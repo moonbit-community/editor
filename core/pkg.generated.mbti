@@ -32,7 +32,7 @@ pub(all) struct Position {
   line : Int
   column : Int
 } derive(Eq, @debug.Debug)
-pub fn Position::new(Int, Int) -> Self
+pub fn Position::Position(Int, Int) -> Self
 
 pub(all) struct Range {
   start : Int

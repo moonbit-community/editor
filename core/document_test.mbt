@@ -15,7 +15,7 @@ test "offset and position use utf16 code units" {
   let pos = doc.position_at_offset(3)
   assert_eq(pos.line, 0)
   assert_eq(pos.column, 3)
-  assert_eq(doc.offset_at_position(Position::new(1, 1)), 5)
+  assert_eq(doc.offset_at_position(Position(1, 1)), 5)
 }
 
 ///|

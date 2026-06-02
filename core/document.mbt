@@ -122,7 +122,7 @@ pub fn DocumentSnapshot::offset_at_position(
 }
 
 ///|
-pub fn Position::new(line : Int, column : Int) -> Position {
+pub fn Position::Position(line : Int, column : Int) -> Position {
   { line, column }
 }
 

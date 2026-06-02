@@ -33,6 +33,43 @@ body {
   font-size: 13px;
 }
 
+.source-title {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.source-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-title span {
+  flex: 0 0 auto;
+  color: #5b6474;
+}
+
+.source-status {
+  flex: 0 0 auto;
+  color: #475467;
+}
+
+.source-status-ready {
+  color: #157347;
+}
+
+.source-status-loading,
+.source-status-stale {
+  color: #7c3f00;
+}
+
+.source-status-missing,
+.source-status-error {
+  color: #9f1f1f;
+}
+
 .topbar strong {
   margin-right: 10px;
 }
@@ -45,6 +82,17 @@ body {
   overflow: auto;
   background: #fbfcff;
   border-bottom: 1px solid #d7dde8;
+}
+
+.source-empty {
+  display: grid;
+  place-items: center;
+}
+
+.source-message {
+  padding: 24px;
+  color: #475467;
+  font-size: 14px;
 }
 
 .code-lines {

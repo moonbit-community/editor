@@ -1,15 +1,22 @@
 import './style.css';
 
-const source = `pub fn main {
+const demoDocument = {
+  uri: 'memory://demo.mbt',
+  displayName: 'Demo',
+  languageId: 'moonbit',
+  version: 1,
+  revision: 'demo',
+  text: `pub fn main {
   let greeting = "hello"
   // TODO: replace demo provider with LSP-backed provider
   println(greeting)
 }
-`;
+`
+};
 
 const root = document.getElementById('app');
+let activeSession = null;
 
-globalThis.__readonlyEditorSource = source;
 globalThis.__readonlyEditorEvent = (name, payload) => {
   let parsed = payload;
   try {
@@ -19,31 +26,215 @@ globalThis.__readonlyEditorEvent = (name, payload) => {
   }
   console.info('[readonly-editor]', name, parsed);
 };
+
 globalThis.__readonlyEditorMount = (payload) => {
   const model = JSON.parse(payload);
-  renderEditor(root, model);
+  activeSession?.mount(model);
 };
 
-import('../../web/generated/editor.mjs').catch((error) => {
-  console.error('[readonly-editor]', 'moonbit:load-error', error);
-});
+class DocumentSession {
+  constructor(container) {
+    const params = new URL(window.location.href).searchParams;
+    this.container = container;
+    this.path = params.get('path') || '';
+    this.document = null;
+    this.status = 'loading';
+    this.error = null;
+    this.eventSource = null;
+    this.rendererPromise = null;
+    this.rendererLoaded = false;
+    this.model = null;
+  }
 
-function renderEditor(container, model) {
+  async start() {
+    if (!this.path) {
+      this.applyDocument(demoDocument);
+      this.status = 'ready';
+      await this.renderCurrentDocument();
+      return;
+    }
+
+    this.renderStatus();
+    try {
+      const document = await this.fetchDocument();
+      this.applyDocument(document);
+      this.status = 'ready';
+      this.error = null;
+      await this.renderCurrentDocument();
+      this.connectEvents();
+    } catch (error) {
+      this.status = error.code === 'FileNotFound' ? 'missing' : 'error';
+      this.error = error;
+      this.renderStatus();
+    }
+  }
+
+  async fetchDocument() {
+    const url = new URL('/api/source/read', window.location.origin);
+    url.searchParams.set('path', this.path);
+    const response = await fetch(url);
+    const payload = await response.json();
+    if (!response.ok) {
+      const error = new Error(payload.message || 'Failed to read source file');
+      error.code = payload.code;
+      error.status = payload.status;
+      throw error;
+    }
+    return payload;
+  }
+
+  connectEvents() {
+    this.eventSource?.close();
+    const url = new URL('/api/source/events', window.location.origin);
+    url.searchParams.set('path', this.path);
+    const source = new EventSource(url);
+    this.eventSource = source;
+
+    source.addEventListener('ready', () => {
+      if (this.status === 'stale') {
+        this.status = 'ready';
+        this.error = null;
+        this.renderStatus();
+      }
+    });
+
+    source.addEventListener('document', async (event) => {
+      const document = JSON.parse(event.data);
+      this.applyDocument(document);
+      this.status = 'ready';
+      this.error = null;
+      await this.renderCurrentDocument();
+    });
+
+    source.addEventListener('missing', (event) => {
+      this.status = 'missing';
+      this.error = JSON.parse(event.data);
+      this.renderStatus();
+    });
+
+    source.addEventListener('error', (event) => {
+      if (event.data) {
+        this.status = 'error';
+        this.error = JSON.parse(event.data);
+        this.renderStatus();
+      }
+    });
+
+    source.onerror = () => {
+      if (this.status === 'ready') {
+        this.status = 'stale';
+        this.renderStatus();
+      }
+    };
+  }
+
+  applyDocument(document) {
+    this.document = document;
+    globalThis.__readonlyEditorDocument = document;
+    globalThis.__readonlyEditorSource = document.text;
+  }
+
+  async renderCurrentDocument() {
+    const alreadyLoaded = this.rendererLoaded;
+    await this.loadRenderer();
+    if (alreadyLoaded && typeof globalThis.__readonlyEditorRender === 'function') {
+      globalThis.__readonlyEditorRender();
+    }
+  }
+
+  async loadRenderer() {
+    if (!this.rendererPromise) {
+      this.rendererPromise = import('../../web/generated/editor.mjs').catch((error) => {
+        console.error('[readonly-editor]', 'moonbit:load-error', error);
+        throw error;
+      });
+    }
+    await this.rendererPromise;
+    this.rendererLoaded = true;
+  }
+
+  mount(model) {
+    this.model = model;
+    const scroll = captureScroll(this.container);
+    renderEditor(this.container, model, {
+      document: this.document,
+      status: this.status,
+      error: this.error,
+      path: this.path
+    });
+    restoreScroll(this.container, scroll);
+  }
+
+  renderStatus() {
+    const scroll = captureScroll(this.container);
+    const model = this.status === 'stale' ? this.model : null;
+    renderEditor(this.container, model, {
+      document: this.document,
+      status: this.status,
+      error: this.error,
+      path: this.path
+    });
+    restoreScroll(this.container, scroll);
+  }
+}
+
+activeSession = new DocumentSession(root);
+activeSession.start();
+
+function renderEditor(container, model, session) {
   container.innerHTML = '';
   const shell = document.createElement('main');
   shell.className = 'editor-shell';
-  shell.dataset.lineCount = String(model.lineCount);
+  shell.dataset.status = session.status;
+  shell.dataset.lineCount = model ? String(model.lineCount) : '0';
+  if (session.document?.uri) {
+    shell.dataset.sourceUri = session.document.uri;
+  }
 
   const topbar = document.createElement('div');
   topbar.className = 'topbar';
-  topbar.innerHTML = `
-    <div>
-      <strong>Readonly MoonBit Editor</strong>
-      <span>${model.languageId}</span>
-    </div>
-    <div>${model.lineCount} lines</div>
-  `;
+  topbar.append(createTitleBlock(model, session), createStatusBlock(model, session));
+  shell.appendChild(topbar);
 
+  if (model) {
+    shell.append(createCodeViewer(model), createDiagnostics(model));
+  } else {
+    shell.append(createEmptyViewer(session), createDiagnostics({ diagnostics: [] }));
+  }
+
+  container.appendChild(shell);
+  console.info('[readonly-editor]', 'dom:mounted', {
+    renderedLines: model ? model.lines.length : 0,
+    diagnostics: model ? model.diagnostics.length : 0,
+    status: session.status
+  });
+}
+
+function createTitleBlock(model, session) {
+  const title = document.createElement('div');
+  title.className = 'source-title';
+
+  const name = document.createElement('strong');
+  name.textContent = session.document?.displayName || session.path || 'Readonly MoonBit Editor';
+
+  const meta = document.createElement('span');
+  const language = model?.languageId || session.document?.languageId || 'moonbit';
+  const version = session.document?.version ? `v${session.document.version}` : 'v-';
+  meta.textContent = `${language} ${version}`;
+
+  title.append(name, meta);
+  return title;
+}
+
+function createStatusBlock(model, session) {
+  const status = document.createElement('div');
+  status.className = `source-status source-status-${session.status}`;
+  const lineCount = model ? `${model.lineCount} lines` : session.statusLabel || '';
+  status.textContent = `${statusLabel(session.status)}${lineCount ? ` - ${lineCount}` : ''}`;
+  return status;
+}
+
+function createCodeViewer(model) {
   const editor = document.createElement('section');
   editor.className = 'code-viewer';
   editor.setAttribute('aria-label', 'Readonly code viewer');
@@ -87,7 +278,22 @@ function renderEditor(container, model) {
   }
 
   editor.appendChild(lines);
+  return editor;
+}
 
+function createEmptyViewer(session) {
+  const editor = document.createElement('section');
+  editor.className = 'code-viewer source-empty';
+  editor.setAttribute('aria-label', 'Readonly code viewer');
+
+  const message = document.createElement('div');
+  message.className = 'source-message';
+  message.textContent = sourceMessage(session);
+  editor.appendChild(message);
+  return editor;
+}
+
+function createDiagnostics(model) {
   const diagnostics = document.createElement('aside');
   diagnostics.className = 'diagnostics';
   diagnostics.setAttribute('aria-label', 'Diagnostics');
@@ -98,13 +304,55 @@ function renderEditor(container, model) {
     item.textContent = `${diagnostic.severity}: ${diagnostic.message}`;
     diagnostics.appendChild(item);
   }
+  return diagnostics;
+}
 
-  shell.append(topbar, editor, diagnostics);
-  container.appendChild(shell);
-  console.info('[readonly-editor]', 'dom:mounted', {
-    renderedLines: model.lines.length,
-    diagnostics: model.diagnostics.length
-  });
+function captureScroll(container) {
+  const viewer = container.querySelector('.code-viewer');
+  return viewer ? { top: viewer.scrollTop, left: viewer.scrollLeft } : null;
+}
+
+function restoreScroll(container, scroll) {
+  if (!scroll) {
+    return;
+  }
+  const viewer = container.querySelector('.code-viewer');
+  if (viewer) {
+    viewer.scrollTop = scroll.top;
+    viewer.scrollLeft = scroll.left;
+  }
+}
+
+function sourceMessage(session) {
+  if (session.status === 'loading') {
+    return 'Loading source...';
+  }
+  if (session.status === 'missing') {
+    return 'Source file is missing.';
+  }
+  if (session.status === 'error') {
+    return session.error?.message || 'Unable to load source.';
+  }
+  if (session.status === 'stale') {
+    return 'Connection lost. Reconnecting...';
+  }
+  return '';
+}
+
+function statusLabel(status) {
+  if (status === 'ready') {
+    return 'Ready';
+  }
+  if (status === 'loading') {
+    return 'Loading';
+  }
+  if (status === 'missing') {
+    return 'Missing';
+  }
+  if (status === 'stale') {
+    return 'Reconnecting';
+  }
+  return 'Error';
 }
 
 function hoverForRange(hovers, start, end) {

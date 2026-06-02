@@ -4,8 +4,13 @@ default:
 check:
     moon check --warn-list +73
 
-test:
+test-moon:
     moon test
+
+test-source:
+    node --test tests/source/*.test.js
+
+test: test-moon test-source
 
 build-moon-web:
     moon run --target native scripts/build-web.mbtx

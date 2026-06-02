@@ -1,6 +1,30 @@
 ///|
 pub extern "js" fn get_source() -> String =
-  #| () => globalThis.__readonlyEditorSource || ""
+  #| () => {
+  #|   const document = globalThis.__readonlyEditorDocument;
+  #|   return document && typeof document.text === "string"
+  #|     ? document.text
+  #|     : globalThis.__readonlyEditorSource || "";
+  #| }
+
+///|
+pub extern "js" fn get_language_id() -> String =
+  #| () => {
+  #|   const document = globalThis.__readonlyEditorDocument;
+  #|   return document && typeof document.languageId === "string"
+  #|     ? document.languageId
+  #|     : "moonbit";
+  #| }
+
+///|
+pub extern "js" fn get_version() -> Int =
+  #| () => {
+  #|   const document = globalThis.__readonlyEditorDocument;
+  #|   const version = document && Number.isFinite(document.version)
+  #|     ? document.version
+  #|     : 1;
+  #|   return Math.max(1, Math.trunc(version));
+  #| }
 
 ///|
 pub extern "js" fn emit_event(name : String, payload : String) -> Unit =
@@ -16,4 +40,10 @@ pub extern "js" fn mount_render_model(payload : String) -> Unit =
   #|   if (typeof globalThis.__readonlyEditorMount === "function") {
   #|     globalThis.__readonlyEditorMount(payload);
   #|   }
+  #| }
+
+///|
+pub extern "js" fn register_render_callback(callback : () -> Unit) -> Unit =
+  #| (callback) => {
+  #|   globalThis.__readonlyEditorRender = callback;
   #| }

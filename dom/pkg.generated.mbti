@@ -4,9 +4,15 @@ package "baozhiyuan/editor/dom"
 // Values
 pub fn emit_event(String, String) -> Unit
 
+pub fn get_language_id() -> String
+
 pub fn get_source() -> String
 
+pub fn get_version() -> Int
+
 pub fn mount_render_model(String) -> Unit
+
+pub fn register_render_callback(() -> Unit) -> Unit
 
 // Errors
 

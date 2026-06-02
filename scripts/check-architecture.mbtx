@@ -1,0 +1,77 @@
+///|
+extern "js" fn source_files(dir : String) -> Array[String] =
+  #| (dir) => {
+  #|   const { readdirSync } = require("node:fs");
+  #|   const { join } = require("node:path");
+  #|   const root = process.cwd();
+  #|   const files = [];
+  #|   const wanted = /\.(mbt|js|mjs|ts|html|css)$/;
+  #|
+  #|   function walk(relativeDir) {
+  #|     let entries;
+  #|     try {
+  #|       entries = readdirSync(join(root, relativeDir), { withFileTypes: true });
+  #|     } catch {
+  #|       return;
+  #|     }
+  #|
+  #|     for (const entry of entries) {
+  #|       const relativePath = `${relativeDir}/${entry.name}`;
+  #|       if (entry.isDirectory()) {
+  #|         walk(relativePath);
+  #|       } else if (wanted.test(relativePath)) {
+  #|         files.push(relativePath);
+  #|       }
+  #|     }
+  #|   }
+  #|
+  #|   walk(dir);
+  #|   return files;
+  #| }
+
+///|
+extern "js" fn read_text_relative(path : String) -> String =
+  #| (path) => {
+  #|   const { readFileSync } = require("node:fs");
+  #|   const { join } = require("node:path");
+  #|   return readFileSync(join(process.cwd(), path), "utf8");
+  #| }
+
+///|
+extern "js" fn print_error(message : String) -> Unit =
+  #| (message) => console.error(message)
+
+///|
+extern "js" fn exit_process(code : Int) -> Unit =
+  #| (code) => process.exit(code)
+
+///|
+fn main {
+  let product_dirs = [
+    "core",
+    "syntax",
+    "decorations",
+    "language",
+    "view",
+    "web",
+    "app",
+    "tests",
+  ]
+  let forbidden = ["codemirror/", "vscode/"]
+  let errors : Array[String] = []
+  for dir in product_dirs {
+    for file in source_files(dir) {
+      let content = read_text_relative(file)
+      for target in forbidden {
+        if content.contains(target) {
+          errors.push(file + " references forbidden tree " + target)
+        }
+      }
+    }
+  }
+  if errors.length() > 0 {
+    print_error(errors.join("\n"))
+    exit_process(1)
+  }
+  println("Architecture checks passed")
+}

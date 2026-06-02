@@ -31,4 +31,4 @@ npm run build
 npm run test:browser
 ```
 
-Use `npm run dev` for the browser viewer. The web shell imports generated MoonBit JS from `web/generated/editor.mjs`, which is created by `npm run build:moon-web`.
+Use `npm run dev` for the browser viewer. The web shell imports generated MoonBit JS from `web/generated/editor.mjs`, which is created by `npm run build:moon-web`. Helper scripts live in `scripts/*.mbtx` and run through `moon run --target js`.

@@ -11,6 +11,8 @@ without hidden setup.
 - `npm run test:browser`: Playwright smoke tests.
 - `npm run dev`: build generated MoonBit JS and serve the browser viewer.
 
+The npm harness uses MoonBit `.mbtx` scripts in `scripts/` for helper tasks.
+
 ## Browser Observability
 
 The browser host logs structured events prefixed with `[readonly-editor]`:

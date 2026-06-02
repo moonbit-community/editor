@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "npm run check && npm run build:moon-web && vite build",
-    "build:moon-web": "node scripts/build-web.mjs",
-    "check": "moon check --warn-list +73 && node scripts/check-architecture.mjs",
+    "build:moon-web": "moon run --target js scripts/build-web.mbtx",
+    "check": "moon check --warn-list +73 && moon run --target js scripts/check-architecture.mbtx",
     "dev": "npm run build:moon-web && vite --host 127.0.0.1",
     "test": "moon test",
     "test:browser": "npm run build:moon-web && playwright test"

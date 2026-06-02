@@ -1,0 +1,65 @@
+///|
+extern "js" fn run_moon_web_build() -> Int =
+  #| () => {
+  #|   const { spawnSync } = require("node:child_process");
+  #|   const result = spawnSync("moon", ["build", "--target", "js", "web"], {
+  #|     cwd: process.cwd(),
+  #|     stdio: "inherit",
+  #|   });
+  #|   return result.status ?? 1;
+  #| }
+
+///|
+extern "js" fn ensure_dir(path : String) -> Unit =
+  #| (path) => {
+  #|   const { mkdirSync } = require("node:fs");
+  #|   mkdirSync(path, { recursive: true });
+  #| }
+
+///|
+extern "js" fn read_text(path : String) -> String =
+  #| (path) => {
+  #|   const { readFileSync } = require("node:fs");
+  #|   return readFileSync(path, "utf8");
+  #| }
+
+///|
+extern "js" fn write_text(path : String, content : String) -> Unit =
+  #| (path, content) => {
+  #|   const { writeFileSync } = require("node:fs");
+  #|   writeFileSync(path, content);
+  #| }
+
+///|
+extern "js" fn copy_file(from : String, to : String) -> Unit =
+  #| (from, to) => {
+  #|   const { copyFileSync } = require("node:fs");
+  #|   copyFileSync(from, to);
+  #| }
+
+///|
+extern "js" fn exit_process(code : Int) -> Unit =
+  #| (code) => process.exit(code)
+
+///|
+fn main {
+  let status = run_moon_web_build()
+  if status != 0 {
+    exit_process(status)
+  }
+  let source_dir = "_build/js/debug/build/web"
+  let target_dir = "web/generated"
+  ensure_dir(target_dir)
+  let generated_js = read_text(source_dir + "/web.js")
+  write_text(
+    target_dir + "/editor.mjs",
+    generated_js.replace(
+      old="//# sourceMappingURL=web.js.map",
+      new="//# sourceMappingURL=editor.mjs.map",
+    ),
+  )
+  copy_file(source_dir + "/web.js.map", target_dir + "/editor.mjs.map")
+  copy_file(source_dir + "/moonbit.d.ts", target_dir + "/moonbit.d.ts")
+  copy_file(source_dir + "/web.d.ts", target_dir + "/web.d.ts")
+  println("Generated web/generated/editor.mjs")
+}

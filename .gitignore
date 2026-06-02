@@ -1,4 +1,5 @@
 _build/
+scripts/_build/
 node_modules/
 dist/
 playwright-report/

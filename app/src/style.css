@@ -47,10 +47,15 @@ body {
   border-bottom: 1px solid #d7dde8;
 }
 
+.code-lines {
+  display: inline-block;
+  min-width: 100%;
+}
+
 .code-line {
   min-height: 22px;
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: max-content max-content;
 }
 
 .code-line:hover {
@@ -68,7 +73,7 @@ body {
 }
 
 .code {
-  min-width: max-content;
+  width: max-content;
   margin: 0;
   padding: 0 16px;
   color: #202938;

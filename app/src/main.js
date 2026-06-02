@@ -48,6 +48,9 @@ function renderEditor(container, model) {
   editor.className = 'code-viewer';
   editor.setAttribute('aria-label', 'Readonly code viewer');
 
+  const lines = document.createElement('div');
+  lines.className = 'code-lines';
+
   for (const line of model.lines) {
     const row = document.createElement('div');
     row.className = 'code-line';
@@ -80,8 +83,10 @@ function renderEditor(container, model) {
     }
 
     row.append(gutter, code);
-    editor.appendChild(row);
+    lines.appendChild(row);
   }
+
+  editor.appendChild(lines);
 
   const diagnostics = document.createElement('aside');
   diagnostics.className = 'diagnostics';

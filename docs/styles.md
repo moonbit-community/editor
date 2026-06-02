@@ -8,4 +8,7 @@
 
 ## Tests
 
-- Prefer `inspect(..., content=...)` for snapshot-style assertions.
+- Prefer inspect-family snapshots over long `assert_eq` chains when output shape matters.
+- Use `inspect(..., content=...)` for stable `Show` output.
+- Use `debug_inspect(..., content=...)` for structural `Debug` output.
+- Use `@json.json_inspect(..., content=...)` for `ToJson` values and JSON-shaped output.

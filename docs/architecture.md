@@ -10,10 +10,12 @@ CodeMirror and Monaco without carrying editing machinery.
 - `decorations`: range-based visual annotations without edit mapping.
 - `language`: provider result types plus deterministic demo providers.
 - `view`: DOM-neutral render model and JSON serialization.
-- `web`: MoonBit main package that reads browser-provided source and emits a render model.
+- `dom`: JavaScript FFI boundary for the browser host.
+- `web`: MoonBit main package that reads through `dom` and emits a render model.
 
 The browser host owns DOM creation, CSS, scrolling, and Playwright-facing
 observability. Product code must not import from `codemirror/` or `vscode/`.
+Only the `dom` package may declare JavaScript FFI.
 
 ## Position Convention
 

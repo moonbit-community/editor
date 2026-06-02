@@ -11,7 +11,7 @@ without hidden setup.
 - `just test-browser`: Playwright smoke tests.
 - `just dev`: build generated MoonBit JS and serve the browser viewer.
 
-The `justfile` harness uses MoonBit `.mbtx` scripts in `scripts/` for helper tasks.
+The `justfile` harness uses Node scripts in `scripts/` for helper tasks.
 
 ## Browser Observability
 

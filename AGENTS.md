@@ -31,4 +31,4 @@ just build
 just test-browser
 ```
 
-Use `just dev` for the browser viewer. The web shell imports generated MoonBit JS from `web/generated/editor.mjs`, which is created by `just build-moon-web`. Helper scripts live in `scripts/*.mbtx` and run through `moon run --target js`.
+Use `just dev` for the browser viewer. The web shell imports generated MoonBit JS from `web/generated/editor.mjs`, which is created by `just build-moon-web`. Helper scripts live in `scripts/*.js` and run through Node.

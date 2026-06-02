@@ -1,26 +1,6 @@
 ///|
-extern "js" fn get_source() -> String =
-  #| () => globalThis.__readonlyEditorSource || ""
-
-///|
-extern "js" fn emit_event(name : String, payload : String) -> Unit =
-  #| (name, payload) => {
-  #|   if (typeof globalThis.__readonlyEditorEvent === "function") {
-  #|     globalThis.__readonlyEditorEvent(name, payload);
-  #|   }
-  #| }
-
-///|
-extern "js" fn mount_render_model(payload : String) -> Unit =
-  #| (payload) => {
-  #|   if (typeof globalThis.__readonlyEditorMount === "function") {
-  #|     globalThis.__readonlyEditorMount(payload);
-  #|   }
-  #| }
-
-///|
 fn main {
-  let source = get_source()
+  let source = @dom.get_source()
   let doc = @core.DocumentSnapshot::new(source, language_id="moonbit")
   let tokens = @syntax.highlight(doc)
   let providers = @language.demo_providers(doc)
@@ -42,8 +22,8 @@ fn main {
   event_payload = event_payload + ",\"diagnosticCount\":"
   event_payload = event_payload + providers.diagnostics.length().to_string()
   event_payload = event_payload + "}"
-  emit_event("moonbit:render", event_payload)
-  mount_render_model(model.to_json())
+  @dom.emit_event("moonbit:render", event_payload)
+  @dom.mount_render_model(model.to_json())
 }
 
 ///|

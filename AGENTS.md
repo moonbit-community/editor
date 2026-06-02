@@ -4,7 +4,7 @@
 
 - Product code lives at the repository root in MoonBit packages: `core`, `syntax`, `decorations`, `language`, `view`, and `web`.
 - `codemirror/` and `vscode/` are reference-only submodules. Do not import product code from either tree.
-- The editor is strictly readonly in v1: no transactions, undo/redo, IME, edit cursor, piece table, or change mapping.
+- The editor is a readonly viewer.
 
 ## References
 

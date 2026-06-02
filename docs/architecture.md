@@ -1,6 +1,6 @@
 # Architecture
 
-The v1 editor is a readonly code viewer. It borrows the separations used by
+The editor is a readonly code viewer. It borrows the separations used by
 CodeMirror and Monaco without carrying editing machinery.
 
 ## Layers

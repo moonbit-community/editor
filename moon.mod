@@ -13,3 +13,7 @@ keywords = [ "editor", "moonbit", "readonly", "syntax-highlighting" ]
 description = "Readonly MoonBit code viewer harness inspired by Monaco and CodeMirror."
 
 preferred_target = "js"
+
+import {
+  "moonbitlang/async@0.19.1",
+}

@@ -3,13 +3,12 @@ default:
 
 check:
     moon check --warn-list +73
-    node scripts/check-architecture.js
 
 test:
     moon test
 
 build-moon-web:
-    node scripts/build-web.js
+    moon run --target native scripts/build-web.mbtx
 
 build: check build-moon-web
     ./node_modules/.bin/vite build

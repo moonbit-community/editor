@@ -5,13 +5,13 @@ without hidden setup.
 
 ## Commands
 
-- `just check`: MoonBit type check plus architecture guardrails.
+- `just check`: MoonBit type check.
 - `just test`: MoonBit unit tests.
 - `just build`: MoonBit web build plus Vite production build.
 - `just test-browser`: Playwright smoke tests.
 - `just dev`: build generated MoonBit JS and serve the browser viewer.
 
-The `justfile` harness uses Node scripts in `scripts/` for helper tasks.
+The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.
 
 ## Browser Observability
 

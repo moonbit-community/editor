@@ -1,0 +1,46 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/process",
+}
+
+async fn main {
+  let status = @process.run("moon", ["build", "--target", "js", "web"])
+  if status != 0 {
+    fail("moon build failed with exit code \{status}")
+  }
+
+  let source_dir = "_build/js/debug/build/web"
+  let target_dir = "web/generated"
+  if !@fs.exists(target_dir) {
+    @fs.mkdir(target_dir, recursive=true)
+  }
+
+  let generated_js = @fs.read_file("\{source_dir}/web.js").text()
+  @fs.write_file(
+    "\{target_dir}/editor.mjs",
+    generated_js.replace(
+      old="//# sourceMappingURL=web.js.map",
+      new="//# sourceMappingURL=editor.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  @fs.write_file(
+    "\{target_dir}/editor.mjs.map",
+    @fs.read_file("\{source_dir}/web.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{target_dir}/moonbit.d.ts",
+    @fs.read_file("\{source_dir}/moonbit.d.ts"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{target_dir}/web.d.ts",
+    @fs.read_file("\{source_dir}/web.d.ts"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  println("Generated web/generated/editor.mjs")
+}

@@ -50,7 +50,7 @@ body {
 .code-line {
   min-height: 22px;
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
 }
 
 .code-line:hover {
@@ -58,7 +58,7 @@ body {
 }
 
 .gutter {
-  padding: 0 14px;
+  padding: 0 4px 0 8px;
   border-right: 1px solid #d7dde8;
   color: #69758a;
   background: #f1f4f9;

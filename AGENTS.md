@@ -14,6 +14,12 @@
 - CodeMirror map: `docs/references/codemirror.md`
 - Monaco map: `docs/references/monaco.md`
 
+## Version Control
+
+- Commit regularly to save work in meaningful steps.
+- Keep commits focused around one coherent change and use messages that describe the behavior or decision being saved.
+- Run the most relevant local checks before committing when the change can affect behavior.
+
 ## Local Harness
 
 Run these from the repo root:

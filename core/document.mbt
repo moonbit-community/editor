@@ -19,7 +19,7 @@ pub(all) struct DocumentSnapshot {
 } derive(Debug)
 
 ///|
-pub fn DocumentSnapshot::new(
+pub fn DocumentSnapshot::DocumentSnapshot(
   text : String,
   language_id? : String = "moonbit",
   version? : Int = 1,
@@ -127,7 +127,7 @@ pub fn Position::Position(line : Int, column : Int) -> Position {
 }
 
 ///|
-pub fn Range::new(start : Int, end : Int) -> Range {
+pub fn Range::Range(start : Int, end : Int) -> Range {
   if start <= end {
     { start, end }
   } else {

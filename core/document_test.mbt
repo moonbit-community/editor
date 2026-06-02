@@ -1,6 +1,6 @@
 ///|
 test "line index handles lf and crlf" {
-  let doc = DocumentSnapshot::new("one\ntwo\r\nthree")
+  let doc = @core.DocumentSnapshot("one\ntwo\r\nthree")
   assert_eq(doc.line_count(), 3)
   assert_eq(doc.line_text(0), "one")
   assert_eq(doc.line_text(1), "two")
@@ -10,7 +10,7 @@ test "line index handles lf and crlf" {
 
 ///|
 test "offset and position use utf16 code units" {
-  let doc = DocumentSnapshot::new("a😊\n中")
+  let doc = @core.DocumentSnapshot("a😊\n中")
   assert_eq(doc.length(), 5)
   let pos = doc.position_at_offset(3)
   assert_eq(pos.line, 0)
@@ -20,10 +20,10 @@ test "offset and position use utf16 code units" {
 
 ///|
 test "range helpers normalize and intersect" {
-  let range = Range::new(8, 3)
+  let range = @core.Range(8, 3)
   assert_eq(range.start, 3)
   assert_eq(range.end, 8)
   assert_true(range.contains_offset(4))
   assert_false(range.contains_offset(8))
-  assert_true(range.intersects(Range::new(7, 10)))
+  assert_true(range.intersects(Range(7, 10)))
 }

@@ -1,6 +1,6 @@
 ///|
 test "demo providers expose hover diagnostic and definition" {
-  let doc = @core.DocumentSnapshot::new("fn main { // TODO\n }")
+  let doc = @core.DocumentSnapshot("fn main { // TODO\n }")
   let providers = demo_providers(doc)
   assert_eq(providers.hovers.length(), 1)
   assert_eq(providers.diagnostics.length(), 1)

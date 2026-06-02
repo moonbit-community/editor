@@ -30,7 +30,7 @@ pub fn highlight(doc : @core.DocumentSnapshot) -> Array[Token] {
       let start = offset
       offset = consume_until_line_end(doc.text, offset)
       tokens.push({
-        range: @core.Range::new(start, offset),
+        range: Range(start, offset),
         tag: Comment,
         text: doc.text[start:offset].to_owned(),
       })
@@ -38,7 +38,7 @@ pub fn highlight(doc : @core.DocumentSnapshot) -> Array[Token] {
       let start = offset
       offset = consume_string(doc.text, offset)
       tokens.push({
-        range: @core.Range::new(start, offset),
+        range: Range(start, offset),
         tag: String,
         text: doc.text[start:offset].to_owned(),
       })
@@ -46,7 +46,7 @@ pub fn highlight(doc : @core.DocumentSnapshot) -> Array[Token] {
       let start = offset
       offset = consume_while(doc.text, offset, is_digit)
       tokens.push({
-        range: @core.Range::new(start, offset),
+        range: Range(start, offset),
         tag: Number,
         text: doc.text[start:offset].to_owned(),
       })
@@ -55,7 +55,7 @@ pub fn highlight(doc : @core.DocumentSnapshot) -> Array[Token] {
       offset = consume_while(doc.text, offset, is_ident_continue)
       let text = doc.text[start:offset].to_owned()
       tokens.push({
-        range: @core.Range::new(start, offset),
+        range: Range(start, offset),
         tag: if is_keyword(text) {
           Keyword
         } else {
@@ -67,7 +67,7 @@ pub fn highlight(doc : @core.DocumentSnapshot) -> Array[Token] {
       let start = offset
       offset = offset + 1
       tokens.push({
-        range: @core.Range::new(start, offset),
+        range: Range(start, offset),
         tag: Punctuation,
         text: doc.text[start:offset].to_owned(),
       })

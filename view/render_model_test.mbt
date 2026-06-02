@@ -1,14 +1,9 @@
 ///|
 test "render model contains highlighted spans and diagnostics" {
-  let doc = @core.DocumentSnapshot::new("fn main { // TODO\n  let x = 1\n}")
+  let doc = @core.DocumentSnapshot("fn main { // TODO\n  let x = 1\n}")
   let tokens = @syntax.highlight(doc)
   let decorations = @decorations.DecorationSet::from_array([
-    @decorations.Decoration::new(
-      @core.Range::new(13, 17),
-      Diagnostic,
-      "diag-warning",
-      message="todo",
-    ),
+    Decoration(Range(13, 17), Diagnostic, "diag-warning", message="todo"),
   ])
   let providers = @language.demo_providers(doc)
   let model = render(

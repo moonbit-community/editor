@@ -21,7 +21,7 @@ pub(all) struct DecorationSet {
 } derive(Debug)
 
 ///|
-pub fn Decoration::new(
+pub fn Decoration::Decoration(
   range : @core.Range,
   kind : DecorationKind,
   class_name : String,

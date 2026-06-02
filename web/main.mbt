@@ -1,7 +1,7 @@
 ///|
 fn main {
   let source = @dom.get_source()
-  let doc = @core.DocumentSnapshot::new(source, language_id="moonbit")
+  let doc = @core.DocumentSnapshot(source, language_id="moonbit")
   let tokens = @syntax.highlight(doc)
   let providers = @language.demo_providers(doc)
   let decorations = decorations_from_diagnostics(providers.diagnostics)
@@ -33,7 +33,7 @@ fn decorations_from_diagnostics(
   let items = []
   for diagnostic in diagnostics {
     items.push(
-      @decorations.Decoration::new(
+      @decorations.Decoration(
         diagnostic.range,
         Diagnostic,
         "diag-warning",

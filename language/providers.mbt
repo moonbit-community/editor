@@ -68,7 +68,7 @@ pub fn demo_providers(doc : @core.DocumentSnapshot) -> ProviderResult {
   match warning {
     Some(start) =>
       diagnostics.push(Diagnostic::{
-        range: @core.Range::new(start, start + 4),
+        range: Range(start, start + 4),
         severity: Warning,
         message: "Demo diagnostic from readonly provider",
       })
@@ -77,7 +77,7 @@ pub fn demo_providers(doc : @core.DocumentSnapshot) -> ProviderResult {
   let main_start = doc.text.find("main")
   match main_start {
     Some(start) => {
-      let range = @core.Range::new(start, start + 4)
+      let range = @core.Range(start, start + 4)
       hovers.push(Hover::{ range, contents: "Demo hover: entry point symbol" })
       definitions.push(Location::{ uri: "memory://fixture.mbt", range })
       symbols.push(DocumentSymbol::{ name: "main", kind: "function", range })

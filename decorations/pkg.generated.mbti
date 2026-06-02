@@ -17,7 +17,7 @@ pub(all) struct Decoration {
   class_name : String
   message : String?
 } derive(@debug.Debug)
-pub fn Decoration::new(@core.Range, DecorationKind, String, message? : String) -> Self
+pub fn Decoration::Decoration(@core.Range, DecorationKind, String, message? : String) -> Self
 
 pub(all) enum DecorationKind {
   Diagnostic

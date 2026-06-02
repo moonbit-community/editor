@@ -49,7 +49,7 @@ pub fn render(
   for line in start_line..<end_line {
     let line_start = doc.line_start_offset(line)
     let line_end = doc.line_end_offset(line)
-    let line_range = @core.Range::new(line_start, line_end)
+    let line_range = @core.Range(line_start, line_end)
     let spans = spans_for_line(doc, line_range, tokens, decoration_set)
     lines.push(RenderLine::{
       line_number: line + 1,
@@ -106,7 +106,7 @@ fn spans_for_line(
       }
       let mut class_name = token.tag.css_class()
       for decoration in line_decorations {
-        if decoration.range.intersects(@core.Range::new(start, end)) {
+        if decoration.range.intersects(Range(start, end)) {
           class_name = class_name + " " + decoration.class_name
         }
       }

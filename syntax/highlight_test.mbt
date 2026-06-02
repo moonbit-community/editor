@@ -1,8 +1,6 @@
 ///|
 test "lexes keywords strings numbers and comments" {
-  let doc = @core.DocumentSnapshot::new(
-    "pub fn main { let x = \"hi\" // ok\n42 }",
-  )
+  let doc = @core.DocumentSnapshot("pub fn main { let x = \"hi\" // ok\n42 }")
   let tokens = highlight(doc)
   @debug.assert_eq(tokens[0].tag, Keyword)
   @debug.assert_eq(tokens[1].tag, Keyword)

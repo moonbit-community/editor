@@ -1,4 +1,3 @@
 import {
   "baozhiyuan/editor/core",
-  "baozhiyuan/editor/workspace",
 }

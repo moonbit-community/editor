@@ -20,7 +20,7 @@ pub(all) struct Diagnostic {
 
 ///|
 pub(all) struct Location {
-  uri : String
+  uri : @workspace.DocumentUri
   range : @core.Range
 } derive(Debug)
 
@@ -79,7 +79,10 @@ pub fn demo_providers(doc : @core.DocumentSnapshot) -> ProviderResult {
     Some(start) => {
       let range = @core.Range(start, start + 4)
       hovers.push(Hover::{ range, contents: "Demo hover: entry point symbol" })
-      definitions.push(Location::{ uri: "memory://fixture.mbt", range })
+      definitions.push(Location::{
+        uri: @workspace.DocumentUri::memory("fixture.mbt"),
+        range,
+      })
       symbols.push(DocumentSymbol::{ name: "main", kind: "function", range })
       semantic_tokens.push(SemanticToken::{ range, token_type: "function" })
     }

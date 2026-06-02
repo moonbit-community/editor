@@ -1,0 +1,62 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/workspace"
+
+import {
+  "baozhiyuan/editor/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn infer_language_id(String) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct DocumentUri {
+  value : String
+} derive(Eq, @debug.Debug)
+pub fn DocumentUri::memory(String) -> Self
+pub fn DocumentUri::parse(String) -> DocumentUriResult
+pub fn DocumentUri::scheme(Self) -> String
+pub fn DocumentUri::to_string(Self) -> String
+
+pub(all) enum DocumentUriResult {
+  ParsedDocumentUri(DocumentUri)
+  DocumentUriError(SourceError)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SourceDocument {
+  uri : DocumentUri
+  display_name : String
+  language_id : String
+  version : Int
+  revision : String
+  text : String
+} derive(@debug.Debug)
+pub fn SourceDocument::SourceDocument(DocumentUri, String, String, Int, String, String) -> Self
+pub fn SourceDocument::snapshot(Self) -> @core.DocumentSnapshot
+
+pub(all) enum SourceError {
+  MissingPath
+  InvalidPath
+  InvalidUri
+} derive(Eq, @debug.Debug)
+pub fn SourceError::to_string(Self) -> String
+
+pub(all) struct SourcePath {
+  value : String
+} derive(Eq, @debug.Debug)
+pub fn SourcePath::display_name(Self) -> String
+pub fn SourcePath::normalize_root_relative_path(String) -> SourcePathResult
+pub fn SourcePath::server_file_uri(Self) -> DocumentUri
+pub fn SourcePath::to_string(Self) -> String
+
+pub(all) enum SourcePathResult {
+  ParsedSourcePath(SourcePath)
+  SourcePathError(SourceError)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

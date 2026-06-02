@@ -8,12 +8,28 @@ pub extern "js" fn get_source() -> String =
   #| }
 
 ///|
-pub extern "js" fn get_language_id() -> String =
+pub extern "js" fn get_uri() -> String =
+  #| () => {
+  #|   const document = globalThis.__readonlyEditorDocument;
+  #|   return document && typeof document.uri === "string" ? document.uri : "";
+  #| }
+
+///|
+pub extern "js" fn get_display_name() -> String =
+  #| () => {
+  #|   const document = globalThis.__readonlyEditorDocument;
+  #|   return document && typeof document.displayName === "string"
+  #|     ? document.displayName
+  #|     : "";
+  #| }
+
+///|
+pub extern "js" fn get_language_id_hint() -> String =
   #| () => {
   #|   const document = globalThis.__readonlyEditorDocument;
   #|   return document && typeof document.languageId === "string"
   #|     ? document.languageId
-  #|     : "moonbit";
+  #|     : "";
   #| }
 
 ///|
@@ -22,8 +38,17 @@ pub extern "js" fn get_version() -> Int =
   #|   const document = globalThis.__readonlyEditorDocument;
   #|   const version = document && Number.isFinite(document.version)
   #|     ? document.version
-  #|     : 1;
-  #|   return Math.max(1, Math.trunc(version));
+  #|     : 0;
+  #|   return Math.trunc(version);
+  #| }
+
+///|
+pub extern "js" fn get_revision() -> String =
+  #| () => {
+  #|   const document = globalThis.__readonlyEditorDocument;
+  #|   return document && typeof document.revision === "string"
+  #|     ? document.revision
+  #|     : "";
   #| }
 
 ///|

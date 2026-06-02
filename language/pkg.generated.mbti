@@ -3,6 +3,7 @@ package "baozhiyuan/editor/language"
 
 import {
   "baozhiyuan/editor/core",
+  "baozhiyuan/editor/workspace",
   "moonbitlang/core/debug",
 }
 
@@ -37,7 +38,7 @@ pub(all) struct Hover {
 } derive(@debug.Debug)
 
 pub(all) struct Location {
-  uri : String
+  uri : @workspace.DocumentUri
   range : @core.Range
 } derive(@debug.Debug)
 

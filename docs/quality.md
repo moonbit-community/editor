@@ -15,4 +15,3 @@ just test-browser
 - Product code must not import from `codemirror/` or `vscode/`.
 - Only the `dom` package may declare JavaScript FFI.
 - `codemirror/` and `vscode/` are references only.
-- The editor is a readonly viewer.

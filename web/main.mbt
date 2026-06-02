@@ -1,7 +1,40 @@
 ///|
 fn main {
   @dom.register_render_callback(render_current_document)
-  render_current_document()
+  @dom.register_load_callback(uri => {
+    @js_async.Promise::from_async(() => load_source_document(uri))
+  })
+  @dom.register_watch_callback(watch_source_document)
+}
+
+///|
+async fn load_source_document(uri_value : String) -> String {
+  let provider = @dom.browser_file_system_provider()
+  let result = match @workspace.DocumentUri::parse(uri_value) {
+    ParsedDocumentUri(uri) => provider.read_source_document(uri)
+    DocumentUriError(_) =>
+      SourceDocumentLoadError(
+        FileSystemProviderError(InvalidUri, "Invalid document URI " + uri_value),
+      )
+  }
+  result.to_json()
+}
+
+///|
+fn watch_source_document(
+  uri_value : String,
+  emit : (String) -> Unit,
+) -> @dom.HostDisposable {
+  match @workspace.DocumentUri::parse(uri_value) {
+    ParsedDocumentUri(uri) => {
+      let provider = @dom.browser_file_system_provider()
+      let watch = provider.watch_file(uri, changes => {
+        emit(@workspace.FileChange::array_to_json(changes))
+      })
+      @dom.provider_disposable(() => watch.dispose())
+    }
+    DocumentUriError(_) => @dom.provider_disposable(() => ())
+  }
 }
 
 ///|

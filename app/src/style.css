@@ -87,12 +87,35 @@ body {
 .source-empty {
   display: grid;
   place-items: center;
+  align-content: center;
+  gap: 12px;
 }
 
 .source-message {
-  padding: 24px;
+  padding: 0 24px;
   color: #475467;
   font-size: 14px;
+}
+
+.source-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.source-open-button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #b8c2d6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1d2433;
+  font: inherit;
+  cursor: pointer;
+}
+
+.source-open-button:hover {
+  background: #eef5ff;
+  border-color: #86a9d8;
 }
 
 .code-lines {

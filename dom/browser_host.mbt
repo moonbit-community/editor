@@ -52,6 +52,137 @@ pub extern "js" fn get_revision() -> String =
   #| }
 
 ///|
+#external
+pub type HostReadResult
+
+///|
+#external
+pub type HostDisposable
+
+///|
+extern "js" fn provider_read_file(
+  uri : String,
+  signal : @js_async.AbortSignal,
+) -> @js_async.Promise[HostReadResult] =
+  #| (uri, signal) => {
+  #|   if (typeof globalThis.__readonlyEditorProviderReadFile === "function") {
+  #|     return globalThis.__readonlyEditorProviderReadFile(uri, signal);
+  #|   }
+  #|   return Promise.resolve({
+  #|     ok: false,
+  #|     code: "Unavailable",
+  #|     message: "No browser filesystem provider is registered."
+  #|   });
+  #| }
+
+///|
+extern "js" fn provider_watch_file(
+  uri : String,
+  listener : (String) -> Unit,
+) -> HostDisposable =
+  #| (uri, listener) => {
+  #|   if (typeof globalThis.__readonlyEditorProviderWatchFile === "function") {
+  #|     return globalThis.__readonlyEditorProviderWatchFile(uri, listener);
+  #|   }
+  #|   return { dispose() {} };
+  #| }
+
+///|
+pub extern "js" fn HostDisposable::dispose(self : HostDisposable) -> Unit =
+  #| (disposable) => {
+  #|   if (disposable && typeof disposable.dispose === "function") {
+  #|     disposable.dispose();
+  #|   }
+  #| }
+
+///|
+pub extern "js" fn provider_disposable(dispose : () -> Unit) -> HostDisposable =
+  #| (dispose) => ({ dispose })
+
+///|
+extern "js" fn HostReadResult::ok(self : HostReadResult) -> Bool =
+  #| (result) => !!(result && result.ok === true)
+
+///|
+extern "js" fn HostReadResult::code(self : HostReadResult) -> String =
+  #| (result) => result && typeof result.code === "string"
+  #|   ? result.code
+  #|   : "Unavailable"
+
+///|
+extern "js" fn HostReadResult::message(self : HostReadResult) -> String =
+  #| (result) => result && typeof result.message === "string"
+  #|   ? result.message
+  #|   : ""
+
+///|
+extern "js" fn HostReadResult::text(self : HostReadResult) -> String =
+  #| (result) => result && typeof result.text === "string" ? result.text : ""
+
+///|
+extern "js" fn HostReadResult::display_name(self : HostReadResult) -> String =
+  #| (result) => result && typeof result.displayName === "string"
+  #|   ? result.displayName
+  #|   : ""
+
+///|
+extern "js" fn HostReadResult::language_id(self : HostReadResult) -> String =
+  #| (result) => result && typeof result.languageId === "string"
+  #|   ? result.languageId
+  #|   : ""
+
+///|
+extern "js" fn HostReadResult::revision(self : HostReadResult) -> String =
+  #| (result) => result && typeof result.revision === "string"
+  #|   ? result.revision
+  #|   : ""
+
+///|
+pub fn browser_file_system_provider() -> @workspace.FileSystemProvider {
+  { scheme: "file", read_file: read_browser_file, watch: watch_browser_file }
+}
+
+///|
+async fn read_browser_file(
+  uri : @workspace.DocumentUri,
+) -> @workspace.FileReadResult {
+  let result = @js_async.run_promise(signal => {
+    provider_read_file(uri.to_string(), signal)
+  })
+  if result.ok() {
+    FileReadOk(
+      FileContent(
+        result.text(),
+        display_name=result.display_name(),
+        language_id=result.language_id(),
+        revision=result.revision(),
+      ),
+    )
+  } else {
+    FileReadError(
+      FileSystemProviderError(
+        @workspace.FileSystemProviderErrorCode::from_string(result.code()),
+        result.message(),
+        uri~,
+      ),
+    )
+  }
+}
+
+///|
+fn watch_browser_file(
+  uri : @workspace.DocumentUri,
+  _options : @workspace.WatchOptions,
+  listener : (Array[@workspace.FileChange]) -> Unit,
+) -> @workspace.FileWatch {
+  let disposable = provider_watch_file(uri.to_string(), payload => {
+    listener([{ uri, change_type: Changed }])
+    ignore(payload)
+  })
+  { dispose: () => disposable.dispose() }
+}
+
+///|
 pub extern "js" fn emit_event(name : String, payload : String) -> Unit =
   #| (name, payload) => {
   #|   if (typeof globalThis.__readonlyEditorEvent === "function") {
@@ -71,4 +202,20 @@ pub extern "js" fn mount_render_model(payload : String) -> Unit =
 pub extern "js" fn register_render_callback(callback : () -> Unit) -> Unit =
   #| (callback) => {
   #|   globalThis.__readonlyEditorRender = callback;
+  #| }
+
+///|
+pub extern "js" fn register_load_callback(
+  callback : (String) -> @js_async.Promise[String],
+) -> Unit =
+  #| (callback) => {
+  #|   globalThis.__readonlyEditorLoadSource = callback;
+  #| }
+
+///|
+pub extern "js" fn register_watch_callback(
+  callback : (String, (String) -> Unit) -> HostDisposable,
+) -> Unit =
+  #| (callback) => {
+  #|   globalThis.__readonlyEditorWatchSource = callback;
   #| }

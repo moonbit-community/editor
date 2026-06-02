@@ -7,10 +7,7 @@ check:
 test-moon:
     moon test
 
-test-source:
-    node --test tests/source/*.test.js
-
-test: test-moon test-source
+test: test-moon
 
 build-moon-web:
     moon run --target native scripts/build-web.mbtx

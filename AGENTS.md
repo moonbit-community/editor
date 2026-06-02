@@ -3,8 +3,8 @@
 ## Project Shape
 
 - Product code lives at the repository root in MoonBit packages: `core`, `syntax`, `decorations`, `workspace`, `language`, `view`, `dom`, and `web`.
-- The browser host owns DOM creation, CSS, scrolling, file read/watch effects, and Playwright-facing observability.
-- MoonBit owns workspace semantics and readonly document identity.
+- The browser backend owns DOM creation, CSS, scrolling, raw browser file handles, and Playwright-facing observability.
+- MoonBit owns workspace semantics, readonly document identity, and the backend-neutral filesystem-provider contract.
 - Only the `dom` package may declare JavaScript FFI.
 - `codemirror/` and `vscode/` are reference-only submodules. Do not import product code from either tree.
 - The editor is a readonly viewer.

@@ -5,6 +5,7 @@ import {
   "baozhiyuan/editor/syntax",
   "baozhiyuan/editor/view",
   "baozhiyuan/editor/workspace",
+  "moonbitlang/async/js_async",
 }
 
 options(

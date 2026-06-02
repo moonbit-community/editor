@@ -1,7 +1,14 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "baozhiyuan/editor/dom"
 
+import {
+  "baozhiyuan/editor/workspace",
+  "moonbitlang/async/js_async",
+}
+
 // Values
+pub fn browser_file_system_provider() -> @workspace.FileSystemProvider
+
 pub fn emit_event(String, String) -> Unit
 
 pub fn get_display_name() -> String
@@ -18,11 +25,23 @@ pub fn get_version() -> Int
 
 pub fn mount_render_model(String) -> Unit
 
+pub fn provider_disposable(() -> Unit) -> HostDisposable
+
+pub fn register_load_callback((String) -> @js_async.Promise[String]) -> Unit
+
 pub fn register_render_callback(() -> Unit) -> Unit
+
+pub fn register_watch_callback((String, (String) -> Unit) -> HostDisposable) -> Unit
 
 // Errors
 
 // Types and methods
+#external
+pub type HostDisposable
+pub fn HostDisposable::dispose(Self) -> Unit
+
+#external
+pub type HostReadResult
 
 // Type aliases
 

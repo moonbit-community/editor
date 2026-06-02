@@ -1,3 +1,7 @@
 import {
   "baozhiyuan/editor/core",
 }
+
+import {
+  "moonbitlang/async",
+} for "test"

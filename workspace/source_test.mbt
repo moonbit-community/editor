@@ -3,7 +3,7 @@ test "normalizes accepted root relative paths" {
   let simple = expect_path("foo.mbt")
   assert_eq(simple.to_string(), "foo.mbt")
   assert_eq(simple.display_name(), "foo.mbt")
-  assert_eq(simple.server_file_uri().to_string(), "file://server/foo.mbt")
+  assert_eq(simple.file_uri().to_string(), "file://local/foo.mbt")
 
   let nested = expect_path("nested/file.txt")
   assert_eq(nested.to_string(), "nested/file.txt")
@@ -31,11 +31,62 @@ test "parses document uris" {
 
   let file = expect_uri("file://server/nested/file.mbt")
   assert_eq(file.scheme(), "file")
+  assert_eq(file.path(), "nested/file.mbt")
+  assert_eq(file.display_name(), "file.mbt")
   assert_eq(file.to_string(), "file://server/nested/file.mbt")
 
   match @workspace.DocumentUri::parse("missing-scheme") {
-    DocumentUriError(error) => assert_true(error == InvalidUri)
+    DocumentUriError(error) => assert_true(error == SourceInvalidUri)
     ParsedDocumentUri(uri) => fail("unexpected uri " + uri.to_string())
+  }
+}
+
+///|
+async test "filesystem provider reads source documents by uri" {
+  let uri = expect_uri("file://local/demo.mbt")
+  let provider = @workspace.FileSystemProvider::{
+    scheme: "file",
+    read_file: _uri => {
+      FileReadOk(
+        FileContent(
+          "pub fn main {}\n",
+          display_name="demo.mbt",
+          revision="rev-1",
+        ),
+      )
+    },
+    watch: (_uri, _options, _listener) => { dispose: () => () },
+  }
+
+  match provider.read_source_document(uri) {
+    SourceDocumentLoaded(document) => {
+      assert_eq(document.uri.to_string(), "file://local/demo.mbt")
+      assert_eq(document.display_name, "demo.mbt")
+      assert_eq(document.language_id, "moonbit")
+      assert_eq(document.version, 1)
+      assert_eq(document.revision, "rev-1")
+      assert_eq(document.text, "pub fn main {}\n")
+    }
+    SourceDocumentLoadError(error) =>
+      fail("unexpected provider error " + error.message)
+  }
+}
+
+///|
+async test "filesystem provider rejects mismatched schemes" {
+  let uri = expect_uri("memory://demo.mbt")
+  let provider = @workspace.FileSystemProvider::{
+    scheme: "file",
+    read_file: _uri => {
+      FileReadError(FileSystemProviderError(FileNotFound, "not found", uri~))
+    },
+    watch: (_uri, _options, _listener) => { dispose: () => () },
+  }
+
+  match provider.read_source_document(uri) {
+    SourceDocumentLoadError(error) => assert_true(error.code == InvalidUri)
+    SourceDocumentLoaded(document) =>
+      fail("unexpected document " + document.uri.to_string())
   }
 }
 

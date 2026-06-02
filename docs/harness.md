@@ -9,7 +9,7 @@ without hidden setup.
 - `just test`: MoonBit unit tests.
 - `just build`: MoonBit web build plus Vite production build.
 - `just test-browser`: Playwright smoke tests.
-- `just dev`: build generated MoonBit JS and serve the browser viewer.
+- `just dev`: build generated MoonBit JS and serve the browser viewer with Vite's static dev host.
 
 The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.
 

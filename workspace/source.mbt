@@ -22,7 +22,7 @@ pub(all) struct SourceDocument {
 pub(all) enum SourceError {
   MissingPath
   InvalidPath
-  InvalidUri
+  SourceInvalidUri
 } derive(Eq, Debug)
 
 ///|
@@ -30,7 +30,7 @@ pub fn SourceError::to_string(self : SourceError) -> String {
   match self {
     MissingPath => "MissingPath"
     InvalidPath => "InvalidPath"
-    InvalidUri => "InvalidUri"
+    SourceInvalidUri => "InvalidUri"
   }
 }
 
@@ -53,9 +53,9 @@ pub fn DocumentUri::parse(value : String) -> DocumentUriResult {
       if is_valid_uri_scheme(value, index) && index + 3 < value.length() {
         ParsedDocumentUri({ value, })
       } else {
-        DocumentUriError(InvalidUri)
+        DocumentUriError(SourceInvalidUri)
       }
-    None => DocumentUriError(InvalidUri)
+    None => DocumentUriError(SourceInvalidUri)
   }
 }
 
@@ -79,6 +79,38 @@ pub fn DocumentUri::scheme(self : DocumentUri) -> String {
   match self.value.find("://") {
     Some(index) => self.value[0:index].to_owned()
     None => ""
+  }
+}
+
+///|
+pub fn DocumentUri::path(self : DocumentUri) -> String {
+  match self.value.find("://") {
+    Some(index) => {
+      let rest = self.value[index + 3:]
+      match rest.find("/") {
+        Some(path_index) => rest[path_index + 1:].to_owned()
+        None => ""
+      }
+    }
+    None => ""
+  }
+}
+
+///|
+pub fn DocumentUri::display_name(self : DocumentUri) -> String {
+  let path = self.path()
+  if path == "" {
+    self.to_string()
+  } else {
+    let segments = path.split("/")
+    let mut found = path
+    for segment_view in segments {
+      let segment = segment_view.to_owned()
+      if segment != "" {
+        found = segment
+      }
+    }
+    found
   }
 }
 
@@ -131,8 +163,8 @@ pub fn SourcePath::display_name(self : SourcePath) -> String {
 }
 
 ///|
-pub fn SourcePath::server_file_uri(self : SourcePath) -> DocumentUri {
-  { value: "file://server/" + self.value }
+pub fn SourcePath::file_uri(self : SourcePath) -> DocumentUri {
+  { value: "file://local/" + self.value }
 }
 
 ///|
@@ -167,6 +199,18 @@ pub fn SourceDocument::snapshot(
     language_id=self.language_id,
     version=self.version,
   )
+}
+
+///|
+pub fn SourceDocument::to_json(self : SourceDocument) -> String {
+  let mut out = "{"
+  out = out + "\"uri\":" + json_string(self.uri.to_string())
+  out = out + ",\"displayName\":" + json_string(self.display_name)
+  out = out + ",\"languageId\":" + json_string(self.language_id)
+  out = out + ",\"version\":" + self.version.to_string()
+  out = out + ",\"revision\":" + json_string(self.revision)
+  out = out + ",\"text\":" + json_string(self.text)
+  out + "}"
 }
 
 ///|
@@ -235,4 +279,26 @@ fn is_ascii_alpha(unit : Int) -> Bool {
 ///|
 fn is_digit(unit : Int) -> Bool {
   48 <= unit && unit <= 57
+}
+
+///|
+fn json_string(value : String) -> String {
+  let mut out = "\""
+  for i in 0..<value.length() {
+    let unit = value[i].to_int()
+    if unit == 34 {
+      out = out + "\\\""
+    } else if unit == 92 {
+      out = out + "\\\\"
+    } else if unit == 10 {
+      out = out + "\\n"
+    } else if unit == 13 {
+      out = out + "\\r"
+    } else if unit == 9 {
+      out = out + "\\t"
+    } else {
+      out = out + value[i:i + 1].to_owned()
+    }
+  }
+  out + "\""
 }

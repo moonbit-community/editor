@@ -75,7 +75,7 @@ body {
 .code {
   width: max-content;
   margin: 0;
-  padding: 0 16px;
+  padding: 0 16px 0 6px;
   color: #202938;
   font: 13px/22px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: pre;

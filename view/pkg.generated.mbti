@@ -1,0 +1,51 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/view"
+
+import {
+  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/decorations",
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/syntax",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn render(@core.DocumentSnapshot, Viewport, Array[@syntax.Token], @decorations.DecorationSet, @language.ProviderResult) -> RenderModel
+
+// Errors
+
+// Types and methods
+pub(all) struct RenderLine {
+  line_number : Int
+  offset : Int
+  text : String
+  spans : Array[RenderSpan]
+} derive(@debug.Debug)
+
+pub(all) struct RenderModel {
+  version : Int
+  language_id : String
+  line_count : Int
+  viewport : Viewport
+  lines : Array[RenderLine]
+  diagnostics : Array[@language.Diagnostic]
+  hovers : Array[@language.Hover]
+} derive(@debug.Debug)
+pub fn RenderModel::to_json(Self) -> String
+
+pub(all) struct RenderSpan {
+  start : Int
+  end : Int
+  text : String
+  class_name : String
+} derive(@debug.Debug)
+
+pub(all) struct Viewport {
+  start_line : Int
+  end_line : Int
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
+

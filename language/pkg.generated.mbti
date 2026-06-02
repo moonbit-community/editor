@@ -1,0 +1,62 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/language"
+
+import {
+  "baozhiyuan/editor/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn demo_providers(@core.DocumentSnapshot) -> ProviderResult
+
+// Errors
+
+// Types and methods
+pub(all) struct Diagnostic {
+  range : @core.Range
+  severity : DiagnosticSeverity
+  message : String
+} derive(@debug.Debug)
+
+pub(all) enum DiagnosticSeverity {
+  Error
+  Warning
+  Info
+} derive(Eq, @debug.Debug)
+pub fn DiagnosticSeverity::label(Self) -> String
+
+pub(all) struct DocumentSymbol {
+  name : String
+  kind : String
+  range : @core.Range
+} derive(@debug.Debug)
+
+pub(all) struct Hover {
+  range : @core.Range
+  contents : String
+} derive(@debug.Debug)
+
+pub(all) struct Location {
+  uri : String
+  range : @core.Range
+} derive(@debug.Debug)
+
+pub(all) struct ProviderResult {
+  hovers : Array[Hover]
+  diagnostics : Array[Diagnostic]
+  definitions : Array[Location]
+  symbols : Array[DocumentSymbol]
+  semantic_tokens : Array[SemanticToken]
+} derive(@debug.Debug)
+pub fn ProviderResult::empty() -> Self
+pub fn ProviderResult::hover_at(Self, Int) -> Hover?
+
+pub(all) struct SemanticToken {
+  range : @core.Range
+  token_type : String
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
+

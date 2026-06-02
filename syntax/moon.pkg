@@ -1,0 +1,7 @@
+import {
+  "baozhiyuan/editor/core",
+}
+
+import {
+  "moonbitlang/core/debug",
+} for "test"

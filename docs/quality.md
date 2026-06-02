@@ -3,10 +3,10 @@
 ## Required Checks
 
 ```sh
-npm run check
-npm run test
-npm run build
-npm run test:browser
+just check
+just test
+just build
+just test-browser
 ```
 
 ## Guardrails

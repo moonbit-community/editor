@@ -5,13 +5,13 @@ without hidden setup.
 
 ## Commands
 
-- `npm run check`: MoonBit type check plus architecture guardrails.
-- `npm run test`: MoonBit unit tests.
-- `npm run build`: MoonBit web build plus Vite production build.
-- `npm run test:browser`: Playwright smoke tests.
-- `npm run dev`: build generated MoonBit JS and serve the browser viewer.
+- `just check`: MoonBit type check plus architecture guardrails.
+- `just test`: MoonBit unit tests.
+- `just build`: MoonBit web build plus Vite production build.
+- `just test-browser`: Playwright smoke tests.
+- `just dev`: build generated MoonBit JS and serve the browser viewer.
 
-The npm harness uses MoonBit `.mbtx` scripts in `scripts/` for helper tasks.
+The `justfile` harness uses MoonBit `.mbtx` scripts in `scripts/` for helper tasks.
 
 ## Browser Observability
 

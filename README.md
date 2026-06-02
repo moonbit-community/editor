@@ -7,8 +7,8 @@ Monaco and CodeMirror checked in as reference-only submodules.
 
 ```sh
 npm install
-npm run check
-npm run dev
+just check
+just dev
 ```
 
 The first milestone is a browser viewer backed by immutable MoonBit document,
@@ -17,10 +17,10 @@ syntax, decoration, language-provider, and render-model packages.
 ## Validation
 
 ```sh
-npm run check
-npm run test
-npm run build
-npm run test:browser
+just check
+just test
+just build
+just test-browser
 ```
 
 See [docs/architecture.md](docs/architecture.md) and [docs/harness.md](docs/harness.md).

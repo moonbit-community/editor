@@ -2,6 +2,6 @@
 
 ## MoonBit Constructors
 
-- Prefer MoonBit same-name struct constructors for a type's primary constructor: define `fn Type::Type(...) -> Type` and call it as `Type(...)` or `@pkg.Type(...)`.
-- Do not expose a primary constructor as `Type::new`; reserve named constructors such as `empty`, `from_array`, or other descriptive names for alternate construction paths.
-- Use a same-name constructor even when construction performs validation, normalization, or derives hidden fields, as long as it is still the canonical way to create that type.
+- Primary struct constructors use `fn Type::Type(...) -> Type` and are called as `Type(...)` or `@pkg.Type(...)`.
+- Reserve named constructors such as `empty` or `from_array` for alternate construction paths.
+- Canonical constructors may validate, normalize, or derive hidden fields.

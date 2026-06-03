@@ -14,6 +14,10 @@ pub fn demo_provider() -> &LanguageProvider
 
 pub fn demo_providers(@core.DocumentSnapshot) -> ProviderResult
 
+pub fn lsp_hover_request(Int, @workspace.SourceDocument, Int) -> String
+
+pub fn lsp_initialize_request(Int) -> String
+
 // Errors
 
 // Types and methods
@@ -46,6 +50,22 @@ pub(all) struct Location {
   range : @core.Range
 } derive(@debug.Debug)
 
+pub struct LspClient {
+  // private fields
+}
+pub fn LspClient::LspClient(&LspTransport) -> Self
+pub fn LspClient::clear_last_error(Self) -> Unit
+pub async fn LspClient::hover_at(Self, @workspace.SourceDocument, Int) -> Hover?
+pub fn LspClient::is_initialized(Self) -> Bool
+pub fn LspClient::last_error(Self) -> String
+pub async fn LspClient::sync_document(Self, @workspace.SourceDocument) -> ProviderResult
+
+pub struct LspSubscription {
+  // private fields
+}
+pub fn LspSubscription::LspSubscription(() -> Unit) -> Self
+pub fn LspSubscription::dispose(Self) -> Unit
+
 pub(all) struct ProviderResult {
   hovers : Array[Hover]
   diagnostics : Array[Diagnostic]
@@ -70,5 +90,11 @@ pub(open) trait LanguageProvider {
   fn definitions(Self, @core.DocumentSnapshot) -> Array[Location]
   fn symbols(Self, @core.DocumentSnapshot) -> Array[DocumentSymbol]
   fn semantic_tokens(Self, @core.DocumentSnapshot) -> Array[SemanticToken]
+}
+
+pub(open) trait LspTransport {
+  async fn request(Self, String) -> String
+  async fn notify(Self, String) -> Unit
+  fn subscribe(Self, (String) -> Unit) -> LspSubscription
 }
 

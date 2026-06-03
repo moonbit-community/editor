@@ -100,6 +100,86 @@ pub extern "js" fn provider_disposable(dispose : () -> Unit) -> HostDisposable =
   #| (dispose) => ({ dispose })
 
 ///|
+extern "js" fn lsp_transport_request(
+  message : String,
+  signal : @js_async.AbortSignal,
+) -> @js_async.Promise[String] =
+  #| (message, signal) => {
+  #|   const transport = globalThis.__readonlyEditorLspTransport;
+  #|   if (transport && typeof transport.request === "function") {
+  #|     return Promise.resolve(transport.request(message, { signal }));
+  #|   }
+  #|   let id = null;
+  #|   try {
+  #|     id = JSON.parse(message).id ?? null;
+  #|   } catch {
+  #|   }
+  #|   return Promise.resolve(JSON.stringify({
+  #|     jsonrpc: "2.0",
+  #|     id,
+  #|     error: { code: -32099, message: "No LSP transport is registered." }
+  #|   }));
+  #| }
+
+///|
+extern "js" fn lsp_transport_notify(
+  message : String,
+  signal : @js_async.AbortSignal,
+) -> @js_async.Promise[String] =
+  #| (message, signal) => {
+  #|   const transport = globalThis.__readonlyEditorLspTransport;
+  #|   if (transport && typeof transport.notify === "function") {
+  #|     return Promise.resolve(transport.notify(message, { signal })).then(() => "");
+  #|   }
+  #|   return Promise.resolve("");
+  #| }
+
+///|
+extern "js" fn lsp_transport_subscribe(
+  listener : (String) -> Unit,
+) -> HostDisposable =
+  #| (listener) => {
+  #|   const transport = globalThis.__readonlyEditorLspTransport;
+  #|   if (transport && typeof transport.subscribe === "function") {
+  #|     return transport.subscribe(listener) || { dispose() {} };
+  #|   }
+  #|   return { dispose() {} };
+  #| }
+
+///|
+priv struct BrowserLspTransport {}
+
+///|
+pub fn browser_lsp_transport() -> &@language.LspTransport {
+  BrowserLspTransport::{  }
+}
+
+///|
+impl @language.LspTransport for BrowserLspTransport with fn request(
+  _self,
+  message,
+) {
+  @js_async.run_promise(signal => lsp_transport_request(message, signal))
+}
+
+///|
+impl @language.LspTransport for BrowserLspTransport with fn notify(
+  _self,
+  message,
+) {
+  ignore(@js_async.run_promise(signal => lsp_transport_notify(message, signal)))
+}
+
+///|
+impl @language.LspTransport for BrowserLspTransport with fn subscribe(
+  _self,
+  listener,
+) {
+  let disposable = lsp_transport_subscribe(listener)
+  LspSubscription(() => disposable.dispose())
+}
+
+///|
 extern "js" fn HostReadResult::ok(self : HostReadResult) -> Bool =
   #| (result) => !!(result && result.ok === true)
 
@@ -227,7 +307,9 @@ pub extern "js" fn mount_render_model(payload : String) -> Unit =
   #| }
 
 ///|
-pub extern "js" fn register_render_callback(callback : () -> Unit) -> Unit =
+pub extern "js" fn register_render_callback(
+  callback : () -> @js_async.Promise[Unit],
+) -> Unit =
   #| (callback) => {
   #|   globalThis.__readonlyEditorRender = callback;
   #| }
@@ -246,4 +328,12 @@ pub extern "js" fn register_watch_callback(
 ) -> Unit =
   #| (callback) => {
   #|   globalThis.__readonlyEditorWatchSource = callback;
+  #| }
+
+///|
+pub extern "js" fn register_hover_callback(
+  callback : (Int, Int) -> @js_async.Promise[String],
+) -> Unit =
+  #| (callback) => {
+  #|   globalThis.__readonlyEditorHover = callback;
   #| }

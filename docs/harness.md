@@ -18,6 +18,10 @@ The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.
 The browser host logs structured events prefixed with `[readonly-editor]`:
 
 - `moonbit:render`: source line count, token count, diagnostic count.
+- `lsp:initialize`: LSP client initialization state for the active document.
+- `lsp:diagnostics`: active document diagnostic count and version after LSP sync.
+- `lsp:hover`: successful on-demand hover resolution for the active document.
+- `lsp:error`: transport or protocol errors that did not block readonly render.
 - `dom:mounted`: rendered line and diagnostic counts after DOM creation.
 
 These events are intentionally stable so automated agents can diagnose render

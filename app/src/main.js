@@ -18,6 +18,7 @@ const root = document.getElementById('app');
 let activeSession = null;
 
 installBrowserFileSystemBackend();
+installBrowserLspBackend();
 
 globalThis.__readonlyEditorEvent = (name, payload) => {
   let parsed = payload;
@@ -164,6 +165,199 @@ function createBrowserFileSystemProvider() {
   }
 
   return provider;
+}
+
+function installBrowserLspBackend() {
+  if (globalThis.__readonlyEditorLspTransport) {
+    return;
+  }
+
+  const listeners = new Set();
+  const documents = new Map();
+  const messages = [];
+  globalThis.__readonlyEditorLspMessages = messages;
+
+  globalThis.__readonlyEditorLspTransport = {
+    async request(message, { signal } = {}) {
+      messages.push({ type: 'request', message });
+      if (signal?.aborted) {
+        throw fileError('AbortError', 'LSP request was cancelled.');
+      }
+      const request = parseLspMessage(message);
+      if (request.method === 'initialize') {
+        return lspResponse(request.id, {
+          capabilities: {
+            textDocumentSync: 1,
+            hoverProvider: true
+          }
+        });
+      }
+      if (request.method === 'textDocument/hover') {
+        const uri = request.params?.textDocument?.uri;
+        const document = documents.get(uri);
+        return lspResponse(request.id, hoverForDocument(document, request.params?.position));
+      }
+      return lspError(request.id, -32601, `Unsupported LSP request ${request.method || ''}.`);
+    },
+
+    async notify(message, { signal } = {}) {
+      messages.push({ type: 'notify', message });
+      if (signal?.aborted) {
+        throw fileError('AbortError', 'LSP notification was cancelled.');
+      }
+      const notification = parseLspMessage(message);
+      if (notification.method === 'textDocument/didOpen') {
+        const item = notification.params?.textDocument;
+        if (item?.uri) {
+          documents.set(item.uri, {
+            uri: item.uri,
+            languageId: item.languageId || '',
+            version: item.version || 1,
+            text: item.text || ''
+          });
+          publishDiagnostics(item.uri);
+        }
+      } else if (notification.method === 'textDocument/didChange') {
+        const item = notification.params?.textDocument;
+        const text = notification.params?.contentChanges?.[0]?.text;
+        if (item?.uri && typeof text === 'string') {
+          const previous = documents.get(item.uri) || { uri: item.uri };
+          documents.set(item.uri, {
+            ...previous,
+            version: item.version || previous.version || 1,
+            text
+          });
+          publishDiagnostics(item.uri);
+        }
+      } else if (notification.method === 'textDocument/didClose') {
+        const uri = notification.params?.textDocument?.uri;
+        if (uri) {
+          documents.delete(uri);
+        }
+      }
+    },
+
+    subscribe(listener) {
+      listeners.add(listener);
+      return {
+        dispose() {
+          listeners.delete(listener);
+        }
+      };
+    }
+  };
+
+  function publishDiagnostics(uri) {
+    const document = documents.get(uri);
+    if (!document) {
+      return;
+    }
+    const diagnostics = diagnosticsForDocument(document);
+    const message = {
+      jsonrpc: '2.0',
+      method: 'textDocument/publishDiagnostics',
+      params: {
+        uri,
+        version: document.version,
+        diagnostics
+      }
+    };
+    for (const listener of listeners) {
+      listener(JSON.stringify(message));
+    }
+  }
+}
+
+function parseLspMessage(message) {
+  try {
+    return JSON.parse(message);
+  } catch {
+    return {};
+  }
+}
+
+function lspResponse(id, result) {
+  return JSON.stringify({
+    jsonrpc: '2.0',
+    id: id ?? null,
+    result
+  });
+}
+
+function lspError(id, code, message) {
+  return JSON.stringify({
+    jsonrpc: '2.0',
+    id: id ?? null,
+    error: { code, message }
+  });
+}
+
+function diagnosticsForDocument(document) {
+  const todo = document.text.indexOf('TODO');
+  if (todo < 0) {
+    return [];
+  }
+  return [{
+    range: {
+      start: offsetToPosition(document.text, todo),
+      end: offsetToPosition(document.text, todo + 4)
+    },
+    severity: 2,
+    message: 'Fake LSP diagnostic from readonly transport'
+  }];
+}
+
+function hoverForDocument(document, position) {
+  if (!document || !position) {
+    return null;
+  }
+  const offset = offsetFromPosition(document.text, position);
+  const main = document.text.indexOf('main');
+  if (main < 0 || offset < main || offset > main + 4) {
+    return null;
+  }
+  return {
+    contents: {
+      kind: 'plaintext',
+      value: 'Fake LSP hover for main'
+    },
+    range: {
+      start: offsetToPosition(document.text, main),
+      end: offsetToPosition(document.text, main + 4)
+    }
+  };
+}
+
+function offsetToPosition(text, offset) {
+  const safeOffset = Math.max(0, Math.min(offset, text.length));
+  let line = 0;
+  let character = 0;
+  for (let index = 0; index < safeOffset; index += 1) {
+    if (text.charCodeAt(index) === 10) {
+      line += 1;
+      character = 0;
+    } else {
+      character += 1;
+    }
+  }
+  return { line, character };
+}
+
+function offsetFromPosition(text, position) {
+  let line = 0;
+  let character = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    if (line === position.line && character === position.character) {
+      return index;
+    }
+    if (text.charCodeAt(index) === 10) {
+      line += 1;
+      character = 0;
+    } else {
+      character += 1;
+    }
+  }
+  return text.length;
 }
 
 async function chooseLocalFile() {
@@ -410,7 +604,7 @@ class DocumentSession {
   async renderCurrentDocument() {
     await this.loadRenderer();
     if (typeof globalThis.__readonlyEditorRender === 'function') {
-      globalThis.__readonlyEditorRender();
+      await globalThis.__readonlyEditorRender();
     }
   }
 
@@ -541,6 +735,8 @@ function createCodeViewer(model) {
         }
         node.dataset.start = String(line.offset + span.start);
         node.dataset.end = String(line.offset + span.end);
+        node.addEventListener('mouseenter', () => requestHoverForSpan(node, model));
+        node.addEventListener('focus', () => requestHoverForSpan(node, model));
         code.appendChild(node);
       }
     }
@@ -640,4 +836,44 @@ function statusLabel(status) {
 
 function hoverForRange(hovers, start, end) {
   return hovers.find((hover) => hover.range.start < end && start < hover.range.end);
+}
+
+async function requestHoverForSpan(node, model) {
+  if (node.dataset.hoverState === 'loading' || !globalThis.__readonlyEditorHover) {
+    return;
+  }
+  const start = Number(node.dataset.start);
+  const end = Number(node.dataset.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return;
+  }
+
+  const cached = hoverForRange(model.hovers || [], start, end);
+  if (cached) {
+    applyHover(node, cached);
+    return;
+  }
+
+  node.dataset.hoverState = 'loading';
+  const offset = Math.floor((start + end) / 2);
+  const requestedVersion = model.version;
+  try {
+    const payload = await globalThis.__readonlyEditorHover(offset, requestedVersion);
+    const result = JSON.parse(payload);
+    if (!result.ok || result.version !== activeSession?.document?.version || requestedVersion !== result.version) {
+      return;
+    }
+    const hover = result.hover;
+    if (hover && hover.range?.start < end && start < hover.range?.end) {
+      applyHover(node, hover);
+    }
+  } finally {
+    delete node.dataset.hoverState;
+  }
+}
+
+function applyHover(node, hover) {
+  node.classList.add('has-hover');
+  node.title = hover.contents;
+  node.dataset.hover = hover.contents;
 }

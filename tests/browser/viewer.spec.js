@@ -16,11 +16,11 @@ test('renders highlighted readonly code and diagnostics', async ({ page }) => {
   await expect(page.locator('.tok-keyword').first()).toHaveText('pub');
   await expect(page.locator('.tok-string')).toContainText('"hello"');
   await expect(page.locator('.diag-warning')).toContainText('TODO');
-  await expect(page.locator('.diagnostic-item')).toContainText('Demo diagnostic');
+  await expect(page.locator('.diagnostic-item')).toContainText('Fake LSP diagnostic');
 
-  const hover = page.locator('[data-hover]').first();
-  await expect(hover).toHaveAttribute('data-hover', /entry point symbol/);
+  const hover = page.locator('.code span', { hasText: 'main' }).first();
   await hover.hover();
+  await expect(hover).toHaveAttribute('data-hover', /Fake LSP hover for main/);
 
   await page.locator('.code-viewer').evaluate((node) => {
     node.scrollTop = node.scrollHeight;
@@ -28,6 +28,9 @@ test('renders highlighted readonly code and diagnostics', async ({ page }) => {
   await expect(page.locator('.code-line').last()).toBeVisible();
   expect(events.some((event) => event.includes('moonbit:render'))).toBeTruthy();
   expect(events.some((event) => event.includes('dom:mounted'))).toBeTruthy();
+  expect(events.some((event) => event.includes('lsp:initialize'))).toBeTruthy();
+  expect(events.some((event) => event.includes('lsp:diagnostics'))).toBeTruthy();
+  expect(events.some((event) => event.includes('lsp:hover'))).toBeTruthy();
 });
 
 test('keeps code cells content-sized while rows span horizontal scroll width', async ({ page }) => {
@@ -85,6 +88,11 @@ test('renders a provider file and refreshes when content changes', async ({ page
     });
   }, { uri: fixtureUri, text: original.replace('"hello"', '"synced"') });
   await expect(page.locator('.tok-string')).toContainText('"synced"', { timeout: 5_000 });
+  await expect.poll(() => page.evaluate(() => {
+    return globalThis.__readonlyEditorLspMessages
+      .filter((entry) => entry.type === 'notify' && entry.message.includes('textDocument/didChange'))
+      .length;
+  })).toBeGreaterThan(0);
 });
 
 test('shows missing state and resumes when watched file reappears', async ({ page }) => {

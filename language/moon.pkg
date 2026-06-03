@@ -1,4 +1,9 @@
 import {
   "baozhiyuan/editor/core",
   "baozhiyuan/editor/workspace",
+  "moonbitlang/core/json",
 }
+
+import {
+  "moonbitlang/async",
+} for "wbtest"

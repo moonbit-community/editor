@@ -56,10 +56,10 @@ pub(all) struct FileWatch {
 }
 
 ///|
-pub(all) struct FileSystemProvider {
-  scheme : String
-  read_file : async (DocumentUri) -> FileReadResult
-  watch : (DocumentUri, WatchOptions, (Array[FileChange]) -> Unit) -> FileWatch
+pub(open) trait FileSystemProvider {
+  fn scheme(Self) -> String
+  async fn read_file(Self, DocumentUri) -> FileReadResult
+  fn watch(Self, DocumentUri, WatchOptions, (Array[FileChange]) -> Unit) -> FileWatch
 }
 
 ///|
@@ -99,11 +99,11 @@ pub fn FileWatch::dispose(self : FileWatch) -> Unit {
 }
 
 ///|
-pub async fn FileSystemProvider::read_source_document(
-  self : FileSystemProvider,
+pub async fn read_source_document(
+  provider : &FileSystemProvider,
   uri : DocumentUri,
 ) -> SourceDocumentLoadResult {
-  if uri.scheme() != self.scheme {
+  if uri.scheme() != provider.scheme() {
     return SourceDocumentLoadError(
       FileSystemProviderError(
         InvalidUri,
@@ -112,7 +112,7 @@ pub async fn FileSystemProvider::read_source_document(
       ),
     )
   }
-  match (self.read_file)(uri) {
+  match provider.read_file(uri) {
     FileReadOk(content) =>
       SourceDocumentLoaded(SourceDocument::from_file_content(uri, content))
     FileReadError(error) => SourceDocumentLoadError(error)
@@ -120,13 +120,13 @@ pub async fn FileSystemProvider::read_source_document(
 }
 
 ///|
-pub fn FileSystemProvider::watch_file(
-  self : FileSystemProvider,
+pub fn watch_file(
+  provider : &FileSystemProvider,
   uri : DocumentUri,
   listener : (Array[FileChange]) -> Unit,
 ) -> FileWatch {
-  if uri.scheme() == self.scheme {
-    (self.watch)(uri, WatchOptions::default(), listener)
+  if uri.scheme() == provider.scheme() {
+    provider.watch(uri, WatchOptions::default(), listener)
   } else {
     { dispose: () => () }
   }

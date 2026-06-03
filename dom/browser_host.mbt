@@ -138,8 +138,36 @@ extern "js" fn HostReadResult::revision(self : HostReadResult) -> String =
   #|   : ""
 
 ///|
-pub fn browser_file_system_provider() -> @workspace.FileSystemProvider {
-  { scheme: "file", read_file: read_browser_file, watch: watch_browser_file }
+priv struct BrowserFileSystemProvider {}
+
+///|
+pub fn browser_file_system_provider() -> &@workspace.FileSystemProvider {
+  BrowserFileSystemProvider::{  }
+}
+
+///|
+impl @workspace.FileSystemProvider for BrowserFileSystemProvider with fn scheme(
+  _self,
+) {
+  "file"
+}
+
+///|
+impl @workspace.FileSystemProvider for BrowserFileSystemProvider with fn read_file(
+  _self,
+  uri,
+) {
+  read_browser_file(uri)
+}
+
+///|
+impl @workspace.FileSystemProvider for BrowserFileSystemProvider with fn watch(
+  _self,
+  uri,
+  options,
+  listener,
+) {
+  watch_browser_file(uri, options, listener)
 }
 
 ///|

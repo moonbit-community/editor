@@ -44,21 +44,9 @@ test "parses document uris" {
 ///|
 async test "filesystem provider reads source documents by uri" {
   let uri = expect_uri("file://local/demo.mbt")
-  let provider = @workspace.FileSystemProvider::{
-    scheme: "file",
-    read_file: _uri => {
-      FileReadOk(
-        FileContent(
-          "pub fn main {}\n",
-          display_name="demo.mbt",
-          revision="rev-1",
-        ),
-      )
-    },
-    watch: (_uri, _options, _listener) => { dispose: () => () },
-  }
+  let provider = TestFileSystemProvider::{  }
 
-  match provider.read_source_document(uri) {
+  match @workspace.read_source_document(provider, uri) {
     SourceDocumentLoaded(document) => {
       assert_eq(document.uri.to_string(), "file://local/demo.mbt")
       assert_eq(document.display_name, "demo.mbt")
@@ -75,15 +63,9 @@ async test "filesystem provider reads source documents by uri" {
 ///|
 async test "filesystem provider rejects mismatched schemes" {
   let uri = expect_uri("memory://demo.mbt")
-  let provider = @workspace.FileSystemProvider::{
-    scheme: "file",
-    read_file: _uri => {
-      FileReadError(FileSystemProviderError(FileNotFound, "not found", uri~))
-    },
-    watch: (_uri, _options, _listener) => { dispose: () => () },
-  }
+  let provider = TestFileSystemProvider::{  }
 
-  match provider.read_source_document(uri) {
+  match @workspace.read_source_document(provider, uri) {
     SourceDocumentLoadError(error) => assert_true(error.code == InvalidUri)
     SourceDocumentLoaded(document) =>
       fail("unexpected document " + document.uri.to_string())
@@ -147,4 +129,34 @@ fn expect_uri(raw_uri : String) -> @workspace.DocumentUri raise {
     ParsedDocumentUri(uri) => uri
     DocumentUriError(error) => fail("unexpected uri error " + error.to_string())
   }
+}
+
+///|
+struct TestFileSystemProvider {}
+
+///|
+impl @workspace.FileSystemProvider for TestFileSystemProvider with fn scheme(
+  _self,
+) {
+  "file"
+}
+
+///|
+impl @workspace.FileSystemProvider for TestFileSystemProvider with fn read_file(
+  _self,
+  _uri,
+) {
+  FileReadOk(
+    FileContent("pub fn main {}\n", display_name="demo.mbt", revision="rev-1"),
+  )
+}
+
+///|
+impl @workspace.FileSystemProvider for TestFileSystemProvider with fn watch(
+  _self,
+  _uri,
+  _options,
+  _listener,
+) {
+  { dispose: () => () }
 }

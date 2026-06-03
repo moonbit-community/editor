@@ -9,6 +9,10 @@ import {
 // Values
 pub fn infer_language_id(String) -> String
 
+pub async fn read_source_document(&FileSystemProvider, DocumentUri) -> SourceDocumentLoadResult
+
+pub fn watch_file(&FileSystemProvider, DocumentUri, (Array[FileChange]) -> Unit) -> FileWatch
+
 // Errors
 
 // Types and methods
@@ -53,14 +57,6 @@ pub(all) enum FileReadResult {
   FileReadOk(FileContent)
   FileReadError(FileSystemProviderError)
 } derive(@debug.Debug)
-
-pub(all) struct FileSystemProvider {
-  scheme : String
-  read_file : async (DocumentUri) -> FileReadResult
-  watch : (DocumentUri, WatchOptions, (Array[FileChange]) -> Unit) -> FileWatch
-}
-pub async fn FileSystemProvider::read_source_document(Self, DocumentUri) -> SourceDocumentLoadResult
-pub fn FileSystemProvider::watch_file(Self, DocumentUri, (Array[FileChange]) -> Unit) -> FileWatch
 
 pub(all) struct FileSystemProviderError {
   code : FileSystemProviderErrorCode
@@ -137,4 +133,9 @@ pub fn WatchOptions::default() -> Self
 // Type aliases
 
 // Traits
+pub(open) trait FileSystemProvider {
+  fn scheme(Self) -> String
+  async fn read_file(Self, DocumentUri) -> FileReadResult
+  fn watch(Self, DocumentUri, WatchOptions, (Array[FileChange]) -> Unit) -> FileWatch
+}
 

@@ -11,7 +11,7 @@ fn main {
 async fn load_source_document(uri_value : String) -> String {
   let provider = @dom.browser_file_system_provider()
   let result = match @workspace.DocumentUri::parse(uri_value) {
-    ParsedDocumentUri(uri) => provider.read_source_document(uri)
+    ParsedDocumentUri(uri) => @workspace.read_source_document(provider, uri)
     DocumentUriError(_) =>
       SourceDocumentLoadError(
         FileSystemProviderError(InvalidUri, "Invalid document URI " + uri_value),
@@ -28,7 +28,7 @@ fn watch_source_document(
   match @workspace.DocumentUri::parse(uri_value) {
     ParsedDocumentUri(uri) => {
       let provider = @dom.browser_file_system_provider()
-      let watch = provider.watch_file(uri, changes => {
+      let watch = @workspace.watch_file(provider, uri, changes => {
         emit(@workspace.FileChange::array_to_json(changes))
       })
       @dom.provider_disposable(() => watch.dispose())

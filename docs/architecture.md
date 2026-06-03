@@ -9,7 +9,7 @@ CodeMirror and Monaco without carrying editing machinery.
 - `syntax`: whole-document lexical highlighting for the first milestone.
 - `decorations`: range-based visual annotations without edit mapping.
 - `workspace`: readonly source document identity, URI/path normalization, filesystem-provider contracts, language inference, and snapshot conversion.
-- `language`: provider result types plus deterministic demo providers.
+- `language`: provider traits, provider result types, and deterministic demo providers.
 - `view`: DOM-neutral render model and JSON serialization.
 - `dom`: JavaScript FFI boundary for the active backend host.
 - `web`: MoonBit main package that reads source documents through a filesystem provider and emits a render model.

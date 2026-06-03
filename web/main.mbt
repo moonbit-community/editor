@@ -42,7 +42,8 @@ fn render_current_document() -> Unit {
   let source_document = current_source_document()
   let doc = source_document.snapshot()
   let tokens = @syntax.highlight(doc)
-  let providers = @language.demo_providers(doc)
+  let provider = @language.demo_provider()
+  let providers = @language.collect_provider_result(provider, doc)
   let decorations = decorations_from_diagnostics(providers.diagnostics)
   let model = @view.render(
     doc,

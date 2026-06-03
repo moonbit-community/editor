@@ -8,6 +8,10 @@ import {
 }
 
 // Values
+pub fn collect_provider_result(&LanguageProvider, @core.DocumentSnapshot) -> ProviderResult
+
+pub fn demo_provider() -> &LanguageProvider
+
 pub fn demo_providers(@core.DocumentSnapshot) -> ProviderResult
 
 // Errors
@@ -60,4 +64,11 @@ pub(all) struct SemanticToken {
 // Type aliases
 
 // Traits
+pub(open) trait LanguageProvider {
+  fn hovers(Self, @core.DocumentSnapshot) -> Array[Hover]
+  fn diagnostics(Self, @core.DocumentSnapshot) -> Array[Diagnostic]
+  fn definitions(Self, @core.DocumentSnapshot) -> Array[Location]
+  fn symbols(Self, @core.DocumentSnapshot) -> Array[DocumentSymbol]
+  fn semantic_tokens(Self, @core.DocumentSnapshot) -> Array[SemanticToken]
+}
 

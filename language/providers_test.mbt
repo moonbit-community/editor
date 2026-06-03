@@ -1,7 +1,8 @@
 ///|
 test "demo providers expose hover diagnostic and definition" {
   let doc = @core.DocumentSnapshot("fn main { // TODO\n }")
-  let providers = demo_providers(doc)
+  let provider = demo_provider()
+  let providers = collect_provider_result(provider, doc)
   assert_eq(providers.hovers.length(), 1)
   assert_eq(providers.diagnostics.length(), 1)
   assert_eq(providers.definitions.length(), 1)

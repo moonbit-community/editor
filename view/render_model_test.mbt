@@ -5,7 +5,8 @@ test "render model contains highlighted spans and diagnostics" {
   let decorations = @decorations.DecorationSet::from_array([
     Decoration(Range(13, 17), Diagnostic, "diag-warning", message="todo"),
   ])
-  let providers = @language.demo_providers(doc)
+  let provider = @language.demo_provider()
+  let providers = @language.collect_provider_result(provider, doc)
   let model = render(
     doc,
     { start_line: 0, end_line: 2 },

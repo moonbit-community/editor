@@ -2,7 +2,7 @@ default:
     just --list
 
 check:
-    moon check --warn-list +73
+    moon check --target all --warn-list +73
 
 test-moon:
     moon test

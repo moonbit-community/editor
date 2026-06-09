@@ -1,0 +1,6 @@
+import {
+  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/decorations",
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/syntax",
+}

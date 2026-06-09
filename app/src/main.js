@@ -19,6 +19,7 @@ let activeSession = null;
 let hoverTooltip = null;
 
 installBrowserFileSystemBackend();
+installBrowserRemoteProtocolBackend();
 installBrowserLspBackend();
 
 globalThis.__readonlyEditorEvent = (name, payload) => {
@@ -326,15 +327,147 @@ function installBrowserLspBackend() {
   }
 }
 
+function installBrowserRemoteProtocolBackend() {
+  if (globalThis.__readonlyEditorRemoteProtocolTransport) {
+    return;
+  }
+
+  globalThis.__readonlyEditorRemoteProtocolMessages = [];
+  globalThis.__readonlyEditorRemoteProtocolTransport = {
+    async request(packet, { signal } = {}) {
+      globalThis.__readonlyEditorRemoteProtocolMessages.push({ type: 'request', packet });
+      const request = parseProtocolPacket(packet);
+      if (request.type === 'OpenDocument') {
+        return readRemoteDocument(request, { signal, responseType: 'DocumentLoaded' });
+      }
+      return protocolErrorPacket(
+        request,
+        'InvalidPacket',
+        `Unsupported remote protocol request ${request.type || 'unknown'}.`
+      );
+    },
+
+    watch(packet, listener) {
+      globalThis.__readonlyEditorRemoteProtocolMessages.push({ type: 'watch', packet });
+      const request = parseProtocolPacket(packet);
+      if (request.type !== 'WatchDocument') {
+        queueMicrotask(() => {
+          listener(protocolErrorPacket(request, 'InvalidPacket', 'Unsupported remote watch request.'));
+        });
+        return { dispose() {} };
+      }
+
+      const localUri = remoteUriToLocalFileUri(request.uri);
+      if (!localUri || typeof globalThis.__readonlyEditorProviderWatchFile !== 'function') {
+        queueMicrotask(() => {
+          listener(providerErrorPacket(request, 'Unavailable', 'No remote watch provider is registered.'));
+        });
+        return { dispose() {} };
+      }
+
+      return globalThis.__readonlyEditorProviderWatchFile(localUri, async (payload) => {
+        const changes = parseRemoteFileChanges(localUri, payload);
+        if (changes.some((change) => change.type === 'deleted')) {
+          listener(providerErrorPacket(request, 'FileNotFound', 'Watched source file was deleted.'));
+          return;
+        }
+        listener(await readRemoteDocument(request, { responseType: 'DocumentChanged' }));
+      }) || { dispose() {} };
+    }
+  };
+}
+
+async function readRemoteDocument(request, { signal, responseType = 'DocumentLoaded' } = {}) {
+  const localUri = remoteUriToLocalFileUri(request.uri);
+  if (!localUri || typeof globalThis.__readonlyEditorProviderReadFile !== 'function') {
+    return providerErrorPacket(request, 'InvalidUri', 'Invalid readonly remote workspace URI.');
+  }
+
+  const result = await globalThis.__readonlyEditorProviderReadFile(localUri, signal);
+  if (!result?.ok) {
+    return providerErrorPacket(
+      request,
+      result?.code || 'Unavailable',
+      result?.message || 'Unable to read remote source document.'
+    );
+  }
+
+  return JSON.stringify({
+    version: 1,
+    type: responseType,
+    id: request.id || '',
+    document: {
+      uri: request.uri,
+      displayName: result.displayName || uriDisplayName(localUri),
+      languageId: result.languageId || '',
+      version: 1,
+      revision: result.revision || String(result.text?.length || 0),
+      text: result.text || ''
+    }
+  });
+}
+
+function protocolErrorPacket(request, code, message) {
+  return JSON.stringify({
+    version: 1,
+    type: 'Error',
+    id: request.id || '',
+    error: {
+      code,
+      message,
+      requestId: request.id || ''
+    }
+  });
+}
+
+function providerErrorPacket(request, providerCode, message) {
+  return JSON.stringify({
+    version: 1,
+    type: 'Error',
+    id: request.id || '',
+    error: {
+      code: 'ProviderError',
+      message: message || providerCode,
+      requestId: request.id || '',
+      providerCode
+    }
+  });
+}
+
+function parseProtocolPacket(packet) {
+  try {
+    return JSON.parse(packet);
+  } catch {
+    return {};
+  }
+}
+
+function remoteUriToLocalFileUri(uri) {
+  const prefix = 'readonly-remote://workspace/';
+  if (typeof uri !== 'string' || !uri.startsWith(prefix)) {
+    return '';
+  }
+  const path = uri.slice(prefix.length);
+  if (!path || path.startsWith('/') || path.includes('/../') || path.startsWith('../')) {
+    return '';
+  }
+  return `file://local/${path}`;
+}
+
+function parseRemoteFileChanges(uri, payload) {
+  try {
+    const parsed = JSON.parse(payload);
+    return normalizeFileChanges(uri, parsed);
+  } catch {
+    return [{ uri, type: 'changed' }];
+  }
+}
+
 function lspWebSocketEndpoint() {
   if (typeof globalThis.__readonlyEditorLspEndpoint === 'string') {
     return globalThis.__readonlyEditorLspEndpoint;
   }
-  if (location.protocol !== 'http:' && location.protocol !== 'https:') {
-    return '';
-  }
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${location.host}/__readonly_editor_lsp`;
+  return '';
 }
 
 function parseLspMessage(message) {

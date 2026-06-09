@@ -1,0 +1,8 @@
+import {
+  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/remote_protocol",
+  "baozhiyuan/editor/workspace",
+}
+
+supported_targets = "native"

@@ -1,19 +1,19 @@
 ///|
 fn main {
-  @dom.register_render_callback(() => {
+  @browser.register_render_callback(() => {
     @js_async.Promise::from_async(() => render_current_document())
   })
   lsp_client().set_diagnostics_listener(
-    Some((_uri, _version) => @dom.queue_render()),
+    Some((_uri, _version) => @browser.queue_render()),
   )
-  @dom.register_load_callback(uri => {
+  @browser.register_load_callback(uri => {
     @js_async.Promise::from_async(() => load_source_document(uri))
   })
-  @dom.register_watch_callback(watch_source_document)
-  @dom.register_hover_callback((offset, version) => {
+  @browser.register_watch_callback(watch_source_document)
+  @browser.register_hover_callback((offset, version) => {
     @js_async.Promise::from_async(() => hover_current_document(offset, version))
   })
-  @dom.register_definition_callback((offset, version) => {
+  @browser.register_definition_callback((offset, version) => {
     @js_async.Promise::from_async(() => {
       definition_current_document(offset, version)
     })
@@ -22,14 +22,14 @@ fn main {
 
 ///|
 let active_lsp_client : @language.LspClient = LspClient(
-  @dom.browser_lsp_transport(),
+  @browser.browser_lsp_transport(),
 )
 
 ///|
 async fn load_source_document(uri_value : String) -> String {
-  let provider = @dom.browser_file_system_provider()
   let result = match @workspace.DocumentUri::parse(uri_value) {
-    ParsedDocumentUri(uri) => @workspace.read_source_document(provider, uri)
+    ParsedDocumentUri(uri) =>
+      @workspace.read_source_document(provider_for_uri(uri), uri)
     DocumentUriError(_) =>
       SourceDocumentLoadError(
         FileSystemProviderError(InvalidUri, "Invalid document URI " + uri_value),
@@ -45,13 +45,24 @@ fn watch_source_document(
 ) -> @dom.HostDisposable {
   match @workspace.DocumentUri::parse(uri_value) {
     ParsedDocumentUri(uri) => {
-      let provider = @dom.browser_file_system_provider()
+      let provider = provider_for_uri(uri)
       let watch = @workspace.watch_file(provider, uri, changes => {
         emit(@workspace.FileChange::array_to_json(changes))
       })
-      @dom.provider_disposable(() => watch.dispose())
+      @browser.provider_disposable(() => watch.dispose())
     }
-    DocumentUriError(_) => @dom.provider_disposable(() => ())
+    DocumentUriError(_) => @browser.provider_disposable(() => ())
+  }
+}
+
+///|
+fn provider_for_uri(
+  uri : @workspace.DocumentUri,
+) -> &@workspace.FileSystemProvider {
+  if uri.scheme() == "readonly-remote" {
+    @browser.browser_remote_file_system_provider()
+  } else {
+    @browser.browser_file_system_provider()
   }
 }
 
@@ -64,27 +75,19 @@ async fn render_current_document() -> Unit {
   let providers = client.sync_document(source_document)
   emit_lsp_status(client, providers.diagnostics.length(), doc.version)
   let decorations = decorations_from_diagnostics(providers.diagnostics)
-  let model = @view.render(
+  let frame = @renderer.build_frame(
     doc,
     { start_line: 0, end_line: doc.line_count() },
     tokens,
     decorations,
     providers,
   )
-  let mut event_payload = "{"
-  event_payload = event_payload +
-    "\"lineCount\":" +
-    doc.line_count().to_string()
-  event_payload = event_payload +
-    ",\"tokenCount\":" +
-    tokens.length().to_string()
-  event_payload = event_payload + ",\"diagnosticCount\":"
-  event_payload = event_payload + providers.diagnostics.length().to_string()
-  event_payload = event_payload + ",\"version\":"
-  event_payload = event_payload + doc.version.to_string()
-  event_payload = event_payload + "}"
-  @dom.emit_event("moonbit:render", event_payload)
-  @dom.mount_render_model(model.to_json())
+  @browser.emit_render_event(
+    frame,
+    tokens.length(),
+    providers.diagnostics.length(),
+  )
+  @browser.mount_frame(frame)
 }
 
 ///|
@@ -96,7 +99,7 @@ async fn hover_current_document(offset : Int, expected_version : Int) -> String 
   let client = lsp_client()
   match client.hover_at(source_document, offset) {
     Some(hover) => {
-      @dom.emit_event(
+      @browser.emit_event(
         "lsp:hover",
         "{\"ok\":true,\"version\":" + source_document.version.to_string() + "}",
       )
@@ -105,7 +108,10 @@ async fn hover_current_document(offset : Int, expected_version : Int) -> String 
     None => {
       let error = client.last_error()
       if error != "" {
-        @dom.emit_event("lsp:error", "{\"message\":" + json_string(error) + "}")
+        @browser.emit_event(
+          "lsp:error",
+          "{\"message\":" + json_string(error) + "}",
+        )
         client.clear_last_error()
       }
       hover_response_json(false, source_document.version, None)
@@ -125,7 +131,7 @@ async fn definition_current_document(
   let client = lsp_client()
   match client.definition_at(source_document, offset) {
     Some(location) => {
-      @dom.emit_event(
+      @browser.emit_event(
         "lsp:definition",
         "{\"ok\":true,\"version\":" + source_document.version.to_string() + "}",
       )
@@ -134,7 +140,10 @@ async fn definition_current_document(
     None => {
       let error = client.last_error()
       if error != "" {
-        @dom.emit_event("lsp:error", "{\"message\":" + json_string(error) + "}")
+        @browser.emit_event(
+          "lsp:error",
+          "{\"message\":" + json_string(error) + "}",
+        )
         client.clear_last_error()
       }
       location_response_json(false, source_document.version, None)
@@ -146,17 +155,17 @@ async fn definition_current_document(
 fn current_source_document() -> @workspace.SourceDocument {
   SourceDocument(
     current_document_uri(),
-    @dom.get_display_name(),
-    @dom.get_language_id_hint(),
-    @dom.get_version(),
-    @dom.get_revision(),
-    @dom.get_source(),
+    @browser.get_display_name(),
+    @browser.get_language_id_hint(),
+    @browser.get_version(),
+    @browser.get_revision(),
+    @browser.get_source(),
   )
 }
 
 ///|
 fn current_document_uri() -> @workspace.DocumentUri {
-  match @workspace.DocumentUri::parse(@dom.get_uri()) {
+  match @workspace.DocumentUri::parse(@browser.get_uri()) {
     ParsedDocumentUri(uri) => uri
     DocumentUriError(_) => @workspace.DocumentUri::memory("demo.mbt")
   }
@@ -174,17 +183,17 @@ fn emit_lsp_status(
   version : Int,
 ) -> Unit {
   if client.is_initialized() {
-    @dom.emit_event(
+    @browser.emit_event(
       "lsp:initialize",
       "{\"ok\":true,\"version\":" + version.to_string() + "}",
     )
   }
   let error = client.last_error()
   if error != "" {
-    @dom.emit_event("lsp:error", "{\"message\":" + json_string(error) + "}")
+    @browser.emit_event("lsp:error", "{\"message\":" + json_string(error) + "}")
     client.clear_last_error()
   }
-  @dom.emit_event(
+  @browser.emit_event(
     "lsp:diagnostics",
     "{\"count\":" +
     diagnostic_count.to_string() +

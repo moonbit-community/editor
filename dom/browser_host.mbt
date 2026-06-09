@@ -147,6 +147,53 @@ extern "js" fn lsp_transport_subscribe(
   #| }
 
 ///|
+extern "js" fn remote_protocol_request(
+  packet : String,
+  signal : @js_async.AbortSignal,
+) -> @js_async.Promise[String] =
+  #| (packet, signal) => {
+  #|   const transport = globalThis.__readonlyEditorRemoteProtocolTransport;
+  #|   if (transport && typeof transport.request === "function") {
+  #|     return Promise.resolve(transport.request(packet, { signal }));
+  #|   }
+  #|   return Promise.resolve(JSON.stringify({
+  #|     version: 1,
+  #|     type: "Error",
+  #|     error: {
+  #|       code: "ProviderError",
+  #|       message: "No remote protocol transport is registered.",
+  #|       providerCode: "Unavailable"
+  #|     }
+  #|   }));
+  #| }
+
+///|
+extern "js" fn remote_protocol_watch(
+  packet : String,
+  listener : (String) -> Unit,
+) -> HostDisposable =
+  #| (packet, listener) => {
+  #|   const transport = globalThis.__readonlyEditorRemoteProtocolTransport;
+  #|   if (transport && typeof transport.watch === "function") {
+  #|     return transport.watch(packet, listener) || { dispose() {} };
+  #|   }
+  #|   return { dispose() {} };
+  #| }
+
+///|
+pub async fn request_remote_protocol(packet : String) -> String {
+  @js_async.run_promise(signal => remote_protocol_request(packet, signal))
+}
+
+///|
+pub fn watch_remote_protocol(
+  packet : String,
+  listener : (String) -> Unit,
+) -> HostDisposable {
+  remote_protocol_watch(packet, listener)
+}
+
+///|
 priv struct BrowserLspTransport {}
 
 ///|

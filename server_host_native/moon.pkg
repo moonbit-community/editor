@@ -1,0 +1,6 @@
+import {
+  "baozhiyuan/editor/server",
+  "baozhiyuan/editor/workspace",
+}
+
+supported_targets = "native"

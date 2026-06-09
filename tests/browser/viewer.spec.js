@@ -103,6 +103,39 @@ test('renders a provider file and refreshes when content changes', async ({ page
   })).toBeGreaterThan(0);
 });
 
+test('opens readonly remote workspace files through the protocol provider', async ({ page }) => {
+  await installTestLsp(page);
+  const localUri = 'file://local/docs/fixtures/demo.mbt';
+  const remoteUri = 'readonly-remote://workspace/docs/fixtures/demo.mbt';
+  const original = await fs.readFile('docs/fixtures/demo.mbt', 'utf8');
+  await installTestFileSystem(page, {
+    [localUri]: {
+      text: original,
+      displayName: 'docs/fixtures/demo.mbt',
+      revision: 'remote-rev-1'
+    }
+  });
+
+  await page.goto(`/?uri=${encodeURIComponent(remoteUri)}`);
+  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
+  await expect(page.locator('.editor-shell')).toHaveAttribute('data-source-uri', remoteUri);
+  await expect(page.locator('.code').first()).toContainText('pub fn main');
+  await expect.poll(() => page.evaluate(() => {
+    return globalThis.__readonlyEditorRemoteProtocolMessages
+      .filter((entry) => entry.type === 'request' || entry.type === 'watch')
+      .length;
+  })).toBeGreaterThan(0);
+
+  await page.evaluate(({ uri, text }) => {
+    globalThis.__readonlyEditorFileSystemProvider.__setFile(uri, {
+      text,
+      displayName: 'docs/fixtures/demo.mbt',
+      revision: 'remote-rev-2'
+    });
+  }, { uri: localUri, text: original.replace('"hello"', '"remote"') });
+  await expect(page.locator('.tok-string')).toContainText('"remote"', { timeout: 5_000 });
+});
+
 test('shows missing state and resumes when watched file reappears', async ({ page }) => {
   await installTestLsp(page);
   const fixtureUri = 'file://local/docs/fixtures/auto-sync-temp.mbt';

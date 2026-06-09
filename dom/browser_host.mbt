@@ -307,6 +307,24 @@ pub extern "js" fn mount_render_model(payload : String) -> Unit =
   #| }
 
 ///|
+pub extern "js" fn queue_render() -> Unit =
+  #| () => {
+  #|   if (typeof globalThis.__readonlyEditorRender === "function") {
+  #|     if (globalThis.__readonlyEditorRenderQueued) {
+  #|       return;
+  #|     }
+  #|     globalThis.__readonlyEditorRenderQueued = true;
+  #|     queueMicrotask(() => {
+  #|       Promise.resolve(globalThis.__readonlyEditorRender()).catch((error) => {
+  #|         console.error("[readonly-editor]", "moonbit:render-error", error);
+  #|       }).finally(() => {
+  #|         globalThis.__readonlyEditorRenderQueued = false;
+  #|       });
+  #|     });
+  #|   }
+  #| }
+
+///|
 pub extern "js" fn register_render_callback(
   callback : () -> @js_async.Promise[Unit],
 ) -> Unit =

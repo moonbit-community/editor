@@ -13,6 +13,19 @@ without hidden setup.
 
 The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.
 
+`just dev` exposes a browser LSP bridge at `/__readonly_editor_lsp`. The bridge
+starts `moon-lsp --stdio` by default. For absolute local file viewing, allow the
+target root through Vite and optionally pin the LSP working directory:
+
+```bash
+READONLY_EDITOR_FS_ALLOW=/path/to/moonbit/project \
+READONLY_EDITOR_LSP_ROOT=/path/to/moonbit/project \
+just dev --port 5173
+```
+
+The command and arguments can be overridden with
+`READONLY_EDITOR_LSP_COMMAND` and `READONLY_EDITOR_LSP_ARGS`.
+
 ## Browser Observability
 
 The browser host logs structured events prefixed with `[readonly-editor]`:

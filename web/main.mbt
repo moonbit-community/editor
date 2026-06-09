@@ -3,6 +3,9 @@ fn main {
   @dom.register_render_callback(() => {
     @js_async.Promise::from_async(() => render_current_document())
   })
+  lsp_client().set_diagnostics_listener(
+    Some((_uri, _version) => @dom.queue_render()),
+  )
   @dom.register_load_callback(uri => {
     @js_async.Promise::from_async(() => load_source_document(uri))
   })

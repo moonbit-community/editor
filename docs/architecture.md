@@ -37,8 +37,11 @@ MoonBit web module is loaded. The transport shape is:
 - `subscribe(listener) -> { dispose() }`: registers a raw JSON-RPC notification
   listener, primarily for `textDocument/publishDiagnostics`.
 
-If no host transport is injected, the browser app installs a deterministic fake
-LSP transport for tests and the default demo.
+When no host transport is injected, the Vite dev app connects to
+`/__readonly_editor_lsp`. The dev server owns a `moon-lsp --stdio` process and
+forwards raw JSON-RPC messages between the browser transport and the server.
+Production or embedded hosts should inject their own transport before loading the
+web module.
 
 ## Position Convention
 

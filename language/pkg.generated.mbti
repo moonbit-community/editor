@@ -61,6 +61,7 @@ pub async fn LspClient::definition_at(Self, @workspace.SourceDocument, Int) -> L
 pub async fn LspClient::hover_at(Self, @workspace.SourceDocument, Int) -> Hover?
 pub fn LspClient::is_initialized(Self) -> Bool
 pub fn LspClient::last_error(Self) -> String
+pub fn LspClient::set_diagnostics_listener(Self, ((String, Int) -> Unit)?) -> Unit
 pub async fn LspClient::sync_document(Self, @workspace.SourceDocument) -> ProviderResult
 
 pub struct LspSubscription {

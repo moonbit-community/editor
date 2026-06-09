@@ -178,73 +178,46 @@ function installBrowserLspBackend() {
   }
 
   const listeners = new Set();
-  const documents = new Map();
   const messages = [];
+  const endpoint = lspWebSocketEndpoint();
+  if (!endpoint) {
+    globalThis.__readonlyEditorLspMessages = messages;
+    return;
+  }
+
+  let socket = null;
+  let connectPromise = null;
+  const pending = new Map();
   globalThis.__readonlyEditorLspMessages = messages;
 
   globalThis.__readonlyEditorLspTransport = {
     async request(message, { signal } = {}) {
       messages.push({ type: 'request', message });
-      if (signal?.aborted) {
-        throw fileError('AbortError', 'LSP request was cancelled.');
-      }
       const request = parseLspMessage(message);
-      if (request.method === 'initialize') {
-        return lspResponse(request.id, {
-          capabilities: {
-            textDocumentSync: 1,
-            hoverProvider: true,
-            definitionProvider: true
-          }
-        });
+      if (signal?.aborted) {
+        return lspError(request.id, -32800, 'LSP request was cancelled.');
       }
-      if (request.method === 'textDocument/hover') {
-        const uri = request.params?.textDocument?.uri;
-        const document = documents.get(uri);
-        return lspResponse(request.id, hoverForDocument(document, request.params?.position));
+      try {
+        const ws = await connect();
+        if (signal?.aborted) {
+          return lspError(request.id, -32800, 'LSP request was cancelled.');
+        }
+        return await sendRequest(ws, message, request.id, signal);
+      } catch (error) {
+        return lspError(request.id, -32099, error.message || 'Unable to connect to moon-lsp.');
       }
-      if (request.method === 'textDocument/definition') {
-        const uri = request.params?.textDocument?.uri;
-        const document = documents.get(uri);
-        return lspResponse(request.id, definitionForDocument(document, request.params?.position));
-      }
-      return lspError(request.id, -32601, `Unsupported LSP request ${request.method || ''}.`);
     },
 
     async notify(message, { signal } = {}) {
       messages.push({ type: 'notify', message });
       if (signal?.aborted) {
-        throw fileError('AbortError', 'LSP notification was cancelled.');
+        return;
       }
-      const notification = parseLspMessage(message);
-      if (notification.method === 'textDocument/didOpen') {
-        const item = notification.params?.textDocument;
-        if (item?.uri) {
-          documents.set(item.uri, {
-            uri: item.uri,
-            languageId: item.languageId || '',
-            version: item.version || 1,
-            text: item.text || ''
-          });
-          publishDiagnostics(item.uri);
-        }
-      } else if (notification.method === 'textDocument/didChange') {
-        const item = notification.params?.textDocument;
-        const text = notification.params?.contentChanges?.[0]?.text;
-        if (item?.uri && typeof text === 'string') {
-          const previous = documents.get(item.uri) || { uri: item.uri };
-          documents.set(item.uri, {
-            ...previous,
-            version: item.version || previous.version || 1,
-            text
-          });
-          publishDiagnostics(item.uri);
-        }
-      } else if (notification.method === 'textDocument/didClose') {
-        const uri = notification.params?.textDocument?.uri;
-        if (uri) {
-          documents.delete(uri);
-        }
+      try {
+        const ws = await connect();
+        ws.send(JSON.stringify({ type: 'message', message }));
+      } catch (error) {
+        messages.push({ type: 'error', message: error.message || 'Unable to notify moon-lsp.' });
       }
     },
 
@@ -258,25 +231,110 @@ function installBrowserLspBackend() {
     }
   };
 
-  function publishDiagnostics(uri) {
-    const document = documents.get(uri);
-    if (!document) {
+  function connect() {
+    if (socket?.readyState === WebSocket.OPEN) {
+      return Promise.resolve(socket);
+    }
+    if (connectPromise) {
+      return connectPromise;
+    }
+    connectPromise = new Promise((resolve, reject) => {
+      const ws = new WebSocket(endpoint);
+      let opened = false;
+      ws.addEventListener('open', () => {
+        opened = true;
+        socket = ws;
+        resolve(ws);
+      }, { once: true });
+      ws.addEventListener('message', (event) => handleSocketMessage(event.data));
+      ws.addEventListener('error', () => {
+        const error = new Error('Unable to connect to moon-lsp.');
+        if (!opened) {
+          reject(error);
+        }
+        failPending(error.message);
+      });
+      ws.addEventListener('close', () => {
+        socket = null;
+        connectPromise = null;
+        failPending('moon-lsp connection closed.');
+        if (!opened) {
+          reject(new Error('moon-lsp connection closed.'));
+        }
+      });
+    });
+    return connectPromise;
+  }
+
+  function sendRequest(ws, message, id, signal) {
+    const key = lspIdKey(id);
+    if (!key) {
+      ws.send(JSON.stringify({ type: 'message', message }));
+      return Promise.resolve(lspError(id, -32600, 'LSP request missing id.'));
+    }
+    return new Promise((resolve) => {
+      let settled = false;
+      const settle = (value) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        pending.delete(key);
+        signal?.removeEventListener?.('abort', abort);
+        resolve(value);
+      };
+      const abort = () => settle(lspError(id, -32800, 'LSP request was cancelled.'));
+      signal?.addEventListener?.('abort', abort, { once: true });
+      pending.set(key, { id, settle });
+      ws.send(JSON.stringify({ type: 'message', message }));
+    });
+  }
+
+  function handleSocketMessage(data) {
+    let packet;
+    try {
+      packet = JSON.parse(data);
+    } catch {
       return;
     }
-    const diagnostics = diagnosticsForDocument(document);
-    const message = {
-      jsonrpc: '2.0',
-      method: 'textDocument/publishDiagnostics',
-      params: {
-        uri,
-        version: document.version,
-        diagnostics
-      }
-    };
+    if (packet.type === 'error') {
+      messages.push({ type: 'error', message: packet.message || 'moon-lsp transport error.' });
+      failPending(packet.message || 'moon-lsp transport error.');
+      return;
+    }
+    if (packet.type !== 'message' || typeof packet.message !== 'string') {
+      return;
+    }
+    const message = packet.message;
+    messages.push({ type: 'server', message });
+    const parsed = parseLspMessage(message);
+    const key = lspIdKey(parsed.id);
+    if (key && pending.has(key)) {
+      pending.get(key).settle(message);
+      return;
+    }
     for (const listener of listeners) {
-      listener(JSON.stringify(message));
+      listener(message);
     }
   }
+
+  function failPending(message) {
+    for (const [key, pendingRequest] of pending) {
+      pending.delete(key);
+      pendingRequest.settle(lspError(pendingRequest.id, -32099, message));
+    }
+  }
+}
+
+function lspWebSocketEndpoint() {
+  if (typeof globalThis.__readonlyEditorLspEndpoint === 'string') {
+    return globalThis.__readonlyEditorLspEndpoint;
+  }
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') {
+    return '';
+  }
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${location.host}/__readonly_editor_lsp`;
 }
 
 function parseLspMessage(message) {
@@ -287,14 +345,6 @@ function parseLspMessage(message) {
   }
 }
 
-function lspResponse(id, result) {
-  return JSON.stringify({
-    jsonrpc: '2.0',
-    id: id ?? null,
-    result
-  });
-}
-
 function lspError(id, code, message) {
   return JSON.stringify({
     jsonrpc: '2.0',
@@ -303,117 +353,8 @@ function lspError(id, code, message) {
   });
 }
 
-function diagnosticsForDocument(document) {
-  const todo = document.text.indexOf('TODO');
-  if (todo < 0) {
-    return [];
-  }
-  return [{
-    range: {
-      start: offsetToPosition(document.text, todo),
-      end: offsetToPosition(document.text, todo + 4)
-    },
-    severity: 2,
-    message: 'Fake LSP diagnostic from readonly transport'
-  }];
-}
-
-function hoverForDocument(document, position) {
-  if (!document || !position) {
-    return null;
-  }
-  const offset = offsetFromPosition(document.text, position);
-  const range = identifierRangeAtOffset(document.text, offset);
-  if (!range) {
-    return null;
-  }
-  const word = document.text.slice(range.start, range.end);
-  return {
-    contents: {
-      kind: 'plaintext',
-      value: `Fake LSP hover for ${word}`
-    },
-    range: {
-      start: offsetToPosition(document.text, range.start),
-      end: offsetToPosition(document.text, range.end)
-    }
-  };
-}
-
-function definitionForDocument(document, position) {
-  if (!document || !position) {
-    return null;
-  }
-  const offset = offsetFromPosition(document.text, position);
-  const range = identifierRangeAtOffset(document.text, offset);
-  if (!range) {
-    return null;
-  }
-  const word = document.text.slice(range.start, range.end);
-  const definitionStart = document.text.indexOf(word);
-  const definitionEnd = definitionStart + word.length;
-  return {
-    uri: document.uri,
-    range: {
-      start: offsetToPosition(document.text, definitionStart),
-      end: offsetToPosition(document.text, definitionEnd)
-    }
-  };
-}
-
-function identifierRangeAtOffset(text, offset) {
-  let index = Math.max(0, Math.min(offset, text.length));
-  if (index === text.length || !isIdentifierCharacter(text[index])) {
-    index -= 1;
-  }
-  if (index < 0 || !isIdentifierCharacter(text[index])) {
-    return null;
-  }
-  let start = index;
-  while (start > 0 && isIdentifierCharacter(text[start - 1])) {
-    start -= 1;
-  }
-  let end = index + 1;
-  while (end < text.length && isIdentifierCharacter(text[end])) {
-    end += 1;
-  }
-  return { start, end };
-}
-
-function isIdentifierCharacter(char) {
-  return typeof char === 'string' && /[A-Za-z0-9_]/.test(char);
-}
-
-function offsetToPosition(text, offset) {
-  const safeOffset = Math.max(0, Math.min(offset, text.length));
-  let line = 0;
-  let character = 0;
-  for (let index = 0; index < safeOffset; index += 1) {
-    if (text.charCodeAt(index) === 10) {
-      line += 1;
-      character = 0;
-    } else {
-      character += 1;
-    }
-  }
-  return { line, character };
-}
-
-function offsetFromPosition(text, position) {
-  let line = 0;
-  let character = 0;
-  for (let index = 0; index < text.length; index += 1) {
-    if (line === position.line && character === position.character) {
-      return index;
-    }
-    if (text.charCodeAt(index) === 10) {
-      line += 1;
-      character = 0;
-    } else {
-      character += 1;
-    }
-  }
-  return text.length;
+function lspIdKey(id) {
+  return id === undefined || id === null ? '' : String(id);
 }
 
 async function chooseLocalFile() {
@@ -521,7 +462,11 @@ function pathToLocalFileUri(path) {
   if (!path) {
     return '';
   }
-  return `file://local/${path.replaceAll('\\', '/')}`;
+  const normalized = path.replaceAll('\\', '/');
+  if (normalized.startsWith('/')) {
+    return new URL(`file://${normalized}`).href;
+  }
+  return `file://local/${normalized}`;
 }
 
 function fileUriForName(name) {
@@ -560,18 +505,25 @@ async function readViteLocalFile(uri, { signal } = {}) {
 }
 
 function localPathFromFileUri(uri) {
-  if (!uri.startsWith('file://local/')) {
+  if (uri.startsWith('file://local/')) {
+    const encoded = uri.slice('file://local'.length);
+    if (!encoded.startsWith('/')) {
+      return '';
+    }
+    const normalized = encoded.startsWith('//') ? encoded.slice(1) : encoded;
+    try {
+      return decodeURIComponent(normalized);
+    } catch {
+      return normalized;
+    }
+  }
+  if (!uri.startsWith('file:///')) {
     return '';
   }
-  const encoded = uri.slice('file://local'.length);
-  if (!encoded.startsWith('/')) {
-    return '';
-  }
-  const normalized = encoded.startsWith('//') ? encoded.slice(1) : encoded;
   try {
-    return decodeURIComponent(normalized);
+    return decodeURIComponent(new URL(uri).pathname);
   } catch {
-    return normalized;
+    return '';
   }
 }
 

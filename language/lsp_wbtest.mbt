@@ -7,6 +7,15 @@ test "builds initialize, hover, and definition requests" {
   assert_true(initialize.contains("\"publishDiagnostics\""))
   assert_true(initialize.contains("\"definition\""))
 
+  let file_document = file_document(1, "pub fn main {}\n")
+  let file_initialize = lsp_initialize_request_with_root(
+    10,
+    lsp_root_uri(file_document.uri),
+  )
+  assert_true(
+    file_initialize.contains("\"rootUri\":\"file:///Users/example/project\""),
+  )
+
   let hover = lsp_hover_request(8, document, 7)
   assert_true(hover.contains("\"method\":\"textDocument/hover\""))
   assert_true(hover.contains("\"uri\":\"memory://demo.mbt\""))
@@ -185,6 +194,23 @@ fn test_document(version : Int, text : String) -> @workspace.SourceDocument {
   SourceDocument(
     @workspace.DocumentUri::memory("demo.mbt"),
     "demo.mbt",
+    "moonbit",
+    version,
+    "rev-" + version.to_string(),
+    text,
+  )
+}
+
+///|
+fn file_document(version : Int, text : String) -> @workspace.SourceDocument {
+  let uri = match
+    @workspace.DocumentUri::parse("file:///Users/example/project/main.mbt") {
+    ParsedDocumentUri(parsed) => parsed
+    DocumentUriError(_) => @workspace.DocumentUri::memory("main.mbt")
+  }
+  SourceDocument(
+    uri,
+    "main.mbt",
     "moonbit",
     version,
     "rev-" + version.to_string(),

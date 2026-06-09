@@ -33,6 +33,7 @@ pub struct LspClient {
   priv active_version : Ref[Int]
   priv active_snapshot : Ref[@core.DocumentSnapshot?]
   priv diagnostics : Map[String, LspCachedDiagnostics]
+  priv diagnostics_listener : Ref[((String, Int) -> Unit)?]
   priv last_error : Ref[String]
 }
 
@@ -54,6 +55,7 @@ pub fn LspClient::LspClient(transport : &LspTransport) -> LspClient {
     active_version: Ref(0),
     active_snapshot: Ref(None),
     diagnostics: Map::default(),
+    diagnostics_listener: Ref(None),
     last_error: Ref(""),
   }
 }
@@ -74,12 +76,20 @@ pub fn LspClient::clear_last_error(self : LspClient) -> Unit {
 }
 
 ///|
+pub fn LspClient::set_diagnostics_listener(
+  self : LspClient,
+  listener : ((String, Int) -> Unit)?,
+) -> Unit {
+  self.diagnostics_listener.val = listener
+}
+
+///|
 pub async fn LspClient::sync_document(
   self : LspClient,
   document : @workspace.SourceDocument,
 ) -> ProviderResult {
   self.ensure_subscribed()
-  if !self.ensure_initialized() {
+  if !self.ensure_initialized(document) {
     return ProviderResult::empty()
   }
   self.sync_active_document(document)
@@ -147,13 +157,18 @@ pub async fn LspClient::definition_at(
 
 ///|
 pub fn lsp_initialize_request(id : Int) -> String {
+  lsp_initialize_request_with_root(id, Json::null())
+}
+
+///|
+fn lsp_initialize_request_with_root(id : Int, root_uri : Json) -> String {
   request_message(
     id,
     "initialize",
     json_object([
       ("processId", Json::null()),
       ("clientInfo", json_object([("name", Json::string("readonly-editor"))])),
-      ("rootUri", Json::null()),
+      ("rootUri", root_uri),
       (
         "capabilities",
         json_object([
@@ -228,12 +243,17 @@ fn LspClient::ensure_subscribed(self : LspClient) -> Unit {
 }
 
 ///|
-async fn LspClient::ensure_initialized(self : LspClient) -> Bool {
+async fn LspClient::ensure_initialized(
+  self : LspClient,
+  document : @workspace.SourceDocument,
+) -> Bool {
   if self.initialized.val {
     return true
   }
   let id = self.next_request_id()
-  let response = self.transport.request(lsp_initialize_request(id))
+  let response = self.transport.request(
+    lsp_initialize_request_with_root(id, lsp_root_uri(document.uri)),
+  )
   match parse_response_result(response) {
     ParsedLspResult(_) => {
       self.initialized.val = true
@@ -248,6 +268,23 @@ async fn LspClient::ensure_initialized(self : LspClient) -> Bool {
       false
     }
   }
+}
+
+///|
+fn lsp_root_uri(uri : @workspace.DocumentUri) -> Json {
+  let raw = uri.to_string()
+  if raw.has_prefix("file:///") {
+    let mut last_slash = -1
+    for i in 0..<raw.length() {
+      if raw[i].to_int() == 47 {
+        last_slash = i
+      }
+    }
+    if last_slash > "file://".length() {
+      return Json::string(raw[0:last_slash].to_owned())
+    }
+  }
+  Json::null()
 }
 
 ///|
@@ -321,6 +358,10 @@ fn LspClient::handle_publish_diagnostics(
                 version: parsed.version,
                 diagnostics: parsed.diagnostics,
               })
+              match self.diagnostics_listener.val {
+                Some(listener) => listener(parsed.uri, parsed.version)
+                None => ()
+              }
             }
           }
         None => ()

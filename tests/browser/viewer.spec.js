@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { promises as fs } from 'node:fs';
 
 test('renders highlighted readonly code and diagnostics', async ({ page }) => {
+  await installTestLsp(page);
   const events = [];
   page.on('console', (message) => {
     if (message.text().includes('[readonly-editor]')) {
@@ -39,6 +40,7 @@ test('renders highlighted readonly code and diagnostics', async ({ page }) => {
 });
 
 test('keeps code cells content-sized while rows span horizontal scroll width', async ({ page }) => {
+  await installTestLsp(page);
   await page.setViewportSize({ width: 432, height: 987 });
   await page.goto('/');
   await expect(page.locator('.code-lines')).toBeVisible();
@@ -70,6 +72,7 @@ test('keeps code cells content-sized while rows span horizontal scroll width', a
 });
 
 test('renders a provider file and refreshes when content changes', async ({ page }) => {
+  await installTestLsp(page);
   const fixtureUri = 'file://local/docs/fixtures/demo.mbt';
   const original = await fs.readFile('docs/fixtures/demo.mbt', 'utf8');
   await installTestFileSystem(page, {
@@ -101,6 +104,7 @@ test('renders a provider file and refreshes when content changes', async ({ page
 });
 
 test('shows missing state and resumes when watched file reappears', async ({ page }) => {
+  await installTestLsp(page);
   const fixtureUri = 'file://local/docs/fixtures/auto-sync-temp.mbt';
   await installTestFileSystem(page, {
     [fixtureUri]: {
@@ -130,6 +134,200 @@ test('shows missing state and resumes when watched file reappears', async ({ pag
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready', { timeout: 5_000 });
   await expect(page.locator('.tok-string')).toContainText('"two"');
 });
+
+async function installTestLsp(page) {
+  await page.addInitScript(() => {
+    const listeners = new Set();
+    const documents = new Map();
+    const messages = [];
+    globalThis.__readonlyEditorLspMessages = messages;
+    globalThis.__readonlyEditorLspTransport = {
+      async request(message) {
+        messages.push({ type: 'request', message });
+        const request = parse(message);
+        if (request.method === 'initialize') {
+          return response(request.id, {
+            capabilities: {
+              textDocumentSync: 1,
+              hoverProvider: true,
+              definitionProvider: true
+            }
+          });
+        }
+        if (request.method === 'textDocument/hover') {
+          const document = documents.get(request.params?.textDocument?.uri);
+          return response(request.id, hoverFor(document, request.params?.position));
+        }
+        if (request.method === 'textDocument/definition') {
+          const document = documents.get(request.params?.textDocument?.uri);
+          return response(request.id, definitionFor(document, request.params?.position));
+        }
+        return JSON.stringify({
+          jsonrpc: '2.0',
+          id: request.id ?? null,
+          error: { code: -32601, message: 'Unsupported test LSP request.' }
+        });
+      },
+
+      async notify(message) {
+        messages.push({ type: 'notify', message });
+        const notification = parse(message);
+        if (notification.method === 'textDocument/didOpen') {
+          const item = notification.params?.textDocument;
+          if (item?.uri) {
+            documents.set(item.uri, {
+              uri: item.uri,
+              languageId: item.languageId || '',
+              version: item.version || 1,
+              text: item.text || ''
+            });
+            publishDiagnostics(item.uri);
+          }
+        } else if (notification.method === 'textDocument/didChange') {
+          const item = notification.params?.textDocument;
+          const text = notification.params?.contentChanges?.[0]?.text;
+          if (item?.uri && typeof text === 'string') {
+            const previous = documents.get(item.uri) || { uri: item.uri };
+            documents.set(item.uri, {
+              ...previous,
+              version: item.version || previous.version || 1,
+              text
+            });
+            publishDiagnostics(item.uri);
+          }
+        } else if (notification.method === 'textDocument/didClose') {
+          documents.delete(notification.params?.textDocument?.uri);
+        }
+      },
+
+      subscribe(listener) {
+        listeners.add(listener);
+        return {
+          dispose() {
+            listeners.delete(listener);
+          }
+        };
+      }
+    };
+
+    function publishDiagnostics(uri) {
+      const document = documents.get(uri);
+      const todo = document?.text.indexOf('TODO') ?? -1;
+      const diagnostics = todo < 0 ? [] : [{
+        range: {
+          start: offsetToPosition(document.text, todo),
+          end: offsetToPosition(document.text, todo + 4)
+        },
+        severity: 2,
+        message: 'Fake LSP diagnostic from readonly transport'
+      }];
+      const message = JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'textDocument/publishDiagnostics',
+        params: { uri, version: document?.version || 1, diagnostics }
+      });
+      for (const listener of listeners) {
+        listener(message);
+      }
+    }
+
+    function hoverFor(document, position) {
+      const range = identifierRange(document, position);
+      if (!range) {
+        return null;
+      }
+      const word = document.text.slice(range.start, range.end);
+      return {
+        contents: { kind: 'plaintext', value: `Fake LSP hover for ${word}` },
+        range: {
+          start: offsetToPosition(document.text, range.start),
+          end: offsetToPosition(document.text, range.end)
+        }
+      };
+    }
+
+    function definitionFor(document, position) {
+      const range = identifierRange(document, position);
+      if (!range) {
+        return null;
+      }
+      const word = document.text.slice(range.start, range.end);
+      const start = document.text.indexOf(word);
+      return {
+        uri: document.uri,
+        range: {
+          start: offsetToPosition(document.text, start),
+          end: offsetToPosition(document.text, start + word.length)
+        }
+      };
+    }
+
+    function identifierRange(document, position) {
+      if (!document || !position) {
+        return null;
+      }
+      let index = offsetFromPosition(document.text, position);
+      if (index === document.text.length || !/[A-Za-z0-9_]/.test(document.text[index])) {
+        index -= 1;
+      }
+      if (index < 0 || !/[A-Za-z0-9_]/.test(document.text[index])) {
+        return null;
+      }
+      let start = index;
+      while (start > 0 && /[A-Za-z0-9_]/.test(document.text[start - 1])) {
+        start -= 1;
+      }
+      let end = index + 1;
+      while (end < document.text.length && /[A-Za-z0-9_]/.test(document.text[end])) {
+        end += 1;
+      }
+      return { start, end };
+    }
+
+    function offsetToPosition(text, offset) {
+      let line = 0;
+      let character = 0;
+      for (let index = 0; index < offset; index += 1) {
+        if (text.charCodeAt(index) === 10) {
+          line += 1;
+          character = 0;
+        } else {
+          character += 1;
+        }
+      }
+      return { line, character };
+    }
+
+    function offsetFromPosition(text, position) {
+      let line = 0;
+      let character = 0;
+      for (let index = 0; index < text.length; index += 1) {
+        if (line === position.line && character === position.character) {
+          return index;
+        }
+        if (text.charCodeAt(index) === 10) {
+          line += 1;
+          character = 0;
+        } else {
+          character += 1;
+        }
+      }
+      return text.length;
+    }
+
+    function parse(message) {
+      try {
+        return JSON.parse(message);
+      } catch {
+        return {};
+      }
+    }
+
+    function response(id, result) {
+      return JSON.stringify({ jsonrpc: '2.0', id: id ?? null, result });
+    }
+  });
+}
 
 async function installTestFileSystem(page, initialFiles) {
   await page.addInitScript((files) => {

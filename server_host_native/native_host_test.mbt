@@ -21,6 +21,19 @@ async test "native lsp transport reports unavailable process host" {
 }
 
 ///|
+async test "configured native lsp transport exchanges stdio frames" {
+  let script = "dd bs=1 count=62 of=/dev/null 2>/dev/null; printf 'Content-Length: 38\\r\\n\\r\\n{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":null}'"
+  let transport = @server_host_native.native_lsp_transport_for_command(
+    "/bin/sh",
+    ["-c", script],
+  )
+  let response = transport.request(
+    "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"test\"}",
+  )
+  assert_true(response.contains("\"result\":null"))
+}
+
+///|
 test "native lsp stdio framing uses content length headers" {
   let message = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":null}"
   let frame = @server_host_native.lsp_stdio_frame(message)

@@ -9,8 +9,8 @@ Native host adapter for server-side effects.
   `server.LspTransport` trait.
 - Keep filesystem reads, file watching, process spawning, timers, sockets, and
   `moon-lsp --stdio` lifecycle effects outside server policy code.
-- Own stdio LSP `Content-Length` framing helpers and surface unconfigured
-  process access as structured JSON-RPC errors.
+- Own configured stdio LSP process startup, `Content-Length` framing, and
+  structured JSON-RPC errors when no process command is configured.
 - Return structured host errors when native capabilities are unavailable.
 
 ## Boundaries

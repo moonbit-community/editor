@@ -1,6 +1,9 @@
 import {
   "baozhiyuan/editor/server",
   "baozhiyuan/editor/workspace",
+  "moonbitlang/async/io",
+  "moonbitlang/async/process",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/string",
 }
 

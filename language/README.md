@@ -9,8 +9,6 @@ Readonly language-provider contracts.
 - Define feature-specific semantic provider traits and the migration
   `LanguageProvider` aggregate.
 - Keep the deterministic demo provider for local tests and fallback fixtures.
-- Keep the existing `LspClient` as migration code until server-owned LSP
-  providers replace it.
 
 ## Boundaries
 
@@ -22,5 +20,5 @@ Readonly language-provider contracts.
 
 ## Checks
 
-- Package tests live in `providers_test.mbt` and `lsp_wbtest.mbt`.
+- Package tests live in `providers_test.mbt`.
 - Run `just check` for the repository-level type check.

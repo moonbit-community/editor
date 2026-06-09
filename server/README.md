@@ -9,10 +9,13 @@ Native-side remote workspace policy and protocol dispatch.
 - Read and cache readonly source documents through `ServerHost`.
 - Manage file watches, close/dispose behavior, semantic language-feature
   requests, and remote protocol dispatch.
+- Own the migration LSP client, request/notification flow, and LSP-to-semantic
+  result conversion until it is replaced by a hardened production client.
 
 ## Boundaries
 
-- May depend on `workspace`, `language`, and `remote_protocol`.
+- May depend on `core`, `workspace`, `language`, `remote_protocol`, and JSON
+  support.
 - Must not import renderer packages, browser backend packages, `dom`, or `web`.
 - Native effects stay behind the `ServerHost` trait; server code owns policy and
   routing.

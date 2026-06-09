@@ -40,7 +40,7 @@ pub struct LspClient {
 ///|
 priv struct LspCachedDiagnostics {
   version : Int
-  diagnostics : Array[Diagnostic]
+  diagnostics : Array[@language.Diagnostic]
 }
 
 ///|
@@ -87,10 +87,10 @@ pub fn LspClient::set_diagnostics_listener(
 pub async fn LspClient::sync_document(
   self : LspClient,
   document : @workspace.SourceDocument,
-) -> ProviderResult {
+) -> @language.ProviderResult {
   self.ensure_subscribed()
   if !self.ensure_initialized(document) {
-    return ProviderResult::empty()
+    return @language.ProviderResult::empty()
   }
   self.sync_active_document(document)
   {
@@ -107,7 +107,7 @@ pub async fn LspClient::hover_at(
   self : LspClient,
   document : @workspace.SourceDocument,
   offset : Int,
-) -> Hover? {
+) -> @language.Hover? {
   ignore(self.sync_document(document))
   if !self.initialized.val {
     return None
@@ -133,7 +133,7 @@ pub async fn LspClient::definition_at(
   self : LspClient,
   document : @workspace.SourceDocument,
   offset : Int,
-) -> Location? {
+) -> @language.Location? {
   ignore(self.sync_document(document))
   if !self.initialized.val {
     return None
@@ -312,7 +312,7 @@ async fn LspClient::sync_active_document(
 fn LspClient::diagnostics_for_document(
   self : LspClient,
   document : @workspace.SourceDocument,
-) -> Array[Diagnostic] {
+) -> Array[@language.Diagnostic] {
   match self.diagnostics.get(document.uri.to_string()) {
     Some(cached) =>
       if cached.version == -1 || cached.version == document.version {
@@ -374,7 +374,7 @@ fn LspClient::handle_publish_diagnostics(
 priv struct ParsedDiagnostics {
   uri : String
   version : Int
-  diagnostics : Array[Diagnostic]
+  diagnostics : Array[@language.Diagnostic]
 }
 
 ///|
@@ -407,7 +407,10 @@ fn parse_publish_diagnostics(
 }
 
 ///|
-fn parse_diagnostic(item : Json, doc : @core.DocumentSnapshot) -> Diagnostic? {
+fn parse_diagnostic(
+  item : Json,
+  doc : @core.DocumentSnapshot,
+) -> @language.Diagnostic? {
   match json_field(item, "range") {
     Some(range_json) =>
       match parse_lsp_range(range_json, doc) {
@@ -424,7 +427,7 @@ fn parse_diagnostic(item : Json, doc : @core.DocumentSnapshot) -> Diagnostic? {
 }
 
 ///|
-fn diagnostic_severity(value : Int?) -> DiagnosticSeverity {
+fn diagnostic_severity(value : Int?) -> @language.DiagnosticSeverity {
   match value {
     Some(1) => Error
     Some(2) => Warning
@@ -437,7 +440,7 @@ fn parse_hover_result(
   result : Json,
   doc : @core.DocumentSnapshot,
   offset : Int,
-) -> Hover? {
+) -> @language.Hover? {
   match result {
     Null => None
     Object(_) =>
@@ -504,12 +507,12 @@ fn fallback_hover_range(
 fn parse_definition_result(
   result : Json,
   document : @workspace.SourceDocument,
-) -> Location? {
+) -> @language.Location? {
   match result {
     Null => None
     Object(_) => parse_location_result(result, document)
     Array(items) => {
-      let mut found : Location? = None
+      let mut found : @language.Location? = None
       for item in items {
         if found is None {
           found = parse_location_result(item, document)
@@ -525,7 +528,7 @@ fn parse_definition_result(
 fn parse_location_result(
   value : Json,
   document : @workspace.SourceDocument,
-) -> Location? {
+) -> @language.Location? {
   match value {
     Object(_) => {
       let uri = match json_string_field(value, "uri") {

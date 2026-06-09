@@ -1,7 +1,13 @@
 import {
+  "baozhiyuan/editor/core",
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/remote_protocol",
   "baozhiyuan/editor/workspace",
+  "moonbitlang/core/json",
 }
 
 supported_targets = "native"
+
+import {
+  "moonbitlang/async",
+} for "wbtest"

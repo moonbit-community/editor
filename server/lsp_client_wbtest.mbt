@@ -171,7 +171,7 @@ fn parse_hover_for_test(
   raw : String,
   doc : @core.DocumentSnapshot,
   offset : Int,
-) -> Hover? {
+) -> @language.Hover? {
   match parse_response_result(raw) {
     ParsedLspResult(result) => parse_hover_result(result, doc, offset)
     LspResponseError(_) => None
@@ -182,7 +182,7 @@ fn parse_hover_for_test(
 fn parse_definition_for_test(
   raw : String,
   document : @workspace.SourceDocument,
-) -> Location? {
+) -> @language.Location? {
   match parse_response_result(raw) {
     ParsedLspResult(result) => parse_definition_result(result, document)
     LspResponseError(_) => None

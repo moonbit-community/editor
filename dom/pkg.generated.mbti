@@ -30,6 +30,8 @@ pub fn mount_render_model(String) -> Unit
 
 pub fn provider_disposable(() -> Unit) -> HostDisposable
 
+pub fn register_definition_callback((Int, Int) -> @js_async.Promise[String]) -> Unit
+
 pub fn register_hover_callback((Int, Int) -> @js_async.Promise[String]) -> Unit
 
 pub fn register_load_callback((String) -> @js_async.Promise[String]) -> Unit

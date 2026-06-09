@@ -10,6 +10,11 @@ fn main {
   @dom.register_hover_callback((offset, version) => {
     @js_async.Promise::from_async(() => hover_current_document(offset, version))
   })
+  @dom.register_definition_callback((offset, version) => {
+    @js_async.Promise::from_async(() => {
+      definition_current_document(offset, version)
+    })
+  })
 }
 
 ///|
@@ -106,6 +111,35 @@ async fn hover_current_document(offset : Int, expected_version : Int) -> String 
 }
 
 ///|
+async fn definition_current_document(
+  offset : Int,
+  expected_version : Int,
+) -> String {
+  let source_document = current_source_document()
+  if source_document.version != expected_version {
+    return location_response_json(false, source_document.version, None)
+  }
+  let client = lsp_client()
+  match client.definition_at(source_document, offset) {
+    Some(location) => {
+      @dom.emit_event(
+        "lsp:definition",
+        "{\"ok\":true,\"version\":" + source_document.version.to_string() + "}",
+      )
+      location_response_json(true, source_document.version, Some(location))
+    }
+    None => {
+      let error = client.last_error()
+      if error != "" {
+        @dom.emit_event("lsp:error", "{\"message\":" + json_string(error) + "}")
+        client.clear_last_error()
+      }
+      location_response_json(false, source_document.version, None)
+    }
+  }
+}
+
+///|
 fn current_source_document() -> @workspace.SourceDocument {
   SourceDocument(
     current_document_uri(),
@@ -169,6 +203,32 @@ fn hover_response_json(
     Some(item) => out = out + ",\"hover\":" + hover_json(item)
     None => ()
   }
+  out + "}"
+}
+
+///|
+fn location_response_json(
+  ok : Bool,
+  version : Int,
+  location : @language.Location?,
+) -> String {
+  let mut out = "{\"ok\":" + ok.to_string()
+  out = out + ",\"version\":" + version.to_string()
+  match location {
+    Some(item) => out = out + ",\"location\":" + location_json(item)
+    None => ()
+  }
+  out + "}"
+}
+
+///|
+fn location_json(location : @language.Location) -> String {
+  let mut out = "{"
+  out = out + "\"uri\":" + json_string(location.uri.to_string())
+  out = out + ",\"range\":{"
+  out = out + "\"start\":" + location.range.start.to_string()
+  out = out + ",\"end\":" + location.range.end.to_string()
+  out = out + "}"
   out + "}"
 }
 

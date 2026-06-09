@@ -1,16 +1,23 @@
 ///|
-test "builds initialize and hover requests" {
+test "builds initialize, hover, and definition requests" {
   let document = test_document(1, "pub fn main {}\n")
   let initialize = lsp_initialize_request(7)
   assert_true(initialize.contains("\"method\":\"initialize\""))
   assert_true(initialize.contains("\"id\":7"))
   assert_true(initialize.contains("\"publishDiagnostics\""))
+  assert_true(initialize.contains("\"definition\""))
 
   let hover = lsp_hover_request(8, document, 7)
   assert_true(hover.contains("\"method\":\"textDocument/hover\""))
   assert_true(hover.contains("\"uri\":\"memory://demo.mbt\""))
   assert_true(hover.contains("\"line\":0"))
   assert_true(hover.contains("\"character\":7"))
+
+  let definition = lsp_definition_request(9, document, 8)
+  assert_true(definition.contains("\"method\":\"textDocument/definition\""))
+  assert_true(definition.contains("\"uri\":\"memory://demo.mbt\""))
+  assert_true(definition.contains("\"line\":0"))
+  assert_true(definition.contains("\"character\":8"))
 }
 
 ///|
@@ -40,6 +47,47 @@ test "normalizes hover result shapes" {
 
   let empty = hover_response("{\"contents\":\"\"}")
   assert_true(parse_hover_for_test(empty, doc, 0) is None)
+}
+
+///|
+test "normalizes definition result shapes" {
+  let document = test_document(1, "pub fn main {}\n")
+  let location = definition_response(
+    "{\"uri\":\"memory://demo.mbt\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
+  )
+  match parse_definition_for_test(location, document) {
+    Some(found) => {
+      assert_eq(found.uri.to_string(), "memory://demo.mbt")
+      assert_true(found.range == Range(7, 11))
+    }
+    None => fail("expected location")
+  }
+
+  let link = definition_response(
+    "[{\"targetUri\":\"memory://demo.mbt\",\"targetSelectionRange\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}]",
+  )
+  match parse_definition_for_test(link, document) {
+    Some(found) => {
+      assert_eq(found.uri.to_string(), "memory://demo.mbt")
+      assert_true(found.range == Range(7, 11))
+    }
+    None => fail("expected location link")
+  }
+
+  let external = definition_response(
+    "{\"uri\":\"memory://other.mbt\",\"range\":{\"start\":{\"line\":4,\"character\":2},\"end\":{\"line\":4,\"character\":8}}}",
+  )
+  match parse_definition_for_test(external, document) {
+    Some(found) => {
+      assert_eq(found.uri.to_string(), "memory://other.mbt")
+      assert_true(found.range == Range(0, 0))
+    }
+    None => fail("expected external location")
+  }
+
+  assert_true(
+    parse_definition_for_test(definition_response("null"), document) is None,
+  )
 }
 
 ///|
@@ -85,7 +133,27 @@ async test "lsp client requests hover through transport" {
 }
 
 ///|
+async test "lsp client requests definition through transport" {
+  let transport = TestLspTransport::{ notifications: [], listener: Ref(None) }
+  let client = LspClient::LspClient(transport)
+  let document = test_document(1, "pub fn main {}\n")
+
+  match client.definition_at(document, 7) {
+    Some(location) => {
+      assert_eq(location.uri.to_string(), "memory://demo.mbt")
+      assert_true(location.range == Range(7, 11))
+    }
+    None => fail("expected definition")
+  }
+}
+
+///|
 fn hover_response(result : String) -> String {
+  "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":" + result + "}"
+}
+
+///|
+fn definition_response(result : String) -> String {
   "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":" + result + "}"
 }
 
@@ -97,6 +165,17 @@ fn parse_hover_for_test(
 ) -> Hover? {
   match parse_response_result(raw) {
     ParsedLspResult(result) => parse_hover_result(result, doc, offset)
+    LspResponseError(_) => None
+  }
+}
+
+///|
+fn parse_definition_for_test(
+  raw : String,
+  document : @workspace.SourceDocument,
+) -> Location? {
+  match parse_response_result(raw) {
+    ParsedLspResult(result) => parse_definition_result(result, document)
     LspResponseError(_) => None
   }
 }
@@ -122,10 +201,14 @@ struct TestLspTransport {
 ///|
 impl LspTransport for TestLspTransport with fn request(_self, message) {
   if message.contains("\"method\":\"initialize\"") {
-    "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"hoverProvider\":true}}}"
+    "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"hoverProvider\":true,\"definitionProvider\":true}}}"
   } else if message.contains("\"method\":\"textDocument/hover\"") {
     hover_response(
       "{\"contents\":\"LSP hover for main\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
+    )
+  } else if message.contains("\"method\":\"textDocument/definition\"") {
+    definition_response(
+      "{\"uri\":\"memory://demo.mbt\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
     )
   } else {
     "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32601,\"message\":\"unsupported\"}}"

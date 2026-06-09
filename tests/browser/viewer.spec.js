@@ -21,6 +21,10 @@ test('renders highlighted readonly code and diagnostics', async ({ page }) => {
   const hover = page.locator('.code span', { hasText: 'main' }).first();
   await hover.hover();
   await expect(hover).toHaveAttribute('data-hover', /Fake LSP hover for main/);
+  await expect(page.locator('.hover-tooltip')).toContainText('Fake LSP hover for main');
+  await hover.dblclick();
+  await expect(hover).toHaveAttribute('data-definition-uri', 'memory://demo.mbt');
+  await expect(hover).toHaveAttribute('data-definition-target', 'true');
 
   await page.locator('.code-viewer').evaluate((node) => {
     node.scrollTop = node.scrollHeight;
@@ -31,6 +35,7 @@ test('renders highlighted readonly code and diagnostics', async ({ page }) => {
   expect(events.some((event) => event.includes('lsp:initialize'))).toBeTruthy();
   expect(events.some((event) => event.includes('lsp:diagnostics'))).toBeTruthy();
   expect(events.some((event) => event.includes('lsp:hover'))).toBeTruthy();
+  expect(events.some((event) => event.includes('lsp:definition'))).toBeTruthy();
 });
 
 test('keeps code cells content-sized while rows span horizontal scroll width', async ({ page }) => {

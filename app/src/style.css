@@ -190,6 +190,43 @@ body {
   cursor: help;
 }
 
+.definition-candidate {
+  cursor: pointer;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.definition-candidate:focus {
+  outline: 2px solid #6aa6d8;
+  outline-offset: 2px;
+}
+
+.definition-target {
+  background: #d8ecff;
+  box-shadow: 0 0 0 2px #6aa6d8;
+}
+
+.hover-tooltip {
+  position: fixed;
+  z-index: 20;
+  max-width: min(420px, calc(100vw - 20px));
+  padding: 8px 10px;
+  border: 1px solid #2f3b52;
+  border-radius: 6px;
+  background: #202938;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgb(29 36 51 / 18%);
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
+.hover-tooltip[hidden] {
+  display: none;
+}
+
 .diagnostics {
   min-height: 72px;
   padding: 12px 16px;

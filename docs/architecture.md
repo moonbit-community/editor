@@ -21,9 +21,9 @@ the VS Code-style filesystem-provider contract (`readFile`, `watch`, and file
 change events). Future native or desktop backends should implement the same
 provider shape instead of changing the viewer pipeline. LSP transport effects
 remain a raw host bridge in `dom`; MoonBit owns LSP JSON-RPC message shaping,
-readonly document sync state, diagnostics, hover normalization, and stale-result
-discard. Product code must not import from `codemirror/` or `vscode/`. Only the
-`dom` package may declare JavaScript FFI.
+readonly document sync state, diagnostics, hover and definition normalization,
+and stale-result discard. Product code must not import from `codemirror/` or
+`vscode/`. Only the `dom` package may declare JavaScript FFI.
 
 ## Browser LSP Host Contract
 

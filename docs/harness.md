@@ -21,6 +21,7 @@ The browser host logs structured events prefixed with `[readonly-editor]`:
 - `lsp:initialize`: LSP client initialization state for the active document.
 - `lsp:diagnostics`: active document diagnostic count and version after LSP sync.
 - `lsp:hover`: successful on-demand hover resolution for the active document.
+- `lsp:definition`: successful on-demand definition resolution for the active document.
 - `lsp:error`: transport or protocol errors that did not block readonly render.
 - `dom:mounted`: rendered line and diagnostic counts after DOM creation.
 

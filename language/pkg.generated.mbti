@@ -14,6 +14,8 @@ pub fn demo_provider() -> &LanguageProvider
 
 pub fn demo_providers(@core.DocumentSnapshot) -> ProviderResult
 
+pub fn lsp_definition_request(Int, @workspace.SourceDocument, Int) -> String
+
 pub fn lsp_hover_request(Int, @workspace.SourceDocument, Int) -> String
 
 pub fn lsp_initialize_request(Int) -> String
@@ -55,6 +57,7 @@ pub struct LspClient {
 }
 pub fn LspClient::LspClient(&LspTransport) -> Self
 pub fn LspClient::clear_last_error(Self) -> Unit
+pub async fn LspClient::definition_at(Self, @workspace.SourceDocument, Int) -> Location?
 pub async fn LspClient::hover_at(Self, @workspace.SourceDocument, Int) -> Hover?
 pub fn LspClient::is_initialized(Self) -> Bool
 pub fn LspClient::last_error(Self) -> String

@@ -337,3 +337,11 @@ pub extern "js" fn register_hover_callback(
   #| (callback) => {
   #|   globalThis.__readonlyEditorHover = callback;
   #| }
+
+///|
+pub extern "js" fn register_definition_callback(
+  callback : (Int, Int) -> @js_async.Promise[String],
+) -> Unit =
+  #| (callback) => {
+  #|   globalThis.__readonlyEditorDefinition = callback;
+  #| }

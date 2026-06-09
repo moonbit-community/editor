@@ -119,6 +119,33 @@ pub async fn LspClient::hover_at(
 }
 
 ///|
+pub async fn LspClient::definition_at(
+  self : LspClient,
+  document : @workspace.SourceDocument,
+  offset : Int,
+) -> Location? {
+  ignore(self.sync_document(document))
+  if !self.initialized.val {
+    return None
+  }
+  let uri = document.uri.to_string()
+  let id = self.next_request_id()
+  let response = self.transport.request(
+    lsp_definition_request(id, document, offset),
+  )
+  if self.active_uri.val != uri || self.active_version.val != document.version {
+    return None
+  }
+  match parse_response_result(response) {
+    ParsedLspResult(result) => parse_definition_result(result, document)
+    LspResponseError(message) => {
+      self.last_error.val = message
+      None
+    }
+  }
+}
+
+///|
 pub fn lsp_initialize_request(id : Int) -> String {
   request_message(
     id,
@@ -141,6 +168,10 @@ pub fn lsp_initialize_request(id : Int) -> String {
                 "hover",
                 json_object([("dynamicRegistration", Json::boolean(false))]),
               ),
+              (
+                "definition",
+                json_object([("dynamicRegistration", Json::boolean(false))]),
+              ),
             ]),
           ),
         ]),
@@ -160,6 +191,24 @@ pub fn lsp_hover_request(
   request_message(
     id,
     "textDocument/hover",
+    json_object([
+      ("textDocument", text_document_identifier(document.uri)),
+      ("position", lsp_position_json(position)),
+    ]),
+  )
+}
+
+///|
+pub fn lsp_definition_request(
+  id : Int,
+  document : @workspace.SourceDocument,
+  offset : Int,
+) -> String {
+  let snapshot = document.snapshot()
+  let position = snapshot.position_at_offset(offset)
+  request_message(
+    id,
+    "textDocument/definition",
     json_object([
       ("textDocument", text_document_identifier(document.uri)),
       ("position", lsp_position_json(position)),
@@ -408,6 +457,70 @@ fn fallback_hover_range(
   let start = @core.clamp_int(offset, 0, doc.length())
   let end = @core.clamp_int(start + 1, start, doc.length())
   Range(start, end)
+}
+
+///|
+fn parse_definition_result(
+  result : Json,
+  document : @workspace.SourceDocument,
+) -> Location? {
+  match result {
+    Null => None
+    Object(_) => parse_location_result(result, document)
+    Array(items) => {
+      let mut found : Location? = None
+      for item in items {
+        if found is None {
+          found = parse_location_result(item, document)
+        }
+      }
+      found
+    }
+    _ => None
+  }
+}
+
+///|
+fn parse_location_result(
+  value : Json,
+  document : @workspace.SourceDocument,
+) -> Location? {
+  match value {
+    Object(_) => {
+      let uri = match json_string_field(value, "uri") {
+        Some(raw) => raw
+        None => json_string_field(value, "targetUri").unwrap_or("")
+      }
+      if uri == "" {
+        return None
+      }
+      let range_json = match json_field(value, "range") {
+        Some(range) => Some(range)
+        None =>
+          match json_field(value, "targetSelectionRange") {
+            Some(range) => Some(range)
+            None => json_field(value, "targetRange")
+          }
+      }
+      let parsed_uri = match @workspace.DocumentUri::parse(uri) {
+        ParsedDocumentUri(parsed) => parsed
+        DocumentUriError(_) => return None
+      }
+      let range = if uri == document.uri.to_string() {
+        match range_json {
+          Some(raw_range) =>
+            parse_lsp_range(raw_range, document.snapshot()).unwrap_or(
+              Range(0, 0),
+            )
+          None => Range(0, 0)
+        }
+      } else {
+        Range(0, 0)
+      }
+      Some({ uri: parsed_uri, range })
+    }
+    _ => None
+  }
 }
 
 ///|

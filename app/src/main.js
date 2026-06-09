@@ -16,6 +16,7 @@ const demoDocument = {
 
 const root = document.getElementById('app');
 let activeSession = null;
+let hoverTooltip = null;
 
 installBrowserFileSystemBackend();
 installBrowserLspBackend();
@@ -192,7 +193,8 @@ function installBrowserLspBackend() {
         return lspResponse(request.id, {
           capabilities: {
             textDocumentSync: 1,
-            hoverProvider: true
+            hoverProvider: true,
+            definitionProvider: true
           }
         });
       }
@@ -200,6 +202,11 @@ function installBrowserLspBackend() {
         const uri = request.params?.textDocument?.uri;
         const document = documents.get(uri);
         return lspResponse(request.id, hoverForDocument(document, request.params?.position));
+      }
+      if (request.method === 'textDocument/definition') {
+        const uri = request.params?.textDocument?.uri;
+        const document = documents.get(uri);
+        return lspResponse(request.id, definitionForDocument(document, request.params?.position));
       }
       return lspError(request.id, -32601, `Unsupported LSP request ${request.method || ''}.`);
     },
@@ -316,20 +323,65 @@ function hoverForDocument(document, position) {
     return null;
   }
   const offset = offsetFromPosition(document.text, position);
-  const main = document.text.indexOf('main');
-  if (main < 0 || offset < main || offset > main + 4) {
+  const range = identifierRangeAtOffset(document.text, offset);
+  if (!range) {
     return null;
   }
+  const word = document.text.slice(range.start, range.end);
   return {
     contents: {
       kind: 'plaintext',
-      value: 'Fake LSP hover for main'
+      value: `Fake LSP hover for ${word}`
     },
     range: {
-      start: offsetToPosition(document.text, main),
-      end: offsetToPosition(document.text, main + 4)
+      start: offsetToPosition(document.text, range.start),
+      end: offsetToPosition(document.text, range.end)
     }
   };
+}
+
+function definitionForDocument(document, position) {
+  if (!document || !position) {
+    return null;
+  }
+  const offset = offsetFromPosition(document.text, position);
+  const range = identifierRangeAtOffset(document.text, offset);
+  if (!range) {
+    return null;
+  }
+  const word = document.text.slice(range.start, range.end);
+  const definitionStart = document.text.indexOf(word);
+  const definitionEnd = definitionStart + word.length;
+  return {
+    uri: document.uri,
+    range: {
+      start: offsetToPosition(document.text, definitionStart),
+      end: offsetToPosition(document.text, definitionEnd)
+    }
+  };
+}
+
+function identifierRangeAtOffset(text, offset) {
+  let index = Math.max(0, Math.min(offset, text.length));
+  if (index === text.length || !isIdentifierCharacter(text[index])) {
+    index -= 1;
+  }
+  if (index < 0 || !isIdentifierCharacter(text[index])) {
+    return null;
+  }
+  let start = index;
+  while (start > 0 && isIdentifierCharacter(text[start - 1])) {
+    start -= 1;
+  }
+  let end = index + 1;
+  while (end < text.length && isIdentifierCharacter(text[end])) {
+    end += 1;
+  }
+  return { start, end };
+}
+
+function isIdentifierCharacter(char) {
+  return typeof char === 'string' && /[A-Za-z0-9_]/.test(char);
 }
 
 function offsetToPosition(text, offset) {
@@ -689,6 +741,7 @@ activeSession = new DocumentSession(root);
 activeSession.start();
 
 function renderEditor(container, model, session) {
+  hideHoverTooltip();
   container.innerHTML = '';
   const shell = document.createElement('main');
   shell.className = 'editor-shell';
@@ -778,6 +831,28 @@ function createCodeViewer(model) {
         node.dataset.end = String(line.offset + span.end);
         node.addEventListener('mouseenter', () => requestHoverForSpan(node, model));
         node.addEventListener('focus', () => requestHoverForSpan(node, model));
+        node.addEventListener('mouseleave', () => hideHoverTooltip(node));
+        node.addEventListener('blur', () => hideHoverTooltip(node));
+        if (isDefinitionCandidate(span)) {
+          node.classList.add('definition-candidate');
+          node.tabIndex = 0;
+          node.addEventListener('click', (event) => {
+            if (event.metaKey || event.ctrlKey) {
+              event.preventDefault();
+              requestDefinitionForSpan(node, model);
+            }
+          });
+          node.addEventListener('dblclick', (event) => {
+            event.preventDefault();
+            requestDefinitionForSpan(node, model);
+          });
+          node.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              requestDefinitionForSpan(node, model);
+            }
+          });
+        }
         code.appendChild(node);
       }
     }
@@ -879,6 +954,10 @@ function hoverForRange(hovers, start, end) {
   return hovers.find((hover) => hover.range.start < end && start < hover.range.end);
 }
 
+function isDefinitionCandidate(span) {
+  return span.text.trim() !== '' && span.className.split(/\s+/).includes('tok-identifier');
+}
+
 async function requestHoverForSpan(node, model) {
   if (node.dataset.hoverState === 'loading' || !globalThis.__readonlyEditorHover) {
     return;
@@ -908,6 +987,8 @@ async function requestHoverForSpan(node, model) {
     if (hover && hover.range?.start < end && start < hover.range?.end) {
       applyHover(node, hover);
     }
+  } catch {
+    hideHoverTooltip(node);
   } finally {
     delete node.dataset.hoverState;
   }
@@ -917,4 +998,141 @@ function applyHover(node, hover) {
   node.classList.add('has-hover');
   node.title = hover.contents;
   node.dataset.hover = hover.contents;
+  if (shouldShowHover(node)) {
+    showHoverTooltip(node, hover.contents);
+  }
+}
+
+function shouldShowHover(node) {
+  return node.matches(':hover') || document.activeElement === node;
+}
+
+function ensureHoverTooltip() {
+  if (!hoverTooltip) {
+    hoverTooltip = document.createElement('div');
+    hoverTooltip.className = 'hover-tooltip';
+    hoverTooltip.setAttribute('role', 'tooltip');
+    hoverTooltip.hidden = true;
+    document.body.appendChild(hoverTooltip);
+    window.addEventListener('scroll', () => hideHoverTooltip(), true);
+    window.addEventListener('resize', () => hideHoverTooltip());
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        hideHoverTooltip();
+      }
+    });
+  }
+  return hoverTooltip;
+}
+
+function showHoverTooltip(node, contents) {
+  const text = String(contents || '').trim();
+  if (!text) {
+    hideHoverTooltip(node);
+    return;
+  }
+  const tooltip = ensureHoverTooltip();
+  tooltip.textContent = text;
+  tooltip.hidden = false;
+  tooltip.dataset.start = node.dataset.start || '';
+
+  const rect = node.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const margin = 10;
+  let top = rect.bottom + 8;
+  if (top + tooltipRect.height + margin > window.innerHeight) {
+    top = rect.top - tooltipRect.height - 8;
+  }
+  let left = rect.left;
+  left = Math.max(margin, Math.min(left, window.innerWidth - tooltipRect.width - margin));
+  top = Math.max(margin, Math.min(top, window.innerHeight - tooltipRect.height - margin));
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+}
+
+function hideHoverTooltip(node) {
+  if (!hoverTooltip) {
+    return;
+  }
+  if (node && hoverTooltip.dataset.start && hoverTooltip.dataset.start !== node.dataset.start) {
+    return;
+  }
+  hoverTooltip.hidden = true;
+  hoverTooltip.textContent = '';
+  delete hoverTooltip.dataset.start;
+}
+
+async function requestDefinitionForSpan(node, model) {
+  if (node.dataset.definitionState === 'loading' || !globalThis.__readonlyEditorDefinition) {
+    return;
+  }
+  const start = Number(node.dataset.start);
+  const end = Number(node.dataset.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return;
+  }
+
+  node.dataset.definitionState = 'loading';
+  const offset = Math.floor((start + end) / 2);
+  const requestedVersion = model.version;
+  try {
+    const payload = await globalThis.__readonlyEditorDefinition(offset, requestedVersion);
+    const result = JSON.parse(payload);
+    if (!result.ok || result.version !== activeSession?.document?.version || requestedVersion !== result.version) {
+      return;
+    }
+    const location = result.location;
+    if (location?.uri) {
+      node.classList.add('has-definition');
+      node.dataset.definitionUri = location.uri;
+      node.dataset.definitionStart = String(location.range?.start ?? 0);
+      await navigateToDefinition(location);
+    }
+  } catch {
+    // The MoonBit bridge emits lsp:error for protocol failures.
+  } finally {
+    delete node.dataset.definitionState;
+  }
+}
+
+async function navigateToDefinition(location) {
+  if (!activeSession || !location?.uri) {
+    return;
+  }
+  if (location.uri !== activeSession.document?.uri) {
+    activeSession.uri = location.uri;
+    activeSession.status = 'loading';
+    activeSession.error = null;
+    activeSession.model = null;
+    activeSession.renderStatus();
+    await activeSession.loadDocument({ watch: true });
+  }
+  requestAnimationFrame(() => revealOffset(location.range?.start ?? 0, location.uri));
+}
+
+function revealOffset(offset, uri) {
+  if (uri && uri !== activeSession?.document?.uri) {
+    return;
+  }
+  const spans = [...document.querySelectorAll('.code span[data-start][data-end]')];
+  const target = spans.find((span) => {
+    const start = Number(span.dataset.start);
+    const end = Number(span.dataset.end);
+    return Number.isFinite(start) && Number.isFinite(end) && start <= offset && offset < end;
+  }) || spans.find((span) => Number(span.dataset.start) >= offset) || spans.at(-1);
+  if (!target) {
+    return;
+  }
+
+  document.querySelectorAll('.definition-target').forEach((node) => {
+    node.classList.remove('definition-target');
+    delete node.dataset.definitionTarget;
+  });
+  target.classList.add('has-definition', 'definition-target');
+  target.dataset.definitionTarget = 'true';
+  target.scrollIntoView({ block: 'center', inline: 'nearest' });
+  window.setTimeout(() => {
+    target.classList.remove('definition-target');
+    delete target.dataset.definitionTarget;
+  }, 1800);
 }

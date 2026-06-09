@@ -1,6 +1,7 @@
 import {
   "baozhiyuan/editor/server",
   "baozhiyuan/editor/workspace",
+  "moonbitlang/core/string",
 }
 
 import {

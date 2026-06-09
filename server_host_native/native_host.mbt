@@ -51,10 +51,9 @@ impl @server.ServerHost for NativeServerHost with fn watch_text_file(
 }
 
 ///|
-impl @server.LspTransport for NativeLspTransport with fn request(self, _message) {
-  "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32099,\"message\":\"" +
-  self.unavailable_message +
-  "\"}}"
+impl @server.LspTransport for NativeLspTransport with fn request(self, message) {
+  ignore(message)
+  lsp_error_response(self.unavailable_message)
 }
 
 ///|
@@ -68,4 +67,33 @@ impl @server.LspTransport for NativeLspTransport with fn subscribe(
   _listener,
 ) {
   LspSubscription(() => ())
+}
+
+///|
+pub fn lsp_stdio_frame(message : String) -> String {
+  "Content-Length: " + message.length().to_string() + "\r\n\r\n" + message
+}
+
+///|
+pub fn lsp_content_length_header(line : String) -> Int? {
+  let trimmed = line.trim(char_set="\r\n ")
+  let prefix = "content-length:"
+  if !trimmed.to_lower().has_prefix(prefix) {
+    return None
+  }
+  Some(@string.parse_int(trimmed[prefix.length():].trim(), base=10)) catch {
+    _ => None
+  }
+}
+
+///|
+fn lsp_error_response(message : String) -> String {
+  "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32099,\"message\":\"" +
+  json_escape(message) +
+  "\"}}"
+}
+
+///|
+fn json_escape(value : String) -> String {
+  value.replace_all(old="\\", new="\\\\").replace_all(old="\"", new="\\\"")
 }

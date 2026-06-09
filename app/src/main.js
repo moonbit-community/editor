@@ -95,6 +95,10 @@ function createBrowserFileSystemProvider() {
       }
       const entry = entries.get(uri);
       if (!entry) {
+        const localFile = await readViteLocalFile(uri, { signal });
+        if (localFile) {
+          return localFile;
+        }
         throw fileError('FileNotFound', 'Choose a local file before opening this URI.');
       }
       const file = await entryFile(entry);
@@ -479,6 +483,43 @@ function uriDisplayName(uri) {
     return decodeURIComponent(name);
   } catch {
     return name;
+  }
+}
+
+async function readViteLocalFile(uri, { signal } = {}) {
+  const path = localPathFromFileUri(uri);
+  if (!path) {
+    return null;
+  }
+  const response = await fetch(`/@fs${path}`, { signal });
+  if (!response.ok) {
+    return null;
+  }
+  const text = await response.text();
+  if (text.includes('\0')) {
+    throw fileError('InvalidData', 'Binary files cannot be viewed as source text.');
+  }
+  return {
+    text,
+    displayName: path.split('/').filter(Boolean).at(-1) || uriDisplayName(uri),
+    languageId: '',
+    revision: `${response.headers.get('last-modified') || ''}:${text.length}`
+  };
+}
+
+function localPathFromFileUri(uri) {
+  if (!uri.startsWith('file://local/')) {
+    return '';
+  }
+  const encoded = uri.slice('file://local'.length);
+  if (!encoded.startsWith('/')) {
+    return '';
+  }
+  const normalized = encoded.startsWith('//') ? encoded.slice(1) : encoded;
+  try {
+    return decodeURIComponent(normalized);
+  } catch {
+    return normalized;
   }
 }
 

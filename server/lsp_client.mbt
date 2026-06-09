@@ -36,6 +36,9 @@ pub(all) enum LspClientState {
 priv struct LspServerCapabilities {
   hover_provider : Bool
   definition_provider : Bool
+  document_symbol_provider : Bool
+  semantic_tokens_provider : Bool
+  semantic_token_types : Array[String]
   publish_diagnostics : Bool
 }
 
@@ -69,6 +72,11 @@ pub struct LspClient {
 }
 
 ///|
+pub(all) struct LspLanguageProvider {
+  priv client : LspClient
+}
+
+///|
 priv struct LspCachedDiagnostics {
   version : Int
   diagnostics : Array[@language.Diagnostic]
@@ -79,6 +87,9 @@ fn default_lsp_capabilities() -> LspServerCapabilities {
   {
     hover_provider: false,
     definition_provider: false,
+    document_symbol_provider: false,
+    semantic_tokens_provider: false,
+    semantic_token_types: [],
     publish_diagnostics: true,
   }
 }
@@ -100,6 +111,46 @@ pub fn LspClient::LspClient(transport : &LspTransport) -> LspClient {
     diagnostics_listener: Ref(None),
     last_error: Ref(""),
   }
+}
+
+///|
+pub fn LspClient::language_provider(self : LspClient) -> LspLanguageProvider {
+  { client: self }
+}
+
+///|
+pub fn LspLanguageProvider::as_hover_provider(
+  self : LspLanguageProvider,
+) -> &@language.HoverProvider {
+  self
+}
+
+///|
+pub fn LspLanguageProvider::as_definition_provider(
+  self : LspLanguageProvider,
+) -> &@language.DefinitionProvider {
+  self
+}
+
+///|
+pub fn LspLanguageProvider::as_diagnostics_provider(
+  self : LspLanguageProvider,
+) -> &@language.DiagnosticsProvider {
+  self
+}
+
+///|
+pub fn LspLanguageProvider::as_document_symbol_provider(
+  self : LspLanguageProvider,
+) -> &@language.DocumentSymbolProvider {
+  self
+}
+
+///|
+pub fn LspLanguageProvider::as_semantic_tokens_provider(
+  self : LspLanguageProvider,
+) -> &@language.SemanticTokensProvider {
+  self
 }
 
 ///|
@@ -147,7 +198,7 @@ pub async fn LspClient::sync_document(
   self.sync_active_document(document)
   {
     hovers: [],
-    diagnostics: self.diagnostics_for_document(document),
+    diagnostics: self.cached_diagnostics_for_document(document),
     definitions: [],
     symbols: [],
     semantic_tokens: [],
@@ -212,6 +263,67 @@ pub async fn LspClient::definition_at(
 }
 
 ///|
+pub async fn LspClient::document_symbols(
+  self : LspClient,
+  document : @workspace.SourceDocument,
+) -> Array[@language.DocumentSymbol] {
+  ignore(self.sync_document(document))
+  if self.state.val != Ready || !self.capabilities.val.document_symbol_provider {
+    return []
+  }
+  let uri = document.uri.to_string()
+  let id = self.next_request_id()
+  self.register_request(id, "textDocument/documentSymbol", document)
+  let response = self.transport.request(
+    lsp_document_symbol_request(id, document),
+  )
+  self.complete_request(id)
+  if self.active_uri.val != uri || self.active_version.val != document.version {
+    return []
+  }
+  match parse_response_result(response) {
+    ParsedLspResult(result) => parse_document_symbols_result(result, document)
+    LspResponseError(message) => {
+      self.last_error.val = message
+      []
+    }
+  }
+}
+
+///|
+pub async fn LspClient::semantic_tokens_for_document(
+  self : LspClient,
+  document : @workspace.SourceDocument,
+) -> Array[@language.SemanticToken] {
+  ignore(self.sync_document(document))
+  if self.state.val != Ready || !self.capabilities.val.semantic_tokens_provider {
+    return []
+  }
+  let uri = document.uri.to_string()
+  let id = self.next_request_id()
+  self.register_request(id, "textDocument/semanticTokens/full", document)
+  let response = self.transport.request(
+    lsp_semantic_tokens_full_request(id, document),
+  )
+  self.complete_request(id)
+  if self.active_uri.val != uri || self.active_version.val != document.version {
+    return []
+  }
+  match parse_response_result(response) {
+    ParsedLspResult(result) =>
+      parse_semantic_tokens_result(
+        result,
+        document.snapshot(),
+        self.capabilities.val.semantic_token_types,
+      )
+    LspResponseError(message) => {
+      self.last_error.val = message
+      []
+    }
+  }
+}
+
+///|
 pub async fn LspClient::shutdown(self : LspClient) -> Unit {
   if self.state.val == Stopped || self.state.val == Stopping {
     return
@@ -265,12 +377,63 @@ fn lsp_initialize_request_with_root(id : Int, root_uri : Json) -> String {
                 "definition",
                 json_object([("dynamicRegistration", Json::boolean(false))]),
               ),
+              (
+                "documentSymbol",
+                json_object([
+                  ("dynamicRegistration", Json::boolean(false)),
+                  ("hierarchicalDocumentSymbolSupport", Json::boolean(true)),
+                ]),
+              ),
+              (
+                "semanticTokens",
+                json_object([
+                  ("dynamicRegistration", Json::boolean(false)),
+                  (
+                    "requests",
+                    json_object([
+                      ("range", Json::boolean(false)),
+                      ("full", Json::boolean(true)),
+                    ]),
+                  ),
+                  ("tokenTypes", semantic_token_type_capability()),
+                  ("tokenModifiers", Json::array([])),
+                  ("formats", Json::array([Json::string("relative")])),
+                ]),
+              ),
             ]),
           ),
         ]),
       ),
     ]),
   )
+}
+
+///|
+fn semantic_token_type_capability() -> Json {
+  Json::array([
+    Json::string("namespace"),
+    Json::string("type"),
+    Json::string("class"),
+    Json::string("enum"),
+    Json::string("interface"),
+    Json::string("struct"),
+    Json::string("typeParameter"),
+    Json::string("parameter"),
+    Json::string("variable"),
+    Json::string("property"),
+    Json::string("enumMember"),
+    Json::string("event"),
+    Json::string("function"),
+    Json::string("method"),
+    Json::string("macro"),
+    Json::string("keyword"),
+    Json::string("modifier"),
+    Json::string("comment"),
+    Json::string("string"),
+    Json::string("number"),
+    Json::string("regexp"),
+    Json::string("operator"),
+  ])
 }
 
 ///|
@@ -306,6 +469,30 @@ pub fn lsp_definition_request(
       ("textDocument", text_document_identifier(document.uri)),
       ("position", lsp_position_json(position)),
     ]),
+  )
+}
+
+///|
+pub fn lsp_document_symbol_request(
+  id : Int,
+  document : @workspace.SourceDocument,
+) -> String {
+  request_message(
+    id,
+    "textDocument/documentSymbol",
+    json_object([("textDocument", text_document_identifier(document.uri))]),
+  )
+}
+
+///|
+pub fn lsp_semantic_tokens_full_request(
+  id : Int,
+  document : @workspace.SourceDocument,
+) -> String {
+  request_message(
+    id,
+    "textDocument/semanticTokens/full",
+    json_object([("textDocument", text_document_identifier(document.uri))]),
   )
 }
 
@@ -397,7 +584,7 @@ async fn LspClient::sync_active_document(
 }
 
 ///|
-fn LspClient::diagnostics_for_document(
+fn LspClient::cached_diagnostics_for_document(
   self : LspClient,
   document : @workspace.SourceDocument,
 ) -> Array[@language.Diagnostic] {
@@ -410,6 +597,48 @@ fn LspClient::diagnostics_for_document(
       }
     None => []
   }
+}
+
+///|
+impl @language.DiagnosticsProvider for LspLanguageProvider with fn diagnostics_for_document(
+  self,
+  document,
+) {
+  self.client.sync_document(document).diagnostics
+}
+
+///|
+impl @language.HoverProvider for LspLanguageProvider with fn hover_at(
+  self,
+  document,
+  offset,
+) {
+  self.client.hover_at(document, offset)
+}
+
+///|
+impl @language.DefinitionProvider for LspLanguageProvider with fn definition_at(
+  self,
+  document,
+  offset,
+) {
+  self.client.definition_at(document, offset)
+}
+
+///|
+impl @language.DocumentSymbolProvider for LspLanguageProvider with fn document_symbols(
+  self,
+  document,
+) {
+  self.client.document_symbols(document)
+}
+
+///|
+impl @language.SemanticTokensProvider for LspLanguageProvider with fn semantic_tokens_for_document(
+  self,
+  document,
+) {
+  self.client.semantic_tokens_for_document(document)
 }
 
 ///|
@@ -638,6 +867,177 @@ fn parse_definition_result(
 }
 
 ///|
+fn parse_document_symbols_result(
+  result : Json,
+  document : @workspace.SourceDocument,
+) -> Array[@language.DocumentSymbol] {
+  let symbols : Array[@language.DocumentSymbol] = []
+  match result {
+    Array(items) =>
+      for item in items {
+        append_document_symbol(item, document, symbols)
+      }
+    _ => ()
+  }
+  symbols
+}
+
+///|
+fn append_document_symbol(
+  value : Json,
+  document : @workspace.SourceDocument,
+  out : Array[@language.DocumentSymbol],
+) -> Unit {
+  match value {
+    Object(_) => {
+      let name = json_string_field(value, "name").unwrap_or("")
+      let kind = document_symbol_kind(json_int_field(value, "kind"))
+      let range = document_symbol_range(value, document)
+      if name != "" {
+        out.push({ name, kind, range })
+      }
+      match json_field(value, "children") {
+        Some(Array(children)) =>
+          for child in children {
+            append_document_symbol(child, document, out)
+          }
+        _ => ()
+      }
+    }
+    _ => ()
+  }
+}
+
+///|
+fn document_symbol_range(
+  value : Json,
+  document : @workspace.SourceDocument,
+) -> @core.Range {
+  let range_json = match json_field(value, "range") {
+    Some(range) => Some(range)
+    None =>
+      match json_field(value, "selectionRange") {
+        Some(range) => Some(range)
+        None =>
+          match json_field(value, "location") {
+            Some(location) =>
+              if location_uri_matches_document(location, document) {
+                json_field(location, "range")
+              } else {
+                None
+              }
+            None => None
+          }
+      }
+  }
+  match range_json {
+    Some(range) =>
+      parse_lsp_range(range, document.snapshot()).unwrap_or(Range(0, 0))
+    None => Range(0, 0)
+  }
+}
+
+///|
+fn location_uri_matches_document(
+  location : Json,
+  document : @workspace.SourceDocument,
+) -> Bool {
+  json_string_field(location, "uri").unwrap_or(document.uri.to_string()) ==
+  document.uri.to_string()
+}
+
+///|
+fn document_symbol_kind(kind : Int?) -> String {
+  match kind {
+    Some(2) => "module"
+    Some(3) => "namespace"
+    Some(4) => "package"
+    Some(5) => "class"
+    Some(6) => "method"
+    Some(7) => "property"
+    Some(8) => "field"
+    Some(9) => "constructor"
+    Some(10) => "enum"
+    Some(11) => "interface"
+    Some(12) => "function"
+    Some(13) => "variable"
+    Some(14) => "constant"
+    Some(15) => "string"
+    Some(16) => "number"
+    Some(17) => "boolean"
+    Some(18) => "array"
+    Some(19) => "object"
+    Some(20) => "key"
+    Some(21) => "null"
+    Some(22) => "enumMember"
+    Some(23) => "struct"
+    Some(24) => "event"
+    Some(25) => "operator"
+    Some(26) => "typeParameter"
+    _ => "unknown"
+  }
+}
+
+///|
+fn parse_semantic_tokens_result(
+  result : Json,
+  doc : @core.DocumentSnapshot,
+  legend : Array[String],
+) -> Array[@language.SemanticToken] {
+  let tokens : Array[@language.SemanticToken] = []
+  match json_field(result, "data") {
+    Some(Array(data)) => {
+      let mut line = 0
+      let mut start_character = 0
+      let mut index = 0
+      while index + 4 < data.length() {
+        match
+          (
+            json_int_value(data[index]),
+            json_int_value(data[index + 1]),
+            json_int_value(data[index + 2]),
+            json_int_value(data[index + 3]),
+          ) {
+          (Some(delta_line), Some(delta_start), Some(length), Some(token_type)) => {
+            if delta_line == 0 {
+              start_character = start_character + delta_start
+            } else {
+              line = line + delta_line
+              start_character = delta_start
+            }
+            if length > 0 {
+              let start = doc.offset_at_position(
+                Position(line, start_character),
+              )
+              let end = doc.offset_at_position(
+                Position(line, start_character + length),
+              )
+              tokens.push({
+                range: Range(start, end),
+                token_type: semantic_token_type_name(legend, token_type),
+              })
+            }
+          }
+          _ => ()
+        }
+        index = index + 5
+      }
+    }
+    _ => ()
+  }
+  tokens
+}
+
+///|
+fn semantic_token_type_name(legend : Array[String], index : Int) -> String {
+  if index >= 0 && index < legend.length() {
+    legend[index]
+  } else {
+    "unknown"
+  }
+}
+
+///|
 fn parse_location_result(
   value : Json,
   document : @workspace.SourceDocument,
@@ -740,6 +1140,13 @@ fn parse_server_capabilities(result : Json) -> LspServerCapabilities {
         definition_provider: capability_enabled(
           capabilities, "definitionProvider",
         ),
+        document_symbol_provider: capability_enabled(
+          capabilities, "documentSymbolProvider",
+        ),
+        semantic_tokens_provider: capability_enabled(
+          capabilities, "semanticTokensProvider",
+        ),
+        semantic_token_types: semantic_token_legend(capabilities),
         publish_diagnostics: true,
       }
     None => default_lsp_capabilities()
@@ -754,6 +1161,30 @@ fn capability_enabled(capabilities : Json, name : String) -> Bool {
     Some(Object(_)) => true
     _ => false
   }
+}
+
+///|
+fn semantic_token_legend(capabilities : Json) -> Array[String] {
+  let token_types = []
+  match json_field(capabilities, "semanticTokensProvider") {
+    Some(provider) =>
+      match json_field(provider, "legend") {
+        Some(legend) =>
+          match json_field(legend, "tokenTypes") {
+            Some(Array(items)) =>
+              for item in items {
+                match item {
+                  String(token_type) => token_types.push(token_type)
+                  _ => ()
+                }
+              }
+            _ => ()
+          }
+        None => ()
+      }
+    None => ()
+  }
+  token_types
 }
 
 ///|
@@ -878,7 +1309,15 @@ fn json_string_field(value : Json, key : String) -> String? {
 ///|
 fn json_int_field(value : Json, key : String) -> Int? {
   match json_field(value, key) {
-    Some(Number(number, repr=_)) => Some(number.to_int())
+    Some(raw) => json_int_value(raw)
+    _ => None
+  }
+}
+
+///|
+fn json_int_value(value : Json) -> Int? {
+  match value {
+    Number(number, repr=_) => Some(number.to_int())
     _ => None
   }
 }

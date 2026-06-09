@@ -6,6 +6,8 @@ test "builds initialize, hover, and definition requests" {
   assert_true(initialize.contains("\"id\":7"))
   assert_true(initialize.contains("\"publishDiagnostics\""))
   assert_true(initialize.contains("\"definition\""))
+  assert_true(initialize.contains("\"documentSymbol\""))
+  assert_true(initialize.contains("\"semanticTokens\""))
 
   let file_document = file_document(1, "pub fn main {}\n")
   let file_initialize = lsp_initialize_request_with_root(
@@ -27,6 +29,16 @@ test "builds initialize, hover, and definition requests" {
   assert_true(definition.contains("\"uri\":\"memory://demo.mbt\""))
   assert_true(definition.contains("\"line\":0"))
   assert_true(definition.contains("\"character\":8"))
+
+  let symbols = lsp_document_symbol_request(10, document)
+  assert_true(symbols.contains("\"method\":\"textDocument/documentSymbol\""))
+  assert_true(symbols.contains("\"uri\":\"memory://demo.mbt\""))
+
+  let semantic_tokens = lsp_semantic_tokens_full_request(11, document)
+  assert_true(
+    semantic_tokens.contains("\"method\":\"textDocument/semanticTokens/full\""),
+  )
+  assert_true(semantic_tokens.contains("\"uri\":\"memory://demo.mbt\""))
 }
 
 ///|
@@ -160,6 +172,38 @@ async test "lsp client requests definition through transport" {
 }
 
 ///|
+async test "lsp client requests symbols and semantic tokens through provider adapter" {
+  let transport = TestLspTransport::new()
+  let client = LspClient::LspClient(transport)
+  let provider = client.language_provider()
+  let document = test_document(1, "pub fn main {}\n")
+
+  let symbols = provider.document_symbols(document)
+  assert_eq(symbols.length(), 2)
+  assert_eq(symbols[0].name, "main")
+  assert_eq(symbols[0].kind, "function")
+  assert_true(symbols[0].range == Range(7, 11))
+  assert_eq(symbols[1].name, "nested")
+  assert_eq(symbols[1].kind, "variable")
+
+  let tokens = provider.semantic_tokens_for_document(document)
+  assert_eq(tokens.length(), 1)
+  assert_true(tokens[0].range == Range(7, 11))
+  assert_eq(tokens[0].token_type, "function")
+
+  assert_true(
+    transport.requests.any(message => {
+      message.contains("\"method\":\"textDocument/documentSymbol\"")
+    }),
+  )
+  assert_true(
+    transport.requests.any(message => {
+      message.contains("\"method\":\"textDocument/semanticTokens/full\"")
+    }),
+  )
+}
+
+///|
 async test "lsp client gates unsupported capabilities" {
   let transport = TestLspTransport::new()
   transport.initialize_response = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"definitionProvider\":true}}}"
@@ -272,7 +316,7 @@ fn TestLspTransport::new() -> TestLspTransport {
     requests: [],
     notifications: [],
     listener: Ref(None),
-    initialize_response: "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"hoverProvider\":true,\"definitionProvider\":true}}}",
+    initialize_response: "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"hoverProvider\":true,\"definitionProvider\":true,\"documentSymbolProvider\":true,\"semanticTokensProvider\":{\"legend\":{\"tokenTypes\":[\"function\",\"variable\"]},\"full\":true}}}}",
   }
 }
 
@@ -289,6 +333,10 @@ impl LspTransport for TestLspTransport with fn request(self, message) {
     definition_response(
       "{\"uri\":\"memory://demo.mbt\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
     )
+  } else if message.contains("\"method\":\"textDocument/documentSymbol\"") {
+    "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":[{\"name\":\"main\",\"kind\":12,\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}},\"selectionRange\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}},\"children\":[{\"name\":\"nested\",\"kind\":13,\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}},\"selectionRange\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}]}]}"
+  } else if message.contains("\"method\":\"textDocument/semanticTokens/full\"") {
+    "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"data\":[0,7,4,0,0]}}"
   } else if message.contains("\"method\":\"shutdown\"") {
     "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":null}"
   } else {

@@ -69,7 +69,7 @@ test "routes watch events to document changed packets" {
 }
 
 ///|
-test "answers hover and definition from cached provider state" {
+async test "answers hover and definition from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("demo.mbt", "pub fn main {}\n")
   let server = @server.RemoteServer("/workspace", host)
@@ -99,7 +99,7 @@ test "answers hover and definition from cached provider state" {
 }
 
 ///|
-test "answers diagnostics symbols and semantic tokens from cached provider state" {
+async test "answers diagnostics symbols and semantic tokens from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("demo.mbt", "pub fn main { // TODO }\n")
   let server = @server.RemoteServer("/workspace", host)
@@ -127,6 +127,55 @@ test "answers diagnostics symbols and semantic tokens from cached provider state
       assert_eq(payload.semantic_tokens.length(), 1)
       assert_eq(payload.semantic_tokens[0].token_type, "function")
     }
+    _ => fail("expected semantic tokens result")
+  }
+}
+
+///|
+async test "dispatches language requests through configured providers" {
+  let host = FakeServerHost::new()
+  host.files.set("configured.mbt", "pub fn configured {}\n")
+  let provider = FakeLanguageProvider::{  }
+  let server = @server.RemoteServer::with_language_providers(
+    "/workspace", host, provider, provider, provider, provider, provider,
+  )
+  let uri = expect_remote_uri("configured.mbt")
+  ignore(server.open_document({ id: "open-1", uri }))
+
+  match server.hover({ id: "hover-1", uri, document_version: 1, offset: 7 }) {
+    HoverResult(payload) =>
+      match payload.hover {
+        Some(hover) => assert_eq(hover.contents, "Configured hover")
+        None => fail("expected configured hover")
+      }
+    _ => fail("expected hover result")
+  }
+
+  match
+    server.definition({ id: "def-1", uri, document_version: 1, offset: 7 }) {
+    DefinitionResult(payload) =>
+      match payload.location {
+        Some(location) => assert_eq(location.uri.to_string(), uri.to_string())
+        None => fail("expected configured definition")
+      }
+    _ => fail("expected definition result")
+  }
+
+  match server.diagnostics({ id: "diag-1", uri, document_version: 1 }) {
+    Diagnostics(payload) =>
+      assert_eq(payload.diagnostics[0].message, "Configured diagnostic")
+    _ => fail("expected diagnostics result")
+  }
+
+  match server.document_symbols({ id: "symbols-1", uri, document_version: 1 }) {
+    DocumentSymbolsResult(payload) =>
+      assert_eq(payload.symbols[0].name, "configured")
+    _ => fail("expected document symbols result")
+  }
+
+  match server.semantic_tokens({ id: "tokens-1", uri, document_version: 1 }) {
+    SemanticTokensResult(payload) =>
+      assert_eq(payload.semantic_tokens[0].token_type, "function")
     _ => fail("expected semantic tokens result")
   }
 }
@@ -205,4 +254,49 @@ impl @server.ServerHost for FakeServerHost with fn watch_text_file(
   let key = path.to_string()
   self.listeners.set(key, listener)
   ServerWatch(() => self.listeners.remove(key))
+}
+
+///|
+struct FakeLanguageProvider {}
+
+///|
+impl @language.HoverProvider for FakeLanguageProvider with fn hover_at(
+  _self,
+  _document,
+  offset,
+) {
+  Some({ range: Range(offset, offset + 4), contents: "Configured hover" })
+}
+
+///|
+impl @language.DefinitionProvider for FakeLanguageProvider with fn definition_at(
+  _self,
+  document,
+  offset,
+) {
+  Some({ uri: document.uri, range: Range(offset, offset + 4) })
+}
+
+///|
+impl @language.DiagnosticsProvider for FakeLanguageProvider with fn diagnostics_for_document(
+  _self,
+  _document,
+) {
+  [{ range: Range(0, 4), severity: Warning, message: "Configured diagnostic" }]
+}
+
+///|
+impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn document_symbols(
+  _self,
+  _document,
+) {
+  [{ name: "configured", kind: "function", range: Range(7, 17) }]
+}
+
+///|
+impl @language.SemanticTokensProvider for FakeLanguageProvider with fn semantic_tokens_for_document(
+  _self,
+  _document,
+) {
+  [{ range: Range(7, 17), token_type: "function" }]
 }

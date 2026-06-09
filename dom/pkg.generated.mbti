@@ -2,15 +2,12 @@
 package "baozhiyuan/editor/dom"
 
 import {
-  "baozhiyuan/editor/language",
   "baozhiyuan/editor/workspace",
   "moonbitlang/async/js_async",
 }
 
 // Values
 pub fn browser_file_system_provider() -> &@workspace.FileSystemProvider
-
-pub fn browser_lsp_transport() -> &@language.LspTransport
 
 pub fn emit_event(String, String) -> Unit
 
@@ -41,6 +38,10 @@ pub fn register_load_callback((String) -> @js_async.Promise[String]) -> Unit
 pub fn register_render_callback(() -> @js_async.Promise[Unit]) -> Unit
 
 pub fn register_watch_callback((String, (String) -> Unit) -> HostDisposable) -> Unit
+
+pub async fn request_remote_protocol(String) -> String
+
+pub fn watch_remote_protocol(String, (String) -> Unit) -> HostDisposable
 
 // Errors
 

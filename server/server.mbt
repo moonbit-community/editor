@@ -30,6 +30,11 @@ pub(open) trait ServerHost {
 pub struct RemoteServer {
   priv workspace_root : String
   priv host : &ServerHost
+  priv hover_provider : &@language.HoverProvider
+  priv definition_provider : &@language.DefinitionProvider
+  priv diagnostics_provider : &@language.DiagnosticsProvider
+  priv document_symbol_provider : &@language.DocumentSymbolProvider
+  priv semantic_tokens_provider : &@language.SemanticTokensProvider
   priv documents : Map[String, @workspace.SourceDocument]
   priv watches : Map[String, ServerWatch]
 }
@@ -49,9 +54,35 @@ pub fn RemoteServer::RemoteServer(
   workspace_root : String,
   host : &ServerHost,
 ) -> RemoteServer {
+  RemoteServer::with_language_providers(
+    workspace_root,
+    host,
+    @language.demo_hover_provider(),
+    @language.demo_definition_provider(),
+    @language.demo_diagnostics_provider(),
+    @language.demo_document_symbol_provider(),
+    @language.demo_semantic_tokens_provider(),
+  )
+}
+
+///|
+pub fn RemoteServer::with_language_providers(
+  workspace_root : String,
+  host : &ServerHost,
+  hover_provider : &@language.HoverProvider,
+  definition_provider : &@language.DefinitionProvider,
+  diagnostics_provider : &@language.DiagnosticsProvider,
+  document_symbol_provider : &@language.DocumentSymbolProvider,
+  semantic_tokens_provider : &@language.SemanticTokensProvider,
+) -> RemoteServer {
   {
     workspace_root: normalize_workspace_root(workspace_root),
     host,
+    hover_provider,
+    definition_provider,
+    diagnostics_provider,
+    document_symbol_provider,
+    semantic_tokens_provider,
     documents: Map::default(),
     watches: Map::default(),
   }
@@ -105,7 +136,7 @@ pub fn resolve_remote_document_uri(
 }
 
 ///|
-pub fn RemoteServer::handle_client_packet(
+pub async fn RemoteServer::handle_client_packet(
   self : RemoteServer,
   packet : @remote_protocol.ClientPacket,
   emit : (@remote_protocol.ServerPacket) -> Unit,
@@ -185,101 +216,98 @@ pub fn RemoteServer::close_document(
 }
 
 ///|
-pub fn RemoteServer::hover(
+pub async fn RemoteServer::hover(
   self : RemoteServer,
   request : @remote_protocol.DocumentPositionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_version, request.id) {
-    Some(document) => {
-      let providers = @language.demo_providers(document.snapshot())
+    Some(document) =>
       HoverResult({
         id: request.id,
         uri: request.uri,
         version: document.version,
-        hover: providers.hover_at(request.offset),
+        hover: self.hover_provider.hover_at(document, request.offset),
       })
-    }
     None => self.missing_cached_document_error(request.id)
   }
 }
 
 ///|
-pub fn RemoteServer::diagnostics(
+pub async fn RemoteServer::diagnostics(
   self : RemoteServer,
   request : @remote_protocol.DocumentVersionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_version, request.id) {
-    Some(document) => {
-      let providers = @language.demo_providers(document.snapshot())
+    Some(document) =>
       Diagnostics({
         id: request.id,
         uri: request.uri,
         version: document.version,
-        diagnostics: providers.diagnostics,
+        diagnostics: self.diagnostics_provider.diagnostics_for_document(
+          document,
+        ),
       })
-    }
     None => self.missing_cached_document_error(request.id)
   }
 }
 
 ///|
-pub fn RemoteServer::definition(
+pub async fn RemoteServer::definition(
   self : RemoteServer,
   request : @remote_protocol.DocumentPositionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_version, request.id) {
-    Some(document) => {
-      let providers = @language.demo_providers(document.snapshot())
+    Some(document) =>
       DefinitionResult({
         id: request.id,
         uri: request.uri,
         version: document.version,
-        location: providers.definition_at(request.offset),
+        location: self.definition_provider.definition_at(
+          document,
+          request.offset,
+        ),
       })
-    }
     None => self.missing_cached_document_error(request.id)
   }
 }
 
 ///|
-pub fn RemoteServer::document_symbols(
+pub async fn RemoteServer::document_symbols(
   self : RemoteServer,
   request : @remote_protocol.DocumentVersionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_version, request.id) {
-    Some(document) => {
-      let providers = @language.demo_providers(document.snapshot())
+    Some(document) =>
       DocumentSymbolsResult({
         id: request.id,
         uri: request.uri,
         version: document.version,
-        symbols: providers.symbols,
+        symbols: self.document_symbol_provider.document_symbols(document),
       })
-    }
     None => self.missing_cached_document_error(request.id)
   }
 }
 
 ///|
-pub fn RemoteServer::semantic_tokens(
+pub async fn RemoteServer::semantic_tokens(
   self : RemoteServer,
   request : @remote_protocol.DocumentVersionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_version, request.id) {
-    Some(document) => {
-      let providers = @language.demo_providers(document.snapshot())
+    Some(document) =>
       SemanticTokensResult({
         id: request.id,
         uri: request.uri,
         version: document.version,
-        semantic_tokens: providers.semantic_tokens,
+        semantic_tokens: self.semantic_tokens_provider.semantic_tokens_for_document(
+          document,
+        ),
       })
-    }
     None => self.missing_cached_document_error(request.id)
   }
 }

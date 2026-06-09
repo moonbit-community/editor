@@ -8,17 +8,23 @@ import {
 }
 
 // Values
+pub async fn collect_document_provider_result(&DiagnosticsProvider, &DocumentSymbolProvider, &SemanticTokensProvider, @workspace.SourceDocument) -> ProviderResult
+
 pub fn collect_provider_result(&LanguageProvider, @core.DocumentSnapshot) -> ProviderResult
+
+pub fn demo_definition_provider() -> &DefinitionProvider
+
+pub fn demo_diagnostics_provider() -> &DiagnosticsProvider
+
+pub fn demo_document_symbol_provider() -> &DocumentSymbolProvider
+
+pub fn demo_hover_provider() -> &HoverProvider
 
 pub fn demo_provider() -> &LanguageProvider
 
 pub fn demo_providers(@core.DocumentSnapshot) -> ProviderResult
 
-pub fn lsp_definition_request(Int, @workspace.SourceDocument, Int) -> String
-
-pub fn lsp_hover_request(Int, @workspace.SourceDocument, Int) -> String
-
-pub fn lsp_initialize_request(Int) -> String
+pub fn demo_semantic_tokens_provider() -> &SemanticTokensProvider
 
 // Errors
 
@@ -52,24 +58,6 @@ pub(all) struct Location {
   range : @core.Range
 } derive(@debug.Debug)
 
-pub struct LspClient {
-  // private fields
-}
-pub fn LspClient::LspClient(&LspTransport) -> Self
-pub fn LspClient::clear_last_error(Self) -> Unit
-pub async fn LspClient::definition_at(Self, @workspace.SourceDocument, Int) -> Location?
-pub async fn LspClient::hover_at(Self, @workspace.SourceDocument, Int) -> Hover?
-pub fn LspClient::is_initialized(Self) -> Bool
-pub fn LspClient::last_error(Self) -> String
-pub fn LspClient::set_diagnostics_listener(Self, ((String, Int) -> Unit)?) -> Unit
-pub async fn LspClient::sync_document(Self, @workspace.SourceDocument) -> ProviderResult
-
-pub struct LspSubscription {
-  // private fields
-}
-pub fn LspSubscription::LspSubscription(() -> Unit) -> Self
-pub fn LspSubscription::dispose(Self) -> Unit
-
 pub(all) struct ProviderResult {
   hovers : Array[Hover]
   diagnostics : Array[Diagnostic]
@@ -77,6 +65,7 @@ pub(all) struct ProviderResult {
   symbols : Array[DocumentSymbol]
   semantic_tokens : Array[SemanticToken]
 } derive(@debug.Debug)
+pub fn ProviderResult::definition_at(Self, Int) -> Location?
 pub fn ProviderResult::empty() -> Self
 pub fn ProviderResult::hover_at(Self, Int) -> Hover?
 
@@ -88,6 +77,22 @@ pub(all) struct SemanticToken {
 // Type aliases
 
 // Traits
+pub(open) trait DefinitionProvider {
+  async fn definition_at(Self, @workspace.SourceDocument, Int) -> Location?
+}
+
+pub(open) trait DiagnosticsProvider {
+  async fn diagnostics_for_document(Self, @workspace.SourceDocument) -> Array[Diagnostic]
+}
+
+pub(open) trait DocumentSymbolProvider {
+  async fn document_symbols(Self, @workspace.SourceDocument) -> Array[DocumentSymbol]
+}
+
+pub(open) trait HoverProvider {
+  async fn hover_at(Self, @workspace.SourceDocument, Int) -> Hover?
+}
+
 pub(open) trait LanguageProvider {
   fn hovers(Self, @core.DocumentSnapshot) -> Array[Hover]
   fn diagnostics(Self, @core.DocumentSnapshot) -> Array[Diagnostic]
@@ -96,9 +101,7 @@ pub(open) trait LanguageProvider {
   fn semantic_tokens(Self, @core.DocumentSnapshot) -> Array[SemanticToken]
 }
 
-pub(open) trait LspTransport {
-  async fn request(Self, String) -> String
-  async fn notify(Self, String) -> Unit
-  fn subscribe(Self, (String) -> Unit) -> LspSubscription
+pub(open) trait SemanticTokensProvider {
+  async fn semantic_tokens_for_document(Self, @workspace.SourceDocument) -> Array[SemanticToken]
 }
 

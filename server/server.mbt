@@ -24,8 +24,6 @@ pub(open) trait ServerHost {
     @workspace.SourcePath,
     (@workspace.FileChangeType) -> Unit,
   ) -> ServerWatch
-  fn request_lsp(Self, String) -> String
-  fn notify_lsp(Self, String) -> Unit
 }
 
 ///|
@@ -119,9 +117,11 @@ pub fn RemoteServer::handle_client_packet(
       self.close_document(request)
       []
     }
+    Diagnostics(request) => [self.diagnostics(request)]
     Hover(request) => [self.hover(request)]
     Definition(request) => [self.definition(request)]
-    Lsp(lsp_packet) => [self.route_lsp(lsp_packet)]
+    DocumentSymbols(request) => [self.document_symbols(request)]
+    SemanticTokens(request) => [self.semantic_tokens(request)]
   }
 }
 
@@ -205,6 +205,26 @@ pub fn RemoteServer::hover(
 }
 
 ///|
+pub fn RemoteServer::diagnostics(
+  self : RemoteServer,
+  request : @remote_protocol.DocumentVersionRequest,
+) -> @remote_protocol.ServerPacket {
+  match
+    self.cached_document(request.uri, request.document_version, request.id) {
+    Some(document) => {
+      let providers = @language.demo_providers(document.snapshot())
+      Diagnostics({
+        id: request.id,
+        uri: request.uri,
+        version: document.version,
+        diagnostics: providers.diagnostics,
+      })
+    }
+    None => self.missing_cached_document_error(request.id)
+  }
+}
+
+///|
 pub fn RemoteServer::definition(
   self : RemoteServer,
   request : @remote_protocol.DocumentPositionRequest,
@@ -217,7 +237,7 @@ pub fn RemoteServer::definition(
         id: request.id,
         uri: request.uri,
         version: document.version,
-        location: definition_at(providers, request.offset),
+        location: providers.definition_at(request.offset),
       })
     }
     None => self.missing_cached_document_error(request.id)
@@ -225,11 +245,43 @@ pub fn RemoteServer::definition(
 }
 
 ///|
-pub fn RemoteServer::route_lsp(
+pub fn RemoteServer::document_symbols(
   self : RemoteServer,
-  packet : @remote_protocol.LspProtocolPacket,
+  request : @remote_protocol.DocumentVersionRequest,
 ) -> @remote_protocol.ServerPacket {
-  LspResult({ id: packet.id, message: self.host.request_lsp(packet.message) })
+  match
+    self.cached_document(request.uri, request.document_version, request.id) {
+    Some(document) => {
+      let providers = @language.demo_providers(document.snapshot())
+      DocumentSymbolsResult({
+        id: request.id,
+        uri: request.uri,
+        version: document.version,
+        symbols: providers.symbols,
+      })
+    }
+    None => self.missing_cached_document_error(request.id)
+  }
+}
+
+///|
+pub fn RemoteServer::semantic_tokens(
+  self : RemoteServer,
+  request : @remote_protocol.DocumentVersionRequest,
+) -> @remote_protocol.ServerPacket {
+  match
+    self.cached_document(request.uri, request.document_version, request.id) {
+    Some(document) => {
+      let providers = @language.demo_providers(document.snapshot())
+      SemanticTokensResult({
+        id: request.id,
+        uri: request.uri,
+        version: document.version,
+        semantic_tokens: providers.semantic_tokens,
+      })
+    }
+    None => self.missing_cached_document_error(request.id)
+  }
 }
 
 ///|
@@ -327,20 +379,6 @@ fn RemoteServer::missing_cached_document_error(
       request_id~,
     ),
   )
-}
-
-///|
-fn definition_at(
-  providers : @language.ProviderResult,
-  offset : Int,
-) -> @language.Location? {
-  let mut found : @language.Location? = None
-  for location in providers.definitions {
-    if found is None && location.range.contains_offset(offset) {
-      found = Some(location)
-    }
-  }
-  found
 }
 
 ///|

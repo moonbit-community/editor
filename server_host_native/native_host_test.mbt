@@ -8,9 +8,6 @@ test "native host reports unavailable effects until runtime is attached" {
     }
     ServerHostReadOk(_) => fail("expected unavailable native file host")
   }
-  assert_true(
-    host.request_lsp("{}").contains("Native LSP process host is not attached"),
-  )
 }
 
 ///|

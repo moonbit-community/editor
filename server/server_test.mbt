@@ -69,22 +69,6 @@ test "routes watch events to document changed packets" {
 }
 
 ///|
-test "routes raw lsp packets through host" {
-  let host = FakeServerHost::new()
-  host.lsp_response = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}"
-  let server = @server.RemoteServer("/workspace", host)
-
-  match server.route_lsp({ id: "lsp-1", message: "{\"id\":1}" }) {
-    LspResult(packet) => {
-      assert_eq(packet.id, "lsp-1")
-      assert_eq(packet.message, host.lsp_response)
-      assert_eq(host.lsp_requests.length(), 1)
-    }
-    _ => fail("expected lsp result")
-  }
-}
-
-///|
 test "answers hover and definition from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("demo.mbt", "pub fn main {}\n")
@@ -115,6 +99,39 @@ test "answers hover and definition from cached provider state" {
 }
 
 ///|
+test "answers diagnostics symbols and semantic tokens from cached provider state" {
+  let host = FakeServerHost::new()
+  host.files.set("demo.mbt", "pub fn main { // TODO }\n")
+  let server = @server.RemoteServer("/workspace", host)
+  let uri = expect_remote_uri("demo.mbt")
+  ignore(server.open_document({ id: "open-1", uri }))
+
+  match server.diagnostics({ id: "diag-1", uri, document_version: 1 }) {
+    Diagnostics(payload) => {
+      assert_eq(payload.id, "diag-1")
+      assert_eq(payload.diagnostics.length(), 1)
+    }
+    _ => fail("expected diagnostics result")
+  }
+
+  match server.document_symbols({ id: "symbols-1", uri, document_version: 1 }) {
+    DocumentSymbolsResult(payload) => {
+      assert_eq(payload.symbols.length(), 1)
+      assert_eq(payload.symbols[0].name, "main")
+    }
+    _ => fail("expected document symbols result")
+  }
+
+  match server.semantic_tokens({ id: "tokens-1", uri, document_version: 1 }) {
+    SemanticTokensResult(payload) => {
+      assert_eq(payload.semantic_tokens.length(), 1)
+      assert_eq(payload.semantic_tokens[0].token_type, "function")
+    }
+    _ => fail("expected semantic tokens result")
+  }
+}
+
+///|
 fn expect_remote_uri(path : String) -> @workspace.DocumentUri raise {
   match @server.remote_document_uri(path) {
     Some(uri) => uri
@@ -135,19 +152,11 @@ struct FakeServerHost {
   files : Map[String, String]
   errors : Map[String, (@workspace.FileSystemProviderErrorCode, String)]
   listeners : Map[String, (@workspace.FileChangeType) -> Unit]
-  lsp_requests : Array[String]
-  mut lsp_response : String
 }
 
 ///|
 fn FakeServerHost::new() -> FakeServerHost {
-  {
-    files: Map::default(),
-    errors: Map::default(),
-    listeners: Map::default(),
-    lsp_requests: [],
-    lsp_response: "",
-  }
+  { files: Map::default(), errors: Map::default(), listeners: Map::default() }
 }
 
 ///|
@@ -196,15 +205,4 @@ impl @server.ServerHost for FakeServerHost with fn watch_text_file(
   let key = path.to_string()
   self.listeners.set(key, listener)
   ServerWatch(() => self.listeners.remove(key))
-}
-
-///|
-impl @server.ServerHost for FakeServerHost with fn request_lsp(self, message) {
-  self.lsp_requests.push(message)
-  self.lsp_response
-}
-
-///|
-impl @server.ServerHost for FakeServerHost with fn notify_lsp(self, message) {
-  self.lsp_requests.push(message)
 }

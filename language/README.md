@@ -1,22 +1,24 @@
 # language
 
-Readonly language-provider contracts and LSP client behavior.
+Readonly language-provider contracts.
 
 ## Responsibilities
 
 - Define hover, diagnostic, definition, symbol, semantic-token, and provider
   result types.
-- Define the `LanguageProvider` trait and deterministic demo provider.
-- Own the readonly LSP client, transport trait, request/notification flow, and
-  conversion of LSP responses into provider results.
+- Define feature-specific semantic provider traits and the migration
+  `LanguageProvider` aggregate.
+- Keep the deterministic demo provider for local tests and fallback fixtures.
+- Keep the existing `LspClient` as migration code until server-owned LSP
+  providers replace it.
 
 ## Boundaries
 
 - May depend on `core`, `workspace`, and JSON support.
 - Must not import renderer backends, DOM, native host packages, or server
   packages.
-- Transport effects are supplied through `LspTransport`; this package owns
-  client state and protocol interpretation.
+- Browser and native transport effects are not part of the target public
+  language-provider architecture.
 
 ## Checks
 

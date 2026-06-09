@@ -3,9 +3,6 @@ fn main {
   @browser.register_render_callback(() => {
     @js_async.Promise::from_async(() => render_current_document())
   })
-  lsp_client().set_diagnostics_listener(
-    Some((_uri, _version) => @browser.queue_render()),
-  )
   @browser.register_load_callback(uri => {
     @js_async.Promise::from_async(() => load_source_document(uri))
   })
@@ -21,9 +18,7 @@ fn main {
 }
 
 ///|
-let active_lsp_client : @language.LspClient = LspClient(
-  @browser.browser_lsp_transport(),
-)
+let active_language_provider : @browser.BrowserRemoteLanguageProvider = @browser.browser_remote_language_provider()
 
 ///|
 async fn load_source_document(uri_value : String) -> String {
@@ -71,9 +66,20 @@ async fn render_current_document() -> Unit {
   let source_document = current_source_document()
   let doc = source_document.snapshot()
   let tokens = @syntax.highlight(doc)
-  let client = lsp_client()
-  let providers = client.sync_document(source_document)
-  emit_lsp_status(client, providers.diagnostics.length(), doc.version)
+  let provider = language_provider()
+  let diagnostics_provider = provider.as_diagnostics_provider()
+  let symbols_provider = provider.as_document_symbol_provider()
+  let semantic_tokens_provider = provider.as_semantic_tokens_provider()
+  let providers : @language.ProviderResult = {
+    hovers: [],
+    diagnostics: diagnostics_provider.diagnostics_for_document(source_document),
+    definitions: [],
+    symbols: symbols_provider.document_symbols(source_document),
+    semantic_tokens: semantic_tokens_provider.semantic_tokens_for_document(
+      source_document,
+    ),
+  }
+  emit_language_status(provider, providers.diagnostics.length(), doc.version)
   let decorations = decorations_from_diagnostics(providers.diagnostics)
   let frame = @renderer.build_frame(
     doc,
@@ -96,23 +102,24 @@ async fn hover_current_document(offset : Int, expected_version : Int) -> String 
   if source_document.version != expected_version {
     return hover_response_json(false, source_document.version, None)
   }
-  let client = lsp_client()
-  match client.hover_at(source_document, offset) {
+  let provider = language_provider()
+  let hover_provider = provider.as_hover_provider()
+  match hover_provider.hover_at(source_document, offset) {
     Some(hover) => {
       @browser.emit_event(
-        "lsp:hover",
+        "language:hover",
         "{\"ok\":true,\"version\":" + source_document.version.to_string() + "}",
       )
       hover_response_json(true, source_document.version, Some(hover))
     }
     None => {
-      let error = client.last_error()
+      let error = provider.last_error_message()
       if error != "" {
         @browser.emit_event(
-          "lsp:error",
+          "language:error",
           "{\"message\":" + json_string(error) + "}",
         )
-        client.clear_last_error()
+        provider.clear_last_error()
       }
       hover_response_json(false, source_document.version, None)
     }
@@ -128,23 +135,24 @@ async fn definition_current_document(
   if source_document.version != expected_version {
     return location_response_json(false, source_document.version, None)
   }
-  let client = lsp_client()
-  match client.definition_at(source_document, offset) {
+  let provider = language_provider()
+  let definition_provider = provider.as_definition_provider()
+  match definition_provider.definition_at(source_document, offset) {
     Some(location) => {
       @browser.emit_event(
-        "lsp:definition",
+        "language:definition",
         "{\"ok\":true,\"version\":" + source_document.version.to_string() + "}",
       )
       location_response_json(true, source_document.version, Some(location))
     }
     None => {
-      let error = client.last_error()
+      let error = provider.last_error_message()
       if error != "" {
         @browser.emit_event(
-          "lsp:error",
+          "language:error",
           "{\"message\":" + json_string(error) + "}",
         )
-        client.clear_last_error()
+        provider.clear_last_error()
       }
       location_response_json(false, source_document.version, None)
     }
@@ -172,29 +180,26 @@ fn current_document_uri() -> @workspace.DocumentUri {
 }
 
 ///|
-fn lsp_client() -> @language.LspClient {
-  active_lsp_client
+fn language_provider() -> @browser.BrowserRemoteLanguageProvider {
+  active_language_provider
 }
 
 ///|
-fn emit_lsp_status(
-  client : @language.LspClient,
+fn emit_language_status(
+  provider : @browser.BrowserRemoteLanguageProvider,
   diagnostic_count : Int,
   version : Int,
 ) -> Unit {
-  if client.is_initialized() {
-    @browser.emit_event(
-      "lsp:initialize",
-      "{\"ok\":true,\"version\":" + version.to_string() + "}",
-    )
-  }
-  let error = client.last_error()
+  let error = provider.last_error_message()
   if error != "" {
-    @browser.emit_event("lsp:error", "{\"message\":" + json_string(error) + "}")
-    client.clear_last_error()
+    @browser.emit_event(
+      "language:error",
+      "{\"message\":" + json_string(error) + "}",
+    )
+    provider.clear_last_error()
   }
   @browser.emit_event(
-    "lsp:diagnostics",
+    "language:diagnostics",
     "{\"count\":" +
     diagnostic_count.to_string() +
     ",\"version\":" +

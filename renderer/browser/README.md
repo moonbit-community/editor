@@ -6,8 +6,8 @@ Browser render backend adapter.
 
 - Bridge backend-neutral `renderer.RenderFrame` values to the browser host.
 - Register render, load, watch, hover, and definition callbacks.
-- Adapt browser filesystem, LSP, and remote protocol transports into MoonBit
-  provider contracts.
+- Adapt browser filesystem and semantic remote protocol transports into
+  MoonBit provider contracts.
 - Emit browser observability events such as `moonbit:render`.
 
 ## Boundaries
@@ -18,6 +18,7 @@ Browser render backend adapter.
   boundary but does not declare it.
 - Browser-only behavior stays here or in `dom`, not in shared renderer or
   domain packages.
+- Must not expose a raw browser LSP transport.
 
 ## Checks
 

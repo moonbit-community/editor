@@ -56,6 +56,37 @@ pub(open) trait LanguageProvider {
 }
 
 ///|
+pub(open) trait HoverProvider {
+  async fn hover_at(Self, @workspace.SourceDocument, Int) -> Hover?
+}
+
+///|
+pub(open) trait DefinitionProvider {
+  async fn definition_at(Self, @workspace.SourceDocument, Int) -> Location?
+}
+
+///|
+pub(open) trait DiagnosticsProvider {
+  async fn diagnostics_for_document(Self, @workspace.SourceDocument) -> Array[
+    Diagnostic,
+  ]
+}
+
+///|
+pub(open) trait DocumentSymbolProvider {
+  async fn document_symbols(Self, @workspace.SourceDocument) -> Array[
+    DocumentSymbol,
+  ]
+}
+
+///|
+pub(open) trait SemanticTokensProvider {
+  async fn semantic_tokens_for_document(Self, @workspace.SourceDocument) -> Array[
+    SemanticToken,
+  ]
+}
+
+///|
 pub fn ProviderResult::empty() -> ProviderResult {
   {
     hovers: [],
@@ -81,7 +112,48 @@ pub fn collect_provider_result(
 }
 
 ///|
+pub async fn collect_document_provider_result(
+  diagnostics : &DiagnosticsProvider,
+  symbols : &DocumentSymbolProvider,
+  semantic_tokens : &SemanticTokensProvider,
+  document : @workspace.SourceDocument,
+) -> ProviderResult {
+  {
+    hovers: [],
+    diagnostics: diagnostics.diagnostics_for_document(document),
+    definitions: [],
+    symbols: symbols.document_symbols(document),
+    semantic_tokens: semantic_tokens.semantic_tokens_for_document(document),
+  }
+}
+
+///|
 pub fn demo_provider() -> &LanguageProvider {
+  DemoLanguageProvider::{  }
+}
+
+///|
+pub fn demo_hover_provider() -> &HoverProvider {
+  DemoLanguageProvider::{  }
+}
+
+///|
+pub fn demo_definition_provider() -> &DefinitionProvider {
+  DemoLanguageProvider::{  }
+}
+
+///|
+pub fn demo_diagnostics_provider() -> &DiagnosticsProvider {
+  DemoLanguageProvider::{  }
+}
+
+///|
+pub fn demo_document_symbol_provider() -> &DocumentSymbolProvider {
+  DemoLanguageProvider::{  }
+}
+
+///|
+pub fn demo_semantic_tokens_provider() -> &SemanticTokensProvider {
   DemoLanguageProvider::{  }
 }
 
@@ -160,6 +232,51 @@ impl LanguageProvider for DemoLanguageProvider with fn semantic_tokens(
 }
 
 ///|
+impl HoverProvider for DemoLanguageProvider with fn hover_at(
+  _self,
+  document,
+  offset,
+) {
+  collect_provider_result(demo_provider(), document.snapshot()).hover_at(offset)
+}
+
+///|
+impl DefinitionProvider for DemoLanguageProvider with fn definition_at(
+  _self,
+  document,
+  offset,
+) {
+  definition_at(
+    collect_provider_result(demo_provider(), document.snapshot()),
+    offset,
+  )
+}
+
+///|
+impl DiagnosticsProvider for DemoLanguageProvider with fn diagnostics_for_document(
+  _self,
+  document,
+) {
+  collect_provider_result(demo_provider(), document.snapshot()).diagnostics
+}
+
+///|
+impl DocumentSymbolProvider for DemoLanguageProvider with fn document_symbols(
+  _self,
+  document,
+) {
+  collect_provider_result(demo_provider(), document.snapshot()).symbols
+}
+
+///|
+impl SemanticTokensProvider for DemoLanguageProvider with fn semantic_tokens_for_document(
+  _self,
+  document,
+) {
+  collect_provider_result(demo_provider(), document.snapshot()).semantic_tokens
+}
+
+///|
 pub fn ProviderResult::hover_at(self : ProviderResult, offset : Int) -> Hover? {
   let mut found : Hover? = None
   for hover in self.hovers {
@@ -168,6 +285,14 @@ pub fn ProviderResult::hover_at(self : ProviderResult, offset : Int) -> Hover? {
     }
   }
   found
+}
+
+///|
+pub fn ProviderResult::definition_at(
+  self : ProviderResult,
+  offset : Int,
+) -> Location? {
+  definition_at(self, offset)
 }
 
 ///|
@@ -185,4 +310,15 @@ fn main_range(doc : @core.DocumentSnapshot) -> @core.Range? {
     Some(start) => Some(Range(start, start + 4))
     None => None
   }
+}
+
+///|
+fn definition_at(providers : ProviderResult, offset : Int) -> Location? {
+  let mut found : Location? = None
+  for location in providers.definitions {
+    if found is None && location.range.contains_offset(offset) {
+      found = Some(location)
+    }
+  }
+  found
 }

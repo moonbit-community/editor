@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { promises as fs } from 'node:fs';
 
 test('renders highlighted readonly code and diagnostics', async ({ page }) => {
-  await installTestLsp(page);
+  await installTestRemoteProtocol(page);
   const events = [];
   page.on('console', (message) => {
     if (message.text().includes('[readonly-editor]')) {
@@ -17,12 +17,12 @@ test('renders highlighted readonly code and diagnostics', async ({ page }) => {
   await expect(page.locator('.tok-keyword').first()).toHaveText('pub');
   await expect(page.locator('.tok-string')).toContainText('"hello"');
   await expect(page.locator('.diag-warning')).toContainText('TODO');
-  await expect(page.locator('.diagnostic-item')).toContainText('Fake LSP diagnostic');
+  await expect(page.locator('.diagnostic-item')).toContainText('Fake semantic diagnostic');
 
   const hover = page.locator('.code span', { hasText: 'main' }).first();
   await hover.hover();
-  await expect(hover).toHaveAttribute('data-hover', /Fake LSP hover for main/);
-  await expect(page.locator('.hover-tooltip')).toContainText('Fake LSP hover for main');
+  await expect(hover).toHaveAttribute('data-hover', /Fake semantic hover for main/);
+  await expect(page.locator('.hover-tooltip')).toContainText('Fake semantic hover for main');
   await hover.dblclick();
   await expect(hover).toHaveAttribute('data-definition-uri', 'memory://demo.mbt');
   await expect(hover).toHaveAttribute('data-definition-target', 'true');
@@ -33,14 +33,13 @@ test('renders highlighted readonly code and diagnostics', async ({ page }) => {
   await expect(page.locator('.code-line').last()).toBeVisible();
   expect(events.some((event) => event.includes('moonbit:render'))).toBeTruthy();
   expect(events.some((event) => event.includes('dom:mounted'))).toBeTruthy();
-  expect(events.some((event) => event.includes('lsp:initialize'))).toBeTruthy();
-  expect(events.some((event) => event.includes('lsp:diagnostics'))).toBeTruthy();
-  expect(events.some((event) => event.includes('lsp:hover'))).toBeTruthy();
-  expect(events.some((event) => event.includes('lsp:definition'))).toBeTruthy();
+  expect(events.some((event) => event.includes('language:diagnostics'))).toBeTruthy();
+  expect(events.some((event) => event.includes('language:hover'))).toBeTruthy();
+  expect(events.some((event) => event.includes('language:definition'))).toBeTruthy();
 });
 
 test('keeps code cells content-sized while rows span horizontal scroll width', async ({ page }) => {
-  await installTestLsp(page);
+  await installTestRemoteProtocol(page);
   await page.setViewportSize({ width: 432, height: 987 });
   await page.goto('/');
   await expect(page.locator('.code-lines')).toBeVisible();
@@ -72,7 +71,7 @@ test('keeps code cells content-sized while rows span horizontal scroll width', a
 });
 
 test('renders a provider file and refreshes when content changes', async ({ page }) => {
-  await installTestLsp(page);
+  await installTestRemoteProtocol(page);
   const fixtureUri = 'file://local/docs/fixtures/demo.mbt';
   const original = await fs.readFile('docs/fixtures/demo.mbt', 'utf8');
   await installTestFileSystem(page, {
@@ -97,14 +96,14 @@ test('renders a provider file and refreshes when content changes', async ({ page
   }, { uri: fixtureUri, text: original.replace('"hello"', '"synced"') });
   await expect(page.locator('.tok-string')).toContainText('"synced"', { timeout: 5_000 });
   await expect.poll(() => page.evaluate(() => {
-    return globalThis.__readonlyEditorLspMessages
-      .filter((entry) => entry.type === 'notify' && entry.message.includes('textDocument/didChange'))
+    return globalThis.__readonlyEditorRemoteProtocolMessages
+      .filter((entry) => entry.type === 'request' && entry.packet.includes('"type":"Diagnostics"'))
       .length;
-  })).toBeGreaterThan(0);
+  })).toBeGreaterThan(1);
 });
 
 test('opens readonly remote workspace files through the protocol provider', async ({ page }) => {
-  await installTestLsp(page);
+  await installTestRemoteProtocol(page);
   const localUri = 'file://local/docs/fixtures/demo.mbt';
   const remoteUri = 'readonly-remote://workspace/docs/fixtures/demo.mbt';
   const original = await fs.readFile('docs/fixtures/demo.mbt', 'utf8');
@@ -137,7 +136,7 @@ test('opens readonly remote workspace files through the protocol provider', asyn
 });
 
 test('shows missing state and resumes when watched file reappears', async ({ page }) => {
-  await installTestLsp(page);
+  await installTestRemoteProtocol(page);
   const fixtureUri = 'file://local/docs/fixtures/auto-sync-temp.mbt';
   await installTestFileSystem(page, {
     [fixtureUri]: {
@@ -168,138 +167,161 @@ test('shows missing state and resumes when watched file reappears', async ({ pag
   await expect(page.locator('.tok-string')).toContainText('"two"');
 });
 
-async function installTestLsp(page) {
+async function installTestRemoteProtocol(page) {
   await page.addInitScript(() => {
-    const listeners = new Set();
-    const documents = new Map();
     const messages = [];
-    globalThis.__readonlyEditorLspMessages = messages;
-    globalThis.__readonlyEditorLspTransport = {
-      async request(message) {
-        messages.push({ type: 'request', message });
-        const request = parse(message);
-        if (request.method === 'initialize') {
-          return response(request.id, {
-            capabilities: {
-              textDocumentSync: 1,
-              hoverProvider: true,
-              definitionProvider: true
-            }
+    globalThis.__readonlyEditorRemoteProtocolMessages = messages;
+    globalThis.__readonlyEditorRemoteProtocolTransport = {
+      async request(packet, { signal } = {}) {
+        messages.push({ type: 'request', packet });
+        const request = parse(packet);
+        if (request.type === 'OpenDocument') {
+          return readRemoteDocument(request, { signal, responseType: 'DocumentLoaded' });
+        }
+        if (request.type === 'Diagnostics') {
+          return diagnosticsPacket(request);
+        }
+        if (request.type === 'Hover') {
+          return hoverPacket(request);
+        }
+        if (request.type === 'Definition') {
+          return definitionPacket(request);
+        }
+        if (request.type === 'DocumentSymbols') {
+          return symbolsPacket(request);
+        }
+        if (request.type === 'SemanticTokens') {
+          return semanticTokensPacket(request);
+        }
+        return protocolErrorPacket(request, 'InvalidPacket', `Unsupported remote protocol request ${request.type || 'unknown'}.`);
+      },
+
+      watch(packet, listener) {
+        messages.push({ type: 'watch', packet });
+        const request = parse(packet);
+        if (request.type !== 'WatchDocument') {
+          queueMicrotask(() => {
+            listener(protocolErrorPacket(request, 'InvalidPacket', 'Unsupported remote watch request.'));
           });
+          return { dispose() {} };
         }
-        if (request.method === 'textDocument/hover') {
-          const document = documents.get(request.params?.textDocument?.uri);
-          return response(request.id, hoverFor(document, request.params?.position));
-        }
-        if (request.method === 'textDocument/definition') {
-          const document = documents.get(request.params?.textDocument?.uri);
-          return response(request.id, definitionFor(document, request.params?.position));
-        }
-        return JSON.stringify({
-          jsonrpc: '2.0',
-          id: request.id ?? null,
-          error: { code: -32601, message: 'Unsupported test LSP request.' }
-        });
-      },
-
-      async notify(message) {
-        messages.push({ type: 'notify', message });
-        const notification = parse(message);
-        if (notification.method === 'textDocument/didOpen') {
-          const item = notification.params?.textDocument;
-          if (item?.uri) {
-            documents.set(item.uri, {
-              uri: item.uri,
-              languageId: item.languageId || '',
-              version: item.version || 1,
-              text: item.text || ''
-            });
-            publishDiagnostics(item.uri);
+        const localUri = remoteUriToLocalFileUri(request.uri);
+        return globalThis.__readonlyEditorProviderWatchFile(localUri, async (payload) => {
+          const changes = parseFileChanges(payload);
+          if (changes.some((change) => change.type === 'deleted')) {
+            listener(providerErrorPacket(request, 'FileNotFound', 'Watched source file was deleted.'));
+            return;
           }
-        } else if (notification.method === 'textDocument/didChange') {
-          const item = notification.params?.textDocument;
-          const text = notification.params?.contentChanges?.[0]?.text;
-          if (item?.uri && typeof text === 'string') {
-            const previous = documents.get(item.uri) || { uri: item.uri };
-            documents.set(item.uri, {
-              ...previous,
-              version: item.version || previous.version || 1,
-              text
-            });
-            publishDiagnostics(item.uri);
-          }
-        } else if (notification.method === 'textDocument/didClose') {
-          documents.delete(notification.params?.textDocument?.uri);
-        }
-      },
-
-      subscribe(listener) {
-        listeners.add(listener);
-        return {
-          dispose() {
-            listeners.delete(listener);
-          }
-        };
+          listener(await readRemoteDocument(request, { responseType: 'DocumentChanged' }));
+        }) || { dispose() {} };
       }
     };
 
-    function publishDiagnostics(uri) {
-      const document = documents.get(uri);
-      const todo = document?.text.indexOf('TODO') ?? -1;
-      const diagnostics = todo < 0 ? [] : [{
-        range: {
-          start: offsetToPosition(document.text, todo),
-          end: offsetToPosition(document.text, todo + 4)
-        },
-        severity: 2,
-        message: 'Fake LSP diagnostic from readonly transport'
-      }];
-      const message = JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'textDocument/publishDiagnostics',
-        params: { uri, version: document?.version || 1, diagnostics }
-      });
-      for (const listener of listeners) {
-        listener(message);
+    async function readRemoteDocument(request, { signal, responseType }) {
+      const localUri = remoteUriToLocalFileUri(request.uri);
+      const result = await globalThis.__readonlyEditorProviderReadFile(localUri, signal);
+      if (!result?.ok) {
+        return providerErrorPacket(request, result?.code || 'Unavailable', result?.message || 'Unable to read remote source document.');
       }
-    }
-
-    function hoverFor(document, position) {
-      const range = identifierRange(document, position);
-      if (!range) {
-        return null;
-      }
-      const word = document.text.slice(range.start, range.end);
-      return {
-        contents: { kind: 'plaintext', value: `Fake LSP hover for ${word}` },
-        range: {
-          start: offsetToPosition(document.text, range.start),
-          end: offsetToPosition(document.text, range.end)
+      return JSON.stringify({
+        version: 1,
+        type: responseType,
+        id: request.id || '',
+        document: {
+          uri: request.uri,
+          displayName: result.displayName || 'demo.mbt',
+          languageId: result.languageId || '',
+          version: 1,
+          revision: result.revision || String(result.text?.length || 0),
+          text: result.text || ''
         }
-      };
+      });
     }
 
-    function definitionFor(document, position) {
-      const range = identifierRange(document, position);
+    function diagnosticsPacket(request) {
+      const document = documentForRequest(request);
+      if (!document) {
+        return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for diagnostics.');
+      }
+      const todo = document.text.indexOf('TODO');
+      const diagnostics = todo < 0 ? [] : [{
+        range: { start: todo, end: todo + 4 },
+        severity: 'Warning',
+        message: 'Fake semantic diagnostic from remote protocol'
+      }];
+      return languagePacket(request, 'Diagnostics', document, { diagnostics });
+    }
+
+    function hoverPacket(request) {
+      const document = documentForRequest(request);
+      if (!document) {
+        return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for hover.');
+      }
+      const range = identifierRange(document, request.offset);
+      const hover = range ? {
+        range,
+        contents: `Fake semantic hover for ${document.text.slice(range.start, range.end)}`
+      } : null;
+      return languagePacket(request, 'HoverResult', document, { hover });
+    }
+
+    function definitionPacket(request) {
+      const document = documentForRequest(request);
+      if (!document) {
+        return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for definition.');
+      }
+      const range = identifierRange(document, request.offset);
+      let location = null;
       if (!range) {
-        return null;
+        return languagePacket(request, 'DefinitionResult', document, { location });
       }
       const word = document.text.slice(range.start, range.end);
       const start = document.text.indexOf(word);
-      return {
-        uri: document.uri,
-        range: {
-          start: offsetToPosition(document.text, start),
-          end: offsetToPosition(document.text, start + word.length)
-        }
-      };
+      if (start >= 0) {
+        location = {
+          uri: document.uri,
+          range: { start, end: start + word.length }
+        };
+      }
+      return languagePacket(request, 'DefinitionResult', document, { location });
     }
 
-    function identifierRange(document, position) {
-      if (!document || !position) {
+    function symbolsPacket(request) {
+      const document = documentForRequest(request);
+      if (!document) {
+        return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for document symbols.');
+      }
+      const main = document.text.indexOf('main');
+      const symbols = main < 0 ? [] : [{ name: 'main', kind: 'function', range: { start: main, end: main + 4 } }];
+      return languagePacket(request, 'DocumentSymbolsResult', document, { symbols });
+    }
+
+    function semanticTokensPacket(request) {
+      const document = documentForRequest(request);
+      if (!document) {
+        return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for semantic tokens.');
+      }
+      const main = document.text.indexOf('main');
+      const semanticTokens = main < 0 ? [] : [{ range: { start: main, end: main + 4 }, tokenType: 'function' }];
+      return languagePacket(request, 'SemanticTokensResult', document, { semanticTokens });
+    }
+
+    function documentForRequest(request) {
+      const document = globalThis.__readonlyEditorDocument;
+      if (!document || document.uri !== request.uri) {
         return null;
       }
-      let index = offsetFromPosition(document.text, position);
+      if (request.documentVersion > 0 && document.version !== request.documentVersion) {
+        return null;
+      }
+      return document;
+    }
+
+    function identifierRange(document, offset) {
+      if (!document || !Number.isFinite(offset)) {
+        return null;
+      }
+      let index = Math.max(0, Math.min(document.text.length, Math.trunc(offset)));
       if (index === document.text.length || !/[A-Za-z0-9_]/.test(document.text[index])) {
         index -= 1;
       }
@@ -317,35 +339,53 @@ async function installTestLsp(page) {
       return { start, end };
     }
 
-    function offsetToPosition(text, offset) {
-      let line = 0;
-      let character = 0;
-      for (let index = 0; index < offset; index += 1) {
-        if (text.charCodeAt(index) === 10) {
-          line += 1;
-          character = 0;
-        } else {
-          character += 1;
-        }
-      }
-      return { line, character };
+    function languagePacket(request, type, document, fields) {
+      return JSON.stringify({
+        version: 1,
+        type,
+        id: request.id || '',
+        uri: request.uri,
+        documentVersion: document.version,
+        ...fields
+      });
     }
 
-    function offsetFromPosition(text, position) {
-      let line = 0;
-      let character = 0;
-      for (let index = 0; index < text.length; index += 1) {
-        if (line === position.line && character === position.character) {
-          return index;
+    function protocolErrorPacket(request, code, message) {
+      return JSON.stringify({
+        version: 1,
+        type: 'Error',
+        id: request.id || '',
+        error: { code, message, requestId: request.id || '' }
+      });
+    }
+
+    function providerErrorPacket(request, providerCode, message) {
+      return JSON.stringify({
+        version: 1,
+        type: 'Error',
+        id: request.id || '',
+        error: {
+          code: 'ProviderError',
+          message,
+          requestId: request.id || '',
+          providerCode
         }
-        if (text.charCodeAt(index) === 10) {
-          line += 1;
-          character = 0;
-        } else {
-          character += 1;
-        }
+      });
+    }
+
+    function remoteUriToLocalFileUri(uri) {
+      const prefix = 'readonly-remote://workspace/';
+      return typeof uri === 'string' && uri.startsWith(prefix)
+        ? `file://local/${uri.slice(prefix.length)}`
+        : '';
+    }
+
+    function parseFileChanges(payload) {
+      try {
+        return JSON.parse(payload);
+      } catch {
+        return [{ type: 'changed' }];
       }
-      return text.length;
     }
 
     function parse(message) {
@@ -354,10 +394,6 @@ async function installTestLsp(page) {
       } catch {
         return {};
       }
-    }
-
-    function response(id, result) {
-      return JSON.stringify({ jsonrpc: '2.0', id: id ?? null, result });
     }
   });
 }

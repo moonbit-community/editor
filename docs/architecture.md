@@ -103,6 +103,11 @@ or `--target native`.
   package boundaries.
 - Remote protocol packet types, version negotiation, encoding, decoding, and
   structured errors are MoonBit-owned.
+- LSP client behavior targets the official Language Server Protocol 3.17
+  specification:
+  `https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/`.
+  LSP stays behind the host-server provider boundary and is not part of the
+  browser protocol.
 - Render frames are backend-neutral. Browser DOM nodes, CSS details, event
   wiring, and observability belong to the browser backend and host boundary.
 - Adding another frontend should require a new backend package, not changes to

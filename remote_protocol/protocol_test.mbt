@@ -17,8 +17,22 @@ test "encodes and decodes document client packets" {
 }
 
 ///|
-test "encodes and decodes hover and definition packets" {
+test "encodes and decodes semantic client packets" {
   let uri = expect_uri("readonly-remote://workspace/src/main.mbt")
+  let diagnostics = @remote_protocol.ClientPacket::Diagnostics({
+    id: "diag-1",
+    uri,
+    document_version: 4,
+  })
+  match @remote_protocol.decode_client_packet(diagnostics.to_json()) {
+    DecodedClientPacket(Diagnostics(request)) => {
+      assert_eq(request.id, "diag-1")
+      assert_eq(request.document_version, 4)
+    }
+    DecodedClientPacket(_) => fail("unexpected diagnostics packet")
+    ClientPacketDecodeError(error) => fail(error.message)
+  }
+
   let hover = @remote_protocol.Hover({
     id: "hover-1",
     uri,
@@ -47,6 +61,34 @@ test "encodes and decodes hover and definition packets" {
       assert_eq(request.offset, 18)
     }
     DecodedClientPacket(_) => fail("unexpected definition packet")
+    ClientPacketDecodeError(error) => fail(error.message)
+  }
+
+  let symbols = @remote_protocol.DocumentSymbols({
+    id: "symbols-1",
+    uri,
+    document_version: 5,
+  })
+  match @remote_protocol.decode_client_packet(symbols.to_json()) {
+    DecodedClientPacket(DocumentSymbols(request)) => {
+      assert_eq(request.id, "symbols-1")
+      assert_eq(request.document_version, 5)
+    }
+    DecodedClientPacket(_) => fail("unexpected document symbols packet")
+    ClientPacketDecodeError(error) => fail(error.message)
+  }
+
+  let tokens = @remote_protocol.SemanticTokens({
+    id: "tokens-1",
+    uri,
+    document_version: 6,
+  })
+  match @remote_protocol.decode_client_packet(tokens.to_json()) {
+    DecodedClientPacket(SemanticTokens(request)) => {
+      assert_eq(request.id, "tokens-1")
+      assert_eq(request.document_version, 6)
+    }
+    DecodedClientPacket(_) => fail("unexpected semantic tokens packet")
     ClientPacketDecodeError(error) => fail(error.message)
   }
 }
@@ -85,6 +127,54 @@ test "encodes and decodes server document and language packets" {
         None => fail("missing hover")
       }
     DecodedServerPacket(_) => fail("unexpected hover result packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+
+  let diagnostics = @remote_protocol.ServerPacket::Diagnostics({
+    id: "diag-1",
+    uri,
+    version: 2,
+    diagnostics: [
+      { range: Range(0, 3), severity: Warning, message: "check me" },
+    ],
+  })
+  match @remote_protocol.decode_server_packet(diagnostics.to_json()) {
+    DecodedServerPacket(Diagnostics(payload)) => {
+      assert_eq(payload.id, "diag-1")
+      assert_eq(payload.diagnostics.length(), 1)
+      assert_eq(payload.diagnostics[0].message, "check me")
+    }
+    DecodedServerPacket(_) => fail("unexpected diagnostics packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+
+  let symbols = @remote_protocol.DocumentSymbolsResult({
+    id: "symbols-1",
+    uri,
+    version: 2,
+    symbols: [{ name: "main", kind: "function", range: Range(7, 11) }],
+  })
+  match @remote_protocol.decode_server_packet(symbols.to_json()) {
+    DecodedServerPacket(DocumentSymbolsResult(payload)) => {
+      assert_eq(payload.symbols.length(), 1)
+      assert_eq(payload.symbols[0].name, "main")
+    }
+    DecodedServerPacket(_) => fail("unexpected document symbols result packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+
+  let semantic_tokens = @remote_protocol.SemanticTokensResult({
+    id: "tokens-1",
+    uri,
+    version: 2,
+    semantic_tokens: [{ range: Range(7, 11), token_type: "function" }],
+  })
+  match @remote_protocol.decode_server_packet(semantic_tokens.to_json()) {
+    DecodedServerPacket(SemanticTokensResult(payload)) => {
+      assert_eq(payload.semantic_tokens.length(), 1)
+      assert_eq(payload.semantic_tokens[0].token_type, "function")
+    }
+    DecodedServerPacket(_) => fail("unexpected semantic tokens result packet")
     ServerPacketDecodeError(error) => fail(error.message)
   }
 }

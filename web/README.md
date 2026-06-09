@@ -11,7 +11,7 @@ Browser client entrypoint for the readonly editor.
   backend.
 - Select local browser providers or `readonly-remote` providers based on URI
   scheme.
-- Emit LSP status, diagnostics, hover, definition, and error observability
+- Emit language diagnostics, hover, definition, and error observability
   events for harness inspection.
 
 ## Boundaries

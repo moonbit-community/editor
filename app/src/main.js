@@ -8,7 +8,7 @@ const demoDocument = {
   revision: 'demo',
   text: `pub fn main {
   let greeting = "hello"
-  // TODO: replace demo provider with LSP-backed provider
+  // TODO: replace demo provider with server-backed provider
   println(greeting)
 }
 `
@@ -20,7 +20,6 @@ let hoverTooltip = null;
 
 installBrowserFileSystemBackend();
 installBrowserRemoteProtocolBackend();
-installBrowserLspBackend();
 
 globalThis.__readonlyEditorEvent = (name, payload) => {
   let parsed = payload;
@@ -173,160 +172,6 @@ function createBrowserFileSystemProvider() {
   return provider;
 }
 
-function installBrowserLspBackend() {
-  if (globalThis.__readonlyEditorLspTransport) {
-    return;
-  }
-
-  const listeners = new Set();
-  const messages = [];
-  const endpoint = lspWebSocketEndpoint();
-  if (!endpoint) {
-    globalThis.__readonlyEditorLspMessages = messages;
-    return;
-  }
-
-  let socket = null;
-  let connectPromise = null;
-  const pending = new Map();
-  globalThis.__readonlyEditorLspMessages = messages;
-
-  globalThis.__readonlyEditorLspTransport = {
-    async request(message, { signal } = {}) {
-      messages.push({ type: 'request', message });
-      const request = parseLspMessage(message);
-      if (signal?.aborted) {
-        return lspError(request.id, -32800, 'LSP request was cancelled.');
-      }
-      try {
-        const ws = await connect();
-        if (signal?.aborted) {
-          return lspError(request.id, -32800, 'LSP request was cancelled.');
-        }
-        return await sendRequest(ws, message, request.id, signal);
-      } catch (error) {
-        return lspError(request.id, -32099, error.message || 'Unable to connect to moon-lsp.');
-      }
-    },
-
-    async notify(message, { signal } = {}) {
-      messages.push({ type: 'notify', message });
-      if (signal?.aborted) {
-        return;
-      }
-      try {
-        const ws = await connect();
-        ws.send(JSON.stringify({ type: 'message', message }));
-      } catch (error) {
-        messages.push({ type: 'error', message: error.message || 'Unable to notify moon-lsp.' });
-      }
-    },
-
-    subscribe(listener) {
-      listeners.add(listener);
-      return {
-        dispose() {
-          listeners.delete(listener);
-        }
-      };
-    }
-  };
-
-  function connect() {
-    if (socket?.readyState === WebSocket.OPEN) {
-      return Promise.resolve(socket);
-    }
-    if (connectPromise) {
-      return connectPromise;
-    }
-    connectPromise = new Promise((resolve, reject) => {
-      const ws = new WebSocket(endpoint);
-      let opened = false;
-      ws.addEventListener('open', () => {
-        opened = true;
-        socket = ws;
-        resolve(ws);
-      }, { once: true });
-      ws.addEventListener('message', (event) => handleSocketMessage(event.data));
-      ws.addEventListener('error', () => {
-        const error = new Error('Unable to connect to moon-lsp.');
-        if (!opened) {
-          reject(error);
-        }
-        failPending(error.message);
-      });
-      ws.addEventListener('close', () => {
-        socket = null;
-        connectPromise = null;
-        failPending('moon-lsp connection closed.');
-        if (!opened) {
-          reject(new Error('moon-lsp connection closed.'));
-        }
-      });
-    });
-    return connectPromise;
-  }
-
-  function sendRequest(ws, message, id, signal) {
-    const key = lspIdKey(id);
-    if (!key) {
-      ws.send(JSON.stringify({ type: 'message', message }));
-      return Promise.resolve(lspError(id, -32600, 'LSP request missing id.'));
-    }
-    return new Promise((resolve) => {
-      let settled = false;
-      const settle = (value) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        pending.delete(key);
-        signal?.removeEventListener?.('abort', abort);
-        resolve(value);
-      };
-      const abort = () => settle(lspError(id, -32800, 'LSP request was cancelled.'));
-      signal?.addEventListener?.('abort', abort, { once: true });
-      pending.set(key, { id, settle });
-      ws.send(JSON.stringify({ type: 'message', message }));
-    });
-  }
-
-  function handleSocketMessage(data) {
-    let packet;
-    try {
-      packet = JSON.parse(data);
-    } catch {
-      return;
-    }
-    if (packet.type === 'error') {
-      messages.push({ type: 'error', message: packet.message || 'moon-lsp transport error.' });
-      failPending(packet.message || 'moon-lsp transport error.');
-      return;
-    }
-    if (packet.type !== 'message' || typeof packet.message !== 'string') {
-      return;
-    }
-    const message = packet.message;
-    messages.push({ type: 'server', message });
-    const parsed = parseLspMessage(message);
-    const key = lspIdKey(parsed.id);
-    if (key && pending.has(key)) {
-      pending.get(key).settle(message);
-      return;
-    }
-    for (const listener of listeners) {
-      listener(message);
-    }
-  }
-
-  function failPending(message) {
-    for (const [key, pendingRequest] of pending) {
-      pending.delete(key);
-      pendingRequest.settle(lspError(pendingRequest.id, -32099, message));
-    }
-  }
-}
-
 function installBrowserRemoteProtocolBackend() {
   if (globalThis.__readonlyEditorRemoteProtocolTransport) {
     return;
@@ -339,6 +184,21 @@ function installBrowserRemoteProtocolBackend() {
       const request = parseProtocolPacket(packet);
       if (request.type === 'OpenDocument') {
         return readRemoteDocument(request, { signal, responseType: 'DocumentLoaded' });
+      }
+      if (request.type === 'Diagnostics') {
+        return diagnosticsPacket(request);
+      }
+      if (request.type === 'Hover') {
+        return hoverPacket(request);
+      }
+      if (request.type === 'Definition') {
+        return definitionPacket(request);
+      }
+      if (request.type === 'DocumentSymbols') {
+        return documentSymbolsPacket(request);
+      }
+      if (request.type === 'SemanticTokens') {
+        return semanticTokensPacket(request);
       }
       return protocolErrorPacket(
         request,
@@ -375,6 +235,124 @@ function installBrowserRemoteProtocolBackend() {
       }) || { dispose() {} };
     }
   };
+}
+
+function documentForLanguageRequest(request) {
+  const document = activeSession?.document || globalThis.__readonlyEditorDocument;
+  if (!document || document.uri !== request.uri) {
+    return null;
+  }
+  if (Number.isFinite(request.documentVersion) && request.documentVersion > 0 && document.version !== request.documentVersion) {
+    return null;
+  }
+  return document;
+}
+
+function diagnosticsPacket(request) {
+  const document = documentForLanguageRequest(request);
+  if (!document) {
+    return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for diagnostics.');
+  }
+  const todo = document.text.indexOf('TODO');
+  const diagnostics = todo < 0 ? [] : [{
+    range: { start: todo, end: todo + 4 },
+    severity: 'Warning',
+    message: 'Semantic diagnostic from readonly provider'
+  }];
+  return languageResultPacket(request, 'Diagnostics', document, { diagnostics });
+}
+
+function hoverPacket(request) {
+  const document = documentForLanguageRequest(request);
+  if (!document) {
+    return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for hover.');
+  }
+  const range = identifierRangeAtOffset(document.text, request.offset);
+  const hover = range ? {
+    range,
+    contents: `Semantic hover for ${document.text.slice(range.start, range.end)}`
+  } : null;
+  return languageResultPacket(request, 'HoverResult', document, { hover });
+}
+
+function definitionPacket(request) {
+  const document = documentForLanguageRequest(request);
+  if (!document) {
+    return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for definition.');
+  }
+  const range = identifierRangeAtOffset(document.text, request.offset);
+  let location = null;
+  if (range) {
+    const word = document.text.slice(range.start, range.end);
+    const start = document.text.indexOf(word);
+    if (start >= 0) {
+      location = {
+        uri: document.uri,
+        range: { start, end: start + word.length }
+      };
+    }
+  }
+  return languageResultPacket(request, 'DefinitionResult', document, { location });
+}
+
+function documentSymbolsPacket(request) {
+  const document = documentForLanguageRequest(request);
+  if (!document) {
+    return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for document symbols.');
+  }
+  const main = document.text.indexOf('main');
+  const symbols = main < 0 ? [] : [{
+    name: 'main',
+    kind: 'function',
+    range: { start: main, end: main + 4 }
+  }];
+  return languageResultPacket(request, 'DocumentSymbolsResult', document, { symbols });
+}
+
+function semanticTokensPacket(request) {
+  const document = documentForLanguageRequest(request);
+  if (!document) {
+    return protocolErrorPacket(request, 'InvalidPacket', 'No matching loaded document is available for semantic tokens.');
+  }
+  const main = document.text.indexOf('main');
+  const semanticTokens = main < 0 ? [] : [{
+    range: { start: main, end: main + 4 },
+    tokenType: 'function'
+  }];
+  return languageResultPacket(request, 'SemanticTokensResult', document, { semanticTokens });
+}
+
+function languageResultPacket(request, type, document, fields) {
+  return JSON.stringify({
+    version: 1,
+    type,
+    id: request.id || '',
+    uri: request.uri,
+    documentVersion: document.version,
+    ...fields
+  });
+}
+
+function identifierRangeAtOffset(text, offset) {
+  if (typeof text !== 'string' || !Number.isFinite(offset)) {
+    return null;
+  }
+  let index = Math.max(0, Math.min(text.length, Math.trunc(offset)));
+  if (index === text.length || !/[A-Za-z0-9_]/.test(text[index])) {
+    index -= 1;
+  }
+  if (index < 0 || !/[A-Za-z0-9_]/.test(text[index])) {
+    return null;
+  }
+  let start = index;
+  while (start > 0 && /[A-Za-z0-9_]/.test(text[start - 1])) {
+    start -= 1;
+  }
+  let end = index + 1;
+  while (end < text.length && /[A-Za-z0-9_]/.test(text[end])) {
+    end += 1;
+  }
+  return { start, end };
 }
 
 async function readRemoteDocument(request, { signal, responseType = 'DocumentLoaded' } = {}) {
@@ -461,33 +439,6 @@ function parseRemoteFileChanges(uri, payload) {
   } catch {
     return [{ uri, type: 'changed' }];
   }
-}
-
-function lspWebSocketEndpoint() {
-  if (typeof globalThis.__readonlyEditorLspEndpoint === 'string') {
-    return globalThis.__readonlyEditorLspEndpoint;
-  }
-  return '';
-}
-
-function parseLspMessage(message) {
-  try {
-    return JSON.parse(message);
-  } catch {
-    return {};
-  }
-}
-
-function lspError(id, code, message) {
-  return JSON.stringify({
-    jsonrpc: '2.0',
-    id: id ?? null,
-    error: { code, message }
-  });
-}
-
-function lspIdKey(id) {
-  return id === undefined || id === null ? '' : String(id);
 }
 
 async function chooseLocalFile() {
@@ -1174,7 +1125,7 @@ async function requestDefinitionForSpan(node, model) {
       await navigateToDefinition(location);
     }
   } catch {
-    // The MoonBit bridge emits lsp:error for protocol failures.
+    // The MoonBit bridge emits language:error for protocol failures.
   } finally {
     delete node.dataset.definitionState;
   }

@@ -36,9 +36,10 @@ pub(all) struct DocumentPositionRequest {
 } derive(Debug)
 
 ///|
-pub(all) struct LspProtocolPacket {
+pub(all) struct DocumentVersionRequest {
   id : String
-  message : String
+  uri : @workspace.DocumentUri
+  document_version : Int
 } derive(Debug)
 
 ///|
@@ -46,9 +47,11 @@ pub(all) enum ClientPacket {
   OpenDocument(DocumentRequest)
   WatchDocument(DocumentRequest)
   CloseDocument(DocumentRequest)
+  Diagnostics(DocumentVersionRequest)
   Hover(DocumentPositionRequest)
   Definition(DocumentPositionRequest)
-  Lsp(LspProtocolPacket)
+  DocumentSymbols(DocumentVersionRequest)
+  SemanticTokens(DocumentVersionRequest)
 } derive(Debug)
 
 ///|
@@ -59,6 +62,7 @@ pub(all) struct DocumentPayload {
 
 ///|
 pub(all) struct DiagnosticsPayload {
+  id : String
   uri : @workspace.DocumentUri
   version : Int
   diagnostics : Array[@language.Diagnostic]
@@ -81,14 +85,31 @@ pub(all) struct DefinitionResultPayload {
 } derive(Debug)
 
 ///|
+pub(all) struct DocumentSymbolsResultPayload {
+  id : String
+  uri : @workspace.DocumentUri
+  version : Int
+  symbols : Array[@language.DocumentSymbol]
+} derive(Debug)
+
+///|
+pub(all) struct SemanticTokensResultPayload {
+  id : String
+  uri : @workspace.DocumentUri
+  version : Int
+  semantic_tokens : Array[@language.SemanticToken]
+} derive(Debug)
+
+///|
 pub(all) enum ServerPacket {
   DocumentLoaded(DocumentPayload)
   DocumentChanged(DocumentPayload)
   Diagnostics(DiagnosticsPayload)
   HoverResult(HoverResultPayload)
   DefinitionResult(DefinitionResultPayload)
+  DocumentSymbolsResult(DocumentSymbolsResultPayload)
+  SemanticTokensResult(SemanticTokensResultPayload)
   RemoteError(ProtocolError)
-  LspResult(LspProtocolPacket)
 } derive(Debug)
 
 ///|
@@ -178,9 +199,11 @@ pub fn ClientPacket::to_json(self : ClientPacket) -> String {
     OpenDocument(request) => document_request_json("OpenDocument", request)
     WatchDocument(request) => document_request_json("WatchDocument", request)
     CloseDocument(request) => document_request_json("CloseDocument", request)
+    Diagnostics(request) => version_request_json("Diagnostics", request)
     Hover(request) => position_request_json("Hover", request)
     Definition(request) => position_request_json("Definition", request)
-    Lsp(packet) => lsp_packet_json("Lsp", packet)
+    DocumentSymbols(request) => version_request_json("DocumentSymbols", request)
+    SemanticTokens(request) => version_request_json("SemanticTokens", request)
   }
 }
 
@@ -193,8 +216,9 @@ pub fn ServerPacket::to_json(self : ServerPacket) -> String {
     Diagnostics(payload) => diagnostics_payload_json(payload)
     HoverResult(payload) => hover_result_json(payload)
     DefinitionResult(payload) => definition_result_json(payload)
+    DocumentSymbolsResult(payload) => document_symbols_result_json(payload)
+    SemanticTokensResult(payload) => semantic_tokens_result_json(payload)
     RemoteError(error) => error_packet_json(error)
-    LspResult(packet) => lsp_packet_json("Lsp", packet)
   }
 }
 
@@ -218,6 +242,10 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
               decode_document_client(packet, request_id(packet), request => {
                 CloseDocument(request)
               })
+            Some("Diagnostics") =>
+              decode_version_client(packet, request_id(packet), request => {
+                Diagnostics(request)
+              })
             Some("Hover") =>
               decode_position_client(packet, request_id(packet), request => {
                 Hover(request)
@@ -226,7 +254,14 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
               decode_position_client(packet, request_id(packet), request => {
                 Definition(request)
               })
-            Some("Lsp") => decode_lsp_client(packet, request_id(packet))
+            Some("DocumentSymbols") =>
+              decode_version_client(packet, request_id(packet), request => {
+                DocumentSymbols(request)
+              })
+            Some("SemanticTokens") =>
+              decode_version_client(packet, request_id(packet), request => {
+                SemanticTokens(request)
+              })
             Some(kind) =>
               ClientPacketDecodeError(
                 ProtocolError(
@@ -273,8 +308,11 @@ pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
               decode_hover_result_payload(packet, request_id(packet))
             Some("DefinitionResult") =>
               decode_definition_result_payload(packet, request_id(packet))
+            Some("DocumentSymbolsResult") =>
+              decode_document_symbols_result_payload(packet, request_id(packet))
+            Some("SemanticTokensResult") =>
+              decode_semantic_tokens_result_payload(packet, request_id(packet))
             Some("Error") => decode_error_payload(packet, request_id(packet))
-            Some("Lsp") => decode_lsp_server(packet, request_id(packet))
             Some(kind) =>
               ServerPacketDecodeError(
                 ProtocolError(
@@ -335,32 +373,23 @@ fn decode_position_client(
 }
 
 ///|
-fn decode_lsp_client(packet : Json, id : String) -> ClientPacketDecodeResult {
-  match json_string_field(packet, "message") {
-    Some(message) => DecodedClientPacket(Lsp({ id, message }))
-    None =>
-      ClientPacketDecodeError(
-        ProtocolError(
-          ProtocolInvalidPacket,
-          "LSP packet is missing a message.",
-          request_id=id,
-        ),
+fn decode_version_client(
+  packet : Json,
+  id : String,
+  build : (DocumentVersionRequest) -> ClientPacket,
+) -> ClientPacketDecodeResult {
+  match parse_uri_field(packet, "uri", id) {
+    ParsedProtocolUri(uri) =>
+      DecodedClientPacket(
+        build({
+          id,
+          uri,
+          document_version: json_int_field(packet, "documentVersion").unwrap_or(
+            0,
+          ),
+        }),
       )
-  }
-}
-
-///|
-fn decode_lsp_server(packet : Json, id : String) -> ServerPacketDecodeResult {
-  match json_string_field(packet, "message") {
-    Some(message) => DecodedServerPacket(LspResult({ id, message }))
-    None =>
-      ServerPacketDecodeError(
-        ProtocolError(
-          ProtocolInvalidPacket,
-          "LSP packet is missing a message.",
-          request_id=id,
-        ),
-      )
+    ProtocolUriError(error) => ClientPacketDecodeError(error)
   }
 }
 
@@ -406,6 +435,7 @@ fn decode_diagnostics_payload(packet : Json) -> ServerPacketDecodeResult {
       }
       DecodedServerPacket(
         Diagnostics({
+          id,
           uri,
           version: json_int_field(packet, "documentVersion").unwrap_or(0),
           diagnostics,
@@ -457,6 +487,68 @@ fn decode_definition_result_payload(
           uri,
           version: json_int_field(packet, "documentVersion").unwrap_or(0),
           location,
+        }),
+      )
+    }
+    ProtocolUriError(error) => ServerPacketDecodeError(error)
+  }
+}
+
+///|
+fn decode_document_symbols_result_payload(
+  packet : Json,
+  id : String,
+) -> ServerPacketDecodeResult {
+  match parse_uri_field(packet, "uri", id) {
+    ParsedProtocolUri(uri) => {
+      let symbols = []
+      match json_field(packet, "symbols") {
+        Some(Array(items)) =>
+          for item in items {
+            match parse_document_symbol(item) {
+              Some(symbol) => symbols.push(symbol)
+              None => ()
+            }
+          }
+        _ => ()
+      }
+      DecodedServerPacket(
+        DocumentSymbolsResult({
+          id,
+          uri,
+          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          symbols,
+        }),
+      )
+    }
+    ProtocolUriError(error) => ServerPacketDecodeError(error)
+  }
+}
+
+///|
+fn decode_semantic_tokens_result_payload(
+  packet : Json,
+  id : String,
+) -> ServerPacketDecodeResult {
+  match parse_uri_field(packet, "uri", id) {
+    ParsedProtocolUri(uri) => {
+      let semantic_tokens = []
+      match json_field(packet, "semanticTokens") {
+        Some(Array(items)) =>
+          for item in items {
+            match parse_semantic_token(item) {
+              Some(token) => semantic_tokens.push(token)
+              None => ()
+            }
+          }
+        _ => ()
+      }
+      DecodedServerPacket(
+        SemanticTokensResult({
+          id,
+          uri,
+          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          semantic_tokens,
         }),
       )
     }
@@ -629,9 +721,13 @@ fn position_request_json(
 }
 
 ///|
-fn lsp_packet_json(kind : String, packet : LspProtocolPacket) -> String {
-  let mut out = packet_head(kind, packet.id)
-  out = out + ",\"message\":" + json_string(packet.message)
+fn version_request_json(
+  kind : String,
+  request : DocumentVersionRequest,
+) -> String {
+  let mut out = packet_head(kind, request.id)
+  out = out + ",\"uri\":" + json_string(request.uri.to_string())
+  out = out + ",\"documentVersion\":" + request.document_version.to_string()
   out + "}"
 }
 
@@ -644,7 +740,7 @@ fn document_payload_json(kind : String, payload : DocumentPayload) -> String {
 
 ///|
 fn diagnostics_payload_json(payload : DiagnosticsPayload) -> String {
-  let mut out = packet_head("Diagnostics", "")
+  let mut out = packet_head("Diagnostics", payload.id)
   out = out + ",\"uri\":" + json_string(payload.uri.to_string())
   out = out + ",\"documentVersion\":" + payload.version.to_string()
   out = out + ",\"diagnostics\":" + diagnostics_json(payload.diagnostics)
@@ -666,6 +762,27 @@ fn definition_result_json(payload : DefinitionResultPayload) -> String {
   out = out + ",\"uri\":" + json_string(payload.uri.to_string())
   out = out + ",\"documentVersion\":" + payload.version.to_string()
   out = out + ",\"location\":" + optional_location_json(payload.location)
+  out + "}"
+}
+
+///|
+fn document_symbols_result_json(
+  payload : DocumentSymbolsResultPayload,
+) -> String {
+  let mut out = packet_head("DocumentSymbolsResult", payload.id)
+  out = out + ",\"uri\":" + json_string(payload.uri.to_string())
+  out = out + ",\"documentVersion\":" + payload.version.to_string()
+  out = out + ",\"symbols\":" + document_symbols_json(payload.symbols)
+  out + "}"
+}
+
+///|
+fn semantic_tokens_result_json(payload : SemanticTokensResultPayload) -> String {
+  let mut out = packet_head("SemanticTokensResult", payload.id)
+  out = out + ",\"uri\":" + json_string(payload.uri.to_string())
+  out = out + ",\"documentVersion\":" + payload.version.to_string()
+  out = out + ",\"semanticTokens\":"
+  out = out + semantic_tokens_json(payload.semantic_tokens)
   out + "}"
 }
 
@@ -712,11 +829,52 @@ fn diagnostics_json(diagnostics : Array[@language.Diagnostic]) -> String {
 }
 
 ///|
+fn document_symbols_json(symbols : Array[@language.DocumentSymbol]) -> String {
+  let mut out = "["
+  for i in 0..<symbols.length() {
+    if i > 0 {
+      out = out + ","
+    }
+    out = out + document_symbol_json(symbols[i])
+  }
+  out + "]"
+}
+
+///|
+fn semantic_tokens_json(tokens : Array[@language.SemanticToken]) -> String {
+  let mut out = "["
+  for i in 0..<tokens.length() {
+    if i > 0 {
+      out = out + ","
+    }
+    out = out + semantic_token_json(tokens[i])
+  }
+  out + "]"
+}
+
+///|
 fn diagnostic_json(diagnostic : @language.Diagnostic) -> String {
   let mut out = "{"
   out = out + "\"range\":" + range_json(diagnostic.range)
   out = out + ",\"severity\":" + json_string(diagnostic.severity.label())
   out = out + ",\"message\":" + json_string(diagnostic.message)
+  out + "}"
+}
+
+///|
+fn document_symbol_json(symbol : @language.DocumentSymbol) -> String {
+  let mut out = "{"
+  out = out + "\"name\":" + json_string(symbol.name)
+  out = out + ",\"kind\":" + json_string(symbol.kind)
+  out = out + ",\"range\":" + range_json(symbol.range)
+  out + "}"
+}
+
+///|
+fn semantic_token_json(token : @language.SemanticToken) -> String {
+  let mut out = "{"
+  out = out + "\"range\":" + range_json(token.range)
+  out = out + ",\"tokenType\":" + json_string(token.token_type)
   out + "}"
 }
 
@@ -813,6 +971,47 @@ fn parse_location(value : Json) -> @language.Location? {
             _ => None
           }
         _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn parse_document_symbol(value : Json) -> @language.DocumentSymbol? {
+  match value {
+    Object(_) =>
+      match json_field(value, "range") {
+        Some(range_json) =>
+          match parse_range(range_json) {
+            Some(range) =>
+              Some({
+                name: json_string_field(value, "name").unwrap_or(""),
+                kind: json_string_field(value, "kind").unwrap_or(""),
+                range,
+              })
+            None => None
+          }
+        None => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn parse_semantic_token(value : Json) -> @language.SemanticToken? {
+  match value {
+    Object(_) =>
+      match json_field(value, "range") {
+        Some(range_json) =>
+          match parse_range(range_json) {
+            Some(range) =>
+              Some({
+                range,
+                token_type: json_string_field(value, "tokenType").unwrap_or(""),
+              })
+            None => None
+          }
+        None => None
       }
     _ => None
   }

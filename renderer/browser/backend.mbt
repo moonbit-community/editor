@@ -9,8 +9,65 @@ pub fn browser_remote_file_system_provider() -> &@workspace.FileSystemProvider {
 }
 
 ///|
-pub fn browser_lsp_transport() -> &@language.LspTransport {
-  @dom.browser_lsp_transport()
+pub(all) struct BrowserRemoteLanguageProvider {
+  priv last_error : Ref[@remote_protocol.ProtocolError?]
+}
+
+///|
+pub fn browser_remote_language_provider() -> BrowserRemoteLanguageProvider {
+  { last_error: Ref(None) }
+}
+
+///|
+pub fn BrowserRemoteLanguageProvider::as_hover_provider(
+  self : BrowserRemoteLanguageProvider,
+) -> &@language.HoverProvider {
+  self
+}
+
+///|
+pub fn BrowserRemoteLanguageProvider::as_definition_provider(
+  self : BrowserRemoteLanguageProvider,
+) -> &@language.DefinitionProvider {
+  self
+}
+
+///|
+pub fn BrowserRemoteLanguageProvider::as_diagnostics_provider(
+  self : BrowserRemoteLanguageProvider,
+) -> &@language.DiagnosticsProvider {
+  self
+}
+
+///|
+pub fn BrowserRemoteLanguageProvider::as_document_symbol_provider(
+  self : BrowserRemoteLanguageProvider,
+) -> &@language.DocumentSymbolProvider {
+  self
+}
+
+///|
+pub fn BrowserRemoteLanguageProvider::as_semantic_tokens_provider(
+  self : BrowserRemoteLanguageProvider,
+) -> &@language.SemanticTokensProvider {
+  self
+}
+
+///|
+pub fn BrowserRemoteLanguageProvider::last_error_message(
+  self : BrowserRemoteLanguageProvider,
+) -> String {
+  match self.last_error.val {
+    Some(error) => error.message
+    None => ""
+  }
+}
+
+///|
+pub fn BrowserRemoteLanguageProvider::clear_last_error(
+  self : BrowserRemoteLanguageProvider,
+) -> Unit {
+  self.last_error.val = None
 }
 
 ///|
@@ -143,6 +200,115 @@ impl @workspace.FileSystemProvider for BrowserRemoteFileSystemProvider with fn w
 }
 
 ///|
+impl @language.DiagnosticsProvider for BrowserRemoteLanguageProvider with fn diagnostics_for_document(
+  self,
+  document,
+) {
+  let request = @remote_protocol.ClientPacket::Diagnostics({
+    id: request_id("diagnostics", document.uri),
+    uri: document.uri,
+    document_version: document.version,
+  })
+  match self.request_packet(request) {
+    Some(Diagnostics(payload)) =>
+      if payload_matches_document(payload.uri, payload.version, document) {
+        payload.diagnostics
+      } else {
+        []
+      }
+    _ => []
+  }
+}
+
+///|
+impl @language.HoverProvider for BrowserRemoteLanguageProvider with fn hover_at(
+  self,
+  document,
+  offset,
+) {
+  let request = @remote_protocol.Hover({
+    id: request_id("hover", document.uri),
+    uri: document.uri,
+    document_version: document.version,
+    offset,
+  })
+  match self.request_packet(request) {
+    Some(HoverResult(payload)) =>
+      if payload_matches_document(payload.uri, payload.version, document) {
+        payload.hover
+      } else {
+        None
+      }
+    _ => None
+  }
+}
+
+///|
+impl @language.DefinitionProvider for BrowserRemoteLanguageProvider with fn definition_at(
+  self,
+  document,
+  offset,
+) {
+  let request = @remote_protocol.Definition({
+    id: request_id("definition", document.uri),
+    uri: document.uri,
+    document_version: document.version,
+    offset,
+  })
+  match self.request_packet(request) {
+    Some(DefinitionResult(payload)) =>
+      if payload_matches_document(payload.uri, payload.version, document) {
+        payload.location
+      } else {
+        None
+      }
+    _ => None
+  }
+}
+
+///|
+impl @language.DocumentSymbolProvider for BrowserRemoteLanguageProvider with fn document_symbols(
+  self,
+  document,
+) {
+  let request = @remote_protocol.DocumentSymbols({
+    id: request_id("symbols", document.uri),
+    uri: document.uri,
+    document_version: document.version,
+  })
+  match self.request_packet(request) {
+    Some(DocumentSymbolsResult(payload)) =>
+      if payload_matches_document(payload.uri, payload.version, document) {
+        payload.symbols
+      } else {
+        []
+      }
+    _ => []
+  }
+}
+
+///|
+impl @language.SemanticTokensProvider for BrowserRemoteLanguageProvider with fn semantic_tokens_for_document(
+  self,
+  document,
+) {
+  let request = @remote_protocol.SemanticTokens({
+    id: request_id("semantic-tokens", document.uri),
+    uri: document.uri,
+    document_version: document.version,
+  })
+  match self.request_packet(request) {
+    Some(SemanticTokensResult(payload)) =>
+      if payload_matches_document(payload.uri, payload.version, document) {
+        payload.semantic_tokens
+      } else {
+        []
+      }
+    _ => []
+  }
+}
+
+///|
 async fn read_remote_file(
   uri : @workspace.DocumentUri,
 ) -> @workspace.FileReadResult {
@@ -178,6 +344,28 @@ fn watch_remote_file(
     }
   })
   { dispose: () => disposable.dispose() }
+}
+
+///|
+async fn BrowserRemoteLanguageProvider::request_packet(
+  self : BrowserRemoteLanguageProvider,
+  packet : @remote_protocol.ClientPacket,
+) -> @remote_protocol.ServerPacket? {
+  let response = @dom.request_remote_protocol(packet.to_json())
+  match @remote_protocol.decode_server_packet(response) {
+    DecodedServerPacket(RemoteError(error)) => {
+      self.last_error.val = Some(error)
+      None
+    }
+    DecodedServerPacket(packet) => {
+      self.last_error.val = None
+      Some(packet)
+    }
+    ServerPacketDecodeError(error) => {
+      self.last_error.val = Some(error)
+      None
+    }
+  }
 }
 
 ///|
@@ -239,4 +427,14 @@ fn protocol_error_to_provider_error(
 ///|
 fn request_id(prefix : String, uri : @workspace.DocumentUri) -> String {
   prefix + ":" + uri.to_string()
+}
+
+///|
+fn payload_matches_document(
+  uri : @workspace.DocumentUri,
+  version : Int,
+  document : @workspace.SourceDocument,
+) -> Bool {
+  uri.to_string() == document.uri.to_string() &&
+  (version <= 0 || version == document.version)
 }

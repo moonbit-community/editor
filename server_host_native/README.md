@@ -5,6 +5,8 @@ Native host adapter for server-side effects.
 ## Responsibilities
 
 - Provide the native implementation point for the `server.ServerHost` trait.
+- Provide the native implementation point for the server-owned
+  `server.LspTransport` trait.
 - Keep filesystem reads, file watching, process spawning, timers, sockets, and
   `moon-lsp --stdio` lifecycle effects outside server policy code.
 - Return structured host errors when native capabilities are unavailable.

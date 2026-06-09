@@ -11,6 +11,16 @@ test "native host reports unavailable effects until runtime is attached" {
 }
 
 ///|
+async test "native lsp transport reports unavailable process host" {
+  let transport = @server_host_native.native_lsp_transport()
+  let response = transport.request("{\"jsonrpc\":\"2.0\",\"id\":1}")
+  assert_true(response.contains("Native LSP process host is not attached"))
+  transport.notify("{\"jsonrpc\":\"2.0\",\"method\":\"exit\"}")
+  let subscription = transport.subscribe(_message => ())
+  subscription.dispose()
+}
+
+///|
 fn expect_path(raw : String) -> @workspace.SourcePath raise {
   match @workspace.SourcePath::normalize_root_relative_path(raw) {
     ParsedSourcePath(path) => path

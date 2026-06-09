@@ -23,15 +23,46 @@ pub(open) trait LspTransport {
 }
 
 ///|
+pub(all) enum LspClientState {
+  Idle
+  Initializing
+  Ready
+  Failed
+  Stopping
+  Stopped
+} derive(Eq, Debug)
+
+///|
+priv struct LspServerCapabilities {
+  hover_provider : Bool
+  definition_provider : Bool
+  publish_diagnostics : Bool
+}
+
+///|
+priv struct LspPendingRequest {
+  method_name : String
+  uri : String
+  version : Int
+}
+
+///|
+fn LspPendingRequest::is_document_request(self : LspPendingRequest) -> Bool {
+  self.method_name != "" && self.uri != "" && self.version > 0
+}
+
+///|
 pub struct LspClient {
   priv transport : &LspTransport
   priv next_id : Ref[Int]
-  priv initialized : Ref[Bool]
+  priv state : Ref[LspClientState]
   priv subscribed : Ref[Bool]
   priv subscription : Ref[LspSubscription?]
   priv active_uri : Ref[String]
   priv active_version : Ref[Int]
   priv active_snapshot : Ref[@core.DocumentSnapshot?]
+  priv capabilities : Ref[LspServerCapabilities]
+  priv pending_requests : Map[Int, LspPendingRequest]
   priv diagnostics : Map[String, LspCachedDiagnostics]
   priv diagnostics_listener : Ref[((String, Int) -> Unit)?]
   priv last_error : Ref[String]
@@ -44,16 +75,27 @@ priv struct LspCachedDiagnostics {
 }
 
 ///|
+fn default_lsp_capabilities() -> LspServerCapabilities {
+  {
+    hover_provider: false,
+    definition_provider: false,
+    publish_diagnostics: true,
+  }
+}
+
+///|
 pub fn LspClient::LspClient(transport : &LspTransport) -> LspClient {
   {
     transport,
     next_id: Ref(0),
-    initialized: Ref(false),
+    state: Ref(Idle),
     subscribed: Ref(false),
     subscription: Ref(None),
     active_uri: Ref(""),
     active_version: Ref(0),
     active_snapshot: Ref(None),
+    capabilities: Ref(default_lsp_capabilities()),
+    pending_requests: Map::default(),
     diagnostics: Map::default(),
     diagnostics_listener: Ref(None),
     last_error: Ref(""),
@@ -62,7 +104,17 @@ pub fn LspClient::LspClient(transport : &LspTransport) -> LspClient {
 
 ///|
 pub fn LspClient::is_initialized(self : LspClient) -> Bool {
-  self.initialized.val
+  self.state.val == Ready
+}
+
+///|
+pub fn LspClient::state(self : LspClient) -> LspClientState {
+  self.state.val
+}
+
+///|
+pub fn LspClient::pending_request_count(self : LspClient) -> Int {
+  self.pending_requests.length()
 }
 
 ///|
@@ -109,12 +161,14 @@ pub async fn LspClient::hover_at(
   offset : Int,
 ) -> @language.Hover? {
   ignore(self.sync_document(document))
-  if !self.initialized.val {
+  if self.state.val != Ready || !self.capabilities.val.hover_provider {
     return None
   }
   let uri = document.uri.to_string()
   let id = self.next_request_id()
+  self.register_request(id, "textDocument/hover", document)
   let response = self.transport.request(lsp_hover_request(id, document, offset))
+  self.complete_request(id)
   if self.active_uri.val != uri || self.active_version.val != document.version {
     return None
   }
@@ -135,14 +189,16 @@ pub async fn LspClient::definition_at(
   offset : Int,
 ) -> @language.Location? {
   ignore(self.sync_document(document))
-  if !self.initialized.val {
+  if self.state.val != Ready || !self.capabilities.val.definition_provider {
     return None
   }
   let uri = document.uri.to_string()
   let id = self.next_request_id()
+  self.register_request(id, "textDocument/definition", document)
   let response = self.transport.request(
     lsp_definition_request(id, document, offset),
   )
+  self.complete_request(id)
   if self.active_uri.val != uri || self.active_version.val != document.version {
     return None
   }
@@ -153,6 +209,28 @@ pub async fn LspClient::definition_at(
       None
     }
   }
+}
+
+///|
+pub async fn LspClient::shutdown(self : LspClient) -> Unit {
+  if self.state.val == Stopped || self.state.val == Stopping {
+    return
+  }
+  self.state.val = Stopping
+  if self.subscribed.val {
+    match self.subscription.val {
+      Some(subscription) => subscription.dispose()
+      None => ()
+    }
+    self.subscription.val = None
+    self.subscribed.val = false
+  }
+  let id = self.next_request_id()
+  self.pending_requests.set(id, { method_name: "shutdown", uri: "", version: 0 })
+  ignore(self.transport.request(request_message(id, "shutdown", Json::null())))
+  self.complete_request(id)
+  self.transport.notify(notification_message("exit", Json::null()))
+  self.state.val = Stopped
 }
 
 ///|
@@ -247,16 +325,25 @@ async fn LspClient::ensure_initialized(
   self : LspClient,
   document : @workspace.SourceDocument,
 ) -> Bool {
-  if self.initialized.val {
+  if self.state.val == Ready {
     return true
   }
+  if self.state.val == Initializing ||
+    self.state.val == Stopping ||
+    self.state.val == Stopped {
+    return false
+  }
+  self.state.val = Initializing
   let id = self.next_request_id()
+  self.register_request(id, "initialize", document)
   let response = self.transport.request(
     lsp_initialize_request_with_root(id, lsp_root_uri(document.uri)),
   )
+  self.complete_request(id)
   match parse_response_result(response) {
-    ParsedLspResult(_) => {
-      self.initialized.val = true
+    ParsedLspResult(result) => {
+      self.capabilities.val = parse_server_capabilities(result)
+      self.state.val = Ready
       self.last_error.val = ""
       self.transport.notify(
         notification_message("initialized", json_object([])),
@@ -265,6 +352,7 @@ async fn LspClient::ensure_initialized(
     }
     LspResponseError(message) => {
       self.last_error.val = message
+      self.state.val = Failed
       false
     }
   }
@@ -331,12 +419,37 @@ fn LspClient::next_request_id(self : LspClient) -> Int {
 }
 
 ///|
+fn LspClient::register_request(
+  self : LspClient,
+  id : Int,
+  method_name : String,
+  document : @workspace.SourceDocument,
+) -> Unit {
+  self.pending_requests.set(id, {
+    method_name,
+    uri: document.uri.to_string(),
+    version: document.version,
+  })
+}
+
+///|
+fn LspClient::complete_request(self : LspClient, id : Int) -> Unit {
+  match self.pending_requests.get(id) {
+    Some(request) => ignore(request.is_document_request())
+    None => ()
+  }
+  self.pending_requests.remove(id)
+}
+
+///|
 fn LspClient::handle_message(self : LspClient, raw : String) -> Unit {
   match parse_json(raw) {
     Some(message) =>
       match json_string_field(message, "method") {
         Some("textDocument/publishDiagnostics") =>
-          self.handle_publish_diagnostics(message)
+          if self.capabilities.val.publish_diagnostics {
+            self.handle_publish_diagnostics(message)
+          }
         _ => ()
       }
     None => self.last_error.val = "Invalid LSP message"
@@ -615,6 +728,31 @@ fn parse_response_result(raw : String) -> LspParsedResult {
           }
       }
     None => LspResponseError("Invalid LSP response")
+  }
+}
+
+///|
+fn parse_server_capabilities(result : Json) -> LspServerCapabilities {
+  match json_field(result, "capabilities") {
+    Some(capabilities) =>
+      {
+        hover_provider: capability_enabled(capabilities, "hoverProvider"),
+        definition_provider: capability_enabled(
+          capabilities, "definitionProvider",
+        ),
+        publish_diagnostics: true,
+      }
+    None => default_lsp_capabilities()
+  }
+}
+
+///|
+fn capability_enabled(capabilities : Json, name : String) -> Bool {
+  match json_field(capabilities, name) {
+    Some(True) => true
+    Some(False) => false
+    Some(Object(_)) => true
+    _ => false
   }
 }
 

@@ -101,12 +101,15 @@ test "normalizes definition result shapes" {
 
 ///|
 async test "lsp client syncs documents and discards stale diagnostics" {
-  let transport = TestLspTransport::{ notifications: [], listener: Ref(None) }
+  let transport = TestLspTransport::new()
   let client = LspClient::LspClient(transport)
   let first = test_document(1, "pub fn main {\n  // TODO\n}\n")
 
+  assert_true(client.state() == Idle)
   let first_result = client.sync_document(first)
   assert_true(client.is_initialized())
+  assert_true(client.state() == Ready)
+  assert_eq(client.pending_request_count(), 0)
   assert_eq(first_result.diagnostics.length(), 1)
   assert_true(first_result.diagnostics[0].severity == Warning)
   assert_true(first_result.diagnostics[0].range == Range(19, 23))
@@ -128,7 +131,7 @@ async test "lsp client syncs documents and discards stale diagnostics" {
 
 ///|
 async test "lsp client requests hover through transport" {
-  let transport = TestLspTransport::{ notifications: [], listener: Ref(None) }
+  let transport = TestLspTransport::new()
   let client = LspClient::LspClient(transport)
   let document = test_document(1, "pub fn main {}\n")
 
@@ -143,7 +146,7 @@ async test "lsp client requests hover through transport" {
 
 ///|
 async test "lsp client requests definition through transport" {
-  let transport = TestLspTransport::{ notifications: [], listener: Ref(None) }
+  let transport = TestLspTransport::new()
   let client = LspClient::LspClient(transport)
   let document = test_document(1, "pub fn main {}\n")
 
@@ -154,6 +157,43 @@ async test "lsp client requests definition through transport" {
     }
     None => fail("expected definition")
   }
+}
+
+///|
+async test "lsp client gates unsupported capabilities" {
+  let transport = TestLspTransport::new()
+  transport.initialize_response = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"definitionProvider\":true}}}"
+  let client = LspClient::LspClient(transport)
+  let document = test_document(1, "pub fn main {}\n")
+
+  assert_true(client.hover_at(document, 7) is None)
+  assert_true(client.state() == Ready)
+  assert_false(
+    transport.requests.any(message => {
+      message.contains("\"method\":\"textDocument/hover\"")
+    }),
+  )
+}
+
+///|
+async test "lsp client sends shutdown and exit" {
+  let transport = TestLspTransport::new()
+  let client = LspClient::LspClient(transport)
+  ignore(client.sync_document(test_document(1, "pub fn main {}\n")))
+
+  client.shutdown()
+  assert_true(client.state() == Stopped)
+  assert_eq(client.pending_request_count(), 0)
+  assert_true(
+    transport.requests.any(message => {
+      message.contains("\"method\":\"shutdown\"")
+    }),
+  )
+  assert_true(
+    transport.notifications.any(message => {
+      message.contains("\"method\":\"exit\"")
+    }),
+  )
 }
 
 ///|
@@ -220,14 +260,27 @@ fn file_document(version : Int, text : String) -> @workspace.SourceDocument {
 
 ///|
 struct TestLspTransport {
+  requests : Array[String]
   notifications : Array[String]
   listener : Ref[((String) -> Unit)?]
+  mut initialize_response : String
 }
 
 ///|
-impl LspTransport for TestLspTransport with fn request(_self, message) {
+fn TestLspTransport::new() -> TestLspTransport {
+  {
+    requests: [],
+    notifications: [],
+    listener: Ref(None),
+    initialize_response: "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"hoverProvider\":true,\"definitionProvider\":true}}}",
+  }
+}
+
+///|
+impl LspTransport for TestLspTransport with fn request(self, message) {
+  self.requests.push(message)
   if message.contains("\"method\":\"initialize\"") {
-    "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"hoverProvider\":true,\"definitionProvider\":true}}}"
+    self.initialize_response
   } else if message.contains("\"method\":\"textDocument/hover\"") {
     hover_response(
       "{\"contents\":\"LSP hover for main\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
@@ -236,6 +289,8 @@ impl LspTransport for TestLspTransport with fn request(_self, message) {
     definition_response(
       "{\"uri\":\"memory://demo.mbt\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
     )
+  } else if message.contains("\"method\":\"shutdown\"") {
+    "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":null}"
   } else {
     "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32601,\"message\":\"unsupported\"}}"
   }

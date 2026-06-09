@@ -5,6 +5,9 @@ CodeMirror, Monaco, and VS Code without carrying editing machinery. Product code
 is written in MoonBit; platform-specific host packages are the only place where
 foreign-function boundaries are allowed.
 
+This file is the high-level system map. Package-local implementation contracts
+live in each product package's `README.md`.
+
 ## Runtime Shape
 
 The project is split into three runtime parts:
@@ -22,21 +25,44 @@ The remote server and render backends communicate through explicit protocol and
 host contracts. Server code does not import browser backend packages.
 Renderer code does not import server packages or host effects.
 
-## Package Layers
+## Package Map
 
-- `core`: immutable `DocumentSnapshot`, UTF-16 offsets, positions, ranges, and line indexing.
-- `syntax`: whole-document lexical highlighting for the first milestone.
-- `decorations`: range-based visual annotations without edit mapping.
-- `workspace`: readonly source document identity, URI/path normalization, filesystem-provider contracts, language inference, and snapshot conversion.
-- `language`: provider traits, provider result types, deterministic demo providers, and the readonly LSP client.
-- `view`: compatibility DOM-neutral render model retained while callers move to `renderer`.
-- `remote_protocol`: MoonBit package for client/server packet types, JSON encoding/decoding, protocol errors, provider-error details, and version negotiation.
-- `server`: native MoonBit package for remote workspace policy, file watch sessions, provider-backed hover/definition responses, raw LSP packet routing, and remote protocol dispatch.
-- `server_host_native`: narrow native host boundary for sockets, filesystem reads, file watching, timers, and process spawning.
-- `renderer`: backend-agnostic render frame construction and JSON serialization.
-- `renderer/browser`: browser render backend adapter for DOM mounting, callback registration, observability, and the `readonly-remote` client provider.
-- `dom`: JavaScript/browser host boundary and the only package that declares JavaScript FFI.
-- `web`: browser client entrypoint that wires `renderer`, `renderer/browser`, workspace loading, and language providers.
+The repository root contains MoonBit packages. Files inside a package are only
+organizational; package boundaries are the directories with `moon.pkg`.
+
+- Shared domain packages: `core`, `syntax`, `decorations`, `workspace`,
+  `language`, and `view`.
+- Remote server packages: `remote_protocol`, `server`, and
+  `server_host_native`.
+- Render packages: `renderer` and `renderer/browser`.
+- Browser host packages: `dom` and `web`.
+
+Read the package-local `README.md` before changing package behavior. Those files
+record each package's owned responsibilities, dependency limits, and local test
+notes.
+
+## Dependency Direction
+
+The dependency graph should flow from host entrypoints toward shared domain
+packages:
+
+```text
+web
+  -> renderer/browser -> renderer
+  -> dom
+  -> workspace, language, syntax, decorations
+
+server_host_native -> server -> remote_protocol
+server -> workspace, language
+
+renderer -> core, syntax, decorations, language
+workspace -> core
+language -> core, workspace
+syntax/decorations -> core
+```
+
+`view` is a compatibility render model kept separate from the active
+`renderer` path.
 
 ## Dependency Rules
 
@@ -67,69 +93,20 @@ Repository-level validation should use `moon check --target all` and
 `moon build --target all`. Package-local checks may use explicit `--target js`
 or `--target native`.
 
-## Remote Server
+## System Contracts
 
-The remote server targets MoonBit native. It is responsible for:
-
-- validating client requests against configured readonly workspace roots;
-- mapping remote URIs such as `readonly-remote://workspace/src/main.mbt` to
-  normalized root-relative paths;
-- reading text files and rejecting directories, missing files, permission
-  failures, invalid paths, and binary content with structured provider errors;
-- tracking file watches and emitting change events;
-- owning `moon-lsp --stdio` process/session lifecycle;
-- forwarding raw LSP JSON-RPC messages while keeping request routing, lifecycle,
-  cancellation, and errors in MoonBit protocol code.
-
-The host boundary for the server should be intentionally small. Native host code
-provides effects, while MoonBit server code owns routing and policy.
-
-## Backend-Agnostic Renderer
-
-The renderer consumes immutable source and provider state, then produces a
-render frame that can be interpreted by multiple frontends. Inputs include:
-
-- `SourceDocument` and `DocumentSnapshot`;
-- syntax tokens and decorations;
-- diagnostics, hover, definition, and future language-provider results;
-- viewport, focus, hover, and selection-like readonly state;
-- theme/style identifiers.
-
-The render frame should describe lines, gutters, token spans, decoration ranges,
-diagnostic surfaces, hover payloads, definition targets, and commands requested
-from the host. It must not assume DOM nodes, CSS classes, host-specific styling
-primitives, or browser APIs.
-
-## Render Backends
-
-Render backends translate render frames to host-specific output. This round
-focuses only on the browser backend:
-
-- Browser backend: DOM creation, CSS class mapping, scrolling, pointer/keyboard
-  event binding, browser file handles, and Playwright-facing observability.
-
-Backends should share the same renderer input and remote protocol. Adding a new
-frontend later should require a new backend package, not changes to server
-routing or workspace/language semantics.
-
-## Remote Protocol
-
-The remote protocol is MoonBit-owned. It should cover at least:
-
-- `OpenDocument(uri)`;
-- `WatchDocument(uri)`;
-- `CloseDocument(uri)`;
-- `Hover(uri, version, offset)`;
-- `Definition(uri, version, offset)`;
-- `DocumentLoaded(SourceDocument)`;
-- `DocumentChanged(SourceDocument)`;
-- `Diagnostics(uri, version, diagnostics)`;
-- `HoverResult`;
-- `DefinitionResult`;
-- structured errors.
-
-LSP payloads may remain raw JSON-RPC strings inside protocol packets, but packet
-encoding, decoding, routing, and error handling belong in MoonBit.
+- The editor is readonly. Document identity, source loading, rendering,
+  hover/definition lookup, diagnostics, and watches must not introduce edit
+  state.
+- Workspace semantics and filesystem-provider contracts belong in MoonBit
+  domain packages. Browser or native hosts provide effects behind narrow
+  package boundaries.
+- Remote protocol packet types, version negotiation, encoding, decoding, and
+  structured errors are MoonBit-owned.
+- Render frames are backend-neutral. Browser DOM nodes, CSS details, event
+  wiring, and observability belong to the browser backend and host boundary.
+- Adding another frontend should require a new backend package, not changes to
+  server routing or workspace/language semantics.
 
 ## Position Convention
 

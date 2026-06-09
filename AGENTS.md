@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-- Product code lives at the repository root in MoonBit packages: `core`, `syntax`, `decorations`, `workspace`, `language`, `view`, `dom`, and `web`.
+- Product code lives at the repository root in MoonBit packages: `core`, `syntax`, `decorations`, `workspace`, `language`, `view`, `remote_protocol`, `server`, `server_host_native`, `renderer`, `renderer/browser`, `dom`, and `web`.
 - The browser backend owns DOM creation, CSS, scrolling, raw browser file handles, and Playwright-facing observability.
 - MoonBit owns workspace semantics, readonly document identity, and the backend-neutral filesystem-provider contract.
 - Only the `dom` package may declare JavaScript FFI.
@@ -11,7 +11,8 @@
 
 ## Documentation Map
 
-- Architecture overview and package boundaries: `docs/architecture.md`
+- Global architecture, dependency direction, and cross-package boundaries: `docs/architecture.md`
+- Local package contracts: each product package's `README.md`
 - Harness commands and browser observability events: `docs/harness.md`
 - Required checks and guardrails: `docs/quality.md`
 - Develop style notes: `docs/styles.md`

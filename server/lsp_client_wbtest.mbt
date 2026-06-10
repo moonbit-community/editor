@@ -20,25 +20,25 @@ test "builds initialize, hover, and definition requests" {
 
   let hover = lsp_hover_request(8, document, 7)
   assert_true(hover.contains("\"method\":\"textDocument/hover\""))
-  assert_true(hover.contains("\"uri\":\"memory://demo.mbt\""))
+  assert_true(hover.contains("\"uri\":\"memory://main.mbt\""))
   assert_true(hover.contains("\"line\":0"))
   assert_true(hover.contains("\"character\":7"))
 
   let definition = lsp_definition_request(9, document, 8)
   assert_true(definition.contains("\"method\":\"textDocument/definition\""))
-  assert_true(definition.contains("\"uri\":\"memory://demo.mbt\""))
+  assert_true(definition.contains("\"uri\":\"memory://main.mbt\""))
   assert_true(definition.contains("\"line\":0"))
   assert_true(definition.contains("\"character\":8"))
 
   let symbols = lsp_document_symbol_request(10, document)
   assert_true(symbols.contains("\"method\":\"textDocument/documentSymbol\""))
-  assert_true(symbols.contains("\"uri\":\"memory://demo.mbt\""))
+  assert_true(symbols.contains("\"uri\":\"memory://main.mbt\""))
 
   let semantic_tokens = lsp_semantic_tokens_full_request(11, document)
   assert_true(
     semantic_tokens.contains("\"method\":\"textDocument/semanticTokens/full\""),
   )
-  assert_true(semantic_tokens.contains("\"uri\":\"memory://demo.mbt\""))
+  assert_true(semantic_tokens.contains("\"uri\":\"memory://main.mbt\""))
 }
 
 ///|
@@ -74,22 +74,22 @@ test "normalizes hover result shapes" {
 test "normalizes definition result shapes" {
   let document = test_document(1, "pub fn main {}\n")
   let location = definition_response(
-    "{\"uri\":\"memory://demo.mbt\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
+    "{\"uri\":\"memory://main.mbt\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
   )
   match parse_definition_for_test(location, document) {
     Some(found) => {
-      assert_eq(found.uri.to_string(), "memory://demo.mbt")
+      assert_eq(found.uri.to_string(), "memory://main.mbt")
       assert_true(found.range == Range(7, 11))
     }
     None => fail("expected location")
   }
 
   let link = definition_response(
-    "[{\"targetUri\":\"memory://demo.mbt\",\"targetSelectionRange\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}]",
+    "[{\"targetUri\":\"memory://main.mbt\",\"targetSelectionRange\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}]",
   )
   match parse_definition_for_test(link, document) {
     Some(found) => {
-      assert_eq(found.uri.to_string(), "memory://demo.mbt")
+      assert_eq(found.uri.to_string(), "memory://main.mbt")
       assert_true(found.range == Range(7, 11))
     }
     None => fail("expected location link")
@@ -164,7 +164,7 @@ async test "lsp client requests definition through transport" {
 
   match client.definition_at(document, 7) {
     Some(location) => {
-      assert_eq(location.uri.to_string(), "memory://demo.mbt")
+      assert_eq(location.uri.to_string(), "memory://main.mbt")
       assert_true(location.range == Range(7, 11))
     }
     None => fail("expected definition")
@@ -276,8 +276,8 @@ fn parse_definition_for_test(
 ///|
 fn test_document(version : Int, text : String) -> @workspace.SourceDocument {
   SourceDocument(
-    @workspace.DocumentUri::memory("demo.mbt"),
-    "demo.mbt",
+    @workspace.DocumentUri::memory("main.mbt"),
+    "main.mbt",
     "moonbit",
     version,
     "rev-" + version.to_string(),
@@ -331,7 +331,7 @@ impl LspTransport for TestLspTransport with fn request(self, message) {
     )
   } else if message.contains("\"method\":\"textDocument/definition\"") {
     definition_response(
-      "{\"uri\":\"memory://demo.mbt\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
+      "{\"uri\":\"memory://main.mbt\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
     )
   } else if message.contains("\"method\":\"textDocument/documentSymbol\"") {
     "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":[{\"name\":\"main\",\"kind\":12,\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}},\"selectionRange\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}},\"children\":[{\"name\":\"nested\",\"kind\":13,\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}},\"selectionRange\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}]}]}"
@@ -357,7 +357,7 @@ impl LspTransport for TestLspTransport with fn notify(self, message) {
       version=1,
     )
   } else if message.contains("\"method\":\"textDocument/didChange\"") {
-    self.publish_empty("memory://demo.mbt", 2)
+    self.publish_empty("memory://main.mbt", 2)
   }
 }
 

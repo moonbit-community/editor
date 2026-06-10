@@ -4,7 +4,7 @@ test "finds decorations by range and offset" {
     Range(2, 5),
     Diagnostic,
     "diag-error",
-    message="demo",
+    message="fixture",
   )
   let second = @decorations.Decoration(Range(10, 12), SearchMatch, "search-hit")
   let set = DecorationSet::from_array([first, second])

@@ -21,7 +21,7 @@ async fn main {
 
 ///|
 fn parse_args(args : ArrayView[String]) -> DevServerConfig {
-  let mut root = "docs/fixtures/project"
+  let mut root = "."
   let mut port = 5173
   let mut asset_dir = "web/dist"
   let mut lsp_command = "moon-lsp"

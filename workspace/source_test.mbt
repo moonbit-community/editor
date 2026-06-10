@@ -25,9 +25,9 @@ test "rejects invalid root relative paths" {
 
 ///|
 test "parses document uris" {
-  let memory = expect_uri("memory://demo.mbt")
+  let memory = expect_uri("memory://main.mbt")
   assert_eq(memory.scheme(), "memory")
-  assert_eq(memory.to_string(), "memory://demo.mbt")
+  assert_eq(memory.to_string(), "memory://main.mbt")
 
   let file = expect_uri("file://server/nested/file.mbt")
   assert_eq(file.scheme(), "file")
@@ -43,13 +43,13 @@ test "parses document uris" {
 
 ///|
 async test "filesystem provider reads source documents by uri" {
-  let uri = expect_uri("file://local/demo.mbt")
+  let uri = expect_uri("file://local/main.mbt")
   let provider = TestFileSystemProvider::{  }
 
   match @workspace.read_source_document(provider, uri) {
     SourceDocumentLoaded(document) => {
-      assert_eq(document.uri.to_string(), "file://local/demo.mbt")
-      assert_eq(document.display_name, "demo.mbt")
+      assert_eq(document.uri.to_string(), "file://local/main.mbt")
+      assert_eq(document.display_name, "main.mbt")
       assert_eq(document.language_id, "moonbit")
       assert_eq(document.version, 1)
       assert_eq(document.revision, "rev-1")
@@ -62,7 +62,7 @@ async test "filesystem provider reads source documents by uri" {
 
 ///|
 async test "filesystem provider rejects mismatched schemes" {
-  let uri = expect_uri("memory://demo.mbt")
+  let uri = expect_uri("memory://main.mbt")
   let provider = TestFileSystemProvider::{  }
 
   match @workspace.read_source_document(provider, uri) {
@@ -90,8 +90,8 @@ test "infers language ids from source names" {
 ///|
 test "source document creates snapshots with identity metadata" {
   let document = @workspace.SourceDocument(
-    @workspace.DocumentUri::memory("demo.mbt"),
-    "demo.mbt",
+    @workspace.DocumentUri::memory("main.mbt"),
+    "main.mbt",
     "",
     3,
     "rev-3",
@@ -147,7 +147,7 @@ impl @workspace.FileSystemProvider for TestFileSystemProvider with fn read_file(
   _uri,
 ) {
   FileReadOk(
-    FileContent("pub fn main {}\n", display_name="demo.mbt", revision="rev-1"),
+    FileContent("pub fn main {}\n", display_name="main.mbt", revision="rev-1"),
   )
 }
 

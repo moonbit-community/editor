@@ -8,7 +8,8 @@ Readonly language-provider contracts.
   result types.
 - Define feature-specific semantic provider traits and the migration
   `LanguageProvider` aggregate.
-- Keep the deterministic demo provider for local tests and fallback fixtures.
+- Keep provider contracts backend-neutral; concrete semantic providers live in
+  server or host packages.
 
 ## Boundaries
 

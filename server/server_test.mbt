@@ -1,19 +1,23 @@
 ///|
 test "validates readonly remote workspace uris" {
-  let uri = expect_uri("readonly-remote://workspace/docs/fixtures/demo.mbt")
+  let uri = expect_uri(
+    "readonly-remote://workspace/docs/fixtures/project/src/main.mbt",
+  )
   match @server.resolve_remote_document_uri(uri) {
     ParsedRemotePath(path) =>
-      assert_eq(path.to_string(), "docs/fixtures/demo.mbt")
+      assert_eq(path.to_string(), "docs/fixtures/project/src/main.mbt")
     RemotePathError(error) => fail(error.message)
   }
 
-  let absolute = expect_uri("readonly-remote://workspace//tmp/demo.mbt")
+  let absolute = expect_uri("readonly-remote://workspace//tmp/main.mbt")
   match @server.resolve_remote_document_uri(absolute) {
     RemotePathError(error) => assert_true(error.code == ProtocolInvalidUri)
     ParsedRemotePath(path) => fail("unexpected path " + path.to_string())
   }
 
-  let wrong_scheme = expect_uri("file://local/docs/fixtures/demo.mbt")
+  let wrong_scheme = expect_uri(
+    "file://local/docs/fixtures/project/src/main.mbt",
+  )
   match @server.resolve_remote_document_uri(wrong_scheme) {
     RemotePathError(error) => assert_true(error.code == ProtocolInvalidUri)
     ParsedRemotePath(path) => fail("unexpected path " + path.to_string())
@@ -28,7 +32,7 @@ async test "lists workspace entries through the host" {
     { path: "src", name: "src", kind: "directory", depth: 0 },
     { path: "src/main.mbt", name: "main.mbt", kind: "file", depth: 1 },
   ]
-  let server = @server.RemoteServer("/workspace", host)
+  let server = test_remote_server("/workspace", host)
 
   match server.list_workspace({ id: "list-1" }) {
     WorkspaceListed(payload) => {
@@ -44,7 +48,7 @@ async test "lists workspace entries through the host" {
 async test "maps host read errors to protocol provider errors" {
   let host = FakeServerHost::new()
   host.errors.set("missing.mbt", (FileNotFound, "missing file"))
-  let server = @server.RemoteServer("/workspace", host)
+  let server = test_remote_server("/workspace", host)
   let uri = expect_remote_uri("missing.mbt")
 
   match server.open_document({ id: "open-1", uri }) {
@@ -60,9 +64,9 @@ async test "maps host read errors to protocol provider errors" {
 ///|
 async test "routes watch events to document changed packets" {
   let host = FakeServerHost::new()
-  host.files.set("demo.mbt", "pub fn main {}\n")
-  let server = @server.RemoteServer("/workspace/", host)
-  let uri = expect_remote_uri("demo.mbt")
+  host.files.set("main.mbt", "pub fn main {}\n")
+  let server = test_remote_server("/workspace/", host)
+  let uri = expect_remote_uri("main.mbt")
   let emitted = []
 
   match
@@ -76,8 +80,8 @@ async test "routes watch events to document changed packets" {
     _ => fail("expected initial document load")
   }
 
-  host.files.set("demo.mbt", "pub fn main { 1 }\n")
-  host.emit("demo.mbt", Changed)
+  host.files.set("main.mbt", "pub fn main { 1 }\n")
+  host.emit("main.mbt", Changed)
   assert_eq(emitted.length(), 1)
   match emitted[0] {
     DocumentChanged(payload) =>
@@ -85,7 +89,7 @@ async test "routes watch events to document changed packets" {
     _ => fail("expected document changed")
   }
 
-  host.emit("demo.mbt", Deleted)
+  host.emit("main.mbt", Deleted)
   match emitted[1] {
     RemoteError(error) => assert_eq(error.provider_code, "FileNotFound")
     _ => fail("expected deletion error")
@@ -95,16 +99,15 @@ async test "routes watch events to document changed packets" {
 ///|
 async test "answers hover and definition from cached provider state" {
   let host = FakeServerHost::new()
-  host.files.set("demo.mbt", "pub fn main {}\n")
-  let server = @server.RemoteServer("/workspace", host)
-  let uri = expect_remote_uri("demo.mbt")
+  host.files.set("main.mbt", "pub fn main {}\n")
+  let server = test_remote_server("/workspace", host)
+  let uri = expect_remote_uri("main.mbt")
   ignore(server.open_document({ id: "open-1", uri }))
 
   match server.hover({ id: "hover-1", uri, document_version: 1, offset: 7 }) {
     HoverResult(payload) =>
       match payload.hover {
-        Some(hover) =>
-          assert_eq(hover.contents, "Demo hover: entry point symbol")
+        Some(hover) => assert_eq(hover.contents, "Configured hover")
         None => fail("expected hover")
       }
     _ => fail("expected hover result")
@@ -124,9 +127,9 @@ async test "answers hover and definition from cached provider state" {
 ///|
 async test "answers diagnostics symbols and semantic tokens from cached provider state" {
   let host = FakeServerHost::new()
-  host.files.set("demo.mbt", "pub fn main { // TODO }\n")
-  let server = @server.RemoteServer("/workspace", host)
-  let uri = expect_remote_uri("demo.mbt")
+  host.files.set("main.mbt", "pub fn main { // TODO }\n")
+  let server = test_remote_server("/workspace", host)
+  let uri = expect_remote_uri("main.mbt")
   ignore(server.open_document({ id: "open-1", uri }))
 
   match server.diagnostics({ id: "diag-1", uri, document_version: 1 }) {
@@ -140,7 +143,7 @@ async test "answers diagnostics symbols and semantic tokens from cached provider
   match server.document_symbols({ id: "symbols-1", uri, document_version: 1 }) {
     DocumentSymbolsResult(payload) => {
       assert_eq(payload.symbols.length(), 1)
-      assert_eq(payload.symbols[0].name, "main")
+      assert_eq(payload.symbols[0].name, "configured")
     }
     _ => fail("expected document symbols result")
   }
@@ -158,10 +161,7 @@ async test "answers diagnostics symbols and semantic tokens from cached provider
 async test "dispatches language requests through configured providers" {
   let host = FakeServerHost::new()
   host.files.set("configured.mbt", "pub fn configured {}\n")
-  let provider = FakeLanguageProvider::{  }
-  let server = @server.RemoteServer::with_language_providers(
-    "/workspace", host, provider, provider, provider, provider, provider,
-  )
+  let server = test_remote_server("/workspace", host)
   let uri = expect_remote_uri("configured.mbt")
   ignore(server.open_document({ id: "open-1", uri }))
 
@@ -217,6 +217,17 @@ fn expect_uri(raw : String) -> @workspace.DocumentUri raise {
     ParsedDocumentUri(uri) => uri
     DocumentUriError(error) => fail("unexpected URI error " + error.to_string())
   }
+}
+
+///|
+fn test_remote_server(
+  root : String,
+  host : &@server.ServerHost,
+) -> @server.RemoteServer {
+  let provider = FakeLanguageProvider::{  }
+  @server.RemoteServer::with_language_providers(
+    root, host, provider, provider, provider, provider, provider,
+  )
 }
 
 ///|

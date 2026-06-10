@@ -88,7 +88,7 @@ Required checks for each implementation slice:
 
 Browser smoke coverage should include:
 
-- opening `readonly-remote://workspace/docs/fixtures/demo.mbt`;
+- opening `readonly-remote://workspace/docs/fixtures/project/src/main.mbt`;
 - rendering syntax and diagnostics;
 - hover and definition requests through the remote server;
 - watched file refresh after the server reports a change;

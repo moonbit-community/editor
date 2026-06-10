@@ -5,8 +5,13 @@ test "render frame contains highlighted spans and provider surfaces" {
   let decorations = @decorations.DecorationSet::from_array([
     Decoration(Range(13, 17), Diagnostic, "diag-warning", message="todo"),
   ])
-  let provider = @language.demo_provider()
-  let providers = @language.collect_provider_result(provider, doc)
+  let providers = @language.ProviderResult::{
+    hovers: [],
+    diagnostics: [{ range: Range(13, 17), severity: Warning, message: "todo" }],
+    definitions: [],
+    symbols: [],
+    semantic_tokens: [],
+  }
   let frame = @renderer.build_frame(
     doc,
     { start_line: 0, end_line: 2 },

@@ -9,8 +9,8 @@ Native-side remote workspace policy and protocol dispatch.
 - Read and cache readonly source documents through `ServerHost`.
 - Manage file watches, close/dispose behavior, semantic language-feature
   requests, and remote protocol dispatch.
-- Dispatch semantic feature requests through injected `language` provider
-  traits, with deterministic demo providers as the default fallback.
+- Dispatch semantic feature requests through explicitly injected `language`
+  provider traits.
 - Own the hidden LSP client, request/notification flow, capability gating, and
   LSP-to-semantic result conversion for server-backed providers.
 

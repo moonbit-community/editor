@@ -110,7 +110,7 @@ Own backend-neutral provider contracts and result types:
   provider result types here;
 - split the broad `LanguageProvider` surface into feature-specific provider
   traits where useful;
-- keep deterministic demo providers for local tests and fixtures;
+- keep provider contracts independent of concrete test fixtures;
 - remove browser/native transport concepts from the public language API once
   server-owned LSP support exists.
 
@@ -272,7 +272,7 @@ Own native effects:
 
 Unit tests:
 
-- `language` tests for provider traits, demo providers, and result conversion
+- `language` tests for provider traits and result conversion
   helpers that remain backend-neutral.
 - `remote_protocol` tests for semantic feature packets and structured errors.
 - `server` tests for semantic request routing, stale version rejection, provider
@@ -286,7 +286,7 @@ Browser tests:
   document changes, errors, and stale versions;
 - real host-server smoke test against a standards-compliant language server;
 - remote URI smoke coverage for
-  `readonly-remote://workspace/docs/fixtures/demo.mbt`.
+  `readonly-remote://workspace/docs/fixtures/project/src/main.mbt`.
 
 Required checks:
 

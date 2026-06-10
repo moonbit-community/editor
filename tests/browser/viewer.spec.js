@@ -32,30 +32,14 @@ test('renders fixture workspace through the native protocol', async ({ page }) =
   );
   await expect(page.locator('.code-viewer')).toContainText('pub fn main');
   await expect(page.locator('.code-viewer')).toContainText('startup_event');
-  await expect(page.locator('.diag-warning')).toContainText('TODO');
-  await expect(page.locator('.diagnostic-item')).toContainText(
-    'Demo diagnostic from readonly provider',
-  );
+  await expect(page.locator('.editor-shell')).not.toContainText('readonly provider');
 
   const mainSymbol = page.locator('.code span', { hasText: 'main' }).first();
   await mainSymbol.hover();
-  await expect(mainSymbol).toHaveAttribute('data-hover', /Demo hover: entry point symbol/);
-  await expect(page.locator('.hover-tooltip')).toContainText(
-    'Demo hover: entry point symbol',
-  );
-
   await mainSymbol.dblclick();
-  await expect(mainSymbol).toHaveAttribute(
-    'data-definition-uri',
-    'readonly-remote://workspace/src/main.mbt',
-  );
-  await expect(mainSymbol).toHaveAttribute('data-definition-target', 'true');
 
   expect(await events.some('moonbit:render')).toBeTruthy();
   expect(await events.some('dom:mounted')).toBeTruthy();
-  expect(await events.some('language:diagnostics')).toBeTruthy();
-  expect(await events.some('language:hover')).toBeTruthy();
-  expect(await events.some('language:definition')).toBeTruthy();
 });
 
 test('renders workspace sidebar entries without changing the URL', async ({ page }) => {

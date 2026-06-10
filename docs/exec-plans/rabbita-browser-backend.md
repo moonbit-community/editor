@@ -197,7 +197,7 @@ Exit criteria:
 
 Exit criteria:
 
-- The default demo frame renders through Rabbita with the same observable DOM
+- The default fixture frame renders through Rabbita with the same observable DOM
   shape expected by `tests/browser/viewer.spec.js`.
 - `dom:mounted` and `moonbit:render` observability events are emitted from
   MoonBit-side logic.
@@ -288,8 +288,8 @@ Run after each migration slice:
 
 Add or preserve browser smoke coverage for:
 
-- demo document rendering;
-- `readonly-remote://workspace/docs/fixtures/demo.mbt`;
+- fixture document rendering;
+- `readonly-remote://workspace/docs/fixtures/project/src/main.mbt`;
 - server-provided workspace tree rendering;
 - sidebar folder expand/collapse;
 - sidebar file selection without URL changes;
@@ -327,7 +327,7 @@ Scope:
 2. Mount a Rabbita app from `web`.
 3. Add the static sidebar skeleton and prove file selection does not touch the
    browser URL.
-4. Render current demo `RenderFrame` through Rabbita.
+4. Render current fixture `RenderFrame` through Rabbita.
 5. Preserve current selectors and console events.
 6. Keep document loading and remote protocol fallback unchanged until the
    rendered DOM passes the existing browser smoke tests.
@@ -458,7 +458,7 @@ Implemented on `codex/rabbita-generated-entry`:
 - `web/main.mbt` is the generated MoonBit entrypoint and starts the
   Rabbita-backed browser app.
 - `renderer/browser` now owns document/session updates with Rabbita commands:
-  default demo render, sidebar-driven workspace opens, protocol-backed loads,
+  default fixture render, sidebar-driven workspace opens, protocol-backed loads,
   watches, refreshes, hover, and definition resolution.
 - `dom` is reduced to host capabilities for event logging, current-document
   exposure needed by transports, filesystem provider hooks, and remote protocol

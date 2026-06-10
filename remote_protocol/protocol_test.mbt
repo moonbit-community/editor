@@ -1,6 +1,8 @@
 ///|
 test "encodes and decodes document client packets" {
-  let uri = expect_uri("readonly-remote://workspace/docs/fixtures/demo.mbt")
+  let uri = expect_uri(
+    "readonly-remote://workspace/docs/fixtures/project/src/main.mbt",
+  )
   let list = @remote_protocol.ListWorkspace({ id: "list-1" })
   match @remote_protocol.decode_client_packet(list.to_json()) {
     DecodedClientPacket(ListWorkspace(request)) =>
@@ -103,7 +105,9 @@ test "encodes and decodes semantic client packets" {
 
 ///|
 test "encodes and decodes server document and language packets" {
-  let uri = expect_uri("readonly-remote://workspace/docs/fixtures/demo.mbt")
+  let uri = expect_uri(
+    "readonly-remote://workspace/docs/fixtures/project/src/main.mbt",
+  )
   let workspace = @remote_protocol.WorkspaceListed({
     id: "list-1",
     entries: [
@@ -124,7 +128,7 @@ test "encodes and decodes server document and language packets" {
   }
 
   let document = @workspace.SourceDocument(
-    uri, "demo.mbt", "moonbit", 2, "rev-2", "pub fn main {}\n",
+    uri, "main.mbt", "moonbit", 2, "rev-2", "pub fn main {}\n",
   )
   let loaded = @remote_protocol.DocumentLoaded({ id: "open-1", document })
   match @remote_protocol.decode_server_packet(loaded.to_json()) {

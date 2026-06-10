@@ -10,7 +10,7 @@ without hidden setup.
 - `just build`: build the MoonBit browser bundle in `web/dist` and the native
   editor server executable.
 - `just test-browser`: Playwright smoke tests against the native server.
-- `just dev ROOT=docs/fixtures/project PORT=5173`: build and run the native
+- `just dev ROOT=. PORT=5173`: build and run the native
   editor server.
 
 The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.

@@ -797,8 +797,6 @@ fn workspace_id_from_uri(uri : String) -> String {
   let prefix = "readonly-remote://workspace/"
   if uri.has_prefix(prefix) {
     uri[prefix.length():].to_owned()
-  } else if uri == "memory://demo.mbt" {
-    "docs/fixtures/demo.mbt"
   } else {
     uri
   }

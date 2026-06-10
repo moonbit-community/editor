@@ -58,22 +58,6 @@ pub fn ServerWatch::dispose(self : ServerWatch) -> Unit {
 }
 
 ///|
-pub fn RemoteServer::RemoteServer(
-  workspace_root : String,
-  host : &ServerHost,
-) -> RemoteServer {
-  RemoteServer::with_language_providers(
-    workspace_root,
-    host,
-    @language.demo_hover_provider(),
-    @language.demo_definition_provider(),
-    @language.demo_diagnostics_provider(),
-    @language.demo_document_symbol_provider(),
-    @language.demo_semantic_tokens_provider(),
-  )
-}
-
-///|
 pub fn RemoteServer::with_language_providers(
   workspace_root : String,
   host : &ServerHost,

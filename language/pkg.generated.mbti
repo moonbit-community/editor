@@ -12,20 +12,6 @@ pub async fn collect_document_provider_result(&DiagnosticsProvider, &DocumentSym
 
 pub fn collect_provider_result(&LanguageProvider, @core.DocumentSnapshot) -> ProviderResult
 
-pub fn demo_definition_provider() -> &DefinitionProvider
-
-pub fn demo_diagnostics_provider() -> &DiagnosticsProvider
-
-pub fn demo_document_symbol_provider() -> &DocumentSymbolProvider
-
-pub fn demo_hover_provider() -> &HoverProvider
-
-pub fn demo_provider() -> &LanguageProvider
-
-pub fn demo_providers(@core.DocumentSnapshot) -> ProviderResult
-
-pub fn demo_semantic_tokens_provider() -> &SemanticTokensProvider
-
 // Errors
 
 // Types and methods
@@ -104,4 +90,3 @@ pub(open) trait LanguageProvider {
 pub(open) trait SemanticTokensProvider {
   async fn semantic_tokens_for_document(Self, @workspace.SourceDocument) -> Array[SemanticToken]
 }
-

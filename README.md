@@ -9,7 +9,7 @@ Monaco and CodeMirror checked in as reference-only submodules.
 npm install
 just check
 just build
-just dev ROOT=docs/fixtures/project PORT=5173
+just dev ROOT=. PORT=5173
 ```
 
 Then open `http://127.0.0.1:5173/`. The browser client is served by the native

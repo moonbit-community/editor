@@ -8,11 +8,13 @@ Monaco and CodeMirror checked in as reference-only submodules.
 ```sh
 npm install
 just check
-just dev
+just build
+just dev ROOT=docs/fixtures/project PORT=5173
 ```
 
-The first milestone is a browser viewer backed by immutable MoonBit document,
-syntax, decoration, language-provider, and render-model packages.
+Then open `http://127.0.0.1:5173/`. The browser client is served by the native
+MoonBit host from `web/dist` and talks to the same host over the readonly
+remote protocol WebSocket.
 
 ## Validation
 

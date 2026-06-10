@@ -105,10 +105,12 @@ or `--target native`.
   package boundaries.
 - Remote protocol packet types, version negotiation, encoding, decoding, and
   structured errors are MoonBit-owned.
-- The browser app is loaded through a bootstrap-only Vite entrypoint. Generated
+- The browser app is served by the native host from `web/dist`. Generated
   MoonBit code owns the Rabbita app, document/session updates, workspace
   selection, render-frame construction, hover/definition resolution, and watch
   refreshes.
+- Browser/native communication uses `remote_protocol` packets over the native
+  host's `/protocol` WebSocket.
 - Browser URLs are not document routes. Active file identity comes from
   MoonBit workspace/sidebar state and server/protocol calls, not `?uri=`,
   `?path=`, hashes, or history updates.

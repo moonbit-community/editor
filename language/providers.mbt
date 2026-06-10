@@ -246,10 +246,14 @@ impl DefinitionProvider for DemoLanguageProvider with fn definition_at(
   document,
   offset,
 ) {
-  definition_at(
-    collect_provider_result(demo_provider(), document.snapshot()),
-    offset,
-  )
+  match
+    definition_at(
+      collect_provider_result(demo_provider(), document.snapshot()),
+      offset,
+    ) {
+    Some(location) => Some({ ..location, uri: document.uri })
+    None => None
+  }
 }
 
 ///|

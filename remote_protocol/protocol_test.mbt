@@ -1,6 +1,14 @@
 ///|
 test "encodes and decodes document client packets" {
   let uri = expect_uri("readonly-remote://workspace/docs/fixtures/demo.mbt")
+  let list = @remote_protocol.ListWorkspace({ id: "list-1" })
+  match @remote_protocol.decode_client_packet(list.to_json()) {
+    DecodedClientPacket(ListWorkspace(request)) =>
+      assert_eq(request.id, "list-1")
+    DecodedClientPacket(_) => fail("unexpected workspace list packet")
+    ClientPacketDecodeError(error) => fail(error.message)
+  }
+
   let packet = @remote_protocol.OpenDocument({ id: "open-1", uri })
   let encoded = packet.to_json()
   assert_true(encoded.contains("\"type\":\"OpenDocument\""))
@@ -96,6 +104,25 @@ test "encodes and decodes semantic client packets" {
 ///|
 test "encodes and decodes server document and language packets" {
   let uri = expect_uri("readonly-remote://workspace/docs/fixtures/demo.mbt")
+  let workspace = @remote_protocol.WorkspaceListed({
+    id: "list-1",
+    entries: [
+      { path: "src", name: "src", kind: "directory", depth: 0 },
+      { path: "src/main.mbt", name: "main.mbt", kind: "file", depth: 1 },
+    ],
+  })
+  match @remote_protocol.decode_server_packet(workspace.to_json()) {
+    DecodedServerPacket(WorkspaceListed(payload)) => {
+      assert_eq(payload.id, "list-1")
+      assert_eq(payload.entries.length(), 2)
+      assert_eq(payload.entries[1].path, "src/main.mbt")
+      assert_eq(payload.entries[1].kind, "file")
+      assert_eq(payload.entries[1].depth, 1)
+    }
+    DecodedServerPacket(_) => fail("unexpected workspace listed packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+
   let document = @workspace.SourceDocument(
     uri, "demo.mbt", "moonbit", 2, "rev-2", "pub fn main {}\n",
   )

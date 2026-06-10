@@ -11,7 +11,7 @@ async fn main {
   }
 
   let source_dir = "_build/js/debug/build/web"
-  let target_dir = "web/generated"
+  let target_dir = "web/dist"
   if !@fs.exists(target_dir) {
     @fs.mkdir(target_dir, recursive=true)
   }
@@ -41,6 +41,35 @@ async fn main {
     @fs.read_file("\{source_dir}/web.d.ts"),
     create_mode=@fs.CreateOrTruncate,
   )
+  @fs.write_file(
+    "\{target_dir}/style.css",
+    @fs.read_file("app/src/style.css"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{target_dir}/index.html",
+    index_html(),
+    create_mode=@fs.CreateOrTruncate,
+  )
 
-  println("Generated web/generated/editor.mjs")
+  println("Generated web/dist/editor.mjs")
+}
+
+///|
+fn index_html() -> String {
+  (
+    #|<!doctype html>
+    #|<html lang="en">
+    #|  <head>
+    #|    <meta charset="UTF-8" />
+    #|    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    #|    <title>Readonly MoonBit Editor</title>
+    #|    <link rel="stylesheet" href="/style.css">
+    #|  </head>
+    #|  <body>
+    #|    <div id="app"></div>
+    #|    <script type="module" src="/editor.mjs"></script>
+    #|  </body>
+    #|</html>
+  )
 }

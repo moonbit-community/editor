@@ -26,23 +26,23 @@ priv struct BrowserAppModel {
   source_document : @workspace.SourceDocument?
   document : BrowserDocumentView?
   selected_workspace_id : String
-  docs_expanded : Bool
-  fixtures_expanded : Bool
+  workspace_entries : Array[@remote_protocol.WorkspaceEntry]
+  collapsed_workspace_ids : Array[String]
+  provider_result : @language.ProviderResult
   hover : HoverView?
   definition : DefinitionView?
 }
 
 ///|
 priv enum BrowserMsg {
-  StartDefaultDocument
+  ConnectProtocol
+  ProtocolEvent(@websocket.Event)
+  ProtocolSendFailed(String)
   DocumentRenderResolved(DocumentRenderResult, Bool)
-  DocumentWatchChanged(String, Bool)
   SelectWorkspace(String)
   ToggleFolder(String)
   RequestHover(Int, Int, Int, Int)
-  HoverResolved(Int, Int, HoverResolution)
   RequestDefinition(Int, Int)
-  DefinitionResolved(DefinitionResolution)
 }
 
 ///|
@@ -67,7 +67,7 @@ pub fn mount_app() -> Unit {
   app.with_init(
     @cmd.custom_cmd(scheduler => {
       browser_dispatch.val = Some(msg => scheduler.add(emit(msg)))
-      scheduler.add(emit(StartDefaultDocument))
+      scheduler.add(emit(ConnectProtocol))
     }),
   )
   app.mount("app")
@@ -81,9 +81,10 @@ fn initial_browser_model() -> BrowserAppModel {
     frame: None,
     source_document: None,
     document: None,
-    selected_workspace_id: "docs/fixtures/demo.mbt",
-    docs_expanded: true,
-    fixtures_expanded: true,
+    selected_workspace_id: "",
+    workspace_entries: [],
+    collapsed_workspace_ids: [],
+    provider_result: @language.ProviderResult::empty(),
     hover: None,
     definition: None,
   }
@@ -96,10 +97,16 @@ fn update_browser_app(
   model : BrowserAppModel,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   match msg {
-    StartDefaultDocument =>
+    ConnectProtocol =>
       (
-        default_document_cmd(),
+        connect_protocol_cmd(emit),
         { ..model, status: "loading", status_message: "", frame: None },
+      )
+    ProtocolEvent(event) => protocol_event_update(emit, model, event)
+    ProtocolSendFailed(message) =>
+      (
+        dom_mounted_status_cmd("error"),
+        { ..model, status: "error", status_message: message },
       )
     DocumentRenderResolved(result, watch) =>
       match result {
@@ -115,44 +122,11 @@ fn update_browser_app(
               frame: None,
               source_document: None,
               document: update_document_uri(model.document, uri),
+              provider_result: @language.ProviderResult::empty(),
               hover: None,
               definition: None,
             },
           )
-      }
-    DocumentWatchChanged(uri, deleted) =>
-      if active_document_uri(model.document) == uri {
-        if deleted {
-          (
-            dom_mounted_status_cmd("missing"),
-            {
-              ..model,
-              status: "missing",
-              status_message: "Source file is missing.",
-              frame: None,
-              hover: None,
-              definition: None,
-            },
-          )
-        } else {
-          match model.source_document {
-            Some(document) =>
-              (
-                @rabbita.batch([
-                  dom_mounted_status_cmd("stale"),
-                  load_document_uri_cmd(
-                    document.uri,
-                    model.source_document,
-                    false,
-                  ),
-                ]),
-                { ..model, status: "stale", status_message: "" },
-              )
-            None => (@rabbita.none, model)
-          }
-        }
-      } else {
-        (@rabbita.none, model)
       }
     SelectWorkspace(id) => {
       let next = {
@@ -166,23 +140,17 @@ fn update_browser_app(
       }
       (
         @rabbita.batch([
-          stop_document_watch_cmd(),
-          load_workspace_document_cmd(emit, id, model.source_document),
+          close_active_document_cmd(emit, model.source_document),
+          load_workspace_document_cmd(emit, id),
         ]),
         next,
       )
     }
     ToggleFolder(id) =>
-      if id == "docs" {
-        (@rabbita.none, { ..model, docs_expanded: !model.docs_expanded })
-      } else if id == "docs/fixtures" {
-        (
-          @rabbita.none,
-          { ..model, fixtures_expanded: !model.fixtures_expanded },
-        )
-      } else {
-        (@rabbita.none, model)
-      }
+      (
+        @rabbita.none,
+        { ..model, collapsed_workspace_ids: toggle_collapsed_id(model, id) },
+      )
     RequestHover(start, end, offset, version) =>
       (
         hover_resolution_cmd(
@@ -195,57 +163,235 @@ fn update_browser_app(
         ),
         { ..model, hover: None },
       )
-    HoverResolved(start, end, result) =>
-      if frame_version(model.frame) == result.version {
-        if result.ok && result.start < end && start < result.end {
-          (
-            @rabbita.none,
-            {
-              ..model,
-              hover: Some({
-                range: Range(result.start, result.end),
-                contents: result.contents,
-              }),
-            },
-          )
-        } else {
-          (@rabbita.none, model)
-        }
-      } else {
-        (@rabbita.none, model)
-      }
     RequestDefinition(offset, version) =>
       (
         definition_resolution_cmd(emit, model.source_document, offset, version),
         { ..model, definition: None },
       )
-    DefinitionResolved(result) =>
-      if frame_version(model.frame) == result.version {
-        if result.ok && result.uri != "" {
-          let definition : DefinitionView = {
-            uri: result.uri,
-            range: Range(result.start, result.end),
+  }
+}
+
+///|
+fn protocol_event_update(
+  emit : @rabbita.Emit[BrowserMsg],
+  model : BrowserAppModel,
+  event : @websocket.Event,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  match event {
+    Opened =>
+      (
+        send_client_packet_cmd(emit, ListWorkspace({ id: "list-workspace" })),
+        { ..model, status_message: "" },
+      )
+    Message(raw) => protocol_message_update(emit, model, raw)
+    Closed(_) =>
+      (
+        dom_mounted_status_cmd("stale"),
+        {
+          ..model,
+          status: "stale",
+          status_message: "Connection lost. Reconnecting...",
+        },
+      )
+    Errored =>
+      (
+        dom_mounted_status_cmd("error"),
+        {
+          ..model,
+          status: "error",
+          status_message: "Remote protocol connection failed.",
+        },
+      )
+  }
+}
+
+///|
+fn protocol_message_update(
+  emit : @rabbita.Emit[BrowserMsg],
+  model : BrowserAppModel,
+  raw : String,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  match @remote_protocol.decode_server_packet(raw) {
+    DecodedServerPacket(packet) => server_packet_update(emit, model, packet)
+    ServerPacketDecodeError(error) => protocol_error_update(model, error)
+  }
+}
+
+///|
+fn server_packet_update(
+  emit : @rabbita.Emit[BrowserMsg],
+  model : BrowserAppModel,
+  packet : @remote_protocol.ServerPacket,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  match packet {
+    WorkspaceListed(payload) => workspace_listed_update(emit, model, payload)
+    DocumentLoaded(payload) => document_payload_update(model, payload)
+    DocumentChanged(payload) => document_payload_update(model, payload)
+    Diagnostics(payload) =>
+      semantic_payload_update(model, {
+        ..model.provider_result,
+        diagnostics: payload.diagnostics,
+      })
+    DocumentSymbolsResult(payload) =>
+      semantic_payload_update(model, {
+        ..model.provider_result,
+        symbols: payload.symbols,
+      })
+    SemanticTokensResult(payload) =>
+      semantic_payload_update(model, {
+        ..model.provider_result,
+        semantic_tokens: payload.semantic_tokens,
+      })
+    HoverResult(payload) =>
+      if frame_version(model.frame) == payload.version {
+        match payload.hover {
+          Some(hover) => {
+            emit_event(
+              "language:hover",
+              "{\"ok\":true,\"version\":" + payload.version.to_string() + "}",
+            )
+            (
+              @rabbita.none,
+              {
+                ..model,
+                hover: Some({ range: hover.range, contents: hover.contents }),
+              },
+            )
           }
-          let cmd = match model.source_document {
-            Some(document) =>
-              if document.uri.to_string() != result.uri {
-                match @workspace.DocumentUri::parse(result.uri) {
-                  ParsedDocumentUri(uri) =>
-                    load_document_uri_cmd(uri, model.source_document, true)
-                  DocumentUriError(_) => @rabbita.none
-                }
-              } else {
-                @rabbita.none
-              }
-            None => @rabbita.none
+          None => {
+            emit_event(
+              "language:hover",
+              "{\"ok\":false,\"version\":" + payload.version.to_string() + "}",
+            )
+            (@rabbita.none, model)
           }
-          (@rabbita.batch([cmd]), { ..model, definition: Some(definition) })
-        } else {
-          (@rabbita.none, model)
         }
       } else {
         (@rabbita.none, model)
       }
+    DefinitionResult(payload) =>
+      if frame_version(model.frame) == payload.version {
+        match payload.location {
+          Some(location) => {
+            emit_event(
+              "language:definition",
+              "{\"ok\":true,\"version\":" +
+              payload.version.to_string() +
+              ",\"uri\":" +
+              json_string(location.uri.to_string()) +
+              "}",
+            )
+            (
+              @rabbita.none,
+              {
+                ..model,
+                definition: Some({
+                  uri: location.uri.to_string(),
+                  range: location.range,
+                }),
+              },
+            )
+          }
+          None => {
+            emit_event(
+              "language:definition",
+              "{\"ok\":false,\"version\":" + payload.version.to_string() + "}",
+            )
+            (@rabbita.none, model)
+          }
+        }
+      } else {
+        (@rabbita.none, model)
+      }
+    RemoteError(error) => protocol_error_update(model, error)
+  }
+}
+
+///|
+fn workspace_listed_update(
+  emit : @rabbita.Emit[BrowserMsg],
+  model : BrowserAppModel,
+  payload : @remote_protocol.WorkspaceListedPayload,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  let selected = if model.selected_workspace_id == "" {
+    first_workspace_file(payload.entries)
+  } else {
+    model.selected_workspace_id
+  }
+  let next = {
+    ..model,
+    workspace_entries: payload.entries,
+    selected_workspace_id: selected,
+  }
+  if selected == "" {
+    (@rabbita.none, next)
+  } else if model.source_document is None {
+    (load_workspace_document_cmd(emit, selected), { ..next, status: "loading" })
+  } else {
+    (@rabbita.none, next)
+  }
+}
+
+///|
+fn document_payload_update(
+  model : BrowserAppModel,
+  payload : @remote_protocol.DocumentPayload,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  let next = {
+    ..model,
+    provider_result: @language.ProviderResult::empty(),
+    hover: None,
+    definition: None,
+  }
+  (
+    render_document_cmd(
+      payload.document,
+      model.source_document,
+      next.provider_result,
+      true,
+    ),
+    next,
+  )
+}
+
+///|
+fn semantic_payload_update(
+  model : BrowserAppModel,
+  providers : @language.ProviderResult,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  match model.source_document {
+    Some(document) =>
+      (
+        render_document_cmd(document, model.source_document, providers, false),
+        { ..model, provider_result: providers },
+      )
+    None => (@rabbita.none, model)
+  }
+}
+
+///|
+fn protocol_error_update(
+  model : BrowserAppModel,
+  error : @remote_protocol.ProtocolError,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  emit_event("language:error", error.to_json())
+  if error.provider_code == "FileNotFound" {
+    (
+      dom_mounted_status_cmd("missing"),
+      {
+        ..model,
+        status: "missing",
+        status_message: "Source file is missing.",
+        frame: None,
+        hover: None,
+        definition: None,
+      },
+    )
+  } else {
+    (
+      dom_mounted_status_cmd("error"),
+      { ..model, status: "error", status_message: error.message },
+    )
   }
 }
 
@@ -271,7 +417,7 @@ fn document_rendered_update(
   let cmd = if watch {
     @rabbita.batch([
       dom_mounted_cmd(rendered.frame, "ready"),
-      watch_document_cmd(emit, rendered.document),
+      language_requests_cmd(emit, rendered.document),
     ])
   } else {
     dom_mounted_cmd(rendered.frame, "ready")
@@ -331,22 +477,26 @@ fn view_sidebar(
 ) -> @html.Html {
   let children : Array[@html.Html] = [
     @html.div(class="workspace-title", "Explorer"),
-    view_folder(emit, "docs", "docs", 0, model.docs_expanded),
   ]
-  if model.docs_expanded {
-    children.push(
-      view_folder(emit, "docs/fixtures", "fixtures", 1, model.fixtures_expanded),
-    )
-    if model.fixtures_expanded {
-      children.push(
-        view_file(emit, model, "docs/fixtures/demo.mbt", "demo.mbt", 2),
-      )
+  for entry in model.workspace_entries {
+    if workspace_entry_visible(model, entry) {
+      if entry.kind == "directory" {
+        children.push(
+          view_folder(
+            emit,
+            entry.path,
+            entry.name,
+            entry.depth,
+            !is_workspace_collapsed(model, entry.path),
+          ),
+        )
+      } else {
+        children.push(
+          view_file(emit, model, entry.path, entry.name, entry.depth),
+        )
+      }
     }
   }
-  children.push(view_file(emit, model, "web/main.mbt", "main.mbt", 0))
-  children.push(
-    view_file(emit, model, "renderer/browser/backend.mbt", "backend.mbt", 0),
-  )
   @html.aside(
     class="workspace-sidebar",
     attrs=@html.Attrs::build().aria_label("Workspace files"),
@@ -639,14 +789,81 @@ fn update_document_uri(
 
 ///|
 fn selected_workspace_for_document(document : BrowserDocumentView) -> String {
+  workspace_id_from_uri(document.uri)
+}
+
+///|
+fn workspace_id_from_uri(uri : String) -> String {
   let prefix = "readonly-remote://workspace/"
-  if document.uri.has_prefix(prefix) {
-    document.uri[prefix.length():].to_owned()
-  } else if document.uri == "memory://demo.mbt" {
+  if uri.has_prefix(prefix) {
+    uri[prefix.length():].to_owned()
+  } else if uri == "memory://demo.mbt" {
     "docs/fixtures/demo.mbt"
   } else {
-    document.uri
+    uri
   }
+}
+
+///|
+fn first_workspace_file(
+  entries : Array[@remote_protocol.WorkspaceEntry],
+) -> String {
+  for entry in entries {
+    if entry.kind == "file" && entry.path.has_suffix(".mbt") {
+      return entry.path
+    }
+  }
+  for entry in entries {
+    if entry.kind == "file" {
+      return entry.path
+    }
+  }
+  ""
+}
+
+///|
+fn is_workspace_collapsed(model : BrowserAppModel, path : String) -> Bool {
+  for collapsed in model.collapsed_workspace_ids {
+    if collapsed == path {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn toggle_collapsed_id(model : BrowserAppModel, path : String) -> Array[String] {
+  let next : Array[String] = []
+  let mut removed = false
+  for collapsed in model.collapsed_workspace_ids {
+    if collapsed == path {
+      removed = true
+    } else {
+      next.push(collapsed)
+    }
+  }
+  if !removed {
+    next.push(path)
+  }
+  next
+}
+
+///|
+fn workspace_entry_visible(
+  model : BrowserAppModel,
+  entry : @remote_protocol.WorkspaceEntry,
+) -> Bool {
+  let mut parent = ""
+  for part_view in entry.path.split("/") {
+    let part = part_view.to_owned()
+    if part != "" && part != entry.name {
+      parent = if parent == "" { part } else { parent + "/" + part }
+      if is_workspace_collapsed(model, parent) {
+        return false
+      }
+    }
+  }
+  true
 }
 
 ///|

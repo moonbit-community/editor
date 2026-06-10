@@ -4,12 +4,12 @@ JavaScript/browser host boundary.
 
 ## Responsibilities
 
-- Declare JavaScript FFI for narrow browser host capabilities: current-document
-  exposure for transports, filesystem provider hooks, remote protocol transport
-  hooks, disposables, and observability.
+- Declare JavaScript FFI for narrow browser host capabilities: protocol URL
+  derivation, current-document exposure, filesystem provider hooks, disposables,
+  and observability.
 - Convert host responses into MoonBit `workspace` contracts.
-- Install dev/test fallback providers and transports without rendering editor
-  DOM or owning document session state.
+- Install browser filesystem fallback providers without rendering editor DOM,
+  owning document session state, or fabricating remote protocol responses.
 
 ## Boundaries
 

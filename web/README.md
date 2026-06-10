@@ -6,8 +6,8 @@ Browser client entrypoint for the readonly editor.
 
 - Remain the generated MoonBit browser entrypoint.
 - Start the Rabbita-backed browser app through `renderer/browser`.
-- Keep application-shell ownership out of JavaScript; Vite's bootstrap only
-  imports CSS and the generated MoonBit module.
+- Keep application-shell ownership out of JavaScript; the native server serves
+  `web/dist/index.html`, `/style.css`, and `/editor.mjs`.
 
 ## Boundaries
 

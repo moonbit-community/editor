@@ -7,20 +7,22 @@ without hidden setup.
 
 - `just check`: MoonBit type check.
 - `just test`: MoonBit unit tests.
-- `just build`: MoonBit web build plus Vite production build.
-- `just test-browser`: Playwright smoke tests.
-- `just dev`: build generated MoonBit JS and serve the browser viewer with Vite's static dev host.
+- `just build`: build the MoonBit browser bundle in `web/dist` and the native
+  editor server executable.
+- `just test-browser`: Playwright smoke tests against the native server.
+- `just dev ROOT=docs/fixtures/project PORT=5173`: build and run the native
+  editor server.
 
 The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.
 
-`app/index.html` loads `app/src/bootstrap.js`. The bootstrap file only imports
-`app/src/style.css` and `web/generated/editor.mjs`; it must not render editor
-DOM, own document session state, or read active document identity from URL
-parameters.
+`web/dist/index.html` loads `/style.css` and `/editor.mjs`. The native server
+serves `/`, `/index.html`, `/style.css`, and `/editor.mjs` directly and returns
+404 for other static paths.
 
-`just dev` serves the browser viewer and the generated MoonBit entrypoint.
-Workspace document loading is exercised through browser filesystem-provider and
-remote-protocol hooks, not Vite external file serving.
+`just dev` serves the browser viewer and handles `/protocol` as a WebSocket.
+The browser connects to the same host with Rabbita WebSocket support, requests
+`ListWorkspace`, opens files through `readonly-remote://workspace/<path>`, and
+receives document, language, and watch packets from the native server.
 
 ## Browser Selectors
 
@@ -41,7 +43,7 @@ must not change `window.location.href`.
 
 The product browser path does not use `?uri=`, `?path=`, hashes, or history
 updates to represent the active file. Browser tests should open workspace files
-through sidebar selection and remote protocol/file-provider hooks.
+through sidebar selection and the native remote protocol.
 
 ## Browser Observability
 

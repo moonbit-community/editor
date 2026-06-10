@@ -10,7 +10,7 @@ import {
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/cmd",
   "moonbit-community/rabbita/html",
-  "moonbitlang/async/js_async",
+  "moonbit-community/rabbita/websocket",
 }
 
 supported_targets = "js"

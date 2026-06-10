@@ -54,65 +54,6 @@ pub extern "js" fn install_host_capabilities() -> Unit =
   #|     };
   #|   }
   #|
-  #|   if (!globalThis.__readonlyEditorRemoteProtocolTransport) {
-  #|     globalThis.__readonlyEditorRemoteProtocolMessages = [];
-  #|     globalThis.__readonlyEditorRemoteProtocolTransport = {
-  #|       async request(packet, { signal } = {}) {
-  #|         globalThis.__readonlyEditorRemoteProtocolMessages.push({ type: "request", packet });
-  #|         const request = parseProtocolPacket(packet);
-  #|         if (request.type === "OpenDocument") {
-  #|           return readRemoteDocument(request, { signal, responseType: "DocumentLoaded" });
-  #|         }
-  #|         if (request.type === "Diagnostics") {
-  #|           return diagnosticsPacket(request);
-  #|         }
-  #|         if (request.type === "Hover") {
-  #|           return hoverPacket(request);
-  #|         }
-  #|         if (request.type === "Definition") {
-  #|           return definitionPacket(request);
-  #|         }
-  #|         if (request.type === "DocumentSymbols") {
-  #|           return symbolsPacket(request);
-  #|         }
-  #|         if (request.type === "SemanticTokens") {
-  #|           return semanticTokensPacket(request);
-  #|         }
-  #|         return protocolErrorPacket(
-  #|           request,
-  #|           "InvalidPacket",
-  #|           `Unsupported remote protocol request ${request.type || "unknown"}.`
-  #|         );
-  #|       },
-  #|
-  #|       watch(packet, listener) {
-  #|         globalThis.__readonlyEditorRemoteProtocolMessages.push({ type: "watch", packet });
-  #|         const request = parseProtocolPacket(packet);
-  #|         if (request.type !== "WatchDocument") {
-  #|           queueMicrotask(() => {
-  #|             listener(protocolErrorPacket(request, "InvalidPacket", "Unsupported remote watch request."));
-  #|           });
-  #|           return { dispose() {} };
-  #|         }
-  #|         const localUri = remoteUriToLocalFileUri(request.uri);
-  #|         if (!localUri || typeof globalThis.__readonlyEditorProviderWatchFile !== "function") {
-  #|           queueMicrotask(() => {
-  #|             listener(providerErrorPacket(request, "Unavailable", "No remote watch provider is registered."));
-  #|           });
-  #|           return { dispose() {} };
-  #|         }
-  #|         return globalThis.__readonlyEditorProviderWatchFile(localUri, async (payload) => {
-  #|           const changes = parseRemoteFileChanges(localUri, payload);
-  #|           if (changes.some((change) => change.type === "deleted")) {
-  #|             listener(providerErrorPacket(request, "FileNotFound", "Watched source file was deleted."));
-  #|             return;
-  #|           }
-  #|           listener(await readRemoteDocument(request, { responseType: "DocumentChanged" }));
-  #|         }) || { dispose() {} };
-  #|       }
-  #|     };
-  #|   }
-  #|
   #|   function createBrowserFileSystemProvider() {
   #|     const entries = new Map();
   #|     const watchers = new Set();
@@ -268,204 +209,6 @@ pub extern "js" fn install_host_capabilities() -> Unit =
   #|       type: change.type || "changed"
   #|     }));
   #|   }
-  #|
-  #|   async function readRemoteDocument(request, { signal, responseType = "DocumentLoaded" } = {}) {
-  #|     const localUri = remoteUriToLocalFileUri(request.uri);
-  #|     if (!localUri || typeof globalThis.__readonlyEditorProviderReadFile !== "function") {
-  #|       return providerErrorPacket(request, "InvalidUri", "Invalid readonly remote workspace URI.");
-  #|     }
-  #|     const result = await globalThis.__readonlyEditorProviderReadFile(localUri, signal);
-  #|     if (!result?.ok) {
-  #|       return providerErrorPacket(
-  #|         request,
-  #|         result?.code || "Unavailable",
-  #|         result?.message || "Unable to read remote source document."
-  #|       );
-  #|     }
-  #|     return JSON.stringify({
-  #|       version: 1,
-  #|       type: responseType,
-  #|       id: request.id || "",
-  #|       document: {
-  #|         uri: request.uri,
-  #|         displayName: result.displayName || uriDisplayName(localUri),
-  #|         languageId: result.languageId || "",
-  #|         version: 1,
-  #|         revision: result.revision || String(result.text?.length || 0),
-  #|         text: result.text || ""
-  #|       }
-  #|     });
-  #|   }
-  #|
-  #|   function diagnosticsPacket(request) {
-  #|     const document = documentForLanguageRequest(request);
-  #|     if (!document) {
-  #|       return protocolErrorPacket(request, "InvalidPacket", "No matching loaded document is available for diagnostics.");
-  #|     }
-  #|     const todo = document.text.indexOf("TODO");
-  #|     const diagnostics = todo < 0 ? [] : [{
-  #|       range: { start: todo, end: todo + 4 },
-  #|       severity: "Warning",
-  #|       message: "Semantic diagnostic from readonly provider"
-  #|     }];
-  #|     return languagePacket(request, "Diagnostics", document, { diagnostics });
-  #|   }
-  #|
-  #|   function hoverPacket(request) {
-  #|     const document = documentForLanguageRequest(request);
-  #|     if (!document) {
-  #|       return protocolErrorPacket(request, "InvalidPacket", "No matching loaded document is available for hover.");
-  #|     }
-  #|     const range = identifierRangeAtOffset(document.text, request.offset);
-  #|     const hover = range ? {
-  #|       range,
-  #|       contents: `Semantic hover for ${document.text.slice(range.start, range.end)}`
-  #|     } : null;
-  #|     return languagePacket(request, "HoverResult", document, { hover });
-  #|   }
-  #|
-  #|   function definitionPacket(request) {
-  #|     const document = documentForLanguageRequest(request);
-  #|     if (!document) {
-  #|       return protocolErrorPacket(request, "InvalidPacket", "No matching loaded document is available for definition.");
-  #|     }
-  #|     const range = identifierRangeAtOffset(document.text, request.offset);
-  #|     let location = null;
-  #|     if (range) {
-  #|       const word = document.text.slice(range.start, range.end);
-  #|       const start = document.text.indexOf(word);
-  #|       if (start >= 0) {
-  #|         location = {
-  #|           uri: document.uri,
-  #|           range: { start, end: start + word.length }
-  #|         };
-  #|       }
-  #|     }
-  #|     return languagePacket(request, "DefinitionResult", document, { location });
-  #|   }
-  #|
-  #|   function symbolsPacket(request) {
-  #|     const document = documentForLanguageRequest(request);
-  #|     if (!document) {
-  #|       return protocolErrorPacket(request, "InvalidPacket", "No matching loaded document is available for document symbols.");
-  #|     }
-  #|     const main = document.text.indexOf("main");
-  #|     const symbols = main < 0 ? [] : [{
-  #|       name: "main",
-  #|       kind: "function",
-  #|       range: { start: main, end: main + 4 }
-  #|     }];
-  #|     return languagePacket(request, "DocumentSymbolsResult", document, { symbols });
-  #|   }
-  #|
-  #|   function semanticTokensPacket(request) {
-  #|     const document = documentForLanguageRequest(request);
-  #|     if (!document) {
-  #|       return protocolErrorPacket(request, "InvalidPacket", "No matching loaded document is available for semantic tokens.");
-  #|     }
-  #|     const main = document.text.indexOf("main");
-  #|     const semanticTokens = main < 0 ? [] : [{
-  #|       range: { start: main, end: main + 4 },
-  #|       tokenType: "function"
-  #|     }];
-  #|     return languagePacket(request, "SemanticTokensResult", document, { semanticTokens });
-  #|   }
-  #|
-  #|   function documentForLanguageRequest(request) {
-  #|     const document = globalThis.__readonlyEditorDocument;
-  #|     if (!document || document.uri !== request.uri) {
-  #|       return null;
-  #|     }
-  #|     if (Number.isFinite(request.documentVersion) && request.documentVersion > 0 && document.version !== request.documentVersion) {
-  #|       return null;
-  #|     }
-  #|     return document;
-  #|   }
-  #|
-  #|   function languagePacket(request, type, document, fields) {
-  #|     return JSON.stringify({
-  #|       version: 1,
-  #|       type,
-  #|       id: request.id || "",
-  #|       uri: request.uri,
-  #|       documentVersion: document.version,
-  #|       ...fields
-  #|     });
-  #|   }
-  #|
-  #|   function identifierRangeAtOffset(text, offset) {
-  #|     if (typeof text !== "string" || !Number.isFinite(offset)) {
-  #|       return null;
-  #|     }
-  #|     let index = Math.max(0, Math.min(text.length, Math.trunc(offset)));
-  #|     if (index === text.length || !/[A-Za-z0-9_]/.test(text[index])) {
-  #|       index -= 1;
-  #|     }
-  #|     if (index < 0 || !/[A-Za-z0-9_]/.test(text[index])) {
-  #|       return null;
-  #|     }
-  #|     let start = index;
-  #|     while (start > 0 && /[A-Za-z0-9_]/.test(text[start - 1])) {
-  #|       start -= 1;
-  #|     }
-  #|     let end = index + 1;
-  #|     while (end < text.length && /[A-Za-z0-9_]/.test(text[end])) {
-  #|       end += 1;
-  #|     }
-  #|     return { start, end };
-  #|   }
-  #|
-  #|   function protocolErrorPacket(request, code, message) {
-  #|     return JSON.stringify({
-  #|       version: 1,
-  #|       type: "Error",
-  #|       id: request.id || "",
-  #|       error: { code, message, requestId: request.id || "" }
-  #|     });
-  #|   }
-  #|
-  #|   function providerErrorPacket(request, providerCode, message) {
-  #|     return JSON.stringify({
-  #|       version: 1,
-  #|       type: "Error",
-  #|       id: request.id || "",
-  #|       error: {
-  #|         code: "ProviderError",
-  #|         message: message || providerCode,
-  #|         requestId: request.id || "",
-  #|         providerCode
-  #|       }
-  #|     });
-  #|   }
-  #|
-  #|   function parseProtocolPacket(packet) {
-  #|     try {
-  #|       return JSON.parse(packet);
-  #|     } catch {
-  #|       return {};
-  #|     }
-  #|   }
-  #|
-  #|   function remoteUriToLocalFileUri(uri) {
-  #|     const prefix = "readonly-remote://workspace/";
-  #|     if (typeof uri !== "string" || !uri.startsWith(prefix)) {
-  #|       return "";
-  #|     }
-  #|     const path = uri.slice(prefix.length);
-  #|     if (!path || path.startsWith("/") || path.includes("/../") || path.startsWith("../")) {
-  #|       return "";
-  #|     }
-  #|     return `file://local/${path}`;
-  #|   }
-  #|
-  #|   function parseRemoteFileChanges(uri, payload) {
-  #|     try {
-  #|       return normalizeFileChanges(uri, JSON.parse(payload));
-  #|     } catch {
-  #|       return [{ uri, type: "changed" }];
-  #|     }
-  #|   }
-  #|
   #|   function readError(code, message, uri) {
   #|     return { ok: false, code, message: message || code, uri };
   #|   }
@@ -510,6 +253,15 @@ pub extern "js" fn set_current_document(payload : String) -> Unit =
   #|   } catch (error) {
   #|     console.error("[readonly-editor]", "document:state-error", error);
   #|   }
+  #| }
+
+///|
+pub extern "js" fn protocol_websocket_url() -> String =
+  #| () => {
+  #|   const location = globalThis.location;
+  #|   const protocol = location?.protocol === "https:" ? "wss:" : "ws:";
+  #|   const host = location?.host || "127.0.0.1:5173";
+  #|   return `${protocol}//${host}/protocol`;
   #| }
 
 ///|

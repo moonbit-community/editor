@@ -11,18 +11,26 @@ pub(all) enum ServerHostReadResult {
 } derive(Debug)
 
 ///|
+pub(all) enum ServerHostListResult {
+  ServerHostListOk(Array[@remote_protocol.WorkspaceEntry])
+  ServerHostListError(@workspace.FileSystemProviderErrorCode, String)
+} derive(Debug)
+
+///|
 pub struct ServerWatch {
   priv dispose : () -> Unit
 }
 
 ///|
 pub(open) trait ServerHost {
-  fn read_text_file(Self, String, @workspace.SourcePath) -> ServerHostReadResult
+  async fn list_workspace(Self, String) -> ServerHostListResult
+  async fn read_text_file(Self, String, @workspace.SourcePath) -> ServerHostReadResult
   fn watch_text_file(
     Self,
     String,
     @workspace.SourcePath,
-    (@workspace.FileChangeType) -> Unit,
+    async (@workspace.FileChangeType) -> Unit,
+    (async () -> Unit) -> Unit,
   ) -> ServerWatch
 }
 
@@ -139,11 +147,13 @@ pub fn resolve_remote_document_uri(
 pub async fn RemoteServer::handle_client_packet(
   self : RemoteServer,
   packet : @remote_protocol.ClientPacket,
-  emit : (@remote_protocol.ServerPacket) -> Unit,
+  emit : async (@remote_protocol.ServerPacket) -> Unit,
+  spawn_watch : (async () -> Unit) -> Unit,
 ) -> Array[@remote_protocol.ServerPacket] {
   match packet {
+    ListWorkspace(request) => [self.list_workspace(request)]
     OpenDocument(request) => [self.open_document(request)]
-    WatchDocument(request) => [self.watch_document(request, emit)]
+    WatchDocument(request) => [self.watch_document(request, emit, spawn_watch)]
     CloseDocument(request) => {
       self.close_document(request)
       []
@@ -157,12 +167,30 @@ pub async fn RemoteServer::handle_client_packet(
 }
 
 ///|
-pub fn RemoteServer::open_document(
+pub async fn RemoteServer::list_workspace(
+  self : RemoteServer,
+  request : @remote_protocol.WorkspaceListRequest,
+) -> @remote_protocol.ServerPacket {
+  match self.host.list_workspace(self.workspace_root) {
+    ServerHostListOk(entries) => WorkspaceListed({ id: request.id, entries })
+    ServerHostListError(code, message) =>
+      RemoteError(
+        @remote_protocol.ProtocolError::from_file_system_error(
+          FileSystemProviderError(code, message),
+          request_id=request.id,
+        ),
+      )
+  }
+}
+
+///|
+pub async fn RemoteServer::open_document(
   self : RemoteServer,
   request : @remote_protocol.DocumentRequest,
 ) -> @remote_protocol.ServerPacket {
   match self.read_remote_document(request.id, request.uri) {
     SourceDocumentLoaded(document) => {
+      let document = self.tracked_document(document)
       self.documents.set(request.uri.to_string(), document)
       DocumentLoaded({ id: request.id, document })
     }
@@ -177,10 +205,11 @@ pub fn RemoteServer::open_document(
 }
 
 ///|
-pub fn RemoteServer::watch_document(
+pub async fn RemoteServer::watch_document(
   self : RemoteServer,
   request : @remote_protocol.DocumentRequest,
-  emit : (@remote_protocol.ServerPacket) -> Unit,
+  emit : async (@remote_protocol.ServerPacket) -> Unit,
+  spawn_watch : (async () -> Unit) -> Unit,
 ) -> @remote_protocol.ServerPacket {
   match resolve_remote_document_uri(request.uri, request_id=request.id) {
     ParsedRemotePath(path) => {
@@ -189,9 +218,14 @@ pub fn RemoteServer::watch_document(
         Some(existing) => existing.dispose()
         None => ()
       }
-      let watch = self.host.watch_text_file(self.workspace_root, path, change_type => {
-        self.handle_watch_event(request.id, request.uri, change_type, emit)
-      })
+      let watch = self.host.watch_text_file(
+        self.workspace_root,
+        path,
+        change_type => {
+          self.handle_watch_event(request.id, request.uri, change_type, emit)
+        },
+        spawn_watch,
+      )
       self.watches.set(key, watch)
       self.open_document(request)
     }
@@ -213,6 +247,21 @@ pub fn RemoteServer::close_document(
     None => ()
   }
   self.documents.remove(key)
+}
+
+///|
+pub fn RemoteServer::dispose_watches(self : RemoteServer) -> Unit {
+  let keys : Array[String] = []
+  for key, _watch in self.watches {
+    keys.push(key)
+  }
+  for key in keys {
+    match self.watches.get(key) {
+      Some(watch) => watch.dispose()
+      None => ()
+    }
+    self.watches.remove(key)
+  }
 }
 
 ///|
@@ -313,7 +362,7 @@ pub async fn RemoteServer::semantic_tokens(
 }
 
 ///|
-fn RemoteServer::read_remote_document(
+async fn RemoteServer::read_remote_document(
   self : RemoteServer,
   request_id : String,
   uri : @workspace.DocumentUri,
@@ -336,12 +385,12 @@ fn RemoteServer::read_remote_document(
 }
 
 ///|
-fn RemoteServer::handle_watch_event(
+async fn RemoteServer::handle_watch_event(
   self : RemoteServer,
   request_id : String,
   uri : @workspace.DocumentUri,
   change_type : @workspace.FileChangeType,
-  emit : (@remote_protocol.ServerPacket) -> Unit,
+  emit : async (@remote_protocol.ServerPacket) -> Unit,
 ) -> Unit {
   match change_type {
     Deleted => {
@@ -360,6 +409,7 @@ fn RemoteServer::handle_watch_event(
     _ =>
       match self.read_remote_document(request_id, uri) {
         SourceDocumentLoaded(document) => {
+          let document = self.tracked_document(document)
           self.documents.set(uri.to_string(), document)
           emit(DocumentChanged({ id: request_id, document }))
         }
@@ -373,6 +423,29 @@ fn RemoteServer::handle_watch_event(
             ),
           )
       }
+  }
+}
+
+///|
+fn RemoteServer::tracked_document(
+  self : RemoteServer,
+  document : @workspace.SourceDocument,
+) -> @workspace.SourceDocument {
+  match self.documents.get(document.uri.to_string()) {
+    Some(previous) =>
+      if previous.revision == document.revision {
+        previous
+      } else {
+        SourceDocument(
+          document.uri,
+          document.display_name,
+          document.language_id,
+          previous.version + 1,
+          document.revision,
+          document.text,
+        )
+      }
+    None => document
   }
 }
 

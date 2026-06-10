@@ -1,0 +1,12 @@
+import {
+  "baozhiyuan/editor/server_host_native",
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+)

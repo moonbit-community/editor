@@ -21,7 +21,27 @@ test "validates readonly remote workspace uris" {
 }
 
 ///|
-test "maps host read errors to protocol provider errors" {
+async test "lists workspace entries through the host" {
+  let host = FakeServerHost::new()
+  host.entries = [
+    { path: "moon.mod", name: "moon.mod", kind: "file", depth: 0 },
+    { path: "src", name: "src", kind: "directory", depth: 0 },
+    { path: "src/main.mbt", name: "main.mbt", kind: "file", depth: 1 },
+  ]
+  let server = @server.RemoteServer("/workspace", host)
+
+  match server.list_workspace({ id: "list-1" }) {
+    WorkspaceListed(payload) => {
+      assert_eq(payload.id, "list-1")
+      assert_eq(payload.entries.length(), 3)
+      assert_eq(payload.entries[2].path, "src/main.mbt")
+    }
+    _ => fail("expected workspace list")
+  }
+}
+
+///|
+async test "maps host read errors to protocol provider errors" {
   let host = FakeServerHost::new()
   host.errors.set("missing.mbt", (FileNotFound, "missing file"))
   let server = @server.RemoteServer("/workspace", host)
@@ -38,7 +58,7 @@ test "maps host read errors to protocol provider errors" {
 }
 
 ///|
-test "routes watch events to document changed packets" {
+async test "routes watch events to document changed packets" {
   let host = FakeServerHost::new()
   host.files.set("demo.mbt", "pub fn main {}\n")
   let server = @server.RemoteServer("/workspace/", host)
@@ -46,7 +66,11 @@ test "routes watch events to document changed packets" {
   let emitted = []
 
   match
-    server.watch_document({ id: "watch-1", uri }, packet => emitted.push(packet)) {
+    server.watch_document(
+      { id: "watch-1", uri },
+      packet => emitted.push(packet),
+      noop_watch_spawner,
+    ) {
     DocumentLoaded(payload) =>
       assert_eq(payload.document.text, "pub fn main {}\n")
     _ => fail("expected initial document load")
@@ -90,8 +114,7 @@ async test "answers hover and definition from cached provider state" {
     server.definition({ id: "def-1", uri, document_version: 1, offset: 7 }) {
     DefinitionResult(payload) =>
       match payload.location {
-        Some(location) =>
-          assert_eq(location.uri.to_string(), "memory://fixture.mbt")
+        Some(location) => assert_eq(location.uri.to_string(), uri.to_string())
         None => fail("expected definition")
       }
     _ => fail("expected definition result")
@@ -200,16 +223,22 @@ fn expect_uri(raw : String) -> @workspace.DocumentUri raise {
 struct FakeServerHost {
   files : Map[String, String]
   errors : Map[String, (@workspace.FileSystemProviderErrorCode, String)]
-  listeners : Map[String, (@workspace.FileChangeType) -> Unit]
+  mut entries : Array[@remote_protocol.WorkspaceEntry]
+  listeners : Map[String, async (@workspace.FileChangeType) -> Unit]
 }
 
 ///|
 fn FakeServerHost::new() -> FakeServerHost {
-  { files: Map::default(), errors: Map::default(), listeners: Map::default() }
+  {
+    files: Map::default(),
+    errors: Map::default(),
+    entries: [],
+    listeners: Map::default(),
+  }
 }
 
 ///|
-fn FakeServerHost::emit(
+async fn FakeServerHost::emit(
   self : FakeServerHost,
   path : String,
   change_type : @workspace.FileChangeType,
@@ -218,6 +247,11 @@ fn FakeServerHost::emit(
     Some(listener) => listener(change_type)
     None => ()
   }
+}
+
+///|
+impl @server.ServerHost for FakeServerHost with fn list_workspace(self, _root) {
+  ServerHostListOk(self.entries)
 }
 
 ///|
@@ -250,10 +284,16 @@ impl @server.ServerHost for FakeServerHost with fn watch_text_file(
   _root,
   path,
   listener,
+  _spawn_watch,
 ) {
   let key = path.to_string()
   self.listeners.set(key, listener)
   ServerWatch(() => self.listeners.remove(key))
+}
+
+///|
+fn noop_watch_spawner(_task : async () -> Unit) -> Unit {
+  ()
 }
 
 ///|

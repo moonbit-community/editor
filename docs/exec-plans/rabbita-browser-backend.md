@@ -445,3 +445,25 @@ Non-goals for this slice:
 - Completing the native server workspace listing protocol if a server-shaped
   fake or existing remote protocol path is still required to keep this slice
   focused on entrypoint and ownership.
+
+## 2026-06-10 Progress: Generated Entry Slice
+
+Implemented on `codex/rabbita-generated-entry`:
+
+- `app/index.html` now loads `app/src/bootstrap.js`, which only imports
+  `app/src/style.css` and `web/generated/editor.mjs`.
+- `app/src/main.js` was deleted; the removed `DocumentSession`, JS renderer,
+  tooltip listeners, definition listeners, render callback globals, and
+  URL-routed active document path are no longer product code.
+- `web/main.mbt` is the generated MoonBit entrypoint and starts the
+  Rabbita-backed browser app.
+- `renderer/browser` now owns document/session updates with Rabbita commands:
+  default demo render, sidebar-driven workspace opens, protocol-backed loads,
+  watches, refreshes, hover, and definition resolution.
+- `dom` is reduced to host capabilities for event logging, current-document
+  exposure needed by transports, filesystem provider hooks, and remote protocol
+  request/watch hooks.
+- Browser tests assert the old `/src/main.js` entrypoint is absent and cover
+  generated-entry startup, stable URL sidebar selection, protocol-backed
+  document loading, watched refresh, hover, definition, and missing/reappear
+  state.

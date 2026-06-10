@@ -23,6 +23,7 @@ priv struct BrowserAppModel {
   status : String
   status_message : String
   frame : @renderer.RenderFrame?
+  source_document : @workspace.SourceDocument?
   document : BrowserDocumentView?
   selected_workspace_id : String
   docs_expanded : Bool
@@ -33,18 +34,27 @@ priv struct BrowserAppModel {
 
 ///|
 priv enum BrowserMsg {
-  FrameReady(@renderer.RenderFrame, BrowserDocumentView)
-  SessionChanged(String, String, String)
+  StartDefaultDocument
+  DocumentRenderResolved(DocumentRenderResult, Bool)
+  DocumentWatchChanged(String, Bool)
   SelectWorkspace(String)
   ToggleFolder(String)
   RequestHover(Int, Int, Int, Int)
-  HoverResolved(Int, Int, Bool, Int, Int, Int, String)
+  HoverResolved(Int, Int, HoverResolution)
   RequestDefinition(Int, Int)
-  DefinitionResolved(Bool, Int, String, Int, Int)
+  DefinitionResolved(DefinitionResolution)
 }
 
 ///|
 let browser_dispatch : Ref[((BrowserMsg) -> Unit)?] = Ref(None)
+
+///|
+fn dispatch_browser_msg(msg : BrowserMsg) -> Unit {
+  match browser_dispatch.val {
+    Some(dispatch) => dispatch(msg)
+    None => ()
+  }
+}
 
 ///|
 pub fn mount_app() -> Unit {
@@ -57,34 +67,10 @@ pub fn mount_app() -> Unit {
   app.with_init(
     @cmd.custom_cmd(scheduler => {
       browser_dispatch.val = Some(msg => scheduler.add(emit(msg)))
+      scheduler.add(emit(StartDefaultDocument))
     }),
   )
   app.mount("app")
-}
-
-///|
-pub fn mount_frame(
-  frame : @renderer.RenderFrame,
-  document : @workspace.SourceDocument,
-) -> Unit {
-  dispatch_browser_msg(FrameReady(frame, document_to_view(document)))
-}
-
-///|
-pub fn update_session_status(
-  status : String,
-  message : String,
-  uri : String,
-) -> Unit {
-  dispatch_browser_msg(SessionChanged(status, message, uri))
-}
-
-///|
-fn dispatch_browser_msg(msg : BrowserMsg) -> Unit {
-  match browser_dispatch.val {
-    Some(dispatch) => dispatch(msg)
-    None => ()
-  }
 }
 
 ///|
@@ -93,6 +79,7 @@ fn initial_browser_model() -> BrowserAppModel {
     status: "loading",
     status_message: "",
     frame: None,
+    source_document: None,
     document: None,
     selected_workspace_id: "docs/fixtures/demo.mbt",
     docs_expanded: true,
@@ -109,38 +96,82 @@ fn update_browser_app(
   model : BrowserAppModel,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   match msg {
-    FrameReady(frame, document) => {
+    StartDefaultDocument =>
+      (
+        default_document_cmd(),
+        { ..model, status: "loading", status_message: "", frame: None },
+      )
+    DocumentRenderResolved(result, watch) =>
+      match result {
+        DocumentRendered(rendered) =>
+          document_rendered_update(emit, model, rendered, watch)
+        DocumentRenderFailed(uri, status, message) =>
+          (
+            dom_mounted_status_cmd(status),
+            {
+              ..model,
+              status,
+              status_message: message,
+              frame: None,
+              source_document: None,
+              document: update_document_uri(model.document, uri),
+              hover: None,
+              definition: None,
+            },
+          )
+      }
+    DocumentWatchChanged(uri, deleted) =>
+      if active_document_uri(model.document) == uri {
+        if deleted {
+          (
+            dom_mounted_status_cmd("missing"),
+            {
+              ..model,
+              status: "missing",
+              status_message: "Source file is missing.",
+              frame: None,
+              hover: None,
+              definition: None,
+            },
+          )
+        } else {
+          match model.source_document {
+            Some(document) =>
+              (
+                @rabbita.batch([
+                  dom_mounted_status_cmd("stale"),
+                  load_document_uri_cmd(
+                    document.uri,
+                    model.source_document,
+                    false,
+                  ),
+                ]),
+                { ..model, status: "stale", status_message: "" },
+              )
+            None => (@rabbita.none, model)
+          }
+        }
+      } else {
+        (@rabbita.none, model)
+      }
+    SelectWorkspace(id) => {
       let next = {
         ..model,
-        status: "ready",
+        selected_workspace_id: id,
+        status: "loading",
         status_message: "",
-        frame: Some(frame),
-        document: Some(document),
-        selected_workspace_id: selected_workspace_for_document(document),
+        frame: None,
         hover: None,
         definition: None,
       }
-      (dom_mounted_cmd(frame, "ready"), next)
-    }
-    SessionChanged(status, message, uri) => {
-      let keep_frame = status == "stale"
-      let document = update_document_uri(model.document, uri)
-      let frame = if keep_frame { model.frame } else { None }
       (
-        dom_mounted_status_cmd(status),
-        {
-          ..model,
-          status,
-          status_message: message,
-          frame,
-          document,
-          hover: None,
-          definition: None,
-        },
+        @rabbita.batch([
+          stop_document_watch_cmd(),
+          load_workspace_document_cmd(emit, id, model.source_document),
+        ]),
+        next,
       )
     }
-    SelectWorkspace(id) =>
-      (@rabbita.none, { ..model, selected_workspace_id: id })
     ToggleFolder(id) =>
       if id == "docs" {
         (@rabbita.none, { ..model, docs_expanded: !model.docs_expanded })
@@ -152,34 +183,29 @@ fn update_browser_app(
       } else {
         (@rabbita.none, model)
       }
-    RequestHover(start, end, offset, version) => {
-      let cmd = @cmd.custom_cmd(scheduler => {
-        @dom.request_hover_result(offset, version, (
-          ok,
-          resolved_version,
-          hover_start,
-          hover_end,
-          contents,
-        ) => {
-          scheduler.add(
-            emit(
-              HoverResolved(
-                start, end, ok, resolved_version, hover_start, hover_end, contents,
-              ),
-            ),
-          )
-        })
-      })
-      (cmd, { ..model, hover: None })
-    }
-    HoverResolved(start, end, ok, version, hover_start, hover_end, contents) =>
-      if frame_version(model.frame) == version {
-        if ok && hover_start < end && start < hover_end {
+    RequestHover(start, end, offset, version) =>
+      (
+        hover_resolution_cmd(
+          emit,
+          model.source_document,
+          start,
+          end,
+          offset,
+          version,
+        ),
+        { ..model, hover: None },
+      )
+    HoverResolved(start, end, result) =>
+      if frame_version(model.frame) == result.version {
+        if result.ok && result.start < end && start < result.end {
           (
             @rabbita.none,
             {
               ..model,
-              hover: Some({ range: Range(hover_start, hover_end), contents }),
+              hover: Some({
+                range: Range(result.start, result.end),
+                contents: result.contents,
+              }),
             },
           )
         } else {
@@ -188,29 +214,32 @@ fn update_browser_app(
       } else {
         (@rabbita.none, model)
       }
-    RequestDefinition(offset, version) => {
-      let cmd = @cmd.custom_cmd(scheduler => {
-        @dom.request_definition_result(offset, version, (
-          ok,
-          resolved_version,
-          uri,
-          start,
-          end,
-        ) => {
-          scheduler.add(
-            emit(DefinitionResolved(ok, resolved_version, uri, start, end)),
-          )
-        })
-      })
-      (cmd, { ..model, definition: None })
-    }
-    DefinitionResolved(ok, version, uri, start, end) =>
-      if frame_version(model.frame) == version {
-        if ok && uri != "" {
-          (
-            @rabbita.none,
-            { ..model, definition: Some({ uri, range: Range(start, end) }) },
-          )
+    RequestDefinition(offset, version) =>
+      (
+        definition_resolution_cmd(emit, model.source_document, offset, version),
+        { ..model, definition: None },
+      )
+    DefinitionResolved(result) =>
+      if frame_version(model.frame) == result.version {
+        if result.ok && result.uri != "" {
+          let definition : DefinitionView = {
+            uri: result.uri,
+            range: Range(result.start, result.end),
+          }
+          let cmd = match model.source_document {
+            Some(document) =>
+              if document.uri.to_string() != result.uri {
+                match @workspace.DocumentUri::parse(result.uri) {
+                  ParsedDocumentUri(uri) =>
+                    load_document_uri_cmd(uri, model.source_document, true)
+                  DocumentUriError(_) => @rabbita.none
+                }
+              } else {
+                @rabbita.none
+              }
+            None => @rabbita.none
+          }
+          (@rabbita.batch([cmd]), { ..model, definition: Some(definition) })
         } else {
           (@rabbita.none, model)
         }
@@ -218,6 +247,36 @@ fn update_browser_app(
         (@rabbita.none, model)
       }
   }
+}
+
+///|
+fn document_rendered_update(
+  emit : @rabbita.Emit[BrowserMsg],
+  model : BrowserAppModel,
+  rendered : RenderedDocument,
+  watch : Bool,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  let document = document_to_view(rendered.document)
+  let next = {
+    ..model,
+    status: "ready",
+    status_message: "",
+    frame: Some(rendered.frame),
+    source_document: Some(rendered.document),
+    document: Some(document),
+    selected_workspace_id: selected_workspace_for_document(document),
+    hover: None,
+    definition: None,
+  }
+  let cmd = if watch {
+    @rabbita.batch([
+      dom_mounted_cmd(rendered.frame, "ready"),
+      watch_document_cmd(emit, rendered.document),
+    ])
+  } else {
+    dom_mounted_cmd(rendered.frame, "ready")
+  }
+  (cmd, next)
 }
 
 ///|

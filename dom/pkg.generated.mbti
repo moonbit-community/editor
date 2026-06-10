@@ -3,7 +3,6 @@ package "baozhiyuan/editor/dom"
 
 import {
   "baozhiyuan/editor/workspace",
-  "moonbitlang/async/js_async",
 }
 
 // Values
@@ -11,35 +10,11 @@ pub fn browser_file_system_provider() -> &@workspace.FileSystemProvider
 
 pub fn emit_event(String, String) -> Unit
 
-pub fn get_display_name() -> String
-
-pub fn get_language_id_hint() -> String
-
-pub fn get_revision() -> String
-
-pub fn get_source() -> String
-
-pub fn get_uri() -> String
-
-pub fn get_version() -> Int
-
-pub fn mount_render_model(String) -> Unit
-
-pub fn provider_disposable(() -> Unit) -> HostDisposable
-
-pub fn queue_render() -> Unit
-
-pub fn register_definition_callback((Int, Int) -> @js_async.Promise[String]) -> Unit
-
-pub fn register_hover_callback((Int, Int) -> @js_async.Promise[String]) -> Unit
-
-pub fn register_load_callback((String) -> @js_async.Promise[String]) -> Unit
-
-pub fn register_render_callback(() -> @js_async.Promise[Unit]) -> Unit
-
-pub fn register_watch_callback((String, (String) -> Unit) -> HostDisposable) -> Unit
+pub fn install_host_capabilities() -> Unit
 
 pub async fn request_remote_protocol(String) -> String
+
+pub fn set_current_document(String) -> Unit
 
 pub fn watch_remote_protocol(String, (String) -> Unit) -> HostDisposable
 

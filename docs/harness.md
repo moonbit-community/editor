@@ -13,9 +13,14 @@ without hidden setup.
 
 The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.
 
-`just dev` serves the browser viewer and installs a semantic remote protocol
-fallback for local/demo documents. For absolute local file viewing, allow the
-target root through Vite:
+`app/index.html` loads `app/src/bootstrap.js`. The bootstrap file only imports
+`app/src/style.css` and `web/generated/editor.mjs`; it must not render editor
+DOM, own document session state, or read active document identity from URL
+parameters.
+
+`just dev` serves the browser viewer and the generated MoonBit entrypoint
+installs narrow host capability fallbacks for local/demo documents. For
+absolute local file viewing experiments, allow the target root through Vite:
 
 ```bash
 READONLY_EDITOR_FS_ALLOW=/path/to/moonbit/project \
@@ -38,6 +43,10 @@ inspection:
 
 Sidebar selection is app state only. Selecting or expanding workspace entries
 must not change `window.location.href`.
+
+The product browser path does not use `?uri=`, `?path=`, hashes, or history
+updates to represent the active file. Browser tests should open workspace files
+through sidebar selection and remote protocol/file-provider hooks.
 
 ## Browser Observability
 

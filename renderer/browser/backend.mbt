@@ -71,48 +71,8 @@ pub fn BrowserRemoteLanguageProvider::clear_last_error(
 }
 
 ///|
-pub fn provider_disposable(dispose : () -> Unit) -> @dom.HostDisposable {
-  @dom.provider_disposable(dispose)
-}
-
-///|
-pub fn get_source() -> String {
-  @dom.get_source()
-}
-
-///|
-pub fn get_uri() -> String {
-  @dom.get_uri()
-}
-
-///|
-pub fn get_display_name() -> String {
-  @dom.get_display_name()
-}
-
-///|
-pub fn get_language_id_hint() -> String {
-  @dom.get_language_id_hint()
-}
-
-///|
-pub fn get_version() -> Int {
-  @dom.get_version()
-}
-
-///|
-pub fn get_revision() -> String {
-  @dom.get_revision()
-}
-
-///|
 pub fn emit_event(name : String, payload : String) -> Unit {
   @dom.emit_event(name, payload)
-}
-
-///|
-pub fn queue_render() -> Unit {
-  @dom.queue_render()
 }
 
 ///|
@@ -129,48 +89,6 @@ pub fn emit_render_event(
   payload = payload + ",\"version\":" + frame.version.to_string()
   payload = payload + "}"
   emit_event("moonbit:render", payload)
-}
-
-///|
-pub fn register_render_callback(
-  callback : () -> @js_async.Promise[Unit],
-) -> Unit {
-  @dom.register_render_callback(callback)
-}
-
-///|
-pub fn register_load_callback(
-  callback : (String) -> @js_async.Promise[String],
-) -> Unit {
-  @dom.register_load_callback(callback)
-}
-
-///|
-pub fn register_watch_callback(
-  callback : (String, (String) -> Unit) -> @dom.HostDisposable,
-) -> Unit {
-  @dom.register_watch_callback(callback)
-}
-
-///|
-pub fn register_hover_callback(
-  callback : (Int, Int) -> @js_async.Promise[String],
-) -> Unit {
-  @dom.register_hover_callback(callback)
-}
-
-///|
-pub fn register_definition_callback(
-  callback : (Int, Int) -> @js_async.Promise[String],
-) -> Unit {
-  @dom.register_definition_callback(callback)
-}
-
-///|
-pub fn register_session_callback(
-  callback : (String, String, String) -> Unit,
-) -> Unit {
-  @dom.register_session_callback(callback)
 }
 
 ///|

@@ -48,9 +48,11 @@ packages:
 
 ```text
 web
-  -> renderer/browser -> renderer
+  -> renderer/browser
+renderer/browser
+  -> renderer
   -> dom
-  -> workspace, language, syntax, decorations
+  -> workspace, language, syntax, decorations, remote_protocol
 
 server_host_native -> server -> remote_protocol
 server -> workspace, language
@@ -103,13 +105,21 @@ or `--target native`.
   package boundaries.
 - Remote protocol packet types, version negotiation, encoding, decoding, and
   structured errors are MoonBit-owned.
+- The browser app is loaded through a bootstrap-only Vite entrypoint. Generated
+  MoonBit code owns the Rabbita app, document/session updates, workspace
+  selection, render-frame construction, hover/definition resolution, and watch
+  refreshes.
+- Browser URLs are not document routes. Active file identity comes from
+  MoonBit workspace/sidebar state and server/protocol calls, not `?uri=`,
+  `?path=`, hashes, or history updates.
 - LSP client behavior targets the official Language Server Protocol 3.17
   specification:
   `https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/`.
   LSP stays behind the host-server provider boundary and is not part of the
   browser protocol.
 - Render frames are backend-neutral. Browser DOM nodes, CSS details, event
-  wiring, and observability belong to the browser backend and host boundary.
+  wiring, session display, and observability belong to the browser backend and
+  host boundary.
 - Adding another frontend should require a new backend package, not changes to
   server routing or workspace/language semantics.
 

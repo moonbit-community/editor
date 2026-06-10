@@ -8,7 +8,9 @@ Browser render backend adapter.
   `renderer.RenderFrame` values as browser HTML.
 - Own browser view state for the readonly shell, workspace sidebar selection,
   active frame, hover tooltip, definition target, and session status.
-- Register render, load, watch, hover, and definition callbacks.
+- Own the browser document session loop: default demo render, sidebar-driven
+  workspace opens, server/protocol-backed document loads, watches, refreshes,
+  hover, and definition requests.
 - Adapt browser filesystem and semantic remote protocol transports into
   MoonBit provider contracts.
 - Emit browser observability events such as `moonbit:render` and `dom:mounted`.
@@ -16,9 +18,10 @@ Browser render backend adapter.
 ## Boundaries
 
 - May depend on Rabbita public packages, `dom`, `workspace`, `language`,
-  `remote_protocol`, `renderer`, and JS async support.
+  `remote_protocol`, `renderer`, `syntax`, `decorations`, and JS async support.
 - Must keep JavaScript FFI declarations in `dom`; this package calls the host
   boundary but does not declare it.
+- Must not pass render-frame JSON to JavaScript for DOM rendering.
 - Browser-only behavior stays here or in `dom`, not in shared renderer or
   domain packages.
 - Must not expose a raw browser LSP transport.

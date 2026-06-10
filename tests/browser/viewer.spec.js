@@ -1,6 +1,20 @@
 import { expect, test } from '@playwright/test';
 import { promises as fs } from 'node:fs';
 
+test('starts from the generated MoonBit entrypoint without the old app shell', async ({ page }) => {
+  const requestedPaths = [];
+  page.on('request', (request) => {
+    requestedPaths.push(new URL(request.url()).pathname);
+  });
+
+  await page.goto('/');
+  await expect(page.locator('.editor-shell')).toBeVisible();
+
+  expect(requestedPaths.some((path) => path.endsWith('/src/main.js'))).toBeFalsy();
+  expect(requestedPaths.some((path) => path.endsWith('/src/bootstrap.js'))).toBeTruthy();
+  expect(requestedPaths.some((path) => path.includes('/web/generated/editor.mjs'))).toBeTruthy();
+});
+
 test('renders highlighted readonly code and diagnostics', async ({ page }) => {
   await installTestRemoteProtocol(page);
   const events = [];
@@ -90,19 +104,21 @@ test('selects workspace sidebar files without changing the URL', async ({ page }
 
 test('renders a provider file and refreshes when content changes', async ({ page }) => {
   await installTestRemoteProtocol(page);
-  const fixtureUri = 'file://local/docs/fixtures/demo.mbt';
+  const localUri = 'file://local/docs/fixtures/demo.mbt';
+  const remoteUri = 'readonly-remote://workspace/docs/fixtures/demo.mbt';
   const original = await fs.readFile('docs/fixtures/demo.mbt', 'utf8');
   await installTestFileSystem(page, {
-    [fixtureUri]: {
+    [localUri]: {
       text: original,
       displayName: 'docs/fixtures/demo.mbt',
       revision: 'rev-1'
     }
   });
 
-  await page.goto(`/?uri=${encodeURIComponent(fixtureUri)}`);
+  await page.goto('/');
+  await page.locator('[data-workspace-id="docs/fixtures/demo.mbt"]').click();
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
-  await expect(page.locator('.editor-shell')).toHaveAttribute('data-source-uri', /docs\/fixtures\/demo\.mbt/);
+  await expect(page.locator('.editor-shell')).toHaveAttribute('data-source-uri', remoteUri);
   await expect(page.locator('.code').first()).toContainText('pub fn main');
 
   await page.evaluate(({ uri, text }) => {
@@ -111,7 +127,7 @@ test('renders a provider file and refreshes when content changes', async ({ page
       displayName: 'docs/fixtures/demo.mbt',
       revision: 'rev-2'
     });
-  }, { uri: fixtureUri, text: original.replace('"hello"', '"synced"') });
+  }, { uri: localUri, text: original.replace('"hello"', '"synced"') });
   await expect(page.locator('.tok-string')).toContainText('"synced"', { timeout: 5_000 });
   await expect.poll(() => page.evaluate(() => {
     return globalThis.__readonlyEditorRemoteProtocolMessages
@@ -133,7 +149,8 @@ test('opens readonly remote workspace files through the protocol provider', asyn
     }
   });
 
-  await page.goto(`/?uri=${encodeURIComponent(remoteUri)}`);
+  await page.goto('/');
+  await page.locator('[data-workspace-id="docs/fixtures/demo.mbt"]').click();
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-source-uri', remoteUri);
   await expect(page.locator('.code').first()).toContainText('pub fn main');
@@ -155,16 +172,17 @@ test('opens readonly remote workspace files through the protocol provider', asyn
 
 test('shows missing state and resumes when watched file reappears', async ({ page }) => {
   await installTestRemoteProtocol(page);
-  const fixtureUri = 'file://local/docs/fixtures/auto-sync-temp.mbt';
+  const fixtureUri = 'file://local/docs/fixtures/demo.mbt';
   await installTestFileSystem(page, {
     [fixtureUri]: {
       text: 'pub fn watched { "one" }\n',
-      displayName: 'auto-sync-temp.mbt',
+      displayName: 'docs/fixtures/demo.mbt',
       revision: 'rev-1'
     }
   });
 
-  await page.goto(`/?uri=${encodeURIComponent(fixtureUri)}`);
+  await page.goto('/');
+  await page.locator('[data-workspace-id="docs/fixtures/demo.mbt"]').click();
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
   await expect(page.locator('.tok-string')).toContainText('"one"');
 
@@ -177,7 +195,7 @@ test('shows missing state and resumes when watched file reappears', async ({ pag
   await page.evaluate((uri) => {
     globalThis.__readonlyEditorFileSystemProvider.__setFile(uri, {
       text: 'pub fn watched { "two" }\n',
-      displayName: 'auto-sync-temp.mbt',
+      displayName: 'docs/fixtures/demo.mbt',
       revision: 'rev-2'
     });
   }, fixtureUri);

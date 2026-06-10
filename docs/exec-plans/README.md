@@ -3,3 +3,14 @@
 Keep future implementation plans here when a feature spans multiple packages or
 changes harness behavior. Plans should be short enough for another engineer or
 agent to execute without re-discovering context.
+
+## Implemented Plans
+
+After an execution plan has been implemented, treat it as historical evidence.
+Do not rewrite its original goals, protocol, steps, validation, or exit
+criteria to match later design changes.
+
+For follow-up work, create a new execution plan or add a clearly dated
+superseding addendum that links back to the implemented plan. Living
+architecture updates belong in `docs/architecture.md`, package READMEs, and
+harness documentation once the follow-up implementation lands.

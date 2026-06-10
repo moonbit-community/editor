@@ -18,14 +18,9 @@ The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.
 DOM, own document session state, or read active document identity from URL
 parameters.
 
-`just dev` serves the browser viewer and the generated MoonBit entrypoint
-installs narrow host capability fallbacks for local/demo documents. For
-absolute local file viewing experiments, allow the target root through Vite:
-
-```bash
-READONLY_EDITOR_FS_ALLOW=/path/to/moonbit/project \
-just dev --port 5173
-```
+`just dev` serves the browser viewer and the generated MoonBit entrypoint.
+Workspace document loading is exercised through browser filesystem-provider and
+remote-protocol hooks, not Vite external file serving.
 
 ## Browser Selectors
 

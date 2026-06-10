@@ -3,6 +3,7 @@ struct DevServerConfig {
   root : String
   port : Int
   asset_dir : String
+  lsp_command : String
 }
 
 ///|
@@ -12,6 +13,7 @@ async fn main {
     config.root,
     port=config.port,
     asset_dir=config.asset_dir,
+    lsp_command=config.lsp_command,
   ) catch {
     error => abort("Readonly editor native server failed: " + error.to_string())
   }
@@ -22,6 +24,7 @@ fn parse_args(args : ArrayView[String]) -> DevServerConfig {
   let mut root = "docs/fixtures/project"
   let mut port = 5173
   let mut asset_dir = "web/dist"
+  let mut lsp_command = "moon-lsp"
   let mut i = 0
   while i < args.length() {
     match args[i] {
@@ -40,11 +43,16 @@ fn parse_args(args : ArrayView[String]) -> DevServerConfig {
           asset_dir = args[i + 1]
           i = i + 1
         }
+      "--lsp-command" =>
+        if i + 1 < args.length() {
+          lsp_command = args[i + 1]
+          i = i + 1
+        }
       _ => ()
     }
     i = i + 1
   }
-  { root, port, asset_dir }
+  { root, port, asset_dir, lsp_command }
 }
 
 ///|

@@ -57,6 +57,7 @@ fn LspPendingRequest::is_document_request(self : LspPendingRequest) -> Bool {
 ///|
 pub struct LspClient {
   priv transport : &LspTransport
+  priv root_uri : String
   priv next_id : Ref[Int]
   priv state : Ref[LspClientState]
   priv subscribed : Ref[Bool]
@@ -96,8 +97,17 @@ fn default_lsp_capabilities() -> LspServerCapabilities {
 
 ///|
 pub fn LspClient::LspClient(transport : &LspTransport) -> LspClient {
+  LspClient::with_root_uri(transport, "")
+}
+
+///|
+pub fn LspClient::with_root_uri(
+  transport : &LspTransport,
+  root_uri : String,
+) -> LspClient {
   {
     transport,
+    root_uri,
     next_id: Ref(0),
     state: Ref(Idle),
     subscribed: Ref(false),
@@ -523,8 +533,13 @@ async fn LspClient::ensure_initialized(
   self.state.val = Initializing
   let id = self.next_request_id()
   self.register_request(id, "initialize", document)
+  let root_uri = if self.root_uri == "" {
+    lsp_root_uri(document.uri)
+  } else {
+    Json::string(self.root_uri)
+  }
   let response = self.transport.request(
-    lsp_initialize_request_with_root(id, lsp_root_uri(document.uri)),
+    lsp_initialize_request_with_root(id, root_uri),
   )
   self.complete_request(id)
   match parse_response_result(response) {

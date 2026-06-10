@@ -318,16 +318,42 @@ pub async fn run_native_editor_server(
   root : String,
   port? : Int = 5173,
   asset_dir? : String = "web/dist",
+  lsp_command? : String = "moon-lsp",
   log? : (String) -> Unit = println,
 ) -> Unit {
   let host = NativeServerHost::NativeServerHost()
-  let remote_server = @server.RemoteServer(root, host)
+  let root = realpath_or_normalized(root)
+  let remote_server = native_lsp_remote_server(root, host, lsp_command)
   let addr = @socket.Addr::parse("127.0.0.1:\{port}")
   let http_server = @http.Server(addr, reuse_addr=true)
   log("Readonly editor native server listening on http://127.0.0.1:\{port}/")
   http_server.run_forever() <| ((request, _body, conn) => {
     handle_native_editor_request(remote_server, asset_dir, request, conn)
   })
+}
+
+///|
+fn native_lsp_remote_server(
+  root : String,
+  host : &@server.ServerHost,
+  lsp_command : String,
+) -> @server.RemoteServer {
+  let transport = NativeLspTransport::configured(
+    lsp_command,
+    ["--stdio"],
+    cwd=root,
+  )
+  let client = @server.LspClient::with_root_uri(
+    transport,
+    file_uri_for_host_path(root),
+  )
+  let provider = NativeWorkspaceLanguageProvider(
+    root,
+    client.language_provider(),
+  )
+  @server.RemoteServer::with_language_providers(
+    root, host, provider, provider, provider, provider, provider,
+  )
 }
 
 ///|

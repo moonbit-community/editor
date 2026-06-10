@@ -194,9 +194,128 @@ test "native lsp stdio framing uses content length headers" {
 }
 
 ///|
+async test "native workspace language provider bridges remote documents to file uri lsp" {
+  let root = "_build/native_host_lsp_provider_test"
+  reset_dir(root)
+  @async.with_task_group() <| group => {
+    group.add_defer(() => @fs.rmdir(root, recursive=true))
+    @fs.mkdir(root, recursive=true)
+    @fs.write_file(
+      root + "/simple.mbt",
+      "pub fn startup_event() -> Unit {}\n",
+      create_mode=CreateOrTruncate,
+    )
+    let root_real = @fs.realpath(root)
+    let root_uri = @server_host_native.file_uri_for_host_path(root_real)
+    let file_uri = root_uri + "/simple.mbt"
+    let transport = RecordingLanguageTransport::new(file_uri)
+    let client = @server.LspClient::with_root_uri(transport, root_uri)
+    let provider = @server_host_native.NativeWorkspaceLanguageProvider(
+      root_real,
+      client.language_provider(),
+    )
+    let remote_uri = expect_remote_uri("simple.mbt")
+    let document = @workspace.SourceDocument(
+      remote_uri, "simple.mbt", "moonbit", 1, "rev-1", "pub fn startup_event() -> Unit {}\n",
+    )
+
+    match provider.hover_at(document, 7) {
+      Some(hover) => {
+        assert_eq(hover.contents, "LSP hover for startup_event")
+        assert_true(hover.range == Range(7, 20))
+      }
+      None => fail("expected lsp hover")
+    }
+    match provider.definition_at(document, 7) {
+      Some(location) => {
+        assert_eq(location.uri.to_string(), remote_uri.to_string())
+        assert_true(location.range == Range(7, 20))
+      }
+      None => fail("expected lsp definition")
+    }
+    assert_true(
+      transport.requests.any(message => {
+        message.contains("\"rootUri\":\"" + root_uri + "\"")
+      }),
+    )
+    assert_true(
+      transport.requests.any(message => {
+        message.contains("\"uri\":\"" + file_uri + "\"") &&
+        message.contains("\"method\":\"textDocument/hover\"")
+      }),
+    )
+    assert_true(
+      transport.notifications.any(message => {
+        message.contains("\"method\":\"textDocument/didOpen\"") &&
+        message.contains("\"uri\":\"" + file_uri + "\"")
+      }),
+    )
+  }
+}
+
+///|
 fn expect_path(raw : String) -> @workspace.SourcePath raise {
   match @workspace.SourcePath::normalize_root_relative_path(raw) {
     ParsedSourcePath(path) => path
     SourcePathError(error) => fail("unexpected path error " + error.to_string())
   }
+}
+
+///|
+fn expect_remote_uri(path : String) -> @workspace.DocumentUri raise {
+  match @server.remote_document_uri(path) {
+    Some(uri) => uri
+    None => fail("invalid remote path " + path)
+  }
+}
+
+///|
+struct RecordingLanguageTransport {
+  file_uri : String
+  requests : Array[String]
+  notifications : Array[String]
+  listener : Ref[((String) -> Unit)?]
+}
+
+///|
+fn RecordingLanguageTransport::new(
+  file_uri : String,
+) -> RecordingLanguageTransport {
+  { file_uri, requests: [], notifications: [], listener: Ref(None) }
+}
+
+///|
+impl @server.LspTransport for RecordingLanguageTransport with fn request(
+  self,
+  message,
+) {
+  self.requests.push(message)
+  if message.contains("\"method\":\"initialize\"") {
+    "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"hoverProvider\":true,\"definitionProvider\":true}}}"
+  } else if message.contains("\"method\":\"textDocument/hover\"") {
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"contents\":\"LSP hover for startup_event\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":20}}}}"
+  } else if message.contains("\"method\":\"textDocument/definition\"") {
+    "{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"uri\":\"" +
+    self.file_uri +
+    "\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":20}}}}"
+  } else {
+    "{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":null}"
+  }
+}
+
+///|
+impl @server.LspTransport for RecordingLanguageTransport with fn notify(
+  self,
+  message,
+) {
+  self.notifications.push(message)
+}
+
+///|
+impl @server.LspTransport for RecordingLanguageTransport with fn subscribe(
+  self,
+  listener,
+) {
+  self.listener.val = Some(listener)
+  LspSubscription(() => self.listener.val = None)
 }

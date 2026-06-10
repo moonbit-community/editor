@@ -1,9 +1,13 @@
 import {
+  "baozhiyuan/editor/core",
   "baozhiyuan/editor/dom",
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/remote_protocol",
   "baozhiyuan/editor/renderer",
   "baozhiyuan/editor/workspace",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/cmd",
+  "moonbit-community/rabbita/html",
   "moonbitlang/async/js_async",
 }
 

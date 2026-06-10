@@ -116,11 +116,6 @@ pub fn queue_render() -> Unit {
 }
 
 ///|
-pub fn mount_frame(frame : @renderer.RenderFrame) -> Unit {
-  @dom.mount_render_model(frame.to_json())
-}
-
-///|
 pub fn emit_render_event(
   frame : @renderer.RenderFrame,
   token_count : Int,
@@ -169,6 +164,13 @@ pub fn register_definition_callback(
   callback : (Int, Int) -> @js_async.Promise[String],
 ) -> Unit {
   @dom.register_definition_callback(callback)
+}
+
+///|
+pub fn register_session_callback(
+  callback : (String, String, String) -> Unit,
+) -> Unit {
+  @dom.register_session_callback(callback)
 }
 
 ///|

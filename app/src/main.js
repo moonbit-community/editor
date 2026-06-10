@@ -761,6 +761,12 @@ class DocumentSession {
   }
 
   renderStatus() {
+    if (this.rendererLoaded && typeof globalThis.__readonlyEditorSessionState === 'function') {
+      const uri = this.uri || this.document?.uri || '';
+      const message = this.error?.message || '';
+      globalThis.__readonlyEditorSessionState(this.status, message, uri);
+      return;
+    }
     const scroll = captureScroll(this.container);
     const model = this.status === 'stale' ? this.model : null;
     renderEditor(this.container, model, {

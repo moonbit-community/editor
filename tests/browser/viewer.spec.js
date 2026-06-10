@@ -70,6 +70,24 @@ test('keeps code cells content-sized while rows span horizontal scroll width', a
   expect(metrics.rowRight).toBe(metrics.viewerRight);
 });
 
+test('selects workspace sidebar files without changing the URL', async ({ page }) => {
+  await installTestRemoteProtocol(page);
+  await page.goto('/');
+  const initialHref = await page.evaluate(() => window.location.href);
+
+  await expect(page.locator('[data-workspace-id="docs/fixtures/demo.mbt"]')).toHaveAttribute('aria-selected', 'true');
+  await page.locator('[data-workspace-id="docs/fixtures"]').click();
+  await expect(page.locator('[data-workspace-id="docs/fixtures"]')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('[data-workspace-id="docs/fixtures/demo.mbt"]')).toHaveCount(0);
+  await page.locator('[data-workspace-id="docs/fixtures"]').click();
+  await expect(page.locator('[data-workspace-id="docs/fixtures/demo.mbt"]')).toHaveCount(1);
+
+  await page.locator('[data-workspace-id="web/main.mbt"]').click();
+  await expect(page.locator('[data-workspace-id="web/main.mbt"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-workspace-id="docs/fixtures/demo.mbt"]')).toHaveAttribute('aria-selected', 'false');
+  expect(await page.evaluate(() => window.location.href)).toBe(initialHref);
+});
+
 test('renders a provider file and refreshes when content changes', async ({ page }) => {
   await installTestRemoteProtocol(page);
   const fixtureUri = 'file://local/docs/fixtures/demo.mbt';

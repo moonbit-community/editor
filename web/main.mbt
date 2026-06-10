@@ -1,5 +1,9 @@
 ///|
 fn main {
+  @browser.mount_app()
+  @browser.register_session_callback((status, message, uri) => {
+    @browser.update_session_status(status, message, uri)
+  })
   @browser.register_render_callback(() => {
     @js_async.Promise::from_async(() => render_current_document())
   })
@@ -93,7 +97,7 @@ async fn render_current_document() -> Unit {
     tokens.length(),
     providers.diagnostics.length(),
   )
-  @browser.mount_frame(frame)
+  @browser.mount_frame(frame, source_document)
 }
 
 ///|

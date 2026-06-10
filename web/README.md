@@ -4,6 +4,7 @@ Browser client entrypoint for the readonly editor.
 
 ## Responsibilities
 
+- Mount the Rabbita browser app.
 - Register browser callbacks for render, load, watch, hover, and definition
   flows.
 - Build the current `SourceDocument`, run syntax highlighting and provider
@@ -17,8 +18,9 @@ Browser client entrypoint for the readonly editor.
 ## Boundaries
 
 - May depend on browser, renderer, workspace, language, syntax, decorations,
-  DOM, and JS async packages.
-- Must remain the JS entrypoint and avoid becoming a shared domain package.
+  Rabbita-backed browser adapter, DOM, and JS async packages.
+- Must remain the generated browser entrypoint and avoid becoming a shared
+  domain package.
 - Does not declare JavaScript FFI directly; host calls go through `dom` and
   `renderer/browser`.
 

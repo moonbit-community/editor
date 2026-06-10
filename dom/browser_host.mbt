@@ -330,3 +330,87 @@ pub extern "js" fn register_definition_callback(
   #| (callback) => {
   #|   globalThis.__readonlyEditorDefinition = callback;
   #| }
+
+///|
+pub extern "js" fn register_session_callback(
+  callback : (String, String, String) -> Unit,
+) -> Unit =
+  #| (callback) => {
+  #|   globalThis.__readonlyEditorSessionState = callback;
+  #| }
+
+///|
+pub extern "js" fn request_hover_result(
+  offset : Int,
+  version : Int,
+  callback : (Bool, Int, Int, Int, String) -> Unit,
+) -> Unit =
+  #| (offset, version, callback) => {
+  #|   const request = globalThis.__readonlyEditorHover;
+  #|   if (typeof request !== "function") {
+  #|     callback(false, version, 0, 0, "");
+  #|     return;
+  #|   }
+  #|   Promise.resolve(request(offset, version)).then((payload) => {
+  #|     let result = {};
+  #|     try {
+  #|       result = JSON.parse(payload);
+  #|     } catch {
+  #|       callback(false, version, 0, 0, "");
+  #|       return;
+  #|     }
+  #|     const hover = result && result.hover;
+  #|     const range = hover && hover.range;
+  #|     if (result.ok === true && range && typeof hover.contents === "string") {
+  #|       callback(
+  #|         true,
+  #|         Number.isFinite(result.version) ? Math.trunc(result.version) : version,
+  #|         Number.isFinite(range.start) ? Math.trunc(range.start) : 0,
+  #|         Number.isFinite(range.end) ? Math.trunc(range.end) : 0,
+  #|         hover.contents
+  #|       );
+  #|       return;
+  #|     }
+  #|     callback(false, Number.isFinite(result.version) ? Math.trunc(result.version) : version, 0, 0, "");
+  #|   }, () => {
+  #|     callback(false, version, 0, 0, "");
+  #|   });
+  #| }
+
+///|
+pub extern "js" fn request_definition_result(
+  offset : Int,
+  version : Int,
+  callback : (Bool, Int, String, Int, Int) -> Unit,
+) -> Unit =
+  #| (offset, version, callback) => {
+  #|   const request = globalThis.__readonlyEditorDefinition;
+  #|   if (typeof request !== "function") {
+  #|     callback(false, version, "", 0, 0);
+  #|     return;
+  #|   }
+  #|   Promise.resolve(request(offset, version)).then((payload) => {
+  #|     let result = {};
+  #|     try {
+  #|       result = JSON.parse(payload);
+  #|     } catch {
+  #|       callback(false, version, "", 0, 0);
+  #|       return;
+  #|     }
+  #|     const location = result && result.location;
+  #|     const range = location && location.range;
+  #|     if (result.ok === true && location && typeof location.uri === "string" && range) {
+  #|       callback(
+  #|         true,
+  #|         Number.isFinite(result.version) ? Math.trunc(result.version) : version,
+  #|         location.uri,
+  #|         Number.isFinite(range.start) ? Math.trunc(range.start) : 0,
+  #|         Number.isFinite(range.end) ? Math.trunc(range.end) : 0
+  #|       );
+  #|       return;
+  #|     }
+  #|     callback(false, Number.isFinite(result.version) ? Math.trunc(result.version) : version, "", 0, 0);
+  #|   }, () => {
+  #|     callback(false, version, "", 0, 0);
+  #|   });
+  #| }

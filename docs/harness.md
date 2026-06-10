@@ -22,6 +22,23 @@ READONLY_EDITOR_FS_ALLOW=/path/to/moonbit/project \
 just dev --port 5173
 ```
 
+## Browser Selectors
+
+The browser app preserves stable DOM contracts for Playwright and agent
+inspection:
+
+- `.editor-shell` exposes `data-status`, `data-line-count`, and
+  `data-source-uri`.
+- `.workspace-sidebar` renders file and folder controls with
+  `data-workspace-id`, `data-workspace-kind`, `aria-expanded`, and
+  `aria-selected`.
+- `.code-line`, `.gutter`, `.code`, token spans, diagnostics, hover data, and
+  definition target attributes keep the same class and `data-*` contracts used
+  by browser smoke tests.
+
+Sidebar selection is app state only. Selecting or expanding workspace entries
+must not change `window.location.href`.
+
 ## Browser Observability
 
 The browser host logs structured events prefixed with `[readonly-editor]`:

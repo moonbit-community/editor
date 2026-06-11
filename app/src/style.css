@@ -417,6 +417,7 @@ body {
 }
 
 .code-lines {
+  position: relative;
   display: inline-block;
   min-width: 100%;
 }
@@ -544,23 +545,35 @@ body {
   background: var(--vscode-editor-rangeHighlightBackground);
 }
 
-.hover-tooltip {
-  position: fixed;
+/* Editor hover widget, anchored at the hovered range inside .code-lines.
+   It sits above the line by default and flips below via the .below class
+   once the after-render measurement detects viewport overflow. */
+.hover-widget {
+  position: absolute;
   z-index: 50;
-  max-width: min(500px, calc(100vw - 20px));
-  padding: 4px 8px;
+  max-width: 500px;
   border: 1px solid var(--vscode-editorHoverWidget-border);
   border-radius: 3px;
   background: var(--vscode-editorHoverWidget-background);
   color: var(--vscode-editorHoverWidget-foreground);
   box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+  transform: translateY(-100%);
   font: var(--editor-font-size) / 1.5 var(--editor-font-family);
   white-space: pre-wrap;
-  pointer-events: none;
+  cursor: default;
+  user-select: text;
 }
 
-.hover-tooltip[hidden] {
-  display: none;
+.hover-widget.below {
+  transform: none;
+}
+
+.hover-widget.measuring {
+  visibility: hidden;
+}
+
+.hover-widget .hover-contents {
+  padding: 4px 8px;
 }
 
 .diagnostics {

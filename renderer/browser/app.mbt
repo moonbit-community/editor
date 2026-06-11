@@ -13,6 +13,28 @@ priv struct HoverView {
 }
 
 ///|
+priv struct HoverAnchor {
+  start : Int
+  end : Int
+  offset : Int
+}
+
+///|
+priv struct HoverPlacement {
+  below : Bool
+  shift_left : Double
+}
+
+///|
+/// Pixel height of one rendered code line. Keep in sync with
+/// `--editor-line-height` in app/src/style.css.
+let editor_line_height = 18
+
+///|
+/// VS Code's default `editor.hover.delay`.
+let hover_delay_ms = 300
+
+///|
 priv struct DefinitionView {
   uri : String
   range : @core.Range
@@ -31,6 +53,9 @@ priv struct BrowserAppModel {
   collapsed_workspace_ids : Array[String]
   provider_result : @language.ProviderResult
   hover : HoverView?
+  hover_anchor : HoverAnchor?
+  hover_token : Int
+  hover_placement : HoverPlacement?
   definition : DefinitionView?
 }
 
@@ -43,7 +68,10 @@ priv enum BrowserMsg {
   SelectWorkspace(String)
   ToggleFolder(String)
   ToggleTheme
-  RequestHover(Int, Int, Int, Int)
+  ScheduleHover(Int, Int, Int)
+  FireHover(Int)
+  HoverMeasured(Bool, Double)
+  ClearHover
   RequestDefinition(Int, Int)
 }
 
@@ -89,6 +117,9 @@ fn initial_browser_model() -> BrowserAppModel {
     collapsed_workspace_ids: [],
     provider_result: @language.ProviderResult::empty(),
     hover: None,
+    hover_anchor: None,
+    hover_token: 0,
+    hover_placement: None,
     definition: None,
   }
 }
@@ -127,6 +158,8 @@ fn update_browser_app(
               document: update_document_uri(model.document, uri),
               provider_result: @language.ProviderResult::empty(),
               hover: None,
+              hover_anchor: None,
+              hover_placement: None,
               definition: None,
             },
           )
@@ -139,6 +172,8 @@ fn update_browser_app(
         status_message: "",
         frame: None,
         hover: None,
+        hover_anchor: None,
+        hover_placement: None,
         definition: None,
       }
       (
@@ -158,17 +193,53 @@ fn update_browser_app(
       let theme = if model.theme == "light" { "dark" } else { "light" }
       (persist_theme_cmd(theme), { ..model, theme, })
     }
-    RequestHover(start, end, offset, version) =>
+    ScheduleHover(start, end, offset) => {
+      let same = match model.hover_anchor {
+        Some(anchor) => anchor.start == start && anchor.end == end
+        None => false
+      }
+      if same {
+        (@rabbita.none, model)
+      } else {
+        let token = model.hover_token + 1
+        (
+          @cmd.delay(emit(FireHover(token)), hover_delay_ms),
+          {
+            ..model,
+            hover_token: token,
+            hover_anchor: Some({ start, end, offset }),
+            hover: None,
+            hover_placement: None,
+          },
+        )
+      }
+    }
+    FireHover(token) =>
+      if token == model.hover_token {
+        match model.hover_anchor {
+          Some(anchor) =>
+            (
+              hover_resolution_cmd(
+                emit,
+                model.source_document,
+                anchor.start,
+                anchor.end,
+                anchor.offset,
+                frame_version(model.frame),
+              ),
+              model,
+            )
+          None => (@rabbita.none, model)
+        }
+      } else {
+        (@rabbita.none, model)
+      }
+    HoverMeasured(below, shift_left) =>
+      (@rabbita.none, { ..model, hover_placement: Some({ below, shift_left }) })
+    ClearHover =>
       (
-        hover_resolution_cmd(
-          emit,
-          model.source_document,
-          start,
-          end,
-          offset,
-          version,
-        ),
-        { ..model, hover: None },
+        @rabbita.none,
+        { ..model, hover: None, hover_anchor: None, hover_placement: None },
       )
     RequestDefinition(offset, version) =>
       (
@@ -258,10 +329,11 @@ fn server_packet_update(
               "{\"ok\":true,\"version\":" + payload.version.to_string() + "}",
             )
             (
-              @rabbita.none,
+              measure_hover_cmd(),
               {
                 ..model,
                 hover: Some({ range: hover.range, contents: hover.contents }),
+                hover_placement: None,
               },
             )
           }
@@ -348,6 +420,8 @@ fn document_payload_update(
     ..model,
     provider_result: @language.ProviderResult::empty(),
     hover: None,
+    hover_anchor: None,
+    hover_placement: None,
     definition: None,
   }
   (
@@ -391,6 +465,8 @@ fn protocol_error_update(
         status_message: "Source file is missing.",
         frame: None,
         hover: None,
+        hover_anchor: None,
+        hover_placement: None,
         definition: None,
       },
     )
@@ -419,6 +495,8 @@ fn document_rendered_update(
     document: Some(document),
     selected_workspace_id: selected_workspace_for_document(document),
     hover: None,
+    hover_anchor: None,
+    hover_placement: None,
     definition: None,
   }
   let cmd = if watch {
@@ -447,7 +525,6 @@ fn view_browser_app(
       },
     ]),
     view_diagnostics(model.frame),
-    view_hover_tooltip(model.hover),
   ])
 }
 
@@ -597,10 +674,17 @@ fn view_code_viewer(
   model : BrowserAppModel,
   frame : @renderer.RenderFrame,
 ) -> @html.Html {
+  let children = line_nodes(emit, model, frame)
+  match view_hover_widget(model, frame) {
+    Some(widget) => children.push(widget)
+    None => ()
+  }
   @html.section(
     class="code-viewer",
-    attrs=@html.Attrs::build().aria_label("Readonly code viewer"),
-    @html.div(class="code-lines", line_nodes(emit, model, frame)),
+    attrs=@html.Attrs::build()
+      .aria_label("Readonly code viewer")
+      .on_mouseleave(_ => emit(ClearHover)),
+    @html.div(class="code-lines", children),
   )
 }
 
@@ -688,19 +772,16 @@ fn view_span(
   attrs = attrs.data_set("start", absolute_start.to_string())
   attrs = attrs.data_set("end", absolute_end.to_string())
   attrs = attrs.on_mouseover(_ => {
-    emit(RequestHover(absolute_start, absolute_end, offset, frame.version))
+    emit(ScheduleHover(absolute_start, absolute_end, offset))
   })
   attrs = attrs.on_mousemove(_ => {
-    emit(RequestHover(absolute_start, absolute_end, offset, frame.version))
+    emit(ScheduleHover(absolute_start, absolute_end, offset))
   })
   attrs = attrs.on_focus(_ => {
-    emit(RequestHover(absolute_start, absolute_end, offset, frame.version))
+    emit(ScheduleHover(absolute_start, absolute_end, offset))
   })
   match hover {
-    Some(item) => {
-      attrs = attrs.title(item.contents)
-      attrs = attrs.data_set("hover", item.contents)
-    }
+    Some(item) => attrs = attrs.data_set("hover", item.contents)
     None => ()
   }
   if is_definition_candidate(span) {
@@ -761,19 +842,110 @@ fn view_diagnostics(frame : @renderer.RenderFrame?) -> @html.Html {
 }
 
 ///|
-fn view_hover_tooltip(hover : HoverView?) -> @html.Html {
-  match hover {
-    Some(item) =>
-      @html.div(
-        class="hover-tooltip",
-        attrs=@html.Attrs::build()
-          .role("tooltip")
-          .style("left", "320px")
-          .style("top", "72px"),
-        item.contents,
-      )
-    None => @html.nothing
+/// Renders the hover widget inside `.code-lines`, anchored at the hovered
+/// range like VS Code's editor hover: above the line by default, flipped
+/// below when the measured widget would leave the viewport, and shifted left
+/// when it would overflow the viewer's right edge.
+fn view_hover_widget(
+  model : BrowserAppModel,
+  frame : @renderer.RenderFrame,
+) -> @html.Html? {
+  match model.hover {
+    Some(hover) =>
+      match line_col_for_offset(frame, hover.range.start) {
+        Some((line_number, column)) => {
+          let mut class_name = "hover-widget"
+          let mut shift_left = 0.0
+          let mut below = false
+          match model.hover_placement {
+            Some(placement) => {
+              below = placement.below
+              shift_left = placement.shift_left
+            }
+            None => class_name = class_name + " measuring"
+          }
+          let top = if below {
+            line_number * editor_line_height
+          } else {
+            (line_number - 1) * editor_line_height
+          }
+          if below {
+            class_name = class_name + " below"
+          }
+          let digits = frame.line_count.to_string().length()
+          let mut attrs = @html.Attrs::build()
+            .role("tooltip")
+            .style("top", top.to_string() + "px")
+            .style(
+              "left",
+              "calc(" +
+              (digits + column).to_string() +
+              "ch + " +
+              gutter_padding_px.to_string() +
+              "px)",
+            )
+          if shift_left > 0.0 {
+            attrs = attrs.style("margin-left", "-" + shift_left.to_string() +
+              "px")
+          }
+          Some(
+            @html.div(class=class_name, attrs~, [
+              @html.div(class="hover-row", [
+                @html.div(class="hover-contents", hover.contents),
+              ]),
+            ]),
+          )
+        }
+        None => None
+      }
+    None => None
   }
+}
+
+///|
+/// Total horizontal padding of the line-number gutter. Keep in sync with
+/// `.gutter` padding in app/src/style.css.
+let gutter_padding_px = 34
+
+///|
+fn line_col_for_offset(
+  frame : @renderer.RenderFrame,
+  offset : Int,
+) -> (Int, Int)? {
+  for line in frame.lines {
+    let end = line.offset + line.text.length()
+    if offset >= line.offset && offset <= end {
+      return Some((line.line_number, offset - line.offset))
+    }
+  }
+  None
+}
+
+///|
+/// Measures the rendered hover widget after paint and reports whether it
+/// must flip below the anchor line or shift left to stay inside the viewer.
+fn measure_hover_cmd() -> @rabbita.Cmd {
+  @cmd.custom_cmd(
+    _ => {
+      let document = @rdom.document()
+      match
+        (
+          document.query_selector(".hover-widget").to_option(),
+          document.query_selector(".code-viewer").to_option(),
+        ) {
+        (Some(widget), Some(viewer)) => {
+          let widget_rect = widget.get_bounding_client_rect()
+          let viewer_rect = viewer.get_bounding_client_rect()
+          let below = widget_rect.get_top() < viewer_rect.get_top()
+          let overflow = widget_rect.get_right() - viewer_rect.get_right()
+          let shift_left = if overflow > 0.0 { overflow } else { 0.0 }
+          dispatch_browser_msg(HoverMeasured(below, shift_left))
+        }
+        _ => ()
+      }
+    },
+    kind=@cmd.after_render,
+  )
 }
 
 ///|

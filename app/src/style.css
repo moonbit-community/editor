@@ -589,6 +589,163 @@ body {
   padding: 4px 8px;
 }
 
+/* Inline references peek widget. It lives in the code-lines flow so the
+   lines below shift down; sticky positioning plus a container-relative
+   width keep it pinned to the visible editor area while code scrolls
+   horizontally. */
+.code-viewer {
+  container-type: inline-size;
+}
+
+.peek-widget {
+  position: sticky;
+  left: 0;
+  width: 100cqw;
+  border-top: 2px solid var(--vscode-peekView-border);
+  border-bottom: 2px solid var(--vscode-peekView-border);
+  background: var(--vscode-editor-background);
+  font-family: var(--ui-font-family);
+  white-space: normal;
+}
+
+.peek-head {
+  height: 22px;
+  padding: 0 4px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--vscode-peekViewTitle-background);
+}
+
+.peek-title {
+  color: var(--vscode-peekViewTitleLabel-foreground);
+  font-size: 13px;
+}
+
+.peek-meta {
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--vscode-peekViewTitleDescription-foreground);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.peek-close {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--vscode-icon-foreground);
+  cursor: pointer;
+}
+
+.peek-close:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.peek-body {
+  height: calc(18 * var(--editor-line-height));
+  display: grid;
+  grid-template-columns: 7fr 3fr;
+  min-width: 0;
+}
+
+.peek-preview {
+  min-width: 0;
+  overflow: auto;
+  background: var(--vscode-peekViewEditor-background);
+}
+
+.peek-preview-caption {
+  padding: 1px 8px;
+  color: var(--vscode-peekViewTitleDescription-foreground);
+  font-size: 12px;
+}
+
+.peek-match {
+  background: var(--vscode-peekViewEditor-matchHighlightBackground);
+}
+
+.peek-list {
+  min-width: 0;
+  overflow: auto;
+  border-left: 1px solid var(--vscode-widget-border);
+  background: var(--vscode-peekViewResult-background);
+  font-size: 13px;
+}
+
+.peek-file-row {
+  height: 22px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--vscode-peekViewResult-fileForeground);
+}
+
+.peek-file-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--vscode-icon-foreground);
+}
+
+.peek-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.peek-file-count {
+  margin-left: auto;
+  color: var(--vscode-peekViewTitleDescription-foreground);
+  font-size: 11px;
+}
+
+.peek-ref-row {
+  width: 100%;
+  height: 22px;
+  padding: 0 8px 0 24px;
+  display: block;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--vscode-peekViewResult-lineForeground);
+  font: 13px/22px var(--ui-font-family);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.peek-ref-row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.peek-ref-row.selected {
+  background: var(--vscode-peekViewResult-selectionBackground);
+  color: var(--vscode-peekViewResult-selectionForeground);
+}
+
+.peek-list-match {
+  background: var(--vscode-peekViewResult-matchHighlightBackground);
+}
+
+.peek-empty {
+  padding: 8px;
+  color: var(--vscode-foreground);
+  font-size: 13px;
+}
+
 .diagnostics {
   min-height: 22px;
   padding: 2px 16px;

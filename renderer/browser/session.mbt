@@ -166,6 +166,28 @@ fn definition_resolution_cmd(
 }
 
 ///|
+fn references_resolution_cmd(
+  emit : @rabbita.Emit[BrowserMsg],
+  document : @workspace.SourceDocument?,
+  offset : Int,
+  version : Int,
+) -> @rabbita.Cmd {
+  match document {
+    Some(source_document) =>
+      send_client_packet_cmd(
+        emit,
+        References({
+          id: request_id("references", source_document.uri),
+          uri: source_document.uri,
+          document_version: version,
+          offset,
+        }),
+      )
+    None => @rabbita.none
+  }
+}
+
+///|
 fn render_document_cmd(
   document : @workspace.SourceDocument,
   previous : @workspace.SourceDocument?,

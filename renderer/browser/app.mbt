@@ -41,6 +41,27 @@ priv struct DefinitionView {
 }
 
 ///|
+priv struct ReferenceViewItem {
+  uri : String
+  range : @core.Range
+  line : Int
+  column : Int
+  line_text : String
+}
+
+///|
+priv struct PeekView {
+  anchor_line : Int
+  items : Array[ReferenceViewItem]
+  selected : Int
+}
+
+///|
+/// Height of the peek widget body in editor lines, matching VS Code's
+/// references widget default layout.
+let peek_body_lines = 18
+
+///|
 priv struct BrowserAppModel {
   status : String
   status_message : String
@@ -59,6 +80,8 @@ priv struct BrowserAppModel {
   goto_modifier : Bool
   definition : DefinitionView?
   pending_reveal : DefinitionView?
+  peek : PeekView?
+  peek_anchor_offset : Int?
 }
 
 ///|
@@ -78,6 +101,10 @@ priv enum BrowserMsg {
   GlobalKeyUp(@common.Keyboard)
   SetGotoModifier(Bool)
   RequestDefinition(Int, Int)
+  RequestReferences(Int, Int)
+  SelectReference(Int)
+  OpenReference(Int)
+  ClosePeek
 }
 
 ///|
@@ -134,6 +161,8 @@ fn initial_browser_model() -> BrowserAppModel {
     goto_modifier: false,
     definition: None,
     pending_reveal: None,
+    peek: None,
+    peek_anchor_offset: None,
   }
 }
 
@@ -247,6 +276,8 @@ fn update_browser_app(
             hover_anchor: None,
             hover_placement: None,
             definition: None,
+            peek: None,
+            peek_anchor_offset: None,
           },
         )
       } else {
@@ -261,6 +292,41 @@ fn update_browser_app(
         definition_resolution_cmd(emit, model.source_document, offset, version),
         { ..model, definition: None },
       )
+    RequestReferences(offset, version) =>
+      (
+        references_resolution_cmd(emit, model.source_document, offset, version),
+        { ..model, peek: None, peek_anchor_offset: Some(offset) },
+      )
+    SelectReference(index) =>
+      match model.peek {
+        Some(peek) =>
+          if index >= 0 && index < peek.items.length() {
+            (
+              @rabbita.none,
+              { ..model, peek: Some({ ..peek, selected: index }) },
+            )
+          } else {
+            (@rabbita.none, model)
+          }
+        None => (@rabbita.none, model)
+      }
+    OpenReference(index) =>
+      match model.peek {
+        Some(peek) =>
+          if index >= 0 && index < peek.items.length() {
+            let item = peek.items[index]
+            let closed = { ..model, peek: None, peek_anchor_offset: None }
+            definition_navigation_update(emit, closed, {
+              uri: item.uri,
+              range: item.range,
+            })
+          } else {
+            (@rabbita.none, model)
+          }
+        None => (@rabbita.none, model)
+      }
+    ClosePeek =>
+      (@rabbita.none, { ..model, peek: None, peek_anchor_offset: None })
   }
 }
 
@@ -281,6 +347,8 @@ fn select_workspace_update(
     hover_placement: None,
     definition: None,
     pending_reveal: None,
+    peek: None,
+    peek_anchor_offset: None,
   }
   (
     @rabbita.batch([
@@ -414,7 +482,10 @@ fn server_packet_update(
               json_string(location.uri.to_string()) +
               "}",
             )
-            definition_navigation_update(emit, model, location)
+            definition_navigation_update(emit, model, {
+              uri: location.uri.to_string(),
+              range: location.range,
+            })
           }
           None => {
             emit_event(
@@ -427,26 +498,58 @@ fn server_packet_update(
       } else {
         (@rabbita.none, model)
       }
-    ReferencesResult(_) => (@rabbita.none, model)
+    ReferencesResult(payload) =>
+      if frame_version(model.frame) == payload.version {
+        emit_event(
+          "language:references",
+          "{\"ok\":true,\"count\":" +
+          payload.references.length().to_string() +
+          ",\"version\":" +
+          payload.version.to_string() +
+          "}",
+        )
+        let anchor_line = match (model.peek_anchor_offset, model.frame) {
+          (Some(offset), Some(frame)) =>
+            match line_col_for_offset(frame, offset) {
+              Some((line_number, _)) => line_number
+              None => 1
+            }
+          _ => 1
+        }
+        let items : Array[ReferenceViewItem] = []
+        for reference in payload.references {
+          items.push({
+            uri: reference.uri.to_string(),
+            range: reference.range,
+            line: reference.line,
+            column: reference.column,
+            line_text: reference.line_text,
+          })
+        }
+        (
+          @rabbita.none,
+          { ..model, peek: Some({ anchor_line, items, selected: 0 }) },
+        )
+      } else {
+        (@rabbita.none, model)
+      }
     RemoteError(error) => protocol_error_update(model, error)
   }
 }
 
 ///|
-/// Navigates to a resolved definition: same-document targets are revealed
+/// Navigates to a resolved location: same-document targets are revealed
 /// and highlighted in place; targets in another workspace file open that
 /// file first and reveal once it renders.
 fn definition_navigation_update(
   emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
-  location : @language.Location,
+  view : DefinitionView,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
-  let uri = location.uri.to_string()
-  let view : DefinitionView = { uri, range: location.range }
-  if uri == active_document_uri(model.document) {
+  if view.uri == active_document_uri(model.document) {
     let cmd = match model.frame {
       Some(frame) =>
-        match line_col_for_offset(frame, location.range.start) {
+        match line_col_for_offset(frame, view.range.start) {
           Some((line_number, _)) => reveal_line_cmd(line_number)
           None => @rabbita.none
         }
@@ -457,7 +560,7 @@ fn definition_navigation_update(
     let (cmd, next) = select_workspace_update(
       emit,
       model,
-      workspace_id_from_uri(uri),
+      workspace_id_from_uri(view.uri),
     )
     (cmd, { ..next, pending_reveal: Some(view) })
   }
@@ -816,8 +919,216 @@ fn line_nodes(
   let rows : Array[@html.Html] = []
   for line in frame.lines {
     rows.push(view_line(emit, model, frame, line))
+    match model.peek {
+      Some(peek) =>
+        if peek.anchor_line == line.line_number {
+          rows.push(view_peek_widget(emit, model, frame, peek))
+        }
+      None => ()
+    }
   }
   rows
+}
+
+///|
+/// Inline references peek widget, inserted below the anchor line so the
+/// following lines are displaced like a VS Code editor zone widget.
+fn view_peek_widget(
+  emit : @rabbita.Emit[BrowserMsg],
+  model : BrowserAppModel,
+  frame : @renderer.RenderFrame,
+  peek : PeekView,
+) -> @html.Html {
+  let count = peek.items.length()
+  let meta = if count == 0 {
+    "No results"
+  } else if count == 1 {
+    "1 result"
+  } else {
+    count.to_string() + " results"
+  }
+  @html.div(
+    class="peek-widget",
+    attrs=@html.Attrs::build().data_set("peek", "references"),
+    [
+      @html.div(class="peek-head", [
+        @html.span(class="peek-title", "References"),
+        @html.span(class="peek-meta", meta),
+        @html.button(
+          type_="button",
+          class="peek-close",
+          title="Close",
+          on_click=emit(ClosePeek),
+          attrs=@html.Attrs::build().aria_label("Close references"),
+          icon_close(),
+        ),
+      ]),
+      @html.div(class="peek-body", [
+        view_peek_preview(model, frame, peek),
+        view_peek_list(emit, peek),
+      ]),
+    ],
+  )
+}
+
+///|
+fn view_peek_preview(
+  model : BrowserAppModel,
+  frame : @renderer.RenderFrame,
+  peek : PeekView,
+) -> @html.Html {
+  if peek.items.length() == 0 {
+    return @html.div(class="peek-preview", [
+      @html.div(class="peek-empty", "No results found."),
+    ])
+  }
+  let item = peek.items[peek.selected]
+  if item.uri == active_document_uri(model.document) {
+    let children : Array[@html.Html] = []
+    let half = peek_body_lines / 2
+    let first = if item.line > half { item.line - half } else { 1 }
+    let last = first + peek_body_lines - 1
+    for line in frame.lines {
+      if line.line_number >= first && line.line_number <= last {
+        children.push(view_peek_preview_line(item, line))
+      }
+    }
+    @html.div(class="peek-preview", children)
+  } else {
+    // Cross-file references preview only their server-enriched line text.
+    @html.div(class="peek-preview", [
+      @html.div(
+        class="peek-preview-caption",
+        display_name_from_uri(item.uri) + ":" + item.line.to_string(),
+      ),
+      @html.div(class="code-line", [
+        @html.div(class="gutter", item.line.to_string()),
+        @html.pre(class="code", line_text_match_nodes(item, "peek-match")),
+      ]),
+    ])
+  }
+}
+
+///|
+/// Non-interactive rendering of a source line for the peek preview pane.
+fn view_peek_preview_line(
+  item : ReferenceViewItem,
+  line : @renderer.RenderLine,
+) -> @html.Html {
+  let code = if line.spans.length() == 0 {
+    @html.pre(class="code", if line.text == "" { " " } else { line.text })
+  } else {
+    let spans : Array[@html.Html] = []
+    for span in line.spans {
+      let absolute_start = line.offset + span.start
+      let absolute_end = line.offset + span.end
+      let class_name = if item.range.start < absolute_end &&
+        absolute_start < item.range.end {
+        span.class_name + " peek-match"
+      } else {
+        span.class_name
+      }
+      spans.push(@html.span(class=class_name, span.text))
+    }
+    @html.pre(class="code", spans)
+  }
+  @html.div(class="code-line", [
+    @html.div(class="gutter", line.line_number.to_string()),
+    code,
+  ])
+}
+
+///|
+fn view_peek_list(
+  emit : @rabbita.Emit[BrowserMsg],
+  peek : PeekView,
+) -> @html.Html {
+  let children : Array[@html.Html] = []
+  let mut current_uri = ""
+  for index in 0..<peek.items.length() {
+    let item = peek.items[index]
+    if item.uri != current_uri {
+      current_uri = item.uri
+      let mut count = 0
+      for other in peek.items {
+        if other.uri == item.uri {
+          count = count + 1
+        }
+      }
+      children.push(
+        @html.div(class="peek-file-row", [
+          @html.span(class="peek-file-icon", icon_file()),
+          @html.span(class="peek-file-name", display_name_from_uri(item.uri)),
+          @html.span(class="peek-file-count", count.to_string()),
+        ]),
+      )
+    }
+    let row_class = if index == peek.selected {
+      "peek-ref-row selected"
+    } else {
+      "peek-ref-row"
+    }
+    let mut attrs = @html.Attrs::build().data_set(
+      "ref-index",
+      index.to_string(),
+    )
+    attrs = attrs.on_dblclick(_ => emit(OpenReference(index)))
+    attrs = attrs.on_keydown(event => {
+      if event.key() == "Enter" {
+        emit(OpenReference(index))
+      } else {
+        @rabbita.none
+      }
+    })
+    children.push(
+      @html.button(
+        type_="button",
+        class=row_class,
+        on_click=emit(SelectReference(index)),
+        attrs~,
+        line_text_match_nodes(item, "peek-list-match"),
+      ),
+    )
+  }
+  if peek.items.length() == 0 {
+    children.push(@html.div(class="peek-empty", "No results found."))
+  }
+  @html.div(class="peek-list", children)
+}
+
+///|
+/// Splits a reference's line text into plain/highlighted spans around the
+/// matched range, falling back to plain text when the enriched column data
+/// cannot address the line safely.
+fn line_text_match_nodes(
+  item : ReferenceViewItem,
+  highlight_class : String,
+) -> Array[@html.Html] {
+  let text = item.line_text
+  let plain : Array[@html.Html] = [
+    @html.span(class="", if text == "" { " " } else { text }),
+  ]
+  let len = text.length()
+  let match_length = item.range.end - item.range.start
+  let start = item.column - 1
+  if start < 0 || start >= len || match_length <= 0 {
+    return plain
+  }
+  let end = if start + match_length > len { len } else { start + match_length }
+  match (try? text[0:start], try? text[start:end], try? text[end:len]) {
+    (Ok(before), Ok(matched), Ok(after)) => {
+      let nodes : Array[@html.Html] = []
+      if start > 0 {
+        nodes.push(@html.span(class="", before.to_owned()))
+      }
+      nodes.push(@html.span(class=highlight_class, matched.to_owned()))
+      if end < len {
+        nodes.push(@html.span(class="", after.to_owned()))
+      }
+      nodes
+    }
+    _ => plain
+  }
 }
 
 ///|
@@ -930,9 +1241,17 @@ fn view_span(
         @rabbita.none
       }
     })
+    attrs = attrs.on_contextmenu(event => {
+      event.prevent_default()
+      emit(RequestReferences(offset, frame.version))
+    })
     attrs = attrs.on_keydown(event => {
-      if event.key() == "F12" && !event.shift_key() {
-        emit(RequestDefinition(offset, frame.version))
+      if event.key() == "F12" {
+        if event.shift_key() {
+          emit(RequestReferences(offset, frame.version))
+        } else {
+          emit(RequestDefinition(offset, frame.version))
+        }
       } else {
         @rabbita.none
       }

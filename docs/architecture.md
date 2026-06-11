@@ -98,8 +98,8 @@ or `--target native`.
 ## System Contracts
 
 - The editor is readonly. Document identity, source loading, rendering,
-  hover/definition lookup, diagnostics, and watches must not introduce edit
-  state.
+  hover/definition/references lookup, diagnostics, and watches must not
+  introduce edit state.
 - Workspace semantics and filesystem-provider contracts belong in MoonBit
   domain packages. Browser or native hosts provide effects behind narrow
   package boundaries.
@@ -107,8 +107,8 @@ or `--target native`.
   structured errors are MoonBit-owned.
 - The browser app is served by the native host from `web/dist`. Generated
   MoonBit code owns the Rabbita app, document/session updates, workspace
-  selection, render-frame construction, hover/definition resolution, and watch
-  refreshes.
+  selection, render-frame construction, hover/definition/references
+  resolution, and watch refreshes.
 - Browser/native communication uses `remote_protocol` packets over the native
   host's `/protocol` WebSocket.
 - Browser URLs are not document routes. Active file identity comes from

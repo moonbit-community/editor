@@ -6,11 +6,12 @@ Browser render backend adapter.
 
 - Mount the Rabbita browser app and render backend-neutral
   `renderer.RenderFrame` values as browser HTML.
-- Own browser view state for the readonly shell, workspace sidebar selection,
-  active frame, hover tooltip, definition target, and session status.
+- Own browser view state for the readonly shell, color theme, workspace
+  sidebar selection, active frame, range-anchored hover widget,
+  go-to-definition navigation, references peek widget, and session status.
 - Own the browser document session loop: protocol connection, workspace
   listing, sidebar-driven workspace opens, server-backed document loads,
-  watches, refreshes, hover, and definition requests.
+  watches, refreshes, hover, definition, and references requests.
 - Use Rabbita WebSocket support to send and receive `remote_protocol` packets.
 - Emit browser observability events such as `moonbit:render` and `dom:mounted`.
 

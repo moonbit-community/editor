@@ -1,9 +1,154 @@
-:root {
-  color: #1d2433;
-  background: #f5f7fb;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+/*
+ * Workbench theming for the readonly editor.
+ *
+ * Color values are transcribed from VS Code's Dark Modern / Light Modern
+ * theme definitions and color registry defaults (MIT licensed), kept in the
+ * reference-only `vscode/` submodule:
+ *   - vscode/extensions/theme-defaults/themes/dark_modern.json, light_modern.json
+ *   - vscode/extensions/theme-defaults/themes/dark_plus.json, light_plus.json
+ *     (token colors via dark_vs.json / light_vs.json)
+ *   - vscode/src/vs/platform/theme/common/colors/*.ts (registry defaults)
+ *   - vscode/src/vs/editor/contrib/peekView/browser/peekView.ts
+ *
+ * Variable names mirror VS Code's `--vscode-<id>` convention with `.`
+ * replaced by `-`.
+ */
+
+.editor-shell {
+  /* Dark Modern (default theme). */
+  --vscode-foreground: #cccccc;
+  --vscode-icon-foreground: #cccccc;
+  --vscode-focusBorder: #0078d4;
+  --vscode-widget-border: #313131;
+  --vscode-widget-shadow: rgb(0 0 0 / 36%);
+
+  --vscode-editor-background: #1f1f1f;
+  --vscode-editor-foreground: #cccccc;
+  --vscode-editorLineNumber-foreground: #6e7681;
+  --vscode-editorLineNumber-activeForeground: #cccccc;
+  --vscode-editor-selectionBackground: #264f78;
+  --vscode-editor-hoverHighlightBackground: #264f7840;
+  --vscode-editor-rangeHighlightBackground: #ffffff0b;
+  --vscode-editorLink-activeForeground: #4e94ce;
+  --vscode-editorWarning-foreground: #cca700;
+  --vscode-editorError-foreground: #f14c4c;
+  --vscode-editorInfo-foreground: #59a4f9;
+
+  --vscode-editorHoverWidget-background: #202020;
+  --vscode-editorHoverWidget-foreground: #cccccc;
+  --vscode-editorHoverWidget-border: #313131;
+
+  --vscode-sideBar-background: #181818;
+  --vscode-sideBar-foreground: #cccccc;
+  --vscode-sideBar-border: #2b2b2b;
+  --vscode-sideBarTitle-foreground: #cccccc;
+  --vscode-sideBarSectionHeader-background: #181818;
+  --vscode-list-hoverBackground: #2a2d2e;
+  --vscode-list-activeSelectionBackground: #04395e;
+  --vscode-list-activeSelectionForeground: #ffffff;
+  --vscode-list-focusOutline: #0078d4;
+  --vscode-tree-indentGuidesStroke: #585858;
+
+  --vscode-titleBar-activeBackground: #181818;
+  --vscode-titleBar-activeForeground: #cccccc;
+  --vscode-titleBar-border: #2b2b2b;
+
+  --vscode-peekView-border: #59a4f9;
+  --vscode-peekViewTitle-background: #252526;
+  --vscode-peekViewTitleLabel-foreground: #ffffff;
+  --vscode-peekViewTitleDescription-foreground: #ccccccb3;
+  --vscode-peekViewResult-background: #1f1f1f;
+  --vscode-peekViewResult-fileForeground: #ffffff;
+  --vscode-peekViewResult-lineForeground: #bbbbbb;
+  --vscode-peekViewResult-selectionBackground: #3399ff33;
+  --vscode-peekViewResult-selectionForeground: #ffffff;
+  --vscode-peekViewResult-matchHighlightBackground: #bb800966;
+  --vscode-peekViewEditor-background: #1f1f1f;
+  --vscode-peekViewEditor-matchHighlightBackground: #bb800966;
+
+  --vscode-scrollbarSlider-background: #79797966;
+  --vscode-scrollbarSlider-hoverBackground: #646464b3;
+  --vscode-scrollbarSlider-activeBackground: #bfbfbf66;
+
+  --vscode-token-keyword: #569cd6;
+  --vscode-token-variable: #9cdcfe;
+  --vscode-token-string: #ce9178;
+  --vscode-token-number: #b5cea8;
+  --vscode-token-comment: #6a9955;
+  --vscode-token-punctuation: #cccccc;
+
+  /* VS Code editor defaults on macOS: 12px Menlo, 1.5x line height. */
+  --editor-font-family: Menlo, Monaco, "Courier New", monospace;
+  --editor-font-size: 12px;
+  /* Keep in sync with `editor_line_height` in renderer/browser/app.mbt. */
+  --editor-line-height: 18px;
+  --ui-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu",
+    "Droid Sans", sans-serif;
+  --ui-font-size: 13px;
+}
+
+.editor-shell[data-theme="light"] {
+  /* Light Modern. */
+  --vscode-foreground: #3b3b3b;
+  --vscode-icon-foreground: #3b3b3b;
+  --vscode-focusBorder: #005fb8;
+  --vscode-widget-border: #e5e5e5;
+  --vscode-widget-shadow: rgb(0 0 0 / 16%);
+
+  --vscode-editor-background: #ffffff;
+  --vscode-editor-foreground: #3b3b3b;
+  --vscode-editorLineNumber-foreground: #6e7681;
+  --vscode-editorLineNumber-activeForeground: #171184;
+  --vscode-editor-selectionBackground: #add6ff;
+  --vscode-editor-hoverHighlightBackground: #add6ff26;
+  --vscode-editor-rangeHighlightBackground: #fdff0033;
+  --vscode-editorLink-activeForeground: #0000ff;
+  --vscode-editorWarning-foreground: #bf8803;
+  --vscode-editorError-foreground: #e51400;
+  --vscode-editorInfo-foreground: #0063d3;
+
+  --vscode-editorHoverWidget-background: #f8f8f8;
+  --vscode-editorHoverWidget-foreground: #3b3b3b;
+  --vscode-editorHoverWidget-border: #e5e5e5;
+
+  --vscode-sideBar-background: #f8f8f8;
+  --vscode-sideBar-foreground: #3b3b3b;
+  --vscode-sideBar-border: #e5e5e5;
+  --vscode-sideBarTitle-foreground: #3b3b3b;
+  --vscode-sideBarSectionHeader-background: #f8f8f8;
+  --vscode-list-hoverBackground: #f2f2f2;
+  --vscode-list-activeSelectionBackground: #e8e8e8;
+  --vscode-list-activeSelectionForeground: #000000;
+  --vscode-list-focusOutline: #005fb8;
+  --vscode-tree-indentGuidesStroke: #a9a9a9;
+
+  --vscode-titleBar-activeBackground: #f8f8f8;
+  --vscode-titleBar-activeForeground: #1e1e1e;
+  --vscode-titleBar-border: #e5e5e5;
+
+  --vscode-peekView-border: #0063d3;
+  --vscode-peekViewTitle-background: #f3f3f3;
+  --vscode-peekViewTitleLabel-foreground: #000000;
+  --vscode-peekViewTitleDescription-foreground: #616161;
+  --vscode-peekViewResult-background: #ffffff;
+  --vscode-peekViewResult-fileForeground: #1e1e1e;
+  --vscode-peekViewResult-lineForeground: #646465;
+  --vscode-peekViewResult-selectionBackground: #3399ff33;
+  --vscode-peekViewResult-selectionForeground: #6c6c6c;
+  --vscode-peekViewResult-matchHighlightBackground: #bb800966;
+  --vscode-peekViewEditor-background: #f2f8fc;
+  --vscode-peekViewEditor-matchHighlightBackground: #bb800966;
+
+  --vscode-scrollbarSlider-background: #64646466;
+  --vscode-scrollbarSlider-hoverBackground: #646464b3;
+  --vscode-scrollbarSlider-activeBackground: #00000099;
+
+  --vscode-token-keyword: #0000ff;
+  --vscode-token-variable: #001080;
+  --vscode-token-string: #a31515;
+  --vscode-token-number: #098658;
+  --vscode-token-comment: #008000;
+  --vscode-token-punctuation: #3b3b3b;
 }
 
 * {
@@ -19,6 +164,9 @@ body {
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-foreground);
+  font-family: var(--ui-font-family);
 }
 
 .editor-main {
@@ -30,19 +178,56 @@ body {
 .workspace-sidebar {
   min-width: 0;
   overflow: auto;
-  border-right: 1px solid #d7dde8;
-  background: #f7f9fc;
-  color: #2f3948;
-  font-size: 13px;
+  border-right: 1px solid var(--vscode-sideBar-border);
+  background: var(--vscode-sideBar-background);
+  color: var(--vscode-sideBar-foreground);
+  font-size: var(--ui-font-size);
 }
 
 .workspace-title {
-  height: 32px;
-  padding: 8px 12px;
-  color: #5b6474;
+  height: 35px;
+  padding: 0 8px 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--vscode-sideBarSectionHeader-background);
+  color: var(--vscode-sideBarTitle-foreground);
+}
+
+.workspace-title-label {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-action {
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--vscode-icon-foreground);
+  cursor: pointer;
+}
+
+.sidebar-action:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.sidebar-action:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.icon {
+  display: block;
 }
 
 .workspace-item {
@@ -60,22 +245,25 @@ body {
   cursor: pointer;
 }
 
-.workspace-item:hover,
+.workspace-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
 .workspace-item:focus-visible {
-  background: #e9eef7;
-  outline: none;
+  outline: 1px solid var(--vscode-list-focusOutline);
+  outline-offset: -1px;
 }
 
 .workspace-item.is-selected {
-  background: #dce9f8;
-  color: #153f68;
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
 }
 
 .workspace-disclosure {
   width: 12px;
   flex: 0 0 12px;
-  color: #69758a;
-  font: 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--vscode-icon-foreground);
+  font: 10px/1 var(--editor-font-family);
 }
 
 .workspace-file-icon {
@@ -84,11 +272,8 @@ body {
   flex: 0 0 18px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid #b8c2d6;
-  border-radius: 3px;
-  background: #ffffff;
-  color: #475467;
-  font: 8px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--vscode-icon-foreground);
+  font: 8px/1 var(--editor-font-family);
 }
 
 .workspace-label {
@@ -99,15 +284,16 @@ body {
 }
 
 .topbar {
-  min-height: 48px;
-  padding: 10px 16px;
+  min-height: 35px;
+  padding: 6px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid #d7dde8;
-  background: #ffffff;
-  font-size: 13px;
+  border-bottom: 1px solid var(--vscode-titleBar-border);
+  background: var(--vscode-titleBar-activeBackground);
+  color: var(--vscode-titleBar-activeForeground);
+  font-size: var(--ui-font-size);
 }
 
 .source-title {
@@ -125,42 +311,37 @@ body {
 
 .source-title span {
   flex: 0 0 auto;
-  color: #5b6474;
+  opacity: 0.7;
 }
 
 .source-status {
   flex: 0 0 auto;
-  color: #475467;
+  opacity: 0.85;
 }
 
 .source-status-ready {
-  color: #157347;
+  color: var(--vscode-titleBar-activeForeground);
 }
 
 .source-status-loading,
 .source-status-stale {
-  color: #7c3f00;
+  color: var(--vscode-editorWarning-foreground);
 }
 
 .source-status-missing,
 .source-status-error {
-  color: #9f1f1f;
+  color: var(--vscode-editorError-foreground);
 }
 
 .topbar strong {
   margin-right: 10px;
 }
 
-.topbar span {
-  color: #5b6474;
-}
-
 .code-viewer {
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  background: #fbfcff;
-  border-bottom: 1px solid #d7dde8;
+  background: var(--vscode-editor-background);
 }
 
 .source-empty {
@@ -172,7 +353,7 @@ body {
 
 .source-message {
   padding: 0 24px;
-  color: #475467;
+  color: var(--vscode-foreground);
   font-size: 14px;
 }
 
@@ -184,17 +365,16 @@ body {
 .source-open-button {
   min-height: 32px;
   padding: 0 12px;
-  border: 1px solid #b8c2d6;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #1d2433;
+  border: 1px solid var(--vscode-widget-border);
+  border-radius: 2px;
+  background: var(--vscode-editorHoverWidget-background);
+  color: var(--vscode-foreground);
   font: inherit;
   cursor: pointer;
 }
 
 .source-open-button:hover {
-  background: #eef5ff;
-  border-color: #86a9d8;
+  background: var(--vscode-list-hoverBackground);
 }
 
 .code-lines {
@@ -203,101 +383,139 @@ body {
 }
 
 .code-line {
-  min-height: 22px;
+  min-height: var(--editor-line-height);
   display: grid;
   grid-template-columns: max-content max-content;
 }
 
-.code-line:hover {
-  background: #eef5ff;
-}
-
 .gutter {
-  padding: 0 4px 0 8px;
-  border-right: 1px solid #d7dde8;
-  color: #69758a;
-  background: #f1f4f9;
+  min-width: 5ch;
+  padding: 0 26px 0 8px;
+  color: var(--vscode-editorLineNumber-foreground);
   text-align: right;
-  font: 13px/22px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font: var(--editor-font-size) / var(--editor-line-height)
+    var(--editor-font-family);
   user-select: none;
 }
 
 .code {
   width: max-content;
   margin: 0;
-  padding: 0 16px 0 6px;
-  color: #202938;
-  font: 13px/22px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  padding: 0 16px 0 0;
+  color: var(--vscode-editor-foreground);
+  font: var(--editor-font-size) / var(--editor-line-height)
+    var(--editor-font-family);
   white-space: pre;
+  cursor: text;
+}
+
+.code ::selection,
+.code::selection {
+  background: var(--vscode-editor-selectionBackground);
 }
 
 .tok-keyword {
-  color: #8f3f71;
-  font-weight: 600;
+  color: var(--vscode-token-keyword);
 }
 
 .tok-identifier {
-  color: #1d4f91;
+  color: var(--vscode-token-variable);
 }
 
 .tok-string {
-  color: #157347;
+  color: var(--vscode-token-string);
 }
 
 .tok-number {
-  color: #9a4d00;
+  color: var(--vscode-token-number);
 }
 
 .tok-comment {
-  color: #667085;
-  font-style: italic;
+  color: var(--vscode-token-comment);
 }
 
 .tok-punctuation {
-  color: #344054;
+  color: var(--vscode-token-punctuation);
+}
+
+.code-viewer::-webkit-scrollbar,
+.workspace-sidebar::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.code-viewer::-webkit-scrollbar-track,
+.workspace-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.code-viewer::-webkit-scrollbar-thumb,
+.workspace-sidebar::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background);
+}
+
+.code-viewer::-webkit-scrollbar-thumb:hover,
+.workspace-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+.code-viewer::-webkit-scrollbar-thumb:active,
+.workspace-sidebar::-webkit-scrollbar-thumb:active {
+  background: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+.code-viewer::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .diag-warning {
   text-decoration-line: underline;
   text-decoration-style: wavy;
-  text-decoration-color: #bf6a02;
+  text-decoration-color: var(--vscode-editorWarning-foreground);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.diag-error {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: var(--vscode-editorError-foreground);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.diag-info {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: var(--vscode-editorInfo-foreground);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 .has-hover {
-  cursor: help;
-}
-
-.definition-candidate {
-  cursor: pointer;
-  text-decoration-line: underline;
-  text-decoration-style: dotted;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  background: var(--vscode-editor-hoverHighlightBackground);
 }
 
 .definition-candidate:focus {
-  outline: 2px solid #6aa6d8;
-  outline-offset: 2px;
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
 }
 
 .definition-target {
-  background: #d8ecff;
-  box-shadow: 0 0 0 2px #6aa6d8;
+  background: var(--vscode-editor-rangeHighlightBackground);
 }
 
 .hover-tooltip {
   position: fixed;
-  z-index: 20;
-  max-width: min(420px, calc(100vw - 20px));
-  padding: 8px 10px;
-  border: 1px solid #2f3b52;
-  border-radius: 6px;
-  background: #202938;
-  color: #ffffff;
-  box-shadow: 0 8px 24px rgb(29 36 51 / 18%);
-  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  z-index: 50;
+  max-width: min(500px, calc(100vw - 20px));
+  padding: 4px 8px;
+  border: 1px solid var(--vscode-editorHoverWidget-border);
+  border-radius: 3px;
+  background: var(--vscode-editorHoverWidget-background);
+  color: var(--vscode-editorHoverWidget-foreground);
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+  font: var(--editor-font-size) / 1.5 var(--editor-font-family);
   white-space: pre-wrap;
   pointer-events: none;
 }
@@ -307,22 +525,21 @@ body {
 }
 
 .diagnostics {
-  min-height: 72px;
-  padding: 12px 16px;
+  min-height: 22px;
+  padding: 2px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  background: #ffffff;
-  font-size: 13px;
+  border-top: 1px solid var(--vscode-sideBar-border);
+  background: var(--vscode-sideBar-background);
+  color: var(--vscode-sideBar-foreground);
+  font-size: 12px;
 }
 
 .diagnostic-item {
-  padding: 4px 8px;
-  border: 1px solid #ebb36a;
-  border-radius: 6px;
-  background: #fff7ed;
-  color: #7c3f00;
+  padding: 1px 6px;
+  color: var(--vscode-editorWarning-foreground);
 }
 
 @media (max-width: 680px) {

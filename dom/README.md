@@ -6,7 +6,8 @@ JavaScript/browser host boundary.
 
 - Declare JavaScript FFI for narrow browser host capabilities: protocol URL
   derivation, current-document exposure, filesystem provider hooks, disposables,
-  and observability.
+  observability, and best-effort `localStorage` persistence
+  (`storage_get_item` / `storage_set_item`).
 - Convert host responses into MoonBit `workspace` contracts.
 - Install browser filesystem fallback providers without rendering editor DOM,
   owning document session state, or fabricating remote protocol responses.

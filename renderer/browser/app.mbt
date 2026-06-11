@@ -22,6 +22,7 @@ priv struct DefinitionView {
 priv struct BrowserAppModel {
   status : String
   status_message : String
+  theme : String
   frame : @renderer.RenderFrame?
   source_document : @workspace.SourceDocument?
   document : BrowserDocumentView?
@@ -41,6 +42,7 @@ priv enum BrowserMsg {
   DocumentRenderResolved(DocumentRenderResult, Bool)
   SelectWorkspace(String)
   ToggleFolder(String)
+  ToggleTheme
   RequestHover(Int, Int, Int, Int)
   RequestDefinition(Int, Int)
 }
@@ -78,6 +80,7 @@ fn initial_browser_model() -> BrowserAppModel {
   {
     status: "loading",
     status_message: "",
+    theme: stored_theme(),
     frame: None,
     source_document: None,
     document: None,
@@ -151,6 +154,10 @@ fn update_browser_app(
         @rabbita.none,
         { ..model, collapsed_workspace_ids: toggle_collapsed_id(model, id) },
       )
+    ToggleTheme => {
+      let theme = if model.theme == "light" { "dark" } else { "light" }
+      (persist_theme_cmd(theme), { ..model, theme, })
+    }
     RequestHover(start, end, offset, version) =>
       (
         hover_resolution_cmd(
@@ -448,6 +455,7 @@ fn view_browser_app(
 fn shell_attrs(model : BrowserAppModel) -> @html.Attrs {
   let mut attrs = @html.Attrs::build()
   attrs = attrs.data_set("status", model.status)
+  attrs = attrs.data_set("theme", model.theme)
   attrs = attrs.data_set("line-count", line_count_string(model.frame))
   match model.document {
     Some(document) => attrs = attrs.data_set("source-uri", document.uri)
@@ -476,7 +484,19 @@ fn view_sidebar(
   model : BrowserAppModel,
 ) -> @html.Html {
   let children : Array[@html.Html] = [
-    @html.div(class="workspace-title", "Explorer"),
+    @html.div(class="workspace-title", [
+      @html.span(class="workspace-title-label", "Explorer"),
+      @html.button(
+        type_="button",
+        class="sidebar-action",
+        title="Toggle Color Theme",
+        on_click=emit(ToggleTheme),
+        attrs=@html.Attrs::build()
+          .data_set("action", "toggle-theme")
+          .aria_label("Toggle color theme"),
+        icon_color_mode(),
+      ),
+    ]),
   ]
   for entry in model.workspace_entries {
     if workspace_entry_visible(model, entry) {
@@ -1052,6 +1072,22 @@ fn dom_mounted_status_cmd(status : String) -> @rabbita.Cmd {
     },
     kind=@cmd.after_render,
   )
+}
+
+///|
+let theme_storage_key = "readonly-editor:theme"
+
+///|
+fn stored_theme() -> String {
+  match @dom.storage_get_item(theme_storage_key) {
+    "light" => "light"
+    _ => "dark"
+  }
+}
+
+///|
+fn persist_theme_cmd(theme : String) -> @rabbita.Cmd {
+  @cmd.custom_cmd(_ => @dom.storage_set_item(theme_storage_key, theme))
 }
 
 ///|

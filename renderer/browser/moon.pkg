@@ -10,6 +10,7 @@ import {
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/cmd",
   "moonbit-community/rabbita/html",
+  "moonbit-community/rabbita/svg",
   "moonbit-community/rabbita/websocket",
 }
 

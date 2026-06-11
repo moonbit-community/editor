@@ -473,3 +473,23 @@ pub extern "js" fn emit_event(name : String, payload : String) -> Unit =
   #|     globalThis.__readonlyEditorEvent(name, payload);
   #|   }
   #| }
+
+///|
+pub extern "js" fn storage_get_item(key : String) -> String =
+  #| (key) => {
+  #|   try {
+  #|     return globalThis.localStorage?.getItem(key) ?? "";
+  #|   } catch {
+  #|     return "";
+  #|   }
+  #| }
+
+///|
+pub extern "js" fn storage_set_item(key : String, value : String) -> Unit =
+  #| (key, value) => {
+  #|   try {
+  #|     globalThis.localStorage?.setItem(key, value);
+  #|   } catch {
+  #|     // Persistence is best-effort; private browsing may deny storage.
+  #|   }
+  #| }

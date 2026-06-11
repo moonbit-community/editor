@@ -3,13 +3,9 @@
 /// consume these the way VS Code contributions consume editor events; no
 /// controller sees raw DOM events.
 priv enum EditorEvent {
-  MouseMoved(@renderer.MouseTarget, Bool)
-  MouseDown(@renderer.MouseTarget, Bool)
-  ContextMenuRequested(@renderer.MouseTarget)
+  MouseMoved(@renderer.MouseTarget)
   MouseLeft
   EscapePressed
-  GotoKeyCommand(Bool)
-  GotoModifierChanged(Bool)
 }
 
 ///|
@@ -17,21 +13,17 @@ priv enum EditorEvent {
 priv struct EditorContext {
   frame : @renderer.RenderFrame?
   source_document : @workspace.SourceDocument?
-  last_target : @renderer.MouseTarget?
 }
 
 ///|
 fn editor_context(model : BrowserAppModel) -> EditorContext {
-  {
-    frame: model.frame,
-    source_document: model.source_document,
-    last_target: model.last_target,
-  }
+  { frame: model.frame, source_document: model.source_document }
 }
 
 ///|
 /// Fans one editor event to every controller in a fixed order and merges
 /// their commands; the contribution model with Elm-shaped sub-updates.
+/// Hover is the only controller today.
 fn editor_event_update(
   emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
@@ -39,12 +31,7 @@ fn editor_event_update(
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   let ctx = editor_context(model)
   let (hover_cmd, hover) = model.hover.on_event(emit, event, ctx)
-  let (definition_cmd, definition) = model.definition.on_event(emit, event, ctx)
-  let (references_cmd, references) = model.references.on_event(emit, event, ctx)
-  (
-    @rabbita.batch([hover_cmd, definition_cmd, references_cmd]),
-    { ..model, hover, definition, references },
-  )
+  (hover_cmd, { ..model, hover, })
 }
 
 ///|
@@ -52,32 +39,5 @@ fn editor_event_update(
 fn controller_decorations(
   surface : CodeSurface,
 ) -> Array[@decorations.Decoration] {
-  let items : Array[@decorations.Decoration] = []
-  items.append(surface.hover.decorations())
-  items.append(surface.definition.decorations(surface.document_uri))
-  items.append(surface.references.decorations())
-  items
-}
-
-///|
-/// The offset a definition/references request should use when the target
-/// rests on a navigable identifier span: the span midpoint, matching the
-/// old per-span handlers.
-fn candidate_request_offset(
-  frame : @renderer.RenderFrame?,
-  target : @renderer.MouseTarget?,
-) -> Int? {
-  match (frame, target) {
-    (Some(frame), Some(target)) =>
-      match span_anchor_for_target(frame, target) {
-        Some((start, end, span)) =>
-          if is_definition_candidate(span) {
-            Some((start + end) / 2)
-          } else {
-            None
-          }
-        None => None
-      }
-    _ => None
-  }
+  surface.hover.decorations()
 }

@@ -35,12 +35,9 @@ inspection:
   `data-workspace-id`, `data-workspace-kind`, `aria-expanded`, and
   `aria-selected`; the pane header exposes the theme toggle as
   `[data-action="toggle-theme"]`.
-- `.code-line`, `.gutter`, `.code`, token spans, diagnostics, hover data, and
-  definition target attributes keep the same class and `data-*` contracts used
-  by browser smoke tests.
-- `.hover-widget` is the range-anchored editor hover; `.peek-widget` is the
-  inline references peek (head `.peek-title`/`.peek-close`, result rows
-  `.peek-ref-row` with `data-ref-index`).
+- `.code-line`, `.gutter`, `.code`, token spans, and diagnostics keep the
+  same class and `data-*` contracts used by browser smoke tests.
+- `.hover-widget` is the range-anchored editor hover.
 
 Sidebar selection is app state only. Selecting or expanding workspace entries
 must not change `window.location.href`.
@@ -59,10 +56,6 @@ The browser host logs structured events prefixed with `[readonly-editor]`:
   semantic provider sync.
 - `language:hover`: successful on-demand hover resolution for the active
   document.
-- `language:definition`: successful on-demand definition resolution for the
-  active document.
-- `language:references`: on-demand references resolution for the active
-  document, with the result count.
 - `language:error`: provider or protocol errors that did not block readonly
   render.
 - `dom:mounted`: rendered line and diagnostic counts after DOM creation,

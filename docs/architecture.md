@@ -16,7 +16,7 @@ The project is split into three runtime parts:
   validation, readonly file-access policy, file-watch routing, remote protocol
   routing, and the host contract for `moon-lsp` session lifecycle.
 - Backend-agnostic renderer: MoonBit packages that convert source snapshots,
-  syntax, diagnostics, hover/definition data, viewport state, and theme data
+  syntax, diagnostics, hover data, viewport state, and theme data
   into a platform-neutral render frame, plus the pure editor geometry that
   backends share: mouse hit-testing (`MouseTarget`/`ViewMetrics`/`hit_test`)
   and line-window math (`visible_window`) for viewport virtualization.
@@ -105,7 +105,7 @@ or `--target native`.
 ## System Contracts
 
 - The editor is readonly. Document identity, source loading, rendering,
-  hover/definition/references lookup, diagnostics, and watches must not
+  hover lookup, diagnostics, and watches must not
   introduce edit state.
 - Workspace semantics and filesystem-provider contracts belong in MoonBit
   domain packages. Browser or native hosts provide effects behind narrow
@@ -114,14 +114,14 @@ or `--target native`.
   structured errors are MoonBit-owned.
 - The browser app is served by the native host from `web/dist`. Generated
   MoonBit code owns the Rabbita app, document/session updates, workspace
-  selection, render-frame construction, hover/definition/references
-  resolution, and watch refreshes.
+  selection, render-frame construction, hover resolution, and watch
+  refreshes.
 - Browser input routes through one shared hit test: container handlers on
   the code viewer turn DOM events into typed editor events consumed by
-  feature controllers (hover, definition, references); rendered spans carry
-  no event handlers. Language features resolve through the `language`
-  provider traits, implemented browser-side by a protocol client that
-  correlates responses by request id.
+  feature controllers (hover today); rendered spans carry no event
+  handlers. Language features resolve through the `language` provider
+  traits, implemented browser-side by a protocol client that correlates
+  responses by request id.
 - The code surface is an embedded Rabbita child cell with keyed line
   children that renders only a windowed slice of the frame; shell updates
   that do not change the surface skip its subtree entirely.

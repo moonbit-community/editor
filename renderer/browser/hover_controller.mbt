@@ -73,7 +73,7 @@ fn HoverController::on_event(
   ctx : EditorContext,
 ) -> (@rabbita.Cmd, HoverController) {
   match event {
-    MouseMoved(target, _) =>
+    MouseMoved(target) =>
       match ctx.frame {
         Some(frame) =>
           match span_anchor_for_target(frame, target) {
@@ -83,7 +83,6 @@ fn HoverController::on_event(
         None => (@rabbita.none, self)
       }
     MouseLeft | EscapePressed => (@rabbita.none, self.cleared())
-    _ => (@rabbita.none, self)
   }
 }
 

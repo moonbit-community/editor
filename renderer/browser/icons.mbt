@@ -38,17 +38,6 @@ fn icon_file() -> @html.Html {
 }
 
 ///|
-/// Close cross for widget headers.
-fn icon_close() -> @html.Html {
-  icon_svg("icon-close", [
-    @svg.path(
-      d="M3.7 3 L3 3.7 L7.3 8 L3 12.3 L3.7 13 L8 8.7 L12.3 13 L13 12.3 L8.7 8 L13 3.7 L12.3 3 L8 7.3 Z",
-      fill="currentColor",
-    ),
-  ])
-}
-
-///|
 /// Half-filled disc representing the light/dark color-mode toggle.
 fn icon_color_mode() -> @html.Html {
   icon_svg("icon-color-mode", [

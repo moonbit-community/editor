@@ -8,7 +8,6 @@
  *   - vscode/extensions/theme-defaults/themes/dark_plus.json, light_plus.json
  *     (token colors via dark_vs.json / light_vs.json)
  *   - vscode/src/vs/platform/theme/common/colors/*.ts (registry defaults)
- *   - vscode/src/vs/editor/contrib/peekView/browser/peekView.ts
  *
  * Variable names mirror VS Code's `--vscode-<id>` convention with `.`
  * replaced by `-`.
@@ -52,19 +51,6 @@
   --vscode-titleBar-activeBackground: #181818;
   --vscode-titleBar-activeForeground: #cccccc;
   --vscode-titleBar-border: #2b2b2b;
-
-  --vscode-peekView-border: #59a4f9;
-  --vscode-peekViewTitle-background: #252526;
-  --vscode-peekViewTitleLabel-foreground: #ffffff;
-  --vscode-peekViewTitleDescription-foreground: #ccccccb3;
-  --vscode-peekViewResult-background: #1f1f1f;
-  --vscode-peekViewResult-fileForeground: #ffffff;
-  --vscode-peekViewResult-lineForeground: #bbbbbb;
-  --vscode-peekViewResult-selectionBackground: #3399ff33;
-  --vscode-peekViewResult-selectionForeground: #ffffff;
-  --vscode-peekViewResult-matchHighlightBackground: #bb800966;
-  --vscode-peekViewEditor-background: #1f1f1f;
-  --vscode-peekViewEditor-matchHighlightBackground: #bb800966;
 
   --vscode-scrollbarSlider-background: #79797966;
   --vscode-scrollbarSlider-hoverBackground: #646464b3;
@@ -127,19 +113,6 @@
   --vscode-titleBar-activeBackground: #f8f8f8;
   --vscode-titleBar-activeForeground: #1e1e1e;
   --vscode-titleBar-border: #e5e5e5;
-
-  --vscode-peekView-border: #0063d3;
-  --vscode-peekViewTitle-background: #f3f3f3;
-  --vscode-peekViewTitleLabel-foreground: #000000;
-  --vscode-peekViewTitleDescription-foreground: #616161;
-  --vscode-peekViewResult-background: #ffffff;
-  --vscode-peekViewResult-fileForeground: #1e1e1e;
-  --vscode-peekViewResult-lineForeground: #646465;
-  --vscode-peekViewResult-selectionBackground: #3399ff33;
-  --vscode-peekViewResult-selectionForeground: #6c6c6c;
-  --vscode-peekViewResult-matchHighlightBackground: #bb800966;
-  --vscode-peekViewEditor-background: #f2f8fc;
-  --vscode-peekViewEditor-matchHighlightBackground: #bb800966;
 
   --vscode-scrollbarSlider-background: #64646466;
   --vscode-scrollbarSlider-hoverBackground: #646464b3;
@@ -581,28 +554,6 @@ body {
   background: var(--vscode-editor-hoverHighlightBackground);
 }
 
-.definition-candidate:focus {
-  outline: 1px solid var(--vscode-focusBorder);
-  outline-offset: -1px;
-}
-
-/* Ctrl/Cmd-hover affordance over a navigable symbol. */
-.goto-definition-link {
-  color: var(--vscode-editorLink-activeForeground) !important;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-/* Line containing the navigated-to definition. */
-.code-line.range-highlight {
-  background: var(--vscode-editor-rangeHighlightBackground);
-}
-
-/* The navigated-to symbol itself, mirroring VS Code selecting the word. */
-.definition-target {
-  background: var(--vscode-editor-selectionBackground);
-}
-
 /* Editor hover widget, anchored at the hovered range inside .code-lines.
    It sits above the line by default and flips below via the .below class
    once the after-render measurement detects viewport overflow. */
@@ -632,163 +583,6 @@ body {
 
 .hover-widget .hover-contents {
   padding: 4px 8px;
-}
-
-/* Inline references peek widget. It lives in the code-lines flow so the
-   lines below shift down; sticky positioning plus a container-relative
-   width keep it pinned to the visible editor area while code scrolls
-   horizontally. */
-.code-viewer {
-  container-type: inline-size;
-}
-
-.peek-widget {
-  position: sticky;
-  left: 0;
-  width: 100cqw;
-  border-top: 2px solid var(--vscode-peekView-border);
-  border-bottom: 2px solid var(--vscode-peekView-border);
-  background: var(--vscode-editor-background);
-  font-family: var(--ui-font-family);
-  white-space: normal;
-}
-
-.peek-head {
-  height: 22px;
-  padding: 0 4px 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--vscode-peekViewTitle-background);
-}
-
-.peek-title {
-  color: var(--vscode-peekViewTitleLabel-foreground);
-  font-size: 13px;
-}
-
-.peek-meta {
-  flex: 1 1 auto;
-  overflow: hidden;
-  color: var(--vscode-peekViewTitleDescription-foreground);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.peek-close {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-  display: inline-grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--vscode-icon-foreground);
-  cursor: pointer;
-}
-
-.peek-close:hover {
-  background: var(--vscode-list-hoverBackground);
-}
-
-.peek-body {
-  height: calc(18 * var(--editor-line-height));
-  display: grid;
-  grid-template-columns: 7fr 3fr;
-  min-width: 0;
-}
-
-.peek-preview {
-  min-width: 0;
-  overflow: auto;
-  background: var(--vscode-peekViewEditor-background);
-}
-
-.peek-preview-caption {
-  padding: 1px 8px;
-  color: var(--vscode-peekViewTitleDescription-foreground);
-  font-size: 12px;
-}
-
-.peek-match {
-  background: var(--vscode-peekViewEditor-matchHighlightBackground);
-}
-
-.peek-list {
-  min-width: 0;
-  overflow: auto;
-  border-left: 1px solid var(--vscode-widget-border);
-  background: var(--vscode-peekViewResult-background);
-  font-size: 13px;
-}
-
-.peek-file-row {
-  height: 22px;
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--vscode-peekViewResult-fileForeground);
-}
-
-.peek-file-icon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  display: inline-grid;
-  place-items: center;
-  color: var(--vscode-icon-foreground);
-}
-
-.peek-file-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.peek-file-count {
-  margin-left: auto;
-  color: var(--vscode-peekViewTitleDescription-foreground);
-  font-size: 11px;
-}
-
-.peek-ref-row {
-  width: 100%;
-  height: 22px;
-  padding: 0 8px 0 24px;
-  display: block;
-  overflow: hidden;
-  border: 0;
-  background: transparent;
-  color: var(--vscode-peekViewResult-lineForeground);
-  font: 13px/22px var(--ui-font-family);
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.peek-ref-row:hover {
-  background: var(--vscode-list-hoverBackground);
-}
-
-.peek-ref-row.selected {
-  background: var(--vscode-peekViewResult-selectionBackground);
-  color: var(--vscode-peekViewResult-selectionForeground);
-}
-
-.peek-list-match {
-  background: var(--vscode-peekViewResult-matchHighlightBackground);
-}
-
-.peek-empty {
-  padding: 8px;
-  color: var(--vscode-foreground);
-  font-size: 13px;
 }
 
 .diagnostics {

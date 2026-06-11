@@ -2,10 +2,7 @@
 /// Feature state the code surface renders besides the frame itself. Pure
 /// data with equality, so the shell can skip pushes that change nothing.
 priv struct CodeSurface {
-  document_uri : String
   hover : HoverController
-  definition : DefinitionController
-  references : ReferencesController
 } derive(Eq)
 
 ///|
@@ -105,12 +102,7 @@ fn code_cell_key(
 
 ///|
 fn code_surface(model : BrowserAppModel) -> CodeSurface {
-  {
-    document_uri: active_document_uri(model.document),
-    hover: model.hover,
-    definition: model.definition,
-    references: model.references,
-  }
+  { hover: model.hover }
 }
 
 ///|
@@ -215,9 +207,7 @@ fn push_code_frame_cmd(
 
 ///|
 /// Renders only the windowed lines, with spacers keeping the full scroll
-/// height so the native scrollbar and arithmetic reveal stay correct. The
-/// peek view zone renders inside the window and adds its height to the
-/// spacer covering its side when it falls outside.
+/// height so the native scrollbar stays correct.
 fn view_code_surface(
   emit : @rabbita.Emit[BrowserMsg],
   model : CodeCellModel,
@@ -227,18 +217,8 @@ fn view_code_surface(
   let start = @core.clamp_int(model.window.start, 0, frame.lines.length())
   let end = @core.clamp_int(model.window.end, start, frame.lines.length())
   let decorations = controller_decorations(surface)
-  let zone = surface.references.zone_widget(emit, frame, surface.document_uri)
-  let mut top_px = start * editor_line_height
-  let mut bottom_px = (frame.line_count - end) * editor_line_height
-  match zone {
-    Some((anchor_line, _)) =>
-      if anchor_line <= start {
-        top_px = top_px + peek_zone_height_px
-      } else if anchor_line > end {
-        bottom_px = bottom_px + peek_zone_height_px
-      }
-    None => ()
-  }
+  let top_px = start * editor_line_height
+  let bottom_px = (frame.line_count - end) * editor_line_height
   let children : Map[String, @html.Html] = {}
   children["char-probe"] = @html.span(
     class="char-probe",
@@ -249,13 +229,6 @@ fn view_code_surface(
   for index in start..<end {
     let line = frame.lines[index]
     children["L" + line.line_number.to_string()] = view_line(decorations, line)
-    match zone {
-      Some((anchor_line, widget)) =>
-        if anchor_line == line.line_number {
-          children["references-peek"] = widget
-        }
-      None => ()
-    }
   }
   children["bottom-spacer"] = line_spacer(bottom_px)
   match surface.hover.widget(frame) {

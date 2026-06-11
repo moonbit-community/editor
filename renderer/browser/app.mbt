@@ -24,13 +24,10 @@ priv struct BrowserAppModel {
   collapsed_workspace_ids : Array[String]
   provider_result : @language.ProviderResult
   hover : HoverController
-  definition : DefinitionController
-  references : ReferencesController
   scroll_top : Double
   viewer_height : Double
   char_width : Double
   gutter_width : Double
-  last_target : @renderer.MouseTarget?
 }
 
 ///|
@@ -42,9 +39,7 @@ priv enum BrowserMsg {
   SelectWorkspace(String)
   ToggleFolder(String)
   ToggleTheme
-  EditorMouseMoved(Double, Double, Bool)
-  EditorMouseDown(Double, Double, Bool)
-  EditorContextMenu(Double, Double)
+  EditorMouseMoved(Double, Double)
   EditorMouseLeft
   EditorScrolled(Double)
   ViewerMeasured(Double, Double, Double)
@@ -54,16 +49,10 @@ priv enum BrowserMsg {
   HoverLoadingDue(Int)
   HoverMeasured(Bool, Double)
   HoverResolved(Int, Int, @language.Hover?)
-  DefinitionResolved(Int, @language.Location?)
-  ReferencesResolved(Int, Array[@remote_protocol.ReferenceItem])
   DiagnosticsResolved(Int, Array[@language.Diagnostic])
   SymbolsResolved(Int, Array[@language.DocumentSymbol])
   SemanticTokensResolved(Int, Array[@language.SemanticToken])
   GlobalKeyDown(@common.Keyboard)
-  GlobalKeyUp(@common.Keyboard)
-  SelectReference(Int)
-  OpenReference(Int)
-  ClosePeek
 }
 
 ///|
@@ -86,7 +75,6 @@ pub fn mount_app() -> Unit {
     subscriptions=(emit, _model) => {
       @sub.batch([
         @sub.on_key_down(emit.map(keyboard => GlobalKeyDown(keyboard))),
-        @sub.on_key_up(emit.map(keyboard => GlobalKeyUp(keyboard))),
         @sub.on_resize(emit.map(_ => ViewerResized)),
       ])
     },
@@ -118,13 +106,10 @@ fn initial_browser_model() -> BrowserAppModel {
     collapsed_workspace_ids: [],
     provider_result: @language.ProviderResult::empty(),
     hover: HoverController::empty(),
-    definition: DefinitionController::empty(),
-    references: ReferencesController::empty(),
     scroll_top: 0.0,
     viewer_height: 0.0,
     char_width: 0.0,
     gutter_width: 0.0,
-    last_target: None,
   }
 }
 
@@ -185,7 +170,6 @@ fn browser_update(
               document: update_document_uri(model.document, uri),
               provider_result: @language.ProviderResult::empty(),
               hover: model.hover.cleared(),
-              definition: model.definition.deactivated(),
             },
           )
         }
@@ -209,11 +193,7 @@ fn browser_update(
         { ..model, theme, },
       )
     }
-    EditorMouseMoved(x, y, modifier) =>
-      editor_mouse_moved_update(emit, model, x, y, modifier)
-    EditorMouseDown(x, y, modifier) =>
-      editor_mouse_down_update(emit, model, x, y, modifier)
-    EditorContextMenu(x, y) => editor_context_menu_update(emit, model, x, y)
+    EditorMouseMoved(x, y) => editor_mouse_moved_update(emit, model, x, y)
     EditorMouseLeft => editor_event_update(emit, model, MouseLeft)
     EditorScrolled(top) => (@rabbita.none, { ..model, scroll_top: top })
     ViewerMeasured(height, char_width, gutter_width) =>
@@ -248,16 +228,6 @@ fn browser_update(
       )
       (cmd, { ..model, hover: controller })
     }
-    DefinitionResolved(version, location) =>
-      definition_resolved_update(emit, model, version, location)
-    ReferencesResolved(version, items) =>
-      (
-        @rabbita.none,
-        {
-          ..model,
-          references: model.references.resolved(items, version, model.frame),
-        },
-      )
     DiagnosticsResolved(version, diagnostics) =>
       if document_version(model.source_document) == version {
         semantic_payload_update(model, { ..model.provider_result, diagnostics, })
@@ -279,57 +249,13 @@ fn browser_update(
       } else {
         (@rabbita.none, model)
       }
-    GlobalKeyDown(keyboard) => {
-      let modifier = keyboard.ctrl_key() || keyboard.meta_key()
+    GlobalKeyDown(keyboard) =>
       if keyboard.key() == "Escape" {
-        fan_editor_events(emit, model, [
-          EscapePressed,
-          GotoModifierChanged(modifier),
-        ])
-      } else if keyboard.key() == "F12" {
-        editor_event_update(emit, model, GotoKeyCommand(keyboard.shift_key()))
+        editor_event_update(emit, model, EscapePressed)
       } else {
-        editor_event_update(emit, model, GotoModifierChanged(modifier))
+        (@rabbita.none, model)
       }
-    }
-    GlobalKeyUp(keyboard) =>
-      editor_event_update(
-        emit,
-        model,
-        GotoModifierChanged(keyboard.ctrl_key() || keyboard.meta_key()),
-      )
-    SelectReference(index) =>
-      (@rabbita.none, { ..model, references: model.references.selected(index) })
-    OpenReference(index) =>
-      match model.references.item_at(index) {
-        Some(item) => {
-          let closed = { ..model, references: model.references.closed() }
-          definition_navigation_update(emit, closed, {
-            uri: item.uri,
-            range: item.range,
-          })
-        }
-        None => (@rabbita.none, model)
-      }
-    ClosePeek =>
-      (@rabbita.none, { ..model, references: model.references.closed() })
   }
-}
-
-///|
-fn fan_editor_events(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  events : Array[EditorEvent],
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  let commands : Array[@rabbita.Cmd] = []
-  let mut current = model
-  for event in events {
-    let (cmd, next) = editor_event_update(emit, current, event)
-    commands.push(cmd)
-    current = next
-  }
-  (@rabbita.batch(commands), current)
 }
 
 ///|
@@ -346,13 +272,6 @@ fn select_workspace_update(
     status_message: "",
     frame: None,
     hover: HoverController::empty(),
-    definition: {
-      ..model.definition,
-      link_anchor: None,
-      active: None,
-      pending_reveal: None,
-    },
-    references: model.references.closed(),
   }
   (
     @rabbita.batch([
@@ -455,102 +374,11 @@ fn server_packet_update(
 }
 
 ///|
-fn definition_resolved_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  version : Int,
-  location : @language.Location?,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  if frame_version(model.frame) != version {
-    return (@rabbita.none, model)
-  }
-  match location {
-    Some(location) => {
-      emit_event(
-        "language:definition",
-        "{\"ok\":true,\"version\":" +
-        version.to_string() +
-        ",\"uri\":" +
-        json_string(location.uri.to_string()) +
-        "}",
-      )
-      definition_navigation_update(emit, model, {
-        uri: location.uri.to_string(),
-        range: location.range,
-      })
-    }
-    None => {
-      emit_event(
-        "language:definition",
-        "{\"ok\":false,\"version\":" + version.to_string() + "}",
-      )
-      (@rabbita.none, model)
-    }
-  }
-}
-
-///|
 fn document_version(document : @workspace.SourceDocument?) -> Int {
   match document {
     Some(document) => document.version
     None => -1
   }
-}
-
-///|
-/// Navigates to a resolved location: same-document targets are revealed
-/// and highlighted in place; targets in another workspace file open that
-/// file first and reveal once it renders.
-fn definition_navigation_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  view : DefinitionView,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  if view.uri == active_document_uri(model.document) {
-    let cmd = match model.frame {
-      Some(frame) =>
-        match line_col_for_offset(frame, view.range.start) {
-          Some((line_number, _)) => reveal_line_cmd(line_number)
-          None => @rabbita.none
-        }
-      None => @rabbita.none
-    }
-    (cmd, { ..model, definition: model.definition.navigated(view) })
-  } else {
-    let (cmd, next) = select_workspace_update(
-      emit,
-      model,
-      workspace_id_from_uri(view.uri),
-    )
-    (cmd, { ..next, definition: next.definition.deferred(view) })
-  }
-}
-
-///|
-/// Scrolls the target line to the vertical center of the viewer when it is
-/// outside the visible range, mirroring VS Code's reveal behavior. Pure
-/// scroll arithmetic: with windowed rendering the target line may not be
-/// in the DOM until the scroll itself brings it into the window.
-fn reveal_line_cmd(line_number : Int) -> @rabbita.Cmd {
-  @cmd.custom_cmd(
-    _ => {
-      match @rdom.document().query_selector(".code-viewer").to_option() {
-        Some(viewer) => {
-          let viewer_height = viewer.get_bounding_client_rect().get_height()
-          let line_top = ((line_number - 1) * editor_line_height).to_double()
-          let line_bottom = line_top + editor_line_height.to_double()
-          let view_top = viewer.get_scroll_top()
-          let view_bottom = view_top + viewer_height
-          if line_top < view_top || line_bottom > view_bottom {
-            let target = line_top - viewer_height / 2.0
-            viewer.set_scroll_top(if target < 0.0 { 0.0 } else { target })
-          }
-        }
-        None => ()
-      }
-    },
-    kind=@cmd.after_render,
-  )
 }
 
 ///|
@@ -601,7 +429,6 @@ fn document_payload_update(
     ..model,
     provider_result: @language.ProviderResult::empty(),
     hover: model.hover.cleared(),
-    definition: model.definition.deactivated(),
   }
   (
     render_document_cmd(
@@ -645,7 +472,6 @@ fn protocol_error_update(
         status_message: "Source file is missing.",
         frame: None,
         hover: model.hover.cleared(),
-        definition: model.definition.deactivated(),
       },
     )
   } else {
@@ -664,7 +490,6 @@ fn document_rendered_update(
   watch : Bool,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   let document = document_to_view(rendered.document)
-  let (pending, definition) = model.definition.claim_pending(document.uri)
   let next = {
     ..model,
     status: "ready",
@@ -674,7 +499,6 @@ fn document_rendered_update(
     document: Some(document),
     selected_workspace_id: selected_workspace_for_document(document),
     hover: model.hover.cleared(),
-    definition,
   }
   // A rotated cell key remounts the viewer element, which starts at
   // scroll offset zero.
@@ -692,14 +516,6 @@ fn document_rendered_update(
   ]
   if watch {
     commands.push(language_feature_cmds(emit, rendered.document))
-  }
-  match pending {
-    Some(item) =>
-      match line_col_for_offset(rendered.frame, item.range.start) {
-        Some((line_number, _)) => commands.push(reveal_line_cmd(line_number))
-        None => ()
-      }
-    None => ()
   }
   (@rabbita.batch(commands), next)
 }
@@ -920,9 +736,6 @@ fn view_span(
   absolute_end : Int,
 ) -> @html.Html {
   let mut class_name = span.class_name
-  if is_definition_candidate(span) {
-    class_name = class_name + " definition-candidate"
-  }
   let span_range = @core.Range(absolute_start, absolute_end)
   for decoration in decorations {
     if decoration.kind != CurrentLine && decoration.range.intersects(span_range) {
@@ -1193,19 +1006,6 @@ fn source_message(model : BrowserAppModel) -> String {
       }
     _ => ""
   }
-}
-
-///|
-fn is_definition_candidate(span : @renderer.RenderSpan) -> Bool {
-  if span.text.trim() == "" {
-    return false
-  }
-  for class_view in span.class_name.split(" ") {
-    if class_view.to_owned() == "tok-identifier" {
-      return true
-    }
-  }
-  false
 }
 
 ///|

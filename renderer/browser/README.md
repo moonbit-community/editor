@@ -10,13 +10,11 @@ Browser render backend adapter.
   converts DOM events into typed `EditorEvent`s through the renderer's
   shared `hit_test`, fed by tracked view metrics (scroll offset, measured
   viewer height, char-probe width, gutter width). Rendered spans carry no
-  handlers; overlay widgets swallow events under them. F12/Shift+F12 act on
-  the last mouse target.
-- Own the feature controllers (`HoverController`, `DefinitionController`,
-  `ReferencesController`): each consumes editor events and answers with
-  commands, span/line decorations, and widgets. Hover follows Monaco's
-  timing (request at half the 300ms delay, display gated at the full delay,
-  loading hover at 3x).
+  handlers; overlay widgets swallow events under them.
+- Own the feature controllers (`HoverController` today): each consumes
+  editor events and answers with commands, span/line decorations, and
+  widgets. Hover follows Monaco's timing (request at half the 300ms delay,
+  display gated at the full delay, loading hover at 3x).
 - Own the browser protocol client: counter-based request ids with a pending
   table so each response resumes its own suspended request, and the
   `language` provider trait implementations (`RemoteLanguageClient` in an
@@ -31,6 +29,9 @@ Browser render backend adapter.
 - Emit browser observability events such as `moonbit:render` (with
   `buildMs`) and `dom:mounted` (with windowed `renderedLines` and
   `patchMs`).
+
+Go-to-definition and find-references were removed for now; the viewer
+focuses on hover until those features can be rebuilt without their bugs.
 
 ## Boundaries
 

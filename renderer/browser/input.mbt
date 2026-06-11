@@ -4,12 +4,6 @@
 let fallback_char_width = 7.2
 
 ///|
-/// Pixel height of the references peek view zone: head row, body lines, and
-/// the top/bottom borders. Keep in sync with `.peek-head`/`.peek-body` in
-/// app/src/style.css.
-let peek_zone_height_px : Int = 22 + peek_body_lines * editor_line_height + 4
-
-///|
 /// Builds the hit-test geometry for the current frame from tracked view
 /// state, falling back to font constants before the first measurement.
 fn view_metrics(
@@ -35,7 +29,7 @@ fn view_metrics(
     line_height: editor_line_height,
     char_width,
     gutter_width,
-    view_zones: model.references.view_zones(),
+    view_zones: [],
   }
 }
 
@@ -123,57 +117,11 @@ fn editor_mouse_moved_update(
   model : BrowserAppModel,
   x : Double,
   y : Double,
-  modifier : Bool,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   match model.frame {
     Some(frame) => {
       let target = @renderer.hit_test(frame, view_metrics(model, frame), x, y)
-      editor_event_update(
-        emit,
-        { ..model, last_target: Some(target) },
-        MouseMoved(target, modifier),
-      )
-    }
-    None => (@rabbita.none, model)
-  }
-}
-
-///|
-fn editor_mouse_down_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  x : Double,
-  y : Double,
-  modifier : Bool,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  match model.frame {
-    Some(frame) => {
-      let target = @renderer.hit_test(frame, view_metrics(model, frame), x, y)
-      editor_event_update(
-        emit,
-        { ..model, last_target: Some(target) },
-        MouseDown(target, modifier),
-      )
-    }
-    None => (@rabbita.none, model)
-  }
-}
-
-///|
-fn editor_context_menu_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  x : Double,
-  y : Double,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  match model.frame {
-    Some(frame) => {
-      let target = @renderer.hit_test(frame, view_metrics(model, frame), x, y)
-      editor_event_update(
-        emit,
-        { ..model, last_target: Some(target) },
-        ContextMenuRequested(target),
-      )
+      editor_event_update(emit, model, MouseMoved(target))
     }
     None => (@rabbita.none, model)
   }
@@ -187,26 +135,7 @@ fn code_viewer_attrs(emit : @rabbita.Emit[BrowserMsg]) -> @html.Attrs {
   .aria_label("Readonly code viewer")
   .on_mousemove(event => {
     match viewer_mouse_position(event) {
-      Some((x, y)) =>
-        emit(
-          EditorMouseMoved(x, y, event.get_ctrl_key() || event.get_meta_key()),
-        )
-      None => @rabbita.none
-    }
-  })
-  .on_click(event => {
-    match viewer_mouse_position(event) {
-      Some((x, y)) =>
-        emit(
-          EditorMouseDown(x, y, event.get_ctrl_key() || event.get_meta_key()),
-        )
-      None => @rabbita.none
-    }
-  })
-  .on_contextmenu(event => {
-    event.prevent_default()
-    match viewer_mouse_position(event) {
-      Some((x, y)) => emit(EditorContextMenu(x, y))
+      Some((x, y)) => emit(EditorMouseMoved(x, y))
       None => @rabbita.none
     }
   })

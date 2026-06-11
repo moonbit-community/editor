@@ -541,8 +541,21 @@ body {
   outline-offset: -1px;
 }
 
-.definition-target {
+/* Ctrl/Cmd-hover affordance over a navigable symbol. */
+.goto-definition-link {
+  color: var(--vscode-editorLink-activeForeground) !important;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Line containing the navigated-to definition. */
+.code-line.range-highlight {
   background: var(--vscode-editor-rangeHighlightBackground);
+}
+
+/* The navigated-to symbol itself, mirroring VS Code selecting the word. */
+.definition-target {
+  background: var(--vscode-editor-selectionBackground);
 }
 
 /* Editor hover widget, anchored at the hovered range inside .code-lines.

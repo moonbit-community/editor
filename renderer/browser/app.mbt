@@ -82,6 +82,11 @@ priv struct BrowserAppModel {
   pending_reveal : DefinitionView?
   peek : PeekView?
   peek_anchor_offset : Int?
+  scroll_top : Double
+  viewer_height : Double
+  char_width : Double
+  gutter_width : Double
+  last_target : @renderer.MouseTarget?
 }
 
 ///|
@@ -93,15 +98,17 @@ priv enum BrowserMsg {
   SelectWorkspace(String)
   ToggleFolder(String)
   ToggleTheme
-  ScheduleHover(Int, Int, Int)
+  EditorMouseMoved(Double, Double, Bool)
+  EditorMouseDown(Double, Double, Bool)
+  EditorContextMenu(Double, Double)
+  EditorMouseLeft
+  EditorScrolled(Double)
+  ViewerMeasured(Double, Double, Double)
+  ViewerResized
   FireHover(Int)
   HoverMeasured(Bool, Double)
-  ClearHover
   GlobalKeyDown(@common.Keyboard)
   GlobalKeyUp(@common.Keyboard)
-  SetGotoModifier(Bool)
-  RequestDefinition(Int, Int)
-  RequestReferences(Int, Int)
   SelectReference(Int)
   OpenReference(Int)
   ClosePeek
@@ -128,6 +135,7 @@ pub fn mount_app() -> Unit {
       @sub.batch([
         @sub.on_key_down(emit.map(keyboard => GlobalKeyDown(keyboard))),
         @sub.on_key_up(emit.map(keyboard => GlobalKeyUp(keyboard))),
+        @sub.on_resize(emit.map(_ => ViewerResized)),
       ])
     },
   )
@@ -163,6 +171,11 @@ fn initial_browser_model() -> BrowserAppModel {
     pending_reveal: None,
     peek: None,
     peek_anchor_offset: None,
+    scroll_top: 0.0,
+    viewer_height: 0.0,
+    char_width: 0.0,
+    gutter_width: 0.0,
+    last_target: None,
   }
 }
 
@@ -216,27 +229,19 @@ fn update_browser_app(
       let theme = if model.theme == "light" { "dark" } else { "light" }
       (persist_theme_cmd(theme), { ..model, theme, })
     }
-    ScheduleHover(start, end, offset) => {
-      let same = match model.hover_anchor {
-        Some(anchor) => anchor.start == start && anchor.end == end
-        None => false
-      }
-      if same {
-        (@rabbita.none, model)
-      } else {
-        let token = model.hover_token + 1
-        (
-          @cmd.delay(emit(FireHover(token)), hover_delay_ms),
-          {
-            ..model,
-            hover_token: token,
-            hover_anchor: Some({ start, end, offset }),
-            hover: None,
-            hover_placement: None,
-          },
-        )
-      }
-    }
+    EditorMouseMoved(x, y, modifier) =>
+      editor_mouse_moved_update(emit, model, x, y, modifier)
+    EditorMouseDown(x, y, modifier) =>
+      editor_mouse_down_update(emit, model, x, y, modifier)
+    EditorContextMenu(x, y) => editor_context_menu_update(emit, model, x, y)
+    EditorMouseLeft => (@rabbita.none, clear_hover(model))
+    EditorScrolled(top) => (@rabbita.none, { ..model, scroll_top: top })
+    ViewerMeasured(height, char_width, gutter_width) =>
+      (
+        @rabbita.none,
+        { ..model, viewer_height: height, char_width, gutter_width },
+      )
+    ViewerResized => (measure_viewer_cmd(), model)
     FireHover(token) =>
       if token == model.hover_token {
         match model.hover_anchor {
@@ -259,11 +264,6 @@ fn update_browser_app(
       }
     HoverMeasured(below, shift_left) =>
       (@rabbita.none, { ..model, hover_placement: Some({ below, shift_left }) })
-    ClearHover =>
-      (
-        @rabbita.none,
-        { ..model, hover: None, hover_anchor: None, hover_placement: None },
-      )
     GlobalKeyDown(keyboard) => {
       let modifier = keyboard.ctrl_key() || keyboard.meta_key()
       if keyboard.key() == "Escape" {
@@ -280,23 +280,14 @@ fn update_browser_app(
             peek_anchor_offset: None,
           },
         )
+      } else if keyboard.key() == "F12" {
+        editor_key_command_update(emit, model, keyboard.shift_key())
       } else {
         set_goto_modifier(model, modifier)
       }
     }
     GlobalKeyUp(keyboard) =>
       set_goto_modifier(model, keyboard.ctrl_key() || keyboard.meta_key())
-    SetGotoModifier(modifier) => set_goto_modifier(model, modifier)
-    RequestDefinition(offset, version) =>
-      (
-        definition_resolution_cmd(emit, model.source_document, offset, version),
-        { ..model, definition: None },
-      )
-    RequestReferences(offset, version) =>
-      (
-        references_resolution_cmd(emit, model.source_document, offset, version),
-        { ..model, peek: None, peek_anchor_offset: Some(offset) },
-      )
     SelectReference(index) =>
       match model.peek {
         Some(peek) =>
@@ -717,7 +708,7 @@ fn document_rendered_update(
     definition: pending,
     pending_reveal: None,
   }
-  let commands = [dom_mounted_cmd(rendered.frame, "ready")]
+  let commands = [dom_mounted_cmd(rendered.frame, "ready"), measure_viewer_cmd()]
   if watch {
     commands.push(language_requests_cmd(emit, rendered.document))
   }
@@ -897,15 +888,20 @@ fn view_code_viewer(
   frame : @renderer.RenderFrame,
 ) -> @html.Html {
   let children = line_nodes(emit, model, frame)
+  children.push(
+    @html.span(
+      class="char-probe",
+      attrs=@html.Attrs::build().aria_hidden("true"),
+      char_probe_text,
+    ),
+  )
   match view_hover_widget(model, frame) {
     Some(widget) => children.push(widget)
     None => ()
   }
   @html.section(
     class="code-viewer",
-    attrs=@html.Attrs::build()
-      .aria_label("Readonly code viewer")
-      .on_mouseleave(_ => emit(ClearHover)),
+    attrs=code_viewer_attrs(emit),
     @html.div(class="code-lines", children),
   )
 }
@@ -918,7 +914,7 @@ fn line_nodes(
 ) -> Array[@html.Html] {
   let rows : Array[@html.Html] = []
   for line in frame.lines {
-    rows.push(view_line(emit, model, frame, line))
+    rows.push(view_line(model, line))
     match model.peek {
       Some(peek) =>
         if peek.anchor_line == line.line_number {
@@ -949,7 +945,9 @@ fn view_peek_widget(
   }
   @html.div(
     class="peek-widget",
-    attrs=@html.Attrs::build().data_set("peek", "references"),
+    attrs=widget_overlay_attrs(
+      @html.Attrs::build().data_set("peek", "references"),
+    ),
     [
       @html.div(class="peek-head", [
         @html.span(class="peek-title", "References"),
@@ -1133,9 +1131,7 @@ fn line_text_match_nodes(
 
 ///|
 fn view_line(
-  emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
-  frame : @renderer.RenderFrame,
   line : @renderer.RenderLine,
 ) -> @html.Html {
   let class_name = if line_intersects_definition(model, line) {
@@ -1151,7 +1147,7 @@ fn view_line(
       if line.spans.length() == 0 {
         @html.pre(class="code", if line.text == "" { " " } else { line.text })
       } else {
-        @html.pre(class="code", span_nodes(emit, model, frame, line))
+        @html.pre(class="code", span_nodes(model, line))
       },
     ],
   )
@@ -1159,9 +1155,7 @@ fn view_line(
 
 ///|
 fn span_nodes(
-  emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
-  frame : @renderer.RenderFrame,
   line : @renderer.RenderLine,
 ) -> Array[@html.Html] {
   let spans : Array[@html.Html] = []
@@ -1169,18 +1163,16 @@ fn span_nodes(
     let span = line.spans[i]
     let absolute_start = line.offset + span.start
     let absolute_end = line.offset + span.end
-    spans.push(
-      view_span(emit, model, frame, span, absolute_start, absolute_end),
-    )
+    spans.push(view_span(model, span, absolute_start, absolute_end))
   }
   spans
 }
 
 ///|
+/// Spans carry no handlers or data attributes: text plus classes only. All
+/// interaction routes through the container hit test.
 fn view_span(
-  emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
-  frame : @renderer.RenderFrame,
   span : @renderer.RenderSpan,
   absolute_start : Int,
   absolute_end : Int,
@@ -1192,7 +1184,6 @@ fn view_span(
     absolute_start,
     absolute_end,
   )
-  let offset = (absolute_start + absolute_end) / 2
   let candidate = is_definition_candidate(span)
   let mut class_name = span.class_name
   if hover is Some(_) {
@@ -1208,64 +1199,7 @@ fn view_span(
   if definition is Some(_) {
     class_name = class_name + " has-definition definition-target"
   }
-  let mut attrs = @html.Attrs::build()
-  attrs = attrs.data_set("start", absolute_start.to_string())
-  attrs = attrs.data_set("end", absolute_end.to_string())
-  attrs = attrs.on_mouseover(_ => {
-    emit(ScheduleHover(absolute_start, absolute_end, offset))
-  })
-  attrs = attrs.on_mousemove(event => {
-    let modifier = event.get_ctrl_key() || event.get_meta_key()
-    if modifier != model.goto_modifier {
-      @rabbita.batch([
-        emit(SetGotoModifier(modifier)),
-        emit(ScheduleHover(absolute_start, absolute_end, offset)),
-      ])
-    } else {
-      emit(ScheduleHover(absolute_start, absolute_end, offset))
-    }
-  })
-  attrs = attrs.on_focus(_ => {
-    emit(ScheduleHover(absolute_start, absolute_end, offset))
-  })
-  match hover {
-    Some(item) => attrs = attrs.data_set("hover", item.contents)
-    None => ()
-  }
-  if candidate {
-    attrs = attrs.tabindex(0)
-    attrs = attrs.on_click(event => {
-      if event.get_ctrl_key() || event.get_meta_key() {
-        emit(RequestDefinition(offset, frame.version))
-      } else {
-        @rabbita.none
-      }
-    })
-    attrs = attrs.on_contextmenu(event => {
-      event.prevent_default()
-      emit(RequestReferences(offset, frame.version))
-    })
-    attrs = attrs.on_keydown(event => {
-      if event.key() == "F12" {
-        if event.shift_key() {
-          emit(RequestReferences(offset, frame.version))
-        } else {
-          emit(RequestDefinition(offset, frame.version))
-        }
-      } else {
-        @rabbita.none
-      }
-    })
-  }
-  match definition {
-    Some(item) => {
-      attrs = attrs.data_set("definition-uri", item.uri)
-      attrs = attrs.data_set("definition-start", item.range.start.to_string())
-      attrs = attrs.data_set("definition-target", "true")
-    }
-    None => ()
-  }
-  @html.span(class=class_name, attrs~, span.text)
+  @html.span(class=class_name, span.text)
 }
 
 ///|
@@ -1331,7 +1265,7 @@ fn view_hover_widget(
             class_name = class_name + " below"
           }
           let digits = frame.line_count.to_string().length()
-          let mut attrs = @html.Attrs::build()
+          let mut attrs = widget_overlay_attrs(@html.Attrs::build())
             .role("tooltip")
             .style("top", top.to_string() + "px")
             .style(

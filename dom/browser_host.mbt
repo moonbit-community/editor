@@ -36,6 +36,12 @@ pub extern "js" fn protocol_websocket_url() -> String =
   #| }
 
 ///|
+/// Monotonic high-resolution timestamp in milliseconds, for render timing
+/// instrumentation.
+pub extern "js" fn now_ms() -> Double =
+  #| () => globalThis.performance?.now() ?? Date.now()
+
+///|
 pub extern "js" fn emit_event(name : String, payload : String) -> Unit =
   #| (name, payload) => {
   #|   if (typeof globalThis.__readonlyEditorEvent === "function") {

@@ -53,7 +53,8 @@ through sidebar selection and the native remote protocol.
 
 The browser host logs structured events prefixed with `[readonly-editor]`:
 
-- `moonbit:render`: source line count, token count, diagnostic count.
+- `moonbit:render`: source line count, token count, diagnostic count, and
+  `buildMs` (frame construction duration).
 - `language:diagnostics`: active document diagnostic count and version after
   semantic provider sync.
 - `language:hover`: successful on-demand hover resolution for the active
@@ -64,7 +65,22 @@ The browser host logs structured events prefixed with `[readonly-editor]`:
   document, with the result count.
 - `language:error`: provider or protocol errors that did not block readonly
   render.
-- `dom:mounted`: rendered line and diagnostic counts after DOM creation.
+- `dom:mounted`: rendered line and diagnostic counts after DOM creation,
+  plus `patchMs` (time from frame build completion to after-paint).
 
 These events are intentionally stable so automated agents can diagnose render
 failures from console output.
+
+## Render Performance Budget
+
+The code surface lives in its own Rabbita child cell with keyed line
+children, so shell-only updates skip the line subtrees entirely and feature
+updates reuse unchanged line DOM. The working budget:
+
+- Interaction re-renders (hover, decorations) should stay under ~2ms.
+- Scrolling should hold 60fps; native scrolling stays untouched between
+  window updates.
+
+`tests/browser/perf.spec.js` opens the small fixture and a generated
+~10k-line fixture and logs `buildMs`/`patchMs` evidence without failing the
+suite.

@@ -54,14 +54,12 @@ fn editor_event_update(
 ///|
 /// Span decorations contributed by every controller for the current state.
 fn controller_decorations(
-  model : BrowserAppModel,
+  surface : CodeSurface,
 ) -> Array[@decorations.Decoration] {
   let items : Array[@decorations.Decoration] = []
-  items.append(model.hover.decorations())
-  items.append(
-    model.definition.decorations(active_document_uri(model.document)),
-  )
-  items.append(model.references.decorations())
+  items.append(surface.hover.decorations())
+  items.append(surface.definition.decorations(surface.document_uri))
+  items.append(surface.references.decorations())
   items
 }
 

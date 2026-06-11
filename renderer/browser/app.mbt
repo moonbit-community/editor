@@ -129,17 +129,32 @@ fn initial_browser_model() -> BrowserAppModel {
 }
 
 ///|
+/// Outer update: after every state transition, the changed feature surface
+/// (if any) is pushed into the embedded code cell, so the cell only
+/// re-renders when something it draws actually changed.
 fn update_browser_app(
   emit : @rabbita.Emit[BrowserMsg],
   msg : BrowserMsg,
   model : BrowserAppModel,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
+  let (cmd, next) = browser_update(emit, msg, model)
+  (@rabbita.batch([cmd, push_code_surface_cmd(next)]), next)
+}
+
+///|
+fn browser_update(
+  emit : @rabbita.Emit[BrowserMsg],
+  msg : BrowserMsg,
+  model : BrowserAppModel,
+) -> (@rabbita.Cmd, BrowserAppModel) {
   match msg {
-    ConnectProtocol =>
+    ConnectProtocol => {
+      invalidate_code_cell()
       (
         connect_protocol_cmd(emit),
         { ..model, status: "loading", status_message: "", frame: None },
       )
+    }
     ProtocolEvent(event) => protocol_event_update(emit, model, event)
     ProtocolSendFailed(message) =>
       (
@@ -150,7 +165,8 @@ fn update_browser_app(
       match result {
         DocumentRendered(rendered) =>
           document_rendered_update(emit, model, rendered, watch)
-        DocumentRenderFailed(uri, status, message) =>
+        DocumentRenderFailed(uri, status, message) => {
+          invalidate_code_cell()
           (
             dom_mounted_status_cmd(status),
             {
@@ -165,6 +181,7 @@ fn update_browser_app(
               definition: model.definition.deactivated(),
             },
           )
+        }
       }
     SelectWorkspace(id) => select_workspace_update(emit, model, id)
     ToggleFolder(id) =>
@@ -305,6 +322,7 @@ fn select_workspace_update(
   model : BrowserAppModel,
   id : String,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
+  invalidate_code_cell()
   let next = {
     ..model,
     selected_workspace_id: id,
@@ -594,6 +612,7 @@ fn protocol_error_update(
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   emit_event("language:error", error.to_json())
   if error.provider_code == "FileNotFound" {
+    invalidate_code_cell()
     (
       dom_mounted_status_cmd("missing"),
       {
@@ -634,6 +653,7 @@ fn document_rendered_update(
     definition,
   }
   let commands = [
+    push_code_frame_cmd(next, rendered.frame),
     dom_mounted_cmd(rendered.frame, "ready"),
     measure_viewer_cmd(),
   ]
@@ -661,7 +681,9 @@ fn view_browser_app(
     @html.div(class="editor-main", [
       view_sidebar(emit, model),
       match model.frame {
-        Some(frame) => view_code_viewer(emit, model, frame)
+        // The code surface is an embedded child cell so shell-only updates
+        // skip its whole subtree (Rabbita's slot diff).
+        Some(frame) => code_surface_cell(emit, model, frame).view()
         None => view_empty_viewer(model)
       },
     ]),
@@ -807,58 +829,6 @@ fn view_file(
       @html.span(class="workspace-label", label),
     ],
   )
-}
-
-///|
-fn view_code_viewer(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  frame : @renderer.RenderFrame,
-) -> @html.Html {
-  let decorations = controller_decorations(model)
-  let children = line_nodes(emit, model, frame, decorations)
-  children.push(
-    @html.span(
-      class="char-probe",
-      attrs=@html.Attrs::build().aria_hidden("true"),
-      char_probe_text,
-    ),
-  )
-  match model.hover.widget(frame) {
-    Some(widget) => children.push(widget)
-    None => ()
-  }
-  @html.section(
-    class="code-viewer",
-    attrs=code_viewer_attrs(emit),
-    @html.div(class="code-lines", children),
-  )
-}
-
-///|
-fn line_nodes(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  frame : @renderer.RenderFrame,
-  decorations : Array[@decorations.Decoration],
-) -> Array[@html.Html] {
-  let zone = model.references.zone_widget(
-    emit,
-    frame,
-    active_document_uri(model.document),
-  )
-  let rows : Array[@html.Html] = []
-  for line in frame.lines {
-    rows.push(view_line(decorations, line))
-    match zone {
-      Some((anchor_line, widget)) =>
-        if anchor_line == line.line_number {
-          rows.push(widget)
-        }
-      None => ()
-    }
-  }
-  rows
 }
 
 ///|
@@ -1230,6 +1200,7 @@ fn dom_mounted_cmd(
 ) -> @rabbita.Cmd {
   @cmd.custom_cmd(
     _ => {
+      let patch_ms = @dom.now_ms() - last_build_finished_at.val
       let mut payload = "{"
       payload = payload +
         "\"renderedLines\":" +
@@ -1237,6 +1208,7 @@ fn dom_mounted_cmd(
       payload = payload + ",\"diagnostics\":"
       payload = payload + frame.diagnostics.length().to_string()
       payload = payload + ",\"status\":" + json_string(status)
+      payload = payload + ",\"patchMs\":" + patch_ms.to_string()
       payload = payload + "}"
       emit_event("dom:mounted", payload)
     },

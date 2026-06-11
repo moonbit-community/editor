@@ -100,6 +100,11 @@ fn render_document_cmd(
 }
 
 ///|
+/// When the latest frame build finished, so the after-paint hook can report
+/// the DOM patch duration alongside the frame build duration.
+let last_build_finished_at : Ref[Double] = Ref(0.0)
+
+///|
 fn render_document(
   loaded_document : @workspace.SourceDocument,
   _previous : @workspace.SourceDocument?,
@@ -107,6 +112,7 @@ fn render_document(
 ) -> DocumentRenderResult {
   let source_document = loaded_document
   @dom.set_current_document(source_document.to_json())
+  let build_started = @dom.now_ms()
   let doc = source_document.snapshot()
   let tokens = @syntax.highlight(doc)
   emit_language_status(providers.diagnostics.length(), doc.version)
@@ -118,7 +124,14 @@ fn render_document(
     decorations,
     providers,
   )
-  emit_render_event(frame, tokens.length(), providers.diagnostics.length())
+  let build_finished = @dom.now_ms()
+  last_build_finished_at.val = build_finished
+  emit_render_event(
+    frame,
+    tokens.length(),
+    providers.diagnostics.length(),
+    build_finished - build_started,
+  )
   DocumentRendered({ frame, document: source_document })
 }
 

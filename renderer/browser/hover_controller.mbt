@@ -2,20 +2,20 @@
 priv struct HoverView {
   range : @core.Range
   contents : String
-}
+} derive(Eq)
 
 ///|
 priv struct HoverAnchor {
   start : Int
   end : Int
   offset : Int
-}
+} derive(Eq)
 
 ///|
 priv struct HoverPlacement {
   below : Bool
   shift_left : Double
-}
+} derive(Eq)
 
 ///|
 /// VS Code's default `editor.hover.delay`.
@@ -35,7 +35,7 @@ priv struct HoverController {
   display_open : Bool
   loading : Bool
   placement : HoverPlacement?
-}
+} derive(Eq)
 
 ///|
 fn HoverController::empty() -> HoverController {

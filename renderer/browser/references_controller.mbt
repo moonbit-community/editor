@@ -5,14 +5,14 @@ priv struct ReferenceViewItem {
   line : Int
   column : Int
   line_text : String
-}
+} derive(Eq)
 
 ///|
 priv struct PeekView {
   anchor_line : Int
   items : Array[ReferenceViewItem]
   selected : Int
-}
+} derive(Eq)
 
 ///|
 /// Height of the peek widget body in editor lines, matching VS Code's
@@ -25,7 +25,7 @@ let peek_body_lines = 18
 priv struct ReferencesController {
   peek : PeekView?
   anchor_offset : Int?
-}
+} derive(Eq)
 
 ///|
 fn ReferencesController::empty() -> ReferencesController {

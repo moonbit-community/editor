@@ -2,7 +2,7 @@
 priv struct DefinitionView {
   uri : String
   range : @core.Range
-}
+} derive(Eq)
 
 ///|
 /// Go-to-definition feature state: the Ctrl/Cmd modifier, the candidate
@@ -13,7 +13,7 @@ priv struct DefinitionController {
   link_anchor : (Int, Int)?
   active : DefinitionView?
   pending_reveal : DefinitionView?
-}
+} derive(Eq)
 
 ///|
 fn DefinitionController::empty() -> DefinitionController {

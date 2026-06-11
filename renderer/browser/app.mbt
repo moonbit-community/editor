@@ -542,10 +542,20 @@ fn view_folder(
       .aria_expanded(expanded.to_string())
       .style("--depth", depth.to_string()),
     [
-      @html.span(class="workspace-disclosure", if expanded { "v" } else { ">" }),
+      view_indent_guides(depth),
+      @html.span(class="workspace-twistie", icon_chevron_right()),
       @html.span(class="workspace-label", label),
     ],
   )
+}
+
+///|
+fn view_indent_guides(depth : Int) -> @html.Html {
+  let guides : Array[@html.Html] = []
+  for _ in 0..<depth {
+    guides.push(@html.span(class="indent-guide", ""))
+  }
+  @html.span(class="workspace-guides", guides)
 }
 
 ///|
@@ -573,7 +583,9 @@ fn view_file(
       .aria_selected(selected.to_string())
       .style("--depth", depth.to_string()),
     [
-      @html.span(class="workspace-file-icon", "mb"),
+      view_indent_guides(depth),
+      @html.span(class="workspace-twistie workspace-twistie-spacer", ""),
+      @html.span(class="workspace-file-icon", icon_file()),
       @html.span(class="workspace-label", label),
     ],
   )

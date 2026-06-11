@@ -40,6 +40,7 @@ pub struct RemoteServer {
   priv host : &ServerHost
   priv hover_provider : &@language.HoverProvider
   priv definition_provider : &@language.DefinitionProvider
+  priv references_provider : &@language.ReferencesProvider
   priv diagnostics_provider : &@language.DiagnosticsProvider
   priv document_symbol_provider : &@language.DocumentSymbolProvider
   priv semantic_tokens_provider : &@language.SemanticTokensProvider
@@ -63,6 +64,7 @@ pub fn RemoteServer::with_language_providers(
   host : &ServerHost,
   hover_provider : &@language.HoverProvider,
   definition_provider : &@language.DefinitionProvider,
+  references_provider : &@language.ReferencesProvider,
   diagnostics_provider : &@language.DiagnosticsProvider,
   document_symbol_provider : &@language.DocumentSymbolProvider,
   semantic_tokens_provider : &@language.SemanticTokensProvider,
@@ -72,6 +74,7 @@ pub fn RemoteServer::with_language_providers(
     host,
     hover_provider,
     definition_provider,
+    references_provider,
     diagnostics_provider,
     document_symbol_provider,
     semantic_tokens_provider,
@@ -145,6 +148,7 @@ pub async fn RemoteServer::handle_client_packet(
     Diagnostics(request) => [self.diagnostics(request)]
     Hover(request) => [self.hover(request)]
     Definition(request) => [self.definition(request)]
+    References(request) => [self.references(request)]
     DocumentSymbols(request) => [self.document_symbols(request)]
     SemanticTokens(request) => [self.semantic_tokens(request)]
   }
@@ -304,6 +308,79 @@ pub async fn RemoteServer::definition(
         ),
       })
     None => self.missing_cached_document_error(request.id)
+  }
+}
+
+///|
+pub async fn RemoteServer::references(
+  self : RemoteServer,
+  request : @remote_protocol.DocumentPositionRequest,
+) -> @remote_protocol.ServerPacket {
+  match
+    self.cached_document(request.uri, request.document_version, request.id) {
+    Some(document) => {
+      let locations = self.references_provider.references_at(
+        document,
+        request.offset,
+      )
+      let references = []
+      for location in locations {
+        references.push(self.enrich_reference(document, location))
+      }
+      ReferencesResult({
+        id: request.id,
+        uri: request.uri,
+        version: document.version,
+        references,
+      })
+    }
+    None => self.missing_cached_document_error(request.id)
+  }
+}
+
+///|
+/// Builds a `ReferenceItem` with one-based line/column and the text of the
+/// containing line. Same-document references read the cached snapshot;
+/// cross-file references read the file through the host and degrade to an
+/// empty preview when the file cannot be read.
+async fn RemoteServer::enrich_reference(
+  self : RemoteServer,
+  requested : @workspace.SourceDocument,
+  location : @language.Location,
+) -> @remote_protocol.ReferenceItem {
+  let snapshot = if location.uri.to_string() == requested.uri.to_string() {
+    Some(requested.snapshot())
+  } else {
+    match resolve_remote_document_uri(location.uri) {
+      ParsedRemotePath(path) =>
+        match self.host.read_text_file(self.workspace_root, path) {
+          ServerHostReadOk(content) =>
+            Some(@core.DocumentSnapshot(content.text))
+          _ => None
+        }
+      RemotePathError(_) => None
+    }
+  }
+  match snapshot {
+    Some(snapshot) => {
+      let line_index = snapshot.line_at_offset(location.range.start)
+      let position = snapshot.position_at_offset(location.range.start)
+      {
+        uri: location.uri,
+        range: location.range,
+        line: position.line + 1,
+        column: position.column + 1,
+        line_text: snapshot.line_text(line_index),
+      }
+    }
+    None =>
+      {
+        uri: location.uri,
+        range: location.range,
+        line: 0,
+        column: 0,
+        line_text: "",
+      }
   }
 }
 

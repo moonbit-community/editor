@@ -66,6 +66,13 @@ pub(open) trait DefinitionProvider {
 }
 
 ///|
+pub(open) trait ReferencesProvider {
+  async fn references_at(Self, @workspace.SourceDocument, Int) -> Array[
+    Location,
+  ]
+}
+
+///|
 pub(open) trait DiagnosticsProvider {
   async fn diagnostics_for_document(Self, @workspace.SourceDocument) -> Array[
     Diagnostic,

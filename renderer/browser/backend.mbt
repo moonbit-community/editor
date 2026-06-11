@@ -33,6 +33,13 @@ pub fn BrowserRemoteLanguageProvider::as_definition_provider(
 }
 
 ///|
+pub fn BrowserRemoteLanguageProvider::as_references_provider(
+  self : BrowserRemoteLanguageProvider,
+) -> &@language.ReferencesProvider {
+  self
+}
+
+///|
 pub fn BrowserRemoteLanguageProvider::as_diagnostics_provider(
   self : BrowserRemoteLanguageProvider,
 ) -> &@language.DiagnosticsProvider {
@@ -183,6 +190,33 @@ impl @language.DefinitionProvider for BrowserRemoteLanguageProvider with fn defi
         None
       }
     _ => None
+  }
+}
+
+///|
+impl @language.ReferencesProvider for BrowserRemoteLanguageProvider with fn references_at(
+  self,
+  document,
+  offset,
+) {
+  let request = @remote_protocol.References({
+    id: request_id("references", document.uri),
+    uri: document.uri,
+    document_version: document.version,
+    offset,
+  })
+  match self.request_packet(request) {
+    Some(ReferencesResult(payload)) =>
+      if payload_matches_document(payload.uri, payload.version, document) {
+        let locations : Array[@language.Location] = []
+        for item in payload.references {
+          locations.push({ uri: item.uri, range: item.range })
+        }
+        locations
+      } else {
+        []
+      }
+    _ => []
   }
 }
 

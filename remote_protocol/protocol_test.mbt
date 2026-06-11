@@ -74,6 +74,22 @@ test "encodes and decodes semantic client packets" {
     ClientPacketDecodeError(error) => fail(error.message)
   }
 
+  let references = @remote_protocol.References({
+    id: "refs-1",
+    uri,
+    document_version: 4,
+    offset: 19,
+  })
+  match @remote_protocol.decode_client_packet(references.to_json()) {
+    DecodedClientPacket(References(request)) => {
+      assert_eq(request.id, "refs-1")
+      assert_eq(request.document_version, 4)
+      assert_eq(request.offset, 19)
+    }
+    DecodedClientPacket(_) => fail("unexpected references packet")
+    ClientPacketDecodeError(error) => fail(error.message)
+  }
+
   let symbols = @remote_protocol.DocumentSymbols({
     id: "symbols-1",
     uri,
@@ -158,6 +174,50 @@ test "encodes and decodes server document and language packets" {
         None => fail("missing hover")
       }
     DecodedServerPacket(_) => fail("unexpected hover result packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+
+  let references_result = @remote_protocol.ReferencesResult({
+    id: "refs-1",
+    uri,
+    version: 2,
+    references: [
+      {
+        uri,
+        range: Range(7, 11),
+        line: 1,
+        column: 8,
+        line_text: "pub fn main {}",
+      },
+      { uri, range: Range(20, 24), line: 2, column: 1, line_text: "main()" },
+    ],
+  })
+  match @remote_protocol.decode_server_packet(references_result.to_json()) {
+    DecodedServerPacket(ReferencesResult(payload)) => {
+      assert_eq(payload.id, "refs-1")
+      assert_eq(payload.version, 2)
+      assert_eq(payload.references.length(), 2)
+      assert_eq(payload.references[0].line, 1)
+      assert_eq(payload.references[0].column, 8)
+      assert_eq(payload.references[0].line_text, "pub fn main {}")
+      assert_true(payload.references[1].range == Range(20, 24))
+    }
+    DecodedServerPacket(_) => fail("unexpected references result packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+
+  let empty_references = @remote_protocol.ReferencesResult({
+    id: "refs-2",
+    uri,
+    version: 3,
+    references: [],
+  })
+  match @remote_protocol.decode_server_packet(empty_references.to_json()) {
+    DecodedServerPacket(ReferencesResult(payload)) => {
+      assert_eq(payload.references.length(), 0)
+      assert_eq(payload.version, 3)
+    }
+    DecodedServerPacket(_) => fail("unexpected empty references packet")
     ServerPacketDecodeError(error) => fail(error.message)
   }
 

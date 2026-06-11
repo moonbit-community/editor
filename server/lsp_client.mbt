@@ -36,6 +36,7 @@ pub(all) enum LspClientState {
 priv struct LspServerCapabilities {
   hover_provider : Bool
   definition_provider : Bool
+  references_provider : Bool
   document_symbol_provider : Bool
   semantic_tokens_provider : Bool
   semantic_token_types : Array[String]
@@ -88,6 +89,7 @@ fn default_lsp_capabilities() -> LspServerCapabilities {
   {
     hover_provider: false,
     definition_provider: false,
+    references_provider: false,
     document_symbol_provider: false,
     semantic_tokens_provider: false,
     semantic_token_types: [],
@@ -139,6 +141,13 @@ pub fn LspLanguageProvider::as_hover_provider(
 pub fn LspLanguageProvider::as_definition_provider(
   self : LspLanguageProvider,
 ) -> &@language.DefinitionProvider {
+  self
+}
+
+///|
+pub fn LspLanguageProvider::as_references_provider(
+  self : LspLanguageProvider,
+) -> &@language.ReferencesProvider {
   self
 }
 
@@ -268,6 +277,35 @@ pub async fn LspClient::definition_at(
     LspResponseError(message) => {
       self.last_error.val = message
       None
+    }
+  }
+}
+
+///|
+pub async fn LspClient::references_at(
+  self : LspClient,
+  document : @workspace.SourceDocument,
+  offset : Int,
+) -> Array[@language.Location] {
+  ignore(self.sync_document(document))
+  if self.state.val != Ready || !self.capabilities.val.references_provider {
+    return []
+  }
+  let uri = document.uri.to_string()
+  let id = self.next_request_id()
+  self.register_request(id, "textDocument/references", document)
+  let response = self.transport.request(
+    lsp_references_request(id, document, offset),
+  )
+  self.complete_request(id)
+  if self.active_uri.val != uri || self.active_version.val != document.version {
+    return []
+  }
+  match parse_response_result(response) {
+    ParsedLspResult(result) => parse_references_result(result, document)
+    LspResponseError(message) => {
+      self.last_error.val = message
+      []
     }
   }
 }
@@ -483,6 +521,25 @@ pub fn lsp_definition_request(
 }
 
 ///|
+pub fn lsp_references_request(
+  id : Int,
+  document : @workspace.SourceDocument,
+  offset : Int,
+) -> String {
+  let snapshot = document.snapshot()
+  let position = snapshot.position_at_offset(offset)
+  request_message(
+    id,
+    "textDocument/references",
+    json_object([
+      ("textDocument", text_document_identifier(document.uri)),
+      ("position", lsp_position_json(position)),
+      ("context", json_object([("includeDeclaration", Json::boolean(true))])),
+    ]),
+  )
+}
+
+///|
 pub fn lsp_document_symbol_request(
   id : Int,
   document : @workspace.SourceDocument,
@@ -638,6 +695,15 @@ impl @language.DefinitionProvider for LspLanguageProvider with fn definition_at(
   offset,
 ) {
   self.client.definition_at(document, offset)
+}
+
+///|
+impl @language.ReferencesProvider for LspLanguageProvider with fn references_at(
+  self,
+  document,
+  offset,
+) {
+  self.client.references_at(document, offset)
 }
 
 ///|
@@ -879,6 +945,25 @@ fn parse_definition_result(
     }
     _ => None
   }
+}
+
+///|
+fn parse_references_result(
+  result : Json,
+  document : @workspace.SourceDocument,
+) -> Array[@language.Location] {
+  let locations : Array[@language.Location] = []
+  match result {
+    Array(items) =>
+      for item in items {
+        match parse_location_result(item, document) {
+          Some(location) => locations.push(location)
+          None => ()
+        }
+      }
+    _ => ()
+  }
+  locations
 }
 
 ///|
@@ -1154,6 +1239,9 @@ fn parse_server_capabilities(result : Json) -> LspServerCapabilities {
         hover_provider: capability_enabled(capabilities, "hoverProvider"),
         definition_provider: capability_enabled(
           capabilities, "definitionProvider",
+        ),
+        references_provider: capability_enabled(
+          capabilities, "referencesProvider",
         ),
         document_symbol_provider: capability_enabled(
           capabilities, "documentSymbolProvider",

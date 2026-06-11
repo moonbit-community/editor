@@ -97,10 +97,12 @@ pub fn mount_app() -> Unit {
     model=initial_browser_model(),
     update=update_browser_app,
     view=view_browser_app,
-    subscriptions=(emit, _model) => @sub.batch([
-      @sub.on_key_down(emit.map(keyboard => GlobalKeyDown(keyboard))),
-      @sub.on_key_up(emit.map(keyboard => GlobalKeyUp(keyboard))),
-    ]),
+    subscriptions=(emit, _model) => {
+      @sub.batch([
+        @sub.on_key_down(emit.map(keyboard => GlobalKeyDown(keyboard))),
+        @sub.on_key_up(emit.map(keyboard => GlobalKeyUp(keyboard))),
+      ])
+    },
   )
   let app = @rabbita.new(cell)
   app.with_init(
@@ -425,6 +427,7 @@ fn server_packet_update(
       } else {
         (@rabbita.none, model)
       }
+    ReferencesResult(_) => (@rabbita.none, model)
     RemoteError(error) => protocol_error_update(model, error)
   }
 }
@@ -920,17 +923,19 @@ fn view_span(
   }
   if candidate {
     attrs = attrs.tabindex(0)
-    attrs = attrs.on_click(event => if event.get_ctrl_key() ||
-      event.get_meta_key() {
-      emit(RequestDefinition(offset, frame.version))
-    } else {
-      @rabbita.none
+    attrs = attrs.on_click(event => {
+      if event.get_ctrl_key() || event.get_meta_key() {
+        emit(RequestDefinition(offset, frame.version))
+      } else {
+        @rabbita.none
+      }
     })
-    attrs = attrs.on_keydown(event => if event.key() == "F12" &&
-      !event.shift_key() {
-      emit(RequestDefinition(offset, frame.version))
-    } else {
-      @rabbita.none
+    attrs = attrs.on_keydown(event => {
+      if event.key() == "F12" && !event.shift_key() {
+        emit(RequestDefinition(offset, frame.version))
+      } else {
+        @rabbita.none
+      }
     })
   }
   match definition {
@@ -1028,8 +1033,10 @@ fn view_hover_widget(
               "px)",
             )
           if shift_left > 0.0 {
-            attrs = attrs.style("margin-left", "-" + shift_left.to_string() +
-              "px")
+            attrs = attrs.style(
+              "margin-left",
+              "-" + shift_left.to_string() + "px",
+            )
           }
           Some(
             @html.div(class=class_name, attrs~, [

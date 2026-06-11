@@ -64,6 +64,7 @@ pub(all) enum ClientPacket {
   Diagnostics(DocumentVersionRequest)
   Hover(DocumentPositionRequest)
   Definition(DocumentPositionRequest)
+  References(DocumentPositionRequest)
   DocumentSymbols(DocumentVersionRequest)
   SemanticTokens(DocumentVersionRequest)
 } derive(Debug)
@@ -105,6 +106,26 @@ pub(all) struct DefinitionResultPayload {
 } derive(Debug)
 
 ///|
+/// A reference location enriched by the server with one-based line/column
+/// and the text of the containing line, so clients can list cross-file
+/// references without fetching file contents.
+pub(all) struct ReferenceItem {
+  uri : @workspace.DocumentUri
+  range : @core.Range
+  line : Int
+  column : Int
+  line_text : String
+} derive(Debug)
+
+///|
+pub(all) struct ReferencesResultPayload {
+  id : String
+  uri : @workspace.DocumentUri
+  version : Int
+  references : Array[ReferenceItem]
+} derive(Debug)
+
+///|
 pub(all) struct DocumentSymbolsResultPayload {
   id : String
   uri : @workspace.DocumentUri
@@ -128,6 +149,7 @@ pub(all) enum ServerPacket {
   Diagnostics(DiagnosticsPayload)
   HoverResult(HoverResultPayload)
   DefinitionResult(DefinitionResultPayload)
+  ReferencesResult(ReferencesResultPayload)
   DocumentSymbolsResult(DocumentSymbolsResultPayload)
   SemanticTokensResult(SemanticTokensResultPayload)
   RemoteError(ProtocolError)
@@ -224,6 +246,7 @@ pub fn ClientPacket::to_json(self : ClientPacket) -> String {
     Diagnostics(request) => version_request_json("Diagnostics", request)
     Hover(request) => position_request_json("Hover", request)
     Definition(request) => position_request_json("Definition", request)
+    References(request) => position_request_json("References", request)
     DocumentSymbols(request) => version_request_json("DocumentSymbols", request)
     SemanticTokens(request) => version_request_json("SemanticTokens", request)
   }
@@ -239,6 +262,7 @@ pub fn ServerPacket::to_json(self : ServerPacket) -> String {
     Diagnostics(payload) => diagnostics_payload_json(payload)
     HoverResult(payload) => hover_result_json(payload)
     DefinitionResult(payload) => definition_result_json(payload)
+    ReferencesResult(payload) => references_result_json(payload)
     DocumentSymbolsResult(payload) => document_symbols_result_json(payload)
     SemanticTokensResult(payload) => semantic_tokens_result_json(payload)
     RemoteError(error) => error_packet_json(error)
@@ -278,6 +302,10 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
             Some("Definition") =>
               decode_position_client(packet, request_id(packet), request => {
                 Definition(request)
+              })
+            Some("References") =>
+              decode_position_client(packet, request_id(packet), request => {
+                References(request)
               })
             Some("DocumentSymbols") =>
               decode_version_client(packet, request_id(packet), request => {
@@ -335,6 +363,8 @@ pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
               decode_hover_result_payload(packet, request_id(packet))
             Some("DefinitionResult") =>
               decode_definition_result_payload(packet, request_id(packet))
+            Some("ReferencesResult") =>
+              decode_references_result_payload(packet, request_id(packet))
             Some("DocumentSymbolsResult") =>
               decode_document_symbols_result_payload(packet, request_id(packet))
             Some("SemanticTokensResult") =>
@@ -533,6 +563,37 @@ fn decode_definition_result_payload(
           uri,
           version: json_int_field(packet, "documentVersion").unwrap_or(0),
           location,
+        }),
+      )
+    }
+    ProtocolUriError(error) => ServerPacketDecodeError(error)
+  }
+}
+
+///|
+fn decode_references_result_payload(
+  packet : Json,
+  id : String,
+) -> ServerPacketDecodeResult {
+  match parse_uri_field(packet, "uri", id) {
+    ParsedProtocolUri(uri) => {
+      let references = []
+      match json_field(packet, "references") {
+        Some(Array(items)) =>
+          for item in items {
+            match parse_reference_item(item) {
+              Some(reference) => references.push(reference)
+              None => ()
+            }
+          }
+        _ => ()
+      }
+      DecodedServerPacket(
+        ReferencesResult({
+          id,
+          uri,
+          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          references,
         }),
       )
     }
@@ -824,6 +885,32 @@ fn definition_result_json(payload : DefinitionResultPayload) -> String {
 }
 
 ///|
+fn references_result_json(payload : ReferencesResultPayload) -> String {
+  let mut out = packet_head("ReferencesResult", payload.id)
+  out = out + ",\"uri\":" + json_string(payload.uri.to_string())
+  out = out + ",\"documentVersion\":" + payload.version.to_string()
+  out = out + ",\"references\":["
+  for i in 0..<payload.references.length() {
+    if i > 0 {
+      out = out + ","
+    }
+    out = out + reference_item_json(payload.references[i])
+  }
+  out + "]}"
+}
+
+///|
+fn reference_item_json(item : ReferenceItem) -> String {
+  let mut out = "{"
+  out = out + "\"uri\":" + json_string(item.uri.to_string())
+  out = out + ",\"range\":" + range_json(item.range)
+  out = out + ",\"line\":" + item.line.to_string()
+  out = out + ",\"column\":" + item.column.to_string()
+  out = out + ",\"lineText\":" + json_string(item.line_text)
+  out + "}"
+}
+
+///|
 fn document_symbols_result_json(
   payload : DocumentSymbolsResultPayload,
 ) -> String {
@@ -1067,6 +1154,30 @@ fn parse_location(value : Json) -> @language.Location? {
           match
             (@workspace.DocumentUri::parse(raw_uri), parse_range(range_json)) {
             (ParsedDocumentUri(uri), Some(range)) => Some({ uri, range })
+            _ => None
+          }
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn parse_reference_item(value : Json) -> ReferenceItem? {
+  match value {
+    Object(_) =>
+      match (json_string_field(value, "uri"), json_field(value, "range")) {
+        (Some(raw_uri), Some(range_json)) =>
+          match
+            (@workspace.DocumentUri::parse(raw_uri), parse_range(range_json)) {
+            (ParsedDocumentUri(uri), Some(range)) =>
+              Some({
+                uri,
+                range,
+                line: json_int_field(value, "line").unwrap_or(0),
+                column: json_int_field(value, "column").unwrap_or(0),
+                line_text: json_string_field(value, "lineText").unwrap_or(""),
+              })
             _ => None
           }
         _ => None

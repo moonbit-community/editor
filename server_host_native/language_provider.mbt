@@ -45,6 +45,30 @@ pub impl @language.DefinitionProvider for NativeWorkspaceLanguageProvider with f
 }
 
 ///|
+pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with fn references_at(
+  self,
+  document,
+  offset,
+) {
+  match self.lsp_document(document) {
+    Some(lsp_document) => {
+      let locations = self.provider
+        .as_references_provider()
+        .references_at(lsp_document, offset)
+      let mapped = []
+      for location in locations {
+        match self.remote_location(location) {
+          Some(remote) => mapped.push(remote)
+          None => ()
+        }
+      }
+      mapped
+    }
+    None => []
+  }
+}
+
+///|
 pub impl @language.DiagnosticsProvider for NativeWorkspaceLanguageProvider with fn diagnostics_for_document(
   self,
   document,

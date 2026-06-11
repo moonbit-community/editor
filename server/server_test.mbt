@@ -122,6 +122,22 @@ async test "answers hover and definition from cached provider state" {
       }
     _ => fail("expected definition result")
   }
+
+  match
+    server.references({ id: "refs-1", uri, document_version: 1, offset: 7 }) {
+    ReferencesResult(payload) => {
+      assert_eq(payload.id, "refs-1")
+      assert_eq(payload.references.length(), 2)
+      // Offset 7 of "pub fn main {}\n" sits on line 1, column 8.
+      assert_eq(payload.references[0].uri.to_string(), uri.to_string())
+      assert_eq(payload.references[0].line, 1)
+      assert_eq(payload.references[0].column, 8)
+      assert_eq(payload.references[0].line_text, "pub fn main {}")
+      assert_eq(payload.references[1].line, 1)
+      assert_eq(payload.references[1].column, 1)
+    }
+    _ => fail("expected references result")
+  }
 }
 
 ///|
@@ -226,7 +242,7 @@ fn test_remote_server(
 ) -> @server.RemoteServer {
   let provider = FakeLanguageProvider::{  }
   @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider,
+    root, host, provider, provider, provider, provider, provider, provider,
   )
 }
 
@@ -326,6 +342,18 @@ impl @language.DefinitionProvider for FakeLanguageProvider with fn definition_at
   offset,
 ) {
   Some({ uri: document.uri, range: Range(offset, offset + 4) })
+}
+
+///|
+impl @language.ReferencesProvider for FakeLanguageProvider with fn references_at(
+  _self,
+  document,
+  offset,
+) {
+  [
+    { uri: document.uri, range: Range(offset, offset + 4) },
+    { uri: document.uri, range: Range(0, 4) },
+  ]
 }
 
 ///|

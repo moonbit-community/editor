@@ -352,7 +352,7 @@ fn native_lsp_remote_server(
     client.language_provider(),
   )
   @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider,
+    root, host, provider, provider, provider, provider, provider, provider,
   )
 }
 

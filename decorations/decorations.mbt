@@ -5,6 +5,7 @@ pub(all) enum DecorationKind {
   Link
   SemanticToken
   CurrentLine
+  HoverHighlight
 } derive(Eq, Debug)
 
 ///|

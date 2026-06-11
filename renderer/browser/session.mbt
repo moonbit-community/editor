@@ -120,11 +120,9 @@ fn protocol_connection_id() -> String {
 }
 
 ///|
-fn hover_resolution_cmd(
+fn hover_request_cmd(
   emit : @rabbita.Emit[BrowserMsg],
   document : @workspace.SourceDocument?,
-  _start : Int,
-  _end : Int,
   offset : Int,
   version : Int,
 ) -> @rabbita.Cmd {
@@ -144,7 +142,7 @@ fn hover_resolution_cmd(
 }
 
 ///|
-fn definition_resolution_cmd(
+fn definition_request_cmd(
   emit : @rabbita.Emit[BrowserMsg],
   document : @workspace.SourceDocument?,
   offset : Int,
@@ -166,7 +164,7 @@ fn definition_resolution_cmd(
 }
 
 ///|
-fn references_resolution_cmd(
+fn references_request_cmd(
   emit : @rabbita.Emit[BrowserMsg],
   document : @workspace.SourceDocument?,
   offset : Int,

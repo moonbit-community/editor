@@ -27,15 +27,6 @@ fn view_metrics(
     let digits = frame.line_count.to_string().length()
     digits.to_double() * char_width + gutter_padding_px.to_double()
   }
-  let view_zones : Array[@renderer.ViewZone] = []
-  match model.peek {
-    Some(peek) =>
-      view_zones.push({
-        anchor_line: peek.anchor_line,
-        height_px: peek_zone_height_px,
-      })
-    None => ()
-  }
   {
     origin_x: 0.0,
     origin_y: 0.0,
@@ -44,7 +35,7 @@ fn view_metrics(
     line_height: editor_line_height,
     char_width,
     gutter_width,
-    view_zones,
+    view_zones: model.references.view_zones(),
   }
 }
 
@@ -127,11 +118,6 @@ fn span_anchor_for_target(
 }
 
 ///|
-fn clear_hover(model : BrowserAppModel) -> BrowserAppModel {
-  { ..model, hover: None, hover_anchor: None, hover_placement: None }
-}
-
-///|
 fn editor_mouse_moved_update(
   emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
@@ -142,49 +128,13 @@ fn editor_mouse_moved_update(
   match model.frame {
     Some(frame) => {
       let target = @renderer.hit_test(frame, view_metrics(model, frame), x, y)
-      let model = {
-        ..model,
-        goto_modifier: modifier,
-        last_target: Some(target),
-      }
-      match span_anchor_for_target(frame, target) {
-        Some((start, end, _)) =>
-          schedule_hover_update(emit, model, start, end, (start + end) / 2)
-        None => (@rabbita.none, clear_hover(model))
-      }
+      editor_event_update(
+        emit,
+        { ..model, last_target: Some(target) },
+        MouseMoved(target, modifier),
+      )
     }
     None => (@rabbita.none, model)
-  }
-}
-
-///|
-/// VS Code's hover scheduling: a new anchor restarts the delay timer; the
-/// same anchor keeps the pending or shown hover untouched.
-fn schedule_hover_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  start : Int,
-  end : Int,
-  offset : Int,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  let same = match model.hover_anchor {
-    Some(anchor) => anchor.start == start && anchor.end == end
-    None => false
-  }
-  if same {
-    (@rabbita.none, model)
-  } else {
-    let token = model.hover_token + 1
-    (
-      @cmd.delay(emit(FireHover(token)), hover_delay_ms),
-      {
-        ..model,
-        hover_token: token,
-        hover_anchor: Some({ start, end, offset }),
-        hover: None,
-        hover_placement: None,
-      },
-    )
   }
 }
 
@@ -196,11 +146,15 @@ fn editor_mouse_down_update(
   y : Double,
   modifier : Bool,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
-  if !modifier {
-    return (@rabbita.none, model)
-  }
-  match candidate_anchor_at(model, x, y) {
-    Some(offset) => request_definition_update(emit, model, offset)
+  match model.frame {
+    Some(frame) => {
+      let target = @renderer.hit_test(frame, view_metrics(model, frame), x, y)
+      editor_event_update(
+        emit,
+        { ..model, last_target: Some(target) },
+        MouseDown(target, modifier),
+      )
+    }
     None => (@rabbita.none, model)
   }
 }
@@ -212,100 +166,16 @@ fn editor_context_menu_update(
   x : Double,
   y : Double,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
-  match candidate_anchor_at(model, x, y) {
-    Some(offset) => request_references_update(emit, model, offset)
-    None => (@rabbita.none, model)
-  }
-}
-
-///|
-/// F12 / Shift+F12 act on the last mouse target, the readonly stand-in for
-/// VS Code commands acting at the cursor.
-fn editor_key_command_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  shift : Bool,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  match candidate_anchor_for_target(model, model.last_target) {
-    Some(offset) =>
-      if shift {
-        request_references_update(emit, model, offset)
-      } else {
-        request_definition_update(emit, model, offset)
-      }
-    None => (@rabbita.none, model)
-  }
-}
-
-///|
-fn request_definition_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  offset : Int,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  (
-    definition_resolution_cmd(
-      emit,
-      model.source_document,
-      offset,
-      frame_version(model.frame),
-    ),
-    { ..model, definition: None },
-  )
-}
-
-///|
-fn request_references_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  offset : Int,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  (
-    references_resolution_cmd(
-      emit,
-      model.source_document,
-      offset,
-      frame_version(model.frame),
-    ),
-    { ..model, peek: None, peek_anchor_offset: Some(offset) },
-  )
-}
-
-///|
-fn candidate_anchor_at(
-  model : BrowserAppModel,
-  x : Double,
-  y : Double,
-) -> Int? {
   match model.frame {
-    Some(frame) =>
-      candidate_anchor_for_target(
-        model,
-        Some(@renderer.hit_test(frame, view_metrics(model, frame), x, y)),
+    Some(frame) => {
+      let target = @renderer.hit_test(frame, view_metrics(model, frame), x, y)
+      editor_event_update(
+        emit,
+        { ..model, last_target: Some(target) },
+        ContextMenuRequested(target),
       )
-    None => None
-  }
-}
-
-///|
-/// The request offset for a target over a definition candidate span: the
-/// span's midpoint, matching the old per-span handlers.
-fn candidate_anchor_for_target(
-  model : BrowserAppModel,
-  target : @renderer.MouseTarget?,
-) -> Int? {
-  match (model.frame, target) {
-    (Some(frame), Some(target)) =>
-      match span_anchor_for_target(frame, target) {
-        Some((start, end, span)) =>
-          if is_definition_candidate(span) {
-            Some((start + end) / 2)
-          } else {
-            None
-          }
-        None => None
-      }
-    _ => None
+    }
+    None => (@rabbita.none, model)
   }
 }
 

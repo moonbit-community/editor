@@ -7,59 +7,9 @@ priv struct BrowserDocumentView {
 }
 
 ///|
-priv struct HoverView {
-  range : @core.Range
-  contents : String
-}
-
-///|
-priv struct HoverAnchor {
-  start : Int
-  end : Int
-  offset : Int
-}
-
-///|
-priv struct HoverPlacement {
-  below : Bool
-  shift_left : Double
-}
-
-///|
 /// Pixel height of one rendered code line. Keep in sync with
 /// `--editor-line-height` in app/src/style.css.
 let editor_line_height = 18
-
-///|
-/// VS Code's default `editor.hover.delay`.
-let hover_delay_ms = 300
-
-///|
-priv struct DefinitionView {
-  uri : String
-  range : @core.Range
-}
-
-///|
-priv struct ReferenceViewItem {
-  uri : String
-  range : @core.Range
-  line : Int
-  column : Int
-  line_text : String
-}
-
-///|
-priv struct PeekView {
-  anchor_line : Int
-  items : Array[ReferenceViewItem]
-  selected : Int
-}
-
-///|
-/// Height of the peek widget body in editor lines, matching VS Code's
-/// references widget default layout.
-let peek_body_lines = 18
 
 ///|
 priv struct BrowserAppModel {
@@ -73,15 +23,9 @@ priv struct BrowserAppModel {
   workspace_entries : Array[@remote_protocol.WorkspaceEntry]
   collapsed_workspace_ids : Array[String]
   provider_result : @language.ProviderResult
-  hover : HoverView?
-  hover_anchor : HoverAnchor?
-  hover_token : Int
-  hover_placement : HoverPlacement?
-  goto_modifier : Bool
-  definition : DefinitionView?
-  pending_reveal : DefinitionView?
-  peek : PeekView?
-  peek_anchor_offset : Int?
+  hover : HoverController
+  definition : DefinitionController
+  references : ReferencesController
   scroll_top : Double
   viewer_height : Double
   char_width : Double
@@ -162,15 +106,9 @@ fn initial_browser_model() -> BrowserAppModel {
     workspace_entries: [],
     collapsed_workspace_ids: [],
     provider_result: @language.ProviderResult::empty(),
-    hover: None,
-    hover_anchor: None,
-    hover_token: 0,
-    hover_placement: None,
-    goto_modifier: false,
-    definition: None,
-    pending_reveal: None,
-    peek: None,
-    peek_anchor_offset: None,
+    hover: HoverController::empty(),
+    definition: DefinitionController::empty(),
+    references: ReferencesController::empty(),
     scroll_top: 0.0,
     viewer_height: 0.0,
     char_width: 0.0,
@@ -212,10 +150,8 @@ fn update_browser_app(
               source_document: None,
               document: update_document_uri(model.document, uri),
               provider_result: @language.ProviderResult::empty(),
-              hover: None,
-              hover_anchor: None,
-              hover_placement: None,
-              definition: None,
+              hover: model.hover.cleared(),
+              definition: model.definition.deactivated(),
             },
           )
       }
@@ -234,7 +170,7 @@ fn update_browser_app(
     EditorMouseDown(x, y, modifier) =>
       editor_mouse_down_update(emit, model, x, y, modifier)
     EditorContextMenu(x, y) => editor_context_menu_update(emit, model, x, y)
-    EditorMouseLeft => (@rabbita.none, clear_hover(model))
+    EditorMouseLeft => editor_event_update(emit, model, MouseLeft)
     EditorScrolled(top) => (@rabbita.none, { ..model, scroll_top: top })
     ViewerMeasured(height, char_width, gutter_width) =>
       (
@@ -242,83 +178,63 @@ fn update_browser_app(
         { ..model, viewer_height: height, char_width, gutter_width },
       )
     ViewerResized => (measure_viewer_cmd(), model)
-    FireHover(token) =>
-      if token == model.hover_token {
-        match model.hover_anchor {
-          Some(anchor) =>
-            (
-              hover_resolution_cmd(
-                emit,
-                model.source_document,
-                anchor.start,
-                anchor.end,
-                anchor.offset,
-                frame_version(model.frame),
-              ),
-              model,
-            )
-          None => (@rabbita.none, model)
-        }
-      } else {
-        (@rabbita.none, model)
-      }
+    FireHover(token) => {
+      let (cmd, hover) = model.hover.fire(emit, editor_context(model), token)
+      (cmd, { ..model, hover, })
+    }
     HoverMeasured(below, shift_left) =>
-      (@rabbita.none, { ..model, hover_placement: Some({ below, shift_left }) })
+      (@rabbita.none, { ..model, hover: model.hover.measured(below, shift_left) })
     GlobalKeyDown(keyboard) => {
       let modifier = keyboard.ctrl_key() || keyboard.meta_key()
       if keyboard.key() == "Escape" {
-        (
-          @rabbita.none,
-          {
-            ..model,
-            goto_modifier: modifier,
-            hover: None,
-            hover_anchor: None,
-            hover_placement: None,
-            definition: None,
-            peek: None,
-            peek_anchor_offset: None,
-          },
-        )
+        fan_editor_events(emit, model, [
+          EscapePressed,
+          GotoModifierChanged(modifier),
+        ])
       } else if keyboard.key() == "F12" {
-        editor_key_command_update(emit, model, keyboard.shift_key())
+        editor_event_update(emit, model, GotoKeyCommand(keyboard.shift_key()))
       } else {
-        set_goto_modifier(model, modifier)
+        editor_event_update(emit, model, GotoModifierChanged(modifier))
       }
     }
     GlobalKeyUp(keyboard) =>
-      set_goto_modifier(model, keyboard.ctrl_key() || keyboard.meta_key())
+      editor_event_update(
+        emit,
+        model,
+        GotoModifierChanged(keyboard.ctrl_key() || keyboard.meta_key()),
+      )
     SelectReference(index) =>
-      match model.peek {
-        Some(peek) =>
-          if index >= 0 && index < peek.items.length() {
-            (
-              @rabbita.none,
-              { ..model, peek: Some({ ..peek, selected: index }) },
-            )
-          } else {
-            (@rabbita.none, model)
-          }
-        None => (@rabbita.none, model)
-      }
+      (@rabbita.none, { ..model, references: model.references.selected(index) })
     OpenReference(index) =>
-      match model.peek {
-        Some(peek) =>
-          if index >= 0 && index < peek.items.length() {
-            let item = peek.items[index]
-            let closed = { ..model, peek: None, peek_anchor_offset: None }
-            definition_navigation_update(emit, closed, {
-              uri: item.uri,
-              range: item.range,
-            })
-          } else {
-            (@rabbita.none, model)
-          }
+      match model.references.item_at(index) {
+        Some(item) => {
+          let closed = { ..model, references: model.references.closed() }
+          definition_navigation_update(emit, closed, {
+            uri: item.uri,
+            range: item.range,
+          })
+        }
         None => (@rabbita.none, model)
       }
     ClosePeek =>
-      (@rabbita.none, { ..model, peek: None, peek_anchor_offset: None })
+      (@rabbita.none, { ..model, references: model.references.closed() })
   }
+}
+
+///|
+fn fan_editor_events(
+  emit : @rabbita.Emit[BrowserMsg],
+  model : BrowserAppModel,
+  events : Array[EditorEvent],
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  let commands : Array[@rabbita.Cmd] = []
+  let mut current = model
+  for event in events {
+    let (cmd, next) = editor_event_update(emit, current, event)
+    commands.push(cmd)
+    current = next
+  }
+  (@rabbita.batch(commands), current)
 }
 
 ///|
@@ -333,13 +249,14 @@ fn select_workspace_update(
     status: "loading",
     status_message: "",
     frame: None,
-    hover: None,
-    hover_anchor: None,
-    hover_placement: None,
-    definition: None,
-    pending_reveal: None,
-    peek: None,
-    peek_anchor_offset: None,
+    hover: HoverController::empty(),
+    definition: {
+      ..model.definition,
+      link_anchor: None,
+      active: None,
+      pending_reveal: None,
+    },
+    references: model.references.closed(),
   }
   (
     @rabbita.batch([
@@ -348,18 +265,6 @@ fn select_workspace_update(
     ]),
     next,
   )
-}
-
-///|
-fn set_goto_modifier(
-  model : BrowserAppModel,
-  modifier : Bool,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  if model.goto_modifier == modifier {
-    (@rabbita.none, model)
-  } else {
-    (@rabbita.none, { ..model, goto_modifier: modifier })
-  }
 }
 
 ///|
@@ -433,34 +338,13 @@ fn server_packet_update(
         ..model.provider_result,
         semantic_tokens: payload.semantic_tokens,
       })
-    HoverResult(payload) =>
-      if frame_version(model.frame) == payload.version {
-        match payload.hover {
-          Some(hover) => {
-            emit_event(
-              "language:hover",
-              "{\"ok\":true,\"version\":" + payload.version.to_string() + "}",
-            )
-            (
-              measure_hover_cmd(),
-              {
-                ..model,
-                hover: Some({ range: hover.range, contents: hover.contents }),
-                hover_placement: None,
-              },
-            )
-          }
-          None => {
-            emit_event(
-              "language:hover",
-              "{\"ok\":false,\"version\":" + payload.version.to_string() + "}",
-            )
-            (@rabbita.none, model)
-          }
-        }
-      } else {
-        (@rabbita.none, model)
-      }
+    HoverResult(payload) => {
+      let (cmd, hover) = model.hover.resolved(
+        payload,
+        frame_version(model.frame),
+      )
+      (cmd, { ..model, hover, })
+    }
     DefinitionResult(payload) =>
       if frame_version(model.frame) == payload.version {
         match payload.location {
@@ -490,40 +374,10 @@ fn server_packet_update(
         (@rabbita.none, model)
       }
     ReferencesResult(payload) =>
-      if frame_version(model.frame) == payload.version {
-        emit_event(
-          "language:references",
-          "{\"ok\":true,\"count\":" +
-          payload.references.length().to_string() +
-          ",\"version\":" +
-          payload.version.to_string() +
-          "}",
-        )
-        let anchor_line = match (model.peek_anchor_offset, model.frame) {
-          (Some(offset), Some(frame)) =>
-            match line_col_for_offset(frame, offset) {
-              Some((line_number, _)) => line_number
-              None => 1
-            }
-          _ => 1
-        }
-        let items : Array[ReferenceViewItem] = []
-        for reference in payload.references {
-          items.push({
-            uri: reference.uri.to_string(),
-            range: reference.range,
-            line: reference.line,
-            column: reference.column,
-            line_text: reference.line_text,
-          })
-        }
-        (
-          @rabbita.none,
-          { ..model, peek: Some({ anchor_line, items, selected: 0 }) },
-        )
-      } else {
-        (@rabbita.none, model)
-      }
+      (
+        @rabbita.none,
+        { ..model, references: model.references.resolved(payload, model.frame) },
+      )
     RemoteError(error) => protocol_error_update(model, error)
   }
 }
@@ -546,14 +400,14 @@ fn definition_navigation_update(
         }
       None => @rabbita.none
     }
-    (cmd, { ..model, definition: Some(view) })
+    (cmd, { ..model, definition: model.definition.navigated(view) })
   } else {
     let (cmd, next) = select_workspace_update(
       emit,
       model,
       workspace_id_from_uri(view.uri),
     )
-    (cmd, { ..next, pending_reveal: Some(view) })
+    (cmd, { ..next, definition: next.definition.deferred(view) })
   }
 }
 
@@ -623,10 +477,8 @@ fn document_payload_update(
   let next = {
     ..model,
     provider_result: @language.ProviderResult::empty(),
-    hover: None,
-    hover_anchor: None,
-    hover_placement: None,
-    definition: None,
+    hover: model.hover.cleared(),
+    definition: model.definition.deactivated(),
   }
   (
     render_document_cmd(
@@ -668,10 +520,8 @@ fn protocol_error_update(
         status: "missing",
         status_message: "Source file is missing.",
         frame: None,
-        hover: None,
-        hover_anchor: None,
-        hover_placement: None,
-        definition: None,
+        hover: model.hover.cleared(),
+        definition: model.definition.deactivated(),
       },
     )
   } else {
@@ -690,10 +540,7 @@ fn document_rendered_update(
   watch : Bool,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   let document = document_to_view(rendered.document)
-  let pending = match model.pending_reveal {
-    Some(item) => if item.uri == document.uri { Some(item) } else { None }
-    None => None
-  }
+  let (pending, definition) = model.definition.claim_pending(document.uri)
   let next = {
     ..model,
     status: "ready",
@@ -702,13 +549,13 @@ fn document_rendered_update(
     source_document: Some(rendered.document),
     document: Some(document),
     selected_workspace_id: selected_workspace_for_document(document),
-    hover: None,
-    hover_anchor: None,
-    hover_placement: None,
-    definition: pending,
-    pending_reveal: None,
+    hover: model.hover.cleared(),
+    definition,
   }
-  let commands = [dom_mounted_cmd(rendered.frame, "ready"), measure_viewer_cmd()]
+  let commands = [
+    dom_mounted_cmd(rendered.frame, "ready"),
+    measure_viewer_cmd(),
+  ]
   if watch {
     commands.push(language_requests_cmd(emit, rendered.document))
   }
@@ -887,7 +734,8 @@ fn view_code_viewer(
   model : BrowserAppModel,
   frame : @renderer.RenderFrame,
 ) -> @html.Html {
-  let children = line_nodes(emit, model, frame)
+  let decorations = controller_decorations(model)
+  let children = line_nodes(emit, model, frame, decorations)
   children.push(
     @html.span(
       class="char-probe",
@@ -895,7 +743,7 @@ fn view_code_viewer(
       char_probe_text,
     ),
   )
-  match view_hover_widget(model, frame) {
+  match model.hover.widget(frame) {
     Some(widget) => children.push(widget)
     None => ()
   }
@@ -911,14 +759,20 @@ fn line_nodes(
   emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
   frame : @renderer.RenderFrame,
+  decorations : Array[@decorations.Decoration],
 ) -> Array[@html.Html] {
+  let zone = model.references.zone_widget(
+    emit,
+    frame,
+    active_document_uri(model.document),
+  )
   let rows : Array[@html.Html] = []
   for line in frame.lines {
-    rows.push(view_line(model, line))
-    match model.peek {
-      Some(peek) =>
-        if peek.anchor_line == line.line_number {
-          rows.push(view_peek_widget(emit, model, frame, peek))
+    rows.push(view_line(decorations, line))
+    match zone {
+      Some((anchor_line, widget)) =>
+        if anchor_line == line.line_number {
+          rows.push(widget)
         }
       None => ()
     }
@@ -927,217 +781,21 @@ fn line_nodes(
 }
 
 ///|
-/// Inline references peek widget, inserted below the anchor line so the
-/// following lines are displaced like a VS Code editor zone widget.
-fn view_peek_widget(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  frame : @renderer.RenderFrame,
-  peek : PeekView,
-) -> @html.Html {
-  let count = peek.items.length()
-  let meta = if count == 0 {
-    "No results"
-  } else if count == 1 {
-    "1 result"
-  } else {
-    count.to_string() + " results"
-  }
-  @html.div(
-    class="peek-widget",
-    attrs=widget_overlay_attrs(
-      @html.Attrs::build().data_set("peek", "references"),
-    ),
-    [
-      @html.div(class="peek-head", [
-        @html.span(class="peek-title", "References"),
-        @html.span(class="peek-meta", meta),
-        @html.button(
-          type_="button",
-          class="peek-close",
-          title="Close",
-          on_click=emit(ClosePeek),
-          attrs=@html.Attrs::build().aria_label("Close references"),
-          icon_close(),
-        ),
-      ]),
-      @html.div(class="peek-body", [
-        view_peek_preview(model, frame, peek),
-        view_peek_list(emit, peek),
-      ]),
-    ],
-  )
-}
-
-///|
-fn view_peek_preview(
-  model : BrowserAppModel,
-  frame : @renderer.RenderFrame,
-  peek : PeekView,
-) -> @html.Html {
-  if peek.items.length() == 0 {
-    return @html.div(class="peek-preview", [
-      @html.div(class="peek-empty", "No results found."),
-    ])
-  }
-  let item = peek.items[peek.selected]
-  if item.uri == active_document_uri(model.document) {
-    let children : Array[@html.Html] = []
-    let half = peek_body_lines / 2
-    let first = if item.line > half { item.line - half } else { 1 }
-    let last = first + peek_body_lines - 1
-    for line in frame.lines {
-      if line.line_number >= first && line.line_number <= last {
-        children.push(view_peek_preview_line(item, line))
-      }
-    }
-    @html.div(class="peek-preview", children)
-  } else {
-    // Cross-file references preview only their server-enriched line text.
-    @html.div(class="peek-preview", [
-      @html.div(
-        class="peek-preview-caption",
-        display_name_from_uri(item.uri) + ":" + item.line.to_string(),
-      ),
-      @html.div(class="code-line", [
-        @html.div(class="gutter", item.line.to_string()),
-        @html.pre(class="code", line_text_match_nodes(item, "peek-match")),
-      ]),
-    ])
-  }
-}
-
-///|
-/// Non-interactive rendering of a source line for the peek preview pane.
-fn view_peek_preview_line(
-  item : ReferenceViewItem,
-  line : @renderer.RenderLine,
-) -> @html.Html {
-  let code = if line.spans.length() == 0 {
-    @html.pre(class="code", if line.text == "" { " " } else { line.text })
-  } else {
-    let spans : Array[@html.Html] = []
-    for span in line.spans {
-      let absolute_start = line.offset + span.start
-      let absolute_end = line.offset + span.end
-      let class_name = if item.range.start < absolute_end &&
-        absolute_start < item.range.end {
-        span.class_name + " peek-match"
-      } else {
-        span.class_name
-      }
-      spans.push(@html.span(class=class_name, span.text))
-    }
-    @html.pre(class="code", spans)
-  }
-  @html.div(class="code-line", [
-    @html.div(class="gutter", line.line_number.to_string()),
-    code,
-  ])
-}
-
-///|
-fn view_peek_list(
-  emit : @rabbita.Emit[BrowserMsg],
-  peek : PeekView,
-) -> @html.Html {
-  let children : Array[@html.Html] = []
-  let mut current_uri = ""
-  for index in 0..<peek.items.length() {
-    let item = peek.items[index]
-    if item.uri != current_uri {
-      current_uri = item.uri
-      let mut count = 0
-      for other in peek.items {
-        if other.uri == item.uri {
-          count = count + 1
-        }
-      }
-      children.push(
-        @html.div(class="peek-file-row", [
-          @html.span(class="peek-file-icon", icon_file()),
-          @html.span(class="peek-file-name", display_name_from_uri(item.uri)),
-          @html.span(class="peek-file-count", count.to_string()),
-        ]),
-      )
-    }
-    let row_class = if index == peek.selected {
-      "peek-ref-row selected"
-    } else {
-      "peek-ref-row"
-    }
-    let mut attrs = @html.Attrs::build().data_set(
-      "ref-index",
-      index.to_string(),
-    )
-    attrs = attrs.on_dblclick(_ => emit(OpenReference(index)))
-    attrs = attrs.on_keydown(event => {
-      if event.key() == "Enter" {
-        emit(OpenReference(index))
-      } else {
-        @rabbita.none
-      }
-    })
-    children.push(
-      @html.button(
-        type_="button",
-        class=row_class,
-        on_click=emit(SelectReference(index)),
-        attrs~,
-        line_text_match_nodes(item, "peek-list-match"),
-      ),
-    )
-  }
-  if peek.items.length() == 0 {
-    children.push(@html.div(class="peek-empty", "No results found."))
-  }
-  @html.div(class="peek-list", children)
-}
-
-///|
-/// Splits a reference's line text into plain/highlighted spans around the
-/// matched range, falling back to plain text when the enriched column data
-/// cannot address the line safely.
-fn line_text_match_nodes(
-  item : ReferenceViewItem,
-  highlight_class : String,
-) -> Array[@html.Html] {
-  let text = item.line_text
-  let plain : Array[@html.Html] = [
-    @html.span(class="", if text == "" { " " } else { text }),
-  ]
-  let len = text.length()
-  let match_length = item.range.end - item.range.start
-  let start = item.column - 1
-  if start < 0 || start >= len || match_length <= 0 {
-    return plain
-  }
-  let end = if start + match_length > len { len } else { start + match_length }
-  match (try? text[0:start], try? text[start:end], try? text[end:len]) {
-    (Ok(before), Ok(matched), Ok(after)) => {
-      let nodes : Array[@html.Html] = []
-      if start > 0 {
-        nodes.push(@html.span(class="", before.to_owned()))
-      }
-      nodes.push(@html.span(class=highlight_class, matched.to_owned()))
-      if end < len {
-        nodes.push(@html.span(class="", after.to_owned()))
-      }
-      nodes
-    }
-    _ => plain
-  }
-}
-
-///|
+/// Lines and spans carry no feature knowledge: feature classes arrive as
+/// controller decorations merged onto the syntax classes here.
 fn view_line(
-  model : BrowserAppModel,
+  decorations : Array[@decorations.Decoration],
   line : @renderer.RenderLine,
 ) -> @html.Html {
-  let class_name = if line_intersects_definition(model, line) {
-    "code-line range-highlight"
-  } else {
-    "code-line"
+  let line_start = line.offset
+  let line_end = line.offset + line.text.length()
+  let mut class_name = "code-line"
+  for decoration in decorations {
+    if decoration.kind == CurrentLine &&
+      decoration.range.start <= line_end &&
+      line_start <= decoration.range.end {
+      class_name = class_name + " " + decoration.class_name
+    }
   }
   @html.div(
     class=class_name,
@@ -1147,7 +805,7 @@ fn view_line(
       if line.spans.length() == 0 {
         @html.pre(class="code", if line.text == "" { " " } else { line.text })
       } else {
-        @html.pre(class="code", span_nodes(model, line))
+        @html.pre(class="code", span_nodes(decorations, line))
       },
     ],
   )
@@ -1155,7 +813,7 @@ fn view_line(
 
 ///|
 fn span_nodes(
-  model : BrowserAppModel,
+  decorations : Array[@decorations.Decoration],
   line : @renderer.RenderLine,
 ) -> Array[@html.Html] {
   let spans : Array[@html.Html] = []
@@ -1163,7 +821,7 @@ fn span_nodes(
     let span = line.spans[i]
     let absolute_start = line.offset + span.start
     let absolute_end = line.offset + span.end
-    spans.push(view_span(model, span, absolute_start, absolute_end))
+    spans.push(view_span(decorations, span, absolute_start, absolute_end))
   }
   spans
 }
@@ -1172,32 +830,21 @@ fn span_nodes(
 /// Spans carry no handlers or data attributes: text plus classes only. All
 /// interaction routes through the container hit test.
 fn view_span(
-  model : BrowserAppModel,
+  decorations : Array[@decorations.Decoration],
   span : @renderer.RenderSpan,
   absolute_start : Int,
   absolute_end : Int,
 ) -> @html.Html {
-  let hover = hover_for_span(model.hover, absolute_start, absolute_end)
-  let definition = definition_for_span(
-    model.definition,
-    active_document_uri(model.document),
-    absolute_start,
-    absolute_end,
-  )
-  let candidate = is_definition_candidate(span)
   let mut class_name = span.class_name
-  if hover is Some(_) {
-    class_name = class_name + " has-hover"
-  }
-  if candidate {
+  if is_definition_candidate(span) {
     class_name = class_name + " definition-candidate"
-    if model.goto_modifier &&
-      anchor_matches(model.hover_anchor, absolute_start, absolute_end) {
-      class_name = class_name + " goto-definition-link"
-    }
   }
-  if definition is Some(_) {
-    class_name = class_name + " has-definition definition-target"
+  let span_range = @core.Range(absolute_start, absolute_end)
+  for decoration in decorations {
+    if decoration.kind != CurrentLine &&
+      decoration.range.intersects(span_range) {
+      class_name = class_name + " " + decoration.class_name
+    }
   }
   @html.span(class=class_name, span.text)
 }
@@ -1234,69 +881,6 @@ fn view_diagnostics(frame : @renderer.RenderFrame?) -> @html.Html {
 }
 
 ///|
-/// Renders the hover widget inside `.code-lines`, anchored at the hovered
-/// range like VS Code's editor hover: above the line by default, flipped
-/// below when the measured widget would leave the viewport, and shifted left
-/// when it would overflow the viewer's right edge.
-fn view_hover_widget(
-  model : BrowserAppModel,
-  frame : @renderer.RenderFrame,
-) -> @html.Html? {
-  match model.hover {
-    Some(hover) =>
-      match line_col_for_offset(frame, hover.range.start) {
-        Some((line_number, column)) => {
-          let mut class_name = "hover-widget"
-          let mut shift_left = 0.0
-          let mut below = false
-          match model.hover_placement {
-            Some(placement) => {
-              below = placement.below
-              shift_left = placement.shift_left
-            }
-            None => class_name = class_name + " measuring"
-          }
-          let top = if below {
-            line_number * editor_line_height
-          } else {
-            (line_number - 1) * editor_line_height
-          }
-          if below {
-            class_name = class_name + " below"
-          }
-          let digits = frame.line_count.to_string().length()
-          let mut attrs = widget_overlay_attrs(@html.Attrs::build())
-            .role("tooltip")
-            .style("top", top.to_string() + "px")
-            .style(
-              "left",
-              "calc(" +
-              (digits + column).to_string() +
-              "ch + " +
-              gutter_padding_px.to_string() +
-              "px)",
-            )
-          if shift_left > 0.0 {
-            attrs = attrs.style(
-              "margin-left",
-              "-" + shift_left.to_string() + "px",
-            )
-          }
-          Some(
-            @html.div(class=class_name, attrs~, [
-              @html.div(class="hover-row", [
-                @html.div(class="hover-contents", hover.contents),
-              ]),
-            ]),
-          )
-        }
-        None => None
-      }
-    None => None
-  }
-}
-
-///|
 /// Total horizontal padding of the line-number gutter. Keep in sync with
 /// `.gutter` padding in app/src/style.css.
 let gutter_padding_px = 34
@@ -1313,33 +897,6 @@ fn line_col_for_offset(
     }
   }
   None
-}
-
-///|
-/// Measures the rendered hover widget after paint and reports whether it
-/// must flip below the anchor line or shift left to stay inside the viewer.
-fn measure_hover_cmd() -> @rabbita.Cmd {
-  @cmd.custom_cmd(
-    _ => {
-      let document = @rdom.document()
-      match
-        (
-          document.query_selector(".hover-widget").to_option(),
-          document.query_selector(".code-viewer").to_option(),
-        ) {
-        (Some(widget), Some(viewer)) => {
-          let widget_rect = widget.get_bounding_client_rect()
-          let viewer_rect = viewer.get_bounding_client_rect()
-          let below = widget_rect.get_top() < viewer_rect.get_top()
-          let overflow = widget_rect.get_right() - viewer_rect.get_right()
-          let shift_left = if overflow > 0.0 { overflow } else { 0.0 }
-          dispatch_browser_msg(HoverMeasured(below, shift_left))
-        }
-        _ => ()
-      }
-    },
-    kind=@cmd.after_render,
-  )
 }
 
 ///|
@@ -1552,61 +1109,6 @@ fn source_message(model : BrowserAppModel) -> String {
         model.status_message
       }
     _ => ""
-  }
-}
-
-///|
-fn hover_for_span(hover : HoverView?, start : Int, end : Int) -> HoverView? {
-  match hover {
-    Some(item) =>
-      if item.range.start < end && start < item.range.end {
-        Some(item)
-      } else {
-        None
-      }
-    None => None
-  }
-}
-
-///|
-fn anchor_matches(anchor : HoverAnchor?, start : Int, end : Int) -> Bool {
-  match anchor {
-    Some(item) => item.start == start && item.end == end
-    None => false
-  }
-}
-
-///|
-fn line_intersects_definition(
-  model : BrowserAppModel,
-  line : @renderer.RenderLine,
-) -> Bool {
-  match model.definition {
-    Some(item) =>
-      item.uri == active_document_uri(model.document) &&
-      item.range.start <= line.offset + line.text.length() &&
-      line.offset <= item.range.end
-    None => false
-  }
-}
-
-///|
-fn definition_for_span(
-  definition : DefinitionView?,
-  document_uri : String,
-  start : Int,
-  end : Int,
-) -> DefinitionView? {
-  match definition {
-    Some(item) =>
-      if item.uri == document_uri &&
-        item.range.start < end &&
-        start < item.range.end {
-        Some(item)
-      } else {
-        None
-      }
-    None => None
   }
 }
 

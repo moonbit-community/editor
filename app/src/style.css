@@ -165,7 +165,9 @@ body {
 }
 
 .editor-shell {
-  min-height: 100vh;
+  /* Pin the workbench to the viewport so the code viewer is the scroll
+     container; line virtualization windows against its height. */
+  height: 100vh;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   background: var(--vscode-editor-background);
@@ -791,6 +793,9 @@ body {
 
 .diagnostics {
   min-height: 22px;
+  /* A diagnostic flood must not squeeze the editor out of the viewport. */
+  max-height: 25vh;
+  overflow: auto;
   padding: 2px 16px;
   display: flex;
   align-items: center;

@@ -4,6 +4,7 @@ import {
   "baozhiyuan/editor/server",
   "baozhiyuan/editor/workspace",
   "moonbitlang/async",
+  "moonbitlang/async/aqueue",
   "moonbitlang/async/fs",
   "moonbitlang/async/http",
   "moonbitlang/async/io",

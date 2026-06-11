@@ -67,6 +67,8 @@ The browser host logs structured events prefixed with `[readonly-editor]`:
   render.
 - `dom:mounted`: rendered line and diagnostic counts after DOM creation,
   plus `patchMs` (time from frame build completion to after-paint).
+  `renderedLines` is the windowed line count actually in the DOM; the
+  shell's `data-line-count` attribute stays the document total.
 
 These events are intentionally stable so automated agents can diagnose render
 failures from console output.

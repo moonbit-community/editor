@@ -378,7 +378,14 @@ async fn handle_protocol_connection(
 ) -> Unit {
   let ws = @websocket.from_http_server(request, conn)
   defer ws.close()
+  // Watch tasks emit packets concurrently with request handling, and the
+  // websocket connection rejects interleaved sends; one writer task owns
+  // the socket and everything else enqueues outbound frames.
+  let outbox : @aqueue.Queue[String] = Queue(kind=Unbounded)
   @async.with_task_group() <| group => {
+    group.spawn_bg(no_wait=true, allow_failure=true, () => for ;; {
+      ws.send_text(outbox.get())
+    })
     let spawn_watch = task => {
       group.spawn_bg(task, no_wait=true, allow_failure=true)
     }
@@ -388,7 +395,7 @@ async fn handle_protocol_connection(
         match message.kind {
           Text => {
             let raw = message.read_all().text()
-            handle_protocol_message(remote_server, ws, raw, spawn_watch)
+            handle_protocol_message(remote_server, outbox, raw, spawn_watch)
           }
           Binary => ignore(message.read_all().binary())
         }
@@ -404,7 +411,7 @@ async fn handle_protocol_connection(
 ///|
 async fn handle_protocol_message(
   remote_server : @server.RemoteServer,
-  ws : @websocket.Conn,
+  outbox : @aqueue.Queue[String],
   raw : String,
   spawn_watch : (async () -> Unit) -> Unit,
 ) -> Unit {
@@ -412,15 +419,15 @@ async fn handle_protocol_message(
     DecodedClientPacket(packet) => {
       let responses = remote_server.handle_client_packet(
         packet,
-        packet => ws.send_text(packet.to_json()),
+        packet => outbox.put(packet.to_json()),
         spawn_watch,
       )
       for packet in responses {
-        ws.send_text(packet.to_json())
+        outbox.put(packet.to_json())
       }
     }
     ClientPacketDecodeError(error) =>
-      ws.send_text(@remote_protocol.RemoteError(error).to_json())
+      outbox.put(@remote_protocol.RemoteError(error).to_json())
   }
 }
 

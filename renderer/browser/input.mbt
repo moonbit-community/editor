@@ -205,10 +205,33 @@ fn code_viewer_attrs(emit : @rabbita.Emit[BrowserMsg]) -> @html.Attrs {
     }
   })
   .on_mouseleave(_ => emit(EditorMouseLeft))
-  .on_scroll(event => match event.target().to_element() {
-    Some(element) => emit(EditorScrolled(element.get_scroll_top()))
-    None => @rabbita.none
-  })
+}
+
+///|
+/// Browser scroll events are plain `Event`s, not `UIEvent`s, so Rabbita's
+/// typed `on_scroll` cannot deliver them; the viewer attaches a native
+/// listener after mount instead. The property marker keeps one listener
+/// per mounted element (remounts produce a fresh element).
+fn attach_scroll_hook_cmd() -> @rabbita.Cmd {
+  @cmd.custom_cmd(
+    _ => match @rdom.document().query_selector(".code-viewer").to_option() {
+      Some(viewer) =>
+        match viewer.get_property("readonlyEditorScrollHook").to_option() {
+          Some(_) => ()
+          None => {
+            viewer.set_property(
+              "readonlyEditorScrollHook",
+              @js.Value::cast_from("attached"),
+            )
+            viewer.add_event_listener("scroll", _event => dispatch_browser_msg(
+              EditorScrolled(viewer.get_scroll_top()),
+            ))
+          }
+        }
+      None => ()
+    },
+    kind=@cmd.after_render,
+  )
 }
 
 ///|

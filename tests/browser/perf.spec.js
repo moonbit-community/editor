@@ -12,7 +12,7 @@ test('logs render timings for small and large documents', async ({ page }) => {
   test.setTimeout(120_000);
   const chunks = [];
   for (let i = 0; i < 2000; i++) {
-    chunks.push(`///|\nfn generated_value_${i}() -> Int {\n  ${i}\n}\n`);
+    chunks.push(`///|\npub fn generated_value_${i}() -> Int {\n  ${i}\n}\n`);
   }
   await fs.writeFile(largeFixture, chunks.join('\n'), 'utf8');
 

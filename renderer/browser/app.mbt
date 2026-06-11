@@ -138,7 +138,14 @@ fn update_browser_app(
   model : BrowserAppModel,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   let (cmd, next) = browser_update(emit, msg, model)
-  (@rabbita.batch([cmd, push_code_surface_cmd(next)]), next)
+  (
+    @rabbita.batch([
+      cmd,
+      push_code_surface_cmd(next),
+      push_code_window_cmd(next),
+    ]),
+    next,
+  )
 }
 
 ///|
@@ -191,7 +198,16 @@ fn browser_update(
       )
     ToggleTheme => {
       let theme = if model.theme == "light" { "dark" } else { "light" }
-      (persist_theme_cmd(theme), { ..model, theme, })
+      // The theme keys the code cell, so toggling remounts it; rehook the
+      // fresh element and restore the scroll offset it loses.
+      (
+        @rabbita.batch([
+          persist_theme_cmd(theme),
+          attach_scroll_hook_cmd(),
+          restore_scroll_cmd(model.scroll_top),
+        ]),
+        { ..model, theme, },
+      )
     }
     EditorMouseMoved(x, y, modifier) =>
       editor_mouse_moved_update(emit, model, x, y, modifier)
@@ -512,32 +528,36 @@ fn definition_navigation_update(
 
 ///|
 /// Scrolls the target line to the vertical center of the viewer when it is
-/// outside the visible range, mirroring VS Code's reveal behavior.
+/// outside the visible range, mirroring VS Code's reveal behavior. Pure
+/// scroll arithmetic: with windowed rendering the target line may not be
+/// in the DOM until the scroll itself brings it into the window.
 fn reveal_line_cmd(line_number : Int) -> @rabbita.Cmd {
   @cmd.custom_cmd(
-    _ => {
-      let document = @rdom.document()
-      match
-        (
-          document
-          .query_selector(
-            ".code-line[data-line=\"" + line_number.to_string() + "\"]",
-          )
-          .to_option(),
-          document.query_selector(".code-viewer").to_option(),
-        ) {
-        (Some(line), Some(viewer)) => {
-          let line_rect = line.get_bounding_client_rect()
-          let viewer_rect = viewer.get_bounding_client_rect()
-          if line_rect.get_top() < viewer_rect.get_top() ||
-            line_rect.get_bottom() > viewer_rect.get_bottom() {
-            let target = ((line_number - 1) * editor_line_height).to_double() -
-              viewer_rect.get_height() / 2.0
-            viewer.set_scroll_top(if target < 0.0 { 0.0 } else { target })
-          }
+    _ => match @rdom.document().query_selector(".code-viewer").to_option() {
+      Some(viewer) => {
+        let viewer_height = viewer.get_bounding_client_rect().get_height()
+        let line_top = ((line_number - 1) * editor_line_height).to_double()
+        let line_bottom = line_top + editor_line_height.to_double()
+        let view_top = viewer.get_scroll_top()
+        let view_bottom = view_top + viewer_height
+        if line_top < view_top || line_bottom > view_bottom {
+          let target = line_top - viewer_height / 2.0
+          viewer.set_scroll_top(if target < 0.0 { 0.0 } else { target })
         }
-        _ => ()
       }
+      None => ()
+    },
+    kind=@cmd.after_render,
+  )
+}
+
+///|
+/// Restores the viewer's scroll offset after a code-cell remount.
+fn restore_scroll_cmd(scroll_top : Double) -> @rabbita.Cmd {
+  @cmd.custom_cmd(
+    _ => match @rdom.document().query_selector(".code-viewer").to_option() {
+      Some(viewer) => viewer.set_scroll_top(scroll_top)
+      None => ()
     },
     kind=@cmd.after_render,
   )
@@ -652,9 +672,18 @@ fn document_rendered_update(
     hover: model.hover.cleared(),
     definition,
   }
+  // A rotated cell key remounts the viewer element, which starts at
+  // scroll offset zero.
+  let next = if code_cell_retained(next, rendered.frame) {
+    next
+  } else {
+    { ..next, scroll_top: 0.0 }
+  }
+  let window = code_cell_window(next, rendered.frame)
   let commands = [
     push_code_frame_cmd(next, rendered.frame),
-    dom_mounted_cmd(rendered.frame, "ready"),
+    dom_mounted_cmd(rendered.frame, window.end - window.start, "ready"),
+    attach_scroll_hook_cmd(),
     measure_viewer_cmd(),
   ]
   if watch {
@@ -1196,15 +1225,14 @@ fn display_name_from_uri(uri : String) -> String {
 ///|
 fn dom_mounted_cmd(
   frame : @renderer.RenderFrame,
+  rendered_lines : Int,
   status : String,
 ) -> @rabbita.Cmd {
   @cmd.custom_cmd(
     _ => {
       let patch_ms = @dom.now_ms() - last_build_finished_at.val
       let mut payload = "{"
-      payload = payload +
-        "\"renderedLines\":" +
-        frame.lines.length().to_string()
+      payload = payload + "\"renderedLines\":" + rendered_lines.to_string()
       payload = payload + ",\"diagnostics\":"
       payload = payload + frame.diagnostics.length().to_string()
       payload = payload + ",\"status\":" + json_string(status)

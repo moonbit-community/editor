@@ -4,23 +4,22 @@ JavaScript/browser host boundary.
 
 ## Responsibilities
 
-- Declare JavaScript FFI for narrow browser host capabilities: protocol URL
-  derivation, current-document exposure, filesystem provider hooks, disposables,
-  observability, and best-effort `localStorage` persistence
+- Declare JavaScript FFI for narrow browser host capabilities shared by the
+  browser app: protocol URL derivation, current-document exposure,
+  observability event emission, and best-effort `localStorage` persistence
   (`storage_get_item` / `storage_set_item`).
-- Convert host responses into MoonBit `workspace` contracts.
-- Install browser filesystem fallback providers without rendering editor DOM,
-  owning document session state, or fabricating remote protocol responses.
+- Install the `__readonlyEditorEvent` observability hook consumed by the
+  browser test harness.
 
 ## Boundaries
 
-- This is the only product package that may declare JavaScript FFI.
-- May depend on `workspace` and JS async support.
+- JS-only package (`supported_targets = "js"`); may declare JavaScript FFI
+  under the host-FFI rule in `../docs/architecture.md`.
+- Has no product package dependencies.
 - Must not own backend-neutral render-frame construction, workspace policy, or
   native server behavior.
 - Must not expose broad render/session callback globals such as
   `__readonlyEditorMount` or `__readonlyEditorRender`.
-- Keep this package JS-only through `supported_targets = "js"`.
 
 ## Checks
 

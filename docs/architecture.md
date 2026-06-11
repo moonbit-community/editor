@@ -72,7 +72,12 @@ syntax/decorations -> core
   `workspace`, `language`, `view`, and `remote_protocol`.
 - `server` may import `workspace`, `language`, and `remote_protocol`, but must
   not import renderer backend packages.
-- Host-boundary packages may contain platform FFI. Domain packages must not.
+- Packages that only run on one host target may declare that host's FFI: a
+  browser-only package such as `dom` or `renderer/browser` may declare
+  JavaScript FFI, and a native-only package such as `server_host_native` may
+  declare native FFI. Declare FFI in the package that uses it; `dom` holds
+  only browser capabilities shared across browser packages. Packages shared
+  across targets must not declare FFI.
 - Browser-specific code must stay out of `core`, `syntax`, `decorations`,
   `workspace`, `language`, `view`, `renderer`, `remote_protocol`, and `server`.
 - Product code must not import from `codemirror/` or `vscode/`; those trees are

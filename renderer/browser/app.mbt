@@ -1273,16 +1273,7 @@ fn view_empty_viewer(model : BrowserAppModel) -> @html.Html {
   @html.section(
     class="code-viewer source-empty",
     attrs=@html.Attrs::build().aria_label("Readonly code viewer"),
-    [
-      @html.div(class="source-message", source_message(model)),
-      if model.status == "loading" {
-        @html.nothing
-      } else {
-        @html.div(class="source-actions", [
-          @html.button(type_="button", class="source-open-button", "Open file"),
-        ])
-      },
-    ],
+    [@html.div(class="source-message", source_message(model))],
   )
 }
 

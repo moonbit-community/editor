@@ -13,5 +13,5 @@ just test-browser
 
 - Root MoonBit package dependencies flow from `web` to `view` to domain packages.
 - Product code must not import from `codemirror/` or `vscode/`.
-- Only the `dom` package may declare JavaScript FFI.
+- Packages that only run on one host target may declare that host's FFI; packages shared across targets must not declare FFI. See the host-FFI rule in `architecture.md`.
 - `codemirror/` and `vscode/` are references only.

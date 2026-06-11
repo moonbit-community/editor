@@ -19,8 +19,9 @@ Browser render backend adapter.
 
 - May depend on Rabbita public packages, `dom`, `workspace`, `language`,
   `remote_protocol`, `renderer`, `syntax`, and `decorations`.
-- Must keep JavaScript FFI declarations in `dom`; this package calls the host
-  boundary but does not declare it.
+- May declare JavaScript FFI it alone uses, under the host-FFI rule in
+  `../../docs/architecture.md`; browser capabilities shared with other browser
+  packages belong in `dom`.
 - Must not pass render-frame JSON to JavaScript for DOM rendering.
 - Browser-only behavior stays here or in `dom`, not in shared renderer or
   domain packages.

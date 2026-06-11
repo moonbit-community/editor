@@ -22,24 +22,47 @@ priv struct HoverPlacement {
 let hover_delay_ms = 300
 
 ///|
-/// Editor hover feature state: the anchored range under the mouse, the
-/// delay token gating stale timers, the resolved hover, and its measured
-/// placement.
+/// Editor hover feature state, with Monaco's timing: the provider request
+/// fires at half the hover delay, display is gated at the full delay, and
+/// a loading hover appears at three times the delay if the provider has
+/// not answered.
 priv struct HoverController {
   anchor : HoverAnchor?
   token : Int
   view : HoverView?
+  pending_view : HoverView?
+  answered : Bool
+  display_open : Bool
+  loading : Bool
   placement : HoverPlacement?
 }
 
 ///|
 fn HoverController::empty() -> HoverController {
-  { anchor: None, token: 0, view: None, placement: None }
+  {
+    anchor: None,
+    token: 0,
+    view: None,
+    pending_view: None,
+    answered: false,
+    display_open: false,
+    loading: false,
+    placement: None,
+  }
 }
 
 ///|
 fn HoverController::cleared(self : HoverController) -> HoverController {
-  { ..self, anchor: None, view: None, placement: None }
+  {
+    ..self,
+    anchor: None,
+    view: None,
+    pending_view: None,
+    answered: false,
+    display_open: false,
+    loading: false,
+    placement: None,
+  }
 }
 
 ///|
@@ -65,8 +88,8 @@ fn HoverController::on_event(
 }
 
 ///|
-/// VS Code's hover scheduling: a new anchor restarts the delay timer; the
-/// same anchor keeps the pending or shown hover untouched.
+/// A new anchor restarts the timers; the same anchor keeps the pending or
+/// shown hover untouched.
 fn HoverController::schedule(
   self : HoverController,
   emit : @rabbita.Emit[BrowserMsg],
@@ -82,12 +105,19 @@ fn HoverController::schedule(
   } else {
     let token = self.token + 1
     (
-      @cmd.delay(emit(FireHover(token)), hover_delay_ms),
+      @rabbita.batch([
+        @cmd.delay(emit(FireHover(token)), hover_delay_ms / 2),
+        @cmd.delay(emit(HoverDisplayDue(token)), hover_delay_ms),
+        @cmd.delay(emit(HoverLoadingDue(token)), hover_delay_ms * 3),
+      ]),
       {
-        ..self,
         token,
         anchor: Some({ start, end, offset: (start + end) / 2 }),
         view: None,
+        pending_view: None,
+        answered: false,
+        display_open: false,
+        loading: false,
         placement: None,
       },
     )
@@ -95,7 +125,7 @@ fn HoverController::schedule(
 }
 
 ///|
-/// The delay timer fired: request the hover if the token is still current.
+/// Half-delay timer fired: ask the hover provider if the token is current.
 fn HoverController::fire(
   self : HoverController,
   emit : @rabbita.Emit[BrowserMsg],
@@ -106,12 +136,7 @@ fn HoverController::fire(
     match self.anchor {
       Some(anchor) =>
         (
-          hover_request_cmd(
-            emit,
-            ctx.source_document,
-            anchor.offset,
-            frame_version(ctx.frame),
-          ),
+          hover_provider_cmd(emit, ctx.source_document, anchor.offset, token),
           self,
         )
       None => (@rabbita.none, self)
@@ -122,37 +147,94 @@ fn HoverController::fire(
 }
 
 ///|
-/// A hover result arrived from the provider; stale frame versions are
-/// dropped, successful results trigger an after-paint measurement.
-fn HoverController::resolved(
+/// Full-delay timer fired: open the display gate and promote an already
+/// resolved hover.
+fn HoverController::display_due(
   self : HoverController,
-  payload : @remote_protocol.HoverResultPayload,
-  current_version : Int,
+  token : Int,
 ) -> (@rabbita.Cmd, HoverController) {
-  if current_version != payload.version {
+  if token != self.token {
     return (@rabbita.none, self)
   }
-  match payload.hover {
-    Some(hover) => {
-      emit_event(
-        "language:hover",
-        "{\"ok\":true,\"version\":" + payload.version.to_string() + "}",
-      )
+  match self.pending_view {
+    Some(view) =>
       (
         measure_hover_cmd(),
         {
           ..self,
-          view: Some({ range: hover.range, contents: hover.contents }),
+          display_open: true,
+          view: Some(view),
+          pending_view: None,
           placement: None,
         },
       )
+    None => (@rabbita.none, { ..self, display_open: true })
+  }
+}
+
+///|
+/// Triple-delay timer fired with no provider answer: show a loading hover.
+fn HoverController::loading_due(
+  self : HoverController,
+  token : Int,
+) -> (@rabbita.Cmd, HoverController) {
+  if token == self.token && !self.answered && self.anchor is Some(_) {
+    (@rabbita.none, { ..self, loading: true })
+  } else {
+    (@rabbita.none, self)
+  }
+}
+
+///|
+/// A hover provider result arrived. Results are dropped when the document
+/// version moved on or the anchor token changed since the request.
+fn HoverController::resolved_hover(
+  self : HoverController,
+  version : Int,
+  token : Int,
+  hover : @language.Hover?,
+  current_version : Int,
+) -> (@rabbita.Cmd, HoverController) {
+  if current_version != version || token != self.token {
+    return (@rabbita.none, self)
+  }
+  match hover {
+    Some(hover) => {
+      emit_event(
+        "language:hover",
+        "{\"ok\":true,\"version\":" + version.to_string() + "}",
+      )
+      let view : HoverView = { range: hover.range, contents: hover.contents }
+      if self.display_open {
+        (
+          measure_hover_cmd(),
+          {
+            ..self,
+            answered: true,
+            loading: false,
+            view: Some(view),
+            pending_view: None,
+            placement: None,
+          },
+        )
+      } else {
+        (
+          @rabbita.none,
+          {
+            ..self,
+            answered: true,
+            loading: false,
+            pending_view: Some(view),
+          },
+        )
+      }
     }
     None => {
       emit_event(
         "language:hover",
-        "{\"ok\":false,\"version\":" + payload.version.to_string() + "}",
+        "{\"ok\":false,\"version\":" + version.to_string() + "}",
       )
-      (@rabbita.none, self)
+      (@rabbita.none, { ..self, answered: true, loading: false })
     }
   }
 }
@@ -167,24 +249,12 @@ fn HoverController::measured(
 }
 
 ///|
-fn HoverController::anchor_matches(
-  self : HoverController,
-  start : Int,
-  end : Int,
-) -> Bool {
-  match self.anchor {
-    Some(anchor) => anchor.start == start && anchor.end == end
-    None => false
-  }
-}
-
-///|
 fn HoverController::decorations(
   self : HoverController,
 ) -> Array[@decorations.Decoration] {
   match self.view {
     Some(hover) => [
-      @decorations.Decoration(hover.range, HoverHighlight, "has-hover"),
+      Decoration(hover.range, HoverHighlight, "has-hover"),
     ]
     None => []
   }
@@ -194,61 +264,80 @@ fn HoverController::decorations(
 /// Renders the hover widget inside `.code-lines`, anchored at the hovered
 /// range like VS Code's editor hover: above the line by default, flipped
 /// below when the measured widget would leave the viewport, and shifted left
-/// when it would overflow the viewer's right edge.
+/// when it would overflow the viewer's right edge. While the provider is
+/// still resolving past the loading delay, an unmeasured loading hover is
+/// shown at the anchor instead.
 fn HoverController::widget(
   self : HoverController,
   frame : @renderer.RenderFrame,
 ) -> @html.Html? {
   match self.view {
     Some(hover) =>
-      match line_col_for_offset(frame, hover.range.start) {
-        Some((line_number, column)) => {
-          let mut class_name = "hover-widget"
-          let mut shift_left = 0.0
-          let mut below = false
-          match self.placement {
-            Some(placement) => {
-              below = placement.below
-              shift_left = placement.shift_left
-            }
-            None => class_name = class_name + " measuring"
-          }
-          let top = if below {
-            line_number * editor_line_height
-          } else {
-            (line_number - 1) * editor_line_height
-          }
-          if below {
-            class_name = class_name + " below"
-          }
-          let digits = frame.line_count.to_string().length()
-          let mut attrs = widget_overlay_attrs(@html.Attrs::build())
-            .role("tooltip")
-            .style("top", top.to_string() + "px")
-            .style(
-              "left",
-              "calc(" +
-              (digits + column).to_string() +
-              "ch + " +
-              gutter_padding_px.to_string() +
-              "px)",
-            )
-          if shift_left > 0.0 {
-            attrs = attrs.style(
-              "margin-left",
-              "-" + shift_left.to_string() + "px",
-            )
-          }
-          Some(
-            @html.div(class=class_name, attrs~, [
-              @html.div(class="hover-row", [
-                @html.div(class="hover-contents", hover.contents),
-              ]),
-            ]),
-          )
+      self.anchored_widget(frame, hover.range.start, hover.contents, true)
+    None =>
+      if self.loading {
+        match self.anchor {
+          Some(anchor) =>
+            self.anchored_widget(frame, anchor.start, "Loading...", false)
+          None => None
         }
-        None => None
+      } else {
+        None
       }
+  }
+}
+
+///|
+fn HoverController::anchored_widget(
+  self : HoverController,
+  frame : @renderer.RenderFrame,
+  anchor_offset : Int,
+  contents : String,
+  measured : Bool,
+) -> @html.Html? {
+  match line_col_for_offset(frame, anchor_offset) {
+    Some((line_number, column)) => {
+      let mut class_name = "hover-widget"
+      let mut shift_left = 0.0
+      let mut below = false
+      match self.placement {
+        Some(placement) => {
+          below = placement.below
+          shift_left = placement.shift_left
+        }
+        None => if measured { class_name = class_name + " measuring" }
+      }
+      let top = if below {
+        line_number * editor_line_height
+      } else {
+        (line_number - 1) * editor_line_height
+      }
+      if below {
+        class_name = class_name + " below"
+      }
+      let digits = frame.line_count.to_string().length()
+      let mut attrs = widget_overlay_attrs(@html.Attrs::build())
+        .role("tooltip")
+        .style("top", top.to_string() + "px")
+        .style(
+          "left",
+          "calc(" +
+          (digits + column).to_string() +
+          "ch + " +
+          gutter_padding_px.to_string() +
+          "px)",
+        )
+      if shift_left > 0.0 {
+        attrs = attrs.style("margin-left", "-" + shift_left.to_string() + "px")
+      }
+      Some(
+        @html.div(class=class_name, attrs~, [
+          @html.div(class="hover-row", [
+            @html.div(class="hover-contents", contents),
+          ]),
+        ]),
+      )
+    }
     None => None
   }
 }

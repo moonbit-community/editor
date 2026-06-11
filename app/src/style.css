@@ -76,6 +76,8 @@
   --vscode-token-number: #b5cea8;
   --vscode-token-comment: #6a9955;
   --vscode-token-punctuation: #cccccc;
+  --vscode-token-function: #dcdcaa;
+  --vscode-token-type: #4ec9b0;
 
   /* VS Code editor defaults on macOS: 12px Menlo, 1.5x line height. */
   --editor-font-family: Menlo, Monaco, "Courier New", monospace;
@@ -149,6 +151,8 @@
   --vscode-token-number: #098658;
   --vscode-token-comment: #008000;
   --vscode-token-punctuation: #3b3b3b;
+  --vscode-token-function: #795e26;
+  --vscode-token-type: #267f99;
 }
 
 * {
@@ -455,6 +459,53 @@ body {
 }
 
 .tok-punctuation {
+  color: var(--vscode-token-punctuation);
+}
+
+/* Semantic token overlays. Declared after the tok-* rules so the semantic
+   color wins where a span carries both classes. */
+.sem-function,
+.sem-method,
+.sem-macro,
+.sem-function_call,
+.sem-function_decl {
+  color: var(--vscode-token-function);
+}
+
+.sem-type,
+.sem-class,
+.sem-struct,
+.sem-enum,
+.sem-interface,
+.sem-typeParameter,
+.sem-namespace {
+  color: var(--vscode-token-type);
+}
+
+.sem-variable,
+.sem-parameter,
+.sem-property,
+.sem-enumMember {
+  color: var(--vscode-token-variable);
+}
+
+.sem-keyword {
+  color: var(--vscode-token-keyword);
+}
+
+.sem-string {
+  color: var(--vscode-token-string);
+}
+
+.sem-number {
+  color: var(--vscode-token-number);
+}
+
+.sem-comment {
+  color: var(--vscode-token-comment);
+}
+
+.sem-operator {
   color: var(--vscode-token-punctuation);
 }
 

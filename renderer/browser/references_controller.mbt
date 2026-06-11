@@ -33,10 +33,11 @@ fn ReferencesController::empty() -> ReferencesController {
 }
 
 ///|
+/// The closed-peek state; identical to the initial state today.
 fn ReferencesController::closed(
-  self : ReferencesController,
+  _self : ReferencesController,
 ) -> ReferencesController {
-  { ..self, peek: None, anchor_offset: None }
+  ReferencesController::empty()
 }
 
 ///|
@@ -69,13 +70,8 @@ fn ReferencesController::request(
   match candidate_request_offset(ctx.frame, target) {
     Some(offset) =>
       (
-        references_request_cmd(
-          emit,
-          ctx.source_document,
-          offset,
-          frame_version(ctx.frame),
-        ),
-        { ..self, peek: None, anchor_offset: Some(offset) },
+        references_provider_cmd(emit, ctx.source_document, offset),
+        { peek: None, anchor_offset: Some(offset) },
       )
     None => (@rabbita.none, self)
   }
@@ -86,19 +82,20 @@ fn ReferencesController::request(
 /// offset's line. Stale frame versions are dropped.
 fn ReferencesController::resolved(
   self : ReferencesController,
-  payload : @remote_protocol.ReferencesResultPayload,
+  references : Array[@remote_protocol.ReferenceItem],
+  version : Int,
   frame : @renderer.RenderFrame?,
 ) -> ReferencesController {
   let current_version = frame_version(frame)
-  if current_version != payload.version {
+  if current_version != version {
     return self
   }
   emit_event(
     "language:references",
     "{\"ok\":true,\"count\":" +
-    payload.references.length().to_string() +
+    references.length().to_string() +
     ",\"version\":" +
-    payload.version.to_string() +
+    version.to_string() +
     "}",
   )
   let anchor_line = match (self.anchor_offset, frame) {
@@ -110,7 +107,7 @@ fn ReferencesController::resolved(
     _ => 1
   }
   let items : Array[ReferenceViewItem] = []
-  for reference in payload.references {
+  for reference in references {
     items.push({
       uri: reference.uri.to_string(),
       range: reference.range,
@@ -156,8 +153,10 @@ fn ReferencesController::item_at(
 }
 
 ///|
+/// The references feature contributes no span decorations today; the peek
+/// renders as a view-zone widget instead.
 fn ReferencesController::decorations(
-  self : ReferencesController,
+  _self : ReferencesController,
 ) -> Array[@decorations.Decoration] {
   []
 }

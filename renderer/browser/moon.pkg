@@ -14,6 +14,7 @@ import {
   "moonbit-community/rabbita/sub",
   "moonbit-community/rabbita/svg",
   "moonbit-community/rabbita/dom" @rdom,
+  "moonbit-community/rabbita/js",
   "moonbit-community/rabbita/websocket",
 }
 

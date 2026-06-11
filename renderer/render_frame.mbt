@@ -50,7 +50,11 @@ pub fn build_frame(
     let line_start = doc.line_start_offset(line)
     let line_end = doc.line_end_offset(line)
     let line_range = @core.Range(line_start, line_end)
-    let spans = spans_for_line(doc, line_range, tokens, decoration_set)
+    let spans = overlay_semantic_tokens(
+      spans_for_line(doc, line_range, tokens, decoration_set),
+      line_range,
+      providers.semantic_tokens,
+    )
     lines.push(RenderLine::{
       line_number: line + 1,
       offset: line_start,
@@ -139,6 +143,78 @@ fn spans_for_line(
     })
   }
   spans
+}
+
+///|
+/// Splits syntax spans at semantic token boundaries and appends a
+/// `sem-<type>` class on the overlapping segments, so semantic colors win
+/// over syntax colors where both apply.
+fn overlay_semantic_tokens(
+  spans : Array[RenderSpan],
+  line_range : @core.Range,
+  semantic_tokens : Array[@language.SemanticToken],
+) -> Array[RenderSpan] {
+  if semantic_tokens.length() == 0 {
+    return spans
+  }
+  let out : Array[RenderSpan] = []
+  for span in spans {
+    let span_start = line_range.start + span.start
+    let span_end = line_range.start + span.end
+    let mut cursor = span_start
+    for token in semantic_tokens {
+      if token.token_type == "" {
+        continue
+      }
+      let segment_start = max_int(token.range.start, cursor)
+      let segment_end = min_int(token.range.end, span_end)
+      if segment_start >= segment_end {
+        continue
+      }
+      if cursor < segment_start {
+        out.push(slice_span(span, span_start, cursor, segment_start, ""))
+      }
+      out.push(
+        slice_span(
+          span,
+          span_start,
+          segment_start,
+          segment_end,
+          " " + semantic_token_class(token.token_type),
+        ),
+      )
+      cursor = segment_end
+    }
+    if cursor == span_start {
+      out.push(span)
+    } else if cursor < span_end {
+      out.push(slice_span(span, span_start, cursor, span_end, ""))
+    }
+  }
+  out
+}
+
+///|
+fn slice_span(
+  span : RenderSpan,
+  span_start : Int,
+  absolute_start : Int,
+  absolute_end : Int,
+  extra_class : String,
+) -> RenderSpan {
+  let relative_start = absolute_start - span_start
+  let relative_end = absolute_end - span_start
+  {
+    start: span.start + relative_start,
+    end: span.start + relative_end,
+    text: span.text[relative_start:relative_end].to_owned(),
+    class_name: span.class_name + extra_class,
+  }
+}
+
+///|
+pub fn semantic_token_class(token_type : String) -> String {
+  "sem-" + token_type
 }
 
 ///|

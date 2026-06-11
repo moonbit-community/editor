@@ -50,7 +50,15 @@ priv enum BrowserMsg {
   ViewerMeasured(Double, Double, Double)
   ViewerResized
   FireHover(Int)
+  HoverDisplayDue(Int)
+  HoverLoadingDue(Int)
   HoverMeasured(Bool, Double)
+  HoverResolved(Int, Int, @language.Hover?)
+  DefinitionResolved(Int, @language.Location?)
+  ReferencesResolved(Int, Array[@remote_protocol.ReferenceItem])
+  DiagnosticsResolved(Int, Array[@language.Diagnostic])
+  SymbolsResolved(Int, Array[@language.DocumentSymbol])
+  SemanticTokensResolved(Int, Array[@language.SemanticToken])
   GlobalKeyDown(@common.Keyboard)
   GlobalKeyUp(@common.Keyboard)
   SelectReference(Int)
@@ -87,6 +95,9 @@ pub fn mount_app() -> Unit {
   app.with_init(
     @cmd.custom_cmd(scheduler => {
       browser_dispatch.val = Some(msg => scheduler.add(emit(msg)))
+      protocol_send.val = Some(packet => scheduler.add(
+        send_client_packet_cmd(emit, packet),
+      ))
       scheduler.add(emit(ConnectProtocol))
     }),
   )
@@ -182,8 +193,59 @@ fn update_browser_app(
       let (cmd, hover) = model.hover.fire(emit, editor_context(model), token)
       (cmd, { ..model, hover, })
     }
+    HoverDisplayDue(token) => {
+      let (cmd, hover) = model.hover.display_due(token)
+      (cmd, { ..model, hover, })
+    }
+    HoverLoadingDue(token) => {
+      let (cmd, hover) = model.hover.loading_due(token)
+      (cmd, { ..model, hover, })
+    }
     HoverMeasured(below, shift_left) =>
       (@rabbita.none, { ..model, hover: model.hover.measured(below, shift_left) })
+    HoverResolved(version, token, hover) => {
+      let (cmd, controller) = model.hover.resolved_hover(
+        version,
+        token,
+        hover,
+        frame_version(model.frame),
+      )
+      (cmd, { ..model, hover: controller })
+    }
+    DefinitionResolved(version, location) =>
+      definition_resolved_update(emit, model, version, location)
+    ReferencesResolved(version, items) =>
+      (
+        @rabbita.none,
+        {
+          ..model,
+          references: model.references.resolved(items, version, model.frame),
+        },
+      )
+    DiagnosticsResolved(version, diagnostics) =>
+      if document_version(model.source_document) == version {
+        semantic_payload_update(model, {
+          ..model.provider_result,
+          diagnostics,
+        })
+      } else {
+        (@rabbita.none, model)
+      }
+    SymbolsResolved(version, symbols) =>
+      if document_version(model.source_document) == version {
+        semantic_payload_update(model, { ..model.provider_result, symbols, })
+      } else {
+        (@rabbita.none, model)
+      }
+    SemanticTokensResolved(version, semantic_tokens) =>
+      if document_version(model.source_document) == version {
+        semantic_payload_update(model, {
+          ..model.provider_result,
+          semantic_tokens,
+        })
+      } else {
+        (@rabbita.none, model)
+      }
     GlobalKeyDown(keyboard) => {
       let modifier = keyboard.ctrl_key() || keyboard.meta_key()
       if keyboard.key() == "Escape" {
@@ -280,7 +342,8 @@ fn protocol_event_update(
         { ..model, status_message: "" },
       )
     Message(raw) => protocol_message_update(emit, model, raw)
-    Closed(_) =>
+    Closed(_) => {
+      fail_pending_requests("Connection lost.")
       (
         dom_mounted_status_cmd("stale"),
         {
@@ -289,7 +352,9 @@ fn protocol_event_update(
           status_message: "Connection lost. Reconnecting...",
         },
       )
-    Errored =>
+    }
+    Errored => {
+      fail_pending_requests("Remote protocol connection failed.")
       (
         dom_mounted_status_cmd("error"),
         {
@@ -298,6 +363,7 @@ fn protocol_event_update(
           status_message: "Remote protocol connection failed.",
         },
       )
+    }
   }
 }
 
@@ -308,7 +374,14 @@ fn protocol_message_update(
   raw : String,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   match @remote_protocol.decode_server_packet(raw) {
-    DecodedServerPacket(packet) => server_packet_update(emit, model, packet)
+    DecodedServerPacket(packet) =>
+      // Correlated responses resume their waiting provider request; only
+      // push packets fall through to app-level handling.
+      if resolve_pending_response(packet) {
+        (@rabbita.none, model)
+      } else {
+        server_packet_update(emit, model, packet)
+      }
     ServerPacketDecodeError(error) => protocol_error_update(model, error)
   }
 }
@@ -338,47 +411,55 @@ fn server_packet_update(
         ..model.provider_result,
         semantic_tokens: payload.semantic_tokens,
       })
-    HoverResult(payload) => {
-      let (cmd, hover) = model.hover.resolved(
-        payload,
-        frame_version(model.frame),
-      )
-      (cmd, { ..model, hover, })
-    }
-    DefinitionResult(payload) =>
-      if frame_version(model.frame) == payload.version {
-        match payload.location {
-          Some(location) => {
-            emit_event(
-              "language:definition",
-              "{\"ok\":true,\"version\":" +
-              payload.version.to_string() +
-              ",\"uri\":" +
-              json_string(location.uri.to_string()) +
-              "}",
-            )
-            definition_navigation_update(emit, model, {
-              uri: location.uri.to_string(),
-              range: location.range,
-            })
-          }
-          None => {
-            emit_event(
-              "language:definition",
-              "{\"ok\":false,\"version\":" + payload.version.to_string() + "}",
-            )
-            (@rabbita.none, model)
-          }
-        }
-      } else {
-        (@rabbita.none, model)
-      }
-    ReferencesResult(payload) =>
-      (
-        @rabbita.none,
-        { ..model, references: model.references.resolved(payload, model.frame) },
-      )
+    // Feature results without a waiting request are unsolicited; provider
+    // commands consume theirs through the pending table.
+    HoverResult(_) => (@rabbita.none, model)
+    DefinitionResult(_) => (@rabbita.none, model)
+    ReferencesResult(_) => (@rabbita.none, model)
     RemoteError(error) => protocol_error_update(model, error)
+  }
+}
+
+///|
+fn definition_resolved_update(
+  emit : @rabbita.Emit[BrowserMsg],
+  model : BrowserAppModel,
+  version : Int,
+  location : @language.Location?,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  if frame_version(model.frame) != version {
+    return (@rabbita.none, model)
+  }
+  match location {
+    Some(location) => {
+      emit_event(
+        "language:definition",
+        "{\"ok\":true,\"version\":" +
+        version.to_string() +
+        ",\"uri\":" +
+        json_string(location.uri.to_string()) +
+        "}",
+      )
+      definition_navigation_update(emit, model, {
+        uri: location.uri.to_string(),
+        range: location.range,
+      })
+    }
+    None => {
+      emit_event(
+        "language:definition",
+        "{\"ok\":false,\"version\":" + version.to_string() + "}",
+      )
+      (@rabbita.none, model)
+    }
+  }
+}
+
+///|
+fn document_version(document : @workspace.SourceDocument?) -> Int {
+  match document {
+    Some(document) => document.version
+    None => -1
   }
 }
 
@@ -557,7 +638,7 @@ fn document_rendered_update(
     measure_viewer_cmd(),
   ]
   if watch {
-    commands.push(language_requests_cmd(emit, rendered.document))
+    commands.push(language_feature_cmds(emit, rendered.document))
   }
   match pending {
     Some(item) =>

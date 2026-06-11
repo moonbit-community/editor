@@ -81,12 +81,7 @@ fn DefinitionController::request(
   match candidate_request_offset(ctx.frame, target) {
     Some(offset) =>
       (
-        definition_request_cmd(
-          emit,
-          ctx.source_document,
-          offset,
-          frame_version(ctx.frame),
-        ),
+        definition_provider_cmd(emit, ctx.source_document, offset),
         self.deactivated(),
       )
     None => (@rabbita.none, self)
@@ -138,7 +133,7 @@ fn DefinitionController::decorations(
     match self.link_anchor {
       Some((start, end)) =>
         items.push(
-          @decorations.Decoration(
+          Decoration(
             Range(start, end),
             Link,
             "goto-definition-link",
@@ -151,14 +146,14 @@ fn DefinitionController::decorations(
     Some(definition) =>
       if definition.uri == document_uri {
         items.push(
-          @decorations.Decoration(
+          Decoration(
             definition.range,
             SearchMatch,
             "has-definition definition-target",
           ),
         )
         items.push(
-          @decorations.Decoration(
+          Decoration(
             definition.range,
             CurrentLine,
             "range-highlight",

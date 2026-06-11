@@ -17,7 +17,6 @@ priv enum EditorEvent {
 priv struct EditorContext {
   frame : @renderer.RenderFrame?
   source_document : @workspace.SourceDocument?
-  document_uri : String
   last_target : @renderer.MouseTarget?
 }
 
@@ -26,7 +25,6 @@ fn editor_context(model : BrowserAppModel) -> EditorContext {
   {
     frame: model.frame,
     source_document: model.source_document,
-    document_uri: active_document_uri(model.document),
     last_target: model.last_target,
   }
 }

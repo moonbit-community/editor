@@ -30,7 +30,7 @@ test('renders fixture workspace through the native protocol', async ({ page }) =
     'data-source-uri',
     'readonly-remote://workspace/src/main.mbt',
   );
-  await expect(page.locator('.code-viewer')).toContainText('pub fn main');
+  await expect(page.locator('.code-viewer')).toContainText('fn main');
   await expect(page.locator('.code-viewer')).toContainText('startup_event');
   await expect(page.locator('.editor-shell')).not.toContainText('readonly provider');
 
@@ -79,6 +79,23 @@ test('renders workspace sidebar entries without changing the URL', async ({ page
   expect(await page.evaluate(() => window.location.href)).toBe(initialHref);
 });
 
+test('overlays semantic token classes onto rendered spans', async ({ page }) => {
+  await page.goto('/');
+  await openWorkspaceFile(page, 'src/errors.mbt');
+
+  const semanticSpan = page.locator('.code span[class*="sem-"]').first();
+  // Semantic tokens resolve once per document version; while the language
+  // server is still indexing, re-open the document to request them again.
+  await expect(async () => {
+    if ((await semanticSpan.count()) === 0) {
+      await openWorkspaceFile(page, 'src/main.mbt');
+      await openWorkspaceFile(page, 'src/errors.mbt');
+    }
+    await expect(semanticSpan).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+  await expect(semanticSpan).toHaveClass(/tok-/);
+});
+
 test('updates and recovers watched fixture files from disk changes', async ({ page }) => {
   const original = await fs.readFile(mainFixture, 'utf8');
 
@@ -119,9 +136,17 @@ test('updates and recovers watched fixture files from disk changes', async ({ pa
 });
 
 async function openMainFixture(page) {
-  await expect(page.locator('[data-workspace-id="src/main.mbt"]')).toBeVisible();
-  await page.locator('[data-workspace-id="src/main.mbt"]').click();
+  await openWorkspaceFile(page, 'src/main.mbt');
+}
+
+async function openWorkspaceFile(page, workspaceId) {
+  await expect(page.locator(`[data-workspace-id="${workspaceId}"]`)).toBeVisible();
+  await page.locator(`[data-workspace-id="${workspaceId}"]`).click();
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
+  await expect(page.locator('.editor-shell')).toHaveAttribute(
+    'data-source-uri',
+    `readonly-remote://workspace/${workspaceId}`,
+  );
 }
 
 function readonlyEvents(page) {

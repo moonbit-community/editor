@@ -167,9 +167,8 @@ fn ReferencesController::view_zones(
   self : ReferencesController,
 ) -> Array[@renderer.ViewZone] {
   match self.peek {
-    Some(peek) => [
-      { anchor_line: peek.anchor_line, height_px: peek_zone_height_px },
-    ]
+    Some(peek) =>
+      [{ anchor_line: peek.anchor_line, height_px: peek_zone_height_px }]
     None => []
   }
 }
@@ -185,10 +184,7 @@ fn ReferencesController::zone_widget(
   match self.peek {
     Some(peek) =>
       Some(
-        (
-          peek.anchor_line,
-          view_peek_widget(emit, frame, document_uri, peek),
-        ),
+        (peek.anchor_line, view_peek_widget(emit, frame, document_uri, peek)),
       )
     None => None
   }

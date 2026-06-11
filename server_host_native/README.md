@@ -10,7 +10,9 @@ Native host adapter for server-side effects.
 - Keep filesystem reads, file watching, process spawning, timers, sockets, and
   `moon-lsp --stdio` lifecycle effects outside server policy code.
 - Serve the browser client from `web/dist` and bridge `/protocol` WebSocket
-  traffic into `server.RemoteServer`.
+  traffic into `server.RemoteServer`, serializing outbound packets through a
+  per-connection writer task so concurrent watch pushes and responses never
+  interleave on the socket.
 - List workspace entries, validate root-relative paths, and poll watched files
   under the configured workspace root.
 - Own configured stdio LSP process startup, `Content-Length` framing, and

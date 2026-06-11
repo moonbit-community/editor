@@ -85,11 +85,7 @@ fn fail_pending_requests(message : String) -> Unit {
         pending_requests.remove(id)
         resolve(
           RemoteError(
-            ProtocolError(
-              ProtocolProviderError,
-              message,
-              request_id=id,
-            ),
+            ProtocolError(ProtocolProviderError, message, request_id=id),
           ),
         )
       }

@@ -81,7 +81,7 @@ pub fn hit_test(
     zone_offset = zone_offset + zone.height_px
   }
   let line_index = ((content_y - zone_offset.to_double()) /
-    metrics.line_height.to_double()).to_int()
+  metrics.line_height.to_double()).to_int()
   if line_index >= frame.line_count {
     return {
       kind: BelowContent,

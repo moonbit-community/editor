@@ -7,7 +7,7 @@ Range-based visual annotations over immutable documents.
 - Define decoration kinds, decoration payloads, and `DecorationSet`.
 - Query decorations by range or offset for render construction.
 - Represent readonly visual state such as diagnostics, links, matches, semantic
-  overlays, and current-line markers.
+  overlays, hover highlights, and current-line markers.
 
 ## Boundaries
 

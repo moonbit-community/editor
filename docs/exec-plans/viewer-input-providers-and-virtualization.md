@@ -1,6 +1,6 @@
 # Viewer Input Bridge, Provider-Backed Features, and Virtualized Rendering
 
-Status: proposed (2026-06-11).
+Status: implemented (2026-06-11).
 
 ## Goal
 

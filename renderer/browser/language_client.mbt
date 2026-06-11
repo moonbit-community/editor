@@ -19,12 +19,9 @@ impl @language.HoverProvider for RemoteLanguageClient with fn hover_at(
   document,
   offset,
 ) {
-  let response = protocol_request("hover", id => Hover({
-    id,
-    uri: document.uri,
-    document_version: document.version,
-    offset,
-  }))
+  let response = protocol_request("hover", id => {
+    Hover({ id, uri: document.uri, document_version: document.version, offset })
+  })
   match response {
     HoverResult(payload) => payload.hover
     packet => {
@@ -40,12 +37,14 @@ impl @language.DefinitionProvider for RemoteLanguageClient with fn definition_at
   document,
   offset,
 ) {
-  let response = protocol_request("definition", id => Definition({
-    id,
-    uri: document.uri,
-    document_version: document.version,
-    offset,
-  }))
+  let response = protocol_request("definition", id => {
+    Definition({
+      id,
+      uri: document.uri,
+      document_version: document.version,
+      offset,
+    })
+  })
   match response {
     DefinitionResult(payload) => payload.location
     packet => {
@@ -77,12 +76,14 @@ async fn RemoteLanguageClient::reference_items_at(
   document : @workspace.SourceDocument,
   offset : Int,
 ) -> Array[@remote_protocol.ReferenceItem] noraise {
-  let response = protocol_request("references", id => References({
-    id,
-    uri: document.uri,
-    document_version: document.version,
-    offset,
-  }))
+  let response = protocol_request("references", id => {
+    References({
+      id,
+      uri: document.uri,
+      document_version: document.version,
+      offset,
+    })
+  })
   match response {
     ReferencesResult(payload) => payload.references
     packet => {
@@ -97,11 +98,9 @@ impl @language.DiagnosticsProvider for RemoteLanguageClient with fn diagnostics_
   _self,
   document,
 ) {
-  let response = protocol_request("diagnostics", id => Diagnostics({
-    id,
-    uri: document.uri,
-    document_version: document.version,
-  }))
+  let response = protocol_request("diagnostics", id => {
+    Diagnostics({ id, uri: document.uri, document_version: document.version })
+  })
   match response {
     Diagnostics(payload) => payload.diagnostics
     packet => {
@@ -116,11 +115,13 @@ impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn document_
   _self,
   document,
 ) {
-  let response = protocol_request("symbols", id => DocumentSymbols({
-    id,
-    uri: document.uri,
-    document_version: document.version,
-  }))
+  let response = protocol_request("symbols", id => {
+    DocumentSymbols({
+      id,
+      uri: document.uri,
+      document_version: document.version,
+    })
+  })
   match response {
     DocumentSymbolsResult(payload) => payload.symbols
     packet => {
@@ -135,11 +136,9 @@ impl @language.SemanticTokensProvider for RemoteLanguageClient with fn semantic_
   _self,
   document,
 ) {
-  let response = protocol_request("semantic-tokens", id => SemanticTokens({
-    id,
-    uri: document.uri,
-    document_version: document.version,
-  }))
+  let response = protocol_request("semantic-tokens", id => {
+    SemanticTokens({ id, uri: document.uri, document_version: document.version })
+  })
   match response {
     SemanticTokensResult(payload) => payload.semantic_tokens
     packet => {
@@ -275,7 +274,9 @@ fn language_feature_cmds(
     @cmd.perform(result => emit(DiagnosticsResolved(version, result)), async fn() noraise {
       match provider_registry.diagnostics.get(0) {
         Some(provider) =>
-          provider.diagnostics_for_document(document) catch { _ => [] }
+          provider.diagnostics_for_document(document) catch {
+            _ => []
+          }
         None => []
       }
     }),
@@ -288,7 +289,9 @@ fn language_feature_cmds(
     @cmd.perform(result => emit(SemanticTokensResolved(version, result)), async fn() noraise {
       match provider_registry.semantic_tokens.get(0) {
         Some(provider) =>
-          provider.semantic_tokens_for_document(document) catch { _ => [] }
+          provider.semantic_tokens_for_document(document) catch {
+            _ => []
+          }
         None => []
       }
     }),

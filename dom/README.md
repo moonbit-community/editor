@@ -6,7 +6,8 @@ JavaScript/browser host boundary.
 
 - Declare JavaScript FFI for narrow browser host capabilities shared by the
   browser app: protocol URL derivation, current-document exposure,
-  observability event emission, and best-effort `localStorage` persistence
+  observability event emission, high-resolution timing (`now_ms`), and
+  best-effort `localStorage` persistence
   (`storage_get_item` / `storage_set_item`).
 - Install the `__readonlyEditorEvent` observability hook consumed by the
   browser test harness.

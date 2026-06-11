@@ -39,12 +39,8 @@ fn editor_event_update(
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   let ctx = editor_context(model)
   let (hover_cmd, hover) = model.hover.on_event(emit, event, ctx)
-  let (definition_cmd, definition) = model.definition.on_event(
-    emit, event, ctx,
-  )
-  let (references_cmd, references) = model.references.on_event(
-    emit, event, ctx,
-  )
+  let (definition_cmd, definition) = model.definition.on_event(emit, event, ctx)
+  let (references_cmd, references) = model.references.on_event(emit, event, ctx)
   (
     @rabbita.batch([hover_cmd, definition_cmd, references_cmd]),
     { ..model, hover, definition, references },

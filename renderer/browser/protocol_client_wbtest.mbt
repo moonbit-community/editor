@@ -12,12 +12,12 @@ test "crossing in-flight responses resolve their own requests" {
   let first = next_request_id("hover")
   let second = next_request_id("hover")
   let resolved : Array[String] = []
-  pending_requests[first] = packet => resolved.push(
-    "first<-" + server_packet_request_id(packet),
-  )
-  pending_requests[second] = packet => resolved.push(
-    "second<-" + server_packet_request_id(packet),
-  )
+  pending_requests[first] = packet => {
+    resolved.push("first<-" + server_packet_request_id(packet))
+  }
+  pending_requests[second] = packet => {
+    resolved.push("second<-" + server_packet_request_id(packet))
+  }
   // The second request answers before the first: ids keep them apart.
   assert_true(
     resolve_pending_response(
@@ -61,9 +61,11 @@ test "push packets without a pending id fall through" {
       }),
     ),
   )
-  assert_false(resolve_pending_response(RemoteError(
-    ProtocolError(ProtocolProviderError, "boom"),
-  )))
+  assert_false(
+    resolve_pending_response(
+      RemoteError(ProtocolError(ProtocolProviderError, "boom")),
+    ),
+  )
 }
 
 ///|

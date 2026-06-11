@@ -185,17 +185,23 @@ fn editor_context_menu_update(
 fn code_viewer_attrs(emit : @rabbita.Emit[BrowserMsg]) -> @html.Attrs {
   @html.Attrs::build()
   .aria_label("Readonly code viewer")
-  .on_mousemove(event => match viewer_mouse_position(event) {
-    Some((x, y)) =>
-      emit(
-        EditorMouseMoved(x, y, event.get_ctrl_key() || event.get_meta_key()),
-      )
-    None => @rabbita.none
+  .on_mousemove(event => {
+    match viewer_mouse_position(event) {
+      Some((x, y)) =>
+        emit(
+          EditorMouseMoved(x, y, event.get_ctrl_key() || event.get_meta_key()),
+        )
+      None => @rabbita.none
+    }
   })
-  .on_click(event => match viewer_mouse_position(event) {
-    Some((x, y)) =>
-      emit(EditorMouseDown(x, y, event.get_ctrl_key() || event.get_meta_key()))
-    None => @rabbita.none
+  .on_click(event => {
+    match viewer_mouse_position(event) {
+      Some((x, y)) =>
+        emit(
+          EditorMouseDown(x, y, event.get_ctrl_key() || event.get_meta_key()),
+        )
+      None => @rabbita.none
+    }
   })
   .on_contextmenu(event => {
     event.prevent_default()
@@ -214,21 +220,23 @@ fn code_viewer_attrs(emit : @rabbita.Emit[BrowserMsg]) -> @html.Attrs {
 /// per mounted element (remounts produce a fresh element).
 fn attach_scroll_hook_cmd() -> @rabbita.Cmd {
   @cmd.custom_cmd(
-    _ => match @rdom.document().query_selector(".code-viewer").to_option() {
-      Some(viewer) =>
-        match viewer.get_property("readonlyEditorScrollHook").to_option() {
-          Some(_) => ()
-          None => {
-            viewer.set_property(
-              "readonlyEditorScrollHook",
-              @js.Value::cast_from("attached"),
-            )
-            viewer.add_event_listener("scroll", _event => dispatch_browser_msg(
-              EditorScrolled(viewer.get_scroll_top()),
-            ))
+    _ => {
+      match @rdom.document().query_selector(".code-viewer").to_option() {
+        Some(viewer) =>
+          match viewer.get_property("readonlyEditorScrollHook").to_option() {
+            Some(_) => ()
+            None => {
+              viewer.set_property(
+                "readonlyEditorScrollHook",
+                @js.Value::cast_from("attached"),
+              )
+              viewer.add_event_listener("scroll", _event => {
+                dispatch_browser_msg(EditorScrolled(viewer.get_scroll_top()))
+              })
+            }
           }
-        }
-      None => ()
+        None => ()
+      }
     },
     kind=@cmd.after_render,
   )

@@ -17,7 +17,12 @@ priv struct DefinitionController {
 
 ///|
 fn DefinitionController::empty() -> DefinitionController {
-  { goto_modifier: false, link_anchor: None, active: None, pending_reveal: None }
+  {
+    goto_modifier: false,
+    link_anchor: None,
+    active: None,
+    pending_reveal: None,
+  }
 }
 
 ///|
@@ -132,13 +137,7 @@ fn DefinitionController::decorations(
   if self.goto_modifier {
     match self.link_anchor {
       Some((start, end)) =>
-        items.push(
-          Decoration(
-            Range(start, end),
-            Link,
-            "goto-definition-link",
-          ),
-        )
+        items.push(Decoration(Range(start, end), Link, "goto-definition-link"))
       None => ()
     }
   }
@@ -152,13 +151,7 @@ fn DefinitionController::decorations(
             "has-definition definition-target",
           ),
         )
-        items.push(
-          Decoration(
-            definition.range,
-            CurrentLine,
-            "range-highlight",
-          ),
-        )
+        items.push(Decoration(definition.range, CurrentLine, "range-highlight"))
       }
     None => ()
   }

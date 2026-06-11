@@ -30,7 +30,11 @@ pub fn visible_window(
     default_visible_lines
   }
   let start = @core.clamp_int(first_visible - overscan, 0, line_count)
-  let end = @core.clamp_int(first_visible + visible + overscan, start, line_count)
+  let end = @core.clamp_int(
+    first_visible + visible + overscan,
+    start,
+    line_count,
+  )
   { start, end }
 }
 

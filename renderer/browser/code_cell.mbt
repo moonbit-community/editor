@@ -92,7 +92,10 @@ fn invalidate_code_cell() -> Unit {
 }
 
 ///|
-fn code_cell_key(model : BrowserAppModel, frame : @renderer.RenderFrame) -> String {
+fn code_cell_key(
+  model : BrowserAppModel,
+  frame : @renderer.RenderFrame,
+) -> String {
   active_document_uri(model.document) +
   "#" +
   frame.version.to_string() +
@@ -224,11 +227,7 @@ fn view_code_surface(
   let start = @core.clamp_int(model.window.start, 0, frame.lines.length())
   let end = @core.clamp_int(model.window.end, start, frame.lines.length())
   let decorations = controller_decorations(surface)
-  let zone = surface.references.zone_widget(
-    emit,
-    frame,
-    surface.document_uri,
-  )
+  let zone = surface.references.zone_widget(emit, frame, surface.document_uri)
   let mut top_px = start * editor_line_height
   let mut bottom_px = (frame.line_count - end) * editor_line_height
   match zone {

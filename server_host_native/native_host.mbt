@@ -383,8 +383,10 @@ async fn handle_protocol_connection(
   // the socket and everything else enqueues outbound frames.
   let outbox : @aqueue.Queue[String] = Queue(kind=Unbounded)
   @async.with_task_group() <| group => {
-    group.spawn_bg(no_wait=true, allow_failure=true, () => for ;; {
-      ws.send_text(outbox.get())
+    group.spawn_bg(no_wait=true, allow_failure=true, () => {
+      for ;; {
+        ws.send_text(outbox.get())
+      }
     })
     let spawn_watch = task => {
       group.spawn_bg(task, no_wait=true, allow_failure=true)

@@ -17,7 +17,9 @@ The project is split into three runtime parts:
   routing, and the host contract for `moon-lsp` session lifecycle.
 - Backend-agnostic renderer: MoonBit packages that convert source snapshots,
   syntax, diagnostics, hover/definition data, viewport state, and theme data
-  into a platform-neutral render frame.
+  into a platform-neutral render frame, plus the pure editor geometry that
+  backends share: mouse hit-testing (`MouseTarget`/`ViewMetrics`/`hit_test`)
+  and line-window math (`visible_window`) for viewport virtualization.
 - Render backends: MoonBit packages that map render frames to concrete hosts.
   This round only defines the browser backend.
 
@@ -114,8 +116,18 @@ or `--target native`.
   MoonBit code owns the Rabbita app, document/session updates, workspace
   selection, render-frame construction, hover/definition/references
   resolution, and watch refreshes.
+- Browser input routes through one shared hit test: container handlers on
+  the code viewer turn DOM events into typed editor events consumed by
+  feature controllers (hover, definition, references); rendered spans carry
+  no event handlers. Language features resolve through the `language`
+  provider traits, implemented browser-side by a protocol client that
+  correlates responses by request id.
+- The code surface is an embedded Rabbita child cell with keyed line
+  children that renders only a windowed slice of the frame; shell updates
+  that do not change the surface skip its subtree entirely.
 - Browser/native communication uses `remote_protocol` packets over the native
-  host's `/protocol` WebSocket.
+  host's `/protocol` WebSocket. The native host serializes outbound packets
+  per connection so watch pushes cannot interleave with responses.
 - Browser URLs are not document routes. Active file identity comes from
   MoonBit workspace/sidebar state and server/protocol calls, not `?uri=`,
   `?path=`, hashes, or history updates.

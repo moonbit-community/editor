@@ -220,12 +220,7 @@ fn HoverController::resolved_hover(
       } else {
         (
           @rabbita.none,
-          {
-            ..self,
-            answered: true,
-            loading: false,
-            pending_view: Some(view),
-          },
+          { ..self, answered: true, loading: false, pending_view: Some(view) },
         )
       }
     }
@@ -253,9 +248,7 @@ fn HoverController::decorations(
   self : HoverController,
 ) -> Array[@decorations.Decoration] {
   match self.view {
-    Some(hover) => [
-      Decoration(hover.range, HoverHighlight, "has-hover"),
-    ]
+    Some(hover) => [Decoration(hover.range, HoverHighlight, "has-hover")]
     None => []
   }
 }

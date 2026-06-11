@@ -95,9 +95,9 @@ pub fn mount_app() -> Unit {
   app.with_init(
     @cmd.custom_cmd(scheduler => {
       browser_dispatch.val = Some(msg => scheduler.add(emit(msg)))
-      protocol_send.val = Some(packet => scheduler.add(
-        send_client_packet_cmd(emit, packet),
-      ))
+      protocol_send.val = Some(packet => {
+        scheduler.add(send_client_packet_cmd(emit, packet))
+      })
       scheduler.add(emit(ConnectProtocol))
     }),
   )
@@ -235,7 +235,10 @@ fn browser_update(
       (cmd, { ..model, hover, })
     }
     HoverMeasured(below, shift_left) =>
-      (@rabbita.none, { ..model, hover: model.hover.measured(below, shift_left) })
+      (
+        @rabbita.none,
+        { ..model, hover: model.hover.measured(below, shift_left) },
+      )
     HoverResolved(version, token, hover) => {
       let (cmd, controller) = model.hover.resolved_hover(
         version,
@@ -257,10 +260,7 @@ fn browser_update(
       )
     DiagnosticsResolved(version, diagnostics) =>
       if document_version(model.source_document) == version {
-        semantic_payload_update(model, {
-          ..model.provider_result,
-          diagnostics,
-        })
+        semantic_payload_update(model, { ..model.provider_result, diagnostics, })
       } else {
         (@rabbita.none, model)
       }
@@ -533,19 +533,21 @@ fn definition_navigation_update(
 /// in the DOM until the scroll itself brings it into the window.
 fn reveal_line_cmd(line_number : Int) -> @rabbita.Cmd {
   @cmd.custom_cmd(
-    _ => match @rdom.document().query_selector(".code-viewer").to_option() {
-      Some(viewer) => {
-        let viewer_height = viewer.get_bounding_client_rect().get_height()
-        let line_top = ((line_number - 1) * editor_line_height).to_double()
-        let line_bottom = line_top + editor_line_height.to_double()
-        let view_top = viewer.get_scroll_top()
-        let view_bottom = view_top + viewer_height
-        if line_top < view_top || line_bottom > view_bottom {
-          let target = line_top - viewer_height / 2.0
-          viewer.set_scroll_top(if target < 0.0 { 0.0 } else { target })
+    _ => {
+      match @rdom.document().query_selector(".code-viewer").to_option() {
+        Some(viewer) => {
+          let viewer_height = viewer.get_bounding_client_rect().get_height()
+          let line_top = ((line_number - 1) * editor_line_height).to_double()
+          let line_bottom = line_top + editor_line_height.to_double()
+          let view_top = viewer.get_scroll_top()
+          let view_bottom = view_top + viewer_height
+          if line_top < view_top || line_bottom > view_bottom {
+            let target = line_top - viewer_height / 2.0
+            viewer.set_scroll_top(if target < 0.0 { 0.0 } else { target })
+          }
         }
+        None => ()
       }
-      None => ()
     },
     kind=@cmd.after_render,
   )
@@ -555,9 +557,11 @@ fn reveal_line_cmd(line_number : Int) -> @rabbita.Cmd {
 /// Restores the viewer's scroll offset after a code-cell remount.
 fn restore_scroll_cmd(scroll_top : Double) -> @rabbita.Cmd {
   @cmd.custom_cmd(
-    _ => match @rdom.document().query_selector(".code-viewer").to_option() {
-      Some(viewer) => viewer.set_scroll_top(scroll_top)
-      None => ()
+    _ => {
+      match @rdom.document().query_selector(".code-viewer").to_option() {
+        Some(viewer) => viewer.set_scroll_top(scroll_top)
+        None => ()
+      }
     },
     kind=@cmd.after_render,
   )
@@ -921,8 +925,7 @@ fn view_span(
   }
   let span_range = @core.Range(absolute_start, absolute_end)
   for decoration in decorations {
-    if decoration.kind != CurrentLine &&
-      decoration.range.intersects(span_range) {
+    if decoration.kind != CurrentLine && decoration.range.intersects(span_range) {
       class_name = class_name + " " + decoration.class_name
     }
   }

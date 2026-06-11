@@ -234,11 +234,16 @@ fn decorations_from_diagnostics(
 ) -> @decorations.DecorationSet {
   let items = []
   for diagnostic in diagnostics {
+    let class_name = match diagnostic.severity {
+      Error => "diag-error"
+      Warning => "diag-warning"
+      Info => "diag-info"
+    }
     items.push(
       @decorations.Decoration(
         diagnostic.range,
         Diagnostic,
-        "diag-warning",
+        class_name,
         message=diagnostic.message,
       ),
     )

@@ -9,6 +9,8 @@ import {
 // Values
 pub fn highlight(@core.DocumentSnapshot) -> Array[Token]
 
+pub fn tokenize_document(@core.DocumentSnapshot, &LineTokenizer) -> Array[Token]
+
 // Errors
 
 // Types and methods
@@ -20,8 +22,32 @@ pub(all) enum HighlightTag {
   Comment
   Punctuation
   Plain
+  Operator
+  Delimiter
+  Type
+  Function
+  Variable
+  Constant
+  StringEscape
+  CommentDoc
+  Regexp
+  Tag
+  Attribute
+  Invalid
 } derive(Eq, @debug.Debug)
 pub fn HighlightTag::css_class(Self) -> String
+
+pub(all) struct LineToken {
+  start : Int
+  end : Int
+  tag : HighlightTag
+} derive(Eq, @debug.Debug)
+
+pub enum PlainTokenizer {
+  PlainTokenizer
+}
+pub fn PlainTokenizer::new() -> Self
+pub impl LineTokenizer for PlainTokenizer
 
 pub(all) struct Token {
   range : @core.Range
@@ -29,7 +55,20 @@ pub(all) struct Token {
   text : String
 } derive(@debug.Debug)
 
+pub struct TokenizerRegistry {
+  // private fields
+}
+pub fn TokenizerRegistry::lookup(Self, String) -> &LineTokenizer?
+pub fn TokenizerRegistry::new() -> Self
+pub fn TokenizerRegistry::register(Self, String, &LineTokenizer) -> Unit
+
+pub(all) struct TokenizerState(String) derive(Eq, @debug.Debug)
+
 // Type aliases
 
 // Traits
+pub(open) trait LineTokenizer {
+  fn initial_state(Self) -> TokenizerState
+  fn tokenize_line(Self, String, TokenizerState) -> (Array[LineToken], TokenizerState)
+}
 

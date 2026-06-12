@@ -84,6 +84,12 @@ pub fn start_app() -> Unit {
 /// viewer library itself ships only the plain fallback.
 fn register_tokenizers() -> Unit {
   @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
+  @browser.register_tokenizer("json", @lang_json.JsonTokenizer::new())
+  let javascript = @lang_javascript.JavascriptTokenizer::new()
+  @browser.register_tokenizer("javascript", javascript)
+  // TypeScript reads acceptably through the JavaScript rules until a
+  // dedicated package exists.
+  @browser.register_tokenizer("typescript", javascript)
 }
 
 ///|

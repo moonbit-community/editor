@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/syntax/lang_json"
+
+import {
+  "baozhiyuan/editor/syntax",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub enum JsonTokenizer {
+  JsonTokenizer
+}
+pub fn JsonTokenizer::new() -> Self
+pub impl @syntax.LineTokenizer for JsonTokenizer
+
+// Type aliases
+
+// Traits
+

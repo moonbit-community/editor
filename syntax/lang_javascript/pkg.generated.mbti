@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/syntax/lang_javascript"
+
+import {
+  "baozhiyuan/editor/syntax",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub enum JavascriptTokenizer {
+  JavascriptTokenizer
+}
+pub fn JavascriptTokenizer::new() -> Self
+pub impl @syntax.LineTokenizer for JavascriptTokenizer
+
+// Type aliases
+
+// Traits
+

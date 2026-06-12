@@ -1,11 +1,41 @@
 # renderer/browser
 
-Browser render backend adapter.
+The embeddable readonly viewer-core library — the `vs/editor` (Monaco)
+role. It ships without the explorer sidebar, the protocol client, or any
+shell chrome; the `workbench` package composes those in a layer above
+(exclusion by composition, not a config flag).
+
+## Embedding API
+
+- `Viewer::Viewer(source, on_notification~, theme?, placeholder?)`
+  constructs the viewer against any `&@workspace.DocumentSource`. The
+  in-memory backend in `examples/embedded_viewer` plus the remote one in
+  `workbench` are the two reference implementations; implementing
+  `DocumentSource` is the entire integration surface for a custom backend.
+- `Viewer::view()` embeds the viewer as a Rabbita child cell. Keep it
+  mounted: Rabbita only steps mounted cells, so the viewer renders a
+  host-pushed `placeholder` message while it has no frame instead of being
+  swapped out.
+- `Viewer::open(uri)` owns the full document-switch choreography: closing
+  the previous document and its watch, invalidating the code cell,
+  subscribing the new watch, opening through the source, and resetting
+  scroll on remount — embedders cannot get the sequencing wrong.
+- `Viewer::set_theme`, `set_placeholder`, `remeasure`, and `escape` push
+  host state and host-captured events in.
+- `Viewer::push_diagnostics`/`push_symbols`/`push_semantic_tokens` accept
+  unsolicited feature data (for example server-initiated pushes the host
+  routes in).
+- `register_hover_provider` (and the diagnostics/symbols/semantic-tokens
+  equivalents) add `language` providers to the registry; it starts empty
+  and the host registers what it has at startup.
+- The viewer reports lifecycle facts through `ViewerNotification`
+  (diagnostics status, frame built, document rendered/failed, hover
+  resolved). The host formats observability events and syncs its chrome
+  from these; the viewer itself emits nothing host-visible.
 
 ## Responsibilities
 
-- Mount the Rabbita browser app and render backend-neutral
-  `renderer.RenderFrame` values as browser HTML.
+- Render backend-neutral `renderer.RenderFrame` values as browser HTML.
 - Own the editor input bridge: one container handler set on the code viewer
   converts DOM events into typed `EditorEvent`s through the renderer's
   shared `hit_test`, fed by tracked view metrics (scroll offset, measured
@@ -15,43 +45,33 @@ Browser render backend adapter.
   editor events and answers with commands, span/line decorations, and
   widgets. Hover follows Monaco's timing (request at half the 300ms delay,
   display gated at the full delay, loading hover at 3x).
-- Own the browser protocol client: counter-based request ids with a pending
-  table so each response resumes its own suspended request, and the
-  `language` provider trait implementations (`RemoteLanguageClient` in an
-  ordered `ProviderRegistry`) the controllers resolve features through.
 - Own the embedded code-surface cell: a cached Rabbita child cell with
   Map-keyed line children that renders only the visible line window between
-  height-preserving spacers; the shell pushes frame/surface/window updates
-  into it only when they change, so shell-only updates skip line subtrees.
-- Own the browser document session loop: protocol connection, workspace
-  listing, sidebar-driven workspace opens, server-backed document loads,
-  watches, and refreshes.
-- Emit browser observability events such as `moonbit:render` (with
-  `buildMs`) and `dom:mounted` (with windowed `renderedLines` and
-  `patchMs`).
+  height-preserving spacers; the viewer pushes frame/surface/window updates
+  into it only when they change, so other updates skip line subtrees.
 
 Go-to-definition and find-references were removed for now; the viewer
 focuses on hover until those features can be rebuilt without their bugs.
 
 ## Boundaries
 
-- May depend on Rabbita public packages, `dom`, `workspace`, `language`,
-  `remote_protocol`, `renderer`, `syntax`, and `decorations`.
+- May depend on Rabbita public packages (except `websocket`), `dom`,
+  `workspace`, `language`, `renderer`, `syntax`, and `decorations`.
+- Must not import `remote_protocol`, `websocket`, `workbench`, or
+  `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports
+  live behind the `DocumentSource` trait and the provider registry.
 - May declare JavaScript FFI it alone uses, under the host-FFI rule in
-  `../../docs/architecture.md`; browser capabilities shared with other browser
-  packages belong in `dom`.
-- Module-level `Ref` registries (the app dispatcher, the protocol send hook,
-  pending protocol requests, the code-cell cache) stay inside this package.
+  `../../docs/architecture.md`; browser capabilities shared with other
+  browser packages belong in `dom`.
+- Module-level `Ref` registries (the code-cell cache, the active document
+  watch, the provider registry) stay inside this package.
 - Must not pass render-frame JSON to JavaScript for DOM rendering.
-- Browser-only behavior stays here or in `dom`, not in shared renderer or
-  domain packages.
-- Must not expose a raw browser LSP transport.
 - The backend-neutral `renderer` package must not import Rabbita or browser
   host packages.
 
 ## Checks
 
-- Protocol-client correlation and hover staleness guards are covered by
-  `protocol_client_wbtest.mbt`.
-- Browser observability expectations are documented in `../../docs/harness.md`.
+- Hover staleness guards are covered by `hover_controller_wbtest.mbt`.
+- The embedding boundary is proven by `examples/embedded_viewer` and
+  `tests/browser/embed.spec.js` (no websocket opened).
 - Run `just check` for the repository-level type check.

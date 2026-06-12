@@ -499,8 +499,10 @@ async fn serve_not_found(conn : @http.ServerConnection) -> Unit {
 fn static_route(path : String) -> (String, String)? {
   match strip_query(path) {
     "/" | "/index.html" => Some(("index.html", "text/html; charset=utf-8"))
+    "/embed.html" => Some(("embed.html", "text/html; charset=utf-8"))
     "/style.css" => Some(("style.css", "text/css; charset=utf-8"))
     "/editor.mjs" => Some(("editor.mjs", "text/javascript; charset=utf-8"))
+    "/embed.mjs" => Some(("embed.mjs", "text/javascript; charset=utf-8"))
     _ => None
   }
 }

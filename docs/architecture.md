@@ -36,8 +36,14 @@ organizational; package boundaries are the directories with `moon.pkg`.
   `language`, and `view`.
 - Remote server packages: `remote_protocol`, `server`, and
   `server_host_native`.
-- Render packages: `renderer` and `renderer/browser`.
+- Render packages: `renderer` and `renderer/browser` (the embeddable
+  viewer-core library, the `vs/editor` role).
+- Optional widgets: `widgets/file_tree` (the provider-backed explorer tree).
+- The shipped app shell: `workbench` (the `vs/workbench` role) composes the
+  viewer, the tree widget, and the remote protocol client.
 - Browser host packages: `dom` and `web`.
+- Embedding proof: `examples/embedded_viewer` mounts the viewer and the tree
+  against in-memory providers with no server or websocket.
 
 Read the package-local `README.md` before changing package behavior. Those files
 record each package's owned responsibilities, dependency limits, and local test
@@ -49,12 +55,15 @@ The dependency graph should flow from host entrypoints toward shared domain
 packages:
 
 ```text
-web
-  -> renderer/browser
+web -> workbench
+workbench
+  -> renderer/browser, widgets/file_tree
+  -> remote_protocol, dom, workspace, language
 renderer/browser
   -> renderer
   -> dom
-  -> workspace, language, syntax, decorations, remote_protocol
+  -> workspace, language, syntax, decorations
+widgets/file_tree -> workspace
 
 server_host_native -> server -> remote_protocol
 server -> workspace, language
@@ -63,6 +72,8 @@ renderer -> core, syntax, decorations, language
 workspace -> core
 language -> core, workspace
 syntax/decorations -> core
+
+examples/embedded_viewer -> renderer/browser, widgets/file_tree, workspace
 ```
 
 `view` is a compatibility render model kept separate from the active
@@ -70,8 +81,22 @@ syntax/decorations -> core
 
 ## Dependency Rules
 
+- Composition over configuration: there is no `show_sidebar` flag anywhere.
+  Excluding the tree means not importing the widget package (the Monaco
+  cut: `vs/editor` ships without the explorer because the workbench sits in
+  a layer above it). Only `workbench` composes the viewer, the widget, and
+  the transport.
+- `renderer/browser` is the viewer-core library and must not import
+  `remote_protocol`, `websocket`, `workbench`, or `widgets/*`; it meets its
+  hosts at the `workspace` traits (`DocumentSource`) and the `language`
+  provider registry.
+- `widgets/file_tree` must not import `remote_protocol` or
+  `renderer/browser`; it is built only against `workspace`
+  (`WorkspaceTreeProvider`).
+- These import rules are enforced by `scripts/check-architecture.mbtx`
+  (run as part of `just check`).
 - Shared renderer packages may import `core`, `syntax`, `decorations`,
-  `workspace`, `language`, `view`, and `remote_protocol`.
+  `workspace`, `language`, and `view`.
 - `server` may import `workspace`, `language`, and `remote_protocol`, but must
   not import renderer backend packages.
 - Packages that only run on one host target may declare that host's FFI: a
@@ -112,10 +137,24 @@ or `--target native`.
   package boundaries.
 - Remote protocol packet types, version negotiation, encoding, decoding, and
   structured errors are MoonBit-owned.
-- The browser app is served by the native host from `web/dist`. Generated
-  MoonBit code owns the Rabbita app, document/session updates, workspace
-  selection, render-frame construction, hover resolution, and watch
-  refreshes.
+- The browser app is served by the native host from `web/dist`. The
+  `workbench` package owns the Rabbita app shell, the protocol client, and
+  the auto-open policy; the `renderer/browser` viewer owns document opening
+  (through a `DocumentSource`), render-frame construction, hover
+  resolution, and watch refreshes.
+- Workspace selection is provider + widget + workbench composition: the
+  server resolves one directory level per `ResolveDirectory` request
+  (`WorkspaceStat`, the `IFileStat` copy: provider-minted URIs, `children:
+  None` until resolved); the `widgets/file_tree` explorer renders stats
+  lazily; the workbench routes the widget's open intents into the viewer
+  and feeds viewer lifecycle back into the widget's `set_active`
+  (autoReveal).
+- Explorer behavior contract: directories start collapsed; expanding a
+  directory with unresolved children resolves exactly one level and caches
+  it on the node; a failed resolve renders the folder as an
+  empty-with-error level and is retried on the next expand; `set_active`
+  resolves and expands the ancestor chain of the active file and selects
+  its row; `refresh` re-resolves from the root on (re)connect.
 - Browser input routes through one shared hit test: container handlers on
   the code viewer turn DOM events into typed editor events consumed by
   feature controllers (hover today); rendered spans carry no event
@@ -129,7 +168,7 @@ or `--target native`.
   host's `/protocol` WebSocket. The native host serializes outbound packets
   per connection so watch pushes cannot interleave with responses.
 - Browser URLs are not document routes. Active file identity comes from
-  MoonBit workspace/sidebar state and server/protocol calls, not `?uri=`,
+  MoonBit workspace/explorer state and server/protocol calls, not `?uri=`,
   `?path=`, hashes, or history updates.
 - LSP client behavior targets the official Language Server Protocol 3.17
   specification:

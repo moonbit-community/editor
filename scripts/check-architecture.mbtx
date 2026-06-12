@@ -1,0 +1,134 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+}
+
+async fn main {
+  let product_dirs = [
+    "core",
+    "syntax",
+    "decorations",
+    "language",
+    "view",
+    "web",
+    "app",
+    "tests",
+    "workbench",
+    "widgets",
+    "examples",
+  ]
+  let forbidden = ["codemirror/", "vscode/"]
+  let errors : Array[String] = []
+  for dir in product_dirs {
+    for file in source_files(dir) {
+      let content = @fs.read_file(file).text()
+      for target in forbidden {
+        if content.contains(target) {
+          errors.push(file + " references forbidden tree " + target)
+        }
+      }
+    }
+  }
+  check_package_imports(errors)
+  if errors.length() > 0 {
+    println(errors.join("\n"))
+    fail("Architecture checks failed")
+  }
+  println("Architecture checks passed")
+}
+
+///|
+/// Package-boundary rules for the pluggable viewer: the viewer-core
+/// library knows no transport or shell, and the tree widget knows no
+/// transport or viewer. Only `workbench` composes.
+async fn check_package_imports(errors : Array[String]) -> Unit {
+  let rules : Array[(String, Array[String])] = [
+    (
+      "renderer/browser/moon.pkg",
+      [
+        "baozhiyuan/editor/remote_protocol",
+        "baozhiyuan/editor/workbench",
+        "baozhiyuan/editor/widgets",
+        "moonbit-community/rabbita/websocket",
+      ],
+    ),
+    (
+      "widgets/file_tree/moon.pkg",
+      [
+        "baozhiyuan/editor/remote_protocol",
+        "baozhiyuan/editor/renderer/browser",
+        "moonbit-community/rabbita/websocket",
+      ],
+    ),
+  ]
+  for rule in rules {
+    let (pkg_file, forbidden_imports) = rule
+    let imports = package_imports(@fs.read_file(pkg_file).text())
+    for imported in imports {
+      for target in forbidden_imports {
+        if imported == target || imported.has_prefix(target + "/") {
+          errors.push(pkg_file + " must not import " + imported)
+        }
+      }
+    }
+  }
+}
+
+///|
+/// The package paths a `moon.pkg` imports: every quoted string containing
+/// a `/` (import entries are the only such strings in the manifest).
+fn package_imports(content : String) -> Array[String] {
+  let imports : Array[String] = []
+  let mut index = 0
+  while index < content.length() {
+    if content[index] == '"' {
+      let mut end = index + 1
+      while end < content.length() && content[end] != '"' {
+        end = end + 1
+      }
+      if end < content.length() {
+        let quoted = content[index + 1:end].to_owned()
+        if quoted.contains("/") {
+          imports.push(quoted)
+        }
+        index = end + 1
+        continue
+      }
+    }
+    index = index + 1
+  }
+  imports
+}
+
+///|
+async fn source_files(dir : String) -> Array[String] {
+  let files : Array[String] = []
+  if @fs.exists(dir) {
+    walk_sources(dir, files)
+  }
+  files
+}
+
+///|
+async fn walk_sources(dir : String, files : Array[String]) -> Unit {
+  let names = @fs.readdir(dir, include_hidden=false, sort=true)
+  for name in names {
+    let path = dir + "/" + name
+    match @fs.kind(path) {
+      Directory => if name != "_build" { walk_sources(path, files) }
+      Regular => if wanted_source(name) { files.push(path) }
+      _ => ()
+    }
+  }
+}
+
+///|
+/// Only importable code files: stylesheets may name the reference trees in
+/// comments documenting where their palettes derive from.
+fn wanted_source(name : String) -> Bool {
+  name.has_suffix(".mbt") ||
+  name.has_suffix(".mbtx") ||
+  name.has_suffix(".js") ||
+  name.has_suffix(".mjs") ||
+  name.has_suffix(".ts")
+}

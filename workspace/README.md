@@ -9,6 +9,11 @@ Readonly source identity and filesystem-provider contracts.
 - Normalize root-relative paths and reject invalid or unsafe source paths.
 - Define the backend-neutral `FileSystemProvider` trait, read results, watch
   events, and structured provider errors.
+- Define the viewer/tree integration contracts: `DocumentSource`
+  (document-level open/watch/close in `SourceDocument` terms, the
+  client-side mirror of the server host) and `WorkspaceTreeProvider` +
+  `WorkspaceStat` (the `IFileStat`/`IFileService.resolve` copy: stats carry
+  provider-minted URIs and children resolve lazily one level per request).
 
 ## Boundaries
 

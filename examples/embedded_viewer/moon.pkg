@@ -1,0 +1,14 @@
+import {
+  "baozhiyuan/editor/renderer/browser",
+  "baozhiyuan/editor/widgets/file_tree",
+  "baozhiyuan/editor/workspace",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/cmd",
+  "moonbit-community/rabbita/html",
+}
+
+supported_targets = "js"
+
+options(
+  "is-main": true,
+)

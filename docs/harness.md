@@ -5,7 +5,9 @@ without hidden setup.
 
 ## Commands
 
-- `just check`: MoonBit type check.
+- `just check`: MoonBit type check plus the architecture checker
+  (`scripts/check-architecture.mbtx`), which greps for forbidden reference
+  trees and enforces package import boundaries.
 - `just test`: MoonBit unit tests.
 - `just build`: build the MoonBit browser bundle in `web/dist` and the native
   editor server executable.
@@ -16,13 +18,17 @@ without hidden setup.
 The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.
 
 `web/dist/index.html` loads `/style.css` and `/editor.mjs`. The native server
-serves `/`, `/index.html`, `/style.css`, and `/editor.mjs` directly and returns
-404 for other static paths.
+serves `/`, `/index.html`, `/style.css`, `/editor.mjs`, `/embed.html`, and
+`/embed.mjs` directly and returns 404 for other static paths. `/embed.html`
+is the embedded-viewer example: the viewer plus the file tree running
+against in-memory providers with no websocket.
 
 `just dev` serves the browser viewer and handles `/protocol` as a WebSocket.
-The browser connects to the same host with Rabbita WebSocket support, requests
-`ListWorkspace`, opens files through `readonly-remote://workspace/<path>`, and
-receives document, language, and watch packets from the native server.
+The workbench connects to the same host with Rabbita WebSocket support,
+resolves the explorer tree one directory level at a time with
+`ResolveDirectory`, opens files through `readonly-remote://workspace/<path>`
+URIs carried on the tree entries, and receives document, language, and
+watch packets from the native server.
 
 ## Browser Selectors
 
@@ -31,16 +37,23 @@ inspection:
 
 - `.editor-shell` exposes `data-status`, `data-theme` (`dark`/`light`),
   `data-line-count`, and `data-source-uri`.
-- `.workspace-sidebar` renders file and folder controls with
-  `data-workspace-id`, `data-workspace-kind`, `aria-expanded`, and
-  `aria-selected`; the pane header exposes the theme toggle as
-  `[data-action="toggle-theme"]`.
+- `.workspace-sidebar` renders explorer rows with `data-workspace-id`
+  (holding the full document URI), `data-workspace-kind`, `aria-expanded`,
+  and `aria-selected`; the pane header exposes the theme toggle as
+  `[data-action="toggle-theme"]`. Directories start collapsed: nested files
+  are not in the DOM until their folders are expanded or the active file is
+  auto-revealed, so specs that navigate to nested files expand ancestors
+  first (or rely on the startup auto-open's reveal).
 - `.code-line`, `.gutter`, `.code`, token spans, and diagnostics keep the
   same class and `data-*` contracts used by browser smoke tests.
 - `.hover-widget` is the range-anchored editor hover.
 
 Sidebar selection is app state only. Selecting or expanding workspace entries
-must not change `window.location.href`.
+must not change `window.location.href`. On startup the workbench auto-opens
+the first MoonBit file found by a bounded depth-first resolve walk (falling
+back to the first file of any kind); specs should wait for `data-status`
+`ready` before navigating so their document switch cannot race the
+auto-open.
 
 The product browser path does not use `?uri=`, `?path=`, hashes, or history
 updates to represent the active file. Browser tests should open workspace files
@@ -64,7 +77,10 @@ The browser host logs structured events prefixed with `[readonly-editor]`:
   shell's `data-line-count` attribute stays the document total.
 
 These events are intentionally stable so automated agents can diagnose render
-failures from console output.
+failures from console output. The workbench owns event names and payload
+formats; the viewer library reports lifecycle facts (`ViewerNotification`)
+and the workbench formats and emits them, so embedders of `renderer/browser`
+get no harness events unless they add their own.
 
 ## Render Performance Budget
 

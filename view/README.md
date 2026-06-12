@@ -11,7 +11,7 @@ Compatibility DOM-neutral render model.
 
 ## Boundaries
 
-- May depend on `core`, `decorations`, `language`, and `syntax`.
+- May depend on `core`, `decorations`, `language`, `syntax`, and JSON support.
 - Must stay DOM-neutral and host-neutral.
 - New rendering work should prefer `renderer` unless compatibility requires
   this package.

@@ -8,6 +8,7 @@ import {
   "baozhiyuan/editor/syntax/lang_moonbit",
   "baozhiyuan/editor/widgets/file_tree",
   "baozhiyuan/editor/workspace",
+  "moonbitlang/core/json",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/dom" @rdom,
   "moonbit-community/rabbita/cmd",

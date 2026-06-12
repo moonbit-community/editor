@@ -35,8 +35,7 @@ pub(all) struct FileChange {
   uri : DocumentUri
   change_type : FileChangeType
 } derive(@debug.Debug)
-pub fn FileChange::array_to_json(Array[Self]) -> String
-pub fn FileChange::to_json(Self) -> String
+pub impl ToJson for FileChange
 
 pub(all) enum FileChangeType {
   Created
@@ -65,7 +64,7 @@ pub(all) struct FileSystemProviderError {
 } derive(@debug.Debug)
 pub fn FileSystemProviderError::FileSystemProviderError(FileSystemProviderErrorCode, String, uri? : DocumentUri) -> Self
 pub fn FileSystemProviderError::status(Self) -> Int
-pub fn FileSystemProviderError::to_json(Self) -> String
+pub impl ToJson for FileSystemProviderError
 
 pub(all) enum FileSystemProviderErrorCode {
   FileNotFound
@@ -96,13 +95,13 @@ pub(all) struct SourceDocument {
 pub fn SourceDocument::SourceDocument(DocumentUri, String, String, Int, String, String) -> Self
 pub fn SourceDocument::from_file_content(DocumentUri, FileContent) -> Self
 pub fn SourceDocument::snapshot(Self) -> @core.DocumentSnapshot
-pub fn SourceDocument::to_json(Self) -> String
+pub impl ToJson for SourceDocument
 
 pub(all) enum SourceDocumentLoadResult {
   SourceDocumentLoaded(SourceDocument)
   SourceDocumentLoadError(FileSystemProviderError)
 } derive(@debug.Debug)
-pub fn SourceDocumentLoadResult::to_json(Self) -> String
+pub impl ToJson for SourceDocumentLoadResult
 
 pub(all) enum SourceError {
   MissingPath
@@ -130,12 +129,42 @@ pub(all) struct WatchOptions {
 } derive(@debug.Debug)
 pub fn WatchOptions::default() -> Self
 
+pub(all) enum WorkspaceEntryKind {
+  File
+  Directory
+} derive(Eq, @debug.Debug)
+pub fn WorkspaceEntryKind::from_string(String) -> Self?
+pub fn WorkspaceEntryKind::to_string(Self) -> String
+
+pub(all) enum WorkspaceResolveResult {
+  WorkspaceResolved(WorkspaceStat)
+  WorkspaceResolveError(FileSystemProviderError)
+} derive(@debug.Debug)
+
+pub(all) struct WorkspaceStat {
+  uri : DocumentUri
+  name : String
+  kind : WorkspaceEntryKind
+  children : Array[WorkspaceStat]?
+} derive(@debug.Debug)
+
 // Type aliases
 
 // Traits
+pub(open) trait DocumentSource {
+  async fn open_document(Self, DocumentUri) -> SourceDocumentLoadResult
+  fn watch_document(Self, DocumentUri, (SourceDocumentLoadResult) -> Unit) -> FileWatch
+  fn close_document(Self, DocumentUri) -> Unit
+}
+
 pub(open) trait FileSystemProvider {
   fn scheme(Self) -> String
   async fn read_file(Self, DocumentUri) -> FileReadResult
   fn watch(Self, DocumentUri, WatchOptions, (Array[FileChange]) -> Unit) -> FileWatch
+}
+
+pub(open) trait WorkspaceTreeProvider {
+  fn root(Self) -> DocumentUri
+  async fn resolve(Self, DocumentUri) -> WorkspaceResolveResult
 }
 

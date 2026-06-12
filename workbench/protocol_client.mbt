@@ -125,9 +125,11 @@ fn send_client_packet_cmd(
   emit : @rabbita.Emit[WorkbenchMsg],
   packet : @remote_protocol.ClientPacket,
 ) -> @rabbita.Cmd {
-  @websocket.send(protocol_connection_id(), Text(packet.to_json()), failed=message => {
-    emit(ProtocolSendFailed(message))
-  })
+  @websocket.send(
+    protocol_connection_id(),
+    Text(packet.to_json().stringify()),
+    failed=message => emit(ProtocolSendFailed(message)),
+  )
 }
 
 ///|

@@ -18,7 +18,8 @@ fn RemoteLanguageClient::emit_remote_error(
   packet : @remote_protocol.ServerPacket,
 ) -> Unit {
   match packet {
-    RemoteError(error) => emit_event("language:error", error.to_json())
+    RemoteError(error) =>
+      emit_event("language:error", error.to_json().stringify())
     _ => ()
   }
 }

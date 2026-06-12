@@ -3,4 +3,5 @@ import {
   "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/syntax",
+  "moonbitlang/core/json",
 }

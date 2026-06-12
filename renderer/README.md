@@ -29,7 +29,7 @@ Backend-agnostic render IR, scroll/layout model, and editor geometry.
 
 ## Boundaries
 
-- May depend on `core`, `syntax`, `decorations`, and `language`.
+- May depend on `core`, `syntax`, `decorations`, `language`, and JSON support.
 - Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,
   server routing, or filesystem providers. Layout, scrollbar, hit-test, and
   window functions are pure arithmetic over frame data and caller-measured

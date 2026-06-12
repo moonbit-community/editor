@@ -275,7 +275,7 @@ fn viewer_notified_update(
       tokenize_ms~,
       build_ms~
     ) => {
-      @dom.set_current_document(document.to_json())
+      @dom.set_current_document(document.to_json().stringify())
       emit_render_event(
         line_count,
         token_count,
@@ -318,7 +318,7 @@ fn viewer_notified_update(
       }
     }
     ViewerDocumentFailed(error) => {
-      emit_event("language:error", error.to_json())
+      emit_event("language:error", error.to_json().stringify())
       if error.code == FileNotFound {
         (
           dom_mounted_status_cmd("missing"),
@@ -462,7 +462,7 @@ fn protocol_error_update(
   model : WorkbenchModel,
   error : @remote_protocol.ProtocolError,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
-  emit_event("language:error", error.to_json())
+  emit_event("language:error", error.to_json().stringify())
   if error.provider_code == "FileNotFound" {
     (
       dom_mounted_status_cmd("missing"),

@@ -17,7 +17,7 @@ Readonly source identity and filesystem-provider contracts.
 
 ## Boundaries
 
-- May depend on `core`.
+- May depend on `core` and JSON support.
 - Must not contain browser, native, DOM, server routing, or LSP process effects.
 - Host packages implement filesystem behavior through the provider contract.
 

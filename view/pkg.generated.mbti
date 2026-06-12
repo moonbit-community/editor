@@ -31,7 +31,7 @@ pub(all) struct RenderModel {
   diagnostics : Array[@language.Diagnostic]
   hovers : Array[@language.Hover]
 } derive(@debug.Debug)
-pub fn RenderModel::to_json(Self) -> String
+pub impl ToJson for RenderModel
 
 pub(all) struct RenderSpan {
   start : Int

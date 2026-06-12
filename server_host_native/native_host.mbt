@@ -430,15 +430,15 @@ async fn handle_protocol_message(
     DecodedClientPacket(packet) => {
       let responses = remote_server.handle_client_packet(
         packet,
-        packet => outbox.put(packet.to_json()),
+        packet => outbox.put(packet.to_json().stringify()),
         spawn_watch,
       )
       for packet in responses {
-        outbox.put(packet.to_json())
+        outbox.put(packet.to_json().stringify())
       }
     }
     ClientPacketDecodeError(error) =>
-      outbox.put(@remote_protocol.RemoteError(error).to_json())
+      outbox.put(@remote_protocol.RemoteError(error).to_json().stringify())
   }
 }
 

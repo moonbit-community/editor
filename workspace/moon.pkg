@@ -1,5 +1,6 @@
 import {
   "baozhiyuan/editor/core",
+  "moonbitlang/core/json",
 }
 
 import {

@@ -70,16 +70,16 @@ pub fn render(
 }
 
 ///|
-pub fn RenderModel::to_json(self : RenderModel) -> String {
-  let mut out = "{"
-  out = out + "\"version\":" + self.version.to_string()
-  out = out + ",\"languageId\":" + json_string(self.language_id)
-  out = out + ",\"lineCount\":" + self.line_count.to_string()
-  out = out + ",\"viewport\":" + viewport_json(self.viewport)
-  out = out + ",\"lines\":" + lines_json(self.lines)
-  out = out + ",\"diagnostics\":" + diagnostics_json(self.diagnostics)
-  out = out + ",\"hovers\":" + hovers_json(self.hovers)
-  out + "}"
+pub impl ToJson for RenderModel with fn to_json(self) {
+  {
+    "version": self.version.to_json(),
+    "languageId": self.language_id.to_json(),
+    "lineCount": self.line_count.to_json(),
+    "viewport": viewport_json(self.viewport),
+    "lines": Json::array(self.lines.map(line_json)),
+    "diagnostics": Json::array(self.diagnostics.map(diagnostic_json)),
+    "hovers": Json::array(self.hovers.map(hover_json)),
+  }
 }
 
 ///|
@@ -131,97 +131,50 @@ fn spans_for_line(
 }
 
 ///|
-fn viewport_json(viewport : Viewport) -> String {
-  let mut out = "{"
-  out = out + "\"startLine\":" + viewport.start_line.to_string()
-  out = out + ",\"endLine\":" + viewport.end_line.to_string()
-  out + "}"
-}
-
-///|
-fn lines_json(lines : Array[RenderLine]) -> String {
-  let mut out = "["
-  for i in 0..<lines.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    out = out + line_json(lines[i])
+fn viewport_json(viewport : Viewport) -> Json {
+  {
+    "startLine": viewport.start_line.to_json(),
+    "endLine": viewport.end_line.to_json(),
   }
-  out + "]"
 }
 
 ///|
-fn line_json(line : RenderLine) -> String {
-  let mut out = "{"
-  out = out + "\"lineNumber\":" + line.line_number.to_string()
-  out = out + ",\"offset\":" + line.offset.to_string()
-  out = out + ",\"text\":" + json_string(line.text)
-  out = out + ",\"spans\":" + spans_json(line.spans)
-  out + "}"
-}
-
-///|
-fn spans_json(spans : Array[RenderSpan]) -> String {
-  let mut out = "["
-  for i in 0..<spans.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    let span = spans[i]
-    out = out + "{"
-    out = out + "\"start\":" + span.start.to_string()
-    out = out + ",\"end\":" + span.end.to_string()
-    out = out + ",\"text\":" + json_string(span.text)
-    out = out + ",\"className\":" + json_string(span.class_name)
-    out = out + "}"
+fn line_json(line : RenderLine) -> Json {
+  {
+    "lineNumber": line.line_number.to_json(),
+    "offset": line.offset.to_json(),
+    "text": line.text.to_json(),
+    "spans": Json::array(line.spans.map(span_json)),
   }
-  out + "]"
 }
 
 ///|
-fn diagnostics_json(diagnostics : Array[@language.Diagnostic]) -> String {
-  let mut out = "["
-  for i in 0..<diagnostics.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    let diagnostic = diagnostics[i]
-    out = out + "{"
-    out = out + "\"range\":" + range_json(diagnostic.range)
-    out = out + ",\"severity\":" + json_string(diagnostic.severity.label())
-    out = out + ",\"message\":" + json_string(diagnostic.message)
-    out = out + "}"
+fn span_json(span : RenderSpan) -> Json {
+  {
+    "start": span.start.to_json(),
+    "end": span.end.to_json(),
+    "text": span.text.to_json(),
+    "className": span.class_name.to_json(),
   }
-  out + "]"
 }
 
 ///|
-fn hovers_json(hovers : Array[@language.Hover]) -> String {
-  let mut out = "["
-  for i in 0..<hovers.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    let hover = hovers[i]
-    out = out + "{"
-    out = out + "\"range\":" + range_json(hover.range)
-    out = out + ",\"contents\":" + json_string(hover.contents)
-    out = out + "}"
+fn diagnostic_json(diagnostic : @language.Diagnostic) -> Json {
+  {
+    "range": range_json(diagnostic.range),
+    "severity": diagnostic.severity.label().to_json(),
+    "message": diagnostic.message.to_json(),
   }
-  out + "]"
 }
 
 ///|
-fn range_json(range : @core.Range) -> String {
-  let mut out = "{"
-  out = out + "\"start\":" + range.start.to_string()
-  out = out + ",\"end\":" + range.end.to_string()
-  out + "}"
+fn hover_json(hover : @language.Hover) -> Json {
+  { "range": range_json(hover.range), "contents": hover.contents.to_json() }
 }
 
 ///|
-fn json_string(value : String) -> String {
-  value.escape(quote=true)
+fn range_json(range : @core.Range) -> Json {
+  { "start": range.start.to_json(), "end": range.end.to_json() }
 }
 
 ///|

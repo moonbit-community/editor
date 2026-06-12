@@ -23,7 +23,7 @@ test "render model contains highlighted spans and diagnostics" {
   assert_true(model.lines[0].spans.length() > 0)
   assert_eq(join_span_text(model.lines[0].spans), model.lines[0].text)
   assert_eq(model.diagnostics.length(), 1)
-  assert_true(model.to_json().contains("\"lineCount\""))
+  assert_true(model.to_json().stringify().contains("\"lineCount\""))
 }
 
 ///|

@@ -4,7 +4,7 @@ test "encodes and decodes document client packets" {
     "readonly-remote://workspace/docs/fixtures/project/src/main.mbt",
   )
   let packet = @remote_protocol.OpenDocument({ id: "open-1", uri })
-  let encoded = packet.to_json()
+  let encoded = packet.to_json().stringify()
   assert_true(encoded.contains("\"type\":\"OpenDocument\""))
   assert_true(encoded.contains("\"version\":1"))
 
@@ -26,7 +26,8 @@ test "encodes and decodes semantic client packets" {
     uri,
     document_version: 4,
   })
-  match @remote_protocol.decode_client_packet(diagnostics.to_json()) {
+  match
+    @remote_protocol.decode_client_packet(diagnostics.to_json().stringify()) {
     DecodedClientPacket(Diagnostics(request)) => {
       assert_eq(request.id, "diag-1")
       assert_eq(request.document_version, 4)
@@ -41,7 +42,7 @@ test "encodes and decodes semantic client packets" {
     document_version: 4,
     offset: 17,
   })
-  match @remote_protocol.decode_client_packet(hover.to_json()) {
+  match @remote_protocol.decode_client_packet(hover.to_json().stringify()) {
     DecodedClientPacket(Hover(request)) => {
       assert_eq(request.id, "hover-1")
       assert_eq(request.document_version, 4)
@@ -57,7 +58,8 @@ test "encodes and decodes semantic client packets" {
     document_version: 4,
     offset: 18,
   })
-  match @remote_protocol.decode_client_packet(definition.to_json()) {
+  match
+    @remote_protocol.decode_client_packet(definition.to_json().stringify()) {
     DecodedClientPacket(Definition(request)) => {
       assert_eq(request.id, "def-1")
       assert_eq(request.offset, 18)
@@ -72,7 +74,8 @@ test "encodes and decodes semantic client packets" {
     document_version: 4,
     offset: 19,
   })
-  match @remote_protocol.decode_client_packet(references.to_json()) {
+  match
+    @remote_protocol.decode_client_packet(references.to_json().stringify()) {
     DecodedClientPacket(References(request)) => {
       assert_eq(request.id, "refs-1")
       assert_eq(request.document_version, 4)
@@ -87,7 +90,7 @@ test "encodes and decodes semantic client packets" {
     uri,
     document_version: 5,
   })
-  match @remote_protocol.decode_client_packet(symbols.to_json()) {
+  match @remote_protocol.decode_client_packet(symbols.to_json().stringify()) {
     DecodedClientPacket(DocumentSymbols(request)) => {
       assert_eq(request.id, "symbols-1")
       assert_eq(request.document_version, 5)
@@ -101,7 +104,7 @@ test "encodes and decodes semantic client packets" {
     uri,
     document_version: 6,
   })
-  match @remote_protocol.decode_client_packet(tokens.to_json()) {
+  match @remote_protocol.decode_client_packet(tokens.to_json().stringify()) {
     DecodedClientPacket(SemanticTokens(request)) => {
       assert_eq(request.id, "tokens-1")
       assert_eq(request.document_version, 6)
@@ -118,7 +121,7 @@ test "encodes and decodes directory resolve packets" {
     id: "resolve-1",
     uri: root_uri,
   })
-  let encoded = request.to_json()
+  let encoded = request.to_json().stringify()
   assert_true(encoded.contains("\"type\":\"ResolveDirectory\""))
   match @remote_protocol.decode_client_packet(encoded) {
     DecodedClientPacket(ResolveDirectory(decoded)) => {
@@ -146,7 +149,7 @@ test "encodes and decodes directory resolve packets" {
       ]),
     },
   })
-  match @remote_protocol.decode_server_packet(resolved.to_json()) {
+  match @remote_protocol.decode_server_packet(resolved.to_json().stringify()) {
     DecodedServerPacket(DirectoryResolved(payload)) => {
       assert_eq(payload.id, "resolve-1")
       assert_eq(payload.stat.uri.to_string(), "readonly-remote://workspace")
@@ -178,7 +181,7 @@ test "encodes and decodes directory resolve packets" {
     id: "resolve-2",
     stat: { uri: src_uri, name: "src", kind: Directory, children: Some([]) },
   })
-  match @remote_protocol.decode_server_packet(empty.to_json()) {
+  match @remote_protocol.decode_server_packet(empty.to_json().stringify()) {
     DecodedServerPacket(DirectoryResolved(payload)) =>
       match payload.stat.children {
         Some(children) => assert_eq(children.length(), 0)
@@ -198,7 +201,7 @@ test "encodes and decodes server document and language packets" {
     uri, "main.mbt", "moonbit", 2, "rev-2", "pub fn main {}\n",
   )
   let loaded = @remote_protocol.DocumentLoaded({ id: "open-1", document })
-  match @remote_protocol.decode_server_packet(loaded.to_json()) {
+  match @remote_protocol.decode_server_packet(loaded.to_json().stringify()) {
     DecodedServerPacket(DocumentLoaded(payload)) => {
       assert_eq(payload.id, "open-1")
       assert_eq(payload.document.uri.to_string(), uri.to_string())
@@ -214,7 +217,7 @@ test "encodes and decodes server document and language packets" {
     version: 2,
     hover: Some({ range: Range(7, 11), contents: "fn main" }),
   })
-  match @remote_protocol.decode_server_packet(hover.to_json()) {
+  match @remote_protocol.decode_server_packet(hover.to_json().stringify()) {
     DecodedServerPacket(HoverResult(payload)) =>
       match payload.hover {
         Some(item) => {
@@ -243,7 +246,10 @@ test "encodes and decodes server document and language packets" {
       { uri, range: Range(20, 24), line: 2, column: 1, line_text: "main()" },
     ],
   })
-  match @remote_protocol.decode_server_packet(references_result.to_json()) {
+  match
+    @remote_protocol.decode_server_packet(
+      references_result.to_json().stringify(),
+    ) {
     DecodedServerPacket(ReferencesResult(payload)) => {
       assert_eq(payload.id, "refs-1")
       assert_eq(payload.version, 2)
@@ -263,7 +269,10 @@ test "encodes and decodes server document and language packets" {
     version: 3,
     references: [],
   })
-  match @remote_protocol.decode_server_packet(empty_references.to_json()) {
+  match
+    @remote_protocol.decode_server_packet(
+      empty_references.to_json().stringify(),
+    ) {
     DecodedServerPacket(ReferencesResult(payload)) => {
       assert_eq(payload.references.length(), 0)
       assert_eq(payload.version, 3)
@@ -280,7 +289,8 @@ test "encodes and decodes server document and language packets" {
       { range: Range(0, 3), severity: Warning, message: "check me" },
     ],
   })
-  match @remote_protocol.decode_server_packet(diagnostics.to_json()) {
+  match
+    @remote_protocol.decode_server_packet(diagnostics.to_json().stringify()) {
     DecodedServerPacket(Diagnostics(payload)) => {
       assert_eq(payload.id, "diag-1")
       assert_eq(payload.diagnostics.length(), 1)
@@ -296,7 +306,7 @@ test "encodes and decodes server document and language packets" {
     version: 2,
     symbols: [{ name: "main", kind: "function", range: Range(7, 11) }],
   })
-  match @remote_protocol.decode_server_packet(symbols.to_json()) {
+  match @remote_protocol.decode_server_packet(symbols.to_json().stringify()) {
     DecodedServerPacket(DocumentSymbolsResult(payload)) => {
       assert_eq(payload.symbols.length(), 1)
       assert_eq(payload.symbols[0].name, "main")
@@ -311,12 +321,32 @@ test "encodes and decodes server document and language packets" {
     version: 2,
     semantic_tokens: [{ range: Range(7, 11), token_type: "function" }],
   })
-  match @remote_protocol.decode_server_packet(semantic_tokens.to_json()) {
+  match
+    @remote_protocol.decode_server_packet(semantic_tokens.to_json().stringify()) {
     DecodedServerPacket(SemanticTokensResult(payload)) => {
       assert_eq(payload.semantic_tokens.length(), 1)
       assert_eq(payload.semantic_tokens[0].token_type, "function")
     }
     DecodedServerPacket(_) => fail("unexpected semantic tokens result packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+}
+
+///|
+test "round-trips document text containing control characters" {
+  // Form feed and vertical tab are valid in source files but invalid in
+  // JSON strings unless escaped; the old hand-rolled escaping emitted
+  // MoonBit-style `\u{c}` and broke the peer's decode.
+  let uri = expect_uri("readonly-remote://workspace/src/control.mbt")
+  let text = "form\u{0c}feed\u{0b}tab\tquote\"backslash\\\nend"
+  let document = @workspace.SourceDocument(
+    uri, "control.mbt", "moonbit", 1, "rev-1", text,
+  )
+  let loaded = @remote_protocol.DocumentLoaded({ id: "open-ctl", document })
+  match @remote_protocol.decode_server_packet(loaded.to_json().stringify()) {
+    DecodedServerPacket(DocumentLoaded(payload)) =>
+      assert_eq(payload.document.text, text)
+    DecodedServerPacket(_) => fail("unexpected server packet")
     ServerPacketDecodeError(error) => fail(error.message)
   }
 }

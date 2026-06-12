@@ -156,33 +156,29 @@ pub fn SourceDocument::from_file_content(
 }
 
 ///|
-pub fn SourceDocumentLoadResult::to_json(
-  self : SourceDocumentLoadResult,
-) -> String {
+pub impl ToJson for SourceDocumentLoadResult with fn to_json(self) {
   match self {
     SourceDocumentLoaded(document) =>
-      "{\"ok\":true,\"document\":" + document.to_json() + "}"
-    SourceDocumentLoadError(error) =>
-      "{\"ok\":false,\"error\":" + error.to_json() + "}"
+      { "ok": true, "document": document.to_json() }
+    SourceDocumentLoadError(error) => { "ok": false, "error": error.to_json() }
   }
 }
 
 ///|
-pub fn FileSystemProviderError::to_json(
-  self : FileSystemProviderError,
-) -> String {
-  let mut out = "{"
-  out = out + "\"code\":" + json_string(self.code.to_string())
-  out = out + ",\"message\":" + json_string(self.message)
-  out = out + ",\"status\":" + self.status().to_string()
+pub impl ToJson for FileSystemProviderError with fn to_json(self) {
+  let fields : Map[String, Json] = {
+    "code": self.code.to_string().to_json(),
+    "message": self.message.to_json(),
+    "status": self.status().to_json(),
+  }
   match self.uri {
     Some(uri) => {
-      out = out + ",\"uri\":" + json_string(uri.to_string())
-      out = out + ",\"displayName\":" + json_string(uri.display_name())
+      fields["uri"] = uri.to_string().to_json()
+      fields["displayName"] = uri.display_name().to_json()
     }
     None => ()
   }
-  out + "}"
+  Json::object(fields)
 }
 
 ///|
@@ -236,23 +232,11 @@ pub fn FileSystemProviderErrorCode::from_string(
 }
 
 ///|
-pub fn FileChange::array_to_json(changes : Array[FileChange]) -> String {
-  let mut out = "["
-  for i in 0..<changes.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    out = out + changes[i].to_json()
+pub impl ToJson for FileChange with fn to_json(self) {
+  {
+    "uri": self.uri.to_string().to_json(),
+    "type": self.change_type.to_string().to_json(),
   }
-  out + "]"
-}
-
-///|
-pub fn FileChange::to_json(self : FileChange) -> String {
-  let mut out = "{"
-  out = out + "\"uri\":" + json_string(self.uri.to_string())
-  out = out + ",\"type\":" + json_string(self.change_type.to_string())
-  out + "}"
 }
 
 ///|

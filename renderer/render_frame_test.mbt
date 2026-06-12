@@ -47,7 +47,7 @@ test "render frame contains highlighted spans and provider surfaces" {
   assert_true(frame.lines[0].spans.length() > 0)
   assert_eq(join_span_text(frame.lines[0]), frame.lines[0].text)
   assert_eq(frame.diagnostics.length(), 1)
-  assert_true(frame.to_json().contains("\"lineCount\""))
+  assert_true(frame.to_json().stringify().contains("\"lineCount\""))
 }
 
 ///|

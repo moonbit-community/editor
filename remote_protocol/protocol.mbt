@@ -226,7 +226,7 @@ pub fn negotiate_protocol_version(version : Int) -> ProtocolNegotiation {
 }
 
 ///|
-pub fn ClientPacket::to_json(self : ClientPacket) -> String {
+pub impl ToJson for ClientPacket with fn to_json(self) {
   match self {
     ResolveDirectory(request) =>
       document_request_json("ResolveDirectory", request)
@@ -243,7 +243,7 @@ pub fn ClientPacket::to_json(self : ClientPacket) -> String {
 }
 
 ///|
-pub fn ServerPacket::to_json(self : ServerPacket) -> String {
+pub impl ToJson for ServerPacket with fn to_json(self) {
   match self {
     DirectoryResolved(payload) => directory_resolved_json(payload)
     DocumentLoaded(payload) => document_payload_json("DocumentLoaded", payload)
@@ -811,71 +811,64 @@ fn parse_source_document(value : Json, id : String) -> ProtocolDocumentResult {
 }
 
 ///|
-fn document_request_json(kind : String, request : DocumentRequest) -> String {
-  let mut out = packet_head(kind, request.id)
-  out = out + ",\"uri\":" + json_string(request.uri.to_string())
-  out + "}"
+fn document_request_json(kind : String, request : DocumentRequest) -> Json {
+  let fields = packet_fields(kind, request.id)
+  fields["uri"] = request.uri.to_string().to_json()
+  Json::object(fields)
 }
 
 ///|
 fn position_request_json(
   kind : String,
   request : DocumentPositionRequest,
-) -> String {
-  let mut out = packet_head(kind, request.id)
-  out = out + ",\"uri\":" + json_string(request.uri.to_string())
-  out = out + ",\"documentVersion\":" + request.document_version.to_string()
-  out = out + ",\"offset\":" + request.offset.to_string()
-  out + "}"
+) -> Json {
+  let fields = packet_fields(kind, request.id)
+  fields["uri"] = request.uri.to_string().to_json()
+  fields["documentVersion"] = request.document_version.to_json()
+  fields["offset"] = request.offset.to_json()
+  Json::object(fields)
 }
 
 ///|
 fn version_request_json(
   kind : String,
   request : DocumentVersionRequest,
-) -> String {
-  let mut out = packet_head(kind, request.id)
-  out = out + ",\"uri\":" + json_string(request.uri.to_string())
-  out = out + ",\"documentVersion\":" + request.document_version.to_string()
-  out + "}"
+) -> Json {
+  let fields = packet_fields(kind, request.id)
+  fields["uri"] = request.uri.to_string().to_json()
+  fields["documentVersion"] = request.document_version.to_json()
+  Json::object(fields)
 }
 
 ///|
-fn document_payload_json(kind : String, payload : DocumentPayload) -> String {
-  let mut out = packet_head(kind, payload.id)
-  out = out + ",\"document\":" + payload.document.to_json()
-  out + "}"
+fn document_payload_json(kind : String, payload : DocumentPayload) -> Json {
+  let fields = packet_fields(kind, payload.id)
+  fields["document"] = payload.document.to_json()
+  Json::object(fields)
 }
 
 ///|
-fn directory_resolved_json(payload : DirectoryResolvedPayload) -> String {
-  let mut out = packet_head("DirectoryResolved", payload.id)
-  out = out + ",\"stat\":" + workspace_stat_json(payload.stat)
-  out + "}"
+fn directory_resolved_json(payload : DirectoryResolvedPayload) -> Json {
+  let fields = packet_fields("DirectoryResolved", payload.id)
+  fields["stat"] = workspace_stat_json(payload.stat)
+  Json::object(fields)
 }
 
 ///|
 /// Kind crosses the wire as a string; unresolved `children` is omitted so
 /// the decoder can tell "not resolved" (`None`) from "empty" (`[]`).
-fn workspace_stat_json(stat : @workspace.WorkspaceStat) -> String {
-  let mut out = "{"
-  out = out + "\"uri\":" + json_string(stat.uri.to_string())
-  out = out + ",\"name\":" + json_string(stat.name)
-  out = out + ",\"kind\":" + json_string(stat.kind.to_string())
+fn workspace_stat_json(stat : @workspace.WorkspaceStat) -> Json {
+  let fields : Map[String, Json] = {
+    "uri": stat.uri.to_string().to_json(),
+    "name": stat.name.to_json(),
+    "kind": stat.kind.to_string().to_json(),
+  }
   match stat.children {
-    Some(children) => {
-      out = out + ",\"children\":["
-      for i in 0..<children.length() {
-        if i > 0 {
-          out = out + ","
-        }
-        out = out + workspace_stat_json(children[i])
-      }
-      out = out + "]"
-    }
+    Some(children) =>
+      fields["children"] = Json::array(children.map(workspace_stat_json))
     None => ()
   }
-  out + "}"
+  Json::object(fields)
 }
 
 ///|
@@ -911,209 +904,151 @@ fn parse_workspace_stat(value : Json) -> @workspace.WorkspaceStat? {
 }
 
 ///|
-fn diagnostics_payload_json(payload : DiagnosticsPayload) -> String {
-  let mut out = packet_head("Diagnostics", payload.id)
-  out = out + ",\"uri\":" + json_string(payload.uri.to_string())
-  out = out + ",\"documentVersion\":" + payload.version.to_string()
-  out = out + ",\"diagnostics\":" + diagnostics_json(payload.diagnostics)
-  out + "}"
+fn diagnostics_payload_json(payload : DiagnosticsPayload) -> Json {
+  let fields = packet_fields("Diagnostics", payload.id)
+  fields["uri"] = payload.uri.to_string().to_json()
+  fields["documentVersion"] = payload.version.to_json()
+  fields["diagnostics"] = Json::array(payload.diagnostics.map(diagnostic_json))
+  Json::object(fields)
 }
 
 ///|
-fn hover_result_json(payload : HoverResultPayload) -> String {
-  let mut out = packet_head("HoverResult", payload.id)
-  out = out + ",\"uri\":" + json_string(payload.uri.to_string())
-  out = out + ",\"documentVersion\":" + payload.version.to_string()
-  out = out + ",\"hover\":" + optional_hover_json(payload.hover)
-  out + "}"
-}
-
-///|
-fn definition_result_json(payload : DefinitionResultPayload) -> String {
-  let mut out = packet_head("DefinitionResult", payload.id)
-  out = out + ",\"uri\":" + json_string(payload.uri.to_string())
-  out = out + ",\"documentVersion\":" + payload.version.to_string()
-  out = out + ",\"location\":" + optional_location_json(payload.location)
-  out + "}"
-}
-
-///|
-fn references_result_json(payload : ReferencesResultPayload) -> String {
-  let mut out = packet_head("ReferencesResult", payload.id)
-  out = out + ",\"uri\":" + json_string(payload.uri.to_string())
-  out = out + ",\"documentVersion\":" + payload.version.to_string()
-  out = out + ",\"references\":["
-  for i in 0..<payload.references.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    out = out + reference_item_json(payload.references[i])
+fn hover_result_json(payload : HoverResultPayload) -> Json {
+  let fields = packet_fields("HoverResult", payload.id)
+  fields["uri"] = payload.uri.to_string().to_json()
+  fields["documentVersion"] = payload.version.to_json()
+  fields["hover"] = match payload.hover {
+    Some(hover) => hover_json(hover)
+    None => Json::null()
   }
-  out + "]}"
+  Json::object(fields)
 }
 
 ///|
-fn reference_item_json(item : ReferenceItem) -> String {
-  let mut out = "{"
-  out = out + "\"uri\":" + json_string(item.uri.to_string())
-  out = out + ",\"range\":" + range_json(item.range)
-  out = out + ",\"line\":" + item.line.to_string()
-  out = out + ",\"column\":" + item.column.to_string()
-  out = out + ",\"lineText\":" + json_string(item.line_text)
-  out + "}"
+fn definition_result_json(payload : DefinitionResultPayload) -> Json {
+  let fields = packet_fields("DefinitionResult", payload.id)
+  fields["uri"] = payload.uri.to_string().to_json()
+  fields["documentVersion"] = payload.version.to_json()
+  fields["location"] = match payload.location {
+    Some(location) => location_json(location)
+    None => Json::null()
+  }
+  Json::object(fields)
 }
 
 ///|
-fn document_symbols_result_json(
-  payload : DocumentSymbolsResultPayload,
-) -> String {
-  let mut out = packet_head("DocumentSymbolsResult", payload.id)
-  out = out + ",\"uri\":" + json_string(payload.uri.to_string())
-  out = out + ",\"documentVersion\":" + payload.version.to_string()
-  out = out + ",\"symbols\":" + document_symbols_json(payload.symbols)
-  out + "}"
+fn references_result_json(payload : ReferencesResultPayload) -> Json {
+  let fields = packet_fields("ReferencesResult", payload.id)
+  fields["uri"] = payload.uri.to_string().to_json()
+  fields["documentVersion"] = payload.version.to_json()
+  fields["references"] = Json::array(
+    payload.references.map(reference_item_json),
+  )
+  Json::object(fields)
 }
 
 ///|
-fn semantic_tokens_result_json(payload : SemanticTokensResultPayload) -> String {
-  let mut out = packet_head("SemanticTokensResult", payload.id)
-  out = out + ",\"uri\":" + json_string(payload.uri.to_string())
-  out = out + ",\"documentVersion\":" + payload.version.to_string()
-  out = out + ",\"semanticTokens\":"
-  out = out + semantic_tokens_json(payload.semantic_tokens)
-  out + "}"
+fn reference_item_json(item : ReferenceItem) -> Json {
+  {
+    "uri": item.uri.to_string().to_json(),
+    "range": range_json(item.range),
+    "line": item.line.to_json(),
+    "column": item.column.to_json(),
+    "lineText": item.line_text.to_json(),
+  }
 }
 
 ///|
-fn error_packet_json(error : ProtocolError) -> String {
-  let mut out = packet_head("Error", error.request_id)
-  out = out + ",\"error\":" + error.to_json()
-  out + "}"
+fn document_symbols_result_json(payload : DocumentSymbolsResultPayload) -> Json {
+  let fields = packet_fields("DocumentSymbolsResult", payload.id)
+  fields["uri"] = payload.uri.to_string().to_json()
+  fields["documentVersion"] = payload.version.to_json()
+  fields["symbols"] = Json::array(payload.symbols.map(document_symbol_json))
+  Json::object(fields)
 }
 
 ///|
-pub fn ProtocolError::to_json(self : ProtocolError) -> String {
-  let mut out = "{"
-  out = out + "\"code\":" + json_string(self.code.to_string())
-  out = out + ",\"message\":" + json_string(self.message)
-  out = out + ",\"requestId\":" + json_string(self.request_id)
+fn semantic_tokens_result_json(payload : SemanticTokensResultPayload) -> Json {
+  let fields = packet_fields("SemanticTokensResult", payload.id)
+  fields["uri"] = payload.uri.to_string().to_json()
+  fields["documentVersion"] = payload.version.to_json()
+  fields["semanticTokens"] = Json::array(
+    payload.semantic_tokens.map(semantic_token_json),
+  )
+  Json::object(fields)
+}
+
+///|
+fn error_packet_json(error : ProtocolError) -> Json {
+  let fields = packet_fields("Error", error.request_id)
+  fields["error"] = error.to_json()
+  Json::object(fields)
+}
+
+///|
+pub impl ToJson for ProtocolError with fn to_json(self) {
+  let fields : Map[String, Json] = {
+    "code": self.code.to_string().to_json(),
+    "message": self.message.to_json(),
+    "requestId": self.request_id.to_json(),
+  }
   if self.provider_code != "" {
-    out = out + ",\"providerCode\":" + json_string(self.provider_code)
+    fields["providerCode"] = self.provider_code.to_json()
   }
-  out + "}"
+  Json::object(fields)
 }
 
 ///|
-fn packet_head(kind : String, id : String) -> String {
-  let mut out = "{"
-  out = out + "\"version\":" + protocol_version().to_string()
-  out = out + ",\"type\":" + json_string(kind)
+fn packet_fields(kind : String, id : String) -> Map[String, Json] {
+  let fields : Map[String, Json] = {
+    "version": protocol_version().to_json(),
+    "type": kind.to_json(),
+  }
   if id != "" {
-    out = out + ",\"id\":" + json_string(id)
+    fields["id"] = id.to_json()
   }
-  out
+  fields
 }
 
 ///|
-fn diagnostics_json(diagnostics : Array[@language.Diagnostic]) -> String {
-  let mut out = "["
-  for i in 0..<diagnostics.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    out = out + diagnostic_json(diagnostics[i])
-  }
-  out + "]"
-}
-
-///|
-fn document_symbols_json(symbols : Array[@language.DocumentSymbol]) -> String {
-  let mut out = "["
-  for i in 0..<symbols.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    out = out + document_symbol_json(symbols[i])
-  }
-  out + "]"
-}
-
-///|
-fn semantic_tokens_json(tokens : Array[@language.SemanticToken]) -> String {
-  let mut out = "["
-  for i in 0..<tokens.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    out = out + semantic_token_json(tokens[i])
-  }
-  out + "]"
-}
-
-///|
-fn diagnostic_json(diagnostic : @language.Diagnostic) -> String {
-  let mut out = "{"
-  out = out + "\"range\":" + range_json(diagnostic.range)
-  out = out + ",\"severity\":" + json_string(diagnostic.severity.label())
-  out = out + ",\"message\":" + json_string(diagnostic.message)
-  out + "}"
-}
-
-///|
-fn document_symbol_json(symbol : @language.DocumentSymbol) -> String {
-  let mut out = "{"
-  out = out + "\"name\":" + json_string(symbol.name)
-  out = out + ",\"kind\":" + json_string(symbol.kind)
-  out = out + ",\"range\":" + range_json(symbol.range)
-  out + "}"
-}
-
-///|
-fn semantic_token_json(token : @language.SemanticToken) -> String {
-  let mut out = "{"
-  out = out + "\"range\":" + range_json(token.range)
-  out = out + ",\"tokenType\":" + json_string(token.token_type)
-  out + "}"
-}
-
-///|
-fn optional_hover_json(hover : @language.Hover?) -> String {
-  match hover {
-    Some(value) => hover_json(value)
-    None => "null"
+fn diagnostic_json(diagnostic : @language.Diagnostic) -> Json {
+  {
+    "range": range_json(diagnostic.range),
+    "severity": diagnostic.severity.label().to_json(),
+    "message": diagnostic.message.to_json(),
   }
 }
 
 ///|
-fn hover_json(hover : @language.Hover) -> String {
-  let mut out = "{"
-  out = out + "\"range\":" + range_json(hover.range)
-  out = out + ",\"contents\":" + json_string(hover.contents)
-  out + "}"
-}
-
-///|
-fn optional_location_json(location : @language.Location?) -> String {
-  match location {
-    Some(value) => location_json(value)
-    None => "null"
+fn document_symbol_json(symbol : @language.DocumentSymbol) -> Json {
+  {
+    "name": symbol.name.to_json(),
+    "kind": symbol.kind.to_json(),
+    "range": range_json(symbol.range),
   }
 }
 
 ///|
-fn location_json(location : @language.Location) -> String {
-  let mut out = "{"
-  out = out + "\"uri\":" + json_string(location.uri.to_string())
-  out = out + ",\"range\":" + range_json(location.range)
-  out + "}"
+fn semantic_token_json(token : @language.SemanticToken) -> Json {
+  { "range": range_json(token.range), "tokenType": token.token_type.to_json() }
 }
 
 ///|
-fn range_json(range : @core.Range) -> String {
-  let mut out = "{"
-  out = out + "\"start\":" + range.start.to_string()
-  out = out + ",\"end\":" + range.end.to_string()
-  out + "}"
+fn hover_json(hover : @language.Hover) -> Json {
+  { "range": range_json(hover.range), "contents": hover.contents.to_json() }
+}
+
+///|
+fn location_json(location : @language.Location) -> Json {
+  {
+    "uri": location.uri.to_string().to_json(),
+    "range": range_json(location.range),
+  }
+}
+
+///|
+fn range_json(range : @core.Range) -> Json {
+  { "start": range.start.to_json(), "end": range.end.to_json() }
 }
 
 ///|
@@ -1289,9 +1224,4 @@ fn json_int_field(value : Json, key : String) -> Int? {
     Some(Number(number, repr=_)) => Some(number.to_int())
     _ => None
   }
-}
-
-///|
-fn json_string(value : String) -> String {
-  value.escape(quote=true)
 }

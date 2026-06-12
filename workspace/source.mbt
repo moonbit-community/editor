@@ -202,15 +202,15 @@ pub fn SourceDocument::snapshot(
 }
 
 ///|
-pub fn SourceDocument::to_json(self : SourceDocument) -> String {
-  let mut out = "{"
-  out = out + "\"uri\":" + json_string(self.uri.to_string())
-  out = out + ",\"displayName\":" + json_string(self.display_name)
-  out = out + ",\"languageId\":" + json_string(self.language_id)
-  out = out + ",\"version\":" + self.version.to_string()
-  out = out + ",\"revision\":" + json_string(self.revision)
-  out = out + ",\"text\":" + json_string(self.text)
-  out + "}"
+pub impl ToJson for SourceDocument with fn to_json(self) {
+  {
+    "uri": self.uri.to_string().to_json(),
+    "displayName": self.display_name.to_json(),
+    "languageId": self.language_id.to_json(),
+    "version": self.version.to_json(),
+    "revision": self.revision.to_json(),
+    "text": self.text.to_json(),
+  }
 }
 
 ///|
@@ -279,26 +279,4 @@ fn is_ascii_alpha(unit : Int) -> Bool {
 ///|
 fn is_digit(unit : Int) -> Bool {
   48 <= unit && unit <= 57
-}
-
-///|
-fn json_string(value : String) -> String {
-  let mut out = "\""
-  for i in 0..<value.length() {
-    let unit = value[i].to_int()
-    if unit == 34 {
-      out = out + "\\\""
-    } else if unit == 92 {
-      out = out + "\\\\"
-    } else if unit == 10 {
-      out = out + "\\n"
-    } else if unit == 13 {
-      out = out + "\\r"
-    } else if unit == 9 {
-      out = out + "\\t"
-    } else {
-      out = out + value[i:i + 1].to_owned()
-    }
-  }
-  out + "\""
 }

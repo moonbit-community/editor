@@ -18,6 +18,23 @@ let provider_registry : ProviderRegistry = {
 }
 
 ///|
+/// Tokenization support by language id, the Monaco
+/// `TokenizationRegistry` singleton: starts empty, and the host
+/// registers the language packages it composed in at startup (the
+/// workbench and embedders register `syntax/lang_*` lexers; this
+/// package itself imports none). Unregistered languages render through
+/// the plain fallback.
+let tokenizer_registry : @syntax.TokenizerRegistry = @syntax.TokenizerRegistry::new()
+
+///|
+pub fn register_tokenizer(
+  language_id : String,
+  tokenizer : &@syntax.LineTokenizer,
+) -> Unit {
+  tokenizer_registry.register(language_id, tokenizer)
+}
+
+///|
 pub fn register_hover_provider(provider : &@language.HoverProvider) -> Unit {
   provider_registry.hover.push(provider)
 }

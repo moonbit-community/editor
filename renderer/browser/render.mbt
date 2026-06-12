@@ -34,7 +34,10 @@ fn render_document(
   let source_document = loaded_document
   let build_started = @dom.now_ms()
   let doc = source_document.snapshot()
-  let tokens = @syntax.highlight(doc)
+  let tokens = match tokenizer_registry.lookup(doc.language_id) {
+    Some(tokenizer) => @syntax.tokenize_document(doc, tokenizer)
+    None => @syntax.highlight(doc)
+  }
   notify(
     ViewerDiagnosticsStatus(
       count=providers.diagnostics.length(),

@@ -75,7 +75,15 @@ fn workbench_viewer() -> @browser.Viewer {
 pub fn start_app() -> Unit {
   @dom.install_host_capabilities()
   register_remote_language_providers()
+  register_tokenizers()
   mount_app()
+}
+
+///|
+/// Languages are compile-time packages composed here by import; the
+/// viewer library itself ships only the plain fallback.
+fn register_tokenizers() -> Unit {
+  @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
 }
 
 ///|

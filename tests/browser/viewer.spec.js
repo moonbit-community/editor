@@ -81,6 +81,28 @@ test('lazily expands explorer folders and auto-reveals the active file', async (
   expect(await page.evaluate(() => window.location.href)).toBe(initialHref);
 });
 
+test('highlights MoonBit sources through the registered language tokenizer', async ({ page }) => {
+  await page.goto('/');
+  await openWorkspaceFile(page, 'src/errors.mbt');
+
+  // tok-type only comes from the MoonBit lexer (capitalized identifier);
+  // the plain fallback never emits it.
+  await expect(page.locator('.tok-type', { hasText: 'FixtureError' }).first()).toBeVisible();
+  await expect(page.locator('.tok-keyword', { hasText: 'suberror' }).first()).toBeVisible();
+});
+
+test('falls back to plain tokenization for unregistered languages', async ({ page }) => {
+  await page.goto('/');
+  await openWorkspaceFile(page, 'notes.txt');
+
+  await expect(page.locator('.code-viewer')).toContainText('Fixture notes');
+  await expect(page.locator('.tok-identifier', { hasText: 'value' }).first()).toBeVisible();
+  // The plain fallback never classifies types or operators, even for the
+  // capitalized FixtureError word the MoonBit lexer would tag.
+  await expect(page.locator('.code span[class*="tok-type"]')).toHaveCount(0);
+  await expect(page.locator('.code span[class*="tok-operator"]')).toHaveCount(0);
+});
+
 test('overlays semantic token classes onto rendered spans', async ({ page }) => {
   await page.goto('/');
   await openWorkspaceFile(page, 'src/errors.mbt');
@@ -149,6 +171,16 @@ async function openWorkspaceFile(page, workspacePath) {
   // Let the startup auto-open settle so its document switch cannot race
   // the one this helper performs.
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
+  // Also let the explorer auto-reveal finish: it inserts rows while
+  // expanding the active file's ancestors, and a click during that
+  // re-render can land on the wrong row.
+  const activeUri = await page.locator('.editor-shell').getAttribute('data-source-uri');
+  if (activeUri) {
+    await expect(page.locator(`[data-workspace-id="${activeUri}"]`)).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  }
   const segments = workspacePath.split('/');
   let prefix = '';
   for (const segment of segments.slice(0, -1)) {

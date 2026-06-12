@@ -260,6 +260,9 @@ fn view_embed(
 
 ///|
 fn main {
+  // Highlighting needs no server: the language package is composed in
+  // by import and registered against the viewer's tokenizer registry.
+  @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
   let (emit, cell) = @rabbita.cell_with_emit(
     model={ status: "loading" },
     update=update_embed,

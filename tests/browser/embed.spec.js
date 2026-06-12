@@ -11,6 +11,10 @@ test('runs the viewer and tree from in-memory providers without a server', async
   // The embedding host auto-opens src/main.mbt; auto-reveal expands src.
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
   await expect(page.locator('.code-viewer')).toContainText('fn main');
+
+  // Real language highlighting with no server: the MoonBit lexer is
+  // registered by the embedding host, not fetched from anywhere.
+  await expect(page.locator('.tok-keyword', { hasText: 'fn' }).first()).toBeVisible();
   await expect(page.locator(workspaceItem('src'))).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator(workspaceItem('src/main.mbt'))).toHaveAttribute(
     'aria-selected',

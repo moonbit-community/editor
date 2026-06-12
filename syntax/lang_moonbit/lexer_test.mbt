@@ -56,9 +56,7 @@ test "fixture errors.mbt token stream" {
       #|111-116 tok-keyword raise
       #|117-129 tok-type FixtureError
       #|129-130 tok-delimiter (
-      #|130-131 tok-string "
-      #|131-146 tok-string fixture failure
-      #|146-147 tok-string "
+      #|130-147 tok-string "fixture failure"
       #|147-148 tok-delimiter )
       #|151-152 tok-delimiter }
       #|155-156 tok-number 1
@@ -77,8 +75,7 @@ test "string interpolation and escapes" {
       #|0-3 tok-keyword let
       #|4-5 tok-identifier s
       #|6-7 tok-operator =
-      #|8-9 tok-string "
-      #|9-15 tok-string count 
+      #|8-15 tok-string "count 
       #|15-17 tok-string-escape \{
       #|17-18 tok-identifier n
       #|19-20 tok-operator +
@@ -104,8 +101,7 @@ test "multiline string lines" {
       #|4-8 tok-identifier text
       #|9-10 tok-operator =
       #|13-27 tok-string #|plain "line"
-      #|30-32 tok-string $|
-      #|32-36 tok-string sum 
+      #|30-36 tok-string $|sum 
       #|36-38 tok-string-escape \{
       #|38-39 tok-number 1
       #|40-41 tok-operator +
@@ -130,13 +126,9 @@ test "doc comments attributes numbers and package refs" {
       #|0-16 tok-comment-doc ///| Doc heading
       #|17-26 tok-attribute #external
       #|26-27 tok-delimiter (
-      #|27-28 tok-string "
-      #|28-30 tok-string js
-      #|30-31 tok-string "
+      #|27-31 tok-string "js"
       #|31-32 tok-delimiter ,
-      #|33-34 tok-string "
-      #|34-35 tok-string x
-      #|35-36 tok-string "
+      #|33-36 tok-string "x"
       #|36-37 tok-delimiter )
       #|38-54 tok-comment // plain comment
       #|55-58 tok-keyword let

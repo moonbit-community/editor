@@ -47,13 +47,13 @@ pub impl @syntax.LineTokenizer for MoonbitTokenizer with fn tokenize_line(
     let consumed = view.length() - rest.length()
     match op {
       Blank => ()
-      Emit(tag) => tokens.push({ start: at, end: at + consumed, tag })
+      Emit(tag) => push_token(tokens, at, at + consumed, tag)
       Push(tag, mode) => {
-        tokens.push({ start: at, end: at + consumed, tag })
+        push_token(tokens, at, at + consumed, tag)
         stack.push(mode)
       }
       Pop(tag) => {
-        tokens.push({ start: at, end: at + consumed, tag })
+        push_token(tokens, at, at + consumed, tag)
         if stack.length() > 1 {
           ignore(stack.pop())
         }
@@ -63,6 +63,26 @@ pub impl @syntax.LineTokenizer for MoonbitTokenizer with fn tokenize_line(
     view = rest
   }
   (tokens, TokenizerState("n"))
+}
+
+///|
+/// Contiguous same-tag lexemes coalesce into one token, so a plain
+/// string renders as a single `tok-string` span (quote, content, quote)
+/// instead of three.
+fn push_token(
+  tokens : Array[@syntax.LineToken],
+  start : Int,
+  end : Int,
+  tag : @syntax.HighlightTag,
+) -> Unit {
+  if tokens.length() > 0 {
+    let last = tokens[tokens.length() - 1]
+    if last.tag == tag && last.end == start {
+      tokens[tokens.length() - 1] = { start: last.start, end, tag }
+      return
+    }
+  }
+  tokens.push({ start, end, tag })
 }
 
 ///|

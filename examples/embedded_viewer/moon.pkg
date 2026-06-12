@@ -1,5 +1,6 @@
 import {
   "baozhiyuan/editor/renderer/browser",
+  "baozhiyuan/editor/syntax/lang_moonbit",
   "baozhiyuan/editor/widgets/file_tree",
   "baozhiyuan/editor/workspace",
   "moonbit-community/rabbita",

@@ -64,6 +64,9 @@
   --vscode-token-punctuation: #cccccc;
   --vscode-token-function: #dcdcaa;
   --vscode-token-type: #4ec9b0;
+  --vscode-token-string-escape: #d7ba7d;
+  --vscode-token-regexp: #d16969;
+  --vscode-token-invalid: #f44747;
 
   /* VS Code editor defaults on macOS: 12px Menlo, 1.5x line height. */
   --editor-font-family: Menlo, Monaco, "Courier New", monospace;
@@ -126,6 +129,9 @@
   --vscode-token-punctuation: #3b3b3b;
   --vscode-token-function: #795e26;
   --vscode-token-type: #267f99;
+  --vscode-token-string-escape: #ee0000;
+  --vscode-token-regexp: #811f3f;
+  --vscode-token-invalid: #cd3131;
 }
 
 * {
@@ -433,8 +439,44 @@ body {
   color: var(--vscode-token-comment);
 }
 
-.tok-punctuation {
+.tok-punctuation,
+.tok-operator,
+.tok-delimiter {
   color: var(--vscode-token-punctuation);
+}
+
+.tok-type {
+  color: var(--vscode-token-type);
+}
+
+.tok-function {
+  color: var(--vscode-token-function);
+}
+
+.tok-variable,
+.tok-attribute {
+  color: var(--vscode-token-variable);
+}
+
+.tok-constant,
+.tok-tag {
+  color: var(--vscode-token-keyword);
+}
+
+.tok-string-escape {
+  color: var(--vscode-token-string-escape);
+}
+
+.tok-comment-doc {
+  color: var(--vscode-token-comment);
+}
+
+.tok-regexp {
+  color: var(--vscode-token-regexp);
+}
+
+.tok-invalid {
+  color: var(--vscode-token-invalid);
 }
 
 /* Semantic token overlays. Declared after the tok-* rules so the semantic

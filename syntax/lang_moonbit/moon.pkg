@@ -1,0 +1,7 @@
+import {
+  "baozhiyuan/editor/syntax",
+}
+
+import {
+  "baozhiyuan/editor/core",
+} for "test"

@@ -35,6 +35,7 @@ priv enum BrowserMsg {
   ConnectProtocol
   ProtocolEvent(@websocket.Event)
   ProtocolSendFailed(String)
+  DocumentSourceResolved(@workspace.SourceDocumentLoadResult)
   DocumentRenderResolved(DocumentRenderResult, Bool)
   SelectWorkspace(String)
   ToggleFolder(String)
@@ -153,6 +154,13 @@ fn browser_update(
         dom_mounted_status_cmd("error"),
         { ..model, status: "error", status_message: message },
       )
+    DocumentSourceResolved(result) =>
+      match result {
+        SourceDocumentLoaded(document) =>
+          document_loaded_update(model, document)
+        SourceDocumentLoadError(error) =>
+          document_load_failed_update(model, error)
+      }
     DocumentRenderResolved(result, watch) =>
       match result {
         DocumentRendered(rendered) =>
@@ -275,7 +283,7 @@ fn select_workspace_update(
   }
   (
     @rabbita.batch([
-      close_active_document_cmd(emit, model.source_document),
+      close_active_document_cmd(model.source_document),
       load_workspace_document_cmd(emit, id),
     ]),
     next,
@@ -347,8 +355,10 @@ fn server_packet_update(
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   match packet {
     WorkspaceListed(payload) => workspace_listed_update(emit, model, payload)
-    DocumentLoaded(payload) => document_payload_update(model, payload)
-    DocumentChanged(payload) => document_payload_update(model, payload)
+    // Uncorrelated document packets are watch pushes; the document source
+    // routes them to the listener registered for their URI.
+    DocumentLoaded(payload) => (route_watched_document_cmd(payload), model)
+    DocumentChanged(payload) => (route_watched_document_cmd(payload), model)
     Diagnostics(payload) =>
       semantic_payload_update(model, {
         ..model.provider_result,
@@ -370,7 +380,11 @@ fn server_packet_update(
     HoverResult(_) => (@rabbita.none, model)
     DefinitionResult(_) => (@rabbita.none, model)
     ReferencesResult(_) => (@rabbita.none, model)
-    RemoteError(error) => protocol_error_update(model, error)
+    RemoteError(error) =>
+      match watched_uri_for_error(error) {
+        Some(uri_key) => (route_watched_error_cmd(uri_key, error), model)
+        None => protocol_error_update(model, error)
+      }
   }
 }
 
@@ -422,9 +436,9 @@ fn workspace_listed_update(
 }
 
 ///|
-fn document_payload_update(
+fn document_loaded_update(
   model : BrowserAppModel,
-  payload : @remote_protocol.DocumentPayload,
+  document : @workspace.SourceDocument,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   let next = {
     ..model,
@@ -433,13 +447,39 @@ fn document_payload_update(
   }
   (
     render_document_cmd(
-      payload.document,
+      document,
       model.source_document,
       next.provider_result,
       true,
     ),
     next,
   )
+}
+
+///|
+fn document_load_failed_update(
+  model : BrowserAppModel,
+  error : @workspace.FileSystemProviderError,
+) -> (@rabbita.Cmd, BrowserAppModel) {
+  emit_event("language:error", error.to_json())
+  if error.code == FileNotFound {
+    invalidate_code_cell()
+    (
+      dom_mounted_status_cmd("missing"),
+      {
+        ..model,
+        status: "missing",
+        status_message: "Source file is missing.",
+        frame: None,
+        hover: model.hover.cleared(),
+      },
+    )
+  } else {
+    (
+      dom_mounted_status_cmd("error"),
+      { ..model, status: "error", status_message: error.message },
+    )
+  }
 }
 
 ///|

@@ -37,6 +37,9 @@ fn send_client_packet_cmd(
 }
 
 ///|
+/// Opens and watches a workspace document through the `DocumentSource`
+/// trait: the open resolves as a correlated request, the watch listener
+/// dispatches every later load result back into the update loop.
 fn load_workspace_document_cmd(
   emit : @rabbita.Emit[BrowserMsg],
   id : String,
@@ -44,14 +47,26 @@ fn load_workspace_document_cmd(
   match workspace_document_uri(id) {
     Some(uri) =>
       @rabbita.batch([
-        send_client_packet_cmd(
-          emit,
-          OpenDocument({ id: request_id("open", uri), uri }),
-        ),
-        send_client_packet_cmd(
-          emit,
-          WatchDocument({ id: request_id("watch", uri), uri }),
-        ),
+        @cmd.custom_cmd(_ => {
+          dispose_active_document_watch()
+          active_document_watch.val = Some(
+            document_source.watch_document(uri, result => {
+              dispatch_browser_msg(DocumentSourceResolved(result))
+            }),
+          )
+        }),
+        @cmd.perform(result => emit(DocumentSourceResolved(result)), async fn() noraise {
+          document_source.open_document(uri) catch {
+            _ =>
+              SourceDocumentLoadError(
+                FileSystemProviderError(
+                  Unavailable,
+                  "Document open failed.",
+                  uri~,
+                ),
+              )
+          }
+        }),
       ])
     None =>
       emit(
@@ -65,18 +80,14 @@ fn load_workspace_document_cmd(
 
 ///|
 fn close_active_document_cmd(
-  emit : @rabbita.Emit[BrowserMsg],
   document : @workspace.SourceDocument?,
 ) -> @rabbita.Cmd {
   match document {
     Some(document) =>
-      send_client_packet_cmd(
-        emit,
-        CloseDocument({
-          id: request_id("close", document.uri),
-          uri: document.uri,
-        }),
-      )
+      @cmd.custom_cmd(_ => {
+        dispose_active_document_watch()
+        document_source.close_document(document.uri)
+      })
     None => @rabbita.none
   }
 }
@@ -133,21 +144,6 @@ fn render_document(
     build_finished - build_started,
   )
   DocumentRendered({ frame, document: source_document })
-}
-
-///|
-fn workspace_document_uri(id : String) -> @workspace.DocumentUri? {
-  match @workspace.SourcePath::normalize_root_relative_path(id) {
-    ParsedSourcePath(path) =>
-      match
-        @workspace.DocumentUri::parse(
-          "readonly-remote://workspace/" + path.to_string(),
-        ) {
-        ParsedDocumentUri(uri) => Some(uri)
-        DocumentUriError(_) => None
-      }
-    SourcePathError(_) => None
-  }
 }
 
 ///|

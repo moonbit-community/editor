@@ -20,8 +20,3 @@ pub fn emit_render_event(
   payload = payload + "}"
   emit_event("moonbit:render", payload)
 }
-
-///|
-fn request_id(prefix : String, uri : @workspace.DocumentUri) -> String {
-  prefix + ":" + uri.to_string()
-}

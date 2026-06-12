@@ -1,6 +1,31 @@
 # Monaco-Shape Tokenization with Compile-Time `lexmatch` Lexers
 
-Status: proposed (2026-06-12).
+Status: implemented (2026-06-12).
+
+Implementation notes (deviations found during Phase 0 probes, all
+recorded in `syntax/README.md`):
+
+- `with first` warns as deprecated on moon 0.1.20260610 even when
+  written explicitly (warning 0076 `lexmatch_first_match`), and
+  `with longest` rejects `if` guards — so every rule set uses
+  `with longest`, keyword classification happens in arm bodies, and
+  rule-priority conflicts resolve by tie-break order (equal-length
+  matches prefer the earlier arm) or a longer specific rule.
+- In pattern strings `\{` parses as (unsupported) string interpolation;
+  literal braces are written as classes (`[{]`, `[}]`), and `-`/`|`
+  need escaping even inside classes.
+- Slicing mid-surrogate panics, so the hand-rolled plain fallback
+  advances surrogate pairs whole; `lexmatch` itself is character-based
+  and never splits pairs.
+- `infer_language_id` defaults unknown extensions to `"moonbit"`, so
+  the plain-fallback browser spec uses a `.txt` fixture
+  (`docs/fixtures/project/notes.txt`).
+- Language lexers coalesce contiguous same-tag lexemes so a plain
+  string stays one `tok-string` span (keeps the pre-existing
+  watched-file spec green).
+- The third language is `lang_javascript` (also registered for
+  `typescript`); regex literals lex as operators (token-history
+  heuristics out of scope).
 
 ## Goal
 

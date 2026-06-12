@@ -28,6 +28,13 @@ shell chrome; the `workbench` package composes those in a layer above
 - `register_hover_provider` (and the diagnostics/symbols/semantic-tokens
   equivalents) add `language` providers to the registry; it starts empty
   and the host registers what it has at startup.
+- `register_tokenizer(language_id, tokenizer)` adds a
+  `syntax.LineTokenizer` to the tokenization registry (the Monaco
+  `TokenizationRegistry` role). Languages are compile-time packages
+  (`syntax/lang_*`) the host composes in by import — the workbench and
+  `examples/embedded_viewer` register `lang_moonbit` and friends at
+  startup; documents whose `language_id` has no registered tokenizer
+  render through the generic plain fallback.
 - The viewer reports lifecycle facts through `ViewerNotification`
   (diagnostics status, frame built, document rendered/failed, hover
   resolved). The host formats observability events and syncs its chrome
@@ -63,8 +70,13 @@ focuses on hover until those features can be rebuilt without their bugs.
 - May declare JavaScript FFI it alone uses, under the host-FFI rule in
   `../../docs/architecture.md`; browser capabilities shared with other
   browser packages belong in `dom`.
+- Must not import `syntax/lang_*` packages: languages reach the viewer
+  only through `register_tokenizer`, so the library carries no grammar
+  weight an embedder did not ask for (enforced by
+  `scripts/check-architecture.mbtx`).
 - Module-level `Ref` registries (the code-cell cache, the active document
-  watch, the provider registry) stay inside this package.
+  watch, the provider registry, the tokenizer registry) stay inside this
+  package.
 - Must not pass render-frame JSON to JavaScript for DOM rendering.
 - The backend-neutral `renderer` package must not import Rabbita or browser
   host packages.

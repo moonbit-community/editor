@@ -34,6 +34,9 @@ organizational; package boundaries are the directories with `moon.pkg`.
 
 - Shared domain packages: `core`, `syntax`, `decorations`, `workspace`,
   `language`, and `view`.
+- Language packages: `syntax/lang_*` (`lang_moonbit`, `lang_json`,
+  `lang_javascript`), one compile-time `lexmatch` lexer per language
+  behind the `syntax.LineTokenizer` contract, composed by import only.
 - Remote server packages: `remote_protocol`, `server`, and
   `server_host_native`.
 - Render packages: `renderer` and `renderer/browser` (the embeddable
@@ -59,6 +62,7 @@ web -> workbench
 workbench
   -> renderer/browser, widgets/file_tree
   -> remote_protocol, dom, workspace, language
+  -> syntax/lang_* (registers tokenizers at startup)
 renderer/browser
   -> renderer
   -> dom
@@ -72,8 +76,10 @@ renderer -> core, syntax, decorations, language
 workspace -> core
 language -> core, workspace
 syntax/decorations -> core
+syntax/lang_* -> core, syntax
 
-examples/embedded_viewer -> renderer/browser, widgets/file_tree, workspace
+examples/embedded_viewer
+  -> renderer/browser, widgets/file_tree, workspace, syntax/lang_*
 ```
 
 `view` is a compatibility render model kept separate from the active
@@ -93,6 +99,16 @@ examples/embedded_viewer -> renderer/browser, widgets/file_tree, workspace
 - `widgets/file_tree` must not import `remote_protocol` or
   `renderer/browser`; it is built only against `workspace`
   (`WorkspaceTreeProvider`).
+- Grammars are compile-time code, not runtime data: a language is a
+  `syntax/lang_*` package whose rules are `lexmatch` arms compiled to a
+  tagged DFA at build time (Monarch's structure without its runtime
+  JS-regex engine; there is deliberately no `setMonarchTokensProvider`
+  equivalent). `syntax/lang_*` may import only `core` and `syntax`, and
+  only `workbench` and `examples/*` may import a `syntax/lang_*`
+  package — they register lexers through the viewer's
+  `register_tokenizer`, and unregistered language ids fall back to the
+  plain tokenizer. Semantic tokens from `language` providers remain the
+  accuracy tier overlaid on top.
 - These import rules are enforced by `scripts/check-architecture.mbtx`
   (run as part of `just check`).
 - Shared renderer packages may import `core`, `syntax`, `decorations`,

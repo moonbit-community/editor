@@ -30,11 +30,77 @@ async fn main {
     }
   }
   check_package_imports(errors)
+  check_language_package_imports(errors)
   if errors.length() > 0 {
     println(errors.join("\n"))
     fail("Architecture checks failed")
   }
   println("Architecture checks passed")
+}
+
+///|
+/// Grammars are compile-time packages composed by import: `syntax/lang_*`
+/// may import only `core` and `syntax`, and only the composition layers
+/// (`workbench`, `examples/*`) may import a `syntax/lang_*` package —
+/// the viewer library, renderer, and server must resolve languages
+/// through the tokenizer registry instead.
+async fn check_language_package_imports(errors : Array[String]) -> Unit {
+  let language_prefix = "baozhiyuan/editor/syntax/lang_"
+  let allowed_in_language_packages = [
+    "baozhiyuan/editor/core",
+    "baozhiyuan/editor/syntax",
+  ]
+  for name in @fs.readdir("syntax", include_hidden=false, sort=true) {
+    if !name.has_prefix("lang_") {
+      continue
+    }
+    let pkg_file = "syntax/" + name + "/moon.pkg"
+    if !@fs.exists(pkg_file) {
+      continue
+    }
+    for imported in package_imports(@fs.read_file(pkg_file).text()) {
+      if imported.has_prefix("moonbitlang/") {
+        continue
+      }
+      if !allowed_in_language_packages.contains(imported) {
+        errors.push(pkg_file + " must not import " + imported)
+      }
+    }
+  }
+  for manifest in package_manifests() {
+    if manifest.has_prefix("workbench/") ||
+      manifest.has_prefix("examples/") ||
+      manifest.has_prefix("syntax/") {
+      continue
+    }
+    for imported in package_imports(@fs.read_file(manifest).text()) {
+      if imported.has_prefix(language_prefix) {
+        errors.push(manifest + " must not import " + imported)
+      }
+    }
+  }
+}
+
+///|
+/// Every product `moon.pkg` in the repository, skipping build output and
+/// the reference submodules.
+async fn package_manifests() -> Array[String] {
+  let manifests : Array[String] = []
+  collect_manifests(".", manifests)
+  manifests
+}
+
+///|
+async fn collect_manifests(dir : String, manifests : Array[String]) -> Unit {
+  let skipped = ["_build", "node_modules", "codemirror", "vscode", "test-results"]
+  for name in @fs.readdir(dir, include_hidden=false, sort=true) {
+    let path = if dir == "." { name } else { dir + "/" + name }
+    match @fs.kind(path) {
+      Directory => if !skipped.contains(name) { collect_manifests(path, manifests) }
+      Regular => if name == "moon.pkg" { manifests.push(path) }
+      _ => ()
+    }
+  }
 }
 
 ///|

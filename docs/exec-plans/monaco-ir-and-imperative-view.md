@@ -1,6 +1,6 @@
 # Monaco IR Stack and Imperative View for the Browser Viewer
 
-Status: proposed (2026-06-12).
+Status: implemented (2026-06-12).
 
 ## Goal
 

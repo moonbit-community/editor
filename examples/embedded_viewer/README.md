@@ -22,5 +22,8 @@ expands a folder, and navigates between files with no websocket opened.
 - The host wires the two together: the widget's `on_open` intent calls
   `viewer.open(uri)`, and the viewer's rendered notification calls
   `tree.set_active(uri)` for autoReveal.
+- The mount seam: the shell renders one stable `.viewer-host` element and
+  calls `viewer.attach(host)` after the first paint; the island owns the
+  whole subtree and the shell never renders children into it.
 - No language providers are registered, so hover and diagnostics simply
   stay absent — the registry starts empty by design.

@@ -138,6 +138,22 @@ async fn check_package_imports(errors : Array[String]) -> Unit {
       }
     }
   }
+  // The viewer is an imperative view island: it may keep the rabbita
+  // DOM bindings and JS helpers, but the TEA core, the vdom, and the
+  // command scheduler are forbidden (exact matches: subpackages such as
+  // rabbita/dom stay allowed).
+  let island_forbidden_exact = [
+    "moonbit-community/rabbita",
+    "moonbit-community/rabbita/html",
+    "moonbit-community/rabbita/cmd",
+  ]
+  for imported in package_imports(
+    @fs.read_file("renderer/browser/moon.pkg").text(),
+  ) {
+    if island_forbidden_exact.contains(imported) {
+      errors.push("renderer/browser/moon.pkg must not import " + imported)
+    }
+  }
 }
 
 ///|

@@ -3,7 +3,7 @@
 ## Project Shape
 
 - Product code lives at the repository root in MoonBit packages: `core`, `syntax`, `decorations`, `workspace`, `language`, `view`, `remote_protocol`, `server`, `server_host_native`, `renderer`, `renderer/browser`, `dom`, and `web`.
-- The browser backend owns DOM creation, CSS, scrolling, and Playwright-facing observability.
+- The browser backend owns DOM creation, CSS, scroll input capture and output application, and Playwright-facing observability; scroll semantics and viewport derivation are backend-neutral model state in `renderer`.
 - MoonBit owns workspace semantics, readonly document identity, and the backend-neutral filesystem-provider contract.
 - Packages that only run on one host target may declare that host's FFI (for example, `dom` and `renderer/browser` may declare JavaScript FFI; `server_host_native` may declare native FFI). Packages shared across targets must not declare FFI.
 - `codemirror/` and `vscode/` are reference-only submodules. Do not import product code from either tree.

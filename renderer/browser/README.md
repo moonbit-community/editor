@@ -5,6 +5,11 @@ role. It ships without the explorer sidebar, the protocol client, or any
 shell chrome; the `workbench` package composes those in a layer above
 (exclusion by composition, not a config flag).
 
+The viewer is an imperative view island: it builds and owns its whole
+DOM subtree inside a host-provided stable element, and every public
+method is a plain call. Hosts with their own effect system (the Rabbita
+workbench) wrap the calls in their command type.
+
 ## Embedding API
 
 - `Viewer::Viewer(source, on_notification~, theme?, placeholder?)`
@@ -12,16 +17,23 @@ shell chrome; the `workbench` package composes those in a layer above
   in-memory backend in `examples/embedded_viewer` plus the remote one in
   `workbench` are the two reference implementations; implementing
   `DocumentSource` is the entire integration surface for a custom backend.
-- `Viewer::view()` embeds the viewer as a Rabbita child cell. Keep it
-  mounted: Rabbita only steps mounted cells, so the viewer renders a
-  host-pushed `placeholder` message while it has no frame instead of being
-  swapped out.
+- `Viewer::attach(host)` is the mount seam: the host renders one stable
+  element, keeps it mounted, and must never render its own children into
+  it — the island's nodes are foreign to any host vdom and must survive
+  host re-renders untouched. While the viewer has no frame it shows the
+  host-pushed `placeholder` message inside the island.
 - `Viewer::open(uri)` owns the full document-switch choreography: closing
-  the previous document and its watch, invalidating the code cell,
-  subscribing the new watch, opening through the source, and resetting
-  scroll on remount — embedders cannot get the sequencing wrong.
+  the previous document and its watch, subscribing the new watch, opening
+  through the source, and resetting scroll only when the (uri, version)
+  identity actually rotated — embedders cannot get the sequencing wrong.
 - `Viewer::set_theme`, `set_placeholder`, `remeasure`, and `escape` push
-  host state and host-captured events in.
+  host state and host-captured events in. Theme changes never remount the
+  island (colors cascade through the host's CSS variables) and keep the
+  scroll position.
+- `Viewer::scroll_to`, `scroll_by_lines`, `scroll_by_pages`,
+  `scroll_home`, and `scroll_end` are the synthetic scroll entry points
+  for host-routed keyboard scrolling and harness controls; wheel and
+  scrollbar input arrive through the island's own listeners.
 - `Viewer::push_diagnostics`/`push_symbols`/`push_semantic_tokens` accept
   unsolicited feature data (for example server-initiated pushes the host
   routes in).
@@ -36,34 +48,55 @@ shell chrome; the `workbench` package composes those in a layer above
   startup; documents whose `language_id` has no registered tokenizer
   render through the generic plain fallback.
 - The viewer reports lifecycle facts through `ViewerNotification`
-  (diagnostics status, frame built, document rendered/failed, hover
-  resolved). The host formats observability events and syncs its chrome
+  (diagnostics status, frame built with `tokenize_ms`/`build_ms`,
+  document rendered/failed with `patch_ms`, hover resolved, scroll
+  settled). The host formats observability events and syncs its chrome
   from these; the viewer itself emits nothing host-visible.
 
 ## Responsibilities
 
-- Render backend-neutral `renderer.RenderFrame` values as browser HTML.
-- Own the editor input bridge: one container handler set on the code viewer
-  converts DOM events into typed `EditorEvent`s through the renderer's
-  shared `hit_test`, fed by tracked view metrics (scroll offset, measured
-  viewer height, char-probe width, gutter width). Rendered spans carry no
-  handlers; overlay widgets swallow events under them.
+- Render `renderer` IR as browser DOM through the imperative island: an
+  `overflow: hidden` root with a margin layer (gutter rail, vertical
+  translate only so horizontal scrolling never moves it), a lines layer
+  translated by `window_origin - scroll_top`, a hover layer sharing the
+  lines transform, and custom scrollbars driven by the backend-neutral
+  `ScrollbarState` arithmetic.
+- Own the render loop: rAF-coalesced flushes with reads (measurement)
+  before writes, a `ViewLayer`-style recycler that splices
+  entering/leaving line nodes and writes `innerHTML` only on entering
+  lines (a changed content generation rewrites the window), and paint
+  facts (`patch_ms`, scroll position) reported after the flush.
+- Own scroll input: the island always consumes wheel events
+  (delta-mode normalization to pixels), scrollbar thumbs drag with the
+  slider position captured at drag start, and tracks page-jump; all of
+  it drives the `renderer.ViewLayout` scroll truth — the island has no
+  DOM scroll container.
+- Own the editor input bridge: native `mousemove`/`mouseleave` listeners
+  on the island root convert DOM events into typed `EditorEvent`s through
+  the renderer's shared `hit_test`, fed by layout state plus the measured
+  char-probe width and the derived gutter width. Rendered spans carry no
+  handlers; the hover widget swallows events under it.
 - Own the feature controllers (`HoverController` today): each consumes
-  editor events and answers with commands, span/line decorations, and
-  widgets. Hover follows Monaco's timing (request at half the 300ms delay,
-  display gated at the full delay, loading hover at 3x).
-- Own the embedded code-surface cell: a cached Rabbita child cell with
-  Map-keyed line children that renders only the visible line window between
-  height-preserving spacers; the viewer pushes frame/surface/window updates
-  into it only when they change, so other updates skip line subtrees.
+  editor events and answers with effects-as-data, span/line decorations,
+  and widget views. Hover follows Monaco's timing (request at half the
+  300ms delay, display gated at the full delay, loading hover at 3x);
+  the delays run on `dom` timer bindings and provider calls run through
+  `@js.async_run` with version/token staleness guards.
+- Own the per-version render cache: provider pushes rebuild frames from
+  the cached `TokenizedDocument` without re-tokenizing, and window
+  shifts rebuild the viewport frame from the cached `FrameSource` in
+  O(window).
 
 Go-to-definition and find-references were removed for now; the viewer
 focuses on hover until those features can be rebuilt without their bugs.
 
 ## Boundaries
 
-- May depend on Rabbita public packages (except `websocket`), `dom`,
-  `workspace`, `language`, `renderer`, `syntax`, and `decorations`.
+- May depend on `rabbita/dom` (WebIDL bindings) and `rabbita/js` only —
+  the Rabbita TEA core, the vdom (`rabbita/html`), and the command
+  scheduler (`rabbita/cmd`) are forbidden and checker-enforced; the
+  viewer renders imperatively. May also depend on `dom`, `workspace`,
+  `language`, `renderer`, `syntax`, and `decorations`.
 - Must not import `remote_protocol`, `websocket`, `workbench`, or
   `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports
   live behind the `DocumentSource` trait and the provider registry.
@@ -74,16 +107,17 @@ focuses on hover until those features can be rebuilt without their bugs.
   only through `register_tokenizer`, so the library carries no grammar
   weight an embedder did not ask for (enforced by
   `scripts/check-architecture.mbtx`).
-- Module-level `Ref` registries (the code-cell cache, the active document
-  watch, the provider registry, the tokenizer registry) stay inside this
-  package.
+- Module-level registries (the provider registry, the tokenizer
+  registry) stay inside this package; per-viewer state lives on the
+  `Viewer` instance.
 - Must not pass render-frame JSON to JavaScript for DOM rendering.
 - The backend-neutral `renderer` package must not import Rabbita or browser
   host packages.
 
 ## Checks
 
-- Hover staleness guards are covered by `hover_controller_wbtest.mbt`.
+- Hover staleness and scheduling guards are covered by
+  `hover_controller_wbtest.mbt`.
 - The embedding boundary is proven by `examples/embedded_viewer` and
   `tests/browser/embed.spec.js` (no websocket opened).
 - Run `just check` for the repository-level type check.

@@ -24,10 +24,17 @@ remote protocol transport.
   the first MoonBit file (fallback: first file) when the socket opens with
   nothing loaded; the viewer's rendered notification then drives the
   tree's `set_active` (autoReveal).
+- Own the viewer mount seam: the shell renders one stable `.viewer-host`
+  element (never any children inside it) and attaches the imperative
+  viewer island into it after the first paint; viewer methods are plain
+  calls lifted into shell commands. Host-captured keys route into the
+  viewer (Escape to the controllers; PgUp/PgDn/Home/End/arrows into the
+  synthetic scroll methods).
 - Own harness observability: the viewer reports lifecycle facts
   (`ViewerNotification`) and the workbench formats and emits the
   structured `[readonly-editor]` events (`dom:mounted`, `moonbit:render`,
-  `language:*`) documented in `../docs/harness.md`.
+  `view:scroll`, `language:*`) documented in `../docs/harness.md`, and
+  installs the `__readonlyEditorScrollTo` scroll control.
 
 ## Boundaries
 

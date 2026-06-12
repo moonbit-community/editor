@@ -15,11 +15,16 @@ The project is split into three runtime parts:
 - MoonBit remote server core: native MoonBit packages that own workspace-root
   validation, readonly file-access policy, file-watch routing, remote protocol
   routing, and the host contract for `moon-lsp` session lifecycle.
-- Backend-agnostic renderer: MoonBit packages that convert source snapshots,
-  syntax, diagnostics, hover data, viewport state, and theme data
-  into a platform-neutral render frame, plus the pure editor geometry that
-  backends share: mouse hit-testing (`MouseTarget`/`ViewMetrics`/`hit_test`)
-  and line-window math (`visible_window`) for viewport virtualization.
+- Backend-agnostic renderer: MoonBit packages that own the Monaco-shaped
+  render IR — a per-version tokenized document (`TokenizedDocument`, the
+  `TextModel` tokens role), per-line bucketed feature data
+  (`FrameSource`), viewport-scoped render frames (`build_frame`, the
+  `ViewportData` role), and pure line-HTML emission (`render_line_html`,
+  the `viewLineRenderer` role) — plus the backend-neutral scroll and
+  layout model (`Scrollable`, the uniform-height `LinesLayout`,
+  `ViewLayout`, `ScrollbarState`) and the pure editor geometry backends
+  share: mouse hit-testing (`MouseTarget`/`ViewMetrics`/`hit_test`) and
+  line-window math (`visible_window`) for viewport virtualization.
 - Render backends: MoonBit packages that map render frames to concrete hosts.
   This round only defines the browser backend.
 
@@ -67,6 +72,8 @@ renderer/browser
   -> renderer
   -> dom
   -> workspace, language, syntax, decorations
+  (rabbita: only the dom bindings and js helpers — never the TEA core,
+   the vdom, or the command scheduler; checker-enforced)
 widgets/file_tree -> workspace
 
 server_host_native -> server -> remote_protocol
@@ -171,15 +178,27 @@ or `--target native`.
   empty-with-error level and is retried on the next expand; `set_active`
   resolves and expands the ancestor chain of the active file and selects
   its row; `refresh` re-resolves from the root on (re)connect.
-- Browser input routes through one shared hit test: container handlers on
-  the code viewer turn DOM events into typed editor events consumed by
-  feature controllers (hover today); rendered spans carry no event
-  handlers. Language features resolve through the `language` provider
-  traits, implemented browser-side by a protocol client that correlates
-  responses by request id.
-- The code surface is an embedded Rabbita child cell with keyed line
-  children that renders only a windowed slice of the frame; shell updates
-  that do not change the surface skip its subtree entirely.
+- Browser input routes through one shared hit test: native container
+  listeners on the viewer island turn DOM events into typed editor events
+  consumed by feature controllers (hover today); rendered spans carry no
+  event handlers. Language features resolve through the `language`
+  provider traits, implemented browser-side by a protocol client that
+  correlates responses by request id.
+- The viewer is an imperative view island behind a mount contract: the
+  shell renders one stable host element (`.viewer-host`) and the viewer
+  attaches its whole DOM subtree into it. The shell must never render
+  vdom children into the host element — the island's nodes are foreign to
+  the shell's diff and must stay untouched across shell updates. The
+  island survives theme switches (colors cascade through CSS variables;
+  there is no remount and the scroll position is preserved).
+- Scrolling is split along the backend boundary: scroll semantics —
+  clamping, dimensions, viewport derivation, scrollbar geometry — are
+  backend-neutral model state in `renderer` (`ViewLayout` owns the single
+  scroll truth; there is no DOM scroll container). The browser backend
+  only captures input (wheel, scrollbar thumb drags and track jumps,
+  host-routed keys) into the model and applies the model's output
+  (layer transforms, recycled line nodes, scrollbar thumbs) in a
+  rAF-coalesced render loop with reads before writes.
 - Browser/native communication uses `remote_protocol` packets over the native
   host's `/protocol` WebSocket. The native host serializes outbound packets
   per connection so watch pushes cannot interleave with responses.

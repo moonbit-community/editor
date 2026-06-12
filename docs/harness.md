@@ -45,8 +45,22 @@ inspection:
   auto-revealed, so specs that navigate to nested files expand ancestors
   first (or rely on the startup auto-open's reveal).
 - `.code-line`, `.gutter`, `.code`, token spans, and diagnostics keep the
-  same class and `data-*` contracts used by browser smoke tests.
+  same class and `data-*` contracts used by browser smoke tests. The
+  viewer is an imperative island inside the shell's `.viewer-host`
+  element: `.code-viewer` is the `overflow: hidden` island root, line
+  nodes are absolutely positioned inside a transformed `.code-lines`
+  layer, gutters live in a separate `.margin` layer, and scrolling is
+  synthetic (assigning `scrollTop` does nothing — use the scroll
+  control below).
 - `.hover-widget` is the range-anchored editor hover.
+
+## Scroll Control
+
+The workbench installs `globalThis.__readonlyEditorScrollTo(top)`, which
+drives the viewer's synthetic scroll model (the request clamps to the
+document). Specs scroll through this control instead of assigning
+`scrollTop`; each settled scroll paints and then emits a `view:scroll`
+event.
 
 Sidebar selection is app state only. Selecting or expanding workspace entries
 must not change `window.location.href`. On startup the workbench auto-opens
@@ -74,9 +88,12 @@ The browser host logs structured events prefixed with `[readonly-editor]`:
 - `language:error`: provider or protocol errors that did not block readonly
   render.
 - `dom:mounted`: rendered line and diagnostic counts after DOM creation,
-  plus `patchMs` (time from frame build completion to after-paint).
-  `renderedLines` is the windowed line count actually in the DOM; the
-  shell's `data-line-count` attribute stays the document total.
+  plus `patchMs` (the duration of the island's DOM flush — the recycler
+  write phase — that painted the frame). `renderedLines` is the windowed
+  line count actually in the DOM; the shell's `data-line-count`
+  attribute stays the document total.
+- `view:scroll`: the settled synthetic scroll position (`scrollTop`,
+  `scrollLeft`) after a paint, coalesced per animation frame.
 
 These events are intentionally stable so automated agents can diagnose render
 failures from console output. The workbench owns event names and payload
@@ -86,13 +103,15 @@ get no harness events unless they add their own.
 
 ## Render Performance Budget
 
-The code surface lives in its own Rabbita child cell with keyed line
-children, so shell-only updates skip the line subtrees entirely and feature
-updates reuse unchanged line DOM. The working budget:
+The code surface is an imperative island: shell updates never touch it,
+window shifts splice entering/leaving line nodes (`innerHTML` only on
+entering lines), and scroll frames are transform writes coalesced per
+animation frame. The working budget:
 
-- Interaction re-renders (hover, decorations) should stay under ~2ms.
-- Scrolling should hold 60fps; native scrolling stays untouched between
-  window updates.
+- Interaction re-renders (hover, decorations) should stay under ~2ms
+  (`patchMs` evidence sits well under 1ms).
+- Scrolling should hold 60fps; between window updates a scroll frame is
+  a handful of style writes.
 
 `tests/browser/perf.spec.js` opens the small fixture and a generated
 ~10k-line fixture and logs `buildMs`/`patchMs` evidence without failing the

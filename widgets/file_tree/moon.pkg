@@ -1,0 +1,13 @@
+import {
+  "baozhiyuan/editor/workspace",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/cmd",
+  "moonbit-community/rabbita/html",
+  "moonbit-community/rabbita/svg",
+}
+
+import {
+  "moonbitlang/async",
+} for "wbtest"
+
+supported_targets = "js"

@@ -97,7 +97,6 @@ fn fail_pending_requests(message : String) -> Unit {
 ///|
 fn server_packet_request_id(packet : @remote_protocol.ServerPacket) -> String {
   match packet {
-    WorkspaceListed(payload) => payload.id
     DirectoryResolved(payload) => payload.id
     DocumentLoaded(payload) => payload.id
     DocumentChanged(payload) => payload.id

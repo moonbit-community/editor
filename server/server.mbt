@@ -11,12 +11,6 @@ pub(all) enum ServerHostReadResult {
 } derive(Debug)
 
 ///|
-pub(all) enum ServerHostListResult {
-  ServerHostListOk(Array[@remote_protocol.WorkspaceEntry])
-  ServerHostListError(@workspace.FileSystemProviderErrorCode, String)
-} derive(Debug)
-
-///|
 /// One resolved directory level: child stats with provider-minted URIs and
 /// `children: None` (unresolved), the `IFileService.resolve` contract.
 pub(all) enum ServerHostResolveResult {
@@ -31,7 +25,6 @@ pub struct ServerWatch {
 
 ///|
 pub(open) trait ServerHost {
-  async fn list_workspace(Self, String) -> ServerHostListResult
   async fn read_directory(Self, String, String) -> ServerHostResolveResult
   async fn read_text_file(Self, String, @workspace.SourcePath) -> ServerHostReadResult
   fn watch_text_file(
@@ -181,7 +174,6 @@ pub async fn RemoteServer::handle_client_packet(
   spawn_watch : (async () -> Unit) -> Unit,
 ) -> Array[@remote_protocol.ServerPacket] {
   match packet {
-    ListWorkspace(request) => [self.list_workspace(request)]
     ResolveDirectory(request) => [self.resolve_directory(request)]
     OpenDocument(request) => [self.open_document(request)]
     WatchDocument(request) => [self.watch_document(request, emit, spawn_watch)]
@@ -195,23 +187,6 @@ pub async fn RemoteServer::handle_client_packet(
     References(request) => [self.references(request)]
     DocumentSymbols(request) => [self.document_symbols(request)]
     SemanticTokens(request) => [self.semantic_tokens(request)]
-  }
-}
-
-///|
-pub async fn RemoteServer::list_workspace(
-  self : RemoteServer,
-  request : @remote_protocol.WorkspaceListRequest,
-) -> @remote_protocol.ServerPacket {
-  match self.host.list_workspace(self.workspace_root) {
-    ServerHostListOk(entries) => WorkspaceListed({ id: request.id, entries })
-    ServerHostListError(code, message) =>
-      RemoteError(
-        @remote_protocol.ProtocolError::from_file_system_error(
-          FileSystemProviderError(code, message),
-          request_id=request.id,
-        ),
-      )
   }
 }
 

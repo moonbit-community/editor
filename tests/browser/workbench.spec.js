@@ -17,9 +17,16 @@ test('defaults to the dark theme and persists the toggled choice', async ({ page
 test('renders explorer rows with twisties and file icons', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.locator('[data-workspace-id="src"] .workspace-twistie svg')).toBeVisible();
+  // src/main.mbt becomes visible once auto-reveal expands src.
   await expect(
-    page.locator('[data-workspace-id="src/main.mbt"] .workspace-file-icon svg'),
+    page.locator(
+      '[data-workspace-id="readonly-remote://workspace/src"] .workspace-twistie svg',
+    ),
+  ).toBeVisible();
+  await expect(
+    page.locator(
+      '[data-workspace-id="readonly-remote://workspace/src/main.mbt"] .workspace-file-icon svg',
+    ),
   ).toBeVisible();
 });
 

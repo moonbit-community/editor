@@ -25,26 +25,6 @@ test "validates readonly remote workspace uris" {
 }
 
 ///|
-async test "lists workspace entries through the host" {
-  let host = FakeServerHost::new()
-  host.entries = [
-    { path: "moon.mod", name: "moon.mod", kind: "file", depth: 0 },
-    { path: "src", name: "src", kind: "directory", depth: 0 },
-    { path: "src/main.mbt", name: "main.mbt", kind: "file", depth: 1 },
-  ]
-  let server = test_remote_server("/workspace", host)
-
-  match server.list_workspace({ id: "list-1" }) {
-    WorkspaceListed(payload) => {
-      assert_eq(payload.id, "list-1")
-      assert_eq(payload.entries.length(), 3)
-      assert_eq(payload.entries[2].path, "src/main.mbt")
-    }
-    _ => fail("expected workspace list")
-  }
-}
-
-///|
 async test "resolves one directory level through the host" {
   let host = FakeServerHost::new()
   host.directories.set("", [
@@ -321,7 +301,6 @@ fn test_remote_server(
 struct FakeServerHost {
   files : Map[String, String]
   errors : Map[String, (@workspace.FileSystemProviderErrorCode, String)]
-  mut entries : Array[@remote_protocol.WorkspaceEntry]
   directories : Map[String, Array[@workspace.WorkspaceStat]]
   listeners : Map[String, async (@workspace.FileChangeType) -> Unit]
 }
@@ -331,7 +310,6 @@ fn FakeServerHost::new() -> FakeServerHost {
   {
     files: Map::default(),
     errors: Map::default(),
-    entries: [],
     directories: Map::default(),
     listeners: Map::default(),
   }
@@ -347,11 +325,6 @@ async fn FakeServerHost::emit(
     Some(listener) => listener(change_type)
     None => ()
   }
-}
-
-///|
-impl @server.ServerHost for FakeServerHost with fn list_workspace(self, _root) {
-  ServerHostListOk(self.entries)
 }
 
 ///|

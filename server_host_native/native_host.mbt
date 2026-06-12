@@ -95,15 +95,6 @@ pub impl @server.ServerHost for NativeServerHost with fn read_text_file(
 }
 
 ///|
-pub impl @server.ServerHost for NativeServerHost with fn list_workspace(
-  self,
-  root,
-) {
-  ignore(self)
-  list_native_workspace(root)
-}
-
-///|
 pub impl @server.ServerHost for NativeServerHost with fn read_directory(
   self,
   root,
@@ -147,57 +138,6 @@ async fn read_native_text_file(
         Some(content) => ServerHostReadOk(content)
         None => ServerHostReadError(Unavailable, "Unable to read source file.")
       }
-  }
-}
-
-///|
-async fn list_native_workspace(root : String) -> @server.ServerHostListResult {
-  let normalized_root = normalize_host_path(root)
-  if !@fs.exists(normalized_root) {
-    return ServerHostListError(FileNotFound, "Workspace root does not exist.")
-  }
-  match @fs.kind(normalized_root) {
-    Directory => {
-      let entries : Array[@remote_protocol.WorkspaceEntry] = []
-      list_native_workspace_dir(normalized_root, "", 0, entries)
-      ServerHostListOk(entries)
-    }
-    _ =>
-      ServerHostListError(
-        FileNotADirectory,
-        "Workspace root is not a directory.",
-      )
-  }
-}
-
-///|
-async fn list_native_workspace_dir(
-  root : String,
-  relative : String,
-  depth : Int,
-  entries : Array[@remote_protocol.WorkspaceEntry],
-) -> Unit {
-  let dir_path = if relative == "" { root } else { root + "/" + relative }
-  let names = Some(@fs.readdir(dir_path, include_hidden=true, sort=true)) catch {
-    _ => None
-  }
-  match names {
-    Some(names) =>
-      for name in names {
-        let path = if relative == "" { name } else { relative + "/" + name }
-        if !skip_workspace_entry(path~, name~) {
-          let full_path = root + "/" + path
-          match (Some(@fs.kind(full_path)) catch { _ => None }) {
-            Some(Directory) => {
-              entries.push({ path, name, kind: "directory", depth })
-              list_native_workspace_dir(root, path, depth + 1, entries)
-            }
-            Some(Regular) => entries.push({ path, name, kind: "file", depth })
-            _ => ()
-          }
-        }
-      }
-    None => ()
   }
 }
 

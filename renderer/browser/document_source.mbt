@@ -149,18 +149,3 @@ fn dispose_active_document_watch() -> Unit {
   }
   active_document_watch.val = None
 }
-
-///|
-fn workspace_document_uri(id : String) -> @workspace.DocumentUri? {
-  match @workspace.SourcePath::normalize_root_relative_path(id) {
-    ParsedSourcePath(path) =>
-      match
-        @workspace.DocumentUri::parse(
-          "readonly-remote://workspace/" + path.to_string(),
-        ) {
-        ParsedDocumentUri(uri) => Some(uri)
-        DocumentUriError(_) => None
-      }
-    SourcePathError(_) => None
-  }
-}

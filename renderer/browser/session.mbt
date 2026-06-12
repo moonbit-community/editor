@@ -5,12 +5,6 @@ priv struct RenderedDocument {
 }
 
 ///|
-priv enum DocumentRenderResult {
-  DocumentRendered(RenderedDocument)
-  DocumentRenderFailed(String, String, String)
-}
-
-///|
 pub fn start_app() -> Unit {
   @dom.install_host_capabilities()
   mount_app()
@@ -42,40 +36,26 @@ fn send_client_packet_cmd(
 /// dispatches every later load result back into the update loop.
 fn load_workspace_document_cmd(
   emit : @rabbita.Emit[BrowserMsg],
-  id : String,
+  uri : @workspace.DocumentUri,
 ) -> @rabbita.Cmd {
-  match workspace_document_uri(id) {
-    Some(uri) =>
-      @rabbita.batch([
-        @cmd.custom_cmd(_ => {
-          dispose_active_document_watch()
-          active_document_watch.val = Some(
-            document_source.watch_document(uri, result => {
-              dispatch_browser_msg(DocumentSourceResolved(result))
-            }),
-          )
+  @rabbita.batch([
+    @cmd.custom_cmd(_ => {
+      dispose_active_document_watch()
+      active_document_watch.val = Some(
+        document_source.watch_document(uri, result => {
+          dispatch_browser_msg(DocumentSourceResolved(result))
         }),
-        @cmd.perform(result => emit(DocumentSourceResolved(result)), async fn() noraise {
-          document_source.open_document(uri) catch {
-            _ =>
-              SourceDocumentLoadError(
-                FileSystemProviderError(
-                  Unavailable,
-                  "Document open failed.",
-                  uri~,
-                ),
-              )
-          }
-        }),
-      ])
-    None =>
-      emit(
-        DocumentRenderResolved(
-          DocumentRenderFailed("", "error", "Invalid workspace file selection."),
-          false,
-        ),
       )
-  }
+    }),
+    @cmd.perform(result => emit(DocumentSourceResolved(result)), async fn() noraise {
+      document_source.open_document(uri) catch {
+        _ =>
+          SourceDocumentLoadError(
+            FileSystemProviderError(Unavailable, "Document open failed.", uri~),
+          )
+      }
+    }),
+  ])
 }
 
 ///|
@@ -105,8 +85,8 @@ fn render_document_cmd(
   request_language : Bool,
 ) -> @rabbita.Cmd {
   @cmd.custom_cmd(_ => {
-    let result = render_document(document, previous, providers)
-    dispatch_browser_msg(DocumentRenderResolved(result, request_language))
+    let rendered = render_document(document, previous, providers)
+    dispatch_browser_msg(DocumentRenderResolved(rendered, request_language))
   })
 }
 
@@ -120,7 +100,7 @@ fn render_document(
   loaded_document : @workspace.SourceDocument,
   _previous : @workspace.SourceDocument?,
   providers : @language.ProviderResult,
-) -> DocumentRenderResult {
+) -> RenderedDocument {
   let source_document = loaded_document
   @dom.set_current_document(source_document.to_json())
   let build_started = @dom.now_ms()
@@ -143,7 +123,7 @@ fn render_document(
     providers.diagnostics.length(),
     build_finished - build_started,
   )
-  DocumentRendered({ frame, document: source_document })
+  { frame, document: source_document }
 }
 
 ///|

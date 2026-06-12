@@ -42,39 +42,41 @@ test('renders fixture workspace through the native protocol', async ({ page }) =
   expect(await events.some('dom:mounted')).toBeTruthy();
 });
 
-test('renders workspace sidebar entries without changing the URL', async ({ page }) => {
+test('lazily expands explorer folders and auto-reveals the active file', async ({ page }) => {
   await page.goto('/');
   const initialHref = await page.evaluate(() => window.location.href);
 
-  await expect(page.locator('[data-workspace-id="moon.mod"]')).toHaveAttribute(
+  // Startup auto-opens the first MoonBit file; auto-reveal expands its
+  // ancestor chain and selects its row.
+  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
+  await expect(page.locator(workspaceItem('moon.mod'))).toHaveAttribute(
     'data-workspace-kind',
     'file',
   );
-  await expect(page.locator('[data-workspace-id="src"]')).toHaveAttribute(
-    'aria-expanded',
-    'true',
-  );
-  await expect(page.locator('[data-workspace-id="src/events.mbt"]')).toHaveAttribute(
-    'data-workspace-kind',
-    'file',
-  );
-  await expect(page.locator('[data-workspace-id="src/main.mbt"]')).toHaveAttribute(
-    'data-workspace-kind',
-    'file',
-  );
-
-  await page.locator('[data-workspace-id="src"]').click();
-  await expect(page.locator('[data-workspace-id="src"]')).toHaveAttribute(
-    'aria-expanded',
-    'false',
-  );
-  await expect(page.locator('[data-workspace-id="src/main.mbt"]')).toHaveCount(0);
-
-  await page.locator('[data-workspace-id="src"]').click();
-  await page.locator('[data-workspace-id="src/main.mbt"]').click();
-  await expect(page.locator('[data-workspace-id="src/main.mbt"]')).toHaveAttribute(
+  await expect(page.locator(workspaceItem('src'))).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator(workspaceItem('src/main.mbt'))).toHaveAttribute(
     'aria-selected',
     'true',
+  );
+  await expect(page.locator(workspaceItem('src/errors.mbt'))).toHaveAttribute(
+    'data-workspace-kind',
+    'file',
+  );
+
+  // Collapsing hides children without forgetting the resolved level.
+  await page.locator(workspaceItem('src')).click();
+  await expect(page.locator(workspaceItem('src'))).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator(workspaceItem('src/main.mbt'))).toHaveCount(0);
+
+  await page.locator(workspaceItem('src')).click();
+  await page.locator(workspaceItem('src/events.mbt')).click();
+  await expect(page.locator(workspaceItem('src/events.mbt'))).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.locator(workspaceItem('src/main.mbt'))).toHaveAttribute(
+    'aria-selected',
+    'false',
   );
   expect(await page.evaluate(() => window.location.href)).toBe(initialHref);
 });
@@ -139,13 +141,31 @@ async function openMainFixture(page) {
   await openWorkspaceFile(page, 'src/main.mbt');
 }
 
-async function openWorkspaceFile(page, workspaceId) {
-  await expect(page.locator(`[data-workspace-id="${workspaceId}"]`)).toBeVisible();
-  await page.locator(`[data-workspace-id="${workspaceId}"]`).click();
+function workspaceItem(path) {
+  return `[data-workspace-id="readonly-remote://workspace/${path}"]`;
+}
+
+async function openWorkspaceFile(page, workspacePath) {
+  // Let the startup auto-open settle so its document switch cannot race
+  // the one this helper performs.
+  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
+  const segments = workspacePath.split('/');
+  let prefix = '';
+  for (const segment of segments.slice(0, -1)) {
+    prefix = prefix ? `${prefix}/${segment}` : segment;
+    const folder = page.locator(workspaceItem(prefix));
+    await expect(folder).toBeVisible();
+    if ((await folder.getAttribute('aria-expanded')) !== 'true') {
+      await folder.click();
+    }
+  }
+  const item = page.locator(workspaceItem(workspacePath));
+  await expect(item).toBeVisible();
+  await item.click();
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
   await expect(page.locator('.editor-shell')).toHaveAttribute(
     'data-source-uri',
-    `readonly-remote://workspace/${workspaceId}`,
+    `readonly-remote://workspace/${workspacePath}`,
   );
 }
 

@@ -28,56 +28,6 @@ async test "native host reads root-relative text files" {
 }
 
 ///|
-async test "native host lists workspace entries in preorder and skips generated directories" {
-  let root = "_build/native_host_list_test"
-  reset_dir(root)
-  @async.with_task_group() <| group => {
-    group.add_defer(() => @fs.rmdir(root, recursive=true))
-    @fs.mkdir(root + "/src/lib", recursive=true)
-    @fs.mkdir(root + "/web/dist", recursive=true)
-    @fs.mkdir(root + "/_build", recursive=true)
-    @fs.write_file(
-      root + "/moon.mod",
-      "name = \"fixture\"\n",
-      create_mode=CreateOrTruncate,
-    )
-    @fs.write_file(
-      root + "/src/main.mbt",
-      "pub fn main {}\n",
-      create_mode=CreateOrTruncate,
-    )
-    @fs.write_file(
-      root + "/src/lib/util.mbt",
-      "pub fn util {}\n",
-      create_mode=CreateOrTruncate,
-    )
-    @fs.write_file(
-      root + "/web/dist/editor.mjs",
-      "ignored",
-      create_mode=CreateOrTruncate,
-    )
-    @fs.write_file(
-      root + "/_build/ignored.mbt",
-      "ignored",
-      create_mode=CreateOrTruncate,
-    )
-
-    let host = @server_host_native.native_server_host()
-    match host.list_workspace(root) {
-      ServerHostListOk(entries) => {
-        assert_eq(entry_kind(entries, "moon.mod"), "file")
-        assert_eq(entry_kind(entries, "src"), "directory")
-        assert_eq(entry_kind(entries, "src/lib"), "directory")
-        assert_eq(entry_kind(entries, "src/lib/util.mbt"), "file")
-        assert_eq(entry_kind(entries, "web/dist/editor.mjs"), "")
-        assert_eq(entry_kind(entries, "_build/ignored.mbt"), "")
-      }
-      ServerHostListError(_code, message) => fail(message)
-    }
-  }
-}
-
-///|
 async test "native host resolves one directory level with minted uris" {
   let root = "_build/native_host_resolve_test"
   reset_dir(root)
@@ -217,19 +167,6 @@ async fn wait_for_events(
   if events.length() < count {
     fail("timed out waiting for native watch event")
   }
-}
-
-///|
-fn entry_kind(
-  entries : Array[@remote_protocol.WorkspaceEntry],
-  path : String,
-) -> String {
-  for entry in entries {
-    if entry.path == path {
-      return entry.kind
-    }
-  }
-  ""
 }
 
 ///|

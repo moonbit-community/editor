@@ -51,14 +51,34 @@ test('logs render timings for small and large documents', async ({ page }) => {
   }
 });
 
-async function openWorkspaceFile(page, workspaceId) {
-  await expect(page.locator(`[data-workspace-id="${workspaceId}"]`)).toBeVisible();
-  await page.locator(`[data-workspace-id="${workspaceId}"]`).click();
+function workspaceItem(path) {
+  return `[data-workspace-id="readonly-remote://workspace/${path}"]`;
+}
+
+async function openWorkspaceFile(page, workspacePath) {
+  // Let the startup auto-open settle so its document switch cannot race
+  // the one this helper performs.
+  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready', {
+    timeout: 60_000,
+  });
+  const segments = workspacePath.split('/');
+  let prefix = '';
+  for (const segment of segments.slice(0, -1)) {
+    prefix = prefix ? `${prefix}/${segment}` : segment;
+    const folder = page.locator(workspaceItem(prefix));
+    await expect(folder).toBeVisible();
+    if ((await folder.getAttribute('aria-expanded')) !== 'true') {
+      await folder.click();
+    }
+  }
+  const item = page.locator(workspaceItem(workspacePath));
+  await expect(item).toBeVisible();
+  await item.click();
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready', {
     timeout: 60_000,
   });
   await expect(page.locator('.editor-shell')).toHaveAttribute(
     'data-source-uri',
-    `readonly-remote://workspace/${workspaceId}`,
+    `readonly-remote://workspace/${workspacePath}`,
   );
 }

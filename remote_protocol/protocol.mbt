@@ -28,19 +28,6 @@ pub(all) struct DocumentRequest {
 } derive(Debug)
 
 ///|
-pub(all) struct WorkspaceListRequest {
-  id : String
-} derive(Debug)
-
-///|
-pub(all) struct WorkspaceEntry {
-  path : String
-  name : String
-  kind : String
-  depth : Int
-} derive(Debug)
-
-///|
 pub(all) struct DocumentPositionRequest {
   id : String
   uri : @workspace.DocumentUri
@@ -57,7 +44,6 @@ pub(all) struct DocumentVersionRequest {
 
 ///|
 pub(all) enum ClientPacket {
-  ListWorkspace(WorkspaceListRequest)
   ResolveDirectory(DocumentRequest)
   OpenDocument(DocumentRequest)
   WatchDocument(DocumentRequest)
@@ -74,12 +60,6 @@ pub(all) enum ClientPacket {
 pub(all) struct DocumentPayload {
   id : String
   document : @workspace.SourceDocument
-} derive(Debug)
-
-///|
-pub(all) struct WorkspaceListedPayload {
-  id : String
-  entries : Array[WorkspaceEntry]
 } derive(Debug)
 
 ///|
@@ -152,7 +132,6 @@ pub(all) struct SemanticTokensResultPayload {
 
 ///|
 pub(all) enum ServerPacket {
-  WorkspaceListed(WorkspaceListedPayload)
   DirectoryResolved(DirectoryResolvedPayload)
   DocumentLoaded(DocumentPayload)
   DocumentChanged(DocumentPayload)
@@ -249,7 +228,6 @@ pub fn negotiate_protocol_version(version : Int) -> ProtocolNegotiation {
 ///|
 pub fn ClientPacket::to_json(self : ClientPacket) -> String {
   match self {
-    ListWorkspace(request) => workspace_list_request_json(request)
     ResolveDirectory(request) =>
       document_request_json("ResolveDirectory", request)
     OpenDocument(request) => document_request_json("OpenDocument", request)
@@ -267,7 +245,6 @@ pub fn ClientPacket::to_json(self : ClientPacket) -> String {
 ///|
 pub fn ServerPacket::to_json(self : ServerPacket) -> String {
   match self {
-    WorkspaceListed(payload) => workspace_listed_json(payload)
     DirectoryResolved(payload) => directory_resolved_json(payload)
     DocumentLoaded(payload) => document_payload_json("DocumentLoaded", payload)
     DocumentChanged(payload) =>
@@ -290,8 +267,6 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
         Some(error) => ClientPacketDecodeError(error)
         None =>
           match json_string_field(packet, "type") {
-            Some("ListWorkspace") =>
-              DecodedClientPacket(ListWorkspace({ id: request_id(packet) }))
             Some("ResolveDirectory") =>
               decode_document_client(packet, request_id(packet), request => {
                 ResolveDirectory(request)
@@ -365,8 +340,6 @@ pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
         Some(error) => ServerPacketDecodeError(error)
         None =>
           match json_string_field(packet, "type") {
-            Some("WorkspaceListed") =>
-              decode_workspace_listed_payload(packet, request_id(packet))
             Some("DirectoryResolved") =>
               decode_directory_resolved_payload(packet, request_id(packet))
             Some("DocumentLoaded") =>
@@ -520,25 +493,6 @@ fn decode_directory_resolved_payload(
         ),
       )
   }
-}
-
-///|
-fn decode_workspace_listed_payload(
-  packet : Json,
-  id : String,
-) -> ServerPacketDecodeResult {
-  let entries = []
-  match json_field(packet, "entries") {
-    Some(Array(items)) =>
-      for item in items {
-        match parse_workspace_entry(item) {
-          Some(entry) => entries.push(entry)
-          None => ()
-        }
-      }
-    _ => ()
-  }
-  DecodedServerPacket(WorkspaceListed({ id, entries }))
 }
 
 ///|
@@ -857,11 +811,6 @@ fn parse_source_document(value : Json, id : String) -> ProtocolDocumentResult {
 }
 
 ///|
-fn workspace_list_request_json(request : WorkspaceListRequest) -> String {
-  packet_head("ListWorkspace", request.id) + "}"
-}
-
-///|
 fn document_request_json(kind : String, request : DocumentRequest) -> String {
   let mut out = packet_head(kind, request.id)
   out = out + ",\"uri\":" + json_string(request.uri.to_string())
@@ -895,13 +844,6 @@ fn version_request_json(
 fn document_payload_json(kind : String, payload : DocumentPayload) -> String {
   let mut out = packet_head(kind, payload.id)
   out = out + ",\"document\":" + payload.document.to_json()
-  out + "}"
-}
-
-///|
-fn workspace_listed_json(payload : WorkspaceListedPayload) -> String {
-  let mut out = packet_head("WorkspaceListed", payload.id)
-  out = out + ",\"entries\":" + workspace_entries_json(payload.entries)
   out + "}"
 }
 
@@ -1085,28 +1027,6 @@ fn diagnostics_json(diagnostics : Array[@language.Diagnostic]) -> String {
 }
 
 ///|
-fn workspace_entries_json(entries : Array[WorkspaceEntry]) -> String {
-  let mut out = "["
-  for i in 0..<entries.length() {
-    if i > 0 {
-      out = out + ","
-    }
-    out = out + workspace_entry_json(entries[i])
-  }
-  out + "]"
-}
-
-///|
-fn workspace_entry_json(entry : WorkspaceEntry) -> String {
-  let mut out = "{"
-  out = out + "\"path\":" + json_string(entry.path)
-  out = out + ",\"name\":" + json_string(entry.name)
-  out = out + ",\"kind\":" + json_string(entry.kind)
-  out = out + ",\"depth\":" + entry.depth.to_string()
-  out + "}"
-}
-
-///|
 fn document_symbols_json(symbols : Array[@language.DocumentSymbol]) -> String {
   let mut out = "["
   for i in 0..<symbols.length() {
@@ -1194,25 +1114,6 @@ fn range_json(range : @core.Range) -> String {
   out = out + "\"start\":" + range.start.to_string()
   out = out + ",\"end\":" + range.end.to_string()
   out + "}"
-}
-
-///|
-fn parse_workspace_entry(value : Json) -> WorkspaceEntry? {
-  match value {
-    Object(_) =>
-      match
-        (
-          json_string_field(value, "path"),
-          json_string_field(value, "name"),
-          json_string_field(value, "kind"),
-          json_int_field(value, "depth"),
-        ) {
-        (Some(path), Some(name), Some(kind), Some(depth)) =>
-          Some({ path, name, kind, depth })
-        _ => None
-      }
-    _ => None
-  }
 }
 
 ///|

@@ -19,9 +19,6 @@ priv struct BrowserAppModel {
   frame : @renderer.RenderFrame?
   source_document : @workspace.SourceDocument?
   document : BrowserDocumentView?
-  selected_workspace_id : String
-  workspace_entries : Array[@remote_protocol.WorkspaceEntry]
-  collapsed_workspace_ids : Array[String]
   provider_result : @language.ProviderResult
   hover : HoverController
   scroll_top : Double
@@ -36,9 +33,9 @@ priv enum BrowserMsg {
   ProtocolEvent(@websocket.Event)
   ProtocolSendFailed(String)
   DocumentSourceResolved(@workspace.SourceDocumentLoadResult)
-  DocumentRenderResolved(DocumentRenderResult, Bool)
-  SelectWorkspace(String)
-  ToggleFolder(String)
+  DocumentRenderResolved(RenderedDocument, Bool)
+  SelectWorkspace(@workspace.DocumentUri)
+  AutoOpenResolved(@workspace.DocumentUri?)
   ToggleTheme
   EditorMouseMoved(Double, Double)
   EditorMouseLeft
@@ -102,9 +99,6 @@ fn initial_browser_model() -> BrowserAppModel {
     frame: None,
     source_document: None,
     document: None,
-    selected_workspace_id: "",
-    workspace_entries: [],
-    collapsed_workspace_ids: [],
     provider_result: @language.ProviderResult::empty(),
     hover: HoverController::empty(),
     scroll_top: 0.0,
@@ -161,33 +155,21 @@ fn browser_update(
         SourceDocumentLoadError(error) =>
           document_load_failed_update(model, error)
       }
-    DocumentRenderResolved(result, watch) =>
-      match result {
-        DocumentRendered(rendered) =>
-          document_rendered_update(emit, model, rendered, watch)
-        DocumentRenderFailed(uri, status, message) => {
-          invalidate_code_cell()
-          (
-            dom_mounted_status_cmd(status),
-            {
-              ..model,
-              status,
-              status_message: message,
-              frame: None,
-              source_document: None,
-              document: update_document_uri(model.document, uri),
-              provider_result: @language.ProviderResult::empty(),
-              hover: model.hover.cleared(),
-            },
-          )
-        }
+    DocumentRenderResolved(rendered, watch) =>
+      document_rendered_update(emit, model, rendered, watch)
+    SelectWorkspace(uri) => select_workspace_update(emit, model, uri)
+    AutoOpenResolved(found) =>
+      match found {
+        Some(uri) =>
+          if model.source_document is None {
+            select_workspace_update(emit, model, uri)
+          } else {
+            (@rabbita.none, model)
+          }
+        // An empty workspace keeps the loading placeholder, like the old
+        // flat list with no openable file.
+        None => (@rabbita.none, model)
       }
-    SelectWorkspace(id) => select_workspace_update(emit, model, id)
-    ToggleFolder(id) =>
-      (
-        @rabbita.none,
-        { ..model, collapsed_workspace_ids: toggle_collapsed_id(model, id) },
-      )
     ToggleTheme => {
       let theme = if model.theme == "light" { "dark" } else { "light" }
       // The theme keys the code cell, so toggling remounts it; rehook the
@@ -270,12 +252,11 @@ fn browser_update(
 fn select_workspace_update(
   emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
-  id : String,
+  uri : @workspace.DocumentUri,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   invalidate_code_cell()
   let next = {
     ..model,
-    selected_workspace_id: id,
     status: "loading",
     status_message: "",
     frame: None,
@@ -284,7 +265,7 @@ fn select_workspace_update(
   (
     @rabbita.batch([
       close_active_document_cmd(model.source_document),
-      load_workspace_document_cmd(emit, id),
+      load_workspace_document_cmd(emit, uri),
     ]),
     next,
   )
@@ -297,12 +278,16 @@ fn protocol_event_update(
   event : @websocket.Event,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   match event {
-    Opened =>
-      (
-        send_client_packet_cmd(emit, ListWorkspace({ id: "list-workspace" })),
-        { ..model, status_message: "" },
-      )
-    Message(raw) => protocol_message_update(emit, model, raw)
+    // A fresh socket (first connect or reconnect) re-resolves the explorer
+    // tree; the auto-open policy fills the viewer when nothing is open yet.
+    Opened => {
+      let commands = [workspace_file_tree().refresh()]
+      if model.source_document is None {
+        commands.push(auto_open_first_file_cmd(emit))
+      }
+      (@rabbita.batch(commands), { ..model, status_message: "" })
+    }
+    Message(raw) => protocol_message_update(model, raw)
     Closed(_) => {
       fail_pending_requests("Connection lost.")
       (
@@ -330,7 +315,6 @@ fn protocol_event_update(
 
 ///|
 fn protocol_message_update(
-  emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
   raw : String,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
@@ -341,7 +325,7 @@ fn protocol_message_update(
       if resolve_pending_response(packet) {
         (@rabbita.none, model)
       } else {
-        server_packet_update(emit, model, packet)
+        server_packet_update(model, packet)
       }
     ServerPacketDecodeError(error) => protocol_error_update(model, error)
   }
@@ -349,12 +333,10 @@ fn protocol_message_update(
 
 ///|
 fn server_packet_update(
-  emit : @rabbita.Emit[BrowserMsg],
   model : BrowserAppModel,
   packet : @remote_protocol.ServerPacket,
 ) -> (@rabbita.Cmd, BrowserAppModel) {
   match packet {
-    WorkspaceListed(payload) => workspace_listed_update(emit, model, payload)
     // Uncorrelated document packets are watch pushes; the document source
     // routes them to the listener registered for their URI.
     DocumentLoaded(payload) => (route_watched_document_cmd(payload), model)
@@ -408,31 +390,6 @@ fn restore_scroll_cmd(scroll_top : Double) -> @rabbita.Cmd {
     },
     kind=@cmd.after_render,
   )
-}
-
-///|
-fn workspace_listed_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  payload : @remote_protocol.WorkspaceListedPayload,
-) -> (@rabbita.Cmd, BrowserAppModel) {
-  let selected = if model.selected_workspace_id == "" {
-    first_workspace_file(payload.entries)
-  } else {
-    model.selected_workspace_id
-  }
-  let next = {
-    ..model,
-    workspace_entries: payload.entries,
-    selected_workspace_id: selected,
-  }
-  if selected == "" {
-    (@rabbita.none, next)
-  } else if model.source_document is None {
-    (load_workspace_document_cmd(emit, selected), { ..next, status: "loading" })
-  } else {
-    (@rabbita.none, next)
-  }
 }
 
 ///|
@@ -538,7 +495,6 @@ fn document_rendered_update(
     frame: Some(rendered.frame),
     source_document: Some(rendered.document),
     document: Some(document),
-    selected_workspace_id: selected_workspace_for_document(document),
     hover: model.hover.cleared(),
   }
   // A rotated cell key remounts the viewer element, which starts at
@@ -557,6 +513,9 @@ fn document_rendered_update(
   ]
   if watch {
     commands.push(language_feature_cmds(emit, rendered.document))
+    // The viewer lifecycle drives the explorer's autoReveal: a freshly
+    // loaded document expands its ancestor chain and selects its row.
+    commands.push(workspace_file_tree().set_active(rendered.document.uri))
   }
   (@rabbita.batch(commands), next)
 }
@@ -609,114 +568,30 @@ fn view_topbar(model : BrowserAppModel) -> @html.Html {
 }
 
 ///|
+/// Sidebar chrome (Explorer title, theme toggle) stays in the shell; the
+/// tree itself is the embedded explorer widget cell.
 fn view_sidebar(
   emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
+  _model : BrowserAppModel,
 ) -> @html.Html {
-  let children : Array[@html.Html] = [
-    @html.div(class="workspace-title", [
-      @html.span(class="workspace-title-label", "Explorer"),
-      @html.button(
-        type_="button",
-        class="sidebar-action",
-        title="Toggle Color Theme",
-        on_click=emit(ToggleTheme),
-        attrs=@html.Attrs::build()
-          .data_set("action", "toggle-theme")
-          .aria_label("Toggle color theme"),
-        icon_color_mode(),
-      ),
-    ]),
-  ]
-  for entry in model.workspace_entries {
-    if workspace_entry_visible(model, entry) {
-      if entry.kind == "directory" {
-        children.push(
-          view_folder(
-            emit,
-            entry.path,
-            entry.name,
-            entry.depth,
-            !is_workspace_collapsed(model, entry.path),
-          ),
-        )
-      } else {
-        children.push(
-          view_file(emit, model, entry.path, entry.name, entry.depth),
-        )
-      }
-    }
-  }
   @html.aside(
     class="workspace-sidebar",
     attrs=@html.Attrs::build().aria_label("Workspace files"),
-    children,
-  )
-}
-
-///|
-fn view_folder(
-  emit : @rabbita.Emit[BrowserMsg],
-  id : String,
-  label : String,
-  depth : Int,
-  expanded : Bool,
-) -> @html.Html {
-  @html.button(
-    type_="button",
-    class="workspace-item workspace-folder",
-    on_click=emit(ToggleFolder(id)),
-    attrs=@html.Attrs::build()
-      .data_set("workspace-id", id)
-      .data_set("workspace-kind", "folder")
-      .aria_expanded(expanded.to_string())
-      .style("--depth", depth.to_string()),
     [
-      view_indent_guides(depth),
-      @html.span(class="workspace-twistie", icon_chevron_right()),
-      @html.span(class="workspace-label", label),
-    ],
-  )
-}
-
-///|
-fn view_indent_guides(depth : Int) -> @html.Html {
-  let guides : Array[@html.Html] = []
-  for _ in 0..<depth {
-    guides.push(@html.span(class="indent-guide", ""))
-  }
-  @html.span(class="workspace-guides", guides)
-}
-
-///|
-fn view_file(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
-  id : String,
-  label : String,
-  depth : Int,
-) -> @html.Html {
-  let selected = model.selected_workspace_id == id
-  let class_name = if selected {
-    "workspace-item workspace-file is-selected"
-  } else {
-    "workspace-item workspace-file"
-  }
-  @html.button(
-    type_="button",
-    class=class_name,
-    on_click=emit(SelectWorkspace(id)),
-    attrs=@html.Attrs::build()
-      .data_set("workspace-id", id)
-      .data_set("workspace-kind", "file")
-      .data_set("selected", selected.to_string())
-      .aria_selected(selected.to_string())
-      .style("--depth", depth.to_string()),
-    [
-      view_indent_guides(depth),
-      @html.span(class="workspace-twistie workspace-twistie-spacer", ""),
-      @html.span(class="workspace-file-icon", icon_file()),
-      @html.span(class="workspace-label", label),
+      @html.div(class="workspace-title", [
+        @html.span(class="workspace-title-label", "Explorer"),
+        @html.button(
+          type_="button",
+          class="sidebar-action",
+          title="Toggle Color Theme",
+          on_click=emit(ToggleTheme),
+          attrs=@html.Attrs::build()
+            .data_set("action", "toggle-theme")
+            .aria_label("Toggle color theme"),
+          icon_color_mode(),
+        ),
+      ]),
+      workspace_file_tree().view(),
     ],
   )
 }
@@ -846,114 +721,6 @@ fn document_to_view(
     language_id: document.language_id,
     version: document.version,
   }
-}
-
-///|
-fn update_document_uri(
-  document : BrowserDocumentView?,
-  uri : String,
-) -> BrowserDocumentView? {
-  match document {
-    Some(item) =>
-      if uri == "" || item.uri == uri {
-        Some(item)
-      } else {
-        Some({
-          uri,
-          display_name: display_name_from_uri(uri),
-          language_id: "",
-          version: 1,
-        })
-      }
-    None =>
-      if uri == "" {
-        None
-      } else {
-        Some({
-          uri,
-          display_name: display_name_from_uri(uri),
-          language_id: "",
-          version: 1,
-        })
-      }
-  }
-}
-
-///|
-fn selected_workspace_for_document(document : BrowserDocumentView) -> String {
-  workspace_id_from_uri(document.uri)
-}
-
-///|
-fn workspace_id_from_uri(uri : String) -> String {
-  let prefix = "readonly-remote://workspace/"
-  if uri.has_prefix(prefix) {
-    uri[prefix.length():].to_owned()
-  } else {
-    uri
-  }
-}
-
-///|
-fn first_workspace_file(
-  entries : Array[@remote_protocol.WorkspaceEntry],
-) -> String {
-  for entry in entries {
-    if entry.kind == "file" && entry.path.has_suffix(".mbt") {
-      return entry.path
-    }
-  }
-  for entry in entries {
-    if entry.kind == "file" {
-      return entry.path
-    }
-  }
-  ""
-}
-
-///|
-fn is_workspace_collapsed(model : BrowserAppModel, path : String) -> Bool {
-  for collapsed in model.collapsed_workspace_ids {
-    if collapsed == path {
-      return true
-    }
-  }
-  false
-}
-
-///|
-fn toggle_collapsed_id(model : BrowserAppModel, path : String) -> Array[String] {
-  let next : Array[String] = []
-  let mut removed = false
-  for collapsed in model.collapsed_workspace_ids {
-    if collapsed == path {
-      removed = true
-    } else {
-      next.push(collapsed)
-    }
-  }
-  if !removed {
-    next.push(path)
-  }
-  next
-}
-
-///|
-fn workspace_entry_visible(
-  model : BrowserAppModel,
-  entry : @remote_protocol.WorkspaceEntry,
-) -> Bool {
-  let mut parent = ""
-  for part_view in entry.path.split("/") {
-    let part = part_view.to_owned()
-    if part != "" && part != entry.name {
-      parent = if parent == "" { part } else { parent + "/" + part }
-      if is_workspace_collapsed(model, parent) {
-        return false
-      }
-    }
-  }
-  true
 }
 
 ///|

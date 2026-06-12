@@ -6,6 +6,7 @@ import {
   "baozhiyuan/editor/remote_protocol",
   "baozhiyuan/editor/renderer",
   "baozhiyuan/editor/syntax",
+  "baozhiyuan/editor/widgets/file_tree",
   "baozhiyuan/editor/workspace",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/cmd",

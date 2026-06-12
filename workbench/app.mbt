@@ -113,9 +113,35 @@ pub fn mount_app() -> Unit {
         scheduler.add(send_client_packet_cmd(emit, packet))
       })
       scheduler.add(emit(ConnectProtocol))
+      // The viewer island mounts into the stable host element after the
+      // shell's first paint; the shell never renders children into it.
+      scheduler.add(
+        @cmd.custom_cmd(_ => attach_workbench_viewer(), kind=@cmd.after_render),
+      )
     }),
   )
   app.mount("app")
+}
+
+///|
+/// Attaches the imperative viewer island into the shell-rendered host
+/// element and installs the harness scroll control
+/// (`__readonlyEditorScrollTo`) that drives synthetic scrolling.
+fn attach_workbench_viewer() -> Unit {
+  match @rdom.document().query_selector(".viewer-host").to_option() {
+    Some(host) => {
+      let viewer = workbench_viewer()
+      viewer.attach(host)
+      @dom.install_scroll_control(top => viewer.scroll_to(top))
+    }
+    None => ()
+  }
+}
+
+///|
+/// Lifts a plain viewer call into the shell's command system.
+fn viewer_cmd(action : () -> Unit) -> @rabbita.Cmd {
+  @cmd.custom_cmd(_ => action())
 }
 
 ///|
@@ -145,7 +171,13 @@ fn update_workbench(
   if message == source_message(model) {
     (cmd, next)
   } else {
-    (@rabbita.batch([cmd, workbench_viewer().set_placeholder(message)]), next)
+    (
+      @rabbita.batch([
+        cmd,
+        viewer_cmd(() => workbench_viewer().set_placeholder(message)),
+      ]),
+      next,
+    )
   }
 }
 
@@ -185,18 +217,29 @@ fn workbench_update(
       (
         @rabbita.batch([
           persist_theme_cmd(theme),
-          workbench_viewer().set_theme(theme),
+          viewer_cmd(() => workbench_viewer().set_theme(theme)),
         ]),
         { ..model, theme, },
       )
     }
-    GlobalKeyDown(keyboard) =>
-      if keyboard.key() == "Escape" {
-        (workbench_viewer().escape(), model)
-      } else {
-        (@rabbita.none, model)
-      }
-    WindowResized => (workbench_viewer().remeasure(), model)
+    GlobalKeyDown(keyboard) => (global_key_cmd(keyboard), model)
+    WindowResized => (viewer_cmd(() => workbench_viewer().remeasure()), model)
+  }
+}
+
+///|
+/// Host-captured keys route into the viewer the way Escape always has;
+/// scrolling keys drive the viewer's synthetic scroll methods.
+fn global_key_cmd(keyboard : @common.Keyboard) -> @rabbita.Cmd {
+  match keyboard.key() {
+    "Escape" => viewer_cmd(() => workbench_viewer().escape())
+    "PageUp" => viewer_cmd(() => workbench_viewer().scroll_by_pages(-1))
+    "PageDown" => viewer_cmd(() => workbench_viewer().scroll_by_pages(1))
+    "Home" => viewer_cmd(() => workbench_viewer().scroll_home())
+    "End" => viewer_cmd(() => workbench_viewer().scroll_end())
+    "ArrowUp" => viewer_cmd(() => workbench_viewer().scroll_by_lines(-1))
+    "ArrowDown" => viewer_cmd(() => workbench_viewer().scroll_by_lines(1))
+    _ => @rabbita.none
   }
 }
 
@@ -206,7 +249,7 @@ fn select_workspace_update(
   uri : @workspace.DocumentUri,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   (
-    workbench_viewer().open(uri),
+    viewer_cmd(() => workbench_viewer().open(uri)),
     { ..model, status: "loading", status_message: "", viewer_has_frame: false },
   )
 }
@@ -302,6 +345,10 @@ fn viewer_notified_update(
       emit_hover_status(ok, version)
       (@rabbita.none, model)
     }
+    ViewerScrolled(scroll_top~, scroll_left~) => {
+      emit_scroll_event(scroll_top, scroll_left)
+      (@rabbita.none, model)
+    }
   }
 }
 
@@ -378,11 +425,24 @@ fn server_packet_update(
     // Server-initiated feature pushes flow into the viewer's public
     // feature-data API.
     Diagnostics(payload) =>
-      (workbench_viewer().push_diagnostics(payload.diagnostics), model)
+      (
+        viewer_cmd(() => {
+          workbench_viewer().push_diagnostics(payload.diagnostics)
+        }),
+        model,
+      )
     DocumentSymbolsResult(payload) =>
-      (workbench_viewer().push_symbols(payload.symbols), model)
+      (
+        viewer_cmd(() => workbench_viewer().push_symbols(payload.symbols)),
+        model,
+      )
     SemanticTokensResult(payload) =>
-      (workbench_viewer().push_semantic_tokens(payload.semantic_tokens), model)
+      (
+        viewer_cmd(() => {
+          workbench_viewer().push_semantic_tokens(payload.semantic_tokens)
+        }),
+        model,
+      )
     // Feature results without a waiting request are unsolicited; provider
     // commands consume theirs through the pending table.
     DirectoryResolved(_) => (@rabbita.none, model)
@@ -442,10 +502,10 @@ fn view_workbench(
     view_topbar(model),
     @html.div(class="editor-main", [
       view_sidebar(emit, model),
-      // The viewer cell is always embedded so its update loop runs even
-      // before the first document renders; while it has no frame it shows
-      // the placeholder message the shell pushes in.
-      workbench_viewer().view(),
+      // The stable island host: the viewer attaches its imperative DOM
+      // into this element after mount, and the shell must never render
+      // vdom children into it (Rabbita's diff would not know them).
+      @html.div(class="viewer-host", ([] : Array[@html.Html])),
     ]),
     view_diagnostics(model),
   ])

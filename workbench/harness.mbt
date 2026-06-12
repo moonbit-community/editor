@@ -39,6 +39,20 @@ fn emit_language_status(diagnostic_count : Int, version : Int) -> Unit {
 }
 
 ///|
+/// The settled synthetic scroll position after a paint, the browser
+/// harness's `view:scroll` signal.
+fn emit_scroll_event(scroll_top : Double, scroll_left : Double) -> Unit {
+  emit_event(
+    "view:scroll",
+    "{\"scrollTop\":" +
+    scroll_top.to_string() +
+    ",\"scrollLeft\":" +
+    scroll_left.to_string() +
+    "}",
+  )
+}
+
+///|
 fn emit_hover_status(ok : Bool, version : Int) -> Unit {
   emit_event(
     "language:hover",

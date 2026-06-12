@@ -22,6 +22,18 @@ priv struct HoverPlacement {
 let hover_delay_ms = 300
 
 ///|
+/// What a hover transition asks the viewer to do; the controller stays a
+/// pure state machine and the viewer interprets these (timers through the
+/// `dom` bindings, provider requests through the registry).
+priv enum HoverEffect {
+  HoverNoEffect
+  /// Start the half/full/triple delay timers for this anchor token.
+  HoverSchedule(Int)
+  /// Ask the hover provider at this offset for this token.
+  HoverRequest(Int, Int)
+}
+
+///|
 /// Editor hover feature state, with Monaco's timing: the provider request
 /// fires at half the hover delay, display is gated at the full delay, and
 /// a loading hover appears at three times the delay if the provider has
@@ -68,21 +80,20 @@ fn HoverController::cleared(self : HoverController) -> HoverController {
 ///|
 fn HoverController::on_event(
   self : HoverController,
-  emit : @rabbita.Emit[ViewerMsg],
   event : EditorEvent,
   ctx : EditorContext,
-) -> (@rabbita.Cmd, HoverController) {
+) -> (HoverEffect, HoverController) {
   match event {
     MouseMoved(target) =>
       match ctx.frame {
         Some(frame) =>
           match span_anchor_for_target(frame, target) {
-            Some((start, end, _)) => self.schedule(emit, start, end)
-            None => (@rabbita.none, self.cleared())
+            Some((start, end, _)) => self.schedule(start, end)
+            None => (HoverNoEffect, self.cleared())
           }
-        None => (@rabbita.none, self)
+        None => (HoverNoEffect, self)
       }
-    MouseLeft | EscapePressed => (@rabbita.none, self.cleared())
+    MouseLeft | EscapePressed => (HoverNoEffect, self.cleared())
   }
 }
 
@@ -91,24 +102,19 @@ fn HoverController::on_event(
 /// shown hover untouched.
 fn HoverController::schedule(
   self : HoverController,
-  emit : @rabbita.Emit[ViewerMsg],
   start : Int,
   end : Int,
-) -> (@rabbita.Cmd, HoverController) {
+) -> (HoverEffect, HoverController) {
   let same = match self.anchor {
     Some(anchor) => anchor.start == start && anchor.end == end
     None => false
   }
   if same {
-    (@rabbita.none, self)
+    (HoverNoEffect, self)
   } else {
     let token = self.token + 1
     (
-      @rabbita.batch([
-        @cmd.delay(emit(FireHover(token)), hover_delay_ms / 2),
-        @cmd.delay(emit(HoverDisplayDue(token)), hover_delay_ms),
-        @cmd.delay(emit(HoverLoadingDue(token)), hover_delay_ms * 3),
-      ]),
+      HoverSchedule(token),
       {
         token,
         anchor: Some({ start, end, offset: (start + end) / 2 }),
@@ -127,21 +133,15 @@ fn HoverController::schedule(
 /// Half-delay timer fired: ask the hover provider if the token is current.
 fn HoverController::fire(
   self : HoverController,
-  emit : @rabbita.Emit[ViewerMsg],
-  ctx : EditorContext,
   token : Int,
-) -> (@rabbita.Cmd, HoverController) {
+) -> (HoverEffect, HoverController) {
   if token == self.token {
     match self.anchor {
-      Some(anchor) =>
-        (
-          hover_provider_cmd(emit, ctx.source_document, anchor.offset, token),
-          self,
-        )
-      None => (@rabbita.none, self)
+      Some(anchor) => (HoverRequest(anchor.offset, token), self)
+      None => (HoverNoEffect, self)
     }
   } else {
-    (@rabbita.none, self)
+    (HoverNoEffect, self)
   }
 }
 
@@ -150,25 +150,21 @@ fn HoverController::fire(
 /// resolved hover.
 fn HoverController::display_due(
   self : HoverController,
-  emit : @rabbita.Emit[ViewerMsg],
   token : Int,
-) -> (@rabbita.Cmd, HoverController) {
+) -> HoverController {
   if token != self.token {
-    return (@rabbita.none, self)
+    return self
   }
   match self.pending_view {
     Some(view) =>
-      (
-        measure_hover_cmd(emit),
-        {
-          ..self,
-          display_open: true,
-          view: Some(view),
-          pending_view: None,
-          placement: None,
-        },
-      )
-    None => (@rabbita.none, { ..self, display_open: true })
+      {
+        ..self,
+        display_open: true,
+        view: Some(view),
+        pending_view: None,
+        placement: None,
+      }
+    None => { ..self, display_open: true }
   }
 }
 
@@ -177,11 +173,11 @@ fn HoverController::display_due(
 fn HoverController::loading_due(
   self : HoverController,
   token : Int,
-) -> (@rabbita.Cmd, HoverController) {
+) -> HoverController {
   if token == self.token && !self.answered && self.anchor is Some(_) {
-    (@rabbita.none, { ..self, loading: true })
+    { ..self, loading: true }
   } else {
-    (@rabbita.none, self)
+    self
   }
 }
 
@@ -191,41 +187,34 @@ fn HoverController::loading_due(
 fn HoverController::resolved_hover(
   self : HoverController,
   notify : (ViewerNotification) -> Unit,
-  emit : @rabbita.Emit[ViewerMsg],
   version : Int,
   token : Int,
   hover : @language.Hover?,
   current_version : Int,
-) -> (@rabbita.Cmd, HoverController) {
+) -> HoverController {
   if current_version != version || token != self.token {
-    return (@rabbita.none, self)
+    return self
   }
   match hover {
     Some(hover) => {
       notify(ViewerHoverResolved(ok=true, version~))
       let view : HoverView = { range: hover.range, contents: hover.contents }
       if self.display_open {
-        (
-          measure_hover_cmd(emit),
-          {
-            ..self,
-            answered: true,
-            loading: false,
-            view: Some(view),
-            pending_view: None,
-            placement: None,
-          },
-        )
+        {
+          ..self,
+          answered: true,
+          loading: false,
+          view: Some(view),
+          pending_view: None,
+          placement: None,
+        }
       } else {
-        (
-          @rabbita.none,
-          { ..self, answered: true, loading: false, pending_view: Some(view) },
-        )
+        { ..self, answered: true, loading: false, pending_view: Some(view) }
       }
     }
     None => {
       notify(ViewerHoverResolved(ok=false, version~))
-      (@rabbita.none, { ..self, answered: true, loading: false })
+      { ..self, answered: true, loading: false }
     }
   }
 }
@@ -250,110 +239,45 @@ fn HoverController::decorations(
 }
 
 ///|
-/// Renders the hover widget inside `.code-lines`, anchored at the hovered
-/// range like VS Code's editor hover: above the line by default, flipped
-/// below when the measured widget would leave the viewport, and shifted left
-/// when it would overflow the viewer's right edge. While the provider is
-/// still resolving past the loading delay, an unmeasured loading hover is
-/// shown at the anchor instead.
-fn HoverController::widget(
-  self : HoverController,
-  frame : @renderer.RenderFrame,
-) -> @html.Html? {
+/// What the hover layer should draw, as data: the widget anchored at the
+/// hovered range like VS Code's editor hover (above the line by default,
+/// flipped below when the after-write measurement detects viewport
+/// overflow, shifted left when it would overflow the right edge), or the
+/// unmeasured loading hover while the provider is still resolving past
+/// the loading delay.
+priv struct HoverWidgetView {
+  anchor_offset : Int
+  contents : String
+  /// Whether this widget participates in placement measurement (the
+  /// loading hover renders unmeasured at the anchor).
+  measurable : Bool
+  placement : HoverPlacement?
+}
+
+///|
+fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
   match self.view {
     Some(hover) =>
-      self.anchored_widget(frame, hover.range.start, hover.contents, true)
+      Some({
+        anchor_offset: hover.range.start,
+        contents: hover.contents,
+        measurable: true,
+        placement: self.placement,
+      })
     None =>
       if self.loading {
         match self.anchor {
           Some(anchor) =>
-            self.anchored_widget(frame, anchor.start, "Loading...", false)
+            Some({
+              anchor_offset: anchor.start,
+              contents: "Loading...",
+              measurable: false,
+              placement: self.placement,
+            })
           None => None
         }
       } else {
         None
       }
   }
-}
-
-///|
-fn HoverController::anchored_widget(
-  self : HoverController,
-  frame : @renderer.RenderFrame,
-  anchor_offset : Int,
-  contents : String,
-  measured : Bool,
-) -> @html.Html? {
-  match line_col_for_offset(frame, anchor_offset) {
-    Some((line_number, column)) => {
-      let mut class_name = "hover-widget"
-      let mut shift_left = 0.0
-      let mut below = false
-      match self.placement {
-        Some(placement) => {
-          below = placement.below
-          shift_left = placement.shift_left
-        }
-        None => if measured { class_name = class_name + " measuring" }
-      }
-      let top = if below {
-        line_number * editor_line_height
-      } else {
-        (line_number - 1) * editor_line_height
-      }
-      if below {
-        class_name = class_name + " below"
-      }
-      let digits = frame.line_count.to_string().length()
-      let mut attrs = widget_overlay_attrs(@html.Attrs::build())
-        .role("tooltip")
-        .style("top", top.to_string() + "px")
-        .style(
-          "left",
-          "calc(" +
-          (digits + column).to_string() +
-          "ch + " +
-          gutter_padding_px.to_string() +
-          "px)",
-        )
-      if shift_left > 0.0 {
-        attrs = attrs.style("margin-left", "-" + shift_left.to_string() + "px")
-      }
-      Some(
-        @html.div(class=class_name, attrs~, [
-          @html.div(class="hover-row", [
-            @html.div(class="hover-contents", contents),
-          ]),
-        ]),
-      )
-    }
-    None => None
-  }
-}
-
-///|
-/// Measures the rendered hover widget after paint and reports whether it
-/// must flip below the anchor line or shift left to stay inside the viewer.
-fn measure_hover_cmd(emit : @rabbita.Emit[ViewerMsg]) -> @rabbita.Cmd {
-  @cmd.custom_cmd(
-    scheduler => {
-      let document = @rdom.document()
-      match
-        (
-          document.query_selector(".hover-widget").to_option(),
-          document.query_selector(".code-viewer").to_option(),
-        ) {
-        (Some(widget), Some(viewer)) => {
-          let widget_rect = widget.get_bounding_client_rect()
-          let viewer_rect = viewer.get_bounding_client_rect()
-          let below = widget_rect.get_top() < viewer_rect.get_top()
-          let overflow = widget_rect.get_right() - viewer_rect.get_right()
-          let shift_left = if overflow > 0.0 { overflow } else { 0.0 }
-          scheduler.add(emit(HoverMeasured(below, shift_left)))
-        }
-        _ => ()
-      }
-    },
-    kind=@cmd.after_render,
-  )
 }

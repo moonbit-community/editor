@@ -76,58 +76,64 @@ async fn ProviderRegistry::hover_at(
 }
 
 ///|
-/// Commands controllers use to resolve features through the registry; each
-/// tags its result with the requesting document version so stale responses
-/// are dropped at handling in addition to id correlation.
-fn hover_provider_cmd(
-  emit : @rabbita.Emit[ViewerMsg],
-  document : @workspace.SourceDocument?,
-  offset : Int,
-  token : Int,
-) -> @rabbita.Cmd {
-  match document {
+/// Controllers resolve features through the registry with async runs;
+/// each result is tagged with the requesting document version (and the
+/// hover anchor token) so stale responses are dropped at handling.
+fn Viewer::request_hover(self : Viewer, offset : Int, token : Int) -> Unit {
+  match self.source_document {
     Some(document) => {
       let version = document.version
-      @cmd.perform(result => emit(HoverResolved(version, token, result)), async fn() noraise {
-        provider_registry.hover_at(document, offset)
+      @js.async_run(() => {
+        let hover = provider_registry.hover_at(document, offset)
+        self.hover_resolved(version, token, hover)
       })
     }
-    None => @rabbita.none
+    None => ()
   }
 }
 
 ///|
 /// Document-level features requested after a fresh render: diagnostics,
 /// symbols, and semantic tokens, each resolving independently.
-fn language_feature_cmds(
-  emit : @rabbita.Emit[ViewerMsg],
+fn Viewer::request_document_features(
+  self : Viewer,
   document : @workspace.SourceDocument,
-) -> @rabbita.Cmd {
+) -> Unit {
   let version = document.version
-  @rabbita.batch([
-    @cmd.perform(result => emit(DiagnosticsResolved(version, result)), async fn() noraise {
-      match provider_registry.diagnostics.get(0) {
-        Some(provider) =>
-          provider.diagnostics_for_document(document) catch {
-            _ => []
-          }
-        None => []
-      }
-    }),
-    @cmd.perform(result => emit(SymbolsResolved(version, result)), async fn() noraise {
-      match provider_registry.symbols.get(0) {
-        Some(provider) => provider.document_symbols(document) catch { _ => [] }
-        None => []
-      }
-    }),
-    @cmd.perform(result => emit(SemanticTokensResolved(version, result)), async fn() noraise {
-      match provider_registry.semantic_tokens.get(0) {
-        Some(provider) =>
-          provider.semantic_tokens_for_document(document) catch {
-            _ => []
-          }
-        None => []
-      }
-    }),
-  ])
+  @js.async_run(() => {
+    let diagnostics = match provider_registry.diagnostics.get(0) {
+      Some(provider) =>
+        provider.diagnostics_for_document(document) catch {
+          _ => []
+        }
+      None => []
+    }
+    if document_version(self.source_document) == version {
+      self.provider_result = { ..self.provider_result, diagnostics, }
+      self.render_feature_update()
+    }
+  })
+  @js.async_run(() => {
+    let symbols = match provider_registry.symbols.get(0) {
+      Some(provider) => provider.document_symbols(document) catch { _ => [] }
+      None => []
+    }
+    if document_version(self.source_document) == version {
+      self.provider_result = { ..self.provider_result, symbols, }
+      self.render_feature_update()
+    }
+  })
+  @js.async_run(() => {
+    let semantic_tokens = match provider_registry.semantic_tokens.get(0) {
+      Some(provider) =>
+        provider.semantic_tokens_for_document(document) catch {
+          _ => []
+        }
+      None => []
+    }
+    if document_version(self.source_document) == version {
+      self.provider_result = { ..self.provider_result, semantic_tokens, }
+      self.render_feature_update()
+    }
+  })
 }

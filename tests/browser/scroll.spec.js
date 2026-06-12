@@ -23,9 +23,9 @@ test('windows the rendered lines while keeping the document height', async ({ pa
   await expect(page.locator('.code-line[data-line="1"]')).toBeVisible();
   await expect(page.locator('.code-line[data-line="10000"]')).toHaveCount(0);
 
-  await page
-    .locator('.code-viewer')
-    .evaluate((viewer) => (viewer.scrollTop = viewer.scrollHeight));
+  // The harness scroll control drives the synthetic scroll model; the
+  // request clamps to the bottom of the document.
+  await page.evaluate(() => globalThis.__readonlyEditorScrollTo(1e9));
 
   await expect(page.locator('.code-line[data-line="10000"]')).toBeVisible();
   await expect(page.locator('.code-line[data-line="1"]')).toHaveCount(0);
@@ -36,9 +36,7 @@ test('resolves hover for the token under the mouse after scrolling', async ({ pa
   await page.goto('/');
   await openWorkspaceFile(page, 'src/generated_scroll.mbt');
 
-  await page
-    .locator('.code-viewer')
-    .evaluate((viewer) => (viewer.scrollTop = viewer.scrollHeight));
+  await page.evaluate(() => globalThis.__readonlyEditorScrollTo(1e9));
   const target = page.locator('.code span', { hasText: 'generated_value_1999' }).first();
   await expect(target).toBeVisible();
 

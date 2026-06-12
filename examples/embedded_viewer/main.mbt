@@ -209,11 +209,14 @@ fn update_embed(
     Boot => {
       let first_file = memory_uri(memory_root + "/src/main.mbt")
       (
-        @rabbita.batch([embed_tree().refresh(), embed_viewer().open(first_file)]),
+        @rabbita.batch([
+          embed_tree().refresh(),
+          @cmd.custom_cmd(_ => embed_viewer().open(first_file)),
+        ]),
         model,
       )
     }
-    OpenFile(uri) => (embed_viewer().open(uri), model)
+    OpenFile(uri) => (@cmd.custom_cmd(_ => embed_viewer().open(uri)), model)
     ViewerNotified(notification) =>
       match notification {
         ViewerDocumentRendered(document, fresh~, ..) => {
@@ -252,7 +255,10 @@ fn view_embed(
             embed_tree().view(),
           ],
         ),
-        embed_viewer().view(),
+        // The stable island host: the viewer attaches its imperative DOM
+        // into this element after the first paint; the shell must never
+        // render vdom children into it.
+        @html.div(class="viewer-host", ([] : Array[@html.Html])),
       ]),
     ],
   )
@@ -272,10 +278,19 @@ fn main {
   app.with_init(
     @cmd.custom_cmd(scheduler => {
       embed_dispatch.val = Some(msg => scheduler.add(emit(msg)))
-      // Boot after the first paint: the tree and viewer child cells must
-      // be mounted before messages can reach their update loops.
+      // Boot after the first paint: the island host and the tree cell
+      // must be in the DOM before the viewer attaches and opens.
       scheduler.add(
-        @cmd.custom_cmd(after => after.add(emit(Boot)), kind=@cmd.after_render),
+        @cmd.custom_cmd(
+          after => {
+            match @rdom.document().query_selector(".viewer-host").to_option() {
+              Some(host) => embed_viewer().attach(host)
+              None => ()
+            }
+            after.add(emit(Boot))
+          },
+          kind=@cmd.after_render,
+        ),
       )
     }),
   )

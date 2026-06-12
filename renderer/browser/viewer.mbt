@@ -1,18 +1,51 @@
 ///|
-/// The embeddable readonly code viewer, the `vs/editor` (Monaco) role: a
-/// Rabbita child cell owning the rendered frame, the input bridge, and the
-/// feature controllers. It is constructed with a `&DocumentSource` and
-/// reports lifecycle facts through `on_notification`; it knows nothing
-/// about transports, shells, or harness event formats.
+/// The embeddable readonly code viewer, the `vs/editor` (Monaco) role: an
+/// imperative view island owning the rendered frame, the scroll and
+/// layout model, the input bridge, and the feature controllers. It is
+/// constructed with a `&DocumentSource`, attached into a host-provided
+/// stable element, and reports lifecycle facts through `on_notification`;
+/// it knows nothing about transports, shells, or harness event formats.
+///
+/// All methods are plain calls (the host wraps them in its own effect
+/// system if it has one). The host must never render its own children
+/// into the element passed to `attach`.
 pub struct Viewer {
-  priv emit : @rabbita.Emit[ViewerMsg]
-  priv cell : @rabbita.Cell
+  priv source : &@workspace.DocumentSource
+  priv notify_host : (ViewerNotification) -> Unit
+  priv layout : @renderer.ViewLayout
+  priv mut theme : String
+  priv mut placeholder : String
+  priv mut frame : @renderer.RenderFrame?
+  priv mut frame_source : @renderer.FrameSource?
+  priv mut source_document : @workspace.SourceDocument?
+  priv mut provider_result : @language.ProviderResult
+  priv mut hover : HoverController
+  priv mut char_width : Double
+  priv mut max_line_length : Int
+  priv mut open_generation : Int
+  priv mut island : Island?
+  priv mut watch : @workspace.FileWatch?
+  priv mut render_pending : Bool
+  priv mut measure_requested : Bool
+  priv mut pending_rendered : PendingRendered?
+  priv mut scroll_dirty : Bool
+  /// Bumped whenever the inputs of line HTML change (new frame source or
+  /// changed controller decorations); the recycler rewrites every
+  /// rendered line when it differs, and only entering lines otherwise.
+  priv mut content_generation : Int
+  priv mut drag : ScrollbarDrag?
+}
+
+///|
+priv struct PendingRendered {
+  document : @workspace.SourceDocument
+  fresh : Bool
 }
 
 ///|
 /// Lifecycle facts the viewer reports to its host. The host formats and
 /// emits harness events, syncs its own chrome (title, status, tree
-/// reveal), and decides what to render while the viewer has no frame.
+/// reveal), and decides messaging while the viewer has no frame.
 pub(all) enum ViewerNotification {
   /// A frame build started for a document version with this many
   /// provider diagnostics merged in.
@@ -30,7 +63,8 @@ pub(all) enum ViewerNotification {
     build_ms~ : Double
   )
   /// The built frame painted. `fresh` marks a document switch or watched
-  /// change (as opposed to a same-version feature-data re-render).
+  /// change (as opposed to a same-version feature-data re-render);
+  /// `patch_ms` is the duration of the DOM flush that painted it.
   ViewerDocumentRendered(
     @workspace.SourceDocument,
     line_count~ : Int,
@@ -43,53 +77,8 @@ pub(all) enum ViewerNotification {
   ViewerDocumentFailed(@workspace.FileSystemProviderError)
   /// A hover request resolved (or resolved empty) for a document version.
   ViewerHoverResolved(ok~ : Bool, version~ : Int)
-}
-
-///|
-priv struct ViewerModel {
-  theme : String
-  /// Host-provided message shown while no frame is rendered. The host owns
-  /// the policy (loading/missing/error wording); the viewer only displays
-  /// it, so the viewer cell can stay mounted across document switches.
-  placeholder : String
-  frame : @renderer.RenderFrame?
-  /// The per-version render cache (tokenized document plus bucketed
-  /// feature data); window shifts and provider pushes rebuild frames
-  /// from it instead of re-tokenizing.
-  frame_source : @renderer.FrameSource?
-  source_document : @workspace.SourceDocument?
-  provider_result : @language.ProviderResult
-  hover : HoverController
-  scroll_top : Double
-  viewer_height : Double
-  char_width : Double
-  gutter_width : Double
-}
-
-///|
-priv enum ViewerMsg {
-  OpenUri(@workspace.DocumentUri)
-  SetTheme(String)
-  SetPlaceholder(String)
-  Remeasure
-  EscapePressed
-  PushDiagnostics(Array[@language.Diagnostic])
-  PushSymbols(Array[@language.DocumentSymbol])
-  PushSemanticTokens(Array[@language.SemanticToken])
-  DocumentSourceResolved(@workspace.SourceDocumentLoadResult)
-  DocumentRenderResolved(RenderedDocument, Bool)
-  EditorMouseMoved(Double, Double)
-  EditorMouseLeft
-  EditorScrolled(Double)
-  ViewerMeasured(Double, Double, Double)
-  FireHover(Int)
-  HoverDisplayDue(Int)
-  HoverLoadingDue(Int)
-  HoverMeasured(Bool, Double)
-  HoverResolved(Int, Int, @language.Hover?)
-  DiagnosticsResolved(Int, Array[@language.Diagnostic])
-  SymbolsResolved(Int, Array[@language.DocumentSymbol])
-  SemanticTokensResolved(Int, Array[@language.SemanticToken])
+  /// The synthetic scroll position settled after a paint.
+  ViewerScrolled(scroll_top~ : Double, scroll_left~ : Double)
 }
 
 ///|
@@ -99,56 +88,157 @@ pub fn Viewer::Viewer(
   theme? : String = "dark",
   placeholder? : String = "",
 ) -> Viewer {
-  let (emit, cell) = @rabbita.cell_with_emit(
-    model=initial_viewer_model(theme, placeholder),
-    update=(emit, msg, model) => {
-      update_viewer(source, on_notification, emit, msg, model)
-    },
-    view=view_viewer,
-  )
-  { emit, cell }
+  {
+    source,
+    notify_host: on_notification,
+    layout: @renderer.ViewLayout::new(line_height=editor_line_height),
+    theme,
+    placeholder,
+    frame: None,
+    frame_source: None,
+    source_document: None,
+    provider_result: @language.ProviderResult::empty(),
+    hover: HoverController::empty(),
+    char_width: 0.0,
+    max_line_length: 0,
+    open_generation: 0,
+    island: None,
+    watch: None,
+    render_pending: false,
+    measure_requested: false,
+    pending_rendered: None,
+    scroll_dirty: false,
+    content_generation: 0,
+    drag: None,
+  }
 }
 
 ///|
-/// Embeds the viewer as a Rabbita child cell.
-pub fn Viewer::view(self : Viewer) -> @html.Html {
-  self.cell.view()
+/// Builds the view island inside the host element and hooks its
+/// listeners. The host element must stay mounted and must never receive
+/// host-rendered children; the island owns its whole subtree.
+pub fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
+  if self.island is Some(_) {
+    return
+  }
+  let island = Island::build()
+  island.root.set_attribute("data-theme", self.theme)
+  host.append_child(island.root.as_node())
+  self.island = Some(island)
+  self.hook_island_input(island)
+  self.measure_requested = true
+  self.schedule_render()
 }
 
 ///|
 /// Owns the full document-switch choreography: closes the previous
-/// document and its watch, invalidates the code cell, subscribes the new
-/// watch, and opens the document through the source.
-pub fn Viewer::open(
-  self : Viewer,
-  uri : @workspace.DocumentUri,
-) -> @rabbita.Cmd {
-  (self.emit)(OpenUri(uri))
+/// document and its watch, clears the frame, subscribes the new watch,
+/// and opens the document through the source.
+pub fn Viewer::open(self : Viewer, uri : @workspace.DocumentUri) -> Unit {
+  self.open_generation += 1
+  let generation = self.open_generation
+  self.dispose_watch()
+  match self.source_document {
+    Some(document) => self.source.close_document(document.uri)
+    None => ()
+  }
+  self.frame = None
+  self.frame_source = None
+  self.source_document = None
+  self.provider_result = @language.ProviderResult::empty()
+  self.hover = HoverController::empty()
+  self.schedule_render()
+  self.watch = Some(
+    self.source.watch_document(uri, result => {
+      if generation == self.open_generation {
+        self.document_resolved(result)
+      }
+    }),
+  )
+  let source = self.source
+  @js.async_run(() => {
+    let result = source.open_document(uri) catch {
+      _ =>
+        SourceDocumentLoadError(
+          FileSystemProviderError(Unavailable, "Document open failed.", uri~),
+        )
+    }
+    if generation == self.open_generation {
+      self.document_resolved(result)
+    }
+  })
 }
 
 ///|
-/// Pushes the host's theme into the viewer (the theme keys the code cell,
-/// so a change remounts it and restores the scroll offset).
-pub fn Viewer::set_theme(self : Viewer, theme : String) -> @rabbita.Cmd {
-  (self.emit)(SetTheme(theme))
+/// Pushes the host's theme into the viewer. Colors cascade from the
+/// host's CSS theme variables, so this only mirrors the theme onto the
+/// island root as a `data-theme` attribute (for standalone styling); the
+/// island keeps its DOM and scroll position.
+pub fn Viewer::set_theme(self : Viewer, theme : String) -> Unit {
+  self.theme = theme
+  match self.island {
+    Some(island) => island.root.set_attribute("data-theme", theme)
+    None => ()
+  }
 }
 
 ///|
 /// Re-measures the viewer box after a host-observed layout change.
-pub fn Viewer::remeasure(self : Viewer) -> @rabbita.Cmd {
-  (self.emit)(Remeasure)
+pub fn Viewer::remeasure(self : Viewer) -> Unit {
+  self.measure_requested = true
+  self.schedule_render()
 }
 
 ///|
 /// Pushes the message shown while the viewer has no rendered frame.
-pub fn Viewer::set_placeholder(self : Viewer, message : String) -> @rabbita.Cmd {
-  (self.emit)(SetPlaceholder(message))
+pub fn Viewer::set_placeholder(self : Viewer, message : String) -> Unit {
+  if self.placeholder != message {
+    self.placeholder = message
+    self.schedule_render()
+  }
 }
 
 ///|
 /// Forwards the host-captured Escape key to the feature controllers.
-pub fn Viewer::escape(self : Viewer) -> @rabbita.Cmd {
-  (self.emit)(EscapePressed)
+pub fn Viewer::escape(self : Viewer) -> Unit {
+  self.dispatch_editor_event(EscapePressed)
+}
+
+///|
+/// Synthetic scroll entry points: the host routes keyboard scrolling
+/// (and the harness scroll control) through these; wheel and scrollbar
+/// input arrive through the island's own listeners.
+pub fn Viewer::scroll_to(self : Viewer, scroll_top : Double) -> Unit {
+  self.apply_scroll_change(self.layout.scroll_to(scroll_top~))
+}
+
+///|
+pub fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
+  self.apply_scroll_change(
+    self.layout.scroll_by(delta_top=(lines * editor_line_height).to_double()),
+  )
+}
+
+///|
+pub fn Viewer::scroll_by_pages(self : Viewer, pages : Int) -> Unit {
+  self.apply_scroll_change(
+    self.layout.scroll_by(
+      delta_top=pages.to_double() * self.layout.dimensions().height,
+    ),
+  )
+}
+
+///|
+pub fn Viewer::scroll_home(self : Viewer) -> Unit {
+  self.apply_scroll_change(self.layout.scroll_to(scroll_top=0.0))
+}
+
+///|
+pub fn Viewer::scroll_end(self : Viewer) -> Unit {
+  let dimensions = self.layout.dimensions()
+  self.apply_scroll_change(
+    self.layout.scroll_to(scroll_top=dimensions.scroll_height),
+  )
 }
 
 ///|
@@ -157,419 +247,83 @@ pub fn Viewer::escape(self : Viewer) -> @rabbita.Cmd {
 pub fn Viewer::push_diagnostics(
   self : Viewer,
   diagnostics : Array[@language.Diagnostic],
-) -> @rabbita.Cmd {
-  (self.emit)(PushDiagnostics(diagnostics))
+) -> Unit {
+  self.provider_result = { ..self.provider_result, diagnostics, }
+  self.render_feature_update()
 }
 
 ///|
 pub fn Viewer::push_symbols(
   self : Viewer,
   symbols : Array[@language.DocumentSymbol],
-) -> @rabbita.Cmd {
-  (self.emit)(PushSymbols(symbols))
+) -> Unit {
+  self.provider_result = { ..self.provider_result, symbols, }
+  self.render_feature_update()
 }
 
 ///|
 pub fn Viewer::push_semantic_tokens(
   self : Viewer,
   semantic_tokens : Array[@language.SemanticToken],
-) -> @rabbita.Cmd {
-  (self.emit)(PushSemanticTokens(semantic_tokens))
+) -> Unit {
+  self.provider_result = { ..self.provider_result, semantic_tokens, }
+  self.render_feature_update()
 }
 
 ///|
-fn initial_viewer_model(theme : String, placeholder : String) -> ViewerModel {
-  {
-    theme,
-    placeholder,
-    frame: None,
-    frame_source: None,
-    source_document: None,
-    provider_result: @language.ProviderResult::empty(),
-    hover: HoverController::empty(),
-    scroll_top: 0.0,
-    viewer_height: 0.0,
-    char_width: 0.0,
-    gutter_width: 0.0,
-  }
-}
-
-///|
-/// Outer update: after every state transition, the changed feature surface
-/// (if any) is pushed into the embedded code cell, so the cell only
-/// re-renders when something it draws actually changed; scroll or
-/// viewport changes past the hysteresis band rebuild the window frame
-/// from the cached source and push it the same way.
-fn update_viewer(
-  source : &@workspace.DocumentSource,
-  notify : (ViewerNotification) -> Unit,
-  emit : @rabbita.Emit[ViewerMsg],
-  msg : ViewerMsg,
-  model : ViewerModel,
-) -> (@rabbita.Cmd, ViewerModel) {
-  let (cmd, next) = viewer_update(source, notify, emit, msg, model)
-  let (window_cmd, next) = sync_code_window(next)
-  (@rabbita.batch([cmd, push_code_surface_cmd(next), window_cmd]), next)
-}
-
-///|
-fn viewer_update(
-  source : &@workspace.DocumentSource,
-  notify : (ViewerNotification) -> Unit,
-  emit : @rabbita.Emit[ViewerMsg],
-  msg : ViewerMsg,
-  model : ViewerModel,
-) -> (@rabbita.Cmd, ViewerModel) {
-  match msg {
-    OpenUri(uri) => {
-      invalidate_code_cell()
-      let next = {
-        ..model,
-        frame: None,
-        frame_source: None,
-        hover: HoverController::empty(),
-      }
-      (
-        @rabbita.batch([
-          close_document_cmd(source, model.source_document),
-          load_document_cmd(source, emit, uri),
-        ]),
-        next,
-      )
+fn Viewer::document_resolved(
+  self : Viewer,
+  result : @workspace.SourceDocumentLoadResult,
+) -> Unit {
+  match result {
+    SourceDocumentLoaded(document) => {
+      self.provider_result = @language.ProviderResult::empty()
+      self.hover = self.hover.cleared()
+      self.render_current_document(document, fresh=true, request_language=true)
     }
-    SetTheme(theme) =>
-      // The theme keys the code cell, so changing it remounts the viewer
-      // element; rehook the fresh element and restore its scroll offset.
-      (
-        @rabbita.batch([
-          attach_scroll_hook_cmd(emit),
-          restore_scroll_cmd(model.scroll_top),
-        ]),
-        { ..model, theme, },
-      )
-    SetPlaceholder(message) =>
-      (@rabbita.none, { ..model, placeholder: message })
-    Remeasure => (measure_viewer_cmd(emit), model)
-    EscapePressed => editor_event_update(emit, model, EscapePressed)
-    PushDiagnostics(diagnostics) =>
-      provider_result_update(notify, emit, model, {
-        ..model.provider_result,
-        diagnostics,
-      })
-    PushSymbols(symbols) =>
-      provider_result_update(notify, emit, model, {
-        ..model.provider_result,
-        symbols,
-      })
-    PushSemanticTokens(semantic_tokens) =>
-      provider_result_update(notify, emit, model, {
-        ..model.provider_result,
-        semantic_tokens,
-      })
-    DocumentSourceResolved(result) =>
-      match result {
-        SourceDocumentLoaded(document) =>
-          document_loaded_update(notify, emit, model, document)
-        SourceDocumentLoadError(error) => {
-          invalidate_code_cell()
-          (
-            @cmd.custom_cmd(_ => notify(ViewerDocumentFailed(error))),
-            {
-              ..model,
-              frame: None,
-              frame_source: None,
-              hover: model.hover.cleared(),
-            },
-          )
-        }
-      }
-    DocumentRenderResolved(rendered, fresh) =>
-      document_rendered_update(notify, emit, model, rendered, fresh)
-    EditorMouseMoved(x, y) => editor_mouse_moved_update(emit, model, x, y)
-    EditorMouseLeft => editor_event_update(emit, model, MouseLeft)
-    EditorScrolled(top) => (@rabbita.none, { ..model, scroll_top: top })
-    ViewerMeasured(height, char_width, gutter_width) =>
-      (
-        @rabbita.none,
-        { ..model, viewer_height: height, char_width, gutter_width },
-      )
-    FireHover(token) => {
-      let (cmd, hover) = model.hover.fire(emit, editor_context(model), token)
-      (cmd, { ..model, hover, })
+    SourceDocumentLoadError(error) => {
+      self.frame = None
+      self.frame_source = None
+      self.hover = self.hover.cleared()
+      (self.notify_host)(ViewerDocumentFailed(error))
+      self.schedule_render()
     }
-    HoverDisplayDue(token) => {
-      let (cmd, hover) = model.hover.display_due(emit, token)
-      (cmd, { ..model, hover, })
-    }
-    HoverLoadingDue(token) => {
-      let (cmd, hover) = model.hover.loading_due(token)
-      (cmd, { ..model, hover, })
-    }
-    HoverMeasured(below, shift_left) =>
-      (
-        @rabbita.none,
-        { ..model, hover: model.hover.measured(below, shift_left) },
-      )
-    HoverResolved(version, token, hover) => {
-      let (cmd, controller) = model.hover.resolved_hover(
-        notify,
-        emit,
-        version,
-        token,
-        hover,
-        frame_version(model.frame),
-      )
-      (cmd, { ..model, hover: controller })
-    }
-    DiagnosticsResolved(version, diagnostics) =>
-      if document_version(model.source_document) == version {
-        provider_result_update(notify, emit, model, {
-          ..model.provider_result,
-          diagnostics,
-        })
-      } else {
-        (@rabbita.none, model)
-      }
-    SymbolsResolved(version, symbols) =>
-      if document_version(model.source_document) == version {
-        provider_result_update(notify, emit, model, {
-          ..model.provider_result,
-          symbols,
-        })
-      } else {
-        (@rabbita.none, model)
-      }
-    SemanticTokensResolved(version, semantic_tokens) =>
-      if document_version(model.source_document) == version {
-        provider_result_update(notify, emit, model, {
-          ..model.provider_result,
-          semantic_tokens,
-        })
-      } else {
-        (@rabbita.none, model)
-      }
   }
-}
-
-///|
-/// Opens and watches a document through the `DocumentSource` trait: the
-/// open resolves as a correlated request, the watch listener dispatches
-/// every later load result back into the viewer's update loop.
-fn load_document_cmd(
-  source : &@workspace.DocumentSource,
-  emit : @rabbita.Emit[ViewerMsg],
-  uri : @workspace.DocumentUri,
-) -> @rabbita.Cmd {
-  @rabbita.batch([
-    @cmd.custom_cmd(scheduler => {
-      dispose_active_document_watch()
-      active_document_watch.val = Some(
-        source.watch_document(uri, result => {
-          scheduler.add(emit(DocumentSourceResolved(result)))
-        }),
-      )
-    }),
-    @cmd.perform(result => emit(DocumentSourceResolved(result)), async fn() noraise {
-      source.open_document(uri) catch {
-        _ =>
-          SourceDocumentLoadError(
-            FileSystemProviderError(Unavailable, "Document open failed.", uri~),
-          )
-      }
-    }),
-  ])
-}
-
-///|
-fn close_document_cmd(
-  source : &@workspace.DocumentSource,
-  document : @workspace.SourceDocument?,
-) -> @rabbita.Cmd {
-  match document {
-    Some(document) =>
-      @cmd.custom_cmd(_ => {
-        dispose_active_document_watch()
-        source.close_document(document.uri)
-      })
-    None => @rabbita.none
-  }
-}
-
-///|
-/// The single live document watch. Opening a new document disposes the
-/// previous watch before subscribing the next one.
-let active_document_watch : Ref[@workspace.FileWatch?] = Ref(None)
-
-///|
-fn dispose_active_document_watch() -> Unit {
-  match active_document_watch.val {
-    Some(watch) => watch.dispose()
-    None => ()
-  }
-  active_document_watch.val = None
-}
-
-///|
-fn document_loaded_update(
-  notify : (ViewerNotification) -> Unit,
-  emit : @rabbita.Emit[ViewerMsg],
-  model : ViewerModel,
-  document : @workspace.SourceDocument,
-) -> (@rabbita.Cmd, ViewerModel) {
-  let next = {
-    ..model,
-    provider_result: @language.ProviderResult::empty(),
-    hover: model.hover.cleared(),
-  }
-  (
-    // Fresh documents render from scroll offset zero (the code cell
-    // remounts at the top when the version rotates).
-    render_document_cmd(
-      notify,
-      emit,
-      document,
-      cached_tokenized(model, document),
-      next.provider_result,
-      0.0,
-      model.viewer_height,
-      true,
-    ),
-    next,
-  )
 }
 
 ///|
 /// Re-renders the current document with updated feature data.
-fn provider_result_update(
-  notify : (ViewerNotification) -> Unit,
-  emit : @rabbita.Emit[ViewerMsg],
-  model : ViewerModel,
-  providers : @language.ProviderResult,
-) -> (@rabbita.Cmd, ViewerModel) {
-  match model.source_document {
+fn Viewer::render_feature_update(self : Viewer) -> Unit {
+  match self.source_document {
     Some(document) =>
-      (
-        render_document_cmd(
-          notify,
-          emit,
-          document,
-          cached_tokenized(model, document),
-          providers,
-          model.scroll_top,
-          model.viewer_height,
-          false,
-        ),
-        { ..model, provider_result: providers },
+      self.render_current_document(
+        document,
+        fresh=false,
+        request_language=false,
       )
-    None => (@rabbita.none, model)
+    None => ()
   }
 }
 
 ///|
-fn document_rendered_update(
-  notify : (ViewerNotification) -> Unit,
-  emit : @rabbita.Emit[ViewerMsg],
-  model : ViewerModel,
-  rendered : RenderedDocument,
-  fresh : Bool,
-) -> (@rabbita.Cmd, ViewerModel) {
-  let next = {
-    ..model,
-    frame_source: Some(rendered.source),
-    source_document: Some(rendered.document),
-    hover: model.hover.cleared(),
+fn Viewer::dispose_watch(self : Viewer) -> Unit {
+  match self.watch {
+    Some(watch) => watch.dispose()
+    None => ()
   }
-  // A rotated cell key remounts the viewer element, which starts at
-  // scroll offset zero.
-  let next = if code_cell_retained(next, rendered.frame) {
-    next
-  } else {
-    { ..next, scroll_top: 0.0 }
-  }
-  // Scroll or measurement may have moved while the build ran; re-derive
-  // the window from the settled view state and rebuild from the source
-  // when it drifted (an O(window) rebuild).
-  let desired = desired_window(next, rendered.frame)
-  let frame = if desired.start == rendered.frame.viewport.start_line &&
-    desired.end == rendered.frame.viewport.end_line {
-    rendered.frame
-  } else {
-    @renderer.build_frame(rendered.source, {
-      start_line: desired.start,
-      end_line: desired.end,
-    })
-  }
-  let next = { ..next, frame: Some(frame) }
-  let commands = [
-    push_code_frame_cmd(next, frame),
-    rendered_notification_cmd(notify, rendered.document, frame, fresh),
-    attach_scroll_hook_cmd(emit),
-    measure_viewer_cmd(emit),
-  ]
-  if fresh {
-    commands.push(language_feature_cmds(emit, rendered.document))
-  }
-  (@rabbita.batch(commands), next)
+  self.watch = None
 }
 
 ///|
-/// Reports the painted frame to the host after the patch flushed, so the
-/// notification carries the real DOM patch duration.
-fn rendered_notification_cmd(
-  notify : (ViewerNotification) -> Unit,
-  document : @workspace.SourceDocument,
-  frame : @renderer.RenderFrame,
-  fresh : Bool,
-) -> @rabbita.Cmd {
-  @cmd.custom_cmd(
-    _ => {
-      let patch_ms = @dom.now_ms() - last_build_finished_at.val
-      notify(
-        ViewerDocumentRendered(
-          document,
-          line_count=frame.line_count,
-          rendered_lines=frame.lines.length(),
-          diagnostics=frame.diagnostics,
-          patch_ms~,
-          fresh~,
-        ),
-      )
-    },
-    kind=@cmd.after_render,
-  )
-}
-
-///|
-fn document_version(document : @workspace.SourceDocument?) -> Int {
-  match document {
-    Some(document) => document.version
-    None => -1
-  }
-}
-
-///|
-fn frame_version(frame : @renderer.RenderFrame?) -> Int {
-  match frame {
-    Some(item) => item.version
-    None => 0
-  }
-}
-
-///|
-fn view_viewer(
-  emit : @rabbita.Emit[ViewerMsg],
-  model : ViewerModel,
-) -> @html.Html {
-  match model.frame {
-    // The code surface is an embedded child cell so viewer-state updates
-    // that change nothing it draws skip its whole subtree (Rabbita's
-    // slot diff).
-    Some(frame) => code_surface_cell(emit, model, frame).view()
-    None =>
-      @html.section(
-        class="code-viewer source-empty",
-        attrs=@html.Attrs::build().aria_label("Readonly code viewer"),
-        [@html.div(class="source-message", model.placeholder)],
-      )
+fn Viewer::apply_scroll_change(
+  self : Viewer,
+  change : @renderer.ScrollChange?,
+) -> Unit {
+  match change {
+    Some(_) => {
+      self.scroll_dirty = true
+      self.schedule_render()
+    }
+    None => ()
   }
 }

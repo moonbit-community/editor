@@ -65,3 +65,22 @@ pub extern "js" fn storage_set_item(key : String, value : String) -> Unit =
   #|     // Persistence is best-effort; private browsing may deny storage.
   #|   }
   #| }
+
+///|
+/// One-shot timer; answers a handle for `clear_timeout`. The viewer's
+/// hover delays run through these instead of framework commands.
+pub extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Double =
+  #| (callback, ms) => globalThis.setTimeout(callback, ms)
+
+///|
+pub extern "js" fn clear_timeout(handle : Double) -> Unit =
+  #| (handle) => globalThis.clearTimeout(handle)
+
+///|
+/// Installs the harness scroll control: `__readonlyEditorScrollTo(top)`
+/// drives the viewer's synthetic scrolling, replacing the native
+/// `scrollTop` assignment specs used before the imperative view.
+pub extern "js" fn install_scroll_control(scroll_to : (Double) -> Unit) -> Unit =
+  #| (scroll_to) => {
+  #|   globalThis.__readonlyEditorScrollTo = (top) => scroll_to(Number(top) || 0);
+  #| }

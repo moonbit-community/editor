@@ -9,6 +9,7 @@ import {
   "baozhiyuan/editor/widgets/file_tree",
   "baozhiyuan/editor/workspace",
   "moonbit-community/rabbita",
+  "moonbit-community/rabbita/dom" @rdom,
   "moonbit-community/rabbita/cmd",
   "moonbit-community/rabbita/common",
   "moonbit-community/rabbita/html",

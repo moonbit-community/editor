@@ -6,9 +6,6 @@ import {
   "baozhiyuan/editor/renderer",
   "baozhiyuan/editor/syntax",
   "baozhiyuan/editor/workspace",
-  "moonbit-community/rabbita",
-  "moonbit-community/rabbita/cmd",
-  "moonbit-community/rabbita/html",
   "moonbit-community/rabbita/dom" @rdom,
   "moonbit-community/rabbita/js",
 }

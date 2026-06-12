@@ -1,14 +1,20 @@
 ///|
-fn test_frame() -> @renderer.RenderFrame {
+fn hit_test_frame(viewport? : @renderer.FrameViewport) -> @renderer.RenderFrame {
   let doc = @core.DocumentSnapshot("fn main {\n  let x = 1\n}\n\nfn other {}")
-  let tokens = @syntax.highlight(doc)
-  @renderer.build_frame(
+  let tokenized = @renderer.TokenizedDocument::build(
     doc,
-    { start_line: 0, end_line: doc.line_count() },
-    tokens,
+    @syntax.highlight(doc),
+  )
+  let source = @renderer.FrameSource(
+    tokenized,
     @decorations.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
+  let viewport = match viewport {
+    Some(viewport) => viewport
+    None => { start_line: 0, end_line: doc.line_count() }
+  }
+  @renderer.build_frame(source, viewport)
 }
 
 ///|
@@ -30,7 +36,7 @@ fn test_metrics(
 
 ///|
 test "hit test resolves gutter, text, and empty content targets" {
-  let frame = test_frame()
+  let frame = hit_test_frame()
   // Inside the gutter band of the first line.
   debug_inspect(
     @renderer.hit_test(frame, test_metrics(), 10.0, 4.0),
@@ -74,7 +80,7 @@ test "hit test resolves gutter, text, and empty content targets" {
 
 ///|
 test "hit test maps scrolled coordinates and below-content space" {
-  let frame = test_frame()
+  let frame = hit_test_frame()
   // Scrolled down one line: y=4 now lands on line 2, column 2 -> `let`.
   debug_inspect(
     @renderer.hit_test(frame, test_metrics(scroll_top=18.0), 50.0 + 16.0, 4.0),
@@ -118,7 +124,7 @@ test "hit test maps scrolled coordinates and below-content space" {
 
 ///|
 test "hit test accounts for view zones displacing following lines" {
-  let frame = test_frame()
+  let frame = hit_test_frame()
   let metrics = test_metrics(view_zones=[{ anchor_line: 1, height_px: 36 }])
   // The zone band itself belongs to the widget, not the editor content.
   debug_inspect(
@@ -163,7 +169,7 @@ test "hit test accounts for view zones displacing following lines" {
 
 ///|
 test "hit test reports empty lines and windowed-out lines as content empty" {
-  let frame = test_frame()
+  let frame = hit_test_frame()
   // Line 4 is empty: any column resolves to its start offset.
   debug_inspect(
     @renderer.hit_test(frame, test_metrics(), 70.0, 18.0 * 3.0 + 4.0),
@@ -177,14 +183,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|}
     ),
   )
-  let doc = @core.DocumentSnapshot("fn main {\n  let x = 1\n}\n\nfn other {}")
-  let windowed = @renderer.build_frame(
-    doc,
-    { start_line: 0, end_line: 2 },
-    @syntax.highlight(doc),
-    @decorations.DecorationSet::empty(),
-    @language.ProviderResult::empty(),
-  )
+  let windowed = hit_test_frame(viewport={ start_line: 0, end_line: 2 })
   // Line 4 exists in the document but is outside the rendered window.
   debug_inspect(
     @renderer.hit_test(windowed, test_metrics(), 70.0, 18.0 * 3.0 + 4.0),

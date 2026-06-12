@@ -9,14 +9,12 @@ priv struct CodeSurface {
 priv struct CodeCellModel {
   frame : @renderer.RenderFrame
   surface : CodeSurface
-  window : @renderer.LineWindow
 }
 
 ///|
 priv enum CodeCellMsg {
   SurfaceUpdated(CodeSurface)
   FrameUpdated(@renderer.RenderFrame, CodeSurface)
-  WindowShifted(@renderer.LineWindow)
 }
 
 ///|
@@ -25,6 +23,8 @@ priv struct CodeCellEntry {
   emit : @rabbita.Emit[CodeCellMsg]
   cell : @rabbita.Cell
   mut surface : CodeSurface
+  /// The window of the frame the mounted cell renders, tracked for the
+  /// scroll hysteresis check.
   mut window : @renderer.LineWindow
 }
 
@@ -48,6 +48,11 @@ fn desired_window(
 }
 
 ///|
+fn frame_window(frame : @renderer.RenderFrame) -> @renderer.LineWindow {
+  { start: frame.viewport.start_line, end: frame.viewport.end_line }
+}
+
+///|
 /// Whether the cached cell instance survives for this model and frame.
 fn code_cell_retained(
   model : ViewerModel,
@@ -56,23 +61,6 @@ fn code_cell_retained(
   match code_cell_cache.val {
     Some(entry) => entry.key == code_cell_key(model, frame)
     None => false
-  }
-}
-
-///|
-/// The window the mounted (or about-to-mount) code cell renders.
-fn code_cell_window(
-  model : ViewerModel,
-  frame : @renderer.RenderFrame,
-) -> @renderer.LineWindow {
-  match code_cell_cache.val {
-    Some(entry) =>
-      if entry.key == code_cell_key(model, frame) {
-        entry.window
-      } else {
-        desired_window(model, frame)
-      }
-    None => desired_window(model, frame)
   }
 }
 
@@ -116,13 +104,18 @@ fn code_surface_cell(
     None => ()
   }
   let surface = code_surface(model)
-  let window = desired_window(model, frame)
   let (cell_emit, cell) = @rabbita.cell_with_emit(
-    model={ frame, surface, window },
+    model={ frame, surface },
     update=update_code_cell,
     view=(_, cell_model) => view_code_surface(emit, cell_model),
   )
-  code_cell_cache.val = Some({ key, emit: cell_emit, cell, surface, window })
+  code_cell_cache.val = Some({
+    key,
+    emit: cell_emit,
+    cell,
+    surface,
+    window: frame_window(frame),
+  })
   cell
 }
 
@@ -134,29 +127,37 @@ fn update_code_cell(
 ) -> (@rabbita.Cmd, CodeCellModel) {
   match msg {
     SurfaceUpdated(surface) => (@rabbita.none, { ..model, surface, })
-    FrameUpdated(frame, surface) => (@rabbita.none, { ..model, frame, surface })
-    WindowShifted(window) => (@rabbita.none, { ..model, window, })
+    FrameUpdated(frame, surface) => (@rabbita.none, { frame, surface })
   }
 }
 
 ///|
-/// Pushes a recomputed line window into the mounted code cell when scroll
-/// or viewport changes moved it past the hysteresis band.
-fn push_code_window_cmd(model : ViewerModel) -> @rabbita.Cmd {
-  match (code_cell_cache.val, model.frame) {
-    (Some(entry), Some(frame)) =>
+/// When scroll or viewport changes moved the desired window past the
+/// hysteresis band, rebuilds the window frame from the cached source (an
+/// O(window) build) and pushes it into the mounted code cell. The model's
+/// frame tracks the rebuilt window so hit tests stay aligned with the DOM.
+fn sync_code_window(model : ViewerModel) -> (@rabbita.Cmd, ViewerModel) {
+  match (code_cell_cache.val, model.frame, model.frame_source) {
+    (Some(entry), Some(frame), Some(source)) =>
       if entry.key == code_cell_key(model, frame) {
         let next = desired_window(model, frame)
         if @renderer.window_needs_update(entry.window, next, line_overscan) {
-          entry.window = next
-          (entry.emit)(WindowShifted(next))
+          let rebuilt = @renderer.build_frame(source, {
+            start_line: next.start,
+            end_line: next.end,
+          })
+          entry.window = frame_window(rebuilt)
+          (
+            (entry.emit)(FrameUpdated(rebuilt, entry.surface)),
+            { ..model, frame: Some(rebuilt) },
+          )
         } else {
-          @rabbita.none
+          (@rabbita.none, model)
         }
       } else {
-        @rabbita.none
+        (@rabbita.none, model)
       }
-    _ => @rabbita.none
+    _ => (@rabbita.none, model)
   }
 }
 
@@ -194,6 +195,7 @@ fn push_code_frame_cmd(
       if entry.key == code_cell_key(model, frame) {
         let surface = code_surface(model)
         entry.surface = surface
+        entry.window = frame_window(frame)
         (entry.emit)(FrameUpdated(frame, surface))
       } else {
         @rabbita.none
@@ -203,19 +205,18 @@ fn push_code_frame_cmd(
 }
 
 ///|
-/// Renders only the windowed lines, with spacers keeping the full scroll
-/// height so the native scrollbar stays correct.
+/// Renders the frame's window of lines, with spacers keeping the full
+/// scroll height so the native scrollbar stays correct.
 fn view_code_surface(
   emit : @rabbita.Emit[ViewerMsg],
   model : CodeCellModel,
 ) -> @html.Html {
   let frame = model.frame
   let surface = model.surface
-  let start = @core.clamp_int(model.window.start, 0, frame.lines.length())
-  let end = @core.clamp_int(model.window.end, start, frame.lines.length())
   let decorations = controller_decorations(surface)
-  let top_px = start * editor_line_height
-  let bottom_px = (frame.line_count - end) * editor_line_height
+  let top_px = frame.viewport.start_line * editor_line_height
+  let bottom_px = (frame.line_count - frame.viewport.end_line) *
+    editor_line_height
   let children : Map[String, @html.Html] = {}
   children["char-probe"] = @html.span(
     class="char-probe",
@@ -223,8 +224,7 @@ fn view_code_surface(
     char_probe_text,
   )
   children["top-spacer"] = line_spacer(top_px)
-  for index in start..<end {
-    let line = frame.lines[index]
+  for line in frame.lines {
     children["L" + line.line_number.to_string()] = view_line(decorations, line)
   }
   children["bottom-spacer"] = line_spacer(bottom_px)

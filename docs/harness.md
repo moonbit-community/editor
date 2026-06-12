@@ -63,8 +63,10 @@ through sidebar selection and the native remote protocol.
 
 The browser host logs structured events prefixed with `[readonly-editor]`:
 
-- `moonbit:render`: source line count, token count, diagnostic count, and
-  `buildMs` (frame construction duration).
+- `moonbit:render`: source line count, token count, diagnostic count,
+  `tokenizeMs` (whole-document tokenization for this document version;
+  near zero when a provider push reuses the cached tokenized document),
+  and `buildMs` (viewport window frame build from the per-line buckets).
 - `language:diagnostics`: active document diagnostic count and version after
   semantic provider sync.
 - `language:hover`: successful on-demand hover resolution for the active

@@ -229,6 +229,7 @@ fn viewer_notified_update(
       line_count~,
       token_count~,
       diagnostic_count~,
+      tokenize_ms~,
       build_ms~
     ) => {
       @dom.set_current_document(document.to_json())
@@ -237,6 +238,7 @@ fn viewer_notified_update(
         token_count,
         diagnostic_count,
         document.version,
+        tokenize_ms,
         build_ms,
       )
       (@rabbita.none, model)

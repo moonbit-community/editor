@@ -3,13 +3,10 @@ pub extern "js" fn install_host_capabilities() -> Unit =
   #| () => {
   #|   if (typeof globalThis.__readonlyEditorEvent !== "function") {
   #|     globalThis.__readonlyEditorEvent = (name, payload) => {
-  #|       let parsed = payload;
-  #|       try {
-  #|         parsed = JSON.parse(payload);
-  #|       } catch {
-  #|         // Keep malformed event payloads visible as raw strings.
-  #|       }
-  #|       console.info("[readonly-editor]", name, parsed);
+  #|       // Log the raw JSON string: console object previews truncate
+  #|       // after a handful of properties, which silently drops payload
+  #|       // keys from harness transcripts.
+  #|       console.info("[readonly-editor]", name, payload);
   #|     };
   #|   }
   #| }

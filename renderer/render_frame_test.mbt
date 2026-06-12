@@ -1,7 +1,32 @@
 ///|
+fn frame_for(
+  doc : @core.DocumentSnapshot,
+  viewport : @renderer.FrameViewport,
+  decorations? : @decorations.DecorationSet = @decorations.DecorationSet::empty(),
+  providers? : @language.ProviderResult = @language.ProviderResult::empty(),
+) -> @renderer.RenderFrame {
+  let tokenized = @renderer.TokenizedDocument::build(
+    doc,
+    @syntax.highlight(doc),
+  )
+  @renderer.build_frame(
+    FrameSource(tokenized, decorations, providers),
+    viewport,
+  )
+}
+
+///|
+fn join_span_text(line : @renderer.RenderLine) -> String {
+  let mut out = ""
+  for span in line.spans {
+    out = out + line.span_text(span)
+  }
+  out
+}
+
+///|
 test "render frame contains highlighted spans and provider surfaces" {
   let doc = @core.DocumentSnapshot("fn main { // TODO\n  let x = 1\n}")
-  let tokens = @syntax.highlight(doc)
   let decorations = @decorations.DecorationSet::from_array([
     Decoration(Range(13, 17), Diagnostic, "diag-warning", message="todo"),
   ])
@@ -12,33 +37,22 @@ test "render frame contains highlighted spans and provider surfaces" {
     symbols: [],
     semantic_tokens: [],
   }
-  let frame = @renderer.build_frame(
+  let frame = frame_for(
     doc,
     { start_line: 0, end_line: 2 },
-    tokens,
-    decorations,
-    providers,
+    decorations~,
+    providers~,
   )
   assert_eq(frame.lines.length(), 2)
   assert_true(frame.lines[0].spans.length() > 0)
-  assert_eq(join_span_text(frame.lines[0].spans), frame.lines[0].text)
+  assert_eq(join_span_text(frame.lines[0]), frame.lines[0].text)
   assert_eq(frame.diagnostics.length(), 1)
   assert_true(frame.to_json().contains("\"lineCount\""))
 }
 
 ///|
-fn join_span_text(spans : Array[@renderer.RenderSpan]) -> String {
-  let mut out = ""
-  for span in spans {
-    out = out + span.text
-  }
-  out
-}
-
-///|
 test "semantic tokens split spans and win on the overlapping segment" {
   let doc = @core.DocumentSnapshot("fn main { run() }")
-  let tokens = @syntax.highlight(doc)
   let providers = @language.ProviderResult::{
     hovers: [],
     diagnostics: [],
@@ -50,19 +64,13 @@ test "semantic tokens split spans and win on the overlapping segment" {
       { range: Range(10, 13), token_type: "function" },
     ],
   }
-  let frame = @renderer.build_frame(
-    doc,
-    { start_line: 0, end_line: 1 },
-    tokens,
-    @decorations.DecorationSet::empty(),
-    providers,
-  )
+  let frame = frame_for(doc, { start_line: 0, end_line: 1 }, providers~)
   let line = frame.lines[0]
-  assert_eq(join_span_text(line.spans), line.text)
+  assert_eq(join_span_text(line), line.text)
   let classes : Array[String] = []
   for span in line.spans {
     if span.class_name.contains("sem-function") {
-      classes.push(span.text + ":" + span.class_name)
+      classes.push(line.span_text(span) + ":" + span.class_name)
     }
   }
   debug_inspect(
@@ -74,9 +82,63 @@ test "semantic tokens split spans and win on the overlapping segment" {
   // The split keeps the rest of the identifier on the syntax class alone.
   let mut tail = ""
   for span in line.spans {
-    if span.text == "n" {
+    if line.span_text(span) == "n" {
       tail = span.class_name
     }
   }
   assert_eq(tail, "tok-identifier")
+}
+
+///|
+test "window builds match the matching slice of a whole-document build" {
+  let doc = @core.DocumentSnapshot(
+    "fn main { // TODO\n  let x = 1\n  let y = 2\n}\n\nfn other {\n  3\n}",
+  )
+  let providers = @language.ProviderResult::{
+    hovers: [],
+    diagnostics: [],
+    definitions: [],
+    symbols: [],
+    semantic_tokens: [{ range: Range(3, 7), token_type: "function" }],
+  }
+  let whole = frame_for(
+    doc,
+    { start_line: 0, end_line: doc.line_count() },
+    providers~,
+  )
+  let window = frame_for(doc, { start_line: 2, end_line: 5 }, providers~)
+  assert_eq(window.line_count, whole.line_count)
+  assert_eq(window.lines.length(), 3)
+  for index in 0..<window.lines.length() {
+    let windowed = window.lines[index]
+    let full = whole.lines[index + 2]
+    assert_eq(windowed.line_number, full.line_number)
+    assert_eq(windowed.offset, full.offset)
+    assert_eq(windowed.text, full.text)
+    assert_eq(windowed.spans.length(), full.spans.length())
+    for i in 0..<windowed.spans.length() {
+      assert_eq(windowed.spans[i].start, full.spans[i].start)
+      assert_eq(windowed.spans[i].end, full.spans[i].end)
+      assert_eq(windowed.spans[i].class_name, full.spans[i].class_name)
+    }
+  }
+}
+
+///|
+test "viewport bounds clamp to the document" {
+  let doc = @core.DocumentSnapshot("a\nb\nc")
+  let frame = frame_for(doc, { start_line: -5, end_line: 99 })
+  debug_inspect(
+    frame.viewport,
+    content=(
+      #|{ start_line: 0, end_line: 3 }
+    ),
+  )
+  let pinned = frame_for(doc, { start_line: 99, end_line: 99 })
+  debug_inspect(
+    pinned.viewport,
+    content=(
+      #|{ start_line: 2, end_line: 3 }
+    ),
+  )
 }

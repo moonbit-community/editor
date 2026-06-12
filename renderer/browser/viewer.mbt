@@ -18,11 +18,15 @@ pub(all) enum ViewerNotification {
   /// provider diagnostics merged in.
   ViewerDiagnosticsStatus(count~ : Int, version~ : Int)
   /// A frame finished building (synchronous facts, before paint).
+  /// `tokenize_ms` covers the per-version whole-document tokenization
+  /// (zero-ish when the tokenized cache was reused); `build_ms` covers
+  /// the viewport window build.
   ViewerFrameBuilt(
     @workspace.SourceDocument,
     line_count~ : Int,
     token_count~ : Int,
     diagnostic_count~ : Int,
+    tokenize_ms~ : Double,
     build_ms~ : Double
   )
   /// The built frame painted. `fresh` marks a document switch or watched
@@ -49,6 +53,10 @@ priv struct ViewerModel {
   /// it, so the viewer cell can stay mounted across document switches.
   placeholder : String
   frame : @renderer.RenderFrame?
+  /// The per-version render cache (tokenized document plus bucketed
+  /// feature data); window shifts and provider pushes rebuild frames
+  /// from it instead of re-tokenizing.
+  frame_source : @renderer.FrameSource?
   source_document : @workspace.SourceDocument?
   provider_result : @language.ProviderResult
   hover : HoverController
@@ -175,6 +183,7 @@ fn initial_viewer_model(theme : String, placeholder : String) -> ViewerModel {
     theme,
     placeholder,
     frame: None,
+    frame_source: None,
     source_document: None,
     provider_result: @language.ProviderResult::empty(),
     hover: HoverController::empty(),
@@ -188,7 +197,9 @@ fn initial_viewer_model(theme : String, placeholder : String) -> ViewerModel {
 ///|
 /// Outer update: after every state transition, the changed feature surface
 /// (if any) is pushed into the embedded code cell, so the cell only
-/// re-renders when something it draws actually changed.
+/// re-renders when something it draws actually changed; scroll or
+/// viewport changes past the hysteresis band rebuild the window frame
+/// from the cached source and push it the same way.
 fn update_viewer(
   source : &@workspace.DocumentSource,
   notify : (ViewerNotification) -> Unit,
@@ -197,14 +208,8 @@ fn update_viewer(
   model : ViewerModel,
 ) -> (@rabbita.Cmd, ViewerModel) {
   let (cmd, next) = viewer_update(source, notify, emit, msg, model)
-  (
-    @rabbita.batch([
-      cmd,
-      push_code_surface_cmd(next),
-      push_code_window_cmd(next),
-    ]),
-    next,
-  )
+  let (window_cmd, next) = sync_code_window(next)
+  (@rabbita.batch([cmd, push_code_surface_cmd(next), window_cmd]), next)
 }
 
 ///|
@@ -218,7 +223,12 @@ fn viewer_update(
   match msg {
     OpenUri(uri) => {
       invalidate_code_cell()
-      let next = { ..model, frame: None, hover: HoverController::empty() }
+      let next = {
+        ..model,
+        frame: None,
+        frame_source: None,
+        hover: HoverController::empty(),
+      }
       (
         @rabbita.batch([
           close_document_cmd(source, model.source_document),
@@ -264,7 +274,12 @@ fn viewer_update(
           invalidate_code_cell()
           (
             @cmd.custom_cmd(_ => notify(ViewerDocumentFailed(error))),
-            { ..model, frame: None, hover: model.hover.cleared() },
+            {
+              ..model,
+              frame: None,
+              frame_source: None,
+              hover: model.hover.cleared(),
+            },
           )
         }
       }
@@ -407,12 +422,16 @@ fn document_loaded_update(
     hover: model.hover.cleared(),
   }
   (
+    // Fresh documents render from scroll offset zero (the code cell
+    // remounts at the top when the version rotates).
     render_document_cmd(
       notify,
       emit,
       document,
-      model.source_document,
+      cached_tokenized(model, document),
       next.provider_result,
+      0.0,
+      model.viewer_height,
       true,
     ),
     next,
@@ -434,8 +453,10 @@ fn provider_result_update(
           notify,
           emit,
           document,
-          model.source_document,
+          cached_tokenized(model, document),
           providers,
+          model.scroll_top,
+          model.viewer_height,
           false,
         ),
         { ..model, provider_result: providers },
@@ -454,7 +475,7 @@ fn document_rendered_update(
 ) -> (@rabbita.Cmd, ViewerModel) {
   let next = {
     ..model,
-    frame: Some(rendered.frame),
+    frame_source: Some(rendered.source),
     source_document: Some(rendered.document),
     hover: model.hover.cleared(),
   }
@@ -465,15 +486,23 @@ fn document_rendered_update(
   } else {
     { ..next, scroll_top: 0.0 }
   }
-  let window = code_cell_window(next, rendered.frame)
+  // Scroll or measurement may have moved while the build ran; re-derive
+  // the window from the settled view state and rebuild from the source
+  // when it drifted (an O(window) rebuild).
+  let desired = desired_window(next, rendered.frame)
+  let frame = if desired.start == rendered.frame.viewport.start_line &&
+    desired.end == rendered.frame.viewport.end_line {
+    rendered.frame
+  } else {
+    @renderer.build_frame(rendered.source, {
+      start_line: desired.start,
+      end_line: desired.end,
+    })
+  }
+  let next = { ..next, frame: Some(frame) }
   let commands = [
-    push_code_frame_cmd(next, rendered.frame),
-    rendered_notification_cmd(
-      notify,
-      rendered,
-      window.end - window.start,
-      fresh,
-    ),
+    push_code_frame_cmd(next, frame),
+    rendered_notification_cmd(notify, rendered.document, frame, fresh),
     attach_scroll_hook_cmd(emit),
     measure_viewer_cmd(emit),
   ]
@@ -488,8 +517,8 @@ fn document_rendered_update(
 /// notification carries the real DOM patch duration.
 fn rendered_notification_cmd(
   notify : (ViewerNotification) -> Unit,
-  rendered : RenderedDocument,
-  rendered_lines : Int,
+  document : @workspace.SourceDocument,
+  frame : @renderer.RenderFrame,
   fresh : Bool,
 ) -> @rabbita.Cmd {
   @cmd.custom_cmd(
@@ -497,10 +526,10 @@ fn rendered_notification_cmd(
       let patch_ms = @dom.now_ms() - last_build_finished_at.val
       notify(
         ViewerDocumentRendered(
-          rendered.document,
-          line_count=rendered.frame.line_count,
-          rendered_lines~,
-          diagnostics=rendered.frame.diagnostics,
+          document,
+          line_count=frame.line_count,
+          rendered_lines=frame.lines.length(),
+          diagnostics=frame.diagnostics,
           patch_ms~,
           fresh~,
         ),

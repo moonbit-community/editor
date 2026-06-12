@@ -47,30 +47,28 @@ fn span_nodes(
   let spans : Array[@html.Html] = []
   for i in 0..<line.spans.length() {
     let span = line.spans[i]
-    let absolute_start = line.offset + span.start
-    let absolute_end = line.offset + span.end
-    spans.push(view_span(decorations, span, absolute_start, absolute_end))
+    spans.push(view_span(decorations, line, span))
   }
   spans
 }
 
 ///|
-/// Spans carry no handlers or data attributes: text plus classes only. All
-/// interaction routes through the container hit test.
+/// Spans carry no handlers or data attributes: text plus classes only.
+/// Spans hold columns, not text; the line's text is sliced here at
+/// emission time. All interaction routes through the container hit test.
 fn view_span(
   decorations : Array[@decorations.Decoration],
+  line : @renderer.RenderLine,
   span : @renderer.RenderSpan,
-  absolute_start : Int,
-  absolute_end : Int,
 ) -> @html.Html {
   let mut class_name = span.class_name
-  let span_range = @core.Range(absolute_start, absolute_end)
+  let span_range = @core.Range(line.offset + span.start, line.offset + span.end)
   for decoration in decorations {
     if decoration.kind != CurrentLine && decoration.range.intersects(span_range) {
       class_name = class_name + " " + decoration.class_name
     }
   }
-  @html.span(class=class_name, span.text)
+  @html.span(class=class_name, line.span_text(span))
 }
 
 ///|

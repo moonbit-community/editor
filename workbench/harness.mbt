@@ -11,6 +11,7 @@ fn emit_render_event(
   token_count : Int,
   diagnostic_count : Int,
   version : Int,
+  tokenize_ms : Double,
   build_ms : Double,
 ) -> Unit {
   let mut payload = "{"
@@ -19,6 +20,7 @@ fn emit_render_event(
   payload = payload + ",\"diagnosticCount\":"
   payload = payload + diagnostic_count.to_string()
   payload = payload + ",\"version\":" + version.to_string()
+  payload = payload + ",\"tokenizeMs\":" + tokenize_ms.to_string()
   payload = payload + ",\"buildMs\":" + build_ms.to_string()
   payload = payload + "}"
   emit_event("moonbit:render", payload)

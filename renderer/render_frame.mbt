@@ -5,10 +5,12 @@ pub(all) struct FrameViewport {
 } derive(Debug)
 
 ///|
+/// A styled segment of one line, as line-relative UTF-16 columns. Spans
+/// carry no text of their own; views slice the owning line's text at
+/// emission time.
 pub(all) struct RenderSpan {
   start : Int
   end : Int
-  text : String
   class_name : String
 } derive(Debug)
 
@@ -21,6 +23,10 @@ pub(all) struct RenderLine {
 } derive(Debug)
 
 ///|
+/// A viewport-scoped render frame, the Monaco `ViewportData` role: only
+/// the lines of the requested window, plus the document facts views need
+/// to place them (`viewport`, `line_count`). Frames are cheap to rebuild
+/// from a `FrameSource` whenever the window shifts.
 pub(all) struct RenderFrame {
   version : Int
   language_id : String
@@ -32,13 +38,13 @@ pub(all) struct RenderFrame {
 } derive(Debug)
 
 ///|
+/// Builds the frame for one viewport window from the per-line buckets of
+/// the source: O(window), independent of document length and token count.
 pub fn build_frame(
-  doc : @core.DocumentSnapshot,
+  source : FrameSource,
   viewport : FrameViewport,
-  tokens : Array[@syntax.Token],
-  decoration_set : @decorations.DecorationSet,
-  providers : @language.ProviderResult,
 ) -> RenderFrame {
+  let doc = source.tokenized.snapshot
   let start_line = @core.clamp_int(viewport.start_line, 0, doc.line_count() - 1)
   let end_line = @core.clamp_int(
     viewport.end_line,
@@ -51,9 +57,13 @@ pub fn build_frame(
     let line_end = doc.line_end_offset(line)
     let line_range = @core.Range(line_start, line_end)
     let spans = overlay_semantic_tokens(
-      spans_for_line(doc, line_range, tokens, decoration_set),
+      spans_for_line(
+        line_range,
+        source.tokenized.tokens_for_line(line),
+        source.line_decorations[line],
+      ),
       line_range,
-      providers.semantic_tokens,
+      source.line_semantic_tokens[line],
     )
     lines.push(RenderLine::{
       line_number: line + 1,
@@ -68,20 +78,9 @@ pub fn build_frame(
     line_count: doc.line_count(),
     viewport: { start_line, end_line },
     lines,
-    diagnostics: providers.diagnostics,
-    hovers: providers.hovers,
+    diagnostics: source.providers.diagnostics,
+    hovers: source.providers.hovers,
   }
-}
-
-///|
-pub fn render(
-  doc : @core.DocumentSnapshot,
-  viewport : FrameViewport,
-  tokens : Array[@syntax.Token],
-  decoration_set : @decorations.DecorationSet,
-  providers : @language.ProviderResult,
-) -> RenderFrame {
-  build_frame(doc, viewport, tokens, decoration_set, providers)
 }
 
 ///|
@@ -98,47 +97,47 @@ pub fn RenderFrame::to_json(self : RenderFrame) -> String {
 }
 
 ///|
+/// The text a span styles, sliced from its owning line.
+pub fn RenderLine::span_text(self : RenderLine, span : RenderSpan) -> String {
+  self.text[span.start:span.end].to_owned()
+}
+
+///|
 fn spans_for_line(
-  doc : @core.DocumentSnapshot,
   line_range : @core.Range,
   tokens : Array[@syntax.Token],
-  decoration_set : @decorations.DecorationSet,
+  line_decorations : Array[@decorations.Decoration],
 ) -> Array[RenderSpan] {
   let spans = []
-  let line_decorations = decoration_set.between(line_range)
   let mut cursor = line_range.start
   for token in tokens {
-    if token.range.intersects(line_range) {
-      let start = max_int(token.range.start, line_range.start)
-      let end = min_int(token.range.end, line_range.end)
-      if cursor < start {
-        spans.push({
-          start: cursor - line_range.start,
-          end: start - line_range.start,
-          text: doc.text[cursor:start].to_owned(),
-          class_name: @syntax.Plain.css_class(),
-        })
-      }
-      let mut class_name = token.tag.css_class()
-      for decoration in line_decorations {
-        if decoration.range.intersects(Range(start, end)) {
-          class_name = class_name + " " + decoration.class_name
-        }
-      }
+    // The bucket holds exactly the tokens intersecting this line.
+    let start = max_int(token.range.start, line_range.start)
+    let end = min_int(token.range.end, line_range.end)
+    if cursor < start {
       spans.push({
-        start: start - line_range.start,
-        end: end - line_range.start,
-        text: doc.text[start:end].to_owned(),
-        class_name,
+        start: cursor - line_range.start,
+        end: start - line_range.start,
+        class_name: @syntax.Plain.css_class(),
       })
-      cursor = end
     }
+    let mut class_name = token.tag.css_class()
+    for decoration in line_decorations {
+      if decoration.range.intersects(Range(start, end)) {
+        class_name = class_name + " " + decoration.class_name
+      }
+    }
+    spans.push({
+      start: start - line_range.start,
+      end: end - line_range.start,
+      class_name,
+    })
+    cursor = end
   }
   if cursor < line_range.end {
     spans.push({
       start: cursor - line_range.start,
       end: line_range.end - line_range.start,
-      text: doc.text[cursor:line_range.end].to_owned(),
       class_name: @syntax.Plain.css_class(),
     })
   }
@@ -202,12 +201,9 @@ fn slice_span(
   absolute_end : Int,
   extra_class : String,
 ) -> RenderSpan {
-  let relative_start = absolute_start - span_start
-  let relative_end = absolute_end - span_start
   {
-    start: span.start + relative_start,
-    end: span.start + relative_end,
-    text: span.text[relative_start:relative_end].to_owned(),
+    start: span.start + (absolute_start - span_start),
+    end: span.start + (absolute_end - span_start),
     class_name: span.class_name + extra_class,
   }
 }
@@ -243,22 +239,22 @@ fn line_json(line : RenderLine) -> String {
   out = out + "\"lineNumber\":" + line.line_number.to_string()
   out = out + ",\"offset\":" + line.offset.to_string()
   out = out + ",\"text\":" + json_string(line.text)
-  out = out + ",\"spans\":" + spans_json(line.spans)
+  out = out + ",\"spans\":" + spans_json(line)
   out + "}"
 }
 
 ///|
-fn spans_json(spans : Array[RenderSpan]) -> String {
+fn spans_json(line : RenderLine) -> String {
   let mut out = "["
-  for i in 0..<spans.length() {
+  for i in 0..<line.spans.length() {
     if i > 0 {
       out = out + ","
     }
-    let span = spans[i]
+    let span = line.spans[i]
     out = out + "{"
     out = out + "\"start\":" + span.start.to_string()
     out = out + ",\"end\":" + span.end.to_string()
-    out = out + ",\"text\":" + json_string(span.text)
+    out = out + ",\"text\":" + json_string(line.span_text(span))
     out = out + ",\"className\":" + json_string(span.class_name)
     out = out + "}"
   }

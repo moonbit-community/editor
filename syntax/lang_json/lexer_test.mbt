@@ -80,7 +80,7 @@ test "jsonc comments carry block state across lines" {
 test "block comment state round-trips through TokenizerState" {
   let lexer : &@syntax.LineTokenizer = @lang_json.JsonTokenizer::new()
   let (_, open_state) = lexer.tokenize_line("{ /* open", lexer.initial_state())
-  assert_true(open_state == @syntax.TokenizerState("c"))
+  assert_true(open_state == TokenizerState("c"))
   let (_, closed_state) = lexer.tokenize_line("still */ }", open_state)
   assert_true(closed_state == lexer.initial_state())
 }

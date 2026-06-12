@@ -12,8 +12,9 @@ recorded in `syntax/README.md`):
   rule-priority conflicts resolve by tie-break order (equal-length
   matches prefer the earlier arm) or a longer specific rule.
 - In pattern strings `\{` parses as (unsupported) string interpolation;
-  literal braces are written as classes (`[{]`, `[}]`), and `-`/`|`
-  need escaping even inside classes.
+  literal braces are written as classes (`[{]`, `[}]`), and bare `-`
+  and `]` are rejected inside classes (`|` is literal there). Verified
+  against the compiler's regex parser sources, not just probes.
 - Slicing mid-surrogate panics, so the hand-rolled plain fallback
   advances surrogate pairs whole; `lexmatch` itself is character-based
   and never splits pairs.

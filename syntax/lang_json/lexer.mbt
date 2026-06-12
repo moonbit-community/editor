@@ -85,9 +85,10 @@ fn normal_step(view : StringView) -> (StepOp, StringView) {
       )
     ("[{}\[\],:]", rest) => (Emit(Delimiter), rest)
     (".", rest) => (Emit(Punctuation), rest)
-    // Unreachable: the loop never feeds an empty view and `.` matches
-    // any character.
-    _ => (Blank, view)
+    // Unreachable while `.` covers the full charset (it includes lone
+    // surrogates); consumes the rest defensively so the driver loop can
+    // never stall on zero progress.
+    _ => (Blank, ""[:])
   }
 }
 
@@ -97,7 +98,7 @@ fn comment_step(view : StringView) -> (StepOp, StringView) {
     ("\*/", rest) => (LeaveComment, rest)
     ("[^*]+", rest) => (Emit(Comment), rest)
     ("\*", rest) => (Emit(Comment), rest)
-    _ => (Blank, view)
+    _ => (Blank, ""[:])
   }
 }
 

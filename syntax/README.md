@@ -38,15 +38,18 @@ layers (`workbench`, `examples/*`) may import `syntax/lang_*` —
 
 ## Monarch-to-`lexmatch` translation playbook
 
-Verified against moon 0.1.20260610. All offsets are UTF-16 code units
-(the repo position convention); `lexmatch` is character-based and never
-splits surrogate pairs.
+Verified against moon 0.1.20260610 and the compiler sources
+(`lib/xml/typing/typer.ml`, `lib/xml/regex/` in the compiler repo). All
+offsets are UTF-16 code units (the repo position convention);
+`lexmatch` is character-based and never splits surrogate pairs.
 
 - Write `with longest` (maximal munch) on every `lexmatch`. First-match
   semantics warn as deprecated even when written explicitly
-  (`lexmatch_first_match`, warning 0076), and `with longest` rejects
-  `if` guards — so Monarch rule-priority conflicts are resolved by rule
-  order (equal-length matches tie-break to the earlier arm) or by
+  (`lexmatch_first_match`, warning 0076, on by default; the
+  longest-match warning 0077 is off by default), and `with longest`
+  rejects `if` guards and start-rest binders — so Monarch rule-priority
+  conflicts are resolved by rule order (equal-length matches tie-break
+  to the earliest arm: the TDFA keeps the smallest accept id) or by
   adding a longer, more specific rule (see the `/**/` arm in
   `lang_javascript`).
 - Monarch `@keywords` cases: bind the identifier (`"[a-z]+" as word`)
@@ -65,12 +68,17 @@ splits surrogate pairs.
 - Pattern strings are raw regex literals (single-backslash escapes,
   validated at compile time), but `\{` inside them is parsed as string
   interpolation (unsupported) — write literal braces as classes:
-  `[{]`, `[}]`. Escape `-` and `|` even inside classes (`\-`, `\|`).
-  A single-character pattern binds a `Char`; multi-character patterns
-  bind a `StringView`.
+  `[{]`, `[}]` (bare braces are rejected outside classes). Inside
+  classes, bare `-` and `]` are rejected (`\-`, `\]`); `|` is literal.
+  The escape set is strict: `\X` for an unlisted `X` is a compile
+  error, not a literal `X`. A single-character pattern binds a `Char`;
+  multi-character patterns bind a `StringView`.
 - Make progress unconditionally: end every rule set with a
-  `(".", rest)` arm (one character, loses every longest-match tie) and
-  the mandatory `_` catch-all (only reachable on empty input).
+  `(".", rest)` arm (one character, loses every longest-match tie;
+  `.` is the full charset including lone surrogates, so it cannot fail
+  on non-empty input) and the mandatory `_` catch-all. The catch-all
+  runs when no rule matches — have it consume the remaining view so
+  the driver loop can never stall even if `.` semantics narrow.
 - A scripted Monarch-grammar translator is out of scope; languages are
   ported by hand from the Monaco `basic-languages` corpus or
   `codemirror/mode/` legacy stream modes.

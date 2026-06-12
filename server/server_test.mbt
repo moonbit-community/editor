@@ -45,6 +45,77 @@ async test "lists workspace entries through the host" {
 }
 
 ///|
+async test "resolves one directory level through the host" {
+  let host = FakeServerHost::new()
+  host.directories.set("", [
+    {
+      uri: expect_remote_uri("moon.mod"),
+      name: "moon.mod",
+      kind: File,
+      children: None,
+    },
+    {
+      uri: expect_remote_uri("src"),
+      name: "src",
+      kind: Directory,
+      children: None,
+    },
+  ])
+  host.directories.set("src", [
+    {
+      uri: expect_remote_uri("src/main.mbt"),
+      name: "main.mbt",
+      kind: File,
+      children: None,
+    },
+  ])
+  let server = test_remote_server("/workspace", host)
+
+  let root_uri = expect_uri("readonly-remote://workspace")
+  match server.resolve_directory({ id: "resolve-1", uri: root_uri }) {
+    DirectoryResolved(payload) => {
+      assert_eq(payload.id, "resolve-1")
+      assert_eq(payload.stat.uri.to_string(), "readonly-remote://workspace")
+      assert_eq(payload.stat.name, "workspace")
+      assert_true(payload.stat.kind == Directory)
+      match payload.stat.children {
+        Some(children) => {
+          assert_eq(children.length(), 2)
+          assert_eq(children[1].name, "src")
+          assert_true(children[1].children is None)
+        }
+        None => fail("expected resolved root children")
+      }
+    }
+    _ => fail("expected directory resolved")
+  }
+
+  match
+    server.resolve_directory({ id: "resolve-2", uri: expect_remote_uri("src") }) {
+    DirectoryResolved(payload) => {
+      assert_eq(payload.stat.name, "src")
+      match payload.stat.children {
+        Some(children) => assert_eq(children[0].name, "main.mbt")
+        None => fail("expected resolved src children")
+      }
+    }
+    _ => fail("expected directory resolved")
+  }
+
+  match
+    server.resolve_directory({
+      id: "resolve-3",
+      uri: expect_remote_uri("missing"),
+    }) {
+    RemoteError(error) => {
+      assert_eq(error.provider_code, "FileNotFound")
+      assert_eq(error.request_id, "resolve-3")
+    }
+    _ => fail("expected provider error")
+  }
+}
+
+///|
 async test "maps host read errors to protocol provider errors" {
   let host = FakeServerHost::new()
   host.errors.set("missing.mbt", (FileNotFound, "missing file"))
@@ -251,6 +322,7 @@ struct FakeServerHost {
   files : Map[String, String]
   errors : Map[String, (@workspace.FileSystemProviderErrorCode, String)]
   mut entries : Array[@remote_protocol.WorkspaceEntry]
+  directories : Map[String, Array[@workspace.WorkspaceStat]]
   listeners : Map[String, async (@workspace.FileChangeType) -> Unit]
 }
 
@@ -260,6 +332,7 @@ fn FakeServerHost::new() -> FakeServerHost {
     files: Map::default(),
     errors: Map::default(),
     entries: [],
+    directories: Map::default(),
     listeners: Map::default(),
   }
 }
@@ -279,6 +352,18 @@ async fn FakeServerHost::emit(
 ///|
 impl @server.ServerHost for FakeServerHost with fn list_workspace(self, _root) {
   ServerHostListOk(self.entries)
+}
+
+///|
+impl @server.ServerHost for FakeServerHost with fn read_directory(
+  self,
+  _root,
+  relative,
+) {
+  match self.directories.get(relative) {
+    Some(children) => ServerHostResolveOk(children)
+    None => ServerHostResolveError(FileNotFound, "Directory does not exist.")
+  }
 }
 
 ///|

@@ -104,6 +104,16 @@ pub impl @server.ServerHost for NativeServerHost with fn list_workspace(
 }
 
 ///|
+pub impl @server.ServerHost for NativeServerHost with fn read_directory(
+  self,
+  root,
+  relative,
+) {
+  ignore(self)
+  read_native_directory(root, relative)
+}
+
+///|
 pub impl @server.ServerHost for NativeServerHost with fn watch_text_file(
   self,
   root,
@@ -189,6 +199,65 @@ async fn list_native_workspace_dir(
       }
     None => ()
   }
+}
+
+///|
+/// Resolves exactly one directory level: a non-recursive `readdir` that
+/// reuses `skip_workspace_entry` filtering and mints each child's
+/// `readonly-remote://workspace/<path>` URI with unresolved children.
+async fn read_native_directory(
+  root : String,
+  relative : String,
+) -> @server.ServerHostResolveResult {
+  let normalized_root = normalize_host_path(root)
+  let dir_path = if relative == "" {
+    normalized_root
+  } else {
+    normalized_root + "/" + relative
+  }
+  if !@fs.exists(dir_path) {
+    return ServerHostResolveError(FileNotFound, "Directory does not exist.")
+  }
+  let root_real = realpath_or_normalized(normalized_root)
+  let dir_real = realpath_or_normalized(dir_path)
+  if !is_under_root(root_real, dir_real) {
+    return ServerHostResolveError(
+      InvalidUri,
+      "Directory path escapes the workspace root.",
+    )
+  }
+  match (Some(@fs.kind(dir_real)) catch { _ => None }) {
+    Some(Directory) => ()
+    _ =>
+      return ServerHostResolveError(
+        FileNotADirectory,
+        "Path is not a directory.",
+      )
+  }
+  let names = Some(@fs.readdir(dir_path, include_hidden=true, sort=true)) catch {
+    _ => None
+  }
+  guard names is Some(names) else {
+    return ServerHostResolveError(Unavailable, "Unable to read directory.")
+  }
+  let children : Array[@workspace.WorkspaceStat] = []
+  for name in names {
+    let path = if relative == "" { name } else { relative + "/" + name }
+    if !skip_workspace_entry(path~, name~) {
+      let kind : @workspace.WorkspaceEntryKind? = match
+        (Some(@fs.kind(dir_path + "/" + name)) catch { _ => None }) {
+        Some(Directory) => Some(Directory)
+        Some(Regular) => Some(File)
+        _ => None
+      }
+      match (kind, @server.remote_document_uri(path)) {
+        (Some(kind), Some(uri)) =>
+          children.push({ uri, name, kind, children: None })
+        _ => ()
+      }
+    }
+  }
+  ServerHostResolveOk(children)
 }
 
 ///|

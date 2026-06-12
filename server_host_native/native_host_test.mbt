@@ -78,6 +78,88 @@ async test "native host lists workspace entries in preorder and skips generated 
 }
 
 ///|
+async test "native host resolves one directory level with minted uris" {
+  let root = "_build/native_host_resolve_test"
+  reset_dir(root)
+  @async.with_task_group() <| group => {
+    group.add_defer(() => @fs.rmdir(root, recursive=true))
+    @fs.mkdir(root + "/src/lib", recursive=true)
+    @fs.mkdir(root + "/_build", recursive=true)
+    @fs.write_file(
+      root + "/moon.mod",
+      "name = \"fixture\"\n",
+      create_mode=CreateOrTruncate,
+    )
+    @fs.write_file(
+      root + "/src/main.mbt",
+      "pub fn main {}\n",
+      create_mode=CreateOrTruncate,
+    )
+    @fs.write_file(
+      root + "/src/lib/util.mbt",
+      "pub fn util {}\n",
+      create_mode=CreateOrTruncate,
+    )
+
+    let host = @server_host_native.native_server_host()
+    match host.read_directory(root, "") {
+      ServerHostResolveOk(children) => {
+        // One level only, with generated trees filtered out and every
+        // child carrying a minted URI and unresolved children.
+        assert_eq(
+          stat_kind(children, "readonly-remote://workspace/moon.mod"),
+          "file",
+        )
+        assert_eq(
+          stat_kind(children, "readonly-remote://workspace/src"),
+          "directory",
+        )
+        assert_eq(children.length(), 2)
+        for child in children {
+          assert_true(child.children is None)
+        }
+      }
+      ServerHostResolveError(_code, message) => fail(message)
+    }
+
+    match host.read_directory(root, "src") {
+      ServerHostResolveOk(children) => {
+        assert_eq(
+          stat_kind(children, "readonly-remote://workspace/src/lib"),
+          "directory",
+        )
+        assert_eq(
+          stat_kind(children, "readonly-remote://workspace/src/main.mbt"),
+          "file",
+        )
+        assert_eq(children.length(), 2)
+      }
+      ServerHostResolveError(_code, message) => fail(message)
+    }
+
+    match host.read_directory(root, "missing") {
+      ServerHostResolveError(code, _) => assert_true(code == FileNotFound)
+      ServerHostResolveOk(_) => fail("expected missing directory error")
+    }
+
+    match host.read_directory(root, "moon.mod") {
+      ServerHostResolveError(code, _) => assert_true(code == FileNotADirectory)
+      ServerHostResolveOk(_) => fail("expected non-directory error")
+    }
+  }
+}
+
+///|
+fn stat_kind(stats : Array[@workspace.WorkspaceStat], uri : String) -> String {
+  for stat in stats {
+    if stat.uri.to_string() == uri {
+      return stat.kind.to_string()
+    }
+  }
+  ""
+}
+
+///|
 async test "native host polling watch emits changed and deleted" {
   let root = "_build/native_host_watch_test"
   reset_dir(root)

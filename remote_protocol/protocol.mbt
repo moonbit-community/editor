@@ -58,6 +58,7 @@ pub(all) struct DocumentVersionRequest {
 ///|
 pub(all) enum ClientPacket {
   ListWorkspace(WorkspaceListRequest)
+  ResolveDirectory(DocumentRequest)
   OpenDocument(DocumentRequest)
   WatchDocument(DocumentRequest)
   CloseDocument(DocumentRequest)
@@ -79,6 +80,14 @@ pub(all) struct DocumentPayload {
 pub(all) struct WorkspaceListedPayload {
   id : String
   entries : Array[WorkspaceEntry]
+} derive(Debug)
+
+///|
+/// One stat for the requested directory URI with exactly one level of
+/// `children` resolved; nested directories arrive with `children: None`.
+pub(all) struct DirectoryResolvedPayload {
+  id : String
+  stat : @workspace.WorkspaceStat
 } derive(Debug)
 
 ///|
@@ -144,6 +153,7 @@ pub(all) struct SemanticTokensResultPayload {
 ///|
 pub(all) enum ServerPacket {
   WorkspaceListed(WorkspaceListedPayload)
+  DirectoryResolved(DirectoryResolvedPayload)
   DocumentLoaded(DocumentPayload)
   DocumentChanged(DocumentPayload)
   Diagnostics(DiagnosticsPayload)
@@ -240,6 +250,8 @@ pub fn negotiate_protocol_version(version : Int) -> ProtocolNegotiation {
 pub fn ClientPacket::to_json(self : ClientPacket) -> String {
   match self {
     ListWorkspace(request) => workspace_list_request_json(request)
+    ResolveDirectory(request) =>
+      document_request_json("ResolveDirectory", request)
     OpenDocument(request) => document_request_json("OpenDocument", request)
     WatchDocument(request) => document_request_json("WatchDocument", request)
     CloseDocument(request) => document_request_json("CloseDocument", request)
@@ -256,6 +268,7 @@ pub fn ClientPacket::to_json(self : ClientPacket) -> String {
 pub fn ServerPacket::to_json(self : ServerPacket) -> String {
   match self {
     WorkspaceListed(payload) => workspace_listed_json(payload)
+    DirectoryResolved(payload) => directory_resolved_json(payload)
     DocumentLoaded(payload) => document_payload_json("DocumentLoaded", payload)
     DocumentChanged(payload) =>
       document_payload_json("DocumentChanged", payload)
@@ -279,6 +292,10 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
           match json_string_field(packet, "type") {
             Some("ListWorkspace") =>
               DecodedClientPacket(ListWorkspace({ id: request_id(packet) }))
+            Some("ResolveDirectory") =>
+              decode_document_client(packet, request_id(packet), request => {
+                ResolveDirectory(request)
+              })
             Some("OpenDocument") =>
               decode_document_client(packet, request_id(packet), request => {
                 OpenDocument(request)
@@ -350,6 +367,8 @@ pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
           match json_string_field(packet, "type") {
             Some("WorkspaceListed") =>
               decode_workspace_listed_payload(packet, request_id(packet))
+            Some("DirectoryResolved") =>
+              decode_directory_resolved_payload(packet, request_id(packet))
             Some("DocumentLoaded") =>
               decode_document_server(packet, request_id(packet), payload => {
                 DocumentLoaded(payload)
@@ -468,6 +487,35 @@ fn decode_document_server(
         ProtocolError(
           ProtocolInvalidPacket,
           "Document packet is missing a document.",
+          request_id=id,
+        ),
+      )
+  }
+}
+
+///|
+fn decode_directory_resolved_payload(
+  packet : Json,
+  id : String,
+) -> ServerPacketDecodeResult {
+  match json_field(packet, "stat") {
+    Some(stat_json) =>
+      match parse_workspace_stat(stat_json) {
+        Some(stat) => DecodedServerPacket(DirectoryResolved({ id, stat }))
+        None =>
+          ServerPacketDecodeError(
+            ProtocolError(
+              ProtocolInvalidPacket,
+              "Directory resolved packet carries an invalid stat.",
+              request_id=id,
+            ),
+          )
+      }
+    None =>
+      ServerPacketDecodeError(
+        ProtocolError(
+          ProtocolInvalidPacket,
+          "Directory resolved packet is missing a stat.",
           request_id=id,
         ),
       )
@@ -855,6 +903,69 @@ fn workspace_listed_json(payload : WorkspaceListedPayload) -> String {
   let mut out = packet_head("WorkspaceListed", payload.id)
   out = out + ",\"entries\":" + workspace_entries_json(payload.entries)
   out + "}"
+}
+
+///|
+fn directory_resolved_json(payload : DirectoryResolvedPayload) -> String {
+  let mut out = packet_head("DirectoryResolved", payload.id)
+  out = out + ",\"stat\":" + workspace_stat_json(payload.stat)
+  out + "}"
+}
+
+///|
+/// Kind crosses the wire as a string; unresolved `children` is omitted so
+/// the decoder can tell "not resolved" (`None`) from "empty" (`[]`).
+fn workspace_stat_json(stat : @workspace.WorkspaceStat) -> String {
+  let mut out = "{"
+  out = out + "\"uri\":" + json_string(stat.uri.to_string())
+  out = out + ",\"name\":" + json_string(stat.name)
+  out = out + ",\"kind\":" + json_string(stat.kind.to_string())
+  match stat.children {
+    Some(children) => {
+      out = out + ",\"children\":["
+      for i in 0..<children.length() {
+        if i > 0 {
+          out = out + ","
+        }
+        out = out + workspace_stat_json(children[i])
+      }
+      out = out + "]"
+    }
+    None => ()
+  }
+  out + "}"
+}
+
+///|
+fn parse_workspace_stat(value : Json) -> @workspace.WorkspaceStat? {
+  guard value is Object(_) else { return None }
+  guard json_string_field(value, "uri") is Some(raw_uri) else { return None }
+  guard @workspace.DocumentUri::parse(raw_uri) is ParsedDocumentUri(uri) else {
+    return None
+  }
+  guard json_string_field(value, "kind") is Some(raw_kind) else { return None }
+  guard @workspace.WorkspaceEntryKind::from_string(raw_kind) is Some(kind) else {
+    return None
+  }
+  let children = match json_field(value, "children") {
+    Some(Array(items)) => {
+      let resolved = []
+      for item in items {
+        match parse_workspace_stat(item) {
+          Some(stat) => resolved.push(stat)
+          None => ()
+        }
+      }
+      Some(resolved)
+    }
+    _ => None
+  }
+  Some({
+    uri,
+    name: json_string_field(value, "name").unwrap_or(uri.display_name()),
+    kind,
+    children,
+  })
 }
 
 ///|

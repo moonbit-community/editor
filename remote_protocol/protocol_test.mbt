@@ -120,6 +120,84 @@ test "encodes and decodes semantic client packets" {
 }
 
 ///|
+test "encodes and decodes directory resolve packets" {
+  let root_uri = expect_uri("readonly-remote://workspace")
+  let request = @remote_protocol.ResolveDirectory({
+    id: "resolve-1",
+    uri: root_uri,
+  })
+  let encoded = request.to_json()
+  assert_true(encoded.contains("\"type\":\"ResolveDirectory\""))
+  match @remote_protocol.decode_client_packet(encoded) {
+    DecodedClientPacket(ResolveDirectory(decoded)) => {
+      assert_eq(decoded.id, "resolve-1")
+      assert_eq(decoded.uri.to_string(), "readonly-remote://workspace")
+    }
+    DecodedClientPacket(_) => fail("unexpected resolve directory packet")
+    ClientPacketDecodeError(error) => fail(error.message)
+  }
+  let src_uri = expect_uri("readonly-remote://workspace/src")
+  let resolved = @remote_protocol.DirectoryResolved({
+    id: "resolve-1",
+    stat: {
+      uri: root_uri,
+      name: "workspace",
+      kind: Directory,
+      children: Some([
+        {
+          uri: expect_uri("readonly-remote://workspace/moon.mod"),
+          name: "moon.mod",
+          kind: File,
+          children: None,
+        },
+        { uri: src_uri, name: "src", kind: Directory, children: None },
+      ]),
+    },
+  })
+  match @remote_protocol.decode_server_packet(resolved.to_json()) {
+    DecodedServerPacket(DirectoryResolved(payload)) => {
+      assert_eq(payload.id, "resolve-1")
+      assert_eq(payload.stat.uri.to_string(), "readonly-remote://workspace")
+      assert_eq(payload.stat.name, "workspace")
+      assert_true(payload.stat.kind == Directory)
+      match payload.stat.children {
+        Some(children) => {
+          assert_eq(children.length(), 2)
+          assert_eq(children[0].name, "moon.mod")
+          assert_true(children[0].kind == File)
+          assert_true(children[0].children is None)
+          assert_eq(
+            children[1].uri.to_string(),
+            "readonly-remote://workspace/src",
+          )
+          assert_true(children[1].kind == Directory)
+          assert_true(children[1].children is None)
+        }
+        None => fail("expected resolved children")
+      }
+    }
+    DecodedServerPacket(_) => fail("unexpected directory resolved packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+
+  // An empty resolved directory stays Some([]) across the wire; only
+  // unresolved children round-trip as None.
+  let empty = @remote_protocol.DirectoryResolved({
+    id: "resolve-2",
+    stat: { uri: src_uri, name: "src", kind: Directory, children: Some([]) },
+  })
+  match @remote_protocol.decode_server_packet(empty.to_json()) {
+    DecodedServerPacket(DirectoryResolved(payload)) =>
+      match payload.stat.children {
+        Some(children) => assert_eq(children.length(), 0)
+        None => fail("expected empty children")
+      }
+    DecodedServerPacket(_) => fail("unexpected empty directory packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+}
+
+///|
 test "encodes and decodes server document and language packets" {
   let uri = expect_uri(
     "readonly-remote://workspace/docs/fixtures/project/src/main.mbt",

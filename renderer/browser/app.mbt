@@ -366,6 +366,7 @@ fn server_packet_update(
       })
     // Feature results without a waiting request are unsolicited; provider
     // commands consume theirs through the pending table.
+    DirectoryResolved(_) => (@rabbita.none, model)
     HoverResult(_) => (@rabbita.none, model)
     DefinitionResult(_) => (@rabbita.none, model)
     ReferencesResult(_) => (@rabbita.none, model)

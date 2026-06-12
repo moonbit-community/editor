@@ -17,6 +17,14 @@ pub(all) enum ServerHostListResult {
 } derive(Debug)
 
 ///|
+/// One resolved directory level: child stats with provider-minted URIs and
+/// `children: None` (unresolved), the `IFileService.resolve` contract.
+pub(all) enum ServerHostResolveResult {
+  ServerHostResolveOk(Array[@workspace.WorkspaceStat])
+  ServerHostResolveError(@workspace.FileSystemProviderErrorCode, String)
+} derive(Debug)
+
+///|
 pub struct ServerWatch {
   priv dispose : () -> Unit
 }
@@ -24,6 +32,7 @@ pub struct ServerWatch {
 ///|
 pub(open) trait ServerHost {
   async fn list_workspace(Self, String) -> ServerHostListResult
+  async fn read_directory(Self, String, String) -> ServerHostResolveResult
   async fn read_text_file(Self, String, @workspace.SourcePath) -> ServerHostReadResult
   fn watch_text_file(
     Self,
@@ -131,6 +140,40 @@ pub fn resolve_remote_document_uri(
 }
 
 ///|
+pub(all) enum RemoteDirectoryResult {
+  /// Root-relative directory path ("" for the workspace root itself) plus
+  /// the directory's display name.
+  ParsedRemoteDirectory(String, String)
+  RemoteDirectoryError(@remote_protocol.ProtocolError)
+} derive(Debug)
+
+///|
+/// Resolves a directory URI to its root-relative path. Accepts the bare
+/// `readonly-remote://workspace` root, which `resolve_remote_document_uri`
+/// rejects because documents always carry a path.
+pub fn resolve_remote_directory_uri(
+  uri : @workspace.DocumentUri,
+  request_id? : String = "",
+) -> RemoteDirectoryResult {
+  if uri.to_string() == "readonly-remote://workspace" {
+    return ParsedRemoteDirectory("", "workspace")
+  }
+  match resolve_remote_document_uri(uri, request_id~) {
+    ParsedRemotePath(path) =>
+      ParsedRemoteDirectory(path.to_string(), directory_name(path.to_string()))
+    RemotePathError(error) => RemoteDirectoryError(error)
+  }
+}
+
+///|
+fn directory_name(path : String) -> String {
+  match path.rev_find("/") {
+    Some(index) => path[index + 1:].to_owned()
+    None => path
+  }
+}
+
+///|
 pub async fn RemoteServer::handle_client_packet(
   self : RemoteServer,
   packet : @remote_protocol.ClientPacket,
@@ -139,6 +182,7 @@ pub async fn RemoteServer::handle_client_packet(
 ) -> Array[@remote_protocol.ServerPacket] {
   match packet {
     ListWorkspace(request) => [self.list_workspace(request)]
+    ResolveDirectory(request) => [self.resolve_directory(request)]
     OpenDocument(request) => [self.open_document(request)]
     WatchDocument(request) => [self.watch_document(request, emit, spawn_watch)]
     CloseDocument(request) => {
@@ -168,6 +212,39 @@ pub async fn RemoteServer::list_workspace(
           request_id=request.id,
         ),
       )
+  }
+}
+
+///|
+/// Resolves one directory level: the stat for the requested URI with its
+/// immediate children attached. The workspace root resolves through the
+/// bare `readonly-remote://workspace` URI.
+pub async fn RemoteServer::resolve_directory(
+  self : RemoteServer,
+  request : @remote_protocol.DocumentRequest,
+) -> @remote_protocol.ServerPacket {
+  match resolve_remote_directory_uri(request.uri, request_id=request.id) {
+    ParsedRemoteDirectory(relative, name) =>
+      match self.host.read_directory(self.workspace_root, relative) {
+        ServerHostResolveOk(children) =>
+          DirectoryResolved({
+            id: request.id,
+            stat: {
+              uri: request.uri,
+              name,
+              kind: Directory,
+              children: Some(children),
+            },
+          })
+        ServerHostResolveError(code, message) =>
+          RemoteError(
+            @remote_protocol.ProtocolError::from_file_system_error(
+              FileSystemProviderError(code, message, uri=request.uri),
+              request_id=request.id,
+            ),
+          )
+      }
+    RemoteDirectoryError(error) => RemoteError(error)
   }
 }
 

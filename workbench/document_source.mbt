@@ -135,17 +135,3 @@ fn route_watched_error_cmd(
     }
   })
 }
-
-///|
-/// The single live document watch. Selecting a new document disposes the
-/// previous watch before subscribing the next one.
-let active_document_watch : Ref[@workspace.FileWatch?] = Ref(None)
-
-///|
-fn dispose_active_document_watch() -> Unit {
-  match active_document_watch.val {
-    Some(watch) => watch.dispose()
-    None => ()
-  }
-  active_document_watch.val = None
-}

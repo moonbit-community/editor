@@ -3,20 +3,14 @@ import {
   "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/dom",
   "baozhiyuan/editor/language",
-  "baozhiyuan/editor/remote_protocol",
   "baozhiyuan/editor/renderer",
   "baozhiyuan/editor/syntax",
-  "baozhiyuan/editor/widgets/file_tree",
   "baozhiyuan/editor/workspace",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/cmd",
-  "moonbit-community/rabbita/common",
   "moonbit-community/rabbita/html",
-  "moonbit-community/rabbita/sub",
-  "moonbit-community/rabbita/svg",
   "moonbit-community/rabbita/dom" @rdom,
   "moonbit-community/rabbita/js",
-  "moonbit-community/rabbita/websocket",
 }
 
 supported_targets = "js"

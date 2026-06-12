@@ -109,3 +109,28 @@ fn server_packet_request_id(packet : @remote_protocol.ServerPacket) -> String {
     RemoteError(error) => error.request_id
   }
 }
+
+///|
+fn connect_protocol_cmd(emit : @rabbita.Emit[WorkbenchMsg]) -> @rabbita.Cmd {
+  @websocket.connect(
+    protocol_connection_id(),
+    @dom.protocol_websocket_url(),
+    on_event=event => emit(ProtocolEvent(event)),
+    failed=message => emit(ProtocolSendFailed(message)),
+  )
+}
+
+///|
+fn send_client_packet_cmd(
+  emit : @rabbita.Emit[WorkbenchMsg],
+  packet : @remote_protocol.ClientPacket,
+) -> @rabbita.Cmd {
+  @websocket.send(protocol_connection_id(), Text(packet.to_json()), failed=message => {
+    emit(ProtocolSendFailed(message))
+  })
+}
+
+///|
+fn protocol_connection_id() -> String {
+  "readonly-editor-protocol"
+}

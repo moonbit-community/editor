@@ -7,7 +7,7 @@ let fallback_char_width = 7.2
 /// Builds the hit-test geometry for the current frame from tracked view
 /// state, falling back to font constants before the first measurement.
 fn view_metrics(
-  model : BrowserAppModel,
+  model : ViewerModel,
   frame : @renderer.RenderFrame,
 ) -> @renderer.ViewMetrics {
   let char_width = if model.char_width > 0.0 {
@@ -58,9 +58,9 @@ fn viewer_mouse_position(event : @rdom.MouseEvent) -> (Double, Double)? {
 ///|
 /// Measures the viewer box, the glyph probe, and the rendered gutter after
 /// paint; these feed `ViewMetrics` for every later hit test.
-fn measure_viewer_cmd() -> @rabbita.Cmd {
+fn measure_viewer_cmd(emit : @rabbita.Emit[ViewerMsg]) -> @rabbita.Cmd {
   @cmd.custom_cmd(
-    _ => {
+    scheduler => {
       let document = @rdom.document()
       match document.query_selector(".code-viewer").to_option() {
         Some(viewer) => {
@@ -77,7 +77,7 @@ fn measure_viewer_cmd() -> @rabbita.Cmd {
             Some(gutter) => gutter.get_bounding_client_rect().get_width()
             None => 0.0
           }
-          dispatch_browser_msg(ViewerMeasured(height, char_width, gutter_width))
+          scheduler.add(emit(ViewerMeasured(height, char_width, gutter_width)))
         }
         None => ()
       }
@@ -113,11 +113,11 @@ fn span_anchor_for_target(
 
 ///|
 fn editor_mouse_moved_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
+  emit : @rabbita.Emit[ViewerMsg],
+  model : ViewerModel,
   x : Double,
   y : Double,
-) -> (@rabbita.Cmd, BrowserAppModel) {
+) -> (@rabbita.Cmd, ViewerModel) {
   match model.frame {
     Some(frame) => {
       let target = @renderer.hit_test(frame, view_metrics(model, frame), x, y)
@@ -130,7 +130,7 @@ fn editor_mouse_moved_update(
 ///|
 /// Container handlers for the code viewer: one listener set replaces the
 /// per-span closures; update resolves targets through `hit_test`.
-fn code_viewer_attrs(emit : @rabbita.Emit[BrowserMsg]) -> @html.Attrs {
+fn code_viewer_attrs(emit : @rabbita.Emit[ViewerMsg]) -> @html.Attrs {
   @html.Attrs::build()
   .aria_label("Readonly code viewer")
   .on_mousemove(event => {
@@ -147,9 +147,9 @@ fn code_viewer_attrs(emit : @rabbita.Emit[BrowserMsg]) -> @html.Attrs {
 /// typed `on_scroll` cannot deliver them; the viewer attaches a native
 /// listener after mount instead. The property marker keeps one listener
 /// per mounted element (remounts produce a fresh element).
-fn attach_scroll_hook_cmd() -> @rabbita.Cmd {
+fn attach_scroll_hook_cmd(emit : @rabbita.Emit[ViewerMsg]) -> @rabbita.Cmd {
   @cmd.custom_cmd(
-    _ => {
+    scheduler => {
       match @rdom.document().query_selector(".code-viewer").to_option() {
         Some(viewer) =>
           match viewer.get_property("readonlyEditorScrollHook").to_option() {
@@ -160,10 +160,24 @@ fn attach_scroll_hook_cmd() -> @rabbita.Cmd {
                 @js.Value::cast_from("attached"),
               )
               viewer.add_event_listener("scroll", _event => {
-                dispatch_browser_msg(EditorScrolled(viewer.get_scroll_top()))
+                scheduler.add(emit(EditorScrolled(viewer.get_scroll_top())))
               })
             }
           }
+        None => ()
+      }
+    },
+    kind=@cmd.after_render,
+  )
+}
+
+///|
+/// Restores the viewer's scroll offset after a code-cell remount.
+fn restore_scroll_cmd(scroll_top : Double) -> @rabbita.Cmd {
+  @cmd.custom_cmd(
+    _ => {
+      match @rdom.document().query_selector(".code-viewer").to_option() {
+        Some(viewer) => viewer.set_scroll_top(scroll_top)
         None => ()
       }
     },

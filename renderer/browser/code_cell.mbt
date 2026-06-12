@@ -35,7 +35,7 @@ let line_overscan = 20
 
 ///|
 fn desired_window(
-  model : BrowserAppModel,
+  model : ViewerModel,
   frame : @renderer.RenderFrame,
 ) -> @renderer.LineWindow {
   @renderer.visible_window(
@@ -50,7 +50,7 @@ fn desired_window(
 ///|
 /// Whether the cached cell instance survives for this model and frame.
 fn code_cell_retained(
-  model : BrowserAppModel,
+  model : ViewerModel,
   frame : @renderer.RenderFrame,
 ) -> Bool {
   match code_cell_cache.val {
@@ -62,7 +62,7 @@ fn code_cell_retained(
 ///|
 /// The window the mounted (or about-to-mount) code cell renders.
 fn code_cell_window(
-  model : BrowserAppModel,
+  model : ViewerModel,
   frame : @renderer.RenderFrame,
 ) -> @renderer.LineWindow {
   match code_cell_cache.val {
@@ -89,19 +89,16 @@ fn invalidate_code_cell() -> Unit {
 }
 
 ///|
-fn code_cell_key(
-  model : BrowserAppModel,
-  frame : @renderer.RenderFrame,
-) -> String {
-  active_document_uri(model.document) +
-  "#" +
-  frame.version.to_string() +
-  "#" +
-  model.theme
+fn code_cell_key(model : ViewerModel, frame : @renderer.RenderFrame) -> String {
+  let uri = match model.source_document {
+    Some(document) => document.uri.to_string()
+    None => ""
+  }
+  uri + "#" + frame.version.to_string() + "#" + model.theme
 }
 
 ///|
-fn code_surface(model : BrowserAppModel) -> CodeSurface {
+fn code_surface(model : ViewerModel) -> CodeSurface {
   { hover: model.hover }
 }
 
@@ -109,8 +106,8 @@ fn code_surface(model : BrowserAppModel) -> CodeSurface {
 /// Returns the cached code cell for the current document, creating a new
 /// instance when the cache key rotates.
 fn code_surface_cell(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
+  emit : @rabbita.Emit[ViewerMsg],
+  model : ViewerModel,
   frame : @renderer.RenderFrame,
 ) -> @rabbita.Cell {
   let key = code_cell_key(model, frame)
@@ -145,7 +142,7 @@ fn update_code_cell(
 ///|
 /// Pushes a recomputed line window into the mounted code cell when scroll
 /// or viewport changes moved it past the hysteresis band.
-fn push_code_window_cmd(model : BrowserAppModel) -> @rabbita.Cmd {
+fn push_code_window_cmd(model : ViewerModel) -> @rabbita.Cmd {
   match (code_cell_cache.val, model.frame) {
     (Some(entry), Some(frame)) =>
       if entry.key == code_cell_key(model, frame) {
@@ -167,7 +164,7 @@ fn push_code_window_cmd(model : BrowserAppModel) -> @rabbita.Cmd {
 /// Pushes the current feature surface into the mounted code cell when it
 /// actually changed; shell-only updates push nothing and the cell slot is
 /// skipped wholesale.
-fn push_code_surface_cmd(model : BrowserAppModel) -> @rabbita.Cmd {
+fn push_code_surface_cmd(model : ViewerModel) -> @rabbita.Cmd {
   match (code_cell_cache.val, model.frame) {
     (Some(entry), Some(frame)) =>
       if entry.key == code_cell_key(model, frame) {
@@ -189,7 +186,7 @@ fn push_code_surface_cmd(model : BrowserAppModel) -> @rabbita.Cmd {
 /// Replaces the cell's frame in place after a same-version re-render (for
 /// example when semantic tokens arrive for the displayed document).
 fn push_code_frame_cmd(
-  model : BrowserAppModel,
+  model : ViewerModel,
   frame : @renderer.RenderFrame,
 ) -> @rabbita.Cmd {
   match code_cell_cache.val {
@@ -209,7 +206,7 @@ fn push_code_frame_cmd(
 /// Renders only the windowed lines, with spacers keeping the full scroll
 /// height so the native scrollbar stays correct.
 fn view_code_surface(
-  emit : @rabbita.Emit[BrowserMsg],
+  emit : @rabbita.Emit[ViewerMsg],
   model : CodeCellModel,
 ) -> @html.Html {
   let frame = model.frame

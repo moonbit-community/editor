@@ -67,25 +67,3 @@ test "push packets without a pending id fall through" {
     ),
   )
 }
-
-///|
-test "stale hover results are dropped by version and token guards" {
-  let controller = HoverController::empty()
-  let hover : @language.Hover? = Some({
-    range: Range(3, 7),
-    contents: "fn main",
-  })
-  // Version moved on: result dropped.
-  let (_, stale_version) = controller.resolved_hover(1, 0, hover, 2)
-  assert_true(stale_version.view is None && stale_version.pending_view is None)
-  // Anchor token moved on: result dropped.
-  let rescheduled = { ..controller, token: 5 }
-  let (_, stale_token) = rescheduled.resolved_hover(2, 4, hover, 2)
-  assert_true(stale_token.view is None && stale_token.pending_view is None)
-  // Current version and token: result lands behind the display gate.
-  let (_, fresh) = rescheduled.resolved_hover(2, 5, hover, 2)
-  assert_true(fresh.pending_view is Some(_))
-  let opened = { ..rescheduled, display_open: true }
-  let (_, shown) = opened.resolved_hover(2, 5, hover, 2)
-  assert_true(shown.view is Some(_))
-}

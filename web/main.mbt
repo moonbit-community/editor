@@ -1,4 +1,4 @@
 ///|
 fn main {
-  @browser.start_app()
+  @workbench.start_app()
 }

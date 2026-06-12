@@ -56,7 +56,7 @@ fn workspace_file_tree() -> @file_tree.FileTree {
     Some(tree) => tree
     None => {
       let tree = @file_tree.FileTree(workspace_tree_provider, on_open=uri => {
-        dispatch_browser_msg(SelectWorkspace(uri))
+        dispatch_workbench_msg(SelectWorkspace(uri))
       })
       file_tree_cell.val = Some(tree)
       tree
@@ -69,7 +69,7 @@ fn workspace_file_tree() -> @file_tree.FileTree {
 /// depth-first resolve walk that opens the first `.mbt` file, falling back
 /// to the first file of any kind; `set_active` then reveals it in the tree
 /// once the document renders.
-fn auto_open_first_file_cmd(emit : @rabbita.Emit[BrowserMsg]) -> @rabbita.Cmd {
+fn auto_open_first_file_cmd(emit : @rabbita.Emit[WorkbenchMsg]) -> @rabbita.Cmd {
   @cmd.perform(result => emit(AutoOpenResolved(result)), async fn() noraise {
     find_first_workspace_file() catch {
       _ => None

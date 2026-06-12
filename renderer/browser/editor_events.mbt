@@ -9,14 +9,14 @@ priv enum EditorEvent {
 }
 
 ///|
-/// Read-only app state controllers may consult while handling an event.
+/// Read-only viewer state controllers may consult while handling an event.
 priv struct EditorContext {
   frame : @renderer.RenderFrame?
   source_document : @workspace.SourceDocument?
 }
 
 ///|
-fn editor_context(model : BrowserAppModel) -> EditorContext {
+fn editor_context(model : ViewerModel) -> EditorContext {
   { frame: model.frame, source_document: model.source_document }
 }
 
@@ -25,10 +25,10 @@ fn editor_context(model : BrowserAppModel) -> EditorContext {
 /// their commands; the contribution model with Elm-shaped sub-updates.
 /// Hover is the only controller today.
 fn editor_event_update(
-  emit : @rabbita.Emit[BrowserMsg],
-  model : BrowserAppModel,
+  emit : @rabbita.Emit[ViewerMsg],
+  model : ViewerModel,
   event : EditorEvent,
-) -> (@rabbita.Cmd, BrowserAppModel) {
+) -> (@rabbita.Cmd, ViewerModel) {
   let ctx = editor_context(model)
   let (hover_cmd, hover) = model.hover.on_event(emit, event, ctx)
   (hover_cmd, { ..model, hover, })

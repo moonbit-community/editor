@@ -68,7 +68,7 @@ fn HoverController::cleared(self : HoverController) -> HoverController {
 ///|
 fn HoverController::on_event(
   self : HoverController,
-  emit : @rabbita.Emit[BrowserMsg],
+  emit : @rabbita.Emit[ViewerMsg],
   event : EditorEvent,
   ctx : EditorContext,
 ) -> (@rabbita.Cmd, HoverController) {
@@ -91,7 +91,7 @@ fn HoverController::on_event(
 /// shown hover untouched.
 fn HoverController::schedule(
   self : HoverController,
-  emit : @rabbita.Emit[BrowserMsg],
+  emit : @rabbita.Emit[ViewerMsg],
   start : Int,
   end : Int,
 ) -> (@rabbita.Cmd, HoverController) {
@@ -127,7 +127,7 @@ fn HoverController::schedule(
 /// Half-delay timer fired: ask the hover provider if the token is current.
 fn HoverController::fire(
   self : HoverController,
-  emit : @rabbita.Emit[BrowserMsg],
+  emit : @rabbita.Emit[ViewerMsg],
   ctx : EditorContext,
   token : Int,
 ) -> (@rabbita.Cmd, HoverController) {
@@ -150,6 +150,7 @@ fn HoverController::fire(
 /// resolved hover.
 fn HoverController::display_due(
   self : HoverController,
+  emit : @rabbita.Emit[ViewerMsg],
   token : Int,
 ) -> (@rabbita.Cmd, HoverController) {
   if token != self.token {
@@ -158,7 +159,7 @@ fn HoverController::display_due(
   match self.pending_view {
     Some(view) =>
       (
-        measure_hover_cmd(),
+        measure_hover_cmd(emit),
         {
           ..self,
           display_open: true,
@@ -189,6 +190,8 @@ fn HoverController::loading_due(
 /// version moved on or the anchor token changed since the request.
 fn HoverController::resolved_hover(
   self : HoverController,
+  notify : (ViewerNotification) -> Unit,
+  emit : @rabbita.Emit[ViewerMsg],
   version : Int,
   token : Int,
   hover : @language.Hover?,
@@ -199,14 +202,11 @@ fn HoverController::resolved_hover(
   }
   match hover {
     Some(hover) => {
-      emit_event(
-        "language:hover",
-        "{\"ok\":true,\"version\":" + version.to_string() + "}",
-      )
+      notify(ViewerHoverResolved(ok=true, version~))
       let view : HoverView = { range: hover.range, contents: hover.contents }
       if self.display_open {
         (
-          measure_hover_cmd(),
+          measure_hover_cmd(emit),
           {
             ..self,
             answered: true,
@@ -224,10 +224,7 @@ fn HoverController::resolved_hover(
       }
     }
     None => {
-      emit_event(
-        "language:hover",
-        "{\"ok\":false,\"version\":" + version.to_string() + "}",
-      )
+      notify(ViewerHoverResolved(ok=false, version~))
       (@rabbita.none, { ..self, answered: true, loading: false })
     }
   }
@@ -337,9 +334,9 @@ fn HoverController::anchored_widget(
 ///|
 /// Measures the rendered hover widget after paint and reports whether it
 /// must flip below the anchor line or shift left to stay inside the viewer.
-fn measure_hover_cmd() -> @rabbita.Cmd {
+fn measure_hover_cmd(emit : @rabbita.Emit[ViewerMsg]) -> @rabbita.Cmd {
   @cmd.custom_cmd(
-    _ => {
+    scheduler => {
       let document = @rdom.document()
       match
         (
@@ -352,7 +349,7 @@ fn measure_hover_cmd() -> @rabbita.Cmd {
           let below = widget_rect.get_top() < viewer_rect.get_top()
           let overflow = widget_rect.get_right() - viewer_rect.get_right()
           let shift_left = if overflow > 0.0 { overflow } else { 0.0 }
-          dispatch_browser_msg(HoverMeasured(below, shift_left))
+          scheduler.add(emit(HoverMeasured(below, shift_left)))
         }
         _ => ()
       }

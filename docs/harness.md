@@ -44,15 +44,18 @@ inspection:
   are not in the DOM until their folders are expanded or the active file is
   auto-revealed, so specs that navigate to nested files expand ancestors
   first (or rely on the startup auto-open's reveal).
-- `.code-line`, `.gutter`, `.code`, token spans, and diagnostics keep the
-  same class and `data-*` contracts used by browser smoke tests. The
-  viewer is an imperative island inside the shell's `.viewer-host`
-  element: `.code-viewer` is the `overflow: hidden` island root, line
-  nodes are absolutely positioned inside a transformed `.code-lines`
-  layer, gutters live in a separate `.margin` layer, and scrolling is
-  synthetic (assigning `scrollTop` does nothing — use the scroll
-  control below).
-- `.hover-widget` is the range-anchored editor hover.
+- The viewer is an imperative island inside the shell's `.viewer-host`
+  element. Its root is `.moonbit-viewer.readonly-editor`; clipping and
+  scrollbars live under `.overflow-guard`; text nodes are windowed
+  `.view-line[data-line]` children of `.lines-content .view-lines`; line
+  numbers are `.line-number[data-line]` children of
+  `.margin .margin-view-overlays .line-numbers`; token spans and
+  diagnostics live inside `.view-line-content`.
+- `.contentWidgets .hover-widget` is the range-anchored editor hover.
+  `.overlayWidgets`, `.overflowingContentWidgets`, and
+  `.overflowingOverlayWidgets` are stable slots for future viewport or
+  overflow-capable UI. Scrolling is synthetic (assigning `scrollTop` does
+  nothing — use the scroll control below).
 
 ## Scroll Control
 

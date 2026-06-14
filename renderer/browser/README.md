@@ -55,12 +55,17 @@ workbench) wrap the calls in their command type.
 
 ## Responsibilities
 
-- Render `renderer` IR as browser DOM through the imperative island: an
-  `overflow: hidden` root with a margin layer (gutter rail, vertical
-  translate only so horizontal scrolling never moves it), a lines layer
-  translated by `window_origin - scroll_top`, a hover layer sharing the
-  lines transform, and custom scrollbars driven by the backend-neutral
-  `ScrollbarState` arithmetic.
+- Render `renderer` IR as browser DOM through the imperative island: a
+  `.moonbit-viewer.readonly-editor` root, an `.overflow-guard` clip,
+  `.lines-content`, `.view-lines`, `.view-overlays`, `.view-zones`,
+  margin view overlays for line numbers, content-widget and
+  overlay-widget slots, overflowing widget slots, and custom scrollbars
+  driven by the backend-neutral `ScrollbarState` arithmetic.
+- Content widgets are anchored to a text position and share the text
+  transform; hover is the first user and mounts in `.contentWidgets`.
+  Overlay widgets are viewport-positioned UI for future controls and
+  mount in `.overlayWidgets`; overflowing variants mount outside
+  `.overflow-guard` when a widget is allowed to escape the editor clip.
 - Own the render loop: rAF-coalesced flushes with reads (measurement)
   before writes, a `ViewLayer`-style recycler that splices
   entering/leaving line nodes and writes `innerHTML` only on entering
@@ -75,7 +80,7 @@ workbench) wrap the calls in their command type.
   on the island root convert DOM events into typed `EditorEvent`s through
   the renderer's shared `hit_test`, fed by layout state plus the measured
   char-probe width and the derived gutter width. Rendered spans carry no
-  handlers; the hover widget swallows events under it.
+  handlers; content and overlay widgets swallow events under them.
 - Own the feature controllers (`HoverController` today): each consumes
   editor events and answers with effects-as-data, span/line decorations,
   and widget views. Hover follows Monaco's timing (request at half the

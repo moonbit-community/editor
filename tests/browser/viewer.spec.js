@@ -30,11 +30,11 @@ test('renders fixture workspace through the native protocol', async ({ page }) =
     'data-source-uri',
     'readonly-remote://workspace/src/main.mbt',
   );
-  await expect(page.locator('.code-viewer')).toContainText('fn main');
-  await expect(page.locator('.code-viewer')).toContainText('startup_event');
+  await expect(page.locator('.moonbit-viewer.readonly-editor')).toContainText('fn main');
+  await expect(page.locator('.moonbit-viewer.readonly-editor')).toContainText('startup_event');
   await expect(page.locator('.editor-shell')).not.toContainText('readonly provider');
 
-  const mainSymbol = page.locator('.code span', { hasText: 'main' }).first();
+  const mainSymbol = page.locator('.view-line span', { hasText: 'main' }).first();
   await mainSymbol.hover();
   await mainSymbol.dblclick();
 
@@ -95,19 +95,19 @@ test('falls back to plain tokenization for unregistered languages', async ({ pag
   await page.goto('/');
   await openWorkspaceFile(page, 'notes.txt');
 
-  await expect(page.locator('.code-viewer')).toContainText('Fixture notes');
+  await expect(page.locator('.moonbit-viewer.readonly-editor')).toContainText('Fixture notes');
   await expect(page.locator('.tok-identifier', { hasText: 'value' }).first()).toBeVisible();
   // The plain fallback never classifies types or operators, even for the
   // capitalized FixtureError word the MoonBit lexer would tag.
-  await expect(page.locator('.code span[class*="tok-type"]')).toHaveCount(0);
-  await expect(page.locator('.code span[class*="tok-operator"]')).toHaveCount(0);
+  await expect(page.locator('.view-line span[class*="tok-type"]')).toHaveCount(0);
+  await expect(page.locator('.view-line span[class*="tok-operator"]')).toHaveCount(0);
 });
 
 test('overlays semantic token classes onto rendered spans', async ({ page }) => {
   await page.goto('/');
   await openWorkspaceFile(page, 'src/errors.mbt');
 
-  const semanticSpan = page.locator('.code span[class*="sem-"]').first();
+  const semanticSpan = page.locator('.view-line span[class*="sem-"]').first();
   // Semantic tokens resolve once per document version; while the language
   // server is still indexing, re-open the document to request them again.
   await expect(async () => {

@@ -371,49 +371,102 @@ body {
   background: var(--vscode-editor-background);
 }
 
-/* The island root: overflow hidden, synthetic scrolling. The layers
-   inside are positioned by inline styles the render loop writes. */
-.code-viewer {
+/* The island root owns a Monaco-shaped view tree. Clipping belongs to
+   .overflow-guard so future overflowing widget slots can escape it. */
+.moonbit-viewer.readonly-editor {
+  position: absolute;
+  inset: 0;
+  background: var(--vscode-editor-background);
+  overflow: visible;
+}
+
+.overflow-guard {
   position: absolute;
   inset: 0;
   overflow: hidden;
   background: var(--vscode-editor-background);
 }
 
-.code-viewer.source-empty {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 12px;
-}
-
-.code-viewer:not(.source-empty) .source-message {
+.moonbit-viewer.source-loaded .source-message {
   display: none;
 }
 
-.code-viewer.source-empty .code-lines,
-.code-viewer.source-empty .hover-layer,
-.code-viewer.source-empty .margin,
-.code-viewer.source-empty .scrollbar {
+.moonbit-viewer.source-empty .overflow-guard,
+.moonbit-viewer.source-empty .overflowingContentWidgets,
+.moonbit-viewer.source-empty .overflowingOverlayWidgets {
   display: none;
 }
 
 .source-message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
   padding: 0 24px;
   color: var(--vscode-foreground);
   font-size: 14px;
 }
 
-/* Lines layer, translated by (window origin - scroll top, -scroll left). */
-.code-lines {
+/* Lines content starts after the margin; text-like child layers carry
+   the synthetic scroll transform. */
+.lines-content {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.view-lines,
+.view-overlays,
+.view-zones,
+.contentWidgets {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 1;
   will-change: transform;
 }
 
-.code-line {
+.view-lines {
+  z-index: 1;
+}
+
+.view-overlays {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.view-zones {
+  z-index: 3;
+}
+
+.contentWidgets {
+  z-index: 50;
+}
+
+.overlayWidgets {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.overflowingContentWidgets,
+.overflowingOverlayWidgets {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.overflowingContentWidgets {
+  z-index: 70;
+}
+
+.overflowingOverlayWidgets {
+  z-index: 80;
+}
+
+.view-line {
   position: absolute;
   left: 0;
   /* top and height are written inline by the recycler (18px lines). */
@@ -432,15 +485,19 @@ body {
   background: var(--vscode-editor-background);
 }
 
-.margin-lines {
+.margin-view-overlays,
+.line-numbers {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
+}
+
+.line-numbers {
   will-change: transform;
 }
 
-.gutter {
+.line-number {
   position: absolute;
   left: 0;
   right: 0;
@@ -453,15 +510,8 @@ body {
   user-select: none;
 }
 
-.hover-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 50;
-  will-change: transform;
-}
-
-.code {
+.view-line-content {
+  display: inline-block;
   width: max-content;
   margin: 0;
   padding: 0 16px 0 0;
@@ -473,50 +523,50 @@ body {
 }
 
 /* Custom scrollbars driven by the ScrollbarState arithmetic. */
-.code-viewer .scrollbar {
+.moonbit-viewer .scrollbar {
   position: absolute;
   z-index: 6;
 }
 
-.code-viewer .scrollbar.vertical {
+.moonbit-viewer .scrollbar.vertical {
   top: 0;
   right: 0;
   bottom: 0;
   width: 14px;
 }
 
-.code-viewer .scrollbar.horizontal {
+.moonbit-viewer .scrollbar.horizontal {
   bottom: 0;
   right: 0;
   height: 14px;
   /* left is written inline (the gutter width). */
 }
 
-.code-viewer .scrollbar .slider {
+.moonbit-viewer .scrollbar .slider {
   position: absolute;
   top: 0;
   left: 0;
   background: var(--vscode-scrollbarSlider-background);
 }
 
-.code-viewer .scrollbar.vertical .slider {
+.moonbit-viewer .scrollbar.vertical .slider {
   width: 14px;
 }
 
-.code-viewer .scrollbar.horizontal .slider {
+.moonbit-viewer .scrollbar.horizontal .slider {
   height: 14px;
 }
 
-.code-viewer .scrollbar .slider:hover {
+.moonbit-viewer .scrollbar .slider:hover {
   background: var(--vscode-scrollbarSlider-hoverBackground);
 }
 
-.code-viewer .scrollbar .slider:active {
+.moonbit-viewer .scrollbar .slider:active {
   background: var(--vscode-scrollbarSlider-activeBackground);
 }
 
-.code ::selection,
-.code::selection {
+.view-line-content ::selection,
+.view-line-content::selection {
   background: var(--vscode-editor-selectionBackground);
 }
 
@@ -692,12 +742,13 @@ body {
   background: var(--vscode-editor-hoverHighlightBackground);
 }
 
-/* Editor hover widget, anchored at the hovered range inside .code-lines.
+/* Editor hover widget, anchored at the hovered range inside .contentWidgets.
    It sits above the line by default and flips below via the .below class
    once the after-render measurement detects viewport overflow. */
 .hover-widget {
   position: absolute;
   z-index: 50;
+  pointer-events: auto;
   max-width: 500px;
   border: 1px solid var(--vscode-editorHoverWidget-border);
   border-radius: 3px;

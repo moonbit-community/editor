@@ -20,15 +20,15 @@ test('windows the rendered lines while keeping the document height', async ({ pa
   await openWorkspaceFile(page, 'src/generated_scroll.mbt');
 
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-line-count', '10000');
-  await expect(page.locator('.code-line[data-line="1"]')).toBeVisible();
-  await expect(page.locator('.code-line[data-line="10000"]')).toHaveCount(0);
+  await expect(page.locator('.view-line[data-line="1"]')).toBeVisible();
+  await expect(page.locator('.view-line[data-line="10000"]')).toHaveCount(0);
 
   // The harness scroll control drives the synthetic scroll model; the
   // request clamps to the bottom of the document.
   await page.evaluate(() => globalThis.__readonlyEditorScrollTo(1e9));
 
-  await expect(page.locator('.code-line[data-line="10000"]')).toBeVisible();
-  await expect(page.locator('.code-line[data-line="1"]')).toHaveCount(0);
+  await expect(page.locator('.view-line[data-line="10000"]')).toBeVisible();
+  await expect(page.locator('.view-line[data-line="1"]')).toHaveCount(0);
 });
 
 test('resolves hover for the token under the mouse after scrolling', async ({ page }) => {
@@ -37,7 +37,7 @@ test('resolves hover for the token under the mouse after scrolling', async ({ pa
   await openWorkspaceFile(page, 'src/generated_scroll.mbt');
 
   await page.evaluate(() => globalThis.__readonlyEditorScrollTo(1e9));
-  const target = page.locator('.code span', { hasText: 'generated_value_1999' }).first();
+  const target = page.locator('.view-line span', { hasText: 'generated_value_1999' }).first();
   await expect(target).toBeVisible();
 
   // The language server may still be indexing the generated file on first
@@ -45,9 +45,10 @@ test('resolves hover for the token under the mouse after scrolling', async ({ pa
   await expect(async () => {
     await page.mouse.move(5, 5);
     await target.hover();
-    await expect(page.locator('.hover-widget')).toContainText('generated_value_1999', {
-      timeout: 3_000,
-    });
+    await expect(page.locator('.contentWidgets .hover-widget')).toContainText(
+      'generated_value_1999',
+      { timeout: 3_000 },
+    );
   }).toPass({ timeout: 60_000 });
 });
 

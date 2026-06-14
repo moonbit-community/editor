@@ -10,7 +10,7 @@ test('runs the viewer and tree from in-memory providers without a server', async
 
   // The embedding host auto-opens src/main.mbt; auto-reveal expands src.
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
-  await expect(page.locator('.code-viewer')).toContainText('fn main');
+  await expect(page.locator('.moonbit-viewer.readonly-editor')).toContainText('fn main');
 
   // Real language highlighting with no server: the MoonBit lexer is
   // registered by the embedding host, not fetched from anywhere.
@@ -28,7 +28,7 @@ test('runs the viewer and tree from in-memory providers without a server', async
 
   // Navigating between files goes through the in-memory document source.
   await page.locator(workspaceItem('src/lib/util.mbt')).click();
-  await expect(page.locator('.code-viewer')).toContainText('util_answer');
+  await expect(page.locator('.moonbit-viewer.readonly-editor')).toContainText('util_answer');
   await expect(page.locator(workspaceItem('src/lib/util.mbt'))).toHaveAttribute(
     'aria-selected',
     'true',

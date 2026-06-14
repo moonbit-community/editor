@@ -191,6 +191,12 @@ or `--target native`.
   the shell's diff and must stay untouched across shell updates. The
   island survives theme switches (colors cascade through CSS variables;
   there is no remount and the scroll position is preserved).
+- The browser island's DOM is Monaco-shaped but locally owned:
+  `.moonbit-viewer.readonly-editor` contains an `.overflow-guard`, margin
+  view overlays, `.lines-content`, `.view-lines`, `.view-overlays`,
+  `.view-zones`, content-widget and overlay-widget slots, overflowing
+  widget slots, and synthetic scrollbars. This is a product DOM contract,
+  not an import of Monaco CSS or services.
 - Scrolling is split along the backend boundary: scroll semantics —
   clamping, dimensions, viewport derivation, scrollbar geometry — are
   backend-neutral model state in `renderer` (`ViewLayout` owns the single

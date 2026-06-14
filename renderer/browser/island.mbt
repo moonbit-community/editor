@@ -5,15 +5,15 @@ let editor_line_height = 18
 
 ///|
 /// Total horizontal padding of the line-number gutter. Keep in sync with
-/// `.gutter` padding in app/src/style.css.
+/// `.line-number` padding in app/src/style.css.
 let gutter_padding_px = 34
 
 ///|
-/// Right padding of `.code` content, part of the horizontal scroll extent.
+/// Right padding of `.view-line-content`, part of the horizontal scroll extent.
 let code_right_padding = 16.0
 
 ///|
-/// Minimum gutter digit slots, matching the old `min-width: 5ch` rule.
+/// Minimum line-number digit slots.
 let gutter_min_digits = 5
 
 ///|
@@ -34,20 +34,49 @@ let char_probe_text = "0000000000"
 let fallback_char_width = 7.2
 
 ///|
+priv enum ContentWidgetPlacement {
+  ContentWidgetAbove
+  ContentWidgetBelow
+}
+
+///|
+priv struct ContentWidgetAnchor {
+  line_number : Int
+  column : Int
+}
+
+///|
+priv struct ContentWidget {
+  id : String
+  node : @rdom.Element
+  anchor : ContentWidgetAnchor
+  preferred_placement : ContentWidgetPlacement
+  allow_overflow : Bool
+  shift_left : Double
+  window_start_line : Int
+}
+
+///|
 /// The imperative view island, the Monaco `View` role: an
-/// `overflow: hidden` root owning a margin layer (vertical translate
-/// only, so horizontal scrolling never moves the gutter), a lines layer
-/// translated by `window_origin - scroll_top`, a hover layer sharing the
-/// lines transform, custom scrollbars, and the line/gutter node recycler
-/// state (the `ViewLayer` role).
+/// root editor node owning an overflow guard, margin and content view
+/// parts, widget slots, custom scrollbars, and the line/line-number node
+/// recycler state (the `ViewLayer` role).
 priv struct Island {
   root : @rdom.Element
   probe : @rdom.Element
   message_text : @rdom.Element
+  overflow_guard : @rdom.Element
   margin : @rdom.Element
-  margin_lines : @rdom.Element
-  content : @rdom.Element
-  hover_layer : @rdom.Element
+  margin_view_overlays : @rdom.Element
+  line_numbers : @rdom.Element
+  lines_content : @rdom.Element
+  view_overlays : @rdom.Element
+  view_zones : @rdom.Element
+  view_lines : @rdom.Element
+  content_widgets : @rdom.Element
+  overlay_widgets : @rdom.Element
+  overflowing_content_widgets : @rdom.Element
+  overflowing_overlay_widgets : @rdom.Element
   vertical_bar : @rdom.Element
   vertical_slider : @rdom.Element
   horizontal_bar : @rdom.Element
@@ -70,7 +99,7 @@ fn frame_window(frame : @renderer.RenderFrame) -> @renderer.LineWindow {
 fn Island::build() -> Island {
   let document = @rdom.document()
   let root = document.create_element("section")
-  root.set_attribute("class", "code-viewer source-empty")
+  root.set_attribute("class", "moonbit-viewer readonly-editor source-empty")
   root.set_attribute("aria-label", "Readonly code viewer")
   let probe = document.create_element("span")
   probe.set_attribute("class", "char-probe")
@@ -80,16 +109,60 @@ fn Island::build() -> Island {
   message.set_attribute("class", "source-message")
   let message_text = document.create_text_node("")
   message.append_child(message_text.as_node())
-  let content = document.create_element("div")
-  content.set_attribute("class", "code-lines")
-  let hover_layer = document.create_element("div")
-  hover_layer.set_attribute("class", "hover-layer")
+  let overflow_guard = document.create_element("div")
+  overflow_guard.set_attribute("class", "overflow-guard")
+  overflow_guard.set_attribute("data-view-part", "overflow-guard")
   let margin = document.create_element("div")
   margin.set_attribute("class", "margin")
+  margin.set_attribute("data-view-part", "margin")
   margin.set_attribute("aria-hidden", "true")
-  let margin_lines = document.create_element("div")
-  margin_lines.set_attribute("class", "margin-lines")
-  margin.append_child(margin_lines.as_node())
+  let margin_view_overlays = document.create_element("div")
+  margin_view_overlays.set_attribute("class", "margin-view-overlays")
+  margin_view_overlays.set_attribute("data-view-part", "margin-view-overlays")
+  let line_numbers = document.create_element("div")
+  line_numbers.set_attribute("class", "view-layer line-numbers")
+  line_numbers.set_attribute("data-view-part", "line-numbers")
+  margin_view_overlays.append_child(line_numbers.as_node())
+  margin.append_child(margin_view_overlays.as_node())
+  let lines_content = document.create_element("div")
+  lines_content.set_attribute(
+    "class", "lines-content moonbit-viewer-background",
+  )
+  lines_content.set_attribute("data-view-part", "lines-content")
+  let view_overlays = document.create_element("div")
+  view_overlays.set_attribute("class", "view-overlays")
+  view_overlays.set_attribute("data-view-part", "view-overlays")
+  let view_zones = document.create_element("div")
+  view_zones.set_attribute("class", "view-zones")
+  view_zones.set_attribute("data-view-part", "view-zones")
+  let view_lines = document.create_element("div")
+  view_lines.set_attribute("class", "view-lines")
+  view_lines.set_attribute("data-view-part", "view-lines")
+  let content_widgets = document.create_element("div")
+  content_widgets.set_attribute("class", "contentWidgets")
+  content_widgets.set_attribute("data-view-part", "contentWidgets")
+  let overlay_widgets = document.create_element("div")
+  overlay_widgets.set_attribute("class", "overlayWidgets")
+  overlay_widgets.set_attribute("data-view-part", "overlayWidgets")
+  lines_content.append_child(view_overlays.as_node())
+  lines_content.append_child(view_zones.as_node())
+  lines_content.append_child(view_lines.as_node())
+  lines_content.append_child(content_widgets.as_node())
+  lines_content.append_child(overlay_widgets.as_node())
+  let overflowing_content_widgets = document.create_element("div")
+  overflowing_content_widgets.set_attribute(
+    "class", "overflowingContentWidgets",
+  )
+  overflowing_content_widgets.set_attribute(
+    "data-view-part", "overflowingContentWidgets",
+  )
+  let overflowing_overlay_widgets = document.create_element("div")
+  overflowing_overlay_widgets.set_attribute(
+    "class", "overflowingOverlayWidgets",
+  )
+  overflowing_overlay_widgets.set_attribute(
+    "data-view-part", "overflowingOverlayWidgets",
+  )
   let vertical_bar = document.create_element("div")
   vertical_bar.set_attribute("class", "scrollbar vertical")
   let vertical_slider = document.create_element("div")
@@ -100,21 +173,31 @@ fn Island::build() -> Island {
   let horizontal_slider = document.create_element("div")
   horizontal_slider.set_attribute("class", "slider")
   horizontal_bar.append_child(horizontal_slider.as_node())
+  overflow_guard.append_child(margin.as_node())
+  overflow_guard.append_child(lines_content.as_node())
+  overflow_guard.append_child(vertical_bar.as_node())
+  overflow_guard.append_child(horizontal_bar.as_node())
   root.append_child(probe.as_node())
   root.append_child(message.as_node())
-  root.append_child(content.as_node())
-  root.append_child(hover_layer.as_node())
-  root.append_child(margin.as_node())
-  root.append_child(vertical_bar.as_node())
-  root.append_child(horizontal_bar.as_node())
-  {
+  root.append_child(overflow_guard.as_node())
+  root.append_child(overflowing_content_widgets.as_node())
+  root.append_child(overflowing_overlay_widgets.as_node())
+  let island : Island = {
     root,
     probe,
     message_text,
+    overflow_guard,
     margin,
-    margin_lines,
-    content,
-    hover_layer,
+    margin_view_overlays,
+    line_numbers,
+    lines_content,
+    view_overlays,
+    view_zones,
+    view_lines,
+    content_widgets,
+    overlay_widgets,
+    overflowing_content_widgets,
+    overflowing_overlay_widgets,
     vertical_bar,
     vertical_slider,
     horizontal_bar,
@@ -131,6 +214,20 @@ fn Island::build() -> Island {
     line_nodes: [],
     gutter_nodes: [],
   }
+  island.sync_static_view_parts()
+  island
+}
+
+///|
+fn Island::sync_static_view_parts(self : Island) -> Unit {
+  self.overflow_guard.set_attribute("data-view-part", "overflow-guard")
+  self.margin_view_overlays.set_attribute(
+    "data-view-part", "margin-view-overlays",
+  )
+  self.overlay_widgets.set_attribute("data-view-part", "overlayWidgets")
+  self.overflowing_overlay_widgets.set_attribute(
+    "data-view-part", "overflowingOverlayWidgets",
+  )
 }
 
 ///|
@@ -149,13 +246,17 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   let write_started = @dom.now_ms()
   match self.frame {
     None => {
-      island.root.set_attribute("class", "code-viewer source-empty")
+      island.root.set_attribute(
+        "class", "moonbit-viewer readonly-editor source-empty",
+      )
       island.message_text.set_node_value(
         @js.Nullable::from_option(Some(self.placeholder)),
       )
     }
     Some(frame) => {
-      island.root.set_attribute("class", "code-viewer")
+      island.root.set_attribute(
+        "class", "moonbit-viewer readonly-editor source-loaded",
+      )
       let frame = self.synced_window_frame(frame)
       island.render_lines(
         frame,
@@ -238,9 +339,10 @@ fn Viewer::synced_window_frame(
 
 ///|
 /// The `ViewLayer` recycler: tracks the rendered line range, splices
-/// entering/leaving line and gutter nodes, and writes `innerHTML` only on
-/// entering lines. A changed content generation (new frame source or
-/// changed controller decorations) rewrites every rendered line instead.
+/// entering/leaving line and line-number nodes, and writes `innerHTML`
+/// only on entering lines. A changed content generation (new frame
+/// source or changed controller decorations) rewrites every rendered line
+/// instead.
 fn Island::render_lines(
   self : Island,
   frame : @renderer.RenderFrame,
@@ -253,18 +355,18 @@ fn Island::render_lines(
     while self.line_nodes.length() > frame.lines.length() {
       match (self.line_nodes.pop(), self.gutter_nodes.pop()) {
         (Some(node), Some(gutter)) => {
-          self.content.remove_child(node.as_node())
-          self.margin_lines.remove_child(gutter.as_node())
+          self.view_lines.remove_child(node.as_node())
+          self.line_numbers.remove_child(gutter.as_node())
         }
         _ => ()
       }
     }
     while self.line_nodes.length() < frame.lines.length() {
       let node = document.create_element("div")
-      self.content.append_child(node.as_node())
+      self.view_lines.append_child(node.as_node())
       self.line_nodes.push(node)
       let gutter = document.create_element("div")
-      self.margin_lines.append_child(gutter.as_node())
+      self.line_numbers.append_child(gutter.as_node())
       self.gutter_nodes.push(gutter)
     }
     for index in 0..<frame.lines.length() {
@@ -274,7 +376,11 @@ fn Island::render_lines(
         decorations,
         index,
       )
-      write_gutter_node(self.gutter_nodes[index], frame.lines[index], index)
+      write_line_number_node(
+        self.gutter_nodes[index],
+        frame.lines[index],
+        index,
+      )
     }
     self.generation = generation
     self.window = target
@@ -299,20 +405,20 @@ fn Island::render_lines(
     } else {
       let node = document.create_element("div")
       write_line_node(node, frame.lines[index], decorations, index)
-      self.content.append_child(node.as_node())
+      self.view_lines.append_child(node.as_node())
       next_lines.push(node)
       let gutter = document.create_element("div")
-      write_gutter_node(gutter, frame.lines[index], index)
-      self.margin_lines.append_child(gutter.as_node())
+      write_line_number_node(gutter, frame.lines[index], index)
+      self.line_numbers.append_child(gutter.as_node())
       next_gutters.push(gutter)
     }
   }
   for line_index in previous.start..<previous.end {
     if line_index < target.start || line_index >= target.end {
-      self.content.remove_child(
+      self.view_lines.remove_child(
         self.line_nodes[line_index - previous.start].as_node(),
       )
-      self.margin_lines.remove_child(
+      self.line_numbers.remove_child(
         self.gutter_nodes[line_index - previous.start].as_node(),
       )
     }
@@ -342,12 +448,13 @@ fn write_line_node(
 }
 
 ///|
-fn write_gutter_node(
+fn write_line_number_node(
   gutter : @rdom.Element,
   line : @renderer.RenderLine,
   window_index : Int,
 ) -> Unit {
-  gutter.set_attribute("class", "gutter")
+  gutter.set_attribute("class", "line-number")
+  gutter.set_attribute("data-line", line.line_number.to_string())
   gutter.set_attribute("style", line_node_style(window_index))
   gutter.set_inner_html(line.line_number.to_string())
 }
@@ -362,25 +469,30 @@ fn line_node_style(window_index : Int) -> String {
 }
 
 ///|
-/// One style write per layer per flush: the lines and hover layers carry
-/// the content transform, the margin translates vertically only.
+/// One style write per view part per flush: text-like content parts carry
+/// the content transform, overlay widgets stay viewport-positioned, and
+/// the margin translates vertically only.
 fn Island::apply_geometry(
   self : Island,
   gutter_width : Double,
   scroll_left : Double,
   translate_y : Double,
 ) -> Unit {
-  let content_style = "left:" +
-    gutter_width.to_string() +
-    "px;transform:translate(" +
+  self.lines_content.set_attribute(
+    "style",
+    "left:" + gutter_width.to_string() + "px",
+  )
+  let content_transform = "transform:translate(" +
     (-scroll_left).to_string() +
     "px," +
     translate_y.to_string() +
     "px)"
-  self.content.set_attribute("style", content_style)
-  self.hover_layer.set_attribute("style", content_style)
+  self.view_lines.set_attribute("style", content_transform)
+  self.view_overlays.set_attribute("style", content_transform)
+  self.view_zones.set_attribute("style", content_transform)
+  self.content_widgets.set_attribute("style", content_transform)
   self.margin.set_attribute("style", "width:" + gutter_width.to_string() + "px")
-  self.margin_lines.set_attribute(
+  self.line_numbers.set_attribute(
     "style",
     "transform:translateY(" + translate_y.to_string() + "px)",
   )
@@ -461,39 +573,37 @@ fn Viewer::render_hover_widget(
   let widget = island.ensure_hover_widget(self)
   let mut class_name = "hover-widget"
   let mut shift_left = 0.0
-  let mut below = false
+  let mut preferred_placement = ContentWidgetAbove
   match view.placement {
     Some(placement) => {
-      below = placement.below
+      if placement.below {
+        preferred_placement = ContentWidgetBelow
+      }
       shift_left = placement.shift_left
     }
     None => if view.measurable { class_name = class_name + " measuring" }
   }
-  if below {
-    class_name = class_name + " below"
+  match preferred_placement {
+    ContentWidgetBelow => class_name = class_name + " below"
+    ContentWidgetAbove => ()
   }
-  let window_line = line_number - 1 - frame.viewport.start_line
-  let top = if below {
-    (window_line + 1) * editor_line_height
-  } else {
-    window_line * editor_line_height
-  }
-  let mut style = "top:" +
-    top.to_string() +
-    "px;left:calc(" +
-    column.to_string() +
-    "ch)"
-  if shift_left > 0.0 {
-    style = style + ";margin-left:-" + shift_left.to_string() + "px"
+  let content_widget : ContentWidget = {
+    id: "hover",
+    node: widget,
+    anchor: { line_number, column },
+    preferred_placement,
+    allow_overflow: false,
+    shift_left,
+    window_start_line: frame.viewport.start_line,
   }
   widget.set_attribute("class", class_name)
   widget.set_attribute("role", "tooltip")
-  widget.set_attribute("style", style)
   widget.set_inner_html(
     "<div class=\"hover-row\"><div class=\"hover-contents\">" +
     @renderer.escape_html(view.contents) +
     "</div></div>",
   )
+  island.mount_content_widget(content_widget)
   if view.measurable && view.placement is None {
     // Read-after-write: decide the flip/shift from the real geometry.
     let widget_rect = widget.get_bounding_client_rect()
@@ -512,14 +622,11 @@ fn Island::ensure_hover_widget(self : Island, viewer : Viewer) -> @rdom.Element 
     Some(widget) => widget
     None => {
       let widget = @rdom.document().create_element("div")
-      // Overlay widgets swallow mouse events so container hit-testing
-      // never resolves targets beneath them (Monaco's "target is widget"
-      // case); mousemove additionally clears any pending hover anchor
-      // the way leaving the content does.
+      // Content widgets swallow mouse events so container hit-testing
+      // never resolves targets beneath them.
       widget.add_event_listener("mousemove", event => event.stop_propagation())
       widget.add_event_listener("click", event => event.stop_propagation())
       widget.add_event_listener("contextmenu", event => event.stop_propagation())
-      self.hover_layer.append_child(widget.as_node())
       self.hover_widget = Some(widget)
       ignore(viewer)
       widget
@@ -531,11 +638,41 @@ fn Island::ensure_hover_widget(self : Island, viewer : Viewer) -> @rdom.Element 
 fn Island::remove_hover_widget(self : Island) -> Unit {
   match self.hover_widget {
     Some(widget) => {
-      self.hover_layer.remove_child(widget.as_node())
+      self.content_widgets.remove_child(widget.as_node())
       self.hover_widget = None
     }
     None => ()
   }
+}
+
+///|
+fn Island::mount_content_widget(self : Island, widget : ContentWidget) -> Unit {
+  let parent = if widget.allow_overflow {
+    self.overflowing_content_widgets
+  } else {
+    self.content_widgets
+  }
+  parent.append_child(widget.node.as_node())
+  widget.node.set_attribute("data-content-widget", widget.id)
+  widget.node.set_attribute("style", widget.style())
+}
+
+///|
+fn ContentWidget::style(self : ContentWidget) -> String {
+  let window_line = self.anchor.line_number - 1 - self.window_start_line
+  let top = match self.preferred_placement {
+    ContentWidgetBelow => (window_line + 1) * editor_line_height
+    ContentWidgetAbove => window_line * editor_line_height
+  }
+  let mut style = "top:" +
+    top.to_string() +
+    "px;left:calc(" +
+    self.anchor.column.to_string() +
+    "ch)"
+  if self.shift_left > 0.0 {
+    style = style + ";margin-left:-" + self.shift_left.to_string() + "px"
+  }
+  style
 }
 
 ///|

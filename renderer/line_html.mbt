@@ -1,8 +1,8 @@
 ///|
 /// Pure line-HTML emission, the Monaco `viewLineRenderer` role: a
 /// `RenderLine` plus controller decorations become the escaped inner HTML
-/// of one line node. No DOM types; the browser view assigns the result
-/// with one `innerHTML` write per entering line.
+/// of one `.view-line` node. No DOM types; the browser view assigns the
+/// result with one `innerHTML` write per entering line.
 ///
 /// Decoration merging mirrors the old vdom path: `CurrentLine`
 /// decorations extend the line class (see `render_line_class`), every
@@ -12,7 +12,7 @@ pub fn render_line_html(
   decorations : Array[@decorations.Decoration],
 ) -> String {
   let html = StringBuilder()
-  html.write_string("<pre class=\"code\">")
+  html.write_string("<span class=\"view-line-content\">")
   if line.spans.length() == 0 {
     write_escaped(html, line.text)
   } else {
@@ -35,12 +35,12 @@ pub fn render_line_html(
       html.write_string("</span>")
     }
   }
-  html.write_string("</pre>")
+  html.write_string("</span>")
   html.to_string()
 }
 
 ///|
-/// The class of the line node itself: `code-line` plus any `CurrentLine`
+/// The class of the line node itself: `view-line` plus any `CurrentLine`
 /// decorations touching the line (inclusive bounds, as before).
 pub fn render_line_class(
   line : RenderLine,
@@ -48,7 +48,7 @@ pub fn render_line_class(
 ) -> String {
   let line_start = line.offset
   let line_end = line.offset + line.text.length()
-  let mut class_name = "code-line"
+  let mut class_name = "view-line"
   for decoration in decorations {
     if decoration.kind == CurrentLine &&
       decoration.range.start <= line_end &&

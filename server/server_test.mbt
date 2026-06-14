@@ -158,7 +158,7 @@ async test "answers hover and definition from cached provider state" {
   match server.hover({ id: "hover-1", uri, document_version: 1, offset: 7 }) {
     HoverResult(payload) =>
       match payload.hover {
-        Some(hover) => assert_eq(hover.contents, "Configured hover")
+        Some(hover) => assert_plaintext_hover(hover, "Configured hover")
         None => fail("expected hover")
       }
     _ => fail("expected hover result")
@@ -235,7 +235,7 @@ async test "dispatches language requests through configured providers" {
   match server.hover({ id: "hover-1", uri, document_version: 1, offset: 7 }) {
     HoverResult(payload) =>
       match payload.hover {
-        Some(hover) => assert_eq(hover.contents, "Configured hover")
+        Some(hover) => assert_plaintext_hover(hover, "Configured hover")
         None => fail("expected configured hover")
       }
     _ => fail("expected hover result")
@@ -390,7 +390,21 @@ impl @language.HoverProvider for FakeLanguageProvider with fn hover_at(
   _document,
   offset,
 ) {
-  Some({ range: Range(offset, offset + 4), contents: "Configured hover" })
+  Some({
+    range: Range(offset, offset + 4),
+    contents: [PlainText("Configured hover")],
+  })
+}
+
+///|
+fn assert_plaintext_hover(
+  hover : @language.Hover,
+  expected : String,
+) -> Unit raise {
+  match hover.contents {
+    [PlainText(text)] => assert_eq(text, expected)
+    _ => fail("expected plaintext hover")
+  }
 }
 
 ///|

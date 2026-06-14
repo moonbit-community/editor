@@ -240,7 +240,10 @@ async test "native workspace language provider bridges remote documents to file 
 
     match provider.hover_at(document, 7) {
       Some(hover) => {
-        assert_eq(hover.contents, "LSP hover for startup_event")
+        match hover.contents {
+          [PlainText(text)] => assert_eq(text, "LSP hover for startup_event")
+          _ => fail("expected plaintext hover")
+        }
         assert_true(hover.range == Range(7, 20))
       }
       None => fail("expected lsp hover")

@@ -1,6 +1,6 @@
 ///|
 pub fn protocol_version() -> Int {
-  1
+  2
 }
 
 ///|
@@ -1035,7 +1035,20 @@ fn semantic_token_json(token : @language.SemanticToken) -> Json {
 
 ///|
 fn hover_json(hover : @language.Hover) -> Json {
-  { "range": range_json(hover.range), "contents": hover.contents.to_json() }
+  {
+    "range": range_json(hover.range),
+    "contents": Json::array(hover.contents.map(hover_content_json)),
+  }
+}
+
+///|
+fn hover_content_json(content : @language.HoverContent) -> Json {
+  match content {
+    PlainText(text) =>
+      { "kind": Json::string("plaintext"), "value": text.to_json() }
+    Markdown(text) =>
+      { "kind": Json::string("markdown"), "value": text.to_json() }
+  }
 }
 
 ///|
@@ -1079,15 +1092,78 @@ fn parse_hover(value : Json) -> @language.Hover? {
   match value {
     Null => None
     Object(_) =>
-      match (json_field(value, "range"), json_string_field(value, "contents")) {
-        (Some(range_json), Some(contents)) =>
+      match (json_field(value, "range"), json_field(value, "contents")) {
+        (Some(range_json), Some(contents_json)) =>
           match parse_range(range_json) {
-            Some(range) => Some({ range, contents })
+            Some(range) => {
+              let contents = parse_hover_contents(contents_json)
+              if contents.length() == 0 {
+                None
+              } else {
+                Some({ range, contents })
+              }
+            }
             None => None
           }
         _ => None
       }
     _ => None
+  }
+}
+
+///|
+fn parse_hover_contents(value : Json) -> Array[@language.HoverContent] {
+  match value {
+    String(text) => parse_hover_plaintext(text)
+    Object(_) =>
+      match parse_hover_content(value) {
+        Some(content) => [content]
+        None => []
+      }
+    Array(items) => {
+      let out : Array[@language.HoverContent] = []
+      for item in items {
+        for content in parse_hover_contents(item) {
+          out.push(content)
+        }
+      }
+      out
+    }
+    _ => []
+  }
+}
+
+///|
+fn parse_hover_content(value : Json) -> @language.HoverContent? {
+  match value {
+    String(text) =>
+      match parse_hover_plaintext(text) {
+        [content] => Some(content)
+        _ => None
+      }
+    Object(_) => {
+      let text = match json_string_field(value, "value") {
+        Some(text) => text
+        None => return None
+      }
+      if text == "" {
+        return None
+      }
+      match json_string_field(value, "kind") {
+        Some("markdown") => Some(Markdown(text))
+        _ => Some(PlainText(text))
+      }
+    }
+    _ => None
+  }
+}
+
+///|
+fn parse_hover_plaintext(text : String) -> Array[@language.HoverContent] {
+  if text == "" {
+    []
+  } else {
+    [PlainText(text)]
   }
 }
 

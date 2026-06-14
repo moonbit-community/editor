@@ -546,10 +546,10 @@ fn Island::update_scrollbars(
 }
 
 ///|
-/// Renders, positions, and (once) measures the hover widget in the hover
-/// layer, which shares the lines transform so the widget tracks content
-/// space. The placement measurement is a read-after-write on the freshly
-/// written widget, applied in the same flush.
+/// Renders, positions, and (once) measures the hover content widget,
+/// which shares the lines transform so it tracks content space. The
+/// placement measurement is a read-after-write on the freshly written
+/// widget, applied in the same flush.
 fn Viewer::render_hover_widget(
   self : Viewer,
   island : Island,
@@ -571,7 +571,7 @@ fn Viewer::render_hover_widget(
     }
   }
   let widget = island.ensure_hover_widget(self)
-  let mut class_name = "hover-widget"
+  let mut class_name = "hover-widget moonbit-viewer-hover fade-in"
   let mut shift_left = 0.0
   let mut preferred_placement = ContentWidgetAbove
   match view.placement {
@@ -598,11 +598,8 @@ fn Viewer::render_hover_widget(
   }
   widget.set_attribute("class", class_name)
   widget.set_attribute("role", "tooltip")
-  widget.set_inner_html(
-    "<div class=\"hover-row\"><div class=\"hover-contents\">" +
-    @renderer.escape_html(view.contents) +
-    "</div></div>",
-  )
+  widget.set_attribute("tabindex", "0")
+  widget.set_inner_html(render_hover_shell(view.contents))
   island.mount_content_widget(content_widget)
   if view.measurable && view.placement is None {
     // Read-after-write: decide the flip/shift from the real geometry.
@@ -625,12 +622,83 @@ fn Island::ensure_hover_widget(self : Island, viewer : Viewer) -> @rdom.Element 
       // Content widgets swallow mouse events so container hit-testing
       // never resolves targets beneath them.
       widget.add_event_listener("mousemove", event => event.stop_propagation())
+      widget.add_event_listener("mousedown", event => event.stop_propagation())
       widget.add_event_listener("click", event => event.stop_propagation())
       widget.add_event_listener("contextmenu", event => event.stop_propagation())
+      widget.add_event_listener("focusin", event => event.stop_propagation())
+      widget.add_event_listener("focusout", event => event.stop_propagation())
+      widget.add_event_listener("wheel", event => event.stop_propagation())
+      widget.add_event_listener("keydown", event => {
+        match event.to_keyboard_event() {
+          Some(keyboard) => viewer.handle_hover_keydown(widget, event, keyboard)
+          None => event.stop_propagation()
+        }
+      })
       self.hover_widget = Some(widget)
-      ignore(viewer)
       widget
     }
+  }
+}
+
+///|
+fn Viewer::handle_hover_keydown(
+  self : Viewer,
+  widget : @rdom.Element,
+  event : @rdom.Event,
+  keyboard : @rdom.KeyboardEvent,
+) -> Unit {
+  event.stop_propagation()
+  match keyboard.key() {
+    "Escape" => {
+      event.prevent_default()
+      self.hover = self.hover.cleared()
+      self.schedule_render()
+    }
+    "ArrowDown" => {
+      event.prevent_default()
+      scroll_hover_content(widget, editor_line_height.to_double())
+    }
+    "ArrowUp" => {
+      event.prevent_default()
+      scroll_hover_content(widget, -editor_line_height.to_double())
+    }
+    "PageDown" => {
+      event.prevent_default()
+      scroll_hover_content(widget, hover_content_page_delta(widget))
+    }
+    "PageUp" => {
+      event.prevent_default()
+      scroll_hover_content(widget, -hover_content_page_delta(widget))
+    }
+    "Home" => {
+      event.prevent_default()
+      hover_scroll_content(widget).set_scroll_top(0.0)
+    }
+    "End" => {
+      event.prevent_default()
+      let content = hover_scroll_content(widget)
+      content.set_scroll_top(content.get_scroll_height())
+    }
+    _ => ()
+  }
+}
+
+///|
+fn scroll_hover_content(widget : @rdom.Element, delta : Double) -> Unit {
+  let content = hover_scroll_content(widget)
+  content.set_scroll_top(content.get_scroll_top() + delta)
+}
+
+///|
+fn hover_content_page_delta(widget : @rdom.Element) -> Double {
+  hover_scroll_content(widget).get_bounding_client_rect().get_height()
+}
+
+///|
+fn hover_scroll_content(widget : @rdom.Element) -> @rdom.Element {
+  match widget.get_children().get(0) {
+    Some(content) => content
+    None => widget
   }
 }
 

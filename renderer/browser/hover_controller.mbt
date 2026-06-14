@@ -1,7 +1,7 @@
 ///|
 priv struct HoverView {
   range : @core.Range
-  contents : String
+  contents : Array[@language.HoverContent]
 } derive(Eq)
 
 ///|
@@ -247,7 +247,7 @@ fn HoverController::decorations(
 /// the loading delay.
 priv struct HoverWidgetView {
   anchor_offset : Int
-  contents : String
+  contents : Array[@language.HoverContent]
   /// Whether this widget participates in placement measurement (the
   /// loading hover renders unmeasured at the anchor).
   measurable : Bool
@@ -270,7 +270,7 @@ fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
           Some(anchor) =>
             Some({
               anchor_offset: anchor.start,
-              contents: "Loading...",
+              contents: [PlainText("Loading...")],
               measurable: false,
               placement: self.placement,
             })

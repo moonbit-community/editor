@@ -749,7 +749,8 @@ body {
   position: absolute;
   z-index: 50;
   pointer-events: auto;
-  max-width: 500px;
+  min-width: 160px;
+  max-width: min(680px, 70vw);
   border: 1px solid var(--vscode-editorHoverWidget-border);
   border-radius: 3px;
   background: var(--vscode-editorHoverWidget-background);
@@ -757,9 +758,13 @@ body {
   box-shadow: 0 2px 8px var(--vscode-widget-shadow);
   transform: translateY(-100%);
   font: var(--editor-font-size) / 1.5 var(--editor-font-family);
-  white-space: pre-wrap;
   cursor: default;
   user-select: text;
+}
+
+.hover-widget:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
 }
 
 .hover-widget.below {
@@ -770,8 +775,106 @@ body {
   visibility: hidden;
 }
 
-.hover-widget .hover-contents {
-  padding: 4px 8px;
+.hover-widget.fade-in {
+  animation: hover-fade-in 80ms ease-out;
+}
+
+@keyframes hover-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.moonbit-viewer-hover-content {
+  max-height: min(320px, 55vh);
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.hover-row {
+  padding: 0;
+}
+
+.hover-contents {
+  padding: 2px 8px;
+  overflow-wrap: anywhere;
+}
+
+.hover-plaintext {
+  white-space: pre-wrap;
+}
+
+.hover-contents p,
+.hover-contents ul,
+.hover-contents ol,
+.hover-contents pre,
+.hover-contents blockquote {
+  margin: 4px 0;
+}
+
+.hover-contents p:first-child,
+.hover-contents ul:first-child,
+.hover-contents ol:first-child,
+.hover-contents pre:first-child,
+.hover-contents blockquote:first-child {
+  margin-top: 0;
+}
+
+.hover-contents p:last-child,
+.hover-contents ul:last-child,
+.hover-contents ol:last-child,
+.hover-contents pre:last-child,
+.hover-contents blockquote:last-child {
+  margin-bottom: 0;
+}
+
+.hover-contents ul,
+.hover-contents ol {
+  padding-left: 20px;
+}
+
+.hover-contents li {
+  margin: 2px 0;
+}
+
+.hover-contents code {
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--vscode-editor-foreground) 12%, transparent);
+  font-family: var(--editor-font-family);
+}
+
+.hover-contents pre {
+  max-width: 100%;
+  overflow: auto;
+  padding: 6px 8px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
+}
+
+.hover-contents pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.hover-contents a {
+  color: var(--vscode-editorLink-activeForeground);
+  text-decoration: none;
+}
+
+.hover-contents a:hover {
+  text-decoration: underline;
+}
+
+.hover-contents hr {
+  height: 1px;
+  margin: 6px 0;
+  border: 0;
+  background: var(--vscode-editorHoverWidget-border);
 }
 
 .diagnostics {

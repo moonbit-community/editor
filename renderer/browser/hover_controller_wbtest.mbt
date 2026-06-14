@@ -7,7 +7,7 @@ test "stale hover results are dropped by version and token guards" {
   let controller = HoverController::empty()
   let hover : @language.Hover? = Some({
     range: Range(3, 7),
-    contents: "fn main",
+    contents: [PlainText("fn main")],
   })
   // Version moved on: result dropped, nothing reported.
   let stale_version = controller.resolved_hover(notify, 1, 0, hover, 2)

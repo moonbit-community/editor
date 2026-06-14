@@ -169,7 +169,20 @@ fn diagnostic_json(diagnostic : @language.Diagnostic) -> Json {
 
 ///|
 fn hover_json(hover : @language.Hover) -> Json {
-  { "range": range_json(hover.range), "contents": hover.contents.to_json() }
+  {
+    "range": range_json(hover.range),
+    "contents": Json::array(hover.contents.map(hover_content_json)),
+  }
+}
+
+///|
+fn hover_content_json(content : @language.HoverContent) -> Json {
+  match content {
+    PlainText(text) =>
+      { "kind": Json::string("plaintext"), "value": text.to_json() }
+    Markdown(text) =>
+      { "kind": Json::string("markdown"), "value": text.to_json() }
+  }
 }
 
 ///|

@@ -1,4 +1,5 @@
 import {
+  "baozhiyuan/editor/core",
   "baozhiyuan/editor/dom",
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/remote_protocol",

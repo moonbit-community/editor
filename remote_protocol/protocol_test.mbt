@@ -6,7 +6,7 @@ test "encodes and decodes document client packets" {
   let packet = @remote_protocol.OpenDocument({ id: "open-1", uri })
   let encoded = packet.to_json().stringify()
   assert_true(encoded.contains("\"type\":\"OpenDocument\""))
-  assert_true(encoded.contains("\"version\":1"))
+  assert_true(encoded.contains("\"version\":2"))
 
   match @remote_protocol.decode_client_packet(encoded) {
     DecodedClientPacket(OpenDocument(request)) => {
@@ -215,19 +215,37 @@ test "encodes and decodes server document and language packets" {
     id: "hover-1",
     uri,
     version: 2,
-    hover: Some({ range: Range(7, 11), contents: "fn main" }),
+    hover: Some({
+      range: Range(7, 11),
+      contents: [PlainText("fn main"), Markdown("**main**")],
+    }),
   })
   match @remote_protocol.decode_server_packet(hover.to_json().stringify()) {
     DecodedServerPacket(HoverResult(payload)) =>
       match payload.hover {
         Some(item) => {
           assert_eq(payload.version, 2)
-          assert_eq(item.contents, "fn main")
+          assert_eq(item.contents.length(), 2)
+          assert_hover_plaintext(item, 0, "fn main")
+          assert_hover_markdown(item, 1, "**main**")
           assert_true(item.range == Range(7, 11))
         }
         None => fail("missing hover")
       }
     DecodedServerPacket(_) => fail("unexpected hover result packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+
+  let legacy_hover = "{\"version\":2,\"type\":\"HoverResult\",\"id\":\"hover-legacy\",\"uri\":\"" +
+    uri.to_string() +
+    "\",\"documentVersion\":2,\"hover\":{\"range\":{\"start\":7,\"end\":11},\"contents\":\"legacy text\"}}"
+  match @remote_protocol.decode_server_packet(legacy_hover) {
+    DecodedServerPacket(HoverResult(payload)) =>
+      match payload.hover {
+        Some(item) => assert_hover_plaintext(item, 0, "legacy text")
+        None => fail("missing legacy hover")
+      }
+    DecodedServerPacket(_) => fail("unexpected legacy hover packet")
     ServerPacketDecodeError(error) => fail(error.message)
   }
 
@@ -370,7 +388,7 @@ test "reports protocol decode errors" {
 
   match
     @remote_protocol.decode_client_packet(
-      "{\"version\":1,\"type\":\"OpenDocument\",\"id\":\"x\",\"uri\":\"bad\"}",
+      "{\"version\":2,\"type\":\"OpenDocument\",\"id\":\"x\",\"uri\":\"bad\"}",
     ) {
     ClientPacketDecodeError(error) =>
       assert_true(error.code == ProtocolInvalidUri)
@@ -380,15 +398,41 @@ test "reports protocol decode errors" {
 
 ///|
 test "negotiates protocol versions" {
-  match @remote_protocol.negotiate_protocol_version(1) {
-    ProtocolAccepted(version) => assert_eq(version, 1)
+  match @remote_protocol.negotiate_protocol_version(2) {
+    ProtocolAccepted(version) => assert_eq(version, 2)
     ProtocolRejected(error) => fail(error.message)
   }
 
-  match @remote_protocol.negotiate_protocol_version(2) {
+  match @remote_protocol.negotiate_protocol_version(1) {
     ProtocolRejected(error) =>
       assert_true(error.code == ProtocolUnsupportedVersion)
     ProtocolAccepted(_) => fail("expected rejected protocol")
+  }
+}
+
+///|
+fn assert_hover_plaintext(
+  hover : @language.Hover,
+  index : Int,
+  expected : String,
+) -> Unit raise {
+  match hover.contents.get(index) {
+    Some(PlainText(text)) => assert_eq(text, expected)
+    Some(Markdown(_)) => fail("expected plaintext hover")
+    None => fail("missing hover content")
+  }
+}
+
+///|
+fn assert_hover_markdown(
+  hover : @language.Hover,
+  index : Int,
+  expected : String,
+) -> Unit raise {
+  match hover.contents.get(index) {
+    Some(Markdown(text)) => assert_eq(text, expected)
+    Some(PlainText(_)) => fail("expected markdown hover")
+    None => fail("missing hover content")
   }
 }
 

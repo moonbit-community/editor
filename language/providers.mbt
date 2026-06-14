@@ -1,7 +1,13 @@
 ///|
+pub(all) enum HoverContent {
+  PlainText(String)
+  Markdown(String)
+} derive(Eq, Debug)
+
+///|
 pub(all) struct Hover {
   range : @core.Range
-  contents : String
+  contents : Array[HoverContent]
 } derive(Debug)
 
 ///|

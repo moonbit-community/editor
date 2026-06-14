@@ -469,17 +469,35 @@ async fn serve_static_file(
     serve_not_found(conn)
     return
   }
-  let content = Some(@fs.read_file(file_path).text()) catch { _ => None }
+  let content = Some(@fs.read_file(file_path).binary()) catch { _ => None }
   match content {
-    Some(content) =>
-      conn
-      ..send_response(200, "OK", extra_headers={
+    Some(content) => {
+      conn.send_response(200, "OK", extra_headers={
         "Content-Type": content_type,
         "Content-Length": content.length().to_string(),
       })
-      ..write_string(content)
-      .end_response()
+      write_static_response_body(conn, content)
+      conn.end_response()
+    }
     None => serve_not_found(conn)
+  }
+}
+
+///|
+async fn write_static_response_body(
+  conn : @http.ServerConnection,
+  content : Bytes,
+) -> Unit {
+  let chunk_size = 16384
+  let mut start = 0
+  while start < content.length() {
+    let end = if start + chunk_size < content.length() {
+      start + chunk_size
+    } else {
+      content.length()
+    }
+    conn.write(content[start:end])
+    start = end
   }
 }
 

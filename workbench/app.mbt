@@ -74,6 +74,7 @@ fn workbench_viewer() -> @browser.Viewer {
 ///|
 pub fn start_app() -> Unit {
   @dom.install_host_capabilities()
+  register_harness_hover_provider()
   register_remote_language_providers()
   register_tokenizers()
   mount_app()

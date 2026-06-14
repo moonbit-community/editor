@@ -9,7 +9,11 @@ test "collects language provider surfaces" {
   assert_eq(providers.definitions[0].uri.to_string(), "memory://provider.mbt")
   let hover = providers.hover_at(3)
   match hover {
-    Some(item) => assert_eq(item.contents, "Provider hover")
+    Some(item) =>
+      match item.contents {
+        [PlainText(text)] => assert_eq(text, "Provider hover")
+        _ => fail("expected plaintext hover")
+      }
     None => fail("expected hover")
   }
 }
@@ -19,7 +23,7 @@ struct TestLanguageProvider {}
 
 ///|
 impl LanguageProvider for TestLanguageProvider with fn hovers(_self, _doc) {
-  [{ range: Range(3, 7), contents: "Provider hover" }]
+  [{ range: Range(3, 7), contents: [PlainText("Provider hover")] }]
 }
 
 ///|

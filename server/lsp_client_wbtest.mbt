@@ -49,21 +49,36 @@ test "normalizes hover result shapes" {
   )
   match parse_hover_for_test(marked, doc, 0) {
     Some(hover) => {
-      assert_eq(hover.contents, "fn main")
+      assert_markdown_hover(hover, 0, "```moonbit\nfn main\n```")
       assert_true(hover.range == Range(7, 11))
     }
     None => fail("expected marked hover")
   }
 
   let fallback = hover_response(
-    "{\"contents\":[\"one\",{\"kind\":\"markdown\",\"value\":\"two\"}]}",
+    "{\"contents\":[\"one\",{\"kind\":\"markdown\",\"value\":\"**two**\"},{\"kind\":\"plaintext\",\"value\":\"three\"},{\"language\":\"moonbit\",\"value\":\"fn four\"},\"\"]}",
   )
   match parse_hover_for_test(fallback, doc, 4) {
     Some(hover) => {
-      assert_eq(hover.contents, "one\ntwo")
+      assert_eq(hover.contents.length(), 4)
+      assert_plaintext_hover(hover, 0, "one")
+      assert_markdown_hover(hover, 1, "**two**")
+      assert_plaintext_hover(hover, 2, "three")
+      assert_markdown_hover(hover, 3, "```moonbit\nfn four\n```")
       assert_true(hover.range == Range(4, 5))
     }
     None => fail("expected fallback hover")
+  }
+
+  let unsafe_markdown = hover_response(
+    "{\"contents\":{\"kind\":\"markdown\",\"value\":\"<img src=x onerror=alert(1)> [x](javascript:alert(1))\"}}",
+  )
+  match parse_hover_for_test(unsafe_markdown, doc, 4) {
+    Some(hover) =>
+      assert_markdown_hover(
+        hover, 0, "<img src=x onerror=alert(1)> [x](javascript:alert(1))",
+      )
+    None => fail("expected unsafe markdown to remain markdown content")
   }
 
   let empty = hover_response("{\"contents\":\"\"}")
@@ -149,7 +164,7 @@ async test "lsp client requests hover through transport" {
 
   match client.hover_at(document, 7) {
     Some(hover) => {
-      assert_eq(hover.contents, "LSP hover for main")
+      assert_plaintext_hover(hover, 0, "LSP hover for main")
       assert_true(hover.range == Range(7, 11))
     }
     None => fail("expected hover")
@@ -270,6 +285,32 @@ fn parse_definition_for_test(
   match parse_response_result(raw) {
     ParsedLspResult(result) => parse_definition_result(result, document)
     LspResponseError(_) => None
+  }
+}
+
+///|
+fn assert_plaintext_hover(
+  hover : @language.Hover,
+  index : Int,
+  expected : String,
+) -> Unit raise {
+  match hover.contents.get(index) {
+    Some(PlainText(text)) => assert_eq(text, expected)
+    Some(Markdown(_)) => fail("expected plaintext hover")
+    None => fail("missing hover content")
+  }
+}
+
+///|
+fn assert_markdown_hover(
+  hover : @language.Hover,
+  index : Int,
+  expected : String,
+) -> Unit raise {
+  match hover.contents.get(index) {
+    Some(Markdown(text)) => assert_eq(text, expected)
+    Some(PlainText(_)) => fail("expected markdown hover")
+    None => fail("missing hover content")
   }
 }
 

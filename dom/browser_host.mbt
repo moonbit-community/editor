@@ -84,3 +84,17 @@ pub extern "js" fn install_scroll_control(scroll_to : (Double) -> Unit) -> Unit 
   #| (scroll_to) => {
   #|   globalThis.__readonlyEditorScrollTo = (top) => scroll_to(Number(top) || 0);
   #| }
+
+///|
+/// Installs the browser-test hover fixture hook. Normal usage never calls
+/// this global, so the workbench's remote language provider remains the
+/// first provider that answers.
+pub extern "js" fn install_hover_fixture_control(
+  configure : (String, String) -> Unit,
+) -> Unit =
+  #| (configure) => {
+  #|   globalThis.__readonlyEditorSetHover = (kind, contents) => {
+  #|     configure(String(kind ?? "plaintext"), String(contents ?? ""));
+  #|   };
+  #|   globalThis.__readonlyEditorClearHover = () => configure("", "");
+  #| }

@@ -869,8 +869,8 @@ fn parse_hover_result(
     Object(_) =>
       match json_field(result, "contents") {
         Some(contents_json) => {
-          let contents = hover_contents_text(contents_json)
-          if contents == "" {
+          let contents = hover_contents(contents_json)
+          if contents.length() == 0 {
             None
           } else {
             let range = match json_field(result, "range") {
@@ -891,29 +891,61 @@ fn parse_hover_result(
 }
 
 ///|
-fn hover_contents_text(value : Json) -> String {
+fn hover_contents(value : Json) -> Array[@language.HoverContent] {
   match value {
-    String(text) => text
-    Object(_) =>
-      match json_string_field(value, "value") {
-        Some(text) => text
-        None => ""
-      }
+    String(text) => hover_plaintext(text)
+    Object(_) => hover_object_contents(value)
     Array(items) => {
-      let mut out = ""
+      let out : Array[@language.HoverContent] = []
       for item in items {
-        let text = hover_contents_text(item)
-        if text != "" {
-          if out != "" {
-            out = out + "\n"
-          }
-          out = out + text
+        for content in hover_contents(item) {
+          out.push(content)
         }
       }
       out
     }
-    _ => ""
+    _ => []
   }
+}
+
+///|
+fn hover_object_contents(value : Json) -> Array[@language.HoverContent] {
+  let text = match json_string_field(value, "value") {
+    Some(text) => text
+    None => return []
+  }
+  match json_string_field(value, "kind") {
+    Some("markdown") => hover_markdown(text)
+    Some("plaintext") => hover_plaintext(text)
+    _ =>
+      match json_string_field(value, "language") {
+        Some(language) => hover_markdown(fenced_marked_string(language, text))
+        None => hover_plaintext(text)
+      }
+  }
+}
+
+///|
+fn hover_plaintext(text : String) -> Array[@language.HoverContent] {
+  if text == "" {
+    []
+  } else {
+    [PlainText(text)]
+  }
+}
+
+///|
+fn hover_markdown(text : String) -> Array[@language.HoverContent] {
+  if text == "" {
+    []
+  } else {
+    [Markdown(text)]
+  }
+}
+
+///|
+fn fenced_marked_string(language : String, value : String) -> String {
+  "```" + language + "\n" + value + "\n```"
 }
 
 ///|

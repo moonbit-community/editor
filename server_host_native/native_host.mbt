@@ -565,7 +565,10 @@ impl @server.LspTransport for NativeLspTransport with fn subscribe(
 
 ///|
 pub fn lsp_stdio_frame(message : String) -> String {
-  "Content-Length: " + message.length().to_string() + "\r\n\r\n" + message
+  "Content-Length: " +
+  @utf8.encode(message).length().to_string() +
+  "\r\n\r\n" +
+  message
 }
 
 ///|
@@ -671,7 +674,7 @@ async fn read_lsp_stdio_frame(reader : @process.ReadFromProcess) -> String? {
   let mut content_length = -1
   let mut header_done = false
   while !header_done {
-    match reader.read_until("\n") {
+    match (reader.read_until("\n") catch { _ => None }) {
       Some(line) =>
         if line.trim(char_set="\r\n") == "" {
           header_done = true

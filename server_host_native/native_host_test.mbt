@@ -193,6 +193,19 @@ async test "configured native lsp transport exchanges stdio frames" {
 }
 
 ///|
+async test "configured native lsp transport reports mid-frame process exit" {
+  let script = "printf 'Content-Length: 38\\r\\n\\r\\n{\"jsonrpc\"'"
+  let transport = @server_host_native.native_lsp_transport_for_command(
+    "/bin/sh",
+    ["-c", script],
+  )
+  let response = transport.request(
+    "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"test\"}",
+  )
+  assert_true(response.contains("Native LSP process response failed."))
+}
+
+///|
 test "native lsp stdio framing uses content length headers" {
   let message = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":null}"
   let frame = @server_host_native.lsp_stdio_frame(message)
@@ -210,6 +223,18 @@ test "native lsp stdio framing uses content length headers" {
   assert_true(
     @server_host_native.lsp_content_length_header("X-Header: 38\r\n") is None,
   )
+}
+
+///|
+test "native lsp stdio framing counts utf8 bytes" {
+  let message = "{\"jsonrpc\":\"2.0\",\"id\":1,\"params\":{\"text\":\"汉\"}}"
+  let byte_length = @utf8.encode(message).length()
+  assert_true(byte_length > message.length())
+  let frame = @server_host_native.lsp_stdio_frame(message)
+  assert_true(
+    frame.has_prefix("Content-Length: " + byte_length.to_string() + "\r\n\r\n"),
+  )
+  assert_true(frame.has_suffix(message))
 }
 
 ///|

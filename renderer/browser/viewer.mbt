@@ -330,6 +330,10 @@ fn Viewer::apply_scroll_change(
 ) -> Unit {
   match change {
     Some(_) => {
+      match self.island {
+        Some(island) => island.editor_scrollable.reveal_for_scroll()
+        None => ()
+      }
       self.scroll_dirty = true
       self.schedule_render()
     }

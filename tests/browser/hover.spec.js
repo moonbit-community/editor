@@ -90,10 +90,12 @@ test('keeps hover inspectable with pointer, wheel, focus, and Escape', async ({ 
   const widget = page.locator('[data-content-widget="hover"]');
   const hover = widget.locator('.monaco-hover');
   const content = widget.locator('.monaco-hover-content');
+  const verticalBar = widget.locator('.scrollbar.vertical');
   await expect(hover).toBeVisible();
-  await expect(widget.locator('.scrollbar.vertical.visible .slider')).toBeVisible();
+  await expect(verticalBar).toHaveClass(/(^|\s)invisible(\s|$)/);
 
   await content.hover();
+  await expect(verticalBar).toHaveClass(/(^|\s)visible(\s|$)/);
   await page.waitForTimeout(400);
   await expect(hover).toBeVisible();
 
@@ -128,10 +130,12 @@ test('scrolls long fenced code horizontally with Monaco hover scrollbar', async 
   await hoverMainSymbol(page);
   const widget = page.locator('[data-content-widget="hover"]');
   const content = widget.locator('.monaco-hover-content');
+  const horizontalBar = widget.locator('.scrollbar.horizontal');
   await expect(widget.locator('.monaco-tokenized-source .tok-keyword').first()).toContainText('fn');
-  await expect(widget.locator('.scrollbar.horizontal.visible .slider')).toBeVisible();
+  await expect(horizontalBar).toHaveClass(/(^|\s)invisible(\s|$)/);
 
   await content.hover();
+  await expect(horizontalBar).toHaveClass(/(^|\s)visible(\s|$)/);
   const scrollEventsBefore = events.count('view:scroll');
   await page.mouse.wheel(600, 0);
   await expect

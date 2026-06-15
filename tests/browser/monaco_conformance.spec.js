@@ -109,8 +109,10 @@ test('editor track click centers the thumb like Monaco scrollByPage=false', asyn
     })
     .toBe('object');
   await openWorkspaceFile(page, 'src/monaco_conformance.mbt');
+  await page.locator('.monaco-scrollable-element.editor-scrollable').hover();
 
   let measurement = await page.evaluate(() => globalThis.__readonlyEditorConformance.measure());
+  expect(measurement.editor.verticalScrollbar.visible).toBe(true);
   const bar = measurement.editor.verticalScrollbar.box;
   const slider = measurement.editor.verticalScrollbar.sliderBox;
   expect(bar.height).toBeGreaterThan(slider.height + 40);
@@ -145,12 +147,14 @@ test('long and wide hover payloads use custom hover scrollbars', async ({ page }
   await openWorkspaceFile(page, 'src/monaco_conformance.mbt');
 
   await showReadonlyHover(page, conformanceStates.longHover);
+  await page.locator('[data-content-widget="hover"] .monaco-hover-content').hover();
   let measurement = await page.evaluate(() => globalThis.__readonlyEditorConformance.measure());
   expect(measurement.hover.verticalScrollbar.visible).toBe(true);
   expect(measurement.hover.contentStyles['scrollbar-width']).not.toBe('auto');
 
   await page.evaluate(() => globalThis.__readonlyEditorConformance.hideHover());
   await showReadonlyHover(page, conformanceStates.wideHover);
+  await page.locator('[data-content-widget="hover"] .monaco-hover-content').hover();
   measurement = await page.evaluate(() => globalThis.__readonlyEditorConformance.measure());
   expect(measurement.hover.horizontalScrollbar.visible).toBe(true);
 

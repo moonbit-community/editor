@@ -63,6 +63,10 @@ function createBars(verticalSize, horizontalSize) {
     topLeftShadow,
     verticalSize,
     horizontalSize,
+    verticalRevealed: false,
+    horizontalRevealed: false,
+    verticalFade: false,
+    horizontalFade: false,
   };
 }
 
@@ -94,14 +98,28 @@ function scrollbarState({ visibleSize, scrollSize, scrollPosition, oppositeSize 
   };
 }
 
-function writeBars(bars, dimensions, position, horizontalLeft = 0) {
+function scrollbarClass(bars, axis, needed) {
+  const revealed = axis === 'vertical' ? bars.verticalRevealed : bars.horizontalRevealed;
+  const fade = axis === 'vertical' ? bars.verticalFade : bars.horizontalFade;
+  return `${needed && revealed ? 'visible' : `invisible${needed && fade ? ' fade' : ''}`} scrollbar ${axis}`;
+}
+
+function writeBars(bars, dimensions, position, horizontalLeft = 0, reveal = false) {
   const vertical = scrollbarState({
     visibleSize: dimensions.height,
     scrollSize: dimensions.scrollHeight,
     scrollPosition: position.top,
     oppositeSize: 0,
   });
-  bars.vertical.className = `${vertical.needed ? 'visible' : 'invisible'} scrollbar vertical`;
+  if (vertical.needed && reveal) {
+    bars.verticalRevealed = true;
+    bars.verticalFade = false;
+  }
+  if (!vertical.needed) {
+    bars.verticalRevealed = false;
+    bars.verticalFade = false;
+  }
+  bars.vertical.className = scrollbarClass(bars, 'vertical', vertical.needed);
   bars.vertical.style.cssText = `width:${bars.verticalSize}px;height:${vertical.available}px;right:0px;top:0px`;
   bars.verticalSlider.style.cssText = vertical.needed
     ? `width:${bars.verticalSize}px;height:${vertical.sliderSize}px;transform:translateY(${vertical.sliderPosition}px)`
@@ -113,7 +131,15 @@ function writeBars(bars, dimensions, position, horizontalLeft = 0) {
     scrollPosition: position.left,
     oppositeSize: bars.verticalSize,
   });
-  bars.horizontal.className = `${horizontal.needed ? 'visible' : 'invisible'} scrollbar horizontal`;
+  if (horizontal.needed && reveal) {
+    bars.horizontalRevealed = true;
+    bars.horizontalFade = false;
+  }
+  if (!horizontal.needed) {
+    bars.horizontalRevealed = false;
+    bars.horizontalFade = false;
+  }
+  bars.horizontal.className = scrollbarClass(bars, 'horizontal', horizontal.needed);
   bars.horizontal.style.cssText = `height:${bars.horizontalSize}px;width:${horizontal.available}px;bottom:0px;left:${horizontalLeft}px`;
   bars.horizontalSlider.style.cssText = horizontal.needed
     ? `height:${bars.horizontalSize}px;width:${horizontal.sliderSize}px;transform:translateX(${horizontal.sliderPosition}px)`
@@ -148,12 +174,12 @@ function editorDimensions() {
   };
 }
 
-function applyEditorScroll() {
+function applyEditorScroll(reveal = false) {
   const dimensions = editorDimensions();
   scrollTop = Math.max(0, Math.min(scrollTop, dimensions.scrollHeight - dimensions.height));
   scrollLeft = Math.max(0, Math.min(scrollLeft, dimensions.scrollWidth - dimensions.width));
   viewLines.style.transform = `translate(${-scrollLeft}px,${-scrollTop}px)`;
-  writeBars(editorBars, dimensions, { top: scrollTop, left: scrollLeft }, 0);
+  writeBars(editorBars, dimensions, { top: scrollTop, left: scrollLeft }, 0, reveal);
 }
 
 function renderMarkdown(markdown) {
@@ -285,10 +311,10 @@ function showHover(payloadName, line, column) {
   content.style.maxWidth = `${Math.max(160, container.clientWidth - 24)}px`;
   content.style.maxHeight = `${Math.max(80, container.clientHeight - 24)}px`;
   updateHoverBars(content, hoverBars);
-  content.addEventListener('scroll', () => updateHoverBars(content, hoverBars));
+  content.addEventListener('scroll', () => updateHoverBars(content, hoverBars, true));
 }
 
-function updateHoverBars(content, bars) {
+function updateHoverBars(content, bars, reveal = false) {
   writeBars(
     bars,
     {
@@ -299,6 +325,7 @@ function updateHoverBars(content, bars) {
     },
     { top: content.scrollTop, left: content.scrollLeft },
     0,
+    reveal,
   );
 }
 
@@ -458,7 +485,7 @@ window.__monacoConformance = {
   scrollEditor(top, left = 0) {
     scrollTop = Number(top) || 0;
     scrollLeft = Number(left) || 0;
-    applyEditorScroll();
+    applyEditorScroll(true);
   },
   measure,
 };

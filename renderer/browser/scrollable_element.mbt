@@ -17,6 +17,13 @@ priv struct ScrollableElementDom {
   horizontal_size : Double
   vertical_state : @renderer.ScrollbarState
   horizontal_state : @renderer.ScrollbarState
+  mut vertical_revealed : Bool
+  mut horizontal_revealed : Bool
+  mut vertical_fade : Bool
+  mut horizontal_fade : Bool
+  mut mouse_is_over : Bool
+  mut is_dragging : Bool
+  mut hide_generation : Int
 }
 
 ///|
@@ -38,6 +45,9 @@ priv struct ScrollbarDrag {
 
 ///|
 let default_scrollbar_size = 10.0
+
+///|
+let scrollbar_hide_timeout_ms = 500
 
 ///|
 fn ScrollableElementDom::new(
@@ -94,6 +104,13 @@ fn ScrollableElementDom::new(
       scrollbar_size=horizontal_size,
       opposite_scrollbar_size=vertical_size,
     ),
+    vertical_revealed: false,
+    horizontal_revealed: false,
+    vertical_fade: false,
+    horizontal_fade: false,
+    mouse_is_over: false,
+    is_dragging: false,
+    hide_generation: 0,
   }
 }
 
@@ -146,8 +163,15 @@ fn ScrollableElementDom::update_from_native_content(
 fn ScrollableElementDom::write_vertical_bar(
   self : ScrollableElementDom,
 ) -> Unit {
+  let needed = self.vertical_state.is_needed()
+  if !needed {
+    self.set_bar_visibility(vertical=true, revealed=false, fade=false)
+  }
+  self.vertical_bar.set_attribute(
+    "class",
+    self.scrollbar_class(vertical=true, needed~),
+  )
   if self.vertical_state.is_needed() {
-    self.vertical_bar.set_attribute("class", "visible scrollbar vertical")
     self.vertical_bar.set_attribute(
       "style",
       "width:" +
@@ -168,7 +192,6 @@ fn ScrollableElementDom::write_vertical_bar(
       "px)",
     )
   } else {
-    self.vertical_bar.set_attribute("class", "invisible scrollbar vertical")
     self.vertical_bar.set_attribute(
       "style",
       "width:" +
@@ -186,8 +209,15 @@ fn ScrollableElementDom::write_horizontal_bar(
   self : ScrollableElementDom,
   horizontal_left? : Double,
 ) -> Unit {
+  let needed = self.horizontal_state.is_needed()
+  if !needed {
+    self.set_bar_visibility(vertical=false, revealed=false, fade=false)
+  }
+  self.horizontal_bar.set_attribute(
+    "class",
+    self.scrollbar_class(vertical=false, needed~),
+  )
   if self.horizontal_state.is_needed() {
-    self.horizontal_bar.set_attribute("class", "visible scrollbar horizontal")
     let mut bar_style = "height:" +
       self.horizontal_size.to_string() +
       "px;width:" +
@@ -210,7 +240,6 @@ fn ScrollableElementDom::write_horizontal_bar(
       "px)",
     )
   } else {
-    self.horizontal_bar.set_attribute("class", "invisible scrollbar horizontal")
     let mut bar_style = "height:" +
       self.horizontal_size.to_string() +
       "px;width:" +
@@ -223,6 +252,162 @@ fn ScrollableElementDom::write_horizontal_bar(
     self.horizontal_bar.set_attribute("style", bar_style)
     self.horizontal_slider.set_attribute("style", "")
   }
+}
+
+///|
+fn ScrollableElementDom::scrollbar_class(
+  self : ScrollableElementDom,
+  vertical~ : Bool,
+  needed~ : Bool,
+) -> String {
+  let axis = if vertical { "vertical" } else { "horizontal" }
+  if needed && self.bar_is_revealed(vertical) {
+    "visible scrollbar " + axis
+  } else {
+    let mut class_name = "invisible scrollbar " + axis
+    if needed && self.bar_has_fade(vertical) {
+      class_name = class_name + " fade"
+    }
+    class_name
+  }
+}
+
+///|
+fn ScrollableElementDom::bar_is_revealed(
+  self : ScrollableElementDom,
+  vertical : Bool,
+) -> Bool {
+  if vertical {
+    self.vertical_revealed
+  } else {
+    self.horizontal_revealed
+  }
+}
+
+///|
+fn ScrollableElementDom::bar_has_fade(
+  self : ScrollableElementDom,
+  vertical : Bool,
+) -> Bool {
+  if vertical {
+    self.vertical_fade
+  } else {
+    self.horizontal_fade
+  }
+}
+
+///|
+fn ScrollableElementDom::set_bar_visibility(
+  self : ScrollableElementDom,
+  vertical~ : Bool,
+  revealed~ : Bool,
+  fade~ : Bool,
+) -> Unit {
+  if vertical {
+    self.vertical_revealed = revealed
+    self.vertical_fade = fade
+  } else {
+    self.horizontal_revealed = revealed
+    self.horizontal_fade = fade
+  }
+}
+
+///|
+fn ScrollableElementDom::write_bar_visibility_class(
+  self : ScrollableElementDom,
+  vertical : Bool,
+) -> Unit {
+  let needed = self.state(vertical).is_needed()
+  self
+  .track(vertical)
+  .set_attribute("class", self.scrollbar_class(vertical~, needed~))
+}
+
+///|
+fn ScrollableElementDom::reveal_scrollbars(self : ScrollableElementDom) -> Unit {
+  self.hide_generation += 1
+  if self.vertical_state.is_needed() {
+    self.set_bar_visibility(vertical=true, revealed=true, fade=false)
+    self.write_bar_visibility_class(true)
+  }
+  if self.horizontal_state.is_needed() {
+    self.set_bar_visibility(vertical=false, revealed=true, fade=false)
+    self.write_bar_visibility_class(false)
+  }
+}
+
+///|
+fn ScrollableElementDom::hide_scrollbars_if_idle(
+  self : ScrollableElementDom,
+) -> Unit {
+  if self.mouse_is_over || self.is_dragging {
+    return
+  }
+  self.set_bar_visibility(
+    vertical=true,
+    revealed=false,
+    fade=self.vertical_state.is_needed(),
+  )
+  self.set_bar_visibility(
+    vertical=false,
+    revealed=false,
+    fade=self.horizontal_state.is_needed(),
+  )
+  self.write_bar_visibility_class(true)
+  self.write_bar_visibility_class(false)
+}
+
+///|
+fn ScrollableElementDom::schedule_hide_scrollbars(
+  self : ScrollableElementDom,
+) -> Unit {
+  if self.mouse_is_over || self.is_dragging {
+    return
+  }
+  self.hide_generation += 1
+  let generation = self.hide_generation
+  @dom.set_timeout(
+    () => {
+      if self.hide_generation == generation {
+        self.hide_scrollbars_if_idle()
+      }
+    },
+    scrollbar_hide_timeout_ms,
+  )
+  |> ignore
+}
+
+///|
+fn ScrollableElementDom::reveal_for_scroll(self : ScrollableElementDom) -> Unit {
+  self.reveal_scrollbars()
+  self.schedule_hide_scrollbars()
+}
+
+///|
+fn ScrollableElementDom::mouse_entered(self : ScrollableElementDom) -> Unit {
+  if self.mouse_is_over {
+    return
+  }
+  self.mouse_is_over = true
+  self.reveal_scrollbars()
+}
+
+///|
+fn ScrollableElementDom::mouse_left(self : ScrollableElementDom) -> Unit {
+  self.mouse_is_over = false
+  self.hide_scrollbars_if_idle()
+}
+
+///|
+fn ScrollableElementDom::drag_started(self : ScrollableElementDom) -> Unit {
+  self.is_dragging = true
+  self.reveal_scrollbars()
+}
+
+///|
+fn ScrollableElementDom::drag_ended(self : ScrollableElementDom) -> Unit {
+  self.is_dragging = false
+  self.hide_scrollbars_if_idle()
 }
 
 ///|
@@ -338,6 +523,7 @@ fn ScrollableElementDom::native_scroll_to(
     self.content.set_scroll_left(position)
   }
   self.update_from_native_content()
+  self.reveal_for_scroll()
 }
 
 ///|
@@ -349,6 +535,7 @@ fn ScrollableElementDom::native_scroll_by(
   self.content.set_scroll_top(self.content.get_scroll_top() + delta_top)
   self.content.set_scroll_left(self.content.get_scroll_left() + delta_left)
   self.update_from_native_content()
+  self.reveal_for_scroll()
 }
 
 ///|

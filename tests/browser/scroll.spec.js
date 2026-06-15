@@ -23,9 +23,11 @@ test('windows the rendered lines while keeping the document height', async ({ pa
   const editorScrollable = page.locator(
     '.overflow-guard > .monaco-scrollable-element.editor-scrollable',
   );
+  const verticalBar = editorScrollable.locator('> .scrollbar.vertical');
   await expect(editorScrollable).toBeVisible();
   await expect(editorScrollable.locator('> .lines-content .view-lines')).toHaveCount(1);
-  await expect(editorScrollable.locator('> .scrollbar.vertical.visible .slider')).toBeVisible();
+  await expect(verticalBar).toHaveClass(/(^|\s)invisible(\s|$)/);
+  await expect(verticalBar.locator('> .slider')).toHaveCount(1);
   await expect(page.locator('.view-line[data-line="1"]')).toBeVisible();
   await expect(page.locator('.view-line[data-line="10000"]')).toHaveCount(0);
 
@@ -37,14 +39,16 @@ test('windows the rendered lines while keeping the document height', async ({ pa
   await expect(page.locator('.view-line[data-line="1"]')).toHaveCount(0);
 });
 
-test('routes wheel input through the editor scrollable element', async ({ page }) => {
+test('reveals editor scrollbar for wheel input then fades it after idle', async ({ page }) => {
   const events = readonlyEvents(page);
   await page.goto('/');
   await openWorkspaceFile(page, 'src/generated_scroll.mbt');
 
   const editorScrollable = page.locator('.monaco-scrollable-element.editor-scrollable');
-  await expect(editorScrollable.locator('> .scrollbar.vertical.visible .slider')).toBeVisible();
+  const verticalBar = editorScrollable.locator('> .scrollbar.vertical');
+  await expect(verticalBar).toHaveClass(/(^|\s)invisible(\s|$)/);
   await editorScrollable.hover();
+  await expect(verticalBar).toHaveClass(/(^|\s)visible(\s|$)/);
 
   const scrollEventsBefore = events.count('view:scroll');
   await page.mouse.wheel(0, 720);
@@ -52,6 +56,52 @@ test('routes wheel input through the editor scrollable element', async ({ page }
     .poll(() => lastScrollTop(events), { timeout: 3_000 })
     .toBeGreaterThan(0);
   expect(events.count('view:scroll')).toBeGreaterThan(scrollEventsBefore);
+  await expect(verticalBar).toHaveClass(/(^|\s)visible(\s|$)/);
+
+  await page.mouse.move(4, 4);
+  await expect(verticalBar).toHaveClass(/(^|\s)invisible(\s|$).*($|\s)fade(\s|$)/, { timeout: 1_500 });
+});
+
+test('drags editor scrollbar thumb after auto reveal', async ({ page }) => {
+  await page.goto('/');
+  await openWorkspaceFile(page, 'src/generated_scroll.mbt');
+
+  const editorScrollable = page.locator('.monaco-scrollable-element.editor-scrollable');
+  const verticalBar = editorScrollable.locator('> .scrollbar.vertical');
+  await expect(verticalBar).toHaveClass(/(^|\s)invisible(\s|$)/);
+  await editorScrollable.hover();
+  await expect(verticalBar).toHaveClass(/(^|\s)visible(\s|$)/);
+
+  const before = await page.evaluate(() => {
+    const slider = document.querySelector(
+      '.monaco-scrollable-element.editor-scrollable > .scrollbar.vertical > .slider',
+    );
+    const rect = slider.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + Math.min(20, rect.height / 2),
+      top: rect.top,
+    };
+  });
+  await page.mouse.move(before.x, before.y);
+  await page.mouse.down();
+  await page.mouse.move(before.x, before.y + 160, { steps: 4 });
+  await page.mouse.up();
+
+  await expect
+    .poll(() => firstVisibleLine(page), { timeout: 3_000 })
+    .toBeGreaterThan(1);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const slider = document.querySelector(
+          '.monaco-scrollable-element.editor-scrollable > .scrollbar.vertical > .slider',
+        );
+        return slider.getBoundingClientRect().top;
+      }),
+    )
+    .toBeGreaterThan(before.top);
+  await expect(verticalBar.locator('> .slider')).not.toHaveClass(/active/);
 });
 
 test('resolves hover for the token under the mouse after scrolling', async ({ page }) => {
@@ -145,4 +195,21 @@ function lastScrollTop(events) {
   }
   const match = latest.match(/"scrollTop":([0-9.]+)/);
   return match ? Number(match[1]) : 0;
+}
+
+async function firstVisibleLine(page) {
+  return page.evaluate(() => {
+    const root = document.querySelector('.moonbit-viewer.readonly-editor');
+    const rootRect = root?.getBoundingClientRect();
+    if (!rootRect) {
+      return 0;
+    }
+    for (const line of document.querySelectorAll('.view-line[data-line]')) {
+      const rect = line.getBoundingClientRect();
+      if (rect.bottom >= rootRect.top && rect.top <= rootRect.bottom) {
+        return Number(line.getAttribute('data-line') || 0);
+      }
+    }
+    return 0;
+  });
 }

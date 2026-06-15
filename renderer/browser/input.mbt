@@ -42,6 +42,15 @@ fn Viewer::hook_scrollable_scrollbar_input(
   scrollable : ScrollableElementDom,
   owner : ScrollableElementOwner,
 ) -> Unit {
+  scrollable.wrapper.add_event_listener("mouseover", _ => {
+    scrollable.mouse_entered()
+  })
+  scrollable.wrapper.add_event_listener("mousemove", _ => {
+    scrollable.mouse_entered()
+  })
+  scrollable.wrapper.add_event_listener("mouseleave", _ => {
+    scrollable.mouse_left()
+  })
   scrollable
   .slider(true)
   .add_event_listener("mousedown", event => {
@@ -128,6 +137,7 @@ fn Viewer::start_scrollable_drag(
   vertical~ : Bool,
   mouse : @rdom.MouseEvent,
 ) -> Unit {
+  scrollable.drag_started()
   self.drag = Some({
     owner,
     vertical,
@@ -142,8 +152,10 @@ fn Viewer::end_scrollable_drag(self : Viewer, island : Island) -> Unit {
   match self.drag {
     Some(drag) =>
       match scrollable_for_drag(island, drag.owner) {
-        Some(scrollable) =>
+        Some(scrollable) => {
           scrollable.set_slider_active(vertical=drag.vertical, false)
+          scrollable.drag_ended()
+        }
         None => ()
       }
     None => ()

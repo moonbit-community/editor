@@ -1,7 +1,7 @@
 ///|
 priv struct HoverView {
   range : @core.Range
-  contents : Array[@language.HoverContent]
+  parts : Array[HoverPart]
 } derive(Eq)
 
 ///|
@@ -30,7 +30,7 @@ priv enum HoverEffect {
   /// Start the half/full/triple delay timers for this anchor token.
   HoverSchedule(Int)
   /// Ask the hover provider at this offset for this token.
-  HoverRequest(Int, Int)
+  HoverRequest(HoverAnchor, Int)
 }
 
 ///|
@@ -137,7 +137,7 @@ fn HoverController::fire(
 ) -> (HoverEffect, HoverController) {
   if token == self.token {
     match self.anchor {
-      Some(anchor) => (HoverRequest(anchor.offset, token), self)
+      Some(anchor) => (HoverRequest(anchor, token), self)
       None => (HoverNoEffect, self)
     }
   } else {
@@ -189,7 +189,7 @@ fn HoverController::resolved_hover(
   notify : (ViewerNotification) -> Unit,
   version : Int,
   token : Int,
-  hover : @language.Hover?,
+  hover : ComputedHover?,
   current_version : Int,
 ) -> HoverController {
   if current_version != version || token != self.token {
@@ -198,22 +198,29 @@ fn HoverController::resolved_hover(
   match hover {
     Some(hover) => {
       notify(ViewerHoverResolved(ok=true, version~))
-      let view : HoverView = { range: hover.range, contents: hover.contents }
+      let view : HoverView = { range: hover.range, parts: hover.parts }
       if self.display_open {
         {
           ..self,
           answered: true,
           loading: false,
-          view: Some(view),
+          view: Some(merge_hover_view(self.view, view)),
           pending_view: None,
           placement: None,
         }
       } else {
-        { ..self, answered: true, loading: false, pending_view: Some(view) }
+        {
+          ..self,
+          answered: true,
+          loading: false,
+          pending_view: Some(merge_hover_view(self.pending_view, view)),
+        }
       }
     }
     None => {
-      notify(ViewerHoverResolved(ok=false, version~))
+      if self.view is None && self.pending_view is None {
+        notify(ViewerHoverResolved(ok=false, version~))
+      }
       { ..self, answered: true, loading: false }
     }
   }
@@ -247,7 +254,7 @@ fn HoverController::decorations(
 /// the loading delay.
 priv struct HoverWidgetView {
   anchor_offset : Int
-  contents : Array[@language.HoverContent]
+  parts : Array[HoverPart]
   /// Whether this widget participates in placement measurement (the
   /// loading hover renders unmeasured at the anchor).
   measurable : Bool
@@ -260,7 +267,7 @@ fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
     Some(hover) =>
       Some({
         anchor_offset: hover.range.start,
-        contents: hover.contents,
+        parts: hover.parts,
         measurable: true,
         placement: self.placement,
       })
@@ -270,7 +277,12 @@ fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
           Some(anchor) =>
             Some({
               anchor_offset: anchor.start,
-              contents: [PlainText("Loading...")],
+              parts: [
+                LoadingHover(
+                  range=Range(anchor.start, anchor.end),
+                  message="Loading...",
+                ),
+              ],
               measurable: false,
               placement: self.placement,
             })
@@ -279,5 +291,24 @@ fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
       } else {
         None
       }
+  }
+}
+
+///|
+fn merge_hover_view(existing : HoverView?, incoming : HoverView) -> HoverView {
+  match existing {
+    Some(view) => {
+      let parts = view.parts.copy()
+      parts.append(incoming.parts)
+      parts.sort_by(compare_hover_parts)
+      {
+        range: Range(
+          min_int(view.range.start, incoming.range.start),
+          max_int(view.range.end, incoming.range.end),
+        ),
+        parts,
+      }
+    }
+    None => incoming
   }
 }

@@ -19,7 +19,7 @@ remote protocol transport.
   listener table), `RemoteWorkspaceTreeProvider`
   (`@workspace.WorkspaceTreeProvider` over `ResolveDirectory`), and
   `RemoteLanguageClient` (the `language` provider traits, registered with
-  the viewer's provider registry at startup).
+  the viewer's `LanguageFeaturesService` at startup).
 - Own the auto-open policy: a bounded depth-first resolve walk that opens
   the first MoonBit file (fallback: first file) when the socket opens with
   nothing loaded; the viewer's rendered notification then drives the
@@ -34,13 +34,16 @@ remote protocol transport.
   (`ViewerNotification`) and the workbench formats and emits the
   structured `[readonly-editor]` events (`dom:mounted`, `moonbit:render`,
   `view:scroll`, `language:*`) documented in `../docs/harness.md`, and
-  installs the `__readonlyEditorScrollTo` scroll control.
+  installs the `__readonlyEditorScrollTo` scroll control. Workbench also
+  installs the concrete runtime logger sink: provider failures go through
+  `LogService`, and warning/error entries become the existing
+  `language:error` harness event.
 
 ## Boundaries
 
 - May depend on `renderer/browser`, `widgets/file_tree`,
-  `remote_protocol`, `dom`, `workspace`, `language`, and Rabbita packages
-  including `websocket`.
+  `remote_protocol`, `dom`, `workspace`, `language`, `platform/log`, and
+  Rabbita packages including `websocket`.
 - Composition lives here: the viewer and the tree widget must not know
   about each other or about the transport.
 - Module-level `Ref` registries (the app dispatcher, the protocol send

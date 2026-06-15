@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './base.js';
 
 test('renders markdown hover content as safe HTML', async ({ page }) => {
   await page.goto('/');

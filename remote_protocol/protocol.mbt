@@ -14,6 +14,18 @@ pub(all) enum ProtocolErrorCode {
 } derive(Eq, Debug)
 
 ///|
+pub fn ProtocolErrorCode::label(self : ProtocolErrorCode) -> String {
+  match self {
+    ProtocolInvalidJson => "ProtocolInvalidJson"
+    ProtocolUnsupportedVersion => "ProtocolUnsupportedVersion"
+    ProtocolUnknownPacket => "ProtocolUnknownPacket"
+    ProtocolInvalidPacket => "ProtocolInvalidPacket"
+    ProtocolInvalidUri => "ProtocolInvalidUri"
+    ProtocolProviderError => "ProtocolProviderError"
+  }
+}
+
+///|
 pub(all) struct ProtocolError {
   code : ProtocolErrorCode
   message : String
@@ -1048,7 +1060,6 @@ fn hover_content_json(content : @language.HoverContent) -> Json {
       { "kind": Json::string("plaintext"), "value": text.to_json() }
     Markdown(text) =>
       { "kind": Json::string("markdown"), "value": text.to_json() }
-    Marker(text) => { "kind": Json::string("marker"), "value": text.to_json() }
   }
 }
 
@@ -1152,7 +1163,6 @@ fn parse_hover_content(value : Json) -> @language.HoverContent? {
       }
       match json_string_field(value, "kind") {
         Some("markdown") => Some(Markdown(text))
-        Some("marker") => Some(Marker(text))
         _ => Some(PlainText(text))
       }
     }

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './base.js';
 import { promises as fs } from 'node:fs';
 
 const largeFixture = 'docs/fixtures/project/src/generated_scroll.mbt';

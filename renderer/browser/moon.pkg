@@ -3,6 +3,7 @@ import {
   "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/dom",
   "baozhiyuan/editor/language",
+  "baozhiyuan/editor/platform/log",
   "baozhiyuan/editor/renderer",
   "baozhiyuan/editor/syntax",
   "baozhiyuan/editor/workspace",
@@ -14,3 +15,7 @@ import {
 }
 
 supported_targets = "js"
+
+import {
+  "moonbitlang/async",
+} for "wbtest"

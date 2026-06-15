@@ -1,32 +1,52 @@
 ///|
 /// Workbench-side language client: implements the `@language` provider
 /// traits over the live protocol socket through `protocol_request`. The
-/// workbench registers it with the viewer's provider registry at startup.
-priv struct RemoteLanguageClient {}
+/// workbench registers it with the viewer's language features service at
+/// startup.
+priv struct RemoteLanguageClient {
+  log_service : @log.LogService
+}
 
 ///|
-fn register_remote_language_providers() -> Unit {
-  let client = RemoteLanguageClient::{  }
-  @browser.register_hover_provider(client)
-  @browser.register_diagnostics_provider(client)
-  @browser.register_document_symbol_provider(client)
-  @browser.register_semantic_tokens_provider(client)
+fn register_remote_language_providers(
+  services : @browser.ViewerServices,
+) -> Unit {
+  let client = RemoteLanguageClient::{ log_service: services.log_service }
+  services.language_features.register_hover_provider(client)
+  services.language_features.register_diagnostics_provider(client)
+  services.language_features.register_document_symbol_provider(client)
+  services.language_features.register_semantic_tokens_provider(client)
 }
 
 ///|
 fn RemoteLanguageClient::emit_remote_error(
+  self : RemoteLanguageClient,
+  operation : String,
+  document : @workspace.SourceDocument,
   packet : @remote_protocol.ServerPacket,
 ) -> Unit {
   match packet {
     RemoteError(error) =>
-      emit_event("language:error", error.to_json().stringify())
+      self.log_service.error(
+        "language.protocol",
+        "remote protocol provider error",
+        details=[
+          ("operation", operation),
+          ("document", document.uri.to_string()),
+          ("version", document.version.to_string()),
+          ("code", error.code.label()),
+          ("providerCode", error.provider_code),
+          ("message", error.message),
+          ("requestId", error.request_id),
+        ],
+      )
     _ => ()
   }
 }
 
 ///|
 impl @language.HoverProvider for RemoteLanguageClient with fn hover_at(
-  _self,
+  self,
   document,
   offset,
 ) {
@@ -36,7 +56,7 @@ impl @language.HoverProvider for RemoteLanguageClient with fn hover_at(
   match response {
     HoverResult(payload) => payload.hover
     packet => {
-      RemoteLanguageClient::emit_remote_error(packet)
+      self.emit_remote_error("hover", document, packet)
       None
     }
   }
@@ -44,7 +64,7 @@ impl @language.HoverProvider for RemoteLanguageClient with fn hover_at(
 
 ///|
 impl @language.DiagnosticsProvider for RemoteLanguageClient with fn diagnostics_for_document(
-  _self,
+  self,
   document,
 ) {
   let response = protocol_request("diagnostics", id => {
@@ -53,7 +73,7 @@ impl @language.DiagnosticsProvider for RemoteLanguageClient with fn diagnostics_
   match response {
     Diagnostics(payload) => payload.diagnostics
     packet => {
-      RemoteLanguageClient::emit_remote_error(packet)
+      self.emit_remote_error("diagnostics", document, packet)
       []
     }
   }
@@ -61,7 +81,7 @@ impl @language.DiagnosticsProvider for RemoteLanguageClient with fn diagnostics_
 
 ///|
 impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn document_symbols(
-  _self,
+  self,
   document,
 ) {
   let response = protocol_request("symbols", id => {
@@ -74,7 +94,7 @@ impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn document_
   match response {
     DocumentSymbolsResult(payload) => payload.symbols
     packet => {
-      RemoteLanguageClient::emit_remote_error(packet)
+      self.emit_remote_error("documentSymbols", document, packet)
       []
     }
   }
@@ -82,7 +102,7 @@ impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn document_
 
 ///|
 impl @language.SemanticTokensProvider for RemoteLanguageClient with fn semantic_tokens_for_document(
-  _self,
+  self,
   document,
 ) {
   let response = protocol_request("semantic-tokens", id => {
@@ -91,7 +111,7 @@ impl @language.SemanticTokensProvider for RemoteLanguageClient with fn semantic_
   match response {
     SemanticTokensResult(payload) => payload.semantic_tokens
     packet => {
-      RemoteLanguageClient::emit_remote_error(packet)
+      self.emit_remote_error("semanticTokens", document, packet)
       []
     }
   }

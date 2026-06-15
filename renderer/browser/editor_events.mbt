@@ -60,7 +60,7 @@ fn Viewer::apply_hover_effect(self : Viewer, effect : HoverEffect) -> Unit {
       @dom.set_timeout(() => self.hover_loading_due(token), hover_delay_ms * 3)
       |> ignore
     }
-    HoverRequest(offset, token) => self.request_hover(offset, token)
+    HoverRequest(anchor, token) => self.request_hover(anchor, token)
   }
 }
 
@@ -90,7 +90,7 @@ fn Viewer::hover_resolved(
   self : Viewer,
   version : Int,
   token : Int,
-  hover : @language.Hover?,
+  hover : ComputedHover?,
 ) -> Unit {
   let before = self.hover
   self.hover = self.hover.resolved_hover(

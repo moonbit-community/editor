@@ -5,9 +5,15 @@ test "stale hover results are dropped by version and token guards" {
     notifications.push(notification)
   }
   let controller = HoverController::empty()
-  let hover : @language.Hover? = Some({
+  let hover : ComputedHover? = Some({
     range: Range(3, 7),
-    contents: [PlainText("fn main")],
+    parts: [
+      MarkdownHover(
+        range=Range(3, 7),
+        contents=[PlainText("fn main")],
+        ordinal=100,
+      ),
+    ],
   })
   // Version moved on: result dropped, nothing reported.
   let stale_version = controller.resolved_hover(notify, 1, 0, hover, 2)
@@ -43,7 +49,7 @@ test "hover scheduling restarts timers only for new anchors" {
   assert_eq(moved.token, 2)
   // The half-delay timer requests the provider only for the live token.
   let (request, _) = moved.fire(2)
-  assert_true(request is HoverRequest(12, 2))
+  assert_true(request is HoverRequest({ start: 10, end: 14, offset: 12 }, 2))
   let (stale, _) = moved.fire(1)
   assert_true(stale is HoverNoEffect)
 }

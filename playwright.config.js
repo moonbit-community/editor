@@ -5,11 +5,13 @@ const serverPort = new URL(baseURL).port || '5173';
 
 export default defineConfig({
   testDir: 'tests/browser',
+  outputDir: 'test-results/browser',
   timeout: 30_000,
   workers: 1,
   use: {
     baseURL,
-    trace: 'on-first-retry'
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure'
   },
   webServer: {
     command: `just dev ROOT=docs/fixtures/project PORT=${serverPort}`,

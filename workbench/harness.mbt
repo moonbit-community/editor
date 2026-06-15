@@ -6,6 +6,44 @@ pub fn emit_event(name : String, payload : String) -> Unit {
 }
 
 ///|
+priv struct WorkbenchLogger {}
+
+///|
+fn workbench_log_service() -> @log.LogService {
+  @log.LogService::new(logger=WorkbenchLogger::{  })
+}
+
+///|
+impl @log.Logger for WorkbenchLogger with fn log(_self, entry) {
+  if entry.level.is_warning_or_error() {
+    emit_event("language:error", log_entry_json(entry))
+  }
+}
+
+///|
+impl @log.Logger for WorkbenchLogger with fn flush(_self) {
+  ()
+}
+
+///|
+fn log_entry_json(entry : @log.LogEntry) -> String {
+  let mut payload = "{"
+  payload = payload + "\"level\":" + json_string(entry.level.label())
+  payload = payload + ",\"category\":" + json_string(entry.category)
+  payload = payload + ",\"message\":" + json_string(entry.message)
+  payload = payload + ",\"details\":{"
+  for index in 0..<entry.details.length() {
+    if index > 0 {
+      payload = payload + ","
+    }
+    let (key, value) = entry.details[index]
+    payload = payload + json_string(key) + ":" + json_string(value)
+  }
+  payload = payload + "}}"
+  payload
+}
+
+///|
 fn emit_render_event(
   line_count : Int,
   token_count : Int,

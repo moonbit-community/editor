@@ -11,6 +11,7 @@
 /// into the element passed to `attach`.
 pub struct Viewer {
   priv source : &@workspace.DocumentSource
+  priv services : ViewerServices
   priv notify_host : (ViewerNotification) -> Unit
   priv layout : @renderer.ViewLayout
   priv mut theme : String
@@ -85,11 +86,13 @@ pub(all) enum ViewerNotification {
 pub fn Viewer::Viewer(
   source : &@workspace.DocumentSource,
   on_notification~ : (ViewerNotification) -> Unit,
+  services? : ViewerServices = ViewerServices::new(),
   theme? : String = "dark",
   placeholder? : String = "",
 ) -> Viewer {
   {
     source,
+    services,
     notify_host: on_notification,
     layout: @renderer.ViewLayout::new(line_height=editor_line_height),
     theme,
@@ -257,8 +260,13 @@ pub fn Viewer::push_diagnostics(
   self : Viewer,
   diagnostics : Array[@language.Diagnostic],
 ) -> Unit {
-  self.provider_result = { ..self.provider_result, diagnostics, }
-  self.render_feature_update()
+  match self.source_document {
+    Some(document) => {
+      self.services.markers.set_diagnostics("push", document.uri, diagnostics)
+      self.render_feature_update()
+    }
+    None => ()
+  }
 }
 
 ///|
@@ -280,12 +288,21 @@ pub fn Viewer::push_semantic_tokens(
 }
 
 ///|
+pub fn Viewer::refresh_document_features(self : Viewer) -> Unit {
+  match self.source_document {
+    Some(document) => self.request_document_features(document)
+    None => ()
+  }
+}
+
+///|
 fn Viewer::document_resolved(
   self : Viewer,
   result : @workspace.SourceDocumentLoadResult,
 ) -> Unit {
   match result {
     SourceDocumentLoaded(document) => {
+      self.services.markers.clear_resource(document.uri)
       self.provider_result = @language.ProviderResult::empty()
       self.hover = self.hover.cleared()
       self.render_current_document(document, fresh=true, request_language=true)

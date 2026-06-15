@@ -564,7 +564,7 @@ fn Viewer::render_hover_widget(
   widget.hover.set_attribute("class", "monaco-hover fade-in")
   widget.clear_sizing()
   widget.scrollable.content.set_inner_html(
-    render_hover_shell(view.contents, frame.language_id),
+    render_hover_shell(view.parts, frame.language_id),
   )
   island.mount_content_widget(content_widget)
   widget.apply_sizing(island.root)

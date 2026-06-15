@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './base.js';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {

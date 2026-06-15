@@ -1,17 +1,30 @@
 ///|
-fn render_hover_shell(
-  contents : Array[@language.HoverContent],
-  language_id : String,
-) -> String {
+fn render_hover_shell(parts : Array[HoverPart], language_id : String) -> String {
   let rows : Array[String] = []
-  for content in contents {
-    rows.push(render_hover_row(content, language_id))
+  for part in parts {
+    rows.append(render_hover_part(part, language_id))
   }
   rows.join("")
 }
 
 ///|
-fn render_hover_row(
+fn render_hover_part(part : HoverPart, language_id : String) -> Array[String] {
+  match part {
+    MarkdownHover(contents~, ..) => {
+      let rows : Array[String] = []
+      for content in contents {
+        rows.push(render_markdown_hover_content(content, language_id))
+      }
+      rows
+    }
+    MarkerHover(marker~, ..) => [marker_hover_row(marker.message)]
+    LoadingHover(message~, ..) =>
+      [standard_hover_row(hover_plaintext_html(message))]
+  }
+}
+
+///|
+fn render_markdown_hover_content(
   content : @language.HoverContent,
   language_id : String,
 ) -> String {
@@ -19,7 +32,6 @@ fn render_hover_row(
     PlainText(text) => standard_hover_row(hover_plaintext_html(text))
     Markdown(markdown) =>
       standard_hover_row(hover_markdown_html(markdown, language_id))
-    Marker(text) => marker_hover_row(text)
   }
 }
 

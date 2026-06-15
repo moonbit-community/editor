@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './base.js';
 
 test('defaults to the dark theme and persists the toggled choice', async ({ page }) => {
   await page.goto('/');

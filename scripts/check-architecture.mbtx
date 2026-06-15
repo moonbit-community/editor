@@ -9,6 +9,7 @@ async fn main {
     "syntax",
     "decorations",
     "language",
+    "platform",
     "view",
     "web",
     "app",
@@ -30,6 +31,7 @@ async fn main {
     }
   }
   check_package_imports(errors)
+  check_platform_log_imports(errors)
   check_language_package_imports(errors)
   if errors.length() > 0 {
     println(errors.join("\n"))
@@ -152,6 +154,23 @@ async fn check_package_imports(errors : Array[String]) -> Unit {
   ) {
     if island_forbidden_exact.contains(imported) {
       errors.push("renderer/browser/moon.pkg must not import " + imported)
+    }
+  }
+}
+
+///|
+/// Runtime logging is shared product infrastructure. It must stay
+/// FFI-free and independent of browser/native hosts; concrete sinks live
+/// in composition packages such as `workbench`.
+async fn check_platform_log_imports(errors : Array[String]) -> Unit {
+  let pkg_file = "platform/log/moon.pkg"
+  if @fs.exists(pkg_file) {
+    for imported in package_imports(@fs.read_file(pkg_file).text()) {
+      if imported.has_prefix("baozhiyuan/editor/dom") ||
+        imported.has_prefix("baozhiyuan/editor/server_host_native") ||
+        imported.has_prefix("moonbit-community/rabbita") {
+        errors.push(pkg_file + " must not import host package " + imported)
+      }
     }
   }
 }

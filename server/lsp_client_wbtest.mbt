@@ -297,7 +297,6 @@ fn assert_plaintext_hover(
   match hover.contents.get(index) {
     Some(PlainText(text)) => assert_eq(text, expected)
     Some(Markdown(_)) => fail("expected plaintext hover")
-    Some(Marker(_)) => fail("expected plaintext hover")
     None => fail("missing hover content")
   }
 }
@@ -311,7 +310,6 @@ fn assert_markdown_hover(
   match hover.contents.get(index) {
     Some(Markdown(text)) => assert_eq(text, expected)
     Some(PlainText(_)) => fail("expected markdown hover")
-    Some(Marker(_)) => fail("expected markdown hover")
     None => fail("missing hover content")
   }
 }

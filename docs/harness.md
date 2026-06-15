@@ -118,7 +118,9 @@ The browser host logs structured events prefixed with `[readonly-editor]`:
 - `language:hover`: successful on-demand hover resolution for the active
   document.
 - `language:error`: provider or protocol errors that did not block readonly
-  render.
+  render. Provider failures are emitted by the workbench logger sink from
+  `platform/log` warning/error entries, so remote protocol providers log once
+  and do not emit this event directly.
 - `dom:mounted`: rendered line and diagnostic counts after DOM creation,
   plus `patchMs` (the duration of the island's DOM flush — the recycler
   write phase — that painted the frame). `renderedLines` is the windowed
@@ -132,6 +134,20 @@ failures from console output. The workbench owns event names and payload
 formats; the viewer library reports lifecycle facts (`ViewerNotification`)
 and the workbench formats and emits them, so embedders of `renderer/browser`
 get no harness events unless they add their own.
+
+## Browser Test Logging
+
+Playwright specs import `tests/browser/base.js`, which installs a VS
+Code-style smoke logger split from runtime product logging:
+
+- every test writes `runner.log` under `test-results/browser/...`;
+- set `READONLY_EDITOR_TEST_VERBOSE=1` or `PW_VERBOSE=1` to mirror runner log
+  entries to the terminal;
+- browser console messages, page errors, failed requests, and HTTP 4xx/5xx
+  responses are captured into the runner log;
+- Playwright keeps traces and screenshots on failure (`trace:
+  retain-on-failure`, `screenshot: only-on-failure`), and the base fixture also
+  attaches a full-page `failure.png` when a test body throws.
 
 ## Render Performance Budget
 

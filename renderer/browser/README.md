@@ -12,11 +12,13 @@ workbench) wrap the calls in their command type.
 
 ## Embedding API
 
-- `Viewer::Viewer(source, on_notification~, theme?, placeholder?)`
+- `Viewer::Viewer(source, on_notification~, services?, theme?, placeholder?)`
   constructs the viewer against any `&@workspace.DocumentSource`. The
   in-memory backend in `examples/embedded_viewer` plus the remote one in
   `workbench` are the two reference implementations; implementing
   `DocumentSource` is the entire integration surface for a custom backend.
+  `services` defaults to `ViewerServices::new()`; hosts that install language
+  providers, log sinks, or test fixtures pass an explicit service object.
 - `Viewer::attach(host)` is the mount seam: the host renders one stable
   element, keeps it mounted, and must never render its own children into
   it — the island's nodes are foreign to any host vdom and must survive
@@ -36,10 +38,13 @@ workbench) wrap the calls in their command type.
   scrollbar input arrive through the island's shared scrollable element.
 - `Viewer::push_diagnostics`/`push_symbols`/`push_semantic_tokens` accept
   unsolicited feature data (for example server-initiated pushes the host
-  routes in).
-- `register_hover_provider` (and the diagnostics/symbols/semantic-tokens
-  equivalents) add `language` providers to the registry; it starts empty
-  and the host registers what it has at startup.
+  routes in). Diagnostics are compatibility input only; the viewer stores
+  them as markers and renders marker decorations from `MarkerService`.
+- `ViewerServices` owns `LanguageFeaturesService`, `MarkerService`,
+  `MarkerDecorationsService`, `HoverParticipantRegistry`, and `LogService`.
+  Hosts register hover, diagnostics, symbol, and semantic-token providers on
+  `services.language_features`; hover composition runs through marker and
+  markdown hover participants.
 - `register_tokenizer(language_id, tokenizer)` adds a
   `syntax.LineTokenizer` to the tokenization registry (the Monaco
   `TokenizationRegistry` role). Languages are compile-time packages
@@ -94,7 +99,9 @@ workbench) wrap the calls in their command type.
   and widget views. Hover follows Monaco's timing (request at half the
   300ms delay, display gated at the full delay, loading hover at 3x);
   the delays run on `dom` timer bindings and provider calls run through
-  `@js.async_run` with version/token staleness guards.
+  `ContentHoverComputer` with version/token staleness guards. Marker hover is
+  contributed synchronously from marker decorations; language hover is
+  contributed asynchronously from markdown hover providers.
 - Own the per-version render cache: provider pushes rebuild frames from
   the cached `TokenizedDocument` without re-tokenizing, and window
   shifts rebuild the viewport frame from the cached `FrameSource` in
@@ -112,7 +119,8 @@ focuses on hover until those features can be rebuilt without their bugs.
   `language`, `renderer`, `syntax`, and `decorations`.
 - Must not import `remote_protocol`, `websocket`, `workbench`, or
   `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports
-  live behind the `DocumentSource` trait and the provider registry.
+  live behind the `DocumentSource` trait and viewer-owned language feature
+  services.
 - May declare JavaScript FFI it alone uses, under the host-FFI rule in
   `../../docs/architecture.md`; browser capabilities shared with other
   browser packages belong in `dom`.
@@ -120,9 +128,9 @@ focuses on hover until those features can be rebuilt without their bugs.
   only through `register_tokenizer`, so the library carries no grammar
   weight an embedder did not ask for (enforced by
   `scripts/check-architecture.mbtx`).
-- Module-level registries (the provider registry, the tokenizer
-  registry) stay inside this package; per-viewer state lives on the
-  `Viewer` instance.
+- The tokenizer registry remains module-level because language packages are
+  composed once by the host. Feature providers, markers, hover participants,
+  and log sinks are per-viewer services.
 - Must not pass render-frame JSON to JavaScript for DOM rendering.
 - The backend-neutral `renderer` package must not import Rabbita or browser
   host packages.
@@ -131,6 +139,8 @@ focuses on hover until those features can be rebuilt without their bugs.
 
 - Hover staleness and scheduling guards are covered by
   `hover_controller_wbtest.mbt`.
+- Viewer service, marker, and hover participant orchestration is covered by
+  `services_wbtest.mbt`.
 - The embedding boundary is proven by `examples/embedded_viewer` and
   `tests/browser/embed.spec.js` (no websocket opened).
 - Run `just check` for the repository-level type check.

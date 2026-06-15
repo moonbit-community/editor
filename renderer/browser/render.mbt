@@ -10,7 +10,10 @@ fn Viewer::render_current_document(
   fresh~ : Bool,
   request_language~ : Bool,
 ) -> Unit {
-  let providers = self.provider_result
+  let marker_diagnostics = self.services.markers.diagnostics_for_resource(
+    document.uri,
+  )
+  let providers = { ..self.provider_result, diagnostics: marker_diagnostics }
   let tokenize_started = @dom.now_ms()
   let tokenized = match self.cached_tokenized(document) {
     Some(tokenized) => tokenized
@@ -26,11 +29,13 @@ fn Viewer::render_current_document(
   let tokenize_finished = @dom.now_ms()
   (self.notify_host)(
     ViewerDiagnosticsStatus(
-      count=providers.diagnostics.length(),
+      count=marker_diagnostics.length(),
       version=tokenized.snapshot.version,
     ),
   )
-  let decorations = decorations_from_diagnostics(providers.diagnostics)
+  let decorations = self.services.marker_decorations.decorations_for_resource(
+    document.uri,
+  )
   let source = @renderer.FrameSource(tokenized, decorations, providers)
   // Only a rotated document identity or version renders from the top;
   // watch backends may re-push the same version (the old cell key kept
@@ -64,7 +69,7 @@ fn Viewer::render_current_document(
       document,
       line_count=frame.line_count,
       token_count=tokenized.token_count,
-      diagnostic_count=providers.diagnostics.length(),
+      diagnostic_count=marker_diagnostics.length(),
       tokenize_ms=tokenize_finished - tokenize_started,
       build_ms=build_finished - tokenize_finished,
     ),
@@ -120,24 +125,3 @@ fn max_line_length(snapshot : @core.DocumentSnapshot) -> Int {
 }
 
 ///|
-fn decorations_from_diagnostics(
-  diagnostics : Array[@language.Diagnostic],
-) -> @decorations.DecorationSet {
-  let items = []
-  for diagnostic in diagnostics {
-    let class_name = match diagnostic.severity {
-      Error => "diag-error"
-      Warning => "diag-warning"
-      Info => "diag-info"
-    }
-    items.push(
-      @decorations.Decoration(
-        diagnostic.range,
-        Diagnostic,
-        class_name,
-        message=diagnostic.message,
-      ),
-    )
-  }
-  @decorations.DecorationSet::from_array(items)
-}

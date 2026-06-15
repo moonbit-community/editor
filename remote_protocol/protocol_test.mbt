@@ -217,11 +217,7 @@ test "encodes and decodes server document and language packets" {
     version: 2,
     hover: Some({
       range: Range(7, 11),
-      contents: [
-        PlainText("fn main"),
-        Markdown("**main**"),
-        Marker("Configured diagnostic"),
-      ],
+      contents: [PlainText("fn main"), Markdown("**main**")],
     }),
   })
   match @remote_protocol.decode_server_packet(hover.to_json().stringify()) {
@@ -229,10 +225,9 @@ test "encodes and decodes server document and language packets" {
       match payload.hover {
         Some(item) => {
           assert_eq(payload.version, 2)
-          assert_eq(item.contents.length(), 3)
+          assert_eq(item.contents.length(), 2)
           assert_hover_plaintext(item, 0, "fn main")
           assert_hover_markdown(item, 1, "**main**")
-          assert_hover_marker(item, 2, "Configured diagnostic")
           assert_true(item.range == Range(7, 11))
         }
         None => fail("missing hover")
@@ -424,7 +419,6 @@ fn assert_hover_plaintext(
   match hover.contents.get(index) {
     Some(PlainText(text)) => assert_eq(text, expected)
     Some(Markdown(_)) => fail("expected plaintext hover")
-    Some(Marker(_)) => fail("expected plaintext hover")
     None => fail("missing hover content")
   }
 }
@@ -438,21 +432,6 @@ fn assert_hover_markdown(
   match hover.contents.get(index) {
     Some(Markdown(text)) => assert_eq(text, expected)
     Some(PlainText(_)) => fail("expected markdown hover")
-    Some(Marker(_)) => fail("expected markdown hover")
-    None => fail("missing hover content")
-  }
-}
-
-///|
-fn assert_hover_marker(
-  hover : @language.Hover,
-  index : Int,
-  expected : String,
-) -> Unit raise {
-  match hover.contents.get(index) {
-    Some(Marker(text)) => assert_eq(text, expected)
-    Some(PlainText(_)) => fail("expected marker hover")
-    Some(Markdown(_)) => fail("expected marker hover")
     None => fail("missing hover content")
   }
 }

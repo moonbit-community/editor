@@ -8,6 +8,8 @@ Readonly language-provider contracts.
   and provider result types.
 - Define feature-specific semantic provider traits and the migration
   `LanguageProvider` aggregate.
+- Keep hover contents limited to language-owned plaintext and markdown data;
+  diagnostics are represented separately as markers in the viewer layer.
 - Keep provider contracts backend-neutral; concrete semantic providers live in
   server or host packages.
 

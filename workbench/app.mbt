@@ -53,6 +53,23 @@ fn dispatch_workbench_msg(msg : WorkbenchMsg) -> Unit {
 let viewer_cell : Ref[@browser.Viewer?] = Ref(None)
 
 ///|
+let viewer_services_cell : Ref[@browser.ViewerServices?] = Ref(None)
+
+///|
+fn workbench_services() -> @browser.ViewerServices {
+  match viewer_services_cell.val {
+    Some(services) => services
+    None => {
+      let services = @browser.ViewerServices::new(
+        log_service=workbench_log_service(),
+      )
+      viewer_services_cell.val = Some(services)
+      services
+    }
+  }
+}
+
+///|
 fn workbench_viewer() -> @browser.Viewer {
   match viewer_cell.val {
     Some(viewer) => viewer
@@ -62,6 +79,7 @@ fn workbench_viewer() -> @browser.Viewer {
         on_notification=notification => {
           dispatch_workbench_msg(ViewerNotified(notification))
         },
+        services=workbench_services(),
         theme=stored_theme(),
         placeholder=source_message(initial_workbench_model()),
       )
@@ -74,8 +92,9 @@ fn workbench_viewer() -> @browser.Viewer {
 ///|
 pub fn start_app() -> Unit {
   @dom.install_host_capabilities()
-  register_harness_hover_provider()
-  register_remote_language_providers()
+  let services = workbench_services()
+  register_harness_hover_provider(services)
+  register_remote_language_providers(services)
   register_tokenizers()
   mount_app()
 }

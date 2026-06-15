@@ -39,6 +39,8 @@ organizational; package boundaries are the directories with `moon.pkg`.
 
 - Shared domain packages: `core`, `syntax`, `decorations`, `workspace`,
   `language`, and `view`.
+- Shared platform packages: `platform/log`, an FFI-free runtime logging API
+  used by shared viewer code and concretized by composition layers.
 - Language packages: `syntax/lang_*` (`lang_moonbit`, `lang_json`,
   `lang_javascript`), one compile-time `lexmatch` lexer per language
   behind the `syntax.LineTokenizer` contract, composed by import only.
@@ -66,12 +68,12 @@ packages:
 web -> workbench
 workbench
   -> renderer/browser, widgets/file_tree
-  -> remote_protocol, dom, workspace, language
+  -> remote_protocol, dom, workspace, language, platform/log
   -> syntax/lang_* (registers tokenizers at startup)
 renderer/browser
   -> renderer
   -> dom
-  -> workspace, language, syntax, decorations
+  -> workspace, language, syntax, decorations, platform/log
   (rabbita: only the dom bindings and js helpers — never the TEA core,
    the vdom, or the command scheduler; checker-enforced)
 widgets/file_tree -> workspace
@@ -83,6 +85,7 @@ renderer -> core, syntax, decorations, language
 workspace -> core
 language -> core, workspace
 syntax/decorations -> core
+platform/log -> (no product packages)
 syntax/lang_* -> core, syntax
 
 examples/embedded_viewer
@@ -101,8 +104,8 @@ examples/embedded_viewer
   the transport.
 - `renderer/browser` is the viewer-core library and must not import
   `remote_protocol`, `websocket`, `workbench`, or `widgets/*`; it meets its
-  hosts at the `workspace` traits (`DocumentSource`) and the `language`
-  provider registry.
+  hosts at the `workspace` traits (`DocumentSource`) and explicit
+  `ViewerServices` language-feature registries.
 - `widgets/file_tree` must not import `remote_protocol` or
   `renderer/browser`; it is built only against `workspace`
   (`WorkspaceTreeProvider`).
@@ -181,9 +184,12 @@ or `--target native`.
 - Browser input routes through one shared hit test: native container
   listeners on the viewer island turn DOM events into typed editor events
   consumed by feature controllers (hover today); rendered spans carry no
-  event handlers. Language features resolve through the `language`
-  provider traits, implemented browser-side by a protocol client that
-  correlates responses by request id.
+  event handlers. Language features resolve through per-viewer
+  `ViewerServices`: `LanguageFeaturesService` owns ordered provider
+  registries, `MarkerService` stores diagnostics by owner/resource,
+  `MarkerDecorationsService` maps markers to rendered squiggles and marker
+  hover lookups, and `HoverParticipantRegistry` composes synchronous marker
+  hover with asynchronous markdown language hover.
 - The viewer is an imperative view island behind a mount contract: the
   shell renders one stable host element (`.viewer-host`) and the viewer
   attaches its whole DOM subtree into it. The shell must never render
@@ -212,6 +218,11 @@ or `--target native`.
 - Browser/native communication uses `remote_protocol` packets over the native
   host's `/protocol` WebSocket. The native host serializes outbound packets
   per connection so watch pushes cannot interleave with responses.
+- Runtime provider and participant failures are reported through
+  `platform/log.LogService`. Shared packages only depend on the FFI-free
+  logging API; the workbench installs the browser harness sink that turns
+  warning/error entries into the existing `language:error` observability
+  event.
 - Browser URLs are not document routes. Active file identity comes from
   MoonBit workspace/explorer state and server/protocol calls, not `?uri=`,
   `?path=`, hashes, or history updates.

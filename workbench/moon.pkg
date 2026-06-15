@@ -2,6 +2,7 @@ import {
   "baozhiyuan/editor/core",
   "baozhiyuan/editor/dom",
   "baozhiyuan/editor/language",
+  "baozhiyuan/editor/platform/log",
   "baozhiyuan/editor/remote_protocol",
   "baozhiyuan/editor/renderer/browser",
   "baozhiyuan/editor/syntax/lang_javascript",

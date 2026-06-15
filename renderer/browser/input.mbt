@@ -33,7 +33,7 @@ fn Viewer::hook_island_input(self : Viewer, island : Island) -> Unit {
   document.add_event_listener("mousemove", event => {
     self.handle_scrollable_drag_move(island, event)
   })
-  document.add_event_listener("mouseup", _ => self.drag = None)
+  document.add_event_listener("mouseup", _ => self.end_scrollable_drag(island))
 }
 
 ///|
@@ -134,6 +134,21 @@ fn Viewer::start_scrollable_drag(
     start_coord: drag_coord(mouse, vertical),
     start_slider: scrollable.state(vertical).slider_position(),
   })
+  scrollable.set_slider_active(vertical~, true)
+}
+
+///|
+fn Viewer::end_scrollable_drag(self : Viewer, island : Island) -> Unit {
+  match self.drag {
+    Some(drag) =>
+      match scrollable_for_drag(island, drag.owner) {
+        Some(scrollable) =>
+          scrollable.set_slider_active(vertical=drag.vertical, false)
+        None => ()
+      }
+    None => ()
+  }
+  self.drag = None
 }
 
 ///|
@@ -163,7 +178,8 @@ fn Viewer::handle_scrollable_drag_move(
 
 ///|
 /// A mousedown on the track (outside the thumb, which stops propagation)
-/// pages towards the clicked side.
+/// uses Monaco's editor default `scrollByPage: false`: jump so the thumb
+/// centers on the pointer.
 fn Viewer::scrollable_track_jump(
   self : Viewer,
   scrollable : ScrollableElementDom,

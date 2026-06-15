@@ -213,6 +213,15 @@ pub fn Viewer::scroll_to(self : Viewer, scroll_top : Double) -> Unit {
 }
 
 ///|
+pub fn Viewer::scroll_to_position(
+  self : Viewer,
+  scroll_top : Double,
+  scroll_left : Double,
+) -> Unit {
+  self.apply_scroll_change(self.layout.scroll_to(scroll_top~, scroll_left~))
+}
+
+///|
 pub fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
   self.apply_scroll_change(
     self.layout.scroll_by(delta_top=(lines * editor_line_height).to_double()),

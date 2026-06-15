@@ -60,12 +60,15 @@ workbench) wrap the calls in their command type.
   `.monaco-scrollable-element.editor-scrollable` around
   `.lines-content`, `.view-lines`, `.view-overlays`, `.view-zones`,
   margin view overlays for line numbers, content-widget and
-  overlay-widget slots, overflowing widget slots, and Monaco-shaped custom
-  scrollbars driven by the backend-neutral `ScrollbarState` arithmetic.
+  overlay-widget slots, overflowing widget slots, and Monaco-conformant custom
+  scrollbars driven by the backend-neutral `ScrollbarState` arithmetic. The
+  outer viewer contract stays MoonBit-owned; the inner hover/scrollbar
+  structure follows the pinned Monaco reference measured by
+  `tests/browser/monaco_conformance.spec.js`.
 - Content widgets are anchored to a text position and share the text
   transform; hover is the first user and mounts in `.contentWidgets` with
-  a locally owned outer content-widget wrapper whose internals intentionally
-  mirror Monaco's hover widget and `monaco-scrollable-element` scrollbar
+  a locally owned outer content-widget wrapper whose internals are checked
+  against Monaco's hover widget and `monaco-scrollable-element` scrollbar
   structure. Overlay widgets are viewport-positioned UI for future controls
   and mount in `.overlayWidgets`; overflowing variants mount outside
   `.overflow-guard` when a widget is allowed to escape the editor clip.
@@ -75,8 +78,9 @@ workbench) wrap the calls in their command type.
   lines (a changed content generation rewrites the window), and paint
   facts (`patch_ms`, scroll position) reported after the flush.
 - Own scroll input through `ScrollableElementDom`: the editor and hover use
-  the same Monaco-shaped wrapper, custom scrollbar nodes, wheel delta-mode
-  normalization, thumb drag, track page-jump, and visibility-class updates.
+  the same Monaco wrapper, custom scrollbar nodes, wheel delta-mode
+  normalization, thumb drag, centered track jump (`scrollByPage: false`), active
+  slider class cleanup, scroll shadows, and visibility-class updates.
   Editor scroll writes back into `renderer.ViewLayout`; hover scroll writes
   into its native content element. Browser reveal scroll offsets on editor
   DOM nodes are translated into `ViewLayout` deltas and reset.

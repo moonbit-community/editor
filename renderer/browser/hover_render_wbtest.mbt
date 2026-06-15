@@ -53,3 +53,14 @@ test "hover unknown fenced code keeps content with the plain fallback" {
   assert_true(html.contains("really"))
   assert_true(html.contains("code"))
 }
+
+///|
+test "marker hover renders Monaco status and copy affordances" {
+  let html = render_hover_shell([Marker("Configured diagnostic")], "moonbit")
+  assert_true(html.contains("hover-row-with-copy"))
+  assert_true(html.contains("hover-copy-button"))
+  assert_true(html.contains("aria-label=\"Copy\""))
+  assert_true(html.contains("data-hover-copy=\"Configured diagnostic\""))
+  assert_true(html.contains("hover-row status-bar"))
+  assert_true(html.contains("View Problem"))
+}

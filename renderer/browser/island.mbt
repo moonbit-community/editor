@@ -17,8 +17,11 @@ let code_right_padding = 16.0
 let gutter_min_digits = 5
 
 ///|
-/// Thickness of the custom scrollbars, matching the old webkit styling.
-let scrollbar_thickness = 14.0
+/// Editor scrollbar defaults from Monaco's `EditorScrollbar` option.
+let editor_vertical_scrollbar_size = 14.0
+
+///|
+let editor_horizontal_scrollbar_size = 12.0
 
 ///|
 /// Lines rendered beyond each viewport edge so scrolling stays inside
@@ -128,6 +131,8 @@ fn Island::build() -> Island {
   margin.append_child(margin_view_overlays.as_node())
   let editor_scrollable = ScrollableElementDom::new(
     "lines-content moonbit-viewer-background",
+    vertical_size=editor_vertical_scrollbar_size,
+    horizontal_size=editor_horizontal_scrollbar_size,
   )
   editor_scrollable.set_wrapper_class(
     "monaco-scrollable-element editor-scrollable",
@@ -602,6 +607,9 @@ fn Island::ensure_hover_widget(
         event.stop_propagation()
       })
       widget.wrapper.add_event_listener("click", event => {
+        if handle_hover_copy_click(event) {
+          event.prevent_default()
+        }
         event.stop_propagation()
       })
       widget.wrapper.add_event_listener("contextmenu", event => {
@@ -826,3 +834,24 @@ fn line_col_for_offset(
   }
   None
 }
+
+///|
+extern "js" fn handle_hover_copy_click(event : @rdom.Event) -> Bool =
+  #| (event) => {
+  #|   const target = event?.target;
+  #|   const button = target?.closest?.(".hover-copy-button");
+  #|   if (!button || !button.closest?.('[data-content-widget="hover"]')) {
+  #|     return false;
+  #|   }
+  #|   const row = button.closest(".hover-row");
+  #|   const content = button.getAttribute("data-hover-copy") || row?.innerText || "";
+  #|   globalThis.__readonlyEditorCopiedText = content;
+  #|   try {
+  #|     const write = globalThis.navigator?.clipboard?.writeText;
+  #|     if (typeof write === "function") {
+  #|       write.call(globalThis.navigator.clipboard, content).catch(() => {});
+  #|     }
+  #|   } catch {
+  #|   }
+  #|   return true;
+  #| }

@@ -16,6 +16,9 @@ without hidden setup.
   editor server.
 
 The `justfile` harness uses `.mbtx` scripts in `scripts/` for helper tasks.
+Playwright uses `http://127.0.0.1:5173` by default; set
+`READONLY_EDITOR_BASE_URL=http://127.0.0.1:<port>` when a focused run should
+target an already-started server on another port.
 
 `web/dist/index.html` loads `/style.css` and `/editor.mjs`. The native server
 serves `/`, `/index.html`, `/style.css`, `/editor.mjs`, `/embed.html`, and
@@ -55,12 +58,16 @@ inspection:
 - `[data-content-widget="hover"] .monaco-hover` is the range-anchored
   editor hover. Its scrollable content is
   `[data-content-widget="hover"] .monaco-hover-content` inside
-  `.monaco-scrollable-element`, with Monaco-shaped custom scrollbar nodes.
+  `.monaco-scrollable-element`, with Monaco-conformant custom scrollbar nodes.
   `.overlayWidgets`, `.overflowingContentWidgets`, and
   `.overflowingOverlayWidgets` are stable slots for future viewport or
   overflow-capable UI. The main editor also exposes
   `.monaco-scrollable-element.editor-scrollable`; its wheel input and
   custom scrollbar nodes are bridged into the `ViewLayout` scroll model.
+- `tests/reference/monaco-hover-scrollbar/` is the local Monaco oracle fixture
+  for hover and scrollbar conformance. It is paired with the readonly viewer by
+  `tests/browser/monaco_conformance.spec.js` and the shared payloads in
+  `tests/browser/fixtures/monaco_conformance_payloads.js`.
 
 ## Scroll Control
 
@@ -71,6 +78,21 @@ document). Specs can also wheel the editor's
 and then emits a `view:scroll` event. Direct DOM scroll offsets are treated
 only as browser reveal deltas and are folded back into the model, matching
 Monaco's editor scrollbar bridge.
+
+For conformance tests, the workbench also installs
+`globalThis.__readonlyEditorConformance`:
+
+- `setPayloads(payloads)` and `setHoverPayload(name)` feed deterministic hover
+  payloads into the harness hover provider.
+- `showHover(line, column)` dispatches a viewer mouse move at the requested
+  text coordinate; `hideHover()` routes Escape into the viewer.
+- `scrollEditor(top, left)` drives the synthetic scroll model.
+- `measure()` returns compact DOM, computed-style, geometry, scrollbar, shadow,
+  hover-row, and accessibility data for the readonly viewer.
+
+The Monaco oracle fixture exposes the analogous
+`globalThis.__monacoConformance` API plus `ready()`, `setTheme(theme)`, and
+`openDocument(text, languageId)`.
 
 Sidebar selection is app state only. Selecting or expanding workspace entries
 must not change `window.location.href`. On startup the workbench auto-opens

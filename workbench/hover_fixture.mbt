@@ -13,13 +13,16 @@ priv struct HarnessHoverProvider {}
 ///|
 fn register_harness_hover_provider() -> Unit {
   @browser.register_hover_provider(HarnessHoverProvider::{  })
-  @dom.install_hover_fixture_control((kind, contents) => {
-    harness_hover_fixture.val = if contents == "" {
-      None
-    } else {
-      Some({ kind, contents })
-    }
-  })
+  @dom.install_hover_fixture_control(set_harness_hover_fixture)
+}
+
+///|
+fn set_harness_hover_fixture(kind : String, contents : String) -> Unit {
+  harness_hover_fixture.val = if contents == "" {
+    None
+  } else {
+    Some({ kind, contents })
+  }
 }
 
 ///|
@@ -34,6 +37,8 @@ impl @language.HoverProvider for HarnessHoverProvider with fn hover_at(
       let end = @core.clamp_int(start + 1, start, document.text.length())
       let content : @language.HoverContent = if fixture.kind == "markdown" {
         Markdown(fixture.contents)
+      } else if fixture.kind == "marker" {
+        Marker(fixture.contents)
       } else {
         PlainText(fixture.contents)
       }

@@ -5,29 +5,45 @@ fn render_hover_shell(
 ) -> String {
   let rows : Array[String] = []
   for content in contents {
-    rows.push(
-      "<div class=\"hover-row\"><div class=\"hover-row-contents\"><div class=\"markdown-hover\"><div class=\"hover-contents\">" +
-      render_hover_content(content, language_id) +
-      "</div></div></div></div>",
-    )
+    rows.push(render_hover_row(content, language_id))
   }
   rows.join("")
 }
 
 ///|
-fn render_hover_content(
+fn render_hover_row(
   content : @language.HoverContent,
   language_id : String,
 ) -> String {
   match content {
-    PlainText(text) => hover_plaintext_html(text)
-    Markdown(markdown) => hover_markdown_html(markdown, language_id)
+    PlainText(text) => standard_hover_row(hover_plaintext_html(text))
+    Markdown(markdown) =>
+      standard_hover_row(hover_markdown_html(markdown, language_id))
+    Marker(text) => marker_hover_row(text)
   }
+}
+
+///|
+fn standard_hover_row(content_html : String) -> String {
+  "<div class=\"hover-row\"><div class=\"hover-row-contents\"><div class=\"markdown-hover\"><div class=\"hover-contents\">" +
+  content_html +
+  "</div></div></div></div>"
 }
 
 ///|
 fn hover_plaintext_html(text : String) -> String {
   "<div class=\"hover-plaintext\">" + @renderer.escape_html(text) + "</div>"
+}
+
+///|
+fn marker_hover_row(text : String) -> String {
+  let escaped = @renderer.escape_html(text)
+  "<div class=\"hover-row hover-row-with-copy\" tabindex=\"0\"><div class=\"marker hover-contents\">" +
+  escaped +
+  "</div><button type=\"button\" class=\"hover-copy-button\" aria-label=\"Copy\" data-hover-copy=\"" +
+  escaped +
+  "\"><span class=\"codicon codicon-copy\" aria-hidden=\"true\"></span></button></div>" +
+  "<div class=\"hover-row status-bar\" tabindex=\"0\"><div class=\"actions\"><div class=\"action-container\"><a class=\"action\" role=\"button\" tabindex=\"0\">View Problem</a></div></div></div>"
 }
 
 ///|

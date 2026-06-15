@@ -38,6 +38,8 @@
   --vscode-editorHoverWidget-background: #202020;
   --vscode-editorHoverWidget-foreground: #cccccc;
   --vscode-editorHoverWidget-border: #313131;
+  --vscode-editorHoverWidget-statusBarBackground: #2b2b2b;
+  --vscode-toolbar-hoverBackground: #ffffff1a;
   --vscode-textLink-foreground: #4e94ce;
   --vscode-textLink-activeForeground: #4e94ce;
   --vscode-textCodeBlock-background: #2d2d2d;
@@ -111,6 +113,8 @@
   --vscode-editorHoverWidget-background: #f8f8f8;
   --vscode-editorHoverWidget-foreground: #3b3b3b;
   --vscode-editorHoverWidget-border: #e5e5e5;
+  --vscode-editorHoverWidget-statusBarBackground: #f0f0f0;
+  --vscode-toolbar-hoverBackground: #00000014;
   --vscode-textLink-foreground: #006ab1;
   --vscode-textLink-activeForeground: #0000ff;
   --vscode-textCodeBlock-background: #f3f3f3;
@@ -538,47 +542,35 @@ body {
   cursor: text;
 }
 
-/* Shared Monaco-shaped scrollbars driven by the ScrollbarState arithmetic. */
+/* Shared Monaco scrollbars driven by the ScrollbarState arithmetic. */
 .moonbit-viewer .scrollbar {
   position: absolute;
-  z-index: 6;
 }
 
 .moonbit-viewer .scrollbar.vertical {
   top: 0;
   right: 0;
-  bottom: 0;
   width: 14px;
 }
 
 .moonbit-viewer .scrollbar.horizontal {
   bottom: 0;
-  right: 0;
-  height: 14px;
-  /* left is written inline (the gutter width). */
+  height: 10px;
+  /* left/width are written inline from the scroll model. */
+}
+
+.moonbit-viewer
+  .monaco-scrollable-element.editor-scrollable
+  > .scrollbar.horizontal {
+  height: 12px;
 }
 
 .moonbit-viewer .scrollbar .slider {
   position: absolute;
   top: 0;
   left: 0;
-  background: var(--vscode-scrollbarSlider-background);
-}
-
-.moonbit-viewer .scrollbar.vertical .slider {
-  width: 14px;
-}
-
-.moonbit-viewer .scrollbar.horizontal .slider {
-  height: 14px;
-}
-
-.moonbit-viewer .scrollbar .slider:hover {
-  background: var(--vscode-scrollbarSlider-hoverBackground);
-}
-
-.moonbit-viewer .scrollbar .slider:active {
-  background: var(--vscode-scrollbarSlider-activeBackground);
+  contain: strict;
+  will-change: transform;
 }
 
 .view-line-content ::selection,
@@ -763,10 +755,14 @@ body {
   position: absolute;
   z-index: 50;
   pointer-events: auto;
-  min-width: 160px;
+  min-width: 150px;
   transform: translateY(-100%);
   cursor: default;
   user-select: text;
+  box-sizing: content-box;
+  border: 1px solid var(--vscode-editorHoverWidget-border);
+  border-radius: var(--vscode-cornerRadius-large);
+  background-color: var(--vscode-editorHoverWidget-background);
 }
 
 .monaco-resizable-hover.below {
@@ -779,12 +775,20 @@ body {
 
 .monaco-hover {
   position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: var(--vscode-hover-whiteSpace, normal);
   color: var(--vscode-editorHoverWidget-foreground);
   background-color: var(--vscode-editorHoverWidget-background);
   border: 1px solid var(--vscode-editorHoverWidget-border);
   border-radius: var(--vscode-cornerRadius-large);
   box-shadow: 0 2px 8px var(--vscode-shadow-hover);
   font: var(--editor-font-size) / 1.5 var(--ui-font-family);
+}
+
+.monaco-resizable-hover > .monaco-hover {
+  border: none;
+  border-radius: inherit;
 }
 
 .monaco-hover:focus {
@@ -818,7 +822,6 @@ body {
 
 .monaco-hover-content {
   overflow: auto;
-  padding: 4px 0;
   scrollbar-width: none;
 }
 
@@ -829,40 +832,92 @@ body {
 
 .monaco-scrollable-element > .scrollbar {
   position: absolute;
-  z-index: 6;
   background: var(--vscode-scrollbar-background);
 }
 
-.monaco-scrollable-element > .scrollbar.visible {
-  display: block;
+.monaco-scrollable-element > .visible {
+  z-index: 11;
+  opacity: 1;
+  background: rgb(0 0 0 / 0%);
+  transition: opacity 100ms linear;
 }
 
-.monaco-scrollable-element > .scrollbar.invisible {
+.monaco-scrollable-element > .invisible {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.monaco-scrollable-element > .invisible.fade {
+  transition: opacity 800ms linear;
+}
+
+.disable-animations .monaco-scrollable-element > .visible,
+.disable-animations .monaco-scrollable-element > .invisible.fade {
+  transition: none;
+}
+
+.monaco-scrollable-element > .shadow {
+  position: absolute;
   display: none;
 }
 
-.monaco-scrollable-element > .scrollbar.vertical {
+.monaco-scrollable-element > .shadow.top {
+  display: block;
   top: 0;
-  right: 0;
-  bottom: 14px;
-  width: 14px;
-  box-shadow: -1px 0 0 var(--vscode-scrollbar-shadow);
+  left: 3px;
+  height: 3px;
+  width: 100%;
+  box-shadow: var(--vscode-scrollbar-shadow) 0 6px 6px -6px inset;
 }
 
-.monaco-scrollable-element > .scrollbar.horizontal {
+.monaco-scrollable-element > .shadow.left {
+  display: block;
+  top: 3px;
   left: 0;
-  right: 14px;
-  bottom: 0;
-  height: 14px;
-  box-shadow: 0 -1px 0 var(--vscode-scrollbar-shadow);
+  height: 100%;
+  width: 3px;
+  box-shadow: var(--vscode-scrollbar-shadow) 6px 0 6px -6px inset;
+}
+
+.monaco-scrollable-element > .shadow.top-left-corner {
+  display: block;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 3px;
+}
+
+.monaco-scrollable-element > .shadow.top.left {
+  box-shadow: var(--vscode-scrollbar-shadow) 6px 0 6px -6px inset;
+}
+
+.monaco-scrollable-element > .scrollbar {
+  background: var(--vscode-scrollbar-background);
+}
+
+.monaco-scrollable-element > .scrollbar > .slider {
+  background: var(--vscode-scrollbarSlider-background);
+}
+
+.monaco-scrollable-element > .scrollbar > .slider:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+.monaco-scrollable-element > .scrollbar > .slider.active,
+.monaco-scrollable-element > .scrollbar > .slider:active {
+  background: var(--vscode-scrollbarSlider-activeBackground);
 }
 
 .hover-row {
   padding: 0;
+  border-radius: var(--vscode-cornerRadius-large);
+  display: flex;
 }
 
 .hover-row-contents {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .markdown-hover {
@@ -870,8 +925,13 @@ body {
 }
 
 .hover-contents {
-  padding: 2px 8px;
-  overflow-wrap: anywhere;
+  padding: 4px 8px;
+  overflow-wrap: break-word;
+}
+
+.monaco-hover .markdown-hover > .hover-contents:not(.code-hover-contents) {
+  width: max-content;
+  max-width: var(--vscode-hover-maxWidth, 500px);
 }
 
 .hover-plaintext {
@@ -882,7 +942,7 @@ body {
 .hover-contents ul,
 .hover-contents ol,
 .hover-contents blockquote {
-  margin: 4px 0;
+  margin: 8px 0;
 }
 
 .hover-contents p:first-child,
@@ -909,19 +969,30 @@ body {
 }
 
 .hover-contents code {
-  padding: 1px 3px;
+  padding: 0 0.4em;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--vscode-editor-foreground) 12%, transparent);
+  background: var(--vscode-textCodeBlock-background);
   font-family: var(--monaco-monospace-font);
 }
 
 .monaco-tokenized-source {
-  display: inline-block;
-  min-width: max-content;
   padding: 6px 8px;
   border-radius: 3px;
   background: var(--vscode-textCodeBlock-background);
   font-family: var(--monaco-monospace-font);
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: var(--vscode-hover-sourceWhiteSpace, pre-wrap);
+}
+
+.monaco-hover .monaco-tokenized-source .view-line-content {
+  display: inline;
+  width: auto;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  white-space: inherit;
+  cursor: inherit;
 }
 
 .hover-contents a {
@@ -936,9 +1007,65 @@ body {
 
 .hover-contents hr {
   height: 1px;
-  margin: 6px 0;
+  margin: 4px -8px -4px;
   border: 0;
   background: var(--vscode-editorHoverWidget-border);
+}
+
+.monaco-hover .hover-row.status-bar {
+  font-size: 12px;
+  line-height: 22px;
+}
+
+.monaco-hover .hover-row.status-bar .actions {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 8px;
+  background-color: var(--vscode-editorHoverWidget-statusBarBackground);
+}
+
+.monaco-hover .hover-row.status-bar .actions .action-container {
+  margin-right: 16px;
+  cursor: pointer;
+  overflow: hidden;
+  text-wrap: nowrap;
+  text-overflow: ellipsis;
+}
+
+.monaco-hover .hover-row.hover-row-with-copy {
+  position: relative;
+  padding-right: 20px;
+}
+
+.monaco-hover .hover-copy-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--vscode-foreground);
+  opacity: 0;
+}
+
+.monaco-hover .hover-row-with-copy:hover .hover-copy-button,
+.monaco-hover .hover-row-with-copy:focus-within .hover-copy-button {
+  opacity: 1;
+}
+
+.monaco-hover .hover-copy-button:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+  cursor: pointer;
+}
+
+.monaco-hover .hover-copy-button:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
 }
 
 .diagnostics {

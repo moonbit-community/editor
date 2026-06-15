@@ -182,6 +182,7 @@ fn hover_content_json(content : @language.HoverContent) -> Json {
       { "kind": Json::string("plaintext"), "value": text.to_json() }
     Markdown(text) =>
       { "kind": Json::string("markdown"), "value": text.to_json() }
+    Marker(text) => { "kind": Json::string("marker"), "value": text.to_json() }
   }
 }
 

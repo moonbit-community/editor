@@ -2,6 +2,7 @@
 pub(all) enum HoverContent {
   PlainText(String)
   Markdown(String)
+  Marker(String)
 } derive(Eq, Debug)
 
 ///|

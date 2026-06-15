@@ -26,6 +26,16 @@ Useful areas:
   checked in as a second porting reference.
 - `vscode/src/vs/editor/common/viewModel`: editor view model concepts.
 - `vscode/src/vs/editor/browser/view`: DOM rendering layers and viewport rendering.
+- `vscode/src/vs/base/browser/ui/scrollbar` and
+  `vscode/src/vs/base/browser/ui/hover`: scrollbar, hover widget, and
+  scrollable-element constants used by
+  `docs/references/monaco-hover-scrollbar-parity.md`.
 - `vscode/src/vs/editor/contrib/hover`, `links`, `semanticTokens`, `find`: readonly feature references.
+
+The hover/scrollbar conformance oracle lives in
+`tests/reference/monaco-hover-scrollbar/`, with the Playwright comparison in
+`tests/browser/monaco_conformance.spec.js`. The fixture transcribes the pinned
+Monaco DOM, CSS, and geometry constants for local testing; product code still
+must not import from the VS Code submodule.
 
 Use these as design references only. Do not import from them in product code.

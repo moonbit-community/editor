@@ -141,6 +141,33 @@ test('scrolls long fenced code horizontally with Monaco hover scrollbar', async 
   expect(events.count('view:scroll')).toBe(scrollEventsBefore);
 });
 
+test('wraps spaced signature code blocks instead of clipping hover content', async ({ page }) => {
+  await page.goto('/');
+  await setHoverFixture(
+    page,
+    'markdown',
+    [
+      '```moonbit',
+      'fn inspect(obj : &Show, content~ : String, loc~ : SourceLoc = _, args_loc~ : ArgsLoc = _) -> Unit raise InspectError',
+      '```',
+      '',
+      'Tests if the string representation of an object matches the expected content.',
+    ].join('\n'),
+  );
+  await openMainFixture(page);
+
+  await hoverMainSymbol(page);
+  const widget = page.locator('[data-content-widget="hover"]');
+  const content = widget.locator('.monaco-hover-content');
+  await expect(widget.locator('.monaco-tokenized-source')).toContainText('InspectError');
+  await expect
+    .poll(() =>
+      content.evaluate((node) => Math.ceil(node.scrollWidth - node.clientWidth)),
+    )
+    .toBeLessThanOrEqual(1);
+  await expect(widget.locator('.scrollbar.horizontal.visible .slider')).toHaveCount(0);
+});
+
 async function setHoverFixture(page, kind, contents) {
   await expect
     .poll(() => page.evaluate(() => typeof globalThis.__readonlyEditorSetHover), {

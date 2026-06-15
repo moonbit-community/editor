@@ -134,6 +134,11 @@ fn attach_workbench_viewer() -> Unit {
       let viewer = workbench_viewer()
       viewer.attach(host)
       @dom.install_scroll_control(top => viewer.scroll_to(top))
+      @dom.install_conformance_control(
+        set_harness_hover_fixture,
+        (top, left) => viewer.scroll_to_position(top, left),
+        () => viewer.escape(),
+      )
     }
     None => ()
   }

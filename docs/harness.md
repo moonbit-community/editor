@@ -46,24 +46,31 @@ inspection:
   first (or rely on the startup auto-open's reveal).
 - The viewer is an imperative island inside the shell's `.viewer-host`
   element. Its root is `.moonbit-viewer.readonly-editor`; clipping and
-  scrollbars live under `.overflow-guard`; text nodes are windowed
-  `.view-line[data-line]` children of `.lines-content .view-lines`; line
-  numbers are `.line-number[data-line]` children of
+  the main editor scrollable live under `.overflow-guard`; text nodes are
+  windowed `.view-line[data-line]` children of
+  `.monaco-scrollable-element.editor-scrollable .lines-content .view-lines`;
+  line numbers are `.line-number[data-line]` children of
   `.margin .margin-view-overlays .line-numbers`; token spans and
   diagnostics live inside `.view-line-content`.
-- `.contentWidgets .hover-widget` is the range-anchored editor hover.
+- `[data-content-widget="hover"] .monaco-hover` is the range-anchored
+  editor hover. Its scrollable content is
+  `[data-content-widget="hover"] .monaco-hover-content` inside
+  `.monaco-scrollable-element`, with Monaco-shaped custom scrollbar nodes.
   `.overlayWidgets`, `.overflowingContentWidgets`, and
   `.overflowingOverlayWidgets` are stable slots for future viewport or
-  overflow-capable UI. Scrolling is synthetic (assigning `scrollTop` does
-  nothing — use the scroll control below).
+  overflow-capable UI. The main editor also exposes
+  `.monaco-scrollable-element.editor-scrollable`; its wheel input and
+  custom scrollbar nodes are bridged into the `ViewLayout` scroll model.
 
 ## Scroll Control
 
 The workbench installs `globalThis.__readonlyEditorScrollTo(top)`, which
-drives the viewer's synthetic scroll model (the request clamps to the
-document). Specs scroll through this control instead of assigning
-`scrollTop`; each settled scroll paints and then emits a `view:scroll`
-event.
+drives the viewer's `ViewLayout` scroll model (the request clamps to the
+document). Specs can also wheel the editor's
+`.monaco-scrollable-element.editor-scrollable`; each settled scroll paints
+and then emits a `view:scroll` event. Direct DOM scroll offsets are treated
+only as browser reveal deltas and are folded back into the model, matching
+Monaco's editor scrollbar bridge.
 
 Sidebar selection is app state only. Selecting or expanding workspace entries
 must not change `window.location.href`. On startup the workbench auto-opens

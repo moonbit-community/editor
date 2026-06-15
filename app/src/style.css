@@ -20,6 +20,8 @@
   --vscode-focusBorder: #0078d4;
   --vscode-widget-border: #313131;
   --vscode-widget-shadow: rgb(0 0 0 / 36%);
+  --vscode-shadow-hover: rgb(0 0 0 / 36%);
+  --vscode-cornerRadius-large: 4px;
 
   --vscode-editor-background: #1f1f1f;
   --vscode-editor-foreground: #cccccc;
@@ -36,6 +38,9 @@
   --vscode-editorHoverWidget-background: #202020;
   --vscode-editorHoverWidget-foreground: #cccccc;
   --vscode-editorHoverWidget-border: #313131;
+  --vscode-textLink-foreground: #4e94ce;
+  --vscode-textLink-activeForeground: #4e94ce;
+  --vscode-textCodeBlock-background: #2d2d2d;
 
   --vscode-sideBar-background: #181818;
   --vscode-sideBar-foreground: #cccccc;
@@ -55,6 +60,8 @@
   --vscode-scrollbarSlider-background: #79797966;
   --vscode-scrollbarSlider-hoverBackground: #646464b3;
   --vscode-scrollbarSlider-activeBackground: #bfbfbf66;
+  --vscode-scrollbar-background: #7979791a;
+  --vscode-scrollbar-shadow: rgb(0 0 0 / 50%);
 
   --vscode-token-keyword: #569cd6;
   --vscode-token-variable: #9cdcfe;
@@ -70,6 +77,7 @@
 
   /* VS Code editor defaults on macOS: 12px Menlo, 1.5x line height. */
   --editor-font-family: Menlo, Monaco, "Courier New", monospace;
+  --monaco-monospace-font: var(--editor-font-family);
   --editor-font-size: 12px;
   /* Keep in sync with `editor_line_height` in renderer/browser/app.mbt. */
   --editor-line-height: 18px;
@@ -85,6 +93,8 @@
   --vscode-focusBorder: #005fb8;
   --vscode-widget-border: #e5e5e5;
   --vscode-widget-shadow: rgb(0 0 0 / 16%);
+  --vscode-shadow-hover: rgb(0 0 0 / 16%);
+  --vscode-cornerRadius-large: 4px;
 
   --vscode-editor-background: #ffffff;
   --vscode-editor-foreground: #3b3b3b;
@@ -101,6 +111,9 @@
   --vscode-editorHoverWidget-background: #f8f8f8;
   --vscode-editorHoverWidget-foreground: #3b3b3b;
   --vscode-editorHoverWidget-border: #e5e5e5;
+  --vscode-textLink-foreground: #006ab1;
+  --vscode-textLink-activeForeground: #0000ff;
+  --vscode-textCodeBlock-background: #f3f3f3;
 
   --vscode-sideBar-background: #f8f8f8;
   --vscode-sideBar-foreground: #3b3b3b;
@@ -120,6 +133,8 @@
   --vscode-scrollbarSlider-background: #64646466;
   --vscode-scrollbarSlider-hoverBackground: #646464b3;
   --vscode-scrollbarSlider-activeBackground: #00000099;
+  --vscode-scrollbar-background: #6464641a;
+  --vscode-scrollbar-shadow: rgb(0 0 0 / 20%);
 
   --vscode-token-keyword: #0000ff;
   --vscode-token-variable: #001080;
@@ -132,6 +147,7 @@
   --vscode-token-string-escape: #ee0000;
   --vscode-token-regexp: #811f3f;
   --vscode-token-invalid: #cd3131;
+  --monaco-monospace-font: var(--editor-font-family);
 }
 
 * {
@@ -522,7 +538,7 @@ body {
   cursor: text;
 }
 
-/* Custom scrollbars driven by the ScrollbarState arithmetic. */
+/* Shared Monaco-shaped scrollbars driven by the ScrollbarState arithmetic. */
 .moonbit-viewer .scrollbar {
   position: absolute;
   z-index: 6;
@@ -742,40 +758,41 @@ body {
   background: var(--vscode-editor-hoverHighlightBackground);
 }
 
-/* Editor hover widget, anchored at the hovered range inside .contentWidgets.
-   It sits above the line by default and flips below via the .below class
-   once the after-render measurement detects viewport overflow. */
-.hover-widget {
+/* Monaco-shaped editor hover, anchored as a content widget. */
+.monaco-resizable-hover {
   position: absolute;
   z-index: 50;
   pointer-events: auto;
   min-width: 160px;
-  max-width: min(680px, 70vw);
-  border: 1px solid var(--vscode-editorHoverWidget-border);
-  border-radius: 3px;
-  background: var(--vscode-editorHoverWidget-background);
-  color: var(--vscode-editorHoverWidget-foreground);
-  box-shadow: 0 2px 8px var(--vscode-widget-shadow);
   transform: translateY(-100%);
-  font: var(--editor-font-size) / 1.5 var(--editor-font-family);
   cursor: default;
   user-select: text;
 }
 
-.hover-widget:focus {
+.monaco-resizable-hover.below {
+  transform: none;
+}
+
+.monaco-resizable-hover.measuring {
+  visibility: hidden;
+}
+
+.monaco-hover {
+  position: relative;
+  color: var(--vscode-editorHoverWidget-foreground);
+  background-color: var(--vscode-editorHoverWidget-background);
+  border: 1px solid var(--vscode-editorHoverWidget-border);
+  border-radius: var(--vscode-cornerRadius-large);
+  box-shadow: 0 2px 8px var(--vscode-shadow-hover);
+  font: var(--editor-font-size) / 1.5 var(--ui-font-family);
+}
+
+.monaco-hover:focus {
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: -1px;
 }
 
-.hover-widget.below {
-  transform: none;
-}
-
-.hover-widget.measuring {
-  visibility: hidden;
-}
-
-.hover-widget.fade-in {
+.monaco-hover.fade-in {
   animation: hover-fade-in 80ms ease-out;
 }
 
@@ -789,14 +806,67 @@ body {
   }
 }
 
-.moonbit-viewer-hover-content {
-  max-height: min(320px, 55vh);
+.monaco-scrollable-element {
+  position: relative;
+  overflow: hidden;
+}
+
+.monaco-scrollable-element.editor-scrollable {
+  position: absolute;
+  inset: 0;
+}
+
+.monaco-hover-content {
   overflow: auto;
   padding: 4px 0;
+  scrollbar-width: none;
+}
+
+.monaco-hover-content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.monaco-scrollable-element > .scrollbar {
+  position: absolute;
+  z-index: 6;
+  background: var(--vscode-scrollbar-background);
+}
+
+.monaco-scrollable-element > .scrollbar.visible {
+  display: block;
+}
+
+.monaco-scrollable-element > .scrollbar.invisible {
+  display: none;
+}
+
+.monaco-scrollable-element > .scrollbar.vertical {
+  top: 0;
+  right: 0;
+  bottom: 14px;
+  width: 14px;
+  box-shadow: -1px 0 0 var(--vscode-scrollbar-shadow);
+}
+
+.monaco-scrollable-element > .scrollbar.horizontal {
+  left: 0;
+  right: 14px;
+  bottom: 0;
+  height: 14px;
+  box-shadow: 0 -1px 0 var(--vscode-scrollbar-shadow);
 }
 
 .hover-row {
   padding: 0;
+}
+
+.hover-row-contents {
+  min-width: 0;
+}
+
+.markdown-hover {
+  min-width: 0;
 }
 
 .hover-contents {
@@ -811,7 +881,6 @@ body {
 .hover-contents p,
 .hover-contents ul,
 .hover-contents ol,
-.hover-contents pre,
 .hover-contents blockquote {
   margin: 4px 0;
 }
@@ -819,7 +888,6 @@ body {
 .hover-contents p:first-child,
 .hover-contents ul:first-child,
 .hover-contents ol:first-child,
-.hover-contents pre:first-child,
 .hover-contents blockquote:first-child {
   margin-top: 0;
 }
@@ -827,7 +895,6 @@ body {
 .hover-contents p:last-child,
 .hover-contents ul:last-child,
 .hover-contents ol:last-child,
-.hover-contents pre:last-child,
 .hover-contents blockquote:last-child {
   margin-bottom: 0;
 }
@@ -845,28 +912,25 @@ body {
   padding: 1px 3px;
   border-radius: 3px;
   background: color-mix(in srgb, var(--vscode-editor-foreground) 12%, transparent);
-  font-family: var(--editor-font-family);
+  font-family: var(--monaco-monospace-font);
 }
 
-.hover-contents pre {
-  max-width: 100%;
-  overflow: auto;
+.monaco-tokenized-source {
+  display: inline-block;
+  min-width: max-content;
   padding: 6px 8px;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
-}
-
-.hover-contents pre code {
-  padding: 0;
-  background: transparent;
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--monaco-monospace-font);
 }
 
 .hover-contents a {
-  color: var(--vscode-editorLink-activeForeground);
+  color: var(--vscode-textLink-foreground);
   text-decoration: none;
 }
 
 .hover-contents a:hover {
+  color: var(--vscode-textLink-activeForeground);
   text-decoration: underline;
 }
 

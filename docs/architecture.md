@@ -193,18 +193,22 @@ or `--target native`.
   there is no remount and the scroll position is preserved).
 - The browser island's DOM is Monaco-shaped but locally owned:
   `.moonbit-viewer.readonly-editor` contains an `.overflow-guard`, margin
-  view overlays, `.lines-content`, `.view-lines`, `.view-overlays`,
-  `.view-zones`, content-widget and overlay-widget slots, overflowing
-  widget slots, and synthetic scrollbars. This is a product DOM contract,
+  view overlays, a `.monaco-scrollable-element.editor-scrollable` around
+  `.lines-content`, `.view-lines`, `.view-overlays`, `.view-zones`,
+  content-widget and overlay-widget slots, overflowing widget slots, and
+  Monaco-shaped custom scrollbar nodes. This is a product DOM contract,
   not an import of Monaco CSS or services.
 - Scrolling is split along the backend boundary: scroll semantics —
   clamping, dimensions, viewport derivation, scrollbar geometry — are
   backend-neutral model state in `renderer` (`ViewLayout` owns the single
-  scroll truth; there is no DOM scroll container). The browser backend
-  only captures input (wheel, scrollbar thumb drags and track jumps,
-  host-routed keys) into the model and applies the model's output
-  (layer transforms, recycled line nodes, scrollbar thumbs) in a
-  rAF-coalesced render loop with reads before writes.
+  editor scroll truth). The browser backend exposes that model through a
+  shared `ScrollableElementDom`, the Monaco `ScrollableElement` role for
+  wheel input, scrollbar thumb drags, track jumps, visibility classes, and
+  slider geometry. It then applies the model's output (layer transforms,
+  recycled line nodes, scrollbar thumbs) in a rAF-coalesced render loop
+  with reads before writes. Browser-originated DOM scroll offsets are
+  treated as reveal deltas and immediately folded back into `ViewLayout`,
+  not used as a second scroll source.
 - Browser/native communication uses `remote_protocol` packets over the native
   host's `/protocol` WebSocket. The native host serializes outbound packets
   per connection so watch pushes cannot interleave with responses.

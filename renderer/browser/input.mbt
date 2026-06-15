@@ -1,20 +1,9 @@
 ///|
-/// An active scrollbar thumb drag: the slider position captured at drag
-/// start plus the pointer travel decides the scroll position, like the
-/// reference.
-priv struct ScrollbarDrag {
-  vertical : Bool
-  start_coord : Double
-  start_slider : Double
-}
-
-///|
 /// Hooks the island's native listeners: one container handler set on the
 /// island root replaces per-span closures (update resolves targets
-/// through `hit_test`), the wheel listener owns scrolling (the island
-/// always consumes wheel events), and the scrollbar parts implement
-/// thumb drags and track page jumps. Document-level move/up listeners
-/// are installed once and guarded by the drag state.
+/// through `hit_test`), the editor scrollable element owns wheel and
+/// scrollbar input, and document-level move/up listeners are installed
+/// once and guarded by the drag state.
 fn Viewer::hook_island_input(self : Viewer, island : Island) -> Unit {
   island.root.add_event_listener("mousemove", event => {
     match event.to_mouse_event() {
@@ -25,58 +14,82 @@ fn Viewer::hook_island_input(self : Viewer, island : Island) -> Unit {
   island.root.add_event_listener("mouseleave", _ => {
     self.dispatch_editor_event(MouseLeft)
   })
-  island.root.add_event_listener("wheel", event => {
+  island.overflow_guard.add_event_listener("wheel", event => {
     match event.to_wheel_event() {
       Some(wheel) => {
         event.prevent_default()
-        self.handle_wheel(wheel)
-      }
-      None => ()
-    }
-  })
-  island.vertical_slider.add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
         event.stop_propagation()
-        self.start_scrollbar_drag(island, vertical=true, mouse)
+        self.handle_editor_wheel(wheel)
       }
       None => ()
     }
   })
-  island.horizontal_slider.add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        event.stop_propagation()
-        self.start_scrollbar_drag(island, vertical=false, mouse)
-      }
-      None => ()
-    }
-  })
-  island.vertical_bar.add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        self.scrollbar_track_jump(island, vertical=true, mouse)
-      }
-      None => ()
-    }
-  })
-  island.horizontal_bar.add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        self.scrollbar_track_jump(island, vertical=false, mouse)
-      }
-      None => ()
-    }
-  })
+  self.hook_scrollable_scrollbar_input(
+    island.editor_scrollable,
+    EditorScrollableElement,
+  )
+  self.hook_browser_desperate_reveal(island)
   let document = @rdom.document()
   document.add_event_listener("mousemove", event => {
-    self.handle_drag_move(island, event)
+    self.handle_scrollable_drag_move(island, event)
   })
   document.add_event_listener("mouseup", _ => self.drag = None)
+}
+
+///|
+fn Viewer::hook_scrollable_scrollbar_input(
+  self : Viewer,
+  scrollable : ScrollableElementDom,
+  owner : ScrollableElementOwner,
+) -> Unit {
+  scrollable
+  .slider(true)
+  .add_event_listener("mousedown", event => {
+    match event.to_mouse_event() {
+      Some(mouse) => {
+        event.prevent_default()
+        event.stop_propagation()
+        self.start_scrollable_drag(scrollable, owner, vertical=true, mouse)
+      }
+      None => ()
+    }
+  })
+  scrollable
+  .slider(false)
+  .add_event_listener("mousedown", event => {
+    match event.to_mouse_event() {
+      Some(mouse) => {
+        event.prevent_default()
+        event.stop_propagation()
+        self.start_scrollable_drag(scrollable, owner, vertical=false, mouse)
+      }
+      None => ()
+    }
+  })
+  scrollable
+  .track(true)
+  .add_event_listener("mousedown", event => {
+    match event.to_mouse_event() {
+      Some(mouse) => {
+        event.prevent_default()
+        event.stop_propagation()
+        self.scrollable_track_jump(scrollable, owner, vertical=true, mouse)
+      }
+      None => ()
+    }
+  })
+  scrollable
+  .track(false)
+  .add_event_listener("mousedown", event => {
+    match event.to_mouse_event() {
+      Some(mouse) => {
+        event.prevent_default()
+        event.stop_propagation()
+        self.scrollable_track_jump(scrollable, owner, vertical=false, mouse)
+      }
+      None => ()
+    }
+  })
 }
 
 ///|
@@ -96,43 +109,35 @@ fn Viewer::handle_mouse_move(
 }
 
 ///|
-/// Simplified wheel delta normalization: line and page delta modes scale
-/// to pixels; pixel deltas pass through.
-fn Viewer::handle_wheel(self : Viewer, wheel : @rdom.WheelEvent) -> Unit {
-  let scale = match wheel.get_delta_mode() {
-    1 => editor_line_height.to_double()
-    2 => self.layout.dimensions().height
-    _ => 1.0
-  }
-  self.apply_scroll_change(
-    self.layout.scroll_by(
-      delta_left=wheel.get_delta_x() * scale,
-      delta_top=wheel.get_delta_y() * scale,
-    ),
+/// Wheel delta normalization is shared with widget scrollables: line and
+/// page delta modes scale to pixels; pixel deltas pass through.
+fn Viewer::handle_editor_wheel(self : Viewer, wheel : @rdom.WheelEvent) -> Unit {
+  let (delta_left, delta_top) = normalized_wheel_delta(
+    wheel,
+    editor_line_height.to_double(),
+    self.layout.dimensions().height,
   )
+  self.apply_scroll_change(self.layout.scroll_by(delta_left~, delta_top~))
 }
 
 ///|
-fn Viewer::start_scrollbar_drag(
+fn Viewer::start_scrollable_drag(
   self : Viewer,
-  island : Island,
+  scrollable : ScrollableElementDom,
+  owner : ScrollableElementOwner,
   vertical~ : Bool,
   mouse : @rdom.MouseEvent,
 ) -> Unit {
-  let state = if vertical {
-    island.vertical_state
-  } else {
-    island.horizontal_state
-  }
   self.drag = Some({
+    owner,
     vertical,
     start_coord: drag_coord(mouse, vertical),
-    start_slider: state.slider_position(),
+    start_slider: scrollable.state(vertical).slider_position(),
   })
 }
 
 ///|
-fn Viewer::handle_drag_move(
+fn Viewer::handle_scrollable_drag_move(
   self : Viewer,
   island : Island,
   event : @rdom.Event,
@@ -141,64 +146,146 @@ fn Viewer::handle_drag_move(
   guard event.to_mouse_event() is Some(mouse) else { return }
   event.prevent_default()
   let delta = drag_coord(mouse, drag.vertical) - drag.start_coord
-  if drag.vertical {
-    let desired = island.vertical_state.desired_position_from_slider(
-      drag.start_slider + delta,
-    )
-    self.apply_scroll_change(self.layout.scroll_to(scroll_top=desired))
-  } else {
-    let desired = island.horizontal_state.desired_position_from_slider(
-      drag.start_slider + delta,
-    )
-    let position = self.layout.position()
-    self.apply_scroll_change(
-      self.layout.scroll_to(scroll_top=position.scroll_top, scroll_left=desired),
-    )
+  guard scrollable_for_drag(island, drag.owner) is Some(scrollable) else {
+    self.drag = None
+    return
   }
+  let desired = scrollable
+    .state(drag.vertical)
+    .desired_position_from_slider(drag.start_slider + delta)
+  self.apply_scrollable_position(
+    scrollable,
+    drag.owner,
+    vertical=drag.vertical,
+    desired,
+  )
 }
 
 ///|
 /// A mousedown on the track (outside the thumb, which stops propagation)
 /// pages towards the clicked side.
-fn Viewer::scrollbar_track_jump(
+fn Viewer::scrollable_track_jump(
   self : Viewer,
-  island : Island,
+  scrollable : ScrollableElementDom,
+  owner : ScrollableElementOwner,
   vertical~ : Bool,
   mouse : @rdom.MouseEvent,
 ) -> Unit {
-  if vertical {
-    let rect = island.vertical_bar.get_bounding_client_rect()
-    let offset = mouse.get_client_y().to_double() - rect.get_top()
-    let desired = island.vertical_state.desired_position_from_offset_paged(
-      offset,
-    )
-    self.apply_scroll_change(self.layout.scroll_to(scroll_top=desired))
-  } else {
-    let rect = island.horizontal_bar.get_bounding_client_rect()
-    let offset = mouse.get_client_x().to_double() - rect.get_left()
-    let desired = island.horizontal_state.desired_position_from_offset_paged(
-      offset,
-    )
-    let position = self.layout.position()
-    self.apply_scroll_change(
-      self.layout.scroll_to(scroll_top=position.scroll_top, scroll_left=desired),
-    )
+  let desired = scrollable.desired_position_from_track(vertical~, mouse)
+  self.apply_scrollable_position(scrollable, owner, vertical~, desired)
+}
+
+///|
+fn Viewer::apply_scrollable_position(
+  self : Viewer,
+  scrollable : ScrollableElementDom,
+  owner : ScrollableElementOwner,
+  vertical~ : Bool,
+  desired : Double,
+) -> Unit {
+  match owner {
+    EditorScrollableElement =>
+      if vertical {
+        self.apply_scroll_change(self.layout.scroll_to(scroll_top=desired))
+      } else {
+        let position = self.layout.position()
+        self.apply_scroll_change(
+          self.layout.scroll_to(
+            scroll_top=position.scroll_top,
+            scroll_left=desired,
+          ),
+        )
+      }
+    HoverScrollableElement => scrollable.native_scroll_to(vertical~, desired)
   }
 }
 
 ///|
-fn drag_coord(mouse : @rdom.MouseEvent, vertical : Bool) -> Double {
-  if vertical {
-    mouse.get_client_y().to_double()
+fn scrollable_for_drag(
+  island : Island,
+  owner : ScrollableElementOwner,
+) -> ScrollableElementDom? {
+  match owner {
+    EditorScrollableElement => Some(island.editor_scrollable)
+    HoverScrollableElement =>
+      match island.hover_widget {
+        Some(widget) => Some(widget.scrollable)
+        None => None
+      }
+  }
+}
+
+///|
+fn Viewer::hook_browser_desperate_reveal(
+  self : Viewer,
+  island : Island,
+) -> Unit {
+  island.root.add_event_listener("scroll", _ => {
+    self.handle_browser_desperate_reveal(
+      island.root,
+      look_at_scroll_top=true,
+      look_at_scroll_left=true,
+    )
+  })
+  island.overflow_guard.add_event_listener("scroll", _ => {
+    self.handle_browser_desperate_reveal(
+      island.overflow_guard,
+      look_at_scroll_top=true,
+      look_at_scroll_left=false,
+    )
+  })
+  island.lines_content.add_event_listener("scroll", _ => {
+    self.handle_browser_desperate_reveal(
+      island.lines_content,
+      look_at_scroll_top=true,
+      look_at_scroll_left=false,
+    )
+  })
+  island.editor_scrollable.wrapper.add_event_listener("scroll", _ => {
+    self.handle_browser_desperate_reveal(
+      island.editor_scrollable.wrapper,
+      look_at_scroll_top=true,
+      look_at_scroll_left=false,
+    )
+  })
+}
+
+///|
+/// Mirrors Monaco's editor scrollbar bridge for browser-driven reveal:
+/// when focus or the browser mutates a DOM scroll offset, translate that
+/// delta into the model and reset the DOM offset to zero.
+fn Viewer::handle_browser_desperate_reveal(
+  self : Viewer,
+  element : @rdom.Element,
+  look_at_scroll_top~ : Bool,
+  look_at_scroll_left~ : Bool,
+) -> Unit {
+  let mut delta_top = 0.0
+  let mut delta_left = 0.0
+  if look_at_scroll_top {
+    delta_top = element.get_scroll_top()
+    if delta_top != 0.0 {
+      element.set_scroll_top(0.0)
+    }
+  }
+  if look_at_scroll_left {
+    delta_left = element.get_scroll_left()
+    if delta_left != 0.0 {
+      element.set_scroll_left(0.0)
+    }
+  }
+  if delta_top != 0.0 || delta_left != 0.0 {
+    self.apply_scroll_change(self.layout.scroll_by(delta_left~, delta_top~))
   } else {
-    mouse.get_client_x().to_double()
+    ()
   }
 }
 
 ///|
 /// Read phase of the render loop: the island box, the glyph probe, and
 /// the derived gutter width feed the layout model and every later hit
-/// test. No DOM scroll reads — the layout owns scroll truth.
+/// test. DOM scroll offsets are treated only as browser reveal deltas;
+/// `ViewLayout` owns the editor scroll truth.
 fn Viewer::measure(self : Viewer, island : Island) -> Unit {
   let rect = island.root.get_bounding_client_rect()
   let probe_width = island.probe.get_bounding_client_rect().get_width()

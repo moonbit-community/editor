@@ -33,7 +33,7 @@ workbench) wrap the calls in their command type.
 - `Viewer::scroll_to`, `scroll_by_lines`, `scroll_by_pages`,
   `scroll_home`, and `scroll_end` are the synthetic scroll entry points
   for host-routed keyboard scrolling and harness controls; wheel and
-  scrollbar input arrive through the island's own listeners.
+  scrollbar input arrive through the island's shared scrollable element.
 - `Viewer::push_diagnostics`/`push_symbols`/`push_semantic_tokens` accept
   unsolicited feature data (for example server-initiated pushes the host
   routes in).
@@ -57,25 +57,29 @@ workbench) wrap the calls in their command type.
 
 - Render `renderer` IR as browser DOM through the imperative island: a
   `.moonbit-viewer.readonly-editor` root, an `.overflow-guard` clip,
+  `.monaco-scrollable-element.editor-scrollable` around
   `.lines-content`, `.view-lines`, `.view-overlays`, `.view-zones`,
   margin view overlays for line numbers, content-widget and
-  overlay-widget slots, overflowing widget slots, and custom scrollbars
-  driven by the backend-neutral `ScrollbarState` arithmetic.
+  overlay-widget slots, overflowing widget slots, and Monaco-shaped custom
+  scrollbars driven by the backend-neutral `ScrollbarState` arithmetic.
 - Content widgets are anchored to a text position and share the text
-  transform; hover is the first user and mounts in `.contentWidgets`.
-  Overlay widgets are viewport-positioned UI for future controls and
-  mount in `.overlayWidgets`; overflowing variants mount outside
+  transform; hover is the first user and mounts in `.contentWidgets` with
+  a locally owned outer content-widget wrapper whose internals intentionally
+  mirror Monaco's hover widget and `monaco-scrollable-element` scrollbar
+  structure. Overlay widgets are viewport-positioned UI for future controls
+  and mount in `.overlayWidgets`; overflowing variants mount outside
   `.overflow-guard` when a widget is allowed to escape the editor clip.
 - Own the render loop: rAF-coalesced flushes with reads (measurement)
   before writes, a `ViewLayer`-style recycler that splices
   entering/leaving line nodes and writes `innerHTML` only on entering
   lines (a changed content generation rewrites the window), and paint
   facts (`patch_ms`, scroll position) reported after the flush.
-- Own scroll input: the island always consumes wheel events
-  (delta-mode normalization to pixels), scrollbar thumbs drag with the
-  slider position captured at drag start, and tracks page-jump; all of
-  it drives the `renderer.ViewLayout` scroll truth — the island has no
-  DOM scroll container.
+- Own scroll input through `ScrollableElementDom`: the editor and hover use
+  the same Monaco-shaped wrapper, custom scrollbar nodes, wheel delta-mode
+  normalization, thumb drag, track page-jump, and visibility-class updates.
+  Editor scroll writes back into `renderer.ViewLayout`; hover scroll writes
+  into its native content element. Browser reveal scroll offsets on editor
+  DOM nodes are translated into `ViewLayout` deltas and reset.
 - Own the editor input bridge: native `mousemove`/`mouseleave` listeners
   on the island root convert DOM events into typed `EditorEvent`s through
   the renderer's shared `hit_test`, fed by layout state plus the measured

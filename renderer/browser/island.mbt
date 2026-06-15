@@ -57,6 +57,13 @@ priv struct ContentWidget {
 }
 
 ///|
+priv struct HoverWidgetDom {
+  wrapper : @rdom.Element
+  hover : @rdom.Element
+  scrollable : ScrollableElementDom
+}
+
+///|
 /// The imperative view island, the Monaco `View` role: an
 /// root editor node owning an overflow guard, margin and content view
 /// parts, widget slots, custom scrollbars, and the line/line-number node
@@ -69,6 +76,7 @@ priv struct Island {
   margin : @rdom.Element
   margin_view_overlays : @rdom.Element
   line_numbers : @rdom.Element
+  editor_scrollable : ScrollableElementDom
   lines_content : @rdom.Element
   view_overlays : @rdom.Element
   view_zones : @rdom.Element
@@ -77,13 +85,7 @@ priv struct Island {
   overlay_widgets : @rdom.Element
   overflowing_content_widgets : @rdom.Element
   overflowing_overlay_widgets : @rdom.Element
-  vertical_bar : @rdom.Element
-  vertical_slider : @rdom.Element
-  horizontal_bar : @rdom.Element
-  horizontal_slider : @rdom.Element
-  vertical_state : @renderer.ScrollbarState
-  horizontal_state : @renderer.ScrollbarState
-  mut hover_widget : @rdom.Element?
+  mut hover_widget : HoverWidgetDom?
   mut window : @renderer.LineWindow
   mut generation : Int
   line_nodes : Array[@rdom.Element]
@@ -124,10 +126,14 @@ fn Island::build() -> Island {
   line_numbers.set_attribute("data-view-part", "line-numbers")
   margin_view_overlays.append_child(line_numbers.as_node())
   margin.append_child(margin_view_overlays.as_node())
-  let lines_content = document.create_element("div")
-  lines_content.set_attribute(
-    "class", "lines-content moonbit-viewer-background",
+  let editor_scrollable = ScrollableElementDom::new(
+    "lines-content moonbit-viewer-background",
   )
+  editor_scrollable.set_wrapper_class(
+    "monaco-scrollable-element editor-scrollable",
+  )
+  editor_scrollable.wrapper.set_attribute("data-view-part", "editor-scrollable")
+  let lines_content = editor_scrollable.content
   lines_content.set_attribute("data-view-part", "lines-content")
   let view_overlays = document.create_element("div")
   view_overlays.set_attribute("class", "view-overlays")
@@ -163,20 +169,12 @@ fn Island::build() -> Island {
   overflowing_overlay_widgets.set_attribute(
     "data-view-part", "overflowingOverlayWidgets",
   )
-  let vertical_bar = document.create_element("div")
-  vertical_bar.set_attribute("class", "scrollbar vertical")
-  let vertical_slider = document.create_element("div")
-  vertical_slider.set_attribute("class", "slider")
-  vertical_bar.append_child(vertical_slider.as_node())
-  let horizontal_bar = document.create_element("div")
-  horizontal_bar.set_attribute("class", "scrollbar horizontal")
-  let horizontal_slider = document.create_element("div")
-  horizontal_slider.set_attribute("class", "slider")
-  horizontal_bar.append_child(horizontal_slider.as_node())
+  editor_scrollable.update_from_model(
+    { width: 0.0, scroll_width: 0.0, height: 0.0, scroll_height: 0.0 },
+    { scroll_left: 0.0, scroll_top: 0.0 },
+  )
   overflow_guard.append_child(margin.as_node())
-  overflow_guard.append_child(lines_content.as_node())
-  overflow_guard.append_child(vertical_bar.as_node())
-  overflow_guard.append_child(horizontal_bar.as_node())
+  overflow_guard.append_child(editor_scrollable.wrapper.as_node())
   root.append_child(probe.as_node())
   root.append_child(message.as_node())
   root.append_child(overflow_guard.as_node())
@@ -190,6 +188,7 @@ fn Island::build() -> Island {
     margin,
     margin_view_overlays,
     line_numbers,
+    editor_scrollable,
     lines_content,
     view_overlays,
     view_zones,
@@ -198,16 +197,6 @@ fn Island::build() -> Island {
     overlay_widgets,
     overflowing_content_widgets,
     overflowing_overlay_widgets,
-    vertical_bar,
-    vertical_slider,
-    horizontal_bar,
-    horizontal_slider,
-    vertical_state: @renderer.ScrollbarState::new(
-      scrollbar_size=scrollbar_thickness,
-    ),
-    horizontal_state: @renderer.ScrollbarState::new(
-      scrollbar_size=scrollbar_thickness,
-    ),
     hover_widget: None,
     window: { start: 0, end: 0 },
     generation: -1,
@@ -508,41 +497,11 @@ fn Island::update_scrollbars(
   position : @renderer.ScrollPosition,
   gutter_width : Double,
 ) -> Unit {
-  self.vertical_state.set_visible_size(dimensions.height) |> ignore
-  self.vertical_state.set_scroll_size(dimensions.scroll_height) |> ignore
-  self.vertical_state.set_scroll_position(position.scroll_top) |> ignore
-  if self.vertical_state.is_needed() {
-    self.vertical_bar.set_attribute("style", "display:block")
-    self.vertical_slider.set_attribute(
-      "style",
-      "height:" +
-      self.vertical_state.slider_size().to_string() +
-      "px;transform:translateY(" +
-      self.vertical_state.slider_position().to_string() +
-      "px)",
-    )
-  } else {
-    self.vertical_bar.set_attribute("style", "display:none")
-  }
-  self.horizontal_state.set_visible_size(dimensions.width) |> ignore
-  self.horizontal_state.set_scroll_size(dimensions.scroll_width) |> ignore
-  self.horizontal_state.set_scroll_position(position.scroll_left) |> ignore
-  if self.horizontal_state.is_needed() {
-    self.horizontal_bar.set_attribute(
-      "style",
-      "display:block;left:" + gutter_width.to_string() + "px",
-    )
-    self.horizontal_slider.set_attribute(
-      "style",
-      "width:" +
-      self.horizontal_state.slider_size().to_string() +
-      "px;transform:translateX(" +
-      self.horizontal_state.slider_position().to_string() +
-      "px)",
-    )
-  } else {
-    self.horizontal_bar.set_attribute("style", "display:none")
-  }
+  self.editor_scrollable.update_from_model(
+    dimensions,
+    position,
+    horizontal_left=gutter_width,
+  )
 }
 
 ///|
@@ -571,7 +530,7 @@ fn Viewer::render_hover_widget(
     }
   }
   let widget = island.ensure_hover_widget(self)
-  let mut class_name = "hover-widget moonbit-viewer-hover fade-in"
+  let mut class_name = "monaco-resizable-hover"
   let mut shift_left = 0.0
   let mut preferred_placement = ContentWidgetAbove
   match view.placement {
@@ -589,24 +548,27 @@ fn Viewer::render_hover_widget(
   }
   let content_widget : ContentWidget = {
     id: "hover",
-    node: widget,
+    node: widget.wrapper,
     anchor: { line_number, column },
     preferred_placement,
     allow_overflow: false,
     shift_left,
     window_start_line: frame.viewport.start_line,
   }
-  widget.set_attribute("class", class_name)
-  widget.set_attribute("role", "tooltip")
-  widget.set_attribute("tabindex", "0")
-  widget.set_inner_html(render_hover_shell(view.contents))
+  widget.wrapper.set_attribute("class", class_name)
+  widget.hover.set_attribute("class", "monaco-hover fade-in")
+  widget.clear_sizing()
+  widget.scrollable.content.set_inner_html(
+    render_hover_shell(view.contents, frame.language_id),
+  )
   island.mount_content_widget(content_widget)
+  widget.apply_sizing(island.root)
   if view.measurable && view.placement is None {
     // Read-after-write: decide the flip/shift from the real geometry.
-    let widget_rect = widget.get_bounding_client_rect()
+    let widget_rect = widget.wrapper.get_bounding_client_rect()
     let root_rect = island.root.get_bounding_client_rect()
     let below = widget_rect.get_top() < root_rect.get_top()
-    let overflow = widget_rect.get_right() - root_rect.get_right()
+    let overflow = widget_rect.get_right() - root_rect.get_right() + 12.0
     let shift_left = if overflow > 0.0 { overflow } else { 0.0 }
     self.hover = self.hover.measured(below, shift_left)
     self.render_hover_widget(island, frame)
@@ -614,21 +576,71 @@ fn Viewer::render_hover_widget(
 }
 
 ///|
-fn Island::ensure_hover_widget(self : Island, viewer : Viewer) -> @rdom.Element {
+fn Island::ensure_hover_widget(
+  self : Island,
+  viewer : Viewer,
+) -> HoverWidgetDom {
   match self.hover_widget {
     Some(widget) => widget
     None => {
-      let widget = @rdom.document().create_element("div")
+      let document = @rdom.document()
+      let wrapper = document.create_element("div")
+      let hover = document.create_element("div")
+      hover.set_attribute("class", "monaco-hover fade-in")
+      hover.set_attribute("role", "tooltip")
+      hover.set_attribute("tabindex", "0")
+      let scrollable = ScrollableElementDom::new("monaco-hover-content")
+      hover.append_child(scrollable.wrapper.as_node())
+      wrapper.append_child(hover.as_node())
+      let widget : HoverWidgetDom = { wrapper, hover, scrollable }
       // Content widgets swallow mouse events so container hit-testing
       // never resolves targets beneath them.
-      widget.add_event_listener("mousemove", event => event.stop_propagation())
-      widget.add_event_listener("mousedown", event => event.stop_propagation())
-      widget.add_event_listener("click", event => event.stop_propagation())
-      widget.add_event_listener("contextmenu", event => event.stop_propagation())
-      widget.add_event_listener("focusin", event => event.stop_propagation())
-      widget.add_event_listener("focusout", event => event.stop_propagation())
-      widget.add_event_listener("wheel", event => event.stop_propagation())
-      widget.add_event_listener("keydown", event => {
+      widget.wrapper.add_event_listener("mousemove", event => {
+        event.stop_propagation()
+      })
+      widget.wrapper.add_event_listener("mousedown", event => {
+        event.stop_propagation()
+      })
+      widget.wrapper.add_event_listener("click", event => {
+        event.stop_propagation()
+      })
+      widget.wrapper.add_event_listener("contextmenu", event => {
+        event.stop_propagation()
+      })
+      widget.wrapper.add_event_listener("focusin", event => {
+        event.stop_propagation()
+      })
+      widget.wrapper.add_event_listener("focusout", event => {
+        event.stop_propagation()
+      })
+      widget.wrapper.add_event_listener("wheel", event => {
+        match event.to_wheel_event() {
+          Some(wheel) => {
+            event.prevent_default()
+            event.stop_propagation()
+            handle_hover_wheel(widget, wheel)
+          }
+          None => event.stop_propagation()
+        }
+      })
+      widget.scrollable.content.add_event_listener("wheel", event => {
+        match event.to_wheel_event() {
+          Some(wheel) => {
+            event.prevent_default()
+            event.stop_propagation()
+            handle_hover_wheel(widget, wheel)
+          }
+          None => event.stop_propagation()
+        }
+      })
+      widget.scrollable.content.add_event_listener("scroll", _ => {
+        widget.scrollable.update_from_native_content()
+      })
+      viewer.hook_scrollable_scrollbar_input(
+        widget.scrollable,
+        HoverScrollableElement,
+      )
+      widget.wrapper.add_event_listener("keydown", event => {
         match event.to_keyboard_event() {
           Some(keyboard) => viewer.handle_hover_keydown(widget, event, keyboard)
           None => event.stop_propagation()
@@ -643,7 +655,7 @@ fn Island::ensure_hover_widget(self : Island, viewer : Viewer) -> @rdom.Element 
 ///|
 fn Viewer::handle_hover_keydown(
   self : Viewer,
-  widget : @rdom.Element,
+  widget : HoverWidgetDom,
   event : @rdom.Event,
   keyboard : @rdom.KeyboardEvent,
 ) -> Unit {
@@ -672,44 +684,102 @@ fn Viewer::handle_hover_keydown(
     }
     "Home" => {
       event.prevent_default()
-      hover_scroll_content(widget).set_scroll_top(0.0)
+      widget.scrollable.native_scroll_to(vertical=true, 0.0)
     }
     "End" => {
       event.prevent_default()
-      let content = hover_scroll_content(widget)
-      content.set_scroll_top(content.get_scroll_height())
+      widget.scrollable.native_scroll_to(
+        vertical=true,
+        widget.scrollable.content.get_scroll_height(),
+      )
+    }
+    "ArrowRight" => {
+      event.prevent_default()
+      scroll_hover_content_horizontal(widget, self.measured_char_width() * 4.0)
+    }
+    "ArrowLeft" => {
+      event.prevent_default()
+      scroll_hover_content_horizontal(
+        widget,
+        -(self.measured_char_width() * 4.0),
+      )
     }
     _ => ()
   }
 }
 
 ///|
-fn scroll_hover_content(widget : @rdom.Element, delta : Double) -> Unit {
-  let content = hover_scroll_content(widget)
-  content.set_scroll_top(content.get_scroll_top() + delta)
+fn handle_hover_wheel(
+  widget : HoverWidgetDom,
+  wheel : @rdom.WheelEvent,
+) -> Unit {
+  let (delta_left, delta_top) = normalized_wheel_delta(
+    wheel,
+    editor_line_height.to_double(),
+    widget.scrollable.native_page_delta(),
+  )
+  widget.scrollable.native_scroll_by(delta_left~, delta_top~)
 }
 
 ///|
-fn hover_content_page_delta(widget : @rdom.Element) -> Double {
-  hover_scroll_content(widget).get_bounding_client_rect().get_height()
+fn scroll_hover_content(widget : HoverWidgetDom, delta : Double) -> Unit {
+  widget.scrollable.native_scroll_by(delta_top=delta)
 }
 
 ///|
-fn hover_scroll_content(widget : @rdom.Element) -> @rdom.Element {
-  match widget.get_children().get(0) {
-    Some(content) => content
-    None => widget
-  }
+fn scroll_hover_content_horizontal(
+  widget : HoverWidgetDom,
+  delta : Double,
+) -> Unit {
+  widget.scrollable.native_scroll_by(delta_left=delta)
+}
+
+///|
+fn hover_content_page_delta(widget : HoverWidgetDom) -> Double {
+  widget.scrollable.native_page_delta()
 }
 
 ///|
 fn Island::remove_hover_widget(self : Island) -> Unit {
   match self.hover_widget {
     Some(widget) => {
-      self.content_widgets.remove_child(widget.as_node())
+      self.content_widgets.remove_child(widget.wrapper.as_node())
       self.hover_widget = None
     }
     None => ()
+  }
+}
+
+///|
+fn HoverWidgetDom::clear_sizing(self : HoverWidgetDom) -> Unit {
+  self.scrollable.content.set_attribute("style", "")
+}
+
+///|
+fn HoverWidgetDom::apply_sizing(
+  self : HoverWidgetDom,
+  root : @rdom.Element,
+) -> Unit {
+  let root_rect = root.get_bounding_client_rect()
+  let max_width = max_hover_double(160.0, root_rect.get_width() - 24.0)
+  let max_height = max_hover_double(80.0, root_rect.get_height() - 24.0)
+  self.scrollable.content.set_attribute(
+    "style",
+    "max-width:" +
+    max_width.to_string() +
+    "px;max-height:" +
+    max_height.to_string() +
+    "px",
+  )
+  self.scrollable.update_from_native_content()
+}
+
+///|
+fn max_hover_double(left : Double, right : Double) -> Double {
+  if left > right {
+    left
+  } else {
+    right
   }
 }
 

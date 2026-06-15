@@ -19,10 +19,21 @@ test('renders markdown hover content as safe HTML', async ({ page }) => {
   await openMainFixture(page);
 
   await hoverMainSymbol(page);
-  const hover = page.locator('.contentWidgets .hover-widget');
+  const widget = page.locator('[data-content-widget="hover"]');
+  const hover = widget.locator('.monaco-hover');
+  const content = widget.locator('.monaco-hover-content');
+  await expect(widget).toHaveClass(/monaco-resizable-hover/);
+  await expect(hover).toBeVisible();
+  await expect(widget.locator('.monaco-scrollable-element')).toBeVisible();
+  await expect(content.locator('.hover-row > .hover-row-contents > .markdown-hover > .hover-contents')).toHaveCount(1);
   await expect(hover.locator('strong')).toHaveText('bold');
   await expect(hover.locator('code', { hasText: 'inline' })).toBeVisible();
-  await expect(hover.locator('pre code')).toContainText('fn rendered');
+  await expect(hover.locator('pre code')).toHaveCount(0);
+  await expect(hover.locator('.monaco-tokenized-source')).toContainText('fn rendered');
+  await expect(hover.locator('.monaco-tokenized-source .tok-keyword').first()).toContainText('fn');
+  await expect(
+    hover.locator('.monaco-tokenized-source .tok-identifier').filter({ hasText: 'rendered' }).first(),
+  ).toBeVisible();
   await expect(hover.locator('li')).toHaveCount(2);
   await expect(hover).not.toContainText('**bold**');
 });
@@ -37,7 +48,7 @@ test('escapes plaintext hover content', async ({ page }) => {
   await openMainFixture(page);
 
   await hoverMainSymbol(page);
-  const hover = page.locator('.contentWidgets .hover-widget');
+  const hover = page.locator('[data-content-widget="hover"] .monaco-hover');
   await expect(hover).toContainText('<img src=x');
   await expect(hover.locator('img')).toHaveCount(0);
   expect(await page.evaluate(() => globalThis.__hoverUnsafe)).toBeUndefined();
@@ -56,7 +67,7 @@ test('sanitizes unsafe markdown hover payloads', async ({ page }) => {
   await openMainFixture(page);
 
   await hoverMainSymbol(page);
-  const hover = page.locator('.contentWidgets .hover-widget');
+  const hover = page.locator('[data-content-widget="hover"] .monaco-hover');
   await expect(hover.locator('img')).toHaveCount(0);
   const hrefs = await hover.locator('a').evaluateAll((links) =>
     links.map((link) => link.getAttribute('href') || ''),
@@ -76,9 +87,11 @@ test('keeps hover inspectable with pointer, wheel, focus, and Escape', async ({ 
   await openMainFixture(page);
 
   await hoverMainSymbol(page);
-  const hover = page.locator('.contentWidgets .hover-widget');
-  const content = hover.locator('.moonbit-viewer-hover-content');
+  const widget = page.locator('[data-content-widget="hover"]');
+  const hover = widget.locator('.monaco-hover');
+  const content = widget.locator('.monaco-hover-content');
   await expect(hover).toBeVisible();
+  await expect(widget.locator('.scrollbar.vertical.visible .slider')).toBeVisible();
 
   await content.hover();
   await page.waitForTimeout(400);
@@ -101,6 +114,33 @@ test('keeps hover inspectable with pointer, wheel, focus, and Escape', async ({ 
   await expect(hover).toHaveCount(0);
 });
 
+test('scrolls long fenced code horizontally with Monaco hover scrollbar', async ({ page }) => {
+  const events = readonlyEvents(page);
+  const longName = `rendered_${'x'.repeat(320)}`;
+  await page.goto('/');
+  await setHoverFixture(
+    page,
+    'markdown',
+    ['```moonbit', `fn ${longName}() -> Unit {}`, '```'].join('\n'),
+  );
+  await openMainFixture(page);
+
+  await hoverMainSymbol(page);
+  const widget = page.locator('[data-content-widget="hover"]');
+  const content = widget.locator('.monaco-hover-content');
+  await expect(widget.locator('.monaco-tokenized-source .tok-keyword').first()).toContainText('fn');
+  await expect(widget.locator('.scrollbar.horizontal.visible .slider')).toBeVisible();
+
+  await content.hover();
+  const scrollEventsBefore = events.count('view:scroll');
+  await page.mouse.wheel(600, 0);
+  await expect
+    .poll(() => content.evaluate((node) => node.scrollLeft), { timeout: 2_000 })
+    .toBeGreaterThan(0);
+  await page.waitForTimeout(100);
+  expect(events.count('view:scroll')).toBe(scrollEventsBefore);
+});
+
 async function setHoverFixture(page, kind, contents) {
   await expect
     .poll(() => page.evaluate(() => typeof globalThis.__readonlyEditorSetHover), {
@@ -118,7 +158,7 @@ async function hoverMainSymbol(page) {
   const target = page.locator('.view-line span', { hasText: 'main' }).first();
   await expect(target).toBeVisible();
   await target.hover();
-  await expect(page.locator('.contentWidgets .hover-widget')).toBeVisible({
+  await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toBeVisible({
     timeout: 3_000,
   });
 }

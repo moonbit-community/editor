@@ -20,6 +20,12 @@ test('windows the rendered lines while keeping the document height', async ({ pa
   await openWorkspaceFile(page, 'src/generated_scroll.mbt');
 
   await expect(page.locator('.editor-shell')).toHaveAttribute('data-line-count', '10000');
+  const editorScrollable = page.locator(
+    '.overflow-guard > .monaco-scrollable-element.editor-scrollable',
+  );
+  await expect(editorScrollable).toBeVisible();
+  await expect(editorScrollable.locator('> .lines-content .view-lines')).toHaveCount(1);
+  await expect(editorScrollable.locator('> .scrollbar.vertical.visible .slider')).toBeVisible();
   await expect(page.locator('.view-line[data-line="1"]')).toBeVisible();
   await expect(page.locator('.view-line[data-line="10000"]')).toHaveCount(0);
 
@@ -31,26 +37,57 @@ test('windows the rendered lines while keeping the document height', async ({ pa
   await expect(page.locator('.view-line[data-line="1"]')).toHaveCount(0);
 });
 
+test('routes wheel input through the editor scrollable element', async ({ page }) => {
+  const events = readonlyEvents(page);
+  await page.goto('/');
+  await openWorkspaceFile(page, 'src/generated_scroll.mbt');
+
+  const editorScrollable = page.locator('.monaco-scrollable-element.editor-scrollable');
+  await expect(editorScrollable.locator('> .scrollbar.vertical.visible .slider')).toBeVisible();
+  await editorScrollable.hover();
+
+  const scrollEventsBefore = events.count('view:scroll');
+  await page.mouse.wheel(0, 720);
+  await expect
+    .poll(() => lastScrollTop(events), { timeout: 3_000 })
+    .toBeGreaterThan(0);
+  expect(events.count('view:scroll')).toBeGreaterThan(scrollEventsBefore);
+});
+
 test('resolves hover for the token under the mouse after scrolling', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/');
+  await setHoverFixture(page, 'plaintext', 'generated_value_1999');
   await openWorkspaceFile(page, 'src/generated_scroll.mbt');
 
   await page.evaluate(() => globalThis.__readonlyEditorScrollTo(1e9));
   const target = page.locator('.view-line span', { hasText: 'generated_value_1999' }).first();
   await expect(target).toBeVisible();
 
-  // The language server may still be indexing the generated file on first
-  // hover; retry the gesture until the hover widget resolves.
+  // Use the deterministic harness hover provider here; this spec verifies
+  // scroll-adjusted hit testing and hover placement, not LSP indexing.
   await expect(async () => {
     await page.mouse.move(5, 5);
     await target.hover();
-    await expect(page.locator('.contentWidgets .hover-widget')).toContainText(
+    await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
       'generated_value_1999',
       { timeout: 3_000 },
     );
   }).toPass({ timeout: 60_000 });
 });
+
+async function setHoverFixture(page, kind, contents) {
+  await expect
+    .poll(() => page.evaluate(() => typeof globalThis.__readonlyEditorSetHover), {
+      timeout: 5_000,
+    })
+    .toBe('function');
+  await page.evaluate(
+    ([fixtureKind, fixtureContents]) =>
+      globalThis.__readonlyEditorSetHover(fixtureKind, fixtureContents),
+    [kind, contents],
+  );
+}
 
 function workspaceItem(path) {
   return `[data-workspace-id="readonly-remote://workspace/${path}"]`;
@@ -82,4 +119,30 @@ async function openWorkspaceFile(page, workspacePath) {
     'data-source-uri',
     `readonly-remote://workspace/${workspacePath}`,
   );
+}
+
+function readonlyEvents(page) {
+  const messages = [];
+  page.on('console', (message) => {
+    if (message.text().includes('[readonly-editor]')) {
+      messages.push(message.text());
+    }
+  });
+  return {
+    count(name) {
+      return messages.filter((event) => event.includes(name)).length;
+    },
+    messages,
+  };
+}
+
+function lastScrollTop(events) {
+  const latest = events.messages
+    .filter((event) => event.includes('view:scroll'))
+    .at(-1);
+  if (!latest) {
+    return 0;
+  }
+  const match = latest.match(/"scrollTop":([0-9.]+)/);
+  return match ? Number(match[1]) : 0;
 }

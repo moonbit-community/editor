@@ -33,8 +33,8 @@ Backend-agnostic render IR, scroll/layout model, and editor geometry.
 - Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,
   server routing, or filesystem providers. Layout, scrollbar, hit-test, and
   window functions are pure arithmetic over frame data and caller-measured
-  metrics; `ViewLayout` owns scroll truth as model state, never a DOM
-  scroll container.
+  metrics; `ViewLayout` owns scroll truth as model state while browser
+  backends choose how to expose that model through DOM scrollable elements.
 - Backend-specific mounting and event wiring belong in `renderer/browser`.
 
 ## Checks

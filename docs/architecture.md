@@ -1,36 +1,85 @@
 # Architecture
 
-The editor is a readonly code viewer. It borrows the separations used by
-CodeMirror, Monaco, and VS Code without carrying editing machinery. Product code
-is written in MoonBit; platform-specific host packages are the only place where
-foreign-function boundaries are allowed.
+The editor is a readonly code viewer. It borrows useful separations from
+CodeMirror, Monaco, and VS Code without importing their product code or carrying
+editing machinery. Product code is written in MoonBit; platform-specific host
+packages are the only place where foreign-function boundaries are allowed.
 
 This file is the high-level system map. Package-local implementation contracts
-live in each product package's `README.md`.
+live in each product package's `README.md`; read those before changing package
+behavior.
 
-## Runtime Shape
+## Architectural Shape
 
-The project is split into three runtime parts:
+The repository uses service-oriented boundaries, not a VS Code-style dependency
+injection container. MoonBit does not give this project TypeScript-style
+decorators, reflection, or constructor metadata, so services are expressed as
+plain MoonBit traits, records, registries, and explicit package composition.
 
-- MoonBit remote server core: native MoonBit packages that own workspace-root
-  validation, readonly file-access policy, file-watch routing, remote protocol
-  routing, and the host contract for `moon-lsp` session lifecycle.
-- Backend-agnostic renderer: MoonBit packages that own the Monaco-shaped
-  render IR — a per-version tokenized document (`TokenizedDocument`, the
-  `TextModel` tokens role), per-line bucketed feature data
-  (`FrameSource`), viewport-scoped render frames (`build_frame`, the
-  `ViewportData` role), and pure line-HTML emission (`render_line_html`,
-  the `viewLineRenderer` role) — plus the backend-neutral scroll and
-  layout model (`Scrollable`, the uniform-height `LinesLayout`,
-  `ViewLayout`, `ScrollbarState`) and the pure editor geometry backends
-  share: mouse hit-testing (`MouseTarget`/`ViewMetrics`/`hit_test`) and
-  line-window math (`visible_window`) for viewport virtualization.
-- Render backends: MoonBit packages that map render frames to concrete hosts.
-  This round only defines the browser backend.
+The current rule is:
 
-The remote server and render backends communicate through explicit protocol and
-host contracts. Server code does not import browser backend packages.
-Renderer code does not import server packages or host effects.
+- use traits for host or provider boundaries;
+- use service records for per-viewer state and registries;
+- use composition roots to assemble concrete implementations;
+- avoid a global service locator or stringly typed injector until there is a
+  concrete lifecycle problem that explicit construction cannot handle.
+
+This gives the project the important parts of a service architecture - narrow
+interfaces, replaceable implementations, and clear ownership - without copying
+VS Code's TypeScript DI machinery.
+
+## Runtime Entry Points
+
+The project has three active runtime entry points:
+
+- `server_host_native/main`: native executable. It serves `web/dist`, owns native
+  filesystem/process/socket effects, starts `moon-lsp --stdio`, and bridges the
+  `/protocol` WebSocket into `server.RemoteServer`.
+- `web`: browser entry point for the shipped app. It imports `workbench` only.
+- `examples/embedded_viewer`: browser embedding proof. It mounts the viewer and
+  optional file tree against in-memory providers with no server or websocket.
+
+The main runtime path is:
+
+```text
+server_host_native/main
+  -> server_host_native
+  -> server
+  -> remote_protocol, workspace, language
+
+web
+  -> workbench
+  -> renderer/browser, widgets/file_tree, remote_protocol
+  -> workspace, language, platform/log, dom, syntax/lang_*
+```
+
+## Service And Provider Boundaries
+
+These are the real import points. New code should extend one of these seams
+before adding cross-package imports.
+
+| Boundary | Owner | Import point | Concrete implementations |
+| --- | --- | --- | --- |
+| Document loading and watches | `workspace` | `DocumentSource` | `workbench.RemoteDocumentSource`, `examples/embedded_viewer` memory workspace |
+| Workspace tree | `workspace` | `WorkspaceTreeProvider`, `WorkspaceStat` | `workbench.RemoteWorkspaceTreeProvider`, `examples/embedded_viewer` memory workspace |
+| Language features | `language` | provider traits for hover, diagnostics, symbols, semantic tokens | `workbench.RemoteLanguageClient`, server-backed providers, tests |
+| Viewer feature state | `renderer/browser` | `ViewerServices` | per-viewer service record built by the host |
+| Tokenization | `renderer/browser` + `syntax` | `register_tokenizer(language_id, tokenizer)` | composition roots importing `syntax/lang_*` packages |
+| Runtime logging | `platform/log` | `LogService` | workbench harness sink, tests, future hosts |
+| Native effects for server policy | `server` | `ServerHost`, `LspTransport` | `server_host_native` |
+| Browser/native packets | `remote_protocol` | client/server packet types and codecs | `workbench` client, `server` dispatcher |
+
+Important consequences:
+
+- `renderer/browser` integrates through `DocumentSource`, `ViewerServices`, and
+  `register_tokenizer`. It must not know about websockets or the remote protocol.
+- `widgets/file_tree` integrates through `WorkspaceTreeProvider`. It must not
+  know about the viewer or the transport.
+- `workbench` is the shipped-app composition root. It is the only package that
+  composes viewer, tree, remote protocol client, tokenizers, language providers,
+  logging, and browser harness observability.
+- `server` owns remote workspace policy and semantic routing. Native effects
+  stay behind `ServerHost` and `LspTransport`.
 
 ## Package Map
 
@@ -42,26 +91,22 @@ organizational; package boundaries are the directories with `moon.pkg`.
 - Shared platform packages: `platform/log`, an FFI-free runtime logging API
   used by shared viewer code and concretized by composition layers.
 - Language packages: `syntax/lang_*` (`lang_moonbit`, `lang_json`,
-  `lang_javascript`), one compile-time `lexmatch` lexer per language
-  behind the `syntax.LineTokenizer` contract, composed by import only.
+  `lang_javascript`), one compile-time `lexmatch` lexer per language behind the
+  `syntax.LineTokenizer` contract, composed by import only.
 - Remote server packages: `remote_protocol`, `server`, and
   `server_host_native`.
-- Render packages: `renderer` and `renderer/browser` (the embeddable
-  viewer-core library, the `vs/editor` role).
-- Optional widgets: `widgets/file_tree` (the provider-backed explorer tree).
-- The shipped app shell: `workbench` (the `vs/workbench` role) composes the
-  viewer, the tree widget, and the remote protocol client.
+- Render packages: `renderer` and `renderer/browser`.
+- Optional widgets: `widgets/file_tree`.
+- Shipped app shell: `workbench`.
 - Browser host packages: `dom` and `web`.
-- Embedding proof: `examples/embedded_viewer` mounts the viewer and the tree
-  against in-memory providers with no server or websocket.
+- Embedding proof: `examples/embedded_viewer`.
 
-Read the package-local `README.md` before changing package behavior. Those files
-record each package's owned responsibilities, dependency limits, and local test
-notes.
+`view` is a compatibility render model kept separate from the active
+`renderer` path.
 
 ## Dependency Direction
 
-The dependency graph should flow from host entrypoints toward shared domain
+The dependency graph should flow from host entry points toward shared domain
 packages:
 
 ```text
@@ -70,14 +115,17 @@ workbench
   -> renderer/browser, widgets/file_tree
   -> remote_protocol, dom, workspace, language, platform/log
   -> syntax/lang_* (registers tokenizers at startup)
+
 renderer/browser
   -> renderer
   -> dom
   -> workspace, language, syntax, decorations, platform/log
-  (rabbita: only the dom bindings and js helpers — never the TEA core,
-   the vdom, or the command scheduler; checker-enforced)
+  (rabbita: only the dom bindings and js helpers; never the TEA core,
+   vdom, or command scheduler)
+
 widgets/file_tree -> workspace
 
+server_host_native/main -> server_host_native
 server_host_native -> server -> remote_protocol
 server -> workspace, language
 
@@ -92,49 +140,114 @@ examples/embedded_viewer
   -> renderer/browser, widgets/file_tree, workspace, syntax/lang_*
 ```
 
-`view` is a compatibility render model kept separate from the active
-`renderer` path.
-
 ## Dependency Rules
 
-- Composition over configuration: there is no `show_sidebar` flag anywhere.
-  Excluding the tree means not importing the widget package (the Monaco
-  cut: `vs/editor` ships without the explorer because the workbench sits in
-  a layer above it). Only `workbench` composes the viewer, the widget, and
-  the transport.
-- `renderer/browser` is the viewer-core library and must not import
-  `remote_protocol`, `websocket`, `workbench`, or `widgets/*`; it meets its
-  hosts at the `workspace` traits (`DocumentSource`) and explicit
-  `ViewerServices` language-feature registries.
-- `widgets/file_tree` must not import `remote_protocol` or
-  `renderer/browser`; it is built only against `workspace`
-  (`WorkspaceTreeProvider`).
-- Grammars are compile-time code, not runtime data: a language is a
-  `syntax/lang_*` package whose rules are `lexmatch` arms compiled to a
-  tagged DFA at build time (Monarch's structure without its runtime
-  JS-regex engine; there is deliberately no `setMonarchTokensProvider`
-  equivalent). `syntax/lang_*` may import only `core` and `syntax`, and
-  only `workbench` and `examples/*` may import a `syntax/lang_*`
-  package — they register lexers through the viewer's
-  `register_tokenizer`, and unregistered language ids fall back to the
-  plain tokenizer. Semantic tokens from `language` providers remain the
-  accuracy tier overlaid on top.
-- These import rules are enforced by `scripts/check-architecture.mbtx`
-  (run as part of `just check`).
+- Composition over configuration: there is no `show_sidebar` flag. Excluding
+  the explorer means not importing `widgets/file_tree`; including it means the
+  composition root wires the widget to the viewer.
+- `renderer/browser` is the embeddable viewer-core library, the `vs/editor`
+  role. It must not import `remote_protocol`, `websocket`, `workbench`, or
+  `widgets/*`.
+- `widgets/file_tree` is an optional explorer widget. It must not import
+  `remote_protocol` or `renderer/browser`.
+- `workbench` is the shipped app shell, the `vs/workbench` role. It may import
+  the viewer, tree widget, protocol, tokenizer packages, and browser host
+  packages because composition is its job.
+- Grammars are compile-time code, not runtime data. A language is a
+  `syntax/lang_*` package whose rules are `lexmatch` arms compiled to a tagged
+  DFA at build time. There is deliberately no `setMonarchTokensProvider`
+  equivalent.
+- `syntax/lang_*` may import only `core` and `syntax`. Only composition roots
+  such as `workbench` and `examples/*` may import `syntax/lang_*`; they register
+  tokenizers through `renderer/browser.register_tokenizer`.
 - Shared renderer packages may import `core`, `syntax`, `decorations`,
   `workspace`, `language`, and `view`.
 - `server` may import `workspace`, `language`, and `remote_protocol`, but must
   not import renderer backend packages.
-- Packages that only run on one host target may declare that host's FFI: a
-  browser-only package such as `dom` or `renderer/browser` may declare
-  JavaScript FFI, and a native-only package such as `server_host_native` may
-  declare native FFI. Declare FFI in the package that uses it; `dom` holds
-  only browser capabilities shared across browser packages. Packages shared
-  across targets must not declare FFI.
+- Packages that only run on one host target may declare that host's FFI. Browser
+  packages such as `dom` and `renderer/browser` may declare JavaScript FFI.
+  Native packages such as `server_host_native` may declare native FFI. Shared
+  packages must not declare FFI.
 - Browser-specific code must stay out of `core`, `syntax`, `decorations`,
   `workspace`, `language`, `view`, `renderer`, `remote_protocol`, and `server`.
 - Product code must not import from `codemirror/` or `vscode/`; those trees are
   reference-only submodules.
+
+These import rules are enforced by `scripts/check-architecture.mbtx`, which runs
+as part of `just check`.
+
+## Rendering And Viewer Contracts
+
+- The editor is readonly. Document identity, source loading, rendering, hover
+  lookup, diagnostics, watches, and scrolling must not introduce edit state.
+- `renderer` owns backend-neutral editor model state: Monaco-shaped render IR,
+  pure line HTML, viewport frame construction, scroll arithmetic, line layout,
+  hit testing, and visible-window math.
+- `renderer/browser` owns the concrete browser island: DOM creation, CSS
+  classes, native input capture, hover controller behavior, widget mounting,
+  custom scrollbars, render-loop scheduling, and browser observability.
+- The viewer is an imperative DOM island. The host renders one stable mount
+  element (`.viewer-host`) and the viewer attaches its whole DOM subtree into it.
+  The host must never render vdom children into that element.
+- The browser island's DOM is Monaco-shaped but locally owned:
+  `.moonbit-viewer.readonly-editor` contains an `.overflow-guard`, margin view
+  overlays, a `.monaco-scrollable-element.editor-scrollable` around
+  `.lines-content`, `.view-lines`, `.view-overlays`, `.view-zones`,
+  content-widget and overlay-widget slots, overflowing widget slots, and
+  Monaco-shaped custom scrollbar nodes. This is a product DOM contract, not an
+  import of Monaco CSS or services.
+- Scrolling is split along the backend boundary. Scroll semantics - clamping,
+  dimensions, viewport derivation, and scrollbar geometry - are backend-neutral
+  model state in `renderer`. The browser backend exposes that model through
+  `ScrollableElementDom` and applies the model's output to DOM in a
+  rAF-coalesced render loop.
+- Browser-originated DOM scroll offsets are reveal deltas folded back into
+  `ViewLayout`; they are not a second editor scroll source.
+- Browser input routes through one shared hit test. Native container listeners
+  on the viewer island turn DOM events into typed editor events consumed by
+  feature controllers. Rendered spans carry no event handlers.
+- Feature controllers consume editor events and services. Hover currently
+  composes synchronous marker hover with asynchronous markdown language hover
+  through `HoverParticipantRegistry`.
+
+## Workspace And Protocol Contracts
+
+- Workspace semantics and filesystem-provider contracts belong in MoonBit domain
+  packages. Browser or native hosts provide effects behind narrow package
+  boundaries.
+- Remote protocol packet types, version negotiation, encoding, decoding, and
+  structured errors are MoonBit-owned.
+- Browser/native communication uses `remote_protocol` packets over the native
+  host's `/protocol` WebSocket. The native host serializes outbound packets per
+  connection so watch pushes cannot interleave with responses.
+- The browser app is served by the native host from `web/dist`.
+- Browser URLs are not document routes. Active file identity comes from MoonBit
+  workspace/explorer state and server/protocol calls, not `?uri=`, `?path=`,
+  hashes, or history updates.
+- Workspace selection is provider + widget + workbench composition: the server
+  resolves one directory level per `ResolveDirectory` request; the explorer
+  renders stats lazily; the workbench routes open intents into the viewer and
+  feeds viewer lifecycle back into the widget's `set_active` behavior.
+- Explorer behavior contract: directories start collapsed; expanding an
+  unresolved directory resolves exactly one level and caches it on the node; a
+  failed resolve renders an empty-with-error level and is retried on next
+  expand; `set_active` resolves and expands ancestors; `refresh` re-resolves
+  from the root on reconnect.
+- LSP client behavior targets Language Server Protocol 3.17:
+  `https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/`.
+  LSP stays behind the host-server provider boundary and is not part of the
+  browser protocol.
+
+## Runtime Observability
+
+- The viewer reports lifecycle facts through `ViewerNotification`; the host
+  formats those into harness events and chrome updates.
+- Runtime provider and participant failures are reported through
+  `platform/log.LogService`. Shared packages only depend on the FFI-free logging
+  API; composition layers install concrete sinks.
+- In the shipped app, `workbench` installs the browser harness sink that turns
+  warning/error log entries into the existing `language:error` observability
+  event.
 
 ## Build Targets
 
@@ -144,8 +257,8 @@ supported-target metadata and explicit command targets:
 - `moon.mod` declares `supported_targets = "+js+native"`.
 - Browser packages such as `web` and the browser host/render backend declare
   `supported_targets = "js"`.
-- Native server packages such as `server` and `server_host_native` declare
-  `supported_targets = "native"`.
+- Native server packages such as `server`, `server_host_native`, and
+  `server_host_native/main` declare `supported_targets = "native"`.
 - Shared packages omit package-level `supported_targets` and inherit the module
   support set.
 
@@ -153,89 +266,12 @@ Repository-level validation should use `moon check --target all` and
 `moon build --target all`. Package-local checks may use explicit `--target js`
 or `--target native`.
 
-## System Contracts
+## Extension Rule
 
-- The editor is readonly. Document identity, source loading, rendering,
-  hover lookup, diagnostics, and watches must not
-  introduce edit state.
-- Workspace semantics and filesystem-provider contracts belong in MoonBit
-  domain packages. Browser or native hosts provide effects behind narrow
-  package boundaries.
-- Remote protocol packet types, version negotiation, encoding, decoding, and
-  structured errors are MoonBit-owned.
-- The browser app is served by the native host from `web/dist`. The
-  `workbench` package owns the Rabbita app shell, the protocol client, and
-  the auto-open policy; the `renderer/browser` viewer owns document opening
-  (through a `DocumentSource`), render-frame construction, hover
-  resolution, and watch refreshes.
-- Workspace selection is provider + widget + workbench composition: the
-  server resolves one directory level per `ResolveDirectory` request
-  (`WorkspaceStat`, the `IFileStat` copy: provider-minted URIs, `children:
-  None` until resolved); the `widgets/file_tree` explorer renders stats
-  lazily; the workbench routes the widget's open intents into the viewer
-  and feeds viewer lifecycle back into the widget's `set_active`
-  (autoReveal).
-- Explorer behavior contract: directories start collapsed; expanding a
-  directory with unresolved children resolves exactly one level and caches
-  it on the node; a failed resolve renders the folder as an
-  empty-with-error level and is retried on the next expand; `set_active`
-  resolves and expands the ancestor chain of the active file and selects
-  its row; `refresh` re-resolves from the root on (re)connect.
-- Browser input routes through one shared hit test: native container
-  listeners on the viewer island turn DOM events into typed editor events
-  consumed by feature controllers (hover today); rendered spans carry no
-  event handlers. Language features resolve through per-viewer
-  `ViewerServices`: `LanguageFeaturesService` owns ordered provider
-  registries, `MarkerService` stores diagnostics by owner/resource,
-  `MarkerDecorationsService` maps markers to rendered squiggles and marker
-  hover lookups, and `HoverParticipantRegistry` composes synchronous marker
-  hover with asynchronous markdown language hover.
-- The viewer is an imperative view island behind a mount contract: the
-  shell renders one stable host element (`.viewer-host`) and the viewer
-  attaches its whole DOM subtree into it. The shell must never render
-  vdom children into the host element — the island's nodes are foreign to
-  the shell's diff and must stay untouched across shell updates. The
-  island survives theme switches (colors cascade through CSS variables;
-  there is no remount and the scroll position is preserved).
-- The browser island's DOM is Monaco-shaped but locally owned:
-  `.moonbit-viewer.readonly-editor` contains an `.overflow-guard`, margin
-  view overlays, a `.monaco-scrollable-element.editor-scrollable` around
-  `.lines-content`, `.view-lines`, `.view-overlays`, `.view-zones`,
-  content-widget and overlay-widget slots, overflowing widget slots, and
-  Monaco-shaped custom scrollbar nodes. This is a product DOM contract,
-  not an import of Monaco CSS or services.
-- Scrolling is split along the backend boundary: scroll semantics —
-  clamping, dimensions, viewport derivation, scrollbar geometry — are
-  backend-neutral model state in `renderer` (`ViewLayout` owns the single
-  editor scroll truth). The browser backend exposes that model through a
-  shared `ScrollableElementDom`, the Monaco `ScrollableElement` role for
-  wheel input, scrollbar thumb drags, track jumps, visibility classes, and
-  slider geometry. It then applies the model's output (layer transforms,
-  recycled line nodes, scrollbar thumbs) in a rAF-coalesced render loop
-  with reads before writes. Browser-originated DOM scroll offsets are
-  treated as reveal deltas and immediately folded back into `ViewLayout`,
-  not used as a second scroll source.
-- Browser/native communication uses `remote_protocol` packets over the native
-  host's `/protocol` WebSocket. The native host serializes outbound packets
-  per connection so watch pushes cannot interleave with responses.
-- Runtime provider and participant failures are reported through
-  `platform/log.LogService`. Shared packages only depend on the FFI-free
-  logging API; the workbench installs the browser harness sink that turns
-  warning/error entries into the existing `language:error` observability
-  event.
-- Browser URLs are not document routes. Active file identity comes from
-  MoonBit workspace/explorer state and server/protocol calls, not `?uri=`,
-  `?path=`, hashes, or history updates.
-- LSP client behavior targets the official Language Server Protocol 3.17
-  specification:
-  `https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/`.
-  LSP stays behind the host-server provider boundary and is not part of the
-  browser protocol.
-- Render frames are backend-neutral. Browser DOM nodes, CSS details, event
-  wiring, session display, and observability belong to the browser backend and
-  host boundary.
-- Adding another frontend should require a new backend package, not changes to
-  server routing or workspace/language semantics.
+Adding another frontend should require a new backend or composition package, not
+changes to server routing or workspace/language semantics. Adding another host
+should provide concrete implementations for the existing provider/service seams
+before adding new ones.
 
 ## Position Convention
 

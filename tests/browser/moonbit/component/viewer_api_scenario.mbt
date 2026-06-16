@@ -41,6 +41,37 @@ impl @workspace.DocumentSource for MemoryDocumentSource with fn close_document(
 }
 
 ///|
+priv struct ComponentHoverProvider {
+  hover_text : String
+}
+
+///|
+fn ComponentHoverProvider::new() -> ComponentHoverProvider {
+  { hover_text: "wrapped component hover" }
+}
+
+///|
+impl @language.HoverProvider for ComponentHoverProvider with fn hover_at(
+  self,
+  document,
+  offset,
+) {
+  let needle = "keeps"
+  match document.text.find(needle) {
+    Some(start) =>
+      if offset >= start && offset < start + needle.length() {
+        Some({
+          range: Range(start, start + needle.length()),
+          contents: [PlainText(self.hover_text)],
+        })
+      } else {
+        None
+      }
+    None => None
+  }
+}
+
+///|
 fn run_viewer_api_test() -> Unit {
   @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
   let ctx = @support.BrowserTestContext::new("viewer_api")
@@ -53,6 +84,10 @@ fn run_viewer_api_test() -> Unit {
   let model_line_count = component_model_line_count()
   match mount_host() {
     Some(host) => {
+      let services = @browser.ViewerServices::new()
+      services.language_features.register_hover_provider(
+        ComponentHoverProvider::new(),
+      )
       let viewer = @browser.Viewer(
         source,
         on_notification=notification => {
@@ -68,6 +103,7 @@ fn run_viewer_api_test() -> Unit {
             _ => ()
           }
         },
+        services~,
         options=ViewerOptions(soft_wrap=true),
         placeholder="Loading component fixture...",
       )

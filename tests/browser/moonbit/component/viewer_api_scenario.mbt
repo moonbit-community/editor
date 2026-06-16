@@ -43,11 +43,15 @@ impl @workspace.DocumentSource for MemoryDocumentSource with fn close_document(
 ///|
 priv struct ComponentHoverProvider {
   hover_text : String
+  diagnostic_text : String
 }
 
 ///|
 fn ComponentHoverProvider::new() -> ComponentHoverProvider {
-  { hover_text: "wrapped component hover" }
+  {
+    hover_text: "wrapped component hover",
+    diagnostic_text: "wrapped component diagnostic",
+  }
 }
 
 ///|
@@ -72,6 +76,25 @@ impl @language.HoverProvider for ComponentHoverProvider with fn hover_at(
 }
 
 ///|
+impl @language.DiagnosticsProvider for ComponentHoverProvider with fn diagnostics_for_document(
+  self,
+  document,
+) {
+  let needle = "keeps"
+  match document.text.find(needle) {
+    Some(start) =>
+      [
+        {
+          range: Range(start, start + needle.length()),
+          severity: Warning,
+          message: self.diagnostic_text,
+        },
+      ]
+    None => []
+  }
+}
+
+///|
 fn run_viewer_api_test() -> Unit {
   @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
   let ctx = @support.BrowserTestContext::new("viewer_api")
@@ -85,9 +108,9 @@ fn run_viewer_api_test() -> Unit {
   match mount_host() {
     Some(host) => {
       let services = @browser.ViewerServices::new()
-      services.language_features.register_hover_provider(
-        ComponentHoverProvider::new(),
-      )
+      let provider = ComponentHoverProvider::new()
+      services.language_features.register_hover_provider(provider)
+      services.language_features.register_diagnostics_provider(provider)
       let viewer = @browser.Viewer(
         source,
         on_notification=notification => {

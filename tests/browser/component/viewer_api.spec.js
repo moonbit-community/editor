@@ -21,6 +21,9 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(Number(await wrappedHoverLine.getAttribute('data-line'))).toBeGreaterThan(
       report.metrics.modelLines,
     );
+    await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toBeVisible({
+      timeout: 10_000,
+    });
     await wrappedHoverLine.hover();
     await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
       'wrapped component hover',

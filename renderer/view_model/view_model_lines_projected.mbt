@@ -30,7 +30,7 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_content(
   line_number : Int,
 ) -> String {
   let segment = self.projection.segment_for_view_line_number(line_number)
-  let text = self.base.get_view_line_content(segment.model_line_number)
+  let text = self.base.get_model_line_content(segment.model_line_number)
   text[segment.start_offset:segment.end_offset].to_owned()
 }
 
@@ -65,7 +65,7 @@ pub fn ViewModelLinesFromProjectedModel::render_line(
 ) -> RenderLine {
   let segment = self.projection.segment_for_view_line_number(line_number)
   slice_render_line(
-    self.base.render_line(segment.model_line_number),
+    self.base.render_model_line(segment.model_line_number),
     @core.clamp_int(line_number, 1, self.line_count()),
     segment.start_offset,
     segment.end_offset,

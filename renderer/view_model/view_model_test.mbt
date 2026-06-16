@@ -85,6 +85,29 @@ fn test_view_model(
 }
 
 ///|
+fn test_folded_view_model(
+  text : String,
+  options : @view_model.ViewModelOptions,
+  ranges : Array[@language.FoldingRange],
+) -> @view_model.ViewModel {
+  let doc = @core.DocumentSnapshot(text)
+  let tokenized = @view_model.TokenizedDocument::build(
+    doc,
+    @syntax.highlight(doc),
+  )
+  let source = @view_model.FrameSource(
+    tokenized,
+    @decorations.DecorationSet::empty(),
+    @language.ProviderResult::empty(),
+  )
+  @view_model.ViewModel::with_options_and_folding(
+    source,
+    options,
+    @view_model.FoldingModel::from_folded_ranges(ranges, doc.line_count()),
+  )
+}
+
+///|
 test "projected view lines cover one two and many wrapped segments" {
   let one = test_view_model("abc", @view_model.ViewModelOptions::soft_wrap(5))
   assert_eq(one.line_count(), 1)
@@ -213,4 +236,57 @@ test "projected long moonbit lines retain source text across segments" {
     joined = joined + view_model.lines().get_view_line_content(line_number)
   }
   assert_eq(joined, text)
+}
+
+///|
+test "folded view model projects visible lines without soft wrap" {
+  let view_model = test_folded_view_model(
+    "a\nb\nc\nd",
+    @view_model.ViewModelOptions::no_wrap(),
+    [FoldingRange(1, 3)],
+  )
+  assert_eq(view_model.line_count(), 2)
+  assert_eq(view_model.lines().get_view_line_content(1), "a")
+  assert_eq(view_model.lines().get_view_line_content(2), "d")
+  assert_eq(view_model.lines().model_line_number_of_view_line(1), 1)
+  assert_eq(view_model.lines().model_line_number_of_view_line(2), 4)
+  let converter = view_model.coordinates_converter()
+  let last_model_line = converter.model_position_to_view_position(
+    Position(3, 0),
+  )
+  assert_eq(last_model_line.line, 1)
+  assert_eq(last_model_line.column, 0)
+  let hidden_model_line = converter.model_position_to_view_position(
+    Position(1, 0),
+  )
+  assert_eq(hidden_model_line.line, 0)
+  assert_eq(hidden_model_line.column, 1)
+  let view_position = converter.view_position_to_model_position(Position(1, 0))
+  assert_eq(view_position.line, 3)
+  assert_eq(view_position.column, 0)
+}
+
+///|
+test "folded view model wraps only visible model lines" {
+  let view_model = test_folded_view_model(
+    "aa\nhidden\nabcdef",
+    @view_model.ViewModelOptions::soft_wrap(3),
+    [FoldingRange(1, 2)],
+  )
+  assert_eq(view_model.line_count(), 3)
+  assert_eq(view_model.lines().get_view_line_content(1), "aa")
+  assert_eq(view_model.lines().get_view_line_content(2), "abc")
+  assert_eq(view_model.lines().get_view_line_content(3), "def")
+  assert_eq(view_model.lines().model_line_number_of_view_line(2), 3)
+  let converter = view_model.coordinates_converter()
+  let wrapped_visible_line = converter.model_position_to_view_position(
+    Position(2, 4),
+  )
+  assert_eq(wrapped_visible_line.line, 2)
+  assert_eq(wrapped_visible_line.column, 1)
+  let hidden_model_line = converter.model_position_to_view_position(
+    Position(1, 0),
+  )
+  assert_eq(hidden_model_line.line, 0)
+  assert_eq(hidden_model_line.column, 2)
 }

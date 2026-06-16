@@ -125,20 +125,74 @@ pub fn ViewModelDecorations::decorations_for_line(
 ///|
 pub struct ViewModelLinesFromModelAsIs {
   source : FrameSource
+  visible_model_line_numbers : Array[Int]
+  hidden_model_lines : Array[Bool]
 }
 
 ///|
 pub fn ViewModelLinesFromModelAsIs::new(
   source : FrameSource,
 ) -> ViewModelLinesFromModelAsIs {
-  { source, }
+  let line_count = source.tokenized.snapshot.line_count()
+  let visible_model_line_numbers : Array[Int] = []
+  let hidden_model_lines : Array[Bool] = []
+  for line_number in 1..<=line_count {
+    visible_model_line_numbers.push(line_number)
+    hidden_model_lines.push(false)
+  }
+  { source, visible_model_line_numbers, hidden_model_lines }
+}
+
+///|
+pub fn ViewModelLinesFromModelAsIs::with_folding_model(
+  source : FrameSource,
+  folding_model : FoldingModel,
+) -> ViewModelLinesFromModelAsIs {
+  let line_count = source.tokenized.snapshot.line_count()
+  let visible_model_line_numbers : Array[Int] = []
+  let hidden_model_lines : Array[Bool] = []
+  for line_number in 1..<=line_count {
+    let hidden = folding_model.is_line_hidden(line_number)
+    hidden_model_lines.push(hidden)
+    if !hidden {
+      visible_model_line_numbers.push(line_number)
+    }
+  }
+  { source, visible_model_line_numbers, hidden_model_lines }
 }
 
 ///|
 pub fn ViewModelLinesFromModelAsIs::line_count(
   self : ViewModelLinesFromModelAsIs,
 ) -> Int {
+  self.visible_model_line_numbers.length()
+}
+
+///|
+pub fn ViewModelLinesFromModelAsIs::model_line_count(
+  self : ViewModelLinesFromModelAsIs,
+) -> Int {
   self.source.tokenized.snapshot.line_count()
+}
+
+///|
+pub fn ViewModelLinesFromModelAsIs::is_model_line_hidden(
+  self : ViewModelLinesFromModelAsIs,
+  model_line_number : Int,
+) -> Bool {
+  match self.hidden_model_lines.get(model_line_number - 1) {
+    Some(hidden) => hidden
+    None => false
+  }
+}
+
+///|
+pub fn ViewModelLinesFromModelAsIs::get_model_line_content(
+  self : ViewModelLinesFromModelAsIs,
+  model_line_number : Int,
+) -> String {
+  let line_index = self.clamped_model_line_index(model_line_number)
+  self.source.tokenized.snapshot.line_text(line_index)
 }
 
 ///|
@@ -146,8 +200,7 @@ pub fn ViewModelLinesFromModelAsIs::get_view_line_content(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
 ) -> String {
-  let line_index = self.clamped_line_index(line_number)
-  self.source.tokenized.snapshot.line_text(line_index)
+  self.get_model_line_content(self.model_line_number_of_view_line(line_number))
 }
 
 ///|
@@ -171,7 +224,8 @@ pub fn ViewModelLinesFromModelAsIs::model_line_number_of_view_line(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
 ) -> Int {
-  self.clamped_line_index(line_number) + 1
+  let index = self.clamped_line_index(line_number)
+  self.visible_model_line_numbers[index]
 }
 
 ///|
@@ -179,8 +233,16 @@ pub fn ViewModelLinesFromModelAsIs::render_line(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
 ) -> RenderLine {
+  self.render_model_line(self.model_line_number_of_view_line(line_number))
+}
+
+///|
+pub fn ViewModelLinesFromModelAsIs::render_model_line(
+  self : ViewModelLinesFromModelAsIs,
+  model_line_number : Int,
+) -> RenderLine {
   let doc = self.source.tokenized.snapshot
-  let line_index = self.clamped_line_index(line_number)
+  let line_index = self.clamped_model_line_index(model_line_number)
   let line_start = doc.line_start_offset(line_index)
   let line_end = doc.line_end_offset(line_index)
   let line_range = @core.Range(line_start, line_end)
@@ -219,6 +281,14 @@ fn ViewModelLinesFromModelAsIs::clamped_line_index(
   line_number : Int,
 ) -> Int {
   @core.clamp_int(line_number - 1, 0, self.line_count() - 1)
+}
+
+///|
+fn ViewModelLinesFromModelAsIs::clamped_model_line_index(
+  self : ViewModelLinesFromModelAsIs,
+  model_line_number : Int,
+) -> Int {
+  @core.clamp_int(model_line_number - 1, 0, self.model_line_count() - 1)
 }
 
 ///|
@@ -323,10 +393,41 @@ pub fn ViewModel::with_options(
   options : ViewModelOptions,
 ) -> ViewModel {
   let as_is = ViewModelLinesFromModelAsIs::new(source)
+  ViewModel::from_lines(source, options, as_is, force_projected=false)
+}
+
+///|
+pub fn ViewModel::with_options_and_folding(
+  source : FrameSource,
+  options : ViewModelOptions,
+  folding_model : FoldingModel,
+) -> ViewModel {
+  let as_is = ViewModelLinesFromModelAsIs::with_folding_model(
+    source, folding_model,
+  )
+  ViewModel::from_lines(source, options, as_is, force_projected=true)
+}
+
+///|
+fn ViewModel::from_lines(
+  source : FrameSource,
+  options : ViewModelOptions,
+  as_is : ViewModelLinesFromModelAsIs,
+  force_projected~ : Bool,
+) -> ViewModel {
   let (lines, coordinates_converter) = if options.is_soft_wrap_enabled() {
     let projected = ViewModelLinesFromProjectedModel::new(
       as_is,
       LineBreaksComputer(options.soft_wrap_column, tab_size=options.tab_size),
+    )
+    (
+      ProjectedModel(projected),
+      Projected(ProjectedCoordinatesConverter::new(projected)),
+    )
+  } else if force_projected {
+    let projected = ViewModelLinesFromProjectedModel::new(
+      as_is,
+      LineBreaksComputer(0, tab_size=options.tab_size),
     )
     (
       ProjectedModel(projected),

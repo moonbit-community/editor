@@ -1,0 +1,4 @@
+import {
+  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/syntax",
+}

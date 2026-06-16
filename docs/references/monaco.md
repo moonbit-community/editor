@@ -32,6 +32,10 @@ Useful areas:
   `docs/references/monaco-hover-scrollbar-parity.md`.
 - `vscode/src/vs/editor/contrib/hover`, `links`, `semanticTokens`, `find`: readonly feature references.
 
+Use `docs/references/monaco-layer-map.md` for the current source-to-local role
+ledger. It records whether a local role is exact, partial, a readonly subset,
+future work, or intentionally skipped.
+
 The hover/scrollbar conformance oracle lives in
 `tests/reference/monaco-hover-scrollbar/`, with the Playwright comparison in
 `tests/browser/monaco_conformance.spec.js`. The fixture transcribes the pinned

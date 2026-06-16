@@ -11,7 +11,9 @@ pub fn render_line_html(
   line : RenderLine,
   decorations : Array[@decorations.Decoration],
 ) -> String {
-  render_view_line2(RenderLineInput::from_render_line(line, decorations~)).html
+  @view_line_renderer.render_view_line2(
+    render_line_input_from_render_line(line, decorations~),
+  ).html
 }
 
 ///|

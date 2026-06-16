@@ -3,7 +3,7 @@ test "monaco lineDecorations normalizer reference suite" {
   let content = "abcabcabcabcabcabcabcabcabcabc"
   assert_segments(
     "Bug 9827",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_line_renderer.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 11, "c1"),
       LineDecoration(3, 4, "c2"),
     ]),
@@ -11,7 +11,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "issue #3462",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_line_renderer.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(15, 21, "mtkw"),
       LineDecoration(20, 21, "inline-folded"),
     ]),
@@ -19,7 +19,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts separate decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_line_renderer.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 2, "c1"),
       LineDecoration(3, 4, "c2"),
     ]),
@@ -27,7 +27,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts adjacent decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_line_renderer.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 3, "c1"),
       LineDecoration(3, 4, "c2"),
     ]),
@@ -35,7 +35,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts overlapping decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_line_renderer.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(3, 4, "c2"),
     ]),
@@ -43,7 +43,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts duplicated base decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_line_renderer.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(1, 4, "c1*"),
       LineDecoration(3, 4, "c2"),
@@ -52,7 +52,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts three duplicated base decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_line_renderer.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(1, 4, "c1*"),
       LineDecoration(1, 4, "c1**"),
@@ -62,7 +62,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts duplicated overlap decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_line_renderer.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(1, 4, "c1*"),
       LineDecoration(1, 4, "c1**"),
@@ -73,7 +73,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts overlap with longer tail",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_line_renderer.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(1, 4, "c1*"),
       LineDecoration(1, 4, "c1**"),
@@ -642,15 +642,15 @@ fn segment(
   end_offset : Int,
   class_name : String,
   metadata? : Int = 0,
-) -> DecorationSegment {
+) -> @view_line_renderer.DecorationSegment {
   { start_offset, end_offset, class_name, metadata }
 }
 
 ///|
 fn assert_segments(
   name : String,
-  actual : Array[DecorationSegment],
-  expected : Array[DecorationSegment],
+  actual : Array[@view_line_renderer.DecorationSegment],
+  expected : Array[@view_line_renderer.DecorationSegment],
 ) -> Unit raise {
   guard actual == expected else {
     fail("Monaco lineDecorations port failed: \{name}")
@@ -658,19 +658,22 @@ fn assert_segments(
 }
 
 ///|
-fn monaco_part(end_index : Int, class_index : Int) -> LinePart {
+fn monaco_part(
+  end_index : Int,
+  class_index : Int,
+) -> @view_line_renderer.LinePart {
   LinePart(end_index, "mtk" + class_index.to_string())
 }
 
 ///|
 fn monaco_view_line(
   content : String,
-  tokens : Array[LinePart],
+  tokens : Array[@view_line_renderer.LinePart],
   tab_size? : Int = 4,
   contains_rtl? : Bool = false,
   is_basic_ascii? : Bool = true,
   continues_with_wrapped_line? : Bool = false,
-) -> ViewLineRenderingData {
+) -> @view_line_renderer.ViewLineRenderingData {
   {
     min_column: 1,
     max_column: content.length() + 1,
@@ -690,8 +693,8 @@ fn monaco_view_line(
 ///|
 fn monaco_input(
   content : String,
-  tokens : Array[LinePart],
-  line_decorations? : Array[LineDecoration] = [],
+  tokens : Array[@view_line_renderer.LinePart],
+  line_decorations? : Array[@view_line_renderer.LineDecoration] = [],
   tab_size? : Int = 4,
   contains_rtl? : Bool = false,
   is_basic_ascii? : Bool = true,
@@ -700,11 +703,11 @@ fn monaco_input(
   can_use_halfwidth_rightwards_arrow? : Bool = true,
   faux_indent_length? : Int = 0,
   stop_rendering_line_after? : Int = -1,
-  render_whitespace? : RenderWhitespace = None,
+  render_whitespace? : @view_line_renderer.RenderWhitespace = None,
   render_control_characters? : Bool = false,
   font_ligatures? : Bool = false,
-) -> RenderLineInput {
-  RenderLineInput::from_view_line(
+) -> @view_line_renderer.RenderLineInput {
+  @view_line_renderer.RenderLineInput::from_view_line(
     monaco_view_line(
       content,
       tokens,
@@ -727,8 +730,8 @@ fn monaco_input(
 ///|
 fn monaco_render(
   content : String,
-  tokens : Array[LinePart],
-  line_decorations? : Array[LineDecoration] = [],
+  tokens : Array[@view_line_renderer.LinePart],
+  line_decorations? : Array[@view_line_renderer.LineDecoration] = [],
   tab_size? : Int = 4,
   contains_rtl? : Bool = false,
   is_basic_ascii? : Bool = true,
@@ -737,11 +740,11 @@ fn monaco_render(
   can_use_halfwidth_rightwards_arrow? : Bool = true,
   faux_indent_length? : Int = 0,
   stop_rendering_line_after? : Int = -1,
-  render_whitespace? : RenderWhitespace = None,
+  render_whitespace? : @view_line_renderer.RenderWhitespace = None,
   render_control_characters? : Bool = false,
   font_ligatures? : Bool = false,
-) -> RenderLineOutput2 {
-  render_view_line2(
+) -> @view_line_renderer.RenderLineOutput2 {
+  @view_line_renderer.render_view_line2(
     monaco_input(
       content,
       tokens,
@@ -765,7 +768,7 @@ fn monaco_render(
 fn assert_render_html(
   name : String,
   content : String,
-  tokens : Array[LinePart],
+  tokens : Array[@view_line_renderer.LinePart],
   expected_html : String,
 ) -> Unit raise {
   let output = monaco_render(content, tokens)
@@ -793,8 +796,8 @@ fn assert_split_count(
 fn assert_monaco_case(
   name : String,
   content : String,
-  tokens : Array[LinePart],
-  line_decorations? : Array[LineDecoration] = [],
+  tokens : Array[@view_line_renderer.LinePart],
+  line_decorations? : Array[@view_line_renderer.LineDecoration] = [],
   tab_size? : Int = 4,
   contains_rtl? : Bool = false,
   is_basic_ascii? : Bool = true,
@@ -803,11 +806,11 @@ fn assert_monaco_case(
   can_use_halfwidth_rightwards_arrow? : Bool = true,
   faux_indent_length? : Int = 0,
   stop_rendering_line_after? : Int = -1,
-  render_whitespace? : RenderWhitespace = None,
+  render_whitespace? : @view_line_renderer.RenderWhitespace = None,
   render_control_characters? : Bool = false,
   font_ligatures? : Bool = false,
   expected_classes? : Array[String] = [],
-  expected_foreign? : ForeignElementType = None,
+  expected_foreign? : @view_line_renderer.ForeignElementType = None,
   expected_overflow? : Bool = false,
 ) -> Unit raise {
   let output = monaco_render(
@@ -863,7 +866,7 @@ fn assert_monaco_case(
 ///|
 fn assert_mapping_invariants(
   name : String,
-  output : RenderLineOutput2,
+  output : @view_line_renderer.RenderLineOutput2,
 ) -> Unit raise {
   let mapping = output.character_mapping
   let mut previous_horizontal_offset = -1
@@ -889,7 +892,7 @@ fn assert_mapping_invariants(
 ///|
 fn assert_get_column(
   name : String,
-  output : RenderLineOutput2,
+  output : @view_line_renderer.RenderLineOutput2,
   part_index : Int,
   part_length : Int,
   char_index : Int,

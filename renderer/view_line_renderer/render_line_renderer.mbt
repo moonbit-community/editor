@@ -421,3 +421,16 @@ fn foreign_element_type(
   }
   found
 }
+
+///|
+fn write_escaped(html : StringBuilder, text : String) -> Unit {
+  for ch in text {
+    match ch {
+      '&' => html.write_string("&amp;")
+      '<' => html.write_string("&lt;")
+      '>' => html.write_string("&gt;")
+      '"' => html.write_string("&quot;")
+      _ => html.write_char(ch)
+    }
+  }
+}

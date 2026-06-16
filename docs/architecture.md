@@ -25,11 +25,12 @@ MoonBit-owned and must not import from `vscode/` or `codemirror/`.
 The project has one primary reusable product surface and one reference host
 stack around it.
 
-- `renderer/browser`: the embeddable readonly viewer for MoonBit users. It owns
-  the browser DOM island, browser input, widgets such as hover, and the public
-  viewer control API.
-- `renderer`: backend-neutral editor model state. It owns render frames, line
-  HTML, viewport math, scroll/layout arithmetic, and hit testing.
+- `renderer/browser`: the embeddable readonly viewer for MoonBit users and this
+  repo's Monaco `editor/browser` role. It owns the browser DOM view, browser
+  input, widgets such as hover, and the public viewer control API.
+- `renderer`: pre-DOM common editor model state and this repo's Monaco
+  `editor/common` role. It owns the readonly `ViewModel` spine, viewport data,
+  line HTML, scroll/layout arithmetic, and hit testing.
 - `workspace`: document identity and source/tree provider contracts. This is
   where host-neutral document and workspace semantics belong.
 - `language`: language feature contracts and result types such as hover,
@@ -108,16 +109,17 @@ Rendering is split by host boundary:
 
 ```text
 workspace.SourceDocument
-  -> renderer tokenization/frame/layout state
+  -> renderer tokenization/ViewModel/layout state
   -> renderer ViewportData
-  -> renderer render-line IR
-  -> renderer/browser DOM island
+  -> renderer/view_line_renderer render-line IR
+  -> renderer/browser DOM view
 ```
 
-Backend-neutral rendering and geometry belong in `renderer`. Browser-specific
-DOM, CSS, event capture, custom scrollbars, and widget placement belong in
-`renderer/browser`. The browser view layer applies `RenderLineInput` /
-`RenderLineOutput2` results to DOM nodes; it does not own line HTML semantics.
+Pre-DOM rendering and geometry belong in `renderer`. Browser-specific DOM, CSS,
+event capture, custom scrollbars, and widget placement belong in
+`renderer/browser`. The browser `ViewLayer` applies
+`@view_line_renderer.RenderLineInput` / `RenderLineOutput2` results to DOM
+nodes; it does not own line HTML semantics.
 
 ### Syntax And Language Features
 

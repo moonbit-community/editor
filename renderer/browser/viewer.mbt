@@ -17,6 +17,7 @@ pub struct Viewer {
   priv mut theme : String
   priv mut placeholder : String
   priv mut frame : @renderer.RenderFrame?
+  priv mut view_model : @renderer.ViewModel?
   priv mut frame_source : @renderer.FrameSource?
   priv mut source_document : @workspace.SourceDocument?
   priv mut provider_result : @language.ProviderResult
@@ -98,6 +99,7 @@ pub fn Viewer::Viewer(
     theme,
     placeholder,
     frame: None,
+    view_model: None,
     frame_source: None,
     source_document: None,
     provider_result: @language.ProviderResult::empty(),
@@ -146,6 +148,7 @@ pub fn Viewer::open(self : Viewer, uri : @workspace.DocumentUri) -> Unit {
     None => ()
   }
   self.frame = None
+  self.view_model = None
   self.frame_source = None
   self.source_document = None
   self.provider_result = @language.ProviderResult::empty()
@@ -309,6 +312,7 @@ fn Viewer::document_resolved(
     }
     SourceDocumentLoadError(error) => {
       self.frame = None
+      self.view_model = None
       self.frame_source = None
       self.hover = self.hover.cleared()
       (self.notify_host)(ViewerDocumentFailed(error))

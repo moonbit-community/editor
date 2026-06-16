@@ -31,8 +31,8 @@ test "render line input carries readonly defaults and equality" {
   let doc = @core.DocumentSnapshot("let x = 1")
   let frame = frame_for(doc, { start_line: 0, end_line: 1 })
   let line = frame.lines[0]
-  let input = @renderer.RenderLineInput::from_render_line(line)
-  let same = @renderer.RenderLineInput::from_render_line(line)
+  let input = @renderer.render_line_input_from_render_line(line)
+  let same = @renderer.render_line_input_from_render_line(line)
   assert_true(input == same)
   assert_true(input.use_monospace_optimizations)
   assert_true(input.can_use_halfwidth_rightwards_arrow)
@@ -40,8 +40,8 @@ test "render line input carries readonly defaults and equality" {
   assert_eq(input.start_visible_column, 0)
   assert_eq(input.stop_rendering_line_after, -1)
   assert_false(input.render_control_characters)
-  let changed = @renderer.RenderLineInput::from_view_line(
-    @renderer.ViewLineRenderingData::from_render_line(line),
+  let changed = @view_line_renderer.RenderLineInput::from_view_line(
+    @renderer.view_line_rendering_data_from_render_line(line),
     render_whitespace=All,
   )
   assert_false(input == changed)
@@ -49,7 +49,7 @@ test "render line input carries readonly defaults and equality" {
 
 ///|
 test "line decorations normalizer splits overlapping segments" {
-  let normalized = @renderer.LineDecorationsNormalizer::normalize("abcdef", [
+  let normalized = @view_line_renderer.LineDecorationsNormalizer::normalize("abcdef", [
     LineDecoration(1, 4, "first"),
     LineDecoration(3, 6, "second"),
   ])
@@ -73,7 +73,7 @@ test "line decorations normalizer splits overlapping segments" {
 ///|
 test "render view line escapes text and returns character mapping" {
   let input = simple_render_input("a<b", [LinePart(3, "tok-test")])
-  let output = @renderer.render_view_line2(input)
+  let output = @view_line_renderer.render_view_line2(input)
   assert_eq(
     output.html,
     "<span class=\"view-line-content\"><span class=\"tok-test\">a&lt;b</span></span>",
@@ -94,7 +94,7 @@ test "render view line supports pseudo decorations and large token splitting" {
   for _ in 0..<121 {
     long = long + "a"
   }
-  let input = @renderer.RenderLineInput::from_view_line(
+  let input = @view_line_renderer.RenderLineInput::from_view_line(
     simple_view_line(long, [LinePart(long.length(), "tok-long")]),
     line_decorations=[
       LineDecoration(1, 1, "before-content", decoration_type=Before),
@@ -106,7 +106,7 @@ test "render view line supports pseudo decorations and large token splitting" {
       ),
     ],
   )
-  let output = @renderer.render_view_line2(input)
+  let output = @view_line_renderer.render_view_line2(input)
   assert_true(output.html.contains("before-content"))
   assert_true(output.html.contains("after-content"))
   assert_true(output.contains_foreign_elements == After)
@@ -132,16 +132,16 @@ test "empty line preserves compatibility wrapper" {
 ///|
 fn simple_render_input(
   content : String,
-  tokens : Array[@renderer.LinePart],
-) -> @renderer.RenderLineInput {
-  @renderer.RenderLineInput::from_view_line(simple_view_line(content, tokens))
+  tokens : Array[@view_line_renderer.LinePart],
+) -> @view_line_renderer.RenderLineInput {
+  @view_line_renderer.RenderLineInput::from_view_line(simple_view_line(content, tokens))
 }
 
 ///|
 fn simple_view_line(
   content : String,
-  tokens : Array[@renderer.LinePart],
-) -> @renderer.ViewLineRenderingData {
+  tokens : Array[@view_line_renderer.LinePart],
+) -> @view_line_renderer.ViewLineRenderingData {
   {
     min_column: 1,
     max_column: content.length() + 1,

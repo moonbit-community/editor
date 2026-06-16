@@ -44,43 +44,7 @@ pub fn build_frame(
   source : FrameSource,
   viewport : FrameViewport,
 ) -> RenderFrame {
-  let doc = source.tokenized.snapshot
-  let start_line = @core.clamp_int(viewport.start_line, 0, doc.line_count() - 1)
-  let end_line = @core.clamp_int(
-    viewport.end_line,
-    start_line + 1,
-    doc.line_count(),
-  )
-  let lines = []
-  for line in start_line..<end_line {
-    let line_start = doc.line_start_offset(line)
-    let line_end = doc.line_end_offset(line)
-    let line_range = @core.Range(line_start, line_end)
-    let spans = overlay_semantic_tokens(
-      spans_for_line(
-        line_range,
-        source.tokenized.tokens_for_line(line),
-        source.line_decorations[line],
-      ),
-      line_range,
-      source.line_semantic_tokens[line],
-    )
-    lines.push(RenderLine::{
-      line_number: line + 1,
-      offset: line_start,
-      text: doc.line_text(line),
-      spans,
-    })
-  }
-  {
-    version: doc.version,
-    language_id: doc.language_id,
-    line_count: doc.line_count(),
-    viewport: { start_line, end_line },
-    lines,
-    diagnostics: source.providers.diagnostics,
-    hovers: source.providers.hovers,
-  }
+  ViewModel(source).render_frame(viewport)
 }
 
 ///|

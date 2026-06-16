@@ -37,6 +37,7 @@ fn Viewer::render_current_document(
     document.uri,
   )
   let source = @renderer.FrameSource(tokenized, decorations, providers)
+  let view_model = @renderer.ViewModel(source)
   // Only a rotated document identity or version renders from the top;
   // watch backends may re-push the same version (the old cell key kept
   // those re-renders at their scroll position too).
@@ -55,12 +56,13 @@ fn Viewer::render_current_document(
   self.max_line_length = max_line_length(tokenized.snapshot)
   self.sync_content_width()
   let window = self.layout.visible_window(overscan=line_overscan)
-  let frame = @renderer.build_frame(source, {
+  let frame = view_model.render_frame({
     start_line: window.start,
     end_line: window.end,
   })
   let build_finished = @dom.now_ms()
   self.frame_source = Some(source)
+  self.view_model = Some(view_model)
   self.frame = Some(frame)
   self.source_document = Some(document)
   self.content_generation += 1

@@ -77,15 +77,21 @@ workbench) wrap the calls in their command type.
   structure. Overlay widgets are viewport-positioned UI for future controls
   and mount in `.overlayWidgets`; overflowing variants mount outside
   `.overflow-guard` when a widget is allowed to escape the editor clip.
+- Own the browser-layer role files that correspond to Monaco
+  `editor/browser`: `view.mbt` owns root DOM creation, scheduling, and flush
+  order; `view_layer.mbt` owns line/gutter node recycling; `view_line.mbt` owns
+  per-line DOM writes; `content_widgets.mbt` owns text-anchored widgets and
+  hover; `overlay_widgets.mbt`, `view_overlays.mbt`, `view_zones.mbt`, and
+  `margin.mbt` own their stable role slots.
 - Own the render loop: rAF-coalesced flushes with reads (measurement)
-  before writes, a `ViewLayer`-style recycler that consumes
-  `renderer.ViewportData`, derives `RenderLineInput` for each visible
-  line, splices entering/leaving line nodes, and writes `innerHTML` only
-  when a line enters the viewport or its render input changed. Raw
-  `RenderFrame` lines may still supply line-node classes and gutter
-  numbers during the compatibility period, but line HTML flows through
-  the backend-neutral render-line IR. Paint facts (`patch_ms`, scroll
-  position) are reported after the flush.
+  before writes, a `ViewLayer` recycler that consumes `renderer.ViewportData`
+  from the readonly `ViewModel`, derives
+  `@view_line_renderer.RenderLineInput` for each visible line, splices
+  entering/leaving line nodes, and writes `innerHTML` only when a line enters
+  the viewport or its render input changed. Raw `RenderFrame` lines may still
+  supply line-node classes and gutter numbers during the compatibility period,
+  but line HTML flows through `renderer/view_line_renderer`. Paint facts
+  (`patch_ms`, scroll position) are reported after the flush.
 - Own scroll input through `ScrollableElementDom`: the editor and hover use
   the same Monaco wrapper, custom scrollbar nodes, wheel delta-mode
   normalization, thumb drag, centered track jump (`scrollByPage: false`), active
@@ -120,7 +126,8 @@ focuses on hover until those features can be rebuilt without their bugs.
   the Rabbita TEA core, the vdom (`rabbita/html`), and the command
   scheduler (`rabbita/cmd`) are forbidden and checker-enforced; the
   viewer renders imperatively. May also depend on `dom`, `workspace`,
-  `language`, `renderer`, `syntax`, and `decorations`.
+  `language`, `renderer`, `renderer/view_line_renderer`, `syntax`, and
+  `decorations`.
 - Must not import `remote_protocol`, `websocket`, `workbench`, or
   `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports
   live behind the `DocumentSource` trait and viewer-owned language feature

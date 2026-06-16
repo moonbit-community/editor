@@ -84,7 +84,7 @@ workbench) wrap the calls in their command type.
   hover; `overlay_widgets.mbt`, `view_overlays.mbt`, `view_zones.mbt`, and
   `margin.mbt` own their stable role slots.
 - Own the render loop: rAF-coalesced flushes with reads (measurement)
-  before writes, a `ViewLayer` recycler that consumes `renderer.ViewportData`
+  before writes, a `ViewLayer` recycler that consumes `renderer/view_layout.ViewportData`
   from `renderer/view_model.ViewModel`, derives
   `@view_line_renderer.RenderLineInput` for each visible line, splices
   entering/leaving line nodes, and writes `innerHTML` only when a line enters

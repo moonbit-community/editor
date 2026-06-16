@@ -1,13 +1,13 @@
 ///|
 fn viewport_window(
-  viewport : @renderer.ViewportData,
+  viewport : @view_layout.ViewportData,
 ) -> @view_layout.LineWindow {
   { start: viewport.start_line_number - 1, end: viewport.end_line_number }
 }
 
 ///|
 fn render_line_input_for_viewport(
-  viewport : @renderer.ViewportData,
+  viewport : @view_layout.ViewportData,
   index : Int,
   space_width : Double,
 ) -> @view_line_renderer.RenderLineInput {

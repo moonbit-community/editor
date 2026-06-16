@@ -10,9 +10,10 @@ readonly identity `ViewModel` spine feeds current viewport rendering, and the
 browser view island has been split into Monaco browser role files. A later
 Phase 6 slice promoted pure layout and scroll state into `renderer/view_layout`,
 and another promoted tokenized source, render-frame, and readonly `ViewModel`
-state into `renderer/view_model`. The remaining package promotions and feature
-phases for soft wrap, folding, inlay hints, selection/copy, view zones, and
-accessibility follow-up remain pending.
+state into `renderer/view_model`; `ViewportData` now lives in
+`renderer/view_layout`. The remaining package promotions and feature phases for
+soft wrap, folding, inlay hints, selection/copy, view zones, and accessibility
+follow-up remain pending.
 
 ## Goal
 
@@ -185,7 +186,7 @@ Split the current render-line IR into smaller role-shaped modules:
 
 ```text
 renderer/render_line_ir.mbt
-  -> renderer/view_lines_viewport_data.mbt
+  -> renderer/view_layout/view_lines_viewport_data.mbt
   -> renderer/view_line_renderer/line_part.mbt
   -> renderer/view_line_renderer/inline_decorations.mbt
   -> renderer/view_line_renderer/line_decorations.mbt

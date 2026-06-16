@@ -55,7 +55,7 @@ pub fn ViewportData::from_render_frame(
 ///|
 pub fn ViewportData::from_view_model(
   view_model : @view_model.ViewModel,
-  window : @view_layout.LineWindow,
+  window : LineWindow,
   line_height~ : Int,
   decorations? : Array[@decorations.Decoration] = [],
 ) -> ViewportData {

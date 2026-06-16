@@ -23,9 +23,8 @@ character-mapping roles.
   transport, workspace, or host packages.
 - Must not declare FFI.
 - This package receives already-derived line content, token classes, and
-  decorations. Document/provider conversion stays in the parent `renderer`
-  package until the `renderer/view_model` package and `ViewportData` promotion
-  are ready.
+  decorations. Document/provider conversion stays in `renderer/view_model`;
+  viewport assembly stays in `renderer/view_layout`.
 
 ## Checks
 

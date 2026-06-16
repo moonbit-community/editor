@@ -14,14 +14,14 @@ fn Island::render_lines(
 ) -> Unit {
   let viewport = match view_model {
     Some(model) =>
-      @renderer.ViewportData::from_view_model(
+      @view_layout.ViewportData::from_view_model(
         model,
         frame_window(frame),
         line_height=editor_line_height,
         decorations~,
       )
     None =>
-      @renderer.ViewportData::from_render_frame(
+      @view_layout.ViewportData::from_render_frame(
         frame,
         line_height=editor_line_height,
         decorations~,

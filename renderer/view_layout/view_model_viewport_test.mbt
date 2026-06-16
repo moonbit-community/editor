@@ -12,7 +12,7 @@ test "view model produces viewport data from layout window" {
       @language.ProviderResult::empty(),
     ),
   )
-  let viewport = @renderer.ViewportData::from_view_model(
+  let viewport = @view_layout.ViewportData::from_view_model(
     view_model,
     { start: 1, end: 3 },
     line_height=18,

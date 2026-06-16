@@ -2,7 +2,7 @@
 test "viewport data exposes one-based inclusive line data" {
   let doc = @core.DocumentSnapshot("a\nbb\nccc")
   let frame = frame_for(doc, { start_line: 1, end_line: 3 })
-  let viewport = @renderer.ViewportData::from_render_frame(
+  let viewport = @view_layout.ViewportData::from_render_frame(
     frame,
     line_height=18,
   )

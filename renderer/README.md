@@ -1,7 +1,7 @@
 # renderer
 
-Pre-DOM viewport data, line HTML compatibility helpers, and shared editor
-geometry. This package is the MoonBit-owned parent for Monaco's
+Line HTML compatibility helpers and shared editor geometry. This package is the
+MoonBit-owned parent for Monaco's
 `vscode/src/vs/editor/common/*` layer.
 
 ## Responsibilities
@@ -9,10 +9,10 @@ geometry. This package is the MoonBit-owned parent for Monaco's
 - Depend on the `renderer/view_model` package for the Monaco-shaped common
   spine: `TokenizedDocument`, `FrameSource`, `RenderFrame`, `ViewModel`,
   `ViewModelLinesFromModelAsIs`, and `IdentityCoordinatesConverter`.
-- Own the pre-DOM viewport layer, matching Monaco's `ViewportData` role:
-  `ViewportData` exposes 1-based inclusive visible line numbers,
-  line-relative vertical offsets, `@view_line_renderer.ViewLineRenderingData`,
-  and normalized line decorations derived from document/provider state.
+- Depend on the `renderer/view_layout` package for the pre-DOM viewport layer:
+  `ViewportData` exposes 1-based inclusive visible line numbers, line-relative
+  vertical offsets, `@view_line_renderer.ViewLineRenderingData`, and normalized
+  line decorations derived from document/provider state.
 - Own compatibility helpers `render_line_html` and `render_line_class`.
   Pure line-HTML emission belongs to the DOM-free
   `renderer/view_line_renderer` package: `RenderLineInput` becomes escaped line
@@ -30,7 +30,7 @@ geometry. This package is the MoonBit-owned parent for Monaco's
 
 ## Boundaries
 
-- May depend on `core`, `decorations`, `renderer/view_line_renderer`,
+- May depend on `decorations`, `renderer/view_line_renderer`,
   `renderer/view_layout`, and `renderer/view_model`.
 - Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,
   server routing, or filesystem providers. Layout, scrollbar, hit-test, and

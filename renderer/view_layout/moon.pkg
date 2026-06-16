@@ -1,3 +1,11 @@
 import {
   "baozhiyuan/editor/core",
+  "baozhiyuan/editor/decorations",
+  "baozhiyuan/editor/renderer/view_line_renderer",
+  "baozhiyuan/editor/renderer/view_model",
 }
+
+import {
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/syntax",
+} for "test"

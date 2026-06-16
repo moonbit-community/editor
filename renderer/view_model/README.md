@@ -25,8 +25,8 @@ render frames.
   `renderer/browser`, `dom`, `web`, server, transport, workspace, or host
   packages.
 - Must not declare FFI.
-- `ViewportData` remains in the parent `renderer` package until it can move to
-  `renderer/view_layout` without creating a dependency cycle.
+- `ViewportData` lives in `renderer/view_layout`, which can depend on this
+  package without a cycle.
 
 ## Checks
 

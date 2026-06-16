@@ -37,7 +37,7 @@ fn Viewer::render_current_document(
     document.uri,
   )
   let source = @view_model.FrameSource(tokenized, decorations, providers)
-  let view_model = @view_model.ViewModel(source)
+  let view_model = self.build_view_model(source)
   // Only a rotated document identity or version renders from the top;
   // watch backends may re-push the same version (the old cell key kept
   // those re-renders at their scroll position too).
@@ -52,9 +52,7 @@ fn Viewer::render_current_document(
       self.layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
     )
   }
-  self.layout.set_line_count(tokenized.snapshot.line_count()) |> ignore
-  self.max_line_length = max_line_length(tokenized.snapshot)
-  self.sync_content_width()
+  self.apply_view_model_layout(view_model, tokenized.snapshot)
   let window = self.layout.visible_window(overscan=line_overscan)
   let frame = view_model.render_frame({
     start_line: window.start,
@@ -93,6 +91,59 @@ fn Viewer::render_current_document(
 }
 
 ///|
+fn Viewer::build_view_model(
+  self : Viewer,
+  source : @view_model.FrameSource,
+) -> @view_model.ViewModel {
+  @view_model.ViewModel::with_options(
+    source,
+    self.options.view_model_options(self.soft_wrap_column),
+  )
+}
+
+///|
+fn Viewer::rebuild_current_view_model_for_options(self : Viewer) -> Unit {
+  match self.frame_source {
+    Some(source) => {
+      let view_model = self.build_view_model(source)
+      self.apply_view_model_layout(view_model, source.tokenized.snapshot)
+      let window = self.layout.visible_window(overscan=line_overscan)
+      let frame = view_model.render_frame({
+        start_line: window.start,
+        end_line: window.end,
+      })
+      self.view_model = Some(view_model)
+      self.frame = Some(frame)
+      self.content_generation += 1
+      let fresh = match self.pending_rendered {
+        Some(pending) => pending.fresh
+        None => false
+      }
+      match self.source_document {
+        Some(document) => self.pending_rendered = Some({ document, fresh })
+        None => ()
+      }
+    }
+    None => self.sync_content_width()
+  }
+}
+
+///|
+fn Viewer::apply_view_model_layout(
+  self : Viewer,
+  view_model : @view_model.ViewModel,
+  snapshot : @core.DocumentSnapshot,
+) -> Unit {
+  self.layout.set_line_count(view_model.line_count()) |> ignore
+  self.max_line_length = if self.options.soft_wrap && self.soft_wrap_column > 0 {
+    max_view_line_length(view_model.lines())
+  } else {
+    max_line_length(snapshot)
+  }
+  self.sync_content_width()
+}
+
+///|
 /// The cached tokenized document, valid only for the same document
 /// identity and version (the Monaco model-version guard).
 fn Viewer::cached_tokenized(
@@ -119,6 +170,18 @@ fn max_line_length(snapshot : @core.DocumentSnapshot) -> Int {
   for line in 0..<snapshot.line_count() {
     let length = snapshot.line_end_offset(line) -
       snapshot.line_start_offset(line)
+    if length > widest {
+      widest = length
+    }
+  }
+  widest
+}
+
+///|
+fn max_view_line_length(lines : @view_model.ViewModelLines) -> Int {
+  let mut widest = 0
+  for line_number in 1..<=lines.line_count() {
+    let length = lines.get_view_line_content(line_number).length()
     if length > widest {
       widest = length
     }

@@ -12,6 +12,7 @@
 pub struct Viewer {
   priv source : &@workspace.DocumentSource
   priv services : ViewerServices
+  priv mut options : ViewerOptions
   priv notify_host : (ViewerNotification) -> Unit
   priv layout : @view_layout.ViewLayout
   priv mut theme : String
@@ -23,6 +24,7 @@ pub struct Viewer {
   priv mut provider_result : @language.ProviderResult
   priv mut hover : HoverController
   priv mut char_width : Double
+  priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
   priv mut open_generation : Int
   priv mut island : Island?
@@ -88,12 +90,14 @@ pub fn Viewer::Viewer(
   source : &@workspace.DocumentSource,
   on_notification~ : (ViewerNotification) -> Unit,
   services? : ViewerServices = ViewerServices::new(),
+  options? : ViewerOptions = ViewerOptions::default(),
   theme? : String = "dark",
   placeholder? : String = "",
 ) -> Viewer {
   {
     source,
     services,
+    options,
     notify_host: on_notification,
     layout: @view_layout.ViewLayout::new(line_height=editor_line_height),
     theme,
@@ -105,6 +109,7 @@ pub fn Viewer::Viewer(
     provider_result: @language.ProviderResult::empty(),
     hover: HoverController::empty(),
     char_width: 0.0,
+    soft_wrap_column: 0,
     max_line_length: 0,
     open_generation: 0,
     island: None,
@@ -116,6 +121,21 @@ pub fn Viewer::Viewer(
     content_generation: 0,
     drag: None,
   }
+}
+
+///|
+pub fn Viewer::set_options(self : Viewer, options : ViewerOptions) -> Unit {
+  if self.options == options {
+    return
+  }
+  self.options = options
+  self.soft_wrap_column = self.options.soft_wrap_column_for_content_width(
+    self.layout.dimensions().width,
+    self.measured_char_width(),
+  )
+  self.rebuild_current_view_model_for_options()
+  self.measure_requested = true
+  self.schedule_render()
 }
 
 ///|

@@ -12,13 +12,16 @@ workbench) wrap the calls in their command type.
 
 ## Embedding API
 
-- `Viewer::Viewer(source, on_notification~, services?, theme?, placeholder?)`
+- `Viewer::Viewer(source, on_notification~, services?, options?, theme?, placeholder?)`
   constructs the viewer against any `&@workspace.DocumentSource`. The
   in-memory backend in `examples/embedded_viewer` plus the remote one in
   `workbench` are the two reference implementations; implementing
   `DocumentSource` is the entire integration surface for a custom backend.
   `services` defaults to `ViewerServices::new()`; hosts that install language
   providers, log sinks, or test fixtures pass an explicit service object.
+  `options` defaults to `ViewerOptions::default()` with soft wrap off; when
+  enabled, the browser derives the wrap column from measured viewport and glyph
+  width while `renderer/view_model` owns the projected line data.
 - `Viewer::attach(host)` is the mount seam: the host renders one stable
   element, keeps it mounted, and must never render its own children into
   it — the island's nodes are foreign to any host vdom and must survive
@@ -92,6 +95,11 @@ workbench) wrap the calls in their command type.
   supply line-node classes and gutter numbers during the compatibility period,
   but line HTML flows through `renderer/view_line_renderer`. Paint facts
   (`patch_ms`, scroll position) are reported after the flush.
+- Own browser measurement for option-controlled soft wrap: the view measures
+  content width and the monospace char probe, converts that to
+  `ViewModelOptions`, and rebuilds the common `ViewModel` when the derived wrap
+  column changes. The default no-wrap path keeps the previous horizontal scroll
+  behavior.
 - Own scroll input through `ScrollableElementDom`: the editor and hover use
   the same Monaco wrapper, custom scrollbar nodes, wheel delta-mode
   normalization, thumb drag, centered track jump (`scrollByPage: false`), active

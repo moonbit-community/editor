@@ -330,16 +330,27 @@ fn Viewer::measure(self : Viewer, island : Island) -> Unit {
     height=rect.get_height(),
   )
   |> ignore
-  self.sync_content_width()
+  let next_wrap_column = self.options.soft_wrap_column_for_content_width(
+    content_width,
+    self.measured_char_width(),
+  )
+  if next_wrap_column != self.soft_wrap_column {
+    self.soft_wrap_column = next_wrap_column
+    self.rebuild_current_view_model_for_options()
+  } else {
+    self.sync_content_width()
+  }
 }
 
 ///|
 fn Viewer::sync_content_width(self : Viewer) -> Unit {
-  self.layout.set_content_width(
+  let content_width = if self.options.soft_wrap && self.soft_wrap_column > 0 {
+    self.layout.dimensions().width
+  } else {
     self.max_line_length.to_double() * self.measured_char_width() +
-    code_right_padding,
-  )
-  |> ignore
+    code_right_padding
+  }
+  self.layout.set_content_width(content_width) |> ignore
 }
 
 ///|

@@ -6,15 +6,21 @@ import {
 async fn main {
   let product_dirs = [
     "core",
-    "syntax",
     "decorations",
+    "dom",
     "language",
     "platform",
+    "remote_protocol",
+    "renderer",
+    "server",
+    "server_host_native",
+    "syntax",
     "view",
     "web",
     "app",
     "tests",
     "workbench",
+    "workspace",
     "widgets",
     "examples",
   ]
@@ -107,54 +113,101 @@ async fn collect_manifests(dir : String, manifests : Array[String]) -> Unit {
 }
 
 ///|
-/// Package-boundary rules for the pluggable viewer: the viewer-core
-/// library knows no transport or shell, and the tree widget knows no
-/// transport or viewer. Only `workbench` composes.
+/// Package-boundary rules for the pluggable viewer: common renderer
+/// packages know no browser, host effects, transport, or shell; browser
+/// renderer packages know no transport or shell; and the tree widget knows
+/// no transport or viewer. Only `workbench` composes.
 async fn check_package_imports(errors : Array[String]) -> Unit {
-  let rules : Array[(String, Array[String])] = [
-    (
-      "renderer/browser/moon.pkg",
-      [
-        "baozhiyuan/editor/remote_protocol",
-        "baozhiyuan/editor/workbench",
-        "baozhiyuan/editor/widgets",
-        "moonbit-community/rabbita/websocket",
-      ],
-    ),
-    (
-      "widgets/file_tree/moon.pkg",
-      [
-        "baozhiyuan/editor/remote_protocol",
-        "baozhiyuan/editor/renderer/browser",
-        "moonbit-community/rabbita/websocket",
-      ],
-    ),
+  let common_forbidden = [
+    "baozhiyuan/editor/dom",
+    "baozhiyuan/editor/remote_protocol",
+    "baozhiyuan/editor/renderer/browser",
+    "baozhiyuan/editor/server",
+    "baozhiyuan/editor/server_host_native",
+    "baozhiyuan/editor/web",
+    "baozhiyuan/editor/widgets",
+    "baozhiyuan/editor/workbench",
+    "moonbit-community/rabbita",
   ]
-  for rule in rules {
-    let (pkg_file, forbidden_imports) = rule
-    let imports = package_imports(@fs.read_file(pkg_file).text())
-    for imported in imports {
-      for target in forbidden_imports {
-        if imported == target || imported.has_prefix(target + "/") {
-          errors.push(pkg_file + " must not import " + imported)
-        }
+  let browser_forbidden = [
+    "baozhiyuan/editor/remote_protocol",
+    "baozhiyuan/editor/server",
+    "baozhiyuan/editor/server_host_native",
+    "baozhiyuan/editor/web",
+    "baozhiyuan/editor/widgets",
+    "baozhiyuan/editor/workbench",
+    "moonbit-community/rabbita/websocket",
+  ]
+  let widget_forbidden = [
+    "baozhiyuan/editor/remote_protocol",
+    "baozhiyuan/editor/renderer/browser",
+    "moonbit-community/rabbita/websocket",
+  ]
+  for manifest in package_manifests() {
+    let imports = package_imports(@fs.read_file(manifest).text())
+    if is_renderer_common_manifest(manifest) {
+      reject_imports(manifest, imports, common_forbidden, errors)
+    } else if is_renderer_browser_manifest(manifest) {
+      reject_imports(manifest, imports, browser_forbidden, errors)
+      check_browser_rabbita_imports(manifest, imports, errors)
+    } else if manifest == "widgets/file_tree/moon.pkg" {
+      reject_imports(manifest, imports, widget_forbidden, errors)
+    }
+  }
+}
+
+///|
+fn is_renderer_common_manifest(manifest : String) -> Bool {
+  manifest == "renderer/moon.pkg" ||
+  (manifest.has_prefix("renderer/") &&
+   !manifest.has_prefix("renderer/browser/") &&
+   manifest.has_suffix("/moon.pkg"))
+}
+
+///|
+fn is_renderer_browser_manifest(manifest : String) -> Bool {
+  manifest == "renderer/browser/moon.pkg" ||
+  (manifest.has_prefix("renderer/browser/") && manifest.has_suffix("/moon.pkg"))
+}
+
+///|
+fn reject_imports(
+  manifest : String,
+  imports : Array[String],
+  forbidden_imports : Array[String],
+  errors : Array[String],
+) -> Unit {
+  for imported in imports {
+    for target in forbidden_imports {
+      if import_matches(imported, target) {
+        errors.push(manifest + " must not import " + imported)
       }
     }
   }
-  // The viewer is an imperative view island: it may keep the rabbita
-  // DOM bindings and JS helpers, but the TEA core, the vdom, and the
-  // command scheduler are forbidden (exact matches: subpackages such as
-  // rabbita/dom stay allowed).
+}
+
+///|
+fn import_matches(imported : String, target : String) -> Bool {
+  imported == target || imported.has_prefix(target + "/")
+}
+
+///|
+fn check_browser_rabbita_imports(
+  manifest : String,
+  imports : Array[String],
+  errors : Array[String],
+) -> Unit {
+  // Browser renderer packages may keep rabbita DOM bindings and JS helpers,
+  // but the TEA core, the vdom, and the command scheduler are forbidden
+  // (exact matches: subpackages such as rabbita/dom stay allowed).
   let island_forbidden_exact = [
     "moonbit-community/rabbita",
     "moonbit-community/rabbita/html",
     "moonbit-community/rabbita/cmd",
   ]
-  for imported in package_imports(
-    @fs.read_file("renderer/browser/moon.pkg").text(),
-  ) {
+  for imported in imports {
     if island_forbidden_exact.contains(imported) {
-      errors.push("renderer/browser/moon.pkg must not import " + imported)
+      errors.push(manifest + " must not import " + imported)
     }
   }
 }

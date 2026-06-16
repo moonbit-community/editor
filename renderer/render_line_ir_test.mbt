@@ -49,10 +49,10 @@ test "render line input carries readonly defaults and equality" {
 
 ///|
 test "line decorations normalizer splits overlapping segments" {
-  let normalized = @view_line_renderer.LineDecorationsNormalizer::normalize("abcdef", [
-    LineDecoration(1, 4, "first"),
-    LineDecoration(3, 6, "second"),
-  ])
+  let normalized = @view_line_renderer.LineDecorationsNormalizer::normalize(
+    "abcdef",
+    [LineDecoration(1, 4, "first"), LineDecoration(3, 6, "second")],
+  )
   debug_inspect(
     normalized,
     content=(
@@ -134,7 +134,9 @@ fn simple_render_input(
   content : String,
   tokens : Array[@view_line_renderer.LinePart],
 ) -> @view_line_renderer.RenderLineInput {
-  @view_line_renderer.RenderLineInput::from_view_line(simple_view_line(content, tokens))
+  @view_line_renderer.RenderLineInput::from_view_line(
+    simple_view_line(content, tokens),
+  )
 }
 
 ///|

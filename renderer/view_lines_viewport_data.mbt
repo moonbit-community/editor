@@ -148,12 +148,7 @@ fn line_parts_from_render_line(
   let parts : Array[@view_line_renderer.LinePart] = []
   if line.spans.length() == 0 {
     if line.text.length() > 0 {
-      parts.push(
-        LinePart(
-          line.text.length(),
-          @syntax.Plain.css_class(),
-        ),
-      )
+      parts.push(LinePart(line.text.length(), @syntax.Plain.css_class()))
     }
     return parts
   }

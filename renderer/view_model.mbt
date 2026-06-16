@@ -2,14 +2,8 @@
 pub(open) trait CoordinatesConverter {
   fn model_position_to_view_position(Self, @core.Position) -> @core.Position
   fn view_position_to_model_position(Self, @core.Position) -> @core.Position
-  fn model_range_to_view_range(
-    Self,
-    @view_line_renderer.ViewRange,
-  ) -> @view_line_renderer.ViewRange
-  fn view_range_to_model_range(
-    Self,
-    @view_line_renderer.ViewRange,
-  ) -> @view_line_renderer.ViewRange
+  fn model_range_to_view_range(Self, @view_line_renderer.ViewRange) -> @view_line_renderer.ViewRange
+  fn view_range_to_model_range(Self, @view_line_renderer.ViewRange) -> @view_line_renderer.ViewRange
 }
 
 ///|

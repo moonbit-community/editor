@@ -46,18 +46,21 @@ fn run_viewer_api_test() -> Unit {
   let ctx = @support.BrowserTestContext::new("viewer_api")
   let rendered_count = Ref(0)
   let rendered_line_count = Ref(0)
+  let view_line_count = Ref(0)
   let done = Ref(false)
   let uri = @workspace.DocumentUri::memory("component.mbt")
   let source : MemoryDocumentSource = { uri, text: component_source_text() }
+  let model_line_count = component_model_line_count()
   match mount_host() {
     Some(host) => {
       let viewer = @browser.Viewer(
         source,
         on_notification=notification => {
           match notification {
-            ViewerDocumentRendered(_, rendered_lines~, fresh~, ..) =>
+            ViewerDocumentRendered(_, line_count~, rendered_lines~, fresh~, ..) =>
               if fresh {
                 rendered_count.val = rendered_count.val + 1
+                view_line_count.val = line_count
                 rendered_line_count.val = rendered_lines
               }
             ViewerDocumentFailed(error) =>
@@ -65,12 +68,18 @@ fn run_viewer_api_test() -> Unit {
             _ => ()
           }
         },
+        options=ViewerOptions(soft_wrap=true),
         placeholder="Loading component fixture...",
       )
       viewer.attach(host)
       viewer.open(uri)
       @support.set_timeout(
-        () => poll_rendered(ctx, rendered_count, rendered_line_count, done, 80),
+        () => {
+          poll_rendered(
+            ctx, rendered_count, rendered_line_count, view_line_count, model_line_count,
+            done, 80,
+          )
+        },
         50,
       )
     }
@@ -92,7 +101,7 @@ fn mount_host() -> @rdom.Element? {
       shell.set_attribute("style", "height:100vh;display:block;")
       let host = document.create_element("div")
       host.set_attribute("class", "viewer-host")
-      host.set_attribute("style", "height:100vh;")
+      host.set_attribute("style", "height:100vh;width:180px;")
       shell.append_child(host.as_node())
       app.append_child(shell.as_node())
       Some(host)
@@ -106,6 +115,8 @@ fn poll_rendered(
   ctx : @support.BrowserTestContext,
   rendered_count : Ref[Int],
   rendered_lines : Ref[Int],
+  view_lines : Ref[Int],
+  model_lines : Int,
   done : Ref[Bool],
   remaining : Int,
 ) -> Unit {
@@ -120,6 +131,10 @@ fn poll_rendered(
     )
     ctx.assert_true(rendered_lines.val > 0, "viewer rendered no lines")
     ctx.assert_true(
+      view_lines.val > model_lines,
+      "soft wrap did not project additional view lines",
+    )
+    ctx.assert_true(
       @support.query_count(".moonbit-viewer.readonly-editor .view-line") > 0,
       "viewer did not create rendered line DOM",
     )
@@ -132,8 +147,15 @@ fn poll_rendered(
       "dark",
       "viewer did not mirror the dark theme onto its root",
     )
+    ctx.assert_true(
+      @support.query_count(".line-number") ==
+      @support.query_count(".moonbit-viewer.readonly-editor .view-line"),
+      "line numbers did not stay aligned with rendered view lines",
+    )
     ctx.metric_int("renderedNotifications", rendered_count.val)
     ctx.metric_int("renderedLines", rendered_lines.val)
+    ctx.metric_int("viewLines", view_lines.val)
+    ctx.metric_int("modelLines", model_lines)
     done.val = true
     ctx.finish()
   } else if remaining <= 0 {
@@ -143,7 +165,15 @@ fn poll_rendered(
   } else {
     @support.set_timeout(
       () => {
-        poll_rendered(ctx, rendered_count, rendered_lines, done, remaining - 1)
+        poll_rendered(
+          ctx,
+          rendered_count,
+          rendered_lines,
+          view_lines,
+          model_lines,
+          done,
+          remaining - 1,
+        )
       },
       50,
     )
@@ -155,8 +185,14 @@ fn component_source_text() -> String {
   (
     #|///|
     #|pub fn component_answer() -> Int {
-    #|  42
+    #|  let really_long_component_identifier_name = "component_answer keeps this line long enough to wrap"
+    #|  really_long_component_identifier_name.length()
     #|}
     #|
   )
+}
+
+///|
+fn component_model_line_count() -> Int {
+  @core.DocumentSnapshot(component_source_text()).line_count()
 }

@@ -1,4 +1,5 @@
 import {
+  "baozhiyuan/editor/core",
   "baozhiyuan/editor/renderer/browser",
   "baozhiyuan/editor/syntax/lang_moonbit",
   "baozhiyuan/editor/tests/browser/moonbit/support",

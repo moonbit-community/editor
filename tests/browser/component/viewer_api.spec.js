@@ -15,6 +15,7 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     const report = await reporter.waitForReport(testInfo, { suite: 'viewer_api' });
     expectMoonBitReportPassed(report, { suite: 'viewer_api' });
     expect(report.metrics.renderedLines).toBeGreaterThan(0);
+    expect(report.metrics.viewLines).toBeGreaterThan(report.metrics.modelLines);
   } finally {
     reporter.dispose();
   }

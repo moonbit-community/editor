@@ -14,11 +14,13 @@ state into `renderer/view_model`; `ViewportData` now lives in
 `renderer/view_layout`. A Phase 7 slice now adds common-layer projected view
 lines, monospace line-break projection, projected coordinate conversion,
 option-controlled browser soft wrap, and a component browser test that verifies
-wrapped view-line rendering and line-number alignment. Remaining Phase 7 work is
-browser-level interaction parity for wrapped hover, diagnostics, hit testing,
-scroll positioning, and exact Monaco word-break behavior; later feature phases
-for folding, inlay hints, selection/copy, view zones, and accessibility
-follow-up remain pending.
+wrapped view-line rendering and line-number alignment. Follow-up Phase 7 slices
+cover wrapped hover, diagnostics, scroll positioning, and Monaco-style
+classifier-backed word breaks in the readonly no-injected-text path. Remaining
+Phase 7 work is direct wrapped hit-test coverage and the Monaco word-break
+deltas tied to later features, especially wrapped indentation and injected text;
+later feature phases for folding, inlay hints, selection/copy, view zones, and
+accessibility follow-up remain pending.
 
 ## Goal
 

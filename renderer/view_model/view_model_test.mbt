@@ -175,6 +175,32 @@ test "projected line breaks account for tabs and full width characters" {
 }
 
 ///|
+test "projected line breaks prefer Monaco word break points" {
+  let space_break = test_view_model(
+    "hello world",
+    @view_model.ViewModelOptions::soft_wrap(8),
+  )
+  assert_eq(space_break.line_count(), 2)
+  assert_eq(space_break.lines().get_view_line_content(1), "hello ")
+  assert_eq(space_break.lines().get_view_line_content(2), "world")
+  let before_punctuation = test_view_model(
+    "call(argument)",
+    @view_model.ViewModelOptions::soft_wrap(6),
+  )
+  assert_eq(before_punctuation.line_count(), 3)
+  assert_eq(before_punctuation.lines().get_view_line_content(1), "call")
+  assert_eq(before_punctuation.lines().get_view_line_content(2), "(argum")
+  let cjk = test_view_model(
+    "中文abc",
+    @view_model.ViewModelOptions::soft_wrap(3),
+  )
+  assert_eq(cjk.line_count(), 3)
+  assert_eq(cjk.lines().get_view_line_content(1), "中")
+  assert_eq(cjk.lines().get_view_line_content(2), "文")
+  assert_eq(cjk.lines().get_view_line_content(3), "abc")
+}
+
+///|
 test "projected long moonbit lines retain source text across segments" {
   let text = "fn main { let really_long_identifier_name = 1234567890 }"
   let view_model = test_view_model(

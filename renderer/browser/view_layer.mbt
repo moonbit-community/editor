@@ -9,6 +9,9 @@ fn Island::render_lines(
   frame : @view_model.RenderFrame,
   view_model : @view_model.ViewModel?,
   decorations : Array[@decorations.Decoration],
+  folding_ranges : Array[@language.FoldingRange],
+  folded_ranges : Array[@language.FoldingRange],
+  on_toggle_fold~ : (Int) -> Unit,
   generation : Int,
   space_width : Double,
 ) -> Unit {
@@ -29,6 +32,13 @@ fn Island::render_lines(
   }
   let target = viewport_window(viewport)
   let document = @rdom.document()
+  self.render_folding_markers(
+    viewport,
+    view_model,
+    folding_ranges,
+    folded_ranges,
+    on_toggle_fold~,
+  )
   if generation != self.generation {
     while self.line_nodes.length() > viewport.lines.length() {
       match
@@ -140,4 +150,77 @@ fn Island::render_lines(
     self.render_inputs.push(input)
   }
   self.window = target
+}
+
+///|
+fn Island::render_folding_markers(
+  self : Island,
+  viewport : @view_layout.ViewportData,
+  view_model : @view_model.ViewModel?,
+  folding_ranges : Array[@language.FoldingRange],
+  folded_ranges : Array[@language.FoldingRange],
+  on_toggle_fold~ : (Int) -> Unit,
+) -> Unit {
+  self.folding.set_inner_html("")
+  if folding_ranges.length() == 0 {
+    return
+  }
+  let document = @rdom.document()
+  let lines = match view_model {
+    Some(model) => Some(model.lines())
+    None => None
+  }
+  for index in 0..<viewport.lines.length() {
+    let view_line_number = viewport.start_line_number + index
+    let model_line_number = match lines {
+      Some(view_model_lines) =>
+        view_model_lines.model_line_number_of_view_line(view_line_number)
+      None => view_line_number
+    }
+    if !is_first_view_line_for_model_line(lines, view_line_number) {
+      continue
+    }
+    match folding_range_for_start_line(folding_ranges, model_line_number) {
+      Some(_) => {
+        let marker = document.create_element("button")
+        let folded = is_line_folded(folded_ranges, model_line_number)
+        let class_name = if folded {
+          "folding-marker collapsed"
+        } else {
+          "folding-marker expanded"
+        }
+        marker.set_attribute("class", class_name)
+        marker.set_attribute("type", "button")
+        marker.set_attribute("data-line", model_line_number.to_string())
+        marker.set_attribute("data-folded", folded.to_string())
+        marker.set_attribute("style", line_node_style(index))
+        marker.set_inner_html(
+          if folded {
+            "<span class=\"codicon codicon-chevron-right\" aria-hidden=\"true\"></span>"
+          } else {
+            "<span class=\"codicon codicon-chevron-down\" aria-hidden=\"true\"></span>"
+          },
+        )
+        marker.add_event_listener("click", event => {
+          event.prevent_default()
+          event.stop_propagation()
+          on_toggle_fold(model_line_number)
+        })
+        self.folding.append_child(marker.as_node())
+      }
+      None => ()
+    }
+  }
+}
+
+///|
+fn is_first_view_line_for_model_line(
+  lines : @view_model.ViewModelLines?,
+  view_line_number : Int,
+) -> Bool {
+  match lines {
+    Some(view_model_lines) =>
+      view_model_lines.get_view_line_min_column(view_line_number) == 1
+    None => true
+  }
 }

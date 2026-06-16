@@ -34,6 +34,10 @@ fn Island::apply_geometry(
     "style",
     "transform:translateY(" + translate_y.to_string() + "px)",
   )
+  self.folding.set_attribute(
+    "style",
+    "transform:translateY(" + translate_y.to_string() + "px)",
+  )
 }
 
 ///|

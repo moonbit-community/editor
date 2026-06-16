@@ -24,6 +24,16 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(1, {
       timeout: 10_000,
     });
+    const foldMarker = page.locator('.folding-marker[data-line="2"]');
+    await expect(foldMarker).toHaveAttribute('data-folded', 'false', { timeout: 10_000 });
+    await foldMarker.click();
+    await expect(foldMarker).toHaveAttribute('data-folded', 'true');
+    await expect(page.locator('.view-line').filter({ hasText: 'keeps' })).toHaveCount(0);
+    await expect(page.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(0);
+    await foldMarker.click();
+    await expect(foldMarker).toHaveAttribute('data-folded', 'false');
+    await expect(wrappedHoverLine).toHaveCount(1);
+    await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(1);
     const firstLineTop = async () =>
       page.locator('.view-line[data-line="1"]').evaluate((node) => {
         const root = node.closest('.moonbit-viewer');

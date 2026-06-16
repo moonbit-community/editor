@@ -48,6 +48,7 @@ priv struct Island {
   overflow_guard : @rdom.Element
   margin : @rdom.Element
   margin_view_overlays : @rdom.Element
+  folding : @rdom.Element
   line_numbers : @rdom.Element
   editor_scrollable : ScrollableElementDom
   lines_content : @rdom.Element
@@ -91,6 +92,7 @@ fn Island::build() -> Island {
   let margin_part = create_margin_part(document)
   let margin = margin_part.margin
   let margin_view_overlays = margin_part.margin_view_overlays
+  let folding = margin_part.folding
   let line_numbers = margin_part.line_numbers
   let editor_scrollable = ScrollableElementDom::new(
     "lines-content moonbit-viewer-background",
@@ -137,6 +139,7 @@ fn Island::build() -> Island {
     overflow_guard,
     margin,
     margin_view_overlays,
+    folding,
     line_numbers,
     editor_scrollable,
     lines_content,
@@ -202,6 +205,9 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         frame,
         self.view_model,
         self.controller_decorations(),
+        self.folding_ranges,
+        self.folded_ranges,
+        on_toggle_fold=line => self.toggle_fold(line),
         self.content_generation,
         self.measured_char_width(),
       )

@@ -48,7 +48,7 @@ fn Viewer::request_hover(
 
 ///|
 /// Document-level features requested after a fresh render: diagnostics,
-/// symbols, and semantic tokens, each resolving independently.
+/// symbols, semantic tokens, and folding ranges, each resolving independently.
 fn Viewer::request_document_features(
   self : Viewer,
   document : @workspace.SourceDocument,
@@ -77,6 +77,14 @@ fn Viewer::request_document_features(
     if document_version(self.source_document) == version {
       self.provider_result = { ..self.provider_result, semantic_tokens, }
       self.render_feature_update()
+    }
+  })
+  @js.async_run(() => {
+    let folding_ranges = self.services.language_features.folding_ranges_for_document(
+      document,
+    )
+    if document_version(self.source_document) == version {
+      self.set_folding_ranges(folding_ranges)
     }
   })
 }

@@ -95,10 +95,19 @@ fn Viewer::build_view_model(
   self : Viewer,
   source : @view_model.FrameSource,
 ) -> @view_model.ViewModel {
-  @view_model.ViewModel::with_options(
-    source,
-    self.options.view_model_options(self.soft_wrap_column),
-  )
+  let options = self.options.view_model_options(self.soft_wrap_column)
+  if self.folded_ranges.length() > 0 {
+    @view_model.ViewModel::with_options_and_folding(
+      source,
+      options,
+      @view_model.FoldingModel::from_folded_ranges(
+        self.folded_ranges,
+        source.tokenized.snapshot.line_count(),
+      ),
+    )
+  } else {
+    @view_model.ViewModel::with_options(source, options)
+  }
 }
 
 ///|

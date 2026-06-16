@@ -506,6 +506,7 @@ body {
 }
 
 .margin-view-overlays,
+.folding,
 .line-numbers {
   position: absolute;
   top: 0;
@@ -513,8 +514,37 @@ body {
   right: 0;
 }
 
+.folding,
 .line-numbers {
   will-change: transform;
+}
+
+.folding {
+  z-index: 2;
+}
+
+.folding-marker {
+  position: absolute;
+  right: 4px;
+  width: 18px;
+  height: var(--editor-line-height);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--vscode-editorLineNumber-foreground);
+  font: var(--editor-font-size) / var(--editor-line-height)
+    var(--editor-font-family);
+  opacity: 0.78;
+  cursor: pointer;
+}
+
+.folding-marker:hover {
+  opacity: 1;
+}
+
+.folding-marker .codicon {
+  font-size: 14px;
+  line-height: var(--editor-line-height);
 }
 
 .line-number {

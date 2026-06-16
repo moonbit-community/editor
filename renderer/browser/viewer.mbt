@@ -22,6 +22,8 @@ pub struct Viewer {
   priv mut frame_source : @view_model.FrameSource?
   priv mut source_document : @workspace.SourceDocument?
   priv mut provider_result : @language.ProviderResult
+  priv mut folding_ranges : Array[@language.FoldingRange]
+  priv mut folded_ranges : Array[@language.FoldingRange]
   priv mut hover : HoverController
   priv mut char_width : Double
   priv mut soft_wrap_column : Int
@@ -107,6 +109,8 @@ pub fn Viewer::Viewer(
     frame_source: None,
     source_document: None,
     provider_result: @language.ProviderResult::empty(),
+    folding_ranges: [],
+    folded_ranges: [],
     hover: HoverController::empty(),
     char_width: 0.0,
     soft_wrap_column: 0,
@@ -172,6 +176,8 @@ pub fn Viewer::open(self : Viewer, uri : @workspace.DocumentUri) -> Unit {
   self.frame_source = None
   self.source_document = None
   self.provider_result = @language.ProviderResult::empty()
+  self.folding_ranges = []
+  self.folded_ranges = []
   self.hover = HoverController::empty()
   self.schedule_render()
   self.watch = Some(
@@ -327,6 +333,8 @@ fn Viewer::document_resolved(
     SourceDocumentLoaded(document) => {
       self.services.markers.clear_resource(document.uri)
       self.provider_result = @language.ProviderResult::empty()
+      self.folding_ranges = []
+      self.folded_ranges = []
       self.hover = self.hover.cleared()
       self.render_current_document(document, fresh=true, request_language=true)
     }
@@ -334,6 +342,8 @@ fn Viewer::document_resolved(
       self.frame = None
       self.view_model = None
       self.frame_source = None
+      self.folding_ranges = []
+      self.folded_ranges = []
       self.hover = self.hover.cleared()
       (self.notify_host)(ViewerDocumentFailed(error))
       self.schedule_render()

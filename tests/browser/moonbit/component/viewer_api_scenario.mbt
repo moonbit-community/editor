@@ -95,6 +95,14 @@ impl @language.DiagnosticsProvider for ComponentHoverProvider with fn diagnostic
 }
 
 ///|
+impl @language.FoldingRangeProvider for ComponentHoverProvider with fn folding_ranges(
+  _self,
+  _document,
+) {
+  [FoldingRange(2, 5)]
+}
+
+///|
 fn run_viewer_api_test() -> Unit {
   @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
   let ctx = @support.BrowserTestContext::new("viewer_api")
@@ -111,6 +119,7 @@ fn run_viewer_api_test() -> Unit {
       let provider = ComponentHoverProvider::new()
       services.language_features.register_hover_provider(provider)
       services.language_features.register_diagnostics_provider(provider)
+      services.language_features.register_folding_range_provider(provider)
       let viewer = @browser.Viewer(
         source,
         on_notification=notification => {

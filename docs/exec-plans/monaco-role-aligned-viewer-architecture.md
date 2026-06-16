@@ -11,8 +11,13 @@ browser view island has been split into Monaco browser role files. A later
 Phase 6 slice promoted pure layout and scroll state into `renderer/view_layout`,
 and another promoted tokenized source, render-frame, and readonly `ViewModel`
 state into `renderer/view_model`; `ViewportData` now lives in
-`renderer/view_layout`. The remaining package promotions and feature phases for
-soft wrap, folding, inlay hints, selection/copy, view zones, and accessibility
+`renderer/view_layout`. A Phase 7 slice now adds common-layer projected view
+lines, monospace line-break projection, projected coordinate conversion,
+option-controlled browser soft wrap, and a component browser test that verifies
+wrapped view-line rendering and line-number alignment. Remaining Phase 7 work is
+browser-level interaction parity for wrapped hover, diagnostics, hit testing,
+scroll positioning, and exact Monaco word-break behavior; later feature phases
+for folding, inlay hints, selection/copy, view zones, and accessibility
 follow-up remain pending.
 
 ## Goal

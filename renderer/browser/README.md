@@ -45,9 +45,11 @@ workbench) wrap the calls in their command type.
   them as markers and renders marker decorations from `MarkerService`.
 - `ViewerServices` owns `LanguageFeaturesService`, `MarkerService`,
   `MarkerDecorationsService`, `HoverParticipantRegistry`, and `LogService`.
-  Hosts register hover, diagnostics, symbol, and semantic-token providers on
-  `services.language_features`; hover composition runs through marker and
-  markdown hover participants.
+  Hosts register hover, diagnostics, symbol, semantic-token, and folding-range
+  providers on `services.language_features`; hover composition runs through
+  marker and markdown hover participants. If folding providers return no ranges
+  for a MoonBit document, the browser uses a conservative indentation/brace
+  fallback.
 - `register_tokenizer(language_id, tokenizer)` adds a
   `syntax.LineTokenizer` to the tokenization registry (the Monaco
   `TokenizationRegistry` role). Languages are compile-time packages
@@ -100,6 +102,10 @@ workbench) wrap the calls in their command type.
   `ViewModelOptions`, and rebuilds the common `ViewModel` when the derived wrap
   column changes. The default no-wrap path keeps the previous horizontal scroll
   behavior.
+- Own readonly folding controls: browser services collect folding ranges,
+  `folding.mbt` tracks folded state for the current document, the common
+  `ViewModel` hides folded model lines, and the margin folding overlay renders
+  fold/unfold markers aligned with line numbers.
 - Own scroll input through `ScrollableElementDom`: the editor and hover use
   the same Monaco wrapper, custom scrollbar nodes, wheel delta-mode
   normalization, thumb drag, centered track jump (`scrollByPage: false`), active

@@ -18,7 +18,8 @@ model-line source data, and viewport-scoped render frames.
   `ViewModelLinesFromProjectedModel`, `ModelLineProjection`,
   `ModelLineProjectionData`, and `LineBreaksComputer`.
 - Own readonly folding normalization through `FoldingModel` and `HiddenRange`
-  data; browser folding controls consume this pure model state.
+  data; projected view lines consume hidden ranges so folded model lines produce
+  no view lines while coordinates remain model-owned.
 - Own DOM-free conversion from `RenderLine` to
   `@view_line_renderer.ViewLineRenderingData` and `RenderLineInput`.
 

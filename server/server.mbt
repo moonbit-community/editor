@@ -46,6 +46,7 @@ pub struct RemoteServer {
   priv diagnostics_provider : &@language.DiagnosticsProvider
   priv document_symbol_provider : &@language.DocumentSymbolProvider
   priv semantic_tokens_provider : &@language.SemanticTokensProvider
+  priv folding_range_provider : &@language.FoldingRangeProvider
   priv documents : Map[String, @workspace.SourceDocument]
   priv watches : Map[String, ServerWatch]
 }
@@ -70,6 +71,7 @@ pub fn RemoteServer::with_language_providers(
   diagnostics_provider : &@language.DiagnosticsProvider,
   document_symbol_provider : &@language.DocumentSymbolProvider,
   semantic_tokens_provider : &@language.SemanticTokensProvider,
+  folding_range_provider : &@language.FoldingRangeProvider,
 ) -> RemoteServer {
   {
     workspace_root: normalize_workspace_root(workspace_root),
@@ -80,6 +82,7 @@ pub fn RemoteServer::with_language_providers(
     diagnostics_provider,
     document_symbol_provider,
     semantic_tokens_provider,
+    folding_range_provider,
     documents: Map::default(),
     watches: Map::default(),
   }
@@ -187,6 +190,7 @@ pub async fn RemoteServer::handle_client_packet(
     References(request) => [self.references(request)]
     DocumentSymbols(request) => [self.document_symbols(request)]
     SemanticTokens(request) => [self.semantic_tokens(request)]
+    FoldingRanges(request) => [self.folding_ranges(request)]
   }
 }
 
@@ -469,6 +473,24 @@ pub async fn RemoteServer::semantic_tokens(
         semantic_tokens: self.semantic_tokens_provider.semantic_tokens_for_document(
           document,
         ),
+      })
+    None => self.missing_cached_document_error(request.id)
+  }
+}
+
+///|
+pub async fn RemoteServer::folding_ranges(
+  self : RemoteServer,
+  request : @remote_protocol.DocumentVersionRequest,
+) -> @remote_protocol.ServerPacket {
+  match
+    self.cached_document(request.uri, request.document_version, request.id) {
+    Some(document) =>
+      FoldingRangesResult({
+        id: request.id,
+        uri: request.uri,
+        version: document.version,
+        folding_ranges: self.folding_range_provider.folding_ranges(document),
       })
     None => self.missing_cached_document_error(request.id)
   }

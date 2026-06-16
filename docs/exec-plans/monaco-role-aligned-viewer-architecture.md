@@ -21,12 +21,15 @@ path. Remaining Phase 7 deltas are tied to later features, especially wrapped
 indentation and injected text; later feature phases for folding, inlay hints,
 selection/copy, view zones, and accessibility follow-up remain pending.
 
-Implementation note, 2026-06-16, Phase 8 start: the first folding slice adds
-language-level `FoldingRange`, `FoldingRangeKind`, and `FoldingRangeProvider`
-contracts plus a pure `renderer/view_model` `FoldingModel` that normalizes
-folded ranges and derives merged `HiddenRange` spans. Browser provider
-collection, hidden-area projection, margin markers, and remote transport are
-still pending.
+Implementation note, 2026-06-16, Phase 8: folding now has language-level
+`FoldingRange`, `FoldingRangeKind`, and `FoldingRangeProvider` contracts; a
+pure `renderer/view_model` `FoldingModel` that normalizes folded ranges and
+derives merged `HiddenRange` spans; hidden-area projection in
+`ViewModelLines`; browser provider collection with a MoonBit indentation
+fallback; margin fold/unfold markers; and optional remote protocol transport
+through server/workbench providers. Remaining Phase 8 follow-up is mostly
+hardening: richer nested-marker behavior, stronger scroll-height browser
+coverage, and native backend folding providers beyond the local fallback.
 
 ## Goal
 

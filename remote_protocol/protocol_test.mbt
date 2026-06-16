@@ -6,7 +6,7 @@ test "encodes and decodes document client packets" {
   let packet = @remote_protocol.OpenDocument({ id: "open-1", uri })
   let encoded = packet.to_json().stringify()
   assert_true(encoded.contains("\"type\":\"OpenDocument\""))
-  assert_true(encoded.contains("\"version\":2"))
+  assert_true(encoded.contains("\"version\":3"))
 
   match @remote_protocol.decode_client_packet(encoded) {
     DecodedClientPacket(OpenDocument(request)) => {
@@ -110,6 +110,20 @@ test "encodes and decodes semantic client packets" {
       assert_eq(request.document_version, 6)
     }
     DecodedClientPacket(_) => fail("unexpected semantic tokens packet")
+    ClientPacketDecodeError(error) => fail(error.message)
+  }
+
+  let folds = @remote_protocol.FoldingRanges({
+    id: "folds-1",
+    uri,
+    document_version: 7,
+  })
+  match @remote_protocol.decode_client_packet(folds.to_json().stringify()) {
+    DecodedClientPacket(FoldingRanges(request)) => {
+      assert_eq(request.id, "folds-1")
+      assert_eq(request.document_version, 7)
+    }
+    DecodedClientPacket(_) => fail("unexpected folding ranges packet")
     ClientPacketDecodeError(error) => fail(error.message)
   }
 }
@@ -236,7 +250,7 @@ test "encodes and decodes server document and language packets" {
     ServerPacketDecodeError(error) => fail(error.message)
   }
 
-  let legacy_hover = "{\"version\":2,\"type\":\"HoverResult\",\"id\":\"hover-legacy\",\"uri\":\"" +
+  let legacy_hover = "{\"version\":3,\"type\":\"HoverResult\",\"id\":\"hover-legacy\",\"uri\":\"" +
     uri.to_string() +
     "\",\"documentVersion\":2,\"hover\":{\"range\":{\"start\":7,\"end\":11},\"contents\":\"legacy text\"}}"
   match @remote_protocol.decode_server_packet(legacy_hover) {
@@ -348,6 +362,24 @@ test "encodes and decodes server document and language packets" {
     DecodedServerPacket(_) => fail("unexpected semantic tokens result packet")
     ServerPacketDecodeError(error) => fail(error.message)
   }
+
+  let folding_ranges = @remote_protocol.FoldingRangesResult({
+    id: "folds-1",
+    uri,
+    version: 2,
+    folding_ranges: [FoldingRange(1, 3, kind=Region)],
+  })
+  match
+    @remote_protocol.decode_server_packet(folding_ranges.to_json().stringify()) {
+    DecodedServerPacket(FoldingRangesResult(payload)) => {
+      assert_eq(payload.folding_ranges.length(), 1)
+      assert_eq(payload.folding_ranges[0].start_line_number, 1)
+      assert_eq(payload.folding_ranges[0].end_line_number, 3)
+      assert_true(payload.folding_ranges[0].kind == Some(Region))
+    }
+    DecodedServerPacket(_) => fail("unexpected folding ranges result packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
 }
 
 ///|
@@ -388,7 +420,7 @@ test "reports protocol decode errors" {
 
   match
     @remote_protocol.decode_client_packet(
-      "{\"version\":2,\"type\":\"OpenDocument\",\"id\":\"x\",\"uri\":\"bad\"}",
+      "{\"version\":3,\"type\":\"OpenDocument\",\"id\":\"x\",\"uri\":\"bad\"}",
     ) {
     ClientPacketDecodeError(error) =>
       assert_true(error.code == ProtocolInvalidUri)
@@ -398,12 +430,12 @@ test "reports protocol decode errors" {
 
 ///|
 test "negotiates protocol versions" {
-  match @remote_protocol.negotiate_protocol_version(2) {
-    ProtocolAccepted(version) => assert_eq(version, 2)
+  match @remote_protocol.negotiate_protocol_version(3) {
+    ProtocolAccepted(version) => assert_eq(version, 3)
     ProtocolRejected(error) => fail(error.message)
   }
 
-  match @remote_protocol.negotiate_protocol_version(1) {
+  match @remote_protocol.negotiate_protocol_version(2) {
     ProtocolRejected(error) =>
       assert_true(error.code == ProtocolUnsupportedVersion)
     ProtocolAccepted(_) => fail("expected rejected protocol")

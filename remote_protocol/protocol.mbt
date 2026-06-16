@@ -1,6 +1,6 @@
 ///|
 pub fn protocol_version() -> Int {
-  2
+  3
 }
 
 ///|
@@ -66,6 +66,7 @@ pub(all) enum ClientPacket {
   References(DocumentPositionRequest)
   DocumentSymbols(DocumentVersionRequest)
   SemanticTokens(DocumentVersionRequest)
+  FoldingRanges(DocumentVersionRequest)
 } derive(Debug)
 
 ///|
@@ -143,6 +144,14 @@ pub(all) struct SemanticTokensResultPayload {
 } derive(Debug)
 
 ///|
+pub(all) struct FoldingRangesResultPayload {
+  id : String
+  uri : @workspace.DocumentUri
+  version : Int
+  folding_ranges : Array[@language.FoldingRange]
+} derive(Debug)
+
+///|
 pub(all) enum ServerPacket {
   DirectoryResolved(DirectoryResolvedPayload)
   DocumentLoaded(DocumentPayload)
@@ -153,6 +162,7 @@ pub(all) enum ServerPacket {
   ReferencesResult(ReferencesResultPayload)
   DocumentSymbolsResult(DocumentSymbolsResultPayload)
   SemanticTokensResult(SemanticTokensResultPayload)
+  FoldingRangesResult(FoldingRangesResultPayload)
   RemoteError(ProtocolError)
 } derive(Debug)
 
@@ -251,6 +261,7 @@ pub impl ToJson for ClientPacket with fn to_json(self) {
     References(request) => position_request_json("References", request)
     DocumentSymbols(request) => version_request_json("DocumentSymbols", request)
     SemanticTokens(request) => version_request_json("SemanticTokens", request)
+    FoldingRanges(request) => version_request_json("FoldingRanges", request)
   }
 }
 
@@ -267,6 +278,7 @@ pub impl ToJson for ServerPacket with fn to_json(self) {
     ReferencesResult(payload) => references_result_json(payload)
     DocumentSymbolsResult(payload) => document_symbols_result_json(payload)
     SemanticTokensResult(payload) => semantic_tokens_result_json(payload)
+    FoldingRangesResult(payload) => folding_ranges_result_json(payload)
     RemoteError(error) => error_packet_json(error)
   }
 }
@@ -318,6 +330,10 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
             Some("SemanticTokens") =>
               decode_version_client(packet, request_id(packet), request => {
                 SemanticTokens(request)
+              })
+            Some("FoldingRanges") =>
+              decode_version_client(packet, request_id(packet), request => {
+                FoldingRanges(request)
               })
             Some(kind) =>
               ClientPacketDecodeError(
@@ -373,6 +389,8 @@ pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
               decode_document_symbols_result_payload(packet, request_id(packet))
             Some("SemanticTokensResult") =>
               decode_semantic_tokens_result_payload(packet, request_id(packet))
+            Some("FoldingRangesResult") =>
+              decode_folding_ranges_result_payload(packet, request_id(packet))
             Some("Error") => decode_error_payload(packet, request_id(packet))
             Some(kind) =>
               ServerPacketDecodeError(
@@ -670,6 +688,37 @@ fn decode_semantic_tokens_result_payload(
           uri,
           version: json_int_field(packet, "documentVersion").unwrap_or(0),
           semantic_tokens,
+        }),
+      )
+    }
+    ProtocolUriError(error) => ServerPacketDecodeError(error)
+  }
+}
+
+///|
+fn decode_folding_ranges_result_payload(
+  packet : Json,
+  id : String,
+) -> ServerPacketDecodeResult {
+  match parse_uri_field(packet, "uri", id) {
+    ParsedProtocolUri(uri) => {
+      let folding_ranges = []
+      match json_field(packet, "foldingRanges") {
+        Some(Array(items)) =>
+          for item in items {
+            match parse_folding_range(item) {
+              Some(range) => folding_ranges.push(range)
+              None => ()
+            }
+          }
+        _ => ()
+      }
+      DecodedServerPacket(
+        FoldingRangesResult({
+          id,
+          uri,
+          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          folding_ranges,
         }),
       )
     }
@@ -991,6 +1040,17 @@ fn semantic_tokens_result_json(payload : SemanticTokensResultPayload) -> Json {
 }
 
 ///|
+fn folding_ranges_result_json(payload : FoldingRangesResultPayload) -> Json {
+  let fields = packet_fields("FoldingRangesResult", payload.id)
+  fields["uri"] = payload.uri.to_string().to_json()
+  fields["documentVersion"] = payload.version.to_json()
+  fields["foldingRanges"] = Json::array(
+    payload.folding_ranges.map(folding_range_json),
+  )
+  Json::object(fields)
+}
+
+///|
 fn error_packet_json(error : ProtocolError) -> Json {
   let fields = packet_fields("Error", error.request_id)
   fields["error"] = error.to_json()
@@ -1046,6 +1106,28 @@ fn semantic_token_json(token : @language.SemanticToken) -> Json {
 }
 
 ///|
+fn folding_range_json(range : @language.FoldingRange) -> Json {
+  let fields : Map[String, Json] = {
+    "startLineNumber": range.start_line_number.to_json(),
+    "endLineNumber": range.end_line_number.to_json(),
+  }
+  match range.kind {
+    Some(kind) => fields["kind"] = folding_range_kind_json(kind)
+    None => ()
+  }
+  Json::object(fields)
+}
+
+///|
+fn folding_range_kind_json(kind : @language.FoldingRangeKind) -> Json {
+  match kind {
+    Comment => Json::string("comment")
+    Imports => Json::string("imports")
+    Region => Json::string("region")
+  }
+}
+
+///|
 fn hover_json(hover : @language.Hover) -> Json {
   {
     "range": range_json(hover.range),
@@ -1095,6 +1177,37 @@ fn parse_diagnostic(value : Json) -> @language.Diagnostic? {
           }
         None => None
       }
+    _ => None
+  }
+}
+
+///|
+fn parse_folding_range(value : Json) -> @language.FoldingRange? {
+  match value {
+    Object(_) => {
+      let start_line_number = json_int_field(value, "startLineNumber").unwrap_or(
+        0,
+      )
+      let end_line_number = json_int_field(value, "endLineNumber").unwrap_or(0)
+      if start_line_number <= 0 || end_line_number <= 0 {
+        return None
+      }
+      match folding_range_kind(json_string_field(value, "kind").unwrap_or("")) {
+        Some(kind) =>
+          Some(FoldingRange(start_line_number, end_line_number, kind~))
+        None => Some(FoldingRange(start_line_number, end_line_number))
+      }
+    }
+    _ => None
+  }
+}
+
+///|
+fn folding_range_kind(raw : String) -> @language.FoldingRangeKind? {
+  match raw {
+    "comment" => Some(Comment)
+    "imports" => Some(Imports)
+    "region" => Some(Region)
     _ => None
   }
 }

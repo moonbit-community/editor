@@ -16,6 +16,7 @@ fn register_remote_language_providers(
   services.language_features.register_diagnostics_provider(client)
   services.language_features.register_document_symbol_provider(client)
   services.language_features.register_semantic_tokens_provider(client)
+  services.language_features.register_folding_range_provider(client)
 }
 
 ///|
@@ -112,6 +113,23 @@ impl @language.SemanticTokensProvider for RemoteLanguageClient with fn semantic_
     SemanticTokensResult(payload) => payload.semantic_tokens
     packet => {
       self.emit_remote_error("semanticTokens", document, packet)
+      []
+    }
+  }
+}
+
+///|
+impl @language.FoldingRangeProvider for RemoteLanguageClient with fn folding_ranges(
+  self,
+  document,
+) {
+  let response = protocol_request("folding-ranges", id => {
+    FoldingRanges({ id, uri: document.uri, document_version: document.version })
+  })
+  match response {
+    FoldingRangesResult(payload) => payload.folding_ranges
+    packet => {
+      self.emit_remote_error("foldingRanges", document, packet)
       []
     }
   }

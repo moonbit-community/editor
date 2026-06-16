@@ -109,6 +109,14 @@ pub impl @language.SemanticTokensProvider for NativeWorkspaceLanguageProvider wi
 }
 
 ///|
+pub impl @language.FoldingRangeProvider for NativeWorkspaceLanguageProvider with fn folding_ranges(
+  _self,
+  _document,
+) {
+  []
+}
+
+///|
 fn NativeWorkspaceLanguageProvider::lsp_document(
   self : NativeWorkspaceLanguageProvider,
   document : @workspace.SourceDocument,

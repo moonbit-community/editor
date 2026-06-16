@@ -192,7 +192,7 @@ async test "answers hover and definition from cached provider state" {
 }
 
 ///|
-async test "answers diagnostics symbols and semantic tokens from cached provider state" {
+async test "answers diagnostics symbols semantic tokens and folding ranges from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("main.mbt", "pub fn main { // TODO }\n")
   let server = test_remote_server("/workspace", host)
@@ -221,6 +221,15 @@ async test "answers diagnostics symbols and semantic tokens from cached provider
       assert_eq(payload.semantic_tokens[0].token_type, "function")
     }
     _ => fail("expected semantic tokens result")
+  }
+
+  match server.folding_ranges({ id: "fold-1", uri, document_version: 1 }) {
+    FoldingRangesResult(payload) => {
+      assert_eq(payload.folding_ranges.length(), 1)
+      assert_eq(payload.folding_ranges[0].start_line_number, 1)
+      assert_eq(payload.folding_ranges[0].end_line_number, 3)
+    }
+    _ => fail("expected folding ranges result")
   }
 }
 
@@ -268,6 +277,12 @@ async test "dispatches language requests through configured providers" {
       assert_eq(payload.semantic_tokens[0].token_type, "function")
     _ => fail("expected semantic tokens result")
   }
+
+  match server.folding_ranges({ id: "fold-1", uri, document_version: 1 }) {
+    FoldingRangesResult(payload) =>
+      assert_eq(payload.folding_ranges[0].start_line_number, 1)
+    _ => fail("expected folding ranges result")
+  }
 }
 
 ///|
@@ -293,7 +308,7 @@ fn test_remote_server(
 ) -> @server.RemoteServer {
   let provider = FakeLanguageProvider::{  }
   @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider, provider,
+    root, host, provider, provider, provider, provider, provider, provider, provider,
   )
 }
 
@@ -450,4 +465,12 @@ impl @language.SemanticTokensProvider for FakeLanguageProvider with fn semantic_
   _document,
 ) {
   [{ range: Range(7, 17), token_type: "function" }]
+}
+
+///|
+impl @language.FoldingRangeProvider for FakeLanguageProvider with fn folding_ranges(
+  _self,
+  _document,
+) {
+  [FoldingRange(1, 3, kind=Region)]
 }

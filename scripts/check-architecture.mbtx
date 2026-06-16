@@ -147,6 +147,14 @@ async fn check_package_imports(errors : Array[String]) -> Unit {
     let imports = package_imports(@fs.read_file(manifest).text())
     if is_renderer_common_manifest(manifest) {
       reject_imports(manifest, imports, common_forbidden, errors)
+      if is_renderer_common_child_manifest(manifest) {
+        reject_exact_import(
+          manifest,
+          imports,
+          "baozhiyuan/editor/renderer",
+          errors,
+        )
+      }
     } else if is_renderer_browser_manifest(manifest) {
       reject_imports(manifest, imports, browser_forbidden, errors)
       check_browser_rabbita_imports(manifest, imports, errors)
@@ -162,6 +170,11 @@ fn is_renderer_common_manifest(manifest : String) -> Bool {
   (manifest.has_prefix("renderer/") &&
    !manifest.has_prefix("renderer/browser/") &&
    manifest.has_suffix("/moon.pkg"))
+}
+
+///|
+fn is_renderer_common_child_manifest(manifest : String) -> Bool {
+  is_renderer_common_manifest(manifest) && manifest != "renderer/moon.pkg"
 }
 
 ///|
@@ -189,6 +202,18 @@ fn reject_imports(
 ///|
 fn import_matches(imported : String, target : String) -> Bool {
   imported == target || imported.has_prefix(target + "/")
+}
+
+///|
+fn reject_exact_import(
+  manifest : String,
+  imports : Array[String],
+  forbidden_import : String,
+  errors : Array[String],
+) -> Unit {
+  if imports.contains(forbidden_import) {
+    errors.push(manifest + " must not import " + forbidden_import)
+  }
 }
 
 ///|

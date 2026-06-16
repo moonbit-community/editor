@@ -20,6 +20,25 @@ fn hit_test_frame(
 }
 
 ///|
+fn projected_hit_test_frame() -> @view_model.RenderFrame {
+  let doc = @core.DocumentSnapshot("abcdefghij")
+  let tokenized = @view_model.TokenizedDocument::build(
+    doc,
+    @syntax.highlight(doc),
+  )
+  let source = @view_model.FrameSource(
+    tokenized,
+    @decorations.DecorationSet::empty(),
+    @language.ProviderResult::empty(),
+  )
+  let view_model = @view_model.ViewModel::with_options(
+    source,
+    @view_model.ViewModelOptions::soft_wrap(5),
+  )
+  view_model.render_frame({ start_line: 0, end_line: view_model.line_count() })
+}
+
+///|
 fn test_metrics(
   scroll_top? : Double = 0.0,
   view_zones? : Array[@view_layout.ViewZone] = [],
@@ -34,6 +53,26 @@ fn test_metrics(
     gutter_width: 50.0,
     view_zones,
   }
+}
+
+///|
+test "hit test maps wrapped view line coordinates back to model offsets" {
+  let frame = projected_hit_test_frame()
+  assert_eq(frame.line_count, 2)
+  let target = @renderer.hit_test(
+    frame,
+    test_metrics(),
+    50.0 + 8.0 * 2.0,
+    18.0 + 4.0,
+  )
+  assert_true(target.kind == ContentText)
+  assert_eq(target.line_number, 2)
+  assert_eq(target.column, 2)
+  assert_eq(target.offset, 7)
+  let gutter = @renderer.hit_test(frame, test_metrics(), 10.0, 18.0 + 4.0)
+  assert_true(gutter.kind == GutterLineNumbers)
+  assert_eq(gutter.line_number, 2)
+  assert_eq(gutter.offset, 5)
 }
 
 ///|

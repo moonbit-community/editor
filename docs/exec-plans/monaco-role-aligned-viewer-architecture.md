@@ -15,12 +15,11 @@ state into `renderer/view_model`; `ViewportData` now lives in
 lines, monospace line-break projection, projected coordinate conversion,
 option-controlled browser soft wrap, and a component browser test that verifies
 wrapped view-line rendering and line-number alignment. Follow-up Phase 7 slices
-cover wrapped hover, diagnostics, scroll positioning, and Monaco-style
-classifier-backed word breaks in the readonly no-injected-text path. Remaining
-Phase 7 work is direct wrapped hit-test coverage and the Monaco word-break
-deltas tied to later features, especially wrapped indentation and injected text;
-later feature phases for folding, inlay hints, selection/copy, view zones, and
-accessibility follow-up remain pending.
+cover wrapped hover, diagnostics, scroll positioning, direct hit-test coverage,
+and Monaco-style classifier-backed word breaks in the readonly no-injected-text
+path. Remaining Phase 7 deltas are tied to later features, especially wrapped
+indentation and injected text; later feature phases for folding, inlay hints,
+selection/copy, view zones, and accessibility follow-up remain pending.
 
 ## Goal
 

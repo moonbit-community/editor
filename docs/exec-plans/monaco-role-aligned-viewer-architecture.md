@@ -21,6 +21,13 @@ path. Remaining Phase 7 deltas are tied to later features, especially wrapped
 indentation and injected text; later feature phases for folding, inlay hints,
 selection/copy, view zones, and accessibility follow-up remain pending.
 
+Implementation note, 2026-06-16, Phase 8 start: the first folding slice adds
+language-level `FoldingRange`, `FoldingRangeKind`, and `FoldingRangeProvider`
+contracts plus a pure `renderer/view_model` `FoldingModel` that normalizes
+folded ranges and derives merged `HiddenRange` spans. Browser provider
+collection, hidden-area projection, margin markers, and remote transport are
+still pending.
+
 ## Goal
 
 Refactor the readonly viewer so its internal module roles and names line up with

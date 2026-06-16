@@ -5,6 +5,7 @@ Readonly language-provider contracts.
 ## Responsibilities
 
 - Define hover, diagnostic, definition, references, symbol, semantic-token,
+  folding-range,
   and provider result types.
 - Define feature-specific semantic provider traits and the migration
   `LanguageProvider` aggregate.

@@ -17,6 +17,8 @@ model-line source data, and viewport-scoped render frames.
 - Own projected view-line data for soft wrap through
   `ViewModelLinesFromProjectedModel`, `ModelLineProjection`,
   `ModelLineProjectionData`, and `LineBreaksComputer`.
+- Own readonly folding normalization through `FoldingModel` and `HiddenRange`
+  data; browser folding controls consume this pure model state.
 - Own DOM-free conversion from `RenderLine` to
   `@view_line_renderer.ViewLineRenderingData` and `RenderLineInput`.
 
@@ -34,6 +36,7 @@ model-line source data, and viewport-scoped render frames.
 ## Checks
 
 - Package tests live in `tokenized_document_test.mbt`,
-  `render_frame_test.mbt`, and `view_model_test.mbt`.
+  `render_frame_test.mbt`, `view_model_test.mbt`, and
+  `folding_model_test.mbt`.
 - Run `moon test --target js renderer/view_model` and
   `moon test --target native renderer/view_model` for this package.

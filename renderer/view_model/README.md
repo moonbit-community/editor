@@ -2,8 +2,8 @@
 
 Pure common-layer view-model state, the MoonBit-owned package boundary for
 Monaco's readonly `ViewModel`, `ViewModelLinesFromModelAsIs`,
-`CoordinatesConverter`, tokenized model-line source data, and viewport-scoped
-render frames.
+`ViewModelLinesFromProjectedModel`, `CoordinatesConverter`, tokenized
+model-line source data, and viewport-scoped render frames.
 
 ## Responsibilities
 
@@ -14,6 +14,9 @@ render frames.
 - Own the readonly identity view model: `ViewModel`,
   `ViewModelLinesFromModelAsIs`, `ViewModelDecorations`,
   `CoordinatesConverter`, and `IdentityCoordinatesConverter`.
+- Own projected view-line data for soft wrap through
+  `ViewModelLinesFromProjectedModel`, `ModelLineProjection`,
+  `ModelLineProjectionData`, and `LineBreaksComputer`.
 - Own DOM-free conversion from `RenderLine` to
   `@view_line_renderer.ViewLineRenderingData` and `RenderLineInput`.
 

@@ -49,6 +49,56 @@ pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn view_rang
 }
 
 ///|
+pub(all) enum ViewModelCoordinatesConverter {
+  Identity(IdentityCoordinatesConverter)
+  Projected(ProjectedCoordinatesConverter)
+}
+
+///|
+pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn model_position_to_view_position(
+  self,
+  position,
+) {
+  match self {
+    Identity(converter) => converter.model_position_to_view_position(position)
+    Projected(converter) => converter.model_position_to_view_position(position)
+  }
+}
+
+///|
+pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn view_position_to_model_position(
+  self,
+  position,
+) {
+  match self {
+    Identity(converter) => converter.view_position_to_model_position(position)
+    Projected(converter) => converter.view_position_to_model_position(position)
+  }
+}
+
+///|
+pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn model_range_to_view_range(
+  self,
+  range,
+) {
+  match self {
+    Identity(converter) => converter.model_range_to_view_range(range)
+    Projected(converter) => converter.model_range_to_view_range(range)
+  }
+}
+
+///|
+pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn view_range_to_model_range(
+  self,
+  range,
+) {
+  match self {
+    Identity(converter) => converter.view_range_to_model_range(range)
+    Projected(converter) => converter.view_range_to_model_range(range)
+  }
+}
+
+///|
 pub struct ViewModelDecorations {
   line_decorations : Array[Array[@decorations.Decoration]]
 }
@@ -172,23 +222,129 @@ fn ViewModelLinesFromModelAsIs::clamped_line_index(
 }
 
 ///|
-pub struct ViewModel {
-  lines : ViewModelLinesFromModelAsIs
-  decorations : ViewModelDecorations
-  coordinates_converter : IdentityCoordinatesConverter
+pub(all) enum ViewModelLines {
+  ModelAsIs(ViewModelLinesFromModelAsIs)
+  ProjectedModel(ViewModelLinesFromProjectedModel)
 }
 
 ///|
-pub fn ViewModel::ViewModel(source : FrameSource) -> ViewModel {
-  {
-    lines: ViewModelLinesFromModelAsIs::new(source),
-    decorations: ViewModelDecorations::from_frame_source(source),
-    coordinates_converter: IdentityCoordinatesConverter::new(),
+pub fn ViewModelLines::line_count(self : ViewModelLines) -> Int {
+  match self {
+    ModelAsIs(lines) => lines.line_count()
+    ProjectedModel(lines) => lines.line_count()
   }
 }
 
 ///|
-pub fn ViewModel::lines(self : ViewModel) -> ViewModelLinesFromModelAsIs {
+pub fn ViewModelLines::get_view_line_content(
+  self : ViewModelLines,
+  line_number : Int,
+) -> String {
+  match self {
+    ModelAsIs(lines) => lines.get_view_line_content(line_number)
+    ProjectedModel(lines) => lines.get_view_line_content(line_number)
+  }
+}
+
+///|
+pub fn ViewModelLines::get_view_line_min_column(
+  self : ViewModelLines,
+  line_number : Int,
+) -> Int {
+  match self {
+    ModelAsIs(lines) => lines.get_view_line_min_column(line_number)
+    ProjectedModel(lines) => lines.get_view_line_min_column(line_number)
+  }
+}
+
+///|
+pub fn ViewModelLines::get_view_line_max_column(
+  self : ViewModelLines,
+  line_number : Int,
+) -> Int {
+  match self {
+    ModelAsIs(lines) => lines.get_view_line_max_column(line_number)
+    ProjectedModel(lines) => lines.get_view_line_max_column(line_number)
+  }
+}
+
+///|
+pub fn ViewModelLines::model_line_number_of_view_line(
+  self : ViewModelLines,
+  line_number : Int,
+) -> Int {
+  match self {
+    ModelAsIs(lines) => lines.model_line_number_of_view_line(line_number)
+    ProjectedModel(lines) => lines.model_line_number_of_view_line(line_number)
+  }
+}
+
+///|
+pub fn ViewModelLines::render_line(
+  self : ViewModelLines,
+  line_number : Int,
+) -> RenderLine {
+  match self {
+    ModelAsIs(lines) => lines.render_line(line_number)
+    ProjectedModel(lines) => lines.render_line(line_number)
+  }
+}
+
+///|
+pub fn ViewModelLines::view_line_rendering_data(
+  self : ViewModelLines,
+  line_number : Int,
+  decorations? : Array[@decorations.Decoration] = [],
+) -> @view_line_renderer.ViewLineRenderingData {
+  match self {
+    ModelAsIs(lines) =>
+      lines.view_line_rendering_data(line_number, decorations~)
+    ProjectedModel(lines) =>
+      lines.view_line_rendering_data(line_number, decorations~)
+  }
+}
+
+///|
+pub struct ViewModel {
+  source : FrameSource
+  lines : ViewModelLines
+  decorations : ViewModelDecorations
+  coordinates_converter : ViewModelCoordinatesConverter
+}
+
+///|
+pub fn ViewModel::ViewModel(source : FrameSource) -> ViewModel {
+  ViewModel::with_options(source, ViewModelOptions::no_wrap())
+}
+
+///|
+pub fn ViewModel::with_options(
+  source : FrameSource,
+  options : ViewModelOptions,
+) -> ViewModel {
+  let as_is = ViewModelLinesFromModelAsIs::new(source)
+  let (lines, coordinates_converter) = if options.is_soft_wrap_enabled() {
+    let projected = ViewModelLinesFromProjectedModel::new(
+      as_is,
+      LineBreaksComputer(options.soft_wrap_column, tab_size=options.tab_size),
+    )
+    (
+      ProjectedModel(projected),
+      Projected(ProjectedCoordinatesConverter::new(projected)),
+    )
+  } else {
+    (ModelAsIs(as_is), Identity(IdentityCoordinatesConverter::new()))
+  }
+  {
+    source,
+    lines,
+    decorations: ViewModelDecorations::from_frame_source(source),
+    coordinates_converter,
+  }
+}
+
+///|
+pub fn ViewModel::lines(self : ViewModel) -> ViewModelLines {
   self.lines
 }
 
@@ -200,7 +356,7 @@ pub fn ViewModel::decorations(self : ViewModel) -> ViewModelDecorations {
 ///|
 pub fn ViewModel::coordinates_converter(
   self : ViewModel,
-) -> IdentityCoordinatesConverter {
+) -> ViewModelCoordinatesConverter {
   self.coordinates_converter
 }
 
@@ -211,12 +367,12 @@ pub fn ViewModel::line_count(self : ViewModel) -> Int {
 
 ///|
 pub fn ViewModel::version(self : ViewModel) -> Int {
-  self.lines.source.tokenized.snapshot.version
+  self.source.tokenized.snapshot.version
 }
 
 ///|
 pub fn ViewModel::language_id(self : ViewModel) -> String {
-  self.lines.source.tokenized.snapshot.language_id
+  self.source.tokenized.snapshot.language_id
 }
 
 ///|
@@ -244,7 +400,7 @@ pub fn ViewModel::render_frame(
     line_count: self.line_count(),
     viewport: { start_line, end_line },
     lines,
-    diagnostics: self.lines.source.providers.diagnostics,
-    hovers: self.lines.source.providers.hovers,
+    diagnostics: self.source.providers.diagnostics,
+    hovers: self.source.providers.hovers,
   }
 }

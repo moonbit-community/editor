@@ -72,10 +72,7 @@ pub fn ViewportData::from_view_model(
   for index in start_line..<end_line {
     let render_line = view_model_lines.render_line(index + 1)
     lines.push(
-      @view_model.view_line_rendering_data_from_render_line(
-        render_line,
-        decorations~,
-      ),
+      view_model_lines.view_line_rendering_data(index + 1, decorations~),
     )
     line_decorations.push(
       @view_model.line_decorations_for_line(render_line, decorations),

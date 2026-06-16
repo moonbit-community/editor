@@ -40,6 +40,7 @@ an already-started server.
 
 ```text
 tests/browser/
+  README.md       browser package contracts, globals, and authoring rules
   support/        Playwright fixtures, app helpers, logger, MoonBit reporter
   smoke/          user workflows against the real app or embedded viewer
   conformance/    Monaco oracle, exact DOM/style/geometry, deterministic hooks
@@ -51,6 +52,9 @@ tests/browser/
 
 `scripts/build-web.mbtx` builds the MoonBit browser-test packages into
 `web/dist/browser-tests/component.html` and `web/dist/browser-tests/perf.html`.
+See `tests/browser/README.md` for package-level authoring rules, selectors, and
+globals. Monaco-specific hover and scrollbar contracts live in
+`tests/browser/conformance/README.md`.
 
 ## Suite Boundaries
 
@@ -67,44 +71,18 @@ tests/browser/
 - Performance: structured JSON evidence and attachments. Perf tests remain
   non-failing unless an explicit documented budget is added.
 
-## Browser Contracts
-
-Keep browser assertions on stable harness contracts:
-
-- Shell readiness and active document state:
-  `.editor-shell[data-status][data-theme][data-line-count][data-source-uri]`.
-- Workspace navigation:
-  `.workspace-sidebar` rows with `data-workspace-id`, `data-workspace-kind`,
-  `aria-expanded`, and `aria-selected`.
-- Readonly viewer surface:
-  `.moonbit-viewer.readonly-editor`,
-  `.monaco-scrollable-element.editor-scrollable`,
-  `.view-line[data-line]`, and
-  `[data-content-widget="hover"] .monaco-hover`.
+## Browser Rules
 
 Browser tests should select files through the sidebar and native remote
 protocol. The active file is application state, not URL state; specs should not
 depend on `?uri=`, `?path=`, hashes, or history updates.
 
-## Globals
+Smoke specs should prefer user gestures and visible outcomes. Conformance specs
+may use deterministic hooks and exact DOM/style/geometry assertions when they
+are checking reference parity.
 
-- Product observability: `__readonlyEditorEvent`,
-  `__readonlyEditorDocument`, `__readonlyEditorSource`, and
-  `__readonlyEditorCopiedText`.
-- Conformance/control only: `__readonlyEditorSetHover`,
-  `__readonlyEditorClearHover`, `__readonlyEditorScrollTo`, and
-  `__readonlyEditorConformance`.
-- MoonBit browser-test reporting:
-  `__readonlyEditorBrowserTestReport`.
-
-The MoonBit reporter is passive. MoonBit pages send payloads like:
-
-```json
-{"suite":"viewer_api","status":"passed","failures":[],"metrics":{}}
-```
-
-Playwright still validates report shape, attaches the JSON, and owns the final
-test result.
+The MoonBit reporter is passive. Playwright validates the report shape, attaches
+the JSON, and owns the final test result.
 
 ## Failure Evidence
 

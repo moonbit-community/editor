@@ -1,0 +1,35 @@
+# Browser Conformance Tests
+
+Conformance specs check reference parity rather than broad user workflows. They
+may inspect exact DOM, computed styles, geometry, screenshots, and deterministic
+test hooks.
+
+## Monaco Hover And Scrollbar Contracts
+
+These selectors are intentional contracts for Monaco-shaped behavior. Keep them
+out of high-level harness docs; update this file and the matching specs when the
+reference contract changes.
+
+- The editor scroll surface is
+  `.overflow-guard > .monaco-scrollable-element.editor-scrollable`.
+- Monaco-shaped scrollables expose horizontal and vertical `.scrollbar` nodes
+  with `.slider` children.
+- The hover content widget is rooted at `[data-content-widget="hover"]`.
+- The hover wrapper uses `.monaco-resizable-hover`.
+- The visible hover node uses `.monaco-hover`.
+- Hover content is inside `.monaco-scrollable-element .monaco-hover-content`.
+
+The local oracle is `tests/reference/monaco-hover-scrollbar/`, and the parity
+ledger is `docs/references/monaco-hover-scrollbar-parity.md`.
+
+## Control Hooks
+
+Conformance specs may use these deterministic hooks:
+
+- `__readonlyEditorSetHover`
+- `__readonlyEditorClearHover`
+- `__readonlyEditorScrollTo`
+- `__readonlyEditorConformance`
+
+These hooks are not smoke-test drivers. Use them only when the test needs exact
+fixture payloads, deterministic scroll positions, or reference measurements.

@@ -42,8 +42,8 @@ fn Island::apply_geometry(
 /// fits.
 fn Island::update_scrollbars(
   self : Island,
-  dimensions : @renderer.ScrollDimensions,
-  position : @renderer.ScrollPosition,
+  dimensions : @view_layout.ScrollDimensions,
+  position : @view_layout.ScrollPosition,
   gutter_width : Double,
 ) -> Unit {
   self.editor_scrollable.update_from_model(

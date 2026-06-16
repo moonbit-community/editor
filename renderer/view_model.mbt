@@ -252,7 +252,7 @@ pub fn ViewModel::render_frame(
 ///|
 pub fn ViewModel::viewport_data(
   self : ViewModel,
-  window : LineWindow,
+  window : @view_layout.LineWindow,
   line_height~ : Int,
   decorations? : Array[@decorations.Decoration] = [],
 ) -> ViewportData {

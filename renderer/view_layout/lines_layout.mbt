@@ -87,3 +87,12 @@ pub fn LinesLayout::line_at_vertical_offset(
 pub fn LinesLayout::content_height(self : LinesLayout) -> Double {
   (self.line_count * self.line_height).to_double()
 }
+
+///|
+fn max_int(left : Int, right : Int) -> Int {
+  if left > right {
+    left
+  } else {
+    right
+  }
+}

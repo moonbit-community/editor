@@ -7,9 +7,11 @@ Implementation note, 2026-06-16: the initial architecture alignment slices have
 landed: the Monaco layer map exists, the common render-line IR has been split
 into role-named files and promoted into `renderer/view_line_renderer`, a
 readonly identity `ViewModel` spine feeds current viewport rendering, and the
-browser view island has been split into Monaco browser role files. The remaining
-package promotions and feature phases for soft wrap, folding, inlay hints,
-selection/copy, view zones, and accessibility follow-up remain pending.
+browser view island has been split into Monaco browser role files. A later
+Phase 6 slice promoted pure layout and scroll state into `renderer/view_layout`.
+The remaining package promotions and feature phases for soft wrap, folding,
+inlay hints, selection/copy, view zones, and accessibility follow-up remain
+pending.
 
 ## Goal
 

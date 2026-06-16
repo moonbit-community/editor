@@ -13,7 +13,7 @@ pub struct Viewer {
   priv source : &@workspace.DocumentSource
   priv services : ViewerServices
   priv notify_host : (ViewerNotification) -> Unit
-  priv layout : @renderer.ViewLayout
+  priv layout : @view_layout.ViewLayout
   priv mut theme : String
   priv mut placeholder : String
   priv mut frame : @renderer.RenderFrame?
@@ -95,7 +95,7 @@ pub fn Viewer::Viewer(
     source,
     services,
     notify_host: on_notification,
-    layout: @renderer.ViewLayout::new(line_height=editor_line_height),
+    layout: @view_layout.ViewLayout::new(line_height=editor_line_height),
     theme,
     placeholder,
     frame: None,
@@ -347,7 +347,7 @@ fn Viewer::dispose_watch(self : Viewer) -> Unit {
 ///|
 fn Viewer::apply_scroll_change(
   self : Viewer,
-  change : @renderer.ScrollChange?,
+  change : @view_layout.ScrollChange?,
 ) -> Unit {
   match change {
     Some(_) => {

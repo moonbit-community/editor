@@ -1,6 +1,6 @@
 ///|
 test "scrollable clamps positions inside its dimensions" {
-  let scrollable = @renderer.Scrollable::new()
+  let scrollable = @view_layout.Scrollable::new()
   // Without dimensions everything clamps to the origin.
   assert_true(
     scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0 }) is None,
@@ -52,7 +52,7 @@ test "scrollable clamps positions inside its dimensions" {
 
 ///|
 test "shrinking dimensions re-clamps the position as one change fact" {
-  let scrollable = @renderer.Scrollable::new()
+  let scrollable = @view_layout.Scrollable::new()
   scrollable.set_dimensions({
     width: 100.0,
     scroll_width: 100.0,
@@ -100,7 +100,7 @@ test "shrinking dimensions re-clamps the position as one change fact" {
 
 ///|
 test "lines layout answers offsets and lines for uniform heights" {
-  let lines = @renderer.LinesLayout::new(line_height=18, line_count=100)
+  let lines = @view_layout.LinesLayout::new(line_height=18, line_count=100)
   assert_eq(lines.vertical_offset_for_line(0), 0.0)
   assert_eq(lines.vertical_offset_for_line(10), 180.0)
   // One past the end probes the bottom edge; beyond clamps.
@@ -111,7 +111,7 @@ test "lines layout answers offsets and lines for uniform heights" {
   assert_eq(lines.line_at_vertical_offset(18.0), 1)
   assert_eq(lines.line_at_vertical_offset(99999.0), 99)
   assert_eq(lines.content_height(), 1800.0)
-  let empty = @renderer.LinesLayout::new(line_height=18)
+  let empty = @view_layout.LinesLayout::new(line_height=18)
   assert_eq(empty.line_at_vertical_offset(50.0), 0)
   assert_eq(empty.content_height(), 0.0)
 }
@@ -120,23 +120,26 @@ test "lines layout answers offsets and lines for uniform heights" {
 /// The layout-derived window must agree with the free `visible_window`
 /// the browser cell uses today, for the same scroll state.
 test "view layout windows match visible_window" {
-  let layout = @renderer.ViewLayout::new(line_height=18, line_count=10000)
+  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=10000)
   layout.set_viewport_size(width=800.0, height=600.0) |> ignore
   for scroll_top in ([0.0, 9000.0, 179400.0] : Array[Double]) {
     layout.scroll_to(scroll_top~) |> ignore
-    let expected = @renderer.visible_window(scroll_top, 600.0, 18, 10000, 20)
+    let expected = @view_layout.visible_window(scroll_top, 600.0, 18, 10000, 20)
     let derived = layout.visible_window(overscan=20)
     assert_eq(derived.start, expected.start)
     assert_eq(derived.end, expected.end)
   }
   // Unmeasured viewport falls back to the same default band.
-  let unmeasured = @renderer.ViewLayout::new(line_height=18, line_count=10000)
-  let expected = @renderer.visible_window(0.0, 0.0, 18, 10000, 20)
+  let unmeasured = @view_layout.ViewLayout::new(
+    line_height=18,
+    line_count=10000,
+  )
+  let expected = @view_layout.visible_window(0.0, 0.0, 18, 10000, 20)
   let derived = unmeasured.visible_window(overscan=20)
   assert_eq(derived.start, expected.start)
   assert_eq(derived.end, expected.end)
   // Tiny documents render entirely.
-  let tiny = @renderer.ViewLayout::new(line_height=18, line_count=10)
+  let tiny = @view_layout.ViewLayout::new(line_height=18, line_count=10)
   tiny.set_viewport_size(width=800.0, height=600.0) |> ignore
   debug_inspect(
     tiny.visible_window(overscan=20),
@@ -148,7 +151,7 @@ test "view layout windows match visible_window" {
 
 ///|
 test "view layout hysteresis matches window_needs_update" {
-  let layout = @renderer.ViewLayout::new(line_height=18, line_count=10000)
+  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=10000)
   layout.set_viewport_size(width=800.0, height=600.0) |> ignore
   layout.scroll_to(scroll_top=9000.0) |> ignore
   let rendered = layout.visible_window(overscan=20)
@@ -162,7 +165,7 @@ test "view layout hysteresis matches window_needs_update" {
 
 ///|
 test "view layout derives scroll dimensions from document and viewport" {
-  let layout = @renderer.ViewLayout::new(line_height=18, line_count=10000)
+  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=10000)
   layout.set_viewport_size(width=800.0, height=600.0) |> ignore
   debug_inspect(
     layout.dimensions(),

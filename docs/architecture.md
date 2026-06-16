@@ -110,14 +110,16 @@ Rendering is split by host boundary:
 ```text
 workspace.SourceDocument
   -> renderer tokenization/ViewModel/layout state
+  -> renderer/view_layout scroll and viewport window state
   -> renderer ViewportData
   -> renderer/view_line_renderer render-line IR
   -> renderer/browser DOM view
 ```
 
-Pre-DOM rendering and geometry belong in `renderer`. Browser-specific DOM, CSS,
-event capture, custom scrollbars, and widget placement belong in
-`renderer/browser`. The browser `ViewLayer` applies
+Pre-DOM rendering and geometry belong in `renderer` and its common-layer
+subpackages. `renderer/view_layout` owns DOM-free scroll/layout state.
+Browser-specific DOM, CSS, event capture, custom scrollbars, and widget
+placement belong in `renderer/browser`. The browser `ViewLayer` applies
 `@view_line_renderer.RenderLineInput` / `RenderLineOutput2` results to DOM
 nodes; it does not own line HTML semantics.
 

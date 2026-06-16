@@ -23,14 +23,6 @@ pub(all) struct MouseTarget {
 } derive(Eq, Debug)
 
 ///|
-/// An inline widget that displaces the lines after `anchor_line` by
-/// `height_px` pixels (the references peek is the only zone today).
-pub(all) struct ViewZone {
-  anchor_line : Int
-  height_px : Int
-} derive(Debug)
-
-///|
 /// Geometry needed to hit-test viewer coordinates against a `RenderFrame`.
 /// `origin_x`/`origin_y` locate the viewer's top-left in the same coordinate
 /// space as the `x`/`y` passed to `hit_test`. All values are pixels.
@@ -42,7 +34,7 @@ pub(all) struct ViewMetrics {
   line_height : Int
   char_width : Double
   gutter_width : Double
-  view_zones : Array[ViewZone]
+  view_zones : Array[@view_layout.ViewZone]
 } derive(Debug)
 
 ///|

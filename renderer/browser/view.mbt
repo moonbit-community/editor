@@ -59,7 +59,7 @@ priv struct Island {
   overflowing_content_widgets : @rdom.Element
   overflowing_overlay_widgets : @rdom.Element
   mut hover_widget : HoverWidgetDom?
-  mut window : @renderer.LineWindow
+  mut window : @view_layout.LineWindow
   mut generation : Int
   line_nodes : Array[@rdom.Element]
   gutter_nodes : Array[@rdom.Element]
@@ -67,7 +67,7 @@ priv struct Island {
 }
 
 ///|
-fn frame_window(frame : @renderer.RenderFrame) -> @renderer.LineWindow {
+fn frame_window(frame : @renderer.RenderFrame) -> @view_layout.LineWindow {
   { start: frame.viewport.start_line, end: frame.viewport.end_line }
 }
 
@@ -267,7 +267,7 @@ fn Viewer::synced_window_frame(
   let rendered = frame_window(frame)
   let desired = self.layout.visible_window(overscan=line_overscan)
   if desired != rendered &&
-    @renderer.window_needs_update(rendered, desired, line_overscan) {
+    @view_layout.window_needs_update(rendered, desired, line_overscan) {
     let rebuilt = view_model.render_frame({
       start_line: desired.start,
       end_line: desired.end,

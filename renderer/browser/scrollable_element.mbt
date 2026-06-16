@@ -15,8 +15,8 @@ priv struct ScrollableElementDom {
   top_left_shadow : @rdom.Element
   vertical_size : Double
   horizontal_size : Double
-  vertical_state : @renderer.ScrollbarState
-  horizontal_state : @renderer.ScrollbarState
+  vertical_state : @view_layout.ScrollbarState
+  horizontal_state : @view_layout.ScrollbarState
   mut vertical_revealed : Bool
   mut horizontal_revealed : Bool
   mut vertical_fade : Bool
@@ -99,8 +99,10 @@ fn ScrollableElementDom::new(
     top_left_shadow,
     vertical_size,
     horizontal_size,
-    vertical_state: @renderer.ScrollbarState::new(scrollbar_size=vertical_size),
-    horizontal_state: @renderer.ScrollbarState::new(
+    vertical_state: @view_layout.ScrollbarState::new(
+      scrollbar_size=vertical_size,
+    ),
+    horizontal_state: @view_layout.ScrollbarState::new(
       scrollbar_size=horizontal_size,
       opposite_scrollbar_size=vertical_size,
     ),
@@ -125,8 +127,8 @@ fn ScrollableElementDom::set_wrapper_class(
 ///|
 fn ScrollableElementDom::update_from_model(
   self : ScrollableElementDom,
-  dimensions : @renderer.ScrollDimensions,
-  position : @renderer.ScrollPosition,
+  dimensions : @view_layout.ScrollDimensions,
+  position : @view_layout.ScrollPosition,
   horizontal_left? : Double,
 ) -> Unit {
   self.vertical_state.set_visible_size(dimensions.height) |> ignore
@@ -413,7 +415,7 @@ fn ScrollableElementDom::drag_ended(self : ScrollableElementDom) -> Unit {
 ///|
 fn ScrollableElementDom::write_shadows(
   self : ScrollableElementDom,
-  position : @renderer.ScrollPosition,
+  position : @view_layout.ScrollPosition,
 ) -> Unit {
   let top = position.scroll_top > 0.0
   let left = position.scroll_left > 0.0
@@ -450,7 +452,7 @@ fn ScrollableElementDom::write_shadows(
 fn ScrollableElementDom::state(
   self : ScrollableElementDom,
   vertical : Bool,
-) -> @renderer.ScrollbarState {
+) -> @view_layout.ScrollbarState {
   if vertical {
     self.vertical_state
   } else {

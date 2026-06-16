@@ -24,7 +24,8 @@ character-mapping roles.
 - Must not declare FFI.
 - This package receives already-derived line content, token classes, and
   decorations. Document/provider conversion stays in the parent `renderer`
-  package until `renderer/view_model` and `renderer/view_layout` are promoted.
+  package until the `renderer/view_model` package and `ViewportData` promotion
+  are ready.
 
 ## Checks
 

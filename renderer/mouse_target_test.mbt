@@ -20,7 +20,7 @@ fn hit_test_frame(viewport? : @renderer.FrameViewport) -> @renderer.RenderFrame 
 ///|
 fn test_metrics(
   scroll_top? : Double = 0.0,
-  view_zones? : Array[@renderer.ViewZone] = [],
+  view_zones? : Array[@view_layout.ViewZone] = [],
 ) -> @renderer.ViewMetrics {
   {
     origin_x: 0.0,

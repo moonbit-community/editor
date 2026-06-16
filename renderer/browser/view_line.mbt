@@ -1,5 +1,7 @@
 ///|
-fn viewport_window(viewport : @renderer.ViewportData) -> @renderer.LineWindow {
+fn viewport_window(
+  viewport : @renderer.ViewportData,
+) -> @view_layout.LineWindow {
   { start: viewport.start_line_number - 1, end: viewport.end_line_number }
 }
 

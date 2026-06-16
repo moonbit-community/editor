@@ -96,9 +96,9 @@ workbench) wrap the calls in their command type.
   the same Monaco wrapper, custom scrollbar nodes, wheel delta-mode
   normalization, thumb drag, centered track jump (`scrollByPage: false`), active
   slider class cleanup, scroll shadows, and visibility-class updates.
-  Editor scroll writes back into `renderer.ViewLayout`; hover scroll writes
-  into its native content element. Browser reveal scroll offsets on editor
-  DOM nodes are translated into `ViewLayout` deltas and reset.
+  Editor scroll writes back into `renderer/view_layout.ViewLayout`; hover
+  scroll writes into its native content element. Browser reveal scroll offsets
+  on editor DOM nodes are translated into `ViewLayout` deltas and reset.
 - Own the editor input bridge: native `mousemove`/`mouseleave` listeners
   on the island root convert DOM events into typed `EditorEvent`s through
   the renderer's shared `hit_test`, fed by layout state plus the measured

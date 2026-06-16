@@ -1,7 +1,7 @@
 # renderer
 
-Pre-DOM common-layer render IR, readonly `ViewModel`, scroll/layout model, and
-editor geometry. This package is the MoonBit-owned counterpart to Monaco's
+Pre-DOM common-layer render IR, readonly `ViewModel`, viewport data, and editor
+geometry. This package is the MoonBit-owned parent for Monaco's
 `vscode/src/vs/editor/common/*` layer.
 
 ## Responsibilities
@@ -21,34 +21,33 @@ editor geometry. This package is the MoonBit-owned counterpart to Monaco's
   Pure line-HTML emission belongs to the DOM-free
   `renderer/view_line_renderer` package: `RenderLineInput` becomes escaped line
   HTML plus `CharacterMapping`/`DomPosition` data.
-- Own the backend-neutral scroll and layout model: `Scrollable` (clamped
-  scroll state answering `ScrollChange` facts), the uniform-height
-  `LinesLayout` (with view-zone slots; displacement deferred),
-  `ViewLayout` (viewport derivation absorbing `visible_window` and
-  `window_needs_update` semantics), and `ScrollbarState` (thumb
-  geometry, drags, and track jumps as pure arithmetic).
+- Depend on the backend-neutral `renderer/view_layout` package for scroll and
+  layout model state: `Scrollable` (clamped scroll state answering
+  `ScrollChange` facts), the uniform-height `LinesLayout` (with view-zone
+  slots; displacement deferred), `ViewLayout` (viewport derivation absorbing
+  `visible_window` and `window_needs_update` semantics), and `ScrollbarState`
+  (thumb geometry, drags, and track jumps as pure arithmetic).
 - Own the pure editor geometry shared by backends: mouse hit-testing
-  (`MouseTargetKind`/`MouseTarget`/`ViewZone`/`ViewMetrics`/`hit_test`)
-  resolved against render frames, and viewport-window math
-  (`LineWindow`/`visible_window`/`window_needs_update`) for line
-  virtualization with overscan and hysteresis.
+  (`MouseTargetKind`/`MouseTarget`/`ViewMetrics`/`hit_test`) resolved against
+  render frames plus `@view_layout.ViewZone` layout data.
 - Keep render output independent of concrete frontend hosts.
 
 ## Boundaries
 
 - May depend on `core`, `syntax`, `decorations`, `language`,
-  `renderer/view_line_renderer`, and JSON support.
+  `renderer/view_line_renderer`, `renderer/view_layout`, and JSON support.
 - Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,
   server routing, or filesystem providers. Layout, scrollbar, hit-test, and
   window functions are pure arithmetic over frame data and caller-measured
-  metrics; `ViewLayout` owns scroll truth as model state while browser
-  backends choose how to expose that model through DOM scrollable elements.
+  metrics; `renderer/view_layout.ViewLayout` owns scroll truth as model state
+  while browser backends choose how to expose that model through DOM scrollable
+  elements.
 - Backend-specific mounting and event wiring belong in `renderer/browser`.
 
 ## Checks
 
 - Package tests live in `tokenized_document_test.mbt`,
   `render_frame_test.mbt`, `render_line_ir_test.mbt`, `view_model_test.mbt`,
-  `line_html_test.mbt`, `mouse_target_test.mbt`, `view_window_test.mbt`,
-  `view_layout_test.mbt`, and `scrollbar_state_test.mbt`.
+  `line_html_test.mbt`, and `mouse_target_test.mbt`.
+- Layout package tests live under `renderer/view_layout`.
 - Run `just check` for the repository-level type check.

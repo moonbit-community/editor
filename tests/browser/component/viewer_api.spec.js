@@ -21,9 +21,18 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(Number(await wrappedHoverLine.getAttribute('data-line'))).toBeGreaterThan(
       report.metrics.modelLines,
     );
-    await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toBeVisible({
+    await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(1, {
       timeout: 10_000,
     });
+    const firstLineTop = async () =>
+      page.locator('.view-line[data-line="1"]').evaluate((node) => {
+        const root = node.closest('.moonbit-viewer');
+        return Math.round(node.getBoundingClientRect().top - root.getBoundingClientRect().top);
+      });
+    const beforeScrollTop = await firstLineTop();
+    await page.locator('.overflow-guard').hover();
+    await page.mouse.wheel(0, 72);
+    await expect.poll(firstLineTop, { timeout: 2_000 }).toBeLessThan(beforeScrollTop - 20);
     await wrappedHoverLine.hover();
     await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
       'wrapped component hover',

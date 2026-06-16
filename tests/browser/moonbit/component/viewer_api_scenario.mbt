@@ -160,7 +160,7 @@ fn mount_host() -> @rdom.Element? {
       shell.set_attribute("style", "height:100vh;display:block;")
       let host = document.create_element("div")
       host.set_attribute("class", "viewer-host")
-      host.set_attribute("style", "height:100vh;width:180px;")
+      host.set_attribute("style", "height:180px;width:180px;")
       shell.append_child(host.as_node())
       app.append_child(shell.as_node())
       Some(host)

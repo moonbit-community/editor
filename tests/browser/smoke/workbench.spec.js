@@ -1,4 +1,4 @@
-import { expect, test } from './base.js';
+import { expect, test } from '../support/test.js';
 
 test('defaults to the dark theme and persists the toggled choice', async ({ page }) => {
   await page.goto('/');
@@ -29,4 +29,3 @@ test('renders explorer rows with twisties and file icons', async ({ page }) => {
     ),
   ).toBeVisible();
 });
-

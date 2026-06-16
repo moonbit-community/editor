@@ -1,4 +1,10 @@
-import { expect, test } from './base.js';
+import { expect, test } from '../support/test.js';
+import {
+  collectReadonlyEvents,
+  hoverMainSymbol,
+  openMainFixture,
+  setHoverFixture,
+} from '../support/app.js';
 
 test('renders markdown hover content as safe HTML', async ({ page }) => {
   await page.goto('/');
@@ -172,75 +178,6 @@ test('wraps spaced signature code blocks instead of clipping hover content', asy
   await expect(widget.locator('.scrollbar.horizontal.visible .slider')).toHaveCount(0);
 });
 
-async function setHoverFixture(page, kind, contents) {
-  await expect
-    .poll(() => page.evaluate(() => typeof globalThis.__readonlyEditorSetHover), {
-      timeout: 5_000,
-    })
-    .toBe('function');
-  await page.evaluate(
-    ([fixtureKind, fixtureContents]) =>
-      globalThis.__readonlyEditorSetHover(fixtureKind, fixtureContents),
-    [kind, contents],
-  );
-}
-
-async function hoverMainSymbol(page) {
-  const target = page.locator('.view-line span', { hasText: 'main' }).first();
-  await expect(target).toBeVisible();
-  await target.hover();
-  await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toBeVisible({
-    timeout: 3_000,
-  });
-}
-
-async function openMainFixture(page) {
-  await openWorkspaceFile(page, 'src/main.mbt');
-}
-
-function workspaceItem(path) {
-  return `[data-workspace-id="readonly-remote://workspace/${path}"]`;
-}
-
-async function openWorkspaceFile(page, workspacePath) {
-  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
-  const activeUri = await page.locator('.editor-shell').getAttribute('data-source-uri');
-  if (activeUri) {
-    await expect(page.locator(`[data-workspace-id="${activeUri}"]`)).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-  }
-  const segments = workspacePath.split('/');
-  let prefix = '';
-  for (const segment of segments.slice(0, -1)) {
-    prefix = prefix ? `${prefix}/${segment}` : segment;
-    const folder = page.locator(workspaceItem(prefix));
-    await expect(folder).toBeVisible();
-    if ((await folder.getAttribute('aria-expanded')) !== 'true') {
-      await folder.click();
-    }
-  }
-  const item = page.locator(workspaceItem(workspacePath));
-  await expect(item).toBeVisible();
-  await item.click();
-  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
-  await expect(page.locator('.editor-shell')).toHaveAttribute(
-    'data-source-uri',
-    `readonly-remote://workspace/${workspacePath}`,
-  );
-}
-
 function readonlyEvents(page) {
-  const messages = [];
-  page.on('console', (message) => {
-    if (message.text().includes('[readonly-editor]')) {
-      messages.push(message.text());
-    }
-  });
-  return {
-    count(name) {
-      return messages.filter((event) => event.includes(name)).length;
-    },
-  };
+  return collectReadonlyEvents(page);
 }

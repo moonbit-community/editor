@@ -5,48 +5,67 @@ without hidden setup.
 
 ## Layers
 
-The harness has three layers:
-
-1. Baseline compiler and build checks.
+1. Baseline compiler/build checks.
 2. MoonBit unit tests.
-3. Browser e2e smoke tests for integrated behavior that unit tests cannot
-   cover.
+3. Browser suites split by purpose: smoke, conformance, component, and
+   performance.
 
-The first two layers should stay boring: if product code changes, it should
-pass the baseline and unit-test layers without warnings or errors. The e2e
-layer is intentionally narrower and should record user-visible workflows, not
-every DOM detail.
+Baseline and unit layers should stay boring: no errors, and no new warnings.
+Browser tests use Playwright for process/browser lifecycle, user gestures,
+outer assertions, logging, screenshots, traces, and final pass/fail decisions.
 
 ## Commands
 
-- `just check`: baseline check. Runs
-  `moon check --target all --warn-list +73` plus
+- `just check`: runs `moon check --target all --warn-list +73` plus
   `scripts/check-architecture.mbtx`.
-- `just build`: baseline build. Depends on `just check`, builds the browser
-  bundle into `web/dist`, and builds `server_host_native/main`.
-- `just test`: unit tests. Runs `moon test --target all`.
-- `just test-browser`: e2e smoke tests. Builds first, starts the native server,
-  and runs Playwright.
+- `just build`: runs `just check`, builds `web/dist` including browser-test
+  assets, and builds `server_host_native/main`.
+- `just test`: runs `moon test --target all`.
+- `just test-browser`: builds first, starts the native server, and runs all
+  default Playwright browser suites.
+- `just test-browser-smoke`: user-like app workflows.
+- `just test-browser-conformance`: Monaco/VS Code parity and deterministic
+  geometry/control checks.
+- `just test-browser-component`: MoonBit-authored browser component checks.
+- `just test-browser-perf`: non-budgeted performance evidence.
 - `just dev ROOT=. PORT=5173`: build and run the native server for local
   inspection. Use `ROOT=/path/to/project` to point the viewer at a fixture or
   real MoonBit project.
 
 Playwright targets `http://127.0.0.1:5173` by default. Set
-`READONLY_EDITOR_BASE_URL=http://127.0.0.1:<port>` to run smoke tests against
+`READONLY_EDITOR_BASE_URL=http://127.0.0.1:<port>` to run browser tests against
 an already-started server.
 
-## What Belongs Where
+## Browser Layout
 
-- Baseline: package graph changes, host-target filtering, FFI boundaries,
-  generated browser assets, and native server build health.
-- Unit tests: pure package behavior, protocol round trips, workspace semantics,
-  renderer model state, and cross-target logic.
-- E2e smoke tests: startup, file-tree navigation, document opening, diagnostics,
-  hover, scrolling, theme changes, and native server/protocol integration.
+```text
+tests/browser/
+  support/        Playwright fixtures, app helpers, logger, MoonBit reporter
+  smoke/          user workflows against the real app or embedded viewer
+  conformance/    Monaco oracle, exact DOM/style/geometry, deterministic hooks
+  component/      Playwright loaders for MoonBit browser component pages
+  perf/           Playwright and MoonBit performance evidence
+  fixtures/       shared browser fixture data
+  moonbit/        js-target MoonBit browser-test packages
+```
 
-Smoke tests are inspired by VS Code/Monaco smoke tests: cover realistic
-workflows and regression-prone integration points, but avoid encoding every
-internal node, style, or timing detail as a public contract.
+`scripts/build-web.mbtx` builds the MoonBit browser-test packages into
+`web/dist/browser-tests/component.html` and `web/dist/browser-tests/perf.html`.
+
+## Suite Boundaries
+
+- Smoke: startup, native-served assets, file-tree navigation, document opening,
+  real hover through pointer interaction, scrolling by wheel/drag, theme
+  changes, embedded viewer loading, and file-watch recovery. Smoke tests should
+  not call deterministic state-control globals when a user path exists.
+- Conformance: Monaco/VS Code parity, local oracle comparison under
+  `tests/reference/monaco-hover-scrollbar`, forced hover payloads, exact
+  scrollbar/hover DOM, computed style, geometry, screenshots, and synthetic
+  scroll/windowing checks.
+- Component: MoonBit browser pages construct the public viewer API directly and
+  report compact JSON through Playwright.
+- Performance: structured JSON evidence and attachments. Perf tests remain
+  non-failing unless an explicit documented budget is added.
 
 ## Browser Contracts
 
@@ -62,23 +81,40 @@ Keep browser assertions on stable harness contracts:
   `.monaco-scrollable-element.editor-scrollable`,
   `.view-line[data-line]`, and
   `[data-content-widget="hover"] .monaco-hover`.
-- Scroll and conformance helpers:
-  `globalThis.__readonlyEditorScrollTo(top)` for ordinary scroll assertions;
-  `globalThis.__readonlyEditorConformance` and the local Monaco oracle under
-  `tests/reference/monaco-hover-scrollbar/` for Monaco-specific conformance.
 
 Browser tests should select files through the sidebar and native remote
 protocol. The active file is application state, not URL state; specs should not
 depend on `?uri=`, `?path=`, hashes, or history updates.
 
+## Globals
+
+- Product observability: `__readonlyEditorEvent`,
+  `__readonlyEditorDocument`, `__readonlyEditorSource`, and
+  `__readonlyEditorCopiedText`.
+- Conformance/control only: `__readonlyEditorSetHover`,
+  `__readonlyEditorClearHover`, `__readonlyEditorScrollTo`, and
+  `__readonlyEditorConformance`.
+- MoonBit browser-test reporting:
+  `__readonlyEditorBrowserTestReport`.
+
+The MoonBit reporter is passive. MoonBit pages send payloads like:
+
+```json
+{"suite":"viewer_api","status":"passed","failures":[],"metrics":{}}
+```
+
+Playwright still validates report shape, attaches the JSON, and owns the final
+test result.
+
 ## Failure Evidence
 
-`tests/browser/base.js` records smoke-test evidence:
+`tests/browser/support/test.js` records:
 
 - `runner.log` under `test-results/browser/...`;
 - browser console messages, page errors, failed requests, and HTTP errors;
 - Playwright traces and screenshots on failure.
 
-Set `READONLY_EDITOR_TEST_VERBOSE=1` or `PW_VERBOSE=1` to mirror smoke logs to
-the terminal. Runtime browser events use the `[readonly-editor]` prefix and are
-diagnostic evidence, not a substitute for user-visible assertions.
+Component and perf specs attach MoonBit report JSON through
+`tests/browser/support/moonbit_reporter.js`; perf specs also attach structured
+timing JSON. Set `READONLY_EDITOR_TEST_VERBOSE=1` or `PW_VERBOSE=1` to mirror
+logs to the terminal.

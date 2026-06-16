@@ -15,12 +15,30 @@ async fn main {
   if embed_status != 0 {
     fail("moon build failed with exit code \{embed_status}")
   }
+  let component_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/component",
+  ])
+  if component_status != 0 {
+    fail("moon build failed with exit code \{component_status}")
+  }
+  let perf_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/perf",
+  ])
+  if perf_status != 0 {
+    fail("moon build failed with exit code \{perf_status}")
+  }
 
   let source_dir = "_build/js/debug/build/web"
   let embed_source_dir = "_build/js/debug/build/examples/embedded_viewer"
+  let component_source_dir = "_build/js/debug/build/tests/browser/moonbit/component"
+  let perf_source_dir = "_build/js/debug/build/tests/browser/moonbit/perf"
   let target_dir = "web/dist"
+  let browser_tests_dir = "\{target_dir}/browser-tests"
   if !@fs.exists(target_dir) {
     @fs.mkdir(target_dir, recursive=true)
+  }
+  if !@fs.exists(browser_tests_dir) {
+    @fs.mkdir(browser_tests_dir, recursive=true)
   }
 
   let generated_js = @fs.read_file("\{source_dir}/web.js").text()
@@ -79,7 +97,49 @@ async fn main {
     create_mode=@fs.CreateOrTruncate,
   )
 
-  println("Generated web/dist/editor.mjs and web/dist/embed.mjs")
+  let component_js = @fs.read_file("\{component_source_dir}/component.js").text()
+  @fs.write_file(
+    "\{browser_tests_dir}/component.mjs",
+    component_js.replace(
+      old="//# sourceMappingURL=component.js.map",
+      new="//# sourceMappingURL=component.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/component.mjs.map",
+    @fs.read_file("\{component_source_dir}/component.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/component.html",
+    browser_test_html("MoonBit Viewer Component Test", "/browser-tests/component.mjs"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  let perf_js = @fs.read_file("\{perf_source_dir}/perf.js").text()
+  @fs.write_file(
+    "\{browser_tests_dir}/perf.mjs",
+    perf_js.replace(
+      old="//# sourceMappingURL=perf.js.map",
+      new="//# sourceMappingURL=perf.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/perf.mjs.map",
+    @fs.read_file("\{perf_source_dir}/perf.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/perf.html",
+    browser_test_html("MoonBit Viewer Performance Test", "/browser-tests/perf.mjs"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  println(
+    "Generated web/dist/editor.mjs, web/dist/embed.mjs, and browser test bundles",
+  )
 }
 
 ///|
@@ -117,5 +177,24 @@ fn embed_html() -> String {
     #|    <script type="module" src="/embed.mjs"></script>
     #|  </body>
     #|</html>
+  )
+}
+
+///|
+fn browser_test_html(title : String, script_src : String) -> String {
+  (
+    $|<!doctype html>
+    $|<html lang="en">
+    $|  <head>
+    $|    <meta charset="UTF-8" />
+    $|    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    $|    <title>\{title}</title>
+    $|    <link rel="stylesheet" href="/style.css">
+    $|  </head>
+    $|  <body>
+    $|    <div id="app"></div>
+    $|    <script type="module" src="\{script_src}"></script>
+    $|  </body>
+    $|</html>
   )
 }

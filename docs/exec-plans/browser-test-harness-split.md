@@ -1,6 +1,6 @@
 # Browser Test Harness Split
 
-Status: planned.
+Status: implemented.
 Date: 2026-06-16
 
 ## Summary

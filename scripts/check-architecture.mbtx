@@ -42,10 +42,10 @@ async fn main {
 
 ///|
 /// Grammars are compile-time packages composed by import: `syntax/lang_*`
-/// may import only `core` and `syntax`, and only the composition layers
-/// (`workbench`, `examples/*`) may import a `syntax/lang_*` package —
-/// the viewer library, renderer, and server must resolve languages
-/// through the tokenizer registry instead.
+/// may import only `core` and `syntax`, and only composition layers
+/// (`workbench`, `examples/*`, browser-test entrypoints) may import a
+/// `syntax/lang_*` package — the viewer library, renderer, and server
+/// must resolve languages through the tokenizer registry instead.
 async fn check_language_package_imports(errors : Array[String]) -> Unit {
   let language_prefix = "baozhiyuan/editor/syntax/lang_"
   let allowed_in_language_packages = [
@@ -72,6 +72,7 @@ async fn check_language_package_imports(errors : Array[String]) -> Unit {
   for manifest in package_manifests() {
     if manifest.has_prefix("workbench/") ||
       manifest.has_prefix("examples/") ||
+      manifest.has_prefix("tests/browser/moonbit/") ||
       manifest.has_prefix("syntax/") {
       continue
     }

@@ -1,4 +1,5 @@
-import { expect, test } from './base.js';
+import { expect, test } from '../support/test.js';
+import { workspaceItem as workspaceSelector } from '../support/app.js';
 
 // Proves the library boundary: the embedded page runs the viewer and the
 // file-tree widget against in-memory providers, with no websocket opened.
@@ -34,9 +35,9 @@ test('runs the viewer and tree from in-memory providers without a server', async
     'true',
   );
 
-  expect(websockets).toEqual([]);
+expect(websockets).toEqual([]);
 });
 
 function workspaceItem(path) {
-  return `[data-workspace-id="memory://workspace/${path}"]`;
+  return workspaceSelector(path, { root: 'memory://workspace' });
 }

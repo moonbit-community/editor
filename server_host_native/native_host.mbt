@@ -521,6 +521,20 @@ fn static_route(path : String) -> (String, String)? {
     "/style.css" => Some(("style.css", "text/css; charset=utf-8"))
     "/editor.mjs" => Some(("editor.mjs", "text/javascript; charset=utf-8"))
     "/embed.mjs" => Some(("embed.mjs", "text/javascript; charset=utf-8"))
+    "/browser-tests/component.html" =>
+      Some(("browser-tests/component.html", "text/html; charset=utf-8"))
+    "/browser-tests/component.mjs" =>
+      Some(("browser-tests/component.mjs", "text/javascript; charset=utf-8"))
+    "/browser-tests/component.mjs.map" =>
+      Some(
+        ("browser-tests/component.mjs.map", "application/json; charset=utf-8"),
+      )
+    "/browser-tests/perf.html" =>
+      Some(("browser-tests/perf.html", "text/html; charset=utf-8"))
+    "/browser-tests/perf.mjs" =>
+      Some(("browser-tests/perf.mjs", "text/javascript; charset=utf-8"))
+    "/browser-tests/perf.mjs.map" =>
+      Some(("browser-tests/perf.mjs.map", "application/json; charset=utf-8"))
     _ => None
   }
 }

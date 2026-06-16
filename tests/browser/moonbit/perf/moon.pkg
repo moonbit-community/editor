@@ -1,0 +1,14 @@
+import {
+  "baozhiyuan/editor/renderer/browser",
+  "baozhiyuan/editor/syntax/lang_moonbit",
+  "baozhiyuan/editor/tests/browser/moonbit/support",
+  "baozhiyuan/editor/workspace",
+  "moonbit-community/rabbita/dom" @rdom,
+  "moonbitlang/core/json",
+}
+
+supported_targets = "js"
+
+options(
+  "is-main": true,
+)

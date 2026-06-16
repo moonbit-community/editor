@@ -1,5 +1,11 @@
-import { expect, test } from './base.js';
 import { promises as fs } from 'node:fs';
+import { expect, test } from '../support/test.js';
+import {
+  collectReadonlyEvents,
+  openMainFixture,
+  openWorkspaceFile,
+  workspaceItem,
+} from '../support/app.js';
 
 const mainFixture = 'docs/fixtures/project/src/main.mbt';
 
@@ -20,7 +26,7 @@ test('starts from native-served static assets', async ({ page }) => {
 });
 
 test('renders fixture workspace through the native protocol', async ({ page }) => {
-  const events = readonlyEvents(page);
+  const events = collectReadonlyEvents(page);
 
   await page.goto('/');
   await openMainFixture(page);
@@ -40,6 +46,24 @@ test('renders fixture workspace through the native protocol', async ({ page }) =
 
   expect(await events.some('moonbit:render')).toBeTruthy();
   expect(await events.some('dom:mounted')).toBeTruthy();
+});
+
+test('shows hover through pointer interaction', async ({ page }) => {
+  await page.goto('/');
+  await openMainFixture(page);
+
+  const symbol = page.locator('.view-line span', { hasText: 'startup_event' }).first();
+  await expect(symbol).toBeVisible();
+  await expect(async () => {
+    await symbol.hover();
+    const hover = page.locator('[data-content-widget="hover"] .monaco-hover');
+    await expect(hover).toBeVisible({ timeout: 3_000 });
+    await expect
+      .poll(() => hover.textContent().then((text) => text.trim().length), {
+        timeout: 3_000,
+      })
+      .toBeGreaterThan(0);
+  }).toPass({ timeout: 60_000 });
 });
 
 test('lazily expands explorer folders and auto-reveals the active file', async ({ page }) => {
@@ -158,64 +182,3 @@ test('updates and recovers watched fixture files from disk changes', async ({ pa
     await fs.writeFile(mainFixture, original, 'utf8');
   }
 });
-
-async function openMainFixture(page) {
-  await openWorkspaceFile(page, 'src/main.mbt');
-}
-
-function workspaceItem(path) {
-  return `[data-workspace-id="readonly-remote://workspace/${path}"]`;
-}
-
-async function openWorkspaceFile(page, workspacePath) {
-  // Let the startup auto-open settle so its document switch cannot race
-  // the one this helper performs.
-  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
-  // Also let the explorer auto-reveal finish: it inserts rows while
-  // expanding the active file's ancestors, and a click during that
-  // re-render can land on the wrong row.
-  const activeUri = await page.locator('.editor-shell').getAttribute('data-source-uri');
-  if (activeUri) {
-    await expect(page.locator(`[data-workspace-id="${activeUri}"]`)).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-  }
-  const segments = workspacePath.split('/');
-  let prefix = '';
-  for (const segment of segments.slice(0, -1)) {
-    prefix = prefix ? `${prefix}/${segment}` : segment;
-    const folder = page.locator(workspaceItem(prefix));
-    await expect(folder).toBeVisible();
-    if ((await folder.getAttribute('aria-expanded')) !== 'true') {
-      await folder.click();
-    }
-  }
-  const item = page.locator(workspaceItem(workspacePath));
-  await expect(item).toBeVisible();
-  await item.click();
-  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready');
-  await expect(page.locator('.editor-shell')).toHaveAttribute(
-    'data-source-uri',
-    `readonly-remote://workspace/${workspacePath}`,
-  );
-}
-
-function readonlyEvents(page) {
-  const messages = [];
-  page.on('console', (message) => {
-    if (message.text().includes('[readonly-editor]')) {
-      messages.push(message.text());
-    }
-  });
-  return {
-    async some(name) {
-      return expect
-        .poll(() => messages.some((event) => event.includes(name)), {
-          timeout: 5_000,
-        })
-        .toBeTruthy()
-        .then(() => true);
-    },
-  };
-}

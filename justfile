@@ -21,3 +21,15 @@ dev *args: build
 
 test-browser: build
     ./node_modules/.bin/playwright test
+
+test-browser-smoke: build
+    ./node_modules/.bin/playwright test tests/browser/smoke
+
+test-browser-conformance: build
+    ./node_modules/.bin/playwright test tests/browser/conformance
+
+test-browser-component: build
+    ./node_modules/.bin/playwright test tests/browser/component
+
+test-browser-perf: build
+    ./node_modules/.bin/playwright test tests/browser/perf

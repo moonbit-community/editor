@@ -1,11 +1,12 @@
-import { expect, test } from './base.js';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { expect, test } from '../support/test.js';
+import { openWorkspaceFile } from '../support/app.js';
 import {
   conformanceSourceText,
   conformanceStates,
   hoverPayloads,
-} from './fixtures/monaco_conformance_payloads.js';
+} from '../fixtures/monaco_conformance_payloads.js';
 
 const oracleUrl = pathToFileURL(
   path.join(process.cwd(), 'tests/reference/monaco-hover-scrollbar/index.html'),
@@ -251,36 +252,6 @@ async function showReadonlyHover(page, state) {
   await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toBeVisible({
     timeout: 3_000,
   });
-}
-
-function workspaceItem(pathName) {
-  return `[data-workspace-id="readonly-remote://workspace/${pathName}"]`;
-}
-
-async function openWorkspaceFile(page, workspacePath) {
-  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready', {
-    timeout: 60_000,
-  });
-  const segments = workspacePath.split('/');
-  let prefix = '';
-  for (const segment of segments.slice(0, -1)) {
-    prefix = prefix ? `${prefix}/${segment}` : segment;
-    const folder = page.locator(workspaceItem(prefix));
-    await expect(folder).toBeVisible();
-    if ((await folder.getAttribute('aria-expanded')) !== 'true') {
-      await folder.click();
-    }
-  }
-  const item = page.locator(workspaceItem(workspacePath));
-  await expect(item).toBeVisible();
-  await item.click();
-  await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready', {
-    timeout: 60_000,
-  });
-  await expect(page.locator('.editor-shell')).toHaveAttribute(
-    'data-source-uri',
-    `readonly-remote://workspace/${workspacePath}`,
-  );
 }
 
 async function readonlyScrollEventCount(page) {

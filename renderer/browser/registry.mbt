@@ -29,7 +29,14 @@ fn Viewer::request_hover(
       let version = document.version
       let computer = ContentHoverComputer::new(self.services)
       let anchor_range = @core.Range(anchor.start, anchor.end)
-      match computer.compute_sync(document, anchor_range, anchor.offset) {
+      match
+        computer.compute_sync(
+          document,
+          anchor_range,
+          anchor.offset,
+          injected_text_index=anchor.injected_text_index,
+          inlay_hints=self.inlay_hints,
+        ) {
         Some(hover) => self.hover_resolved(version, token, Some(hover))
         None => ()
       }
@@ -38,6 +45,8 @@ fn Viewer::request_hover(
           document,
           anchor_range,
           anchor.offset,
+          injected_text_index=anchor.injected_text_index,
+          inlay_hints=self.inlay_hints,
         )
         self.hover_resolved(version, token, hover)
       })

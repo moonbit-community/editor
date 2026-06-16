@@ -715,6 +715,17 @@ body {
   color: var(--vscode-token-punctuation);
 }
 
+.inlay-hint {
+  color: var(--vscode-descriptionForeground);
+  font-style: normal;
+  opacity: 0.9;
+}
+
+.inlay-hint-type,
+.inlay-hint-parameter {
+  color: var(--vscode-descriptionForeground);
+}
+
 .workspace-sidebar::-webkit-scrollbar {
   width: 14px;
   height: 14px;

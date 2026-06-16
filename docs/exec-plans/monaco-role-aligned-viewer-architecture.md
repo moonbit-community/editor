@@ -18,8 +18,8 @@ wrapped view-line rendering and line-number alignment. Follow-up Phase 7 slices
 cover wrapped hover, diagnostics, scroll positioning, direct hit-test coverage,
 and Monaco-style classifier-backed word breaks in the readonly no-injected-text
 path. Remaining Phase 7 deltas are tied to later features, especially wrapped
-indentation and injected text; later feature phases for folding, inlay hints,
-selection/copy, view zones, and accessibility follow-up remain pending.
+indentation; later feature phases for selection/copy, view zones, and
+accessibility follow-up remain pending.
 
 Implementation note, 2026-06-16, Phase 8: folding now has language-level
 `FoldingRange`, `FoldingRangeKind`, and `FoldingRangeProvider` contracts; a
@@ -30,6 +30,18 @@ fallback; margin fold/unfold markers; and optional remote protocol transport
 through server/workbench providers. Remaining Phase 8 follow-up is mostly
 hardening: richer nested-marker behavior, stronger scroll-height browser
 coverage, and native backend folding providers beyond the local fallback.
+
+Implementation note, 2026-06-16, Phase 9: inlay hints now have language-level
+`InlayHint`, `InlayHintKind`, and `InlayHintsProvider` contracts plus optional
+remote transport through `remote_protocol`, `server`, and `workbench`.
+`renderer/view_model` represents hints as `InjectedText` and projects them
+before line breaking, with render-line source mappings preserving model offsets
+for hit testing and decorations. `renderer/browser` collects providers, renders
+hint spans through the normal line renderer, and contributes hint tooltip hover
+content through the hover participant pipeline. Browser component coverage now
+exercises hint rendering, hover, wrapping, and folding together. Copy/selection
+exclusion remains part of Phase 10 because the readonly selection/copy pipeline
+does not exist yet.
 
 ## Goal
 
@@ -644,6 +656,10 @@ Exit criteria:
 - Hints participate in wrapping and hit testing but do not corrupt model offsets.
 - Copying selected source excludes hint labels unless explicitly configured
   otherwise.
+
+Implementation note, 2026-06-16: the first two exit criteria are implemented.
+Plain-text copy exclusion is carried by Phase 10, where readonly selection/copy
+is introduced.
 
 ## Phase 10: Selection and Copy Parity
 

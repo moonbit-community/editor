@@ -30,8 +30,10 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_content(
   line_number : Int,
 ) -> String {
   let segment = self.projection.segment_for_view_line_number(line_number)
-  let text = self.base.get_model_line_content(segment.model_line_number)
-  text[segment.start_offset:segment.end_offset].to_owned()
+  let line = self.projection.projected_line_for_model_line(
+    segment.model_line_number,
+  )
+  line.text[segment.start_offset:segment.end_offset].to_owned()
 }
 
 ///|
@@ -64,8 +66,12 @@ pub fn ViewModelLinesFromProjectedModel::render_line(
   line_number : Int,
 ) -> RenderLine {
   let segment = self.projection.segment_for_view_line_number(line_number)
-  slice_render_line(
+  let projected_line = self.projection.projected_line_for_model_line(
+    segment.model_line_number,
+  )
+  render_projected_line(
     self.base.render_model_line(segment.model_line_number),
+    projected_line,
     @core.clamp_int(line_number, 1, self.line_count()),
     segment.start_offset,
     segment.end_offset,
@@ -110,31 +116,140 @@ pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(
 }
 
 ///|
-fn slice_render_line(
+fn render_projected_line(
   line : RenderLine,
+  projected_line : ProjectedTextLine,
   view_line_number : Int,
   start_offset : Int,
   end_offset : Int,
 ) -> RenderLine {
-  let text = line.text[start_offset:end_offset].to_owned()
+  let text = projected_line.text[start_offset:end_offset].to_owned()
+  let line_start_offset = line.source_offset_at_column(0)
   let spans : Array[RenderSpan] = []
-  for span in line.spans {
-    let start = max_int(span.start, start_offset)
-    let end = min_int(span.end, end_offset)
+  let projected_spans = projected_render_spans(line, projected_line)
+  append_sliced_projected_spans(
+    spans, projected_line, projected_spans, start_offset, end_offset,
+  )
+  {
+    line_number: view_line_number,
+    offset: line_start_offset +
+    projected_line.projected_column_to_model_column(start_offset),
+    text,
+    model_columns: projected_model_columns(
+      projected_line, start_offset, end_offset,
+    ),
+    injected_text_indices: projected_injected_text_indices(
+      projected_line, start_offset, end_offset,
+    ),
+    spans,
+  }
+}
+
+///|
+fn projected_render_spans(
+  line : RenderLine,
+  projected_line : ProjectedTextLine,
+) -> Array[RenderSpan] {
+  let spans : Array[RenderSpan] = []
+  for part in projected_line.parts {
+    match part.kind {
+      SourceSegment(model_start~, model_end~) =>
+        append_source_projected_spans(
+          spans,
+          line.spans,
+          part.start,
+          model_start,
+          model_end,
+        )
+      InjectedSegment(model_column~, injected_text_index~, class_name~) =>
+        spans.push({
+          start: part.start,
+          end: part.end,
+          source_start: model_column,
+          source_end: model_column,
+          injected_text_index,
+          class_name,
+        })
+    }
+  }
+  spans
+}
+
+///|
+fn append_source_projected_spans(
+  out : Array[RenderSpan],
+  source_spans : Array[RenderSpan],
+  projected_start : Int,
+  model_start : Int,
+  model_end : Int,
+) -> Unit {
+  for span in source_spans {
+    if span.injected_text_index >= 0 {
+      continue
+    }
+    let start = max_int(span.source_start, model_start)
+    let end = min_int(span.source_end, model_end)
     if start < end {
-      spans.push({
-        start: start - start_offset,
-        end: end - start_offset,
+      out.push({
+        start: projected_start + (start - model_start),
+        end: projected_start + (end - model_start),
+        source_start: start,
+        source_end: end,
+        injected_text_index: -1,
         class_name: span.class_name,
       })
     }
   }
-  {
-    line_number: view_line_number,
-    offset: line.offset + start_offset,
-    text,
-    spans,
+}
+
+///|
+fn append_sliced_projected_spans(
+  out : Array[RenderSpan],
+  projected_line : ProjectedTextLine,
+  spans : Array[RenderSpan],
+  start_offset : Int,
+  end_offset : Int,
+) -> Unit {
+  for span in spans {
+    let start = max_int(span.start, start_offset)
+    let end = min_int(span.end, end_offset)
+    if start < end {
+      out.push({
+        start: start - start_offset,
+        end: end - start_offset,
+        source_start: projected_line.projected_column_to_model_column(start),
+        source_end: projected_line.projected_column_to_model_column(end),
+        injected_text_index: span.injected_text_index,
+        class_name: span.class_name,
+      })
+    }
   }
+}
+
+///|
+fn projected_model_columns(
+  projected_line : ProjectedTextLine,
+  start_offset : Int,
+  end_offset : Int,
+) -> Array[Int] {
+  let columns : Array[Int] = []
+  for offset in start_offset..<=end_offset {
+    columns.push(projected_line.projected_column_to_model_column(offset))
+  }
+  columns
+}
+
+///|
+fn projected_injected_text_indices(
+  projected_line : ProjectedTextLine,
+  start_offset : Int,
+  end_offset : Int,
+) -> Array[Int] {
+  let indices : Array[Int] = []
+  for offset in start_offset..<end_offset {
+    indices.push(projected_line.injected_text_index_at_projected_column(offset))
+  }
+  indices
 }
 
 ///|

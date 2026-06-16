@@ -63,23 +63,29 @@ fn inline_decorations_for_line(
   decorations : Array[@decorations.Decoration],
 ) -> Array[@view_line_renderer.InlineDecoration] {
   let inline : Array[@view_line_renderer.InlineDecoration] = []
-  let line_start = line.offset
-  let line_end = line.offset + line.text.length()
+  let model_line_start = line.model_line_start_offset()
   for decoration in decorations {
     if decoration.kind == CurrentLine {
       continue
     }
     let range = decoration.range
-    if range.intersects(Range(line_start, line_end)) {
-      inline.push(
-        InlineDecoration(
-          Range(
-            max_int(line_start, range.start) - line_start,
-            min_int(line_end, range.end) - line_start,
+    for span in line.spans {
+      if span.injected_text_index >= 0 {
+        continue
+      }
+      let span_start = model_line_start + span.source_start
+      let span_end = model_line_start + span.source_end
+      if range.intersects(Range(span_start, span_end)) {
+        inline.push(
+          InlineDecoration(
+            Range(
+              span.start + max_int(range.start, span_start) - span_start,
+              span.start + min_int(range.end, span_end) - span_start,
+            ),
+            decoration.class_name,
           ),
-          decoration.class_name,
-        ),
-      )
+        )
+      }
     }
   }
   inline
@@ -91,21 +97,27 @@ pub fn line_decorations_for_line(
   decorations : Array[@decorations.Decoration],
 ) -> Array[@view_line_renderer.LineDecoration] {
   let line_decorations : Array[@view_line_renderer.LineDecoration] = []
-  let line_start = line.offset
-  let line_end = line.offset + line.text.length()
+  let model_line_start = line.model_line_start_offset()
   for decoration in decorations {
     if decoration.kind == CurrentLine {
       continue
     }
     let range = decoration.range
-    if range.intersects(Range(line_start, line_end)) {
-      line_decorations.push(
-        LineDecoration(
-          max_int(line_start, range.start) - line_start + 1,
-          min_int(line_end, range.end) - line_start + 1,
-          decoration.class_name,
-        ),
-      )
+    for span in line.spans {
+      if span.injected_text_index >= 0 {
+        continue
+      }
+      let span_start = model_line_start + span.source_start
+      let span_end = model_line_start + span.source_end
+      if range.intersects(Range(span_start, span_end)) {
+        line_decorations.push(
+          LineDecoration(
+            span.start + max_int(range.start, span_start) - span_start + 1,
+            span.start + min_int(range.end, span_end) - span_start + 1,
+            decoration.class_name,
+          ),
+        )
+      }
     }
   }
   line_decorations

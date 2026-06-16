@@ -20,6 +20,8 @@ pub(all) struct HoverComputeContext {
   document : @workspace.SourceDocument
   anchor_range : @core.Range
   offset : Int
+  injected_text_index : Int
+  inlay_hints : Array[@language.InlayHint]
   services : ViewerServices
 }
 
@@ -48,6 +50,9 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
   _self,
   ctx,
 ) {
+  if ctx.injected_text_index >= 0 {
+    return []
+  }
   let parts : Array[HoverPart] = []
   for
     marker in ctx.services.marker_decorations.markers_at(
@@ -93,6 +98,9 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
   self,
   ctx,
 ) {
+  if ctx.injected_text_index >= 0 {
+    return []
+  }
   match ctx.services.language_features.hover_at(ctx.document, ctx.offset) {
     Some(hover) =>
       if hover.contents.length() == 0 {
@@ -108,6 +116,54 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
       }
     None => []
   }
+}
+
+///|
+pub(all) struct InlayHintHoverParticipant {
+  identity : Unit
+}
+
+///|
+pub fn InlayHintHoverParticipant::new() -> InlayHintHoverParticipant {
+  { identity: () }
+}
+
+///|
+pub impl HoverParticipant for InlayHintHoverParticipant with fn ordinal(_self) {
+  50
+}
+
+///|
+pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_sync(
+  self,
+  ctx,
+) {
+  if ctx.injected_text_index < 0 {
+    return []
+  }
+  match ctx.inlay_hints.get(ctx.injected_text_index) {
+    Some(hint) =>
+      if hint.tooltip.length() == 0 {
+        []
+      } else {
+        [
+          MarkdownHover(
+            range=ctx.anchor_range,
+            contents=hint.tooltip,
+            ordinal=self.ordinal(),
+          ),
+        ]
+      }
+    None => []
+  }
+}
+
+///|
+pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_async(
+  _self,
+  _ctx,
+) {
+  []
 }
 
 ///|
@@ -128,11 +184,15 @@ pub fn ContentHoverComputer::compute_sync(
   document : @workspace.SourceDocument,
   anchor_range : @core.Range,
   offset : Int,
+  injected_text_index? : Int = -1,
+  inlay_hints? : Array[@language.InlayHint] = [],
 ) -> ComputedHover? {
   let ctx : HoverComputeContext = {
     document,
     anchor_range,
     offset,
+    injected_text_index,
+    inlay_hints,
     services: self.services,
   }
   let parts : Array[HoverPart] = []
@@ -148,11 +208,15 @@ pub async fn ContentHoverComputer::compute_async(
   document : @workspace.SourceDocument,
   anchor_range : @core.Range,
   offset : Int,
+  injected_text_index? : Int = -1,
+  inlay_hints? : Array[@language.InlayHint] = [],
 ) -> ComputedHover? noraise {
   let ctx : HoverComputeContext = {
     document,
     anchor_range,
     offset,
+    injected_text_index,
+    inlay_hints,
     services: self.services,
   }
   let parts : Array[HoverPart] = []

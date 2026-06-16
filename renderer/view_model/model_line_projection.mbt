@@ -15,11 +15,18 @@ pub fn ModelLineProjection::build(
   let segments : Array[ModelLineProjectionSegment] = []
   for model_line_number in 1..<=lines.model_line_count() {
     starts.push(segments.length())
-    let content = lines.get_model_line_content(model_line_number)
+    let projected_line = lines.projected_text_line(model_line_number)
     let data = if lines.is_model_line_hidden(model_line_number) {
-      ModelLineProjectionData(model_line_number, content.length(), [])
+      ModelLineProjectionData(
+        model_line_number,
+        projected_line.model_line_length,
+        projected_line,
+        [],
+      )
     } else {
-      computer.compute_model_line_projection(model_line_number, content)
+      computer.compute_projected_line_projection(
+        model_line_number, projected_line,
+      )
     }
     projections.push(data)
     for segment in data.segments {
@@ -52,6 +59,19 @@ pub fn ModelLineProjection::segment_for_view_line_number(
 }
 
 ///|
+pub fn ModelLineProjection::projected_line_for_model_line(
+  self : ModelLineProjection,
+  model_line_number : Int,
+) -> ProjectedTextLine {
+  let index = @core.clamp_int(
+    model_line_number - 1,
+    0,
+    self.projections.length() - 1,
+  )
+  self.projections[index].projected_line
+}
+
+///|
 pub fn ModelLineProjection::model_position_to_view_position(
   self : ModelLineProjection,
   position : @core.Position,
@@ -66,11 +86,16 @@ pub fn ModelLineProjection::model_position_to_view_position(
   if data.view_line_count() == 0 {
     return self.hidden_model_position_to_view_position(model_line)
   }
-  let segment_index = data.view_line_index_for_model_column(model_column)
+  let projected_column = data.projected_line.model_column_to_projected_column(
+    model_column,
+  )
+  let segment_index = data.view_line_index_for_projected_column(
+    projected_column,
+  )
   let segment = data.segment_at_view_line_index(segment_index)
   {
     line: self.model_line_start_view_indices[model_line] + segment_index,
-    column: model_column - segment.start_offset,
+    column: projected_column - segment.start_offset,
   }
 }
 
@@ -80,10 +105,15 @@ pub fn ModelLineProjection::view_position_to_model_position(
   position : @core.Position,
 ) -> @core.Position {
   let segment = self.segment_for_view_line_number(position.line + 1)
+  let data = self.projections[segment.model_line_number - 1]
   let width = segment.end_offset - segment.start_offset
+  let projected_column = segment.start_offset +
+    @core.clamp_int(position.column, 0, width)
   {
     line: segment.model_line_number - 1,
-    column: segment.start_offset + @core.clamp_int(position.column, 0, width),
+    column: data.projected_line.projected_column_to_model_column(
+      projected_column,
+    ),
   }
 }
 

@@ -20,6 +20,7 @@ pub(all) struct MouseTarget {
   column : Int
   offset : Int
   span_index : Int
+  injected_text_index : Int
 } derive(Eq, Debug)
 
 ///|
@@ -39,7 +40,14 @@ pub(all) struct ViewMetrics {
 
 ///|
 fn outside_target() -> MouseTarget {
-  { kind: Outside, line_number: 0, column: 0, offset: -1, span_index: -1 }
+  {
+    kind: Outside,
+    line_number: 0,
+    column: 0,
+    offset: -1,
+    span_index: -1,
+    injected_text_index: -1,
+  }
 }
 
 ///|
@@ -81,6 +89,7 @@ pub fn hit_test(
       column: 0,
       offset: -1,
       span_index: -1,
+      injected_text_index: -1,
     }
   }
   let line_number = line_index + 1
@@ -94,6 +103,7 @@ pub fn hit_test(
         column: 0,
         offset: -1,
         span_index: -1,
+        injected_text_index: -1,
       }
   }
   if viewer_x < metrics.gutter_width {
@@ -101,8 +111,9 @@ pub fn hit_test(
       kind: GutterLineNumbers,
       line_number,
       column: 0,
-      offset: line.offset,
+      offset: line.source_offset_at_column(0),
       span_index: -1,
+      injected_text_index: -1,
     }
   }
   let column = if metrics.char_width > 0.0 {
@@ -115,16 +126,18 @@ pub fn hit_test(
       kind: ContentText,
       line_number,
       column,
-      offset: line.offset + column,
+      offset: line.source_offset_at_column(column),
       span_index: span_index_at_column(line, column),
+      injected_text_index: line.injected_text_index_at_column(column),
     }
   } else {
     {
       kind: ContentEmpty,
       line_number,
       column,
-      offset: line.offset + line.text.length(),
+      offset: line.source_offset_at_column(line.text.length()),
       span_index: -1,
+      injected_text_index: -1,
     }
   }
 }

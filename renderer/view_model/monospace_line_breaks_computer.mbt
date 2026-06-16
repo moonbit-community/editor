@@ -35,27 +35,50 @@ pub fn LineBreaksComputer::compute_model_line_projection(
   model_line_number : Int,
   line_text : String,
 ) -> ModelLineProjectionData {
+  self.compute_projected_line_projection(
+    model_line_number,
+    ProjectedTextLine::identity(line_text),
+  )
+}
+
+///|
+pub fn LineBreaksComputer::compute_projected_line_projection(
+  self : LineBreaksComputer,
+  model_line_number : Int,
+  projected_line : ProjectedTextLine,
+) -> ModelLineProjectionData {
+  let line_text = projected_line.text
   if self.wrapping_column <= 0 {
-    return ModelLineProjectionData(model_line_number, line_text.length(), [
-      model_line_projection_segment(
-        model_line_number,
-        0,
-        line_text.length(),
-        0,
-        false,
-      ),
-    ])
+    return ModelLineProjectionData(
+      model_line_number,
+      projected_line.model_line_length,
+      projected_line,
+      [
+        model_line_projection_segment(
+          model_line_number,
+          0,
+          line_text.length(),
+          0,
+          false,
+        ),
+      ],
+    )
   }
   if line_text.length() <= 1 {
-    return ModelLineProjectionData(model_line_number, line_text.length(), [
-      model_line_projection_segment(
-        model_line_number,
-        0,
-        line_text.length(),
-        0,
-        false,
-      ),
-    ])
+    return ModelLineProjectionData(
+      model_line_number,
+      projected_line.model_line_length,
+      projected_line,
+      [
+        model_line_projection_segment(
+          model_line_number,
+          0,
+          line_text.length(),
+          0,
+          false,
+        ),
+      ],
+    )
   }
   let segments : Array[ModelLineProjectionSegment] = []
   let mut segment_start = 0
@@ -111,7 +134,12 @@ pub fn LineBreaksComputer::compute_model_line_projection(
       segment_start > 0,
     ),
   )
-  ModelLineProjectionData(model_line_number, line_text.length(), segments)
+  ModelLineProjectionData(
+    model_line_number,
+    projected_line.model_line_length,
+    projected_line,
+    segments,
+  )
 }
 
 ///|

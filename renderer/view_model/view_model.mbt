@@ -127,11 +127,20 @@ pub struct ViewModelLinesFromModelAsIs {
   source : FrameSource
   visible_model_line_numbers : Array[Int]
   hidden_model_lines : Array[Bool]
+  injected_text_by_model_line : Array[Array[InjectedText]]
 }
 
 ///|
 pub fn ViewModelLinesFromModelAsIs::new(
   source : FrameSource,
+) -> ViewModelLinesFromModelAsIs {
+  ViewModelLinesFromModelAsIs::with_injected_text(source, [])
+}
+
+///|
+pub fn ViewModelLinesFromModelAsIs::with_injected_text(
+  source : FrameSource,
+  injected_text : Array[InjectedText],
 ) -> ViewModelLinesFromModelAsIs {
   let line_count = source.tokenized.snapshot.line_count()
   let visible_model_line_numbers : Array[Int] = []
@@ -140,13 +149,34 @@ pub fn ViewModelLinesFromModelAsIs::new(
     visible_model_line_numbers.push(line_number)
     hidden_model_lines.push(false)
   }
-  { source, visible_model_line_numbers, hidden_model_lines }
+  {
+    source,
+    visible_model_line_numbers,
+    hidden_model_lines,
+    injected_text_by_model_line: bucket_injected_text(
+      source.tokenized.snapshot,
+      injected_text,
+    ),
+  }
 }
 
 ///|
 pub fn ViewModelLinesFromModelAsIs::with_folding_model(
   source : FrameSource,
   folding_model : FoldingModel,
+) -> ViewModelLinesFromModelAsIs {
+  ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(
+    source,
+    folding_model,
+    [],
+  )
+}
+
+///|
+pub fn ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(
+  source : FrameSource,
+  folding_model : FoldingModel,
+  injected_text : Array[InjectedText],
 ) -> ViewModelLinesFromModelAsIs {
   let line_count = source.tokenized.snapshot.line_count()
   let visible_model_line_numbers : Array[Int] = []
@@ -158,7 +188,15 @@ pub fn ViewModelLinesFromModelAsIs::with_folding_model(
       visible_model_line_numbers.push(line_number)
     }
   }
-  { source, visible_model_line_numbers, hidden_model_lines }
+  {
+    source,
+    visible_model_line_numbers,
+    hidden_model_lines,
+    injected_text_by_model_line: bucket_injected_text(
+      source.tokenized.snapshot,
+      injected_text,
+    ),
+  }
 }
 
 ///|
@@ -201,6 +239,19 @@ pub fn ViewModelLinesFromModelAsIs::get_view_line_content(
   line_number : Int,
 ) -> String {
   self.get_model_line_content(self.model_line_number_of_view_line(line_number))
+}
+
+///|
+pub fn ViewModelLinesFromModelAsIs::projected_text_line(
+  self : ViewModelLinesFromModelAsIs,
+  model_line_number : Int,
+) -> ProjectedTextLine {
+  let line_text = self.get_model_line_content(model_line_number)
+  match self.injected_text_by_model_line.get(model_line_number - 1) {
+    Some(injected_text) =>
+      ProjectedTextLine::from_injected_text(line_text, injected_text)
+    None => ProjectedTextLine::identity(line_text)
+  }
 }
 
 ///|
@@ -259,6 +310,8 @@ pub fn ViewModelLinesFromModelAsIs::render_model_line(
     line_number: line_index + 1,
     offset: line_start,
     text: doc.line_text(line_index),
+    model_columns: identity_model_columns(line_end - line_start),
+    injected_text_indices: identity_injected_text_indices(line_end - line_start),
     spans,
   }
 }
@@ -289,6 +342,53 @@ fn ViewModelLinesFromModelAsIs::clamped_model_line_index(
   model_line_number : Int,
 ) -> Int {
   @core.clamp_int(model_line_number - 1, 0, self.model_line_count() - 1)
+}
+
+///|
+fn bucket_injected_text(
+  snapshot : @core.DocumentSnapshot,
+  injected_text : Array[InjectedText],
+) -> Array[Array[InjectedText]] {
+  let buckets : Array[Array[InjectedText]] = []
+  for _ in 0..<snapshot.line_count() {
+    buckets.push([])
+  }
+  for item in injected_text {
+    let line = @core.clamp_int(item.position.line, 0, snapshot.line_count() - 1)
+    let line_text = snapshot.line_text(line)
+    let column = @core.clamp_int(item.position.column, 0, line_text.length())
+    if item.text.length() > 0 {
+      buckets[line].push({ ..item, position: { line, column } })
+    }
+  }
+  for bucket in buckets {
+    bucket.sort_by((left, right) => {
+      if left.position.column != right.position.column {
+        left.position.column - right.position.column
+      } else {
+        left.source_index - right.source_index
+      }
+    })
+  }
+  buckets
+}
+
+///|
+fn identity_model_columns(line_length : Int) -> Array[Int] {
+  let columns : Array[Int] = []
+  for column in 0..<=line_length {
+    columns.push(column)
+  }
+  columns
+}
+
+///|
+fn identity_injected_text_indices(line_length : Int) -> Array[Int] {
+  let indices : Array[Int] = []
+  for _ in 0..<line_length {
+    indices.push(-1)
+  }
+  indices
 }
 
 ///|
@@ -397,6 +497,24 @@ pub fn ViewModel::with_options(
 }
 
 ///|
+pub fn ViewModel::with_options_and_inlay_hints(
+  source : FrameSource,
+  options : ViewModelOptions,
+  inlay_hints : Array[@language.InlayHint],
+) -> ViewModel {
+  let injected_text = injected_text_from_inlay_hints(inlay_hints)
+  let as_is = ViewModelLinesFromModelAsIs::with_injected_text(
+    source, injected_text,
+  )
+  ViewModel::from_lines(
+    source,
+    options,
+    as_is,
+    force_projected=injected_text.length() > 0,
+  )
+}
+
+///|
 pub fn ViewModel::with_options_and_folding(
   source : FrameSource,
   options : ViewModelOptions,
@@ -404,6 +522,20 @@ pub fn ViewModel::with_options_and_folding(
 ) -> ViewModel {
   let as_is = ViewModelLinesFromModelAsIs::with_folding_model(
     source, folding_model,
+  )
+  ViewModel::from_lines(source, options, as_is, force_projected=true)
+}
+
+///|
+pub fn ViewModel::with_options_folding_and_inlay_hints(
+  source : FrameSource,
+  options : ViewModelOptions,
+  folding_model : FoldingModel,
+  inlay_hints : Array[@language.InlayHint],
+) -> ViewModel {
+  let injected_text = injected_text_from_inlay_hints(inlay_hints)
+  let as_is = ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(
+    source, folding_model, injected_text,
   )
   ViewModel::from_lines(source, options, as_is, force_projected=true)
 }

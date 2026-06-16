@@ -416,5 +416,6 @@ fn span_anchor_for_target(
     return None
   }
   let span = line.spans[target.span_index]
-  Some((line.offset + span.start, line.offset + span.end, span))
+  let line_start = line.model_line_start_offset()
+  Some((line_start + span.source_start, line_start + span.source_end, span))
 }

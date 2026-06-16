@@ -11,6 +11,9 @@ pub(all) struct FrameViewport {
 pub(all) struct RenderSpan {
   start : Int
   end : Int
+  source_start : Int
+  source_end : Int
+  injected_text_index : Int
   class_name : String
 } derive(Debug)
 
@@ -19,6 +22,8 @@ pub(all) struct RenderLine {
   line_number : Int
   offset : Int
   text : String
+  model_columns : Array[Int]
+  injected_text_indices : Array[Int]
   spans : Array[RenderSpan]
 } derive(Debug)
 
@@ -67,6 +72,61 @@ pub fn RenderLine::span_text(self : RenderLine, span : RenderSpan) -> String {
 }
 
 ///|
+pub fn RenderLine::model_column_at_column(
+  self : RenderLine,
+  column : Int,
+) -> Int {
+  let column = @core.clamp_int(column, 0, self.text.length())
+  match self.model_columns.get(column) {
+    Some(model_column) => model_column
+    None => column
+  }
+}
+
+///|
+pub fn RenderLine::source_offset_at_column(
+  self : RenderLine,
+  column : Int,
+) -> Int {
+  self.model_line_start_offset() + self.model_column_at_column(column)
+}
+
+///|
+pub fn RenderLine::model_line_start_offset(self : RenderLine) -> Int {
+  self.offset - self.model_column_at_column(0)
+}
+
+///|
+pub fn RenderLine::injected_text_index_at_column(
+  self : RenderLine,
+  column : Int,
+) -> Int {
+  let column = @core.clamp_int(column, 0, self.text.length())
+  match self.injected_text_indices.get(column) {
+    Some(index) => index
+    None => -1
+  }
+}
+
+///|
+pub fn RenderLine::view_column_at_source_offset(
+  self : RenderLine,
+  offset : Int,
+) -> Int {
+  let model_column = @core.clamp_int(
+    offset - self.model_line_start_offset(),
+    0,
+    self.model_column_at_column(self.text.length()),
+  )
+  for column in 0..<=self.text.length() {
+    if self.model_column_at_column(column) >= model_column {
+      return column
+    }
+  }
+  self.text.length()
+}
+
+///|
 fn spans_for_line(
   line_range : @core.Range,
   tokens : Array[@syntax.Token],
@@ -82,6 +142,9 @@ fn spans_for_line(
       spans.push({
         start: cursor - line_range.start,
         end: start - line_range.start,
+        source_start: cursor - line_range.start,
+        source_end: start - line_range.start,
+        injected_text_index: -1,
         class_name: @syntax.Plain.css_class(),
       })
     }
@@ -94,6 +157,9 @@ fn spans_for_line(
     spans.push({
       start: start - line_range.start,
       end: end - line_range.start,
+      source_start: start - line_range.start,
+      source_end: end - line_range.start,
+      injected_text_index: -1,
       class_name,
     })
     cursor = end
@@ -102,6 +168,9 @@ fn spans_for_line(
     spans.push({
       start: cursor - line_range.start,
       end: line_range.end - line_range.start,
+      source_start: cursor - line_range.start,
+      source_end: line_range.end - line_range.start,
+      injected_text_index: -1,
       class_name: @syntax.Plain.css_class(),
     })
   }
@@ -168,6 +237,9 @@ fn slice_span(
   {
     start: span.start + (absolute_start - span_start),
     end: span.start + (absolute_end - span_start),
+    source_start: absolute_start - span_start + span.source_start,
+    source_end: absolute_end - span_start + span.source_start,
+    injected_text_index: span.injected_text_index,
     class_name: span.class_name + extra_class,
   }
 }

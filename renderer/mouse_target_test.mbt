@@ -39,6 +39,26 @@ fn projected_hit_test_frame() -> @view_model.RenderFrame {
 }
 
 ///|
+fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
+  let doc = @core.DocumentSnapshot("let x = 1")
+  let tokenized = @view_model.TokenizedDocument::build(
+    doc,
+    @syntax.highlight(doc),
+  )
+  let source = @view_model.FrameSource(
+    tokenized,
+    @decorations.DecorationSet::empty(),
+    @language.ProviderResult::empty(),
+  )
+  let view_model = @view_model.ViewModel::with_options_and_inlay_hints(
+    source,
+    @view_model.ViewModelOptions::no_wrap(),
+    [InlayHint(Position(0, 5), ": Int", kind=TypeHint)],
+  )
+  view_model.render_frame({ start_line: 0, end_line: view_model.line_count() })
+}
+
+///|
 fn test_metrics(
   scroll_top? : Double = 0.0,
   view_zones? : Array[@view_layout.ViewZone] = [],
@@ -76,6 +96,26 @@ test "hit test maps wrapped view line coordinates back to model offsets" {
 }
 
 ///|
+test "hit test reports injected text hits without shifting source offsets" {
+  let frame = inlay_hint_hit_test_frame()
+  assert_eq(frame.lines[0].text, "let x: Int = 1")
+  let target = @renderer.hit_test(frame, test_metrics(), 50.0 + 8.0 * 6.0, 4.0)
+  assert_true(target.kind == ContentText)
+  assert_eq(target.column, 6)
+  assert_eq(target.offset, 5)
+  assert_eq(target.injected_text_index, 0)
+  let source_after_hint = @renderer.hit_test(
+    frame,
+    test_metrics(),
+    50.0 + 8.0 * 11.0,
+    4.0,
+  )
+  assert_true(source_after_hint.kind == ContentText)
+  assert_eq(source_after_hint.offset, 6)
+  assert_eq(source_after_hint.injected_text_index, -1)
+}
+
+///|
 test "hit test resolves gutter, text, and empty content targets" {
   let frame = hit_test_frame()
   // Inside the gutter band of the first line.
@@ -88,6 +128,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  column: 0,
       #|  offset: 0,
       #|  span_index: -1,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -101,6 +142,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  column: 3,
       #|  offset: 3,
       #|  span_index: 2,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -114,6 +156,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  column: 30,
       #|  offset: 9,
       #|  span_index: -1,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -132,6 +175,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  column: 2,
       #|  offset: 12,
       #|  span_index: 1,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -145,6 +189,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  column: 0,
       #|  offset: -1,
       #|  span_index: -1,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -158,6 +203,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  column: 0,
       #|  offset: -1,
       #|  span_index: -1,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -177,6 +223,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  column: 0,
       #|  offset: -1,
       #|  span_index: -1,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -190,6 +237,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  column: 2,
       #|  offset: 12,
       #|  span_index: 1,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -203,6 +251,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  column: 3,
       #|  offset: 3,
       #|  span_index: 2,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -221,6 +270,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|  column: 2,
       #|  offset: 24,
       #|  span_index: -1,
+      #|  injected_text_index: -1,
       #|}
     ),
   )
@@ -235,6 +285,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|  column: 0,
       #|  offset: -1,
       #|  span_index: -1,
+      #|  injected_text_index: -1,
       #|}
     ),
   )

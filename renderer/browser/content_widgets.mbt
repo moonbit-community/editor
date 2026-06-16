@@ -367,9 +367,10 @@ fn line_col_for_offset(
   offset : Int,
 ) -> (Int, Int)? {
   for line in frame.lines {
-    let end = line.offset + line.text.length()
-    if offset >= line.offset && offset <= end {
-      return Some((line.line_number, offset - line.offset))
+    let start = line.source_offset_at_column(0)
+    let end = line.source_offset_at_column(line.text.length())
+    if offset >= start && offset <= end {
+      return Some((line.line_number, line.view_column_at_source_offset(offset)))
     }
   }
   None

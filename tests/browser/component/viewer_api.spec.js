@@ -21,6 +21,14 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(Number(await wrappedHoverLine.getAttribute('data-line'))).toBeGreaterThan(
       report.metrics.modelLines,
     );
+    const inlayHint = page.locator('.view-line .inlay-hint', { hasText: ': T' });
+    await expect(inlayHint).toHaveCount(1, { timeout: 10_000 });
+    await expect(inlayHint).toHaveClass(/inlay-hint-type/);
+    await inlayHint.hover();
+    await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
+      'component inlay hint',
+      { timeout: 3_000 },
+    );
     await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(1, {
       timeout: 10_000,
     });
@@ -28,10 +36,12 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     await expect(foldMarker).toHaveAttribute('data-folded', 'false', { timeout: 10_000 });
     await foldMarker.click();
     await expect(foldMarker).toHaveAttribute('data-folded', 'true');
+    await expect(inlayHint).toHaveCount(1);
     await expect(page.locator('.view-line').filter({ hasText: 'keeps' })).toHaveCount(0);
     await expect(page.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(0);
     await foldMarker.click();
     await expect(foldMarker).toHaveAttribute('data-folded', 'false');
+    await expect(inlayHint).toHaveCount(1);
     await expect(wrappedHoverLine).toHaveCount(1);
     await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(1);
     const firstLineTop = async () =>

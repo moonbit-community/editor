@@ -96,15 +96,21 @@ fn Viewer::build_view_model(
   source : @view_model.FrameSource,
 ) -> @view_model.ViewModel {
   let options = self.options.view_model_options(self.soft_wrap_column)
-  let _inlay_hint_count = self.inlay_hints.length()
   if self.folded_ranges.length() > 0 {
-    @view_model.ViewModel::with_options_and_folding(
+    @view_model.ViewModel::with_options_folding_and_inlay_hints(
       source,
       options,
       @view_model.FoldingModel::from_folded_ranges(
         self.folded_ranges,
         source.tokenized.snapshot.line_count(),
       ),
+      self.inlay_hints,
+    )
+  } else if self.inlay_hints.length() > 0 {
+    @view_model.ViewModel::with_options_and_inlay_hints(
+      source,
+      options,
+      self.inlay_hints,
     )
   } else {
     @view_model.ViewModel::with_options(source, options)

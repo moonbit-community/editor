@@ -381,6 +381,7 @@ pub fn ViewerServices::new(
   let markers = MarkerService::new()
   let hover_participants = HoverParticipantRegistry::new()
   hover_participants.register(MarkerHoverParticipant::new())
+  hover_participants.register(InlayHintHoverParticipant::new())
   hover_participants.register(MarkdownHoverParticipant::new())
   {
     language_features: LanguageFeaturesService::new(log_service~),

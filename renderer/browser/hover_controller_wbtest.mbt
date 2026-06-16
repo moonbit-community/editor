@@ -49,7 +49,9 @@ test "hover scheduling restarts timers only for new anchors" {
   assert_eq(moved.token, 2)
   // The half-delay timer requests the provider only for the live token.
   let (request, _) = moved.fire(2)
-  assert_true(request is HoverRequest({ start: 10, end: 14, offset: 12 }, 2))
+  assert_true(
+    request is HoverRequest({ start: 10, end: 14, offset: 12, .. }, 2),
+  )
   let (stale, _) = moved.fire(1)
   assert_true(stale is HoverNoEffect)
 }

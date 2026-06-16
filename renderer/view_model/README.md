@@ -20,6 +20,10 @@ model-line source data, and viewport-scoped render frames.
 - Own readonly folding normalization through `FoldingModel` and `HiddenRange`
   data; projected view lines consume hidden ranges so folded model lines produce
   no view lines while coordinates remain model-owned.
+- Own readonly injected text through `InjectedText` and `ProjectedTextLine`.
+  Inlay hints are projected before line breaking so hint width participates in
+  wrapping, while render-line source mappings keep hit testing and decorations
+  model-offset based.
 - Own DOM-free conversion from `RenderLine` to
   `@view_line_renderer.ViewLineRenderingData` and `RenderLineInput`.
 

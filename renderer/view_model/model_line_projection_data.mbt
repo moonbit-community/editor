@@ -13,6 +13,7 @@ pub(all) struct ModelLineProjectionSegment {
 pub(all) struct ModelLineProjectionData {
   model_line_number : Int
   line_length : Int
+  projected_line : ProjectedTextLine
   segments : Array[ModelLineProjectionSegment]
 } derive(Eq, Debug)
 
@@ -20,9 +21,10 @@ pub(all) struct ModelLineProjectionData {
 pub fn ModelLineProjectionData::ModelLineProjectionData(
   model_line_number : Int,
   line_length : Int,
+  projected_line : ProjectedTextLine,
   segments : Array[ModelLineProjectionSegment],
 ) -> ModelLineProjectionData {
-  { model_line_number, line_length, segments }
+  { model_line_number, line_length, projected_line, segments }
 }
 
 ///|
@@ -47,6 +49,18 @@ pub fn ModelLineProjectionData::view_line_index_for_model_column(
   column : Int,
 ) -> Int {
   let column = @core.clamp_int(column, 0, self.line_length)
+  let projected_column = self.projected_line.model_column_to_projected_column(
+    column,
+  )
+  self.view_line_index_for_projected_column(projected_column)
+}
+
+///|
+pub fn ModelLineProjectionData::view_line_index_for_projected_column(
+  self : ModelLineProjectionData,
+  column : Int,
+) -> Int {
+  let column = @core.clamp_int(column, 0, self.projected_line.text.length())
   for index in 0..<self.segments.length() {
     let segment = self.segments[index]
     if column < segment.end_offset || index + 1 == self.segments.length() {

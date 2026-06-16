@@ -9,6 +9,7 @@ priv struct HoverAnchor {
   start : Int
   end : Int
   offset : Int
+  injected_text_index : Int
 } derive(Eq)
 
 ///|
@@ -88,7 +89,12 @@ fn HoverController::on_event(
       match ctx.frame {
         Some(frame) =>
           match span_anchor_for_target(frame, target) {
-            Some((start, end, _)) => self.schedule(start, end)
+            Some((start, end, span)) =>
+              self.schedule(
+                start,
+                end,
+                injected_text_index=span.injected_text_index,
+              )
             None => (HoverNoEffect, self.cleared())
           }
         None => (HoverNoEffect, self)
@@ -104,9 +110,13 @@ fn HoverController::schedule(
   self : HoverController,
   start : Int,
   end : Int,
+  injected_text_index? : Int = -1,
 ) -> (HoverEffect, HoverController) {
   let same = match self.anchor {
-    Some(anchor) => anchor.start == start && anchor.end == end
+    Some(anchor) =>
+      anchor.start == start &&
+      anchor.end == end &&
+      anchor.injected_text_index == injected_text_index
     None => false
   }
   if same {
@@ -117,7 +127,12 @@ fn HoverController::schedule(
       HoverSchedule(token),
       {
         token,
-        anchor: Some({ start, end, offset: (start + end) / 2 }),
+        anchor: Some({
+          start,
+          end,
+          offset: (start + end) / 2,
+          injected_text_index,
+        }),
         view: None,
         pending_view: None,
         answered: false,

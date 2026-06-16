@@ -108,6 +108,28 @@ fn test_folded_view_model(
 }
 
 ///|
+fn test_inlay_view_model(
+  text : String,
+  options : @view_model.ViewModelOptions,
+  hints : Array[@language.InlayHint],
+) -> @view_model.ViewModel {
+  let doc = @core.DocumentSnapshot(text)
+  let tokenized = @view_model.TokenizedDocument::build(
+    doc,
+    @syntax.highlight(doc),
+  )
+  @view_model.ViewModel::with_options_and_inlay_hints(
+    FrameSource(
+      tokenized,
+      @decorations.DecorationSet::empty(),
+      @language.ProviderResult::empty(),
+    ),
+    options,
+    hints,
+  )
+}
+
+///|
 test "projected view lines cover one two and many wrapped segments" {
   let one = test_view_model("abc", @view_model.ViewModelOptions::soft_wrap(5))
   assert_eq(one.line_count(), 1)
@@ -236,6 +258,70 @@ test "projected long moonbit lines retain source text across segments" {
     joined = joined + view_model.lines().get_view_line_content(line_number)
   }
   assert_eq(joined, text)
+}
+
+///|
+test "inlay hints render as injected text without changing model offsets" {
+  let view_model = test_inlay_view_model(
+    "let x = 1",
+    @view_model.ViewModelOptions::no_wrap(),
+    [InlayHint(Position(0, 5), ": Int", kind=TypeHint)],
+  )
+  assert_eq(view_model.line_count(), 1)
+  let line = view_model.lines().render_line(1)
+  assert_eq(line.text, "let x: Int = 1")
+  assert_eq(line.source_offset_at_column(0), 0)
+  assert_eq(line.source_offset_at_column(5), 5)
+  assert_eq(line.source_offset_at_column(10), 5)
+  assert_eq(line.source_offset_at_column(line.text.length()), 9)
+  assert_eq(line.injected_text_index_at_column(5), 0)
+  assert_eq(line.injected_text_index_at_column(10), -1)
+  let data = view_model.lines().view_line_rendering_data(1)
+  assert_eq(data.content, "let x: Int = 1")
+  assert_true(data.tokens.any(part => part.class_name.contains("inlay-hint")))
+}
+
+///|
+test "injected text participates in wrapping and coordinate conversion" {
+  let view_model = test_inlay_view_model(
+    "abcdef",
+    @view_model.ViewModelOptions::soft_wrap(5),
+    [InlayHint(Position(0, 3), "XYZ", kind=ParameterHint)],
+  )
+  assert_eq(view_model.line_count(), 2)
+  assert_eq(view_model.lines().get_view_line_content(1), "abcXY")
+  assert_eq(view_model.lines().get_view_line_content(2), "Zdef")
+  let converter = view_model.coordinates_converter()
+  let source_position = converter.model_position_to_view_position(
+    Position(0, 3),
+  )
+  assert_eq(source_position.line, 0)
+  assert_eq(source_position.column, 3)
+  let hint_position = converter.view_position_to_model_position(Position(0, 4))
+  assert_eq(hint_position.line, 0)
+  assert_eq(hint_position.column, 3)
+  let wrapped_source = converter.view_position_to_model_position(Position(1, 1))
+  assert_eq(wrapped_source.line, 0)
+  assert_eq(wrapped_source.column, 3)
+}
+
+///|
+test "injected text can sit at line boundaries" {
+  let view_model = test_inlay_view_model(
+    "ab",
+    @view_model.ViewModelOptions::no_wrap(),
+    [
+      InlayHint(Position(0, 0), "[", kind=ParameterHint),
+      InlayHint(Position(0, 2), "]", kind=TypeHint),
+    ],
+  )
+  let line = view_model.lines().render_line(1)
+  assert_eq(line.text, "[ab]")
+  assert_eq(line.source_offset_at_column(0), 0)
+  assert_eq(line.source_offset_at_column(1), 0)
+  assert_eq(line.source_offset_at_column(3), 2)
+  assert_eq(line.injected_text_index_at_column(0), 0)
+  assert_eq(line.injected_text_index_at_column(3), 1)
 }
 
 ///|

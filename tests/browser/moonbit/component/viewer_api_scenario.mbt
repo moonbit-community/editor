@@ -103,6 +103,18 @@ impl @language.FoldingRangeProvider for ComponentHoverProvider with fn folding_r
 }
 
 ///|
+impl @language.InlayHintsProvider for ComponentHoverProvider with fn inlay_hints(
+  _self,
+  _document,
+) {
+  [
+    InlayHint(Position(1, 23), " : T", kind=TypeHint, tooltip=[
+      PlainText("component inlay hint"),
+    ]),
+  ]
+}
+
+///|
 fn run_viewer_api_test() -> Unit {
   @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
   let ctx = @support.BrowserTestContext::new("viewer_api")
@@ -120,6 +132,7 @@ fn run_viewer_api_test() -> Unit {
       services.language_features.register_hover_provider(provider)
       services.language_features.register_diagnostics_provider(provider)
       services.language_features.register_folding_range_provider(provider)
+      services.language_features.register_inlay_hints_provider(provider)
       let viewer = @browser.Viewer(
         source,
         on_notification=notification => {

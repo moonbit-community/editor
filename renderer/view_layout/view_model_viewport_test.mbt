@@ -27,4 +27,31 @@ test "view model produces viewport data from layout window" {
       #|[0, 18]
     ),
   )
+  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=3)
+  layout.set_view_zones([{ anchor_line: 1, height_px: 36 }]) |> ignore
+  let displaced = @view_layout.ViewportData::from_view_model(
+    view_model,
+    { start: 1, end: 3 },
+    line_height=18,
+    layout~,
+  )
+  debug_inspect(
+    displaced.relative_vertical_offset,
+    content=(
+      #|[0, 18]
+    ),
+  )
+  debug_inspect(
+    displaced.view_zones,
+    content=(
+      #|[
+      #|  {
+      #|    zone_index: 0,
+      #|    anchor_line: 1,
+      #|    height_px: 36,
+      #|    relative_vertical_offset: -36,
+      #|  },
+      #|]
+    ),
+  )
 }

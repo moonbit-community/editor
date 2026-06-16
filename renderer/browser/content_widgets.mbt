@@ -6,8 +6,8 @@ priv enum ContentWidgetPlacement {
 
 ///|
 priv struct ContentWidgetAnchor {
-  line_number : Int
   column : Int
+  top : Int
 }
 
 ///|
@@ -18,7 +18,6 @@ priv struct ContentWidget {
   preferred_placement : ContentWidgetPlacement
   allow_overflow : Bool
   shift_left : Double
-  window_start_line : Int
 }
 
 ///|
@@ -94,11 +93,16 @@ fn Viewer::render_hover_widget(
   let content_widget : ContentWidget = {
     id: "hover",
     node: widget.wrapper,
-    anchor: { line_number, column },
+    anchor: {
+      column,
+      top: self.layout.relative_vertical_offset_for_line(
+        frame_window(frame),
+        line_number - 1,
+      ),
+    },
     preferred_placement,
     allow_overflow: false,
     shift_left,
-    window_start_line: frame.viewport.start_line,
   }
   widget.wrapper.set_attribute("class", class_name)
   widget.hover.set_attribute("class", "monaco-hover fade-in")
@@ -353,10 +357,9 @@ fn Island::mount_content_widget(self : Island, widget : ContentWidget) -> Unit {
 
 ///|
 fn ContentWidget::style(self : ContentWidget) -> String {
-  let window_line = self.anchor.line_number - 1 - self.window_start_line
   let top = match self.preferred_placement {
-    ContentWidgetBelow => (window_line + 1) * editor_line_height
-    ContentWidgetAbove => window_line * editor_line_height
+    ContentWidgetBelow => self.anchor.top + editor_line_height
+    ContentWidgetAbove => self.anchor.top
   }
   let mut style = "top:" +
     top.to_string() +

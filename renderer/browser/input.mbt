@@ -461,7 +461,7 @@ fn Viewer::view_metrics(
     line_height: editor_line_height,
     char_width: self.measured_char_width(),
     gutter_width: self.gutter_width(frame),
-    view_zones: [],
+    view_zones: self.layout.view_zones(),
   }
 }
 

@@ -25,6 +25,7 @@ pub struct Viewer {
   priv mut folding_ranges : Array[@language.FoldingRange]
   priv mut folded_ranges : Array[@language.FoldingRange]
   priv mut inlay_hints : Array[@language.InlayHint]
+  priv mut view_zones : Array[BrowserViewZone]
   priv mut selection : @view_model.Selection?
   priv mut selection_dragging : Bool
   priv mut hover : HoverController
@@ -115,6 +116,7 @@ pub fn Viewer::Viewer(
     folding_ranges: [],
     folded_ranges: [],
     inlay_hints: [],
+    view_zones: [],
     selection: None,
     selection_dragging: false,
     hover: HoverController::empty(),
@@ -185,6 +187,8 @@ pub fn Viewer::open(self : Viewer, uri : @workspace.DocumentUri) -> Unit {
   self.folding_ranges = []
   self.folded_ranges = []
   self.inlay_hints = []
+  self.view_zones = []
+  self.layout.set_view_zones([]) |> ignore
   self.selection = None
   self.selection_dragging = false
   self.hover = HoverController::empty()

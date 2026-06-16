@@ -1,6 +1,6 @@
 # Monaco Role-Aligned Viewer Architecture
 
-Status: in progress.
+Status: implemented.
 Date: 2026-06-16
 
 Implementation note, 2026-06-16: the initial architecture alignment slices have
@@ -18,8 +18,7 @@ wrapped view-line rendering and line-number alignment. Follow-up Phase 7 slices
 cover wrapped hover, diagnostics, scroll positioning, direct hit-test coverage,
 and Monaco-style classifier-backed word breaks in the readonly no-injected-text
 path. Remaining Phase 7 deltas are tied to later features, especially wrapped
-indentation; later feature phases for view zones and accessibility follow-up
-remain pending.
+indentation; accessibility follow-up remains pending as a dedicated design area.
 
 Implementation note, 2026-06-16, Phase 8: folding now has language-level
 `FoldingRange`, `FoldingRangeKind`, and `FoldingRangeProvider` contracts; a
@@ -42,6 +41,16 @@ content through the hover participant pipeline. Browser component coverage now
 exercises hint rendering, hover, wrapping, folding, and selection/copy together.
 Phase 10 copy excludes injected hint labels through the model-backed selection
 range and visible source-span rich-copy path.
+
+Implementation note, 2026-06-16, Phase 11: view zones now displace readonly
+view lines through `renderer/view_layout.LinesLayout`, `ViewLayout`, and
+`ViewportData.view_zones`. `renderer/browser` exposes a minimal
+`ViewZoneChangeAccessor` with add/update/remove operations over DOM nodes,
+mounts them in `.view-zones`, and positions lines, line numbers, folding
+markers, selection overlays, hover content widgets, scrollbars, and hit testing
+from the zone-aware layout. Component browser coverage registers an internal
+fixture zone and exercises zone rendering, line alignment, hover after zones,
+and selection/copy across a zone.
 
 ## Goal
 
@@ -765,6 +774,10 @@ Exit criteria:
 - Existing hover, scrollbars, wrapping, folding, inlay hints, and selection keep
   working when zones are present.
 
+Implementation note, 2026-06-16: implemented by the common zone-aware
+`LinesLayout` and browser `ViewZoneChangeAccessor` described above. This phase
+does not add a peek UI; the test fixture uses a small readonly DOM zone.
+
 ## Phase 12: Accessibility Deferred Ledger
 
 Update `docs/references/monaco-layer-map.md` with the remaining accessibility
@@ -784,6 +797,10 @@ Exit criteria:
 - Accessibility is not hidden under generic "future work."
 - The final docs explicitly say that accessibility parity remains a separate
   high-priority design area.
+
+Implementation note, 2026-06-16: the Monaco layer map records the accessibility
+model as skipped for this plan with high UX impact and a dedicated follow-up
+requirement.
 
 ## Phase 13: Documentation and Harness Updates
 

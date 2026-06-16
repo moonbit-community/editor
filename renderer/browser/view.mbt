@@ -205,6 +205,8 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
       island.render_lines(
         frame,
         self.view_model,
+        self.layout,
+        self.view_zones,
         self.controller_decorations(),
         self.selection_range(),
         self.folding_ranges,

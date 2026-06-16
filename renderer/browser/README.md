@@ -117,6 +117,12 @@ workbench) wrap the calls in their command type.
   browser exposes clipboard data. Hover widgets delegate non-interactive
   mousedown back to the editor so an overlapping hover does not block source
   selection.
+- Own readonly view zones: `view_zones.mbt` exposes `change_view_zones` with a
+  minimal `ViewZoneChangeAccessor` for add/update/remove by id, anchor line,
+  height, and DOM node. The common `ViewLayout` computes displacement;
+  `.view-zones` mounts the DOM nodes, while line nodes, line numbers, folding
+  markers, hover widgets, selection overlays, scrollbars, and hit testing use
+  the same zone-aware offsets.
 - Own scroll input through `ScrollableElementDom`: the editor and hover use
   the same Monaco wrapper, custom scrollbar nodes, wheel delta-mode
   normalization, thumb drag, centered track jump (`scrollByPage: false`), active
@@ -180,7 +186,8 @@ focuses on hover until those features can be rebuilt without their bugs.
   `services_wbtest.mbt`.
 - Browser component coverage verifies drag selection, copy shortcut
   observability, token-class rich HTML, wrapped-line selection, hover overlap,
-  folding interaction, and inlay-hint exclusion from copied source.
+  folding interaction, readonly view-zone rendering/alignment, selection across
+  a zone, hover after zones, and inlay-hint exclusion from copied source.
 - The embedding boundary is proven by `examples/embedded_viewer` and
   `tests/browser/embed.spec.js` (no websocket opened).
 - Run `just check` for the repository-level type check.

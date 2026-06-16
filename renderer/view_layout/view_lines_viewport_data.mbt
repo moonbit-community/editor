@@ -8,6 +8,7 @@ pub(all) struct ViewportData {
   big_numbers_delta : Int
   lines : Array[@view_line_renderer.ViewLineRenderingData]
   line_decorations : Array[Array[@view_line_renderer.LineDecoration]]
+  view_zones : Array[ViewZoneViewportData]
 } derive(Eq, Debug)
 
 ///|
@@ -49,6 +50,7 @@ pub fn ViewportData::from_render_frame(
     big_numbers_delta: 0,
     lines,
     line_decorations,
+    view_zones: [],
   }
 }
 
@@ -58,6 +60,7 @@ pub fn ViewportData::from_view_model(
   window : LineWindow,
   line_height~ : Int,
   decorations? : Array[@decorations.Decoration] = [],
+  layout? : ViewLayout,
 ) -> ViewportData {
   let start_line = @core.clamp_int(window.start, 0, view_model.line_count() - 1)
   let end_line = @core.clamp_int(
@@ -69,6 +72,7 @@ pub fn ViewportData::from_view_model(
   let line_decorations : Array[Array[@view_line_renderer.LineDecoration]] = []
   let relative_vertical_offset : Array[Int] = []
   let view_model_lines = view_model.lines()
+  let normalized_window : LineWindow = { start: start_line, end: end_line }
   for index in start_line..<end_line {
     let render_line = view_model_lines.render_line(index + 1)
     lines.push(
@@ -77,7 +81,13 @@ pub fn ViewportData::from_view_model(
     line_decorations.push(
       @view_model.line_decorations_for_line(render_line, decorations),
     )
-    relative_vertical_offset.push((index - start_line) * line_height)
+    relative_vertical_offset.push(
+      match layout {
+        Some(layout) =>
+          layout.relative_vertical_offset_for_line(normalized_window, index)
+        None => (index - start_line) * line_height
+      },
+    )
   }
   let start_line_number = start_line + 1
   let end_line_number = end_line
@@ -99,6 +109,10 @@ pub fn ViewportData::from_view_model(
     big_numbers_delta: 0,
     lines,
     line_decorations,
+    view_zones: match layout {
+      Some(layout) => layout.view_zone_viewport_data(normalized_window)
+      None => []
+    },
   }
 }
 

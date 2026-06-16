@@ -26,12 +26,12 @@ fn write_line_node(
   line : @view_model.RenderLine,
   decorations : Array[@decorations.Decoration],
   input : @view_line_renderer.RenderLineInput,
-  window_index : Int,
+  top : Int,
   rewrite_html~ : Bool,
 ) -> Unit {
   node.set_attribute("class", @renderer.render_line_class(line, decorations))
   node.set_attribute("data-line", line.line_number.to_string())
-  node.set_attribute("style", line_node_style(window_index))
+  node.set_attribute("style", line_node_style(top))
   if rewrite_html {
     node.set_inner_html(@view_line_renderer.render_view_line2(input).html)
   }
@@ -41,18 +41,18 @@ fn write_line_node(
 fn write_line_number_node(
   gutter : @rdom.Element,
   line : @view_model.RenderLine,
-  window_index : Int,
+  top : Int,
 ) -> Unit {
   gutter.set_attribute("class", "line-number")
   gutter.set_attribute("data-line", line.line_number.to_string())
-  gutter.set_attribute("style", line_node_style(window_index))
+  gutter.set_attribute("style", line_node_style(top))
   gutter.set_inner_html(line.line_number.to_string())
 }
 
 ///|
-fn line_node_style(window_index : Int) -> String {
+fn line_node_style(top : Int) -> String {
   "top:" +
-  (window_index * editor_line_height).to_string() +
+  top.to_string() +
   "px;height:" +
   editor_line_height.to_string() +
   "px"

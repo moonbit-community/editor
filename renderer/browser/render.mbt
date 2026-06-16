@@ -151,6 +151,8 @@ fn Viewer::apply_view_model_layout(
   snapshot : @core.DocumentSnapshot,
 ) -> Unit {
   self.layout.set_line_count(view_model.line_count()) |> ignore
+  self.normalize_browser_view_zones()
+  self.sync_view_zones_with_layout()
   self.max_line_length = if self.options.soft_wrap && self.soft_wrap_column > 0 {
     max_view_line_length(view_model.lines())
   } else {

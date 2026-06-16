@@ -1,7 +1,164 @@
 ///|
+priv struct BrowserViewZone {
+  id : String
+  anchor_line : Int
+  height_px : Int
+  node : @rdom.Element
+}
+
+///|
+pub(all) struct ViewZoneChangeAccessor {
+  viewer : Viewer
+}
+
+///|
 fn create_view_zones_part(document : @rdom.Document) -> @rdom.Element {
   let view_zones = document.create_element("div")
   view_zones.set_attribute("class", "view-zones")
   view_zones.set_attribute("data-view-part", "view-zones")
   view_zones
+}
+
+///|
+pub fn Viewer::change_view_zones(
+  self : Viewer,
+  update : (ViewZoneChangeAccessor) -> Unit,
+) -> Unit {
+  update({ viewer: self })
+  self.normalize_browser_view_zones()
+  self.sync_view_zones_with_layout()
+  self.content_generation += 1
+  self.measure_requested = true
+  self.schedule_render()
+}
+
+///|
+pub fn ViewZoneChangeAccessor::add_zone(
+  self : ViewZoneChangeAccessor,
+  id : String,
+  anchor_line : Int,
+  height_px : Int,
+  node : @rdom.Element,
+) -> Unit {
+  self.viewer.upsert_view_zone(id, anchor_line, height_px, node)
+}
+
+///|
+pub fn ViewZoneChangeAccessor::update_zone(
+  self : ViewZoneChangeAccessor,
+  id : String,
+  anchor_line : Int,
+  height_px : Int,
+  node : @rdom.Element,
+) -> Unit {
+  self.viewer.upsert_view_zone(id, anchor_line, height_px, node)
+}
+
+///|
+pub fn ViewZoneChangeAccessor::remove_zone(
+  self : ViewZoneChangeAccessor,
+  id : String,
+) -> Unit {
+  for index in 0..<self.viewer.view_zones.length() {
+    if self.viewer.view_zones[index].id == id {
+      self.viewer.view_zones.remove(index) |> ignore
+      return
+    }
+  }
+}
+
+///|
+fn Viewer::upsert_view_zone(
+  self : Viewer,
+  id : String,
+  anchor_line : Int,
+  height_px : Int,
+  node : @rdom.Element,
+) -> Unit {
+  let zone : BrowserViewZone = { id, anchor_line, height_px, node }
+  for index in 0..<self.view_zones.length() {
+    if self.view_zones[index].id == id {
+      self.view_zones[index] = zone
+      return
+    }
+  }
+  self.view_zones.push(zone)
+}
+
+///|
+fn Viewer::normalize_browser_view_zones(self : Viewer) -> Unit {
+  let normalized : Array[BrowserViewZone] = []
+  let line_count = self.layout.line_count()
+  for zone in self.view_zones {
+    let max_anchor = if line_count > 0 {
+      line_count
+    } else {
+      max_int(zone.anchor_line, 0)
+    }
+    normalized.push({
+      ..zone,
+      anchor_line: @core.clamp_int(zone.anchor_line, 0, max_anchor),
+      height_px: max_int(zone.height_px, 0),
+    })
+  }
+  normalized.sort_by(compare_browser_view_zones)
+  self.view_zones = normalized
+}
+
+///|
+fn compare_browser_view_zones(
+  left : BrowserViewZone,
+  right : BrowserViewZone,
+) -> Int {
+  let anchor = left.anchor_line - right.anchor_line
+  if anchor != 0 {
+    return anchor
+  }
+  let height = left.height_px - right.height_px
+  if height != 0 {
+    return height
+  }
+  if left.id < right.id {
+    -1
+  } else if left.id > right.id {
+    1
+  } else {
+    0
+  }
+}
+
+///|
+fn Viewer::sync_view_zones_with_layout(self : Viewer) -> Unit {
+  let zones : Array[@view_layout.ViewZone] = []
+  for zone in self.view_zones {
+    zones.push({ anchor_line: zone.anchor_line, height_px: zone.height_px })
+  }
+  self.apply_scroll_change(self.layout.set_view_zones(zones))
+}
+
+///|
+fn Island::render_view_zones(
+  self : Island,
+  zones : Array[BrowserViewZone],
+  viewport : @view_layout.ViewportData,
+) -> Unit {
+  self.view_zones.set_inner_html("")
+  for data in viewport.view_zones {
+    if data.zone_index < 0 || data.zone_index >= zones.length() {
+      continue
+    }
+    let zone = zones[data.zone_index]
+    zone.node.set_attribute("class", "view-zone")
+    zone.node.set_attribute("data-view-zone-id", zone.id)
+    zone.node.set_attribute(
+      "style",
+      view_zone_style(data.relative_vertical_offset, data.height_px),
+    )
+    self.view_zones.append_child(zone.node.as_node())
+  }
+}
+
+///|
+fn view_zone_style(top : Int, height : Int) -> String {
+  "top:" + top.to_string() + "px;height:" + height.to_string() + "px"
 }

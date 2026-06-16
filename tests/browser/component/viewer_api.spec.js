@@ -24,17 +24,26 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     const inlayHint = page.locator('.view-line .inlay-hint', { hasText: ': T' });
     await expect(inlayHint).toHaveCount(1, { timeout: 10_000 });
     await expect(inlayHint).toHaveClass(/inlay-hint-type/);
+    const componentZone = page.locator('.view-zone[data-view-zone-id="component-zone"]');
+    await expect(componentZone).toContainText('component view zone');
+    const braceLine = page.locator('.view-line').filter({ hasText: '{' });
+    await expect(braceLine).toHaveCount(1);
+    const zoneBox = await componentZone.boundingBox();
+    const braceBox = await braceLine.boundingBox();
+    expect(zoneBox).not.toBeNull();
+    expect(braceBox).not.toBeNull();
+    expect(Math.abs(Math.round(braceBox.y - (zoneBox.y + zoneBox.height)))).toBeLessThanOrEqual(1);
     await inlayHint.hover();
     await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
       'component inlay hint',
       { timeout: 3_000 },
     );
     const signatureStart = page.locator('.view-line').filter({ hasText: 'component_answe' });
-    const signatureEnd = page.locator('.view-line').filter({ hasText: 'r : T() -> Int' });
+    const bodyEndLine = page.locator('.view-line').filter({ hasText: 'er_name =' });
     await expect(signatureStart).toHaveCount(1);
-    await expect(signatureEnd).toHaveCount(1);
+    await expect(bodyEndLine).toHaveCount(1);
     const startBox = await signatureStart.boundingBox();
-    const endBox = await signatureEnd.boundingBox();
+    const endBox = await bodyEndLine.boundingBox();
     expect(startBox).not.toBeNull();
     expect(endBox).not.toBeNull();
     await page.mouse.move(startBox.x + 1, startBox.y + startBox.height / 2);
@@ -47,6 +56,7 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     await page.keyboard.press('ControlOrMeta+C');
     const copiedText = await page.evaluate(() => globalThis.__readonlyEditorCopiedText || '');
     expect(copiedText).toContain('component_answer() -> Int');
+    expect(copiedText).toContain('let really_l');
     expect(copiedText).not.toContain(': T');
     const copiedHtml = await page.evaluate(() => globalThis.__readonlyEditorCopiedHtml || '');
     expect(copiedHtml).toContain('tok-identifier');

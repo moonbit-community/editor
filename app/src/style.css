@@ -461,6 +461,14 @@ body {
   z-index: 3;
 }
 
+.view-zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
 .contentWidgets {
   z-index: 50;
 }

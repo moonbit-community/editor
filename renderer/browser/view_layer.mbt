@@ -8,6 +8,8 @@ fn Island::render_lines(
   self : Island,
   frame : @view_model.RenderFrame,
   view_model : @view_model.ViewModel?,
+  layout : @view_layout.ViewLayout,
+  browser_view_zones : Array[BrowserViewZone],
   decorations : Array[@decorations.Decoration],
   selection_range : @core.Range?,
   folding_ranges : Array[@language.FoldingRange],
@@ -23,6 +25,7 @@ fn Island::render_lines(
         frame_window(frame),
         line_height=editor_line_height,
         decorations~,
+        layout~,
       )
     None =>
       @view_layout.ViewportData::from_render_frame(
@@ -40,7 +43,8 @@ fn Island::render_lines(
     folded_ranges,
     on_toggle_fold~,
   )
-  self.render_selection_overlays(frame, selection_range)
+  self.render_selection_overlays(frame, viewport, selection_range)
+  self.render_view_zones(browser_view_zones, viewport)
   if generation != self.generation {
     while self.line_nodes.length() > viewport.lines.length() {
       match
@@ -77,13 +81,13 @@ fn Island::render_lines(
         frame.lines[index],
         decorations,
         input,
-        index,
+        viewport.relative_vertical_offset[index],
         rewrite_html~,
       )
       write_line_number_node(
         self.gutter_nodes[index],
         frame.lines[index],
-        index,
+        viewport.relative_vertical_offset[index],
       )
       self.render_inputs.push(input)
     }
@@ -103,10 +107,16 @@ fn Island::render_lines(
     if line_index >= previous.start && line_index < previous.end {
       // Retained line: only its window-relative top moves.
       let node = self.line_nodes[line_index - previous.start]
-      node.set_attribute("style", line_node_style(index))
+      node.set_attribute(
+        "style",
+        line_node_style(viewport.relative_vertical_offset[index]),
+      )
       next_lines.push(node)
       let gutter = self.gutter_nodes[line_index - previous.start]
-      gutter.set_attribute("style", line_node_style(index))
+      gutter.set_attribute(
+        "style",
+        line_node_style(viewport.relative_vertical_offset[index]),
+      )
       next_gutters.push(gutter)
       next_inputs.push(self.render_inputs[line_index - previous.start])
     } else {
@@ -117,13 +127,17 @@ fn Island::render_lines(
         frame.lines[index],
         decorations,
         input,
-        index,
+        viewport.relative_vertical_offset[index],
         rewrite_html=true,
       )
       self.view_lines.append_child(node.as_node())
       next_lines.push(node)
       let gutter = document.create_element("div")
-      write_line_number_node(gutter, frame.lines[index], index)
+      write_line_number_node(
+        gutter,
+        frame.lines[index],
+        viewport.relative_vertical_offset[index],
+      )
       self.line_numbers.append_child(gutter.as_node())
       next_gutters.push(gutter)
       next_inputs.push(input)
@@ -158,6 +172,7 @@ fn Island::render_lines(
 fn Island::render_selection_overlays(
   self : Island,
   frame : @view_model.RenderFrame,
+  viewport : @view_layout.ViewportData,
   selection_range : @core.Range?,
 ) -> Unit {
   self.view_overlays.set_inner_html("")
@@ -173,7 +188,7 @@ fn Island::render_selection_overlays(
       document,
       line,
       range,
-      index,
+      viewport.relative_vertical_offset[index],
     )
   }
 }
@@ -184,7 +199,7 @@ fn append_line_selection_segments(
   document : @rdom.Document,
   line : @view_model.RenderLine,
   range : @core.Range,
-  window_index : Int,
+  top : Int,
 ) -> Unit {
   let model_line_start = line.model_line_start_offset()
   for span in line.spans {
@@ -199,10 +214,7 @@ fn append_line_selection_segments(
       if start < end {
         let node = document.create_element("div")
         node.set_attribute("class", "selected-text")
-        node.set_attribute(
-          "style",
-          selection_segment_style(window_index, start, end),
-        )
+        node.set_attribute("style", selection_segment_style(top, start, end))
         parent.append_child(node.as_node())
       }
     }
@@ -211,12 +223,12 @@ fn append_line_selection_segments(
 
 ///|
 fn selection_segment_style(
-  window_index : Int,
+  top : Int,
   start_column : Int,
   end_column : Int,
 ) -> String {
   "top:" +
-  (window_index * editor_line_height).to_string() +
+  top.to_string() +
   "px;left:" +
   start_column.to_string() +
   "ch;width:" +
@@ -267,7 +279,10 @@ fn Island::render_folding_markers(
         marker.set_attribute("type", "button")
         marker.set_attribute("data-line", model_line_number.to_string())
         marker.set_attribute("data-folded", folded.to_string())
-        marker.set_attribute("style", line_node_style(index))
+        marker.set_attribute(
+          "style",
+          line_node_style(viewport.relative_vertical_offset[index]),
+        )
         marker.set_inner_html(
           if folded {
             "<span class=\"codicon codicon-chevron-right\" aria-hidden=\"true\"></span>"

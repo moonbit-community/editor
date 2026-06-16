@@ -55,6 +55,51 @@ pub fn ViewLayout::set_content_width(
 }
 
 ///|
+pub fn ViewLayout::set_view_zones(
+  self : ViewLayout,
+  view_zones : Array[ViewZone],
+) -> ScrollChange? {
+  self.lines.set_view_zones(view_zones)
+  self.sync_dimensions()
+}
+
+///|
+pub fn ViewLayout::view_zones(self : ViewLayout) -> Array[ViewZone] {
+  self.lines.view_zones()
+}
+
+///|
+pub fn ViewLayout::line_count(self : ViewLayout) -> Int {
+  self.lines.line_count()
+}
+
+///|
+pub fn ViewLayout::view_zone_vertical_offset(
+  self : ViewLayout,
+  index : Int,
+) -> Double {
+  self.lines.view_zone_vertical_offset(index)
+}
+
+///|
+pub fn ViewLayout::view_zone_viewport_data(
+  self : ViewLayout,
+  window : LineWindow,
+) -> Array[ViewZoneViewportData] {
+  self.lines.view_zone_viewport_data(window)
+}
+
+///|
+pub fn ViewLayout::relative_vertical_offset_for_line(
+  self : ViewLayout,
+  window : LineWindow,
+  line : Int,
+) -> Int {
+  (self.lines.vertical_offset_for_line(line) -
+  self.lines.vertical_offset_for_line(window.start)).to_int()
+}
+
+///|
 pub fn ViewLayout::scroll_to(
   self : ViewLayout,
   scroll_top~ : Double,
@@ -96,11 +141,9 @@ pub fn ViewLayout::visible_window(
   self : ViewLayout,
   overscan~ : Int,
 ) -> LineWindow {
-  visible_window(
+  self.lines.visible_window(
     self.scrollable.position().scroll_top,
     self.scrollable.dimensions().height,
-    self.lines.line_height(),
-    self.lines.line_count(),
     overscan,
   )
 }

@@ -4,4 +4,12 @@
 pub(all) struct ViewZone {
   anchor_line : Int
   height_px : Int
-} derive(Debug)
+} derive(Eq, Debug)
+
+///|
+pub(all) struct ViewZoneViewportData {
+  zone_index : Int
+  anchor_line : Int
+  height_px : Int
+  relative_vertical_offset : Int
+} derive(Eq, Debug)

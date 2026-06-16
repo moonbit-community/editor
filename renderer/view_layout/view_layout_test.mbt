@@ -117,6 +117,66 @@ test "lines layout answers offsets and lines for uniform heights" {
 }
 
 ///|
+test "lines layout accounts for view zone displacement" {
+  let lines = @view_layout.LinesLayout::new(line_height=18, line_count=5)
+  lines.set_view_zones([
+    { anchor_line: 1, height_px: 36 },
+    { anchor_line: 3, height_px: 18 },
+    { anchor_line: 2, height_px: 0 },
+  ])
+  assert_eq(lines.vertical_offset_for_line(0), 0.0)
+  assert_eq(lines.vertical_offset_for_line(1), 54.0)
+  assert_eq(lines.vertical_offset_for_line(3), 108.0)
+  assert_eq(lines.vertical_offset_for_line(5), 144.0)
+  assert_eq(lines.content_height(), 144.0)
+  assert_eq(lines.line_at_vertical_offset(18.0), 1)
+  assert_eq(lines.line_at_vertical_offset(53.0), 1)
+  assert_eq(lines.line_at_vertical_offset(54.0), 1)
+  assert_eq(lines.line_at_vertical_offset(90.0), 3)
+  lines.set_view_zones([])
+  assert_eq(lines.vertical_offset_for_line(5), 90.0)
+  assert_eq(lines.content_height(), 90.0)
+}
+
+///|
+test "lines layout supports top and bottom view zones" {
+  let lines = @view_layout.LinesLayout::new(line_height=18, line_count=3)
+  lines.set_view_zones([
+    { anchor_line: 0, height_px: 10 },
+    { anchor_line: 3, height_px: 20 },
+  ])
+  assert_eq(lines.vertical_offset_for_line(0), 10.0)
+  assert_eq(lines.vertical_offset_for_line(3), 84.0)
+  assert_eq(lines.content_height(), 84.0)
+  debug_inspect(
+    lines.view_zone_viewport_data({ start: 0, end: 3 }),
+    content=(
+      #|[
+      #|  {
+      #|    zone_index: 0,
+      #|    anchor_line: 0,
+      #|    height_px: 10,
+      #|    relative_vertical_offset: -10,
+      #|  },
+      #|  {
+      #|    zone_index: 1,
+      #|    anchor_line: 3,
+      #|    height_px: 20,
+      #|    relative_vertical_offset: 54,
+      #|  },
+      #|]
+    ),
+  )
+  lines.set_line_count(2)
+  debug_inspect(
+    lines.view_zones(),
+    content=(
+      #|[{ anchor_line: 0, height_px: 10 }, { anchor_line: 2, height_px: 20 }]
+    ),
+  )
+}
+
+///|
 /// The layout-derived window must agree with the free `visible_window`
 /// the browser cell uses today, for the same scroll state.
 test "view layout windows match visible_window" {
@@ -161,6 +221,31 @@ test "view layout hysteresis matches window_needs_update" {
   // Drift beyond half the overscan re-renders.
   layout.scroll_to(scroll_top=9000.0 + 18.0 * 11.0) |> ignore
   assert_true(layout.window_needs_update(rendered, overscan=20))
+}
+
+///|
+test "view layout windows and dimensions account for view zones" {
+  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=20)
+  layout.set_viewport_size(width=200.0, height=54.0) |> ignore
+  layout.set_view_zones([{ anchor_line: 1, height_px: 36 }]) |> ignore
+  assert_eq(layout.dimensions().scroll_height, 396.0)
+  debug_inspect(
+    layout.visible_window(overscan=0),
+    content=(
+      #|{ start: 0, end: 2 }
+    ),
+  )
+  layout.scroll_to(scroll_top=54.0) |> ignore
+  debug_inspect(
+    layout.visible_window(overscan=0),
+    content=(
+      #|{ start: 1, end: 5 }
+    ),
+  )
+  assert_eq(
+    layout.relative_vertical_offset_for_line({ start: 1, end: 5 }, 2),
+    18,
+  )
 }
 
 ///|

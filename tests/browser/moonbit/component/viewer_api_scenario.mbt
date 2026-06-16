@@ -154,6 +154,11 @@ fn run_viewer_api_test() -> Unit {
       )
       viewer.attach(host)
       viewer.open(uri)
+      let zone = @rdom.document().create_element("div")
+      zone.set_inner_html("component view zone")
+      viewer.change_view_zones(accessor => {
+        accessor.add_zone("component-zone", 4, 36, zone)
+      })
       @support.set_timeout(
         () => {
           poll_rendered(

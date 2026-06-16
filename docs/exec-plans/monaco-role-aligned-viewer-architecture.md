@@ -18,8 +18,8 @@ wrapped view-line rendering and line-number alignment. Follow-up Phase 7 slices
 cover wrapped hover, diagnostics, scroll positioning, direct hit-test coverage,
 and Monaco-style classifier-backed word breaks in the readonly no-injected-text
 path. Remaining Phase 7 deltas are tied to later features, especially wrapped
-indentation; later feature phases for selection/copy, view zones, and
-accessibility follow-up remain pending.
+indentation; later feature phases for view zones and accessibility follow-up
+remain pending.
 
 Implementation note, 2026-06-16, Phase 8: folding now has language-level
 `FoldingRange`, `FoldingRangeKind`, and `FoldingRangeProvider` contracts; a
@@ -39,9 +39,9 @@ before line breaking, with render-line source mappings preserving model offsets
 for hit testing and decorations. `renderer/browser` collects providers, renders
 hint spans through the normal line renderer, and contributes hint tooltip hover
 content through the hover participant pipeline. Browser component coverage now
-exercises hint rendering, hover, wrapping, and folding together. Copy/selection
-exclusion remains part of Phase 10 because the readonly selection/copy pipeline
-does not exist yet.
+exercises hint rendering, hover, wrapping, folding, and selection/copy together.
+Phase 10 copy excludes injected hint labels through the model-backed selection
+range and visible source-span rich-copy path.
 
 ## Goal
 
@@ -708,6 +708,17 @@ Exit criteria:
 - Users can select and copy readonly source reliably.
 - Copy output is source-faithful by default.
 - Selection rendering does not break hover, scroll, or line recycling.
+
+Implementation note, 2026-06-16: readonly drag selection is implemented as
+model-owned `Selection` state plus browser overlay rectangles in
+`.view-overlays`. Copy writes `text/plain` from the selected
+`DocumentSnapshot` range, so injected inlay-hint labels are excluded and folded
+model text is included only when the selected range spans it. The browser copy
+bridge writes `text/html` from visible render-frame source spans with token
+classes when a frame is available, falling back to escaped model text. The
+component browser test covers drag selection after an overlapping hover, copy
+shortcut observability, token-class rich HTML, wrapped lines, folding around the
+same fixture, and inlay-hint exclusion.
 
 ## Phase 11: View Zones
 

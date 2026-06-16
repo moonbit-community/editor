@@ -24,6 +24,10 @@ model-line source data, and viewport-scoped render frames.
   Inlay hints are projected before line breaking so hint width participates in
   wrapping, while render-line source mappings keep hit testing and decorations
   model-offset based.
+- Own readonly `Selection` model ranges and copy helpers. Plain copy slices the
+  selected `DocumentSnapshot` range directly, so browser-only injected text is
+  excluded by default; rich copy has a model-only escaped fallback while the
+  browser layer can decorate visible source spans with token classes.
 - Own DOM-free conversion from `RenderLine` to
   `@view_line_renderer.ViewLineRenderingData` and `RenderLineInput`.
 
@@ -42,6 +46,7 @@ model-line source data, and viewport-scoped render frames.
 
 - Package tests live in `tokenized_document_test.mbt`,
   `render_frame_test.mbt`, `view_model_test.mbt`, and
-  `folding_model_test.mbt`.
+  `folding_model_test.mbt`, plus focused selection tests in
+  `selection_test.mbt`.
 - Run `moon test --target js renderer/view_model` and
   `moon test --target native renderer/view_model` for this package.

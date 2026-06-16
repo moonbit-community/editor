@@ -110,6 +110,13 @@ workbench) wrap the calls in their command type.
   `InlayHint` provider results per document version, the common `ViewModel`
   projects them as injected text, and the hover participant pipeline serves
   hint tooltip content without asking source hover providers for injected spans.
+- Own readonly selection and copy: `selection.mbt` stores model-range selection
+  state on the viewer, mouse drag updates it through shared hit testing,
+  `.view-overlays` renders selection rectangles over visible source spans, and
+  the copy bridge writes plain model text plus token-class rich HTML when the
+  browser exposes clipboard data. Hover widgets delegate non-interactive
+  mousedown back to the editor so an overlapping hover does not block source
+  selection.
 - Own scroll input through `ScrollableElementDom`: the editor and hover use
   the same Monaco wrapper, custom scrollbar nodes, wheel delta-mode
   normalization, thumb drag, centered track jump (`scrollByPage: false`), active
@@ -121,7 +128,8 @@ workbench) wrap the calls in their command type.
   on the island root convert DOM events into typed `EditorEvent`s through
   the renderer's shared `hit_test`, fed by layout state plus the measured
   char-probe width and the derived gutter width. Rendered spans carry no
-  handlers; content and overlay widgets swallow events under them.
+  handlers; content and overlay widgets stay centralized so selection, hover,
+  and widget input can arbitrate events in one layer.
 - Own the feature controllers (`HoverController` today): each consumes
   editor events and answers with effects-as-data, span/line decorations,
   and widget views. Hover follows Monaco's timing (request at half the
@@ -170,6 +178,9 @@ focuses on hover until those features can be rebuilt without their bugs.
   `hover_controller_wbtest.mbt`.
 - Viewer service, marker, and hover participant orchestration is covered by
   `services_wbtest.mbt`.
+- Browser component coverage verifies drag selection, copy shortcut
+  observability, token-class rich HTML, wrapped-line selection, hover overlap,
+  folding interaction, and inlay-hint exclusion from copied source.
 - The embedding boundary is proven by `examples/embedded_viewer` and
   `tests/browser/embed.spec.js` (no websocket opened).
 - Run `just check` for the repository-level type check.

@@ -29,6 +29,28 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
       'component inlay hint',
       { timeout: 3_000 },
     );
+    const signatureStart = page.locator('.view-line').filter({ hasText: 'component_answe' });
+    const signatureEnd = page.locator('.view-line').filter({ hasText: 'r : T() -> Int' });
+    await expect(signatureStart).toHaveCount(1);
+    await expect(signatureEnd).toHaveCount(1);
+    const startBox = await signatureStart.boundingBox();
+    const endBox = await signatureEnd.boundingBox();
+    expect(startBox).not.toBeNull();
+    expect(endBox).not.toBeNull();
+    await page.mouse.move(startBox.x + 1, startBox.y + startBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(endBox.x + endBox.width - 1, endBox.y + endBox.height / 2, {
+      steps: 4,
+    });
+    await page.mouse.up();
+    await expect.poll(() => page.locator('.selected-text').count(), { timeout: 2_000 }).toBeGreaterThan(0);
+    await page.keyboard.press('ControlOrMeta+C');
+    const copiedText = await page.evaluate(() => globalThis.__readonlyEditorCopiedText || '');
+    expect(copiedText).toContain('component_answer() -> Int');
+    expect(copiedText).not.toContain(': T');
+    const copiedHtml = await page.evaluate(() => globalThis.__readonlyEditorCopiedHtml || '');
+    expect(copiedHtml).toContain('tok-identifier');
+    expect(copiedHtml).not.toContain('inlay-hint');
     await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(1, {
       timeout: 10_000,
     });

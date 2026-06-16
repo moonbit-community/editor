@@ -138,13 +138,21 @@ fn Island::ensure_hover_widget(
       hover.append_child(scrollable.wrapper.as_node())
       wrapper.append_child(hover.as_node())
       let widget : HoverWidgetDom = { wrapper, hover, scrollable }
-      // Content widgets swallow mouse events so container hit-testing
-      // never resolves targets beneath them.
+      // Content widgets swallow pointer motion, but a hover may overlap source
+      // text; non-interactive mousedown should still start editor selection at
+      // the underlying coordinate.
       widget.wrapper.add_event_listener("mousemove", event => {
         event.stop_propagation()
       })
       widget.wrapper.add_event_listener("mousedown", event => {
-        event.stop_propagation()
+        if hover_mousedown_is_interactive(event) {
+          event.stop_propagation()
+        } else {
+          match event.to_mouse_event() {
+            Some(mouse) => viewer.handle_mouse_down(self, event, mouse)
+            None => event.stop_propagation()
+          }
+        }
       })
       widget.wrapper.add_event_listener("click", event => {
         if handle_hover_copy_click(event) {
@@ -395,4 +403,11 @@ extern "js" fn handle_hover_copy_click(event : @rdom.Event) -> Bool =
   #|   } catch {
   #|   }
   #|   return true;
+  #| }
+
+///|
+extern "js" fn hover_mousedown_is_interactive(event : @rdom.Event) -> Bool =
+  #| (event) => {
+  #|   const target = event?.target;
+  #|   return Boolean(target?.closest?.("button, a, input, textarea, select, [role='button'], .hover-copy-button"));
   #| }

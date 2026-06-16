@@ -78,6 +78,7 @@ fn Island::build() -> Island {
   let root = document.create_element("section")
   root.set_attribute("class", "moonbit-viewer readonly-editor source-empty")
   root.set_attribute("aria-label", "Readonly code viewer")
+  root.set_attribute("tabindex", "0")
   let probe = document.create_element("span")
   probe.set_attribute("class", "char-probe")
   probe.set_attribute("aria-hidden", "true")
@@ -205,6 +206,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         frame,
         self.view_model,
         self.controller_decorations(),
+        self.selection_range(),
         self.folding_ranges,
         self.folded_ranges,
         on_toggle_fold=line => self.toggle_fold(line),

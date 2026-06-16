@@ -11,6 +11,24 @@ fn Viewer::hook_island_input(self : Viewer, island : Island) -> Unit {
       None => ()
     }
   })
+  island.root.add_event_listener("mousedown", event => {
+    match event.to_mouse_event() {
+      Some(mouse) => self.handle_mouse_down(island, event, mouse)
+      None => ()
+    }
+  })
+  island.view_lines.add_event_listener("mousedown", event => {
+    match event.to_mouse_event() {
+      Some(mouse) => self.handle_mouse_down(island, event, mouse)
+      None => ()
+    }
+  })
+  island.root.add_event_listener("copy", event => {
+    if self.handle_copy_event(event) {
+      event.prevent_default()
+      event.stop_propagation()
+    }
+  })
   island.root.add_event_listener("mouseleave", _ => {
     self.dispatch_editor_event(MouseLeft)
   })
@@ -32,8 +50,12 @@ fn Viewer::hook_island_input(self : Viewer, island : Island) -> Unit {
   let document = @rdom.document()
   document.add_event_listener("mousemove", event => {
     self.handle_scrollable_drag_move(island, event)
+    self.handle_selection_drag_move(island, event)
   })
-  document.add_event_listener("mouseup", _ => self.end_scrollable_drag(island))
+  document.add_event_listener("mouseup", _ => {
+    self.end_scrollable_drag(island)
+    self.finish_selection()
+  })
 }
 
 ///|
@@ -115,6 +137,52 @@ fn Viewer::handle_mouse_move(
   let y = mouse.get_client_y().to_double() - rect.get_top()
   let target = @renderer.hit_test(frame, self.view_metrics(frame), x, y)
   self.dispatch_editor_event(MouseMoved(target))
+}
+
+///|
+fn Viewer::handle_mouse_down(
+  self : Viewer,
+  island : Island,
+  event : @rdom.Event,
+  mouse : @rdom.MouseEvent,
+) -> Unit {
+  if mouse.get_button() != 0 {
+    return
+  }
+  guard self.frame is Some(frame) else { return }
+  focus_element(island.root)
+  let rect = island.root.get_bounding_client_rect()
+  let x = mouse.get_client_x().to_double() - rect.get_left()
+  let y = mouse.get_client_y().to_double() - rect.get_top()
+  let target = @renderer.hit_test(frame, self.view_metrics(frame), x, y)
+  match target.kind {
+    ContentText | ContentEmpty => {
+      event.prevent_default()
+      event.stop_propagation()
+      self.begin_selection(target)
+    }
+    _ => ()
+  }
+}
+
+///|
+extern "js" fn focus_element(element : @rdom.Element) -> Unit = "(element) => element.focus?.()"
+
+///|
+fn Viewer::handle_selection_drag_move(
+  self : Viewer,
+  island : Island,
+  event : @rdom.Event,
+) -> Unit {
+  guard self.selection_dragging else { return }
+  guard self.frame is Some(frame) else { return }
+  guard event.to_mouse_event() is Some(mouse) else { return }
+  event.prevent_default()
+  let rect = island.root.get_bounding_client_rect()
+  let x = mouse.get_client_x().to_double() - rect.get_left()
+  let y = mouse.get_client_y().to_double() - rect.get_top()
+  let target = @renderer.hit_test(frame, self.view_metrics(frame), x, y)
+  self.update_selection(target)
 }
 
 ///|

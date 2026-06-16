@@ -449,6 +449,7 @@ body {
 
 .view-lines {
   z-index: 1;
+  user-select: none;
 }
 
 .view-overlays {
@@ -491,6 +492,14 @@ body {
   left: 0;
   /* top and height are written inline by the recycler (18px lines). */
   white-space: pre;
+}
+
+.selected-text {
+  position: absolute;
+  box-sizing: border-box;
+  background: var(--vscode-editor-selectionBackground);
+  opacity: 0.72;
+  pointer-events: none;
 }
 
 /* Margin layer: viewport-fixed clip that occludes horizontally scrolled

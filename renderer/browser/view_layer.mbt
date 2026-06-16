@@ -9,6 +9,7 @@ fn Island::render_lines(
   frame : @view_model.RenderFrame,
   view_model : @view_model.ViewModel?,
   decorations : Array[@decorations.Decoration],
+  selection_range : @core.Range?,
   folding_ranges : Array[@language.FoldingRange],
   folded_ranges : Array[@language.FoldingRange],
   on_toggle_fold~ : (Int) -> Unit,
@@ -39,6 +40,7 @@ fn Island::render_lines(
     folded_ranges,
     on_toggle_fold~,
   )
+  self.render_selection_overlays(frame, selection_range)
   if generation != self.generation {
     while self.line_nodes.length() > viewport.lines.length() {
       match
@@ -150,6 +152,78 @@ fn Island::render_lines(
     self.render_inputs.push(input)
   }
   self.window = target
+}
+
+///|
+fn Island::render_selection_overlays(
+  self : Island,
+  frame : @view_model.RenderFrame,
+  selection_range : @core.Range?,
+) -> Unit {
+  self.view_overlays.set_inner_html("")
+  let range = match selection_range {
+    Some(range) => range
+    None => return
+  }
+  let document = @rdom.document()
+  for index in 0..<frame.lines.length() {
+    let line = frame.lines[index]
+    append_line_selection_segments(
+      self.view_overlays,
+      document,
+      line,
+      range,
+      index,
+    )
+  }
+}
+
+///|
+fn append_line_selection_segments(
+  parent : @rdom.Element,
+  document : @rdom.Document,
+  line : @view_model.RenderLine,
+  range : @core.Range,
+  window_index : Int,
+) -> Unit {
+  let model_line_start = line.model_line_start_offset()
+  for span in line.spans {
+    if span.injected_text_index >= 0 {
+      continue
+    }
+    let span_start = model_line_start + span.source_start
+    let span_end = model_line_start + span.source_end
+    if range.intersects(Range(span_start, span_end)) {
+      let start = span.start + max_int(range.start, span_start) - span_start
+      let end = span.start + min_int(range.end, span_end) - span_start
+      if start < end {
+        let node = document.create_element("div")
+        node.set_attribute("class", "selected-text")
+        node.set_attribute(
+          "style",
+          selection_segment_style(window_index, start, end),
+        )
+        parent.append_child(node.as_node())
+      }
+    }
+  }
+}
+
+///|
+fn selection_segment_style(
+  window_index : Int,
+  start_column : Int,
+  end_column : Int,
+) -> String {
+  "top:" +
+  (window_index * editor_line_height).to_string() +
+  "px;left:" +
+  start_column.to_string() +
+  "ch;width:" +
+  (end_column - start_column).to_string() +
+  "ch;height:" +
+  editor_line_height.to_string() +
+  "px"
 }
 
 ///|

@@ -93,6 +93,7 @@ priv struct Island {
   mut generation : Int
   line_nodes : Array[@rdom.Element]
   gutter_nodes : Array[@rdom.Element]
+  render_inputs : Array[@renderer.RenderLineInput]
 }
 
 ///|
@@ -207,6 +208,7 @@ fn Island::build() -> Island {
     generation: -1,
     line_nodes: [],
     gutter_nodes: [],
+    render_inputs: [],
   }
   island.sync_static_view_parts()
   island
@@ -256,6 +258,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         frame,
         self.controller_decorations(),
         self.content_generation,
+        self.measured_char_width(),
       )
       let gutter_width = self.gutter_width(frame)
       let position = self.layout.position()
@@ -342,20 +345,31 @@ fn Island::render_lines(
   frame : @renderer.RenderFrame,
   decorations : Array[@decorations.Decoration],
   generation : Int,
+  space_width : Double,
 ) -> Unit {
-  let target = frame_window(frame)
+  let viewport = @renderer.ViewportData::from_render_frame(
+    frame,
+    line_height=editor_line_height,
+    decorations~,
+  )
+  let target = viewport_window(viewport)
   let document = @rdom.document()
   if generation != self.generation {
-    while self.line_nodes.length() > frame.lines.length() {
-      match (self.line_nodes.pop(), self.gutter_nodes.pop()) {
-        (Some(node), Some(gutter)) => {
+    while self.line_nodes.length() > viewport.lines.length() {
+      match
+        (
+          self.line_nodes.pop(),
+          self.gutter_nodes.pop(),
+          self.render_inputs.pop(),
+        ) {
+        (Some(node), Some(gutter), _) => {
           self.view_lines.remove_child(node.as_node())
           self.line_numbers.remove_child(gutter.as_node())
         }
         _ => ()
       }
     }
-    while self.line_nodes.length() < frame.lines.length() {
+    while self.line_nodes.length() < viewport.lines.length() {
       let node = document.create_element("div")
       self.view_lines.append_child(node.as_node())
       self.line_nodes.push(node)
@@ -363,18 +377,28 @@ fn Island::render_lines(
       self.line_numbers.append_child(gutter.as_node())
       self.gutter_nodes.push(gutter)
     }
-    for index in 0..<frame.lines.length() {
+    let previous_inputs = self.render_inputs.copy()
+    self.render_inputs.clear()
+    for index in 0..<viewport.lines.length() {
+      let input = render_line_input_for_viewport(viewport, index, space_width)
+      let rewrite_html = match previous_inputs.get(index) {
+        Some(previous) => previous != input
+        None => true
+      }
       write_line_node(
         self.line_nodes[index],
         frame.lines[index],
         decorations,
+        input,
         index,
+        rewrite_html~,
       )
       write_line_number_node(
         self.gutter_nodes[index],
         frame.lines[index],
         index,
       )
+      self.render_inputs.push(input)
     }
     self.generation = generation
     self.window = target
@@ -386,7 +410,8 @@ fn Island::render_lines(
   let previous = self.window
   let next_lines : Array[@rdom.Element] = []
   let next_gutters : Array[@rdom.Element] = []
-  for index in 0..<frame.lines.length() {
+  let next_inputs : Array[@renderer.RenderLineInput] = []
+  for index in 0..<viewport.lines.length() {
     let line_index = target.start + index
     if line_index >= previous.start && line_index < previous.end {
       // Retained line: only its window-relative top moves.
@@ -396,15 +421,25 @@ fn Island::render_lines(
       let gutter = self.gutter_nodes[line_index - previous.start]
       gutter.set_attribute("style", line_node_style(index))
       next_gutters.push(gutter)
+      next_inputs.push(self.render_inputs[line_index - previous.start])
     } else {
       let node = document.create_element("div")
-      write_line_node(node, frame.lines[index], decorations, index)
+      let input = render_line_input_for_viewport(viewport, index, space_width)
+      write_line_node(
+        node,
+        frame.lines[index],
+        decorations,
+        input,
+        index,
+        rewrite_html=true,
+      )
       self.view_lines.append_child(node.as_node())
       next_lines.push(node)
       let gutter = document.create_element("div")
       write_line_number_node(gutter, frame.lines[index], index)
       self.line_numbers.append_child(gutter.as_node())
       next_gutters.push(gutter)
+      next_inputs.push(input)
     }
   }
   for line_index in previous.start..<previous.end {
@@ -425,7 +460,31 @@ fn Island::render_lines(
   for gutter in next_gutters {
     self.gutter_nodes.push(gutter)
   }
+  self.render_inputs.clear()
+  for input in next_inputs {
+    self.render_inputs.push(input)
+  }
   self.window = target
+}
+
+///|
+fn viewport_window(viewport : @renderer.ViewportData) -> @renderer.LineWindow {
+  { start: viewport.start_line_number - 1, end: viewport.end_line_number }
+}
+
+///|
+fn render_line_input_for_viewport(
+  viewport : @renderer.ViewportData,
+  index : Int,
+  space_width : Double,
+) -> @renderer.RenderLineInput {
+  let line_number = viewport.start_line_number + index
+  @renderer.RenderLineInput::from_view_line(
+    viewport.lines[index],
+    line_decorations=viewport.decorations_for_line(line_number),
+    space_width~,
+    vertical_scrollbar_size=editor_vertical_scrollbar_size,
+  )
 }
 
 ///|
@@ -433,12 +492,16 @@ fn write_line_node(
   node : @rdom.Element,
   line : @renderer.RenderLine,
   decorations : Array[@decorations.Decoration],
+  input : @renderer.RenderLineInput,
   window_index : Int,
+  rewrite_html~ : Bool,
 ) -> Unit {
   node.set_attribute("class", @renderer.render_line_class(line, decorations))
   node.set_attribute("data-line", line.line_number.to_string())
   node.set_attribute("style", line_node_style(window_index))
-  node.set_inner_html(@renderer.render_line_html(line, decorations))
+  if rewrite_html {
+    node.set_inner_html(@renderer.render_view_line2(input).html)
+  }
 }
 
 ///|

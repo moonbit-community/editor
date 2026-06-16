@@ -109,12 +109,15 @@ Rendering is split by host boundary:
 ```text
 workspace.SourceDocument
   -> renderer tokenization/frame/layout state
+  -> renderer ViewportData
+  -> renderer render-line IR
   -> renderer/browser DOM island
 ```
 
 Backend-neutral rendering and geometry belong in `renderer`. Browser-specific
 DOM, CSS, event capture, custom scrollbars, and widget placement belong in
-`renderer/browser`.
+`renderer/browser`. The browser view layer applies `RenderLineInput` /
+`RenderLineOutput2` results to DOM nodes; it does not own line HTML semantics.
 
 ### Syntax And Language Features
 

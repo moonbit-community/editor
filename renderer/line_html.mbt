@@ -11,32 +11,7 @@ pub fn render_line_html(
   line : RenderLine,
   decorations : Array[@decorations.Decoration],
 ) -> String {
-  let html = StringBuilder()
-  html.write_string("<span class=\"view-line-content\">")
-  if line.spans.length() == 0 {
-    write_escaped(html, line.text)
-  } else {
-    for span in line.spans {
-      let mut class_name = span.class_name
-      let span_range = @core.Range(
-        line.offset + span.start,
-        line.offset + span.end,
-      )
-      for decoration in decorations {
-        if decoration.kind != CurrentLine &&
-          decoration.range.intersects(span_range) {
-          class_name = class_name + " " + decoration.class_name
-        }
-      }
-      html.write_string("<span class=\"")
-      write_escaped(html, class_name)
-      html.write_string("\">")
-      write_escaped(html, line.span_text(span))
-      html.write_string("</span>")
-    }
-  }
-  html.write_string("</span>")
-  html.to_string()
+  render_view_line2(RenderLineInput::from_render_line(line, decorations~)).html
 }
 
 ///|

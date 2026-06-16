@@ -59,3 +59,74 @@ test('resolves hover for the token under the mouse after deterministic scrolling
     );
   }).toPass({ timeout: 60_000 });
 });
+
+test('retains visible line nodes and limits html rewrites on decoration updates', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await setHoverFixture(page, 'plaintext', 'main hover');
+  await openWorkspaceFile(page, 'src/main.mbt');
+
+  await installViewLineHtmlWriteCounter(page);
+  const before = await snapshotVisibleLines(page);
+  expect(before.length).toBeGreaterThan(1);
+
+  const target = page.locator('.view-line span', { hasText: 'main' }).first();
+  await expect(target).toBeVisible();
+  await target.hover();
+  await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
+    'main hover',
+    { timeout: 5_000 },
+  );
+
+  const after = await snapshotVisibleLines(page);
+  const beforeByLine = new Map(before.map((line) => [line.line, line.probe]));
+  for (const line of after) {
+    expect(line.probe).toBe(beforeByLine.get(line.line));
+  }
+  const writes = await page.evaluate(() => globalThis.__readonlyEditorLineHtmlWrites ?? 0);
+  expect(writes).toBeGreaterThan(0);
+  expect(writes).toBeLessThan(before.length);
+  await expect(page.locator('.view-line[data-line]').first()).toHaveAttribute('style', /top:/);
+  await expect(page.locator('.line-number[data-line]').first()).toBeVisible();
+});
+
+async function installViewLineHtmlWriteCounter(page) {
+  await page.evaluate(() => {
+    if (globalThis.__readonlyEditorLineHtmlCounterInstalled) {
+      globalThis.__readonlyEditorLineHtmlWrites = 0;
+      return;
+    }
+    const descriptor =
+      Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML') ??
+      Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerHTML');
+    globalThis.__readonlyEditorLineHtmlWrites = 0;
+    Object.defineProperty(Element.prototype, 'innerHTML', {
+      configurable: true,
+      get() {
+        return descriptor.get.call(this);
+      },
+      set(value) {
+        if (this.classList?.contains('view-line')) {
+          globalThis.__readonlyEditorLineHtmlWrites += 1;
+        }
+        return descriptor.set.call(this, value);
+      },
+    });
+    globalThis.__readonlyEditorLineHtmlCounterInstalled = true;
+  });
+}
+
+async function snapshotVisibleLines(page) {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll('.view-line[data-line]')).map((node, index) => {
+      if (!node.dataset.retainProbe) {
+        node.dataset.retainProbe = `line-${index}-${node.getAttribute('data-line')}`;
+      }
+      return {
+        line: node.getAttribute('data-line'),
+        probe: node.dataset.retainProbe,
+      };
+    }),
+  );
+}

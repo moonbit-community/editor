@@ -78,10 +78,14 @@ workbench) wrap the calls in their command type.
   and mount in `.overlayWidgets`; overflowing variants mount outside
   `.overflow-guard` when a widget is allowed to escape the editor clip.
 - Own the render loop: rAF-coalesced flushes with reads (measurement)
-  before writes, a `ViewLayer`-style recycler that splices
-  entering/leaving line nodes and writes `innerHTML` only on entering
-  lines (a changed content generation rewrites the window), and paint
-  facts (`patch_ms`, scroll position) reported after the flush.
+  before writes, a `ViewLayer`-style recycler that consumes
+  `renderer.ViewportData`, derives `RenderLineInput` for each visible
+  line, splices entering/leaving line nodes, and writes `innerHTML` only
+  when a line enters the viewport or its render input changed. Raw
+  `RenderFrame` lines may still supply line-node classes and gutter
+  numbers during the compatibility period, but line HTML flows through
+  the backend-neutral render-line IR. Paint facts (`patch_ms`, scroll
+  position) are reported after the flush.
 - Own scroll input through `ScrollableElementDom`: the editor and hover use
   the same Monaco wrapper, custom scrollbar nodes, wheel delta-mode
   normalization, thumb drag, centered track jump (`scrollByPage: false`), active

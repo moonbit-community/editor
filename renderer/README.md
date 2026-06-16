@@ -8,12 +8,22 @@ Backend-agnostic render IR, scroll/layout model, and editor geometry.
   tokens role: the snapshot plus syntax tokens bucketed per line, built
   once per document version), `FrameSource` (per-line bucketed semantic
   tokens and decorations, rebuilt per provider push), and `build_frame`
-  (the `ViewportData` role: viewport-scoped frames built in O(window)
-  from the buckets). `RenderSpan` carries columns and classes only;
-  views slice the owning line's text (`RenderLine::span_text`).
-- Own pure line-HTML emission (`render_line_html`/`render_line_class`,
-  the `viewLineRenderer` role): a `RenderLine` plus controller
-  decorations become the escaped inner HTML of one line node, DOM-free.
+  (viewport-scoped frames built in O(window) from the buckets).
+  `RenderSpan` carries columns and classes only; views slice the owning
+  line's text (`RenderLine::span_text`).
+- Own the pre-DOM render-line layer, matching Monaco's
+  `ViewportData`/`ViewLineRenderingData`/`viewLineRenderer` roles:
+  `ViewportData` exposes 1-based inclusive visible line numbers,
+  line-relative vertical offsets, `ViewLineRenderingData`, and normalized
+  line decorations; `RenderLineInput` carries Monaco-equivalent render
+  fields with deterministic readonly defaults for selections, wrapping,
+  ligatures, whitespace, and scrollbar data not yet configurable by the
+  viewer.
+- Own pure line-HTML emission (`render_view_line`/`render_view_line2`,
+  plus compatibility wrappers `render_line_html`/`render_line_class`):
+  a `RenderLineInput` becomes escaped line HTML plus
+  `CharacterMapping`/`DomPosition` data, DOM-free. Existing
+  `RenderLine` callers route through the new input/output path.
 - Own the backend-neutral scroll and layout model: `Scrollable` (clamped
   scroll state answering `ScrollChange` facts), the uniform-height
   `LinesLayout` (with view-zone slots; displacement deferred),

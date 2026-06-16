@@ -1,6 +1,6 @@
 ///|
 pub fn protocol_version() -> Int {
-  3
+  4
 }
 
 ///|
@@ -67,6 +67,7 @@ pub(all) enum ClientPacket {
   DocumentSymbols(DocumentVersionRequest)
   SemanticTokens(DocumentVersionRequest)
   FoldingRanges(DocumentVersionRequest)
+  InlayHints(DocumentVersionRequest)
 } derive(Debug)
 
 ///|
@@ -152,6 +153,14 @@ pub(all) struct FoldingRangesResultPayload {
 } derive(Debug)
 
 ///|
+pub(all) struct InlayHintsResultPayload {
+  id : String
+  uri : @workspace.DocumentUri
+  version : Int
+  inlay_hints : Array[@language.InlayHint]
+} derive(Debug)
+
+///|
 pub(all) enum ServerPacket {
   DirectoryResolved(DirectoryResolvedPayload)
   DocumentLoaded(DocumentPayload)
@@ -163,6 +172,7 @@ pub(all) enum ServerPacket {
   DocumentSymbolsResult(DocumentSymbolsResultPayload)
   SemanticTokensResult(SemanticTokensResultPayload)
   FoldingRangesResult(FoldingRangesResultPayload)
+  InlayHintsResult(InlayHintsResultPayload)
   RemoteError(ProtocolError)
 } derive(Debug)
 
@@ -262,6 +272,7 @@ pub impl ToJson for ClientPacket with fn to_json(self) {
     DocumentSymbols(request) => version_request_json("DocumentSymbols", request)
     SemanticTokens(request) => version_request_json("SemanticTokens", request)
     FoldingRanges(request) => version_request_json("FoldingRanges", request)
+    InlayHints(request) => version_request_json("InlayHints", request)
   }
 }
 
@@ -279,6 +290,7 @@ pub impl ToJson for ServerPacket with fn to_json(self) {
     DocumentSymbolsResult(payload) => document_symbols_result_json(payload)
     SemanticTokensResult(payload) => semantic_tokens_result_json(payload)
     FoldingRangesResult(payload) => folding_ranges_result_json(payload)
+    InlayHintsResult(payload) => inlay_hints_result_json(payload)
     RemoteError(error) => error_packet_json(error)
   }
 }
@@ -334,6 +346,10 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
             Some("FoldingRanges") =>
               decode_version_client(packet, request_id(packet), request => {
                 FoldingRanges(request)
+              })
+            Some("InlayHints") =>
+              decode_version_client(packet, request_id(packet), request => {
+                InlayHints(request)
               })
             Some(kind) =>
               ClientPacketDecodeError(
@@ -391,6 +407,8 @@ pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
               decode_semantic_tokens_result_payload(packet, request_id(packet))
             Some("FoldingRangesResult") =>
               decode_folding_ranges_result_payload(packet, request_id(packet))
+            Some("InlayHintsResult") =>
+              decode_inlay_hints_result_payload(packet, request_id(packet))
             Some("Error") => decode_error_payload(packet, request_id(packet))
             Some(kind) =>
               ServerPacketDecodeError(
@@ -727,6 +745,37 @@ fn decode_folding_ranges_result_payload(
 }
 
 ///|
+fn decode_inlay_hints_result_payload(
+  packet : Json,
+  id : String,
+) -> ServerPacketDecodeResult {
+  match parse_uri_field(packet, "uri", id) {
+    ParsedProtocolUri(uri) => {
+      let inlay_hints = []
+      match json_field(packet, "inlayHints") {
+        Some(Array(items)) =>
+          for item in items {
+            match parse_inlay_hint(item) {
+              Some(hint) => inlay_hints.push(hint)
+              None => ()
+            }
+          }
+        _ => ()
+      }
+      DecodedServerPacket(
+        InlayHintsResult({
+          id,
+          uri,
+          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          inlay_hints,
+        }),
+      )
+    }
+    ProtocolUriError(error) => ServerPacketDecodeError(error)
+  }
+}
+
+///|
 fn decode_error_payload(packet : Json, id : String) -> ServerPacketDecodeResult {
   match json_field(packet, "error") {
     Some(error) =>
@@ -1051,6 +1100,15 @@ fn folding_ranges_result_json(payload : FoldingRangesResultPayload) -> Json {
 }
 
 ///|
+fn inlay_hints_result_json(payload : InlayHintsResultPayload) -> Json {
+  let fields = packet_fields("InlayHintsResult", payload.id)
+  fields["uri"] = payload.uri.to_string().to_json()
+  fields["documentVersion"] = payload.version.to_json()
+  fields["inlayHints"] = Json::array(payload.inlay_hints.map(inlay_hint_json))
+  Json::object(fields)
+}
+
+///|
 fn error_packet_json(error : ProtocolError) -> Json {
   let fields = packet_fields("Error", error.request_id)
   fields["error"] = error.to_json()
@@ -1125,6 +1183,37 @@ fn folding_range_kind_json(kind : @language.FoldingRangeKind) -> Json {
     Imports => Json::string("imports")
     Region => Json::string("region")
   }
+}
+
+///|
+fn inlay_hint_json(hint : @language.InlayHint) -> Json {
+  let fields : Map[String, Json] = {
+    "position": position_json(hint.position),
+    "label": hint.label.to_json(),
+    "paddingLeft": Json::boolean(hint.padding_left),
+    "paddingRight": Json::boolean(hint.padding_right),
+  }
+  match hint.kind {
+    Some(kind) => fields["kind"] = inlay_hint_kind_json(kind)
+    None => ()
+  }
+  if hint.tooltip.length() > 0 {
+    fields["tooltip"] = Json::array(hint.tooltip.map(hover_content_json))
+  }
+  Json::object(fields)
+}
+
+///|
+fn inlay_hint_kind_json(kind : @language.InlayHintKind) -> Json {
+  match kind {
+    TypeHint => Json::string("type")
+    ParameterHint => Json::string("parameter")
+  }
+}
+
+///|
+fn position_json(position : @core.Position) -> Json {
+  { "line": position.line.to_json(), "column": position.column.to_json() }
 }
 
 ///|
@@ -1208,6 +1297,68 @@ fn folding_range_kind(raw : String) -> @language.FoldingRangeKind? {
     "comment" => Some(Comment)
     "imports" => Some(Imports)
     "region" => Some(Region)
+    _ => None
+  }
+}
+
+///|
+fn parse_inlay_hint(value : Json) -> @language.InlayHint? {
+  match value {
+    Object(_) =>
+      match (json_field(value, "position"), json_string_field(value, "label")) {
+        (Some(position_json), Some(label)) =>
+          match parse_position(position_json) {
+            Some(position) => {
+              let tooltip = match json_field(value, "tooltip") {
+                Some(tooltip_json) => parse_hover_contents(tooltip_json)
+                None => []
+              }
+              match
+                inlay_hint_kind(json_string_field(value, "kind").unwrap_or("")) {
+                Some(kind) =>
+                  Some(
+                    InlayHint(
+                      position,
+                      label,
+                      kind~,
+                      padding_left=json_bool_field(value, "paddingLeft").unwrap_or(
+                        false,
+                      ),
+                      padding_right=json_bool_field(value, "paddingRight").unwrap_or(
+                        false,
+                      ),
+                      tooltip~,
+                    ),
+                  )
+                None =>
+                  Some(
+                    InlayHint(
+                      position,
+                      label,
+                      padding_left=json_bool_field(value, "paddingLeft").unwrap_or(
+                        false,
+                      ),
+                      padding_right=json_bool_field(value, "paddingRight").unwrap_or(
+                        false,
+                      ),
+                      tooltip~,
+                    ),
+                  )
+              }
+            }
+            None => None
+          }
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn inlay_hint_kind(raw : String) -> @language.InlayHintKind? {
+  match raw {
+    "type" => Some(TypeHint)
+    "parameter" => Some(ParameterHint)
     _ => None
   }
 }
@@ -1388,6 +1539,18 @@ fn parse_range(value : Json) -> @core.Range? {
 }
 
 ///|
+fn parse_position(value : Json) -> @core.Position? {
+  match value {
+    Object(_) =>
+      match (json_int_field(value, "line"), json_int_field(value, "column")) {
+        (Some(line), Some(column)) => Some(Position(line, column))
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
 fn diagnostic_severity(label : String) -> @language.DiagnosticSeverity {
   match label {
     "Error" => Error
@@ -1423,6 +1586,15 @@ fn json_string_field(value : Json, key : String) -> String? {
 fn json_int_field(value : Json, key : String) -> Int? {
   match json_field(value, key) {
     Some(Number(number, repr=_)) => Some(number.to_int())
+    _ => None
+  }
+}
+
+///|
+fn json_bool_field(value : Json, key : String) -> Bool? {
+  match json_field(value, key) {
+    Some(True) => Some(true)
+    Some(False) => Some(false)
     _ => None
   }
 }

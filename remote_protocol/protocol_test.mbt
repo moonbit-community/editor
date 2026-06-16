@@ -6,7 +6,7 @@ test "encodes and decodes document client packets" {
   let packet = @remote_protocol.OpenDocument({ id: "open-1", uri })
   let encoded = packet.to_json().stringify()
   assert_true(encoded.contains("\"type\":\"OpenDocument\""))
-  assert_true(encoded.contains("\"version\":3"))
+  assert_true(encoded.contains("\"version\":4"))
 
   match @remote_protocol.decode_client_packet(encoded) {
     DecodedClientPacket(OpenDocument(request)) => {
@@ -124,6 +124,20 @@ test "encodes and decodes semantic client packets" {
       assert_eq(request.document_version, 7)
     }
     DecodedClientPacket(_) => fail("unexpected folding ranges packet")
+    ClientPacketDecodeError(error) => fail(error.message)
+  }
+
+  let hints = @remote_protocol.InlayHints({
+    id: "hints-1",
+    uri,
+    document_version: 8,
+  })
+  match @remote_protocol.decode_client_packet(hints.to_json().stringify()) {
+    DecodedClientPacket(InlayHints(request)) => {
+      assert_eq(request.id, "hints-1")
+      assert_eq(request.document_version, 8)
+    }
+    DecodedClientPacket(_) => fail("unexpected inlay hints packet")
     ClientPacketDecodeError(error) => fail(error.message)
   }
 }
@@ -250,7 +264,7 @@ test "encodes and decodes server document and language packets" {
     ServerPacketDecodeError(error) => fail(error.message)
   }
 
-  let legacy_hover = "{\"version\":3,\"type\":\"HoverResult\",\"id\":\"hover-legacy\",\"uri\":\"" +
+  let legacy_hover = "{\"version\":4,\"type\":\"HoverResult\",\"id\":\"hover-legacy\",\"uri\":\"" +
     uri.to_string() +
     "\",\"documentVersion\":2,\"hover\":{\"range\":{\"start\":7,\"end\":11},\"contents\":\"legacy text\"}}"
   match @remote_protocol.decode_server_packet(legacy_hover) {
@@ -380,6 +394,29 @@ test "encodes and decodes server document and language packets" {
     DecodedServerPacket(_) => fail("unexpected folding ranges result packet")
     ServerPacketDecodeError(error) => fail(error.message)
   }
+
+  let inlay_hints = @remote_protocol.InlayHintsResult({
+    id: "hints-1",
+    uri,
+    version: 2,
+    inlay_hints: [
+      InlayHint(Position(0, 11), ": Int", kind=TypeHint, padding_left=true, tooltip=[
+        PlainText("inferred type"),
+      ]),
+    ],
+  })
+  match
+    @remote_protocol.decode_server_packet(inlay_hints.to_json().stringify()) {
+    DecodedServerPacket(InlayHintsResult(payload)) => {
+      assert_eq(payload.inlay_hints.length(), 1)
+      assert_eq(payload.inlay_hints[0].label, ": Int")
+      assert_true(payload.inlay_hints[0].kind == Some(TypeHint))
+      assert_true(payload.inlay_hints[0].padding_left)
+      assert_eq(payload.inlay_hints[0].tooltip.length(), 1)
+    }
+    DecodedServerPacket(_) => fail("unexpected inlay hints result packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
 }
 
 ///|
@@ -420,7 +457,7 @@ test "reports protocol decode errors" {
 
   match
     @remote_protocol.decode_client_packet(
-      "{\"version\":3,\"type\":\"OpenDocument\",\"id\":\"x\",\"uri\":\"bad\"}",
+      "{\"version\":4,\"type\":\"OpenDocument\",\"id\":\"x\",\"uri\":\"bad\"}",
     ) {
     ClientPacketDecodeError(error) =>
       assert_true(error.code == ProtocolInvalidUri)
@@ -430,12 +467,12 @@ test "reports protocol decode errors" {
 
 ///|
 test "negotiates protocol versions" {
-  match @remote_protocol.negotiate_protocol_version(3) {
-    ProtocolAccepted(version) => assert_eq(version, 3)
+  match @remote_protocol.negotiate_protocol_version(4) {
+    ProtocolAccepted(version) => assert_eq(version, 4)
     ProtocolRejected(error) => fail(error.message)
   }
 
-  match @remote_protocol.negotiate_protocol_version(2) {
+  match @remote_protocol.negotiate_protocol_version(3) {
     ProtocolRejected(error) =>
       assert_true(error.code == ProtocolUnsupportedVersion)
     ProtocolAccepted(_) => fail("expected rejected protocol")

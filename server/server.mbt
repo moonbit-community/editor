@@ -47,6 +47,7 @@ pub struct RemoteServer {
   priv document_symbol_provider : &@language.DocumentSymbolProvider
   priv semantic_tokens_provider : &@language.SemanticTokensProvider
   priv folding_range_provider : &@language.FoldingRangeProvider
+  priv inlay_hints_provider : &@language.InlayHintsProvider
   priv documents : Map[String, @workspace.SourceDocument]
   priv watches : Map[String, ServerWatch]
 }
@@ -72,6 +73,7 @@ pub fn RemoteServer::with_language_providers(
   document_symbol_provider : &@language.DocumentSymbolProvider,
   semantic_tokens_provider : &@language.SemanticTokensProvider,
   folding_range_provider : &@language.FoldingRangeProvider,
+  inlay_hints_provider : &@language.InlayHintsProvider,
 ) -> RemoteServer {
   {
     workspace_root: normalize_workspace_root(workspace_root),
@@ -83,6 +85,7 @@ pub fn RemoteServer::with_language_providers(
     document_symbol_provider,
     semantic_tokens_provider,
     folding_range_provider,
+    inlay_hints_provider,
     documents: Map::default(),
     watches: Map::default(),
   }
@@ -191,6 +194,7 @@ pub async fn RemoteServer::handle_client_packet(
     DocumentSymbols(request) => [self.document_symbols(request)]
     SemanticTokens(request) => [self.semantic_tokens(request)]
     FoldingRanges(request) => [self.folding_ranges(request)]
+    InlayHints(request) => [self.inlay_hints(request)]
   }
 }
 
@@ -491,6 +495,24 @@ pub async fn RemoteServer::folding_ranges(
         uri: request.uri,
         version: document.version,
         folding_ranges: self.folding_range_provider.folding_ranges(document),
+      })
+    None => self.missing_cached_document_error(request.id)
+  }
+}
+
+///|
+pub async fn RemoteServer::inlay_hints(
+  self : RemoteServer,
+  request : @remote_protocol.DocumentVersionRequest,
+) -> @remote_protocol.ServerPacket {
+  match
+    self.cached_document(request.uri, request.document_version, request.id) {
+    Some(document) =>
+      InlayHintsResult({
+        id: request.id,
+        uri: request.uri,
+        version: document.version,
+        inlay_hints: self.inlay_hints_provider.inlay_hints(document),
       })
     None => self.missing_cached_document_error(request.id)
   }

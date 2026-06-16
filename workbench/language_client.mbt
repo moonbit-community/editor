@@ -17,6 +17,7 @@ fn register_remote_language_providers(
   services.language_features.register_document_symbol_provider(client)
   services.language_features.register_semantic_tokens_provider(client)
   services.language_features.register_folding_range_provider(client)
+  services.language_features.register_inlay_hints_provider(client)
 }
 
 ///|
@@ -130,6 +131,23 @@ impl @language.FoldingRangeProvider for RemoteLanguageClient with fn folding_ran
     FoldingRangesResult(payload) => payload.folding_ranges
     packet => {
       self.emit_remote_error("foldingRanges", document, packet)
+      []
+    }
+  }
+}
+
+///|
+impl @language.InlayHintsProvider for RemoteLanguageClient with fn inlay_hints(
+  self,
+  document,
+) {
+  let response = protocol_request("inlay-hints", id => {
+    InlayHints({ id, uri: document.uri, document_version: document.version })
+  })
+  match response {
+    InlayHintsResult(payload) => payload.inlay_hints
+    packet => {
+      self.emit_remote_error("inlayHints", document, packet)
       []
     }
   }

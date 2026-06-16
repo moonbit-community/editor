@@ -192,7 +192,7 @@ async test "answers hover and definition from cached provider state" {
 }
 
 ///|
-async test "answers diagnostics symbols semantic tokens and folding ranges from cached provider state" {
+async test "answers diagnostics symbols semantic tokens folding ranges and inlay hints from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("main.mbt", "pub fn main { // TODO }\n")
   let server = test_remote_server("/workspace", host)
@@ -230,6 +230,14 @@ async test "answers diagnostics symbols semantic tokens and folding ranges from 
       assert_eq(payload.folding_ranges[0].end_line_number, 3)
     }
     _ => fail("expected folding ranges result")
+  }
+
+  match server.inlay_hints({ id: "hints-1", uri, document_version: 1 }) {
+    InlayHintsResult(payload) => {
+      assert_eq(payload.inlay_hints.length(), 1)
+      assert_eq(payload.inlay_hints[0].label, ": Int")
+    }
+    _ => fail("expected inlay hints result")
   }
 }
 
@@ -283,6 +291,12 @@ async test "dispatches language requests through configured providers" {
       assert_eq(payload.folding_ranges[0].start_line_number, 1)
     _ => fail("expected folding ranges result")
   }
+
+  match server.inlay_hints({ id: "hints-1", uri, document_version: 1 }) {
+    InlayHintsResult(payload) =>
+      assert_eq(payload.inlay_hints[0].label, ": Int")
+    _ => fail("expected inlay hints result")
+  }
 }
 
 ///|
@@ -309,6 +323,7 @@ fn test_remote_server(
   let provider = FakeLanguageProvider::{  }
   @server.RemoteServer::with_language_providers(
     root, host, provider, provider, provider, provider, provider, provider, provider,
+    provider,
   )
 }
 
@@ -473,4 +488,12 @@ impl @language.FoldingRangeProvider for FakeLanguageProvider with fn folding_ran
   _document,
 ) {
   [FoldingRange(1, 3, kind=Region)]
+}
+
+///|
+impl @language.InlayHintsProvider for FakeLanguageProvider with fn inlay_hints(
+  _self,
+  _document,
+) {
+  [InlayHint(Position(0, 11), ": Int", kind=TypeHint, padding_left=true)]
 }

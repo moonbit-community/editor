@@ -475,6 +475,7 @@ fn server_packet_update(
     DefinitionResult(_) => (@rabbita.none, model)
     ReferencesResult(_) => (@rabbita.none, model)
     FoldingRangesResult(_) => (@rabbita.none, model)
+    InlayHintsResult(_) => (@rabbita.none, model)
     RemoteError(error) =>
       match watched_uri_for_error(error) {
         Some(uri_key) => (route_watched_error_cmd(uri_key, error), model)

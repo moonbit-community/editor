@@ -29,6 +29,7 @@ pub(all) struct LanguageFeaturesService {
   folding_range_provider : LanguageFeatureRegistry[
     &@language.FoldingRangeProvider,
   ]
+  inlay_hints_provider : LanguageFeatureRegistry[&@language.InlayHintsProvider]
   log_service : @log.LogService
 }
 
@@ -42,6 +43,7 @@ pub fn LanguageFeaturesService::new(
     document_symbol_provider: LanguageFeatureRegistry::new(),
     semantic_tokens_provider: LanguageFeatureRegistry::new(),
     folding_range_provider: LanguageFeatureRegistry::new(),
+    inlay_hints_provider: LanguageFeatureRegistry::new(),
     log_service,
   }
 }
@@ -84,6 +86,14 @@ pub fn LanguageFeaturesService::register_folding_range_provider(
   provider : &@language.FoldingRangeProvider,
 ) -> Unit {
   self.folding_range_provider.register(provider)
+}
+
+///|
+pub fn LanguageFeaturesService::register_inlay_hints_provider(
+  self : LanguageFeaturesService,
+  provider : &@language.InlayHintsProvider,
+) -> Unit {
+  self.inlay_hints_provider.register(provider)
 }
 
 ///|
@@ -186,6 +196,25 @@ pub async fn LanguageFeaturesService::folding_ranges_for_document(
   } else {
     fallback_folding_ranges(document)
   }
+}
+
+///|
+pub async fn LanguageFeaturesService::inlay_hints_for_document(
+  self : LanguageFeaturesService,
+  document : @workspace.SourceDocument,
+) -> Array[@language.InlayHint] noraise {
+  let hints : Array[@language.InlayHint] = []
+  for index in 0..<self.inlay_hints_provider.entries.length() {
+    let provider = self.inlay_hints_provider.entries[index]
+    let result = provider.inlay_hints(document) catch {
+      _ => {
+        self.log_provider_failure("language.inlayHints", document, index)
+        []
+      }
+    }
+    hints.append(result)
+  }
+  hints
 }
 
 ///|

@@ -107,6 +107,7 @@ fn server_packet_request_id(packet : @remote_protocol.ServerPacket) -> String {
     DocumentSymbolsResult(payload) => payload.id
     SemanticTokensResult(payload) => payload.id
     FoldingRangesResult(payload) => payload.id
+    InlayHintsResult(payload) => payload.id
     RemoteError(error) => error.request_id
   }
 }

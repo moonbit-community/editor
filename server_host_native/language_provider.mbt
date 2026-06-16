@@ -117,6 +117,14 @@ pub impl @language.FoldingRangeProvider for NativeWorkspaceLanguageProvider with
 }
 
 ///|
+pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with fn inlay_hints(
+  _self,
+  _document,
+) {
+  []
+}
+
+///|
 fn NativeWorkspaceLanguageProvider::lsp_document(
   self : NativeWorkspaceLanguageProvider,
   document : @workspace.SourceDocument,

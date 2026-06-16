@@ -354,7 +354,10 @@ fn Viewer::measured_char_width(self : Viewer) -> Double {
 ///|
 /// The margin width: digit slots (at least the old `min-width: 5ch`)
 /// plus the gutter padding, in measured glyph advances.
-fn Viewer::gutter_width(self : Viewer, frame : @renderer.RenderFrame) -> Double {
+fn Viewer::gutter_width(
+  self : Viewer,
+  frame : @view_model.RenderFrame,
+) -> Double {
   let digits = frame.line_count.to_string().length()
   let slots = if digits > gutter_min_digits {
     digits
@@ -369,7 +372,7 @@ fn Viewer::gutter_width(self : Viewer, frame : @renderer.RenderFrame) -> Double 
 /// model, falling back to font constants before the first measurement.
 fn Viewer::view_metrics(
   self : Viewer,
-  frame : @renderer.RenderFrame,
+  frame : @view_model.RenderFrame,
 ) -> @renderer.ViewMetrics {
   {
     origin_x: 0.0,
@@ -387,9 +390,9 @@ fn Viewer::view_metrics(
 /// The span the target falls in, as absolute document offsets. Mirrors
 /// the anchors the old per-span handlers produced.
 fn span_anchor_for_target(
-  frame : @renderer.RenderFrame,
+  frame : @view_model.RenderFrame,
   target : @renderer.MouseTarget,
-) -> (Int, Int, @renderer.RenderSpan)? {
+) -> (Int, Int, @view_model.RenderSpan)? {
   if target.span_index < 0 {
     return None
   }

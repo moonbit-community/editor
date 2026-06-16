@@ -57,7 +57,7 @@ fn create_content_widget_slots(document : @rdom.Document) -> ContentWidgetSlots 
 fn Viewer::render_hover_widget(
   self : Viewer,
   island : Island,
-  frame : @renderer.RenderFrame,
+  frame : @view_model.RenderFrame,
 ) -> Unit {
   let view = match self.hover.widget_view() {
     Some(view) => view
@@ -363,7 +363,7 @@ fn ContentWidget::style(self : ContentWidget) -> String {
 
 ///|
 fn line_col_for_offset(
-  frame : @renderer.RenderFrame,
+  frame : @view_model.RenderFrame,
   offset : Int,
 ) -> (Int, Int)? {
   for line in frame.lines {

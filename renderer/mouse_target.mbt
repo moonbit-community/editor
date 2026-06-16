@@ -48,7 +48,7 @@ fn outside_target() -> MouseTarget {
 /// band (widgets over them stop event propagation, so a zone hit resolves
 /// to `Outside`) and shift every line below their anchor.
 pub fn hit_test(
-  frame : RenderFrame,
+  frame : @view_model.RenderFrame,
   metrics : ViewMetrics,
   x : Double,
   y : Double,
@@ -130,7 +130,10 @@ pub fn hit_test(
 }
 
 ///|
-fn rendered_line(frame : RenderFrame, line_number : Int) -> RenderLine? {
+fn rendered_line(
+  frame : @view_model.RenderFrame,
+  line_number : Int,
+) -> @view_model.RenderLine? {
   let index = line_number - 1 - frame.viewport.start_line
   if index >= 0 && index < frame.lines.length() {
     Some(frame.lines[index])
@@ -140,7 +143,7 @@ fn rendered_line(frame : RenderFrame, line_number : Int) -> RenderLine? {
 }
 
 ///|
-fn span_index_at_column(line : RenderLine, column : Int) -> Int {
+fn span_index_at_column(line : @view_model.RenderLine, column : Int) -> Int {
   for index in 0..<line.spans.length() {
     let span = line.spans[index]
     if column >= span.start && column < span.end {

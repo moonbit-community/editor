@@ -109,7 +109,7 @@ Rendering is split by host boundary:
 
 ```text
 workspace.SourceDocument
-  -> renderer tokenization/ViewModel/layout state
+  -> renderer/view_model tokenization and ViewModel state
   -> renderer/view_layout scroll and viewport window state
   -> renderer ViewportData
   -> renderer/view_line_renderer render-line IR

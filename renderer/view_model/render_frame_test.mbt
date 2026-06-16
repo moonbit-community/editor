@@ -1,22 +1,22 @@
 ///|
 fn frame_for(
   doc : @core.DocumentSnapshot,
-  viewport : @renderer.FrameViewport,
+  viewport : @view_model.FrameViewport,
   decorations? : @decorations.DecorationSet = @decorations.DecorationSet::empty(),
   providers? : @language.ProviderResult = @language.ProviderResult::empty(),
-) -> @renderer.RenderFrame {
-  let tokenized = @renderer.TokenizedDocument::build(
+) -> @view_model.RenderFrame {
+  let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
   )
-  @renderer.build_frame(
+  @view_model.build_frame(
     FrameSource(tokenized, decorations, providers),
     viewport,
   )
 }
 
 ///|
-fn join_span_text(line : @renderer.RenderLine) -> String {
+fn join_span_text(line : @view_model.RenderLine) -> String {
   let mut out = ""
   for span in line.spans {
     out = out + line.span_text(span)

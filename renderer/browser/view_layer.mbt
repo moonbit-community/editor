@@ -6,8 +6,8 @@
 /// instead.
 fn Island::render_lines(
   self : Island,
-  frame : @renderer.RenderFrame,
-  view_model : @renderer.ViewModel?,
+  frame : @view_model.RenderFrame,
+  view_model : @view_model.ViewModel?,
   decorations : Array[@decorations.Decoration],
   generation : Int,
   space_width : Double,

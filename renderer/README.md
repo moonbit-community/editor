@@ -1,18 +1,14 @@
 # renderer
 
-Pre-DOM common-layer render IR, readonly `ViewModel`, viewport data, and editor
+Pre-DOM viewport data, line HTML compatibility helpers, and shared editor
 geometry. This package is the MoonBit-owned parent for Monaco's
 `vscode/src/vs/editor/common/*` layer.
 
 ## Responsibilities
 
-- Own the Monaco-shaped common spine: `TokenizedDocument` (the `TextModel`
-  tokens role: the snapshot plus syntax tokens bucketed per line, built
-  once per document version), `FrameSource` (per-line bucketed semantic
-  tokens and decorations, rebuilt per provider push), `ViewModel` (the readonly
-  no-wrap common-layer facade), `ViewModelLinesFromModelAsIs` (one view line per
-  model line), and `IdentityCoordinatesConverter` (model/view coordinates are
-  identical until wrapping, folding, and injected text land).
+- Depend on the `renderer/view_model` package for the Monaco-shaped common
+  spine: `TokenizedDocument`, `FrameSource`, `RenderFrame`, `ViewModel`,
+  `ViewModelLinesFromModelAsIs`, and `IdentityCoordinatesConverter`.
 - Own the pre-DOM viewport layer, matching Monaco's `ViewportData` role:
   `ViewportData` exposes 1-based inclusive visible line numbers,
   line-relative vertical offsets, `@view_line_renderer.ViewLineRenderingData`,
@@ -34,8 +30,8 @@ geometry. This package is the MoonBit-owned parent for Monaco's
 
 ## Boundaries
 
-- May depend on `core`, `syntax`, `decorations`, `language`,
-  `renderer/view_line_renderer`, `renderer/view_layout`, and JSON support.
+- May depend on `core`, `decorations`, `renderer/view_line_renderer`,
+  `renderer/view_layout`, and `renderer/view_model`.
 - Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,
   server routing, or filesystem providers. Layout, scrollbar, hit-test, and
   window functions are pure arithmetic over frame data and caller-measured
@@ -46,8 +42,8 @@ geometry. This package is the MoonBit-owned parent for Monaco's
 
 ## Checks
 
-- Package tests live in `tokenized_document_test.mbt`,
-  `render_frame_test.mbt`, `render_line_ir_test.mbt`, `view_model_test.mbt`,
-  `line_html_test.mbt`, and `mouse_target_test.mbt`.
+- Package tests live in `render_line_ir_test.mbt`, `line_html_test.mbt`,
+  `mouse_target_test.mbt`, and `view_model_viewport_test.mbt`.
+- View-model package tests live under `renderer/view_model`.
 - Layout package tests live under `renderer/view_layout`.
 - Run `just check` for the repository-level type check.

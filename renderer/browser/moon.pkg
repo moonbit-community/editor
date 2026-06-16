@@ -7,6 +7,7 @@ import {
   "baozhiyuan/editor/renderer",
   "baozhiyuan/editor/renderer/view_line_renderer",
   "baozhiyuan/editor/renderer/view_layout",
+  "baozhiyuan/editor/renderer/view_model",
   "baozhiyuan/editor/syntax",
   "baozhiyuan/editor/workspace",
   "moonbit-community/cmark/cmark",

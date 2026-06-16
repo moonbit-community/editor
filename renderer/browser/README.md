@@ -85,7 +85,7 @@ workbench) wrap the calls in their command type.
   `margin.mbt` own their stable role slots.
 - Own the render loop: rAF-coalesced flushes with reads (measurement)
   before writes, a `ViewLayer` recycler that consumes `renderer.ViewportData`
-  from the readonly `ViewModel`, derives
+  from `renderer/view_model.ViewModel`, derives
   `@view_line_renderer.RenderLineInput` for each visible line, splices
   entering/leaving line nodes, and writes `innerHTML` only when a line enters
   the viewport or its render input changed. Raw `RenderFrame` lines may still

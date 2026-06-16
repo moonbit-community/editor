@@ -1,9 +1,13 @@
 import {
   "baozhiyuan/editor/core",
   "baozhiyuan/editor/decorations",
-  "baozhiyuan/editor/language",
   "baozhiyuan/editor/renderer/view_line_renderer",
   "baozhiyuan/editor/renderer/view_layout",
-  "baozhiyuan/editor/syntax",
+  "baozhiyuan/editor/renderer/view_model",
   "moonbitlang/core/json",
 }
+
+import {
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/syntax",
+} for "test"

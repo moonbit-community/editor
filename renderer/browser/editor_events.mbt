@@ -11,7 +11,7 @@ priv enum EditorEvent {
 ///|
 /// Read-only viewer state controllers may consult while handling an event.
 priv struct EditorContext {
-  frame : @renderer.RenderFrame?
+  frame : @view_model.RenderFrame?
 }
 
 ///|
@@ -112,7 +112,7 @@ fn Viewer::controller_decorations(
 }
 
 ///|
-fn frame_version(frame : @renderer.RenderFrame?) -> Int {
+fn frame_version(frame : @view_model.RenderFrame?) -> Int {
   match frame {
     Some(item) => item.version
     None => 0

@@ -8,11 +8,11 @@
 /// decorations extend the line class (see `render_line_class`), every
 /// other kind extends the classes of the spans it intersects.
 pub fn render_line_html(
-  line : RenderLine,
+  line : @view_model.RenderLine,
   decorations : Array[@decorations.Decoration],
 ) -> String {
   @view_line_renderer.render_view_line2(
-    render_line_input_from_render_line(line, decorations~),
+    @view_model.render_line_input_from_render_line(line, decorations~),
   ).html
 }
 
@@ -20,7 +20,7 @@ pub fn render_line_html(
 /// The class of the line node itself: `view-line` plus any `CurrentLine`
 /// decorations touching the line (inclusive bounds, as before).
 pub fn render_line_class(
-  line : RenderLine,
+  line : @view_model.RenderLine,
   decorations : Array[@decorations.Decoration],
 ) -> String {
   let line_start = line.offset

@@ -1,6 +1,6 @@
 ///|
 fn bucket_texts(
-  tokenized : @renderer.TokenizedDocument,
+  tokenized : @view_model.TokenizedDocument,
   line : Int,
 ) -> Array[String] {
   let texts = []
@@ -28,7 +28,7 @@ test "tokens bucket per line and multi-line tokens cover every line" {
     { range: comment_range, tag: Comment, text: doc.slice(comment_range) },
     { range: Range(33, 36), tag: Keyword, text: "let" },
   ]
-  let tokenized = @renderer.TokenizedDocument::build(doc, tokens)
+  let tokenized = @view_model.TokenizedDocument::build(doc, tokens)
   assert_eq(tokenized.token_count, 3)
   debug_inspect(
     bucket_texts(tokenized, 0),
@@ -59,16 +59,16 @@ test "bucketed window frames equal a full lexer pass" {
     chunks.push("}")
   }
   let doc = @core.DocumentSnapshot(chunks.join("\n"))
-  let tokenized = @renderer.TokenizedDocument::build(
+  let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
   )
-  let source = @renderer.FrameSource(
+  let source = @view_model.FrameSource(
     tokenized,
     @decorations.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
-  let frame = @renderer.build_frame(source, { start_line: 300, end_line: 360 })
+  let frame = @view_model.build_frame(source, { start_line: 300, end_line: 360 })
   assert_eq(frame.lines.length(), 60)
   assert_eq(frame.lines[0].line_number, 301)
   for line in frame.lines {
@@ -83,7 +83,7 @@ test "bucketed window frames equal a full lexer pass" {
 ///|
 test "feature buckets accept unsorted ranges" {
   let doc = @core.DocumentSnapshot("aaa\nbbb\nccc\nddd")
-  let tokenized = @renderer.TokenizedDocument::build(
+  let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
   )
@@ -99,12 +99,12 @@ test "feature buckets accept unsorted ranges" {
       { range: Range(4, 11), token_type: "comment" },
     ],
   }
-  let source = @renderer.FrameSource(
+  let source = @view_model.FrameSource(
     tokenized,
     @decorations.DecorationSet::empty(),
     providers,
   )
-  let frame = @renderer.build_frame(source, { start_line: 0, end_line: 4 })
+  let frame = @view_model.build_frame(source, { start_line: 0, end_line: 4 })
   let classes = []
   for line in frame.lines {
     let line_classes = []

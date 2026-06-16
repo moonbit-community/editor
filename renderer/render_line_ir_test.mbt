@@ -31,8 +31,8 @@ test "render line input carries readonly defaults and equality" {
   let doc = @core.DocumentSnapshot("let x = 1")
   let frame = frame_for(doc, { start_line: 0, end_line: 1 })
   let line = frame.lines[0]
-  let input = @renderer.render_line_input_from_render_line(line)
-  let same = @renderer.render_line_input_from_render_line(line)
+  let input = @view_model.render_line_input_from_render_line(line)
+  let same = @view_model.render_line_input_from_render_line(line)
   assert_true(input == same)
   assert_true(input.use_monospace_optimizations)
   assert_true(input.can_use_halfwidth_rightwards_arrow)
@@ -41,7 +41,7 @@ test "render line input carries readonly defaults and equality" {
   assert_eq(input.stop_rendering_line_after, -1)
   assert_false(input.render_control_characters)
   let changed = @view_line_renderer.RenderLineInput::from_view_line(
-    @renderer.view_line_rendering_data_from_render_line(line),
+    @view_model.view_line_rendering_data_from_render_line(line),
     render_whitespace=All,
   )
   assert_false(input == changed)

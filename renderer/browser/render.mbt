@@ -23,7 +23,7 @@ fn Viewer::render_current_document(
         Some(tokenizer) => @syntax.tokenize_document(doc, tokenizer)
         None => @syntax.highlight(doc)
       }
-      @renderer.TokenizedDocument::build(doc, tokens)
+      @view_model.TokenizedDocument::build(doc, tokens)
     }
   }
   let tokenize_finished = @dom.now_ms()
@@ -36,8 +36,8 @@ fn Viewer::render_current_document(
   let decorations = self.services.marker_decorations.decorations_for_resource(
     document.uri,
   )
-  let source = @renderer.FrameSource(tokenized, decorations, providers)
-  let view_model = @renderer.ViewModel(source)
+  let source = @view_model.FrameSource(tokenized, decorations, providers)
+  let view_model = @view_model.ViewModel(source)
   // Only a rotated document identity or version renders from the top;
   // watch backends may re-push the same version (the old cell key kept
   // those re-renders at their scroll position too).
@@ -98,7 +98,7 @@ fn Viewer::render_current_document(
 fn Viewer::cached_tokenized(
   self : Viewer,
   document : @workspace.SourceDocument,
-) -> @renderer.TokenizedDocument? {
+) -> @view_model.TokenizedDocument? {
   match (self.frame_source, self.source_document) {
     (Some(source), Some(current)) =>
       if current.uri.to_string() == document.uri.to_string() &&

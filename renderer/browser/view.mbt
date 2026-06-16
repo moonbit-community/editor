@@ -67,7 +67,7 @@ priv struct Island {
 }
 
 ///|
-fn frame_window(frame : @renderer.RenderFrame) -> @view_layout.LineWindow {
+fn frame_window(frame : @view_model.RenderFrame) -> @view_layout.LineWindow {
   { start: frame.viewport.start_line, end: frame.viewport.end_line }
 }
 
@@ -261,8 +261,8 @@ fn Viewer::schedule_render(self : Viewer) -> Unit {
 /// O(window) build) so hit tests and the recycler stay aligned.
 fn Viewer::synced_window_frame(
   self : Viewer,
-  frame : @renderer.RenderFrame,
-) -> @renderer.RenderFrame {
+  frame : @view_model.RenderFrame,
+) -> @view_model.RenderFrame {
   guard self.view_model is Some(view_model) else { return frame }
   let rendered = frame_window(frame)
   let desired = self.layout.visible_window(overscan=line_overscan)

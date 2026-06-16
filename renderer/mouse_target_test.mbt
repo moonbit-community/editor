@@ -1,11 +1,13 @@
 ///|
-fn hit_test_frame(viewport? : @renderer.FrameViewport) -> @renderer.RenderFrame {
+fn hit_test_frame(
+  viewport? : @view_model.FrameViewport,
+) -> @view_model.RenderFrame {
   let doc = @core.DocumentSnapshot("fn main {\n  let x = 1\n}\n\nfn other {}")
-  let tokenized = @renderer.TokenizedDocument::build(
+  let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
   )
-  let source = @renderer.FrameSource(
+  let source = @view_model.FrameSource(
     tokenized,
     @decorations.DecorationSet::empty(),
     @language.ProviderResult::empty(),
@@ -14,7 +16,7 @@ fn hit_test_frame(viewport? : @renderer.FrameViewport) -> @renderer.RenderFrame 
     Some(viewport) => viewport
     None => { start_line: 0, end_line: doc.line_count() }
   }
-  @renderer.build_frame(source, viewport)
+  @view_model.build_frame(source, viewport)
 }
 
 ///|

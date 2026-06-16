@@ -16,9 +16,9 @@ pub struct Viewer {
   priv layout : @view_layout.ViewLayout
   priv mut theme : String
   priv mut placeholder : String
-  priv mut frame : @renderer.RenderFrame?
-  priv mut view_model : @renderer.ViewModel?
-  priv mut frame_source : @renderer.FrameSource?
+  priv mut frame : @view_model.RenderFrame?
+  priv mut view_model : @view_model.ViewModel?
+  priv mut frame_source : @view_model.FrameSource?
   priv mut source_document : @workspace.SourceDocument?
   priv mut provider_result : @language.ProviderResult
   priv mut hover : HoverController

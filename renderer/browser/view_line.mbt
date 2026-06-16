@@ -23,7 +23,7 @@ fn render_line_input_for_viewport(
 ///|
 fn write_line_node(
   node : @rdom.Element,
-  line : @renderer.RenderLine,
+  line : @view_model.RenderLine,
   decorations : Array[@decorations.Decoration],
   input : @view_line_renderer.RenderLineInput,
   window_index : Int,
@@ -40,7 +40,7 @@ fn write_line_node(
 ///|
 fn write_line_number_node(
   gutter : @rdom.Element,
-  line : @renderer.RenderLine,
+  line : @view_model.RenderLine,
   window_index : Int,
 ) -> Unit {
   gutter.set_attribute("class", "line-number")

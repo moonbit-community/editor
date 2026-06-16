@@ -89,16 +89,16 @@ fn render_hover_code_block(
     Some(tokenizer) => tokenizer
     None => @syntax.PlainTokenizer::new()
   }
-  let tokenized = @renderer.TokenizedDocument::build(
+  let tokenized = @view_model.TokenizedDocument::build(
     snapshot,
     @syntax.tokenize_document(snapshot, tokenizer),
   )
-  let source = @renderer.FrameSource(
+  let source = @view_model.FrameSource(
     tokenized,
     @decorations.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
-  let frame = @renderer.build_frame(source, {
+  let frame = @view_model.build_frame(source, {
     start_line: 0,
     end_line: snapshot.line_count(),
   })

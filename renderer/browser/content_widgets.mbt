@@ -125,10 +125,7 @@ fn Viewer::render_hover_widget(
 }
 
 ///|
-fn View::ensure_hover_widget(
-  self : View,
-  viewer : Viewer,
-) -> HoverWidgetDom {
+fn View::ensure_hover_widget(self : View, viewer : Viewer) -> HoverWidgetDom {
   match self.hover_widget {
     Some(widget) => widget
     None => {

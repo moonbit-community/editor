@@ -77,10 +77,7 @@ impl ViewPart for ViewPartRole with fn render(self, context) {
         rendering.viewport,
         input.selection_range,
       )
-      view.view_overlays.set_attribute(
-        "style",
-        rendering.content_transform(),
-      )
+      view.view_overlays.set_attribute("style", rendering.content_transform())
     }
     MarginViewOverlaysPart => {
       view.render_folding_markers(
@@ -98,10 +95,7 @@ impl ViewPart for ViewPartRole with fn render(self, context) {
       view.folding.set_attribute("style", rendering.margin_transform())
     }
     ContentWidgetsPart => {
-      view.content_widgets.set_attribute(
-        "style",
-        rendering.content_transform(),
-      )
+      view.content_widgets.set_attribute("style", rendering.content_transform())
       rendering.view_context.viewer.render_hover_widget(view, input.frame)
     }
     OverlayWidgetsPart => ()

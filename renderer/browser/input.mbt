@@ -312,10 +312,7 @@ fn scrollable_for_drag(
 }
 
 ///|
-fn Viewer::hook_browser_desperate_reveal(
-  self : Viewer,
-  view : View,
-) -> Unit {
+fn Viewer::hook_browser_desperate_reveal(self : Viewer, view : View) -> Unit {
   view.root.add_event_listener("scroll", _ => {
     self.handle_browser_desperate_reveal(
       view.root,

@@ -67,7 +67,9 @@ fn RenderingContext::from_input(
 }
 
 ///|
-fn RenderingContext::restricted(self : RenderingContext) -> RestrictedRenderingContext {
+fn RenderingContext::restricted(
+  self : RenderingContext,
+) -> RestrictedRenderingContext {
   { rendering: self }
 }
 

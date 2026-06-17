@@ -91,6 +91,34 @@ test('retains visible line nodes and limits html rewrites on decoration updates'
   await expect(page.locator('.line-number[data-line]').first()).toBeVisible();
 });
 
+test('scroll position updates transforms without rewriting visible line html', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await openWorkspaceFile(page, 'src/generated_scroll.mbt', { waitForActiveReveal: false });
+
+  await installViewLineHtmlWriteCounter(page);
+  const before = await snapshotVisibleLines(page);
+  expect(before.length).toBeGreaterThan(1);
+  const firstLineTop = async () =>
+    page.locator('.view-line[data-line="1"]').evaluate((node) => {
+      const root = node.closest('.monaco-editor');
+      return Math.round(node.getBoundingClientRect().top - root.getBoundingClientRect().top);
+    });
+  const beforeTop = await firstLineTop();
+
+  await page.evaluate(() => globalThis.__readonlyEditorScrollTo(72));
+  await expect.poll(firstLineTop, { timeout: 2_000 }).toBeLessThan(beforeTop - 40);
+
+  const after = await snapshotVisibleLines(page);
+  const beforeByLine = new Map(before.map((line) => [line.line, line.probe]));
+  for (const line of after) {
+    expect(line.probe).toBe(beforeByLine.get(line.line));
+  }
+  const writes = await page.evaluate(() => globalThis.__readonlyEditorLineHtmlWrites ?? 0);
+  expect(writes).toBe(0);
+});
+
 async function installViewLineHtmlWriteCounter(page) {
   await page.evaluate(() => {
     if (globalThis.__readonlyEditorLineHtmlCounterInstalled) {

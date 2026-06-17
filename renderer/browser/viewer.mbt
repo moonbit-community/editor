@@ -419,7 +419,7 @@ fn Viewer::apply_scroll_change(
   match change {
     Some(_) => {
       match self.view {
-        Some(view) => view.editor_scrollable.reveal_for_scroll()
+        Some(view) => view.editor_scrollbar.scrollable().reveal_for_scroll()
         None => ()
       }
       self.scroll_dirty = true

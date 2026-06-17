@@ -85,24 +85,27 @@ their command type.
   `.overflow-guard` when a widget is allowed to escape the editor clip.
 - Own the browser-layer role files that correspond to Monaco
   `editor/browser`: `view.mbt` owns root DOM creation, scheduling, and
-  coordinated rendering; `view_part.mbt` owns the private render lifecycle;
-  `rendering_context.mbt` owns the shared read/prepare data; `view_layer.mbt`
-  owns line/gutter node recycling; `view_line.mbt` owns per-line DOM writes;
-  `content_widgets.mbt` owns text-anchored widgets and hover;
-  `overlay_widgets.mbt`, `view_overlays.mbt`, `view_zones.mbt`, and
-  `margin.mbt` own their stable role slots.
+  coordinated rendering; `view_part.mbt` owns stateful private part handles;
+  `rendering_context.mbt` owns the shared read/prepare data and the restricted
+  write context; `view_layer.mbt` owns text-line node recycling;
+  `view_line.mbt` owns per-line DOM writes; `content_widgets.mbt` owns
+  text-anchored widgets and hover; `overlay_widgets.mbt`, `view_overlays.mbt`,
+  `view_zones.mbt`, `margin.mbt`, and `editor_scrollbar.mbt` own their stable
+  role slots and private DOM state.
 - Own the render loop: rAF-coalesced flushes with reads (measurement) before
   writes. `Viewer::flush_render` builds `ViewRenderInput`; `View::render`
-  derives `RenderingContext`, asks `ViewPartRole`s if they should render,
-  renders `ViewLines` first, then lets zones, overlays, margin, widgets, and
-  scrollbars prepare/write through `RestrictedRenderingContext`. The
+  derives `RenderingContext`, asks stateful `ViewPartHandle`s if they should
+  render from a render-change summary, prepares/renders `ViewLines` first, then
+  lets zones, overlays, margin, widgets, and scrollbars prepare/write through
+  `RestrictedRenderingContext`. The
   `ViewLayer` recycler consumes `renderer/view_layout.ViewportData` from
   `renderer/view_model.ViewModel`, derives
   `@view_line_renderer.RenderLineInput` for each visible line, splices
   entering/leaving line nodes, and writes `innerHTML` only when a line enters
   the viewport or its render input changed. Raw `RenderFrame` lines may still
-  supply line-node classes and gutter numbers during the compatibility period,
-  but line HTML flows through `renderer/view_line_renderer`. Paint facts
+  supply line-node classes during the compatibility period, but line HTML flows
+  through `renderer/view_line_renderer`; line-number DOM is owned by the margin
+  overlay part. Paint facts
   (`patch_ms`, scroll position) are reported after the flush.
 - Own browser measurement for option-controlled soft wrap: the view measures
   content width and the monospace char probe, converts that to

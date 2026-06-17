@@ -2,6 +2,7 @@
 /// Private Monaco-shaped render lifecycle for browser view concerns.
 priv trait ViewPart {
   fn should_render(Self, RenderingContext) -> Bool
+  fn set_should_render(Self, Bool) -> Unit
   fn on_before_render(Self, @view_layout.ViewportData) -> Unit
   fn prepare_render(Self, RenderingContext) -> Unit
   fn render(Self, RestrictedRenderingContext) -> Unit
@@ -9,106 +10,111 @@ priv trait ViewPart {
 }
 
 ///|
-priv enum ViewPartRole {
-  ViewLinesPart
-  ViewZonesPart
-  ContentViewOverlaysPart
-  MarginViewOverlaysPart
-  ContentWidgetsPart
-  OverlayWidgetsPart
-  EditorScrollbarPart
+priv enum ViewPartHandle {
+  ViewLinesPart(ViewLines)
+  ViewZonesPart(ViewZones)
+  ContentViewOverlaysPart(ContentViewOverlays)
+  MarginViewOverlaysPart(MarginViewOverlays)
+  ContentWidgetsPart(ContentWidgets)
+  OverlayWidgetsPart(OverlayWidgets)
+  EditorScrollbarPart(EditorScrollbar)
 }
 
 ///|
-fn default_view_parts() -> Array[ViewPartRole] {
+fn default_view_parts(
+  view_lines : ViewLines,
+  view_zones : ViewZones,
+  content_view_overlays : ContentViewOverlays,
+  margin_view_overlays : MarginViewOverlays,
+  content_widgets : ContentWidgets,
+  overlay_widgets : OverlayWidgets,
+  editor_scrollbar : EditorScrollbar,
+) -> Array[ViewPartHandle] {
   [
-    ViewLinesPart,
-    ViewZonesPart,
-    ContentViewOverlaysPart,
-    MarginViewOverlaysPart,
-    ContentWidgetsPart,
-    OverlayWidgetsPart,
-    EditorScrollbarPart,
+    ViewLinesPart(view_lines),
+    ViewZonesPart(view_zones),
+    ContentViewOverlaysPart(content_view_overlays),
+    MarginViewOverlaysPart(margin_view_overlays),
+    ContentWidgetsPart(content_widgets),
+    OverlayWidgetsPart(overlay_widgets),
+    EditorScrollbarPart(editor_scrollbar),
   ]
 }
 
 ///|
-impl ViewPart for ViewPartRole with fn should_render(_self, _context) {
-  true
-}
-
-///|
-impl ViewPart for ViewPartRole with fn on_before_render(_self, _viewport) {
-  ()
-}
-
-///|
-impl ViewPart for ViewPartRole with fn prepare_render(_self, _context) {
-  ()
-}
-
-///|
-impl ViewPart for ViewPartRole with fn render(self, context) {
-  let rendering = context.rendering
-  let view = rendering.view_context.view
-  let input = rendering.input
+impl ViewPart for ViewPartHandle with fn should_render(self, context) {
   match self {
-    ViewLinesPart => {
-      view.render_lines(
-        input.frame,
-        rendering.viewport,
-        input.decorations,
-        input.generation,
-        input.space_width,
-      )
-      view.lines_content.set_attribute(
-        "style",
-        "left:" + rendering.gutter_width.to_string() + "px",
-      )
-      view.view_lines.set_attribute("style", rendering.content_transform())
-    }
-    ViewZonesPart => {
-      view.render_view_zones(input.browser_view_zones, rendering.viewport)
-      view.view_zones.set_attribute("style", rendering.content_transform())
-    }
-    ContentViewOverlaysPart => {
-      view.render_selection_overlays(
-        input.frame,
-        rendering.viewport,
-        input.selection_range,
-      )
-      view.view_overlays.set_attribute("style", rendering.content_transform())
-    }
-    MarginViewOverlaysPart => {
-      view.render_folding_markers(
-        rendering.viewport,
-        input.view_model,
-        input.folding_ranges,
-        input.folded_ranges,
-        on_toggle_fold=input.on_toggle_fold,
-      )
-      view.margin.set_attribute(
-        "style",
-        "width:" + rendering.gutter_width.to_string() + "px",
-      )
-      view.line_numbers.set_attribute("style", rendering.margin_transform())
-      view.folding.set_attribute("style", rendering.margin_transform())
-    }
-    ContentWidgetsPart => {
-      view.content_widgets.set_attribute("style", rendering.content_transform())
-      rendering.view_context.viewer.render_hover_widget(view, input.frame)
-    }
-    OverlayWidgetsPart => ()
-    EditorScrollbarPart =>
-      view.update_scrollbars(
-        input.layout.dimensions(),
-        rendering.position,
-        rendering.gutter_width,
-      )
+    ViewLinesPart(part) => part.should_render(context)
+    ViewZonesPart(part) => part.should_render(context)
+    ContentViewOverlaysPart(part) => part.should_render(context)
+    MarginViewOverlaysPart(part) => part.should_render(context)
+    ContentWidgetsPart(part) => part.should_render(context)
+    OverlayWidgetsPart(part) => part.should_render(context)
+    EditorScrollbarPart(part) => part.should_render(context)
   }
 }
 
 ///|
-impl ViewPart for ViewPartRole with fn on_did_render(_self) {
-  ()
+impl ViewPart for ViewPartHandle with fn set_should_render(self, value) {
+  match self {
+    ViewLinesPart(part) => part.set_should_render(value)
+    ViewZonesPart(part) => part.set_should_render(value)
+    ContentViewOverlaysPart(part) => part.set_should_render(value)
+    MarginViewOverlaysPart(part) => part.set_should_render(value)
+    ContentWidgetsPart(part) => part.set_should_render(value)
+    OverlayWidgetsPart(part) => part.set_should_render(value)
+    EditorScrollbarPart(part) => part.set_should_render(value)
+  }
+}
+
+///|
+impl ViewPart for ViewPartHandle with fn on_before_render(self, viewport) {
+  match self {
+    ViewLinesPart(part) => part.on_before_render(viewport)
+    ViewZonesPart(part) => part.on_before_render(viewport)
+    ContentViewOverlaysPart(part) => part.on_before_render(viewport)
+    MarginViewOverlaysPart(part) => part.on_before_render(viewport)
+    ContentWidgetsPart(part) => part.on_before_render(viewport)
+    OverlayWidgetsPart(part) => part.on_before_render(viewport)
+    EditorScrollbarPart(part) => part.on_before_render(viewport)
+  }
+}
+
+///|
+impl ViewPart for ViewPartHandle with fn prepare_render(self, context) {
+  match self {
+    ViewLinesPart(part) => part.prepare_render(context)
+    ViewZonesPart(part) => part.prepare_render(context)
+    ContentViewOverlaysPart(part) => part.prepare_render(context)
+    MarginViewOverlaysPart(part) => part.prepare_render(context)
+    ContentWidgetsPart(part) => part.prepare_render(context)
+    OverlayWidgetsPart(part) => part.prepare_render(context)
+    EditorScrollbarPart(part) => part.prepare_render(context)
+  }
+}
+
+///|
+impl ViewPart for ViewPartHandle with fn render(self, context) {
+  match self {
+    ViewLinesPart(part) => part.render(context)
+    ViewZonesPart(part) => part.render(context)
+    ContentViewOverlaysPart(part) => part.render(context)
+    MarginViewOverlaysPart(part) => part.render(context)
+    ContentWidgetsPart(part) => part.render(context)
+    OverlayWidgetsPart(part) => part.render(context)
+    EditorScrollbarPart(part) => part.render(context)
+  }
+}
+
+///|
+impl ViewPart for ViewPartHandle with fn on_did_render(self) {
+  match self {
+    ViewLinesPart(part) => part.on_did_render()
+    ViewZonesPart(part) => part.on_did_render()
+    ContentViewOverlaysPart(part) => part.on_did_render()
+    MarginViewOverlaysPart(part) => part.on_did_render()
+    ContentWidgetsPart(part) => part.on_did_render()
+    OverlayWidgetsPart(part) => part.on_did_render()
+    EditorScrollbarPart(part) => part.on_did_render()
+  }
 }

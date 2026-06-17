@@ -26,7 +26,7 @@ remote protocol transport.
   tree's `set_active` (autoReveal).
 - Own the viewer mount seam: the shell renders one stable `.viewer-host`
   element (never any children inside it) and attaches the imperative
-  viewer island into it after the first paint; viewer methods are plain
+  viewer view into it after the first paint; viewer methods are plain
   calls lifted into shell commands. Host-captured keys route into the
   viewer (Escape to the controllers; PgUp/PgDn/Home/End/arrows into the
   synthetic scroll methods).

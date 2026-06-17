@@ -1,7 +1,13 @@
 # Monaco View-Part Ownership Architecture
 
-Status: planned.
+Status: implemented.
 Date: 2026-06-17
+
+Implementation note: the browser viewer now uses stateful private
+`ViewPartHandle` values carrying `ViewLines`, `ViewZones`,
+`ContentViewOverlays`, `MarginViewOverlays`, `ContentWidgets`,
+`OverlayWidgets`, and `EditorScrollbar`. The original plan narrative below is
+kept as the implementation target and historical rationale.
 
 ## Summary
 

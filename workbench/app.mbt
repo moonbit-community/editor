@@ -130,7 +130,7 @@ fn register_tokenizers() -> Unit {
 }
 
 ///|
-/// Mounts the Rabbita workbench shell and attaches the viewer island after the
+/// Mounts the Rabbita workbench shell and attaches the viewer view after the
 /// first shell paint.
 pub fn mount_app() -> Unit {
   let (_, cell) = @rabbita.cell_with_emit(
@@ -146,7 +146,7 @@ pub fn mount_app() -> Unit {
               scheduler.add(send_client_packet_cmd(emit, packet))
             })
             scheduler.add(emit(ConnectProtocol))
-            // The viewer island mounts into the stable host element after the
+            // The viewer view mounts into the stable host element after the
             // shell's first paint; the shell never renders children into it.
             scheduler.add(
               @cmd.custom_cmd(
@@ -166,7 +166,7 @@ pub fn mount_app() -> Unit {
 }
 
 ///|
-/// Attaches the imperative viewer island into the shell-rendered host
+/// Attaches the imperative viewer view into the shell-rendered host
 /// element and installs the harness scroll control
 /// (`__readonlyEditorScrollTo`) that drives synthetic scrolling.
 fn attach_workbench_viewer() -> Unit {
@@ -551,7 +551,7 @@ fn view_workbench(
     view_topbar(model),
     @html.div(class="editor-main", [
       view_sidebar(emit, model),
-      // The stable island host: the viewer attaches its imperative DOM
+      // The stable viewer host: the viewer attaches its imperative DOM
       // into this element after mount, and the shell must never render
       // vdom children into it (Rabbita's diff would not know them).
       @html.div(class="viewer-host", ([] : Array[@html.Html])),

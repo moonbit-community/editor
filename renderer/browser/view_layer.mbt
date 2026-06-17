@@ -1,11 +1,108 @@
 ///|
+priv struct ViewLinesPrepared {
+  frame : @view_model.RenderFrame
+  viewport : @view_layout.ViewportData
+  decorations : Array[@decorations.Decoration]
+  generation : Int
+  space_width : Double
+}
+
+///|
+priv struct ViewLines {
+  view_lines : @rdom.Element
+  mut window : @view_layout.LineWindow
+  mut generation : Int
+  line_nodes : Array[@rdom.Element]
+  render_inputs : Array[@view_line_renderer.RenderLineInput]
+  mut should_render : Bool
+  mut prepared : ViewLinesPrepared?
+}
+
+///|
+fn ViewLines::new(document : @rdom.Document) -> ViewLines {
+  let view_lines = document.create_element("div")
+  view_lines.set_attribute("class", "view-lines")
+  view_lines.set_attribute("data-view-part", "view-lines")
+  {
+    view_lines,
+    window: { start: 0, end: 0 },
+    generation: -1,
+    line_nodes: [],
+    render_inputs: [],
+    should_render: true,
+    prepared: None,
+  }
+}
+
+///|
+fn ViewLines::dom(self : ViewLines) -> @rdom.Element {
+  self.view_lines
+}
+
+///|
+impl ViewPart for ViewLines with fn should_render(self, context) {
+  self.should_render ||
+  context.change.first_render ||
+  context.change.frame_generation_changed ||
+  context.change.viewport_window_changed ||
+  context.change.scroll_position_changed ||
+  context.change.layout_dimensions_changed ||
+  context.change.gutter_width_changed ||
+  context.change.glyph_width_changed ||
+  context.change.decorations_changed
+}
+
+///|
+impl ViewPart for ViewLines with fn set_should_render(self, value) {
+  self.should_render = value
+}
+
+///|
+impl ViewPart for ViewLines with fn on_before_render(_self, _viewport) {
+  ()
+}
+
+///|
+impl ViewPart for ViewLines with fn prepare_render(self, context) {
+  self.prepared = Some({
+    frame: context.input.frame,
+    viewport: context.viewport,
+    decorations: context.input.decorations,
+    generation: context.input.generation,
+    space_width: context.input.space_width,
+  })
+}
+
+///|
+impl ViewPart for ViewLines with fn render(self, context) {
+  match self.prepared {
+    Some(prepared) => {
+      self.render_text(
+        prepared.frame,
+        prepared.viewport,
+        prepared.decorations,
+        prepared.generation,
+        prepared.space_width,
+      )
+      self.view_lines.set_attribute("style", context.content_transform)
+    }
+    None => ()
+  }
+}
+
+///|
+impl ViewPart for ViewLines with fn on_did_render(self) {
+  self.should_render = false
+  self.prepared = None
+}
+
+///|
 /// The `ViewLayer` recycler: tracks the rendered line range, splices
-/// entering/leaving line and line-number nodes, and writes `innerHTML`
-/// only on entering lines. A changed content generation (new frame
-/// source or changed controller decorations) rewrites every rendered line
-/// instead.
-fn View::render_lines(
-  self : View,
+/// entering/leaving text line nodes, and writes `innerHTML` only on entering
+/// lines. A changed content generation (new frame source or changed
+/// controller decorations) rewrites every rendered line instead.
+fn ViewLines::render_text(
+  self : ViewLines,
   frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
   decorations : Array[@decorations.Decoration],
@@ -16,16 +113,8 @@ fn View::render_lines(
   let document = @rdom.document()
   if generation != self.generation {
     while self.line_nodes.length() > viewport.lines.length() {
-      match
-        (
-          self.line_nodes.pop(),
-          self.gutter_nodes.pop(),
-          self.render_inputs.pop(),
-        ) {
-        (Some(node), Some(gutter), _) => {
-          self.view_lines.remove_child(node.as_node())
-          self.line_numbers.remove_child(gutter.as_node())
-        }
+      match (self.line_nodes.pop(), self.render_inputs.pop()) {
+        (Some(node), _) => self.view_lines.remove_child(node.as_node())
         _ => ()
       }
     }
@@ -33,9 +122,6 @@ fn View::render_lines(
       let node = document.create_element("div")
       self.view_lines.append_child(node.as_node())
       self.line_nodes.push(node)
-      let gutter = document.create_element("div")
-      self.line_numbers.append_child(gutter.as_node())
-      self.gutter_nodes.push(gutter)
     }
     let previous_inputs = self.render_inputs.copy()
     self.render_inputs.clear()
@@ -53,11 +139,6 @@ fn View::render_lines(
         viewport.relative_vertical_offset[index],
         rewrite_html~,
       )
-      write_line_number_node(
-        self.gutter_nodes[index],
-        frame.lines[index],
-        viewport.relative_vertical_offset[index],
-      )
       self.render_inputs.push(input)
     }
     self.generation = generation
@@ -69,24 +150,16 @@ fn View::render_lines(
   }
   let previous = self.window
   let next_lines : Array[@rdom.Element] = []
-  let next_gutters : Array[@rdom.Element] = []
   let next_inputs : Array[@view_line_renderer.RenderLineInput] = []
   for index in 0..<viewport.lines.length() {
     let line_index = target.start + index
     if line_index >= previous.start && line_index < previous.end {
-      // Retained line: only its window-relative top moves.
       let node = self.line_nodes[line_index - previous.start]
       node.set_attribute(
         "style",
         line_node_style(viewport.relative_vertical_offset[index]),
       )
       next_lines.push(node)
-      let gutter = self.gutter_nodes[line_index - previous.start]
-      gutter.set_attribute(
-        "style",
-        line_node_style(viewport.relative_vertical_offset[index]),
-      )
-      next_gutters.push(gutter)
       next_inputs.push(self.render_inputs[line_index - previous.start])
     } else {
       let node = document.create_element("div")
@@ -101,14 +174,6 @@ fn View::render_lines(
       )
       self.view_lines.append_child(node.as_node())
       next_lines.push(node)
-      let gutter = document.create_element("div")
-      write_line_number_node(
-        gutter,
-        frame.lines[index],
-        viewport.relative_vertical_offset[index],
-      )
-      self.line_numbers.append_child(gutter.as_node())
-      next_gutters.push(gutter)
       next_inputs.push(input)
     }
   }
@@ -117,49 +182,17 @@ fn View::render_lines(
       self.view_lines.remove_child(
         self.line_nodes[line_index - previous.start].as_node(),
       )
-      self.line_numbers.remove_child(
-        self.gutter_nodes[line_index - previous.start].as_node(),
-      )
     }
   }
   self.line_nodes.clear()
   for node in next_lines {
     self.line_nodes.push(node)
   }
-  self.gutter_nodes.clear()
-  for gutter in next_gutters {
-    self.gutter_nodes.push(gutter)
-  }
   self.render_inputs.clear()
   for input in next_inputs {
     self.render_inputs.push(input)
   }
   self.window = target
-}
-
-///|
-fn View::render_selection_overlays(
-  self : View,
-  frame : @view_model.RenderFrame,
-  viewport : @view_layout.ViewportData,
-  selection_range : @core.Range?,
-) -> Unit {
-  self.view_overlays.set_inner_html("")
-  let range = match selection_range {
-    Some(range) => range
-    None => return
-  }
-  let document = @rdom.document()
-  for index in 0..<frame.lines.length() {
-    let line = frame.lines[index]
-    append_line_selection_segments(
-      self.view_overlays,
-      document,
-      line,
-      range,
-      viewport.relative_vertical_offset[index],
-    )
-  }
 }
 
 ///|
@@ -205,70 +238,6 @@ fn selection_segment_style(
   "ch;height:" +
   editor_line_height.to_string() +
   "px"
-}
-
-///|
-fn View::render_folding_markers(
-  self : View,
-  viewport : @view_layout.ViewportData,
-  view_model : @view_model.ViewModel?,
-  folding_ranges : Array[@language.FoldingRange],
-  folded_ranges : Array[@language.FoldingRange],
-  on_toggle_fold~ : (Int) -> Unit,
-) -> Unit {
-  self.folding.set_inner_html("")
-  if folding_ranges.length() == 0 {
-    return
-  }
-  let document = @rdom.document()
-  let lines = match view_model {
-    Some(model) => Some(model.lines())
-    None => None
-  }
-  for index in 0..<viewport.lines.length() {
-    let view_line_number = viewport.start_line_number + index
-    let model_line_number = match lines {
-      Some(view_model_lines) =>
-        view_model_lines.model_line_number_of_view_line(view_line_number)
-      None => view_line_number
-    }
-    if !is_first_view_line_for_model_line(lines, view_line_number) {
-      continue
-    }
-    match folding_range_for_start_line(folding_ranges, model_line_number) {
-      Some(_) => {
-        let marker = document.create_element("button")
-        let folded = is_line_folded(folded_ranges, model_line_number)
-        let class_name = if folded {
-          "folding-marker collapsed"
-        } else {
-          "folding-marker expanded"
-        }
-        marker.set_attribute("class", class_name)
-        marker.set_attribute("type", "button")
-        marker.set_attribute("data-line", model_line_number.to_string())
-        marker.set_attribute("data-folded", folded.to_string())
-        marker.set_attribute(
-          "style",
-          line_node_style(viewport.relative_vertical_offset[index]),
-        )
-        marker.set_inner_html(
-          if folded {
-            "<span class=\"codicon codicon-chevron-right\" aria-hidden=\"true\"></span>"
-          } else {
-            "<span class=\"codicon codicon-chevron-down\" aria-hidden=\"true\"></span>"
-          },
-        )
-        marker.add_event_listener("click", event => {
-          event.prevent_default()
-          event.stop_propagation()
-          on_toggle_fold(model_line_number)
-        })
-        self.folding.append_child(marker.as_node())
-      }
-      None => ()
-    }
-  }
 }
 
 ///|

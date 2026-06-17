@@ -38,34 +38,23 @@ let fallback_char_width = 7.2
 
 ///|
 /// The imperative browser `View` role: a root editor node owning an
-/// overflow guard, margin and content view
-/// parts, widget slots, custom scrollbars, and the line/line-number node
-/// recycler state (the `ViewLayer` role).
+/// overflow guard, root scheduling, and an ordered list of stateful parts.
+/// Each part owns its own DOM nodes, private state, dirty flag, prepare step,
+/// and write step.
 priv struct View {
   root : @rdom.Element
   probe : @rdom.Element
   message_text : @rdom.Element
   overflow_guard : @rdom.Element
-  margin : @rdom.Element
-  margin_view_overlays : @rdom.Element
-  folding : @rdom.Element
-  line_numbers : @rdom.Element
-  editor_scrollable : ScrollableElementDom
-  lines_content : @rdom.Element
-  view_overlays : @rdom.Element
-  view_zones : @rdom.Element
-  view_lines : @rdom.Element
-  content_widgets : @rdom.Element
-  overlay_widgets : @rdom.Element
-  overflowing_content_widgets : @rdom.Element
-  overflowing_overlay_widgets : @rdom.Element
-  mut hover_widget : HoverWidgetDom?
-  mut window : @view_layout.LineWindow
-  mut generation : Int
-  line_nodes : Array[@rdom.Element]
-  gutter_nodes : Array[@rdom.Element]
-  render_inputs : Array[@view_line_renderer.RenderLineInput]
-  view_parts : Array[ViewPartRole]
+  view_lines : ViewLines
+  view_zones : ViewZones
+  content_view_overlays : ContentViewOverlays
+  margin_view_overlays : MarginViewOverlays
+  content_widgets : ContentWidgets
+  overlay_widgets : OverlayWidgets
+  editor_scrollbar : EditorScrollbar
+  view_parts : Array[ViewPartHandle]
+  mut last_snapshot : ViewRenderSnapshot?
 }
 
 ///|
@@ -91,76 +80,45 @@ fn View::build() -> View {
   let overflow_guard = document.create_element("div")
   overflow_guard.set_attribute("class", "overflow-guard")
   overflow_guard.set_attribute("data-view-part", "overflow-guard")
-  let margin_part = create_margin_part(document)
-  let margin = margin_part.margin
-  let margin_view_overlays = margin_part.margin_view_overlays
-  let folding = margin_part.folding
-  let line_numbers = margin_part.line_numbers
-  let editor_scrollable = ScrollableElementDom::new(
-    "lines-content moonbit-viewer-background",
-    vertical_size=editor_vertical_scrollbar_size,
-    horizontal_size=editor_horizontal_scrollbar_size,
-  )
-  editor_scrollable.set_wrapper_class(
-    "monaco-scrollable-element editor-scrollable",
-  )
-  editor_scrollable.wrapper.set_attribute("data-view-part", "editor-scrollable")
-  let lines_content = editor_scrollable.content
-  lines_content.set_attribute("data-view-part", "lines-content")
-  let view_overlays = create_view_overlays_part(document)
-  let view_zones = create_view_zones_part(document)
-  let view_lines = document.create_element("div")
-  view_lines.set_attribute("class", "view-lines")
-  view_lines.set_attribute("data-view-part", "view-lines")
-  let content_widget_slots = create_content_widget_slots(document)
-  let content_widgets = content_widget_slots.content_widgets
-  let overlay_widget_slots = create_overlay_widget_slots(document)
-  let overlay_widgets = overlay_widget_slots.overlay_widgets
-  lines_content.append_child(view_overlays.as_node())
-  lines_content.append_child(view_zones.as_node())
-  lines_content.append_child(view_lines.as_node())
-  lines_content.append_child(content_widgets.as_node())
-  lines_content.append_child(overlay_widgets.as_node())
-  let overflowing_content_widgets = content_widget_slots.overflowing_content_widgets
-  let overflowing_overlay_widgets = overlay_widget_slots.overflowing_overlay_widgets
-  editor_scrollable.update_from_model(
-    { width: 0.0, scroll_width: 0.0, height: 0.0, scroll_height: 0.0 },
-    { scroll_left: 0.0, scroll_top: 0.0 },
-  )
-  overflow_guard.append_child(margin.as_node())
-  overflow_guard.append_child(editor_scrollable.wrapper.as_node())
+  let margin_view_overlays = MarginViewOverlays::new(document)
+  let editor_scrollbar = EditorScrollbar::new()
+  let content_view_overlays = ContentViewOverlays::new(document)
+  let view_zones = ViewZones::new(document)
+  let view_lines = ViewLines::new(document)
+  let content_widgets = ContentWidgets::new(document)
+  let overlay_widgets = OverlayWidgets::new(document)
+  let lines_content = editor_scrollbar.content()
+  lines_content.append_child(content_view_overlays.dom().as_node())
+  lines_content.append_child(view_zones.dom().as_node())
+  lines_content.append_child(view_lines.dom().as_node())
+  lines_content.append_child(content_widgets.dom().as_node())
+  lines_content.append_child(overlay_widgets.dom().as_node())
+  overflow_guard.append_child(margin_view_overlays.dom().as_node())
+  overflow_guard.append_child(editor_scrollbar.wrapper().as_node())
   root.append_child(probe.as_node())
   root.append_child(message.as_node())
   root.append_child(overflow_guard.as_node())
-  root.append_child(overflowing_content_widgets.as_node())
-  root.append_child(overflowing_overlay_widgets.as_node())
+  root.append_child(content_widgets.overflowing_dom().as_node())
+  root.append_child(overlay_widgets.overflowing_dom().as_node())
+  let view_parts = default_view_parts(
+    view_lines, view_zones, content_view_overlays, margin_view_overlays, content_widgets,
+    overlay_widgets, editor_scrollbar,
+  )
   let view : View = {
     root,
     probe,
     message_text,
     overflow_guard,
-    margin,
-    margin_view_overlays,
-    folding,
-    line_numbers,
-    editor_scrollable,
-    lines_content,
-    view_overlays,
-    view_zones,
     view_lines,
+    view_zones,
+    content_view_overlays,
+    margin_view_overlays,
     content_widgets,
     overlay_widgets,
-    overflowing_content_widgets,
-    overflowing_overlay_widgets,
-    hover_widget: None,
-    window: { start: 0, end: 0 },
-    generation: -1,
-    line_nodes: [],
-    gutter_nodes: [],
-    render_inputs: [],
-    view_parts: default_view_parts(),
+    editor_scrollbar,
+    view_parts,
+    last_snapshot: None,
   }
-  view.sync_static_view_parts()
   view
 }
 
@@ -170,22 +128,23 @@ fn view_root_class(source_state : String) -> String {
 }
 
 ///|
-fn View::sync_static_view_parts(self : View) -> Unit {
-  self.overflow_guard.set_attribute("data-view-part", "overflow-guard")
-  self.margin_view_overlays.set_attribute(
-    "data-view-part", "margin-view-overlays",
-  )
-  self.overlay_widgets.set_attribute("data-view-part", "overlayWidgets")
-  self.overflowing_overlay_widgets.set_attribute(
-    "data-view-part", "overflowingOverlayWidgets",
-  )
-}
-
-///|
 /// Shows the host-provided placeholder when no document frame is loaded.
 fn View::render_empty(self : View, placeholder : String) -> Unit {
   self.root.set_attribute("class", view_root_class("source-empty"))
   self.message_text.set_node_value(@js.Nullable::from_option(Some(placeholder)))
+  self.last_snapshot = None
+  self.mark_parts_dirty()
+}
+
+///|
+fn View::mark_parts_dirty(self : View) -> Unit {
+  self.view_lines.set_should_render(true)
+  self.view_zones.set_should_render(true)
+  self.content_view_overlays.set_should_render(true)
+  self.margin_view_overlays.set_should_render(true)
+  self.content_widgets.set_should_render(true)
+  self.overlay_widgets.set_should_render(true)
+  self.editor_scrollbar.set_should_render(true)
 }
 
 ///|
@@ -197,6 +156,7 @@ fn View::render(self : View, viewer : Viewer, input : ViewRenderInput) -> Unit {
   let rendering = RenderingContext::from_input(
     ViewContext::new(viewer, self),
     input,
+    self.last_snapshot,
   )
   let dirty_parts = self.dirty_view_parts(rendering)
   for part in dirty_parts {
@@ -205,31 +165,38 @@ fn View::render(self : View, viewer : Viewer, input : ViewRenderInput) -> Unit {
   let restricted = rendering.restricted()
   for part in dirty_parts {
     match part {
-      ViewLinesPart => part.render(restricted)
+      ViewLinesPart(_) => {
+        part.prepare_render(rendering)
+        part.render(restricted)
+      }
       _ => ()
     }
   }
   let dirty_parts = self.dirty_view_parts(rendering)
   for part in dirty_parts {
-    part.prepare_render(rendering)
+    match part {
+      ViewLinesPart(_) => ()
+      _ => part.prepare_render(rendering)
+    }
   }
   for part in dirty_parts {
     match part {
-      ViewLinesPart => ()
+      ViewLinesPart(_) => ()
       _ => part.render(restricted)
     }
   }
   for part in dirty_parts {
     part.on_did_render()
   }
+  self.last_snapshot = Some(rendering.snapshot)
 }
 
 ///|
 fn View::dirty_view_parts(
   self : View,
   rendering : RenderingContext,
-) -> Array[ViewPartRole] {
-  let parts : Array[ViewPartRole] = []
+) -> Array[ViewPartHandle] {
+  let parts : Array[ViewPartHandle] = []
   for part in self.view_parts {
     if part.should_render(rendering) {
       parts.push(part)
@@ -265,8 +232,13 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         selection_range: self.selection_range(),
         folding_ranges: self.folding_ranges,
         folded_ranges: self.folded_ranges,
+        hover_state: self.hover,
         on_toggle_fold: line => self.toggle_fold(line),
+        on_hover_measured: (below, shift_left) => {
+          self.hover = self.hover.measured(below, shift_left)
+        },
         generation: self.content_generation,
+        gutter_width: self.gutter_width(frame),
         space_width: self.measured_char_width(),
       })
     }

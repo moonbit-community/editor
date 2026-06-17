@@ -17,7 +17,9 @@ fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
       None => ()
     }
   })
-  view.view_lines.add_event_listener("mousedown", event => {
+  view.view_lines
+  .dom()
+  .add_event_listener("mousedown", event => {
     match event.to_mouse_event() {
       Some(mouse) => self.handle_mouse_down(view, event, mouse)
       None => ()
@@ -43,7 +45,7 @@ fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
     }
   })
   self.hook_scrollable_scrollbar_input(
-    view.editor_scrollable,
+    view.editor_scrollbar.scrollable(),
     EditorScrollableElement,
   )
   self.hook_browser_desperate_reveal(view)
@@ -302,12 +304,8 @@ fn scrollable_for_drag(
   owner : ScrollableElementOwner,
 ) -> ScrollableElementDom? {
   match owner {
-    EditorScrollableElement => Some(view.editor_scrollable)
-    HoverScrollableElement =>
-      match view.hover_widget {
-        Some(widget) => Some(widget.scrollable)
-        None => None
-      }
+    EditorScrollableElement => Some(view.editor_scrollbar.scrollable())
+    HoverScrollableElement => view.content_widgets.hover_scrollable()
   }
 }
 
@@ -327,16 +325,18 @@ fn Viewer::hook_browser_desperate_reveal(self : Viewer, view : View) -> Unit {
       look_at_scroll_left=false,
     )
   })
-  view.lines_content.add_event_listener("scroll", _ => {
+  view.editor_scrollbar
+  .content()
+  .add_event_listener("scroll", _ => {
     self.handle_browser_desperate_reveal(
-      view.lines_content,
+      view.editor_scrollbar.content(),
       look_at_scroll_top=true,
       look_at_scroll_left=false,
     )
   })
-  view.editor_scrollable.wrapper.add_event_listener("scroll", _ => {
+  view.editor_scrollbar.scrollable().wrapper.add_event_listener("scroll", _ => {
     self.handle_browser_desperate_reveal(
-      view.editor_scrollable.wrapper,
+      view.editor_scrollbar.scrollable().wrapper,
       look_at_scroll_top=true,
       look_at_scroll_left=false,
     )

@@ -1,11 +1,12 @@
 ///|
-priv struct OverlayWidgetSlots {
+priv struct OverlayWidgets {
   overlay_widgets : @rdom.Element
   overflowing_overlay_widgets : @rdom.Element
+  mut should_render : Bool
 }
 
 ///|
-fn create_overlay_widget_slots(document : @rdom.Document) -> OverlayWidgetSlots {
+fn OverlayWidgets::new(document : @rdom.Document) -> OverlayWidgets {
   let overlay_widgets = document.create_element("div")
   overlay_widgets.set_attribute("class", "overlayWidgets")
   overlay_widgets.set_attribute("data-view-part", "overlayWidgets")
@@ -16,5 +17,47 @@ fn create_overlay_widget_slots(document : @rdom.Document) -> OverlayWidgetSlots 
   overflowing_overlay_widgets.set_attribute(
     "data-view-part", "overflowingOverlayWidgets",
   )
-  { overlay_widgets, overflowing_overlay_widgets }
+  { overlay_widgets, overflowing_overlay_widgets, should_render: true }
+}
+
+///|
+fn OverlayWidgets::dom(self : OverlayWidgets) -> @rdom.Element {
+  self.overlay_widgets
+}
+
+///|
+fn OverlayWidgets::overflowing_dom(self : OverlayWidgets) -> @rdom.Element {
+  self.overflowing_overlay_widgets
+}
+
+///|
+impl ViewPart for OverlayWidgets with fn should_render(self, context) {
+  self.should_render ||
+  context.change.first_render ||
+  context.change.layout_dimensions_changed
+}
+
+///|
+impl ViewPart for OverlayWidgets with fn set_should_render(self, value) {
+  self.should_render = value
+}
+
+///|
+impl ViewPart for OverlayWidgets with fn on_before_render(_self, _viewport) {
+  ()
+}
+
+///|
+impl ViewPart for OverlayWidgets with fn prepare_render(_self, _context) {
+  ()
+}
+
+///|
+impl ViewPart for OverlayWidgets with fn render(_self, _context) {
+  ()
+}
+
+///|
+impl ViewPart for OverlayWidgets with fn on_did_render(self) {
+  self.should_render = false
 }

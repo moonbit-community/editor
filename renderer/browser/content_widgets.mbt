@@ -28,13 +28,24 @@ priv struct HoverWidgetDom {
 }
 
 ///|
-priv struct ContentWidgetSlots {
-  content_widgets : @rdom.Element
-  overflowing_content_widgets : @rdom.Element
+priv struct ContentWidgetsPrepared {
+  frame : @view_model.RenderFrame
+  layout : @view_layout.ViewLayout
+  hover_state : HoverController
+  on_hover_measured : (Bool, Double) -> Unit
 }
 
 ///|
-fn create_content_widget_slots(document : @rdom.Document) -> ContentWidgetSlots {
+priv struct ContentWidgets {
+  content_widgets : @rdom.Element
+  overflowing_content_widgets : @rdom.Element
+  mut hover_widget : HoverWidgetDom?
+  mut should_render : Bool
+  mut prepared : ContentWidgetsPrepared?
+}
+
+///|
+fn ContentWidgets::new(document : @rdom.Document) -> ContentWidgets {
   let content_widgets = document.create_element("div")
   content_widgets.set_attribute("class", "contentWidgets")
   content_widgets.set_attribute("data-view-part", "contentWidgets")
@@ -45,7 +56,87 @@ fn create_content_widget_slots(document : @rdom.Document) -> ContentWidgetSlots 
   overflowing_content_widgets.set_attribute(
     "data-view-part", "overflowingContentWidgets",
   )
-  { content_widgets, overflowing_content_widgets }
+  {
+    content_widgets,
+    overflowing_content_widgets,
+    hover_widget: None,
+    should_render: true,
+    prepared: None,
+  }
+}
+
+///|
+fn ContentWidgets::dom(self : ContentWidgets) -> @rdom.Element {
+  self.content_widgets
+}
+
+///|
+fn ContentWidgets::overflowing_dom(self : ContentWidgets) -> @rdom.Element {
+  self.overflowing_content_widgets
+}
+
+///|
+fn ContentWidgets::hover_scrollable(
+  self : ContentWidgets,
+) -> ScrollableElementDom? {
+  match self.hover_widget {
+    Some(widget) => Some(widget.scrollable)
+    None => None
+  }
+}
+
+///|
+impl ViewPart for ContentWidgets with fn should_render(self, context) {
+  self.should_render ||
+  context.change.first_render ||
+  context.change.frame_generation_changed ||
+  context.change.hover_changed ||
+  context.change.viewport_window_changed ||
+  context.change.scroll_position_changed ||
+  context.change.view_zones_changed ||
+  context.change.layout_dimensions_changed
+}
+
+///|
+impl ViewPart for ContentWidgets with fn set_should_render(self, value) {
+  self.should_render = value
+}
+
+///|
+impl ViewPart for ContentWidgets with fn on_before_render(_self, _viewport) {
+  ()
+}
+
+///|
+impl ViewPart for ContentWidgets with fn prepare_render(self, context) {
+  self.prepared = Some({
+    frame: context.input.frame,
+    layout: context.input.layout,
+    hover_state: context.input.hover_state,
+    on_hover_measured: context.input.on_hover_measured,
+  })
+}
+
+///|
+impl ViewPart for ContentWidgets with fn render(self, context) {
+  self.content_widgets.set_attribute("style", context.content_transform)
+  match self.prepared {
+    Some(prepared) =>
+      self.render_hover_widget(
+        context.view_context,
+        prepared.frame,
+        prepared.layout,
+        prepared.hover_state,
+        prepared.on_hover_measured,
+      )
+    None => ()
+  }
+}
+
+///|
+impl ViewPart for ContentWidgets with fn on_did_render(self) {
+  self.should_render = false
+  self.prepared = None
 }
 
 ///|
@@ -53,15 +144,18 @@ fn create_content_widget_slots(document : @rdom.Document) -> ContentWidgetSlots 
 /// which shares the lines transform so it tracks content space. The
 /// placement measurement is a read-after-write on the freshly written
 /// widget, applied in the same flush.
-fn Viewer::render_hover_widget(
-  self : Viewer,
-  browser_view : View,
+fn ContentWidgets::render_hover_widget(
+  self : ContentWidgets,
+  context : ViewContext,
   frame : @view_model.RenderFrame,
+  layout : @view_layout.ViewLayout,
+  hover_state : HoverController,
+  on_hover_measured : (Bool, Double) -> Unit,
 ) -> Unit {
-  let hover_view = match self.hover.widget_view() {
+  let hover_view = match hover_state.widget_view() {
     Some(hover_view) => hover_view
     None => {
-      browser_view.remove_hover_widget()
+      self.remove_hover_widget()
       return
     }
   }
@@ -69,11 +163,11 @@ fn Viewer::render_hover_widget(
     line_col_for_offset(frame, hover_view.anchor_offset) {
     Some(anchor) => anchor
     None => {
-      browser_view.remove_hover_widget()
+      self.remove_hover_widget()
       return
     }
   }
-  let widget = browser_view.ensure_hover_widget(self)
+  let widget = self.ensure_hover_widget(context)
   let mut class_name = "monaco-resizable-hover"
   let mut shift_left = 0.0
   let mut preferred_placement = ContentWidgetAbove
@@ -95,7 +189,7 @@ fn Viewer::render_hover_widget(
     node: widget.wrapper,
     anchor: {
       column,
-      top: self.layout.relative_vertical_offset_for_line(
+      top: layout.relative_vertical_offset_for_line(
         frame_window(frame),
         line_number - 1,
       ),
@@ -110,22 +204,31 @@ fn Viewer::render_hover_widget(
   widget.scrollable.content.set_inner_html(
     render_hover_shell(hover_view.parts, frame.language_id),
   )
-  browser_view.mount_content_widget(content_widget)
-  widget.apply_sizing(browser_view.root)
+  self.mount_content_widget(content_widget)
+  widget.apply_sizing(context.root)
   if hover_view.measurable && hover_view.placement is None {
     // Read-after-write: decide the flip/shift from the real geometry.
     let widget_rect = widget.wrapper.get_bounding_client_rect()
-    let root_rect = browser_view.root.get_bounding_client_rect()
+    let root_rect = context.root.get_bounding_client_rect()
     let below = widget_rect.get_top() < root_rect.get_top()
     let overflow = widget_rect.get_right() - root_rect.get_right() + 12.0
     let shift_left = if overflow > 0.0 { overflow } else { 0.0 }
-    self.hover = self.hover.measured(below, shift_left)
-    self.render_hover_widget(browser_view, frame)
+    on_hover_measured(below, shift_left)
+    self.render_hover_widget(
+      context,
+      frame,
+      layout,
+      hover_state.measured(below, shift_left),
+      on_hover_measured,
+    )
   }
 }
 
 ///|
-fn View::ensure_hover_widget(self : View, viewer : Viewer) -> HoverWidgetDom {
+fn ContentWidgets::ensure_hover_widget(
+  self : ContentWidgets,
+  context : ViewContext,
+) -> HoverWidgetDom {
   match self.hover_widget {
     Some(widget) => widget
     None => {
@@ -150,7 +253,7 @@ fn View::ensure_hover_widget(self : View, viewer : Viewer) -> HoverWidgetDom {
           event.stop_propagation()
         } else {
           match event.to_mouse_event() {
-            Some(mouse) => viewer.handle_mouse_down(self, event, mouse)
+            Some(mouse) => (context.handle_hover_mousedown)(event, mouse)
             None => event.stop_propagation()
           }
         }
@@ -193,13 +296,14 @@ fn View::ensure_hover_widget(self : View, viewer : Viewer) -> HoverWidgetDom {
       widget.scrollable.content.add_event_listener("scroll", _ => {
         widget.scrollable.update_from_native_content()
       })
-      viewer.hook_scrollable_scrollbar_input(
+      (context.hook_scrollable_scrollbar_input)(
         widget.scrollable,
         HoverScrollableElement,
       )
       widget.wrapper.add_event_listener("keydown", event => {
         match event.to_keyboard_event() {
-          Some(keyboard) => viewer.handle_hover_keydown(widget, event, keyboard)
+          Some(keyboard) =>
+            (context.handle_hover_keydown)(widget, event, keyboard)
           None => event.stop_propagation()
         }
       })
@@ -297,7 +401,7 @@ fn hover_content_page_delta(widget : HoverWidgetDom) -> Double {
 }
 
 ///|
-fn View::remove_hover_widget(self : View) -> Unit {
+fn ContentWidgets::remove_hover_widget(self : ContentWidgets) -> Unit {
   match self.hover_widget {
     Some(widget) => {
       self.content_widgets.remove_child(widget.wrapper.as_node())
@@ -341,7 +445,10 @@ fn max_hover_double(left : Double, right : Double) -> Double {
 }
 
 ///|
-fn View::mount_content_widget(self : View, widget : ContentWidget) -> Unit {
+fn ContentWidgets::mount_content_widget(
+  self : ContentWidgets,
+  widget : ContentWidget,
+) -> Unit {
   let parent = if widget.allow_overflow {
     self.overflowing_content_widgets
   } else {

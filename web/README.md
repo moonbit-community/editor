@@ -15,8 +15,9 @@ Browser client entrypoint for the readonly editor.
   transport lives there.
 - Must remain the generated browser entrypoint and avoid becoming a shared
   domain package.
-- Does not declare JavaScript FFI directly; host calls go through `dom` and
-  the packages `workbench` composes.
+- Does not declare JavaScript FFI directly; browser host calls go through
+  `workbench` and the packages it composes, especially `renderer/browser` and
+  Rabbita browser bindings.
 - Does not parse active document identity from browser URL parameters.
 
 ## Checks

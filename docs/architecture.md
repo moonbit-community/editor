@@ -174,15 +174,25 @@ Dependencies should flow from host entry points toward shared domain packages:
 
 ```text
 web -> workbench
-workbench -> renderer/browser, widgets/file_tree, remote_protocol
-renderer/browser -> renderer, workspace, language, syntax, decorations
+workbench -> renderer/browser, widgets/file_tree, remote_protocol, syntax/lang_*
+renderer/browser -> renderer, renderer/core, renderer/model,
+                    renderer/view_line_renderer, renderer/view_layout,
+                    renderer/view_model, workspace, language, syntax,
+                    decorations, platform/log
 widgets/file_tree -> workspace
 
 server_host_native/main -> server_host_native
 server_host_native -> server
 server -> remote_protocol, workspace, language
 
-renderer -> renderer/core, renderer/model, syntax, decorations, language
+renderer -> renderer/view_line_renderer, renderer/view_layout,
+            renderer/view_model, decorations
+renderer/view_layout -> renderer/view_model, renderer/view_line_renderer,
+                        renderer/core, renderer/model, syntax, decorations,
+                        language
+renderer/view_model -> renderer/view_line_renderer, renderer/core,
+                       renderer/model, syntax, decorations, language
+renderer/view_line_renderer -> renderer/core, syntax
 workspace -> base/common, renderer/model
 language -> base/common, renderer/core, renderer/model
 syntax/decorations -> renderer/core

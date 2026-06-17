@@ -36,8 +36,7 @@ model-line source data, and viewport-scoped render frames.
 - May depend on `renderer/core`, `renderer/model`, `syntax`, `decorations`,
   `language`, JSON support, and `renderer/view_line_renderer`.
 - Must not depend on parent `renderer`, `renderer/view_layout`,
-  `renderer/browser`, `dom`, `web`, server, transport, workspace, or host
-  packages.
+  `renderer/browser`, `web`, server, transport, workspace, or host packages.
 - Must not declare FFI.
 - `ViewportData` lives in `renderer/view_layout`, which can depend on this
   package without a cycle.

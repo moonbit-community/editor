@@ -2,10 +2,10 @@
 
 ## Project Shape
 
-- Product code lives at the repository root in MoonBit packages: `base/common`, `syntax`, `decorations`, `workspace`, `language`, `view`, `remote_protocol`, `server`, `server_host_native`, `renderer/core`, `renderer/model`, `renderer`, `renderer/browser`, `dom`, and `web`.
+- Product code lives at the repository root in MoonBit packages: `base/common`, `decorations`, `workspace`, `language`, `platform/log`, `syntax`, `syntax/lang_*`, `renderer/core`, `renderer/model`, `renderer/view_line_renderer`, `renderer/view_model`, `renderer/view_layout`, `renderer`, `renderer/browser`, `widgets/file_tree`, `workbench`, `web`, `remote_protocol`, `server`, `server_host_native`, `view`, and `examples/embedded_viewer`.
 - The browser backend owns DOM creation, CSS, scroll input capture and output application, and Playwright-facing observability; scroll semantics and viewport derivation are backend-neutral model state in `renderer`.
 - MoonBit owns workspace semantics, readonly editor model identity, and the backend-neutral filesystem-provider contract.
-- Packages that only run on one host target may declare that host's FFI (for example, `dom` and `renderer/browser` may declare JavaScript FFI; `server_host_native` may declare native FFI). Packages shared across targets must not declare FFI.
+- Packages that only run on one host target may declare that host's FFI (for example, `renderer/browser` may declare JavaScript FFI and use `rabbita/dom`; `server_host_native` may declare native FFI). Packages shared across targets must not declare FFI.
 - `codemirror/` and `vscode/` are reference-only submodules. Do not import product code from either tree.
 - The editor is a readonly viewer.
 

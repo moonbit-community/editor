@@ -162,8 +162,9 @@ focuses on hover until those features can be rebuilt without their bugs.
   the Rabbita TEA core, the vdom (`rabbita/html`), and the command
   scheduler (`rabbita/cmd`) are forbidden and checker-enforced; the
   viewer renders imperatively. May also depend on `base/common`,
-  `workspace`, `language`, `renderer`, `renderer/model`,
-  `renderer/view_line_renderer`, `syntax`, and `decorations`.
+  `workspace`, `language`, `platform/log`, `renderer`, `renderer/core`,
+  `renderer/model`, `renderer/view_line_renderer`, `renderer/view_layout`,
+  `renderer/view_model`, `syntax`, and `decorations`.
 - Must not import `remote_protocol`, `websocket`, `workbench`, or
   `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports
   live behind the `DocumentSource` trait and viewer-owned language feature

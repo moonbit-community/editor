@@ -22,10 +22,10 @@ viewport-window derivation, and readonly view-zone displacement.
 
 ## Boundaries
 
-- May depend on `renderer/core`, `decorations`,
-  `renderer/view_line_renderer`, and `renderer/view_model`.
-- Must not depend on `renderer`, `renderer/browser`, `dom`, `web`, server,
-  transport, workspace, or host packages.
+- May depend on `renderer/core`, `renderer/model`, `syntax`, `decorations`,
+  `language`, `renderer/view_line_renderer`, and `renderer/view_model`.
+- Must not depend on `renderer`, `renderer/browser`, `web`, server, transport,
+  workspace, or host packages.
 - Must not declare FFI.
 - Browser DOM mounting and event handling stay in `renderer/browser`.
 

@@ -19,8 +19,8 @@ character-mapping roles.
 ## Boundaries
 
 - May depend on `renderer/core` and `syntax`.
-- Must not depend on `renderer`, `renderer/browser`, `dom`, `web`, server,
-  transport, workspace, or host packages.
+- Must not depend on `renderer`, `renderer/browser`, `web`, server, transport,
+  workspace, or host packages.
 - Must not declare FFI.
 - This package receives already-derived line content, token classes, and
   decorations. Document/provider conversion stays in `renderer/view_model`;

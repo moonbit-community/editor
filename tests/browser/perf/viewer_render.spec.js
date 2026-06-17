@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import { expect, test } from '../support/test.js';
 import { openWorkspaceFile } from '../support/app.js';
 
-const largeFixture = 'docs/fixtures/project/src/generated_large.mbt';
+const largeFixture = 'tests/fixtures/workspace/src/generated_large.mbt';
 
 // Non-failing perf probe: opens the small fixture and a generated ~10k-line
 // fixture, then attaches structured render timing evidence from browser events.

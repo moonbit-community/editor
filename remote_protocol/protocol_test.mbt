@@ -1,7 +1,7 @@
 ///|
 test "encodes and decodes document client packets" {
   let uri = expect_uri(
-    "readonly-remote://workspace/docs/fixtures/project/src/main.mbt",
+    "readonly-remote://workspace/tests/fixtures/workspace/src/main.mbt",
   )
   let packet = @remote_protocol.OpenDocument({ id: "open-1", uri })
   let encoded = packet.to_json().stringify()
@@ -223,7 +223,7 @@ test "encodes and decodes directory resolve packets" {
 ///|
 test "encodes and decodes server document and language packets" {
   let uri = expect_uri(
-    "readonly-remote://workspace/docs/fixtures/project/src/main.mbt",
+    "readonly-remote://workspace/tests/fixtures/workspace/src/main.mbt",
   )
   let document = @workspace.SourceDocument(
     uri, "main.mbt", "moonbit", 2, "rev-2", "pub fn main {}\n",

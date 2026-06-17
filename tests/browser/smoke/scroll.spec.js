@@ -7,7 +7,7 @@ import {
   openWorkspaceFile,
 } from '../support/app.js';
 
-const largeFixture = 'docs/fixtures/project/src/generated_scroll.mbt';
+const largeFixture = 'tests/fixtures/workspace/src/generated_scroll.mbt';
 
 test.beforeAll(async () => {
   const chunks = [];

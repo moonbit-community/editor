@@ -7,7 +7,7 @@ import {
   workspaceItem,
 } from '../support/app.js';
 
-const mainFixture = 'docs/fixtures/project/src/main.mbt';
+const mainFixture = 'tests/fixtures/workspace/src/main.mbt';
 
 test('starts from native-served static assets', async ({ page }) => {
   const requestedPaths = [];

@@ -14,7 +14,7 @@ export default defineConfig({
     trace: 'retain-on-failure'
   },
   webServer: {
-    command: `just dev ROOT=docs/fixtures/project PORT=${serverPort}`,
+    command: `just dev ROOT=tests/fixtures/workspace PORT=${serverPort}`,
     url: `http://127.0.0.1:${serverPort}`,
     reuseExistingServer: true,
     timeout: 60_000

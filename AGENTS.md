@@ -17,7 +17,7 @@
 - Required checks and guardrails: `docs/quality.md`
 - Develop style notes: `docs/styles.md`
 - Future multi-package or harness-affecting plans: `docs/exec-plans/README.md`
-- Source fixture for viewer/browser flows: `docs/fixtures/project`
+- Source fixture for viewer/browser flows: `tests/fixtures/workspace`
 - CodeMirror reference map: `docs/references/codemirror.md`
 - Monaco/VS Code reference map: `docs/references/monaco.md`
 

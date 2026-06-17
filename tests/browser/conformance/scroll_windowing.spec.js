@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import { expect, test } from '../support/test.js';
 import { openWorkspaceFile, setHoverFixture } from '../support/app.js';
 
-const largeFixture = 'docs/fixtures/project/src/generated_scroll.mbt';
+const largeFixture = 'tests/fixtures/workspace/src/generated_scroll.mbt';
 
 test.beforeAll(async () => {
   const chunks = [];

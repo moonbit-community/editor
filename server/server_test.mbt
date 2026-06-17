@@ -1,11 +1,11 @@
 ///|
 test "validates readonly remote workspace uris" {
   let uri = expect_uri(
-    "readonly-remote://workspace/docs/fixtures/project/src/main.mbt",
+    "readonly-remote://workspace/tests/fixtures/workspace/src/main.mbt",
   )
   match @server.resolve_remote_document_uri(uri) {
     ParsedRemotePath(path) =>
-      assert_eq(path.to_string(), "docs/fixtures/project/src/main.mbt")
+      assert_eq(path.to_string(), "tests/fixtures/workspace/src/main.mbt")
     RemotePathError(error) => fail(error.message)
   }
 
@@ -16,7 +16,7 @@ test "validates readonly remote workspace uris" {
   }
 
   let wrong_scheme = expect_uri(
-    "file://local/docs/fixtures/project/src/main.mbt",
+    "file://local/tests/fixtures/workspace/src/main.mbt",
   )
   match @server.resolve_remote_document_uri(wrong_scheme) {
     RemotePathError(error) => assert_true(error.code == ProtocolInvalidUri)

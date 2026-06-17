@@ -18,7 +18,7 @@ fn render_tokens(source : String) -> String {
 
 ///|
 test "fixture errors.mbt token stream" {
-  // docs/fixtures/project/src/errors.mbt
+  // tests/fixtures/workspace/src/errors.mbt
   let source =
     #|///|
     #|suberror FixtureError String

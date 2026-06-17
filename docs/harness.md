@@ -34,7 +34,8 @@ outer assertions, logging, screenshots, traces, and final pass/fail decisions.
 
 Playwright targets `http://127.0.0.1:5173` by default. Set
 `READONLY_EDITOR_BASE_URL=http://127.0.0.1:<port>` to run browser tests against
-an already-started server.
+an already-started server. The default Playwright server uses the deterministic
+workspace fixture at `tests/fixtures/workspace`.
 
 ## Browser Layout
 

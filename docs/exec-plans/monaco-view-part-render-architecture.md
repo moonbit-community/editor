@@ -1,7 +1,15 @@
 # Monaco View-Part Render Architecture
 
-Status: planned.
+Status: partially implemented; superseded for further work by
+`monaco-view-part-ownership-architecture.md`.
 Date: 2026-06-17
+
+Implementation note, 2026-06-17: the initial `Island` to `View` move and the
+first private `ViewPartRole` / `RenderingContext` lifecycle have landed. The
+remaining work is now state ownership, real dirty rendering, stricter contexts,
+and optional package promotion; use
+`monaco-view-part-ownership-architecture.md` for that follow-up rather than
+executing the stale current-state sections below literally.
 
 ## Summary
 

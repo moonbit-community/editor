@@ -55,7 +55,6 @@ stack around it.
   reference remote workspace stack. It proves one backend composition with
   filesystem access, file watching, static serving, websocket transport, and
   `moon-lsp`.
-- `dom`: browser host capabilities shared by browser packages.
 - `examples/embedded_viewer`: proof that the viewer can be embedded without the
   workbench, remote protocol, server, or native host.
 
@@ -159,8 +158,8 @@ Use these rules when deciding where to add a new package or feature:
 - Remote protocol packet shape belongs in `remote_protocol`.
 - Remote workspace policy belongs in `server`; native filesystem, process,
   socket, and static-serving effects belong in `server_host_native`.
-- Browser capabilities shared by browser packages belong in `dom`; one-package
-  browser FFI may stay in the browser package that uses it.
+- JS-only browser packages may declare narrowly scoped JS FFI for effects they
+  own; shared packages must remain FFI-free.
 - Packages shared across browser and native targets must not declare FFI.
 - Product code must not import from `codemirror/` or `vscode/`; those trees are
   references only.
@@ -176,7 +175,7 @@ Dependencies should flow from host entry points toward shared domain packages:
 ```text
 web -> workbench
 workbench -> renderer/browser, widgets/file_tree, remote_protocol
-renderer/browser -> renderer, workspace, language, syntax, decorations, dom
+renderer/browser -> renderer, workspace, language, syntax, decorations
 widgets/file_tree -> workspace
 
 server_host_native/main -> server_host_native

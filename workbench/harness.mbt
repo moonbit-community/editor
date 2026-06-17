@@ -2,7 +2,7 @@
 /// Harness observability: the workbench formats viewer lifecycle facts and
 /// protocol errors into the structured events the browser harness reads.
 pub fn emit_event(name : String, payload : String) -> Unit {
-  @dom.emit_event(name, payload)
+  emit_host_event(name, payload)
 }
 
 ///|

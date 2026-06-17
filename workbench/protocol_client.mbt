@@ -116,7 +116,7 @@ fn server_packet_request_id(packet : @remote_protocol.ServerPacket) -> String {
 fn connect_protocol_cmd(emit : @rabbita.Emit[WorkbenchMsg]) -> @rabbita.Cmd {
   @websocket.connect(
     protocol_connection_id(),
-    @dom.protocol_websocket_url(),
+    protocol_websocket_url(),
     on_event=event => emit(ProtocolEvent(event)),
     failed=message => emit(ProtocolSendFailed(message)),
   )

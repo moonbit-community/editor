@@ -53,11 +53,9 @@ fn Viewer::apply_hover_effect(self : Viewer, effect : HoverEffect) -> Unit {
   match effect {
     HoverNoEffect => ()
     HoverSchedule(token) => {
-      @dom.set_timeout(() => self.hover_fire(token), hover_delay_ms / 2)
-      |> ignore
-      @dom.set_timeout(() => self.hover_display_due(token), hover_delay_ms)
-      |> ignore
-      @dom.set_timeout(() => self.hover_loading_due(token), hover_delay_ms * 3)
+      set_timeout(() => self.hover_fire(token), hover_delay_ms / 2) |> ignore
+      set_timeout(() => self.hover_display_due(token), hover_delay_ms) |> ignore
+      set_timeout(() => self.hover_loading_due(token), hover_delay_ms * 3)
       |> ignore
     }
     HoverRequest(anchor, token) => self.request_hover(anchor, token)

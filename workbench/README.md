@@ -34,16 +34,19 @@ remote protocol transport.
   (`ViewerNotification`) and the workbench formats and emits the
   structured `[readonly-editor]` events (`dom:mounted`, `moonbit:render`,
   `view:scroll`, `language:*`) documented in `../docs/harness.md`, and
-  installs the `__readonlyEditorScrollTo` scroll control. Workbench also
-  installs the concrete runtime logger sink: provider failures go through
-  `LogService`, and warning/error entries become the existing
-  `language:error` harness event.
+  installs the `__readonlyEditorScrollTo` scroll control. Workbench owns the
+  browser-host helpers for harness globals, current-document exposure, theme
+  storage, and protocol URL derivation. Workbench also installs the concrete
+  runtime logger sink: provider failures go through `LogService`, and
+  warning/error entries become the existing `language:error` harness event.
 
 ## Boundaries
 
 - May depend on `renderer/browser`, `widgets/file_tree`,
-  `remote_protocol`, `dom`, `workspace`, `language`, `platform/log`, and
-  Rabbita packages including `websocket`.
+  `remote_protocol`, `workspace`, `language`, `platform/log`, and Rabbita
+  packages including `websocket`.
+- May declare narrowly scoped JavaScript FFI for workbench-owned browser-host
+  effects such as harness observability, storage, and protocol URL derivation.
 - Composition lives here: the viewer and the tree widget must not know
   about each other or about the transport.
 - Module-level `Ref` registries (the app dispatcher, the protocol send

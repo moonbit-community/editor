@@ -15,7 +15,7 @@ fn register_harness_hover_provider(services : @browser.ViewerServices) -> Unit {
   let provider = HarnessHoverProvider::{  }
   services.language_features.register_hover_provider(provider)
   services.language_features.register_diagnostics_provider(provider)
-  @dom.install_hover_fixture_control(set_harness_hover_fixture)
+  install_hover_fixture_control(set_harness_hover_fixture)
 }
 
 ///|

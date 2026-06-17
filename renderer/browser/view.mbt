@@ -187,7 +187,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
     self.measure(island)
   }
   // Write phase.
-  let write_started = @dom.now_ms()
+  let write_started = now_ms()
   match self.frame {
     None => {
       island.root.set_attribute(
@@ -227,7 +227,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
       self.render_hover_widget(island, frame)
     }
   }
-  let patch_ms = @dom.now_ms() - write_started
+  let patch_ms = now_ms() - write_started
   match (self.pending_rendered, self.frame) {
     (Some(pending), Some(frame)) => {
       self.pending_rendered = None

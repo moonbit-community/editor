@@ -368,7 +368,7 @@ fn ScrollableElementDom::schedule_hide_scrollbars(
   }
   self.hide_generation += 1
   let generation = self.hide_generation
-  @dom.set_timeout(
+  set_timeout(
     () => {
       if self.hide_generation == generation {
         self.hide_scrollbars_if_idle()

@@ -15,7 +15,7 @@ fn Viewer::render_current_document(
     model.uri,
   )
   let providers = { ..self.provider_result, diagnostics: marker_diagnostics }
-  let tokenize_started = @dom.now_ms()
+  let tokenize_started = now_ms()
   let tokenized = match self.cached_tokenized(model) {
     Some(tokenized) => tokenized
     None => {
@@ -27,7 +27,7 @@ fn Viewer::render_current_document(
       @view_model.TokenizedDocument::build(snapshot, tokens)
     }
   }
-  let tokenize_finished = @dom.now_ms()
+  let tokenize_finished = now_ms()
   (self.notify_host)(
     ViewerDiagnosticsStatus(
       count=marker_diagnostics.length(),
@@ -61,7 +61,7 @@ fn Viewer::render_current_document(
     start_line: window.start,
     end_line: window.end,
   })
-  let build_finished = @dom.now_ms()
+  let build_finished = now_ms()
   self.frame_source = Some(source)
   self.view_model = Some(view_model)
   self.frame = Some(frame)

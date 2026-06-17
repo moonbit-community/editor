@@ -140,10 +140,10 @@ workbench) wrap the calls in their command type.
   editor events and answers with effects-as-data, span/line decorations,
   and widget views. Hover follows Monaco's timing (request at half the
   300ms delay, display gated at the full delay, loading hover at 3x);
-  the delays run on `dom` timer bindings and provider calls run through
-  `ContentHoverComputer` with version/token staleness guards. Marker hover is
-  contributed synchronously from marker decorations; language hover is
-  contributed asynchronously from markdown hover providers.
+  the delays run on package-local browser-host timer bindings and provider
+  calls run through `ContentHoverComputer` with version/token staleness guards.
+  Marker hover is contributed synchronously from marker decorations; language
+  hover is contributed asynchronously from markdown hover providers.
 - Own the per-version render cache: provider pushes rebuild frames from
   the cached `TokenizedDocument` without re-tokenizing, and window
   shifts rebuild the viewport frame from the cached `FrameSource` in
@@ -161,16 +161,16 @@ focuses on hover until those features can be rebuilt without their bugs.
 - May depend on `rabbita/dom` (WebIDL bindings) and `rabbita/js` only —
   the Rabbita TEA core, the vdom (`rabbita/html`), and the command
   scheduler (`rabbita/cmd`) are forbidden and checker-enforced; the
-  viewer renders imperatively. May also depend on `base/common`, `dom`,
+  viewer renders imperatively. May also depend on `base/common`,
   `workspace`, `language`, `renderer`, `renderer/model`,
   `renderer/view_line_renderer`, `syntax`, and `decorations`.
 - Must not import `remote_protocol`, `websocket`, `workbench`, or
   `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports
   live behind the `DocumentSource` trait and viewer-owned language feature
   services.
-- May declare JavaScript FFI it alone uses, under the host-FFI rule in
-  `../../docs/architecture.md`; browser capabilities shared with other
-  browser packages belong in `dom`.
+- May declare narrowly scoped JavaScript FFI it owns, under the host-FFI rule in
+  `../../docs/architecture.md`; browser-host timer helpers live package-local
+  in `browser_host.mbt`.
 - Must not import `syntax/lang_*` packages: languages reach the viewer
   only through `register_tokenizer`, so the library carries no grammar
   weight an embedder did not ask for (enforced by

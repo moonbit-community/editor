@@ -1,6 +1,6 @@
 ///|
 /// Installs browser globals used by the reference app and Playwright harness.
-pub extern "js" fn install_host_capabilities() -> Unit =
+extern "js" fn install_host_capabilities() -> Unit =
   #| () => {
   #|   if (typeof globalThis.__readonlyEditorEvent !== "function") {
   #|     globalThis.__readonlyEditorEvent = (name, payload) => {
@@ -14,7 +14,7 @@ pub extern "js" fn install_host_capabilities() -> Unit =
 
 ///|
 /// Publishes the current document JSON on harness globals.
-pub extern "js" fn set_current_document(payload : String) -> Unit =
+extern "js" fn set_current_document(payload : String) -> Unit =
   #| (payload) => {
   #|   try {
   #|     const document = JSON.parse(payload);
@@ -27,7 +27,7 @@ pub extern "js" fn set_current_document(payload : String) -> Unit =
 
 ///|
 /// WebSocket endpoint for the current page's native remote protocol server.
-pub extern "js" fn protocol_websocket_url() -> String =
+extern "js" fn protocol_websocket_url() -> String =
   #| () => {
   #|   const location = globalThis.location;
   #|   const protocol = location?.protocol === "https:" ? "wss:" : "ws:";
@@ -36,14 +36,8 @@ pub extern "js" fn protocol_websocket_url() -> String =
   #| }
 
 ///|
-/// Monotonic high-resolution timestamp in milliseconds, for render timing
-/// instrumentation.
-pub extern "js" fn now_ms() -> Double =
-  #| () => globalThis.performance?.now() ?? Date.now()
-
-///|
 /// Emits one harness/browser observability event.
-pub extern "js" fn emit_event(name : String, payload : String) -> Unit =
+extern "js" fn emit_host_event(name : String, payload : String) -> Unit =
   #| (name, payload) => {
   #|   if (typeof globalThis.__readonlyEditorEvent === "function") {
   #|     globalThis.__readonlyEditorEvent(name, payload);
@@ -52,7 +46,7 @@ pub extern "js" fn emit_event(name : String, payload : String) -> Unit =
 
 ///|
 /// Best-effort local storage read; returns empty string when unavailable.
-pub extern "js" fn storage_get_item(key : String) -> String =
+extern "js" fn storage_get_item(key : String) -> String =
   #| (key) => {
   #|   try {
   #|     return globalThis.localStorage?.getItem(key) ?? "";
@@ -63,7 +57,7 @@ pub extern "js" fn storage_get_item(key : String) -> String =
 
 ///|
 /// Best-effort local storage write; private browsing failures are ignored.
-pub extern "js" fn storage_set_item(key : String, value : String) -> Unit =
+extern "js" fn storage_set_item(key : String, value : String) -> Unit =
   #| (key, value) => {
   #|   try {
   #|     globalThis.localStorage?.setItem(key, value);
@@ -73,21 +67,10 @@ pub extern "js" fn storage_set_item(key : String, value : String) -> Unit =
   #| }
 
 ///|
-/// One-shot timer; answers a handle for `clear_timeout`. The viewer's
-/// hover delays run through these instead of framework commands.
-pub extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Double =
-  #| (callback, ms) => globalThis.setTimeout(callback, ms)
-
-///|
-/// Clears a timeout handle returned by `set_timeout`.
-pub extern "js" fn clear_timeout(handle : Double) -> Unit =
-  #| (handle) => globalThis.clearTimeout(handle)
-
-///|
 /// Installs the harness scroll control: `__readonlyEditorScrollTo(top)`
 /// drives the viewer's synthetic scrolling, replacing the native
 /// `scrollTop` assignment specs used before the imperative view.
-pub extern "js" fn install_scroll_control(scroll_to : (Double) -> Unit) -> Unit =
+extern "js" fn install_scroll_control(scroll_to : (Double) -> Unit) -> Unit =
   #| (scroll_to) => {
   #|   globalThis.__readonlyEditorScrollTo = (top) => scroll_to(Number(top) || 0);
   #| }
@@ -96,7 +79,7 @@ pub extern "js" fn install_scroll_control(scroll_to : (Double) -> Unit) -> Unit 
 /// Installs the browser-test hover fixture hook. Normal usage never calls
 /// this global, so the workbench's remote language provider remains the
 /// first provider that answers.
-pub extern "js" fn install_hover_fixture_control(
+extern "js" fn install_hover_fixture_control(
   configure : (String, String) -> Unit,
 ) -> Unit =
   #| (configure) => {
@@ -109,7 +92,7 @@ pub extern "js" fn install_hover_fixture_control(
 ///|
 /// Installs Playwright-only conformance controls for hover/scrollbar parity
 /// checks. Product embedders should keep using the viewer API.
-pub extern "js" fn install_conformance_control(
+extern "js" fn install_conformance_control(
   configure_hover : (String, String) -> Unit,
   scroll_to : (Double, Double) -> Unit,
   hide_hover : () -> Unit,

@@ -25,7 +25,7 @@ let hover_delay_ms = 300
 ///|
 /// What a hover transition asks the viewer to do; the controller stays a
 /// pure state machine and the viewer interprets these (timers through the
-/// `dom` bindings, provider requests through the registry).
+/// browser-host timer bindings, provider requests through the registry).
 priv enum HoverEffect {
   HoverNoEffect
   /// Start the half/full/triple delay timers for this anchor token.

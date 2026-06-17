@@ -7,7 +7,6 @@ async fn main {
   let product_dirs = [
     "base",
     "decorations",
-    "dom",
     "language",
     "platform",
     "remote_protocol",
@@ -120,7 +119,6 @@ async fn collect_manifests(dir : String, manifests : Array[String]) -> Unit {
 /// no transport or viewer. Only `workbench` composes.
 async fn check_package_imports(errors : Array[String]) -> Unit {
   let common_forbidden = [
-    "baozhiyuan/editor/dom",
     "baozhiyuan/editor/remote_protocol",
     "baozhiyuan/editor/renderer/browser",
     "baozhiyuan/editor/server",
@@ -246,8 +244,7 @@ async fn check_platform_log_imports(errors : Array[String]) -> Unit {
   let pkg_file = "platform/log/moon.pkg"
   if @fs.exists(pkg_file) {
     for imported in package_imports(@fs.read_file(pkg_file).text()) {
-      if imported.has_prefix("baozhiyuan/editor/dom") ||
-        imported.has_prefix("baozhiyuan/editor/server_host_native") ||
+      if imported.has_prefix("baozhiyuan/editor/server_host_native") ||
         imported.has_prefix("moonbit-community/rabbita") {
         errors.push(pkg_file + " must not import host package " + imported)
       }

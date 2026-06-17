@@ -108,7 +108,7 @@ fn workbench_viewer() -> @browser.Viewer {
 ///|
 /// Browser entrypoint for the reference workbench.
 pub fn start_app() -> Unit {
-  @dom.install_host_capabilities()
+  install_host_capabilities()
   let services = workbench_services()
   register_harness_hover_provider(services)
   register_remote_language_providers(services)
@@ -174,8 +174,8 @@ fn attach_workbench_viewer() -> Unit {
     Some(host) => {
       let viewer = workbench_viewer()
       viewer.attach(host)
-      @dom.install_scroll_control(top => viewer.scroll_to(top))
-      @dom.install_conformance_control(
+      install_scroll_control(top => viewer.scroll_to(top))
+      install_conformance_control(
         set_harness_hover_fixture,
         (top, left) => viewer.scroll_to_position(top, left),
         () => viewer.escape(),
@@ -322,7 +322,7 @@ fn viewer_notified_update(
       tokenize_ms~,
       build_ms~
     ) => {
-      @dom.set_current_document(document.to_json().stringify())
+      set_current_document(document.to_json().stringify())
       emit_render_event(
         line_count,
         token_count,
@@ -737,7 +737,7 @@ let theme_storage_key = "readonly-editor:theme"
 
 ///|
 fn stored_theme() -> String {
-  match @dom.storage_get_item(theme_storage_key) {
+  match storage_get_item(theme_storage_key) {
     "light" => "light"
     _ => "dark"
   }
@@ -745,5 +745,5 @@ fn stored_theme() -> String {
 
 ///|
 fn persist_theme_cmd(theme : String) -> @rabbita.Cmd {
-  @cmd.custom_cmd(_ => @dom.storage_set_item(theme_storage_key, theme))
+  @cmd.custom_cmd(_ => storage_set_item(theme_storage_key, theme))
 }

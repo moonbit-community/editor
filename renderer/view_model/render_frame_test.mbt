@@ -1,6 +1,6 @@
 ///|
 fn frame_for(
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
   viewport : @view_model.FrameViewport,
   decorations? : @decorations.DecorationSet = @decorations.DecorationSet::empty(),
   providers? : @language.ProviderResult = @language.ProviderResult::empty(),
@@ -26,7 +26,7 @@ fn join_span_text(line : @view_model.RenderLine) -> String {
 
 ///|
 test "render frame contains highlighted spans and provider surfaces" {
-  let doc = @core.DocumentSnapshot("fn main { // TODO\n  let x = 1\n}")
+  let doc = @model.TextSnapshot("fn main { // TODO\n  let x = 1\n}")
   let decorations = @decorations.DecorationSet::from_array([
     Decoration(Range(13, 17), Diagnostic, "diag-warning", message="todo"),
   ])
@@ -52,7 +52,7 @@ test "render frame contains highlighted spans and provider surfaces" {
 
 ///|
 test "semantic tokens split spans and win on the overlapping segment" {
-  let doc = @core.DocumentSnapshot("fn main { run() }")
+  let doc = @model.TextSnapshot("fn main { run() }")
   let providers = @language.ProviderResult::{
     hovers: [],
     diagnostics: [],
@@ -91,7 +91,7 @@ test "semantic tokens split spans and win on the overlapping segment" {
 
 ///|
 test "window builds match the matching slice of a whole-document build" {
-  let doc = @core.DocumentSnapshot(
+  let doc = @model.TextSnapshot(
     "fn main { // TODO\n  let x = 1\n  let y = 2\n}\n\nfn other {\n  3\n}",
   )
   let providers = @language.ProviderResult::{
@@ -126,7 +126,7 @@ test "window builds match the matching slice of a whole-document build" {
 
 ///|
 test "viewport bounds clamp to the document" {
-  let doc = @core.DocumentSnapshot("a\nb\nc")
+  let doc = @model.TextSnapshot("a\nb\nc")
   let frame = frame_for(doc, { start_line: -5, end_line: 99 })
   debug_inspect(
     frame.viewport,

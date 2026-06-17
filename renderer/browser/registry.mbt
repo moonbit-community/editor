@@ -19,8 +19,8 @@ pub fn register_tokenizer(
 
 ///|
 /// Controllers resolve features through the registry with async runs;
-/// each result is tagged with the requesting document version (and the
-/// hover anchor token) so stale responses are dropped at handling.
+/// each result is tagged with the requesting text model (URI plus version)
+/// and the hover anchor token so stale responses are dropped at handling.
 fn Viewer::request_hover(
   self : Viewer,
   anchor : HoverAnchor,
@@ -28,29 +28,29 @@ fn Viewer::request_hover(
 ) -> Unit {
   match self.source_document {
     Some(document) => {
-      let version = document.version
+      let model = document.text_model()
       let computer = ContentHoverComputer::new(self.services)
       let anchor_range = @core.Range(anchor.start, anchor.end)
       match
         computer.compute_sync(
-          document,
+          model,
           anchor_range,
           anchor.offset,
           injected_text_index=anchor.injected_text_index,
           inlay_hints=self.inlay_hints,
         ) {
-        Some(hover) => self.hover_resolved(version, token, Some(hover))
+        Some(hover) => self.hover_resolved(model, token, Some(hover))
         None => ()
       }
       @js.async_run(() => {
         let hover = computer.compute_async(
-          document,
+          model,
           anchor_range,
           anchor.offset,
           injected_text_index=anchor.injected_text_index,
           inlay_hints=self.inlay_hints,
         )
-        self.hover_resolved(version, token, hover)
+        self.hover_resolved(model, token, hover)
       })
     }
     None => ()
@@ -63,21 +63,20 @@ fn Viewer::request_hover(
 /// independently.
 fn Viewer::request_document_features(
   self : Viewer,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
 ) -> Unit {
-  let version = document.version
   @js.async_run(() => {
     self.services.language_features.diagnostics_for_document(document, (
       owner,
       diagnostics,
     ) => self.services.markers.set_diagnostics(owner, document.uri, diagnostics))
-    if document_version(self.source_document) == version {
+    if self.is_current_model(document) {
       self.render_feature_update()
     }
   })
   @js.async_run(() => {
     let symbols = self.services.language_features.document_symbols(document)
-    if document_version(self.source_document) == version {
+    if self.is_current_model(document) {
       self.provider_result = { ..self.provider_result, symbols, }
       self.render_feature_update()
     }
@@ -86,7 +85,7 @@ fn Viewer::request_document_features(
     let semantic_tokens = self.services.language_features.semantic_tokens_for_document(
       document,
     )
-    if document_version(self.source_document) == version {
+    if self.is_current_model(document) {
       self.provider_result = { ..self.provider_result, semantic_tokens, }
       self.render_feature_update()
     }
@@ -95,7 +94,7 @@ fn Viewer::request_document_features(
     let folding_ranges = self.services.language_features.folding_ranges_for_document(
       document,
     )
-    if document_version(self.source_document) == version {
+    if self.is_current_model(document) {
       self.set_folding_ranges(folding_ranges)
     }
   })
@@ -103,7 +102,7 @@ fn Viewer::request_document_features(
     let inlay_hints = self.services.language_features.inlay_hints_for_document(
       document,
     )
-    if document_version(self.source_document) == version {
+    if self.is_current_model(document) {
       self.inlay_hints = inlay_hints
       self.render_feature_update()
     }

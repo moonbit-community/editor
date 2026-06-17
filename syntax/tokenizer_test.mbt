@@ -65,7 +65,7 @@ fn find_marker(
 
 ///|
 test "driver carries state across lines and converts to doc offsets" {
-  let doc = @core.DocumentSnapshot("aa /* bb\ncc */ dd", language_id="toy")
+  let doc = @model.TextSnapshot("aa /* bb\ncc */ dd", language_id="toy")
   let tokens = @syntax.tokenize_document(doc, BlockCommentToy::{  })
   debug_inspect(
     tokens,
@@ -102,7 +102,7 @@ test "registry lookup resolves registered languages only" {
 test "plain tokenizer counts UTF-16 code units and keeps pairs whole" {
   // 𐍈 (U+10348) is two UTF-16 code units; the identifier after it must
   // start at offset 4 and the pair must stay one token.
-  let doc = @core.DocumentSnapshot("a \u{10348}b", language_id="plaintext")
+  let doc = @model.TextSnapshot("a \u{10348}b", language_id="plaintext")
   let tokens = @syntax.tokenize_document(doc, @syntax.PlainTokenizer::new())
   debug_inspect(
     tokens,

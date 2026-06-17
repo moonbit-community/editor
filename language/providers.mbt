@@ -33,7 +33,7 @@ pub(all) struct Diagnostic {
 ///|
 /// Cross-document location result for definition and reference providers.
 pub(all) struct Location {
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   range : @core.Range
 } derive(Debug)
 
@@ -67,58 +67,52 @@ pub(all) struct ProviderResult {
 /// Legacy snapshot-level provider aggregate used by the compatibility render
 /// path.
 pub(open) trait LanguageProvider {
-  fn hovers(Self, @core.DocumentSnapshot) -> Array[Hover]
-  fn diagnostics(Self, @core.DocumentSnapshot) -> Array[Diagnostic]
-  fn definitions(Self, @core.DocumentSnapshot) -> Array[Location]
-  fn symbols(Self, @core.DocumentSnapshot) -> Array[DocumentSymbol]
-  fn semantic_tokens(Self, @core.DocumentSnapshot) -> Array[SemanticToken]
+  fn hovers(Self, @model.TextSnapshot) -> Array[Hover]
+  fn diagnostics(Self, @model.TextSnapshot) -> Array[Diagnostic]
+  fn definitions(Self, @model.TextSnapshot) -> Array[Location]
+  fn symbols(Self, @model.TextSnapshot) -> Array[DocumentSymbol]
+  fn semantic_tokens(Self, @model.TextSnapshot) -> Array[SemanticToken]
 }
 
 ///|
-/// Asynchronous hover provider for a versioned `SourceDocument` and UTF-16
+/// Asynchronous hover provider for a versioned `TextModel` and UTF-16
 /// offset.
 pub(open) trait HoverProvider {
-  async fn hover_at(Self, @workspace.SourceDocument, Int) -> Hover?
+  async fn hover_at(Self, @model.TextModel, Int) -> Hover?
 }
 
 ///|
-/// Asynchronous definition provider for a versioned `SourceDocument` and
+/// Asynchronous definition provider for a versioned `TextModel` and
 /// UTF-16 offset.
 pub(open) trait DefinitionProvider {
-  async fn definition_at(Self, @workspace.SourceDocument, Int) -> Location?
+  async fn definition_at(Self, @model.TextModel, Int) -> Location?
 }
 
 ///|
-/// Asynchronous references provider for a versioned `SourceDocument` and
+/// Asynchronous references provider for a versioned `TextModel` and
 /// UTF-16 offset.
 pub(open) trait ReferencesProvider {
-  async fn references_at(Self, @workspace.SourceDocument, Int) -> Array[
-    Location,
-  ]
+  async fn references_at(Self, @model.TextModel, Int) -> Array[Location]
 }
 
 ///|
 /// Document diagnostics provider. Results replace diagnostics for the queried
 /// document/resource owner.
 pub(open) trait DiagnosticsProvider {
-  async fn diagnostics_for_document(Self, @workspace.SourceDocument) -> Array[
-    Diagnostic,
-  ]
+  async fn diagnostics_for_document(Self, @model.TextModel) -> Array[Diagnostic]
 }
 
 ///|
 /// Document symbol provider for outline/navigation views.
 pub(open) trait DocumentSymbolProvider {
-  async fn document_symbols(Self, @workspace.SourceDocument) -> Array[
-    DocumentSymbol,
-  ]
+  async fn document_symbols(Self, @model.TextModel) -> Array[DocumentSymbol]
 }
 
 ///|
 /// Full-document semantic token provider. The viewer treats returned tokens as
 /// replacing the previous semantic-token set for that document version.
 pub(open) trait SemanticTokensProvider {
-  async fn semantic_tokens_for_document(Self, @workspace.SourceDocument) -> Array[
+  async fn semantic_tokens_for_document(Self, @model.TextModel) -> Array[
     SemanticToken,
   ]
 }
@@ -139,7 +133,7 @@ pub fn ProviderResult::empty() -> ProviderResult {
 /// Collects every feature family from the legacy snapshot-level provider.
 pub fn collect_provider_result(
   provider : &LanguageProvider,
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
 ) -> ProviderResult {
   {
     hovers: provider.hovers(doc),
@@ -157,7 +151,7 @@ pub async fn collect_document_provider_result(
   diagnostics : &DiagnosticsProvider,
   symbols : &DocumentSymbolProvider,
   semantic_tokens : &SemanticTokensProvider,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
 ) -> ProviderResult {
   {
     hovers: [],

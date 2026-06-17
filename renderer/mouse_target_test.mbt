@@ -2,7 +2,7 @@
 fn hit_test_frame(
   viewport? : @view_model.FrameViewport,
 ) -> @view_model.RenderFrame {
-  let doc = @core.DocumentSnapshot("fn main {\n  let x = 1\n}\n\nfn other {}")
+  let doc = @model.TextSnapshot("fn main {\n  let x = 1\n}\n\nfn other {}")
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
@@ -21,7 +21,7 @@ fn hit_test_frame(
 
 ///|
 fn projected_hit_test_frame() -> @view_model.RenderFrame {
-  let doc = @core.DocumentSnapshot("abcdefghij")
+  let doc = @model.TextSnapshot("abcdefghij")
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
@@ -40,7 +40,7 @@ fn projected_hit_test_frame() -> @view_model.RenderFrame {
 
 ///|
 fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
-  let doc = @core.DocumentSnapshot("let x = 1")
+  let doc = @model.TextSnapshot("let x = 1")
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),

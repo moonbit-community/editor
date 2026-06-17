@@ -11,7 +11,7 @@ Range-based visual annotations over immutable documents.
 
 ## Boundaries
 
-- May depend on `core`.
+- May depend on `renderer/core`.
 - Must not own edit mapping, document mutation, DOM classes beyond stored class
   names, or host-specific rendering.
 - Does not compute diagnostics or language data; it only carries annotations.

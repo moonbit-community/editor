@@ -2,15 +2,15 @@
 package "baozhiyuan/editor/view"
 
 import {
-  "baozhiyuan/editor/core",
   "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/language",
+  "baozhiyuan/editor/renderer/model",
   "baozhiyuan/editor/syntax",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn render(@core.DocumentSnapshot, Viewport, Array[@syntax.Token], @decorations.DecorationSet, @language.ProviderResult) -> RenderModel
+pub fn render(@model.TextSnapshot, Viewport, Array[@syntax.Token], @decorations.DecorationSet, @language.ProviderResult) -> RenderModel
 
 // Errors
 

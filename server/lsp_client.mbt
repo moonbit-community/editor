@@ -73,7 +73,7 @@ pub struct LspClient {
   priv subscription : Ref[LspSubscription?]
   priv active_uri : Ref[String]
   priv active_version : Ref[Int]
-  priv active_snapshot : Ref[@core.DocumentSnapshot?]
+  priv active_snapshot : Ref[@model.TextSnapshot?]
   priv capabilities : Ref[LspServerCapabilities]
   priv pending_requests : Map[Int, LspPendingRequest]
   priv diagnostics : Map[String, LspCachedDiagnostics]
@@ -657,7 +657,7 @@ async fn LspClient::ensure_initialized(
 }
 
 ///|
-fn lsp_root_uri(uri : @workspace.DocumentUri) -> Json {
+fn lsp_root_uri(uri : @base_common.Uri) -> Json {
   let raw = uri.to_string()
   if raw.has_prefix("file:///") {
     let mut last_slash = -1
@@ -715,7 +715,7 @@ impl @language.DiagnosticsProvider for LspLanguageProvider with fn diagnostics_f
   self,
   document,
 ) {
-  self.client.sync_document(document).diagnostics
+  self.client.sync_document(source_document_from_model(document)).diagnostics
 }
 
 ///|
@@ -724,7 +724,7 @@ impl @language.HoverProvider for LspLanguageProvider with fn hover_at(
   document,
   offset,
 ) {
-  self.client.hover_at(document, offset)
+  self.client.hover_at(source_document_from_model(document), offset)
 }
 
 ///|
@@ -733,7 +733,7 @@ impl @language.DefinitionProvider for LspLanguageProvider with fn definition_at(
   document,
   offset,
 ) {
-  self.client.definition_at(document, offset)
+  self.client.definition_at(source_document_from_model(document), offset)
 }
 
 ///|
@@ -742,7 +742,7 @@ impl @language.ReferencesProvider for LspLanguageProvider with fn references_at(
   document,
   offset,
 ) {
-  self.client.references_at(document, offset)
+  self.client.references_at(source_document_from_model(document), offset)
 }
 
 ///|
@@ -750,7 +750,7 @@ impl @language.DocumentSymbolProvider for LspLanguageProvider with fn document_s
   self,
   document,
 ) {
-  self.client.document_symbols(document)
+  self.client.document_symbols(source_document_from_model(document))
 }
 
 ///|
@@ -758,7 +758,21 @@ impl @language.SemanticTokensProvider for LspLanguageProvider with fn semantic_t
   self,
   document,
 ) {
-  self.client.semantic_tokens_for_document(document)
+  self.client.semantic_tokens_for_document(source_document_from_model(document))
+}
+
+///|
+fn source_document_from_model(
+  model : @model.TextModel,
+) -> @workspace.SourceDocument {
+  SourceDocument(
+    model.uri,
+    model.display_name,
+    model.language_id,
+    model.version,
+    model.revision,
+    model.snapshot.text,
+  )
 }
 
 ///|
@@ -842,7 +856,7 @@ priv struct ParsedDiagnostics {
 ///|
 fn parse_publish_diagnostics(
   params : Json,
-  snapshot : @core.DocumentSnapshot?,
+  snapshot : @model.TextSnapshot?,
 ) -> ParsedDiagnostics? {
   match snapshot {
     Some(doc) => {
@@ -871,7 +885,7 @@ fn parse_publish_diagnostics(
 ///|
 fn parse_diagnostic(
   item : Json,
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
 ) -> @language.Diagnostic? {
   match json_field(item, "range") {
     Some(range_json) =>
@@ -900,7 +914,7 @@ fn diagnostic_severity(value : Int?) -> @language.DiagnosticSeverity {
 ///|
 fn parse_hover_result(
   result : Json,
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
   offset : Int,
 ) -> @language.Hover? {
   match result {
@@ -988,10 +1002,7 @@ fn fenced_marked_string(language : String, value : String) -> String {
 }
 
 ///|
-fn fallback_hover_range(
-  doc : @core.DocumentSnapshot,
-  offset : Int,
-) -> @core.Range {
+fn fallback_hover_range(doc : @model.TextSnapshot, offset : Int) -> @core.Range {
   let start = @core.clamp_int(offset, 0, doc.length())
   let end = @core.clamp_int(start + 1, start, doc.length())
   Range(start, end)
@@ -1152,7 +1163,7 @@ fn document_symbol_kind(kind : Int?) -> String {
 ///|
 fn parse_semantic_tokens_result(
   result : Json,
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
   legend : Array[String],
 ) -> Array[@language.SemanticToken] {
   let tokens : Array[@language.SemanticToken] = []
@@ -1230,9 +1241,9 @@ fn parse_location_result(
             None => json_field(value, "targetRange")
           }
       }
-      let parsed_uri = match @workspace.DocumentUri::parse(uri) {
-        ParsedDocumentUri(parsed) => parsed
-        DocumentUriError(_) => return None
+      let parsed_uri = match @base_common.Uri::parse(uri) {
+        ParsedUri(parsed) => parsed
+        UriError(_) => return None
       }
       let range = if uri == document.uri.to_string() {
         match range_json {
@@ -1252,7 +1263,7 @@ fn parse_location_result(
 }
 
 ///|
-fn parse_lsp_range(value : Json, doc : @core.DocumentSnapshot) -> @core.Range? {
+fn parse_lsp_range(value : Json, doc : @model.TextSnapshot) -> @core.Range? {
   match (json_field(value, "start"), json_field(value, "end")) {
     (Some(start), Some(end)) =>
       match (parse_lsp_position(start), parse_lsp_position(end)) {
@@ -1424,13 +1435,13 @@ fn text_document_item(document : @workspace.SourceDocument) -> Json {
 }
 
 ///|
-fn text_document_identifier(uri : @workspace.DocumentUri) -> Json {
+fn text_document_identifier(uri : @base_common.Uri) -> Json {
   json_object([("uri", Json::string(uri.to_string()))])
 }
 
 ///|
 fn versioned_text_document_identifier(
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
   version : Int,
 ) -> Json {
   json_object([

@@ -1,6 +1,8 @@
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/base/common" @base_common,
+  "baozhiyuan/editor/renderer/core",
   "baozhiyuan/editor/language",
+  "baozhiyuan/editor/renderer/model",
   "baozhiyuan/editor/renderer/browser",
   "baozhiyuan/editor/syntax/lang_moonbit",
   "baozhiyuan/editor/tests/browser/moonbit/support",

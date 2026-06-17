@@ -36,7 +36,7 @@ pub(all) struct Token {
 /// Tokenizes the whole document with the generic fallback lexer. Render
 /// paths resolve a language tokenizer through `TokenizerRegistry` and use
 /// `tokenize_document` directly; this stays as the registry-miss path.
-pub fn highlight(doc : @core.DocumentSnapshot) -> Array[Token] {
+pub fn highlight(doc : @model.TextSnapshot) -> Array[Token] {
   tokenize_document(doc, PlainTokenizer::new())
 }
 

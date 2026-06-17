@@ -1,6 +1,6 @@
 ///|
 test "line html escapes text and merges span decorations" {
-  let doc = @core.DocumentSnapshot("let a = \"<b> & 'c'\"")
+  let doc = @model.TextSnapshot("let a = \"<b> & 'c'\"")
   let frame = frame_for(doc, { start_line: 0, end_line: 1 })
   let line = frame.lines[0]
   let plain = @renderer.render_line_html(line, [])
@@ -30,7 +30,7 @@ test "line html escapes text and merges span decorations" {
 
 ///|
 test "empty lines emit an empty view-line content wrapper" {
-  let doc = @core.DocumentSnapshot("a\n\nb")
+  let doc = @model.TextSnapshot("a\n\nb")
   let frame = frame_for(doc, { start_line: 0, end_line: 3 })
   assert_eq(
     @renderer.render_line_html(frame.lines[1], []),

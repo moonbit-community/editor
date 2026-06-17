@@ -127,7 +127,7 @@ fn run_next_sample(
   } else {
     "sample_" + sample_index.val.to_string()
   }
-  viewer.open(@workspace.DocumentUri::memory("perf/large_" + name + ".mbt"))
+  viewer.open(@base_common.Uri::memory("perf/large_" + name + ".mbt"))
 }
 
 ///|

@@ -1,0 +1,36 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/base/common"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct Uri {
+  value : String
+} derive(Eq, @debug.Debug)
+pub fn Uri::display_name(Self) -> String
+pub fn Uri::memory(String) -> Self
+pub fn Uri::parse(String) -> UriResult
+pub fn Uri::path(Self) -> String
+pub fn Uri::scheme(Self) -> String
+pub fn Uri::to_string(Self) -> String
+
+pub(all) enum UriError {
+  InvalidUri
+} derive(Eq, @debug.Debug)
+pub fn UriError::to_string(Self) -> String
+
+pub(all) enum UriResult {
+  ParsedUri(Uri)
+  UriError(UriError)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

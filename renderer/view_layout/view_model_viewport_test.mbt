@@ -1,6 +1,6 @@
 ///|
 test "view model produces viewport data from layout window" {
-  let doc = @core.DocumentSnapshot("a\nbb\nccc")
+  let doc = @model.TextSnapshot("a\nbb\nccc")
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),

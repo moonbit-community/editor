@@ -25,7 +25,7 @@ model-line source data, and viewport-scoped render frames.
   wrapping, while render-line source mappings keep hit testing and decorations
   model-offset based.
 - Own readonly `Selection` model ranges and copy helpers. Plain copy slices the
-  selected `DocumentSnapshot` range directly, so browser-only injected text is
+  selected `TextSnapshot` range directly, so browser-only injected text is
   excluded by default; rich copy has a model-only escaped fallback while the
   browser layer can decorate visible source spans with token classes.
 - Own DOM-free conversion from `RenderLine` to
@@ -33,8 +33,8 @@ model-line source data, and viewport-scoped render frames.
 
 ## Boundaries
 
-- May depend on `core`, `syntax`, `decorations`, `language`, JSON support, and
-  `renderer/view_line_renderer`.
+- May depend on `renderer/core`, `renderer/model`, `syntax`, `decorations`,
+  `language`, JSON support, and `renderer/view_line_renderer`.
 - Must not depend on parent `renderer`, `renderer/view_layout`,
   `renderer/browser`, `dom`, `web`, server, transport, workspace, or host
   packages.

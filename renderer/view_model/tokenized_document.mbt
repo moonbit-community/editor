@@ -5,7 +5,7 @@
 /// array. Frame builds read line buckets, so a window build costs
 /// O(window) instead of O(document x tokens).
 pub struct TokenizedDocument {
-  snapshot : @core.DocumentSnapshot
+  snapshot : @model.TextSnapshot
   token_count : Int
   line_tokens : Array[Array[@syntax.Token]]
 }
@@ -13,7 +13,7 @@ pub struct TokenizedDocument {
 ///|
 /// Builds line buckets from a document snapshot and whole-document token list.
 pub fn TokenizedDocument::build(
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   tokens : Array[@syntax.Token],
 ) -> TokenizedDocument {
   {
@@ -77,7 +77,7 @@ pub fn FrameSource::FrameSource(
 /// each item with a forward sweep; out-of-order items (feature data makes
 /// no ordering promise) restart the cursor through a binary search.
 fn[T] bucket_by_line(
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   items : Array[T],
   range_of : (T) -> @core.Range,
 ) -> Array[Array[T]] {
@@ -113,10 +113,7 @@ fn[T] bucket_by_line(
 }
 
 ///|
-fn line_at_offset_binary(
-  snapshot : @core.DocumentSnapshot,
-  offset : Int,
-) -> Int {
+fn line_at_offset_binary(snapshot : @model.TextSnapshot, offset : Int) -> Int {
   let starts = snapshot.line_starts
   for low = 0, high = starts.length() - 1; low < high; {
     let mid = low + (high - low + 1) / 2

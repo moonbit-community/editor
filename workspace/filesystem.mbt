@@ -17,7 +17,7 @@ pub(all) enum FileSystemProviderErrorCode {
 pub(all) struct FileSystemProviderError {
   code : FileSystemProviderErrorCode
   message : String
-  uri : DocumentUri?
+  uri : @base_common.Uri?
 } derive(Debug)
 
 ///|
@@ -49,7 +49,7 @@ pub(all) enum FileChangeType {
 ///|
 /// One changed document URI reported by a file watch.
 pub(all) struct FileChange {
-  uri : DocumentUri
+  uri : @base_common.Uri
   change_type : FileChangeType
 } derive(Debug)
 
@@ -72,8 +72,8 @@ pub(all) struct FileWatch {
 /// notifications.
 pub(open) trait FileSystemProvider {
   fn scheme(Self) -> String
-  async fn read_file(Self, DocumentUri) -> FileReadResult
-  fn watch(Self, DocumentUri, WatchOptions, (Array[FileChange]) -> Unit) -> FileWatch
+  async fn read_file(Self, @base_common.Uri) -> FileReadResult
+  fn watch(Self, @base_common.Uri, WatchOptions, (Array[FileChange]) -> Unit) -> FileWatch
 }
 
 ///|
@@ -100,7 +100,7 @@ pub fn FileContent::FileContent(
 pub fn FileSystemProviderError::FileSystemProviderError(
   code : FileSystemProviderErrorCode,
   message : String,
-  uri? : DocumentUri,
+  uri? : @base_common.Uri,
 ) -> FileSystemProviderError {
   let message = if message == "" { code.to_string() } else { message }
   { code, message, uri }
@@ -123,7 +123,7 @@ pub fn FileWatch::dispose(self : FileWatch) -> Unit {
 /// `SourceDocument`, failing closed when the URI scheme does not match.
 pub async fn read_source_document(
   provider : &FileSystemProvider,
-  uri : DocumentUri,
+  uri : @base_common.Uri,
 ) -> SourceDocumentLoadResult {
   if uri.scheme() != provider.scheme() {
     return SourceDocumentLoadError(
@@ -145,7 +145,7 @@ pub async fn read_source_document(
 /// Starts a default file watch only when the provider owns the URI scheme.
 pub fn watch_file(
   provider : &FileSystemProvider,
-  uri : DocumentUri,
+  uri : @base_common.Uri,
   listener : (Array[FileChange]) -> Unit,
 ) -> FileWatch {
   if uri.scheme() == provider.scheme() {
@@ -159,7 +159,7 @@ pub fn watch_file(
 /// Derives a `SourceDocument` from provider content, filling display name,
 /// language id, and revision when they are absent.
 pub fn SourceDocument::from_file_content(
-  uri : DocumentUri,
+  uri : @base_common.Uri,
   content : FileContent,
 ) -> SourceDocument {
   let display_name = if content.display_name == "" {

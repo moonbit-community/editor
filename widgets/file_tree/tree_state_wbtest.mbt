@@ -1,5 +1,5 @@
 ///|
-fn uri(raw : String) -> @workspace.DocumentUri {
+fn uri(raw : String) -> @base_common.Uri {
   { value: raw }
 }
 
@@ -153,7 +153,7 @@ test "reveal of targets outside the tree is unreachable" {
 
 ///|
 struct MemoryTreeProvider {
-  root_uri : @workspace.DocumentUri
+  root_uri : @base_common.Uri
   directories : Map[String, Array[@workspace.WorkspaceStat]]
   resolve_counts : Map[String, Int]
 }

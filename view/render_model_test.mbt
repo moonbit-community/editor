@@ -1,6 +1,6 @@
 ///|
 test "render model contains highlighted spans and diagnostics" {
-  let doc = @core.DocumentSnapshot("fn main { // TODO\n  let x = 1\n}")
+  let doc = @model.TextSnapshot("fn main { // TODO\n  let x = 1\n}")
   let tokens = @syntax.highlight(doc)
   let decorations = @decorations.DecorationSet::from_array([
     Decoration(Range(13, 17), Diagnostic, "diag-warning", message="todo"),

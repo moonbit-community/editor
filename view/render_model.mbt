@@ -38,7 +38,7 @@ pub(all) struct RenderModel {
 ///|
 /// Builds the legacy viewport render model.
 pub fn render(
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
   viewport : Viewport,
   tokens : Array[@syntax.Token],
   decoration_set : @decorations.DecorationSet,
@@ -90,7 +90,7 @@ pub impl ToJson for RenderModel with fn to_json(self) {
 
 ///|
 fn spans_for_line(
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
   line_range : @core.Range,
   tokens : Array[@syntax.Token],
   decoration_set : @decorations.DecorationSet,

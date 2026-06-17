@@ -1,9 +1,8 @@
 ///|
-fn test_uri() -> @workspace.DocumentUri {
-  match
-    @workspace.DocumentUri::parse("readonly-remote://workspace/src/main.mbt") {
-    ParsedDocumentUri(uri) => uri
-    DocumentUriError(_) => panic()
+fn test_uri() -> @base_common.Uri {
+  match @base_common.Uri::parse("readonly-remote://workspace/src/main.mbt") {
+    ParsedUri(uri) => uri
+    UriError(_) => panic()
   }
 }
 

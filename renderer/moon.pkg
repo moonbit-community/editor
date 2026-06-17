@@ -6,7 +6,8 @@ import {
 }
 
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/renderer/core",
   "baozhiyuan/editor/language",
+  "baozhiyuan/editor/renderer/model",
   "baozhiyuan/editor/syntax",
 } for "test"

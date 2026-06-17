@@ -1,6 +1,6 @@
 ///|
 fn render_tokens(source : String) -> String {
-  let doc = @core.DocumentSnapshot(source, language_id="javascript")
+  let doc = @model.TextSnapshot(source, language_id="javascript")
   let tokens = @syntax.tokenize_document(
     doc,
     @lang_javascript.JavascriptTokenizer::new(),

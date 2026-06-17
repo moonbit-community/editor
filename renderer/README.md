@@ -9,6 +9,9 @@ MoonBit-owned parent for Monaco's
 - Depend on the `renderer/view_model` package for the Monaco-shaped common
   spine: `TokenizedDocument`, `FrameSource`, `RenderFrame`, `ViewModel`,
   `ViewModelLinesFromModelAsIs`, and `IdentityCoordinatesConverter`.
+- Depend on `renderer/core` for UTF-16 coordinate primitives and
+  `renderer/model` for readonly text snapshots used by tests and frame source
+  construction.
 - Depend on the `renderer/view_layout` package for the pre-DOM viewport layer:
   `ViewportData` exposes 1-based inclusive visible line numbers, line-relative
   vertical offsets, `@view_line_renderer.ViewLineRenderingData`, and normalized
@@ -30,8 +33,9 @@ MoonBit-owned parent for Monaco's
 
 ## Boundaries
 
-- May depend on `decorations`, `renderer/view_line_renderer`,
-  `renderer/view_layout`, and `renderer/view_model`.
+- May depend on `decorations`, `renderer/core`, `renderer/model`,
+  `renderer/view_line_renderer`, `renderer/view_layout`, and
+  `renderer/view_model`.
 - Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,
   server routing, or filesystem providers. Layout, scrollbar, hit-test, and
   window functions are pure arithmetic over frame data and caller-measured

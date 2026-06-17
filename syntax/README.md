@@ -32,9 +32,9 @@ is deliberately no runtime grammar loading (no
 importing a package, or implementing `LineTokenizer` yourself.
 
 Import rules (enforced by `scripts/check-architecture.mbtx`):
-`syntax/lang_*` may import only `core` and `syntax`; only composition
-layers (`workbench`, `examples/*`) may import `syntax/lang_*` —
-`renderer`, `renderer/browser`, and `server` must not.
+`syntax/lang_*` may import only `renderer/core`, `renderer/model` test support,
+and `syntax`; only composition layers (`workbench`, `examples/*`) may import
+`syntax/lang_*` — `renderer`, `renderer/browser`, and `server` must not.
 
 ## Monarch-to-`lexmatch` translation playbook
 
@@ -85,8 +85,9 @@ offsets are UTF-16 code units (the repo position convention);
 
 ## Boundaries
 
-- `syntax` may depend only on `core`; `syntax/lang_*` only on `core`
-  and `syntax`. No module-level state anywhere in this subtree.
+- `syntax` may depend only on `renderer/core` and `renderer/model`;
+  `syntax/lang_*` only on `renderer/core`, `renderer/model` test support, and
+  `syntax`. No module-level state anywhere in this subtree.
 - Must not depend on workspace loading, language providers, DOM,
   renderer backends, server packages, or reference submodules.
 - Does not own semantic tokens or diagnostics; those belong to

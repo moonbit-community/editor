@@ -1,7 +1,8 @@
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/renderer/core",
   "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/language",
+  "baozhiyuan/editor/renderer/model",
   "baozhiyuan/editor/syntax",
   "moonbitlang/core/json",
 }

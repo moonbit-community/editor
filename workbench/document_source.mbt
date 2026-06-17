@@ -105,9 +105,9 @@ fn route_watched_error_cmd(
   @cmd.custom_cmd(_ => {
     match watch_listeners.get(uri_key) {
       Some(listener) => {
-        let uri = match @workspace.DocumentUri::parse(uri_key) {
-          ParsedDocumentUri(uri) => Some(uri)
-          DocumentUriError(_) => None
+        let uri = match @base_common.Uri::parse(uri_key) {
+          ParsedUri(uri) => Some(uri)
+          UriError(_) => None
         }
         listener(
           SourceDocumentLoadError(

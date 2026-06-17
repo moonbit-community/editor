@@ -24,7 +24,7 @@ fn register_remote_language_providers(
 fn RemoteLanguageClient::emit_remote_error(
   self : RemoteLanguageClient,
   operation : String,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
   packet : @remote_protocol.ServerPacket,
 ) -> Unit {
   match packet {

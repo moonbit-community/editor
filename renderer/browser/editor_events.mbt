@@ -88,14 +88,17 @@ fn Viewer::hover_loading_due(self : Viewer, token : Int) -> Unit {
 ///|
 fn Viewer::hover_resolved(
   self : Viewer,
-  version : Int,
+  model : @model.TextModel,
   token : Int,
   hover : ComputedHover?,
 ) -> Unit {
+  if !self.is_current_model(model) {
+    return
+  }
   let before = self.hover
   self.hover = self.hover.resolved_hover(
     self.notify_host,
-    version,
+    model.version,
     token,
     hover,
     frame_version(self.frame),
@@ -120,9 +123,9 @@ fn frame_version(frame : @view_model.RenderFrame?) -> Int {
 }
 
 ///|
-fn document_version(document : @workspace.SourceDocument?) -> Int {
-  match document {
-    Some(document) => document.version
-    None => -1
+fn Viewer::is_current_model(self : Viewer, model : @model.TextModel) -> Bool {
+  match self.text_model {
+    Some(current) => current.same_identity_and_version(model)
+    None => false
   }
 }

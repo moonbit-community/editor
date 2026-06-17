@@ -35,9 +35,9 @@ test "parses document uris" {
   assert_eq(file.display_name(), "file.mbt")
   assert_eq(file.to_string(), "file://server/nested/file.mbt")
 
-  match @workspace.DocumentUri::parse("missing-scheme") {
-    DocumentUriError(error) => assert_true(error == SourceInvalidUri)
-    ParsedDocumentUri(uri) => fail("unexpected uri " + uri.to_string())
+  match @base_common.Uri::parse("missing-scheme") {
+    UriError(error) => assert_true(error == InvalidUri)
+    ParsedUri(uri) => fail("unexpected uri " + uri.to_string())
   }
 }
 
@@ -90,7 +90,7 @@ test "infers language ids from source names" {
 ///|
 test "source document creates snapshots with identity metadata" {
   let document = @workspace.SourceDocument(
-    @workspace.DocumentUri::memory("main.mbt"),
+    @base_common.Uri::memory("main.mbt"),
     "main.mbt",
     "",
     3,
@@ -124,10 +124,10 @@ fn expect_path_error(
 }
 
 ///|
-fn expect_uri(raw_uri : String) -> @workspace.DocumentUri raise {
-  match @workspace.DocumentUri::parse(raw_uri) {
-    ParsedDocumentUri(uri) => uri
-    DocumentUriError(error) => fail("unexpected uri error " + error.to_string())
+fn expect_uri(raw_uri : String) -> @base_common.Uri raise {
+  match @base_common.Uri::parse(raw_uri) {
+    ParsedUri(uri) => uri
+    UriError(error) => fail("unexpected uri error " + error.to_string())
   }
 }
 

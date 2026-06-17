@@ -1,10 +1,12 @@
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/base/common" @base_common,
+  "baozhiyuan/editor/renderer/core",
   "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/dom",
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/platform/log",
   "baozhiyuan/editor/renderer",
+  "baozhiyuan/editor/renderer/model",
   "baozhiyuan/editor/renderer/view_line_renderer",
   "baozhiyuan/editor/renderer/view_layout",
   "baozhiyuan/editor/renderer/view_model",

@@ -2,37 +2,23 @@
 package "baozhiyuan/editor/workspace"
 
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/base/common",
+  "baozhiyuan/editor/renderer/model",
   "moonbitlang/core/debug",
 }
 
 // Values
 pub fn infer_language_id(String) -> String
 
-pub async fn read_source_document(&FileSystemProvider, DocumentUri) -> SourceDocumentLoadResult
+pub async fn read_source_document(&FileSystemProvider, @common.Uri) -> SourceDocumentLoadResult
 
-pub fn watch_file(&FileSystemProvider, DocumentUri, (Array[FileChange]) -> Unit) -> FileWatch
+pub fn watch_file(&FileSystemProvider, @common.Uri, (Array[FileChange]) -> Unit) -> FileWatch
 
 // Errors
 
 // Types and methods
-pub(all) struct DocumentUri {
-  value : String
-} derive(Eq, @debug.Debug)
-pub fn DocumentUri::display_name(Self) -> String
-pub fn DocumentUri::memory(String) -> Self
-pub fn DocumentUri::parse(String) -> DocumentUriResult
-pub fn DocumentUri::path(Self) -> String
-pub fn DocumentUri::scheme(Self) -> String
-pub fn DocumentUri::to_string(Self) -> String
-
-pub(all) enum DocumentUriResult {
-  ParsedDocumentUri(DocumentUri)
-  DocumentUriError(SourceError)
-} derive(Eq, @debug.Debug)
-
 pub(all) struct FileChange {
-  uri : DocumentUri
+  uri : @common.Uri
   change_type : FileChangeType
 } derive(@debug.Debug)
 pub impl ToJson for FileChange
@@ -60,9 +46,9 @@ pub(all) enum FileReadResult {
 pub(all) struct FileSystemProviderError {
   code : FileSystemProviderErrorCode
   message : String
-  uri : DocumentUri?
+  uri : @common.Uri?
 } derive(@debug.Debug)
-pub fn FileSystemProviderError::FileSystemProviderError(FileSystemProviderErrorCode, String, uri? : DocumentUri) -> Self
+pub fn FileSystemProviderError::FileSystemProviderError(FileSystemProviderErrorCode, String, uri? : @common.Uri) -> Self
 pub fn FileSystemProviderError::status(Self) -> Int
 pub impl ToJson for FileSystemProviderError
 
@@ -85,16 +71,17 @@ pub(all) struct FileWatch {
 pub fn FileWatch::dispose(Self) -> Unit
 
 pub(all) struct SourceDocument {
-  uri : DocumentUri
+  uri : @common.Uri
   display_name : String
   language_id : String
   version : Int
   revision : String
   text : String
 } derive(@debug.Debug)
-pub fn SourceDocument::SourceDocument(DocumentUri, String, String, Int, String, String) -> Self
-pub fn SourceDocument::from_file_content(DocumentUri, FileContent) -> Self
-pub fn SourceDocument::snapshot(Self) -> @core.DocumentSnapshot
+pub fn SourceDocument::SourceDocument(@common.Uri, String, String, Int, String, String) -> Self
+pub fn SourceDocument::from_file_content(@common.Uri, FileContent) -> Self
+pub fn SourceDocument::snapshot(Self) -> @model.TextSnapshot
+pub fn SourceDocument::text_model(Self) -> @model.TextModel
 pub impl ToJson for SourceDocument
 
 pub(all) enum SourceDocumentLoadResult {
@@ -106,7 +93,6 @@ pub impl ToJson for SourceDocumentLoadResult
 pub(all) enum SourceError {
   MissingPath
   InvalidPath
-  SourceInvalidUri
 } derive(Eq, @debug.Debug)
 pub fn SourceError::to_string(Self) -> String
 
@@ -114,7 +100,7 @@ pub(all) struct SourcePath {
   value : String
 } derive(Eq, @debug.Debug)
 pub fn SourcePath::display_name(Self) -> String
-pub fn SourcePath::file_uri(Self) -> DocumentUri
+pub fn SourcePath::file_uri(Self) -> @common.Uri
 pub fn SourcePath::normalize_root_relative_path(String) -> SourcePathResult
 pub fn SourcePath::to_string(Self) -> String
 
@@ -142,7 +128,7 @@ pub(all) enum WorkspaceResolveResult {
 } derive(@debug.Debug)
 
 pub(all) struct WorkspaceStat {
-  uri : DocumentUri
+  uri : @common.Uri
   name : String
   kind : WorkspaceEntryKind
   children : Array[WorkspaceStat]?
@@ -152,19 +138,19 @@ pub(all) struct WorkspaceStat {
 
 // Traits
 pub(open) trait DocumentSource {
-  async fn open_document(Self, DocumentUri) -> SourceDocumentLoadResult
-  fn watch_document(Self, DocumentUri, (SourceDocumentLoadResult) -> Unit) -> FileWatch
-  fn close_document(Self, DocumentUri) -> Unit
+  async fn open_document(Self, @common.Uri) -> SourceDocumentLoadResult
+  fn watch_document(Self, @common.Uri, (SourceDocumentLoadResult) -> Unit) -> FileWatch
+  fn close_document(Self, @common.Uri) -> Unit
 }
 
 pub(open) trait FileSystemProvider {
   fn scheme(Self) -> String
-  async fn read_file(Self, DocumentUri) -> FileReadResult
-  fn watch(Self, DocumentUri, WatchOptions, (Array[FileChange]) -> Unit) -> FileWatch
+  async fn read_file(Self, @common.Uri) -> FileReadResult
+  fn watch(Self, @common.Uri, WatchOptions, (Array[FileChange]) -> Unit) -> FileWatch
 }
 
 pub(open) trait WorkspaceTreeProvider {
-  fn root(Self) -> DocumentUri
-  async fn resolve(Self, DocumentUri) -> WorkspaceResolveResult
+  fn root(Self) -> @common.Uri
+  async fn resolve(Self, @common.Uri) -> WorkspaceResolveResult
 }
 

@@ -1,7 +1,7 @@
 ///|
 fn test_document() -> @workspace.SourceDocument {
   SourceDocument(
-    @workspace.DocumentUri::memory("service-test.mbt"),
+    @base_common.Uri::memory("service-test.mbt"),
     "service-test.mbt",
     "moonbit",
     7,
@@ -13,7 +13,7 @@ fn test_document() -> @workspace.SourceDocument {
 ///|
 test "marker service replaces owner resource and supports limits" {
   let service = MarkerService::new()
-  let uri = @workspace.DocumentUri::memory("markers.mbt")
+  let uri = @base_common.Uri::memory("markers.mbt")
   service.set_diagnostics("owner-a", uri, [
     { range: Range(0, 1), severity: Warning, message: "first" },
     { range: Range(2, 3), severity: Error, message: "second" },
@@ -35,7 +35,7 @@ test "marker service replaces owner resource and supports limits" {
 ///|
 test "marker decorations expose squiggles and marker hover lookup" {
   let markers = MarkerService::new()
-  let uri = @workspace.DocumentUri::memory("decorations.mbt")
+  let uri = @base_common.Uri::memory("decorations.mbt")
   markers.set_diagnostics("owner", uri, [
     { range: Range(2, 8), severity: Warning, message: "diagnostic" },
   ])
@@ -51,7 +51,7 @@ test "marker decorations expose squiggles and marker hover lookup" {
 ///|
 async test "content hover computer separates sync markers from async markdown" {
   let services = ViewerServices::new()
-  let document = test_document()
+  let document = test_document().text_model()
   services.markers.set_diagnostics("diagnostics:0", document.uri, [
     { range: Range(12, 17), severity: Warning, message: "marker hover" },
   ])
@@ -83,7 +83,7 @@ async test "provider failures are logged and isolated" {
   )
   services.language_features.register_hover_provider(FailingHoverProvider::{  })
   services.language_features.register_hover_provider(TestHoverProvider::{  })
-  let document = test_document()
+  let document = test_document().text_model()
   let hover = services.language_features.hover_at(document, 3)
   assert_true(hover is Some(_))
   let entries = memory.entries()

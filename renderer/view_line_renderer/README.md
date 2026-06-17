@@ -18,7 +18,7 @@ character-mapping roles.
 
 ## Boundaries
 
-- May depend on `core` and `syntax`.
+- May depend on `renderer/core` and `syntax`.
 - Must not depend on `renderer`, `renderer/browser`, `dom`, `web`, server,
   transport, workspace, or host packages.
 - Must not declare FFI.

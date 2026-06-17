@@ -15,7 +15,7 @@ pub(all) struct Marker {
 /// Converts a language diagnostic into a marker owned by a specific provider.
 pub fn Marker::from_diagnostic(
   owner : String,
-  resource : @workspace.DocumentUri,
+  resource : @base_common.Uri,
   diagnostic : @language.Diagnostic,
 ) -> Marker {
   {
@@ -52,7 +52,7 @@ pub fn MarkerService::new() -> MarkerService {
 pub fn MarkerService::set_diagnostics(
   self : MarkerService,
   owner : String,
-  resource : @workspace.DocumentUri,
+  resource : @base_common.Uri,
   diagnostics : Array[@language.Diagnostic],
 ) -> Unit {
   let markers : Array[Marker] = []
@@ -68,7 +68,7 @@ pub fn MarkerService::set_diagnostics(
 pub fn MarkerService::set_markers(
   self : MarkerService,
   owner : String,
-  resource : @workspace.DocumentUri,
+  resource : @base_common.Uri,
   markers : Array[Marker],
 ) -> Unit {
   let resource_key = resource.to_string()
@@ -85,7 +85,7 @@ pub fn MarkerService::set_markers(
 pub fn MarkerService::remove_owner_resource(
   self : MarkerService,
   owner : String,
-  resource : @workspace.DocumentUri,
+  resource : @base_common.Uri,
 ) -> Unit {
   self.set_markers(owner, resource, [])
 }
@@ -94,7 +94,7 @@ pub fn MarkerService::remove_owner_resource(
 /// Clears markers from every owner for one resource.
 pub fn MarkerService::clear_resource(
   self : MarkerService,
-  resource : @workspace.DocumentUri,
+  resource : @base_common.Uri,
 ) -> Unit {
   let resource_key = resource.to_string()
   let retained = self.entries.filter(marker => marker.resource != resource_key)
@@ -106,7 +106,7 @@ pub fn MarkerService::clear_resource(
 /// Returns markers for one resource, optionally capped by `limit`.
 pub fn MarkerService::markers_for_resource(
   self : MarkerService,
-  resource : @workspace.DocumentUri,
+  resource : @base_common.Uri,
   limit? : Int = 0,
 ) -> Array[Marker] {
   let resource_key = resource.to_string()
@@ -126,7 +126,7 @@ pub fn MarkerService::markers_for_resource(
 /// Returns resource markers in the shared diagnostic shape.
 pub fn MarkerService::diagnostics_for_resource(
   self : MarkerService,
-  resource : @workspace.DocumentUri,
+  resource : @base_common.Uri,
 ) -> Array[@language.Diagnostic] {
   let diagnostics : Array[@language.Diagnostic] = []
   for marker in self.markers_for_resource(resource) {
@@ -153,7 +153,7 @@ pub fn MarkerDecorationsService::new(
 /// Builds diagnostic decorations for one resource.
 pub fn MarkerDecorationsService::decorations_for_resource(
   self : MarkerDecorationsService,
-  resource : @workspace.DocumentUri,
+  resource : @base_common.Uri,
 ) -> @decorations.DecorationSet {
   let items : Array[@decorations.Decoration] = []
   for marker in self.markers.markers_for_resource(resource) {
@@ -173,7 +173,7 @@ pub fn MarkerDecorationsService::decorations_for_resource(
 /// Returns markers intersecting a rendered range, optionally capped by `limit`.
 pub fn MarkerDecorationsService::markers_at(
   self : MarkerDecorationsService,
-  resource : @workspace.DocumentUri,
+  resource : @base_common.Uri,
   range : @core.Range,
   limit? : Int = 0,
 ) -> Array[Marker] {

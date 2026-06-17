@@ -1,6 +1,6 @@
 ///|
 fn frame_for(
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
   viewport : @view_model.FrameViewport,
   decorations? : @decorations.DecorationSet = @decorations.DecorationSet::empty(),
   providers? : @language.ProviderResult = @language.ProviderResult::empty(),

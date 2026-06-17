@@ -1,6 +1,6 @@
 ///|
 priv struct MemoryDocumentSource {
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   text : String
 }
 
@@ -61,7 +61,7 @@ impl @language.HoverProvider for ComponentHoverProvider with fn hover_at(
   offset,
 ) {
   let needle = "keeps"
-  match document.text.find(needle) {
+  match document.snapshot.text.find(needle) {
     Some(start) =>
       if offset >= start && offset < start + needle.length() {
         Some({
@@ -81,7 +81,7 @@ impl @language.DiagnosticsProvider for ComponentHoverProvider with fn diagnostic
   document,
 ) {
   let needle = "keeps"
-  match document.text.find(needle) {
+  match document.snapshot.text.find(needle) {
     Some(start) =>
       [
         {
@@ -122,7 +122,7 @@ fn run_viewer_api_test() -> Unit {
   let rendered_line_count = Ref(0)
   let view_line_count = Ref(0)
   let done = Ref(false)
-  let uri = @workspace.DocumentUri::memory("component.mbt")
+  let uri = @base_common.Uri::memory("component.mbt")
   let source : MemoryDocumentSource = { uri, text: component_source_text() }
   let model_line_count = component_model_line_count()
   match mount_host() {
@@ -280,5 +280,5 @@ fn component_source_text() -> String {
 
 ///|
 fn component_model_line_count() -> Int {
-  @core.DocumentSnapshot(component_source_text()).line_count()
+  @model.TextSnapshot(component_source_text()).line_count()
 }

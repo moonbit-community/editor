@@ -139,20 +139,20 @@ pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with f
 ///|
 fn NativeWorkspaceLanguageProvider::lsp_document(
   self : NativeWorkspaceLanguageProvider,
-  document : @workspace.SourceDocument,
-) -> @workspace.SourceDocument? {
+  document : @model.TextModel,
+) -> @model.TextModel? {
   match @server.resolve_remote_document_uri(document.uri) {
     ParsedRemotePath(path) =>
       match self.file_uri(path) {
         Some(uri) =>
           Some(
-            SourceDocument(
+            TextModel(
               uri,
               document.display_name,
               document.language_id,
               document.version,
               document.revision,
-              document.text,
+              document.snapshot.text,
             ),
           )
         None => None
@@ -165,11 +165,11 @@ fn NativeWorkspaceLanguageProvider::lsp_document(
 fn NativeWorkspaceLanguageProvider::file_uri(
   self : NativeWorkspaceLanguageProvider,
   path : @workspace.SourcePath,
-) -> @workspace.DocumentUri? {
+) -> @base_common.Uri? {
   let raw = file_uri_for_host_path(self.root + "/" + path.to_string())
-  match @workspace.DocumentUri::parse(raw) {
-    ParsedDocumentUri(uri) => Some(uri)
-    DocumentUriError(_) => None
+  match @base_common.Uri::parse(raw) {
+    ParsedUri(uri) => Some(uri)
+    UriError(_) => None
   }
 }
 
@@ -187,8 +187,8 @@ fn NativeWorkspaceLanguageProvider::remote_location(
 ///|
 fn NativeWorkspaceLanguageProvider::remote_uri(
   self : NativeWorkspaceLanguageProvider,
-  uri : @workspace.DocumentUri,
-) -> @workspace.DocumentUri? {
+  uri : @base_common.Uri,
+) -> @base_common.Uri? {
   let prefix = file_uri_for_host_path(self.root) + "/"
   let raw = uri.to_string()
   if raw.has_prefix(prefix) {

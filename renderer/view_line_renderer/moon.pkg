@@ -1,4 +1,4 @@
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/renderer/core",
   "baozhiyuan/editor/syntax",
 }

@@ -83,7 +83,7 @@ fn render_hover_code_block(
 ) -> String {
   let language_id = hover_code_language(code_block, active_language_id)
   let code = hover_code_text(code_block)
-  let snapshot = @core.DocumentSnapshot(code, language_id~)
+  let snapshot = @model.TextSnapshot(code, language_id~)
   let tokenizer : &@syntax.LineTokenizer = match
     tokenizer_registry.lookup(language_id) {
     Some(tokenizer) => tokenizer

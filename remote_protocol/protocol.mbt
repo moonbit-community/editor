@@ -43,7 +43,7 @@ pub(all) struct ProtocolError {
 /// Request addressed only by document URI.
 pub(all) struct DocumentRequest {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
 } derive(Debug)
 
 ///|
@@ -51,7 +51,7 @@ pub(all) struct DocumentRequest {
 /// Servers use the version to drop stale feature requests.
 pub(all) struct DocumentPositionRequest {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   document_version : Int
   offset : Int
 } derive(Debug)
@@ -61,7 +61,7 @@ pub(all) struct DocumentPositionRequest {
 /// feature refreshes.
 pub(all) struct DocumentVersionRequest {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   document_version : Int
 } derive(Debug)
 
@@ -101,7 +101,7 @@ pub(all) struct DirectoryResolvedPayload {
 /// Diagnostics response for a specific URI and document version.
 pub(all) struct DiagnosticsPayload {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   version : Int
   diagnostics : Array[@language.Diagnostic]
 } derive(Debug)
@@ -110,7 +110,7 @@ pub(all) struct DiagnosticsPayload {
 /// Hover response for a specific URI, document version, and request id.
 pub(all) struct HoverResultPayload {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   version : Int
   hover : @language.Hover?
 } derive(Debug)
@@ -119,7 +119,7 @@ pub(all) struct HoverResultPayload {
 /// Definition response for a specific URI, document version, and request id.
 pub(all) struct DefinitionResultPayload {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   version : Int
   location : @language.Location?
 } derive(Debug)
@@ -129,7 +129,7 @@ pub(all) struct DefinitionResultPayload {
 /// and the text of the containing line, so clients can list cross-file
 /// references without fetching file contents.
 pub(all) struct ReferenceItem {
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   range : @core.Range
   line : Int
   column : Int
@@ -140,7 +140,7 @@ pub(all) struct ReferenceItem {
 /// References response for a specific URI and document version.
 pub(all) struct ReferencesResultPayload {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   version : Int
   references : Array[ReferenceItem]
 } derive(Debug)
@@ -149,7 +149,7 @@ pub(all) struct ReferencesResultPayload {
 /// Document symbols response for a specific URI and document version.
 pub(all) struct DocumentSymbolsResultPayload {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   version : Int
   symbols : Array[@language.DocumentSymbol]
 } derive(Debug)
@@ -158,7 +158,7 @@ pub(all) struct DocumentSymbolsResultPayload {
 /// Semantic tokens response for a specific URI and document version.
 pub(all) struct SemanticTokensResultPayload {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   version : Int
   semantic_tokens : Array[@language.SemanticToken]
 } derive(Debug)
@@ -167,7 +167,7 @@ pub(all) struct SemanticTokensResultPayload {
 /// Folding ranges response for a specific URI and document version.
 pub(all) struct FoldingRangesResultPayload {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   version : Int
   folding_ranges : Array[@language.FoldingRange]
 } derive(Debug)
@@ -176,7 +176,7 @@ pub(all) struct FoldingRangesResultPayload {
 /// Inlay hints response for a specific URI and document version.
 pub(all) struct InlayHintsResultPayload {
   id : String
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   version : Int
   inlay_hints : Array[@language.InlayHint]
 } derive(Debug)
@@ -871,7 +871,7 @@ fn request_id(packet : Json) -> String {
 
 ///|
 priv enum ProtocolUriResult {
-  ParsedProtocolUri(@workspace.DocumentUri)
+  ParsedProtocolUri(@base_common.Uri)
   ProtocolUriError(ProtocolError)
 }
 
@@ -883,9 +883,9 @@ fn parse_uri_field(
 ) -> ProtocolUriResult {
   match json_string_field(packet, key) {
     Some(raw) =>
-      match @workspace.DocumentUri::parse(raw) {
-        ParsedDocumentUri(uri) => ParsedProtocolUri(uri)
-        DocumentUriError(_) =>
+      match @base_common.Uri::parse(raw) {
+        ParsedUri(uri) => ParsedProtocolUri(uri)
+        UriError(_) =>
           ProtocolUriError(
             ProtocolError(
               ProtocolInvalidUri,
@@ -917,8 +917,8 @@ fn parse_source_document(value : Json, id : String) -> ProtocolDocumentResult {
     Object(_) =>
       match json_string_field(value, "uri") {
         Some(raw_uri) =>
-          match @workspace.DocumentUri::parse(raw_uri) {
-            ParsedDocumentUri(uri) =>
+          match @base_common.Uri::parse(raw_uri) {
+            ParsedUri(uri) =>
               ParsedProtocolDocument(
                 SourceDocument(
                   uri,
@@ -929,7 +929,7 @@ fn parse_source_document(value : Json, id : String) -> ProtocolDocumentResult {
                   json_string_field(value, "text").unwrap_or(""),
                 ),
               )
-            DocumentUriError(_) =>
+            UriError(_) =>
               ProtocolDocumentError(
                 ProtocolError(
                   ProtocolInvalidUri,
@@ -1023,9 +1023,7 @@ fn workspace_stat_json(stat : @workspace.WorkspaceStat) -> Json {
 fn parse_workspace_stat(value : Json) -> @workspace.WorkspaceStat? {
   guard value is Object(_) else { return None }
   guard json_string_field(value, "uri") is Some(raw_uri) else { return None }
-  guard @workspace.DocumentUri::parse(raw_uri) is ParsedDocumentUri(uri) else {
-    return None
-  }
+  guard @base_common.Uri::parse(raw_uri) is ParsedUri(uri) else { return None }
   guard json_string_field(value, "kind") is Some(raw_kind) else { return None }
   guard @workspace.WorkspaceEntryKind::from_string(raw_kind) is Some(kind) else {
     return None
@@ -1489,9 +1487,8 @@ fn parse_location(value : Json) -> @language.Location? {
     Object(_) =>
       match (json_string_field(value, "uri"), json_field(value, "range")) {
         (Some(raw_uri), Some(range_json)) =>
-          match
-            (@workspace.DocumentUri::parse(raw_uri), parse_range(range_json)) {
-            (ParsedDocumentUri(uri), Some(range)) => Some({ uri, range })
+          match (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
+            (ParsedUri(uri), Some(range)) => Some({ uri, range })
             _ => None
           }
         _ => None
@@ -1506,9 +1503,8 @@ fn parse_reference_item(value : Json) -> ReferenceItem? {
     Object(_) =>
       match (json_string_field(value, "uri"), json_field(value, "range")) {
         (Some(raw_uri), Some(range_json)) =>
-          match
-            (@workspace.DocumentUri::parse(raw_uri), parse_range(range_json)) {
-            (ParsedDocumentUri(uri), Some(range)) =>
+          match (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
+            (ParsedUri(uri), Some(range)) =>
               Some({
                 uri,
                 range,

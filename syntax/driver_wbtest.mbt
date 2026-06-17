@@ -1,6 +1,6 @@
 ///|
 test "driver records one entry state per line" {
-  let doc = @core.DocumentSnapshot("fn main {\n  1\n}")
+  let doc = @model.TextSnapshot("fn main {\n  1\n}")
   let (_, line_entry_states) = tokenize_document_lines(
     doc,
     PlainTokenizer::new(),

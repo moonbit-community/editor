@@ -31,13 +31,21 @@ stack around it.
 - `renderer`: pre-DOM common editor model state and this repo's Monaco
   `editor/common` role. It owns the readonly `ViewModel` spine, viewport data,
   line HTML, scroll/layout arithmetic, and hit testing.
-- `workspace`: document identity and source/tree provider contracts. This is
-  where host-neutral document and workspace semantics belong.
+- `base/common`: low-level URI identity shared by workspace, renderer model,
+  protocol, server, and widgets.
+- `renderer/core`: editor coordinate primitives such as zero-based
+  `Position`, half-open UTF-16 `Range`, and clamping helpers.
+- `renderer/model`: readonly editor text ownership. `TextSnapshot` owns the
+  immutable text buffer and line-start cache; `TextModel` owns URI, display
+  name, language id, version, revision, and snapshot identity.
+- `workspace`: source/tree provider contracts and provider-loaded
+  `SourceDocument` payloads. It loads and watches source documents; it does not
+  own editor text models.
 - `language`: language feature contracts and result types such as hover,
   diagnostics, document symbols, and semantic tokens.
 - `syntax` and `syntax/lang_*`: tokenization contracts and compile-time
   language lexers.
-- `decorations`, `core`, and `platform/log`: shared support packages.
+- `decorations` and `platform/log`: shared support packages.
 - `widgets/file_tree`: optional file-tree widget. Embedders may use it, or they
   may use their own tree and call the viewer directly.
 - `workbench` and `web`: the repository's browser reference app. This shell
@@ -109,6 +117,7 @@ Rendering is split by host boundary:
 
 ```text
 workspace.SourceDocument
+  -> renderer/model.TextModel / TextSnapshot
   -> renderer/view_model tokenization and ViewModel state
   -> renderer/view_layout scroll and viewport window state
   -> renderer/view_layout ViewportData
@@ -174,10 +183,12 @@ server_host_native/main -> server_host_native
 server_host_native -> server
 server -> remote_protocol, workspace, language
 
-renderer -> core, syntax, decorations, language
-workspace -> core
-language -> core, workspace
-syntax/decorations -> core
+renderer -> renderer/core, renderer/model, syntax, decorations, language
+workspace -> base/common, renderer/model
+language -> base/common, renderer/core, renderer/model
+syntax/decorations -> renderer/core
+renderer/model -> base/common, renderer/core
+remote_protocol/server/workbench/widgets -> base/common
 platform/log -> no product packages
 syntax/lang_* -> syntax
 ```

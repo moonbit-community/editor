@@ -28,13 +28,13 @@ fn startup_sub(cmd : @cmd.Cmd) -> @sub.Sub {
 /// directories behind the two `workspace` traits the viewer and the tree
 /// widget are built against.
 priv struct MemoryWorkspace {
-  root_uri : @workspace.DocumentUri
+  root_uri : @base_common.Uri
   directories : Map[String, Array[@workspace.WorkspaceStat]]
   documents : Map[String, String]
 }
 
 ///|
-fn memory_uri(raw : String) -> @workspace.DocumentUri {
+fn memory_uri(raw : String) -> @base_common.Uri {
   { value: raw }
 }
 
@@ -162,7 +162,7 @@ priv struct EmbedModel {
 ///|
 priv enum EmbedMsg {
   Boot
-  OpenFile(@workspace.DocumentUri)
+  OpenFile(@base_common.Uri)
   ViewerNotified(@browser.ViewerNotification)
 }
 

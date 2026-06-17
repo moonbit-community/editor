@@ -12,7 +12,7 @@ fn bucket_texts(
 
 ///|
 test "tokens bucket per line and multi-line tokens cover every line" {
-  let doc = @core.DocumentSnapshot(
+  let doc = @model.TextSnapshot(
     (
       #|let a = 1
       #|/* two
@@ -58,7 +58,7 @@ test "bucketed window frames equal a full lexer pass" {
     chunks.push("  " + i.to_string())
     chunks.push("}")
   }
-  let doc = @core.DocumentSnapshot(chunks.join("\n"))
+  let doc = @model.TextSnapshot(chunks.join("\n"))
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
@@ -82,7 +82,7 @@ test "bucketed window frames equal a full lexer pass" {
 
 ///|
 test "feature buckets accept unsorted ranges" {
-  let doc = @core.DocumentSnapshot("aaa\nbbb\nccc\nddd")
+  let doc = @model.TextSnapshot("aaa\nbbb\nccc\nddd")
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),

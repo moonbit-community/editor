@@ -104,15 +104,15 @@ pub fn RemoteServer::with_language_providers(
 
 ///|
 /// Converts a root-relative source path into the remote workspace URI scheme.
-pub fn remote_document_uri(raw_path : String) -> @workspace.DocumentUri? {
+pub fn remote_document_uri(raw_path : String) -> @base_common.Uri? {
   match @workspace.SourcePath::normalize_root_relative_path(raw_path) {
     ParsedSourcePath(path) =>
       match
-        @workspace.DocumentUri::parse(
+        @base_common.Uri::parse(
           "readonly-remote://workspace/" + path.to_string(),
         ) {
-        ParsedDocumentUri(uri) => Some(uri)
-        DocumentUriError(_) => None
+        ParsedUri(uri) => Some(uri)
+        UriError(_) => None
       }
     SourcePathError(_) => None
   }
@@ -122,7 +122,7 @@ pub fn remote_document_uri(raw_path : String) -> @workspace.DocumentUri? {
 /// Resolves a `readonly-remote://workspace/...` document URI into a safe
 /// root-relative source path.
 pub fn resolve_remote_document_uri(
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
   request_id? : String = "",
 ) -> RemotePathResult {
   let raw = uri.to_string()
@@ -167,7 +167,7 @@ pub(all) enum RemoteDirectoryResult {
 /// `readonly-remote://workspace` root, which `resolve_remote_document_uri`
 /// rejects because documents always carry a path.
 pub fn resolve_remote_directory_uri(
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
   request_id? : String = "",
 ) -> RemoteDirectoryResult {
   if uri.to_string() == "readonly-remote://workspace" {
@@ -349,7 +349,10 @@ pub async fn RemoteServer::hover(
         id: request.id,
         uri: request.uri,
         version: document.version,
-        hover: self.hover_provider.hover_at(document, request.offset),
+        hover: self.hover_provider.hover_at(
+          document.text_model(),
+          request.offset,
+        ),
       })
     None => self.missing_cached_document_error(request.id)
   }
@@ -370,7 +373,7 @@ pub async fn RemoteServer::diagnostics(
         uri: request.uri,
         version: document.version,
         diagnostics: self.diagnostics_provider.diagnostics_for_document(
-          document,
+          document.text_model(),
         ),
       })
     None => self.missing_cached_document_error(request.id)
@@ -392,7 +395,7 @@ pub async fn RemoteServer::definition(
         uri: request.uri,
         version: document.version,
         location: self.definition_provider.definition_at(
-          document,
+          document.text_model(),
           request.offset,
         ),
       })
@@ -410,7 +413,7 @@ pub async fn RemoteServer::references(
     self.cached_document(request.uri, request.document_version, request.id) {
     Some(document) => {
       let locations = self.references_provider.references_at(
-        document,
+        document.text_model(),
         request.offset,
       )
       let references = []
@@ -444,7 +447,7 @@ async fn RemoteServer::enrich_reference(
     match resolve_remote_document_uri(location.uri) {
       ParsedRemotePath(path) =>
         match self.host.read_text_file(self.workspace_root, path) {
-          ServerHostReadOk(content) => Some(DocumentSnapshot(content.text))
+          ServerHostReadOk(content) => Some(TextSnapshot(content.text))
           _ => None
         }
       RemotePathError(_) => None
@@ -486,7 +489,9 @@ pub async fn RemoteServer::document_symbols(
         id: request.id,
         uri: request.uri,
         version: document.version,
-        symbols: self.document_symbol_provider.document_symbols(document),
+        symbols: self.document_symbol_provider.document_symbols(
+          document.text_model(),
+        ),
       })
     None => self.missing_cached_document_error(request.id)
   }
@@ -506,7 +511,7 @@ pub async fn RemoteServer::semantic_tokens(
         uri: request.uri,
         version: document.version,
         semantic_tokens: self.semantic_tokens_provider.semantic_tokens_for_document(
-          document,
+          document.text_model(),
         ),
       })
     None => self.missing_cached_document_error(request.id)
@@ -526,7 +531,9 @@ pub async fn RemoteServer::folding_ranges(
         id: request.id,
         uri: request.uri,
         version: document.version,
-        folding_ranges: self.folding_range_provider.folding_ranges(document),
+        folding_ranges: self.folding_range_provider.folding_ranges(
+          document.text_model(),
+        ),
       })
     None => self.missing_cached_document_error(request.id)
   }
@@ -545,7 +552,9 @@ pub async fn RemoteServer::inlay_hints(
         id: request.id,
         uri: request.uri,
         version: document.version,
-        inlay_hints: self.inlay_hints_provider.inlay_hints(document),
+        inlay_hints: self.inlay_hints_provider.inlay_hints(
+          document.text_model(),
+        ),
       })
     None => self.missing_cached_document_error(request.id)
   }
@@ -555,7 +564,7 @@ pub async fn RemoteServer::inlay_hints(
 async fn RemoteServer::read_remote_document(
   self : RemoteServer,
   request_id : String,
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
 ) -> @workspace.SourceDocumentLoadResult {
   match resolve_remote_document_uri(uri, request_id~) {
     ParsedRemotePath(path) =>
@@ -578,7 +587,7 @@ async fn RemoteServer::read_remote_document(
 async fn RemoteServer::handle_watch_event(
   self : RemoteServer,
   request_id : String,
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
   change_type : @workspace.FileChangeType,
   emit : async (@remote_protocol.ServerPacket) -> Unit,
 ) -> Unit {
@@ -642,7 +651,7 @@ fn RemoteServer::tracked_document(
 ///|
 fn RemoteServer::cached_document(
   self : RemoteServer,
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
   expected_version : Int,
   request_id : String,
 ) -> @workspace.SourceDocument? {

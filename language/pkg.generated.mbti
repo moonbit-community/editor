@@ -2,15 +2,16 @@
 package "baozhiyuan/editor/language"
 
 import {
-  "baozhiyuan/editor/core",
-  "baozhiyuan/editor/workspace",
+  "baozhiyuan/editor/base/common",
+  "baozhiyuan/editor/renderer/core",
+  "baozhiyuan/editor/renderer/model",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn collect_document_provider_result(&DiagnosticsProvider, &DocumentSymbolProvider, &SemanticTokensProvider, @workspace.SourceDocument) -> ProviderResult
+pub async fn collect_document_provider_result(&DiagnosticsProvider, &DocumentSymbolProvider, &SemanticTokensProvider, @model.TextModel) -> ProviderResult
 
-pub fn collect_provider_result(&LanguageProvider, @core.DocumentSnapshot) -> ProviderResult
+pub fn collect_provider_result(&LanguageProvider, @model.TextSnapshot) -> ProviderResult
 
 // Errors
 
@@ -34,13 +35,46 @@ pub(all) struct DocumentSymbol {
   range : @core.Range
 } derive(@debug.Debug)
 
+pub(all) struct FoldingRange {
+  start_line_number : Int
+  end_line_number : Int
+  kind : FoldingRangeKind?
+} derive(Eq, @debug.Debug)
+pub fn FoldingRange::FoldingRange(Int, Int, kind? : FoldingRangeKind) -> Self
+
+pub(all) enum FoldingRangeKind {
+  Comment
+  Imports
+  Region
+} derive(Eq, @debug.Debug)
+
 pub(all) struct Hover {
   range : @core.Range
-  contents : String
+  contents : Array[HoverContent]
 } derive(@debug.Debug)
 
+pub(all) enum HoverContent {
+  PlainText(String)
+  Markdown(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct InlayHint {
+  position : @core.Position
+  label : String
+  kind : InlayHintKind?
+  padding_left : Bool
+  padding_right : Bool
+  tooltip : Array[HoverContent]
+} derive(Eq, @debug.Debug)
+pub fn InlayHint::InlayHint(@core.Position, String, kind? : InlayHintKind, padding_left? : Bool, padding_right? : Bool, tooltip? : Array[HoverContent]) -> Self
+
+pub(all) enum InlayHintKind {
+  TypeHint
+  ParameterHint
+} derive(Eq, @debug.Debug)
+
 pub(all) struct Location {
-  uri : @workspace.DocumentUri
+  uri : @common.Uri
   range : @core.Range
 } derive(@debug.Debug)
 
@@ -64,29 +98,42 @@ pub(all) struct SemanticToken {
 
 // Traits
 pub(open) trait DefinitionProvider {
-  async fn definition_at(Self, @workspace.SourceDocument, Int) -> Location?
+  async fn definition_at(Self, @model.TextModel, Int) -> Location?
 }
 
 pub(open) trait DiagnosticsProvider {
-  async fn diagnostics_for_document(Self, @workspace.SourceDocument) -> Array[Diagnostic]
+  async fn diagnostics_for_document(Self, @model.TextModel) -> Array[Diagnostic]
 }
 
 pub(open) trait DocumentSymbolProvider {
-  async fn document_symbols(Self, @workspace.SourceDocument) -> Array[DocumentSymbol]
+  async fn document_symbols(Self, @model.TextModel) -> Array[DocumentSymbol]
+}
+
+pub(open) trait FoldingRangeProvider {
+  async fn folding_ranges(Self, @model.TextModel) -> Array[FoldingRange]
 }
 
 pub(open) trait HoverProvider {
-  async fn hover_at(Self, @workspace.SourceDocument, Int) -> Hover?
+  async fn hover_at(Self, @model.TextModel, Int) -> Hover?
+}
+
+pub(open) trait InlayHintsProvider {
+  async fn inlay_hints(Self, @model.TextModel) -> Array[InlayHint]
 }
 
 pub(open) trait LanguageProvider {
-  fn hovers(Self, @core.DocumentSnapshot) -> Array[Hover]
-  fn diagnostics(Self, @core.DocumentSnapshot) -> Array[Diagnostic]
-  fn definitions(Self, @core.DocumentSnapshot) -> Array[Location]
-  fn symbols(Self, @core.DocumentSnapshot) -> Array[DocumentSymbol]
-  fn semantic_tokens(Self, @core.DocumentSnapshot) -> Array[SemanticToken]
+  fn hovers(Self, @model.TextSnapshot) -> Array[Hover]
+  fn diagnostics(Self, @model.TextSnapshot) -> Array[Diagnostic]
+  fn definitions(Self, @model.TextSnapshot) -> Array[Location]
+  fn symbols(Self, @model.TextSnapshot) -> Array[DocumentSymbol]
+  fn semantic_tokens(Self, @model.TextSnapshot) -> Array[SemanticToken]
+}
+
+pub(open) trait ReferencesProvider {
+  async fn references_at(Self, @model.TextModel, Int) -> Array[Location]
 }
 
 pub(open) trait SemanticTokensProvider {
-  async fn semantic_tokens_for_document(Self, @workspace.SourceDocument) -> Array[SemanticToken]
+  async fn semantic_tokens_for_document(Self, @model.TextModel) -> Array[SemanticToken]
 }
+

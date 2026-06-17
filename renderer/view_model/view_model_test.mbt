@@ -16,7 +16,7 @@ test "identity coordinates converter preserves model and view positions" {
 
 ///|
 test "view model lines as-is match render frame line data" {
-  let doc = @core.DocumentSnapshot("fn main {\n  let x = 1\n}")
+  let doc = @model.TextSnapshot("fn main {\n  let x = 1\n}")
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
@@ -69,7 +69,7 @@ fn test_view_model(
   text : String,
   options : @view_model.ViewModelOptions,
 ) -> @view_model.ViewModel {
-  let doc = @core.DocumentSnapshot(text)
+  let doc = @model.TextSnapshot(text)
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
@@ -90,7 +90,7 @@ fn test_folded_view_model(
   options : @view_model.ViewModelOptions,
   ranges : Array[@language.FoldingRange],
 ) -> @view_model.ViewModel {
-  let doc = @core.DocumentSnapshot(text)
+  let doc = @model.TextSnapshot(text)
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
@@ -113,7 +113,7 @@ fn test_inlay_view_model(
   options : @view_model.ViewModelOptions,
   hints : Array[@language.InlayHint],
 ) -> @view_model.ViewModel {
-  let doc = @core.DocumentSnapshot(text)
+  let doc = @model.TextSnapshot(text)
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),

@@ -33,5 +33,5 @@ pub fn InlayHint::InlayHint(
 ///|
 /// Document-level inlay hint provider.
 pub(open) trait InlayHintsProvider {
-  async fn inlay_hints(Self, @workspace.SourceDocument) -> Array[InlayHint]
+  async fn inlay_hints(Self, @model.TextModel) -> Array[InlayHint]
 }

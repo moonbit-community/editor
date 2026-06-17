@@ -14,10 +14,10 @@ pub struct FileTree {
 ///|
 priv enum FileTreeMsg {
   Refresh
-  DirectoryResolved(@workspace.DocumentUri, @workspace.WorkspaceResolveResult)
-  ToggleDirectory(@workspace.DocumentUri)
-  OpenFile(@workspace.DocumentUri)
-  SetActive(@workspace.DocumentUri)
+  DirectoryResolved(@base_common.Uri, @workspace.WorkspaceResolveResult)
+  ToggleDirectory(@base_common.Uri)
+  OpenFile(@base_common.Uri)
+  SetActive(@base_common.Uri)
 }
 
 ///|
@@ -25,7 +25,7 @@ priv enum FileTreeMsg {
 /// intents to the host.
 pub fn FileTree::FileTree(
   provider : &@workspace.WorkspaceTreeProvider,
-  on_open~ : (@workspace.DocumentUri) -> Unit,
+  on_open~ : (@base_common.Uri) -> Unit,
 ) -> FileTree {
   let model : FileTreeModel = {
     root: None,
@@ -61,7 +61,7 @@ pub fn FileTree::refresh(self : FileTree) -> @rabbita.Cmd {
 /// from its root-relative path segments) and marks the node selected.
 pub fn FileTree::set_active(
   self : FileTree,
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
 ) -> @rabbita.Cmd {
   (self.emit)(SetActive(uri))
 }
@@ -69,7 +69,7 @@ pub fn FileTree::set_active(
 ///|
 fn update_file_tree(
   provider : &@workspace.WorkspaceTreeProvider,
-  on_open : (@workspace.DocumentUri) -> Unit,
+  on_open : (@base_common.Uri) -> Unit,
   emit : @rabbita.Emit[FileTreeMsg],
   msg : FileTreeMsg,
   model : FileTreeModel,
@@ -109,7 +109,7 @@ fn directory_resolved_update(
   provider : &@workspace.WorkspaceTreeProvider,
   emit : @rabbita.Emit[FileTreeMsg],
   model : FileTreeModel,
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
   result : @workspace.WorkspaceResolveResult,
 ) -> (@rabbita.Cmd, FileTreeModel) {
   match result {
@@ -172,7 +172,7 @@ fn continue_reveal(
 fn resolve_directory_cmd(
   provider : &@workspace.WorkspaceTreeProvider,
   emit : @rabbita.Emit[FileTreeMsg],
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
 ) -> @rabbita.Cmd {
   @cmd.perform(result => emit(DirectoryResolved(uri, result)), async fn() noraise {
     provider.resolve(uri) catch {

@@ -1,6 +1,6 @@
 ///|
 test "collects language provider surfaces" {
-  let doc = @core.DocumentSnapshot("fn main {\n }")
+  let doc = @model.TextSnapshot("fn main {\n }")
   let provider = TestLanguageProvider::{  }
   let providers = collect_provider_result(provider, doc)
   assert_eq(providers.hovers.length(), 1)
@@ -33,7 +33,7 @@ impl LanguageProvider for TestLanguageProvider with fn diagnostics(_self, _doc) 
 
 ///|
 impl LanguageProvider for TestLanguageProvider with fn definitions(_self, _doc) {
-  [{ uri: @workspace.DocumentUri::memory("provider.mbt"), range: Range(3, 7) }]
+  [{ uri: @base_common.Uri::memory("provider.mbt"), range: Range(3, 7) }]
 }
 
 ///|

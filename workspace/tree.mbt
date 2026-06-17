@@ -13,7 +13,7 @@ pub(all) enum WorkspaceEntryKind {
 /// `IFileStat.children: undefined` convention). Depth is tree structure,
 /// not an annotation.
 pub(all) struct WorkspaceStat {
-  uri : DocumentUri
+  uri : @base_common.Uri
   name : String
   kind : WorkspaceEntryKind
   children : Array[WorkspaceStat]?
@@ -32,8 +32,8 @@ pub(all) enum WorkspaceResolveResult {
 /// of `children` resolved. Requests are pull-based; providers never push
 /// tree data.
 pub(open) trait WorkspaceTreeProvider {
-  fn root(Self) -> DocumentUri
-  async fn resolve(Self, DocumentUri) -> WorkspaceResolveResult
+  fn root(Self) -> @base_common.Uri
+  async fn resolve(Self, @base_common.Uri) -> WorkspaceResolveResult
 }
 
 ///|
@@ -43,9 +43,9 @@ pub(open) trait WorkspaceTreeProvider {
 /// resolve to versioned `SourceDocument`s and watches push fully loaded
 /// documents (or load errors) for the watched URI.
 pub(open) trait DocumentSource {
-  async fn open_document(Self, DocumentUri) -> SourceDocumentLoadResult
-  fn watch_document(Self, DocumentUri, (SourceDocumentLoadResult) -> Unit) -> FileWatch
-  fn close_document(Self, DocumentUri) -> Unit
+  async fn open_document(Self, @base_common.Uri) -> SourceDocumentLoadResult
+  fn watch_document(Self, @base_common.Uri, (SourceDocumentLoadResult) -> Unit) -> FileWatch
+  fn close_document(Self, @base_common.Uri) -> Unit
 }
 
 ///|

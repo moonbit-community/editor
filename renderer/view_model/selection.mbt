@@ -17,7 +17,7 @@ pub fn Selection::Selection(
 ///|
 /// Builds a selection from document offsets.
 pub fn Selection::from_offsets(
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   anchor_offset : Int,
   focus_offset : Int,
 ) -> Selection {
@@ -31,7 +31,7 @@ pub fn Selection::from_offsets(
 /// Selection range normalized into ascending document offsets.
 pub fn Selection::normalized_range(
   self : Selection,
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
 ) -> @core.Range {
   let anchor = snapshot.offset_at_position(self.anchor)
   let focus = snapshot.offset_at_position(self.focus)
@@ -46,7 +46,7 @@ pub fn Selection::normalized_range(
 /// Whether the normalized selection range is empty.
 pub fn Selection::is_empty(
   self : Selection,
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
 ) -> Bool {
   self.normalized_range(snapshot).is_empty()
 }
@@ -55,7 +55,7 @@ pub fn Selection::is_empty(
 /// Plain selected text for clipboard writes.
 pub fn Selection::get_plain_text_to_copy(
   self : Selection,
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
 ) -> String {
   snapshot.slice(self.normalized_range(snapshot))
 }
@@ -64,7 +64,7 @@ pub fn Selection::get_plain_text_to_copy(
 /// Minimal HTML clipboard payload preserving preformatted text.
 pub fn Selection::get_rich_text_to_copy(
   self : Selection,
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
 ) -> String {
   "<pre class=\"readonly-editor-copy\">" +
   escape_copy_html(self.get_plain_text_to_copy(snapshot)) +

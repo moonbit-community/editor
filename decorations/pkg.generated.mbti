@@ -2,7 +2,7 @@
 package "baozhiyuan/editor/decorations"
 
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/renderer/core",
   "moonbitlang/core/debug",
 }
 
@@ -25,6 +25,7 @@ pub(all) enum DecorationKind {
   Link
   SemanticToken
   CurrentLine
+  HoverHighlight
 } derive(Eq, @debug.Debug)
 
 pub(all) struct DecorationSet {

@@ -1,11 +1,13 @@
 # workspace
 
-Readonly source identity and filesystem-provider contracts.
+Readonly source loading and filesystem-provider contracts.
 
 ## Responsibilities
 
-- Own `DocumentUri`, `SourcePath`, `SourceDocument`, language inference, and
-  snapshot conversion.
+- Own `SourcePath`, `SourceDocument`, language inference, filesystem-provider
+  conversion, and conversion from loaded source payloads to
+  `@model.TextModel`/`@model.TextSnapshot`.
+- Use `@base_common.Uri` for provider-minted document identity.
 - Normalize root-relative paths and reject invalid or unsafe source paths.
 - Define the backend-neutral `FileSystemProvider` trait, read results, watch
   events, and structured provider errors.
@@ -17,7 +19,7 @@ Readonly source identity and filesystem-provider contracts.
 
 ## Boundaries
 
-- May depend on `core` and JSON support.
+- May depend on `base/common`, `renderer/model`, and JSON support.
 - Must not contain browser, native, DOM, server routing, or LSP process effects.
 - Host packages implement filesystem behavior through the provider contract.
 

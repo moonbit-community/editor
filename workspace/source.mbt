@@ -1,11 +1,4 @@
 ///|
-/// Provider-minted absolute document URI. The viewer treats the string as an
-/// opaque identity except for scheme and display-name extraction.
-pub(all) struct DocumentUri {
-  value : String
-} derive(Eq, Debug)
-
-///|
 /// Root-relative source path accepted from UI or protocol input after
 /// normalization rejects absolute paths, parent traversal, and NUL bytes.
 pub(all) struct SourcePath {
@@ -16,7 +9,7 @@ pub(all) struct SourcePath {
 /// Versioned readonly document passed from workspace providers into renderer
 /// and language-feature packages.
 pub(all) struct SourceDocument {
-  uri : DocumentUri
+  uri : @base_common.Uri
   display_name : String
   language_id : String
   version : Int
@@ -29,7 +22,6 @@ pub(all) struct SourceDocument {
 pub(all) enum SourceError {
   MissingPath
   InvalidPath
-  SourceInvalidUri
 } derive(Eq, Debug)
 
 ///|
@@ -38,16 +30,8 @@ pub fn SourceError::to_string(self : SourceError) -> String {
   match self {
     MissingPath => "MissingPath"
     InvalidPath => "InvalidPath"
-    SourceInvalidUri => "InvalidUri"
   }
 }
-
-///|
-/// Result wrapper used instead of raising while parsing document URIs.
-pub(all) enum DocumentUriResult {
-  ParsedDocumentUri(DocumentUri)
-  DocumentUriError(SourceError)
-} derive(Eq, Debug)
 
 ///|
 /// Result wrapper used instead of raising while normalizing source paths.
@@ -55,83 +39,6 @@ pub(all) enum SourcePathResult {
   ParsedSourcePath(SourcePath)
   SourcePathError(SourceError)
 } derive(Eq, Debug)
-
-///|
-/// Parses an absolute `scheme://...` document URI and leaves the provider-owned
-/// authority/path text otherwise untouched.
-pub fn DocumentUri::parse(value : String) -> DocumentUriResult {
-  match value.find("://") {
-    Some(index) =>
-      if is_valid_uri_scheme(value, index) && index + 3 < value.length() {
-        ParsedDocumentUri({ value, })
-      } else {
-        DocumentUriError(SourceInvalidUri)
-      }
-    None => DocumentUriError(SourceInvalidUri)
-  }
-}
-
-///|
-/// Creates an in-memory URI for demos, tests, or embedders without filesystem
-/// identity.
-pub fn DocumentUri::memory(name : String) -> DocumentUri {
-  let name = if name == "" {
-    "document"
-  } else {
-    name.replace_all(old="\\", new="/")
-  }
-  { value: "memory://" + name }
-}
-
-///|
-/// Returns the provider-owned URI string.
-pub fn DocumentUri::to_string(self : DocumentUri) -> String {
-  self.value
-}
-
-///|
-/// URI scheme before `://`, or an empty string for malformed values.
-pub fn DocumentUri::scheme(self : DocumentUri) -> String {
-  match self.value.find("://") {
-    Some(index) => self.value[0:index].to_owned()
-    None => ""
-  }
-}
-
-///|
-/// Path part after the authority, without a leading slash.
-pub fn DocumentUri::path(self : DocumentUri) -> String {
-  match self.value.find("://") {
-    Some(index) => {
-      let rest = self.value[index + 3:]
-      match rest.find("/") {
-        Some(path_index) => rest[path_index + 1:].to_owned()
-        None => ""
-      }
-    }
-    None => ""
-  }
-}
-
-///|
-/// Best-effort file name for labels; falls back to the full URI when no path is
-/// present.
-pub fn DocumentUri::display_name(self : DocumentUri) -> String {
-  let path = self.path()
-  if path == "" {
-    self.to_string()
-  } else {
-    let segments = path.split("/")
-    let mut found = path
-    for segment_view in segments {
-      let segment = segment_view.to_owned()
-      if segment != "" {
-        found = segment
-      }
-    }
-    found
-  }
-}
 
 ///|
 /// Normalizes a user-provided workspace path into a safe root-relative path.
@@ -187,15 +94,18 @@ pub fn SourcePath::display_name(self : SourcePath) -> String {
 ///|
 /// Converts a normalized source path to the local file URI convention used by
 /// simple embedders.
-pub fn SourcePath::file_uri(self : SourcePath) -> DocumentUri {
-  { value: "file://local/" + self.value }
+pub fn SourcePath::file_uri(self : SourcePath) -> @base_common.Uri {
+  match @base_common.Uri::parse("file://local/" + self.value) {
+    ParsedUri(uri) => uri
+    UriError(_) => @base_common.Uri::memory(self.value)
+  }
 }
 
 ///|
 /// Builds a document and normalizes empty display name, empty language id, and
 /// non-positive version inputs.
 pub fn SourceDocument::SourceDocument(
-  uri : DocumentUri,
+  uri : @base_common.Uri,
   display_name : String,
   language_id : String,
   version : Int,
@@ -217,15 +127,22 @@ pub fn SourceDocument::SourceDocument(
 }
 
 ///|
-/// Converts workspace document identity into the core snapshot consumed by
+/// Converts workspace document text into the model snapshot consumed by
 /// renderer and language providers.
-pub fn SourceDocument::snapshot(
-  self : SourceDocument,
-) -> @core.DocumentSnapshot {
-  DocumentSnapshot(
+pub fn SourceDocument::snapshot(self : SourceDocument) -> @model.TextSnapshot {
+  TextSnapshot(self.text, language_id=self.language_id, version=self.version)
+}
+
+///|
+/// Converts workspace provider payload into the readonly editor model.
+pub fn SourceDocument::text_model(self : SourceDocument) -> @model.TextModel {
+  TextModel(
+    self.uri,
+    self.display_name,
+    self.language_id,
+    self.version,
+    self.revision,
     self.text,
-    language_id=self.language_id,
-    version=self.version,
   )
 }
 
@@ -285,29 +202,6 @@ fn is_windows_drive_path(path : String) -> Bool {
 }
 
 ///|
-fn is_valid_uri_scheme(value : String, end : Int) -> Bool {
-  if end == 0 || !is_ascii_alpha(value[0].to_int()) {
-    return false
-  }
-  for i in 1..<end {
-    let unit = value[i].to_int()
-    if !is_ascii_alpha(unit) &&
-      !is_digit(unit) &&
-      unit != 43 &&
-      unit != 45 &&
-      unit != 46 {
-      return false
-    }
-  }
-  true
-}
-
-///|
 fn is_ascii_alpha(unit : Int) -> Bool {
   (65 <= unit && unit <= 90) || (97 <= unit && unit <= 122)
-}
-
-///|
-fn is_digit(unit : Int) -> Bool {
-  48 <= unit && unit <= 57
 }

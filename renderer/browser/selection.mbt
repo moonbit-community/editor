@@ -108,7 +108,7 @@ fn Viewer::handle_copy_event(self : Viewer, event : @rdom.Event) -> Bool {
 fn Viewer::get_rich_text_to_copy(
   self : Viewer,
   selection : @view_model.Selection,
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
 ) -> String {
   match self.frame {
     Some(frame) =>

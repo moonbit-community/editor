@@ -263,7 +263,7 @@ async test "native workspace language provider bridges remote documents to file 
       remote_uri, "simple.mbt", "moonbit", 1, "rev-1", "pub fn startup_event() -> Unit {}\n",
     )
 
-    match provider.hover_at(document, 7) {
+    match provider.hover_at(document.text_model(), 7) {
       Some(hover) => {
         match hover.contents {
           [PlainText(text)] => assert_eq(text, "LSP hover for startup_event")
@@ -273,7 +273,7 @@ async test "native workspace language provider bridges remote documents to file 
       }
       None => fail("expected lsp hover")
     }
-    match provider.definition_at(document, 7) {
+    match provider.definition_at(document.text_model(), 7) {
       Some(location) => {
         assert_eq(location.uri.to_string(), remote_uri.to_string())
         assert_true(location.range == Range(7, 20))
@@ -309,7 +309,7 @@ fn expect_path(raw : String) -> @workspace.SourcePath raise {
 }
 
 ///|
-fn expect_remote_uri(path : String) -> @workspace.DocumentUri raise {
+fn expect_remote_uri(path : String) -> @base_common.Uri raise {
   match @server.remote_document_uri(path) {
     Some(uri) => uri
     None => fail("invalid remote path " + path)

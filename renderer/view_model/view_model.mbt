@@ -380,7 +380,7 @@ fn ViewModelLinesFromModelAsIs::clamped_model_line_index(
 
 ///|
 fn bucket_injected_text(
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   injected_text : Array[InjectedText],
 ) -> Array[Array[InjectedText]] {
   let buckets : Array[Array[InjectedText]] = []

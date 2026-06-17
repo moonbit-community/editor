@@ -1,5 +1,5 @@
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/renderer/core",
   "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/renderer/view_line_renderer",
   "baozhiyuan/editor/renderer/view_model",
@@ -7,5 +7,6 @@ import {
 
 import {
   "baozhiyuan/editor/language",
+  "baozhiyuan/editor/renderer/model",
   "baozhiyuan/editor/syntax",
 } for "test"

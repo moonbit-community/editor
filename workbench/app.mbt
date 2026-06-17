@@ -28,8 +28,8 @@ priv enum WorkbenchMsg {
   ConnectProtocol
   ProtocolEvent(@websocket.Event)
   ProtocolSendFailed(String)
-  SelectWorkspace(@workspace.DocumentUri)
-  AutoOpenResolved(@workspace.DocumentUri?)
+  SelectWorkspace(@base_common.Uri)
+  AutoOpenResolved(@base_common.Uri?)
   ViewerNotified(@browser.ViewerNotification)
   ToggleTheme
   GlobalKeyDown(@common.Keyboard)
@@ -293,7 +293,7 @@ fn global_key_cmd(keyboard : @common.Keyboard) -> @rabbita.Cmd {
 ///|
 fn select_workspace_update(
   model : WorkbenchModel,
-  uri : @workspace.DocumentUri,
+  uri : @base_common.Uri,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   (
     viewer_cmd(() => workbench_viewer().open(uri)),

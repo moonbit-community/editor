@@ -2,7 +2,7 @@
 /// Golden token-stream rendering: one `start-end css-class text` line per
 /// token, so the snapshots read as the highlighted document.
 fn render_tokens(source : String) -> String {
-  let doc = @core.DocumentSnapshot(source, language_id="moonbit")
+  let doc = @model.TextSnapshot(source, language_id="moonbit")
   let tokens = @syntax.tokenize_document(
     doc,
     @lang_moonbit.MoonbitTokenizer::new(),

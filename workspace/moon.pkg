@@ -1,5 +1,6 @@
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/base/common" @base_common,
+  "baozhiyuan/editor/renderer/model",
   "moonbitlang/core/json",
 }
 

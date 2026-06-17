@@ -4,7 +4,7 @@
 /// has not been resolved yet; a resolve result is cached on the node and
 /// survives collapse/expand cycles.
 priv struct TreeNode {
-  uri : @workspace.DocumentUri
+  uri : @base_common.Uri
   name : String
   kind : @workspace.WorkspaceEntryKind
   mut children : Array[TreeNode]?
@@ -15,8 +15,8 @@ priv struct TreeNode {
 ///|
 priv struct FileTreeModel {
   mut root : TreeNode?
-  mut selected : @workspace.DocumentUri?
-  mut pending_reveal : @workspace.DocumentUri?
+  mut selected : @base_common.Uri?
+  mut pending_reveal : @base_common.Uri?
 }
 
 ///|
@@ -28,12 +28,12 @@ priv struct TreeRow {
 ///|
 priv enum ToggleEffect {
   ToggleNone
-  ToggleResolve(@workspace.DocumentUri)
+  ToggleResolve(@base_common.Uri)
 }
 
 ///|
 priv enum RevealStep {
-  RevealResolve(@workspace.DocumentUri)
+  RevealResolve(@base_common.Uri)
   RevealDone
   RevealUnreachable
 }
@@ -75,7 +75,7 @@ fn children_from_stats(
 }
 
 ///|
-fn find_node(node : TreeNode, uri : @workspace.DocumentUri) -> TreeNode? {
+fn find_node(node : TreeNode, uri : @base_common.Uri) -> TreeNode? {
   if node.uri == uri {
     return Some(node)
   }
@@ -125,16 +125,16 @@ fn toggle_node(node : TreeNode) -> ToggleEffect {
 /// (exclusive), derived from the root-relative path segments. `None` when
 /// the target does not live under the root.
 fn ancestor_uris(
-  root_uri : @workspace.DocumentUri,
-  target : @workspace.DocumentUri,
-) -> Array[@workspace.DocumentUri]? {
+  root_uri : @base_common.Uri,
+  target : @base_common.Uri,
+) -> Array[@base_common.Uri]? {
   let root_raw = root_uri.to_string()
   let target_raw = target.to_string()
   if !target_raw.has_prefix(root_raw + "/") {
     return None
   }
   let relative = target_raw[root_raw.length() + 1:].to_owned()
-  let ancestors : Array[@workspace.DocumentUri] = []
+  let ancestors : Array[@base_common.Uri] = []
   let mut prefix = root_raw
   let segments = []
   for segment_view in relative.split("/") {
@@ -156,8 +156,8 @@ fn ancestor_uris(
 /// resolved before the reveal can continue).
 fn reveal_step(
   root : TreeNode,
-  root_uri : @workspace.DocumentUri,
-  target : @workspace.DocumentUri,
+  root_uri : @base_common.Uri,
+  target : @base_common.Uri,
 ) -> RevealStep {
   guard ancestor_uris(root_uri, target) is Some(ancestors) else {
     return RevealUnreachable

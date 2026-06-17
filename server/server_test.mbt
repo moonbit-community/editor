@@ -300,7 +300,7 @@ async test "dispatches language requests through configured providers" {
 }
 
 ///|
-fn expect_remote_uri(path : String) -> @workspace.DocumentUri raise {
+fn expect_remote_uri(path : String) -> @base_common.Uri raise {
   match @server.remote_document_uri(path) {
     Some(uri) => uri
     None => fail("invalid remote path " + path)
@@ -308,10 +308,10 @@ fn expect_remote_uri(path : String) -> @workspace.DocumentUri raise {
 }
 
 ///|
-fn expect_uri(raw : String) -> @workspace.DocumentUri raise {
-  match @workspace.DocumentUri::parse(raw) {
-    ParsedDocumentUri(uri) => uri
-    DocumentUriError(error) => fail("unexpected URI error " + error.to_string())
+fn expect_uri(raw : String) -> @base_common.Uri raise {
+  match @base_common.Uri::parse(raw) {
+    ParsedUri(uri) => uri
+    UriError(error) => fail("unexpected URI error " + error.to_string())
   }
 }
 

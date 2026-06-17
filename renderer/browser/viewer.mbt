@@ -21,6 +21,7 @@ pub struct Viewer {
   priv mut view_model : @view_model.ViewModel?
   priv mut frame_source : @view_model.FrameSource?
   priv mut source_document : @workspace.SourceDocument?
+  priv mut text_model : @model.TextModel?
   priv mut provider_result : @language.ProviderResult
   priv mut folding_ranges : Array[@language.FoldingRange]
   priv mut folded_ranges : Array[@language.FoldingRange]
@@ -114,6 +115,7 @@ pub fn Viewer::Viewer(
     view_model: None,
     frame_source: None,
     source_document: None,
+    text_model: None,
     provider_result: @language.ProviderResult::empty(),
     folding_ranges: [],
     folded_ranges: [],
@@ -175,7 +177,7 @@ pub fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
 /// Owns the full document-switch choreography: closes the previous
 /// document and its watch, clears the frame, subscribes the new watch,
 /// and opens the document through the source.
-pub fn Viewer::open(self : Viewer, uri : @workspace.DocumentUri) -> Unit {
+pub fn Viewer::open(self : Viewer, uri : @base_common.Uri) -> Unit {
   self.open_generation += 1
   let generation = self.open_generation
   self.dispose_watch()
@@ -187,6 +189,7 @@ pub fn Viewer::open(self : Viewer, uri : @workspace.DocumentUri) -> Unit {
   self.view_model = None
   self.frame_source = None
   self.source_document = None
+  self.text_model = None
   self.provider_result = @language.ProviderResult::empty()
   self.folding_ranges = []
   self.folded_ranges = []
@@ -345,8 +348,8 @@ pub fn Viewer::push_semantic_tokens(
 ///|
 /// Re-requests document-level feature data for the current document.
 pub fn Viewer::refresh_document_features(self : Viewer) -> Unit {
-  match self.source_document {
-    Some(document) => self.request_document_features(document)
+  match self.text_model {
+    Some(model) => self.request_document_features(model)
     None => ()
   }
 }
@@ -372,6 +375,7 @@ fn Viewer::document_resolved(
       self.frame = None
       self.view_model = None
       self.frame_source = None
+      self.text_model = None
       self.folding_ranges = []
       self.folded_ranges = []
       self.inlay_hints = []

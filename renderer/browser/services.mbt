@@ -112,7 +112,7 @@ pub fn LanguageFeaturesService::register_inlay_hints_provider(
 /// Returns the first non-empty hover answer in provider order.
 pub async fn LanguageFeaturesService::hover_at(
   self : LanguageFeaturesService,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
   offset : Int,
 ) -> @language.Hover? noraise {
   for index in 0..<self.hover_provider.entries.length() {
@@ -136,7 +136,7 @@ pub async fn LanguageFeaturesService::hover_at(
 /// to the caller so marker ownership can be replaced independently.
 pub async fn LanguageFeaturesService::diagnostics_for_document(
   self : LanguageFeaturesService,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
   apply : (String, Array[@language.Diagnostic]) -> Unit,
 ) -> Unit noraise {
   for index in 0..<self.diagnostics_provider.entries.length() {
@@ -156,7 +156,7 @@ pub async fn LanguageFeaturesService::diagnostics_for_document(
 /// Concatenates document-symbol results from every provider.
 pub async fn LanguageFeaturesService::document_symbols(
   self : LanguageFeaturesService,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
 ) -> Array[@language.DocumentSymbol] noraise {
   let symbols : Array[@language.DocumentSymbol] = []
   for index in 0..<self.document_symbol_provider.entries.length() {
@@ -176,7 +176,7 @@ pub async fn LanguageFeaturesService::document_symbols(
 /// Concatenates semantic-token results from every provider.
 pub async fn LanguageFeaturesService::semantic_tokens_for_document(
   self : LanguageFeaturesService,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
 ) -> Array[@language.SemanticToken] noraise {
   let tokens : Array[@language.SemanticToken] = []
   for index in 0..<self.semantic_tokens_provider.entries.length() {
@@ -197,7 +197,7 @@ pub async fn LanguageFeaturesService::semantic_tokens_for_document(
 /// ranges when no provider answers.
 pub async fn LanguageFeaturesService::folding_ranges_for_document(
   self : LanguageFeaturesService,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
 ) -> Array[@language.FoldingRange] noraise {
   let ranges : Array[@language.FoldingRange] = []
   for index in 0..<self.folding_range_provider.entries.length() {
@@ -221,7 +221,7 @@ pub async fn LanguageFeaturesService::folding_ranges_for_document(
 /// Concatenates inlay-hint results from every provider.
 pub async fn LanguageFeaturesService::inlay_hints_for_document(
   self : LanguageFeaturesService,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
 ) -> Array[@language.InlayHint] noraise {
   let hints : Array[@language.InlayHint] = []
   for index in 0..<self.inlay_hints_provider.entries.length() {
@@ -241,7 +241,7 @@ pub async fn LanguageFeaturesService::inlay_hints_for_document(
 fn LanguageFeaturesService::log_provider_failure(
   self : LanguageFeaturesService,
   category : String,
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
   index : Int,
 ) -> Unit {
   self.log_service.warn(category, "provider failed", details=[
@@ -253,10 +253,10 @@ fn LanguageFeaturesService::log_provider_failure(
 
 ///|
 fn fallback_folding_ranges(
-  document : @workspace.SourceDocument,
+  document : @model.TextModel,
 ) -> Array[@language.FoldingRange] {
   if document.language_id == "moonbit" {
-    moonbit_indentation_folding_ranges(document.snapshot())
+    moonbit_indentation_folding_ranges(document.snapshot)
   } else {
     []
   }
@@ -264,7 +264,7 @@ fn fallback_folding_ranges(
 
 ///|
 fn moonbit_indentation_folding_ranges(
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
 ) -> Array[@language.FoldingRange] {
   let ranges : Array[@language.FoldingRange] = []
   for line_index in 0..<snapshot.line_count() {
@@ -300,7 +300,7 @@ fn moonbit_indentation_folding_ranges(
 
 ///|
 fn next_non_empty_line(
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   start_index : Int,
 ) -> Int? {
   for index in start_index..<snapshot.line_count() {
@@ -313,7 +313,7 @@ fn next_non_empty_line(
 
 ///|
 fn indentation_block_end(
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   start_index : Int,
   indent : Int,
 ) -> Int {
@@ -334,7 +334,7 @@ fn indentation_block_end(
 
 ///|
 fn brace_block_end(
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   start_index : Int,
   indent : Int,
 ) -> Int {

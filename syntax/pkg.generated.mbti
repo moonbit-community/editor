@@ -2,14 +2,15 @@
 package "baozhiyuan/editor/syntax"
 
 import {
-  "baozhiyuan/editor/core",
+  "baozhiyuan/editor/renderer/core",
+  "baozhiyuan/editor/renderer/model",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn highlight(@core.DocumentSnapshot) -> Array[Token]
+pub fn highlight(@model.TextSnapshot) -> Array[Token]
 
-pub fn tokenize_document(@core.DocumentSnapshot, &LineTokenizer) -> Array[Token]
+pub fn tokenize_document(@model.TextSnapshot, &LineTokenizer) -> Array[Token]
 
 // Errors
 

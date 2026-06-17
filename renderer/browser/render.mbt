@@ -10,31 +10,32 @@ fn Viewer::render_current_document(
   fresh~ : Bool,
   request_language~ : Bool,
 ) -> Unit {
+  let model = document.text_model()
   let marker_diagnostics = self.services.markers.diagnostics_for_resource(
-    document.uri,
+    model.uri,
   )
   let providers = { ..self.provider_result, diagnostics: marker_diagnostics }
   let tokenize_started = @dom.now_ms()
-  let tokenized = match self.cached_tokenized(document) {
+  let tokenized = match self.cached_tokenized(model) {
     Some(tokenized) => tokenized
     None => {
-      let doc = document.snapshot()
-      let tokens = match tokenizer_registry.lookup(doc.language_id) {
-        Some(tokenizer) => @syntax.tokenize_document(doc, tokenizer)
-        None => @syntax.highlight(doc)
+      let snapshot = model.snapshot
+      let tokens = match tokenizer_registry.lookup(model.language_id) {
+        Some(tokenizer) => @syntax.tokenize_document(snapshot, tokenizer)
+        None => @syntax.highlight(snapshot)
       }
-      @view_model.TokenizedDocument::build(doc, tokens)
+      @view_model.TokenizedDocument::build(snapshot, tokens)
     }
   }
   let tokenize_finished = @dom.now_ms()
   (self.notify_host)(
     ViewerDiagnosticsStatus(
       count=marker_diagnostics.length(),
-      version=tokenized.snapshot.version,
+      version=model.version,
     ),
   )
   let decorations = self.services.marker_decorations.decorations_for_resource(
-    document.uri,
+    model.uri,
   )
   let source = @view_model.FrameSource(tokenized, decorations, providers)
   let view_model = self.build_view_model(source)
@@ -42,9 +43,11 @@ fn Viewer::render_current_document(
   // watch backends may re-push the same version (the old cell key kept
   // those re-renders at their scroll position too).
   let rotated = match self.source_document {
-    Some(current) =>
-      current.uri.to_string() != document.uri.to_string() ||
-      current.version != document.version
+    Some(_) =>
+      match self.text_model {
+        Some(current) => !current.same_identity_and_version(model)
+        None => true
+      }
     None => true
   }
   if fresh && rotated {
@@ -63,6 +66,7 @@ fn Viewer::render_current_document(
   self.view_model = Some(view_model)
   self.frame = Some(frame)
   self.source_document = Some(document)
+  self.text_model = Some(model)
   self.content_generation += 1
   (self.notify_host)(
     ViewerFrameBuilt(
@@ -86,7 +90,7 @@ fn Viewer::render_current_document(
   self.measure_requested = true
   self.schedule_render()
   if request_language {
-    self.request_document_features(document)
+    self.request_document_features(model)
   }
 }
 
@@ -148,7 +152,7 @@ fn Viewer::rebuild_current_view_model_for_options(self : Viewer) -> Unit {
 fn Viewer::apply_view_model_layout(
   self : Viewer,
   view_model : @view_model.ViewModel,
-  snapshot : @core.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
 ) -> Unit {
   self.layout.set_line_count(view_model.line_count()) |> ignore
   self.normalize_browser_view_zones()
@@ -166,12 +170,12 @@ fn Viewer::apply_view_model_layout(
 /// identity and version (the Monaco model-version guard).
 fn Viewer::cached_tokenized(
   self : Viewer,
-  document : @workspace.SourceDocument,
+  model : @model.TextModel,
 ) -> @view_model.TokenizedDocument? {
-  match (self.frame_source, self.source_document) {
+  match (self.frame_source, self.text_model) {
     (Some(source), Some(current)) =>
-      if current.uri.to_string() == document.uri.to_string() &&
-        source.tokenized.snapshot.version == document.version {
+      if current.same_identity_and_version(model) &&
+        source.tokenized.snapshot.version == model.version {
         Some(source.tokenized)
       } else {
         None
@@ -183,7 +187,7 @@ fn Viewer::cached_tokenized(
 ///|
 /// The widest line in UTF-16 code units, the horizontal scroll extent
 /// driver (uniform-advance monospace metrics).
-fn max_line_length(snapshot : @core.DocumentSnapshot) -> Int {
+fn max_line_length(snapshot : @model.TextSnapshot) -> Int {
   let mut widest = 0
   for line in 0..<snapshot.line_count() {
     let length = snapshot.line_end_offset(line) -

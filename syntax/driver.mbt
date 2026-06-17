@@ -3,7 +3,7 @@
 /// carrying state across lines, and converts line-local tokens to the
 /// doc-offset `Token` shape `renderer.build_frame` consumes.
 pub fn tokenize_document(
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
   tokenizer : &LineTokenizer,
 ) -> Array[Token] {
   tokenize_document_lines(doc, tokenizer).0
@@ -16,7 +16,7 @@ pub fn tokenize_document(
 /// converges, the `IState.equals` idea) is a driver change, not a
 /// contract change.
 fn tokenize_document_lines(
-  doc : @core.DocumentSnapshot,
+  doc : @model.TextSnapshot,
   tokenizer : &LineTokenizer,
 ) -> (Array[Token], Array[TokenizerState]) {
   let tokens : Array[Token] = []

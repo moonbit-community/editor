@@ -148,6 +148,10 @@ workbench) wrap the calls in their command type.
   the cached `TokenizedDocument` without re-tokenizing, and window
   shifts rebuild the viewport frame from the cached `FrameSource` in
   O(window).
+- Own the current editor-model identity: loaded `workspace.SourceDocument`
+  payloads are converted to `renderer/model.TextModel`, and async feature
+  results are accepted only when URI plus version still match the current
+  model.
 
 Go-to-definition and find-references were removed for now; the viewer
 focuses on hover until those features can be rebuilt without their bugs.
@@ -157,9 +161,9 @@ focuses on hover until those features can be rebuilt without their bugs.
 - May depend on `rabbita/dom` (WebIDL bindings) and `rabbita/js` only —
   the Rabbita TEA core, the vdom (`rabbita/html`), and the command
   scheduler (`rabbita/cmd`) are forbidden and checker-enforced; the
-  viewer renders imperatively. May also depend on `dom`, `workspace`,
-  `language`, `renderer`, `renderer/view_line_renderer`, `syntax`, and
-  `decorations`.
+  viewer renders imperatively. May also depend on `base/common`, `dom`,
+  `workspace`, `language`, `renderer`, `renderer/model`,
+  `renderer/view_line_renderer`, `syntax`, and `decorations`.
 - Must not import `remote_protocol`, `websocket`, `workbench`, or
   `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports
   live behind the `DocumentSource` trait and viewer-owned language feature

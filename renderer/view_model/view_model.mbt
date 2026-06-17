@@ -1,4 +1,5 @@
 ///|
+/// Converts between model document coordinates and rendered view coordinates.
 pub(open) trait CoordinatesConverter {
   fn model_position_to_view_position(Self, @core.Position) -> @core.Position
   fn view_position_to_model_position(Self, @core.Position) -> @core.Position
@@ -7,16 +8,20 @@ pub(open) trait CoordinatesConverter {
 }
 
 ///|
+/// Converter for the no-wrap, no-projection case where model and view
+/// coordinates are identical.
 pub struct IdentityCoordinatesConverter {
   identity : Unit
 }
 
 ///|
+/// Creates an identity coordinate converter.
 pub fn IdentityCoordinatesConverter::new() -> IdentityCoordinatesConverter {
   { identity: () }
 }
 
 ///|
+/// Identity model-to-view position conversion.
 pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn model_position_to_view_position(
   _self,
   position,
@@ -25,6 +30,7 @@ pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn model_pos
 }
 
 ///|
+/// Identity view-to-model position conversion.
 pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn view_position_to_model_position(
   _self,
   position,
@@ -33,6 +39,7 @@ pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn view_posi
 }
 
 ///|
+/// Identity model-to-view range conversion.
 pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn model_range_to_view_range(
   _self,
   range,
@@ -41,6 +48,7 @@ pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn model_ran
 }
 
 ///|
+/// Identity view-to-model range conversion.
 pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn view_range_to_model_range(
   _self,
   range,
@@ -49,12 +57,14 @@ pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn view_rang
 }
 
 ///|
+/// Active coordinate converter variant for a view model.
 pub(all) enum ViewModelCoordinatesConverter {
   Identity(IdentityCoordinatesConverter)
   Projected(ProjectedCoordinatesConverter)
 }
 
 ///|
+/// Dispatches model-to-view position conversion to the active converter.
 pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn model_position_to_view_position(
   self,
   position,
@@ -66,6 +76,7 @@ pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn model_po
 }
 
 ///|
+/// Dispatches view-to-model position conversion to the active converter.
 pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn view_position_to_model_position(
   self,
   position,
@@ -77,6 +88,7 @@ pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn view_pos
 }
 
 ///|
+/// Dispatches model-to-view range conversion to the active converter.
 pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn model_range_to_view_range(
   self,
   range,
@@ -88,6 +100,7 @@ pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn model_ra
 }
 
 ///|
+/// Dispatches view-to-model range conversion to the active converter.
 pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn view_range_to_model_range(
   self,
   range,
@@ -99,11 +112,13 @@ pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn view_ran
 }
 
 ///|
+/// Per-model-line decoration buckets derived from a frame source.
 pub struct ViewModelDecorations {
   line_decorations : Array[Array[@decorations.Decoration]]
 }
 
 ///|
+/// Builds decoration buckets from the source used to create a view model.
 pub fn ViewModelDecorations::from_frame_source(
   source : FrameSource,
 ) -> ViewModelDecorations {
@@ -111,6 +126,7 @@ pub fn ViewModelDecorations::from_frame_source(
 }
 
 ///|
+/// Returns decorations for a one-based model line number.
 pub fn ViewModelDecorations::decorations_for_line(
   self : ViewModelDecorations,
   line_number : Int,
@@ -123,6 +139,7 @@ pub fn ViewModelDecorations::decorations_for_line(
 }
 
 ///|
+/// View lines that preserve one visible view line per visible model line.
 pub struct ViewModelLinesFromModelAsIs {
   source : FrameSource
   visible_model_line_numbers : Array[Int]
@@ -131,6 +148,7 @@ pub struct ViewModelLinesFromModelAsIs {
 }
 
 ///|
+/// Creates unprojected view lines with every model line visible.
 pub fn ViewModelLinesFromModelAsIs::new(
   source : FrameSource,
 ) -> ViewModelLinesFromModelAsIs {
@@ -138,6 +156,8 @@ pub fn ViewModelLinesFromModelAsIs::new(
 }
 
 ///|
+/// Creates unwrapped view lines with injected text projected into each model
+/// line.
 pub fn ViewModelLinesFromModelAsIs::with_injected_text(
   source : FrameSource,
   injected_text : Array[InjectedText],
@@ -161,6 +181,7 @@ pub fn ViewModelLinesFromModelAsIs::with_injected_text(
 }
 
 ///|
+/// Creates unwrapped view lines while hiding folded model lines.
 pub fn ViewModelLinesFromModelAsIs::with_folding_model(
   source : FrameSource,
   folding_model : FoldingModel,
@@ -173,6 +194,7 @@ pub fn ViewModelLinesFromModelAsIs::with_folding_model(
 }
 
 ///|
+/// Creates unwrapped view lines with folding and injected text applied.
 pub fn ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(
   source : FrameSource,
   folding_model : FoldingModel,
@@ -200,6 +222,7 @@ pub fn ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(
 }
 
 ///|
+/// Number of visible view lines.
 pub fn ViewModelLinesFromModelAsIs::line_count(
   self : ViewModelLinesFromModelAsIs,
 ) -> Int {
@@ -207,6 +230,7 @@ pub fn ViewModelLinesFromModelAsIs::line_count(
 }
 
 ///|
+/// Number of model lines in the source document.
 pub fn ViewModelLinesFromModelAsIs::model_line_count(
   self : ViewModelLinesFromModelAsIs,
 ) -> Int {
@@ -214,6 +238,7 @@ pub fn ViewModelLinesFromModelAsIs::model_line_count(
 }
 
 ///|
+/// Whether a one-based model line is hidden by folding.
 pub fn ViewModelLinesFromModelAsIs::is_model_line_hidden(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
@@ -225,6 +250,7 @@ pub fn ViewModelLinesFromModelAsIs::is_model_line_hidden(
 }
 
 ///|
+/// Returns the text of a one-based model line.
 pub fn ViewModelLinesFromModelAsIs::get_model_line_content(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
@@ -234,6 +260,7 @@ pub fn ViewModelLinesFromModelAsIs::get_model_line_content(
 }
 
 ///|
+/// Returns the text of a one-based view line.
 pub fn ViewModelLinesFromModelAsIs::get_view_line_content(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
@@ -242,6 +269,7 @@ pub fn ViewModelLinesFromModelAsIs::get_view_line_content(
 }
 
 ///|
+/// Returns projected text for a one-based model line, including inlay hints.
 pub fn ViewModelLinesFromModelAsIs::projected_text_line(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
@@ -255,6 +283,7 @@ pub fn ViewModelLinesFromModelAsIs::projected_text_line(
 }
 
 ///|
+/// Minimum one-based column in an unwrapped view line.
 pub fn ViewModelLinesFromModelAsIs::get_view_line_min_column(
   _self : ViewModelLinesFromModelAsIs,
   _line_number : Int,
@@ -263,6 +292,7 @@ pub fn ViewModelLinesFromModelAsIs::get_view_line_min_column(
 }
 
 ///|
+/// Maximum one-based column in an unwrapped view line.
 pub fn ViewModelLinesFromModelAsIs::get_view_line_max_column(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
@@ -271,6 +301,7 @@ pub fn ViewModelLinesFromModelAsIs::get_view_line_max_column(
 }
 
 ///|
+/// Maps a one-based view line number to its one-based model line number.
 pub fn ViewModelLinesFromModelAsIs::model_line_number_of_view_line(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
@@ -280,6 +311,7 @@ pub fn ViewModelLinesFromModelAsIs::model_line_number_of_view_line(
 }
 
 ///|
+/// Renders a one-based view line.
 pub fn ViewModelLinesFromModelAsIs::render_line(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
@@ -288,6 +320,7 @@ pub fn ViewModelLinesFromModelAsIs::render_line(
 }
 
 ///|
+/// Renders a one-based model line regardless of folding visibility.
 pub fn ViewModelLinesFromModelAsIs::render_model_line(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
@@ -317,6 +350,7 @@ pub fn ViewModelLinesFromModelAsIs::render_model_line(
 }
 
 ///|
+/// Builds line-renderer input data for a one-based view line.
 pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
@@ -392,12 +426,14 @@ fn identity_injected_text_indices(line_length : Int) -> Array[Int] {
 }
 
 ///|
+/// View-line implementation selected by the active view model options.
 pub(all) enum ViewModelLines {
   ModelAsIs(ViewModelLinesFromModelAsIs)
   ProjectedModel(ViewModelLinesFromProjectedModel)
 }
 
 ///|
+/// Number of visible view lines.
 pub fn ViewModelLines::line_count(self : ViewModelLines) -> Int {
   match self {
     ModelAsIs(lines) => lines.line_count()
@@ -406,6 +442,7 @@ pub fn ViewModelLines::line_count(self : ViewModelLines) -> Int {
 }
 
 ///|
+/// Returns text for a one-based view line.
 pub fn ViewModelLines::get_view_line_content(
   self : ViewModelLines,
   line_number : Int,
@@ -417,6 +454,7 @@ pub fn ViewModelLines::get_view_line_content(
 }
 
 ///|
+/// Minimum one-based column for a view line.
 pub fn ViewModelLines::get_view_line_min_column(
   self : ViewModelLines,
   line_number : Int,
@@ -428,6 +466,7 @@ pub fn ViewModelLines::get_view_line_min_column(
 }
 
 ///|
+/// Maximum one-based column for a view line.
 pub fn ViewModelLines::get_view_line_max_column(
   self : ViewModelLines,
   line_number : Int,
@@ -439,6 +478,7 @@ pub fn ViewModelLines::get_view_line_max_column(
 }
 
 ///|
+/// Maps a one-based view line to its one-based model line.
 pub fn ViewModelLines::model_line_number_of_view_line(
   self : ViewModelLines,
   line_number : Int,
@@ -450,6 +490,7 @@ pub fn ViewModelLines::model_line_number_of_view_line(
 }
 
 ///|
+/// Renders a one-based view line.
 pub fn ViewModelLines::render_line(
   self : ViewModelLines,
   line_number : Int,
@@ -461,6 +502,7 @@ pub fn ViewModelLines::render_line(
 }
 
 ///|
+/// Builds line-renderer input data for a one-based view line.
 pub fn ViewModelLines::view_line_rendering_data(
   self : ViewModelLines,
   line_number : Int,
@@ -475,6 +517,8 @@ pub fn ViewModelLines::view_line_rendering_data(
 }
 
 ///|
+/// Backend-neutral document view model: source data plus line projection,
+/// decorations, and coordinate conversion.
 pub struct ViewModel {
   source : FrameSource
   lines : ViewModelLines
@@ -483,11 +527,13 @@ pub struct ViewModel {
 }
 
 ///|
+/// Creates a view model with default no-wrap options.
 pub fn ViewModel::ViewModel(source : FrameSource) -> ViewModel {
   ViewModel::with_options(source, ViewModelOptions::no_wrap())
 }
 
 ///|
+/// Creates a view model with wrapping/tab options.
 pub fn ViewModel::with_options(
   source : FrameSource,
   options : ViewModelOptions,
@@ -497,6 +543,7 @@ pub fn ViewModel::with_options(
 }
 
 ///|
+/// Creates a view model with wrapping/tab options and inlay hints.
 pub fn ViewModel::with_options_and_inlay_hints(
   source : FrameSource,
   options : ViewModelOptions,
@@ -515,6 +562,7 @@ pub fn ViewModel::with_options_and_inlay_hints(
 }
 
 ///|
+/// Creates a view model with wrapping/tab options and folding.
 pub fn ViewModel::with_options_and_folding(
   source : FrameSource,
   options : ViewModelOptions,
@@ -527,6 +575,7 @@ pub fn ViewModel::with_options_and_folding(
 }
 
 ///|
+/// Creates a view model with wrapping/tab options, folding, and inlay hints.
 pub fn ViewModel::with_options_folding_and_inlay_hints(
   source : FrameSource,
   options : ViewModelOptions,
@@ -577,16 +626,19 @@ fn ViewModel::from_lines(
 }
 
 ///|
+/// Active line model for this view model.
 pub fn ViewModel::lines(self : ViewModel) -> ViewModelLines {
   self.lines
 }
 
 ///|
+/// Decoration buckets for this view model.
 pub fn ViewModel::decorations(self : ViewModel) -> ViewModelDecorations {
   self.decorations
 }
 
 ///|
+/// Coordinate converter selected for this view model.
 pub fn ViewModel::coordinates_converter(
   self : ViewModel,
 ) -> ViewModelCoordinatesConverter {
@@ -594,21 +646,25 @@ pub fn ViewModel::coordinates_converter(
 }
 
 ///|
+/// Number of visible view lines.
 pub fn ViewModel::line_count(self : ViewModel) -> Int {
   self.lines.line_count()
 }
 
 ///|
+/// Source document version.
 pub fn ViewModel::version(self : ViewModel) -> Int {
   self.source.tokenized.snapshot.version
 }
 
 ///|
+/// Source document language id.
 pub fn ViewModel::language_id(self : ViewModel) -> String {
   self.source.tokenized.snapshot.language_id
 }
 
 ///|
+/// Builds a render frame for the requested zero-based viewport line window.
 pub fn ViewModel::render_frame(
   self : ViewModel,
   viewport : FrameViewport,

@@ -1,10 +1,12 @@
 ///|
+/// Parsed remote workspace path or protocol-shaped URI validation error.
 pub(all) enum RemotePathResult {
   ParsedRemotePath(@workspace.SourcePath)
   RemotePathError(@remote_protocol.ProtocolError)
 } derive(Debug)
 
 ///|
+/// Native host file-read result returned to the remote server policy layer.
 pub(all) enum ServerHostReadResult {
   ServerHostReadOk(@workspace.FileContent)
   ServerHostReadError(@workspace.FileSystemProviderErrorCode, String)
@@ -19,11 +21,15 @@ pub(all) enum ServerHostResolveResult {
 } derive(Debug)
 
 ///|
+/// Disposable watch handle owned by the remote server.
 pub struct ServerWatch {
   priv dispose : () -> Unit
 }
 
 ///|
+/// Native-effect boundary for the remote server. Paths are root-relative
+/// `SourcePath`s under `workspace_root`; the host owns filesystem and watcher
+/// details.
 pub(open) trait ServerHost {
   async fn read_directory(Self, String, String) -> ServerHostResolveResult
   async fn read_text_file(Self, String, @workspace.SourcePath) -> ServerHostReadResult
@@ -37,6 +43,8 @@ pub(open) trait ServerHost {
 }
 
 ///|
+/// Reference remote workspace server: protocol policy, document cache, watches,
+/// and language-provider routing without direct native effects.
 pub struct RemoteServer {
   priv workspace_root : String
   priv host : &ServerHost
@@ -53,16 +61,19 @@ pub struct RemoteServer {
 }
 
 ///|
+/// Builds a server watch from a host disposer.
 pub fn ServerWatch::ServerWatch(dispose : () -> Unit) -> ServerWatch {
   { dispose, }
 }
 
 ///|
+/// Stops the host watch.
 pub fn ServerWatch::dispose(self : ServerWatch) -> Unit {
   (self.dispose)()
 }
 
 ///|
+/// Creates a remote server with explicit semantic feature providers.
 pub fn RemoteServer::with_language_providers(
   workspace_root : String,
   host : &ServerHost,
@@ -92,6 +103,7 @@ pub fn RemoteServer::with_language_providers(
 }
 
 ///|
+/// Converts a root-relative source path into the remote workspace URI scheme.
 pub fn remote_document_uri(raw_path : String) -> @workspace.DocumentUri? {
   match @workspace.SourcePath::normalize_root_relative_path(raw_path) {
     ParsedSourcePath(path) =>
@@ -107,6 +119,8 @@ pub fn remote_document_uri(raw_path : String) -> @workspace.DocumentUri? {
 }
 
 ///|
+/// Resolves a `readonly-remote://workspace/...` document URI into a safe
+/// root-relative source path.
 pub fn resolve_remote_document_uri(
   uri : @workspace.DocumentUri,
   request_id? : String = "",
@@ -139,6 +153,8 @@ pub fn resolve_remote_document_uri(
 }
 
 ///|
+/// Parsed remote directory URI. The root uses an empty path and display name
+/// `workspace`.
 pub(all) enum RemoteDirectoryResult {
   /// Root-relative directory path ("" for the workspace root itself) plus
   /// the directory's display name.
@@ -173,6 +189,8 @@ fn directory_name(path : String) -> String {
 }
 
 ///|
+/// Dispatches one decoded client packet and returns immediate response packets.
+/// Watch callbacks emit later packets through `emit`.
 pub async fn RemoteServer::handle_client_packet(
   self : RemoteServer,
   packet : @remote_protocol.ClientPacket,
@@ -232,6 +250,7 @@ pub async fn RemoteServer::resolve_directory(
 }
 
 ///|
+/// Opens, caches, and returns a remote document.
 pub async fn RemoteServer::open_document(
   self : RemoteServer,
   request : @remote_protocol.DocumentRequest,
@@ -253,6 +272,8 @@ pub async fn RemoteServer::open_document(
 }
 
 ///|
+/// Starts or replaces a remote document watch, then returns the current document
+/// payload as the initial watch value.
 pub async fn RemoteServer::watch_document(
   self : RemoteServer,
   request : @remote_protocol.DocumentRequest,
@@ -282,6 +303,7 @@ pub async fn RemoteServer::watch_document(
 }
 
 ///|
+/// Closes a document and disposes its active watch if present.
 pub fn RemoteServer::close_document(
   self : RemoteServer,
   request : @remote_protocol.DocumentRequest,
@@ -298,6 +320,7 @@ pub fn RemoteServer::close_document(
 }
 
 ///|
+/// Disposes every active document watch.
 pub fn RemoteServer::dispose_watches(self : RemoteServer) -> Unit {
   let keys : Array[String] = []
   for key, _watch in self.watches {
@@ -313,6 +336,8 @@ pub fn RemoteServer::dispose_watches(self : RemoteServer) -> Unit {
 }
 
 ///|
+/// Routes a hover request only when the cached document URI/version still
+/// matches the request.
 pub async fn RemoteServer::hover(
   self : RemoteServer,
   request : @remote_protocol.DocumentPositionRequest,
@@ -331,6 +356,8 @@ pub async fn RemoteServer::hover(
 }
 
 ///|
+/// Routes a diagnostics request only when the cached document URI/version still
+/// matches the request.
 pub async fn RemoteServer::diagnostics(
   self : RemoteServer,
   request : @remote_protocol.DocumentVersionRequest,
@@ -351,6 +378,8 @@ pub async fn RemoteServer::diagnostics(
 }
 
 ///|
+/// Routes a definition request only when the cached document URI/version still
+/// matches the request.
 pub async fn RemoteServer::definition(
   self : RemoteServer,
   request : @remote_protocol.DocumentPositionRequest,
@@ -372,6 +401,7 @@ pub async fn RemoteServer::definition(
 }
 
 ///|
+/// Routes a references request and enriches locations with preview line data.
 pub async fn RemoteServer::references(
   self : RemoteServer,
   request : @remote_protocol.DocumentPositionRequest,
@@ -444,6 +474,7 @@ async fn RemoteServer::enrich_reference(
 }
 
 ///|
+/// Routes a document-symbol request for the cached document version.
 pub async fn RemoteServer::document_symbols(
   self : RemoteServer,
   request : @remote_protocol.DocumentVersionRequest,
@@ -462,6 +493,7 @@ pub async fn RemoteServer::document_symbols(
 }
 
 ///|
+/// Routes a semantic-token request for the cached document version.
 pub async fn RemoteServer::semantic_tokens(
   self : RemoteServer,
   request : @remote_protocol.DocumentVersionRequest,
@@ -482,6 +514,7 @@ pub async fn RemoteServer::semantic_tokens(
 }
 
 ///|
+/// Routes a folding-range request for the cached document version.
 pub async fn RemoteServer::folding_ranges(
   self : RemoteServer,
   request : @remote_protocol.DocumentVersionRequest,
@@ -500,6 +533,7 @@ pub async fn RemoteServer::folding_ranges(
 }
 
 ///|
+/// Routes an inlay-hints request for the cached document version.
 pub async fn RemoteServer::inlay_hints(
   self : RemoteServer,
   request : @remote_protocol.DocumentVersionRequest,

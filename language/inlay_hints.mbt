@@ -1,10 +1,13 @@
 ///|
+/// Inlay hint category used for styling and hover copy.
 pub(all) enum InlayHintKind {
   TypeHint
   ParameterHint
 } derive(Eq, Debug)
 
 ///|
+/// Inline annotation rendered at a core document position, with optional
+/// spacing and hover tooltip content.
 pub(all) struct InlayHint {
   position : @core.Position
   label : String
@@ -15,6 +18,7 @@ pub(all) struct InlayHint {
 } derive(Eq, Debug)
 
 ///|
+/// Builds an inlay hint with explicit spacing and tooltip defaults.
 pub fn InlayHint::InlayHint(
   position : @core.Position,
   label : String,
@@ -27,6 +31,7 @@ pub fn InlayHint::InlayHint(
 }
 
 ///|
+/// Document-level inlay hint provider.
 pub(open) trait InlayHintsProvider {
   async fn inlay_hints(Self, @workspace.SourceDocument) -> Array[InlayHint]
 }

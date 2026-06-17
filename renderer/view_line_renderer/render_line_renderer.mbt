@@ -2,6 +2,7 @@
 let long_token_threshold = 50
 
 ///|
+/// Renders one line into `html` and returns mapping/foreign-element metadata.
 pub fn render_view_line(
   input : RenderLineInput,
   html : StringBuilder,
@@ -109,6 +110,7 @@ pub fn render_view_line(
 }
 
 ///|
+/// Renders one line and returns the generated HTML with metadata.
 pub fn render_view_line2(input : RenderLineInput) -> RenderLineOutput2 {
   let html = StringBuilder()
   let output = render_view_line(input, html)

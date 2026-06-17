@@ -1,10 +1,13 @@
 ///|
+/// DOM span/character coordinate for a rendered line.
 pub(all) struct DomPosition {
   part_index : Int
   char_index : Int
 } derive(Eq, Debug)
 
 ///|
+/// Mapping entry from one line column to rendered DOM coordinates and visible
+/// monospace column.
 pub(all) struct CharacterMappingEntry {
   part_index : Int
   char_index : Int
@@ -12,12 +15,14 @@ pub(all) struct CharacterMappingEntry {
 } derive(Eq, Debug)
 
 ///|
+/// Column-to-DOM mapping produced while rendering a line.
 pub(all) struct CharacterMapping {
   length : Int
   entries : Array[CharacterMappingEntry]
 } derive(Eq, Debug)
 
 ///|
+/// Creates a mapping with `length` column slots.
 pub fn CharacterMapping::new(length : Int) -> CharacterMapping {
   let entries : Array[CharacterMappingEntry] = []
   for _ in 0..<length {
@@ -27,6 +32,7 @@ pub fn CharacterMapping::new(length : Int) -> CharacterMapping {
 }
 
 ///|
+/// Stores DOM and visible-column info for a one-based line column.
 pub fn CharacterMapping::set_column_info(
   self : CharacterMapping,
   column : Int,
@@ -41,6 +47,7 @@ pub fn CharacterMapping::set_column_info(
 }
 
 ///|
+/// Returns the DOM position nearest a one-based line column.
 pub fn CharacterMapping::get_dom_position(
   self : CharacterMapping,
   column : Int,
@@ -54,6 +61,7 @@ pub fn CharacterMapping::get_dom_position(
 }
 
 ///|
+/// Returns the one-based line column nearest a DOM position.
 pub fn CharacterMapping::get_column(
   self : CharacterMapping,
   dom_position : DomPosition,
@@ -87,6 +95,7 @@ pub fn CharacterMapping::get_column(
 }
 
 ///|
+/// Visible monospace column for a one-based line column.
 pub fn CharacterMapping::get_horizontal_offset(
   self : CharacterMapping,
   column : Int,
@@ -99,6 +108,7 @@ pub fn CharacterMapping::get_horizontal_offset(
 }
 
 ///|
+/// Horizontal CSS-pixel offset for a one-based line column.
 pub fn CharacterMapping::column_horizontal_offset(
   self : CharacterMapping,
   column : Int,
@@ -108,6 +118,7 @@ pub fn CharacterMapping::column_horizontal_offset(
 }
 
 ///|
+/// Copies the raw mapping entries for diagnostics and tests.
 pub fn CharacterMapping::inflate(
   self : CharacterMapping,
 ) -> Array[CharacterMappingEntry] {
@@ -134,12 +145,14 @@ fn abs_int(value : Int) -> Int {
 }
 
 ///|
+/// Render output when the caller owns the output builder.
 pub(all) struct RenderLineOutput {
   character_mapping : CharacterMapping
   contains_foreign_elements : ForeignElementType
 } derive(Eq, Debug)
 
 ///|
+/// Render output including generated HTML.
 pub(all) struct RenderLineOutput2 {
   html : String
   character_mapping : CharacterMapping

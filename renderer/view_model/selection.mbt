@@ -1,10 +1,12 @@
 ///|
+/// Anchor/focus selection in zero-based document positions.
 pub(all) struct Selection {
   anchor : @core.Position
   focus : @core.Position
 } derive(Eq, Debug)
 
 ///|
+/// Builds a selection without normalizing anchor/focus order.
 pub fn Selection::Selection(
   anchor : @core.Position,
   focus : @core.Position,
@@ -13,6 +15,7 @@ pub fn Selection::Selection(
 }
 
 ///|
+/// Builds a selection from document offsets.
 pub fn Selection::from_offsets(
   snapshot : @core.DocumentSnapshot,
   anchor_offset : Int,
@@ -25,6 +28,7 @@ pub fn Selection::from_offsets(
 }
 
 ///|
+/// Selection range normalized into ascending document offsets.
 pub fn Selection::normalized_range(
   self : Selection,
   snapshot : @core.DocumentSnapshot,
@@ -39,6 +43,7 @@ pub fn Selection::normalized_range(
 }
 
 ///|
+/// Whether the normalized selection range is empty.
 pub fn Selection::is_empty(
   self : Selection,
   snapshot : @core.DocumentSnapshot,
@@ -47,6 +52,7 @@ pub fn Selection::is_empty(
 }
 
 ///|
+/// Plain selected text for clipboard writes.
 pub fn Selection::get_plain_text_to_copy(
   self : Selection,
   snapshot : @core.DocumentSnapshot,
@@ -55,6 +61,7 @@ pub fn Selection::get_plain_text_to_copy(
 }
 
 ///|
+/// Minimal HTML clipboard payload preserving preformatted text.
 pub fn Selection::get_rich_text_to_copy(
   self : Selection,
   snapshot : @core.DocumentSnapshot,

@@ -1,4 +1,5 @@
 ///|
+/// One-based line decoration range plus CSS class.
 pub(all) struct LineDecoration {
   start_column : Int
   end_column : Int
@@ -7,6 +8,7 @@ pub(all) struct LineDecoration {
 } derive(Eq, Debug)
 
 ///|
+/// Builds a line decoration.
 pub fn LineDecoration::LineDecoration(
   start_column : Int,
   end_column : Int,
@@ -17,6 +19,7 @@ pub fn LineDecoration::LineDecoration(
 }
 
 ///|
+/// Sort order used before decoration normalization.
 pub fn LineDecoration::compare(
   left : LineDecoration,
   right : LineDecoration,
@@ -51,6 +54,7 @@ fn inline_decoration_type_order(decoration_type : InlineDecorationType) -> Int {
 }
 
 ///|
+/// Normalized decoration segment in zero-based offsets.
 pub(all) struct DecorationSegment {
   start_offset : Int
   end_offset : Int
@@ -59,9 +63,12 @@ pub(all) struct DecorationSegment {
 } derive(Eq, Debug)
 
 ///|
+/// Normalizes overlapping line decorations into contiguous CSS segments.
 pub(all) struct LineDecorationsNormalizer {}
 
 ///|
+/// Converts sorted line decorations into renderer segments, preserving
+/// surrogate-pair boundaries.
 pub fn LineDecorationsNormalizer::normalize(
   line_content : String,
   line_decorations : Array[LineDecoration],

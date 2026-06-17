@@ -11,6 +11,7 @@ pub struct ViewLayout {
 }
 
 ///|
+/// Creates a view layout with a fixed line height and optional line count.
 pub fn ViewLayout::new(line_height~ : Int, line_count? : Int = 0) -> ViewLayout {
   let layout : ViewLayout = {
     scrollable: Scrollable::new(),
@@ -55,6 +56,7 @@ pub fn ViewLayout::set_content_width(
 }
 
 ///|
+/// Replaces view zones and re-derives scroll dimensions.
 pub fn ViewLayout::set_view_zones(
   self : ViewLayout,
   view_zones : Array[ViewZone],
@@ -64,16 +66,19 @@ pub fn ViewLayout::set_view_zones(
 }
 
 ///|
+/// Current view-zone slots.
 pub fn ViewLayout::view_zones(self : ViewLayout) -> Array[ViewZone] {
   self.lines.view_zones()
 }
 
 ///|
+/// Current number of lines.
 pub fn ViewLayout::line_count(self : ViewLayout) -> Int {
   self.lines.line_count()
 }
 
 ///|
+/// Content-space top offset of a view zone by index.
 pub fn ViewLayout::view_zone_vertical_offset(
   self : ViewLayout,
   index : Int,
@@ -82,6 +87,7 @@ pub fn ViewLayout::view_zone_vertical_offset(
 }
 
 ///|
+/// View-zone geometry relative to a rendered line window.
 pub fn ViewLayout::view_zone_viewport_data(
   self : ViewLayout,
   window : LineWindow,
@@ -90,6 +96,7 @@ pub fn ViewLayout::view_zone_viewport_data(
 }
 
 ///|
+/// Top offset of `line` relative to the rendered window start.
 pub fn ViewLayout::relative_vertical_offset_for_line(
   self : ViewLayout,
   window : LineWindow,
@@ -100,6 +107,8 @@ pub fn ViewLayout::relative_vertical_offset_for_line(
 }
 
 ///|
+/// Sets the synthetic scroll position, preserving horizontal position unless
+/// `scroll_left` is supplied.
 pub fn ViewLayout::scroll_to(
   self : ViewLayout,
   scroll_top~ : Double,
@@ -114,6 +123,7 @@ pub fn ViewLayout::scroll_to(
 }
 
 ///|
+/// Applies a relative synthetic scroll delta.
 pub fn ViewLayout::scroll_by(
   self : ViewLayout,
   delta_left? : Double = 0.0,
@@ -123,11 +133,13 @@ pub fn ViewLayout::scroll_by(
 }
 
 ///|
+/// Current synthetic scroll position.
 pub fn ViewLayout::position(self : ViewLayout) -> ScrollPosition {
   self.scrollable.position()
 }
 
 ///|
+/// Current viewport and content dimensions.
 pub fn ViewLayout::dimensions(self : ViewLayout) -> ScrollDimensions {
   self.scrollable.dimensions()
 }

@@ -1,4 +1,5 @@
 ///|
+/// Log threshold and entry severity. `Off` disables emission.
 pub(all) enum LogLevel {
   Off
   Trace
@@ -9,6 +10,7 @@ pub(all) enum LogLevel {
 } derive(Eq, Debug)
 
 ///|
+/// Structured log event emitted by app and viewer services.
 pub(all) struct LogEntry {
   level : LogLevel
   category : String
@@ -17,71 +19,86 @@ pub(all) struct LogEntry {
 } derive(Eq, Debug)
 
 ///|
+/// Minimal logger sink abstraction. Methods are `noraise` so logging cannot
+/// fail a viewer or server workflow.
 pub(open) trait Logger {
   fn log(Self, LogEntry) -> Unit noraise
   fn flush(Self) -> Unit noraise
 }
 
 ///|
+/// Logger sink that drops every entry.
 pub(all) struct NullLogger(Unit)
 
 ///|
+/// Creates a sink that ignores logs and flushes.
 pub fn NullLogger::new() -> NullLogger {
   NullLogger(())
 }
 
 ///|
+/// Drops one log entry.
 pub impl Logger for NullLogger with fn log(_self, _entry) {
   ()
 }
 
 ///|
+/// No-op flush for the null sink.
 pub impl Logger for NullLogger with fn flush(_self) {
   ()
 }
 
 ///|
+/// In-memory logger used by tests and harness-facing diagnostics.
 pub(all) struct MemoryLogger {
   entries : Array[LogEntry]
   flush_count : Ref[Int]
 }
 
 ///|
+/// Creates an empty in-memory log sink.
 pub fn MemoryLogger::new() -> MemoryLogger {
   { entries: [], flush_count: Ref(0) }
 }
 
 ///|
+/// Snapshot of collected log entries.
 pub fn MemoryLogger::entries(self : MemoryLogger) -> Array[LogEntry] {
   self.entries.copy()
 }
 
 ///|
+/// Number of flush calls observed by the memory sink.
 pub fn MemoryLogger::flush_count(self : MemoryLogger) -> Int {
   self.flush_count.val
 }
 
 ///|
+/// Records one log entry in memory.
 pub impl Logger for MemoryLogger with fn log(self, entry) {
   self.entries.push(entry)
 }
 
 ///|
+/// Records a flush boundary in memory.
 pub impl Logger for MemoryLogger with fn flush(self) {
   self.flush_count.val = self.flush_count.val + 1
 }
 
 ///|
+/// Logger sink that fans each entry and flush to multiple sinks.
 pub(all) struct MultiplexLogger {
   loggers : Array[&Logger]
 }
 
 ///|
+/// Creates a logger fan-out over the supplied sinks.
 pub fn MultiplexLogger::new(loggers : Array[&Logger]) -> MultiplexLogger {
   { loggers, }
 }
 
 ///|
+/// Emits one entry to every child logger.
 pub impl Logger for MultiplexLogger with fn log(self, entry) {
   for logger in self.loggers {
     logger.log(entry)
@@ -89,6 +106,7 @@ pub impl Logger for MultiplexLogger with fn log(self, entry) {
 }
 
 ///|
+/// Flushes every child logger.
 pub impl Logger for MultiplexLogger with fn flush(self) {
   for logger in self.loggers {
     logger.flush()
@@ -96,12 +114,15 @@ pub impl Logger for MultiplexLogger with fn flush(self) {
 }
 
 ///|
+/// Thresholded logging facade used by services that should not know the sink
+/// implementation.
 pub(all) struct LogService {
   level : LogLevel
   logger : &Logger
 }
 
 ///|
+/// Creates a log service with an optional threshold and sink.
 pub fn LogService::new(
   level? : LogLevel = Info,
   logger? : &Logger = NullLogger::new(),
@@ -110,6 +131,7 @@ pub fn LogService::new(
 }
 
 ///|
+/// Emits an already-structured log entry when it passes the threshold.
 pub fn LogService::log(self : LogService, entry : LogEntry) -> Unit {
   if should_log(self.level, entry.level) {
     self.logger.log(entry)
@@ -117,6 +139,7 @@ pub fn LogService::log(self : LogService, entry : LogEntry) -> Unit {
 }
 
 ///|
+/// Emits a trace-level entry.
 pub fn LogService::trace(
   self : LogService,
   category : String,
@@ -127,6 +150,7 @@ pub fn LogService::trace(
 }
 
 ///|
+/// Emits a debug-level entry.
 pub fn LogService::debug(
   self : LogService,
   category : String,
@@ -137,6 +161,7 @@ pub fn LogService::debug(
 }
 
 ///|
+/// Emits an info-level entry.
 pub fn LogService::info(
   self : LogService,
   category : String,
@@ -147,6 +172,7 @@ pub fn LogService::info(
 }
 
 ///|
+/// Emits a warning-level entry.
 pub fn LogService::warn(
   self : LogService,
   category : String,
@@ -157,6 +183,7 @@ pub fn LogService::warn(
 }
 
 ///|
+/// Emits an error-level entry.
 pub fn LogService::error(
   self : LogService,
   category : String,
@@ -167,11 +194,13 @@ pub fn LogService::error(
 }
 
 ///|
+/// Flushes the configured log sink.
 pub fn LogService::flush(self : LogService) -> Unit {
   self.logger.flush()
 }
 
 ///|
+/// Stable lowercase label for configuration and diagnostics.
 pub fn LogLevel::label(self : LogLevel) -> String {
   match self {
     Off => "off"
@@ -184,6 +213,7 @@ pub fn LogLevel::label(self : LogLevel) -> String {
 }
 
 ///|
+/// Whether the level should be treated as a failure signal by harness checks.
 pub fn LogLevel::is_warning_or_error(self : LogLevel) -> Bool {
   level_rank(self) >= level_rank(Warning) && self != Off
 }

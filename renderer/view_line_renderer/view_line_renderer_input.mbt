@@ -1,4 +1,5 @@
 ///|
+/// Fully normalized input for rendering one view line to HTML.
 pub(all) struct RenderLineInput {
   use_monospace_optimizations : Bool
   can_use_halfwidth_rightwards_arrow : Bool
@@ -25,6 +26,8 @@ pub(all) struct RenderLineInput {
 } derive(Eq, Debug)
 
 ///|
+/// Builds line-renderer input from viewport line data plus runtime rendering
+/// options.
 pub fn RenderLineInput::from_view_line(
   data : ViewLineRenderingData,
   line_decorations? : Array[LineDecoration] = [],

@@ -38,11 +38,13 @@ pub struct TokenizerRegistry {
 }
 
 ///|
+/// Creates an empty tokenizer registry for host-side language composition.
 pub fn TokenizerRegistry::new() -> TokenizerRegistry {
   { tokenizers: {} }
 }
 
 ///|
+/// Registers or replaces the tokenizer for a language id.
 pub fn TokenizerRegistry::register(
   self : TokenizerRegistry,
   language_id : String,
@@ -52,6 +54,7 @@ pub fn TokenizerRegistry::register(
 }
 
 ///|
+/// Returns the tokenizer for `language_id`, leaving fallback choice to callers.
 pub fn TokenizerRegistry::lookup(
   self : TokenizerRegistry,
   language_id : String,

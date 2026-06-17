@@ -1,4 +1,5 @@
 ///|
+/// Converts a rendered view-model line to line-renderer data.
 pub fn view_line_rendering_data_from_render_line(
   line : RenderLine,
   decorations? : Array[@decorations.Decoration] = [],
@@ -20,6 +21,7 @@ pub fn view_line_rendering_data_from_render_line(
 }
 
 ///|
+/// Builds full line-renderer input from a rendered view-model line.
 pub fn render_line_input_from_render_line(
   line : RenderLine,
   decorations? : Array[@decorations.Decoration] = [],
@@ -92,6 +94,7 @@ fn inline_decorations_for_line(
 }
 
 ///|
+/// Line decorations in one-based columns for the line renderer.
 pub fn line_decorations_for_line(
   line : RenderLine,
   decorations : Array[@decorations.Decoration],

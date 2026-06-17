@@ -1,4 +1,5 @@
 ///|
+/// Zero-based half-open view-line window to render.
 pub(all) struct FrameViewport {
   start_line : Int
   end_line : Int
@@ -18,6 +19,8 @@ pub(all) struct RenderSpan {
 } derive(Debug)
 
 ///|
+/// One rendered view line with text, source offset, per-column model mapping,
+/// injected-text mapping, and styled spans.
 pub(all) struct RenderLine {
   line_number : Int
   offset : Int
@@ -53,6 +56,7 @@ pub fn build_frame(
 }
 
 ///|
+/// JSON shape used by tests and browser observability.
 pub impl ToJson for RenderFrame with fn to_json(self) {
   {
     "version": self.version.to_json(),
@@ -72,6 +76,7 @@ pub fn RenderLine::span_text(self : RenderLine, span : RenderSpan) -> String {
 }
 
 ///|
+/// Model column at a rendered view column.
 pub fn RenderLine::model_column_at_column(
   self : RenderLine,
   column : Int,
@@ -84,6 +89,7 @@ pub fn RenderLine::model_column_at_column(
 }
 
 ///|
+/// Source document offset at a rendered view column.
 pub fn RenderLine::source_offset_at_column(
   self : RenderLine,
   column : Int,
@@ -92,11 +98,13 @@ pub fn RenderLine::source_offset_at_column(
 }
 
 ///|
+/// Source offset of the model line that produced this rendered line.
 pub fn RenderLine::model_line_start_offset(self : RenderLine) -> Int {
   self.offset - self.model_column_at_column(0)
 }
 
 ///|
+/// Inlay-hint source index at a rendered view column, or `-1` for source text.
 pub fn RenderLine::injected_text_index_at_column(
   self : RenderLine,
   column : Int,
@@ -109,6 +117,7 @@ pub fn RenderLine::injected_text_index_at_column(
 }
 
 ///|
+/// Rendered view column corresponding to a source document offset.
 pub fn RenderLine::view_column_at_source_offset(
   self : RenderLine,
   offset : Int,
@@ -245,6 +254,7 @@ fn slice_span(
 }
 
 ///|
+/// Normalized CSS class for an LSP semantic token type.
 pub fn semantic_token_class(token_type : String) -> String {
   "sem-" + token_type
 }

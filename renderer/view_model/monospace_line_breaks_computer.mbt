@@ -1,4 +1,5 @@
 ///|
+/// Monaco-inspired line-break calculator for monospace soft wrapping.
 pub(all) struct LineBreaksComputer {
   wrapping_column : Int
   tab_size : Int
@@ -19,6 +20,7 @@ let word_wrap_break_after_characters = " \t})]?|/&.,;¢°′″‰℃、。｡�
 let word_wrap_break_before_characters = "([{‘“〈《「『【〔（［｛｢£¥＄￡￥+＋"
 
 ///|
+/// Builds a line-break calculator with clamped wrapping and tab settings.
 pub fn LineBreaksComputer::LineBreaksComputer(
   wrapping_column : Int,
   tab_size? : Int = 2,
@@ -30,6 +32,7 @@ pub fn LineBreaksComputer::LineBreaksComputer(
 }
 
 ///|
+/// Computes wrapping segments for a raw model line.
 pub fn LineBreaksComputer::compute_model_line_projection(
   self : LineBreaksComputer,
   model_line_number : Int,
@@ -42,6 +45,8 @@ pub fn LineBreaksComputer::compute_model_line_projection(
 }
 
 ///|
+/// Computes wrapping segments for a projected line that may include injected
+/// text.
 pub fn LineBreaksComputer::compute_projected_line_projection(
   self : LineBreaksComputer,
   model_line_number : Int,

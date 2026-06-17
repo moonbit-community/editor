@@ -17,11 +17,13 @@ pub enum JavascriptTokenizer {
 }
 
 ///|
+/// Creates the JavaScript tokenizer.
 pub fn JavascriptTokenizer::new() -> JavascriptTokenizer {
   JavascriptTokenizer
 }
 
 ///|
+/// Initial JavaScript lexer mode stack.
 pub impl @syntax.LineTokenizer for JavascriptTokenizer with fn initial_state(
   _self,
 ) {
@@ -29,6 +31,7 @@ pub impl @syntax.LineTokenizer for JavascriptTokenizer with fn initial_state(
 }
 
 ///|
+/// Tokenizes one JavaScript line while carrying comment/template state.
 pub impl @syntax.LineTokenizer for JavascriptTokenizer with fn tokenize_line(
   _self,
   line_text,

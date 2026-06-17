@@ -1,4 +1,5 @@
 ///|
+/// Installs browser globals used by the reference app and Playwright harness.
 pub extern "js" fn install_host_capabilities() -> Unit =
   #| () => {
   #|   if (typeof globalThis.__readonlyEditorEvent !== "function") {
@@ -12,6 +13,7 @@ pub extern "js" fn install_host_capabilities() -> Unit =
   #| }
 
 ///|
+/// Publishes the current document JSON on harness globals.
 pub extern "js" fn set_current_document(payload : String) -> Unit =
   #| (payload) => {
   #|   try {
@@ -24,6 +26,7 @@ pub extern "js" fn set_current_document(payload : String) -> Unit =
   #| }
 
 ///|
+/// WebSocket endpoint for the current page's native remote protocol server.
 pub extern "js" fn protocol_websocket_url() -> String =
   #| () => {
   #|   const location = globalThis.location;
@@ -39,6 +42,7 @@ pub extern "js" fn now_ms() -> Double =
   #| () => globalThis.performance?.now() ?? Date.now()
 
 ///|
+/// Emits one harness/browser observability event.
 pub extern "js" fn emit_event(name : String, payload : String) -> Unit =
   #| (name, payload) => {
   #|   if (typeof globalThis.__readonlyEditorEvent === "function") {
@@ -47,6 +51,7 @@ pub extern "js" fn emit_event(name : String, payload : String) -> Unit =
   #| }
 
 ///|
+/// Best-effort local storage read; returns empty string when unavailable.
 pub extern "js" fn storage_get_item(key : String) -> String =
   #| (key) => {
   #|   try {
@@ -57,6 +62,7 @@ pub extern "js" fn storage_get_item(key : String) -> String =
   #| }
 
 ///|
+/// Best-effort local storage write; private browsing failures are ignored.
 pub extern "js" fn storage_set_item(key : String, value : String) -> Unit =
   #| (key, value) => {
   #|   try {
@@ -73,6 +79,7 @@ pub extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Double =
   #| (callback, ms) => globalThis.setTimeout(callback, ms)
 
 ///|
+/// Clears a timeout handle returned by `set_timeout`.
 pub extern "js" fn clear_timeout(handle : Double) -> Unit =
   #| (handle) => globalThis.clearTimeout(handle)
 

@@ -1,14 +1,17 @@
 ///|
+/// Ordered registry for one family of language providers.
 pub(all) struct LanguageFeatureRegistry[T] {
   entries : Array[T]
 }
 
 ///|
+/// Creates an empty provider registry.
 pub fn[T] LanguageFeatureRegistry::new() -> LanguageFeatureRegistry[T] {
   { entries: [] }
 }
 
 ///|
+/// Adds a provider to the end of the registry.
 pub fn[T] LanguageFeatureRegistry::register(
   self : LanguageFeatureRegistry[T],
   entry : T,
@@ -17,6 +20,8 @@ pub fn[T] LanguageFeatureRegistry::register(
 }
 
 ///|
+/// Viewer-owned language feature broker. Provider failures are logged and
+/// degraded to empty results so one provider cannot break rendering.
 pub(all) struct LanguageFeaturesService {
   hover_provider : LanguageFeatureRegistry[&@language.HoverProvider]
   diagnostics_provider : LanguageFeatureRegistry[&@language.DiagnosticsProvider]
@@ -34,6 +39,7 @@ pub(all) struct LanguageFeaturesService {
 }
 
 ///|
+/// Creates a language feature broker with empty registries.
 pub fn LanguageFeaturesService::new(
   log_service? : @log.LogService = @log.LogService::new(),
 ) -> LanguageFeaturesService {
@@ -49,6 +55,7 @@ pub fn LanguageFeaturesService::new(
 }
 
 ///|
+/// Registers an ordered hover provider.
 pub fn LanguageFeaturesService::register_hover_provider(
   self : LanguageFeaturesService,
   provider : &@language.HoverProvider,
@@ -57,6 +64,7 @@ pub fn LanguageFeaturesService::register_hover_provider(
 }
 
 ///|
+/// Registers an ordered diagnostics provider.
 pub fn LanguageFeaturesService::register_diagnostics_provider(
   self : LanguageFeaturesService,
   provider : &@language.DiagnosticsProvider,
@@ -65,6 +73,7 @@ pub fn LanguageFeaturesService::register_diagnostics_provider(
 }
 
 ///|
+/// Registers an ordered document-symbol provider.
 pub fn LanguageFeaturesService::register_document_symbol_provider(
   self : LanguageFeaturesService,
   provider : &@language.DocumentSymbolProvider,
@@ -73,6 +82,7 @@ pub fn LanguageFeaturesService::register_document_symbol_provider(
 }
 
 ///|
+/// Registers an ordered semantic-token provider.
 pub fn LanguageFeaturesService::register_semantic_tokens_provider(
   self : LanguageFeaturesService,
   provider : &@language.SemanticTokensProvider,
@@ -81,6 +91,7 @@ pub fn LanguageFeaturesService::register_semantic_tokens_provider(
 }
 
 ///|
+/// Registers an ordered folding-range provider.
 pub fn LanguageFeaturesService::register_folding_range_provider(
   self : LanguageFeaturesService,
   provider : &@language.FoldingRangeProvider,
@@ -89,6 +100,7 @@ pub fn LanguageFeaturesService::register_folding_range_provider(
 }
 
 ///|
+/// Registers an ordered inlay-hints provider.
 pub fn LanguageFeaturesService::register_inlay_hints_provider(
   self : LanguageFeaturesService,
   provider : &@language.InlayHintsProvider,
@@ -97,6 +109,7 @@ pub fn LanguageFeaturesService::register_inlay_hints_provider(
 }
 
 ///|
+/// Returns the first non-empty hover answer in provider order.
 pub async fn LanguageFeaturesService::hover_at(
   self : LanguageFeaturesService,
   document : @workspace.SourceDocument,
@@ -119,6 +132,8 @@ pub async fn LanguageFeaturesService::hover_at(
 }
 
 ///|
+/// Refreshes diagnostics from every provider, passing each provider's owner id
+/// to the caller so marker ownership can be replaced independently.
 pub async fn LanguageFeaturesService::diagnostics_for_document(
   self : LanguageFeaturesService,
   document : @workspace.SourceDocument,
@@ -138,6 +153,7 @@ pub async fn LanguageFeaturesService::diagnostics_for_document(
 }
 
 ///|
+/// Concatenates document-symbol results from every provider.
 pub async fn LanguageFeaturesService::document_symbols(
   self : LanguageFeaturesService,
   document : @workspace.SourceDocument,
@@ -157,6 +173,7 @@ pub async fn LanguageFeaturesService::document_symbols(
 }
 
 ///|
+/// Concatenates semantic-token results from every provider.
 pub async fn LanguageFeaturesService::semantic_tokens_for_document(
   self : LanguageFeaturesService,
   document : @workspace.SourceDocument,
@@ -176,6 +193,8 @@ pub async fn LanguageFeaturesService::semantic_tokens_for_document(
 }
 
 ///|
+/// Concatenates folding-range results, falling back to MoonBit indentation
+/// ranges when no provider answers.
 pub async fn LanguageFeaturesService::folding_ranges_for_document(
   self : LanguageFeaturesService,
   document : @workspace.SourceDocument,
@@ -199,6 +218,7 @@ pub async fn LanguageFeaturesService::folding_ranges_for_document(
 }
 
 ///|
+/// Concatenates inlay-hint results from every provider.
 pub async fn LanguageFeaturesService::inlay_hints_for_document(
   self : LanguageFeaturesService,
   document : @workspace.SourceDocument,
@@ -348,16 +368,20 @@ fn line_indent(line : String) -> Int {
 }
 
 ///|
+/// Ordered registry for hover participants. Participants with lower ordinals
+/// render before later participants when ranges overlap.
 pub(all) struct HoverParticipantRegistry {
   entries : Array[&HoverParticipant]
 }
 
 ///|
+/// Creates an empty hover participant registry.
 pub fn HoverParticipantRegistry::new() -> HoverParticipantRegistry {
   { entries: [] }
 }
 
 ///|
+/// Adds a hover participant to the registry.
 pub fn HoverParticipantRegistry::register(
   self : HoverParticipantRegistry,
   participant : &HoverParticipant,
@@ -366,6 +390,7 @@ pub fn HoverParticipantRegistry::register(
 }
 
 ///|
+/// Services shared by the embeddable viewer and its feature controllers.
 pub(all) struct ViewerServices {
   language_features : LanguageFeaturesService
   markers : MarkerService
@@ -375,6 +400,8 @@ pub(all) struct ViewerServices {
 }
 
 ///|
+/// Creates the default viewer services, including marker, inlay-hint, and
+/// markdown hover participants.
 pub fn ViewerServices::new(
   log_service? : @log.LogService = @log.LogService::new(),
 ) -> ViewerServices {

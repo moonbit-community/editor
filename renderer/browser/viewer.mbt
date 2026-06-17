@@ -92,6 +92,8 @@ pub(all) enum ViewerNotification {
 }
 
 ///|
+/// Creates a viewer instance. Call `attach` before opening documents so the
+/// first render has a DOM island to measure and patch.
 pub fn Viewer::Viewer(
   source : &@workspace.DocumentSource,
   on_notification~ : (ViewerNotification) -> Unit,
@@ -136,6 +138,8 @@ pub fn Viewer::Viewer(
 }
 
 ///|
+/// Applies runtime options and rebuilds the current view model when wrapping or
+/// tab settings change.
 pub fn Viewer::set_options(self : Viewer, options : ViewerOptions) -> Unit {
   if self.options == options {
     return
@@ -258,6 +262,7 @@ pub fn Viewer::scroll_to(self : Viewer, scroll_top : Double) -> Unit {
 }
 
 ///|
+/// Scrolls to an explicit vertical and horizontal synthetic scroll position.
 pub fn Viewer::scroll_to_position(
   self : Viewer,
   scroll_top : Double,
@@ -267,6 +272,7 @@ pub fn Viewer::scroll_to_position(
 }
 
 ///|
+/// Scrolls by a line-count delta using the viewer's fixed line height.
 pub fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
   self.apply_scroll_change(
     self.layout.scroll_by(delta_top=(lines * editor_line_height).to_double()),
@@ -274,6 +280,7 @@ pub fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
 }
 
 ///|
+/// Scrolls by a viewport-height page delta.
 pub fn Viewer::scroll_by_pages(self : Viewer, pages : Int) -> Unit {
   self.apply_scroll_change(
     self.layout.scroll_by(
@@ -283,11 +290,13 @@ pub fn Viewer::scroll_by_pages(self : Viewer, pages : Int) -> Unit {
 }
 
 ///|
+/// Scrolls to the top of the document.
 pub fn Viewer::scroll_home(self : Viewer) -> Unit {
   self.apply_scroll_change(self.layout.scroll_to(scroll_top=0.0))
 }
 
 ///|
+/// Scrolls to the bottom of the document.
 pub fn Viewer::scroll_end(self : Viewer) -> Unit {
   let dimensions = self.layout.dimensions()
   self.apply_scroll_change(
@@ -312,6 +321,8 @@ pub fn Viewer::push_diagnostics(
 }
 
 ///|
+/// Replaces the current document-symbol result and re-renders feature-derived
+/// UI.
 pub fn Viewer::push_symbols(
   self : Viewer,
   symbols : Array[@language.DocumentSymbol],
@@ -321,6 +332,8 @@ pub fn Viewer::push_symbols(
 }
 
 ///|
+/// Replaces the current semantic-token result and re-renders feature-derived
+/// UI.
 pub fn Viewer::push_semantic_tokens(
   self : Viewer,
   semantic_tokens : Array[@language.SemanticToken],
@@ -330,6 +343,7 @@ pub fn Viewer::push_semantic_tokens(
 }
 
 ///|
+/// Re-requests document-level feature data for the current document.
 pub fn Viewer::refresh_document_features(self : Viewer) -> Unit {
   match self.source_document {
     Some(document) => self.request_document_features(document)

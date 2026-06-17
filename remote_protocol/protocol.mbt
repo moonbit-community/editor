@@ -1,9 +1,12 @@
 ///|
+/// Current client/server protocol version. Both sides reject packets carrying a
+/// different version.
 pub fn protocol_version() -> Int {
   4
 }
 
 ///|
+/// Structured error categories used on the wire.
 pub(all) enum ProtocolErrorCode {
   ProtocolInvalidJson
   ProtocolUnsupportedVersion
@@ -14,6 +17,7 @@ pub(all) enum ProtocolErrorCode {
 } derive(Eq, Debug)
 
 ///|
+/// Debug label that keeps the local enum prefix visible.
 pub fn ProtocolErrorCode::label(self : ProtocolErrorCode) -> String {
   match self {
     ProtocolInvalidJson => "ProtocolInvalidJson"
@@ -26,6 +30,8 @@ pub fn ProtocolErrorCode::label(self : ProtocolErrorCode) -> String {
 }
 
 ///|
+/// Remote protocol error packet payload. `request_id` correlates failures to a
+/// request; `provider_code` preserves lower-level filesystem/LSP categories.
 pub(all) struct ProtocolError {
   code : ProtocolErrorCode
   message : String
@@ -34,12 +40,15 @@ pub(all) struct ProtocolError {
 } derive(Debug)
 
 ///|
+/// Request addressed only by document URI.
 pub(all) struct DocumentRequest {
   id : String
   uri : @workspace.DocumentUri
 } derive(Debug)
 
 ///|
+/// Request addressed by URI, expected document version, and UTF-16 offset.
+/// Servers use the version to drop stale feature requests.
 pub(all) struct DocumentPositionRequest {
   id : String
   uri : @workspace.DocumentUri
@@ -48,6 +57,8 @@ pub(all) struct DocumentPositionRequest {
 } derive(Debug)
 
 ///|
+/// Request addressed by URI and expected document version, for whole-document
+/// feature refreshes.
 pub(all) struct DocumentVersionRequest {
   id : String
   uri : @workspace.DocumentUri
@@ -55,6 +66,7 @@ pub(all) struct DocumentVersionRequest {
 } derive(Debug)
 
 ///|
+/// Browser-to-server request packet variants.
 pub(all) enum ClientPacket {
   ResolveDirectory(DocumentRequest)
   OpenDocument(DocumentRequest)
@@ -71,6 +83,7 @@ pub(all) enum ClientPacket {
 } derive(Debug)
 
 ///|
+/// Loaded or changed document payload from the remote server.
 pub(all) struct DocumentPayload {
   id : String
   document : @workspace.SourceDocument
@@ -85,6 +98,7 @@ pub(all) struct DirectoryResolvedPayload {
 } derive(Debug)
 
 ///|
+/// Diagnostics response for a specific URI and document version.
 pub(all) struct DiagnosticsPayload {
   id : String
   uri : @workspace.DocumentUri
@@ -93,6 +107,7 @@ pub(all) struct DiagnosticsPayload {
 } derive(Debug)
 
 ///|
+/// Hover response for a specific URI, document version, and request id.
 pub(all) struct HoverResultPayload {
   id : String
   uri : @workspace.DocumentUri
@@ -101,6 +116,7 @@ pub(all) struct HoverResultPayload {
 } derive(Debug)
 
 ///|
+/// Definition response for a specific URI, document version, and request id.
 pub(all) struct DefinitionResultPayload {
   id : String
   uri : @workspace.DocumentUri
@@ -121,6 +137,7 @@ pub(all) struct ReferenceItem {
 } derive(Debug)
 
 ///|
+/// References response for a specific URI and document version.
 pub(all) struct ReferencesResultPayload {
   id : String
   uri : @workspace.DocumentUri
@@ -129,6 +146,7 @@ pub(all) struct ReferencesResultPayload {
 } derive(Debug)
 
 ///|
+/// Document symbols response for a specific URI and document version.
 pub(all) struct DocumentSymbolsResultPayload {
   id : String
   uri : @workspace.DocumentUri
@@ -137,6 +155,7 @@ pub(all) struct DocumentSymbolsResultPayload {
 } derive(Debug)
 
 ///|
+/// Semantic tokens response for a specific URI and document version.
 pub(all) struct SemanticTokensResultPayload {
   id : String
   uri : @workspace.DocumentUri
@@ -145,6 +164,7 @@ pub(all) struct SemanticTokensResultPayload {
 } derive(Debug)
 
 ///|
+/// Folding ranges response for a specific URI and document version.
 pub(all) struct FoldingRangesResultPayload {
   id : String
   uri : @workspace.DocumentUri
@@ -153,6 +173,7 @@ pub(all) struct FoldingRangesResultPayload {
 } derive(Debug)
 
 ///|
+/// Inlay hints response for a specific URI and document version.
 pub(all) struct InlayHintsResultPayload {
   id : String
   uri : @workspace.DocumentUri
@@ -161,6 +182,7 @@ pub(all) struct InlayHintsResultPayload {
 } derive(Debug)
 
 ///|
+/// Server-to-browser response, event, and error packet variants.
 pub(all) enum ServerPacket {
   DirectoryResolved(DirectoryResolvedPayload)
   DocumentLoaded(DocumentPayload)
@@ -177,24 +199,28 @@ pub(all) enum ServerPacket {
 } derive(Debug)
 
 ///|
+/// Client-packet decode result that preserves structured protocol errors.
 pub(all) enum ClientPacketDecodeResult {
   DecodedClientPacket(ClientPacket)
   ClientPacketDecodeError(ProtocolError)
 } derive(Debug)
 
 ///|
+/// Server-packet decode result that preserves structured protocol errors.
 pub(all) enum ServerPacketDecodeResult {
   DecodedServerPacket(ServerPacket)
   ServerPacketDecodeError(ProtocolError)
 } derive(Debug)
 
 ///|
+/// Version-negotiation result used before opening a long-lived connection.
 pub(all) enum ProtocolNegotiation {
   ProtocolAccepted(Int)
   ProtocolRejected(ProtocolError)
 } derive(Debug)
 
 ///|
+/// Builds a protocol error, defaulting an empty message to the wire code.
 pub fn ProtocolError::ProtocolError(
   code : ProtocolErrorCode,
   message : String,
@@ -206,6 +232,8 @@ pub fn ProtocolError::ProtocolError(
 }
 
 ///|
+/// Converts a filesystem-provider failure into a protocol error without losing
+/// the provider error code.
 pub fn ProtocolError::from_file_system_error(
   error : @workspace.FileSystemProviderError,
   request_id? : String = "",
@@ -219,6 +247,7 @@ pub fn ProtocolError::from_file_system_error(
 }
 
 ///|
+/// Stable compact code used in JSON payloads.
 pub fn ProtocolErrorCode::to_string(self : ProtocolErrorCode) -> String {
   match self {
     ProtocolInvalidJson => "InvalidJson"
@@ -231,6 +260,8 @@ pub fn ProtocolErrorCode::to_string(self : ProtocolErrorCode) -> String {
 }
 
 ///|
+/// Decodes a wire error code, failing closed to `InvalidPacket` for unknown
+/// values.
 pub fn ProtocolErrorCode::from_string(code : String) -> ProtocolErrorCode {
   match code {
     "InvalidJson" => ProtocolInvalidJson
@@ -244,6 +275,7 @@ pub fn ProtocolErrorCode::from_string(code : String) -> ProtocolErrorCode {
 }
 
 ///|
+/// Accepts only the exact current protocol version.
 pub fn negotiate_protocol_version(version : Int) -> ProtocolNegotiation {
   if version == protocol_version() {
     ProtocolAccepted(version)
@@ -258,6 +290,7 @@ pub fn negotiate_protocol_version(version : Int) -> ProtocolNegotiation {
 }
 
 ///|
+/// Serializes client requests to the MoonBit-owned remote protocol JSON shape.
 pub impl ToJson for ClientPacket with fn to_json(self) {
   match self {
     ResolveDirectory(request) =>
@@ -277,6 +310,7 @@ pub impl ToJson for ClientPacket with fn to_json(self) {
 }
 
 ///|
+/// Serializes server responses and events to the remote protocol JSON shape.
 pub impl ToJson for ServerPacket with fn to_json(self) {
   match self {
     DirectoryResolved(payload) => directory_resolved_json(payload)
@@ -296,6 +330,8 @@ pub impl ToJson for ServerPacket with fn to_json(self) {
 }
 
 ///|
+/// Decodes and validates a client packet, returning structured errors instead
+/// of raising on malformed JSON or packet shape.
 pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
   match parse_packet_object(raw) {
     Some(packet) =>
@@ -377,6 +413,8 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
 }
 
 ///|
+/// Decodes and validates a server packet, returning structured errors instead
+/// of raising on malformed JSON or packet shape.
 pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
   match parse_packet_object(raw) {
     Some(packet) =>
@@ -1116,6 +1154,7 @@ fn error_packet_json(error : ProtocolError) -> Json {
 }
 
 ///|
+/// JSON error payload used inside `RemoteError` server packets.
 pub impl ToJson for ProtocolError with fn to_json(self) {
   let fields : Map[String, Json] = {
     "code": self.code.to_string().to_json(),

@@ -18,16 +18,19 @@ pub enum MoonbitTokenizer {
 }
 
 ///|
+/// Creates the MoonBit tokenizer.
 pub fn MoonbitTokenizer::new() -> MoonbitTokenizer {
   MoonbitTokenizer
 }
 
 ///|
+/// Initial MoonBit lexer mode stack.
 pub impl @syntax.LineTokenizer for MoonbitTokenizer with fn initial_state(_self) {
   TokenizerState("n")
 }
 
 ///|
+/// Tokenizes one MoonBit source line and resets to normal mode at line end.
 pub impl @syntax.LineTokenizer for MoonbitTokenizer with fn tokenize_line(
   _self,
   line_text,

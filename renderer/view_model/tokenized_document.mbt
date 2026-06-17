@@ -11,6 +11,7 @@ pub struct TokenizedDocument {
 }
 
 ///|
+/// Builds line buckets from a document snapshot and whole-document token list.
 pub fn TokenizedDocument::build(
   snapshot : @core.DocumentSnapshot,
   tokens : Array[@syntax.Token],
@@ -23,6 +24,7 @@ pub fn TokenizedDocument::build(
 }
 
 ///|
+/// Tokens intersecting a zero-based model line.
 pub fn TokenizedDocument::tokens_for_line(
   self : TokenizedDocument,
   line : Int,
@@ -48,6 +50,7 @@ pub struct FrameSource {
 }
 
 ///|
+/// Builds a frame source by bucketing decorations and semantic tokens per line.
 pub fn FrameSource::FrameSource(
   tokenized : TokenizedDocument,
   decoration_set : @decorations.DecorationSet,

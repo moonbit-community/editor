@@ -24,6 +24,7 @@ pub struct ScrollbarState {
 }
 
 ///|
+/// Creates scrollbar geometry state for one axis.
 pub fn ScrollbarState::new(
   arrow_size? : Double = 0.0,
   scrollbar_size~ : Double,
@@ -80,6 +81,7 @@ pub fn ScrollbarState::set_scroll_size(
 }
 
 ///|
+/// Sets the scroll position along this axis. Answers whether geometry changed.
 pub fn ScrollbarState::set_scroll_position(
   self : ScrollbarState,
   scroll_position : Double,
@@ -95,6 +97,7 @@ pub fn ScrollbarState::set_scroll_position(
 }
 
 ///|
+/// Current scroll position along this axis.
 pub fn ScrollbarState::scroll_position(self : ScrollbarState) -> Double {
   self.scroll_position
 }
@@ -118,11 +121,13 @@ pub fn ScrollbarState::rectangle_small_size(self : ScrollbarState) -> Double {
 }
 
 ///|
+/// Computed slider length in CSS pixels.
 pub fn ScrollbarState::slider_size(self : ScrollbarState) -> Double {
   self.computed_slider_size
 }
 
 ///|
+/// Computed slider offset inside the track.
 pub fn ScrollbarState::slider_position(self : ScrollbarState) -> Double {
   self.computed_slider_position
 }

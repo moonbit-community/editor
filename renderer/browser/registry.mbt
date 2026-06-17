@@ -8,6 +8,8 @@
 let tokenizer_registry : @syntax.TokenizerRegistry = @syntax.TokenizerRegistry::new()
 
 ///|
+/// Registers a tokenizer with the browser viewer's process-wide tokenization
+/// registry.
 pub fn register_tokenizer(
   language_id : String,
   tokenizer : &@syntax.LineTokenizer,

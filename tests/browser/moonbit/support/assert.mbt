@@ -1,4 +1,5 @@
 ///|
+/// Mutable result accumulator for MoonBit-authored browser tests.
 pub(all) struct BrowserTestContext {
   suite : String
   failures : Array[String]
@@ -6,11 +7,13 @@ pub(all) struct BrowserTestContext {
 }
 
 ///|
+/// Creates a browser test context for one suite.
 pub fn BrowserTestContext::new(suite : String) -> BrowserTestContext {
   { suite, failures: [], metrics: {} }
 }
 
 ///|
+/// Records a failed assertion message.
 pub fn BrowserTestContext::fail(
   self : BrowserTestContext,
   message : String,
@@ -19,6 +22,7 @@ pub fn BrowserTestContext::fail(
 }
 
 ///|
+/// Records `message` when `condition` is false.
 pub fn BrowserTestContext::assert_true(
   self : BrowserTestContext,
   condition : Bool,
@@ -30,6 +34,7 @@ pub fn BrowserTestContext::assert_true(
 }
 
 ///|
+/// Stores a JSON metric on the test report.
 pub fn BrowserTestContext::metric(
   self : BrowserTestContext,
   name : String,
@@ -39,6 +44,7 @@ pub fn BrowserTestContext::metric(
 }
 
 ///|
+/// Stores an integer metric.
 pub fn BrowserTestContext::metric_int(
   self : BrowserTestContext,
   name : String,
@@ -48,6 +54,7 @@ pub fn BrowserTestContext::metric_int(
 }
 
 ///|
+/// Stores a numeric metric.
 pub fn BrowserTestContext::metric_number(
   self : BrowserTestContext,
   name : String,
@@ -57,6 +64,7 @@ pub fn BrowserTestContext::metric_number(
 }
 
 ///|
+/// Stores a string metric.
 pub fn BrowserTestContext::metric_string(
   self : BrowserTestContext,
   name : String,
@@ -66,6 +74,7 @@ pub fn BrowserTestContext::metric_string(
 }
 
 ///|
+/// Serializes the suite result for the Playwright bridge.
 pub fn BrowserTestContext::to_json(self : BrowserTestContext) -> Json {
   {
     "suite": self.suite.to_json(),
@@ -76,6 +85,7 @@ pub fn BrowserTestContext::to_json(self : BrowserTestContext) -> Json {
 }
 
 ///|
+/// Emits the final suite result to the browser test reporter.
 pub fn BrowserTestContext::finish(self : BrowserTestContext) -> Unit {
   report_json(self.to_json().stringify())
 }

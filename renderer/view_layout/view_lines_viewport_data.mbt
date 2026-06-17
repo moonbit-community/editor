@@ -1,4 +1,6 @@
 ///|
+/// Line-renderer viewport data derived from the backend-neutral view model and
+/// layout state.
 pub(all) struct ViewportData {
   start_line_number : Int
   end_line_number : Int
@@ -12,6 +14,7 @@ pub(all) struct ViewportData {
 } derive(Eq, Debug)
 
 ///|
+/// Builds viewport data from a precomputed render frame.
 pub fn ViewportData::from_render_frame(
   frame : @view_model.RenderFrame,
   line_height~ : Int,
@@ -55,6 +58,7 @@ pub fn ViewportData::from_render_frame(
 }
 
 ///|
+/// Builds viewport data directly from a view model and layout window.
 pub fn ViewportData::from_view_model(
   view_model : @view_model.ViewModel,
   window : LineWindow,
@@ -117,6 +121,7 @@ pub fn ViewportData::from_view_model(
 }
 
 ///|
+/// Line-rendering data for a one-based line number inside this viewport.
 pub fn ViewportData::line_data(
   self : ViewportData,
   line_number : Int,
@@ -130,6 +135,7 @@ pub fn ViewportData::line_data(
 }
 
 ///|
+/// Line decorations for a one-based line number inside this viewport.
 pub fn ViewportData::decorations_for_line(
   self : ViewportData,
   line_number : Int,
@@ -142,6 +148,7 @@ pub fn ViewportData::decorations_for_line(
 }
 
 ///|
+/// Flattened decorations for every line in this viewport.
 pub fn ViewportData::decorations_in_viewport(
   self : ViewportData,
 ) -> Array[@view_line_renderer.LineDecoration] {

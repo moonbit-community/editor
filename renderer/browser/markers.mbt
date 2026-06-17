@@ -1,4 +1,6 @@
 ///|
+/// Monaco-style marker stored by owner and resource, derived from diagnostics
+/// but ready for marker-specific metadata.
 pub(all) struct Marker {
   owner : String
   resource : String
@@ -10,6 +12,7 @@ pub(all) struct Marker {
 } derive(Eq, Debug)
 
 ///|
+/// Converts a language diagnostic into a marker owned by a specific provider.
 pub fn Marker::from_diagnostic(
   owner : String,
   resource : @workspace.DocumentUri,
@@ -27,21 +30,25 @@ pub fn Marker::from_diagnostic(
 }
 
 ///|
+/// Converts marker data back to the shared diagnostic shape.
 pub fn Marker::to_diagnostic(self : Marker) -> @language.Diagnostic {
   { range: self.range, severity: self.severity, message: self.message }
 }
 
 ///|
+/// In-memory marker store keyed by owner/resource pairs.
 pub(all) struct MarkerService {
   entries : Array[Marker]
 }
 
 ///|
+/// Creates an empty marker store.
 pub fn MarkerService::new() -> MarkerService {
   { entries: [] }
 }
 
 ///|
+/// Replaces diagnostics for one owner/resource pair.
 pub fn MarkerService::set_diagnostics(
   self : MarkerService,
   owner : String,
@@ -56,6 +63,8 @@ pub fn MarkerService::set_diagnostics(
 }
 
 ///|
+/// Replaces markers for one owner/resource pair while retaining all other
+/// owners and resources.
 pub fn MarkerService::set_markers(
   self : MarkerService,
   owner : String,
@@ -72,6 +81,7 @@ pub fn MarkerService::set_markers(
 }
 
 ///|
+/// Clears markers for one owner/resource pair.
 pub fn MarkerService::remove_owner_resource(
   self : MarkerService,
   owner : String,
@@ -81,6 +91,7 @@ pub fn MarkerService::remove_owner_resource(
 }
 
 ///|
+/// Clears markers from every owner for one resource.
 pub fn MarkerService::clear_resource(
   self : MarkerService,
   resource : @workspace.DocumentUri,
@@ -92,6 +103,7 @@ pub fn MarkerService::clear_resource(
 }
 
 ///|
+/// Returns markers for one resource, optionally capped by `limit`.
 pub fn MarkerService::markers_for_resource(
   self : MarkerService,
   resource : @workspace.DocumentUri,
@@ -111,6 +123,7 @@ pub fn MarkerService::markers_for_resource(
 }
 
 ///|
+/// Returns resource markers in the shared diagnostic shape.
 pub fn MarkerService::diagnostics_for_resource(
   self : MarkerService,
   resource : @workspace.DocumentUri,
@@ -123,11 +136,13 @@ pub fn MarkerService::diagnostics_for_resource(
 }
 
 ///|
+/// Converts marker state into renderer decorations and hover lookups.
 pub(all) struct MarkerDecorationsService {
   markers : MarkerService
 }
 
 ///|
+/// Creates a decoration facade over the marker store.
 pub fn MarkerDecorationsService::new(
   markers : MarkerService,
 ) -> MarkerDecorationsService {
@@ -135,6 +150,7 @@ pub fn MarkerDecorationsService::new(
 }
 
 ///|
+/// Builds diagnostic decorations for one resource.
 pub fn MarkerDecorationsService::decorations_for_resource(
   self : MarkerDecorationsService,
   resource : @workspace.DocumentUri,
@@ -154,6 +170,7 @@ pub fn MarkerDecorationsService::decorations_for_resource(
 }
 
 ///|
+/// Returns markers intersecting a rendered range, optionally capped by `limit`.
 pub fn MarkerDecorationsService::markers_at(
   self : MarkerDecorationsService,
   resource : @workspace.DocumentUri,

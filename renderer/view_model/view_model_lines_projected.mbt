@@ -1,4 +1,6 @@
 ///|
+/// View-line implementation for projected model lines, used for wrapping and
+/// injected text.
 pub struct ViewModelLinesFromProjectedModel {
   base : ViewModelLinesFromModelAsIs
   projection : ModelLineProjection
@@ -6,6 +8,7 @@ pub struct ViewModelLinesFromProjectedModel {
 }
 
 ///|
+/// Builds projected view lines from an unwrapped base and line-break computer.
 pub fn ViewModelLinesFromProjectedModel::new(
   base : ViewModelLinesFromModelAsIs,
   computer : LineBreaksComputer,
@@ -18,6 +21,7 @@ pub fn ViewModelLinesFromProjectedModel::new(
 }
 
 ///|
+/// Number of visible projected view lines.
 pub fn ViewModelLinesFromProjectedModel::line_count(
   self : ViewModelLinesFromProjectedModel,
 ) -> Int {
@@ -25,6 +29,7 @@ pub fn ViewModelLinesFromProjectedModel::line_count(
 }
 
 ///|
+/// Text for one projected view line segment.
 pub fn ViewModelLinesFromProjectedModel::get_view_line_content(
   self : ViewModelLinesFromProjectedModel,
   line_number : Int,
@@ -37,6 +42,7 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_content(
 }
 
 ///|
+/// Minimum one-based column in a projected view line.
 pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(
   self : ViewModelLinesFromProjectedModel,
   line_number : Int,
@@ -45,6 +51,7 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(
 }
 
 ///|
+/// Maximum one-based column in a projected view line.
 pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(
   self : ViewModelLinesFromProjectedModel,
   line_number : Int,
@@ -53,6 +60,7 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(
 }
 
 ///|
+/// Maps a projected view line to its source model line.
 pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(
   self : ViewModelLinesFromProjectedModel,
   line_number : Int,
@@ -61,6 +69,7 @@ pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(
 }
 
 ///|
+/// Renders one projected view line segment.
 pub fn ViewModelLinesFromProjectedModel::render_line(
   self : ViewModelLinesFromProjectedModel,
   line_number : Int,
@@ -79,6 +88,7 @@ pub fn ViewModelLinesFromProjectedModel::render_line(
 }
 
 ///|
+/// Builds line-renderer input data for one projected view line.
 pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(
   self : ViewModelLinesFromProjectedModel,
   line_number : Int,
@@ -100,6 +110,7 @@ pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(
 }
 
 ///|
+/// Converts a model position to its projected view position.
 pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(
   self : ViewModelLinesFromProjectedModel,
   position : @core.Position,
@@ -108,6 +119,7 @@ pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(
 }
 
 ///|
+/// Converts a projected view position back to the nearest model position.
 pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(
   self : ViewModelLinesFromProjectedModel,
   position : @core.Position,
@@ -253,11 +265,13 @@ fn projected_injected_text_indices(
 }
 
 ///|
+/// Coordinate converter backed by a `ModelLineProjection`.
 pub struct ProjectedCoordinatesConverter {
   projection : ModelLineProjection
 }
 
 ///|
+/// Creates a coordinate converter from projected view lines.
 pub fn ProjectedCoordinatesConverter::new(
   lines : ViewModelLinesFromProjectedModel,
 ) -> ProjectedCoordinatesConverter {
@@ -265,6 +279,7 @@ pub fn ProjectedCoordinatesConverter::new(
 }
 
 ///|
+/// Converts model positions through the projection table.
 pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_to_view_position(
   self,
   position,
@@ -273,6 +288,7 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_po
 }
 
 ///|
+/// Converts view positions through the projection table.
 pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_position_to_model_position(
   self,
   position,
@@ -281,6 +297,7 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_pos
 }
 
 ///|
+/// Converts model ranges through the projection table.
 pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_range_to_view_range(
   self,
   range,
@@ -300,6 +317,7 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_ra
 }
 
 ///|
+/// Converts view ranges through the projection table.
 pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_range_to_model_range(
   self,
   range,

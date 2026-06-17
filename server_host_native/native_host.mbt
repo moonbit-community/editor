@@ -1,9 +1,11 @@
 ///|
+/// Native filesystem host for the reference remote server.
 pub struct NativeServerHost {
   priv poll_interval_ms : Int
 }
 
 ///|
+/// Native stdio transport for a spawned LSP process.
 pub struct NativeLspTransport {
   priv unavailable_message : String
   priv command : String
@@ -16,11 +18,13 @@ pub struct NativeLspTransport {
 }
 
 ///|
+/// Creates the native host with the default file-watch polling interval.
 pub fn NativeServerHost::NativeServerHost() -> NativeServerHost {
   { poll_interval_ms: 500 }
 }
 
 ///|
+/// Creates the native host with a clamped polling interval.
 pub fn NativeServerHost::with_poll_interval(
   poll_interval_ms : Int,
 ) -> NativeServerHost {
@@ -34,6 +38,8 @@ pub fn NativeServerHost::with_poll_interval(
 }
 
 ///|
+/// Creates an unattached LSP transport that reports unavailable until
+/// configured.
 pub fn NativeLspTransport::NativeLspTransport() -> NativeLspTransport {
   {
     unavailable_message: "Native LSP process host is not attached.",
@@ -48,6 +54,7 @@ pub fn NativeLspTransport::NativeLspTransport() -> NativeLspTransport {
 }
 
 ///|
+/// Creates an LSP transport that lazily spawns `command` with `args`.
 pub fn NativeLspTransport::configured(
   command : String,
   args : Array[String],
@@ -66,16 +73,20 @@ pub fn NativeLspTransport::configured(
 }
 
 ///|
+/// Returns the default native filesystem host as a server host trait object.
 pub fn native_server_host() -> &@server.ServerHost {
   NativeServerHost()
 }
 
 ///|
+/// Returns an unattached native LSP transport.
 pub fn native_lsp_transport() -> &@server.LspTransport {
   NativeLspTransport()
 }
 
 ///|
+/// Returns a configured native LSP transport for a command and working
+/// directory.
 pub fn native_lsp_transport_for_command(
   command : String,
   args : Array[String],
@@ -85,6 +96,7 @@ pub fn native_lsp_transport_for_command(
 }
 
 ///|
+/// Reads one validated text file under the workspace root.
 pub impl @server.ServerHost for NativeServerHost with fn read_text_file(
   self,
   root,
@@ -95,6 +107,7 @@ pub impl @server.ServerHost for NativeServerHost with fn read_text_file(
 }
 
 ///|
+/// Reads one validated directory level under the workspace root.
 pub impl @server.ServerHost for NativeServerHost with fn read_directory(
   self,
   root,
@@ -105,6 +118,8 @@ pub impl @server.ServerHost for NativeServerHost with fn read_directory(
 }
 
 ///|
+/// Watches one validated text file by polling and reporting changed/deleted
+/// events.
 pub impl @server.ServerHost for NativeServerHost with fn watch_text_file(
   self,
   root,
@@ -323,6 +338,8 @@ fn skip_workspace_entry(path~ : String, name~ : String) -> Bool {
 }
 
 ///|
+/// Starts the native reference server: static assets over HTTP and the remote
+/// workspace protocol over WebSocket.
 pub async fn run_native_editor_server(
   root : String,
   port? : Int = 5173,
@@ -579,6 +596,8 @@ impl @server.LspTransport for NativeLspTransport with fn subscribe(
 }
 
 ///|
+/// Frames a JSON-RPC message for LSP stdio. Content length is measured in UTF-8
+/// bytes, not MoonBit string code units.
 pub fn lsp_stdio_frame(message : String) -> String {
   "Content-Length: " +
   @utf8.encode(message).length().to_string() +
@@ -587,6 +606,7 @@ pub fn lsp_stdio_frame(message : String) -> String {
 }
 
 ///|
+/// Parses a case-insensitive LSP `Content-Length` header.
 pub fn lsp_content_length_header(line : String) -> Int? {
   let trimmed = line.trim(char_set="\r\n ")
   let prefix = "content-length:"

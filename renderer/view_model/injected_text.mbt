@@ -1,4 +1,6 @@
 ///|
+/// Text inserted into a rendered line without existing in the source document,
+/// currently used for inlay hints.
 pub(all) struct InjectedText {
   position : @core.Position
   text : String
@@ -7,6 +9,7 @@ pub(all) struct InjectedText {
 } derive(Eq, Debug)
 
 ///|
+/// Builds injected text at a model position.
 pub fn InjectedText::InjectedText(
   position : @core.Position,
   text : String,
@@ -17,6 +20,7 @@ pub fn InjectedText::InjectedText(
 }
 
 ///|
+/// Converts a language inlay hint to injected renderer text.
 pub fn InjectedText::from_inlay_hint(
   hint : @language.InlayHint,
   source_index : Int,
@@ -30,6 +34,8 @@ pub fn InjectedText::from_inlay_hint(
 }
 
 ///|
+/// Converts all non-empty inlay hints into injected text while preserving source
+/// indices for hover lookup.
 pub fn injected_text_from_inlay_hints(
   hints : Array[@language.InlayHint],
 ) -> Array[InjectedText] {
@@ -66,6 +72,7 @@ fn inlay_hint_class_name(hint : @language.InlayHint) -> String {
 }
 
 ///|
+/// Segment kind inside a projected line: source text or injected text.
 pub(all) enum ProjectedLinePartKind {
   SourceSegment(model_start~ : Int, model_end~ : Int)
   InjectedSegment(
@@ -76,6 +83,7 @@ pub(all) enum ProjectedLinePartKind {
 } derive(Eq, Debug)
 
 ///|
+/// Half-open projected text segment with its source/injected identity.
 pub(all) struct ProjectedLinePart {
   start : Int
   end : Int
@@ -83,6 +91,8 @@ pub(all) struct ProjectedLinePart {
 } derive(Eq, Debug)
 
 ///|
+/// One model line after injected text has been projected into display text,
+/// with column maps in both directions.
 pub(all) struct ProjectedTextLine {
   text : String
   model_line_length : Int
@@ -93,11 +103,13 @@ pub(all) struct ProjectedTextLine {
 } derive(Eq, Debug)
 
 ///|
+/// Projection for a line with no injected text.
 pub fn ProjectedTextLine::identity(line_text : String) -> ProjectedTextLine {
   ProjectedTextLine::from_injected_text(line_text, [])
 }
 
 ///|
+/// Builds projected text and column maps for one model line plus injected text.
 pub fn ProjectedTextLine::from_injected_text(
   line_text : String,
   injected_text : Array[InjectedText],
@@ -156,6 +168,7 @@ pub fn ProjectedTextLine::from_injected_text(
 }
 
 ///|
+/// Maps a model column to a projected display column.
 pub fn ProjectedTextLine::model_column_to_projected_column(
   self : ProjectedTextLine,
   model_column : Int,
@@ -168,6 +181,7 @@ pub fn ProjectedTextLine::model_column_to_projected_column(
 }
 
 ///|
+/// Maps a projected display column back to a model column.
 pub fn ProjectedTextLine::projected_column_to_model_column(
   self : ProjectedTextLine,
   projected_column : Int,
@@ -180,6 +194,8 @@ pub fn ProjectedTextLine::projected_column_to_model_column(
 }
 
 ///|
+/// Returns the inlay-hint source index at a projected display column, or `-1`
+/// for source text.
 pub fn ProjectedTextLine::injected_text_index_at_projected_column(
   self : ProjectedTextLine,
   projected_column : Int,

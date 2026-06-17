@@ -1,9 +1,11 @@
 ///|
+/// Disposable subscription to server-initiated LSP messages.
 pub struct LspSubscription {
   priv dispose : () -> Unit
 }
 
 ///|
+/// Builds an LSP message subscription from a transport disposer.
 pub fn LspSubscription::LspSubscription(
   dispose : () -> Unit,
 ) -> LspSubscription {
@@ -11,11 +13,14 @@ pub fn LspSubscription::LspSubscription(
 }
 
 ///|
+/// Unsubscribes from server-initiated LSP messages.
 pub fn LspSubscription::dispose(self : LspSubscription) -> Unit {
   (self.dispose)()
 }
 
 ///|
+/// JSON-RPC transport used by `LspClient`; native code owns stdio/process
+/// details while the client owns request shape and response parsing.
 pub(open) trait LspTransport {
   async fn request(Self, String) -> String
   async fn notify(Self, String) -> Unit
@@ -23,6 +28,7 @@ pub(open) trait LspTransport {
 }
 
 ///|
+/// Lifecycle state for the LSP client connection.
 pub(all) enum LspClientState {
   Idle
   Initializing
@@ -56,6 +62,8 @@ fn LspPendingRequest::is_document_request(self : LspPendingRequest) -> Bool {
 }
 
 ///|
+/// Stateful LSP client with cached capabilities, active document identity, and
+/// pending request freshness tracking.
 pub struct LspClient {
   priv transport : &LspTransport
   priv root_uri : String
@@ -74,6 +82,7 @@ pub struct LspClient {
 }
 
 ///|
+/// Adapter that exposes one `LspClient` through the language provider traits.
 pub(all) struct LspLanguageProvider {
   priv client : LspClient
 }
@@ -98,11 +107,13 @@ fn default_lsp_capabilities() -> LspServerCapabilities {
 }
 
 ///|
+/// Creates an LSP client without a root URI.
 pub fn LspClient::LspClient(transport : &LspTransport) -> LspClient {
   LspClient::with_root_uri(transport, "")
 }
 
 ///|
+/// Creates an LSP client with an explicit root URI for initialization.
 pub fn LspClient::with_root_uri(
   transport : &LspTransport,
   root_uri : String,
@@ -126,11 +137,13 @@ pub fn LspClient::with_root_uri(
 }
 
 ///|
+/// Returns the language-provider adapter for this client.
 pub fn LspClient::language_provider(self : LspClient) -> LspLanguageProvider {
   { client: self }
 }
 
 ///|
+/// Views the adapter as a hover provider.
 pub fn LspLanguageProvider::as_hover_provider(
   self : LspLanguageProvider,
 ) -> &@language.HoverProvider {
@@ -138,6 +151,7 @@ pub fn LspLanguageProvider::as_hover_provider(
 }
 
 ///|
+/// Views the adapter as a definition provider.
 pub fn LspLanguageProvider::as_definition_provider(
   self : LspLanguageProvider,
 ) -> &@language.DefinitionProvider {
@@ -145,6 +159,7 @@ pub fn LspLanguageProvider::as_definition_provider(
 }
 
 ///|
+/// Views the adapter as a references provider.
 pub fn LspLanguageProvider::as_references_provider(
   self : LspLanguageProvider,
 ) -> &@language.ReferencesProvider {
@@ -152,6 +167,7 @@ pub fn LspLanguageProvider::as_references_provider(
 }
 
 ///|
+/// Views the adapter as a diagnostics provider.
 pub fn LspLanguageProvider::as_diagnostics_provider(
   self : LspLanguageProvider,
 ) -> &@language.DiagnosticsProvider {
@@ -159,6 +175,7 @@ pub fn LspLanguageProvider::as_diagnostics_provider(
 }
 
 ///|
+/// Views the adapter as a document-symbol provider.
 pub fn LspLanguageProvider::as_document_symbol_provider(
   self : LspLanguageProvider,
 ) -> &@language.DocumentSymbolProvider {
@@ -166,6 +183,7 @@ pub fn LspLanguageProvider::as_document_symbol_provider(
 }
 
 ///|
+/// Views the adapter as a semantic-token provider.
 pub fn LspLanguageProvider::as_semantic_tokens_provider(
   self : LspLanguageProvider,
 ) -> &@language.SemanticTokensProvider {
@@ -173,31 +191,37 @@ pub fn LspLanguageProvider::as_semantic_tokens_provider(
 }
 
 ///|
+/// Whether initialization completed successfully.
 pub fn LspClient::is_initialized(self : LspClient) -> Bool {
   self.state.val == Ready
 }
 
 ///|
+/// Current lifecycle state.
 pub fn LspClient::state(self : LspClient) -> LspClientState {
   self.state.val
 }
 
 ///|
+/// Number of outstanding JSON-RPC requests tracked for freshness cleanup.
 pub fn LspClient::pending_request_count(self : LspClient) -> Int {
   self.pending_requests.length()
 }
 
 ///|
+/// Last parse, transport, or response error observed by the client.
 pub fn LspClient::last_error(self : LspClient) -> String {
   self.last_error.val
 }
 
 ///|
+/// Clears the recorded last error.
 pub fn LspClient::clear_last_error(self : LspClient) -> Unit {
   self.last_error.val = ""
 }
 
 ///|
+/// Installs a listener notified when diagnostics arrive for a URI/version.
 pub fn LspClient::set_diagnostics_listener(
   self : LspClient,
   listener : ((String, Int) -> Unit)?,
@@ -206,6 +230,8 @@ pub fn LspClient::set_diagnostics_listener(
 }
 
 ///|
+/// Ensures the LSP server is initialized and synchronized to `document`, then
+/// returns cached document-level feature data available without extra requests.
 pub async fn LspClient::sync_document(
   self : LspClient,
   document : @workspace.SourceDocument,
@@ -225,6 +251,8 @@ pub async fn LspClient::sync_document(
 }
 
 ///|
+/// Requests hover data at a UTF-16 document offset when the server advertises
+/// hover support.
 pub async fn LspClient::hover_at(
   self : LspClient,
   document : @workspace.SourceDocument,
@@ -253,6 +281,7 @@ pub async fn LspClient::hover_at(
 }
 
 ///|
+/// Requests definition data at a UTF-16 document offset when supported.
 pub async fn LspClient::definition_at(
   self : LspClient,
   document : @workspace.SourceDocument,
@@ -282,6 +311,7 @@ pub async fn LspClient::definition_at(
 }
 
 ///|
+/// Requests references at a UTF-16 document offset when supported.
 pub async fn LspClient::references_at(
   self : LspClient,
   document : @workspace.SourceDocument,
@@ -311,6 +341,7 @@ pub async fn LspClient::references_at(
 }
 
 ///|
+/// Requests document symbols when supported.
 pub async fn LspClient::document_symbols(
   self : LspClient,
   document : @workspace.SourceDocument,
@@ -339,6 +370,7 @@ pub async fn LspClient::document_symbols(
 }
 
 ///|
+/// Requests full-document semantic tokens when supported.
 pub async fn LspClient::semantic_tokens_for_document(
   self : LspClient,
   document : @workspace.SourceDocument,
@@ -372,6 +404,7 @@ pub async fn LspClient::semantic_tokens_for_document(
 }
 
 ///|
+/// Sends shutdown/exit and clears the server-message subscription.
 pub async fn LspClient::shutdown(self : LspClient) -> Unit {
   if self.state.val == Stopped || self.state.val == Stopping {
     return
@@ -394,6 +427,7 @@ pub async fn LspClient::shutdown(self : LspClient) -> Unit {
 }
 
 ///|
+/// Builds an initialize JSON-RPC request without a root URI.
 pub fn lsp_initialize_request(id : Int) -> String {
   lsp_initialize_request_with_root(id, Json::null())
 }
@@ -485,6 +519,7 @@ fn semantic_token_type_capability() -> Json {
 }
 
 ///|
+/// Builds a hover JSON-RPC request at a core UTF-16 offset.
 pub fn lsp_hover_request(
   id : Int,
   document : @workspace.SourceDocument,
@@ -503,6 +538,7 @@ pub fn lsp_hover_request(
 }
 
 ///|
+/// Builds a definition JSON-RPC request at a core UTF-16 offset.
 pub fn lsp_definition_request(
   id : Int,
   document : @workspace.SourceDocument,
@@ -521,6 +557,7 @@ pub fn lsp_definition_request(
 }
 
 ///|
+/// Builds a references JSON-RPC request at a core UTF-16 offset.
 pub fn lsp_references_request(
   id : Int,
   document : @workspace.SourceDocument,
@@ -540,6 +577,7 @@ pub fn lsp_references_request(
 }
 
 ///|
+/// Builds a document-symbol JSON-RPC request.
 pub fn lsp_document_symbol_request(
   id : Int,
   document : @workspace.SourceDocument,
@@ -552,6 +590,7 @@ pub fn lsp_document_symbol_request(
 }
 
 ///|
+/// Builds a full semantic-token JSON-RPC request.
 pub fn lsp_semantic_tokens_full_request(
   id : Int,
   document : @workspace.SourceDocument,

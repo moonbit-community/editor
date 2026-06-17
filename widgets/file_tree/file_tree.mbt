@@ -21,6 +21,8 @@ priv enum FileTreeMsg {
 }
 
 ///|
+/// Creates a file tree over a workspace provider and reports file-open
+/// intents to the host.
 pub fn FileTree::FileTree(
   provider : &@workspace.WorkspaceTreeProvider,
   on_open~ : (@workspace.DocumentUri) -> Unit,

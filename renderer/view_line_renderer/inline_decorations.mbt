@@ -1,4 +1,5 @@
 ///|
+/// Inline decoration over a line-local offset range.
 pub(all) struct InlineDecoration {
   range : @core.Range
   class_name : String
@@ -6,6 +7,7 @@ pub(all) struct InlineDecoration {
 } derive(Eq, Debug)
 
 ///|
+/// Builds an inline decoration.
 pub fn InlineDecoration::InlineDecoration(
   range : @core.Range,
   class_name : String,

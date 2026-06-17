@@ -20,6 +20,7 @@ pub(all) struct WorkspaceStat {
 } derive(Debug)
 
 ///|
+/// Result of resolving a workspace tree node through a tree provider.
 pub(all) enum WorkspaceResolveResult {
   WorkspaceResolved(WorkspaceStat)
   WorkspaceResolveError(FileSystemProviderError)
@@ -48,6 +49,7 @@ pub(open) trait DocumentSource {
 }
 
 ///|
+/// Wire label for workspace tree entry kinds.
 pub fn WorkspaceEntryKind::to_string(self : WorkspaceEntryKind) -> String {
   match self {
     File => "file"
@@ -56,6 +58,7 @@ pub fn WorkspaceEntryKind::to_string(self : WorkspaceEntryKind) -> String {
 }
 
 ///|
+/// Decodes a workspace tree entry kind from its wire label.
 pub fn WorkspaceEntryKind::from_string(kind : String) -> WorkspaceEntryKind? {
   match kind {
     "file" => Some(File)

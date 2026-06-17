@@ -106,6 +106,7 @@ fn workbench_viewer() -> @browser.Viewer {
 }
 
 ///|
+/// Browser entrypoint for the reference workbench.
 pub fn start_app() -> Unit {
   @dom.install_host_capabilities()
   let services = workbench_services()
@@ -129,6 +130,8 @@ fn register_tokenizers() -> Unit {
 }
 
 ///|
+/// Mounts the Rabbita workbench shell and attaches the viewer island after the
+/// first shell paint.
 pub fn mount_app() -> Unit {
   let (_, cell) = @rabbita.cell_with_emit(
     model=initial_workbench_model(),

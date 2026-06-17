@@ -1,4 +1,5 @@
 ///|
+/// One view-line segment produced from a model line after projection/wrapping.
 pub(all) struct ModelLineProjectionSegment {
   model_line_number : Int
   start_offset : Int
@@ -10,6 +11,7 @@ pub(all) struct ModelLineProjectionSegment {
 } derive(Eq, Debug)
 
 ///|
+/// Projection data for one model line.
 pub(all) struct ModelLineProjectionData {
   model_line_number : Int
   line_length : Int
@@ -18,6 +20,7 @@ pub(all) struct ModelLineProjectionData {
 } derive(Eq, Debug)
 
 ///|
+/// Builds projection data for one model line.
 pub fn ModelLineProjectionData::ModelLineProjectionData(
   model_line_number : Int,
   line_length : Int,
@@ -28,6 +31,7 @@ pub fn ModelLineProjectionData::ModelLineProjectionData(
 }
 
 ///|
+/// Number of view-line segments for this model line.
 pub fn ModelLineProjectionData::view_line_count(
   self : ModelLineProjectionData,
 ) -> Int {
@@ -35,6 +39,7 @@ pub fn ModelLineProjectionData::view_line_count(
 }
 
 ///|
+/// Segment at a zero-based view-line index, clamped into range.
 pub fn ModelLineProjectionData::segment_at_view_line_index(
   self : ModelLineProjectionData,
   index : Int,
@@ -44,6 +49,7 @@ pub fn ModelLineProjectionData::segment_at_view_line_index(
 }
 
 ///|
+/// View-line index containing the given model column.
 pub fn ModelLineProjectionData::view_line_index_for_model_column(
   self : ModelLineProjectionData,
   column : Int,
@@ -56,6 +62,7 @@ pub fn ModelLineProjectionData::view_line_index_for_model_column(
 }
 
 ///|
+/// View-line index containing the given projected display column.
 pub fn ModelLineProjectionData::view_line_index_for_projected_column(
   self : ModelLineProjectionData,
   column : Int,

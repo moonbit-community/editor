@@ -1,10 +1,13 @@
 ///|
+/// One-based hidden line interval derived from a folded range. The folded start
+/// line remains visible, so hidden ranges begin after it.
 pub(all) struct HiddenRange {
   start_line_number : Int
   end_line_number : Int
 } derive(Eq, Debug)
 
 ///|
+/// Builds a hidden line interval.
 pub fn HiddenRange::HiddenRange(
   start_line_number : Int,
   end_line_number : Int,
@@ -13,12 +16,14 @@ pub fn HiddenRange::HiddenRange(
 }
 
 ///|
+/// Normalized folding state used to filter visible model lines.
 pub struct FoldingModel {
   folding_ranges : Array[@language.FoldingRange]
   hidden_ranges : Array[HiddenRange]
 } derive(Debug)
 
 ///|
+/// Builds folding state from folded ranges and the source line count.
 pub fn FoldingModel::from_folded_ranges(
   ranges : Array[@language.FoldingRange],
   line_count : Int,
@@ -31,6 +36,7 @@ pub fn FoldingModel::from_folded_ranges(
 }
 
 ///|
+/// Normalized folded ranges.
 pub fn FoldingModel::folding_ranges(
   self : FoldingModel,
 ) -> Array[@language.FoldingRange] {
@@ -38,11 +44,13 @@ pub fn FoldingModel::folding_ranges(
 }
 
 ///|
+/// Merged one-based hidden line intervals.
 pub fn FoldingModel::hidden_ranges(self : FoldingModel) -> Array[HiddenRange] {
   self.hidden_ranges
 }
 
 ///|
+/// Whether a one-based model line is hidden.
 pub fn FoldingModel::is_line_hidden(
   self : FoldingModel,
   line_number : Int,
@@ -57,6 +65,7 @@ pub fn FoldingModel::is_line_hidden(
 }
 
 ///|
+/// Visible line count after hiding folded ranges.
 pub fn FoldingModel::visible_line_count(
   self : FoldingModel,
   line_count : Int,

@@ -25,6 +25,7 @@ pub(all) enum HighlightTag {
 } derive(Eq, Debug)
 
 ///|
+/// Whole-document highlight token in document-offset coordinates.
 pub(all) struct Token {
   range : @core.Range
   tag : HighlightTag
@@ -40,6 +41,7 @@ pub fn highlight(doc : @core.DocumentSnapshot) -> Array[Token] {
 }
 
 ///|
+/// CSS class emitted for this token tag by browser renderers.
 pub fn HighlightTag::css_class(self : HighlightTag) -> String {
   match self {
     Keyword => "tok-keyword"

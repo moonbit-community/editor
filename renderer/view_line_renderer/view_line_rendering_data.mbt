@@ -1,4 +1,5 @@
 ///|
+/// View-model line data before it is expanded into full render input.
 pub(all) struct ViewLineRenderingData {
   min_column : Int
   max_column : Int

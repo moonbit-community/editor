@@ -1,14 +1,20 @@
 ///|
+/// Provider-minted absolute document URI. The viewer treats the string as an
+/// opaque identity except for scheme and display-name extraction.
 pub(all) struct DocumentUri {
   value : String
 } derive(Eq, Debug)
 
 ///|
+/// Root-relative source path accepted from UI or protocol input after
+/// normalization rejects absolute paths, parent traversal, and NUL bytes.
 pub(all) struct SourcePath {
   value : String
 } derive(Eq, Debug)
 
 ///|
+/// Versioned readonly document passed from workspace providers into renderer
+/// and language-feature packages.
 pub(all) struct SourceDocument {
   uri : DocumentUri
   display_name : String
@@ -19,6 +25,7 @@ pub(all) struct SourceDocument {
 } derive(Debug)
 
 ///|
+/// Validation failures for user-facing source paths and document URIs.
 pub(all) enum SourceError {
   MissingPath
   InvalidPath
@@ -26,6 +33,7 @@ pub(all) enum SourceError {
 } derive(Eq, Debug)
 
 ///|
+/// Stable protocol/debug label for source validation failures.
 pub fn SourceError::to_string(self : SourceError) -> String {
   match self {
     MissingPath => "MissingPath"
@@ -35,18 +43,22 @@ pub fn SourceError::to_string(self : SourceError) -> String {
 }
 
 ///|
+/// Result wrapper used instead of raising while parsing document URIs.
 pub(all) enum DocumentUriResult {
   ParsedDocumentUri(DocumentUri)
   DocumentUriError(SourceError)
 } derive(Eq, Debug)
 
 ///|
+/// Result wrapper used instead of raising while normalizing source paths.
 pub(all) enum SourcePathResult {
   ParsedSourcePath(SourcePath)
   SourcePathError(SourceError)
 } derive(Eq, Debug)
 
 ///|
+/// Parses an absolute `scheme://...` document URI and leaves the provider-owned
+/// authority/path text otherwise untouched.
 pub fn DocumentUri::parse(value : String) -> DocumentUriResult {
   match value.find("://") {
     Some(index) =>
@@ -60,6 +72,8 @@ pub fn DocumentUri::parse(value : String) -> DocumentUriResult {
 }
 
 ///|
+/// Creates an in-memory URI for demos, tests, or embedders without filesystem
+/// identity.
 pub fn DocumentUri::memory(name : String) -> DocumentUri {
   let name = if name == "" {
     "document"
@@ -70,11 +84,13 @@ pub fn DocumentUri::memory(name : String) -> DocumentUri {
 }
 
 ///|
+/// Returns the provider-owned URI string.
 pub fn DocumentUri::to_string(self : DocumentUri) -> String {
   self.value
 }
 
 ///|
+/// URI scheme before `://`, or an empty string for malformed values.
 pub fn DocumentUri::scheme(self : DocumentUri) -> String {
   match self.value.find("://") {
     Some(index) => self.value[0:index].to_owned()
@@ -83,6 +99,7 @@ pub fn DocumentUri::scheme(self : DocumentUri) -> String {
 }
 
 ///|
+/// Path part after the authority, without a leading slash.
 pub fn DocumentUri::path(self : DocumentUri) -> String {
   match self.value.find("://") {
     Some(index) => {
@@ -97,6 +114,8 @@ pub fn DocumentUri::path(self : DocumentUri) -> String {
 }
 
 ///|
+/// Best-effort file name for labels; falls back to the full URI when no path is
+/// present.
 pub fn DocumentUri::display_name(self : DocumentUri) -> String {
   let path = self.path()
   if path == "" {
@@ -115,6 +134,7 @@ pub fn DocumentUri::display_name(self : DocumentUri) -> String {
 }
 
 ///|
+/// Normalizes a user-provided workspace path into a safe root-relative path.
 pub fn SourcePath::normalize_root_relative_path(
   raw_path : String,
 ) -> SourcePathResult {
@@ -153,21 +173,27 @@ pub fn SourcePath::normalize_root_relative_path(
 }
 
 ///|
+/// Returns the normalized root-relative path string.
 pub fn SourcePath::to_string(self : SourcePath) -> String {
   self.value
 }
 
 ///|
+/// Display label for a source path; currently the normalized path itself.
 pub fn SourcePath::display_name(self : SourcePath) -> String {
   self.value
 }
 
 ///|
+/// Converts a normalized source path to the local file URI convention used by
+/// simple embedders.
 pub fn SourcePath::file_uri(self : SourcePath) -> DocumentUri {
   { value: "file://local/" + self.value }
 }
 
 ///|
+/// Builds a document and normalizes empty display name, empty language id, and
+/// non-positive version inputs.
 pub fn SourceDocument::SourceDocument(
   uri : DocumentUri,
   display_name : String,
@@ -191,6 +217,8 @@ pub fn SourceDocument::SourceDocument(
 }
 
 ///|
+/// Converts workspace document identity into the core snapshot consumed by
+/// renderer and language providers.
 pub fn SourceDocument::snapshot(
   self : SourceDocument,
 ) -> @core.DocumentSnapshot {
@@ -202,6 +230,7 @@ pub fn SourceDocument::snapshot(
 }
 
 ///|
+/// JSON shape emitted to browser harnesses and remote protocol adapters.
 pub impl ToJson for SourceDocument with fn to_json(self) {
   {
     "uri": self.uri.to_string().to_json(),
@@ -214,6 +243,8 @@ pub impl ToJson for SourceDocument with fn to_json(self) {
 }
 
 ///|
+/// Maps common source extensions to the language ids used by tokenizer and
+/// feature registries.
 pub fn infer_language_id(path_or_name : String) -> String {
   if path_or_name.has_suffix(".mbt") || path_or_name.has_suffix(".mbt.md") {
     "moonbit"

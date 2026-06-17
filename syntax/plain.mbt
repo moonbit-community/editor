@@ -8,16 +8,19 @@ pub enum PlainTokenizer {
 }
 
 ///|
+/// Creates the stateless fallback tokenizer.
 pub fn PlainTokenizer::new() -> PlainTokenizer {
   PlainTokenizer
 }
 
 ///|
+/// Entry state for the stateless fallback tokenizer.
 pub impl LineTokenizer for PlainTokenizer with fn initial_state(_self) {
   TokenizerState("")
 }
 
 ///|
+/// Tokenizes one line with simple MoonBit-ish lexical classes.
 pub impl LineTokenizer for PlainTokenizer with fn tokenize_line(
   _self,
   line_text,

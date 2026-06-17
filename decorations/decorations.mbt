@@ -1,4 +1,6 @@
 ///|
+/// Semantic reason for a renderer decoration. Browser code maps these kinds to
+/// stable CSS classes and feature ownership.
 pub(all) enum DecorationKind {
   Diagnostic
   SearchMatch
@@ -9,6 +11,8 @@ pub(all) enum DecorationKind {
 } derive(Eq, Debug)
 
 ///|
+/// One half-open range decoration with the CSS class and optional message the
+/// renderer should attach to matching line spans.
 pub(all) struct Decoration {
   range : @core.Range
   kind : DecorationKind
@@ -17,11 +21,14 @@ pub(all) struct Decoration {
 } derive(Debug)
 
 ///|
+/// Immutable-style decoration collection queried by viewport and hover code.
 pub(all) struct DecorationSet {
   items : Array[Decoration]
 } derive(Debug)
 
 ///|
+/// Builds a decoration from an explicit range, kind, CSS class, and optional
+/// message.
 pub fn Decoration::Decoration(
   range : @core.Range,
   kind : DecorationKind,
@@ -32,16 +39,19 @@ pub fn Decoration::Decoration(
 }
 
 ///|
+/// Empty decoration collection.
 pub fn DecorationSet::empty() -> DecorationSet {
   { items: [] }
 }
 
 ///|
+/// Wraps an array of decorations as a queryable set.
 pub fn DecorationSet::from_array(items : Array[Decoration]) -> DecorationSet {
   { items, }
 }
 
 ///|
+/// Decorations whose ranges intersect `range`.
 pub fn DecorationSet::between(
   self : DecorationSet,
   range : @core.Range,
@@ -56,6 +66,7 @@ pub fn DecorationSet::between(
 }
 
 ///|
+/// Decorations whose ranges contain `offset`.
 pub fn DecorationSet::at_offset(
   self : DecorationSet,
   offset : Int,

@@ -1,10 +1,12 @@
 ///|
+/// Compatibility viewport window used by the legacy render model.
 pub(all) struct Viewport {
   start_line : Int
   end_line : Int
 } derive(Debug)
 
 ///|
+/// Compatibility rendered span with owned text.
 pub(all) struct RenderSpan {
   start : Int
   end : Int
@@ -13,6 +15,7 @@ pub(all) struct RenderSpan {
 } derive(Debug)
 
 ///|
+/// Compatibility rendered line with owned text spans.
 pub(all) struct RenderLine {
   line_number : Int
   offset : Int
@@ -21,6 +24,7 @@ pub(all) struct RenderLine {
 } derive(Debug)
 
 ///|
+/// Compatibility render model kept separate from the active `renderer` path.
 pub(all) struct RenderModel {
   version : Int
   language_id : String
@@ -32,6 +36,7 @@ pub(all) struct RenderModel {
 } derive(Debug)
 
 ///|
+/// Builds the legacy viewport render model.
 pub fn render(
   doc : @core.DocumentSnapshot,
   viewport : Viewport,
@@ -70,6 +75,7 @@ pub fn render(
 }
 
 ///|
+/// JSON shape used by older tests and compatibility callers.
 pub impl ToJson for RenderModel with fn to_json(self) {
   {
     "version": self.version.to_json(),

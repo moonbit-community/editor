@@ -1,4 +1,6 @@
 ///|
+/// Host-neutral error codes used by file providers and remote workspace
+/// responses.
 pub(all) enum FileSystemProviderErrorCode {
   FileNotFound
   FileExists
@@ -11,6 +13,7 @@ pub(all) enum FileSystemProviderErrorCode {
 } derive(Eq, Debug)
 
 ///|
+/// File-provider failure with optional URI context.
 pub(all) struct FileSystemProviderError {
   code : FileSystemProviderErrorCode
   message : String
@@ -18,6 +21,7 @@ pub(all) struct FileSystemProviderError {
 } derive(Debug)
 
 ///|
+/// Raw file text plus metadata needed to construct a `SourceDocument`.
 pub(all) struct FileContent {
   text : String
   display_name : String
@@ -26,12 +30,16 @@ pub(all) struct FileContent {
 } derive(Debug)
 
 ///|
+/// Provider read result without exceptions, so browser and native providers can
+/// share the same contract.
 pub(all) enum FileReadResult {
   FileReadOk(FileContent)
   FileReadError(FileSystemProviderError)
 } derive(Debug)
 
 ///|
+/// File-watch event kind. Providers may coalesce events before delivering
+/// them.
 pub(all) enum FileChangeType {
   Created
   Changed
@@ -39,23 +47,29 @@ pub(all) enum FileChangeType {
 } derive(Eq, Debug)
 
 ///|
+/// One changed document URI reported by a file watch.
 pub(all) struct FileChange {
   uri : DocumentUri
   change_type : FileChangeType
 } derive(Debug)
 
 ///|
+/// Watch behavior requested from a provider.
 pub(all) struct WatchOptions {
   recursive : Bool
   excludes : Array[String]
 } derive(Debug)
 
 ///|
+/// Disposable watch handle. Calling `dispose` must stop future callbacks for
+/// that watch when the provider can do so.
 pub(all) struct FileWatch {
   dispose : () -> Unit
 }
 
 ///|
+/// Host filesystem abstraction for readonly document loading and file-change
+/// notifications.
 pub(open) trait FileSystemProvider {
   fn scheme(Self) -> String
   async fn read_file(Self, DocumentUri) -> FileReadResult
@@ -63,12 +77,14 @@ pub(open) trait FileSystemProvider {
 }
 
 ///|
+/// Document-level load result derived from file-provider reads.
 pub(all) enum SourceDocumentLoadResult {
   SourceDocumentLoaded(SourceDocument)
   SourceDocumentLoadError(FileSystemProviderError)
 } derive(Debug)
 
 ///|
+/// Builds file content while allowing providers to omit derived metadata.
 pub fn FileContent::FileContent(
   text : String,
   display_name? : String = "",
@@ -79,6 +95,8 @@ pub fn FileContent::FileContent(
 }
 
 ///|
+/// Builds a provider error, defaulting an empty message to the stable code
+/// label.
 pub fn FileSystemProviderError::FileSystemProviderError(
   code : FileSystemProviderErrorCode,
   message : String,
@@ -89,16 +107,20 @@ pub fn FileSystemProviderError::FileSystemProviderError(
 }
 
 ///|
+/// Default non-recursive watch with no excludes.
 pub fn WatchOptions::default() -> WatchOptions {
   { recursive: false, excludes: [] }
 }
 
 ///|
+/// Stops the watch through the provider-supplied disposer.
 pub fn FileWatch::dispose(self : FileWatch) -> Unit {
   (self.dispose)()
 }
 
 ///|
+/// Reads and converts a file-provider result into a versioned
+/// `SourceDocument`, failing closed when the URI scheme does not match.
 pub async fn read_source_document(
   provider : &FileSystemProvider,
   uri : DocumentUri,
@@ -120,6 +142,7 @@ pub async fn read_source_document(
 }
 
 ///|
+/// Starts a default file watch only when the provider owns the URI scheme.
 pub fn watch_file(
   provider : &FileSystemProvider,
   uri : DocumentUri,
@@ -133,6 +156,8 @@ pub fn watch_file(
 }
 
 ///|
+/// Derives a `SourceDocument` from provider content, filling display name,
+/// language id, and revision when they are absent.
 pub fn SourceDocument::from_file_content(
   uri : DocumentUri,
   content : FileContent,
@@ -156,6 +181,7 @@ pub fn SourceDocument::from_file_content(
 }
 
 ///|
+/// JSON shape consumed by browser harnesses and remote protocol adapters.
 pub impl ToJson for SourceDocumentLoadResult with fn to_json(self) {
   match self {
     SourceDocumentLoaded(document) =>
@@ -165,6 +191,8 @@ pub impl ToJson for SourceDocumentLoadResult with fn to_json(self) {
 }
 
 ///|
+/// JSON shape for provider errors, including HTTP-like status for the native
+/// reference server.
 pub impl ToJson for FileSystemProviderError with fn to_json(self) {
   let fields : Map[String, Json] = {
     "code": self.code.to_string().to_json(),
@@ -182,6 +210,8 @@ pub impl ToJson for FileSystemProviderError with fn to_json(self) {
 }
 
 ///|
+/// HTTP-like status used by the reference server when serializing provider
+/// failures.
 pub fn FileSystemProviderError::status(self : FileSystemProviderError) -> Int {
   match self.code {
     FileNotFound => 404
@@ -196,6 +226,7 @@ pub fn FileSystemProviderError::status(self : FileSystemProviderError) -> Int {
 }
 
 ///|
+/// Stable string label for wire format and JSON diagnostics.
 pub fn FileSystemProviderErrorCode::to_string(
   self : FileSystemProviderErrorCode,
 ) -> String {
@@ -212,6 +243,7 @@ pub fn FileSystemProviderErrorCode::to_string(
 }
 
 ///|
+/// Decodes both this package's labels and browser File System Access API names.
 pub fn FileSystemProviderErrorCode::from_string(
   code : String,
 ) -> FileSystemProviderErrorCode {
@@ -232,6 +264,7 @@ pub fn FileSystemProviderErrorCode::from_string(
 }
 
 ///|
+/// JSON shape for watch events.
 pub impl ToJson for FileChange with fn to_json(self) {
   {
     "uri": self.uri.to_string().to_json(),
@@ -240,6 +273,7 @@ pub impl ToJson for FileChange with fn to_json(self) {
 }
 
 ///|
+/// Lowercase watch-event label used in JSON payloads.
 pub fn FileChangeType::to_string(self : FileChangeType) -> String {
   match self {
     Created => "created"

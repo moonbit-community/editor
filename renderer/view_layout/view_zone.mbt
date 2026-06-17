@@ -7,6 +7,8 @@ pub(all) struct ViewZone {
 } derive(Eq, Debug)
 
 ///|
+/// View-zone geometry after it has been positioned relative to a rendered
+/// viewport.
 pub(all) struct ViewZoneViewportData {
   zone_index : Int
   anchor_line : Int

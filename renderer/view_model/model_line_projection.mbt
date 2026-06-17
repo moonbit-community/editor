@@ -1,4 +1,5 @@
 ///|
+/// Projection table from model lines to visible view-line segments.
 pub struct ModelLineProjection {
   projections : Array[ModelLineProjectionData]
   model_line_start_view_indices : Array[Int]
@@ -6,6 +7,7 @@ pub struct ModelLineProjection {
 }
 
 ///|
+/// Builds a full projection table from visible/unwrapped model lines.
 pub fn ModelLineProjection::build(
   lines : ViewModelLinesFromModelAsIs,
   computer : LineBreaksComputer,
@@ -41,11 +43,13 @@ pub fn ModelLineProjection::build(
 }
 
 ///|
+/// Total number of visible projected view lines.
 pub fn ModelLineProjection::view_line_count(self : ModelLineProjection) -> Int {
   self.view_line_segments.length()
 }
 
 ///|
+/// Segment for a one-based view line number.
 pub fn ModelLineProjection::segment_for_view_line_number(
   self : ModelLineProjection,
   view_line_number : Int,
@@ -59,6 +63,7 @@ pub fn ModelLineProjection::segment_for_view_line_number(
 }
 
 ///|
+/// Projected text for a one-based model line.
 pub fn ModelLineProjection::projected_line_for_model_line(
   self : ModelLineProjection,
   model_line_number : Int,
@@ -72,6 +77,7 @@ pub fn ModelLineProjection::projected_line_for_model_line(
 }
 
 ///|
+/// Converts a model position to the corresponding projected view position.
 pub fn ModelLineProjection::model_position_to_view_position(
   self : ModelLineProjection,
   position : @core.Position,
@@ -100,6 +106,7 @@ pub fn ModelLineProjection::model_position_to_view_position(
 }
 
 ///|
+/// Converts a projected view position back to model coordinates.
 pub fn ModelLineProjection::view_position_to_model_position(
   self : ModelLineProjection,
   position : @core.Position,

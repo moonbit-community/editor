@@ -1,10 +1,13 @@
 ///|
+/// Adapter that translates remote workspace URIs to native `file://` URIs
+/// before delegating semantic features to the LSP-backed provider.
 pub(all) struct NativeWorkspaceLanguageProvider {
   root : String
   provider : @server.LspLanguageProvider
 }
 
 ///|
+/// Creates a native workspace provider rooted at `root`.
 pub fn NativeWorkspaceLanguageProvider::NativeWorkspaceLanguageProvider(
   root : String,
   provider : @server.LspLanguageProvider,
@@ -13,6 +16,7 @@ pub fn NativeWorkspaceLanguageProvider::NativeWorkspaceLanguageProvider(
 }
 
 ///|
+/// Delegates hover requests after translating the document URI to `file://`.
 pub impl @language.HoverProvider for NativeWorkspaceLanguageProvider with fn hover_at(
   self,
   document,
@@ -26,6 +30,8 @@ pub impl @language.HoverProvider for NativeWorkspaceLanguageProvider with fn hov
 }
 
 ///|
+/// Delegates definition requests and maps returned file locations back to
+/// `readonly-remote://workspace/...` URIs.
 pub impl @language.DefinitionProvider for NativeWorkspaceLanguageProvider with fn definition_at(
   self,
   document,
@@ -45,6 +51,7 @@ pub impl @language.DefinitionProvider for NativeWorkspaceLanguageProvider with f
 }
 
 ///|
+/// Delegates references requests and drops locations outside the workspace root.
 pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with fn references_at(
   self,
   document,
@@ -69,6 +76,7 @@ pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with f
 }
 
 ///|
+/// Delegates diagnostics requests after URI translation.
 pub impl @language.DiagnosticsProvider for NativeWorkspaceLanguageProvider with fn diagnostics_for_document(
   self,
   document,
@@ -83,6 +91,7 @@ pub impl @language.DiagnosticsProvider for NativeWorkspaceLanguageProvider with 
 }
 
 ///|
+/// Delegates document-symbol requests after URI translation.
 pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider with fn document_symbols(
   self,
   document,
@@ -95,6 +104,7 @@ pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider wi
 }
 
 ///|
+/// Delegates semantic-token requests after URI translation.
 pub impl @language.SemanticTokensProvider for NativeWorkspaceLanguageProvider with fn semantic_tokens_for_document(
   self,
   document,
@@ -109,6 +119,7 @@ pub impl @language.SemanticTokensProvider for NativeWorkspaceLanguageProvider wi
 }
 
 ///|
+/// Folding ranges currently come from the browser fallback service.
 pub impl @language.FoldingRangeProvider for NativeWorkspaceLanguageProvider with fn folding_ranges(
   _self,
   _document,
@@ -117,6 +128,7 @@ pub impl @language.FoldingRangeProvider for NativeWorkspaceLanguageProvider with
 }
 
 ///|
+/// Native LSP inlay hints are not wired yet.
 pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with fn inlay_hints(
   _self,
   _document,
@@ -187,6 +199,7 @@ fn NativeWorkspaceLanguageProvider::remote_uri(
 }
 
 ///|
+/// Converts an absolute host path to a `file://` URI string.
 pub fn file_uri_for_host_path(path : String) -> String {
   "file://" + normalize_host_path(path)
 }

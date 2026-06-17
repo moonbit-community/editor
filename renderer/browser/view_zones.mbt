@@ -7,6 +7,8 @@ priv struct BrowserViewZone {
 }
 
 ///|
+/// Mutation accessor passed to `Viewer::change_view_zones`; callers describe
+/// the complete set of changes inside one layout invalidation.
 pub(all) struct ViewZoneChangeAccessor {
   viewer : Viewer
 }
@@ -20,6 +22,7 @@ fn create_view_zones_part(document : @rdom.Document) -> @rdom.Element {
 }
 
 ///|
+/// Applies a batch of browser view-zone mutations and reflows the viewer.
 pub fn Viewer::change_view_zones(
   self : Viewer,
   update : (ViewZoneChangeAccessor) -> Unit,
@@ -33,6 +36,7 @@ pub fn Viewer::change_view_zones(
 }
 
 ///|
+/// Adds or replaces a view zone by id.
 pub fn ViewZoneChangeAccessor::add_zone(
   self : ViewZoneChangeAccessor,
   id : String,
@@ -44,6 +48,7 @@ pub fn ViewZoneChangeAccessor::add_zone(
 }
 
 ///|
+/// Updates a view zone by id; currently equivalent to `add_zone`.
 pub fn ViewZoneChangeAccessor::update_zone(
   self : ViewZoneChangeAccessor,
   id : String,
@@ -55,6 +60,7 @@ pub fn ViewZoneChangeAccessor::update_zone(
 }
 
 ///|
+/// Removes a view zone by id.
 pub fn ViewZoneChangeAccessor::remove_zone(
   self : ViewZoneChangeAccessor,
   id : String,

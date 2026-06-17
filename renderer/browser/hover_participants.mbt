@@ -1,4 +1,5 @@
 ///|
+/// One renderable contribution to the content hover widget.
 pub(all) enum HoverPart {
   MarkdownHover(
     range~ : @core.Range,
@@ -10,12 +11,14 @@ pub(all) enum HoverPart {
 } derive(Eq, Debug)
 
 ///|
+/// Complete hover result after participant parts have been merged and sorted.
 pub(all) struct ComputedHover {
   range : @core.Range
   parts : Array[HoverPart]
 } derive(Eq, Debug)
 
 ///|
+/// Inputs shared by synchronous and asynchronous hover participants.
 pub(all) struct HoverComputeContext {
   document : @workspace.SourceDocument
   anchor_range : @core.Range
@@ -26,6 +29,9 @@ pub(all) struct HoverComputeContext {
 }
 
 ///|
+/// Pluggable content-hover participant. Synchronous participants provide data
+/// already in viewer state; asynchronous participants may call language
+/// providers.
 pub(open) trait HoverParticipant {
   fn ordinal(Self) -> Int noraise
   fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart] noraise
@@ -33,19 +39,23 @@ pub(open) trait HoverParticipant {
 }
 
 ///|
+/// Hover participant that exposes diagnostics/markers at the anchor range.
 pub(all) struct MarkerHoverParticipant(Unit)
 
 ///|
+/// Creates the marker hover participant.
 pub fn MarkerHoverParticipant::new() -> MarkerHoverParticipant {
   MarkerHoverParticipant(())
 }
 
 ///|
+/// Marker hovers render first.
 pub impl HoverParticipant for MarkerHoverParticipant with fn ordinal(_self) {
   0
 }
 
 ///|
+/// Computes marker hover parts from the current marker decorations.
 pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
   _self,
   ctx,
@@ -65,6 +75,7 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
 }
 
 ///|
+/// Marker hover data is fully synchronous.
 pub impl HoverParticipant for MarkerHoverParticipant with fn compute_async(
   _self,
   _ctx,
@@ -73,19 +84,23 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_async(
 }
 
 ///|
+/// Hover participant that queries registered markdown/plaintext hover providers.
 pub(all) struct MarkdownHoverParticipant(Unit)
 
 ///|
+/// Creates the markdown hover participant.
 pub fn MarkdownHoverParticipant::new() -> MarkdownHoverParticipant {
   MarkdownHoverParticipant(())
 }
 
 ///|
+/// Markdown hovers render after marker and inlay-hint hovers.
 pub impl HoverParticipant for MarkdownHoverParticipant with fn ordinal(_self) {
   100
 }
 
 ///|
+/// Markdown provider hovers are asynchronous only.
 pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_sync(
   _self,
   _ctx,
@@ -94,6 +109,7 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_sync(
 }
 
 ///|
+/// Queries language hover providers for the anchor offset.
 pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
   self,
   ctx,
@@ -119,21 +135,25 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
 }
 
 ///|
+/// Hover participant for inlay-hint tooltips.
 pub(all) struct InlayHintHoverParticipant {
   identity : Unit
 }
 
 ///|
+/// Creates the inlay-hint hover participant.
 pub fn InlayHintHoverParticipant::new() -> InlayHintHoverParticipant {
   { identity: () }
 }
 
 ///|
+/// Inlay-hint hovers render after markers and before language markdown hovers.
 pub impl HoverParticipant for InlayHintHoverParticipant with fn ordinal(_self) {
   50
 }
 
 ///|
+/// Computes tooltip hovers for injected inlay-hint text.
 pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_sync(
   self,
   ctx,
@@ -159,6 +179,7 @@ pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_sync(
 }
 
 ///|
+/// Inlay-hint hover data is fully synchronous.
 pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_async(
   _self,
   _ctx,
@@ -167,11 +188,13 @@ pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_async(
 }
 
 ///|
+/// Coordinates hover participants for one viewer service set.
 pub(all) struct ContentHoverComputer {
   services : ViewerServices
 }
 
 ///|
+/// Creates a content-hover computer over viewer services.
 pub fn ContentHoverComputer::new(
   services : ViewerServices,
 ) -> ContentHoverComputer {
@@ -179,6 +202,7 @@ pub fn ContentHoverComputer::new(
 }
 
 ///|
+/// Computes hover parts that are immediately available from viewer state.
 pub fn ContentHoverComputer::compute_sync(
   self : ContentHoverComputer,
   document : @workspace.SourceDocument,
@@ -203,6 +227,7 @@ pub fn ContentHoverComputer::compute_sync(
 }
 
 ///|
+/// Computes hover parts that may require provider calls.
 pub async fn ContentHoverComputer::compute_async(
   self : ContentHoverComputer,
   document : @workspace.SourceDocument,

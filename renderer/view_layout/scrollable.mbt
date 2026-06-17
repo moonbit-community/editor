@@ -11,6 +11,7 @@ pub(all) struct ScrollDimensions {
 } derive(Eq, Debug)
 
 ///|
+/// Synthetic scroll position in backend-neutral CSS pixels.
 pub(all) struct ScrollPosition {
   scroll_left : Double
   scroll_top : Double
@@ -40,6 +41,7 @@ pub struct Scrollable {
 }
 
 ///|
+/// Creates a scrollable model with zero viewport/content dimensions.
 pub fn Scrollable::new() -> Scrollable {
   {
     dimensions: {
@@ -53,11 +55,13 @@ pub fn Scrollable::new() -> Scrollable {
 }
 
 ///|
+/// Current viewport and scrollable content dimensions.
 pub fn Scrollable::dimensions(self : Scrollable) -> ScrollDimensions {
   self.dimensions
 }
 
 ///|
+/// Current clamped scroll position.
 pub fn Scrollable::position(self : Scrollable) -> ScrollPosition {
   self.position
 }

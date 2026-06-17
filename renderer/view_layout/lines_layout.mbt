@@ -10,6 +10,7 @@ pub struct LinesLayout {
 }
 
 ///|
+/// Creates a uniform-height line layout.
 pub fn LinesLayout::new(
   line_height~ : Int,
   line_count? : Int = 0,
@@ -18,16 +19,19 @@ pub fn LinesLayout::new(
 }
 
 ///|
+/// Number of model/view lines tracked by the layout.
 pub fn LinesLayout::line_count(self : LinesLayout) -> Int {
   self.line_count
 }
 
 ///|
+/// Fixed line height in CSS pixels.
 pub fn LinesLayout::line_height(self : LinesLayout) -> Int {
   self.line_height
 }
 
 ///|
+/// Updates the line count and clamps existing view zones into the new extent.
 pub fn LinesLayout::set_line_count(
   self : LinesLayout,
   line_count : Int,
@@ -37,6 +41,7 @@ pub fn LinesLayout::set_line_count(
 }
 
 ///|
+/// Updates the fixed line height in CSS pixels.
 pub fn LinesLayout::set_line_height(
   self : LinesLayout,
   line_height : Int,
@@ -51,6 +56,7 @@ pub fn LinesLayout::view_zones(self : LinesLayout) -> Array[ViewZone] {
 }
 
 ///|
+/// Replaces view-zone geometry, normalizing anchor lines and heights.
 pub fn LinesLayout::set_view_zones(
   self : LinesLayout,
   view_zones : Array[ViewZone],
@@ -98,6 +104,7 @@ pub fn LinesLayout::line_at_vertical_offset(
 }
 
 ///|
+/// Total scrollable content height, including view zones.
 pub fn LinesLayout::content_height(self : LinesLayout) -> Double {
   let height = self.line_count * self.line_height +
     total_zone_height(self.view_zones)
@@ -105,6 +112,8 @@ pub fn LinesLayout::content_height(self : LinesLayout) -> Double {
 }
 
 ///|
+/// Computes the zero-based half-open line window intersecting the viewport plus
+/// overscan.
 pub fn LinesLayout::visible_window(
   self : LinesLayout,
   scroll_top : Double,
@@ -130,6 +139,7 @@ pub fn LinesLayout::visible_window(
 }
 
 ///|
+/// Content-space top offset of a view zone by index.
 pub fn LinesLayout::view_zone_vertical_offset(
   self : LinesLayout,
   index : Int,
@@ -146,6 +156,7 @@ pub fn LinesLayout::view_zone_vertical_offset(
 }
 
 ///|
+/// View-zone geometry relative to a rendered line window.
 pub fn LinesLayout::view_zone_viewport_data(
   self : LinesLayout,
   window : LineWindow,

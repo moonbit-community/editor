@@ -1,4 +1,5 @@
 ///|
+/// Emits a browser-test report object to the Playwright bridge and console.
 pub extern "js" fn report_json(payload : String) -> Unit =
   #| (payload) => {
   #|   let parsed = null;

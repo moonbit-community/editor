@@ -37,11 +37,11 @@ let char_probe_text = "0000000000"
 let fallback_char_width = 7.2
 
 ///|
-/// The imperative view island, the Monaco `View` role: an
-/// root editor node owning an overflow guard, margin and content view
+/// The imperative browser `View` role: a root editor node owning an
+/// overflow guard, margin and content view
 /// parts, widget slots, custom scrollbars, and the line/line-number node
 /// recycler state (the `ViewLayer` role).
-priv struct Island {
+priv struct View {
   root : @rdom.Element
   probe : @rdom.Element
   message_text : @rdom.Element
@@ -65,6 +65,7 @@ priv struct Island {
   line_nodes : Array[@rdom.Element]
   gutter_nodes : Array[@rdom.Element]
   render_inputs : Array[@view_line_renderer.RenderLineInput]
+  view_parts : Array[ViewPartRole]
 }
 
 ///|
@@ -73,10 +74,10 @@ fn frame_window(frame : @view_model.RenderFrame) -> @view_layout.LineWindow {
 }
 
 ///|
-fn Island::build() -> Island {
+fn View::build() -> View {
   let document = @rdom.document()
   let root = document.create_element("section")
-  root.set_attribute("class", "moonbit-viewer readonly-editor source-empty")
+  root.set_attribute("class", view_root_class("source-empty"))
   root.set_attribute("aria-label", "Readonly code viewer")
   root.set_attribute("tabindex", "0")
   let probe = document.create_element("span")
@@ -133,7 +134,7 @@ fn Island::build() -> Island {
   root.append_child(overflow_guard.as_node())
   root.append_child(overflowing_content_widgets.as_node())
   root.append_child(overflowing_overlay_widgets.as_node())
-  let island : Island = {
+  let view : View = {
     root,
     probe,
     message_text,
@@ -157,13 +158,19 @@ fn Island::build() -> Island {
     line_nodes: [],
     gutter_nodes: [],
     render_inputs: [],
+    view_parts: default_view_parts(),
   }
-  island.sync_static_view_parts()
-  island
+  view.sync_static_view_parts()
+  view
 }
 
 ///|
-fn Island::sync_static_view_parts(self : Island) -> Unit {
+fn view_root_class(source_state : String) -> String {
+  "monaco-editor moonbit-viewer readonly-editor " + source_state
+}
+
+///|
+fn View::sync_static_view_parts(self : View) -> Unit {
   self.overflow_guard.set_attribute("data-view-part", "overflow-guard")
   self.margin_view_overlays.set_attribute(
     "data-view-part", "margin-view-overlays",
@@ -175,56 +182,93 @@ fn Island::sync_static_view_parts(self : Island) -> Unit {
 }
 
 ///|
+/// Shows the host-provided placeholder when no document frame is loaded.
+fn View::render_empty(self : View, placeholder : String) -> Unit {
+  self.root.set_attribute("class", view_root_class("source-empty"))
+  self.message_text.set_node_value(@js.Nullable::from_option(Some(placeholder)))
+}
+
+///|
+/// Monaco-shaped coordinated rendering: collect dirty view parts, let them
+/// observe viewport data, render text lines first, then prepare/write the
+/// remaining browser concerns.
+fn View::render(self : View, viewer : Viewer, input : ViewRenderInput) -> Unit {
+  self.root.set_attribute("class", view_root_class("source-loaded"))
+  let rendering = RenderingContext::from_input(
+    ViewContext::new(viewer, self),
+    input,
+  )
+  let dirty_parts = self.dirty_view_parts(rendering)
+  for part in dirty_parts {
+    part.on_before_render(rendering.viewport)
+  }
+  let restricted = rendering.restricted()
+  for part in dirty_parts {
+    match part {
+      ViewLinesPart => part.render(restricted)
+      _ => ()
+    }
+  }
+  let dirty_parts = self.dirty_view_parts(rendering)
+  for part in dirty_parts {
+    part.prepare_render(rendering)
+  }
+  for part in dirty_parts {
+    match part {
+      ViewLinesPart => ()
+      _ => part.render(restricted)
+    }
+  }
+  for part in dirty_parts {
+    part.on_did_render()
+  }
+}
+
+///|
+fn View::dirty_view_parts(
+  self : View,
+  rendering : RenderingContext,
+) -> Array[ViewPartRole] {
+  let parts : Array[ViewPartRole] = []
+  for part in self.view_parts {
+    if part.should_render(rendering) {
+      parts.push(part)
+    }
+  }
+  parts
+}
+
+///|
 /// The rAF-coalesced render loop entry: reads (measurement) before
-/// writes (transforms, recycling, scrollbars, hover), then reports the
-/// paint facts that were waiting on this flush.
+/// writes, delegates browser DOM work to `View`, then reports the paint
+/// facts that were waiting on this flush.
 fn Viewer::flush_render(self : Viewer) -> Unit {
   self.render_pending = false
-  guard self.island is Some(island) else { return }
+  guard self.view is Some(view) else { return }
   // Read phase: measure only when a re-measure was requested.
   if self.measure_requested {
     self.measure_requested = false
-    self.measure(island)
+    self.measure(view)
   }
   // Write phase.
   let write_started = now_ms()
   match self.frame {
-    None => {
-      island.root.set_attribute(
-        "class", "moonbit-viewer readonly-editor source-empty",
-      )
-      island.message_text.set_node_value(
-        @js.Nullable::from_option(Some(self.placeholder)),
-      )
-    }
+    None => view.render_empty(self.placeholder)
     Some(frame) => {
-      island.root.set_attribute(
-        "class", "moonbit-viewer readonly-editor source-loaded",
-      )
       let frame = self.synced_window_frame(frame)
-      island.render_lines(
+      view.render(self, {
         frame,
-        self.view_model,
-        self.layout,
-        self.view_zones,
-        self.controller_decorations(),
-        self.selection_range(),
-        self.folding_ranges,
-        self.folded_ranges,
-        on_toggle_fold=line => self.toggle_fold(line),
-        self.content_generation,
-        self.measured_char_width(),
-      )
-      let gutter_width = self.gutter_width(frame)
-      let position = self.layout.position()
-      let origin = self.layout.window_origin(frame_window(frame))
-      island.apply_geometry(
-        gutter_width,
-        position.scroll_left,
-        origin - position.scroll_top,
-      )
-      island.update_scrollbars(self.layout.dimensions(), position, gutter_width)
-      self.render_hover_widget(island, frame)
+        view_model: self.view_model,
+        layout: self.layout,
+        browser_view_zones: self.view_zones,
+        decorations: self.controller_decorations(),
+        selection_range: self.selection_range(),
+        folding_ranges: self.folding_ranges,
+        folded_ranges: self.folded_ranges,
+        on_toggle_fold: line => self.toggle_fold(line),
+        generation: self.content_generation,
+        space_width: self.measured_char_width(),
+      })
     }
   }
   let patch_ms = now_ms() - write_started
@@ -258,7 +302,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
 
 ///|
 fn Viewer::schedule_render(self : Viewer) -> Unit {
-  if self.render_pending || self.island is None {
+  if self.render_pending || self.view is None {
     return
   }
   self.render_pending = true

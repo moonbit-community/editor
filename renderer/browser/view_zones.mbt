@@ -143,8 +143,8 @@ fn Viewer::sync_view_zones_with_layout(self : Viewer) -> Unit {
 }
 
 ///|
-fn Island::render_view_zones(
-  self : Island,
+fn View::render_view_zones(
+  self : View,
   zones : Array[BrowserViewZone],
   viewport : @view_layout.ViewportData,
 ) -> Unit {

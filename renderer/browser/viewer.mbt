@@ -1,6 +1,6 @@
 ///|
 /// The embeddable readonly code viewer, the `vs/editor` (Monaco) role: an
-/// imperative view island owning the rendered frame, the scroll and
+/// browser `View` owning the rendered frame, the scroll and
 /// layout model, the input bridge, and the feature controllers. It is
 /// constructed with a `&DocumentSource`, attached into a host-provided
 /// stable element, and reports lifecycle facts through `on_notification`;
@@ -34,7 +34,7 @@ pub struct Viewer {
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
   priv mut open_generation : Int
-  priv mut island : Island?
+  priv mut view : View?
   priv mut watch : @workspace.FileWatch?
   priv mut render_pending : Bool
   priv mut measure_requested : Bool
@@ -94,7 +94,7 @@ pub(all) enum ViewerNotification {
 
 ///|
 /// Creates a viewer instance. Call `attach` before opening documents so the
-/// first render has a DOM island to measure and patch.
+/// first render has a DOM view to measure and patch.
 pub fn Viewer::Viewer(
   source : &@workspace.DocumentSource,
   on_notification~ : (ViewerNotification) -> Unit,
@@ -128,7 +128,7 @@ pub fn Viewer::Viewer(
     soft_wrap_column: 0,
     max_line_length: 0,
     open_generation: 0,
-    island: None,
+    view: None,
     watch: None,
     render_pending: false,
     measure_requested: false,
@@ -157,18 +157,18 @@ pub fn Viewer::set_options(self : Viewer, options : ViewerOptions) -> Unit {
 }
 
 ///|
-/// Builds the view island inside the host element and hooks its
+/// Builds the browser `View` inside the host element and hooks its
 /// listeners. The host element must stay mounted and must never receive
-/// host-rendered children; the island owns its whole subtree.
+/// host-rendered children; the view owns its whole subtree.
 pub fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
-  if self.island is Some(_) {
+  if self.view is Some(_) {
     return
   }
-  let island = Island::build()
-  island.root.set_attribute("data-theme", self.theme)
-  host.append_child(island.root.as_node())
-  self.island = Some(island)
-  self.hook_island_input(island)
+  let view = View::build()
+  view.root.set_attribute("data-theme", self.theme)
+  host.append_child(view.root.as_node())
+  self.view = Some(view)
+  self.hook_view_input(view)
   self.measure_requested = true
   self.schedule_render()
 }
@@ -224,12 +224,12 @@ pub fn Viewer::open(self : Viewer, uri : @base_common.Uri) -> Unit {
 ///|
 /// Pushes the host's theme into the viewer. Colors cascade from the
 /// host's CSS theme variables, so this only mirrors the theme onto the
-/// island root as a `data-theme` attribute (for standalone styling); the
-/// island keeps its DOM and scroll position.
+/// view root as a `data-theme` attribute (for standalone styling); the
+/// view keeps its DOM and scroll position.
 pub fn Viewer::set_theme(self : Viewer, theme : String) -> Unit {
   self.theme = theme
-  match self.island {
-    Some(island) => island.root.set_attribute("data-theme", theme)
+  match self.view {
+    Some(view) => view.root.set_attribute("data-theme", theme)
     None => ()
   }
 }
@@ -259,7 +259,7 @@ pub fn Viewer::escape(self : Viewer) -> Unit {
 ///|
 /// Synthetic scroll entry points: the host routes keyboard scrolling
 /// (and the harness scroll control) through these; wheel and scrollbar
-/// input arrive through the island's own listeners.
+/// input arrive through the view's own listeners.
 pub fn Viewer::scroll_to(self : Viewer, scroll_top : Double) -> Unit {
   self.apply_scroll_change(self.layout.scroll_to(scroll_top~))
 }
@@ -418,8 +418,8 @@ fn Viewer::apply_scroll_change(
 ) -> Unit {
   match change {
     Some(_) => {
-      match self.island {
-        Some(island) => island.editor_scrollable.reveal_for_scroll()
+      match self.view {
+        Some(view) => view.editor_scrollable.reveal_for_scroll()
         None => ()
       }
       self.scroll_dirty = true

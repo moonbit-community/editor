@@ -4,47 +4,16 @@
 /// only on entering lines. A changed content generation (new frame
 /// source or changed controller decorations) rewrites every rendered line
 /// instead.
-fn Island::render_lines(
-  self : Island,
+fn View::render_lines(
+  self : View,
   frame : @view_model.RenderFrame,
-  view_model : @view_model.ViewModel?,
-  layout : @view_layout.ViewLayout,
-  browser_view_zones : Array[BrowserViewZone],
+  viewport : @view_layout.ViewportData,
   decorations : Array[@decorations.Decoration],
-  selection_range : @core.Range?,
-  folding_ranges : Array[@language.FoldingRange],
-  folded_ranges : Array[@language.FoldingRange],
-  on_toggle_fold~ : (Int) -> Unit,
   generation : Int,
   space_width : Double,
 ) -> Unit {
-  let viewport = match view_model {
-    Some(model) =>
-      @view_layout.ViewportData::from_view_model(
-        model,
-        frame_window(frame),
-        line_height=editor_line_height,
-        decorations~,
-        layout~,
-      )
-    None =>
-      @view_layout.ViewportData::from_render_frame(
-        frame,
-        line_height=editor_line_height,
-        decorations~,
-      )
-  }
   let target = viewport_window(viewport)
   let document = @rdom.document()
-  self.render_folding_markers(
-    viewport,
-    view_model,
-    folding_ranges,
-    folded_ranges,
-    on_toggle_fold~,
-  )
-  self.render_selection_overlays(frame, viewport, selection_range)
-  self.render_view_zones(browser_view_zones, viewport)
   if generation != self.generation {
     while self.line_nodes.length() > viewport.lines.length() {
       match
@@ -169,8 +138,8 @@ fn Island::render_lines(
 }
 
 ///|
-fn Island::render_selection_overlays(
-  self : Island,
+fn View::render_selection_overlays(
+  self : View,
   frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
   selection_range : @core.Range?,
@@ -239,8 +208,8 @@ fn selection_segment_style(
 }
 
 ///|
-fn Island::render_folding_markers(
-  self : Island,
+fn View::render_folding_markers(
+  self : View,
   viewport : @view_layout.ViewportData,
   view_model : @view_model.ViewModel?,
   folding_ranges : Array[@language.FoldingRange],

@@ -55,36 +55,36 @@ fn create_content_widget_slots(document : @rdom.Document) -> ContentWidgetSlots 
 /// widget, applied in the same flush.
 fn Viewer::render_hover_widget(
   self : Viewer,
-  island : Island,
+  browser_view : View,
   frame : @view_model.RenderFrame,
 ) -> Unit {
-  let view = match self.hover.widget_view() {
-    Some(view) => view
+  let hover_view = match self.hover.widget_view() {
+    Some(hover_view) => hover_view
     None => {
-      island.remove_hover_widget()
+      browser_view.remove_hover_widget()
       return
     }
   }
   let (line_number, column) = match
-    line_col_for_offset(frame, view.anchor_offset) {
+    line_col_for_offset(frame, hover_view.anchor_offset) {
     Some(anchor) => anchor
     None => {
-      island.remove_hover_widget()
+      browser_view.remove_hover_widget()
       return
     }
   }
-  let widget = island.ensure_hover_widget(self)
+  let widget = browser_view.ensure_hover_widget(self)
   let mut class_name = "monaco-resizable-hover"
   let mut shift_left = 0.0
   let mut preferred_placement = ContentWidgetAbove
-  match view.placement {
+  match hover_view.placement {
     Some(placement) => {
       if placement.below {
         preferred_placement = ContentWidgetBelow
       }
       shift_left = placement.shift_left
     }
-    None => if view.measurable { class_name = class_name + " measuring" }
+    None => if hover_view.measurable { class_name = class_name + " measuring" }
   }
   match preferred_placement {
     ContentWidgetBelow => class_name = class_name + " below"
@@ -108,25 +108,25 @@ fn Viewer::render_hover_widget(
   widget.hover.set_attribute("class", "monaco-hover fade-in")
   widget.clear_sizing()
   widget.scrollable.content.set_inner_html(
-    render_hover_shell(view.parts, frame.language_id),
+    render_hover_shell(hover_view.parts, frame.language_id),
   )
-  island.mount_content_widget(content_widget)
-  widget.apply_sizing(island.root)
-  if view.measurable && view.placement is None {
+  browser_view.mount_content_widget(content_widget)
+  widget.apply_sizing(browser_view.root)
+  if hover_view.measurable && hover_view.placement is None {
     // Read-after-write: decide the flip/shift from the real geometry.
     let widget_rect = widget.wrapper.get_bounding_client_rect()
-    let root_rect = island.root.get_bounding_client_rect()
+    let root_rect = browser_view.root.get_bounding_client_rect()
     let below = widget_rect.get_top() < root_rect.get_top()
     let overflow = widget_rect.get_right() - root_rect.get_right() + 12.0
     let shift_left = if overflow > 0.0 { overflow } else { 0.0 }
     self.hover = self.hover.measured(below, shift_left)
-    self.render_hover_widget(island, frame)
+    self.render_hover_widget(browser_view, frame)
   }
 }
 
 ///|
-fn Island::ensure_hover_widget(
-  self : Island,
+fn View::ensure_hover_widget(
+  self : View,
   viewer : Viewer,
 ) -> HoverWidgetDom {
   match self.hover_widget {
@@ -300,7 +300,7 @@ fn hover_content_page_delta(widget : HoverWidgetDom) -> Double {
 }
 
 ///|
-fn Island::remove_hover_widget(self : Island) -> Unit {
+fn View::remove_hover_widget(self : View) -> Unit {
   match self.hover_widget {
     Some(widget) => {
       self.content_widgets.remove_child(widget.wrapper.as_node())
@@ -344,7 +344,7 @@ fn max_hover_double(left : Double, right : Double) -> Double {
 }
 
 ///|
-fn Island::mount_content_widget(self : Island, widget : ContentWidget) -> Unit {
+fn View::mount_content_widget(self : View, widget : ContentWidget) -> Unit {
   let parent = if widget.allow_overflow {
     self.overflowing_content_widgets
   } else {

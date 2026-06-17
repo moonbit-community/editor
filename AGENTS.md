@@ -23,6 +23,7 @@
 
 ## Version Control
 
-- Commit regularly to save work in meaningful steps.
-- Keep commits focused around one coherent change and use messages that describe the behavior or decision being saved.
-- Run the most relevant local checks before committing when the change can affect behavior.
+- Commit regularly without waiting for an explicit user request.
+- For multi-step implementation plans, create a focused commit after each coherent milestone once relevant checks pass.
+- Do not leave a large implementation as one final commit unless the user explicitly requests a single commit.
+- Never rewrite, squash, amend, reset, or revert history without explicit user approval.

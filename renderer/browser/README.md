@@ -5,10 +5,11 @@ role. It ships without the explorer sidebar, the protocol client, or any
 shell chrome; the `workbench` package composes those in a layer above
 (exclusion by composition, not a config flag).
 
-The viewer is an imperative view island: it builds and owns its whole
-DOM subtree inside a host-provided stable element, and every public
-method is a plain call. Hosts with their own effect system (the Rabbita
-workbench) wrap the calls in their command type.
+The viewer exposes a public `Viewer` facade and delegates browser DOM rendering
+to an imperative Monaco-shaped `View`: it builds and owns its whole DOM subtree
+inside a host-provided stable element, and every public method is a plain call.
+Hosts with their own effect system (the Rabbita workbench) wrap the calls in
+their command type.
 
 ## Embedding API
 
@@ -24,21 +25,21 @@ workbench) wrap the calls in their command type.
   width while `renderer/view_model` owns the projected line data.
 - `Viewer::attach(host)` is the mount seam: the host renders one stable
   element, keeps it mounted, and must never render its own children into
-  it — the island's nodes are foreign to any host vdom and must survive
+  it — the `View` nodes are foreign to any host vdom and must survive
   host re-renders untouched. While the viewer has no frame it shows the
-  host-pushed `placeholder` message inside the island.
+  host-pushed `placeholder` message inside the view.
 - `Viewer::open(uri)` owns the full document-switch choreography: closing
   the previous document and its watch, subscribing the new watch, opening
   through the source, and resetting scroll only when the (uri, version)
   identity actually rotated — embedders cannot get the sequencing wrong.
 - `Viewer::set_theme`, `set_placeholder`, `remeasure`, and `escape` push
   host state and host-captured events in. Theme changes never remount the
-  island (colors cascade through the host's CSS variables) and keep the
+  view (colors cascade through the host's CSS variables) and keep the
   scroll position.
 - `Viewer::scroll_to`, `scroll_by_lines`, `scroll_by_pages`,
   `scroll_home`, and `scroll_end` are the synthetic scroll entry points
   for host-routed keyboard scrolling and harness controls; wheel and
-  scrollbar input arrive through the island's shared scrollable element.
+  scrollbar input arrive through the view's shared scrollable element.
 - `Viewer::push_diagnostics`/`push_symbols`/`push_semantic_tokens` accept
   unsolicited feature data (for example server-initiated pushes the host
   routes in). Diagnostics are compatibility input only; the viewer stores
@@ -65,8 +66,8 @@ workbench) wrap the calls in their command type.
 
 ## Responsibilities
 
-- Render `renderer` IR as browser DOM through the imperative island: a
-  `.moonbit-viewer.readonly-editor` root, an `.overflow-guard` clip,
+- Render `renderer` IR as browser DOM through the imperative `View`: a
+  `.monaco-editor.readonly-editor` root, an `.overflow-guard` clip,
   `.monaco-scrollable-element.editor-scrollable` around
   `.lines-content`, `.view-lines`, `.view-overlays`, `.view-zones`,
   margin view overlays for line numbers, content-widget and
@@ -83,14 +84,20 @@ workbench) wrap the calls in their command type.
   and mount in `.overlayWidgets`; overflowing variants mount outside
   `.overflow-guard` when a widget is allowed to escape the editor clip.
 - Own the browser-layer role files that correspond to Monaco
-  `editor/browser`: `view.mbt` owns root DOM creation, scheduling, and flush
-  order; `view_layer.mbt` owns line/gutter node recycling; `view_line.mbt` owns
-  per-line DOM writes; `content_widgets.mbt` owns text-anchored widgets and
-  hover; `overlay_widgets.mbt`, `view_overlays.mbt`, `view_zones.mbt`, and
+  `editor/browser`: `view.mbt` owns root DOM creation, scheduling, and
+  coordinated rendering; `view_part.mbt` owns the private render lifecycle;
+  `rendering_context.mbt` owns the shared read/prepare data; `view_layer.mbt`
+  owns line/gutter node recycling; `view_line.mbt` owns per-line DOM writes;
+  `content_widgets.mbt` owns text-anchored widgets and hover;
+  `overlay_widgets.mbt`, `view_overlays.mbt`, `view_zones.mbt`, and
   `margin.mbt` own their stable role slots.
-- Own the render loop: rAF-coalesced flushes with reads (measurement)
-  before writes, a `ViewLayer` recycler that consumes `renderer/view_layout.ViewportData`
-  from `renderer/view_model.ViewModel`, derives
+- Own the render loop: rAF-coalesced flushes with reads (measurement) before
+  writes. `Viewer::flush_render` builds `ViewRenderInput`; `View::render`
+  derives `RenderingContext`, asks `ViewPartRole`s if they should render,
+  renders `ViewLines` first, then lets zones, overlays, margin, widgets, and
+  scrollbars prepare/write through `RestrictedRenderingContext`. The
+  `ViewLayer` recycler consumes `renderer/view_layout.ViewportData` from
+  `renderer/view_model.ViewModel`, derives
   `@view_line_renderer.RenderLineInput` for each visible line, splices
   entering/leaving line nodes, and writes `innerHTML` only when a line enters
   the viewport or its render input changed. Raw `RenderFrame` lines may still
@@ -131,7 +138,7 @@ workbench) wrap the calls in their command type.
   scroll writes into its native content element. Browser reveal scroll offsets
   on editor DOM nodes are translated into `ViewLayout` deltas and reset.
 - Own the editor input bridge: native `mousemove`/`mouseleave` listeners
-  on the island root convert DOM events into typed `EditorEvent`s through
+  on the view root convert DOM events into typed `EditorEvent`s through
   the renderer's shared `hit_test`, fed by layout state plus the measured
   char-probe width and the derived gutter width. Rendered spans carry no
   handlers; content and overlay widgets stay centralized so selection, hover,

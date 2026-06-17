@@ -28,7 +28,7 @@ application contracts:
 - Workspace navigation uses `.workspace-sidebar` rows with
   `data-workspace-id`, `data-workspace-kind`, `aria-expanded`, and
   `aria-selected`.
-- Readonly viewer rendering uses `.moonbit-viewer.readonly-editor` and
+- Readonly viewer rendering uses `.monaco-editor.readonly-editor` and
   `.view-line[data-line]`.
 
 The active file is application state, not URL state. Specs should select files

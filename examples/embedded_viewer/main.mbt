@@ -271,7 +271,7 @@ fn view_embed(
             embed_tree().view(),
           ],
         ),
-        // The stable island host: the viewer attaches its imperative DOM
+        // The stable view host: the viewer attaches its imperative DOM
         // into this element after the first paint; the shell must never
         // render vdom children into it.
         @html.div(class="viewer-host", ([] : Array[@html.Html])),
@@ -293,7 +293,7 @@ fn main {
       startup_sub(
         @cmd.custom_cmd(scheduler => {
           embed_dispatch.val = Some(msg => scheduler.add(emit(msg)))
-          // Boot after the first paint: the island host and the tree cell
+          // Boot after the first paint: the view host and the tree cell
           // must be in the DOM before the viewer attaches and opens.
           scheduler.add(
             @cmd.custom_cmd(

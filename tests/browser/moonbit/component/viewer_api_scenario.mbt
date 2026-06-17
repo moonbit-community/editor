@@ -209,7 +209,7 @@ fn poll_rendered(
   if done.val {
     return
   }
-  let text = @support.query_text(".moonbit-viewer.readonly-editor")
+  let text = @support.query_text(".monaco-editor.readonly-editor")
   if text.contains("component_answer") {
     ctx.assert_true(
       rendered_count.val > 0,
@@ -221,7 +221,7 @@ fn poll_rendered(
       "soft wrap did not project additional view lines",
     )
     ctx.assert_true(
-      @support.query_count(".moonbit-viewer.readonly-editor .view-line") > 0,
+      @support.query_count(".monaco-editor.readonly-editor .view-line") > 0,
       "viewer did not create rendered line DOM",
     )
     ctx.assert_true(
@@ -229,13 +229,13 @@ fn poll_rendered(
       "MoonBit tokenizer did not classify keywords",
     )
     ctx.assert_true(
-      @support.query_attribute(".moonbit-viewer.readonly-editor", "data-theme") ==
+      @support.query_attribute(".monaco-editor.readonly-editor", "data-theme") ==
       "dark",
       "viewer did not mirror the dark theme onto its root",
     )
     ctx.assert_true(
       @support.query_count(".line-number") ==
-      @support.query_count(".moonbit-viewer.readonly-editor .view-line"),
+      @support.query_count(".monaco-editor.readonly-editor .view-line"),
       "line numbers did not stay aligned with rendered view lines",
     )
     ctx.metric_int("renderedNotifications", rendered_count.val)

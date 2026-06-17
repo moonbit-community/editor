@@ -118,7 +118,7 @@ export function lastScrollTop(events) {
 
 export async function firstVisibleLine(page) {
   return page.evaluate(() => {
-    const root = document.querySelector('.moonbit-viewer.readonly-editor');
+    const root = document.querySelector('.monaco-editor.readonly-editor');
     const rootRect = root?.getBoundingClientRect();
     if (!rootRect) {
       return 0;

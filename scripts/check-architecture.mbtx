@@ -224,13 +224,13 @@ fn check_browser_rabbita_imports(
   // Browser renderer packages may keep rabbita DOM bindings and JS helpers,
   // but the TEA core, the vdom, and the command scheduler are forbidden
   // (exact matches: subpackages such as rabbita/dom stay allowed).
-  let island_forbidden_exact = [
+  let browser_forbidden_exact = [
     "moonbit-community/rabbita",
     "moonbit-community/rabbita/html",
     "moonbit-community/rabbita/cmd",
   ]
   for imported in imports {
-    if island_forbidden_exact.contains(imported) {
+    if browser_forbidden_exact.contains(imported) {
       errors.push(manifest + " must not import " + imported)
     }
   }

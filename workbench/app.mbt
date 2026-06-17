@@ -37,6 +37,22 @@ priv enum WorkbenchMsg {
 }
 
 ///|
+priv suberror StartupSubscription
+
+///|
+fn startup_sub(cmd : @cmd.Cmd) -> @sub.Sub {
+  @sub.custom_sub(
+    "workbench-startup",
+    Local,
+    StartupSubscription,
+    SubLoader((_, scheduler) => {
+      scheduler.add(cmd)
+      Some({ unload: _ => (), update_tagger: _ => () })
+    }),
+  )
+}
+
+///|
 let workbench_dispatch : Ref[((WorkbenchMsg) -> Unit)?] = Ref(None)
 
 ///|
@@ -114,32 +130,35 @@ fn register_tokenizers() -> Unit {
 
 ///|
 pub fn mount_app() -> Unit {
-  let (emit, cell) = @rabbita.cell_with_emit(
+  let (_, cell) = @rabbita.cell_with_emit(
     model=initial_workbench_model(),
     update=update_workbench,
     view=view_workbench,
     subscriptions=(emit, _model) => {
       @sub.batch([
+        startup_sub(
+          @cmd.custom_cmd(scheduler => {
+            workbench_dispatch.val = Some(msg => scheduler.add(emit(msg)))
+            protocol_send.val = Some(packet => {
+              scheduler.add(send_client_packet_cmd(emit, packet))
+            })
+            scheduler.add(emit(ConnectProtocol))
+            // The viewer island mounts into the stable host element after the
+            // shell's first paint; the shell never renders children into it.
+            scheduler.add(
+              @cmd.custom_cmd(
+                _ => attach_workbench_viewer(),
+                kind=@cmd.after_render,
+              ),
+            )
+          }),
+        ),
         @sub.on_key_down(emit.map(keyboard => GlobalKeyDown(keyboard))),
         @sub.on_resize(emit.map(_ => WindowResized)),
       ])
     },
   )
   let app = @rabbita.new(cell)
-  app.with_init(
-    @cmd.custom_cmd(scheduler => {
-      workbench_dispatch.val = Some(msg => scheduler.add(emit(msg)))
-      protocol_send.val = Some(packet => {
-        scheduler.add(send_client_packet_cmd(emit, packet))
-      })
-      scheduler.add(emit(ConnectProtocol))
-      // The viewer island mounts into the stable host element after the
-      // shell's first paint; the shell never renders children into it.
-      scheduler.add(
-        @cmd.custom_cmd(_ => attach_workbench_viewer(), kind=@cmd.after_render),
-      )
-    }),
-  )
   app.mount("app")
 }
 

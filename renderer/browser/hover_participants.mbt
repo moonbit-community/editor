@@ -33,11 +33,11 @@ pub(open) trait HoverParticipant {
 }
 
 ///|
-pub(all) struct MarkerHoverParticipant {}
+pub(all) struct MarkerHoverParticipant(Unit)
 
 ///|
 pub fn MarkerHoverParticipant::new() -> MarkerHoverParticipant {
-  MarkerHoverParticipant::{  }
+  MarkerHoverParticipant(())
 }
 
 ///|
@@ -73,11 +73,11 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_async(
 }
 
 ///|
-pub(all) struct MarkdownHoverParticipant {}
+pub(all) struct MarkdownHoverParticipant(Unit)
 
 ///|
 pub fn MarkdownHoverParticipant::new() -> MarkdownHoverParticipant {
-  MarkdownHoverParticipant::{  }
+  MarkdownHoverParticipant(())
 }
 
 ///|

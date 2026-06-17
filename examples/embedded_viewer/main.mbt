@@ -8,6 +8,22 @@
 let memory_root : String = "memory://workspace"
 
 ///|
+priv suberror StartupSubscription
+
+///|
+fn startup_sub(cmd : @cmd.Cmd) -> @sub.Sub {
+  @sub.custom_sub(
+    "embedded-viewer-startup",
+    Local,
+    StartupSubscription,
+    SubLoader((_, scheduler) => {
+      scheduler.add(cmd)
+      Some({ unload: _ => (), update_tagger: _ => () })
+    }),
+  )
+}
+
+///|
 /// In-memory workspace backend: a handful of hardcoded documents and
 /// directories behind the two `workspace` traits the viewer and the tree
 /// widget are built against.
@@ -269,30 +285,33 @@ fn main {
   // Highlighting needs no server: the language package is composed in
   // by import and registered against the viewer's tokenizer registry.
   @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
-  let (emit, cell) = @rabbita.cell_with_emit(
+  let (_, cell) = @rabbita.cell_with_emit(
     model={ status: "loading" },
     update=update_embed,
     view=view_embed,
+    subscriptions=(emit, _model) => {
+      startup_sub(
+        @cmd.custom_cmd(scheduler => {
+          embed_dispatch.val = Some(msg => scheduler.add(emit(msg)))
+          // Boot after the first paint: the island host and the tree cell
+          // must be in the DOM before the viewer attaches and opens.
+          scheduler.add(
+            @cmd.custom_cmd(
+              after => {
+                match
+                  @rdom.document().query_selector(".viewer-host").to_option() {
+                  Some(host) => embed_viewer().attach(host)
+                  None => ()
+                }
+                after.add(emit(Boot))
+              },
+              kind=@cmd.after_render,
+            ),
+          )
+        }),
+      )
+    },
   )
   let app = @rabbita.new(cell)
-  app.with_init(
-    @cmd.custom_cmd(scheduler => {
-      embed_dispatch.val = Some(msg => scheduler.add(emit(msg)))
-      // Boot after the first paint: the island host and the tree cell
-      // must be in the DOM before the viewer attaches and opens.
-      scheduler.add(
-        @cmd.custom_cmd(
-          after => {
-            match @rdom.document().query_selector(".viewer-host").to_option() {
-              Some(host) => embed_viewer().attach(host)
-              None => ()
-            }
-            after.add(emit(Boot))
-          },
-          kind=@cmd.after_render,
-        ),
-      )
-    }),
-  )
   app.mount("app")
 }

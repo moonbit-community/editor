@@ -23,11 +23,11 @@ pub(open) trait Logger {
 }
 
 ///|
-pub(all) struct NullLogger {}
+pub(all) struct NullLogger(Unit)
 
 ///|
 pub fn NullLogger::new() -> NullLogger {
-  NullLogger::{  }
+  NullLogger(())
 }
 
 ///|
@@ -104,7 +104,7 @@ pub(all) struct LogService {
 ///|
 pub fn LogService::new(
   level? : LogLevel = Info,
-  logger? : &Logger = NullLogger::{  },
+  logger? : &Logger = NullLogger::new(),
 ) -> LogService {
   { level, logger }
 }

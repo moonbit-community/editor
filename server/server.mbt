@@ -414,8 +414,7 @@ async fn RemoteServer::enrich_reference(
     match resolve_remote_document_uri(location.uri) {
       ParsedRemotePath(path) =>
         match self.host.read_text_file(self.workspace_root, path) {
-          ServerHostReadOk(content) =>
-            Some(@core.DocumentSnapshot(content.text))
+          ServerHostReadOk(content) => Some(DocumentSnapshot(content.text))
           _ => None
         }
       RemotePathError(_) => None

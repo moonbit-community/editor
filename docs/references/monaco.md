@@ -49,8 +49,8 @@ future work, or intentionally skipped.
 
 The hover/scrollbar conformance oracle lives in
 `tests/reference/monaco-hover-scrollbar/`, with the Playwright comparison in
-`tests/browser/monaco_conformance.spec.js`. The fixture transcribes the pinned
-Monaco DOM, CSS, and geometry constants for local testing; product code still
-must not import from the VS Code submodule.
+`tests/browser/conformance/monaco_hover_scrollbar.spec.js`. The fixture
+transcribes the pinned Monaco DOM, CSS, and geometry constants for local
+testing; product code still must not import from the VS Code submodule.
 
 Use these as design references only. Do not import from them in product code.

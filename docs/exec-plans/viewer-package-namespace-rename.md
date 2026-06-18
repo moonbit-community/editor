@@ -1,7 +1,12 @@
 # Viewer Package Namespace Rename
 
-Status: proposed
+Status: implemented
 Date: 2026-06-18
+
+Implemented note (2026-06-18): the package rename has landed. The current
+living package graph is documented in `docs/architecture.md` and package
+READMEs; old `renderer/*` references below are the historical migration
+context for this plan.
 
 Superseding note (2026-06-18): language registration now uses
 `@viewer.languages.set_tokens_provider(...)` and

@@ -32,8 +32,8 @@ is deliberately no runtime grammar loading (no
 importing a package, or implementing `LineTokenizer` yourself.
 
 Import rules (enforced by `scripts/check-architecture.mbtx`):
-`syntax/lang_*` may import only `viewer/core`, `viewer/model` test support,
-and `syntax`; only composition layers (`workbench`, `examples/*`) may import
+`syntax/lang_*` may import only `syntax` plus `viewer/model` test support;
+only composition layers (`workbench`, `examples/*`) may import
 `syntax/lang_*` — `viewer/common`, `viewer`, and `server` must not.
 
 ## Monarch-to-`lexmatch` translation playbook
@@ -85,9 +85,9 @@ offsets are UTF-16 code units (the repo position convention);
 
 ## Boundaries
 
-- `syntax` may depend only on `viewer/core` and `viewer/model`;
-  `syntax/lang_*` only on `viewer/core`, `viewer/model` test support, and
-  `syntax`. No module-level state anywhere in this subtree.
+- `syntax` may depend only on `base/common` and `viewer/model`;
+  `syntax/lang_*` only on `syntax` plus `viewer/model` test support. No
+  module-level state anywhere in this subtree.
 - Must not depend on workspace loading, language providers, DOM,
   viewer backends, server packages, or reference submodules.
 - Does not own semantic tokens or diagnostics; those belong to

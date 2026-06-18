@@ -198,7 +198,8 @@ viewer/view_model -> viewer/view_line_renderer, viewer/core,
 viewer/view_line_renderer -> viewer/core, syntax
 workspace -> base/common
 language -> base/common, workspace
-syntax/decorations -> viewer/core
+syntax -> base/common, viewer/model
+decorations -> base/common
 viewer/model -> base/common, viewer/core
 remote_protocol/server/workbench/widgets -> base/common, workspace, language
 platform/log -> no product packages

@@ -8,7 +8,7 @@ hardcoded documents and directories, zero server or websocket involvement.
 
 The web build script bundles it into `web/dist/embed.mjs` +
 `web/dist/embed.html`, and the native server serves it at `/embed.html`.
-`tests/browser/embed.spec.js` asserts it renders a document, lazily
+`tests/browser/smoke/embed.spec.js` asserts it renders a document, lazily
 expands a folder, and navigates between files with no websocket opened.
 
 ## What it demonstrates

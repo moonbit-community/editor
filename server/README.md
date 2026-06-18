@@ -16,10 +16,9 @@ Native-side remote workspace policy and protocol dispatch.
 
 ## Boundaries
 
-- May depend on `base/common`, `renderer/core`, `renderer/model`,
-  `workspace`, `language`, `remote_protocol`, and JSON support.
-- Must not import browser backend packages or `web`; common renderer packages
-  are allowed only where listed above.
+- May depend on `base/common`, `workspace`, `language`, `remote_protocol`, and
+  JSON support.
+- Must not import browser backend packages, viewer packages, or `web`.
 - Native effects stay behind the `ServerHost` trait; server code owns policy and
   routing.
 

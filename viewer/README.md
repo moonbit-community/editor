@@ -82,7 +82,7 @@ their command type.
   scrollbars driven by the backend-neutral `ScrollbarState` arithmetic. The
   outer viewer contract stays MoonBit-owned; the inner hover/scrollbar
   structure follows the pinned Monaco reference measured by
-  `tests/browser/monaco_conformance.spec.js`.
+  `tests/browser/conformance/monaco_hover_scrollbar.spec.js`.
 - Content widgets are anchored to a text position and share the text
   transform; hover is the first user and mounts in `.contentWidgets` with
   a locally owned outer content-widget wrapper whose internals are checked
@@ -211,5 +211,5 @@ focuses on hover until those features can be rebuilt without their bugs.
   folding interaction, readonly view-zone rendering/alignment, selection across
   a zone, hover after zones, and inlay-hint exclusion from copied source.
 - The embedding boundary is proven by `examples/embedded_viewer` and
-  `tests/browser/embed.spec.js` (no websocket opened).
+  `tests/browser/smoke/embed.spec.js` (no websocket opened).
 - Run `just check` for the repository-level type check.

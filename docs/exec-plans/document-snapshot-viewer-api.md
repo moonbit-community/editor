@@ -122,7 +122,6 @@ The viewer facade should be resource-command based:
 pub fn Viewer::create(
   host : @rdom.Element,
   provider : &@workspace.DocumentProvider,
-  on_event~ : (ViewerEvent) -> Unit,
   services? : ViewerServices = ViewerServices::new(),
   options? : ViewerOptions = ViewerOptions::default(),
 ) -> Viewer
@@ -159,6 +158,67 @@ pub fn Viewer::dispose(self : Viewer) -> Unit
 `attach(...)` constructor for embedders. Internal tests may keep lower-level
 constructors if useful, but the documented public path should be one call that
 mounts into the host element.
+
+## Target Event API
+
+Follow Monaco's disposable typed-event model. `Viewer::create` should not take a
+constructor-level catch-all event callback. Instead, the returned viewer exposes
+typed subscriptions and every subscription returns `Disposable`, so hosts can
+unsubscribe independently of the viewer lifetime.
+
+Monaco reference shape:
+
+```ts
+const editor = monaco.editor.create(host, options)
+const scroll_subscription = editor.onDidScrollChange(event => { ... })
+scroll_subscription.dispose()
+editor.dispose()
+```
+
+Target viewer shape:
+
+```moonbit
+pub fn Viewer::on_did_open_document(
+  self : Viewer,
+  listener : (DocumentOpenedEvent) -> Unit,
+) -> @workspace.Disposable
+
+pub fn Viewer::on_did_close_document(
+  self : Viewer,
+  listener : (DocumentClosedEvent) -> Unit,
+) -> @workspace.Disposable
+
+pub fn Viewer::on_did_fail_document(
+  self : Viewer,
+  listener : (DocumentFailedEvent) -> Unit,
+) -> @workspace.Disposable
+
+pub fn Viewer::on_did_render_document(
+  self : Viewer,
+  listener : (DocumentRenderedEvent) -> Unit,
+) -> @workspace.Disposable
+
+pub fn Viewer::on_did_change_diagnostics(
+  self : Viewer,
+  listener : (DiagnosticsChangedEvent) -> Unit,
+) -> @workspace.Disposable
+
+pub fn Viewer::on_did_scroll(
+  self : Viewer,
+  listener : (ScrollEvent) -> Unit,
+) -> @workspace.Disposable
+
+pub fn Viewer::on_did_dispose(
+  self : Viewer,
+  listener : () -> Unit,
+) -> @workspace.Disposable
+```
+
+The implementation may use one internal emitter or several per-event emitters,
+but the public API should not expose a single `ViewerEvent` sum type as the
+main subscription surface. A catch-all event stream can be added later for
+logging or harnesses if there is a concrete need, but it should also return a
+`Disposable`.
 
 ## Target Language Feature API
 
@@ -341,34 +401,42 @@ Exit criteria:
 
 1. Replace `Viewer::Viewer(source, ...)` and `Viewer::attach(host)` in public
    docs with `Viewer::create(host, provider, ...)`.
-2. Replace `Viewer::open(uri)` internals with a command flow that:
+2. Remove constructor-level `on_event` from the target API. Add Monaco-style
+   typed subscription methods such as `on_did_open_document`,
+   `on_did_render_document`, `on_did_change_diagnostics`, `on_did_scroll`, and
+   `on_did_dispose`, each returning `Disposable`.
+3. Replace `Viewer::open(uri)` internals with a command flow that:
    - closes and disposes the previous URI watch;
    - stores the requested URI and request generation;
    - subscribes through `DocumentProvider::watch`;
    - calls `DocumentProvider::read`;
    - applies the resulting `DocumentSnapshot` only when generation still
      matches.
-3. Add `Viewer::reload(view_state?)`, reading the current URI through the
+4. Add `Viewer::reload(view_state?)`, reading the current URI through the
    provider and preserving viewport by default.
-4. Add `Viewer::notify(change, view_state?)`:
+5. Add `Viewer::notify(change, view_state?)`:
    - `DocumentInvalidated(current_uri)` triggers `reload`;
    - `DocumentUpdated(current_uri snapshot)` applies the snapshot directly;
    - `DocumentDeleted(current_uri)` clears the frame and emits a deleted/error
      event;
    - changes for other URIs are no-ops.
-5. Add `Viewer::show(snapshot, view_state?)` for hosts that already have fresh
+6. Add `Viewer::show(snapshot, view_state?)` for hosts that already have fresh
    content and do not need the provider read path.
-6. Add `Viewer::current()` returning `uri`, `revision`, `language_id`,
+7. Add `Viewer::current()` returning `uri`, `revision`, `language_id`,
    `display_name`, and current view-state facts needed by embedders.
-7. Add `Viewer::close()` and `Viewer::dispose()` so host teardown is explicit.
+8. Add `Viewer::close()` and `Viewer::dispose()` so host teardown is explicit.
+   `Viewer::dispose()` must dispose DOM listeners, provider watches, and all
+   viewer event emitters; disposing one event subscription must not dispose the
+   viewer itself.
 
 Exit criteria:
 
 - The documented embedding flow is:
-  `create -> open -> notify/reload/show -> close/dispose`.
+  `create -> subscribe -> open -> notify/reload/show -> close/dispose`.
+- Every public viewer event subscription returns `Disposable`.
 - Watch updates preserve viewport by default; new user-selected files reset or
   restore view state according to `ViewStatePolicy`.
-- Viewer notifications expose document revision, not only numeric version.
+- Viewer document events expose document revision, not only numeric version.
 
 ## Phase 5 - Internal Model And Render Cache
 

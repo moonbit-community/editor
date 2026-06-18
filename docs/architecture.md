@@ -46,6 +46,7 @@ contract.
   `viewer/view_line_renderer`: DOM-free viewer common layer for tokenized
   lines, render frames, projections, layout, viewport data, scrollbar
   arithmetic, hit testing, and render-line HTML/character mapping.
+- `base/common`: host-neutral URI identity and shared resource primitives.
 - `language`: backend-neutral readonly semantic provider contracts over
   `viewer/model.TextModel`.
 - `syntax` and `syntax/lang_*`: tokenization contracts and concrete

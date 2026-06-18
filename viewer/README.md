@@ -70,6 +70,7 @@ zones. Go-to-definition and find-references are not current viewer behavior.
 - May depend on `base/common`, `language`, `platform/log`, `viewer/common`,
   `viewer/core`, `viewer/model`, `viewer/view_line_renderer`,
   `viewer/view_layout`, `viewer/view_model`, `syntax`, and `decorations`.
+- May depend on focused markdown-rendering packages used by hover content.
 - Must not depend on `workspace`, `remote_protocol`, `websocket`, `workbench`,
   `web`, `server`, `server_host_native`, or `widgets/*`.
 - Must not import concrete `syntax/lang_*` packages.

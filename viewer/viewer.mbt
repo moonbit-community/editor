@@ -29,6 +29,7 @@ pub struct Viewer {
   priv mut frame : @view_model.RenderFrame?
   priv mut view_model : @view_model.ViewModel?
   priv mut frame_source : @view_model.FrameSource?
+  priv mut current_uri : @base_common.Uri?
   priv mut source_document : @workspace.DocumentSnapshot?
   priv mut text_model : @model.TextModel?
   priv mut provider_result : @language.ProviderResult
@@ -146,6 +147,7 @@ pub fn Viewer::Viewer(
     frame: None,
     view_model: None,
     frame_source: None,
+    current_uri: None,
     source_document: None,
     text_model: None,
     provider_result: @language.ProviderResult::empty(),
@@ -297,13 +299,14 @@ pub fn Viewer::open(
   self.open_generation += 1
   let generation = self.open_generation
   self.dispose_watch()
-  match self.source_document {
-    Some(document) => self.provider.close(document.uri)
+  match self.current_uri {
+    Some(uri) => self.provider.close(uri)
     None => ()
   }
   self.clear_current_document(
     reset_scroll=view_state == Reset || view_state == RestoreOrReset,
   )
+  self.current_uri = Some(uri)
   self.watch = Some(
     self.provider.watch(uri, change => {
       if generation == self.open_generation {
@@ -320,10 +323,10 @@ pub fn Viewer::reload(
   self : Viewer,
   view_state? : ViewStatePolicy = PreserveAnchor,
 ) -> Unit {
-  match self.source_document {
-    Some(document) => {
+  match self.current_uri {
+    Some(uri) => {
       let generation = self.open_generation
-      self.read_uri(document.uri, generation, view_state~)
+      self.read_uri(uri, generation, view_state~)
     }
     None => ()
   }
@@ -365,6 +368,7 @@ pub fn Viewer::show(
   snapshot : @workspace.DocumentSnapshot,
   view_state? : ViewStatePolicy = PreserveAnchor,
 ) -> Unit {
+  self.current_uri = Some(snapshot.uri)
   self.services.markers.clear_resource(snapshot.uri)
   self.provider_result = @language.ProviderResult::empty()
   self.folding_ranges = []
@@ -408,11 +412,12 @@ pub fn Viewer::current(self : Viewer) -> CurrentDocument? {
 pub fn Viewer::close(self : Viewer) -> Unit {
   self.open_generation += 1
   self.dispose_watch()
-  match self.source_document {
-    Some(document) => self.provider.close(document.uri)
+  match self.current_uri {
+    Some(uri) => self.provider.close(uri)
     None => ()
   }
   self.clear_current_document(reset_scroll=true)
+  self.current_uri = None
 }
 
 ///|
@@ -598,8 +603,8 @@ fn Viewer::clear_current_document(self : Viewer, reset_scroll~ : Bool) -> Unit {
 
 ///|
 fn Viewer::is_current_uri(self : Viewer, uri : @base_common.Uri) -> Bool {
-  match self.source_document {
-    Some(document) => document.uri.to_string() == uri.to_string()
+  match self.current_uri {
+    Some(current_uri) => current_uri.to_string() == uri.to_string()
     None => false
   }
 }

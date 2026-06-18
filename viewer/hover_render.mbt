@@ -44,7 +44,9 @@ fn standard_hover_row(content_html : String) -> String {
 
 ///|
 fn hover_plaintext_html(text : String) -> String {
-  "<div class=\"hover-plaintext\">" + @viewer_common.escape_html(text) + "</div>"
+  "<div class=\"hover-plaintext\">" +
+  @viewer_common.escape_html(text) +
+  "</div>"
 }
 
 ///|

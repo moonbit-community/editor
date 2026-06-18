@@ -176,7 +176,9 @@ fn append_rich_copy_line_segments(
         html.write_string(@viewer_common.escape_html(span.class_name))
         html.write_string("\">")
         html.write_string(
-          @viewer_common.escape_html(line.text[start_column:end_column].to_owned()),
+          @viewer_common.escape_html(
+            line.text[start_column:end_column].to_owned(),
+          ),
         )
         html.write_string("</span>")
       }

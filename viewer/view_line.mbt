@@ -29,7 +29,10 @@ fn write_line_node(
   top : Int,
   rewrite_html~ : Bool,
 ) -> Unit {
-  node.set_attribute("class", @viewer_common.render_line_class(line, decorations))
+  node.set_attribute(
+    "class",
+    @viewer_common.render_line_class(line, decorations),
+  )
   node.set_attribute("data-line", line.line_number.to_string())
   node.set_attribute("style", line_node_style(top))
   if rewrite_html {

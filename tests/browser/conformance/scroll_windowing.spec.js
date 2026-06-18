@@ -98,6 +98,7 @@ test('scroll position updates transforms without rewriting visible line html', a
   await openWorkspaceFile(page, 'src/generated_scroll.mbt', { waitForActiveReveal: false });
 
   await installViewLineHtmlWriteCounter(page);
+  await waitForLineHtmlWritesToSettle(page);
   const before = await snapshotVisibleLines(page);
   expect(before.length).toBeGreaterThan(1);
   const firstLineTop = async () =>
@@ -142,6 +143,23 @@ async function installViewLineHtmlWriteCounter(page) {
       },
     });
     globalThis.__readonlyEditorLineHtmlCounterInstalled = true;
+  });
+}
+
+async function waitForLineHtmlWritesToSettle(page) {
+  await expect
+    .poll(
+      async () => {
+        const before = await page.evaluate(() => globalThis.__readonlyEditorLineHtmlWrites ?? 0);
+        await page.waitForTimeout(250);
+        const after = await page.evaluate(() => globalThis.__readonlyEditorLineHtmlWrites ?? 0);
+        return after - before;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(0);
+  await page.evaluate(() => {
+    globalThis.__readonlyEditorLineHtmlWrites = 0;
   });
 }
 

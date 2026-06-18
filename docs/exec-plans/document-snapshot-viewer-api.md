@@ -5,10 +5,30 @@ Date: 2026-06-18
 
 ## Summary
 
-Redesign the embeddable readonly viewer API around resource snapshots instead
-of Monaco-style mutable text models. Compatibility with the current
-`DocumentSource`, `SourceDocument`, `push_*`, and provider signatures is not a
-goal. The new public surface should optimize for the intended product shape:
+Redesign the embeddable readonly viewer as one cohesive public API instead of a
+set of ad hoc callbacks, source objects, and push methods. The API should be
+Monaco-shaped where Monaco has a proven structure, but it should stay optimized
+for this viewer's primary use case: showing externally owned files and
+reflecting local or remote filesystem changes in real time.
+
+The plan has four connected parts:
+
+1. Add a shared lifecycle/event foundation in `base/common`: `Disposable`, and
+   optionally `Event[T]` / emitter helpers if the implementation needs a named
+   event type.
+2. Expose viewer lifecycle and render notifications through typed `on_*`
+   subscription methods such as `on_did_render_document`, each returning
+   `Disposable`.
+3. Replace the current `DocumentSource` / `SourceDocument` model with a
+   document source API built around `DocumentProvider`, `DocumentChange`, and
+   immutable `DocumentSnapshot`.
+4. Make language features use Monaco-style `register_*_provider` APIs whose
+   registrations return `Disposable` and whose providers receive
+   `DocumentSnapshot`.
+
+Compatibility with the current `DocumentSource`, `SourceDocument`, `push_*`,
+and provider signatures is not a goal. The new public surface should optimize
+for this product shape:
 
 - the host owns the file tree and selects a URI;
 - the viewer opens, watches, reloads, and renders document content for that URI;
@@ -33,6 +53,49 @@ Reference sources, used only as design references:
 - `renderer/browser/viewer.mbt`, `renderer/browser/registry.mbt`, and
   `renderer/browser/render.mbt`: current viewer open, watch, feature, and render
   flow.
+
+## Whole API Shape
+
+The public API should read as one lifecycle:
+
+```moonbit
+let viewer = Viewer::create(host, provider, services~)
+
+let rendered = viewer.on_did_render_document(event => {
+  // observe rendered uri/revision
+})
+
+let hovers = services.language_features.register_hover_provider(
+  LanguageSelector::LanguageId("moonbit"),
+  hover_provider,
+)
+
+viewer.open(uri)
+viewer.notify(DocumentChange::DocumentInvalidated(uri~, known_revision=None))
+viewer.reload()
+viewer.close()
+
+hovers.dispose()
+rendered.dispose()
+viewer.dispose()
+```
+
+`DocumentProvider` is the concrete public type name for the document source
+contract. The plan uses "document source API" for the role, but does not keep
+the old `DocumentSource` type name because that name belongs to the API being
+replaced.
+
+Package ownership should stay narrow:
+
+- `base/common`: `Disposable`, optional `Event[T]`, and shared text primitives.
+- `workspace`: `DocumentSnapshot`, `DocumentProvider`, `DocumentChange`, and
+  document read errors.
+- `language`: provider traits, selectors, cancellation tokens, diagnostics, and
+  feature payload types.
+- `renderer/browser`: `Viewer`, `ViewerServices`, `on_*` subscriptions,
+  provider watching, DOM mounting, and render application.
+- host/workbench/example code: file tree ownership, local or remote provider
+  implementation, and explicit calls to `open`, `notify`, `reload`, or `show`.
 
 ## Target Mental Model
 
@@ -69,7 +132,9 @@ flowchart TD
   Features -->|"result revision mismatches"| Drop["drop stale result"]
 ```
 
-## Target Public API
+## Target API Details
+
+### Document Source API
 
 Own these public concrete types in `workspace`, because embedders construct and
 inspect them.
@@ -159,7 +224,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit
 constructors if useful, but the documented public path should be one call that
 mounts into the host element.
 
-## Target Event API
+### Viewer `on_*` Event API
 
 Follow Monaco's disposable typed-event model. `Viewer::create` should not take a
 constructor-level catch-all event callback. Instead, the returned viewer exposes
@@ -226,7 +291,7 @@ main subscription surface. A catch-all event stream can be added later for
 logging or harnesses if there is a concrete need, but it should also return a
 `Disposable`.
 
-## Target Language Feature API
+### Language Registration API
 
 Copy Monaco's provider-registration shape, but scope registries to
 `ViewerServices` instead of making all feature providers process-global.
@@ -332,7 +397,7 @@ version.
 - Do not preserve old public names with deprecated aliases unless a downstream
   package cannot be migrated in the same patch.
 
-## Phase 1 - Public Text Primitives
+## Phase 1 - Shared Lifecycle, Event, And Text Primitives
 
 1. Move public `Position` and `Range` out of `renderer/core` into a neutral
    public package used by both `workspace` and `language`. Prefer
@@ -355,7 +420,7 @@ Exit criteria:
   talk about text coordinates or disposable subscriptions.
 - `moon info` shows intentional public API changes for the affected packages.
 
-## Phase 2 - `DocumentSnapshot` And `DocumentProvider`
+## Phase 2 - Document Source API
 
 1. Add `workspace.DocumentSnapshot`, `DocumentReadResult`, `DocumentChange`,
    `DocumentError`, and `DocumentProvider`. Use `@base_common.Disposable` for
@@ -381,7 +446,7 @@ Exit criteria:
 - A same-URI content change with a different revision cannot reuse stale render
   cache entries.
 
-## Phase 3 - Language Provider Migration
+## Phase 3 - Language Registration API
 
 1. Change provider traits in `language/providers.mbt` to accept
    `@workspace.DocumentSnapshot` instead of `@model.TextModel` or
@@ -407,7 +472,7 @@ Exit criteria:
   `DocumentSnapshot.uri.scheme()`, and optional path pattern.
 - Feature result freshness is checked by `(uri, revision)`.
 
-## Phase 4 - Viewer Facade Migration
+## Phase 4 - Viewer Facade And `on_*` Events
 
 1. Replace `Viewer::Viewer(source, ...)` and `Viewer::attach(host)` in public
    docs with `Viewer::create(host, provider, ...)`.

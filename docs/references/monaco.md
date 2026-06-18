@@ -8,9 +8,9 @@ Useful areas:
 - `vscode/src/vs/base/common/uri.ts`: URI identity; local owner is
   `base/common.Uri`.
 - `vscode/src/vs/editor/common/core`: `Position`, `Range`, offset/range helpers;
-  local owner is `renderer/core`.
+  local owner is `viewer/core`.
 - `vscode/src/vs/editor/common/model`: text model, tokens, decorations, interval
-  tree; local readonly text owner is `renderer/model`.
+  tree; local readonly text owner is `viewer/model`.
 - `vscode/src/vs/editor/common/languages`: language registrations and tokenization.
 - `vscode/src/vs/editor/common/tokenizationRegistry.ts`: the
   `TokenizationRegistry` this repo's `syntax.TokenizerRegistry` copies —

@@ -1,7 +1,7 @@
 # examples/embedded_viewer
 
 A real embedding target, the way Monaco's standalone editor proves its
-package boundary: the viewer library (`renderer/browser`) plus the
+package boundary: the viewer library (`viewer`) plus the
 file-tree widget (`widgets/file_tree`) mounted against in-memory
 `DocumentProvider` / `WorkspaceTreeProvider` implementations — a handful of
 hardcoded documents and directories, zero server or websocket involvement.

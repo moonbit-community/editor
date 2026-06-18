@@ -1,4 +1,4 @@
-# renderer/model
+# viewer/model
 
 Readonly editor text model and immutable text snapshots.
 
@@ -13,14 +13,14 @@ Readonly editor text model and immutable text snapshots.
 
 ## Boundaries
 
-- May depend on `base/common` for `Uri` and `renderer/core` for `Position`,
+- May depend on `base/common` for `Uri` and `viewer/core` for `Position`,
   `Range`, and clamping.
 - Must not depend on workspace providers, language providers, syntax,
-  renderer/browser, DOM, server routing, or host effects.
+  viewer, DOM, server routing, or host effects.
 - Does not expose edit, undo/redo, cursor, IME, or model event APIs.
 
 ## Checks
 
 - Package tests live in `text_model_test.mbt`.
-- Run `moon test renderer/model` for focused coverage.
+- Run `moon test viewer/model` for focused coverage.
 

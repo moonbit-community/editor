@@ -136,7 +136,7 @@ pub fn MarkerService::diagnostics_for_resource(
 }
 
 ///|
-/// Converts marker state into renderer decorations and hover lookups.
+/// Converts marker state into viewer decorations and hover lookups.
 pub(all) struct MarkerDecorationsService {
   markers : MarkerService
 }

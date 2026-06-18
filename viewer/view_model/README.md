@@ -1,4 +1,4 @@
-# renderer/view_model
+# viewer/view_model
 
 Pure common-layer view-model state, the MoonBit-owned package boundary for
 Monaco's readonly `ViewModel`, `ViewModelLinesFromModelAsIs`,
@@ -33,12 +33,12 @@ model-line source data, and viewport-scoped render frames.
 
 ## Boundaries
 
-- May depend on `renderer/core`, `renderer/model`, `syntax`, `decorations`,
-  `language`, JSON support, and `renderer/view_line_renderer`.
-- Must not depend on parent `renderer`, `renderer/view_layout`,
-  `renderer/browser`, `web`, server, transport, workspace, or host packages.
+- May depend on `viewer/core`, `viewer/model`, `syntax`, `decorations`,
+  `language`, JSON support, and `viewer/view_line_renderer`.
+- Must not depend on parent `viewer/common`, `viewer/view_layout`,
+  `viewer`, `web`, server, transport, workspace, or host packages.
 - Must not declare FFI.
-- `ViewportData` lives in `renderer/view_layout`, which can depend on this
+- `ViewportData` lives in `viewer/view_layout`, which can depend on this
   package without a cycle.
 
 ## Checks
@@ -47,5 +47,5 @@ model-line source data, and viewport-scoped render frames.
   `render_frame_test.mbt`, `view_model_test.mbt`, and
   `folding_model_test.mbt`, plus focused selection tests in
   `selection_test.mbt`.
-- Run `moon test --target js renderer/view_model` and
-  `moon test --target native renderer/view_model` for this package.
+- Run `moon test --target js viewer/view_model` and
+  `moon test --target native viewer/view_model` for this package.

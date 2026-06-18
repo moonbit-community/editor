@@ -1,7 +1,7 @@
 ///|
 /// Whole-document driver: feeds every line through a `LineTokenizer`
 /// carrying state across lines, and converts line-local tokens to the
-/// doc-offset `Token` shape `renderer.build_frame` consumes.
+/// doc-offset `Token` shape `viewer/common` frame building consumes.
 pub fn tokenize_document(
   doc : @model.TextSnapshot,
   tokenizer : &LineTokenizer,

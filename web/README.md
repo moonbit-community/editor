@@ -16,7 +16,7 @@ Browser client entrypoint for the readonly editor.
 - Must remain the generated browser entrypoint and avoid becoming a shared
   domain package.
 - Does not declare JavaScript FFI directly; browser host calls go through
-  `workbench` and the packages it composes, especially `renderer/browser` and
+  `workbench` and the packages it composes, especially `viewer` and
   Rabbita browser bindings.
 - Does not parse active document identity from browser URL parameters.
 

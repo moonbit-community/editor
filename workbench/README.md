@@ -42,8 +42,8 @@ remote protocol transport.
 
 ## Boundaries
 
-- May depend on `base/common`, `renderer/core`, `renderer/model`,
-  `renderer/browser`, `widgets/file_tree`, `remote_protocol`, `workspace`,
+- May depend on `base/common`, `viewer/core`, `viewer/model`,
+  `viewer`, `widgets/file_tree`, `remote_protocol`, `workspace`,
   `language`, `platform/log`, concrete `syntax/lang_*` packages, and Rabbita
   packages including `websocket`.
 - May declare narrowly scoped JavaScript FFI for workbench-owned browser-host

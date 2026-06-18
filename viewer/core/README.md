@@ -1,4 +1,4 @@
-# renderer/core
+# viewer/core
 
 Backend-neutral editor coordinate primitives.
 
@@ -12,12 +12,12 @@ Backend-neutral editor coordinate primitives.
 ## Boundaries
 
 - Must not depend on DOM, browser APIs, native APIs, workspace providers,
-  server routing, syntax, language providers, or renderer/browser packages.
-- Text ownership belongs in `renderer/model`; URI ownership belongs in
+  server routing, syntax, language providers, or viewer packages.
+- Text ownership belongs in `viewer/model`; URI ownership belongs in
   `base/common`.
 
 ## Checks
 
 - Package tests live in `position_range_test.mbt`.
-- Run `moon test renderer/core` for focused coverage.
+- Run `moon test viewer/core` for focused coverage.
 

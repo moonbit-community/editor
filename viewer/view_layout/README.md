@@ -1,4 +1,4 @@
-# renderer/view_layout
+# viewer/view_layout
 
 Pure common-layer layout and scroll state, the MoonBit-owned package boundary
 for Monaco's `viewLayout`, `linesLayout`, scrollable state, scrollbar geometry,
@@ -18,21 +18,21 @@ viewport-window derivation, and readonly view-zone displacement.
   rendered window.
 - Own pure scrollbar geometry through `ScrollbarState`.
 - Own view-zone layout data (`ViewZone`) as common-layer model state. Browser
-  DOM mounting and the add/update/remove accessor stay in `renderer/browser`.
+  DOM mounting and the add/update/remove accessor stay in `viewer`.
 
 ## Boundaries
 
-- May depend on `renderer/core`, `renderer/model`, `syntax`, `decorations`,
-  `language`, `renderer/view_line_renderer`, and `renderer/view_model`.
-- Must not depend on `renderer`, `renderer/browser`, `web`, server, transport,
+- May depend on `viewer/core`, `viewer/model`, `syntax`, `decorations`,
+  `language`, `viewer/view_line_renderer`, and `viewer/view_model`.
+- Must not depend on `viewer/common`, `viewer`, `web`, server, transport,
   workspace, or host packages.
 - Must not declare FFI.
-- Browser DOM mounting and event handling stay in `renderer/browser`.
+- Browser DOM mounting and event handling stay in `viewer`.
 
 ## Checks
 
 - Package tests live in `view_layout_test.mbt`, `view_window_test.mbt`, and
   `scrollbar_state_test.mbt`, with viewport integration in
   `view_model_viewport_test.mbt`.
-- Run `moon test --target js renderer/view_layout` and
-  `moon test --target native renderer/view_layout` for this package.
+- Run `moon test --target js viewer/view_layout` and
+  `moon test --target native viewer/view_layout` for this package.

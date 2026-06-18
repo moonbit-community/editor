@@ -1,4 +1,4 @@
-# renderer/view_line_renderer
+# viewer/view_line_renderer
 
 Pure common-layer line rendering, the MoonBit-owned package boundary for
 Monaco's `viewLineRenderer`, `lineDecorations`, `inlineDecorations`, and
@@ -18,16 +18,16 @@ character-mapping roles.
 
 ## Boundaries
 
-- May depend on `renderer/core` and `syntax`.
-- Must not depend on `renderer`, `renderer/browser`, `web`, server, transport,
+- May depend on `viewer/core` and `syntax`.
+- Must not depend on `viewer/common`, `viewer`, `web`, server, transport,
   workspace, or host packages.
 - Must not declare FFI.
 - This package receives already-derived line content, token classes, and
-  decorations. Document/provider conversion stays in `renderer/view_model`;
-  viewport assembly stays in `renderer/view_layout`.
+  decorations. Document/provider conversion stays in `viewer/view_model`;
+  viewport assembly stays in `viewer/view_layout`.
 
 ## Checks
 
 - Package reference tests live in `monaco_render_line_reference_test.mbt`.
-- Run `moon test --target js renderer/view_line_renderer` and
-  `moon test --target native renderer/view_line_renderer` for this package.
+- Run `moon test --target js viewer/view_line_renderer` and
+  `moon test --target native viewer/view_line_renderer` for this package.

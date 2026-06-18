@@ -1,9 +1,8 @@
 # Architecture
 
 The editor is a readonly MoonBit code viewer. The public embedding surface is
-the browser viewer backend: MoonBit users import `renderer/browser`, provide
-document and feature providers, attach the viewer to their own host element, and
-drive it from their own shell.
+`viewer`: MoonBit users provide document and feature providers, attach the
+viewer to their own host element, and drive it from their own shell.
 
 This file is the high-level system map. It should stay stable and describe
 where components belong. Package-local contracts, method lists, tests, and DOM
@@ -25,22 +24,22 @@ MoonBit-owned and must not import from `vscode/` or `codemirror/`.
 The project has one primary reusable product surface and one reference host
 stack around it.
 
-- `renderer/browser`: the embeddable readonly viewer for MoonBit users and this
+- `viewer`: the embeddable readonly viewer for MoonBit users and this
   repo's Monaco `editor/browser` role. It owns the browser DOM view, browser
   input, widgets such as hover, and the public viewer control API.
-- `renderer`: pre-DOM common editor model state and this repo's Monaco
+- `viewer/common`: pre-DOM common editor model state and this repo's Monaco
   `editor/common` role. It owns the readonly `ViewModel` spine, viewport data,
   line HTML, scroll/layout arithmetic, and hit testing.
 - `base/common`: low-level URI identity, lifecycle helpers, and editor
-  coordinate primitives shared by workspace, language, renderer, protocol,
+  coordinate primitives shared by workspace, language, viewer, protocol,
   server, and widgets.
-- `renderer/core`: legacy coordinate re-export package kept for older renderer
-  internals while public contracts use `base/common`.
-- `renderer/model`: internal readonly editor text ownership derived from
+- `viewer/core`: UTF-16 coordinate primitives used by viewer internals while
+  public host contracts use `base/common`.
+- `viewer/model`: internal readonly editor text ownership derived from
   `workspace.DocumentSnapshot` by browser rendering code.
 - `workspace`: source/tree provider contracts, provider-loaded
   `DocumentSnapshot` payloads, and document watch notifications. It does not
-  own renderer text models or depend on renderer packages.
+  own viewer text models or depend on viewer packages.
 - `language`: language feature contracts and result types such as hover,
   diagnostics, document symbols, and semantic tokens.
 - `syntax` and `syntax/lang_*`: tokenization contracts and compile-time
@@ -59,17 +58,17 @@ stack around it.
   workbench, remote protocol, server, or native host.
 
 `view` is a compatibility render model kept separate from the active
-`renderer` path.
+`viewer` path.
 
 ## Main Interactions
 
 ### Embedded Viewer
 
-External MoonBit embedders should treat `renderer/browser` as the entry point:
+External MoonBit embedders should treat `viewer` as the entry point:
 
 ```text
 embedder shell
-  -> renderer/browser.Viewer
+  -> viewer.Viewer
   -> workspace.DocumentProvider
   -> optional language providers
   -> optional syntax/lang_* tokenizer registration
@@ -91,7 +90,7 @@ The shipped app is one composition of the public viewer:
 ```text
 web
   -> workbench
-  -> renderer/browser
+  -> viewer
   -> widgets/file_tree
   -> remote_protocol
 
@@ -116,18 +115,18 @@ Rendering is split by host boundary:
 
 ```text
 workspace.DocumentSnapshot
-  -> renderer/browser-derived renderer/model.TextModel / TextSnapshot
-  -> renderer/view_model tokenization and ViewModel state
-  -> renderer/view_layout scroll and viewport window state
-  -> renderer/view_layout ViewportData
-  -> renderer/view_line_renderer render-line IR
-  -> renderer/browser DOM view
+  -> viewer-derived viewer/model.TextModel / TextSnapshot
+  -> viewer/view_model tokenization and ViewModel state
+  -> viewer/view_layout scroll and viewport window state
+  -> viewer/view_layout ViewportData
+  -> viewer/view_line_renderer render-line IR
+  -> viewer DOM view
 ```
 
-Pre-DOM rendering and geometry belong in `renderer` and its common-layer
-subpackages. `renderer/view_layout` owns DOM-free scroll/layout state.
+Pre-DOM rendering and geometry belong in `viewer/common` and its focused
+common-layer subpackages. `viewer/view_layout` owns DOM-free scroll/layout state.
 Browser-specific DOM, CSS, event capture, custom scrollbars, and widget
-placement belong in `renderer/browser`. The browser `ViewLayer` applies
+placement belong in `viewer`. The browser `ViewLayer` applies
 `@view_line_renderer.RenderLineInput` / `RenderLineOutput2` results to DOM
 nodes; it does not own line HTML semantics.
 
@@ -139,15 +138,16 @@ Syntax highlighting and semantic language features are separate:
 - Hosts register tokenizers with the viewer.
 - `language` provider traits provide semantic features such as hover and
   diagnostics.
-- `renderer/browser` consumes registered tokenizers and providers without
+- `viewer` consumes registered tokenizers and providers without
   importing concrete `syntax/lang_*` packages or any backend transport.
 
 ## Placement Rules
 
 Use these rules when deciding where to add a new package or feature:
 
-- Public viewer behavior belongs in `renderer/browser` unless it is pure
-  backend-neutral model logic, in which case it belongs in `renderer`.
+- Public viewer behavior belongs in `viewer` unless it is pure
+  backend-neutral model logic, in which case it belongs in `viewer/common` or a
+  focused `viewer/*` common-layer package.
 - New host-neutral document or workspace contracts belong in `workspace`.
 - New semantic language feature contracts belong in `language`.
 - New concrete tokenizers belong in `syntax/lang_*` packages and are composed by
@@ -174,32 +174,31 @@ Dependencies should flow from host entry points toward shared domain packages:
 
 ```text
 web -> workbench
-workbench -> renderer/browser, widgets/file_tree, remote_protocol, syntax/lang_*
-renderer/browser -> renderer, renderer/core, renderer/model,
-                    renderer/view_line_renderer, renderer/view_layout,
-                    renderer/view_model, workspace, language, syntax,
-                    decorations, platform/log
+workbench -> viewer, widgets/file_tree, remote_protocol, syntax/lang_*
+viewer -> viewer/common, viewer/core, viewer/model,
+          viewer/view_line_renderer, viewer/view_layout, viewer/view_model,
+          workspace, language, syntax, decorations, platform/log
 widgets/file_tree -> workspace
 
 server_host_native/main -> server_host_native
 server_host_native -> server
 server -> remote_protocol, workspace, language
 
-renderer -> renderer/view_line_renderer, renderer/view_layout,
-            renderer/view_model, decorations
-renderer/view_layout -> renderer/view_model, renderer/view_line_renderer,
-                        renderer/core, renderer/model, syntax, decorations,
+viewer/common -> viewer/view_line_renderer, viewer/view_layout,
+                 viewer/view_model, decorations
+viewer/view_layout -> viewer/view_model, viewer/view_line_renderer,
+                        viewer/core, viewer/model, syntax, decorations,
                         language
-renderer/view_model -> renderer/view_line_renderer, renderer/core,
-                       renderer/model, syntax, decorations, language
-renderer/view_line_renderer -> renderer/core, syntax
+viewer/view_model -> viewer/view_line_renderer, viewer/core,
+                       viewer/model, syntax, decorations, language
+viewer/view_line_renderer -> viewer/core, syntax
 workspace -> base/common
 language -> base/common, workspace
-syntax/decorations -> renderer/core
-renderer/model -> base/common, renderer/core
+syntax/decorations -> viewer/core
+viewer/model -> base/common, viewer/core
 remote_protocol/server/workbench/widgets -> base/common, workspace, language
 platform/log -> no product packages
-syntax/lang_* -> syntax
+syntax/lang_* -> syntax, viewer/core, viewer/model
 ```
 
 The repository-level architecture guardrail is `scripts/check-architecture.mbtx`,

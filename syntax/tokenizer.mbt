@@ -9,7 +9,7 @@ pub(all) struct TokenizerState(String) derive(Eq, Debug)
 ///|
 /// One highlighted span within a single line, in line-local UTF-16
 /// code-unit offsets. Token ranges must never split a surrogate pair: the
-/// renderer slices the document text at these offsets.
+/// viewer slices the document text at these offsets.
 pub(all) struct LineToken {
   start : Int
   end : Int
@@ -31,7 +31,7 @@ pub(open) trait LineTokenizer {
 ///|
 /// Tokenization support keyed by language id, Monaco's
 /// `TokenizationRegistry`. A plain value with no global instance here:
-/// the embedding layer owns its singleton (`renderer/browser`, per the
+/// the embedding layer owns its singleton (`viewer`, per the
 /// module-`Ref` convention) and registers languages at startup.
 pub struct TokenizerRegistry {
   priv tokenizers : Map[String, &LineTokenizer]

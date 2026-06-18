@@ -40,7 +40,7 @@ Rows keep the explorer selectors: `workspace-item`,
 ## Boundaries
 
 - May depend on `workspace` and Rabbita html/cmd/svg.
-- Must not import `remote_protocol` or `renderer/browser` — enforced by
+- Must not import `remote_protocol` or `viewer` — enforced by
   `scripts/check-architecture.mbtx`.
 
 ## Checks

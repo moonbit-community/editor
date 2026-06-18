@@ -1,5 +1,5 @@
 ///|
-/// Browser-side counterpart to the renderer `Scrollable` model. This owns the
+/// Browser-side counterpart to the common `Scrollable` model. This owns the
 /// Monaco-shaped DOM shell and the custom scrollbar node geometry; callers
 /// decide whether scroll positions are written back into `ViewLayout` or a
 /// native content element.

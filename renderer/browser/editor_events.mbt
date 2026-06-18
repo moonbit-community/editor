@@ -3,7 +3,7 @@
 /// consume these the way VS Code contributions consume editor events; no
 /// controller sees raw DOM events.
 priv enum EditorEvent {
-  MouseMoved(@renderer.MouseTarget)
+  MouseMoved(@viewer_common.MouseTarget)
   MouseLeft
   EscapePressed
 }

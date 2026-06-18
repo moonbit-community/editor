@@ -62,7 +62,7 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
 fn test_metrics(
   scroll_top? : Double = 0.0,
   view_zones? : Array[@view_layout.ViewZone] = [],
-) -> @renderer.ViewMetrics {
+) -> @common.ViewMetrics {
   {
     origin_x: 0.0,
     origin_y: 0.0,
@@ -79,7 +79,7 @@ fn test_metrics(
 test "hit test maps wrapped view line coordinates back to model offsets" {
   let frame = projected_hit_test_frame()
   assert_eq(frame.line_count, 2)
-  let target = @renderer.hit_test(
+  let target = @common.hit_test(
     frame,
     test_metrics(),
     50.0 + 8.0 * 2.0,
@@ -89,7 +89,7 @@ test "hit test maps wrapped view line coordinates back to model offsets" {
   assert_eq(target.line_number, 2)
   assert_eq(target.column, 2)
   assert_eq(target.offset, 7)
-  let gutter = @renderer.hit_test(frame, test_metrics(), 10.0, 18.0 + 4.0)
+  let gutter = @common.hit_test(frame, test_metrics(), 10.0, 18.0 + 4.0)
   assert_true(gutter.kind == GutterLineNumbers)
   assert_eq(gutter.line_number, 2)
   assert_eq(gutter.offset, 5)
@@ -99,12 +99,12 @@ test "hit test maps wrapped view line coordinates back to model offsets" {
 test "hit test reports injected text hits without shifting source offsets" {
   let frame = inlay_hint_hit_test_frame()
   assert_eq(frame.lines[0].text, "let x: Int = 1")
-  let target = @renderer.hit_test(frame, test_metrics(), 50.0 + 8.0 * 6.0, 4.0)
+  let target = @common.hit_test(frame, test_metrics(), 50.0 + 8.0 * 6.0, 4.0)
   assert_true(target.kind == ContentText)
   assert_eq(target.column, 6)
   assert_eq(target.offset, 5)
   assert_eq(target.injected_text_index, 0)
-  let source_after_hint = @renderer.hit_test(
+  let source_after_hint = @common.hit_test(
     frame,
     test_metrics(),
     50.0 + 8.0 * 11.0,
@@ -120,7 +120,7 @@ test "hit test resolves gutter, text, and empty content targets" {
   let frame = hit_test_frame()
   // Inside the gutter band of the first line.
   debug_inspect(
-    @renderer.hit_test(frame, test_metrics(), 10.0, 4.0),
+    @common.hit_test(frame, test_metrics(), 10.0, 4.0),
     content=(
       #|{
       #|  kind: GutterLineNumbers,
@@ -134,7 +134,7 @@ test "hit test resolves gutter, text, and empty content targets" {
   )
   // Column 3 of line 1 lands inside the `main` identifier span.
   debug_inspect(
-    @renderer.hit_test(frame, test_metrics(), 50.0 + 8.0 * 3.0, 4.0),
+    @common.hit_test(frame, test_metrics(), 50.0 + 8.0 * 3.0, 4.0),
     content=(
       #|{
       #|  kind: ContentText,
@@ -148,7 +148,7 @@ test "hit test resolves gutter, text, and empty content targets" {
   )
   // Past the end of line 1's text.
   debug_inspect(
-    @renderer.hit_test(frame, test_metrics(), 50.0 + 8.0 * 30.0, 4.0),
+    @common.hit_test(frame, test_metrics(), 50.0 + 8.0 * 30.0, 4.0),
     content=(
       #|{
       #|  kind: ContentEmpty,
@@ -167,7 +167,7 @@ test "hit test maps scrolled coordinates and below-content space" {
   let frame = hit_test_frame()
   // Scrolled down one line: y=4 now lands on line 2, column 2 -> `let`.
   debug_inspect(
-    @renderer.hit_test(frame, test_metrics(scroll_top=18.0), 50.0 + 16.0, 4.0),
+    @common.hit_test(frame, test_metrics(scroll_top=18.0), 50.0 + 16.0, 4.0),
     content=(
       #|{
       #|  kind: ContentText,
@@ -181,7 +181,7 @@ test "hit test maps scrolled coordinates and below-content space" {
   )
   // Below the last line.
   debug_inspect(
-    @renderer.hit_test(frame, test_metrics(), 60.0, 18.0 * 5.0 + 4.0),
+    @common.hit_test(frame, test_metrics(), 60.0, 18.0 * 5.0 + 4.0),
     content=(
       #|{
       #|  kind: BelowContent,
@@ -195,7 +195,7 @@ test "hit test maps scrolled coordinates and below-content space" {
   )
   // Outside the viewer box.
   debug_inspect(
-    @renderer.hit_test(frame, test_metrics(), -2.0, 4.0),
+    @common.hit_test(frame, test_metrics(), -2.0, 4.0),
     content=(
       #|{
       #|  kind: Outside,
@@ -215,7 +215,7 @@ test "hit test accounts for view zones displacing following lines" {
   let metrics = test_metrics(view_zones=[{ anchor_line: 1, height_px: 36 }])
   // The zone band itself belongs to the widget, not the editor content.
   debug_inspect(
-    @renderer.hit_test(frame, metrics, 60.0, 18.0 + 4.0),
+    @common.hit_test(frame, metrics, 60.0, 18.0 + 4.0),
     content=(
       #|{
       #|  kind: Outside,
@@ -229,7 +229,7 @@ test "hit test accounts for view zones displacing following lines" {
   )
   // Below the zone, line 2 is shifted down by the zone height.
   debug_inspect(
-    @renderer.hit_test(frame, metrics, 50.0 + 16.0, 18.0 + 36.0 + 4.0),
+    @common.hit_test(frame, metrics, 50.0 + 16.0, 18.0 + 36.0 + 4.0),
     content=(
       #|{
       #|  kind: ContentText,
@@ -243,7 +243,7 @@ test "hit test accounts for view zones displacing following lines" {
   )
   // Above the zone, line 1 is unaffected.
   debug_inspect(
-    @renderer.hit_test(frame, metrics, 50.0 + 8.0 * 3.0, 4.0),
+    @common.hit_test(frame, metrics, 50.0 + 8.0 * 3.0, 4.0),
     content=(
       #|{
       #|  kind: ContentText,
@@ -262,7 +262,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
   let frame = hit_test_frame()
   // Line 4 is empty: any column resolves to its start offset.
   debug_inspect(
-    @renderer.hit_test(frame, test_metrics(), 70.0, 18.0 * 3.0 + 4.0),
+    @common.hit_test(frame, test_metrics(), 70.0, 18.0 * 3.0 + 4.0),
     content=(
       #|{
       #|  kind: ContentEmpty,
@@ -277,7 +277,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
   let windowed = hit_test_frame(viewport={ start_line: 0, end_line: 2 })
   // Line 4 exists in the document but is outside the rendered window.
   debug_inspect(
-    @renderer.hit_test(windowed, test_metrics(), 70.0, 18.0 * 3.0 + 4.0),
+    @common.hit_test(windowed, test_metrics(), 70.0, 18.0 * 3.0 + 4.0),
     content=(
       #|{
       #|  kind: ContentEmpty,

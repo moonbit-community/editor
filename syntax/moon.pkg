@@ -1,6 +1,6 @@
 import {
   "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/renderer/model",
+  "baozhiyuan/editor/viewer/model",
 }
 
 import {

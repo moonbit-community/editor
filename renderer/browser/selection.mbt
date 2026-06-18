@@ -16,7 +16,7 @@ fn Viewer::selection_range(self : Viewer) -> @base_common.Range? {
 ///|
 fn Viewer::begin_selection(
   self : Viewer,
-  target : @renderer.MouseTarget,
+  target : @viewer_common.MouseTarget,
 ) -> Unit {
   match self.position_for_selection_target(target) {
     Some(position) => {
@@ -36,7 +36,7 @@ fn Viewer::begin_selection(
 ///|
 fn Viewer::update_selection(
   self : Viewer,
-  target : @renderer.MouseTarget,
+  target : @viewer_common.MouseTarget,
 ) -> Unit {
   guard self.selection_dragging else { return }
   guard self.selection is Some(selection) else { return }
@@ -68,7 +68,7 @@ fn Viewer::finish_selection(self : Viewer) -> Unit {
 ///|
 fn Viewer::position_for_selection_target(
   self : Viewer,
-  target : @renderer.MouseTarget,
+  target : @viewer_common.MouseTarget,
 ) -> @base_common.Position? {
   if target.offset < 0 {
     return None
@@ -173,10 +173,10 @@ fn append_rich_copy_line_segments(
       let end_column = span.start + min_int(range.end, span_end) - span_start
       if start_column < end_column {
         html.write_string("<span class=\"")
-        html.write_string(@renderer.escape_html(span.class_name))
+        html.write_string(@viewer_common.escape_html(span.class_name))
         html.write_string("\">")
         html.write_string(
-          @renderer.escape_html(line.text[start_column:end_column].to_owned()),
+          @viewer_common.escape_html(line.text[start_column:end_column].to_owned()),
         )
         html.write_string("</span>")
       }

@@ -124,7 +124,7 @@ test "empty line preserves compatibility wrapper" {
   let doc = @model.TextSnapshot("a\n\nb")
   let frame = frame_for(doc, { start_line: 0, end_line: 3 })
   assert_eq(
-    @renderer.render_line_html(frame.lines[1], []),
+    @common.render_line_html(frame.lines[1], []),
     "<span class=\"view-line-content\"></span>",
   )
 }

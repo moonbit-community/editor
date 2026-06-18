@@ -44,12 +44,12 @@ fn standard_hover_row(content_html : String) -> String {
 
 ///|
 fn hover_plaintext_html(text : String) -> String {
-  "<div class=\"hover-plaintext\">" + @renderer.escape_html(text) + "</div>"
+  "<div class=\"hover-plaintext\">" + @viewer_common.escape_html(text) + "</div>"
 }
 
 ///|
 fn marker_hover_row(text : String) -> String {
-  let escaped = @renderer.escape_html(text)
+  let escaped = @viewer_common.escape_html(text)
   "<div class=\"hover-row hover-row-with-copy\" tabindex=\"0\"><div class=\"marker hover-contents\">" +
   escaped +
   "</div><button type=\"button\" class=\"hover-copy-button\" aria-label=\"Copy\" data-hover-copy=\"" +
@@ -108,7 +108,7 @@ fn render_hover_code_block(
     if index > 0 {
       html.write_string("<br/>")
     }
-    html.write_string(@renderer.render_line_html(frame.lines[index], []))
+    html.write_string(@viewer_common.render_line_html(frame.lines[index], []))
   }
   html.write_string("</div>")
   html.to_string()

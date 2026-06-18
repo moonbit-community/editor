@@ -54,8 +54,8 @@ async fn main {
 async fn check_language_package_imports(errors : Array[String]) -> Unit {
   let language_prefix = "baozhiyuan/editor/syntax/lang_"
   let allowed_in_language_packages = [
-    "baozhiyuan/editor/renderer/core",
-    "baozhiyuan/editor/renderer/model",
+    "baozhiyuan/editor/viewer/core",
+    "baozhiyuan/editor/viewer/model",
     "baozhiyuan/editor/syntax",
   ]
   for name in @fs.readdir("syntax", include_hidden=false, sort=true) {

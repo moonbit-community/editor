@@ -1,0 +1,12 @@
+import {
+  "baozhiyuan/editor/decorations",
+  "baozhiyuan/editor/viewer/view_line_renderer",
+  "baozhiyuan/editor/viewer/view_layout",
+  "baozhiyuan/editor/viewer/view_model",
+}
+
+import {
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/viewer/model",
+  "baozhiyuan/editor/syntax",
+} for "test"

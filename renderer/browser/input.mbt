@@ -137,7 +137,7 @@ fn Viewer::handle_mouse_move(
   let rect = view.root.get_bounding_client_rect()
   let x = mouse.get_client_x().to_double() - rect.get_left()
   let y = mouse.get_client_y().to_double() - rect.get_top()
-  let target = @renderer.hit_test(frame, self.view_metrics(frame), x, y)
+  let target = @viewer_common.hit_test(frame, self.view_metrics(frame), x, y)
   self.dispatch_editor_event(MouseMoved(target))
 }
 
@@ -156,7 +156,7 @@ fn Viewer::handle_mouse_down(
   let rect = view.root.get_bounding_client_rect()
   let x = mouse.get_client_x().to_double() - rect.get_left()
   let y = mouse.get_client_y().to_double() - rect.get_top()
-  let target = @renderer.hit_test(frame, self.view_metrics(frame), x, y)
+  let target = @viewer_common.hit_test(frame, self.view_metrics(frame), x, y)
   match target.kind {
     ContentText | ContentEmpty => {
       event.prevent_default()
@@ -183,7 +183,7 @@ fn Viewer::handle_selection_drag_move(
   let rect = view.root.get_bounding_client_rect()
   let x = mouse.get_client_x().to_double() - rect.get_left()
   let y = mouse.get_client_y().to_double() - rect.get_top()
-  let target = @renderer.hit_test(frame, self.view_metrics(frame), x, y)
+  let target = @viewer_common.hit_test(frame, self.view_metrics(frame), x, y)
   self.update_selection(target)
 }
 
@@ -449,7 +449,7 @@ fn Viewer::gutter_width(
 fn Viewer::view_metrics(
   self : Viewer,
   frame : @view_model.RenderFrame,
-) -> @renderer.ViewMetrics {
+) -> @viewer_common.ViewMetrics {
   {
     origin_x: 0.0,
     origin_y: 0.0,
@@ -467,7 +467,7 @@ fn Viewer::view_metrics(
 /// the anchors the old per-span handlers produced.
 fn span_anchor_for_target(
   frame : @view_model.RenderFrame,
-  target : @renderer.MouseTarget,
+  target : @viewer_common.MouseTarget,
 ) -> (Int, Int, @view_model.RenderSpan)? {
   if target.span_index < 0 {
     return None

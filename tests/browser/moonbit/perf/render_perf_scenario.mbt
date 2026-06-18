@@ -1,11 +1,11 @@
 ///|
-priv struct PerfDocumentSource {
+priv struct PerfDocumentProvider {
   small_text : String
   large_text : String
 }
 
 ///|
-impl @workspace.DocumentSource for PerfDocumentSource with fn open_document(
+impl @workspace.DocumentProvider for PerfDocumentProvider with fn read(
   self,
   uri,
 ) {
@@ -14,25 +14,25 @@ impl @workspace.DocumentSource for PerfDocumentSource with fn open_document(
   } else {
     self.small_text
   }
-  SourceDocumentLoaded(
-    @workspace.SourceDocument::from_file_content(
+  DocumentLoaded(
+    @workspace.DocumentSnapshot::from_content(
       uri,
-      FileContent(text, display_name=uri.display_name()),
+      DocumentContent(text, display_name=uri.display_name()),
     ),
   )
 }
 
 ///|
-impl @workspace.DocumentSource for PerfDocumentSource with fn watch_document(
+impl @workspace.DocumentProvider for PerfDocumentProvider with fn watch(
   _self,
   _uri,
   _listener,
 ) {
-  { dispose: () => () }
+  @base_common.Disposable::from(() => ())
 }
 
 ///|
-impl @workspace.DocumentSource for PerfDocumentSource with fn close_document(
+impl @workspace.DocumentProvider for PerfDocumentProvider with fn close(
   _self,
   _uri,
 ) {
@@ -47,7 +47,7 @@ fn run_render_perf_test() -> Unit {
   let sample_index = Ref(-1)
   let sample_start = Ref(0.0)
   let samples : Array[Double] = []
-  let source : PerfDocumentSource = {
+  let source : PerfDocumentProvider = {
     small_text: small_source_text(),
     large_text: large_source_text(2000),
   }

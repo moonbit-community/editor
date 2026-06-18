@@ -1,9 +1,16 @@
 ///|
-test "collects language provider surfaces" {
-  let doc = @model.TextSnapshot("fn main {\n }")
-  let provider = TestLanguageProvider::{  }
-  let providers = collect_provider_result(provider, doc)
-  assert_eq(providers.hovers.length(), 1)
+test "provider result finds hover and definition by offset" {
+  let providers : ProviderResult = {
+    hovers: [{ range: Range(3, 7), contents: [PlainText("Provider hover")] }],
+    diagnostics: [
+      { range: Range(0, 2), severity: Warning, message: "Provider warning" },
+    ],
+    definitions: [
+      { uri: @base_common.Uri::memory("provider.mbt"), range: Range(3, 7) },
+    ],
+    symbols: [{ name: "main", kind: "function", range: Range(3, 7) }],
+    semantic_tokens: [{ range: Range(3, 7), token_type: "function" }],
+  }
   assert_eq(providers.diagnostics.length(), 1)
   assert_eq(providers.definitions.length(), 1)
   assert_eq(providers.definitions[0].uri.to_string(), "memory://provider.mbt")
@@ -16,35 +23,47 @@ test "collects language provider surfaces" {
       }
     None => fail("expected hover")
   }
+  match providers.definition_at(3) {
+    Some(item) => assert_eq(item.uri.to_string(), "memory://provider.mbt")
+    None => fail("expected definition")
+  }
 }
 
 ///|
-struct TestLanguageProvider {}
-
-///|
-impl LanguageProvider for TestLanguageProvider with fn hovers(_self, _doc) {
-  [{ range: Range(3, 7), contents: [PlainText("Provider hover")] }]
+test "language selectors match language scheme and path" {
+  let document = @workspace.DocumentSnapshot(
+    expect_uri("file://workspace/src/main.mbt"),
+    "main.mbt",
+    "moonbit",
+    "rev-1",
+    "fn main {}\n",
+  )
+  assert_true(LanguageSelector::LanguageId("moonbit").matches(document))
+  assert_true(
+    LanguageFilter::LanguageFilter(
+      language="moonbit",
+      scheme="file",
+      pattern="src/*.mbt",
+    ).matches(document),
+  )
+  assert_true(
+    LanguageSelector::LanguageSelectorList([
+      LanguageId("javascript"),
+      LanguageFilter(LanguageFilter(language="moonbit")),
+    ]).matches(document),
+  )
+  assert_true(!LanguageSelector::LanguageId("javascript").matches(document))
+  assert_true(
+    !LanguageFilter::LanguageFilter(language="moonbit", scheme="memory").matches(
+      document,
+    ),
+  )
 }
 
 ///|
-impl LanguageProvider for TestLanguageProvider with fn diagnostics(_self, _doc) {
-  [{ range: Range(0, 2), severity: Warning, message: "Provider warning" }]
-}
-
-///|
-impl LanguageProvider for TestLanguageProvider with fn definitions(_self, _doc) {
-  [{ uri: @base_common.Uri::memory("provider.mbt"), range: Range(3, 7) }]
-}
-
-///|
-impl LanguageProvider for TestLanguageProvider with fn symbols(_self, _doc) {
-  [{ name: "main", kind: "function", range: Range(3, 7) }]
-}
-
-///|
-impl LanguageProvider for TestLanguageProvider with fn semantic_tokens(
-  _self,
-  _doc,
-) {
-  [{ range: Range(3, 7), token_type: "function" }]
+fn expect_uri(raw_uri : String) -> @base_common.Uri raise {
+  match @base_common.Uri::parse(raw_uri) {
+    ParsedUri(uri) => uri
+    UriError(error) => fail("unexpected uri error " + error.to_string())
+  }
 }

@@ -86,20 +86,19 @@ fn Viewer::hover_loading_due(self : Viewer, token : Int) -> Unit {
 ///|
 fn Viewer::hover_resolved(
   self : Viewer,
-  model : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
   token : Int,
   hover : ComputedHover?,
 ) -> Unit {
-  if !self.is_current_model(model) {
+  if !self.is_current_document(document) {
     return
   }
   let before = self.hover
   self.hover = self.hover.resolved_hover(
     self.notify_host,
-    model.version,
+    document.revision,
     token,
     hover,
-    frame_version(self.frame),
   )
   self.after_hover_transition(before)
 }
@@ -113,17 +112,14 @@ fn Viewer::controller_decorations(
 }
 
 ///|
-fn frame_version(frame : @view_model.RenderFrame?) -> Int {
-  match frame {
-    Some(item) => item.version
-    None => 0
-  }
-}
-
-///|
-fn Viewer::is_current_model(self : Viewer, model : @model.TextModel) -> Bool {
-  match self.text_model {
-    Some(current) => current.same_identity_and_version(model)
+fn Viewer::is_current_document(
+  self : Viewer,
+  document : @workspace.DocumentSnapshot,
+) -> Bool {
+  match self.source_document {
+    Some(current) =>
+      current.uri.to_string() == document.uri.to_string() &&
+      current.revision == document.revision
     None => false
   }
 }

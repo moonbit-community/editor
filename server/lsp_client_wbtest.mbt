@@ -43,7 +43,7 @@ test "builds initialize, hover, and definition requests" {
 
 ///|
 test "normalizes hover result shapes" {
-  let doc = @model.TextSnapshot("pub fn main {}\n")
+  let doc = test_document(1, "pub fn main {}\n")
   let marked = hover_response(
     "{\"contents\":{\"language\":\"moonbit\",\"value\":\"fn main\"},\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":11}}}",
   )
@@ -193,7 +193,9 @@ async test "lsp client requests symbols and semantic tokens through provider ada
   let provider = client.language_provider()
   let document = test_document(1, "pub fn main {}\n")
 
-  let symbols = provider.document_symbols(document.text_model())
+  let symbols = provider
+    .as_document_symbol_provider()
+    .provide_document_symbols(document, @language.CancellationToken::none())
   assert_eq(symbols.length(), 2)
   assert_eq(symbols[0].name, "main")
   assert_eq(symbols[0].kind, "function")
@@ -201,7 +203,12 @@ async test "lsp client requests symbols and semantic tokens through provider ada
   assert_eq(symbols[1].name, "nested")
   assert_eq(symbols[1].kind, "variable")
 
-  let tokens = provider.semantic_tokens_for_document(document.text_model())
+  let tokens = provider
+    .as_semantic_tokens_provider()
+    .provide_document_semantic_tokens(
+      document,
+      @language.CancellationToken::none(),
+    )
   assert_eq(tokens.length(), 1)
   assert_true(tokens[0].range == Range(7, 11))
   assert_eq(tokens[0].token_type, "function")
@@ -268,7 +275,7 @@ fn definition_response(result : String) -> String {
 ///|
 fn parse_hover_for_test(
   raw : String,
-  doc : @model.TextSnapshot,
+  doc : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> @language.Hover? {
   match parse_response_result(raw) {
@@ -280,7 +287,7 @@ fn parse_hover_for_test(
 ///|
 fn parse_definition_for_test(
   raw : String,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> @language.Location? {
   match parse_response_result(raw) {
     ParsedLspResult(result) => parse_definition_result(result, document)
@@ -315,29 +322,27 @@ fn assert_markdown_hover(
 }
 
 ///|
-fn test_document(version : Int, text : String) -> @workspace.SourceDocument {
-  SourceDocument(
+fn test_document(version : Int, text : String) -> @workspace.DocumentSnapshot {
+  DocumentSnapshot(
     @base_common.Uri::memory("main.mbt"),
     "main.mbt",
     "moonbit",
-    version,
     "rev-" + version.to_string(),
     text,
   )
 }
 
 ///|
-fn file_document(version : Int, text : String) -> @workspace.SourceDocument {
+fn file_document(version : Int, text : String) -> @workspace.DocumentSnapshot {
   let uri = match
     @base_common.Uri::parse("file:///Users/example/project/main.mbt") {
     ParsedUri(parsed) => parsed
     UriError(_) => @base_common.Uri::memory("main.mbt")
   }
-  SourceDocument(
+  DocumentSnapshot(
     uri,
     "main.mbt",
     "moonbit",
-    version,
     "rev-" + version.to_string(),
     text,
   )
@@ -411,7 +416,7 @@ impl LspTransport for TestLspTransport with fn subscribe(self, listener) {
 ///|
 fn TestLspTransport::publish_diagnostics(
   self : TestLspTransport,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
   start_line : Int,
   start_character : Int,
   end_line : Int,

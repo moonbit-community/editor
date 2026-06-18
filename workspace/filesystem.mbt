@@ -21,8 +21,8 @@ pub(all) struct FileSystemProviderError {
 } derive(Debug)
 
 ///|
-/// Raw file text plus metadata needed to construct a `SourceDocument`.
-pub(all) struct FileContent {
+/// Raw file text plus metadata needed to construct a `DocumentSnapshot`.
+pub(all) struct DocumentContent {
   text : String
   display_name : String
   language_id : String
@@ -33,7 +33,7 @@ pub(all) struct FileContent {
 /// Provider read result without exceptions, so browser and native providers can
 /// share the same contract.
 pub(all) enum FileReadResult {
-  FileReadOk(FileContent)
+  FileReadOk(DocumentContent)
   FileReadError(FileSystemProviderError)
 } derive(Debug)
 
@@ -77,20 +77,13 @@ pub(open) trait FileSystemProvider {
 }
 
 ///|
-/// Document-level load result derived from file-provider reads.
-pub(all) enum SourceDocumentLoadResult {
-  SourceDocumentLoaded(SourceDocument)
-  SourceDocumentLoadError(FileSystemProviderError)
-} derive(Debug)
-
-///|
 /// Builds file content while allowing providers to omit derived metadata.
-pub fn FileContent::FileContent(
+pub fn DocumentContent::DocumentContent(
   text : String,
   display_name? : String = "",
   language_id? : String = "",
   revision? : String = "",
-) -> FileContent {
+) -> DocumentContent {
   { text, display_name, language_id, revision }
 }
 
@@ -119,15 +112,15 @@ pub fn FileWatch::dispose(self : FileWatch) -> Unit {
 }
 
 ///|
-/// Reads and converts a file-provider result into a versioned
-/// `SourceDocument`, failing closed when the URI scheme does not match.
-pub async fn read_source_document(
+/// Reads and converts a file-provider result into an immutable
+/// `DocumentSnapshot`, failing closed when the URI scheme does not match.
+pub async fn read_document(
   provider : &FileSystemProvider,
   uri : @base_common.Uri,
-) -> SourceDocumentLoadResult {
+) -> DocumentReadResult {
   if uri.scheme() != provider.scheme() {
-    return SourceDocumentLoadError(
-      FileSystemProviderError(
+    return DocumentReadFailed(
+      DocumentError(
         InvalidUri,
         "No filesystem provider is registered for URI scheme " + uri.scheme(),
         uri~,
@@ -136,8 +129,12 @@ pub async fn read_source_document(
   }
   match provider.read_file(uri) {
     FileReadOk(content) =>
-      SourceDocumentLoaded(SourceDocument::from_file_content(uri, content))
-    FileReadError(error) => SourceDocumentLoadError(error)
+      DocumentLoaded(DocumentSnapshot::from_content(uri, content))
+    FileReadError(error) =>
+      match error.code {
+        FileNotFound => DocumentNotFound(uri)
+        _ => DocumentReadFailed(DocumentError::from_file_system_error(error))
+      }
   }
 }
 
@@ -152,41 +149,6 @@ pub fn watch_file(
     provider.watch(uri, WatchOptions::default(), listener)
   } else {
     { dispose: () => () }
-  }
-}
-
-///|
-/// Derives a `SourceDocument` from provider content, filling display name,
-/// language id, and revision when they are absent.
-pub fn SourceDocument::from_file_content(
-  uri : @base_common.Uri,
-  content : FileContent,
-) -> SourceDocument {
-  let display_name = if content.display_name == "" {
-    uri.display_name()
-  } else {
-    content.display_name
-  }
-  let language_id = if content.language_id == "" {
-    infer_language_id(display_name)
-  } else {
-    content.language_id
-  }
-  let revision = if content.revision == "" {
-    revision_from_text(content.text)
-  } else {
-    content.revision
-  }
-  SourceDocument(uri, display_name, language_id, 1, revision, content.text)
-}
-
-///|
-/// JSON shape consumed by browser harnesses and remote protocol adapters.
-pub impl ToJson for SourceDocumentLoadResult with fn to_json(self) {
-  match self {
-    SourceDocumentLoaded(document) =>
-      { "ok": true, "document": document.to_json() }
-    SourceDocumentLoadError(error) => { "ok": false, "error": error.to_json() }
   }
 }
 
@@ -283,7 +245,7 @@ pub fn FileChangeType::to_string(self : FileChangeType) -> String {
 }
 
 ///|
-fn revision_from_text(text : String) -> String {
+pub fn revision_from_text(text : String) -> String {
   let mut hash = 2166136261L
   for i in 0..<text.length() {
     hash = (hash ^ text[i].to_int64()) * 16777619L

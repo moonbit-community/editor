@@ -17,14 +17,17 @@ pub fn NativeWorkspaceLanguageProvider::NativeWorkspaceLanguageProvider(
 
 ///|
 /// Delegates hover requests after translating the document URI to `file://`.
-pub impl @language.HoverProvider for NativeWorkspaceLanguageProvider with fn hover_at(
+pub impl @language.HoverProvider for NativeWorkspaceLanguageProvider with fn provide_hover(
   self,
   document,
-  offset,
+  position,
+  token,
 ) {
   match self.lsp_document(document) {
     Some(lsp_document) =>
-      self.provider.as_hover_provider().hover_at(lsp_document, offset)
+      self.provider
+      .as_hover_provider()
+      .provide_hover(lsp_document, position, token)
     None => None
   }
 }
@@ -32,17 +35,18 @@ pub impl @language.HoverProvider for NativeWorkspaceLanguageProvider with fn hov
 ///|
 /// Delegates definition requests and maps returned file locations back to
 /// `readonly-remote://workspace/...` URIs.
-pub impl @language.DefinitionProvider for NativeWorkspaceLanguageProvider with fn definition_at(
+pub impl @language.DefinitionProvider for NativeWorkspaceLanguageProvider with fn provide_definition(
   self,
   document,
-  offset,
+  position,
+  token,
 ) {
   match self.lsp_document(document) {
     Some(lsp_document) =>
       match
         self.provider
         .as_definition_provider()
-        .definition_at(lsp_document, offset) {
+        .provide_definition(lsp_document, position, token) {
         Some(location) => self.remote_location(location)
         None => None
       }
@@ -52,16 +56,17 @@ pub impl @language.DefinitionProvider for NativeWorkspaceLanguageProvider with f
 
 ///|
 /// Delegates references requests and drops locations outside the workspace root.
-pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with fn references_at(
+pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with fn provide_references(
   self,
   document,
-  offset,
+  position,
+  token,
 ) {
   match self.lsp_document(document) {
     Some(lsp_document) => {
       let locations = self.provider
         .as_references_provider()
-        .references_at(lsp_document, offset)
+        .provide_references(lsp_document, position, token)
       let mapped = []
       for location in locations {
         match self.remote_location(location) {
@@ -77,61 +82,69 @@ pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with f
 
 ///|
 /// Delegates diagnostics requests after URI translation.
-pub impl @language.DiagnosticsProvider for NativeWorkspaceLanguageProvider with fn diagnostics_for_document(
+pub impl @language.DiagnosticsProvider for NativeWorkspaceLanguageProvider with fn provide_diagnostics(
   self,
   document,
+  token,
 ) {
   match self.lsp_document(document) {
     Some(lsp_document) =>
       self.provider
       .as_diagnostics_provider()
-      .diagnostics_for_document(lsp_document)
+      .provide_diagnostics(lsp_document, token)
     None => []
   }
 }
 
 ///|
 /// Delegates document-symbol requests after URI translation.
-pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider with fn document_symbols(
+pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider with fn provide_document_symbols(
   self,
   document,
+  token,
 ) {
   match self.lsp_document(document) {
     Some(lsp_document) =>
-      self.provider.as_document_symbol_provider().document_symbols(lsp_document)
+      self.provider
+      .as_document_symbol_provider()
+      .provide_document_symbols(lsp_document, token)
     None => []
   }
 }
 
 ///|
 /// Delegates semantic-token requests after URI translation.
-pub impl @language.SemanticTokensProvider for NativeWorkspaceLanguageProvider with fn semantic_tokens_for_document(
+pub impl @language.SemanticTokensProvider for NativeWorkspaceLanguageProvider with fn provide_document_semantic_tokens(
   self,
   document,
+  token,
 ) {
   match self.lsp_document(document) {
     Some(lsp_document) =>
       self.provider
       .as_semantic_tokens_provider()
-      .semantic_tokens_for_document(lsp_document)
+      .provide_document_semantic_tokens(lsp_document, token)
     None => []
   }
 }
 
 ///|
 /// Folding ranges currently come from the browser fallback service.
-pub impl @language.FoldingRangeProvider for NativeWorkspaceLanguageProvider with fn folding_ranges(
+pub impl @language.FoldingRangeProvider for NativeWorkspaceLanguageProvider with fn provide_folding_ranges(
   _self,
   _document,
+  _token,
 ) {
   []
 }
 
 ///|
 /// Native LSP inlay hints are not wired yet.
-pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with fn inlay_hints(
+pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with fn provide_inlay_hints(
   _self,
   _document,
+  _range,
+  _token,
 ) {
   []
 }
@@ -139,20 +152,19 @@ pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with f
 ///|
 fn NativeWorkspaceLanguageProvider::lsp_document(
   self : NativeWorkspaceLanguageProvider,
-  document : @model.TextModel,
-) -> @model.TextModel? {
+  document : @workspace.DocumentSnapshot,
+) -> @workspace.DocumentSnapshot? {
   match @server.resolve_remote_document_uri(document.uri) {
     ParsedRemotePath(path) =>
       match self.file_uri(path) {
         Some(uri) =>
           Some(
-            TextModel(
+            DocumentSnapshot(
               uri,
               document.display_name,
               document.language_id,
-              document.version,
               document.revision,
-              document.snapshot.text,
+              document.text,
             ),
           )
         None => None

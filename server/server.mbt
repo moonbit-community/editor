@@ -8,7 +8,7 @@ pub(all) enum RemotePathResult {
 ///|
 /// Native host file-read result returned to the remote server policy layer.
 pub(all) enum ServerHostReadResult {
-  ServerHostReadOk(@workspace.FileContent)
+  ServerHostReadOk(@workspace.DocumentContent)
   ServerHostReadError(@workspace.FileSystemProviderErrorCode, String)
 } derive(Debug)
 
@@ -56,7 +56,7 @@ pub struct RemoteServer {
   priv semantic_tokens_provider : &@language.SemanticTokensProvider
   priv folding_range_provider : &@language.FoldingRangeProvider
   priv inlay_hints_provider : &@language.InlayHintsProvider
-  priv documents : Map[String, @workspace.SourceDocument]
+  priv documents : Map[String, @workspace.DocumentSnapshot]
   priv watches : Map[String, ServerWatch]
 }
 
@@ -256,15 +256,26 @@ pub async fn RemoteServer::open_document(
   request : @remote_protocol.DocumentRequest,
 ) -> @remote_protocol.ServerPacket {
   match self.read_remote_document(request.id, request.uri) {
-    SourceDocumentLoaded(document) => {
+    DocumentLoaded(document) => {
       let document = self.tracked_document(document)
       self.documents.set(request.uri.to_string(), document)
       DocumentLoaded({ id: request.id, document })
     }
-    SourceDocumentLoadError(error) =>
+    DocumentNotFound(uri) =>
       RemoteError(
         @remote_protocol.ProtocolError::from_file_system_error(
-          error,
+          FileSystemProviderError(
+            FileNotFound,
+            "Source file does not exist.",
+            uri~,
+          ),
+          request_id=request.id,
+        ),
+      )
+    DocumentReadFailed(error) =>
+      RemoteError(
+        @remote_protocol.ProtocolError::from_file_system_error(
+          error.to_file_system_error(),
           request_id=request.id,
         ),
       )
@@ -336,22 +347,23 @@ pub fn RemoteServer::dispose_watches(self : RemoteServer) -> Unit {
 }
 
 ///|
-/// Routes a hover request only when the cached document URI/version still
+/// Routes a hover request only when the cached document URI/revision still
 /// matches the request.
 pub async fn RemoteServer::hover(
   self : RemoteServer,
   request : @remote_protocol.DocumentPositionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
-    self.cached_document(request.uri, request.document_version, request.id) {
+    self.cached_document(request.uri, request.document_revision, request.id) {
     Some(document) =>
       HoverResult({
         id: request.id,
         uri: request.uri,
-        version: document.version,
-        hover: self.hover_provider.hover_at(
-          document.text_model(),
-          request.offset,
+        revision: document.revision,
+        hover: self.hover_provider.provide_hover(
+          document,
+          document.position_at_offset(request.offset),
+          @language.CancellationToken::none(),
         ),
       })
     None => self.missing_cached_document_error(request.id)
@@ -359,21 +371,22 @@ pub async fn RemoteServer::hover(
 }
 
 ///|
-/// Routes a diagnostics request only when the cached document URI/version still
+/// Routes a diagnostics request only when the cached document URI/revision still
 /// matches the request.
 pub async fn RemoteServer::diagnostics(
   self : RemoteServer,
-  request : @remote_protocol.DocumentVersionRequest,
+  request : @remote_protocol.DocumentRevisionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
-    self.cached_document(request.uri, request.document_version, request.id) {
+    self.cached_document(request.uri, request.document_revision, request.id) {
     Some(document) =>
       Diagnostics({
         id: request.id,
         uri: request.uri,
-        version: document.version,
-        diagnostics: self.diagnostics_provider.diagnostics_for_document(
-          document.text_model(),
+        revision: document.revision,
+        diagnostics: self.diagnostics_provider.provide_diagnostics(
+          document,
+          @language.CancellationToken::none(),
         ),
       })
     None => self.missing_cached_document_error(request.id)
@@ -381,22 +394,23 @@ pub async fn RemoteServer::diagnostics(
 }
 
 ///|
-/// Routes a definition request only when the cached document URI/version still
+/// Routes a definition request only when the cached document URI/revision still
 /// matches the request.
 pub async fn RemoteServer::definition(
   self : RemoteServer,
   request : @remote_protocol.DocumentPositionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
-    self.cached_document(request.uri, request.document_version, request.id) {
+    self.cached_document(request.uri, request.document_revision, request.id) {
     Some(document) =>
       DefinitionResult({
         id: request.id,
         uri: request.uri,
-        version: document.version,
-        location: self.definition_provider.definition_at(
-          document.text_model(),
-          request.offset,
+        revision: document.revision,
+        location: self.definition_provider.provide_definition(
+          document,
+          document.position_at_offset(request.offset),
+          @language.CancellationToken::none(),
         ),
       })
     None => self.missing_cached_document_error(request.id)
@@ -410,11 +424,12 @@ pub async fn RemoteServer::references(
   request : @remote_protocol.DocumentPositionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
-    self.cached_document(request.uri, request.document_version, request.id) {
+    self.cached_document(request.uri, request.document_revision, request.id) {
     Some(document) => {
-      let locations = self.references_provider.references_at(
-        document.text_model(),
-        request.offset,
+      let locations = self.references_provider.provide_references(
+        document,
+        document.position_at_offset(request.offset),
+        @language.CancellationToken::none(),
       )
       let references = []
       for location in locations {
@@ -423,7 +438,7 @@ pub async fn RemoteServer::references(
       ReferencesResult({
         id: request.id,
         uri: request.uri,
-        version: document.version,
+        revision: document.revision,
         references,
       })
     }
@@ -438,16 +453,19 @@ pub async fn RemoteServer::references(
 /// empty preview when the file cannot be read.
 async fn RemoteServer::enrich_reference(
   self : RemoteServer,
-  requested : @workspace.SourceDocument,
+  requested : @workspace.DocumentSnapshot,
   location : @language.Location,
 ) -> @remote_protocol.ReferenceItem {
   let snapshot = if location.uri.to_string() == requested.uri.to_string() {
-    Some(requested.snapshot())
+    Some(requested)
   } else {
     match resolve_remote_document_uri(location.uri) {
       ParsedRemotePath(path) =>
         match self.host.read_text_file(self.workspace_root, path) {
-          ServerHostReadOk(content) => Some(TextSnapshot(content.text))
+          ServerHostReadOk(content) =>
+            Some(
+              @workspace.DocumentSnapshot::from_content(location.uri, content),
+            )
           _ => None
         }
       RemotePathError(_) => None
@@ -477,20 +495,21 @@ async fn RemoteServer::enrich_reference(
 }
 
 ///|
-/// Routes a document-symbol request for the cached document version.
+/// Routes a document-symbol request for the cached document revision.
 pub async fn RemoteServer::document_symbols(
   self : RemoteServer,
-  request : @remote_protocol.DocumentVersionRequest,
+  request : @remote_protocol.DocumentRevisionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
-    self.cached_document(request.uri, request.document_version, request.id) {
+    self.cached_document(request.uri, request.document_revision, request.id) {
     Some(document) =>
       DocumentSymbolsResult({
         id: request.id,
         uri: request.uri,
-        version: document.version,
-        symbols: self.document_symbol_provider.document_symbols(
-          document.text_model(),
+        revision: document.revision,
+        symbols: self.document_symbol_provider.provide_document_symbols(
+          document,
+          @language.CancellationToken::none(),
         ),
       })
     None => self.missing_cached_document_error(request.id)
@@ -498,20 +517,21 @@ pub async fn RemoteServer::document_symbols(
 }
 
 ///|
-/// Routes a semantic-token request for the cached document version.
+/// Routes a semantic-token request for the cached document revision.
 pub async fn RemoteServer::semantic_tokens(
   self : RemoteServer,
-  request : @remote_protocol.DocumentVersionRequest,
+  request : @remote_protocol.DocumentRevisionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
-    self.cached_document(request.uri, request.document_version, request.id) {
+    self.cached_document(request.uri, request.document_revision, request.id) {
     Some(document) =>
       SemanticTokensResult({
         id: request.id,
         uri: request.uri,
-        version: document.version,
-        semantic_tokens: self.semantic_tokens_provider.semantic_tokens_for_document(
-          document.text_model(),
+        revision: document.revision,
+        semantic_tokens: self.semantic_tokens_provider.provide_document_semantic_tokens(
+          document,
+          @language.CancellationToken::none(),
         ),
       })
     None => self.missing_cached_document_error(request.id)
@@ -519,20 +539,21 @@ pub async fn RemoteServer::semantic_tokens(
 }
 
 ///|
-/// Routes a folding-range request for the cached document version.
+/// Routes a folding-range request for the cached document revision.
 pub async fn RemoteServer::folding_ranges(
   self : RemoteServer,
-  request : @remote_protocol.DocumentVersionRequest,
+  request : @remote_protocol.DocumentRevisionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
-    self.cached_document(request.uri, request.document_version, request.id) {
+    self.cached_document(request.uri, request.document_revision, request.id) {
     Some(document) =>
       FoldingRangesResult({
         id: request.id,
         uri: request.uri,
-        version: document.version,
-        folding_ranges: self.folding_range_provider.folding_ranges(
-          document.text_model(),
+        revision: document.revision,
+        folding_ranges: self.folding_range_provider.provide_folding_ranges(
+          document,
+          @language.CancellationToken::none(),
         ),
       })
     None => self.missing_cached_document_error(request.id)
@@ -540,20 +561,22 @@ pub async fn RemoteServer::folding_ranges(
 }
 
 ///|
-/// Routes an inlay-hints request for the cached document version.
+/// Routes an inlay-hints request for the cached document revision.
 pub async fn RemoteServer::inlay_hints(
   self : RemoteServer,
-  request : @remote_protocol.DocumentVersionRequest,
+  request : @remote_protocol.DocumentRevisionRequest,
 ) -> @remote_protocol.ServerPacket {
   match
-    self.cached_document(request.uri, request.document_version, request.id) {
+    self.cached_document(request.uri, request.document_revision, request.id) {
     Some(document) =>
       InlayHintsResult({
         id: request.id,
         uri: request.uri,
-        version: document.version,
-        inlay_hints: self.inlay_hints_provider.inlay_hints(
-          document.text_model(),
+        revision: document.revision,
+        inlay_hints: self.inlay_hints_provider.provide_inlay_hints(
+          document,
+          Range(0, document.length()),
+          @language.CancellationToken::none(),
         ),
       })
     None => self.missing_cached_document_error(request.id)
@@ -565,21 +588,23 @@ async fn RemoteServer::read_remote_document(
   self : RemoteServer,
   request_id : String,
   uri : @base_common.Uri,
-) -> @workspace.SourceDocumentLoadResult {
+) -> @workspace.DocumentReadResult {
   match resolve_remote_document_uri(uri, request_id~) {
     ParsedRemotePath(path) =>
       match self.host.read_text_file(self.workspace_root, path) {
         ServerHostReadOk(content) =>
-          SourceDocumentLoaded(
-            @workspace.SourceDocument::from_file_content(uri, content),
+          DocumentLoaded(
+            @workspace.DocumentSnapshot::from_content(uri, content),
           )
         ServerHostReadError(code, message) =>
-          SourceDocumentLoadError(FileSystemProviderError(code, message, uri~))
+          if code == FileNotFound {
+            DocumentNotFound(uri)
+          } else {
+            DocumentReadFailed(DocumentError(code, message, uri~))
+          }
       }
     RemotePathError(error) =>
-      SourceDocumentLoadError(
-        FileSystemProviderError(InvalidUri, error.message, uri~),
-      )
+      DocumentReadFailed(DocumentError(InvalidUri, error.message, uri~))
   }
 }
 
@@ -607,16 +632,29 @@ async fn RemoteServer::handle_watch_event(
     }
     _ =>
       match self.read_remote_document(request_id, uri) {
-        SourceDocumentLoaded(document) => {
+        DocumentLoaded(document) => {
           let document = self.tracked_document(document)
           self.documents.set(uri.to_string(), document)
           emit(DocumentChanged({ id: request_id, document }))
         }
-        SourceDocumentLoadError(error) =>
+        DocumentNotFound(uri) =>
           emit(
             RemoteError(
               @remote_protocol.ProtocolError::from_file_system_error(
-                error,
+                FileSystemProviderError(
+                  FileNotFound,
+                  "Source file does not exist.",
+                  uri~,
+                ),
+                request_id~,
+              ),
+            ),
+          )
+        DocumentReadFailed(error) =>
+          emit(
+            RemoteError(
+              @remote_protocol.ProtocolError::from_file_system_error(
+                error.to_file_system_error(),
                 request_id~,
               ),
             ),
@@ -628,21 +666,14 @@ async fn RemoteServer::handle_watch_event(
 ///|
 fn RemoteServer::tracked_document(
   self : RemoteServer,
-  document : @workspace.SourceDocument,
-) -> @workspace.SourceDocument {
+  document : @workspace.DocumentSnapshot,
+) -> @workspace.DocumentSnapshot {
   match self.documents.get(document.uri.to_string()) {
     Some(previous) =>
       if previous.revision == document.revision {
         previous
       } else {
-        SourceDocument(
-          document.uri,
-          document.display_name,
-          document.language_id,
-          previous.version + 1,
-          document.revision,
-          document.text,
-        )
+        document
       }
     None => document
   }
@@ -652,13 +683,13 @@ fn RemoteServer::tracked_document(
 fn RemoteServer::cached_document(
   self : RemoteServer,
   uri : @base_common.Uri,
-  expected_version : Int,
+  expected_revision : String,
   request_id : String,
-) -> @workspace.SourceDocument? {
+) -> @workspace.DocumentSnapshot? {
   ignore(request_id)
   match self.documents.get(uri.to_string()) {
     Some(document) =>
-      if expected_version <= 0 || document.version == expected_version {
+      if expected_revision == "" || document.revision == expected_revision {
         Some(document)
       } else {
         None

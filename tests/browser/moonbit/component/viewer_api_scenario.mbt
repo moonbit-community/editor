@@ -1,39 +1,39 @@
 ///|
-priv struct MemoryDocumentSource {
+priv struct MemoryDocumentProvider {
   uri : @base_common.Uri
   text : String
 }
 
 ///|
-impl @workspace.DocumentSource for MemoryDocumentSource with fn open_document(
+impl @workspace.DocumentProvider for MemoryDocumentProvider with fn read(
   self,
   uri,
 ) {
   if uri == self.uri {
-    SourceDocumentLoaded(
-      @workspace.SourceDocument::from_file_content(
+    DocumentLoaded(
+      @workspace.DocumentSnapshot::from_content(
         uri,
-        FileContent(self.text, display_name="component.mbt"),
+        DocumentContent(self.text, display_name="component.mbt"),
       ),
     )
   } else {
-    SourceDocumentLoadError(
-      FileSystemProviderError(FileNotFound, "Document does not exist.", uri~),
+    DocumentReadFailed(
+      DocumentError(FileNotFound, "Document does not exist.", uri~),
     )
   }
 }
 
 ///|
-impl @workspace.DocumentSource for MemoryDocumentSource with fn watch_document(
+impl @workspace.DocumentProvider for MemoryDocumentProvider with fn watch(
   _self,
   _uri,
   _listener,
 ) {
-  { dispose: () => () }
+  @base_common.Disposable::from(() => ())
 }
 
 ///|
-impl @workspace.DocumentSource for MemoryDocumentSource with fn close_document(
+impl @workspace.DocumentProvider for MemoryDocumentProvider with fn close(
   _self,
   _uri,
 ) {
@@ -55,13 +55,15 @@ fn ComponentHoverProvider::new() -> ComponentHoverProvider {
 }
 
 ///|
-impl @language.HoverProvider for ComponentHoverProvider with fn hover_at(
+impl @language.HoverProvider for ComponentHoverProvider with fn provide_hover(
   self,
   document,
-  offset,
+  position,
+  _token,
 ) {
   let needle = "keeps"
-  match document.snapshot.text.find(needle) {
+  let offset = document.offset_at_position(position)
+  match document.text.find(needle) {
     Some(start) =>
       if offset >= start && offset < start + needle.length() {
         Some({
@@ -76,12 +78,13 @@ impl @language.HoverProvider for ComponentHoverProvider with fn hover_at(
 }
 
 ///|
-impl @language.DiagnosticsProvider for ComponentHoverProvider with fn diagnostics_for_document(
+impl @language.DiagnosticsProvider for ComponentHoverProvider with fn provide_diagnostics(
   self,
   document,
+  _token,
 ) {
   let needle = "keeps"
-  match document.snapshot.text.find(needle) {
+  match document.text.find(needle) {
     Some(start) =>
       [
         {
@@ -95,17 +98,20 @@ impl @language.DiagnosticsProvider for ComponentHoverProvider with fn diagnostic
 }
 
 ///|
-impl @language.FoldingRangeProvider for ComponentHoverProvider with fn folding_ranges(
+impl @language.FoldingRangeProvider for ComponentHoverProvider with fn provide_folding_ranges(
   _self,
   _document,
+  _token,
 ) {
   [FoldingRange(2, 5)]
 }
 
 ///|
-impl @language.InlayHintsProvider for ComponentHoverProvider with fn inlay_hints(
+impl @language.InlayHintsProvider for ComponentHoverProvider with fn provide_inlay_hints(
   _self,
   _document,
+  _range,
+  _token,
 ) {
   [
     InlayHint(Position(1, 23), " : T", kind=TypeHint, tooltip=[
@@ -123,16 +129,32 @@ fn run_viewer_api_test() -> Unit {
   let view_line_count = Ref(0)
   let done = Ref(false)
   let uri = @base_common.Uri::memory("component.mbt")
-  let source : MemoryDocumentSource = { uri, text: component_source_text() }
+  let source : MemoryDocumentProvider = { uri, text: component_source_text() }
   let model_line_count = component_model_line_count()
   match mount_host() {
     Some(host) => {
       let services = @browser.ViewerServices::new()
       let provider = ComponentHoverProvider::new()
-      services.language_features.register_hover_provider(provider)
-      services.language_features.register_diagnostics_provider(provider)
-      services.language_features.register_folding_range_provider(provider)
-      services.language_features.register_inlay_hints_provider(provider)
+      services.language_features.register_hover_provider(
+        LanguageId("moonbit"),
+        provider,
+      )
+      |> ignore
+      services.language_features.register_diagnostics_provider(
+        LanguageId("moonbit"),
+        provider,
+      )
+      |> ignore
+      services.language_features.register_folding_range_provider(
+        LanguageId("moonbit"),
+        provider,
+      )
+      |> ignore
+      services.language_features.register_inlay_hints_provider(
+        LanguageId("moonbit"),
+        provider,
+      )
+      |> ignore
       let viewer = @browser.Viewer(
         source,
         on_notification=notification => {
@@ -280,5 +302,11 @@ fn component_source_text() -> String {
 
 ///|
 fn component_model_line_count() -> Int {
-  @model.TextSnapshot(component_source_text()).line_count()
+  @workspace.DocumentSnapshot(
+    @base_common.Uri::memory("component.mbt"),
+    "component.mbt",
+    "moonbit",
+    "component-rev",
+    component_source_text(),
+  ).line_count()
 }

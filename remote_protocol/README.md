@@ -14,7 +14,7 @@ MoonBit-owned client/server packet contract for remote readonly workspaces.
 
 ## Boundaries
 
-- May depend on `base/common`, `renderer/core`, `workspace`, `language`, and
+- May depend on `base/common`, `workspace`, `language`, and
   JSON support.
 - Must not depend on browser, native, DOM, renderer backend, or server host
   effects.

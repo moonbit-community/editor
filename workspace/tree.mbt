@@ -37,18 +37,6 @@ pub(open) trait WorkspaceTreeProvider {
 }
 
 ///|
-/// Client-side mirror of the server document surface, in `SourceDocument`
-/// terms. `FileSystemProvider` is the content-level contract (raw file
-/// reads and change pings); `DocumentSource` is document-level: opens
-/// resolve to versioned `SourceDocument`s and watches push fully loaded
-/// documents (or load errors) for the watched URI.
-pub(open) trait DocumentSource {
-  async fn open_document(Self, @base_common.Uri) -> SourceDocumentLoadResult
-  fn watch_document(Self, @base_common.Uri, (SourceDocumentLoadResult) -> Unit) -> FileWatch
-  fn close_document(Self, @base_common.Uri) -> Unit
-}
-
-///|
 /// Wire label for workspace tree entry kinds.
 pub fn WorkspaceEntryKind::to_string(self : WorkspaceEntryKind) -> String {
   match self {

@@ -198,21 +198,20 @@ fn HoverController::loading_due(
 
 ///|
 /// A hover provider result arrived. Results are dropped when the document
-/// version moved on or the anchor token changed since the request.
+/// revision moved on or the anchor token changed since the request.
 fn HoverController::resolved_hover(
   self : HoverController,
   notify : (ViewerNotification) -> Unit,
-  version : Int,
+  revision : String,
   token : Int,
   hover : ComputedHover?,
-  current_version : Int,
 ) -> HoverController {
-  if current_version != version || token != self.token {
+  if token != self.token {
     return self
   }
   match hover {
     Some(hover) => {
-      notify(ViewerHoverResolved(ok=true, version~))
+      notify(ViewerHoverResolved(ok=true, revision~))
       let view : HoverView = { range: hover.range, parts: hover.parts }
       if self.display_open {
         {
@@ -234,7 +233,7 @@ fn HoverController::resolved_hover(
     }
     None => {
       if self.view is None && self.pending_view is None {
-        notify(ViewerHoverResolved(ok=false, version~))
+        notify(ViewerHoverResolved(ok=false, revision~))
       }
       { ..self, answered: true, loading: false }
     }

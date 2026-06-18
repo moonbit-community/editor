@@ -64,57 +64,69 @@ pub(all) struct ProviderResult {
 } derive(Debug)
 
 ///|
-/// Legacy snapshot-level provider aggregate used by the compatibility render
-/// path.
-pub(open) trait LanguageProvider {
-  fn hovers(Self, @model.TextSnapshot) -> Array[Hover]
-  fn diagnostics(Self, @model.TextSnapshot) -> Array[Diagnostic]
-  fn definitions(Self, @model.TextSnapshot) -> Array[Location]
-  fn symbols(Self, @model.TextSnapshot) -> Array[DocumentSymbol]
-  fn semantic_tokens(Self, @model.TextSnapshot) -> Array[SemanticToken]
-}
-
-///|
-/// Asynchronous hover provider for a versioned `TextModel` and UTF-16
-/// offset.
+/// Asynchronous hover provider for an immutable document snapshot and
+/// zero-based UTF-16 position.
 pub(open) trait HoverProvider {
-  async fn hover_at(Self, @model.TextModel, Int) -> Hover?
+  async fn provide_hover(
+    Self,
+    @workspace.DocumentSnapshot,
+    @base_common.Position,
+    CancellationToken,
+  ) -> Hover?
 }
 
 ///|
-/// Asynchronous definition provider for a versioned `TextModel` and
-/// UTF-16 offset.
+/// Asynchronous definition provider for an immutable document snapshot.
 pub(open) trait DefinitionProvider {
-  async fn definition_at(Self, @model.TextModel, Int) -> Location?
+  async fn provide_definition(
+    Self,
+    @workspace.DocumentSnapshot,
+    @base_common.Position,
+    CancellationToken,
+  ) -> Location?
 }
 
 ///|
-/// Asynchronous references provider for a versioned `TextModel` and
-/// UTF-16 offset.
+/// Asynchronous references provider for an immutable document snapshot.
 pub(open) trait ReferencesProvider {
-  async fn references_at(Self, @model.TextModel, Int) -> Array[Location]
+  async fn provide_references(
+    Self,
+    @workspace.DocumentSnapshot,
+    @base_common.Position,
+    CancellationToken,
+  ) -> Array[Location]
 }
 
 ///|
 /// Document diagnostics provider. Results replace diagnostics for the queried
 /// document/resource owner.
 pub(open) trait DiagnosticsProvider {
-  async fn diagnostics_for_document(Self, @model.TextModel) -> Array[Diagnostic]
+  async fn provide_diagnostics(
+    Self,
+    @workspace.DocumentSnapshot,
+    CancellationToken,
+  ) -> Array[Diagnostic]
 }
 
 ///|
 /// Document symbol provider for outline/navigation views.
 pub(open) trait DocumentSymbolProvider {
-  async fn document_symbols(Self, @model.TextModel) -> Array[DocumentSymbol]
+  async fn provide_document_symbols(
+    Self,
+    @workspace.DocumentSnapshot,
+    CancellationToken,
+  ) -> Array[DocumentSymbol]
 }
 
 ///|
 /// Full-document semantic token provider. The viewer treats returned tokens as
-/// replacing the previous semantic-token set for that document version.
+/// replacing the previous semantic-token set for that document revision.
 pub(open) trait SemanticTokensProvider {
-  async fn semantic_tokens_for_document(Self, @model.TextModel) -> Array[
-    SemanticToken,
-  ]
+  async fn provide_document_semantic_tokens(
+    Self,
+    @workspace.DocumentSnapshot,
+    CancellationToken,
+  ) -> Array[SemanticToken]
 }
 
 ///|
@@ -130,35 +142,23 @@ pub fn ProviderResult::empty() -> ProviderResult {
 }
 
 ///|
-/// Collects every feature family from the legacy snapshot-level provider.
-pub fn collect_provider_result(
-  provider : &LanguageProvider,
-  doc : @model.TextSnapshot,
-) -> ProviderResult {
-  {
-    hovers: provider.hovers(doc),
-    diagnostics: provider.diagnostics(doc),
-    definitions: provider.definitions(doc),
-    symbols: provider.symbols(doc),
-    semantic_tokens: provider.semantic_tokens(doc),
-  }
-}
-
-///|
 /// Collects document-level feature families that do not depend on a cursor
 /// offset.
 pub async fn collect_document_provider_result(
   diagnostics : &DiagnosticsProvider,
   symbols : &DocumentSymbolProvider,
   semantic_tokens : &SemanticTokensProvider,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
+  token : CancellationToken,
 ) -> ProviderResult {
   {
     hovers: [],
-    diagnostics: diagnostics.diagnostics_for_document(document),
+    diagnostics: diagnostics.provide_diagnostics(document, token),
     definitions: [],
-    symbols: symbols.document_symbols(document),
-    semantic_tokens: semantic_tokens.semantic_tokens_for_document(document),
+    symbols: symbols.provide_document_symbols(document, token),
+    semantic_tokens: semantic_tokens.provide_document_semantic_tokens(
+      document, token,
+    ),
   }
 }
 

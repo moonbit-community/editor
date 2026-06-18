@@ -31,16 +31,16 @@ stack around it.
 - `renderer`: pre-DOM common editor model state and this repo's Monaco
   `editor/common` role. It owns the readonly `ViewModel` spine, viewport data,
   line HTML, scroll/layout arithmetic, and hit testing.
-- `base/common`: low-level URI identity shared by workspace, renderer model,
-  protocol, server, and widgets.
-- `renderer/core`: editor coordinate primitives such as zero-based
-  `Position`, half-open UTF-16 `Range`, and clamping helpers.
-- `renderer/model`: readonly editor text ownership. `TextSnapshot` owns the
-  immutable text buffer and line-start cache; `TextModel` owns URI, display
-  name, language id, version, revision, and snapshot identity.
-- `workspace`: source/tree provider contracts and provider-loaded
-  `SourceDocument` payloads. It loads and watches source documents; it does not
-  own editor text models.
+- `base/common`: low-level URI identity, lifecycle helpers, and editor
+  coordinate primitives shared by workspace, language, renderer, protocol,
+  server, and widgets.
+- `renderer/core`: legacy coordinate re-export package kept for older renderer
+  internals while public contracts use `base/common`.
+- `renderer/model`: internal readonly editor text ownership derived from
+  `workspace.DocumentSnapshot` by browser rendering code.
+- `workspace`: source/tree provider contracts, provider-loaded
+  `DocumentSnapshot` payloads, and document watch notifications. It does not
+  own renderer text models or depend on renderer packages.
 - `language`: language feature contracts and result types such as hover,
   diagnostics, document symbols, and semantic tokens.
 - `syntax` and `syntax/lang_*`: tokenization contracts and compile-time
@@ -70,7 +70,7 @@ External MoonBit embedders should treat `renderer/browser` as the entry point:
 ```text
 embedder shell
   -> renderer/browser.Viewer
-  -> workspace.DocumentSource
+  -> workspace.DocumentProvider
   -> optional language providers
   -> optional syntax/lang_* tokenizer registration
 ```
@@ -115,8 +115,8 @@ viewer, but it is not required for users who embed the viewer package.
 Rendering is split by host boundary:
 
 ```text
-workspace.SourceDocument
-  -> renderer/model.TextModel / TextSnapshot
+workspace.DocumentSnapshot
+  -> renderer/browser-derived renderer/model.TextModel / TextSnapshot
   -> renderer/view_model tokenization and ViewModel state
   -> renderer/view_layout scroll and viewport window state
   -> renderer/view_layout ViewportData
@@ -193,11 +193,11 @@ renderer/view_layout -> renderer/view_model, renderer/view_line_renderer,
 renderer/view_model -> renderer/view_line_renderer, renderer/core,
                        renderer/model, syntax, decorations, language
 renderer/view_line_renderer -> renderer/core, syntax
-workspace -> base/common, renderer/model
-language -> base/common, renderer/core, renderer/model
+workspace -> base/common
+language -> base/common, workspace
 syntax/decorations -> renderer/core
 renderer/model -> base/common, renderer/core
-remote_protocol/server/workbench/widgets -> base/common
+remote_protocol/server/workbench/widgets -> base/common, workspace, language
 platform/log -> no product packages
 syntax/lang_* -> syntax
 ```

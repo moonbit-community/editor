@@ -48,7 +48,7 @@ fn emit_render_event(
   line_count : Int,
   token_count : Int,
   diagnostic_count : Int,
-  version : Int,
+  revision : String,
   tokenize_ms : Double,
   build_ms : Double,
 ) -> Unit {
@@ -57,7 +57,7 @@ fn emit_render_event(
   payload = payload + ",\"tokenCount\":" + token_count.to_string()
   payload = payload + ",\"diagnosticCount\":"
   payload = payload + diagnostic_count.to_string()
-  payload = payload + ",\"version\":" + version.to_string()
+  payload = payload + ",\"revision\":" + json_string(revision)
   payload = payload + ",\"tokenizeMs\":" + tokenize_ms.to_string()
   payload = payload + ",\"buildMs\":" + build_ms.to_string()
   payload = payload + "}"
@@ -65,13 +65,13 @@ fn emit_render_event(
 }
 
 ///|
-fn emit_language_status(diagnostic_count : Int, version : Int) -> Unit {
+fn emit_language_status(diagnostic_count : Int, revision : String) -> Unit {
   emit_event(
     "language:diagnostics",
     "{\"count\":" +
     diagnostic_count.to_string() +
-    ",\"version\":" +
-    version.to_string() +
+    ",\"revision\":" +
+    json_string(revision) +
     "}",
   )
 }
@@ -91,10 +91,10 @@ fn emit_scroll_event(scroll_top : Double, scroll_left : Double) -> Unit {
 }
 
 ///|
-fn emit_hover_status(ok : Bool, version : Int) -> Unit {
+fn emit_hover_status(ok : Bool, revision : String) -> Unit {
   emit_event(
     "language:hover",
-    "{\"ok\":" + ok.to_string() + ",\"version\":" + version.to_string() + "}",
+    "{\"ok\":" + ok.to_string() + ",\"revision\":" + json_string(revision) + "}",
   )
 }
 

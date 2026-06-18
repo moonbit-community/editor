@@ -2,7 +2,7 @@
 /// The embeddable readonly code viewer, the `vs/editor` (Monaco) role: an
 /// browser `View` owning the rendered frame, the scroll and
 /// layout model, the input bridge, and the feature controllers. It is
-/// constructed with a `&DocumentSource`, attached into a host-provided
+/// constructed with a `&DocumentProvider`, attached into a host-provided
 /// stable element, and reports lifecycle facts through `on_notification`;
 /// it knows nothing about transports, shells, or harness event formats.
 ///
@@ -10,7 +10,7 @@
 /// system if it has one). The host must never render its own children
 /// into the element passed to `attach`.
 pub struct Viewer {
-  priv source : &@workspace.DocumentSource
+  priv provider : &@workspace.DocumentProvider
   priv services : ViewerServices
   priv mut options : ViewerOptions
   priv notify_host : (ViewerNotification) -> Unit
@@ -20,7 +20,7 @@ pub struct Viewer {
   priv mut frame : @view_model.RenderFrame?
   priv mut view_model : @view_model.ViewModel?
   priv mut frame_source : @view_model.FrameSource?
-  priv mut source_document : @workspace.SourceDocument?
+  priv mut source_document : @workspace.DocumentSnapshot?
   priv mut text_model : @model.TextModel?
   priv mut provider_result : @language.ProviderResult
   priv mut folding_ranges : Array[@language.FoldingRange]
@@ -34,8 +34,9 @@ pub struct Viewer {
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
   priv mut open_generation : Int
+  priv mut render_version : Int
   priv mut view : View?
-  priv mut watch : @workspace.FileWatch?
+  priv mut watch : @base_common.Disposable?
   priv mut render_pending : Bool
   priv mut measure_requested : Bool
   priv mut pending_rendered : PendingRendered?
@@ -49,24 +50,41 @@ pub struct Viewer {
 
 ///|
 priv struct PendingRendered {
-  document : @workspace.SourceDocument
+  document : @workspace.DocumentSnapshot
   fresh : Bool
 }
+
+///|
+pub(all) enum ViewStatePolicy {
+  RestoreOrReset
+  PreserveAnchor
+  Reset
+} derive(Eq, Debug)
+
+///|
+pub(all) struct CurrentDocument {
+  uri : @base_common.Uri
+  revision : String
+  language_id : String
+  display_name : String
+  scroll_top : Double
+  scroll_left : Double
+} derive(Debug)
 
 ///|
 /// Lifecycle facts the viewer reports to its host. The host formats and
 /// emits harness events, syncs its own chrome (title, status, tree
 /// reveal), and decides messaging while the viewer has no frame.
 pub(all) enum ViewerNotification {
-  /// A frame build started for a document version with this many
+  /// A frame build started for a document revision with this many
   /// provider diagnostics merged in.
-  ViewerDiagnosticsStatus(count~ : Int, version~ : Int)
+  ViewerDiagnosticsStatus(count~ : Int, revision~ : String)
   /// A frame finished building (synchronous facts, before paint).
   /// `tokenize_ms` covers the per-version whole-document tokenization
   /// (zero-ish when the tokenized cache was reused); `build_ms` covers
   /// the viewport window build.
   ViewerFrameBuilt(
-    @workspace.SourceDocument,
+    @workspace.DocumentSnapshot,
     line_count~ : Int,
     token_count~ : Int,
     diagnostic_count~ : Int,
@@ -77,7 +95,7 @@ pub(all) enum ViewerNotification {
   /// change (as opposed to a same-version feature-data re-render);
   /// `patch_ms` is the duration of the DOM flush that painted it.
   ViewerDocumentRendered(
-    @workspace.SourceDocument,
+    @workspace.DocumentSnapshot,
     line_count~ : Int,
     rendered_lines~ : Int,
     diagnostics~ : Array[@language.Diagnostic],
@@ -85,9 +103,9 @@ pub(all) enum ViewerNotification {
     fresh~ : Bool
   )
   /// Opening or watching the document failed; the viewer cleared its frame.
-  ViewerDocumentFailed(@workspace.FileSystemProviderError)
-  /// A hover request resolved (or resolved empty) for a document version.
-  ViewerHoverResolved(ok~ : Bool, version~ : Int)
+  ViewerDocumentFailed(@workspace.DocumentError)
+  /// A hover request resolved (or resolved empty) for a document revision.
+  ViewerHoverResolved(ok~ : Bool, revision~ : String)
   /// The synthetic scroll position settled after a paint.
   ViewerScrolled(scroll_top~ : Double, scroll_left~ : Double)
 }
@@ -96,7 +114,7 @@ pub(all) enum ViewerNotification {
 /// Creates a viewer instance. Call `attach` before opening documents so the
 /// first render has a DOM view to measure and patch.
 pub fn Viewer::Viewer(
-  source : &@workspace.DocumentSource,
+  provider : &@workspace.DocumentProvider,
   on_notification~ : (ViewerNotification) -> Unit,
   services? : ViewerServices = ViewerServices::new(),
   options? : ViewerOptions = ViewerOptions::default(),
@@ -104,7 +122,7 @@ pub fn Viewer::Viewer(
   placeholder? : String = "",
 ) -> Viewer {
   {
-    source,
+    provider,
     services,
     options,
     notify_host: on_notification,
@@ -128,6 +146,7 @@ pub fn Viewer::Viewer(
     soft_wrap_column: 0,
     max_line_length: 0,
     open_generation: 0,
+    render_version: 0,
     view: None,
     watch: None,
     render_pending: false,
@@ -137,6 +156,29 @@ pub fn Viewer::Viewer(
     content_generation: 0,
     drag: None,
   }
+}
+
+///|
+/// Creates and attaches a viewer in one call.
+pub fn Viewer::create(
+  host : @rdom.Element,
+  provider : &@workspace.DocumentProvider,
+  services? : ViewerServices = ViewerServices::new(),
+  options? : ViewerOptions = ViewerOptions::default(),
+  theme? : String = "dark",
+  placeholder? : String = "",
+  on_notification? : (ViewerNotification) -> Unit = _ => (),
+) -> Viewer {
+  let viewer = Viewer(
+    provider,
+    on_notification~,
+    services~,
+    options~,
+    theme~,
+    placeholder~,
+  )
+  viewer.attach(host)
+  viewer
 }
 
 ///|
@@ -177,46 +219,154 @@ pub fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
 /// Owns the full document-switch choreography: closes the previous
 /// document and its watch, clears the frame, subscribes the new watch,
 /// and opens the document through the source.
-pub fn Viewer::open(self : Viewer, uri : @base_common.Uri) -> Unit {
+pub fn Viewer::open(
+  self : Viewer,
+  uri : @base_common.Uri,
+  view_state? : ViewStatePolicy = RestoreOrReset,
+) -> Unit {
   self.open_generation += 1
   let generation = self.open_generation
   self.dispose_watch()
   match self.source_document {
-    Some(document) => self.source.close_document(document.uri)
+    Some(document) => self.provider.close(document.uri)
     None => ()
   }
-  self.frame = None
-  self.view_model = None
-  self.frame_source = None
-  self.source_document = None
-  self.text_model = None
+  self.clear_current_document(
+    reset_scroll=view_state == Reset || view_state == RestoreOrReset,
+  )
+  self.watch = Some(
+    self.provider.watch(uri, change => {
+      if generation == self.open_generation {
+        self.notify(change)
+      }
+    }),
+  )
+  self.read_uri(uri, generation, view_state~)
+}
+
+///|
+/// Re-reads the current URI through the provider.
+pub fn Viewer::reload(
+  self : Viewer,
+  view_state? : ViewStatePolicy = PreserveAnchor,
+) -> Unit {
+  match self.source_document {
+    Some(document) => {
+      let generation = self.open_generation
+      self.read_uri(document.uri, generation, view_state~)
+    }
+    None => ()
+  }
+}
+
+///|
+/// Applies a provider or host document change notification.
+pub fn Viewer::notify(
+  self : Viewer,
+  change : @workspace.DocumentChange,
+  view_state? : ViewStatePolicy = PreserveAnchor,
+) -> Unit {
+  match change {
+    DocumentInvalidated(uri~, ..) =>
+      if self.is_current_uri(uri) {
+        self.reload(view_state~)
+      }
+    DocumentUpdated(snapshot) =>
+      if self.is_current_uri(snapshot.uri) {
+        self.show(snapshot, view_state~)
+      }
+    DocumentDeleted(uri) =>
+      if self.is_current_uri(uri) {
+        self.document_failed(
+          DocumentError(FileNotFound, "Document was deleted.", uri~),
+        )
+      }
+    DocumentChangeFailed(uri~, error~) =>
+      if self.is_current_uri(uri) {
+        self.document_failed(error)
+      }
+  }
+}
+
+///|
+/// Shows an already-loaded snapshot.
+pub fn Viewer::show(
+  self : Viewer,
+  snapshot : @workspace.DocumentSnapshot,
+  view_state? : ViewStatePolicy = PreserveAnchor,
+) -> Unit {
+  self.services.markers.clear_resource(snapshot.uri)
   self.provider_result = @language.ProviderResult::empty()
   self.folding_ranges = []
   self.folded_ranges = []
   self.inlay_hints = []
-  self.view_zones = []
-  self.layout.set_view_zones([]) |> ignore
-  self.selection = None
-  self.selection_dragging = false
-  self.hover = HoverController::empty()
-  self.schedule_render()
-  self.watch = Some(
-    self.source.watch_document(uri, result => {
-      if generation == self.open_generation {
-        self.document_resolved(result)
-      }
-    }),
+  if view_state == Reset || view_state == RestoreOrReset {
+    self.selection = None
+    self.selection_dragging = false
+    self.hover = self.hover.cleared()
+  }
+  self.render_current_document(
+    snapshot,
+    fresh=true,
+    request_language=true,
+    reset_view_state=view_state == Reset || view_state == RestoreOrReset,
   )
-  let source = self.source
+}
+
+///|
+/// Returns the current document identity and viewport facts.
+pub fn Viewer::current(self : Viewer) -> CurrentDocument? {
+  match self.source_document {
+    Some(document) => {
+      let position = self.layout.position()
+      Some({
+        uri: document.uri,
+        revision: document.revision,
+        language_id: document.language_id,
+        display_name: document.display_name,
+        scroll_top: position.scroll_top,
+        scroll_left: position.scroll_left,
+      })
+    }
+    None => None
+  }
+}
+
+///|
+/// Closes the current document and clears the rendered frame.
+pub fn Viewer::close(self : Viewer) -> Unit {
+  self.open_generation += 1
+  self.dispose_watch()
+  match self.source_document {
+    Some(document) => self.provider.close(document.uri)
+    None => ()
+  }
+  self.clear_current_document(reset_scroll=true)
+}
+
+///|
+/// Disposes viewer-owned external resources.
+pub fn Viewer::dispose(self : Viewer) -> Unit {
+  self.close()
+}
+
+///|
+fn Viewer::read_uri(
+  self : Viewer,
+  uri : @base_common.Uri,
+  generation : Int,
+  view_state~ : ViewStatePolicy,
+) -> Unit {
+  let provider = self.provider
   @js.async_run(() => {
-    let result = source.open_document(uri) catch {
+    let result = provider.read(uri) catch {
       _ =>
-        SourceDocumentLoadError(
-          FileSystemProviderError(Unavailable, "Document open failed.", uri~),
+        DocumentReadFailed(
+          DocumentError(Unavailable, "Document open failed.", uri~),
         )
     }
     if generation == self.open_generation {
-      self.document_resolved(result)
+      self.document_resolved(result, view_state~)
     }
   })
 }
@@ -308,48 +458,10 @@ pub fn Viewer::scroll_end(self : Viewer) -> Unit {
 }
 
 ///|
-/// Push APIs for unsolicited feature data (for example server-initiated
-/// diagnostics pushes routed by the host).
-pub fn Viewer::push_diagnostics(
-  self : Viewer,
-  diagnostics : Array[@language.Diagnostic],
-) -> Unit {
-  match self.source_document {
-    Some(document) => {
-      self.services.markers.set_diagnostics("push", document.uri, diagnostics)
-      self.render_feature_update()
-    }
-    None => ()
-  }
-}
-
-///|
-/// Replaces the current document-symbol result and re-renders feature-derived
-/// UI.
-pub fn Viewer::push_symbols(
-  self : Viewer,
-  symbols : Array[@language.DocumentSymbol],
-) -> Unit {
-  self.provider_result = { ..self.provider_result, symbols, }
-  self.render_feature_update()
-}
-
-///|
-/// Replaces the current semantic-token result and re-renders feature-derived
-/// UI.
-pub fn Viewer::push_semantic_tokens(
-  self : Viewer,
-  semantic_tokens : Array[@language.SemanticToken],
-) -> Unit {
-  self.provider_result = { ..self.provider_result, semantic_tokens, }
-  self.render_feature_update()
-}
-
-///|
 /// Re-requests document-level feature data for the current document.
 pub fn Viewer::refresh_document_features(self : Viewer) -> Unit {
-  match self.text_model {
-    Some(model) => self.request_document_features(model)
+  match self.source_document {
+    Some(document) => self.request_document_features(document)
     None => ()
   }
 }
@@ -357,34 +469,58 @@ pub fn Viewer::refresh_document_features(self : Viewer) -> Unit {
 ///|
 fn Viewer::document_resolved(
   self : Viewer,
-  result : @workspace.SourceDocumentLoadResult,
+  result : @workspace.DocumentReadResult,
+  view_state~ : ViewStatePolicy,
 ) -> Unit {
   match result {
-    SourceDocumentLoaded(document) => {
-      self.services.markers.clear_resource(document.uri)
-      self.provider_result = @language.ProviderResult::empty()
-      self.folding_ranges = []
-      self.folded_ranges = []
-      self.inlay_hints = []
-      self.selection = None
-      self.selection_dragging = false
-      self.hover = self.hover.cleared()
-      self.render_current_document(document, fresh=true, request_language=true)
-    }
-    SourceDocumentLoadError(error) => {
-      self.frame = None
-      self.view_model = None
-      self.frame_source = None
-      self.text_model = None
-      self.folding_ranges = []
-      self.folded_ranges = []
-      self.inlay_hints = []
-      self.selection = None
-      self.selection_dragging = false
-      self.hover = self.hover.cleared()
-      (self.notify_host)(ViewerDocumentFailed(error))
-      self.schedule_render()
-    }
+    DocumentLoaded(document) => self.show(document, view_state~)
+    DocumentNotFound(uri) =>
+      self.document_failed(
+        DocumentError(FileNotFound, "Document not found.", uri~),
+      )
+    DocumentReadFailed(error) => self.document_failed(error)
+  }
+}
+
+///|
+fn Viewer::document_failed(
+  self : Viewer,
+  error : @workspace.DocumentError,
+) -> Unit {
+  self.clear_current_document(reset_scroll=false)
+  (self.notify_host)(ViewerDocumentFailed(error))
+  self.schedule_render()
+}
+
+///|
+fn Viewer::clear_current_document(self : Viewer, reset_scroll~ : Bool) -> Unit {
+  self.frame = None
+  self.view_model = None
+  self.frame_source = None
+  self.source_document = None
+  self.text_model = None
+  self.provider_result = @language.ProviderResult::empty()
+  self.folding_ranges = []
+  self.folded_ranges = []
+  self.inlay_hints = []
+  self.view_zones = []
+  self.layout.set_view_zones([]) |> ignore
+  if reset_scroll {
+    self.apply_scroll_change(
+      self.layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
+    )
+  }
+  self.selection = None
+  self.selection_dragging = false
+  self.hover = HoverController::empty()
+  self.schedule_render()
+}
+
+///|
+fn Viewer::is_current_uri(self : Viewer, uri : @base_common.Uri) -> Bool {
+  match self.source_document {
+    Some(document) => document.uri.to_string() == uri.to_string()
+    None => false
   }
 }
 

@@ -12,19 +12,29 @@ fn register_remote_language_providers(
   services : @browser.ViewerServices,
 ) -> Unit {
   let client = RemoteLanguageClient::{ log_service: services.log_service }
-  services.language_features.register_hover_provider(client)
-  services.language_features.register_diagnostics_provider(client)
-  services.language_features.register_document_symbol_provider(client)
-  services.language_features.register_semantic_tokens_provider(client)
-  services.language_features.register_folding_range_provider(client)
-  services.language_features.register_inlay_hints_provider(client)
+  let selector = @language.LanguageSelector::LanguageFilter(
+    LanguageFilter(scheme="readonly-remote"),
+  )
+  services.language_features.register_hover_provider(selector, client) |> ignore
+  services.language_features.register_diagnostics_provider(selector, client)
+  |> ignore
+  services.language_features.register_document_symbol_provider(selector, client)
+  |> ignore
+  services.language_features.register_document_semantic_tokens_provider(
+    selector, client,
+  )
+  |> ignore
+  services.language_features.register_folding_range_provider(selector, client)
+  |> ignore
+  services.language_features.register_inlay_hints_provider(selector, client)
+  |> ignore
 }
 
 ///|
 fn RemoteLanguageClient::emit_remote_error(
   self : RemoteLanguageClient,
   operation : String,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
   packet : @remote_protocol.ServerPacket,
 ) -> Unit {
   match packet {
@@ -35,7 +45,7 @@ fn RemoteLanguageClient::emit_remote_error(
         details=[
           ("operation", operation),
           ("document", document.uri.to_string()),
-          ("version", document.version.to_string()),
+          ("revision", document.revision),
           ("code", error.code.label()),
           ("providerCode", error.provider_code),
           ("message", error.message),
@@ -47,13 +57,20 @@ fn RemoteLanguageClient::emit_remote_error(
 }
 
 ///|
-impl @language.HoverProvider for RemoteLanguageClient with fn hover_at(
+impl @language.HoverProvider for RemoteLanguageClient with fn provide_hover(
   self,
   document,
-  offset,
+  position,
+  _token,
 ) {
+  let offset = document.offset_at_position(position)
   let response = protocol_request("hover", id => {
-    Hover({ id, uri: document.uri, document_version: document.version, offset })
+    Hover({
+      id,
+      uri: document.uri,
+      document_revision: document.revision,
+      offset,
+    })
   })
   match response {
     HoverResult(payload) => payload.hover
@@ -65,12 +82,13 @@ impl @language.HoverProvider for RemoteLanguageClient with fn hover_at(
 }
 
 ///|
-impl @language.DiagnosticsProvider for RemoteLanguageClient with fn diagnostics_for_document(
+impl @language.DiagnosticsProvider for RemoteLanguageClient with fn provide_diagnostics(
   self,
   document,
+  _token,
 ) {
   let response = protocol_request("diagnostics", id => {
-    Diagnostics({ id, uri: document.uri, document_version: document.version })
+    Diagnostics({ id, uri: document.uri, document_revision: document.revision })
   })
   match response {
     Diagnostics(payload) => payload.diagnostics
@@ -82,15 +100,16 @@ impl @language.DiagnosticsProvider for RemoteLanguageClient with fn diagnostics_
 }
 
 ///|
-impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn document_symbols(
+impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn provide_document_symbols(
   self,
   document,
+  _token,
 ) {
   let response = protocol_request("symbols", id => {
     DocumentSymbols({
       id,
       uri: document.uri,
-      document_version: document.version,
+      document_revision: document.revision,
     })
   })
   match response {
@@ -103,12 +122,17 @@ impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn document_
 }
 
 ///|
-impl @language.SemanticTokensProvider for RemoteLanguageClient with fn semantic_tokens_for_document(
+impl @language.SemanticTokensProvider for RemoteLanguageClient with fn provide_document_semantic_tokens(
   self,
   document,
+  _token,
 ) {
   let response = protocol_request("semantic-tokens", id => {
-    SemanticTokens({ id, uri: document.uri, document_version: document.version })
+    SemanticTokens({
+      id,
+      uri: document.uri,
+      document_revision: document.revision,
+    })
   })
   match response {
     SemanticTokensResult(payload) => payload.semantic_tokens
@@ -120,12 +144,17 @@ impl @language.SemanticTokensProvider for RemoteLanguageClient with fn semantic_
 }
 
 ///|
-impl @language.FoldingRangeProvider for RemoteLanguageClient with fn folding_ranges(
+impl @language.FoldingRangeProvider for RemoteLanguageClient with fn provide_folding_ranges(
   self,
   document,
+  _token,
 ) {
   let response = protocol_request("folding-ranges", id => {
-    FoldingRanges({ id, uri: document.uri, document_version: document.version })
+    FoldingRanges({
+      id,
+      uri: document.uri,
+      document_revision: document.revision,
+    })
   })
   match response {
     FoldingRangesResult(payload) => payload.folding_ranges
@@ -137,12 +166,14 @@ impl @language.FoldingRangeProvider for RemoteLanguageClient with fn folding_ran
 }
 
 ///|
-impl @language.InlayHintsProvider for RemoteLanguageClient with fn inlay_hints(
+impl @language.InlayHintsProvider for RemoteLanguageClient with fn provide_inlay_hints(
   self,
   document,
+  _range,
+  _token,
 ) {
   let response = protocol_request("inlay-hints", id => {
-    InlayHints({ id, uri: document.uri, document_version: document.version })
+    InlayHints({ id, uri: document.uri, document_revision: document.revision })
   })
   match response {
     InlayHintsResult(payload) => payload.inlay_hints

@@ -1,10 +1,9 @@
 ///|
-fn test_document() -> @workspace.SourceDocument {
-  SourceDocument(
+fn test_document() -> @workspace.DocumentSnapshot {
+  DocumentSnapshot(
     @base_common.Uri::memory("service-test.mbt"),
     "service-test.mbt",
     "moonbit",
-    7,
     "rev-7",
     "fn main {\n  value\n}\n",
   )
@@ -51,11 +50,14 @@ test "marker decorations expose squiggles and marker hover lookup" {
 ///|
 async test "content hover computer separates sync markers from async markdown" {
   let services = ViewerServices::new()
-  let document = test_document().text_model()
+  let document = test_document()
   services.markers.set_diagnostics("diagnostics:0", document.uri, [
     { range: Range(12, 17), severity: Warning, message: "marker hover" },
   ])
-  services.language_features.register_hover_provider(TestHoverProvider::{  })
+  services.language_features.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
+
+  })
+  |> ignore
   let computer = ContentHoverComputer::new(services)
   let sync_hover = computer.compute_sync(document, Range(12, 17), 14)
   match sync_hover {
@@ -81,9 +83,15 @@ async test "provider failures are logged and isolated" {
   let services = ViewerServices::new(
     log_service=@log.LogService::new(logger=memory),
   )
-  services.language_features.register_hover_provider(FailingHoverProvider::{  })
-  services.language_features.register_hover_provider(TestHoverProvider::{  })
-  let document = test_document().text_model()
+  services.language_features.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
+
+  })
+  |> ignore
+  services.language_features.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
+
+  })
+  |> ignore
+  let document = test_document()
   let hover = services.language_features.hover_at(document, 3)
   assert_true(hover is Some(_))
   let entries = memory.entries()
@@ -96,11 +104,13 @@ async test "provider failures are logged and isolated" {
 priv struct TestHoverProvider {}
 
 ///|
-impl @language.HoverProvider for TestHoverProvider with fn hover_at(
+impl @language.HoverProvider for TestHoverProvider with fn provide_hover(
   _self,
-  _document,
-  offset,
+  document,
+  position,
+  _token,
 ) {
+  let offset = document.offset_at_position(position)
   Some({
     range: Range(offset, offset + 1),
     contents: [PlainText("provider hover")],
@@ -116,10 +126,11 @@ priv suberror TestProviderError {
 priv struct FailingHoverProvider {}
 
 ///|
-impl @language.HoverProvider for FailingHoverProvider with fn hover_at(
+impl @language.HoverProvider for FailingHoverProvider with fn provide_hover(
   _self,
   _document,
-  _offset,
+  _position,
+  _token,
 ) {
   raise TestProviderError
 }

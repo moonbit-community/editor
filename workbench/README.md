@@ -6,7 +6,7 @@ remote protocol transport.
 
 ## Responsibilities
 
-- Own the Rabbita app shell: topbar (title, language/version, status),
+- Own the Rabbita app shell: topbar (title, language/revision, status),
   sidebar chrome (Explorer title, theme toggle), diagnostics panel,
   status/empty-viewer messages, and theme state + persistence.
 - Own the websocket protocol client: counter-based request ids with a
@@ -14,7 +14,7 @@ remote protocol transport.
   (`protocol_request`), plus the uncorrelated push routing for watch and
   feature packets.
 - Implement the seams the viewer and widget are built against:
-  `RemoteDocumentSource` (`@workspace.DocumentSource` over
+  `RemoteDocumentProvider` (`@workspace.DocumentProvider` over
   `OpenDocument`/`WatchDocument`/`CloseDocument` with a URI-keyed watch
   listener table), `RemoteWorkspaceTreeProvider`
   (`@workspace.WorkspaceTreeProvider` over `ResolveDirectory`), and

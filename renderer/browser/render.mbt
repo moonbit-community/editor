@@ -6,11 +6,12 @@
 /// next render flush.
 fn Viewer::render_current_document(
   self : Viewer,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
   fresh~ : Bool,
   request_language~ : Bool,
+  reset_view_state? : Bool = false,
 ) -> Unit {
-  let model = document.text_model()
+  let model = self.text_model_for_snapshot(document)
   let marker_diagnostics = self.services.markers.diagnostics_for_resource(
     model.uri,
   )
@@ -31,7 +32,7 @@ fn Viewer::render_current_document(
   (self.notify_host)(
     ViewerDiagnosticsStatus(
       count=marker_diagnostics.length(),
-      version=model.version,
+      revision=model.revision,
     ),
   )
   let decorations = self.services.marker_decorations.decorations_for_resource(
@@ -39,9 +40,8 @@ fn Viewer::render_current_document(
   )
   let source = @view_model.FrameSource(tokenized, decorations, providers)
   let view_model = self.build_view_model(source)
-  // Only a rotated document identity or version renders from the top;
-  // watch backends may re-push the same version (the old cell key kept
-  // those re-renders at their scroll position too).
+  // Only a rotated document identity or revision renders from the top when the
+  // caller requested reset semantics.
   let rotated = match self.source_document {
     Some(_) =>
       match self.text_model {
@@ -50,7 +50,7 @@ fn Viewer::render_current_document(
       }
     None => true
   }
-  if fresh && rotated {
+  if fresh && rotated && reset_view_state {
     self.apply_scroll_change(
       self.layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
     )
@@ -90,8 +90,37 @@ fn Viewer::render_current_document(
   self.measure_requested = true
   self.schedule_render()
   if request_language {
-    self.request_document_features(model)
+    self.request_document_features(document)
   }
+}
+
+///|
+fn Viewer::text_model_for_snapshot(
+  self : Viewer,
+  document : @workspace.DocumentSnapshot,
+) -> @model.TextModel {
+  let version = match self.text_model {
+    Some(current) =>
+      if current.uri.to_string() == document.uri.to_string() &&
+        current.revision == document.revision {
+        current.version
+      } else {
+        self.render_version += 1
+        self.render_version
+      }
+    None => {
+      self.render_version += 1
+      self.render_version
+    }
+  }
+  TextModel(
+    document.uri,
+    document.display_name,
+    document.language_id,
+    version,
+    document.revision,
+    document.text,
+  )
 }
 
 ///|

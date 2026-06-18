@@ -155,7 +155,7 @@ async test "answers hover and definition from cached provider state" {
   let uri = expect_remote_uri("main.mbt")
   ignore(server.open_document({ id: "open-1", uri }))
 
-  match server.hover({ id: "hover-1", uri, document_version: 1, offset: 7 }) {
+  match server.hover({ id: "hover-1", uri, document_revision: "", offset: 7 }) {
     HoverResult(payload) =>
       match payload.hover {
         Some(hover) => assert_plaintext_hover(hover, "Configured hover")
@@ -165,7 +165,7 @@ async test "answers hover and definition from cached provider state" {
   }
 
   match
-    server.definition({ id: "def-1", uri, document_version: 1, offset: 7 }) {
+    server.definition({ id: "def-1", uri, document_revision: "", offset: 7 }) {
     DefinitionResult(payload) =>
       match payload.location {
         Some(location) => assert_eq(location.uri.to_string(), uri.to_string())
@@ -175,7 +175,7 @@ async test "answers hover and definition from cached provider state" {
   }
 
   match
-    server.references({ id: "refs-1", uri, document_version: 1, offset: 7 }) {
+    server.references({ id: "refs-1", uri, document_revision: "", offset: 7 }) {
     ReferencesResult(payload) => {
       assert_eq(payload.id, "refs-1")
       assert_eq(payload.references.length(), 2)
@@ -199,7 +199,7 @@ async test "answers diagnostics symbols semantic tokens folding ranges and inlay
   let uri = expect_remote_uri("main.mbt")
   ignore(server.open_document({ id: "open-1", uri }))
 
-  match server.diagnostics({ id: "diag-1", uri, document_version: 1 }) {
+  match server.diagnostics({ id: "diag-1", uri, document_revision: "" }) {
     Diagnostics(payload) => {
       assert_eq(payload.id, "diag-1")
       assert_eq(payload.diagnostics.length(), 1)
@@ -207,7 +207,8 @@ async test "answers diagnostics symbols semantic tokens folding ranges and inlay
     _ => fail("expected diagnostics result")
   }
 
-  match server.document_symbols({ id: "symbols-1", uri, document_version: 1 }) {
+  match
+    server.document_symbols({ id: "symbols-1", uri, document_revision: "" }) {
     DocumentSymbolsResult(payload) => {
       assert_eq(payload.symbols.length(), 1)
       assert_eq(payload.symbols[0].name, "configured")
@@ -215,7 +216,7 @@ async test "answers diagnostics symbols semantic tokens folding ranges and inlay
     _ => fail("expected document symbols result")
   }
 
-  match server.semantic_tokens({ id: "tokens-1", uri, document_version: 1 }) {
+  match server.semantic_tokens({ id: "tokens-1", uri, document_revision: "" }) {
     SemanticTokensResult(payload) => {
       assert_eq(payload.semantic_tokens.length(), 1)
       assert_eq(payload.semantic_tokens[0].token_type, "function")
@@ -223,7 +224,7 @@ async test "answers diagnostics symbols semantic tokens folding ranges and inlay
     _ => fail("expected semantic tokens result")
   }
 
-  match server.folding_ranges({ id: "fold-1", uri, document_version: 1 }) {
+  match server.folding_ranges({ id: "fold-1", uri, document_revision: "" }) {
     FoldingRangesResult(payload) => {
       assert_eq(payload.folding_ranges.length(), 1)
       assert_eq(payload.folding_ranges[0].start_line_number, 1)
@@ -232,7 +233,7 @@ async test "answers diagnostics symbols semantic tokens folding ranges and inlay
     _ => fail("expected folding ranges result")
   }
 
-  match server.inlay_hints({ id: "hints-1", uri, document_version: 1 }) {
+  match server.inlay_hints({ id: "hints-1", uri, document_revision: "" }) {
     InlayHintsResult(payload) => {
       assert_eq(payload.inlay_hints.length(), 1)
       assert_eq(payload.inlay_hints[0].label, ": Int")
@@ -249,7 +250,7 @@ async test "dispatches language requests through configured providers" {
   let uri = expect_remote_uri("configured.mbt")
   ignore(server.open_document({ id: "open-1", uri }))
 
-  match server.hover({ id: "hover-1", uri, document_version: 1, offset: 7 }) {
+  match server.hover({ id: "hover-1", uri, document_revision: "", offset: 7 }) {
     HoverResult(payload) =>
       match payload.hover {
         Some(hover) => assert_plaintext_hover(hover, "Configured hover")
@@ -259,7 +260,7 @@ async test "dispatches language requests through configured providers" {
   }
 
   match
-    server.definition({ id: "def-1", uri, document_version: 1, offset: 7 }) {
+    server.definition({ id: "def-1", uri, document_revision: "", offset: 7 }) {
     DefinitionResult(payload) =>
       match payload.location {
         Some(location) => assert_eq(location.uri.to_string(), uri.to_string())
@@ -268,31 +269,32 @@ async test "dispatches language requests through configured providers" {
     _ => fail("expected definition result")
   }
 
-  match server.diagnostics({ id: "diag-1", uri, document_version: 1 }) {
+  match server.diagnostics({ id: "diag-1", uri, document_revision: "" }) {
     Diagnostics(payload) =>
       assert_eq(payload.diagnostics[0].message, "Configured diagnostic")
     _ => fail("expected diagnostics result")
   }
 
-  match server.document_symbols({ id: "symbols-1", uri, document_version: 1 }) {
+  match
+    server.document_symbols({ id: "symbols-1", uri, document_revision: "" }) {
     DocumentSymbolsResult(payload) =>
       assert_eq(payload.symbols[0].name, "configured")
     _ => fail("expected document symbols result")
   }
 
-  match server.semantic_tokens({ id: "tokens-1", uri, document_version: 1 }) {
+  match server.semantic_tokens({ id: "tokens-1", uri, document_revision: "" }) {
     SemanticTokensResult(payload) =>
       assert_eq(payload.semantic_tokens[0].token_type, "function")
     _ => fail("expected semantic tokens result")
   }
 
-  match server.folding_ranges({ id: "fold-1", uri, document_version: 1 }) {
+  match server.folding_ranges({ id: "fold-1", uri, document_revision: "" }) {
     FoldingRangesResult(payload) =>
       assert_eq(payload.folding_ranges[0].start_line_number, 1)
     _ => fail("expected folding ranges result")
   }
 
-  match server.inlay_hints({ id: "hints-1", uri, document_version: 1 }) {
+  match server.inlay_hints({ id: "hints-1", uri, document_revision: "" }) {
     InlayHintsResult(payload) =>
       assert_eq(payload.inlay_hints[0].label, ": Int")
     _ => fail("expected inlay hints result")
@@ -382,7 +384,7 @@ impl @server.ServerHost for FakeServerHost with fn read_text_file(
       match self.files.get(key) {
         Some(text) =>
           ServerHostReadOk(
-            FileContent(
+            DocumentContent(
               text,
               display_name=path.display_name(),
               revision="rev-" + text.length().to_string(),
@@ -415,11 +417,13 @@ fn noop_watch_spawner(_task : async () -> Unit) -> Unit {
 struct FakeLanguageProvider {}
 
 ///|
-impl @language.HoverProvider for FakeLanguageProvider with fn hover_at(
+impl @language.HoverProvider for FakeLanguageProvider with fn provide_hover(
   _self,
-  _document,
-  offset,
+  document,
+  position,
+  _token,
 ) {
+  let offset = document.offset_at_position(position)
   Some({
     range: Range(offset, offset + 4),
     contents: [PlainText("Configured hover")],
@@ -438,20 +442,24 @@ fn assert_plaintext_hover(
 }
 
 ///|
-impl @language.DefinitionProvider for FakeLanguageProvider with fn definition_at(
+impl @language.DefinitionProvider for FakeLanguageProvider with fn provide_definition(
   _self,
   document,
-  offset,
+  position,
+  _token,
 ) {
+  let offset = document.offset_at_position(position)
   Some({ uri: document.uri, range: Range(offset, offset + 4) })
 }
 
 ///|
-impl @language.ReferencesProvider for FakeLanguageProvider with fn references_at(
+impl @language.ReferencesProvider for FakeLanguageProvider with fn provide_references(
   _self,
   document,
-  offset,
+  position,
+  _token,
 ) {
+  let offset = document.offset_at_position(position)
   [
     { uri: document.uri, range: Range(offset, offset + 4) },
     { uri: document.uri, range: Range(0, 4) },
@@ -459,41 +467,47 @@ impl @language.ReferencesProvider for FakeLanguageProvider with fn references_at
 }
 
 ///|
-impl @language.DiagnosticsProvider for FakeLanguageProvider with fn diagnostics_for_document(
+impl @language.DiagnosticsProvider for FakeLanguageProvider with fn provide_diagnostics(
   _self,
   _document,
+  _token,
 ) {
   [{ range: Range(0, 4), severity: Warning, message: "Configured diagnostic" }]
 }
 
 ///|
-impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn document_symbols(
+impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_document_symbols(
   _self,
   _document,
+  _token,
 ) {
   [{ name: "configured", kind: "function", range: Range(7, 17) }]
 }
 
 ///|
-impl @language.SemanticTokensProvider for FakeLanguageProvider with fn semantic_tokens_for_document(
+impl @language.SemanticTokensProvider for FakeLanguageProvider with fn provide_document_semantic_tokens(
   _self,
   _document,
+  _token,
 ) {
   [{ range: Range(7, 17), token_type: "function" }]
 }
 
 ///|
-impl @language.FoldingRangeProvider for FakeLanguageProvider with fn folding_ranges(
+impl @language.FoldingRangeProvider for FakeLanguageProvider with fn provide_folding_ranges(
   _self,
   _document,
+  _token,
 ) {
   [FoldingRange(1, 3, kind=Region)]
 }
 
 ///|
-impl @language.InlayHintsProvider for FakeLanguageProvider with fn inlay_hints(
+impl @language.InlayHintsProvider for FakeLanguageProvider with fn provide_inlay_hints(
   _self,
   _document,
+  _range,
+  _token,
 ) {
   [InlayHint(Position(0, 11), ": Int", kind=TypeHint, padding_left=true)]
 }

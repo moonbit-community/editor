@@ -13,11 +13,12 @@ their command type.
 
 ## Embedding API
 
-- `Viewer::Viewer(source, on_notification~, services?, options?, theme?, placeholder?)`
-  constructs the viewer against any `&@workspace.DocumentSource`. The
+- `Viewer::Viewer(provider, on_notification~, services?, options?, theme?, placeholder?)`
+  constructs the viewer against any `&@workspace.DocumentProvider`. The
   in-memory backend in `examples/embedded_viewer` plus the remote one in
   `workbench` are the two reference implementations; implementing
-  `DocumentSource` is the entire integration surface for a custom backend.
+  `DocumentProvider` is the entire document-loading surface for a custom
+  backend.
   `services` defaults to `ViewerServices::new()`; hosts that install language
   providers, log sinks, or test fixtures pass an explicit service object.
   `options` defaults to `ViewerOptions::default()` with soft wrap off; when
@@ -28,10 +29,17 @@ their command type.
   it — the `View` nodes are foreign to any host vdom and must survive
   host re-renders untouched. While the viewer has no frame it shows the
   host-pushed `placeholder` message inside the view.
-- `Viewer::open(uri)` owns the full document-switch choreography: closing
-  the previous document and its watch, subscribing the new watch, opening
-  through the source, and resetting scroll only when the (uri, version)
-  identity actually rotated — embedders cannot get the sequencing wrong.
+- `Viewer::create(host, provider, ...)` constructs and attaches in one call.
+- `Viewer::open(uri, view_state?)` owns the full document-switch choreography:
+  closing the previous document and its watch, subscribing the new watch,
+  reading through the provider, and applying the result only when the open
+  generation still matches.
+- `Viewer::notify(change, view_state?)`, `reload(view_state?)`, and
+  `show(snapshot, view_state?)` are the host-side refresh paths. Watch
+  invalidations and updates preserve the viewport by default; user-selected
+  opens can reset or restore view state through `ViewStatePolicy`.
+- `Viewer::current()`, `close()`, and `dispose()` expose explicit lifecycle
+  state and teardown. `dispose()` stops the provider watch and DOM listeners.
 - `Viewer::set_theme`, `set_placeholder`, `remeasure`, and `escape` push
   host state and host-captured events in. Theme changes never remount the
   view (colors cascade through the host's CSS variables) and keep the
@@ -40,10 +48,6 @@ their command type.
   `scroll_home`, and `scroll_end` are the synthetic scroll entry points
   for host-routed keyboard scrolling and harness controls; wheel and
   scrollbar input arrive through the view's shared scrollable element.
-- `Viewer::push_diagnostics`/`push_symbols`/`push_semantic_tokens` accept
-  unsolicited feature data (for example server-initiated pushes the host
-  routes in). Diagnostics are compatibility input only; the viewer stores
-  them as markers and renders marker decorations from `MarkerService`.
 - `ViewerServices` owns `LanguageFeaturesService`, `MarkerService`,
   `MarkerDecorationsService`, `HoverParticipantRegistry`, and `LogService`.
   Hosts register hover, diagnostics, symbol, semantic-token, folding-range, and
@@ -117,7 +121,7 @@ their command type.
   `ViewModel` hides folded model lines, and the margin folding overlay renders
   fold/unfold markers aligned with line numbers.
 - Own readonly inlay hint collection and hint hover: browser services collect
-  `InlayHint` provider results per document version, the common `ViewModel`
+  `InlayHint` provider results per document revision, the common `ViewModel`
   projects them as injected text, and the hover participant pipeline serves
   hint tooltip content without asking source hover providers for injected spans.
 - Own readonly selection and copy: `selection.mbt` stores model-range selection
@@ -151,17 +155,16 @@ their command type.
   and widget views. Hover follows Monaco's timing (request at half the
   300ms delay, display gated at the full delay, loading hover at 3x);
   the delays run on package-local browser-host timer bindings and provider
-  calls run through `ContentHoverComputer` with version/token staleness guards.
+  calls run through `ContentHoverComputer` with revision/token staleness guards.
   Marker hover is contributed synchronously from marker decorations; language
   hover is contributed asynchronously from markdown hover providers.
-- Own the per-version render cache: provider pushes rebuild frames from
-  the cached `TokenizedDocument` without re-tokenizing, and window
-  shifts rebuild the viewport frame from the cached `FrameSource` in
-  O(window).
-- Own the current editor-model identity: loaded `workspace.SourceDocument`
-  payloads are converted to `renderer/model.TextModel`, and async feature
-  results are accepted only when URI plus version still match the current
-  model.
+- Own the per-revision render cache: provider refreshes rebuild frames from
+  the cached `TokenizedDocument` without re-tokenizing, and window shifts
+  rebuild the viewport frame from the cached `FrameSource` in O(window).
+- Own the current editor-model identity: loaded `workspace.DocumentSnapshot`
+  payloads are converted to internal `renderer/model.TextModel` values, and
+  async feature results are accepted only when URI plus revision still match
+  the current document.
 
 Go-to-definition and find-references were removed for now; the viewer
 focuses on hover until those features can be rebuilt without their bugs.
@@ -177,7 +180,7 @@ focuses on hover until those features can be rebuilt without their bugs.
   `renderer/view_model`, `syntax`, and `decorations`.
 - Must not import `remote_protocol`, `websocket`, `workbench`, or
   `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports
-  live behind the `DocumentSource` trait and viewer-owned language feature
+  live behind the `DocumentProvider` trait and viewer-owned language feature
   services.
 - May declare narrowly scoped JavaScript FFI it owns, under the host-FFI rule in
   `../../docs/architecture.md`; browser-host timer helpers live package-local

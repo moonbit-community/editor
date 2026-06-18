@@ -20,12 +20,17 @@ test "crossing in-flight responses resolve their own requests" {
   // The second request answers before the first: ids keep them apart.
   assert_true(
     resolve_pending_response(
-      HoverResult({ id: second, uri: test_uri(), version: 2, hover: None }),
+      HoverResult({
+        id: second,
+        uri: test_uri(),
+        revision: "rev-2",
+        hover: None,
+      }),
     ),
   )
   assert_true(
     resolve_pending_response(
-      HoverResult({ id: first, uri: test_uri(), version: 1, hover: None }),
+      HoverResult({ id: first, uri: test_uri(), revision: "rev-1", hover: None }),
     ),
   )
   debug_inspect(
@@ -37,7 +42,7 @@ test "crossing in-flight responses resolve their own requests" {
   // Each entry resolves exactly once.
   assert_false(
     resolve_pending_response(
-      HoverResult({ id: first, uri: test_uri(), version: 1, hover: None }),
+      HoverResult({ id: first, uri: test_uri(), revision: "rev-1", hover: None }),
     ),
   )
   assert_eq(pending_requests.length(), 0)
@@ -49,11 +54,10 @@ test "push packets without a pending id fall through" {
     resolve_pending_response(
       DocumentChanged({
         id: "watch:readonly-remote://workspace/src/main.mbt",
-        document: SourceDocument(
+        document: DocumentSnapshot(
           test_uri(),
           "main.mbt",
           "moonbit",
-          1,
           "rev",
           "fn main {}",
         ),

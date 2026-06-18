@@ -1,5 +1,5 @@
 ///|
-test "stale hover results are dropped by version and token guards" {
+test "stale hover results are dropped by token guards" {
   let notifications : Array[ViewerNotification] = []
   let notify = (notification : ViewerNotification) => {
     notifications.push(notification)
@@ -15,22 +15,21 @@ test "stale hover results are dropped by version and token guards" {
       ),
     ],
   })
-  // Version moved on: result dropped, nothing reported.
-  let stale_version = controller.resolved_hover(notify, 1, 0, hover, 2)
-  assert_true(stale_version.view is None && stale_version.pending_view is None)
-  assert_eq(notifications.length(), 0)
   // Anchor token moved on: result dropped.
   let rescheduled = { ..controller, token: 5 }
-  let stale_token = rescheduled.resolved_hover(notify, 2, 4, hover, 2)
+  let stale_token = rescheduled.resolved_hover(notify, "rev-2", 4, hover)
   assert_true(stale_token.view is None && stale_token.pending_view is None)
-  // Current version and token: result lands behind the display gate and the
+  assert_eq(notifications.length(), 0)
+  // Current revision and token: result lands behind the display gate and the
   // resolution fact is reported for the host to format.
-  let fresh = rescheduled.resolved_hover(notify, 2, 5, hover, 2)
+  let fresh = rescheduled.resolved_hover(notify, "rev-2", 5, hover)
   assert_true(fresh.pending_view is Some(_))
   assert_true(notifications.length() == 1)
-  assert_true(notifications[0] is ViewerHoverResolved(ok=true, version=2))
+  assert_true(
+    notifications[0] is ViewerHoverResolved(ok=true, revision="rev-2"),
+  )
   let opened = { ..rescheduled, display_open: true }
-  let shown = opened.resolved_hover(notify, 2, 5, hover, 2)
+  let shown = opened.resolved_hover(notify, "rev-2", 5, hover)
   assert_true(shown.view is Some(_))
 }
 

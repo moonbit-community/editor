@@ -24,13 +24,13 @@ test "encodes and decodes semantic client packets" {
   let diagnostics = @remote_protocol.ClientPacket::Diagnostics({
     id: "diag-1",
     uri,
-    document_version: 4,
+    document_revision: "rev-4",
   })
   match
     @remote_protocol.decode_client_packet(diagnostics.to_json().stringify()) {
     DecodedClientPacket(Diagnostics(request)) => {
       assert_eq(request.id, "diag-1")
-      assert_eq(request.document_version, 4)
+      assert_eq(request.document_revision, "rev-4")
     }
     DecodedClientPacket(_) => fail("unexpected diagnostics packet")
     ClientPacketDecodeError(error) => fail(error.message)
@@ -39,13 +39,13 @@ test "encodes and decodes semantic client packets" {
   let hover = @remote_protocol.Hover({
     id: "hover-1",
     uri,
-    document_version: 4,
+    document_revision: "rev-4",
     offset: 17,
   })
   match @remote_protocol.decode_client_packet(hover.to_json().stringify()) {
     DecodedClientPacket(Hover(request)) => {
       assert_eq(request.id, "hover-1")
-      assert_eq(request.document_version, 4)
+      assert_eq(request.document_revision, "rev-4")
       assert_eq(request.offset, 17)
     }
     DecodedClientPacket(_) => fail("unexpected hover packet")
@@ -55,7 +55,7 @@ test "encodes and decodes semantic client packets" {
   let definition = @remote_protocol.Definition({
     id: "def-1",
     uri,
-    document_version: 4,
+    document_revision: "rev-4",
     offset: 18,
   })
   match
@@ -71,14 +71,14 @@ test "encodes and decodes semantic client packets" {
   let references = @remote_protocol.References({
     id: "refs-1",
     uri,
-    document_version: 4,
+    document_revision: "rev-4",
     offset: 19,
   })
   match
     @remote_protocol.decode_client_packet(references.to_json().stringify()) {
     DecodedClientPacket(References(request)) => {
       assert_eq(request.id, "refs-1")
-      assert_eq(request.document_version, 4)
+      assert_eq(request.document_revision, "rev-4")
       assert_eq(request.offset, 19)
     }
     DecodedClientPacket(_) => fail("unexpected references packet")
@@ -88,12 +88,12 @@ test "encodes and decodes semantic client packets" {
   let symbols = @remote_protocol.DocumentSymbols({
     id: "symbols-1",
     uri,
-    document_version: 5,
+    document_revision: "rev-5",
   })
   match @remote_protocol.decode_client_packet(symbols.to_json().stringify()) {
     DecodedClientPacket(DocumentSymbols(request)) => {
       assert_eq(request.id, "symbols-1")
-      assert_eq(request.document_version, 5)
+      assert_eq(request.document_revision, "rev-5")
     }
     DecodedClientPacket(_) => fail("unexpected document symbols packet")
     ClientPacketDecodeError(error) => fail(error.message)
@@ -102,12 +102,12 @@ test "encodes and decodes semantic client packets" {
   let tokens = @remote_protocol.SemanticTokens({
     id: "tokens-1",
     uri,
-    document_version: 6,
+    document_revision: "rev-6",
   })
   match @remote_protocol.decode_client_packet(tokens.to_json().stringify()) {
     DecodedClientPacket(SemanticTokens(request)) => {
       assert_eq(request.id, "tokens-1")
-      assert_eq(request.document_version, 6)
+      assert_eq(request.document_revision, "rev-6")
     }
     DecodedClientPacket(_) => fail("unexpected semantic tokens packet")
     ClientPacketDecodeError(error) => fail(error.message)
@@ -116,12 +116,12 @@ test "encodes and decodes semantic client packets" {
   let folds = @remote_protocol.FoldingRanges({
     id: "folds-1",
     uri,
-    document_version: 7,
+    document_revision: "rev-7",
   })
   match @remote_protocol.decode_client_packet(folds.to_json().stringify()) {
     DecodedClientPacket(FoldingRanges(request)) => {
       assert_eq(request.id, "folds-1")
-      assert_eq(request.document_version, 7)
+      assert_eq(request.document_revision, "rev-7")
     }
     DecodedClientPacket(_) => fail("unexpected folding ranges packet")
     ClientPacketDecodeError(error) => fail(error.message)
@@ -130,12 +130,12 @@ test "encodes and decodes semantic client packets" {
   let hints = @remote_protocol.InlayHints({
     id: "hints-1",
     uri,
-    document_version: 8,
+    document_revision: "rev-8",
   })
   match @remote_protocol.decode_client_packet(hints.to_json().stringify()) {
     DecodedClientPacket(InlayHints(request)) => {
       assert_eq(request.id, "hints-1")
-      assert_eq(request.document_version, 8)
+      assert_eq(request.document_revision, "rev-8")
     }
     DecodedClientPacket(_) => fail("unexpected inlay hints packet")
     ClientPacketDecodeError(error) => fail(error.message)
@@ -225,15 +225,15 @@ test "encodes and decodes server document and language packets" {
   let uri = expect_uri(
     "readonly-remote://workspace/tests/fixtures/workspace/src/main.mbt",
   )
-  let document = @workspace.SourceDocument(
-    uri, "main.mbt", "moonbit", 2, "rev-2", "pub fn main {}\n",
+  let document = @workspace.DocumentSnapshot(
+    uri, "main.mbt", "moonbit", "rev-2", "pub fn main {}\n",
   )
   let loaded = @remote_protocol.DocumentLoaded({ id: "open-1", document })
   match @remote_protocol.decode_server_packet(loaded.to_json().stringify()) {
     DecodedServerPacket(DocumentLoaded(payload)) => {
       assert_eq(payload.id, "open-1")
       assert_eq(payload.document.uri.to_string(), uri.to_string())
-      assert_eq(payload.document.version, 2)
+      assert_eq(payload.document.revision, "rev-2")
     }
     DecodedServerPacket(_) => fail("unexpected server packet")
     ServerPacketDecodeError(error) => fail(error.message)
@@ -242,7 +242,7 @@ test "encodes and decodes server document and language packets" {
   let hover = @remote_protocol.HoverResult({
     id: "hover-1",
     uri,
-    version: 2,
+    revision: "rev-2",
     hover: Some({
       range: Range(7, 11),
       contents: [PlainText("fn main"), Markdown("**main**")],
@@ -252,7 +252,7 @@ test "encodes and decodes server document and language packets" {
     DecodedServerPacket(HoverResult(payload)) =>
       match payload.hover {
         Some(item) => {
-          assert_eq(payload.version, 2)
+          assert_eq(payload.revision, "rev-2")
           assert_eq(item.contents.length(), 2)
           assert_hover_plaintext(item, 0, "fn main")
           assert_hover_markdown(item, 1, "**main**")
@@ -264,23 +264,10 @@ test "encodes and decodes server document and language packets" {
     ServerPacketDecodeError(error) => fail(error.message)
   }
 
-  let legacy_hover = "{\"version\":4,\"type\":\"HoverResult\",\"id\":\"hover-legacy\",\"uri\":\"" +
-    uri.to_string() +
-    "\",\"documentVersion\":2,\"hover\":{\"range\":{\"start\":7,\"end\":11},\"contents\":\"legacy text\"}}"
-  match @remote_protocol.decode_server_packet(legacy_hover) {
-    DecodedServerPacket(HoverResult(payload)) =>
-      match payload.hover {
-        Some(item) => assert_hover_plaintext(item, 0, "legacy text")
-        None => fail("missing legacy hover")
-      }
-    DecodedServerPacket(_) => fail("unexpected legacy hover packet")
-    ServerPacketDecodeError(error) => fail(error.message)
-  }
-
   let references_result = @remote_protocol.ReferencesResult({
     id: "refs-1",
     uri,
-    version: 2,
+    revision: "rev-2",
     references: [
       {
         uri,
@@ -298,7 +285,7 @@ test "encodes and decodes server document and language packets" {
     ) {
     DecodedServerPacket(ReferencesResult(payload)) => {
       assert_eq(payload.id, "refs-1")
-      assert_eq(payload.version, 2)
+      assert_eq(payload.revision, "rev-2")
       assert_eq(payload.references.length(), 2)
       assert_eq(payload.references[0].line, 1)
       assert_eq(payload.references[0].column, 8)
@@ -312,7 +299,7 @@ test "encodes and decodes server document and language packets" {
   let empty_references = @remote_protocol.ReferencesResult({
     id: "refs-2",
     uri,
-    version: 3,
+    revision: "rev-3",
     references: [],
   })
   match
@@ -321,7 +308,7 @@ test "encodes and decodes server document and language packets" {
     ) {
     DecodedServerPacket(ReferencesResult(payload)) => {
       assert_eq(payload.references.length(), 0)
-      assert_eq(payload.version, 3)
+      assert_eq(payload.revision, "rev-3")
     }
     DecodedServerPacket(_) => fail("unexpected empty references packet")
     ServerPacketDecodeError(error) => fail(error.message)
@@ -330,7 +317,7 @@ test "encodes and decodes server document and language packets" {
   let diagnostics = @remote_protocol.ServerPacket::Diagnostics({
     id: "diag-1",
     uri,
-    version: 2,
+    revision: "rev-2",
     diagnostics: [
       { range: Range(0, 3), severity: Warning, message: "check me" },
     ],
@@ -349,7 +336,7 @@ test "encodes and decodes server document and language packets" {
   let symbols = @remote_protocol.DocumentSymbolsResult({
     id: "symbols-1",
     uri,
-    version: 2,
+    revision: "rev-2",
     symbols: [{ name: "main", kind: "function", range: Range(7, 11) }],
   })
   match @remote_protocol.decode_server_packet(symbols.to_json().stringify()) {
@@ -364,7 +351,7 @@ test "encodes and decodes server document and language packets" {
   let semantic_tokens = @remote_protocol.SemanticTokensResult({
     id: "tokens-1",
     uri,
-    version: 2,
+    revision: "rev-2",
     semantic_tokens: [{ range: Range(7, 11), token_type: "function" }],
   })
   match
@@ -380,7 +367,7 @@ test "encodes and decodes server document and language packets" {
   let folding_ranges = @remote_protocol.FoldingRangesResult({
     id: "folds-1",
     uri,
-    version: 2,
+    revision: "rev-2",
     folding_ranges: [FoldingRange(1, 3, kind=Region)],
   })
   match
@@ -398,7 +385,7 @@ test "encodes and decodes server document and language packets" {
   let inlay_hints = @remote_protocol.InlayHintsResult({
     id: "hints-1",
     uri,
-    version: 2,
+    revision: "rev-2",
     inlay_hints: [
       InlayHint(Position(0, 11), ": Int", kind=TypeHint, padding_left=true, tooltip=[
         PlainText("inferred type"),
@@ -426,8 +413,8 @@ test "round-trips document text containing control characters" {
   // MoonBit-style `\u{c}` and broke the peer's decode.
   let uri = expect_uri("readonly-remote://workspace/src/control.mbt")
   let text = "form\u{0c}feed\u{0b}tab\tquote\"backslash\\\nend"
-  let document = @workspace.SourceDocument(
-    uri, "control.mbt", "moonbit", 1, "rev-1", text,
+  let document = @workspace.DocumentSnapshot(
+    uri, "control.mbt", "moonbit", "rev-1", text,
   )
   let loaded = @remote_protocol.DocumentLoaded({ id: "open-ctl", document })
   match @remote_protocol.decode_server_packet(loaded.to_json().stringify()) {

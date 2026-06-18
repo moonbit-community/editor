@@ -42,21 +42,21 @@ test "parses document uris" {
 }
 
 ///|
-async test "filesystem provider reads source documents by uri" {
+async test "filesystem provider reads document snapshots by uri" {
   let uri = expect_uri("file://local/main.mbt")
   let provider = TestFileSystemProvider::{  }
 
-  match @workspace.read_source_document(provider, uri) {
-    SourceDocumentLoaded(document) => {
+  match @workspace.read_document(provider, uri) {
+    DocumentLoaded(document) => {
       assert_eq(document.uri.to_string(), "file://local/main.mbt")
       assert_eq(document.display_name, "main.mbt")
       assert_eq(document.language_id, "moonbit")
-      assert_eq(document.version, 1)
       assert_eq(document.revision, "rev-1")
       assert_eq(document.text, "pub fn main {}\n")
     }
-    SourceDocumentLoadError(error) =>
+    DocumentReadFailed(error) =>
       fail("unexpected provider error " + error.message)
+    DocumentNotFound(uri) => fail("unexpected not found " + uri.to_string())
   }
 }
 
@@ -65,10 +65,11 @@ async test "filesystem provider rejects mismatched schemes" {
   let uri = expect_uri("memory://main.mbt")
   let provider = TestFileSystemProvider::{  }
 
-  match @workspace.read_source_document(provider, uri) {
-    SourceDocumentLoadError(error) => assert_true(error.code == InvalidUri)
-    SourceDocumentLoaded(document) =>
+  match @workspace.read_document(provider, uri) {
+    DocumentReadFailed(error) => assert_true(error.code == InvalidUri)
+    DocumentLoaded(document) =>
       fail("unexpected document " + document.uri.to_string())
+    DocumentNotFound(uri) => fail("unexpected not found " + uri.to_string())
   }
 }
 
@@ -88,20 +89,24 @@ test "infers language ids from source names" {
 }
 
 ///|
-test "source document creates snapshots with identity metadata" {
-  let document = @workspace.SourceDocument(
+test "document snapshot owns identity and text helpers" {
+  let document = @workspace.DocumentSnapshot(
     @base_common.Uri::memory("main.mbt"),
     "main.mbt",
     "",
-    3,
     "rev-3",
-    "pub fn main {}\n",
+    "pub fn main {}\r\nlet x = 1",
   )
-  let snapshot = document.snapshot()
   assert_eq(document.revision, "rev-3")
-  assert_eq(snapshot.text, "pub fn main {}\n")
-  assert_eq(snapshot.language_id, "moonbit")
-  assert_eq(snapshot.version, 3)
+  assert_eq(document.text, "pub fn main {}\r\nlet x = 1")
+  assert_eq(document.language_id, "moonbit")
+  assert_eq(document.line_count(), 2)
+  assert_eq(document.line_text(0), "pub fn main {}")
+  assert_eq(document.line_start_offset(1), 16)
+  assert_eq(document.offset_at_position(Position(1, 3)), 19)
+  let position = document.position_at_offset(19)
+  assert_eq(position.line, 1)
+  assert_eq(position.column, 3)
 }
 
 ///|
@@ -147,7 +152,11 @@ impl @workspace.FileSystemProvider for TestFileSystemProvider with fn read_file(
   _uri,
 ) {
   FileReadOk(
-    FileContent("pub fn main {}\n", display_name="main.mbt", revision="rev-1"),
+    DocumentContent(
+      "pub fn main {}\n",
+      display_name="main.mbt",
+      revision="rev-1",
+    ),
   )
 }
 

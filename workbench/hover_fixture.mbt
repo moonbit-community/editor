@@ -13,8 +13,13 @@ priv struct HarnessHoverProvider {}
 ///|
 fn register_harness_hover_provider(services : @browser.ViewerServices) -> Unit {
   let provider = HarnessHoverProvider::{  }
-  services.language_features.register_hover_provider(provider)
-  services.language_features.register_diagnostics_provider(provider)
+  let selector = @language.LanguageSelector::LanguageFilter(
+    LanguageFilter(scheme="readonly-remote"),
+  )
+  services.language_features.register_hover_provider(selector, provider)
+  |> ignore
+  services.language_features.register_diagnostics_provider(selector, provider)
+  |> ignore
   install_hover_fixture_control(set_harness_hover_fixture)
 }
 
@@ -32,17 +37,19 @@ fn set_harness_hover_fixture(kind : String, contents : String) -> Unit {
 }
 
 ///|
-impl @language.HoverProvider for HarnessHoverProvider with fn hover_at(
+impl @language.HoverProvider for HarnessHoverProvider with fn provide_hover(
   _self,
   document,
-  offset,
+  position,
+  _token,
 ) {
   match harness_hover_fixture.val {
     Some(fixture) =>
       if fixture.kind == "marker" {
         Some({ range: harness_marker_range(document), contents: [] })
       } else {
-        let text = document.snapshot.text
+        let text = document.text
+        let offset = document.offset_at_position(position)
         let start = @base_common.clamp_int(offset, 0, text.length())
         let end = @base_common.clamp_int(start + 1, start, text.length())
         let content : @language.HoverContent = if fixture.kind == "markdown" {
@@ -57,9 +64,10 @@ impl @language.HoverProvider for HarnessHoverProvider with fn hover_at(
 }
 
 ///|
-impl @language.DiagnosticsProvider for HarnessHoverProvider with fn diagnostics_for_document(
+impl @language.DiagnosticsProvider for HarnessHoverProvider with fn provide_diagnostics(
   _self,
   document,
+  _token,
 ) {
   match harness_hover_fixture.val {
     Some(fixture) =>
@@ -79,14 +87,15 @@ impl @language.DiagnosticsProvider for HarnessHoverProvider with fn diagnostics_
 }
 
 ///|
-fn harness_marker_range(document : @model.TextModel) -> @base_common.Range {
-  let snapshot = document.snapshot
-  if snapshot.line_count() >= 3 {
-    let start = snapshot.offset_at_position({ line: 2, column: 2 })
-    let end = snapshot.offset_at_position({ line: 2, column: 23 })
+fn harness_marker_range(
+  document : @workspace.DocumentSnapshot,
+) -> @base_common.Range {
+  if document.line_count() >= 3 {
+    let start = document.offset_at_position({ line: 2, column: 2 })
+    let end = document.offset_at_position({ line: 2, column: 23 })
     Range(start, end)
   } else {
-    let end = if snapshot.length() > 0 { 1 } else { 0 }
+    let end = if document.length() > 0 { 1 } else { 0 }
     Range(0, end)
   }
 }

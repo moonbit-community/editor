@@ -53,12 +53,12 @@ priv struct LspServerCapabilities {
 priv struct LspPendingRequest {
   method_name : String
   uri : String
-  version : Int
+  revision : String
 }
 
 ///|
 fn LspPendingRequest::is_document_request(self : LspPendingRequest) -> Bool {
-  self.method_name != "" && self.uri != "" && self.version > 0
+  self.method_name != "" && self.uri != "" && self.revision != ""
 }
 
 ///|
@@ -72,8 +72,9 @@ pub struct LspClient {
   priv subscribed : Ref[Bool]
   priv subscription : Ref[LspSubscription?]
   priv active_uri : Ref[String]
+  priv active_revision : Ref[String]
   priv active_version : Ref[Int]
-  priv active_snapshot : Ref[@model.TextSnapshot?]
+  priv active_snapshot : Ref[@workspace.DocumentSnapshot?]
   priv capabilities : Ref[LspServerCapabilities]
   priv pending_requests : Map[Int, LspPendingRequest]
   priv diagnostics : Map[String, LspCachedDiagnostics]
@@ -126,6 +127,7 @@ pub fn LspClient::with_root_uri(
     subscribed: Ref(false),
     subscription: Ref(None),
     active_uri: Ref(""),
+    active_revision: Ref(""),
     active_version: Ref(0),
     active_snapshot: Ref(None),
     capabilities: Ref(default_lsp_capabilities()),
@@ -234,7 +236,7 @@ pub fn LspClient::set_diagnostics_listener(
 /// returns cached document-level feature data available without extra requests.
 pub async fn LspClient::sync_document(
   self : LspClient,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> @language.ProviderResult {
   self.ensure_subscribed()
   if !self.ensure_initialized(document) {
@@ -255,7 +257,7 @@ pub async fn LspClient::sync_document(
 /// hover support.
 pub async fn LspClient::hover_at(
   self : LspClient,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> @language.Hover? {
   ignore(self.sync_document(document))
@@ -267,12 +269,11 @@ pub async fn LspClient::hover_at(
   self.register_request(id, "textDocument/hover", document)
   let response = self.transport.request(lsp_hover_request(id, document, offset))
   self.complete_request(id)
-  if self.active_uri.val != uri || self.active_version.val != document.version {
+  if self.active_uri.val != uri || self.active_revision.val != document.revision {
     return None
   }
   match parse_response_result(response) {
-    ParsedLspResult(result) =>
-      parse_hover_result(result, document.snapshot(), offset)
+    ParsedLspResult(result) => parse_hover_result(result, document, offset)
     LspResponseError(message) => {
       self.last_error.val = message
       None
@@ -284,7 +285,7 @@ pub async fn LspClient::hover_at(
 /// Requests definition data at a UTF-16 document offset when supported.
 pub async fn LspClient::definition_at(
   self : LspClient,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> @language.Location? {
   ignore(self.sync_document(document))
@@ -298,7 +299,7 @@ pub async fn LspClient::definition_at(
     lsp_definition_request(id, document, offset),
   )
   self.complete_request(id)
-  if self.active_uri.val != uri || self.active_version.val != document.version {
+  if self.active_uri.val != uri || self.active_revision.val != document.revision {
     return None
   }
   match parse_response_result(response) {
@@ -314,7 +315,7 @@ pub async fn LspClient::definition_at(
 /// Requests references at a UTF-16 document offset when supported.
 pub async fn LspClient::references_at(
   self : LspClient,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> Array[@language.Location] {
   ignore(self.sync_document(document))
@@ -328,7 +329,7 @@ pub async fn LspClient::references_at(
     lsp_references_request(id, document, offset),
   )
   self.complete_request(id)
-  if self.active_uri.val != uri || self.active_version.val != document.version {
+  if self.active_uri.val != uri || self.active_revision.val != document.revision {
     return []
   }
   match parse_response_result(response) {
@@ -344,7 +345,7 @@ pub async fn LspClient::references_at(
 /// Requests document symbols when supported.
 pub async fn LspClient::document_symbols(
   self : LspClient,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.DocumentSymbol] {
   ignore(self.sync_document(document))
   if self.state.val != Ready || !self.capabilities.val.document_symbol_provider {
@@ -357,7 +358,7 @@ pub async fn LspClient::document_symbols(
     lsp_document_symbol_request(id, document),
   )
   self.complete_request(id)
-  if self.active_uri.val != uri || self.active_version.val != document.version {
+  if self.active_uri.val != uri || self.active_revision.val != document.revision {
     return []
   }
   match parse_response_result(response) {
@@ -373,7 +374,7 @@ pub async fn LspClient::document_symbols(
 /// Requests full-document semantic tokens when supported.
 pub async fn LspClient::semantic_tokens_for_document(
   self : LspClient,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.SemanticToken] {
   ignore(self.sync_document(document))
   if self.state.val != Ready || !self.capabilities.val.semantic_tokens_provider {
@@ -386,14 +387,14 @@ pub async fn LspClient::semantic_tokens_for_document(
     lsp_semantic_tokens_full_request(id, document),
   )
   self.complete_request(id)
-  if self.active_uri.val != uri || self.active_version.val != document.version {
+  if self.active_uri.val != uri || self.active_revision.val != document.revision {
     return []
   }
   match parse_response_result(response) {
     ParsedLspResult(result) =>
       parse_semantic_tokens_result(
         result,
-        document.snapshot(),
+        document,
         self.capabilities.val.semantic_token_types,
       )
     LspResponseError(message) => {
@@ -419,7 +420,11 @@ pub async fn LspClient::shutdown(self : LspClient) -> Unit {
     self.subscribed.val = false
   }
   let id = self.next_request_id()
-  self.pending_requests.set(id, { method_name: "shutdown", uri: "", version: 0 })
+  self.pending_requests.set(id, {
+    method_name: "shutdown",
+    uri: "",
+    revision: "",
+  })
   ignore(self.transport.request(request_message(id, "shutdown", Json::null())))
   self.complete_request(id)
   self.transport.notify(notification_message("exit", Json::null()))
@@ -522,11 +527,10 @@ fn semantic_token_type_capability() -> Json {
 /// Builds a hover JSON-RPC request at a core UTF-16 offset.
 pub fn lsp_hover_request(
   id : Int,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> String {
-  let snapshot = document.snapshot()
-  let position = snapshot.position_at_offset(offset)
+  let position = document.position_at_offset(offset)
   request_message(
     id,
     "textDocument/hover",
@@ -541,11 +545,10 @@ pub fn lsp_hover_request(
 /// Builds a definition JSON-RPC request at a core UTF-16 offset.
 pub fn lsp_definition_request(
   id : Int,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> String {
-  let snapshot = document.snapshot()
-  let position = snapshot.position_at_offset(offset)
+  let position = document.position_at_offset(offset)
   request_message(
     id,
     "textDocument/definition",
@@ -560,11 +563,10 @@ pub fn lsp_definition_request(
 /// Builds a references JSON-RPC request at a core UTF-16 offset.
 pub fn lsp_references_request(
   id : Int,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> String {
-  let snapshot = document.snapshot()
-  let position = snapshot.position_at_offset(offset)
+  let position = document.position_at_offset(offset)
   request_message(
     id,
     "textDocument/references",
@@ -580,7 +582,7 @@ pub fn lsp_references_request(
 /// Builds a document-symbol JSON-RPC request.
 pub fn lsp_document_symbol_request(
   id : Int,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> String {
   request_message(
     id,
@@ -593,7 +595,7 @@ pub fn lsp_document_symbol_request(
 /// Builds a full semantic-token JSON-RPC request.
 pub fn lsp_semantic_tokens_full_request(
   id : Int,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> String {
   request_message(
     id,
@@ -616,7 +618,7 @@ fn LspClient::ensure_subscribed(self : LspClient) -> Unit {
 ///|
 async fn LspClient::ensure_initialized(
   self : LspClient,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> Bool {
   if self.state.val == Ready {
     return true
@@ -676,32 +678,44 @@ fn lsp_root_uri(uri : @base_common.Uri) -> Json {
 ///|
 async fn LspClient::sync_active_document(
   self : LspClient,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> Unit {
   let uri = document.uri.to_string()
   let previous_uri = self.active_uri.val
-  let previous_version = self.active_version.val
-  self.active_snapshot.val = Some(document.snapshot())
+  let previous_revision = self.active_revision.val
+  let lsp_version = if previous_uri == "" || previous_uri != uri {
+    1
+  } else if previous_revision != document.revision {
+    self.active_version.val + 1
+  } else {
+    self.active_version.val
+  }
+  self.active_snapshot.val = Some(document)
   self.active_uri.val = uri
-  self.active_version.val = document.version
+  self.active_revision.val = document.revision
+  self.active_version.val = lsp_version
   if previous_uri == "" {
-    self.transport.notify(did_open_notification(document))
+    self.transport.notify(did_open_notification(document, lsp_version))
   } else if previous_uri != uri {
     self.transport.notify(did_close_notification(previous_uri))
-    self.transport.notify(did_open_notification(document))
-  } else if previous_version != document.version {
-    self.transport.notify(did_change_notification(document))
+    self.transport.notify(did_open_notification(document, lsp_version))
+  } else if previous_revision != document.revision {
+    self.transport.notify(did_change_notification(document, lsp_version))
   }
 }
 
 ///|
 fn LspClient::cached_diagnostics_for_document(
   self : LspClient,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.Diagnostic] {
+  if self.active_uri.val != document.uri.to_string() ||
+    self.active_revision.val != document.revision {
+    return []
+  }
   match self.diagnostics.get(document.uri.to_string()) {
     Some(cached) =>
-      if cached.version == -1 || cached.version == document.version {
+      if cached.version == -1 || cached.version == self.active_version.val {
         cached.diagnostics
       } else {
         []
@@ -711,68 +725,63 @@ fn LspClient::cached_diagnostics_for_document(
 }
 
 ///|
-impl @language.DiagnosticsProvider for LspLanguageProvider with fn diagnostics_for_document(
+impl @language.DiagnosticsProvider for LspLanguageProvider with fn provide_diagnostics(
   self,
   document,
+  _token,
 ) {
-  self.client.sync_document(source_document_from_model(document)).diagnostics
+  self.client.sync_document(document).diagnostics
 }
 
 ///|
-impl @language.HoverProvider for LspLanguageProvider with fn hover_at(
+impl @language.HoverProvider for LspLanguageProvider with fn provide_hover(
   self,
   document,
-  offset,
+  position,
+  _token,
 ) {
-  self.client.hover_at(source_document_from_model(document), offset)
+  let offset = document.offset_at_position(position)
+  self.client.hover_at(document, offset)
 }
 
 ///|
-impl @language.DefinitionProvider for LspLanguageProvider with fn definition_at(
+impl @language.DefinitionProvider for LspLanguageProvider with fn provide_definition(
   self,
   document,
-  offset,
+  position,
+  _token,
 ) {
-  self.client.definition_at(source_document_from_model(document), offset)
+  let offset = document.offset_at_position(position)
+  self.client.definition_at(document, offset)
 }
 
 ///|
-impl @language.ReferencesProvider for LspLanguageProvider with fn references_at(
+impl @language.ReferencesProvider for LspLanguageProvider with fn provide_references(
   self,
   document,
-  offset,
+  position,
+  _token,
 ) {
-  self.client.references_at(source_document_from_model(document), offset)
+  let offset = document.offset_at_position(position)
+  self.client.references_at(document, offset)
 }
 
 ///|
-impl @language.DocumentSymbolProvider for LspLanguageProvider with fn document_symbols(
+impl @language.DocumentSymbolProvider for LspLanguageProvider with fn provide_document_symbols(
   self,
   document,
+  _token,
 ) {
-  self.client.document_symbols(source_document_from_model(document))
+  self.client.document_symbols(document)
 }
 
 ///|
-impl @language.SemanticTokensProvider for LspLanguageProvider with fn semantic_tokens_for_document(
+impl @language.SemanticTokensProvider for LspLanguageProvider with fn provide_document_semantic_tokens(
   self,
   document,
+  _token,
 ) {
-  self.client.semantic_tokens_for_document(source_document_from_model(document))
-}
-
-///|
-fn source_document_from_model(
-  model : @model.TextModel,
-) -> @workspace.SourceDocument {
-  SourceDocument(
-    model.uri,
-    model.display_name,
-    model.language_id,
-    model.version,
-    model.revision,
-    model.snapshot.text,
-  )
+  self.client.semantic_tokens_for_document(document)
 }
 
 ///|
@@ -786,12 +795,12 @@ fn LspClient::register_request(
   self : LspClient,
   id : Int,
   method_name : String,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> Unit {
   self.pending_requests.set(id, {
     method_name,
     uri: document.uri.to_string(),
-    version: document.version,
+    revision: document.revision,
   })
 }
 
@@ -856,7 +865,7 @@ priv struct ParsedDiagnostics {
 ///|
 fn parse_publish_diagnostics(
   params : Json,
-  snapshot : @model.TextSnapshot?,
+  snapshot : @workspace.DocumentSnapshot?,
 ) -> ParsedDiagnostics? {
   match snapshot {
     Some(doc) => {
@@ -885,7 +894,7 @@ fn parse_publish_diagnostics(
 ///|
 fn parse_diagnostic(
   item : Json,
-  doc : @model.TextSnapshot,
+  doc : @workspace.DocumentSnapshot,
 ) -> @language.Diagnostic? {
   match json_field(item, "range") {
     Some(range_json) =>
@@ -914,7 +923,7 @@ fn diagnostic_severity(value : Int?) -> @language.DiagnosticSeverity {
 ///|
 fn parse_hover_result(
   result : Json,
-  doc : @model.TextSnapshot,
+  doc : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> @language.Hover? {
   match result {
@@ -1003,7 +1012,7 @@ fn fenced_marked_string(language : String, value : String) -> String {
 
 ///|
 fn fallback_hover_range(
-  doc : @model.TextSnapshot,
+  doc : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> @base_common.Range {
   let start = @base_common.clamp_int(offset, 0, doc.length())
@@ -1014,7 +1023,7 @@ fn fallback_hover_range(
 ///|
 fn parse_definition_result(
   result : Json,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> @language.Location? {
   match result {
     Null => None
@@ -1035,7 +1044,7 @@ fn parse_definition_result(
 ///|
 fn parse_references_result(
   result : Json,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.Location] {
   let locations : Array[@language.Location] = []
   match result {
@@ -1054,7 +1063,7 @@ fn parse_references_result(
 ///|
 fn parse_document_symbols_result(
   result : Json,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.DocumentSymbol] {
   let symbols : Array[@language.DocumentSymbol] = []
   match result {
@@ -1070,7 +1079,7 @@ fn parse_document_symbols_result(
 ///|
 fn append_document_symbol(
   value : Json,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
   out : Array[@language.DocumentSymbol],
 ) -> Unit {
   match value {
@@ -1096,7 +1105,7 @@ fn append_document_symbol(
 ///|
 fn document_symbol_range(
   value : Json,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> @base_common.Range {
   let range_json = match json_field(value, "range") {
     Some(range) => Some(range)
@@ -1116,8 +1125,7 @@ fn document_symbol_range(
       }
   }
   match range_json {
-    Some(range) =>
-      parse_lsp_range(range, document.snapshot()).unwrap_or(Range(0, 0))
+    Some(range) => parse_lsp_range(range, document).unwrap_or(Range(0, 0))
     None => Range(0, 0)
   }
 }
@@ -1125,7 +1133,7 @@ fn document_symbol_range(
 ///|
 fn location_uri_matches_document(
   location : Json,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> Bool {
   json_string_field(location, "uri").unwrap_or(document.uri.to_string()) ==
   document.uri.to_string()
@@ -1166,7 +1174,7 @@ fn document_symbol_kind(kind : Int?) -> String {
 ///|
 fn parse_semantic_tokens_result(
   result : Json,
-  doc : @model.TextSnapshot,
+  doc : @workspace.DocumentSnapshot,
   legend : Array[String],
 ) -> Array[@language.SemanticToken] {
   let tokens : Array[@language.SemanticToken] = []
@@ -1225,7 +1233,7 @@ fn semantic_token_type_name(legend : Array[String], index : Int) -> String {
 ///|
 fn parse_location_result(
   value : Json,
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> @language.Location? {
   match value {
     Object(_) => {
@@ -1251,9 +1259,7 @@ fn parse_location_result(
       let range = if uri == document.uri.to_string() {
         match range_json {
           Some(raw_range) =>
-            parse_lsp_range(raw_range, document.snapshot()).unwrap_or(
-              Range(0, 0),
-            )
+            parse_lsp_range(raw_range, document).unwrap_or(Range(0, 0))
           None => Range(0, 0)
         }
       } else {
@@ -1268,7 +1274,7 @@ fn parse_location_result(
 ///|
 fn parse_lsp_range(
   value : Json,
-  doc : @model.TextSnapshot,
+  doc : @workspace.DocumentSnapshot,
 ) -> @base_common.Range? {
   match (json_field(value, "start"), json_field(value, "end")) {
     (Some(start), Some(end)) =>
@@ -1398,21 +1404,27 @@ fn notification_message(method_name : String, params : Json) -> String {
 }
 
 ///|
-fn did_open_notification(document : @workspace.SourceDocument) -> String {
+fn did_open_notification(
+  document : @workspace.DocumentSnapshot,
+  version : Int,
+) -> String {
   notification_message(
     "textDocument/didOpen",
-    json_object([("textDocument", text_document_item(document))]),
+    json_object([("textDocument", text_document_item(document, version))]),
   )
 }
 
 ///|
-fn did_change_notification(document : @workspace.SourceDocument) -> String {
+fn did_change_notification(
+  document : @workspace.DocumentSnapshot,
+  version : Int,
+) -> String {
   notification_message(
     "textDocument/didChange",
     json_object([
       (
         "textDocument",
-        versioned_text_document_identifier(document.uri, document.version),
+        versioned_text_document_identifier(document.uri, version),
       ),
       (
         "contentChanges",
@@ -1431,11 +1443,14 @@ fn did_close_notification(uri : String) -> String {
 }
 
 ///|
-fn text_document_item(document : @workspace.SourceDocument) -> Json {
+fn text_document_item(
+  document : @workspace.DocumentSnapshot,
+  version : Int,
+) -> Json {
   json_object([
     ("uri", Json::string(document.uri.to_string())),
     ("languageId", Json::string(document.language_id)),
-    ("version", json_int(document.version)),
+    ("version", json_int(version)),
     ("text", Json::string(document.text)),
   ])
 }

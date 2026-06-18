@@ -1,7 +1,14 @@
 ///|
 /// Ordered registry for one family of language providers.
 pub(all) struct LanguageFeatureRegistry[T] {
-  entries : Array[T]
+  entries : Array[LanguageFeatureEntry[T]]
+}
+
+///|
+pub(all) struct LanguageFeatureEntry[T] {
+  selector : @language.LanguageSelector
+  provider : T
+  active : Ref[Bool]
 }
 
 ///|
@@ -14,9 +21,18 @@ pub fn[T] LanguageFeatureRegistry::new() -> LanguageFeatureRegistry[T] {
 /// Adds a provider to the end of the registry.
 pub fn[T] LanguageFeatureRegistry::register(
   self : LanguageFeatureRegistry[T],
-  entry : T,
-) -> Unit {
+  selector : @language.LanguageSelector,
+  provider : T,
+) -> @base_common.Disposable {
+  let active = Ref(true)
+  let entry : LanguageFeatureEntry[T] = { selector, provider, active }
   self.entries.push(entry)
+  @base_common.Disposable::from(() => {
+    active.val = false
+    let retained = self.entries.filter(item => item.active.val)
+    self.entries.clear()
+    self.entries.append(retained)
+  })
 }
 
 ///|
@@ -58,67 +74,78 @@ pub fn LanguageFeaturesService::new(
 /// Registers an ordered hover provider.
 pub fn LanguageFeaturesService::register_hover_provider(
   self : LanguageFeaturesService,
+  selector : @language.LanguageSelector,
   provider : &@language.HoverProvider,
-) -> Unit {
-  self.hover_provider.register(provider)
+) -> @base_common.Disposable {
+  self.hover_provider.register(selector, provider)
 }
 
 ///|
 /// Registers an ordered diagnostics provider.
 pub fn LanguageFeaturesService::register_diagnostics_provider(
   self : LanguageFeaturesService,
+  selector : @language.LanguageSelector,
   provider : &@language.DiagnosticsProvider,
-) -> Unit {
-  self.diagnostics_provider.register(provider)
+) -> @base_common.Disposable {
+  self.diagnostics_provider.register(selector, provider)
 }
 
 ///|
 /// Registers an ordered document-symbol provider.
 pub fn LanguageFeaturesService::register_document_symbol_provider(
   self : LanguageFeaturesService,
+  selector : @language.LanguageSelector,
   provider : &@language.DocumentSymbolProvider,
-) -> Unit {
-  self.document_symbol_provider.register(provider)
+) -> @base_common.Disposable {
+  self.document_symbol_provider.register(selector, provider)
 }
 
 ///|
 /// Registers an ordered semantic-token provider.
-pub fn LanguageFeaturesService::register_semantic_tokens_provider(
+pub fn LanguageFeaturesService::register_document_semantic_tokens_provider(
   self : LanguageFeaturesService,
+  selector : @language.LanguageSelector,
   provider : &@language.SemanticTokensProvider,
-) -> Unit {
-  self.semantic_tokens_provider.register(provider)
+) -> @base_common.Disposable {
+  self.semantic_tokens_provider.register(selector, provider)
 }
 
 ///|
 /// Registers an ordered folding-range provider.
 pub fn LanguageFeaturesService::register_folding_range_provider(
   self : LanguageFeaturesService,
+  selector : @language.LanguageSelector,
   provider : &@language.FoldingRangeProvider,
-) -> Unit {
-  self.folding_range_provider.register(provider)
+) -> @base_common.Disposable {
+  self.folding_range_provider.register(selector, provider)
 }
 
 ///|
 /// Registers an ordered inlay-hints provider.
 pub fn LanguageFeaturesService::register_inlay_hints_provider(
   self : LanguageFeaturesService,
+  selector : @language.LanguageSelector,
   provider : &@language.InlayHintsProvider,
-) -> Unit {
-  self.inlay_hints_provider.register(provider)
+) -> @base_common.Disposable {
+  self.inlay_hints_provider.register(selector, provider)
 }
 
 ///|
 /// Returns the first non-empty hover answer in provider order.
 pub async fn LanguageFeaturesService::hover_at(
   self : LanguageFeaturesService,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> @language.Hover? noraise {
+  let position = document.position_at_offset(offset)
+  let token = @language.CancellationToken::none()
   for index in 0..<self.hover_provider.entries.length() {
-    let provider = self.hover_provider.entries[index]
+    let entry = self.hover_provider.entries[index]
+    if !entry.active.val || !entry.selector.matches(document) {
+      continue
+    }
     match
-      (provider.hover_at(document, offset) catch {
+      (entry.provider.provide_hover(document, position, token) catch {
         _ => {
           self.log_provider_failure("language.hover", document, index)
           None
@@ -136,13 +163,17 @@ pub async fn LanguageFeaturesService::hover_at(
 /// to the caller so marker ownership can be replaced independently.
 pub async fn LanguageFeaturesService::diagnostics_for_document(
   self : LanguageFeaturesService,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
   apply : (String, Array[@language.Diagnostic]) -> Unit,
 ) -> Unit noraise {
+  let token = @language.CancellationToken::none()
   for index in 0..<self.diagnostics_provider.entries.length() {
-    let provider = self.diagnostics_provider.entries[index]
+    let entry = self.diagnostics_provider.entries[index]
+    if !entry.active.val || !entry.selector.matches(document) {
+      continue
+    }
     let owner = "diagnostics:" + index.to_string()
-    let diagnostics = provider.diagnostics_for_document(document) catch {
+    let diagnostics = entry.provider.provide_diagnostics(document, token) catch {
       _ => {
         self.log_provider_failure("language.diagnostics", document, index)
         []
@@ -156,12 +187,16 @@ pub async fn LanguageFeaturesService::diagnostics_for_document(
 /// Concatenates document-symbol results from every provider.
 pub async fn LanguageFeaturesService::document_symbols(
   self : LanguageFeaturesService,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.DocumentSymbol] noraise {
   let symbols : Array[@language.DocumentSymbol] = []
+  let token = @language.CancellationToken::none()
   for index in 0..<self.document_symbol_provider.entries.length() {
-    let provider = self.document_symbol_provider.entries[index]
-    let result = provider.document_symbols(document) catch {
+    let entry = self.document_symbol_provider.entries[index]
+    if !entry.active.val || !entry.selector.matches(document) {
+      continue
+    }
+    let result = entry.provider.provide_document_symbols(document, token) catch {
       _ => {
         self.log_provider_failure("language.documentSymbols", document, index)
         []
@@ -176,12 +211,18 @@ pub async fn LanguageFeaturesService::document_symbols(
 /// Concatenates semantic-token results from every provider.
 pub async fn LanguageFeaturesService::semantic_tokens_for_document(
   self : LanguageFeaturesService,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.SemanticToken] noraise {
   let tokens : Array[@language.SemanticToken] = []
+  let token = @language.CancellationToken::none()
   for index in 0..<self.semantic_tokens_provider.entries.length() {
-    let provider = self.semantic_tokens_provider.entries[index]
-    let result = provider.semantic_tokens_for_document(document) catch {
+    let entry = self.semantic_tokens_provider.entries[index]
+    if !entry.active.val || !entry.selector.matches(document) {
+      continue
+    }
+    let result = entry.provider.provide_document_semantic_tokens(
+      document, token,
+    ) catch {
       _ => {
         self.log_provider_failure("language.semanticTokens", document, index)
         []
@@ -197,12 +238,16 @@ pub async fn LanguageFeaturesService::semantic_tokens_for_document(
 /// ranges when no provider answers.
 pub async fn LanguageFeaturesService::folding_ranges_for_document(
   self : LanguageFeaturesService,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.FoldingRange] noraise {
   let ranges : Array[@language.FoldingRange] = []
+  let token = @language.CancellationToken::none()
   for index in 0..<self.folding_range_provider.entries.length() {
-    let provider = self.folding_range_provider.entries[index]
-    let result = provider.folding_ranges(document) catch {
+    let entry = self.folding_range_provider.entries[index]
+    if !entry.active.val || !entry.selector.matches(document) {
+      continue
+    }
+    let result = entry.provider.provide_folding_ranges(document, token) catch {
       _ => {
         self.log_provider_failure("language.foldingRanges", document, index)
         []
@@ -221,12 +266,17 @@ pub async fn LanguageFeaturesService::folding_ranges_for_document(
 /// Concatenates inlay-hint results from every provider.
 pub async fn LanguageFeaturesService::inlay_hints_for_document(
   self : LanguageFeaturesService,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.InlayHint] noraise {
   let hints : Array[@language.InlayHint] = []
+  let token = @language.CancellationToken::none()
+  let full_range = @base_common.Range(0, document.length())
   for index in 0..<self.inlay_hints_provider.entries.length() {
-    let provider = self.inlay_hints_provider.entries[index]
-    let result = provider.inlay_hints(document) catch {
+    let entry = self.inlay_hints_provider.entries[index]
+    if !entry.active.val || !entry.selector.matches(document) {
+      continue
+    }
+    let result = entry.provider.provide_inlay_hints(document, full_range, token) catch {
       _ => {
         self.log_provider_failure("language.inlayHints", document, index)
         []
@@ -241,22 +291,22 @@ pub async fn LanguageFeaturesService::inlay_hints_for_document(
 fn LanguageFeaturesService::log_provider_failure(
   self : LanguageFeaturesService,
   category : String,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
   index : Int,
 ) -> Unit {
   self.log_service.warn(category, "provider failed", details=[
     ("document", document.uri.to_string()),
-    ("version", document.version.to_string()),
+    ("revision", document.revision),
     ("providerIndex", index.to_string()),
   ])
 }
 
 ///|
 fn fallback_folding_ranges(
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
 ) -> Array[@language.FoldingRange] {
   if document.language_id == "moonbit" {
-    moonbit_indentation_folding_ranges(document.snapshot)
+    moonbit_indentation_folding_ranges(document)
   } else {
     []
   }
@@ -264,7 +314,7 @@ fn fallback_folding_ranges(
 
 ///|
 fn moonbit_indentation_folding_ranges(
-  snapshot : @model.TextSnapshot,
+  snapshot : @workspace.DocumentSnapshot,
 ) -> Array[@language.FoldingRange] {
   let ranges : Array[@language.FoldingRange] = []
   for line_index in 0..<snapshot.line_count() {
@@ -300,7 +350,7 @@ fn moonbit_indentation_folding_ranges(
 
 ///|
 fn next_non_empty_line(
-  snapshot : @model.TextSnapshot,
+  snapshot : @workspace.DocumentSnapshot,
   start_index : Int,
 ) -> Int? {
   for index in start_index..<snapshot.line_count() {
@@ -313,7 +363,7 @@ fn next_non_empty_line(
 
 ///|
 fn indentation_block_end(
-  snapshot : @model.TextSnapshot,
+  snapshot : @workspace.DocumentSnapshot,
   start_index : Int,
   indent : Int,
 ) -> Int {
@@ -334,7 +384,7 @@ fn indentation_block_end(
 
 ///|
 fn brace_block_end(
-  snapshot : @model.TextSnapshot,
+  snapshot : @workspace.DocumentSnapshot,
   start_index : Int,
   indent : Int,
 ) -> Int {

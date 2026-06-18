@@ -47,22 +47,22 @@ pub(all) struct DocumentRequest {
 } derive(Debug)
 
 ///|
-/// Request addressed by URI, expected document version, and UTF-16 offset.
-/// Servers use the version to drop stale feature requests.
+/// Request addressed by URI, expected document revision, and UTF-16 offset.
+/// Servers use the revision to drop stale feature requests.
 pub(all) struct DocumentPositionRequest {
   id : String
   uri : @base_common.Uri
-  document_version : Int
+  document_revision : String
   offset : Int
 } derive(Debug)
 
 ///|
-/// Request addressed by URI and expected document version, for whole-document
+/// Request addressed by URI and expected document revision, for whole-document
 /// feature refreshes.
-pub(all) struct DocumentVersionRequest {
+pub(all) struct DocumentRevisionRequest {
   id : String
   uri : @base_common.Uri
-  document_version : Int
+  document_revision : String
 } derive(Debug)
 
 ///|
@@ -72,21 +72,21 @@ pub(all) enum ClientPacket {
   OpenDocument(DocumentRequest)
   WatchDocument(DocumentRequest)
   CloseDocument(DocumentRequest)
-  Diagnostics(DocumentVersionRequest)
+  Diagnostics(DocumentRevisionRequest)
   Hover(DocumentPositionRequest)
   Definition(DocumentPositionRequest)
   References(DocumentPositionRequest)
-  DocumentSymbols(DocumentVersionRequest)
-  SemanticTokens(DocumentVersionRequest)
-  FoldingRanges(DocumentVersionRequest)
-  InlayHints(DocumentVersionRequest)
+  DocumentSymbols(DocumentRevisionRequest)
+  SemanticTokens(DocumentRevisionRequest)
+  FoldingRanges(DocumentRevisionRequest)
+  InlayHints(DocumentRevisionRequest)
 } derive(Debug)
 
 ///|
 /// Loaded or changed document payload from the remote server.
 pub(all) struct DocumentPayload {
   id : String
-  document : @workspace.SourceDocument
+  document : @workspace.DocumentSnapshot
 } derive(Debug)
 
 ///|
@@ -98,29 +98,29 @@ pub(all) struct DirectoryResolvedPayload {
 } derive(Debug)
 
 ///|
-/// Diagnostics response for a specific URI and document version.
+/// Diagnostics response for a specific URI and document revision.
 pub(all) struct DiagnosticsPayload {
   id : String
   uri : @base_common.Uri
-  version : Int
+  revision : String
   diagnostics : Array[@language.Diagnostic]
 } derive(Debug)
 
 ///|
-/// Hover response for a specific URI, document version, and request id.
+/// Hover response for a specific URI, document revision, and request id.
 pub(all) struct HoverResultPayload {
   id : String
   uri : @base_common.Uri
-  version : Int
+  revision : String
   hover : @language.Hover?
 } derive(Debug)
 
 ///|
-/// Definition response for a specific URI, document version, and request id.
+/// Definition response for a specific URI, document revision, and request id.
 pub(all) struct DefinitionResultPayload {
   id : String
   uri : @base_common.Uri
-  version : Int
+  revision : String
   location : @language.Location?
 } derive(Debug)
 
@@ -137,47 +137,47 @@ pub(all) struct ReferenceItem {
 } derive(Debug)
 
 ///|
-/// References response for a specific URI and document version.
+/// References response for a specific URI and document revision.
 pub(all) struct ReferencesResultPayload {
   id : String
   uri : @base_common.Uri
-  version : Int
+  revision : String
   references : Array[ReferenceItem]
 } derive(Debug)
 
 ///|
-/// Document symbols response for a specific URI and document version.
+/// Document symbols response for a specific URI and document revision.
 pub(all) struct DocumentSymbolsResultPayload {
   id : String
   uri : @base_common.Uri
-  version : Int
+  revision : String
   symbols : Array[@language.DocumentSymbol]
 } derive(Debug)
 
 ///|
-/// Semantic tokens response for a specific URI and document version.
+/// Semantic tokens response for a specific URI and document revision.
 pub(all) struct SemanticTokensResultPayload {
   id : String
   uri : @base_common.Uri
-  version : Int
+  revision : String
   semantic_tokens : Array[@language.SemanticToken]
 } derive(Debug)
 
 ///|
-/// Folding ranges response for a specific URI and document version.
+/// Folding ranges response for a specific URI and document revision.
 pub(all) struct FoldingRangesResultPayload {
   id : String
   uri : @base_common.Uri
-  version : Int
+  revision : String
   folding_ranges : Array[@language.FoldingRange]
 } derive(Debug)
 
 ///|
-/// Inlay hints response for a specific URI and document version.
+/// Inlay hints response for a specific URI and document revision.
 pub(all) struct InlayHintsResultPayload {
   id : String
   uri : @base_common.Uri
-  version : Int
+  revision : String
   inlay_hints : Array[@language.InlayHint]
 } derive(Debug)
 
@@ -298,14 +298,15 @@ pub impl ToJson for ClientPacket with fn to_json(self) {
     OpenDocument(request) => document_request_json("OpenDocument", request)
     WatchDocument(request) => document_request_json("WatchDocument", request)
     CloseDocument(request) => document_request_json("CloseDocument", request)
-    Diagnostics(request) => version_request_json("Diagnostics", request)
+    Diagnostics(request) => revision_request_json("Diagnostics", request)
     Hover(request) => position_request_json("Hover", request)
     Definition(request) => position_request_json("Definition", request)
     References(request) => position_request_json("References", request)
-    DocumentSymbols(request) => version_request_json("DocumentSymbols", request)
-    SemanticTokens(request) => version_request_json("SemanticTokens", request)
-    FoldingRanges(request) => version_request_json("FoldingRanges", request)
-    InlayHints(request) => version_request_json("InlayHints", request)
+    DocumentSymbols(request) =>
+      revision_request_json("DocumentSymbols", request)
+    SemanticTokens(request) => revision_request_json("SemanticTokens", request)
+    FoldingRanges(request) => revision_request_json("FoldingRanges", request)
+    InlayHints(request) => revision_request_json("InlayHints", request)
   }
 }
 
@@ -497,8 +498,8 @@ fn decode_position_client(
         build({
           id,
           uri,
-          document_version: json_int_field(packet, "documentVersion").unwrap_or(
-            0,
+          document_revision: json_string_field(packet, "documentRevision").unwrap_or(
+            "",
           ),
           offset: json_int_field(packet, "offset").unwrap_or(0),
         }),
@@ -511,7 +512,7 @@ fn decode_position_client(
 fn decode_version_client(
   packet : Json,
   id : String,
-  build : (DocumentVersionRequest) -> ClientPacket,
+  build : (DocumentRevisionRequest) -> ClientPacket,
 ) -> ClientPacketDecodeResult {
   match parse_uri_field(packet, "uri", id) {
     ParsedProtocolUri(uri) =>
@@ -519,8 +520,8 @@ fn decode_version_client(
         build({
           id,
           uri,
-          document_version: json_int_field(packet, "documentVersion").unwrap_or(
-            0,
+          document_revision: json_string_field(packet, "documentRevision").unwrap_or(
+            "",
           ),
         }),
       )
@@ -601,7 +602,7 @@ fn decode_diagnostics_payload(packet : Json) -> ServerPacketDecodeResult {
         Diagnostics({
           id,
           uri,
-          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           diagnostics,
         }),
       )
@@ -625,7 +626,7 @@ fn decode_hover_result_payload(
         HoverResult({
           id,
           uri,
-          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           hover,
         }),
       )
@@ -649,7 +650,7 @@ fn decode_definition_result_payload(
         DefinitionResult({
           id,
           uri,
-          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           location,
         }),
       )
@@ -680,7 +681,7 @@ fn decode_references_result_payload(
         ReferencesResult({
           id,
           uri,
-          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           references,
         }),
       )
@@ -711,7 +712,7 @@ fn decode_document_symbols_result_payload(
         DocumentSymbolsResult({
           id,
           uri,
-          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           symbols,
         }),
       )
@@ -742,7 +743,7 @@ fn decode_semantic_tokens_result_payload(
         SemanticTokensResult({
           id,
           uri,
-          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           semantic_tokens,
         }),
       )
@@ -773,7 +774,7 @@ fn decode_folding_ranges_result_payload(
         FoldingRangesResult({
           id,
           uri,
-          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           folding_ranges,
         }),
       )
@@ -804,7 +805,7 @@ fn decode_inlay_hints_result_payload(
         InlayHintsResult({
           id,
           uri,
-          version: json_int_field(packet, "documentVersion").unwrap_or(0),
+          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           inlay_hints,
         }),
       )
@@ -907,7 +908,7 @@ fn parse_uri_field(
 
 ///|
 priv enum ProtocolDocumentResult {
-  ParsedProtocolDocument(@workspace.SourceDocument)
+  ParsedProtocolDocument(@workspace.DocumentSnapshot)
   ProtocolDocumentError(ProtocolError)
 }
 
@@ -920,11 +921,10 @@ fn parse_source_document(value : Json, id : String) -> ProtocolDocumentResult {
           match @base_common.Uri::parse(raw_uri) {
             ParsedUri(uri) =>
               ParsedProtocolDocument(
-                SourceDocument(
+                DocumentSnapshot(
                   uri,
                   json_string_field(value, "displayName").unwrap_or(""),
                   json_string_field(value, "languageId").unwrap_or(""),
-                  json_int_field(value, "version").unwrap_or(1),
                   json_string_field(value, "revision").unwrap_or(""),
                   json_string_field(value, "text").unwrap_or(""),
                 ),
@@ -972,19 +972,19 @@ fn position_request_json(
 ) -> Json {
   let fields = packet_fields(kind, request.id)
   fields["uri"] = request.uri.to_string().to_json()
-  fields["documentVersion"] = request.document_version.to_json()
+  fields["documentRevision"] = request.document_revision.to_json()
   fields["offset"] = request.offset.to_json()
   Json::object(fields)
 }
 
 ///|
-fn version_request_json(
+fn revision_request_json(
   kind : String,
-  request : DocumentVersionRequest,
+  request : DocumentRevisionRequest,
 ) -> Json {
   let fields = packet_fields(kind, request.id)
   fields["uri"] = request.uri.to_string().to_json()
-  fields["documentVersion"] = request.document_version.to_json()
+  fields["documentRevision"] = request.document_revision.to_json()
   Json::object(fields)
 }
 
@@ -1053,7 +1053,7 @@ fn parse_workspace_stat(value : Json) -> @workspace.WorkspaceStat? {
 fn diagnostics_payload_json(payload : DiagnosticsPayload) -> Json {
   let fields = packet_fields("Diagnostics", payload.id)
   fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentVersion"] = payload.version.to_json()
+  fields["documentRevision"] = payload.revision.to_json()
   fields["diagnostics"] = Json::array(payload.diagnostics.map(diagnostic_json))
   Json::object(fields)
 }
@@ -1062,7 +1062,7 @@ fn diagnostics_payload_json(payload : DiagnosticsPayload) -> Json {
 fn hover_result_json(payload : HoverResultPayload) -> Json {
   let fields = packet_fields("HoverResult", payload.id)
   fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentVersion"] = payload.version.to_json()
+  fields["documentRevision"] = payload.revision.to_json()
   fields["hover"] = match payload.hover {
     Some(hover) => hover_json(hover)
     None => Json::null()
@@ -1074,7 +1074,7 @@ fn hover_result_json(payload : HoverResultPayload) -> Json {
 fn definition_result_json(payload : DefinitionResultPayload) -> Json {
   let fields = packet_fields("DefinitionResult", payload.id)
   fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentVersion"] = payload.version.to_json()
+  fields["documentRevision"] = payload.revision.to_json()
   fields["location"] = match payload.location {
     Some(location) => location_json(location)
     None => Json::null()
@@ -1086,7 +1086,7 @@ fn definition_result_json(payload : DefinitionResultPayload) -> Json {
 fn references_result_json(payload : ReferencesResultPayload) -> Json {
   let fields = packet_fields("ReferencesResult", payload.id)
   fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentVersion"] = payload.version.to_json()
+  fields["documentRevision"] = payload.revision.to_json()
   fields["references"] = Json::array(
     payload.references.map(reference_item_json),
   )
@@ -1108,7 +1108,7 @@ fn reference_item_json(item : ReferenceItem) -> Json {
 fn document_symbols_result_json(payload : DocumentSymbolsResultPayload) -> Json {
   let fields = packet_fields("DocumentSymbolsResult", payload.id)
   fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentVersion"] = payload.version.to_json()
+  fields["documentRevision"] = payload.revision.to_json()
   fields["symbols"] = Json::array(payload.symbols.map(document_symbol_json))
   Json::object(fields)
 }
@@ -1117,7 +1117,7 @@ fn document_symbols_result_json(payload : DocumentSymbolsResultPayload) -> Json 
 fn semantic_tokens_result_json(payload : SemanticTokensResultPayload) -> Json {
   let fields = packet_fields("SemanticTokensResult", payload.id)
   fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentVersion"] = payload.version.to_json()
+  fields["documentRevision"] = payload.revision.to_json()
   fields["semanticTokens"] = Json::array(
     payload.semantic_tokens.map(semantic_token_json),
   )
@@ -1128,7 +1128,7 @@ fn semantic_tokens_result_json(payload : SemanticTokensResultPayload) -> Json {
 fn folding_ranges_result_json(payload : FoldingRangesResultPayload) -> Json {
   let fields = packet_fields("FoldingRangesResult", payload.id)
   fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentVersion"] = payload.version.to_json()
+  fields["documentRevision"] = payload.revision.to_json()
   fields["foldingRanges"] = Json::array(
     payload.folding_ranges.map(folding_range_json),
   )
@@ -1139,7 +1139,7 @@ fn folding_ranges_result_json(payload : FoldingRangesResultPayload) -> Json {
 fn inlay_hints_result_json(payload : InlayHintsResultPayload) -> Json {
   let fields = packet_fields("InlayHintsResult", payload.id)
   fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentVersion"] = payload.version.to_json()
+  fields["documentRevision"] = payload.revision.to_json()
   fields["inlayHints"] = Json::array(payload.inlay_hints.map(inlay_hint_json))
   Json::object(fields)
 }

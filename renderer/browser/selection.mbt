@@ -1,8 +1,8 @@
 ///|
 fn Viewer::selection_range(self : Viewer) -> @base_common.Range? {
-  match (self.selection, self.source_document) {
-    (Some(selection), Some(document)) => {
-      let snapshot = document.snapshot()
+  match (self.selection, self.text_model) {
+    (Some(selection), Some(model)) => {
+      let snapshot = model.snapshot
       if selection.is_empty(snapshot) {
         None
       } else {
@@ -55,9 +55,9 @@ fn Viewer::finish_selection(self : Viewer) -> Unit {
     return
   }
   self.selection_dragging = false
-  match (self.selection, self.source_document) {
-    (Some(selection), Some(document)) =>
-      if selection.is_empty(document.snapshot()) {
+  match (self.selection, self.text_model) {
+    (Some(selection), Some(model)) =>
+      if selection.is_empty(model.snapshot) {
         self.selection = None
       }
     _ => ()
@@ -76,8 +76,7 @@ fn Viewer::position_for_selection_target(
   match target.kind {
     ContentText | ContentEmpty =>
       match self.source_document {
-        Some(document) =>
-          Some(document.snapshot().position_at_offset(target.offset))
+        Some(document) => Some(document.position_at_offset(target.offset))
         None => None
       }
     _ => None
@@ -89,9 +88,9 @@ fn Viewer::handle_copy_event(self : Viewer, event : @rdom.Event) -> Bool {
   guard event.to_clipboard_event() is Some(clipboard_event) else {
     return false
   }
-  match (self.selection, self.source_document) {
-    (Some(selection), Some(document)) => {
-      let snapshot = document.snapshot()
+  match (self.selection, self.text_model) {
+    (Some(selection), Some(model)) => {
+      let snapshot = model.snapshot
       if selection.is_empty(snapshot) {
         return false
       }

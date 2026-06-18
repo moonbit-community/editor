@@ -277,7 +277,7 @@ async fn validate_native_file(
 async fn try_read_text_file(
   target : String,
   display_name : String,
-) -> @workspace.FileContent? {
+) -> @workspace.DocumentContent? {
   let data = Some(@fs.read_file(target)) catch { _ => None }
   match data {
     Some(data) => {
@@ -286,7 +286,7 @@ async fn try_read_text_file(
         None
       } else {
         Some(
-          FileContent(
+          DocumentContent(
             text,
             display_name~,
             language_id=@workspace.infer_language_id(display_name),

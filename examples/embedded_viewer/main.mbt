@@ -1,7 +1,7 @@
 // A real embedding target, the way Monaco's standalone editor proves its
 // package boundary: the viewer library plus the file-tree widget mounted
 // against in-memory providers, with zero server or websocket involvement.
-// Implementing `DocumentSource` (and optionally `WorkspaceTreeProvider`)
+// Implementing `DocumentProvider` (and optionally `WorkspaceTreeProvider`)
 // is the entire integration surface for a custom backend.
 
 ///|
@@ -92,37 +92,31 @@ fn memory_workspace() -> MemoryWorkspace {
 }
 
 ///|
-impl @workspace.DocumentSource for MemoryWorkspace with fn open_document(
-  self,
-  uri,
-) {
+impl @workspace.DocumentProvider for MemoryWorkspace with fn read(self, uri) {
   match self.documents.get(uri.to_string()) {
     Some(text) =>
-      SourceDocumentLoaded(
-        @workspace.SourceDocument::from_file_content(uri, FileContent(text)),
+      DocumentLoaded(
+        @workspace.DocumentSnapshot::from_content(uri, DocumentContent(text)),
       )
     None =>
-      SourceDocumentLoadError(
-        FileSystemProviderError(FileNotFound, "Document does not exist.", uri~),
+      DocumentReadFailed(
+        DocumentError(FileNotFound, "Document does not exist.", uri~),
       )
   }
 }
 
 ///|
-impl @workspace.DocumentSource for MemoryWorkspace with fn watch_document(
+impl @workspace.DocumentProvider for MemoryWorkspace with fn watch(
   _self,
   _uri,
   _listener,
 ) {
   // In-memory documents never change behind the viewer's back.
-  { dispose: () => () }
+  @base_common.Disposable::from(() => ())
 }
 
 ///|
-impl @workspace.DocumentSource for MemoryWorkspace with fn close_document(
-  _self,
-  _uri,
-) {
+impl @workspace.DocumentProvider for MemoryWorkspace with fn close(_self, _uri) {
 
 }
 

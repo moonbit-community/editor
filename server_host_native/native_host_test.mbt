@@ -259,11 +259,16 @@ async test "native workspace language provider bridges remote documents to file 
       client.language_provider(),
     )
     let remote_uri = expect_remote_uri("simple.mbt")
-    let document = @workspace.SourceDocument(
-      remote_uri, "simple.mbt", "moonbit", 1, "rev-1", "pub fn startup_event() -> Unit {}\n",
+    let document = @workspace.DocumentSnapshot(
+      remote_uri, "simple.mbt", "moonbit", "rev-1", "pub fn startup_event() -> Unit {}\n",
     )
 
-    match provider.hover_at(document.text_model(), 7) {
+    match
+      provider.provide_hover(
+        document,
+        document.position_at_offset(7),
+        @language.CancellationToken::none(),
+      ) {
       Some(hover) => {
         match hover.contents {
           [PlainText(text)] => assert_eq(text, "LSP hover for startup_event")
@@ -273,7 +278,12 @@ async test "native workspace language provider bridges remote documents to file 
       }
       None => fail("expected lsp hover")
     }
-    match provider.definition_at(document.text_model(), 7) {
+    match
+      provider.provide_definition(
+        document,
+        document.position_at_offset(7),
+        @language.CancellationToken::none(),
+      ) {
       Some(location) => {
         assert_eq(location.uri.to_string(), remote_uri.to_string())
         assert_true(location.range == Range(7, 20))

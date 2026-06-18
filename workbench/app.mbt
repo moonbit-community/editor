@@ -7,7 +7,7 @@ priv struct WorkbenchDocumentView {
   uri : String
   display_name : String
   language_id : String
-  version : Int
+  revision : String
 }
 
 ///|
@@ -91,7 +91,7 @@ fn workbench_viewer() -> @browser.Viewer {
     Some(viewer) => viewer
     None => {
       let viewer = @browser.Viewer(
-        document_source,
+        document_provider,
         on_notification=notification => {
           dispatch_workbench_msg(ViewerNotified(notification))
         },
@@ -310,8 +310,8 @@ fn viewer_notified_update(
   notification : @browser.ViewerNotification,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   match notification {
-    ViewerDiagnosticsStatus(count~, version~) => {
-      emit_language_status(count, version)
+    ViewerDiagnosticsStatus(count~, revision~) => {
+      emit_language_status(count, revision)
       (@rabbita.none, model)
     }
     ViewerFrameBuilt(
@@ -327,7 +327,7 @@ fn viewer_notified_update(
         line_count,
         token_count,
         diagnostic_count,
-        document.version,
+        document.revision,
         tokenize_ms,
         build_ms,
       )
@@ -388,8 +388,8 @@ fn viewer_notified_update(
         )
       }
     }
-    ViewerHoverResolved(ok~, version~) => {
-      emit_hover_status(ok, version)
+    ViewerHoverResolved(ok~, revision~) => {
+      emit_hover_status(ok, revision)
       (@rabbita.none, model)
     }
     ViewerScrolled(scroll_top~, scroll_left~) => {
@@ -469,33 +469,15 @@ fn server_packet_update(
     // routes them to the listener registered for their URI.
     DocumentLoaded(payload) => (route_watched_document_cmd(payload), model)
     DocumentChanged(payload) => (route_watched_document_cmd(payload), model)
-    // Server-initiated feature pushes flow into the viewer's public
-    // feature-data API.
-    Diagnostics(payload) =>
-      (
-        viewer_cmd(() => {
-          workbench_viewer().push_diagnostics(payload.diagnostics)
-        }),
-        model,
-      )
-    DocumentSymbolsResult(payload) =>
-      (
-        viewer_cmd(() => workbench_viewer().push_symbols(payload.symbols)),
-        model,
-      )
-    SemanticTokensResult(payload) =>
-      (
-        viewer_cmd(() => {
-          workbench_viewer().push_semantic_tokens(payload.semantic_tokens)
-        }),
-        model,
-      )
     // Feature results without a waiting request are unsolicited; provider
     // commands consume theirs through the pending table.
     DirectoryResolved(_) => (@rabbita.none, model)
+    Diagnostics(_) => (@rabbita.none, model)
     HoverResult(_) => (@rabbita.none, model)
     DefinitionResult(_) => (@rabbita.none, model)
     ReferencesResult(_) => (@rabbita.none, model)
+    DocumentSymbolsResult(_) => (@rabbita.none, model)
+    SemanticTokensResult(_) => (@rabbita.none, model)
     FoldingRangesResult(_) => (@rabbita.none, model)
     InlayHintsResult(_) => (@rabbita.none, model)
     RemoteError(error) =>
@@ -532,13 +514,13 @@ fn protocol_error_update(
 
 ///|
 fn document_to_view(
-  document : @workspace.SourceDocument,
+  document : @workspace.DocumentSnapshot,
 ) -> WorkbenchDocumentView {
   {
     uri: document.uri.to_string(),
     display_name: document.display_name,
     language_id: document.language_id,
-    version: document.version,
+    revision: document.revision,
   }
 }
 
@@ -667,9 +649,9 @@ fn document_meta(model : WorkbenchModel) -> String {
       } else {
         document.language_id
       }
-      language + " v" + document.version.to_string()
+      language + " " + document.revision
     }
-    None => "moonbit v-"
+    None => "moonbit"
   }
 }
 

@@ -20,7 +20,7 @@ pub(all) struct ComputedHover {
 ///|
 /// Inputs shared by synchronous and asynchronous hover participants.
 pub(all) struct HoverComputeContext {
-  document : @model.TextModel
+  document : @workspace.DocumentSnapshot
   anchor_range : @base_common.Range
   offset : Int
   injected_text_index : Int
@@ -205,7 +205,7 @@ pub fn ContentHoverComputer::new(
 /// Computes hover parts that are immediately available from viewer state.
 pub fn ContentHoverComputer::compute_sync(
   self : ContentHoverComputer,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
   anchor_range : @base_common.Range,
   offset : Int,
   injected_text_index? : Int = -1,
@@ -230,7 +230,7 @@ pub fn ContentHoverComputer::compute_sync(
 /// Computes hover parts that may require provider calls.
 pub async fn ContentHoverComputer::compute_async(
   self : ContentHoverComputer,
-  document : @model.TextModel,
+  document : @workspace.DocumentSnapshot,
   anchor_range : @base_common.Range,
   offset : Int,
   injected_text_index? : Int = -1,

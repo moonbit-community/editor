@@ -6,18 +6,6 @@ pub(all) struct SourcePath {
 } derive(Eq, Debug)
 
 ///|
-/// Versioned readonly document passed from workspace providers into renderer
-/// and language-feature packages.
-pub(all) struct SourceDocument {
-  uri : @base_common.Uri
-  display_name : String
-  language_id : String
-  version : Int
-  revision : String
-  text : String
-} derive(Debug)
-
-///|
 /// Validation failures for user-facing source paths and document URIs.
 pub(all) enum SourceError {
   MissingPath
@@ -98,64 +86,6 @@ pub fn SourcePath::file_uri(self : SourcePath) -> @base_common.Uri {
   match @base_common.Uri::parse("file://local/" + self.value) {
     ParsedUri(uri) => uri
     UriError(_) => @base_common.Uri::memory(self.value)
-  }
-}
-
-///|
-/// Builds a document and normalizes empty display name, empty language id, and
-/// non-positive version inputs.
-pub fn SourceDocument::SourceDocument(
-  uri : @base_common.Uri,
-  display_name : String,
-  language_id : String,
-  version : Int,
-  revision : String,
-  text : String,
-) -> SourceDocument {
-  let display_name = if display_name == "" {
-    uri.to_string()
-  } else {
-    display_name
-  }
-  let language_id = if language_id == "" {
-    infer_language_id(display_name)
-  } else {
-    language_id
-  }
-  let version = if version < 1 { 1 } else { version }
-  { uri, display_name, language_id, version, revision, text }
-}
-
-///|
-/// Converts workspace document text into the model snapshot consumed by
-/// renderer and language providers.
-pub fn SourceDocument::snapshot(self : SourceDocument) -> @model.TextSnapshot {
-  TextSnapshot(self.text, language_id=self.language_id, version=self.version)
-}
-
-///|
-/// Converts workspace provider payload into the readonly editor model.
-pub fn SourceDocument::text_model(self : SourceDocument) -> @model.TextModel {
-  TextModel(
-    self.uri,
-    self.display_name,
-    self.language_id,
-    self.version,
-    self.revision,
-    self.text,
-  )
-}
-
-///|
-/// JSON shape emitted to browser harnesses and remote protocol adapters.
-pub impl ToJson for SourceDocument with fn to_json(self) {
-  {
-    "uri": self.uri.to_string().to_json(),
-    "displayName": self.display_name.to_json(),
-    "languageId": self.language_id.to_json(),
-    "version": self.version.to_json(),
-    "revision": self.revision.to_json(),
-    "text": self.text.to_json(),
   }
 }
 

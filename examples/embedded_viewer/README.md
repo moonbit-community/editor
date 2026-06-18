@@ -14,16 +14,21 @@ expands a folder, and navigates between files with no websocket opened.
 ## What it demonstrates
 
 - The host owns document storage and selection. Here it is a `Map` of URI to
-  text; opening a file builds a `workspace.DocumentSnapshot` and passes it to
-  `viewer.set_document`.
+  text; opening a file should build a `viewer/model.TextModel` and pass it to
+  the viewer model API.
 - Implementing `@workspace.WorkspaceTreeProvider` (root + one-level
   resolve) is all the tree widget needs; here it is a `Map` of directory
   URI to child stats.
 - The host wires the two together: the widget's `on_open` intent reads from the
-  in-memory document map, calls `viewer.set_document(snapshot)`, and the
-  viewer's rendered notification calls `tree.set_active(uri)` for autoReveal.
+  in-memory document map, installs the corresponding text model on the viewer,
+  and the viewer's rendered notification calls `tree.set_active(uri)` for
+  autoReveal.
 - The mount seam: the shell renders one stable `.viewer-host` element and
   calls `viewer.attach(host)` after the first paint; the browser `View` owns the
   whole subtree and the shell never renders children into it.
 - No language providers are registered, so hover and diagnostics simply
   stay absent — the registry starts empty by design.
+
+Implementation note: the current example still constructs
+`workspace.DocumentSnapshot` and calls `viewer.set_document` until the public
+viewer API is migrated to `set_model` / `get_model`.

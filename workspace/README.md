@@ -14,14 +14,17 @@ Readonly source loading and filesystem-provider contracts for host packages.
   (document-level read/watch/close in `DocumentSnapshot` terms) and
   `WorkspaceTreeProvider` + `WorkspaceStat` (the `IFileStat`/
   `IFileService.resolve` copy: stats carry provider-minted URIs and children
-  resolve lazily one level per request). The viewer core consumes
-  `DocumentSnapshot` values directly; it does not require or own a provider.
+  resolve lazily one level per request). Host packages adapt
+  `DocumentSnapshot` values into `viewer/model.TextModel` before calling the
+  viewer; the viewer core should not consume workspace payload types directly.
 
 ## Boundaries
 
 - May depend on `base/common` and JSON support.
 - Must not contain browser, native, DOM, server routing, or LSP process effects.
 - Host packages implement filesystem behavior through the provider contract.
+- Must not become the viewer model API. `DocumentSnapshot` is source-provider
+  data; editor model identity belongs in `viewer/model`.
 
 ## Checks
 

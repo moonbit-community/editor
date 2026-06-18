@@ -1,6 +1,14 @@
 # Monaco-Core Viewer API and Documentation Cleanup
 
-Status: Proposed
+Status: Superseded
+
+Superseded by `docs/exec-plans/monaco-model-viewer-api.md`.
+This file remains useful as historical context for moving provider reads,
+watches, reload policy, and source errors out of viewer core, but its
+`set_document` / generic document-state boundary is stale. The current target is
+a Monaco-style model boundary: public viewer and language APIs use
+`viewer/model.TextModel` or `TextSnapshot`, while `workspace.DocumentSnapshot`
+stays a host/source-provider payload.
 
 ## Summary
 

@@ -20,10 +20,11 @@ remote protocol transport.
   (`@workspace.WorkspaceTreeProvider` over `ResolveDirectory`), and
   `RemoteLanguageClient` (the `language` provider traits, registered with
   the viewer's selected `Languages` registry at startup).
-- Own active-document composition: selecting a URI closes the previous source,
-  reads the next snapshot, starts the host watch, applies watch updates through
-  `viewer.set_document`, and decides how missing or failed documents affect the
-  shell status and empty-viewer placeholder.
+- Own active-model composition: selecting a URI closes the previous source,
+  reads the next source payload, converts it into `viewer/model.TextModel`,
+  starts the host watch, applies watch updates through the viewer's model API,
+  and decides how missing or failed documents affect the shell status and
+  empty-viewer placeholder.
 - Own the auto-open policy: a bounded depth-first resolve walk that opens
   the first MoonBit file (fallback: first file) when the socket opens with
   nothing loaded; the viewer's rendered notification then drives the
@@ -57,6 +58,11 @@ remote protocol transport.
 - Module-level `Ref` registries (the app dispatcher, the protocol send
   hook, pending protocol requests, the viewer and tree singletons) stay
   inside this package.
+
+Implementation note: the checked-in workbench still calls `viewer.set_document`
+with `workspace.DocumentSnapshot` while the viewer API migration is pending.
+That is implementation debt in the shell adapter, not the intended viewer
+boundary.
 
 ## Checks
 

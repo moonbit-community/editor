@@ -1,7 +1,7 @@
 # Architecture
 
 The editor is a readonly MoonBit code viewer. The public embedding surface is
-`viewer`: MoonBit users create or fetch immutable document snapshots, attach the
+`viewer`: MoonBit users create or fetch readonly editor models, attach the
 viewer to their own host element, and drive rendering, selection, reload, and
 error policy from their own shell.
 
@@ -36,12 +36,14 @@ stack around it.
   server, and widgets.
 - `viewer/core`: UTF-16 coordinate primitives used by viewer internals while
   public host contracts use `base/common`.
-- `viewer/model`: internal readonly editor text ownership derived from
-  `workspace.DocumentSnapshot` by browser rendering code.
-- `workspace`: host-side source/tree provider contracts, immutable
-  `DocumentSnapshot` payloads, and document watch notifications. It does not
-  own viewer text models or depend on viewer packages; using a provider is one
-  host composition option, not a viewer-core requirement.
+- `viewer/model`: readonly editor text ownership and this repo's Monaco
+  `ITextModel`/`TextModel` role. Public viewer and language-provider APIs
+  should depend on `TextModel` or `TextSnapshot`, not workspace source payloads.
+- `workspace`: host-side source/tree provider contracts, source payloads, and
+  document watch notifications. It does not own viewer text models or depend on
+  viewer packages; using a provider is one host composition option, not a
+  viewer-core requirement. Host packages adapt workspace payloads into
+  `viewer/model.TextModel` before calling viewer APIs.
 - `language`: language feature contracts and result types such as hover,
   diagnostics, document symbols, and semantic tokens.
 - `syntax` and `syntax/lang_*`: tokenization contracts and compile-time
@@ -71,18 +73,23 @@ External MoonBit embedders should treat `viewer` as the entry point:
 ```text
 embedder shell
   -> viewer.Viewer
-  -> workspace.DocumentSnapshot
+  -> viewer/model.TextModel
   -> optional workspace.DocumentProvider owned by the shell
   -> optional language providers
   -> optional syntax/lang_* tokenizer registration
 ```
 
-The embedder supplies document content by calling `set_document` with a
-`workspace.DocumentSnapshot`. It may fetch that snapshot through a
-`workspace.DocumentProvider`, from memory, from a remote service, or from any
+The embedder supplies document content by creating or reusing a readonly
+`viewer/model.TextModel` and installing it on the viewer. It may derive that
+model from memory, a remote service, a `workspace.DocumentProvider`, or any
 other source it owns. The viewer owns rendering, scrolling, hover presentation,
-and lifecycle notifications. The embedder owns its shell, file tree,
-transport, persistence, source watches, reload policy, and error display.
+and lifecycle notifications. The embedder owns its shell, file tree, transport,
+persistence, source watches, reload policy, and error display.
+
+Implementation note: the current checked-in viewer API still exposes
+`workspace.DocumentSnapshot` in several public signatures. That is a temporary
+API mismatch, not the intended architecture; the correction is tracked in
+`docs/exec-plans/monaco-model-viewer-api.md`.
 
 Language features are provider-based. A hover provider, for example, may compute
 locally, call a backend, or use any other MoonBit-accessible mechanism. The
@@ -106,9 +113,10 @@ server_host_native/main
 ```
 
 `workbench` adapts the remote protocol into host-owned provider contracts, then
-passes loaded snapshots to the viewer. `server` owns remote workspace policy
-and language-feature routing. `server_host_native` owns native effects such as
-filesystem reads, watching, process startup, sockets, and static asset serving.
+converts loaded source payloads into viewer text models before calling the
+viewer. `server` owns remote workspace policy and language-feature routing.
+`server_host_native` owns native effects such as filesystem reads, watching,
+process startup, sockets, and static asset serving.
 
 This stack is useful for development, local demos, and testing a complete remote
 viewer, but it is not required for users who embed the viewer package.
@@ -118,8 +126,7 @@ viewer, but it is not required for users who embed the viewer package.
 Rendering is split by host boundary:
 
 ```text
-workspace.DocumentSnapshot
-  -> viewer-derived viewer/model.TextModel / TextSnapshot
+viewer/model.TextModel / TextSnapshot
   -> viewer/view_model tokenization and ViewModel state
   -> viewer/view_layout scroll and viewport window state
   -> viewer/view_layout ViewportData
@@ -154,7 +161,9 @@ Use these rules when deciding where to add a new package or feature:
 - Public viewer behavior belongs in `viewer` unless it is pure
   backend-neutral model logic, in which case it belongs in `viewer/common` or a
   focused `viewer/*` common-layer package.
-- New host-neutral document or workspace contracts belong in `workspace`.
+- New host-neutral source or workspace-provider contracts belong in `workspace`.
+- New editor text model contracts belong in `viewer/model`; do not expose
+  workspace payload types from viewer or language-provider public APIs.
 - New semantic language feature contracts belong in `language`.
 - New concrete tokenizers belong in `syntax/lang_*` packages and are composed by
   host packages.
@@ -185,7 +194,7 @@ web -> workbench
 workbench -> viewer, widgets/file_tree, remote_protocol, syntax/lang_*
 viewer -> viewer/common, viewer/core, viewer/model,
           viewer/view_line_renderer, viewer/view_layout, viewer/view_model,
-          workspace, language, syntax, decorations, platform/log
+          language, syntax, decorations, platform/log
 widgets/file_tree -> workspace
 
 server_host_native/main -> server_host_native
@@ -201,7 +210,7 @@ viewer/view_model -> viewer/view_line_renderer, viewer/core,
                        viewer/model, syntax, decorations, language
 viewer/view_line_renderer -> viewer/core, syntax
 workspace -> base/common
-language -> base/common, workspace
+language -> base/common, viewer/model
 syntax -> base/common, viewer/model
 decorations -> base/common
 viewer/model -> base/common, viewer/core

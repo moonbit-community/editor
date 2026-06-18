@@ -3,11 +3,12 @@
 Status: superseded
 Date: 2026-06-18
 
-Superseded by `docs/exec-plans/monaco-core-viewer-api-and-docs.md`.
-The current direction keeps `workspace.DocumentSnapshot` as the shared immutable
-document payload but moves provider reads, watches, reload policy, and source
-errors out of viewer core and into host code such as `workbench` or an
-embedding app.
+Superseded first by `docs/exec-plans/monaco-core-viewer-api-and-docs.md`; the
+document-boundary portion is now superseded by
+`docs/exec-plans/monaco-model-viewer-api.md`. The current direction moves
+provider reads, watches, reload policy, and source errors out of viewer core,
+and also replaces `workspace.DocumentSnapshot` as the public viewer/language
+API boundary with `viewer/model.TextModel` or `TextSnapshot`.
 
 Superseding note (2026-06-18): provider registration now goes through
 `@viewer.languages.register_*_provider(...)` or an isolated `Languages` value

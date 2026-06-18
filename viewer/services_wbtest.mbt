@@ -49,12 +49,12 @@ test "marker decorations expose squiggles and marker hover lookup" {
 
 ///|
 async test "content hover computer separates sync markers from async markdown" {
-  let services = ViewerServices::new()
+  let services = ViewerServices::new(languages=Languages::new())
   let document = test_document()
   services.markers.set_diagnostics("diagnostics:0", document.uri, [
     { range: Range(12, 17), severity: Warning, message: "marker hover" },
   ])
-  services.language_features.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
+  services.languages.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
 
   })
   |> ignore
@@ -81,23 +81,59 @@ async test "content hover computer separates sync markers from async markdown" {
 async test "provider failures are logged and isolated" {
   let memory = @log.MemoryLogger::new()
   let services = ViewerServices::new(
+    languages=Languages::new(),
     log_service=@log.LogService::new(logger=memory),
   )
-  services.language_features.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
+  services.languages.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
 
   })
   |> ignore
-  services.language_features.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
+  services.languages.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
 
   })
   |> ignore
   let document = test_document()
-  let hover = services.language_features.hover_at(document, 3)
+  let hover = services.languages.hover_at(document, 3, services.log_service)
   assert_true(hover is Some(_))
   let entries = memory.entries()
   assert_eq(entries.length(), 1)
   assert_true(entries[0].category == "language.hover")
   assert_true(entries[0].details[2] == ("providerIndex", "0"))
+}
+
+///|
+test "token providers dispose only the active registration" {
+  let languages = Languages::new()
+  let first = languages.set_tokens_provider(
+    "toy", @syntax.PlainTokenizer::new(),
+  )
+  let second = languages.set_tokens_provider(
+    "toy", @syntax.PlainTokenizer::new(),
+  )
+  first.dispose()
+  assert_true(languages.lookup_tokens_provider("toy") is Some(_))
+  second.dispose()
+  assert_true(languages.lookup_tokens_provider("toy") is None)
+}
+
+///|
+async test "language provider registrations preserve order after disposal" {
+  let languages = Languages::new()
+  let first = languages.register_hover_provider(
+    LanguageId("moonbit"),
+    NamedHoverProvider::{ text: "first" },
+  )
+  let second = languages.register_hover_provider(
+    LanguageId("moonbit"),
+    NamedHoverProvider::{ text: "second" },
+  )
+  let log_service = @log.LogService::new()
+  let document = test_document()
+  assert_hover_text(languages.hover_at(document, 3, log_service), "first")
+  first.dispose()
+  assert_hover_text(languages.hover_at(document, 3, log_service), "second")
+  second.dispose()
+  assert_true(languages.hover_at(document, 3, log_service) is None)
 }
 
 ///|
@@ -115,6 +151,34 @@ impl @language.HoverProvider for TestHoverProvider with fn provide_hover(
     range: Range(offset, offset + 1),
     contents: [PlainText("provider hover")],
   })
+}
+
+///|
+priv struct NamedHoverProvider {
+  text : String
+}
+
+///|
+impl @language.HoverProvider for NamedHoverProvider with fn provide_hover(
+  self,
+  document,
+  position,
+  _token,
+) {
+  let offset = document.offset_at_position(position)
+  Some({ range: Range(offset, offset + 1), contents: [PlainText(self.text)] })
+}
+
+///|
+fn assert_hover_text(hover : @language.Hover?, expected : String) -> Unit raise {
+  match hover {
+    Some(hover) =>
+      match hover.contents[0] {
+        PlainText(text) => assert_eq(text, expected)
+        Markdown(_) => fail("expected plaintext hover")
+      }
+    None => fail("expected hover")
+  }
 }
 
 ///|

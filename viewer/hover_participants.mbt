@@ -117,7 +117,10 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
   if ctx.injected_text_index >= 0 {
     return []
   }
-  match ctx.services.language_features.hover_at(ctx.document, ctx.offset) {
+  match
+    ctx.services.languages.hover_at(
+      ctx.document, ctx.offset, ctx.services.log_service,
+    ) {
     Some(hover) =>
       if hover.contents.length() == 0 {
         []

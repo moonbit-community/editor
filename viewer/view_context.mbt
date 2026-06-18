@@ -4,6 +4,7 @@
 /// facade remains `Viewer` and browser DOM ownership stays on each part.
 priv struct ViewContext {
   root : @rdom.Element
+  languages : Languages
   handle_hover_mousedown : (@rdom.Event, @rdom.MouseEvent) -> Unit
   handle_hover_keydown : (HoverWidgetDom, @rdom.Event, @rdom.KeyboardEvent) -> Unit
   hook_scrollable_scrollbar_input : (
@@ -16,6 +17,7 @@ priv struct ViewContext {
 fn ViewContext::new(viewer : Viewer, view : View) -> ViewContext {
   {
     root: view.root,
+    languages: viewer.services.languages,
     handle_hover_mousedown: (event, mouse) => {
       viewer.handle_mouse_down(view, event, mouse)
     },

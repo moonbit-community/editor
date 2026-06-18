@@ -21,7 +21,8 @@ fn Viewer::render_current_document(
     Some(tokenized) => tokenized
     None => {
       let snapshot = model.snapshot
-      let tokens = match tokenizer_registry.lookup(model.language_id) {
+      let tokens = match
+        self.services.languages.lookup_tokens_provider(model.language_id) {
         Some(tokenizer) => @syntax.tokenize_document(snapshot, tokenizer)
         None => @syntax.highlight(snapshot)
       }

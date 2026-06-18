@@ -1,23 +1,4 @@
 ///|
-/// Tokenization support by language id, the Monaco
-/// `TokenizationRegistry` singleton: starts empty, and the host
-/// registers the language packages it composed in at startup (the
-/// workbench and embedders register `syntax/lang_*` lexers; this
-/// package itself imports none). Unregistered languages render through
-/// the plain fallback.
-let tokenizer_registry : @syntax.TokenizerRegistry = @syntax.TokenizerRegistry::new()
-
-///|
-/// Registers a tokenizer with the browser viewer's process-wide tokenization
-/// registry.
-pub fn register_tokenizer(
-  language_id : String,
-  tokenizer : &@syntax.LineTokenizer,
-) -> Unit {
-  tokenizer_registry.register(language_id, tokenizer)
-}
-
-///|
 /// Controllers resolve features through the registry with async runs;
 /// each result is tagged with the requesting document snapshot (URI plus
 /// revision)
@@ -66,24 +47,28 @@ fn Viewer::request_document_features(
   document : @workspace.DocumentSnapshot,
 ) -> Unit {
   @js.async_run(() => {
-    self.services.language_features.diagnostics_for_document(document, (
-      owner,
-      diagnostics,
-    ) => self.services.markers.set_diagnostics(owner, document.uri, diagnostics))
+    self.services.languages.diagnostics_for_document(
+      document,
+      (owner, diagnostics) =>
+        self.services.markers.set_diagnostics(owner, document.uri, diagnostics),
+      self.services.log_service,
+    )
     if self.is_current_document(document) {
       self.render_feature_update()
     }
   })
   @js.async_run(() => {
-    let symbols = self.services.language_features.document_symbols(document)
+    let symbols = self.services.languages.document_symbols(
+      document, self.services.log_service,
+    )
     if self.is_current_document(document) {
       self.provider_result = { ..self.provider_result, symbols, }
       self.render_feature_update()
     }
   })
   @js.async_run(() => {
-    let semantic_tokens = self.services.language_features.semantic_tokens_for_document(
-      document,
+    let semantic_tokens = self.services.languages.semantic_tokens_for_document(
+      document, self.services.log_service,
     )
     if self.is_current_document(document) {
       self.provider_result = { ..self.provider_result, semantic_tokens, }
@@ -91,16 +76,16 @@ fn Viewer::request_document_features(
     }
   })
   @js.async_run(() => {
-    let folding_ranges = self.services.language_features.folding_ranges_for_document(
-      document,
+    let folding_ranges = self.services.languages.folding_ranges_for_document(
+      document, self.services.log_service,
     )
     if self.is_current_document(document) {
       self.set_folding_ranges(folding_ranges)
     }
   })
   @js.async_run(() => {
-    let inlay_hints = self.services.language_features.inlay_hints_for_document(
-      document,
+    let inlay_hints = self.services.languages.inlay_hints_for_document(
+      document, self.services.log_service,
     )
     if self.is_current_document(document) {
       self.inlay_hints = inlay_hints

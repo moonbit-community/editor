@@ -39,13 +39,8 @@ Useful areas:
 - `vscode/src/vs/editor/browser/view`: DOM rendering layers and viewport rendering.
 - `vscode/src/vs/base/browser/ui/scrollbar` and
   `vscode/src/vs/base/browser/ui/hover`: scrollbar, hover widget, and
-  scrollable-element constants used by
-  `docs/references/monaco-hover-scrollbar-parity.md`.
+  scrollable-element behavior exercised by the local conformance oracle.
 - `vscode/src/vs/editor/contrib/hover`, `links`, `semanticTokens`, `find`: readonly feature references.
-
-Use `docs/references/monaco-layer-map.md` for the current source-to-local role
-ledger. It records whether a local role is exact, partial, a readonly subset,
-future work, or intentionally skipped.
 
 The hover/scrollbar conformance oracle lives in
 `tests/reference/monaco-hover-scrollbar/`, with the Playwright comparison in

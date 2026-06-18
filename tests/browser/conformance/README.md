@@ -19,8 +19,8 @@ reference contract changes.
 - The visible hover node uses `.monaco-hover`.
 - Hover content is inside `.monaco-scrollable-element .monaco-hover-content`.
 
-The local oracle is `tests/reference/monaco-hover-scrollbar/`, and the parity
-ledger is `docs/references/monaco-hover-scrollbar-parity.md`.
+The local oracle is `tests/reference/monaco-hover-scrollbar/`, with comparison
+coverage in `tests/browser/conformance/monaco_hover_scrollbar.spec.js`.
 
 ## Control Hooks
 

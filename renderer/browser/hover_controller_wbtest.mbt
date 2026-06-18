@@ -1,7 +1,7 @@
 ///|
 test "stale hover results are dropped by token guards" {
-  let notifications : Array[ViewerNotification] = []
-  let notify = (notification : ViewerNotification) => {
+  let notifications : Array[ViewerHoverResolvedEvent] = []
+  let notify = (notification : ViewerHoverResolvedEvent) => {
     notifications.push(notification)
   }
   let controller = HoverController::empty()
@@ -25,9 +25,8 @@ test "stale hover results are dropped by token guards" {
   let fresh = rescheduled.resolved_hover(notify, "rev-2", 5, hover)
   assert_true(fresh.pending_view is Some(_))
   assert_true(notifications.length() == 1)
-  assert_true(
-    notifications[0] is ViewerHoverResolved(ok=true, revision="rev-2"),
-  )
+  assert_true(notifications[0].ok)
+  assert_eq(notifications[0].revision, "rev-2")
   let opened = { ..rescheduled, display_open: true }
   let shown = opened.resolved_hover(notify, "rev-2", 5, hover)
   assert_true(shown.view is Some(_))

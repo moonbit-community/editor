@@ -56,21 +56,20 @@ fn run_render_perf_test() -> Unit {
     Some(host) => {
       let viewer = @browser.Viewer(
         source,
-        on_notification=notification => {
-          match notification {
-            ViewerDocumentRendered(document, fresh~, ..) =>
-              if fresh && document.uri.to_string().contains("large") {
-                record_sample(
-                  ctx, viewer_ref, done, sample_index, sample_start, samples,
-                )
-              }
-            ViewerDocumentFailed(error) =>
-              ctx.fail("viewer failed to open perf document: " + error.message)
-            _ => ()
-          }
-        },
         placeholder="Loading performance fixture...",
       )
+      viewer.on_did_render_document(event => {
+        if event.fresh && event.document.uri.to_string().contains("large") {
+          record_sample(
+            ctx, viewer_ref, done, sample_index, sample_start, samples,
+          )
+        }
+      })
+      |> ignore
+      viewer.on_did_fail_document(error => {
+        ctx.fail("viewer failed to open perf document: " + error.message)
+      })
+      |> ignore
       viewer_ref.val = Some(viewer)
       viewer.attach(host)
       @support.set_timeout(

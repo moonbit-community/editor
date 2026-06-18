@@ -157,7 +157,8 @@ priv struct EmbedModel {
 priv enum EmbedMsg {
   Boot
   OpenFile(@base_common.Uri)
-  ViewerNotified(@browser.ViewerNotification)
+  ViewerRendered(@browser.ViewerDocumentRenderedEvent)
+  ViewerFailed
 }
 
 ///|
@@ -181,11 +182,14 @@ fn embed_viewer() -> @browser.Viewer {
     None => {
       let viewer = @browser.Viewer(
         workspace_backend,
-        on_notification=notification => {
-          dispatch_embed_msg(ViewerNotified(notification))
-        },
         placeholder="Loading source...",
       )
+      viewer.on_did_render_document(event => {
+        dispatch_embed_msg(ViewerRendered(event))
+      })
+      |> ignore
+      viewer.on_did_fail_document(_error => dispatch_embed_msg(ViewerFailed))
+      |> ignore
       embed_viewer_cell.val = Some(viewer)
       viewer
     }
@@ -227,19 +231,15 @@ fn update_embed(
       )
     }
     OpenFile(uri) => (@cmd.custom_cmd(_ => embed_viewer().open(uri)), model)
-    ViewerNotified(notification) =>
-      match notification {
-        ViewerDocumentRendered(document, fresh~, ..) => {
-          let cmd = if fresh {
-            embed_tree().set_active(document.uri)
-          } else {
-            @rabbita.none
-          }
-          (cmd, { status: "ready" })
-        }
-        ViewerDocumentFailed(_) => (@rabbita.none, { status: "error" })
-        _ => (@rabbita.none, model)
+    ViewerRendered(event) => {
+      let cmd = if event.fresh {
+        embed_tree().set_active(event.document.uri)
+      } else {
+        @rabbita.none
       }
+      (cmd, { status: "ready" })
+    }
+    ViewerFailed => (@rabbita.none, { status: "error" })
   }
 }
 

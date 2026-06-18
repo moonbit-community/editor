@@ -201,7 +201,7 @@ fn HoverController::loading_due(
 /// revision moved on or the anchor token changed since the request.
 fn HoverController::resolved_hover(
   self : HoverController,
-  notify : (ViewerNotification) -> Unit,
+  notify : (ViewerHoverResolvedEvent) -> Unit,
   revision : String,
   token : Int,
   hover : ComputedHover?,
@@ -211,7 +211,7 @@ fn HoverController::resolved_hover(
   }
   match hover {
     Some(hover) => {
-      notify(ViewerHoverResolved(ok=true, revision~))
+      notify({ ok: true, revision })
       let view : HoverView = { range: hover.range, parts: hover.parts }
       if self.display_open {
         {
@@ -233,7 +233,7 @@ fn HoverController::resolved_hover(
     }
     None => {
       if self.view is None && self.pending_view is None {
-        notify(ViewerHoverResolved(ok=false, revision~))
+        notify({ ok: false, revision })
       }
       { ..self, answered: true, loading: false }
     }

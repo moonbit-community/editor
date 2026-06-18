@@ -247,28 +247,24 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   match (self.pending_rendered, self.frame) {
     (Some(pending), Some(frame)) => {
       self.pending_rendered = None
-      (self.notify_host)(
-        ViewerDocumentRendered(
-          pending.document,
-          line_count=frame.line_count,
-          rendered_lines=frame.lines.length(),
-          diagnostics=frame.diagnostics,
-          patch_ms~,
-          fresh=pending.fresh,
-        ),
-      )
+      self.did_render_document.fire({
+        document: pending.document,
+        line_count: frame.line_count,
+        rendered_lines: frame.lines.length(),
+        diagnostics: frame.diagnostics,
+        patch_ms,
+        fresh: pending.fresh,
+      })
     }
     _ => ()
   }
   if self.scroll_dirty {
     self.scroll_dirty = false
     let position = self.layout.position()
-    (self.notify_host)(
-      ViewerScrolled(
-        scroll_top=position.scroll_top,
-        scroll_left=position.scroll_left,
-      ),
-    )
+    self.did_scroll.fire({
+      scroll_top: position.scroll_top,
+      scroll_left: position.scroll_left,
+    })
   }
 }
 

@@ -3,7 +3,7 @@
 /// browser `View` owning the rendered frame, the scroll and
 /// layout model, the input bridge, and the feature controllers. It is
 /// constructed with a `&DocumentProvider`, attached into a host-provided
-/// stable element, and reports lifecycle facts through `on_notification`;
+/// stable element, and reports lifecycle facts through typed subscriptions;
 /// it knows nothing about transports, shells, or harness event formats.
 ///
 /// All methods are plain calls (the host wraps them in its own effect
@@ -13,7 +13,16 @@ pub struct Viewer {
   priv provider : &@workspace.DocumentProvider
   priv services : ViewerServices
   priv mut options : ViewerOptions
-  priv notify_host : (ViewerNotification) -> Unit
+  priv did_open_document : @base_common.Emitter[@workspace.DocumentSnapshot]
+  priv did_build_frame : @base_common.Emitter[ViewerFrameBuiltEvent]
+  priv did_render_document : @base_common.Emitter[ViewerDocumentRenderedEvent]
+  priv did_change_diagnostics : @base_common.Emitter[
+    ViewerDiagnosticsChangedEvent,
+  ]
+  priv did_fail_document : @base_common.Emitter[@workspace.DocumentError]
+  priv did_resolve_hover : @base_common.Emitter[ViewerHoverResolvedEvent]
+  priv did_scroll : @base_common.Emitter[ViewerScrollEvent]
+  priv did_dispose : @base_common.Emitter[Unit]
   priv layout : @view_layout.ViewLayout
   priv mut theme : String
   priv mut placeholder : String
@@ -72,50 +81,48 @@ pub(all) struct CurrentDocument {
 } derive(Debug)
 
 ///|
-/// Lifecycle facts the viewer reports to its host. The host formats and
-/// emits harness events, syncs its own chrome (title, status, tree
-/// reveal), and decides messaging while the viewer has no frame.
-pub(all) enum ViewerNotification {
-  /// A frame build started for a document revision with this many
-  /// provider diagnostics merged in.
-  ViewerDiagnosticsStatus(count~ : Int, revision~ : String)
-  /// A frame finished building (synchronous facts, before paint).
-  /// `tokenize_ms` covers the per-version whole-document tokenization
-  /// (zero-ish when the tokenized cache was reused); `build_ms` covers
-  /// the viewport window build.
-  ViewerFrameBuilt(
-    @workspace.DocumentSnapshot,
-    line_count~ : Int,
-    token_count~ : Int,
-    diagnostic_count~ : Int,
-    tokenize_ms~ : Double,
-    build_ms~ : Double
-  )
-  /// The built frame painted. `fresh` marks a document switch or watched
-  /// change (as opposed to a same-version feature-data re-render);
-  /// `patch_ms` is the duration of the DOM flush that painted it.
-  ViewerDocumentRendered(
-    @workspace.DocumentSnapshot,
-    line_count~ : Int,
-    rendered_lines~ : Int,
-    diagnostics~ : Array[@language.Diagnostic],
-    patch_ms~ : Double,
-    fresh~ : Bool
-  )
-  /// Opening or watching the document failed; the viewer cleared its frame.
-  ViewerDocumentFailed(@workspace.DocumentError)
-  /// A hover request resolved (or resolved empty) for a document revision.
-  ViewerHoverResolved(ok~ : Bool, revision~ : String)
-  /// The synthetic scroll position settled after a paint.
-  ViewerScrolled(scroll_top~ : Double, scroll_left~ : Double)
-}
+pub(all) struct ViewerDiagnosticsChangedEvent {
+  count : Int
+  revision : String
+} derive(Debug)
+
+///|
+pub(all) struct ViewerFrameBuiltEvent {
+  document : @workspace.DocumentSnapshot
+  line_count : Int
+  token_count : Int
+  diagnostic_count : Int
+  tokenize_ms : Double
+  build_ms : Double
+} derive(Debug)
+
+///|
+pub(all) struct ViewerDocumentRenderedEvent {
+  document : @workspace.DocumentSnapshot
+  line_count : Int
+  rendered_lines : Int
+  diagnostics : Array[@language.Diagnostic]
+  patch_ms : Double
+  fresh : Bool
+} derive(Debug)
+
+///|
+pub(all) struct ViewerHoverResolvedEvent {
+  ok : Bool
+  revision : String
+} derive(Debug)
+
+///|
+pub(all) struct ViewerScrollEvent {
+  scroll_top : Double
+  scroll_left : Double
+} derive(Debug)
 
 ///|
 /// Creates a viewer instance. Call `attach` before opening documents so the
 /// first render has a DOM view to measure and patch.
 pub fn Viewer::Viewer(
   provider : &@workspace.DocumentProvider,
-  on_notification~ : (ViewerNotification) -> Unit,
   services? : ViewerServices = ViewerServices::new(),
   options? : ViewerOptions = ViewerOptions::default(),
   theme? : String = "dark",
@@ -125,7 +132,14 @@ pub fn Viewer::Viewer(
     provider,
     services,
     options,
-    notify_host: on_notification,
+    did_open_document: @base_common.Emitter::new(),
+    did_build_frame: @base_common.Emitter::new(),
+    did_render_document: @base_common.Emitter::new(),
+    did_change_diagnostics: @base_common.Emitter::new(),
+    did_fail_document: @base_common.Emitter::new(),
+    did_resolve_hover: @base_common.Emitter::new(),
+    did_scroll: @base_common.Emitter::new(),
+    did_dispose: @base_common.Emitter::new(),
     layout: @view_layout.ViewLayout::new(line_height=editor_line_height),
     theme,
     placeholder,
@@ -167,18 +181,74 @@ pub fn Viewer::create(
   options? : ViewerOptions = ViewerOptions::default(),
   theme? : String = "dark",
   placeholder? : String = "",
-  on_notification? : (ViewerNotification) -> Unit = _ => (),
 ) -> Viewer {
-  let viewer = Viewer(
-    provider,
-    on_notification~,
-    services~,
-    options~,
-    theme~,
-    placeholder~,
-  )
+  let viewer = Viewer(provider, services~, options~, theme~, placeholder~)
   viewer.attach(host)
   viewer
+}
+
+///|
+pub fn Viewer::on_did_open_document(
+  self : Viewer,
+  listener : (@workspace.DocumentSnapshot) -> Unit,
+) -> @base_common.Disposable {
+  self.did_open_document.event(listener)
+}
+
+///|
+pub fn Viewer::on_did_build_frame(
+  self : Viewer,
+  listener : (ViewerFrameBuiltEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.did_build_frame.event(listener)
+}
+
+///|
+pub fn Viewer::on_did_render_document(
+  self : Viewer,
+  listener : (ViewerDocumentRenderedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.did_render_document.event(listener)
+}
+
+///|
+pub fn Viewer::on_did_change_diagnostics(
+  self : Viewer,
+  listener : (ViewerDiagnosticsChangedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.did_change_diagnostics.event(listener)
+}
+
+///|
+pub fn Viewer::on_did_fail_document(
+  self : Viewer,
+  listener : (@workspace.DocumentError) -> Unit,
+) -> @base_common.Disposable {
+  self.did_fail_document.event(listener)
+}
+
+///|
+pub fn Viewer::on_did_resolve_hover(
+  self : Viewer,
+  listener : (ViewerHoverResolvedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.did_resolve_hover.event(listener)
+}
+
+///|
+pub fn Viewer::on_did_scroll(
+  self : Viewer,
+  listener : (ViewerScrollEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.did_scroll.event(listener)
+}
+
+///|
+pub fn Viewer::on_did_dispose(
+  self : Viewer,
+  listener : () -> Unit,
+) -> @base_common.Disposable {
+  self.did_dispose.event(_ => listener())
 }
 
 ///|
@@ -311,6 +381,7 @@ pub fn Viewer::show(
     request_language=true,
     reset_view_state=view_state == Reset || view_state == RestoreOrReset,
   )
+  self.did_open_document.fire(snapshot)
 }
 
 ///|
@@ -348,6 +419,15 @@ pub fn Viewer::close(self : Viewer) -> Unit {
 /// Disposes viewer-owned external resources.
 pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.close()
+  self.did_dispose.fire(())
+  self.did_open_document.dispose()
+  self.did_build_frame.dispose()
+  self.did_render_document.dispose()
+  self.did_change_diagnostics.dispose()
+  self.did_fail_document.dispose()
+  self.did_resolve_hover.dispose()
+  self.did_scroll.dispose()
+  self.did_dispose.dispose()
 }
 
 ///|
@@ -488,7 +568,7 @@ fn Viewer::document_failed(
   error : @workspace.DocumentError,
 ) -> Unit {
   self.clear_current_document(reset_scroll=false)
-  (self.notify_host)(ViewerDocumentFailed(error))
+  self.did_fail_document.fire(error)
   self.schedule_render()
 }
 

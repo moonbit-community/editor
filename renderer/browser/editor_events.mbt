@@ -95,7 +95,7 @@ fn Viewer::hover_resolved(
   }
   let before = self.hover
   self.hover = self.hover.resolved_hover(
-    self.notify_host,
+    event => self.did_resolve_hover.fire(event),
     document.revision,
     token,
     hover,

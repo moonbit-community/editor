@@ -30,8 +30,8 @@ remote protocol transport.
   calls lifted into shell commands. Host-captured keys route into the
   viewer (Escape to the controllers; PgUp/PgDn/Home/End/arrows into the
   synthetic scroll methods).
-- Own harness observability: the viewer reports lifecycle facts
-  (`ViewerNotification`) and the workbench formats and emits the
+- Own harness observability: the viewer reports lifecycle facts through typed
+  subscriptions and the workbench formats and emits the
   structured `[readonly-editor]` events (`dom:mounted`, `moonbit:render`,
   `view:scroll`, `language:*`) documented in `../docs/harness.md`, and
   installs the `__readonlyEditorScrollTo` scroll control. Workbench owns the

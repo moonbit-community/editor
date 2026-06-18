@@ -30,10 +30,21 @@ priv enum WorkbenchMsg {
   ProtocolSendFailed(String)
   SelectWorkspace(@base_common.Uri)
   AutoOpenResolved(@base_common.Uri?)
-  ViewerNotified(@browser.ViewerNotification)
+  ViewerEvent(WorkbenchViewerEvent)
   ToggleTheme
   GlobalKeyDown(@common.Keyboard)
   WindowResized
+}
+
+///|
+priv enum WorkbenchViewerEvent {
+  DidChangeDiagnostics(@browser.ViewerDiagnosticsChangedEvent)
+  DidBuildFrame(@browser.ViewerFrameBuiltEvent)
+  DidRenderDocument(@browser.ViewerDocumentRenderedEvent)
+  DidFailDocument(@workspace.DocumentError)
+  DidResolveHover(@browser.ViewerHoverResolvedEvent)
+  DidScroll(@browser.ViewerScrollEvent)
+  DidDispose
 }
 
 ///|
@@ -65,7 +76,7 @@ fn dispatch_workbench_msg(msg : WorkbenchMsg) -> Unit {
 
 ///|
 /// The embedded viewer instance, created on first use with the remote
-/// document source and the notification bridge into the shell update loop.
+/// document provider and event subscriptions into the shell update loop.
 let viewer_cell : Ref[@browser.Viewer?] = Ref(None)
 
 ///|
@@ -92,17 +103,45 @@ fn workbench_viewer() -> @browser.Viewer {
     None => {
       let viewer = @browser.Viewer(
         document_provider,
-        on_notification=notification => {
-          dispatch_workbench_msg(ViewerNotified(notification))
-        },
         services=workbench_services(),
         theme=stored_theme(),
         placeholder=source_message(initial_workbench_model()),
       )
+      install_viewer_event_subscriptions(viewer)
       viewer_cell.val = Some(viewer)
       viewer
     }
   }
+}
+
+///|
+fn install_viewer_event_subscriptions(viewer : @browser.Viewer) -> Unit {
+  viewer.on_did_change_diagnostics(event => {
+    dispatch_workbench_msg(ViewerEvent(DidChangeDiagnostics(event)))
+  })
+  |> ignore
+  viewer.on_did_build_frame(event => {
+    dispatch_workbench_msg(ViewerEvent(DidBuildFrame(event)))
+  })
+  |> ignore
+  viewer.on_did_render_document(event => {
+    dispatch_workbench_msg(ViewerEvent(DidRenderDocument(event)))
+  })
+  |> ignore
+  viewer.on_did_fail_document(error => {
+    dispatch_workbench_msg(ViewerEvent(DidFailDocument(error)))
+  })
+  |> ignore
+  viewer.on_did_resolve_hover(event => {
+    dispatch_workbench_msg(ViewerEvent(DidResolveHover(event)))
+  })
+  |> ignore
+  viewer.on_did_scroll(event => {
+    dispatch_workbench_msg(ViewerEvent(DidScroll(event)))
+  })
+  |> ignore
+  viewer.on_did_dispose(() => dispatch_workbench_msg(ViewerEvent(DidDispose)))
+  |> ignore
 }
 
 ///|
@@ -258,7 +297,7 @@ fn workbench_update(
         // An empty workspace keeps the loading placeholder.
         None => (@rabbita.none, model)
       }
-    ViewerNotified(notification) => viewer_notified_update(model, notification)
+    ViewerEvent(event) => viewer_event_update(model, event)
     ToggleTheme => {
       let theme = if model.theme == "light" { "dark" } else { "light" }
       (
@@ -305,66 +344,52 @@ fn select_workspace_update(
 /// Viewer lifecycle facts drive the shell: status and topbar sync, the
 /// explorer's autoReveal, and the harness events the viewer no longer
 /// formats itself.
-fn viewer_notified_update(
+fn viewer_event_update(
   model : WorkbenchModel,
-  notification : @browser.ViewerNotification,
+  event : WorkbenchViewerEvent,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
-  match notification {
-    ViewerDiagnosticsStatus(count~, revision~) => {
-      emit_language_status(count, revision)
+  match event {
+    DidChangeDiagnostics(event) => {
+      emit_language_status(event.count, event.revision)
       (@rabbita.none, model)
     }
-    ViewerFrameBuilt(
-      document,
-      line_count~,
-      token_count~,
-      diagnostic_count~,
-      tokenize_ms~,
-      build_ms~
-    ) => {
-      set_current_document(document.to_json().stringify())
+    DidBuildFrame(event) => {
+      set_current_document(event.document.to_json().stringify())
       emit_render_event(
-        line_count,
-        token_count,
-        diagnostic_count,
-        document.revision,
-        tokenize_ms,
-        build_ms,
+        event.line_count,
+        event.token_count,
+        event.diagnostic_count,
+        event.document.revision,
+        event.tokenize_ms,
+        event.build_ms,
       )
       (@rabbita.none, model)
     }
-    ViewerDocumentRendered(
-      document,
-      line_count~,
-      rendered_lines~,
-      diagnostics~,
-      patch_ms~,
-      fresh~
-    ) => {
+    DidRenderDocument(event) => {
       emit_dom_mounted(
-        rendered_lines,
-        diagnostics.length(),
+        event.rendered_lines,
+        event.diagnostics.length(),
         "ready",
-        patch_ms=Some(patch_ms),
+        patch_ms=Some(event.patch_ms),
       )
       let next = {
         ..model,
         status: "ready",
         status_message: "",
-        document: Some(document_to_view(document)),
-        line_count,
-        diagnostics,
+        document: Some(document_to_view(event.document)),
+        line_count: event.line_count,
+        diagnostics: event.diagnostics,
         viewer_has_frame: true,
       }
-      if fresh {
+      if event.fresh {
         // The viewer lifecycle drives the explorer's autoReveal: a freshly
         // loaded document expands its ancestor chain and selects its row.
-        (workspace_file_tree().set_active(document.uri), next)
+        (workspace_file_tree().set_active(event.document.uri), next)
       } else {
         (@rabbita.none, next)
       }
     }
-    ViewerDocumentFailed(error) => {
+    DidFailDocument(error) => {
       emit_event("language:error", error.to_json().stringify())
       if error.code == FileNotFound {
         (
@@ -388,14 +413,15 @@ fn viewer_notified_update(
         )
       }
     }
-    ViewerHoverResolved(ok~, revision~) => {
-      emit_hover_status(ok, revision)
+    DidResolveHover(event) => {
+      emit_hover_status(event.ok, event.revision)
       (@rabbita.none, model)
     }
-    ViewerScrolled(scroll_top~, scroll_left~) => {
-      emit_scroll_event(scroll_top, scroll_left)
+    DidScroll(event) => {
+      emit_scroll_event(event.scroll_top, event.scroll_left)
       (@rabbita.none, model)
     }
+    DidDispose => (@rabbita.none, { ..model, viewer_has_frame: false })
   }
 }
 

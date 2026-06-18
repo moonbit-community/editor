@@ -157,23 +157,22 @@ fn run_viewer_api_test() -> Unit {
       |> ignore
       let viewer = @browser.Viewer(
         source,
-        on_notification=notification => {
-          match notification {
-            ViewerDocumentRendered(_, line_count~, rendered_lines~, fresh~, ..) =>
-              if fresh {
-                rendered_count.val = rendered_count.val + 1
-                view_line_count.val = line_count
-                rendered_line_count.val = rendered_lines
-              }
-            ViewerDocumentFailed(error) =>
-              ctx.fail("viewer failed to open document: " + error.message)
-            _ => ()
-          }
-        },
         services~,
         options=ViewerOptions(soft_wrap=true),
         placeholder="Loading component fixture...",
       )
+      viewer.on_did_render_document(event => {
+        if event.fresh {
+          rendered_count.val = rendered_count.val + 1
+          view_line_count.val = event.line_count
+          rendered_line_count.val = event.rendered_lines
+        }
+      })
+      |> ignore
+      viewer.on_did_fail_document(error => {
+        ctx.fail("viewer failed to open document: " + error.message)
+      })
+      |> ignore
       viewer.attach(host)
       viewer.open(uri)
       let zone = @rdom.document().create_element("div")

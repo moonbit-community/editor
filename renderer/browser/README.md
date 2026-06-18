@@ -13,7 +13,7 @@ their command type.
 
 ## Embedding API
 
-- `Viewer::Viewer(provider, on_notification~, services?, options?, theme?, placeholder?)`
+- `Viewer::Viewer(provider, services?, options?, theme?, placeholder?)`
   constructs the viewer against any `&@workspace.DocumentProvider`. The
   in-memory backend in `examples/embedded_viewer` plus the remote one in
   `workbench` are the two reference implementations; implementing
@@ -40,6 +40,10 @@ their command type.
   opens can reset or restore view state through `ViewStatePolicy`.
 - `Viewer::current()`, `close()`, and `dispose()` expose explicit lifecycle
   state and teardown. `dispose()` stops the provider watch and DOM listeners.
+- `on_did_open_document`, `on_did_build_frame`, `on_did_render_document`,
+  `on_did_change_diagnostics`, `on_did_fail_document`,
+  `on_did_resolve_hover`, `on_did_scroll`, and `on_did_dispose` are typed
+  event subscriptions. Each returns a `Disposable` for just that listener.
 - `Viewer::set_theme`, `set_placeholder`, `remeasure`, and `escape` push
   host state and host-captured events in. Theme changes never remount the
   view (colors cascade through the host's CSS variables) and keep the
@@ -62,11 +66,11 @@ their command type.
   `examples/embedded_viewer` register `lang_moonbit` and friends at
   startup; documents whose `language_id` has no registered tokenizer
   render through the generic plain fallback.
-- The viewer reports lifecycle facts through `ViewerNotification`
+- The viewer reports lifecycle facts through typed subscriptions
   (diagnostics status, frame built with `tokenize_ms`/`build_ms`,
-  document rendered/failed with `patch_ms`, hover resolved, scroll
-  settled). The host formats observability events and syncs its chrome
-  from these; the viewer itself emits nothing host-visible.
+  document rendered/failed with `patch_ms`, hover resolved, scroll settled,
+  disposal). The host formats observability events and syncs its chrome from
+  these; the viewer itself emits nothing host-visible.
 
 ## Responsibilities
 

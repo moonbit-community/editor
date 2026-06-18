@@ -29,12 +29,10 @@ fn Viewer::render_current_document(
     }
   }
   let tokenize_finished = now_ms()
-  (self.notify_host)(
-    ViewerDiagnosticsStatus(
-      count=marker_diagnostics.length(),
-      revision=model.revision,
-    ),
-  )
+  self.did_change_diagnostics.fire({
+    count: marker_diagnostics.length(),
+    revision: model.revision,
+  })
   let decorations = self.services.marker_decorations.decorations_for_resource(
     model.uri,
   )
@@ -68,16 +66,14 @@ fn Viewer::render_current_document(
   self.source_document = Some(document)
   self.text_model = Some(model)
   self.content_generation += 1
-  (self.notify_host)(
-    ViewerFrameBuilt(
-      document,
-      line_count=frame.line_count,
-      token_count=tokenized.token_count,
-      diagnostic_count=marker_diagnostics.length(),
-      tokenize_ms=tokenize_finished - tokenize_started,
-      build_ms=build_finished - tokenize_finished,
-    ),
-  )
+  self.did_build_frame.fire({
+    document,
+    line_count: frame.line_count,
+    token_count: tokenized.token_count,
+    diagnostic_count: marker_diagnostics.length(),
+    tokenize_ms: tokenize_finished - tokenize_started,
+    build_ms: build_finished - tokenize_finished,
+  })
   // Several renders can coalesce into one flush (feature data often
   // resolves before the next animation frame); a pending fresh paint
   // stays fresh so the host still sees the document switch.

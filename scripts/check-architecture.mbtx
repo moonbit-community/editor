@@ -10,7 +10,7 @@ async fn main {
     "language",
     "platform",
     "remote_protocol",
-    "renderer",
+    "viewer",
     "server",
     "server_host_native",
     "syntax",
@@ -47,9 +47,9 @@ async fn main {
 
 ///|
 /// Grammars are compile-time packages composed by import: `syntax/lang_*`
-/// may import only editor core/model test support and `syntax`, and only composition layers
+/// may import only viewer core/model test support and `syntax`, and only composition layers
 /// (`workbench`, `examples/*`, browser-test entrypoints) may import a
-/// `syntax/lang_*` package — the viewer library, renderer, and server
+/// `syntax/lang_*` package — the viewer library, viewer common layer, and server
 /// must resolve languages through the tokenizer registry instead.
 async fn check_language_package_imports(errors : Array[String]) -> Unit {
   let language_prefix = "baozhiyuan/editor/syntax/lang_"
@@ -113,14 +113,13 @@ async fn collect_manifests(dir : String, manifests : Array[String]) -> Unit {
 }
 
 ///|
-/// Package-boundary rules for the pluggable viewer: common renderer
-/// packages know no browser, host effects, transport, or shell; browser
-/// renderer packages know no transport or shell; and the tree widget knows
+/// Package-boundary rules for the pluggable viewer: common viewer
+/// packages know no browser, host effects, transport, or shell; the public
+/// browser-backed viewer package knows no transport or shell; and the tree widget knows
 /// no transport or viewer. Only `workbench` composes.
 async fn check_package_imports(errors : Array[String]) -> Unit {
   let common_forbidden = [
     "baozhiyuan/editor/remote_protocol",
-    "baozhiyuan/editor/viewer",
     "baozhiyuan/editor/server",
     "baozhiyuan/editor/server_host_native",
     "baozhiyuan/editor/web",
@@ -144,17 +143,23 @@ async fn check_package_imports(errors : Array[String]) -> Unit {
   ]
   for manifest in package_manifests() {
     let imports = package_imports(@fs.read_file(manifest).text())
-    if is_renderer_common_manifest(manifest) {
+    if is_viewer_common_manifest(manifest) {
       reject_imports(manifest, imports, common_forbidden, errors)
-      if is_renderer_common_child_manifest(manifest) {
+      reject_exact_import(
+        manifest,
+        imports,
+        "baozhiyuan/editor/viewer",
+        errors,
+      )
+      if is_viewer_common_child_manifest(manifest) {
         reject_exact_import(
           manifest,
           imports,
-          "baozhiyuan/editor/renderer",
+          "baozhiyuan/editor/viewer/common",
           errors,
         )
       }
-    } else if is_renderer_browser_manifest(manifest) {
+    } else if is_viewer_browser_manifest(manifest) {
       reject_imports(manifest, imports, browser_forbidden, errors)
       check_browser_rabbita_imports(manifest, imports, errors)
     } else if manifest == "widgets/file_tree/moon.pkg" {
@@ -164,22 +169,21 @@ async fn check_package_imports(errors : Array[String]) -> Unit {
 }
 
 ///|
-fn is_renderer_common_manifest(manifest : String) -> Bool {
-  manifest == "renderer/moon.pkg" ||
-  (manifest.has_prefix("renderer/") &&
-   !manifest.has_prefix("renderer/browser/") &&
+fn is_viewer_common_manifest(manifest : String) -> Bool {
+  manifest == "viewer/common/moon.pkg" ||
+  (manifest.has_prefix("viewer/") &&
+   manifest != "viewer/moon.pkg" &&
    manifest.has_suffix("/moon.pkg"))
 }
 
 ///|
-fn is_renderer_common_child_manifest(manifest : String) -> Bool {
-  is_renderer_common_manifest(manifest) && manifest != "renderer/moon.pkg"
+fn is_viewer_common_child_manifest(manifest : String) -> Bool {
+  is_viewer_common_manifest(manifest) && manifest != "viewer/common/moon.pkg"
 }
 
 ///|
-fn is_renderer_browser_manifest(manifest : String) -> Bool {
-  manifest == "renderer/browser/moon.pkg" ||
-  (manifest.has_prefix("renderer/browser/") && manifest.has_suffix("/moon.pkg"))
+fn is_viewer_browser_manifest(manifest : String) -> Bool {
+  manifest == "viewer/moon.pkg"
 }
 
 ///|
@@ -221,7 +225,7 @@ fn check_browser_rabbita_imports(
   imports : Array[String],
   errors : Array[String],
 ) -> Unit {
-  // Browser renderer packages may keep rabbita DOM bindings and JS helpers,
+  // The browser-backed viewer package may keep rabbita DOM bindings and JS helpers,
   // but the TEA core, the vdom, and the command scheduler are forbidden
   // (exact matches: subpackages such as rabbita/dom stay allowed).
   let browser_forbidden_exact = [

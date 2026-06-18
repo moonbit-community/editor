@@ -98,7 +98,7 @@ pub(all) enum DocumentChange {
 
 pub(open) trait DocumentProvider {
   async fn read(Self, @base_common.Uri) -> DocumentReadResult
-  fn watch(Self, @base_common.Uri, (DocumentChange) -> Unit) -> Disposable
+  fn watch(Self, @base_common.Uri, (DocumentChange) -> Unit) -> @base_common.Disposable
   fn close(Self, @base_common.Uri) -> Unit
 }
 ```
@@ -166,6 +166,12 @@ constructor-level catch-all event callback. Instead, the returned viewer exposes
 typed subscriptions and every subscription returns `Disposable`, so hosts can
 unsubscribe independently of the viewer lifetime.
 
+`Disposable` is a base/common concept, not a workspace concept. Monaco's source
+defines `IDisposable`, `toDisposable`, and stores in `vs/base/common/lifecycle`;
+its typed event function lives in `vs/base/common/event` and returns
+`IDisposable`. Mirror that placement with `base/common.Disposable` and, if the
+implementation needs a named event type, `base/common.Event[T]`.
+
 Monaco reference shape:
 
 ```ts
@@ -181,37 +187,37 @@ Target viewer shape:
 pub fn Viewer::on_did_open_document(
   self : Viewer,
   listener : (DocumentOpenedEvent) -> Unit,
-) -> @workspace.Disposable
+) -> @base_common.Disposable
 
 pub fn Viewer::on_did_close_document(
   self : Viewer,
   listener : (DocumentClosedEvent) -> Unit,
-) -> @workspace.Disposable
+) -> @base_common.Disposable
 
 pub fn Viewer::on_did_fail_document(
   self : Viewer,
   listener : (DocumentFailedEvent) -> Unit,
-) -> @workspace.Disposable
+) -> @base_common.Disposable
 
 pub fn Viewer::on_did_render_document(
   self : Viewer,
   listener : (DocumentRenderedEvent) -> Unit,
-) -> @workspace.Disposable
+) -> @base_common.Disposable
 
 pub fn Viewer::on_did_change_diagnostics(
   self : Viewer,
   listener : (DiagnosticsChangedEvent) -> Unit,
-) -> @workspace.Disposable
+) -> @base_common.Disposable
 
 pub fn Viewer::on_did_scroll(
   self : Viewer,
   listener : (ScrollEvent) -> Unit,
-) -> @workspace.Disposable
+) -> @base_common.Disposable
 
 pub fn Viewer::on_did_dispose(
   self : Viewer,
   listener : () -> Unit,
-) -> @workspace.Disposable
+) -> @base_common.Disposable
 ```
 
 The implementation may use one internal emitter or several per-event emitters,
@@ -288,7 +294,7 @@ pub fn LanguageFeaturesService::register_hover_provider(
   self : LanguageFeaturesService,
   selector : LanguageSelector,
   provider : &HoverProvider,
-) -> Disposable
+) -> @base_common.Disposable
 
 pub fn LanguageFeaturesService::register_document_symbol_provider(...)
 pub fn LanguageFeaturesService::register_document_semantic_tokens_provider(...)
@@ -332,24 +338,28 @@ version.
    public package used by both `workspace` and `language`. Prefer
    `base/common` unless the implementation uncovers a reason to create a small
    dedicated text package.
-2. Rename or adapt the types to the public API names chosen for the viewer.
+2. Add `base/common.Disposable` and a helper constructor such as
+   `Disposable::from(fn () -> Unit)` or `to_disposable(fn () -> Unit)`.
+   If event emitters need a public function type, add it in `base/common`
+   too. Keep workspace out of the lifetime/disposal abstraction.
+3. Rename or adapt the text types to the public API names chosen for the viewer.
    Keep the existing zero-based line/UTF-16-column and half-open offset range
    semantics.
-3. Migrate `renderer/core`, `renderer/model`, `language`, and browser call
+4. Migrate `renderer/core`, `renderer/model`, `language`, and browser call
    sites to the neutral text primitives.
-4. Update tests that assert position/range behavior.
+5. Update tests that assert position/range behavior and disposable idempotency.
 
 Exit criteria:
 
 - No public language or workspace type needs to import `renderer/core` just to
-  talk about text coordinates.
+  talk about text coordinates or disposable subscriptions.
 - `moon info` shows intentional public API changes for the affected packages.
 
 ## Phase 2 - `DocumentSnapshot` And `DocumentProvider`
 
 1. Add `workspace.DocumentSnapshot`, `DocumentReadResult`, `DocumentChange`,
-   `DocumentError`, `DocumentProvider`, and a general `Disposable` or reuse a
-   neutral disposable type.
+   `DocumentError`, and `DocumentProvider`. Use `@base_common.Disposable` for
+   watch handles.
 2. Move line-start caching and text helper methods from
    `renderer/model.TextSnapshot` to `workspace.DocumentSnapshot`, or make
    `TextSnapshot` an internal implementation detail wrapped by

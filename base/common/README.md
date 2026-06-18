@@ -12,7 +12,7 @@ Host-neutral base utilities shared by editor packages.
 ## Boundaries
 
 - Must not depend on product packages, DOM, browser APIs, native APIs, server
-  routing, workspace providers, or renderer packages.
+  routing, workspace providers, or viewer packages.
 - Product packages should use `@base_common.Uri` for document/resource identity
   instead of reintroducing workspace-owned URI aliases.
 
@@ -20,4 +20,3 @@ Host-neutral base utilities shared by editor packages.
 
 - Package tests live in `uri_test.mbt`.
 - Run `moon test base/common` for focused coverage.
-

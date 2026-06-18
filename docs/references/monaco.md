@@ -1,9 +1,12 @@
 # Monaco Reference Map
 
-The VS Code submodule contains Monaco's editor implementation under
-`vscode/src/vs/editor`.
+Monaco/VS Code is the primary reference for this project. Use it for readonly
+viewer behavior, API shape, rendering roles, widget behavior, and conformance
+tests. Copy roles and observable behavior, not runtime code, services, or
+package names.
 
-Useful areas:
+The VS Code submodule contains Monaco's editor implementation under
+`vscode/src/vs/editor`. Useful areas:
 
 - `vscode/src/vs/base/common/uri.ts`: URI identity; local owner is
   `base/common.Uri`.
@@ -47,7 +50,9 @@ Useful areas:
 - `vscode/src/vs/base/browser/ui/scrollbar` and
   `vscode/src/vs/base/browser/ui/hover`: scrollbar, hover widget, and
   scrollable-element behavior exercised by the local conformance oracle.
-- `vscode/src/vs/editor/contrib/hover`, `links`, `semanticTokens`, `find`: readonly feature references.
+- `vscode/src/vs/editor/contrib/hover`, `links`, `semanticTokens`, `find`:
+  readonly feature references. A feature reference does not imply that the
+  local viewer currently exposes that whole Monaco feature.
 
 The hover/scrollbar conformance oracle lives in
 `tests/reference/monaco-hover-scrollbar/`, with the Playwright comparison in
@@ -56,3 +61,5 @@ transcribes the pinned Monaco DOM, CSS, and geometry constants for local
 testing; product code still must not import from the VS Code submodule.
 
 Use these as design references only. Do not import from them in product code.
+When Monaco and current local docs disagree, treat current local docs as the
+product boundary and Monaco as the source to research before changing it.

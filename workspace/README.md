@@ -1,6 +1,6 @@
 # workspace
 
-Readonly source loading and filesystem-provider contracts for host packages.
+Readonly source and tree provider contracts for host packages.
 
 ## Responsibilities
 

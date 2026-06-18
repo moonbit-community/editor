@@ -1,8 +1,13 @@
 # workbench
 
-The shipped app shell — the `vs/workbench` + remote-agent role. It is the
-only package that composes the viewer library, the explorer widget, and the
-remote protocol transport.
+The reference browser shell. It plays the small local `vs/workbench` role around
+the reusable `viewer`: compose the viewer with an explorer widget, tokenizers,
+language providers, theme state, remote protocol transport, and harness
+observability.
+
+This package demonstrates one host composition. It must call the viewer through
+public APIs and must not rely on viewer DOM internals or private view-part
+implementation details.
 
 ## Responsibilities
 
@@ -30,11 +35,9 @@ remote protocol transport.
   nothing loaded; the viewer's rendered notification then drives the
   tree's `set_active` (autoReveal).
 - Own the viewer mount seam: the shell renders one stable `.viewer-host`
-  element (never any children inside it) and attaches the imperative
-  viewer view into it after the first paint; viewer methods are plain
-  calls lifted into shell commands. Host-captured keys route into the
-  viewer (Escape to the controllers; PgUp/PgDn/Home/End/arrows into the
-  synthetic scroll methods).
+  element, never renders children inside it, and attaches the viewer after the
+  first paint. Viewer methods are plain public calls lifted into shell commands.
+  Host-captured keys route into public viewer entrypoints.
 - Own harness observability: the viewer reports lifecycle facts through typed
   subscriptions and the workbench formats and emits the
   structured `[readonly-editor]` events (`dom:mounted`, `moonbit:render`,
@@ -53,8 +56,8 @@ remote protocol transport.
   packages including `websocket`.
 - May declare narrowly scoped JavaScript FFI for workbench-owned browser-host
   effects such as harness observability, storage, and protocol URL derivation.
-- Composition lives here: the viewer and the tree widget must not know
-  about each other or about the transport.
+- Composition lives here: the viewer and tree widget must not know about each
+  other or about the transport.
 - Module-level `Ref` registries (the app dispatcher, the protocol send
   hook, pending protocol requests, the viewer and tree singletons) stay
   inside this package.

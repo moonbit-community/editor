@@ -1,231 +1,203 @@
 # Architecture
 
-The editor is a readonly MoonBit code viewer. The public embedding surface is
-`viewer`: MoonBit users create or fetch readonly editor models, attach the
-viewer to their own host element, and drive rendering, selection, reload, and
-error policy from their own shell.
+The current project has two main parts.
 
-This file is the high-level system map. It should stay stable and describe
-where components belong. Package-local contracts, method lists, tests, and DOM
-details belong in each package's `README.md`.
+1. `viewer`: the reusable MoonBit readonly viewer. It provides the public
+   viewer API, owns the browser editor surface, and follows Monaco-shaped
+   behavior where that helps readonly embedders.
+2. `workbench` plus the backend shell: a small reference host used to see the
+   viewer working against a real workspace. It illustrates how outer users can
+   compose the viewer, and it must use viewer public APIs instead of reaching
+   into viewer implementation details.
+
+This file is the high-level map. Package-local method lists, DOM details,
+tests, and invariants belong in each package README.
 
 ## References
 
-For editor behavior and design choices, inspect the local reference sources
-before inventing a local shape. Monaco/VS Code references live under `vscode/`
-with editor code primarily under `vscode/src/vs/editor`; use
-`docs/references/monaco.md` as the starting map. CodeMirror references live
-under `codemirror/` with `docs/references/codemirror.md` as the starting map.
+Monaco/VS Code is the primary reference for behavior, API shape, rendering
+roles, and conformance checks. Start at `docs/references/monaco.md`.
 
-Reference sources are for design research only. Product code must stay
-MoonBit-owned and must not import from `vscode/` or `codemirror/`.
+CodeMirror is a secondary reference for simpler state/view ideas. Start at
+`docs/references/codemirror.md`.
 
-## Component Map
+Reference trees are research inputs only. Product code must not import from
+`vscode/` or `codemirror/`, and local public names should stay MoonBit-owned.
 
-The project has one primary reusable product surface and one reference host
-stack around it.
+## Current Truth
 
-- `viewer`: the embeddable readonly viewer for MoonBit users and this
-  repo's Monaco `editor/browser` role. It owns the browser DOM view, browser
-  input, widgets such as hover, and the public viewer control API.
-- `viewer/common`: pre-DOM common editor model state and this repo's Monaco
-  `editor/common` role. It owns the readonly `ViewModel` spine, viewport data,
-  line HTML, scroll/layout arithmetic, and hit testing.
-- `base/common`: low-level URI identity, lifecycle helpers, and editor
-  coordinate primitives shared by workspace, language, viewer, protocol,
-  server, and widgets.
-- `viewer/core`: UTF-16 coordinate primitives used by viewer internals while
-  public host contracts use `base/common`.
-- `viewer/model`: readonly editor text ownership and this repo's Monaco
-  `ITextModel`/`TextModel` role. Public viewer and language-provider APIs
-  should depend on `TextModel` or `TextSnapshot`, not workspace source payloads.
-- `workspace`: host-side source/tree provider contracts, source payloads, and
-  document watch notifications. It does not own viewer text models or depend on
-  viewer packages; using a provider is one host composition option, not a
-  viewer-core requirement. Host packages adapt workspace payloads into
-  `viewer/model.TextModel` before calling viewer APIs.
-- `language`: language feature contracts and result types such as hover,
-  diagnostics, document symbols, and semantic tokens.
-- `syntax` and `syntax/lang_*`: tokenization contracts and compile-time
-  language lexers.
-- `decorations` and `platform/log`: shared support packages.
-- `widgets/file_tree`: optional file-tree widget. Embedders may use it, or they
-  may use their own tree and call the viewer directly.
-- `workbench` and `web`: the repository's browser reference app. This shell
-  composes the viewer, optional tree, tokenizers, language providers, protocol
-  client, theme state, and test observability.
-- `remote_protocol`, `server`, and `server_host_native`: the repository's
-  reference remote workspace stack. It proves one backend composition with
-  filesystem access, file watching, static serving, websocket transport, and
-  `moon-lsp`.
-- `examples/embedded_viewer`: proof that the viewer can be embedded without the
-  workbench, remote protocol, server, or native host.
+Use current architecture docs, package READMEs, and tests for active behavior.
+Execution plans in `docs/exec-plans/` are implementation records. Once a plan
+has landed or been superseded, it is historical evidence, not an active
+contract.
 
-`view` is a compatibility render model kept separate from the active
-`viewer` path.
+## Package Roles
 
-## Main Interactions
+### Viewer
 
-### Embedded Viewer
+- `viewer`: public browser-backed readonly viewer facade. It owns DOM creation,
+  CSS-facing editor structure, input capture, scrollbars, widgets, feature
+  controllers, typed lifecycle events, and Monaco-shaped APIs such as model
+  installation and language registration.
+- `viewer/model`: readonly `TextModel` and `TextSnapshot`, the model identity
+  used by viewer and language-provider APIs.
+- `viewer/core`: UTF-16 position/range primitives for editor internals.
+- `viewer/common`, `viewer/view_model`, `viewer/view_layout`, and
+  `viewer/view_line_renderer`: DOM-free viewer common layer for tokenized
+  lines, render frames, projections, layout, viewport data, scrollbar
+  arithmetic, hit testing, and render-line HTML/character mapping.
+- `language`: backend-neutral readonly semantic provider contracts over
+  `viewer/model.TextModel`.
+- `syntax` and `syntax/lang_*`: tokenization contracts and concrete
+  compile-time lexers. Hosts import concrete language packages and register
+  tokenizers with the viewer.
+- `decorations` and `platform/log`: small shared support packages.
 
-External MoonBit embedders should treat `viewer` as the entry point:
+### Reference Shell
+
+- `web`: generated browser entrypoint. It starts the workbench and should not
+  grow application logic.
+- `workbench`: the reference browser shell. It composes the viewer, optional
+  file tree, syntax packages, remote protocol client, theme state, shell UI,
+  and test observability.
+- `widgets/file_tree`: optional explorer widget over `workspace` providers. It
+  does not know about the viewer or transport.
+- `remote_protocol`: MoonBit-owned packets between the reference workbench and
+  reference backend.
+- `server`: remote workspace policy and semantic feature routing.
+- `server_host_native`: native filesystem, watching, process, socket, static
+  serving, and LSP-process effects for the reference backend.
+- `examples/embedded_viewer`: small non-remote embedding proof. It demonstrates
+  that the viewer can run without `workbench`, `remote_protocol`, `server`, or
+  `server_host_native`.
+
+`workspace` defines host-side source and tree provider contracts used by the
+reference shell and examples. It is not the viewer model API.
+
+`view` is a compatibility render model outside the active viewer path.
+
+## Main Flows
+
+### Embedding
 
 ```text
-embedder shell
+host app
   -> viewer.Viewer
   -> viewer/model.TextModel
-  -> optional workspace.DocumentProvider owned by the shell
   -> optional language providers
-  -> optional syntax/lang_* tokenizer registration
+  -> optional tokenizer registration
+  -> optional host-owned workspace/tree/transport
 ```
 
-The embedder supplies document content by creating or reusing a readonly
-`viewer/model.TextModel` and installing it on the viewer. It may derive that
-model from memory, a remote service, a `workspace.DocumentProvider`, or any
-other source it owns. The viewer owns rendering, scrolling, hover presentation,
-and lifecycle notifications. The embedder owns its shell, file tree, transport,
-persistence, source watches, reload policy, and error display.
+The host creates or fetches readonly document content, converts it into a
+`viewer/model.TextModel`, and installs it on the viewer. The viewer owns
+rendering, scrolling, hover presentation, selection/copy, widget placement, and
+lifecycle events. The host owns files, transport, persistence, reload policy,
+shell chrome, and error display.
 
-Language features are provider-based. A hover provider, for example, may compute
-locally, call a backend, or use any other MoonBit-accessible mechanism. The
-viewer only depends on the provider contract and result.
+Language features are provider-based. Providers may compute locally, call a
+backend, or read host state. The viewer depends only on the provider contracts
+and result values.
 
 ### Reference Workbench
 
-The shipped app is one composition of the public viewer:
-
 ```text
-web
-  -> workbench
-  -> viewer
-  -> widgets/file_tree
-  -> remote_protocol
+web -> workbench -> viewer
+                 -> widgets/file_tree
+                 -> remote_protocol
 
-server_host_native/main
-  -> server_host_native
-  -> server
-  -> remote_protocol, workspace, language
+server_host_native/main -> server_host_native -> server
+                                           -> remote_protocol
+                                           -> workspace
+                                           -> language
 ```
 
-`workbench` adapts the remote protocol into host-owned provider contracts, then
-converts loaded source payloads into viewer text models before calling the
-viewer. `server` owns remote workspace policy and language-feature routing.
-`server_host_native` owns native effects such as filesystem reads, watching,
-process startup, sockets, and static asset serving.
+`workbench` adapts remote protocol responses into host-owned providers and
+`viewer/model.TextModel` values, then calls the viewer API. `server` owns
+remote workspace policy. `server_host_native` owns native effects.
 
-This stack is useful for development, local demos, and testing a complete remote
-viewer, but it is not required for users who embed the viewer package.
+This stack exists for development, demos, and end-to-end validation. It should
+not become a dependency of the reusable viewer.
 
 ### Rendering
 
-Rendering is split by host boundary:
-
 ```text
-viewer/model.TextModel / TextSnapshot
-  -> viewer/view_model tokenization and ViewModel state
-  -> viewer/view_layout scroll and viewport window state
-  -> viewer/view_layout ViewportData
-  -> viewer/view_line_renderer render-line IR
+viewer/model.TextModel
+  -> viewer/view_model
+  -> viewer/view_layout
+  -> viewer/view_line_renderer
   -> viewer DOM view
 ```
 
-Pre-DOM rendering and geometry belong in `viewer/common` and its focused
-common-layer subpackages. `viewer/view_layout` owns DOM-free scroll/layout state.
-Browser-specific DOM, CSS, event capture, custom scrollbars, and widget
-placement belong in `viewer`. The browser `ViewLayer` applies
-`@view_line_renderer.RenderLineInput` / `RenderLineOutput2` results to DOM
-nodes; it does not own line HTML semantics.
-
-### Syntax And Language Features
-
-Syntax highlighting and semantic language features are separate:
-
-- `syntax/lang_*` packages provide compile-time tokenizers.
-- `language` provider traits provide semantic features such as hover and
-  diagnostics.
-- Hosts register tokenizers and semantic providers through
-  `@viewer.languages.*`, or through an isolated `Languages` registry selected by
-  `ViewerServices::new(languages~)`.
-- `viewer` consumes registered tokenizers and providers without importing
-  concrete `syntax/lang_*` packages or any backend transport.
+DOM-free text, projection, layout, viewport, scrollbar, and hit-test state live
+in the viewer common-layer packages. Browser DOM, CSS, measurement, native
+events, custom scrollbars, and widget DOM live in `viewer`.
 
 ## Placement Rules
 
-Use these rules when deciding where to add a new package or feature:
-
-- Public viewer behavior belongs in `viewer` unless it is pure
-  backend-neutral model logic, in which case it belongs in `viewer/common` or a
-  focused `viewer/*` common-layer package.
-- New host-neutral source or workspace-provider contracts belong in `workspace`.
-- New editor text model contracts belong in `viewer/model`; do not expose
-  workspace payload types from viewer or language-provider public APIs.
-- New semantic language feature contracts belong in `language`.
-- New concrete tokenizers belong in `syntax/lang_*` packages and are composed by
-  host packages.
-- Runtime language registration belongs in `viewer.languages`; `language` owns
-  contracts, not live viewer registries.
+- Public viewer behavior belongs in `viewer`.
+- Pure DOM-free editor model, layout, viewport, and render-line logic belongs in
+  the focused `viewer/*` common-layer packages.
+- Editor text identity belongs in `viewer/model`; do not expose
+  `workspace.DocumentSnapshot` through viewer or language-provider APIs.
+- Host source/tree provider contracts belong in `workspace`.
+- Semantic provider contracts belong in `language`.
+- Runtime language registration belongs in `viewer.languages`; concrete
+  tokenizers belong in `syntax/lang_*` and are imported by host packages.
 - Optional reusable UI around the viewer belongs under `widgets/*`.
-- App-specific browser shell behavior belongs in `workbench` or a separate
-  example/application package.
-- Remote protocol packet shape belongs in `remote_protocol`.
-- Remote workspace policy belongs in `server`; native filesystem, process,
-  socket, and static-serving effects belong in `server_host_native`.
-- JS-only browser packages may declare narrowly scoped JS FFI for effects they
-  own; shared packages must remain FFI-free.
-- Packages shared across browser and native targets must not declare FFI.
-- Product code must not import from `codemirror/` or `vscode/`; those trees are
-  references only.
+- Reference app behavior belongs in `workbench` or an example package.
+- Remote packet shape belongs in `remote_protocol`.
+- Remote workspace policy belongs in `server`.
+- Native filesystem, process, socket, and static-serving effects belong in
+  `server_host_native`.
+- JS-only packages may declare narrowly scoped JS FFI for effects they own.
+  Shared packages must remain FFI-free.
+- Product code must not import from `vscode/` or `codemirror/`.
 
-Composition stays explicit. There is no global dependency-injection container
-and no hidden service locator. Hosts assemble plain MoonBit traits, records, and
-registries.
+Composition stays explicit. Hosts assemble plain MoonBit traits, records,
+registries, and viewer calls. There is no global dependency-injection container.
 
 ## Dependency Direction
 
-Dependencies should flow from host entry points toward shared domain packages:
+Dependencies flow from host entrypoints toward viewer and shared domain
+packages:
 
 ```text
 web -> workbench
-workbench -> viewer, widgets/file_tree, remote_protocol, syntax/lang_*
-viewer -> viewer/common, viewer/core, viewer/model,
+workbench -> base/common, viewer, viewer/model, widgets/file_tree,
+             remote_protocol, workspace, language, syntax/lang_*,
+             platform/log
+viewer -> base/common, viewer/common, viewer/core, viewer/model,
           viewer/view_line_renderer, viewer/view_layout, viewer/view_model,
           language, syntax, decorations, platform/log
-widgets/file_tree -> workspace
 
 server_host_native/main -> server_host_native
-server_host_native -> server
-server -> remote_protocol, workspace, language
+server_host_native -> base/common, server, remote_protocol, workspace,
+                      language, viewer/model
+server -> base/common, remote_protocol, workspace, language, viewer/model
+remote_protocol -> base/common, workspace, language
+widgets/file_tree -> base/common, workspace
 
-viewer/common -> viewer/view_line_renderer, viewer/view_layout,
-                 viewer/view_model, decorations
-viewer/view_layout -> viewer/view_model, viewer/view_line_renderer,
-                        viewer/core, viewer/model, syntax, decorations,
-                        language
-viewer/view_model -> viewer/view_line_renderer, viewer/core,
-                       viewer/model, syntax, decorations, language
-viewer/view_line_renderer -> viewer/core, syntax
-workspace -> base/common
 language -> base/common, viewer/model
+workspace -> base/common
 syntax -> base/common, viewer/model
 decorations -> base/common
 viewer/model -> base/common, viewer/core
-remote_protocol/server/workbench/widgets -> base/common, workspace, language
 platform/log -> no product packages
 syntax/lang_* -> syntax, viewer/core, viewer/model
 ```
 
-The repository-level architecture guardrail is `scripts/check-architecture.mbtx`,
-run by `just check`.
+`scripts/check-architecture.mbtx`, run by `just check`, enforces the most
+important import boundaries.
 
 ## Build Targets
 
-The module supports both JavaScript and native targets. Browser packages declare
-`supported_targets = "js"`, native host packages declare
-`supported_targets = "native"`, and shared packages remain target-neutral.
+Browser packages use `supported_targets = "js"`. Native host packages use
+`supported_targets = "native"`. Shared packages stay target-neutral.
 
-Repository-level validation should use `just check`.
+Repository-level validation starts with `just check`.
 
 ## Position Convention
 
-Offsets and columns are UTF-16 code units. This matches browser JavaScript
-strings, Monaco/CodeMirror position behavior, and default LSP positions.
+Offsets and columns are UTF-16 code units. This matches browser strings,
+Monaco/CodeMirror position behavior, and default LSP positions.

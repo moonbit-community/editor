@@ -1,7 +1,8 @@
 # Harness
 
-The harness is designed so agents can inspect, run, and debug the project
-without hidden setup.
+The harness exists to validate the reusable viewer through both direct
+component pages and the reference workbench/backend shell. It should make
+behavior inspectable without hidden setup.
 
 ## Layers
 
@@ -28,9 +29,9 @@ outer assertions, logging, screenshots, traces, and final pass/fail decisions.
   geometry/control checks.
 - `just test-browser-component`: MoonBit-authored browser component checks.
 - `just test-browser-perf`: non-budgeted performance evidence.
-- `just dev ROOT=. PORT=5173`: build and run the native server for local
-  inspection. Use `ROOT=/path/to/project` to point the viewer at a fixture or
-  real MoonBit project.
+- `just dev ROOT=. PORT=5173`: build and run the reference backend shell for
+  local inspection. Use `ROOT=/path/to/project` to point the workbench at a
+  fixture or real MoonBit project.
 
 Playwright targets `http://127.0.0.1:5173` by default. Set
 `READONLY_EDITOR_BASE_URL=http://127.0.0.1:<port>` to run browser tests against
@@ -61,20 +62,22 @@ globals. Monaco-specific hover and scrollbar contracts live in
 
 - Smoke: startup, native-served assets, file-tree navigation, document opening,
   real hover through pointer interaction, scrolling by wheel/drag, theme
-  changes, embedded viewer loading, and file-watch recovery. Smoke tests should
-  not call deterministic state-control globals when a user path exists.
+  changes, embedded viewer loading, and file-watch recovery through the
+  reference shell. Smoke tests should not call deterministic state-control
+  globals when a user path exists.
 - Conformance: Monaco/VS Code parity, local oracle comparison under
   `tests/reference/monaco-hover-scrollbar`, forced hover payloads, exact
   scrollbar/hover DOM, computed style, geometry, screenshots, and synthetic
   scroll/windowing checks.
-- Component: MoonBit browser pages construct the public viewer API directly and
-  report compact JSON through Playwright.
+- Component: MoonBit browser pages construct the public viewer API directly,
+  without the workbench/backend shell, and report compact JSON through
+  Playwright.
 - Performance: structured JSON evidence and attachments. Perf tests remain
   non-failing unless an explicit documented budget is added.
 
 ## Browser Rules
 
-Browser tests should select files through the sidebar and native remote
+Workbench smoke tests should select files through the sidebar and native remote
 protocol. The active file is application state, not URL state; specs should not
 depend on `?uri=`, `?path=`, hashes, or history updates.
 

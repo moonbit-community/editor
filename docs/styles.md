@@ -1,5 +1,14 @@
 # Style Notes
 
+## Docs
+
+- Prefer concise current-truth docs over detailed historical narration.
+- Put architecture and ownership rules in `docs/architecture.md`.
+- Put package-local contracts and checks in package READMEs.
+- Put large future implementation plans in `docs/exec-plans/`.
+- Do not update implemented execution plans to match newer architecture. Add a
+  superseding plan or update current docs instead.
+
 ## MoonBit Constructors
 
 - Primary struct constructors use `fn Type::Type(...) -> Type` and are called as `Type(...)` or `@pkg.Type(...)`.

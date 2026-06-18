@@ -1,6 +1,6 @@
 # server
 
-Native-side remote workspace policy and protocol dispatch.
+Reference backend policy for remote readonly workspaces.
 
 ## Responsibilities
 
@@ -18,9 +18,11 @@ Native-side remote workspace policy and protocol dispatch.
 
 - May depend on `base/common`, `workspace`, `language`, `remote_protocol`, and
   JSON support.
-- Must not import browser backend packages, viewer packages, or `web`.
+- Must not import browser packages, the public `viewer` package, or `web`.
 - Native effects stay behind the `ServerHost` trait; server code owns policy and
   routing.
+- This package is part of the reference shell/backend stack, not a requirement
+  for embedding the viewer.
 
 ## Checks
 

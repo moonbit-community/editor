@@ -1,10 +1,9 @@
 # examples/embedded_viewer
 
-A real embedding target, the way Monaco's standalone editor proves its
-package boundary: the viewer library (`viewer`) plus the
-file-tree widget (`widgets/file_tree`) mounted against in-memory document
-state and a `WorkspaceTreeProvider` implementation — a handful of hardcoded
-documents and directories, zero server or websocket involvement.
+A small real embedding target for the reusable `viewer`. It mounts the viewer
+and optional `widgets/file_tree` against in-memory documents and a
+`WorkspaceTreeProvider` implementation. There is no workbench, server, remote
+protocol, or websocket.
 
 The web build script bundles it into `web/dist/embed.mjs` +
 `web/dist/embed.html`, and the native server serves it at `/embed.html`.

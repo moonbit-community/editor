@@ -18,8 +18,8 @@ Readonly language-provider contracts.
 ## Boundaries
 
 - May depend on `base/common`, `viewer/model`, and JSON support.
-- Must not import renderer backends, DOM, native host packages, or server
-  packages.
+- Must not import viewer browser implementation packages, DOM, native host
+  packages, or server packages.
 - Must not depend on `workspace`; source-provider payloads are adapted by host
   packages before semantic providers run.
 - Browser and native transport effects are not part of the target public

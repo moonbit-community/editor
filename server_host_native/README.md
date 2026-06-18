@@ -1,6 +1,6 @@
 # server_host_native
 
-Native host adapter for server-side effects.
+Native effect adapter for the reference backend shell.
 
 ## Responsibilities
 
@@ -27,6 +27,7 @@ Native host adapter for server-side effects.
 - Must not own remote protocol routing, workspace policy, provider semantics, or
   browser behavior.
 - Keep this package native-only through `supported_targets = "native"`.
+- This package is not part of the reusable viewer API.
 
 ## Checks
 

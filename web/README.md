@@ -1,11 +1,11 @@
 # web
 
-Browser client entrypoint for the readonly editor.
+Generated browser entrypoint for the reference workbench.
 
 ## Responsibilities
 
 - Remain the generated MoonBit browser entrypoint.
-- Start the Rabbita-backed browser app through `workbench`.
+- Start the Rabbita-backed reference shell through `workbench`.
 - Keep application-shell ownership out of JavaScript; the native server serves
   `web/dist/index.html`, `/style.css`, and `/editor.mjs`.
 

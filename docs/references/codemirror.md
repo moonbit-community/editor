@@ -1,5 +1,9 @@
 # CodeMirror Reference Map
 
+CodeMirror is a secondary reference. Use it when its smaller state/view split or
+language package shape clarifies an implementation decision. Monaco remains the
+main reference for viewer API shape and conformance.
+
 CodeMirror was hydrated with:
 
 ```sh
@@ -14,7 +18,7 @@ Useful packages for this project:
 - `codemirror/language`: language state, syntax integration, highlighting.
 - `codemirror/lint`: diagnostics and lint decorations.
 - `codemirror/search`: search range handling.
-- `codemirror/lsp-client`: future LSP client reference.
+- `codemirror/lsp-client`: optional protocol/client design reference.
 - `codemirror/lang-javascript` and other `lang-*` packages: language package shape.
 
 Use these as design references only. Do not import from them in product code.

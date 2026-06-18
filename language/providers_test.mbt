@@ -31,31 +31,32 @@ test "provider result finds hover and definition by offset" {
 
 ///|
 test "language selectors match language scheme and path" {
-  let document = @workspace.DocumentSnapshot(
+  let model = @model.TextModel(
     expect_uri("file://workspace/src/main.mbt"),
     "main.mbt",
     "moonbit",
+    1,
     "rev-1",
     "fn main {}\n",
   )
-  assert_true(LanguageSelector::LanguageId("moonbit").matches(document))
+  assert_true(LanguageSelector::LanguageId("moonbit").matches(model))
   assert_true(
     LanguageFilter::LanguageFilter(
       language="moonbit",
       scheme="file",
       pattern="src/*.mbt",
-    ).matches(document),
+    ).matches(model),
   )
   assert_true(
     LanguageSelector::LanguageSelectorList([
       LanguageId("javascript"),
       LanguageFilter(LanguageFilter(language="moonbit")),
-    ]).matches(document),
+    ]).matches(model),
   )
-  assert_true(!LanguageSelector::LanguageId("javascript").matches(document))
+  assert_true(!LanguageSelector::LanguageId("javascript").matches(model))
   assert_true(
     !LanguageFilter::LanguageFilter(language="moonbit", scheme="memory").matches(
-      document,
+      model,
     ),
   )
 }

@@ -16,18 +16,18 @@ pub fn NativeWorkspaceLanguageProvider::NativeWorkspaceLanguageProvider(
 }
 
 ///|
-/// Delegates hover requests after translating the document URI to `file://`.
+/// Delegates hover requests after translating the model URI to `file://`.
 pub impl @language.HoverProvider for NativeWorkspaceLanguageProvider with fn provide_hover(
   self,
-  document,
+  model,
   position,
   token,
 ) {
-  match self.lsp_document(document) {
-    Some(lsp_document) =>
+  match self.lsp_model(model) {
+    Some(lsp_model) =>
       self.provider
       .as_hover_provider()
-      .provide_hover(lsp_document, position, token)
+      .provide_hover(lsp_model, position, token)
     None => None
   }
 }
@@ -37,16 +37,16 @@ pub impl @language.HoverProvider for NativeWorkspaceLanguageProvider with fn pro
 /// `readonly-remote://workspace/...` URIs.
 pub impl @language.DefinitionProvider for NativeWorkspaceLanguageProvider with fn provide_definition(
   self,
-  document,
+  model,
   position,
   token,
 ) {
-  match self.lsp_document(document) {
-    Some(lsp_document) =>
+  match self.lsp_model(model) {
+    Some(lsp_model) =>
       match
         self.provider
         .as_definition_provider()
-        .provide_definition(lsp_document, position, token) {
+        .provide_definition(lsp_model, position, token) {
         Some(location) => self.remote_location(location)
         None => None
       }
@@ -58,15 +58,15 @@ pub impl @language.DefinitionProvider for NativeWorkspaceLanguageProvider with f
 /// Delegates references requests and drops locations outside the workspace root.
 pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with fn provide_references(
   self,
-  document,
+  model,
   position,
   token,
 ) {
-  match self.lsp_document(document) {
-    Some(lsp_document) => {
+  match self.lsp_model(model) {
+    Some(lsp_model) => {
       let locations = self.provider
         .as_references_provider()
-        .provide_references(lsp_document, position, token)
+        .provide_references(lsp_model, position, token)
       let mapped = []
       for location in locations {
         match self.remote_location(location) {
@@ -84,14 +84,14 @@ pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with f
 /// Delegates diagnostics requests after URI translation.
 pub impl @language.DiagnosticsProvider for NativeWorkspaceLanguageProvider with fn provide_diagnostics(
   self,
-  document,
+  model,
   token,
 ) {
-  match self.lsp_document(document) {
-    Some(lsp_document) =>
+  match self.lsp_model(model) {
+    Some(lsp_model) =>
       self.provider
       .as_diagnostics_provider()
-      .provide_diagnostics(lsp_document, token)
+      .provide_diagnostics(lsp_model, token)
     None => []
   }
 }
@@ -100,14 +100,14 @@ pub impl @language.DiagnosticsProvider for NativeWorkspaceLanguageProvider with 
 /// Delegates document-symbol requests after URI translation.
 pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider with fn provide_document_symbols(
   self,
-  document,
+  model,
   token,
 ) {
-  match self.lsp_document(document) {
-    Some(lsp_document) =>
+  match self.lsp_model(model) {
+    Some(lsp_model) =>
       self.provider
       .as_document_symbol_provider()
-      .provide_document_symbols(lsp_document, token)
+      .provide_document_symbols(lsp_model, token)
     None => []
   }
 }
@@ -116,14 +116,14 @@ pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider wi
 /// Delegates semantic-token requests after URI translation.
 pub impl @language.SemanticTokensProvider for NativeWorkspaceLanguageProvider with fn provide_document_semantic_tokens(
   self,
-  document,
+  model,
   token,
 ) {
-  match self.lsp_document(document) {
-    Some(lsp_document) =>
+  match self.lsp_model(model) {
+    Some(lsp_model) =>
       self.provider
       .as_semantic_tokens_provider()
-      .provide_document_semantic_tokens(lsp_document, token)
+      .provide_document_semantic_tokens(lsp_model, token)
     None => []
   }
 }
@@ -150,21 +150,22 @@ pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with f
 }
 
 ///|
-fn NativeWorkspaceLanguageProvider::lsp_document(
+fn NativeWorkspaceLanguageProvider::lsp_model(
   self : NativeWorkspaceLanguageProvider,
-  document : @workspace.DocumentSnapshot,
-) -> @workspace.DocumentSnapshot? {
-  match @server.resolve_remote_document_uri(document.uri) {
+  model : @model.TextModel,
+) -> @model.TextModel? {
+  match @server.resolve_remote_document_uri(model.uri) {
     ParsedRemotePath(path) =>
       match self.file_uri(path) {
         Some(uri) =>
           Some(
-            DocumentSnapshot(
+            TextModel(
               uri,
-              document.display_name,
-              document.language_id,
-              document.revision,
-              document.text,
+              model.display_name,
+              model.language_id,
+              model.version,
+              model.revision,
+              model.snapshot.text,
             ),
           )
         None => None

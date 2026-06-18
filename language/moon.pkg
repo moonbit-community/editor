@@ -1,4 +1,4 @@
 import {
   "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/workspace",
+  "baozhiyuan/editor/viewer/model",
 }

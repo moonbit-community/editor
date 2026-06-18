@@ -355,17 +355,19 @@ pub async fn RemoteServer::hover(
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) =>
+    Some(document) => {
+      let model = text_model_from_document(document)
       HoverResult({
         id: request.id,
         uri: request.uri,
         revision: document.revision,
         hover: self.hover_provider.provide_hover(
-          document,
-          document.position_at_offset(request.offset),
+          model,
+          model.snapshot.position_at_offset(request.offset),
           @language.CancellationToken::none(),
         ),
       })
+    }
     None => self.missing_cached_document_error(request.id)
   }
 }
@@ -379,16 +381,18 @@ pub async fn RemoteServer::diagnostics(
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) =>
+    Some(document) => {
+      let model = text_model_from_document(document)
       Diagnostics({
         id: request.id,
         uri: request.uri,
         revision: document.revision,
         diagnostics: self.diagnostics_provider.provide_diagnostics(
-          document,
+          model,
           @language.CancellationToken::none(),
         ),
       })
+    }
     None => self.missing_cached_document_error(request.id)
   }
 }
@@ -402,17 +406,19 @@ pub async fn RemoteServer::definition(
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) =>
+    Some(document) => {
+      let model = text_model_from_document(document)
       DefinitionResult({
         id: request.id,
         uri: request.uri,
         revision: document.revision,
         location: self.definition_provider.provide_definition(
-          document,
-          document.position_at_offset(request.offset),
+          model,
+          model.snapshot.position_at_offset(request.offset),
           @language.CancellationToken::none(),
         ),
       })
+    }
     None => self.missing_cached_document_error(request.id)
   }
 }
@@ -426,9 +432,10 @@ pub async fn RemoteServer::references(
   match
     self.cached_document(request.uri, request.document_revision, request.id) {
     Some(document) => {
+      let model = text_model_from_document(document)
       let locations = self.references_provider.provide_references(
-        document,
-        document.position_at_offset(request.offset),
+        model,
+        model.snapshot.position_at_offset(request.offset),
         @language.CancellationToken::none(),
       )
       let references = []
@@ -502,16 +509,18 @@ pub async fn RemoteServer::document_symbols(
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) =>
+    Some(document) => {
+      let model = text_model_from_document(document)
       DocumentSymbolsResult({
         id: request.id,
         uri: request.uri,
         revision: document.revision,
         symbols: self.document_symbol_provider.provide_document_symbols(
-          document,
+          model,
           @language.CancellationToken::none(),
         ),
       })
+    }
     None => self.missing_cached_document_error(request.id)
   }
 }
@@ -524,16 +533,18 @@ pub async fn RemoteServer::semantic_tokens(
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) =>
+    Some(document) => {
+      let model = text_model_from_document(document)
       SemanticTokensResult({
         id: request.id,
         uri: request.uri,
         revision: document.revision,
         semantic_tokens: self.semantic_tokens_provider.provide_document_semantic_tokens(
-          document,
+          model,
           @language.CancellationToken::none(),
         ),
       })
+    }
     None => self.missing_cached_document_error(request.id)
   }
 }
@@ -546,16 +557,18 @@ pub async fn RemoteServer::folding_ranges(
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) =>
+    Some(document) => {
+      let model = text_model_from_document(document)
       FoldingRangesResult({
         id: request.id,
         uri: request.uri,
         revision: document.revision,
         folding_ranges: self.folding_range_provider.provide_folding_ranges(
-          document,
+          model,
           @language.CancellationToken::none(),
         ),
       })
+    }
     None => self.missing_cached_document_error(request.id)
   }
 }
@@ -568,17 +581,19 @@ pub async fn RemoteServer::inlay_hints(
 ) -> @remote_protocol.ServerPacket {
   match
     self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) =>
+    Some(document) => {
+      let model = text_model_from_document(document)
       InlayHintsResult({
         id: request.id,
         uri: request.uri,
         revision: document.revision,
         inlay_hints: self.inlay_hints_provider.provide_inlay_hints(
-          document,
-          Range(0, document.length()),
+          model,
+          Range(0, model.snapshot.length()),
           @language.CancellationToken::none(),
         ),
       })
+    }
     None => self.missing_cached_document_error(request.id)
   }
 }

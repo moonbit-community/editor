@@ -54,7 +54,8 @@ non-budgeted until a budget is explicitly documented.
 Keep globals narrow and classify them by purpose:
 
 - Product observability: `__readonlyEditorEvent`,
-  `__readonlyEditorDocument`, `__readonlyEditorSource`, and
+  `__readonlyEditorModel`, `__readonlyEditorDocument`,
+  `__readonlyEditorSource`, and
   `__readonlyEditorCopiedText`.
 - Conformance/control only: `__readonlyEditorSetHover`,
   `__readonlyEditorClearHover`, `__readonlyEditorScrollTo`, and

@@ -28,7 +28,3 @@ expands a folder, and navigates between files with no websocket opened.
   whole subtree and the shell never renders children into it.
 - No language providers are registered, so hover and diagnostics simply
   stay absent — the registry starts empty by design.
-
-Implementation note: the current example still constructs
-`workspace.DocumentSnapshot` and calls `viewer.set_document` until the public
-viewer API is migrated to `set_model` / `get_model`.

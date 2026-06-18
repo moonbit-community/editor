@@ -1,9 +1,10 @@
 ///|
-fn test_document() -> @workspace.DocumentSnapshot {
-  DocumentSnapshot(
+fn test_model() -> @model.TextModel {
+  TextModel(
     @base_common.Uri::memory("service-test.mbt"),
     "service-test.mbt",
     "moonbit",
+    7,
     "rev-7",
     "fn main {\n  value\n}\n",
   )
@@ -50,8 +51,8 @@ test "marker decorations expose squiggles and marker hover lookup" {
 ///|
 async test "content hover computer separates sync markers from async markdown" {
   let services = ViewerServices::new(languages=Languages::new())
-  let document = test_document()
-  services.markers.set_diagnostics("diagnostics:0", document.uri, [
+  let model = test_model()
+  services.markers.set_diagnostics("diagnostics:0", model.uri, [
     { range: Range(12, 17), severity: Warning, message: "marker hover" },
   ])
   services.languages.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
@@ -59,7 +60,7 @@ async test "content hover computer separates sync markers from async markdown" {
   })
   |> ignore
   let computer = ContentHoverComputer::new(services)
-  let sync_hover = computer.compute_sync(document, Range(12, 17), 14)
+  let sync_hover = computer.compute_sync(model, Range(12, 17), 14)
   match sync_hover {
     Some(hover) => {
       assert_eq(hover.parts.length(), 1)
@@ -67,7 +68,7 @@ async test "content hover computer separates sync markers from async markdown" {
     }
     None => fail("expected marker hover")
   }
-  let async_hover = computer.compute_async(document, Range(12, 17), 14)
+  let async_hover = computer.compute_async(model, Range(12, 17), 14)
   match async_hover {
     Some(hover) => {
       assert_eq(hover.parts.length(), 1)
@@ -92,8 +93,8 @@ async test "provider failures are logged and isolated" {
 
   })
   |> ignore
-  let document = test_document()
-  let hover = services.languages.hover_at(document, 3, services.log_service)
+  let model = test_model()
+  let hover = services.languages.hover_at(model, 3, services.log_service)
   assert_true(hover is Some(_))
   let entries = memory.entries()
   assert_eq(entries.length(), 1)
@@ -128,12 +129,12 @@ async test "language provider registrations preserve order after disposal" {
     text: "second",
   })
   let log_service = @log.LogService::new()
-  let document = test_document()
-  assert_hover_text(languages.hover_at(document, 3, log_service), "first")
+  let model = test_model()
+  assert_hover_text(languages.hover_at(model, 3, log_service), "first")
   first.dispose()
-  assert_hover_text(languages.hover_at(document, 3, log_service), "second")
+  assert_hover_text(languages.hover_at(model, 3, log_service), "second")
   second.dispose()
-  assert_true(languages.hover_at(document, 3, log_service) is None)
+  assert_true(languages.hover_at(model, 3, log_service) is None)
 }
 
 ///|
@@ -142,11 +143,11 @@ priv struct TestHoverProvider {}
 ///|
 impl @language.HoverProvider for TestHoverProvider with fn provide_hover(
   _self,
-  document,
+  model,
   position,
   _token,
 ) {
-  let offset = document.offset_at_position(position)
+  let offset = model.snapshot.offset_at_position(position)
   Some({
     range: Range(offset, offset + 1),
     contents: [PlainText("provider hover")],
@@ -161,11 +162,11 @@ priv struct NamedHoverProvider {
 ///|
 impl @language.HoverProvider for NamedHoverProvider with fn provide_hover(
   self,
-  document,
+  model,
   position,
   _token,
 ) {
-  let offset = document.offset_at_position(position)
+  let offset = model.snapshot.offset_at_position(position)
   Some({ range: Range(offset, offset + 1), contents: [PlainText(self.text)] })
 }
 
@@ -192,7 +193,7 @@ priv struct FailingHoverProvider {}
 ///|
 impl @language.HoverProvider for FailingHoverProvider with fn provide_hover(
   _self,
-  _document,
+  _model,
   _position,
   _token,
 ) {

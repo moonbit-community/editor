@@ -1,9 +1,9 @@
 import {
   "baozhiyuan/editor/base/common" @base_common,
   "baozhiyuan/editor/viewer",
+  "baozhiyuan/editor/viewer/model",
   "baozhiyuan/editor/syntax/lang_moonbit",
   "baozhiyuan/editor/tests/browser/moonbit/support",
-  "baozhiyuan/editor/workspace",
   "moonbit-community/rabbita/dom" @rdom,
   "moonbitlang/core/json",
 }

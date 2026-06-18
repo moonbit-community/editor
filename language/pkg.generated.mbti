@@ -3,12 +3,12 @@ package "baozhiyuan/editor/language"
 
 import {
   "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/workspace",
+  "baozhiyuan/editor/viewer/model",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn collect_document_provider_result(&DiagnosticsProvider, &DocumentSymbolProvider, &SemanticTokensProvider, @workspace.DocumentSnapshot, CancellationToken) -> ProviderResult
+pub async fn collect_model_provider_result(&DiagnosticsProvider, &DocumentSymbolProvider, &SemanticTokensProvider, @model.TextModel, CancellationToken) -> ProviderResult
 
 // Errors
 
@@ -84,14 +84,14 @@ pub(all) struct LanguageFilter {
   pattern : String?
 } derive(@debug.Debug)
 pub fn LanguageFilter::LanguageFilter(language? : String, scheme? : String, pattern? : String) -> Self
-pub fn LanguageFilter::matches(Self, @workspace.DocumentSnapshot) -> Bool
+pub fn LanguageFilter::matches(Self, @model.TextModel) -> Bool
 
 pub(all) enum LanguageSelector {
   LanguageId(String)
   LanguageFilter(LanguageFilter)
   LanguageSelectorList(Array[LanguageSelector])
 } derive(@debug.Debug)
-pub fn LanguageSelector::matches(Self, @workspace.DocumentSnapshot) -> Bool
+pub fn LanguageSelector::matches(Self, @model.TextModel) -> Bool
 
 pub(all) struct Location {
   uri : @common.Uri
@@ -118,34 +118,34 @@ pub(all) struct SemanticToken {
 
 // Traits
 pub(open) trait DefinitionProvider {
-  async fn provide_definition(Self, @workspace.DocumentSnapshot, @common.Position, CancellationToken) -> Location?
+  async fn provide_definition(Self, @model.TextModel, @common.Position, CancellationToken) -> Location?
 }
 
 pub(open) trait DiagnosticsProvider {
-  async fn provide_diagnostics(Self, @workspace.DocumentSnapshot, CancellationToken) -> Array[Diagnostic]
+  async fn provide_diagnostics(Self, @model.TextModel, CancellationToken) -> Array[Diagnostic]
 }
 
 pub(open) trait DocumentSymbolProvider {
-  async fn provide_document_symbols(Self, @workspace.DocumentSnapshot, CancellationToken) -> Array[DocumentSymbol]
+  async fn provide_document_symbols(Self, @model.TextModel, CancellationToken) -> Array[DocumentSymbol]
 }
 
 pub(open) trait FoldingRangeProvider {
-  async fn provide_folding_ranges(Self, @workspace.DocumentSnapshot, CancellationToken) -> Array[FoldingRange]
+  async fn provide_folding_ranges(Self, @model.TextModel, CancellationToken) -> Array[FoldingRange]
 }
 
 pub(open) trait HoverProvider {
-  async fn provide_hover(Self, @workspace.DocumentSnapshot, @common.Position, CancellationToken) -> Hover?
+  async fn provide_hover(Self, @model.TextModel, @common.Position, CancellationToken) -> Hover?
 }
 
 pub(open) trait InlayHintsProvider {
-  async fn provide_inlay_hints(Self, @workspace.DocumentSnapshot, @common.Range, CancellationToken) -> Array[InlayHint]
+  async fn provide_inlay_hints(Self, @model.TextModel, @common.Range, CancellationToken) -> Array[InlayHint]
 }
 
 pub(open) trait ReferencesProvider {
-  async fn provide_references(Self, @workspace.DocumentSnapshot, @common.Position, CancellationToken) -> Array[Location]
+  async fn provide_references(Self, @model.TextModel, @common.Position, CancellationToken) -> Array[Location]
 }
 
 pub(open) trait SemanticTokensProvider {
-  async fn provide_document_semantic_tokens(Self, @workspace.DocumentSnapshot, CancellationToken) -> Array[SemanticToken]
+  async fn provide_document_semantic_tokens(Self, @model.TextModel, CancellationToken) -> Array[SemanticToken]
 }
 

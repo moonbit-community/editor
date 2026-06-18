@@ -13,11 +13,6 @@ they pass readonly `viewer/model.TextModel` values into the viewer when they
 want a document rendered. Hosts with their own effect system (the Rabbita
 workbench) wrap viewer calls in their command type.
 
-Implementation note: the current checked-in public signatures still expose
-`workspace.DocumentSnapshot` in `set_document`, events, and provider paths.
-That is a temporary mismatch with the Monaco-shaped model boundary, tracked by
-`../docs/exec-plans/monaco-model-viewer-api.md`.
-
 ## Embedding API
 
 - `Viewer::Viewer(services?, options?, theme?, placeholder?)` constructs an
@@ -33,17 +28,18 @@ That is a temporary mismatch with the Monaco-shaped model boundary, tracked by
   host re-renders untouched. While the viewer has no frame it shows the
   host-pushed `placeholder` message inside the view.
 - `Viewer::create(host, ...)` constructs and attaches in one call.
-- `Viewer::set_model(model, view_state?)` is the intended Monaco-shaped document
-  seam: it renders caller-owned readonly editor model state. The host may build
+- `Viewer::set_model(model, view_state?)` is the Monaco-shaped model seam: it
+  renders caller-owned readonly editor model state. The host may build
   that model from memory, a remote protocol, a `workspace.DocumentProvider`, or
   another application source. The viewer keeps URI/version guards so async
   feature results cannot apply to a stale model.
 - `Viewer::clear_model(view_state?)` clears the rendered frame. The host
   decides whether a missing, deleted, or failed source should clear the viewer,
   preserve a previous frame, or show a shell-level error.
-- `Viewer::get_model()`, `save_view_state()`, and `restore_view_state()` expose
-  model identity and scroll state. `ViewStatePolicy` controls whether a new
-  model resets, preserves, or restores viewport state.
+- `Viewer::get_model()`, `current_model()`, `save_view_state()`, and
+  `restore_view_state()` expose model identity and scroll state.
+  `ViewStatePolicy` controls whether a new model resets, preserves, or
+  restores viewport state.
 - `Viewer::dispose()` disposes viewer-owned event emitters. It does not close
   files, cancel provider watches, or own source lifecycle.
 - `on_did_change_model`, `on_did_build_frame`, `on_did_render_model`,
@@ -126,11 +122,11 @@ That is a temporary mismatch with the Monaco-shaped model boundary, tracked by
   column changes. The default no-wrap path keeps the previous horizontal scroll
   behavior.
 - Own readonly folding controls: browser services collect folding ranges,
-  `folding.mbt` tracks folded state for the current document, the common
+  `folding.mbt` tracks folded state for the current model, the common
   `ViewModel` hides folded model lines, and the margin folding overlay renders
   fold/unfold markers aligned with line numbers.
 - Own readonly inlay hint collection and hint hover: browser services collect
-  `InlayHint` provider results per document revision, the common `ViewModel`
+  `InlayHint` provider results per model version, the common `ViewModel`
   projects them as injected text, and the hover participant pipeline serves
   hint tooltip content without asking source hover providers for injected spans.
 - Own readonly selection and copy: `selection.mbt` stores model-range selection
@@ -164,7 +160,8 @@ That is a temporary mismatch with the Monaco-shaped model boundary, tracked by
   and widget views. Hover follows Monaco's timing (request at half the
   300ms delay, display gated at the full delay, loading hover at 3x);
   the delays run on package-local browser-host timer bindings and provider
-  calls run through `ContentHoverComputer` with revision/token staleness guards.
+  calls run through `ContentHoverComputer` with model-version and hover-token
+  staleness guards.
   Marker hover is contributed synchronously from marker decorations; language
   hover is contributed asynchronously from markdown hover providers.
 - Own the per-version render cache: caller-provided model replacements
@@ -187,8 +184,8 @@ focuses on hover until those features can be rebuilt without their bugs.
   viewer renders imperatively. May also depend on `base/common`, `language`,
   `platform/log`, `viewer/common`, `viewer/core`, `viewer/model`,
   `viewer/view_line_renderer`, `viewer/view_layout`, `viewer/view_model`,
-  `syntax`, and `decorations`. It should not depend on `workspace`; any current
-  dependency exists only to support the temporary `DocumentSnapshot` API gap.
+  `syntax`, and `decorations`. It must not depend on `workspace`; hosts adapt
+  source payloads into `viewer/model.TextModel` before calling the viewer.
 - Must not import `remote_protocol`, `websocket`, `workbench`, or
   `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports,
   reads, watches, reload policy, and file lifecycle stay in host packages.

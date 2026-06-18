@@ -727,60 +727,66 @@ fn LspClient::cached_diagnostics_for_document(
 ///|
 impl @language.DiagnosticsProvider for LspLanguageProvider with fn provide_diagnostics(
   self,
-  document,
+  model,
   _token,
 ) {
+  let document = document_from_text_model(model)
   self.client.sync_document(document).diagnostics
 }
 
 ///|
 impl @language.HoverProvider for LspLanguageProvider with fn provide_hover(
   self,
-  document,
+  model,
   position,
   _token,
 ) {
-  let offset = document.offset_at_position(position)
+  let document = document_from_text_model(model)
+  let offset = model.snapshot.offset_at_position(position)
   self.client.hover_at(document, offset)
 }
 
 ///|
 impl @language.DefinitionProvider for LspLanguageProvider with fn provide_definition(
   self,
-  document,
+  model,
   position,
   _token,
 ) {
-  let offset = document.offset_at_position(position)
+  let document = document_from_text_model(model)
+  let offset = model.snapshot.offset_at_position(position)
   self.client.definition_at(document, offset)
 }
 
 ///|
 impl @language.ReferencesProvider for LspLanguageProvider with fn provide_references(
   self,
-  document,
+  model,
   position,
   _token,
 ) {
-  let offset = document.offset_at_position(position)
+  let document = document_from_text_model(model)
+  let offset = model.snapshot.offset_at_position(position)
   self.client.references_at(document, offset)
 }
 
 ///|
 impl @language.DocumentSymbolProvider for LspLanguageProvider with fn provide_document_symbols(
   self,
-  document,
+  model,
   _token,
 ) {
+  let document = document_from_text_model(model)
   self.client.document_symbols(document)
 }
 
 ///|
 impl @language.SemanticTokensProvider for LspLanguageProvider with fn provide_document_semantic_tokens(
   self,
-  document,
+  model,
   _token,
 ) {
+  let document = document_from_text_model(model)
   self.client.semantic_tokens_for_document(document)
 }
 

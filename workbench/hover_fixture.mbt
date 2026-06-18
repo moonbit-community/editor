@@ -29,7 +29,7 @@ fn set_harness_hover_fixture(kind : String, contents : String) -> Unit {
     Some({ kind, contents })
   }
   match viewer_cell.val {
-    Some(viewer) => viewer.refresh_document_features()
+    Some(viewer) => viewer.refresh_model_features()
     None => ()
   }
 }
@@ -37,17 +37,17 @@ fn set_harness_hover_fixture(kind : String, contents : String) -> Unit {
 ///|
 impl @language.HoverProvider for HarnessHoverProvider with fn provide_hover(
   _self,
-  document,
+  model,
   position,
   _token,
 ) {
   match harness_hover_fixture.val {
     Some(fixture) =>
       if fixture.kind == "marker" {
-        Some({ range: harness_marker_range(document), contents: [] })
+        Some({ range: harness_marker_range(model), contents: [] })
       } else {
-        let text = document.text
-        let offset = document.offset_at_position(position)
+        let text = model.snapshot.text
+        let offset = model.snapshot.offset_at_position(position)
         let start = @base_common.clamp_int(offset, 0, text.length())
         let end = @base_common.clamp_int(start + 1, start, text.length())
         let content : @language.HoverContent = if fixture.kind == "markdown" {
@@ -64,7 +64,7 @@ impl @language.HoverProvider for HarnessHoverProvider with fn provide_hover(
 ///|
 impl @language.DiagnosticsProvider for HarnessHoverProvider with fn provide_diagnostics(
   _self,
-  document,
+  model,
   _token,
 ) {
   match harness_hover_fixture.val {
@@ -72,7 +72,7 @@ impl @language.DiagnosticsProvider for HarnessHoverProvider with fn provide_diag
       if fixture.kind == "marker" {
         [
           {
-            range: harness_marker_range(document),
+            range: harness_marker_range(model),
             severity: Warning,
             message: fixture.contents,
           },
@@ -85,15 +85,14 @@ impl @language.DiagnosticsProvider for HarnessHoverProvider with fn provide_diag
 }
 
 ///|
-fn harness_marker_range(
-  document : @workspace.DocumentSnapshot,
-) -> @base_common.Range {
-  if document.line_count() >= 3 {
-    let start = document.offset_at_position({ line: 2, column: 2 })
-    let end = document.offset_at_position({ line: 2, column: 23 })
+fn harness_marker_range(model : @model.TextModel) -> @base_common.Range {
+  let snapshot = model.snapshot
+  if snapshot.line_count() >= 3 {
+    let start = snapshot.offset_at_position({ line: 2, column: 2 })
+    let end = snapshot.offset_at_position({ line: 2, column: 23 })
     Range(start, end)
   } else {
-    let end = if document.length() > 0 { 1 } else { 0 }
+    let end = if snapshot.length() > 0 { 1 } else { 0 }
     Range(0, end)
   }
 }

@@ -35,3 +35,20 @@ test "text model owns uri and version identity" {
   assert_eq(model.revision, "rev-3")
   assert_eq(model.snapshot().text, "pub fn main {}\n")
 }
+
+///|
+test "text model version is the freshness guard" {
+  let uri = @base_common.Uri::memory("main.mbt")
+  let baseline = @model.TextModel(uri, "", "", 0, "rev-a", "one")
+  let same_version_new_revision = @model.TextModel(
+    uri, "main.mbt", "moonbit", 1, "rev-b", "two",
+  )
+  let new_version = @model.TextModel(
+    uri, "main.mbt", "moonbit", 2, "rev-b", "two",
+  )
+  assert_eq(baseline.display_name, "memory://main.mbt")
+  assert_eq(baseline.language_id, "moonbit")
+  assert_eq(baseline.version, 1)
+  assert_true(baseline.same_identity_and_version(same_version_new_revision))
+  assert_true(!baseline.same_identity_and_version(new_version))
+}

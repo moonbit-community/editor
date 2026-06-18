@@ -419,11 +419,11 @@ struct FakeLanguageProvider {}
 ///|
 impl @language.HoverProvider for FakeLanguageProvider with fn provide_hover(
   _self,
-  document,
+  model,
   position,
   _token,
 ) {
-  let offset = document.offset_at_position(position)
+  let offset = model.snapshot.offset_at_position(position)
   Some({
     range: Range(offset, offset + 4),
     contents: [PlainText("Configured hover")],
@@ -444,32 +444,32 @@ fn assert_plaintext_hover(
 ///|
 impl @language.DefinitionProvider for FakeLanguageProvider with fn provide_definition(
   _self,
-  document,
+  model,
   position,
   _token,
 ) {
-  let offset = document.offset_at_position(position)
-  Some({ uri: document.uri, range: Range(offset, offset + 4) })
+  let offset = model.snapshot.offset_at_position(position)
+  Some({ uri: model.uri, range: Range(offset, offset + 4) })
 }
 
 ///|
 impl @language.ReferencesProvider for FakeLanguageProvider with fn provide_references(
   _self,
-  document,
+  model,
   position,
   _token,
 ) {
-  let offset = document.offset_at_position(position)
+  let offset = model.snapshot.offset_at_position(position)
   [
-    { uri: document.uri, range: Range(offset, offset + 4) },
-    { uri: document.uri, range: Range(0, 4) },
+    { uri: model.uri, range: Range(offset, offset + 4) },
+    { uri: model.uri, range: Range(0, 4) },
   ]
 }
 
 ///|
 impl @language.DiagnosticsProvider for FakeLanguageProvider with fn provide_diagnostics(
   _self,
-  _document,
+  _model,
   _token,
 ) {
   [{ range: Range(0, 4), severity: Warning, message: "Configured diagnostic" }]
@@ -478,7 +478,7 @@ impl @language.DiagnosticsProvider for FakeLanguageProvider with fn provide_diag
 ///|
 impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_document_symbols(
   _self,
-  _document,
+  _model,
   _token,
 ) {
   [{ name: "configured", kind: "function", range: Range(7, 17) }]
@@ -487,7 +487,7 @@ impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_d
 ///|
 impl @language.SemanticTokensProvider for FakeLanguageProvider with fn provide_document_semantic_tokens(
   _self,
-  _document,
+  _model,
   _token,
 ) {
   [{ range: Range(7, 17), token_type: "function" }]
@@ -496,7 +496,7 @@ impl @language.SemanticTokensProvider for FakeLanguageProvider with fn provide_d
 ///|
 impl @language.FoldingRangeProvider for FakeLanguageProvider with fn provide_folding_ranges(
   _self,
-  _document,
+  _model,
   _token,
 ) {
   [FoldingRange(1, 3, kind=Region)]
@@ -505,7 +505,7 @@ impl @language.FoldingRangeProvider for FakeLanguageProvider with fn provide_fol
 ///|
 impl @language.InlayHintsProvider for FakeLanguageProvider with fn provide_inlay_hints(
   _self,
-  _document,
+  _model,
   _range,
   _token,
 ) {

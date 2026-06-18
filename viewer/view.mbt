@@ -247,8 +247,8 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   match (self.pending_rendered, self.frame) {
     (Some(pending), Some(frame)) => {
       self.pending_rendered = None
-      self.did_render_document.fire({
-        document: pending.document,
+      self.did_render_model.fire({
+        model: pending.model,
         line_count: frame.line_count,
         rendered_lines: frame.lines.length(),
         diagnostics: frame.diagnostics,

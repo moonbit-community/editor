@@ -25,17 +25,17 @@ pub fn LanguageFilter::LanguageFilter(
 }
 
 ///|
-/// Whether this selector accepts a document snapshot.
+/// Whether this selector accepts a text model.
 pub fn LanguageSelector::matches(
   self : LanguageSelector,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
 ) -> Bool {
   match self {
-    LanguageId(language_id) => document.language_id == language_id
-    LanguageFilter(filter) => filter.matches(document)
+    LanguageId(language_id) => model.language_id == language_id
+    LanguageFilter(filter) => filter.matches(model)
     LanguageSelectorList(selectors) => {
       for selector in selectors {
-        if selector.matches(document) {
+        if selector.matches(model) {
           return true
         }
       }
@@ -45,21 +45,21 @@ pub fn LanguageSelector::matches(
 }
 
 ///|
-/// Whether this filter accepts a document snapshot.
+/// Whether this filter accepts a text model.
 pub fn LanguageFilter::matches(
   self : LanguageFilter,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
 ) -> Bool {
   match self.language {
-    Some(language) => if language != document.language_id { return false }
+    Some(language) => if language != model.language_id { return false }
     None => ()
   }
   match self.scheme {
-    Some(scheme) => if scheme != document.uri.scheme() { return false }
+    Some(scheme) => if scheme != model.uri.scheme() { return false }
     None => ()
   }
   match self.pattern {
-    Some(pattern) => path_pattern_matches(pattern, document.uri.path())
+    Some(pattern) => path_pattern_matches(pattern, model.uri.path())
     None => true
   }
 }

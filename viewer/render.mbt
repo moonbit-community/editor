@@ -1,17 +1,16 @@
 ///|
-/// Builds (or reuses) the per-version tokenized document, buckets the
+/// Builds (or reuses) the per-version tokenized model, buckets the
 /// feature data into a frame source, and emits the frame for the current
-/// layout window. Only the tokenize step depends on document size; cache
+/// layout window. Only the tokenize step depends on model size; cache
 /// hits skip it entirely. Synchronous CPU work; the paint happens in the
 /// next render flush.
-fn Viewer::render_current_document(
+fn Viewer::render_current_model(
   self : Viewer,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   fresh~ : Bool,
   request_language~ : Bool,
   view_state? : ViewStatePolicy = PreserveAnchor,
 ) -> Unit {
-  let model = self.text_model_for_snapshot(document)
   let marker_diagnostics = self.services.markers.diagnostics_for_resource(
     model.uri,
   )
@@ -39,14 +38,10 @@ fn Viewer::render_current_document(
   )
   let source = @view_model.FrameSource(tokenized, decorations, providers)
   let view_model = self.build_view_model(source)
-  // Only a rotated document identity or revision renders from the top when the
+  // Only a rotated model identity or version renders from the top when the
   // caller requested reset semantics.
-  let rotated = match self.source_document {
-    Some(_) =>
-      match self.text_model {
-        Some(current) => !current.same_identity_and_version(model)
-        None => true
-      }
+  let rotated = match self.text_model {
+    Some(current) => !current.same_identity_and_version(model)
     None => true
   }
   self.apply_view_model_layout(view_model, tokenized.snapshot)
@@ -62,11 +57,10 @@ fn Viewer::render_current_document(
   self.frame_source = Some(source)
   self.view_model = Some(view_model)
   self.frame = Some(frame)
-  self.source_document = Some(document)
   self.text_model = Some(model)
   self.content_generation += 1
   self.did_build_frame.fire({
-    document,
+    model,
     line_count: frame.line_count,
     token_count: tokenized.token_count,
     diagnostic_count: marker_diagnostics.length(),
@@ -81,41 +75,12 @@ fn Viewer::render_current_document(
       Some(pending) => pending.fresh
       None => false
     })
-  self.pending_rendered = Some({ document, fresh })
+  self.pending_rendered = Some({ model, fresh })
   self.measure_requested = true
   self.schedule_render()
   if request_language {
-    self.request_document_features(document)
+    self.request_model_features(model)
   }
-}
-
-///|
-fn Viewer::text_model_for_snapshot(
-  self : Viewer,
-  document : @workspace.DocumentSnapshot,
-) -> @model.TextModel {
-  let version = match self.text_model {
-    Some(current) =>
-      if current.uri.to_string() == document.uri.to_string() &&
-        current.revision == document.revision {
-        current.version
-      } else {
-        self.render_version += 1
-        self.render_version
-      }
-    None => {
-      self.render_version += 1
-      self.render_version
-    }
-  }
-  TextModel(
-    document.uri,
-    document.display_name,
-    document.language_id,
-    version,
-    document.revision,
-    document.text,
-  )
 }
 
 ///|
@@ -163,8 +128,8 @@ fn Viewer::rebuild_current_view_model_for_options(self : Viewer) -> Unit {
         Some(pending) => pending.fresh
         None => false
       }
-      match self.source_document {
-        Some(document) => self.pending_rendered = Some({ document, fresh })
+      match self.text_model {
+        Some(model) => self.pending_rendered = Some({ model, fresh })
         None => ()
       }
     }

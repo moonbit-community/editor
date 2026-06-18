@@ -13,15 +13,16 @@ extern "js" fn install_host_capabilities() -> Unit =
   #| }
 
 ///|
-/// Publishes the current document JSON on harness globals.
-extern "js" fn set_current_document(payload : String) -> Unit =
+/// Publishes the current model JSON on harness globals.
+extern "js" fn set_current_model(payload : String) -> Unit =
   #| (payload) => {
   #|   try {
-  #|     const document = JSON.parse(payload);
-  #|     globalThis.__readonlyEditorDocument = document;
-  #|     globalThis.__readonlyEditorSource = typeof document.text === "string" ? document.text : "";
+  #|     const model = JSON.parse(payload);
+  #|     globalThis.__readonlyEditorModel = model;
+  #|     globalThis.__readonlyEditorDocument = model;
+  #|     globalThis.__readonlyEditorSource = typeof model.text === "string" ? model.text : "";
   #|   } catch (error) {
-  #|     console.error("[readonly-editor]", "document:state-error", error);
+  #|     console.error("[readonly-editor]", "model:state-error", error);
   #|   }
   #| }
 

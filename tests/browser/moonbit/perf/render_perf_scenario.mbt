@@ -15,8 +15,8 @@ fn run_render_perf_test() -> Unit {
   match mount_host() {
     Some(host) => {
       let viewer = @viewer.Viewer(placeholder="Loading performance fixture...")
-      viewer.on_did_render_document(event => {
-        if event.fresh && event.document.uri.to_string().contains("large") {
+      viewer.on_did_render_model(event => {
+        if event.fresh && event.model.uri.to_string().contains("large") {
           record_sample(
             ctx, viewer_ref, large_text, done, sample_index, sample_start, samples,
           )
@@ -81,10 +81,14 @@ fn run_next_sample(
     "sample_" + sample_index.val.to_string()
   }
   let uri = @base_common.Uri::memory("perf/large_" + name + ".mbt")
-  viewer.set_document(
-    @workspace.DocumentSnapshot::from_content(
+  viewer.set_model(
+    TextModel(
       uri,
-      DocumentContent(large_text, display_name=uri.display_name()),
+      uri.display_name(),
+      "moonbit",
+      sample_index.val + 2,
+      "perf-" + name,
+      large_text,
     ),
     view_state=Reset,
   )

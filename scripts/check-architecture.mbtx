@@ -37,12 +37,30 @@ async fn main {
   }
   check_package_imports(errors)
   check_platform_log_imports(errors)
+  check_model_boundary_imports(errors)
   check_language_package_imports(errors)
   if errors.length() > 0 {
     println(errors.join("\n"))
     fail("Architecture checks failed")
   }
   println("Architecture checks passed")
+}
+
+///|
+/// Viewer and language public APIs are model-based. Workspace source payloads
+/// are adapted by host packages before they cross those boundaries.
+async fn check_model_boundary_imports(errors : Array[String]) -> Unit {
+  let forbidden = ["baozhiyuan/editor/workspace"]
+  for manifest in ["viewer/moon.pkg", "language/moon.pkg"] {
+    if @fs.exists(manifest) {
+      reject_imports(
+        manifest,
+        package_imports(@fs.read_file(manifest).text()),
+        forbidden,
+        errors,
+      )
+    }
+  }
 }
 
 ///|

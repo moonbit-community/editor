@@ -29,9 +29,7 @@ pub fn FoldingRange::FoldingRange(
 ///|
 /// Document-level folding range provider.
 pub(open) trait FoldingRangeProvider {
-  async fn provide_folding_ranges(
-    Self,
-    @workspace.DocumentSnapshot,
-    CancellationToken,
-  ) -> Array[FoldingRange]
+  async fn provide_folding_ranges(Self, @model.TextModel, CancellationToken) -> Array[
+    FoldingRange,
+  ]
 }

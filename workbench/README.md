@@ -40,7 +40,7 @@ remote protocol transport.
   structured `[readonly-editor]` events (`dom:mounted`, `moonbit:render`,
   `view:scroll`, `language:*`) documented in `../docs/harness.md`, and
   installs the `__readonlyEditorScrollTo` scroll control. Workbench owns the
-  browser-host helpers for harness globals, current-document exposure, theme
+  browser-host helpers for harness globals, current-model exposure, theme
   storage, and protocol URL derivation. Workbench also installs the concrete
   runtime logger sink: provider failures go through `LogService`, and
   warning/error entries become the existing `language:error` harness event.
@@ -58,11 +58,6 @@ remote protocol transport.
 - Module-level `Ref` registries (the app dispatcher, the protocol send
   hook, pending protocol requests, the viewer and tree singletons) stay
   inside this package.
-
-Implementation note: the checked-in workbench still calls `viewer.set_document`
-with `workspace.DocumentSnapshot` while the viewer API migration is pending.
-That is implementation debt in the shell adapter, not the intended viewer
-boundary.
 
 ## Checks
 

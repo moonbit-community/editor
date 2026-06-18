@@ -192,10 +192,11 @@ async test "lsp client requests symbols and semantic tokens through provider ada
   let client = LspClient::LspClient(transport)
   let provider = client.language_provider()
   let document = test_document(1, "pub fn main {}\n")
+  let model = text_model_from_document(document)
 
   let symbols = provider
     .as_document_symbol_provider()
-    .provide_document_symbols(document, @language.CancellationToken::none())
+    .provide_document_symbols(model, @language.CancellationToken::none())
   assert_eq(symbols.length(), 2)
   assert_eq(symbols[0].name, "main")
   assert_eq(symbols[0].kind, "function")
@@ -206,7 +207,7 @@ async test "lsp client requests symbols and semantic tokens through provider ada
   let tokens = provider
     .as_semantic_tokens_provider()
     .provide_document_semantic_tokens(
-      document,
+      model,
       @language.CancellationToken::none(),
     )
   assert_eq(tokens.length(), 1)

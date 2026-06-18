@@ -185,21 +185,21 @@ pub fn Languages::register_inlay_hints_provider(
 /// Returns the first non-empty hover answer in provider order.
 async fn Languages::hover_at(
   self : Languages,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   offset : Int,
   log_service : @log.LogService,
 ) -> @language.Hover? noraise {
-  let position = document.position_at_offset(offset)
+  let position = model.snapshot.position_at_offset(offset)
   let token = @language.CancellationToken::none()
   for index in 0..<self.hover_provider.entries.length() {
     let entry = self.hover_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(document) {
+    if !entry.active.val || !entry.selector.matches(model) {
       continue
     }
     match
-      (entry.provider.provide_hover(document, position, token) catch {
+      (entry.provider.provide_hover(model, position, token) catch {
         _ => {
-          log_provider_failure(log_service, "language.hover", document, index)
+          log_provider_failure(log_service, "language.hover", model, index)
           None
         }
       }) {
@@ -213,24 +213,22 @@ async fn Languages::hover_at(
 ///|
 /// Refreshes diagnostics from every provider, passing each provider's owner id
 /// to the caller so marker ownership can be replaced independently.
-async fn Languages::diagnostics_for_document(
+async fn Languages::diagnostics_for_model(
   self : Languages,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   apply : (String, Array[@language.Diagnostic]) -> Unit,
   log_service : @log.LogService,
 ) -> Unit noraise {
   let token = @language.CancellationToken::none()
   for index in 0..<self.diagnostics_provider.entries.length() {
     let entry = self.diagnostics_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(document) {
+    if !entry.active.val || !entry.selector.matches(model) {
       continue
     }
     let owner = "diagnostics:" + index.to_string()
-    let diagnostics = entry.provider.provide_diagnostics(document, token) catch {
+    let diagnostics = entry.provider.provide_diagnostics(model, token) catch {
       _ => {
-        log_provider_failure(
-          log_service, "language.diagnostics", document, index,
-        )
+        log_provider_failure(log_service, "language.diagnostics", model, index)
         []
       }
     }
@@ -242,20 +240,20 @@ async fn Languages::diagnostics_for_document(
 /// Concatenates document-symbol results from every provider.
 async fn Languages::document_symbols(
   self : Languages,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   log_service : @log.LogService,
 ) -> Array[@language.DocumentSymbol] noraise {
   let symbols : Array[@language.DocumentSymbol] = []
   let token = @language.CancellationToken::none()
   for index in 0..<self.document_symbol_provider.entries.length() {
     let entry = self.document_symbol_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(document) {
+    if !entry.active.val || !entry.selector.matches(model) {
       continue
     }
-    let result = entry.provider.provide_document_symbols(document, token) catch {
+    let result = entry.provider.provide_document_symbols(model, token) catch {
       _ => {
         log_provider_failure(
-          log_service, "language.documentSymbols", document, index,
+          log_service, "language.documentSymbols", model, index,
         )
         []
       }
@@ -267,24 +265,22 @@ async fn Languages::document_symbols(
 
 ///|
 /// Concatenates semantic-token results from every provider.
-async fn Languages::semantic_tokens_for_document(
+async fn Languages::semantic_tokens_for_model(
   self : Languages,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   log_service : @log.LogService,
 ) -> Array[@language.SemanticToken] noraise {
   let tokens : Array[@language.SemanticToken] = []
   let token = @language.CancellationToken::none()
   for index in 0..<self.semantic_tokens_provider.entries.length() {
     let entry = self.semantic_tokens_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(document) {
+    if !entry.active.val || !entry.selector.matches(model) {
       continue
     }
-    let result = entry.provider.provide_document_semantic_tokens(
-      document, token,
-    ) catch {
+    let result = entry.provider.provide_document_semantic_tokens(model, token) catch {
       _ => {
         log_provider_failure(
-          log_service, "language.semanticTokens", document, index,
+          log_service, "language.semanticTokens", model, index,
         )
         []
       }
@@ -297,22 +293,22 @@ async fn Languages::semantic_tokens_for_document(
 ///|
 /// Concatenates folding-range results, falling back to MoonBit indentation
 /// ranges when no provider answers.
-async fn Languages::folding_ranges_for_document(
+async fn Languages::folding_ranges_for_model(
   self : Languages,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   log_service : @log.LogService,
 ) -> Array[@language.FoldingRange] noraise {
   let ranges : Array[@language.FoldingRange] = []
   let token = @language.CancellationToken::none()
   for index in 0..<self.folding_range_provider.entries.length() {
     let entry = self.folding_range_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(document) {
+    if !entry.active.val || !entry.selector.matches(model) {
       continue
     }
-    let result = entry.provider.provide_folding_ranges(document, token) catch {
+    let result = entry.provider.provide_folding_ranges(model, token) catch {
       _ => {
         log_provider_failure(
-          log_service, "language.foldingRanges", document, index,
+          log_service, "language.foldingRanges", model, index,
         )
         []
       }
@@ -322,30 +318,28 @@ async fn Languages::folding_ranges_for_document(
   if ranges.length() > 0 {
     ranges
   } else {
-    fallback_folding_ranges(document)
+    fallback_folding_ranges(model)
   }
 }
 
 ///|
 /// Concatenates inlay-hint results from every provider.
-async fn Languages::inlay_hints_for_document(
+async fn Languages::inlay_hints_for_model(
   self : Languages,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   log_service : @log.LogService,
 ) -> Array[@language.InlayHint] noraise {
   let hints : Array[@language.InlayHint] = []
   let token = @language.CancellationToken::none()
-  let full_range = @base_common.Range(0, document.length())
+  let full_range = @base_common.Range(0, model.snapshot.length())
   for index in 0..<self.inlay_hints_provider.entries.length() {
     let entry = self.inlay_hints_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(document) {
+    if !entry.active.val || !entry.selector.matches(model) {
       continue
     }
-    let result = entry.provider.provide_inlay_hints(document, full_range, token) catch {
+    let result = entry.provider.provide_inlay_hints(model, full_range, token) catch {
       _ => {
-        log_provider_failure(
-          log_service, "language.inlayHints", document, index,
-        )
+        log_provider_failure(log_service, "language.inlayHints", model, index)
         []
       }
     }
@@ -358,12 +352,12 @@ async fn Languages::inlay_hints_for_document(
 fn log_provider_failure(
   log_service : @log.LogService,
   category : String,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   index : Int,
 ) -> Unit {
   log_service.warn(category, "provider failed", details=[
-    ("document", document.uri.to_string()),
-    ("revision", document.revision),
+    ("model", model.uri.to_string()),
+    ("revision", model.revision),
     ("providerIndex", index.to_string()),
   ])
 }

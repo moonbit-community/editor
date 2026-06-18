@@ -42,7 +42,7 @@ priv enum WorkbenchMsg {
 priv enum WorkbenchViewerEvent {
   DidChangeDiagnostics(@viewer.ViewerDiagnosticsChangedEvent)
   DidBuildFrame(@viewer.ViewerFrameBuiltEvent)
-  DidRenderDocument(@viewer.ViewerDocumentRenderedEvent)
+  DidRenderModel(@viewer.ViewerModelRenderedEvent)
   DidResolveHover(@viewer.ViewerHoverResolvedEvent)
   DidScroll(@viewer.ViewerScrollEvent)
   DidDispose
@@ -82,6 +82,9 @@ let viewer_cell : Ref[@viewer.Viewer?] = Ref(None)
 
 ///|
 let viewer_services_cell : Ref[@viewer.ViewerServices?] = Ref(None)
+
+///|
+let workbench_model_version : Ref[Int] = Ref(0)
 
 ///|
 fn workbench_services() -> @viewer.ViewerServices {
@@ -124,8 +127,8 @@ fn install_viewer_event_subscriptions(viewer : @viewer.Viewer) -> Unit {
     dispatch_workbench_msg(ViewerEvent(DidBuildFrame(event)))
   })
   |> ignore
-  viewer.on_did_render_document(event => {
-    dispatch_workbench_msg(ViewerEvent(DidRenderDocument(event)))
+  viewer.on_did_render_model(event => {
+    dispatch_workbench_msg(ViewerEvent(DidRenderModel(event)))
   })
   |> ignore
   viewer.on_did_resolve_hover(event => {
@@ -349,7 +352,7 @@ fn select_workspace_update(
 }
 
 ///|
-/// Host-owned document read results are translated into direct viewer document
+/// Host-owned document read results are translated into direct viewer model
 /// calls or shell-level source errors.
 fn active_document_read_update(
   model : WorkbenchModel,
@@ -357,11 +360,13 @@ fn active_document_read_update(
   view_state : @viewer.ViewStatePolicy,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   match result {
-    DocumentLoaded(document) =>
+    DocumentLoaded(document) => {
+      let text_model = document_to_text_model(document)
       (
-        viewer_cmd(() => workbench_viewer().set_document(document, view_state~)),
+        viewer_cmd(() => workbench_viewer().set_model(text_model, view_state~)),
         model,
       )
+    }
     DocumentNotFound(uri) =>
       active_document_error_update(
         model,
@@ -379,13 +384,15 @@ fn active_document_change_update(
   match change {
     DocumentInvalidated(uri~, ..) =>
       (reload_active_document_cmd(uri, PreserveAnchor), model)
-    DocumentUpdated(document) =>
+    DocumentUpdated(document) => {
+      let text_model = document_to_text_model(document)
       (
         viewer_cmd(() => {
-          workbench_viewer().set_document(document, view_state=PreserveAnchor)
+          workbench_viewer().set_model(text_model, view_state=PreserveAnchor)
         }),
         model,
       )
+    }
     DocumentDeleted(uri) =>
       active_document_error_update(
         model,
@@ -403,7 +410,7 @@ fn active_document_error_update(
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   emit_event("language:error", error.to_json().stringify())
   let clear = viewer_cmd(() => {
-    workbench_viewer().clear_document(view_state=PreserveAnchor)
+    workbench_viewer().clear_model(view_state=PreserveAnchor)
   })
   if error.code == FileNotFound {
     (
@@ -442,18 +449,18 @@ fn viewer_event_update(
       (@rabbita.none, model)
     }
     DidBuildFrame(event) => {
-      set_current_document(event.document.to_json().stringify())
+      set_current_model(text_model_harness_json(event.model))
       emit_render_event(
         event.line_count,
         event.token_count,
         event.diagnostic_count,
-        event.document.revision,
+        event.model.revision,
         event.tokenize_ms,
         event.build_ms,
       )
       (@rabbita.none, model)
     }
-    DidRenderDocument(event) => {
+    DidRenderModel(event) => {
       emit_dom_mounted(
         event.rendered_lines,
         event.diagnostics.length(),
@@ -464,7 +471,7 @@ fn viewer_event_update(
         ..model,
         status: "ready",
         status_message: "",
-        document: Some(document_to_view(event.document)),
+        document: Some(model_to_view(event.model)),
         line_count: event.line_count,
         diagnostics: event.diagnostics,
         viewer_has_frame: true,
@@ -472,7 +479,7 @@ fn viewer_event_update(
       if event.fresh {
         // The viewer lifecycle drives the explorer's autoReveal: a freshly
         // loaded document expands its ancestor chain and selects its row.
-        (workspace_file_tree().set_active(event.document.uri), next)
+        (workspace_file_tree().set_active(event.model.uri), next)
       } else {
         (@rabbita.none, next)
       }
@@ -603,15 +610,41 @@ fn protocol_error_update(
 }
 
 ///|
-fn document_to_view(
+fn document_to_text_model(
   document : @workspace.DocumentSnapshot,
-) -> WorkbenchDocumentView {
+) -> @model.TextModel {
+  workbench_model_version.val = workbench_model_version.val + 1
+  TextModel(
+    document.uri,
+    document.display_name,
+    document.language_id,
+    workbench_model_version.val,
+    document.revision,
+    document.text,
+  )
+}
+
+///|
+fn model_to_view(model : @model.TextModel) -> WorkbenchDocumentView {
   {
-    uri: document.uri.to_string(),
-    display_name: document.display_name,
-    language_id: document.language_id,
-    revision: document.revision,
+    uri: model.uri.to_string(),
+    display_name: model.display_name,
+    language_id: model.language_id,
+    revision: model.revision,
   }
+}
+
+///|
+fn text_model_harness_json(model : @model.TextModel) -> String {
+  let mut payload = "{"
+  payload = payload + "\"uri\":" + json_string(model.uri.to_string())
+  payload = payload + ",\"displayName\":" + json_string(model.display_name)
+  payload = payload + ",\"languageId\":" + json_string(model.language_id)
+  payload = payload + ",\"version\":" + model.version.to_string()
+  payload = payload + ",\"revision\":" + json_string(model.revision)
+  payload = payload + ",\"text\":" + json_string(model.snapshot.text)
+  payload = payload + "}"
+  payload
 }
 
 ///|

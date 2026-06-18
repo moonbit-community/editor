@@ -2,7 +2,7 @@
 // package boundary: the viewer library plus the file-tree widget mounted
 // against in-memory documents and an in-memory tree provider, with zero server
 // or websocket involvement. The host owns document selection and passes
-// snapshots directly to the viewer.
+// text models directly to the viewer.
 
 ///|
 let memory_root : String = "memory://workspace"
@@ -26,7 +26,7 @@ fn startup_sub(cmd : @cmd.Cmd) -> @sub.Sub {
 ///|
 /// In-memory workspace backend: a handful of hardcoded documents and
 /// directories. The tree widget uses the `workspace` tree trait; the viewer
-/// receives snapshots directly from host code.
+/// receives text models directly from host code.
 priv struct MemoryWorkspace {
   root_uri : @base_common.Uri
   directories : Map[String, Array[@workspace.WorkspaceStat]]
@@ -92,20 +92,6 @@ fn memory_workspace() -> MemoryWorkspace {
 }
 
 ///|
-fn MemoryWorkspace::snapshot(
-  self : MemoryWorkspace,
-  uri : @base_common.Uri,
-) -> @workspace.DocumentSnapshot? {
-  match self.documents.get(uri.to_string()) {
-    Some(text) =>
-      Some(
-        @workspace.DocumentSnapshot::from_content(uri, DocumentContent(text)),
-      )
-    None => None
-  }
-}
-
-///|
 impl @workspace.WorkspaceTreeProvider for MemoryWorkspace with fn root(self) {
   self.root_uri
 }
@@ -134,6 +120,38 @@ impl @workspace.WorkspaceTreeProvider for MemoryWorkspace with fn resolve(
 let workspace_backend : MemoryWorkspace = memory_workspace()
 
 ///|
+let embed_model_version : Ref[Int] = Ref(0)
+
+///|
+fn next_embed_model_version() -> Int {
+  embed_model_version.val = embed_model_version.val + 1
+  embed_model_version.val
+}
+
+///|
+fn MemoryWorkspace::model(
+  self : MemoryWorkspace,
+  uri : @base_common.Uri,
+) -> @model.TextModel? {
+  match self.documents.get(uri.to_string()) {
+    Some(text) => {
+      let version = next_embed_model_version()
+      Some(
+        TextModel(
+          uri,
+          uri.display_name(),
+          @workspace.infer_language_id(uri.display_name()),
+          version,
+          "memory-" + version.to_string(),
+          text,
+        ),
+      )
+    }
+    None => None
+  }
+}
+
+///|
 priv struct EmbedModel {
   status : String
 }
@@ -142,7 +160,7 @@ priv struct EmbedModel {
 priv enum EmbedMsg {
   Boot
   OpenFile(@base_common.Uri)
-  ViewerRendered(@viewer.ViewerDocumentRenderedEvent)
+  ViewerRendered(@viewer.ViewerModelRenderedEvent)
   ViewerFailed
 }
 
@@ -166,7 +184,7 @@ fn embed_viewer() -> @viewer.Viewer {
     Some(viewer) => viewer
     None => {
       let viewer = @viewer.Viewer(placeholder="Loading source...")
-      viewer.on_did_render_document(event => {
+      viewer.on_did_render_model(event => {
         dispatch_embed_msg(ViewerRendered(event))
       })
       |> ignore
@@ -213,7 +231,7 @@ fn update_embed(
     OpenFile(uri) => (open_embed_document_cmd(uri), model)
     ViewerRendered(event) => {
       let cmd = if event.fresh {
-        embed_tree().set_active(event.document.uri)
+        embed_tree().set_active(event.model.uri)
       } else {
         @rabbita.none
       }
@@ -226,8 +244,8 @@ fn update_embed(
 ///|
 fn open_embed_document_cmd(uri : @base_common.Uri) -> @rabbita.Cmd {
   @cmd.custom_cmd(_ => {
-    match workspace_backend.snapshot(uri) {
-      Some(document) => embed_viewer().set_document(document, view_state=Reset)
+    match workspace_backend.model(uri) {
+      Some(model) => embed_viewer().set_model(model, view_state=Reset)
       None => dispatch_embed_msg(ViewerFailed)
     }
   })

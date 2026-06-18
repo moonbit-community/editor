@@ -10,8 +10,13 @@ pub(all) struct TextModel {
 } derive(Debug)
 
 ///|
-/// Builds a readonly text model and normalizes empty display name, language id,
-/// and non-positive version inputs.
+/// Builds a readonly text model.
+///
+/// `version` is the editor-model freshness guard: hosts should increment it
+/// whenever they install new content for the same URI. `revision` is optional
+/// source metadata such as a remote provider revision or content hash.
+/// Empty display name and language id are normalized; non-positive versions
+/// become version 1.
 pub fn TextModel::TextModel(
   uri : @base_common.Uri,
   display_name : String,
@@ -39,7 +44,8 @@ pub fn TextModel::snapshot(self : TextModel) -> TextSnapshot {
 }
 
 ///|
-/// Stable current-document identity guard used to drop stale async work.
+/// Stable current-model identity guard used to drop stale async work.
+/// URI and model version decide freshness; source revisions are metadata.
 pub fn TextModel::same_identity_and_version(
   self : TextModel,
   other : TextModel,

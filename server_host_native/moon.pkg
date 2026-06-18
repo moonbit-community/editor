@@ -3,6 +3,7 @@ import {
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/remote_protocol",
   "baozhiyuan/editor/server",
+  "baozhiyuan/editor/viewer/model",
   "baozhiyuan/editor/workspace",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",

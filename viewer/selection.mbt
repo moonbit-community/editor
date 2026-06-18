@@ -75,8 +75,8 @@ fn Viewer::position_for_selection_target(
   }
   match target.kind {
     ContentText | ContentEmpty =>
-      match self.source_document {
-        Some(document) => Some(document.position_at_offset(target.offset))
+      match self.text_model {
+        Some(model) => Some(model.snapshot.position_at_offset(target.offset))
         None => None
       }
     _ => None

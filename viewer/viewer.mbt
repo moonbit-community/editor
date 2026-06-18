@@ -13,9 +13,9 @@
 pub struct Viewer {
   priv services : ViewerServices
   priv mut options : ViewerOptions
-  priv did_open_document : @base_common.Emitter[@workspace.DocumentSnapshot]
+  priv did_change_model : @base_common.Emitter[@model.TextModel]
   priv did_build_frame : @base_common.Emitter[ViewerFrameBuiltEvent]
-  priv did_render_document : @base_common.Emitter[ViewerDocumentRenderedEvent]
+  priv did_render_model : @base_common.Emitter[ViewerModelRenderedEvent]
   priv did_change_diagnostics : @base_common.Emitter[
     ViewerDiagnosticsChangedEvent,
   ]
@@ -28,7 +28,6 @@ pub struct Viewer {
   priv mut frame : @view_model.RenderFrame?
   priv mut view_model : @view_model.ViewModel?
   priv mut frame_source : @view_model.FrameSource?
-  priv mut source_document : @workspace.DocumentSnapshot?
   priv mut text_model : @model.TextModel?
   priv mut provider_result : @language.ProviderResult
   priv mut folding_ranges : Array[@language.FoldingRange]
@@ -41,7 +40,6 @@ pub struct Viewer {
   priv mut char_width : Double
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
-  priv mut render_version : Int
   priv mut view : View?
   priv mut render_pending : Bool
   priv mut measure_requested : Bool
@@ -56,7 +54,7 @@ pub struct Viewer {
 
 ///|
 priv struct PendingRendered {
-  document : @workspace.DocumentSnapshot
+  model : @model.TextModel
   fresh : Bool
 }
 
@@ -74,8 +72,9 @@ pub(all) struct ViewerViewState {
 } derive(Debug)
 
 ///|
-pub(all) struct CurrentDocument {
+pub(all) struct CurrentModel {
   uri : @base_common.Uri
+  version : Int
   revision : String
   language_id : String
   display_name : String
@@ -91,7 +90,7 @@ pub(all) struct ViewerDiagnosticsChangedEvent {
 
 ///|
 pub(all) struct ViewerFrameBuiltEvent {
-  document : @workspace.DocumentSnapshot
+  model : @model.TextModel
   line_count : Int
   token_count : Int
   diagnostic_count : Int
@@ -100,8 +99,8 @@ pub(all) struct ViewerFrameBuiltEvent {
 } derive(Debug)
 
 ///|
-pub(all) struct ViewerDocumentRenderedEvent {
-  document : @workspace.DocumentSnapshot
+pub(all) struct ViewerModelRenderedEvent {
+  model : @model.TextModel
   line_count : Int
   rendered_lines : Int
   diagnostics : Array[@language.Diagnostic]
@@ -133,9 +132,9 @@ pub fn Viewer::Viewer(
   {
     services,
     options,
-    did_open_document: @base_common.Emitter::new(),
+    did_change_model: @base_common.Emitter::new(),
     did_build_frame: @base_common.Emitter::new(),
-    did_render_document: @base_common.Emitter::new(),
+    did_render_model: @base_common.Emitter::new(),
     did_change_diagnostics: @base_common.Emitter::new(),
     did_resolve_hover: @base_common.Emitter::new(),
     did_scroll: @base_common.Emitter::new(),
@@ -146,7 +145,6 @@ pub fn Viewer::Viewer(
     frame: None,
     view_model: None,
     frame_source: None,
-    source_document: None,
     text_model: None,
     provider_result: @language.ProviderResult::empty(),
     folding_ranges: [],
@@ -159,7 +157,6 @@ pub fn Viewer::Viewer(
     char_width: 0.0,
     soft_wrap_column: 0,
     max_line_length: 0,
-    render_version: 0,
     view: None,
     render_pending: false,
     measure_requested: false,
@@ -185,11 +182,11 @@ pub fn Viewer::create(
 }
 
 ///|
-pub fn Viewer::on_did_open_document(
+pub fn Viewer::on_did_change_model(
   self : Viewer,
-  listener : (@workspace.DocumentSnapshot) -> Unit,
+  listener : (@model.TextModel) -> Unit,
 ) -> @base_common.Disposable {
-  self.did_open_document.event(listener)
+  self.did_change_model.event(listener)
 }
 
 ///|
@@ -201,11 +198,11 @@ pub fn Viewer::on_did_build_frame(
 }
 
 ///|
-pub fn Viewer::on_did_render_document(
+pub fn Viewer::on_did_render_model(
   self : Viewer,
-  listener : (ViewerDocumentRenderedEvent) -> Unit,
+  listener : (ViewerModelRenderedEvent) -> Unit,
 ) -> @base_common.Disposable {
-  self.did_render_document.event(listener)
+  self.did_render_model.event(listener)
 }
 
 ///|
@@ -282,14 +279,14 @@ pub fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
 }
 
 ///|
-/// Renders caller-owned immutable document state. Source reads, watches,
+/// Renders caller-owned immutable text model state. Source reads, watches,
 /// reloads, and error policy belong to the host.
-pub fn Viewer::set_document(
+pub fn Viewer::set_model(
   self : Viewer,
-  snapshot : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   view_state? : ViewStatePolicy = PreserveAnchor,
 ) -> Unit {
-  self.services.markers.clear_resource(snapshot.uri)
+  self.services.markers.clear_resource(model.uri)
   self.provider_result = @language.ProviderResult::empty()
   self.folding_ranges = []
   self.folded_ranges = []
@@ -299,26 +296,33 @@ pub fn Viewer::set_document(
     self.selection_dragging = false
     self.hover = self.hover.cleared()
   }
-  self.render_current_document(
-    snapshot,
+  self.render_current_model(
+    model,
     fresh=true,
     request_language=true,
     view_state~,
   )
-  self.did_open_document.fire(snapshot)
+  self.did_change_model.fire(model)
 }
 
 ///|
-/// Returns the current document identity and viewport facts.
-pub fn Viewer::current_document(self : Viewer) -> CurrentDocument? {
-  match self.source_document {
-    Some(document) => {
+/// Returns the current model installed on the viewer.
+pub fn Viewer::get_model(self : Viewer) -> @model.TextModel? {
+  self.text_model
+}
+
+///|
+/// Returns the current model identity and viewport facts.
+pub fn Viewer::current_model(self : Viewer) -> CurrentModel? {
+  match self.text_model {
+    Some(model) => {
       let position = self.layout.position()
       Some({
-        uri: document.uri,
-        revision: document.revision,
-        language_id: document.language_id,
-        display_name: document.display_name,
+        uri: model.uri,
+        version: model.version,
+        revision: model.revision,
+        language_id: model.language_id,
+        display_name: model.display_name,
         scroll_top: position.scroll_top,
         scroll_left: position.scroll_left,
       })
@@ -328,14 +332,8 @@ pub fn Viewer::current_document(self : Viewer) -> CurrentDocument? {
 }
 
 ///|
-/// Returns the current document identity and viewport facts.
-pub fn Viewer::current(self : Viewer) -> CurrentDocument? {
-  self.current_document()
-}
-
-///|
 /// Returns the current scroll state in host-restorable form.
-pub fn Viewer::get_view_state(self : Viewer) -> ViewerViewState {
+pub fn Viewer::save_view_state(self : Viewer) -> ViewerViewState {
   let position = self.layout.position()
   { scroll_top: position.scroll_top, scroll_left: position.scroll_left }
 }
@@ -355,24 +353,24 @@ pub fn Viewer::restore_view_state(
 }
 
 ///|
-/// Clears the current document and rendered frame. The host remains
+/// Clears the current model and rendered frame. The host remains
 /// responsible for closing files, cancelling watches, and showing source
 /// errors.
-pub fn Viewer::clear_document(
+pub fn Viewer::clear_model(
   self : Viewer,
   view_state? : ViewStatePolicy = Reset,
 ) -> Unit {
-  self.clear_current_document(view_state~)
+  self.clear_current_model(view_state~)
 }
 
 ///|
 /// Disposes viewer-owned external resources.
 pub fn Viewer::dispose(self : Viewer) -> Unit {
-  self.clear_document()
+  self.clear_model()
   self.did_dispose.fire(())
-  self.did_open_document.dispose()
+  self.did_change_model.dispose()
   self.did_build_frame.dispose()
-  self.did_render_document.dispose()
+  self.did_render_model.dispose()
   self.did_change_diagnostics.dispose()
   self.did_resolve_hover.dispose()
   self.did_scroll.dispose()
@@ -466,23 +464,22 @@ pub fn Viewer::scroll_end(self : Viewer) -> Unit {
 }
 
 ///|
-/// Re-requests document-level feature data for the current document.
-pub fn Viewer::refresh_document_features(self : Viewer) -> Unit {
-  match self.source_document {
-    Some(document) => self.request_document_features(document)
+/// Re-requests model-level feature data for the current model.
+pub fn Viewer::refresh_model_features(self : Viewer) -> Unit {
+  match self.text_model {
+    Some(model) => self.request_model_features(model)
     None => ()
   }
 }
 
 ///|
-fn Viewer::clear_current_document(
+fn Viewer::clear_current_model(
   self : Viewer,
   view_state~ : ViewStatePolicy,
 ) -> Unit {
   self.frame = None
   self.view_model = None
   self.frame_source = None
-  self.source_document = None
   self.text_model = None
   self.provider_result = @language.ProviderResult::empty()
   self.folding_ranges = []
@@ -498,15 +495,11 @@ fn Viewer::clear_current_document(
 }
 
 ///|
-/// Re-renders the current document with updated feature data.
+/// Re-renders the current model with updated feature data.
 fn Viewer::render_feature_update(self : Viewer) -> Unit {
-  match self.source_document {
-    Some(document) =>
-      self.render_current_document(
-        document,
-        fresh=false,
-        request_language=false,
-      )
+  match self.text_model {
+    Some(model) =>
+      self.render_current_model(model, fresh=false, request_language=false)
     None => ()
   }
 }

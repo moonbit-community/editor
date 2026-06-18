@@ -64,34 +64,34 @@ pub(all) struct ProviderResult {
 } derive(Debug)
 
 ///|
-/// Asynchronous hover provider for an immutable document snapshot and
+/// Asynchronous hover provider for a readonly text model and
 /// zero-based UTF-16 position.
 pub(open) trait HoverProvider {
   async fn provide_hover(
     Self,
-    @workspace.DocumentSnapshot,
+    @model.TextModel,
     @base_common.Position,
     CancellationToken,
   ) -> Hover?
 }
 
 ///|
-/// Asynchronous definition provider for an immutable document snapshot.
+/// Asynchronous definition provider for a readonly text model.
 pub(open) trait DefinitionProvider {
   async fn provide_definition(
     Self,
-    @workspace.DocumentSnapshot,
+    @model.TextModel,
     @base_common.Position,
     CancellationToken,
   ) -> Location?
 }
 
 ///|
-/// Asynchronous references provider for an immutable document snapshot.
+/// Asynchronous references provider for a readonly text model.
 pub(open) trait ReferencesProvider {
   async fn provide_references(
     Self,
-    @workspace.DocumentSnapshot,
+    @model.TextModel,
     @base_common.Position,
     CancellationToken,
   ) -> Array[Location]
@@ -101,21 +101,17 @@ pub(open) trait ReferencesProvider {
 /// Document diagnostics provider. Results replace diagnostics for the queried
 /// document/resource owner.
 pub(open) trait DiagnosticsProvider {
-  async fn provide_diagnostics(
-    Self,
-    @workspace.DocumentSnapshot,
-    CancellationToken,
-  ) -> Array[Diagnostic]
+  async fn provide_diagnostics(Self, @model.TextModel, CancellationToken) -> Array[
+    Diagnostic,
+  ]
 }
 
 ///|
 /// Document symbol provider for outline/navigation views.
 pub(open) trait DocumentSymbolProvider {
-  async fn provide_document_symbols(
-    Self,
-    @workspace.DocumentSnapshot,
-    CancellationToken,
-  ) -> Array[DocumentSymbol]
+  async fn provide_document_symbols(Self, @model.TextModel, CancellationToken) -> Array[
+    DocumentSymbol,
+  ]
 }
 
 ///|
@@ -124,7 +120,7 @@ pub(open) trait DocumentSymbolProvider {
 pub(open) trait SemanticTokensProvider {
   async fn provide_document_semantic_tokens(
     Self,
-    @workspace.DocumentSnapshot,
+    @model.TextModel,
     CancellationToken,
   ) -> Array[SemanticToken]
 }
@@ -142,22 +138,22 @@ pub fn ProviderResult::empty() -> ProviderResult {
 }
 
 ///|
-/// Collects document-level feature families that do not depend on a cursor
+/// Collects model-level feature families that do not depend on a cursor
 /// offset.
-pub async fn collect_document_provider_result(
+pub async fn collect_model_provider_result(
   diagnostics : &DiagnosticsProvider,
   symbols : &DocumentSymbolProvider,
   semantic_tokens : &SemanticTokensProvider,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   token : CancellationToken,
 ) -> ProviderResult {
   {
     hovers: [],
-    diagnostics: diagnostics.provide_diagnostics(document, token),
+    diagnostics: diagnostics.provide_diagnostics(model, token),
     definitions: [],
-    symbols: symbols.provide_document_symbols(document, token),
+    symbols: symbols.provide_document_symbols(model, token),
     semantic_tokens: semantic_tokens.provide_document_semantic_tokens(
-      document, token,
+      model, token,
     ),
   }
 }

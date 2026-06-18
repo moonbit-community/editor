@@ -15,13 +15,13 @@ fn ComponentHoverProvider::new() -> ComponentHoverProvider {
 ///|
 impl @language.HoverProvider for ComponentHoverProvider with fn provide_hover(
   self,
-  document,
+  model,
   position,
   _token,
 ) {
   let needle = "keeps"
-  let offset = document.offset_at_position(position)
-  match document.text.find(needle) {
+  let offset = model.snapshot.offset_at_position(position)
+  match model.snapshot.text.find(needle) {
     Some(start) =>
       if offset >= start && offset < start + needle.length() {
         Some({
@@ -38,11 +38,11 @@ impl @language.HoverProvider for ComponentHoverProvider with fn provide_hover(
 ///|
 impl @language.DiagnosticsProvider for ComponentHoverProvider with fn provide_diagnostics(
   self,
-  document,
+  model,
   _token,
 ) {
   let needle = "keeps"
-  match document.text.find(needle) {
+  match model.snapshot.text.find(needle) {
     Some(start) =>
       [
         {
@@ -58,7 +58,7 @@ impl @language.DiagnosticsProvider for ComponentHoverProvider with fn provide_di
 ///|
 impl @language.FoldingRangeProvider for ComponentHoverProvider with fn provide_folding_ranges(
   _self,
-  _document,
+  _model,
   _token,
 ) {
   [FoldingRange(2, 5)]
@@ -67,7 +67,7 @@ impl @language.FoldingRangeProvider for ComponentHoverProvider with fn provide_f
 ///|
 impl @language.InlayHintsProvider for ComponentHoverProvider with fn provide_inlay_hints(
   _self,
-  _document,
+  _model,
   _range,
   _token,
 ) {
@@ -86,9 +86,13 @@ fn run_viewer_api_test() -> Unit {
   let view_line_count = Ref(0)
   let done = Ref(false)
   let uri = @base_common.Uri::memory("component.mbt")
-  let document = @workspace.DocumentSnapshot::from_content(
+  let model = @model.TextModel(
     uri,
-    DocumentContent(component_source_text(), display_name="component.mbt"),
+    "component.mbt",
+    "moonbit",
+    1,
+    "component-rev-1",
+    component_source_text(),
   )
   let model_line_count = component_model_line_count()
   match mount_host() {
@@ -127,7 +131,7 @@ fn run_viewer_api_test() -> Unit {
         options=ViewerOptions(soft_wrap=true),
         placeholder="Loading component fixture...",
       )
-      viewer.on_did_render_document(event => {
+      viewer.on_did_render_model(event => {
         if event.fresh {
           rendered_count.val = rendered_count.val + 1
           view_line_count.val = event.line_count
@@ -136,7 +140,7 @@ fn run_viewer_api_test() -> Unit {
       })
       |> ignore
       viewer.attach(host)
-      viewer.set_document(document, view_state=Reset)
+      viewer.set_model(model, view_state=Reset)
       let zone = @rdom.document().create_element("div")
       zone.set_inner_html("component view zone")
       viewer.change_view_zones(accessor => {
@@ -263,11 +267,5 @@ fn component_source_text() -> String {
 
 ///|
 fn component_model_line_count() -> Int {
-  @workspace.DocumentSnapshot(
-    @base_common.Uri::memory("component.mbt"),
-    "component.mbt",
-    "moonbit",
-    "component-rev",
-    component_source_text(),
-  ).line_count()
+  @model.TextSnapshot(component_source_text()).line_count()
 }

@@ -86,11 +86,6 @@ other source it owns. The viewer owns rendering, scrolling, hover presentation,
 and lifecycle notifications. The embedder owns its shell, file tree, transport,
 persistence, source watches, reload policy, and error display.
 
-Implementation note: the current checked-in viewer API still exposes
-`workspace.DocumentSnapshot` in several public signatures. That is a temporary
-API mismatch, not the intended architecture; the correction is tracked in
-`docs/exec-plans/monaco-model-viewer-api.md`.
-
 Language features are provider-based. A hover provider, for example, may compute
 locally, call a backend, or use any other MoonBit-accessible mechanism. The
 viewer only depends on the provider contract and result.

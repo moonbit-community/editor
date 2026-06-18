@@ -259,14 +259,14 @@ async test "native workspace language provider bridges remote documents to file 
       client.language_provider(),
     )
     let remote_uri = expect_remote_uri("simple.mbt")
-    let document = @workspace.DocumentSnapshot(
-      remote_uri, "simple.mbt", "moonbit", "rev-1", "pub fn startup_event() -> Unit {}\n",
+    let model = @model.TextModel(
+      remote_uri, "simple.mbt", "moonbit", 1, "rev-1", "pub fn startup_event() -> Unit {}\n",
     )
 
     match
       provider.provide_hover(
-        document,
-        document.position_at_offset(7),
+        model,
+        model.snapshot.position_at_offset(7),
         @language.CancellationToken::none(),
       ) {
       Some(hover) => {
@@ -280,8 +280,8 @@ async test "native workspace language provider bridges remote documents to file 
     }
     match
       provider.provide_definition(
-        document,
-        document.position_at_offset(7),
+        model,
+        model.snapshot.position_at_offset(7),
         @language.CancellationToken::none(),
       ) {
       Some(location) => {

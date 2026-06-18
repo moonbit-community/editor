@@ -1,9 +1,9 @@
 ///|
 fn fallback_folding_ranges(
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
 ) -> Array[@language.FoldingRange] {
-  if document.language_id == "moonbit" {
-    moonbit_indentation_folding_ranges(document)
+  if model.language_id == "moonbit" {
+    moonbit_indentation_folding_ranges(model.snapshot)
   } else {
     []
   }
@@ -11,7 +11,7 @@ fn fallback_folding_ranges(
 
 ///|
 fn moonbit_indentation_folding_ranges(
-  snapshot : @workspace.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
 ) -> Array[@language.FoldingRange] {
   let ranges : Array[@language.FoldingRange] = []
   for line_index in 0..<snapshot.line_count() {
@@ -47,7 +47,7 @@ fn moonbit_indentation_folding_ranges(
 
 ///|
 fn next_non_empty_line(
-  snapshot : @workspace.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   start_index : Int,
 ) -> Int? {
   for index in start_index..<snapshot.line_count() {
@@ -60,7 +60,7 @@ fn next_non_empty_line(
 
 ///|
 fn indentation_block_end(
-  snapshot : @workspace.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   start_index : Int,
   indent : Int,
 ) -> Int {
@@ -81,7 +81,7 @@ fn indentation_block_end(
 
 ///|
 fn brace_block_end(
-  snapshot : @workspace.DocumentSnapshot,
+  snapshot : @model.TextSnapshot,
   start_index : Int,
   indent : Int,
 ) -> Int {

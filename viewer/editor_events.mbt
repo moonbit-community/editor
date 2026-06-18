@@ -86,17 +86,17 @@ fn Viewer::hover_loading_due(self : Viewer, token : Int) -> Unit {
 ///|
 fn Viewer::hover_resolved(
   self : Viewer,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   token : Int,
   hover : ComputedHover?,
 ) -> Unit {
-  if !self.is_current_document(document) {
+  if !self.is_current_model(model) {
     return
   }
   let before = self.hover
   self.hover = self.hover.resolved_hover(
     event => self.did_resolve_hover.fire(event),
-    document.revision,
+    model.revision,
     token,
     hover,
   )
@@ -112,14 +112,9 @@ fn Viewer::controller_decorations(
 }
 
 ///|
-fn Viewer::is_current_document(
-  self : Viewer,
-  document : @workspace.DocumentSnapshot,
-) -> Bool {
-  match self.source_document {
-    Some(current) =>
-      current.uri.to_string() == document.uri.to_string() &&
-      current.revision == document.revision
+fn Viewer::is_current_model(self : Viewer, model : @model.TextModel) -> Bool {
+  match self.text_model {
+    Some(current) => current.same_identity_and_version(model)
     None => false
   }
 }

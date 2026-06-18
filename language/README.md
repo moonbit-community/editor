@@ -15,11 +15,6 @@ Readonly language-provider contracts.
 - Keep provider contracts backend-neutral; concrete semantic providers live in
   server or host packages.
 
-Implementation note: current provider traits still take
-`@workspace.DocumentSnapshot`. That is a temporary mismatch with the
-Monaco-shaped model boundary, tracked by
-`../docs/exec-plans/monaco-model-viewer-api.md`.
-
 ## Boundaries
 
 - May depend on `base/common`, `viewer/model`, and JSON support.

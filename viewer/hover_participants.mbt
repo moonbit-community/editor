@@ -20,7 +20,7 @@ pub(all) struct ComputedHover {
 ///|
 /// Inputs shared by synchronous and asynchronous hover participants.
 pub(all) struct HoverComputeContext {
-  document : @workspace.DocumentSnapshot
+  model : @model.TextModel
   anchor_range : @base_common.Range
   offset : Int
   injected_text_index : Int
@@ -66,7 +66,7 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
   let parts : Array[HoverPart] = []
   for
     marker in ctx.services.marker_decorations.markers_at(
-      ctx.document.uri,
+      ctx.model.uri,
       ctx.anchor_range,
     ) {
     parts.push(MarkerHover(range=marker.range, marker~))
@@ -119,7 +119,7 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
   }
   match
     ctx.services.languages.hover_at(
-      ctx.document,
+      ctx.model,
       ctx.offset,
       ctx.services.log_service,
     ) {
@@ -210,14 +210,14 @@ pub fn ContentHoverComputer::new(
 /// Computes hover parts that are immediately available from viewer state.
 pub fn ContentHoverComputer::compute_sync(
   self : ContentHoverComputer,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   anchor_range : @base_common.Range,
   offset : Int,
   injected_text_index? : Int = -1,
   inlay_hints? : Array[@language.InlayHint] = [],
 ) -> ComputedHover? {
   let ctx : HoverComputeContext = {
-    document,
+    model,
     anchor_range,
     offset,
     injected_text_index,
@@ -235,14 +235,14 @@ pub fn ContentHoverComputer::compute_sync(
 /// Computes hover parts that may require provider calls.
 pub async fn ContentHoverComputer::compute_async(
   self : ContentHoverComputer,
-  document : @workspace.DocumentSnapshot,
+  model : @model.TextModel,
   anchor_range : @base_common.Range,
   offset : Int,
   injected_text_index? : Int = -1,
   inlay_hints? : Array[@language.InlayHint] = [],
 ) -> ComputedHover? noraise {
   let ctx : HoverComputeContext = {
-    document,
+    model,
     anchor_range,
     offset,
     injected_text_index,

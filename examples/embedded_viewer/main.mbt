@@ -1,8 +1,8 @@
 // A real embedding target, the way Monaco's standalone editor proves its
 // package boundary: the viewer library plus the file-tree widget mounted
-// against in-memory providers, with zero server or websocket involvement.
-// Implementing `DocumentProvider` (and optionally `WorkspaceTreeProvider`)
-// is the entire integration surface for a custom backend.
+// against in-memory documents and an in-memory tree provider, with zero server
+// or websocket involvement. The host owns document selection and passes
+// snapshots directly to the viewer.
 
 ///|
 let memory_root : String = "memory://workspace"
@@ -25,8 +25,8 @@ fn startup_sub(cmd : @cmd.Cmd) -> @sub.Sub {
 
 ///|
 /// In-memory workspace backend: a handful of hardcoded documents and
-/// directories behind the two `workspace` traits the viewer and the tree
-/// widget are built against.
+/// directories. The tree widget uses the `workspace` tree trait; the viewer
+/// receives snapshots directly from host code.
 priv struct MemoryWorkspace {
   root_uri : @base_common.Uri
   directories : Map[String, Array[@workspace.WorkspaceStat]]
@@ -92,32 +92,17 @@ fn memory_workspace() -> MemoryWorkspace {
 }
 
 ///|
-impl @workspace.DocumentProvider for MemoryWorkspace with fn read(self, uri) {
+fn MemoryWorkspace::snapshot(
+  self : MemoryWorkspace,
+  uri : @base_common.Uri,
+) -> @workspace.DocumentSnapshot? {
   match self.documents.get(uri.to_string()) {
     Some(text) =>
-      DocumentLoaded(
+      Some(
         @workspace.DocumentSnapshot::from_content(uri, DocumentContent(text)),
       )
-    None =>
-      DocumentReadFailed(
-        DocumentError(FileNotFound, "Document does not exist.", uri~),
-      )
+    None => None
   }
-}
-
-///|
-impl @workspace.DocumentProvider for MemoryWorkspace with fn watch(
-  _self,
-  _uri,
-  _listener,
-) {
-  // In-memory documents never change behind the viewer's back.
-  @base_common.Disposable::from(() => ())
-}
-
-///|
-impl @workspace.DocumentProvider for MemoryWorkspace with fn close(_self, _uri) {
-
 }
 
 ///|
@@ -180,15 +165,10 @@ fn embed_viewer() -> @viewer.Viewer {
   match embed_viewer_cell.val {
     Some(viewer) => viewer
     None => {
-      let viewer = @viewer.Viewer(
-        workspace_backend,
-        placeholder="Loading source...",
-      )
+      let viewer = @viewer.Viewer(placeholder="Loading source...")
       viewer.on_did_render_document(event => {
         dispatch_embed_msg(ViewerRendered(event))
       })
-      |> ignore
-      viewer.on_did_fail_document(_error => dispatch_embed_msg(ViewerFailed))
       |> ignore
       embed_viewer_cell.val = Some(viewer)
       viewer
@@ -225,12 +205,12 @@ fn update_embed(
       (
         @rabbita.batch([
           embed_tree().refresh(),
-          @cmd.custom_cmd(_ => embed_viewer().open(first_file)),
+          open_embed_document_cmd(first_file),
         ]),
         model,
       )
     }
-    OpenFile(uri) => (@cmd.custom_cmd(_ => embed_viewer().open(uri)), model)
+    OpenFile(uri) => (open_embed_document_cmd(uri), model)
     ViewerRendered(event) => {
       let cmd = if event.fresh {
         embed_tree().set_active(event.document.uri)
@@ -241,6 +221,16 @@ fn update_embed(
     }
     ViewerFailed => (@rabbita.none, { status: "error" })
   }
+}
+
+///|
+fn open_embed_document_cmd(uri : @base_common.Uri) -> @rabbita.Cmd {
+  @cmd.custom_cmd(_ => {
+    match workspace_backend.snapshot(uri) {
+      Some(document) => embed_viewer().set_document(document, view_state=Reset)
+      None => dispatch_embed_msg(ViewerFailed)
+    }
+  })
 }
 
 ///|

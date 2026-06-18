@@ -1,45 +1,4 @@
 ///|
-priv struct PerfDocumentProvider {
-  small_text : String
-  large_text : String
-}
-
-///|
-impl @workspace.DocumentProvider for PerfDocumentProvider with fn read(
-  self,
-  uri,
-) {
-  let text = if uri.to_string().contains("large") {
-    self.large_text
-  } else {
-    self.small_text
-  }
-  DocumentLoaded(
-    @workspace.DocumentSnapshot::from_content(
-      uri,
-      DocumentContent(text, display_name=uri.display_name()),
-    ),
-  )
-}
-
-///|
-impl @workspace.DocumentProvider for PerfDocumentProvider with fn watch(
-  _self,
-  _uri,
-  _listener,
-) {
-  @base_common.Disposable::from(() => ())
-}
-
-///|
-impl @workspace.DocumentProvider for PerfDocumentProvider with fn close(
-  _self,
-  _uri,
-) {
-
-}
-
-///|
 fn run_render_perf_test() -> Unit {
   @viewer.languages.set_tokens_provider(
     "moonbit",
@@ -51,33 +10,23 @@ fn run_render_perf_test() -> Unit {
   let sample_index = Ref(-1)
   let sample_start = Ref(0.0)
   let samples : Array[Double] = []
-  let source : PerfDocumentProvider = {
-    small_text: small_source_text(),
-    large_text: large_source_text(2000),
-  }
+  let large_text = large_source_text(2000)
   let viewer_ref : Ref[@viewer.Viewer?] = Ref(None)
   match mount_host() {
     Some(host) => {
-      let viewer = @viewer.Viewer(
-        source,
-        placeholder="Loading performance fixture...",
-      )
+      let viewer = @viewer.Viewer(placeholder="Loading performance fixture...")
       viewer.on_did_render_document(event => {
         if event.fresh && event.document.uri.to_string().contains("large") {
           record_sample(
-            ctx, viewer_ref, done, sample_index, sample_start, samples,
+            ctx, viewer_ref, large_text, done, sample_index, sample_start, samples,
           )
         }
-      })
-      |> ignore
-      viewer.on_did_fail_document(error => {
-        ctx.fail("viewer failed to open perf document: " + error.message)
       })
       |> ignore
       viewer_ref.val = Some(viewer)
       viewer.attach(host)
       @support.set_timeout(
-        () => run_next_sample(viewer, sample_index, sample_start),
+        () => run_next_sample(viewer, large_text, sample_index, sample_start),
         50,
       )
       @support.set_timeout(
@@ -121,6 +70,7 @@ fn mount_host() -> @rdom.Element? {
 ///|
 fn run_next_sample(
   viewer : @viewer.Viewer,
+  large_text : String,
   sample_index : Ref[Int],
   sample_start : Ref[Double],
 ) -> Unit {
@@ -130,13 +80,21 @@ fn run_next_sample(
   } else {
     "sample_" + sample_index.val.to_string()
   }
-  viewer.open(@base_common.Uri::memory("perf/large_" + name + ".mbt"))
+  let uri = @base_common.Uri::memory("perf/large_" + name + ".mbt")
+  viewer.set_document(
+    @workspace.DocumentSnapshot::from_content(
+      uri,
+      DocumentContent(large_text, display_name=uri.display_name()),
+    ),
+    view_state=Reset,
+  )
 }
 
 ///|
 fn record_sample(
   ctx : @support.BrowserTestContext,
   viewer_ref : Ref[@viewer.Viewer?],
+  large_text : String,
   done : Ref[Bool],
   sample_index : Ref[Int],
   sample_start : Ref[Double],
@@ -156,7 +114,7 @@ fn record_sample(
     match viewer_ref.val {
       Some(viewer) =>
         @support.set_timeout(
-          () => run_next_sample(viewer, sample_index, sample_start),
+          () => run_next_sample(viewer, large_text, sample_index, sample_start),
           50,
         )
       None => {
@@ -213,17 +171,6 @@ fn sample_summary(samples : Array[Double]) -> (Double, Double, Double) {
     samples[samples.length() / 2]
   }
   (best, median, worst)
-}
-
-///|
-fn small_source_text() -> String {
-  (
-    #|///|
-    #|pub fn small_value() -> Int {
-    #|  1
-    #|}
-    #|
-  )
 }
 
 ///|

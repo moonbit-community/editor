@@ -9,7 +9,7 @@ fn Viewer::render_current_document(
   document : @workspace.DocumentSnapshot,
   fresh~ : Bool,
   request_language~ : Bool,
-  reset_view_state? : Bool = false,
+  view_state? : ViewStatePolicy = PreserveAnchor,
 ) -> Unit {
   let model = self.text_model_for_snapshot(document)
   let marker_diagnostics = self.services.markers.diagnostics_for_resource(
@@ -49,12 +49,10 @@ fn Viewer::render_current_document(
       }
     None => true
   }
-  if fresh && rotated && reset_view_state {
-    self.apply_scroll_change(
-      self.layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
-    )
-  }
   self.apply_view_model_layout(view_model, tokenized.snapshot)
+  if fresh && (rotated || view_state is Restore(_)) {
+    self.apply_view_state_policy(view_state)
+  }
   let window = self.layout.visible_window(overscan=line_overscan)
   let frame = view_model.render_frame({
     start_line: window.start,

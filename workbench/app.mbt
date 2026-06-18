@@ -30,6 +30,8 @@ priv enum WorkbenchMsg {
   ProtocolSendFailed(String)
   SelectWorkspace(@base_common.Uri)
   AutoOpenResolved(@base_common.Uri?)
+  ActiveDocumentRead(@workspace.DocumentReadResult, @viewer.ViewStatePolicy)
+  ActiveDocumentChanged(@workspace.DocumentChange)
   ViewerEvent(WorkbenchViewerEvent)
   ToggleTheme
   GlobalKeyDown(@common.Keyboard)
@@ -41,7 +43,6 @@ priv enum WorkbenchViewerEvent {
   DidChangeDiagnostics(@viewer.ViewerDiagnosticsChangedEvent)
   DidBuildFrame(@viewer.ViewerFrameBuiltEvent)
   DidRenderDocument(@viewer.ViewerDocumentRenderedEvent)
-  DidFailDocument(@workspace.DocumentError)
   DidResolveHover(@viewer.ViewerHoverResolvedEvent)
   DidScroll(@viewer.ViewerScrollEvent)
   DidDispose
@@ -102,7 +103,6 @@ fn workbench_viewer() -> @viewer.Viewer {
     Some(viewer) => viewer
     None => {
       let viewer = @viewer.Viewer(
-        document_provider,
         services=workbench_services(),
         theme=stored_theme(),
         placeholder=source_message(initial_workbench_model()),
@@ -126,10 +126,6 @@ fn install_viewer_event_subscriptions(viewer : @viewer.Viewer) -> Unit {
   |> ignore
   viewer.on_did_render_document(event => {
     dispatch_workbench_msg(ViewerEvent(DidRenderDocument(event)))
-  })
-  |> ignore
-  viewer.on_did_fail_document(error => {
-    dispatch_workbench_msg(ViewerEvent(DidFailDocument(error)))
   })
   |> ignore
   viewer.on_did_resolve_hover(event => {
@@ -305,6 +301,10 @@ fn workbench_update(
         // An empty workspace keeps the loading placeholder.
         None => (@rabbita.none, model)
       }
+    ActiveDocumentRead(result, view_state) =>
+      active_document_read_update(model, result, view_state)
+    ActiveDocumentChanged(change) =>
+      active_document_change_update(model, change)
     ViewerEvent(event) => viewer_event_update(model, event)
     ToggleTheme => {
       let theme = if model.theme == "light" { "dark" } else { "light" }
@@ -343,9 +343,89 @@ fn select_workspace_update(
   uri : @base_common.Uri,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   (
-    viewer_cmd(() => workbench_viewer().open(uri)),
+    open_active_document_cmd(uri, Reset),
     { ..model, status: "loading", status_message: "", viewer_has_frame: false },
   )
+}
+
+///|
+/// Host-owned document read results are translated into direct viewer document
+/// calls or shell-level source errors.
+fn active_document_read_update(
+  model : WorkbenchModel,
+  result : @workspace.DocumentReadResult,
+  view_state : @viewer.ViewStatePolicy,
+) -> (@rabbita.Cmd, WorkbenchModel) {
+  match result {
+    DocumentLoaded(document) =>
+      (
+        viewer_cmd(() => workbench_viewer().set_document(document, view_state~)),
+        model,
+      )
+    DocumentNotFound(uri) =>
+      active_document_error_update(
+        model,
+        DocumentError(FileNotFound, "Document not found.", uri~),
+      )
+    DocumentReadFailed(error) => active_document_error_update(model, error)
+  }
+}
+
+///|
+fn active_document_change_update(
+  model : WorkbenchModel,
+  change : @workspace.DocumentChange,
+) -> (@rabbita.Cmd, WorkbenchModel) {
+  match change {
+    DocumentInvalidated(uri~, ..) =>
+      (reload_active_document_cmd(uri, PreserveAnchor), model)
+    DocumentUpdated(document) =>
+      (
+        viewer_cmd(() => {
+          workbench_viewer().set_document(document, view_state=PreserveAnchor)
+        }),
+        model,
+      )
+    DocumentDeleted(uri) =>
+      active_document_error_update(
+        model,
+        DocumentError(FileNotFound, "Document was deleted.", uri~),
+      )
+    DocumentChangeFailed(uri=_uri, error~) =>
+      active_document_error_update(model, error)
+  }
+}
+
+///|
+fn active_document_error_update(
+  model : WorkbenchModel,
+  error : @workspace.DocumentError,
+) -> (@rabbita.Cmd, WorkbenchModel) {
+  emit_event("language:error", error.to_json().stringify())
+  let clear = viewer_cmd(() => {
+    workbench_viewer().clear_document(view_state=PreserveAnchor)
+  })
+  if error.code == FileNotFound {
+    (
+      @rabbita.batch([clear, dom_mounted_status_cmd("missing")]),
+      {
+        ..model,
+        status: "missing",
+        status_message: "Source file is missing.",
+        viewer_has_frame: false,
+      },
+    )
+  } else {
+    (
+      @rabbita.batch([clear, dom_mounted_status_cmd("error")]),
+      {
+        ..model,
+        status: "error",
+        status_message: error.message,
+        viewer_has_frame: false,
+      },
+    )
+  }
 }
 
 ///|
@@ -395,30 +475,6 @@ fn viewer_event_update(
         (workspace_file_tree().set_active(event.document.uri), next)
       } else {
         (@rabbita.none, next)
-      }
-    }
-    DidFailDocument(error) => {
-      emit_event("language:error", error.to_json().stringify())
-      if error.code == FileNotFound {
-        (
-          dom_mounted_status_cmd("missing"),
-          {
-            ..model,
-            status: "missing",
-            status_message: "Source file is missing.",
-            viewer_has_frame: false,
-          },
-        )
-      } else {
-        (
-          dom_mounted_status_cmd("error"),
-          {
-            ..model,
-            status: "error",
-            status_message: error.message,
-            viewer_has_frame: false,
-          },
-        )
       }
     }
     DidResolveHover(event) => {

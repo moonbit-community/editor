@@ -1,46 +1,4 @@
 ///|
-priv struct MemoryDocumentProvider {
-  uri : @base_common.Uri
-  text : String
-}
-
-///|
-impl @workspace.DocumentProvider for MemoryDocumentProvider with fn read(
-  self,
-  uri,
-) {
-  if uri == self.uri {
-    DocumentLoaded(
-      @workspace.DocumentSnapshot::from_content(
-        uri,
-        DocumentContent(self.text, display_name="component.mbt"),
-      ),
-    )
-  } else {
-    DocumentReadFailed(
-      DocumentError(FileNotFound, "Document does not exist.", uri~),
-    )
-  }
-}
-
-///|
-impl @workspace.DocumentProvider for MemoryDocumentProvider with fn watch(
-  _self,
-  _uri,
-  _listener,
-) {
-  @base_common.Disposable::from(() => ())
-}
-
-///|
-impl @workspace.DocumentProvider for MemoryDocumentProvider with fn close(
-  _self,
-  _uri,
-) {
-
-}
-
-///|
 priv struct ComponentHoverProvider {
   hover_text : String
   diagnostic_text : String
@@ -128,7 +86,10 @@ fn run_viewer_api_test() -> Unit {
   let view_line_count = Ref(0)
   let done = Ref(false)
   let uri = @base_common.Uri::memory("component.mbt")
-  let source : MemoryDocumentProvider = { uri, text: component_source_text() }
+  let document = @workspace.DocumentSnapshot::from_content(
+    uri,
+    DocumentContent(component_source_text(), display_name="component.mbt"),
+  )
   let model_line_count = component_model_line_count()
   match mount_host() {
     Some(host) => {
@@ -162,7 +123,6 @@ fn run_viewer_api_test() -> Unit {
       )
       |> ignore
       let viewer = @viewer.Viewer(
-        source,
         services~,
         options=ViewerOptions(soft_wrap=true),
         placeholder="Loading component fixture...",
@@ -175,12 +135,8 @@ fn run_viewer_api_test() -> Unit {
         }
       })
       |> ignore
-      viewer.on_did_fail_document(error => {
-        ctx.fail("viewer failed to open document: " + error.message)
-      })
-      |> ignore
       viewer.attach(host)
-      viewer.open(uri)
+      viewer.set_document(document, view_state=Reset)
       let zone = @rdom.document().create_element("div")
       zone.set_inner_html("component view zone")
       viewer.change_view_zones(accessor => {

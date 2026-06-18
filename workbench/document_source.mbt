@@ -1,9 +1,9 @@
 ///|
-/// Browser-side document provider: implements `@workspace.DocumentProvider`
-/// over the live protocol socket. Opens are correlated request/response
-/// through `protocol_request`; watches register a URI-keyed listener that
-/// the websocket push branch feeds `DocumentChanged` packets (and watch
-/// errors such as `FileNotFound`) into; closes are fire-and-forget.
+/// Browser-side document provider used by the workbench host. Opens are
+/// correlated request/response through `protocol_request`; watches register a
+/// URI-keyed listener that the websocket push branch feeds `DocumentChanged`
+/// packets (and watch errors such as `FileNotFound`) into; closes are
+/// fire-and-forget. The viewer never sees this provider directly.
 priv struct RemoteDocumentProvider {}
 
 ///|
@@ -20,6 +20,16 @@ let watch_listeners : Map[String, (@workspace.DocumentChange) -> Unit] = {}
 /// Watch request ids back to their URI, so `RemoteError` pushes (which
 /// carry only a request id) can reach the watched document's listener.
 let watch_request_uris : Map[String, String] = {}
+
+///|
+/// The active source lifecycle belongs to the workbench, not the viewer.
+let active_document_uri : Ref[@base_common.Uri?] = Ref(None)
+
+///|
+let active_document_generation : Ref[Int] = Ref(0)
+
+///|
+let active_document_watch : Ref[@base_common.Disposable?] = Ref(None)
 
 ///|
 impl @workspace.DocumentProvider for RemoteDocumentProvider with fn read(
@@ -73,6 +83,84 @@ impl @workspace.DocumentProvider for RemoteDocumentProvider with fn close(
   uri,
 ) {
   send_protocol_packet(CloseDocument({ id: next_request_id("close"), uri }))
+}
+
+///|
+fn open_active_document_cmd(
+  uri : @base_common.Uri,
+  view_state : @viewer.ViewStatePolicy,
+) -> @rabbita.Cmd {
+  @cmd.custom_cmd(_ => {
+    active_document_generation.val = active_document_generation.val + 1
+    let generation = active_document_generation.val
+    close_active_document_source()
+    active_document_uri.val = Some(uri)
+    active_document_watch.val = Some(
+      document_provider.watch(uri, change => {
+        if is_active_document(uri, generation) {
+          dispatch_workbench_msg(ActiveDocumentChanged(change))
+        }
+      }),
+    )
+    read_active_document(uri, generation, view_state)
+  })
+}
+
+///|
+fn reload_active_document_cmd(
+  uri : @base_common.Uri,
+  view_state : @viewer.ViewStatePolicy,
+) -> @rabbita.Cmd {
+  @cmd.custom_cmd(_ => {
+    let generation = active_document_generation.val
+    if is_active_document(uri, generation) {
+      read_active_document(uri, generation, view_state)
+    }
+  })
+}
+
+///|
+fn close_active_document_source() -> Unit {
+  match active_document_watch.val {
+    Some(watch) => watch.dispose()
+    None => ()
+  }
+  active_document_watch.val = None
+  match active_document_uri.val {
+    Some(uri) => document_provider.close(uri)
+    None => ()
+  }
+  active_document_uri.val = None
+}
+
+///|
+fn read_active_document(
+  uri : @base_common.Uri,
+  generation : Int,
+  view_state : @viewer.ViewStatePolicy,
+) -> Unit {
+  @js.async_run(() => {
+    let result = document_provider.read(uri) catch {
+      _ =>
+        DocumentReadFailed(
+          DocumentError(Unavailable, "Document open failed.", uri~),
+        )
+    }
+    if is_active_document(uri, generation) {
+      dispatch_workbench_msg(ActiveDocumentRead(result, view_state))
+    }
+  })
+}
+
+///|
+fn is_active_document(uri : @base_common.Uri, generation : Int) -> Bool {
+  if generation != active_document_generation.val {
+    return false
+  }
+  match active_document_uri.val {
+    Some(current) => current.to_string() == uri.to_string()
+    None => false
+  }
 }
 
 ///|

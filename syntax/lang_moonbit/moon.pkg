@@ -3,6 +3,5 @@ import {
 }
 
 import {
-  "baozhiyuan/editor/renderer/core",
   "baozhiyuan/editor/renderer/model",
 } for "test"

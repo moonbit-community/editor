@@ -1002,9 +1002,12 @@ fn fenced_marked_string(language : String, value : String) -> String {
 }
 
 ///|
-fn fallback_hover_range(doc : @model.TextSnapshot, offset : Int) -> @core.Range {
-  let start = @core.clamp_int(offset, 0, doc.length())
-  let end = @core.clamp_int(start + 1, start, doc.length())
+fn fallback_hover_range(
+  doc : @model.TextSnapshot,
+  offset : Int,
+) -> @base_common.Range {
+  let start = @base_common.clamp_int(offset, 0, doc.length())
+  let end = @base_common.clamp_int(start + 1, start, doc.length())
   Range(start, end)
 }
 
@@ -1094,7 +1097,7 @@ fn append_document_symbol(
 fn document_symbol_range(
   value : Json,
   document : @workspace.SourceDocument,
-) -> @core.Range {
+) -> @base_common.Range {
   let range_json = match json_field(value, "range") {
     Some(range) => Some(range)
     None =>
@@ -1263,7 +1266,10 @@ fn parse_location_result(
 }
 
 ///|
-fn parse_lsp_range(value : Json, doc : @model.TextSnapshot) -> @core.Range? {
+fn parse_lsp_range(
+  value : Json,
+  doc : @model.TextSnapshot,
+) -> @base_common.Range? {
   match (json_field(value, "start"), json_field(value, "end")) {
     (Some(start), Some(end)) =>
       match (parse_lsp_position(start), parse_lsp_position(end)) {
@@ -1281,7 +1287,7 @@ fn parse_lsp_range(value : Json, doc : @model.TextSnapshot) -> @core.Range? {
 }
 
 ///|
-fn parse_lsp_position(value : Json) -> @core.Position? {
+fn parse_lsp_position(value : Json) -> @base_common.Position? {
   match (json_int_field(value, "line"), json_int_field(value, "character")) {
     (Some(line), Some(column)) => Some(Position(line, column))
     _ => None
@@ -1451,7 +1457,7 @@ fn versioned_text_document_identifier(
 }
 
 ///|
-fn lsp_position_json(position : @core.Position) -> Json {
+fn lsp_position_json(position : @base_common.Position) -> Json {
   json_object([
     ("line", json_int(position.line)),
     ("character", json_int(position.column)),

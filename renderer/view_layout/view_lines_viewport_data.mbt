@@ -66,8 +66,12 @@ pub fn ViewportData::from_view_model(
   decorations? : Array[@decorations.Decoration] = [],
   layout? : ViewLayout,
 ) -> ViewportData {
-  let start_line = @core.clamp_int(window.start, 0, view_model.line_count() - 1)
-  let end_line = @core.clamp_int(
+  let start_line = @base_common.clamp_int(
+    window.start,
+    0,
+    view_model.line_count() - 1,
+  )
+  let end_line = @base_common.clamp_int(
     window.end,
     start_line + 1,
     view_model.line_count(),

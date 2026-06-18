@@ -30,7 +30,7 @@ fn Viewer::request_hover(
     Some(document) => {
       let model = document.text_model()
       let computer = ContentHoverComputer::new(self.services)
-      let anchor_range = @core.Range(anchor.start, anchor.end)
+      let anchor_range = @base_common.Range(anchor.start, anchor.end)
       match
         computer.compute_sync(
           model,

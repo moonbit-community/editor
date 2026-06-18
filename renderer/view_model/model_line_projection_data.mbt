@@ -44,7 +44,7 @@ pub fn ModelLineProjectionData::segment_at_view_line_index(
   self : ModelLineProjectionData,
   index : Int,
 ) -> ModelLineProjectionSegment {
-  let index = @core.clamp_int(index, 0, self.segments.length() - 1)
+  let index = @base_common.clamp_int(index, 0, self.segments.length() - 1)
   self.segments[index]
 }
 
@@ -54,7 +54,7 @@ pub fn ModelLineProjectionData::view_line_index_for_model_column(
   self : ModelLineProjectionData,
   column : Int,
 ) -> Int {
-  let column = @core.clamp_int(column, 0, self.line_length)
+  let column = @base_common.clamp_int(column, 0, self.line_length)
   let projected_column = self.projected_line.model_column_to_projected_column(
     column,
   )
@@ -67,7 +67,11 @@ pub fn ModelLineProjectionData::view_line_index_for_projected_column(
   self : ModelLineProjectionData,
   column : Int,
 ) -> Int {
-  let column = @core.clamp_int(column, 0, self.projected_line.text.length())
+  let column = @base_common.clamp_int(
+    column,
+    0,
+    self.projected_line.text.length(),
+  )
   for index in 0..<self.segments.length() {
     let segment = self.segments[index]
     if column < segment.end_offset || index + 1 == self.segments.length() {

@@ -1,6 +1,6 @@
 ///|
 priv struct HoverView {
-  range : @core.Range
+  range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq)
 

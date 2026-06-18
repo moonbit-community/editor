@@ -71,7 +71,7 @@ pub fn LinesLayout::vertical_offset_for_line(
   self : LinesLayout,
   line : Int,
 ) -> Double {
-  let line = @core.clamp_int(line, 0, self.line_count)
+  let line = @base_common.clamp_int(line, 0, self.line_count)
   let offset = line * self.line_height +
     zone_height_before_line(self.view_zones, line)
   offset.to_double()
@@ -94,13 +94,13 @@ pub fn LinesLayout::line_at_vertical_offset(
       break
     }
     if offset < (zone_top + zone.height_px).to_double() {
-      return @core.clamp_int(zone.anchor_line, 0, self.line_count - 1)
+      return @base_common.clamp_int(zone.anchor_line, 0, self.line_count - 1)
     }
     zone_offset = zone_offset + zone.height_px
   }
   let offset = offset - zone_offset.to_double()
   let line = (offset / self.line_height.to_double()).to_int()
-  @core.clamp_int(line, 0, self.line_count - 1)
+  @base_common.clamp_int(line, 0, self.line_count - 1)
 }
 
 ///|
@@ -124,7 +124,7 @@ pub fn LinesLayout::visible_window(
     return { start: 0, end: 0 }
   }
   if viewport_height <= 0.0 {
-    let end = @core.clamp_int(
+    let end = @base_common.clamp_int(
       default_visible_lines + overscan,
       0,
       self.line_count,
@@ -133,8 +133,16 @@ pub fn LinesLayout::visible_window(
   }
   let first_visible = self.line_at_vertical_offset(scroll_top)
   let last_visible = self.line_at_vertical_offset(scroll_top + viewport_height)
-  let start = @core.clamp_int(first_visible - overscan, 0, self.line_count)
-  let end = @core.clamp_int(last_visible + 1 + overscan, start, self.line_count)
+  let start = @base_common.clamp_int(
+    first_visible - overscan,
+    0,
+    self.line_count,
+  )
+  let end = @base_common.clamp_int(
+    last_visible + 1 + overscan,
+    start,
+    self.line_count,
+  )
   { start, end }
 }
 
@@ -197,7 +205,11 @@ fn normalized_view_zones(
   let normalized : Array[ViewZone] = []
   for zone in view_zones {
     normalized.push({
-      anchor_line: @core.clamp_int(zone.anchor_line, 0, max_int(line_count, 0)),
+      anchor_line: @base_common.clamp_int(
+        zone.anchor_line,
+        0,
+        max_int(line_count, 0),
+      ),
       height_px: max_int(zone.height_px, 0),
     })
   }

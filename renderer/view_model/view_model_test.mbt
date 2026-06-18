@@ -1,7 +1,7 @@
 ///|
 test "identity coordinates converter preserves model and view positions" {
   let converter = @view_model.IdentityCoordinatesConverter::new()
-  let position = @core.Position(2, 7)
+  let position = @base_common.Position(2, 7)
   assert_true(converter.model_position_to_view_position(position) == position)
   assert_true(converter.view_position_to_model_position(position) == position)
   let range = @view_line_renderer.ViewRange::{

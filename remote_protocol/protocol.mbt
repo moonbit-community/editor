@@ -130,7 +130,7 @@ pub(all) struct DefinitionResultPayload {
 /// references without fetching file contents.
 pub(all) struct ReferenceItem {
   uri : @base_common.Uri
-  range : @core.Range
+  range : @base_common.Range
   line : Int
   column : Int
   line_text : String
@@ -1249,7 +1249,7 @@ fn inlay_hint_kind_json(kind : @language.InlayHintKind) -> Json {
 }
 
 ///|
-fn position_json(position : @core.Position) -> Json {
+fn position_json(position : @base_common.Position) -> Json {
   { "line": position.line.to_json(), "column": position.column.to_json() }
 }
 
@@ -1280,7 +1280,7 @@ fn location_json(location : @language.Location) -> Json {
 }
 
 ///|
-fn range_json(range : @core.Range) -> Json {
+fn range_json(range : @base_common.Range) -> Json {
   { "start": range.start.to_json(), "end": range.end.to_json() }
 }
 
@@ -1562,7 +1562,7 @@ fn parse_semantic_token(value : Json) -> @language.SemanticToken? {
 }
 
 ///|
-fn parse_range(value : Json) -> @core.Range? {
+fn parse_range(value : Json) -> @base_common.Range? {
   match value {
     Object(_) =>
       match (json_int_field(value, "start"), json_int_field(value, "end")) {
@@ -1574,7 +1574,7 @@ fn parse_range(value : Json) -> @core.Range? {
 }
 
 ///|
-fn parse_position(value : Json) -> @core.Position? {
+fn parse_position(value : Json) -> @base_common.Position? {
   match value {
     Object(_) =>
       match (json_int_field(value, "line"), json_int_field(value, "column")) {

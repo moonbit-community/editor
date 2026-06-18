@@ -1,8 +1,8 @@
 ///|
 /// Converts between model document coordinates and rendered view coordinates.
 pub(open) trait CoordinatesConverter {
-  fn model_position_to_view_position(Self, @core.Position) -> @core.Position
-  fn view_position_to_model_position(Self, @core.Position) -> @core.Position
+  fn model_position_to_view_position(Self, @base_common.Position) -> @base_common.Position
+  fn view_position_to_model_position(Self, @base_common.Position) -> @base_common.Position
   fn model_range_to_view_range(Self, @view_line_renderer.ViewRange) -> @view_line_renderer.ViewRange
   fn view_range_to_model_range(Self, @view_line_renderer.ViewRange) -> @view_line_renderer.ViewRange
 }
@@ -329,7 +329,7 @@ pub fn ViewModelLinesFromModelAsIs::render_model_line(
   let line_index = self.clamped_model_line_index(model_line_number)
   let line_start = doc.line_start_offset(line_index)
   let line_end = doc.line_end_offset(line_index)
-  let line_range = @core.Range(line_start, line_end)
+  let line_range = @base_common.Range(line_start, line_end)
   let spans = overlay_semantic_tokens(
     spans_for_line(
       line_range,
@@ -367,7 +367,7 @@ fn ViewModelLinesFromModelAsIs::clamped_line_index(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
 ) -> Int {
-  @core.clamp_int(line_number - 1, 0, self.line_count() - 1)
+  @base_common.clamp_int(line_number - 1, 0, self.line_count() - 1)
 }
 
 ///|
@@ -375,7 +375,7 @@ fn ViewModelLinesFromModelAsIs::clamped_model_line_index(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
 ) -> Int {
-  @core.clamp_int(model_line_number - 1, 0, self.model_line_count() - 1)
+  @base_common.clamp_int(model_line_number - 1, 0, self.model_line_count() - 1)
 }
 
 ///|
@@ -388,9 +388,17 @@ fn bucket_injected_text(
     buckets.push([])
   }
   for item in injected_text {
-    let line = @core.clamp_int(item.position.line, 0, snapshot.line_count() - 1)
+    let line = @base_common.clamp_int(
+      item.position.line,
+      0,
+      snapshot.line_count() - 1,
+    )
     let line_text = snapshot.line_text(line)
-    let column = @core.clamp_int(item.position.column, 0, line_text.length())
+    let column = @base_common.clamp_int(
+      item.position.column,
+      0,
+      line_text.length(),
+    )
     if item.text.length() > 0 {
       buckets[line].push({ ..item, position: { line, column } })
     }
@@ -669,12 +677,12 @@ pub fn ViewModel::render_frame(
   self : ViewModel,
   viewport : FrameViewport,
 ) -> RenderFrame {
-  let start_line = @core.clamp_int(
+  let start_line = @base_common.clamp_int(
     viewport.start_line,
     0,
     self.line_count() - 1,
   )
-  let end_line = @core.clamp_int(
+  let end_line = @base_common.clamp_int(
     viewport.end_line,
     start_line + 1,
     self.line_count(),

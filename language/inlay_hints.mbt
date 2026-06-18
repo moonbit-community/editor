@@ -9,7 +9,7 @@ pub(all) enum InlayHintKind {
 /// Inline annotation rendered at a core document position, with optional
 /// spacing and hover tooltip content.
 pub(all) struct InlayHint {
-  position : @core.Position
+  position : @base_common.Position
   label : String
   kind : InlayHintKind?
   padding_left : Bool
@@ -20,7 +20,7 @@ pub(all) struct InlayHint {
 ///|
 /// Builds an inlay hint with explicit spacing and tooltip defaults.
 pub fn InlayHint::InlayHint(
-  position : @core.Position,
+  position : @base_common.Position,
   label : String,
   kind? : InlayHintKind,
   padding_left? : Bool = false,

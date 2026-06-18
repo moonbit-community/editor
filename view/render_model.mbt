@@ -44,8 +44,12 @@ pub fn render(
   decoration_set : @decorations.DecorationSet,
   providers : @language.ProviderResult,
 ) -> RenderModel {
-  let start_line = @core.clamp_int(viewport.start_line, 0, doc.line_count() - 1)
-  let end_line = @core.clamp_int(
+  let start_line = @base_common.clamp_int(
+    viewport.start_line,
+    0,
+    doc.line_count() - 1,
+  )
+  let end_line = @base_common.clamp_int(
     viewport.end_line,
     start_line + 1,
     doc.line_count(),
@@ -54,7 +58,7 @@ pub fn render(
   for line in start_line..<end_line {
     let line_start = doc.line_start_offset(line)
     let line_end = doc.line_end_offset(line)
-    let line_range = @core.Range(line_start, line_end)
+    let line_range = @base_common.Range(line_start, line_end)
     let spans = spans_for_line(doc, line_range, tokens, decoration_set)
     lines.push(RenderLine::{
       line_number: line + 1,
@@ -91,7 +95,7 @@ pub impl ToJson for RenderModel with fn to_json(self) {
 ///|
 fn spans_for_line(
   doc : @model.TextSnapshot,
-  line_range : @core.Range,
+  line_range : @base_common.Range,
   tokens : Array[@syntax.Token],
   decoration_set : @decorations.DecorationSet,
 ) -> Array[RenderSpan] {
@@ -192,7 +196,7 @@ fn hover_content_json(content : @language.HoverContent) -> Json {
 }
 
 ///|
-fn range_json(range : @core.Range) -> Json {
+fn range_json(range : @base_common.Range) -> Json {
   { "start": range.start.to_json(), "end": range.end.to_json() }
 }
 

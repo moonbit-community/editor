@@ -81,7 +81,7 @@ pub fn RenderLine::model_column_at_column(
   self : RenderLine,
   column : Int,
 ) -> Int {
-  let column = @core.clamp_int(column, 0, self.text.length())
+  let column = @base_common.clamp_int(column, 0, self.text.length())
   match self.model_columns.get(column) {
     Some(model_column) => model_column
     None => column
@@ -109,7 +109,7 @@ pub fn RenderLine::injected_text_index_at_column(
   self : RenderLine,
   column : Int,
 ) -> Int {
-  let column = @core.clamp_int(column, 0, self.text.length())
+  let column = @base_common.clamp_int(column, 0, self.text.length())
   match self.injected_text_indices.get(column) {
     Some(index) => index
     None => -1
@@ -122,7 +122,7 @@ pub fn RenderLine::view_column_at_source_offset(
   self : RenderLine,
   offset : Int,
 ) -> Int {
-  let model_column = @core.clamp_int(
+  let model_column = @base_common.clamp_int(
     offset - self.model_line_start_offset(),
     0,
     self.model_column_at_column(self.text.length()),
@@ -137,7 +137,7 @@ pub fn RenderLine::view_column_at_source_offset(
 
 ///|
 fn spans_for_line(
-  line_range : @core.Range,
+  line_range : @base_common.Range,
   tokens : Array[@syntax.Token],
   line_decorations : Array[@decorations.Decoration],
 ) -> Array[RenderSpan] {
@@ -192,7 +192,7 @@ fn spans_for_line(
 /// over syntax colors where both apply.
 fn overlay_semantic_tokens(
   spans : Array[RenderSpan],
-  line_range : @core.Range,
+  line_range : @base_common.Range,
   semantic_tokens : Array[@language.SemanticToken],
 ) -> Array[RenderSpan] {
   if semantic_tokens.length() == 0 {
@@ -315,7 +315,7 @@ fn hover_content_json(content : @language.HoverContent) -> Json {
 }
 
 ///|
-fn range_json(range : @core.Range) -> Json {
+fn range_json(range : @base_common.Range) -> Json {
   { "start": range.start.to_json(), "end": range.end.to_json() }
 }
 

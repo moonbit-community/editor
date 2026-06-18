@@ -200,7 +200,7 @@ fn append_line_selection_segments(
   parent : @rdom.Element,
   document : @rdom.Document,
   line : @view_model.RenderLine,
-  range : @core.Range,
+  range : @base_common.Range,
   top : Int,
 ) -> Unit {
   let model_line_start = line.model_line_start_offset()

@@ -84,12 +84,12 @@ fn normalize_folding_ranges(
 ) -> Array[@language.FoldingRange] {
   let normalized : Array[@language.FoldingRange] = []
   for range in ranges {
-    let start_line_number = @core.clamp_int(
+    let start_line_number = @base_common.clamp_int(
       range.start_line_number,
       1,
       max_int(line_count, 1),
     )
-    let end_line_number = @core.clamp_int(
+    let end_line_number = @base_common.clamp_int(
       range.end_line_number,
       1,
       max_int(line_count, 1),

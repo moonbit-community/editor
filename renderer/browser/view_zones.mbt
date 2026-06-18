@@ -167,7 +167,7 @@ fn Viewer::normalize_browser_view_zones(self : Viewer) -> Unit {
     }
     normalized.push({
       ..zone,
-      anchor_line: @core.clamp_int(zone.anchor_line, 0, max_anchor),
+      anchor_line: @base_common.clamp_int(zone.anchor_line, 0, max_anchor),
       height_px: max_int(zone.height_px, 0),
     })
   }

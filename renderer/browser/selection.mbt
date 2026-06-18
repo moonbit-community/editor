@@ -1,5 +1,5 @@
 ///|
-fn Viewer::selection_range(self : Viewer) -> @core.Range? {
+fn Viewer::selection_range(self : Viewer) -> @base_common.Range? {
   match (self.selection, self.source_document) {
     (Some(selection), Some(document)) => {
       let snapshot = document.snapshot()
@@ -69,7 +69,7 @@ fn Viewer::finish_selection(self : Viewer) -> Unit {
 fn Viewer::position_for_selection_target(
   self : Viewer,
   target : @renderer.MouseTarget,
-) -> @core.Position? {
+) -> @base_common.Position? {
   if target.offset < 0 {
     return None
   }
@@ -126,7 +126,7 @@ fn Viewer::get_rich_text_to_copy(
 
 ///|
 fn rich_text_to_copy_from_frame(
-  range : @core.Range,
+  range : @base_common.Range,
   frame : @view_model.RenderFrame,
 ) -> String? {
   let html = StringBuilder()
@@ -158,7 +158,7 @@ fn rich_text_to_copy_from_frame(
 fn append_rich_copy_line_segments(
   html : StringBuilder,
   line : @view_model.RenderLine,
-  range : @core.Range,
+  range : @base_common.Range,
 ) -> Unit {
   let model_line_start = line.model_line_start_offset()
   for span in line.spans {

@@ -79,7 +79,7 @@ pub fn FrameSource::FrameSource(
 fn[T] bucket_by_line(
   snapshot : @model.TextSnapshot,
   items : Array[T],
-  range_of : (T) -> @core.Range,
+  range_of : (T) -> @base_common.Range,
 ) -> Array[Array[T]] {
   let line_count = snapshot.line_count()
   let buckets : Array[Array[T]] = []
@@ -99,7 +99,7 @@ fn[T] bucket_by_line(
     let mut covered = line
     while covered < line_count &&
           snapshot.line_start_offset(covered) < range.end {
-      let line_range = @core.Range(
+      let line_range = @base_common.Range(
         snapshot.line_start_offset(covered),
         snapshot.line_end_offset(covered),
       )

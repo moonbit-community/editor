@@ -2,18 +2,18 @@
 /// One renderable contribution to the content hover widget.
 pub(all) enum HoverPart {
   MarkdownHover(
-    range~ : @core.Range,
+    range~ : @base_common.Range,
     contents~ : Array[@language.HoverContent],
     ordinal~ : Int
   )
-  MarkerHover(range~ : @core.Range, marker~ : Marker)
-  LoadingHover(range~ : @core.Range, message~ : String)
+  MarkerHover(range~ : @base_common.Range, marker~ : Marker)
+  LoadingHover(range~ : @base_common.Range, message~ : String)
 } derive(Eq, Debug)
 
 ///|
 /// Complete hover result after participant parts have been merged and sorted.
 pub(all) struct ComputedHover {
-  range : @core.Range
+  range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq, Debug)
 
@@ -21,7 +21,7 @@ pub(all) struct ComputedHover {
 /// Inputs shared by synchronous and asynchronous hover participants.
 pub(all) struct HoverComputeContext {
   document : @model.TextModel
-  anchor_range : @core.Range
+  anchor_range : @base_common.Range
   offset : Int
   injected_text_index : Int
   inlay_hints : Array[@language.InlayHint]
@@ -206,7 +206,7 @@ pub fn ContentHoverComputer::new(
 pub fn ContentHoverComputer::compute_sync(
   self : ContentHoverComputer,
   document : @model.TextModel,
-  anchor_range : @core.Range,
+  anchor_range : @base_common.Range,
   offset : Int,
   injected_text_index? : Int = -1,
   inlay_hints? : Array[@language.InlayHint] = [],
@@ -231,7 +231,7 @@ pub fn ContentHoverComputer::compute_sync(
 pub async fn ContentHoverComputer::compute_async(
   self : ContentHoverComputer,
   document : @model.TextModel,
-  anchor_range : @core.Range,
+  anchor_range : @base_common.Range,
   offset : Int,
   injected_text_index? : Int = -1,
   inlay_hints? : Array[@language.InlayHint] = [],
@@ -253,7 +253,7 @@ pub async fn ContentHoverComputer::compute_async(
 
 ///|
 fn computed_hover_from_parts(
-  fallback_range : @core.Range,
+  fallback_range : @base_common.Range,
   parts : Array[HoverPart],
 ) -> ComputedHover? {
   if parts.length() == 0 {
@@ -287,7 +287,7 @@ fn hover_part_ordinal(part : HoverPart) -> Int {
 }
 
 ///|
-fn hover_part_range(part : HoverPart) -> @core.Range {
+fn hover_part_range(part : HoverPart) -> @base_common.Range {
   match part {
     MarkdownHover(range~, ..) => range
     MarkerHover(range~, ..) => range
@@ -296,7 +296,10 @@ fn hover_part_range(part : HoverPart) -> @core.Range {
 }
 
 ///|
-fn union_range(left : @core.Range, right : @core.Range) -> @core.Range {
+fn union_range(
+  left : @base_common.Range,
+  right : @base_common.Range,
+) -> @base_common.Range {
   Range(min_int(left.start, right.start), max_int(left.end, right.end))
 }
 

@@ -2,7 +2,7 @@
 priv struct ContentViewOverlaysPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
-  selection_range : @core.Range?
+  selection_range : @base_common.Range?
 }
 
 ///|
@@ -81,7 +81,7 @@ fn ContentViewOverlays::render_selection_overlays(
   self : ContentViewOverlays,
   frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
-  selection_range : @core.Range?,
+  selection_range : @base_common.Range?,
 ) -> Unit {
   self.view_overlays.set_inner_html("")
   let range = match selection_range {

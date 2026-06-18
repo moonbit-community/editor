@@ -2,7 +2,7 @@
 /// Text inserted into a rendered line without existing in the source document,
 /// currently used for inlay hints.
 pub(all) struct InjectedText {
-  position : @core.Position
+  position : @base_common.Position
   text : String
   class_name : String
   source_index : Int
@@ -11,7 +11,7 @@ pub(all) struct InjectedText {
 ///|
 /// Builds injected text at a model position.
 pub fn InjectedText::InjectedText(
-  position : @core.Position,
+  position : @base_common.Position,
   text : String,
   class_name : String,
   source_index? : Int = -1,
@@ -128,7 +128,11 @@ pub fn ProjectedTextLine::from_injected_text(
   let mut source_cursor = 0
   let mut view_cursor = 0
   for item in normalized {
-    let column = @core.clamp_int(item.position.column, 0, line_text.length())
+    let column = @base_common.clamp_int(
+      item.position.column,
+      0,
+      line_text.length(),
+    )
     if column > source_cursor {
       append_source_text(
         builder, line_text, source_cursor, column, model_columns, injected_text_indices,
@@ -173,7 +177,7 @@ pub fn ProjectedTextLine::model_column_to_projected_column(
   self : ProjectedTextLine,
   model_column : Int,
 ) -> Int {
-  let column = @core.clamp_int(model_column, 0, self.model_line_length)
+  let column = @base_common.clamp_int(model_column, 0, self.model_line_length)
   match self.model_to_projected_columns.get(column) {
     Some(projected_column) => projected_column
     None => self.text.length()
@@ -186,7 +190,7 @@ pub fn ProjectedTextLine::projected_column_to_model_column(
   self : ProjectedTextLine,
   projected_column : Int,
 ) -> Int {
-  let column = @core.clamp_int(projected_column, 0, self.text.length())
+  let column = @base_common.clamp_int(projected_column, 0, self.text.length())
   match self.model_columns.get(column) {
     Some(model_column) => model_column
     None => self.model_line_length
@@ -200,7 +204,7 @@ pub fn ProjectedTextLine::injected_text_index_at_projected_column(
   self : ProjectedTextLine,
   projected_column : Int,
 ) -> Int {
-  let column = @core.clamp_int(projected_column, 0, self.text.length())
+  let column = @base_common.clamp_int(projected_column, 0, self.text.length())
   match self.injected_text_indices.get(column) {
     Some(index) => index
     None => -1
@@ -245,7 +249,11 @@ fn normalize_injected_text(
   let normalized : Array[InjectedText] = []
   for item in injected_text {
     if item.text.length() > 0 {
-      let column = @core.clamp_int(item.position.column, 0, line_text.length())
+      let column = @base_common.clamp_int(
+        item.position.column,
+        0,
+        line_text.length(),
+      )
       normalized.push({ ..item, position: { ..item.position, column, } })
     }
   }

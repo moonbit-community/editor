@@ -22,7 +22,7 @@ test "tokens bucket per line and multi-line tokens cover every line" {
     language_id="moonbit",
   )
   // Hand-built tokens with doc offsets: the block comment spans lines 1-2.
-  let comment_range = @core.Range(10, 32)
+  let comment_range = @base_common.Range(10, 32)
   let tokens : Array[@syntax.Token] = [
     { range: Range(0, 3), tag: Keyword, text: "let" },
     { range: comment_range, tag: Comment, text: doc.slice(comment_range) },

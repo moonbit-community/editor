@@ -43,8 +43,8 @@ impl @language.HoverProvider for HarnessHoverProvider with fn hover_at(
         Some({ range: harness_marker_range(document), contents: [] })
       } else {
         let text = document.snapshot.text
-        let start = @core.clamp_int(offset, 0, text.length())
-        let end = @core.clamp_int(start + 1, start, text.length())
+        let start = @base_common.clamp_int(offset, 0, text.length())
+        let end = @base_common.clamp_int(start + 1, start, text.length())
         let content : @language.HoverContent = if fixture.kind == "markdown" {
           Markdown(fixture.contents)
         } else {
@@ -79,7 +79,7 @@ impl @language.DiagnosticsProvider for HarnessHoverProvider with fn diagnostics_
 }
 
 ///|
-fn harness_marker_range(document : @model.TextModel) -> @core.Range {
+fn harness_marker_range(document : @model.TextModel) -> @base_common.Range {
   let snapshot = document.snapshot
   if snapshot.line_count() >= 3 {
     let start = snapshot.offset_at_position({ line: 2, column: 2 })

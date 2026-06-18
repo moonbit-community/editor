@@ -1,15 +1,15 @@
 ///|
 /// Anchor/focus selection in zero-based document positions.
 pub(all) struct Selection {
-  anchor : @core.Position
-  focus : @core.Position
+  anchor : @base_common.Position
+  focus : @base_common.Position
 } derive(Eq, Debug)
 
 ///|
 /// Builds a selection without normalizing anchor/focus order.
 pub fn Selection::Selection(
-  anchor : @core.Position,
-  focus : @core.Position,
+  anchor : @base_common.Position,
+  focus : @base_common.Position,
 ) -> Selection {
   { anchor, focus }
 }
@@ -32,7 +32,7 @@ pub fn Selection::from_offsets(
 pub fn Selection::normalized_range(
   self : Selection,
   snapshot : @model.TextSnapshot,
-) -> @core.Range {
+) -> @base_common.Range {
   let anchor = snapshot.offset_at_position(self.anchor)
   let focus = snapshot.offset_at_position(self.focus)
   if anchor <= focus {

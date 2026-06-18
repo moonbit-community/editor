@@ -6,7 +6,7 @@ priv struct ViewRenderInput {
   layout : @view_layout.ViewLayout
   browser_view_zones : Array[BrowserViewZone]
   decorations : Array[@decorations.Decoration]
-  selection_range : @core.Range?
+  selection_range : @base_common.Range?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   hover_state : HoverController
@@ -124,7 +124,7 @@ priv struct ViewRenderSnapshot {
   dimensions : @view_layout.ScrollDimensions
   gutter_width : Double
   space_width : Double
-  selection_range : @core.Range?
+  selection_range : @base_common.Range?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   browser_view_zones : Array[BrowserViewZone]

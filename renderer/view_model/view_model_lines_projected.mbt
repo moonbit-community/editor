@@ -81,7 +81,7 @@ pub fn ViewModelLinesFromProjectedModel::render_line(
   render_projected_line(
     self.base.render_model_line(segment.model_line_number),
     projected_line,
-    @core.clamp_int(line_number, 1, self.line_count()),
+    @base_common.clamp_int(line_number, 1, self.line_count()),
     segment.start_offset,
     segment.end_offset,
   )
@@ -113,8 +113,8 @@ pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(
 /// Converts a model position to its projected view position.
 pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(
   self : ViewModelLinesFromProjectedModel,
-  position : @core.Position,
-) -> @core.Position {
+  position : @base_common.Position,
+) -> @base_common.Position {
   self.projection.model_position_to_view_position(position)
 }
 
@@ -122,8 +122,8 @@ pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(
 /// Converts a projected view position back to the nearest model position.
 pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(
   self : ViewModelLinesFromProjectedModel,
-  position : @core.Position,
-) -> @core.Position {
+  position : @base_common.Position,
+) -> @base_common.Position {
   self.projection.view_position_to_model_position(position)
 }
 

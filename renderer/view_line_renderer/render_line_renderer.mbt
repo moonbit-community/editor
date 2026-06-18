@@ -29,7 +29,11 @@ pub fn render_view_line(
   let mut last_char_offset_in_part = 0
   for part_index in 0..<parts.length() {
     let part = parts[part_index]
-    let part_end = @core.clamp_int(part.end_index, char_index, render_len)
+    let part_end = @base_common.clamp_int(
+      part.end_index,
+      char_index,
+      render_len,
+    )
     let class_name = if part.is_whitespace() && input.render_whitespace != None {
       "mtkw"
     } else {
@@ -191,7 +195,7 @@ fn normalized_line_tokens(
     if cursor >= render_len {
       break
     }
-    let end_index = @core.clamp_int(token.end_index, cursor, render_len)
+    let end_index = @base_common.clamp_int(token.end_index, cursor, render_len)
     if cursor < end_index {
       out.push({
         end_index,
@@ -231,7 +235,7 @@ fn apply_inline_decorations(
   let mut segment_index = 0
   let mut last_result_end_index = 0
   for token in tokens {
-    let token_end = @core.clamp_int(
+    let token_end = @base_common.clamp_int(
       token.end_index,
       last_result_end_index,
       render_len,

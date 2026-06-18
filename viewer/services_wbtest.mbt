@@ -105,10 +105,12 @@ async test "provider failures are logged and isolated" {
 test "token providers dispose only the active registration" {
   let languages = Languages::new()
   let first = languages.set_tokens_provider(
-    "toy", @syntax.PlainTokenizer::new(),
+    "toy",
+    @syntax.PlainTokenizer::new(),
   )
   let second = languages.set_tokens_provider(
-    "toy", @syntax.PlainTokenizer::new(),
+    "toy",
+    @syntax.PlainTokenizer::new(),
   )
   first.dispose()
   assert_true(languages.lookup_tokens_provider("toy") is Some(_))
@@ -119,14 +121,12 @@ test "token providers dispose only the active registration" {
 ///|
 async test "language provider registrations preserve order after disposal" {
   let languages = Languages::new()
-  let first = languages.register_hover_provider(
-    LanguageId("moonbit"),
-    NamedHoverProvider::{ text: "first" },
-  )
-  let second = languages.register_hover_provider(
-    LanguageId("moonbit"),
-    NamedHoverProvider::{ text: "second" },
-  )
+  let first = languages.register_hover_provider(LanguageId("moonbit"), NamedHoverProvider::{
+    text: "first",
+  })
+  let second = languages.register_hover_provider(LanguageId("moonbit"), NamedHoverProvider::{
+    text: "second",
+  })
   let log_service = @log.LogService::new()
   let document = test_document()
   assert_hover_text(languages.hover_at(document, 3, log_service), "first")

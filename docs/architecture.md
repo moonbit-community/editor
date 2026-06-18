@@ -135,11 +135,13 @@ nodes; it does not own line HTML semantics.
 Syntax highlighting and semantic language features are separate:
 
 - `syntax/lang_*` packages provide compile-time tokenizers.
-- Hosts register tokenizers with the viewer.
 - `language` provider traits provide semantic features such as hover and
   diagnostics.
-- `viewer` consumes registered tokenizers and providers without
-  importing concrete `syntax/lang_*` packages or any backend transport.
+- Hosts register tokenizers and semantic providers through
+  `@viewer.languages.*`, or through an isolated `Languages` registry selected by
+  `ViewerServices::new(languages~)`.
+- `viewer` consumes registered tokenizers and providers without importing
+  concrete `syntax/lang_*` packages or any backend transport.
 
 ## Placement Rules
 
@@ -152,6 +154,8 @@ Use these rules when deciding where to add a new package or feature:
 - New semantic language feature contracts belong in `language`.
 - New concrete tokenizers belong in `syntax/lang_*` packages and are composed by
   host packages.
+- Runtime language registration belongs in `viewer.languages`; `language` owns
+  contracts, not live viewer registries.
 - Optional reusable UI around the viewer belongs under `widgets/*`.
 - App-specific browser shell behavior belongs in `workbench` or a separate
   example/application package.

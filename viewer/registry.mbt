@@ -49,8 +49,9 @@ fn Viewer::request_document_features(
   @js.async_run(() => {
     self.services.languages.diagnostics_for_document(
       document,
-      (owner, diagnostics) =>
-        self.services.markers.set_diagnostics(owner, document.uri, diagnostics),
+      (owner, diagnostics) => {
+        self.services.markers.set_diagnostics(owner, document.uri, diagnostics)
+      },
       self.services.log_service,
     )
     if self.is_current_document(document) {
@@ -59,7 +60,8 @@ fn Viewer::request_document_features(
   })
   @js.async_run(() => {
     let symbols = self.services.languages.document_symbols(
-      document, self.services.log_service,
+      document,
+      self.services.log_service,
     )
     if self.is_current_document(document) {
       self.provider_result = { ..self.provider_result, symbols, }
@@ -68,7 +70,8 @@ fn Viewer::request_document_features(
   })
   @js.async_run(() => {
     let semantic_tokens = self.services.languages.semantic_tokens_for_document(
-      document, self.services.log_service,
+      document,
+      self.services.log_service,
     )
     if self.is_current_document(document) {
       self.provider_result = { ..self.provider_result, semantic_tokens, }
@@ -77,7 +80,8 @@ fn Viewer::request_document_features(
   })
   @js.async_run(() => {
     let folding_ranges = self.services.languages.folding_ranges_for_document(
-      document, self.services.log_service,
+      document,
+      self.services.log_service,
     )
     if self.is_current_document(document) {
       self.set_folding_ranges(folding_ranges)
@@ -85,7 +89,8 @@ fn Viewer::request_document_features(
   })
   @js.async_run(() => {
     let inlay_hints = self.services.languages.inlay_hints_for_document(
-      document, self.services.log_service,
+      document,
+      self.services.log_service,
     )
     if self.is_current_document(document) {
       self.inlay_hints = inlay_hints

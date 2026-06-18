@@ -136,7 +136,8 @@ fn run_viewer_api_test() -> Unit {
         languages=@viewer.Languages::new(),
       )
       services.languages.set_tokens_provider(
-        "moonbit", @lang_moonbit.MoonbitTokenizer::new(),
+        "moonbit",
+        @lang_moonbit.MoonbitTokenizer::new(),
       )
       |> ignore
       let provider = ComponentHoverProvider::new()

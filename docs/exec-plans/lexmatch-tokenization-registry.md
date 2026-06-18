@@ -2,6 +2,11 @@
 
 Status: implemented (2026-06-12).
 
+Superseding note (2026-06-18): embedders now install tokenizers through
+`@viewer.languages.set_tokens_provider(...)` or an isolated `Languages` value.
+Historical mentions of `Viewer::register_tokenizer(...)` below refer to the
+original tokenization-registry implementation.
+
 Implementation notes (deviations found during Phase 0 probes, all
 recorded in `syntax/README.md`):
 

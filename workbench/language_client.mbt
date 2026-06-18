@@ -16,18 +16,15 @@ fn register_remote_language_providers(
     LanguageFilter(scheme="readonly-remote"),
   )
   services.languages.register_hover_provider(selector, client) |> ignore
-  services.languages.register_diagnostics_provider(selector, client)
-  |> ignore
+  services.languages.register_diagnostics_provider(selector, client) |> ignore
   services.languages.register_document_symbol_provider(selector, client)
   |> ignore
   services.languages.register_document_semantic_tokens_provider(
     selector, client,
   )
   |> ignore
-  services.languages.register_folding_range_provider(selector, client)
-  |> ignore
-  services.languages.register_inlay_hints_provider(selector, client)
-  |> ignore
+  services.languages.register_folding_range_provider(selector, client) |> ignore
+  services.languages.register_inlay_hints_provider(selector, client) |> ignore
 }
 
 ///|

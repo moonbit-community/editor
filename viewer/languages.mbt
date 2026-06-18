@@ -104,10 +104,7 @@ pub fn Languages::set_tokens_provider(
   self.tokenizers[language_id] = { id, tokenizer }
   @base_common.Disposable::from(() => {
     match self.tokenizers.get(language_id) {
-      Some(entry) =>
-        if entry.id == id {
-          self.tokenizers.remove(language_id)
-        }
+      Some(entry) => if entry.id == id { self.tokenizers.remove(language_id) }
       None => ()
     }
   })
@@ -346,7 +343,9 @@ async fn Languages::inlay_hints_for_document(
     }
     let result = entry.provider.provide_inlay_hints(document, full_range, token) catch {
       _ => {
-        log_provider_failure(log_service, "language.inlayHints", document, index)
+        log_provider_failure(
+          log_service, "language.inlayHints", document, index,
+        )
         []
       }
     }

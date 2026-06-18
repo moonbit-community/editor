@@ -3,6 +3,11 @@
 Status: implemented in `17ae776`, with host startup log flag wiring deferred.
 Date: 2026-06-16
 
+Superseding note (2026-06-18): public language registration moved from
+`LanguageFeaturesService` to `@viewer.languages.*` / `Languages`. The
+`LanguageFeaturesService` examples in this historical plan describe the earlier
+service split, not the current public API.
+
 ## Summary
 
 Refactor the readonly viewer so language features, diagnostics, marker state,

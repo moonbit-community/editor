@@ -52,20 +52,19 @@ their command type.
   `scroll_home`, and `scroll_end` are the synthetic scroll entry points
   for host-routed keyboard scrolling and harness controls; wheel and
   scrollbar input arrive through the view's shared scrollable element.
-- `ViewerServices` owns `LanguageFeaturesService`, `MarkerService`,
-  `MarkerDecorationsService`, `HoverParticipantRegistry`, and `LogService`.
-  Hosts register hover, diagnostics, symbol, semantic-token, folding-range, and
-  inlay-hint providers on `services.language_features`; hover composition runs
-  through marker, inlay-hint, and markdown hover participants. If folding
-  providers return no ranges for a MoonBit document, the browser uses a
-  conservative indentation/brace fallback.
-- `register_tokenizer(language_id, tokenizer)` adds a
-  `syntax.LineTokenizer` to the tokenization registry (the Monaco
-  `TokenizationRegistry` role). Languages are compile-time packages
-  (`syntax/lang_*`) the host composes in by import — the workbench and
-  `examples/embedded_viewer` register `lang_moonbit` and friends at
-  startup; documents whose `language_id` has no registered tokenizer
-  render through the generic plain fallback.
+- `languages` is the default public language registry. Hosts call
+  `@viewer.languages.set_tokens_provider(language_id, tokenizer)` for syntax
+  highlighting and `@viewer.languages.register_*_provider(selector, provider)`
+  for hover, diagnostics, document symbols, semantic tokens, folding ranges, and
+  inlay hints. Token providers are one-per-language with replacement-safe
+  disposal; semantic providers are ordered multi-provider registries.
+- `ViewerServices` selects the `Languages` registry a viewer uses and owns
+  `MarkerService`, `MarkerDecorationsService`, `HoverParticipantRegistry`, and
+  `LogService`. Hosts that need isolation create `Languages::new()`, register
+  providers on it, and pass it as `ViewerServices::new(languages~)`. Hover
+  composition runs through marker, inlay-hint, and markdown hover participants.
+  If folding providers return no ranges for a MoonBit document, the browser uses
+  a conservative indentation/brace fallback.
 - The viewer reports lifecycle facts through typed subscriptions
   (diagnostics status, frame built with `tokenize_ms`/`build_ms`,
   document rendered/failed with `patch_ms`, hover resolved, scroll settled,
@@ -189,13 +188,14 @@ focuses on hover until those features can be rebuilt without their bugs.
 - May declare narrowly scoped JavaScript FFI it owns, under the host-FFI rule in
   `../../docs/architecture.md`; browser-host timer helpers live package-local
   in `browser_host.mbt`.
-- Must not import `syntax/lang_*` packages: languages reach the viewer
-  only through `register_tokenizer`, so the library carries no grammar
+- Must not import `syntax/lang_*` packages: tokenizers reach the viewer only
+  through `Languages::set_tokens_provider`, so the library carries no grammar
   weight an embedder did not ask for (enforced by
   `scripts/check-architecture.mbtx`).
-- The tokenizer registry remains module-level because language packages are
-  composed once by the host. Feature providers, markers, hover participants,
-  and log sinks are per-viewer services.
+- The default `languages` registry is module-level for simple embedders, while
+  `ViewerServices::new(languages~)` lets tests and embedded viewers select an
+  isolated registry. Markers, hover participants, and log sinks remain
+  per-viewer services.
 - Must not pass render-frame JSON to JavaScript for DOM rendering.
 - The backend-neutral `viewer/common` package must not import Rabbita or browser
   host packages.

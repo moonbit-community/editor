@@ -19,7 +19,7 @@ remote protocol transport.
   listener table), `RemoteWorkspaceTreeProvider`
   (`@workspace.WorkspaceTreeProvider` over `ResolveDirectory`), and
   `RemoteLanguageClient` (the `language` provider traits, registered with
-  the viewer's `LanguageFeaturesService` at startup).
+  the viewer's selected `Languages` registry at startup).
 - Own the auto-open policy: a bounded depth-first resolve walk that opens
   the first MoonBit file (fallback: first file) when the socket opens with
   nothing loaded; the viewer's rendered notification then drives the

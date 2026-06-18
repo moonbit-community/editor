@@ -84,9 +84,7 @@ fn hover_markdown_html(
     match block {
       CodeBlock(code_block) => {
         ctx.string(
-          render_hover_code_block(
-            code_block.v, language_id, language_registry,
-          ),
+          render_hover_code_block(code_block.v, language_id, language_registry),
         )
         true
       }

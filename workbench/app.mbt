@@ -160,10 +160,14 @@ pub fn start_app() -> Unit {
 /// viewer library itself ships only the plain fallback.
 fn install_language_tokenizers(services : @viewer.ViewerServices) -> Unit {
   services.languages.set_tokens_provider(
-    "moonbit", @lang_moonbit.MoonbitTokenizer::new(),
+    "moonbit",
+    @lang_moonbit.MoonbitTokenizer::new(),
   )
   |> ignore
-  services.languages.set_tokens_provider("json", @lang_json.JsonTokenizer::new())
+  services.languages.set_tokens_provider(
+    "json",
+    @lang_json.JsonTokenizer::new(),
+  )
   |> ignore
   let javascript = @lang_javascript.JavascriptTokenizer::new()
   services.languages.set_tokens_provider("javascript", javascript) |> ignore

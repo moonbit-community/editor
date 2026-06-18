@@ -1,7 +1,12 @@
 # Viewer Languages API
 
-Status: proposed
+Status: implemented (2026-06-18)
 Date: 2026-06-18
+
+Implementation note (2026-06-18): active code and current package docs now use
+`@viewer.languages.*` and isolated `Languages` registries. References below to
+`@viewer.register_tokenizer` and `services.language_features.*` describe the
+pre-implementation state or migration notes.
 
 ## Summary
 

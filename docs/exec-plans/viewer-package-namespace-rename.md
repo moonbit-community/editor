@@ -3,6 +3,12 @@
 Status: proposed
 Date: 2026-06-18
 
+Superseding note (2026-06-18): language registration now uses
+`@viewer.languages.set_tokens_provider(...)` and
+`@viewer.languages.register_*_provider(...)`. Examples below with
+`@viewer.register_tokenizer(...)` or `@viewer.languages.register_tokenizer(...)`
+are historical naming-plan context, not the current API.
+
 ## Summary
 
 Rename the public readonly viewer package family from implementation-oriented

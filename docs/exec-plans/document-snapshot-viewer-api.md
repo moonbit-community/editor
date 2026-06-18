@@ -3,6 +3,11 @@
 Status: proposed
 Date: 2026-06-18
 
+Superseding note (2026-06-18): provider registration now goes through
+`@viewer.languages.register_*_provider(...)` or an isolated `Languages` value
+passed to `ViewerServices::new(languages~)`. Examples below using
+`services.language_features.*` are historical plan context.
+
 ## Summary
 
 Redesign the embeddable readonly viewer as one cohesive public API instead of a

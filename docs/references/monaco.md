@@ -12,9 +12,16 @@ Useful areas:
 - `vscode/src/vs/editor/common/model`: text model, tokens, decorations, interval
   tree; local readonly text owner is `viewer/model`.
 - `vscode/src/vs/editor/common/languages`: language registrations and tokenization.
+  Local public registration is `@viewer.languages.*`: `set_tokens_provider`
+  mirrors `monaco.languages.setTokensProvider`, while
+  `register_hover_provider`, `register_diagnostics_provider`,
+  `register_document_symbol_provider`,
+  `register_document_semantic_tokens_provider`,
+  `register_folding_range_provider`, and `register_inlay_hints_provider` cover
+  this viewer's readonly semantic provider seams.
 - `vscode/src/vs/editor/common/tokenizationRegistry.ts`: the
-  `TokenizationRegistry` this repo's `syntax.TokenizerRegistry` copies —
-  support registered per language id, looked up at render time, plain
+  `TokenizationRegistry` this repo's `Languages` facade uses for the same
+  role — support registered per language id, looked up at render time, plain
   fallback on a miss.
 - `vscode/src/vs/editor/common/languages.ts` (~lines 123-174):
   `ITokenizationSupport` and `IState` — the line-at-a-time tokenization

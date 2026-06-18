@@ -279,7 +279,8 @@ fn main {
   // Highlighting needs no server: the language package is composed in
   // by import and registered through the viewer languages facade.
   @viewer.languages.set_tokens_provider(
-    "moonbit", @lang_moonbit.MoonbitTokenizer::new(),
+    "moonbit",
+    @lang_moonbit.MoonbitTokenizer::new(),
   )
   |> ignore
   let (_, cell) = @rabbita.cell_with_emit(

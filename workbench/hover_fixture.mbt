@@ -11,7 +11,7 @@ let harness_hover_fixture : Ref[HarnessHoverFixture?] = Ref(None)
 priv struct HarnessHoverProvider {}
 
 ///|
-fn register_harness_hover_provider(services : @browser.ViewerServices) -> Unit {
+fn register_harness_hover_provider(services : @viewer.ViewerServices) -> Unit {
   let provider = HarnessHoverProvider::{  }
   let selector = @language.LanguageSelector::LanguageFilter(
     LanguageFilter(scheme="readonly-remote"),

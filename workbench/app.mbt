@@ -38,12 +38,12 @@ priv enum WorkbenchMsg {
 
 ///|
 priv enum WorkbenchViewerEvent {
-  DidChangeDiagnostics(@browser.ViewerDiagnosticsChangedEvent)
-  DidBuildFrame(@browser.ViewerFrameBuiltEvent)
-  DidRenderDocument(@browser.ViewerDocumentRenderedEvent)
+  DidChangeDiagnostics(@viewer.ViewerDiagnosticsChangedEvent)
+  DidBuildFrame(@viewer.ViewerFrameBuiltEvent)
+  DidRenderDocument(@viewer.ViewerDocumentRenderedEvent)
   DidFailDocument(@workspace.DocumentError)
-  DidResolveHover(@browser.ViewerHoverResolvedEvent)
-  DidScroll(@browser.ViewerScrollEvent)
+  DidResolveHover(@viewer.ViewerHoverResolvedEvent)
+  DidScroll(@viewer.ViewerScrollEvent)
   DidDispose
 }
 
@@ -77,17 +77,17 @@ fn dispatch_workbench_msg(msg : WorkbenchMsg) -> Unit {
 ///|
 /// The embedded viewer instance, created on first use with the remote
 /// document provider and event subscriptions into the shell update loop.
-let viewer_cell : Ref[@browser.Viewer?] = Ref(None)
+let viewer_cell : Ref[@viewer.Viewer?] = Ref(None)
 
 ///|
-let viewer_services_cell : Ref[@browser.ViewerServices?] = Ref(None)
+let viewer_services_cell : Ref[@viewer.ViewerServices?] = Ref(None)
 
 ///|
-fn workbench_services() -> @browser.ViewerServices {
+fn workbench_services() -> @viewer.ViewerServices {
   match viewer_services_cell.val {
     Some(services) => services
     None => {
-      let services = @browser.ViewerServices::new(
+      let services = @viewer.ViewerServices::new(
         log_service=workbench_log_service(),
       )
       viewer_services_cell.val = Some(services)
@@ -97,11 +97,11 @@ fn workbench_services() -> @browser.ViewerServices {
 }
 
 ///|
-fn workbench_viewer() -> @browser.Viewer {
+fn workbench_viewer() -> @viewer.Viewer {
   match viewer_cell.val {
     Some(viewer) => viewer
     None => {
-      let viewer = @browser.Viewer(
+      let viewer = @viewer.Viewer(
         document_provider,
         services=workbench_services(),
         theme=stored_theme(),
@@ -115,7 +115,7 @@ fn workbench_viewer() -> @browser.Viewer {
 }
 
 ///|
-fn install_viewer_event_subscriptions(viewer : @browser.Viewer) -> Unit {
+fn install_viewer_event_subscriptions(viewer : @viewer.Viewer) -> Unit {
   viewer.on_did_change_diagnostics(event => {
     dispatch_workbench_msg(ViewerEvent(DidChangeDiagnostics(event)))
   })
@@ -159,13 +159,13 @@ pub fn start_app() -> Unit {
 /// Languages are compile-time packages composed here by import; the
 /// viewer library itself ships only the plain fallback.
 fn register_tokenizers() -> Unit {
-  @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
-  @browser.register_tokenizer("json", @lang_json.JsonTokenizer::new())
+  @viewer.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
+  @viewer.register_tokenizer("json", @lang_json.JsonTokenizer::new())
   let javascript = @lang_javascript.JavascriptTokenizer::new()
-  @browser.register_tokenizer("javascript", javascript)
+  @viewer.register_tokenizer("javascript", javascript)
   // TypeScript reads acceptably through the JavaScript rules until a
   // dedicated package exists.
-  @browser.register_tokenizer("typescript", javascript)
+  @viewer.register_tokenizer("typescript", javascript)
 }
 
 ///|

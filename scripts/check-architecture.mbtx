@@ -120,7 +120,7 @@ async fn collect_manifests(dir : String, manifests : Array[String]) -> Unit {
 async fn check_package_imports(errors : Array[String]) -> Unit {
   let common_forbidden = [
     "baozhiyuan/editor/remote_protocol",
-    "baozhiyuan/editor/renderer/browser",
+    "baozhiyuan/editor/viewer",
     "baozhiyuan/editor/server",
     "baozhiyuan/editor/server_host_native",
     "baozhiyuan/editor/web",
@@ -139,7 +139,7 @@ async fn check_package_imports(errors : Array[String]) -> Unit {
   ]
   let widget_forbidden = [
     "baozhiyuan/editor/remote_protocol",
-    "baozhiyuan/editor/renderer/browser",
+    "baozhiyuan/editor/viewer",
     "moonbit-community/rabbita/websocket",
   ]
   for manifest in package_manifests() {

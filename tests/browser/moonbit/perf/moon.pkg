@@ -1,6 +1,6 @@
 import {
   "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/renderer/browser",
+  "baozhiyuan/editor/viewer",
   "baozhiyuan/editor/syntax/lang_moonbit",
   "baozhiyuan/editor/tests/browser/moonbit/support",
   "baozhiyuan/editor/workspace",

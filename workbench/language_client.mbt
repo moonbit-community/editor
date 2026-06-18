@@ -9,7 +9,7 @@ priv struct RemoteLanguageClient {
 
 ///|
 fn register_remote_language_providers(
-  services : @browser.ViewerServices,
+  services : @viewer.ViewerServices,
 ) -> Unit {
   let client = RemoteLanguageClient::{ log_service: services.log_service }
   let selector = @language.LanguageSelector::LanguageFilter(

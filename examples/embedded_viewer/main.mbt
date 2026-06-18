@@ -157,7 +157,7 @@ priv struct EmbedModel {
 priv enum EmbedMsg {
   Boot
   OpenFile(@base_common.Uri)
-  ViewerRendered(@browser.ViewerDocumentRenderedEvent)
+  ViewerRendered(@viewer.ViewerDocumentRenderedEvent)
   ViewerFailed
 }
 
@@ -173,14 +173,14 @@ fn dispatch_embed_msg(msg : EmbedMsg) -> Unit {
 }
 
 ///|
-let embed_viewer_cell : Ref[@browser.Viewer?] = Ref(None)
+let embed_viewer_cell : Ref[@viewer.Viewer?] = Ref(None)
 
 ///|
-fn embed_viewer() -> @browser.Viewer {
+fn embed_viewer() -> @viewer.Viewer {
   match embed_viewer_cell.val {
     Some(viewer) => viewer
     None => {
-      let viewer = @browser.Viewer(
+      let viewer = @viewer.Viewer(
         workspace_backend,
         placeholder="Loading source...",
       )
@@ -278,7 +278,7 @@ fn view_embed(
 fn main {
   // Highlighting needs no server: the language package is composed in
   // by import and registered against the viewer's tokenizer registry.
-  @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
+  @viewer.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
   let (_, cell) = @rabbita.cell_with_emit(
     model={ status: "loading" },
     update=update_embed,

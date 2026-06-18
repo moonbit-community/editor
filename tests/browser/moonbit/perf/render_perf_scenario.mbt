@@ -41,7 +41,7 @@ impl @workspace.DocumentProvider for PerfDocumentProvider with fn close(
 
 ///|
 fn run_render_perf_test() -> Unit {
-  @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
+  @viewer.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
   let ctx = @support.BrowserTestContext::new("viewer_render_perf")
   let done = Ref(false)
   let sample_index = Ref(-1)
@@ -51,10 +51,10 @@ fn run_render_perf_test() -> Unit {
     small_text: small_source_text(),
     large_text: large_source_text(2000),
   }
-  let viewer_ref : Ref[@browser.Viewer?] = Ref(None)
+  let viewer_ref : Ref[@viewer.Viewer?] = Ref(None)
   match mount_host() {
     Some(host) => {
-      let viewer = @browser.Viewer(
+      let viewer = @viewer.Viewer(
         source,
         placeholder="Loading performance fixture...",
       )
@@ -116,7 +116,7 @@ fn mount_host() -> @rdom.Element? {
 
 ///|
 fn run_next_sample(
-  viewer : @browser.Viewer,
+  viewer : @viewer.Viewer,
   sample_index : Ref[Int],
   sample_start : Ref[Double],
 ) -> Unit {
@@ -132,7 +132,7 @@ fn run_next_sample(
 ///|
 fn record_sample(
   ctx : @support.BrowserTestContext,
-  viewer_ref : Ref[@browser.Viewer?],
+  viewer_ref : Ref[@viewer.Viewer?],
   done : Ref[Bool],
   sample_index : Ref[Int],
   sample_start : Ref[Double],

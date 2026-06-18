@@ -122,7 +122,7 @@ impl @language.InlayHintsProvider for ComponentHoverProvider with fn provide_inl
 
 ///|
 fn run_viewer_api_test() -> Unit {
-  @browser.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
+  @viewer.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
   let ctx = @support.BrowserTestContext::new("viewer_api")
   let rendered_count = Ref(0)
   let rendered_line_count = Ref(0)
@@ -133,7 +133,7 @@ fn run_viewer_api_test() -> Unit {
   let model_line_count = component_model_line_count()
   match mount_host() {
     Some(host) => {
-      let services = @browser.ViewerServices::new()
+      let services = @viewer.ViewerServices::new()
       let provider = ComponentHoverProvider::new()
       services.language_features.register_hover_provider(
         LanguageId("moonbit"),
@@ -155,7 +155,7 @@ fn run_viewer_api_test() -> Unit {
         provider,
       )
       |> ignore
-      let viewer = @browser.Viewer(
+      let viewer = @viewer.Viewer(
         source,
         services~,
         options=ViewerOptions(soft_wrap=true),

@@ -3,7 +3,7 @@ import {
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/platform/log",
   "baozhiyuan/editor/remote_protocol",
-  "baozhiyuan/editor/renderer/browser",
+  "baozhiyuan/editor/viewer",
   "baozhiyuan/editor/syntax/lang_javascript",
   "baozhiyuan/editor/syntax/lang_json",
   "baozhiyuan/editor/syntax/lang_moonbit",

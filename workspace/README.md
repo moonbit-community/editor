@@ -1,6 +1,6 @@
 # workspace
 
-Readonly source loading and filesystem-provider contracts.
+Readonly source loading and filesystem-provider contracts for host packages.
 
 ## Responsibilities
 
@@ -10,11 +10,12 @@ Readonly source loading and filesystem-provider contracts.
 - Normalize root-relative paths and reject invalid or unsafe source paths.
 - Define the backend-neutral `FileSystemProvider` trait, `DocumentContent`,
   read results, watch events, and structured provider errors.
-- Define the viewer/tree integration contracts: `DocumentProvider`
+- Define host-side composition contracts: `DocumentProvider`
   (document-level read/watch/close in `DocumentSnapshot` terms) and
   `WorkspaceTreeProvider` + `WorkspaceStat` (the `IFileStat`/
   `IFileService.resolve` copy: stats carry provider-minted URIs and children
-  resolve lazily one level per request).
+  resolve lazily one level per request). The viewer core consumes
+  `DocumentSnapshot` values directly; it does not require or own a provider.
 
 ## Boundaries
 

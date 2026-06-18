@@ -13,13 +13,17 @@ remote protocol transport.
   pending table so each response resumes its own suspended request
   (`protocol_request`), plus the uncorrelated push routing for watch and
   feature packets.
-- Implement the seams the viewer and widget are built against:
+- Implement the host-side seams the viewer and widget are built against:
   `RemoteDocumentProvider` (`@workspace.DocumentProvider` over
   `OpenDocument`/`WatchDocument`/`CloseDocument` with a URI-keyed watch
   listener table), `RemoteWorkspaceTreeProvider`
   (`@workspace.WorkspaceTreeProvider` over `ResolveDirectory`), and
   `RemoteLanguageClient` (the `language` provider traits, registered with
   the viewer's selected `Languages` registry at startup).
+- Own active-document composition: selecting a URI closes the previous source,
+  reads the next snapshot, starts the host watch, applies watch updates through
+  `viewer.set_document`, and decides how missing or failed documents affect the
+  shell status and empty-viewer placeholder.
 - Own the auto-open policy: a bounded depth-first resolve walk that opens
   the first MoonBit file (fallback: first file) when the socket opens with
   nothing loaded; the viewer's rendered notification then drives the

@@ -8,42 +8,43 @@ shell chrome; the `workbench` package composes those in a layer above
 The viewer exposes a public `Viewer` facade and delegates browser DOM rendering
 to an imperative Monaco-shaped `View`: it builds and owns its whole DOM subtree
 inside a host-provided stable element, and every public method is a plain call.
-Hosts with their own effect system (the Rabbita workbench) wrap the calls in
-their command type.
+Hosts own document source, selection, read, watch, reload, and error policy;
+they pass immutable `workspace.DocumentSnapshot` values into the viewer when
+they want a document rendered. Hosts with their own effect system (the Rabbita
+workbench) wrap viewer calls in their command type.
 
 ## Embedding API
 
-- `Viewer::Viewer(provider, services?, options?, theme?, placeholder?)`
-  constructs the viewer against any `&@workspace.DocumentProvider`. The
-  in-memory backend in `examples/embedded_viewer` plus the remote one in
-  `workbench` are the two reference implementations; implementing
-  `DocumentProvider` is the entire document-loading surface for a custom
-  backend.
-  `services` defaults to `ViewerServices::new()`; hosts that install language
-  providers, log sinks, or test fixtures pass an explicit service object.
-  `options` defaults to `ViewerOptions::default()` with soft wrap off; when
-  enabled, the browser derives the wrap column from measured viewport and glyph
-  width while `viewer/view_model` owns the projected line data.
+- `Viewer::Viewer(services?, options?, theme?, placeholder?)` constructs an
+  unattached viewer. `services` defaults to `ViewerServices::new()`; hosts that
+  install language providers, log sinks, or test fixtures pass an explicit
+  service object. `options` defaults to `ViewerOptions::default()` with soft
+  wrap off; when enabled, the browser derives the wrap column from measured
+  viewport and glyph width while `viewer/view_model` owns the projected line
+  data.
 - `Viewer::attach(host)` is the mount seam: the host renders one stable
   element, keeps it mounted, and must never render its own children into
   it — the `View` nodes are foreign to any host vdom and must survive
   host re-renders untouched. While the viewer has no frame it shows the
   host-pushed `placeholder` message inside the view.
-- `Viewer::create(host, provider, ...)` constructs and attaches in one call.
-- `Viewer::open(uri, view_state?)` owns the full document-switch choreography:
-  closing the previous document and its watch, subscribing the new watch,
-  reading through the provider, and applying the result only when the open
-  generation still matches.
-- `Viewer::notify(change, view_state?)`, `reload(view_state?)`, and
-  `show(snapshot, view_state?)` are the host-side refresh paths. Watch
-  invalidations and updates preserve the viewport by default; user-selected
-  opens can reset or restore view state through `ViewStatePolicy`.
-- `Viewer::current()`, `close()`, and `dispose()` expose explicit lifecycle
-  state and teardown. `dispose()` stops the provider watch and DOM listeners.
+- `Viewer::create(host, ...)` constructs and attaches in one call.
+- `Viewer::set_document(snapshot, view_state?)` renders caller-owned immutable
+  document state. The host may get that snapshot from memory, a remote
+  protocol, a `workspace.DocumentProvider`, or another application source. The
+  viewer keeps URI/revision guards so async feature results cannot apply to a
+  stale document.
+- `Viewer::clear_document(view_state?)` clears the rendered frame. The host
+  decides whether a missing, deleted, or failed source should clear the viewer,
+  preserve a previous frame, or show a shell-level error.
+- `Viewer::current_document()`, `get_view_state()`, and `restore_view_state()`
+  expose document identity and scroll state. `ViewStatePolicy` controls whether
+  a new snapshot resets, preserves, or restores viewport state.
+- `Viewer::dispose()` disposes viewer-owned event emitters. It does not close
+  files, cancel provider watches, or own source lifecycle.
 - `on_did_open_document`, `on_did_build_frame`, `on_did_render_document`,
-  `on_did_change_diagnostics`, `on_did_fail_document`,
-  `on_did_resolve_hover`, `on_did_scroll`, and `on_did_dispose` are typed
-  event subscriptions. Each returns a `Disposable` for just that listener.
+  `on_did_change_diagnostics`, `on_did_resolve_hover`, `on_did_scroll`, and
+  `on_did_dispose` are typed event subscriptions. Each returns a `Disposable`
+  for just that listener.
 - `Viewer::set_theme`, `set_placeholder`, `remeasure`, and `escape` push
   host state and host-captured events in. Theme changes never remount the
   view (colors cascade through the host's CSS variables) and keep the
@@ -161,13 +162,14 @@ their command type.
   calls run through `ContentHoverComputer` with revision/token staleness guards.
   Marker hover is contributed synchronously from marker decorations; language
   hover is contributed asynchronously from markdown hover providers.
-- Own the per-revision render cache: provider refreshes rebuild frames from
-  the cached `TokenizedDocument` without re-tokenizing, and window shifts
+- Own the per-revision render cache: caller-provided document replacements
+  rebuild frames from the cached `TokenizedDocument` without re-tokenizing when
+  URI and revision match, and window shifts
   rebuild the viewport frame from the cached `FrameSource` in O(window).
-- Own the current editor-model identity: loaded `workspace.DocumentSnapshot`
-  payloads are converted to internal `viewer/model.TextModel` values, and
-  async feature results are accepted only when URI plus revision still match
-  the current document.
+- Own the current editor-model identity: caller-owned
+  `workspace.DocumentSnapshot` payloads are converted to internal
+  `viewer/model.TextModel` values, and async feature results are accepted only
+  when URI plus revision still match the current document.
 
 Go-to-definition and find-references were removed for now; the viewer
 focuses on hover until those features can be rebuilt without their bugs.
@@ -182,9 +184,8 @@ focuses on hover until those features can be rebuilt without their bugs.
   `viewer/model`, `viewer/view_line_renderer`, `viewer/view_layout`,
   `viewer/view_model`, `syntax`, and `decorations`.
 - Must not import `remote_protocol`, `websocket`, `workbench`, or
-  `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports
-  live behind the `DocumentProvider` trait and viewer-owned language feature
-  services.
+  `widgets/*` — enforced by `scripts/check-architecture.mbtx`. Transports,
+  reads, watches, reload policy, and file lifecycle stay in host packages.
 - May declare narrowly scoped JavaScript FFI it owns, under the host-FFI rule in
   `../../docs/architecture.md`; browser-host timer helpers live package-local
   in `browser_host.mbt`.

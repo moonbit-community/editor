@@ -1,8 +1,9 @@
 # Architecture
 
 The editor is a readonly MoonBit code viewer. The public embedding surface is
-`viewer`: MoonBit users provide document and feature providers, attach the
-viewer to their own host element, and drive it from their own shell.
+`viewer`: MoonBit users create or fetch immutable document snapshots, attach the
+viewer to their own host element, and drive rendering, selection, reload, and
+error policy from their own shell.
 
 This file is the high-level system map. It should stay stable and describe
 where components belong. Package-local contracts, method lists, tests, and DOM
@@ -37,9 +38,10 @@ stack around it.
   public host contracts use `base/common`.
 - `viewer/model`: internal readonly editor text ownership derived from
   `workspace.DocumentSnapshot` by browser rendering code.
-- `workspace`: source/tree provider contracts, provider-loaded
+- `workspace`: host-side source/tree provider contracts, immutable
   `DocumentSnapshot` payloads, and document watch notifications. It does not
-  own viewer text models or depend on viewer packages.
+  own viewer text models or depend on viewer packages; using a provider is one
+  host composition option, not a viewer-core requirement.
 - `language`: language feature contracts and result types such as hover,
   diagnostics, document symbols, and semantic tokens.
 - `syntax` and `syntax/lang_*`: tokenization contracts and compile-time
@@ -69,15 +71,18 @@ External MoonBit embedders should treat `viewer` as the entry point:
 ```text
 embedder shell
   -> viewer.Viewer
-  -> workspace.DocumentProvider
+  -> workspace.DocumentSnapshot
+  -> optional workspace.DocumentProvider owned by the shell
   -> optional language providers
   -> optional syntax/lang_* tokenizer registration
 ```
 
-The embedder supplies document content through `workspace` provider traits. The
-viewer owns opening, rendering, scrolling, hover presentation, and lifecycle
-notifications. The embedder owns its shell, file tree, transport, persistence,
-and any backend calls it wants to make.
+The embedder supplies document content by calling `set_document` with a
+`workspace.DocumentSnapshot`. It may fetch that snapshot through a
+`workspace.DocumentProvider`, from memory, from a remote service, or from any
+other source it owns. The viewer owns rendering, scrolling, hover presentation,
+and lifecycle notifications. The embedder owns its shell, file tree,
+transport, persistence, source watches, reload policy, and error display.
 
 Language features are provider-based. A hover provider, for example, may compute
 locally, call a backend, or use any other MoonBit-accessible mechanism. The
@@ -100,11 +105,10 @@ server_host_native/main
   -> remote_protocol, workspace, language
 ```
 
-`workbench` adapts the remote protocol into the same provider contracts that an
-external embedder would implement directly. `server` owns remote workspace
-policy and language-feature routing. `server_host_native` owns native effects
-such as filesystem reads, watching, process startup, sockets, and static asset
-serving.
+`workbench` adapts the remote protocol into host-owned provider contracts, then
+passes loaded snapshots to the viewer. `server` owns remote workspace policy
+and language-feature routing. `server_host_native` owns native effects such as
+filesystem reads, watching, process startup, sockets, and static asset serving.
 
 This stack is useful for development, local demos, and testing a complete remote
 viewer, but it is not required for users who embed the viewer package.

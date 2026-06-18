@@ -6,10 +6,42 @@ import {
 }
 
 // Values
+pub fn clamp_int(Int, Int, Int) -> Int
+
+pub fn to_disposable(() -> Unit) -> Disposable
 
 // Errors
 
 // Types and methods
+pub struct Disposable {
+  // private fields
+}
+pub fn Disposable::dispose(Self) -> Unit
+pub fn Disposable::from(() -> Unit) -> Self
+
+pub struct Emitter[T] {
+  // private fields
+}
+pub fn[T] Emitter::dispose(Self[T]) -> Unit
+pub fn[T] Emitter::event(Self[T], (T) -> Unit) -> Disposable
+pub fn[T] Emitter::fire(Self[T], T) -> Unit
+pub fn[T] Emitter::new() -> Self[T]
+
+pub(all) struct Position {
+  line : Int
+  column : Int
+} derive(Eq, @debug.Debug)
+pub fn Position::Position(Int, Int) -> Self
+
+pub(all) struct Range {
+  start : Int
+  end : Int
+} derive(Eq, @debug.Debug)
+pub fn Range::Range(Int, Int) -> Self
+pub fn Range::contains_offset(Self, Int) -> Bool
+pub fn Range::intersects(Self, Self) -> Bool
+pub fn Range::is_empty(Self) -> Bool
+
 pub(all) struct Uri {
   value : String
 } derive(Eq, @debug.Debug)

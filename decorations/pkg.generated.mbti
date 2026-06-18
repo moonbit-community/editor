@@ -2,7 +2,7 @@
 package "baozhiyuan/editor/decorations"
 
 import {
-  "baozhiyuan/editor/renderer/core",
+  "baozhiyuan/editor/base/common",
   "moonbitlang/core/debug",
 }
 
@@ -12,12 +12,12 @@ import {
 
 // Types and methods
 pub(all) struct Decoration {
-  range : @core.Range
+  range : @common.Range
   kind : DecorationKind
   class_name : String
   message : String?
 } derive(@debug.Debug)
-pub fn Decoration::Decoration(@core.Range, DecorationKind, String, message? : String) -> Self
+pub fn Decoration::Decoration(@common.Range, DecorationKind, String, message? : String) -> Self
 
 pub(all) enum DecorationKind {
   Diagnostic
@@ -32,7 +32,7 @@ pub(all) struct DecorationSet {
   items : Array[Decoration]
 } derive(@debug.Debug)
 pub fn DecorationSet::at_offset(Self, Int) -> Array[Decoration]
-pub fn DecorationSet::between(Self, @core.Range) -> Array[Decoration]
+pub fn DecorationSet::between(Self, @common.Range) -> Array[Decoration]
 pub fn DecorationSet::empty() -> Self
 pub fn DecorationSet::from_array(Array[Decoration]) -> Self
 

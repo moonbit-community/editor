@@ -1,9 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/renderer/model"
+package "baozhiyuan/editor/viewer/model"
 
 import {
   "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/renderer/core",
   "moonbitlang/core/debug",
 }
 
@@ -37,9 +36,9 @@ pub fn TextSnapshot::line_count(Self) -> Int
 pub fn TextSnapshot::line_end_offset(Self, Int) -> Int
 pub fn TextSnapshot::line_start_offset(Self, Int) -> Int
 pub fn TextSnapshot::line_text(Self, Int) -> String
-pub fn TextSnapshot::offset_at_position(Self, @core.Position) -> Int
-pub fn TextSnapshot::position_at_offset(Self, Int) -> @core.Position
-pub fn TextSnapshot::slice(Self, @core.Range) -> String
+pub fn TextSnapshot::offset_at_position(Self, @common.Position) -> Int
+pub fn TextSnapshot::position_at_offset(Self, Int) -> @common.Position
+pub fn TextSnapshot::slice(Self, @common.Range) -> String
 
 // Type aliases
 

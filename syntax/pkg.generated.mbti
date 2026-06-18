@@ -2,8 +2,8 @@
 package "baozhiyuan/editor/syntax"
 
 import {
-  "baozhiyuan/editor/renderer/core",
-  "baozhiyuan/editor/renderer/model",
+  "baozhiyuan/editor/base/common",
+  "baozhiyuan/editor/viewer/model",
   "moonbitlang/core/debug",
 }
 
@@ -51,7 +51,7 @@ pub fn PlainTokenizer::new() -> Self
 pub impl LineTokenizer for PlainTokenizer
 
 pub(all) struct Token {
-  range : @core.Range
+  range : @common.Range
   tag : HighlightTag
   text : String
 } derive(@debug.Debug)

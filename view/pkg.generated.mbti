@@ -4,8 +4,8 @@ package "baozhiyuan/editor/view"
 import {
   "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/language",
-  "baozhiyuan/editor/renderer/model",
   "baozhiyuan/editor/syntax",
+  "baozhiyuan/editor/viewer/model",
   "moonbitlang/core/debug",
 }
 

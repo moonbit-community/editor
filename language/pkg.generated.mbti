@@ -3,21 +3,26 @@ package "baozhiyuan/editor/language"
 
 import {
   "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/renderer/core",
-  "baozhiyuan/editor/renderer/model",
+  "baozhiyuan/editor/workspace",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn collect_document_provider_result(&DiagnosticsProvider, &DocumentSymbolProvider, &SemanticTokensProvider, @model.TextModel) -> ProviderResult
-
-pub fn collect_provider_result(&LanguageProvider, @model.TextSnapshot) -> ProviderResult
+pub async fn collect_document_provider_result(&DiagnosticsProvider, &DocumentSymbolProvider, &SemanticTokensProvider, @workspace.DocumentSnapshot, CancellationToken) -> ProviderResult
 
 // Errors
 
 // Types and methods
+pub struct CancellationToken {
+  // private fields
+}
+pub fn CancellationToken::cancel(Self) -> Unit
+pub fn CancellationToken::is_cancellation_requested(Self) -> Bool
+pub fn CancellationToken::new() -> Self
+pub fn CancellationToken::none() -> Self
+
 pub(all) struct Diagnostic {
-  range : @core.Range
+  range : @common.Range
   severity : DiagnosticSeverity
   message : String
 } derive(@debug.Debug)
@@ -32,7 +37,7 @@ pub fn DiagnosticSeverity::label(Self) -> String
 pub(all) struct DocumentSymbol {
   name : String
   kind : String
-  range : @core.Range
+  range : @common.Range
 } derive(@debug.Debug)
 
 pub(all) struct FoldingRange {
@@ -49,7 +54,7 @@ pub(all) enum FoldingRangeKind {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Hover {
-  range : @core.Range
+  range : @common.Range
   contents : Array[HoverContent]
 } derive(@debug.Debug)
 
@@ -59,23 +64,38 @@ pub(all) enum HoverContent {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct InlayHint {
-  position : @core.Position
+  position : @common.Position
   label : String
   kind : InlayHintKind?
   padding_left : Bool
   padding_right : Bool
   tooltip : Array[HoverContent]
 } derive(Eq, @debug.Debug)
-pub fn InlayHint::InlayHint(@core.Position, String, kind? : InlayHintKind, padding_left? : Bool, padding_right? : Bool, tooltip? : Array[HoverContent]) -> Self
+pub fn InlayHint::InlayHint(@common.Position, String, kind? : InlayHintKind, padding_left? : Bool, padding_right? : Bool, tooltip? : Array[HoverContent]) -> Self
 
 pub(all) enum InlayHintKind {
   TypeHint
   ParameterHint
 } derive(Eq, @debug.Debug)
 
+pub(all) struct LanguageFilter {
+  language : String?
+  scheme : String?
+  pattern : String?
+} derive(@debug.Debug)
+pub fn LanguageFilter::LanguageFilter(language? : String, scheme? : String, pattern? : String) -> Self
+pub fn LanguageFilter::matches(Self, @workspace.DocumentSnapshot) -> Bool
+
+pub(all) enum LanguageSelector {
+  LanguageId(String)
+  LanguageFilter(LanguageFilter)
+  LanguageSelectorList(Array[LanguageSelector])
+} derive(@debug.Debug)
+pub fn LanguageSelector::matches(Self, @workspace.DocumentSnapshot) -> Bool
+
 pub(all) struct Location {
   uri : @common.Uri
-  range : @core.Range
+  range : @common.Range
 } derive(@debug.Debug)
 
 pub(all) struct ProviderResult {
@@ -90,7 +110,7 @@ pub fn ProviderResult::empty() -> Self
 pub fn ProviderResult::hover_at(Self, Int) -> Hover?
 
 pub(all) struct SemanticToken {
-  range : @core.Range
+  range : @common.Range
   token_type : String
 } derive(@debug.Debug)
 
@@ -98,42 +118,34 @@ pub(all) struct SemanticToken {
 
 // Traits
 pub(open) trait DefinitionProvider {
-  async fn definition_at(Self, @model.TextModel, Int) -> Location?
+  async fn provide_definition(Self, @workspace.DocumentSnapshot, @common.Position, CancellationToken) -> Location?
 }
 
 pub(open) trait DiagnosticsProvider {
-  async fn diagnostics_for_document(Self, @model.TextModel) -> Array[Diagnostic]
+  async fn provide_diagnostics(Self, @workspace.DocumentSnapshot, CancellationToken) -> Array[Diagnostic]
 }
 
 pub(open) trait DocumentSymbolProvider {
-  async fn document_symbols(Self, @model.TextModel) -> Array[DocumentSymbol]
+  async fn provide_document_symbols(Self, @workspace.DocumentSnapshot, CancellationToken) -> Array[DocumentSymbol]
 }
 
 pub(open) trait FoldingRangeProvider {
-  async fn folding_ranges(Self, @model.TextModel) -> Array[FoldingRange]
+  async fn provide_folding_ranges(Self, @workspace.DocumentSnapshot, CancellationToken) -> Array[FoldingRange]
 }
 
 pub(open) trait HoverProvider {
-  async fn hover_at(Self, @model.TextModel, Int) -> Hover?
+  async fn provide_hover(Self, @workspace.DocumentSnapshot, @common.Position, CancellationToken) -> Hover?
 }
 
 pub(open) trait InlayHintsProvider {
-  async fn inlay_hints(Self, @model.TextModel) -> Array[InlayHint]
-}
-
-pub(open) trait LanguageProvider {
-  fn hovers(Self, @model.TextSnapshot) -> Array[Hover]
-  fn diagnostics(Self, @model.TextSnapshot) -> Array[Diagnostic]
-  fn definitions(Self, @model.TextSnapshot) -> Array[Location]
-  fn symbols(Self, @model.TextSnapshot) -> Array[DocumentSymbol]
-  fn semantic_tokens(Self, @model.TextSnapshot) -> Array[SemanticToken]
+  async fn provide_inlay_hints(Self, @workspace.DocumentSnapshot, @common.Range, CancellationToken) -> Array[InlayHint]
 }
 
 pub(open) trait ReferencesProvider {
-  async fn references_at(Self, @model.TextModel, Int) -> Array[Location]
+  async fn provide_references(Self, @workspace.DocumentSnapshot, @common.Position, CancellationToken) -> Array[Location]
 }
 
 pub(open) trait SemanticTokensProvider {
-  async fn semantic_tokens_for_document(Self, @model.TextModel) -> Array[SemanticToken]
+  async fn provide_document_semantic_tokens(Self, @workspace.DocumentSnapshot, CancellationToken) -> Array[SemanticToken]
 }
 

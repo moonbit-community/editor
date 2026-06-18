@@ -1,7 +1,7 @@
 ///|
 /// Workbench-side language client: implements the `@language` provider
 /// traits over the live protocol socket through `protocol_request`. The
-/// workbench registers it with the viewer's language features service at
+/// workbench registers it with the viewer's selected language registry at
 /// startup.
 priv struct RemoteLanguageClient {
   log_service : @log.LogService
@@ -15,18 +15,18 @@ fn register_remote_language_providers(
   let selector = @language.LanguageSelector::LanguageFilter(
     LanguageFilter(scheme="readonly-remote"),
   )
-  services.language_features.register_hover_provider(selector, client) |> ignore
-  services.language_features.register_diagnostics_provider(selector, client)
+  services.languages.register_hover_provider(selector, client) |> ignore
+  services.languages.register_diagnostics_provider(selector, client)
   |> ignore
-  services.language_features.register_document_symbol_provider(selector, client)
+  services.languages.register_document_symbol_provider(selector, client)
   |> ignore
-  services.language_features.register_document_semantic_tokens_provider(
+  services.languages.register_document_semantic_tokens_provider(
     selector, client,
   )
   |> ignore
-  services.language_features.register_folding_range_provider(selector, client)
+  services.languages.register_folding_range_provider(selector, client)
   |> ignore
-  services.language_features.register_inlay_hints_provider(selector, client)
+  services.languages.register_inlay_hints_provider(selector, client)
   |> ignore
 }
 

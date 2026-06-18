@@ -151,21 +151,25 @@ pub fn start_app() -> Unit {
   let services = workbench_services()
   register_harness_hover_provider(services)
   register_remote_language_providers(services)
-  register_tokenizers()
+  install_language_tokenizers(services)
   mount_app()
 }
 
 ///|
 /// Languages are compile-time packages composed here by import; the
 /// viewer library itself ships only the plain fallback.
-fn register_tokenizers() -> Unit {
-  @viewer.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
-  @viewer.register_tokenizer("json", @lang_json.JsonTokenizer::new())
+fn install_language_tokenizers(services : @viewer.ViewerServices) -> Unit {
+  services.languages.set_tokens_provider(
+    "moonbit", @lang_moonbit.MoonbitTokenizer::new(),
+  )
+  |> ignore
+  services.languages.set_tokens_provider("json", @lang_json.JsonTokenizer::new())
+  |> ignore
   let javascript = @lang_javascript.JavascriptTokenizer::new()
-  @viewer.register_tokenizer("javascript", javascript)
+  services.languages.set_tokens_provider("javascript", javascript) |> ignore
   // TypeScript reads acceptably through the JavaScript rules until a
   // dedicated package exists.
-  @viewer.register_tokenizer("typescript", javascript)
+  services.languages.set_tokens_provider("typescript", javascript) |> ignore
 }
 
 ///|

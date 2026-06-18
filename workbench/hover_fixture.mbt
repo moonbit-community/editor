@@ -16,9 +16,9 @@ fn register_harness_hover_provider(services : @viewer.ViewerServices) -> Unit {
   let selector = @language.LanguageSelector::LanguageFilter(
     LanguageFilter(scheme="readonly-remote"),
   )
-  services.language_features.register_hover_provider(selector, provider)
+  services.languages.register_hover_provider(selector, provider)
   |> ignore
-  services.language_features.register_diagnostics_provider(selector, provider)
+  services.languages.register_diagnostics_provider(selector, provider)
   |> ignore
   install_hover_fixture_control(set_harness_hover_fixture)
 }

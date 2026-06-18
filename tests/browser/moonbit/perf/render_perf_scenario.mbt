@@ -41,7 +41,10 @@ impl @workspace.DocumentProvider for PerfDocumentProvider with fn close(
 
 ///|
 fn run_render_perf_test() -> Unit {
-  @viewer.register_tokenizer("moonbit", @lang_moonbit.MoonbitTokenizer::new())
+  @viewer.languages.set_tokens_provider(
+    "moonbit", @lang_moonbit.MoonbitTokenizer::new(),
+  )
+  |> ignore
   let ctx = @support.BrowserTestContext::new("viewer_render_perf")
   let done = Ref(false)
   let sample_index = Ref(-1)

@@ -1,7 +1,7 @@
 ///|
 test "public languages facade registers hover providers" {
   let disposable = @viewer.languages.register_hover_provider(
-    @language.LanguageId("moonbit"),
+    LanguageId("moonbit"),
     PublicHoverProvider::{  },
   )
   disposable.dispose()

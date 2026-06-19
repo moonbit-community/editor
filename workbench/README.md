@@ -50,10 +50,10 @@ implementation details.
 
 ## Boundaries
 
-- May depend on `base/common`, `viewer/core`, `viewer/model`,
-  `viewer`, `widgets/file_tree`, `remote_protocol`, `workspace`,
-  `language`, `platform/log`, concrete `syntax/lang_*` packages, and Rabbita
-  packages including `websocket`.
+- May depend on `base/common`, `viewer`, `viewer/model`,
+  `widgets/file_tree`, `remote_protocol`, `workspace`, `language`,
+  `platform/log`, concrete `syntax/lang_*` packages, and Rabbita packages
+  including `websocket`.
 - May declare narrowly scoped JavaScript FFI for workbench-owned browser-host
   effects such as harness observability, storage, and protocol URL derivation.
 - Composition lives here: the viewer and tree widget must not know about each

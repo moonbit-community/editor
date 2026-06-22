@@ -20,10 +20,10 @@ fn Viewer::render_current_model(
     Some(tokenized) => tokenized
     None => {
       let snapshot = model.snapshot
-      let tokens = match
+      let tokens : Array[@syntax.Token] = match
         self.services.languages.lookup_tokens_provider(model.language_id) {
         Some(tokenizer) => @syntax.tokenize_document(snapshot, tokenizer)
-        None => @syntax.highlight(snapshot)
+        None => []
       }
       @view_model.TokenizedDocument::build(snapshot, tokens)
     }

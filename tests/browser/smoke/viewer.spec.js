@@ -115,14 +115,15 @@ test('highlights MoonBit sources through the registered language tokenizer', asy
   await expect(page.locator('.tok-keyword', { hasText: 'suberror' }).first()).toBeVisible();
 });
 
-test('falls back to plain tokenization for unregistered languages', async ({ page }) => {
+test('renders unregistered languages with default/plain spans', async ({ page }) => {
   await page.goto('/');
   await openWorkspaceFile(page, 'notes.txt');
 
   await expect(page.locator('.monaco-editor.readonly-editor')).toContainText('Fixture notes');
-  await expect(page.locator('.tok-identifier', { hasText: 'value' }).first()).toBeVisible();
-  // The plain fallback never classifies types or operators, even for the
-  // capitalized FixtureError word the MoonBit lexer would tag.
+  await expect(page.locator('.tok-plain', { hasText: 'value' }).first()).toBeVisible();
+  // Registry misses intentionally do not run the generic fallback lexer; the
+  // line renderer fills the content with default/plain spans instead.
+  await expect(page.locator('.view-line span[class*="tok-identifier"]')).toHaveCount(0);
   await expect(page.locator('.view-line span[class*="tok-type"]')).toHaveCount(0);
   await expect(page.locator('.view-line span[class*="tok-operator"]')).toHaveCount(0);
 });

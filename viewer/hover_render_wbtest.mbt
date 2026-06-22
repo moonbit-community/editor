@@ -1,4 +1,12 @@
 ///|
+fn hover_test_languages() -> Languages {
+  let languages = Languages::new()
+  languages.set_tokens_provider("moonbit", @syntax.PlainTokenizer::new())
+  |> ignore
+  languages
+}
+
+///|
 test "hover markdown rows use the Monaco-shaped row wrappers" {
   let html = render_hover_shell(
     [
@@ -51,6 +59,7 @@ test "hover markdown remains sanitized and plaintext remains escaped" {
 
 ///|
 test "hover fenced code renders through the viewer token classes" {
+  let languages = hover_test_languages()
   let moonbit = render_hover_shell(
     [
       MarkdownHover(
@@ -60,6 +69,7 @@ test "hover fenced code renders through the viewer token classes" {
       ),
     ],
     "moonbit",
+    language_registry=languages,
   )
   assert_true(moonbit.contains("monaco-tokenized-source"))
   assert_true(moonbit.contains("tok-keyword"))
@@ -73,13 +83,15 @@ test "hover fenced code renders through the viewer token classes" {
       ),
     ],
     "moonbit",
+    language_registry=languages,
   )
   assert_true(mbt_alias.contains("monaco-tokenized-source"))
   assert_true(mbt_alias.contains("tok-keyword"))
 }
 
 ///|
-test "hover unknown fenced code keeps content with the plain fallback" {
+test "hover unknown fenced code keeps content as default plain text" {
+  let languages = hover_test_languages()
   let html = render_hover_shell(
     [
       MarkdownHover(
@@ -89,11 +101,14 @@ test "hover unknown fenced code keeps content with the plain fallback" {
       ),
     ],
     "moonbit",
+    language_registry=languages,
   )
   assert_true(html.contains("monaco-tokenized-source"))
   assert_true(html.contains("not"))
   assert_true(html.contains("really"))
   assert_true(html.contains("code"))
+  assert_true(html.contains("tok-plain"))
+  assert_false(html.contains("tok-identifier"))
 }
 
 ///|

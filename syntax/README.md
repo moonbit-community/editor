@@ -19,8 +19,9 @@ MoonBit's compile-time `lexmatch` lexer generator.
   convert to doc-offset `Token`s, and per-line entry states are
   recorded internally so a windowed/incremental pass later is a driver
   change, not a contract change.
-- Provide the `PlainTokenizer` fallback (the generic lexer used when no
-  language is registered) and `highlight()`, the registry-miss path.
+- Provide `PlainTokenizer` and `highlight()` as explicit generic-lexer helpers.
+  Viewer registry misses stay un-tokenized so the renderer uses plain/default
+  text, matching Monaco's unknown-language behavior.
 
 ## Language packages (`syntax/lang_*`)
 

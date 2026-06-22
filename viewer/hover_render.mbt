@@ -106,15 +106,12 @@ fn render_hover_code_block(
   let language_id = hover_code_language(code_block, active_language_id)
   let code = hover_code_text(code_block)
   let snapshot = @model.TextSnapshot(code, language_id~)
-  let tokenizer : &@syntax.LineTokenizer = match
+  let tokens : Array[@syntax.Token] = match
     language_registry.lookup_tokens_provider(language_id) {
-    Some(tokenizer) => tokenizer
-    None => @syntax.PlainTokenizer::new()
+    Some(tokenizer) => @syntax.tokenize_document(snapshot, tokenizer)
+    None => []
   }
-  let tokenized = @view_model.TokenizedDocument::build(
-    snapshot,
-    @syntax.tokenize_document(snapshot, tokenizer),
-  )
+  let tokenized = @view_model.TokenizedDocument::build(snapshot, tokens)
   let source = @view_model.FrameSource(
     tokenized,
     @decorations.DecorationSet::empty(),

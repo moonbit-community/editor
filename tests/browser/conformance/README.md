@@ -30,6 +30,14 @@ order for the editor scroll shell, view layers, hover widget, and hover
 scrollbars without asserting text content, geometry, or virtualization window
 size.
 
+## Computed Style And Geometry Contracts
+
+`computed_style_geometry.spec.js` checks the next parity layer: browser-resolved
+CSS and layout dimensions for the editor scroll surface, hover shell, hover
+scrollbars, and marker-hover affordances. It compares stable computed
+properties against the Monaco oracle and uses pixel tolerance only for geometry
+that can vary with browser rounding.
+
 ## Control Hooks
 
 Conformance specs may use these deterministic hooks:

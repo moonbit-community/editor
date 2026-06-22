@@ -22,6 +22,14 @@ reference contract changes.
 The local oracle is `tests/reference/monaco-hover-scrollbar/`, with comparison
 coverage in `tests/browser/conformance/monaco_hover_scrollbar.spec.js`.
 
+## DOM Structure Contracts
+
+`dom_structure.spec.js` locks the Monaco-shaped DOM hierarchy that copied
+Monaco CSS depends on. It checks normalized element signatures and direct child
+order for the editor scroll shell, view layers, hover widget, and hover
+scrollbars without asserting text content, geometry, or virtualization window
+size.
+
 ## Control Hooks
 
 Conformance specs may use these deterministic hooks:

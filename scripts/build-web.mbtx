@@ -68,7 +68,7 @@ async fn main {
   )
   @fs.write_file(
     "\{target_dir}/style.css",
-    @fs.read_file("app/src/style.css"),
+    assembled_style_css(),
     create_mode=@fs.CreateOrTruncate,
   )
   @fs.write_file(
@@ -140,6 +140,44 @@ async fn main {
   println(
     "Generated web/dist/editor.mjs, web/dist/embed.mjs, and browser test bundles",
   )
+}
+
+///|
+fn css_sources() -> Array[String] {
+  [
+    "workbench/theme.css",
+    "workbench/shell.css",
+    "widgets/file_tree/file_tree.css",
+    "viewer/editor.css",
+    "viewer/scrollable_element.css",
+    "viewer/view_lines.css",
+    "viewer/view_overlays.css",
+    "viewer/view_zones.css",
+    "viewer/content_widgets.css",
+    "viewer/overlay_widgets.css",
+    "viewer/selections.css",
+    "viewer/margin.css",
+    "viewer/folding.css",
+    "viewer/tokens.css",
+    "viewer/inlay_hints.css",
+    "viewer/markers.css",
+    "viewer/hover.css",
+  ]
+}
+
+///|
+async fn assembled_style_css() -> String {
+  let css = StringBuilder::new()
+  for source in css_sources() {
+    css.write_string("/* " + source + " */\n")
+    let source_css = @fs.read_file(source).text()
+    css.write_string(source_css)
+    if !source_css.has_suffix("\n") {
+      css.write_string("\n")
+    }
+    css.write_string("\n")
+  }
+  css.to_string()
 }
 
 ///|

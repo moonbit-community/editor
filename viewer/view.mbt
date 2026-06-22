@@ -1,11 +1,11 @@
 ///|
 /// Pixel height of one rendered code line. Keep in sync with
-/// `--editor-line-height` in app/src/style.css.
+/// `--editor-line-height` in workbench/theme.css.
 let editor_line_height = 18
 
 ///|
 /// Total horizontal padding of the line-number gutter. Keep in sync with
-/// `.line-number` padding in app/src/style.css.
+/// `.line-number` padding in viewer/margin.css.
 let gutter_padding_px = 34
 
 ///|

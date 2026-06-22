@@ -52,7 +52,8 @@ tests/browser/
   moonbit/        js-target MoonBit browser-test packages
 ```
 
-`scripts/build-web.mbtx` builds the MoonBit browser-test packages into
+`scripts/build-web.mbtx` assembles owner-adjacent CSS into `web/dist/style.css`
+and builds the MoonBit browser-test packages into
 `web/dist/browser-tests/component.html` and `web/dist/browser-tests/perf.html`.
 See `tests/browser/README.md` for package-level authoring rules, selectors, and
 globals. Monaco-specific hover and scrollbar contracts live in

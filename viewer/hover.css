@@ -1,0 +1,233 @@
+.has-hover {
+  background: var(--vscode-editor-hoverHighlightBackground);
+}
+
+/* Monaco-shaped editor hover, anchored as a content widget. */
+.monaco-resizable-hover {
+  position: absolute;
+  z-index: 50;
+  pointer-events: auto;
+  min-width: 150px;
+  transform: translateY(-100%);
+  cursor: default;
+  user-select: text;
+  box-sizing: content-box;
+  border: 1px solid var(--vscode-editorHoverWidget-border);
+  border-radius: var(--vscode-cornerRadius-large);
+  background-color: var(--vscode-editorHoverWidget-background);
+}
+
+.monaco-resizable-hover.below {
+  transform: none;
+}
+
+.monaco-resizable-hover.measuring {
+  visibility: hidden;
+}
+
+.monaco-hover {
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: var(--vscode-hover-whiteSpace, normal);
+  color: var(--vscode-editorHoverWidget-foreground);
+  background-color: var(--vscode-editorHoverWidget-background);
+  border: 1px solid var(--vscode-editorHoverWidget-border);
+  border-radius: var(--vscode-cornerRadius-large);
+  box-shadow: 0 2px 8px var(--vscode-shadow-hover);
+  font: var(--editor-font-size) / 1.5 var(--ui-font-family);
+}
+
+.monaco-resizable-hover > .monaco-hover {
+  border: none;
+  border-radius: inherit;
+}
+
+.monaco-hover:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.monaco-hover.fade-in {
+  animation: hover-fade-in 80ms ease-out;
+}
+
+@keyframes hover-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.monaco-hover-content {
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.monaco-hover-content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.hover-row {
+  padding: 0;
+  border-radius: var(--vscode-cornerRadius-large);
+  display: flex;
+}
+
+.hover-row-contents {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.markdown-hover {
+  min-width: 0;
+}
+
+.hover-contents {
+  padding: 4px 8px;
+  overflow-wrap: break-word;
+}
+
+.monaco-hover .markdown-hover > .hover-contents:not(.code-hover-contents) {
+  width: max-content;
+  max-width: var(--vscode-hover-maxWidth, 500px);
+}
+
+.hover-plaintext {
+  white-space: pre-wrap;
+}
+
+.hover-contents p,
+.hover-contents ul,
+.hover-contents ol,
+.hover-contents blockquote {
+  margin: 8px 0;
+}
+
+.hover-contents p:first-child,
+.hover-contents ul:first-child,
+.hover-contents ol:first-child,
+.hover-contents blockquote:first-child {
+  margin-top: 0;
+}
+
+.hover-contents p:last-child,
+.hover-contents ul:last-child,
+.hover-contents ol:last-child,
+.hover-contents blockquote:last-child {
+  margin-bottom: 0;
+}
+
+.hover-contents ul,
+.hover-contents ol {
+  padding-left: 20px;
+}
+
+.hover-contents li {
+  margin: 2px 0;
+}
+
+.hover-contents code {
+  padding: 0 0.4em;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--monaco-monospace-font);
+}
+
+.monaco-tokenized-source {
+  padding: 6px 8px;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--monaco-monospace-font);
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: var(--vscode-hover-sourceWhiteSpace, pre-wrap);
+}
+
+.monaco-hover .monaco-tokenized-source .view-line-content {
+  display: inline;
+  width: auto;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  white-space: inherit;
+  cursor: inherit;
+}
+
+.hover-contents a {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+}
+
+.hover-contents a:hover {
+  color: var(--vscode-textLink-activeForeground);
+  text-decoration: underline;
+}
+
+.hover-contents hr {
+  height: 1px;
+  margin: 4px -8px -4px;
+  border: 0;
+  background: var(--vscode-editorHoverWidget-border);
+}
+
+.monaco-hover .hover-row.status-bar {
+  font-size: 12px;
+  line-height: 22px;
+}
+
+.monaco-hover .hover-row.status-bar .actions {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 8px;
+  background-color: var(--vscode-editorHoverWidget-statusBarBackground);
+}
+
+.monaco-hover .hover-row.status-bar .actions .action-container {
+  margin-right: 16px;
+  cursor: pointer;
+  overflow: hidden;
+  text-wrap: nowrap;
+  text-overflow: ellipsis;
+}
+
+.monaco-hover .hover-row.hover-row-with-copy {
+  position: relative;
+  padding-right: 20px;
+}
+
+.monaco-hover .hover-copy-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--vscode-foreground);
+  opacity: 0;
+}
+
+.monaco-hover .hover-row-with-copy:hover .hover-copy-button,
+.monaco-hover .hover-row-with-copy:focus-within .hover-copy-button {
+  opacity: 1;
+}
+
+.monaco-hover .hover-copy-button:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+  cursor: pointer;
+}
+
+.monaco-hover .hover-copy-button:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}

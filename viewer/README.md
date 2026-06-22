@@ -40,6 +40,9 @@ package.
   input capture, custom scrollbars, content widgets, overlay widgets, hover,
   folding controls, inlay hint projection, readonly selection/copy, view zones,
   and lifecycle events.
+- Keep viewer-owned styles next to the viewer part that owns the corresponding
+  DOM; `scripts/build-web.mbtx` assembles those files into the served
+  `/style.css`.
 - Render DOM from the viewer common layer:
 
   ```text

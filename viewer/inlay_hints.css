@@ -1,0 +1,10 @@
+.inlay-hint {
+  color: var(--vscode-descriptionForeground);
+  font-style: normal;
+  opacity: 0.9;
+}
+
+.inlay-hint-type,
+.inlay-hint-parameter {
+  color: var(--vscode-descriptionForeground);
+}

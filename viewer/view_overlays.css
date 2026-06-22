@@ -1,0 +1,8 @@
+.view-overlays {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  z-index: 2;
+  pointer-events: none;
+}

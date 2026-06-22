@@ -1,0 +1,15 @@
+.view-zones {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  z-index: 3;
+}
+
+.view-zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}

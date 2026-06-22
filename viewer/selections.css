@@ -1,0 +1,12 @@
+.selected-text {
+  position: absolute;
+  box-sizing: border-box;
+  background: var(--vscode-editor-selectionBackground);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.view-line-content ::selection,
+.view-line-content::selection {
+  background: var(--vscode-editor-selectionBackground);
+}

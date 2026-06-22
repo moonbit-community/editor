@@ -8,6 +8,8 @@ Generated browser entrypoint for the reference workbench.
 - Start the Rabbita-backed reference shell through `workbench`.
 - Keep application-shell ownership out of JavaScript; the native server serves
   `web/dist/index.html`, `/style.css`, and `/editor.mjs`.
+- Treat `/style.css` as a generated asset assembled from owner-adjacent CSS
+  files by `scripts/build-web.mbtx`.
 
 ## Boundaries
 

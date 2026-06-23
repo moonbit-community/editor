@@ -43,6 +43,27 @@ pub fn CursorsController::move_to(
 }
 
 ///|
+/// The current cursor state in model coordinates. Read by the `ViewController`
+/// for the model-dependent commands (word/line select) whose continuation logic
+/// needs the existing anchor and kind.
+pub fn CursorsController::model_state(
+  self : CursorsController,
+) -> SingleCursorState {
+  self.cursor.model_state
+}
+
+///|
+/// Sets the cursor from an explicit model-coordinate state, deriving the view
+/// state through the converter. Used by the model-dependent navigation commands
+/// (word/line select, select all) that compute anchor ranges from the model.
+pub fn CursorsController::set_model_cursor_state(
+  self : CursorsController,
+  model_state : SingleCursorState,
+) -> Unit {
+  self.cursor.set_model_state(self.context, model_state)
+}
+
+///|
 /// The selection in model coordinates (for the clipboard boundary).
 pub fn CursorsController::get_model_selection(
   self : CursorsController,

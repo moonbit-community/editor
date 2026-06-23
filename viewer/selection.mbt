@@ -58,62 +58,13 @@ fn Viewer::refresh_cursor_context(self : Viewer) -> Unit {
 }
 
 ///|
-fn Viewer::begin_selection(
-  self : Viewer,
-  target : @viewer_common.MouseTarget,
-) -> Unit {
-  guard view_position_for_target(target) is Some(view_position) else {
-    self.selection_dragging = false
-    self.schedule_render()
-    return
-  }
-  guard self.ensure_cursor() is Some(controller) else { return }
-  // `CoreNavigationCommands.MoveTo`: collapse the cursor at the click.
-  @cursor.move_to(controller, view_position)
-  self.selection_dragging = true
-  self.hover = self.hover.cleared()
-  self.schedule_render()
-}
-
-///|
-fn Viewer::update_selection(
-  self : Viewer,
-  target : @viewer_common.MouseTarget,
-) -> Unit {
-  guard self.selection_dragging else { return }
-  guard self.cursor is Some(controller) else { return }
-  match view_position_for_target(target) {
-    // `CoreNavigationCommands.MoveToSelect`: extend the selection.
-    Some(view_position) => {
-      @cursor.move_to_select(controller, view_position)
-      self.schedule_render()
-    }
-    None => ()
-  }
-}
-
-///|
 fn Viewer::finish_selection(self : Viewer) -> Unit {
   if !self.selection_dragging {
     return
   }
   self.selection_dragging = false
+  self.selection_autoscroll_active = false
   self.schedule_render()
-}
-
-///|
-/// The view position a content hit resolves to, as a zero-based `Position`.
-/// The hit test already yields a view line/column; the cursor stack keeps the
-/// selection there and derives model positions through the converter.
-fn view_position_for_target(
-  target : @viewer_common.MouseTarget,
-) -> @base_common.Position? {
-  guard target.line_number >= 1 else { return None }
-  match target.kind {
-    ContentText | ContentEmpty =>
-      Some(@base_common.Position::Position(target.line_number - 1, target.column))
-    _ => None
-  }
 }
 
 ///|

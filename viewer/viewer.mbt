@@ -36,6 +36,14 @@ pub struct Viewer {
   priv mut view_zones : Array[BrowserViewZone]
   priv mut cursor : @cursor.CursorsController?
   priv mut selection_dragging : Bool
+  priv mut selection_started_on_line_numbers : Bool
+  priv mut last_mouse_down_count : Int
+  priv mut last_mouse_down_time : Double
+  priv mut last_mouse_down_x : Double
+  priv mut last_mouse_down_y : Double
+  priv mut selection_autoscroll_active : Bool
+  priv mut selection_autoscroll_x : Double
+  priv mut selection_autoscroll_y : Double
   priv mut hover : HoverController
   priv mut char_width : Double
   priv mut soft_wrap_column : Int
@@ -153,6 +161,14 @@ pub fn Viewer::Viewer(
     view_zones: [],
     cursor: None,
     selection_dragging: false,
+    selection_started_on_line_numbers: false,
+    last_mouse_down_count: 0,
+    last_mouse_down_time: 0.0,
+    last_mouse_down_x: 0.0,
+    last_mouse_down_y: 0.0,
+    selection_autoscroll_active: false,
+    selection_autoscroll_x: 0.0,
+    selection_autoscroll_y: 0.0,
     hover: HoverController::empty(),
     char_width: 0.0,
     soft_wrap_column: 0,

@@ -17,6 +17,19 @@ let code_right_padding = 16.0
 let gutter_min_digits = 5
 
 ///|
+/// Maximum milliseconds between mousedowns counted as the same multi-click,
+/// matching Monaco's `MouseHandler` multi-click gating.
+let multi_click_time = 500.0
+
+///|
+/// Maximum pixel travel between mousedowns counted as the same multi-click.
+let multi_click_distance = 6.0
+
+///|
+/// Maximum pixels the drag-autoscroll loop scrolls per frame.
+let selection_autoscroll_max_step = 36.0
+
+///|
 /// Editor scrollbar defaults from Monaco's `EditorScrollbar` option.
 let editor_vertical_scrollbar_size = 14.0
 

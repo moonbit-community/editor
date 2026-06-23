@@ -159,21 +159,78 @@ fn Viewer::handle_mouse_down(
   let x = client_x - rect.get_left()
   let y = client_y - rect.get_top()
   let target = @viewer_common.hit_test(frame, self.view_metrics(frame), x, y)
-  match target.kind {
+  // Resolve the pointer to a view position and whether the drag started on the
+  // line-number gutter (which selects whole lines).
+  let resolved : (@base_common.Position, Bool)? = match target.kind {
     ContentText | ContentEmpty => {
-      event.prevent_default()
-      event.stop_propagation()
       let refined = self.dom_refine_content_target(
         view, frame, client_x, client_y, target,
       )
-      self.begin_selection(refined)
+      Some(
+        (
+          @base_common.Position::Position(refined.line_number - 1, refined.column),
+          false,
+        ),
+      )
     }
-    _ => ()
+    GutterLineNumbers =>
+      Some(
+        (@base_common.Position::Position(target.line_number - 1, 0), true),
+      )
+    _ => None
   }
+  guard resolved is Some((view_position, started_on_line_numbers)) else { return }
+  event.prevent_default()
+  event.stop_propagation()
+  let mouse_down_count = self.next_mouse_down_count(client_x, client_y)
+  self.selection_started_on_line_numbers = started_on_line_numbers
+  self.selection_dragging = true
+  self.dispatch_mouse({
+    view_position,
+    in_selection_mode: mouse_shift_key(mouse),
+    mouse_down_count,
+    started_on_line_numbers,
+  })
 }
 
 ///|
 extern "js" fn focus_element(element : @rdom.Element) -> Unit = "(element) => element.focus?.()"
+
+///|
+extern "js" fn mouse_shift_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.shiftKey"
+
+///|
+/// The multi-click count for a fresh mousedown, transcribing the timing/distance
+/// gating of Monaco's `MouseDownState`: a mousedown close to the previous one in
+/// time and space increments the count (single → double → triple → quad), else
+/// it resets to a single click.
+fn Viewer::next_mouse_down_count(
+  self : Viewer,
+  client_x : Double,
+  client_y : Double,
+) -> Int {
+  let now = now_ms()
+  let dx = abs_double(client_x - self.last_mouse_down_x)
+  let dy = abs_double(client_y - self.last_mouse_down_y)
+  let close = now - self.last_mouse_down_time <= multi_click_time &&
+    dx <= multi_click_distance &&
+    dy <= multi_click_distance
+  let count = if close { self.last_mouse_down_count + 1 } else { 1 }
+  self.last_mouse_down_count = count
+  self.last_mouse_down_time = now
+  self.last_mouse_down_x = client_x
+  self.last_mouse_down_y = client_y
+  count
+}
+
+///|
+fn abs_double(value : Double) -> Double {
+  if value < 0.0 {
+    -value
+  } else {
+    value
+  }
+}
 
 ///|
 fn Viewer::handle_selection_drag_move(
@@ -182,11 +239,26 @@ fn Viewer::handle_selection_drag_move(
   event : @rdom.Event,
 ) -> Unit {
   guard self.selection_dragging else { return }
-  guard self.frame is Some(frame) else { return }
   guard event.to_mouse_event() is Some(mouse) else { return }
   event.prevent_default()
   let client_x = mouse.get_client_x().to_double()
   let client_y = mouse.get_client_y().to_double()
+  self.extend_selection_at(view, client_x, client_y)
+  self.update_selection_autoscroll(view, client_x, client_y)
+}
+
+///|
+/// Extends the in-progress selection to a pointer position (in client
+/// coordinates), re-running the hit test against the current scroll. Shared by
+/// pointer moves and the drag-autoscroll loop.
+fn Viewer::extend_selection_at(
+  self : Viewer,
+  view : View,
+  client_x : Double,
+  client_y : Double,
+) -> Unit {
+  guard self.selection_dragging else { return }
+  guard self.frame is Some(frame) else { return }
   let rect = view.root.get_bounding_client_rect()
   let x = client_x - rect.get_left()
   let y = client_y - rect.get_top()
@@ -196,7 +268,123 @@ fn Viewer::handle_selection_drag_move(
       self.dom_refine_content_target(view, frame, client_x, client_y, target)
     _ => target
   }
-  self.update_selection(refined)
+  match drag_view_position(refined) {
+    Some(view_position) =>
+      self.dispatch_mouse({
+        view_position,
+        in_selection_mode: true,
+        mouse_down_count: self.last_mouse_down_count,
+        started_on_line_numbers: self.selection_started_on_line_numbers,
+      })
+    None => ()
+  }
+}
+
+///|
+/// Updates the drag-autoscroll state from the latest pointer position. When the
+/// pointer is dragged past the top or bottom of the content viewport, the
+/// remembered position drives a continuous scroll-and-extend loop (Monaco's
+/// `dragScrolling`); when it returns inside, the loop stops on its next tick.
+fn Viewer::update_selection_autoscroll(
+  self : Viewer,
+  view : View,
+  client_x : Double,
+  client_y : Double,
+) -> Unit {
+  self.selection_autoscroll_x = client_x
+  self.selection_autoscroll_y = client_y
+  if self.selection_drag_edge_delta(view, client_y) != 0.0 {
+    if !self.selection_autoscroll_active {
+      self.selection_autoscroll_active = true
+      self.schedule_selection_autoscroll(view)
+    }
+  } else {
+    self.selection_autoscroll_active = false
+  }
+}
+
+///|
+/// The signed vertical overshoot of a client-Y past the content viewport edges:
+/// negative above the top, positive below the bottom, zero inside.
+fn Viewer::selection_drag_edge_delta(
+  self : Viewer,
+  view : View,
+  client_y : Double,
+) -> Double {
+  let rect = view.root.get_bounding_client_rect()
+  let y = client_y - rect.get_top()
+  let viewport_height = self.layout.dimensions().height
+  if y < 0.0 {
+    y
+  } else if viewport_height > 0.0 && y > viewport_height {
+    y - viewport_height
+  } else {
+    0.0
+  }
+}
+
+///|
+fn Viewer::schedule_selection_autoscroll(self : Viewer, view : View) -> Unit {
+  @rdom.window().request_animation_frame(_ => self.selection_autoscroll_tick(view))
+  |> ignore
+}
+
+///|
+/// One frame of drag autoscroll: scroll toward the remembered off-edge pointer,
+/// re-extend the selection at the new scroll, and reschedule until the drag ends
+/// or the pointer returns inside the viewport.
+fn Viewer::selection_autoscroll_tick(self : Viewer, view : View) -> Unit {
+  guard self.selection_dragging && self.selection_autoscroll_active else {
+    self.selection_autoscroll_active = false
+    return
+  }
+  let delta = self.selection_drag_edge_delta(view, self.selection_autoscroll_y)
+  if delta == 0.0 {
+    self.selection_autoscroll_active = false
+    return
+  }
+  let step = clamp_double(
+    delta,
+    -selection_autoscroll_max_step,
+    selection_autoscroll_max_step,
+  )
+  self.apply_scroll_change(self.layout.scroll_by(delta_left=0.0, delta_top=step))
+  self.extend_selection_at(
+    view,
+    self.selection_autoscroll_x,
+    self.selection_autoscroll_y,
+  )
+  self.schedule_selection_autoscroll(view)
+}
+
+///|
+fn clamp_double(value : Double, low : Double, high : Double) -> Double {
+  if value < low {
+    low
+  } else if value > high {
+    high
+  } else {
+    value
+  }
+}
+
+///|
+/// The view position a drag should extend the selection to, for any target that
+/// resolves to a line (content, below-content, or the line-number gutter).
+fn drag_view_position(
+  target : @viewer_common.MouseTarget,
+) -> @base_common.Position? {
+  match target.kind {
+    ContentText | ContentEmpty | BelowContent | GutterLineNumbers =>
+      if target.line_number >= 1 {
+        Some(
+          @base_common.Position::Position(target.line_number - 1, target.column),
+        )
+      } else {
+        None
+      }
+    _ => None
+  }
 }
 
 ///|

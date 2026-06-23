@@ -13,9 +13,11 @@ pub(all) enum SelectionDirection {
 /// positions (zero-based line, UTF-16 column); `selection_start` is the fixed
 /// anchor and `position` is the moving active end (the cursor).
 ///
-/// Everything in the cursor/selection/hit-test path stays in `Position`
-/// space; the conversion to raw document offsets happens only at the
-/// model/clipboard boundary (`normalized_range`).
+/// This is pure geometry, like `core/selection.ts`. The model/clipboard
+/// boundary — normalizing to document offsets and extracting copy text — lives
+/// in the controller layer (`viewer/selection.mbt`), not on this type, matching
+/// Monaco's split (clipboard belongs to the editor controller, not the value
+/// type).
 pub(all) struct Selection {
   selection_start : @base_common.Position
   position : @base_common.Position
@@ -39,19 +41,6 @@ pub fn Selection::from_positions(
   end : @base_common.Position,
 ) -> Selection {
   { selection_start: start, position: end }
-}
-
-///|
-/// Builds a selection from document offsets, anchor at `anchor_offset`.
-pub fn Selection::from_offsets(
-  snapshot : @model.TextSnapshot,
-  anchor_offset : Int,
-  focus_offset : Int,
-) -> Selection {
-  Selection::new(
-    snapshot.position_at_offset(anchor_offset),
-    snapshot.position_at_offset(focus_offset),
-  )
 }
 
 ///|
@@ -105,39 +94,6 @@ pub fn Selection::is_empty(self : Selection) -> Bool {
 }
 
 ///|
-/// Selection range normalized into ascending document offsets, the
-/// model/clipboard boundary where `Position` space crosses into raw offsets.
-pub fn Selection::normalized_range(
-  self : Selection,
-  snapshot : @model.TextSnapshot,
-) -> @base_common.Range {
-  Range(
-    snapshot.offset_at_position(self.start()),
-    snapshot.offset_at_position(self.end()),
-  )
-}
-
-///|
-/// Plain selected text for clipboard writes.
-pub fn Selection::get_plain_text_to_copy(
-  self : Selection,
-  snapshot : @model.TextSnapshot,
-) -> String {
-  snapshot.slice(self.normalized_range(snapshot))
-}
-
-///|
-/// Minimal HTML clipboard payload preserving preformatted text.
-pub fn Selection::get_rich_text_to_copy(
-  self : Selection,
-  snapshot : @model.TextSnapshot,
-) -> String {
-  "<pre class=\"readonly-editor-copy\">" +
-  escape_copy_html(self.get_plain_text_to_copy(snapshot)) +
-  "</pre>"
-}
-
-///|
 /// Whether `a` is at or before `b` in reading order (line, then column).
 fn position_le(a : @base_common.Position, b : @base_common.Position) -> Bool {
   if a.line != b.line {
@@ -150,19 +106,4 @@ fn position_le(a : @base_common.Position, b : @base_common.Position) -> Bool {
 ///|
 fn position_eq(a : @base_common.Position, b : @base_common.Position) -> Bool {
   a.line == b.line && a.column == b.column
-}
-
-///|
-fn escape_copy_html(text : String) -> String {
-  let out = StringBuilder()
-  for ch in text {
-    match ch {
-      '<' => out.write_string("&lt;")
-      '>' => out.write_string("&gt;")
-      '&' => out.write_string("&amp;")
-      '"' => out.write_string("&quot;")
-      _ => out.write_char(ch)
-    }
-  }
-  out.to_string()
 }

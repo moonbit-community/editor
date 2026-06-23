@@ -79,7 +79,7 @@ fn Viewer::handle_copy_event(self : Viewer, event : @rdom.Event) -> Bool {
       if selection.is_empty() {
         return false
       }
-      let plain = selection.get_plain_text_to_copy(snapshot)
+      let plain = selection_plain_text_to_copy(selection, snapshot)
       let html = self.get_rich_text_to_copy(selection, snapshot)
       write_selection_clipboard_data(clipboard_event, plain, html)
       true
@@ -98,14 +98,67 @@ fn Viewer::get_rich_text_to_copy(
     Some(frame) =>
       match
         rich_text_to_copy_from_frame(
-          selection.normalized_range(snapshot),
+          selection_normalized_range(selection, snapshot),
           frame,
         ) {
         Some(html) => html
-        None => selection.get_rich_text_to_copy(snapshot)
+        None => selection_rich_text_to_copy(selection, snapshot)
       }
-    None => selection.get_rich_text_to_copy(snapshot)
+    None => selection_rich_text_to_copy(selection, snapshot)
   }
+}
+
+///|
+/// Selection range normalized into ascending document offsets — the
+/// model/clipboard boundary where the selection's view-`Position` geometry
+/// crosses into raw document offsets. Monaco keeps this off the pure-geometry
+/// `Selection` (`core/selection.ts`); the readonly viewer does the same, placing
+/// it here in the controller layer. The offset round-trip is allowed only
+/// because this is the model/clipboard boundary (the port's rule #3).
+fn selection_normalized_range(
+  selection : @view_model.Selection,
+  snapshot : @model.TextSnapshot,
+) -> @base_common.Range {
+  Range(
+    snapshot.offset_at_position(selection.start()),
+    snapshot.offset_at_position(selection.end()),
+  )
+}
+
+///|
+/// Plain selected text for clipboard writes.
+fn selection_plain_text_to_copy(
+  selection : @view_model.Selection,
+  snapshot : @model.TextSnapshot,
+) -> String {
+  snapshot.slice(selection_normalized_range(selection, snapshot))
+}
+
+///|
+/// Minimal HTML clipboard payload preserving preformatted text, used as the
+/// fallback when no render frame is available to produce styled spans.
+fn selection_rich_text_to_copy(
+  selection : @view_model.Selection,
+  snapshot : @model.TextSnapshot,
+) -> String {
+  "<pre class=\"readonly-editor-copy\">" +
+  escape_copy_html(selection_plain_text_to_copy(selection, snapshot)) +
+  "</pre>"
+}
+
+///|
+fn escape_copy_html(text : String) -> String {
+  let out = StringBuilder()
+  for ch in text {
+    match ch {
+      '<' => out.write_string("&lt;")
+      '>' => out.write_string("&gt;")
+      '&' => out.write_string("&amp;")
+      '"' => out.write_string("&quot;")
+      _ => out.write_char(ch)
+    }
+  }
+  out.to_string()
 }
 
 ///|

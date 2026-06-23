@@ -11,6 +11,10 @@ priv struct ViewContext {
     ScrollableElementDom,
     ScrollableElementOwner,
   ) -> Unit
+  // Monaco's `RenderingContext.linesVisibleRangesForRange` seam: measures the
+  // pixel rects of a zero-based view-column range on a view line off the live
+  // line DOM, which the selection overlay renders after `ViewLines` writes.
+  measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
 }
 
 ///|
@@ -26,6 +30,9 @@ fn ViewContext::new(viewer : Viewer, view : View) -> ViewContext {
     },
     hook_scrollable_scrollbar_input: (scrollable, owner) => {
       viewer.hook_scrollable_scrollbar_input(scrollable, owner)
+    },
+    measure_line_selection: (line_number, start_column, end_column) => {
+      view.measure_line_selection(line_number, start_column, end_column)
     },
   }
 }

@@ -69,6 +69,21 @@ fn ViewLines::mapping_at(
 }
 
 ///|
+/// The rendered line node for a one-based view-line number, if in window. Used
+/// by selection measurement to read DOM client rects off the live line DOM.
+fn ViewLines::line_node_at(
+  self : ViewLines,
+  view_line_number : Int,
+) -> @rdom.Element? {
+  let index = self.window_index(view_line_number)
+  if index < 0 {
+    None
+  } else {
+    Some(self.line_nodes[index])
+  }
+}
+
+///|
 impl ViewPart for ViewLines with fn should_render(self, context) {
   self.should_render ||
   context.change.first_render ||
@@ -251,51 +266,6 @@ fn resolve_line_mapping(
     (None, Some(mapping)) => mapping
     (None, None) => @view_line_renderer.CharacterMapping::new(0)
   }
-}
-
-///|
-fn append_line_selection_segments(
-  parent : @rdom.Element,
-  document : @rdom.Document,
-  line : @view_model.RenderLine,
-  range : @base_common.Range,
-  top : Int,
-) -> Unit {
-  let model_line_start = line.model_line_start_offset()
-  for span in line.spans {
-    if span.injected_text_index >= 0 {
-      continue
-    }
-    let span_start = model_line_start + span.source_start
-    let span_end = model_line_start + span.source_end
-    if range.intersects(Range(span_start, span_end)) {
-      let start = span.start + max_int(range.start, span_start) - span_start
-      let end = span.start + min_int(range.end, span_end) - span_start
-      if start < end {
-        let node = document.create_element("div")
-        node.set_attribute("class", "selected-text")
-        node.set_attribute("style", selection_segment_style(top, start, end))
-        parent.append_child(node.as_node())
-      }
-    }
-  }
-}
-
-///|
-fn selection_segment_style(
-  top : Int,
-  start_column : Int,
-  end_column : Int,
-) -> String {
-  "top:" +
-  top.to_string() +
-  "px;left:" +
-  start_column.to_string() +
-  "ch;width:" +
-  (end_column - start_column).to_string() +
-  "ch;height:" +
-  editor_line_height.to_string() +
-  "px"
 }
 
 ///|

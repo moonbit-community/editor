@@ -93,6 +93,18 @@ pub(all) struct ProjectedLinePart {
 ///|
 /// One model line after injected text has been projected into display text,
 /// with column maps in both directions.
+///
+/// Deliberate deviation (no `PositionAffinity`): Monaco's
+/// `ModelLineProjectionData` maps columns with offset arithmetic and binary
+/// search (`translateToOutputPosition` / `translateToInputOffset`), each
+/// parameterized by a `PositionAffinity` that disambiguates which side of an
+/// injected-text or wrap boundary a position resolves to. This type instead
+/// precomputes per-column lookup tables (`model_to_projected_columns`,
+/// `model_columns`) for O(1) `.get()` and models **no** affinity: the boundary
+/// side is fixed by the table. That disambiguation only matters for caret
+/// placement and cursor movement, which the readonly viewer omits (no caret,
+/// no keyboard navigation), so affinity has no role here. Same result as Monaco
+/// for the tested cases (`view_model_test.mbt`); reduced scope by design.
 pub(all) struct ProjectedTextLine {
   text : String
   model_line_length : Int

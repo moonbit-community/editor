@@ -78,6 +78,11 @@ pub fn ModelLineProjection::projected_line_for_model_line(
 
 ///|
 /// Converts a model position to the corresponding projected view position.
+///
+/// Monaco's `translateToOutputPosition` takes a `PositionAffinity`; this does
+/// not (see the deviation note on `ProjectedTextLine`). The boundary side is
+/// fixed by the column lookup table, which suffices for the caret-free readonly
+/// viewer.
 pub fn ModelLineProjection::model_position_to_view_position(
   self : ModelLineProjection,
   position : @base_common.Position,

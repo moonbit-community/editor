@@ -14,23 +14,20 @@ pub(all) struct ViewportData {
 } derive(Eq, Debug)
 
 ///|
-/// Builds viewport data from a precomputed render frame.
+/// Builds viewport data from a precomputed render frame. This path has no
+/// coordinate converter, so it carries no decorations; the view-model path
+/// below is the one the running viewer uses.
 pub fn ViewportData::from_render_frame(
   frame : @view_model.RenderFrame,
   line_height~ : Int,
-  decorations? : Array[@decorations.Decoration] = [],
 ) -> ViewportData {
   let lines : Array[@view_line_renderer.ViewLineRenderingData] = []
   let line_decorations : Array[Array[@view_line_renderer.LineDecoration]] = []
   let relative_vertical_offset : Array[Int] = []
   for index in 0..<frame.lines.length() {
     let line = frame.lines[index]
-    lines.push(
-      @view_model.view_line_rendering_data_from_render_line(line, decorations~),
-    )
-    line_decorations.push(
-      @view_model.line_decorations_for_line(line, decorations),
-    )
+    lines.push(@view_model.view_line_rendering_data_from_render_line(line))
+    line_decorations.push(@view_model.line_decorations_for_line(line, []))
     relative_vertical_offset.push(index * line_height)
   }
   let start_line_number = frame.viewport.start_line + 1
@@ -80,14 +77,22 @@ pub fn ViewportData::from_view_model(
   let line_decorations : Array[Array[@view_line_renderer.LineDecoration]] = []
   let relative_vertical_offset : Array[Int] = []
   let view_model_lines = view_model.lines()
+  // Decorations baked into the source (markers/diagnostics) plus the
+  // controller-contributed ones (hover) are converted once to view
+  // coordinates, then clipped per line — no document-offset round-trips.
+  let model_decorations = view_model.decorations()
+  let view_decorations = [
+    ..model_decorations.view_decorations(),
+    ..model_decorations.to_view_decorations(decorations),
+  ]
   let normalized_window : LineWindow = { start: start_line, end: end_line }
   for index in start_line..<end_line {
     let render_line = view_model_lines.render_line(index + 1)
     lines.push(
-      view_model_lines.view_line_rendering_data(index + 1, decorations~),
+      view_model_lines.view_line_rendering_data(index + 1, view_decorations~),
     )
     line_decorations.push(
-      @view_model.line_decorations_for_line(render_line, decorations),
+      @view_model.line_decorations_for_line(render_line, view_decorations),
     )
     relative_vertical_offset.push(
       match layout {

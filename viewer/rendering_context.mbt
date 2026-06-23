@@ -63,7 +63,6 @@ fn RenderingContext::from_input(
       @view_layout.ViewportData::from_render_frame(
         input.frame,
         line_height=editor_line_height,
-        decorations=input.decorations,
       )
   }
   let position = input.layout.position()

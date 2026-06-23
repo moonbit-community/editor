@@ -112,33 +112,6 @@ pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn view_ran
 }
 
 ///|
-/// Per-model-line decoration buckets derived from a frame source.
-pub struct ViewModelDecorations {
-  line_decorations : Array[Array[@decorations.Decoration]]
-}
-
-///|
-/// Builds decoration buckets from the source used to create a view model.
-pub fn ViewModelDecorations::from_frame_source(
-  source : FrameSource,
-) -> ViewModelDecorations {
-  { line_decorations: source.line_decorations }
-}
-
-///|
-/// Returns decorations for a one-based model line number.
-pub fn ViewModelDecorations::decorations_for_line(
-  self : ViewModelDecorations,
-  line_number : Int,
-) -> Array[@decorations.Decoration] {
-  let index = line_number - 1
-  match self.line_decorations.get(index) {
-    Some(decorations) => decorations
-    None => []
-  }
-}
-
-///|
 /// View lines that preserve one visible view line per visible model line.
 pub struct ViewModelLinesFromModelAsIs {
   source : FrameSource
@@ -334,7 +307,6 @@ pub fn ViewModelLinesFromModelAsIs::render_model_line(
     spans_for_line(
       line_range,
       self.source.tokenized.tokens_for_line(line_index),
-      self.source.line_decorations[line_index],
     ),
     line_range,
     self.source.line_semantic_tokens[line_index],
@@ -354,11 +326,11 @@ pub fn ViewModelLinesFromModelAsIs::render_model_line(
 pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
-  decorations? : Array[@decorations.Decoration] = [],
+  view_decorations? : Array[ViewModelDecoration] = [],
 ) -> @view_line_renderer.ViewLineRenderingData {
   view_line_rendering_data_from_render_line(
     self.render_line(line_number),
-    decorations~,
+    view_decorations~,
   )
 }
 
@@ -514,13 +486,13 @@ pub fn ViewModelLines::render_line(
 pub fn ViewModelLines::view_line_rendering_data(
   self : ViewModelLines,
   line_number : Int,
-  decorations? : Array[@decorations.Decoration] = [],
+  view_decorations? : Array[ViewModelDecoration] = [],
 ) -> @view_line_renderer.ViewLineRenderingData {
   match self {
     ModelAsIs(lines) =>
-      lines.view_line_rendering_data(line_number, decorations~)
+      lines.view_line_rendering_data(line_number, view_decorations~)
     ProjectedModel(lines) =>
-      lines.view_line_rendering_data(line_number, decorations~)
+      lines.view_line_rendering_data(line_number, view_decorations~)
   }
 }
 
@@ -628,7 +600,11 @@ fn ViewModel::from_lines(
   {
     source,
     lines,
-    decorations: ViewModelDecorations::from_frame_source(source),
+    decorations: ViewModelDecorations::new(
+      source.tokenized.snapshot,
+      coordinates_converter,
+      source.decorations,
+    ),
     coordinates_converter,
   }
 }

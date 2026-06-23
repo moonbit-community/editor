@@ -2,7 +2,7 @@
 priv struct ViewLinesPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
-  decorations : Array[@decorations.Decoration]
+  view_decorations : Array[@view_model.ViewModelDecoration]
   generation : Int
   space_width : Double
 }
@@ -113,10 +113,18 @@ impl ViewPart for ViewLines with fn on_before_render(_self, _viewport) {
 
 ///|
 impl ViewPart for ViewLines with fn prepare_render(self, context) {
+  // The line node's own class carries current-line decorations; convert the
+  // controller decorations to view coordinates so the class test stays in
+  // view `Position`s like the inline path.
+  let view_decorations = match context.input.view_model {
+    Some(view_model) =>
+      view_model.decorations().to_view_decorations(context.input.decorations)
+    None => []
+  }
   self.prepared = Some({
     frame: context.input.frame,
     viewport: context.viewport,
-    decorations: context.input.decorations,
+    view_decorations,
     generation: context.input.generation,
     space_width: context.input.space_width,
   })
@@ -129,7 +137,7 @@ impl ViewPart for ViewLines with fn render(self, context) {
       self.render_text(
         prepared.frame,
         prepared.viewport,
-        prepared.decorations,
+        prepared.view_decorations,
         prepared.generation,
         prepared.space_width,
       )
@@ -154,7 +162,7 @@ fn ViewLines::render_text(
   self : ViewLines,
   frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
-  decorations : Array[@decorations.Decoration],
+  view_decorations : Array[@view_model.ViewModelDecoration],
   generation : Int,
   space_width : Double,
 ) -> Unit {
@@ -185,7 +193,7 @@ fn ViewLines::render_text(
       let mapping = write_line_node(
         self.line_nodes[index],
         frame.lines[index],
-        decorations,
+        view_decorations,
         input,
         viewport.relative_vertical_offset[index],
         rewrite_html~,
@@ -225,7 +233,7 @@ fn ViewLines::render_text(
       let mapping = write_line_node(
         node,
         frame.lines[index],
-        decorations,
+        view_decorations,
         input,
         viewport.relative_vertical_offset[index],
         rewrite_html=true,

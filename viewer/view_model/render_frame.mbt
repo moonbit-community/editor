@@ -136,10 +136,13 @@ pub fn RenderLine::view_column_at_source_offset(
 }
 
 ///|
+/// Builds the syntax-token spans of one model line. Decorations are no longer
+/// overlaid onto token spans here: they are applied as view-coordinate inline
+/// decorations at render time (`ViewModelDecorations`), so spans carry only the
+/// tokenizer's classes.
 fn spans_for_line(
   line_range : @base_common.Range,
   tokens : Array[@syntax.Token],
-  line_decorations : Array[@decorations.Decoration],
 ) -> Array[RenderSpan] {
   let spans = []
   let mut cursor = line_range.start
@@ -157,19 +160,13 @@ fn spans_for_line(
         class_name: @syntax.Plain.css_class(),
       })
     }
-    let mut class_name = token.tag.css_class()
-    for decoration in line_decorations {
-      if decoration.range.intersects(Range(start, end)) {
-        class_name = class_name + " " + decoration.class_name
-      }
-    }
     spans.push({
       start: start - line_range.start,
       end: end - line_range.start,
       source_start: start - line_range.start,
       source_end: end - line_range.start,
       injected_text_index: -1,
-      class_name,
+      class_name: token.tag.css_class(),
     })
     cursor = end
   }

@@ -29,14 +29,14 @@ fn render_line_input_for_viewport(
 fn write_line_node(
   node : @rdom.Element,
   line : @view_model.RenderLine,
-  decorations : Array[@decorations.Decoration],
+  view_decorations : Array[@view_model.ViewModelDecoration],
   input : @view_line_renderer.RenderLineInput,
   top : Int,
   rewrite_html~ : Bool,
 ) -> @view_line_renderer.CharacterMapping? {
   node.set_attribute(
     "class",
-    @viewer_common.render_line_class(line, decorations),
+    @viewer_common.render_line_class(line, view_decorations),
   )
   node.set_attribute("data-line", line.line_number.to_string())
   node.set_attribute("style", line_node_style(top))

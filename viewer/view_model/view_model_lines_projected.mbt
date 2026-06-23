@@ -92,12 +92,12 @@ pub fn ViewModelLinesFromProjectedModel::render_line(
 pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(
   self : ViewModelLinesFromProjectedModel,
   line_number : Int,
-  decorations? : Array[@decorations.Decoration] = [],
+  view_decorations? : Array[ViewModelDecoration] = [],
 ) -> @view_line_renderer.ViewLineRenderingData {
   let segment = self.projection.segment_for_view_line_number(line_number)
   let data = view_line_rendering_data_from_render_line(
     self.render_line(line_number),
-    decorations~,
+    view_decorations~,
   )
   {
     ..data,

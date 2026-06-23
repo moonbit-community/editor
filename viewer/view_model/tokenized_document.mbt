@@ -45,12 +45,14 @@ pub fn TokenizedDocument::tokens_for_line(
 pub struct FrameSource {
   tokenized : TokenizedDocument
   providers : @language.ProviderResult
-  line_decorations : Array[Array[@decorations.Decoration]]
+  decorations : Array[@decorations.Decoration]
   line_semantic_tokens : Array[Array[@language.SemanticToken]]
 }
 
 ///|
-/// Builds a frame source by bucketing decorations and semantic tokens per line.
+/// Builds a frame source by retaining decorations (converted to view
+/// coordinates lazily by the view model) and bucketing semantic tokens per
+/// line.
 pub fn FrameSource::FrameSource(
   tokenized : TokenizedDocument,
   decoration_set : @decorations.DecorationSet,
@@ -60,9 +62,7 @@ pub fn FrameSource::FrameSource(
   {
     tokenized,
     providers,
-    line_decorations: bucket_by_line(snapshot, decoration_set.items, decoration => {
-      decoration.range
-    }),
+    decorations: decoration_set.items,
     line_semantic_tokens: bucket_by_line(snapshot, providers.semantic_tokens, token => {
       token.range
     }),

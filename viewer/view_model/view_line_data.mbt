@@ -1,8 +1,10 @@
 ///|
-/// Converts a rendered view-model line to line-renderer data.
+/// Converts a rendered view-model line to line-renderer data. Decorations are
+/// supplied already in view coordinates (`ViewModelDecoration`) and clipped to
+/// this view line; no document-offset arithmetic is involved.
 pub fn view_line_rendering_data_from_render_line(
   line : RenderLine,
-  decorations? : Array[@decorations.Decoration] = [],
+  view_decorations? : Array[ViewModelDecoration] = [],
 ) -> @view_line_renderer.ViewLineRenderingData {
   {
     min_column: 1,
@@ -12,7 +14,7 @@ pub fn view_line_rendering_data_from_render_line(
     contains_rtl: contains_rtl(line.text),
     is_basic_ascii: is_basic_ascii(line.text),
     tokens: line_parts_from_render_line(line),
-    inline_decorations: inline_decorations_for_line(line, decorations),
+    inline_decorations: inline_decorations_for_line(line, view_decorations),
     tab_size: 2,
     start_visible_column: 0,
     text_direction: LTR,
@@ -21,16 +23,17 @@ pub fn view_line_rendering_data_from_render_line(
 }
 
 ///|
-/// Builds full line-renderer input from a rendered view-model line.
+/// Builds full line-renderer input from a rendered view-model line, applying
+/// the view-coordinate decorations that cover the line.
 pub fn render_line_input_from_render_line(
   line : RenderLine,
-  decorations? : Array[@decorations.Decoration] = [],
+  view_decorations? : Array[ViewModelDecoration] = [],
   space_width? : Double = 7.2,
   vertical_scrollbar_size? : Double = 0.0,
 ) -> @view_line_renderer.RenderLineInput {
   @view_line_renderer.RenderLineInput::from_view_line(
-    view_line_rendering_data_from_render_line(line, decorations~),
-    line_decorations=line_decorations_for_line(line, decorations),
+    view_line_rendering_data_from_render_line(line, view_decorations~),
+    line_decorations=line_decorations_for_line(line, view_decorations),
     space_width~,
     vertical_scrollbar_size~,
   )
@@ -60,67 +63,53 @@ fn line_parts_from_render_line(
 }
 
 ///|
+/// Inline decorations (line-local, zero-based half-open columns) covering this
+/// view line, clipped from each decoration's view range. Mirrors Monaco's
+/// per-line inline-decoration projection; current-line decorations style the
+/// line node itself, not its spans, so they are skipped here.
 fn inline_decorations_for_line(
   line : RenderLine,
-  decorations : Array[@decorations.Decoration],
+  view_decorations : Array[ViewModelDecoration],
 ) -> Array[@view_line_renderer.InlineDecoration] {
   let inline : Array[@view_line_renderer.InlineDecoration] = []
-  let model_line_start = line.model_line_start_offset()
-  for decoration in decorations {
+  let max_column = line.text.length() + 1
+  for decoration in view_decorations {
     if decoration.kind == CurrentLine {
       continue
     }
-    let range = decoration.range
-    for span in line.spans {
-      if span.injected_text_index >= 0 {
-        continue
-      }
-      let span_start = model_line_start + span.source_start
-      let span_end = model_line_start + span.source_end
-      if range.intersects(Range(span_start, span_end)) {
+    match decoration.columns_on_view_line(line.line_number, max_column) {
+      Some((start_column, end_column)) =>
         inline.push(
           InlineDecoration(
-            Range(
-              span.start + max_int(range.start, span_start) - span_start,
-              span.start + min_int(range.end, span_end) - span_start,
-            ),
+            Range(start_column - 1, end_column - 1),
             decoration.class_name,
           ),
         )
-      }
+      None => ()
     }
   }
   inline
 }
 
 ///|
-/// Line decorations in one-based columns for the line renderer.
+/// Line decorations in one-based columns for the line renderer, clipped from
+/// each decoration's view range.
 pub fn line_decorations_for_line(
   line : RenderLine,
-  decorations : Array[@decorations.Decoration],
+  view_decorations : Array[ViewModelDecoration],
 ) -> Array[@view_line_renderer.LineDecoration] {
   let line_decorations : Array[@view_line_renderer.LineDecoration] = []
-  let model_line_start = line.model_line_start_offset()
-  for decoration in decorations {
+  let max_column = line.text.length() + 1
+  for decoration in view_decorations {
     if decoration.kind == CurrentLine {
       continue
     }
-    let range = decoration.range
-    for span in line.spans {
-      if span.injected_text_index >= 0 {
-        continue
-      }
-      let span_start = model_line_start + span.source_start
-      let span_end = model_line_start + span.source_end
-      if range.intersects(Range(span_start, span_end)) {
+    match decoration.columns_on_view_line(line.line_number, max_column) {
+      Some((start_column, end_column)) =>
         line_decorations.push(
-          LineDecoration(
-            span.start + max_int(range.start, span_start) - span_start + 1,
-            span.start + min_int(range.end, span_end) - span_start + 1,
-            decoration.class_name,
-          ),
+          LineDecoration(start_column, end_column, decoration.class_name),
         )
-      }
+      None => ()
     }
   }
   line_decorations

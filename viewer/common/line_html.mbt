@@ -9,27 +9,25 @@
 /// other kind extends the classes of the spans it intersects.
 pub fn render_line_html(
   line : @view_model.RenderLine,
-  decorations : Array[@decorations.Decoration],
+  view_decorations : Array[@view_model.ViewModelDecoration],
 ) -> String {
   @view_line_renderer.render_view_line2(
-    @view_model.render_line_input_from_render_line(line, decorations~),
+    @view_model.render_line_input_from_render_line(line, view_decorations~),
   ).html
 }
 
 ///|
 /// The class of the line node itself: `view-line` plus any `CurrentLine`
-/// decorations touching the line (inclusive bounds, as before).
+/// decorations covering the view line (inclusive view-line bounds).
 pub fn render_line_class(
   line : @view_model.RenderLine,
-  decorations : Array[@decorations.Decoration],
+  view_decorations : Array[@view_model.ViewModelDecoration],
 ) -> String {
-  let line_start = line.offset
-  let line_end = line.offset + line.text.length()
   let mut class_name = "view-line"
-  for decoration in decorations {
+  for decoration in view_decorations {
     if decoration.kind == CurrentLine &&
-      decoration.range.start <= line_end &&
-      line_start <= decoration.range.end {
+      decoration.range.start_line_number <= line.line_number &&
+      line.line_number <= decoration.range.end_line_number {
       class_name = class_name + " " + decoration.class_name
     }
   }

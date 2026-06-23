@@ -5,12 +5,14 @@ import {
 }
 
 async fn main {
-  let status = @process.run("moon", ["build", "--target", "js", "web"])
+  let status = @process.run("moon", [
+    "build", "--target", "js", "internal/shell/web",
+  ])
   if status != 0 {
     fail("moon build failed with exit code \{status}")
   }
   let embed_status = @process.run("moon", [
-    "build", "--target", "js", "examples/embedded_viewer",
+    "build", "--target", "js", "internal/shell/examples/embedded_viewer",
   ])
   if embed_status != 0 {
     fail("moon build failed with exit code \{embed_status}")
@@ -145,9 +147,9 @@ async fn main {
 ///|
 fn css_sources() -> Array[String] {
   [
-    "workbench/theme.css",
-    "workbench/shell.css",
-    "widgets/file_tree/file_tree.css",
+    "internal/shell/workbench/theme.css",
+    "internal/shell/workbench/shell.css",
+    "internal/shell/widgets/file_tree/file_tree.css",
     "viewer/editor.css",
     "viewer/scrollable_element.css",
     "viewer/view_lines.css",

@@ -5,9 +5,9 @@ This repository has two main parts:
 - `viewer`: the reusable MoonBit readonly viewer. It is Monaco-shaped in API
   and behavior where that helps embedders, but it stays MoonBit-owned and does
   not import Monaco, VS Code, or CodeMirror code.
-- `workbench` plus the backend shell: the reference app used to see the viewer
-  working against a real workspace. It demonstrates one host composition and
-  must use the viewer through public APIs.
+- `internal/shell`: the reference app/backend used to see the viewer working
+  against a real workspace. It demonstrates one host composition and must use
+  the viewer through public APIs; it is not an external import surface.
 
 Monaco/VS Code is the primary design reference. CodeMirror is a secondary
 reference when its simpler state/view split is useful. Both submodules are
@@ -22,9 +22,9 @@ just build
 just dev ROOT=. PORT=5173
 ```
 
-Open `http://127.0.0.1:5173/`. The dev server is the native backend shell: it
-serves `web/dist` and talks to the browser workbench over the readonly remote
-protocol WebSocket.
+Open `http://127.0.0.1:5173/`. The dev server is the internal native backend
+shell: it serves `web/dist` and talks to the browser workbench over the
+readonly remote protocol WebSocket.
 
 ## Validation
 

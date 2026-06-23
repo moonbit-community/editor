@@ -7,21 +7,15 @@ async fn main {
   let product_dirs = [
     "base",
     "decorations",
+    "internal",
     "language",
     "platform",
-    "remote_protocol",
     "viewer",
-    "server",
-    "server_host_native",
     "syntax",
     "view",
     "web",
     "app",
     "tests",
-    "workbench",
-    "workspace",
-    "widgets",
-    "examples",
   ]
   let forbidden = ["codemirror/", "vscode/"]
   let errors : Array[String] = []
@@ -36,6 +30,7 @@ async fn main {
     }
   }
   check_package_imports(errors)
+  check_public_package_imports(errors)
   check_platform_log_imports(errors)
   check_model_boundary_imports(errors)
   check_language_package_imports(errors)
@@ -50,7 +45,7 @@ async fn main {
 /// Viewer and language public APIs are model-based. Workspace source payloads
 /// are adapted by host packages before they cross those boundaries.
 async fn check_model_boundary_imports(errors : Array[String]) -> Unit {
-  let forbidden = ["baozhiyuan/editor/workspace"]
+  let forbidden = ["baozhiyuan/editor/internal/shell/workspace"]
   for manifest in ["viewer/moon.pkg", "language/moon.pkg"] {
     if @fs.exists(manifest) {
       reject_imports(
@@ -66,7 +61,8 @@ async fn check_model_boundary_imports(errors : Array[String]) -> Unit {
 ///|
 /// Grammars are compile-time packages composed by import: `syntax/lang_*`
 /// may import only viewer core/model test support and `syntax`, and only composition layers
-/// (`workbench`, `examples/*`, browser-test entrypoints) may import a
+/// (`internal/shell/workbench`, `internal/shell/examples/*`, browser-test
+/// entrypoints) may import a
 /// `syntax/lang_*` package — the viewer library, viewer common layer, and server
 /// must resolve languages through the tokenizer registry instead.
 async fn check_language_package_imports(errors : Array[String]) -> Unit {
@@ -94,8 +90,8 @@ async fn check_language_package_imports(errors : Array[String]) -> Unit {
     }
   }
   for manifest in package_manifests() {
-    if manifest.has_prefix("workbench/") ||
-      manifest.has_prefix("examples/") ||
+    if manifest.has_prefix("internal/shell/workbench/") ||
+      manifest.has_prefix("internal/shell/examples/") ||
       manifest.has_prefix("tests/browser/moonbit/") ||
       manifest.has_prefix("syntax/") {
       continue
@@ -133,29 +129,30 @@ async fn collect_manifests(dir : String, manifests : Array[String]) -> Unit {
 ///|
 /// Package-boundary rules for the pluggable viewer: common viewer
 /// packages know no browser, host effects, transport, or shell; the public
-/// browser-backed viewer package knows no transport or shell; and the tree widget knows
-/// no transport or viewer. Only `workbench` composes.
+/// browser-backed viewer package knows no transport or shell; and the internal
+/// tree widget knows no transport or viewer. Only `internal/shell/workbench`
+/// composes.
 async fn check_package_imports(errors : Array[String]) -> Unit {
   let common_forbidden = [
-    "baozhiyuan/editor/remote_protocol",
-    "baozhiyuan/editor/server",
-    "baozhiyuan/editor/server_host_native",
-    "baozhiyuan/editor/web",
-    "baozhiyuan/editor/widgets",
-    "baozhiyuan/editor/workbench",
+    "baozhiyuan/editor/internal/shell/remote_protocol",
+    "baozhiyuan/editor/internal/shell/server",
+    "baozhiyuan/editor/internal/shell/server_host_native",
+    "baozhiyuan/editor/internal/shell/web",
+    "baozhiyuan/editor/internal/shell/widgets",
+    "baozhiyuan/editor/internal/shell/workbench",
     "moonbit-community/rabbita",
   ]
   let browser_forbidden = [
-    "baozhiyuan/editor/remote_protocol",
-    "baozhiyuan/editor/server",
-    "baozhiyuan/editor/server_host_native",
-    "baozhiyuan/editor/web",
-    "baozhiyuan/editor/widgets",
-    "baozhiyuan/editor/workbench",
+    "baozhiyuan/editor/internal/shell/remote_protocol",
+    "baozhiyuan/editor/internal/shell/server",
+    "baozhiyuan/editor/internal/shell/server_host_native",
+    "baozhiyuan/editor/internal/shell/web",
+    "baozhiyuan/editor/internal/shell/widgets",
+    "baozhiyuan/editor/internal/shell/workbench",
     "moonbit-community/rabbita/websocket",
   ]
   let widget_forbidden = [
-    "baozhiyuan/editor/remote_protocol",
+    "baozhiyuan/editor/internal/shell/remote_protocol",
     "baozhiyuan/editor/viewer",
     "moonbit-community/rabbita/websocket",
   ]
@@ -180,8 +177,26 @@ async fn check_package_imports(errors : Array[String]) -> Unit {
     } else if is_viewer_browser_manifest(manifest) {
       reject_imports(manifest, imports, browser_forbidden, errors)
       check_browser_rabbita_imports(manifest, imports, errors)
-    } else if manifest == "widgets/file_tree/moon.pkg" {
+    } else if manifest == "internal/shell/widgets/file_tree/moon.pkg" {
       reject_imports(manifest, imports, widget_forbidden, errors)
+    }
+  }
+}
+
+///|
+/// The reusable public surface must not depend on reference shell packages.
+/// The only packages allowed to import `internal/shell/*` are other packages in
+/// the same shell stack.
+async fn check_public_package_imports(errors : Array[String]) -> Unit {
+  let shell_prefix = "baozhiyuan/editor/internal/shell"
+  for manifest in package_manifests() {
+    if manifest.has_prefix("internal/shell/") {
+      continue
+    }
+    for imported in package_imports(@fs.read_file(manifest).text()) {
+      if import_matches(imported, shell_prefix) {
+        errors.push(manifest + " must not import internal shell package " + imported)
+      }
     }
   }
 }
@@ -261,12 +276,12 @@ fn check_browser_rabbita_imports(
 ///|
 /// Runtime logging is shared product infrastructure. It must stay
 /// FFI-free and independent of browser/native hosts; concrete sinks live
-/// in composition packages such as `workbench`.
+/// in composition packages such as `internal/shell/workbench`.
 async fn check_platform_log_imports(errors : Array[String]) -> Unit {
   let pkg_file = "platform/log/moon.pkg"
   if @fs.exists(pkg_file) {
     for imported in package_imports(@fs.read_file(pkg_file).text()) {
-      if imported.has_prefix("baozhiyuan/editor/server_host_native") ||
+      if imported.has_prefix("baozhiyuan/editor/internal/shell/server_host_native") ||
         imported.has_prefix("moonbit-community/rabbita") {
         errors.push(pkg_file + " must not import host package " + imported)
       }

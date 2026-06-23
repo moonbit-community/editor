@@ -6,8 +6,8 @@ DOM subtree inside a host-provided stable element.
 
 It ships without explorer chrome, transport, persistence, file watching, or
 reload policy. Hosts provide readonly `viewer/model.TextModel` values and call
-the viewer API. The reference `workbench` is one host; it is not part of this
-package.
+the viewer API. The reference `internal/shell/workbench` is one host; it is not
+part of this package or the public import surface.
 
 ## Embedding API
 
@@ -74,8 +74,8 @@ zones. Go-to-definition and find-references are not current viewer behavior.
   `viewer/core`, `viewer/model`, `viewer/view_line_renderer`,
   `viewer/view_layout`, `viewer/view_model`, `syntax`, and `decorations`.
 - May depend on focused markdown-rendering packages used by hover content.
-- Must not depend on `workspace`, `remote_protocol`, `websocket`, `workbench`,
-  `web`, `server`, `server_host_native`, or `widgets/*`.
+- Must not depend on `baozhiyuan/editor/internal/shell/*` packages or
+  websocket transports.
 - Must not import concrete `syntax/lang_*` packages.
 - May declare narrowly scoped JavaScript FFI for viewer-owned browser effects.
   Shared viewer common-layer packages must remain FFI-free.
@@ -87,6 +87,6 @@ zones. Go-to-definition and find-references are not current viewer behavior.
 - Viewer services and hover participants: `services_wbtest.mbt`.
 - Browser component tests cover public API construction, selection/copy,
   wrapping, hover overlap, folding, view zones, and inlay-hint copy behavior.
-- Embedding boundary: `examples/embedded_viewer` and
+- Embedding boundary: `internal/shell/examples/embedded_viewer` and
   `tests/browser/smoke/embed.spec.js`.
 - Run `just check` for the repository-level guardrail.

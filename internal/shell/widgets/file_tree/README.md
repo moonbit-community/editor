@@ -1,8 +1,8 @@
-# widgets/file_tree
+# internal/shell/widgets/file_tree
 
-Explorer-style workspace tree widget — the `workbench/contrib/files`
-explorer role. An optional, provider-backed Rabbita child cell; apps that
-do not want a sidebar simply do not import this package.
+Explorer-style workspace tree widget for the internal reference shell: the
+`workbench/contrib/files` explorer role. It is not part of the public viewer
+API.
 
 ## Behavior (the explorer contract)
 
@@ -39,7 +39,7 @@ Rows keep the explorer selectors: `workspace-item`,
 
 ## Boundaries
 
-- May depend on `workspace` and Rabbita html/cmd/svg.
+- May depend on internal shell `workspace` and Rabbita html/cmd/svg.
 - Must not import `remote_protocol` or `viewer` — enforced by
   `scripts/check-architecture.mbtx`.
 
@@ -47,4 +47,4 @@ Rows keep the explorer selectors: `workspace-item`,
 
 - Expansion, reveal, and resolve-caching logic is unit-tested with an
   in-memory `WorkspaceTreeProvider` in `tree_state_wbtest.mbt`.
-- Run `moon test widgets/file_tree --target js`.
+- Run `moon test internal/shell/widgets/file_tree --target js`.

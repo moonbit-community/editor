@@ -22,8 +22,8 @@ Native effect adapter for the reference backend shell.
 
 ## Boundaries
 
-- May depend on `server`, `remote_protocol`, `workspace`, and native async
-  runtime packages.
+- May depend on internal shell `server`, `remote_protocol`, `workspace`, and
+  native async runtime packages.
 - Must not own remote protocol routing, workspace policy, provider semantics, or
   browser behavior.
 - Keep this package native-only through `supported_targets = "native"`.

@@ -1,5 +1,5 @@
 import {
-  "baozhiyuan/editor/server_host_native",
+  "baozhiyuan/editor/internal/shell/server_host_native",
   "moonbitlang/async",
   "moonbitlang/core/env",
   "moonbitlang/core/string",

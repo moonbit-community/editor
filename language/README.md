@@ -13,15 +13,15 @@ Readonly language-provider contracts.
 - Keep hover contents limited to language-owned plaintext and markdown data;
   diagnostics are represented separately as markers in the viewer layer.
 - Keep provider contracts backend-neutral; concrete semantic providers live in
-  server or host packages.
+  host packages such as the internal shell backend.
 
 ## Boundaries
 
 - May depend on `base/common`, `viewer/model`, and JSON support.
 - Must not import viewer browser implementation packages, DOM, native host
-  packages, or server packages.
-- Must not depend on `workspace`; source-provider payloads are adapted by host
-  packages before semantic providers run.
+  packages, server packages, or any `internal/shell` package.
+- Must not depend on source-provider payloads; host packages adapt them before
+  semantic providers run.
 - Browser and native transport effects are not part of the target public
   language-provider architecture.
 

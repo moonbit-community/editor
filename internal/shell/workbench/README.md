@@ -41,7 +41,7 @@ implementation details.
 - Own harness observability: the viewer reports lifecycle facts through typed
   subscriptions and the workbench formats and emits the
   structured `[readonly-editor]` events (`dom:mounted`, `moonbit:render`,
-  `view:scroll`, `language:*`) documented in `../docs/harness.md`, and
+  `view:scroll`, `language:*`) documented in `../../../docs/harness.md`, and
   installs the `__readonlyEditorScrollTo` scroll control. Workbench owns the
   browser-host helpers for harness globals, current-model exposure, theme
   storage, and protocol URL derivation. Workbench also installs the concrete
@@ -50,10 +50,10 @@ implementation details.
 
 ## Boundaries
 
-- May depend on `base/common`, `viewer`, `viewer/model`,
-  `widgets/file_tree`, `remote_protocol`, `workspace`, `language`,
-  `platform/log`, concrete `syntax/lang_*` packages, and Rabbita packages
-  including `websocket`.
+- May depend on public viewer packages plus the internal shell packages
+  `widgets/file_tree`, `remote_protocol`, and `workspace`, concrete
+  `syntax/lang_*` packages, `platform/log`, and Rabbita packages including
+  `websocket`.
 - May declare narrowly scoped JavaScript FFI for workbench-owned browser-host
   effects such as harness observability, storage, and protocol URL derivation.
 - Composition lives here: the viewer and tree widget must not know about each
@@ -66,5 +66,5 @@ implementation details.
 
 - Protocol-client correlation is covered by `protocol_client_wbtest.mbt`.
 - End-to-end behavior is covered by the Playwright specs in
-  `../tests/browser`.
+  `../../../tests/browser`.
 - Run `just check` for the repository-level type check.

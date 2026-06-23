@@ -20,7 +20,7 @@ outer assertions, logging, screenshots, traces, and final pass/fail decisions.
 - `just check`: runs `moon check --target all --warn-list +73` plus
   `scripts/check-architecture.mbtx`.
 - `just build`: runs `just check`, builds `web/dist` including browser-test
-  assets, and builds `server_host_native/main`.
+  assets, and builds `internal/shell/server_host_native/main`.
 - `just test`: runs `moon test --target all`.
 - `just test-browser`: builds first, starts the native server, and runs all
   default Playwright browser suites.
@@ -53,7 +53,8 @@ tests/browser/
 ```
 
 `scripts/build-web.mbtx` assembles owner-adjacent CSS into `web/dist/style.css`
-and builds the MoonBit browser-test packages into
+from the viewer and internal shell packages, and builds the MoonBit
+browser-test packages into
 `web/dist/browser-tests/component.html` and `web/dist/browser-tests/perf.html`.
 See `tests/browser/README.md` for package-level authoring rules, selectors, and
 globals. Monaco-specific hover and scrollbar contracts live in
@@ -71,7 +72,7 @@ globals. Monaco-specific hover and scrollbar contracts live in
   scrollbar/hover DOM, computed style, geometry, screenshots, and synthetic
   scroll/windowing checks.
 - Component: MoonBit browser pages construct the public viewer API directly,
-  without the workbench/backend shell, and report compact JSON through
+  without the internal workbench/backend shell, and report compact JSON through
   Playwright.
 - Performance: structured JSON evidence and attachments. Perf tests remain
   non-failing unless an explicit documented budget is added.

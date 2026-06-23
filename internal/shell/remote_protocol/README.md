@@ -14,8 +14,8 @@ MoonBit-owned client/server packet contract for remote readonly workspaces.
 
 ## Boundaries
 
-- May depend on `base/common`, `workspace`, `language`, and
-  JSON support.
+- May depend on public domain packages, internal shell `workspace`, and JSON
+  support.
 - Must not depend on browser, native, DOM, viewer implementation, or server host
   effects.
 - Protocol errors should preserve provider-error details for callers.

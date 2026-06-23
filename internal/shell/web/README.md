@@ -1,4 +1,4 @@
-# web
+# internal/shell/web
 
 Generated browser entrypoint for the reference workbench.
 
@@ -13,8 +13,8 @@ Generated browser entrypoint for the reference workbench.
 
 ## Boundaries
 
-- May depend on `workbench` only; composition of the viewer, tree, and
-  transport lives there.
+- May depend on `internal/shell/workbench` only; composition of the viewer,
+  tree, and transport lives there.
 - Must remain the generated browser entrypoint and avoid becoming a shared
   domain package.
 - Does not declare JavaScript FFI directly; browser host calls go through
@@ -24,5 +24,5 @@ Generated browser entrypoint for the reference workbench.
 
 ## Checks
 
-- Browser harness behavior is documented in `../docs/harness.md`.
+- Browser harness behavior is documented in `../../../docs/harness.md`.
 - Run `just check` for the repository-level type check.

@@ -16,9 +16,10 @@ Reference backend policy for remote readonly workspaces.
 
 ## Boundaries
 
-- May depend on `base/common`, `workspace`, `language`, `remote_protocol`, and
-  JSON support.
-- Must not import browser packages, the public `viewer` package, or `web`.
+- May depend on public domain packages plus internal shell `workspace` and
+  `remote_protocol`, and JSON support.
+- Must not import browser shell packages, the public `viewer` package, or
+  `internal/shell/web`.
 - Native effects stay behind the `ServerHost` trait; server code owns policy and
   routing.
 - This package is part of the reference shell/backend stack, not a requirement

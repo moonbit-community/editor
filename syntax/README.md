@@ -34,8 +34,9 @@ importing a package, or implementing `LineTokenizer` yourself.
 
 Import rules (enforced by `scripts/check-architecture.mbtx`):
 `syntax/lang_*` may import only `syntax` plus `viewer/model` test support;
-only composition layers (`workbench`, `examples/*`) may import
-`syntax/lang_*` — `viewer/common`, `viewer`, and `server` must not.
+only composition layers (`internal/shell/workbench`,
+`internal/shell/examples/*`, and browser test entrypoints) may import
+`syntax/lang_*`; `viewer/common`, `viewer`, and backend policy packages must not.
 
 ## Monarch-to-`lexmatch` translation playbook
 
@@ -90,7 +91,7 @@ offsets are UTF-16 code units (the repo position convention);
   `syntax/lang_*` only on `syntax` plus `viewer/model` test support. No
   module-level state anywhere in this subtree.
 - Must not depend on workspace loading, language providers, DOM,
-  viewer backends, server packages, or reference submodules.
+  viewer backends, `internal/shell` packages, or reference submodules.
 - Does not own semantic tokens or diagnostics; those belong to
   `language` and overlay on top of these tokens in the viewer.
 

@@ -5,10 +5,10 @@ The current project has two main parts.
 1. `viewer`: the reusable MoonBit readonly viewer. It provides the public
    viewer API, owns the browser editor surface, and follows Monaco-shaped
    behavior where that helps readonly embedders.
-2. `workbench` plus the backend shell: a small reference host used to see the
-   viewer working against a real workspace. It illustrates how outer users can
-   compose the viewer, and it must use viewer public APIs instead of reaching
-   into viewer implementation details.
+2. `internal/shell`: a small reference host/backend used to see the viewer
+   working against a real workspace. It illustrates one host composition, but
+   it is not an external import surface and must use viewer public APIs instead
+   of reaching into viewer implementation details.
 
 This file is the high-level map. Package-local method lists, DOM details,
 tests, and invariants belong in each package README.
@@ -56,24 +56,24 @@ contract.
 
 ### Reference Shell
 
-- `web`: generated browser entrypoint. It starts the workbench and should not
-  grow application logic.
-- `workbench`: the reference browser shell. It composes the viewer, optional
-  file tree, syntax packages, remote protocol client, theme state, shell UI,
-  and test observability.
-- `widgets/file_tree`: optional explorer widget over `workspace` providers. It
-  does not know about the viewer or transport.
-- `remote_protocol`: MoonBit-owned packets between the reference workbench and
-  reference backend.
-- `server`: remote workspace policy and semantic feature routing.
-- `server_host_native`: native filesystem, watching, process, socket, static
-  serving, and LSP-process effects for the reference backend.
-- `examples/embedded_viewer`: small non-remote embedding proof. It demonstrates
-  that the viewer can run without `workbench`, `remote_protocol`, `server`, or
-  `server_host_native`.
+- `internal/shell/web`: generated browser entrypoint. It starts the workbench
+  and should not grow application logic. Built assets still land in `web/dist`.
+- `internal/shell/workbench`: the reference browser shell. It composes the
+  viewer, internal file tree, syntax packages, remote protocol client, theme
+  state, shell UI, and test observability.
+- `internal/shell/widgets/file_tree`: explorer widget over internal
+  `workspace` providers. It does not know about the viewer or transport.
+- `internal/shell/remote_protocol`: MoonBit-owned packets between the
+  reference workbench and reference backend.
+- `internal/shell/server`: remote workspace policy and semantic feature
+  routing.
+- `internal/shell/server_host_native`: native filesystem, watching, process,
+  socket, static serving, and LSP-process effects for the reference backend.
+- `internal/shell/examples/embedded_viewer`: small non-remote embedding proof.
+  It demonstrates that the viewer can run without the remote backend.
 
-`workspace` defines host-side source and tree provider contracts used by the
-reference shell and examples. It is not the viewer model API.
+`internal/shell/workspace` defines host-side source and tree provider contracts
+used by the reference shell and examples. It is not the viewer model API.
 
 `view` is a compatibility render model outside the active viewer path.
 
@@ -87,14 +87,15 @@ host app
   -> viewer/model.TextModel
   -> optional language providers
   -> optional tokenizer registration
-  -> optional host-owned workspace/tree/transport
 ```
 
 The host creates or fetches readonly document content, converts it into a
 `viewer/model.TextModel`, and installs it on the viewer. The viewer owns
 rendering, scrolling, hover presentation, selection/copy, widget placement, and
 lifecycle events. The host owns files, transport, persistence, reload policy,
-shell chrome, and error display.
+shell chrome, and error display. The repo's workspace/tree/transport example is
+internal to `internal/shell`; external embedders should provide their own host
+code around the public viewer/language APIs.
 
 Language features are provider-based. Providers may compute locally, call a
 backend, or read host state. The viewer depends only on the provider contracts
@@ -103,19 +104,21 @@ and result values.
 ### Reference Workbench
 
 ```text
-web -> workbench -> viewer
-                 -> widgets/file_tree
-                 -> remote_protocol
+internal/shell/web -> internal/shell/workbench -> viewer
+                                           -> internal/shell/widgets/file_tree
+                                           -> internal/shell/remote_protocol
 
-server_host_native/main -> server_host_native -> server
-                                           -> remote_protocol
-                                           -> workspace
-                                           -> language
+internal/shell/server_host_native/main
+  -> internal/shell/server_host_native -> internal/shell/server
+                                      -> internal/shell/remote_protocol
+                                      -> internal/shell/workspace
+                                      -> language
 ```
 
-`workbench` adapts remote protocol responses into host-owned providers and
-`viewer/model.TextModel` values, then calls the viewer API. `server` owns
-remote workspace policy. `server_host_native` owns native effects.
+`internal/shell/workbench` adapts remote protocol responses into host-owned
+providers and `viewer/model.TextModel` values, then calls the viewer API.
+`internal/shell/server` owns remote workspace policy.
+`internal/shell/server_host_native` owns native effects.
 
 This stack exists for development, demos, and end-to-end validation. It should
 not become a dependency of the reusable viewer.
@@ -140,17 +143,21 @@ events, custom scrollbars, and widget DOM live in `viewer`.
 - Pure DOM-free editor model, layout, viewport, and render-line logic belongs in
   the focused `viewer/*` common-layer packages.
 - Editor text identity belongs in `viewer/model`; do not expose
-  `workspace.DocumentSnapshot` through viewer or language-provider APIs.
-- Host source/tree provider contracts belong in `workspace`.
+  `internal/shell/workspace.DocumentSnapshot` through viewer or
+  language-provider APIs.
 - Semantic provider contracts belong in `language`.
 - Runtime language registration belongs in `viewer.languages`; concrete
   tokenizers belong in `syntax/lang_*` and are imported by host packages.
-- Optional reusable UI around the viewer belongs under `widgets/*`.
-- Reference app behavior belongs in `workbench` or an example package.
-- Remote packet shape belongs in `remote_protocol`.
-- Remote workspace policy belongs in `server`.
+- Reference shell source/tree provider contracts belong in
+  `internal/shell/workspace`.
+- Reference app behavior belongs in `internal/shell/workbench` or an internal
+  example package.
+- Reference shell UI around the viewer belongs under `internal/shell/widgets/*`.
+- Remote packet shape belongs in `internal/shell/remote_protocol`.
+- Remote workspace policy belongs in `internal/shell/server`.
 - Native filesystem, process, socket, and static-serving effects belong in
-  `server_host_native`.
+  `internal/shell/server_host_native`.
+- Public packages must not import `baozhiyuan/editor/internal/shell/*`.
 - JS-only packages may declare narrowly scoped JS FFI for effects they own.
   Shared packages must remain FFI-free.
 - Product code must not import from `vscode/` or `codemirror/`.
@@ -164,23 +171,29 @@ Dependencies flow from host entrypoints toward viewer and shared domain
 packages:
 
 ```text
-web -> workbench
-workbench -> base/common, viewer, viewer/model, widgets/file_tree,
-             remote_protocol, workspace, language, syntax/lang_*,
-             platform/log
+internal/shell/web -> internal/shell/workbench
+internal/shell/workbench -> base/common, viewer, viewer/model,
+                            internal/shell/widgets/file_tree,
+                            internal/shell/remote_protocol,
+                            internal/shell/workspace, language,
+                            syntax/lang_*, platform/log
 viewer -> base/common, viewer/common, viewer/core, viewer/model,
           viewer/view_line_renderer, viewer/view_layout, viewer/view_model,
           language, syntax, decorations, platform/log
 
-server_host_native/main -> server_host_native
-server_host_native -> base/common, server, remote_protocol, workspace,
-                      language, viewer/model
-server -> base/common, remote_protocol, workspace, language, viewer/model
-remote_protocol -> base/common, workspace, language
-widgets/file_tree -> base/common, workspace
+internal/shell/server_host_native/main -> internal/shell/server_host_native
+internal/shell/server_host_native -> base/common, internal/shell/server,
+                                     internal/shell/remote_protocol,
+                                     internal/shell/workspace, language,
+                                     viewer/model
+internal/shell/server -> base/common, internal/shell/remote_protocol,
+                         internal/shell/workspace, language, viewer/model
+internal/shell/remote_protocol -> base/common, internal/shell/workspace,
+                                  language
+internal/shell/widgets/file_tree -> base/common, internal/shell/workspace
 
 language -> base/common, viewer/model
-workspace -> base/common
+internal/shell/workspace -> base/common
 syntax -> base/common, viewer/model
 decorations -> base/common
 viewer/model -> base/common, viewer/core

@@ -1,7 +1,7 @@
-# examples/embedded_viewer
+# internal/shell/examples/embedded_viewer
 
-A small real embedding target for the reusable `viewer`. It mounts the viewer
-and optional `widgets/file_tree` against in-memory documents and a
+A small internal embedding target for the reusable `viewer`. It mounts the
+viewer and internal file-tree widget against in-memory documents and a
 `WorkspaceTreeProvider` implementation. There is no workbench, server, remote
 protocol, or websocket.
 

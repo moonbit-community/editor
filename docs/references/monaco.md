@@ -19,8 +19,8 @@ The VS Code submodule contains Monaco's editor implementation under
   `getModel()` / `setModel(ITextModel | null)`, model-change events, and
   language providers such as hover providers whose callbacks receive an
   `ITextModel`. The local equivalent target is `viewer/model.TextModel` at the
-  viewer and language-provider boundary; `workspace.DocumentSnapshot` is only a
-  host/source-provider payload.
+  viewer and language-provider boundary; the internal shell's
+  `workspace.DocumentSnapshot` is only a host/source-provider payload.
 - `vscode/src/vs/editor/common/languages`: language registrations and tokenization.
   Local public registration is `@viewer.languages.*`: `set_tokens_provider`
   mirrors `monaco.languages.setTokensProvider`, while

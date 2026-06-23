@@ -11,8 +11,8 @@ Host-neutral structured logging contracts.
 
 ## Boundaries
 
-- Must not depend on viewer, workbench, server, browser, native, transport, or
-  workspace packages.
+- Must not depend on viewer, browser, native, transport, or
+  `internal/shell` packages.
 - Hosts decide where log entries go. This package only defines the shared
   structure and filtering facade.
 

@@ -1,6 +1,6 @@
 ///|
 /// Pixel height of one rendered code line. Keep in sync with
-/// `--editor-line-height` in workbench/theme.css.
+/// `--editor-line-height` in internal/shell/workbench/theme.css.
 let editor_line_height = 18
 
 ///|

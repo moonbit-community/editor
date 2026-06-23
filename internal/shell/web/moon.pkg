@@ -1,5 +1,5 @@
 import {
-  "baozhiyuan/editor/workbench",
+  "baozhiyuan/editor/internal/shell/workbench",
 }
 
 supported_targets = "js"

@@ -90,15 +90,58 @@ impl ViewPart for ContentViewOverlays with fn on_did_render(self) {
 }
 
 ///|
+/// The rounded-corner classification of a selection edge, Monaco's
+/// `CornerStyle`: `Extern` rounds outward, `Intern` is a reverse (inverse)
+/// corner cut into an adjacent line, `Flat` leaves a straight edge.
+priv enum CornerStyle {
+  Extern
+  Intern
+  Flat
+} derive(Eq)
+
+///|
+/// One measured selection rectangle plus the corner styles of its four corners,
+/// Monaco's `HorizontalRangeWithStyle`.
+priv struct StyledRange {
+  left : Double
+  width : Double
+  mut start_top : CornerStyle
+  mut start_bottom : CornerStyle
+  mut end_top : CornerStyle
+  mut end_bottom : CornerStyle
+}
+
+///|
+/// The styled selection rectangles for one view line, Monaco's
+/// `LineVisibleRangesWithStyle`, plus the line's pixel top in the overlay.
+priv struct LineSelectionRanges {
+  top : Int
+  ranges : Array[StyledRange]
+}
+
+///|
+fn new_styled_range(left : Double, width : Double) -> StyledRange {
+  {
+    left,
+    width,
+    start_top: Extern,
+    start_bottom: Extern,
+    end_top: Extern,
+    end_bottom: Extern,
+  }
+}
+
+///|
 /// Renders the selection highlight as DOM-measured rectangles, Monaco's
-/// `SelectionsOverlay` role driven by `RenderingContext.linesVisibleRangesForRange`.
-/// The selection arrives as a view-coordinate range (already bridged from the
-/// model selection through the `CoordinatesConverter`), so this stays entirely
-/// in view `Position`s: each visible line contributes one rectangle per
-/// measured horizontal range, lines that end a model line inside the selection
-/// get an end-of-line extension, and empty lines inside the selection get a
-/// stub, so multi-line selections read as continuous. There is no raw-offset
-/// round-trip.
+/// `SelectionsOverlay`. The selection arrives as a view-coordinate range
+/// (already bridged from the model selection through the `CoordinatesConverter`),
+/// so this stays entirely in view `Position`s. It collects the per-line
+/// horizontal ranges (`linesVisibleRangesForRange`), enriches them with
+/// rounded-corner styles (`_enrichVisibleRangesWithStyle`), then paints each
+/// range with its corner radii and reverse-corner pieces
+/// (`_actualRenderOneSelection`). There is one selection, so the multi-selection
+/// top/bottom margins are always zero; the previous-frame corner cache (a
+/// repaint optimization) is intentionally omitted.
 fn ContentViewOverlays::render_selection_overlays(
   self : ContentViewOverlays,
   frame : @view_model.RenderFrame,
@@ -113,93 +156,213 @@ fn ContentViewOverlays::render_selection_overlays(
     Some(range) => range
     None => return
   }
-  let document = @rdom.document()
+  let lines : Array[LineSelectionRanges] = []
   for index in 0..<frame.lines.length() {
-    append_line_selection_rects(
-      self.view_overlays,
-      document,
-      frame.lines[index],
-      range,
-      view_model,
-      viewport.relative_vertical_offset[index],
-      space_width,
-      measure,
-    )
+    match
+      collect_line_selection_ranges(
+        frame.lines[index],
+        range,
+        view_model,
+        viewport.relative_vertical_offset[index],
+        space_width,
+        measure,
+      ) {
+      Some(line_ranges) => lines.push(line_ranges)
+      None => ()
+    }
+  }
+  // Rounded selection is always on; enrich unless a line has multiple ranges.
+  let styled = !visible_ranges_have_gaps(lines)
+  if styled {
+    enrich_visible_ranges_with_style(lines, space_width)
+  }
+  let document = @rdom.document()
+  for line in lines {
+    render_styled_line(self.view_overlays, document, line, styled)
   }
 }
 
 ///|
-/// Appends the selection rectangles for one rendered view line, transcribing
-/// the per-line body of Monaco's `viewLines.linesVisibleRangesForRange`.
-/// `range` is the selection in view coordinates (one-based, local to each view
-/// line). The start column applies only on the first selected line and the end
-/// column only on the last; lines in between span their whole rendered width.
-/// Text rectangles come from DOM measurement of that view-column range. A view
-/// line that ends a model line inside the selection (a real newline, not a
-/// soft-wrap continuation) gets a one-space marker past the text so the
-/// included line break is visible.
-fn append_line_selection_rects(
-  parent : @rdom.Element,
-  document : @rdom.Document,
+/// The styled horizontal ranges for one rendered view line, transcribing the
+/// per-line body of `viewLines.linesVisibleRangesForRange`. The start column
+/// applies only on the first selected line and the end column only on the last;
+/// lines in between span their whole rendered width. A view line that ends a
+/// model line inside the selection (a real newline, not a soft-wrap
+/// continuation) has the trailing newline folded into the last range's width,
+/// matching Monaco's end-of-line extension.
+fn collect_line_selection_ranges(
   line : @view_model.RenderLine,
   range : @view_line_renderer.ViewRange,
   view_model : @view_model.ViewModel?,
   top : Int,
   space_width : Double,
   measure : (Int, Int, Int) -> Array[(Double, Double)],
-) -> Unit {
+) -> LineSelectionRanges? {
   let view_line_number = line.line_number
   if view_line_number < range.start_line_number ||
     view_line_number > range.end_line_number {
-    return
+    return None
   }
-  // `startColumn = lineNumber === range.startLineNumber ? range.startColumn : 1`
   let start_column = if view_line_number == range.start_line_number {
     range.start_column
   } else {
     1
   }
-  // `continuesInNextLine = lineNumber !== originalEndLineNumber`
   let continues_in_next_line = view_line_number != range.end_line_number
-  // `endColumn = continuesInNextLine ? getLineMaxColumn(lineNumber) : range.endColumn`.
-  // The rendered text length is the view line's local length, so the local
-  // one-based max column is `text.length() + 1`.
   let end_column = if continues_in_next_line {
     line.text.length() + 1
   } else {
     range.end_column
   }
-  // `measure` consumes zero-based local view columns.
   let start_column0 = start_column - 1
   let end_column0 = end_column - 1
-  // Monaco's `includeNewLines` branch: only extend past the text when this
-  // view line ends a *model* line, so soft-wrap continuations stay seamless.
   let includes_newline = continues_in_next_line &&
     ends_model_line(view_model, view_line_number)
-  let has_text_selection = start_column0 < end_column0
-  if !has_text_selection && !includes_newline {
-    return
-  }
-  let mut right_edge = 0.0
-  let mut drew_text = false
-  if has_text_selection {
+  let ranges : Array[StyledRange] = []
+  if start_column0 < end_column0 {
     for rect in measure(view_line_number, start_column0, end_column0) {
       let (left, width) = rect
-      append_selection_rect(parent, document, top, left, width)
-      let edge = left + width
-      if edge > right_edge {
-        right_edge = edge
-      }
-      drew_text = true
+      ranges.push(new_styled_range(left, width))
     }
   }
   if includes_newline {
-    let left = if drew_text {
-      right_edge
+    if ranges.length() > 0 {
+      let last = ranges[ranges.length() - 1]
+      ranges[ranges.length() - 1] = { ..last, width: last.width + space_width }
     } else {
-      eol_anchor_x(view_line_number, start_column0, measure)
+      let left = eol_anchor_x(view_line_number, start_column0, measure)
+      ranges.push(new_styled_range(left, space_width))
     }
-    append_selection_rect(parent, document, top, left, space_width)
+  }
+  if ranges.length() == 0 {
+    return None
+  }
+  Some({ top, ranges })
+}
+
+///|
+/// Whether any line carries more than one range, in which case Monaco skips
+/// corner enrichment (the staircase math assumes one range per line).
+fn visible_ranges_have_gaps(lines : Array[LineSelectionRanges]) -> Bool {
+  for line in lines {
+    if line.ranges.length() > 1 {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// Classifies each selection corner by comparing a line's single range to the
+/// lines above and below, a transcription of Monaco's
+/// `_enrichVisibleRangesWithStyle` (minus the previous-frame cache). Where edges
+/// line up the corner is `Flat`, where this line is narrower the corner is
+/// `Extern` (rounds outward), and where it is wider it is `Intern` (a reverse
+/// corner cut into the neighbor).
+fn enrich_visible_ranges_with_style(
+  lines : Array[LineSelectionRanges],
+  space_width : Double,
+) -> Unit {
+  let epsilon = space_width / 4.0
+  for i in 0..<lines.length() {
+    let cur = lines[i].ranges[0]
+    let cur_left = cur.left
+    let cur_right = cur.left + cur.width
+    if i > 0 {
+      let prev = lines[i - 1].ranges[0]
+      let prev_left = prev.left
+      let prev_right = prev.left + prev.width
+      if abs_double(cur_left - prev_left) < epsilon {
+        cur.start_top = Flat
+      } else if cur_left > prev_left {
+        cur.start_top = Intern
+      }
+      if abs_double(cur_right - prev_right) < epsilon {
+        cur.end_top = Flat
+      } else if prev_left < cur_right && cur_right < prev_right {
+        cur.end_top = Intern
+      }
+    }
+    if i + 1 < lines.length() {
+      let next = lines[i + 1].ranges[0]
+      let next_left = next.left
+      let next_right = next.left + next.width
+      if abs_double(cur_left - next_left) < epsilon {
+        cur.start_bottom = Flat
+      } else if next_left < cur_left && cur_left < next_right {
+        cur.start_bottom = Intern
+      }
+      if abs_double(cur_right - next_right) < epsilon {
+        cur.end_bottom = Flat
+      } else if cur_right < next_right {
+        cur.end_bottom = Intern
+      }
+    }
+  }
+}
+
+///|
+/// Paints one line's styled ranges, transcribing Monaco's
+/// `_actualRenderOneSelection` for the single-selection case (no top/bottom
+/// margins): reverse-corner pieces first (a selection layer plus a
+/// background layer with the inverse radius), then the main rectangle with its
+/// outward corner radii.
+fn render_styled_line(
+  parent : @rdom.Element,
+  document : @rdom.Document,
+  line : LineSelectionRanges,
+  styled : Bool,
+) -> Unit {
+  for range in line.ranges {
+    if styled {
+      if range.start_top == Intern || range.start_bottom == Intern {
+        let left = range.left - rounded_piece_width
+        append_selection_piece(parent, document, line.top, left, rounded_piece_width, "selected-text")
+        let mut class_name = "selection-corner-piece"
+        if range.start_top == Intern {
+          class_name = class_name + " top-right-radius"
+        }
+        if range.start_bottom == Intern {
+          class_name = class_name + " bottom-right-radius"
+        }
+        append_selection_piece(parent, document, line.top, left, rounded_piece_width, class_name)
+      }
+      if range.end_top == Intern || range.end_bottom == Intern {
+        let left = range.left + range.width
+        append_selection_piece(parent, document, line.top, left, rounded_piece_width, "selected-text")
+        let mut class_name = "selection-corner-piece"
+        if range.end_top == Intern {
+          class_name = class_name + " top-left-radius"
+        }
+        if range.end_bottom == Intern {
+          class_name = class_name + " bottom-left-radius"
+        }
+        append_selection_piece(parent, document, line.top, left, rounded_piece_width, class_name)
+      }
+    }
+    let mut class_name = "selected-text"
+    if styled {
+      if range.start_top == Extern {
+        class_name = class_name + " top-left-radius"
+      }
+      if range.start_bottom == Extern {
+        class_name = class_name + " bottom-left-radius"
+      }
+      if range.end_top == Extern {
+        class_name = class_name + " top-right-radius"
+      }
+      if range.end_bottom == Extern {
+        class_name = class_name + " bottom-right-radius"
+      }
+    }
+    append_selection_piece(
+      parent,
+      document,
+      line.top,
+      range.left,
+      range.width,
+      class_name,
+    )
   }
 }
 
@@ -252,15 +415,23 @@ fn eol_anchor_x(
 }
 
 ///|
-fn append_selection_rect(
+/// Width of a reverse-corner piece, Monaco's `ROUNDED_PIECE_WIDTH`.
+let rounded_piece_width = 10.0
+
+///|
+/// Appends one absolutely-positioned selection piece (a `selected-text`
+/// rectangle, or a `selection-corner-piece` reverse corner) with the given
+/// class names, Monaco's `_createSelectionPiece`.
+fn append_selection_piece(
   parent : @rdom.Element,
   document : @rdom.Document,
   top : Int,
   left : Double,
   width : Double,
+  class_name : String,
 ) -> Unit {
   let node = document.create_element("div")
-  node.set_attribute("class", "selected-text")
+  node.set_attribute("class", class_name)
   node.set_attribute("style", selection_rect_style(top, left, width))
   parent.append_child(node.as_node())
 }

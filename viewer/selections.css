@@ -6,6 +6,31 @@
   pointer-events: none;
 }
 
+/* Inverse ("reverse rounded") corner pieces, painted in the editor background
+   so a staircased selection edge reads as a smooth curve. */
+.selection-corner-piece {
+  position: absolute;
+  box-sizing: border-box;
+  background: var(--vscode-editor-background);
+  pointer-events: none;
+}
+
+.top-left-radius {
+  border-top-left-radius: 3px;
+}
+
+.bottom-left-radius {
+  border-bottom-left-radius: 3px;
+}
+
+.top-right-radius {
+  border-top-right-radius: 3px;
+}
+
+.bottom-right-radius {
+  border-bottom-right-radius: 3px;
+}
+
 .view-line-content ::selection,
 .view-line-content::selection {
   background: var(--vscode-editor-selectionBackground);

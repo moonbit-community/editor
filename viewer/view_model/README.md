@@ -33,7 +33,7 @@ model-line source data, and viewport-scoped render frames.
 
 ## Boundaries
 
-- May depend on `viewer/core`, `viewer/model`, `syntax`, `decorations`,
+- May depend on `base/common`, `viewer/model`, `syntax`, `decorations`,
   `language`, JSON support, and `viewer/view_line_renderer`.
 - Must not depend on parent `viewer/common`, `viewer/view_layout`,
   `viewer`, `web`, server, transport, workspace, or host packages.

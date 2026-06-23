@@ -18,7 +18,7 @@ character-mapping roles.
 
 ## Boundaries
 
-- May depend on `viewer/core` and `syntax`.
+- May depend on `base/common` and `syntax`.
 - Must not depend on `viewer/common`, `viewer`, `web`, server, transport,
   workspace, or host packages.
 - Must not declare FFI.

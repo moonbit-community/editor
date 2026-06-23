@@ -41,7 +41,6 @@ contract.
   installation and language registration.
 - `viewer/model`: readonly `TextModel` and `TextSnapshot`, the model identity
   used by viewer and language-provider APIs.
-- `viewer/core`: UTF-16 position/range primitives for editor internals.
 - `viewer/common`, `viewer/view_model`, `viewer/view_layout`, and
   `viewer/view_line_renderer`: DOM-free viewer common layer for tokenized
   lines, render frames, projections, layout, viewport data, scrollbar
@@ -74,8 +73,6 @@ contract.
 
 `internal/shell/workspace` defines host-side source and tree provider contracts
 used by the reference shell and examples. It is not the viewer model API.
-
-`view` is a compatibility render model outside the active viewer path.
 
 ## Main Flows
 
@@ -177,7 +174,7 @@ internal/shell/workbench -> base/common, viewer, viewer/model,
                             internal/shell/remote_protocol,
                             internal/shell/workspace, language,
                             syntax/lang_*, platform/log
-viewer -> base/common, viewer/common, viewer/core, viewer/model,
+viewer -> base/common, viewer/common, viewer/cursor, viewer/model,
           viewer/view_line_renderer, viewer/view_layout, viewer/view_model,
           language, syntax, decorations, platform/log
 
@@ -196,9 +193,9 @@ language -> base/common, viewer/model
 internal/shell/workspace -> base/common
 syntax -> base/common, viewer/model
 decorations -> base/common
-viewer/model -> base/common, viewer/core
+viewer/model -> base/common
 platform/log -> no product packages
-syntax/lang_* -> syntax, viewer/core, viewer/model
+syntax/lang_* -> syntax, viewer/model
 ```
 
 `scripts/check-architecture.mbtx`, run by `just check`, enforces the most

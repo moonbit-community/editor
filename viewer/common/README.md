@@ -9,7 +9,7 @@ layer.
 - Depend on the `viewer/view_model` package for the Monaco-shaped common
   spine: `TokenizedDocument`, `FrameSource`, `RenderFrame`, `ViewModel`,
   `ViewModelLinesFromModelAsIs`, and `IdentityCoordinatesConverter`.
-- Depend on `viewer/core` for UTF-16 coordinate primitives and
+- Depend on `base/common` for UTF-16 coordinate primitives and
   `viewer/model` for readonly text snapshots used by tests and frame source
   construction.
 - Depend on the `viewer/view_layout` package for the pre-DOM viewport layer:
@@ -33,7 +33,7 @@ layer.
 
 ## Boundaries
 
-- May depend on `decorations`, `viewer/core`, `viewer/model`,
+- May depend on `decorations`, `base/common`, `viewer/model`,
   `viewer/view_line_renderer`, `viewer/view_layout`, and
   `viewer/view_model`.
 - Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,

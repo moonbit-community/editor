@@ -12,7 +12,6 @@ async fn main {
     "platform",
     "viewer",
     "syntax",
-    "view",
     "web",
     "app",
     "tests",
@@ -60,7 +59,7 @@ async fn check_model_boundary_imports(errors : Array[String]) -> Unit {
 
 ///|
 /// Grammars are compile-time packages composed by import: `syntax/lang_*`
-/// may import only viewer core/model test support and `syntax`, and only composition layers
+/// may import only viewer model test support and `syntax`, and only composition layers
 /// (`internal/shell/workbench`, `internal/shell/examples/*`, browser-test
 /// entrypoints) may import a
 /// `syntax/lang_*` package — the viewer library, viewer common layer, and server
@@ -68,7 +67,6 @@ async fn check_model_boundary_imports(errors : Array[String]) -> Unit {
 async fn check_language_package_imports(errors : Array[String]) -> Unit {
   let language_prefix = "baozhiyuan/editor/syntax/lang_"
   let allowed_in_language_packages = [
-    "baozhiyuan/editor/viewer/core",
     "baozhiyuan/editor/viewer/model",
     "baozhiyuan/editor/syntax",
   ]

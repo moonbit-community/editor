@@ -13,8 +13,7 @@ Readonly editor text model and immutable text snapshots.
 
 ## Boundaries
 
-- May depend on `base/common` for `Uri` and `viewer/core` for `Position`,
-  `Range`, and clamping.
+- May depend on `base/common` for `Uri`, `Position`, `Range`, and clamping.
 - Must not depend on workspace providers, language providers, syntax,
   viewer, DOM, server routing, or host effects.
 - Does not expose edit, undo/redo, cursor, IME, or model event APIs.

@@ -1,8 +1,0 @@
-import {
-  "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/decorations",
-  "baozhiyuan/editor/language",
-  "baozhiyuan/editor/viewer/model",
-  "baozhiyuan/editor/syntax",
-  "moonbitlang/core/json",
-}

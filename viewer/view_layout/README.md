@@ -22,7 +22,7 @@ viewport-window derivation, and readonly view-zone displacement.
 
 ## Boundaries
 
-- May depend on `viewer/core`, `viewer/model`, `syntax`, `decorations`,
+- May depend on `base/common`, `viewer/model`, `syntax`, `decorations`,
   `language`, `viewer/view_line_renderer`, and `viewer/view_model`.
 - Must not depend on `viewer/common`, `viewer`, `web`, server, transport,
   workspace, or host packages.

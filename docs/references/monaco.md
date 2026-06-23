@@ -11,7 +11,7 @@ The VS Code submodule contains Monaco's editor implementation under
 - `vscode/src/vs/base/common/uri.ts`: URI identity; local owner is
   `base/common.Uri`.
 - `vscode/src/vs/editor/common/core`: `Position`, `Range`, offset/range helpers;
-  local owner is `viewer/core`.
+  local owner is `base/common`.
 - `vscode/src/vs/editor/common/model`: text model, tokens, decorations, interval
   tree; local readonly text owner is `viewer/model`.
 - `vscode/src/vs/monaco.d.ts`: public standalone editor/model APIs are

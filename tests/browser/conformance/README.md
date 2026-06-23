@@ -38,6 +38,18 @@ scrollbars, and marker-hover affordances. It compares stable computed
 properties against the Monaco oracle and uses pixel tolerance only for geometry
 that can vary with browser rounding.
 
+## Selection Geometry Contracts
+
+`selection_geometry.spec.js` locks in the DOM-as-source-of-truth selection
+behavior (Monaco's `MouseTargetFactory` + `SelectionsOverlay` roles): pointer
+hits resolve through the browser caret APIs and the highlight is painted from
+measured client rects, not monospace `ch` arithmetic. It asserts that a
+contiguous single-line selection paints exactly one merged `.selected-text`
+rectangle (no per-token seams) and that a selection continuing past a line's
+text extends the highlight beyond the rendered text's right edge. It drives the
+`component.html` harness with real pointer drags and tolerates
+character-boundary snapping rather than asserting exact pixel widths.
+
 ## Control Hooks
 
 Conformance specs may use these deterministic hooks:

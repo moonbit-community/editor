@@ -47,6 +47,23 @@ The VS Code submodule contains Monaco's editor implementation under
   checked in as a second porting reference.
 - `vscode/src/vs/editor/common/viewModel`: editor view model concepts.
 - `vscode/src/vs/editor/browser/view`: DOM rendering layers and viewport rendering.
+- Selection geometry (DOM-as-source-of-truth):
+  `vscode/src/vs/editor/browser/controller/mouseTarget.ts`
+  (`MouseTargetFactory.doHitTest` via `caretRangeFromPoint`/
+  `caretPositionFromPoint`, bridged to a model column through the line's
+  `CharacterMapping`),
+  `vscode/src/vs/editor/browser/viewParts/viewLines/viewLine.ts` +
+  `rangeUtil.ts` (`getVisibleRangesForRange` /
+  `RangeUtil.readHorizontalRanges` measuring DOM client rects),
+  `vscode/src/vs/editor/browser/viewParts/selections/selections.ts`
+  (`SelectionsOverlay`), and
+  `vscode/src/vs/editor/browser/view/renderingContext.ts`
+  (`RenderingContext.linesVisibleRangesForRange`). Local owners:
+  `viewer/hit_test_dom.mbt`, `viewer/selection_measure.mbt`, the
+  `measure_line_selection` seam on `ViewContext`, and the selection overlay in
+  `viewer/view_overlays.mbt`; the column-to-DOM bridge is
+  `viewer/view_line_renderer.CharacterMapping`. Implemented per
+  `docs/exec-plans/monaco-faithful-selection-hit-testing.md`.
 - `vscode/src/vs/base/browser/ui/scrollbar` and
   `vscode/src/vs/base/browser/ui/hover`: scrollbar, hover widget, and
   scrollable-element behavior exercised by the local conformance oracle.

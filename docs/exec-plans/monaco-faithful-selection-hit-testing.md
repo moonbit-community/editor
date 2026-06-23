@@ -1,6 +1,7 @@
 # Monaco-Faithful Selection Hit-Testing and Measurement
 
-Status: planned.
+Status: implemented (2026-06-23), except the cosmetic rounded-corner enrichment
+noted in [Implementation Notes](#implementation-notes-2026-06-23).
 Date: 2026-06-23.
 
 ## Summary
@@ -261,4 +262,34 @@ just test-browser
   both the hit-test and measurement paths; no product code imports from
   `vscode/`.
 - `just check && just test && just build && just test-browser` pass.
+
+## Implementation Notes (2026-06-23)
+
+What landed, mapped to the phases above:
+
+- Phase 1: `write_line_node` now returns the `CharacterMapping`, retained as
+  `ViewLines.line_mappings` in lockstep with `line_nodes`/`render_inputs`
+  (`viewer/view_layer.mbt`), with `mapping_at` / `line_node_at` accessors.
+- Phase 2 (+2.5): `viewer/hit_test_dom.mbt` adds `caretRangeFromPoint`/
+  `caretPositionFromPoint` FFI and `Viewer::dom_refine_content_target`, wired
+  into `handle_mouse_down` and `handle_selection_drag_move`. The pure fallback
+  in `viewer/common/mouse_target.mbt` rounds to the nearest boundary and adds
+  `scroll_left`.
+- Phase 3: `viewer/selection_measure.mbt` adds the `read_horizontal_ranges`
+  (DOM `Range` + `getClientRects`) FFI and `View::measure_line_selection`,
+  exposed to the overlay as the `measure_line_selection` capability on
+  `ViewContext`.
+- Phase 4: `viewer/view_overlays.mbt` paints merged per-line rects with
+  end-of-line and empty-line fill; the old `ch`-based per-span path is removed
+  from `viewer/view_layer.mbt`.
+
+Validated by the existing `tests/browser/component/viewer_api.spec.js`
+(drag-select + copy) and the new
+`tests/browser/conformance/selection_geometry.spec.js`, plus the smoke and
+conformance suites.
+
+Deferred as cosmetic (not part of the brokenness this plan fixed): the
+rounded-corner enrichment (`_enrichVisibleRangesWithStyle`) and the
+`rounded_selection` option. Selection rectangles render square; geometry is
+otherwise DOM-accurate. Track rounded corners as a follow-up if desired.
 ```

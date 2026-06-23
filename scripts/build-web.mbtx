@@ -30,8 +30,8 @@ async fn main {
     fail("moon build failed with exit code \{perf_status}")
   }
 
-  let source_dir = "_build/js/debug/build/web"
-  let embed_source_dir = "_build/js/debug/build/examples/embedded_viewer"
+  let source_dir = "_build/js/debug/build/internal/shell/web"
+  let embed_source_dir = "_build/js/debug/build/internal/shell/examples/embedded_viewer"
   let component_source_dir = "_build/js/debug/build/tests/browser/moonbit/component"
   let perf_source_dir = "_build/js/debug/build/tests/browser/moonbit/perf"
   let target_dir = "web/dist"

@@ -229,7 +229,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         layout: self.layout,
         browser_view_zones: self.view_zones,
         decorations: self.controller_decorations(),
-        selection_range: self.selection_range(),
+        selection_view_range: self.selection_view_range(),
         folding_ranges: self.folding_ranges,
         folded_ranges: self.folded_ranges,
         hover_state: self.hover,

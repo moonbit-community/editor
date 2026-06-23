@@ -1,16 +1,27 @@
 ///|
-fn Viewer::selection_range(self : Viewer) -> @base_common.Range? {
-  match (self.selection, self.text_model) {
-    (Some(selection), Some(model)) => {
-      let snapshot = model.snapshot
-      if selection.is_empty(snapshot) {
-        None
-      } else {
-        Some(selection.normalized_range(snapshot))
-      }
-    }
-    _ => None
+/// The selection as a view-coordinate range, the input the selection overlay
+/// renders from. Mirrors the view selections Monaco's `SelectionsOverlay`
+/// receives via `onCursorStateChanged`: the model selection is converted to
+/// view positions through the `CoordinatesConverter`, so the overlay never
+/// round-trips through raw document offsets. Columns are one-based and local
+/// to each view line (the convention `measure_line_selection` consumes).
+fn Viewer::selection_view_range(
+  self : Viewer,
+) -> @view_line_renderer.ViewRange? {
+  guard self.selection is Some(selection) else { return None }
+  if selection.is_empty() {
+    return None
   }
+  guard self.view_model is Some(view_model) else { return None }
+  let converter = view_model.coordinates_converter()
+  let view_start = converter.model_position_to_view_position(selection.start())
+  let view_end = converter.model_position_to_view_position(selection.end())
+  Some({
+    start_line_number: view_start.line + 1,
+    start_column: view_start.column + 1,
+    end_line_number: view_end.line + 1,
+    end_column: view_end.column + 1,
+  })
 }
 
 ///|
@@ -18,9 +29,9 @@ fn Viewer::begin_selection(
   self : Viewer,
   target : @viewer_common.MouseTarget,
 ) -> Unit {
-  match self.position_for_selection_target(target) {
+  match self.model_position_for_selection_target(target) {
     Some(position) => {
-      self.selection = Some(Selection(position, position))
+      self.selection = Some(@view_model.Selection::new(position, position))
       self.selection_dragging = true
       self.hover = self.hover.cleared()
       self.schedule_render()
@@ -40,9 +51,9 @@ fn Viewer::update_selection(
 ) -> Unit {
   guard self.selection_dragging else { return }
   guard self.selection is Some(selection) else { return }
-  match self.position_for_selection_target(target) {
+  match self.model_position_for_selection_target(target) {
     Some(position) => {
-      self.selection = Some({ ..selection, focus: position })
+      self.selection = Some(selection.with_position(position))
       self.schedule_render()
     }
     None => ()
@@ -55,30 +66,39 @@ fn Viewer::finish_selection(self : Viewer) -> Unit {
     return
   }
   self.selection_dragging = false
-  match (self.selection, self.text_model) {
-    (Some(selection), Some(model)) =>
-      if selection.is_empty(model.snapshot) {
+  match self.selection {
+    Some(selection) =>
+      if selection.is_empty() {
         self.selection = None
       }
-    _ => ()
+    None => ()
   }
   self.schedule_render()
 }
 
 ///|
-fn Viewer::position_for_selection_target(
+/// The model position a content hit resolves to, bridged from the hit's view
+/// position through the `CoordinatesConverter` (never through a raw document
+/// offset). The hit test already yields a view line/column; we keep the
+/// selection state in model `Position`s, like Monaco's cursor.
+fn Viewer::model_position_for_selection_target(
   self : Viewer,
   target : @viewer_common.MouseTarget,
 ) -> @base_common.Position? {
-  if target.offset < 0 {
-    return None
-  }
+  guard target.line_number >= 1 else { return None }
   match target.kind {
-    ContentText | ContentEmpty =>
-      match self.text_model {
-        Some(model) => Some(model.snapshot.position_at_offset(target.offset))
-        None => None
-      }
+    ContentText | ContentEmpty => {
+      guard self.view_model is Some(view_model) else { return None }
+      let view_position = @base_common.Position::Position(
+        target.line_number - 1,
+        target.column,
+      )
+      Some(
+        view_model
+        .coordinates_converter()
+        .view_position_to_model_position(view_position),
+      )
+    }
     _ => None
   }
 }
@@ -91,7 +111,7 @@ fn Viewer::handle_copy_event(self : Viewer, event : @rdom.Event) -> Bool {
   match (self.selection, self.text_model) {
     (Some(selection), Some(model)) => {
       let snapshot = model.snapshot
-      if selection.is_empty(snapshot) {
+      if selection.is_empty() {
         return false
       }
       let plain = selection.get_plain_text_to_copy(snapshot)

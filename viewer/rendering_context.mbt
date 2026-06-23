@@ -6,7 +6,7 @@ priv struct ViewRenderInput {
   layout : @view_layout.ViewLayout
   browser_view_zones : Array[BrowserViewZone]
   decorations : Array[@decorations.Decoration]
-  selection_range : @base_common.Range?
+  selection_view_range : @view_line_renderer.ViewRange?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   hover_state : HoverController
@@ -124,7 +124,7 @@ priv struct ViewRenderSnapshot {
   dimensions : @view_layout.ScrollDimensions
   gutter_width : Double
   space_width : Double
-  selection_range : @base_common.Range?
+  selection_view_range : @view_line_renderer.ViewRange?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   browser_view_zones : Array[BrowserViewZone]
@@ -144,7 +144,7 @@ fn ViewRenderSnapshot::from_input(
     dimensions,
     gutter_width: input.gutter_width,
     space_width: input.space_width,
-    selection_range: input.selection_range,
+    selection_view_range: input.selection_view_range,
     folding_ranges: input.folding_ranges.copy(),
     folded_ranges: input.folded_ranges.copy(),
     browser_view_zones: input.browser_view_zones.copy(),
@@ -200,7 +200,8 @@ fn ViewRenderChange::from_snapshots(
         gutter_width_changed: previous.gutter_width != current.gutter_width,
         glyph_width_changed: previous.space_width != current.space_width,
         decorations_changed: generation_changed,
-        selection_changed: previous.selection_range != current.selection_range,
+        selection_changed: previous.selection_view_range !=
+          current.selection_view_range,
         folding_changed: previous.folding_ranges != current.folding_ranges ||
         previous.folded_ranges != current.folded_ranges,
         view_zones_changed: !same_browser_view_zones(

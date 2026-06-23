@@ -1,0 +1,4 @@
+import {
+  "baozhiyuan/editor/base/common" @base_common,
+  "baozhiyuan/editor/viewer/view_model" @view_model,
+}

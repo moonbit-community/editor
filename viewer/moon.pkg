@@ -4,6 +4,7 @@ import {
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/platform/log",
   "baozhiyuan/editor/viewer/common" @viewer_common,
+  "baozhiyuan/editor/viewer/cursor" @cursor,
   "baozhiyuan/editor/viewer/model",
   "baozhiyuan/editor/viewer/view_line_renderer",
   "baozhiyuan/editor/viewer/view_layout",

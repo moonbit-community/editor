@@ -99,17 +99,6 @@ pub fn Selection::direction(self : Selection) -> SelectionDirection {
 }
 
 ///|
-/// Moves the active end while keeping the anchor fixed (drag-to-extend).
-/// Direction-agnostic: the anchor stays put and `position` follows the
-/// pointer, matching Monaco's `MoveToSelect`.
-pub fn Selection::with_position(
-  self : Selection,
-  position : @base_common.Position,
-) -> Selection {
-  { ..self, position }
-}
-
-///|
 /// Whether the selection covers no text (anchor and active coincide).
 pub fn Selection::is_empty(self : Selection) -> Bool {
   position_eq(self.selection_start, self.position)

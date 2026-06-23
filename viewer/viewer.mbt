@@ -34,7 +34,7 @@ pub struct Viewer {
   priv mut folded_ranges : Array[@language.FoldingRange]
   priv mut inlay_hints : Array[@language.InlayHint]
   priv mut view_zones : Array[BrowserViewZone]
-  priv mut selection : @view_model.Selection?
+  priv mut cursor : @cursor.CursorsController?
   priv mut selection_dragging : Bool
   priv mut hover : HoverController
   priv mut char_width : Double
@@ -151,7 +151,7 @@ pub fn Viewer::Viewer(
     folded_ranges: [],
     inlay_hints: [],
     view_zones: [],
-    selection: None,
+    cursor: None,
     selection_dragging: false,
     hover: HoverController::empty(),
     char_width: 0.0,
@@ -292,7 +292,7 @@ pub fn Viewer::set_model(
   self.folded_ranges = []
   self.inlay_hints = []
   if view_state.resets_controller_state() {
-    self.selection = None
+    self.cursor = None
     self.selection_dragging = false
     self.hover = self.hover.cleared()
   }
@@ -488,7 +488,7 @@ fn Viewer::clear_current_model(
   self.view_zones = []
   self.layout.set_view_zones([]) |> ignore
   self.apply_view_state_policy(view_state)
-  self.selection = None
+  self.cursor = None
   self.selection_dragging = false
   self.hover = HoverController::empty()
   self.schedule_render()

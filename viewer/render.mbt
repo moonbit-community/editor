@@ -58,6 +58,7 @@ fn Viewer::render_current_model(
   self.view_model = Some(view_model)
   self.frame = Some(frame)
   self.text_model = Some(model)
+  self.refresh_cursor_context()
   self.content_generation += 1
   self.did_build_frame.fire({
     model,
@@ -123,6 +124,7 @@ fn Viewer::rebuild_current_view_model_for_options(self : Viewer) -> Unit {
       })
       self.view_model = Some(view_model)
       self.frame = Some(frame)
+      self.refresh_cursor_context()
       self.content_generation += 1
       let fresh = match self.pending_rendered {
         Some(pending) => pending.fresh

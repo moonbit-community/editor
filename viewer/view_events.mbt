@@ -8,10 +8,12 @@
 /// Deliberate deviations from Monaco recorded here: events are *sourced* by
 /// diffing one frame snapshot against the previous (`view_events_from_snapshots`)
 /// rather than emitted incrementally by an event-emitting view model — the
-/// readonly view model is frame-based, and Phase 3's cursor stack will add a
-/// second, direct emission path for `ViewCursorStateChanged`. The event set is
-/// the subset this viewer observes; composition/focus/theme/language and the
-/// fine-grained line insert/delete events have no readonly counterpart yet.
+/// readonly view model is frame-based. This includes `ViewCursorStateChanged`,
+/// which is derived from the `selection_view_range` snapshot diff rather than
+/// emitted directly by the cursor stack (`view_events_from_snapshots:81-83`).
+/// The event set is the subset this viewer observes; composition/focus/theme/
+/// language and the fine-grained line insert/delete events have no readonly
+/// counterpart yet.
 pub(all) enum ViewEvent {
   /// Everything must re-render (Monaco `ViewFlushedEvent`). Emitted on the
   /// first frame.

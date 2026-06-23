@@ -111,6 +111,15 @@ overlay/decoration/invalidation** layers are where the port forked, and they
 share one root cause — an **offset-centric coordinate model** where Monaco is
 **view-`Position`-centric**.
 
+> Post-port note (2026-06-23): this table is the **pre-port** audit snapshot;
+> the phases below have since landed. One row is now stale enough to flag here:
+> **Value types — "Bespoke (Selection)"** described the pre-port state. After the
+> port, `view_model.Selection` is a faithful (idiomatic) transcription of
+> `core/selection.ts` — an anchor/focus `Position` pair that derives
+> `start`/`end`/`direction` lazily (`getDirection` LTR iff `selection_start ==
+> start`), per the fidelity review. The other "Bespoke"/"Missing" rows likewise
+> record the pre-port baseline this plan set out to replace.
+
 ## Target architecture
 
 Port the viewing input→cursor→selection→render stack as a faithful transcription.

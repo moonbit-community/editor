@@ -16,6 +16,15 @@ pub(all) struct ViewModelDecoration {
 /// model boundary) into view-coordinate `ViewModelDecoration`s through the
 /// `CoordinatesConverter`. Replacing the offset-centric per-line bucket query,
 /// every consumer downstream of this works in view `Position`s.
+///
+/// Deliberate deviation (storage): this converts the *whole* flat decoration
+/// list eagerly at construction (`new` maps every decoration up front), where
+/// Monaco's `getDecorationsViewportData` resolves decorations lazily, scoped to
+/// the viewport and backed by a cached interval tree (`model/intervalTree.ts`).
+/// Conversion fidelity matches (offset → model `Position` at the boundary, then
+/// a single view-range projection — no render-time offset round-trip); only the
+/// storage/lookup strategy is reduced. Interval-tree storage is the recorded
+/// remaining follow-up (see `monaco-one-to-one-port.md` and project memory).
 pub struct ViewModelDecorations {
   snapshot : @model.TextSnapshot
   converter : ViewModelCoordinatesConverter

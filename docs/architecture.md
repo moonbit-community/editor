@@ -215,3 +215,18 @@ Repository-level validation starts with `just check`.
 
 Offsets and columns are UTF-16 code units. This matches browser strings,
 Monaco/CodeMirror position behavior, and default LSP positions.
+
+The viewer mixes 0-based, 1-based, and offset coordinate spaces; read against
+the Monaco oracle with this split in mind:
+
+- **`base/common.Position` is 0-based** on both axes (line and UTF-16 column),
+  where **Monaco's `Position` is 1-based**. Every Monaco invariant (`minColumn
+  === 1`, etc.) shifts by one when read against this type.
+- **`base/common.Range` is an offset range `[start, end)`**, not a line/column
+  pair. It reuses Monaco's type name for a different concept. The line/column
+  analog of Monaco's `Range` is `view_line_renderer.ViewRange`, which is
+  **1-based**. `CharacterMapping` is likewise **1-based**.
+- The 0-based `Position` ↔ 1-based `ViewRange` / `CharacterMapping` seams need
+  explicit `±1` conversions (`start.line + 1`, `col1 - 1`). These are internally
+  consistent, but the seam is a recurring off-by-one surface — keep conversions
+  at the boundary where coordinate spaces meet.

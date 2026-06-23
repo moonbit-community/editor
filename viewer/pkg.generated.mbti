@@ -1,0 +1,265 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/viewer"
+
+import {
+  "baozhiyuan/editor/base/common",
+  "baozhiyuan/editor/decorations",
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/platform/log",
+  "baozhiyuan/editor/syntax",
+  "baozhiyuan/editor/viewer/model",
+  "baozhiyuan/editor/viewer/view_model",
+  "moonbit-community/rabbita/dom",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let languages : Languages
+
+// Errors
+
+// Types and methods
+pub(all) struct ComputedHover {
+  range : @common.Range
+  parts : Array[HoverPart]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ContentHoverComputer {
+  services : ViewerServices
+}
+pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @common.Range, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
+pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @common.Range, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
+pub fn ContentHoverComputer::new(ViewerServices) -> Self
+
+pub(all) struct CurrentModel {
+  uri : @common.Uri
+  version : Int
+  revision : String
+  language_id : String
+  display_name : String
+  scroll_top : Double
+  scroll_left : Double
+} derive(@debug.Debug)
+
+pub(all) struct HoverComputeContext {
+  model : @model.TextModel
+  anchor_range : @common.Range
+  offset : Int
+  injected_text_index : Int
+  inlay_hints : Array[@language.InlayHint]
+  services : ViewerServices
+}
+
+pub(all) enum HoverPart {
+  MarkdownHover(range~ : @common.Range, contents~ : Array[@language.HoverContent], ordinal~ : Int)
+  MarkerHover(range~ : @common.Range, marker~ : Marker)
+  LoadingHover(range~ : @common.Range, message~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct HoverParticipantRegistry {
+  entries : Array[&HoverParticipant]
+}
+pub fn HoverParticipantRegistry::new() -> Self
+pub fn HoverParticipantRegistry::register(Self, &HoverParticipant) -> Unit
+
+pub(all) struct InlayHintHoverParticipant {
+  identity : Unit
+}
+pub fn InlayHintHoverParticipant::new() -> Self
+pub impl HoverParticipant for InlayHintHoverParticipant
+
+type LanguageFeatureRegistry[T]
+
+pub struct Languages {
+  // private fields
+}
+pub fn Languages::new() -> Self
+pub fn Languages::register_diagnostics_provider(Self, @language.LanguageSelector, &@language.DiagnosticsProvider) -> @common.Disposable
+pub fn Languages::register_document_semantic_tokens_provider(Self, @language.LanguageSelector, &@language.SemanticTokensProvider) -> @common.Disposable
+pub fn Languages::register_document_symbol_provider(Self, @language.LanguageSelector, &@language.DocumentSymbolProvider) -> @common.Disposable
+pub fn Languages::register_folding_range_provider(Self, @language.LanguageSelector, &@language.FoldingRangeProvider) -> @common.Disposable
+pub fn Languages::register_hover_provider(Self, @language.LanguageSelector, &@language.HoverProvider) -> @common.Disposable
+pub fn Languages::register_inlay_hints_provider(Self, @language.LanguageSelector, &@language.InlayHintsProvider) -> @common.Disposable
+pub fn Languages::set_tokens_provider(Self, String, &@syntax.LineTokenizer) -> @common.Disposable
+
+pub(all) struct MarkdownHoverParticipant(Unit)
+pub fn MarkdownHoverParticipant::new() -> Self
+pub impl HoverParticipant for MarkdownHoverParticipant
+
+pub(all) struct Marker {
+  owner : String
+  resource : String
+  range : @common.Range
+  severity : @language.DiagnosticSeverity
+  message : String
+  source : String?
+  code : String?
+} derive(Eq, @debug.Debug)
+pub fn Marker::from_diagnostic(String, @common.Uri, @language.Diagnostic) -> Self
+pub fn Marker::to_diagnostic(Self) -> @language.Diagnostic
+
+pub(all) struct MarkerDecorationsService {
+  markers : MarkerService
+}
+pub fn MarkerDecorationsService::decorations_for_resource(Self, @common.Uri) -> @decorations.DecorationSet
+pub fn MarkerDecorationsService::markers_at(Self, @common.Uri, @common.Range, limit? : Int) -> Array[Marker]
+pub fn MarkerDecorationsService::new(MarkerService) -> Self
+
+pub(all) struct MarkerHoverParticipant(Unit)
+pub fn MarkerHoverParticipant::new() -> Self
+pub impl HoverParticipant for MarkerHoverParticipant
+
+pub(all) struct MarkerService {
+  entries : Array[Marker]
+}
+pub fn MarkerService::clear_resource(Self, @common.Uri) -> Unit
+pub fn MarkerService::diagnostics_for_resource(Self, @common.Uri) -> Array[@language.Diagnostic]
+pub fn MarkerService::markers_for_resource(Self, @common.Uri, limit? : Int) -> Array[Marker]
+pub fn MarkerService::new() -> Self
+pub fn MarkerService::remove_owner_resource(Self, String, @common.Uri) -> Unit
+pub fn MarkerService::set_diagnostics(Self, String, @common.Uri, Array[@language.Diagnostic]) -> Unit
+pub fn MarkerService::set_markers(Self, String, @common.Uri, Array[Marker]) -> Unit
+
+pub(all) struct MouseDispatchData {
+  view_position : @common.Position
+  in_selection_mode : Bool
+  mouse_down_count : Int
+  started_on_line_numbers : Bool
+}
+
+type TokenProviderEntry
+
+pub(all) struct ViewConfigurationChangedEvent {
+  gutter_width_changed : Bool
+  font_changed : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ViewEvent {
+  ViewFlushed
+  ViewLinesChanged
+  ViewScrollChanged(ViewScrollChangedEvent)
+  ViewCursorStateChanged
+  ViewConfigurationChanged(ViewConfigurationChangedEvent)
+  ViewLineMappingChanged
+  ViewZonesChanged
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ViewScrollChangedEvent {
+  position_changed : Bool
+  dimensions_changed : Bool
+  window_changed : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ViewStatePolicy {
+  PreserveAnchor
+  Reset
+  Restore(ViewerViewState)
+} derive(@debug.Debug)
+
+pub(all) struct ViewZoneChangeAccessor {
+  viewer : Viewer
+}
+pub fn ViewZoneChangeAccessor::add_zone(Self, String, Int, Int, @dom.Element) -> Unit
+pub fn ViewZoneChangeAccessor::remove_zone(Self, String) -> Unit
+pub fn ViewZoneChangeAccessor::update_zone(Self, String, Int, Int, @dom.Element) -> Unit
+
+pub struct Viewer {
+  // private fields
+}
+pub fn Viewer::Viewer(services? : ViewerServices, options? : ViewerOptions, theme? : String, placeholder? : String) -> Self
+pub fn Viewer::attach(Self, @dom.Element) -> Unit
+pub fn Viewer::change_view_zones(Self, (ViewZoneChangeAccessor) -> Unit) -> Unit
+pub fn Viewer::clear_model(Self, view_state? : ViewStatePolicy) -> Unit
+pub fn Viewer::create(@dom.Element, services? : ViewerServices, options? : ViewerOptions, theme? : String, placeholder? : String) -> Self
+pub fn Viewer::current_model(Self) -> CurrentModel?
+pub fn Viewer::dispose(Self) -> Unit
+pub fn Viewer::escape(Self) -> Unit
+pub fn Viewer::get_model(Self) -> @model.TextModel?
+pub fn Viewer::on_did_build_frame(Self, (ViewerFrameBuiltEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_change_diagnostics(Self, (ViewerDiagnosticsChangedEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_change_model(Self, (@model.TextModel) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_render_model(Self, (ViewerModelRenderedEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_resolve_hover(Self, (ViewerHoverResolvedEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_scroll(Self, (ViewerScrollEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::refresh_model_features(Self) -> Unit
+pub fn Viewer::remeasure(Self) -> Unit
+pub fn Viewer::restore_view_state(Self, ViewerViewState) -> Unit
+pub fn Viewer::save_view_state(Self) -> ViewerViewState
+pub fn Viewer::scroll_by_lines(Self, Int) -> Unit
+pub fn Viewer::scroll_by_pages(Self, Int) -> Unit
+pub fn Viewer::scroll_end(Self) -> Unit
+pub fn Viewer::scroll_home(Self) -> Unit
+pub fn Viewer::scroll_to(Self, Double) -> Unit
+pub fn Viewer::scroll_to_position(Self, Double, Double) -> Unit
+pub fn Viewer::set_model(Self, @model.TextModel, view_state? : ViewStatePolicy) -> Unit
+pub fn Viewer::set_options(Self, ViewerOptions) -> Unit
+pub fn Viewer::set_placeholder(Self, String) -> Unit
+pub fn Viewer::set_theme(Self, String) -> Unit
+pub fn Viewer::update_options(Self, ViewerOptions) -> Unit
+
+pub(all) struct ViewerDiagnosticsChangedEvent {
+  count : Int
+  revision : String
+} derive(@debug.Debug)
+
+pub(all) struct ViewerFrameBuiltEvent {
+  model : @model.TextModel
+  line_count : Int
+  token_count : Int
+  diagnostic_count : Int
+  tokenize_ms : Double
+  build_ms : Double
+} derive(@debug.Debug)
+
+pub(all) struct ViewerHoverResolvedEvent {
+  ok : Bool
+  revision : String
+} derive(@debug.Debug)
+
+pub(all) struct ViewerModelRenderedEvent {
+  model : @model.TextModel
+  line_count : Int
+  rendered_lines : Int
+  diagnostics : Array[@language.Diagnostic]
+  patch_ms : Double
+  fresh : Bool
+} derive(@debug.Debug)
+
+pub(all) struct ViewerOptions {
+  soft_wrap : Bool
+  tab_size : Int
+} derive(Eq, @debug.Debug)
+pub fn ViewerOptions::ViewerOptions(soft_wrap? : Bool, tab_size? : Int) -> Self
+pub fn ViewerOptions::default() -> Self
+pub fn ViewerOptions::soft_wrap_column_for_content_width(Self, Double, Double) -> Int
+pub fn ViewerOptions::view_model_options(Self, Int) -> @view_model.ViewModelOptions
+
+pub(all) struct ViewerScrollEvent {
+  scroll_top : Double
+  scroll_left : Double
+} derive(@debug.Debug)
+
+pub(all) struct ViewerServices {
+  languages : Languages
+  markers : MarkerService
+  marker_decorations : MarkerDecorationsService
+  hover_participants : HoverParticipantRegistry
+  log_service : @log.LogService
+}
+pub fn ViewerServices::new(languages? : Languages, log_service? : @log.LogService) -> Self
+
+pub(all) struct ViewerViewState {
+  scroll_top : Double
+  scroll_left : Double
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
+pub(open) trait HoverParticipant {
+  fn ordinal(Self) -> Int
+  fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart]
+  async fn compute_async(Self, HoverComputeContext) -> Array[HoverPart] noraise
+}
+

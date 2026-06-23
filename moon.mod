@@ -14,6 +14,8 @@ description = "Readonly MoonBit code viewer harness inspired by Monaco and CodeM
 
 supported_targets = "+js+native"
 
+preferred_target = "js"
+
 import {
   "moonbit-community/cmark@0.4.4",
   "moonbitlang/async@0.19.1",

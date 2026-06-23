@@ -40,14 +40,20 @@ fn ViewZones::dom(self : ViewZones) -> @rdom.Element {
 }
 
 ///|
-impl ViewPart for ViewZones with fn should_render(self, context) {
-  self.should_render ||
-  context.change.first_render ||
-  context.change.frame_generation_changed ||
-  context.change.viewport_window_changed ||
-  context.change.scroll_position_changed ||
-  context.change.view_zones_changed ||
-  context.change.layout_dimensions_changed
+impl ViewPart for ViewZones with fn should_render(self) {
+  self.should_render
+}
+
+///|
+impl ViewPart for ViewZones with fn on_view_event(_self, event) {
+  match event {
+    ViewFlushed => true
+    ViewLinesChanged => true
+    ViewScrollChanged(e) =>
+      e.window_changed || e.position_changed || e.dimensions_changed
+    ViewZonesChanged => true
+    _ => false
+  }
 }
 
 ///|

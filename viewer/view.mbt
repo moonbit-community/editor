@@ -156,9 +156,19 @@ fn View::render(self : View, viewer : Viewer, input : ViewRenderInput) -> Unit {
   let rendering = RenderingContext::from_input(
     ViewContext::new(viewer, self),
     input,
-    self.last_snapshot,
   )
-  let dirty_parts = self.dirty_view_parts(rendering)
+  // Dispatch this frame's typed view events to every part, accumulating each
+  // part's dirty flag (Monaco's `ViewEventHandler.handleEvents`).
+  let events = view_events_from_snapshots(self.last_snapshot, rendering.snapshot)
+  for part in self.view_parts {
+    part.handle_view_events(events)
+  }
+  // Hover content is not a view event: invalidate the hover content widget
+  // directly, mirroring Monaco's contrib hover.
+  if hover_changed_between(self.last_snapshot, rendering.snapshot) {
+    self.content_widgets.set_should_render(true)
+  }
+  let dirty_parts = self.dirty_view_parts()
   for part in dirty_parts {
     part.on_before_render(rendering.viewport)
   }
@@ -172,7 +182,6 @@ fn View::render(self : View, viewer : Viewer, input : ViewRenderInput) -> Unit {
       _ => ()
     }
   }
-  let dirty_parts = self.dirty_view_parts(rendering)
   for part in dirty_parts {
     match part {
       ViewLinesPart(_) => ()
@@ -192,13 +201,10 @@ fn View::render(self : View, viewer : Viewer, input : ViewRenderInput) -> Unit {
 }
 
 ///|
-fn View::dirty_view_parts(
-  self : View,
-  rendering : RenderingContext,
-) -> Array[ViewPartHandle] {
+fn View::dirty_view_parts(self : View) -> Array[ViewPartHandle] {
   let parts : Array[ViewPartHandle] = []
   for part in self.view_parts {
-    if part.should_render(rendering) {
+    if part.should_render() {
       parts.push(part)
     }
   }

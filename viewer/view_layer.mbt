@@ -84,16 +84,21 @@ fn ViewLines::line_node_at(
 }
 
 ///|
-impl ViewPart for ViewLines with fn should_render(self, context) {
-  self.should_render ||
-  context.change.first_render ||
-  context.change.frame_generation_changed ||
-  context.change.viewport_window_changed ||
-  context.change.scroll_position_changed ||
-  context.change.layout_dimensions_changed ||
-  context.change.gutter_width_changed ||
-  context.change.glyph_width_changed ||
-  context.change.decorations_changed
+impl ViewPart for ViewLines with fn should_render(self) {
+  self.should_render
+}
+
+///|
+impl ViewPart for ViewLines with fn on_view_event(_self, event) {
+  match event {
+    ViewFlushed => true
+    // Line content, tokens, and decorations are regenerated together.
+    ViewLinesChanged => true
+    ViewScrollChanged(e) =>
+      e.window_changed || e.position_changed || e.dimensions_changed
+    ViewConfigurationChanged(e) => e.gutter_width_changed || e.font_changed
+    _ => false
+  }
 }
 
 ///|

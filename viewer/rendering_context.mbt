@@ -24,7 +24,6 @@ priv struct RenderingContext {
   view_context : ViewContext
   input : ViewRenderInput
   snapshot : ViewRenderSnapshot
-  change : ViewRenderChange
   viewport : @view_layout.ViewportData
   gutter_width : Double
   position : @view_layout.ScrollPosition
@@ -50,7 +49,6 @@ priv struct RestrictedRenderingContext {
 fn RenderingContext::from_input(
   view_context : ViewContext,
   input : ViewRenderInput,
-  previous : ViewRenderSnapshot?,
 ) -> RenderingContext {
   let viewport = match input.view_model {
     Some(model) =>
@@ -76,7 +74,6 @@ fn RenderingContext::from_input(
     view_context,
     input,
     snapshot,
-    change: ViewRenderChange::from_snapshots(previous, snapshot),
     viewport,
     gutter_width: input.gutter_width,
     position,
@@ -149,68 +146,6 @@ fn ViewRenderSnapshot::from_input(
     folded_ranges: input.folded_ranges.copy(),
     browser_view_zones: input.browser_view_zones.copy(),
     hover_state: input.hover_state,
-  }
-}
-
-///|
-priv struct ViewRenderChange {
-  first_render : Bool
-  frame_generation_changed : Bool
-  viewport_window_changed : Bool
-  scroll_position_changed : Bool
-  layout_dimensions_changed : Bool
-  gutter_width_changed : Bool
-  glyph_width_changed : Bool
-  decorations_changed : Bool
-  selection_changed : Bool
-  folding_changed : Bool
-  view_zones_changed : Bool
-  hover_changed : Bool
-}
-
-///|
-fn ViewRenderChange::from_snapshots(
-  previous : ViewRenderSnapshot?,
-  current : ViewRenderSnapshot,
-) -> ViewRenderChange {
-  match previous {
-    None =>
-      {
-        first_render: true,
-        frame_generation_changed: true,
-        viewport_window_changed: true,
-        scroll_position_changed: true,
-        layout_dimensions_changed: true,
-        gutter_width_changed: true,
-        glyph_width_changed: true,
-        decorations_changed: true,
-        selection_changed: true,
-        folding_changed: true,
-        view_zones_changed: true,
-        hover_changed: true,
-      }
-    Some(previous) => {
-      let generation_changed = previous.generation != current.generation
-      {
-        first_render: false,
-        frame_generation_changed: generation_changed,
-        viewport_window_changed: previous.window != current.window,
-        scroll_position_changed: previous.position != current.position,
-        layout_dimensions_changed: previous.dimensions != current.dimensions,
-        gutter_width_changed: previous.gutter_width != current.gutter_width,
-        glyph_width_changed: previous.space_width != current.space_width,
-        decorations_changed: generation_changed,
-        selection_changed: previous.selection_view_range !=
-          current.selection_view_range,
-        folding_changed: previous.folding_ranges != current.folding_ranges ||
-        previous.folded_ranges != current.folded_ranges,
-        view_zones_changed: !same_browser_view_zones(
-          previous.browser_view_zones,
-          current.browser_view_zones,
-        ),
-        hover_changed: previous.hover_state != current.hover_state,
-      }
-    }
   }
 }
 

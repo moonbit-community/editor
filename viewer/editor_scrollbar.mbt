@@ -39,12 +39,18 @@ fn EditorScrollbar::scrollable(self : EditorScrollbar) -> ScrollableElementDom {
 }
 
 ///|
-impl ViewPart for EditorScrollbar with fn should_render(self, context) {
-  self.should_render ||
-  context.change.first_render ||
-  context.change.scroll_position_changed ||
-  context.change.layout_dimensions_changed ||
-  context.change.gutter_width_changed
+impl ViewPart for EditorScrollbar with fn should_render(self) {
+  self.should_render
+}
+
+///|
+impl ViewPart for EditorScrollbar with fn on_view_event(_self, event) {
+  match event {
+    ViewFlushed => true
+    ViewScrollChanged(e) => e.position_changed || e.dimensions_changed
+    ViewConfigurationChanged(e) => e.gutter_width_changed
+    _ => false
+  }
 }
 
 ///|

@@ -86,15 +86,22 @@ fn ContentWidgets::hover_scrollable(
 }
 
 ///|
-impl ViewPart for ContentWidgets with fn should_render(self, context) {
-  self.should_render ||
-  context.change.first_render ||
-  context.change.frame_generation_changed ||
-  context.change.hover_changed ||
-  context.change.viewport_window_changed ||
-  context.change.scroll_position_changed ||
-  context.change.view_zones_changed ||
-  context.change.layout_dimensions_changed
+impl ViewPart for ContentWidgets with fn should_render(self) {
+  self.should_render
+}
+
+///|
+// Hover content changes invalidate this part directly (see `View::render`),
+// mirroring Monaco's contrib hover widget rather than a view event.
+impl ViewPart for ContentWidgets with fn on_view_event(_self, event) {
+  match event {
+    ViewFlushed => true
+    ViewLinesChanged => true
+    ViewScrollChanged(e) =>
+      e.window_changed || e.position_changed || e.dimensions_changed
+    ViewZonesChanged => true
+    _ => false
+  }
 }
 
 ///|

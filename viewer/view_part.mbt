@@ -1,12 +1,33 @@
 ///|
-/// Private Monaco-shaped render lifecycle for browser view concerns.
+/// Private Monaco-shaped render lifecycle for browser view concerns. The
+/// event-handling half (`on_view_event` / `should_render` / `set_should_render`
+/// / `on_did_render`) mirrors Monaco's `ViewEventHandler`: a typed view event is
+/// offered to every part, and a part that returns `true` is marked dirty for the
+/// next render. `should_render` returns that accumulated flag (no longer a
+/// snapshot diff). The render half (`on_before_render` / `prepare_render` /
+/// `render`) mirrors Monaco's `ViewPart`/`DynamicViewOverlay`.
 priv trait ViewPart {
-  fn should_render(Self, RenderingContext) -> Bool
+  fn on_view_event(Self, ViewEvent) -> Bool
+  fn should_render(Self) -> Bool
   fn set_should_render(Self, Bool) -> Unit
   fn on_before_render(Self, @view_layout.ViewportData) -> Unit
   fn prepare_render(Self, RenderingContext) -> Unit
   fn render(Self, RestrictedRenderingContext) -> Unit
   fn on_did_render(Self) -> Unit
+}
+
+///|
+/// Dispatches a frame's view events to one part, accumulating its dirty flag.
+/// Mirrors `ViewEventHandler.handleEvents`.
+fn ViewPartHandle::handle_view_events(
+  self : ViewPartHandle,
+  events : Array[ViewEvent],
+) -> Unit {
+  for event in events {
+    if self.on_view_event(event) {
+      self.set_should_render(true)
+    }
+  }
 }
 
 ///|
@@ -42,15 +63,28 @@ fn default_view_parts(
 }
 
 ///|
-impl ViewPart for ViewPartHandle with fn should_render(self, context) {
+impl ViewPart for ViewPartHandle with fn on_view_event(self, event) {
   match self {
-    ViewLinesPart(part) => part.should_render(context)
-    ViewZonesPart(part) => part.should_render(context)
-    ContentViewOverlaysPart(part) => part.should_render(context)
-    MarginViewOverlaysPart(part) => part.should_render(context)
-    ContentWidgetsPart(part) => part.should_render(context)
-    OverlayWidgetsPart(part) => part.should_render(context)
-    EditorScrollbarPart(part) => part.should_render(context)
+    ViewLinesPart(part) => part.on_view_event(event)
+    ViewZonesPart(part) => part.on_view_event(event)
+    ContentViewOverlaysPart(part) => part.on_view_event(event)
+    MarginViewOverlaysPart(part) => part.on_view_event(event)
+    ContentWidgetsPart(part) => part.on_view_event(event)
+    OverlayWidgetsPart(part) => part.on_view_event(event)
+    EditorScrollbarPart(part) => part.on_view_event(event)
+  }
+}
+
+///|
+impl ViewPart for ViewPartHandle with fn should_render(self) {
+  match self {
+    ViewLinesPart(part) => part.should_render()
+    ViewZonesPart(part) => part.should_render()
+    ContentViewOverlaysPart(part) => part.should_render()
+    MarginViewOverlaysPart(part) => part.should_render()
+    ContentWidgetsPart(part) => part.should_render()
+    OverlayWidgetsPart(part) => part.should_render()
+    EditorScrollbarPart(part) => part.should_render()
   }
 }
 

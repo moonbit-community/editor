@@ -95,5 +95,57 @@ fn View::measure_line_selection(
   for i = 0; i + 1 < count; i = i + 2 {
     out.push((rects.get(i), rects.get(i + 1)))
   }
-  out
+  merge_adjacent_ranges(out)
+}
+
+///|
+/// Coalesces adjacent/overlapping horizontal ranges into contiguous ones,
+/// Monaco's `RangeUtil._mergeAdjacentRanges`. `getClientRects` returns one
+/// rectangle per token span a selection crosses; without merging, a single
+/// contiguous selection paints as several abutting (and, after sub-pixel
+/// rounding, overlapping) pieces. Sorting by left edge and joining ranges whose
+/// gap is within the browser-rounding tolerance yields one range per contiguous
+/// run, so the overlay paints a single rectangle and keeps its rounded corners.
+fn merge_adjacent_ranges(
+  ranges : Array[(Double, Double)],
+) -> Array[(Double, Double)] {
+  if ranges.length() <= 1 {
+    return ranges
+  }
+  let sorted = ranges.copy()
+  sorted.sort_by((left, right) => {
+    if left.0 != right.0 {
+      if left.0 < right.0 {
+        -1
+      } else {
+        1
+      }
+    } else if left.1 < right.1 {
+      -1
+    } else if left.1 > right.1 {
+      1
+    } else {
+      0
+    }
+  })
+  let result : Array[(Double, Double)] = []
+  let mut prev_left = sorted[0].0
+  let mut prev_width = sorted[0].1
+  for index in 1..<sorted.length() {
+    let left = sorted[index].0
+    let width = sorted[index].1
+    // 0.9px accounts for the browser's client-rect rounding errors.
+    if prev_left + prev_width + 0.9 >= left {
+      let candidate = left + width - prev_left
+      if candidate > prev_width {
+        prev_width = candidate
+      }
+    } else {
+      result.push((prev_left, prev_width))
+      prev_left = left
+      prev_width = width
+    }
+  }
+  result.push((prev_left, prev_width))
+  result
 }

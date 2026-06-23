@@ -1,8 +1,10 @@
+/* Monaco paints the selection opaque, behind the text (see .view-overlays
+   z-index). No element opacity: overlapping/merged pieces never stack into
+   darker patches, and the color matches the editor's selectionBackground. */
 .selected-text {
   position: absolute;
   box-sizing: border-box;
   background: var(--vscode-editor-selectionBackground);
-  opacity: 0.72;
   pointer-events: none;
 }
 

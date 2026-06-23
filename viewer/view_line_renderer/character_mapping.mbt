@@ -61,37 +61,75 @@ pub fn CharacterMapping::get_dom_position(
 }
 
 ///|
-/// Returns the one-based line column nearest a DOM position.
+/// Returns the one-based line column nearest a DOM position, transcribing
+/// Monaco's `CharacterMapping.getColumn`/`partDataToCharOffset`. The mapping
+/// entries are laid out left-to-right, so their `(part_index, char_index)`
+/// ranks increase monotonically; a binary search brackets the DOM position
+/// between two columns and returns the nearer one. `part_length` bounds the
+/// "sitting between parts" case, where the upper column starts a new part.
 pub fn CharacterMapping::get_column(
   self : CharacterMapping,
   dom_position : DomPosition,
   part_length : Int,
 ) -> Int {
+  self.part_data_to_char_offset(
+    dom_position.part_index,
+    part_length,
+    dom_position.char_index,
+  ) +
+  1
+}
+
+///|
+fn CharacterMapping::part_data_to_char_offset(
+  self : CharacterMapping,
+  part_index : Int,
+  part_length : Int,
+  char_index : Int,
+) -> Int {
   if self.length == 0 {
-    return 1
+    return 0
   }
-  let search = mapping_rank(dom_position.part_index, dom_position.char_index)
-  let mut best = 0
-  let mut best_distance = abs_int(mapping_rank_entry(self.entries[0]) - search)
-  for index in 1..<self.entries.length() {
-    let entry = self.entries[index]
-    let rank = mapping_rank_entry(entry)
-    if rank == search {
-      return index + 1
-    }
-    let distance = if entry.part_index == dom_position.part_index {
-      abs_int(entry.char_index - dom_position.char_index)
-    } else if entry.part_index < dom_position.part_index {
-      abs_int(part_length - entry.char_index + dom_position.char_index)
+  let search = mapping_rank(part_index, char_index)
+  let mut min = 0
+  let mut max = self.length - 1
+  while min + 1 < max {
+    let mid = (min + max) / 2
+    let mid_entry = mapping_rank_entry(self.entries[mid])
+    if mid_entry == search {
+      return mid
+    } else if mid_entry > search {
+      max = mid
     } else {
-      abs_int(part_length - dom_position.char_index + entry.char_index)
-    }
-    if distance < best_distance {
-      best = index
-      best_distance = distance
+      min = mid
     }
   }
-  best + 1
+  if min == max {
+    return min
+  }
+  let min_entry = self.entries[min]
+  let max_entry = self.entries[max]
+  if mapping_rank_entry(min_entry) == search {
+    return min
+  }
+  if mapping_rank_entry(max_entry) == search {
+    return max
+  }
+  let min_char_index = min_entry.char_index
+  let max_char_index = if min_entry.part_index != max_entry.part_index {
+    // Sitting between parts: the upper bracket starts a new part, so its
+    // distance is measured against the hit part's length.
+    part_length
+  } else {
+    max_entry.char_index
+  }
+  let min_entry_distance = char_index - min_char_index
+  let max_entry_distance = max_char_index - char_index
+  if min_entry_distance <= max_entry_distance {
+    min
+  } else {
+    max
+  }
 }
 
 ///|
@@ -133,15 +171,6 @@ fn mapping_rank(part_index : Int, char_index : Int) -> Int {
 ///|
 fn mapping_rank_entry(entry : CharacterMappingEntry) -> Int {
   mapping_rank(entry.part_index, entry.char_index)
-}
-
-///|
-fn abs_int(value : Int) -> Int {
-  if value < 0 {
-    -value
-  } else {
-    value
-  }
 }
 
 ///|

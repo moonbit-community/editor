@@ -28,7 +28,7 @@ pub fn Cursor::new() -> Cursor {
 /// converting every endpoint through the coordinates converter. Mirrors the
 /// "we only have the view state => compute the model state" branch of
 /// Monaco's `_setState`.
-pub fn Cursor::set_view_state(
+fn Cursor::set_view_state(
   self : Cursor,
   context : CursorContext,
   view_state : SingleCursorState,
@@ -66,6 +66,6 @@ pub fn Cursor::set_model_state(
 /// Re-derives the view state from the current model state through `context`.
 /// Used when the view model is rebuilt so an existing selection stays anchored
 /// to the same model positions after the reflow.
-pub fn Cursor::reproject(self : Cursor, context : CursorContext) -> Unit {
+fn Cursor::reproject(self : Cursor, context : CursorContext) -> Unit {
   self.set_model_state(context, self.model_state)
 }

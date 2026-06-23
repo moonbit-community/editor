@@ -78,9 +78,3 @@ pub fn CursorsController::get_view_selection(
 ) -> @view_model.Selection {
   self.cursor.view_state.selection()
 }
-
-///|
-/// Whether the cursor currently selects any text.
-pub fn CursorsController::has_selection(self : CursorsController) -> Bool {
-  self.cursor.model_state.has_selection()
-}

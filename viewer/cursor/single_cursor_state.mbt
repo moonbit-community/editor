@@ -47,7 +47,7 @@ pub fn SingleCursorState::collapsed(
 
 ///|
 /// Whether the anchor range is collapsed to a point.
-pub fn SingleCursorState::selection_start_is_empty(
+fn SingleCursorState::selection_start_is_empty(
   self : SingleCursorState,
 ) -> Bool {
   position_eq(self.selection_start_start, self.selection_start_end)

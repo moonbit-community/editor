@@ -21,6 +21,11 @@ fn render_line_input_for_viewport(
 }
 
 ///|
+/// Writes a line node's attributes, and on `rewrite_html` its `innerHTML`.
+/// Returns the freshly produced `CharacterMapping` when the HTML is rewritten,
+/// or `None` when the existing DOM (and its previously stored mapping) is
+/// reused. The mapping is the DOM-truth bridge consumed by hit-testing and
+/// selection measurement.
 fn write_line_node(
   node : @rdom.Element,
   line : @view_model.RenderLine,
@@ -28,7 +33,7 @@ fn write_line_node(
   input : @view_line_renderer.RenderLineInput,
   top : Int,
   rewrite_html~ : Bool,
-) -> Unit {
+) -> @view_line_renderer.CharacterMapping? {
   node.set_attribute(
     "class",
     @viewer_common.render_line_class(line, decorations),
@@ -36,7 +41,11 @@ fn write_line_node(
   node.set_attribute("data-line", line.line_number.to_string())
   node.set_attribute("style", line_node_style(top))
   if rewrite_html {
-    node.set_inner_html(@view_line_renderer.render_view_line2(input).html)
+    let output = @view_line_renderer.render_view_line2(input)
+    node.set_inner_html(output.html)
+    Some(output.character_mapping)
+  } else {
+    None
   }
 }
 

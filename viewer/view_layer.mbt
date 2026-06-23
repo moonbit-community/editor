@@ -14,6 +14,7 @@ priv struct ViewLines {
   mut generation : Int
   line_nodes : Array[@rdom.Element]
   render_inputs : Array[@view_line_renderer.RenderLineInput]
+  line_mappings : Array[@view_line_renderer.CharacterMapping]
   mut should_render : Bool
   mut prepared : ViewLinesPrepared?
 }
@@ -29,6 +30,7 @@ fn ViewLines::new(document : @rdom.Document) -> ViewLines {
     generation: -1,
     line_nodes: [],
     render_inputs: [],
+    line_mappings: [],
     should_render: true,
     prepared: None,
   }
@@ -37,6 +39,33 @@ fn ViewLines::new(document : @rdom.Document) -> ViewLines {
 ///|
 fn ViewLines::dom(self : ViewLines) -> @rdom.Element {
   self.view_lines
+}
+
+///|
+/// Index of a one-based view-line number within the currently rendered
+/// window, or `-1` when the line is outside the window.
+fn ViewLines::window_index(self : ViewLines, view_line_number : Int) -> Int {
+  let index = view_line_number - 1 - self.window.start
+  if index >= 0 && index < self.line_nodes.length() {
+    index
+  } else {
+    -1
+  }
+}
+
+///|
+/// The retained column-to-DOM `CharacterMapping` for a one-based view-line
+/// number, if in window.
+fn ViewLines::mapping_at(
+  self : ViewLines,
+  view_line_number : Int,
+) -> @view_line_renderer.CharacterMapping? {
+  let index = self.window_index(view_line_number)
+  if index < 0 {
+    None
+  } else {
+    Some(self.line_mappings[index])
+  }
 }
 
 ///|
@@ -124,14 +153,16 @@ fn ViewLines::render_text(
       self.line_nodes.push(node)
     }
     let previous_inputs = self.render_inputs.copy()
+    let previous_mappings = self.line_mappings.copy()
     self.render_inputs.clear()
+    self.line_mappings.clear()
     for index in 0..<viewport.lines.length() {
       let input = render_line_input_for_viewport(viewport, index, space_width)
       let rewrite_html = match previous_inputs.get(index) {
         Some(previous) => previous != input
         None => true
       }
-      write_line_node(
+      let mapping = write_line_node(
         self.line_nodes[index],
         frame.lines[index],
         decorations,
@@ -140,6 +171,11 @@ fn ViewLines::render_text(
         rewrite_html~,
       )
       self.render_inputs.push(input)
+      // `None` only when `!rewrite_html`, which only happens when the line was
+      // present last frame with the same input — so its mapping is unchanged.
+      self.line_mappings.push(
+        resolve_line_mapping(mapping, previous_mappings.get(index)),
+      )
     }
     self.generation = generation
     self.window = target
@@ -151,6 +187,7 @@ fn ViewLines::render_text(
   let previous = self.window
   let next_lines : Array[@rdom.Element] = []
   let next_inputs : Array[@view_line_renderer.RenderLineInput] = []
+  let next_mappings : Array[@view_line_renderer.CharacterMapping] = []
   for index in 0..<viewport.lines.length() {
     let line_index = target.start + index
     if line_index >= previous.start && line_index < previous.end {
@@ -161,10 +198,11 @@ fn ViewLines::render_text(
       )
       next_lines.push(node)
       next_inputs.push(self.render_inputs[line_index - previous.start])
+      next_mappings.push(self.line_mappings[line_index - previous.start])
     } else {
       let node = document.create_element("div")
       let input = render_line_input_for_viewport(viewport, index, space_width)
-      write_line_node(
+      let mapping = write_line_node(
         node,
         frame.lines[index],
         decorations,
@@ -175,6 +213,7 @@ fn ViewLines::render_text(
       self.view_lines.append_child(node.as_node())
       next_lines.push(node)
       next_inputs.push(input)
+      next_mappings.push(resolve_line_mapping(mapping, None))
     }
   }
   for line_index in previous.start..<previous.end {
@@ -192,7 +231,26 @@ fn ViewLines::render_text(
   for input in next_inputs {
     self.render_inputs.push(input)
   }
+  self.line_mappings.clear()
+  for mapping in next_mappings {
+    self.line_mappings.push(mapping)
+  }
   self.window = target
+}
+
+///|
+/// Resolves the mapping to store for a line: the freshly rendered one when the
+/// HTML was rewritten, otherwise the carried-over previous mapping. The empty
+/// fallback only occurs on a logic error (no fresh and no previous mapping).
+fn resolve_line_mapping(
+  fresh : @view_line_renderer.CharacterMapping?,
+  previous : @view_line_renderer.CharacterMapping?,
+) -> @view_line_renderer.CharacterMapping {
+  match (fresh, previous) {
+    (Some(mapping), _) => mapping
+    (None, Some(mapping)) => mapping
+    (None, None) => @view_line_renderer.CharacterMapping::new(0)
+  }
 }
 
 ///|

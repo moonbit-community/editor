@@ -61,12 +61,14 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
 ///|
 fn test_metrics(
   scroll_top? : Double = 0.0,
+  scroll_left? : Double = 0.0,
   view_zones? : Array[@view_layout.ViewZone] = [],
 ) -> @common.ViewMetrics {
   {
     origin_x: 0.0,
     origin_y: 0.0,
     scroll_top,
+    scroll_left,
     viewport_height: 200.0,
     line_height: 18,
     char_width: 8.0,
@@ -260,14 +262,15 @@ test "hit test accounts for view zones displacing following lines" {
 ///|
 test "hit test reports empty lines and windowed-out lines as content empty" {
   let frame = hit_test_frame()
-  // Line 4 is empty: any column resolves to its start offset.
+  // Line 4 is empty: any column resolves to its start offset. x=70 sits 2.5
+  // glyphs past the content origin and rounds to the nearer column 3.
   debug_inspect(
     @common.hit_test(frame, test_metrics(), 70.0, 18.0 * 3.0 + 4.0),
     content=(
       #|{
       #|  kind: ContentEmpty,
       #|  line_number: 4,
-      #|  column: 2,
+      #|  column: 3,
       #|  offset: 24,
       #|  span_index: -1,
       #|  injected_text_index: -1,

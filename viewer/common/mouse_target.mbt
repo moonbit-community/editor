@@ -31,6 +31,7 @@ pub(all) struct ViewMetrics {
   origin_x : Double
   origin_y : Double
   scroll_top : Double
+  scroll_left : Double
   viewport_height : Double
   line_height : Int
   char_width : Double
@@ -116,8 +117,14 @@ pub fn hit_test(
       injected_text_index: -1,
     }
   }
+  // Horizontal scroll moves content left under the sticky gutter, so the
+  // content column at a viewer x adds the scrolled-away width back in. Round to
+  // the nearest character boundary (the browser's caret APIs round; this
+  // monospace path is only the caret-API-miss fallback) instead of truncating,
+  // which would bias every hit to the left edge of the glyph under the pointer.
   let column = if metrics.char_width > 0.0 {
-    ((viewer_x - metrics.gutter_width) / metrics.char_width).to_int()
+    let content_x = viewer_x - metrics.gutter_width + metrics.scroll_left
+    (content_x / metrics.char_width + 0.5).to_int()
   } else {
     0
   }

@@ -153,15 +153,20 @@ fn Viewer::handle_mouse_down(
   }
   guard self.frame is Some(frame) else { return }
   focus_element(view.root)
+  let client_x = mouse.get_client_x().to_double()
+  let client_y = mouse.get_client_y().to_double()
   let rect = view.root.get_bounding_client_rect()
-  let x = mouse.get_client_x().to_double() - rect.get_left()
-  let y = mouse.get_client_y().to_double() - rect.get_top()
+  let x = client_x - rect.get_left()
+  let y = client_y - rect.get_top()
   let target = @viewer_common.hit_test(frame, self.view_metrics(frame), x, y)
   match target.kind {
     ContentText | ContentEmpty => {
       event.prevent_default()
       event.stop_propagation()
-      self.begin_selection(target)
+      let refined = self.dom_refine_content_target(
+        view, frame, client_x, client_y, target,
+      )
+      self.begin_selection(refined)
     }
     _ => ()
   }
@@ -180,11 +185,18 @@ fn Viewer::handle_selection_drag_move(
   guard self.frame is Some(frame) else { return }
   guard event.to_mouse_event() is Some(mouse) else { return }
   event.prevent_default()
+  let client_x = mouse.get_client_x().to_double()
+  let client_y = mouse.get_client_y().to_double()
   let rect = view.root.get_bounding_client_rect()
-  let x = mouse.get_client_x().to_double() - rect.get_left()
-  let y = mouse.get_client_y().to_double() - rect.get_top()
+  let x = client_x - rect.get_left()
+  let y = client_y - rect.get_top()
   let target = @viewer_common.hit_test(frame, self.view_metrics(frame), x, y)
-  self.update_selection(target)
+  let refined = match target.kind {
+    ContentText | ContentEmpty =>
+      self.dom_refine_content_target(view, frame, client_x, client_y, target)
+    _ => target
+  }
+  self.update_selection(refined)
 }
 
 ///|
@@ -454,6 +466,7 @@ fn Viewer::view_metrics(
     origin_x: 0.0,
     origin_y: 0.0,
     scroll_top: self.layout.position().scroll_top,
+    scroll_left: self.layout.position().scroll_left,
     viewport_height: self.layout.dimensions().height,
     line_height: editor_line_height,
     char_width: self.measured_char_width(),

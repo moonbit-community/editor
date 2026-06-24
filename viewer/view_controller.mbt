@@ -4,7 +4,7 @@
 /// view position the hit test resolved; `mouse_down_count` is the multi-click
 /// count (1 = single, 2 = double, 3 = triple, >=4 = quad); `started_on_line_numbers`
 /// routes gutter drags to whole-line selection.
-pub(all) struct MouseDispatchData {
+priv struct MouseDispatchData {
   view_position : @base_common.Position
   in_selection_mode : Bool
   mouse_down_count : Int

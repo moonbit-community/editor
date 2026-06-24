@@ -28,42 +28,14 @@ pub(all) struct CurrentModel {
   scroll_left : Double
 } derive(@debug.Debug)
 
-pub(all) struct MouseDispatchData {
-  view_position : @common.Position
-  in_selection_mode : Bool
-  mouse_down_count : Int
-  started_on_line_numbers : Bool
-}
-
-pub(all) struct ViewConfigurationChangedEvent {
-  gutter_width_changed : Bool
-  font_changed : Bool
-} derive(Eq, @debug.Debug)
-
-pub(all) enum ViewEvent {
-  ViewFlushed
-  ViewLinesChanged
-  ViewScrollChanged(ViewScrollChangedEvent)
-  ViewCursorStateChanged
-  ViewConfigurationChanged(ViewConfigurationChangedEvent)
-  ViewLineMappingChanged
-  ViewZonesChanged
-} derive(Eq, @debug.Debug)
-
-pub(all) struct ViewScrollChangedEvent {
-  position_changed : Bool
-  dimensions_changed : Bool
-  window_changed : Bool
-} derive(Eq, @debug.Debug)
-
 pub(all) enum ViewStatePolicy {
   PreserveAnchor
   Reset
   Restore(ViewerViewState)
 } derive(@debug.Debug)
 
-pub(all) struct ViewZoneChangeAccessor {
-  viewer : Viewer
+pub struct ViewZoneChangeAccessor {
+  // private fields
 }
 pub fn ViewZoneChangeAccessor::add_zone(Self, String, Int, Int, @dom.Element) -> Unit
 pub fn ViewZoneChangeAccessor::remove_zone(Self, String) -> Unit

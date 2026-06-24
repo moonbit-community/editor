@@ -14,7 +14,7 @@
 /// The event set is the subset this viewer observes; composition/focus/theme/
 /// language and the fine-grained line insert/delete events have no readonly
 /// counterpart yet.
-pub(all) enum ViewEvent {
+priv enum ViewEvent {
   /// Everything must re-render (Monaco `ViewFlushedEvent`). Emitted on the
   /// first frame.
   ViewFlushed
@@ -34,26 +34,26 @@ pub(all) enum ViewEvent {
   ViewLineMappingChanged
   /// View zones changed (Monaco `ViewZonesChangedEvent`).
   ViewZonesChanged
-} derive(Eq, Debug)
+}
 
 ///|
 /// Payload for `ViewScrollChanged`. Mirrors Monaco's `ViewScrollChangedEvent`
 /// change flags; `window_changed` is the local rendered-line-window shift
 /// (a viewer-side windowing concern with no separate Monaco field).
-pub(all) struct ViewScrollChangedEvent {
+priv struct ViewScrollChangedEvent {
   position_changed : Bool
   dimensions_changed : Bool
   window_changed : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 /// Payload for `ViewConfigurationChanged`. Mirrors the `hasChanged(option)`
 /// queries Monaco view parts make against `ViewConfigurationChangedEvent`,
 /// reduced to the inputs this viewer's parts consult.
-pub(all) struct ViewConfigurationChangedEvent {
+priv struct ViewConfigurationChangedEvent {
   gutter_width_changed : Bool
   font_changed : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 /// Derives the typed view events for one frame by comparing the new render

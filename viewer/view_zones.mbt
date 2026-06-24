@@ -22,8 +22,8 @@ priv struct ViewZones {
 ///|
 /// Mutation accessor passed to `Viewer::change_view_zones`; callers describe
 /// the complete set of changes inside one layout invalidation.
-pub(all) struct ViewZoneChangeAccessor {
-  viewer : Viewer
+pub struct ViewZoneChangeAccessor {
+  priv viewer : Viewer
 }
 
 ///|

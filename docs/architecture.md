@@ -41,17 +41,32 @@ contract.
   installation and language registration.
 - `viewer/model`: readonly `TextModel` and `TextSnapshot`, the model identity
   used by viewer and language-provider APIs.
-- `viewer/common`, `viewer/view_model`, `viewer/view_layout`, and
-  `viewer/view_line_renderer`: DOM-free viewer common layer for tokenized
-  lines, render frames, projections, layout, viewport data, scrollbar
-  arithmetic, hit testing, and render-line HTML/character mapping.
+- `viewer/common`, `viewer/view_model`, `viewer/view_layout`,
+  `viewer/view_line_renderer`, and `viewer/decorations`: DOM-free viewer common
+  layer for tokenized lines, render frames, projections, layout, viewport data,
+  scrollbar arithmetic, hit testing, render-line HTML/character mapping, and the
+  range-based decoration carrier (`viewer/decorations`, Monaco
+  `vs/editor/common/model` decorations).
 - `viewer/cursor`, `viewer/folding`, and `viewer/markers`: DOM-free feature
   models the viewer drives. `viewer/cursor` is the readonly cursor/selection
   state; `viewer/folding` is the folded-range set operations and fallback
   folding-range computation (Monaco `contrib/folding/`); `viewer/markers` is
   the marker store, squiggle decorations, and marker-hover lookup (Monaco's
-  marker stack). The browser-side controls and presentation for these (folding
-  gutter toggle, marker hover participant and squiggle DOM) stay in `viewer`.
+  marker stack). The browser-side controls for these (folding gutter toggle,
+  squiggle DOM) stay in `viewer`.
+- `viewer/languages`: the language-feature registry (Monaco's
+  `ILanguageFeaturesService` / `vs/editor/common` language features) — the
+  tokenizer registry plus ordered hover, diagnostics, document-symbol,
+  semantic-token, folding-range, and inlay-hint providers, with the
+  process-wide `languages` value hosts register against.
+- `viewer/hover`: the content-hover feature (Monaco `contrib/hover/`) —
+  hover-part types, the participants (marker, inlay-hint, markdown), the free
+  participant registry plus its default-participant contribution, the
+  `ContentHoverComputer`, and hover rendering. Participants capture their own
+  services (`HoverParticipantServices`), so the package depends on
+  `viewer/languages` and `viewer/markers` but never on the `viewer` core. The
+  hover *controller* — the timing state machine and its event driver — stays in
+  `viewer` core, the way Monaco drives a contribution from the editor.
 - `viewer/ui/scrollbar`: the custom scrollbar widget (Monaco
   `base/browser/ui/scrollbar/`). Unlike the common-layer packages it owns
   browser DOM, so it is a *browser-UI subpackage*: it may import `rabbita/dom`
@@ -72,7 +87,7 @@ contract.
 - `syntax` and `syntax/lang_*`: tokenization contracts and concrete
   compile-time lexers. Hosts import concrete language packages and register
   tokenizers with the viewer.
-- `decorations` and `platform/log`: small shared support packages.
+- `platform/log`: a small shared support package.
 
 ### Reference Shell
 
@@ -196,9 +211,10 @@ internal/shell/workbench -> base/common, viewer, viewer/model,
                             internal/shell/workspace, language,
                             syntax/lang_*, platform/log
 viewer -> base/common, viewer/common, viewer/controller, viewer/cursor,
-          viewer/folding, viewer/markers, viewer/model, viewer/ui/scrollbar,
+          viewer/folding, viewer/hover, viewer/languages, viewer/markers,
+          viewer/model, viewer/ui/scrollbar, viewer/decorations,
           viewer/view_line_renderer, viewer/view_layout, viewer/view_model,
-          language, syntax, decorations, platform/log
+          language, syntax, platform/log
 
 internal/shell/server_host_native/main -> internal/shell/server_host_native
 internal/shell/server_host_native -> base/common, internal/shell/server,
@@ -214,18 +230,36 @@ internal/shell/widgets/file_tree -> base/common, internal/shell/workspace
 language -> base/common, viewer/model
 internal/shell/workspace -> base/common
 syntax -> base/common, viewer/model
-decorations -> base/common
+viewer/decorations -> base/common
 viewer/model -> base/common
 viewer/folding -> language, viewer/model
-viewer/markers -> base/common, language, decorations
+viewer/languages -> base/common, language, platform/log, syntax,
+                    viewer/folding, viewer/model
+viewer/hover -> base/common, language, platform/log, syntax, viewer/common,
+                viewer/decorations, viewer/languages, viewer/markers,
+                viewer/model, viewer/view_model, cmark/*
+viewer/markers -> base/common, language, viewer/decorations
 viewer/ui/scrollbar -> viewer/view_layout, rabbita/dom
 viewer/controller -> viewer/ui/scrollbar, viewer/view_layout, rabbita/dom
 platform/log -> no product packages
 syntax/lang_* -> syntax, viewer/model
 ```
 
-`scripts/check-architecture.mbtx`, run by `just check`, enforces the most
-important import boundaries.
+`scripts/check-architecture.mbtx`, run by `just check`, enforces three import
+boundaries — the ones the MoonBit toolchain cannot catch on its own:
+
+1. No product source references the reference trees (`vscode/`, `codemirror/`).
+2. Nothing outside `internal/shell/` imports `internal/shell/*`, so the reusable
+   surface never depends on the reference shell.
+3. `viewer/*` packages import only the Rabbita API bindings (`rabbita/dom`,
+   `rabbita/js`), never the Rabbita TEA framework (`rabbita`, `rabbita/html`,
+   `rabbita/cmd`, `rabbita/websocket`, …).
+
+Everything else is left to the toolchain: MoonBit rejects package cycles, and
+`supported_targets` rejects DOM-only imports into native packages. Which viewer
+sub-packages stay DOM-free, and the one-directional `viewer -> sub-package`
+edges, are a design discipline that follows Monaco's module seams rather than a
+machine-checked rule.
 
 ## Build Targets
 

@@ -163,7 +163,7 @@ fn css_sources() -> Array[String] {
     "viewer/tokens.css",
     "viewer/inlay_hints.css",
     "viewer/markers.css",
-    "viewer/hover.css",
+    "viewer/hover/hover.css",
   ]
 }
 

@@ -3,9 +3,9 @@ package "baozhiyuan/editor/viewer/view_model"
 
 import {
   "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/syntax",
+  "baozhiyuan/editor/viewer/decorations",
   "baozhiyuan/editor/viewer/model",
   "baozhiyuan/editor/viewer/view_line_renderer",
   "moonbitlang/core/debug",

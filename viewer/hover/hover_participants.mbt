@@ -18,14 +18,16 @@ pub(all) struct ComputedHover {
 } derive(Eq, Debug)
 
 ///|
-/// Inputs shared by synchronous and asynchronous hover participants.
+/// Inputs shared by synchronous and asynchronous hover participants. Mirrors
+/// Monaco's `(anchor, lineDecorations, source)` compute arguments: it carries
+/// only the hovered state, never a services bag — participants capture the
+/// services they need at construction instead.
 pub(all) struct HoverComputeContext {
   model : @model.TextModel
   anchor_range : @base_common.Range
   offset : Int
   injected_text_index : Int
   inlay_hints : Array[@language.InlayHint]
-  services : ViewerServices
 }
 
 ///|
@@ -39,13 +41,29 @@ pub(open) trait HoverParticipant {
 }
 
 ///|
-/// Hover participant that exposes diagnostics/markers at the anchor range.
-pub(all) struct MarkerHoverParticipant(Unit)
+/// The editor-scoped services a hover participant captures at construction, the
+/// MoonBit analog of the services Monaco injects into participant constructors
+/// (`IMarkerDecorationsService`, `ILanguageFeaturesService`, …). The registry
+/// builds participants from this record, so the hover package never depends on
+/// the viewer core's `ViewerServices`.
+pub(all) struct HoverParticipantServices {
+  languages : @languages.Languages
+  marker_decorations : @markers.MarkerDecorationsService
+  log_service : @log.LogService
+}
 
 ///|
-/// Creates the marker hover participant.
-pub fn MarkerHoverParticipant::new() -> MarkerHoverParticipant {
-  MarkerHoverParticipant(())
+/// Hover participant that exposes diagnostics/markers at the anchor range.
+pub(all) struct MarkerHoverParticipant {
+  marker_decorations : @markers.MarkerDecorationsService
+}
+
+///|
+/// Creates the marker hover participant over the marker decorations service.
+pub fn MarkerHoverParticipant::new(
+  marker_decorations : @markers.MarkerDecorationsService,
+) -> MarkerHoverParticipant {
+  { marker_decorations, }
 }
 
 ///|
@@ -57,7 +75,7 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn ordinal(_self) {
 ///|
 /// Computes marker hover parts from the current marker decorations.
 pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
-  _self,
+  self,
   ctx,
 ) {
   if ctx.injected_text_index >= 0 {
@@ -65,7 +83,7 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
   }
   let parts : Array[HoverPart] = []
   for
-    marker in ctx.services.marker_decorations.markers_at(
+    marker in self.marker_decorations.markers_at(
       ctx.model.uri,
       ctx.anchor_range,
     ) {
@@ -85,12 +103,18 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_async(
 
 ///|
 /// Hover participant that queries registered markdown/plaintext hover providers.
-pub(all) struct MarkdownHoverParticipant(Unit)
+pub(all) struct MarkdownHoverParticipant {
+  languages : @languages.Languages
+  log_service : @log.LogService
+}
 
 ///|
-/// Creates the markdown hover participant.
-pub fn MarkdownHoverParticipant::new() -> MarkdownHoverParticipant {
-  MarkdownHoverParticipant(())
+/// Creates the markdown hover participant over the language features registry.
+pub fn MarkdownHoverParticipant::new(
+  languages : @languages.Languages,
+  log_service : @log.LogService,
+) -> MarkdownHoverParticipant {
+  { languages, log_service }
 }
 
 ///|
@@ -117,12 +141,7 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
   if ctx.injected_text_index >= 0 {
     return []
   }
-  match
-    ctx.services.languages.hover_at(
-      ctx.model,
-      ctx.offset,
-      ctx.services.log_service,
-    ) {
+  match self.languages.hover_at(ctx.model, ctx.offset, self.log_service) {
     Some(hover) =>
       if hover.contents.length() == 0 {
         []
@@ -195,15 +214,17 @@ pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_async(
 ///|
 /// Coordinates hover participants for one viewer service set.
 pub(all) struct ContentHoverComputer {
-  services : ViewerServices
+  participants : Array[&HoverParticipant]
 }
 
 ///|
-/// Creates a content-hover computer over viewer services.
+/// Creates a content-hover computer, instantiating the registered default
+/// participants with the given services — Monaco's
+/// `ContentHoverWidgetWrapper._initializeHoverParticipants`.
 pub fn ContentHoverComputer::new(
-  services : ViewerServices,
+  services : HoverParticipantServices,
 ) -> ContentHoverComputer {
-  { services, }
+  { participants: hover_participant_registry.build_all(services) }
 }
 
 ///|
@@ -222,10 +243,9 @@ pub fn ContentHoverComputer::compute_sync(
     offset,
     injected_text_index,
     inlay_hints,
-    services: self.services,
   }
   let parts : Array[HoverPart] = []
-  for participant in self.services.hover_participants.entries {
+  for participant in self.participants {
     parts.append(participant.compute_sync(ctx))
   }
   computed_hover_from_parts(anchor_range, parts)
@@ -247,10 +267,9 @@ pub async fn ContentHoverComputer::compute_async(
     offset,
     injected_text_index,
     inlay_hints,
-    services: self.services,
   }
   let parts : Array[HoverPart] = []
-  for participant in self.services.hover_participants.entries {
+  for participant in self.participants {
     parts.append(participant.compute_async(ctx))
   }
   computed_hover_from_parts(anchor_range, parts)
@@ -273,7 +292,10 @@ fn computed_hover_from_parts(
 }
 
 ///|
-fn compare_hover_parts(left : HoverPart, right : HoverPart) -> Int {
+/// Orders hover parts by participant ordinal, then by start offset. Exposed for
+/// the viewer core's hover controller, which merges late-arriving async parts
+/// into an already-shown hover.
+pub fn compare_hover_parts(left : HoverPart, right : HoverPart) -> Int {
   let ordinal = hover_part_ordinal(left) - hover_part_ordinal(right)
   if ordinal != 0 {
     ordinal

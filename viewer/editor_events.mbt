@@ -88,7 +88,7 @@ fn Viewer::hover_resolved(
   self : Viewer,
   model : @model.TextModel,
   token : Int,
-  hover : ComputedHover?,
+  hover : @hover.ComputedHover?,
 ) -> Unit {
   if !self.is_current_model(model) {
     return

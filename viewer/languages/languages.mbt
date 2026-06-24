@@ -40,7 +40,7 @@ fn[T] LanguageFeatureRegistry::register(
 
 ///|
 /// Public language registry for tokenization and semantic language providers.
-/// Hosts normally use the process-wide `@viewer.languages` value; tests and
+/// Hosts normally use the process-wide `@languages.languages` value; tests and
 /// embedded viewers that need isolation can create a fresh registry and pass it
 /// through `ViewerServices::new(languages~)`.
 pub struct Languages {
@@ -84,7 +84,7 @@ pub fn Languages::new() -> Languages {
 pub let languages : Languages = Languages::new()
 
 ///|
-fn default_languages() -> Languages {
+pub fn default_languages() -> Languages {
   languages
 }
 
@@ -111,7 +111,7 @@ pub fn Languages::set_tokens_provider(
 }
 
 ///|
-fn Languages::lookup_tokens_provider(
+pub fn Languages::lookup_tokens_provider(
   self : Languages,
   language_id : String,
 ) -> &@syntax.LineTokenizer? {
@@ -183,7 +183,7 @@ pub fn Languages::register_inlay_hints_provider(
 
 ///|
 /// Returns the first non-empty hover answer in provider order.
-async fn Languages::hover_at(
+pub async fn Languages::hover_at(
   self : Languages,
   model : @model.TextModel,
   offset : Int,
@@ -213,7 +213,7 @@ async fn Languages::hover_at(
 ///|
 /// Refreshes diagnostics from every provider, passing each provider's owner id
 /// to the caller so marker ownership can be replaced independently.
-async fn Languages::diagnostics_for_model(
+pub async fn Languages::diagnostics_for_model(
   self : Languages,
   model : @model.TextModel,
   apply : (String, Array[@language.Diagnostic]) -> Unit,
@@ -238,7 +238,7 @@ async fn Languages::diagnostics_for_model(
 
 ///|
 /// Concatenates document-symbol results from every provider.
-async fn Languages::document_symbols(
+pub async fn Languages::document_symbols(
   self : Languages,
   model : @model.TextModel,
   log_service : @log.LogService,
@@ -265,7 +265,7 @@ async fn Languages::document_symbols(
 
 ///|
 /// Concatenates semantic-token results from every provider.
-async fn Languages::semantic_tokens_for_model(
+pub async fn Languages::semantic_tokens_for_model(
   self : Languages,
   model : @model.TextModel,
   log_service : @log.LogService,
@@ -293,7 +293,7 @@ async fn Languages::semantic_tokens_for_model(
 ///|
 /// Concatenates folding-range results, falling back to MoonBit indentation
 /// ranges when no provider answers.
-async fn Languages::folding_ranges_for_model(
+pub async fn Languages::folding_ranges_for_model(
   self : Languages,
   model : @model.TextModel,
   log_service : @log.LogService,
@@ -324,7 +324,7 @@ async fn Languages::folding_ranges_for_model(
 
 ///|
 /// Concatenates inlay-hint results from every provider.
-async fn Languages::inlay_hints_for_model(
+pub async fn Languages::inlay_hints_for_model(
   self : Languages,
   model : @model.TextModel,
   log_service : @log.LogService,

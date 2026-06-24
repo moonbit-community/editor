@@ -1,6 +1,6 @@
 ///|
 fn run_render_perf_test() -> Unit {
-  @viewer.languages.set_tokens_provider(
+  @languages.languages.set_tokens_provider(
     "moonbit",
     @lang_moonbit.MoonbitTokenizer::new(),
   )

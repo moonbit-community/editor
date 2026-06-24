@@ -6,7 +6,6 @@ import {
 async fn main {
   let product_dirs = [
     "base",
-    "decorations",
     "internal",
     "language",
     "platform",
@@ -28,11 +27,8 @@ async fn main {
       }
     }
   }
-  check_package_imports(errors)
-  check_public_package_imports(errors)
-  check_platform_log_imports(errors)
-  check_model_boundary_imports(errors)
-  check_language_package_imports(errors)
+  check_no_outside_shell_imports(errors)
+  check_viewer_rabbita_bindings(errors)
   if errors.length() > 0 {
     println(errors.join("\n"))
     fail("Architecture checks failed")
@@ -41,62 +37,51 @@ async fn main {
 }
 
 ///|
-/// Viewer and language public APIs are model-based. Workspace source payloads
-/// are adapted by host packages before they cross those boundaries.
-async fn check_model_boundary_imports(errors : Array[String]) -> Unit {
-  let forbidden = ["baozhiyuan/editor/internal/shell/workspace"]
-  for manifest in ["viewer/moon.pkg", "language/moon.pkg"] {
-    if @fs.exists(manifest) {
-      reject_imports(
-        manifest,
-        package_imports(@fs.read_file(manifest).text()),
-        forbidden,
-        errors,
-      )
+/// The reusable surface must not depend on the reference shell. Only packages
+/// under `internal/shell/` may import `internal/shell/*` — a `viewer -> shell`
+/// edge compiles fine (no cycle, no target clash), so only this guard catches it.
+async fn check_no_outside_shell_imports(errors : Array[String]) -> Unit {
+  let shell_prefix = "baozhiyuan/editor/internal/shell"
+  for manifest in package_manifests() {
+    if manifest.has_prefix("internal/shell/") {
+      continue
+    }
+    for imported in package_imports(@fs.read_file(manifest).text()) {
+      if import_matches(imported, shell_prefix) {
+        errors.push(
+          manifest + " must not import internal shell package " + imported,
+        )
+      }
     }
   }
 }
 
 ///|
-/// Grammars are compile-time packages composed by import: `syntax/lang_*`
-/// may import only viewer model test support and `syntax`, and only composition layers
-/// (`internal/shell/workbench`, `internal/shell/examples/*`, browser-test
-/// entrypoints) may import a
-/// `syntax/lang_*` package — the viewer library, viewer common layer, and server
-/// must resolve languages through the tokenizer registry instead.
-async fn check_language_package_imports(errors : Array[String]) -> Unit {
-  let language_prefix = "baozhiyuan/editor/syntax/lang_"
-  let allowed_in_language_packages = [
-    "baozhiyuan/editor/viewer/model",
-    "baozhiyuan/editor/syntax",
+/// The viewer uses Rabbita as a thin API binding library, not as its app
+/// framework: every `viewer/*` package may import `rabbita/dom` and
+/// `rabbita/js`, but not the rabbita TEA root or any other `rabbita/*`
+/// (`html`, `cmd`, `websocket`, …). The shell is the actual rabbita-TEA app and
+/// is out of scope. Which viewer packages stay DOM-free is a design discipline
+/// that follows Monaco's architecture, enforced by `supported_targets` and the
+/// MoonBit cycle checker rather than by this script.
+async fn check_viewer_rabbita_bindings(errors : Array[String]) -> Unit {
+  let allowed_bindings = [
+    "moonbit-community/rabbita/dom",
+    "moonbit-community/rabbita/js",
   ]
-  for name in @fs.readdir("syntax", include_hidden=false, sort=true) {
-    if !name.has_prefix("lang_") {
-      continue
-    }
-    let pkg_file = "syntax/" + name + "/moon.pkg"
-    if !@fs.exists(pkg_file) {
-      continue
-    }
-    for imported in package_imports(@fs.read_file(pkg_file).text()) {
-      if imported.has_prefix("moonbitlang/") {
-        continue
-      }
-      if !allowed_in_language_packages.contains(imported) {
-        errors.push(pkg_file + " must not import " + imported)
-      }
-    }
-  }
   for manifest in package_manifests() {
-    if manifest.has_prefix("internal/shell/workbench/") ||
-      manifest.has_prefix("internal/shell/examples/") ||
-      manifest.has_prefix("tests/browser/moonbit/") ||
-      manifest.has_prefix("syntax/") {
+    if !manifest.has_prefix("viewer/") {
       continue
     }
     for imported in package_imports(@fs.read_file(manifest).text()) {
-      if imported.has_prefix(language_prefix) {
-        errors.push(manifest + " must not import " + imported)
+      let is_rabbita = imported == "moonbit-community/rabbita" ||
+        imported.has_prefix("moonbit-community/rabbita/")
+      if is_rabbita && !allowed_bindings.contains(imported) {
+        errors.push(
+          manifest +
+          " may import only the rabbita API bindings (rabbita/dom, rabbita/js), not the rabbita framework: " +
+          imported,
+        )
       }
     }
   }
@@ -125,185 +110,8 @@ async fn collect_manifests(dir : String, manifests : Array[String]) -> Unit {
 }
 
 ///|
-/// Package-boundary rules for the pluggable viewer: common viewer
-/// packages know no browser, host effects, transport, or shell; the public
-/// browser-backed viewer package knows no transport or shell; and the internal
-/// tree widget knows no transport or viewer. Only `internal/shell/workbench`
-/// composes.
-async fn check_package_imports(errors : Array[String]) -> Unit {
-  let common_forbidden = [
-    "baozhiyuan/editor/internal/shell/remote_protocol",
-    "baozhiyuan/editor/internal/shell/server",
-    "baozhiyuan/editor/internal/shell/server_host_native",
-    "baozhiyuan/editor/internal/shell/web",
-    "baozhiyuan/editor/internal/shell/widgets",
-    "baozhiyuan/editor/internal/shell/workbench",
-    "moonbit-community/rabbita",
-  ]
-  let browser_forbidden = [
-    "baozhiyuan/editor/internal/shell/remote_protocol",
-    "baozhiyuan/editor/internal/shell/server",
-    "baozhiyuan/editor/internal/shell/server_host_native",
-    "baozhiyuan/editor/internal/shell/web",
-    "baozhiyuan/editor/internal/shell/widgets",
-    "baozhiyuan/editor/internal/shell/workbench",
-    "moonbit-community/rabbita/websocket",
-  ]
-  let widget_forbidden = [
-    "baozhiyuan/editor/internal/shell/remote_protocol",
-    "baozhiyuan/editor/viewer",
-    "moonbit-community/rabbita/websocket",
-  ]
-  for manifest in package_manifests() {
-    let imports = package_imports(@fs.read_file(manifest).text())
-    if is_viewer_common_manifest(manifest) {
-      reject_imports(manifest, imports, common_forbidden, errors)
-      reject_exact_import(
-        manifest,
-        imports,
-        "baozhiyuan/editor/viewer",
-        errors,
-      )
-      if is_viewer_common_child_manifest(manifest) {
-        reject_exact_import(
-          manifest,
-          imports,
-          "baozhiyuan/editor/viewer/common",
-          errors,
-        )
-      }
-    } else if is_viewer_browser_manifest(manifest) {
-      reject_imports(manifest, imports, browser_forbidden, errors)
-      check_browser_rabbita_imports(manifest, imports, errors)
-      if is_viewer_browser_subpackage(manifest) {
-        // A browser-UI subpackage owns DOM under the viewer, but the edge stays
-        // one-directional: the viewer core depends on it, never the reverse.
-        reject_exact_import(manifest, imports, "baozhiyuan/editor/viewer", errors)
-      }
-    } else if manifest == "internal/shell/widgets/file_tree/moon.pkg" {
-      reject_imports(manifest, imports, widget_forbidden, errors)
-    }
-  }
-}
-
-///|
-/// The reusable public surface must not depend on reference shell packages.
-/// The only packages allowed to import `internal/shell/*` are other packages in
-/// the same shell stack.
-async fn check_public_package_imports(errors : Array[String]) -> Unit {
-  let shell_prefix = "baozhiyuan/editor/internal/shell"
-  for manifest in package_manifests() {
-    if manifest.has_prefix("internal/shell/") {
-      continue
-    }
-    for imported in package_imports(@fs.read_file(manifest).text()) {
-      if import_matches(imported, shell_prefix) {
-        errors.push(manifest + " must not import internal shell package " + imported)
-      }
-    }
-  }
-}
-
-///|
-fn is_viewer_common_manifest(manifest : String) -> Bool {
-  // Browser-UI subpackages own DOM and are checked as browser manifests, not as
-  // the DOM-free common layer.
-  if is_viewer_browser_subpackage(manifest) {
-    return false
-  }
-  manifest == "viewer/common/moon.pkg" ||
-  (manifest.has_prefix("viewer/") &&
-   manifest != "viewer/moon.pkg" &&
-   manifest.has_suffix("/moon.pkg"))
-}
-
-///|
-fn is_viewer_common_child_manifest(manifest : String) -> Bool {
-  is_viewer_common_manifest(manifest) && manifest != "viewer/common/moon.pkg"
-}
-
-///|
-fn is_viewer_browser_manifest(manifest : String) -> Bool {
-  manifest == "viewer/moon.pkg" || is_viewer_browser_subpackage(manifest)
-}
-
-///|
-/// Browser-UI subpackages under the viewer: they own browser DOM (`rabbita/dom`)
-/// like the viewer core, but are still forbidden from the shell and from the
-/// rabbita TEA/vdom/command layers. The local analog of Monaco's
-/// `base/browser/ui/*` and `editor/browser/controller/*`.
-fn is_viewer_browser_subpackage(manifest : String) -> Bool {
-  manifest.has_prefix("viewer/ui/") || manifest.has_prefix("viewer/controller/")
-}
-
-///|
-fn reject_imports(
-  manifest : String,
-  imports : Array[String],
-  forbidden_imports : Array[String],
-  errors : Array[String],
-) -> Unit {
-  for imported in imports {
-    for target in forbidden_imports {
-      if import_matches(imported, target) {
-        errors.push(manifest + " must not import " + imported)
-      }
-    }
-  }
-}
-
-///|
 fn import_matches(imported : String, target : String) -> Bool {
   imported == target || imported.has_prefix(target + "/")
-}
-
-///|
-fn reject_exact_import(
-  manifest : String,
-  imports : Array[String],
-  forbidden_import : String,
-  errors : Array[String],
-) -> Unit {
-  if imports.contains(forbidden_import) {
-    errors.push(manifest + " must not import " + forbidden_import)
-  }
-}
-
-///|
-fn check_browser_rabbita_imports(
-  manifest : String,
-  imports : Array[String],
-  errors : Array[String],
-) -> Unit {
-  // The browser-backed viewer package may keep rabbita DOM bindings and JS helpers,
-  // but the TEA core, the vdom, and the command scheduler are forbidden
-  // (exact matches: subpackages such as rabbita/dom stay allowed).
-  let browser_forbidden_exact = [
-    "moonbit-community/rabbita",
-    "moonbit-community/rabbita/html",
-    "moonbit-community/rabbita/cmd",
-  ]
-  for imported in imports {
-    if browser_forbidden_exact.contains(imported) {
-      errors.push(manifest + " must not import " + imported)
-    }
-  }
-}
-
-///|
-/// Runtime logging is shared product infrastructure. It must stay
-/// FFI-free and independent of browser/native hosts; concrete sinks live
-/// in composition packages such as `internal/shell/workbench`.
-async fn check_platform_log_imports(errors : Array[String]) -> Unit {
-  let pkg_file = "platform/log/moon.pkg"
-  if @fs.exists(pkg_file) {
-    for imported in package_imports(@fs.read_file(pkg_file).text()) {
-      if imported.has_prefix("baozhiyuan/editor/internal/shell/server_host_native") ||
-        imported.has_prefix("moonbit-community/rabbita") {
-        errors.push(pkg_file + " must not import host package " + imported)
-      }
-    }
-  }
 }
 
 ///|

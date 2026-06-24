@@ -76,10 +76,12 @@ zones. Go-to-definition and find-references are not current viewer behavior.
 - May depend on `rabbita/dom` and `rabbita/js` for browser effects it owns.
   It must not depend on Rabbita TEA, vdom, or command packages.
 - May depend on `base/common`, `language`, `platform/log`, `viewer/common`,
-  `viewer/controller`, `viewer/cursor`, `viewer/folding`, `viewer/markers`,
-  `viewer/model`, `viewer/ui/scrollbar`, `viewer/view_line_renderer`,
-  `viewer/view_layout`, `viewer/view_model`, `syntax`, and `decorations`.
-- May depend on focused markdown-rendering packages used by hover content.
+  `viewer/controller`, `viewer/cursor`, `viewer/folding`, `viewer/hover`,
+  `viewer/languages`, `viewer/markers`, `viewer/model`, `viewer/ui/scrollbar`,
+  `viewer/view_line_renderer`, `viewer/view_layout`, `viewer/view_model`,
+  `syntax`, and `viewer/decorations`.
+- Hover content/markdown rendering lives in `viewer/hover`; the viewer core only
+  drives the hover controller and asks `viewer/hover` to render.
 - Must not depend on `baozhiyuan/editor/internal/shell/*` packages or
   websocket transports.
 - Must not import concrete `syntax/lang_*` packages.
@@ -89,8 +91,12 @@ zones. Go-to-definition and find-references are not current viewer behavior.
 
 ## Checks
 
-- Hover scheduling and staleness: `hover_controller_wbtest.mbt`.
-- Viewer services and hover participants: `services_wbtest.mbt`.
+- Hover scheduling and staleness: `hover_controller_wbtest.mbt` (the controller
+  state machine stays in the viewer core).
+- Hover compute/participants and rendering: `viewer/hover/`
+  (`content_hover_computer_wbtest.mbt`, `hover_render_wbtest.mbt`).
+- Language-feature registry: `viewer/languages/`
+  (`languages_registry_wbtest.mbt`, `languages_test.mbt`).
 - Marker store, squiggle decorations, and marker-hover lookup:
   `viewer/markers/markers_wbtest.mbt`.
 - Browser component tests cover public API construction, selection/copy,

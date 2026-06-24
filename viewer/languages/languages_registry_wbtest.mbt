@@ -1,8 +1,8 @@
 ///|
 fn test_model() -> @model.TextModel {
   TextModel(
-    @base_common.Uri::memory("service-test.mbt"),
-    "service-test.mbt",
+    @base_common.Uri::memory("language-test.mbt"),
+    "language-test.mbt",
     "moonbit",
     7,
     "rev-7",
@@ -11,52 +11,20 @@ fn test_model() -> @model.TextModel {
 }
 
 ///|
-async test "content hover computer separates sync markers from async markdown" {
-  let services = ViewerServices::new(languages=Languages::new())
-  let model = test_model()
-  services.markers.set_diagnostics("diagnostics:0", model.uri, [
-    { range: Range(12, 17), severity: Warning, message: "marker hover" },
-  ])
-  services.languages.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
-
-  })
-  |> ignore
-  let computer = ContentHoverComputer::new(services)
-  let sync_hover = computer.compute_sync(model, Range(12, 17), 14)
-  match sync_hover {
-    Some(hover) => {
-      assert_eq(hover.parts.length(), 1)
-      assert_true(hover.parts[0] is MarkerHover(_))
-    }
-    None => fail("expected marker hover")
-  }
-  let async_hover = computer.compute_async(model, Range(12, 17), 14)
-  match async_hover {
-    Some(hover) => {
-      assert_eq(hover.parts.length(), 1)
-      assert_true(hover.parts[0] is MarkdownHover(_))
-    }
-    None => fail("expected markdown hover")
-  }
-}
-
-///|
 async test "provider failures are logged and isolated" {
   let memory = @log.MemoryLogger::new()
-  let services = ViewerServices::new(
-    languages=Languages::new(),
-    log_service=@log.LogService::new(logger=memory),
-  )
-  services.languages.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
+  let log_service = @log.LogService::new(logger=memory)
+  let languages = Languages::new()
+  languages.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
 
   })
   |> ignore
-  services.languages.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
+  languages.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
 
   })
   |> ignore
   let model = test_model()
-  let hover = services.languages.hover_at(model, 3, services.log_service)
+  let hover = languages.hover_at(model, 3, log_service)
   assert_true(hover is Some(_))
   let entries = memory.entries()
   assert_eq(entries.length(), 1)

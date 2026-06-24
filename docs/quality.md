@@ -23,6 +23,9 @@ just test-browser
   `internal/shell/server_host_native/main -> internal/shell/server_host_native -> internal/shell/server`.
 - Product code must not import from `codemirror/` or `vscode/`.
 - Public packages must not import `baozhiyuan/editor/internal/shell/*`.
+- `viewer/*` packages use only the Rabbita API bindings (`rabbita/dom`,
+  `rabbita/js`), never the Rabbita TEA framework (`rabbita`, `rabbita/html`,
+  `rabbita/cmd`, `rabbita/websocket`).
 - Packages that only run on one host target may declare that host's FFI; packages shared across targets must not declare FFI. See the host-FFI rule in `architecture.md`.
 - `codemirror/` and `vscode/` are references only.
 - `internal/shell/workbench`, `internal/shell/web`, `internal/shell/server`,

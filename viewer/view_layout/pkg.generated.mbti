@@ -2,7 +2,7 @@
 package "baozhiyuan/editor/viewer/view_layout"
 
 import {
-  "baozhiyuan/editor/decorations",
+  "baozhiyuan/editor/viewer/decorations",
   "baozhiyuan/editor/viewer/view_line_renderer",
   "baozhiyuan/editor/viewer/view_model",
   "moonbitlang/core/debug",

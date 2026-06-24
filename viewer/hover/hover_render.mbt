@@ -1,8 +1,10 @@
 ///|
-fn render_hover_shell(
+/// Renders the content-hover widget's inner HTML from computed hover parts.
+/// Called by the viewer core's content-widget render pass.
+pub fn render_hover_shell(
   parts : Array[HoverPart],
   language_id : String,
-  language_registry? : Languages = default_languages(),
+  language_registry? : @languages.Languages = @languages.default_languages(),
 ) -> String {
   let rows : Array[String] = []
   for part in parts {
@@ -15,7 +17,7 @@ fn render_hover_shell(
 fn render_hover_part(
   part : HoverPart,
   language_id : String,
-  language_registry : Languages,
+  language_registry : @languages.Languages,
 ) -> Array[String] {
   match part {
     MarkdownHover(contents~, ..) => {
@@ -37,7 +39,7 @@ fn render_hover_part(
 fn render_markdown_hover_content(
   content : @language.HoverContent,
   language_id : String,
-  language_registry : Languages,
+  language_registry : @languages.Languages,
 ) -> String {
   match content {
     PlainText(text) => standard_hover_row(hover_plaintext_html(text))
@@ -77,7 +79,7 @@ fn marker_hover_row(text : String) -> String {
 fn hover_markdown_html(
   markdown : String,
   language_id : String,
-  language_registry : Languages,
+  language_registry : @languages.Languages,
 ) -> String {
   let base = @cmark_html.renderer(safe=true)
   let code_override = @cmark_renderer.Renderer::new(block=fn(ctx, block) {
@@ -101,7 +103,7 @@ fn hover_markdown_html(
 fn render_hover_code_block(
   code_block : @cmark.CodeBlock,
   active_language_id : String,
-  language_registry : Languages,
+  language_registry : @languages.Languages,
 ) -> String {
   let language_id = hover_code_language(code_block, active_language_id)
   let code = hover_code_text(code_block)

@@ -1,6 +1,6 @@
 ///|
-fn hover_test_languages() -> Languages {
-  let languages = Languages::new()
+fn hover_test_languages() -> @languages.Languages {
+  let languages = @languages.Languages::new()
   languages.set_tokens_provider("moonbit", @syntax.PlainTokenizer::new())
   |> ignore
   languages

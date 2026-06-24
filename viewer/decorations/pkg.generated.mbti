@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/decorations"
+package "baozhiyuan/editor/viewer/decorations"
 
 import {
   "baozhiyuan/editor/base/common",

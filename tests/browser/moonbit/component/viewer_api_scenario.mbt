@@ -98,7 +98,7 @@ fn run_viewer_api_test() -> Unit {
   match mount_host() {
     Some(host) => {
       let services = @viewer.ViewerServices::new(
-        languages=@viewer.Languages::new(),
+        languages=@languages.Languages::new(),
       )
       services.languages.set_tokens_provider(
         "moonbit",

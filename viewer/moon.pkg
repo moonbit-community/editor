@@ -1,28 +1,23 @@
 import {
   "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/platform/log",
   "baozhiyuan/editor/viewer/common" @viewer_common,
-  "baozhiyuan/editor/viewer/controller" @controller,
-  "baozhiyuan/editor/viewer/cursor" @cursor,
-  "baozhiyuan/editor/viewer/folding" @folding,
-  "baozhiyuan/editor/viewer/markers" @markers,
+  "baozhiyuan/editor/viewer/controller",
+  "baozhiyuan/editor/viewer/cursor",
+  "baozhiyuan/editor/viewer/decorations",
+  "baozhiyuan/editor/viewer/folding",
+  "baozhiyuan/editor/viewer/hover",
+  "baozhiyuan/editor/viewer/languages",
+  "baozhiyuan/editor/viewer/markers",
   "baozhiyuan/editor/viewer/model",
-  "baozhiyuan/editor/viewer/ui/scrollbar" @scrollbar,
+  "baozhiyuan/editor/viewer/ui/scrollbar",
   "baozhiyuan/editor/viewer/view_line_renderer",
   "baozhiyuan/editor/viewer/view_layout",
   "baozhiyuan/editor/viewer/view_model",
   "baozhiyuan/editor/syntax",
-  "moonbit-community/cmark/cmark",
-  "moonbit-community/cmark/cmark_html",
-  "moonbit-community/cmark/cmark_renderer",
   "moonbit-community/rabbita/dom" @rdom,
   "moonbit-community/rabbita/js",
 }
 
 supported_targets = "js"
-
-import {
-  "moonbitlang/async",
-} for "wbtest"

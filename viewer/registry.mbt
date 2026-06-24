@@ -9,7 +9,12 @@ fn Viewer::request_hover(
 ) -> Unit {
   match self.text_model {
     Some(model) => {
-      let computer = ContentHoverComputer::new(self.services)
+      let hover_services : @hover.HoverParticipantServices = {
+        languages: self.services.languages,
+        marker_decorations: self.services.marker_decorations,
+        log_service: self.services.log_service,
+      }
+      let computer = @hover.ContentHoverComputer::new(hover_services)
       let anchor_range = @base_common.Range(anchor.start, anchor.end)
       match
         computer.compute_sync(

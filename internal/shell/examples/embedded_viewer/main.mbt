@@ -286,7 +286,7 @@ fn view_embed(
 fn main {
   // Highlighting needs no server: the language package is composed in
   // by import and registered through the viewer languages facade.
-  @viewer.languages.set_tokens_provider(
+  @languages.languages.set_tokens_provider(
     "moonbit",
     @lang_moonbit.MoonbitTokenizer::new(),
   )

@@ -1,7 +1,7 @@
 import {
   "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/language",
+  "baozhiyuan/editor/viewer/decorations",
   "baozhiyuan/editor/viewer/model",
   "baozhiyuan/editor/viewer/view_line_renderer",
   "baozhiyuan/editor/syntax",

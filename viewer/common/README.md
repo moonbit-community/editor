@@ -33,7 +33,7 @@ layer.
 
 ## Boundaries
 
-- May depend on `decorations`, `base/common`, `viewer/model`,
+- May depend on `viewer/decorations`, `base/common`, `viewer/model`,
   `viewer/view_line_renderer`, `viewer/view_layout`, and
   `viewer/view_model`.
 - Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,

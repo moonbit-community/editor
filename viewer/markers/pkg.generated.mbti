@@ -3,8 +3,8 @@ package "baozhiyuan/editor/viewer/markers"
 
 import {
   "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/language",
+  "baozhiyuan/editor/viewer/decorations",
   "moonbitlang/core/debug",
 }
 

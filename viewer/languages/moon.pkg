@@ -1,0 +1,16 @@
+import {
+  "baozhiyuan/editor/base/common" @base_common,
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/platform/log",
+  "baozhiyuan/editor/syntax",
+  "baozhiyuan/editor/viewer/folding",
+  "baozhiyuan/editor/viewer/model",
+}
+
+import {
+  "baozhiyuan/editor/language",
+} for "test"
+
+import {
+  "moonbitlang/async",
+} for "wbtest"

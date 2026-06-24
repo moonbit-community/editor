@@ -1,0 +1,92 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/viewer/hover"
+
+import {
+  "baozhiyuan/editor/base/common",
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/platform/log",
+  "baozhiyuan/editor/viewer/languages",
+  "baozhiyuan/editor/viewer/markers",
+  "baozhiyuan/editor/viewer/model",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn compare_hover_parts(HoverPart, HoverPart) -> Int
+
+pub let hover_participant_registry : HoverParticipantRegistry
+
+pub fn register_default_hover_participants(HoverParticipantRegistry) -> Unit
+
+pub fn render_hover_shell(Array[HoverPart], String, language_registry? : @languages.Languages) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct ComputedHover {
+  range : @common.Range
+  parts : Array[HoverPart]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ContentHoverComputer {
+  participants : Array[&HoverParticipant]
+}
+pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @common.Range, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
+pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @common.Range, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
+pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
+
+pub(all) struct HoverComputeContext {
+  model : @model.TextModel
+  anchor_range : @common.Range
+  offset : Int
+  injected_text_index : Int
+  inlay_hints : Array[@language.InlayHint]
+}
+
+pub(all) enum HoverPart {
+  MarkdownHover(range~ : @common.Range, contents~ : Array[@language.HoverContent], ordinal~ : Int)
+  MarkerHover(range~ : @common.Range, marker~ : @markers.Marker)
+  LoadingHover(range~ : @common.Range, message~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct HoverParticipantRegistry {
+  entries : Array[(HoverParticipantServices) -> &HoverParticipant]
+}
+pub fn HoverParticipantRegistry::build_all(Self, HoverParticipantServices) -> Array[&HoverParticipant]
+pub fn HoverParticipantRegistry::new() -> Self
+pub fn HoverParticipantRegistry::register(Self, (HoverParticipantServices) -> &HoverParticipant) -> Unit
+
+pub(all) struct HoverParticipantServices {
+  languages : @languages.Languages
+  marker_decorations : @markers.MarkerDecorationsService
+  log_service : @log.LogService
+}
+
+pub(all) struct InlayHintHoverParticipant {
+  identity : Unit
+}
+pub fn InlayHintHoverParticipant::new() -> Self
+pub impl HoverParticipant for InlayHintHoverParticipant
+
+pub(all) struct MarkdownHoverParticipant {
+  languages : @languages.Languages
+  log_service : @log.LogService
+}
+pub fn MarkdownHoverParticipant::new(@languages.Languages, @log.LogService) -> Self
+pub impl HoverParticipant for MarkdownHoverParticipant
+
+pub(all) struct MarkerHoverParticipant {
+  marker_decorations : @markers.MarkerDecorationsService
+}
+pub fn MarkerHoverParticipant::new(@markers.MarkerDecorationsService) -> Self
+pub impl HoverParticipant for MarkerHoverParticipant
+
+// Type aliases
+
+// Traits
+pub(open) trait HoverParticipant {
+  fn ordinal(Self) -> Int
+  fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart]
+  async fn compute_async(Self, HoverComputeContext) -> Array[HoverPart] noraise
+}
+

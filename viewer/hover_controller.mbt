@@ -1,7 +1,7 @@
 ///|
 priv struct HoverView {
   range : @base_common.Range
-  parts : Array[HoverPart]
+  parts : Array[@hover.HoverPart]
 } derive(Eq)
 
 ///|
@@ -204,7 +204,7 @@ fn HoverController::resolved_hover(
   notify : (ViewerHoverResolvedEvent) -> Unit,
   revision : String,
   token : Int,
-  hover : ComputedHover?,
+  hover : @hover.ComputedHover?,
 ) -> HoverController {
   if token != self.token {
     return self
@@ -268,7 +268,7 @@ fn HoverController::decorations(
 /// the loading delay.
 priv struct HoverWidgetView {
   anchor_offset : Int
-  parts : Array[HoverPart]
+  parts : Array[@hover.HoverPart]
   /// Whether this widget participates in placement measurement (the
   /// loading hover renders unmeasured at the anchor).
   measurable : Bool
@@ -314,7 +314,7 @@ fn merge_hover_view(existing : HoverView?, incoming : HoverView) -> HoverView {
     Some(view) => {
       let parts = view.parts.copy()
       parts.append(incoming.parts)
-      parts.sort_by(compare_hover_parts)
+      parts.sort_by(@hover.compare_hover_parts)
       {
         range: Range(
           min_int(view.range.start, incoming.range.start),

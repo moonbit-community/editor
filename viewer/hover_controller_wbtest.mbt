@@ -5,7 +5,7 @@ test "stale hover results are dropped by token guards" {
     notifications.push(notification)
   }
   let controller = HoverController::empty()
-  let hover : ComputedHover? = Some({
+  let hover : @hover.ComputedHover? = Some({
     range: Range(3, 7),
     parts: [
       MarkdownHover(

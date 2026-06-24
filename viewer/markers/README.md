@@ -22,6 +22,6 @@ DOM — stays in `viewer`; this package is the pure data those parts consume.
 
 - Pure logic: no DOM, browser, or native FFI; builds on `js` and `native`.
 - Depends only on `base/common` (URI/range identity), `language` (diagnostics),
-  and `decorations` (render decorations).
+  and `viewer/decorations` (render decorations).
 - Depends on neither the `viewer` browser package nor any other view part. The
   dependency edge is one-directional: `viewer -> viewer/markers`.

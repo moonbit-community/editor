@@ -209,7 +209,7 @@ fn ContentWidgets::render_hover_widget(
   widget.hover.set_attribute("class", "monaco-hover fade-in")
   widget.clear_sizing()
   widget.scrollable.content.set_inner_html(
-    render_hover_shell(
+    @hover.render_hover_shell(
       hover_view.parts,
       frame.language_id,
       language_registry=context.languages,
@@ -249,7 +249,9 @@ fn ContentWidgets::ensure_hover_widget(
       hover.set_attribute("class", "monaco-hover fade-in")
       hover.set_attribute("role", "tooltip")
       hover.set_attribute("tabindex", "0")
-      let scrollable = @scrollbar.ScrollableElementDom::new("monaco-hover-content")
+      let scrollable = @scrollbar.ScrollableElementDom::new(
+        "monaco-hover-content",
+      )
       hover.append_child(scrollable.wrapper.as_node())
       wrapper.append_child(hover.as_node())
       let widget : HoverWidgetDom = { wrapper, hover, scrollable }

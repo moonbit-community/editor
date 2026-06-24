@@ -5,7 +5,7 @@ import {
   "baozhiyuan/editor/base/common",
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/platform/log",
-  "baozhiyuan/editor/syntax",
+  "baozhiyuan/editor/viewer/languages",
   "baozhiyuan/editor/viewer/markers",
   "baozhiyuan/editor/viewer/model",
   "baozhiyuan/editor/viewer/view_model",
@@ -14,23 +14,10 @@ import {
 }
 
 // Values
-pub let languages : Languages
 
 // Errors
 
 // Types and methods
-pub(all) struct ComputedHover {
-  range : @common.Range
-  parts : Array[HoverPart]
-} derive(Eq, @debug.Debug)
-
-pub(all) struct ContentHoverComputer {
-  services : ViewerServices
-}
-pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @common.Range, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
-pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @common.Range, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
-pub fn ContentHoverComputer::new(ViewerServices) -> Self
-
 pub(all) struct CurrentModel {
   uri : @common.Uri
   version : Int
@@ -41,63 +28,12 @@ pub(all) struct CurrentModel {
   scroll_left : Double
 } derive(@debug.Debug)
 
-pub(all) struct HoverComputeContext {
-  model : @model.TextModel
-  anchor_range : @common.Range
-  offset : Int
-  injected_text_index : Int
-  inlay_hints : Array[@language.InlayHint]
-  services : ViewerServices
-}
-
-pub(all) enum HoverPart {
-  MarkdownHover(range~ : @common.Range, contents~ : Array[@language.HoverContent], ordinal~ : Int)
-  MarkerHover(range~ : @common.Range, marker~ : @markers.Marker)
-  LoadingHover(range~ : @common.Range, message~ : String)
-} derive(Eq, @debug.Debug)
-
-pub(all) struct HoverParticipantRegistry {
-  entries : Array[&HoverParticipant]
-}
-pub fn HoverParticipantRegistry::new() -> Self
-pub fn HoverParticipantRegistry::register(Self, &HoverParticipant) -> Unit
-
-pub(all) struct InlayHintHoverParticipant {
-  identity : Unit
-}
-pub fn InlayHintHoverParticipant::new() -> Self
-pub impl HoverParticipant for InlayHintHoverParticipant
-
-type LanguageFeatureRegistry[T]
-
-pub struct Languages {
-  // private fields
-}
-pub fn Languages::new() -> Self
-pub fn Languages::register_diagnostics_provider(Self, @language.LanguageSelector, &@language.DiagnosticsProvider) -> @common.Disposable
-pub fn Languages::register_document_semantic_tokens_provider(Self, @language.LanguageSelector, &@language.SemanticTokensProvider) -> @common.Disposable
-pub fn Languages::register_document_symbol_provider(Self, @language.LanguageSelector, &@language.DocumentSymbolProvider) -> @common.Disposable
-pub fn Languages::register_folding_range_provider(Self, @language.LanguageSelector, &@language.FoldingRangeProvider) -> @common.Disposable
-pub fn Languages::register_hover_provider(Self, @language.LanguageSelector, &@language.HoverProvider) -> @common.Disposable
-pub fn Languages::register_inlay_hints_provider(Self, @language.LanguageSelector, &@language.InlayHintsProvider) -> @common.Disposable
-pub fn Languages::set_tokens_provider(Self, String, &@syntax.LineTokenizer) -> @common.Disposable
-
-pub(all) struct MarkdownHoverParticipant(Unit)
-pub fn MarkdownHoverParticipant::new() -> Self
-pub impl HoverParticipant for MarkdownHoverParticipant
-
-pub(all) struct MarkerHoverParticipant(Unit)
-pub fn MarkerHoverParticipant::new() -> Self
-pub impl HoverParticipant for MarkerHoverParticipant
-
 pub(all) struct MouseDispatchData {
   view_position : @common.Position
   in_selection_mode : Bool
   mouse_down_count : Int
   started_on_line_numbers : Bool
 }
-
-type TokenProviderEntry
 
 pub(all) struct ViewConfigurationChangedEvent {
   gutter_width_changed : Bool
@@ -211,13 +147,12 @@ pub(all) struct ViewerScrollEvent {
 } derive(@debug.Debug)
 
 pub(all) struct ViewerServices {
-  languages : Languages
+  languages : @languages.Languages
   markers : @markers.MarkerService
   marker_decorations : @markers.MarkerDecorationsService
-  hover_participants : HoverParticipantRegistry
   log_service : @log.LogService
 }
-pub fn ViewerServices::new(languages? : Languages, log_service? : @log.LogService) -> Self
+pub fn ViewerServices::new(languages? : @languages.Languages, log_service? : @log.LogService) -> Self
 
 pub(all) struct ViewerViewState {
   scroll_top : Double
@@ -227,9 +162,4 @@ pub(all) struct ViewerViewState {
 // Type aliases
 
 // Traits
-pub(open) trait HoverParticipant {
-  fn ordinal(Self) -> Int
-  fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart]
-  async fn compute_async(Self, HoverComputeContext) -> Array[HoverPart] noraise
-}
 

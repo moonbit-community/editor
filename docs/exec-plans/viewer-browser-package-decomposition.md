@@ -39,15 +39,36 @@ turned out to be the *most* coupled phase, so the clean DOM-free leaves
 (folding, markers) and the genuine UI leaf (scrollbar) went first instead,
 honoring the plan's "minimal risk first" principle.
 
-Deferred — each needs an interface boundary / cycle-break, the plan's
-explicitly "hard, optional" work:
+Later update (also 2026-06-24): the guardrail was first simplified, then
+`viewer/languages` and `viewer/hover` were extracted under the simpler rules.
 
-- **`viewer/hover`** — blocked by the `hover ↔ ViewerServices ↔ Languages`
-  cycle. The three `hover_*.mbt` files are DOM-free, but extraction needs
-  `Languages` pulled into its own package, `ViewerHoverResolvedEvent` /
-  `span_anchor_for_target` / `EditorEvent`/`EditorContext` relocated, and
-  `ViewerServices::new`'s default-participant registration moved out to break
-  the services→participant edge.
+- **Guardrail simplification.** `scripts/check-architecture.mbtx` was reduced
+  from the per-package common/browser-subpackage classification to three checks
+  the toolchain cannot do itself: no `vscode/`/`codemirror/` references, nothing
+  outside `internal/shell/` imports the shell, and `viewer/*` imports only the
+  Rabbita API bindings (`rabbita/dom`, `rabbita/js`) not the framework. Cycles
+  are left to the MoonBit compiler and DOM/native purity to `supported_targets`;
+  DOM-free layering is now a Monaco-following discipline, not a machine rule.
+  This removed the `viewer/common`-child import ban that had blocked hover
+  rendering.
+- **`viewer/languages`** — *landed*. The `Languages` registry (Monaco's
+  `ILanguageFeaturesService`) moved out of the core so hover could depend on it
+  acyclically; its resolution methods became `pub`.
+- **`viewer/hover`** — *landed* (compute/data layer + rendering). The original
+  `hover ↔ ViewerServices ↔ Languages` cycle was two couplings Monaco's source
+  does not have: the whole `ViewerServices` bag was threaded through the compute
+  path, and `ViewerServices` owned + registered the participants. Both were
+  removed — participants now capture their own services
+  (`HoverParticipantServices`), the registry is a free global populated by a
+  hover-side contribution (`register_default_hover_participants`), and the
+  computer takes a participant list. The hover *controller* (timing state
+  machine + `Viewer` event driver, with `EditorEvent`/`EditorContext`/
+  `ViewerHoverResolvedEvent`/`span_anchor_for_target`) stays in `viewer` core:
+  it is driven imperatively by the viewer and consumes core editor-event types,
+  the same bidirectional integration Monaco breaks only through its generic
+  editor-contribution registry. Porting that registry to invert
+  `core → controller` is the one remaining, explicitly-optional divergence,
+  left for later like the cyclic view core in phase 5.
 - **`viewer/controller`** — *landed* (full pointer-input layer).
   `input.mbt`'s handlers were `Viewer::`/`View::` methods over private state, so
   this was not a leaf move: it follows Monaco's `mouseHandler.ts` shape. A

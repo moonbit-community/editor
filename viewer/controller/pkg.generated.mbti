@@ -1,0 +1,67 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/viewer/controller"
+
+import {
+  "baozhiyuan/editor/viewer/ui/scrollbar",
+  "baozhiyuan/editor/viewer/view_layout",
+  "baozhiyuan/editor/viewer/view_model",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct MouseDispatch {
+  view_position : @baozhiyuan/editor/base/common.Position
+  in_selection_mode : Bool
+  mouse_down_count : Int
+  started_on_line_numbers : Bool
+}
+
+pub struct MouseHandler {
+  helper : PointerHandlerHelper
+  mut drag : @scrollbar.ScrollbarDrag?
+  mut selection_dragging : Bool
+  mut selection_started_on_line_numbers : Bool
+  mut last_mouse_down_count : Int
+  mut last_mouse_down_time : Double
+  mut last_mouse_down_x : Double
+  mut last_mouse_down_y : Double
+  mut selection_autoscroll_active : Bool
+  mut selection_autoscroll_x : Double
+  mut selection_autoscroll_y : Double
+}
+pub fn MouseHandler::cancel_selection(Self) -> Unit
+pub fn MouseHandler::end_scrollable_drag(Self) -> Unit
+pub fn MouseHandler::finish_selection(Self) -> Unit
+pub fn MouseHandler::handle_editor_wheel(Self, @dom.WheelEvent) -> Unit
+pub fn MouseHandler::handle_mouse_down(Self, @dom.Event, @dom.MouseEvent) -> Unit
+pub fn MouseHandler::handle_mouse_move(Self, @dom.MouseEvent) -> Unit
+pub fn MouseHandler::handle_scrollable_drag_move(Self, @dom.Event) -> Unit
+pub fn MouseHandler::handle_selection_drag_move(Self, @dom.Event) -> Unit
+pub fn MouseHandler::hook_browser_desperate_reveal(Self) -> Unit
+pub fn MouseHandler::hook_scrollable_scrollbar_input(Self, @scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
+pub fn MouseHandler::new(PointerHandlerHelper) -> Self
+
+pub(all) struct PointerHandlerHelper {
+  view_root : @dom.Element
+  overflow_guard : @dom.Element
+  editor_scrollable : @scrollbar.ScrollableElementDom
+  hover_scrollable : () -> @scrollbar.ScrollableElementDom?
+  view_layout : () -> @view_layout.ViewLayout
+  apply_scroll : (@view_layout.ScrollChange?) -> Unit
+  line_height : () -> Double
+  frame : () -> @view_model.RenderFrame?
+  view_metrics : (@view_model.RenderFrame) -> @baozhiyuan/editor/viewer/common.ViewMetrics
+  refine_content_target : (@view_model.RenderFrame, Double, Double, @baozhiyuan/editor/viewer/common.MouseTarget) -> @baozhiyuan/editor/viewer/common.MouseTarget
+  dispatch_mouse : (MouseDispatch) -> Unit
+  notify_mouse_moved : (@baozhiyuan/editor/viewer/common.MouseTarget) -> Unit
+  schedule_render : () -> Unit
+}
+
+// Type aliases
+
+// Traits
+

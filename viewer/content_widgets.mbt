@@ -24,7 +24,7 @@ priv struct ContentWidget {
 priv struct HoverWidgetDom {
   wrapper : @rdom.Element
   hover : @rdom.Element
-  scrollable : ScrollableElementDom
+  scrollable : @scrollbar.ScrollableElementDom
 }
 
 ///|
@@ -78,7 +78,7 @@ fn ContentWidgets::overflowing_dom(self : ContentWidgets) -> @rdom.Element {
 ///|
 fn ContentWidgets::hover_scrollable(
   self : ContentWidgets,
-) -> ScrollableElementDom? {
+) -> @scrollbar.ScrollableElementDom? {
   match self.hover_widget {
     Some(widget) => Some(widget.scrollable)
     None => None
@@ -249,7 +249,7 @@ fn ContentWidgets::ensure_hover_widget(
       hover.set_attribute("class", "monaco-hover fade-in")
       hover.set_attribute("role", "tooltip")
       hover.set_attribute("tabindex", "0")
-      let scrollable = ScrollableElementDom::new("monaco-hover-content")
+      let scrollable = @scrollbar.ScrollableElementDom::new("monaco-hover-content")
       hover.append_child(scrollable.wrapper.as_node())
       wrapper.append_child(hover.as_node())
       let widget : HoverWidgetDom = { wrapper, hover, scrollable }
@@ -309,7 +309,7 @@ fn ContentWidgets::ensure_hover_widget(
       })
       (context.hook_scrollable_scrollbar_input)(
         widget.scrollable,
-        HoverScrollableElement,
+        @scrollbar.HoverScrollableElement,
       )
       widget.wrapper.add_event_listener("keydown", event => {
         match event.to_keyboard_event() {
@@ -385,7 +385,7 @@ fn handle_hover_wheel(
   widget : HoverWidgetDom,
   wheel : @rdom.WheelEvent,
 ) -> Unit {
-  let (delta_left, delta_top) = normalized_wheel_delta(
+  let (delta_left, delta_top) = @scrollbar.normalized_wheel_delta(
     wheel,
     editor_line_height.to_double(),
     widget.scrollable.native_page_delta(),

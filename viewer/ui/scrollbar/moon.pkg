@@ -1,0 +1,6 @@
+import {
+  "baozhiyuan/editor/viewer/view_layout" @view_layout,
+  "moonbit-community/rabbita/dom" @rdom,
+}
+
+supported_targets = "js"

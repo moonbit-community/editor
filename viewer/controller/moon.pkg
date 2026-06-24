@@ -1,0 +1,10 @@
+import {
+  "baozhiyuan/editor/base/common" @base_common,
+  "baozhiyuan/editor/viewer/common" @viewer_common,
+  "baozhiyuan/editor/viewer/view_model" @view_model,
+  "baozhiyuan/editor/viewer/ui/scrollbar" @scrollbar,
+  "baozhiyuan/editor/viewer/view_layout" @view_layout,
+  "moonbit-community/rabbita/dom" @rdom,
+}
+
+supported_targets = "js"

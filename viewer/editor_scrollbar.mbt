@@ -1,12 +1,12 @@
 ///|
 priv struct EditorScrollbar {
-  editor_scrollable : ScrollableElementDom
+  editor_scrollable : @scrollbar.ScrollableElementDom
   mut should_render : Bool
 }
 
 ///|
 fn EditorScrollbar::new() -> EditorScrollbar {
-  let editor_scrollable = ScrollableElementDom::new(
+  let editor_scrollable = @scrollbar.ScrollableElementDom::new(
     "lines-content moonbit-viewer-background",
     vertical_size=editor_vertical_scrollbar_size,
     horizontal_size=editor_horizontal_scrollbar_size,
@@ -34,7 +34,7 @@ fn EditorScrollbar::content(self : EditorScrollbar) -> @rdom.Element {
 }
 
 ///|
-fn EditorScrollbar::scrollable(self : EditorScrollbar) -> ScrollableElementDom {
+fn EditorScrollbar::scrollable(self : EditorScrollbar) -> @scrollbar.ScrollableElementDom {
   self.editor_scrollable
 }
 

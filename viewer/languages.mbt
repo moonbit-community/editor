@@ -318,7 +318,7 @@ async fn Languages::folding_ranges_for_model(
   if ranges.length() > 0 {
     ranges
   } else {
-    fallback_folding_ranges(model)
+    @folding.fallback_folding_ranges(model)
   }
 }
 

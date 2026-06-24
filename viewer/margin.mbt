@@ -229,10 +229,11 @@ fn MarginViewOverlays::render_folding_markers(
     if !is_first_view_line_for_model_line(lines, view_line_number) {
       continue
     }
-    match folding_range_for_start_line(folding_ranges, model_line_number) {
+    match
+      @folding.folding_range_for_start_line(folding_ranges, model_line_number) {
       Some(_) => {
         let marker = document.create_element("button")
-        let folded = is_line_folded(folded_ranges, model_line_number)
+        let folded = @folding.is_line_folded(folded_ranges, model_line_number)
         let class_name = if folded {
           "folding-marker collapsed"
         } else {

@@ -175,6 +175,11 @@ async fn check_package_imports(errors : Array[String]) -> Unit {
     } else if is_viewer_browser_manifest(manifest) {
       reject_imports(manifest, imports, browser_forbidden, errors)
       check_browser_rabbita_imports(manifest, imports, errors)
+      if is_viewer_browser_subpackage(manifest) {
+        // A browser-UI subpackage owns DOM under the viewer, but the edge stays
+        // one-directional: the viewer core depends on it, never the reverse.
+        reject_exact_import(manifest, imports, "baozhiyuan/editor/viewer", errors)
+      }
     } else if manifest == "internal/shell/widgets/file_tree/moon.pkg" {
       reject_imports(manifest, imports, widget_forbidden, errors)
     }
@@ -201,6 +206,11 @@ async fn check_public_package_imports(errors : Array[String]) -> Unit {
 
 ///|
 fn is_viewer_common_manifest(manifest : String) -> Bool {
+  // Browser-UI subpackages own DOM and are checked as browser manifests, not as
+  // the DOM-free common layer.
+  if is_viewer_browser_subpackage(manifest) {
+    return false
+  }
   manifest == "viewer/common/moon.pkg" ||
   (manifest.has_prefix("viewer/") &&
    manifest != "viewer/moon.pkg" &&
@@ -214,7 +224,16 @@ fn is_viewer_common_child_manifest(manifest : String) -> Bool {
 
 ///|
 fn is_viewer_browser_manifest(manifest : String) -> Bool {
-  manifest == "viewer/moon.pkg"
+  manifest == "viewer/moon.pkg" || is_viewer_browser_subpackage(manifest)
+}
+
+///|
+/// Browser-UI subpackages under the viewer: they own browser DOM (`rabbita/dom`)
+/// like the viewer core, but are still forbidden from the shell and from the
+/// rabbita TEA/vdom/command layers. The local analog of Monaco's
+/// `base/browser/ui/*` and `editor/browser/controller/*`.
+fn is_viewer_browser_subpackage(manifest : String) -> Bool {
+  manifest.has_prefix("viewer/ui/") || manifest.has_prefix("viewer/controller/")
 }
 
 ///|

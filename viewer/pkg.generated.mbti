@@ -3,10 +3,10 @@ package "baozhiyuan/editor/viewer"
 
 import {
   "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/decorations",
   "baozhiyuan/editor/language",
   "baozhiyuan/editor/platform/log",
   "baozhiyuan/editor/syntax",
+  "baozhiyuan/editor/viewer/markers",
   "baozhiyuan/editor/viewer/model",
   "baozhiyuan/editor/viewer/view_model",
   "moonbit-community/rabbita/dom",
@@ -52,7 +52,7 @@ pub(all) struct HoverComputeContext {
 
 pub(all) enum HoverPart {
   MarkdownHover(range~ : @common.Range, contents~ : Array[@language.HoverContent], ordinal~ : Int)
-  MarkerHover(range~ : @common.Range, marker~ : Marker)
+  MarkerHover(range~ : @common.Range, marker~ : @markers.Marker)
   LoadingHover(range~ : @common.Range, message~ : String)
 } derive(Eq, @debug.Debug)
 
@@ -86,39 +86,9 @@ pub(all) struct MarkdownHoverParticipant(Unit)
 pub fn MarkdownHoverParticipant::new() -> Self
 pub impl HoverParticipant for MarkdownHoverParticipant
 
-pub(all) struct Marker {
-  owner : String
-  resource : String
-  range : @common.Range
-  severity : @language.DiagnosticSeverity
-  message : String
-  source : String?
-  code : String?
-} derive(Eq, @debug.Debug)
-pub fn Marker::from_diagnostic(String, @common.Uri, @language.Diagnostic) -> Self
-pub fn Marker::to_diagnostic(Self) -> @language.Diagnostic
-
-pub(all) struct MarkerDecorationsService {
-  markers : MarkerService
-}
-pub fn MarkerDecorationsService::decorations_for_resource(Self, @common.Uri) -> @decorations.DecorationSet
-pub fn MarkerDecorationsService::markers_at(Self, @common.Uri, @common.Range, limit? : Int) -> Array[Marker]
-pub fn MarkerDecorationsService::new(MarkerService) -> Self
-
 pub(all) struct MarkerHoverParticipant(Unit)
 pub fn MarkerHoverParticipant::new() -> Self
 pub impl HoverParticipant for MarkerHoverParticipant
-
-pub(all) struct MarkerService {
-  entries : Array[Marker]
-}
-pub fn MarkerService::clear_resource(Self, @common.Uri) -> Unit
-pub fn MarkerService::diagnostics_for_resource(Self, @common.Uri) -> Array[@language.Diagnostic]
-pub fn MarkerService::markers_for_resource(Self, @common.Uri, limit? : Int) -> Array[Marker]
-pub fn MarkerService::new() -> Self
-pub fn MarkerService::remove_owner_resource(Self, String, @common.Uri) -> Unit
-pub fn MarkerService::set_diagnostics(Self, String, @common.Uri, Array[@language.Diagnostic]) -> Unit
-pub fn MarkerService::set_markers(Self, String, @common.Uri, Array[Marker]) -> Unit
 
 pub(all) struct MouseDispatchData {
   view_position : @common.Position
@@ -242,8 +212,8 @@ pub(all) struct ViewerScrollEvent {
 
 pub(all) struct ViewerServices {
   languages : Languages
-  markers : MarkerService
-  marker_decorations : MarkerDecorationsService
+  markers : @markers.MarkerService
+  marker_decorations : @markers.MarkerDecorationsService
   hover_participants : HoverParticipantRegistry
   log_service : @log.LogService
 }

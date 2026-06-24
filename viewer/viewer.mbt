@@ -35,15 +35,6 @@ pub struct Viewer {
   priv mut inlay_hints : Array[@language.InlayHint]
   priv mut view_zones : Array[BrowserViewZone]
   priv mut cursor : @cursor.CursorsController?
-  priv mut selection_dragging : Bool
-  priv mut selection_started_on_line_numbers : Bool
-  priv mut last_mouse_down_count : Int
-  priv mut last_mouse_down_time : Double
-  priv mut last_mouse_down_x : Double
-  priv mut last_mouse_down_y : Double
-  priv mut selection_autoscroll_active : Bool
-  priv mut selection_autoscroll_x : Double
-  priv mut selection_autoscroll_y : Double
   priv mut hover : HoverController
   priv mut char_width : Double
   priv mut soft_wrap_column : Int
@@ -57,7 +48,7 @@ pub struct Viewer {
   /// changed controller decorations); the recycler rewrites every
   /// rendered line when it differs, and only entering lines otherwise.
   priv mut content_generation : Int
-  priv mut drag : ScrollbarDrag?
+  priv mut mouse_handler : @controller.MouseHandler?
 }
 
 ///|
@@ -160,15 +151,6 @@ pub fn Viewer::Viewer(
     inlay_hints: [],
     view_zones: [],
     cursor: None,
-    selection_dragging: false,
-    selection_started_on_line_numbers: false,
-    last_mouse_down_count: 0,
-    last_mouse_down_time: 0.0,
-    last_mouse_down_x: 0.0,
-    last_mouse_down_y: 0.0,
-    selection_autoscroll_active: false,
-    selection_autoscroll_x: 0.0,
-    selection_autoscroll_y: 0.0,
     hover: HoverController::empty(),
     char_width: 0.0,
     soft_wrap_column: 0,
@@ -179,7 +161,7 @@ pub fn Viewer::Viewer(
     pending_rendered: None,
     scroll_dirty: false,
     content_generation: 0,
-    drag: None,
+    mouse_handler: None,
   }
 }
 
@@ -309,7 +291,7 @@ pub fn Viewer::set_model(
   self.inlay_hints = []
   if view_state.resets_controller_state() {
     self.cursor = None
-    self.selection_dragging = false
+    self.cancel_mouse_selection()
     self.hover = self.hover.cleared()
   }
   self.render_current_model(
@@ -505,7 +487,7 @@ fn Viewer::clear_current_model(
   self.layout.set_view_zones([]) |> ignore
   self.apply_view_state_policy(view_state)
   self.cursor = None
-  self.selection_dragging = false
+  self.cancel_mouse_selection()
   self.hover = HoverController::empty()
   self.schedule_render()
 }

@@ -113,7 +113,7 @@ test "hover unknown fenced code keeps content as default plain text" {
 
 ///|
 test "marker hover renders Monaco status and copy affordances" {
-  let marker : Marker = {
+  let marker : @markers.Marker = {
     owner: "test",
     resource: "memory://test.mbt",
     range: Range(0, 1),

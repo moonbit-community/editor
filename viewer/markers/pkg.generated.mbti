@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/viewer/markers"
+
+import {
+  "baozhiyuan/editor/base/common",
+  "baozhiyuan/editor/decorations",
+  "baozhiyuan/editor/language",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct Marker {
+  owner : String
+  resource : String
+  range : @common.Range
+  severity : @language.DiagnosticSeverity
+  message : String
+  source : String?
+  code : String?
+} derive(Eq, @debug.Debug)
+pub fn Marker::from_diagnostic(String, @common.Uri, @language.Diagnostic) -> Self
+pub fn Marker::to_diagnostic(Self) -> @language.Diagnostic
+
+pub(all) struct MarkerDecorationsService {
+  markers : MarkerService
+}
+pub fn MarkerDecorationsService::decorations_for_resource(Self, @common.Uri) -> @decorations.DecorationSet
+pub fn MarkerDecorationsService::markers_at(Self, @common.Uri, @common.Range, limit? : Int) -> Array[Marker]
+pub fn MarkerDecorationsService::new(MarkerService) -> Self
+
+pub(all) struct MarkerService {
+  entries : Array[Marker]
+}
+pub fn MarkerService::clear_resource(Self, @common.Uri) -> Unit
+pub fn MarkerService::diagnostics_for_resource(Self, @common.Uri) -> Array[@language.Diagnostic]
+pub fn MarkerService::markers_for_resource(Self, @common.Uri, limit? : Int) -> Array[Marker]
+pub fn MarkerService::new() -> Self
+pub fn MarkerService::remove_owner_resource(Self, String, @common.Uri) -> Unit
+pub fn MarkerService::set_diagnostics(Self, String, @common.Uri, Array[@language.Diagnostic]) -> Unit
+pub fn MarkerService::set_markers(Self, String, @common.Uri, Array[Marker]) -> Unit
+
+// Type aliases
+
+// Traits
+

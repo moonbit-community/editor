@@ -45,6 +45,27 @@ contract.
   `viewer/view_line_renderer`: DOM-free viewer common layer for tokenized
   lines, render frames, projections, layout, viewport data, scrollbar
   arithmetic, hit testing, and render-line HTML/character mapping.
+- `viewer/cursor`, `viewer/folding`, and `viewer/markers`: DOM-free feature
+  models the viewer drives. `viewer/cursor` is the readonly cursor/selection
+  state; `viewer/folding` is the folded-range set operations and fallback
+  folding-range computation (Monaco `contrib/folding/`); `viewer/markers` is
+  the marker store, squiggle decorations, and marker-hover lookup (Monaco's
+  marker stack). The browser-side controls and presentation for these (folding
+  gutter toggle, marker hover participant and squiggle DOM) stay in `viewer`.
+- `viewer/ui/scrollbar`: the custom scrollbar widget (Monaco
+  `base/browser/ui/scrollbar/`). Unlike the common-layer packages it owns
+  browser DOM, so it is a *browser-UI subpackage*: it may import `rabbita/dom`
+  and declare narrow JS FFI, but not the shell or the rabbita TEA/vdom/command
+  layers. The edge stays one-directional: `viewer -> viewer/ui/scrollbar`.
+- `viewer/controller`: the browser input controller (Monaco
+  `editor/browser/controller/`). A browser-UI subpackage like the scrollbar; it
+  owns the pointer-input layer — mouse selection + hit test (Monaco
+  `MouseDownOperation`/`mouseTarget`), scrollbar interaction, wheel, and
+  drag-autoscroll — and calls back into the view through a `PointerHandlerHelper`
+  (Monaco's `IPointerHandlerHelper`, built as a struct of nodes + closures), so
+  the edge stays one-directional: `viewer -> viewer/controller`. The viewer core
+  keeps the measurement read-phase (exposed via the helper) and the dispatch
+  side (`Viewer::dispatch_mouse`, Monaco's `ViewController`).
 - `base/common`: host-neutral URI identity and shared resource primitives.
 - `language`: backend-neutral readonly semantic provider contracts over
   `viewer/model.TextModel`.
@@ -174,7 +195,8 @@ internal/shell/workbench -> base/common, viewer, viewer/model,
                             internal/shell/remote_protocol,
                             internal/shell/workspace, language,
                             syntax/lang_*, platform/log
-viewer -> base/common, viewer/common, viewer/cursor, viewer/model,
+viewer -> base/common, viewer/common, viewer/controller, viewer/cursor,
+          viewer/folding, viewer/markers, viewer/model, viewer/ui/scrollbar,
           viewer/view_line_renderer, viewer/view_layout, viewer/view_model,
           language, syntax, decorations, platform/log
 
@@ -194,6 +216,10 @@ internal/shell/workspace -> base/common
 syntax -> base/common, viewer/model
 decorations -> base/common
 viewer/model -> base/common
+viewer/folding -> language, viewer/model
+viewer/markers -> base/common, language, decorations
+viewer/ui/scrollbar -> viewer/view_layout, rabbita/dom
+viewer/controller -> viewer/ui/scrollbar, viewer/view_layout, rabbita/dom
 platform/log -> no product packages
 syntax/lang_* -> syntax, viewer/model
 ```

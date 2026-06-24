@@ -1,0 +1,4 @@
+import {
+  "baozhiyuan/editor/language" @language,
+  "baozhiyuan/editor/viewer/model" @model,
+}

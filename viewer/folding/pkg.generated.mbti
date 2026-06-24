@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "baozhiyuan/editor/viewer/folding"
+
+import {
+  "baozhiyuan/editor/language",
+  "baozhiyuan/editor/viewer/model",
+}
+
+// Values
+pub fn fallback_folding_ranges(@model.TextModel) -> Array[@language.FoldingRange]
+
+pub fn folding_range_for_start_line(Array[@language.FoldingRange], Int) -> @language.FoldingRange?
+
+pub fn is_line_folded(Array[@language.FoldingRange], Int) -> Bool
+
+pub fn preserved_folded_ranges(Array[@language.FoldingRange], Array[@language.FoldingRange]) -> Array[@language.FoldingRange]
+
+pub fn toggled_folded_ranges(Array[@language.FoldingRange], @language.FoldingRange) -> (Array[@language.FoldingRange], Bool)
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

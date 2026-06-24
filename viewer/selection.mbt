@@ -58,16 +58,6 @@ fn Viewer::refresh_cursor_context(self : Viewer) -> Unit {
 }
 
 ///|
-fn Viewer::finish_selection(self : Viewer) -> Unit {
-  if !self.selection_dragging {
-    return
-  }
-  self.selection_dragging = false
-  self.selection_autoscroll_active = false
-  self.schedule_render()
-}
-
-///|
 fn Viewer::handle_copy_event(self : Viewer, event : @rdom.Event) -> Bool {
   guard event.to_clipboard_event() is Some(clipboard_event) else {
     return false

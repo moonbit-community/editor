@@ -6,7 +6,7 @@ pub(all) enum HoverPart {
     contents~ : Array[@language.HoverContent],
     ordinal~ : Int
   )
-  MarkerHover(range~ : @base_common.Range, marker~ : Marker)
+  MarkerHover(range~ : @base_common.Range, marker~ : @markers.Marker)
   LoadingHover(range~ : @base_common.Range, message~ : String)
 } derive(Eq, Debug)
 

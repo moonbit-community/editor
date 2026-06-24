@@ -37,9 +37,14 @@ part of this package or the public import surface.
 ## Responsibilities
 
 - Own the browser editor DOM, CSS-facing class structure, measurement, native
-  input capture, custom scrollbars, content widgets, overlay widgets, hover,
-  folding controls, inlay hint projection, readonly selection/copy, view zones,
-  and lifecycle events.
+  input capture (the pointer-input controller — mouse selection, hit test,
+  scrollbar, wheel, autoscroll — lives in `viewer/controller`; the viewer keeps
+  the measurement read-phase and the selection-command dispatch), custom
+  scrollbars (the scrollable-element widget itself lives in
+  `viewer/ui/scrollbar`), content widgets, overlay widgets, hover, folding
+  controls (the gutter toggle and folded state; the pure folded-range model
+  lives in `viewer/folding`), inlay hint projection, readonly selection/copy,
+  view zones, and lifecycle events.
 - Keep viewer-owned styles next to the viewer part that owns the corresponding
   DOM; `scripts/build-web.mbtx` assembles those files into the served
   `/style.css`.
@@ -71,7 +76,8 @@ zones. Go-to-definition and find-references are not current viewer behavior.
 - May depend on `rabbita/dom` and `rabbita/js` for browser effects it owns.
   It must not depend on Rabbita TEA, vdom, or command packages.
 - May depend on `base/common`, `language`, `platform/log`, `viewer/common`,
-  `viewer/cursor`, `viewer/model`, `viewer/view_line_renderer`,
+  `viewer/controller`, `viewer/cursor`, `viewer/folding`, `viewer/markers`,
+  `viewer/model`, `viewer/ui/scrollbar`, `viewer/view_line_renderer`,
   `viewer/view_layout`, `viewer/view_model`, `syntax`, and `decorations`.
 - May depend on focused markdown-rendering packages used by hover content.
 - Must not depend on `baozhiyuan/editor/internal/shell/*` packages or
@@ -85,6 +91,8 @@ zones. Go-to-definition and find-references are not current viewer behavior.
 
 - Hover scheduling and staleness: `hover_controller_wbtest.mbt`.
 - Viewer services and hover participants: `services_wbtest.mbt`.
+- Marker store, squiggle decorations, and marker-hover lookup:
+  `viewer/markers/markers_wbtest.mbt`.
 - Browser component tests cover public API construction, selection/copy,
   wrapping, hover overlap, folding, view zones, and inlay-hint copy behavior.
 - Embedding boundary: `internal/shell/examples/embedded_viewer` and

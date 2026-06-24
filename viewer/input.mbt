@@ -1,19 +1,24 @@
 ///|
-/// Hooks the view's native listeners: one container handler set on the
-/// view root replaces per-span closures (update resolves targets
-/// through `hit_test`), the editor scrollable element owns wheel and
-/// scrollbar input, and document-level move/up listeners are installed
-/// once and guarded by the drag state.
+/// Hooks the view's native pointer listeners. Copy and hover-relevant
+/// mouseleave stay on the viewer; all pointer input (mouse-select, scrollbar,
+/// wheel, drag-autoscroll, browser-reveal) is delegated to the
+/// `viewer/controller` `MouseHandler`, which the viewer builds here with a
+/// `PointerHandlerHelper` closing over the view — the local analog of Monaco's
+/// `View._createPointerHandlerHelper`.
 fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
+  let handler = @controller.MouseHandler::new(
+    self.pointer_handler_helper(view),
+  )
+  self.mouse_handler = Some(handler)
   view.root.add_event_listener("mousemove", event => {
     match event.to_mouse_event() {
-      Some(mouse) => self.handle_mouse_move(view, mouse)
+      Some(mouse) => handler.handle_mouse_move(mouse)
       None => ()
     }
   })
   view.root.add_event_listener("mousedown", event => {
     match event.to_mouse_event() {
-      Some(mouse) => self.handle_mouse_down(view, event, mouse)
+      Some(mouse) => handler.handle_mouse_down(event, mouse)
       None => ()
     }
   })
@@ -21,7 +26,7 @@ fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
   .dom()
   .add_event_listener("mousedown", event => {
     match event.to_mouse_event() {
-      Some(mouse) => self.handle_mouse_down(view, event, mouse)
+      Some(mouse) => handler.handle_mouse_down(event, mouse)
       None => ()
     }
   })
@@ -39,539 +44,25 @@ fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
       Some(wheel) => {
         event.prevent_default()
         event.stop_propagation()
-        self.handle_editor_wheel(wheel)
+        handler.handle_editor_wheel(wheel)
       }
       None => ()
     }
   })
-  self.hook_scrollable_scrollbar_input(
+  handler.hook_scrollable_scrollbar_input(
     view.editor_scrollbar.scrollable(),
-    EditorScrollableElement,
+    @scrollbar.EditorScrollableElement,
   )
-  self.hook_browser_desperate_reveal(view)
+  handler.hook_browser_desperate_reveal()
   let document = @rdom.document()
   document.add_event_listener("mousemove", event => {
-    self.handle_scrollable_drag_move(view, event)
-    self.handle_selection_drag_move(view, event)
+    handler.handle_scrollable_drag_move(event)
+    handler.handle_selection_drag_move(event)
   })
   document.add_event_listener("mouseup", _ => {
-    self.end_scrollable_drag(view)
-    self.finish_selection()
+    handler.end_scrollable_drag()
+    handler.finish_selection()
   })
-}
-
-///|
-fn Viewer::hook_scrollable_scrollbar_input(
-  self : Viewer,
-  scrollable : ScrollableElementDom,
-  owner : ScrollableElementOwner,
-) -> Unit {
-  scrollable.wrapper.add_event_listener("mouseover", _ => {
-    scrollable.mouse_entered()
-  })
-  scrollable.wrapper.add_event_listener("mousemove", _ => {
-    scrollable.mouse_entered()
-  })
-  scrollable.wrapper.add_event_listener("mouseleave", _ => {
-    scrollable.mouse_left()
-  })
-  scrollable
-  .slider(true)
-  .add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        event.stop_propagation()
-        self.start_scrollable_drag(scrollable, owner, vertical=true, mouse)
-      }
-      None => ()
-    }
-  })
-  scrollable
-  .slider(false)
-  .add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        event.stop_propagation()
-        self.start_scrollable_drag(scrollable, owner, vertical=false, mouse)
-      }
-      None => ()
-    }
-  })
-  scrollable
-  .track(true)
-  .add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        event.stop_propagation()
-        self.scrollable_track_jump(scrollable, owner, vertical=true, mouse)
-      }
-      None => ()
-    }
-  })
-  scrollable
-  .track(false)
-  .add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        event.stop_propagation()
-        self.scrollable_track_jump(scrollable, owner, vertical=false, mouse)
-      }
-      None => ()
-    }
-  })
-}
-
-///|
-/// Converts a container mouse event into view-relative coordinates
-/// using the view root, so hit-testing is independent of page layout.
-fn Viewer::handle_mouse_move(
-  self : Viewer,
-  view : View,
-  mouse : @rdom.MouseEvent,
-) -> Unit {
-  guard self.frame is Some(frame) else { return }
-  let rect = view.root.get_bounding_client_rect()
-  let x = mouse.get_client_x().to_double() - rect.get_left()
-  let y = mouse.get_client_y().to_double() - rect.get_top()
-  let target = @viewer_common.hit_test(frame, self.view_metrics(frame), x, y)
-  self.dispatch_editor_event(MouseMoved(target))
-}
-
-///|
-fn Viewer::handle_mouse_down(
-  self : Viewer,
-  view : View,
-  event : @rdom.Event,
-  mouse : @rdom.MouseEvent,
-) -> Unit {
-  if mouse.get_button() != 0 {
-    return
-  }
-  guard self.frame is Some(frame) else { return }
-  focus_element(view.root)
-  let client_x = mouse.get_client_x().to_double()
-  let client_y = mouse.get_client_y().to_double()
-  let rect = view.root.get_bounding_client_rect()
-  let x = client_x - rect.get_left()
-  let y = client_y - rect.get_top()
-  let target = @viewer_common.hit_test(frame, self.view_metrics(frame), x, y)
-  // Resolve the pointer to a view position and whether the drag started on the
-  // line-number gutter (which selects whole lines).
-  let resolved : (@base_common.Position, Bool)? = match target.kind {
-    ContentText | ContentEmpty => {
-      let refined = self.dom_refine_content_target(
-        view, frame, client_x, client_y, target,
-      )
-      Some(
-        (
-          @base_common.Position::Position(refined.line_number - 1, refined.column),
-          false,
-        ),
-      )
-    }
-    GutterLineNumbers =>
-      Some(
-        (@base_common.Position::Position(target.line_number - 1, 0), true),
-      )
-    _ => None
-  }
-  guard resolved is Some((view_position, started_on_line_numbers)) else { return }
-  event.prevent_default()
-  event.stop_propagation()
-  let mouse_down_count = self.next_mouse_down_count(client_x, client_y)
-  self.selection_started_on_line_numbers = started_on_line_numbers
-  self.selection_dragging = true
-  self.dispatch_mouse({
-    view_position,
-    in_selection_mode: mouse_shift_key(mouse),
-    mouse_down_count,
-    started_on_line_numbers,
-  })
-}
-
-///|
-extern "js" fn focus_element(element : @rdom.Element) -> Unit = "(element) => element.focus?.()"
-
-///|
-extern "js" fn mouse_shift_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.shiftKey"
-
-///|
-/// The multi-click count for a fresh mousedown, transcribing the timing/distance
-/// gating of Monaco's `MouseDownState`: a mousedown close to the previous one in
-/// time and space increments the count (single → double → triple → quad), else
-/// it resets to a single click.
-fn Viewer::next_mouse_down_count(
-  self : Viewer,
-  client_x : Double,
-  client_y : Double,
-) -> Int {
-  let now = now_ms()
-  let dx = abs_double(client_x - self.last_mouse_down_x)
-  let dy = abs_double(client_y - self.last_mouse_down_y)
-  let close = now - self.last_mouse_down_time <= multi_click_time &&
-    dx <= multi_click_distance &&
-    dy <= multi_click_distance
-  let count = if close { self.last_mouse_down_count + 1 } else { 1 }
-  self.last_mouse_down_count = count
-  self.last_mouse_down_time = now
-  self.last_mouse_down_x = client_x
-  self.last_mouse_down_y = client_y
-  count
-}
-
-///|
-fn abs_double(value : Double) -> Double {
-  if value < 0.0 {
-    -value
-  } else {
-    value
-  }
-}
-
-///|
-fn Viewer::handle_selection_drag_move(
-  self : Viewer,
-  view : View,
-  event : @rdom.Event,
-) -> Unit {
-  guard self.selection_dragging else { return }
-  guard event.to_mouse_event() is Some(mouse) else { return }
-  event.prevent_default()
-  let client_x = mouse.get_client_x().to_double()
-  let client_y = mouse.get_client_y().to_double()
-  self.extend_selection_at(view, client_x, client_y)
-  self.update_selection_autoscroll(view, client_x, client_y)
-}
-
-///|
-/// Extends the in-progress selection to a pointer position (in client
-/// coordinates), re-running the hit test against the current scroll. Shared by
-/// pointer moves and the drag-autoscroll loop.
-fn Viewer::extend_selection_at(
-  self : Viewer,
-  view : View,
-  client_x : Double,
-  client_y : Double,
-) -> Unit {
-  guard self.selection_dragging else { return }
-  guard self.frame is Some(frame) else { return }
-  let rect = view.root.get_bounding_client_rect()
-  let x = client_x - rect.get_left()
-  let y = client_y - rect.get_top()
-  let target = @viewer_common.hit_test(frame, self.view_metrics(frame), x, y)
-  let refined = match target.kind {
-    ContentText | ContentEmpty =>
-      self.dom_refine_content_target(view, frame, client_x, client_y, target)
-    _ => target
-  }
-  match drag_view_position(refined) {
-    Some(view_position) =>
-      self.dispatch_mouse({
-        view_position,
-        in_selection_mode: true,
-        mouse_down_count: self.last_mouse_down_count,
-        started_on_line_numbers: self.selection_started_on_line_numbers,
-      })
-    None => ()
-  }
-}
-
-///|
-/// Updates the drag-autoscroll state from the latest pointer position. When the
-/// pointer is dragged past the top or bottom of the content viewport, the
-/// remembered position drives a continuous scroll-and-extend loop (Monaco's
-/// `dragScrolling`); when it returns inside, the loop stops on its next tick.
-fn Viewer::update_selection_autoscroll(
-  self : Viewer,
-  view : View,
-  client_x : Double,
-  client_y : Double,
-) -> Unit {
-  self.selection_autoscroll_x = client_x
-  self.selection_autoscroll_y = client_y
-  if self.selection_drag_edge_delta(view, client_y) != 0.0 {
-    if !self.selection_autoscroll_active {
-      self.selection_autoscroll_active = true
-      self.schedule_selection_autoscroll(view)
-    }
-  } else {
-    self.selection_autoscroll_active = false
-  }
-}
-
-///|
-/// The signed vertical overshoot of a client-Y past the content viewport edges:
-/// negative above the top, positive below the bottom, zero inside.
-fn Viewer::selection_drag_edge_delta(
-  self : Viewer,
-  view : View,
-  client_y : Double,
-) -> Double {
-  let rect = view.root.get_bounding_client_rect()
-  let y = client_y - rect.get_top()
-  let viewport_height = self.layout.dimensions().height
-  if y < 0.0 {
-    y
-  } else if viewport_height > 0.0 && y > viewport_height {
-    y - viewport_height
-  } else {
-    0.0
-  }
-}
-
-///|
-fn Viewer::schedule_selection_autoscroll(self : Viewer, view : View) -> Unit {
-  @rdom.window().request_animation_frame(_ => self.selection_autoscroll_tick(view))
-  |> ignore
-}
-
-///|
-/// One frame of drag autoscroll: scroll toward the remembered off-edge pointer,
-/// re-extend the selection at the new scroll, and reschedule until the drag ends
-/// or the pointer returns inside the viewport.
-fn Viewer::selection_autoscroll_tick(self : Viewer, view : View) -> Unit {
-  guard self.selection_dragging && self.selection_autoscroll_active else {
-    self.selection_autoscroll_active = false
-    return
-  }
-  let delta = self.selection_drag_edge_delta(view, self.selection_autoscroll_y)
-  if delta == 0.0 {
-    self.selection_autoscroll_active = false
-    return
-  }
-  let step = clamp_double(
-    delta,
-    -selection_autoscroll_max_step,
-    selection_autoscroll_max_step,
-  )
-  self.apply_scroll_change(self.layout.scroll_by(delta_left=0.0, delta_top=step))
-  self.extend_selection_at(
-    view,
-    self.selection_autoscroll_x,
-    self.selection_autoscroll_y,
-  )
-  self.schedule_selection_autoscroll(view)
-}
-
-///|
-fn clamp_double(value : Double, low : Double, high : Double) -> Double {
-  if value < low {
-    low
-  } else if value > high {
-    high
-  } else {
-    value
-  }
-}
-
-///|
-/// The view position a drag should extend the selection to, for any target that
-/// resolves to a line (content, below-content, or the line-number gutter).
-fn drag_view_position(
-  target : @viewer_common.MouseTarget,
-) -> @base_common.Position? {
-  match target.kind {
-    ContentText | ContentEmpty | BelowContent | GutterLineNumbers =>
-      if target.line_number >= 1 {
-        Some(
-          @base_common.Position::Position(target.line_number - 1, target.column),
-        )
-      } else {
-        None
-      }
-    _ => None
-  }
-}
-
-///|
-/// Wheel delta normalization is shared with widget scrollables: line and
-/// page delta modes scale to pixels; pixel deltas pass through.
-fn Viewer::handle_editor_wheel(self : Viewer, wheel : @rdom.WheelEvent) -> Unit {
-  let (delta_left, delta_top) = normalized_wheel_delta(
-    wheel,
-    editor_line_height.to_double(),
-    self.layout.dimensions().height,
-  )
-  self.apply_scroll_change(self.layout.scroll_by(delta_left~, delta_top~))
-}
-
-///|
-fn Viewer::start_scrollable_drag(
-  self : Viewer,
-  scrollable : ScrollableElementDom,
-  owner : ScrollableElementOwner,
-  vertical~ : Bool,
-  mouse : @rdom.MouseEvent,
-) -> Unit {
-  scrollable.drag_started()
-  self.drag = Some({
-    owner,
-    vertical,
-    start_coord: drag_coord(mouse, vertical),
-    start_slider: scrollable.state(vertical).slider_position(),
-  })
-  scrollable.set_slider_active(vertical~, true)
-}
-
-///|
-fn Viewer::end_scrollable_drag(self : Viewer, view : View) -> Unit {
-  match self.drag {
-    Some(drag) =>
-      match scrollable_for_drag(view, drag.owner) {
-        Some(scrollable) => {
-          scrollable.set_slider_active(vertical=drag.vertical, false)
-          scrollable.drag_ended()
-        }
-        None => ()
-      }
-    None => ()
-  }
-  self.drag = None
-}
-
-///|
-fn Viewer::handle_scrollable_drag_move(
-  self : Viewer,
-  view : View,
-  event : @rdom.Event,
-) -> Unit {
-  guard self.drag is Some(drag) else { return }
-  guard event.to_mouse_event() is Some(mouse) else { return }
-  event.prevent_default()
-  let delta = drag_coord(mouse, drag.vertical) - drag.start_coord
-  guard scrollable_for_drag(view, drag.owner) is Some(scrollable) else {
-    self.drag = None
-    return
-  }
-  let desired = scrollable
-    .state(drag.vertical)
-    .desired_position_from_slider(drag.start_slider + delta)
-  self.apply_scrollable_position(
-    scrollable,
-    drag.owner,
-    vertical=drag.vertical,
-    desired,
-  )
-}
-
-///|
-/// A mousedown on the track (outside the thumb, which stops propagation)
-/// uses Monaco's editor default `scrollByPage: false`: jump so the thumb
-/// centers on the pointer.
-fn Viewer::scrollable_track_jump(
-  self : Viewer,
-  scrollable : ScrollableElementDom,
-  owner : ScrollableElementOwner,
-  vertical~ : Bool,
-  mouse : @rdom.MouseEvent,
-) -> Unit {
-  let desired = scrollable.desired_position_from_track(vertical~, mouse)
-  self.apply_scrollable_position(scrollable, owner, vertical~, desired)
-}
-
-///|
-fn Viewer::apply_scrollable_position(
-  self : Viewer,
-  scrollable : ScrollableElementDom,
-  owner : ScrollableElementOwner,
-  vertical~ : Bool,
-  desired : Double,
-) -> Unit {
-  match owner {
-    EditorScrollableElement =>
-      if vertical {
-        self.apply_scroll_change(self.layout.scroll_to(scroll_top=desired))
-      } else {
-        let position = self.layout.position()
-        self.apply_scroll_change(
-          self.layout.scroll_to(
-            scroll_top=position.scroll_top,
-            scroll_left=desired,
-          ),
-        )
-      }
-    HoverScrollableElement => scrollable.native_scroll_to(vertical~, desired)
-  }
-}
-
-///|
-fn scrollable_for_drag(
-  view : View,
-  owner : ScrollableElementOwner,
-) -> ScrollableElementDom? {
-  match owner {
-    EditorScrollableElement => Some(view.editor_scrollbar.scrollable())
-    HoverScrollableElement => view.content_widgets.hover_scrollable()
-  }
-}
-
-///|
-fn Viewer::hook_browser_desperate_reveal(self : Viewer, view : View) -> Unit {
-  view.root.add_event_listener("scroll", _ => {
-    self.handle_browser_desperate_reveal(
-      view.root,
-      look_at_scroll_top=true,
-      look_at_scroll_left=true,
-    )
-  })
-  view.overflow_guard.add_event_listener("scroll", _ => {
-    self.handle_browser_desperate_reveal(
-      view.overflow_guard,
-      look_at_scroll_top=true,
-      look_at_scroll_left=false,
-    )
-  })
-  view.editor_scrollbar
-  .content()
-  .add_event_listener("scroll", _ => {
-    self.handle_browser_desperate_reveal(
-      view.editor_scrollbar.content(),
-      look_at_scroll_top=true,
-      look_at_scroll_left=false,
-    )
-  })
-  view.editor_scrollbar.scrollable().wrapper.add_event_listener("scroll", _ => {
-    self.handle_browser_desperate_reveal(
-      view.editor_scrollbar.scrollable().wrapper,
-      look_at_scroll_top=true,
-      look_at_scroll_left=false,
-    )
-  })
-}
-
-///|
-/// Mirrors Monaco's editor scrollbar bridge for browser-driven reveal:
-/// when focus or the browser mutates a DOM scroll offset, translate that
-/// delta into the model and reset the DOM offset to zero.
-fn Viewer::handle_browser_desperate_reveal(
-  self : Viewer,
-  element : @rdom.Element,
-  look_at_scroll_top~ : Bool,
-  look_at_scroll_left~ : Bool,
-) -> Unit {
-  let mut delta_top = 0.0
-  let mut delta_left = 0.0
-  if look_at_scroll_top {
-    delta_top = element.get_scroll_top()
-    if delta_top != 0.0 {
-      element.set_scroll_top(0.0)
-    }
-  }
-  if look_at_scroll_left {
-    delta_left = element.get_scroll_left()
-    if delta_left != 0.0 {
-      element.set_scroll_left(0.0)
-    }
-  }
-  if delta_top != 0.0 || delta_left != 0.0 {
-    self.apply_scroll_change(self.layout.scroll_by(delta_left~, delta_top~))
-  } else {
-    ()
-  }
 }
 
 ///|

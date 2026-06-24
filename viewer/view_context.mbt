@@ -8,8 +8,8 @@ priv struct ViewContext {
   handle_hover_mousedown : (@rdom.Event, @rdom.MouseEvent) -> Unit
   handle_hover_keydown : (HoverWidgetDom, @rdom.Event, @rdom.KeyboardEvent) -> Unit
   hook_scrollable_scrollbar_input : (
-    ScrollableElementDom,
-    ScrollableElementOwner,
+    @scrollbar.ScrollableElementDom,
+    @scrollbar.ScrollableElementOwner,
   ) -> Unit
   // Monaco's `RenderingContext.linesVisibleRangesForRange` seam: measures the
   // pixel rects of a zero-based view-column range on a view line off the live
@@ -23,13 +23,19 @@ fn ViewContext::new(viewer : Viewer, view : View) -> ViewContext {
     root: view.root,
     languages: viewer.services.languages,
     handle_hover_mousedown: (event, mouse) => {
-      viewer.handle_mouse_down(view, event, mouse)
+      match viewer.mouse_handler {
+        Some(handler) => handler.handle_mouse_down(event, mouse)
+        None => ()
+      }
     },
     handle_hover_keydown: (widget, event, keyboard) => {
       viewer.handle_hover_keydown(widget, event, keyboard)
     },
     hook_scrollable_scrollbar_input: (scrollable, owner) => {
-      viewer.hook_scrollable_scrollbar_input(scrollable, owner)
+      match viewer.mouse_handler {
+        Some(handler) => handler.hook_scrollable_scrollbar_input(scrollable, owner)
+        None => ()
+      }
     },
     measure_line_selection: (line_number, start_column, end_column) => {
       view.measure_line_selection(line_number, start_column, end_column)

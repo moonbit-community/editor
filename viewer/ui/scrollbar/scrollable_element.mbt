@@ -3,7 +3,7 @@
 /// Monaco-shaped DOM shell and the custom scrollbar node geometry; callers
 /// decide whether scroll positions are written back into `ViewLayout` or a
 /// native content element.
-priv struct ScrollableElementDom {
+pub(all) struct ScrollableElementDom {
   wrapper : @rdom.Element
   content : @rdom.Element
   vertical_bar : @rdom.Element
@@ -27,7 +27,7 @@ priv struct ScrollableElementDom {
 }
 
 ///|
-priv enum ScrollableElementOwner {
+pub(all) enum ScrollableElementOwner {
   EditorScrollableElement
   HoverScrollableElement
 }
@@ -36,7 +36,7 @@ priv enum ScrollableElementOwner {
 /// An active scrollbar thumb drag. The owner tag lets document-level
 /// mousemove/up handling stay shared while still applying the resulting
 /// position to the correct scroll target.
-priv struct ScrollbarDrag {
+pub(all) struct ScrollbarDrag {
   owner : ScrollableElementOwner
   vertical : Bool
   start_coord : Double
@@ -50,7 +50,7 @@ let default_scrollbar_size = 10.0
 let scrollbar_hide_timeout_ms = 500
 
 ///|
-fn ScrollableElementDom::new(
+pub fn ScrollableElementDom::new(
   content_class : String,
   vertical_size? : Double = default_scrollbar_size,
   horizontal_size? : Double = default_scrollbar_size,
@@ -117,7 +117,7 @@ fn ScrollableElementDom::new(
 }
 
 ///|
-fn ScrollableElementDom::set_wrapper_class(
+pub fn ScrollableElementDom::set_wrapper_class(
   self : ScrollableElementDom,
   class_name : String,
 ) -> Unit {
@@ -125,7 +125,7 @@ fn ScrollableElementDom::set_wrapper_class(
 }
 
 ///|
-fn ScrollableElementDom::update_from_model(
+pub fn ScrollableElementDom::update_from_model(
   self : ScrollableElementDom,
   dimensions : @view_layout.ScrollDimensions,
   position : @view_layout.ScrollPosition,
@@ -143,7 +143,7 @@ fn ScrollableElementDom::update_from_model(
 }
 
 ///|
-fn ScrollableElementDom::update_from_native_content(
+pub fn ScrollableElementDom::update_from_native_content(
   self : ScrollableElementDom,
 ) -> Unit {
   let content_rect = self.content.get_bounding_client_rect()
@@ -380,13 +380,15 @@ fn ScrollableElementDom::schedule_hide_scrollbars(
 }
 
 ///|
-fn ScrollableElementDom::reveal_for_scroll(self : ScrollableElementDom) -> Unit {
+pub fn ScrollableElementDom::reveal_for_scroll(
+  self : ScrollableElementDom,
+) -> Unit {
   self.reveal_scrollbars()
   self.schedule_hide_scrollbars()
 }
 
 ///|
-fn ScrollableElementDom::mouse_entered(self : ScrollableElementDom) -> Unit {
+pub fn ScrollableElementDom::mouse_entered(self : ScrollableElementDom) -> Unit {
   if self.mouse_is_over {
     return
   }
@@ -395,19 +397,19 @@ fn ScrollableElementDom::mouse_entered(self : ScrollableElementDom) -> Unit {
 }
 
 ///|
-fn ScrollableElementDom::mouse_left(self : ScrollableElementDom) -> Unit {
+pub fn ScrollableElementDom::mouse_left(self : ScrollableElementDom) -> Unit {
   self.mouse_is_over = false
   self.hide_scrollbars_if_idle()
 }
 
 ///|
-fn ScrollableElementDom::drag_started(self : ScrollableElementDom) -> Unit {
+pub fn ScrollableElementDom::drag_started(self : ScrollableElementDom) -> Unit {
   self.is_dragging = true
   self.reveal_scrollbars()
 }
 
 ///|
-fn ScrollableElementDom::drag_ended(self : ScrollableElementDom) -> Unit {
+pub fn ScrollableElementDom::drag_ended(self : ScrollableElementDom) -> Unit {
   self.is_dragging = false
   self.hide_scrollbars_if_idle()
 }
@@ -449,7 +451,7 @@ fn ScrollableElementDom::write_shadows(
 }
 
 ///|
-fn ScrollableElementDom::state(
+pub fn ScrollableElementDom::state(
   self : ScrollableElementDom,
   vertical : Bool,
 ) -> @view_layout.ScrollbarState {
@@ -461,7 +463,7 @@ fn ScrollableElementDom::state(
 }
 
 ///|
-fn ScrollableElementDom::track(
+pub fn ScrollableElementDom::track(
   self : ScrollableElementDom,
   vertical : Bool,
 ) -> @rdom.Element {
@@ -473,7 +475,7 @@ fn ScrollableElementDom::track(
 }
 
 ///|
-fn ScrollableElementDom::slider(
+pub fn ScrollableElementDom::slider(
   self : ScrollableElementDom,
   vertical : Bool,
 ) -> @rdom.Element {
@@ -485,7 +487,7 @@ fn ScrollableElementDom::slider(
 }
 
 ///|
-fn ScrollableElementDom::desired_position_from_track(
+pub fn ScrollableElementDom::desired_position_from_track(
   self : ScrollableElementDom,
   vertical~ : Bool,
   mouse : @rdom.MouseEvent,
@@ -500,7 +502,7 @@ fn ScrollableElementDom::desired_position_from_track(
 }
 
 ///|
-fn ScrollableElementDom::set_slider_active(
+pub fn ScrollableElementDom::set_slider_active(
   self : ScrollableElementDom,
   vertical~ : Bool,
   active : Bool,
@@ -514,7 +516,7 @@ fn ScrollableElementDom::set_slider_active(
 }
 
 ///|
-fn ScrollableElementDom::native_scroll_to(
+pub fn ScrollableElementDom::native_scroll_to(
   self : ScrollableElementDom,
   vertical~ : Bool,
   position : Double,
@@ -529,7 +531,7 @@ fn ScrollableElementDom::native_scroll_to(
 }
 
 ///|
-fn ScrollableElementDom::native_scroll_by(
+pub fn ScrollableElementDom::native_scroll_by(
   self : ScrollableElementDom,
   delta_left? : Double = 0.0,
   delta_top? : Double = 0.0,
@@ -541,14 +543,14 @@ fn ScrollableElementDom::native_scroll_by(
 }
 
 ///|
-fn ScrollableElementDom::native_page_delta(
+pub fn ScrollableElementDom::native_page_delta(
   self : ScrollableElementDom,
 ) -> Double {
   self.content.get_bounding_client_rect().get_height()
 }
 
 ///|
-fn normalized_wheel_delta(
+pub fn normalized_wheel_delta(
   wheel : @rdom.WheelEvent,
   line_height : Double,
   page_size : Double,
@@ -562,7 +564,7 @@ fn normalized_wheel_delta(
 }
 
 ///|
-fn drag_coord(mouse : @rdom.MouseEvent, vertical : Bool) -> Double {
+pub fn drag_coord(mouse : @rdom.MouseEvent, vertical : Bool) -> Double {
   if vertical {
     mouse.get_client_y().to_double()
   } else {

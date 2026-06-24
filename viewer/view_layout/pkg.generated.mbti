@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/viewer/view_layout"
+package "moonbit-community/editor/viewer/view_layout"
 
 import {
-  "baozhiyuan/editor/viewer/decorations",
-  "baozhiyuan/editor/viewer/view_line_renderer",
-  "baozhiyuan/editor/viewer/view_model",
+  "moonbit-community/editor/viewer/decorations",
+  "moonbit-community/editor/viewer/view_line_renderer",
+  "moonbit-community/editor/viewer/view_model",
   "moonbitlang/core/debug",
 }
 

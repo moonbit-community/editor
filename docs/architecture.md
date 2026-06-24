@@ -190,7 +190,7 @@ events, custom scrollbars, and widget DOM live in `viewer`.
 - Remote workspace policy belongs in `internal/shell/server`.
 - Native filesystem, process, socket, and static-serving effects belong in
   `internal/shell/server_host_native`.
-- Public packages must not import `baozhiyuan/editor/internal/shell/*`.
+- Public packages must not import `moonbit-community/editor/internal/shell/*`.
 - JS-only packages may declare narrowly scoped JS FFI for effects they own.
   Shared packages must remain FFI-free.
 - Product code must not import from `vscode/` or `codemirror/`.

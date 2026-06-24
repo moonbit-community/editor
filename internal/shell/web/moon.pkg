@@ -1,5 +1,5 @@
 import {
-  "baozhiyuan/editor/internal/shell/workbench",
+  "moonbit-community/editor/internal/shell/workbench",
 }
 
 supported_targets = "js"

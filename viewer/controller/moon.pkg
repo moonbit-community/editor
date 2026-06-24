@@ -1,9 +1,9 @@
 import {
-  "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/viewer/common" @viewer_common,
-  "baozhiyuan/editor/viewer/view_model" @view_model,
-  "baozhiyuan/editor/viewer/ui/scrollbar" @scrollbar,
-  "baozhiyuan/editor/viewer/view_layout" @view_layout,
+  "moonbit-community/editor/base/common" @base_common,
+  "moonbit-community/editor/viewer/common" @viewer_common,
+  "moonbit-community/editor/viewer/view_model" @view_model,
+  "moonbit-community/editor/viewer/ui/scrollbar" @scrollbar,
+  "moonbit-community/editor/viewer/view_layout" @view_layout,
   "moonbit-community/rabbita/dom" @rdom,
 }
 

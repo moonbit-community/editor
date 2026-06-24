@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/viewer/folding"
+package "moonbit-community/editor/viewer/folding"
 
 import {
-  "baozhiyuan/editor/language",
-  "baozhiyuan/editor/viewer/model",
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/viewer/model",
 }
 
 // Values

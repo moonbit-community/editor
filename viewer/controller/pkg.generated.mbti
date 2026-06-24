@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/viewer/controller"
+package "moonbit-community/editor/viewer/controller"
 
 import {
-  "baozhiyuan/editor/viewer/ui/scrollbar",
-  "baozhiyuan/editor/viewer/view_layout",
-  "baozhiyuan/editor/viewer/view_model",
+  "moonbit-community/editor/viewer/ui/scrollbar",
+  "moonbit-community/editor/viewer/view_layout",
+  "moonbit-community/editor/viewer/view_model",
   "moonbit-community/rabbita/dom",
 }
 
@@ -14,7 +14,7 @@ import {
 
 // Types and methods
 pub(all) struct MouseDispatch {
-  view_position : @baozhiyuan/editor/base/common.Position
+  view_position : @moonbit-community/editor/base/common.Position
   in_selection_mode : Bool
   mouse_down_count : Int
   started_on_line_numbers : Bool
@@ -54,10 +54,10 @@ pub(all) struct PointerHandlerHelper {
   apply_scroll : (@view_layout.ScrollChange?) -> Unit
   line_height : () -> Double
   frame : () -> @view_model.RenderFrame?
-  view_metrics : (@view_model.RenderFrame) -> @baozhiyuan/editor/viewer/common.ViewMetrics
-  refine_content_target : (@view_model.RenderFrame, Double, Double, @baozhiyuan/editor/viewer/common.MouseTarget) -> @baozhiyuan/editor/viewer/common.MouseTarget
+  view_metrics : (@view_model.RenderFrame) -> @moonbit-community/editor/viewer/common.ViewMetrics
+  refine_content_target : (@view_model.RenderFrame, Double, Double, @moonbit-community/editor/viewer/common.MouseTarget) -> @moonbit-community/editor/viewer/common.MouseTarget
   dispatch_mouse : (MouseDispatch) -> Unit
-  notify_mouse_moved : (@baozhiyuan/editor/viewer/common.MouseTarget) -> Unit
+  notify_mouse_moved : (@moonbit-community/editor/viewer/common.MouseTarget) -> Unit
   schedule_render : () -> Unit
 }
 

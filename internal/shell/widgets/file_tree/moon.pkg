@@ -1,6 +1,6 @@
 import {
-  "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/internal/shell/workspace",
+  "moonbit-community/editor/base/common" @base_common,
+  "moonbit-community/editor/internal/shell/workspace",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/cmd",
   "moonbit-community/rabbita/html",

@@ -41,7 +41,7 @@ async fn main {
 /// under `internal/shell/` may import `internal/shell/*` — a `viewer -> shell`
 /// edge compiles fine (no cycle, no target clash), so only this guard catches it.
 async fn check_no_outside_shell_imports(errors : Array[String]) -> Unit {
-  let shell_prefix = "baozhiyuan/editor/internal/shell"
+  let shell_prefix = "moonbit-community/editor/internal/shell"
   for manifest in package_manifests() {
     if manifest.has_prefix("internal/shell/") {
       continue

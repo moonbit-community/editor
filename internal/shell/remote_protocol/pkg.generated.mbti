@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/internal/shell/remote_protocol"
+package "moonbit-community/editor/internal/shell/remote_protocol"
 
 import {
-  "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/internal/shell/workspace",
-  "baozhiyuan/editor/language",
+  "moonbit-community/editor/base/common",
+  "moonbit-community/editor/internal/shell/workspace",
+  "moonbit-community/editor/language",
   "moonbitlang/core/debug",
 }
 

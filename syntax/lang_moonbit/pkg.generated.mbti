@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/syntax/lang_moonbit"
+package "moonbit-community/editor/syntax/lang_moonbit"
 
 import {
-  "baozhiyuan/editor/syntax",
+  "moonbit-community/editor/syntax",
 }
 
 // Values

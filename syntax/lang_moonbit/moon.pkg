@@ -1,7 +1,7 @@
 import {
-  "baozhiyuan/editor/syntax",
+  "moonbit-community/editor/syntax",
 }
 
 import {
-  "baozhiyuan/editor/viewer/model",
+  "moonbit-community/editor/viewer/model",
 } for "test"

@@ -10,7 +10,7 @@ app boundary, and its current callers are limited to `renderer/browser` and
 
 The end state is:
 
-- no product package imports `baozhiyuan/editor/dom`;
+- no product package imports `moonbit-community/editor/dom`;
 - `dom/` is deleted;
 - `renderer/browser` owns viewer-only timing FFI;
 - `workbench` owns reference-app, harness, storage, and protocol URL browser
@@ -38,7 +38,7 @@ The end state is:
 - Delete the local `dom` package after all imports are gone:
   - remove `dom/README.md`, `dom/browser_host.mbt`, `dom/moon.pkg`, and
     generated interface output;
-  - remove `baozhiyuan/editor/dom` from `renderer/browser/moon.pkg` and
+  - remove `moonbit-community/editor/dom` from `renderer/browser/moon.pkg` and
     `workbench/moon.pkg`.
 
 - Update documentation and architecture guardrails:
@@ -57,7 +57,7 @@ The end state is:
 
 ## Test Plan
 
-- Run `rg '@dom\\.|baozhiyuan/editor/dom|editor/dom'` and confirm there are no
+- Run `rg '@dom\\.|moonbit-community/editor/dom|editor/dom'` and confirm there are no
   product imports or call sites.
 - Run `moon info` and verify generated public interfaces only change where
   expected because the `dom` package is gone.

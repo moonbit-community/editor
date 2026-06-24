@@ -22,7 +22,7 @@ just test-browser
   internal widgets, and protocol;
   `internal/shell/server_host_native/main -> internal/shell/server_host_native -> internal/shell/server`.
 - Product code must not import from `codemirror/` or `vscode/`.
-- Public packages must not import `baozhiyuan/editor/internal/shell/*`.
+- Public packages must not import `moonbit-community/editor/internal/shell/*`.
 - `viewer/*` packages use only the Rabbita API bindings (`rabbita/dom`,
   `rabbita/js`), never the Rabbita TEA framework (`rabbita`, `rabbita/html`,
   `rabbita/cmd`, `rabbita/websocket`).

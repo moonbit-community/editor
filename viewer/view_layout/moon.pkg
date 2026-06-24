@@ -1,12 +1,12 @@
 import {
-  "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/viewer/decorations",
-  "baozhiyuan/editor/viewer/view_line_renderer",
-  "baozhiyuan/editor/viewer/view_model",
+  "moonbit-community/editor/base/common" @base_common,
+  "moonbit-community/editor/viewer/decorations",
+  "moonbit-community/editor/viewer/view_line_renderer",
+  "moonbit-community/editor/viewer/view_model",
 }
 
 import {
-  "baozhiyuan/editor/language",
-  "baozhiyuan/editor/viewer/model",
-  "baozhiyuan/editor/syntax",
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/viewer/model",
+  "moonbit-community/editor/syntax",
 } for "test"

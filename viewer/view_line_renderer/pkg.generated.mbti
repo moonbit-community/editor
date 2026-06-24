@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/viewer/view_line_renderer"
+package "moonbit-community/editor/viewer/view_line_renderer"
 
 import {
-  "baozhiyuan/editor/base/common",
+  "moonbit-community/editor/base/common",
   "moonbitlang/core/debug",
 }
 

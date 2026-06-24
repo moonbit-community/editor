@@ -1,4 +1,4 @@
 import {
-  "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/syntax",
+  "moonbit-community/editor/base/common" @base_common,
+  "moonbit-community/editor/syntax",
 }

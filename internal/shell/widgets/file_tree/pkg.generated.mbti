@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/internal/shell/widgets/file_tree"
+package "moonbit-community/editor/internal/shell/widgets/file_tree"
 
 import {
-  "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/internal/shell/workspace",
+  "moonbit-community/editor/base/common",
+  "moonbit-community/editor/internal/shell/workspace",
   "moonbit-community/rabbita/cmd",
   "moonbit-community/rabbita/html",
 }

@@ -82,7 +82,7 @@ zones. Go-to-definition and find-references are not current viewer behavior.
   `syntax`, and `viewer/decorations`.
 - Hover content/markdown rendering lives in `viewer/hover`; the viewer core only
   drives the hover controller and asks `viewer/hover` to render.
-- Must not depend on `baozhiyuan/editor/internal/shell/*` packages or
+- Must not depend on `moonbit-community/editor/internal/shell/*` packages or
   websocket transports.
 - Must not import concrete `syntax/lang_*` packages.
 - May declare narrowly scoped JavaScript FFI for viewer-owned browser effects.

@@ -1,9 +1,9 @@
 import {
-  "baozhiyuan/editor/base/common" @base_common,
-  "baozhiyuan/editor/language",
-  "baozhiyuan/editor/internal/shell/remote_protocol",
-  "baozhiyuan/editor/viewer/model",
-  "baozhiyuan/editor/internal/shell/workspace",
+  "moonbit-community/editor/base/common" @base_common,
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/internal/shell/remote_protocol",
+  "moonbit-community/editor/viewer/model",
+  "moonbit-community/editor/internal/shell/workspace",
   "moonbitlang/core/json",
 }
 

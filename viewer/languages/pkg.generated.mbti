@@ -1,12 +1,12 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/viewer/languages"
+package "moonbit-community/editor/viewer/languages"
 
 import {
-  "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/language",
-  "baozhiyuan/editor/platform/log",
-  "baozhiyuan/editor/syntax",
-  "baozhiyuan/editor/viewer/model",
+  "moonbit-community/editor/base/common",
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/platform/log",
+  "moonbit-community/editor/syntax",
+  "moonbit-community/editor/viewer/model",
 }
 
 // Values

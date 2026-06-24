@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/internal/shell/workspace"
+package "moonbit-community/editor/internal/shell/workspace"
 
 import {
-  "baozhiyuan/editor/base/common",
+  "moonbit-community/editor/base/common",
   "moonbitlang/core/debug",
 }
 

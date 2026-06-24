@@ -1,4 +1,4 @@
 import {
-  "baozhiyuan/editor/language" @language,
-  "baozhiyuan/editor/viewer/model" @model,
+  "moonbit-community/editor/language" @language,
+  "moonbit-community/editor/viewer/model" @model,
 }

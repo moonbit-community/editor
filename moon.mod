@@ -1,10 +1,10 @@
-name = "baozhiyuan/editor"
+name = "moonbit-community/editor"
 
 version = "0.1.0"
 
 readme = "README.md"
 
-repository = ""
+repository = "https://github.com/moonbit-community/editor"
 
 license = "Apache-2.0"
 

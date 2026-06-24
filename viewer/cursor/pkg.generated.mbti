@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "baozhiyuan/editor/viewer/cursor"
+package "moonbit-community/editor/viewer/cursor"
 
 import {
-  "baozhiyuan/editor/base/common",
-  "baozhiyuan/editor/viewer/view_model",
+  "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/view_model",
   "moonbitlang/core/debug",
 }
 

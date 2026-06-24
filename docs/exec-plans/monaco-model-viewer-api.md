@@ -29,7 +29,7 @@ This plan supersedes the document-boundary parts of
 The living architecture now says `workspace` is a host/source-provider layer, but
 the public API still leaks that layer:
 
-- `viewer/moon.pkg` imports `baozhiyuan/editor/workspace`.
+- `viewer/moon.pkg` imports `moonbit-community/editor/workspace`.
 - `Viewer::set_document`, `Viewer::current_document`, frame/render events, and
   internal freshness checks expose `@workspace.DocumentSnapshot`.
 - `language/moon.pkg` imports `workspace`, and provider traits accept
@@ -225,7 +225,7 @@ Exit criteria:
 ### Phase 5: Guardrails And Docs
 
 - Extend `scripts/check-architecture.mbtx` so `viewer/moon.pkg` and
-  `language/moon.pkg` must not import `baozhiyuan/editor/workspace`.
+  `language/moon.pkg` must not import `moonbit-community/editor/workspace`.
 - Update `viewer/README.md`, `language/README.md`, `workbench/README.md`,
   `examples/embedded_viewer/README.md`, and `docs/architecture.md` after the API
   migration lands, removing the temporary implementation notes added before this
@@ -259,7 +259,7 @@ git diff --check
 For the API boundary specifically, run:
 
 ```sh
-rg -n "baozhiyuan/editor/workspace" viewer/moon.pkg language/moon.pkg
+rg -n "moonbit-community/editor/workspace" viewer/moon.pkg language/moon.pkg
 rg -n "@workspace.DocumentSnapshot|DocumentSnapshot" viewer language
 rg -n "set_document|current_document|on_did_render_document|on_did_open_document" viewer language workbench examples/embedded_viewer
 ```

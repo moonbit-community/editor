@@ -92,8 +92,8 @@ place unless a separate cleanup plan removes or replaces it.
 - Keep DOM class names such as `.moonbit-viewer` and Monaco structural classes
   unchanged unless a test or doc still exposes the old package name.
 - Use explicit import aliases where the default alias would be too generic:
-  - import `baozhiyuan/editor/viewer` as `@viewer`;
-  - import `baozhiyuan/editor/viewer/common` as `@viewer_common` when a caller
+  - import `moonbit-community/editor/viewer` as `@viewer`;
+  - import `moonbit-community/editor/viewer/common` as `@viewer_common` when a caller
     needs the common-layer compatibility package;
   - keep focused aliases such as `@core`, `@model`, `@view_model`,
     `@view_layout`, and `@view_line_renderer` for internal packages when they
@@ -157,7 +157,7 @@ target-neutral, DOM-free, and FFI-free.
 2. Run an inventory before moving files:
 
    ```sh
-   rg -n 'renderer/browser|baozhiyuan/editor/renderer|@browser|@renderer' \
+   rg -n 'renderer/browser|moonbit-community/editor/renderer|@browser|@renderer' \
      --glob 'moon.pkg' --glob '*.mbt' --glob '*.mbtx' --glob '*.md'
    ```
 
@@ -203,8 +203,8 @@ moon test --target js viewer/core viewer/model viewer/view_model \
 ### Phase 2: Promote The Public Viewer Package
 
 1. Move `renderer/browser` to `viewer`.
-2. Update all imports from `baozhiyuan/editor/renderer/browser` to
-   `baozhiyuan/editor/viewer`.
+2. Update all imports from `moonbit-community/editor/renderer/browser` to
+   `moonbit-community/editor/viewer`.
 3. Update aliases from `@browser` to `@viewer`.
 4. Keep the public `Viewer` constructor, events, services, widgets,
    tokenization registry, DOM ownership, and lifecycle behavior in this package.
@@ -226,8 +226,8 @@ moon test --target js examples/embedded_viewer
    - replace common package detection with `viewer/common` and
      `viewer/*` common-layer packages;
    - replace browser package detection with the top-level `viewer` package;
-   - update forbidden imports from `baozhiyuan/editor/renderer/browser` to
-     `baozhiyuan/editor/viewer`;
+   - update forbidden imports from `moonbit-community/editor/renderer/browser` to
+     `moonbit-community/editor/viewer`;
    - update `syntax/lang_*` allowed imports to `viewer/core`, `viewer/model`,
      and `syntax`.
 2. Preserve the rule that common packages cannot import browser effects,
@@ -260,7 +260,7 @@ just check
 Validation:
 
 ```sh
-rg -n 'renderer/browser|baozhiyuan/editor/renderer|@browser|@renderer' \
+rg -n 'renderer/browser|moonbit-community/editor/renderer|@browser|@renderer' \
   --glob 'moon.pkg' --glob '*.mbt' --glob '*.mbtx' --glob '*.md'
 ```
 
@@ -293,9 +293,9 @@ explicitly explain the old name.
 ## Migration Notes
 
 - External embedders will need to change imports from
-  `baozhiyuan/editor/renderer/browser` to `baozhiyuan/editor/viewer`.
-- Internal common-layer imports move from `baozhiyuan/editor/renderer/...` to
-  `baozhiyuan/editor/viewer/...`.
+  `moonbit-community/editor/renderer/browser` to `moonbit-community/editor/viewer`.
+- Internal common-layer imports move from `moonbit-community/editor/renderer/...` to
+  `moonbit-community/editor/viewer/...`.
 - Calls currently written as `@browser.Viewer`, `@browser.register_tokenizer`,
   or `@browser.ViewerServices` become `@viewer.Viewer`,
   `@viewer.register_tokenizer`, and `@viewer.ViewerServices`.
@@ -317,9 +317,9 @@ explicitly explain the old name.
 
 ## Exit Criteria
 
-- Embedders import `baozhiyuan/editor/viewer` and use `@viewer`.
-- No active product package imports `baozhiyuan/editor/renderer` or
-  `baozhiyuan/editor/renderer/browser`.
+- Embedders import `moonbit-community/editor/viewer` and use `@viewer`.
+- No active product package imports `moonbit-community/editor/renderer` or
+  `moonbit-community/editor/renderer/browser`.
 - `docs/architecture.md` describes `viewer` as the public embeddable readonly
   viewer API.
 - Architecture guardrails enforce the renamed package graph.

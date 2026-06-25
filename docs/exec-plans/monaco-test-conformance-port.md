@@ -66,8 +66,8 @@ package status. Counts are from the pinned `vscode/` submodule.
 
 | vscode source | vscode tests | Local owner | Local status | Scope |
 |---|---:|---|---|---|
-| `common/core/range.test.ts` | 9 | `base/common` (Range) | deferred (divergence) | Full |
-| `common/core/lineRange.test.ts` | 4 | `base/common` | deferred (divergence) | Full |
+| `common/core/range.test.ts` | 9 | `base/common` (Range) | done (reference, 9) ✓ | Full ✓ |
+| `common/core/lineRange.test.ts` | 4 | `base/common` | done (reference, 4) ✓ | Full ✓ |
 | `common/core/cursorColumns.test.ts` | 5 | `viewer/common` | done (reference, 5) ✓ | Full ✓ |
 | `common/core/characterClassifier.test.ts` | 1 | `base/common` | done (reference, 1) ✓ | Full ✓ |
 | `common/core/lineTokens.test.ts` | 7 | `viewer/view_model` (tokens) | partial | Full |
@@ -144,12 +144,18 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   ported to back these: `PrefixSumComputer`/`ConstantTimePrefixSumComputer`,
   `FoldingRegions`/`FoldRange`/`FoldSource`, `RangesCollector`/`computeRanges`,
   `CursorColumns`, `CharacterClassifier`/`CharacterSet`.
+- **Range-system migration (stage 1 done).** The viewer's home-grown offset
+  `Range` was renamed to `OffsetRange` (Monaco's own name for it) across all
+  consumers, and Monaco's line/column `Range`, `LineRange`, `LineRangeSet` were
+  ported 1:1 into `base/common` with their conformance suites (`range` 9,
+  `lineRange` 4). `Range` reuses the existing `Position` struct as its
+  line/column holder. **Remaining (next session):** re-plumb consumers
+  (decorations, markers, hover, view_model, selection, providers, LSP/syntax
+  producers) from `OffsetRange` to line/column `Range` where Monaco does, rebase
+  `Position` to 1-based with a `lineNumber` field + Monaco's Position methods,
+  align `OffsetRange`'s field/method names to Monaco's `OffsetRange`, and update
+  the browser code/tests.
 - **Phase 1 deferred, with reasons:**
-  - `range` (9) / `lineRange` (4): the viewer's `base/common.Range` is an
-    *offset* range used pervasively; Monaco's line/column `Range`/`LineRange`
-    is a different geometry the readonly viewer intentionally does not adopt.
-    Porting these would mean introducing a parallel geometry type. Recorded as
-    a divergence rather than forced.
   - `foldingModel` (17) / `hiddenRangeModel` (1): require a full editor
     decoration-tracking model (`changeDecorations`/`deltaDecorations`/
     `getAllDecorations`/`getDecorationRange`) that does not exist as a test

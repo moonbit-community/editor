@@ -8,13 +8,27 @@ import {
 }
 
 // Values
+pub fn column_from_visible_column(String, Int, Int) -> Int
+
 pub fn escape_html(String) -> String
 
 pub fn hit_test(@view_model.RenderFrame, ViewMetrics, Double, Double) -> MouseTarget
 
+pub fn next_indent_tab_stop(Int, Int) -> Int
+
+pub fn next_render_tab_stop(Int, Int) -> Int
+
+pub fn prev_indent_tab_stop(Int, Int) -> Int
+
+pub fn prev_render_tab_stop(Int, Int) -> Int
+
 pub fn render_line_class(@view_model.RenderLine, Array[@view_model.ViewModelDecoration]) -> String
 
 pub fn render_line_html(@view_model.RenderLine, Array[@view_model.ViewModelDecoration]) -> String
+
+pub fn to_statusbar_column(String, Int, Int) -> Int
+
+pub fn visible_column_from_column(String, Int, Int) -> Int
 
 // Errors
 

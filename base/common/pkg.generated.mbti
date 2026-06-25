@@ -13,6 +13,24 @@ pub fn to_disposable(() -> Unit) -> Disposable
 // Errors
 
 // Types and methods
+pub struct CharacterClassifier {
+  ascii_map : Array[Int]
+  map : Map[Int, Int]
+  default_value : Int
+}
+pub fn CharacterClassifier::clear(Self) -> Unit
+pub fn CharacterClassifier::get(Self, Int) -> Int
+pub fn CharacterClassifier::new(Int) -> Self
+pub fn CharacterClassifier::set(Self, Int, Int) -> Unit
+
+pub struct CharacterSet {
+  actual : CharacterClassifier
+}
+pub fn CharacterSet::add(Self, Int) -> Unit
+pub fn CharacterSet::clear(Self) -> Unit
+pub fn CharacterSet::has(Self, Int) -> Bool
+pub fn CharacterSet::new() -> Self
+
 pub struct Disposable {
   // private fields
 }

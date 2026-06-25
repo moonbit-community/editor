@@ -16,7 +16,6 @@ let code_right_padding = 16.0
 /// Minimum line-number digit slots.
 let gutter_min_digits = 5
 
-
 ///|
 /// Editor scrollbar defaults from Monaco's `EditorScrollbar` option.
 let editor_vertical_scrollbar_size = 14.0
@@ -160,7 +159,10 @@ fn View::render(self : View, viewer : Viewer, input : ViewRenderInput) -> Unit {
   )
   // Dispatch this frame's typed view events to every part, accumulating each
   // part's dirty flag (Monaco's `ViewEventHandler.handleEvents`).
-  let events = view_events_from_snapshots(self.last_snapshot, rendering.snapshot)
+  let events = view_events_from_snapshots(
+    self.last_snapshot,
+    rendering.snapshot,
+  )
   for part in self.view_parts {
     part.handle_view_events(events)
   }

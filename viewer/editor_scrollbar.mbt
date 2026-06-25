@@ -34,7 +34,9 @@ fn EditorScrollbar::content(self : EditorScrollbar) -> @rdom.Element {
 }
 
 ///|
-fn EditorScrollbar::scrollable(self : EditorScrollbar) -> @scrollbar.ScrollableElementDom {
+fn EditorScrollbar::scrollable(
+  self : EditorScrollbar,
+) -> @scrollbar.ScrollableElementDom {
   self.editor_scrollable
 }
 

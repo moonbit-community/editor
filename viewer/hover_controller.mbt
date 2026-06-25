@@ -96,7 +96,8 @@ fn HoverController::on_event(
     MouseMoved(target) =>
       match ctx.frame {
         Some(frame) =>
-          match span_anchor_for_target(frame, target, ctx.view_to_model_offset) {
+          match
+            span_anchor_for_target(frame, target, ctx.view_to_model_offset) {
             Some((start, end, span)) =>
               self.schedule(
                 start,

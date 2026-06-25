@@ -493,7 +493,11 @@ fn ContentWidget::style(self : ContentWidget) -> String {
     ContentWidgetAbove => self.anchor.top
   }
   let left = self.anchor.column.to_double() * self.char_width
-  let mut style = "top:" + top.to_string() + "px;left:" + left.to_string() + "px"
+  let mut style = "top:" +
+    top.to_string() +
+    "px;left:" +
+    left.to_string() +
+    "px"
   if self.shift_left > 0.0 {
     style = style + ";margin-left:-" + self.shift_left.to_string() + "px"
   }

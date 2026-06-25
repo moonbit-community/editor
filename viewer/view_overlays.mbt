@@ -317,7 +317,14 @@ fn render_styled_line(
     if styled {
       if range.start_top == Intern || range.start_bottom == Intern {
         let left = range.left - rounded_piece_width
-        append_selection_piece(parent, document, line.top, left, rounded_piece_width, "selected-text")
+        append_selection_piece(
+          parent,
+          document,
+          line.top,
+          left,
+          rounded_piece_width,
+          "selected-text",
+        )
         let mut class_name = "selection-corner-piece"
         if range.start_top == Intern {
           class_name = class_name + " top-right-radius"
@@ -325,11 +332,25 @@ fn render_styled_line(
         if range.start_bottom == Intern {
           class_name = class_name + " bottom-right-radius"
         }
-        append_selection_piece(parent, document, line.top, left, rounded_piece_width, class_name)
+        append_selection_piece(
+          parent,
+          document,
+          line.top,
+          left,
+          rounded_piece_width,
+          class_name,
+        )
       }
       if range.end_top == Intern || range.end_bottom == Intern {
         let left = range.left + range.width
-        append_selection_piece(parent, document, line.top, left, rounded_piece_width, "selected-text")
+        append_selection_piece(
+          parent,
+          document,
+          line.top,
+          left,
+          rounded_piece_width,
+          "selected-text",
+        )
         let mut class_name = "selection-corner-piece"
         if range.end_top == Intern {
           class_name = class_name + " top-left-radius"
@@ -337,7 +358,14 @@ fn render_styled_line(
         if range.end_bottom == Intern {
           class_name = class_name + " bottom-left-radius"
         }
-        append_selection_piece(parent, document, line.top, left, rounded_piece_width, class_name)
+        append_selection_piece(
+          parent,
+          document,
+          line.top,
+          left,
+          rounded_piece_width,
+          class_name,
+        )
       }
     }
     let mut class_name = "selected-text"

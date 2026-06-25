@@ -63,9 +63,9 @@ fn Viewer::select_all(
     snapshot.line_text(last_line).length(),
   )
   let origin = @base_common.Position::Position(0, 0)
-  controller.set_model_cursor_state(@cursor.SingleCursorState::new(
-    origin, end, Simple, end,
-  ))
+  controller.set_model_cursor_state(
+    @cursor.SingleCursorState::new(origin, end, Simple, end),
+  )
 }
 
 ///|
@@ -82,9 +82,9 @@ fn Viewer::line_select(
   let (to_line, to_column) = line_select_end(snapshot, position.line)
   let start = @base_common.Position::Position(position.line, 0)
   let active = @base_common.Position::Position(to_line, to_column)
-  controller.set_model_cursor_state(@cursor.SingleCursorState::new(
-    start, active, Line, active,
-  ))
+  controller.set_model_cursor_state(
+    @cursor.SingleCursorState::new(start, active, Line, active),
+  )
 }
 
 ///|
@@ -130,9 +130,9 @@ fn Viewer::word_select(
   )
   let start = @base_common.Position::Position(position.line, start_column)
   let active = @base_common.Position::Position(position.line, end_column)
-  controller.set_model_cursor_state(@cursor.SingleCursorState::new(
-    start, active, Word, active,
-  ))
+  controller.set_model_cursor_state(
+    @cursor.SingleCursorState::new(start, active, Word, active),
+  )
 }
 
 ///|

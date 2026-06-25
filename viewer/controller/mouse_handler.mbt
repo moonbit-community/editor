@@ -128,7 +128,12 @@ pub fn MouseHandler::handle_mouse_move(
   let rect = self.helper.view_root.get_bounding_client_rect()
   let x = mouse.get_client_x().to_double() - rect.get_left()
   let y = mouse.get_client_y().to_double() - rect.get_top()
-  let target = @viewer_common.hit_test(frame, (self.helper.view_metrics)(frame), x, y)
+  let target = @viewer_common.hit_test(
+    frame,
+    (self.helper.view_metrics)(frame),
+    x,
+    y,
+  )
   (self.helper.notify_mouse_moved)(target)
 }
 
@@ -148,7 +153,12 @@ pub fn MouseHandler::handle_mouse_down(
   let rect = self.helper.view_root.get_bounding_client_rect()
   let x = client_x - rect.get_left()
   let y = client_y - rect.get_top()
-  let target = @viewer_common.hit_test(frame, (self.helper.view_metrics)(frame), x, y)
+  let target = @viewer_common.hit_test(
+    frame,
+    (self.helper.view_metrics)(frame),
+    x,
+    y,
+  )
   // Resolve the pointer to a view position and whether the drag started on the
   // line-number gutter (which selects whole lines).
   let resolved : (@base_common.Position, Bool)? = match target.kind {
@@ -158,7 +168,10 @@ pub fn MouseHandler::handle_mouse_down(
       )
       Some(
         (
-          @base_common.Position::Position(refined.line_number - 1, refined.column),
+          @base_common.Position::Position(
+            refined.line_number - 1,
+            refined.column,
+          ),
           false,
         ),
       )
@@ -167,7 +180,9 @@ pub fn MouseHandler::handle_mouse_down(
       Some((@base_common.Position::Position(target.line_number - 1, 0), true))
     _ => None
   }
-  guard resolved is Some((view_position, started_on_line_numbers)) else { return }
+  guard resolved is Some((view_position, started_on_line_numbers)) else {
+    return
+  }
   event.prevent_default()
   event.stop_propagation()
   let mouse_down_count = self.next_mouse_down_count(client_x, client_y)
@@ -253,7 +268,12 @@ fn MouseHandler::extend_selection_at(
   let rect = self.helper.view_root.get_bounding_client_rect()
   let x = client_x - rect.get_left()
   let y = client_y - rect.get_top()
-  let target = @viewer_common.hit_test(frame, (self.helper.view_metrics)(frame), x, y)
+  let target = @viewer_common.hit_test(
+    frame,
+    (self.helper.view_metrics)(frame),
+    x,
+    y,
+  )
   let refined = match target.kind {
     ContentText | ContentEmpty =>
       (self.helper.refine_content_target)(frame, client_x, client_y, target)
@@ -340,7 +360,10 @@ fn MouseHandler::selection_autoscroll_tick(self : MouseHandler) -> Unit {
   (self.helper.apply_scroll)(
     (self.helper.view_layout)().scroll_by(delta_left=0.0, delta_top=step),
   )
-  self.extend_selection_at(self.selection_autoscroll_x, self.selection_autoscroll_y)
+  self.extend_selection_at(
+    self.selection_autoscroll_x,
+    self.selection_autoscroll_y,
+  )
   self.schedule_selection_autoscroll()
 }
 
@@ -598,9 +621,7 @@ fn MouseHandler::scrollable_for_drag(
 /// Wires the browser-driven reveal listeners: when focus or the browser mutates
 /// a DOM scroll offset, the delta is translated into the model and the DOM
 /// offset reset (Monaco's editor scrollbar bridge).
-pub fn MouseHandler::hook_browser_desperate_reveal(
-  self : MouseHandler,
-) -> Unit {
+pub fn MouseHandler::hook_browser_desperate_reveal(self : MouseHandler) -> Unit {
   let editor_scrollable = self.helper.editor_scrollable
   self.helper.view_root.add_event_listener("scroll", _ => {
     self.handle_browser_desperate_reveal(

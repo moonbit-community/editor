@@ -18,15 +18,17 @@ fn Viewer::pointer_handler_helper(
     line_height: () => editor_line_height.to_double(),
     frame: () => self.frame,
     view_metrics: frame => self.view_metrics(frame),
-    refine_content_target: (frame, client_x, client_y, fallback) =>
-      self.dom_refine_content_target(view, frame, client_x, client_y, fallback),
-    dispatch_mouse: payload =>
+    refine_content_target: (frame, client_x, client_y, fallback) => {
+      self.dom_refine_content_target(view, frame, client_x, client_y, fallback)
+    },
+    dispatch_mouse: payload => {
       self.dispatch_mouse({
         view_position: payload.view_position,
         in_selection_mode: payload.in_selection_mode,
         mouse_down_count: payload.mouse_down_count,
         started_on_line_numbers: payload.started_on_line_numbers,
-      }),
+      })
+    },
     notify_mouse_moved: target => self.on_mouse_moved(target),
     schedule_render: () => self.schedule_render(),
   }

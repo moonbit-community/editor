@@ -6,9 +6,7 @@
 /// `PointerHandlerHelper` closing over the view — the local analog of Monaco's
 /// `View._createPointerHandlerHelper`.
 fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
-  let handler = @controller.MouseHandler::new(
-    self.pointer_handler_helper(view),
-  )
+  let handler = @controller.MouseHandler::new(self.pointer_handler_helper(view))
   self.mouse_handler = Some(handler)
   view.root.add_event_listener("mousemove", event => {
     match event.to_mouse_event() {

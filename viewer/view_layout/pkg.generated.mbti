@@ -16,6 +16,21 @@ pub fn window_needs_update(LineWindow, LineWindow, Int) -> Bool
 // Errors
 
 // Types and methods
+pub struct ConstantTimePrefixSumComputer {
+  mut values : Array[Int]
+  mut is_valid : Bool
+  mut valid_end_index : Int
+  mut prefix_sum : Array[Int]
+  mut index_by_sum : Array[Int]
+}
+pub fn ConstantTimePrefixSumComputer::get_index_of(Self, Int) -> PrefixSumIndexOfResult
+pub fn ConstantTimePrefixSumComputer::get_prefix_sum(Self, Int) -> Int
+pub fn ConstantTimePrefixSumComputer::get_total_sum(Self) -> Int
+pub fn ConstantTimePrefixSumComputer::insert_values(Self, Int, Array[Int]) -> Unit
+pub fn ConstantTimePrefixSumComputer::new(Array[Int]) -> Self
+pub fn ConstantTimePrefixSumComputer::remove_values(Self, Int, Int) -> Unit
+pub fn ConstantTimePrefixSumComputer::set_value(Self, Int, Int) -> Unit
+
 pub(all) struct LineWindow {
   start : Int
   end : Int
@@ -37,6 +52,25 @@ pub fn LinesLayout::view_zone_vertical_offset(Self, Int) -> Double
 pub fn LinesLayout::view_zone_viewport_data(Self, LineWindow) -> Array[ViewZoneViewportData]
 pub fn LinesLayout::view_zones(Self) -> Array[ViewZone]
 pub fn LinesLayout::visible_window(Self, Double, Double, Int) -> LineWindow
+
+pub struct PrefixSumComputer {
+  mut values : Array[Int]
+  mut prefix_sum : Array[Int]
+  mut prefix_sum_valid_index : Int
+}
+pub fn PrefixSumComputer::get_count(Self) -> Int
+pub fn PrefixSumComputer::get_index_of(Self, Int) -> PrefixSumIndexOfResult
+pub fn PrefixSumComputer::get_prefix_sum(Self, Int) -> Int
+pub fn PrefixSumComputer::get_total_sum(Self) -> Int
+pub fn PrefixSumComputer::insert_values(Self, Int, Array[Int]) -> Bool
+pub fn PrefixSumComputer::new(Array[Int]) -> Self
+pub fn PrefixSumComputer::remove_values(Self, Int, Int) -> Bool
+pub fn PrefixSumComputer::set_value(Self, Int, Int) -> Bool
+
+pub(all) struct PrefixSumIndexOfResult {
+  index : Int
+  remainder : Int
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ScrollChange {
   position : ScrollPosition

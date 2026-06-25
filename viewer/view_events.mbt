@@ -77,7 +77,11 @@ fn view_events_from_snapshots(
       let window_changed = previous.window != current.window
       if position_changed || dimensions_changed || window_changed {
         events.push(
-          ViewScrollChanged({ position_changed, dimensions_changed, window_changed }),
+          ViewScrollChanged({
+            position_changed,
+            dimensions_changed,
+            window_changed,
+          }),
         )
       }
       if previous.selection_view_range != current.selection_view_range {
@@ -86,7 +90,9 @@ fn view_events_from_snapshots(
       let gutter_width_changed = previous.gutter_width != current.gutter_width
       let font_changed = previous.space_width != current.space_width
       if gutter_width_changed || font_changed {
-        events.push(ViewConfigurationChanged({ gutter_width_changed, font_changed }))
+        events.push(
+          ViewConfigurationChanged({ gutter_width_changed, font_changed }),
+        )
       }
       if previous.folding_ranges != current.folding_ranges ||
         previous.folded_ranges != current.folded_ranges {

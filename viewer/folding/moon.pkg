@@ -1,4 +1,4 @@
 import {
-  "moonbit-community/editor/language" @language,
-  "moonbit-community/editor/viewer/model" @model,
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/viewer/model",
 }

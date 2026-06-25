@@ -39,11 +39,9 @@ pub fn ViewModelDecorations::new(
   converter : ViewModelCoordinatesConverter,
   decorations : Array[@decorations.Decoration],
 ) -> ViewModelDecorations {
-  let view_decorations = decorations.map(decoration => to_view_decoration(
-    snapshot,
-    converter,
-    decoration,
-  ))
+  let view_decorations = decorations.map(decoration => {
+    to_view_decoration(snapshot, converter, decoration)
+  })
   { snapshot, converter, decorations: view_decorations }
 }
 
@@ -64,11 +62,9 @@ pub fn ViewModelDecorations::to_view_decorations(
   self : ViewModelDecorations,
   decorations : Array[@decorations.Decoration],
 ) -> Array[ViewModelDecoration] {
-  decorations.map(decoration => to_view_decoration(
-    self.snapshot,
-    self.converter,
-    decoration,
-  ))
+  decorations.map(decoration => {
+    to_view_decoration(self.snapshot, self.converter, decoration)
+  })
 }
 
 ///|

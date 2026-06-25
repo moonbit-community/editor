@@ -87,10 +87,7 @@ pub fn SingleCursorState::moved(
   position : @base_common.Position,
 ) -> SingleCursorState {
   if in_selection_mode {
-    {
-      ..self,
-      position,
-    }
+    { ..self, position, }
   } else {
     SingleCursorState::new(position, position, Simple, position)
   }

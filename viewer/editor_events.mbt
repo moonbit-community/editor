@@ -23,7 +23,9 @@ priv struct EditorContext {
 fn Viewer::editor_context(self : Viewer) -> EditorContext {
   {
     frame: self.frame,
-    view_to_model_offset: view_position => self.view_position_to_model_offset(view_position),
+    view_to_model_offset: view_position => {
+      self.view_position_to_model_offset(view_position)
+    },
   }
 }
 
@@ -62,11 +64,14 @@ fn Viewer::on_mouse_moved(
     if !self.hover_react_pending {
       self.hover_react_pending = true
       let token = self.hover_react_token
-      set_timeout(() => {
-        if self.hover_react_pending && token == self.hover_react_token {
-          self.run_hover_react()
-        }
-      }, hover_hiding_delay_ms)
+      set_timeout(
+        () => {
+          if self.hover_react_pending && token == self.hover_react_token {
+            self.run_hover_react()
+          }
+        },
+        hover_hiding_delay_ms,
+      )
       |> ignore
     }
   } else {

@@ -10,12 +10,13 @@ pub(all) struct Position {
 } derive(Eq, Debug)
 
 ///|
-/// Half-open UTF-16 offset range `[start, end)` in a text snapshot. This is the
-/// viewer's offset-based span, mirroring Monaco's `OffsetRange`. The name
-/// `Range` is reserved for Monaco's line/column range (see `monaco_range.mbt`).
+/// A range of offsets (0-based), half-open `[start, end_exclusive)`. A 1:1 port
+/// of Monaco's `OffsetRange` (`core/ranges/offsetRange.ts`); field names use the
+/// repo's snake_case (`end_exclusive`). The name `Range` is reserved for
+/// Monaco's line/column range (see `monaco_range.mbt`).
 pub(all) struct OffsetRange {
   start : Int
-  end : Int
+  end_exclusive : Int
 } derive(Eq, Debug)
 
 ///|
@@ -114,31 +115,182 @@ pub fn Position::to_string(self : Position) -> String {
 }
 
 ///|
-/// Builds a normalized half-open range by swapping endpoints when needed.
-pub fn OffsetRange::OffsetRange(start : Int, end : Int) -> OffsetRange {
-  if start <= end {
-    { start, end }
+/// Builds a half-open offset range. Monaco's constructor throws a
+/// `BugIndicatingError` when `start > end_exclusive`; the readonly viewer avoids
+/// panics, so this normalizes by swapping instead. For valid inputs
+/// (`start <= end_exclusive`) the swap is a no-op, so every other method keeps
+/// Monaco's behavior.
+pub fn OffsetRange::OffsetRange(start : Int, end_exclusive : Int) -> OffsetRange {
+  if start <= end_exclusive {
+    { start, end_exclusive }
   } else {
-    { start: end, end: start }
+    { start: end_exclusive, end_exclusive: start }
   }
 }
 
 ///|
-/// Whether `offset` falls inside the half-open range.
-pub fn OffsetRange::contains_offset(self : OffsetRange, offset : Int) -> Bool {
-  self.start <= offset && offset < self.end
+/// `[start, end_exclusive)`. Mirrors Monaco's static `OffsetRange.fromTo`.
+pub fn OffsetRange::from_to(start : Int, end_exclusive : Int) -> OffsetRange {
+  OffsetRange::OffsetRange(start, end_exclusive)
 }
 
 ///|
-/// Whether two half-open ranges overlap.
-pub fn OffsetRange::intersects(self : OffsetRange, other : OffsetRange) -> Bool {
-  self.start < other.end && other.start < self.end
+/// `[0, length)`. Mirrors Monaco's static `OffsetRange.ofLength`.
+pub fn OffsetRange::of_length(length : Int) -> OffsetRange {
+  OffsetRange::OffsetRange(0, length)
 }
 
 ///|
-/// Whether the range contains no offsets.
+/// `[start, start + length)`. Mirrors Monaco's `OffsetRange.ofStartAndLength`.
+pub fn OffsetRange::of_start_and_length(
+  start : Int,
+  length : Int,
+) -> OffsetRange {
+  OffsetRange::OffsetRange(start, start + length)
+}
+
+///|
+/// The empty range `[offset, offset)`. Mirrors Monaco's `OffsetRange.emptyAt`.
+pub fn OffsetRange::empty_at(offset : Int) -> OffsetRange {
+  OffsetRange::OffsetRange(offset, offset)
+}
+
+///|
+/// `[start, end_exclusive)`, or `None` when `start > end_exclusive`. Mirrors
+/// Monaco's static `OffsetRange.tryCreate`.
+pub fn OffsetRange::try_create(start : Int, end_exclusive : Int) -> OffsetRange? {
+  if start > end_exclusive {
+    None
+  } else {
+    Some({ start, end_exclusive })
+  }
+}
+
+///|
+/// Whether the range contains no offsets. Mirrors Monaco's `isEmpty` getter.
 pub fn OffsetRange::is_empty(self : OffsetRange) -> Bool {
-  self.start == self.end
+  self.start == self.end_exclusive
+}
+
+///|
+/// The number of offsets in the range. Mirrors Monaco's `length` getter.
+pub fn OffsetRange::length(self : OffsetRange) -> Int {
+  self.end_exclusive - self.start
+}
+
+///|
+/// Shifts both endpoints by `offset`. Mirrors Monaco's `delta`.
+pub fn OffsetRange::delta(self : OffsetRange, offset : Int) -> OffsetRange {
+  OffsetRange::OffsetRange(self.start + offset, self.end_exclusive + offset)
+}
+
+///|
+/// Shifts the start by `offset`. Mirrors Monaco's `deltaStart`.
+pub fn OffsetRange::delta_start(self : OffsetRange, offset : Int) -> OffsetRange {
+  OffsetRange::OffsetRange(self.start + offset, self.end_exclusive)
+}
+
+///|
+/// Shifts the end by `offset`. Mirrors Monaco's `deltaEnd`.
+pub fn OffsetRange::delta_end(self : OffsetRange, offset : Int) -> OffsetRange {
+  OffsetRange::OffsetRange(self.start, self.end_exclusive + offset)
+}
+
+///|
+/// Whether this range equals `other`. Mirrors Monaco's `equals`.
+pub fn OffsetRange::equals(self : OffsetRange, other : OffsetRange) -> Bool {
+  self.start == other.start && self.end_exclusive == other.end_exclusive
+}
+
+///|
+/// Whether `other` is fully contained in this range. Mirrors `containsRange`.
+pub fn OffsetRange::contains_range(
+  self : OffsetRange,
+  other : OffsetRange,
+) -> Bool {
+  self.start <= other.start && other.end_exclusive <= self.end_exclusive
+}
+
+///|
+/// Whether `offset` falls inside the half-open range. Mirrors Monaco's
+/// `contains`.
+pub fn OffsetRange::contains(self : OffsetRange, offset : Int) -> Bool {
+  self.start <= offset && offset < self.end_exclusive
+}
+
+///|
+/// The smallest range containing both ranges. Mirrors Monaco's `join`.
+pub fn OffsetRange::join(self : OffsetRange, other : OffsetRange) -> OffsetRange {
+  OffsetRange::OffsetRange(
+    min_int(self.start, other.start),
+    max_int(self.end_exclusive, other.end_exclusive),
+  )
+}
+
+///|
+/// The intersection of the two ranges, or `None` if they do not even touch.
+/// Mirrors Monaco's `intersect` (an empty range if they touch but not overlap).
+pub fn OffsetRange::intersect(
+  self : OffsetRange,
+  other : OffsetRange,
+) -> OffsetRange? {
+  let start = max_int(self.start, other.start)
+  let end = min_int(self.end_exclusive, other.end_exclusive)
+  if start <= end {
+    Some(OffsetRange::OffsetRange(start, end))
+  } else {
+    None
+  }
+}
+
+///|
+/// The number of overlapping offsets (0 if disjoint). Mirrors Monaco's
+/// `intersectionLength`.
+pub fn OffsetRange::intersection_length(
+  self : OffsetRange,
+  other : OffsetRange,
+) -> Int {
+  let start = max_int(self.start, other.start)
+  let end = min_int(self.end_exclusive, other.end_exclusive)
+  max_int(0, end - start)
+}
+
+///|
+/// Whether the two ranges overlap. Mirrors Monaco's `intersects` (always false
+/// when either range is empty).
+pub fn OffsetRange::intersects(self : OffsetRange, other : OffsetRange) -> Bool {
+  let start = max_int(self.start, other.start)
+  let end = min_int(self.end_exclusive, other.end_exclusive)
+  start < end
+}
+
+///|
+/// Whether the two ranges overlap or touch. Mirrors `intersectsOrTouches`.
+pub fn OffsetRange::intersects_or_touches(
+  self : OffsetRange,
+  other : OffsetRange,
+) -> Bool {
+  let start = max_int(self.start, other.start)
+  let end = min_int(self.end_exclusive, other.end_exclusive)
+  start <= end
+}
+
+///|
+/// Whether this range ends at or before `other` starts. Mirrors `isBefore`.
+pub fn OffsetRange::is_before(self : OffsetRange, other : OffsetRange) -> Bool {
+  self.end_exclusive <= other.start
+}
+
+///|
+/// Whether this range starts at or after `other` ends. Mirrors `isAfter`.
+pub fn OffsetRange::is_after(self : OffsetRange, other : OffsetRange) -> Bool {
+  self.start >= other.end_exclusive
+}
+
+///|
+/// `[start, end_exclusive)`. Mirrors Monaco's `toString`.
+pub fn OffsetRange::to_string(self : OffsetRange) -> String {
+  "[\{self.start}, \{self.end_exclusive})"
 }
 
 ///|

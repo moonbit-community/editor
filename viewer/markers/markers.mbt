@@ -180,7 +180,7 @@ pub fn MarkerDecorationsService::markers_at(
   let out : Array[Marker] = []
   for marker in self.markers.markers_for_resource(resource) {
     if marker.range.intersects(range) ||
-      marker.range.contains_offset(range.start) {
+      marker.range.contains(range.start) {
       out.push(marker)
       if limit > 0 && out.length() >= limit {
         return out

@@ -76,12 +76,30 @@ pub fn LineRangeSet::to_string(Self) -> String
 
 pub(all) struct OffsetRange {
   start : Int
-  end : Int
+  end_exclusive : Int
 } derive(Eq, @debug.Debug)
 pub fn OffsetRange::OffsetRange(Int, Int) -> Self
-pub fn OffsetRange::contains_offset(Self, Int) -> Bool
+pub fn OffsetRange::contains(Self, Int) -> Bool
+pub fn OffsetRange::contains_range(Self, Self) -> Bool
+pub fn OffsetRange::delta(Self, Int) -> Self
+pub fn OffsetRange::delta_end(Self, Int) -> Self
+pub fn OffsetRange::delta_start(Self, Int) -> Self
+pub fn OffsetRange::empty_at(Int) -> Self
+pub fn OffsetRange::equals(Self, Self) -> Bool
+pub fn OffsetRange::from_to(Int, Int) -> Self
+pub fn OffsetRange::intersect(Self, Self) -> Self?
+pub fn OffsetRange::intersection_length(Self, Self) -> Int
 pub fn OffsetRange::intersects(Self, Self) -> Bool
+pub fn OffsetRange::intersects_or_touches(Self, Self) -> Bool
+pub fn OffsetRange::is_after(Self, Self) -> Bool
+pub fn OffsetRange::is_before(Self, Self) -> Bool
 pub fn OffsetRange::is_empty(Self) -> Bool
+pub fn OffsetRange::join(Self, Self) -> Self
+pub fn OffsetRange::length(Self) -> Int
+pub fn OffsetRange::of_length(Int) -> Self
+pub fn OffsetRange::of_start_and_length(Int, Int) -> Self
+pub fn OffsetRange::to_string(Self) -> String
+pub fn OffsetRange::try_create(Int, Int) -> Self?
 
 pub(all) struct Position {
   line_number : Int

@@ -73,7 +73,7 @@ pub fn DecorationSet::at_offset(
 ) -> Array[Decoration] {
   let found = []
   for item in self.items {
-    if item.range.contains_offset(offset) {
+    if item.range.contains(offset) {
       found.push(item)
     }
   }

@@ -327,23 +327,5 @@ fn union_range(
   left : @base_common.OffsetRange,
   right : @base_common.OffsetRange,
 ) -> @base_common.OffsetRange {
-  OffsetRange(min_int(left.start, right.start), max_int(left.end, right.end))
-}
-
-///|
-fn min_int(left : Int, right : Int) -> Int {
-  if left < right {
-    left
-  } else {
-    right
-  }
-}
-
-///|
-fn max_int(left : Int, right : Int) -> Int {
-  if left > right {
-    left
-  } else {
-    right
-  }
+  left.join(right)
 }

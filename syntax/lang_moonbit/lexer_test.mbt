@@ -10,7 +10,7 @@ fn render_tokens(source : String) -> String {
   let lines : Array[String] = []
   for token in tokens {
     lines.push(
-      "\{token.range.start}-\{token.range.end} \{token.tag.css_class()} \{token.text}",
+      "\{token.range.start}-\{token.range.end_exclusive} \{token.tag.css_class()} \{token.text}",
     )
   }
   lines.join("\n")

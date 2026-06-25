@@ -165,7 +165,7 @@ fn rich_text_to_copy_from_frame(
     let model_line_end = line.source_offset_at_column(line.text.length())
     if model_line_start != previous_model_line_start &&
       range.start <= model_line_end &&
-      model_line_start <= range.end {
+      model_line_start <= range.end_exclusive {
       if wrote_line {
         html.write_string("\n")
       }
@@ -198,7 +198,9 @@ fn append_rich_copy_line_segments(
       let start_column = span.start +
         max_int(range.start, span_start) -
         span_start
-      let end_column = span.start + min_int(range.end, span_end) - span_start
+      let end_column = span.start +
+        min_int(range.end_exclusive, span_end) -
+        span_start
       if start_column < end_column {
         html.write_string("<span class=\"")
         html.write_string(@viewer_common.escape_html(span.class_name))

@@ -166,10 +166,25 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   methods. Browser fixtures audited: the JS conformance fixtures address lines
   via the unchanged 1-based `data-line` attribute, so only the MoonBit inlay-hint
   fixture position was shifted; `just test-browser` was not run in this
-  environment. **Remaining (next steps):** align `OffsetRange`'s field/method
-  names to Monaco's `OffsetRange` (step 2); move the model/provider/decoration/
-  hover/marker layers from `OffsetRange` to line/column `Range` (step 3); run
-  the browser suite (step 4).
+  environment.
+- **Range-system migration (stage 2, step 2 done — OffsetRange API).**
+  `OffsetRange` aligned 1:1 to Monaco's `OffsetRange`: field `end` →
+  `end_exclusive`, `contains_offset` → `contains`, plus the full method set
+  (`length`, `contains_range`, `intersects`/`intersects_or_touches`, `join`,
+  `intersect`/`intersection_length`, `is_before`/`is_after`, `delta`/
+  `delta_start`/`delta_end`, `equals`, `to_string`, and the
+  `from_to`/`of_length`/`of_start_and_length`/`empty_at`/`try_create`
+  constructors), with a local `offset_range_test.mbt` (no upstream
+  `offsetRange.test.ts` at the pinned commit). Deviation recorded: the
+  constructor normalizes inverted input instead of throwing. Consumers
+  re-plumbed (`.end` → `.end_exclusive` across snapshots, render-frame span
+  building, tokenized-document, markers, decorations, hover, selection
+  clipboard, syntax lexers, remote protocol); ad-hoc union/min-max range code
+  now delegates to `join`. JSON wire keys kept as `"end"` (sourced from
+  `end_exclusive`) to avoid churn. All green (260 js / 270 native).
+  **Remaining (next steps):** move the model/provider/decoration/hover/marker
+  layers from `OffsetRange` to line/column `Range` where Monaco does (step 3);
+  run the browser suite (step 4).
 - **Phase 1 deferred, with reasons:**
   - `foldingModel` (17) / `hiddenRangeModel` (1): require a full editor
     decoration-tracking model (`changeDecorations`/`deltaDecorations`/

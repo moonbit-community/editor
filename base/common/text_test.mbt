@@ -2,9 +2,9 @@
 test "range normalizes endpoints and tests offsets" {
   let range : OffsetRange = OffsetRange(8, 3)
   assert_eq(range.start, 3)
-  assert_eq(range.end, 8)
-  assert_true(range.contains_offset(3))
-  assert_true(!range.contains_offset(8))
+  assert_eq(range.end_exclusive, 8)
+  assert_true(range.contains(3))
+  assert_true(!range.contains(8))
   assert_true(range.intersects(OffsetRange(7, 10)))
   assert_true(!range.intersects(OffsetRange(8, 10)))
 }

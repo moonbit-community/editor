@@ -71,9 +71,14 @@ test "driver carries state across lines and converts to doc offsets" {
     tokens,
     content=(
       #|[
-      #|  { range: { start: 3, end: 8 }, tag: Comment, text: "/* bb" },
-      #|  { range: { start: 9, end: 14 }, tag: Comment, text: "cc */" },
+      #|  { range: { start: 3, end_exclusive: 8 }, tag: Comment, text: "/* bb" },
+      #|  {
+      #|    range: { start: 9, end_exclusive: 14 },
+      #|    tag: Comment,
+      #|    text: "cc */",
+      #|  },
       #|]
+
     ),
   )
 }
@@ -108,10 +113,15 @@ test "plain tokenizer counts UTF-16 code units and keeps pairs whole" {
     tokens,
     content=(
       #|[
-      #|  { range: { start: 0, end: 1 }, tag: Identifier, text: "a" },
-      #|  { range: { start: 2, end: 4 }, tag: Punctuation, text: "𐍈" },
-      #|  { range: { start: 4, end: 5 }, tag: Identifier, text: "b" },
+      #|  { range: { start: 0, end_exclusive: 1 }, tag: Identifier, text: "a" },
+      #|  {
+      #|    range: { start: 2, end_exclusive: 4 },
+      #|    tag: Punctuation,
+      #|    text: "𐍈",
+      #|  },
+      #|  { range: { start: 4, end_exclusive: 5 }, tag: Identifier, text: "b" },
       #|]
+
     ),
   )
 }

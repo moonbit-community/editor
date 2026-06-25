@@ -164,7 +164,7 @@ pub async fn collect_model_provider_result(
 pub fn ProviderResult::hover_at(self : ProviderResult, offset : Int) -> Hover? {
   let mut found : Hover? = None
   for hover in self.hovers {
-    if hover.range.contains_offset(offset) {
+    if hover.range.contains(offset) {
       found = Some(hover)
     }
   }
@@ -194,7 +194,7 @@ pub fn DiagnosticSeverity::label(self : DiagnosticSeverity) -> String {
 fn definition_at(providers : ProviderResult, offset : Int) -> Location? {
   let mut found : Location? = None
   for location in providers.definitions {
-    if found is None && location.range.contains_offset(offset) {
+    if found is None && location.range.contains(offset) {
       found = Some(location)
     }
   }

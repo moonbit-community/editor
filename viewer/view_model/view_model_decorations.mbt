@@ -77,7 +77,7 @@ fn to_view_decoration(
   decoration : @decorations.Decoration,
 ) -> ViewModelDecoration {
   let start = snapshot.position_at_offset(decoration.range.start)
-  let end = snapshot.position_at_offset(decoration.range.end)
+  let end = snapshot.position_at_offset(decoration.range.end_exclusive)
   let model_range : @view_line_renderer.ViewRange = {
     start_line_number: start.line_number,
     start_column: start.column,

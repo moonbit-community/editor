@@ -182,7 +182,7 @@ pub fn DocumentSnapshot::slice(
   range : @base_common.OffsetRange,
 ) -> String {
   let start = @base_common.clamp_int(range.start, 0, self.length())
-  let end = @base_common.clamp_int(range.end, start, self.length())
+  let end = @base_common.clamp_int(range.end_exclusive, start, self.length())
   self.text[start:end].to_owned()
 }
 

@@ -1283,7 +1283,7 @@ fn location_json(location : @language.Location) -> Json {
 
 ///|
 fn range_json(range : @base_common.OffsetRange) -> Json {
-  { "start": range.start.to_json(), "end": range.end.to_json() }
+  { "start": range.start.to_json(), "end": range.end_exclusive.to_json() }
 }
 
 ///|

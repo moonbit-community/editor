@@ -332,13 +332,7 @@ fn merge_hover_view(existing : HoverView?, incoming : HoverView) -> HoverView {
       let parts = view.parts.copy()
       parts.append(incoming.parts)
       parts.sort_by(@hover.compare_hover_parts)
-      {
-        range: OffsetRange(
-          min_int(view.range.start, incoming.range.start),
-          max_int(view.range.end, incoming.range.end),
-        ),
-        parts,
-      }
+      { range: view.range.join(incoming.range), parts }
     }
     None => incoming
   }

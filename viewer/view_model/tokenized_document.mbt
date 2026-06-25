@@ -98,7 +98,7 @@ fn[T] bucket_by_line(
     }
     let mut covered = line
     while covered < line_count &&
-          snapshot.line_start_offset(covered) < range.end {
+          snapshot.line_start_offset(covered) < range.end_exclusive {
       let line_range = @base_common.OffsetRange(
         snapshot.line_start_offset(covered),
         snapshot.line_end_offset(covered),

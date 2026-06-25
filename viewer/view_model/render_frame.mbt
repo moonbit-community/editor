@@ -149,7 +149,7 @@ fn spans_for_line(
   for token in tokens {
     // The bucket holds exactly the tokens intersecting this line.
     let start = max_int(token.range.start, line_range.start)
-    let end = min_int(token.range.end, line_range.end)
+    let end = min_int(token.range.end_exclusive, line_range.end_exclusive)
     if cursor < start {
       spans.push({
         start: cursor - line_range.start,
@@ -170,12 +170,12 @@ fn spans_for_line(
     })
     cursor = end
   }
-  if cursor < line_range.end {
+  if cursor < line_range.end_exclusive {
     spans.push({
       start: cursor - line_range.start,
-      end: line_range.end - line_range.start,
+      end: line_range.end_exclusive - line_range.start,
       source_start: cursor - line_range.start,
-      source_end: line_range.end - line_range.start,
+      source_end: line_range.end_exclusive - line_range.start,
       injected_text_index: -1,
       class_name: @syntax.Plain.css_class(),
     })
@@ -205,7 +205,7 @@ fn overlay_semantic_tokens(
         continue
       }
       let segment_start = max_int(token.range.start, cursor)
-      let segment_end = min_int(token.range.end, span_end)
+      let segment_end = min_int(token.range.end_exclusive, span_end)
       if segment_start >= segment_end {
         continue
       }
@@ -313,7 +313,7 @@ fn hover_content_json(content : @language.HoverContent) -> Json {
 
 ///|
 fn range_json(range : @base_common.OffsetRange) -> Json {
-  { "start": range.start.to_json(), "end": range.end.to_json() }
+  { "start": range.start.to_json(), "end": range.end_exclusive.to_json() }
 }
 
 ///|

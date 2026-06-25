@@ -20,7 +20,7 @@ test "selection normalizes model ranges and copies plain source text" {
   let selection = selection_from_offsets(snapshot, 6, 1)
   let range = selection_normalized_range(selection, snapshot)
   assert_eq(range.start, 1)
-  assert_eq(range.end, 6)
+  assert_eq(range.end_exclusive, 6)
   assert_eq(selection_plain_text_to_copy(selection, snapshot), "bc\nde")
 }
 

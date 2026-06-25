@@ -78,7 +78,7 @@ fn test_metrics(
 }
 
 ///|
-test "hit test maps wrapped view line coordinates back to model offsets" {
+test "hit test maps wrapped view line coordinates to a view position" {
   let frame = projected_hit_test_frame()
   assert_eq(frame.line_count, 2)
   let target = @common.hit_test(
@@ -90,21 +90,18 @@ test "hit test maps wrapped view line coordinates back to model offsets" {
   assert_true(target.kind == ContentText)
   assert_eq(target.line_number, 2)
   assert_eq(target.column, 2)
-  assert_eq(target.offset, 7)
   let gutter = @common.hit_test(frame, test_metrics(), 10.0, 18.0 + 4.0)
   assert_true(gutter.kind == GutterLineNumbers)
   assert_eq(gutter.line_number, 2)
-  assert_eq(gutter.offset, 5)
 }
 
 ///|
-test "hit test reports injected text hits without shifting source offsets" {
+test "hit test reports injected text hits with their view column and index" {
   let frame = inlay_hint_hit_test_frame()
   assert_eq(frame.lines[0].text, "let x: Int = 1")
   let target = @common.hit_test(frame, test_metrics(), 50.0 + 8.0 * 6.0, 4.0)
   assert_true(target.kind == ContentText)
   assert_eq(target.column, 6)
-  assert_eq(target.offset, 5)
   assert_eq(target.injected_text_index, 0)
   let source_after_hint = @common.hit_test(
     frame,
@@ -113,7 +110,7 @@ test "hit test reports injected text hits without shifting source offsets" {
     4.0,
   )
   assert_true(source_after_hint.kind == ContentText)
-  assert_eq(source_after_hint.offset, 6)
+  assert_eq(source_after_hint.column, 11)
   assert_eq(source_after_hint.injected_text_index, -1)
 }
 
@@ -128,7 +125,6 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  kind: GutterLineNumbers,
       #|  line_number: 1,
       #|  column: 0,
-      #|  offset: 0,
       #|  span_index: -1,
       #|  injected_text_index: -1,
       #|}
@@ -142,7 +138,6 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  kind: ContentText,
       #|  line_number: 1,
       #|  column: 3,
-      #|  offset: 3,
       #|  span_index: 2,
       #|  injected_text_index: -1,
       #|}
@@ -156,7 +151,6 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  kind: ContentEmpty,
       #|  line_number: 1,
       #|  column: 30,
-      #|  offset: 9,
       #|  span_index: -1,
       #|  injected_text_index: -1,
       #|}
@@ -175,7 +169,6 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  kind: ContentText,
       #|  line_number: 2,
       #|  column: 2,
-      #|  offset: 12,
       #|  span_index: 1,
       #|  injected_text_index: -1,
       #|}
@@ -189,7 +182,6 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  kind: BelowContent,
       #|  line_number: 5,
       #|  column: 0,
-      #|  offset: -1,
       #|  span_index: -1,
       #|  injected_text_index: -1,
       #|}
@@ -203,7 +195,6 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  kind: Outside,
       #|  line_number: 0,
       #|  column: 0,
-      #|  offset: -1,
       #|  span_index: -1,
       #|  injected_text_index: -1,
       #|}
@@ -223,7 +214,6 @@ test "hit test accounts for view zones displacing following lines" {
       #|  kind: Outside,
       #|  line_number: 0,
       #|  column: 0,
-      #|  offset: -1,
       #|  span_index: -1,
       #|  injected_text_index: -1,
       #|}
@@ -237,7 +227,6 @@ test "hit test accounts for view zones displacing following lines" {
       #|  kind: ContentText,
       #|  line_number: 2,
       #|  column: 2,
-      #|  offset: 12,
       #|  span_index: 1,
       #|  injected_text_index: -1,
       #|}
@@ -251,7 +240,6 @@ test "hit test accounts for view zones displacing following lines" {
       #|  kind: ContentText,
       #|  line_number: 1,
       #|  column: 3,
-      #|  offset: 3,
       #|  span_index: 2,
       #|  injected_text_index: -1,
       #|}
@@ -271,7 +259,6 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|  kind: ContentEmpty,
       #|  line_number: 4,
       #|  column: 3,
-      #|  offset: 24,
       #|  span_index: -1,
       #|  injected_text_index: -1,
       #|}
@@ -286,7 +273,6 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|  kind: ContentEmpty,
       #|  line_number: 4,
       #|  column: 0,
-      #|  offset: -1,
       #|  span_index: -1,
       #|  injected_text_index: -1,
       #|}

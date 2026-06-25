@@ -4,9 +4,11 @@
 
 - Public product code lives at the repository root in MoonBit packages:
   `base/common`, `language`, `platform/log`, `syntax`,
-  `syntax/lang_*`, `viewer`, `viewer/common`, `viewer/cursor`,
-  `viewer/decorations`, `viewer/model`, `viewer/view_line_renderer`,
-  `viewer/view_model`, and `viewer/view_layout`.
+  `syntax/lang_*`, `viewer`, `viewer/common`, `viewer/controller`,
+  `viewer/cursor`, `viewer/decorations`, `viewer/folding`, `viewer/hover`,
+  `viewer/languages`, `viewer/markers`, `viewer/model`,
+  `viewer/ui/scrollbar`, `viewer/view_line_renderer`, `viewer/view_model`,
+  and `viewer/view_layout`.
 - Reference shell/backend code lives under `internal/shell`: `workspace`,
   `remote_protocol`, `workbench`, `web`, `widgets/file_tree`, `server`,
   `server_host_native`, and `examples/embedded_viewer`. These packages are

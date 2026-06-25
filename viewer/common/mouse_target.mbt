@@ -10,15 +10,16 @@ pub(all) enum MouseTargetKind {
 } derive(Eq, Debug)
 
 ///|
-/// A resolved hit-test result. `line_number` is one-based; `column` is a
-/// zero-based character column inside the line; `offset` is the document
-/// offset for the position; `span_index` indexes the hit line's spans.
+/// A resolved hit-test result as a view position: `line_number` is a one-based
+/// view line; `column` is a zero-based view column inside the line; `span_index`
+/// indexes the hit line's spans. Mirrors Monaco's `MouseTarget` carrying a view
+/// `Position` — consumers convert to a model position through the
+/// `CoordinatesConverter`, rather than this layer baking in a document offset.
 /// Fields that do not apply to the kind are `0`/`-1`.
 pub(all) struct MouseTarget {
   kind : MouseTargetKind
   line_number : Int
   column : Int
-  offset : Int
   span_index : Int
   injected_text_index : Int
 } derive(Eq, Debug)
@@ -45,7 +46,6 @@ fn outside_target() -> MouseTarget {
     kind: Outside,
     line_number: 0,
     column: 0,
-    offset: -1,
     span_index: -1,
     injected_text_index: -1,
   }
@@ -88,7 +88,6 @@ pub fn hit_test(
       kind: BelowContent,
       line_number: frame.line_count,
       column: 0,
-      offset: -1,
       span_index: -1,
       injected_text_index: -1,
     }
@@ -102,7 +101,6 @@ pub fn hit_test(
         kind: ContentEmpty,
         line_number,
         column: 0,
-        offset: -1,
         span_index: -1,
         injected_text_index: -1,
       }
@@ -112,7 +110,6 @@ pub fn hit_test(
       kind: GutterLineNumbers,
       line_number,
       column: 0,
-      offset: line.source_offset_at_column(0),
       span_index: -1,
       injected_text_index: -1,
     }
@@ -133,7 +130,6 @@ pub fn hit_test(
       kind: ContentText,
       line_number,
       column,
-      offset: line.source_offset_at_column(column),
       span_index: span_index_at_column(line, column),
       injected_text_index: line.injected_text_index_at_column(column),
     }
@@ -142,7 +138,6 @@ pub fn hit_test(
       kind: ContentEmpty,
       line_number,
       column,
-      offset: line.source_offset_at_column(line.text.length()),
       span_index: -1,
       injected_text_index: -1,
     }

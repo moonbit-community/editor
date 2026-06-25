@@ -155,11 +155,15 @@ fn Viewer::view_metrics(
 }
 
 ///|
-/// The span the target falls in, as absolute document offsets. Mirrors
-/// the anchors the old per-span handlers produced.
+/// The span the target falls in, as absolute document offsets. The span's view
+/// columns are resolved to model offsets through `view_to_model_offset` (the
+/// `CoordinatesConverter` + model snapshot boundary), the way Monaco maps a
+/// `MouseTarget`'s view position to the model — not via a render-line offset
+/// helper.
 fn span_anchor_for_target(
   frame : @view_model.RenderFrame,
   target : @viewer_common.MouseTarget,
+  view_to_model_offset : (@base_common.Position) -> Int,
 ) -> (Int, Int, @view_model.RenderSpan)? {
   if target.span_index < 0 {
     return None
@@ -173,6 +177,12 @@ fn span_anchor_for_target(
     return None
   }
   let span = line.spans[target.span_index]
-  let line_start = line.model_line_start_offset()
-  Some((line_start + span.source_start, line_start + span.source_end, span))
+  let view_line = target.line_number - 1
+  let start = view_to_model_offset(
+    @base_common.Position::Position(view_line, span.start),
+  )
+  let end = view_to_model_offset(
+    @base_common.Position::Position(view_line, span.end),
+  )
+  Some((start, end, span))
 }

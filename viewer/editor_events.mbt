@@ -10,13 +10,37 @@ priv enum EditorEvent {
 
 ///|
 /// Read-only viewer state controllers may consult while handling an event.
+/// `view_to_model_offset` resolves a view position to a model document offset
+/// through the active `CoordinatesConverter` and model snapshot — Monaco's
+/// view→model boundary — so controllers anchor on the model without a bespoke
+/// render-line offset helper.
 priv struct EditorContext {
   frame : @view_model.RenderFrame?
+  view_to_model_offset : (@base_common.Position) -> Int
 }
 
 ///|
 fn Viewer::editor_context(self : Viewer) -> EditorContext {
-  { frame: self.frame }
+  {
+    frame: self.frame,
+    view_to_model_offset: view_position => self.view_position_to_model_offset(view_position),
+  }
+}
+
+///|
+/// Resolves a view position to a model document offset, routing through the
+/// `CoordinatesConverter` (view→model position) and the model snapshot
+/// (model position→offset), the way Monaco resolves a `MouseTarget`'s view
+/// position. The offset only appears at this model boundary.
+fn Viewer::view_position_to_model_offset(
+  self : Viewer,
+  view_position : @base_common.Position,
+) -> Int {
+  let model_position = self.view_to_model(view_position)
+  match self.text_model {
+    Some(model) => model.snapshot().offset_at_position(model_position)
+    None => model_position.column
+  }
 }
 
 ///|

@@ -115,7 +115,6 @@ fn Viewer::dom_refine_content_target(
     hit.part_length(),
   )
   let column0 = column1 - 1
-  let offset = line.source_offset_at_column(column0)
   let kind : @viewer_common.MouseTargetKind = if column0 < line.text.length() {
     ContentText
   } else {
@@ -125,7 +124,6 @@ fn Viewer::dom_refine_content_target(
     kind,
     line_number,
     column: column0,
-    offset,
     span_index: -1,
     injected_text_index: line.injected_text_index_at_column(column0),
   }

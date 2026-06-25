@@ -56,6 +56,17 @@ offset helpers (`source_offset_at_column`, `model_line_start_offset`,
   boundary exception, or convert the hover anchor through the
   `CoordinatesConverter` like Monaco.
 
+  **Resolved (2026-06-25):** took the Monaco route. `MouseTarget.offset` was
+  dropped — the struct now carries only the view position (`line_number`,
+  `column`). `span_anchor_for_target` resolves the span's view columns to model
+  offsets through the active `CoordinatesConverter` (view→model position) plus
+  the model snapshot (`offset_at_position`), threaded into the hover controller
+  as the `EditorContext.view_to_model_offset` closure (`editor_events.mbt`).
+  `hit_test`/`dom_refine_content_target` no longer call
+  `source_offset_at_column`; the offset now appears only at that model boundary.
+  Validated: `just check`, `moon test --target js viewer viewer/common`, and the
+  hover + mouse/selection browser conformance specs.
+
 - **Out-of-scope subsystems still using the helpers** (not selection path):
   `content_widgets.mbt:496-499` (`line_col_for_offset` for the hover-copy
   widget) and `view_model_lines_projected.mbt:139` (internal projection). Both
@@ -230,7 +241,9 @@ fresh line-by-line diff because they are oracle-gated or known close ports:
 
 1. **Hover-anchor offset round-trip** on the hit-test path (`Drift`) — decide:
    document as a hover-boundary exception, or route the anchor through the
-   `CoordinatesConverter`.
+   `CoordinatesConverter`. **Resolved (2026-06-25):** routed through the
+   `CoordinatesConverter` + model snapshot; `MouseTarget.offset` removed (see A4
+   above).
 2. **`Selection` clipboard methods** (`normalized_range`, `get_*_to_copy`,
    `from_offsets`) live on the geometry type — Monaco keeps clipboard in the
    controller (module-decomposition `Drift`).

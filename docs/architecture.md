@@ -240,7 +240,8 @@ viewer/hover -> base/common, language, platform/log, syntax, viewer/common,
                 viewer/model, viewer/view_model, cmark/*
 viewer/markers -> base/common, language, viewer/decorations
 viewer/ui/scrollbar -> viewer/view_layout, rabbita/dom
-viewer/controller -> viewer/ui/scrollbar, viewer/view_layout, rabbita/dom
+viewer/controller -> base/common, viewer/common, viewer/view_model,
+                     viewer/ui/scrollbar, viewer/view_layout, rabbita/dom
 platform/log -> no product packages
 syntax/lang_* -> syntax, viewer/model
 ```

@@ -44,4 +44,5 @@ which the controller feeds via a `MouseDispatch` intent.
   and declare JS FFI, but not the shell, the rabbita TEA/vdom/command layers, or
   the `viewer` core. The edge is one-directional: `viewer -> viewer/controller`
   (`scripts/check-architecture.mbtx`, `is_viewer_browser_subpackage`).
-- May depend on `viewer/ui/scrollbar` and `viewer/view_layout`.
+- May depend on `base/common`, `viewer/common`, `viewer/view_model`,
+  `viewer/ui/scrollbar`, and `viewer/view_layout`.

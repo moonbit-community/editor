@@ -7,6 +7,9 @@ priv struct ViewContext {
   languages : @languages.Languages
   handle_hover_mousedown : (@rdom.Event, @rdom.MouseEvent) -> Unit
   handle_hover_keydown : (HoverWidgetDom, @rdom.Event, @rdom.KeyboardEvent) -> Unit
+  // The pointer is over the hover widget: keep the hover open and drop any
+  // pending hide (Monaco's `_shouldKeepCurrentHover` over the content widget).
+  keep_hover_open : () -> Unit
   hook_scrollable_scrollbar_input : (
     @scrollbar.ScrollableElementDom,
     @scrollbar.ScrollableElementOwner,
@@ -31,6 +34,7 @@ fn ViewContext::new(viewer : Viewer, view : View) -> ViewContext {
     handle_hover_keydown: (widget, event, keyboard) => {
       viewer.handle_hover_keydown(widget, event, keyboard)
     },
+    keep_hover_open: () => viewer.keep_hover_open(),
     hook_scrollable_scrollbar_input: (scrollable, owner) => {
       match viewer.mouse_handler {
         Some(handler) =>

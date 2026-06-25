@@ -18,6 +18,10 @@ priv struct ContentWidget {
   preferred_placement : ContentWidgetPlacement
   allow_overflow : Bool
   shift_left : Double
+  /// Measured monospace glyph advance, so the horizontal anchor is placed in
+  /// exact pixels (`column * char_width`) like Monaco, rather than CSS `ch`
+  /// units that resolve against the widget's inherited proportional UI font.
+  char_width : Double
 }
 
 ///|
@@ -33,6 +37,7 @@ priv struct ContentWidgetsPrepared {
   layout : @view_layout.ViewLayout
   hover_state : HoverController
   on_hover_measured : (Bool, Double) -> Unit
+  space_width : Double
 }
 
 ///|
@@ -121,6 +126,7 @@ impl ViewPart for ContentWidgets with fn prepare_render(self, context) {
     layout: context.input.layout,
     hover_state: context.input.hover_state,
     on_hover_measured: context.input.on_hover_measured,
+    space_width: context.input.space_width,
   })
 }
 
@@ -135,6 +141,7 @@ impl ViewPart for ContentWidgets with fn render(self, context) {
         prepared.layout,
         prepared.hover_state,
         prepared.on_hover_measured,
+        prepared.space_width,
       )
     None => ()
   }
@@ -158,6 +165,7 @@ fn ContentWidgets::render_hover_widget(
   layout : @view_layout.ViewLayout,
   hover_state : HoverController,
   on_hover_measured : (Bool, Double) -> Unit,
+  space_width : Double,
 ) -> Unit {
   let hover_view = match hover_state.widget_view() {
     Some(hover_view) => hover_view
@@ -204,6 +212,7 @@ fn ContentWidgets::render_hover_widget(
     preferred_placement,
     allow_overflow: false,
     shift_left,
+    char_width: space_width,
   }
   widget.wrapper.set_attribute("class", class_name)
   widget.hover.set_attribute("class", "monaco-hover fade-in")
@@ -231,6 +240,7 @@ fn ContentWidgets::render_hover_widget(
       layout,
       hover_state.measured(below, shift_left),
       on_hover_measured,
+      space_width,
     )
   }
 }
@@ -259,6 +269,10 @@ fn ContentWidgets::ensure_hover_widget(
       // text; non-interactive mousedown should still start editor selection at
       // the underlying coordinate.
       widget.wrapper.add_event_listener("mousemove", event => {
+        // The pointer is on the hover widget: keep it open. The editor never
+        // sees this move (stop_propagation), so the controller's grace timer
+        // would otherwise still fire and hide the widget out from under it.
+        (context.keep_hover_open)()
         event.stop_propagation()
       })
       widget.wrapper.add_event_listener("mousedown", event => {
@@ -337,7 +351,7 @@ fn Viewer::handle_hover_keydown(
   match keyboard.key() {
     "Escape" => {
       event.prevent_default()
-      self.hover = self.hover.cleared()
+      self.dismiss_hover()
       self.schedule_render()
     }
     "ArrowDown" => {
@@ -478,11 +492,8 @@ fn ContentWidget::style(self : ContentWidget) -> String {
     ContentWidgetBelow => self.anchor.top + editor_line_height
     ContentWidgetAbove => self.anchor.top
   }
-  let mut style = "top:" +
-    top.to_string() +
-    "px;left:calc(" +
-    self.anchor.column.to_string() +
-    "ch)"
+  let left = self.anchor.column.to_double() * self.char_width
+  let mut style = "top:" + top.to_string() + "px;left:" + left.to_string() + "px"
   if self.shift_left > 0.0 {
     style = style + ";margin-left:-" + self.shift_left.to_string() + "px"
   }

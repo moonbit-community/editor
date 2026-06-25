@@ -27,7 +27,7 @@ fn Viewer::pointer_handler_helper(
         mouse_down_count: payload.mouse_down_count,
         started_on_line_numbers: payload.started_on_line_numbers,
       }),
-    notify_mouse_moved: target => self.dispatch_editor_event(MouseMoved(target)),
+    notify_mouse_moved: target => self.on_mouse_moved(target),
     schedule_render: () => self.schedule_render(),
   }
 }

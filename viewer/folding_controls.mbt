@@ -22,7 +22,7 @@ fn Viewer::toggle_fold(self : Viewer, model_line_number : Int) -> Unit {
       )
       if changed {
         self.folded_ranges = folded_ranges
-        self.hover = self.hover.cleared()
+        self.dismiss_hover()
         self.render_feature_update()
       }
     }

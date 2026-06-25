@@ -23,6 +23,14 @@ priv struct HoverPlacement {
 let hover_delay_ms = 300
 
 ///|
+/// VS Code's default `editor.hover.hidingDelay`: once the widget is on screen,
+/// a mouse move off the anchor is debounced by this grace period before the
+/// hover reacts, so the pointer can travel onto the hover widget without it
+/// closing. Mirrors `ContentHoverController`'s `_reactToEditorMouseMoveRunner`
+/// scheduled at `hidingDelay`.
+let hover_hiding_delay_ms = 300
+
+///|
 /// What a hover transition asks the viewer to do; the controller stays a
 /// pure state machine and the viewer interprets these (timers through the
 /// browser-host timer bindings, provider requests through the registry).
@@ -273,6 +281,14 @@ priv struct HoverWidgetView {
   /// loading hover renders unmeasured at the anchor).
   measurable : Bool
   placement : HoverPlacement?
+}
+
+///|
+/// Whether a hover widget is currently on screen (resolved content or the
+/// loading placeholder). Monaco's `_contentWidget.isVisible`; the mouse-move
+/// grace period only applies once the widget is shown.
+fn HoverController::widget_visible(self : HoverController) -> Bool {
+  self.widget_view() is Some(_)
 }
 
 ///|

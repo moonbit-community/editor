@@ -44,10 +44,85 @@ fn Viewer::view_position_to_model_offset(
 }
 
 ///|
+/// Mouse-move entry point (Monaco's `ContentHoverController._onEditorMouseMove`).
+/// Once a hover widget is on screen, a move off the anchor is debounced by
+/// `hover_hiding_delay_ms` so the pointer can travel onto the widget without it
+/// closing; before the widget is visible the move reacts immediately. The
+/// pointer entering the widget cancels the deferred reaction (see
+/// `Viewer::keep_hover_open`).
+fn Viewer::on_mouse_moved(
+  self : Viewer,
+  target : @viewer_common.MouseTarget,
+) -> Unit {
+  self.hover_pending_target = Some(target)
+  if self.hover.widget_visible() {
+    // Grace period: keep the earliest pending timer (Monaco only schedules when
+    // the runner is not already scheduled), so the reaction fires once the delay
+    // elapses unless the pointer reaches the widget first.
+    if !self.hover_react_pending {
+      self.hover_react_pending = true
+      let token = self.hover_react_token
+      set_timeout(() => {
+        if self.hover_react_pending && token == self.hover_react_token {
+          self.run_hover_react()
+        }
+      }, hover_hiding_delay_ms)
+      |> ignore
+    }
+  } else {
+    self.run_hover_react()
+  }
+}
+
+///|
+/// Reacts to the latest mouse position, dispatching it as a `MouseMoved` event.
+fn Viewer::run_hover_react(self : Viewer) -> Unit {
+  self.hover_react_pending = false
+  match self.hover_pending_target {
+    Some(target) => self.dispatch_editor_event(MouseMoved(target))
+    None => ()
+  }
+}
+
+///|
+/// Cancels any deferred mouse-move reaction (Monaco's
+/// `_reactToEditorMouseMoveRunner.cancel()`). Bumping the token invalidates a
+/// timer that is already in flight.
+fn Viewer::cancel_hover_react(self : Viewer) -> Unit {
+  self.hover_react_token += 1
+  self.hover_react_pending = false
+  self.hover_pending_target = None
+}
+
+///|
+/// The pointer is on the hover widget: keep the current hover and drop any
+/// pending hide. Monaco's `_shouldKeepCurrentHover` short-circuit when the mouse
+/// is over the content hover widget.
+fn Viewer::keep_hover_open(self : Viewer) -> Unit {
+  self.cancel_hover_react()
+}
+
+///|
+/// Hides the hover and drops any deferred mouse-move reaction, so a stale
+/// pending target cannot re-open it after an imperative dismiss (mouse-down,
+/// fold toggle, model reset, Escape). Monaco's `hideContentHover()` pairs with
+/// `_cancelScheduler()`. Callers own their own re-render.
+fn Viewer::dismiss_hover(self : Viewer) -> Unit {
+  self.cancel_hover_react()
+  self.hover = self.hover.cleared()
+}
+
+///|
 /// Fans one editor event to every controller in a fixed order and applies
 /// their effects; the contribution model with imperative sub-updates.
 /// Hover is the only controller today.
 fn Viewer::dispatch_editor_event(self : Viewer, event : EditorEvent) -> Unit {
+  // A pointer leaving the editor or Escape hides immediately and must drop any
+  // deferred mouse-move reaction so a stale target cannot re-open the hover.
+  match event {
+    MouseLeft | EscapePressed => self.cancel_hover_react()
+    MouseMoved(_) => ()
+  }
   let before = self.hover
   let (effect, hover) = self.hover.on_event(event, self.editor_context())
   self.hover = hover

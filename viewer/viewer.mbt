@@ -36,6 +36,14 @@ pub struct Viewer {
   priv mut view_zones : Array[BrowserViewZone]
   priv mut cursor : @cursor.CursorsController?
   priv mut hover : HoverController
+  /// Mouse-move grace state (Monaco's `_reactToEditorMouseMoveRunner`): while a
+  /// hover widget is on screen, a move off the anchor is deferred by
+  /// `hover_hiding_delay_ms` instead of reacting immediately, so the pointer can
+  /// reach the widget. `hover_react_token` invalidates a deferred reaction that
+  /// the pointer cancelled by entering the widget.
+  priv mut hover_react_pending : Bool
+  priv mut hover_react_token : Int
+  priv mut hover_pending_target : @viewer_common.MouseTarget?
   priv mut char_width : Double
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
@@ -152,6 +160,9 @@ pub fn Viewer::Viewer(
     view_zones: [],
     cursor: None,
     hover: HoverController::empty(),
+    hover_react_pending: false,
+    hover_react_token: 0,
+    hover_pending_target: None,
     char_width: 0.0,
     soft_wrap_column: 0,
     max_line_length: 0,
@@ -292,7 +303,7 @@ pub fn Viewer::set_model(
   if view_state.resets_controller_state() {
     self.cursor = None
     self.cancel_mouse_selection()
-    self.hover = self.hover.cleared()
+    self.dismiss_hover()
   }
   self.render_current_model(
     model,
@@ -489,6 +500,7 @@ fn Viewer::clear_current_model(
   self.cursor = None
   self.cancel_mouse_selection()
   self.hover = HoverController::empty()
+  self.cancel_hover_react()
   self.schedule_render()
 }
 

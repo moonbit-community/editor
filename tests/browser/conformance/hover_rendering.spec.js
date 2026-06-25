@@ -178,6 +178,68 @@ test('wraps spaced signature code blocks instead of clipping hover content', asy
   await expect(widget.locator('.scrollbar.horizontal.visible .slider')).toHaveCount(0);
 });
 
+test('anchors the hover at the hovered word in exact pixels', async ({ page }) => {
+  await page.goto('/');
+  await setHoverFixture(page, 'plaintext', 'anchored at the word start');
+  await openMainFixture(page);
+
+  await hoverMainSymbol(page);
+  const widget = page.locator('[data-content-widget="hover"]');
+  await expect(widget.locator('.monaco-hover')).toBeVisible();
+
+  const wordBox = await page
+    .locator('.view-line span', { hasText: /^main$/ })
+    .first()
+    .boundingBox();
+  const widgetBox = await widget.boundingBox();
+  // The hover anchors at the word's start column. Positioning it with CSS `ch`
+  // (which resolves against the wrapper's proportional UI font, not the editor
+  // glyph advance) drifts it right by column*(ch - charWidth); exact-pixel
+  // placement keeps the widget's left edge on the word.
+  expect(Math.abs(widgetBox.x - wordBox.x)).toBeLessThan(3);
+});
+
+test('keeps the hover open while the pointer travels onto the widget', async ({ page }) => {
+  await page.goto('/');
+  await setHoverFixture(page, 'plaintext', 'grace period hover');
+  await openMainFixture(page);
+
+  await hoverMainSymbol(page);
+  const widget = page.locator('[data-content-widget="hover"]');
+  const hover = widget.locator('.monaco-hover');
+  await expect(hover).toBeVisible();
+
+  const geom = await page.evaluate(() => {
+    const span = [...document.querySelectorAll('.view-line span')].find(
+      (node) => node.textContent === 'main',
+    );
+    const wordRect = span.getBoundingClientRect();
+    const root =
+      document.querySelector('.readonly-editor') ||
+      document.querySelector('.moonbit-viewer');
+    const rootRect = root.getBoundingClientRect();
+    return { right: wordRect.right, top: wordRect.top, rootRight: rootRect.right };
+  });
+
+  // Move into empty content space off the word but still inside the editor: the
+  // hover must survive the hidingDelay grace instead of closing immediately
+  // (the bug was an instant `cleared()` on any move off the anchored span).
+  const emptyX = Math.min(geom.right + 140, geom.rootRight - 30);
+  await page.mouse.move(emptyX, geom.top + 7);
+  await page.waitForTimeout(150);
+  await expect(hover).toBeVisible();
+
+  // Reaching the widget within the grace keeps it open past the delay.
+  const widgetBox = await widget.boundingBox();
+  await page.mouse.move(widgetBox.x + widgetBox.width / 2, widgetBox.y + widgetBox.height / 2);
+  await page.waitForTimeout(450);
+  await expect(hover).toBeVisible();
+
+  // Leaving the editor entirely hides it.
+  await page.mouse.move(10, 10);
+  await expect(widget).toHaveCount(0);
+});
+
 function readonlyEvents(page) {
   return collectReadonlyEvents(page);
 }

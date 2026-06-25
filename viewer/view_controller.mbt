@@ -45,7 +45,7 @@ fn Viewer::dispatch_mouse(self : Viewer, data : MouseDispatchData) -> Unit {
   } else {
     @cursor.move_to(controller, data.view_position)
   }
-  self.hover = self.hover.cleared()
+  self.dismiss_hover()
   self.schedule_render()
 }
 

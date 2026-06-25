@@ -94,7 +94,7 @@ test "normalizes definition result shapes" {
   match parse_definition_for_test(location, document) {
     Some(found) => {
       assert_eq(found.uri.to_string(), "memory://main.mbt")
-      assert_true(found.range == OffsetRange(7, 11))
+      assert_true(found.range == Range(1, 8, 1, 12))
     }
     None => fail("expected location")
   }
@@ -105,7 +105,7 @@ test "normalizes definition result shapes" {
   match parse_definition_for_test(link, document) {
     Some(found) => {
       assert_eq(found.uri.to_string(), "memory://main.mbt")
-      assert_true(found.range == OffsetRange(7, 11))
+      assert_true(found.range == Range(1, 8, 1, 12))
     }
     None => fail("expected location link")
   }
@@ -116,7 +116,7 @@ test "normalizes definition result shapes" {
   match parse_definition_for_test(external, document) {
     Some(found) => {
       assert_eq(found.uri.to_string(), "memory://other.mbt")
-      assert_true(found.range == OffsetRange(0, 0))
+      assert_true(found.range == Range(1, 1, 1, 1))
     }
     None => fail("expected external location")
   }
@@ -180,7 +180,7 @@ async test "lsp client requests definition through transport" {
   match client.definition_at(document, 7) {
     Some(location) => {
       assert_eq(location.uri.to_string(), "memory://main.mbt")
-      assert_true(location.range == OffsetRange(7, 11))
+      assert_true(location.range == Range(1, 8, 1, 12))
     }
     None => fail("expected definition")
   }
@@ -200,7 +200,7 @@ async test "lsp client requests symbols and semantic tokens through provider ada
   assert_eq(symbols.length(), 2)
   assert_eq(symbols[0].name, "main")
   assert_eq(symbols[0].kind, "function")
-  assert_true(symbols[0].range == OffsetRange(7, 11))
+  assert_true(symbols[0].range == Range(1, 8, 1, 12))
   assert_eq(symbols[1].name, "nested")
   assert_eq(symbols[1].kind, "variable")
 

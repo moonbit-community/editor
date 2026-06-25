@@ -130,7 +130,7 @@ pub(all) struct DefinitionResultPayload {
 /// references without fetching file contents.
 pub(all) struct ReferenceItem {
   uri : @base_common.Uri
-  range : @base_common.OffsetRange
+  range : @base_common.Range
   line : Int
   column : Int
   line_text : String
@@ -1180,7 +1180,7 @@ fn packet_fields(kind : String, id : String) -> Map[String, Json] {
 ///|
 fn diagnostic_json(diagnostic : @language.Diagnostic) -> Json {
   {
-    "range": range_json(diagnostic.range),
+    "range": offset_range_json(diagnostic.range),
     "severity": diagnostic.severity.label().to_json(),
     "message": diagnostic.message.to_json(),
   }
@@ -1197,7 +1197,10 @@ fn document_symbol_json(symbol : @language.DocumentSymbol) -> Json {
 
 ///|
 fn semantic_token_json(token : @language.SemanticToken) -> Json {
-  { "range": range_json(token.range), "tokenType": token.token_type.to_json() }
+  {
+    "range": offset_range_json(token.range),
+    "tokenType": token.token_type.to_json(),
+  }
 }
 
 ///|
@@ -1258,7 +1261,7 @@ fn position_json(position : @base_common.Position) -> Json {
 ///|
 fn hover_json(hover : @language.Hover) -> Json {
   {
-    "range": range_json(hover.range),
+    "range": offset_range_json(hover.range),
     "contents": Json::array(hover.contents.map(hover_content_json)),
   }
 }
@@ -1282,8 +1285,38 @@ fn location_json(location : @language.Location) -> Json {
 }
 
 ///|
-fn range_json(range : @base_common.OffsetRange) -> Json {
+fn offset_range_json(range : @base_common.OffsetRange) -> Json {
   { "start": range.start.to_json(), "end": range.end_exclusive.to_json() }
+}
+
+///|
+/// Serializes a line/column `Range`, used by the types that carry a `Range`
+/// (Location, DocumentSymbol, ReferenceItem). The offset span uses
+/// `offset_range_json`.
+fn range_json(range : @base_common.Range) -> Json {
+  {
+    "startLineNumber": range.start_line_number.to_json(),
+    "startColumn": range.start_column.to_json(),
+    "endLineNumber": range.end_line_number.to_json(),
+    "endColumn": range.end_column.to_json(),
+  }
+}
+
+///|
+fn parse_range(value : Json) -> @base_common.Range? {
+  match
+    (
+      json_int_field(value, "startLineNumber"),
+      json_int_field(value, "startColumn"),
+      json_int_field(value, "endLineNumber"),
+      json_int_field(value, "endColumn"),
+    ) {
+    (Some(start_line), Some(start_column), Some(end_line), Some(end_column)) =>
+      Some(
+        @base_common.Range::Range(start_line, start_column, end_line, end_column),
+      )
+    _ => None
+  }
 }
 
 ///|
@@ -1292,7 +1325,7 @@ fn parse_diagnostic(value : Json) -> @language.Diagnostic? {
     Object(_) =>
       match json_field(value, "range") {
         Some(range_json) =>
-          match parse_range(range_json) {
+          match parse_offset_range(range_json) {
             Some(range) =>
               Some({
                 range,
@@ -1409,7 +1442,7 @@ fn parse_hover(value : Json) -> @language.Hover? {
     Object(_) =>
       match (json_field(value, "range"), json_field(value, "contents")) {
         (Some(range_json), Some(contents_json)) =>
-          match parse_range(range_json) {
+          match parse_offset_range(range_json) {
             Some(range) => {
               let contents = parse_hover_contents(contents_json)
               if contents.length() == 0 {
@@ -1489,7 +1522,8 @@ fn parse_location(value : Json) -> @language.Location? {
     Object(_) =>
       match (json_string_field(value, "uri"), json_field(value, "range")) {
         (Some(raw_uri), Some(range_json)) =>
-          match (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
+          match
+            (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
             (ParsedUri(uri), Some(range)) => Some({ uri, range })
             _ => None
           }
@@ -1505,7 +1539,8 @@ fn parse_reference_item(value : Json) -> ReferenceItem? {
     Object(_) =>
       match (json_string_field(value, "uri"), json_field(value, "range")) {
         (Some(raw_uri), Some(range_json)) =>
-          match (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
+          match
+            (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
             (ParsedUri(uri), Some(range)) =>
               Some({
                 uri,
@@ -1549,7 +1584,7 @@ fn parse_semantic_token(value : Json) -> @language.SemanticToken? {
     Object(_) =>
       match json_field(value, "range") {
         Some(range_json) =>
-          match parse_range(range_json) {
+          match parse_offset_range(range_json) {
             Some(range) =>
               Some({
                 range,
@@ -1564,7 +1599,7 @@ fn parse_semantic_token(value : Json) -> @language.SemanticToken? {
 }
 
 ///|
-fn parse_range(value : Json) -> @base_common.OffsetRange? {
+fn parse_offset_range(value : Json) -> @base_common.OffsetRange? {
   match value {
     Object(_) =>
       match (json_int_field(value, "start"), json_int_field(value, "end")) {

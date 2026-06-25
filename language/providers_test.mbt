@@ -14,10 +14,16 @@ test "provider result finds hover and definition by offset" {
     definitions: [
       {
         uri: @base_common.Uri::memory("provider.mbt"),
-        range: OffsetRange(3, 7),
+        range: @base_common.Range::Range(1, 4, 1, 8),
       },
     ],
-    symbols: [{ name: "main", kind: "function", range: OffsetRange(3, 7) }],
+    symbols: [
+      {
+        name: "main",
+        kind: "function",
+        range: @base_common.Range::Range(1, 4, 1, 8),
+      },
+    ],
     semantic_tokens: [{ range: OffsetRange(3, 7), token_type: "function" }],
   }
   assert_eq(providers.diagnostics.length(), 1)
@@ -32,7 +38,7 @@ test "provider result finds hover and definition by offset" {
       }
     None => fail("expected hover")
   }
-  match providers.definition_at(3) {
+  match providers.definition_at(@base_common.Position::Position(1, 4)) {
     Some(item) => assert_eq(item.uri.to_string(), "memory://provider.mbt")
     None => fail("expected definition")
   }

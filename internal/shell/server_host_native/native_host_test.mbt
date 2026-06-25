@@ -286,7 +286,7 @@ async test "native workspace language provider bridges remote documents to file 
       ) {
       Some(location) => {
         assert_eq(location.uri.to_string(), remote_uri.to_string())
-        assert_true(location.range == OffsetRange(7, 20))
+        assert_true(location.range == Range(1, 8, 1, 21))
       }
       None => fail("expected lsp definition")
     }

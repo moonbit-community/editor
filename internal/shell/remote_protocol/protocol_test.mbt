@@ -271,14 +271,14 @@ test "encodes and decodes server document and language packets" {
     references: [
       {
         uri,
-        range: OffsetRange(7, 11),
+        range: Range(1, 8, 1, 12),
         line: 1,
         column: 8,
         line_text: "pub fn main {}",
       },
       {
         uri,
-        range: OffsetRange(20, 24),
+        range: Range(2, 1, 2, 5),
         line: 2,
         column: 1,
         line_text: "main()",
@@ -296,7 +296,7 @@ test "encodes and decodes server document and language packets" {
       assert_eq(payload.references[0].line, 1)
       assert_eq(payload.references[0].column, 8)
       assert_eq(payload.references[0].line_text, "pub fn main {}")
-      assert_true(payload.references[1].range == OffsetRange(20, 24))
+      assert_true(payload.references[1].range == Range(2, 1, 2, 5))
     }
     DecodedServerPacket(_) => fail("unexpected references result packet")
     ServerPacketDecodeError(error) => fail(error.message)
@@ -343,7 +343,7 @@ test "encodes and decodes server document and language packets" {
     id: "symbols-1",
     uri,
     revision: "rev-2",
-    symbols: [{ name: "main", kind: "function", range: OffsetRange(7, 11) }],
+    symbols: [{ name: "main", kind: "function", range: Range(1, 8, 1, 12) }],
   })
   match @remote_protocol.decode_server_packet(symbols.to_json().stringify()) {
     DecodedServerPacket(DocumentSymbolsResult(payload)) => {

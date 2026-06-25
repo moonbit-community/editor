@@ -904,7 +904,7 @@ fn parse_diagnostic(
 ) -> @language.Diagnostic? {
   match json_field(item, "range") {
     Some(range_json) =>
-      match parse_lsp_range(range_json, doc) {
+      match parse_lsp_offset_range(range_json, doc) {
         Some(range) =>
           Some({
             range,
@@ -943,7 +943,7 @@ fn parse_hover_result(
           } else {
             let range = match json_field(result, "range") {
               Some(range_json) =>
-                match parse_lsp_range(range_json, doc) {
+                match parse_lsp_offset_range(range_json, doc) {
                   Some(range) => range
                   None => fallback_hover_range(doc, offset)
                 }
@@ -1112,7 +1112,7 @@ fn append_document_symbol(
 fn document_symbol_range(
   value : Json,
   document : @workspace.DocumentSnapshot,
-) -> @base_common.OffsetRange {
+) -> @base_common.Range {
   let range_json = match json_field(value, "range") {
     Some(range) => Some(range)
     None =>
@@ -1131,8 +1131,9 @@ fn document_symbol_range(
       }
   }
   match range_json {
-    Some(range) => parse_lsp_range(range, document).unwrap_or(OffsetRange(0, 0))
-    None => OffsetRange(0, 0)
+    Some(range) =>
+      parse_lsp_range(range).unwrap_or(@base_common.Range::Range(1, 1, 1, 1))
+    None => @base_common.Range::Range(1, 1, 1, 1)
   }
 }
 
@@ -1267,11 +1268,13 @@ fn parse_location_result(
       let range = if uri == document.uri.to_string() {
         match range_json {
           Some(raw_range) =>
-            parse_lsp_range(raw_range, document).unwrap_or(OffsetRange(0, 0))
-          None => OffsetRange(0, 0)
+            parse_lsp_range(raw_range).unwrap_or(
+              @base_common.Range::Range(1, 1, 1, 1),
+            )
+          None => @base_common.Range::Range(1, 1, 1, 1)
         }
       } else {
-        OffsetRange(0, 0)
+        @base_common.Range::Range(1, 1, 1, 1)
       }
       Some({ uri: parsed_uri, range })
     }
@@ -1280,7 +1283,7 @@ fn parse_location_result(
 }
 
 ///|
-fn parse_lsp_range(
+fn parse_lsp_offset_range(
   value : Json,
   doc : @workspace.DocumentSnapshot,
 ) -> @base_common.OffsetRange? {
@@ -1294,6 +1297,22 @@ fn parse_lsp_range(
               doc.offset_at_position(end_position),
             ),
           )
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+/// Parses an LSP range straight into a line/column `Range`. Unlike
+/// `parse_lsp_offset_range`, this keeps Monaco's coordinate space (no offset
+/// round-trip): `parse_lsp_position` already returns a 1-based `Position`.
+fn parse_lsp_range(value : Json) -> @base_common.Range? {
+  match (json_field(value, "start"), json_field(value, "end")) {
+    (Some(start), Some(end)) =>
+      match (parse_lsp_position(start), parse_lsp_position(end)) {
+        (Some(start_position), Some(end_position)) =>
+          Some(@base_common.Range::from_positions(start_position, end_position))
         _ => None
       }
     _ => None

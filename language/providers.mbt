@@ -32,17 +32,19 @@ pub(all) struct Diagnostic {
 
 ///|
 /// Cross-document location result for definition and reference providers.
+/// `range` is a line/column `Range`, matching Monaco's `Location`.
 pub(all) struct Location {
   uri : @base_common.Uri
-  range : @base_common.OffsetRange
+  range : @base_common.Range
 } derive(Debug)
 
 ///|
-/// Symbol outline item for the current document.
+/// Symbol outline item for the current document. `range` is a line/column
+/// `Range`, matching Monaco's `DocumentSymbol`.
 pub(all) struct DocumentSymbol {
   name : String
   kind : String
-  range : @base_common.OffsetRange
+  range : @base_common.Range
 } derive(Debug)
 
 ///|
@@ -172,12 +174,12 @@ pub fn ProviderResult::hover_at(self : ProviderResult, offset : Int) -> Hover? {
 }
 
 ///|
-/// First definition location containing `offset`.
+/// First definition location containing `position`.
 pub fn ProviderResult::definition_at(
   self : ProviderResult,
-  offset : Int,
+  position : @base_common.Position,
 ) -> Location? {
-  definition_at(self, offset)
+  definition_at(self, position)
 }
 
 ///|
@@ -191,10 +193,13 @@ pub fn DiagnosticSeverity::label(self : DiagnosticSeverity) -> String {
 }
 
 ///|
-fn definition_at(providers : ProviderResult, offset : Int) -> Location? {
+fn definition_at(
+  providers : ProviderResult,
+  position : @base_common.Position,
+) -> Location? {
   let mut found : Location? = None
   for location in providers.definitions {
-    if found is None && location.range.contains(offset) {
+    if found is None && location.range.contains_position(position) {
       found = Some(location)
     }
   }

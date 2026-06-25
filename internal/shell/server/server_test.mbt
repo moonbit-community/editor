@@ -449,7 +449,11 @@ impl @language.DefinitionProvider for FakeLanguageProvider with fn provide_defin
   _token,
 ) {
   let offset = model.snapshot.offset_at_position(position)
-  Some({ uri: model.uri, range: OffsetRange(offset, offset + 4) })
+  let end_pos = model.snapshot.position_at_offset(offset + 4)
+  Some({
+    uri: model.uri,
+    range: @base_common.Range::from_positions(position, end_pos),
+  })
 }
 
 ///|
@@ -460,9 +464,19 @@ impl @language.ReferencesProvider for FakeLanguageProvider with fn provide_refer
   _token,
 ) {
   let offset = model.snapshot.offset_at_position(position)
+  let end_pos = model.snapshot.position_at_offset(offset + 4)
   [
-    { uri: model.uri, range: OffsetRange(offset, offset + 4) },
-    { uri: model.uri, range: OffsetRange(0, 4) },
+    {
+      uri: model.uri,
+      range: @base_common.Range::from_positions(position, end_pos),
+    },
+    {
+      uri: model.uri,
+      range: @base_common.Range::from_positions(
+        model.snapshot.position_at_offset(0),
+        model.snapshot.position_at_offset(4),
+      ),
+    },
   ]
 }
 
@@ -487,7 +501,13 @@ impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_d
   _model,
   _token,
 ) {
-  [{ name: "configured", kind: "function", range: OffsetRange(7, 17) }]
+  [
+    {
+      name: "configured",
+      kind: "function",
+      range: @base_common.Range::Range(1, 8, 1, 18),
+    },
+  ]
 }
 
 ///|

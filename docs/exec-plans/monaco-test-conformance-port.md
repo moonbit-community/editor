@@ -182,9 +182,23 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   clipboard, syntax lexers, remote protocol); ad-hoc union/min-max range code
   now delegates to `join`. JSON wire keys kept as `"end"` (sourced from
   `end_exclusive`) to avoid churn. All green (260 js / 270 native).
-  **Remaining (next steps):** move the model/provider/decoration/hover/marker
-  layers from `OffsetRange` to line/column `Range` where Monaco does (step 3);
-  run the browser suite (step 4).
+- **Range-system migration (stage 2, step 3a done — Location/DocumentSymbol).**
+  Moved the shell-display provider types `Location.range` and
+  `DocumentSymbol.range` (plus the protocol `ReferenceItem.range`) from
+  `OffsetRange` to line/column `Range`. These never touch the viewer's
+  offset-based render/marker/hover machinery, so they're isolated. New
+  a `parse_lsp_range` that lifts an LSP range straight to a line/column `Range`
+  (no offset round-trip) and `range_json`/`parse_range` wire helpers (line/column
+  keys) back them; the offset variants are renamed `offset_range_json`/
+  `parse_offset_range` (and `parse_lsp_offset_range`) for the still-offset types,
+  so the unqualified name always means the canonical `Range`. `server.mbt`'s
+  go-to-def display now reads `location.range`'s
+  line/column directly (drops the `position_at_offset` step), and
+  `definition_at` is position-keyed. All green (260 js / 270 native).
+  **Remaining:** the render-coupled cluster — `Diagnostic` + `Marker` + `Hover`
+  + `Decoration` → `Range` (step 3b; `hover_at`/marker queries become
+  position-keyed, `to_view_decoration` simplifies; `SemanticToken` and syntax
+  tokens stay `OffsetRange`); then the browser suite (step 4).
 - **Phase 1 deferred, with reasons:**
   - `foldingModel` (17) / `hiddenRangeModel` (1): require a full editor
     decoration-tracking model (`changeDecorations`/`deltaDecorations`/

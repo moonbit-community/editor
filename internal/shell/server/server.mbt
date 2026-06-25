@@ -479,17 +479,16 @@ async fn RemoteServer::enrich_reference(
     }
   }
   match snapshot {
-    Some(snapshot) => {
-      let line_index = snapshot.line_at_offset(location.range.start)
-      let position = snapshot.position_at_offset(location.range.start)
+    Some(snapshot) =>
+      // `location.range` is already 1-based line/column, so the display fields
+      // read straight off it; only `line_text` needs a 0-based line index.
       {
         uri: location.uri,
         range: location.range,
-        line: position.line_number,
-        column: position.column,
-        line_text: snapshot.line_text(line_index),
+        line: location.range.start_line_number,
+        column: location.range.start_column,
+        line_text: snapshot.line_text(location.range.start_line_number - 1),
       }
-    }
     None =>
       {
         uri: location.uri,

@@ -37,7 +37,7 @@ pub fn DiagnosticSeverity::label(Self) -> String
 pub(all) struct DocumentSymbol {
   name : String
   kind : String
-  range : @common.OffsetRange
+  range : @common.Range
 } derive(@debug.Debug)
 
 pub(all) struct FoldingRange {
@@ -95,7 +95,7 @@ pub fn LanguageSelector::matches(Self, @model.TextModel) -> Bool
 
 pub(all) struct Location {
   uri : @common.Uri
-  range : @common.OffsetRange
+  range : @common.Range
 } derive(@debug.Debug)
 
 pub(all) struct ProviderResult {
@@ -105,7 +105,7 @@ pub(all) struct ProviderResult {
   symbols : Array[DocumentSymbol]
   semantic_tokens : Array[SemanticToken]
 } derive(@debug.Debug)
-pub fn ProviderResult::definition_at(Self, Int) -> Location?
+pub fn ProviderResult::definition_at(Self, @common.Position) -> Location?
 pub fn ProviderResult::empty() -> Self
 pub fn ProviderResult::hover_at(Self, Int) -> Hover?
 

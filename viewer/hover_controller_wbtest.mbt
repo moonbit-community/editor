@@ -6,10 +6,10 @@ test "stale hover results are dropped by token guards" {
   }
   let controller = HoverController::empty()
   let hover : @hover.ComputedHover? = Some({
-    range: Range(3, 7),
+    range: OffsetRange(3, 7),
     parts: [
       MarkdownHover(
-        range=Range(3, 7),
+        range=OffsetRange(3, 7),
         contents=[PlainText("fn main")],
         ordinal=100,
       ),

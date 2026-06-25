@@ -51,7 +51,7 @@ pub fn PlainTokenizer::new() -> Self
 pub impl LineTokenizer for PlainTokenizer
 
 pub(all) struct Token {
-  range : @common.Range
+  range : @common.OffsetRange
   tag : HighlightTag
   text : String
 } derive(@debug.Debug)

@@ -16,7 +16,7 @@ import {
 pub(all) struct Marker {
   owner : String
   resource : String
-  range : @common.Range
+  range : @common.OffsetRange
   severity : @language.DiagnosticSeverity
   message : String
   source : String?
@@ -29,7 +29,7 @@ pub(all) struct MarkerDecorationsService {
   markers : MarkerService
 }
 pub fn MarkerDecorationsService::decorations_for_resource(Self, @common.Uri) -> @decorations.DecorationSet
-pub fn MarkerDecorationsService::markers_at(Self, @common.Uri, @common.Range, limit? : Int) -> Array[Marker]
+pub fn MarkerDecorationsService::markers_at(Self, @common.Uri, @common.OffsetRange, limit? : Int) -> Array[Marker]
 pub fn MarkerDecorationsService::new(MarkerService) -> Self
 
 pub(all) struct MarkerService {

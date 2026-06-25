@@ -51,11 +51,11 @@ pub(all) enum ForeignElementType {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct InlineDecoration {
-  range : @common.Range
+  range : @common.OffsetRange
   class_name : String
   decoration_type : InlineDecorationType
 } derive(Eq, @debug.Debug)
-pub fn InlineDecoration::InlineDecoration(@common.Range, String, decoration_type? : InlineDecorationType) -> Self
+pub fn InlineDecoration::InlineDecoration(@common.OffsetRange, String, decoration_type? : InlineDecorationType) -> Self
 
 pub(all) enum InlineDecorationType {
   Regular
@@ -107,12 +107,12 @@ pub(all) struct RenderLineInput {
   render_whitespace : RenderWhitespace
   render_control_characters : Bool
   font_ligatures : Bool
-  selections_on_line : Array[@common.Range]
+  selections_on_line : Array[@common.OffsetRange]
   text_direction : TextDirection
   vertical_scrollbar_size : Double
   render_new_line_when_empty : Bool
 } derive(Eq, @debug.Debug)
-pub fn RenderLineInput::from_view_line(ViewLineRenderingData, line_decorations? : Array[LineDecoration], use_monospace_optimizations? : Bool, can_use_halfwidth_rightwards_arrow? : Bool, faux_indent_length? : Int, space_width? : Double, middot_width? : Double, wsmiddot_width? : Double, stop_rendering_line_after? : Int, render_whitespace? : RenderWhitespace, render_control_characters? : Bool, font_ligatures? : Bool, selections_on_line? : Array[@common.Range], vertical_scrollbar_size? : Double, render_new_line_when_empty? : Bool) -> Self
+pub fn RenderLineInput::from_view_line(ViewLineRenderingData, line_decorations? : Array[LineDecoration], use_monospace_optimizations? : Bool, can_use_halfwidth_rightwards_arrow? : Bool, faux_indent_length? : Int, space_width? : Double, middot_width? : Double, wsmiddot_width? : Double, stop_rendering_line_after? : Int, render_whitespace? : RenderWhitespace, render_control_characters? : Bool, font_ligatures? : Bool, selections_on_line? : Array[@common.OffsetRange], vertical_scrollbar_size? : Double, render_new_line_when_empty? : Bool) -> Self
 
 pub(all) struct RenderLineOutput {
   character_mapping : CharacterMapping

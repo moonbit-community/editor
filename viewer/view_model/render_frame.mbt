@@ -141,7 +141,7 @@ pub fn RenderLine::view_column_at_source_offset(
 /// decorations at render time (`ViewModelDecorations`), so spans carry only the
 /// tokenizer's classes.
 fn spans_for_line(
-  line_range : @base_common.Range,
+  line_range : @base_common.OffsetRange,
   tokens : Array[@syntax.Token],
 ) -> Array[RenderSpan] {
   let spans = []
@@ -189,7 +189,7 @@ fn spans_for_line(
 /// over syntax colors where both apply.
 fn overlay_semantic_tokens(
   spans : Array[RenderSpan],
-  line_range : @base_common.Range,
+  line_range : @base_common.OffsetRange,
   semantic_tokens : Array[@language.SemanticToken],
 ) -> Array[RenderSpan] {
   if semantic_tokens.length() == 0 {
@@ -312,7 +312,7 @@ fn hover_content_json(content : @language.HoverContent) -> Json {
 }
 
 ///|
-fn range_json(range : @base_common.Range) -> Json {
+fn range_json(range : @base_common.OffsetRange) -> Json {
   { "start": range.start.to_json(), "end": range.end.to_json() }
 }
 

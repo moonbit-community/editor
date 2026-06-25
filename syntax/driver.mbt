@@ -30,7 +30,7 @@ fn tokenize_document_lines(
       state,
     )
     for line_token in line_tokens {
-      let range = @base_common.Range(
+      let range = @base_common.OffsetRange(
         line_start + line_token.start,
         line_start + line_token.end,
       )

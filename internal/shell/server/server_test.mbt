@@ -425,7 +425,7 @@ impl @language.HoverProvider for FakeLanguageProvider with fn provide_hover(
 ) {
   let offset = model.snapshot.offset_at_position(position)
   Some({
-    range: Range(offset, offset + 4),
+    range: OffsetRange(offset, offset + 4),
     contents: [PlainText("Configured hover")],
   })
 }
@@ -449,7 +449,7 @@ impl @language.DefinitionProvider for FakeLanguageProvider with fn provide_defin
   _token,
 ) {
   let offset = model.snapshot.offset_at_position(position)
-  Some({ uri: model.uri, range: Range(offset, offset + 4) })
+  Some({ uri: model.uri, range: OffsetRange(offset, offset + 4) })
 }
 
 ///|
@@ -461,8 +461,8 @@ impl @language.ReferencesProvider for FakeLanguageProvider with fn provide_refer
 ) {
   let offset = model.snapshot.offset_at_position(position)
   [
-    { uri: model.uri, range: Range(offset, offset + 4) },
-    { uri: model.uri, range: Range(0, 4) },
+    { uri: model.uri, range: OffsetRange(offset, offset + 4) },
+    { uri: model.uri, range: OffsetRange(0, 4) },
   ]
 }
 
@@ -472,7 +472,13 @@ impl @language.DiagnosticsProvider for FakeLanguageProvider with fn provide_diag
   _model,
   _token,
 ) {
-  [{ range: Range(0, 4), severity: Warning, message: "Configured diagnostic" }]
+  [
+    {
+      range: OffsetRange(0, 4),
+      severity: Warning,
+      message: "Configured diagnostic",
+    },
+  ]
 }
 
 ///|
@@ -481,7 +487,7 @@ impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_d
   _model,
   _token,
 ) {
-  [{ name: "configured", kind: "function", range: Range(7, 17) }]
+  [{ name: "configured", kind: "function", range: OffsetRange(7, 17) }]
 }
 
 ///|
@@ -490,7 +496,7 @@ impl @language.SemanticTokensProvider for FakeLanguageProvider with fn provide_d
   _model,
   _token,
 ) {
-  [{ range: Range(7, 17), token_type: "function" }]
+  [{ range: OffsetRange(7, 17), token_type: "function" }]
 }
 
 ///|

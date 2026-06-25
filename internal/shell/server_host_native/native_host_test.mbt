@@ -274,7 +274,7 @@ async test "native workspace language provider bridges remote documents to file 
           [PlainText(text)] => assert_eq(text, "LSP hover for startup_event")
           _ => fail("expected plaintext hover")
         }
-        assert_true(hover.range == Range(7, 20))
+        assert_true(hover.range == OffsetRange(7, 20))
       }
       None => fail("expected lsp hover")
     }
@@ -286,7 +286,7 @@ async test "native workspace language provider bridges remote documents to file 
       ) {
       Some(location) => {
         assert_eq(location.uri.to_string(), remote_uri.to_string())
-        assert_true(location.range == Range(7, 20))
+        assert_true(location.range == OffsetRange(7, 20))
       }
       None => fail("expected lsp definition")
     }

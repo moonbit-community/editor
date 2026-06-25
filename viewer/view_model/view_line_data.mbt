@@ -81,7 +81,7 @@ fn inline_decorations_for_line(
       Some((start_column, end_column)) =>
         inline.push(
           InlineDecoration(
-            Range(start_column - 1, end_column - 1),
+            OffsetRange(start_column - 1, end_column - 1),
             decoration.class_name,
           ),
         )

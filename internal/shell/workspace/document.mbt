@@ -179,7 +179,7 @@ pub fn DocumentSnapshot::line_text(
 /// Returns a clamped half-open slice of the snapshot text.
 pub fn DocumentSnapshot::slice(
   self : DocumentSnapshot,
-  range : @base_common.Range,
+  range : @base_common.OffsetRange,
 ) -> String {
   let start = @base_common.clamp_int(range.start, 0, self.length())
   let end = @base_common.clamp_int(range.end, start, self.length())

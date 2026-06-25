@@ -9,7 +9,7 @@ pub(all) enum HoverContent {
 ///|
 /// Hover result anchored to a document range in core UTF-16 offsets.
 pub(all) struct Hover {
-  range : @base_common.Range
+  range : @base_common.OffsetRange
   contents : Array[HoverContent]
 } derive(Debug)
 
@@ -25,7 +25,7 @@ pub(all) enum DiagnosticSeverity {
 ///|
 /// Problem marker over a source range.
 pub(all) struct Diagnostic {
-  range : @base_common.Range
+  range : @base_common.OffsetRange
   severity : DiagnosticSeverity
   message : String
 } derive(Debug)
@@ -34,7 +34,7 @@ pub(all) struct Diagnostic {
 /// Cross-document location result for definition and reference providers.
 pub(all) struct Location {
   uri : @base_common.Uri
-  range : @base_common.Range
+  range : @base_common.OffsetRange
 } derive(Debug)
 
 ///|
@@ -42,13 +42,13 @@ pub(all) struct Location {
 pub(all) struct DocumentSymbol {
   name : String
   kind : String
-  range : @base_common.Range
+  range : @base_common.OffsetRange
 } derive(Debug)
 
 ///|
 /// Semantic token span after provider-side token-type classification.
 pub(all) struct SemanticToken {
-  range : @base_common.Range
+  range : @base_common.OffsetRange
   token_type : String
 } derive(Debug)
 

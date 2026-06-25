@@ -1,15 +1,24 @@
 ///|
 test "provider result finds hover and definition by offset" {
   let providers : ProviderResult = {
-    hovers: [{ range: Range(3, 7), contents: [PlainText("Provider hover")] }],
+    hovers: [
+      { range: OffsetRange(3, 7), contents: [PlainText("Provider hover")] },
+    ],
     diagnostics: [
-      { range: Range(0, 2), severity: Warning, message: "Provider warning" },
+      {
+        range: OffsetRange(0, 2),
+        severity: Warning,
+        message: "Provider warning",
+      },
     ],
     definitions: [
-      { uri: @base_common.Uri::memory("provider.mbt"), range: Range(3, 7) },
+      {
+        uri: @base_common.Uri::memory("provider.mbt"),
+        range: OffsetRange(3, 7),
+      },
     ],
-    symbols: [{ name: "main", kind: "function", range: Range(3, 7) }],
-    semantic_tokens: [{ range: Range(3, 7), token_type: "function" }],
+    symbols: [{ name: "main", kind: "function", range: OffsetRange(3, 7) }],
+    semantic_tokens: [{ range: OffsetRange(3, 7), token_type: "function" }],
   }
   assert_eq(providers.diagnostics.length(), 1)
   assert_eq(providers.definitions.length(), 1)

@@ -79,7 +79,7 @@ impl @language.HoverProvider for TestHoverProvider with fn provide_hover(
 ) {
   let offset = model.snapshot.offset_at_position(position)
   Some({
-    range: Range(offset, offset + 1),
+    range: OffsetRange(offset, offset + 1),
     contents: [PlainText("provider hover")],
   })
 }
@@ -97,7 +97,10 @@ impl @language.HoverProvider for NamedHoverProvider with fn provide_hover(
   _token,
 ) {
   let offset = model.snapshot.offset_at_position(position)
-  Some({ range: Range(offset, offset + 1), contents: [PlainText(self.text)] })
+  Some({
+    range: OffsetRange(offset, offset + 1),
+    contents: [PlainText(self.text)],
+  })
 }
 
 ///|

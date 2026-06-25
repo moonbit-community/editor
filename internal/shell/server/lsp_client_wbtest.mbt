@@ -50,7 +50,7 @@ test "normalizes hover result shapes" {
   match parse_hover_for_test(marked, doc, 0) {
     Some(hover) => {
       assert_markdown_hover(hover, 0, "```moonbit\nfn main\n```")
-      assert_true(hover.range == Range(7, 11))
+      assert_true(hover.range == OffsetRange(7, 11))
     }
     None => fail("expected marked hover")
   }
@@ -65,7 +65,7 @@ test "normalizes hover result shapes" {
       assert_markdown_hover(hover, 1, "**two**")
       assert_plaintext_hover(hover, 2, "three")
       assert_markdown_hover(hover, 3, "```moonbit\nfn four\n```")
-      assert_true(hover.range == Range(4, 5))
+      assert_true(hover.range == OffsetRange(4, 5))
     }
     None => fail("expected fallback hover")
   }
@@ -94,7 +94,7 @@ test "normalizes definition result shapes" {
   match parse_definition_for_test(location, document) {
     Some(found) => {
       assert_eq(found.uri.to_string(), "memory://main.mbt")
-      assert_true(found.range == Range(7, 11))
+      assert_true(found.range == OffsetRange(7, 11))
     }
     None => fail("expected location")
   }
@@ -105,7 +105,7 @@ test "normalizes definition result shapes" {
   match parse_definition_for_test(link, document) {
     Some(found) => {
       assert_eq(found.uri.to_string(), "memory://main.mbt")
-      assert_true(found.range == Range(7, 11))
+      assert_true(found.range == OffsetRange(7, 11))
     }
     None => fail("expected location link")
   }
@@ -116,7 +116,7 @@ test "normalizes definition result shapes" {
   match parse_definition_for_test(external, document) {
     Some(found) => {
       assert_eq(found.uri.to_string(), "memory://other.mbt")
-      assert_true(found.range == Range(0, 0))
+      assert_true(found.range == OffsetRange(0, 0))
     }
     None => fail("expected external location")
   }
@@ -139,12 +139,12 @@ async test "lsp client syncs documents and discards stale diagnostics" {
   assert_eq(client.pending_request_count(), 0)
   assert_eq(first_result.diagnostics.length(), 1)
   assert_true(first_result.diagnostics[0].severity == Warning)
-  assert_true(first_result.diagnostics[0].range == Range(19, 23))
+  assert_true(first_result.diagnostics[0].range == OffsetRange(19, 23))
 
   transport.publish_diagnostics(first, 0, 3, 0, 6, version=0)
   let stale_result = client.sync_document(first)
   assert_eq(stale_result.diagnostics.length(), 1)
-  assert_true(stale_result.diagnostics[0].range == Range(19, 23))
+  assert_true(stale_result.diagnostics[0].range == OffsetRange(19, 23))
 
   let second = test_document(2, "pub fn main {\n  // DONE\n}\n")
   let second_result = client.sync_document(second)
@@ -165,7 +165,7 @@ async test "lsp client requests hover through transport" {
   match client.hover_at(document, 7) {
     Some(hover) => {
       assert_plaintext_hover(hover, 0, "LSP hover for main")
-      assert_true(hover.range == Range(7, 11))
+      assert_true(hover.range == OffsetRange(7, 11))
     }
     None => fail("expected hover")
   }
@@ -180,7 +180,7 @@ async test "lsp client requests definition through transport" {
   match client.definition_at(document, 7) {
     Some(location) => {
       assert_eq(location.uri.to_string(), "memory://main.mbt")
-      assert_true(location.range == Range(7, 11))
+      assert_true(location.range == OffsetRange(7, 11))
     }
     None => fail("expected definition")
   }
@@ -200,7 +200,7 @@ async test "lsp client requests symbols and semantic tokens through provider ada
   assert_eq(symbols.length(), 2)
   assert_eq(symbols[0].name, "main")
   assert_eq(symbols[0].kind, "function")
-  assert_true(symbols[0].range == Range(7, 11))
+  assert_true(symbols[0].range == OffsetRange(7, 11))
   assert_eq(symbols[1].name, "nested")
   assert_eq(symbols[1].kind, "variable")
 
@@ -211,7 +211,7 @@ async test "lsp client requests symbols and semantic tokens through provider ada
       @language.CancellationToken::none(),
     )
   assert_eq(tokens.length(), 1)
-  assert_true(tokens[0].range == Range(7, 11))
+  assert_true(tokens[0].range == OffsetRange(7, 11))
   assert_eq(tokens[0].token_type, "function")
 
   assert_true(

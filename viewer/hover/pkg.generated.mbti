@@ -24,29 +24,29 @@ pub fn render_hover_shell(Array[HoverPart], String, language_registry? : @langua
 
 // Types and methods
 pub(all) struct ComputedHover {
-  range : @common.Range
+  range : @common.OffsetRange
   parts : Array[HoverPart]
 } derive(Eq, @debug.Debug)
 
 pub(all) struct ContentHoverComputer {
   participants : Array[&HoverParticipant]
 }
-pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @common.Range, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
-pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @common.Range, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
+pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
+pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
 pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
 
 pub(all) struct HoverComputeContext {
   model : @model.TextModel
-  anchor_range : @common.Range
+  anchor_range : @common.OffsetRange
   offset : Int
   injected_text_index : Int
   inlay_hints : Array[@language.InlayHint]
 }
 
 pub(all) enum HoverPart {
-  MarkdownHover(range~ : @common.Range, contents~ : Array[@language.HoverContent], ordinal~ : Int)
-  MarkerHover(range~ : @common.Range, marker~ : @markers.Marker)
-  LoadingHover(range~ : @common.Range, message~ : String)
+  MarkdownHover(range~ : @common.OffsetRange, contents~ : Array[@language.HoverContent], ordinal~ : Int)
+  MarkerHover(range~ : @common.OffsetRange, marker~ : @markers.Marker)
+  LoadingHover(range~ : @common.OffsetRange, message~ : String)
 } derive(Eq, @debug.Debug)
 
 pub(all) struct HoverParticipantRegistry {

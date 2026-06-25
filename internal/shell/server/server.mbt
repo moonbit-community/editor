@@ -589,7 +589,7 @@ pub async fn RemoteServer::inlay_hints(
         revision: document.revision,
         inlay_hints: self.inlay_hints_provider.provide_inlay_hints(
           model,
-          Range(0, model.snapshot.length()),
+          OffsetRange(0, model.snapshot.length()),
           @language.CancellationToken::none(),
         ),
       })

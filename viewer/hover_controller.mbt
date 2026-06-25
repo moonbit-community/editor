@@ -1,6 +1,6 @@
 ///|
 priv struct HoverView {
-  range : @base_common.Range
+  range : @base_common.OffsetRange
   parts : Array[@hover.HoverPart]
 } derive(Eq)
 
@@ -310,7 +310,7 @@ fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
               anchor_offset: anchor.start,
               parts: [
                 LoadingHover(
-                  range=Range(anchor.start, anchor.end),
+                  range=OffsetRange(anchor.start, anchor.end),
                   message="Loading...",
                 ),
               ],
@@ -333,7 +333,7 @@ fn merge_hover_view(existing : HoverView?, incoming : HoverView) -> HoverView {
       parts.append(incoming.parts)
       parts.sort_by(@hover.compare_hover_parts)
       {
-        range: Range(
+        range: OffsetRange(
           min_int(view.range.start, incoming.range.start),
           max_int(view.range.end, incoming.range.end),
         ),

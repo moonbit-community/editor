@@ -244,7 +244,7 @@ test "encodes and decodes server document and language packets" {
     uri,
     revision: "rev-2",
     hover: Some({
-      range: Range(7, 11),
+      range: OffsetRange(7, 11),
       contents: [PlainText("fn main"), Markdown("**main**")],
     }),
   })
@@ -256,7 +256,7 @@ test "encodes and decodes server document and language packets" {
           assert_eq(item.contents.length(), 2)
           assert_hover_plaintext(item, 0, "fn main")
           assert_hover_markdown(item, 1, "**main**")
-          assert_true(item.range == Range(7, 11))
+          assert_true(item.range == OffsetRange(7, 11))
         }
         None => fail("missing hover")
       }
@@ -271,12 +271,18 @@ test "encodes and decodes server document and language packets" {
     references: [
       {
         uri,
-        range: Range(7, 11),
+        range: OffsetRange(7, 11),
         line: 1,
         column: 8,
         line_text: "pub fn main {}",
       },
-      { uri, range: Range(20, 24), line: 2, column: 1, line_text: "main()" },
+      {
+        uri,
+        range: OffsetRange(20, 24),
+        line: 2,
+        column: 1,
+        line_text: "main()",
+      },
     ],
   })
   match
@@ -290,7 +296,7 @@ test "encodes and decodes server document and language packets" {
       assert_eq(payload.references[0].line, 1)
       assert_eq(payload.references[0].column, 8)
       assert_eq(payload.references[0].line_text, "pub fn main {}")
-      assert_true(payload.references[1].range == Range(20, 24))
+      assert_true(payload.references[1].range == OffsetRange(20, 24))
     }
     DecodedServerPacket(_) => fail("unexpected references result packet")
     ServerPacketDecodeError(error) => fail(error.message)
@@ -319,7 +325,7 @@ test "encodes and decodes server document and language packets" {
     uri,
     revision: "rev-2",
     diagnostics: [
-      { range: Range(0, 3), severity: Warning, message: "check me" },
+      { range: OffsetRange(0, 3), severity: Warning, message: "check me" },
     ],
   })
   match
@@ -337,7 +343,7 @@ test "encodes and decodes server document and language packets" {
     id: "symbols-1",
     uri,
     revision: "rev-2",
-    symbols: [{ name: "main", kind: "function", range: Range(7, 11) }],
+    symbols: [{ name: "main", kind: "function", range: OffsetRange(7, 11) }],
   })
   match @remote_protocol.decode_server_packet(symbols.to_json().stringify()) {
     DecodedServerPacket(DocumentSymbolsResult(payload)) => {
@@ -352,7 +358,7 @@ test "encodes and decodes server document and language packets" {
     id: "tokens-1",
     uri,
     revision: "rev-2",
-    semantic_tokens: [{ range: Range(7, 11), token_type: "function" }],
+    semantic_tokens: [{ range: OffsetRange(7, 11), token_type: "function" }],
   })
   match
     @remote_protocol.decode_server_packet(semantic_tokens.to_json().stringify()) {

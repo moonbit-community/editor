@@ -28,11 +28,13 @@ fn join_span_text(line : @view_model.RenderLine) -> String {
 test "render frame contains highlighted spans and provider surfaces" {
   let doc = @model.TextSnapshot("fn main { // TODO\n  let x = 1\n}")
   let decorations = @decorations.DecorationSet::from_array([
-    Decoration(Range(13, 17), Diagnostic, "diag-warning", message="todo"),
+    Decoration(OffsetRange(13, 17), Diagnostic, "diag-warning", message="todo"),
   ])
   let providers = @language.ProviderResult::{
     hovers: [],
-    diagnostics: [{ range: Range(13, 17), severity: Warning, message: "todo" }],
+    diagnostics: [
+      { range: OffsetRange(13, 17), severity: Warning, message: "todo" },
+    ],
     definitions: [],
     symbols: [],
     semantic_tokens: [],
@@ -60,8 +62,8 @@ test "semantic tokens split spans and win on the overlapping segment" {
     symbols: [],
     // `main` is offsets 3..7; cover only `mai` to force a span split.
     semantic_tokens: [
-      { range: Range(3, 6), token_type: "function" },
-      { range: Range(10, 13), token_type: "function" },
+      { range: OffsetRange(3, 6), token_type: "function" },
+      { range: OffsetRange(10, 13), token_type: "function" },
     ],
   }
   let frame = frame_for(doc, { start_line: 0, end_line: 1 }, providers~)
@@ -99,7 +101,7 @@ test "window builds match the matching slice of a whole-document build" {
     diagnostics: [],
     definitions: [],
     symbols: [],
-    semantic_tokens: [{ range: Range(3, 7), token_type: "function" }],
+    semantic_tokens: [{ range: OffsetRange(3, 7), token_type: "function" }],
   }
   let whole = frame_for(
     doc,

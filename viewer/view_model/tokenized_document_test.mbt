@@ -22,11 +22,11 @@ test "tokens bucket per line and multi-line tokens cover every line" {
     language_id="moonbit",
   )
   // Hand-built tokens with doc offsets: the block comment spans lines 1-2.
-  let comment_range = @base_common.Range(10, 32)
+  let comment_range = @base_common.OffsetRange(10, 32)
   let tokens : Array[@syntax.Token] = [
-    { range: Range(0, 3), tag: Keyword, text: "let" },
+    { range: OffsetRange(0, 3), tag: Keyword, text: "let" },
     { range: comment_range, tag: Comment, text: doc.slice(comment_range) },
-    { range: Range(33, 36), tag: Keyword, text: "let" },
+    { range: OffsetRange(33, 36), tag: Keyword, text: "let" },
   ]
   let tokenized = @view_model.TokenizedDocument::build(doc, tokens)
   assert_eq(tokenized.token_count, 3)
@@ -94,9 +94,9 @@ test "feature buckets accept unsorted ranges" {
     symbols: [],
     // Deliberately out of order: line 3, then line 0, then a multi-line one.
     semantic_tokens: [
-      { range: Range(12, 15), token_type: "variable" },
-      { range: Range(0, 3), token_type: "function" },
-      { range: Range(4, 11), token_type: "comment" },
+      { range: OffsetRange(12, 15), token_type: "variable" },
+      { range: OffsetRange(0, 3), token_type: "function" },
+      { range: OffsetRange(4, 11), token_type: "comment" },
     ],
   }
   let source = @view_model.FrameSource(

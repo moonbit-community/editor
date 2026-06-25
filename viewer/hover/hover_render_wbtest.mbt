@@ -11,7 +11,7 @@ test "hover markdown rows use the Monaco-shaped row wrappers" {
   let html = render_hover_shell(
     [
       MarkdownHover(
-        range=Range(0, 1),
+        range=OffsetRange(0, 1),
         contents=[Markdown("**bold**")],
         ordinal=100,
       ),
@@ -31,7 +31,7 @@ test "hover markdown remains sanitized and plaintext remains escaped" {
   let sanitized = render_hover_shell(
     [
       MarkdownHover(
-        range=Range(0, 1),
+        range=OffsetRange(0, 1),
         contents=[
           Markdown(
             "<img src=x onerror=\"globalThis.__hoverUnsafe=1\"> [bad](javascript:alert(1))",
@@ -47,7 +47,7 @@ test "hover markdown remains sanitized and plaintext remains escaped" {
   let plain = render_hover_shell(
     [
       MarkdownHover(
-        range=Range(0, 1),
+        range=OffsetRange(0, 1),
         contents=[PlainText("<img src=x> plain")],
         ordinal=100,
       ),
@@ -63,7 +63,7 @@ test "hover fenced code renders through the viewer token classes" {
   let moonbit = render_hover_shell(
     [
       MarkdownHover(
-        range=Range(0, 1),
+        range=OffsetRange(0, 1),
         contents=[Markdown("```moonbit\nfn rendered() -> Unit {}\n```")],
         ordinal=100,
       ),
@@ -77,7 +77,7 @@ test "hover fenced code renders through the viewer token classes" {
   let mbt_alias = render_hover_shell(
     [
       MarkdownHover(
-        range=Range(0, 1),
+        range=OffsetRange(0, 1),
         contents=[Markdown("```mbt\nlet answer = 42\n```")],
         ordinal=100,
       ),
@@ -95,7 +95,7 @@ test "hover unknown fenced code keeps content as default plain text" {
   let html = render_hover_shell(
     [
       MarkdownHover(
-        range=Range(0, 1),
+        range=OffsetRange(0, 1),
         contents=[Markdown("```unknown\nnot really code\n```")],
         ordinal=100,
       ),
@@ -116,14 +116,14 @@ test "marker hover renders Monaco status and copy affordances" {
   let marker : @markers.Marker = {
     owner: "test",
     resource: "memory://test.mbt",
-    range: Range(0, 1),
+    range: OffsetRange(0, 1),
     severity: Warning,
     message: "Configured diagnostic",
     source: None,
     code: None,
   }
   let html = render_hover_shell(
-    [MarkerHover(range=Range(0, 1), marker~)],
+    [MarkerHover(range=OffsetRange(0, 1), marker~)],
     "moonbit",
   )
   assert_true(html.contains("hover-row-with-copy"))

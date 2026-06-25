@@ -27,7 +27,7 @@ pub(all) enum HighlightTag {
 ///|
 /// Whole-document highlight token in document-offset coordinates.
 pub(all) struct Token {
-  range : @base_common.Range
+  range : @base_common.OffsetRange
   tag : HighlightTag
   text : String
 } derive(Debug)

@@ -6,8 +6,10 @@ pub(all) struct Position {
 } derive(Eq, Debug)
 
 ///|
-/// Half-open UTF-16 offset range `[start, end)` in a text snapshot.
-pub(all) struct Range {
+/// Half-open UTF-16 offset range `[start, end)` in a text snapshot. This is the
+/// viewer's offset-based span, mirroring Monaco's `OffsetRange`. The name
+/// `Range` is reserved for Monaco's line/column range (see `monaco_range.mbt`).
+pub(all) struct OffsetRange {
   start : Int
   end : Int
 } derive(Eq, Debug)
@@ -21,7 +23,7 @@ pub fn Position::Position(line : Int, column : Int) -> Position {
 
 ///|
 /// Builds a normalized half-open range by swapping endpoints when needed.
-pub fn Range::Range(start : Int, end : Int) -> Range {
+pub fn OffsetRange::OffsetRange(start : Int, end : Int) -> OffsetRange {
   if start <= end {
     { start, end }
   } else {
@@ -31,19 +33,19 @@ pub fn Range::Range(start : Int, end : Int) -> Range {
 
 ///|
 /// Whether `offset` falls inside the half-open range.
-pub fn Range::contains_offset(self : Range, offset : Int) -> Bool {
+pub fn OffsetRange::contains_offset(self : OffsetRange, offset : Int) -> Bool {
   self.start <= offset && offset < self.end
 }
 
 ///|
 /// Whether two half-open ranges overlap.
-pub fn Range::intersects(self : Range, other : Range) -> Bool {
+pub fn OffsetRange::intersects(self : OffsetRange, other : OffsetRange) -> Bool {
   self.start < other.end && other.start < self.end
 }
 
 ///|
 /// Whether the range contains no offsets.
-pub fn Range::is_empty(self : Range) -> Bool {
+pub fn OffsetRange::is_empty(self : OffsetRange) -> Bool {
   self.start == self.end
 }
 

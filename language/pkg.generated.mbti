@@ -22,7 +22,7 @@ pub fn CancellationToken::new() -> Self
 pub fn CancellationToken::none() -> Self
 
 pub(all) struct Diagnostic {
-  range : @common.Range
+  range : @common.OffsetRange
   severity : DiagnosticSeverity
   message : String
 } derive(@debug.Debug)
@@ -37,7 +37,7 @@ pub fn DiagnosticSeverity::label(Self) -> String
 pub(all) struct DocumentSymbol {
   name : String
   kind : String
-  range : @common.Range
+  range : @common.OffsetRange
 } derive(@debug.Debug)
 
 pub(all) struct FoldingRange {
@@ -54,7 +54,7 @@ pub(all) enum FoldingRangeKind {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Hover {
-  range : @common.Range
+  range : @common.OffsetRange
   contents : Array[HoverContent]
 } derive(@debug.Debug)
 
@@ -95,7 +95,7 @@ pub fn LanguageSelector::matches(Self, @model.TextModel) -> Bool
 
 pub(all) struct Location {
   uri : @common.Uri
-  range : @common.Range
+  range : @common.OffsetRange
 } derive(@debug.Debug)
 
 pub(all) struct ProviderResult {
@@ -110,7 +110,7 @@ pub fn ProviderResult::empty() -> Self
 pub fn ProviderResult::hover_at(Self, Int) -> Hover?
 
 pub(all) struct SemanticToken {
-  range : @common.Range
+  range : @common.OffsetRange
   token_type : String
 } derive(@debug.Debug)
 
@@ -138,7 +138,7 @@ pub(open) trait HoverProvider {
 }
 
 pub(open) trait InlayHintsProvider {
-  async fn provide_inlay_hints(Self, @model.TextModel, @common.Range, CancellationToken) -> Array[InlayHint]
+  async fn provide_inlay_hints(Self, @model.TextModel, @common.OffsetRange, CancellationToken) -> Array[InlayHint]
 }
 
 pub(open) trait ReferencesProvider {

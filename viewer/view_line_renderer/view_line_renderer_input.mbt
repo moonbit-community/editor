@@ -19,7 +19,7 @@ pub(all) struct RenderLineInput {
   render_whitespace : RenderWhitespace
   render_control_characters : Bool
   font_ligatures : Bool
-  selections_on_line : Array[@base_common.Range]
+  selections_on_line : Array[@base_common.OffsetRange]
   text_direction : TextDirection
   vertical_scrollbar_size : Double
   render_new_line_when_empty : Bool
@@ -41,7 +41,7 @@ pub fn RenderLineInput::from_view_line(
   render_whitespace? : RenderWhitespace = None,
   render_control_characters? : Bool = false,
   font_ligatures? : Bool = false,
-  selections_on_line? : Array[@base_common.Range] = [],
+  selections_on_line? : Array[@base_common.OffsetRange] = [],
   vertical_scrollbar_size? : Double = 0.0,
   render_new_line_when_empty? : Bool = false,
 ) -> RenderLineInput {

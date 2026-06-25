@@ -36,7 +36,7 @@ pub(open) trait InlayHintsProvider {
   async fn provide_inlay_hints(
     Self,
     @model.TextModel,
-    @base_common.Range,
+    @base_common.OffsetRange,
     CancellationToken,
   ) -> Array[InlayHint]
 }

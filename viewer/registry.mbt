@@ -15,7 +15,7 @@ fn Viewer::request_hover(
         log_service: self.services.log_service,
       }
       let computer = @hover.ContentHoverComputer::new(hover_services)
-      let anchor_range = @base_common.Range(anchor.start, anchor.end)
+      let anchor_range = @base_common.OffsetRange(anchor.start, anchor.end)
       match
         computer.compute_sync(
           model,

@@ -69,7 +69,7 @@ pub fn DocumentSnapshot::line_start_offset(Self, Int) -> Int
 pub fn DocumentSnapshot::line_text(Self, Int) -> String
 pub fn DocumentSnapshot::offset_at_position(Self, @common.Position) -> Int
 pub fn DocumentSnapshot::position_at_offset(Self, Int) -> @common.Position
-pub fn DocumentSnapshot::slice(Self, @common.Range) -> String
+pub fn DocumentSnapshot::slice(Self, @common.OffsetRange) -> String
 pub impl ToJson for DocumentSnapshot
 
 pub(all) struct FileChange {

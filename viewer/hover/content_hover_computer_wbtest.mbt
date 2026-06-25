@@ -17,7 +17,7 @@ async test "content hover computer separates sync markers from async markdown" {
   let marker_decorations = @markers.MarkerDecorationsService::new(markers)
   let model = computer_test_model()
   markers.set_diagnostics("diagnostics:0", model.uri, [
-    { range: Range(12, 17), severity: Warning, message: "marker hover" },
+    { range: OffsetRange(12, 17), severity: Warning, message: "marker hover" },
   ])
   languages.register_hover_provider(LanguageId("moonbit"), ComputerHoverProvider::{
 
@@ -29,7 +29,7 @@ async test "content hover computer separates sync markers from async markdown" {
     log_service: @log.LogService::new(),
   }
   let computer = ContentHoverComputer::new(services)
-  let sync_hover = computer.compute_sync(model, Range(12, 17), 14)
+  let sync_hover = computer.compute_sync(model, OffsetRange(12, 17), 14)
   match sync_hover {
     Some(hover) => {
       assert_eq(hover.parts.length(), 1)
@@ -37,7 +37,7 @@ async test "content hover computer separates sync markers from async markdown" {
     }
     None => fail("expected marker hover")
   }
-  let async_hover = computer.compute_async(model, Range(12, 17), 14)
+  let async_hover = computer.compute_async(model, OffsetRange(12, 17), 14)
   match async_hover {
     Some(hover) => {
       assert_eq(hover.parts.length(), 1)
@@ -59,7 +59,7 @@ impl @language.HoverProvider for ComputerHoverProvider with fn provide_hover(
 ) {
   let offset = model.snapshot.offset_at_position(position)
   Some({
-    range: Range(offset, offset + 1),
+    range: OffsetRange(offset, offset + 1),
     contents: [PlainText("provider hover")],
   })
 }

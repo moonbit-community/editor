@@ -25,7 +25,7 @@ impl @language.HoverProvider for ComponentHoverProvider with fn provide_hover(
     Some(start) =>
       if offset >= start && offset < start + needle.length() {
         Some({
-          range: Range(start, start + needle.length()),
+          range: OffsetRange(start, start + needle.length()),
           contents: [PlainText(self.hover_text)],
         })
       } else {
@@ -46,7 +46,7 @@ impl @language.DiagnosticsProvider for ComponentHoverProvider with fn provide_di
     Some(start) =>
       [
         {
-          range: Range(start, start + needle.length()),
+          range: OffsetRange(start, start + needle.length()),
           severity: Warning,
           message: self.diagnostic_text,
         },

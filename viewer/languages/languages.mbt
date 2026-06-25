@@ -331,7 +331,7 @@ pub async fn Languages::inlay_hints_for_model(
 ) -> Array[@language.InlayHint] noraise {
   let hints : Array[@language.InlayHint] = []
   let token = @language.CancellationToken::none()
-  let full_range = @base_common.Range(0, model.snapshot.length())
+  let full_range = @base_common.OffsetRange(0, model.snapshot.length())
   for index in 0..<self.inlay_hints_provider.entries.length() {
     let entry = self.inlay_hints_provider.entries[index]
     if !entry.active.val || !entry.selector.matches(model) {

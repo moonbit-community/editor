@@ -1020,10 +1020,10 @@ fn fenced_marked_string(language : String, value : String) -> String {
 fn fallback_hover_range(
   doc : @workspace.DocumentSnapshot,
   offset : Int,
-) -> @base_common.Range {
+) -> @base_common.OffsetRange {
   let start = @base_common.clamp_int(offset, 0, doc.length())
   let end = @base_common.clamp_int(start + 1, start, doc.length())
-  Range(start, end)
+  OffsetRange(start, end)
 }
 
 ///|
@@ -1112,7 +1112,7 @@ fn append_document_symbol(
 fn document_symbol_range(
   value : Json,
   document : @workspace.DocumentSnapshot,
-) -> @base_common.Range {
+) -> @base_common.OffsetRange {
   let range_json = match json_field(value, "range") {
     Some(range) => Some(range)
     None =>
@@ -1131,8 +1131,8 @@ fn document_symbol_range(
       }
   }
   match range_json {
-    Some(range) => parse_lsp_range(range, document).unwrap_or(Range(0, 0))
-    None => Range(0, 0)
+    Some(range) => parse_lsp_range(range, document).unwrap_or(OffsetRange(0, 0))
+    None => OffsetRange(0, 0)
   }
 }
 
@@ -1212,7 +1212,7 @@ fn parse_semantic_tokens_result(
                 Position(line, start_character + length),
               )
               tokens.push({
-                range: Range(start, end),
+                range: OffsetRange(start, end),
                 token_type: semantic_token_type_name(legend, token_type),
               })
             }
@@ -1265,11 +1265,11 @@ fn parse_location_result(
       let range = if uri == document.uri.to_string() {
         match range_json {
           Some(raw_range) =>
-            parse_lsp_range(raw_range, document).unwrap_or(Range(0, 0))
-          None => Range(0, 0)
+            parse_lsp_range(raw_range, document).unwrap_or(OffsetRange(0, 0))
+          None => OffsetRange(0, 0)
         }
       } else {
-        Range(0, 0)
+        OffsetRange(0, 0)
       }
       Some({ uri: parsed_uri, range })
     }
@@ -1281,13 +1281,13 @@ fn parse_location_result(
 fn parse_lsp_range(
   value : Json,
   doc : @workspace.DocumentSnapshot,
-) -> @base_common.Range? {
+) -> @base_common.OffsetRange? {
   match (json_field(value, "start"), json_field(value, "end")) {
     (Some(start), Some(end)) =>
       match (parse_lsp_position(start), parse_lsp_position(end)) {
         (Some(start_position), Some(end_position)) =>
           Some(
-            Range(
+            OffsetRange(
               doc.offset_at_position(start_position),
               doc.offset_at_position(end_position),
             ),

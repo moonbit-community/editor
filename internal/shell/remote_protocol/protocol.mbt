@@ -130,7 +130,7 @@ pub(all) struct DefinitionResultPayload {
 /// references without fetching file contents.
 pub(all) struct ReferenceItem {
   uri : @base_common.Uri
-  range : @base_common.Range
+  range : @base_common.OffsetRange
   line : Int
   column : Int
   line_text : String
@@ -1280,7 +1280,7 @@ fn location_json(location : @language.Location) -> Json {
 }
 
 ///|
-fn range_json(range : @base_common.Range) -> Json {
+fn range_json(range : @base_common.OffsetRange) -> Json {
   { "start": range.start.to_json(), "end": range.end.to_json() }
 }
 
@@ -1562,11 +1562,11 @@ fn parse_semantic_token(value : Json) -> @language.SemanticToken? {
 }
 
 ///|
-fn parse_range(value : Json) -> @base_common.Range? {
+fn parse_range(value : Json) -> @base_common.OffsetRange? {
   match value {
     Object(_) =>
       match (json_int_field(value, "start"), json_int_field(value, "end")) {
-        (Some(start), Some(end)) => Some(Range(start, end))
+        (Some(start), Some(end)) => Some(OffsetRange(start, end))
         _ => None
       }
     _ => None

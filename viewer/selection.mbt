@@ -108,8 +108,8 @@ fn Viewer::get_rich_text_to_copy(
 fn selection_normalized_range(
   selection : @view_model.Selection,
   snapshot : @model.TextSnapshot,
-) -> @base_common.Range {
-  Range(
+) -> @base_common.OffsetRange {
+  OffsetRange(
     snapshot.offset_at_position(selection.start()),
     snapshot.offset_at_position(selection.end()),
   )
@@ -153,7 +153,7 @@ fn escape_copy_html(text : String) -> String {
 
 ///|
 fn rich_text_to_copy_from_frame(
-  range : @base_common.Range,
+  range : @base_common.OffsetRange,
   frame : @view_model.RenderFrame,
 ) -> String? {
   let html = StringBuilder()
@@ -185,7 +185,7 @@ fn rich_text_to_copy_from_frame(
 fn append_rich_copy_line_segments(
   html : StringBuilder,
   line : @view_model.RenderLine,
-  range : @base_common.Range,
+  range : @base_common.OffsetRange,
 ) -> Unit {
   let model_line_start = line.model_line_start_offset()
   for span in line.spans {
@@ -194,7 +194,7 @@ fn append_rich_copy_line_segments(
     }
     let span_start = model_line_start + span.source_start
     let span_end = model_line_start + span.source_end
-    if range.intersects(Range(span_start, span_end)) {
+    if range.intersects(OffsetRange(span_start, span_end)) {
       let start_column = span.start +
         max_int(range.start, span_start) -
         span_start

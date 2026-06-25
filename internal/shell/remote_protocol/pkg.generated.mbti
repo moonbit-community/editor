@@ -140,7 +140,7 @@ pub(all) enum ProtocolNegotiation {
 
 pub(all) struct ReferenceItem {
   uri : @common.Uri
-  range : @common.Range
+  range : @common.OffsetRange
   line : Int
   column : Int
   line_text : String

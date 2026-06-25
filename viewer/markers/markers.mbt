@@ -4,7 +4,7 @@
 pub(all) struct Marker {
   owner : String
   resource : String
-  range : @base_common.Range
+  range : @base_common.OffsetRange
   severity : @language.DiagnosticSeverity
   message : String
   source : String?
@@ -174,7 +174,7 @@ pub fn MarkerDecorationsService::decorations_for_resource(
 pub fn MarkerDecorationsService::markers_at(
   self : MarkerDecorationsService,
   resource : @base_common.Uri,
-  range : @base_common.Range,
+  range : @base_common.OffsetRange,
   limit? : Int = 0,
 ) -> Array[Marker] {
   let out : Array[Marker] = []

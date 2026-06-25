@@ -44,7 +44,10 @@ impl @language.HoverProvider for HarnessHoverProvider with fn provide_hover(
   match harness_hover_fixture.val {
     Some(fixture) =>
       if fixture.kind == "marker" {
-        Some({ range: harness_marker_range(model), contents: [] })
+        Some({
+          range: model.snapshot.range_of(harness_marker_range(model)),
+          contents: [],
+        })
       } else {
         let text = model.snapshot.text
         let offset = model.snapshot.offset_at_position(position)
@@ -55,7 +58,10 @@ impl @language.HoverProvider for HarnessHoverProvider with fn provide_hover(
         } else {
           PlainText(fixture.contents)
         }
-        Some({ range: OffsetRange(start, end), contents: [content] })
+        Some({
+          range: model.snapshot.range_of(OffsetRange(start, end)),
+          contents: [content],
+        })
       }
     None => None
   }

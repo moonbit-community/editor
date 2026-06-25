@@ -296,7 +296,7 @@ fn diagnostic_json(diagnostic : @language.Diagnostic) -> Json {
 ///|
 fn hover_json(hover : @language.Hover) -> Json {
   {
-    "range": offset_range_json(hover.range),
+    "range": range_json(hover.range),
     "contents": Json::array(hover.contents.map(hover_content_json)),
   }
 }
@@ -319,11 +319,6 @@ fn range_json(range : @base_common.Range) -> Json {
     "endLineNumber": range.end_line_number.to_json(),
     "endColumn": range.end_column.to_json(),
   }
-}
-
-///|
-fn offset_range_json(range : @base_common.OffsetRange) -> Json {
-  { "start": range.start.to_json(), "end": range.end_exclusive.to_json() }
 }
 
 ///|

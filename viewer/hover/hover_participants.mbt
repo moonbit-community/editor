@@ -147,8 +147,10 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
         []
       } else {
         [
+          // Provider hovers carry a line/column `Range`; the offset-based hover
+          // widget consumes offset spans, so convert at this boundary.
           MarkdownHover(
-            range=hover.range,
+            range=ctx.model.snapshot.offset_range_of(hover.range),
             contents=hover.contents,
             ordinal=self.ordinal(),
           ),

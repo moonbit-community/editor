@@ -7,9 +7,9 @@ pub(all) enum HoverContent {
 } derive(Eq, Debug)
 
 ///|
-/// Hover result anchored to a document range in core UTF-16 offsets.
+/// Hover result anchored to a line/column `Range`, matching Monaco's `Hover`.
 pub(all) struct Hover {
-  range : @base_common.OffsetRange
+  range : @base_common.Range
   contents : Array[HoverContent]
 } derive(Debug)
 
@@ -162,12 +162,15 @@ pub async fn collect_model_provider_result(
 }
 
 ///|
-/// Last hover containing `offset`, matching the viewer's later-result-wins
+/// Last hover containing `position`, matching the viewer's later-result-wins
 /// behavior for overlapping hover ranges.
-pub fn ProviderResult::hover_at(self : ProviderResult, offset : Int) -> Hover? {
+pub fn ProviderResult::hover_at(
+  self : ProviderResult,
+  position : @base_common.Position,
+) -> Hover? {
   let mut found : Hover? = None
   for hover in self.hovers {
-    if hover.range.contains(offset) {
+    if hover.range.contains_position(position) {
       found = Some(hover)
     }
   }

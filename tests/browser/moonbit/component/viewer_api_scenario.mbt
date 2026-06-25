@@ -25,7 +25,9 @@ impl @language.HoverProvider for ComponentHoverProvider with fn provide_hover(
     Some(start) =>
       if offset >= start && offset < start + needle.length() {
         Some({
-          range: OffsetRange(start, start + needle.length()),
+          range: model.snapshot.range_of(
+            OffsetRange(start, start + needle.length()),
+          ),
           contents: [PlainText(self.hover_text)],
         })
       } else {

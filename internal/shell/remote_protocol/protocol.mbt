@@ -1261,7 +1261,7 @@ fn position_json(position : @base_common.Position) -> Json {
 ///|
 fn hover_json(hover : @language.Hover) -> Json {
   {
-    "range": offset_range_json(hover.range),
+    "range": range_json(hover.range),
     "contents": Json::array(hover.contents.map(hover_content_json)),
   }
 }
@@ -1442,7 +1442,7 @@ fn parse_hover(value : Json) -> @language.Hover? {
     Object(_) =>
       match (json_field(value, "range"), json_field(value, "contents")) {
         (Some(range_json), Some(contents_json)) =>
-          match parse_offset_range(range_json) {
+          match parse_range(range_json) {
             Some(range) => {
               let contents = parse_hover_contents(contents_json)
               if contents.length() == 0 {

@@ -54,7 +54,7 @@ pub(all) enum FoldingRangeKind {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Hover {
-  range : @common.OffsetRange
+  range : @common.Range
   contents : Array[HoverContent]
 } derive(@debug.Debug)
 
@@ -107,7 +107,7 @@ pub(all) struct ProviderResult {
 } derive(@debug.Debug)
 pub fn ProviderResult::definition_at(Self, @common.Position) -> Location?
 pub fn ProviderResult::empty() -> Self
-pub fn ProviderResult::hover_at(Self, Int) -> Hover?
+pub fn ProviderResult::hover_at(Self, @common.Position) -> Hover?
 
 pub(all) struct SemanticToken {
   range : @common.OffsetRange

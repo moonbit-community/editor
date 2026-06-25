@@ -244,7 +244,7 @@ test "encodes and decodes server document and language packets" {
     uri,
     revision: "rev-2",
     hover: Some({
-      range: OffsetRange(7, 11),
+      range: Range(1, 8, 1, 12),
       contents: [PlainText("fn main"), Markdown("**main**")],
     }),
   })
@@ -256,7 +256,7 @@ test "encodes and decodes server document and language packets" {
           assert_eq(item.contents.length(), 2)
           assert_hover_plaintext(item, 0, "fn main")
           assert_hover_markdown(item, 1, "**main**")
-          assert_true(item.range == OffsetRange(7, 11))
+          assert_true(item.range == Range(1, 8, 1, 12))
         }
         None => fail("missing hover")
       }

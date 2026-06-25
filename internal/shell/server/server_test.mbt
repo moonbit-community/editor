@@ -425,7 +425,7 @@ impl @language.HoverProvider for FakeLanguageProvider with fn provide_hover(
 ) {
   let offset = model.snapshot.offset_at_position(position)
   Some({
-    range: OffsetRange(offset, offset + 4),
+    range: model.snapshot.range_of(OffsetRange(offset, offset + 4)),
     contents: [PlainText("Configured hover")],
   })
 }

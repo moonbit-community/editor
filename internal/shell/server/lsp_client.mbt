@@ -940,7 +940,7 @@ fn parse_hover_result(
           } else {
             let range = match json_field(result, "range") {
               Some(range_json) =>
-                match parse_lsp_offset_range(range_json, doc) {
+                match parse_lsp_range(range_json) {
                   Some(range) => range
                   None => fallback_hover_range(doc, offset)
                 }
@@ -1017,10 +1017,13 @@ fn fenced_marked_string(language : String, value : String) -> String {
 fn fallback_hover_range(
   doc : @workspace.DocumentSnapshot,
   offset : Int,
-) -> @base_common.OffsetRange {
+) -> @base_common.Range {
   let start = @base_common.clamp_int(offset, 0, doc.length())
   let end = @base_common.clamp_int(start + 1, start, doc.length())
-  OffsetRange(start, end)
+  @base_common.Range::from_positions(
+    doc.position_at_offset(start),
+    doc.position_at_offset(end),
+  )
 }
 
 ///|
@@ -1280,30 +1283,9 @@ fn parse_location_result(
 }
 
 ///|
-fn parse_lsp_offset_range(
-  value : Json,
-  doc : @workspace.DocumentSnapshot,
-) -> @base_common.OffsetRange? {
-  match (json_field(value, "start"), json_field(value, "end")) {
-    (Some(start), Some(end)) =>
-      match (parse_lsp_position(start), parse_lsp_position(end)) {
-        (Some(start_position), Some(end_position)) =>
-          Some(
-            OffsetRange(
-              doc.offset_at_position(start_position),
-              doc.offset_at_position(end_position),
-            ),
-          )
-        _ => None
-      }
-    _ => None
-  }
-}
-
-///|
-/// Parses an LSP range straight into a line/column `Range`. Unlike
-/// `parse_lsp_offset_range`, this keeps Monaco's coordinate space (no offset
-/// round-trip): `parse_lsp_position` already returns a 1-based `Position`.
+/// Parses an LSP range into a line/column `Range`, keeping Monaco's coordinate
+/// space (no offset round-trip): `parse_lsp_position` already returns a 1-based
+/// `Position`.
 fn parse_lsp_range(value : Json) -> @base_common.Range? {
   match (json_field(value, "start"), json_field(value, "end")) {
     (Some(start), Some(end)) =>

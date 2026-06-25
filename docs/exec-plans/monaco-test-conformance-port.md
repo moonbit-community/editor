@@ -208,10 +208,18 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   (the `MarkerHoverParticipant` query/parts, and the `HoverHighlight`
   decoration). `SemanticToken` + syntax tokens stay `OffsetRange`. All green
   (260 js / 270 native).
-  **Remaining:** step 3b-ii — `Hover.range` → `Range` (provider result, LSP
-  hover parse, protocol, `languages.hover_at`/`ProviderResult::hover_at`
-  position-keyed, the `MarkdownHoverParticipant` boundary). Then the browser
-  suite (step 4).
+- **Range-system migration (stage 2, step 3b-ii done — Hover; step 3 complete).**
+  `Hover.range` → line/column `Range`; `ProviderResult::hover_at` is
+  position-keyed. LSP `parse_hover_result`/`fallback_hover_range` build `Range`
+  hovers (and the now-dead `parse_lsp_offset_range` was removed — `parse_lsp_range`
+  is the only LSP range parser); the protocol/render-frame hover uses
+  `range_json`/`parse_range`. The `MarkdownHoverParticipant` converts the
+  provider `Range` hover to an offset span for the offset-based widget via
+  `offset_range_of`. With this, **`SemanticToken` is the only `OffsetRange`-typed
+  provider result left** (render-coupled, as in Monaco); the protocol's offset
+  `offset_range_json`/`parse_offset_range` now serve only it. All green (260 js /
+  270 native). **Remaining:** the browser suite (step 4); the interval-tree
+  decoration-storage follow-up is still open and unaffected.
 - **Phase 1 deferred, with reasons:**
   - `foldingModel` (17) / `hiddenRangeModel` (1): require a full editor
     decoration-tracking model (`changeDecorations`/`deltaDecorations`/

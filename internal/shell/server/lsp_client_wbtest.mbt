@@ -50,7 +50,7 @@ test "normalizes hover result shapes" {
   match parse_hover_for_test(marked, doc, 0) {
     Some(hover) => {
       assert_markdown_hover(hover, 0, "```moonbit\nfn main\n```")
-      assert_true(hover.range == OffsetRange(7, 11))
+      assert_true(hover.range == Range(1, 8, 1, 12))
     }
     None => fail("expected marked hover")
   }
@@ -65,7 +65,7 @@ test "normalizes hover result shapes" {
       assert_markdown_hover(hover, 1, "**two**")
       assert_plaintext_hover(hover, 2, "three")
       assert_markdown_hover(hover, 3, "```moonbit\nfn four\n```")
-      assert_true(hover.range == OffsetRange(4, 5))
+      assert_true(hover.range == Range(1, 5, 1, 6))
     }
     None => fail("expected fallback hover")
   }
@@ -165,7 +165,7 @@ async test "lsp client requests hover through transport" {
   match client.hover_at(document, 7) {
     Some(hover) => {
       assert_plaintext_hover(hover, 0, "LSP hover for main")
-      assert_true(hover.range == OffsetRange(7, 11))
+      assert_true(hover.range == Range(1, 8, 1, 12))
     }
     None => fail("expected hover")
   }

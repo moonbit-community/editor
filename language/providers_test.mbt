@@ -2,7 +2,10 @@
 test "provider result finds hover and definition by offset" {
   let providers : ProviderResult = {
     hovers: [
-      { range: OffsetRange(3, 7), contents: [PlainText("Provider hover")] },
+      {
+        range: @base_common.Range::Range(1, 4, 1, 8),
+        contents: [PlainText("Provider hover")],
+      },
     ],
     diagnostics: [
       {
@@ -29,7 +32,7 @@ test "provider result finds hover and definition by offset" {
   assert_eq(providers.diagnostics.length(), 1)
   assert_eq(providers.definitions.length(), 1)
   assert_eq(providers.definitions[0].uri.to_string(), "memory://provider.mbt")
-  let hover = providers.hover_at(3)
+  let hover = providers.hover_at(@base_common.Position::Position(1, 4))
   match hover {
     Some(item) =>
       match item.contents {

@@ -9,7 +9,7 @@
 
 ///|
 fn model_of(lines : Array[String]) -> @model.TextSnapshot {
-  @model.TextSnapshot::TextSnapshot(lines.join("\n"))
+  TextSnapshot(lines.join("\n"))
 }
 
 ///|

@@ -22,7 +22,7 @@ fn fold_range(
   from : Int,
   to : Int,
   collapsed? : Bool = false,
-  source? : @folding.FoldSource = @folding.FoldSource::Provider,
+  source? : @folding.FoldSource = Provider,
   type_? : String,
 ) -> @folding.FoldRange {
   @folding.FoldRange::new(from, to, is_collapsed=collapsed, source~, type_?)
@@ -185,13 +185,7 @@ test "sanitizeAndMerge2" {
   assert_equal_ranges(result[3], fold_range(21, 29, source=p, type_="a5"), "P4")
   assert_equal_ranges(
     result[4],
-    fold_range(
-      30,
-      39,
-      collapsed=true,
-      source=@folding.FoldSource::Recovered,
-      type_="b1",
-    ),
+    fold_range(30, 39, collapsed=true, source=Recovered, type_="b1"),
     "P5",
   )
   assert_equal_ranges(

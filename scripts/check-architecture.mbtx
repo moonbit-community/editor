@@ -21,7 +21,7 @@ async fn main {
     for file in source_files(dir) {
       let content = @fs.read_file(file).text()
       for target in forbidden {
-        if content.contains(target) {
+        if references_forbidden_in_code(content, target) {
           errors.push(file + " references forbidden tree " + target)
         }
       }
@@ -34,6 +34,28 @@ async fn main {
     fail("Architecture checks failed")
   }
   println("Architecture checks passed")
+}
+
+///|
+/// Whether `target` (a reference tree like `vscode/`) appears in product code
+/// outside of `//` line comments. Conformance reference ports must cite their
+/// exact vscode/ source path in a header comment (see docs/quality.md
+/// "Conformance ports"); only non-comment, import-like uses are forbidden, the
+/// same spirit as the `.css` carve-out below.
+fn references_forbidden_in_code(content : String, target : String) -> Bool {
+  for line in content.split("\n") {
+    match line.find(target) {
+      None => continue
+      Some(hit) =>
+        match line.find("//") {
+          // No comment on this line: a bare reference is forbidden.
+          None => return true
+          // Reference appears before the comment marker, i.e. in code.
+          Some(comment) => if hit < comment { return true }
+        }
+    }
+  }
+  false
 }
 
 ///|

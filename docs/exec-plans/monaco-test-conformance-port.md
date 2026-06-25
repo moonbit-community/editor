@@ -66,10 +66,10 @@ package status. Counts are from the pinned `vscode/` submodule.
 
 | vscode source | vscode tests | Local owner | Local status | Scope |
 |---|---:|---|---|---|
-| `common/core/range.test.ts` | 9 | `base/common` (Range) | none | Full |
-| `common/core/lineRange.test.ts` | 4 | `base/common` | none | Full |
-| `common/core/cursorColumns.test.ts` | 5 | `viewer/cursor`,`viewer/common` | partial (cursor 4) | Full |
-| `common/core/characterClassifier.test.ts` | 1 | `syntax` / `base/common` | none | Full |
+| `common/core/range.test.ts` | 9 | `base/common` (Range) | deferred (divergence) | Full |
+| `common/core/lineRange.test.ts` | 4 | `base/common` | deferred (divergence) | Full |
+| `common/core/cursorColumns.test.ts` | 5 | `viewer/common` | done (reference, 5) ✓ | Full ✓ |
+| `common/core/characterClassifier.test.ts` | 1 | `base/common` | done (reference, 1) ✓ | Full ✓ |
 | `common/core/lineTokens.test.ts` | 7 | `viewer/view_model` (tokens) | partial | Full |
 
 ### Text model
@@ -93,7 +93,7 @@ package status. Counts are from the pinned `vscode/` submodule.
 | `common/viewLayout/lineDecorations.test.ts` | 5 | `viewer/view_line_renderer` | done (reference) | Full ✓ |
 | `common/viewLayout/linesLayout.test.ts` | 12 | `viewer/view_layout` | partial (9) | Full |
 | `common/viewLayout/lineHeights.test.ts` | 38 | `viewer/view_layout` | none | Conditional (variable line heights) |
-| `common/viewModel/prefixSumComputer.test.ts` | 48 | `viewer/view_layout` | none | Full |
+| `common/viewModel/prefixSumComputer.test.ts` | 48 | `viewer/view_layout` | done (reference, 48) ✓ | Full ✓ |
 
 ### View model / decorations
 
@@ -117,11 +117,11 @@ package status. Counts are from the pinned `vscode/` submodule.
 
 | vscode source | vscode tests | Local owner | Local status | Scope |
 |---|---:|---|---|---|
-| `contrib/folding/test/browser/foldingModel.test.ts` | 17 | `viewer/folding`,`viewer/view_model` | partial (2) | Full |
-| `contrib/folding/test/browser/indentRangeProvider.test.ts` | 26 | `viewer/folding` | none | Full |
-| `contrib/folding/test/browser/foldingRanges.test.ts` | 7 | `viewer/folding` | none | Full |
-| `contrib/folding/test/browser/hiddenRangeModel.test.ts` | 1 | `viewer/folding` | none | Full |
-| `contrib/folding/test/browser/indentFold.test.ts` | 1 | `viewer/folding` | none | Full |
+| `contrib/folding/test/browser/foldingModel.test.ts` | 17 | `viewer/folding`,`viewer/view_model` | deferred (decoration model) | Full |
+| `contrib/folding/test/browser/indentRangeProvider.test.ts` | 26 | `viewer/folding` | done (reference, 26) ✓ | Full ✓ |
+| `contrib/folding/test/browser/foldingRanges.test.ts` | 7 | `viewer/folding` | done (reference, 7) ✓ | Full ✓ |
+| `contrib/folding/test/browser/hiddenRangeModel.test.ts` | 1 | `viewer/folding` | deferred (FoldingModel) | Full |
+| `contrib/folding/test/browser/indentFold.test.ts` | 1 | `viewer/folding` | done (reference, 1) ✓ | Full ✓ |
 | `contrib/folding/test/browser/syntaxFold.test.ts` | 1 | `viewer/folding` | none | Conditional (syntax folding provider) |
 
 ### Hover (contrib)
@@ -130,6 +130,31 @@ package status. Counts are from the pinned `vscode/` submodule.
 |---|---:|---|---|---|
 | `contrib/hover/test/browser/hoverUtils.test.ts` | 29 | `viewer/hover` | none | Readonly-subset |
 | `contrib/hover/test/browser/contentHover.test.ts` | 2 | `viewer/hover` | partial (5) | Readonly-subset |
+
+## Progress log
+
+Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
+
+- **Phase 0** — `docs/quality.md` "Conformance ports" section added; existing
+  view-line reference suite given a source/commit header.
+- **Phase 1 done** — `prefixSumComputer` (48, `viewer/view_layout`),
+  `foldingRanges` (7), `indentRangeProvider` (26), `indentFold` (1)
+  (`viewer/folding`), `cursorColumns` (5, `viewer/common`),
+  `characterClassifier` (1, `base/common`). Supporting Monaco subsystems were
+  ported to back these: `PrefixSumComputer`/`ConstantTimePrefixSumComputer`,
+  `FoldingRegions`/`FoldRange`/`FoldSource`, `RangesCollector`/`computeRanges`,
+  `CursorColumns`, `CharacterClassifier`/`CharacterSet`.
+- **Phase 1 deferred, with reasons:**
+  - `range` (9) / `lineRange` (4): the viewer's `base/common.Range` is an
+    *offset* range used pervasively; Monaco's line/column `Range`/`LineRange`
+    is a different geometry the readonly viewer intentionally does not adopt.
+    Porting these would mean introducing a parallel geometry type. Recorded as
+    a divergence rather than forced.
+  - `foldingModel` (17) / `hiddenRangeModel` (1): require a full editor
+    decoration-tracking model (`changeDecorations`/`deltaDecorations`/
+    `getAllDecorations`/`getDecorationRange`) that does not exist as a test
+    seam yet. The `viewer/folding` zero-coverage exit criterion is already met
+    by the 34 cases above.
 
 ## Phased Steps
 

@@ -12,6 +12,11 @@ parts of Monaco's `contrib/folding/`, reduced to what a readonly viewer needs.
 - `fallback_folding_ranges`: the indentation/brace heuristic used to derive
   folding ranges from the model text when no provider supplies them (today only
   MoonBit).
+- Faithful Monaco ports backing the conformance suites: `FoldingRegions` /
+  `FoldRange` / `FoldSource` (range storage, parent computation, `find_range`,
+  `sanitize_and_merge`), and `RangesCollector` / `compute_ranges` (the
+  indentation + fold-marker range computation, with `FoldingMarkers` modelled
+  as matcher closures since there is no regex engine).
 
 The browser-side folding *controls* — the gutter toggle, `Viewer::toggle_fold`,
 `Viewer::set_folding_ranges`, and the re-render — stay on the viewer, which owns

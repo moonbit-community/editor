@@ -47,6 +47,9 @@ pub fn RenderLineInput::from_view_line(
 ) -> RenderLineInput {
   let sorted_line_decorations = line_decorations.copy()
   sorted_line_decorations.sort_by(LineDecoration::compare)
+  // Monaco's RenderLineInput constructor sorts selections by start offset.
+  let sorted_selections = selections_on_line.copy()
+  sorted_selections.sort_by((a, b) => a.start - b.start)
   {
     use_monospace_optimizations,
     can_use_halfwidth_rightwards_arrow,
@@ -66,7 +69,7 @@ pub fn RenderLineInput::from_view_line(
     render_whitespace,
     render_control_characters,
     font_ligatures,
-    selections_on_line,
+    selections_on_line: sorted_selections,
     text_direction: data.text_direction,
     vertical_scrollbar_size,
     render_new_line_when_empty,

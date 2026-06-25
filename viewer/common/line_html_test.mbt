@@ -5,7 +5,12 @@ test "line html escapes text and merges span decorations" {
   let line = frame.lines[0]
   let plain = @common.render_line_html(line, [])
   assert_true(plain.contains("<span class=\"view-line-content\">"))
-  assert_true(plain.contains("&quot;&lt;b&gt; &amp; 'c'&quot;"))
+  // `<`, `>`, `&` are escaped; like Monaco, `"` is left literal in text content
+  // (only attribute values need quote-escaping). Spaces render as U+00A0, so the
+  // escaped entities are checked without relying on the space byte.
+  assert_true(plain.contains("\"&lt;b&gt;"))
+  assert_true(plain.contains("&amp;"))
+  assert_true(plain.contains("'c'\""))
   assert_false(plain.contains("<b>"))
   // A diagnostic decoration over `a` (view line 1, columns 5..6) lands on the
   // spans it intersects.
@@ -53,8 +58,9 @@ fn view_decoration(
 test "empty lines emit an empty view-line content wrapper" {
   let doc = @model.TextSnapshot("a\n\nb")
   let frame = frame_for(doc, { start_line: 0, end_line: 3 })
+  // Monaco emits an empty inner `<span></span>` for a blank line.
   assert_eq(
     @common.render_line_html(frame.lines[1], []),
-    "<span class=\"view-line-content\"></span>",
+    "<span class=\"view-line-content\"><span></span></span>",
   )
 }

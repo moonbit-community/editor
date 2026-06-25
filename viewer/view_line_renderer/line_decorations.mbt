@@ -33,14 +33,31 @@ pub fn LineDecoration::compare(
       inline_decoration_type_order(right.decoration_type)
     if type_cmp != 0 {
       type_cmp
-    } else if left.class_name < right.class_name {
-      -1
-    } else if left.class_name > right.class_name {
-      1
     } else {
-      0
+      // Monaco compares class names with JS string `<`, i.e. lexicographic by
+      // UTF-16 code unit. MoonBit's `String::compare` is length-first, so we
+      // must compare code units explicitly.
+      lexicographic_compare(left.class_name, right.class_name)
     }
   }
+}
+
+///|
+/// Compares two strings lexicographically by UTF-16 code unit (JS `<` order).
+fn lexicographic_compare(left : String, right : String) -> Int {
+  let left_view = left.view()
+  let right_view = right.view()
+  let left_len = left.length()
+  let right_len = right.length()
+  let min_len = if left_len < right_len { left_len } else { right_len }
+  for i in 0..<min_len {
+    let lc = left_view.unsafe_get(i).to_int()
+    let rc = right_view.unsafe_get(i).to_int()
+    if lc != rc {
+      return lc - rc
+    }
+  }
+  left_len - right_len
 }
 
 ///|

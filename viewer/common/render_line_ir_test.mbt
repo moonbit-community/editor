@@ -123,9 +123,10 @@ test "render view line supports pseudo decorations and large token splitting" {
 test "empty line preserves compatibility wrapper" {
   let doc = @model.TextSnapshot("a\n\nb")
   let frame = frame_for(doc, { start_line: 0, end_line: 3 })
+  // Monaco emits an empty inner `<span></span>` for a blank line.
   assert_eq(
     @common.render_line_html(frame.lines[1], []),
-    "<span class=\"view-line-content\"></span>",
+    "<span class=\"view-line-content\"><span></span></span>",
   )
 }
 

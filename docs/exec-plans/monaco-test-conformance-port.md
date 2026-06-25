@@ -89,7 +89,7 @@ package status. Counts are from the pinned `vscode/` submodule.
 
 | vscode source | vscode tests | Local owner | Local status | Scope |
 |---|---:|---|---|---|
-| `common/viewLayout/viewLineRenderer.test.ts` | 72 | `viewer/view_line_renderer` | partial (reference port subset) | Full (finish the port) |
+| `common/viewLayout/viewLineRenderer.test.ts` | 72 | `viewer/view_line_renderer` | done (reference, 72; exact HTML+mapping) ✓ | Full ✓ |
 | `common/viewLayout/lineDecorations.test.ts` | 5 | `viewer/view_line_renderer` | done (reference) | Full ✓ |
 | `common/viewLayout/linesLayout.test.ts` | 12 | `viewer/view_layout` | partial (9) | Full |
 | `common/viewLayout/lineHeights.test.ts` | 38 | `viewer/view_layout` | none | Conditional (variable line heights) |
@@ -226,6 +226,31 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
     `getAllDecorations`/`getDecorationRange`) that does not exist as a test
     seam yet. The `viewer/folding` zero-coverage exit criterion is already met
     by the 34 cases above.
+- **Phase 2, step 1 done — `viewLineRenderer` (72), faithful port.** First
+  landed as a 72-label reference over the pre-existing readonly *subset*
+  renderer (exact where it matched, structural + `DEVIATION:` elsewhere, 4
+  SKIPPED findings). Triage surfaced 11 divergences from Monaco — including a
+  latent **crash** (`issue-20624`: a fixed 50-unit token split landing
+  mid-surrogate raised) and a wrong `CharacterMapping.charIndex` on tabs (used
+  by DOM hit-testing). Per user direction, `render_line_renderer.mbt` was then
+  **rewritten as a faithful 1:1 port** of Monaco's `renderViewLine`/
+  `_renderLine` and the full resolve pipeline (`transformAndRemoveOverflowing`,
+  `_applyRenderWhitespace`, `_applyInlineDecorations`, `splitLargeTokens` with
+  `onlyAtSpaces`, `splitLeadingWhitespaceFromRTL`, `extractControlCharacters`),
+  porting `strings.isFullWidthCharacter`/`containsRTL` and the control-char
+  table. Along the way three real bugs were fixed: the surrogate-split crash
+  (now resolved by the faithful `onlyAtSpaces` split), `charIndex` tab/
+  whitespace displacement (DOM-offset counting), and `LineDecoration.compare`
+  using MoonBit's length-first `String::compare` instead of JS lexicographic
+  order. The row is now **Full ✓**: all 72 cases assert Monaco's exact inner
+  HTML (`__snapshots__/*.0.html`) and inflated `CharacterMapping`
+  (`*.1.snap`), with no skips. The **sole** remaining deviation is the
+  `view-line-content` line wrapper (load-bearing for the browser's
+  `querySelector`/CSS), recorded in the package README. Production rendering now
+  matches Monaco (spaces→`U+00A0`, tab→nbsp expansion, literal `"` in text,
+  empty-line inner `<span></span>`); the three `viewer/common` line-HTML tests
+  were updated to suit. Browser (Playwright) suite not run in this environment.
+  Green on `--target all` (328 js / 338 native).
 
 ## Phased Steps
 

@@ -1,3 +1,10 @@
+// Conformance port of Monaco/VS Code view-line rendering suites.
+//
+// Ports:
+//   vscode/src/vs/editor/common/viewLayout/lineDecorations.test.ts
+//   vscode/src/vs/editor/common/viewLayout/viewLineRenderer.test.ts
+// From vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971.
+
 ///|
 test "monaco lineDecorations normalizer reference suite" {
   let content = "abcabcabcabcabcabcabcabcabcabc"

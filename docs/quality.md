@@ -13,6 +13,28 @@ just build
 just test-browser
 ```
 
+## Conformance ports
+
+Faithful 1:1 ports of Monaco/VS Code's own unit tests are kept as reference
+conformance suites and must follow these conventions (see
+`docs/exec-plans/monaco-test-conformance-port.md`):
+
+1. **Naming.** A port lives in a file suffixed `*_reference_test.mbt` (or
+   `*_reference_wbtest.mbt` for white-box) in the owning package, separating
+   conformance ports from local tests.
+2. **Traceability.** Preserve Monaco's original `test(...)` / `suite(...)` names
+   and bug IDs verbatim as the case label string (e.g. `"Bug 9827"`,
+   `"issue #3462"`) so a reviewer can diff a suite line-for-line against its
+   `.ts` source.
+3. **Header pointer.** Each reference file starts with a comment naming the exact
+   vscode source path it ports and the submodule commit it was taken from.
+4. **Un-portable cases.** A case needing DI/services, async, or DOM
+   `client-rect` measurement is not silently dropped: adapt it to our seam, or
+   leave an explicit `// SKIPPED (covered by Playwright tests/): ...` marker
+   naming the harness test that covers it. "Skipped" never means "untested."
+5. **One reference file per vscode source file** wherever practical, to keep the
+   mapping one-to-one.
+
 ## Guardrails
 
 - Public MoonBit package dependencies stay centered on the reusable viewer

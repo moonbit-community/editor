@@ -1,0 +1,212 @@
+# Monaco Test Conformance Port Plan
+
+## Goal
+
+Prove the "copy Monaco's logic" port is complete and correct by porting
+Monaco/VS Code's own unit tests as **reference conformance suites**, validating
+local behavior against Monaco's expectations rather than our own assumptions.
+
+This is a deliberately *scoped* port: this project is a **readonly viewer**, so
+roughly half of Monaco's editor test corpus (editing, undo/redo, edit commands,
+bracket-pair colorizer, GPU, diffing) tests behavior we do not implement and is
+out of scope. The plan ports the in-scope subset, in priority order, and tracks
+coverage in the matrix below.
+
+Baseline at time of writing: **139 tests, all green** (`moon test`).
+
+## Scope Rule
+
+A vscode test file is **in scope** only if it exercises behavior the readonly
+viewer actually implements. Each in-scope file is further classified:
+
+- **Full** — every case is readonly-relevant; port the whole file.
+- **Readonly-subset** — port only the cases that do not mutate the model or
+  depend on editing/cursor-command APIs; record which cases were dropped.
+- **Conditional** — in scope only if/when an optional feature lands (word-wrap
+  line projection, find/search, variable line heights, syntax folding provider).
+- **Deferred** — in scope but blocked on a known follow-up (e.g. interval-tree
+  decoration storage).
+
+Explicitly **out of scope** (do not port): `editableTextModel*`, `editStack`,
+`modelEditOperation`, `textChange`, `commands/*`, `controller/{cursor,
+cursorMoveCommand,textAreaInput,textAreaState}`, `model/bracketPairColorizer/*`,
+`gpu/*`, `diff/*`, `node/diffing/*`, `services/{modelService,languageService,
+semanticTokens*}`, `minimapCharRenderer`. These test editing, input, DI
+services, or subsystems this viewer does not have.
+
+## Conventions
+
+These codify the pattern already established by
+`viewer/view_line_renderer/monaco_render_line_reference_test.mbt`:
+
+1. **Naming.** A faithful 1:1 port lives in a file suffixed
+   `*_reference_test.mbt` (or `*_reference_wbtest.mbt` for white-box) in the
+   owning package. This visibly separates conformance ports from our own tests.
+2. **Traceability.** Preserve Monaco's original `test(...)` / `suite(...)` names
+   and bug IDs verbatim as the case label string (e.g. `"Bug 9827"`,
+   `"issue #3462"`), so a reviewer can diff a suite line-for-line against its
+   `.ts` source.
+3. **Header pointer.** Each reference file starts with a `///|` doc comment
+   naming the exact vscode source path it ports and the commit/submodule it was
+   taken from.
+4. **Un-portable cases.** A case that needs DI/services, async, or DOM
+   `client-rect` measurement is not silently dropped: either adapt it to our
+   seam, or leave an explicit `// SKIPPED (covered by Playwright tests/): ...`
+   marker naming the harness test that covers it. "Skipped" must never mean
+   "untested."
+5. **One reference file per vscode source file** wherever practical, to keep the
+   mapping one-to-one.
+
+## Coverage Matrix (triage)
+
+`vscode tests` = `test(...)` blocks in the source. `Local` = current owning
+package status. Counts are from the pinned `vscode/` submodule.
+
+### Core / geometry
+
+| vscode source | vscode tests | Local owner | Local status | Scope |
+|---|---:|---|---|---|
+| `common/core/range.test.ts` | 9 | `base/common` (Range) | none | Full |
+| `common/core/lineRange.test.ts` | 4 | `base/common` | none | Full |
+| `common/core/cursorColumns.test.ts` | 5 | `viewer/cursor`,`viewer/common` | partial (cursor 4) | Full |
+| `common/core/characterClassifier.test.ts` | 1 | `syntax` / `base/common` | none | Full |
+| `common/core/lineTokens.test.ts` | 7 | `viewer/view_model` (tokens) | partial | Full |
+
+### Text model
+
+| vscode source | vscode tests | Local owner | Local status | Scope |
+|---|---:|---|---|---|
+| `common/model/textModel.test.ts` | 40 | `viewer/model` | partial (4) | Readonly-subset |
+| `common/model/model.line.test.ts` | 53 | `viewer/model` | partial | Readonly-subset |
+| `common/model/model.test.ts` | 32 | `viewer/model` | partial | Readonly-subset |
+| `common/model/textModelWithTokens.test.ts` | 30 | `viewer/view_model` | partial | Readonly-subset |
+| `common/model/textModelTokens.test.ts` | 2 | `viewer/view_model` | none | Full |
+| `common/model/modelDecorations.test.ts` | 100 | `viewer/decorations` | partial (1) | Readonly-subset |
+| `common/model/intervalTree.test.ts` | 25 | `viewer/decorations` | none | Deferred (interval-tree storage follow-up) |
+| `common/model/textModelSearch.test.ts` | 42 | — | none | Conditional (find/search feature) |
+
+### View layout / line rendering
+
+| vscode source | vscode tests | Local owner | Local status | Scope |
+|---|---:|---|---|---|
+| `common/viewLayout/viewLineRenderer.test.ts` | 72 | `viewer/view_line_renderer` | partial (reference port subset) | Full (finish the port) |
+| `common/viewLayout/lineDecorations.test.ts` | 5 | `viewer/view_line_renderer` | done (reference) | Full ✓ |
+| `common/viewLayout/linesLayout.test.ts` | 12 | `viewer/view_layout` | partial (9) | Full |
+| `common/viewLayout/lineHeights.test.ts` | 38 | `viewer/view_layout` | none | Conditional (variable line heights) |
+| `common/viewModel/prefixSumComputer.test.ts` | 48 | `viewer/view_layout` | none | Full |
+
+### View model / decorations
+
+| vscode source | vscode tests | Local owner | Local status | Scope |
+|---|---:|---|---|---|
+| `common/viewModel/inlineDecorations.test.ts` | 23 | `viewer/view_model` | partial | Readonly-subset |
+| `browser/viewModel/viewModelImpl.test.ts` | 29 | `viewer/view_model` | partial (12) | Readonly-subset |
+| `browser/viewModel/viewModelDecorations.test.ts` | 3 | `viewer/view_model` | partial | Full |
+| `browser/viewModel/modelLineProjection.test.ts` | 6 | `viewer/view_model` | none | Conditional (word-wrap) |
+| `browser/view/viewController.test.ts` | 17 | `viewer/controller` | none | Readonly-subset |
+
+### Languages / tokenization
+
+| vscode source | vscode tests | Local owner | Local status | Scope |
+|---|---:|---|---|---|
+| `common/services/languagesRegistry.test.ts` | 14 | `viewer/languages` | partial (2) | Readonly-subset |
+| `common/modes/supports/tokenization.test.ts` | 16 | `syntax` | partial | Readonly-subset |
+| `common/modes/textToHtmlTokenizer.test.ts` | 5 | `viewer/common` (line html) | partial (2) | Full |
+
+### Folding (contrib)
+
+| vscode source | vscode tests | Local owner | Local status | Scope |
+|---|---:|---|---|---|
+| `contrib/folding/test/browser/foldingModel.test.ts` | 17 | `viewer/folding`,`viewer/view_model` | partial (2) | Full |
+| `contrib/folding/test/browser/indentRangeProvider.test.ts` | 26 | `viewer/folding` | none | Full |
+| `contrib/folding/test/browser/foldingRanges.test.ts` | 7 | `viewer/folding` | none | Full |
+| `contrib/folding/test/browser/hiddenRangeModel.test.ts` | 1 | `viewer/folding` | none | Full |
+| `contrib/folding/test/browser/indentFold.test.ts` | 1 | `viewer/folding` | none | Full |
+| `contrib/folding/test/browser/syntaxFold.test.ts` | 1 | `viewer/folding` | none | Conditional (syntax folding provider) |
+
+### Hover (contrib)
+
+| vscode source | vscode tests | Local owner | Local status | Scope |
+|---|---:|---|---|---|
+| `contrib/hover/test/browser/hoverUtils.test.ts` | 29 | `viewer/hover` | none | Readonly-subset |
+| `contrib/hover/test/browser/contentHover.test.ts` | 2 | `viewer/hover` | partial (5) | Readonly-subset |
+
+## Phased Steps
+
+Ordered by value-per-effort: highest first is pure logic with zero current
+coverage and no DOM/editing dependency.
+
+### Phase 0 — Conventions + harness
+
+- Add a short "Conformance ports" section to `docs/quality.md` referencing the
+  five Conventions above so the pattern is enforced in review.
+- Confirm the existing reference suite's header comment names its vscode source;
+  retrofit if missing. No behavior change.
+
+### Phase 1 — Pure-logic gaps (folding + core utilities)
+
+Highest priority: `viewer/folding` has reference suites in vscode but only 2
+local cases (under `view_model`), and these are DOM-free pure logic.
+
+- `indentRangeProvider` (26), `foldingRanges` (7), `foldingModel` (17),
+  `hiddenRangeModel` (1), `indentFold` (1) → `viewer/folding`.
+- `range` (9), `lineRange` (4), `cursorColumns` (5), `characterClassifier` (1)
+  → `base/common` / `viewer/common`.
+- `prefixSumComputer` (48) → `viewer/view_layout`.
+
+### Phase 2 — Render / view-line completeness
+
+- Finish the `viewLineRenderer` port to all 72 cases in
+  `viewer/view_line_renderer` (current reference file is a subset).
+- `linesLayout` (12) → `viewer/view_layout`.
+- `inlineDecorations` (23), `viewModelDecorations` (3) → `viewer/view_model`.
+
+### Phase 3 — Text model + decorations (readonly subset)
+
+- `textModelTokens` (2), `lineTokens` (7), `textModelWithTokens` readonly cases
+  → `viewer/view_model`.
+- `textModel` / `model.line` / `model.test` readonly cases → `viewer/model`;
+  drop every mutate/undo case and list the dropped names in the file header.
+- `modelDecorations` readonly subset → `viewer/decorations`.
+
+### Phase 4 — Languages / tokenization
+
+- `languagesRegistry` (14) → `viewer/languages`.
+- `tokenization` supports (16) → `syntax`.
+- `textToHtmlTokenizer` (5) → `viewer/common`.
+
+### Phase 5 — Hover + controller (readonly subset)
+
+- `hoverUtils` (29), `contentHover` (2) → `viewer/hover`.
+- `viewController` readonly dispatch cases (17, minus editing/cursor-command
+  dispatch) → `viewer/controller` (currently zero coverage).
+
+### Deferred (tracked, not scheduled here)
+
+- `intervalTree` (25) — port alongside the interval-tree decoration storage
+  follow-up.
+- `modelLineProjection` (6) / `viewModelImpl` wrapping cases — only when
+  word-wrap lands.
+- `textModelSearch` (42) — only when a find/search feature lands.
+- `lineHeights` (38) — only if variable line heights are supported.
+
+## Validation
+
+- `moon test` (and `moon test --target all` where packages are multi-target)
+  stays green after each phase.
+- Each ported file's case count and labels match the vscode source minus any
+  documented `SKIPPED` / dropped-editing cases.
+- A divergence found while porting is a finding: fix the port to match Monaco,
+  or, if Monaco's behavior is intentionally not replicated (readonly), record
+  the deviation in the file header and the owning package README.
+
+## Exit Criteria
+
+- Every **Full** and **Readonly-subset** row above has a `*_reference_test.mbt`
+  in its owning package, green, with case-count parity (net of documented
+  skips).
+- This matrix is kept current: when a row is completed its Local status is
+  updated here; when a Conditional/Deferred precondition lands, the row is
+  rescheduled into a phase.
+- `viewer/folding` and `viewer/controller` no longer have zero conformance
+  coverage.

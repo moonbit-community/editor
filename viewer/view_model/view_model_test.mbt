@@ -164,19 +164,19 @@ test "projected coordinates convert model and view positions at wrap boundaries"
   )
   let converter = view_model.coordinates_converter()
   let before_boundary = converter.model_position_to_view_position(
-    Position(0, 4),
+    Position(1, 5),
   )
-  assert_eq(before_boundary.line, 0)
-  assert_eq(before_boundary.column, 4)
-  let boundary = converter.model_position_to_view_position(Position(0, 5))
-  assert_eq(boundary.line, 1)
-  assert_eq(boundary.column, 0)
-  let round_trip = converter.view_position_to_model_position(Position(1, 0))
-  assert_eq(round_trip.line, 0)
-  assert_eq(round_trip.column, 5)
-  let line_end = converter.view_position_to_model_position(Position(1, 5))
-  assert_eq(line_end.line, 0)
-  assert_eq(line_end.column, 10)
+  assert_eq(before_boundary.line_number, 1)
+  assert_eq(before_boundary.column, 5)
+  let boundary = converter.model_position_to_view_position(Position(1, 6))
+  assert_eq(boundary.line_number, 2)
+  assert_eq(boundary.column, 1)
+  let round_trip = converter.view_position_to_model_position(Position(2, 1))
+  assert_eq(round_trip.line_number, 1)
+  assert_eq(round_trip.column, 6)
+  let line_end = converter.view_position_to_model_position(Position(2, 6))
+  assert_eq(line_end.line_number, 1)
+  assert_eq(line_end.column, 11)
   let model_input_range : @view_line_renderer.ViewRange = {
     start_line_number: 1,
     start_column: 6,
@@ -265,7 +265,7 @@ test "inlay hints render as injected text without changing model offsets" {
   let view_model = test_inlay_view_model(
     "let x = 1",
     @view_model.ViewModelOptions::no_wrap(),
-    [InlayHint(Position(0, 5), ": Int", kind=TypeHint)],
+    [InlayHint(Position(1, 6), ": Int", kind=TypeHint)],
   )
   assert_eq(view_model.line_count(), 1)
   let line = view_model.lines().render_line(1)
@@ -286,23 +286,23 @@ test "injected text participates in wrapping and coordinate conversion" {
   let view_model = test_inlay_view_model(
     "abcdef",
     @view_model.ViewModelOptions::soft_wrap(5),
-    [InlayHint(Position(0, 3), "XYZ", kind=ParameterHint)],
+    [InlayHint(Position(1, 4), "XYZ", kind=ParameterHint)],
   )
   assert_eq(view_model.line_count(), 2)
   assert_eq(view_model.lines().get_view_line_content(1), "abcXY")
   assert_eq(view_model.lines().get_view_line_content(2), "Zdef")
   let converter = view_model.coordinates_converter()
   let source_position = converter.model_position_to_view_position(
-    Position(0, 3),
+    Position(1, 4),
   )
-  assert_eq(source_position.line, 0)
-  assert_eq(source_position.column, 3)
-  let hint_position = converter.view_position_to_model_position(Position(0, 4))
-  assert_eq(hint_position.line, 0)
-  assert_eq(hint_position.column, 3)
-  let wrapped_source = converter.view_position_to_model_position(Position(1, 1))
-  assert_eq(wrapped_source.line, 0)
-  assert_eq(wrapped_source.column, 3)
+  assert_eq(source_position.line_number, 1)
+  assert_eq(source_position.column, 4)
+  let hint_position = converter.view_position_to_model_position(Position(1, 5))
+  assert_eq(hint_position.line_number, 1)
+  assert_eq(hint_position.column, 4)
+  let wrapped_source = converter.view_position_to_model_position(Position(2, 2))
+  assert_eq(wrapped_source.line_number, 1)
+  assert_eq(wrapped_source.column, 4)
 }
 
 ///|
@@ -311,8 +311,8 @@ test "injected text can sit at line boundaries" {
     "ab",
     @view_model.ViewModelOptions::no_wrap(),
     [
-      InlayHint(Position(0, 0), "[", kind=ParameterHint),
-      InlayHint(Position(0, 2), "]", kind=TypeHint),
+      InlayHint(Position(1, 1), "[", kind=ParameterHint),
+      InlayHint(Position(1, 3), "]", kind=TypeHint),
     ],
   )
   let line = view_model.lines().render_line(1)
@@ -338,18 +338,18 @@ test "folded view model projects visible lines without soft wrap" {
   assert_eq(view_model.lines().model_line_number_of_view_line(2), 4)
   let converter = view_model.coordinates_converter()
   let last_model_line = converter.model_position_to_view_position(
-    Position(3, 0),
+    Position(4, 1),
   )
-  assert_eq(last_model_line.line, 1)
-  assert_eq(last_model_line.column, 0)
+  assert_eq(last_model_line.line_number, 2)
+  assert_eq(last_model_line.column, 1)
   let hidden_model_line = converter.model_position_to_view_position(
-    Position(1, 0),
+    Position(2, 1),
   )
-  assert_eq(hidden_model_line.line, 0)
-  assert_eq(hidden_model_line.column, 1)
-  let view_position = converter.view_position_to_model_position(Position(1, 0))
-  assert_eq(view_position.line, 3)
-  assert_eq(view_position.column, 0)
+  assert_eq(hidden_model_line.line_number, 1)
+  assert_eq(hidden_model_line.column, 2)
+  let view_position = converter.view_position_to_model_position(Position(2, 1))
+  assert_eq(view_position.line_number, 4)
+  assert_eq(view_position.column, 1)
 }
 
 ///|
@@ -366,13 +366,13 @@ test "folded view model wraps only visible model lines" {
   assert_eq(view_model.lines().model_line_number_of_view_line(2), 3)
   let converter = view_model.coordinates_converter()
   let wrapped_visible_line = converter.model_position_to_view_position(
-    Position(2, 4),
+    Position(3, 5),
   )
-  assert_eq(wrapped_visible_line.line, 2)
-  assert_eq(wrapped_visible_line.column, 1)
+  assert_eq(wrapped_visible_line.line_number, 3)
+  assert_eq(wrapped_visible_line.column, 2)
   let hidden_model_line = converter.model_position_to_view_position(
-    Position(1, 0),
+    Position(2, 1),
   )
-  assert_eq(hidden_model_line.line, 0)
-  assert_eq(hidden_model_line.column, 2)
+  assert_eq(hidden_model_line.line_number, 1)
+  assert_eq(hidden_model_line.column, 3)
 }

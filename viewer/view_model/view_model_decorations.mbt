@@ -79,10 +79,10 @@ fn to_view_decoration(
   let start = snapshot.position_at_offset(decoration.range.start)
   let end = snapshot.position_at_offset(decoration.range.end)
   let model_range : @view_line_renderer.ViewRange = {
-    start_line_number: start.line + 1,
-    start_column: start.column + 1,
-    end_line_number: end.line + 1,
-    end_column: end.column + 1,
+    start_line_number: start.line_number,
+    start_column: start.column,
+    end_line_number: end.line_number,
+    end_column: end.column,
   }
   {
     range: converter.model_range_to_view_range(model_range),

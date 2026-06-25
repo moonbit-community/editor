@@ -1205,11 +1205,13 @@ fn parse_semantic_tokens_result(
               start_character = delta_start
             }
             if length > 0 {
+              // `line`/`start_character` are 0-based LSP coordinates; `Position`
+              // is 1-based, so shift both before converting to offsets.
               let start = doc.offset_at_position(
-                Position(line, start_character),
+                Position(line + 1, start_character + 1),
               )
               let end = doc.offset_at_position(
-                Position(line, start_character + length),
+                Position(line + 1, start_character + length + 1),
               )
               tokens.push({
                 range: OffsetRange(start, end),
@@ -1300,8 +1302,10 @@ fn parse_lsp_range(
 
 ///|
 fn parse_lsp_position(value : Json) -> @base_common.Position? {
+  // LSP positions are 0-based (line/character); `Position` is 1-based, so this
+  // wire boundary adds +1 on both axes.
   match (json_int_field(value, "line"), json_int_field(value, "character")) {
-    (Some(line), Some(column)) => Some(Position(line, column))
+    (Some(line), Some(column)) => Some(Position(line + 1, column + 1))
     _ => None
   }
 }
@@ -1479,9 +1483,10 @@ fn versioned_text_document_identifier(
 
 ///|
 fn lsp_position_json(position : @base_common.Position) -> Json {
+  // `Position` is 1-based; LSP positions are 0-based, so undo the +1.
   json_object([
-    ("line", json_int(position.line)),
-    ("character", json_int(position.column)),
+    ("line", json_int(position.line_number - 1)),
+    ("character", json_int(position.column - 1)),
   ])
 }
 

@@ -175,12 +175,14 @@ fn span_anchor_for_target(
     return None
   }
   let span = line.spans[target.span_index]
-  let view_line = target.line_number - 1
+  // `target.line_number` is the 1-based view line; span columns are 0-based, so
+  // shift them to 1-based `Position` columns.
+  let view_line = target.line_number
   let start = view_to_model_offset(
-    @base_common.Position::Position(view_line, span.start),
+    @base_common.Position::Position(view_line, span.start + 1),
   )
   let end = view_to_model_offset(
-    @base_common.Position::Position(view_line, span.end),
+    @base_common.Position::Position(view_line, span.end + 1),
   )
   Some((start, end, span))
 }

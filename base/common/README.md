@@ -21,10 +21,15 @@ The geometry types are a 1:1 port of Monaco's range system:
 - `OffsetRange` is the half-open UTF-16 offset span (`[start, end)`), mirroring
   Monaco's `OffsetRange`; it is what most viewer consumers currently carry.
 
+`Position` is a 1:1 port of Monaco's `Position`: one-based on both axes
+(`line_number` starts at 1, `column` starts at 1), with Monaco's methods
+(`with_`, `delta`, `equals`, `is_before`/`is_before_or_equal`, `compare`,
+`clone`, `to_string`). The offset↔position boundary lives in the snapshots
+(`position_at_offset`/`offset_at_position`); the LSP wire (0-based) converts in
+`lsp_client`'s `parse_lsp_position`/`lsp_position_json`.
+
 Migration note: consumers are mid-transition from `OffsetRange` to line/column
-`Range`, and `Position` is still 0-based with a `line` field pending the rebase
-to Monaco's 1-based `lineNumber`. See
-`docs/exec-plans/monaco-test-conformance-port.md` (Progress log).
+`Range`. See `docs/exec-plans/monaco-test-conformance-port.md` (Progress log).
 
 ## Boundaries
 

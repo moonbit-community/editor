@@ -53,7 +53,7 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
   let view_model = @view_model.ViewModel::with_options_and_inlay_hints(
     source,
     @view_model.ViewModelOptions::no_wrap(),
-    [InlayHint(Position(0, 5), ": Int", kind=TypeHint)],
+    [InlayHint(Position(1, 6), ": Int", kind=TypeHint)],
   )
   view_model.render_frame({ start_line: 0, end_line: view_model.line_count() })
 }

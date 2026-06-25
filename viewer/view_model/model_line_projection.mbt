@@ -87,14 +87,16 @@ pub fn ModelLineProjection::model_position_to_view_position(
   self : ModelLineProjection,
   position : @base_common.Position,
 ) -> @base_common.Position {
+  // `position` is 1-based (Monaco); the projection tables are 0-based, so undo
+  // the +1 on entry and re-apply it when building the view `Position`.
   let model_line = @base_common.clamp_int(
-    position.line,
+    position.line_number - 1,
     0,
     self.projections.length() - 1,
   )
   let data = self.projections[model_line]
   let model_column = @base_common.clamp_int(
-    position.column,
+    position.column - 1,
     0,
     data.line_length,
   )
@@ -109,8 +111,10 @@ pub fn ModelLineProjection::model_position_to_view_position(
   )
   let segment = data.segment_at_view_line_index(segment_index)
   {
-    line: self.model_line_start_view_indices[model_line] + segment_index,
-    column: projected_column - segment.start_offset,
+    line_number: self.model_line_start_view_indices[model_line] +
+      segment_index +
+      1,
+    column: projected_column - segment.start_offset + 1,
   }
 }
 
@@ -120,16 +124,20 @@ pub fn ModelLineProjection::view_position_to_model_position(
   self : ModelLineProjection,
   position : @base_common.Position,
 ) -> @base_common.Position {
-  let segment = self.segment_for_view_line_number(position.line + 1)
+  // `position` is a 1-based view position; segments and the projection tables
+  // are 0-based internally. `model_line_number` is already 1-based, so the model
+  // `Position` keeps it as-is and only the column re-gains the +1.
+  let segment = self.segment_for_view_line_number(position.line_number)
   let data = self.projections[segment.model_line_number - 1]
   let width = segment.end_offset - segment.start_offset
   let projected_column = segment.start_offset +
-    @base_common.clamp_int(position.column, 0, width)
+    @base_common.clamp_int(position.column - 1, 0, width)
   {
-    line: segment.model_line_number - 1,
+    line_number: segment.model_line_number,
     column: data.projected_line.projected_column_to_model_column(
-      projected_column,
-    ),
+        projected_column,
+      ) +
+      1,
   }
 }
 
@@ -146,15 +154,18 @@ fn ModelLineProjection::hidden_model_position_to_view_position(
         data.view_line_count() -
         1
       let segment = self.view_line_segments[view_line]
-      return Position(view_line, segment.end_offset - segment.start_offset)
+      return Position(
+        view_line + 1,
+        segment.end_offset - segment.start_offset + 1,
+      )
     }
     previous = previous - 1
   }
   for next in (model_line + 1)..<self.projections.length() {
     let data = self.projections[next]
     if data.view_line_count() > 0 {
-      return Position(self.model_line_start_view_indices[next], 0)
+      return Position(self.model_line_start_view_indices[next] + 1, 1)
     }
   }
-  Position(0, 0)
+  Position(1, 1)
 }

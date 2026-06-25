@@ -72,7 +72,7 @@ impl @language.InlayHintsProvider for ComponentHoverProvider with fn provide_inl
   _token,
 ) {
   [
-    InlayHint(Position(1, 23), " : T", kind=TypeHint, tooltip=[
+    InlayHint(Position(2, 24), " : T", kind=TypeHint, tooltip=[
       PlainText("component inlay hint"),
     ]),
   ]

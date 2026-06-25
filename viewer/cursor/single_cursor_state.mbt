@@ -14,7 +14,8 @@ pub(all) enum SelectionStartKind {
 /// Monaco's `cursorCommon.ts` `SingleCursorState`. `selection_start` is the
 /// anchor *range* (a region for word/line selection, collapsed for simple) and
 /// `position` is the moving active end; the derived `selection` carries the
-/// orientation. Positions are zero-based (line, UTF-16 column).
+/// orientation. Positions are one-based (`line_number`, UTF-16 `column`),
+/// matching Monaco's `Position`.
 ///
 /// `leftover_visible_column` (Monaco's `leftoverVisibleColumns` for sticky
 /// vertical movement) has no readonly mouse-selection role and is omitted until
@@ -99,14 +100,10 @@ fn not_before_or_equal(
   a : @base_common.Position,
   b : @base_common.Position,
 ) -> Bool {
-  if a.line != b.line {
-    a.line > b.line
-  } else {
-    a.column > b.column
-  }
+  !a.is_before_or_equal(b)
 }
 
 ///|
 fn position_eq(a : @base_common.Position, b : @base_common.Position) -> Bool {
-  a.line == b.line && a.column == b.column
+  a.equals(b)
 }

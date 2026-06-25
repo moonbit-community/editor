@@ -103,10 +103,10 @@ test "document snapshot owns identity and text helpers" {
   assert_eq(document.line_count(), 2)
   assert_eq(document.line_text(0), "pub fn main {}")
   assert_eq(document.line_start_offset(1), 16)
-  assert_eq(document.offset_at_position(Position(1, 3)), 19)
+  assert_eq(document.offset_at_position(Position(2, 4)), 19)
   let position = document.position_at_offset(19)
-  assert_eq(position.line, 1)
-  assert_eq(position.column, 3)
+  assert_eq(position.line_number, 2)
+  assert_eq(position.column, 4)
 }
 
 ///|

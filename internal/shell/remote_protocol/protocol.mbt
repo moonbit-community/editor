@@ -1250,7 +1250,9 @@ fn inlay_hint_kind_json(kind : @language.InlayHintKind) -> Json {
 
 ///|
 fn position_json(position : @base_common.Position) -> Json {
-  { "line": position.line.to_json(), "column": position.column.to_json() }
+  // Internal round-trip with `parse_position`; both ends are 1-based, so the
+  // wire keys carry the `Position` values verbatim.
+  { "line": position.line_number.to_json(), "column": position.column.to_json() }
 }
 
 ///|

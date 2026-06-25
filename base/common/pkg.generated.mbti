@@ -84,10 +84,18 @@ pub fn OffsetRange::intersects(Self, Self) -> Bool
 pub fn OffsetRange::is_empty(Self) -> Bool
 
 pub(all) struct Position {
-  line : Int
+  line_number : Int
   column : Int
 } derive(Eq, @debug.Debug)
 pub fn Position::Position(Int, Int) -> Self
+pub fn Position::clone(Self) -> Self
+pub fn Position::compare(Self, Self) -> Int
+pub fn Position::delta(Self, delta_line_number? : Int, delta_column? : Int) -> Self
+pub fn Position::equals(Self, Self) -> Bool
+pub fn Position::is_before(Self, Self) -> Bool
+pub fn Position::is_before_or_equal(Self, Self) -> Bool
+pub fn Position::to_string(Self) -> String
+pub fn Position::with_(Self, line_number? : Int, column? : Int) -> Self
 
 pub(all) struct Range {
   start_line_number : Int

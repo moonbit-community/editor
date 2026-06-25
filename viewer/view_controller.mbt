@@ -1,6 +1,6 @@
 ///|
 /// The data a pointer gesture carries into `dispatch_mouse`, the readonly
-/// subset of Monaco's `IMouseDispatchData`. `view_position` is the zero-based
+/// subset of Monaco's `IMouseDispatchData`. `view_position` is the one-based
 /// view position the hit test resolved; `mouse_down_count` is the multi-click
 /// count (1 = single, 2 = double, 3 = triple, >=4 = quad); `started_on_line_numbers`
 /// routes gutter drags to whole-line selection.
@@ -59,10 +59,10 @@ fn Viewer::select_all(
   let snapshot = model.snapshot
   let last_line = snapshot.line_count() - 1
   let end = @base_common.Position::Position(
-    last_line,
-    snapshot.line_text(last_line).length(),
+    last_line + 1,
+    snapshot.line_text(last_line).length() + 1,
   )
-  let origin = @base_common.Position::Position(0, 0)
+  let origin = @base_common.Position::Position(1, 1)
   controller.set_model_cursor_state(
     @cursor.SingleCursorState::new(origin, end, Simple, end),
   )
@@ -79,9 +79,9 @@ fn Viewer::line_select(
   guard self.text_model is Some(model) else { return }
   let snapshot = model.snapshot
   let position = self.view_to_model(view_position)
-  let (to_line, to_column) = line_select_end(snapshot, position.line)
-  let start = @base_common.Position::Position(position.line, 0)
-  let active = @base_common.Position::Position(to_line, to_column)
+  let (to_line, to_column) = line_select_end(snapshot, position.line_number - 1)
+  let start = @base_common.Position::Position(position.line_number, 1)
+  let active = @base_common.Position::Position(to_line + 1, to_column + 1)
   controller.set_model_cursor_state(
     @cursor.SingleCursorState::new(start, active, Line, active),
   )
@@ -101,12 +101,15 @@ fn Viewer::line_select_drag(
   let snapshot = model.snapshot
   let position = self.view_to_model(view_position)
   let state = controller.model_state()
-  let entering_line = state.selection_start_start.line
-  let next = if position.line < entering_line {
-    state.moved(true, @base_common.Position::Position(position.line, 0))
-  } else if position.line > entering_line {
-    let (to_line, to_column) = line_select_end(snapshot, position.line)
-    state.moved(true, @base_common.Position::Position(to_line, to_column))
+  let entering_line = state.selection_start_start.line_number
+  let next = if position.line_number < entering_line {
+    state.moved(true, @base_common.Position::Position(position.line_number, 1))
+  } else if position.line_number > entering_line {
+    let (to_line, to_column) = line_select_end(snapshot, position.line_number - 1)
+    state.moved(
+      true,
+      @base_common.Position::Position(to_line + 1, to_column + 1),
+    )
   } else {
     state.moved(true, state.selection_start_end)
   }
@@ -125,11 +128,17 @@ fn Viewer::word_select(
   let snapshot = model.snapshot
   let position = self.view_to_model(view_position)
   let (start_column, end_column) = word_range(
-    snapshot.line_text(position.line),
-    position.column,
+    snapshot.line_text(position.line_number - 1),
+    position.column - 1,
   )
-  let start = @base_common.Position::Position(position.line, start_column)
-  let active = @base_common.Position::Position(position.line, end_column)
+  let start = @base_common.Position::Position(
+    position.line_number,
+    start_column + 1,
+  )
+  let active = @base_common.Position::Position(
+    position.line_number,
+    end_column + 1,
+  )
   controller.set_model_cursor_state(
     @cursor.SingleCursorState::new(start, active, Word, active),
   )
@@ -149,15 +158,15 @@ fn Viewer::word_select_drag(
   let position = self.view_to_model(view_position)
   let state = controller.model_state()
   let (start_column, end_column) = word_range(
-    snapshot.line_text(position.line),
-    position.column,
+    snapshot.line_text(position.line_number - 1),
+    position.column - 1,
   )
   let anchor = state.selection_start_start
-  let active = if position.line < anchor.line ||
-    (position.line == anchor.line && position.column < anchor.column) {
-    @base_common.Position::Position(position.line, start_column)
+  let active = if position.line_number < anchor.line_number ||
+    (position.line_number == anchor.line_number && position.column < anchor.column) {
+    @base_common.Position::Position(position.line_number, start_column + 1)
   } else {
-    @base_common.Position::Position(position.line, end_column)
+    @base_common.Position::Position(position.line_number, end_column + 1)
   }
   controller.set_model_cursor_state(state.moved(true, active))
 }
@@ -179,7 +188,9 @@ fn Viewer::view_to_model(
 
 ///|
 /// The end position of a one-click line selection: the start of the next model
-/// line, or the end of the last line when the clicked line is the last.
+/// line, or the end of the last line when the clicked line is the last. Pure
+/// 0-based helper (0-based `line` in, 0-based `(line, column)` out); callers
+/// convert to/from 1-based `Position`.
 fn line_select_end(snapshot : @model.TextSnapshot, line : Int) -> (Int, Int) {
   if line + 1 < snapshot.line_count() {
     (line + 1, 0)

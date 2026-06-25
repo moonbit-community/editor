@@ -4,9 +4,8 @@
 // (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971).
 //
 // `(startLineNumber, startColumn)` is normalized to be <= `(endLineNumber,
-// endColumn)`. Positions use the existing `Position` struct as a line/column
-// holder (`Position.line` carries the line number). Monaco's 1-based convention
-// is adopted by callers; the methods here are pure coordinate comparisons.
+// endColumn)`. Endpoints are held as `Position` (1-based `line_number`/`column`,
+// matching Monaco); the methods here are pure coordinate comparisons.
 
 ///|
 /// A range in the editor. `(start_line_number, start_column)` is <=
@@ -59,15 +58,15 @@ pub fn Range::contains_position(self : Range, position : Position) -> Bool {
 
 ///|
 pub fn Range::contains_position_in(range : Range, position : Position) -> Bool {
-  if position.line < range.start_line_number ||
-    position.line > range.end_line_number {
+  if position.line_number < range.start_line_number ||
+    position.line_number > range.end_line_number {
     return false
   }
-  if position.line == range.start_line_number &&
+  if position.line_number == range.start_line_number &&
     position.column < range.start_column {
     return false
   }
-  if position.line == range.end_line_number &&
+  if position.line_number == range.end_line_number &&
     position.column > range.end_column {
     return false
   }
@@ -80,15 +79,15 @@ pub fn Range::strict_contains_position(
   range : Range,
   position : Position,
 ) -> Bool {
-  if position.line < range.start_line_number ||
-    position.line > range.end_line_number {
+  if position.line_number < range.start_line_number ||
+    position.line_number > range.end_line_number {
     return false
   }
-  if position.line == range.start_line_number &&
+  if position.line_number == range.start_line_number &&
     position.column <= range.start_column {
     return false
   }
-  if position.line == range.end_line_number &&
+  if position.line_number == range.end_line_number &&
     position.column >= range.end_column {
     return false
   }
@@ -319,7 +318,12 @@ pub fn Range::is_single_line(self : Range) -> Bool {
 ///|
 /// Build a range from two positions.
 pub fn Range::from_positions(start : Position, end : Position) -> Range {
-  Range::Range(start.line, start.column, end.line, end.column)
+  Range::Range(
+    start.line_number,
+    start.column,
+    end.line_number,
+    end.column,
+  )
 }
 
 ///|

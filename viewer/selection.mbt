@@ -16,10 +16,10 @@ fn Viewer::selection_view_range(
   let start = selection.start()
   let end = selection.end()
   Some({
-    start_line_number: start.line + 1,
-    start_column: start.column + 1,
-    end_line_number: end.line + 1,
-    end_column: end.column + 1,
+    start_line_number: start.line_number,
+    start_column: start.column,
+    end_line_number: end.line_number,
+    end_column: end.column,
   })
 }
 

@@ -360,19 +360,22 @@ fn bucket_injected_text(
     buckets.push([])
   }
   for item in injected_text {
+    // Provider/inlay-hint positions are 1-based (Monaco); the projection
+    // pipeline (`ProjectedTextLine::from_injected_text`) consumes 0-based model
+    // line/column, so this boundary converts once and stores 0-based.
     let line = @base_common.clamp_int(
-      item.position.line,
+      item.position.line_number - 1,
       0,
       snapshot.line_count() - 1,
     )
     let line_text = snapshot.line_text(line)
     let column = @base_common.clamp_int(
-      item.position.column,
+      item.position.column - 1,
       0,
       line_text.length(),
     )
     if item.text.length() > 0 {
-      buckets[line].push({ ..item, position: { line, column } })
+      buckets[line].push({ ..item, position: { line_number: line, column } })
     }
   }
   for bucket in buckets {

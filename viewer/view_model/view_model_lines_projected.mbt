@@ -303,16 +303,16 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_ra
   range,
 ) {
   let start = self.model_position_to_view_position(
-    Position(range.start_line_number - 1, range.start_column - 1),
+    Position(range.start_line_number, range.start_column),
   )
   let end = self.model_position_to_view_position(
-    Position(range.end_line_number - 1, range.end_column - 1),
+    Position(range.end_line_number, range.end_column),
   )
   {
-    start_line_number: start.line + 1,
-    start_column: start.column + 1,
-    end_line_number: end.line + 1,
-    end_column: end.column + 1,
+    start_line_number: start.line_number,
+    start_column: start.column,
+    end_line_number: end.line_number,
+    end_column: end.column,
   }
 }
 
@@ -323,15 +323,15 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_ran
   range,
 ) {
   let start = self.view_position_to_model_position(
-    Position(range.start_line_number - 1, range.start_column - 1),
+    Position(range.start_line_number, range.start_column),
   )
   let end = self.view_position_to_model_position(
-    Position(range.end_line_number - 1, range.end_column - 1),
+    Position(range.end_line_number, range.end_column),
   )
   {
-    start_line_number: start.line + 1,
-    start_column: start.column + 1,
-    end_line_number: end.line + 1,
-    end_column: end.column + 1,
+    start_line_number: start.line_number,
+    start_column: start.column,
+    end_line_number: end.line_number,
+    end_column: end.column,
   }
 }

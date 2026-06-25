@@ -16,7 +16,7 @@ pub struct Cursor {
 ///|
 /// A fresh cursor collapsed at the document origin.
 pub fn Cursor::new() -> Cursor {
-  let origin = @base_common.Position::Position(0, 0)
+  let origin = @base_common.Position::Position(1, 1)
   {
     model_state: SingleCursorState::collapsed(origin),
     view_state: SingleCursorState::collapsed(origin),

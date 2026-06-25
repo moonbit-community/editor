@@ -149,12 +149,27 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   consumers, and Monaco's line/column `Range`, `LineRange`, `LineRangeSet` were
   ported 1:1 into `base/common` with their conformance suites (`range` 9,
   `lineRange` 4). `Range` reuses the existing `Position` struct as its
-  line/column holder. **Remaining (next session):** re-plumb consumers
-  (decorations, markers, hover, view_model, selection, providers, LSP/syntax
-  producers) from `OffsetRange` to line/column `Range` where Monaco does, rebase
-  `Position` to 1-based with a `lineNumber` field + Monaco's Position methods,
-  align `OffsetRange`'s field/method names to Monaco's `OffsetRange`, and update
-  the browser code/tests.
+  line/column holder.
+- **Range-system migration (stage 2, step 1 done — Position rebase).** `Position`
+  was rebased to Monaco's 1-based convention on both axes: field `line` →
+  `line_number`, columns one-based, plus Monaco's `Position` methods (`with_`,
+  `delta`, `equals`, `is_before`/`is_before_or_equal`, `compare`, `clone`,
+  `to_string`) with a local `position_test.mbt` (vscode has no standalone
+  `position.test.ts` at the pinned commit — `Position` is covered indirectly by
+  `range.test.ts`). The ~17 consumers (snapshots, projection converter,
+  injected-text bucketing, cursor/selection, view_controller word/line select,
+  mouse hit-testing, view-model decoration adapters) were re-plumbed; the
+  snapshot `position_at_offset`/`offset_at_position` and the LSP wire
+  (`parse_lsp_position`/`lsp_position_json`, semantic-tokens decode) are the
+  ±1 boundaries. All green on `--target all` (250 js / 260 native). The
+  cursor/selection comparison helpers now delegate to the ported `Position`
+  methods. Browser fixtures audited: the JS conformance fixtures address lines
+  via the unchanged 1-based `data-line` attribute, so only the MoonBit inlay-hint
+  fixture position was shifted; `just test-browser` was not run in this
+  environment. **Remaining (next steps):** align `OffsetRange`'s field/method
+  names to Monaco's `OffsetRange` (step 2); move the model/provider/decoration/
+  hover/marker layers from `OffsetRange` to line/column `Range` (step 3); run
+  the browser suite (step 4).
 - **Phase 1 deferred, with reasons:**
   - `foldingModel` (17) / `hiddenRangeModel` (1): require a full editor
     decoration-tracking model (`changeDecorations`/`deltaDecorations`/

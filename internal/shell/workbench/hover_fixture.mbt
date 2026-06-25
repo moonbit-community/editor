@@ -88,8 +88,8 @@ impl @language.DiagnosticsProvider for HarnessHoverProvider with fn provide_diag
 fn harness_marker_range(model : @model.TextModel) -> @base_common.OffsetRange {
   let snapshot = model.snapshot
   if snapshot.line_count() >= 3 {
-    let start = snapshot.offset_at_position({ line: 2, column: 2 })
-    let end = snapshot.offset_at_position({ line: 2, column: 23 })
+    let start = snapshot.offset_at_position({ line_number: 3, column: 3 })
+    let end = snapshot.offset_at_position({ line_number: 3, column: 24 })
     OffsetRange(start, end)
   } else {
     let end = if snapshot.length() > 0 { 1 } else { 0 }

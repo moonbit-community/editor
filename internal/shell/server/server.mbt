@@ -485,8 +485,8 @@ async fn RemoteServer::enrich_reference(
       {
         uri: location.uri,
         range: location.range,
-        line: position.line + 1,
-        column: position.column + 1,
+        line: position.line_number,
+        column: position.column,
         line_text: snapshot.line_text(line_index),
       }
     }

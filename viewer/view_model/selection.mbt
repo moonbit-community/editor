@@ -10,8 +10,8 @@ pub(all) enum SelectionDirection {
 ///|
 /// A selection in the editor: a range that carries an orientation. Mirrors
 /// Monaco's `core/selection.ts` `Selection`. Both endpoints are model
-/// positions (zero-based line, UTF-16 column); `selection_start` is the fixed
-/// anchor and `position` is the moving active end (the cursor).
+/// positions (one-based `line_number`, UTF-16 `column`); `selection_start` is
+/// the fixed anchor and `position` is the moving active end (the cursor).
 ///
 /// This is pure geometry, like `core/selection.ts`. The model/clipboard
 /// boundary — normalizing to document offsets and extracting copy text — lives
@@ -96,14 +96,10 @@ pub fn Selection::is_empty(self : Selection) -> Bool {
 ///|
 /// Whether `a` is at or before `b` in reading order (line, then column).
 fn position_le(a : @base_common.Position, b : @base_common.Position) -> Bool {
-  if a.line != b.line {
-    a.line < b.line
-  } else {
-    a.column <= b.column
-  }
+  a.is_before_or_equal(b)
 }
 
 ///|
 fn position_eq(a : @base_common.Position, b : @base_common.Position) -> Bool {
-  a.line == b.line && a.column == b.column
+  a.equals(b)
 }

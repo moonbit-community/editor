@@ -91,26 +91,33 @@ pub fn TextSnapshot::line_at_offset(self : TextSnapshot, offset : Int) -> Int {
 }
 
 ///|
-/// Converts an offset to a zero-based line/column position.
+/// Converts an offset to a one-based line/column `Position` (Monaco's
+/// convention; this is the offset↔position boundary, so it adds the +1 on both
+/// axes that keeps the rest of the viewer in 1-based coordinates).
 pub fn TextSnapshot::position_at_offset(
   self : TextSnapshot,
   offset : Int,
 ) -> @base_common.Position {
   let offset = @base_common.clamp_int(offset, 0, self.length())
   let line = self.line_at_offset(offset)
-  { line, column: offset - self.line_starts[line] }
+  { line_number: line + 1, column: offset - self.line_starts[line] + 1 }
 }
 
 ///|
-/// Converts a zero-based line/column position to a clamped document offset.
+/// Converts a one-based line/column `Position` to a clamped document offset,
+/// undoing the +1 this boundary added in `position_at_offset`.
 pub fn TextSnapshot::offset_at_position(
   self : TextSnapshot,
   position : @base_common.Position,
 ) -> Int {
-  let line = @base_common.clamp_int(position.line, 0, self.line_count() - 1)
+  let line = @base_common.clamp_int(
+    position.line_number - 1,
+    0,
+    self.line_count() - 1,
+  )
   let start = self.line_start_offset(line)
   let end = self.line_end_offset(line)
-  @base_common.clamp_int(start + position.column, start, end)
+  @base_common.clamp_int(start + position.column - 1, start, end)
 }
 
 ///|

@@ -169,15 +169,15 @@ pub fn MouseHandler::handle_mouse_down(
       Some(
         (
           @base_common.Position::Position(
-            refined.line_number - 1,
-            refined.column,
+            refined.line_number,
+            refined.column + 1,
           ),
           false,
         ),
       )
     }
     GutterLineNumbers =>
-      Some((@base_common.Position::Position(target.line_number - 1, 0), true))
+      Some((@base_common.Position::Position(target.line_number, 1), true))
     _ => None
   }
   guard resolved is Some((view_position, started_on_line_numbers)) else {
@@ -407,7 +407,10 @@ fn drag_view_position(
     ContentText | ContentEmpty | BelowContent | GutterLineNumbers =>
       if target.line_number >= 1 {
         Some(
-          @base_common.Position::Position(target.line_number - 1, target.column),
+          @base_common.Position::Position(
+            target.line_number,
+            target.column + 1,
+          ),
         )
       } else {
         None

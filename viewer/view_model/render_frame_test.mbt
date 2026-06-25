@@ -28,12 +28,12 @@ fn join_span_text(line : @view_model.RenderLine) -> String {
 test "render frame contains highlighted spans and provider surfaces" {
   let doc = @model.TextSnapshot("fn main { // TODO\n  let x = 1\n}")
   let decorations = @decorations.DecorationSet::from_array([
-    Decoration(OffsetRange(13, 17), Diagnostic, "diag-warning", message="todo"),
+    Decoration(Range(1, 14, 1, 18), Diagnostic, "diag-warning", message="todo"),
   ])
   let providers = @language.ProviderResult::{
     hovers: [],
     diagnostics: [
-      { range: OffsetRange(13, 17), severity: Warning, message: "todo" },
+      { range: Range(1, 14, 1, 18), severity: Warning, message: "todo" },
     ],
     definitions: [],
     symbols: [],

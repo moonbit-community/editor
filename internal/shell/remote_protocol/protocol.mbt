@@ -1180,7 +1180,7 @@ fn packet_fields(kind : String, id : String) -> Map[String, Json] {
 ///|
 fn diagnostic_json(diagnostic : @language.Diagnostic) -> Json {
   {
-    "range": offset_range_json(diagnostic.range),
+    "range": range_json(diagnostic.range),
     "severity": diagnostic.severity.label().to_json(),
     "message": diagnostic.message.to_json(),
   }
@@ -1325,7 +1325,7 @@ fn parse_diagnostic(value : Json) -> @language.Diagnostic? {
     Object(_) =>
       match json_field(value, "range") {
         Some(range_json) =>
-          match parse_offset_range(range_json) {
+          match parse_range(range_json) {
             Some(range) =>
               Some({
                 range,

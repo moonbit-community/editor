@@ -22,7 +22,7 @@ pub fn CancellationToken::new() -> Self
 pub fn CancellationToken::none() -> Self
 
 pub(all) struct Diagnostic {
-  range : @common.OffsetRange
+  range : @common.Range
   severity : DiagnosticSeverity
   message : String
 } derive(@debug.Debug)

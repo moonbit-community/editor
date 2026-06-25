@@ -116,7 +116,7 @@ test "marker hover renders Monaco status and copy affordances" {
   let marker : @markers.Marker = {
     owner: "test",
     resource: "memory://test.mbt",
-    range: OffsetRange(0, 1),
+    range: Range(1, 1, 1, 2),
     severity: Warning,
     message: "Configured diagnostic",
     source: None,

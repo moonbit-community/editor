@@ -82,12 +82,12 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
     return []
   }
   let parts : Array[HoverPart] = []
-  for
-    marker in self.marker_decorations.markers_at(
-      ctx.model.uri,
-      ctx.anchor_range,
-    ) {
-    parts.push(MarkerHover(range=marker.range, marker~))
+  // Markers carry a line/column `Range`; the offset-based hover widget consumes
+  // offset spans, so convert at this boundary through the snapshot.
+  let snapshot = ctx.model.snapshot
+  let query = snapshot.range_of(ctx.anchor_range)
+  for marker in self.marker_decorations.markers_at(ctx.model.uri, query) {
+    parts.push(MarkerHover(range=snapshot.offset_range_of(marker.range), marker~))
   }
   parts
 }

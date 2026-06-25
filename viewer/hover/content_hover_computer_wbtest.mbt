@@ -17,7 +17,7 @@ async test "content hover computer separates sync markers from async markdown" {
   let marker_decorations = @markers.MarkerDecorationsService::new(markers)
   let model = computer_test_model()
   markers.set_diagnostics("diagnostics:0", model.uri, [
-    { range: OffsetRange(12, 17), severity: Warning, message: "marker hover" },
+    { range: Range(2, 3, 2, 8), severity: Warning, message: "marker hover" },
   ])
   languages.register_hover_provider(LanguageId("moonbit"), ComputerHoverProvider::{
 

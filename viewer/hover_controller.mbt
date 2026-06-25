@@ -261,9 +261,13 @@ fn HoverController::measured(
 ///|
 fn HoverController::decorations(
   self : HoverController,
+  snapshot : @model.TextSnapshot,
 ) -> Array[@decorations.Decoration] {
+  // The hover view holds an offset span (the widget anchors by offset);
+  // decorations are line/column `Range`, so convert at this boundary.
   match self.view {
-    Some(hover) => [Decoration(hover.range, HoverHighlight, "has-hover")]
+    Some(hover) =>
+      [Decoration(snapshot.range_of(hover.range), HoverHighlight, "has-hover")]
     None => []
   }
 }

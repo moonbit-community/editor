@@ -325,7 +325,7 @@ test "encodes and decodes server document and language packets" {
     uri,
     revision: "rev-2",
     diagnostics: [
-      { range: OffsetRange(0, 3), severity: Warning, message: "check me" },
+      { range: Range(1, 1, 1, 4), severity: Warning, message: "check me" },
     ],
   })
   match

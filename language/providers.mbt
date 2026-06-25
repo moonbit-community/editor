@@ -23,9 +23,10 @@ pub(all) enum DiagnosticSeverity {
 } derive(Eq, Debug)
 
 ///|
-/// Problem marker over a source range.
+/// Problem marker over a source range. `range` is a line/column `Range`,
+/// matching Monaco's `IMarkerData`.
 pub(all) struct Diagnostic {
-  range : @base_common.OffsetRange
+  range : @base_common.Range
   severity : DiagnosticSeverity
   message : String
 } derive(Debug)

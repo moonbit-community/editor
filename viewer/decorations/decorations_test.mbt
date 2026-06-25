@@ -1,18 +1,18 @@
 ///|
-test "finds decorations by range and offset" {
+test "finds decorations by range and position" {
   let first = @decorations.Decoration(
-    OffsetRange(2, 5),
+    @base_common.Range::Range(1, 3, 1, 6),
     Diagnostic,
     "diag-error",
     message="fixture",
   )
   let second = @decorations.Decoration(
-    OffsetRange(10, 12),
+    @base_common.Range::Range(1, 11, 1, 13),
     SearchMatch,
     "search-hit",
   )
   let set = DecorationSet::from_array([first, second])
-  assert_eq(set.between(OffsetRange(4, 11)).length(), 2)
-  assert_eq(set.at_offset(3).length(), 1)
-  assert_eq(set.at_offset(8).length(), 0)
+  assert_eq(set.between(@base_common.Range::Range(1, 5, 1, 12)).length(), 2)
+  assert_eq(set.at_position(@base_common.Position::Position(1, 4)).length(), 1)
+  assert_eq(set.at_position(@base_common.Position::Position(1, 9)).length(), 0)
 }

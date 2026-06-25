@@ -604,7 +604,6 @@ fn ViewModel::from_lines(
     source,
     lines,
     decorations: ViewModelDecorations::new(
-      source.tokenized.snapshot,
       coordinates_converter,
       source.decorations,
     ),

@@ -12,12 +12,12 @@ import {
 
 // Types and methods
 pub(all) struct Decoration {
-  range : @common.OffsetRange
+  range : @common.Range
   kind : DecorationKind
   class_name : String
   message : String?
 } derive(@debug.Debug)
-pub fn Decoration::Decoration(@common.OffsetRange, DecorationKind, String, message? : String) -> Self
+pub fn Decoration::Decoration(@common.Range, DecorationKind, String, message? : String) -> Self
 
 pub(all) enum DecorationKind {
   Diagnostic
@@ -31,8 +31,8 @@ pub(all) enum DecorationKind {
 pub(all) struct DecorationSet {
   items : Array[Decoration]
 } derive(@debug.Debug)
-pub fn DecorationSet::at_offset(Self, Int) -> Array[Decoration]
-pub fn DecorationSet::between(Self, @common.OffsetRange) -> Array[Decoration]
+pub fn DecorationSet::at_position(Self, @common.Position) -> Array[Decoration]
+pub fn DecorationSet::between(Self, @common.Range) -> Array[Decoration]
 pub fn DecorationSet::empty() -> Self
 pub fn DecorationSet::from_array(Array[Decoration]) -> Self
 

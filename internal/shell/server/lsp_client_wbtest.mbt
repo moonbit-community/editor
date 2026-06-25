@@ -139,12 +139,12 @@ async test "lsp client syncs documents and discards stale diagnostics" {
   assert_eq(client.pending_request_count(), 0)
   assert_eq(first_result.diagnostics.length(), 1)
   assert_true(first_result.diagnostics[0].severity == Warning)
-  assert_true(first_result.diagnostics[0].range == OffsetRange(19, 23))
+  assert_true(first_result.diagnostics[0].range == Range(2, 6, 2, 10))
 
   transport.publish_diagnostics(first, 0, 3, 0, 6, version=0)
   let stale_result = client.sync_document(first)
   assert_eq(stale_result.diagnostics.length(), 1)
-  assert_true(stale_result.diagnostics[0].range == OffsetRange(19, 23))
+  assert_true(stale_result.diagnostics[0].range == Range(2, 6, 2, 10))
 
   let second = test_document(2, "pub fn main {\n  // DONE\n}\n")
   let second_result = client.sync_document(second)

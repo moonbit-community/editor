@@ -212,7 +212,10 @@ fn Viewer::hover_resolved(
 fn Viewer::controller_decorations(
   self : Viewer,
 ) -> Array[@decorations.Decoration] {
-  self.hover.decorations()
+  match self.text_model {
+    Some(model) => self.hover.decorations(model.snapshot)
+    None => []
+  }
 }
 
 ///|

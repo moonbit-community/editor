@@ -488,7 +488,7 @@ impl @language.DiagnosticsProvider for FakeLanguageProvider with fn provide_diag
 ) {
   [
     {
-      range: OffsetRange(0, 4),
+      range: @base_common.Range::Range(1, 1, 1, 5),
       severity: Warning,
       message: "Configured diagnostic",
     },

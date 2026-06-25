@@ -4,7 +4,7 @@
 pub(all) struct Marker {
   owner : String
   resource : String
-  range : @base_common.OffsetRange
+  range : @base_common.Range
   severity : @language.DiagnosticSeverity
   message : String
   source : String?
@@ -174,13 +174,13 @@ pub fn MarkerDecorationsService::decorations_for_resource(
 pub fn MarkerDecorationsService::markers_at(
   self : MarkerDecorationsService,
   resource : @base_common.Uri,
-  range : @base_common.OffsetRange,
+  range : @base_common.Range,
   limit? : Int = 0,
 ) -> Array[Marker] {
   let out : Array[Marker] = []
   for marker in self.markers.markers_for_resource(resource) {
-    if marker.range.intersects(range) ||
-      marker.range.contains(range.start) {
+    if @base_common.Range::are_intersecting(marker.range, range) ||
+      marker.range.contains_position(range.get_start_position()) {
       out.push(marker)
       if limit > 0 && out.length() >= limit {
         return out

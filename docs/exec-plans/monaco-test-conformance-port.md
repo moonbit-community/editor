@@ -195,10 +195,23 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   go-to-def display now reads `location.range`'s
   line/column directly (drops the `position_at_offset` step), and
   `definition_at` is position-keyed. All green (260 js / 270 native).
-  **Remaining:** the render-coupled cluster — `Diagnostic` + `Marker` + `Hover`
-  + `Decoration` → `Range` (step 3b; `hover_at`/marker queries become
-  position-keyed, `to_view_decoration` simplifies; `SemanticToken` and syntax
-  tokens stay `OffsetRange`); then the browser suite (step 4).
+- **Range-system migration (stage 2, step 3b-i done — Diagnostic/Marker/
+  Decoration).** Moved `Diagnostic.range`, `Marker.range`, and `Decoration.range`
+  to line/column `Range`. LSP `parse_diagnostic` now uses `parse_lsp_range`
+  (no offset round-trip); the protocol diagnostic uses `range_json`/`parse_range`.
+  `to_view_decoration` collapses to a single model-`Range` → view-range
+  projection (the `snapshot` field/round-trip dropped from `ViewModelDecorations`).
+  `markers_at` and `DecorationSet::between`/`at_position` are now `Range`/
+  `Position`-keyed. The hover widget machinery stays offset-based internally
+  (it anchors by offset for pixel placement, a pre-existing deviation); the two
+  hover boundaries convert via new `TextSnapshot::range_of`/`offset_range_of`
+  (the `MarkerHoverParticipant` query/parts, and the `HoverHighlight`
+  decoration). `SemanticToken` + syntax tokens stay `OffsetRange`. All green
+  (260 js / 270 native).
+  **Remaining:** step 3b-ii — `Hover.range` → `Range` (provider result, LSP
+  hover parse, protocol, `languages.hover_at`/`ProviderResult::hover_at`
+  position-keyed, the `MarkdownHoverParticipant` boundary). Then the browser
+  suite (step 4).
 - **Phase 1 deferred, with reasons:**
   - `foldingModel` (17) / `hiddenRangeModel` (1): require a full editor
     decoration-tracking model (`changeDecorations`/`deltaDecorations`/

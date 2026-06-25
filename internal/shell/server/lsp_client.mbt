@@ -874,7 +874,7 @@ fn parse_publish_diagnostics(
   snapshot : @workspace.DocumentSnapshot?,
 ) -> ParsedDiagnostics? {
   match snapshot {
-    Some(doc) => {
+    Some(_) => {
       let uri = json_string_field(params, "uri").unwrap_or("")
       if uri == "" {
         return None
@@ -884,7 +884,7 @@ fn parse_publish_diagnostics(
       match json_field(params, "diagnostics") {
         Some(Array(items)) =>
           for item in items {
-            match parse_diagnostic(item, doc) {
+            match parse_diagnostic(item) {
               Some(diagnostic) => diagnostics.push(diagnostic)
               None => ()
             }
@@ -898,13 +898,10 @@ fn parse_publish_diagnostics(
 }
 
 ///|
-fn parse_diagnostic(
-  item : Json,
-  doc : @workspace.DocumentSnapshot,
-) -> @language.Diagnostic? {
+fn parse_diagnostic(item : Json) -> @language.Diagnostic? {
   match json_field(item, "range") {
     Some(range_json) =>
-      match parse_lsp_offset_range(range_json, doc) {
+      match parse_lsp_range(range_json) {
         Some(range) =>
           Some({
             range,

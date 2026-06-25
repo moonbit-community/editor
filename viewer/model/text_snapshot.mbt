@@ -104,6 +104,31 @@ pub fn TextSnapshot::position_at_offset(
 }
 
 ///|
+/// Converts an offset span to a line/column `Range` (the boundary helper for
+/// code that carries `Range` but holds offsets, e.g. the hover widget).
+pub fn TextSnapshot::range_of(
+  self : TextSnapshot,
+  offset_range : @base_common.OffsetRange,
+) -> @base_common.Range {
+  @base_common.Range::from_positions(
+    self.position_at_offset(offset_range.start),
+    self.position_at_offset(offset_range.end_exclusive),
+  )
+}
+
+///|
+/// Converts a line/column `Range` to an offset span (inverse of `range_of`).
+pub fn TextSnapshot::offset_range_of(
+  self : TextSnapshot,
+  range : @base_common.Range,
+) -> @base_common.OffsetRange {
+  @base_common.OffsetRange(
+    self.offset_at_position(range.get_start_position()),
+    self.offset_at_position(range.get_end_position()),
+  )
+}
+
+///|
 /// Converts a one-based line/column `Position` to a clamped document offset,
 /// undoing the +1 this boundary added in `position_at_offset`.
 pub fn TextSnapshot::offset_at_position(

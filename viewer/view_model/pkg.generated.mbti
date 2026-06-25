@@ -238,11 +238,10 @@ pub(all) struct ViewModelDecoration {
 pub fn ViewModelDecoration::columns_on_view_line(Self, Int, Int) -> (Int, Int)?
 
 pub struct ViewModelDecorations {
-  snapshot : @model.TextSnapshot
   converter : ViewModelCoordinatesConverter
   decorations : Array[ViewModelDecoration]
 }
-pub fn ViewModelDecorations::new(@model.TextSnapshot, ViewModelCoordinatesConverter, Array[@decorations.Decoration]) -> Self
+pub fn ViewModelDecorations::new(ViewModelCoordinatesConverter, Array[@decorations.Decoration]) -> Self
 pub fn ViewModelDecorations::to_view_decorations(Self, Array[@decorations.Decoration]) -> Array[ViewModelDecoration]
 pub fn ViewModelDecorations::view_decorations(Self) -> Array[ViewModelDecoration]
 

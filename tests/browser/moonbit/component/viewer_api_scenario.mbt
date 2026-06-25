@@ -46,7 +46,9 @@ impl @language.DiagnosticsProvider for ComponentHoverProvider with fn provide_di
     Some(start) =>
       [
         {
-          range: OffsetRange(start, start + needle.length()),
+          range: model.snapshot.range_of(
+            OffsetRange(start, start + needle.length()),
+          ),
           severity: Warning,
           message: self.diagnostic_text,
         },

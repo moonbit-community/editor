@@ -12,21 +12,18 @@ pub(all) struct ViewModelDecoration {
 
 ///|
 /// Decoration provider for one view model, the Monaco `ViewModelDecorations`
-/// role: it maps model decorations (stored as document-offset ranges, the
-/// model boundary) into view-coordinate `ViewModelDecoration`s through the
-/// `CoordinatesConverter`. Replacing the offset-centric per-line bucket query,
-/// every consumer downstream of this works in view `Position`s.
+/// role: it maps model decorations (line/column `Range`, as Monaco stores them)
+/// into view-coordinate `ViewModelDecoration`s through the `CoordinatesConverter`.
+/// Every consumer downstream of this works in view `Position`s.
 ///
 /// Deliberate deviation (storage): this converts the *whole* flat decoration
 /// list eagerly at construction (`new` maps every decoration up front), where
 /// Monaco's `getDecorationsViewportData` resolves decorations lazily, scoped to
 /// the viewport and backed by a cached interval tree (`model/intervalTree.ts`).
-/// Conversion fidelity matches (offset → model `Position` at the boundary, then
-/// a single view-range projection — no render-time offset round-trip); only the
-/// storage/lookup strategy is reduced. Interval-tree storage is the recorded
-/// remaining follow-up (see `monaco-one-to-one-port.md` and project memory).
+/// Conversion fidelity matches (a single model-`Range` → view-range projection);
+/// only the storage/lookup strategy is reduced. Interval-tree storage is the
+/// recorded remaining follow-up (see `monaco-one-to-one-port.md` and memory).
 pub struct ViewModelDecorations {
-  snapshot : @model.TextSnapshot
   converter : ViewModelCoordinatesConverter
   decorations : Array[ViewModelDecoration]
 }
@@ -35,14 +32,13 @@ pub struct ViewModelDecorations {
 /// Builds the view-coordinate decorations for a view model from its model
 /// decorations, snapshot, and coordinate converter.
 pub fn ViewModelDecorations::new(
-  snapshot : @model.TextSnapshot,
   converter : ViewModelCoordinatesConverter,
   decorations : Array[@decorations.Decoration],
 ) -> ViewModelDecorations {
   let view_decorations = decorations.map(decoration => {
-    to_view_decoration(snapshot, converter, decoration)
+    to_view_decoration(converter, decoration)
   })
-  { snapshot, converter, decorations: view_decorations }
+  { converter, decorations: view_decorations }
 }
 
 ///|
@@ -62,27 +58,21 @@ pub fn ViewModelDecorations::to_view_decorations(
   self : ViewModelDecorations,
   decorations : Array[@decorations.Decoration],
 ) -> Array[ViewModelDecoration] {
-  decorations.map(decoration => {
-    to_view_decoration(self.snapshot, self.converter, decoration)
-  })
+  decorations.map(decoration => { to_view_decoration(self.converter, decoration) })
 }
 
 ///|
-/// Converts one model decoration to view coordinates: the offset range becomes
-/// a model `Position` range at the model boundary, then the converter projects
-/// it to a view `Position` range.
+/// Converts one model decoration to view coordinates: the decoration's model
+/// `Range` is projected to a view range by the converter.
 fn to_view_decoration(
-  snapshot : @model.TextSnapshot,
   converter : ViewModelCoordinatesConverter,
   decoration : @decorations.Decoration,
 ) -> ViewModelDecoration {
-  let start = snapshot.position_at_offset(decoration.range.start)
-  let end = snapshot.position_at_offset(decoration.range.end_exclusive)
   let model_range : @view_line_renderer.ViewRange = {
-    start_line_number: start.line_number,
-    start_column: start.column,
-    end_line_number: end.line_number,
-    end_column: end.column,
+    start_line_number: decoration.range.start_line_number,
+    start_column: decoration.range.start_column,
+    end_line_number: decoration.range.end_line_number,
+    end_column: decoration.range.end_column,
   }
   {
     range: converter.model_range_to_view_range(model_range),

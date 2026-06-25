@@ -11,10 +11,11 @@ pub(all) enum DecorationKind {
 } derive(Eq, Debug)
 
 ///|
-/// One half-open range decoration with the CSS class and optional message the
-/// renderer should attach to matching line spans.
+/// One line/column `Range` decoration with the CSS class and optional message
+/// the renderer should attach to matching line spans. Mirrors Monaco's
+/// `IModelDeltaDecoration` (which carries a `Range`).
 pub(all) struct Decoration {
-  range : @base_common.OffsetRange
+  range : @base_common.Range
   kind : DecorationKind
   class_name : String
   message : String?
@@ -30,7 +31,7 @@ pub(all) struct DecorationSet {
 /// Builds a decoration from an explicit range, kind, CSS class, and optional
 /// message.
 pub fn Decoration::Decoration(
-  range : @base_common.OffsetRange,
+  range : @base_common.Range,
   kind : DecorationKind,
   class_name : String,
   message? : String,
@@ -51,14 +52,14 @@ pub fn DecorationSet::from_array(items : Array[Decoration]) -> DecorationSet {
 }
 
 ///|
-/// Decorations whose ranges intersect `range`.
+/// Decorations whose ranges intersect or touch `range`.
 pub fn DecorationSet::between(
   self : DecorationSet,
-  range : @base_common.OffsetRange,
+  range : @base_common.Range,
 ) -> Array[Decoration] {
   let found = []
   for item in self.items {
-    if item.range.intersects(range) {
+    if @base_common.Range::are_intersecting_or_touching(item.range, range) {
       found.push(item)
     }
   }
@@ -66,14 +67,14 @@ pub fn DecorationSet::between(
 }
 
 ///|
-/// Decorations whose ranges contain `offset`.
-pub fn DecorationSet::at_offset(
+/// Decorations whose ranges contain `position`.
+pub fn DecorationSet::at_position(
   self : DecorationSet,
-  offset : Int,
+  position : @base_common.Position,
 ) -> Array[Decoration] {
   let found = []
   for item in self.items {
-    if item.range.contains(offset) {
+    if item.range.contains_position(position) {
       found.push(item)
     }
   }

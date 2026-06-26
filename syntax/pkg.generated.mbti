@@ -10,6 +10,8 @@ import {
 // Values
 pub fn highlight(@model.TextSnapshot) -> Array[Token]
 
+pub fn is_capitalized(StringView) -> Bool
+
 pub fn tokenize_document(@model.TextSnapshot, &LineTokenizer) -> Array[Token]
 
 // Errors

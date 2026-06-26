@@ -281,6 +281,12 @@ pub fn DocumentError::status(self : DocumentError) -> Int {
 }
 
 ///|
+/// Offsets where each line begins (0-based), splitting only on `\n` (LF). A
+/// lonely `\r` (classic-Mac CR EOL) does not start a new line. This LF-only
+/// limitation is shared with the byte-identical copy in
+/// `viewer/model/text_snapshot.mbt`; the two straddle the product/shell
+/// boundary, so they are intentionally not unified but must change together if
+/// CR handling is ever added.
 fn build_line_starts(text : String) -> Array[Int] {
   let starts = [0]
   for i in 0..<text.length() {

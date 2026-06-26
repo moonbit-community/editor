@@ -61,3 +61,12 @@ pub fn TokenizerRegistry::lookup(
 ) -> &LineTokenizer? {
   self.tokenizers.get(language_id)
 }
+
+///|
+/// Whether `word` begins with an uppercase ASCII letter (`A`–`Z`), the shared
+/// lexer heuristic for classifying an identifier as a type. Shared by the
+/// language lexers (`lang_*`), which otherwise carry identical copies.
+pub fn is_capitalized(word : StringView) -> Bool {
+  let unit = word[0].to_int()
+  65 <= unit && unit <= 90
+}

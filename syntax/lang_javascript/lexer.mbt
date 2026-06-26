@@ -233,12 +233,6 @@ fn classify_word(word : StringView) -> @syntax.HighlightTag {
     | "set" => Keyword
     "true" | "false" | "null" | "undefined" | "NaN" | "Infinity" => Constant
     "this" => Variable
-    _ => if is_capitalized(word) { Type } else { Identifier }
+    _ => if @syntax.is_capitalized(word) { Type } else { Identifier }
   }
-}
-
-///|
-fn is_capitalized(word : StringView) -> Bool {
-  let unit = word[0].to_int()
-  65 <= unit && unit <= 90
 }

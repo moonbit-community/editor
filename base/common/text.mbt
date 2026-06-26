@@ -294,6 +294,43 @@ pub fn OffsetRange::to_string(self : OffsetRange) -> String {
 }
 
 ///|
+/// Inserts `range` into `sorted_ranges`, merging it with any ranges it touches
+/// or overlaps so the array stays sorted and non-overlapping. Mirrors Monaco's
+/// static `OffsetRange.addRange`.
+pub fn OffsetRange::add_range(
+  range : OffsetRange,
+  sorted_ranges : Array[OffsetRange],
+) -> Unit {
+  let mut i = 0
+  while i < sorted_ranges.length() &&
+        sorted_ranges[i].end_exclusive < range.start {
+    i = i + 1
+  }
+  let mut j = i
+  while j < sorted_ranges.length() && sorted_ranges[j].start <= range.end_exclusive {
+    j = j + 1
+  }
+  if i == j {
+    sorted_ranges.insert(i, range)
+  } else {
+    let start = if range.start < sorted_ranges[i].start {
+      range.start
+    } else {
+      sorted_ranges[i].start
+    }
+    let end = if range.end_exclusive > sorted_ranges[j - 1].end_exclusive {
+      range.end_exclusive
+    } else {
+      sorted_ranges[j - 1].end_exclusive
+    }
+    for _ in 0..<(j - i) {
+      sorted_ranges.remove(i) |> ignore
+    }
+    sorted_ranges.insert(i, OffsetRange(start, end))
+  }
+}
+
+///|
 /// Clamps an integer to an inclusive range.
 pub fn clamp_int(value : Int, low : Int, high : Int) -> Int {
   if value < low {

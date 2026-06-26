@@ -12,6 +12,44 @@ import {
 }
 
 // Values
+pub const COLOR_ID_DEFAULT_BACKGROUND : Int = 2
+
+pub const COLOR_ID_DEFAULT_FOREGROUND : Int = 1
+
+pub const COLOR_ID_NONE : Int = 0
+
+pub const FONT_STYLE_BOLD : Int = 2
+
+pub const FONT_STYLE_ITALIC : Int = 1
+
+pub const FONT_STYLE_NONE : Int = 0
+
+pub const FONT_STYLE_NOT_SET : Int = -1
+
+pub const FONT_STYLE_STRIKETHROUGH : Int = 8
+
+pub const FONT_STYLE_UNDERLINE : Int = 4
+
+pub const METADATA_BACKGROUND_OFFSET : Int = 24
+
+pub const METADATA_BALANCED_BRACKETS_OFFSET : Int = 10
+
+pub const METADATA_FONT_STYLE_OFFSET : Int = 11
+
+pub const METADATA_FOREGROUND_OFFSET : Int = 15
+
+pub const METADATA_LANGUAGEID_OFFSET : Int = 0
+
+pub const METADATA_TOKEN_TYPE_OFFSET : Int = 8
+
+pub const STANDARD_TOKEN_TYPE_COMMENT : Int = 1
+
+pub const STANDARD_TOKEN_TYPE_OTHER : Int = 0
+
+pub const STANDARD_TOKEN_TYPE_REGEX : Int = 3
+
+pub const STANDARD_TOKEN_TYPE_STRING : Int = 2
+
 pub fn build_frame(FrameSource, FrameViewport) -> RenderFrame
 
 pub fn injected_text_from_inlay_hints(Array[@language.InlayHint]) -> Array[InjectedText]
@@ -71,6 +109,19 @@ pub(all) struct InjectedText {
 pub fn InjectedText::InjectedText(@common.Position, String, String, source_index? : Int) -> Self
 pub fn InjectedText::from_inlay_hint(@language.InlayHint, Int) -> Self
 
+pub struct InsertedToken {
+  offset : Int
+  text : String
+  token_metadata : UInt
+}
+pub fn InsertedToken::new(Int, String, UInt) -> Self
+
+pub struct LanguageIdCodec {
+  language_id_to_language : Array[String]
+}
+pub fn LanguageIdCodec::decode_language_id(Self, Int) -> String
+pub fn LanguageIdCodec::new() -> Self
+
 pub(all) struct LineBreaksComputer {
   wrapping_column : Int
   tab_size : Int
@@ -78,6 +129,25 @@ pub(all) struct LineBreaksComputer {
 pub fn LineBreaksComputer::LineBreaksComputer(Int, tab_size? : Int) -> Self
 pub fn LineBreaksComputer::compute_model_line_projection(Self, Int, String) -> ModelLineProjectionData
 pub fn LineBreaksComputer::compute_projected_line_projection(Self, Int, ProjectedTextLine) -> ModelLineProjectionData
+
+pub struct LineTokens {
+  tokens : Array[UInt]
+  tokens_count : Int
+  text : String
+  language_id_codec : LanguageIdCodec
+}
+pub fn LineTokens::convert_to_end_offset(Array[UInt], Int) -> Unit
+pub fn LineTokens::create_empty(String, LanguageIdCodec) -> Self
+pub fn LineTokens::create_from_text_and_metadata(Array[(String, UInt)], LanguageIdCodec) -> Self
+pub fn LineTokens::default_token_metadata() -> UInt
+pub fn LineTokens::find_index_in_tokens_array(Array[UInt], Int) -> Int
+pub fn LineTokens::get_start_offset(Self, Int) -> Int
+pub fn LineTokens::get_text_length(Self) -> Int
+pub fn LineTokens::inflate(Self) -> &IViewLineTokens
+pub fn LineTokens::new(Array[UInt], String, LanguageIdCodec) -> Self
+pub fn LineTokens::slice_and_inflate(Self, Int, Int, Int) -> &IViewLineTokens
+pub fn LineTokens::slice_zero_copy(Self, @common.OffsetRange) -> &IViewLineTokens
+pub fn LineTokens::with_inserted(Self, Array[InsertedToken]) -> Self
 
 pub struct ModelLineProjection {
   projections : Array[ModelLineProjectionData]
@@ -144,6 +214,17 @@ pub fn ProjectedTextLine::injected_text_index_at_projected_column(Self, Int) -> 
 pub fn ProjectedTextLine::model_column_to_projected_column(Self, Int) -> Int
 pub fn ProjectedTextLine::projected_column_to_model_column(Self, Int) -> Int
 
+pub struct RangePriorityQueueImpl {
+  ranges : Array[@common.OffsetRange]
+}
+pub fn RangePriorityQueueImpl::add_range(Self, @common.OffsetRange) -> Unit
+pub fn RangePriorityQueueImpl::add_range_and_resize(Self, @common.OffsetRange, Int) -> Unit
+pub fn RangePriorityQueueImpl::delete(Self, Int) -> Unit
+pub fn RangePriorityQueueImpl::get_ranges(Self) -> Array[@common.OffsetRange]
+pub fn RangePriorityQueueImpl::min(Self) -> Int?
+pub fn RangePriorityQueueImpl::new() -> Self
+pub fn RangePriorityQueueImpl::remove_min(Self) -> Int?
+
 pub(all) struct RenderFrame {
   version : Int
   language_id : String
@@ -196,6 +277,25 @@ pub(all) enum SelectionDirection {
   LTR
   RTL
 } derive(Eq, @debug.Debug)
+
+type TokenMetadata
+pub fn TokenMetadata::contains_balanced_brackets(UInt) -> Bool
+pub fn TokenMetadata::get_background(UInt) -> Int
+pub fn TokenMetadata::get_class_name_from_metadata(UInt) -> String
+pub fn TokenMetadata::get_font_style(UInt) -> Int
+pub fn TokenMetadata::get_foreground(UInt) -> Int
+pub fn TokenMetadata::get_inline_style_from_metadata(UInt, Array[String]) -> String
+pub fn TokenMetadata::get_language_id(UInt) -> Int
+pub fn TokenMetadata::get_presentation_from_metadata(UInt) -> TokenPresentation
+pub fn TokenMetadata::get_token_type(UInt) -> Int
+
+pub struct TokenPresentation {
+  foreground : Int
+  italic : Bool
+  bold : Bool
+  underline : Bool
+  strikethrough : Bool
+}
 
 pub struct TokenizedDocument {
   snapshot : @model.TextSnapshot
@@ -313,5 +413,21 @@ pub(open) trait CoordinatesConverter {
   fn view_position_to_model_position(Self, @common.Position) -> @common.Position
   fn model_range_to_view_range(Self, @view_line_renderer.ViewRange) -> @view_line_renderer.ViewRange
   fn view_range_to_model_range(Self, @view_line_renderer.ViewRange) -> @view_line_renderer.ViewRange
+}
+
+pub trait IViewLineTokens {
+  fn get_count(Self) -> Int
+  fn get_standard_token_type(Self, Int) -> Int
+  fn get_foreground(Self, Int) -> Int
+  fn get_end_offset(Self, Int) -> Int
+  fn get_class_name(Self, Int) -> String
+  fn get_inline_style(Self, Int, Array[String]) -> String
+  fn get_presentation(Self, Int) -> TokenPresentation
+  fn find_token_index_at_offset(Self, Int) -> Int
+  fn get_line_content(Self) -> String
+  fn get_metadata(Self, Int) -> UInt
+  fn get_language_id(Self, Int) -> String
+  fn get_token_text(Self, Int) -> String
+  fn for_each(Self, (Int) -> Unit) -> Unit
 }
 

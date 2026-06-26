@@ -60,6 +60,10 @@ pub fn render_line_input_from_render_line(RenderLine, view_decorations? : Array[
 
 pub fn semantic_token_class(String) -> String
 
+pub fn tokenize_line_to_html(String, &IViewLineTokens, Array[String], Int, Int, Int, Bool) -> String
+
+pub fn tokenize_to_string(String, LanguageIdCodec, (String) -> Array[UInt]) -> String
+
 pub fn view_line_rendering_data_from_render_line(RenderLine, view_decorations? : Array[ViewModelDecoration]) -> @view_line_renderer.ViewLineRenderingData
 
 // Errors

@@ -1,0 +1,85 @@
+///| Faithful ports of a few `base/common/strings.ts` helpers (pinned `vscode/`
+/// submodule, commit 294fb350) needed by the model read APIs. Kept here, the
+/// lowest-level shared package, so model/view code shares one definition.
+
+///|
+/// `0xD800 <= charCode <= 0xDBFF`. Mirrors `strings.isHighSurrogate`.
+pub fn is_high_surrogate(char_code : Int) -> Bool {
+  0xD800 <= char_code && char_code <= 0xDBFF
+}
+
+///|
+/// `0xDC00 <= charCode <= 0xDFFF`. Mirrors `strings.isLowSurrogate`.
+pub fn is_low_surrogate(char_code : Int) -> Bool {
+  0xDC00 <= char_code && char_code <= 0xDFFF
+}
+
+///|
+/// Whether `text` contains any right-to-left character. Mirrors
+/// `strings.containsRTL` over the common BMP RTL blocks (Hebrew/Arabic
+/// `U+0590..U+08FF`, Arabic Presentation Forms-A `U+FB1D..U+FDFF` and Forms-B
+/// `U+FE70..U+FEFF`); supplementary-plane RTL is not detected, matching the
+/// viewer's existing simplified port.
+pub fn contains_rtl(text : String) -> Bool {
+  for i in 0..<text.length() {
+    let code = text[i].to_int()
+    if (code >= 0x0590 && code <= 0x08ff) ||
+      (code >= 0xfb1d && code <= 0xfdff) ||
+      (code >= 0xfe70 && code <= 0xfeff) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// Index of the first non-whitespace (non-space, non-tab) character, or `-1`.
+/// Mirrors `strings.firstNonWhitespaceIndex`.
+pub fn first_non_whitespace_index(text : String) -> Int {
+  for i in 0..<text.length() {
+    let code = text[i].to_int()
+    if code != 32 && code != 9 {
+      return i
+    }
+  }
+  -1
+}
+
+///|
+/// Index of the last non-whitespace (non-space, non-tab) character, or `-1`.
+/// Mirrors `strings.lastNonWhitespaceIndex`.
+pub fn last_non_whitespace_index(text : String) -> Int {
+  for i = text.length() - 1; i >= 0; i = i - 1 {
+    let code = text[i].to_int()
+    if code != 32 && code != 9 {
+      return i
+    }
+  }
+  -1
+}
+
+///|
+/// Whether `char_code` is a full-width character (CJK and related blocks).
+/// Mirrors `strings.isFullWidthCharacter`.
+pub fn is_full_width_character(char_code : Int) -> Bool {
+  (char_code >= 0x2E80 && char_code <= 0xD7AF) ||
+  (char_code >= 0xF900 && char_code <= 0xFAFF) ||
+  (char_code >= 0xFF01 && char_code <= 0xFF5E) ||
+  (char_code >= 0xFFE0 && char_code <= 0xFFE6)
+}
+
+///|
+/// HTML-escapes `&`, `<`, `>`. Mirrors `strings.escape` (note: unlike the view's
+/// `escape_html`, it does not escape `"`, matching Monaco's `_tokenizeToString`).
+pub fn escape(text : String) -> String {
+  let sb = StringBuilder::new()
+  for ch in text {
+    match ch {
+      '&' => sb.write_string("&amp;")
+      '<' => sb.write_string("&lt;")
+      '>' => sb.write_string("&gt;")
+      _ => sb.write_char(ch)
+    }
+  }
+  sb.to_string()
+}

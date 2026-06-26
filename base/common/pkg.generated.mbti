@@ -8,6 +8,20 @@ import {
 // Values
 pub fn clamp_int(Int, Int, Int) -> Int
 
+pub fn contains_rtl(String) -> Bool
+
+pub fn escape(String) -> String
+
+pub fn first_non_whitespace_index(String) -> Int
+
+pub fn is_full_width_character(Int) -> Bool
+
+pub fn is_high_surrogate(Int) -> Bool
+
+pub fn is_low_surrogate(Int) -> Bool
+
+pub fn last_non_whitespace_index(String) -> Int
+
 pub fn to_disposable(() -> Unit) -> Disposable
 
 // Errors

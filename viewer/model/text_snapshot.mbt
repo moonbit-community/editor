@@ -66,6 +66,70 @@ pub fn TextSnapshot::line_text(self : TextSnapshot, line : Int) -> String {
 }
 
 ///|
+/// Full document text with lines joined by `\n` (the viewer's normalized
+/// end-of-line). Mirrors Monaco's `getValue()` at its default LF EOL; the
+/// viewer has no EOL option, so it always emits `\n`.
+pub fn TextSnapshot::get_value(self : TextSnapshot) -> String {
+  let sb = StringBuilder::new()
+  for line in 0..<self.line_count() {
+    if line > 0 {
+      sb.write_string("\n")
+    }
+    sb.write_string(self.line_text(line))
+  }
+  sb.to_string()
+}
+
+///|
+/// Text inside a 1-based line/column `Range`, interior line breaks emitted as
+/// `\n`. Mirrors Monaco's `getValueInRange` at its default LF EOL. Columns are
+/// clamped into each line.
+pub fn TextSnapshot::get_value_in_range(
+  self : TextSnapshot,
+  range : @base_common.Range,
+) -> String {
+  let start_line = @base_common.clamp_int(
+    range.start_line_number - 1,
+    0,
+    self.line_count() - 1,
+  )
+  let end_line = @base_common.clamp_int(
+    range.end_line_number - 1,
+    0,
+    self.line_count() - 1,
+  )
+  if start_line == end_line {
+    let line = self.line_text(start_line)
+    let a = @base_common.clamp_int(range.start_column - 1, 0, line.length())
+    let b = @base_common.clamp_int(range.end_column - 1, a, line.length())
+    return line[a:b].to_owned()
+  }
+  let sb = StringBuilder::new()
+  let first = self.line_text(start_line)
+  let a = @base_common.clamp_int(range.start_column - 1, 0, first.length())
+  sb.write_string(first[a:first.length()].to_owned())
+  for line = start_line + 1; line < end_line; line = line + 1 {
+    sb.write_string("\n")
+    sb.write_string(self.line_text(line))
+  }
+  let last = self.line_text(end_line)
+  let b = @base_common.clamp_int(range.end_column - 1, 0, last.length())
+  sb.write_string("\n")
+  sb.write_string(last[0:b].to_owned())
+  sb.to_string()
+}
+
+///|
+/// Length, in UTF-16 code units, of `get_value_in_range`. Mirrors Monaco's
+/// `getValueLengthInRange` at its default LF EOL.
+pub fn TextSnapshot::get_value_length_in_range(
+  self : TextSnapshot,
+  range : @base_common.Range,
+) -> Int {
+  self.get_value_in_range(range).length()
+}
+
+///|
 /// Returns a clamped half-open slice of the snapshot text.
 pub fn TextSnapshot::slice(
   self : TextSnapshot,
@@ -143,6 +207,184 @@ pub fn TextSnapshot::offset_at_position(
   let start = self.line_start_offset(line)
   let end = self.line_end_offset(line)
   @base_common.clamp_int(start + position.column - 1, start, end)
+}
+
+///|
+/// Length, in UTF-16 code units, of `line`'s content (1-based, EOL excluded).
+/// Mirrors Monaco's `getLineLength`.
+fn TextSnapshot::get_line_length(self : TextSnapshot, line : Int) -> Int {
+  self.line_text(line - 1).length()
+}
+
+///|
+/// Max (1-based) column for `line`: content length + 1. Mirrors
+/// `getLineMaxColumn`.
+fn TextSnapshot::get_line_max_column(self : TextSnapshot, line : Int) -> Int {
+  self.get_line_length(line) + 1
+}
+
+///|
+/// Code unit at 0-based `index` of `line`'s content. Mirrors `getLineCharCode`.
+fn TextSnapshot::get_line_char_code(
+  self : TextSnapshot,
+  line : Int,
+  index : Int,
+) -> Int {
+  self.line_text(line - 1)[index].to_int()
+}
+
+///|
+/// Core of `validate_position` (Monaco's `_validatePosition`). When `surrogate`
+/// is true, a column landing in the middle of a high-low surrogate pair is
+/// moved to before the pair. `surrogate=false` is Monaco's `Relaxed` mode (a
+/// plain clamp). Inputs are integers, so Monaco's `NaN`/float coercion is moot.
+fn TextSnapshot::do_validate_position(
+  self : TextSnapshot,
+  line_number : Int,
+  column : Int,
+  surrogate : Bool,
+) -> @base_common.Position {
+  let line_count = self.line_count()
+  if line_number < 1 {
+    return @base_common.Position::Position(1, 1)
+  }
+  if line_number > line_count {
+    return @base_common.Position::Position(
+      line_count,
+      self.get_line_max_column(line_count),
+    )
+  }
+  if column <= 1 {
+    return @base_common.Position::Position(line_number, 1)
+  }
+  let max_column = self.get_line_max_column(line_number)
+  if column >= max_column {
+    return @base_common.Position::Position(line_number, max_column)
+  }
+  if surrogate {
+    // column > 1 here; if it would split a high-low pair, move before it.
+    let char_code_before = self.get_line_char_code(line_number, column - 2)
+    if @base_common.is_high_surrogate(char_code_before) {
+      return @base_common.Position::Position(line_number, column - 1)
+    }
+  }
+  @base_common.Position::Position(line_number, column)
+}
+
+///|
+/// Clamps a position into the snapshot, snapping out of the middle of a
+/// surrogate pair. Mirrors Monaco's `validatePosition`.
+pub fn TextSnapshot::validate_position(
+  self : TextSnapshot,
+  position : @base_common.Position,
+) -> @base_common.Position {
+  self.do_validate_position(position.line_number, position.column, true)
+}
+
+///|
+/// Clamps a range into the snapshot, expanding out of any surrogate pair its
+/// ends land inside. Mirrors Monaco's `validateRange`.
+pub fn TextSnapshot::validate_range(
+  self : TextSnapshot,
+  range : @base_common.Range,
+) -> @base_common.Range {
+  let start = self.do_validate_position(
+    range.start_line_number,
+    range.start_column,
+    false,
+  )
+  let end = self.do_validate_position(
+    range.end_line_number,
+    range.end_column,
+    false,
+  )
+  let sl = start.line_number
+  let sc = start.column
+  let el = end.line_number
+  let ec = end.column
+  let char_before_start = if sc > 1 {
+    self.get_line_char_code(sl, sc - 2)
+  } else {
+    0
+  }
+  let char_before_end = if ec > 1 && ec <= self.get_line_length(el) {
+    self.get_line_char_code(el, ec - 2)
+  } else {
+    0
+  }
+  let start_inside = @base_common.is_high_surrogate(char_before_start)
+  let end_inside = @base_common.is_high_surrogate(char_before_end)
+  if !start_inside && !end_inside {
+    return @base_common.Range::Range(sl, sc, el, ec)
+  }
+  if sl == el && sc == ec {
+    // do not expand a collapsed range, simply move it to a valid location
+    return @base_common.Range::Range(sl, sc - 1, el, ec - 1)
+  }
+  if start_inside && end_inside {
+    return @base_common.Range::Range(sl, sc - 1, el, ec + 1)
+  }
+  if start_inside {
+    return @base_common.Range::Range(sl, sc - 1, el, ec)
+  }
+  @base_common.Range::Range(sl, sc, el, ec + 1)
+}
+
+///|
+/// Position `offset` UTF-16 code units away from `position`, clamped to the
+/// snapshot. Mirrors Monaco's `modifyPosition` (relaxed-validate, then offset
+/// round-trip).
+pub fn TextSnapshot::modify_position(
+  self : TextSnapshot,
+  position : @base_common.Position,
+  offset : Int,
+) -> @base_common.Position {
+  let valid = self.do_validate_position(
+    position.line_number,
+    position.column,
+    false,
+  )
+  let candidate = self.offset_at_position(valid) + offset
+  let clamped = @base_common.clamp_int(candidate, 0, self.length())
+  self.position_at_offset(clamped)
+}
+
+///|
+/// 1-based column of the first non-whitespace character on `line`, or `0` if the
+/// line is empty/whitespace-only. Mirrors `getLineFirstNonWhitespaceColumn`.
+pub fn TextSnapshot::get_line_first_non_whitespace_column(
+  self : TextSnapshot,
+  line : Int,
+) -> Int {
+  let result = @base_common.first_non_whitespace_index(self.line_text(line - 1))
+  if result == -1 {
+    0
+  } else {
+    result + 1
+  }
+}
+
+///|
+/// 1-based column just past the last non-whitespace character on `line`, or `0`
+/// if the line is empty/whitespace-only. Mirrors
+/// `getLineLastNonWhitespaceColumn`.
+pub fn TextSnapshot::get_line_last_non_whitespace_column(
+  self : TextSnapshot,
+  line : Int,
+) -> Int {
+  let result = @base_common.last_non_whitespace_index(self.line_text(line - 1))
+  if result == -1 {
+    0
+  } else {
+    result + 2
+  }
+}
+
+///|
+/// Whether the snapshot text contains any right-to-left character. Mirrors
+/// `mightContainRTL` (recomputed on demand rather than cached at construction).
+pub fn TextSnapshot::might_contain_rtl(self : TextSnapshot) -> Bool {
+  @base_common.contains_rtl(self.text)
 }
 
 ///|

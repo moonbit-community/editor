@@ -11,6 +11,22 @@ import {
 // Errors
 
 // Types and methods
+pub struct ActiveIndentGuideInfo {
+  start_line_number : Int
+  end_line_number : Int
+  indent : Int
+} derive(Eq, @debug.Debug)
+
+pub struct GuidesTextModelPart {
+  text_model : TextSnapshot
+  tab_size : Int
+  indent_size : Int
+  off_side : Bool
+}
+pub fn GuidesTextModelPart::get_active_indent_guide(Self, Int, Int, Int) -> ActiveIndentGuideInfo
+pub fn GuidesTextModelPart::get_lines_indent_guides(Self, Int, Int) -> Array[Int]
+pub fn GuidesTextModelPart::new(TextSnapshot, tab_size? : Int, indent_size? : Int, off_side? : Bool) -> Self
+
 pub(all) struct TextModel {
   uri : @common.Uri
   display_name : String

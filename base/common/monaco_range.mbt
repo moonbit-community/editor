@@ -168,7 +168,7 @@ pub fn Range::plus_range_of(a : Range, b : Range) -> Range {
     start_column = b.start_column
   } else if b.start_line_number == a.start_line_number {
     start_line_number = b.start_line_number
-    start_column = min_int(b.start_column, a.start_column)
+    start_column = b.start_column.min(a.start_column)
   } else {
     start_line_number = a.start_line_number
     start_column = a.start_column
@@ -178,7 +178,7 @@ pub fn Range::plus_range_of(a : Range, b : Range) -> Range {
     end_column = b.end_column
   } else if b.end_line_number == a.end_line_number {
     end_line_number = b.end_line_number
-    end_column = max_int(b.end_column, a.end_column)
+    end_column = b.end_column.max(a.end_column)
   } else {
     end_line_number = a.end_line_number
     end_column = a.end_column
@@ -206,13 +206,13 @@ pub fn Range::intersect_ranges_of(a : Range, b : Range) -> Range? {
     result_start_line_number = other_start_line_number
     result_start_column = other_start_column
   } else if result_start_line_number == other_start_line_number {
-    result_start_column = max_int(result_start_column, other_start_column)
+    result_start_column = result_start_column.max(other_start_column)
   }
   if result_end_line_number > other_end_line_number {
     result_end_line_number = other_end_line_number
     result_end_column = other_end_column
   } else if result_end_line_number == other_end_line_number {
-    result_end_column = min_int(result_end_column, other_end_column)
+    result_end_column = result_end_column.min(other_end_column)
   }
   if result_start_line_number > result_end_line_number {
     return None
@@ -318,12 +318,7 @@ pub fn Range::is_single_line(self : Range) -> Bool {
 ///|
 /// Build a range from two positions.
 pub fn Range::from_positions(start : Position, end : Position) -> Range {
-  Range::Range(
-    start.line_number,
-    start.column,
-    end.line_number,
-    end.column,
-  )
+  Range::Range(start.line_number, start.column, end.line_number, end.column)
 }
 
 ///|
@@ -394,22 +389,4 @@ pub fn Range::spans_multiple_lines(range : Range) -> Bool {
 /// Transform to a user-presentable string representation.
 pub fn Range::to_string(self : Range) -> String {
   "[\{self.start_line_number},\{self.start_column} -> \{self.end_line_number},\{self.end_column}]"
-}
-
-///|
-fn min_int(a : Int, b : Int) -> Int {
-  if a < b {
-    a
-  } else {
-    b
-  }
-}
-
-///|
-fn max_int(a : Int, b : Int) -> Int {
-  if a > b {
-    a
-  } else {
-    b
-  }
 }

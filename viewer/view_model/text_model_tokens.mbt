@@ -46,7 +46,10 @@ pub fn RangePriorityQueueImpl::remove_min(
   if range.start + 1 == range.end_exclusive {
     self.ranges.remove(0) |> ignore
   } else {
-    self.ranges[0] = @base_common.OffsetRange(range.start + 1, range.end_exclusive)
+    self.ranges[0] = @base_common.OffsetRange(
+      range.start + 1,
+      range.end_exclusive,
+    )
   }
   Some(range.start)
 }
@@ -70,7 +73,10 @@ pub fn RangePriorityQueueImpl::delete(
       if range.end_exclusive == value + 1 {
         self.ranges.remove(idx) |> ignore
       } else {
-        self.ranges[idx] = @base_common.OffsetRange(value + 1, range.end_exclusive)
+        self.ranges[idx] = @base_common.OffsetRange(
+          value + 1,
+          range.end_exclusive,
+        )
       }
     } else if range.end_exclusive == value + 1 {
       self.ranges[idx] = @base_common.OffsetRange(range.start, value)
@@ -101,17 +107,14 @@ pub fn RangePriorityQueueImpl::add_range_and_resize(
   new_length : Int,
 ) -> Unit {
   let mut idx_first_might_be_intersecting = 0
-  while !(
-      idx_first_might_be_intersecting >= self.ranges.length() ||
-      range.start <= self.ranges[idx_first_might_be_intersecting].end_exclusive
-    ) {
+  while !(idx_first_might_be_intersecting >= self.ranges.length() ||
+        range.start <=
+        self.ranges[idx_first_might_be_intersecting].end_exclusive) {
     idx_first_might_be_intersecting = idx_first_might_be_intersecting + 1
   }
   let mut idx_first_is_after = idx_first_might_be_intersecting
-  while !(
-      idx_first_is_after >= self.ranges.length() ||
-      range.end_exclusive < self.ranges[idx_first_is_after].start
-    ) {
+  while !(idx_first_is_after >= self.ranges.length() ||
+        range.end_exclusive < self.ranges[idx_first_is_after].start) {
     idx_first_is_after = idx_first_is_after + 1
   }
   let delta = new_length - range.length()
@@ -119,17 +122,18 @@ pub fn RangePriorityQueueImpl::add_range_and_resize(
     self.ranges[i] = self.ranges[i].delta(delta)
   }
   if idx_first_might_be_intersecting == idx_first_is_after {
-    let new_range = @base_common.OffsetRange(range.start, range.start + new_length)
+    let new_range = @base_common.OffsetRange(
+      range.start,
+      range.start + new_length,
+    )
     if !new_range.is_empty() {
       self.ranges.insert(idx_first_might_be_intersecting, new_range)
     }
   } else {
-    let start = min_int(
-      range.start,
+    let start = range.start.min(
       self.ranges[idx_first_might_be_intersecting].start,
     )
-    let end_ex = max_int(
-      range.end_exclusive,
+    let end_ex = range.end_exclusive.max(
       self.ranges[idx_first_is_after - 1].end_exclusive,
     )
     let new_range = @base_common.OffsetRange(start, end_ex + delta)

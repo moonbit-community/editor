@@ -11,7 +11,7 @@ pub fn ViewerOptions::ViewerOptions(
   soft_wrap? : Bool = false,
   tab_size? : Int = 2,
 ) -> ViewerOptions {
-  { soft_wrap, tab_size: max_int(tab_size, 1) }
+  { soft_wrap, tab_size: tab_size.max(1) }
 }
 
 ///|
@@ -31,7 +31,7 @@ pub fn ViewerOptions::soft_wrap_column_for_content_width(
   if !self.soft_wrap || content_width <= 0.0 || char_width <= 0.0 {
     0
   } else {
-    max_int(1, (content_width / char_width).to_int())
+    (1).max((content_width / char_width).to_int())
   }
 }
 

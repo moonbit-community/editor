@@ -50,8 +50,8 @@ pub fn Position::with_(
 /// Mirrors Monaco's `delta(deltaLineNumber, deltaColumn)`.
 pub fn Position::delta(
   self : Position,
-  delta_line_number~ : Int = 0,
-  delta_column~ : Int = 0,
+  delta_line_number? : Int = 0,
+  delta_column? : Int = 0,
 ) -> Position {
   self.with_(
     line_number=clamp_int(self.line_number + delta_line_number, 1, 2147483647),
@@ -120,7 +120,10 @@ pub fn Position::to_string(self : Position) -> String {
 /// panics, so this normalizes by swapping instead. For valid inputs
 /// (`start <= end_exclusive`) the swap is a no-op, so every other method keeps
 /// Monaco's behavior.
-pub fn OffsetRange::OffsetRange(start : Int, end_exclusive : Int) -> OffsetRange {
+pub fn OffsetRange::OffsetRange(
+  start : Int,
+  end_exclusive : Int,
+) -> OffsetRange {
   if start <= end_exclusive {
     { start, end_exclusive }
   } else {
@@ -158,7 +161,10 @@ pub fn OffsetRange::empty_at(offset : Int) -> OffsetRange {
 ///|
 /// `[start, end_exclusive)`, or `None` when `start > end_exclusive`. Mirrors
 /// Monaco's static `OffsetRange.tryCreate`.
-pub fn OffsetRange::try_create(start : Int, end_exclusive : Int) -> OffsetRange? {
+pub fn OffsetRange::try_create(
+  start : Int,
+  end_exclusive : Int,
+) -> OffsetRange? {
   if start > end_exclusive {
     None
   } else {
@@ -186,7 +192,10 @@ pub fn OffsetRange::delta(self : OffsetRange, offset : Int) -> OffsetRange {
 
 ///|
 /// Shifts the start by `offset`. Mirrors Monaco's `deltaStart`.
-pub fn OffsetRange::delta_start(self : OffsetRange, offset : Int) -> OffsetRange {
+pub fn OffsetRange::delta_start(
+  self : OffsetRange,
+  offset : Int,
+) -> OffsetRange {
   OffsetRange::OffsetRange(self.start + offset, self.end_exclusive)
 }
 
@@ -220,10 +229,13 @@ pub fn OffsetRange::contains(self : OffsetRange, offset : Int) -> Bool {
 
 ///|
 /// The smallest range containing both ranges. Mirrors Monaco's `join`.
-pub fn OffsetRange::join(self : OffsetRange, other : OffsetRange) -> OffsetRange {
+pub fn OffsetRange::join(
+  self : OffsetRange,
+  other : OffsetRange,
+) -> OffsetRange {
   OffsetRange::OffsetRange(
-    min_int(self.start, other.start),
-    max_int(self.end_exclusive, other.end_exclusive),
+    self.start.min(other.start),
+    self.end_exclusive.max(other.end_exclusive),
   )
 }
 
@@ -234,8 +246,8 @@ pub fn OffsetRange::intersect(
   self : OffsetRange,
   other : OffsetRange,
 ) -> OffsetRange? {
-  let start = max_int(self.start, other.start)
-  let end = min_int(self.end_exclusive, other.end_exclusive)
+  let start = self.start.max(other.start)
+  let end = self.end_exclusive.min(other.end_exclusive)
   if start <= end {
     Some(OffsetRange::OffsetRange(start, end))
   } else {
@@ -250,17 +262,17 @@ pub fn OffsetRange::intersection_length(
   self : OffsetRange,
   other : OffsetRange,
 ) -> Int {
-  let start = max_int(self.start, other.start)
-  let end = min_int(self.end_exclusive, other.end_exclusive)
-  max_int(0, end - start)
+  let start = self.start.max(other.start)
+  let end = self.end_exclusive.min(other.end_exclusive)
+  (0).max(end - start)
 }
 
 ///|
 /// Whether the two ranges overlap. Mirrors Monaco's `intersects` (always false
 /// when either range is empty).
 pub fn OffsetRange::intersects(self : OffsetRange, other : OffsetRange) -> Bool {
-  let start = max_int(self.start, other.start)
-  let end = min_int(self.end_exclusive, other.end_exclusive)
+  let start = self.start.max(other.start)
+  let end = self.end_exclusive.min(other.end_exclusive)
   start < end
 }
 
@@ -270,8 +282,8 @@ pub fn OffsetRange::intersects_or_touches(
   self : OffsetRange,
   other : OffsetRange,
 ) -> Bool {
-  let start = max_int(self.start, other.start)
-  let end = min_int(self.end_exclusive, other.end_exclusive)
+  let start = self.start.max(other.start)
+  let end = self.end_exclusive.min(other.end_exclusive)
   start <= end
 }
 
@@ -307,7 +319,8 @@ pub fn OffsetRange::add_range(
     i = i + 1
   }
   let mut j = i
-  while j < sorted_ranges.length() && sorted_ranges[j].start <= range.end_exclusive {
+  while j < sorted_ranges.length() &&
+        sorted_ranges[j].start <= range.end_exclusive {
     j = j + 1
   }
   if i == j {

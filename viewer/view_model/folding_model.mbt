@@ -74,7 +74,7 @@ pub fn FoldingModel::visible_line_count(
   for hidden in self.hidden_ranges {
     hidden_count += hidden.end_line_number - hidden.start_line_number + 1
   }
-  max_int(0, line_count - hidden_count)
+  (0).max(line_count - hidden_count)
 }
 
 ///|
@@ -87,12 +87,12 @@ fn normalize_folding_ranges(
     let start_line_number = @base_common.clamp_int(
       range.start_line_number,
       1,
-      max_int(line_count, 1),
+      line_count.max(1),
     )
     let end_line_number = @base_common.clamp_int(
       range.end_line_number,
       1,
-      max_int(line_count, 1),
+      line_count.max(1),
     )
     if start_line_number < end_line_number {
       normalized.push({ start_line_number, end_line_number, kind: range.kind })
@@ -136,7 +136,7 @@ fn merge_hidden_ranges(ranges : Array[HiddenRange]) -> Array[HiddenRange] {
           merged.push(
             HiddenRange(
               previous.start_line_number,
-              max_int(previous.end_line_number, range.end_line_number),
+              previous.end_line_number.max(range.end_line_number),
             ),
           )
         } else {

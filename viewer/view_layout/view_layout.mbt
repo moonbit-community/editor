@@ -44,7 +44,7 @@ fn build_lines(
 ///|
 /// Creates a view layout with a fixed line height and optional line count.
 pub fn ViewLayout::new(line_height~ : Int, line_count? : Int = 0) -> ViewLayout {
-  let line_count = max_int(line_count, 0)
+  let line_count = line_count.max(0)
   let layout : ViewLayout = {
     scrollable: Scrollable::new(),
     lines: build_lines(line_count, line_height, []),
@@ -64,9 +64,16 @@ pub fn ViewLayout::set_line_count(
   self : ViewLayout,
   line_count : Int,
 ) -> ScrollChange? {
-  self.line_count = max_int(line_count, 0)
-  self.view_zones_arr = normalized_view_zones(self.view_zones_arr, self.line_count)
-  self.lines = build_lines(self.line_count, self.line_height, self.view_zones_arr)
+  self.line_count = line_count.max(0)
+  self.view_zones_arr = normalized_view_zones(
+    self.view_zones_arr,
+    self.line_count,
+  )
+  self.lines = build_lines(
+    self.line_count,
+    self.line_height,
+    self.view_zones_arr,
+  )
   self.sync_dimensions()
 }
 
@@ -99,7 +106,11 @@ pub fn ViewLayout::set_view_zones(
   view_zones : Array[ViewZone],
 ) -> ScrollChange? {
   self.view_zones_arr = normalized_view_zones(view_zones, self.line_count)
-  self.lines = build_lines(self.line_count, self.line_height, self.view_zones_arr)
+  self.lines = build_lines(
+    self.line_count,
+    self.line_height,
+    self.view_zones_arr,
+  )
   self.sync_dimensions()
 }
 
@@ -145,7 +156,7 @@ pub fn ViewLayout::line_at_vertical_offset(
   let line_number = self.lines.get_line_number_at_or_after_vertical_offset(
     offset.to_int(),
   )
-  max_int(0, line_number - 1)
+  (0).max(line_number - 1)
 }
 
 ///|
@@ -316,9 +327,9 @@ fn normalized_view_zones(
       anchor_line: @base_common.clamp_int(
         zone.anchor_line,
         0,
-        max_int(line_count, 0),
+        line_count.max(0),
       ),
-      height_px: max_int(zone.height_px, 0),
+      height_px: zone.height_px.max(0),
     })
   }
   normalized.sort_by(compare_view_zones)

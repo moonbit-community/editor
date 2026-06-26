@@ -199,8 +199,8 @@ fn append_source_projected_spans(
     if span.injected_text_index >= 0 {
       continue
     }
-    let start = max_int(span.source_start, model_start)
-    let end = min_int(span.source_end, model_end)
+    let start = span.source_start.max(model_start)
+    let end = span.source_end.min(model_end)
     if start < end {
       out.push({
         start: projected_start + (start - model_start),
@@ -223,8 +223,8 @@ fn append_sliced_projected_spans(
   end_offset : Int,
 ) -> Unit {
   for span in spans {
-    let start = max_int(span.start, start_offset)
-    let end = min_int(span.end, end_offset)
+    let start = span.start.max(start_offset)
+    let end = span.end.min(end_offset)
     if start < end {
       out.push({
         start: start - start_offset,

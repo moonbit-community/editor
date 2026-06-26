@@ -217,8 +217,8 @@ fn MouseHandler::next_mouse_down_count(
   client_y : Double,
 ) -> Int {
   let now = now_ms()
-  let dx = abs_double(client_x - self.last_mouse_down_x)
-  let dy = abs_double(client_y - self.last_mouse_down_y)
+  let dx = (client_x - self.last_mouse_down_x).abs()
+  let dy = (client_y - self.last_mouse_down_y).abs()
   let close = now - self.last_mouse_down_time <= multi_click_time &&
     dx <= multi_click_distance &&
     dy <= multi_click_distance
@@ -228,15 +228,6 @@ fn MouseHandler::next_mouse_down_count(
   self.last_mouse_down_x = client_x
   self.last_mouse_down_y = client_y
   count
-}
-
-///|
-fn abs_double(value : Double) -> Double {
-  if value < 0.0 {
-    -value
-  } else {
-    value
-  }
 }
 
 ///|
@@ -407,10 +398,7 @@ fn drag_view_position(
     ContentText | ContentEmpty | BelowContent | GutterLineNumbers =>
       if target.line_number >= 1 {
         Some(
-          @base_common.Position::Position(
-            target.line_number,
-            target.column + 1,
-          ),
+          @base_common.Position::Position(target.line_number, target.column + 1),
         )
       } else {
         None

@@ -48,19 +48,19 @@ pub fn LanguageIdCodec::decode_language_id(
 /// A line's tokens, viewed as a sequence with per-token end offset and
 /// metadata. Both `LineTokens` and `SliceLineTokens` implement it.
 pub trait IViewLineTokens {
-  get_count(Self) -> Int
-  get_standard_token_type(Self, Int) -> Int
-  get_foreground(Self, Int) -> Int
-  get_end_offset(Self, Int) -> Int
-  get_class_name(Self, Int) -> String
-  get_inline_style(Self, Int, Array[String]) -> String
-  get_presentation(Self, Int) -> TokenPresentation
-  find_token_index_at_offset(Self, Int) -> Int
-  get_line_content(Self) -> String
-  get_metadata(Self, Int) -> UInt
-  get_language_id(Self, Int) -> String
-  get_token_text(Self, Int) -> String
-  for_each(Self, (Int) -> Unit) -> Unit
+  fn get_count(Self) -> Int
+  fn get_standard_token_type(Self, Int) -> Int
+  fn get_foreground(Self, Int) -> Int
+  fn get_end_offset(Self, Int) -> Int
+  fn get_class_name(Self, Int) -> String
+  fn get_inline_style(Self, Int, Array[String]) -> String
+  fn get_presentation(Self, Int) -> TokenPresentation
+  fn find_token_index_at_offset(Self, Int) -> Int
+  fn get_line_content(Self) -> String
+  fn get_metadata(Self, Int) -> UInt
+  fn get_language_id(Self, Int) -> String
+  fn get_token_text(Self, Int) -> String
+  fn for_each(Self, (Int) -> Unit) -> Unit
 }
 
 ///|
@@ -79,7 +79,12 @@ pub fn LineTokens::new(
   text : String,
   decoder : LanguageIdCodec,
 ) -> LineTokens {
-  { tokens, tokens_count: tokens.length() >> 1, text, language_id_codec: decoder }
+  {
+    tokens,
+    tokens_count: tokens.length() >> 1,
+    text,
+    language_id_codec: decoder,
+  }
 }
 
 ///|
@@ -166,7 +171,10 @@ pub fn LineTokens::get_text_length(self : LineTokens) -> Int {
 }
 
 ///|
-pub fn LineTokens::get_start_offset(self : LineTokens, token_index : Int) -> Int {
+pub fn LineTokens::get_start_offset(
+  self : LineTokens,
+  token_index : Int,
+) -> Int {
   if token_index > 0 {
     self.tokens[(token_index - 1) << 1].reinterpret_as_int()
   } else {
@@ -279,48 +287,55 @@ pub fn LineTokens::with_inserted(
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_count(self) {
+impl IViewLineTokens for LineTokens with fn get_count(self) {
   self.tokens_count
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_line_content(self) {
+impl IViewLineTokens for LineTokens with fn get_line_content(self) {
   self.text
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_end_offset(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_end_offset(self, token_index) {
   self.tokens[token_index << 1].reinterpret_as_int()
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_metadata(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_metadata(self, token_index) {
   self.tokens[(token_index << 1) + 1]
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_language_id(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_language_id(self, token_index) {
   let metadata = self.tokens[(token_index << 1) + 1]
-  self.language_id_codec.decode_language_id(TokenMetadata::get_language_id(metadata))
+  self.language_id_codec.decode_language_id(
+    TokenMetadata::get_language_id(metadata),
+  )
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_standard_token_type(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_standard_token_type(
+  self,
+  token_index,
+) {
   TokenMetadata::get_token_type(self.tokens[(token_index << 1) + 1])
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_foreground(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_foreground(self, token_index) {
   TokenMetadata::get_foreground(self.tokens[(token_index << 1) + 1])
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_class_name(self, token_index) {
-  TokenMetadata::get_class_name_from_metadata(self.tokens[(token_index << 1) + 1])
+impl IViewLineTokens for LineTokens with fn get_class_name(self, token_index) {
+  TokenMetadata::get_class_name_from_metadata(
+    self.tokens[(token_index << 1) + 1],
+  )
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_inline_style(
+impl IViewLineTokens for LineTokens with fn get_inline_style(
   self,
   token_index,
   color_map,
@@ -332,17 +347,22 @@ impl IViewLineTokens for LineTokens with get_inline_style(
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_presentation(self, token_index) {
-  TokenMetadata::get_presentation_from_metadata(self.tokens[(token_index << 1) + 1])
+impl IViewLineTokens for LineTokens with fn get_presentation(self, token_index) {
+  TokenMetadata::get_presentation_from_metadata(
+    self.tokens[(token_index << 1) + 1],
+  )
 }
 
 ///|
-impl IViewLineTokens for LineTokens with find_token_index_at_offset(self, offset) {
+impl IViewLineTokens for LineTokens with fn find_token_index_at_offset(
+  self,
+  offset,
+) {
   LineTokens::find_index_in_tokens_array(self.tokens, offset)
 }
 
 ///|
-impl IViewLineTokens for LineTokens with get_token_text(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_token_text(self, token_index) {
   substr(
     self.text,
     self.get_start_offset(token_index),
@@ -351,7 +371,7 @@ impl IViewLineTokens for LineTokens with get_token_text(self, token_index) {
 }
 
 ///|
-impl IViewLineTokens for LineTokens with for_each(self, callback) {
+impl IViewLineTokens for LineTokens with fn for_each(self, callback) {
   for token_index in 0..<self.get_count() {
     callback(token_index)
   }
@@ -396,27 +416,30 @@ fn SliceLineTokens::new(
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_count(self) {
+impl IViewLineTokens for SliceLineTokens with fn get_count(self) {
   self.tokens_count
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_line_content(self) {
+impl IViewLineTokens for SliceLineTokens with fn get_line_content(self) {
   substr(self.source.get_line_content(), self.start_offset, self.end_offset)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_metadata(self, token_index) {
+impl IViewLineTokens for SliceLineTokens with fn get_metadata(self, token_index) {
   self.source.get_metadata(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_language_id(self, token_index) {
+impl IViewLineTokens for SliceLineTokens with fn get_language_id(
+  self,
+  token_index,
+) {
   self.source.get_language_id(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_standard_token_type(
+impl IViewLineTokens for SliceLineTokens with fn get_standard_token_type(
   self,
   token_index,
 ) {
@@ -424,26 +447,34 @@ impl IViewLineTokens for SliceLineTokens with get_standard_token_type(
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_foreground(self, token_index) {
+impl IViewLineTokens for SliceLineTokens with fn get_foreground(
+  self,
+  token_index,
+) {
   self.source.get_foreground(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_end_offset(self, token_index) {
+impl IViewLineTokens for SliceLineTokens with fn get_end_offset(
+  self,
+  token_index,
+) {
   let token_end_offset = self.source.get_end_offset(
     self.first_token_index + token_index,
   )
-  min_int(self.end_offset, token_end_offset) - self.start_offset + self.delta_offset
+  self.end_offset.min(token_end_offset) - self.start_offset + self.delta_offset
 }
 
-
 ///|
-impl IViewLineTokens for SliceLineTokens with get_class_name(self, token_index) {
+impl IViewLineTokens for SliceLineTokens with fn get_class_name(
+  self,
+  token_index,
+) {
   self.source.get_class_name(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_inline_style(
+impl IViewLineTokens for SliceLineTokens with fn get_inline_style(
   self,
   token_index,
   color_map,
@@ -452,12 +483,15 @@ impl IViewLineTokens for SliceLineTokens with get_inline_style(
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_presentation(self, token_index) {
+impl IViewLineTokens for SliceLineTokens with fn get_presentation(
+  self,
+  token_index,
+) {
   self.source.get_presentation(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with find_token_index_at_offset(
+impl IViewLineTokens for SliceLineTokens with fn find_token_index_at_offset(
   self,
   offset,
 ) {
@@ -468,7 +502,10 @@ impl IViewLineTokens for SliceLineTokens with find_token_index_at_offset(
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with get_token_text(self, token_index) {
+impl IViewLineTokens for SliceLineTokens with fn get_token_text(
+  self,
+  token_index,
+) {
   let adjusted_token_index = self.first_token_index + token_index
   let token_start_offset = self.source.get_start_offset(adjusted_token_index)
   let token_end_offset = self.source.get_end_offset(adjusted_token_index)
@@ -483,7 +520,7 @@ impl IViewLineTokens for SliceLineTokens with get_token_text(self, token_index) 
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with for_each(self, callback) {
+impl IViewLineTokens for SliceLineTokens with fn for_each(self, callback) {
   for token_index in 0..<self.get_count() {
     callback(token_index)
   }

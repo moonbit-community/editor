@@ -272,12 +272,12 @@ fn enrich_visible_ranges_with_style(
       let prev = lines[i - 1].ranges[0]
       let prev_left = prev.left
       let prev_right = prev.left + prev.width
-      if abs_double(cur_left - prev_left) < epsilon {
+      if (cur_left - prev_left).abs() < epsilon {
         cur.start_top = Flat
       } else if cur_left > prev_left {
         cur.start_top = Intern
       }
-      if abs_double(cur_right - prev_right) < epsilon {
+      if (cur_right - prev_right).abs() < epsilon {
         cur.end_top = Flat
       } else if prev_left < cur_right && cur_right < prev_right {
         cur.end_top = Intern
@@ -287,12 +287,12 @@ fn enrich_visible_ranges_with_style(
       let next = lines[i + 1].ranges[0]
       let next_left = next.left
       let next_right = next.left + next.width
-      if abs_double(cur_left - next_left) < epsilon {
+      if (cur_left - next_left).abs() < epsilon {
         cur.start_bottom = Flat
       } else if next_left < cur_left && cur_left < next_right {
         cur.start_bottom = Intern
       }
-      if abs_double(cur_right - next_right) < epsilon {
+      if (cur_right - next_right).abs() < epsilon {
         cur.end_bottom = Flat
       } else if cur_right < next_right {
         cur.end_bottom = Intern
@@ -467,13 +467,4 @@ fn append_selection_piece(
 ///|
 fn selection_rect_style(top : Int, left : Double, width : Double) -> String {
   "top:\{top}px;left:\{left}px;width:\{width}px;height:\{editor_line_height}px"
-}
-
-///|
-fn abs_double(value : Double) -> Double {
-  if value < 0.0 {
-    -value
-  } else {
-    value
-  }
 }

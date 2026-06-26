@@ -67,14 +67,14 @@ pub(all) struct ModelDecorationOptions {
 /// Builds decoration options, defaulting every optional field the way an absent
 /// JS property would.
 pub fn ModelDecorationOptions::new(
-  description~ : String = "",
+  description? : String = "",
   class_name? : String,
   inline_class_name? : String,
-  inline_class_name_affects_letter_spacing~ : Bool = false,
+  inline_class_name_affects_letter_spacing? : Bool = false,
   before_content_class_name? : String,
   after_content_class_name? : String,
-  affects_font~ : Bool = false,
-  is_whole_line~ : Bool = false,
+  affects_font? : Bool = false,
+  is_whole_line? : Bool = false,
 ) -> ModelDecorationOptions {
   {
     description,
@@ -303,7 +303,7 @@ pub fn InlineModelDecorationsComputer::get_decorations(
   let decorations_in_viewport : Array[ViewModelDecoration] = []
   let inline_decorations : Array[Array[InlineDecoration]] = []
   let has_variable_fonts : Array[Bool] = []
-  for _j in start_line_number..=end_line_number {
+  for _j in start_line_number..<=end_line_number {
     inline_decorations.push([])
     has_variable_fonts.push(false)
   }
@@ -327,15 +327,13 @@ pub fn InlineModelDecorationsComputer::get_decorations(
         let inline_decoration = InlineDecoration::new(
           view_range, inline_class_name, type_,
         )
-        let intersected_start_line_number = max_int(
-          start_line_number,
+        let intersected_start_line_number = start_line_number.max(
           view_range.start_line_number,
         )
-        let intersected_end_line_number = min_int(
-          end_line_number,
+        let intersected_end_line_number = end_line_number.min(
           view_range.end_line_number,
         )
-        for j in intersected_start_line_number..=intersected_end_line_number {
+        for j in intersected_start_line_number..<=intersected_end_line_number {
           inline_decorations[j - start_line_number].push(inline_decoration)
           if decoration_options.affects_font {
             has_variable_fonts[j - start_line_number] = true
@@ -391,7 +389,11 @@ pub fn InlineModelDecorationsComputer::get_decorations(
       None => ()
     }
   }
-  { decorations: decorations_in_viewport, inline_decorations, has_variable_fonts }
+  {
+    decorations: decorations_in_viewport,
+    inline_decorations,
+    has_variable_fonts,
+  }
 }
 
 ///|
@@ -432,7 +434,9 @@ fn InlineModelDecorationsComputer::get_or_create_view_model_decoration(
           end.column,
         )
       } else {
-        self.coordinates_converter.convert_model_range_to_view_range(model_range)
+        self.coordinates_converter.convert_model_range_to_view_range(
+          model_range,
+        )
       }
       let r = ViewModelDecoration::new(view_range, options)
       self.decorations_cache[id] = r
@@ -454,7 +458,7 @@ pub(all) struct InjectedTextOptions {
 pub fn InjectedTextOptions::new(
   content~ : String,
   inline_class_name? : String,
-  inline_class_name_affects_letter_spacing~ : Bool = false,
+  inline_class_name_affects_letter_spacing? : Bool = false,
 ) -> InjectedTextOptions {
   { content, inline_class_name, inline_class_name_affects_letter_spacing }
 }
@@ -492,12 +496,16 @@ pub fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
   self : InjectedTextInlineDecorationsComputer,
   model_line_number : Int,
 ) -> Array[Array[InlineDecoration]] {
-  let injection_offsets = (self.context.get_injection_offsets)(model_line_number)
+  let injection_offsets = (self.context.get_injection_offsets)(
+    model_line_number,
+  )
   guard injection_offsets is Some(injection_offsets) else { [] }
   let line_inline_decorations : Array[Array[InlineDecoration]] = []
   let mut total_injected_text_length_before = 0
   let mut current_injected_offset = 0
-  let injection_options = (self.context.get_injection_options)(model_line_number)
+  let injection_options = (self.context.get_injection_options)(
+    model_line_number,
+  )
   let break_offsets = (self.context.get_break_offsets)(model_line_number)
   for output_line_index in 0..<break_offsets.length() {
     let inline_decorations : Array[InlineDecoration] = []
@@ -534,15 +542,11 @@ pub fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
               0
             }
             let start = offset +
-              max_int(
-                injected_text_start_offset_in_input_with_injections -
-                line_start_offset_in_input_with_injections,
-                0,
-              )
+              (injected_text_start_offset_in_input_with_injections -
+              line_start_offset_in_input_with_injections).max(0)
             let end = offset +
-              min_int(
-                injected_text_end_offset_in_input_with_injections -
-                line_start_offset_in_input_with_injections,
+              (injected_text_end_offset_in_input_with_injections -
+              line_start_offset_in_input_with_injections).min(
                 line_end_offset_in_input_with_injections -
                 line_start_offset_in_input_with_injections,
               )
@@ -582,24 +586,6 @@ pub fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
     }
   }
   line_inline_decorations
-}
-
-///|
-fn min_int(left : Int, right : Int) -> Int {
-  if left < right {
-    left
-  } else {
-    right
-  }
-}
-
-///|
-fn max_int(left : Int, right : Int) -> Int {
-  if left > right {
-    left
-  } else {
-    right
-  }
 }
 
 ///|

@@ -66,8 +66,8 @@ pub fn LineRange::length(self : LineRange) -> Int {
 /// Combines this and the given line range into the smallest covering range.
 pub fn LineRange::join(self : LineRange, other : LineRange) -> LineRange {
   LineRange::LineRange(
-    min_int(self.start_line_number, other.start_line_number),
-    max_int(self.end_line_number_exclusive, other.end_line_number_exclusive),
+    self.start_line_number.min(other.start_line_number),
+    self.end_line_number_exclusive.max(other.end_line_number_exclusive),
   )
 }
 
@@ -79,12 +79,8 @@ pub fn LineRange::to_string(self : LineRange) -> String {
 ///|
 /// Empty if the ranges touch but do not overlap; `None` if they don't touch.
 pub fn LineRange::intersect(self : LineRange, other : LineRange) -> LineRange? {
-  let start_line_number = max_int(
-    self.start_line_number,
-    other.start_line_number,
-  )
-  let end_line_number_exclusive = min_int(
-    self.end_line_number_exclusive,
+  let start_line_number = self.start_line_number.max(other.start_line_number)
+  let end_line_number_exclusive = self.end_line_number_exclusive.min(
     other.end_line_number_exclusive,
   )
   if start_line_number <= end_line_number_exclusive {
@@ -232,10 +228,7 @@ pub fn LineRangeSet::get_union(
           current = Some(
             LineRange::LineRange(
               cur.start_line_number,
-              max_int(
-                cur.end_line_number_exclusive,
-                next.end_line_number_exclusive,
-              ),
+              cur.end_line_number_exclusive.max(next.end_line_number_exclusive),
             ),
           )
         } else {

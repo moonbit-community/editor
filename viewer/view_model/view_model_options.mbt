@@ -11,10 +11,7 @@ pub fn ViewModelOptions::ViewModelOptions(
   soft_wrap_column? : Int = 0,
   tab_size? : Int = 2,
 ) -> ViewModelOptions {
-  {
-    soft_wrap_column: max_int(soft_wrap_column, 0),
-    tab_size: max_int(tab_size, 1),
-  }
+  { soft_wrap_column: soft_wrap_column.max(0), tab_size: tab_size.max(1) }
 }
 
 ///|

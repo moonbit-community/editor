@@ -169,12 +169,12 @@ fn Viewer::normalize_browser_view_zones(self : Viewer) -> Unit {
     let max_anchor = if line_count > 0 {
       line_count
     } else {
-      max_int(zone.anchor_line, 0)
+      zone.anchor_line.max(0)
     }
     normalized.push({
       ..zone,
       anchor_line: @base_common.clamp_int(zone.anchor_line, 0, max_anchor),
-      height_px: max_int(zone.height_px, 0),
+      height_px: zone.height_px.max(0),
     })
   }
   normalized.sort_by(compare_browser_view_zones)

@@ -25,10 +25,7 @@ pub fn LineBreaksComputer::LineBreaksComputer(
   wrapping_column : Int,
   tab_size? : Int = 2,
 ) -> LineBreaksComputer {
-  {
-    wrapping_column: max_int(wrapping_column, 0),
-    tab_size: max_int(tab_size, 1),
-  }
+  { wrapping_column: wrapping_column.max(0), tab_size: tab_size.max(1) }
 }
 
 ///|

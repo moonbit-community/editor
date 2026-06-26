@@ -195,11 +195,9 @@ fn append_rich_copy_line_segments(
     let span_start = model_line_start + span.source_start
     let span_end = model_line_start + span.source_end
     if range.intersects(OffsetRange(span_start, span_end)) {
-      let start_column = span.start +
-        max_int(range.start, span_start) -
-        span_start
+      let start_column = span.start + range.start.max(span_start) - span_start
       let end_column = span.start +
-        min_int(range.end_exclusive, span_end) -
+        range.end_exclusive.min(span_end) -
         span_start
       if start_column < end_column {
         html.write_string("<span class=\"")

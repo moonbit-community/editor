@@ -148,8 +148,8 @@ fn spans_for_line(
   let mut cursor = line_range.start
   for token in tokens {
     // The bucket holds exactly the tokens intersecting this line.
-    let start = max_int(token.range.start, line_range.start)
-    let end = min_int(token.range.end_exclusive, line_range.end_exclusive)
+    let start = token.range.start.max(line_range.start)
+    let end = token.range.end_exclusive.min(line_range.end_exclusive)
     if cursor < start {
       spans.push({
         start: cursor - line_range.start,
@@ -204,8 +204,8 @@ fn overlay_semantic_tokens(
       if token.token_type == "" {
         continue
       }
-      let segment_start = max_int(token.range.start, cursor)
-      let segment_end = min_int(token.range.end_exclusive, span_end)
+      let segment_start = token.range.start.max(cursor)
+      let segment_end = token.range.end_exclusive.min(span_end)
       if segment_start >= segment_end {
         continue
       }
@@ -318,23 +318,5 @@ fn range_json(range : @base_common.Range) -> Json {
     "startColumn": range.start_column.to_json(),
     "endLineNumber": range.end_line_number.to_json(),
     "endColumn": range.end_column.to_json(),
-  }
-}
-
-///|
-fn min_int(left : Int, right : Int) -> Int {
-  if left < right {
-    left
-  } else {
-    right
-  }
-}
-
-///|
-fn max_int(left : Int, right : Int) -> Int {
-  if left > right {
-    left
-  } else {
-    right
   }
 }

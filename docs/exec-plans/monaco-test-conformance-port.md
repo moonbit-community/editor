@@ -79,7 +79,7 @@ package status. Counts are from the pinned `vscode/` submodule.
 | `common/model/textModel.test.ts` | 40 | `viewer/model` | partial (4) | Readonly-subset |
 | `common/model/model.line.test.ts` | 53 | `viewer/model` | partial | Readonly-subset |
 | `common/model/model.test.ts` | 32 | `viewer/model` | partial | Readonly-subset |
-| `common/model/textModelWithTokens.test.ts` | 30 | `viewer/view_model` | partial | Readonly-subset |
+| `common/model/textModelWithTokens.test.ts` | 29 | `viewer/model` (guides) | done (reference, 18 indent-guide) ✓; bracket-matching 11 deferred | Readonly-subset |
 | `common/model/textModelTokens.test.ts` | 2 | `viewer/view_model` | done (reference, 2) ✓ | Full ✓ |
 | `common/model/modelDecorations.test.ts` | 100 | `viewer/decorations` | partial (1) | Readonly-subset |
 | `common/model/intervalTree.test.ts` | 25 | `viewer/decorations` | none | Deferred (interval-tree storage follow-up) |
@@ -339,6 +339,28 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
     readonly viewer does not run Monaco's background tokenizer, so this is a
     conformance-only port of the queue. Green on `--target all` (372 js / 382
     native); `pkg.generated.mbti` regenerated.
+- **Phase 3, step 2 done — `textModelWithTokens` indent-guide subset (18).**
+  `textModelWithTokens.test.ts` splits into two halves: bracket matching and
+  indent guides. The **18 indent-guide cases** (the `TextModel.getLineIndentGuide`
+  suite, including its `tweaks` and `issue #...` cases) are the readonly,
+  pure-logic subset — a faithful port of `GuidesTextModelPart`'s
+  `getActiveIndentGuide` / `getLinesIndentGuides` /
+  `_getIndentLevelForWhitespaceLine` (plus `utils.ts` `computeIndentLevel`)
+  landed in **`viewer/model`** (not `viewer/view_model`), since it is
+  `model.guides` — a `TextModel` part operating purely on snapshot lines; it
+  wraps the existing `TextSnapshot`. `guides_text_model_part_reference_test.mbt`
+  ports all 18 against it. **Deviations:** the bracket-guide methods
+  (`getLinesBracketGuides`, `getVisibleColumnFromPosition`) are omitted (they
+  need the bracket-pair + language-configuration infrastructure that is out of
+  scope); `off_side`/`tab_size`/`indent_size` are fields rather than read from a
+  language config / `model.getOptions()` (the viewer has neither yet) — the
+  upstream test languages register no folding rules so `off_side` is `false`, and
+  `tab_size` uses Monaco's default 4. **The 11 bracket-matching cases** (the
+  `TextModelWithTokens*` and regression suites, exercising
+  `model.bracketPairs.{matchBracket,findPrevBracket,findNextBracket}`) are
+  **deferred** behind that same bracket-pair infrastructure and recorded as an
+  explicit `SKIPPED` block in the reference file header (see Deferred). Green on
+  `--target all` (390 js / 400 native).
 
 ## Phased Steps
 
@@ -381,7 +403,9 @@ local cases (under `view_model`), and these are DOM-free pure logic.
 - `textModelTokens` (2), `lineTokens` (7) → `viewer/view_model`. **Done** (the
   two Full-scope, pure-logic token files; faithful `LineTokens`/
   `SliceLineTokens` + `RangePriorityQueueImpl` ports — see progress log).
-- `textModelWithTokens` readonly cases → `viewer/view_model`.
+- `textModelWithTokens` indent-guide cases (18) → `viewer/model` (`model.guides`).
+  **Done.** The 11 bracket-matching cases are deferred (need bracket-pair +
+  language-configuration infrastructure — see Deferred).
 - `textModel` / `model.line` / `model.test` readonly cases → `viewer/model`;
   drop every mutate/undo case and list the dropped names in the file header.
 - `modelDecorations` readonly subset → `viewer/decorations`.
@@ -411,6 +435,14 @@ local cases (under `view_model`), and these are DOM-free pure logic.
   `view_lines_viewport_data.mbt`, `rendering_context.mbt`) and carries real
   behavior risk, so it is deliberately separated from the test-conformance port;
   the 9 `view_layout_test.mbt` cases are the behavior contract it must preserve.
+- `textModelWithTokens` bracket-matching cases (11) — the `TextModelWithTokens*`
+  and regression suites exercise
+  `model.bracketPairs.{matchBracket,findPrevBracket,findNextBracket}`, which need
+  the bracket-pair scanner + language-configuration (bracket definitions) +
+  tokenization (to skip brackets inside comments/strings) infrastructure the
+  readonly viewer does not implement (sibling to the out-of-scope bracket-pair
+  colorizer). Port if/when bracket matching lands. The indent-guide half of the
+  same file is already done (Phase 3 step 2).
 - `intervalTree` (25) — port alongside the interval-tree decoration storage
   follow-up.
 - `viewModelDecorations` (3) — browser integration capstone. Core

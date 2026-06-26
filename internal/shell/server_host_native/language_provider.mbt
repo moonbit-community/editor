@@ -113,22 +113,6 @@ pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider wi
 }
 
 ///|
-/// Delegates semantic-token requests after URI translation.
-pub impl @language.SemanticTokensProvider for NativeWorkspaceLanguageProvider with fn provide_document_semantic_tokens(
-  self,
-  model,
-  token,
-) {
-  match self.lsp_model(model) {
-    Some(lsp_model) =>
-      self.provider
-      .as_semantic_tokens_provider()
-      .provide_document_semantic_tokens(lsp_model, token)
-    None => []
-  }
-}
-
-///|
 /// Folding ranges currently come from the browser fallback service.
 pub impl @language.FoldingRangeProvider for NativeWorkspaceLanguageProvider with fn provide_folding_ranges(
   _self,

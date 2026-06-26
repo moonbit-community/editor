@@ -17,7 +17,7 @@ test "line html escapes text and merges span decorations" {
   let decorated = @common.render_line_html(line, [
     view_decoration(5, 6, Diagnostic, "diag-warning"),
   ])
-  assert_true(decorated.contains("class=\"tok-identifier diag-warning\""))
+  assert_true(decorated.contains("class=\"mtk4 diag-warning\""))
   // The line class carries CurrentLine decorations only.
   assert_eq(@common.render_line_class(line, []), "view-line")
   assert_eq(

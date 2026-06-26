@@ -15,7 +15,7 @@ test('runs the viewer and tree from in-memory providers without a server', async
 
   // Real language highlighting with no server: the MoonBit lexer is
   // registered by the embedding host, not fetched from anywhere.
-  await expect(page.locator('.tok-keyword', { hasText: 'fn' }).first()).toBeVisible();
+  await expect(page.locator('.mtk3', { hasText: 'fn' }).first()).toBeVisible();
   await expect(page.locator(workspaceItem('src'))).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator(workspaceItem('src/main.mbt'))).toHaveAttribute(
     'aria-selected',

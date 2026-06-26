@@ -109,10 +109,10 @@ test('highlights MoonBit sources through the registered language tokenizer', asy
   await page.goto('/');
   await openWorkspaceFile(page, 'src/errors.mbt');
 
-  // tok-type only comes from the MoonBit lexer (capitalized identifier);
-  // the plain fallback never emits it.
-  await expect(page.locator('.tok-type', { hasText: 'FixtureError' }).first()).toBeVisible();
-  await expect(page.locator('.tok-keyword', { hasText: 'suberror' }).first()).toBeVisible();
+  // The type color (mtk9) only comes from the MoonBit lexer (capitalized
+  // identifier); the plain fallback never emits it.
+  await expect(page.locator('.mtk9', { hasText: 'FixtureError' }).first()).toBeVisible();
+  await expect(page.locator('.mtk3', { hasText: 'suberror' }).first()).toBeVisible();
 });
 
 test('renders unregistered languages with default/plain spans', async ({ page }) => {
@@ -120,29 +120,13 @@ test('renders unregistered languages with default/plain spans', async ({ page })
   await openWorkspaceFile(page, 'notes.txt');
 
   await expect(page.locator('.monaco-editor.readonly-editor')).toContainText('Fixture notes');
-  await expect(page.locator('.tok-plain', { hasText: 'value' }).first()).toBeVisible();
+  await expect(page.locator('.mtk1', { hasText: 'value' }).first()).toBeVisible();
   // Registry misses intentionally do not run the generic fallback lexer; the
-  // line renderer fills the content with default/plain spans instead.
-  await expect(page.locator('.view-line span[class*="tok-identifier"]')).toHaveCount(0);
-  await expect(page.locator('.view-line span[class*="tok-type"]')).toHaveCount(0);
-  await expect(page.locator('.view-line span[class*="tok-operator"]')).toHaveCount(0);
-});
-
-test('overlays semantic token classes onto rendered spans', async ({ page }) => {
-  await page.goto('/');
-  await openWorkspaceFile(page, 'src/errors.mbt');
-
-  const semanticSpan = page.locator('.view-line span[class*="sem-"]').first();
-  // Semantic tokens resolve once per document version; while the language
-  // server is still indexing, re-open the document to request them again.
-  await expect(async () => {
-    if ((await semanticSpan.count()) === 0) {
-      await openWorkspaceFile(page, 'src/main.mbt');
-      await openWorkspaceFile(page, 'src/errors.mbt');
-    }
-    await expect(semanticSpan).toBeVisible({ timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
-  await expect(semanticSpan).toHaveClass(/tok-/);
+  // line renderer fills the content with default-foreground (mtk1) spans, never
+  // the variable/type/punctuation colors.
+  await expect(page.locator('.view-line span.mtk4')).toHaveCount(0);
+  await expect(page.locator('.view-line span.mtk9')).toHaveCount(0);
+  await expect(page.locator('.view-line span.mtk8')).toHaveCount(0);
 });
 
 test('updates and recovers watched fixture files from disk changes', async ({ page }) => {
@@ -158,7 +142,7 @@ test('updates and recovers watched fixture files from disk changes', async ({ pa
       original.replace('println(event.message)', 'println("synced from disk")'),
       'utf8',
     );
-    await expect(page.locator('.tok-string')).toContainText('"synced from disk"', {
+    await expect(page.locator('.mtk5')).toContainText('"synced from disk"', {
       timeout: 7_000,
     });
 
@@ -176,7 +160,7 @@ test('updates and recovers watched fixture files from disk changes', async ({ pa
     await expect(page.locator('.editor-shell')).toHaveAttribute('data-status', 'ready', {
       timeout: 7_000,
     });
-    await expect(page.locator('.tok-string')).toContainText('"restored from disk"', {
+    await expect(page.locator('.mtk5')).toContainText('"restored from disk"', {
       timeout: 7_000,
     });
   } finally {

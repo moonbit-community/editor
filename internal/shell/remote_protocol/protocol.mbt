@@ -77,7 +77,6 @@ pub(all) enum ClientPacket {
   Definition(DocumentPositionRequest)
   References(DocumentPositionRequest)
   DocumentSymbols(DocumentRevisionRequest)
-  SemanticTokens(DocumentRevisionRequest)
   FoldingRanges(DocumentRevisionRequest)
   InlayHints(DocumentRevisionRequest)
 } derive(Debug)
@@ -155,15 +154,6 @@ pub(all) struct DocumentSymbolsResultPayload {
 } derive(Debug)
 
 ///|
-/// Semantic tokens response for a specific URI and document revision.
-pub(all) struct SemanticTokensResultPayload {
-  id : String
-  uri : @base_common.Uri
-  revision : String
-  semantic_tokens : Array[@language.SemanticToken]
-} derive(Debug)
-
-///|
 /// Folding ranges response for a specific URI and document revision.
 pub(all) struct FoldingRangesResultPayload {
   id : String
@@ -192,7 +182,6 @@ pub(all) enum ServerPacket {
   DefinitionResult(DefinitionResultPayload)
   ReferencesResult(ReferencesResultPayload)
   DocumentSymbolsResult(DocumentSymbolsResultPayload)
-  SemanticTokensResult(SemanticTokensResultPayload)
   FoldingRangesResult(FoldingRangesResultPayload)
   InlayHintsResult(InlayHintsResultPayload)
   RemoteError(ProtocolError)
@@ -304,7 +293,6 @@ pub impl ToJson for ClientPacket with fn to_json(self) {
     References(request) => position_request_json("References", request)
     DocumentSymbols(request) =>
       revision_request_json("DocumentSymbols", request)
-    SemanticTokens(request) => revision_request_json("SemanticTokens", request)
     FoldingRanges(request) => revision_request_json("FoldingRanges", request)
     InlayHints(request) => revision_request_json("InlayHints", request)
   }
@@ -323,7 +311,6 @@ pub impl ToJson for ServerPacket with fn to_json(self) {
     DefinitionResult(payload) => definition_result_json(payload)
     ReferencesResult(payload) => references_result_json(payload)
     DocumentSymbolsResult(payload) => document_symbols_result_json(payload)
-    SemanticTokensResult(payload) => semantic_tokens_result_json(payload)
     FoldingRangesResult(payload) => folding_ranges_result_json(payload)
     InlayHintsResult(payload) => inlay_hints_result_json(payload)
     RemoteError(error) => error_packet_json(error)
@@ -375,10 +362,6 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
             Some("DocumentSymbols") =>
               decode_version_client(packet, request_id(packet), request => {
                 DocumentSymbols(request)
-              })
-            Some("SemanticTokens") =>
-              decode_version_client(packet, request_id(packet), request => {
-                SemanticTokens(request)
               })
             Some("FoldingRanges") =>
               decode_version_client(packet, request_id(packet), request => {
@@ -442,8 +425,6 @@ pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
               decode_references_result_payload(packet, request_id(packet))
             Some("DocumentSymbolsResult") =>
               decode_document_symbols_result_payload(packet, request_id(packet))
-            Some("SemanticTokensResult") =>
-              decode_semantic_tokens_result_payload(packet, request_id(packet))
             Some("FoldingRangesResult") =>
               decode_folding_ranges_result_payload(packet, request_id(packet))
             Some("InlayHintsResult") =>
@@ -714,37 +695,6 @@ fn decode_document_symbols_result_payload(
           uri,
           revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           symbols,
-        }),
-      )
-    }
-    ProtocolUriError(error) => ServerPacketDecodeError(error)
-  }
-}
-
-///|
-fn decode_semantic_tokens_result_payload(
-  packet : Json,
-  id : String,
-) -> ServerPacketDecodeResult {
-  match parse_uri_field(packet, "uri", id) {
-    ParsedProtocolUri(uri) => {
-      let semantic_tokens = []
-      match json_field(packet, "semanticTokens") {
-        Some(Array(items)) =>
-          for item in items {
-            match parse_semantic_token(item) {
-              Some(token) => semantic_tokens.push(token)
-              None => ()
-            }
-          }
-        _ => ()
-      }
-      DecodedServerPacket(
-        SemanticTokensResult({
-          id,
-          uri,
-          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
-          semantic_tokens,
         }),
       )
     }
@@ -1113,16 +1063,6 @@ fn document_symbols_result_json(payload : DocumentSymbolsResultPayload) -> Json 
   Json::object(fields)
 }
 
-///|
-fn semantic_tokens_result_json(payload : SemanticTokensResultPayload) -> Json {
-  let fields = packet_fields("SemanticTokensResult", payload.id)
-  fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentRevision"] = payload.revision.to_json()
-  fields["semanticTokens"] = Json::array(
-    payload.semantic_tokens.map(semantic_token_json),
-  )
-  Json::object(fields)
-}
 
 ///|
 fn folding_ranges_result_json(payload : FoldingRangesResultPayload) -> Json {
@@ -1192,14 +1132,6 @@ fn document_symbol_json(symbol : @language.DocumentSymbol) -> Json {
     "name": symbol.name.to_json(),
     "kind": symbol.kind.to_json(),
     "range": range_json(symbol.range),
-  }
-}
-
-///|
-fn semantic_token_json(token : @language.SemanticToken) -> Json {
-  {
-    "range": offset_range_json(token.range),
-    "tokenType": token.token_type.to_json(),
   }
 }
 
@@ -1285,14 +1217,8 @@ fn location_json(location : @language.Location) -> Json {
 }
 
 ///|
-fn offset_range_json(range : @base_common.OffsetRange) -> Json {
-  { "start": range.start.to_json(), "end": range.end_exclusive.to_json() }
-}
-
-///|
 /// Serializes a line/column `Range`, used by the types that carry a `Range`
-/// (Location, DocumentSymbol, ReferenceItem). The offset span uses
-/// `offset_range_json`.
+/// (Location, DocumentSymbol, ReferenceItem).
 fn range_json(range : @base_common.Range) -> Json {
   {
     "startLineNumber": range.start_line_number.to_json(),
@@ -1573,38 +1499,6 @@ fn parse_document_symbol(value : Json) -> @language.DocumentSymbol? {
             None => None
           }
         None => None
-      }
-    _ => None
-  }
-}
-
-///|
-fn parse_semantic_token(value : Json) -> @language.SemanticToken? {
-  match value {
-    Object(_) =>
-      match json_field(value, "range") {
-        Some(range_json) =>
-          match parse_offset_range(range_json) {
-            Some(range) =>
-              Some({
-                range,
-                token_type: json_string_field(value, "tokenType").unwrap_or(""),
-              })
-            None => None
-          }
-        None => None
-      }
-    _ => None
-  }
-}
-
-///|
-fn parse_offset_range(value : Json) -> @base_common.OffsetRange? {
-  match value {
-    Object(_) =>
-      match (json_int_field(value, "start"), json_int_field(value, "end")) {
-        (Some(start), Some(end)) => Some(OffsetRange(start, end))
-        _ => None
       }
     _ => None
   }

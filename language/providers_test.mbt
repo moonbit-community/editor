@@ -27,7 +27,6 @@ test "provider result finds hover and definition by offset" {
         range: @base_common.Range::Range(1, 4, 1, 8),
       },
     ],
-    semantic_tokens: [{ range: OffsetRange(3, 7), token_type: "function" }],
   }
   assert_eq(providers.diagnostics.length(), 1)
   assert_eq(providers.definitions.length(), 1)

@@ -574,7 +574,6 @@ fn server_packet_update(
     DefinitionResult(_) => (@rabbita.none, model)
     ReferencesResult(_) => (@rabbita.none, model)
     DocumentSymbolsResult(_) => (@rabbita.none, model)
-    SemanticTokensResult(_) => (@rabbita.none, model)
     FoldingRangesResult(_) => (@rabbita.none, model)
     InlayHintsResult(_) => (@rabbita.none, model)
     RemoteError(error) =>

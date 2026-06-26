@@ -6,8 +6,10 @@ MoonBit's compile-time `lexmatch` lexer generator.
 
 ## Responsibilities
 
-- Own the tokenization contracts: `HighlightTag` (stable `tok-*` CSS
-  class names), `LineToken`, `TokenizerState`, and the `LineTokenizer`
+- Own the tokenization contracts: `HighlightTag` (the semantic token
+  classification; the viewer maps each tag to Monaco token metadata in
+  `viewer/view_model/token_theme.mbt`), `LineToken`, `TokenizerState`, and the
+  `LineTokenizer`
   trait (Monaco's `ITokenizationSupport`/`IState` pair — line-at-a-time
   tokenization with an explicit carried state whose derived equality
   lets callers detect convergence).

@@ -1,13 +1,12 @@
 ///|
-fn bucket_texts(
-  tokenized : @view_model.TokenizedDocument,
-  line : Int,
-) -> Array[String] {
-  let texts = []
-  for token in tokenized.tokens_for_line(line) {
-    texts.push(token.text)
+/// Whether any of a rendered line's spans carries `class_name`.
+fn line_has_span_class(line : @view_model.RenderLine, class_name : String) -> Bool {
+  for span in line.spans {
+    if span.class_name == class_name {
+      return true
+    }
   }
-  texts
+  false
 }
 
 ///|
@@ -30,24 +29,21 @@ test "tokens bucket per line and multi-line tokens cover every line" {
   ]
   let tokenized = @view_model.TokenizedDocument::build(doc, tokens)
   assert_eq(tokenized.token_count, 3)
-  debug_inspect(
-    bucket_texts(tokenized, 0),
-    content=(
-      #|["let"]
-    ),
+  // Render the frame and read the encoded `mtk<colorId>` classes: line 0 opens
+  // with the keyword color, and the block comment colors every line it covers.
+  let source = @view_model.FrameSource(
+    tokenized,
+    @decorations.DecorationSet::empty(),
+    @language.ProviderResult::empty(),
   )
-  assert_eq(tokenized.tokens_for_line(1).length(), 1)
-  assert_true(tokenized.tokens_for_line(1)[0].tag is Comment)
-  assert_eq(tokenized.tokens_for_line(2).length(), 1)
-  assert_true(tokenized.tokens_for_line(2)[0].tag is Comment)
-  debug_inspect(
-    bucket_texts(tokenized, 3),
-    content=(
-      #|["let"]
-    ),
-  )
-  // Out-of-range lines answer empty instead of trapping.
-  assert_eq(tokenized.tokens_for_line(99).length(), 0)
+  let frame = @view_model.build_frame(source, {
+    start_line: 0,
+    end_line: doc.line_count(),
+  })
+  assert_eq(frame.lines[0].spans[0].class_name, "mtk3") // Keyword
+  assert_true(line_has_span_class(frame.lines[1], "mtk7")) // Comment
+  assert_true(line_has_span_class(frame.lines[2], "mtk7")) // Comment
+  assert_eq(frame.lines[3].spans[0].class_name, "mtk3") // Keyword
 }
 
 ///|
@@ -80,48 +76,3 @@ test "bucketed window frames equal a full lexer pass" {
   }
 }
 
-///|
-test "feature buckets accept unsorted ranges" {
-  let doc = @model.TextSnapshot("aaa\nbbb\nccc\nddd")
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
-  let providers = @language.ProviderResult::{
-    hovers: [],
-    diagnostics: [],
-    definitions: [],
-    symbols: [],
-    // Deliberately out of order: line 3, then line 0, then a multi-line one.
-    semantic_tokens: [
-      { range: OffsetRange(12, 15), token_type: "variable" },
-      { range: OffsetRange(0, 3), token_type: "function" },
-      { range: OffsetRange(4, 11), token_type: "comment" },
-    ],
-  }
-  let source = @view_model.FrameSource(
-    tokenized,
-    @decorations.DecorationSet::empty(),
-    providers,
-  )
-  let frame = @view_model.build_frame(source, { start_line: 0, end_line: 4 })
-  let classes = []
-  for line in frame.lines {
-    let line_classes = []
-    for span in line.spans {
-      line_classes.push(span.class_name)
-    }
-    classes.push(line_classes.join("|"))
-  }
-  debug_inspect(
-    classes,
-    content=(
-      #|[
-      #|  "tok-identifier sem-function",
-      #|  "tok-identifier sem-comment",
-      #|  "tok-identifier sem-comment",
-      #|  "tok-identifier sem-variable",
-      #|]
-    ),
-  )
-}

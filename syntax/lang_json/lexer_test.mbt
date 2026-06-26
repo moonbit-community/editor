@@ -5,7 +5,7 @@ fn render_tokens(source : String) -> String {
   let lines : Array[String] = []
   for token in tokens {
     lines.push(
-      "\{token.range.start}-\{token.range.end_exclusive} \{token.tag.css_class()} \{token.text}",
+      "\{token.range.start}-\{token.range.end_exclusive} \{token.tag} \{token.text}",
     )
   }
   lines.join("\n")
@@ -24,31 +24,31 @@ test "object with property names values and literals" {
   inspect(
     render_tokens(source),
     content=(
-      #|0-1 tok-delimiter {
-      #|4-10 tok-attribute "name"
-      #|10-11 tok-delimiter :
-      #|12-21 tok-string "fixture"
-      #|21-22 tok-delimiter ,
-      #|25-31 tok-attribute "size"
-      #|31-32 tok-delimiter :
-      #|33-40 tok-number -12.5e2
-      #|40-41 tok-delimiter ,
-      #|44-48 tok-attribute "ok"
-      #|48-49 tok-delimiter :
-      #|50-54 tok-constant true
-      #|54-55 tok-delimiter ,
-      #|58-64 tok-attribute "tags"
-      #|64-65 tok-delimiter :
-      #|66-67 tok-delimiter [
-      #|67-70 tok-string "a"
-      #|70-71 tok-delimiter ,
-      #|72-75 tok-string "b"
-      #|75-76 tok-delimiter ]
-      #|76-77 tok-delimiter ,
-      #|80-86 tok-attribute "next"
-      #|86-87 tok-delimiter :
-      #|88-92 tok-constant null
-      #|93-94 tok-delimiter }
+      #|0-1 Delimiter {
+      #|4-10 Attribute "name"
+      #|10-11 Delimiter :
+      #|12-21 String "fixture"
+      #|21-22 Delimiter ,
+      #|25-31 Attribute "size"
+      #|31-32 Delimiter :
+      #|33-40 Number -12.5e2
+      #|40-41 Delimiter ,
+      #|44-48 Attribute "ok"
+      #|48-49 Delimiter :
+      #|50-54 Constant true
+      #|54-55 Delimiter ,
+      #|58-64 Attribute "tags"
+      #|64-65 Delimiter :
+      #|66-67 Delimiter [
+      #|67-70 String "a"
+      #|70-71 Delimiter ,
+      #|72-75 String "b"
+      #|75-76 Delimiter ]
+      #|76-77 Delimiter ,
+      #|80-86 Attribute "next"
+      #|86-87 Delimiter :
+      #|88-92 Constant null
+      #|93-94 Delimiter }
     ),
   )
 }
@@ -62,16 +62,16 @@ test "jsonc comments carry block state across lines" {
   inspect(
     render_tokens(source),
     content=(
-      #|0-10 tok-comment // heading
-      #|11-12 tok-delimiter {
-      #|13-15 tok-comment /*
-      #|15-21 tok-comment  multi
-      #|22-27 tok-comment line 
-      #|27-29 tok-comment */
-      #|30-35 tok-attribute "key"
-      #|35-36 tok-delimiter :
-      #|37-38 tok-number 1
-      #|39-40 tok-delimiter }
+      #|0-10 Comment // heading
+      #|11-12 Delimiter {
+      #|13-15 Comment /*
+      #|15-21 Comment  multi
+      #|22-27 Comment line 
+      #|27-29 Comment */
+      #|30-35 Attribute "key"
+      #|35-36 Delimiter :
+      #|37-38 Number 1
+      #|39-40 Delimiter }
     ),
   )
 }
@@ -90,11 +90,11 @@ test "bare words are invalid outside strings" {
   inspect(
     render_tokens("{ bad: 1 }"),
     content=(
-      #|0-1 tok-delimiter {
-      #|2-5 tok-invalid bad
-      #|5-6 tok-delimiter :
-      #|7-8 tok-number 1
-      #|9-10 tok-delimiter }
+      #|0-1 Delimiter {
+      #|2-5 Invalid bad
+      #|5-6 Delimiter :
+      #|7-8 Number 1
+      #|9-10 Delimiter }
     ),
   )
 }

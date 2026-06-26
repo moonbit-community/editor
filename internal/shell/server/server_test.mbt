@@ -192,7 +192,7 @@ async test "answers hover and definition from cached provider state" {
 }
 
 ///|
-async test "answers diagnostics symbols semantic tokens folding ranges and inlay hints from cached provider state" {
+async test "answers diagnostics symbols folding ranges and inlay hints from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("main.mbt", "pub fn main { // TODO }\n")
   let server = test_remote_server("/workspace", host)
@@ -214,14 +214,6 @@ async test "answers diagnostics symbols semantic tokens folding ranges and inlay
       assert_eq(payload.symbols[0].name, "configured")
     }
     _ => fail("expected document symbols result")
-  }
-
-  match server.semantic_tokens({ id: "tokens-1", uri, document_revision: "" }) {
-    SemanticTokensResult(payload) => {
-      assert_eq(payload.semantic_tokens.length(), 1)
-      assert_eq(payload.semantic_tokens[0].token_type, "function")
-    }
-    _ => fail("expected semantic tokens result")
   }
 
   match server.folding_ranges({ id: "fold-1", uri, document_revision: "" }) {
@@ -282,12 +274,6 @@ async test "dispatches language requests through configured providers" {
     _ => fail("expected document symbols result")
   }
 
-  match server.semantic_tokens({ id: "tokens-1", uri, document_revision: "" }) {
-    SemanticTokensResult(payload) =>
-      assert_eq(payload.semantic_tokens[0].token_type, "function")
-    _ => fail("expected semantic tokens result")
-  }
-
   match server.folding_ranges({ id: "fold-1", uri, document_revision: "" }) {
     FoldingRangesResult(payload) =>
       assert_eq(payload.folding_ranges[0].start_line_number, 1)
@@ -324,7 +310,7 @@ fn test_remote_server(
 ) -> @server.RemoteServer {
   let provider = FakeLanguageProvider::{  }
   @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider, provider, provider,
+    root, host, provider, provider, provider, provider, provider, provider,
     provider,
   )
 }
@@ -508,15 +494,6 @@ impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_d
       range: @base_common.Range::Range(1, 8, 1, 18),
     },
   ]
-}
-
-///|
-impl @language.SemanticTokensProvider for FakeLanguageProvider with fn provide_document_semantic_tokens(
-  _self,
-  _model,
-  _token,
-) {
-  [{ range: OffsetRange(7, 17), token_type: "function" }]
 }
 
 ///|

@@ -36,9 +36,9 @@ test('renders markdown hover content as safe HTML', async ({ page }) => {
   await expect(hover.locator('code', { hasText: 'inline' })).toBeVisible();
   await expect(hover.locator('pre code')).toHaveCount(0);
   await expect(hover.locator('.monaco-tokenized-source')).toContainText('fn rendered');
-  await expect(hover.locator('.monaco-tokenized-source .tok-keyword').first()).toContainText('fn');
+  await expect(hover.locator('.monaco-tokenized-source .mtk3').first()).toContainText('fn');
   await expect(
-    hover.locator('.monaco-tokenized-source .tok-identifier').filter({ hasText: 'rendered' }).first(),
+    hover.locator('.monaco-tokenized-source .mtk4').filter({ hasText: 'rendered' }).first(),
   ).toBeVisible();
   await expect(hover.locator('li')).toHaveCount(2);
   await expect(hover).not.toContainText('**bold**');
@@ -137,7 +137,7 @@ test('scrolls long fenced code horizontally with Monaco hover scrollbar', async 
   const widget = page.locator('[data-content-widget="hover"]');
   const content = widget.locator('.monaco-hover-content');
   const horizontalBar = widget.locator('.scrollbar.horizontal');
-  await expect(widget.locator('.monaco-tokenized-source .tok-keyword').first()).toContainText('fn');
+  await expect(widget.locator('.monaco-tokenized-source .mtk3').first()).toContainText('fn');
   await expect(horizontalBar).toHaveClass(/(^|\s)invisible(\s|$)/);
 
   await content.hover();

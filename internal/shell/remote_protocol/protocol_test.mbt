@@ -99,20 +99,6 @@ test "encodes and decodes semantic client packets" {
     ClientPacketDecodeError(error) => fail(error.message)
   }
 
-  let tokens = @remote_protocol.SemanticTokens({
-    id: "tokens-1",
-    uri,
-    document_revision: "rev-6",
-  })
-  match @remote_protocol.decode_client_packet(tokens.to_json().stringify()) {
-    DecodedClientPacket(SemanticTokens(request)) => {
-      assert_eq(request.id, "tokens-1")
-      assert_eq(request.document_revision, "rev-6")
-    }
-    DecodedClientPacket(_) => fail("unexpected semantic tokens packet")
-    ClientPacketDecodeError(error) => fail(error.message)
-  }
-
   let folds = @remote_protocol.FoldingRanges({
     id: "folds-1",
     uri,
@@ -351,22 +337,6 @@ test "encodes and decodes server document and language packets" {
       assert_eq(payload.symbols[0].name, "main")
     }
     DecodedServerPacket(_) => fail("unexpected document symbols result packet")
-    ServerPacketDecodeError(error) => fail(error.message)
-  }
-
-  let semantic_tokens = @remote_protocol.SemanticTokensResult({
-    id: "tokens-1",
-    uri,
-    revision: "rev-2",
-    semantic_tokens: [{ range: OffsetRange(7, 11), token_type: "function" }],
-  })
-  match
-    @remote_protocol.decode_server_packet(semantic_tokens.to_json().stringify()) {
-    DecodedServerPacket(SemanticTokensResult(payload)) => {
-      assert_eq(payload.semantic_tokens.length(), 1)
-      assert_eq(payload.semantic_tokens[0].token_type, "function")
-    }
-    DecodedServerPacket(_) => fail("unexpected semantic tokens result packet")
     ServerPacketDecodeError(error) => fail(error.message)
   }
 

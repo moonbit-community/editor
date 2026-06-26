@@ -302,14 +302,8 @@ pub fn ViewModelLinesFromModelAsIs::render_model_line(
   let line_index = self.clamped_model_line_index(model_line_number)
   let line_start = doc.line_start_offset(line_index)
   let line_end = doc.line_end_offset(line_index)
-  let line_range = @base_common.OffsetRange(line_start, line_end)
-  let spans = overlay_semantic_tokens(
-    spans_for_line(
-      line_range,
-      self.source.tokenized.tokens_for_line(line_index),
-    ),
-    line_range,
-    self.source.line_semantic_tokens[line_index],
+  let spans = spans_from_line_tokens(
+    self.source.tokenized.line_tokens_for_line(line_index),
   )
   {
     line_number: line_index + 1,

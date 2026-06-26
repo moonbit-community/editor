@@ -70,7 +70,7 @@ pub impl @syntax.LineTokenizer for MoonbitTokenizer with fn tokenize_line(
 
 ///|
 /// Contiguous same-tag lexemes coalesce into one token, so a plain
-/// string renders as a single `tok-string` span (quote, content, quote)
+/// string renders as a single `String`-tagged token (quote, content, quote)
 /// instead of three.
 fn push_token(
   tokens : Array[@syntax.LineToken],

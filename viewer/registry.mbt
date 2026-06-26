@@ -73,16 +73,6 @@ fn Viewer::request_model_features(
     }
   })
   @js.async_run(() => {
-    let semantic_tokens = self.services.languages.semantic_tokens_for_model(
-      model,
-      self.services.log_service,
-    )
-    if self.is_current_model(model) {
-      self.provider_result = { ..self.provider_result, semantic_tokens, }
-      self.render_feature_update()
-    }
-  })
-  @js.async_run(() => {
     let folding_ranges = self.services.languages.folding_ranges_for_model(
       model,
       self.services.log_service,

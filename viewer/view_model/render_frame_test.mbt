@@ -37,7 +37,6 @@ test "render frame contains highlighted spans and provider surfaces" {
     ],
     definitions: [],
     symbols: [],
-    semantic_tokens: [],
   }
   let frame = frame_for(
     doc,
@@ -53,45 +52,6 @@ test "render frame contains highlighted spans and provider surfaces" {
 }
 
 ///|
-test "semantic tokens split spans and win on the overlapping segment" {
-  let doc = @model.TextSnapshot("fn main { run() }")
-  let providers = @language.ProviderResult::{
-    hovers: [],
-    diagnostics: [],
-    definitions: [],
-    symbols: [],
-    // `main` is offsets 3..7; cover only `mai` to force a span split.
-    semantic_tokens: [
-      { range: OffsetRange(3, 6), token_type: "function" },
-      { range: OffsetRange(10, 13), token_type: "function" },
-    ],
-  }
-  let frame = frame_for(doc, { start_line: 0, end_line: 1 }, providers~)
-  let line = frame.lines[0]
-  assert_eq(join_span_text(line), line.text)
-  let classes : Array[String] = []
-  for span in line.spans {
-    if span.class_name.contains("sem-function") {
-      classes.push(line.span_text(span) + ":" + span.class_name)
-    }
-  }
-  debug_inspect(
-    classes,
-    content=(
-      #|["mai:tok-identifier sem-function", "run:tok-identifier sem-function"]
-    ),
-  )
-  // The split keeps the rest of the identifier on the syntax class alone.
-  let mut tail = ""
-  for span in line.spans {
-    if line.span_text(span) == "n" {
-      tail = span.class_name
-    }
-  }
-  assert_eq(tail, "tok-identifier")
-}
-
-///|
 test "window builds match the matching slice of a whole-document build" {
   let doc = @model.TextSnapshot(
     "fn main { // TODO\n  let x = 1\n  let y = 2\n}\n\nfn other {\n  3\n}",
@@ -101,7 +61,6 @@ test "window builds match the matching slice of a whole-document build" {
     diagnostics: [],
     definitions: [],
     symbols: [],
-    semantic_tokens: [{ range: OffsetRange(3, 7), token_type: "function" }],
   }
   let whole = frame_for(
     doc,

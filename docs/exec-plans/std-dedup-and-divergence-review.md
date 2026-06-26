@@ -142,6 +142,15 @@ owning package pointing from the production type to its conformance-only twin, s
 the drift risk is visible at the call site. Full reconciliation stays out of
 scope (it is the deferred `ViewLayout` migration + a future token-model port).
 
+> **Update — token half resolved by unification.** The
+> `docs/exec-plans/production-line-tokens-pipeline.md` work made production
+> rendering consume `LineTokens` / `TokenMetadata` / `MetadataConsts` directly
+> (`TokenizedDocument` now stores one faithful `LineTokens` per line, encoded
+> from the MoonBit lexers). Those types are no longer conformance-only, so this
+> half of Finding D is closed by *unification* rather than the cross-link below.
+> `RangePriorityQueueImpl` (background retokenization) and the `LinesLayout` /
+> `ViewLayout` half remain conformance-only and deferred.
+
 ## Fix Plan
 
 Ordered by leverage × safety. Each step is behavior-preserving and gated by
@@ -201,9 +210,13 @@ package changes).
 ### Step 6 — README cross-links for conformance-only ports (docs only)
 
 - In `viewer/view_model` and `viewer/view_layout` READMEs, add a one-line pointer
-  from each conformance-only faithful type (`LineTokens`, `TokenMetadata`,
-  `RangePriorityQueueImpl`, faithful `LinesLayout` surface) to the production
-  system it shadows, naming the drift risk. No code change.
+  from each conformance-only faithful type to the production system it shadows,
+  naming the drift risk. No code change.
+- Superseded for the token cluster: `LineTokens` / `TokenMetadata` /
+  `MetadataConsts` are now the production token model (see the Finding D update
+  above), so the `viewer/view_model` README documents them as the live path, not
+  a twin. The cross-link survives only for `RangePriorityQueueImpl` and the
+  `LinesLayout` / `ViewLayout` surface.
 
 ## Validation
 

@@ -19,10 +19,6 @@ fn register_remote_language_providers(
   services.languages.register_diagnostics_provider(selector, client) |> ignore
   services.languages.register_document_symbol_provider(selector, client)
   |> ignore
-  services.languages.register_document_semantic_tokens_provider(
-    selector, client,
-  )
-  |> ignore
   services.languages.register_folding_range_provider(selector, client) |> ignore
   services.languages.register_inlay_hints_provider(selector, client) |> ignore
 }
@@ -104,24 +100,6 @@ impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn provide_d
     DocumentSymbolsResult(payload) => payload.symbols
     packet => {
       self.emit_remote_error("documentSymbols", model, packet)
-      []
-    }
-  }
-}
-
-///|
-impl @language.SemanticTokensProvider for RemoteLanguageClient with fn provide_document_semantic_tokens(
-  self,
-  model,
-  _token,
-) {
-  let response = protocol_request("semantic-tokens", id => {
-    SemanticTokens({ id, uri: model.uri, document_revision: model.revision })
-  })
-  match response {
-    SemanticTokensResult(payload) => payload.semantic_tokens
-    packet => {
-      self.emit_remote_error("semanticTokens", model, packet)
       []
     }
   }

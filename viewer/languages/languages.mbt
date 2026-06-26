@@ -53,9 +53,6 @@ pub struct Languages {
   priv document_symbol_provider : LanguageFeatureRegistry[
     &@language.DocumentSymbolProvider,
   ]
-  priv semantic_tokens_provider : LanguageFeatureRegistry[
-    &@language.SemanticTokensProvider,
-  ]
   priv folding_range_provider : LanguageFeatureRegistry[
     &@language.FoldingRangeProvider,
   ]
@@ -73,7 +70,6 @@ pub fn Languages::new() -> Languages {
     hover_provider: LanguageFeatureRegistry::new(),
     diagnostics_provider: LanguageFeatureRegistry::new(),
     document_symbol_provider: LanguageFeatureRegistry::new(),
-    semantic_tokens_provider: LanguageFeatureRegistry::new(),
     folding_range_provider: LanguageFeatureRegistry::new(),
     inlay_hints_provider: LanguageFeatureRegistry::new(),
   }
@@ -149,16 +145,6 @@ pub fn Languages::register_document_symbol_provider(
   provider : &@language.DocumentSymbolProvider,
 ) -> @base_common.Disposable {
   self.document_symbol_provider.register(selector, provider)
-}
-
-///|
-/// Registers an ordered semantic-token provider.
-pub fn Languages::register_document_semantic_tokens_provider(
-  self : Languages,
-  selector : @language.LanguageSelector,
-  provider : &@language.SemanticTokensProvider,
-) -> @base_common.Disposable {
-  self.semantic_tokens_provider.register(selector, provider)
 }
 
 ///|
@@ -261,33 +247,6 @@ pub async fn Languages::document_symbols(
     symbols.append(result)
   }
   symbols
-}
-
-///|
-/// Concatenates semantic-token results from every provider.
-pub async fn Languages::semantic_tokens_for_model(
-  self : Languages,
-  model : @model.TextModel,
-  log_service : @log.LogService,
-) -> Array[@language.SemanticToken] noraise {
-  let tokens : Array[@language.SemanticToken] = []
-  let token = @language.CancellationToken::none()
-  for index in 0..<self.semantic_tokens_provider.entries.length() {
-    let entry = self.semantic_tokens_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(model) {
-      continue
-    }
-    let result = entry.provider.provide_document_semantic_tokens(model, token) catch {
-      _ => {
-        log_provider_failure(
-          log_service, "language.semanticTokens", model, index,
-        )
-        []
-      }
-    }
-    tokens.append(result)
-  }
-  tokens
 }
 
 ///|

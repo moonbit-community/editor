@@ -216,7 +216,7 @@ fn poll_rendered(
       "viewer did not create rendered line DOM",
     )
     ctx.assert_true(
-      @support.query_count(".tok-keyword") > 0,
+      @support.query_count(".mtk3") > 0,
       "MoonBit tokenizer did not classify keywords",
     )
     ctx.assert_true(

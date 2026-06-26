@@ -72,7 +72,7 @@ test "hover fenced code renders through the viewer token classes" {
     language_registry=languages,
   )
   assert_true(moonbit.contains("monaco-tokenized-source"))
-  assert_true(moonbit.contains("tok-keyword"))
+  assert_true(moonbit.contains("mtk3")) // keyword color id
   assert_true(moonbit.contains("fn"))
   let mbt_alias = render_hover_shell(
     [
@@ -86,7 +86,7 @@ test "hover fenced code renders through the viewer token classes" {
     language_registry=languages,
   )
   assert_true(mbt_alias.contains("monaco-tokenized-source"))
-  assert_true(mbt_alias.contains("tok-keyword"))
+  assert_true(mbt_alias.contains("mtk3")) // keyword color id
 }
 
 ///|
@@ -107,8 +107,10 @@ test "hover unknown fenced code keeps content as default plain text" {
   assert_true(html.contains("not"))
   assert_true(html.contains("really"))
   assert_true(html.contains("code"))
-  assert_true(html.contains("tok-plain"))
-  assert_false(html.contains("tok-identifier"))
+  // No tokenizer for `unknown`: the whole line is one default-metadata token
+  // (`mtk1`), never the variable/identifier color (`mtk4`).
+  assert_true(html.contains("class=\"mtk1\""))
+  assert_false(html.contains("mtk4"))
 }
 
 ///|

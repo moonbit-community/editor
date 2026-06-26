@@ -44,8 +44,6 @@ priv struct LspServerCapabilities {
   definition_provider : Bool
   references_provider : Bool
   document_symbol_provider : Bool
-  semantic_tokens_provider : Bool
-  semantic_token_types : Array[String]
   publish_diagnostics : Bool
 }
 
@@ -101,8 +99,6 @@ fn default_lsp_capabilities() -> LspServerCapabilities {
     definition_provider: false,
     references_provider: false,
     document_symbol_provider: false,
-    semantic_tokens_provider: false,
-    semantic_token_types: [],
     publish_diagnostics: true,
   }
 }
@@ -185,14 +181,6 @@ pub fn LspLanguageProvider::as_document_symbol_provider(
 }
 
 ///|
-/// Views the adapter as a semantic-token provider.
-pub fn LspLanguageProvider::as_semantic_tokens_provider(
-  self : LspLanguageProvider,
-) -> &@language.SemanticTokensProvider {
-  self
-}
-
-///|
 /// Whether initialization completed successfully.
 pub fn LspClient::is_initialized(self : LspClient) -> Bool {
   self.state.val == Ready
@@ -248,7 +236,6 @@ pub async fn LspClient::sync_document(
     diagnostics: self.cached_diagnostics_for_document(document),
     definitions: [],
     symbols: [],
-    semantic_tokens: [],
   }
 }
 
@@ -371,40 +358,6 @@ pub async fn LspClient::document_symbols(
 }
 
 ///|
-/// Requests full-document semantic tokens when supported.
-pub async fn LspClient::semantic_tokens_for_document(
-  self : LspClient,
-  document : @workspace.DocumentSnapshot,
-) -> Array[@language.SemanticToken] {
-  ignore(self.sync_document(document))
-  if self.state.val != Ready || !self.capabilities.val.semantic_tokens_provider {
-    return []
-  }
-  let uri = document.uri.to_string()
-  let id = self.next_request_id()
-  self.register_request(id, "textDocument/semanticTokens/full", document)
-  let response = self.transport.request(
-    lsp_semantic_tokens_full_request(id, document),
-  )
-  self.complete_request(id)
-  if self.active_uri.val != uri || self.active_revision.val != document.revision {
-    return []
-  }
-  match parse_response_result(response) {
-    ParsedLspResult(result) =>
-      parse_semantic_tokens_result(
-        result,
-        document,
-        self.capabilities.val.semantic_token_types,
-      )
-    LspResponseError(message) => {
-      self.last_error.val = message
-      []
-    }
-  }
-}
-
-///|
 /// Sends shutdown/exit and clears the server-message subscription.
 pub async fn LspClient::shutdown(self : LspClient) -> Unit {
   if self.state.val == Stopped || self.state.val == Stopping {
@@ -471,56 +424,12 @@ fn lsp_initialize_request_with_root(id : Int, root_uri : Json) -> String {
                   ("hierarchicalDocumentSymbolSupport", Json::boolean(true)),
                 ]),
               ),
-              (
-                "semanticTokens",
-                json_object([
-                  ("dynamicRegistration", Json::boolean(false)),
-                  (
-                    "requests",
-                    json_object([
-                      ("range", Json::boolean(false)),
-                      ("full", Json::boolean(true)),
-                    ]),
-                  ),
-                  ("tokenTypes", semantic_token_type_capability()),
-                  ("tokenModifiers", Json::array([])),
-                  ("formats", Json::array([Json::string("relative")])),
-                ]),
-              ),
             ]),
           ),
         ]),
       ),
     ]),
   )
-}
-
-///|
-fn semantic_token_type_capability() -> Json {
-  Json::array([
-    Json::string("namespace"),
-    Json::string("type"),
-    Json::string("class"),
-    Json::string("enum"),
-    Json::string("interface"),
-    Json::string("struct"),
-    Json::string("typeParameter"),
-    Json::string("parameter"),
-    Json::string("variable"),
-    Json::string("property"),
-    Json::string("enumMember"),
-    Json::string("event"),
-    Json::string("function"),
-    Json::string("method"),
-    Json::string("macro"),
-    Json::string("keyword"),
-    Json::string("modifier"),
-    Json::string("comment"),
-    Json::string("string"),
-    Json::string("number"),
-    Json::string("regexp"),
-    Json::string("operator"),
-  ])
 }
 
 ///|
@@ -587,19 +496,6 @@ pub fn lsp_document_symbol_request(
   request_message(
     id,
     "textDocument/documentSymbol",
-    json_object([("textDocument", text_document_identifier(document.uri))]),
-  )
-}
-
-///|
-/// Builds a full semantic-token JSON-RPC request.
-pub fn lsp_semantic_tokens_full_request(
-  id : Int,
-  document : @workspace.DocumentSnapshot,
-) -> String {
-  request_message(
-    id,
-    "textDocument/semanticTokens/full",
     json_object([("textDocument", text_document_identifier(document.uri))]),
   )
 }
@@ -780,15 +676,6 @@ impl @language.DocumentSymbolProvider for LspLanguageProvider with fn provide_do
   self.client.document_symbols(document)
 }
 
-///|
-impl @language.SemanticTokensProvider for LspLanguageProvider with fn provide_document_semantic_tokens(
-  self,
-  model,
-  _token,
-) {
-  let document = document_from_text_model(model)
-  self.client.semantic_tokens_for_document(document)
-}
 
 ///|
 fn LspClient::next_request_id(self : LspClient) -> Int {
@@ -1179,67 +1066,6 @@ fn document_symbol_kind(kind : Int?) -> String {
 }
 
 ///|
-fn parse_semantic_tokens_result(
-  result : Json,
-  doc : @workspace.DocumentSnapshot,
-  legend : Array[String],
-) -> Array[@language.SemanticToken] {
-  let tokens : Array[@language.SemanticToken] = []
-  match json_field(result, "data") {
-    Some(Array(data)) => {
-      let mut line = 0
-      let mut start_character = 0
-      let mut index = 0
-      while index + 4 < data.length() {
-        match
-          (
-            json_int_value(data[index]),
-            json_int_value(data[index + 1]),
-            json_int_value(data[index + 2]),
-            json_int_value(data[index + 3]),
-          ) {
-          (Some(delta_line), Some(delta_start), Some(length), Some(token_type)) => {
-            if delta_line == 0 {
-              start_character = start_character + delta_start
-            } else {
-              line = line + delta_line
-              start_character = delta_start
-            }
-            if length > 0 {
-              // `line`/`start_character` are 0-based LSP coordinates; `Position`
-              // is 1-based, so shift both before converting to offsets.
-              let start = doc.offset_at_position(
-                Position(line + 1, start_character + 1),
-              )
-              let end = doc.offset_at_position(
-                Position(line + 1, start_character + length + 1),
-              )
-              tokens.push({
-                range: OffsetRange(start, end),
-                token_type: semantic_token_type_name(legend, token_type),
-              })
-            }
-          }
-          _ => ()
-        }
-        index = index + 5
-      }
-    }
-    _ => ()
-  }
-  tokens
-}
-
-///|
-fn semantic_token_type_name(legend : Array[String], index : Int) -> String {
-  if index >= 0 && index < legend.length() {
-    legend[index]
-  } else {
-    "unknown"
-  }
-}
-
-///|
 fn parse_location_result(
   value : Json,
   document : @workspace.DocumentSnapshot,
@@ -1348,10 +1174,6 @@ fn parse_server_capabilities(result : Json) -> LspServerCapabilities {
         document_symbol_provider: capability_enabled(
           capabilities, "documentSymbolProvider",
         ),
-        semantic_tokens_provider: capability_enabled(
-          capabilities, "semanticTokensProvider",
-        ),
-        semantic_token_types: semantic_token_legend(capabilities),
         publish_diagnostics: true,
       }
     None => default_lsp_capabilities()
@@ -1366,30 +1188,6 @@ fn capability_enabled(capabilities : Json, name : String) -> Bool {
     Some(Object(_)) => true
     _ => false
   }
-}
-
-///|
-fn semantic_token_legend(capabilities : Json) -> Array[String] {
-  let token_types = []
-  match json_field(capabilities, "semanticTokensProvider") {
-    Some(provider) =>
-      match json_field(provider, "legend") {
-        Some(legend) =>
-          match json_field(legend, "tokenTypes") {
-            Some(Array(items)) =>
-              for item in items {
-                match item {
-                  String(token_type) => token_types.push(token_type)
-                  _ => ()
-                }
-              }
-            _ => ()
-          }
-        None => ()
-      }
-    None => ()
-  }
-  token_types
 }
 
 ///|

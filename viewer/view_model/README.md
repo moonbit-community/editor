@@ -41,18 +41,24 @@ model-line source data, and viewport-scoped render frames.
 - `ViewportData` lives in `viewer/view_layout`, which can depend on this
   package without a cycle.
 
-## Conformance-only token ports (drift risk)
+## Token model
 
-`LineTokens` / `SliceLineTokens` / `IViewLineTokens` (`line_tokens.mbt`),
-`TokenMetadata` / `MetadataConsts` (`encoded_token_attributes.mbt`),
-`RangePriorityQueueImpl` (`text_model_tokens.mbt`), and `text_to_html_tokenizer`
-are **faithful 1:1 Monaco ports exercised only by their reference tests and each
-other**. Production rendering ships the parallel `@syntax.Token` pipeline
-(`TokenizedDocument` → `FrameSource` → `RenderFrame`) instead. The two are not
-reconciled, so this faithful token subsystem can silently drift from the path
-production actually renders — treat it as a Monaco oracle, not the live code.
-Full reconciliation is a deferred token-model port (out of scope of
-`docs/exec-plans/std-dedup-and-divergence-review.md`).
+`LineTokens` / `SliceLineTokens` / `IViewLineTokens` (`line_tokens.mbt`) and
+`TokenMetadata` / `MetadataConsts` (`encoded_token_attributes.mbt`) are the
+**production** token model. `TokenizedDocument` stores one faithful `LineTokens`
+per model line (encoded from the MoonBit lexers' `@syntax.Token`s by
+`line_tokens_encoder.mbt`, with each `HighlightTag` packed into a metadata word
+by `token_theme.mbt`); rendering walks those tokens into the `mtk<colorId>`
+classes the line renderer consumes (`spans_from_line_tokens`). The faithful
+reference tests now guard the live path, not a twin, so the Finding D
+conformance-only-vs-production split (`docs/exec-plans/std-dedup-and-divergence-review.md`)
+is closed by unification.
+
+Still deferred (faithful ports not yet on the production path):
+`RangePriorityQueueImpl` (`text_model_tokens.mbt`, incremental/background
+retokenization scheduling) and the embedded-language `LanguageIdCodec` — both
+explicitly out of scope for single-language synchronous viewing.
+`text_to_html_tokenizer` is the standalone HTML emitter Monaco co-locates here.
 
 ## Checks
 

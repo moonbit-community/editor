@@ -136,125 +136,32 @@ pub fn RenderLine::view_column_at_source_offset(
 }
 
 ///|
-/// Builds the syntax-token spans of one model line. Decorations are no longer
-/// overlaid onto token spans here: they are applied as view-coordinate inline
-/// decorations at render time (`ViewModelDecorations`), so spans carry only the
-/// tokenizer's classes.
-fn spans_for_line(
-  line_range : @base_common.OffsetRange,
-  tokens : Array[@syntax.Token],
-) -> Array[RenderSpan] {
-  let spans = []
-  let mut cursor = line_range.start
-  for token in tokens {
-    // The bucket holds exactly the tokens intersecting this line.
-    let start = token.range.start.max(line_range.start)
-    let end = token.range.end_exclusive.min(line_range.end_exclusive)
-    if cursor < start {
+/// Builds the token spans of one model line by walking its faithful
+/// `LineTokens` — the Monaco `renderLine` input shape (one segment per
+/// `[endOffset, metadata]` pair, classed `mtk<colorId>` via the theme). This
+/// replaces the legacy `@syntax.Token`-driven `spans_for_line` as the
+/// production seam. Zero-length tokens (e.g. the placeholder of a blank line)
+/// are dropped so a blank line yields no span, matching the prior behavior.
+fn spans_from_line_tokens(line_tokens : LineTokens) -> Array[RenderSpan] {
+  let spans : Array[RenderSpan] = []
+  let mut start = 0
+  for i in 0..<line_tokens.get_count() {
+    let end = line_tokens.get_end_offset(i)
+    if start < end {
       spans.push({
-        start: cursor - line_range.start,
-        end: start - line_range.start,
-        source_start: cursor - line_range.start,
-        source_end: start - line_range.start,
+        start,
+        end,
+        source_start: start,
+        source_end: end,
         injected_text_index: -1,
-        class_name: @syntax.Plain.css_class(),
+        class_name: line_tokens.get_class_name(i),
       })
     }
-    spans.push({
-      start: start - line_range.start,
-      end: end - line_range.start,
-      source_start: start - line_range.start,
-      source_end: end - line_range.start,
-      injected_text_index: -1,
-      class_name: token.tag.css_class(),
-    })
-    cursor = end
-  }
-  if cursor < line_range.end_exclusive {
-    spans.push({
-      start: cursor - line_range.start,
-      end: line_range.end_exclusive - line_range.start,
-      source_start: cursor - line_range.start,
-      source_end: line_range.end_exclusive - line_range.start,
-      injected_text_index: -1,
-      class_name: @syntax.Plain.css_class(),
-    })
+    start = end
   }
   spans
 }
 
-///|
-/// Splits syntax spans at semantic token boundaries and appends a
-/// `sem-<type>` class on the overlapping segments, so semantic colors win
-/// over syntax colors where both apply.
-fn overlay_semantic_tokens(
-  spans : Array[RenderSpan],
-  line_range : @base_common.OffsetRange,
-  semantic_tokens : Array[@language.SemanticToken],
-) -> Array[RenderSpan] {
-  if semantic_tokens.length() == 0 {
-    return spans
-  }
-  let out : Array[RenderSpan] = []
-  for span in spans {
-    let span_start = line_range.start + span.start
-    let span_end = line_range.start + span.end
-    let mut cursor = span_start
-    for token in semantic_tokens {
-      if token.token_type == "" {
-        continue
-      }
-      let segment_start = token.range.start.max(cursor)
-      let segment_end = token.range.end_exclusive.min(span_end)
-      if segment_start >= segment_end {
-        continue
-      }
-      if cursor < segment_start {
-        out.push(slice_span(span, span_start, cursor, segment_start, ""))
-      }
-      out.push(
-        slice_span(
-          span,
-          span_start,
-          segment_start,
-          segment_end,
-          " " + semantic_token_class(token.token_type),
-        ),
-      )
-      cursor = segment_end
-    }
-    if cursor == span_start {
-      out.push(span)
-    } else if cursor < span_end {
-      out.push(slice_span(span, span_start, cursor, span_end, ""))
-    }
-  }
-  out
-}
-
-///|
-fn slice_span(
-  span : RenderSpan,
-  span_start : Int,
-  absolute_start : Int,
-  absolute_end : Int,
-  extra_class : String,
-) -> RenderSpan {
-  {
-    start: span.start + (absolute_start - span_start),
-    end: span.start + (absolute_end - span_start),
-    source_start: absolute_start - span_start + span.source_start,
-    source_end: absolute_end - span_start + span.source_start,
-    injected_text_index: span.injected_text_index,
-    class_name: span.class_name + extra_class,
-  }
-}
-
-///|
-/// Normalized CSS class for an LSP semantic token type.
-pub fn semantic_token_class(token_type : String) -> String {
-  "sem-" + token_type
-}
 
 ///|
 fn viewport_json(viewport : FrameViewport) -> Json {

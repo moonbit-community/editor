@@ -49,13 +49,6 @@ pub(all) struct DocumentSymbol {
 } derive(Debug)
 
 ///|
-/// Semantic token span after provider-side token-type classification.
-pub(all) struct SemanticToken {
-  range : @base_common.OffsetRange
-  token_type : String
-} derive(Debug)
-
-///|
 /// Aggregated feature result used by the renderer model when several semantic
 /// feature families are computed together.
 pub(all) struct ProviderResult {
@@ -63,7 +56,6 @@ pub(all) struct ProviderResult {
   diagnostics : Array[Diagnostic]
   definitions : Array[Location]
   symbols : Array[DocumentSymbol]
-  semantic_tokens : Array[SemanticToken]
 } derive(Debug)
 
 ///|
@@ -118,47 +110,9 @@ pub(open) trait DocumentSymbolProvider {
 }
 
 ///|
-/// Full-document semantic token provider. The viewer treats returned tokens as
-/// replacing the previous semantic-token set for that document revision.
-pub(open) trait SemanticTokensProvider {
-  async fn provide_document_semantic_tokens(
-    Self,
-    @model.TextModel,
-    CancellationToken,
-  ) -> Array[SemanticToken]
-}
-
-///|
 /// Empty feature aggregate used when no provider has answered.
 pub fn ProviderResult::empty() -> ProviderResult {
-  {
-    hovers: [],
-    diagnostics: [],
-    definitions: [],
-    symbols: [],
-    semantic_tokens: [],
-  }
-}
-
-///|
-/// Collects model-level feature families that do not depend on a cursor
-/// offset.
-pub async fn collect_model_provider_result(
-  diagnostics : &DiagnosticsProvider,
-  symbols : &DocumentSymbolProvider,
-  semantic_tokens : &SemanticTokensProvider,
-  model : @model.TextModel,
-  token : CancellationToken,
-) -> ProviderResult {
-  {
-    hovers: [],
-    diagnostics: diagnostics.provide_diagnostics(model, token),
-    definitions: [],
-    symbols: symbols.provide_document_symbols(model, token),
-    semantic_tokens: semantic_tokens.provide_document_semantic_tokens(
-      model, token,
-    ),
-  }
+  { hovers: [], diagnostics: [], definitions: [], symbols: [] }
 }
 
 ///|

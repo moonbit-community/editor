@@ -33,36 +33,40 @@ pub(all) struct Token {
 } derive(Debug)
 
 ///|
+/// Renders the tag's variant name. Used by the per-language lexer golden tests
+/// to label each token; production styling is the view model's metadata
+/// encoding (`mtk<colorId>`), not a per-tag string.
+pub impl Show for HighlightTag with output(self, logger) {
+  logger.write_string(
+    match self {
+      Keyword => "Keyword"
+      Identifier => "Identifier"
+      String => "String"
+      Number => "Number"
+      Comment => "Comment"
+      Punctuation => "Punctuation"
+      Plain => "Plain"
+      Operator => "Operator"
+      Delimiter => "Delimiter"
+      Type => "Type"
+      Function => "Function"
+      Variable => "Variable"
+      Constant => "Constant"
+      StringEscape => "StringEscape"
+      CommentDoc => "CommentDoc"
+      Regexp => "Regexp"
+      Tag => "Tag"
+      Attribute => "Attribute"
+      Invalid => "Invalid"
+    },
+  )
+}
+
+///|
 /// Tokenizes the whole document with the generic fallback lexer. Render
 /// paths resolve a language tokenizer through `TokenizerRegistry` and use
 /// `tokenize_document` directly; registry misses stay un-tokenized so the
 /// renderer emits plain/default text.
 pub fn highlight(doc : @model.TextSnapshot) -> Array[Token] {
   tokenize_document(doc, PlainTokenizer::new())
-}
-
-///|
-/// CSS class emitted for this token tag by browser renderers.
-pub fn HighlightTag::css_class(self : HighlightTag) -> String {
-  match self {
-    Keyword => "tok-keyword"
-    Identifier => "tok-identifier"
-    String => "tok-string"
-    Number => "tok-number"
-    Comment => "tok-comment"
-    Punctuation => "tok-punctuation"
-    Plain => "tok-plain"
-    Operator => "tok-operator"
-    Delimiter => "tok-delimiter"
-    Type => "tok-type"
-    Function => "tok-function"
-    Variable => "tok-variable"
-    Constant => "tok-constant"
-    StringEscape => "tok-string-escape"
-    CommentDoc => "tok-comment-doc"
-    Regexp => "tok-regexp"
-    Tag => "tok-tag"
-    Attribute => "tok-attribute"
-    Invalid => "tok-invalid"
-  }
 }

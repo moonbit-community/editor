@@ -26,7 +26,6 @@ test "view model lines as-is match render frame line data" {
     diagnostics: [],
     definitions: [],
     symbols: [],
-    semantic_tokens: [{ range: OffsetRange(13, 14), token_type: "variable" }],
   }
   let source = @view_model.FrameSource(
     tokenized,

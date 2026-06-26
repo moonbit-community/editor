@@ -59,7 +59,7 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(copiedText).toContain('let really_l');
     expect(copiedText).not.toContain(': T');
     const copiedHtml = await page.evaluate(() => globalThis.__readonlyEditorCopiedHtml || '');
-    expect(copiedHtml).toContain('tok-identifier');
+    expect(copiedHtml).toContain('mtk4');
     expect(copiedHtml).not.toContain('inlay-hint');
     await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(1, {
       timeout: 10_000,

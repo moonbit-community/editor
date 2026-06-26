@@ -46,7 +46,17 @@ fn line_parts_from_render_line(
   let parts : Array[@view_line_renderer.LinePart] = []
   if line.spans.length() == 0 {
     if line.text.length() > 0 {
-      parts.push(LinePart(line.text.length(), @syntax.Plain.css_class()))
+      // Defensive fallback: a non-empty line always yields at least one span
+      // through `spans_from_line_tokens`, so this covers only degenerate input.
+      // Style it with the default-foreground class (`mtk1`), never a `tok-*`.
+      parts.push(
+        LinePart(
+          line.text.length(),
+          TokenMetadata::get_class_name_from_metadata(
+            LineTokens::default_token_metadata(),
+          ),
+        ),
+      )
     }
     return parts
   }

@@ -7,31 +7,48 @@
 pub struct TokenizedDocument {
   snapshot : @model.TextSnapshot
   token_count : Int
-  line_tokens : Array[Array[@syntax.Token]]
+  // Faithful per-line binary token store (Monaco's `TextModel` line tokens),
+  // the production token model. Per-line so a wrapped view line can later slice
+  // it through `SliceLineTokens` (word wrap is out of scope here, but this is
+  // the storage shape it needs).
+  line_tokens : Array[LineTokens]
 }
 
 ///|
-/// Builds line buckets from a document snapshot and whole-document token list.
+/// Buckets the whole-document tokens per line and encodes each line's bucket
+/// into a faithful `LineTokens` (the MoonBit lexers stay the sole token source;
+/// only the on-line encoding is Monaco's binary store). The simplified
+/// `@syntax.Token` buckets are a transient local, not retained.
 pub fn TokenizedDocument::build(
   snapshot : @model.TextSnapshot,
   tokens : Array[@syntax.Token],
 ) -> TokenizedDocument {
-  {
-    snapshot,
-    token_count: tokens.length(),
-    line_tokens: bucket_by_line(snapshot, tokens, token => token.range),
+  let buckets = bucket_by_line(snapshot, tokens, token => token.range)
+  let decoder = LanguageIdCodec::new()
+  let line_tokens : Array[LineTokens] = []
+  for line in 0..<snapshot.line_count() {
+    line_tokens.push(
+      line_tokens_from_syntax_tokens(
+        snapshot.line_text(line),
+        snapshot.line_start_offset(line),
+        buckets[line],
+        decoder,
+      ),
+    )
   }
+  { snapshot, token_count: tokens.length(), line_tokens }
 }
 
 ///|
-/// Tokens intersecting a zero-based model line.
-pub fn TokenizedDocument::tokens_for_line(
+/// The faithful `LineTokens` for a zero-based model line. Out-of-range lines
+/// answer an empty token line instead of trapping.
+pub fn TokenizedDocument::line_tokens_for_line(
   self : TokenizedDocument,
   line : Int,
-) -> Array[@syntax.Token] {
+) -> LineTokens {
   match self.line_tokens.get(line) {
-    Some(bucket) => bucket
-    None => []
+    Some(line_tokens) => line_tokens
+    None => LineTokens::create_empty("", LanguageIdCodec::new())
   }
 }
 
@@ -46,27 +63,17 @@ pub struct FrameSource {
   tokenized : TokenizedDocument
   providers : @language.ProviderResult
   decorations : Array[@decorations.Decoration]
-  line_semantic_tokens : Array[Array[@language.SemanticToken]]
 }
 
 ///|
 /// Builds a frame source by retaining decorations (converted to view
-/// coordinates lazily by the view model) and bucketing semantic tokens per
-/// line.
+/// coordinates lazily by the view model).
 pub fn FrameSource::FrameSource(
   tokenized : TokenizedDocument,
   decoration_set : @decorations.DecorationSet,
   providers : @language.ProviderResult,
 ) -> FrameSource {
-  let snapshot = tokenized.snapshot
-  {
-    tokenized,
-    providers,
-    decorations: decoration_set.items,
-    line_semantic_tokens: bucket_by_line(snapshot, providers.semantic_tokens, token => {
-      token.range
-    }),
-  }
+  { tokenized, providers, decorations: decoration_set.items }
 }
 
 ///|

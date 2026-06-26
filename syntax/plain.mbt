@@ -61,9 +61,9 @@ pub impl LineTokenizer for PlainTokenizer with fn tokenize_line(
       // A surrogate pair is one punctuation token: token boundaries must
       // stay on whole characters or downstream text slicing panics.
       let start = offset
-      offset = if is_high_surrogate(unit) &&
+      offset = if @base_common.is_high_surrogate(unit) &&
         offset + 1 < line_text.length() &&
-        is_low_surrogate(line_text[offset + 1].to_int()) {
+        @base_common.is_low_surrogate(line_text[offset + 1].to_int()) {
         offset + 2
       } else {
         offset + 1
@@ -119,16 +119,6 @@ fn is_ident_start(unit : Int) -> Bool {
 ///|
 fn is_ident_continue(unit : Int) -> Bool {
   is_ident_start(unit) || is_digit(unit)
-}
-
-///|
-fn is_high_surrogate(unit : Int) -> Bool {
-  0xD800 <= unit && unit <= 0xDBFF
-}
-
-///|
-fn is_low_surrogate(unit : Int) -> Bool {
-  0xDC00 <= unit && unit <= 0xDFFF
 }
 
 ///|

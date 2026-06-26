@@ -3,15 +3,17 @@
 /// lowest-level shared package, so model/view code shares one definition.
 
 ///|
-/// `0xD800 <= charCode <= 0xDBFF`. Mirrors `strings.isHighSurrogate`.
+/// `0xD800 <= charCode <= 0xDBFF`. Mirrors `strings.isHighSurrogate`; the std
+/// `Int::is_leading_surrogate` is the identical range check.
 pub fn is_high_surrogate(char_code : Int) -> Bool {
-  0xD800 <= char_code && char_code <= 0xDBFF
+  char_code.is_leading_surrogate()
 }
 
 ///|
-/// `0xDC00 <= charCode <= 0xDFFF`. Mirrors `strings.isLowSurrogate`.
+/// `0xDC00 <= charCode <= 0xDFFF`. Mirrors `strings.isLowSurrogate`; the std
+/// `Int::is_trailing_surrogate` is the identical range check.
 pub fn is_low_surrogate(char_code : Int) -> Bool {
-  0xDC00 <= char_code && char_code <= 0xDFFF
+  char_code.is_trailing_surrogate()
 }
 
 ///|

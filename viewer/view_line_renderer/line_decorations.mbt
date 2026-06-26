@@ -102,12 +102,12 @@ pub fn LineDecorationsNormalizer::normalize(
     let mut end_column = decoration.end_column
     if start_column > 1 &&
       start_column - 2 < line_length &&
-      is_high_surrogate(line_content[start_column - 2].to_int()) {
+      @base_common.is_high_surrogate(line_content[start_column - 2].to_int()) {
       start_column = start_column - 1
     }
     if end_column > 1 &&
       end_column - 2 < line_length &&
-      is_high_surrogate(line_content[end_column - 2].to_int()) {
+      @base_common.is_high_surrogate(line_content[end_column - 2].to_int()) {
       end_column = end_column - 1
     }
     let start_offset = @base_common.clamp_int(start_column - 1, 0, line_length)
@@ -239,9 +239,4 @@ fn line_decoration_metadata(decoration_type : InlineDecorationType) -> Int {
     After => line_part_metadata_pseudo_after
     RegularAffectingLetterSpacing => 0
   }
-}
-
-///|
-fn is_high_surrogate(code : Int) -> Bool {
-  code >= 0xd800 && code <= 0xdbff
 }

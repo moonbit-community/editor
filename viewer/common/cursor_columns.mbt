@@ -15,16 +15,6 @@
 // which covers the conformance corpus.
 
 ///|
-fn is_high_surrogate(c : Int) -> Bool {
-  c >= 0xD800 && c <= 0xDBFF
-}
-
-///|
-fn is_low_surrogate(c : Int) -> Bool {
-  c >= 0xDC00 && c <= 0xDFFF
-}
-
-///|
 fn compute_code_point(high : Int, low : Int) -> Int {
   (high - 0xD800) * 0x400 + (low - 0xDC00) + 0x10000
 }
@@ -32,9 +22,9 @@ fn compute_code_point(high : Int, low : Int) -> Int {
 ///|
 fn get_next_code_point(str : String, len : Int, offset : Int) -> Int {
   let char_code = str[offset].to_int()
-  if is_high_surrogate(char_code) && offset + 1 < len {
+  if @base_common.is_high_surrogate(char_code) && offset + 1 < len {
     let next_char_code = str[offset + 1].to_int()
-    if is_low_surrogate(next_char_code) {
+    if @base_common.is_low_surrogate(next_char_code) {
       return compute_code_point(char_code, next_char_code)
     }
   }
@@ -48,14 +38,6 @@ fn code_point_utf16_length(code_point : Int) -> Int {
   } else {
     1
   }
-}
-
-///|
-fn is_full_width_character(char_code : Int) -> Bool {
-  (char_code >= 0x2E80 && char_code <= 0xD7AF) ||
-  (char_code >= 0xF900 && char_code <= 0xFAFF) ||
-  (char_code >= 0xFF01 && char_code <= 0xFF5E) ||
-  (char_code >= 0xFFE0 && char_code <= 0xFFE6)
 }
 
 ///|
@@ -84,7 +66,8 @@ fn next_visible_column(
   if code_point == 9 {
     return next_render_tab_stop(visible_column, tab_size)
   }
-  if is_full_width_character(code_point) || is_emoji_imprecise(code_point) {
+  if @base_common.is_full_width_character(code_point) ||
+    is_emoji_imprecise(code_point) {
     return visible_column + 2
   }
   visible_column + 1

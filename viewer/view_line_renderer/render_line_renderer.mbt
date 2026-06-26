@@ -108,11 +108,18 @@ pub fn render_view_line(
     }
     // Completely empty line.
     if input.render_new_line_when_empty {
-      html.write_string("<span class=\"view-line-content\"><span>\n</span></span>")
+      html.write_string(
+        "<span class=\"view-line-content\"><span>\n</span></span>",
+      )
     } else {
-      html.write_string("<span class=\"view-line-content\"><span></span></span>")
+      html.write_string(
+        "<span class=\"view-line-content\"><span></span></span>",
+      )
     }
-    return { character_mapping: CharacterMapping::new(0), contains_foreign_elements: None }
+    return {
+      character_mapping: CharacterMapping::new(0),
+      contains_foreign_elements: None,
+    }
   }
   render_resolved(resolve_render_line_input(input), html)
 }
@@ -150,14 +157,17 @@ priv struct ResolvedRenderLineInput {
 }
 
 ///|
-fn resolve_render_line_input(input : RenderLineInput) -> ResolvedRenderLineInput {
+fn resolve_render_line_input(
+  input : RenderLineInput,
+) -> ResolvedRenderLineInput {
   let line_content = input.line_content
   let mut is_overflowing = false
   let mut overflowing_char_count = 0
   let len = if input.stop_rendering_line_after != -1 &&
     input.stop_rendering_line_after < line_content.length() {
     is_overflowing = true
-    overflowing_char_count = line_content.length() - input.stop_rendering_line_after
+    overflowing_char_count = line_content.length() -
+      input.stop_rendering_line_after
     input.stop_rendering_line_after
   } else {
     line_content.length()
@@ -169,15 +179,16 @@ fn resolve_render_line_input(input : RenderLineInput) -> ResolvedRenderLineInput
     input.faux_indent_length,
     len,
   )
-  if input.render_control_characters && !(input.is_basic_ascii) {
+  if input.render_control_characters && !input.is_basic_ascii {
     tokens = extract_control_characters(line_content, tokens)
   }
   if input.render_whitespace == All ||
     input.render_whitespace == Boundary ||
-    (input.render_whitespace == Selection &&
-    input.selections_on_line.length() > 0) ||
-    (input.render_whitespace == Trailing &&
-    !(input.continues_with_wrapped_line)) {
+    (
+      input.render_whitespace == Selection &&
+      input.selections_on_line.length() > 0
+    ) ||
+    (input.render_whitespace == Trailing && !input.continues_with_wrapped_line) {
     tokens = apply_render_whitespace(input, line_content, len, tokens)
   }
   let contains_foreign_elements = foreign_element_type(input.line_decorations)
@@ -189,11 +200,11 @@ fn resolve_render_line_input(input : RenderLineInput) -> ResolvedRenderLineInput
       input.line_decorations,
     )
   }
-  if !(input.contains_rtl) {
+  if !input.contains_rtl {
     tokens = split_large_tokens(
       line_content,
       tokens,
-      !(input.is_basic_ascii) || input.font_ligatures,
+      !input.is_basic_ascii || input.font_ligatures,
     )
   } else {
     tokens = split_leading_whitespace_from_rtl(line_content, tokens)
@@ -269,7 +280,9 @@ fn transform_and_remove_overflowing(
     }
     let token_contains_rtl = line_contains_rtl &&
       contains_rtl_in(line_content, start_offset, end_index)
-    result.push(LinePart(end_index, class_name, contains_rtl=token_contains_rtl))
+    result.push(
+      LinePart(end_index, class_name, contains_rtl=token_contains_rtl),
+    )
     start_offset = end_index
   }
   result
@@ -363,7 +376,7 @@ fn split_leading_whitespace_from_rtl(
     return tokens
   }
   let first_token = tokens[0]
-  if !(first_token.contains_rtl) {
+  if !first_token.contains_rtl {
     return tokens
   }
   let first_token_end_index = first_token.end_index
@@ -549,8 +562,8 @@ fn apply_render_whitespace(
       }
     }
     if was_in_whitespace {
-      if !(is_in_whitespace) ||
-        (!(use_monospace_optimizations) && tmp_indent >= tab_size) {
+      if !is_in_whitespace ||
+        (!use_monospace_optimizations && tmp_indent >= tab_size) {
         if generate_for_each {
           let last_end_index = if result.length() > 0 {
             result[result.length() - 1].end_index
@@ -558,25 +571,31 @@ fn apply_render_whitespace(
             faux_indent_length
           }
           for i in (last_end_index + 1)..<=char_index {
-            result.push(LinePart(i, "mtkw", metadata=line_part_metadata_is_whitespace))
+            result.push(
+              LinePart(i, "mtkw", metadata=line_part_metadata_is_whitespace),
+            )
           }
         } else {
-          result.push(LinePart(
-            char_index,
-            "mtkw",
-            metadata=line_part_metadata_is_whitespace,
-          ))
+          result.push(
+            LinePart(
+              char_index,
+              "mtkw",
+              metadata=line_part_metadata_is_whitespace,
+            ),
+          )
         }
         tmp_indent = tmp_indent % tab_size
       }
     } else if char_index == token_end_index ||
       (is_in_whitespace && char_index > faux_indent_length) {
-      result.push(LinePart(char_index, token_type, contains_rtl=token_contains_rtl))
+      result.push(
+        LinePart(char_index, token_type, contains_rtl=token_contains_rtl),
+      )
       tmp_indent = tmp_indent % tab_size
     }
     if ch_code == cc_tab {
       tmp_indent = tab_size
-    } else if is_full_width_character(ch_code) {
+    } else if @base_common.is_full_width_character(ch_code) {
       tmp_indent = tmp_indent + 2
     } else {
       tmp_indent = tmp_indent + 1
@@ -607,8 +626,9 @@ fn apply_render_whitespace(
         cc_null
       }
       let is_single_trailing_space = last_char_code == cc_space &&
-        (prev_char_code != cc_space && prev_char_code != cc_tab)
-      if !(is_single_trailing_space) {
+        prev_char_code != cc_space &&
+        prev_char_code != cc_tab
+      if !is_single_trailing_space {
         generate_whitespace = true
       }
     } else {
@@ -623,10 +643,14 @@ fn apply_render_whitespace(
         faux_indent_length
       }
       for i in (last_end_index + 1)..<=len {
-        result.push(LinePart(i, "mtkw", metadata=line_part_metadata_is_whitespace))
+        result.push(
+          LinePart(i, "mtkw", metadata=line_part_metadata_is_whitespace),
+        )
       }
     } else {
-      result.push(LinePart(len, "mtkw", metadata=line_part_metadata_is_whitespace))
+      result.push(
+        LinePart(len, "mtkw", metadata=line_part_metadata_is_whitespace),
+      )
     }
   } else {
     result.push(LinePart(len, token_type, contains_rtl=token_contains_rtl))
@@ -745,9 +769,10 @@ fn render_resolved(
     let part_end_index = part.end_index
     let part_type = part.class_name
     let part_contains_rtl = part.contains_rtl
-    let part_renders_whitespace = render_whitespace != None && part.is_whitespace()
+    let part_renders_whitespace = render_whitespace != None &&
+      part.is_whitespace()
     let part_renders_whitespace_with_width = part_renders_whitespace &&
-      !(font_is_monospace) &&
+      !font_is_monospace &&
       (part_type == "mtkw" || contains_foreign_elements == None)
     let part_is_empty_and_has_pseudo_after = char_index == part_end_index &&
       part.is_pseudo_after()
@@ -800,7 +825,7 @@ fn render_resolved(
         if charcode == cc_tab {
           produced_characters = tab_size - visible_column % tab_size
           char_width = produced_characters
-          if !(can_use_halfwidth_rightwards_arrow) || char_width > 1 {
+          if !can_use_halfwidth_rightwards_arrow || char_width > 1 {
             append_code(html, ch_rightwards_arrow)
           } else {
             append_code(html, ch_halfwidth_rightwards_arrow)
@@ -875,7 +900,7 @@ fn render_resolved(
           append_code(html, ch_replacement)
           run_start = char_index + 1
         } else {
-          if is_full_width_character(charcode) {
+          if @base_common.is_full_width_character(charcode) {
             char_width = char_width + 1
           }
           if render_control_characters && charcode < 32 {
@@ -912,7 +937,7 @@ fn render_resolved(
       part_displacement = 0
     }
     if char_index >= len &&
-      !(last_character_mapping_defined) &&
+      !last_character_mapping_defined &&
       part.is_pseudo_after() {
       last_character_mapping_defined = true
       character_mapping.set_column_info(
@@ -924,7 +949,7 @@ fn render_resolved(
     }
     html.write_string("</span>")
   }
-  if !(last_character_mapping_defined) {
+  if !last_character_mapping_defined {
     character_mapping.set_column_info(
       len + 1,
       parts.length() - 1,
@@ -935,7 +960,9 @@ fn render_resolved(
   if input.is_overflowing {
     html.write_string("<span class=\"mtkoverflow\">")
     html.write_string("Show more (")
-    html.write_string(render_overflowing_char_count(input.overflowing_char_count))
+    html.write_string(
+      render_overflowing_char_count(input.overflowing_char_count),
+    )
     html.write_string(")")
     html.write_string("</span>")
   }
@@ -1023,14 +1050,6 @@ fn foreign_element_type(
 }
 
 ///|
-fn is_full_width_character(charcode : Int) -> Bool {
-  (charcode >= 0x2E80 && charcode <= 0xD7AF) ||
-  (charcode >= 0xF900 && charcode <= 0xFAFF) ||
-  (charcode >= 0xFF01 && charcode <= 0xFF5E) ||
-  (charcode >= 0xFFE0 && charcode <= 0xFFE6)
-}
-
-///|
 fn first_non_whitespace_index_of(view : StringView, len : Int) -> Int {
   for i in 0..<len {
     let charcode = view.unsafe_get(i).to_int()
@@ -1082,37 +1101,37 @@ fn contains_rtl_in(line_content : String, start : Int, end : Int) -> Bool {
 ///|
 fn is_rtl_code(code : Int) -> Bool {
   // Generated from vscode's CONTAINS_RTL regex.
-  (code == 0x05BE) ||
-  (code == 0x05C0) ||
-  (code == 0x05C3) ||
-  (code == 0x05C6) ||
+  code == 0x05BE ||
+  code == 0x05C0 ||
+  code == 0x05C3 ||
+  code == 0x05C6 ||
   (code >= 0x05D0 && code <= 0x05F4) ||
-  (code == 0x0608) ||
-  (code == 0x060B) ||
-  (code == 0x060D) ||
+  code == 0x0608 ||
+  code == 0x060B ||
+  code == 0x060D ||
   (code >= 0x061B && code <= 0x064A) ||
   (code >= 0x066D && code <= 0x066F) ||
   (code >= 0x0671 && code <= 0x06D5) ||
-  (code == 0x06E5) ||
-  (code == 0x06E6) ||
-  (code == 0x06EE) ||
-  (code == 0x06EF) ||
+  code == 0x06E5 ||
+  code == 0x06E6 ||
+  code == 0x06EE ||
+  code == 0x06EF ||
   (code >= 0x06FA && code <= 0x0710) ||
   (code >= 0x0712 && code <= 0x072F) ||
   (code >= 0x074D && code <= 0x07A5) ||
   (code >= 0x07B1 && code <= 0x07EA) ||
-  (code == 0x07F4) ||
-  (code == 0x07F5) ||
-  (code == 0x07FA) ||
+  code == 0x07F4 ||
+  code == 0x07F5 ||
+  code == 0x07FA ||
   (code >= 0x07FE && code <= 0x0815) ||
-  (code == 0x081A) ||
-  (code == 0x0824) ||
-  (code == 0x0828) ||
+  code == 0x081A ||
+  code == 0x0824 ||
+  code == 0x0828 ||
   (code >= 0x0830 && code <= 0x0858) ||
   (code >= 0x085E && code <= 0x088E) ||
   (code >= 0x08A0 && code <= 0x08C9) ||
-  (code == 0x200F) ||
-  (code == 0xFB1D) ||
+  code == 0x200F ||
+  code == 0xFB1D ||
   (code >= 0xFB1F && code <= 0xFB28) ||
   (code >= 0xFB2A && code <= 0xFD3D) ||
   (code >= 0xFD50 && code <= 0xFDC7) ||

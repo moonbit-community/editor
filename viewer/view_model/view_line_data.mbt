@@ -11,7 +11,7 @@ pub fn view_line_rendering_data_from_render_line(
     max_column: line.text.length() + 1,
     content: line.text,
     continues_with_wrapped_line: false,
-    contains_rtl: contains_rtl(line.text),
+    contains_rtl: @base_common.contains_rtl(line.text),
     is_basic_ascii: is_basic_ascii(line.text),
     tokens: line_parts_from_render_line(line),
     inline_decorations: inline_decorations_for_line(line, view_decorations),
@@ -55,7 +55,7 @@ fn line_parts_from_render_line(
       LinePart(
         span.end,
         span.class_name,
-        contains_rtl=contains_rtl(line.span_text(span)),
+        contains_rtl=@base_common.contains_rtl(line.span_text(span)),
       ),
     )
   }
@@ -123,17 +123,4 @@ fn is_basic_ascii(text : String) -> Bool {
     }
   }
   true
-}
-
-///|
-fn contains_rtl(text : String) -> Bool {
-  for i in 0..<text.length() {
-    let code = text[i].to_int()
-    if (code >= 0x0590 && code <= 0x08ff) ||
-      (code >= 0xfb1d && code <= 0xfdff) ||
-      (code >= 0xfe70 && code <= 0xfeff) {
-      return true
-    }
-  }
-  false
 }

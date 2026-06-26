@@ -91,7 +91,7 @@ package status. Counts are from the pinned `vscode/` submodule.
 |---|---:|---|---|---|
 | `common/viewLayout/viewLineRenderer.test.ts` | 72 | `viewer/view_line_renderer` | done (reference, 72; exact HTML+mapping) ✓ | Full ✓ |
 | `common/viewLayout/lineDecorations.test.ts` | 5 | `viewer/view_line_renderer` | done (reference) | Full ✓ |
-| `common/viewLayout/linesLayout.test.ts` | 12 | `viewer/view_layout` | partial (9) | Full |
+| `common/viewLayout/linesLayout.test.ts` | 12 | `viewer/view_layout` | done (reference, 12) ✓ | Full ✓ |
 | `common/viewLayout/lineHeights.test.ts` | 38 | `viewer/view_layout` | none | Conditional (variable line heights) |
 | `common/viewModel/prefixSumComputer.test.ts` | 48 | `viewer/view_layout` | done (reference, 48) ✓ | Full ✓ |
 
@@ -99,9 +99,9 @@ package status. Counts are from the pinned `vscode/` submodule.
 
 | vscode source | vscode tests | Local owner | Local status | Scope |
 |---|---:|---|---|---|
-| `common/viewModel/inlineDecorations.test.ts` | 23 | `viewer/view_model` | partial | Readonly-subset |
+| `common/viewModel/inlineDecorations.test.ts` | 23 | `viewer/inline_decorations` | done (reference, 23) ✓ | Full ✓ |
 | `browser/viewModel/viewModelImpl.test.ts` | 29 | `viewer/view_model` | partial (12) | Readonly-subset |
-| `browser/viewModel/viewModelDecorations.test.ts` | 3 | `viewer/view_model` | partial | Full |
+| `browser/viewModel/viewModelDecorations.test.ts` | 3 | `viewer/view_model` | deferred (integration) | Deferred (word-wrap + editing addDecoration harness) |
 | `browser/viewModel/modelLineProjection.test.ts` | 6 | `viewer/view_model` | none | Conditional (word-wrap) |
 | `browser/view/viewController.test.ts` | 17 | `viewer/controller` | none | Readonly-subset |
 
@@ -254,6 +254,64 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   — fixed by adding `render_source_line_html` (Monaco's `_tokenizeToString`
   role: class spans with breakable spaces) and pointing the hover at it. Green
   on `--target all` (328 js / 338 native) and `just test-browser` (45 passed).
+- **Phase 2, step 2 done — `linesLayout` (12, faithful migration) +
+  `inlineDecorations` (23).**
+  - **`linesLayout` (12).** Production's `LinesLayout` was a home-grown
+    *different design* (zero-based, view-zone/anchor based, no whitespace ids,
+    no padding, no line insert/delete). Per user direction it was **replaced
+    with a faithful 1:1 port** of Monaco's `linesLayout.ts` (`EditorWhitespace`,
+    1-based line numbers, id/ordinal whitespaces, `changeWhitespace` accessor +
+    pending-changes commit, `onLinesDeleted`/`onLinesInserted`, prefix-sum cache,
+    `getLinesViewportData`/`getWhitespaceViewportData`/`getWhitespaceAt
+    VerticalOffset`, binary searches, `singleLetterHash` ids). `ViewLayout` was
+    rewritten as a thin **zero-based view-zone adapter** over it (maps
+    `ViewZone{anchor_line,height_px}` → whitespace `afterLineNumber=anchor_line`;
+    zero-based `L` ↔ 1-based `L+1`), preserving its full public surface so the
+    render path (`render.mbt`, `view.mbt`, `content_widgets.mbt`,
+    `view_lines_viewport_data.mbt`, `rendering_context.mbt`, `input.mbt`,
+    `view_zones.mbt`) is untouched. The existing 9 `view_layout_test.mbt` cases
+    (re-pointed at `ViewLayout`) are the regression net that confirms behavior
+    was preserved. `lines_layout_reference_test.mbt` ports all 12
+    `linesLayout.test.ts` cases against the production `LinesLayout`. **Deviation:**
+    variable line heights (`LineHeightsManager` / the out-of-scope Conditional
+    `lineHeights.test.ts` row) are dropped — uniform `default_line_height`; every
+    upstream case uses empty `customLineHeightData` (`[]`), so it matches exactly.
+    **Scope limit (tracked follow-up below):** the migration swapped the engine
+    but kept the viewer's vocabulary at the `ViewLayout` boundary, so production
+    consumes only ~5 of the faithful methods (`get_vertical_offset_for_line_number`,
+    `get_line_number_at_or_after_vertical_offset`, `get_lines_total_height`,
+    `get_vertical_offset_for_whitespace_index`, `change_whitespace`); Monaco's
+    richer surface (`getLinesViewportData`'s centered/completelyVisible lines,
+    `getWhitespace{ViewportData,AtVerticalOffset}`, padding,
+    `onLinesDeleted`/`onLinesInserted`) is conformance-tested but **not consumed**
+    by the render path — the zero-based `ViewLayout` adapter still owns that
+    behavior.
+  - **`inlineDecorations` (23).** Faithful 1:1 port of `inlineDecorations.ts`
+    (`InlineDecoration`/`InlineDecorationType`, `InlineModelDecorationsComputer`
+    with the `ViewModelDecoration` id-cache + before/after/affectsFont handling,
+    `InjectedTextInlineDecorationsComputer`) plus the minimal collaborators its
+    suite needs (`ViewModelDecoration` + `isModelDecorationVisible`,
+    `IdentityCoordinatesConverter`, a `createTextModel`-style `TextModel`). Landed
+    in a **dedicated `viewer/inline_decorations` package** (not `viewer/view_model`)
+    because Monaco declares `InlineDecorationType` in this file and its
+    `ViewModelDecoration`/`InlineDecoration` names collide with the existing
+    simplified view-model pipeline; the dedicated package keeps the faithful names
+    and depends only on `base/common`. `inline_decorations_reference_test.mbt`
+    ports all 23 cases. **Deviations (unused by the suite):**
+    `is_model_decoration_visible` always `true` (no comment/string-token
+    tokenization seam); `TextModel` line lengths use `String::length()` over a
+    `\n`-split model. Green on `--target all` (363 js / 373 native);
+    `just test-browser` not run in this environment (the `ViewLayout` public
+    surface is unchanged and the 9-case regression net is green).
+- **Phase 2, step 3 (`viewModelDecorations`, 3) — deferred, with reasons.** This
+  is a browser integration test: 2 of 3 cases use `wordWrap:'wordWrapColumn'`
+  (the Conditional word-wrap row) and all three use the editing
+  `model.changeDecorations`/`addDecoration` API plus a full `testViewModel`
+  harness and before/after content decorations the local viewport path does not
+  yet emit. Its core decoration→viewport logic is now covered by the
+  `InlineModelDecorationsComputer` port above; the remaining integration
+  assertions need the view-model viewport wiring + a `testViewModel`-style
+  harness, tracked as a follow-up (see Deferred).
 
 ## Phased Steps
 
@@ -278,12 +336,18 @@ local cases (under `view_model`), and these are DOM-free pure logic.
   → `base/common` / `viewer/common`.
 - `prefixSumComputer` (48) → `viewer/view_layout`.
 
-### Phase 2 — Render / view-line completeness
+### Phase 2 — Render / view-line completeness — done ✓
 
 - Finish the `viewLineRenderer` port to all 72 cases in
-  `viewer/view_line_renderer` (current reference file is a subset).
-- `linesLayout` (12) → `viewer/view_layout`.
-- `inlineDecorations` (23), `viewModelDecorations` (3) → `viewer/view_model`.
+  `viewer/view_line_renderer` (current reference file is a subset). **Done.**
+- `linesLayout` (12) → `viewer/view_layout`. **Done** (faithful migration:
+  production `LinesLayout` replaced by Monaco's port; `ViewLayout` is now a
+  zero-based view-zone adapter over it).
+- `inlineDecorations` (23) → `viewer/inline_decorations` (dedicated package, to
+  avoid `ViewModelDecoration`/`InlineDecoration` name collisions). **Done.**
+- `viewModelDecorations` (3) → deferred (browser integration; 2/3 cases need
+  word-wrap + the editing `addDecoration` harness — see Deferred). Its core
+  logic is covered by the `inlineDecorations` `InlineModelDecorationsComputer`.
 
 ### Phase 3 — Text model + decorations (readonly subset)
 
@@ -307,8 +371,25 @@ local cases (under `view_model`), and these are DOM-free pure logic.
 
 ### Deferred (tracked, not scheduled here)
 
+- **`ViewLayout` deeper migration (drop the zero-based adapter).** `LinesLayout`
+  is now Monaco's faithful port, but `ViewLayout` still presents a zero-based
+  view-zone facade and consumes only a subset of it (see Phase 2 step 2). The
+  follow-up is to make `ViewLayout` and the render path speak Monaco's
+  vocabulary directly — 1-based line numbers, consuming `getLinesViewportData`
+  (centered/completelyVisible lines, `relativeVerticalOffset`), padding, and the
+  `getWhitespace*` viewport APIs — and retire the adapter. This touches the
+  scroll/render path (`render.mbt`, `view.mbt`, `content_widgets.mbt`,
+  `view_lines_viewport_data.mbt`, `rendering_context.mbt`) and carries real
+  behavior risk, so it is deliberately separated from the test-conformance port;
+  the 9 `view_layout_test.mbt` cases are the behavior contract it must preserve.
 - `intervalTree` (25) — port alongside the interval-tree decoration storage
   follow-up.
+- `viewModelDecorations` (3) — browser integration capstone. Core
+  decoration→viewport logic is already covered by
+  `InlineModelDecorationsComputer` (`viewer/inline_decorations`); the remaining
+  work is wiring that computer into the view-model viewport rendering path (so
+  before/after/letter-spacing decorations emit) plus a `testViewModel`-style
+  harness with a decoration-mutation seam. 2 of 3 cases also need word-wrap.
 - `modelLineProjection` (6) / `viewModelImpl` wrapping cases — only when
   word-wrap lands.
 - `textModelSearch` (42) — only when a find/search feature lands.

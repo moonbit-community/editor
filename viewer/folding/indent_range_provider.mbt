@@ -51,28 +51,6 @@ pub fn FoldingLimitReporter::new(
 let max_folding_regions_for_indent_default : Int = 5000
 
 ///|
-fn compute_indent_level(line : String, tab_size : Int) -> Int {
-  let mut indent = 0
-  let mut i = 0
-  let len = line.length()
-  while i < len {
-    let ch_code = line[i].to_int()
-    if ch_code == 32 {
-      indent += 1
-    } else if ch_code == 9 {
-      indent = indent - indent % tab_size + tab_size
-    } else {
-      break
-    }
-    i += 1
-  }
-  if i == len {
-    return -1 // line only consists of whitespace
-  }
-  indent
-}
-
-///|
 /// Accumulates folding ranges (inserted in reverse line order) and produces a
 /// sorted `FoldingRegions`, honouring the configured limit.
 pub struct RangesCollector {
@@ -157,7 +135,7 @@ pub fn RangesCollector::to_indent_ranges(
     for i = self.length - 1; i >= 0; i = i - 1 {
       let start_index = self.start_indexes[i]
       let line_content = snapshot.line_text(start_index - 1)
-      let indent = compute_indent_level(line_content, tab_size)
+      let indent = @model.compute_indent_level(line_content, tab_size)
       // Mirrors `indent < maxIndent || (indent === maxIndent && entries++ < limit)`:
       // when indent === maxIndent, entries is post-incremented regardless.
       let mut take = false
@@ -208,7 +186,7 @@ pub fn compute_ranges(
   previous_regions.push({ indent: -1, end_above: sentinel, line: sentinel })
   for line = line_count; line > 0; line = line - 1 {
     let line_content = snapshot.line_text(line - 1)
-    let indent = compute_indent_level(line_content, tab_size)
+    let indent = @model.compute_indent_level(line_content, tab_size)
     let mut previous = previous_regions[previous_regions.length() - 1]
     if indent == -1 {
       if offside {

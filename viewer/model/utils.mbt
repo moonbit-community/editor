@@ -6,7 +6,7 @@
 /// Whitespace-run width of `line` (tabs expanded to `tab_size`), or `-1` if the
 /// line consists only of whitespace. Mirrors `model/utils.ts`
 /// `computeIndentLevel`.
-fn compute_indent_level(line : String, tab_size : Int) -> Int {
+pub fn compute_indent_level(line : String, tab_size : Int) -> Int {
   let mut indent = 0
   let mut i = 0
   let len = line.length()

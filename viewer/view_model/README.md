@@ -41,6 +41,19 @@ model-line source data, and viewport-scoped render frames.
 - `ViewportData` lives in `viewer/view_layout`, which can depend on this
   package without a cycle.
 
+## Conformance-only token ports (drift risk)
+
+`LineTokens` / `SliceLineTokens` / `IViewLineTokens` (`line_tokens.mbt`),
+`TokenMetadata` / `MetadataConsts` (`encoded_token_attributes.mbt`),
+`RangePriorityQueueImpl` (`text_model_tokens.mbt`), and `text_to_html_tokenizer`
+are **faithful 1:1 Monaco ports exercised only by their reference tests and each
+other**. Production rendering ships the parallel `@syntax.Token` pipeline
+(`TokenizedDocument` → `FrameSource` → `RenderFrame`) instead. The two are not
+reconciled, so this faithful token subsystem can silently drift from the path
+production actually renders — treat it as a Monaco oracle, not the live code.
+Full reconciliation is a deferred token-model port (out of scope of
+`docs/exec-plans/std-dedup-and-divergence-review.md`).
+
 ## Checks
 
 - Package tests live in `tokenized_document_test.mbt`,

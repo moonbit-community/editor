@@ -50,6 +50,14 @@ viewport-window derivation, and readonly view-zone displacement.
 - The zero-based view-zone semantics live in the `ViewLayout` adapter and are
   pinned by `view_layout_test.mbt` (the migration's regression net), which
   preserved the prior behavior byte-for-byte.
+- **Drift risk.** Production consumes only the ~5 `LinesLayout` methods the
+  `ViewLayout` adapter wraps; the rest of the faithful `LinesLayout` surface
+  (whitespace-by-id mutation, ordinal addressing, `changeWhitespace`/
+  `onLinesDeleted`/`onLinesInserted`) is exercised **only** by
+  `lines_layout_reference_test.mbt`. That faithful surface can silently drift
+  from what the adapter needs; reconciling it onto `ViewLayout` directly is the
+  deferred migration tracked in
+  `docs/exec-plans/std-dedup-and-divergence-review.md`.
 
 ## Checks
 

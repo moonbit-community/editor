@@ -161,6 +161,13 @@ fn clamp_position(
 }
 
 ///|
+/// Clamps a scroll offset into `[low, high]`, tolerating an inverted range.
+///
+/// Deliberately retained instead of std `Double::clamp(min~, max~)`: the high
+/// bound here is `scroll_width - width` (or `scroll_height - height`), which
+/// goes negative when the content is smaller than the viewport, so `high < low`
+/// is a normal case and must clamp to `low` (0). Std `Double::clamp` would
+/// `guard min <= max` and panic. See std-dedup-and-divergence-review.md Step 2.
 fn clamp_double(value : Double, low : Double, high : Double) -> Double {
   if high < low {
     low

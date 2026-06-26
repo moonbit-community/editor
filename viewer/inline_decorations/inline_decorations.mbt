@@ -172,8 +172,12 @@ pub fn TextModel::validate_position(
   self : TextModel,
   pos : @base_common.Position,
 ) -> @base_common.Position {
-  let line = clamp_int(pos.line_number, 1, self.get_line_count())
-  let column = clamp_int(pos.column, 1, self.get_line_max_column(line))
+  let line = @base_common.clamp_int(pos.line_number, 1, self.get_line_count())
+  let column = @base_common.clamp_int(
+    pos.column,
+    1,
+    self.get_line_max_column(line),
+  )
   @base_common.Position::Position(line, column)
 }
 
@@ -586,15 +590,4 @@ pub fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
     }
   }
   line_inline_decorations
-}
-
-///|
-fn clamp_int(value : Int, low : Int, high : Int) -> Int {
-  if value < low {
-    low
-  } else if value > high {
-    high
-  } else {
-    value
-  }
 }

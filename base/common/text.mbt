@@ -345,6 +345,12 @@ pub fn OffsetRange::add_range(
 
 ///|
 /// Clamps an integer to an inclusive range.
+///
+/// Deliberately retained instead of std `Int::clamp(min~, max~)`: many callers
+/// pass bounds like `(x, 0, line_count - 1)` where the high bound can fall
+/// below the low bound for an empty model, and this helper tolerates that
+/// (returning a bound) where std `Int::clamp` would `guard min <= max` and
+/// panic. See std-dedup-and-divergence-review.md Step 2.
 pub fn clamp_int(value : Int, low : Int, high : Int) -> Int {
   if value < low {
     low

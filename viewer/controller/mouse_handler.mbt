@@ -343,10 +343,9 @@ fn MouseHandler::selection_autoscroll_tick(self : MouseHandler) -> Unit {
     self.selection_autoscroll_active = false
     return
   }
-  let step = clamp_double(
-    delta,
-    -selection_autoscroll_max_step,
-    selection_autoscroll_max_step,
+  let step = delta.clamp(
+    min=-selection_autoscroll_max_step,
+    max=selection_autoscroll_max_step,
   )
   (self.helper.apply_scroll)(
     (self.helper.view_layout)().scroll_by(delta_left=0.0, delta_top=step),
@@ -375,17 +374,6 @@ pub fn MouseHandler::finish_selection(self : MouseHandler) -> Unit {
 /// its next tick once `selection_dragging` is false.
 pub fn MouseHandler::cancel_selection(self : MouseHandler) -> Unit {
   self.selection_dragging = false
-}
-
-///|
-fn clamp_double(value : Double, low : Double, high : Double) -> Double {
-  if value < low {
-    low
-  } else if value > high {
-    high
-  } else {
-    value
-  }
 }
 
 ///|

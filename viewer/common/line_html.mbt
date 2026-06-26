@@ -17,6 +17,32 @@ pub fn render_line_html(
 }
 
 ///|
+/// Source-code HTML for one rendered line, the Monaco `_tokenizeToString` role
+/// (`textToHtmlTokenizer.ts`): class-based token spans with HTML-escaped text
+/// and ordinary, *breakable* spaces — no `U+00A0` substitution or tab
+/// expansion. Used for hover/markdown code blocks, which wrap (`white-space:
+/// pre-wrap`); distinct from `render_line_html`, the editor view-line renderer,
+/// whose non-breaking spaces and tab expansion reproduce Monaco's view geometry
+/// but never break.
+pub fn render_source_line_html(line : @view_model.RenderLine) -> String {
+  let html = StringBuilder()
+  html.write_string("<span class=\"view-line-content\">")
+  if line.spans.length() == 0 {
+    write_escaped(html, line.text)
+  } else {
+    for span in line.spans {
+      html.write_string("<span class=\"")
+      write_escaped(html, span.class_name)
+      html.write_string("\">")
+      write_escaped(html, line.span_text(span))
+      html.write_string("</span>")
+    }
+  }
+  html.write_string("</span>")
+  html.to_string()
+}
+
+///|
 /// The class of the line node itself: `view-line` plus any `CurrentLine`
 /// decorations covering the view line (inclusive view-line bounds).
 pub fn render_line_class(

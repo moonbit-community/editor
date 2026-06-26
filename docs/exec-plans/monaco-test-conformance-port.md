@@ -249,8 +249,11 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   `querySelector`/CSS), recorded in the package README. Production rendering now
   matches Monaco (spaces→`U+00A0`, tab→nbsp expansion, literal `"` in text,
   empty-line inner `<span></span>`); the three `viewer/common` line-HTML tests
-  were updated to suit. Browser (Playwright) suite not run in this environment.
-  Green on `--target all` (328 js / 338 native).
+  were updated to suit. The Playwright suite caught one regression — hover code
+  blocks reused the editor renderer and its non-breaking spaces stopped wrapping
+  — fixed by adding `render_source_line_html` (Monaco's `_tokenizeToString`
+  role: class spans with breakable spaces) and pointing the hover at it. Green
+  on `--target all` (328 js / 338 native) and `just test-browser` (45 passed).
 
 ## Phased Steps
 

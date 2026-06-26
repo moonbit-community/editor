@@ -129,7 +129,7 @@ fn render_hover_code_block(
     if index > 0 {
       html.write_string("<br/>")
     }
-    html.write_string(@viewer_common.render_line_html(frame.lines[index], []))
+    html.write_string(@viewer_common.render_source_line_html(frame.lines[index]))
   }
   html.write_string("</div>")
   html.to_string()

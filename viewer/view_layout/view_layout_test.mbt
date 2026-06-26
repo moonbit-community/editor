@@ -99,8 +99,11 @@ test "shrinking dimensions re-clamps the position as one change fact" {
 }
 
 ///|
+/// The zero-based view-zone semantics now live in the `ViewLayout` adapter
+/// (over the faithful 1-based `LinesLayout`); this is the regression net that
+/// confirms the migration preserved that behavior.
 test "lines layout answers offsets and lines for uniform heights" {
-  let lines = @view_layout.LinesLayout::new(line_height=18, line_count=100)
+  let lines = @view_layout.ViewLayout::new(line_height=18, line_count=100)
   assert_eq(lines.vertical_offset_for_line(0), 0.0)
   assert_eq(lines.vertical_offset_for_line(10), 180.0)
   // One past the end probes the bottom edge; beyond clamps.
@@ -111,19 +114,20 @@ test "lines layout answers offsets and lines for uniform heights" {
   assert_eq(lines.line_at_vertical_offset(18.0), 1)
   assert_eq(lines.line_at_vertical_offset(99999.0), 99)
   assert_eq(lines.content_height(), 1800.0)
-  let empty = @view_layout.LinesLayout::new(line_height=18)
+  let empty = @view_layout.ViewLayout::new(line_height=18)
   assert_eq(empty.line_at_vertical_offset(50.0), 0)
   assert_eq(empty.content_height(), 0.0)
 }
 
 ///|
 test "lines layout accounts for view zone displacement" {
-  let lines = @view_layout.LinesLayout::new(line_height=18, line_count=5)
+  let lines = @view_layout.ViewLayout::new(line_height=18, line_count=5)
   lines.set_view_zones([
     { anchor_line: 1, height_px: 36 },
     { anchor_line: 3, height_px: 18 },
     { anchor_line: 2, height_px: 0 },
   ])
+  |> ignore
   assert_eq(lines.vertical_offset_for_line(0), 0.0)
   assert_eq(lines.vertical_offset_for_line(1), 54.0)
   assert_eq(lines.vertical_offset_for_line(3), 108.0)
@@ -133,18 +137,19 @@ test "lines layout accounts for view zone displacement" {
   assert_eq(lines.line_at_vertical_offset(53.0), 1)
   assert_eq(lines.line_at_vertical_offset(54.0), 1)
   assert_eq(lines.line_at_vertical_offset(90.0), 3)
-  lines.set_view_zones([])
+  lines.set_view_zones([]) |> ignore
   assert_eq(lines.vertical_offset_for_line(5), 90.0)
   assert_eq(lines.content_height(), 90.0)
 }
 
 ///|
 test "lines layout supports top and bottom view zones" {
-  let lines = @view_layout.LinesLayout::new(line_height=18, line_count=3)
+  let lines = @view_layout.ViewLayout::new(line_height=18, line_count=3)
   lines.set_view_zones([
     { anchor_line: 0, height_px: 10 },
     { anchor_line: 3, height_px: 20 },
   ])
+  |> ignore
   assert_eq(lines.vertical_offset_for_line(0), 10.0)
   assert_eq(lines.vertical_offset_for_line(3), 84.0)
   assert_eq(lines.content_height(), 84.0)
@@ -167,7 +172,7 @@ test "lines layout supports top and bottom view zones" {
       #|]
     ),
   )
-  lines.set_line_count(2)
+  lines.set_line_count(2) |> ignore
   debug_inspect(
     lines.view_zones(),
     content=(

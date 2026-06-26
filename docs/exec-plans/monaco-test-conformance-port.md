@@ -70,7 +70,7 @@ package status. Counts are from the pinned `vscode/` submodule.
 | `common/core/lineRange.test.ts` | 4 | `base/common` | done (reference, 4) ✓ | Full ✓ |
 | `common/core/cursorColumns.test.ts` | 5 | `viewer/common` | done (reference, 5) ✓ | Full ✓ |
 | `common/core/characterClassifier.test.ts` | 1 | `base/common` | done (reference, 1) ✓ | Full ✓ |
-| `common/core/lineTokens.test.ts` | 7 | `viewer/view_model` (tokens) | partial | Full |
+| `common/core/lineTokens.test.ts` | 7 | `viewer/view_model` (tokens) | done (reference, 7) ✓ | Full ✓ |
 
 ### Text model
 
@@ -80,7 +80,7 @@ package status. Counts are from the pinned `vscode/` submodule.
 | `common/model/model.line.test.ts` | 53 | `viewer/model` | partial | Readonly-subset |
 | `common/model/model.test.ts` | 32 | `viewer/model` | partial | Readonly-subset |
 | `common/model/textModelWithTokens.test.ts` | 30 | `viewer/view_model` | partial | Readonly-subset |
-| `common/model/textModelTokens.test.ts` | 2 | `viewer/view_model` | none | Full |
+| `common/model/textModelTokens.test.ts` | 2 | `viewer/view_model` | done (reference, 2) ✓ | Full ✓ |
 | `common/model/modelDecorations.test.ts` | 100 | `viewer/decorations` | partial (1) | Readonly-subset |
 | `common/model/intervalTree.test.ts` | 25 | `viewer/decorations` | none | Deferred (interval-tree storage follow-up) |
 | `common/model/textModelSearch.test.ts` | 42 | — | none | Conditional (find/search feature) |
@@ -312,6 +312,33 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   `InlineModelDecorationsComputer` port above; the remaining integration
   assertions need the view-model viewport wiring + a `testViewModel`-style
   harness, tracked as a follow-up (see Deferred).
+- **Phase 3, step 1 done — `lineTokens` (7) + `textModelTokens` (2).** Started
+  the readonly-subset text-model phase with the two **Full**-scope, pure-logic
+  token files (no readonly triage needed), in `viewer/view_model`.
+  - **`lineTokens` (7).** Faithful 1:1 port of `lineTokens.ts` (`LineTokens` +
+    `SliceLineTokens` behind a shared `IViewLineTokens` trait, the static
+    `findIndexInTokensArray`/`createEmpty`/`createFromTextAndMetadata`/
+    `convertToEndOffset`, `withInserted`, `inflate`/`sliceAndInflate`) backed by
+    a faithful `encodedTokenAttributes.ts` port (`MetadataConsts` bit layout, the
+    `FontStyle`/`ColorId`/`StandardTokenType` enums, `TokenMetadata` decoders).
+    The flat binary token store is an `Array[UInt]` mirroring Monaco's
+    `Uint32Array` (even = end offset, odd = metadata word; the background field
+    needs the top byte, hence `UInt`). The local viewer's render path still uses
+    its own `@syntax.Token`-based tokens, so this port is conformance-only for
+    now. The suite is white-box (`*_reference_wbtest.mbt`) because the test calls
+    trait-impl methods on the concrete type and the `substr` helper directly.
+    **Deviations** (none exercised by the suite): the `IViewLineTokens` trait
+    omits `equals`/`languageIdCodec`; `getTokensInRange`/`toString` (the unported
+    `TokenArray` family) are omitted; the constructor skips Monaco's soft
+    length-mismatch warning; `LanguageIdCodec` is a minimal placeholder (null
+    language at id 0) to be unified with the Phase 4 `languagesRegistry` port;
+    `with_inserted` guards an unreachable past-end metadata read.
+  - **`textModelTokens` (2).** Faithful 1:1 port of `RangePriorityQueueImpl`
+    (`min`/`removeMin`/`delete`/`addRange`/`addRangeAndResize`/`getRanges`) plus
+    the `OffsetRange.addRange` static it builds on, added to `base/common`. The
+    readonly viewer does not run Monaco's background tokenizer, so this is a
+    conformance-only port of the queue. Green on `--target all` (372 js / 382
+    native); `pkg.generated.mbti` regenerated.
 
 ## Phased Steps
 
@@ -351,8 +378,10 @@ local cases (under `view_model`), and these are DOM-free pure logic.
 
 ### Phase 3 — Text model + decorations (readonly subset)
 
-- `textModelTokens` (2), `lineTokens` (7), `textModelWithTokens` readonly cases
-  → `viewer/view_model`.
+- `textModelTokens` (2), `lineTokens` (7) → `viewer/view_model`. **Done** (the
+  two Full-scope, pure-logic token files; faithful `LineTokens`/
+  `SliceLineTokens` + `RangePriorityQueueImpl` ports — see progress log).
+- `textModelWithTokens` readonly cases → `viewer/view_model`.
 - `textModel` / `model.line` / `model.test` readonly cases → `viewer/model`;
   drop every mutate/undo case and list the dropped names in the file header.
 - `modelDecorations` readonly subset → `viewer/decorations`.

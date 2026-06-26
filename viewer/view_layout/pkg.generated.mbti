@@ -31,6 +31,16 @@ pub fn ConstantTimePrefixSumComputer::new(Array[Int]) -> Self
 pub fn ConstantTimePrefixSumComputer::remove_values(Self, Int, Int) -> Unit
 pub fn ConstantTimePrefixSumComputer::set_value(Self, Int, Int) -> Unit
 
+pub struct EditorWhitespace {
+  id : String
+  mut after_line_number : Int
+  ordinal : Int
+  mut height : Int
+  min_width : Int
+  mut prefix_sum : Int
+} derive(Eq, @debug.Debug)
+pub fn EditorWhitespace::new(String, Int, Int, Int, Int) -> Self
+
 pub(all) struct LineWindow {
   start : Int
   end : Int
@@ -39,19 +49,49 @@ pub(all) struct LineWindow {
 pub struct LinesLayout {
   // private fields
 }
-pub fn LinesLayout::content_height(Self) -> Double
-pub fn LinesLayout::line_at_vertical_offset(Self, Double) -> Int
-pub fn LinesLayout::line_count(Self) -> Int
-pub fn LinesLayout::line_height(Self) -> Int
-pub fn LinesLayout::new(line_height~ : Int, line_count? : Int) -> Self
-pub fn LinesLayout::set_line_count(Self, Int) -> Unit
-pub fn LinesLayout::set_line_height(Self, Int) -> Unit
-pub fn LinesLayout::set_view_zones(Self, Array[ViewZone]) -> Unit
-pub fn LinesLayout::vertical_offset_for_line(Self, Int) -> Double
-pub fn LinesLayout::view_zone_vertical_offset(Self, Int) -> Double
-pub fn LinesLayout::view_zone_viewport_data(Self, LineWindow) -> Array[ViewZoneViewportData]
-pub fn LinesLayout::view_zones(Self) -> Array[ViewZone]
-pub fn LinesLayout::visible_window(Self, Double, Double, Int) -> LineWindow
+pub fn LinesLayout::change_whitespace(Self, (WhitespaceChangeAccessor) -> Unit) -> Bool
+pub fn LinesLayout::find_insertion_index(Array[EditorWhitespace], Int, Int) -> Int
+pub fn LinesLayout::get_after_line_number_for_whitespace_index(Self, Int) -> Int
+pub fn LinesLayout::get_first_whitespace_index_after_line_number(Self, Int) -> Int
+pub fn LinesLayout::get_height_for_whitespace_index(Self, Int) -> Int
+pub fn LinesLayout::get_id_for_whitespace_index(Self, Int) -> String
+pub fn LinesLayout::get_line_height_for_line_number(Self, Int) -> Int
+pub fn LinesLayout::get_line_number_at_or_after_vertical_offset(Self, Int) -> Int
+pub fn LinesLayout::get_lines_total_height(Self) -> Int
+pub fn LinesLayout::get_lines_viewport_data(Self, Int, Int) -> PartialViewLinesViewportData
+pub fn LinesLayout::get_vertical_offset_after_line_number(Self, Int, include_view_zones? : Bool) -> Int
+pub fn LinesLayout::get_vertical_offset_for_line_number(Self, Int, include_view_zones? : Bool) -> Int
+pub fn LinesLayout::get_vertical_offset_for_whitespace_index(Self, Int) -> Int
+pub fn LinesLayout::get_whitespace_accumulated_height_before_line_number(Self, Int) -> Int
+pub fn LinesLayout::get_whitespace_at_vertical_offset(Self, Int) -> ViewWhitespaceViewportData?
+pub fn LinesLayout::get_whitespace_index_at_or_after_vertical_offset(Self, Int) -> Int
+pub fn LinesLayout::get_whitespace_min_width(Self) -> Int
+pub fn LinesLayout::get_whitespace_viewport_data(Self, Int, Int) -> Array[ViewWhitespaceViewportData]
+pub fn LinesLayout::get_whitespaces(Self) -> Array[EditorWhitespace]
+pub fn LinesLayout::get_whitespaces_accumulated_height(Self, Int) -> Int
+pub fn LinesLayout::get_whitespaces_count(Self) -> Int
+pub fn LinesLayout::get_whitespaces_total_height(Self) -> Int
+pub fn LinesLayout::has_whitespace(Self) -> Bool
+pub fn LinesLayout::is_after_lines(Self, Int) -> Bool
+pub fn LinesLayout::is_in_bottom_padding(Self, Int) -> Bool
+pub fn LinesLayout::is_in_top_padding(Self, Int) -> Bool
+pub fn LinesLayout::new(Int, Int, Int, Int) -> Self
+pub fn LinesLayout::on_flushed(Self, Int) -> Unit
+pub fn LinesLayout::on_lines_deleted(Self, Int, Int) -> Unit
+pub fn LinesLayout::on_lines_inserted(Self, Int, Int) -> Unit
+pub fn LinesLayout::set_default_line_height(Self, Int) -> Unit
+pub fn LinesLayout::set_padding(Self, Int, Int) -> Unit
+
+pub struct PartialViewLinesViewportData {
+  big_numbers_delta : Int
+  start_line_number : Int
+  end_line_number : Int
+  relative_vertical_offset : Array[Int]
+  centered_line_number : Int
+  completely_visible_start_line_number : Int
+  completely_visible_end_line_number : Int
+  line_height : Int
+} derive(Eq, @debug.Debug)
 
 pub struct PrefixSumComputer {
   mut values : Array[Int]
@@ -123,10 +163,11 @@ pub fn ScrollbarState::slider_size(Self) -> Double
 
 pub struct ViewLayout {
   scrollable : Scrollable
-  lines : LinesLayout
   // private fields
 }
+pub fn ViewLayout::content_height(Self) -> Double
 pub fn ViewLayout::dimensions(Self) -> ScrollDimensions
+pub fn ViewLayout::line_at_vertical_offset(Self, Double) -> Int
 pub fn ViewLayout::line_count(Self) -> Int
 pub fn ViewLayout::new(line_height~ : Int, line_count? : Int) -> Self
 pub fn ViewLayout::position(Self) -> ScrollPosition
@@ -137,12 +178,20 @@ pub fn ViewLayout::set_content_width(Self, Double) -> ScrollChange?
 pub fn ViewLayout::set_line_count(Self, Int) -> ScrollChange?
 pub fn ViewLayout::set_view_zones(Self, Array[ViewZone]) -> ScrollChange?
 pub fn ViewLayout::set_viewport_size(Self, width~ : Double, height~ : Double) -> ScrollChange?
+pub fn ViewLayout::vertical_offset_for_line(Self, Int) -> Double
 pub fn ViewLayout::view_zone_vertical_offset(Self, Int) -> Double
 pub fn ViewLayout::view_zone_viewport_data(Self, LineWindow) -> Array[ViewZoneViewportData]
 pub fn ViewLayout::view_zones(Self) -> Array[ViewZone]
 pub fn ViewLayout::visible_window(Self, overscan~ : Int) -> LineWindow
 pub fn ViewLayout::window_needs_update(Self, LineWindow, overscan~ : Int) -> Bool
 pub fn ViewLayout::window_origin(Self, LineWindow) -> Double
+
+pub struct ViewWhitespaceViewportData {
+  id : String
+  after_line_number : Int
+  vertical_offset : Int
+  height : Int
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ViewZone {
   anchor_line : Int
@@ -172,6 +221,13 @@ pub fn ViewportData::decorations_in_viewport(Self) -> Array[@view_line_renderer.
 pub fn ViewportData::from_render_frame(@view_model.RenderFrame, line_height~ : Int) -> Self
 pub fn ViewportData::from_view_model(@view_model.ViewModel, LineWindow, line_height~ : Int, decorations? : Array[@decorations.Decoration], layout? : ViewLayout) -> Self
 pub fn ViewportData::line_data(Self, Int) -> @view_line_renderer.ViewLineRenderingData?
+
+pub struct WhitespaceChangeAccessor {
+  // private fields
+}
+pub fn WhitespaceChangeAccessor::change_one_whitespace(Self, String, Int, Int) -> Unit
+pub fn WhitespaceChangeAccessor::insert_whitespace(Self, Int, Int, Int, Int) -> String
+pub fn WhitespaceChangeAccessor::remove_whitespace(Self, String) -> Unit
 
 // Type aliases
 

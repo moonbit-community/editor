@@ -30,7 +30,6 @@ pub(all) enum ClientPacket {
   Definition(DocumentPositionRequest)
   References(DocumentPositionRequest)
   DocumentSymbols(DocumentRevisionRequest)
-  SemanticTokens(DocumentRevisionRequest)
   FoldingRanges(DocumentRevisionRequest)
   InlayHints(DocumentRevisionRequest)
 } derive(@debug.Debug)
@@ -153,13 +152,6 @@ pub(all) struct ReferencesResultPayload {
   references : Array[ReferenceItem]
 } derive(@debug.Debug)
 
-pub(all) struct SemanticTokensResultPayload {
-  id : String
-  uri : @common.Uri
-  revision : String
-  semantic_tokens : Array[@language.SemanticToken]
-} derive(@debug.Debug)
-
 pub(all) enum ServerPacket {
   DirectoryResolved(DirectoryResolvedPayload)
   DocumentLoaded(DocumentPayload)
@@ -169,7 +161,6 @@ pub(all) enum ServerPacket {
   DefinitionResult(DefinitionResultPayload)
   ReferencesResult(ReferencesResultPayload)
   DocumentSymbolsResult(DocumentSymbolsResultPayload)
-  SemanticTokensResult(SemanticTokensResultPayload)
   FoldingRangesResult(FoldingRangesResultPayload)
   InlayHintsResult(InlayHintsResultPayload)
   RemoteError(ProtocolError)

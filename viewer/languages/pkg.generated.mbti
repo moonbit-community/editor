@@ -30,12 +30,10 @@ pub async fn Languages::inlay_hints_for_model(Self, @model.TextModel, @log.LogSe
 pub fn Languages::lookup_tokens_provider(Self, String) -> &@syntax.LineTokenizer?
 pub fn Languages::new() -> Self
 pub fn Languages::register_diagnostics_provider(Self, @language.LanguageSelector, &@language.DiagnosticsProvider) -> @common.Disposable
-pub fn Languages::register_document_semantic_tokens_provider(Self, @language.LanguageSelector, &@language.SemanticTokensProvider) -> @common.Disposable
 pub fn Languages::register_document_symbol_provider(Self, @language.LanguageSelector, &@language.DocumentSymbolProvider) -> @common.Disposable
 pub fn Languages::register_folding_range_provider(Self, @language.LanguageSelector, &@language.FoldingRangeProvider) -> @common.Disposable
 pub fn Languages::register_hover_provider(Self, @language.LanguageSelector, &@language.HoverProvider) -> @common.Disposable
 pub fn Languages::register_inlay_hints_provider(Self, @language.LanguageSelector, &@language.InlayHintsProvider) -> @common.Disposable
-pub async fn Languages::semantic_tokens_for_model(Self, @model.TextModel, @log.LogService) -> Array[@language.SemanticToken] noraise
 pub fn Languages::set_tokens_provider(Self, String, &@syntax.LineTokenizer) -> @common.Disposable
 
 type TokenProviderEntry

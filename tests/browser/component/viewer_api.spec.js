@@ -21,6 +21,43 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(Number(await wrappedHoverLine.getAttribute('data-line'))).toBeGreaterThan(
       report.metrics.modelLines,
     );
+    // wrappingIndent=Same (the default): the wrapped continuation of the
+    // two-space-indented line is itself indented, so its first visible glyph
+    // sits to the right of a flush-left line's first glyph (the DOM left offset
+    // proves the indent renders, not just that the content carries spaces).
+    const firstGlyphLeft = (locator) =>
+      locator.first().evaluate((node) => {
+        const text = node.textContent || '';
+        const idx = text.search(/\S/);
+        if (idx < 0) return null;
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+        let remaining = idx;
+        let target = null;
+        let offset = 0;
+        let current;
+        while ((current = walker.nextNode())) {
+          const len = current.textContent.length;
+          if (remaining < len) {
+            target = current;
+            offset = remaining;
+            break;
+          }
+          remaining -= len;
+        }
+        if (!target) return null;
+        const range = document.createRange();
+        range.setStart(target, offset);
+        range.setEnd(target, offset + 1);
+        const root = node.closest('.monaco-editor');
+        return Math.round(
+          range.getBoundingClientRect().left - root.getBoundingClientRect().left,
+        );
+      });
+    const flushLeftGlyph = await firstGlyphLeft(page.locator('.view-line[data-line="1"]'));
+    const wrappedGlyph = await firstGlyphLeft(wrappedHoverLine);
+    expect(wrappedGlyph).not.toBeNull();
+    expect(flushLeftGlyph).not.toBeNull();
+    expect(wrappedGlyph).toBeGreaterThan(flushLeftGlyph + 5);
     const inlayHint = page.locator('.view-line .inlay-hint', { hasText: ': T' });
     await expect(inlayHint).toHaveCount(1, { timeout: 10_000 });
     await expect(inlayHint).toHaveClass(/inlay-hint-type/);
@@ -39,9 +76,15 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
       { timeout: 3_000 },
     );
     const signatureStart = page.locator('.view-line').filter({ hasText: 'component_answe' });
-    const bodyEndLine = page.locator('.view-line').filter({ hasText: 'er_name =' });
+    // A view segment near the top of the wrapped body line is a stable drag
+    // endpoint (the deeper continuations scroll out of reach). The identifier
+    // text repeats on the later `.length()` line, so take the first occurrence.
+    const bodyEndLine = page
+      .locator('.view-line')
+      .filter({ hasText: 'really_long_c' })
+      .first();
     await expect(signatureStart).toHaveCount(1);
-    await expect(bodyEndLine).toHaveCount(1);
+    await expect(bodyEndLine).toBeVisible();
     const startBox = await signatureStart.boundingBox();
     const endBox = await bodyEndLine.boundingBox();
     expect(startBox).not.toBeNull();

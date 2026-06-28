@@ -80,7 +80,7 @@ pub fn injected_text_from_inlay_hints(Array[@language.InlayHint]) -> Array[Injec
 
 pub fn line_decorations_for_line(RenderLine, Array[ViewModelDecoration]) -> Array[@view_line_renderer.LineDecoration]
 
-pub fn line_tokens_from_syntax_tokens(String, Int, Array[@syntax.Token], LanguageIdCodec) -> LineTokens
+pub fn line_tokens_from_syntax_tokens(String, Int, Array[@syntax.Token], LanguageIdCodec, language_id? : Int) -> LineTokens
 
 pub fn render_line_input_from_render_line(RenderLine, view_decorations? : Array[ViewModelDecoration], space_width? : Double, vertical_scrollbar_size? : Double) -> @view_line_renderer.RenderLineInput
 
@@ -153,15 +153,20 @@ pub fn InsertedToken::new(Int, String, UInt) -> Self
 
 pub struct LanguageIdCodec {
   language_id_to_language : Array[String]
+  language_to_language_id : Map[String, Int]
+  mut next_language_id : Int
 }
 pub fn LanguageIdCodec::decode_language_id(Self, Int) -> String
+pub fn LanguageIdCodec::encode_language_id(Self, String) -> Int
 pub fn LanguageIdCodec::new() -> Self
+pub fn LanguageIdCodec::register(Self, String) -> Int
 
 pub(all) struct LineBreaksComputer {
   wrapping_column : Int
   tab_size : Int
+  wrapping_indent : WrappingIndent
 } derive(Eq, @debug.Debug)
-pub fn LineBreaksComputer::LineBreaksComputer(Int, tab_size? : Int) -> Self
+pub fn LineBreaksComputer::LineBreaksComputer(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
 pub fn LineBreaksComputer::compute_model_line_projection(Self, Int, String) -> ModelLineProjectionData
 pub fn LineBreaksComputer::compute_projected_line_projection(Self, Int, ProjectedTextLine) -> ModelLineProjectionData
 
@@ -216,6 +221,7 @@ pub(all) struct ModelLineProjectionSegment {
   end_column : Int
   start_visible_column : Int
   continues_with_wrapped_line : Bool
+  wrapped_text_indent_length : Int
 } derive(Eq, @debug.Debug)
 
 pub struct ProjectedCoordinatesConverter {
@@ -426,11 +432,19 @@ pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(Self, @
 pub(all) struct ViewModelOptions {
   soft_wrap_column : Int
   tab_size : Int
+  wrapping_indent : WrappingIndent
 } derive(Eq, @debug.Debug)
-pub fn ViewModelOptions::ViewModelOptions(soft_wrap_column? : Int, tab_size? : Int) -> Self
+pub fn ViewModelOptions::ViewModelOptions(soft_wrap_column? : Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
 pub fn ViewModelOptions::is_soft_wrap_enabled(Self) -> Bool
 pub fn ViewModelOptions::no_wrap() -> Self
-pub fn ViewModelOptions::soft_wrap(Int, tab_size? : Int) -> Self
+pub fn ViewModelOptions::soft_wrap(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
+
+pub(all) enum WrappingIndent {
+  None
+  Same
+  Indent
+  DeepIndent
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

@@ -107,8 +107,9 @@ pub(all) struct ViewerModelRenderedEvent {
 pub(all) struct ViewerOptions {
   soft_wrap : Bool
   tab_size : Int
+  wrapping_indent : @view_model.WrappingIndent
 } derive(Eq, @debug.Debug)
-pub fn ViewerOptions::ViewerOptions(soft_wrap? : Bool, tab_size? : Int) -> Self
+pub fn ViewerOptions::ViewerOptions(soft_wrap? : Bool, tab_size? : Int, wrapping_indent? : @view_model.WrappingIndent) -> Self
 pub fn ViewerOptions::default() -> Self
 pub fn ViewerOptions::soft_wrap_column_for_content_width(Self, Double, Double) -> Int
 pub fn ViewerOptions::view_model_options(Self, Int) -> @view_model.ViewModelOptions

@@ -63,9 +63,12 @@ test('extends the highlight past a line whose continuation is selected', async (
   await mountComponentViewer(page);
 
   const firstLine = page.locator('.view-line').filter({ hasText: 'component_answe' });
-  const lastLine = page.locator('.view-line').filter({ hasText: 'er_name =' });
+  // A reachable segment of the next model line (the old "er_name =" slice moved
+  // once wrappingIndent shifted the soft-wrap breaks). The identifier repeats on
+  // the later `.length()` line, so take the first occurrence.
+  const lastLine = page.locator('.view-line').filter({ hasText: 'really_long_c' }).first();
   await expect(firstLine).toHaveCount(1);
-  await expect(lastLine).toHaveCount(1);
+  await expect(lastLine).toBeVisible();
 
   const firstBox = await firstLine.boundingBox();
   const lastBox = await lastLine.boundingBox();

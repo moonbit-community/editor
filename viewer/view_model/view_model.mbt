@@ -585,7 +585,11 @@ fn ViewModel::from_lines(
   let (lines, coordinates_converter) = if options.is_soft_wrap_enabled() {
     let projected = ViewModelLinesFromProjectedModel::new(
       as_is,
-      LineBreaksComputer(options.soft_wrap_column, tab_size=options.tab_size),
+      LineBreaksComputer(
+        options.soft_wrap_column,
+        tab_size=options.tab_size,
+        wrapping_indent=options.wrapping_indent,
+      ),
     )
     (
       ProjectedModel(projected),

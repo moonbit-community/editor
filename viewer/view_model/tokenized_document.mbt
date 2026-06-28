@@ -24,7 +24,11 @@ pub fn TokenizedDocument::build(
   tokens : Array[@syntax.Token],
 ) -> TokenizedDocument {
   let buckets = bucket_by_line(snapshot, tokens, token => token.range)
-  let decoder = LanguageIdCodec::new()
+  // One codec shared by every line of the document (Monaco threads a single
+  // codec through a model). Register the model's language once and pack its
+  // numeric id into each line's tokens.
+  let codec = LanguageIdCodec::new()
+  let language_id = codec.register(snapshot.language_id)
   let line_tokens : Array[LineTokens] = []
   for line in 0..<snapshot.line_count() {
     line_tokens.push(
@@ -32,7 +36,8 @@ pub fn TokenizedDocument::build(
         snapshot.line_text(line),
         snapshot.line_start_offset(line),
         buckets[line],
-        decoder,
+        codec,
+        language_id~,
       ),
     )
   }

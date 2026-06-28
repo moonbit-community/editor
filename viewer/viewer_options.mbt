@@ -3,15 +3,19 @@
 pub(all) struct ViewerOptions {
   soft_wrap : Bool
   tab_size : Int
+  wrapping_indent : @view_model.WrappingIndent
 } derive(Eq, Debug)
 
 ///|
 /// Builds viewer options, normalizing `tab_size` to at least one column.
+/// `wrapping_indent` defaults to `Same`, Monaco's default, and applies only when
+/// `soft_wrap` is on.
 pub fn ViewerOptions::ViewerOptions(
   soft_wrap? : Bool = false,
   tab_size? : Int = 2,
+  wrapping_indent? : @view_model.WrappingIndent = Same,
 ) -> ViewerOptions {
-  { soft_wrap, tab_size: tab_size.max(1) }
+  { soft_wrap, tab_size: tab_size.max(1), wrapping_indent }
 }
 
 ///|
@@ -45,6 +49,7 @@ pub fn ViewerOptions::view_model_options(
     @view_model.ViewModelOptions::soft_wrap(
       soft_wrap_column,
       tab_size=self.tab_size,
+      wrapping_indent=self.wrapping_indent,
     )
   } else {
     @view_model.ViewModelOptions::no_wrap()

@@ -1,8 +1,27 @@
 ///|
+/// Continuation-line indentation mode, Monaco's `WrappingIndent`
+/// (`config/editorOptions.ts`). Controls how far a wrapped continuation line is
+/// indented under the first: `None` flush-left, `Same` under the model line's
+/// own indent, `Indent`/`DeepIndent` one/two extra tab stops past it.
+pub(all) enum WrappingIndent {
+  None
+  Same
+  Indent
+  DeepIndent
+} derive(Eq, Debug)
+
+///|
+/// Width, in columns, of a full-width character — Monaco's
+/// `columnsForFullWidthChar` (`Math.round(fullwidth / halfwidth)`), which for the
+/// viewer's monospace font is `2`, matching `code_unit_width` for `code > 0xff`.
+const COLUMNS_FOR_FULL_WIDTH_CHAR : Int = 2
+
+///|
 /// Monaco-inspired line-break calculator for monospace soft wrapping.
 pub(all) struct LineBreaksComputer {
   wrapping_column : Int
   tab_size : Int
+  wrapping_indent : WrappingIndent
 } derive(Eq, Debug)
 
 ///|
@@ -21,11 +40,17 @@ let word_wrap_break_before_characters = "([{‘“〈《「『【〔（［｛｢
 
 ///|
 /// Builds a line-break calculator with clamped wrapping and tab settings.
+/// `wrapping_indent` defaults to `Same`, Monaco's default.
 pub fn LineBreaksComputer::LineBreaksComputer(
   wrapping_column : Int,
   tab_size? : Int = 2,
+  wrapping_indent? : WrappingIndent = Same,
 ) -> LineBreaksComputer {
-  { wrapping_column: wrapping_column.max(0), tab_size: tab_size.max(1) }
+  {
+    wrapping_column: wrapping_column.max(0),
+    tab_size: tab_size.max(1),
+    wrapping_indent,
+  }
 }
 
 ///|
@@ -62,6 +87,7 @@ pub fn LineBreaksComputer::compute_projected_line_projection(
           line_text.length(),
           0,
           false,
+          0,
         ),
       ],
     )
@@ -78,10 +104,22 @@ pub fn LineBreaksComputer::compute_projected_line_projection(
           line_text.length(),
           0,
           false,
+          0,
         ),
       ],
     )
   }
+  // Continuation lines are indented by `wrapped_text_indent_length` columns,
+  // which shrinks their available break width to `wrapped_line_break_column`
+  // (Monaco's `firstLineBreakColumn - wrappedTextIndentLength`). The first
+  // segment still breaks at the full `wrapping_column`.
+  let wrapped_text_indent_length = compute_wrapped_text_indent_length(
+    line_text,
+    self.tab_size,
+    self.wrapping_column,
+    self.wrapping_indent,
+  )
+  let wrapped_line_break_column = self.wrapping_column - wrapped_text_indent_length
   let segments : Array[ModelLineProjectionSegment] = []
   let mut segment_start = 0
   let mut segment_start_visible_column = 0
@@ -106,7 +144,7 @@ pub fn LineBreaksComputer::compute_projected_line_projection(
     visible_column = visible_column + width
     if visible_column > breaking_column {
       if break_offset == 0 ||
-        visible_column - break_offset_visible_column > self.wrapping_column {
+        visible_column - break_offset_visible_column > wrapped_line_break_column {
         break_offset = offset
         break_offset_visible_column = visible_column - width
       }
@@ -117,11 +155,12 @@ pub fn LineBreaksComputer::compute_projected_line_projection(
           break_offset,
           segment_start_visible_column,
           segment_start > 0,
+          indent_for_segment(segment_start, wrapped_text_indent_length),
         ),
       )
       segment_start = break_offset
       segment_start_visible_column = break_offset_visible_column
-      breaking_column = break_offset_visible_column + self.wrapping_column
+      breaking_column = break_offset_visible_column + wrapped_line_break_column
       break_offset = 0
       break_offset_visible_column = 0
     }
@@ -134,6 +173,7 @@ pub fn LineBreaksComputer::compute_projected_line_projection(
       line_text.length(),
       segment_start_visible_column,
       segment_start > 0,
+      indent_for_segment(segment_start, wrapped_text_indent_length),
     ),
   )
   ModelLineProjectionData(
@@ -142,6 +182,68 @@ pub fn LineBreaksComputer::compute_projected_line_projection(
     projected_line,
     segments,
   )
+}
+
+///|
+/// The indent applied to one view-line segment: `0` for a model line's first
+/// segment, `wrapped_text_indent_length` for every continuation segment. Mirrors
+/// Monaco's `deltaStartIndex = (outputLineIndex > 0 ? wrappedTextIndentLength :
+/// 0)` and `ModelLineProjectionData.getMinOutputOffset`.
+fn indent_for_segment(
+  segment_start : Int,
+  wrapped_text_indent_length : Int,
+) -> Int {
+  if segment_start > 0 {
+    wrapped_text_indent_length
+  } else {
+    0
+  }
+}
+
+///|
+/// Visible-column indent for continuation lines, Monaco's
+/// `computeWrappedTextIndentLength` (`monospaceLineBreaksComputer.ts`). The
+/// model line's own leading whitespace width, plus one/two extra tab stops for
+/// `Indent`/`DeepIndent`; dropped to `0` when it would leave no room for content.
+fn compute_wrapped_text_indent_length(
+  line_text : String,
+  tab_size : Int,
+  first_line_break_column : Int,
+  wrapping_indent : WrappingIndent,
+) -> Int {
+  let mut wrapped_text_indent_length = 0
+  if wrapping_indent != None {
+    let first_non_whitespace_index = @base_common.first_non_whitespace_index(
+      line_text,
+    )
+    if first_non_whitespace_index != -1 {
+      for i in 0..<first_non_whitespace_index {
+        let char_width = if line_text[i].to_int() == 9 {
+          code_unit_width(9, wrapped_text_indent_length, tab_size)
+        } else {
+          1
+        }
+        wrapped_text_indent_length = wrapped_text_indent_length + char_width
+      }
+      let number_of_additional_tabs = match wrapping_indent {
+        DeepIndent => 2
+        Indent => 1
+        _ => 0
+      }
+      for _ in 0..<number_of_additional_tabs {
+        let char_width = code_unit_width(9, wrapped_text_indent_length, tab_size)
+        wrapped_text_indent_length = wrapped_text_indent_length + char_width
+      }
+
+      // If wrapping indent is greater than the entire wrapping column, leave it
+      // out so a continuation line still has room for at least one character.
+      if wrapped_text_indent_length + COLUMNS_FOR_FULL_WIDTH_CHAR >
+        first_line_break_column {
+        wrapped_text_indent_length = 0
+      }
+    }
+  }
+  wrapped_text_indent_length
 }
 
 ///|

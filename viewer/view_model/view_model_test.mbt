@@ -161,6 +161,40 @@ test "projected view lines cover one two and many wrapped segments" {
 }
 
 ///|
+test "wrapping indent prefixes continuation lines and round-trips positions" {
+  // Two leading spaces -> `Same` indent of 2 columns on every continuation.
+  let view_model = test_view_model(
+    "  abcdefghij",
+    @view_model.ViewModelOptions::soft_wrap(6, tab_size=2, wrapping_indent=Same),
+  )
+  assert_eq(view_model.line_count(), 3)
+  assert_eq(view_model.lines().get_view_line_content(1), "  abcd")
+  // Continuation lines carry the two-space indent (`spaces(...) + lineContent`).
+  assert_eq(view_model.lines().get_view_line_content(2), "  efgh")
+  assert_eq(view_model.lines().get_view_line_content(3), "  ij")
+  let second = view_model.lines().view_line_rendering_data(2)
+  assert_true(second.continues_with_wrapped_line)
+  assert_eq(second.content, "  efgh")
+
+  // The indent is synthetic: view column 1 of the continuation still maps back
+  // to the model column where the wrap began (offset 6 -> model column 7).
+  let converter = view_model.coordinates_converter()
+  let continuation_start = converter.view_position_to_model_position(
+    Position(2, 1),
+  )
+  assert_eq(continuation_start.line_number, 1)
+  assert_eq(continuation_start.column, 7)
+  // Past the indent, view column 3 maps to the first real character (offset 6).
+  let first_char = converter.view_position_to_model_position(Position(2, 3))
+  assert_eq(first_char.line_number, 1)
+  assert_eq(first_char.column, 7)
+  // Round-trip: model column 7 lands at the indented continuation column 3.
+  let back = converter.model_position_to_view_position(Position(1, 7))
+  assert_eq(back.line_number, 2)
+  assert_eq(back.column, 3)
+}
+
+///|
 test "projected coordinates convert model and view positions at wrap boundaries" {
   let view_model = test_view_model(
     "abcdefghij",

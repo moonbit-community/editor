@@ -29,7 +29,8 @@ pub fn ViewModelLinesFromProjectedModel::line_count(
 }
 
 ///|
-/// Text for one projected view line segment.
+/// Text for one projected view line segment, with the continuation indent
+/// prepended (Monaco's `getViewLineContent`: `spaces(...) + r`).
 pub fn ViewModelLinesFromProjectedModel::get_view_line_content(
   self : ViewModelLinesFromProjectedModel,
   line_number : Int,
@@ -38,7 +39,12 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_content(
   let line = self.projection.projected_line_for_model_line(
     segment.model_line_number,
   )
-  line.text[segment.start_offset:segment.end_offset].to_owned()
+  let content = line.text[segment.start_offset:segment.end_offset].to_owned()
+  if segment.wrapped_text_indent_length > 0 {
+    spaces(segment.wrapped_text_indent_length) + content
+  } else {
+    content
+  }
 }
 
 ///|
@@ -85,6 +91,7 @@ pub fn ViewModelLinesFromProjectedModel::render_line(
     @base_common.clamp_int(line_number, 1, self.line_count()),
     segment.start_offset,
     segment.end_offset,
+    segment.wrapped_text_indent_length,
   )
 }
 
@@ -142,8 +149,14 @@ fn render_projected_line(
   view_line_number : Int,
   start_offset : Int,
   end_offset : Int,
+  wrapped_text_indent_length : Int,
 ) -> RenderLine {
-  let text = projected_line.text[start_offset:end_offset].to_owned()
+  // Continuation lines render `wrapped_text_indent_length` leading spaces and
+  // shift their token offsets by the same amount, Monaco's `_getViewLineData`
+  // (`spaces(...) + lineContent` and `sliceAndInflate(..., deltaStartIndex)`).
+  let indent = wrapped_text_indent_length
+  let content = projected_line.text[start_offset:end_offset].to_owned()
+  let text = if indent > 0 { spaces(indent) + content } else { content }
   let line_start_offset = line.source_offset_at_column(0)
   let with_injections = base_tokens.with_inserted(
     injected_tokens_for_projected_line(projected_line),
@@ -154,16 +167,27 @@ fn render_projected_line(
     projected_line.projected_column_to_model_column(start_offset),
     text,
     model_columns: projected_model_columns(
-      projected_line, start_offset, end_offset,
+      projected_line, start_offset, end_offset, indent,
     ),
     injected_text_indices: projected_injected_text_indices(
-      projected_line, start_offset, end_offset,
+      projected_line, start_offset, end_offset, indent,
     ),
-    tokens: with_injections.slice_and_inflate(start_offset, end_offset, 0),
+    tokens: with_injections.slice_and_inflate(start_offset, end_offset, indent),
     injected_inline_decorations: projected_injected_inline_decorations(
-      projected_line, start_offset, end_offset,
+      projected_line, start_offset, end_offset, indent,
     ),
   }
+}
+
+///|
+/// A run of `n` spaces — the leading indent prepended to a wrapped continuation
+/// line. Monaco's `spaces(count)`.
+fn spaces(n : Int) -> String {
+  let sb = StringBuilder::new()
+  for _ in 0..<n {
+    sb.write_char(' ')
+  }
+  sb.to_string()
 }
 
 ///|
@@ -201,6 +225,7 @@ fn projected_injected_inline_decorations(
   projected_line : ProjectedTextLine,
   start_offset : Int,
   end_offset : Int,
+  indent : Int,
 ) -> Array[@view_line_renderer.InlineDecoration] {
   let decorations : Array[@view_line_renderer.InlineDecoration] = []
   for part in projected_line.parts {
@@ -209,9 +234,13 @@ fn projected_injected_inline_decorations(
         let start = part.start.max(start_offset)
         let end = part.end.min(end_offset)
         if start < end {
+          // View-local columns shift right by the continuation indent.
           decorations.push(
             InlineDecoration(
-              OffsetRange(start - start_offset, end - start_offset),
+              OffsetRange(
+                start - start_offset + indent,
+                end - start_offset + indent,
+              ),
               class_name,
             ),
           )
@@ -228,8 +257,17 @@ fn projected_model_columns(
   projected_line : ProjectedTextLine,
   start_offset : Int,
   end_offset : Int,
+  indent : Int,
 ) -> Array[Int] {
   let columns : Array[Int] = []
+  // The leading indent columns all map to the segment's first model column
+  // (Monaco's `translateToInputOffset` clamps `outputOffset - indent` at 0).
+  let first_model_column = projected_line.projected_column_to_model_column(
+    start_offset,
+  )
+  for _ in 0..<indent {
+    columns.push(first_model_column)
+  }
   for offset in start_offset..<=end_offset {
     columns.push(projected_line.projected_column_to_model_column(offset))
   }
@@ -241,8 +279,13 @@ fn projected_injected_text_indices(
   projected_line : ProjectedTextLine,
   start_offset : Int,
   end_offset : Int,
+  indent : Int,
 ) -> Array[Int] {
   let indices : Array[Int] = []
+  // The synthetic indent is plain whitespace, not injected text.
+  for _ in 0..<indent {
+    indices.push(-1)
+  }
   for offset in start_offset..<end_offset {
     indices.push(projected_line.injected_text_index_at_projected_column(offset))
   }

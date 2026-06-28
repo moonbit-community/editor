@@ -13,23 +13,79 @@
 ///     unported `TokenArray` family).
 ///   - The constructor skips Monaco's soft token-length/text-length mismatch
 ///     warning (`onUnexpectedError`); the readonly viewer has no such reporter.
-///   - `LanguageIdCodec` is a minimal placeholder (null language at id 0); it is
-///     unified with the full `languagesRegistry` port in Phase 4.
+///   - `LanguageIdCodec` is a real string↔numeric registry (Monaco's
+///     `LanguageIdCodec` from `languagesRegistry.ts`) seeded with the viewer's
+///     built-in languages, but is shared per document rather than the one global
+///     instance Monaco threads through every model.
 ///   - `with_inserted` guards the middle-insert metadata read against a
 ///     past-end token index (Monaco reads `undefined`); the read is unreachable
 ///     for valid in-bounds insert offsets.
 
 ///|
-/// Minimal `ILanguageIdCodec`. Monaco maps numeric language ids to string ids;
-/// only the null language (id 0) is registered here. Superseded by the
-/// Phase 4 `languagesRegistry` port.
+/// The built-in languages the codec is seeded with, so their numeric ids are
+/// stable across documents. Mirrors Monaco reserving `null`/`plaintext` at ids
+/// `0`/`1` (`LanguageId.Null` / `LanguageId.PlainText`), followed by the
+/// languages the shell registers via `Languages::set_tokens_provider`
+/// (`internal/shell/workbench/app.mbt`). Any other language (e.g. a test
+/// language) is allocated an id on demand by `register`.
+let builtin_language_ids : Array[String] = [
+  "null", "plaintext", "moonbit", "javascript", "typescript", "json",
+]
+
+///|
+/// Faithful `ILanguageIdCodec` (`languagesRegistry.ts`). Maps string language
+/// ids to a stable numeric id (and back), the value the metadata word's low 8
+/// bits carry. Seeded with the built-in languages; `register` extends it.
 pub struct LanguageIdCodec {
   language_id_to_language : Array[String]
+  language_to_language_id : Map[String, Int]
+  mut next_language_id : Int
 }
 
 ///|
 pub fn LanguageIdCodec::new() -> LanguageIdCodec {
-  { language_id_to_language: ["null"] }
+  let codec = {
+    language_id_to_language: [],
+    language_to_language_id: {},
+    next_language_id: 0,
+  }
+  for language in builtin_language_ids {
+    codec.register(language) |> ignore
+  }
+  codec
+}
+
+///|
+/// Registers `language`, returning its numeric id (the existing id if already
+/// registered). Mirrors Monaco's `register` + `encodeLanguageId` allocation:
+/// ids are handed out sequentially, so the first registered language is `0`.
+pub fn LanguageIdCodec::register(
+  self : LanguageIdCodec,
+  language : String,
+) -> Int {
+  match self.language_to_language_id.get(language) {
+    Some(id) => id
+    None => {
+      let id = self.next_language_id
+      self.next_language_id = id + 1
+      self.language_id_to_language.push(language)
+      self.language_to_language_id[language] = id
+      id
+    }
+  }
+}
+
+///|
+/// Numeric id for `language`, or `0` (the null language) when unregistered.
+/// Mirrors Monaco's `encodeLanguageId` (lookup only — `register` allocates).
+pub fn LanguageIdCodec::encode_language_id(
+  self : LanguageIdCodec,
+  language : String,
+) -> Int {
+  match self.language_to_language_id.get(language) {
+    Some(id) => id
+    None => 0
+  }
 }
 
 ///|

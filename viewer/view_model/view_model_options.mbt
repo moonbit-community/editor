@@ -3,15 +3,22 @@
 pub(all) struct ViewModelOptions {
   soft_wrap_column : Int
   tab_size : Int
+  wrapping_indent : WrappingIndent
 } derive(Eq, Debug)
 
 ///|
 /// Builds options while clamping wrapping column and tab size.
+/// `wrapping_indent` defaults to `Same`, Monaco's default.
 pub fn ViewModelOptions::ViewModelOptions(
   soft_wrap_column? : Int = 0,
   tab_size? : Int = 2,
+  wrapping_indent? : WrappingIndent = Same,
 ) -> ViewModelOptions {
-  { soft_wrap_column: soft_wrap_column.max(0), tab_size: tab_size.max(1) }
+  {
+    soft_wrap_column: soft_wrap_column.max(0),
+    tab_size: tab_size.max(1),
+    wrapping_indent,
+  }
 }
 
 ///|
@@ -25,8 +32,9 @@ pub fn ViewModelOptions::no_wrap() -> ViewModelOptions {
 pub fn ViewModelOptions::soft_wrap(
   column : Int,
   tab_size? : Int = 2,
+  wrapping_indent? : WrappingIndent = Same,
 ) -> ViewModelOptions {
-  ViewModelOptions(soft_wrap_column=column, tab_size~)
+  ViewModelOptions(soft_wrap_column=column, tab_size~, wrapping_indent~)
 }
 
 ///|

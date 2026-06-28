@@ -16,10 +16,11 @@ fn frame_for(
 }
 
 ///|
-fn join_span_text(line : @view_model.RenderLine) -> String {
+fn join_token_text(line : @view_model.RenderLine) -> String {
   let mut out = ""
-  for span in line.spans {
-    out = out + line.span_text(span)
+  let tokens = line.tokens
+  for i in 0..<tokens.get_count() {
+    out = out + tokens.get_token_text(i)
   }
   out
 }
@@ -45,8 +46,8 @@ test "render frame contains highlighted spans and provider surfaces" {
     providers~,
   )
   assert_eq(frame.lines.length(), 2)
-  assert_true(frame.lines[0].spans.length() > 0)
-  assert_eq(join_span_text(frame.lines[0]), frame.lines[0].text)
+  assert_true(frame.lines[0].tokens.get_count() > 0)
+  assert_eq(join_token_text(frame.lines[0]), frame.lines[0].text)
   assert_eq(frame.diagnostics.length(), 1)
   assert_true(frame.to_json().stringify().contains("\"lineCount\""))
 }
@@ -76,11 +77,10 @@ test "window builds match the matching slice of a whole-document build" {
     assert_eq(windowed.line_number, full.line_number)
     assert_eq(windowed.offset, full.offset)
     assert_eq(windowed.text, full.text)
-    assert_eq(windowed.spans.length(), full.spans.length())
-    for i in 0..<windowed.spans.length() {
-      assert_eq(windowed.spans[i].start, full.spans[i].start)
-      assert_eq(windowed.spans[i].end, full.spans[i].end)
-      assert_eq(windowed.spans[i].class_name, full.spans[i].class_name)
+    assert_eq(windowed.tokens.get_count(), full.tokens.get_count())
+    for i in 0..<windowed.tokens.get_count() {
+      assert_eq(windowed.tokens.get_end_offset(i), full.tokens.get_end_offset(i))
+      assert_eq(windowed.tokens.get_class_name(i), full.tokens.get_class_name(i))
     }
   }
 }

@@ -97,13 +97,9 @@ fn HoverController::on_event(
       match ctx.frame {
         Some(frame) =>
           match
-            span_anchor_for_target(frame, target, ctx.view_to_model_offset) {
-            Some((start, end, span)) =>
-              self.schedule(
-                start,
-                end,
-                injected_text_index=span.injected_text_index,
-              )
+            token_anchor_for_target(frame, target, ctx.view_to_model_offset) {
+            Some((start, end, injected_text_index)) =>
+              self.schedule(start, end, injected_text_index~)
             None => (HoverNoEffect, self.cleared())
           }
         None => (HoverNoEffect, self)

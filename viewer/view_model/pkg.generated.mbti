@@ -12,11 +12,33 @@ import {
 }
 
 // Values
+pub const COLOR_ID_COMMENT : Int = 7
+
 pub const COLOR_ID_DEFAULT_BACKGROUND : Int = 2
 
 pub const COLOR_ID_DEFAULT_FOREGROUND : Int = 1
 
+pub const COLOR_ID_FUNCTION : Int = 10
+
+pub const COLOR_ID_INVALID : Int = 13
+
+pub const COLOR_ID_KEYWORD : Int = 3
+
 pub const COLOR_ID_NONE : Int = 0
+
+pub const COLOR_ID_NUMBER : Int = 6
+
+pub const COLOR_ID_PUNCTUATION : Int = 8
+
+pub const COLOR_ID_REGEXP : Int = 12
+
+pub const COLOR_ID_STRING : Int = 5
+
+pub const COLOR_ID_STRING_ESCAPE : Int = 11
+
+pub const COLOR_ID_TYPE : Int = 9
+
+pub const COLOR_ID_VARIABLE : Int = 4
 
 pub const FONT_STYLE_BOLD : Int = 2
 
@@ -52,13 +74,23 @@ pub const STANDARD_TOKEN_TYPE_STRING : Int = 2
 
 pub fn build_frame(FrameSource, FrameViewport) -> RenderFrame
 
+pub fn default_token_color_map() -> Array[String]
+
 pub fn injected_text_from_inlay_hints(Array[@language.InlayHint]) -> Array[InjectedText]
 
 pub fn line_decorations_for_line(RenderLine, Array[ViewModelDecoration]) -> Array[@view_line_renderer.LineDecoration]
 
+pub fn line_tokens_from_syntax_tokens(String, Int, Array[@syntax.Token], LanguageIdCodec) -> LineTokens
+
 pub fn render_line_input_from_render_line(RenderLine, view_decorations? : Array[ViewModelDecoration], space_width? : Double, vertical_scrollbar_size? : Double) -> @view_line_renderer.RenderLineInput
 
-pub fn semantic_token_class(String) -> String
+pub fn tag_foreground_color_id(@syntax.HighlightTag) -> Int
+
+pub fn tag_standard_token_type(@syntax.HighlightTag) -> Int
+
+pub fn tag_to_metadata(@syntax.HighlightTag, font_style? : Int, language_id? : Int) -> UInt
+
+pub fn token_theme_style_block(Array[String]) -> String
 
 pub fn tokenize_line_to_html(String, &IViewLineTokens, Array[String], Int, Int, Int, Bool) -> String
 
@@ -83,7 +115,6 @@ pub struct FrameSource {
   tokenized : TokenizedDocument
   providers : @language.ProviderResult
   decorations : Array[@decorations.Decoration]
-  line_semantic_tokens : Array[Array[@language.SemanticToken]]
 }
 pub fn FrameSource::FrameSource(TokenizedDocument, @decorations.DecorationSet, @language.ProviderResult) -> Self
 
@@ -237,7 +268,7 @@ pub(all) struct RenderFrame {
   lines : Array[RenderLine]
   diagnostics : Array[@language.Diagnostic]
   hovers : Array[@language.Hover]
-} derive(@debug.Debug)
+}
 pub impl ToJson for RenderFrame
 
 pub(all) struct RenderLine {
@@ -246,23 +277,14 @@ pub(all) struct RenderLine {
   text : String
   model_columns : Array[Int]
   injected_text_indices : Array[Int]
-  spans : Array[RenderSpan]
-} derive(@debug.Debug)
+  tokens : &IViewLineTokens
+  injected_inline_decorations : Array[@view_line_renderer.InlineDecoration]
+}
 pub fn RenderLine::injected_text_index_at_column(Self, Int) -> Int
 pub fn RenderLine::model_column_at_column(Self, Int) -> Int
 pub fn RenderLine::model_line_start_offset(Self) -> Int
 pub fn RenderLine::source_offset_at_column(Self, Int) -> Int
-pub fn RenderLine::span_text(Self, RenderSpan) -> String
 pub fn RenderLine::view_column_at_source_offset(Self, Int) -> Int
-
-pub(all) struct RenderSpan {
-  start : Int
-  end : Int
-  source_start : Int
-  source_end : Int
-  injected_text_index : Int
-  class_name : String
-} derive(@debug.Debug)
 
 pub(all) struct Selection {
   selection_start : @common.Position
@@ -304,10 +326,10 @@ pub struct TokenPresentation {
 pub struct TokenizedDocument {
   snapshot : @model.TextSnapshot
   token_count : Int
-  line_tokens : Array[Array[@syntax.Token]]
+  line_tokens : Array[LineTokens]
 }
 pub fn TokenizedDocument::build(@model.TextSnapshot, Array[@syntax.Token]) -> Self
-pub fn TokenizedDocument::tokens_for_line(Self, Int) -> Array[@syntax.Token]
+pub fn TokenizedDocument::line_tokens_for_line(Self, Int) -> LineTokens
 
 pub struct ViewModel {
   source : FrameSource
@@ -375,6 +397,7 @@ pub fn ViewModelLinesFromModelAsIs::is_model_line_hidden(Self, Int) -> Bool
 pub fn ViewModelLinesFromModelAsIs::line_count(Self) -> Int
 pub fn ViewModelLinesFromModelAsIs::model_line_count(Self) -> Int
 pub fn ViewModelLinesFromModelAsIs::model_line_number_of_view_line(Self, Int) -> Int
+pub fn ViewModelLinesFromModelAsIs::model_line_tokens(Self, Int) -> LineTokens
 pub fn ViewModelLinesFromModelAsIs::new(FrameSource) -> Self
 pub fn ViewModelLinesFromModelAsIs::projected_text_line(Self, Int) -> ProjectedTextLine
 pub fn ViewModelLinesFromModelAsIs::render_line(Self, Int) -> RenderLine

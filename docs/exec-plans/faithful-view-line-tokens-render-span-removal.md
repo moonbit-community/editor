@@ -1,6 +1,23 @@
 # Faithful `ViewLineData` Tokens — Delete `RenderSpan`
 
-Status: not started — Date: 2026-06-26.
+Status: completed — Date: 2026-06-26.
+
+> **Completion note.** Implemented across all four phases. `RenderSpan` and the
+> projected-span machinery are gone; a `RenderLine` now carries
+> `tokens : &IViewLineTokens` (Monaco's `ViewLineData.tokens`) plus
+> `injected_inline_decorations`. Projected/injected lines are built by
+> `LineTokens::with_inserted` + `slice_and_inflate`; injected-text (inlay-hint)
+> classes are inline decorations, so the token stream carries only syntactic
+> `mtk<colorId>` metadata (the injected token now renders
+> `mtk1 inlay-hint inlay-hint-type`, one class richer than the prior
+> span overlay and exactly Monaco's DOM). The `LinePart` bridge, rich copy,
+> hit-testing (`span_index` → `token_index`), the standalone HTML emitter, and the
+> frame JSON (`"spans"` → `"tokens"`) all read `IViewLineTokens`; the per-column
+> maps stay the geometry source. `RenderLine`/`RenderFrame` drop `derive(Debug)`
+> (a trait-object field), the only API deviation from the field-name plan.
+> Validated: `just check` (0 errors), `moon test --target all`
+> (424 js + 434 native, 0 failures), and the full browser suite
+> (component/smoke/conformance/perf) green.
 
 Oracle pin: `vscode` submodule at `294fb350` (2026-06-02, `heads/main`).
 Std pin: `moonbitlang/core` at the toolchain in use (`moon 0.1.20260618`).

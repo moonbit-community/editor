@@ -11,16 +11,16 @@ pub(all) enum MouseTargetKind {
 
 ///|
 /// A resolved hit-test result as a view position: `line_number` is a one-based
-/// view line; `column` is a zero-based view column inside the line; `span_index`
-/// indexes the hit line's spans. Mirrors Monaco's `MouseTarget` carrying a view
-/// `Position` — consumers convert to a model position through the
+/// view line; `column` is a zero-based view column inside the line; `token_index`
+/// indexes the hit line's `IViewLineTokens`. Mirrors Monaco's `MouseTarget`
+/// carrying a view `Position` — consumers convert to a model position through the
 /// `CoordinatesConverter`, rather than this layer baking in a document offset.
 /// Fields that do not apply to the kind are `0`/`-1`.
 pub(all) struct MouseTarget {
   kind : MouseTargetKind
   line_number : Int
   column : Int
-  span_index : Int
+  token_index : Int
   injected_text_index : Int
 } derive(Eq, Debug)
 
@@ -46,7 +46,7 @@ fn outside_target() -> MouseTarget {
     kind: Outside,
     line_number: 0,
     column: 0,
-    span_index: -1,
+    token_index: -1,
     injected_text_index: -1,
   }
 }
@@ -88,7 +88,7 @@ pub fn hit_test(
       kind: BelowContent,
       line_number: frame.line_count,
       column: 0,
-      span_index: -1,
+      token_index: -1,
       injected_text_index: -1,
     }
   }
@@ -101,7 +101,7 @@ pub fn hit_test(
         kind: ContentEmpty,
         line_number,
         column: 0,
-        span_index: -1,
+        token_index: -1,
         injected_text_index: -1,
       }
   }
@@ -110,7 +110,7 @@ pub fn hit_test(
       kind: GutterLineNumbers,
       line_number,
       column: 0,
-      span_index: -1,
+      token_index: -1,
       injected_text_index: -1,
     }
   }
@@ -130,7 +130,7 @@ pub fn hit_test(
       kind: ContentText,
       line_number,
       column,
-      span_index: span_index_at_column(line, column),
+      token_index: token_index_at_column(line, column),
       injected_text_index: line.injected_text_index_at_column(column),
     }
   } else {
@@ -138,7 +138,7 @@ pub fn hit_test(
       kind: ContentEmpty,
       line_number,
       column,
-      span_index: -1,
+      token_index: -1,
       injected_text_index: -1,
     }
   }
@@ -158,12 +158,9 @@ fn rendered_line(
 }
 
 ///|
-fn span_index_at_column(line : @view_model.RenderLine, column : Int) -> Int {
-  for index in 0..<line.spans.length() {
-    let span = line.spans[index]
-    if column >= span.start && column < span.end {
-      return index
-    }
-  }
-  -1
+/// Index of the token covering a zero-based view column, Monaco's
+/// `LineTokens.findTokenIndexAtOffset`. Only called for an in-text column, so
+/// the offset always lands inside a token.
+fn token_index_at_column(line : @view_model.RenderLine, column : Int) -> Int {
+  line.tokens.find_token_index_at_offset(column)
 }

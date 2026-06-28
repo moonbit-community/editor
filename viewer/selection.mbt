@@ -187,30 +187,37 @@ fn append_rich_copy_line_segments(
   line : @view_model.RenderLine,
   range : @base_common.OffsetRange,
 ) -> Unit {
-  let model_line_start = line.model_line_start_offset()
-  for span in line.spans {
-    if span.injected_text_index >= 0 {
-      continue
-    }
-    let span_start = model_line_start + span.source_start
-    let span_end = model_line_start + span.source_end
-    if range.intersects(OffsetRange(span_start, span_end)) {
-      let start_column = span.start + range.start.max(span_start) - span_start
-      let end_column = span.start +
-        range.end_exclusive.min(span_end) -
-        span_start
-      if start_column < end_column {
-        html.write_string("<span class=\"")
-        html.write_string(@viewer_common.escape_html(span.class_name))
-        html.write_string("\">")
-        html.write_string(
-          @viewer_common.escape_html(
-            line.text[start_column:end_column].to_owned(),
-          ),
-        )
-        html.write_string("</span>")
+  let tokens = line.tokens
+  let mut token_start = 0
+  for i in 0..<tokens.get_count() {
+    let token_end = tokens.get_end_offset(i)
+    // Injected (inlay-hint) tokens have no source text; skip them so the rich
+    // copy holds only real document content (Monaco never copies injected text).
+    if token_start < token_end &&
+      line.injected_text_index_at_column(token_start) < 0 {
+      let model_start = line.source_offset_at_column(token_start)
+      let model_end = line.source_offset_at_column(token_end)
+      if range.intersects(OffsetRange(model_start, model_end)) {
+        let start_column = token_start +
+          range.start.max(model_start) -
+          model_start
+        let end_column = token_start +
+          range.end_exclusive.min(model_end) -
+          model_start
+        if start_column < end_column {
+          html.write_string("<span class=\"")
+          html.write_string(@viewer_common.escape_html(tokens.get_class_name(i)))
+          html.write_string("\">")
+          html.write_string(
+            @viewer_common.escape_html(
+              line.text[start_column:end_column].to_owned(),
+            ),
+          )
+          html.write_string("</span>")
+        }
       }
     }
+    token_start = token_end
   }
 }
 

@@ -80,6 +80,7 @@ pub fn ViewModelLinesFromProjectedModel::render_line(
   )
   render_projected_line(
     self.base.render_model_line(segment.model_line_number),
+    self.base.model_line_tokens(segment.model_line_number),
     projected_line,
     @base_common.clamp_int(line_number, 1, self.line_count()),
     segment.start_offset,
@@ -128,8 +129,15 @@ pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(
 }
 
 ///|
+/// Builds one view line the Monaco `getViewLinesData` way: splice the injected
+/// text into the model line's tokens with `with_inserted`
+/// (`getLineTokensWithInjections`), then slice the output line's segment with
+/// `slice_and_inflate` (`_getViewLineData`). Injected-text classes become inline
+/// decorations (`InjectedTextInlineDecorationsComputer`), never token colors —
+/// the spliced injected tokens carry only default syntactic metadata.
 fn render_projected_line(
   line : RenderLine,
+  base_tokens : LineTokens,
   projected_line : ProjectedTextLine,
   view_line_number : Int,
   start_offset : Int,
@@ -137,10 +145,8 @@ fn render_projected_line(
 ) -> RenderLine {
   let text = projected_line.text[start_offset:end_offset].to_owned()
   let line_start_offset = line.source_offset_at_column(0)
-  let spans : Array[RenderSpan] = []
-  let projected_spans = projected_render_spans(line, projected_line)
-  append_sliced_projected_spans(
-    spans, projected_line, projected_spans, start_offset, end_offset,
+  let with_injections = base_tokens.with_inserted(
+    injected_tokens_for_projected_line(projected_line),
   )
   {
     line_number: view_line_number,
@@ -153,89 +159,68 @@ fn render_projected_line(
     injected_text_indices: projected_injected_text_indices(
       projected_line, start_offset, end_offset,
     ),
-    spans,
+    tokens: with_injections.slice_and_inflate(start_offset, end_offset, 0),
+    injected_inline_decorations: projected_injected_inline_decorations(
+      projected_line, start_offset, end_offset,
+    ),
   }
 }
 
 ///|
-fn projected_render_spans(
-  line : RenderLine,
+/// The injected text of a projected line as `with_inserted` splice tokens —
+/// Monaco's `getLineTokensWithInjections`. Each run inserts at its 0-based model
+/// column with default token metadata (no per-token color); the inlay color is
+/// applied as an inline decoration instead. Offsets are ascending, satisfying
+/// `with_inserted`'s precondition.
+fn injected_tokens_for_projected_line(
   projected_line : ProjectedTextLine,
-) -> Array[RenderSpan] {
-  let spans : Array[RenderSpan] = []
+) -> Array[InsertedToken] {
+  let inserts : Array[InsertedToken] = []
   for part in projected_line.parts {
     match part.kind {
-      SourceSegment(model_start~, model_end~) =>
-        append_source_projected_spans(
-          spans,
-          line.spans,
-          part.start,
-          model_start,
-          model_end,
+      InjectedSegment(model_column~, ..) =>
+        inserts.push(
+          InsertedToken::new(
+            model_column,
+            projected_line.text[part.start:part.end].to_owned(),
+            LineTokens::default_token_metadata(),
+          ),
         )
-      InjectedSegment(model_column~, injected_text_index~, class_name~) =>
-        spans.push({
-          start: part.start,
-          end: part.end,
-          source_start: model_column,
-          source_end: model_column,
-          injected_text_index,
-          class_name,
-        })
+      SourceSegment(_) => ()
     }
   }
-  spans
+  inserts
 }
 
 ///|
-fn append_source_projected_spans(
-  out : Array[RenderSpan],
-  source_spans : Array[RenderSpan],
-  projected_start : Int,
-  model_start : Int,
-  model_end : Int,
-) -> Unit {
-  for span in source_spans {
-    if span.injected_text_index >= 0 {
-      continue
-    }
-    let start = span.source_start.max(model_start)
-    let end = span.source_end.min(model_end)
-    if start < end {
-      out.push({
-        start: projected_start + (start - model_start),
-        end: projected_start + (end - model_start),
-        source_start: start,
-        source_end: end,
-        injected_text_index: -1,
-        class_name: span.class_name,
-      })
-    }
-  }
-}
-
-///|
-fn append_sliced_projected_spans(
-  out : Array[RenderSpan],
+/// Inline decorations for the injected text of a projected line, clipped to the
+/// output (view-local) segment `[start_offset, end_offset)` — Monaco's
+/// `InjectedTextInlineDecorationsComputer.getInlineDecorations`. Each injected
+/// run with a class emits one decoration over its projected columns.
+fn projected_injected_inline_decorations(
   projected_line : ProjectedTextLine,
-  spans : Array[RenderSpan],
   start_offset : Int,
   end_offset : Int,
-) -> Unit {
-  for span in spans {
-    let start = span.start.max(start_offset)
-    let end = span.end.min(end_offset)
-    if start < end {
-      out.push({
-        start: start - start_offset,
-        end: end - start_offset,
-        source_start: projected_line.projected_column_to_model_column(start),
-        source_end: projected_line.projected_column_to_model_column(end),
-        injected_text_index: span.injected_text_index,
-        class_name: span.class_name,
-      })
+) -> Array[@view_line_renderer.InlineDecoration] {
+  let decorations : Array[@view_line_renderer.InlineDecoration] = []
+  for part in projected_line.parts {
+    match part.kind {
+      InjectedSegment(class_name~, ..) => {
+        let start = part.start.max(start_offset)
+        let end = part.end.min(end_offset)
+        if start < end {
+          decorations.push(
+            InlineDecoration(
+              OffsetRange(start - start_offset, end - start_offset),
+              class_name,
+            ),
+          )
+        }
+      }
+      SourceSegment(_) => ()
     }
   }
+  decorations
 }
 
 ///|

@@ -6,29 +6,20 @@ pub(all) struct FrameViewport {
 } derive(Debug)
 
 ///|
-/// A styled segment of one line, as line-relative UTF-16 columns. Spans
-/// carry no text of their own; views slice the owning line's text at
-/// emission time.
-pub(all) struct RenderSpan {
-  start : Int
-  end : Int
-  source_start : Int
-  source_end : Int
-  injected_text_index : Int
-  class_name : String
-} derive(Debug)
-
-///|
-/// One rendered view line with text, source offset, per-column model mapping,
-/// injected-text mapping, and styled spans.
+/// One rendered view line, the Monaco `ViewLineData` shape: text, source
+/// offset, per-column model/injected-text maps, the line's faithful token
+/// stream (`tokens : IViewLineTokens`), and the inline decorations injected
+/// text contributes (`injected_inline_decorations`). The token stream is the
+/// single source of styled segments; views derive `LinePart`s straight from it.
 pub(all) struct RenderLine {
   line_number : Int
   offset : Int
   text : String
   model_columns : Array[Int]
   injected_text_indices : Array[Int]
-  spans : Array[RenderSpan]
-} derive(Debug)
+  tokens : &IViewLineTokens
+  injected_inline_decorations : Array[@view_line_renderer.InlineDecoration]
+}
 
 ///|
 /// A viewport-scoped render frame, the Monaco `ViewportData` role: only
@@ -43,7 +34,7 @@ pub(all) struct RenderFrame {
   lines : Array[RenderLine]
   diagnostics : Array[@language.Diagnostic]
   hovers : Array[@language.Hover]
-} derive(Debug)
+}
 
 ///|
 /// Builds the frame for one viewport window from the per-line buckets of
@@ -67,12 +58,6 @@ pub impl ToJson for RenderFrame with fn to_json(self) {
     "diagnostics": Json::array(self.diagnostics.map(diagnostic_json)),
     "hovers": Json::array(self.hovers.map(hover_json)),
   }
-}
-
-///|
-/// The text a span styles, sliced from its owning line.
-pub fn RenderLine::span_text(self : RenderLine, span : RenderSpan) -> String {
-  self.text[span.start:span.end].to_owned()
 }
 
 ///|
@@ -136,34 +121,6 @@ pub fn RenderLine::view_column_at_source_offset(
 }
 
 ///|
-/// Builds the token spans of one model line by walking its faithful
-/// `LineTokens` — the Monaco `renderLine` input shape (one segment per
-/// `[endOffset, metadata]` pair, classed `mtk<colorId>` via the theme). This
-/// replaces the legacy `@syntax.Token`-driven `spans_for_line` as the
-/// production seam. Zero-length tokens (e.g. the placeholder of a blank line)
-/// are dropped so a blank line yields no span, matching the prior behavior.
-fn spans_from_line_tokens(line_tokens : LineTokens) -> Array[RenderSpan] {
-  let spans : Array[RenderSpan] = []
-  let mut start = 0
-  for i in 0..<line_tokens.get_count() {
-    let end = line_tokens.get_end_offset(i)
-    if start < end {
-      spans.push({
-        start,
-        end,
-        source_start: start,
-        source_end: end,
-        injected_text_index: -1,
-        class_name: line_tokens.get_class_name(i),
-      })
-    }
-    start = end
-  }
-  spans
-}
-
-
-///|
 fn viewport_json(viewport : FrameViewport) -> Json {
   {
     "startLine": viewport.start_line.to_json(),
@@ -177,18 +134,30 @@ fn line_json(line : RenderLine) -> Json {
     "lineNumber": line.line_number.to_json(),
     "offset": line.offset.to_json(),
     "text": line.text.to_json(),
-    "spans": Json::array(line.spans.map(span => span_json(line, span))),
+    "tokens": Json::array(tokens_json(line)),
   }
 }
 
 ///|
-fn span_json(line : RenderLine, span : RenderSpan) -> Json {
-  {
-    "start": span.start.to_json(),
-    "end": span.end.to_json(),
-    "text": line.span_text(span).to_json(),
-    "className": span.class_name.to_json(),
+/// The line's styled token segments, the Monaco `ViewLineData.tokens` shape:
+/// one `{ endOffset, className, text }` per non-empty token. Zero-length tokens
+/// (e.g. a blank line's placeholder) are dropped, matching the rendered spans.
+fn tokens_json(line : RenderLine) -> Array[Json] {
+  let out : Array[Json] = []
+  let tokens = line.tokens
+  let mut start = 0
+  for i in 0..<tokens.get_count() {
+    let end = tokens.get_end_offset(i)
+    if start < end {
+      out.push({
+        "endOffset": end.to_json(),
+        "className": tokens.get_class_name(i).to_json(),
+        "text": tokens.get_token_text(i).to_json(),
+      })
+    }
+    start = end
   }
+  out
 }
 
 ///|

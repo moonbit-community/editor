@@ -19,7 +19,7 @@ test "viewport data exposes one-based inclusive line data" {
       assert_eq(line.min_column, 1)
       assert_eq(line.max_column, 3)
       assert_eq(line.content, "bb")
-      assert_eq(line.tokens.length(), frame.lines[0].spans.length())
+      assert_eq(line.tokens.length(), frame.lines[0].tokens.get_count())
     }
     None => fail("expected line 2 data")
   }

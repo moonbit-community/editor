@@ -28,7 +28,9 @@ layer.
   (thumb geometry, drags, and track jumps as pure arithmetic).
 - Own the pure editor geometry shared by backends: mouse hit-testing
   (`MouseTargetKind`/`MouseTarget`/`ViewMetrics`/`hit_test`) resolved against
-  render frames plus `@view_layout.ViewZone` layout data.
+  render frames plus `@view_layout.ViewZone` layout data. A `MouseTarget`
+  carries the hit line's `token_index` into its `IViewLineTokens` (Monaco's
+  `LineTokens.findTokenIndexAtOffset`), not a per-line span index.
 - Keep render output independent of concrete frontend hosts.
 
 ## Boundaries

@@ -1,8 +1,12 @@
 ///|
-/// Whether any of a rendered line's spans carries `class_name`.
-fn line_has_span_class(line : @view_model.RenderLine, class_name : String) -> Bool {
-  for span in line.spans {
-    if span.class_name == class_name {
+/// Whether any of a rendered line's tokens carries `class_name`.
+fn line_has_token_class(
+  line : @view_model.RenderLine,
+  class_name : String,
+) -> Bool {
+  let tokens = line.tokens
+  for i in 0..<tokens.get_count() {
+    if tokens.get_class_name(i) == class_name {
       return true
     }
   }
@@ -40,10 +44,10 @@ test "tokens bucket per line and multi-line tokens cover every line" {
     start_line: 0,
     end_line: doc.line_count(),
   })
-  assert_eq(frame.lines[0].spans[0].class_name, "mtk3") // Keyword
-  assert_true(line_has_span_class(frame.lines[1], "mtk7")) // Comment
-  assert_true(line_has_span_class(frame.lines[2], "mtk7")) // Comment
-  assert_eq(frame.lines[3].spans[0].class_name, "mtk3") // Keyword
+  assert_eq(frame.lines[0].tokens.get_class_name(0), "mtk3") // Keyword
+  assert_true(line_has_token_class(frame.lines[1], "mtk7")) // Comment
+  assert_true(line_has_token_class(frame.lines[2], "mtk7")) // Comment
+  assert_eq(frame.lines[3].tokens.get_class_name(0), "mtk3") // Keyword
 }
 
 ///|
@@ -69,8 +73,9 @@ test "bucketed window frames equal a full lexer pass" {
   assert_eq(frame.lines[0].line_number, 301)
   for line in frame.lines {
     let mut joined = ""
-    for span in line.spans {
-      joined = joined + line.span_text(span)
+    let tokens = line.tokens
+    for i in 0..<tokens.get_count() {
+      joined = joined + tokens.get_token_text(i)
     }
     assert_eq(joined, line.text)
   }

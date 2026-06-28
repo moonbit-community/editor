@@ -153,17 +153,17 @@ fn Viewer::view_metrics(
 }
 
 ///|
-/// The span the target falls in, as absolute document offsets. The span's view
-/// columns are resolved to model offsets through `view_to_model_offset` (the
-/// `CoordinatesConverter` + model snapshot boundary), the way Monaco maps a
-/// `MouseTarget`'s view position to the model — not via a render-line offset
-/// helper.
-fn span_anchor_for_target(
+/// The token the target falls in, as `(start, end, injected_text_index)` in
+/// absolute document offsets. The token's view columns are resolved to model
+/// offsets through `view_to_model_offset` (the `CoordinatesConverter` + model
+/// snapshot boundary), the way Monaco maps a `MouseTarget`'s view position to
+/// the model — not via a render-line offset helper.
+fn token_anchor_for_target(
   frame : @view_model.RenderFrame,
   target : @viewer_common.MouseTarget,
   view_to_model_offset : (@base_common.Position) -> Int,
-) -> (Int, Int, @view_model.RenderSpan)? {
-  if target.span_index < 0 {
+) -> (Int, Int, Int)? {
+  if target.token_index < 0 {
     return None
   }
   let index = target.line_number - 1 - frame.viewport.start_line
@@ -171,18 +171,26 @@ fn span_anchor_for_target(
     return None
   }
   let line = frame.lines[index]
-  if target.span_index >= line.spans.length() {
+  let tokens = line.tokens
+  if target.token_index >= tokens.get_count() {
     return None
   }
-  let span = line.spans[target.span_index]
-  // `target.line_number` is the 1-based view line; span columns are 0-based, so
+  // The token's view columns: `IViewLineTokens` exposes end offsets, so the
+  // start is the previous token's end (or 0 for the first token).
+  let token_start = if target.token_index > 0 {
+    tokens.get_end_offset(target.token_index - 1)
+  } else {
+    0
+  }
+  let token_end = tokens.get_end_offset(target.token_index)
+  // `target.line_number` is the 1-based view line; token columns are 0-based, so
   // shift them to 1-based `Position` columns.
   let view_line = target.line_number
   let start = view_to_model_offset(
-    @base_common.Position::Position(view_line, span.start + 1),
+    @base_common.Position::Position(view_line, token_start + 1),
   )
   let end = view_to_model_offset(
-    @base_common.Position::Position(view_line, span.end + 1),
+    @base_common.Position::Position(view_line, token_end + 1),
   )
-  Some((start, end, span))
+  Some((start, end, target.injected_text_index))
 }

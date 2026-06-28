@@ -124,7 +124,7 @@ fn Viewer::dom_refine_content_target(
     kind,
     line_number,
     column: column0,
-    span_index: -1,
+    token_index: -1,
     injected_text_index: line.injected_text_index_at_column(column0),
   }
 }

@@ -43,29 +43,36 @@ pub fn render_line_input_from_render_line(
 fn line_parts_from_render_line(
   line : RenderLine,
 ) -> Array[@view_line_renderer.LinePart] {
+  // Monaco's `renderViewLine` token loop: one `LinePart` per token, ending at
+  // the token's exclusive offset with its `mtk<colorId>` class. Zero-length
+  // tokens (a blank line's placeholder) are dropped so a blank line yields no
+  // part, matching Monaco's empty-line handling.
   let parts : Array[@view_line_renderer.LinePart] = []
-  if line.spans.length() == 0 {
-    if line.text.length() > 0 {
-      // Defensive fallback: a non-empty line always yields at least one span
-      // through `spans_from_line_tokens`, so this covers only degenerate input.
-      // Style it with the default-foreground class (`mtk1`), never a `tok-*`.
+  let tokens = line.tokens
+  let mut start = 0
+  for i in 0..<tokens.get_count() {
+    let end = tokens.get_end_offset(i)
+    if start < end {
       parts.push(
         LinePart(
-          line.text.length(),
-          TokenMetadata::get_class_name_from_metadata(
-            LineTokens::default_token_metadata(),
-          ),
+          end,
+          tokens.get_class_name(i),
+          contains_rtl=@base_common.contains_rtl(tokens.get_token_text(i)),
         ),
       )
     }
-    return parts
+    start = end
   }
-  for span in line.spans {
+  if parts.length() == 0 && line.text.length() > 0 {
+    // Defensive fallback: a non-empty line always tokenizes to at least one
+    // non-empty token, so this covers only degenerate input. Style it with the
+    // default-foreground class (`mtk1`), never a `tok-*`.
     parts.push(
       LinePart(
-        span.end,
-        span.class_name,
-        contains_rtl=@base_common.contains_rtl(line.span_text(span)),
+        line.text.length(),
+        TokenMetadata::get_class_name_from_metadata(
+          LineTokens::default_token_metadata(),
+        ),
       ),
     )
   }
@@ -81,7 +88,9 @@ fn inline_decorations_for_line(
   line : RenderLine,
   view_decorations : Array[ViewModelDecoration],
 ) -> Array[@view_line_renderer.InlineDecoration] {
-  let inline : Array[@view_line_renderer.InlineDecoration] = []
+  // Injected text (inlay hints) contributes its own inline decorations, the
+  // Monaco `ViewLineData.inlineDecorations` carried straight on the line.
+  let inline : Array[@view_line_renderer.InlineDecoration] = line.injected_inline_decorations.copy()
   let max_column = line.text.length() + 1
   for decoration in view_decorations {
     if decoration.kind == CurrentLine {
@@ -109,6 +118,18 @@ pub fn line_decorations_for_line(
   view_decorations : Array[ViewModelDecoration],
 ) -> Array[@view_line_renderer.LineDecoration] {
   let line_decorations : Array[@view_line_renderer.LineDecoration] = []
+  // Injected-text inline decorations (inlay-hint classes) render through the
+  // same renderer merge as model inline decorations; project each onto a
+  // one-based `LineDecoration` over the injected run's view columns.
+  for injected in line.injected_inline_decorations {
+    line_decorations.push(
+      LineDecoration(
+        injected.range.start + 1,
+        injected.range.end_exclusive + 1,
+        injected.class_name,
+      ),
+    )
+  }
   let max_column = line.text.length() + 1
   for decoration in view_decorations {
     if decoration.kind == CurrentLine {

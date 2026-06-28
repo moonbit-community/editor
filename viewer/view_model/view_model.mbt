@@ -302,17 +302,26 @@ pub fn ViewModelLinesFromModelAsIs::render_model_line(
   let line_index = self.clamped_model_line_index(model_line_number)
   let line_start = doc.line_start_offset(line_index)
   let line_end = doc.line_end_offset(line_index)
-  let spans = spans_from_line_tokens(
-    self.source.tokenized.line_tokens_for_line(line_index),
-  )
   {
     line_number: line_index + 1,
     offset: line_start,
     text: doc.line_text(line_index),
     model_columns: identity_model_columns(line_end - line_start),
     injected_text_indices: identity_injected_text_indices(line_end - line_start),
-    spans,
+    tokens: self.model_line_tokens(model_line_number).inflate(),
+    injected_inline_decorations: [],
   }
+}
+
+///|
+/// The faithful `LineTokens` for a one-based model line, the concrete token
+/// store the projection slices through `with_inserted` / `slice_and_inflate`.
+pub fn ViewModelLinesFromModelAsIs::model_line_tokens(
+  self : ViewModelLinesFromModelAsIs,
+  model_line_number : Int,
+) -> LineTokens {
+  let line_index = self.clamped_model_line_index(model_line_number)
+  self.source.tokenized.line_tokens_for_line(line_index)
 }
 
 ///|

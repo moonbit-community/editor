@@ -39,7 +39,7 @@ pub(all) struct MouseTarget {
   kind : MouseTargetKind
   line_number : Int
   column : Int
-  span_index : Int
+  token_index : Int
   injected_text_index : Int
 } derive(Eq, @debug.Debug)
 

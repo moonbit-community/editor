@@ -27,16 +27,23 @@ pub fn render_line_html(
 pub fn render_source_line_html(line : @view_model.RenderLine) -> String {
   let html = StringBuilder()
   html.write_string("<span class=\"view-line-content\">")
-  if line.spans.length() == 0 {
-    write_escaped(html, line.text)
-  } else {
-    for span in line.spans {
+  let tokens = line.tokens
+  let mut start = 0
+  let mut wrote = false
+  for i in 0..<tokens.get_count() {
+    let end = tokens.get_end_offset(i)
+    if start < end {
       html.write_string("<span class=\"")
-      write_escaped(html, span.class_name)
+      write_escaped(html, tokens.get_class_name(i))
       html.write_string("\">")
-      write_escaped(html, line.span_text(span))
+      write_escaped(html, tokens.get_token_text(i))
       html.write_string("</span>")
+      wrote = true
     }
+    start = end
+  }
+  if !wrote {
+    write_escaped(html, line.text)
   }
   html.write_string("</span>")
   html.to_string()

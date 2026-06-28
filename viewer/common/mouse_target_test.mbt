@@ -125,7 +125,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  kind: GutterLineNumbers,
       #|  line_number: 1,
       #|  column: 0,
-      #|  span_index: -1,
+      #|  token_index: -1,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -138,7 +138,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  kind: ContentText,
       #|  line_number: 1,
       #|  column: 3,
-      #|  span_index: 2,
+      #|  token_index: 2,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -151,7 +151,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  kind: ContentEmpty,
       #|  line_number: 1,
       #|  column: 30,
-      #|  span_index: -1,
+      #|  token_index: -1,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -169,7 +169,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  kind: ContentText,
       #|  line_number: 2,
       #|  column: 2,
-      #|  span_index: 1,
+      #|  token_index: 1,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -182,7 +182,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  kind: BelowContent,
       #|  line_number: 5,
       #|  column: 0,
-      #|  span_index: -1,
+      #|  token_index: -1,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -195,7 +195,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  kind: Outside,
       #|  line_number: 0,
       #|  column: 0,
-      #|  span_index: -1,
+      #|  token_index: -1,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -214,7 +214,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  kind: Outside,
       #|  line_number: 0,
       #|  column: 0,
-      #|  span_index: -1,
+      #|  token_index: -1,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -227,7 +227,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  kind: ContentText,
       #|  line_number: 2,
       #|  column: 2,
-      #|  span_index: 1,
+      #|  token_index: 1,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -240,7 +240,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  kind: ContentText,
       #|  line_number: 1,
       #|  column: 3,
-      #|  span_index: 2,
+      #|  token_index: 2,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -259,7 +259,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|  kind: ContentEmpty,
       #|  line_number: 4,
       #|  column: 3,
-      #|  span_index: -1,
+      #|  token_index: -1,
       #|  injected_text_index: -1,
       #|}
     ),
@@ -273,7 +273,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|  kind: ContentEmpty,
       #|  line_number: 4,
       #|  column: 0,
-      #|  span_index: -1,
+      #|  token_index: -1,
       #|  injected_text_index: -1,
       #|}
     ),

@@ -40,25 +40,30 @@ test "view model lines as-is match render frame line data" {
   assert_eq(direct_line.line_number, frame_line.line_number)
   assert_eq(direct_line.offset, frame_line.offset)
   assert_eq(direct_line.text, frame_line.text)
-  assert_eq(direct_line.spans.length(), frame_line.spans.length())
-  for index in 0..<direct_line.spans.length() {
-    assert_eq(direct_line.spans[index].start, frame_line.spans[index].start)
-    assert_eq(direct_line.spans[index].end, frame_line.spans[index].end)
+  assert_eq(direct_line.tokens.get_count(), frame_line.tokens.get_count())
+  for index in 0..<direct_line.tokens.get_count() {
     assert_eq(
-      direct_line.spans[index].class_name,
-      frame_line.spans[index].class_name,
+      direct_line.tokens.get_end_offset(index),
+      frame_line.tokens.get_end_offset(index),
+    )
+    assert_eq(
+      direct_line.tokens.get_class_name(index),
+      frame_line.tokens.get_class_name(index),
     )
   }
   let data = lines.view_line_rendering_data(2)
   assert_eq(data.min_column, 1)
   assert_eq(data.max_column, direct_line.text.length() + 1)
   assert_eq(data.content, direct_line.text)
-  assert_eq(data.tokens.length(), direct_line.spans.length())
+  assert_eq(data.tokens.length(), direct_line.tokens.get_count())
   for index in 0..<data.tokens.length() {
-    assert_eq(data.tokens[index].end_index, direct_line.spans[index].end)
+    assert_eq(
+      data.tokens[index].end_index,
+      direct_line.tokens.get_end_offset(index),
+    )
     assert_eq(
       data.tokens[index].class_name,
-      direct_line.spans[index].class_name,
+      direct_line.tokens.get_class_name(index),
     )
   }
 }
@@ -277,7 +282,21 @@ test "inlay hints render as injected text without changing model offsets" {
   assert_eq(line.injected_text_index_at_column(10), -1)
   let data = view_model.lines().view_line_rendering_data(1)
   assert_eq(data.content, "let x: Int = 1")
-  assert_true(data.tokens.any(part => part.class_name.contains("inlay-hint")))
+  // The inlay-hint color is now an inline decoration (Monaco's
+  // `InjectedTextInlineDecorationsComputer`), not a token class; the spliced
+  // injected token carries only default syntactic metadata (`mtk1`).
+  assert_false(data.tokens.any(part => part.class_name.contains("inlay-hint")))
+  assert_true(
+    line.injected_inline_decorations.any(decoration => decoration.class_name.contains(
+      "inlay-hint",
+    )),
+  )
+  // The decoration still merges onto the injected token in the rendered DOM, so
+  // the inlay text is styled `mtk1 inlay-hint inlay-hint-type`.
+  let html = @view_line_renderer.render_view_line2(
+    @view_model.render_line_input_from_render_line(line),
+  ).html
+  assert_true(html.contains("mtk1 inlay-hint inlay-hint-type"))
 }
 
 ///|

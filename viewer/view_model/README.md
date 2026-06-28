@@ -9,8 +9,11 @@ model-line source data, and viewport-scoped render frames.
 
 - Own per-version token buckets through `TokenizedDocument`.
 - Own provider/decorator buckets through `FrameSource`.
-- Own render-frame data: `FrameViewport`, `RenderSpan`, `RenderLine`, and
-  `RenderFrame`.
+- Own render-frame data: `FrameViewport`, `RenderLine`, and `RenderFrame`. A
+  `RenderLine` is Monaco's `ViewLineData`: it carries the line's token stream
+  (`tokens : IViewLineTokens`) plus the inline decorations injected text
+  contributes (`injected_inline_decorations`). There is no per-line span type;
+  the token stream is the single source of styled segments.
 - Own the readonly identity view model: `ViewModel`,
   `ViewModelLinesFromModelAsIs`, `ViewModelDecorations`,
   `CoordinatesConverter`, and `IdentityCoordinatesConverter`.
@@ -27,7 +30,7 @@ model-line source data, and viewport-scoped render frames.
 - Own readonly `Selection` model ranges and copy helpers. Plain copy slices the
   selected `TextSnapshot` range directly, so browser-only injected text is
   excluded by default; rich copy has a model-only escaped fallback while the
-  browser layer can decorate visible source spans with token classes.
+  browser layer styles visible source tokens with their token classes.
 - Own DOM-free conversion from `RenderLine` to
   `@view_line_renderer.ViewLineRenderingData` and `RenderLineInput`.
 
@@ -48,9 +51,13 @@ model-line source data, and viewport-scoped render frames.
 **production** token model. `TokenizedDocument` stores one faithful `LineTokens`
 per model line (encoded from the MoonBit lexers' `@syntax.Token`s by
 `line_tokens_encoder.mbt`, with each `HighlightTag` packed into a metadata word
-by `token_theme.mbt`); rendering walks those tokens into the `mtk<colorId>`
-classes the line renderer consumes (`spans_from_line_tokens`). The faithful
-reference tests now guard the live path, not a twin, so the Finding D
+by `token_theme.mbt`); rendering walks a `RenderLine`'s `tokens` straight into
+the `mtk<colorId>` `LinePart`s the line renderer consumes
+(`line_parts_from_render_line`). Projected/injected view lines build their token
+stream Monaco's way — `LineTokens::with_inserted` then `slice_and_inflate`
+(`getViewLinesData`) — so injected (inlay-hint) classes are inline decorations,
+not token colors. The faithful reference tests now guard the live path, not a
+twin, so the Finding D
 conformance-only-vs-production split (`docs/exec-plans/std-dedup-and-divergence-review.md`)
 is closed by unification.
 

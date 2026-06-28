@@ -35,7 +35,7 @@ test "view model lines as-is match render frame line data" {
   let view_model = @view_model.ViewModel(source)
   let lines = view_model.lines()
   let direct_line = lines.render_line(2)
-  let frame = view_model.render_frame({ start_line: 1, end_line: 2 })
+  let frame = view_model.render_frame({ start_line: 2, end_line: 3 })
   let frame_line = frame.lines[0]
   assert_eq(direct_line.line_number, frame_line.line_number)
   assert_eq(direct_line.offset, frame_line.offset)

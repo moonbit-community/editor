@@ -30,8 +30,10 @@ pub fn ViewportData::from_render_frame(
     line_decorations.push(@view_model.line_decorations_for_line(line, []))
     relative_vertical_offset.push(index * line_height)
   }
-  let start_line_number = frame.viewport.start_line + 1
-  let end_line_number = frame.viewport.end_line
+  // The frame viewport is a 1-based half-open window; the inclusive last line is
+  // `end_line - 1`.
+  let start_line_number = frame.viewport.start_line
+  let end_line_number = frame.viewport.end_line - 1
   let end_column = match lines.last() {
     Some(line) => line.max_column
     None => 1
@@ -65,13 +67,13 @@ pub fn ViewportData::from_view_model(
 ) -> ViewportData {
   let start_line = @base_common.clamp_int(
     window.start,
-    0,
-    view_model.line_count() - 1,
+    1,
+    view_model.line_count(),
   )
   let end_line = @base_common.clamp_int(
     window.end,
     start_line + 1,
-    view_model.line_count(),
+    view_model.line_count() + 1,
   )
   let lines : Array[@view_line_renderer.ViewLineRenderingData] = []
   let line_decorations : Array[Array[@view_line_renderer.LineDecoration]] = []
@@ -86,10 +88,10 @@ pub fn ViewportData::from_view_model(
     ..model_decorations.to_view_decorations(decorations),
   ]
   let normalized_window : LineWindow = { start: start_line, end: end_line }
-  for index in start_line..<end_line {
-    let render_line = view_model_lines.render_line(index + 1)
+  for line_number in start_line..<end_line {
+    let render_line = view_model_lines.render_line(line_number)
     lines.push(
-      view_model_lines.view_line_rendering_data(index + 1, view_decorations~),
+      view_model_lines.view_line_rendering_data(line_number, view_decorations~),
     )
     line_decorations.push(
       @view_model.line_decorations_for_line(render_line, view_decorations),
@@ -97,13 +99,16 @@ pub fn ViewportData::from_view_model(
     relative_vertical_offset.push(
       match layout {
         Some(layout) =>
-          layout.relative_vertical_offset_for_line(normalized_window, index)
-        None => (index - start_line) * line_height
+          layout.relative_vertical_offset_for_line(
+            normalized_window,
+            line_number,
+          )
+        None => (line_number - start_line) * line_height
       },
     )
   }
-  let start_line_number = start_line + 1
-  let end_line_number = end_line
+  let start_line_number = start_line
+  let end_line_number = end_line - 1
   let end_column = match lines.last() {
     Some(line) => line.max_column
     None => 1

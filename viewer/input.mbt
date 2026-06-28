@@ -166,7 +166,7 @@ fn token_anchor_for_target(
   if target.token_index < 0 {
     return None
   }
-  let index = target.line_number - 1 - frame.viewport.start_line
+  let index = target.line_number - frame.viewport.start_line
   if index < 0 || index >= frame.lines.length() {
     return None
   }

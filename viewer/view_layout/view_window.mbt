@@ -1,5 +1,6 @@
 ///|
-/// A half-open range of zero-based line indices the view should render.
+/// A half-open range of 1-based view-line numbers the view should render:
+/// covers lines `start ..< end` in Monaco's view coordinate space.
 pub(all) struct LineWindow {
   start : Int
   end : Int
@@ -21,19 +22,23 @@ pub fn visible_window(
   overscan : Int,
 ) -> LineWindow {
   if line_count <= 0 {
-    return { start: 0, end: 0 }
+    return { start: 1, end: 1 }
   }
-  let first_visible = (scroll_top / line_height.to_double()).to_int()
+  let first_visible = (scroll_top / line_height.to_double()).to_int() + 1
   let visible = if viewport_height > 0.0 {
     (viewport_height / line_height.to_double()).to_int() + 1
   } else {
     default_visible_lines
   }
-  let start = @base_common.clamp_int(first_visible - overscan, 0, line_count)
+  let start = @base_common.clamp_int(
+    first_visible - overscan,
+    1,
+    line_count + 1,
+  )
   let end = @base_common.clamp_int(
     first_visible + visible + overscan,
     start,
-    line_count,
+    line_count + 1,
   )
   { start, end }
 }

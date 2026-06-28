@@ -104,18 +104,18 @@ test "shrinking dimensions re-clamps the position as one change fact" {
 /// confirms the migration preserved that behavior.
 test "lines layout answers offsets and lines for uniform heights" {
   let lines = @view_layout.ViewLayout::new(line_height=18, line_count=100)
-  assert_eq(lines.vertical_offset_for_line(0), 0.0)
-  assert_eq(lines.vertical_offset_for_line(10), 180.0)
+  assert_eq(lines.vertical_offset_for_line(1), 0.0)
+  assert_eq(lines.vertical_offset_for_line(11), 180.0)
   // One past the end probes the bottom edge; beyond clamps.
-  assert_eq(lines.vertical_offset_for_line(100), 1800.0)
-  assert_eq(lines.vertical_offset_for_line(999), 1800.0)
-  assert_eq(lines.line_at_vertical_offset(0.0), 0)
-  assert_eq(lines.line_at_vertical_offset(17.9), 0)
-  assert_eq(lines.line_at_vertical_offset(18.0), 1)
-  assert_eq(lines.line_at_vertical_offset(99999.0), 99)
+  assert_eq(lines.vertical_offset_for_line(101), 1800.0)
+  assert_eq(lines.vertical_offset_for_line(1000), 1800.0)
+  assert_eq(lines.line_at_vertical_offset(0.0), 1)
+  assert_eq(lines.line_at_vertical_offset(17.9), 1)
+  assert_eq(lines.line_at_vertical_offset(18.0), 2)
+  assert_eq(lines.line_at_vertical_offset(99999.0), 100)
   assert_eq(lines.content_height(), 1800.0)
   let empty = @view_layout.ViewLayout::new(line_height=18)
-  assert_eq(empty.line_at_vertical_offset(50.0), 0)
+  assert_eq(empty.line_at_vertical_offset(50.0), 1)
   assert_eq(empty.content_height(), 0.0)
 }
 
@@ -128,17 +128,17 @@ test "lines layout accounts for view zone displacement" {
     { anchor_line: 2, height_px: 0 },
   ])
   |> ignore
-  assert_eq(lines.vertical_offset_for_line(0), 0.0)
-  assert_eq(lines.vertical_offset_for_line(1), 54.0)
-  assert_eq(lines.vertical_offset_for_line(3), 108.0)
-  assert_eq(lines.vertical_offset_for_line(5), 144.0)
+  assert_eq(lines.vertical_offset_for_line(1), 0.0)
+  assert_eq(lines.vertical_offset_for_line(2), 54.0)
+  assert_eq(lines.vertical_offset_for_line(4), 108.0)
+  assert_eq(lines.vertical_offset_for_line(6), 144.0)
   assert_eq(lines.content_height(), 144.0)
-  assert_eq(lines.line_at_vertical_offset(18.0), 1)
-  assert_eq(lines.line_at_vertical_offset(53.0), 1)
-  assert_eq(lines.line_at_vertical_offset(54.0), 1)
-  assert_eq(lines.line_at_vertical_offset(90.0), 3)
+  assert_eq(lines.line_at_vertical_offset(18.0), 2)
+  assert_eq(lines.line_at_vertical_offset(53.0), 2)
+  assert_eq(lines.line_at_vertical_offset(54.0), 2)
+  assert_eq(lines.line_at_vertical_offset(90.0), 4)
   lines.set_view_zones([]) |> ignore
-  assert_eq(lines.vertical_offset_for_line(5), 90.0)
+  assert_eq(lines.vertical_offset_for_line(6), 90.0)
   assert_eq(lines.content_height(), 90.0)
 }
 
@@ -150,11 +150,11 @@ test "lines layout supports top and bottom view zones" {
     { anchor_line: 3, height_px: 20 },
   ])
   |> ignore
-  assert_eq(lines.vertical_offset_for_line(0), 10.0)
-  assert_eq(lines.vertical_offset_for_line(3), 84.0)
+  assert_eq(lines.vertical_offset_for_line(1), 10.0)
+  assert_eq(lines.vertical_offset_for_line(4), 84.0)
   assert_eq(lines.content_height(), 84.0)
   debug_inspect(
-    lines.view_zone_viewport_data({ start: 0, end: 3 }),
+    lines.view_zone_viewport_data({ start: 1, end: 4 }),
     content=(
       #|[
       #|  {
@@ -209,7 +209,7 @@ test "view layout windows match visible_window" {
   debug_inspect(
     tiny.visible_window(overscan=20),
     content=(
-      #|{ start: 0, end: 10 }
+      #|{ start: 1, end: 11 }
     ),
   )
 }
@@ -237,18 +237,18 @@ test "view layout windows and dimensions account for view zones" {
   debug_inspect(
     layout.visible_window(overscan=0),
     content=(
-      #|{ start: 0, end: 2 }
+      #|{ start: 1, end: 3 }
     ),
   )
   layout.scroll_to(scroll_top=54.0) |> ignore
   debug_inspect(
     layout.visible_window(overscan=0),
     content=(
-      #|{ start: 1, end: 5 }
+      #|{ start: 2, end: 6 }
     ),
   )
   assert_eq(
-    layout.relative_vertical_offset_for_line({ start: 1, end: 5 }, 2),
+    layout.relative_vertical_offset_for_line({ start: 2, end: 6 }, 3),
     18,
   )
 }
@@ -284,7 +284,8 @@ test "view layout derives scroll dimensions from document and viewport" {
       #|)
     ),
   )
-  // The window origin is the content-space top of the window start.
+  // The window origin is the content-space top of the window start (the
+  // 1-based start line's offset, `(start - 1) * line_height`).
   let window = layout.visible_window(overscan=20)
-  assert_eq(layout.window_origin(window), (window.start * 18).to_double())
+  assert_eq(layout.window_origin(window), ((window.start - 1) * 18).to_double())
 }

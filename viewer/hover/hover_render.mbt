@@ -120,8 +120,8 @@ fn render_hover_code_block(
     @language.ProviderResult::empty(),
   )
   let frame = @view_model.build_frame(source, {
-    start_line: 0,
-    end_line: snapshot.line_count(),
+    start_line: 1,
+    end_line: snapshot.line_count() + 1,
   })
   let html = StringBuilder::new()
   html.write_string("<div class=\"monaco-tokenized-source\">")

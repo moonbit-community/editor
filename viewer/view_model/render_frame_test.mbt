@@ -41,7 +41,7 @@ test "render frame contains highlighted spans and provider surfaces" {
   }
   let frame = frame_for(
     doc,
-    { start_line: 0, end_line: 2 },
+    { start_line: 1, end_line: 3 },
     decorations~,
     providers~,
   )
@@ -65,10 +65,10 @@ test "window builds match the matching slice of a whole-document build" {
   }
   let whole = frame_for(
     doc,
-    { start_line: 0, end_line: doc.line_count() },
+    { start_line: 1, end_line: doc.line_count() + 1 },
     providers~,
   )
-  let window = frame_for(doc, { start_line: 2, end_line: 5 }, providers~)
+  let window = frame_for(doc, { start_line: 3, end_line: 6 }, providers~)
   assert_eq(window.line_count, whole.line_count)
   assert_eq(window.lines.length(), 3)
   for index in 0..<window.lines.length() {
@@ -92,14 +92,14 @@ test "viewport bounds clamp to the document" {
   debug_inspect(
     frame.viewport,
     content=(
-      #|{ start_line: 0, end_line: 3 }
+      #|{ start_line: 1, end_line: 4 }
     ),
   )
   let pinned = frame_for(doc, { start_line: 99, end_line: 99 })
   debug_inspect(
     pinned.viewport,
     content=(
-      #|{ start_line: 2, end_line: 3 }
+      #|{ start_line: 3, end_line: 4 }
     ),
   )
 }

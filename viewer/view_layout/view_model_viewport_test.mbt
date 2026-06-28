@@ -14,7 +14,7 @@ test "view model produces viewport data from layout window" {
   )
   let viewport = @view_layout.ViewportData::from_view_model(
     view_model,
-    { start: 1, end: 3 },
+    { start: 2, end: 4 },
     line_height=18,
   )
   assert_eq(viewport.start_line_number, 2)
@@ -31,7 +31,7 @@ test "view model produces viewport data from layout window" {
   layout.set_view_zones([{ anchor_line: 1, height_px: 36 }]) |> ignore
   let displaced = @view_layout.ViewportData::from_view_model(
     view_model,
-    { start: 1, end: 3 },
+    { start: 2, end: 4 },
     line_height=18,
     layout~,
   )

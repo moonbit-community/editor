@@ -4,21 +4,21 @@ test "visible window covers the viewport plus overscan, clamped" {
   debug_inspect(
     @view_layout.visible_window(0.0, 600.0, 18, 10000, 20),
     content=(
-      #|{ start: 0, end: 54 }
+      #|{ start: 1, end: 55 }
     ),
   )
   // Scrolled to line 500.
   debug_inspect(
     @view_layout.visible_window(9000.0, 600.0, 18, 10000, 20),
     content=(
-      #|{ start: 480, end: 554 }
+      #|{ start: 481, end: 555 }
     ),
   )
   // Bottom of the document clamps the end.
   debug_inspect(
     @view_layout.visible_window(179400.0, 600.0, 18, 10000, 20),
     content=(
-      #|{ start: 9946, end: 10000 }
+      #|{ start: 9947, end: 10001 }
     ),
   )
   // Unmeasured viewport falls back to a default band; tiny documents
@@ -26,13 +26,13 @@ test "visible window covers the viewport plus overscan, clamped" {
   debug_inspect(
     @view_layout.visible_window(0.0, 0.0, 18, 10000, 20),
     content=(
-      #|{ start: 0, end: 80 }
+      #|{ start: 1, end: 81 }
     ),
   )
   debug_inspect(
     @view_layout.visible_window(0.0, 600.0, 18, 10, 20),
     content=(
-      #|{ start: 0, end: 10 }
+      #|{ start: 1, end: 11 }
     ),
   )
 }

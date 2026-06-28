@@ -5,13 +5,11 @@
 /// semantics the browser cell uses today. Pure model state — input
 /// capture and DOM application stay backend-side.
 ///
-/// This is a zero-based view-zone adapter over the faithful, 1-based
-/// `LinesLayout` port: the viewer addresses lines with zero-based indices and
-/// models view zones as `ViewZone { anchor_line, height_px }`, which map onto
-/// Monaco whitespaces as `afterLineNumber = anchor_line` (a zero-based line `L`
-/// is Monaco's 1-based line `L + 1`, and a whitespace before `L` is "after"
-/// 1-based line `L`). The `LinesLayout` held here is exactly the type the
-/// conformance suite validates.
+/// Like Monaco, the entire view layer is 1-based, so `ViewLayout` and the
+/// `LinesLayout` it holds share one coordinate space — line-number arguments
+/// pass straight through with no translation. View zones carry Monaco's
+/// `afterLineNumber` directly (`ViewZone.anchor_line`). The `LinesLayout` held
+/// here is exactly the type the conformance suite validates.
 pub struct ViewLayout {
   scrollable : Scrollable
   priv mut lines : LinesLayout
@@ -22,9 +20,10 @@ pub struct ViewLayout {
 }
 
 ///|
-/// Builds a faithful `LinesLayout` from the zero-based view-zone array: each
-/// zone becomes a whitespace with `afterLineNumber = anchor_line`, inserted in
-/// the array's (already normalized) order via `ordinal`.
+/// Builds a faithful `LinesLayout` from the view-zone array: each zone becomes
+/// a whitespace with `afterLineNumber = anchor_line` (Monaco's
+/// `IViewZone.afterLineNumber`, passed straight through), inserted in the
+/// array's (already normalized) order via `ordinal`.
 fn build_lines(
   line_count : Int,
   line_height : Int,
@@ -133,30 +132,28 @@ pub fn ViewLayout::content_height(self : ViewLayout) -> Double {
 }
 
 ///|
-/// The top of a zero-based `line` in content space. Indices clamp to the
-/// document so callers can probe one-past-the-end for a bottom edge.
+/// The top of a 1-based `line` in content space. Line numbers clamp to the
+/// document so callers can probe one-past-the-end (`line_count + 1`) for a
+/// bottom edge.
 pub fn ViewLayout::vertical_offset_for_line(
   self : ViewLayout,
   line : Int,
 ) -> Double {
-  let line = @base_common.clamp_int(line, 0, self.line_count)
-  self.lines.get_vertical_offset_for_line_number(line + 1).to_double()
+  let line = @base_common.clamp_int(line, 1, self.line_count + 1)
+  self.lines.get_vertical_offset_for_line_number(line).to_double()
 }
 
 ///|
-/// The zero-based line whose band contains a content-space vertical offset,
-/// clamped to the document (`0` for an empty one).
+/// The 1-based line whose band contains a content-space vertical offset,
+/// clamped to the document (`1` for an empty one).
 pub fn ViewLayout::line_at_vertical_offset(
   self : ViewLayout,
   offset : Double,
 ) -> Int {
   if self.line_count <= 0 {
-    return 0
+    return 1
   }
-  let line_number = self.lines.get_line_number_at_or_after_vertical_offset(
-    offset.to_int(),
-  )
-  (0).max(line_number - 1)
+  self.lines.get_line_number_at_or_after_vertical_offset(offset.to_int())
 }
 
 ///|
@@ -197,7 +194,7 @@ pub fn ViewLayout::view_zone_viewport_data(
 }
 
 ///|
-/// Top offset of zero-based `line` relative to the rendered window start.
+/// Top offset of 1-based `line` relative to the rendered window start.
 pub fn ViewLayout::relative_vertical_offset_for_line(
   self : ViewLayout,
   window : LineWindow,
@@ -256,27 +253,27 @@ pub fn ViewLayout::visible_window(
   let scroll_top = self.scrollable.position().scroll_top
   let viewport_height = self.scrollable.dimensions().height
   if self.line_count <= 0 {
-    return { start: 0, end: 0 }
+    return { start: 1, end: 1 }
   }
   if viewport_height <= 0.0 {
     let end = @base_common.clamp_int(
-      default_visible_lines + overscan,
-      0,
-      self.line_count,
+      default_visible_lines + overscan + 1,
+      1,
+      self.line_count + 1,
     )
-    return { start: 0, end }
+    return { start: 1, end }
   }
   let first_visible = self.line_at_vertical_offset(scroll_top)
   let last_visible = self.line_at_vertical_offset(scroll_top + viewport_height)
   let start = @base_common.clamp_int(
     first_visible - overscan,
-    0,
-    self.line_count,
+    1,
+    self.line_count + 1,
   )
   let end = @base_common.clamp_int(
     last_visible + 1 + overscan,
     start,
-    self.line_count,
+    self.line_count + 1,
   )
   { start, end }
 }
@@ -314,9 +311,9 @@ fn ViewLayout::sync_dimensions(self : ViewLayout) -> ScrollChange? {
 }
 
 ///|
-/// Clamps view-zone anchors into `[0, line_count]`, floors heights at zero, and
-/// sorts by `(anchor_line, height_px)` — the zero-based normalization the
-/// adapter applies before translating zones into faithful whitespaces.
+/// Clamps view-zone anchors into `[0, line_count]` (Monaco's `afterLineNumber`
+/// range), floors heights at zero, and sorts by `(anchor_line, height_px)`
+/// before the zones become faithful whitespaces.
 fn normalized_view_zones(
   view_zones : Array[ViewZone],
   line_count : Int,

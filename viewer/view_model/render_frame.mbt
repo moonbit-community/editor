@@ -1,5 +1,6 @@
 ///|
-/// Zero-based half-open view-line window to render.
+/// 1-based half-open view-line window to render: covers 1-based view lines
+/// `start_line ..< end_line` (Monaco's view coordinate space).
 pub(all) struct FrameViewport {
   start_line : Int
   end_line : Int

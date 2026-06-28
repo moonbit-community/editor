@@ -149,7 +149,7 @@ fn rendered_line(
   frame : @view_model.RenderFrame,
   line_number : Int,
 ) -> @view_model.RenderLine? {
-  let index = line_number - 1 - frame.viewport.start_line
+  let index = line_number - frame.viewport.start_line
   if index >= 0 && index < frame.lines.length() {
     Some(frame.lines[index])
   } else {

@@ -41,8 +41,8 @@ test "tokens bucket per line and multi-line tokens cover every line" {
     @language.ProviderResult::empty(),
   )
   let frame = @view_model.build_frame(source, {
-    start_line: 0,
-    end_line: doc.line_count(),
+    start_line: 1,
+    end_line: doc.line_count() + 1,
   })
   assert_eq(frame.lines[0].tokens.get_class_name(0), "mtk3") // Keyword
   assert_true(line_has_token_class(frame.lines[1], "mtk7")) // Comment
@@ -68,7 +68,7 @@ test "bucketed window frames equal a full lexer pass" {
     @decorations.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
-  let frame = @view_model.build_frame(source, { start_line: 300, end_line: 360 })
+  let frame = @view_model.build_frame(source, { start_line: 301, end_line: 361 })
   assert_eq(frame.lines.length(), 60)
   assert_eq(frame.lines[0].line_number, 301)
   for line in frame.lines {

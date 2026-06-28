@@ -45,7 +45,7 @@ fn ViewLines::dom(self : ViewLines) -> @rdom.Element {
 /// Index of a one-based view-line number within the currently rendered
 /// window, or `-1` when the line is outside the window.
 fn ViewLines::window_index(self : ViewLines, view_line_number : Int) -> Int {
-  let index = view_line_number - 1 - self.window.start
+  let index = view_line_number - self.window.start
   if index >= 0 && index < self.line_nodes.length() {
     index
   } else {

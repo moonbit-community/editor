@@ -206,7 +206,7 @@ fn ContentWidgets::render_hover_widget(
       column,
       top: layout.relative_vertical_offset_for_line(
         frame_window(frame),
-        line_number - 1,
+        line_number,
       ),
     },
     preferred_placement,

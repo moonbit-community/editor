@@ -2,7 +2,9 @@
 fn viewport_window(
   viewport : @view_layout.ViewportData,
 ) -> @view_layout.LineWindow {
-  { start: viewport.start_line_number - 1, end: viewport.end_line_number }
+  // ViewportData is a 1-based inclusive range `[start, end]`; the render window
+  // is the equivalent 1-based half-open `[start, end + 1)`.
+  { start: viewport.start_line_number, end: viewport.end_line_number + 1 }
 }
 
 ///|

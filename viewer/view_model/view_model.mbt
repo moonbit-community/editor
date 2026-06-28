@@ -657,24 +657,24 @@ pub fn ViewModel::language_id(self : ViewModel) -> String {
 }
 
 ///|
-/// Builds a render frame for the requested zero-based viewport line window.
+/// Builds a render frame for the requested 1-based viewport line window.
 pub fn ViewModel::render_frame(
   self : ViewModel,
   viewport : FrameViewport,
 ) -> RenderFrame {
   let start_line = @base_common.clamp_int(
     viewport.start_line,
-    0,
-    self.line_count() - 1,
+    1,
+    self.line_count(),
   )
   let end_line = @base_common.clamp_int(
     viewport.end_line,
     start_line + 1,
-    self.line_count(),
+    self.line_count() + 1,
   )
   let lines : Array[RenderLine] = []
   for line in start_line..<end_line {
-    lines.push(self.lines.render_line(line + 1))
+    lines.push(self.lines.render_line(line))
   }
   {
     version: self.version(),

@@ -1,12 +1,25 @@
 # Closing the Remaining Monaco Architecture Divergences
 
-Status: **Track B + Track C landed** (2026-06-28; `just check` / `moon test
---target all` / `just test-browser` all green). **Track A deferred** by request
-after its Phase 1 inventory — the line-number rebase is a no-user-impact internal
-cleanup best coordinated with the pending `Position` rebase
-(`range-system-monaco-migration`). Date: 2026-06-28.
+Status: **All three tracks landed** (2026-06-28; `just check` / `moon test
+--target all` (js 433 / native 443) / `just test-browser` (44 specs) all green).
+Track A was resumed from its deferred Phase 1 inventory and completed; the
+view-line-number axis is now 1-based end to end. Date: 2026-06-28.
 
 Landed summary:
+- **Track A** — the view-line-number axis is 1-based throughout (`LineWindow`,
+  `FrameViewport`, `ViewLayout`'s public surface, hit-testing). `ViewLayout`
+  calls `LinesLayout` directly with no `± 1`; the zero-based-adapter doc-comment
+  is gone; `ViewZone.anchor_line` is documented as Monaco's `afterLineNumber`
+  (it was already numerically equal, so the clamp stays `[0, line_count]` — the
+  plan's `[1, line_count + 1]` would have clipped an above-first-line zone). The
+  `ViewportData` start/end stay numerically identical (already 1-based
+  inclusive), so the only residual conversion is the half-open↔inclusive shift
+  at the `ViewportData`/`viewport_window` boundary, documented inline. Four
+  frame-line index sites shared the `line_number - 1 - frame.viewport.start_line`
+  pattern (`mouse_target.rendered_line`, `input.token_anchor_for_target`,
+  `view_layer.window_index`, plus the `hover_render` mini-frame's `start_line:0`)
+  and were the source of a hover/selection regression caught by `just
+  test-browser`; all four were flipped to the 1-based form.
 - **Track B** — `LanguageIdCodec` is now a real string↔numeric registry seeded
   with the built-in languages and shared per document; `TokenizedDocument::build`
   registers the model language and packs its numeric id into every token
@@ -114,6 +127,13 @@ This is the column-axis-independent half of the `Position` rebase; the column
   mapping shift by one.
 
 ### Phases
+
+**All phases complete (2026-06-28).** Phases 2–5 were implemented together
+(the data types, `ViewLayout`, the `ViewportData` seams, and the viewer
+consumers are too tightly coupled to land in separately-green slices), then
+validated as one change: `just check` + `moon test --target all` green, and the
+hover/selection regression surfaced only by `just test-browser` was traced to
+the four index sites named in the Track A landed summary.
 
 1. **Inventory the 0-based view-line-number boundaries.** Grep every consumer of
    `LineWindow`, `ViewLayout::*_for_line`, frame `line_number`, and view-line

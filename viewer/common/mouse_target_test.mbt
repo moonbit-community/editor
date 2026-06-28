@@ -14,7 +14,7 @@ fn hit_test_frame(
   )
   let viewport = match viewport {
     Some(viewport) => viewport
-    None => { start_line: 0, end_line: doc.line_count() }
+    None => { start_line: 1, end_line: doc.line_count() + 1 }
   }
   @view_model.build_frame(source, viewport)
 }
@@ -35,7 +35,10 @@ fn projected_hit_test_frame() -> @view_model.RenderFrame {
     source,
     @view_model.ViewModelOptions::soft_wrap(5),
   )
-  view_model.render_frame({ start_line: 0, end_line: view_model.line_count() })
+  view_model.render_frame({
+    start_line: 1,
+    end_line: view_model.line_count() + 1,
+  })
 }
 
 ///|
@@ -55,7 +58,10 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
     @view_model.ViewModelOptions::no_wrap(),
     [InlayHint(Position(1, 6), ": Int", kind=TypeHint)],
   )
-  view_model.render_frame({ start_line: 0, end_line: view_model.line_count() })
+  view_model.render_frame({
+    start_line: 1,
+    end_line: view_model.line_count() + 1,
+  })
 }
 
 ///|
@@ -264,7 +270,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|}
     ),
   )
-  let windowed = hit_test_frame(viewport={ start_line: 0, end_line: 2 })
+  let windowed = hit_test_frame(viewport={ start_line: 1, end_line: 3 })
   // Line 4 exists in the document but is outside the rendered window.
   debug_inspect(
     @common.hit_test(windowed, test_metrics(), 70.0, 18.0 * 3.0 + 4.0),

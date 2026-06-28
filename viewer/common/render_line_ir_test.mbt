@@ -1,7 +1,7 @@
 ///|
 test "viewport data exposes one-based inclusive line data" {
   let doc = @model.TextSnapshot("a\nbb\nccc")
-  let frame = frame_for(doc, { start_line: 1, end_line: 3 })
+  let frame = frame_for(doc, { start_line: 2, end_line: 4 })
   let viewport = @view_layout.ViewportData::from_render_frame(
     frame,
     line_height=18,
@@ -29,7 +29,7 @@ test "viewport data exposes one-based inclusive line data" {
 ///|
 test "render line input carries readonly defaults and equality" {
   let doc = @model.TextSnapshot("let x = 1")
-  let frame = frame_for(doc, { start_line: 0, end_line: 1 })
+  let frame = frame_for(doc, { start_line: 1, end_line: 2 })
   let line = frame.lines[0]
   let input = @view_model.render_line_input_from_render_line(line)
   let same = @view_model.render_line_input_from_render_line(line)
@@ -122,7 +122,7 @@ test "render view line supports pseudo decorations and large token splitting" {
 ///|
 test "empty line preserves compatibility wrapper" {
   let doc = @model.TextSnapshot("a\n\nb")
-  let frame = frame_for(doc, { start_line: 0, end_line: 3 })
+  let frame = frame_for(doc, { start_line: 1, end_line: 4 })
   // Monaco emits an empty inner `<span></span>` for a blank line.
   assert_eq(
     @common.render_line_html(frame.lines[1], []),

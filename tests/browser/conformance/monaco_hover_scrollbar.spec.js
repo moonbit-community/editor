@@ -133,6 +133,58 @@ test('tall hover is capped to the available space and stays fully scrollable', a
   expect(Math.abs(reachedBottom.scrollTop - reachedBottom.maxScrollTop)).toBeLessThan(2);
 });
 
+test('wrappable hover content is capped to the editor content area in a narrow window', async ({
+  page,
+}) => {
+  // Horizontal counterpart to the tall-hover cap: when the editor is narrower
+  // than the hover's natural width, the content must wrap to the available
+  // width (the content area to the right of the gutter) instead of defaulting
+  // to --vscode-hover-maxWidth (500px) and overflowing. The right-aligned
+  // widget must also stay out of the line-number gutter, where the margin
+  // overlays clip its leading text.
+  await page.setViewportSize({ width: 520, height: 800 });
+  await page.goto(readonlyBaseUrl);
+  await expect
+    .poll(() => page.evaluate(() => typeof globalThis.__readonlyEditorConformance), {
+      timeout: 10_000,
+    })
+    .toBe('object');
+  await page.evaluate((payloads) => {
+    globalThis.__readonlyEditorConformance.setPayloads(payloads);
+  }, hoverPayloads);
+  await openWorkspaceFile(page, 'src/monaco_conformance.mbt');
+
+  await showReadonlyHover(page, conformanceStates.wrappableHover);
+
+  const metrics = await page.evaluate(() => {
+    const editor = document.querySelector('.monaco-scrollable-element.editor-scrollable');
+    const lines = document.querySelector('.lines-content');
+    const wrapper = document.querySelector('[data-content-widget="hover"]');
+    const content = wrapper.querySelector('.monaco-hover-content');
+    const editorRect = editor.getBoundingClientRect();
+    const linesRect = lines.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+    return {
+      scrollWidth: content.scrollWidth,
+      clientWidth: content.clientWidth,
+      scrollLeft: content.scrollLeft,
+      wrapperLeft: wrapperRect.left,
+      wrapperRight: wrapperRect.right,
+      // Left edge of the text content area (gutter ends here).
+      contentAreaLeft: linesRect.left,
+      editorRight: editorRect.right,
+    };
+  });
+
+  // Wrappable content wraps instead of overflowing: no leading text is hidden.
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+  expect(metrics.scrollLeft).toBe(0);
+  // The widget stays within the content area (not shifted into the gutter) and
+  // inside the editor's right edge.
+  expect(metrics.wrapperLeft).toBeGreaterThanOrEqual(metrics.contentAreaLeft - 1);
+  expect(metrics.wrapperRight).toBeLessThanOrEqual(metrics.editorRight + 1);
+});
+
 async function showReadonlyHover(page, state) {
   await page.evaluate((payload) => {
     globalThis.__readonlyEditorConformance.setHoverPayload(payload);

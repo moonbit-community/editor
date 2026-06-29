@@ -142,6 +142,7 @@ impl ViewPart for ContentWidgets with fn render(self, context) {
         prepared.hover_state,
         prepared.on_hover_measured,
         prepared.space_width,
+        context.gutter_width,
       )
     None => ()
   }
@@ -166,6 +167,7 @@ fn ContentWidgets::render_hover_widget(
   hover_state : HoverController,
   on_hover_measured : (Bool, Double, Double) -> Unit,
   space_width : Double,
+  gutter_width : Double,
 ) -> Unit {
   let hover_view = match hover_state.widget_view() {
     Some(hover_view) => hover_view
@@ -235,7 +237,7 @@ fn ContentWidgets::render_hover_widget(
     // First (measuring) pass: cap only the width so the natural wrapped height
     // is measurable, then choose the side and the available-space height cap
     // (Monaco `_findPositionPreference` + `_findMaximumRenderingHeight`).
-    widget.apply_width_sizing(context.root)
+    widget.apply_width_sizing(context.root, gutter_width)
     let content_height = widget.wrapper.get_bounding_client_rect().get_height()
     let space_above = hover_available_space_above(line_top)
     let space_below = hover_available_space_below(
@@ -244,10 +246,7 @@ fn ContentWidgets::render_hover_widget(
       editor_height,
     )
     let below = !hover_prefer_above(
-      content_height,
-      space_above,
-      space_below,
-      hover_prefer_above_default,
+      content_height, space_above, space_below, hover_prefer_above_default,
     )
     let available = if below { space_below } else { space_above }
     let max_height = hover_maximum_rendering_height(available, content_height)
@@ -263,6 +262,7 @@ fn ContentWidgets::render_hover_widget(
       hover_state.measured(below, shift_left, max_height),
       on_hover_measured,
       space_width,
+      gutter_width,
     )
     return
   }
@@ -276,7 +276,7 @@ fn ContentWidgets::render_hover_widget(
         hover_available_space_above(line_top),
       )
   }
-  widget.apply_sizing(context.root, max_height)
+  widget.apply_sizing(context.root, max_height, gutter_width)
 }
 
 ///|
@@ -553,18 +553,27 @@ fn hover_prefer_above(
 }
 
 ///|
+/// Horizontal space the hover may occupy: the editor content area to the right
+/// of the line-number/glyph gutter, less a trailing gap for the vertical
+/// scrollbar. Capping to the *content area* (not the whole editor box) keeps the
+/// right-aligned widget from being shifted left into the gutter, where the
+/// margin overlays clip its leading text. Mirrors Monaco's content-relative
+/// width cap (`contentHoverWidget.ts` `_findMaximumRenderingWidth`).
+fn hover_available_width(root : @rdom.Element, gutter_width : Double) -> Double {
+  let root_rect = root.get_bounding_client_rect()
+  max_hover_double(160.0, root_rect.get_width() - gutter_width - 24.0)
+}
+
+///|
 /// Caps only the hover width, leaving the height natural so the wrapped content
 /// height can be measured for the placement decision.
 fn HoverWidgetDom::apply_width_sizing(
   self : HoverWidgetDom,
   root : @rdom.Element,
+  gutter_width : Double,
 ) -> Unit {
-  let root_rect = root.get_bounding_client_rect()
-  let max_width = max_hover_double(160.0, root_rect.get_width() - 24.0)
-  self.scrollable.content.set_attribute(
-    "style",
-    "max-width:" + max_width.to_string() + "px",
-  )
+  let max_width = hover_available_width(root, gutter_width)
+  self.scrollable.content.set_attribute("style", hover_width_style(max_width))
   self.scrollable.update_from_native_content()
 }
 
@@ -573,18 +582,28 @@ fn HoverWidgetDom::apply_sizing(
   self : HoverWidgetDom,
   root : @rdom.Element,
   max_height : Double,
+  gutter_width : Double,
 ) -> Unit {
-  let root_rect = root.get_bounding_client_rect()
-  let max_width = max_hover_double(160.0, root_rect.get_width() - 24.0)
+  let max_width = hover_available_width(root, gutter_width)
   self.scrollable.content.set_attribute(
     "style",
-    "max-width:" +
-    max_width.to_string() +
-    "px;max-height:" +
+    hover_width_style(max_width) +
+    ";max-height:" +
     max_height.to_string() +
     "px",
   )
   self.scrollable.update_from_native_content()
+}
+
+///|
+/// Both the scrollable container `max-width` and the `--vscode-hover-maxWidth`
+/// custom property the markdown `.hover-contents` reads (`hover.css`), so a
+/// narrow editor wraps the content instead of letting it default to 500px and
+/// overflow. Mirrors Monaco `contentHoverWidget.ts` `_setHoverWidgetMaxDimensions`,
+/// which sets the same property on the hover container.
+fn hover_width_style(max_width : Double) -> String {
+  let px = max_width.to_string() + "px"
+  "max-width:" + px + ";--vscode-hover-maxWidth:" + px
 }
 
 ///|

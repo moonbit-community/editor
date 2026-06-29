@@ -87,6 +87,22 @@ The available-space cap (`_findMaximumRenderingHeight` =
 by the `tall hover is capped to the available space and stays fully scrollable`
 case in `tests/browser/conformance/monaco_hover_scrollbar.spec.js`.
 
+#### Phase 1b — available-width cap (horizontal counterpart)
+
+Same bug class as the height cap, on the horizontal axis: a hover wider than the
+editor renders with its leading text clipped and unreachable. Two gaps were
+closed in `content_widgets.mbt`:
+
+| Monaco method (source) | Arithmetic | MoonBit symbol | Status |
+|---|---|---|---|
+| `_setHoverWidgetMaxDimensions` `--vscode-hover-maxWidth` (`contentHoverWidget.ts:153`) | set the CSS custom property the markdown `.hover-contents` `max-width` reads, so it caps to the available width instead of the 500px default | `hover_width_style` (sets `--vscode-hover-maxWidth` alongside `max-width`) | TESTED |
+| `_findMaximumRenderingWidth` (content-relative) (`contentHoverWidget.ts:217-235`) | cap to the editor **content area** (`width − contentLeft − 24`), not the whole editor box, so the right-aligned `shift_left` cannot push the widget left into the line-number gutter where the margin overlays clip it | `hover_available_width` (takes `gutter_width`) | TESTED |
+
+Verified by the `wrappable hover content is capped to the editor content area in
+a narrow window` case in `tests/browser/conformance/monaco_hover_scrollbar.spec.js`
+(520px window: content wraps with no horizontal overflow, widget stays right of
+the gutter and inside the editor's right edge).
+
 ### Phase 2 — HoverOperation
 
 `hoverOperation.ts` ported into `hover_controller.mbt` as a pure `HoverOperation`

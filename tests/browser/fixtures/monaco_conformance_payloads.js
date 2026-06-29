@@ -52,6 +52,21 @@ export const hoverPayloads = {
       '```',
     ].join('\n'),
   },
+  wideWrappable: {
+    kind: 'markdown',
+    contents: [
+      '```moonbit',
+      'fn[T, K : Compare + Eq] maximum_by_key(x : T, y : T, f : (T) -> K) -> T',
+      '```',
+      '',
+      'Returns the element that gives the maximum value from the specified function, ' +
+        'or the second argument when the comparison determines the two are equal.',
+      '',
+      '```moonbit',
+      'inspect(@cmp.maximum_by_key(1, -2, Int::abs), content="-2")',
+      '```',
+    ].join('\n'),
+  },
   plaintext: {
     kind: 'plaintext',
     contents: 'Plain hover payload for DOM parity checks.',
@@ -66,5 +81,6 @@ export const conformanceStates = {
   shortHover: { payload: 'shortSignature', line: 2, column: 8 },
   longHover: { payload: 'markdownLong', line: 2, column: 8 },
   wideHover: { payload: 'wideCode', line: 12, column: 8 },
+  wrappableHover: { payload: 'wideWrappable', line: 12, column: 8 },
   markerHover: { payload: 'markerDiagnostic', line: 3, column: 8 },
 };

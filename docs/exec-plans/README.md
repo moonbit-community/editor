@@ -7,6 +7,11 @@ agent to execute without re-discovering context.
 Execution plans are not the current architecture map. Active behavior and
 ownership live in `docs/architecture.md`, package READMEs, and tests.
 
+For any plan that ports Monaco/VS Code (or CodeMirror) behavior, follow
+`_PORT_PLAYBOOK.md` — it gives the inventory-first protocol, parity-ledger
+format, "copy don't invent" rule, and the exit gate that make "1:1 port"
+verifiable rather than aspirational.
+
 ## Implemented Plans
 
 After an execution plan has been implemented, treat it as historical evidence.

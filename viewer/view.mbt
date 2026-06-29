@@ -252,6 +252,9 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
       })
     }
   }
+  // The lines are now in the DOM: a deferred horizontal reveal can measure its
+  // target line's client rects and apply the horizontal scroll.
+  self.flush_horizontal_reveal(view)
   let patch_ms = now_ms() - write_started
   match (self.pending_rendered, self.frame) {
     (Some(pending), Some(frame)) => {

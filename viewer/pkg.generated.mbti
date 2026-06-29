@@ -63,6 +63,20 @@ pub fn Viewer::on_did_scroll(Self, (ViewerScrollEvent) -> Unit) -> @common.Dispo
 pub fn Viewer::refresh_model_features(Self) -> Unit
 pub fn Viewer::remeasure(Self) -> Unit
 pub fn Viewer::restore_view_state(Self, ViewerViewState) -> Unit
+pub fn Viewer::reveal_line(Self, Int) -> Unit
+pub fn Viewer::reveal_line_in_center(Self, Int) -> Unit
+pub fn Viewer::reveal_line_near_top(Self, Int) -> Unit
+pub fn Viewer::reveal_lines(Self, Int, Int) -> Unit
+pub fn Viewer::reveal_lines_in_center(Self, Int, Int) -> Unit
+pub fn Viewer::reveal_lines_near_top(Self, Int, Int) -> Unit
+pub fn Viewer::reveal_position(Self, Int, Int) -> Unit
+pub fn Viewer::reveal_position_in_center(Self, Int, Int) -> Unit
+pub fn Viewer::reveal_position_near_top(Self, Int, Int) -> Unit
+pub fn Viewer::reveal_range(Self, @common.Range) -> Unit
+pub fn Viewer::reveal_range_at_top(Self, @common.Range) -> Unit
+pub fn Viewer::reveal_range_in_center(Self, @common.Range) -> Unit
+pub fn Viewer::reveal_range_in_center_if_outside_viewport(Self, @common.Range) -> Unit
+pub fn Viewer::reveal_range_near_top(Self, @common.Range) -> Unit
 pub fn Viewer::save_view_state(Self) -> ViewerViewState
 pub fn Viewer::scroll_by_lines(Self, Int) -> Unit
 pub fn Viewer::scroll_by_pages(Self, Int) -> Unit

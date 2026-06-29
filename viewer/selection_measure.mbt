@@ -11,14 +11,20 @@ priv type RectList
 /// offset into that span's text node — and returns its `getClientRects`, left
 /// values normalized against the line node so they are independent of scroll
 /// and page position.
+/// `keep_empty` mirrors Monaco's `RangeUtil._createHorizontalRangesFromClientRects`,
+/// which keeps every client rect — including the zero-width caret rect a
+/// collapsed range yields. Selection rendering passes `false` (zero-width
+/// slivers are noise there); horizontal reveal passes `true` so a collapsed
+/// `reveal_position` can still measure its caret x.
 extern "js" fn read_horizontal_ranges(
   line_node : @rdom.Element,
   start_part : Int,
   start_char : Int,
   end_part : Int,
   end_char : Int,
+  keep_empty : Bool,
 ) -> RectList =
-  #| (lineNode, startPart, startChar, endPart, endChar) => {
+  #| (lineNode, startPart, startChar, endPart, endChar, keepEmpty) => {
   #|   const content = lineNode.querySelector(".view-line-content");
   #|   if (!content || !content.children || content.children.length === 0) { return []; }
   #|   const kids = content.children;
@@ -49,7 +55,7 @@ extern "js" fn read_horizontal_ranges(
   #|   const out = [];
   #|   for (let i = 0; i < rects.length; i++) {
   #|     const r = rects[i];
-  #|     if (r.width <= 0) { continue; }
+  #|     if (r.width <= 0 && !keepEmpty) { continue; }
   #|     out.push(r.left - lineLeft);
   #|     out.push(r.width);
   #|   }
@@ -63,17 +69,28 @@ extern "js" fn RectList::length(self : RectList) -> Int = "(a) => a.length"
 extern "js" fn RectList::get(self : RectList, index : Int) -> Double = "(a, i) => a[i]"
 
 ///|
+/// Whether a one-based view line currently has a rendered DOM node — the gate
+/// the deferred horizontal reveal waits on before measuring (the line node may
+/// not exist until a vertical scroll brings the line into the window).
+fn View::is_line_rendered(self : View, view_line_number : Int) -> Bool {
+  self.view_lines.line_node_at(view_line_number) is Some(_)
+}
+
+///|
 /// Measured horizontal selection rectangles `(left, width)` for the zero-based
 /// view-column range `[start_column, end_column)` on one rendered view line.
 /// Returns an empty list when the line is outside the rendered window.
 ///
 /// `CharacterMapping` is one-based, so each zero-based column is shifted by one
-/// before resolving its DOM position.
+/// before resolving its DOM position. `keep_empty` (default `false`) keeps
+/// zero-width rects so a collapsed range still yields its caret rect — horizontal
+/// reveal needs it, selection rendering does not.
 fn View::measure_line_selection(
   self : View,
   view_line_number : Int,
   start_column : Int,
   end_column : Int,
+  keep_empty? : Bool = false,
 ) -> Array[(Double, Double)] {
   guard self.view_lines.mapping_at(view_line_number) is Some(mapping) else {
     return []
@@ -89,6 +106,7 @@ fn View::measure_line_selection(
     start_dom.char_index,
     end_dom.part_index,
     end_dom.char_index,
+    keep_empty,
   )
   let out : Array[(Double, Double)] = []
   let count = rects.length()

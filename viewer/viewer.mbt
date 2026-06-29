@@ -60,12 +60,30 @@ pub struct Viewer {
   /// rendered line when it differs, and only entering lines otherwise.
   priv mut content_generation : Int
   priv mut mouse_handler : @controller.MouseHandler?
+  /// Monaco's `ViewLines._horizontalRevealRequest`: a single-line reveal whose
+  /// horizontal scroll is deferred until the target view line renders (its
+  /// client rects are unknown until then). Flushed in `flush_render`, cancelled
+  /// when an unrelated scroll moves out of the reveal's band (`reveal.mbt`).
+  priv mut pending_horizontal_reveal : PendingHorizontalReveal?
 }
 
 ///|
 priv struct PendingRendered {
   model : @model.TextModel
   fresh : Bool
+}
+
+///|
+/// A deferred horizontal reveal, Monaco's `HorizontalRevealRangeRequest`. Holds
+/// the 1-based view line/columns to measure once rendered, plus the scroll-top
+/// band (`[start_scroll_top, stop_scroll_top]`) outside which an intervening
+/// vertical scroll cancels the request.
+priv struct PendingHorizontalReveal {
+  view_line_number : Int
+  start_column : Int
+  end_column : Int
+  start_scroll_top : Double
+  stop_scroll_top : Double
 }
 
 ///|
@@ -177,6 +195,7 @@ pub fn Viewer::Viewer(
     scroll_dirty: false,
     content_generation: 0,
     mouse_handler: None,
+    pending_horizontal_reveal: None,
   }
 }
 
@@ -500,6 +519,7 @@ fn Viewer::clear_current_model(
   self.inlay_hints = []
   self.view_zones = []
   self.layout.set_view_zones([]) |> ignore
+  self.pending_horizontal_reveal = None
   self.apply_view_state_policy(view_state)
   self.cursor = None
   self.cancel_mouse_selection()
@@ -524,7 +544,8 @@ fn Viewer::apply_scroll_change(
   change : @view_layout.ScrollChange?,
 ) -> Unit {
   match change {
-    Some(_) => {
+    Some(scroll_change) => {
+      self.cancel_horizontal_reveal_on_scroll(scroll_change)
       match self.view {
         Some(view) => view.editor_scrollbar.scrollable().reveal_for_scroll()
         None => ()

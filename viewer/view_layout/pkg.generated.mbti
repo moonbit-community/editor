@@ -161,10 +161,22 @@ pub fn ScrollbarState::set_visible_size(Self, Double) -> Bool
 pub fn ScrollbarState::slider_position(Self) -> Double
 pub fn ScrollbarState::slider_size(Self) -> Double
 
+pub(all) enum VerticalRevealType {
+  Simple
+  Center
+  CenterIfOutsideViewport
+  NearTop
+  NearTopIfOutsideViewport
+  Top
+  Bottom
+} derive(Eq, @debug.Debug)
+
 pub struct ViewLayout {
   scrollable : Scrollable
   // private fields
 }
+pub fn ViewLayout::compute_scroll_left_to_reveal(Self, Array[(Double, Double)], vertical_scrollbar_width~ : Double) -> Double?
+pub fn ViewLayout::compute_scroll_top_to_reveal(Self, Int, Int, VerticalRevealType) -> Double
 pub fn ViewLayout::content_height(Self) -> Double
 pub fn ViewLayout::dimensions(Self) -> ScrollDimensions
 pub fn ViewLayout::line_at_vertical_offset(Self, Double) -> Int

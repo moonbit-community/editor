@@ -29,11 +29,18 @@ async fn main {
   if perf_status != 0 {
     fail("moon build failed with exit code \{perf_status}")
   }
+  let reveal_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/reveal",
+  ])
+  if reveal_status != 0 {
+    fail("moon build failed with exit code \{reveal_status}")
+  }
 
   let source_dir = "_build/js/debug/build/internal/shell/web"
   let embed_source_dir = "_build/js/debug/build/internal/shell/examples/embedded_viewer"
   let component_source_dir = "_build/js/debug/build/tests/browser/moonbit/component"
   let perf_source_dir = "_build/js/debug/build/tests/browser/moonbit/perf"
+  let reveal_source_dir = "_build/js/debug/build/tests/browser/moonbit/reveal"
   let target_dir = "web/dist"
   let browser_tests_dir = "\{target_dir}/browser-tests"
   if !@fs.exists(target_dir) {
@@ -136,6 +143,26 @@ async fn main {
   @fs.write_file(
     "\{browser_tests_dir}/perf.html",
     browser_test_html("MoonBit Viewer Performance Test", "/browser-tests/perf.mjs"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  let reveal_js = @fs.read_file("\{reveal_source_dir}/reveal.js").text()
+  @fs.write_file(
+    "\{browser_tests_dir}/reveal.mjs",
+    reveal_js.replace(
+      old="//# sourceMappingURL=reveal.js.map",
+      new="//# sourceMappingURL=reveal.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/reveal.mjs.map",
+    @fs.read_file("\{reveal_source_dir}/reveal.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/reveal.html",
+    browser_test_html("MoonBit Viewer Reveal Test", "/browser-tests/reveal.mjs"),
     create_mode=@fs.CreateOrTruncate,
   )
 

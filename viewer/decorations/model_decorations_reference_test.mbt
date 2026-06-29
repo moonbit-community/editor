@@ -42,11 +42,7 @@ fn dec(
   ec : Int,
   name : String,
 ) -> @decorations.Decoration {
-  @decorations.Decoration(
-    @base_common.Range::Range(sl, sc, el, ec),
-    Diagnostic,
-    name,
-  )
+  Decoration(Range(sl, sc, el, ec), Diagnostic, name)
 }
 
 ///|
@@ -56,7 +52,7 @@ fn line_decorations(
   set : @decorations.DecorationSet,
   line : Int,
 ) -> Array[@decorations.Decoration] {
-  set.between(@base_common.Range::Range(line, 1, line, 1000000))
+  set.between(Range(line, 1, line, 1000000))
 }
 
 ///|
@@ -134,7 +130,7 @@ test "issue #16922: Clicking on link doesn't seem to do anything" {
     dec(1, 1, 2, 8, "x3"),
     dec(2, 5, 3, 1, "x4"),
   ])
-  let in_range = set.between(@base_common.Range::Range(2, 6, 2, 6))
+  let in_range = set.between(Range(2, 6, 2, 6))
   let names = in_range.map(fn(d) { d.class_name })
   names.sort()
   assert_eq(names.length(), 4)

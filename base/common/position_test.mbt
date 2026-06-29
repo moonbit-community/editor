@@ -17,31 +17,29 @@ test "Position is one-based on both axes" {
 ///|
 test "with_ keeps unspecified axes" {
   let p = Position::Position(3, 5)
-  assert_true(p.with_(line_number=7).equals(Position::Position(7, 5)))
-  assert_true(p.with_(column=2).equals(Position::Position(3, 2)))
-  assert_true(p.with_(line_number=7, column=2).equals(Position::Position(7, 2)))
+  assert_true(p.with_(line_number=7).equals(Position(7, 5)))
+  assert_true(p.with_(column=2).equals(Position(3, 2)))
+  assert_true(p.with_(line_number=7, column=2).equals(Position(7, 2)))
   assert_true(p.with_().equals(p))
 }
 
 ///|
 test "delta shifts and clamps to at least 1" {
   let p = Position::Position(3, 5)
-  assert_true(p.delta(delta_line_number=1).equals(Position::Position(4, 5)))
-  assert_true(p.delta(delta_column=-2).equals(Position::Position(3, 3)))
+  assert_true(p.delta(delta_line_number=1).equals(Position(4, 5)))
+  assert_true(p.delta(delta_column=-2).equals(Position(3, 3)))
   // Both axes clamp at 1, matching Monaco's Math.max(1, ...).
   assert_true(
-    p
-    .delta(delta_line_number=-10, delta_column=-10)
-    .equals(Position::Position(1, 1)),
+    p.delta(delta_line_number=-10, delta_column=-10).equals(Position(1, 1)),
   )
 }
 
 ///|
 test "equals compares both axes" {
   let p = Position::Position(2, 4)
-  assert_true(p.equals(Position::Position(2, 4)))
-  assert_false(p.equals(Position::Position(2, 5)))
-  assert_false(p.equals(Position::Position(3, 4)))
+  assert_true(p.equals(Position(2, 4)))
+  assert_false(p.equals(Position(2, 5)))
+  assert_false(p.equals(Position(3, 4)))
 }
 
 ///|

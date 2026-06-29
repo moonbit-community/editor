@@ -103,16 +103,13 @@ fn Viewer::line_select_drag(
   let state = controller.model_state()
   let entering_line = state.selection_start_start.line_number
   let next = if position.line_number < entering_line {
-    state.moved(true, @base_common.Position::Position(position.line_number, 1))
+    state.moved(true, Position(position.line_number, 1))
   } else if position.line_number > entering_line {
     let (to_line, to_column) = line_select_end(
       snapshot,
       position.line_number - 1,
     )
-    state.moved(
-      true,
-      @base_common.Position::Position(to_line + 1, to_column + 1),
-    )
+    state.moved(true, Position(to_line + 1, to_column + 1))
   } else {
     state.moved(true, state.selection_start_end)
   }
@@ -165,14 +162,15 @@ fn Viewer::word_select_drag(
     position.column - 1,
   )
   let anchor = state.selection_start_start
-  let active = if position.line_number < anchor.line_number ||
+  let active : @base_common.Position = if position.line_number <
+    anchor.line_number ||
     (
       position.line_number == anchor.line_number &&
       position.column < anchor.column
     ) {
-    @base_common.Position::Position(position.line_number, start_column + 1)
+    Position(position.line_number, start_column + 1)
   } else {
-    @base_common.Position::Position(position.line_number, end_column + 1)
+    Position(position.line_number, end_column + 1)
   }
   controller.set_model_cursor_state(state.moved(true, active))
 }

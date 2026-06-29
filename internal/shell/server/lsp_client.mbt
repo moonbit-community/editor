@@ -1017,9 +1017,8 @@ fn document_symbol_range(
       }
   }
   match range_json {
-    Some(range) =>
-      parse_lsp_range(range).unwrap_or(@base_common.Range::Range(1, 1, 1, 1))
-    None => @base_common.Range::Range(1, 1, 1, 1)
+    Some(range) => parse_lsp_range(range).unwrap_or(Range(1, 1, 1, 1))
+    None => Range(1, 1, 1, 1)
   }
 }
 
@@ -1093,13 +1092,11 @@ fn parse_location_result(
       let range = if uri == document.uri.to_string() {
         match range_json {
           Some(raw_range) =>
-            parse_lsp_range(raw_range).unwrap_or(
-              @base_common.Range::Range(1, 1, 1, 1),
-            )
-          None => @base_common.Range::Range(1, 1, 1, 1)
+            parse_lsp_range(raw_range).unwrap_or(Range(1, 1, 1, 1))
+          None => Range(1, 1, 1, 1)
         }
       } else {
-        @base_common.Range::Range(1, 1, 1, 1)
+        Range(1, 1, 1, 1)
       }
       Some({ uri: parsed_uri, range })
     }

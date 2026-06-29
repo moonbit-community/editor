@@ -1,6 +1,6 @@
 ///|
 fn pos(line : Int, column : Int) -> @base_common.Position {
-  @base_common.Position::Position(line, column)
+  Position(line, column)
 }
 
 ///|

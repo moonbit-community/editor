@@ -26,7 +26,7 @@ pub fn LineRange::LineRange(
 
 ///|
 pub fn LineRange::of_length(start_line_number : Int, length : Int) -> LineRange {
-  LineRange::LineRange(start_line_number, start_line_number + length)
+  LineRange(start_line_number, start_line_number + length)
 }
 
 ///|
@@ -50,7 +50,7 @@ pub fn LineRange::is_empty(self : LineRange) -> Bool {
 
 ///|
 pub fn LineRange::delta(self : LineRange, offset : Int) -> LineRange {
-  LineRange::LineRange(
+  LineRange(
     self.start_line_number + offset,
     self.end_line_number_exclusive + offset,
   )
@@ -65,7 +65,7 @@ pub fn LineRange::length(self : LineRange) -> Int {
 ///|
 /// Combines this and the given line range into the smallest covering range.
 pub fn LineRange::join(self : LineRange, other : LineRange) -> LineRange {
-  LineRange::LineRange(
+  LineRange(
     self.start_line_number.min(other.start_line_number),
     self.end_line_number_exclusive.max(other.end_line_number_exclusive),
   )
@@ -84,7 +84,7 @@ pub fn LineRange::intersect(self : LineRange, other : LineRange) -> LineRange? {
     other.end_line_number_exclusive,
   )
   if start_line_number <= end_line_number_exclusive {
-    Some(LineRange::LineRange(start_line_number, end_line_number_exclusive))
+    Some(LineRange(start_line_number, end_line_number_exclusive))
   } else {
     None
   }
@@ -226,7 +226,7 @@ pub fn LineRangeSet::get_union(
       Some(cur) =>
         if cur.end_line_number_exclusive >= next.start_line_number {
           current = Some(
-            LineRange::LineRange(
+            LineRange(
               cur.start_line_number,
               cur.end_line_number_exclusive.max(next.end_line_number_exclusive),
             ),

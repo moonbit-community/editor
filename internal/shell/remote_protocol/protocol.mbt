@@ -1240,11 +1240,7 @@ fn parse_range(value : Json) -> @base_common.Range? {
       json_int_field(value, "endColumn"),
     ) {
     (Some(start_line), Some(start_column), Some(end_line), Some(end_column)) =>
-      Some(
-        @base_common.Range::Range(
-          start_line, start_column, end_line, end_column,
-        ),
-      )
+      Some(Range(start_line, start_column, end_line, end_column))
     _ => None
   }
 }

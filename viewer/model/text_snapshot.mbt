@@ -186,7 +186,7 @@ pub fn TextSnapshot::offset_range_of(
   self : TextSnapshot,
   range : @base_common.Range,
 ) -> @base_common.OffsetRange {
-  @base_common.OffsetRange(
+  OffsetRange(
     self.offset_at_position(range.get_start_position()),
     self.offset_at_position(range.get_end_position()),
   )
@@ -246,29 +246,26 @@ fn TextSnapshot::do_validate_position(
 ) -> @base_common.Position {
   let line_count = self.line_count()
   if line_number < 1 {
-    return @base_common.Position::Position(1, 1)
+    return Position(1, 1)
   }
   if line_number > line_count {
-    return @base_common.Position::Position(
-      line_count,
-      self.get_line_max_column(line_count),
-    )
+    return Position(line_count, self.get_line_max_column(line_count))
   }
   if column <= 1 {
-    return @base_common.Position::Position(line_number, 1)
+    return Position(line_number, 1)
   }
   let max_column = self.get_line_max_column(line_number)
   if column >= max_column {
-    return @base_common.Position::Position(line_number, max_column)
+    return Position(line_number, max_column)
   }
   if surrogate {
     // column > 1 here; if it would split a high-low pair, move before it.
     let char_code_before = self.get_line_char_code(line_number, column - 2)
     if @base_common.is_high_surrogate(char_code_before) {
-      return @base_common.Position::Position(line_number, column - 1)
+      return Position(line_number, column - 1)
     }
   }
-  @base_common.Position::Position(line_number, column)
+  Position(line_number, column)
 }
 
 ///|
@@ -315,19 +312,19 @@ pub fn TextSnapshot::validate_range(
   let start_inside = @base_common.is_high_surrogate(char_before_start)
   let end_inside = @base_common.is_high_surrogate(char_before_end)
   if !start_inside && !end_inside {
-    return @base_common.Range::Range(sl, sc, el, ec)
+    return Range(sl, sc, el, ec)
   }
   if sl == el && sc == ec {
     // do not expand a collapsed range, simply move it to a valid location
-    return @base_common.Range::Range(sl, sc - 1, el, ec - 1)
+    return Range(sl, sc - 1, el, ec - 1)
   }
   if start_inside && end_inside {
-    return @base_common.Range::Range(sl, sc - 1, el, ec + 1)
+    return Range(sl, sc - 1, el, ec + 1)
   }
   if start_inside {
-    return @base_common.Range::Range(sl, sc - 1, el, ec)
+    return Range(sl, sc - 1, el, ec)
   }
-  @base_common.Range::Range(sl, sc, el, ec + 1)
+  Range(sl, sc, el, ec + 1)
 }
 
 ///|

@@ -2050,7 +2050,7 @@ fn dec(
 ///|
 /// An on-line selection range (Monaco's `new OffsetRange`).
 fn sel(start : Int, end_exclusive : Int) -> @base_common.OffsetRange {
-  @base_common.OffsetRange(start, end_exclusive)
+  OffsetRange(start, end_exclusive)
 }
 
 ///|

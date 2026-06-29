@@ -2,14 +2,11 @@
 test "provider result finds hover and definition by offset" {
   let providers : ProviderResult = {
     hovers: [
-      {
-        range: @base_common.Range::Range(1, 4, 1, 8),
-        contents: [PlainText("Provider hover")],
-      },
+      { range: Range(1, 4, 1, 8), contents: [PlainText("Provider hover")] },
     ],
     diagnostics: [
       {
-        range: @base_common.Range::Range(1, 1, 1, 3),
+        range: Range(1, 1, 1, 3),
         severity: Warning,
         message: "Provider warning",
       },
@@ -17,21 +14,15 @@ test "provider result finds hover and definition by offset" {
     definitions: [
       {
         uri: @base_common.Uri::memory("provider.mbt"),
-        range: @base_common.Range::Range(1, 4, 1, 8),
+        range: Range(1, 4, 1, 8),
       },
     ],
-    symbols: [
-      {
-        name: "main",
-        kind: "function",
-        range: @base_common.Range::Range(1, 4, 1, 8),
-      },
-    ],
+    symbols: [{ name: "main", kind: "function", range: Range(1, 4, 1, 8) }],
   }
   assert_eq(providers.diagnostics.length(), 1)
   assert_eq(providers.definitions.length(), 1)
   assert_eq(providers.definitions[0].uri.to_string(), "memory://provider.mbt")
-  let hover = providers.hover_at(@base_common.Position::Position(1, 4))
+  let hover = providers.hover_at(Position(1, 4))
   match hover {
     Some(item) =>
       match item.contents {
@@ -40,7 +31,7 @@ test "provider result finds hover and definition by offset" {
       }
     None => fail("expected hover")
   }
-  match providers.definition_at(@base_common.Position::Position(1, 4)) {
+  match providers.definition_at(Position(1, 4)) {
     Some(item) => assert_eq(item.uri.to_string(), "memory://provider.mbt")
     None => fail("expected definition")
   }

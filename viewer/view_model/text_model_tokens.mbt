@@ -46,10 +46,7 @@ pub fn RangePriorityQueueImpl::remove_min(
   if range.start + 1 == range.end_exclusive {
     self.ranges.remove(0) |> ignore
   } else {
-    self.ranges[0] = @base_common.OffsetRange(
-      range.start + 1,
-      range.end_exclusive,
-    )
+    self.ranges[0] = OffsetRange(range.start + 1, range.end_exclusive)
   }
   Some(range.start)
 }
@@ -73,19 +70,13 @@ pub fn RangePriorityQueueImpl::delete(
       if range.end_exclusive == value + 1 {
         self.ranges.remove(idx) |> ignore
       } else {
-        self.ranges[idx] = @base_common.OffsetRange(
-          value + 1,
-          range.end_exclusive,
-        )
+        self.ranges[idx] = OffsetRange(value + 1, range.end_exclusive)
       }
     } else if range.end_exclusive == value + 1 {
-      self.ranges[idx] = @base_common.OffsetRange(range.start, value)
+      self.ranges[idx] = OffsetRange(range.start, value)
     } else {
-      self.ranges[idx] = @base_common.OffsetRange(range.start, value)
-      self.ranges.insert(
-        idx + 1,
-        @base_common.OffsetRange(value + 1, range.end_exclusive),
-      )
+      self.ranges[idx] = OffsetRange(range.start, value)
+      self.ranges.insert(idx + 1, OffsetRange(value + 1, range.end_exclusive))
     }
   }
 }

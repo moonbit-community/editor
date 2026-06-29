@@ -41,7 +41,7 @@ pub fn Position::with_(
   if new_line_number == self.line_number && new_column == self.column {
     self
   } else {
-    Position::Position(new_line_number, new_column)
+    Position(new_line_number, new_column)
   }
 }
 
@@ -105,7 +105,7 @@ pub fn Position::compare(a : Position, b : Position) -> Int {
 /// A copy of this position. Mirrors Monaco's `Position.clone` (a value copy
 /// here, since `Position` is a value type).
 pub fn Position::clone(self : Position) -> Position {
-  Position::Position(self.line_number, self.column)
+  Position(self.line_number, self.column)
 }
 
 ///|
@@ -134,13 +134,13 @@ pub fn OffsetRange::OffsetRange(
 ///|
 /// `[start, end_exclusive)`. Mirrors Monaco's static `OffsetRange.fromTo`.
 pub fn OffsetRange::from_to(start : Int, end_exclusive : Int) -> OffsetRange {
-  OffsetRange::OffsetRange(start, end_exclusive)
+  OffsetRange(start, end_exclusive)
 }
 
 ///|
 /// `[0, length)`. Mirrors Monaco's static `OffsetRange.ofLength`.
 pub fn OffsetRange::of_length(length : Int) -> OffsetRange {
-  OffsetRange::OffsetRange(0, length)
+  OffsetRange(0, length)
 }
 
 ///|
@@ -149,13 +149,13 @@ pub fn OffsetRange::of_start_and_length(
   start : Int,
   length : Int,
 ) -> OffsetRange {
-  OffsetRange::OffsetRange(start, start + length)
+  OffsetRange(start, start + length)
 }
 
 ///|
 /// The empty range `[offset, offset)`. Mirrors Monaco's `OffsetRange.emptyAt`.
 pub fn OffsetRange::empty_at(offset : Int) -> OffsetRange {
-  OffsetRange::OffsetRange(offset, offset)
+  OffsetRange(offset, offset)
 }
 
 ///|
@@ -187,7 +187,7 @@ pub fn OffsetRange::length(self : OffsetRange) -> Int {
 ///|
 /// Shifts both endpoints by `offset`. Mirrors Monaco's `delta`.
 pub fn OffsetRange::delta(self : OffsetRange, offset : Int) -> OffsetRange {
-  OffsetRange::OffsetRange(self.start + offset, self.end_exclusive + offset)
+  OffsetRange(self.start + offset, self.end_exclusive + offset)
 }
 
 ///|
@@ -196,13 +196,13 @@ pub fn OffsetRange::delta_start(
   self : OffsetRange,
   offset : Int,
 ) -> OffsetRange {
-  OffsetRange::OffsetRange(self.start + offset, self.end_exclusive)
+  OffsetRange(self.start + offset, self.end_exclusive)
 }
 
 ///|
 /// Shifts the end by `offset`. Mirrors Monaco's `deltaEnd`.
 pub fn OffsetRange::delta_end(self : OffsetRange, offset : Int) -> OffsetRange {
-  OffsetRange::OffsetRange(self.start, self.end_exclusive + offset)
+  OffsetRange(self.start, self.end_exclusive + offset)
 }
 
 ///|
@@ -233,7 +233,7 @@ pub fn OffsetRange::join(
   self : OffsetRange,
   other : OffsetRange,
 ) -> OffsetRange {
-  OffsetRange::OffsetRange(
+  OffsetRange(
     self.start.min(other.start),
     self.end_exclusive.max(other.end_exclusive),
   )
@@ -249,7 +249,7 @@ pub fn OffsetRange::intersect(
   let start = self.start.max(other.start)
   let end = self.end_exclusive.min(other.end_exclusive)
   if start <= end {
-    Some(OffsetRange::OffsetRange(start, end))
+    Some(OffsetRange(start, end))
   } else {
     None
   }

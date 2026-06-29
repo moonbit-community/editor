@@ -41,7 +41,7 @@
 
 ///|
 fn pos(line : Int, column : Int) -> @base_common.Position {
-  @base_common.Position::Position(line, column)
+  Position(line, column)
 }
 
 ///|
@@ -83,7 +83,7 @@ fn join_lines(lines : Array[String]) -> String {
 
 ///|
 test "validatePosition" {
-  let m = TextSnapshot::TextSnapshot("line one\nline two")
+  let m = TextSnapshot("line one\nline two")
   assert_pos(m.validate_position(pos(0, 0)), 1, 1)
   assert_pos(m.validate_position(pos(0, 1)), 1, 1)
   assert_pos(m.validate_position(pos(1, 1)), 1, 1)
@@ -102,7 +102,7 @@ test "validatePosition" {
 
 ///|
 test "validatePosition around high-low surrogate pairs 1" {
-  let m = TextSnapshot::TextSnapshot("a\u{1F4DA}b")
+  let m = TextSnapshot("a\u{1F4DA}b")
   assert_pos(m.validate_position(pos(0, 0)), 1, 1)
   assert_pos(m.validate_position(pos(0, 1)), 1, 1)
   assert_pos(m.validate_position(pos(0, 7)), 1, 1)
@@ -121,7 +121,7 @@ test "validatePosition around high-low surrogate pairs 1" {
 
 ///|
 test "validatePosition around high-low surrogate pairs 2" {
-  let m = TextSnapshot::TextSnapshot("a\u{1F4DA}\u{1F4DA}b")
+  let m = TextSnapshot("a\u{1F4DA}\u{1F4DA}b")
   assert_pos(m.validate_position(pos(1, 1)), 1, 1)
   assert_pos(m.validate_position(pos(1, 2)), 1, 2)
   assert_pos(m.validate_position(pos(1, 3)), 1, 2)
@@ -133,7 +133,7 @@ test "validatePosition around high-low surrogate pairs 2" {
 
 ///|
 test "validateRange around high-low surrogate pairs 1" {
-  let m = TextSnapshot::TextSnapshot("a\u{1F4DA}b")
+  let m = TextSnapshot("a\u{1F4DA}b")
   assert_range(m.validate_range(rng(0, 0, 0, 1)), 1, 1, 1, 1)
   assert_range(m.validate_range(rng(0, 0, 0, 7)), 1, 1, 1, 1)
   assert_range(m.validate_range(rng(1, 1, 1, 1)), 1, 1, 1, 1)
@@ -155,7 +155,7 @@ test "validateRange around high-low surrogate pairs 1" {
 
 ///|
 test "validateRange around high-low surrogate pairs 2" {
-  let m = TextSnapshot::TextSnapshot("a\u{1F4DA}\u{1F4DA}b")
+  let m = TextSnapshot("a\u{1F4DA}\u{1F4DA}b")
   assert_range(m.validate_range(rng(0, 0, 0, 1)), 1, 1, 1, 1)
   assert_range(m.validate_range(rng(0, 0, 0, 7)), 1, 1, 1, 1)
   assert_range(m.validate_range(rng(1, 1, 1, 1)), 1, 1, 1, 1)
@@ -190,7 +190,7 @@ test "validateRange around high-low surrogate pairs 2" {
 
 ///|
 test "modifyPosition" {
-  let m = TextSnapshot::TextSnapshot("line one\nline two")
+  let m = TextSnapshot("line one\nline two")
   assert_pos(m.modify_position(pos(1, 1), 0), 1, 1)
   assert_pos(m.modify_position(pos(0, 0), 0), 1, 1)
   assert_pos(m.modify_position(pos(30, 1), 0), 2, 9)
@@ -216,7 +216,7 @@ test "modifyPosition" {
 
 ///|
 test "getLineFirstNonWhitespaceColumn" {
-  let m = TextSnapshot::TextSnapshot(
+  let m = TextSnapshot(
     join_lines([
       "asd", " asd", "\tasd", "  asd", "\t\tasd", " ", "  ", "\t", "\t\t", "  \tasd",
       "", "",
@@ -238,7 +238,7 @@ test "getLineFirstNonWhitespaceColumn" {
 
 ///|
 test "getLineLastNonWhitespaceColumn" {
-  let m = TextSnapshot::TextSnapshot(
+  let m = TextSnapshot(
     join_lines([
       "asd", "asd ", "asd\t", "asd  ", "asd\t\t", " ", "  ", "\t", "\t\t", "asd  \t",
       "", "",
@@ -260,14 +260,12 @@ test "getLineLastNonWhitespaceColumn" {
 
 ///|
 test "mightContainRTL nope" {
-  let m = TextSnapshot::TextSnapshot("hello world!")
+  let m = TextSnapshot("hello world!")
   assert_eq(m.might_contain_rtl(), false)
 }
 
 ///|
 test "mightContainRTL yes" {
-  let m = TextSnapshot::TextSnapshot(
-    "Hello,\nזוהי עובדה מבוססת שדעתו",
-  )
+  let m = TextSnapshot("Hello,\nזוהי עובדה מבוססת שדעתו")
   assert_eq(m.might_contain_rtl(), true)
 }

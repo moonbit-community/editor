@@ -325,7 +325,7 @@ fn ContentWidgets::ensure_hover_widget(
       })
       (context.hook_scrollable_scrollbar_input)(
         widget.scrollable,
-        @scrollbar.HoverScrollableElement,
+        HoverScrollableElement,
       )
       widget.wrapper.add_event_listener("keydown", event => {
         match event.to_keyboard_event() {

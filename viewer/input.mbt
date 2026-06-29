@@ -49,7 +49,7 @@ fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
   })
   handler.hook_scrollable_scrollbar_input(
     view.editor_scrollbar.scrollable(),
-    @scrollbar.EditorScrollableElement,
+    EditorScrollableElement,
   )
   handler.hook_browser_desperate_reveal()
   let document = @rdom.document()
@@ -186,11 +186,7 @@ fn token_anchor_for_target(
   // `target.line_number` is the 1-based view line; token columns are 0-based, so
   // shift them to 1-based `Position` columns.
   let view_line = target.line_number
-  let start = view_to_model_offset(
-    @base_common.Position::Position(view_line, token_start + 1),
-  )
-  let end = view_to_model_offset(
-    @base_common.Position::Position(view_line, token_end + 1),
-  )
+  let start = view_to_model_offset(Position(view_line, token_start + 1))
+  let end = view_to_model_offset(Position(view_line, token_end + 1))
   Some((start, end, target.injected_text_index))
 }

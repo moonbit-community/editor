@@ -32,14 +32,12 @@
 /// The suite's shared 5-line model (`LINE1..LINE5` joined with mixed CRLF/LF, as
 /// in `setup()`).
 fn this_model() -> TextSnapshot {
-  TextSnapshot::TextSnapshot(
-    "My First Line\r\n\t\tMy Second Line\n    Third Line\n\r\n1",
-  )
+  TextSnapshot("My First Line\r\n\t\tMy Second Line\n    Third Line\n\r\n1")
 }
 
 ///|
 fn rng(sl : Int, sc : Int, el : Int, ec : Int) -> @base_common.Range {
-  @base_common.Range::Range(sl, sc, el, ec)
+  Range(sl, sc, el, ec)
 }
 
 ///|
@@ -114,7 +112,7 @@ test "getValueLengthInRange" {
 /// `Editor Model - Model Line Separators` suite: `\u{2028}` (LINE SEPARATOR) is
 /// not a line break — only `\n`/`\r\n` are.
 fn this_model_line_separators() -> TextSnapshot {
-  TextSnapshot::TextSnapshot(
+  TextSnapshot(
     "My First Line\u{2028}\t\tMy Second Line\n    Third Line\u{2028}\r\n1",
   )
 }

@@ -178,7 +178,7 @@ pub fn TextModel::validate_position(
     1,
     self.get_line_max_column(line),
   )
-  @base_common.Position::Position(line, column)
+  Position(line, column)
 }
 
 ///|
@@ -188,17 +188,12 @@ pub fn TextModel::validate_range(
   range : @base_common.Range,
 ) -> @base_common.Range {
   let start = self.validate_position(
-    @base_common.Position::Position(range.start_line_number, range.start_column),
+    Position(range.start_line_number, range.start_column),
   )
   let end = self.validate_position(
-    @base_common.Position::Position(range.end_line_number, range.end_column),
+    Position(range.end_line_number, range.end_column),
   )
-  @base_common.Range::Range(
-    start.line_number,
-    start.column,
-    end.line_number,
-    end.column,
-  )
+  Range(start.line_number, start.column, end.line_number, end.column)
 }
 
 ///|
@@ -351,7 +346,7 @@ pub fn InlineModelDecorationsComputer::get_decorations(
         if start_line_number <= view_range.start_line_number &&
           view_range.start_line_number <= end_line_number {
           let inline_decoration = InlineDecoration::new(
-            @base_common.Range::Range(
+            Range(
               view_range.start_line_number,
               view_range.start_column,
               view_range.start_line_number,
@@ -374,7 +369,7 @@ pub fn InlineModelDecorationsComputer::get_decorations(
         if start_line_number <= view_range.end_line_number &&
           view_range.end_line_number <= end_line_number {
           let inline_decoration = InlineDecoration::new(
-            @base_common.Range::Range(
+            Range(
               view_range.end_line_number,
               view_range.end_column,
               view_range.end_line_number,
@@ -423,10 +418,10 @@ fn InlineModelDecorationsComputer::get_or_create_view_model_decoration(
       let view_range = if options.is_whole_line {
         // For backwards compatibility, whole-line decorations span min..max col.
         let start = self.coordinates_converter.convert_model_position_to_view_position(
-          @base_common.Position::Position(model_range.start_line_number, 1),
+          Position(model_range.start_line_number, 1),
         )
         let end = self.coordinates_converter.convert_model_position_to_view_position(
-          @base_common.Position::Position(
+          Position(
             model_range.end_line_number,
             self.model.get_line_max_column(model_range.end_line_number),
           ),

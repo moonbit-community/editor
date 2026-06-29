@@ -166,18 +166,9 @@ pub fn MouseHandler::handle_mouse_down(
       let refined = (self.helper.refine_content_target)(
         frame, client_x, client_y, target,
       )
-      Some(
-        (
-          @base_common.Position::Position(
-            refined.line_number,
-            refined.column + 1,
-          ),
-          false,
-        ),
-      )
+      Some((Position(refined.line_number, refined.column + 1), false))
     }
-    GutterLineNumbers =>
-      Some((@base_common.Position::Position(target.line_number, 1), true))
+    GutterLineNumbers => Some((Position(target.line_number, 1), true))
     _ => None
   }
   guard resolved is Some((view_position, started_on_line_numbers)) else {
@@ -385,9 +376,7 @@ fn drag_view_position(
   match target.kind {
     ContentText | ContentEmpty | BelowContent | GutterLineNumbers =>
       if target.line_number >= 1 {
-        Some(
-          @base_common.Position::Position(target.line_number, target.column + 1),
-        )
+        Some(Position(target.line_number, target.column + 1))
       } else {
         None
       }
@@ -566,7 +555,7 @@ fn MouseHandler::apply_scrollable_position(
   desired : Double,
 ) -> Unit {
   match owner {
-    @scrollbar.EditorScrollableElement =>
+    EditorScrollableElement =>
       if vertical {
         (self.helper.apply_scroll)(
           (self.helper.view_layout)().scroll_to(scroll_top=desired),
@@ -580,8 +569,7 @@ fn MouseHandler::apply_scrollable_position(
           ),
         )
       }
-    @scrollbar.HoverScrollableElement =>
-      scrollable.native_scroll_to(vertical~, desired)
+    HoverScrollableElement => scrollable.native_scroll_to(vertical~, desired)
   }
 }
 
@@ -591,8 +579,8 @@ fn MouseHandler::scrollable_for_drag(
   owner : @scrollbar.ScrollableElementOwner,
 ) -> @scrollbar.ScrollableElementDom? {
   match owner {
-    @scrollbar.EditorScrollableElement => Some(self.helper.editor_scrollable)
-    @scrollbar.HoverScrollableElement => (self.helper.hover_scrollable)()
+    EditorScrollableElement => Some(self.helper.editor_scrollable)
+    HoverScrollableElement => (self.helper.hover_scrollable)()
   }
 }
 

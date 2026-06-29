@@ -183,7 +183,7 @@ pub fn Range::plus_range_of(a : Range, b : Range) -> Range {
     end_line_number = a.end_line_number
     end_column = a.end_column
   }
-  Range::Range(start_line_number, start_column, end_line_number, end_column)
+  Range(start_line_number, start_column, end_line_number, end_column)
 }
 
 ///|
@@ -222,7 +222,7 @@ pub fn Range::intersect_ranges_of(a : Range, b : Range) -> Range? {
     return None
   }
   Some(
-    Range::Range(
+    Range(
       result_start_line_number, result_start_column, result_end_line_number, result_end_column,
     ),
   )
@@ -237,13 +237,13 @@ pub fn Range::equals_range(self : Range, other : Range) -> Bool {
 ///|
 /// The end position (after or equal to the start position).
 pub fn Range::get_end_position(self : Range) -> Position {
-  Position::Position(self.end_line_number, self.end_column)
+  Position(self.end_line_number, self.end_column)
 }
 
 ///|
 /// The start position (before or equal to the end position).
 pub fn Range::get_start_position(self : Range) -> Position {
-  Position::Position(self.start_line_number, self.start_column)
+  Position(self.start_line_number, self.start_column)
 }
 
 ///|
@@ -253,12 +253,7 @@ pub fn Range::set_end_position(
   end_line_number : Int,
   end_column : Int,
 ) -> Range {
-  Range::Range(
-    self.start_line_number,
-    self.start_column,
-    end_line_number,
-    end_column,
-  )
+  Range(self.start_line_number, self.start_column, end_line_number, end_column)
 }
 
 ///|
@@ -268,18 +263,13 @@ pub fn Range::set_start_position(
   start_line_number : Int,
   start_column : Int,
 ) -> Range {
-  Range::Range(
-    start_line_number,
-    start_column,
-    self.end_line_number,
-    self.end_column,
-  )
+  Range(start_line_number, start_column, self.end_line_number, self.end_column)
 }
 
 ///|
 /// New empty range at this range's start.
 pub fn Range::collapse_to_start(self : Range) -> Range {
-  Range::Range(
+  Range(
     self.start_line_number,
     self.start_column,
     self.start_line_number,
@@ -290,7 +280,7 @@ pub fn Range::collapse_to_start(self : Range) -> Range {
 ///|
 /// New empty range at this range's end.
 pub fn Range::collapse_to_end(self : Range) -> Range {
-  Range::Range(
+  Range(
     self.end_line_number,
     self.end_column,
     self.end_line_number,
@@ -301,7 +291,7 @@ pub fn Range::collapse_to_end(self : Range) -> Range {
 ///|
 /// Moves the range by the given number of lines.
 pub fn Range::delta(self : Range, line_count : Int) -> Range {
-  Range::Range(
+  Range(
     self.start_line_number + line_count,
     self.start_column,
     self.end_line_number + line_count,
@@ -318,7 +308,7 @@ pub fn Range::is_single_line(self : Range) -> Bool {
 ///|
 /// Build a range from two positions.
 pub fn Range::from_positions(start : Position, end : Position) -> Range {
-  Range::Range(start.line_number, start.column, end.line_number, end.column)
+  Range(start.line_number, start.column, end.line_number, end.column)
 }
 
 ///|

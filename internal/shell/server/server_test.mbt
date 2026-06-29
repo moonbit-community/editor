@@ -473,7 +473,7 @@ impl @language.DiagnosticsProvider for FakeLanguageProvider with fn provide_diag
 ) {
   [
     {
-      range: @base_common.Range::Range(1, 1, 1, 5),
+      range: Range(1, 1, 1, 5),
       severity: Warning,
       message: "Configured diagnostic",
     },
@@ -486,13 +486,7 @@ impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_d
   _model,
   _token,
 ) {
-  [
-    {
-      name: "configured",
-      kind: "function",
-      range: @base_common.Range::Range(1, 8, 1, 18),
-    },
-  ]
+  [{ name: "configured", kind: "function", range: Range(1, 8, 1, 18) }]
 }
 
 ///|

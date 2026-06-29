@@ -55,11 +55,7 @@ test "no decorations" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_eq(result.decorations.length(), 0)
   assert_inline_eq(result.inline_decorations, [[]])
   assert_bool_array_eq(result.has_variable_fonts, [false])
@@ -76,7 +72,7 @@ test "inline class name decoration on a single line" {
       [
         create_model_decoration(
           "dec1",
-          @base_common.Range::Range(1, 1, 1, 6),
+          Range(1, 1, 1, 6),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             inline_class_name="test-class",
@@ -88,18 +84,14 @@ test "inline class name decoration on a single line" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_eq(result.decorations.length(), 1)
   assert_inline_eq(result.inline_decorations, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 1, 1, 6),
+        Range(1, 1, 1, 6),
         "test-class",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -117,7 +109,7 @@ test "inlineClassName with affectsLetterSpacing" {
       [
         create_model_decoration(
           "dec1",
-          @base_common.Range::Range(1, 1, 1, 6),
+          Range(1, 1, 1, 6),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             inline_class_name="test-class",
@@ -130,17 +122,13 @@ test "inlineClassName with affectsLetterSpacing" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_inline_eq(result.inline_decorations, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 1, 1, 6),
+        Range(1, 1, 1, 6),
         "test-class",
-        @inline_decorations.RegularAffectingLetterSpacing,
+        RegularAffectingLetterSpacing,
       ),
     ],
   ])
@@ -157,7 +145,7 @@ test "beforeContentClassName decoration" {
       [
         create_model_decoration(
           "dec1",
-          @base_common.Range::Range(1, 3, 1, 8),
+          Range(1, 3, 1, 8),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             before_content_class_name="before-class",
@@ -169,17 +157,13 @@ test "beforeContentClassName decoration" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_inline_eq(result.inline_decorations, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 3, 1, 3),
+        Range(1, 3, 1, 3),
         "before-class",
-        @inline_decorations.Before,
+        Before,
       ),
     ],
   ])
@@ -196,7 +180,7 @@ test "afterContentClassName decoration" {
       [
         create_model_decoration(
           "dec1",
-          @base_common.Range::Range(1, 3, 1, 8),
+          Range(1, 3, 1, 8),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             after_content_class_name="after-class",
@@ -208,17 +192,13 @@ test "afterContentClassName decoration" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_inline_eq(result.inline_decorations, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 8, 1, 8),
+        Range(1, 8, 1, 8),
         "after-class",
-        @inline_decorations.After,
+        After,
       ),
     ],
   ])
@@ -235,7 +215,7 @@ test "all decoration types combined" {
       [
         create_model_decoration(
           "dec1",
-          @base_common.Range::Range(1, 2, 1, 6),
+          Range(1, 2, 1, 6),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             inline_class_name="inline-class",
@@ -249,27 +229,23 @@ test "all decoration types combined" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_inline_eq(result.inline_decorations, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 2, 1, 6),
+        Range(1, 2, 1, 6),
         "inline-class",
-        @inline_decorations.Regular,
+        Regular,
       ),
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 2, 1, 2),
+        Range(1, 2, 1, 2),
         "before-class",
-        @inline_decorations.Before,
+        Before,
       ),
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 6, 1, 6),
+        Range(1, 6, 1, 6),
         "after-class",
-        @inline_decorations.After,
+        After,
       ),
     ],
   ])
@@ -288,7 +264,7 @@ test "decoration spanning multiple lines" {
       [
         create_model_decoration(
           "dec1",
-          @base_common.Range::Range(1, 3, 3, 5),
+          Range(1, 3, 3, 5),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             inline_class_name="multi-line",
@@ -300,15 +276,11 @@ test "decoration spanning multiple lines" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 3, 11),
-    false,
-    false,
-  )
+  let result = computer.get_decorations(Range(1, 1, 3, 11), false, false)
   let expected = @inline_decorations.InlineDecoration::new(
-    @base_common.Range::Range(1, 3, 3, 5),
+    Range(1, 3, 3, 5),
     "multi-line",
-    @inline_decorations.Regular,
+    Regular,
   )
   assert_inline_eq(result.inline_decorations, [
     [expected],
@@ -328,7 +300,7 @@ test "decoration with affectsFont sets hasVariableFonts" {
       [
         create_model_decoration(
           "dec1",
-          @base_common.Range::Range(1, 1, 1, 6),
+          Range(1, 1, 1, 6),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             inline_class_name="font-class",
@@ -341,11 +313,7 @@ test "decoration with affectsFont sets hasVariableFonts" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_bool_array_eq(result.has_variable_fonts, [true])
 }
 
@@ -360,7 +328,7 @@ test "multiple decorations on different lines" {
       [
         create_model_decoration(
           "dec1",
-          @base_common.Range::Range(1, 1, 1, 5),
+          Range(1, 1, 1, 5),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             inline_class_name="class-a",
@@ -368,7 +336,7 @@ test "multiple decorations on different lines" {
         ),
         create_model_decoration(
           "dec2",
-          @base_common.Range::Range(2, 1, 2, 5),
+          Range(2, 1, 2, 5),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             inline_class_name="class-b",
@@ -380,24 +348,20 @@ test "multiple decorations on different lines" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 2, 9),
-    false,
-    false,
-  )
+  let result = computer.get_decorations(Range(1, 1, 2, 9), false, false)
   assert_inline_eq(result.inline_decorations, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 1, 1, 5),
+        Range(1, 1, 1, 5),
         "class-a",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(2, 1, 2, 5),
+        Range(2, 1, 2, 5),
         "class-b",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -411,7 +375,7 @@ test "decoration cache is used for same decoration id" {
   )
   let dec = create_model_decoration(
     "dec1",
-    @base_common.Range::Range(1, 1, 1, 6),
+    Range(1, 1, 1, 6),
     @inline_decorations.ModelDecorationOptions::new(
       description="test",
       inline_class_name="test-class",
@@ -423,16 +387,8 @@ test "decoration cache is used for same decoration id" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result1 = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
-  let result2 = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result1 = computer.get_decorations(Range(1, 1, 1, 12), false, false)
+  let result2 = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_true(physical_equal(result1.decorations[0], result2.decorations[0]))
 }
 
@@ -444,7 +400,7 @@ test "reset clears decoration cache" {
   )
   let dec = create_model_decoration(
     "dec1",
-    @base_common.Range::Range(1, 1, 1, 6),
+    Range(1, 1, 1, 6),
     @inline_decorations.ModelDecorationOptions::new(
       description="test",
       inline_class_name="test-class",
@@ -456,17 +412,9 @@ test "reset clears decoration cache" {
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
-  let result1 = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result1 = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   computer.reset()
-  let result2 = computer.get_decorations(
-    @base_common.Range::Range(1, 1, 1, 12),
-    false,
-    false,
-  )
+  let result2 = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_false(physical_equal(result1.decorations[0], result2.decorations[0]))
 }
 
@@ -481,7 +429,7 @@ test "getInlineDecorations returns inline decorations for a model line" {
       [
         create_model_decoration(
           "dec1",
-          @base_common.Range::Range(1, 1, 1, 6),
+          Range(1, 1, 1, 6),
           @inline_decorations.ModelDecorationOptions::new(
             description="test",
             inline_class_name="test-class",
@@ -497,9 +445,9 @@ test "getInlineDecorations returns inline decorations for a model line" {
   assert_inline_eq(result, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 1, 1, 6),
+        Range(1, 1, 1, 6),
         "test-class",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -549,9 +497,9 @@ test "single injection with inlineClassName on a single output line" {
   assert_inline_eq(result, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 6, 1, 14),
+        Range(1, 6, 1, 14),
         "injected-class",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -599,9 +547,9 @@ test "injection with inlineClassNameAffectsLetterSpacing" {
   assert_inline_eq(result, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 1, 1, 4),
+        Range(1, 1, 1, 4),
         "ls-class",
-        @inline_decorations.RegularAffectingLetterSpacing,
+        RegularAffectingLetterSpacing,
       ),
     ],
   ])
@@ -633,14 +581,14 @@ test "multiple injections on a single output line" {
   assert_inline_eq(result, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 3, 1, 5),
+        Range(1, 3, 1, 5),
         "class-a",
-        @inline_decorations.Regular,
+        Regular,
       ),
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 8, 1, 11),
+        Range(1, 8, 1, 11),
         "class-b",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -673,16 +621,16 @@ test "injection spanning across wrapped lines" {
   assert_inline_eq(result, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(5, 9, 5, 16),
+        Range(5, 9, 5, 16),
         "injected",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(6, 1, 6, 4),
+        Range(6, 1, 6, 4),
         "injected",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -712,16 +660,16 @@ test "injection with wrappedTextIndentLength on wrapped lines" {
   assert_inline_eq(result, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(1, 1, 1, 16),
+        Range(1, 1, 1, 16),
         "injected",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(2, 5, 2, 10),
+        Range(2, 5, 2, 10),
         "injected",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -753,9 +701,9 @@ test "injection starting in later wrapped line" {
     [],
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(2, 6, 2, 8),
+        Range(2, 6, 2, 8),
         "late-class",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -783,9 +731,9 @@ test "base view line number offsets correctly" {
   assert_inline_eq(result, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(10, 1, 10, 5),
+        Range(10, 1, 10, 5),
         "test-class",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -818,9 +766,9 @@ test "range uses view line number, not model line number" {
   assert_inline_eq(result, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(7, 1, 7, 6),
+        Range(7, 1, 7, 6),
         "ghost-class",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])
@@ -852,16 +800,16 @@ test "range uses view line number on wrapped lines, not model line number" {
   assert_inline_eq(result, [
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(5, 1, 5, 9),
+        Range(5, 1, 5, 9),
         "wrap-class",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
     [
       @inline_decorations.InlineDecoration::new(
-        @base_common.Range::Range(6, 1, 6, 3),
+        Range(6, 1, 6, 3),
         "wrap-class",
-        @inline_decorations.Regular,
+        Regular,
       ),
     ],
   ])

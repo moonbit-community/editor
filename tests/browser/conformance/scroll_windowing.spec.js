@@ -1,3 +1,8 @@
+// DOM-wiring smoke for virtualization only. The *semantic* windowing and
+// view<->model projection assertions (frame viewport window, soft-wrap view
+// positions, scroll-window math) live in the headless viewer harness
+// (viewer/test_viewer_wbtest.mbt; see docs/harness.md). Keep this spec on the
+// wired-up app behavior a browser is actually needed for.
 import { promises as fs } from 'node:fs';
 import { expect, test } from '../support/test.js';
 import { openWorkspaceFile, setHoverFixture } from '../support/app.js';

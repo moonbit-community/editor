@@ -1,0 +1,210 @@
+// Headless behavior-test harness — the MoonBit analog of vscode's
+// editor/test/browser/testCodeEditor.ts. Drives a real Viewer + ViewModel +
+// CursorsController over an in-memory model WITHOUT attaching a DOM view
+// (mirrors TestCodeEditor._createView returning null), so tests assert on
+// semantic state — positions, ranges, projected view lines, frames — instead
+// of rendered pixels.
+//
+// The seam is `Viewer::render_current_model` (render.mbt): it builds the
+// tokenized document, view model, render frame, and cursor context and stores
+// them synchronously before `schedule_render`. Only the DOM flush is deferred,
+// and `schedule_render`/`flush_render` already no-op while `view is None`
+// (view.mbt). So an unattached viewer has fully-populated semantic state after
+// `set_model` — no DOM, no requestAnimationFrame, no measurement needed.
+
+///|
+/// Builds a TextModel from raw text. The analog of `instantiateTextModel`.
+fn test_model(
+  text : String,
+  language_id? : String = "plaintext",
+) -> @model.TextModel {
+  TextModel(
+    @base_common.Uri::memory("test-model"),
+    "test-model",
+    language_id,
+    1,
+    "",
+    text,
+  )
+}
+
+///|
+/// `withTestCodeEditor`: spin up a headless viewer over `text`, run `body`,
+/// dispose. No `attach()` — no DOM view — but `set_model` still builds the
+/// tokenized doc, view model, render frame, and cursor context synchronously.
+fn with_test_viewer(
+  text : String,
+  body : (Viewer) -> Unit raise,
+  options? : ViewerOptions = ViewerOptions::default(),
+) -> Unit raise {
+  let viewer = Viewer::Viewer(options~) // NOTE: deliberately no attach()
+  viewer.set_model(test_model(text))
+  body(viewer)
+  viewer.dispose()
+}
+
+///|
+/// `ITestCodeEditor.getViewModel()` — whitebox read of the private field.
+fn Viewer::test_view_model(self : Viewer) -> @view_model.ViewModel {
+  self.view_model.unwrap()
+}
+
+///|
+/// vscode keeps one cursor controller live per editor; here it is lazy
+/// (created on first interaction), so force it for tests.
+fn Viewer::test_cursor(self : Viewer) -> @cursor.CursorsController {
+  self.ensure_cursor().unwrap()
+}
+
+///|
+/// The frame the viewer last built for its visible window.
+fn Viewer::test_frame(self : Viewer) -> @view_model.RenderFrame {
+  self.frame.unwrap()
+}
+
+///|
+/// Forces a soft-wrap column and rebuilds the view model, the headless analog
+/// of the wrap width an attached viewer derives from its measured content box.
+/// `ViewerOptions` carries no wrap-column field (the real column is measured
+/// from the DOM via `soft_wrap_column_for_content_width`), so a headless wrap
+/// test sets the private column directly. Requires `options.soft_wrap`.
+fn Viewer::test_set_soft_wrap_column(self : Viewer, column : Int) -> Unit {
+  self.soft_wrap_column = column
+  self.rebuild_current_view_model_for_options()
+}
+
+///|
+/// Sets the viewport box the layout windows against, the headless analog of the
+/// measured content box, so frame-windowing can be tested without a DOM.
+fn Viewer::test_set_viewport(
+  self : Viewer,
+  width~ : Double,
+  height~ : Double,
+) -> Unit {
+  self.layout.set_viewport_size(width~, height~) |> ignore
+}
+
+///|
+/// Rebuilds and returns the render frame for the layout's current visible
+/// window — the headless analog of `synced_window_frame`, which only runs
+/// inside a DOM flush. Scroll/viewport changes do not rebuild the frame while
+/// `view is None`, so a windowing test calls this after scrolling.
+fn Viewer::test_refresh_frame(self : Viewer) -> @view_model.RenderFrame {
+  let view_model = self.test_view_model()
+  let window = self.layout.visible_window(overscan=line_overscan)
+  let frame = view_model.render_frame({
+    start_line: window.start,
+    end_line: window.end,
+  })
+  self.frame = Some(frame)
+  frame
+}
+
+///|
+/// A document of `line_count` distinct one-line entries, for windowing tests.
+fn long_document(line_count : Int) -> String {
+  let out = StringBuilder()
+  for i in 0..<line_count {
+    if i > 0 {
+      out.write_char('\n')
+    }
+    out.write_string("line ")
+    out.write_string(i.to_string())
+  }
+  out.to_string()
+}
+
+///|
+/// Component-wise position equality. `@base_common.Position` derives `Eq`/`Debug`
+/// but not `Show`, so `assert_eq` on it cannot format a failure message; the
+/// rest of this package's tests compare `line_number`/`column` (both `Int`,
+/// which has `Show`) the same way.
+fn assert_position(
+  actual : @base_common.Position,
+  expected : @base_common.Position,
+) -> Unit raise {
+  assert_eq(actual.line_number, expected.line_number)
+  assert_eq(actual.column, expected.column)
+}
+
+///|
+/// Selection equality by endpoints (anchor + active), for the same `Show` reason
+/// as `assert_position`.
+fn assert_selection_eq(
+  actual : @view_model.Selection,
+  expected : @view_model.Selection,
+) -> Unit raise {
+  assert_position(actual.get_selection_start(), expected.get_selection_start())
+  assert_position(actual.get_position(), expected.get_position())
+}
+
+///|
+/// `assertCursor`: compare the controller's model selection to an expected one.
+fn assert_cursor(
+  viewer : Viewer,
+  expected : @view_model.Selection,
+) -> Unit raise {
+  assert_selection_eq(viewer.test_cursor().get_model_selection(), expected)
+}
+
+///|
+/// The seam this harness rests on: an unattached viewer (no `attach()`, no DOM
+/// view) still has a fully-populated view model and render frame synchronously
+/// after `set_model`. The whole short document fits the default window.
+test "set_model populates frame and view model without attaching" {
+  with_test_viewer("alpha\nbeta\ngamma", viewer => {
+    let frame = viewer.test_frame()
+    assert_eq(frame.line_count, 3)
+    assert_eq(frame.viewport.start_line, 1)
+    assert_eq(frame.lines.length(), 3)
+    assert_eq(viewer.test_view_model().line_count(), 3)
+  })
+}
+
+///|
+/// Step 2 (worked example): the view-axis / soft-wrap projection the memory
+/// note flags as previously regressing undetected, now a fast precise harness
+/// test instead of a broad/brittle Playwright assertion. Routes a model column
+/// through the full Viewer -> ViewModel -> CoordinatesConverter stack.
+test "soft wrap maps a model column to the correct view position" {
+  let options = ViewerOptions(soft_wrap=true)
+  with_test_viewer(
+    "abcdefghij",
+    viewer => {
+      viewer.test_set_soft_wrap_column(6)
+      let converter = viewer.test_view_model().coordinates_converter()
+      // wrap col 6: view line 1 = "abcdef" (model cols 1-6), view line 2 = "ghij"
+      // (model cols 7-10). Model col 9 ('i') projects onto view line 2, col 3.
+      let view_pos = converter.model_position_to_view_position(Position(1, 9))
+      assert_position(view_pos, Position(2, 3))
+      // The wrap boundary itself: model col 7 ('g') starts the continuation line.
+      let boundary = converter.model_position_to_view_position(Position(1, 7))
+      assert_position(boundary, Position(2, 1))
+    },
+    options~,
+  )
+}
+
+///|
+/// Step 2 (worked example): the render frame windows to the scrolled viewport
+/// while the document height is retained — the semantic core of the
+/// "windows the rendered lines while keeping the document height" Playwright
+/// spec, now deterministic and DOM-free.
+test "render frame windows to the visible range, not the whole document" {
+  with_test_viewer(long_document(200), viewer => {
+    viewer.test_set_viewport(width=800.0, height=400.0)
+    viewer.scroll_to(720.0)
+    let frame = viewer.test_refresh_frame()
+    // Document height is retained...
+    assert_eq(frame.line_count, 200)
+    // ...but only a window around the scrolled viewport is materialized.
+    // scroll_top 720 = 40 lines * 18px line height; with the 20-line overscan
+    // the window starts at line 21.
+    assert_eq(frame.viewport.start_line, 21)
+    assert_true(frame.lines.length() < frame.line_count)
+    assert_eq(
+      frame.lines.length(),
+      frame.viewport.end_line - frame.viewport.start_line,
+    )
+  })
+}

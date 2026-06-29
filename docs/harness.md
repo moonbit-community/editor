@@ -7,8 +7,11 @@ behavior inspectable without hidden setup.
 ## Layers
 
 1. Baseline compiler/build checks.
-2. MoonBit unit tests.
-3. Browser suites split by purpose: smoke, conformance, component, and
+2. MoonBit unit tests: DOM-free package tests (vscode's `editor/test/common`).
+3. Headless viewer harness: drives a real `Viewer` + `ViewModel` +
+   `CursorsController` with no DOM view, asserting on semantic state (vscode's
+   `editor/test/browser/testCodeEditor.ts`). See "Headless Viewer Harness".
+4. Browser suites split by purpose: smoke, conformance, component, and
    performance.
 
 Baseline and unit layers should stay boring: no errors, and no new warnings.
@@ -37,6 +40,32 @@ Playwright targets `http://127.0.0.1:5173` by default. Set
 `READONLY_EDITOR_BASE_URL=http://127.0.0.1:<port>` to run browser tests against
 an already-started server. The default Playwright server uses the deterministic
 workspace fixture at `tests/fixtures/workspace`.
+
+## Headless Viewer Harness
+
+`viewer/test_viewer_wbtest.mbt` is the MoonBit analog of vscode's
+`editor/test/browser/testCodeEditor.ts` (`withTestCodeEditor`). It constructs a
+real `Viewer` *without* `attach()` — no DOM view, mirroring
+`TestCodeEditor._createView` returning `null` — and drives the full
+model/view-model/cursor pipeline over an in-memory model. `set_model` builds the
+tokenized document, view model, render frame, and cursor context synchronously;
+`schedule_render`/`flush_render` no-op while the view is `None`, so the semantic
+state is fully populated with no `requestAnimationFrame` and no measurement.
+
+Use `with_test_viewer(text, viewer => { ... })` and assert on semantic state:
+positions, ranges, projected view lines (`coordinates_converter()`), and render
+frames (`test_frame()` / `test_refresh_frame()`). `RenderFrame` is `pub(all)`
+with a `ToJson` impl, so a frame can also be asserted as golden JSON. Soft wrap
+and the viewport are normally measured from the DOM, so the harness exposes
+`test_set_soft_wrap_column` and `test_set_viewport` to drive them headlessly.
+
+The rule: **a behavior expressible as a position, range, line string, token
+array, or frame is tested here with `with_test_viewer` (run by `just test`), not
+in Playwright.** Cursor motion, soft-wrap view↔model mapping, and scroll-window
+math are harness tests. Playwright is reserved for wiring (smoke) and the
+oracle/differential conformance specs, which compare computed CSS/geometry
+against a real Monaco page and genuinely need a browser; DOM flush, measurement,
+and pointer hit-testing stay there too.
 
 ## Browser Layout
 
@@ -69,8 +98,10 @@ globals. Monaco-specific hover and scrollbar contracts live in
   globals when a user path exists.
 - Conformance: Monaco/VS Code parity, local oracle comparison under
   `tests/reference/monaco-hover-scrollbar`, forced hover payloads, exact
-  scrollbar/hover DOM, computed style, geometry, screenshots, and synthetic
-  scroll/windowing checks.
+  scrollbar/hover DOM, computed style, geometry, screenshots, and the DOM-wiring
+  side of scroll/windowing (only visible nodes mount, scrollbar, scroll-to-bottom
+  reveal). The *semantic* windowing and view↔model projection assertions live in
+  the headless viewer harness, not here.
 - Component: MoonBit browser pages construct the public viewer API directly,
   without the internal workbench/backend shell, and report compact JSON through
   Playwright.

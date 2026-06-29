@@ -50,6 +50,18 @@ text extends the highlight beyond the rendered text's right edge. It drives the
 `component.html` harness with real pointer drags and tolerates
 character-boundary snapping rather than asserting exact pixel widths.
 
+## Scroll Windowing Boundary
+
+`scroll_windowing.spec.js` keeps only the DOM-wiring smoke for virtualization:
+that the wired-up app mounts a single `.view-lines` layer, windows visible nodes
+(line 1 visible, line 10000 absent), and reveals the last line after a
+scroll-to-bottom. The *semantic* windowing and view↔model projection assertions
+— the frame's viewport window, projected view positions under soft wrap, and the
+scroll-window math the memory note flagged as previously regressing only under
+`just test-browser` — now live in the headless viewer harness
+(`viewer/test_viewer_wbtest.mbt`, see `docs/harness.md`), where they are
+deterministic and DOM-free.
+
 ## Control Hooks
 
 Conformance specs may use these deterministic hooks:

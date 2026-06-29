@@ -19,8 +19,13 @@ reference contract changes.
 - The visible hover node uses `.monaco-hover`.
 - Hover content is inside `.monaco-scrollable-element .monaco-hover-content`.
 
-The local oracle is `tests/reference/monaco-hover-scrollbar/`, with comparison
-coverage in `tests/browser/conformance/monaco_hover_scrollbar.spec.js`.
+These selectors are exercised against the real readonly editor by
+`dom_structure.spec.js` (DOM hierarchy), `hover_rendering.spec.js` (hover widget
+structure and forced payloads), and `monaco_hover_scrollbar.spec.js` (scrollbar
+track-click, custom hover scrollbars, and the available-space height cap). There
+is no Monaco oracle: parity is maintained by porting Monaco logic into the viewer
+and pinning the resulting DOM/CSS contract here, not by diffing against a copied
+reference page.
 
 ## DOM Structure Contracts
 
@@ -29,14 +34,6 @@ Monaco CSS depends on. It checks normalized element signatures and direct child
 order for the editor scroll shell, view layers, hover widget, and hover
 scrollbars without asserting text content, geometry, or virtualization window
 size.
-
-## Computed Style And Geometry Contracts
-
-`computed_style_geometry.spec.js` checks the next parity layer: browser-resolved
-CSS and layout dimensions for the editor scroll surface, hover shell, hover
-scrollbars, and marker-hover affordances. It compares stable computed
-properties against the Monaco oracle and uses pixel tolerance only for geometry
-that can vary with browser rounding.
 
 ## Selection Geometry Contracts
 

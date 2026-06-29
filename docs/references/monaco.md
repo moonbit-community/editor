@@ -66,16 +66,19 @@ The VS Code submodule contains Monaco's editor implementation under
   `docs/exec-plans/monaco-faithful-selection-hit-testing.md`.
 - `vscode/src/vs/base/browser/ui/scrollbar` and
   `vscode/src/vs/base/browser/ui/hover`: scrollbar, hover widget, and
-  scrollable-element behavior exercised by the local conformance oracle.
+  scrollable-element behavior exercised by the browser conformance specs.
 - `vscode/src/vs/editor/contrib/hover`, `links`, `semanticTokens`, `find`:
   readonly feature references. A feature reference does not imply that the
   local viewer currently exposes that whole Monaco feature.
 
-The hover/scrollbar conformance oracle lives in
-`tests/reference/monaco-hover-scrollbar/`, with the Playwright comparison in
-`tests/browser/conformance/monaco_hover_scrollbar.spec.js`. The fixture
-transcribes the pinned Monaco DOM, CSS, and geometry constants for local
-testing; product code still must not import from the VS Code submodule.
+Hover and scrollbar parity is verified directly against the readonly editor by
+`tests/browser/conformance/dom_structure.spec.js`,
+`tests/browser/conformance/hover_rendering.spec.js`, and
+`tests/browser/conformance/monaco_hover_scrollbar.spec.js`. There is no
+transcribed Monaco reference page: parity is held by porting Monaco logic into
+the viewer and pinning the resulting DOM/CSS contract in
+`tests/browser/conformance/README.md`. Product code still must not import from
+the VS Code submodule.
 
 Use these as design references only. Do not import from them in product code.
 When Monaco and current local docs disagree, treat current local docs as the

@@ -42,8 +42,9 @@ they should not call deterministic state-control globals when a real user path
 exists.
 
 Conformance specs are allowed to be precise and internal. Monaco-specific
-hover, scrollbar, style, geometry, and oracle contracts are documented in
-`tests/browser/conformance/README.md`.
+hover, scrollbar, style, and geometry contracts are documented in
+`tests/browser/conformance/README.md`. They drive the real readonly editor;
+there is no Monaco reference page to diff against.
 
 Component specs load MoonBit-authored browser pages and validate the compact
 JSON report. Perf specs collect structured timing evidence and stay

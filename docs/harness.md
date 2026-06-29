@@ -63,9 +63,8 @@ The rule: **a behavior expressible as a position, range, line string, token
 array, or frame is tested here with `with_test_viewer` (run by `just test`), not
 in Playwright.** Cursor motion, soft-wrap view↔model mapping, and scroll-window
 math are harness tests. Playwright is reserved for wiring (smoke) and the
-oracle/differential conformance specs, which compare computed CSS/geometry
-against a real Monaco page and genuinely need a browser; DOM flush, measurement,
-and pointer hit-testing stay there too.
+conformance specs that need a real browser for DOM structure, flush,
+measurement, and pointer hit-testing against the actual readonly editor.
 
 ## Browser Layout
 
@@ -74,7 +73,7 @@ tests/browser/
   README.md       browser package contracts, globals, and authoring rules
   support/        Playwright fixtures, app helpers, logger, MoonBit reporter
   smoke/          user workflows against the real app or embedded viewer
-  conformance/    Monaco oracle, exact DOM/style/geometry, deterministic hooks
+  conformance/    exact DOM/style/geometry parity, deterministic hooks
   component/      Playwright loaders for MoonBit browser component pages
   perf/           Playwright and MoonBit performance evidence
   fixtures/       shared browser fixture data
@@ -96,12 +95,13 @@ globals. Monaco-specific hover and scrollbar contracts live in
   changes, embedded viewer loading, and file-watch recovery through the
   reference shell. Smoke tests should not call deterministic state-control
   globals when a user path exists.
-- Conformance: Monaco/VS Code parity, local oracle comparison under
-  `tests/reference/monaco-hover-scrollbar`, forced hover payloads, exact
-  scrollbar/hover DOM, computed style, geometry, screenshots, and the DOM-wiring
-  side of scroll/windowing (only visible nodes mount, scrollbar, scroll-to-bottom
-  reveal). The *semantic* windowing and view↔model projection assertions live in
-  the headless viewer harness, not here.
+- Conformance: Monaco/VS Code parity against the real readonly editor — forced
+  hover payloads, exact scrollbar/hover DOM, computed style, geometry,
+  screenshots, and the DOM-wiring side of scroll/windowing (only visible nodes
+  mount, scrollbar, scroll-to-bottom reveal). Parity is held by porting Monaco
+  logic into the viewer, not by diffing a copied reference page. The *semantic*
+  windowing and view↔model projection assertions live in the headless viewer
+  harness, not here.
 - Component: MoonBit browser pages construct the public viewer API directly,
   without the internal workbench/backend shell, and report compact JSON through
   Playwright.

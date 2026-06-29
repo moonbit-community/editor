@@ -81,9 +81,11 @@ Deferred to a Phase 1 follow-on: resizable sashes / user drag
 (`_resize`, `_updateResizableNodeMaxDimensions`, `_lastDimensions`,
 `_updateMaxDimensions`) — not needed for the sizing/clipping bug fix.
 
-The oracle (`tests/reference/monaco-hover-scrollbar/conformance-oracle.js`) now
-ports `_findMaximumRenderingHeight` (`min(availableSpaceBelow, contentHeight)`)
-instead of the buggy `Math.max(80, clientHeight − 24)`.
+The available-space cap (`_findMaximumRenderingHeight` =
+`min(availableSpaceBelow, contentHeight)`, replacing the buggy
+`Math.max(80, clientHeight − 24)`) is verified directly against the real editor
+by the `tall hover is capped to the available space and stays fully scrollable`
+case in `tests/browser/conformance/monaco_hover_scrollbar.spec.js`.
 
 ### Phase 2 — HoverOperation
 
@@ -150,12 +152,12 @@ helpers, viewer-core-owned):
   `rootHeight−24`), so the `.monaco-hover-content` `overflow:auto` + custom
   scrollbar engages instead of `.overflow-guard` clipping.
 
-Update the **conformance oracle** in parallel: `tests/reference/monaco-hover-scrollbar/conformance-oracle.js:311-312`
-currently mirrors the *buggy* `Math.max(80, clientHeight−24)`. It must port the
-real `_findMaximumRenderingHeight` so the oracle stops blessing the bug. Add a
-small-window case (anchor near top and near bottom) to
-`tests/browser/conformance/monaco_hover_scrollbar.spec.js` that asserts the
-scrollbar becomes visible and full content is reachable by scroll.
+Verify directly against the real editor: a small-window case (anchor near top
+and near bottom) in `tests/browser/conformance/monaco_hover_scrollbar.spec.js`
+asserts the scrollbar becomes visible and full content is reachable by scroll.
+(There is no Monaco reference page to keep in sync — the removed oracle used to
+mirror the *buggy* `Math.max(80, clientHeight−24)`; the port is now proven by
+the real-editor browser test alone.)
 
 Resizable sashes (user drag-resize) are in scope as a follow-on sub-step but may
 land after the sizing fix, since the bug fix does not need drag.
@@ -213,9 +215,9 @@ for the computer).
   available-space arithmetic (Phase 1), the operation state transitions
   (Phase 2), and the controller settings matrix (Phase 3) headlessly — ideally
   via the `with_test_viewer` harness from `headless-viewer-test-harness.md`.
-- The Phase 1 oracle update makes `monaco_hover_scrollbar.spec.js` *fail* against
-  the old `apply_sizing` and *pass* after the port; the new small-window case
-  proves the scrollbar engages and full content is reachable.
+- The Phase 1 small-window case in `monaco_hover_scrollbar.spec.js` *fails*
+  against the old `apply_sizing` and *passes* after the port, proving the
+  scrollbar engages and full content is reachable.
 - Each phase extends the parity ledger; a phase is done only when its ported
   methods match the oracle's arithmetic/transitions, not when class names match
   (per the conformance-plan rule).

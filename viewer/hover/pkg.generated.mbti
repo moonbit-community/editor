@@ -16,6 +16,8 @@ pub fn compare_hover_parts(HoverPart, HoverPart) -> Int
 
 pub let hover_participant_registry : HoverParticipantRegistry
 
+pub fn hover_parts_range(Array[HoverPart], @common.OffsetRange) -> @common.OffsetRange
+
 pub fn register_default_hover_participants(HoverParticipantRegistry) -> Unit
 
 pub fn render_hover_shell(Array[HoverPart], String, language_registry? : @languages.Languages) -> String
@@ -32,6 +34,7 @@ pub(all) struct ContentHoverComputer {
   participants : Array[&HoverParticipant]
 }
 pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
+pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint], emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
 pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
 pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
 

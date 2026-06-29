@@ -4,6 +4,9 @@ const VERTICAL_SCROLLBAR = 14;
 const HORIZONTAL_SCROLLBAR = 12;
 const HOVER_SCROLLBAR = 10;
 const MINIMUM_SLIDER = 20;
+// Monaco resizableContentWidget.ts BOTTOM_HEIGHT: the margin kept between the
+// hover and the editor bottom edge when measuring how much room is below.
+const BOTTOM_HEIGHT = 24;
 
 let sourceLines = [''];
 let scrollTop = 0;
@@ -309,7 +312,20 @@ function showHover(payloadName, line, column) {
   wrapper.style.top = `${top}px`;
   wrapper.style.left = `${left}px`;
   content.style.maxWidth = `${Math.max(160, container.clientWidth - 24)}px`;
-  content.style.maxHeight = `${Math.max(80, container.clientHeight - 24)}px`;
+  // Port of ContentHoverWidget._findMaximumRenderingHeight: cap the rendered
+  // height to the lesser of the available vertical space and the natural content
+  // height so the .monaco-hover-content overflow:auto scrollbar engages instead
+  // of the editor clipping the spill. The oracle renders downward from the
+  // anchor line top, so the available room is measured to the editor bottom.
+  // (Previously this mirrored the buggy Math.max(80, clientHeight - 24), which
+  // blessed a height larger than the room below and never scrolled.)
+  const availableSpaceBelow = container.clientHeight - top - BOTTOM_HEIGHT;
+  const contentHeight = content.scrollHeight;
+  const maximumRenderingHeight = Math.max(
+    0,
+    Math.min(availableSpaceBelow, contentHeight),
+  );
+  content.style.maxHeight = `${maximumRenderingHeight}px`;
   updateHoverBars(content, hoverBars);
   content.addEventListener('scroll', () => updateHoverBars(content, hoverBars, true));
 }

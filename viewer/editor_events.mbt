@@ -153,58 +153,181 @@ fn Viewer::after_hover_transition(
 }
 
 ///|
+/// Interprets a hover transition. Monaco's `HoverOperation.start(Delayed)`
+/// schedules only the async trigger and the loading message up front; the sync
+/// trigger is scheduled by the async trigger (see `hover_trigger_async`).
 fn Viewer::apply_hover_effect(self : Viewer, effect : HoverEffect) -> Unit {
   match effect {
     HoverNoEffect => ()
-    HoverSchedule(token) => {
-      set_timeout(() => self.hover_fire(token), hover_delay_ms / 2) |> ignore
-      set_timeout(() => self.hover_display_due(token), hover_delay_ms) |> ignore
-      set_timeout(() => self.hover_loading_due(token), hover_delay_ms * 3)
+    HoverScheduleDelayed(token) => {
+      set_timeout(() => self.hover_trigger_async(token), hover_first_wait_ms)
+      |> ignore
+      set_timeout(
+        () => self.hover_trigger_loading(token),
+        hover_loading_message_ms,
+      )
       |> ignore
     }
-    HoverRequest(anchor, token) => self.request_hover(anchor, token)
   }
 }
 
 ///|
-fn Viewer::hover_fire(self : Viewer, token : Int) -> Unit {
-  let (effect, hover) = self.hover.fire(token)
+/// Monaco `_triggerAsyncComputation` fired (at `hover_first_wait_ms`): advance
+/// the operation to `SecondWait`, schedule the sync compute at
+/// `hover_second_wait_ms`, and kick the streamed async compute. No view changes
+/// yet (emission is still suppressed), so no re-render is needed here.
+fn Viewer::hover_trigger_async(self : Viewer, token : Int) -> Unit {
+  let (proceed, hover) = self.hover.op_trigger_async(token)
   self.hover = hover
-  self.apply_hover_effect(effect)
+  if proceed {
+    set_timeout(() => self.hover_trigger_sync(token), hover_second_wait_ms)
+    |> ignore
+    self.kick_hover_async(token)
+  }
 }
 
 ///|
-fn Viewer::hover_display_due(self : Viewer, token : Int) -> Unit {
-  let before = self.hover
-  self.hover = self.hover.display_due(token)
-  self.after_hover_transition(before)
-}
-
-///|
-fn Viewer::hover_loading_due(self : Viewer, token : Int) -> Unit {
-  let before = self.hover
-  self.hover = self.hover.loading_due(token)
-  self.after_hover_transition(before)
-}
-
-///|
-fn Viewer::hover_resolved(
-  self : Viewer,
-  model : @model.TextModel,
-  token : Int,
-  hover : @hover.ComputedHover?,
-) -> Unit {
-  if !self.is_current_model(model) {
+/// Monaco `_triggerSyncComputation` fired (at the full delay): run the sync
+/// participants and feed their parts into the operation.
+fn Viewer::hover_trigger_sync(self : Viewer, token : Int) -> Unit {
+  if token != self.hover.operation.token {
     return
   }
   let before = self.hover
-  self.hover = self.hover.resolved_hover(
-    event => self.did_resolve_hover.fire(event),
-    model.revision,
-    token,
-    hover,
-  )
+  self.hover = self.hover.op_trigger_sync(token, self.compute_hover_sync(token))
   self.after_hover_transition(before)
+  self.maybe_notify_hover_resolved(token)
+}
+
+///|
+/// Monaco `_triggerLoadingMessage` fired (at three times the delay): show the
+/// loading message if the async compute is still pending.
+fn Viewer::hover_trigger_loading(self : Viewer, token : Int) -> Unit {
+  if token != self.hover.operation.token {
+    return
+  }
+  let before = self.hover
+  self.hover = self.hover.op_trigger_loading(token)
+  self.after_hover_transition(before)
+}
+
+///|
+/// Builds a content-hover computer over the current viewer services (Monaco
+/// `ContentHoverWidgetWrapper._initializeHoverParticipants`).
+fn Viewer::make_hover_computer(self : Viewer) -> @hover.ContentHoverComputer {
+  let services : @hover.HoverParticipantServices = {
+    languages: self.services.languages,
+    marker_decorations: self.services.marker_decorations,
+    log_service: self.services.log_service,
+  }
+  @hover.ContentHoverComputer::new(services)
+}
+
+///|
+/// Runs the synchronous hover participants for the current anchor.
+fn Viewer::compute_hover_sync(
+  self : Viewer,
+  token : Int,
+) -> Array[@hover.HoverPart] {
+  match (self.text_model, self.hover.anchor) {
+    (Some(model), Some(anchor)) =>
+      if token != self.hover.operation.token {
+        []
+      } else {
+        match
+          self
+          .make_hover_computer()
+          .compute_sync(
+            model,
+            OffsetRange(anchor.start, anchor.end),
+            anchor.offset,
+            injected_text_index=anchor.injected_text_index,
+            inlay_hints=self.inlay_hints,
+          ) {
+          Some(hover) => hover.parts
+          None => []
+        }
+      }
+    _ => []
+  }
+}
+
+///|
+/// Kicks the streamed async hover compute (Monaco `computeAsync`): each
+/// participant's parts are fed to the operation as they resolve, then the
+/// operation is marked done. Results carry the requesting model and anchor token
+/// so stale responses are dropped at their guards.
+fn Viewer::kick_hover_async(self : Viewer, token : Int) -> Unit {
+  match (self.text_model, self.hover.anchor) {
+    (Some(model), Some(anchor)) => {
+      let computer = self.make_hover_computer()
+      let range = @base_common.OffsetRange(anchor.start, anchor.end)
+      let offset = anchor.offset
+      let injected_text_index = anchor.injected_text_index
+      let inlay_hints = self.inlay_hints
+      @js.async_run(() => {
+        computer.compute_async_each(
+          model,
+          range,
+          offset,
+          injected_text_index~,
+          inlay_hints~,
+          emit=parts => self.hover_async_item(model, token, parts),
+        )
+        self.hover_async_done(model, token)
+      })
+    }
+    _ => ()
+  }
+}
+
+///|
+fn Viewer::hover_async_item(
+  self : Viewer,
+  model : @model.TextModel,
+  token : Int,
+  parts : Array[@hover.HoverPart],
+) -> Unit {
+  if !self.is_current_model(model) || token != self.hover.operation.token {
+    return
+  }
+  let before = self.hover
+  self.hover = self.hover.op_async_item(token, parts)
+  self.after_hover_transition(before)
+}
+
+///|
+fn Viewer::hover_async_done(
+  self : Viewer,
+  model : @model.TextModel,
+  token : Int,
+) -> Unit {
+  if !self.is_current_model(model) || token != self.hover.operation.token {
+    return
+  }
+  let before = self.hover
+  self.hover = self.hover.op_async_done(token)
+  self.after_hover_transition(before)
+  self.maybe_notify_hover_resolved(token)
+}
+
+///|
+/// Fires the public hover-resolution status exactly once per anchor, when the
+/// operation completes (reaches `Idle`): `ok` reports whether any hover content
+/// was produced. Replaces the old per-result notification.
+fn Viewer::maybe_notify_hover_resolved(self : Viewer, token : Int) -> Unit {
+  if token != self.hover.operation.token || !self.hover.is_complete() {
+    return
+  }
+  if self.hover_notified_token == token {
+    return
+  }
+  self.hover_notified_token = token
+  let revision = match self.text_model {
+    Some(model) => model.revision
+    None => ""
+  }
+  self.did_resolve_hover.fire({ ok: self.hover.view is Some(_), revision })
 }
 
 ///|

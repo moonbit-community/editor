@@ -36,7 +36,7 @@ priv struct ContentWidgetsPrepared {
   frame : @view_model.RenderFrame
   layout : @view_layout.ViewLayout
   hover_state : HoverController
-  on_hover_measured : (Bool, Double) -> Unit
+  on_hover_measured : (Bool, Double, Double) -> Unit
   space_width : Double
 }
 
@@ -164,7 +164,7 @@ fn ContentWidgets::render_hover_widget(
   frame : @view_model.RenderFrame,
   layout : @view_layout.ViewLayout,
   hover_state : HoverController,
-  on_hover_measured : (Bool, Double) -> Unit,
+  on_hover_measured : (Bool, Double, Double) -> Unit,
   space_width : Double,
 ) -> Unit {
   let hover_view = match hover_state.widget_view() {
@@ -225,24 +225,58 @@ fn ContentWidgets::render_hover_widget(
     ),
   )
   self.mount_content_widget(content_widget)
-  widget.apply_sizing(context.root)
+  // The anchor line's top edge in editor-viewport pixels and the editor height,
+  // the two inputs Monaco's `ResizableContentWidget` available-space helpers
+  // need (`getScrolledVisiblePosition().top` and the editor DOM box).
+  let line_top = layout.vertical_offset_for_line(line_number) -
+    layout.position().scroll_top
+  let editor_height = context.root.get_bounding_client_rect().get_height()
   if hover_view.measurable && hover_view.placement is None {
-    // Read-after-write: decide the flip/shift from the real geometry.
+    // First (measuring) pass: cap only the width so the natural wrapped height
+    // is measurable, then choose the side and the available-space height cap
+    // (Monaco `_findPositionPreference` + `_findMaximumRenderingHeight`).
+    widget.apply_width_sizing(context.root)
+    let content_height = widget.wrapper.get_bounding_client_rect().get_height()
+    let space_above = hover_available_space_above(line_top)
+    let space_below = hover_available_space_below(
+      line_top,
+      editor_line_height.to_double(),
+      editor_height,
+    )
+    let below = !hover_prefer_above(
+      content_height,
+      space_above,
+      space_below,
+      hover_prefer_above_default,
+    )
+    let available = if below { space_below } else { space_above }
+    let max_height = hover_maximum_rendering_height(available, content_height)
     let widget_rect = widget.wrapper.get_bounding_client_rect()
     let root_rect = context.root.get_bounding_client_rect()
-    let below = widget_rect.get_top() < root_rect.get_top()
     let overflow = widget_rect.get_right() - root_rect.get_right() + 12.0
     let shift_left = if overflow > 0.0 { overflow } else { 0.0 }
-    on_hover_measured(below, shift_left)
+    on_hover_measured(below, shift_left, max_height)
     self.render_hover_widget(
       context,
       frame,
       layout,
-      hover_state.measured(below, shift_left),
+      hover_state.measured(below, shift_left, max_height),
       on_hover_measured,
       space_width,
     )
+    return
   }
+  // Placement-set pass, or the unmeasured loading hover (rendered above by
+  // default, capped to the room above so it cannot spill past `.overflow-guard`).
+  let max_height = match hover_view.placement {
+    Some(placement) => placement.max_height
+    None =>
+      max_hover_double(
+        hover_loading_min_height,
+        hover_available_space_above(line_top),
+      )
+  }
+  widget.apply_sizing(context.root, max_height)
 }
 
 ///|
@@ -444,13 +478,104 @@ fn HoverWidgetDom::clear_sizing(self : HoverWidgetDom) -> Unit {
 }
 
 ///|
-fn HoverWidgetDom::apply_sizing(
+/// Floor for the unmeasured loading hover's height cap, so a near-top anchor
+/// (tiny available space above) still leaves room for the one-line placeholder.
+let hover_loading_min_height : Double = 80.0
+
+///|
+/// `editor.hover.above`'s VS Code default: prefer rendering the hover above the
+/// anchor line when it fits there.
+let hover_prefer_above_default : Bool = true
+
+///|
+/// Monaco `resizableContentWidget.ts` `TOP_HEIGHT` / `BOTTOM_HEIGHT`: the margin
+/// kept between the hover and the editor top / bottom edge when measuring how
+/// much vertical room each side has.
+let hover_top_height : Double = 30.0
+
+///|
+let hover_bottom_height : Double = 24.0
+
+///|
+/// Monaco `ResizableContentWidget._availableVerticalSpaceAbove`, adapted to the
+/// non-overflowing (clipped to `.overflow-guard`) hover: the room from the
+/// anchor line top up to the editor top edge, less `TOP_HEIGHT`. `line_top` is
+/// the anchor line's top in editor-viewport pixels.
+fn hover_available_space_above(line_top : Double) -> Double {
+  line_top - hover_top_height
+}
+
+///|
+/// Monaco `ResizableContentWidget._availableVerticalSpaceBelow`, editor-relative:
+/// the room from the anchor line bottom down to the editor bottom edge, less
+/// `BOTTOM_HEIGHT`.
+fn hover_available_space_below(
+  line_top : Double,
+  line_height : Double,
+  editor_height : Double,
+) -> Double {
+  editor_height - (line_top + line_height) - hover_bottom_height
+}
+
+///|
+/// Monaco `ContentHoverWidget._findMaximumRenderingHeight`: the rendered hover
+/// height is the lesser of the chosen side's available space and the natural
+/// content height, so the `.monaco-hover-content` `overflow:auto` scrollbar
+/// engages exactly when the content does not fit the available room.
+fn hover_maximum_rendering_height(
+  available : Double,
+  content_height : Double,
+) -> Double {
+  min_hover_double(available, content_height)
+}
+
+///|
+/// Monaco `ResizableContentWidget._findPositionPreference`: choose ABOVE vs
+/// BELOW. Returns `true` for ABOVE. `prefer_above` mirrors `editor.hover.above`.
+fn hover_prefer_above(
+  widget_height : Double,
+  space_above : Double,
+  space_below : Double,
+  prefer_above : Bool,
+) -> Bool {
+  let max_above = min_hover_double(space_above, widget_height)
+  let max_below = min_hover_double(space_below, widget_height)
+  let max_height = min_hover_double(
+    max_hover_double(max_above, max_below),
+    widget_height,
+  )
+  let height = min_hover_double(widget_height, max_height)
+  if prefer_above {
+    height <= max_above
+  } else {
+    !(height <= max_below)
+  }
+}
+
+///|
+/// Caps only the hover width, leaving the height natural so the wrapped content
+/// height can be measured for the placement decision.
+fn HoverWidgetDom::apply_width_sizing(
   self : HoverWidgetDom,
   root : @rdom.Element,
 ) -> Unit {
   let root_rect = root.get_bounding_client_rect()
   let max_width = max_hover_double(160.0, root_rect.get_width() - 24.0)
-  let max_height = max_hover_double(80.0, root_rect.get_height() - 24.0)
+  self.scrollable.content.set_attribute(
+    "style",
+    "max-width:" + max_width.to_string() + "px",
+  )
+  self.scrollable.update_from_native_content()
+}
+
+///|
+fn HoverWidgetDom::apply_sizing(
+  self : HoverWidgetDom,
+  root : @rdom.Element,
+  max_height : Double,
+) -> Unit {
+  let root_rect = root.get_bounding_client_rect()
+  let max_width = max_hover_double(160.0, root_rect.get_width() - 24.0)
   self.scrollable.content.set_attribute(
     "style",
     "max-width:" +
@@ -465,6 +590,15 @@ fn HoverWidgetDom::apply_sizing(
 ///|
 fn max_hover_double(left : Double, right : Double) -> Double {
   if left > right {
+    left
+  } else {
+    right
+  }
+}
+
+///|
+fn min_hover_double(left : Double, right : Double) -> Double {
+  if left < right {
     left
   } else {
     right

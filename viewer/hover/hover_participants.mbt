@@ -280,6 +280,49 @@ pub async fn ContentHoverComputer::compute_async(
 }
 
 ///|
+/// Streams asynchronous hover parts participant by participant, invoking `emit`
+/// with each participant's non-empty parts as they resolve. Mirrors Monaco
+/// `HoverOperation`'s incremental `computeAsync` consumption: results are fed to
+/// the operation as they arrive rather than gathered into a single resolution.
+pub async fn ContentHoverComputer::compute_async_each(
+  self : ContentHoverComputer,
+  model : @model.TextModel,
+  anchor_range : @base_common.OffsetRange,
+  offset : Int,
+  injected_text_index? : Int = -1,
+  inlay_hints? : Array[@language.InlayHint] = [],
+  emit~ : (Array[HoverPart]) -> Unit,
+) -> Unit noraise {
+  let ctx : HoverComputeContext = {
+    model,
+    anchor_range,
+    offset,
+    injected_text_index,
+    inlay_hints,
+  }
+  for participant in self.participants {
+    let parts = participant.compute_async(ctx)
+    if parts.length() > 0 {
+      emit(parts)
+    }
+  }
+}
+
+///|
+/// Union range of accumulated hover parts, falling back to the anchor range when
+/// there are none. The offset-based hover widget anchors on this span.
+pub fn hover_parts_range(
+  parts : Array[HoverPart],
+  fallback : @base_common.OffsetRange,
+) -> @base_common.OffsetRange {
+  let mut range = fallback
+  for part in parts {
+    range = union_range(range, hover_part_range(part))
+  }
+  range
+}
+
+///|
 fn computed_hover_from_parts(
   fallback_range : @base_common.OffsetRange,
   parts : Array[HoverPart],

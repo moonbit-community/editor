@@ -11,7 +11,7 @@ priv struct ViewRenderInput {
   folded_ranges : Array[@language.FoldingRange]
   hover_state : HoverController
   on_toggle_fold : (Int) -> Unit
-  on_hover_measured : (Bool, Double) -> Unit
+  on_hover_measured : (Bool, Double, Double) -> Unit
   generation : Int
   gutter_width : Double
   space_width : Double

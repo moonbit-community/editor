@@ -172,6 +172,58 @@ test('long and wide hover payloads use custom hover scrollbars', async ({ page }
   expect(await readonlyScrollEventCount(page)).toBe(scrollEventsBefore);
 });
 
+test('tall hover is capped to the available space and stays fully scrollable', async ({
+  page,
+}) => {
+  // Phase 1 of monaco-hover-logic-chain-port.md: a hover taller than the room on
+  // its chosen side must cap its height to that room (Monaco
+  // _findMaximumRenderingHeight) so the .monaco-hover-content scrollbar engages
+  // and the whole hover stays inside the editor instead of spilling past
+  // .overflow-guard, which clips the overflow and leaves it unreachable.
+  await page.goto(readonlyBaseUrl);
+  await expect
+    .poll(() => page.evaluate(() => typeof globalThis.__readonlyEditorConformance), {
+      timeout: 10_000,
+    })
+    .toBe('object');
+  await page.evaluate((payloads) => {
+    globalThis.__readonlyEditorConformance.setPayloads(payloads);
+  }, hoverPayloads);
+  await openWorkspaceFile(page, 'src/monaco_conformance.mbt');
+
+  // Anchor near the vertical middle of the editor so neither side has room for
+  // the tall payload: the height must be capped whichever way it flips.
+  const anchor = await pickRenderedLineNearFraction(page, 0.45);
+  expect(anchor).not.toBeNull();
+
+  await showReadonlyHover(page, {
+    payload: 'markdownLong',
+    line: anchor.line,
+    column: 8,
+  });
+
+  const metrics = await hoverContentMetrics(page);
+  // The content overflows its capped box, so the custom scrollbar is needed.
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight + 1);
+  // The whole hover stays within the editor viewport (the bug let it spill).
+  expect(metrics.contentTop).toBeGreaterThanOrEqual(metrics.editorTop - 2);
+  expect(metrics.contentBottom).toBeLessThanOrEqual(metrics.editorBottom + 2);
+
+  // The full content is reachable: scrolling to the end lands at the maximum
+  // scroll offset rather than off-screen behind the editor clip.
+  const reachedBottom = await page
+    .locator('[data-content-widget="hover"] .monaco-hover-content')
+    .evaluate((node) => {
+      node.scrollTop = node.scrollHeight;
+      return {
+        scrollTop: node.scrollTop,
+        maxScrollTop: node.scrollHeight - node.clientHeight,
+      };
+    });
+  expect(reachedBottom.maxScrollTop).toBeGreaterThan(0);
+  expect(Math.abs(reachedBottom.scrollTop - reachedBottom.maxScrollTop)).toBeLessThan(2);
+});
+
 test('marker hover status row and copy affordance match Monaco', async ({ browser }) => {
   const oracle = await browser.newPage();
   const readonly = await browser.newPage();
@@ -251,6 +303,49 @@ async function showReadonlyHover(page, state) {
     .toBe(true);
   await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toBeVisible({
     timeout: 3_000,
+  });
+}
+
+async function pickRenderedLineNearFraction(page, fraction) {
+  return page.evaluate((target) => {
+    const editor = document.querySelector('.monaco-scrollable-element.editor-scrollable');
+    if (!editor) return null;
+    const editorRect = editor.getBoundingClientRect();
+    const wantY = editorRect.top + editorRect.height * target;
+    let best = null;
+    for (const node of document.querySelectorAll('.view-line[data-line]')) {
+      const rect = node.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      // Only consider lines comfortably inside the viewport so the hover has
+      // room to flip either way.
+      if (center < editorRect.top + 24 || center > editorRect.bottom - 24) {
+        continue;
+      }
+      const distance = Math.abs(center - wantY);
+      if (!best || distance < best.distance) {
+        best = { line: Number(node.dataset.line), distance };
+      }
+    }
+    return best ? { line: best.line } : null;
+  }, fraction);
+}
+
+async function hoverContentMetrics(page) {
+  return page.evaluate(() => {
+    const editor = document.querySelector('.monaco-scrollable-element.editor-scrollable');
+    const content = document.querySelector(
+      '[data-content-widget="hover"] .monaco-hover-content',
+    );
+    const editorRect = editor.getBoundingClientRect();
+    const contentRect = content.getBoundingClientRect();
+    return {
+      scrollHeight: content.scrollHeight,
+      clientHeight: content.clientHeight,
+      contentTop: contentRect.top,
+      contentBottom: contentRect.bottom,
+      editorTop: editorRect.top,
+      editorBottom: editorRect.bottom,
+    };
   });
 }
 

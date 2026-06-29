@@ -380,14 +380,22 @@ function expectBoxClose(
 
 async function expectHoverMaxConstraints(page, content) {
   const root = await measureNode(page, '.monaco-editor', []);
+  // max-width is unchanged by the available-space port.
   expect(numericStyle(content, 'max-width')).toBeCloseTo(
     Math.max(160, root.box.width - 24),
     0,
   );
-  expect(numericStyle(content, 'max-height')).toBeCloseTo(
-    Math.max(80, root.box.height - 24),
-    0,
-  );
+  // After the Phase 1 available-space port, the height cap is the lesser of the
+  // chosen side's room and the content height (Monaco
+  // ContentHoverWidget._findMaximumRenderingHeight) rather than the whole-editor
+  // Math.max(80, height - 24) the bug blessed. The short hover fits, so the cap
+  // tracks the content height and stays well within the editor.
+  const maxHeight = numericStyle(content, 'max-height');
+  expect(maxHeight).toBeGreaterThanOrEqual(content.box.height - 1);
+  expect(maxHeight).toBeLessThanOrEqual(content.box.height + 4);
+  expect(maxHeight).toBeLessThan(root.box.height - 24);
+  // The short content is not clipped: it does not overflow its own cap.
+  expect(content.scrollHeight).toBeLessThanOrEqual(content.clientHeight + 1);
 }
 
 function numericStyle(measurement, prop) {

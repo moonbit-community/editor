@@ -42,11 +42,11 @@ below, not a one-off.
 | `hoverTypes.ts` (participant iface + registry) | `hover_participants.mbt` + `hover/hover_registry.mbt` | 🟡 no `renderHoverParts` / `handleResize` / `handleScroll` / verbosity hooks |
 | `markdownHoverParticipant.ts` | `MarkdownHoverParticipant` | 🟡 parts only |
 | `markerHoverParticipant.ts` | `MarkerHoverParticipant` | 🟡 parts only; status bar is static HTML |
-| `hoverOperation.ts` | hand-rolled timers in `hover_controller.mbt` | 🟡 no incremental async streaming, no immediate mode, different state shape |
+| `hoverOperation.ts` | `hover_controller.mbt` `HoverOperation` | 🟡 5-state machine + 3 schedulers + streamed async ported (Phase 2); immediate mode = synchronous triggers (product trigger lands with Phase 5) |
 | `contentHoverController.ts` | `hover_controller.mbt` `HoverController` | 🟡 no sticky / enablement modes / trigger-modifier / mouse-down keep / scroll-hide / resizing-keep / context-menu |
 | `contentHoverWidgetWrapper.ts` | split across `hover_controller.mbt` + `content_widgets.mbt` | 🟡 no focus-part nav / verbosity / color-picker / participant resize+scroll fan-out |
-| `contentHoverWidget.ts` | `content_widgets.mbt` `HoverWidgetDom` | 🟡 no available-space sizing, no resize, no min/max dims, no `_lastDimensions` |
-| `resizableContentWidget.ts` | — | ❌ not ported (available-space, position preference, sashes) |
+| `contentHoverWidget.ts` | `content_widgets.mbt` `HoverWidgetDom` | 🟡 available-space sizing ported (Phase 1); no resize, no min/max dims, no `_lastDimensions` |
+| `resizableContentWidget.ts` | `content_widgets.mbt` hover sizing helpers | 🟡 available-space + position preference ported (Phase 1); sashes deferred |
 | `contentHoverRendered.ts` | `hover/hover_render.mbt` (HTML string) | 🟡 no per-part focus/nav, no per-part highlight decorations |
 | `contentHoverStatusBar.ts` | static HTML in `hover_render.mbt` | ❌ no real actions |
 | `hoverCopyButton.ts` | `hover_render.mbt` + `handle_hover_copy_click` | 🟡 partial |
@@ -54,6 +54,61 @@ below, not a one-off.
 | `hoverActions.ts` / `hoverActionIds.ts` | inline `handle_hover_keydown` (`content_widgets.mbt:344`) | 🟡 scroll/page/home/end behavior only; not registered commands; no keyboard-triggered `showHover`; no verbosity |
 | `hoverContribution.ts` | — | ❌ no contribution registration concept |
 | `glyphHover{Controller,Widget,Computer}.ts` | — | ❌ entire margin/gutter-diagnostic hover chain absent |
+
+## Parity ledger (logic chain)
+
+Source-first record of the ported methods: the Monaco source location, the exact
+arithmetic, and the MoonBit symbol it now lives next to. Statuses: `TODO` /
+`PORTED` (code matches source) / `TESTED` (whitebox/oracle/browser proof) /
+`PASS` (proof green).
+
+### Phase 1 — available-space sizing
+
+Oracle commit pinned at `294fb350837dbaee37b949533fead4df4e0e8971`. Constants
+`TOP_HEIGHT = 30`, `BOTTOM_HEIGHT = 24` from `resizableContentWidget.ts:13-14`.
+The viewer hover is **non-overflowing** (lives in `.overflow-guard`), so the
+available-space edges are the *editor* box, not the page body as in Monaco.
+
+| Monaco method (source) | Arithmetic | MoonBit symbol | Status |
+|---|---|---|---|
+| `_availableVerticalSpaceAbove` (`resizableContentWidget.ts:64-72`) | `editorBox.top + mouseBox.top − TOP_HEIGHT` → editor-relative `line_top − 30` | `hover_available_space_above` (`content_widgets.mbt`) | TESTED |
+| `_availableVerticalSpaceBelow` (`resizableContentWidget.ts:74-84`) | `bodyBox.height − (editorBox.top + mouseBox.top + mouseBox.height) − BOTTOM_HEIGHT` → editor-relative `editor_height − (line_top + line_height) − 24` | `hover_available_space_below` | TESTED |
+| `_findMaximumRenderingHeight` (`contentHoverWidget.ts:189-200`) | `Math.min(availableSpace, contentHeight)` | `hover_maximum_rendering_height` | TESTED |
+| `_findPositionPreference` (`resizableContentWidget.ts:86-103`) | `maxAbove=min(spaceAbove,h)`, `maxBelow=min(spaceBelow,h)`, `maxHeight=min(max(maxAbove,maxBelow),h)`, `height=min(h,maxHeight)`; `above` default → `ABOVE` iff `height≤maxAbove`, else by `maxBelow` | `hover_prefer_above` (+ `hover_prefer_above_default = true`) | TESTED |
+| `ContentHoverWidget.show` height-cap apply (`contentHoverWidget.ts:336-362`) | render → measure natural height → pick side → cap `.monaco-hover-content` `max-height` to chosen-side space | `HoverWidgetDom::apply_sizing` / measurement pass in `render_hover_widget` | TESTED |
+
+Deferred to a Phase 1 follow-on: resizable sashes / user drag
+(`_resize`, `_updateResizableNodeMaxDimensions`, `_lastDimensions`,
+`_updateMaxDimensions`) — not needed for the sizing/clipping bug fix.
+
+The oracle (`tests/reference/monaco-hover-scrollbar/conformance-oracle.js`) now
+ports `_findMaximumRenderingHeight` (`min(availableSpaceBelow, contentHeight)`)
+instead of the buggy `Math.max(80, clientHeight − 24)`.
+
+### Phase 2 — HoverOperation
+
+`hoverOperation.ts` ported into `hover_controller.mbt` as a pure `HoverOperation`
+(state + token + accumulating `parts` + `async_done`); the viewer
+(`editor_events.mbt`) drives the schedulers and the sync/async computes.
+
+| Monaco method (source) | Arithmetic / transition | MoonBit symbol | Status |
+|---|---|---|---|
+| `HoverOperationState` (`hoverOperation.ts:25-31`) | Idle / FirstWait / SecondWait / WaitingForAsync / WaitingForAsyncShowingLoading | `HoverOpState` | TESTED |
+| `_firstWaitTime` / `_secondWaitTime` / `_loadingMessageTime` (`:98-108`) | `delay/2` / `delay − delay/2` / `3·delay` | `hover_first_wait_ms` / `hover_second_wait_ms` / `hover_loading_message_ms` | TESTED |
+| `start(Delayed)` (`:171-177`) | Idle→FirstWait; schedule async@first, loading@loading | `start_delayed` + `apply_hover_effect`(`HoverScheduleDelayed`) | TESTED |
+| `start(Immediate)` (`:178-190`) | run async-trigger + sync-trigger synchronously (no waits) | `op_trigger_async` + `op_trigger_sync` invoked back to back (wbtest) | TESTED |
+| `_triggerAsyncComputation` (`:116-146`) | →SecondWait; schedule sync@second; kick streamed `computeAsync` | `op_trigger_async` + `hover_trigger_async` + `kick_hover_async` + `compute_async_each` | TESTED |
+| `_triggerSyncComputation` (`:148-153`) | `result += computeSync`; `asyncDone ? Idle : WaitingForAsync` | `op_trigger_sync` + `compute_hover_sync` | TESTED |
+| `_triggerLoadingMessage` (`:155-159`) | WaitingForAsync→WaitingForAsyncShowingLoading | `op_trigger_loading` | TESTED |
+| async item / `_asyncIterableDone` (`:124-145`) | push each item + re-fire; on done, complete to Idle | `op_async_item` / `op_async_done` | TESTED |
+| `_fireResult` (`:161-169`) | suppress during FirstWait/SecondWait; else emit `{value, isComplete, hasLoadingMessage}` | `HoverController::emit` (+ `is_complete`) | TESTED |
+| `cancel()` (`:193-204`) | drop result, reset Idle (token rotation drops in-flight) | `HoverController::cleared` | TESTED |
+
+Deviation: the viewer's hover-resolution status event (`did_resolve_hover`,
+public API) now fires exactly once per anchor when the operation completes
+(`maybe_notify_hover_resolved`), replacing the old per-result notification.
+Immediate mode's *product* trigger (keyboard/click `showHover`) is defined in
+Phase 5; the operation already supports it (the same triggers, no schedulers).
 
 ## Ownership boundary to respect
 
@@ -70,7 +125,8 @@ Phases are in dependency order. Each phase is independently shippable and
 verifiable; Phase 1 is the only one that also fixes a known bug, so it goes
 first.
 
-**Phase 0 — Inventory + oracle ledger (no product change).** For each Monaco
+**Phase 0 — Inventory + oracle ledger (no product change). — DONE** (see
+"Parity ledger (logic chain)" above). For each Monaco
 method this plan ports, record the source location, the exact arithmetic
 (`TOP_HEIGHT`/`BOTTOM_HEIGHT` constants in `resizableContentWidget.ts`, the
 `Math.max(layoutInfo.height/4, 250, …)` in `contentHoverWidget._updateMaxDimensions`,
@@ -81,8 +137,9 @@ spec so the port is source-first, not eyeballed. Confirm the seams in
 measure block at `content_widgets.mbt:229`) and the anchor data the widget
 already has (`line_col_for_offset`).
 
-**Phase 1 — `resizableContentWidget` + available-space sizing (fixes the bug).**
-Port into `viewer/content_widgets.mbt` (new helpers, viewer-core-owned):
+**Phase 1 — `resizableContentWidget` + available-space sizing (fixes the bug).
+— DONE (sashes deferred).** Ported into `viewer/content_widgets.mbt` (new
+helpers, viewer-core-owned):
 - `_availableVerticalSpaceAbove/Below(position)` — distance between the anchor
   line box and the editor/viewport edge, minus `TOP_HEIGHT`/`BOTTOM_HEIGHT`.
 - `_findMaximumRenderingHeight()` = `min(availableSpace, contentHeight)`.
@@ -103,7 +160,8 @@ scrollbar becomes visible and full content is reachable by scroll.
 Resizable sashes (user drag-resize) are in scope as a follow-on sub-step but may
 land after the sizing fix, since the bug fix does not need drag.
 
-**Phase 2 — Faithful `HoverOperation`.** Port the
+**Phase 2 — Faithful `HoverOperation`. — DONE (immediate-mode product trigger
+deferred to Phase 5).** Port the
 `Idle → FirstWait → SecondWait → WaitingForAsync → WaitingForAsyncShowingLoading`
 state machine and its three debounced schedulers (firstWait = delay/2,
 secondWait = delay − firstWait, loadingMessage = 3×delay), plus `computeSync`

@@ -243,8 +243,8 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         folded_ranges: self.folded_ranges,
         hover_state: self.hover,
         on_toggle_fold: line => self.toggle_fold(line),
-        on_hover_measured: (below, shift_left) => {
-          self.hover = self.hover.measured(below, shift_left)
+        on_hover_measured: (below, shift_left, max_height) => {
+          self.hover = self.hover.measured(below, shift_left, max_height)
         },
         generation: self.content_generation,
         gutter_width: self.gutter_width(frame),

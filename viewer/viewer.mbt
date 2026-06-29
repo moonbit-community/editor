@@ -44,6 +44,9 @@ pub struct Viewer {
   priv mut hover_react_pending : Bool
   priv mut hover_react_token : Int
   priv mut hover_pending_target : @viewer_common.MouseTarget?
+  /// The last anchor token for which the public hover-resolution status fired,
+  /// so it fires exactly once per anchor when the operation completes.
+  priv mut hover_notified_token : Int
   priv mut char_width : Double
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
@@ -163,6 +166,7 @@ pub fn Viewer::Viewer(
     hover_react_pending: false,
     hover_react_token: 0,
     hover_pending_target: None,
+    hover_notified_token: 0,
     char_width: 0.0,
     soft_wrap_column: 0,
     max_line_length: 0,

@@ -1,48 +1,4 @@
 ///|
-/// Controllers resolve features through the registry with async runs;
-/// each result is tagged with the requesting model (URI plus version)
-/// and the hover anchor token so stale responses are dropped at handling.
-fn Viewer::request_hover(
-  self : Viewer,
-  anchor : HoverAnchor,
-  token : Int,
-) -> Unit {
-  match self.text_model {
-    Some(model) => {
-      let hover_services : @hover.HoverParticipantServices = {
-        languages: self.services.languages,
-        marker_decorations: self.services.marker_decorations,
-        log_service: self.services.log_service,
-      }
-      let computer = @hover.ContentHoverComputer::new(hover_services)
-      let anchor_range = @base_common.OffsetRange(anchor.start, anchor.end)
-      match
-        computer.compute_sync(
-          model,
-          anchor_range,
-          anchor.offset,
-          injected_text_index=anchor.injected_text_index,
-          inlay_hints=self.inlay_hints,
-        ) {
-        Some(hover) => self.hover_resolved(model, token, Some(hover))
-        None => ()
-      }
-      @js.async_run(() => {
-        let hover = computer.compute_async(
-          model,
-          anchor_range,
-          anchor.offset,
-          injected_text_index=anchor.injected_text_index,
-          inlay_hints=self.inlay_hints,
-        )
-        self.hover_resolved(model, token, hover)
-      })
-    }
-    None => ()
-  }
-}
-
-///|
 /// Model-level features requested after a fresh render: diagnostics,
 /// symbols, semantic tokens, folding ranges, and inlay hints, each resolving
 /// independently.

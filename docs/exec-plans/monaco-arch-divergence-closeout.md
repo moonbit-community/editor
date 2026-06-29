@@ -11,7 +11,9 @@ Landed summary:
   calls `LinesLayout` directly with no `± 1`; the zero-based-adapter doc-comment
   is gone; `ViewZone.anchor_line` is documented as Monaco's `afterLineNumber`
   (it was already numerically equal, so the clamp stays `[0, line_count]` — the
-  plan's `[1, line_count + 1]` would have clipped an above-first-line zone). The
+  plan's `[1, line_count + 1]` would have clipped an above-first-line zone; the
+  remaining model-line-vs-view-line gap against Monaco's `IViewZone` is recorded
+  in `docs/notes/view-zone-afterlinenumber-divergence.md`). The
   `ViewportData` start/end stay numerically identical (already 1-based
   inclusive), so the only residual conversion is the half-open↔inclusive shift
   at the `ViewportData`/`viewport_window` boundary, documented inline. Four

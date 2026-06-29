@@ -18,7 +18,7 @@ character-mapping roles.
 
 ## Boundaries
 
-- May depend on `base/common` and `syntax`.
+- May depend on `base/common`.
 - Must not depend on `viewer/common`, `viewer`, `web`, server, transport,
   workspace, or host packages.
 - Must not declare FFI.
@@ -34,18 +34,11 @@ character-mapping roles.
 
 ## Fidelity to Monaco's `viewLineRenderer`
 
-`render_view_line` / `render_view_line2` are a faithful 1:1 port of Monaco's
-`renderViewLine` / `_renderLine` (`resolveRenderLineInput`,
-`transformAndRemoveOverflowing`, `_applyRenderWhitespace`,
-`_applyInlineDecorations`, `splitLargeTokens`, `splitLeadingWhitespaceFromRTL`,
-`extractControlCharacters`). The conformance port
-(`monaco_render_line_reference_test.mbt`) asserts Monaco's **exact** output for
-all 72 upstream `viewLineRenderer.test.ts` cases — inner HTML byte-for-byte
-against `__snapshots__/*.0.html`, and the inflated `CharacterMapping` against
-`*.1.snap` — covering spaces (`U+00A0`), tab expansion, rendered/selection
-whitespace (width-bearing `mtkz`/`mtkw` spans), RTL `unicode-bidi:isolate`
-spans, control/bad-character substitution, faux indent, large-token splitting
-(incl. surrogate-safe boundaries), and overflow.
+`render_view_line` / `render_view_line2` follow Monaco's `renderViewLine` /
+`_renderLine` behavior for the readonly subset: whitespace, tabs, RTL, control
+characters, inline decorations, large-token splitting, overflow, and character
+mapping. `monaco_render_line_reference_test.mbt` keeps the byte-level reference
+coverage.
 
 ### Sole deviation
 
@@ -55,6 +48,6 @@ locates the content node via `querySelector(".view-line-content")` and styles it
 by that class. The inner content (everything between the wrapper tags) and the
 `CharacterMapping` are identical to Monaco.
 
-Note: like Monaco, `"` is left literal in text content (only attribute values
-are quote-escaped, via `viewer/common`'s `escape_html`), and spaces render as
-`U+00A0` — both rely on the `.view-line` node being `white-space: pre`.
+Note: like Monaco, `"` is left literal in text content; only attribute values
+need quote escaping. Spaces render as `U+00A0`, relying on the `.view-line`
+node's `white-space: pre` styling.

@@ -2,7 +2,8 @@
 
 The content-hover feature for the readonly viewing path. A port of Monaco's
 `contrib/hover/browser/`, reduced to what a readonly viewer needs. Depends on
-the editor; the editor never depends on it.
+viewer-adjacent services and provider contracts, but not on the browser `viewer`
+package itself.
 
 ## Responsibilities
 

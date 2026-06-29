@@ -4,6 +4,11 @@ Faithful 1:1 port of Monaco's `common/viewModel/inlineDecorations.ts` — the
 inline-decoration computers that map model decorations and injected text into
 per-view-line `InlineDecoration`s.
 
+This package is current conformance/support code, not part of the live viewer
+rendering import chain. The production view-model path has its own projected
+line and injected-text representation; wire this package into that path only as
+an explicit integration change.
+
 ## Responsibilities
 
 - `InlineDecorationType` / `InlineDecoration` (line/column `Range`,

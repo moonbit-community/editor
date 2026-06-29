@@ -8,17 +8,9 @@ viewport-window derivation, and readonly view-zone displacement.
 
 - Own backend-neutral scroll truth: `Scrollable`, `ScrollDimensions`,
   `ScrollPosition`, and `ScrollChange`.
-- Own line layout and line-window derivation. `LinesLayout` is a **faithful
-  1:1 port of Monaco's `linesLayout.ts`** (`EditorWhitespace`, 1-based line
-  numbers, whitespaces addressed by id/ordinal, padding, `changeWhitespace`/
-  `onLinesDeleted`/`onLinesInserted`, viewport data) — see the conformance
-  suite below. `ViewLayout` is the viewer's **zero-based view-zone adapter**
-  over it: it maps `ViewZone { anchor_line, height_px }` onto whitespaces
-  (`afterLineNumber = anchor_line`; zero-based line `L` ↔ Monaco 1-based
-  `L + 1`) and exposes the zero-based `LineWindow`/`visible_window`/
-  `window_needs_update`/`relative_vertical_offset_for_line`/`window_origin`
-  surface the render path consumes. `LineWindow`, `visible_window`, and
-  `window_needs_update` remain in `view_window.mbt`.
+- Own line layout and line-window derivation. `LinesLayout` is the
+  Monaco-shaped line/whitespace layout primitive; `ViewLayout` adapts it to the
+  viewer's viewport, view-zone, and scroll-window needs.
 - Own pre-DOM viewport data: `ViewportData` converts `ViewModel`/`RenderFrame`
   data plus layout windows into visible `ViewLineRenderingData` and line
   decorations, including `ViewZoneViewportData` for zones intersecting the
@@ -29,8 +21,9 @@ viewport-window derivation, and readonly view-zone displacement.
 
 ## Boundaries
 
-- May depend on `base/common`, `viewer/model`, `syntax`, `viewer/decorations`,
-  `language`, `viewer/view_line_renderer`, and `viewer/view_model`.
+- May depend on `base/common`, `viewer/decorations`,
+  `viewer/view_line_renderer`, and `viewer/view_model`. Tests may import
+  `language`, `viewer/model`, and `syntax` for fixture setup.
 - Must not depend on `viewer/common`, `viewer`, `web`, server, transport,
   workspace, or host packages.
 - Must not declare FFI.
@@ -38,26 +31,12 @@ viewport-window derivation, and readonly view-zone displacement.
 
 ## Conformance
 
-- `lines_layout_reference_test.mbt` is a faithful 1:1 port of Monaco's
-  `linesLayout.test.ts` (all 12 `suite('Editor ViewLayout - LinesLayout')`
-  cases), validating the production `LinesLayout` directly.
-- **Deviation — uniform line heights.** The port drops Monaco's
-  `LineHeightsManager` (variable line heights, the out-of-scope Conditional
-  `lineHeights.test.ts` row); `accumulated_line_heights_including_line_number`
-  collapses to `lineNumber * default_line_height`. Every `linesLayout.test.ts`
-  case constructs the layout with empty `customLineHeightData` (`[]`), so this
-  matches upstream exactly.
-- The zero-based view-zone semantics live in the `ViewLayout` adapter and are
-  pinned by `view_layout_test.mbt` (the migration's regression net), which
-  preserved the prior behavior byte-for-byte.
-- **Drift risk.** Production consumes only the ~5 `LinesLayout` methods the
-  `ViewLayout` adapter wraps; the rest of the faithful `LinesLayout` surface
-  (whitespace-by-id mutation, ordinal addressing, `changeWhitespace`/
-  `onLinesDeleted`/`onLinesInserted`) is exercised **only** by
-  `lines_layout_reference_test.mbt`. That faithful surface can silently drift
-  from what the adapter needs; reconciling it onto `ViewLayout` directly is the
-  deferred migration tracked in
-  `docs/exec-plans/std-dedup-and-divergence-review.md`.
+- `lines_layout_reference_test.mbt` ports Monaco's `linesLayout.test.ts` for the
+  layout primitive.
+- `view_layout_test.mbt` covers the viewer adapter: viewport windows,
+  view-zone placement, and scroll-window decisions.
+- The current viewer assumes uniform line heights; variable line-height support
+  is outside the readonly contract.
 
 ## Checks
 

@@ -8,8 +8,8 @@ Host-neutral base utilities shared by editor packages.
 - Parse absolute provider-owned `scheme://...` identities.
 - Create memory URIs for tests, demos, and simple embedders.
 - Expose scheme, path, display-name, and string conversion helpers.
-- Own the coordinate geometry: `Position` (line/column), Monaco's line/column
-  `Range`, `LineRange`/`LineRangeSet`, and the offset span `OffsetRange`.
+- Own coordinate geometry: Monaco-style line/column `Position`, `Range`,
+  `LineRange`/`LineRangeSet`, and the offset span `OffsetRange`.
 
 ## Range geometry
 
@@ -26,15 +26,9 @@ The geometry types are a 1:1 port of Monaco's range system:
   the constructor normalizes inverted input instead of throwing (the readonly
   viewer avoids panics).
 
-`Position` is a 1:1 port of Monaco's `Position`: one-based on both axes
-(`line_number` starts at 1, `column` starts at 1), with Monaco's methods
-(`with_`, `delta`, `equals`, `is_before`/`is_before_or_equal`, `compare`,
-`clone`, `to_string`). The offset↔position boundary lives in the snapshots
-(`position_at_offset`/`offset_at_position`); the LSP wire (0-based) converts in
-`lsp_client`'s `parse_lsp_position`/`lsp_position_json`.
-
-Migration note: consumers are mid-transition from `OffsetRange` to line/column
-`Range`. See `docs/exec-plans/monaco-test-conformance-port.md` (Progress log).
+`Position` is one-based on both axes (`line_number` starts at 1, `column` starts
+at 1). The offset-to-position boundary lives in `viewer/model.TextSnapshot`;
+wire formats such as LSP convert at their adapter boundary.
 
 ## Boundaries
 
@@ -45,5 +39,6 @@ Migration note: consumers are mid-transition from `OffsetRange` to line/column
 
 ## Checks
 
-- Package tests live in `uri_test.mbt`.
+- Package tests cover URI, lifecycle, position, range, line-range,
+  offset-range, and string helpers.
 - Run `moon test base/common` for focused coverage.

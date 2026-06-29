@@ -9,9 +9,7 @@ layer.
 - Depend on the `viewer/view_model` package for the Monaco-shaped common
   spine: `TokenizedDocument`, `FrameSource`, `RenderFrame`, `ViewModel`,
   `ViewModelLinesFromModelAsIs`, and `IdentityCoordinatesConverter`.
-- Depend on `base/common` for UTF-16 coordinate primitives and
-  `viewer/model` for readonly text snapshots used by tests and frame source
-  construction.
+- Depend on `base/common` for UTF-16 coordinate primitives.
 - Depend on the `viewer/view_layout` package for the pre-DOM viewport layer:
   `ViewportData` exposes 1-based inclusive visible line numbers, line-relative
   vertical offsets, `@view_line_renderer.ViewLineRenderingData`, and normalized
@@ -35,9 +33,9 @@ layer.
 
 ## Boundaries
 
-- May depend on `viewer/decorations`, `base/common`, `viewer/model`,
-  `viewer/view_line_renderer`, `viewer/view_layout`, and
-  `viewer/view_model`.
+- May depend on `viewer/decorations`, `base/common`,
+  `viewer/view_line_renderer`, `viewer/view_layout`, and `viewer/view_model`.
+  Tests may import `language`, `viewer/model`, and `syntax` for fixture setup.
 - Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,
   server routing, or filesystem providers. Layout, scrollbar, hit-test, and
   window functions are pure arithmetic over frame data and caller-measured

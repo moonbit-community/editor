@@ -9,11 +9,9 @@ model-line source data, and viewport-scoped render frames.
 
 - Own per-version token buckets through `TokenizedDocument`.
 - Own provider/decorator buckets through `FrameSource`.
-- Own render-frame data: `FrameViewport`, `RenderLine`, and `RenderFrame`. A
-  `RenderLine` is Monaco's `ViewLineData`: it carries the line's token stream
-  (`tokens : IViewLineTokens`) plus the inline decorations injected text
-  contributes (`injected_inline_decorations`). There is no per-line span type;
-  the token stream is the single source of styled segments.
+- Own render-frame data: `FrameViewport`, `RenderLine`, and `RenderFrame`.
+  Render lines carry token streams and injected inline decorations; the browser
+  layer receives frame data rather than recomputing model state.
 - Own the readonly identity view model: `ViewModel`,
   `ViewModelLinesFromModelAsIs`, `ViewModelDecorations`,
   `CoordinatesConverter`, and `IdentityCoordinatesConverter`.
@@ -44,28 +42,17 @@ model-line source data, and viewport-scoped render frames.
 - `ViewportData` lives in `viewer/view_layout`, which can depend on this
   package without a cycle.
 
-## Token model
+## Token Model
 
-`LineTokens` / `SliceLineTokens` / `IViewLineTokens` (`line_tokens.mbt`) and
-`TokenMetadata` / `MetadataConsts` (`encoded_token_attributes.mbt`) are the
-**production** token model. `TokenizedDocument` stores one faithful `LineTokens`
-per model line (encoded from the MoonBit lexers' `@syntax.Token`s by
-`line_tokens_encoder.mbt`, with each `HighlightTag` packed into a metadata word
-by `token_theme.mbt`); rendering walks a `RenderLine`'s `tokens` straight into
-the `mtk<colorId>` `LinePart`s the line renderer consumes
-(`line_parts_from_render_line`). Projected/injected view lines build their token
-stream Monaco's way — `LineTokens::with_inserted` then `slice_and_inflate`
-(`getViewLinesData`) — so injected (inlay-hint) classes are inline decorations,
-not token colors. The faithful reference tests now guard the live path, not a
-twin, so the Finding D
-conformance-only-vs-production split (`docs/exec-plans/std-dedup-and-divergence-review.md`)
-is closed by unification.
+`TokenizedDocument` stores `LineTokens` per model line. MoonBit lexer tokens are
+encoded into Monaco-shaped metadata words, and render frames pass those token
+streams to `viewer/view_line_renderer`.
 
-Still deferred (faithful ports not yet on the production path):
-`RangePriorityQueueImpl` (`text_model_tokens.mbt`, incremental/background
-retokenization scheduling) and the embedded-language `LanguageIdCodec` — both
-explicitly out of scope for single-language synchronous viewing.
-`text_to_html_tokenizer` is the standalone HTML emitter Monaco co-locates here.
+Projected and injected view lines derive from the same token model. Inlay-hint
+text is represented as inline decoration data, not as token color data.
+
+Incremental/background retokenization and embedded-language token codecs are not
+part of the current readonly viewer contract.
 
 ## Checks
 

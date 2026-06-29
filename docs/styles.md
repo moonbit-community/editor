@@ -3,7 +3,8 @@
 ## Docs
 
 - Prefer concise current-truth docs over detailed historical narration.
-- Put architecture and ownership rules in `docs/architecture.md`.
+- Put architecture and ownership rules in `docs/architecture.md`; do not
+  duplicate exact import graphs that can be read from `moon.pkg`.
 - Put package-local contracts and checks in package READMEs.
 - Put large future implementation plans in `docs/exec-plans/`.
 - Do not update implemented execution plans to match newer architecture. Add a

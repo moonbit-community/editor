@@ -13,14 +13,10 @@
 /// `(start_offset, end_offset, wrapped_text_indent_length)` per view-line
 /// segment — the break boundaries plus the indent applied to each segment
 /// (`0` for the first, the model line's indent for continuations).
-fn segment_breaks(
-  data : ModelLineProjectionData,
-) -> Array[(Int, Int, Int)] {
-  data.segments.map(s => (
-    s.start_offset,
-    s.end_offset,
-    s.wrapped_text_indent_length,
-  ))
+fn segment_breaks(data : ModelLineProjectionData) -> Array[(Int, Int, Int)] {
+  data.segments.map(s => {
+    (s.start_offset, s.end_offset, s.wrapped_text_indent_length)
+  })
 }
 
 ///|
@@ -42,7 +38,11 @@ fn assert_segment_breaks(
 test "wrappingIndent Same indents continuations under leading spaces" {
   let computer = LineBreaksComputer(6, tab_size=2, wrapping_indent=Same)
   let data = computer.compute_model_line_projection(1, "  abcdefghij")
-  assert_segment_breaks(segment_breaks(data), [(0, 6, 0), (6, 10, 2), (10, 12, 2)])
+  assert_segment_breaks(segment_breaks(data), [
+    (0, 6, 0),
+    (6, 10, 2),
+    (10, 12, 2),
+  ])
 }
 
 ///|

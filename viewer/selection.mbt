@@ -206,7 +206,9 @@ fn append_rich_copy_line_segments(
           model_start
         if start_column < end_column {
           html.write_string("<span class=\"")
-          html.write_string(@viewer_common.escape_html(tokens.get_class_name(i)))
+          html.write_string(
+            @viewer_common.escape_html(tokens.get_class_name(i)),
+          )
           html.write_string("\">")
           html.write_string(
             @viewer_common.escape_html(

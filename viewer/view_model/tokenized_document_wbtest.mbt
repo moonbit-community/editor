@@ -40,10 +40,7 @@ test "line_tokens_for_line encodes each line and covers its content" {
   // interior lines it covers.
   let line1 = tokenized.line_tokens_for_line(1)
   assert_eq(line1.get_class_name(0), "mtk7") // Comment
-  assert_eq(
-    line1.get_standard_token_type(0),
-    STANDARD_TOKEN_TYPE_COMMENT,
-  )
+  assert_eq(line1.get_standard_token_type(0), STANDARD_TOKEN_TYPE_COMMENT)
 
   // Out-of-range lines answer an empty token line.
   assert_eq(tokenized.line_tokens_for_line(99).get_count(), 1)
@@ -76,7 +73,10 @@ test "language id round-trips through the per-document codec" {
     assert_true(tokens.get_count() >= 1)
     for i in 0..<tokens.get_count() {
       assert_eq(tokens.get_language_id(i), "moonbit")
-      assert_eq(TokenMetadata::get_language_id(tokens.get_metadata(i)), expected_id)
+      assert_eq(
+        TokenMetadata::get_language_id(tokens.get_metadata(i)),
+        expected_id,
+      )
     }
   }
 

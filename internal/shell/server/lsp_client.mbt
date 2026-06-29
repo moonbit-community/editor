@@ -676,7 +676,6 @@ impl @language.DocumentSymbolProvider for LspLanguageProvider with fn provide_do
   self.client.document_symbols(document)
 }
 
-
 ///|
 fn LspClient::next_request_id(self : LspClient) -> Int {
   self.next_id.val = self.next_id.val + 1

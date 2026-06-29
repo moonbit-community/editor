@@ -321,15 +321,15 @@ test "inlay hints render as injected text without changing model offsets" {
   // injected token carries only default syntactic metadata (`mtk1`).
   assert_false(data.tokens.any(part => part.class_name.contains("inlay-hint")))
   assert_true(
-    line.injected_inline_decorations.any(decoration => decoration.class_name.contains(
-      "inlay-hint",
-    )),
+    line.injected_inline_decorations.any(decoration => {
+      decoration.class_name.contains("inlay-hint")
+    }),
   )
   // The decoration still merges onto the injected token in the rendered DOM, so
   // the inlay text is styled `mtk1 inlay-hint inlay-hint-type`.
   let html = @view_line_renderer.render_view_line2(
-    @view_model.render_line_input_from_render_line(line),
-  ).html
+      @view_model.render_line_input_from_render_line(line),
+    ).html
   assert_true(html.contains("mtk1 inlay-hint inlay-hint-type"))
 }
 

@@ -41,15 +41,19 @@ pub fn line_tokens_from_syntax_tokens(
       data.push((substr(line_text, cursor, start), gap_metadata(language_id)))
     }
     if start < end {
-      data.push((
-        substr(line_text, start, end),
-        tag_to_metadata(token.tag, language_id~),
-      ))
+      data.push(
+        (
+          substr(line_text, start, end),
+          tag_to_metadata(token.tag, language_id~),
+        ),
+      )
       cursor = end
     }
   }
   if cursor < line_length {
-    data.push((substr(line_text, cursor, line_length), gap_metadata(language_id)))
+    data.push(
+      (substr(line_text, cursor, line_length), gap_metadata(language_id)),
+    )
   }
   if data.is_empty() {
     // An empty line still needs one token covering its (zero-length) content.

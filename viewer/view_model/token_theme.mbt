@@ -116,19 +116,19 @@ pub fn tag_to_metadata(
 pub fn default_token_color_map() -> Array[String] {
   [
     "", // 0  ColorId.None
-    "var(--vscode-editor-foreground)", // 1  default foreground
-    "var(--vscode-editor-background)", // 2  default background
-    "var(--vscode-token-keyword)", // 3  COLOR_ID_KEYWORD
-    "var(--vscode-token-variable)", // 4  COLOR_ID_VARIABLE
-    "var(--vscode-token-string)", // 5  COLOR_ID_STRING
-    "var(--vscode-token-number)", // 6  COLOR_ID_NUMBER
-    "var(--vscode-token-comment)", // 7  COLOR_ID_COMMENT
-    "var(--vscode-token-punctuation)", // 8  COLOR_ID_PUNCTUATION
-    "var(--vscode-token-type)", // 9  COLOR_ID_TYPE
-    "var(--vscode-token-function)", // 10 COLOR_ID_FUNCTION
-    "var(--vscode-token-string-escape)", // 11 COLOR_ID_STRING_ESCAPE
-    "var(--vscode-token-regexp)", // 12 COLOR_ID_REGEXP
-    "var(--vscode-token-invalid)", // 13 COLOR_ID_INVALID
+     "var(--vscode-editor-foreground)", // 1  default foreground
+     "var(--vscode-editor-background)", // 2  default background
+     "var(--vscode-token-keyword)", // 3  COLOR_ID_KEYWORD
+     "var(--vscode-token-variable)", // 4  COLOR_ID_VARIABLE
+     "var(--vscode-token-string)", // 5  COLOR_ID_STRING
+     "var(--vscode-token-number)", // 6  COLOR_ID_NUMBER
+     "var(--vscode-token-comment)", // 7  COLOR_ID_COMMENT
+     "var(--vscode-token-punctuation)", // 8  COLOR_ID_PUNCTUATION
+     "var(--vscode-token-type)", // 9  COLOR_ID_TYPE
+     "var(--vscode-token-function)", // 10 COLOR_ID_FUNCTION
+     "var(--vscode-token-string-escape)", // 11 COLOR_ID_STRING_ESCAPE
+     "var(--vscode-token-regexp)", // 12 COLOR_ID_REGEXP
+     "var(--vscode-token-invalid)", // 13 COLOR_ID_INVALID
   ]
 }
 

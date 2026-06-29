@@ -1063,7 +1063,6 @@ fn document_symbols_result_json(payload : DocumentSymbolsResultPayload) -> Json 
   Json::object(fields)
 }
 
-
 ///|
 fn folding_ranges_result_json(payload : FoldingRangesResultPayload) -> Json {
   let fields = packet_fields("FoldingRangesResult", payload.id)
@@ -1187,7 +1186,10 @@ fn inlay_hint_kind_json(kind : @language.InlayHintKind) -> Json {
 fn position_json(position : @base_common.Position) -> Json {
   // Internal round-trip with `parse_position`; both ends are 1-based, so the
   // wire keys carry the `Position` values verbatim.
-  { "line": position.line_number.to_json(), "column": position.column.to_json() }
+  {
+    "line": position.line_number.to_json(),
+    "column": position.column.to_json(),
+  }
 }
 
 ///|
@@ -1239,7 +1241,9 @@ fn parse_range(value : Json) -> @base_common.Range? {
     ) {
     (Some(start_line), Some(start_column), Some(end_line), Some(end_column)) =>
       Some(
-        @base_common.Range::Range(start_line, start_column, end_line, end_column),
+        @base_common.Range::Range(
+          start_line, start_column, end_line, end_column,
+        ),
       )
     _ => None
   }
@@ -1448,8 +1452,7 @@ fn parse_location(value : Json) -> @language.Location? {
     Object(_) =>
       match (json_string_field(value, "uri"), json_field(value, "range")) {
         (Some(raw_uri), Some(range_json)) =>
-          match
-            (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
+          match (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
             (ParsedUri(uri), Some(range)) => Some({ uri, range })
             _ => None
           }
@@ -1465,8 +1468,7 @@ fn parse_reference_item(value : Json) -> ReferenceItem? {
     Object(_) =>
       match (json_string_field(value, "uri"), json_field(value, "range")) {
         (Some(raw_uri), Some(range_json)) =>
-          match
-            (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
+          match (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
             (ParsedUri(uri), Some(range)) =>
               Some({
                 uri,

@@ -510,7 +510,9 @@ test "getInlineDecorations returns inline decorations for a model line" {
 ///|
 test "no injections returns empty" {
   let context : @inline_decorations.InjectedTextContext = {
-    get_injection_options: fn(_l) -> Array[@inline_decorations.InjectedTextOptions]? {
+    get_injection_options: fn(
+      _l,
+    ) -> Array[@inline_decorations.InjectedTextOptions]? {
       None
     },
     get_injection_offsets: fn(_l) -> Array[Int]? { None },

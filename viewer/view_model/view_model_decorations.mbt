@@ -58,7 +58,7 @@ pub fn ViewModelDecorations::to_view_decorations(
   self : ViewModelDecorations,
   decorations : Array[@decorations.Decoration],
 ) -> Array[ViewModelDecoration] {
-  decorations.map(decoration => { to_view_decoration(self.converter, decoration) })
+  decorations.map(decoration => to_view_decoration(self.converter, decoration))
 }
 
 ///|

@@ -100,8 +100,7 @@ pub fn ViewportData::from_view_model(
       match layout {
         Some(layout) =>
           layout.relative_vertical_offset_for_line(
-            normalized_window,
-            line_number,
+            normalized_window, line_number,
           )
         None => (line_number - start_line) * line_height
       },

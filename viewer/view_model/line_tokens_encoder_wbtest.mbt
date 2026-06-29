@@ -10,7 +10,12 @@ test "encoder fills gaps and trailing text with default metadata" {
     { range: OffsetRange(0, 3), tag: Keyword, text: "let" },
     { range: OffsetRange(8, 9), tag: Number, text: "1" },
   ]
-  let lt = line_tokens_from_syntax_tokens(line, 0, tokens, LanguageIdCodec::new())
+  let lt = line_tokens_from_syntax_tokens(
+    line,
+    0,
+    tokens,
+    LanguageIdCodec::new(),
+  )
   assert_eq(lt.get_line_content(), line)
   assert_eq(lt.get_count(), 3)
   // "let" | " x = " (gap) | "1"

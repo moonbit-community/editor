@@ -36,7 +36,7 @@ pub(all) struct Token {
 /// Renders the tag's variant name. Used by the per-language lexer golden tests
 /// to label each token; production styling is the view model's metadata
 /// encoding (`mtk<colorId>`), not a per-tag string.
-pub impl Show for HighlightTag with output(self, logger) {
+pub impl Show for HighlightTag with fn output(self, logger) {
   logger.write_string(
     match self {
       Keyword => "Keyword"

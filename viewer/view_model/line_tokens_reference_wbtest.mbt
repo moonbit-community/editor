@@ -144,12 +144,12 @@ test "findToken" {
   let line_tokens = create_test_line_tokens()
   let expected = [
     0, 0, 0, 0, 0, 0, // offsets 0..5  -> token 0
-    1, 1, 1, 1, 1, 1, 1, // offsets 6..12 -> token 1
-    2, 2, 2, 2, 2, // offsets 13..17 -> token 2
-    3, 3, 3, // offsets 18..20 -> token 3
-    4, 4, // offsets 21..22 -> token 4
-    5, 5, 5, 5, 5, 5, 5, // offsets 23..29 -> token 5
-    6, 6, 6, 6, 6, // offsets 30..34 -> token 6
+     1, 1, 1, 1, 1, 1, 1, // offsets 6..12 -> token 1
+     2, 2, 2, 2, 2, // offsets 13..17 -> token 2
+     3, 3, 3, // offsets 18..20 -> token 3
+     4, 4, // offsets 21..22 -> token 4
+     5, 5, 5, 5, 5, 5, 5, // offsets 23..29 -> token 5
+     6, 6, 6, 6, 6, // offsets 30..34 -> token 6
   ]
   for offset in 0..<expected.length() {
     assert_eq(line_tokens.find_token_index_at_offset(offset), expected[offset])
@@ -207,9 +207,18 @@ test "sliceAndInflate" {
     (24, 5),
     (31, 6),
   ])
-  assert_view_line_tokens(line_tokens.slice_and_inflate(6, 18, 0), [(7, 2), (12, 3)])
-  assert_view_line_tokens(line_tokens.slice_and_inflate(7, 18, 0), [(6, 2), (11, 3)])
-  assert_view_line_tokens(line_tokens.slice_and_inflate(6, 17, 0), [(7, 2), (11, 3)])
+  assert_view_line_tokens(line_tokens.slice_and_inflate(6, 18, 0), [
+    (7, 2),
+    (12, 3),
+  ])
+  assert_view_line_tokens(line_tokens.slice_and_inflate(7, 18, 0), [
+    (6, 2),
+    (11, 3),
+  ])
+  assert_view_line_tokens(line_tokens.slice_and_inflate(6, 17, 0), [
+    (7, 2),
+    (11, 3),
+  ])
   assert_view_line_tokens(line_tokens.slice_and_inflate(6, 19, 0), [
     (7, 2),
     (12, 3),

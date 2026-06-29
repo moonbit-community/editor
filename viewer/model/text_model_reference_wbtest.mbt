@@ -218,8 +218,8 @@ test "modifyPosition" {
 test "getLineFirstNonWhitespaceColumn" {
   let m = TextSnapshot::TextSnapshot(
     join_lines([
-      "asd", " asd", "\tasd", "  asd", "\t\tasd", " ", "  ", "\t", "\t\t",
-      "  \tasd", "", "",
+      "asd", " asd", "\tasd", "  asd", "\t\tasd", " ", "  ", "\t", "\t\t", "  \tasd",
+      "", "",
     ]),
   )
   assert_eq(m.get_line_first_non_whitespace_column(1), 1)
@@ -240,8 +240,8 @@ test "getLineFirstNonWhitespaceColumn" {
 test "getLineLastNonWhitespaceColumn" {
   let m = TextSnapshot::TextSnapshot(
     join_lines([
-      "asd", "asd ", "asd\t", "asd  ", "asd\t\t", " ", "  ", "\t", "\t\t",
-      "asd  \t", "", "",
+      "asd", "asd ", "asd\t", "asd  ", "asd\t\t", " ", "  ", "\t", "\t\t", "asd  \t",
+      "", "",
     ]),
   )
   assert_eq(m.get_line_last_non_whitespace_column(1), 4)
@@ -266,6 +266,8 @@ test "mightContainRTL nope" {
 
 ///|
 test "mightContainRTL yes" {
-  let m = TextSnapshot::TextSnapshot("Hello,\nזוהי עובדה מבוססת שדעתו")
+  let m = TextSnapshot::TextSnapshot(
+    "Hello,\nזוהי עובדה מבוססת שדעתו",
+  )
   assert_eq(m.might_contain_rtl(), true)
 }

@@ -58,7 +58,12 @@ fn assert_indent_guides(
 ///|
 test "getLineIndentGuide one level 2" {
   assert_indent_guides(
-    [(0, 2, 4, 1, "A"), (1, 2, 4, 1, "  A"), (1, 2, 4, 1, "  A"), (1, 2, 4, 1, "  A")],
+    [
+      (0, 2, 4, 1, "A"),
+      (1, 2, 4, 1, "  A"),
+      (1, 2, 4, 1, "  A"),
+      (1, 2, 4, 1, "  A"),
+    ],
     2,
   )
 }
@@ -256,13 +261,12 @@ test "issue #12398 - Problem in indent guidelines" {
 
 ///|
 test "issue #49173" {
-  let text =
-    (
-      [
-        "class A {", "\tpublic m1(): void {", "\t}", "\tpublic m2(): void {", "\t}",
-        "\tpublic m3(): void {", "\t}", "\tpublic m4(): void {", "\t}",
-        "\tpublic m5(): void {", "\t}", "}",
-      ] : Array[String]).join("\n")
+  let text = (
+    [
+      "class A {", "\tpublic m1(): void {", "\t}", "\tpublic m2(): void {", "\t}",
+      "\tpublic m3(): void {", "\t}", "\tpublic m4(): void {", "\t}", "\tpublic m5(): void {",
+      "\t}", "}",
+    ] : Array[String]).join("\n")
   let snapshot = TextSnapshot::TextSnapshot(text)
   let guides = GuidesTextModelPart::new(snapshot, tab_size=4, indent_size=4)
   let actual = guides.get_active_indent_guide(2, 4, 9)

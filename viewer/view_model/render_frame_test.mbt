@@ -79,8 +79,14 @@ test "window builds match the matching slice of a whole-document build" {
     assert_eq(windowed.text, full.text)
     assert_eq(windowed.tokens.get_count(), full.tokens.get_count())
     for i in 0..<windowed.tokens.get_count() {
-      assert_eq(windowed.tokens.get_end_offset(i), full.tokens.get_end_offset(i))
-      assert_eq(windowed.tokens.get_class_name(i), full.tokens.get_class_name(i))
+      assert_eq(
+        windowed.tokens.get_end_offset(i),
+        full.tokens.get_end_offset(i),
+      )
+      assert_eq(
+        windowed.tokens.get_class_name(i),
+        full.tokens.get_class_name(i),
+      )
     }
   }
 }

@@ -112,14 +112,14 @@ pub fn ModelLineProjection::model_position_to_view_position(
   let segment = data.segment_at_view_line_index(segment_index)
   {
     line_number: self.model_line_start_view_indices[model_line] +
-      segment_index +
-      1,
+    segment_index +
+    1,
     // A continuation line's content sits past its indent, so the view column
     // gains `wrapped_text_indent_length` (Monaco's `getOutputPositionOfInputOffset`).
     column: projected_column -
-      segment.start_offset +
-      1 +
-      segment.wrapped_text_indent_length,
+    segment.start_offset +
+    1 +
+    segment.wrapped_text_indent_length,
   }
 }
 
@@ -146,9 +146,9 @@ pub fn ModelLineProjection::view_position_to_model_position(
   {
     line_number: segment.model_line_number,
     column: data.projected_line.projected_column_to_model_column(
-        projected_column,
-      ) +
-      1,
+      projected_column,
+    ) +
+    1,
   }
 }
 

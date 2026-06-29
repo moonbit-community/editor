@@ -28,7 +28,7 @@
 fn assert_indent_level(
   text : String,
   expected : Int,
-  tab_size~ : Int = 4,
+  tab_size? : Int = 4,
 ) -> Unit raise {
   assert_eq(compute_indent_level(text, tab_size), expected)
 }

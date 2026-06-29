@@ -262,13 +262,7 @@ test "encodes and decodes server document and language packets" {
         column: 8,
         line_text: "pub fn main {}",
       },
-      {
-        uri,
-        range: Range(2, 1, 2, 5),
-        line: 2,
-        column: 1,
-        line_text: "main()",
-      },
+      { uri, range: Range(2, 1, 2, 5), line: 2, column: 1, line_text: "main()" },
     ],
   })
   match

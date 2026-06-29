@@ -310,8 +310,7 @@ fn test_remote_server(
 ) -> @server.RemoteServer {
   let provider = FakeLanguageProvider::{  }
   @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider, provider,
-    provider,
+    root, host, provider, provider, provider, provider, provider, provider, provider,
   )
 }
 

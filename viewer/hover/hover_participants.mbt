@@ -87,7 +87,9 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
   let snapshot = ctx.model.snapshot
   let query = snapshot.range_of(ctx.anchor_range)
   for marker in self.marker_decorations.markers_at(ctx.model.uri, query) {
-    parts.push(MarkerHover(range=snapshot.offset_range_of(marker.range), marker~))
+    parts.push(
+      MarkerHover(range=snapshot.offset_range_of(marker.range), marker~),
+    )
   }
   parts
 }

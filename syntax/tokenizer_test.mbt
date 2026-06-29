@@ -78,7 +78,6 @@ test "driver carries state across lines and converts to doc offsets" {
       #|    text: "cc */",
       #|  },
       #|]
-
     ),
   )
 }
@@ -121,7 +120,6 @@ test "plain tokenizer counts UTF-16 code units and keeps pairs whole" {
       #|  },
       #|  { range: { start: 4, end_exclusive: 5 }, tag: Identifier, text: "b" },
       #|]
-
     ),
   )
 }

@@ -119,7 +119,8 @@ pub fn LineBreaksComputer::compute_projected_line_projection(
     self.wrapping_column,
     self.wrapping_indent,
   )
-  let wrapped_line_break_column = self.wrapping_column - wrapped_text_indent_length
+  let wrapped_line_break_column = self.wrapping_column -
+    wrapped_text_indent_length
   let segments : Array[ModelLineProjectionSegment] = []
   let mut segment_start = 0
   let mut segment_start_visible_column = 0
@@ -231,7 +232,9 @@ fn compute_wrapped_text_indent_length(
         _ => 0
       }
       for _ in 0..<number_of_additional_tabs {
-        let char_width = code_unit_width(9, wrapped_text_indent_length, tab_size)
+        let char_width = code_unit_width(
+          9, wrapped_text_indent_length, tab_size,
+        )
         wrapped_text_indent_length = wrapped_text_indent_length + char_width
       }
 

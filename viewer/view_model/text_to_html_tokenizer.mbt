@@ -136,7 +136,9 @@ pub fn tokenize_line_to_html(
       continue
     }
     result.write_string("<span style=\"")
-    result.write_string(view_line_tokens.get_inline_style(token_index, color_map))
+    result.write_string(
+      view_line_tokens.get_inline_style(token_index, color_map),
+    )
     result.write_string("\">")
     result.write_string(part.to_string())
     result.write_string("</span>")
@@ -178,7 +180,9 @@ pub fn tokenize_to_string(
       result.write_string("<span class=\"")
       result.write_string(type_)
       result.write_string("\">")
-      result.write_string(@base_common.escape(line[start_offset:end_index].to_owned()))
+      result.write_string(
+        @base_common.escape(line[start_offset:end_index].to_owned()),
+      )
       result.write_string("</span>")
       start_offset = end_index
     }

@@ -121,7 +121,9 @@ pub fn GuidesTextModelPart::get_lines_indent_guides(
       above_content_line_index = -1
       above_content_line_indent = -1
       // must find previous line with content
-      for line_index = line_number - 2; line_index >= 0; line_index = line_index - 1 {
+      for line_index = line_number - 2
+          line_index >= 0
+          line_index = line_index - 1 {
         let indent = self.compute_indent_level(line_index)
         if indent >= 0 {
           above_content_line_index = line_index
@@ -131,11 +133,16 @@ pub fn GuidesTextModelPart::get_lines_indent_guides(
       }
     }
     if below_content_line_index != -1 &&
-      (below_content_line_index == -2 || below_content_line_index < line_number - 1) {
+      (
+        below_content_line_index == -2 ||
+        below_content_line_index < line_number - 1
+      ) {
       below_content_line_index = -1
       below_content_line_indent = -1
       // must find next line with content
-      for line_index = line_number; line_index < line_count; line_index = line_index + 1 {
+      for line_index = line_number
+          line_index < line_count
+          line_index = line_index + 1 {
         let indent = self.compute_indent_level(line_index)
         if indent >= 0 {
           below_content_line_index = line_index
@@ -145,9 +152,7 @@ pub fn GuidesTextModelPart::get_lines_indent_guides(
       }
     }
     result[result_index] = self.get_indent_level_for_whitespace_line(
-      off_side,
-      above_content_line_indent,
-      below_content_line_indent,
+      off_side, above_content_line_indent, below_content_line_indent,
     )
   }
   result
@@ -182,7 +187,9 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
       up_above_content_line_index = -1
       up_above_content_line_indent = -1
       // must find previous line with content
-      for line_index = line_number - 2; line_index >= 0; line_index = line_index - 1 {
+      for line_index = line_number - 2
+          line_index >= 0
+          line_index = line_index - 1 {
         let indent = self.compute_indent_level(line_index)
         if indent >= 0 {
           up_above_content_line_index = line_index
@@ -195,7 +202,9 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
       up_below_content_line_index = -1
       up_below_content_line_indent = -1
       // must find next line with content
-      for line_index = line_number; line_index < line_count; line_index = line_index + 1 {
+      for line_index = line_number
+          line_index < line_count
+          line_index = line_index + 1 {
         let indent = self.compute_indent_level(line_index)
         if indent >= 0 {
           up_below_content_line_index = line_index
@@ -214,7 +223,9 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
       down_above_content_line_index = -1
       down_above_content_line_indent = -1
       // must find previous line with content
-      for line_index = line_number - 2; line_index >= 0; line_index = line_index - 1 {
+      for line_index = line_number - 2
+          line_index >= 0
+          line_index = line_index - 1 {
         let indent = self.compute_indent_level(line_index)
         if indent >= 0 {
           down_above_content_line_index = line_index
@@ -231,7 +242,9 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
       down_below_content_line_index = -1
       down_below_content_line_indent = -1
       // must find next line with content
-      for line_index = line_number; line_index < line_count; line_index = line_index + 1 {
+      for line_index = line_number
+          line_index < line_count
+          line_index = line_index + 1 {
         let indent = self.compute_indent_level(line_index)
         if indent >= 0 {
           down_below_content_line_index = line_index
@@ -274,9 +287,7 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
       } else {
         up_resolve_indents(up_line_number)
         up_line_indent_level = self.get_indent_level_for_whitespace_line(
-          off_side,
-          up_above_content_line_indent,
-          up_below_content_line_indent,
+          off_side, up_above_content_line_indent, up_below_content_line_indent,
         )
       }
     }
@@ -292,9 +303,7 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
       } else {
         down_resolve_indents(down_line_number)
         down_line_indent_level = self.get_indent_level_for_whitespace_line(
-          off_side,
-          down_above_content_line_indent,
-          down_below_content_line_indent,
+          off_side, down_above_content_line_indent, down_below_content_line_indent,
         )
       }
     }

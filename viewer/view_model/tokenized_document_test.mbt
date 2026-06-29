@@ -80,4 +80,3 @@ test "bucketed window frames equal a full lexer pass" {
     assert_eq(joined, line.text)
   }
 }
-

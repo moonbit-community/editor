@@ -32,10 +32,7 @@ fn insert_whitespace(
   let id = Ref("")
   lines_layout.change_whitespace(fn(accessor) {
     id.val = accessor.insert_whitespace(
-      after_line_number,
-      ordinal,
-      height_in_px,
-      min_width,
+      after_line_number, ordinal, height_in_px, min_width,
     )
   })
   |> ignore
@@ -145,26 +142,86 @@ test "LinesLayout 1" {
   assert_eq(lines_layout.get_vertical_offset_for_whitespace_index(1), 35) // 35 -> 40
   assert_eq(lines_layout.get_vertical_offset_for_whitespace_index(2), 50)
   assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(0), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(19), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(20), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(21), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(22), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(23), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(24), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(25), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(26), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(34), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(35), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(36), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(39), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(40), 2)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(41), 2)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(49), 2)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(50), 2)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(51), 2)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(54), 2)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(55), -1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(1000), -1)
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(19),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(20),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(21),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(22),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(23),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(24),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(25),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(26),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(34),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(35),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(36),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(39),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(40),
+    2,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(41),
+    2,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(49),
+    2,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(50),
+    2,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(51),
+    2,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(54),
+    2,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(55),
+    -1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(1000),
+    -1,
+  )
 }
 
 ///|
@@ -343,17 +400,50 @@ test "LinesLayout Padding" {
   assert_eq(lines_layout.get_vertical_offset_for_whitespace_index(1), 50) // 50 -> 55
   assert_eq(lines_layout.get_vertical_offset_for_whitespace_index(2), 65)
   assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(0), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(34), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(35), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(39), 0)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(40), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(49), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(50), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(54), 1)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(55), 2)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(64), 2)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(65), 2)
-  assert_eq(lines_layout.get_whitespace_index_at_or_after_vertical_offset(70), -1)
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(34),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(35),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(39),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(40),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(49),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(50),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(54),
+    1,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(55),
+    2,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(64),
+    2,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(65),
+    2,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_index_at_or_after_vertical_offset(70),
+    -1,
+  )
 }
 
 ///|
@@ -475,19 +565,58 @@ test "LinesLayout getCenteredLineInViewport" {
   assert_eq(lines_layout.get_lines_viewport_data(7, 20).centered_line_number, 7)
   assert_eq(lines_layout.get_lines_viewport_data(8, 20).centered_line_number, 7)
   assert_eq(lines_layout.get_lines_viewport_data(9, 20).centered_line_number, 7)
-  assert_eq(lines_layout.get_lines_viewport_data(10, 20).centered_line_number, 7)
-  assert_eq(lines_layout.get_lines_viewport_data(11, 20).centered_line_number, 7)
-  assert_eq(lines_layout.get_lines_viewport_data(12, 20).centered_line_number, 7)
-  assert_eq(lines_layout.get_lines_viewport_data(13, 20).centered_line_number, 7)
-  assert_eq(lines_layout.get_lines_viewport_data(14, 20).centered_line_number, 8)
-  assert_eq(lines_layout.get_lines_viewport_data(15, 20).centered_line_number, 8)
-  assert_eq(lines_layout.get_lines_viewport_data(16, 20).centered_line_number, 9)
-  assert_eq(lines_layout.get_lines_viewport_data(17, 20).centered_line_number, 9)
-  assert_eq(lines_layout.get_lines_viewport_data(18, 20).centered_line_number, 10)
-  assert_eq(lines_layout.get_lines_viewport_data(19, 20).centered_line_number, 10)
-  assert_eq(lines_layout.get_lines_viewport_data(20, 23).centered_line_number, 10)
-  assert_eq(lines_layout.get_lines_viewport_data(21, 23).centered_line_number, 10)
-  assert_eq(lines_layout.get_lines_viewport_data(22, 23).centered_line_number, 10)
+  assert_eq(
+    lines_layout.get_lines_viewport_data(10, 20).centered_line_number,
+    7,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(11, 20).centered_line_number,
+    7,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(12, 20).centered_line_number,
+    7,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(13, 20).centered_line_number,
+    7,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(14, 20).centered_line_number,
+    8,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(15, 20).centered_line_number,
+    8,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(16, 20).centered_line_number,
+    9,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(17, 20).centered_line_number,
+    9,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(18, 20).centered_line_number,
+    10,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(19, 20).centered_line_number,
+    10,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(20, 23).centered_line_number,
+    10,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(21, 23).centered_line_number,
+    10,
+  )
+  assert_eq(
+    lines_layout.get_lines_viewport_data(22, 23).centered_line_number,
+    10,
+  )
 }
 
 ///|
@@ -515,7 +644,9 @@ test "LinesLayout getLinesViewportData 1" {
   assert_eq(viewport_data.end_line_number, 5)
   assert_eq(viewport_data.completely_visible_start_line_number, 1)
   assert_eq(viewport_data.completely_visible_end_line_number, 5)
-  assert_int_array_eq(viewport_data.relative_vertical_offset, [0, 10, 20, 30, 40])
+  assert_int_array_eq(viewport_data.relative_vertical_offset, [
+    0, 10, 20, 30, 40,
+  ])
 
   // viewport 1->51
   let viewport_data = lines_layout.get_lines_viewport_data(1, 51)
@@ -523,7 +654,9 @@ test "LinesLayout getLinesViewportData 1" {
   assert_eq(viewport_data.end_line_number, 6)
   assert_eq(viewport_data.completely_visible_start_line_number, 2)
   assert_eq(viewport_data.completely_visible_end_line_number, 5)
-  assert_int_array_eq(viewport_data.relative_vertical_offset, [0, 10, 20, 30, 40, 50])
+  assert_int_array_eq(viewport_data.relative_vertical_offset, [
+    0, 10, 20, 30, 40, 50,
+  ])
 
   // viewport 5->55
   let viewport_data = lines_layout.get_lines_viewport_data(5, 55)
@@ -531,7 +664,9 @@ test "LinesLayout getLinesViewportData 1" {
   assert_eq(viewport_data.end_line_number, 6)
   assert_eq(viewport_data.completely_visible_start_line_number, 2)
   assert_eq(viewport_data.completely_visible_end_line_number, 5)
-  assert_int_array_eq(viewport_data.relative_vertical_offset, [0, 10, 20, 30, 40, 50])
+  assert_int_array_eq(viewport_data.relative_vertical_offset, [
+    0, 10, 20, 30, 40, 50,
+  ])
 
   // viewport 10->60
   let viewport_data = lines_layout.get_lines_viewport_data(10, 60)
@@ -539,7 +674,9 @@ test "LinesLayout getLinesViewportData 1" {
   assert_eq(viewport_data.end_line_number, 6)
   assert_eq(viewport_data.completely_visible_start_line_number, 2)
   assert_eq(viewport_data.completely_visible_end_line_number, 6)
-  assert_int_array_eq(viewport_data.relative_vertical_offset, [10, 20, 30, 40, 50])
+  assert_int_array_eq(viewport_data.relative_vertical_offset, [
+    10, 20, 30, 40, 50,
+  ])
 
   // viewport 50->100
   let viewport_data = lines_layout.get_lines_viewport_data(50, 100)
@@ -619,7 +756,9 @@ test "LinesLayout getLinesViewportData 1" {
   assert_eq(viewport_data.end_line_number, 10)
   assert_eq(viewport_data.completely_visible_start_line_number, 7)
   assert_eq(viewport_data.completely_visible_end_line_number, 10)
-  assert_int_array_eq(viewport_data.relative_vertical_offset, [160, 170, 180, 190])
+  assert_int_array_eq(viewport_data.relative_vertical_offset, [
+    160, 170, 180, 190,
+  ])
 }
 
 ///|
@@ -688,7 +827,9 @@ test "LinesLayout getLinesViewportData 2 & getWhitespaceViewportData" {
   assert_eq(viewport_data.end_line_number, 10)
   assert_eq(viewport_data.completely_visible_start_line_number, 6)
   assert_eq(viewport_data.completely_visible_end_line_number, 10)
-  assert_int_array_eq(viewport_data.relative_vertical_offset, [50, 160, 220, 230, 240])
+  assert_int_array_eq(viewport_data.relative_vertical_offset, [
+    50, 160, 220, 230, 240,
+  ])
 }
 
 ///|
@@ -722,10 +863,22 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_height_for_whitespace_index(0), 10)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(0), 10)
   assert_eq(lines_layout.get_whitespaces_total_height(), 10)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 10)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 10)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    10,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    10,
+  )
 
   // Insert a whitespace again after line number 2, of height 20
   let b = insert_whitespace(lines_layout, 2, 0, 20, 0)
@@ -738,10 +891,22 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(0), 10)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(1), 30)
   assert_eq(lines_layout.get_whitespaces_total_height(), 30)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 30)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 30)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    30,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    30,
+  )
 
   // Change last inserted whitespace height to 30
   change_one_whitespace(lines_layout, b, 2, 30)
@@ -754,10 +919,22 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(0), 10)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(1), 40)
   assert_eq(lines_layout.get_whitespaces_total_height(), 40)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 40)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 40)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    40,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    40,
+  )
 
   // Remove last inserted whitespace
   remove_whitespace(lines_layout, b)
@@ -767,10 +944,22 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_height_for_whitespace_index(0), 10)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(0), 10)
   assert_eq(lines_layout.get_whitespaces_total_height(), 10)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 10)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 10)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    10,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    10,
+  )
 
   // Add a whitespace before the first line of height 50
   let b = insert_whitespace(lines_layout, 0, 0, 50, 0)
@@ -783,10 +972,22 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(0), 50)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(1), 60)
   assert_eq(lines_layout.get_whitespaces_total_height(), 60)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 60)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 60)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    60,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    60,
+  )
 
   // Add a whitespace after line 4 of height 20
   insert_whitespace(lines_layout, 4, 0, 20, 0) |> ignore
@@ -802,11 +1003,26 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(1), 60)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(2), 80)
   assert_eq(lines_layout.get_whitespaces_total_height(), 80)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 60)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 60)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(5), 80)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    60,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    60,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(5),
+    80,
+  )
 
   // Add a whitespace after line 3 of height 30
   insert_whitespace(lines_layout, 3, 0, 30, 0) |> ignore
@@ -825,11 +1041,26 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(2), 90)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(3), 110)
   assert_eq(lines_layout.get_whitespaces_total_height(), 110)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 60)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 90)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(5), 110)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    60,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    90,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(5),
+    110,
+  )
 
   // Change whitespace after line 2 to height of 100
   change_one_whitespace(lines_layout, a, 2, 100)
@@ -848,11 +1079,26 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(2), 180)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(3), 200)
   assert_eq(lines_layout.get_whitespaces_total_height(), 200)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 150)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 180)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(5), 200)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    150,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    180,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(5),
+    200,
+  )
 
   // Remove whitespace after line 2
   remove_whitespace(lines_layout, a)
@@ -868,11 +1114,26 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(1), 80)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(2), 100)
   assert_eq(lines_layout.get_whitespaces_total_height(), 100)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 80)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(5), 100)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    80,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(5),
+    100,
+  )
 
   // Remove whitespace before line 1
   remove_whitespace(lines_layout, b)
@@ -885,11 +1146,26 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(0), 30)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(1), 50)
   assert_eq(lines_layout.get_whitespaces_total_height(), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 30)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(5), 50)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    30,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(5),
+    50,
+  )
 
   // Delete line 1
   lines_layout.on_lines_deleted(1, 1)
@@ -902,11 +1178,26 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(0), 30)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(1), 50)
   assert_eq(lines_layout.get_whitespaces_total_height(), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 30)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(5), 50)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    30,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(5),
+    50,
+  )
 
   // Insert a line before line 1
   lines_layout.on_lines_inserted(1, 1)
@@ -919,11 +1210,26 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(0), 30)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(1), 50)
   assert_eq(lines_layout.get_whitespaces_total_height(), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 30)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(5), 50)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    30,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(5),
+    50,
+  )
 
   // Delete line 4
   lines_layout.on_lines_deleted(4, 4)
@@ -936,11 +1242,26 @@ test "LinesLayout" {
   assert_eq(lines_layout.get_whitespaces_accumulated_height(0), 30)
   assert_eq(lines_layout.get_whitespaces_accumulated_height(1), 50)
   assert_eq(lines_layout.get_whitespaces_total_height(), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(1), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(2), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(3), 0)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(4), 50)
-  assert_eq(lines_layout.get_whitespace_accumulated_height_before_line_number(5), 50)
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(1),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(2),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(3),
+    0,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(4),
+    50,
+  )
+  assert_eq(
+    lines_layout.get_whitespace_accumulated_height_before_line_number(5),
+    50,
+  )
 }
 
 ///|

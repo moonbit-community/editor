@@ -1,0 +1,63 @@
+///|
+test "MarkerDecorations diff: no-op and add/remove" {
+  let model = @model.TextModel(
+    @base_common.Uri::memory("diff.mbt"),
+    "",
+    "moonbit",
+    1,
+    "rev",
+    "hello world\nsecond line",
+  )
+  let md = MarkerDecorations::new(model)
+  let m1 = make_marker(Error, 1, 1, 1, 3)
+  let m2 = make_marker(Warning, 2, 1, 2, 5)
+  // first update adds both
+  assert_true(md.update([m1, m2]))
+  assert_eq(md.get_markers().length(), 2)
+  // identical set → diffSets no-op (load-bearing early return)
+  assert_false(md.update([m1, m2]))
+  // dropping m2 is a change
+  assert_true(md.update([m1]))
+  assert_eq(md.get_markers().length(), 1)
+  let (range, marker) = md.get_markers()[0]
+  assert_true(range == Range(1, 1, 1, 3))
+  assert_true(marker.severity == Error)
+}
+
+///|
+test "MarkerDecorationsService fires change event and honors suppression" {
+  let markers = MarkerService::new()
+  let svc = MarkerDecorationsService::new(markers)
+  let uri = @base_common.Uri::memory("svc.mbt")
+  let model = @model.TextModel(uri, "", "moonbit", 1, "rev", "alpha beta gamma")
+  svc.on_model_added(model)
+  let fired : Array[String] = []
+  let d = svc.on_did_change_marker_decorations(m => fired.push(m.uri.to_string()))
+  markers.set_diagnostics("o", uri, [
+    { range: Range(1, 1, 1, 6), severity: Error, message: "x" },
+  ])
+  assert_eq(fired.length(), 1)
+  assert_eq(svc.get_live_markers(uri).length(), 1)
+  // suppressing the marker's range hides it
+  let suppression = svc.add_marker_suppression(uri, Range(1, 1, 1, 16))
+  assert_eq(svc.get_live_markers(uri).length(), 0)
+  // disposing the suppression brings it back
+  suppression.dispose()
+  assert_eq(svc.get_live_markers(uri).length(), 1)
+  d.dispose()
+}
+
+///|
+test "MarkerDecorationsService take caps at 500" {
+  let markers = MarkerService::new()
+  let svc = MarkerDecorationsService::new(markers)
+  let uri = @base_common.Uri::memory("cap.mbt")
+  let model = @model.TextModel(uri, "", "moonbit", 1, "rev", "x")
+  svc.on_model_added(model)
+  let diagnostics : Array[@language.Diagnostic] = []
+  for _ in 0..<600 {
+    diagnostics.push({ range: Range(1, 1, 1, 2), severity: Error, message: "e" })
+  }
+  markers.set_diagnostics("o", uri, diagnostics)
+  assert_eq(svc.get_live_markers(uri).length(), 500)
+}

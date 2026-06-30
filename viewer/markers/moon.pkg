@@ -2,4 +2,5 @@ import {
   "moonbit-community/editor/base/common" @base_common,
   "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/decorations",
+  "moonbit-community/editor/viewer/model",
 }

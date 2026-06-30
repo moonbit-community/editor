@@ -101,13 +101,21 @@ fn inline_decorations_for_line(
       continue
     }
     match decoration.columns_on_view_line(line.line_number, max_column) {
-      Some((start_column, end_column)) =>
-        inline.push(
-          InlineDecoration(
-            OffsetRange(start_column - 1, end_column - 1),
-            decoration.class_name,
-          ),
-        )
+      Some((start_column, end_column)) => {
+        let range = @base_common.OffsetRange(start_column - 1, end_column - 1)
+        // An empty `class_name` is Monaco's `className: undefined` (Hint+
+        // Deprecated): no squiggle span, only the inline class below.
+        if decoration.class_name != "" {
+          inline.push(InlineDecoration(range, decoration.class_name))
+        }
+        // Marker decorations carry a second inline class (unnecessary/deprecated
+        // styling) over the same columns (markerDecorationsService.ts:275-282).
+        match decoration.inline_class_name {
+          Some(inline_class_name) =>
+            inline.push(InlineDecoration(range, inline_class_name))
+          None => ()
+        }
+      }
       None => ()
     }
   }
@@ -140,10 +148,21 @@ pub fn line_decorations_for_line(
       continue
     }
     match decoration.columns_on_view_line(line.line_number, max_column) {
-      Some((start_column, end_column)) =>
-        line_decorations.push(
-          LineDecoration(start_column, end_column, decoration.class_name),
-        )
+      Some((start_column, end_column)) => {
+        // Empty `class_name` = Monaco's `className: undefined`; skip it.
+        if decoration.class_name != "" {
+          line_decorations.push(
+            LineDecoration(start_column, end_column, decoration.class_name),
+          )
+        }
+        match decoration.inline_class_name {
+          Some(inline_class_name) =>
+            line_decorations.push(
+              LineDecoration(start_column, end_column, inline_class_name),
+            )
+          None => ()
+        }
+      }
       None => ()
     }
   }

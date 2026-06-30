@@ -8,6 +8,8 @@ pub(all) struct ViewModelDecoration {
   range : @view_line_renderer.ViewRange
   kind : @decorations.DecorationKind
   class_name : String
+  inline_class_name : String?
+  show_if_collapsed : Bool
 } derive(Eq, Debug)
 
 ///|
@@ -78,6 +80,8 @@ fn to_view_decoration(
     range: converter.model_range_to_view_range(model_range),
     kind: decoration.kind,
     class_name: decoration.class_name,
+    inline_class_name: decoration.inline_class_name,
+    show_if_collapsed: decoration.show_if_collapsed,
   }
 }
 
@@ -109,7 +113,14 @@ pub fn ViewModelDecoration::columns_on_view_line(
   let start_column = @base_common.clamp_int(start_column, 1, max_column)
   let end_column = @base_common.clamp_int(end_column, 1, max_column)
   if start_column >= end_column {
-    None
+    // A collapsed span normally contributes nothing; Monaco's `showIfCollapsed`
+    // forces it to render one column wide (the squiggle on an empty line / at
+    // EOL). `markerDecorationsService.ts` sets `showIfCollapsed: true`.
+    if self.show_if_collapsed {
+      Some((start_column, start_column + 1))
+    } else {
+      None
+    }
   } else {
     Some((start_column, end_column))
   }

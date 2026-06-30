@@ -123,8 +123,12 @@ fn View::build() -> View {
 }
 
 ///|
+/// Root classes. `showUnused`/`showDeprecated` mirror Monaco's editor options,
+/// which default to `true` (`editorOptions.ts`); they gate the unnecessary /
+/// deprecated marker styling (`editor.css:114-119`).
 fn view_root_class(source_state : String) -> String {
-  "monaco-editor moonbit-viewer readonly-editor " + source_state
+  "monaco-editor moonbit-viewer readonly-editor showUnused showDeprecated " +
+  source_state
 }
 
 ///|

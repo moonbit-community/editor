@@ -174,7 +174,7 @@ pub fn Viewer::Viewer(
   theme? : String = "dark",
   placeholder? : String = "",
 ) -> Viewer {
-  {
+  let viewer : Viewer = {
     services,
     options,
     did_change_model: @base_common.Emitter::new(),
@@ -221,6 +221,15 @@ pub fn Viewer::Viewer(
     mouse_handler: None,
     pending_horizontal_reveal: None,
   }
+  // Marker decoration changes drive a render refresh (the event-driven
+  // replacement for the diagnostics-path explicit re-render; plan increment E).
+  viewer.services.marker_decorations.on_did_change_marker_decorations(model => if viewer.is_current_model(
+      model,
+    ) {
+      viewer.render_feature_update()
+    })
+  |> ignore
+  viewer
 }
 
 ///|
@@ -342,7 +351,18 @@ pub fn Viewer::set_model(
   model : @model.TextModel,
   view_state? : ViewStatePolicy = PreserveAnchor,
 ) -> Unit {
+  // Rotate the per-model marker decorations: drop the previous model's set when
+  // switching resources, then (re)register this model so marker changes resolve
+  // against its snapshot (Monaco's `_onModelRemoved`/`_onModelAdded`).
+  match self.text_model {
+    Some(prev) =>
+      if prev.uri.to_string() != model.uri.to_string() {
+        self.services.marker_decorations.on_model_removed(prev)
+      }
+    None => ()
+  }
   self.services.markers.clear_resource(model.uri)
+  self.services.marker_decorations.on_model_added(model)
   self.provider_result = @language.ProviderResult::empty()
   self.folding_ranges = []
   self.folded_ranges = []
@@ -431,6 +451,8 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_resolve_hover.dispose()
   self.did_scroll.dispose()
   self.did_dispose.dispose()
+  self.services.marker_decorations.dispose()
+  self.services.markers.dispose()
 }
 
 ///|

@@ -34,7 +34,7 @@ fn Viewer::render_current_model(
     revision: model.revision,
   })
   let decorations = self.services.marker_decorations.decorations_for_resource(
-    model.uri,
+    model,
   )
   let source = @view_model.FrameSource(tokenized, decorations, providers)
   let view_model = self.build_view_model(source)

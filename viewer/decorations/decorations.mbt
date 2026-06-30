@@ -11,14 +11,68 @@ pub(all) enum DecorationKind {
 } derive(Eq, Debug)
 
 ///|
+/// How a decoration's range grows when text is typed at its edges,
+/// `TrackedRangeStickiness` (`model.ts`). Inert in the readonly viewer; carried
+/// for fidelity.
+pub(all) enum TrackedRangeStickiness {
+  AlwaysGrowsWhenTypingAtEdges
+  NeverGrowsWhenTypingAtEdges
+  GrowsOnlyWhenTypingBefore
+  GrowsOnlyWhenTypingAfter
+} derive(Eq, Debug)
+
+///|
+/// Overview-ruler lane, `OverviewRulerLane` (`model.ts`).
+pub(all) enum OverviewRulerLane {
+  Left
+  Center
+  Right
+  Full
+} derive(Eq, Debug)
+
+///|
+/// Minimap decoration position, `MinimapPosition` (`model.ts`).
+pub(all) enum MinimapPosition {
+  Inline
+  Gutter
+} derive(Eq, Debug)
+
+///|
+/// Overview-ruler decoration options, `IModelDecorationOverviewRulerOptions`.
+/// `color` is a theme-color id (`themeColorFromId`), carried inert (no overview
+/// ruler part paints it — plan D4).
+pub(all) struct OverviewRulerOptions {
+  color : String?
+  position : OverviewRulerLane
+} derive(Eq, Debug)
+
+///|
+/// Minimap decoration options, `IModelDecorationMinimapOptions`. `color` is a
+/// theme-color id, carried inert (plan D4).
+pub(all) struct MinimapOptions {
+  color : String
+  position : MinimapPosition
+} derive(Eq, Debug)
+
+///|
 /// One line/column `Range` decoration with the CSS class and optional message
 /// the renderer should attach to matching line spans. Mirrors Monaco's
-/// `IModelDeltaDecoration` (which carries a `Range`).
+/// `IModelDeltaDecoration` (range) plus the `IModelDecorationOptions` fields the
+/// marker transform sets. An empty `class_name` means Monaco's
+/// `className: undefined` (e.g. Hint+Deprecated). The `overview_ruler`/`minimap`
+/// carriers are inert (plan D4).
 pub(all) struct Decoration {
   range : @base_common.Range
   kind : DecorationKind
   class_name : String
   message : String?
+  inline_class_name : String?
+  z_index : Int
+  show_if_collapsed : Bool
+  stickiness : TrackedRangeStickiness
+  overview_ruler : OverviewRulerOptions?
+  minimap : MinimapOptions?
+  description : String
 } derive(Debug)
 
 ///|
@@ -35,8 +89,27 @@ pub fn Decoration::Decoration(
   kind : DecorationKind,
   class_name : String,
   message? : String,
+  inline_class_name? : String,
+  z_index? : Int = 0,
+  show_if_collapsed? : Bool = false,
+  stickiness? : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
+  overview_ruler? : OverviewRulerOptions,
+  minimap? : MinimapOptions,
+  description? : String = "",
 ) -> Decoration {
-  { range, kind, class_name, message }
+  {
+    range,
+    kind,
+    class_name,
+    message,
+    inline_class_name,
+    z_index,
+    show_if_collapsed,
+    stickiness,
+    overview_ruler,
+    minimap,
+    description,
+  }
 }
 
 ///|

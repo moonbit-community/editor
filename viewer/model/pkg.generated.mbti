@@ -9,6 +9,10 @@ import {
 // Values
 pub fn compute_indent_level(String, Int) -> Int
 
+pub fn get_word_at_text(Int, String, Int) -> WordAtPosition?
+
+pub let usual_word_separators : String
+
 // Errors
 
 // Types and methods
@@ -49,9 +53,11 @@ pub(all) struct TextSnapshot {
 pub fn TextSnapshot::TextSnapshot(String, language_id? : String, version? : Int) -> Self
 pub fn TextSnapshot::get_line_first_non_whitespace_column(Self, Int) -> Int
 pub fn TextSnapshot::get_line_last_non_whitespace_column(Self, Int) -> Int
+pub fn TextSnapshot::get_line_max_column(Self, Int) -> Int
 pub fn TextSnapshot::get_value(Self) -> String
 pub fn TextSnapshot::get_value_in_range(Self, @common.Range) -> String
 pub fn TextSnapshot::get_value_length_in_range(Self, @common.Range) -> Int
+pub fn TextSnapshot::get_word_at_position(Self, @common.Position) -> WordAtPosition?
 pub fn TextSnapshot::length(Self) -> Int
 pub fn TextSnapshot::line_at_offset(Self, Int) -> Int
 pub fn TextSnapshot::line_count(Self) -> Int
@@ -67,6 +73,12 @@ pub fn TextSnapshot::range_of(Self, @common.OffsetRange) -> @common.Range
 pub fn TextSnapshot::slice(Self, @common.OffsetRange) -> String
 pub fn TextSnapshot::validate_position(Self, @common.Position) -> @common.Position
 pub fn TextSnapshot::validate_range(Self, @common.Range) -> @common.Range
+
+pub(all) struct WordAtPosition {
+  word : String
+  start_column : Int
+  end_column : Int
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

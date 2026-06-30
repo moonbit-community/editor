@@ -83,13 +83,16 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
   }
   let parts : Array[HoverPart] = []
   // Markers carry a line/column `Range`; the offset-based hover widget consumes
-  // offset spans, so convert at this boundary through the snapshot.
+  // offset spans, so convert at this boundary through the snapshot. The live
+  // markers carry the transform's tracked range, which is what is rendered.
   let snapshot = ctx.model.snapshot
   let query = snapshot.range_of(ctx.anchor_range)
-  for marker in self.marker_decorations.markers_at(ctx.model.uri, query) {
-    parts.push(
-      MarkerHover(range=snapshot.offset_range_of(marker.range), marker~),
-    )
+  for entry in self.marker_decorations.get_live_markers(ctx.model.uri) {
+    let (range, marker) = entry
+    if @base_common.Range::are_intersecting(range, query) ||
+      range.contains_position(query.get_start_position()) {
+      parts.push(MarkerHover(range=snapshot.offset_range_of(range), marker~))
+    }
   }
   parts
 }

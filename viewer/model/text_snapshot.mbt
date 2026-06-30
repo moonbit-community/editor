@@ -219,7 +219,7 @@ fn TextSnapshot::get_line_length(self : TextSnapshot, line : Int) -> Int {
 ///|
 /// Max (1-based) column for `line`: content length + 1. Mirrors
 /// `getLineMaxColumn`.
-fn TextSnapshot::get_line_max_column(self : TextSnapshot, line : Int) -> Int {
+pub fn TextSnapshot::get_line_max_column(self : TextSnapshot, line : Int) -> Int {
   self.get_line_length(line) + 1
 }
 

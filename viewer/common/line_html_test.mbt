@@ -51,6 +51,8 @@ fn view_decoration(
     },
     kind,
     class_name,
+    inline_class_name: None,
+    show_if_collapsed: false,
   }
 }
 

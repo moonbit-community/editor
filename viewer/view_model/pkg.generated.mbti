@@ -372,6 +372,8 @@ pub(all) struct ViewModelDecoration {
   range : @view_line_renderer.ViewRange
   kind : @decorations.DecorationKind
   class_name : String
+  inline_class_name : String?
+  show_if_collapsed : Bool
 } derive(Eq, @debug.Debug)
 pub fn ViewModelDecoration::columns_on_view_line(Self, Int, Int) -> (Int, Int)?
 

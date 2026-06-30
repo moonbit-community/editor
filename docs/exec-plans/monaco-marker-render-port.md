@@ -1,6 +1,11 @@
 # Monaco Marker Render 1:1 Port
 
-Status: proposed — Date: 2026-06-30. Oracle commit: `294fb350837dbaee37b949533fead4df4e0e8971`.
+Status: implemented (A–G) — Date: 2026-06-30. Oracle commit: `294fb350837dbaee37b949533fead4df4e0e8971`.
+
+Increments A–G landed; H (overview ruler / minimap parts) stays deferred. `just
+check && just test` green (js 546 / native 487); `just test-browser` green except
+the pre-existing `dom_structure.spec.js:58` markdown-hover `tabindex` mismatch,
+which fails on `main` too (a hover-render-upgrade issue, out of scope here).
 
 Follows `_PORT_PLAYBOOK.md`. Supersedes the simplified marker render that lives
 in `viewer/markers/markers.mbt` + `viewer/markers.css` today: a flat
@@ -350,7 +355,39 @@ increment ends green on `just check && just test`; render increments add
   readonly render path.
 - **Suppression/resource-filter UI N-A (D5).** Data path ported; the
   Problems-panel pause that drives it does not exist.
-- *(Add any line written during the port that cannot cite a source location.)*
+- **Squiggle `::before` background fill omitted (G).** Monaco's
+  `.squiggly-*::before { background: var(--vscode-editor*-background) }`
+  (`editor.css:84-110`) is not ported. `editor*.background` is `null`
+  (transparent) outside HC themes, and a `display:block` pseudo-element would
+  inject a block box into the inline view-line span flow. The visible squiggle
+  (the `border-bottom` double/dotted/dashed underline) is ported faithfully.
+- **`*-border` tokens default to the foreground (G).** VS Code's
+  `editorError/Warning/Info.border` and `editorHint.border` are `null` in normal
+  themes (the live squiggle there is a dynamically generated wavy underline from
+  `editor*.foreground`). The static `border-double` variant the plan ports is the
+  HC form, so the viewer defaults the `*-border` tokens to the foreground colors
+  (theme.css) to keep squiggles visible. `editorUnnecessaryCode.border` stays
+  unset (null in normal themes — unnecessary code is dimmed via opacity).
+- **`showUnused`/`showDeprecated` always on (G).** Monaco gates the
+  unnecessary/deprecated styling behind these editor-option classes, which default
+  to `true`. The viewer has no editor-options port, so `view.mbt` adds both root
+  classes unconditionally (their faithful default). They are inert today: no
+  producer emits `MarkerTag` (diagnostics carry no tags).
+- **`Marker.resource` is a `Uri`, store keyed by `uri.to_string()`.** Monaco's
+  `IMarker.resource` is a `URI` and `ResourceMap`/`ResourceSet` key on
+  `uri.toString()`; MoonBit has no `ResourceMap`, so `DoubleResourceMap`,
+  `_filteredResources`, `_suppressedRanges`, and the `read` dedup `Set` key on the
+  string form — the same identity `ResourceMap` uses internally.
+- **`MarkerDecorations` ids are synthetic; ranges stored inline.** No
+  `model.deltaDecorations`/`getDecorationRange` exists (D3), so `update()` assigns
+  `marker-decoration-N` ids and stores each decoration's computed range; the diff
+  (`diffSets`) and option/range computation are 1:1 and tested. `BidirectionalMap`
+  reference-identity keying becomes structural equality (markers are not recreated
+  when unchanged, so the comparison is equivalent — Monaco's own comment).
+- **Pre-existing, out of scope:** `dom_structure.spec.js:58` (markdown hover
+  `tabindex`) fails on `main` independent of this port — the viewer core's
+  `set_hover_parts` sets `tabindex` on every part, which the markdown-hover DOM
+  assertion has not absorbed. A hover-render concern, not a marker concern.
 
 ---
 
@@ -390,15 +427,60 @@ config.
 
 ## Exit gate (Phase 5)
 
-- [ ] inventory reconciled (rows == members): done/deferred/N-A = _/_/_
-- [ ] every ported fn diff-reviewed vs its source (branch order, constants,
+- [x] inventory reconciled (rows == members): done/deferred/N-A = 42 / 12 / 4
+      (see reconciliation below; ~58 members).
+- [x] every ported fn diff-reviewed vs its source (branch order, constants,
       early returns) — esp. `read` (both paths), `_createDecorationRange` (4
-      branches), `_createDecorationOption` (severity×tag matrix)
-- [ ] test matrix covered; `just check && just test && just test-browser` green
-      across configs (severity × tags × range-branch)
-- [ ] deviations documented (sync events, per-frame rebuild, overview-ruler data,
-      bridges/makeKey deferred, suppression UI N-A)
-- [ ] closing self-audit: re-read the four source files + `ClassName`/CSS; paste
-      the member-by-member reconciliation here
-- [ ] memory updated: supersede the "simplified marker render" note; cross-link
-      the interval-tree storage follow-up
+      branches), `_createDecorationOption` (severity×tag matrix). Done during
+      port; the matrix-test asserts confirm the constants (zIndex 0/10/20/30,
+      class names, theme-color ids, stickiness, showIfCollapsed).
+- [x] test matrix covered; `just check && just test` green (js 546 / native 487);
+      `just test-browser` 43/44 (the 1 failure is the pre-existing, out-of-scope
+      `dom_structure.spec.js:58`). Covered: severity × decoration output, tags ×
+      severity, all four `_createDecorationRange` branches, `read` (owner∧resource
+      / resource / owner / neither+dedup / severities bitmask / take / ignore
+      filters), `change_one`/`change_all` + clear event, statistics + unsupported
+      scheme, `_toMarker` sanitize, `getWordAtText` boundaries, `update` diffSets
+      no-op/add/remove, suppression, take:500, render (`.squiggly-warning` lands on
+      the right columns).
+- [x] deviations documented (sync events, per-frame rebuild, overview-ruler data,
+      bridges/makeKey deferred, suppression UI N-A, `::before` omission,
+      `*-border` foreground default, showUnused/showDeprecated always-on,
+      string-keyed resource maps, synthetic decoration ids).
+- [x] closing self-audit pasted (below).
+- [x] memory updated: superseded the "simplified marker render" note
+      ([[editor-marker-render-monaco-port]]); cross-linked the interval-tree
+      storage follow-up ([[editor-monaco-one-to-one-port-progress]]).
+
+### Reconciliation (closing self-audit)
+
+Re-read `markers.ts`, `markerService.ts`, `markerDecorations.ts`,
+`markerDecorationsService.ts`, `intervalTree.ts` `ClassName`, and
+`editor.css:81-120`. Member-by-member:
+
+- **markers.ts** — `MarkerSeverity` enum + `value`/`compare`/`label`/
+  `label_plural` PASS; `fromSeverity`/`toSeverity` DEFERRED (no base `Severity`);
+  `MarkerTag` + `value` PASS; `IMarkerReadOptions`/`IRelatedInformation`/
+  `IMarkerData`/`IResourceMarker`/`IMarker`/`MarkerStatistics` PORTED as structs;
+  `_toMarker` sanitize PASS; `makeKey*` DEFERRED (extension-host dedup, no caller);
+  `IMarkerService` N-A (interface).
+- **markerService.ts** — `unsupportedSchemas` PASS (literal Monaco strings);
+  `DoubleResourceMap` set/get/delete(+guard)/values(all/resource/owner) PASS;
+  `MarkerStats` ctor/_update/_resourceStats/_add/_substract PASS; `getStatistics`
+  PASS (snapshot); `remove`/`changeOne`/`changeAll`/`installResourceFilter`/
+  `_createFilteredMarker`/`read`(both paths)/`_accept` PASS; `onMarkerChanged`
+  PASS (synchronous Emitter); `_merge` DEFERRED (sync fire).
+- **markerDecorations.ts** (interface) — `onDidChangeMarker`/`getMarker`/
+  `getLiveMarkers`/`addMarkerSuppression` realized on `MarkerDecorationsService`.
+- **markerDecorationsService.ts** — ctor/_onModelAdded/_onModelRemoved(transient
+  cleanup)/_handleMarkerChange/_updateDecorations(take:500 + suppressed filter)/
+  getMarker/getLiveMarkers/addMarkerSuppression/_onDidChangeMarker PASS; inner
+  `MarkerDecorations` update(diffSets, no-op return)/getMarker/getMarkers PASS
+  (synthetic ids, D3); `_createDecorationRange` 4 branches PASS;
+  `_createDecorationOption` severity×tag matrix PASS; overviewRuler/minimap data
+  carried, render DEFERRED (D4).
+- **render surface** — `ClassName` squiggly strings PASS (replaced `diag-*`);
+  `setNodeIsForValidation` DEFERRED (no interval tree, D3); `.squiggly-*` CSS
+  PASS (border-double; `::before` deviation); theme tokens PASS (foreground-
+  default deviation); `.squiggly-inline-unnecessary{opacity}` PASS;
+  overviewRuler/minimap render DEFERRED (Increment H).

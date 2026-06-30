@@ -35,6 +35,16 @@
   --vscode-editorError-foreground: #f14c4c;
   --vscode-editorInfo-foreground: #59a4f9;
 
+  /* Squiggle borders: VS Code defaults these to null (HC themes only); the
+     viewer mirrors the foreground so the ported border-double squiggle renders.
+     editorError/Warning/Info.background and editorUnnecessaryCode.border are
+     null in Dark Modern, so they stay unset (transparent). */
+  --vscode-editorError-border: #f14c4c;
+  --vscode-editorWarning-border: #cca700;
+  --vscode-editorInfo-border: #59a4f9;
+  --vscode-editorHint-border: #eeeeeeb3;
+  --vscode-editorUnnecessaryCode-opacity: 0.67;
+
   --vscode-editorHoverWidget-background: #202020;
   --vscode-editorHoverWidget-foreground: #cccccc;
   --vscode-editorHoverWidget-border: #313131;
@@ -108,6 +118,13 @@
   --vscode-editorWarning-foreground: #bf8803;
   --vscode-editorError-foreground: #e51400;
   --vscode-editorInfo-foreground: #0063d3;
+
+  /* See the Dark Modern block above. */
+  --vscode-editorError-border: #e51400;
+  --vscode-editorWarning-border: #bf8803;
+  --vscode-editorInfo-border: #0063d3;
+  --vscode-editorHint-border: #6c6c6c;
+  --vscode-editorUnnecessaryCode-opacity: 0.47;
 
   --vscode-editorHoverWidget-background: #f8f8f8;
   --vscode-editorHoverWidget-foreground: #3b3b3b;

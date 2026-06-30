@@ -104,7 +104,7 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     const copiedHtml = await page.evaluate(() => globalThis.__readonlyEditorCopiedHtml || '');
     expect(copiedHtml).toContain('mtk4');
     expect(copiedHtml).not.toContain('inlay-hint');
-    await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(1, {
+    await expect(wrappedHoverLine.locator('.squiggly-warning', { hasText: 'keeps' })).toHaveCount(1, {
       timeout: 10_000,
     });
     const foldMarker = page.locator('.folding-marker[data-line="2"]');
@@ -113,12 +113,12 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     await expect(foldMarker).toHaveAttribute('data-folded', 'true');
     await expect(inlayHint).toHaveCount(1);
     await expect(page.locator('.view-line').filter({ hasText: 'keeps' })).toHaveCount(0);
-    await expect(page.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(0);
+    await expect(page.locator('.squiggly-warning', { hasText: 'keeps' })).toHaveCount(0);
     await foldMarker.click();
     await expect(foldMarker).toHaveAttribute('data-folded', 'false');
     await expect(inlayHint).toHaveCount(1);
     await expect(wrappedHoverLine).toHaveCount(1);
-    await expect(wrappedHoverLine.locator('.diag-warning', { hasText: 'keeps' })).toHaveCount(1);
+    await expect(wrappedHoverLine.locator('.squiggly-warning', { hasText: 'keeps' })).toHaveCount(1);
     const firstLineTop = async () =>
       page.locator('.view-line[data-line="1"]').evaluate((node) => {
         const root = node.closest('.monaco-editor');

@@ -139,15 +139,11 @@ test "hover unknown fenced code keeps content as default plain text" {
 
 ///|
 test "marker hover renders the row and status bar as separate rendered parts" {
-  let marker : @markers.Marker = {
-    owner: "test",
-    resource: "memory://test.mbt",
-    range: Range(1, 1, 1, 2),
-    severity: Warning,
-    message: "Configured diagnostic",
-    source: None,
-    code: None,
-  }
+  let marker = @markers.Marker::from_diagnostic(
+    "test",
+    @base_common.Uri::memory("test.mbt"),
+    { range: Range(1, 1, 1, 2), severity: Warning, message: "Configured diagnostic" },
+  )
   // Monaco renders a marker hover as its own part plus a distinct `statusBar`
   // part, so the viewer emits two single-root rows.
   let rows = render_hover_parts(

@@ -7,6 +7,9 @@ fn Viewer::request_model_features(
   model : @model.TextModel,
 ) -> Unit {
   @js.async_run(() => {
+    // `set_diagnostics` fires the marker-change event, which the viewer turns
+    // into a render refresh via `on_did_change_marker_decorations` (plan E); no
+    // explicit re-render is needed here.
     self.services.languages.diagnostics_for_model(
       model,
       (owner, diagnostics) => {
@@ -14,9 +17,6 @@ fn Viewer::request_model_features(
       },
       self.services.log_service,
     )
-    if self.is_current_model(model) {
-      self.render_feature_update()
-    }
   })
   @js.async_run(() => {
     let symbols = self.services.languages.document_symbols(

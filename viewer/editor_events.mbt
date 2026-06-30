@@ -125,16 +125,9 @@ fn Viewer::react_to_editor_mouse_move(self : Viewer) -> Unit {
       hover_multi_cursor_modifier,
       self.hover_last_modifiers,
     ) {
-    // Monaco `_startShowingOrUpdateHover`: a visible sticky hover the pointer is
-    // getting closer to is kept untouched rather than re-evaluated (which off
-    // the anchor token would hide it). The insist-on-keeping update Monaco kicks
-    // here lands with `_withResult`/`_setCurrentResult`.
-    if self.hover.widget_visible() &&
-      self.hover_settings.sticky &&
-      self.hover_mouse_getting_closer() {
-      self.cancel_hover_react()
-      return
-    }
+    // The sticky mouse-getting-closer keep + insist-update is decided inside the
+    // controller's `_startShowingOrUpdateHover`; `run_hover_react` measures the
+    // signal and passes it through.
     self.run_hover_react()
     return
   }
@@ -162,10 +155,20 @@ fn Viewer::record_hover_pointer(
 
 ///|
 /// Reacts to the latest mouse position, dispatching it as a `MouseMoved` event.
+/// The sticky mouse-getting-closer signal (Monaco `isHoverSticky &&
+/// isMouseGettingCloser`) is measured here — the one point that reacts to a
+/// move — and threaded into the controller, which owns the keep/insist-update.
 fn Viewer::run_hover_react(self : Viewer) -> Unit {
   self.hover_react_pending = false
   match self.hover_pending_target {
-    Some(target) => self.dispatch_editor_event(MouseMoved(target))
+    Some(target) => {
+      let sticky_mouse_getting_closer = self.hover_settings.sticky &&
+        self.hover_mouse_getting_closer()
+      self.dispatch_editor_event(
+        MouseMoved(target),
+        sticky_mouse_getting_closer~,
+      )
+    }
     None => ()
   }
 }
@@ -323,7 +326,11 @@ fn Viewer::on_editor_scroll_changed(
 /// Fans one editor event to every controller in a fixed order and applies
 /// their effects; the contribution model with imperative sub-updates.
 /// Hover is the only controller today.
-fn Viewer::dispatch_editor_event(self : Viewer, event : EditorEvent) -> Unit {
+fn Viewer::dispatch_editor_event(
+  self : Viewer,
+  event : EditorEvent,
+  sticky_mouse_getting_closer~ : Bool = false,
+) -> Unit {
   // Escape hides immediately and must drop any deferred mouse-move reaction so a
   // stale target cannot re-open the hover.
   match event {
@@ -331,7 +338,11 @@ fn Viewer::dispatch_editor_event(self : Viewer, event : EditorEvent) -> Unit {
     MouseMoved(_) => ()
   }
   let before = self.hover
-  let (effect, hover) = self.hover.on_event(event, self.editor_context())
+  let (effect, hover) = self.hover.on_event(
+    event,
+    self.editor_context(),
+    sticky_mouse_getting_closer~,
+  )
   self.hover = hover
   self.apply_hover_effect(effect)
   self.after_hover_transition(before)

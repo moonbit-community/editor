@@ -214,6 +214,7 @@ fn HoverController::on_event(
   self : HoverController,
   event : EditorEvent,
   ctx : EditorContext,
+  sticky_mouse_getting_closer~ : Bool = false,
 ) -> (HoverEffect, HoverController) {
   match event {
     MouseMoved(target) =>
@@ -229,9 +230,19 @@ fn HoverController::on_event(
                 injected_text_index,
                 line: (ctx.offset_to_model_line)(start),
               }
-              self.start_showing_or_update_hover(anchor)
+              self.start_showing_or_update_hover(
+                anchor,
+                sticky_mouse_getting_closer,
+              )
             }
-            None => (HoverNoEffect, self.cleared())
+            None =>
+              // No token under the pointer (Monaco `_startShowingOrUpdateHover(null)`):
+              // a visible hover the pointer is approaching is kept; otherwise hide.
+              if sticky_mouse_getting_closer && self.view is Some(_) {
+                (HoverNoEffect, self)
+              } else {
+                (HoverNoEffect, self.cleared())
+              }
           }
         None => (HoverNoEffect, self)
       }
@@ -241,18 +252,26 @@ fn HoverController::on_event(
 
 ///|
 /// Monaco `ContentHoverWidgetWrapper._startShowingOrUpdateHover`. With no hover
-/// shown, start an operation for the anchor. With one shown, the sticky
-/// mouse-getting-closer keep is handled at the input seam before this point, so
-/// the remaining branches are: the same anchor keeps the hover untouched; a
-/// compatible anchor (same line) keeps the parts still valid for it and kicks a
-/// fresh operation; an incompatible anchor hides the current hover and restarts.
+/// shown, start an operation for the anchor. With one shown: the sticky
+/// mouse-getting-closer case keeps the current result untouched and kicks an
+/// `insist`-update operation at the new anchor; the same anchor keeps the hover
+/// untouched; a compatible anchor (same line) keeps the parts still valid for it
+/// and kicks a fresh operation; an incompatible anchor hides the current hover
+/// and restarts. `sticky_mouse_getting_closer` is computed at the input seam
+/// (`sticky && isMouseGettingCloser`, both host concerns).
 fn HoverController::start_showing_or_update_hover(
   self : HoverController,
   anchor : HoverAnchor,
+  sticky_mouse_getting_closer : Bool,
 ) -> (HoverEffect, HoverController) {
   let content_hover_is_visible = self.view is Some(_)
   if !content_hover_is_visible {
     return self.start_hover_operation_if_necessary(anchor, insist=false)
+  }
+  // The pointer is approaching the shown hover: keep the current result
+  // untouched and kick an operation that insists on keeping it visible.
+  if sticky_mouse_getting_closer {
+    return self.start_hover_operation_if_necessary(anchor, insist=true)
   }
   // A hover is shown. The new anchor equals the shown one: keep it untouched.
   match self.current_anchor {

@@ -360,7 +360,7 @@ text-selection arms, `getAccessibleWidgetContent(+AtIndex)`, `isColorPickerVisib
 
 ---
 
-## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — IN PROGRESS (increments 1–3)
+## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — IN PROGRESS (increments 1–4)
 
 Give rendered parts real structure instead of one HTML blob: a
 `RenderedContentHover` analog that owns per-part nodes, supports focus
@@ -410,6 +410,18 @@ out-of-scope `hoverTypes.ts`/`contentHoverTypes.ts`) are ported inline as
 in offset space. The anchor's model start line flows through a new
 `EditorContext.offset_to_model_line` seam. Whitebox-tested across the six
 reconciliation branches; the hover conformance specs stay green.
+
+**Increment 4 (`isMouseGettingCloser` insist-update, landed).** With the
+reconciliation in place, the sticky mouse-getting-closer branch moved from the
+input-seam keep (increment 2) into the controller's
+`start_showing_or_update_hover`, matching Monaco `_startShowingOrUpdateHover`
+:114-124: a visible sticky hover the pointer is approaching is kept untouched
+*and* kicks `start_hover_operation_if_necessary(insist=true)` at the new anchor,
+so an empty result keeps the previous hover (`_withResult`
+`shouldKeepPreviousHoverVisible`) instead of hiding. The
+`sticky && isMouseGettingCloser` signal is measured once per reaction in
+`run_hover_react` and threaded through `on_event`. Two whitebox tests cover the
+keep+insist and the empty-keep; the hover conformance specs stay green.
 `setMinimumDimensions`/`_updateMinimumWidth` and the wrapper/rendered DOM rows
 remain TODO; they land with their consumers (sashes / the per-part structure
 rework) rather than as committed dead code.
@@ -507,7 +519,7 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 | `setMinimumDimensions`/`_updateMinimumWidth` (cHW :387,:396) | combine min dims; min width = `min(contentWidth, minWidth)` | `hover_min_dimensions` (new) | TODO |
 | `handleContentsChanged` (cHW :406-428) | relayout, remeasure, re-pick position preference, fire contents-changed | `handle_contents_changed` (new) | TODO |
 | `_removeConstraintsRenderNormally` (cHW :379-385) | layout to editor box; dims `auto`; update max | `render_normally` (new) | TODO |
-| `isMouseGettingCloser` + `computeDistanceFromPointToRectangle` (cHW :238-276,:477-483) | point-to-rect distance, 4px tolerance, track closest | `MouseCloserState::is_mouse_getting_closer` / `compute_distance_from_point_to_rectangle` (`hover_widget_geometry.mbt`; wired into `react_to_editor_mouse_move`, reset per shown view) | TESTED |
+| `isMouseGettingCloser` + `computeDistanceFromPointToRectangle` (cHW :238-276,:477-483) | point-to-rect distance, 4px tolerance, track closest | `MouseCloserState::is_mouse_getting_closer` / `compute_distance_from_point_to_rectangle` (`hover_widget_geometry.mbt`; `sticky && getting-closer` signal threaded into `start_showing_or_update_hover`'s insist-update; reset per shown view) | TESTED |
 | `_render`/`_setRenderedHover`/`_updateContent`/`_layoutContentWidget` (cHW :314-322,:278-305) | render + visibility key + content swap | render pipeline | TODO |
 | dimension setters `_setHoverWidgetDimensions` etc. (cHW :113-160) | width/height px apply (4 setters) | DOM dim setters | PORTED (predecessor DOM plan) |
 | `onDidResize`/`onDidScroll`/`onContentsChanged` emitters (cHW :38-45) | participant fan-out events | event seams | TODO |
@@ -757,19 +769,21 @@ is **not** and must trace to a source line.
     makes the clamp a no-op), so the wiring is behavior-neutral. Justification:
     coordinates-converter / single-offset-anchor seams; the arithmetic matches
     source line-for-line and is whitebox-tested across all branches.
-11. **`isMouseGettingCloser` keep without insist-update (Phase 4, increment 2).**
-    Monaco's `_startShowingOrUpdateHover` sticky-getting-closer branch both keeps
-    the hover *and* kicks `_startHoverOperationIfNecessary(..., insistOnKeepingHoverVisible=true)`.
-    The viewer ports only the keep (no recompute); the insist-on-keeping update
-    needs `_withResult`/`_setCurrentResult` (later increment). The deferred
-    mouse-move runner was also rerouted from the bare `run_hover_react` dispatch
-    to `react_to_editor_mouse_move`, matching Monaco's
-    `_reactToEditorMouseMoveRunner` → `_reactToEditorMouseMove` (re-gates
-    `shouldShowHover` on the grace path). Justification: the keep is the
-    user-visible effect; the insist-update is an inert refinement until the
-    result-reconciliation rows land. The distance math is whitebox-tested and the
-    keep adds no hide path (it only prevents hides), validated against the hover
-    conformance specs.
+11. **`isMouseGettingCloser` sticky keep + insist-update (Phase 4, increments 2 & 4).**
+    Monaco's `_startShowingOrUpdateHover` sticky-getting-closer branch keeps the
+    hover *and* kicks `_startHoverOperationIfNecessary(..., insistOnKeepingHoverVisible=true)`.
+    Increment 2 landed the keep; increment 4 (after the reconciliation) moved the
+    branch into the controller's `start_showing_or_update_hover` and kicks the
+    `insist=true` operation, so an empty result for the approached anchor keeps
+    the previous hover (`_withResult` `shouldKeepPreviousHoverVisible`) instead of
+    hiding. The `sticky && isMouseGettingCloser` signal is measured once per
+    reaction in `run_hover_react` (the host seam — DOM rect + the `sticky` option)
+    and threaded into `on_event`. The deferred mouse-move runner fires
+    `react_to_editor_mouse_move` (Monaco's `_reactToEditorMouseMoveRunner` →
+    `_reactToEditorMouseMove`, re-gating `shouldShowHover` on the grace path).
+    Justification: `sticky`/DOM-measurement are host concerns computed at the
+    seam; the keep, insist-update, and empty-keep gating match source and are
+    whitebox-tested, validated against the hover conformance specs.
 12. **Reconciliation predicates in offset space (Phase 4, increment 3).**
     `HoverRangeAnchor.canAdoptVisibleHover` (same model line),
     `IHoverPart.isValidForHoverAnchor` (`startColumn <= anchor.startColumn &&

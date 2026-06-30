@@ -18,13 +18,10 @@ fn HoverController::start_delayed(
   end : Int,
   injected_text_index? : Int = -1,
 ) -> (HoverEffect, HoverController) {
-  self.start_showing_or_update_hover({
-    start,
-    end,
-    offset: (start + end) / 2,
-    injected_text_index,
-    line: 1,
-  })
+  self.start_showing_or_update_hover(
+    { start, end, offset: (start + end) / 2, injected_text_index, line: 1 },
+    false,
+  )
 }
 
 ///|

@@ -20,7 +20,7 @@ pub fn hover_parts_range(Array[HoverPart], @common.OffsetRange) -> @common.Offse
 
 pub fn register_default_hover_participants(HoverParticipantRegistry) -> Unit
 
-pub fn render_hover_shell(Array[HoverPart], String, language_registry? : @languages.Languages) -> String
+pub fn render_hover_parts(Array[HoverPart], String, language_registry? : @languages.Languages) -> Array[String]
 
 // Errors
 

@@ -8,7 +8,7 @@ fn hover_test_languages() -> @languages.Languages {
 
 ///|
 test "hover markdown rows use the Monaco-shaped row wrappers" {
-  let html = render_hover_shell(
+  let html = render_hover_parts(
     [
       MarkdownHover(
         range=OffsetRange(0, 1),
@@ -17,7 +17,7 @@ test "hover markdown rows use the Monaco-shaped row wrappers" {
       ),
     ],
     "moonbit",
-  )
+  ).join("")
   assert_true(
     html.contains(
       "<div class=\"hover-row\"><div class=\"hover-row-contents\"><div class=\"markdown-hover\"><div class=\"hover-contents\">",
@@ -27,8 +27,32 @@ test "hover markdown rows use the Monaco-shaped row wrappers" {
 }
 
 ///|
+test "a markdown part with several contents renders one grouped hover row" {
+  // Monaco `renderMarkdown` appends every content into a single `.hover-row`, so
+  // a multi-content part is one row carrying one `.markdown-hover` per content —
+  // not one row per content.
+  let rows = render_hover_parts(
+    [
+      MarkdownHover(
+        range=OffsetRange(0, 1),
+        contents=[Markdown("**first**"), Markdown("**second**")],
+        ordinal=100,
+      ),
+    ],
+    "moonbit",
+  )
+  assert_eq(rows.length(), 1)
+  let html = rows[0]
+  // One row wrapper, two `.markdown-hover` blocks inside it.
+  assert_eq(html.split("hover-row-contents").count() - 1, 1)
+  assert_eq(html.split("markdown-hover").count() - 1, 2)
+  assert_true(html.contains("<strong>first</strong>"))
+  assert_true(html.contains("<strong>second</strong>"))
+}
+
+///|
 test "hover markdown remains sanitized and plaintext remains escaped" {
-  let sanitized = render_hover_shell(
+  let sanitized = render_hover_parts(
     [
       MarkdownHover(
         range=OffsetRange(0, 1),
@@ -41,10 +65,10 @@ test "hover markdown remains sanitized and plaintext remains escaped" {
       ),
     ],
     "moonbit",
-  )
+  ).join("")
   assert_false(sanitized.contains("<img"))
   assert_false(sanitized.contains("javascript:"))
-  let plain = render_hover_shell(
+  let plain = render_hover_parts(
     [
       MarkdownHover(
         range=OffsetRange(0, 1),
@@ -53,14 +77,14 @@ test "hover markdown remains sanitized and plaintext remains escaped" {
       ),
     ],
     "moonbit",
-  )
+  ).join("")
   assert_true(plain.contains("&lt;img src=x&gt; plain"))
 }
 
 ///|
 test "hover fenced code renders through the viewer token classes" {
   let languages = hover_test_languages()
-  let moonbit = render_hover_shell(
+  let moonbit = render_hover_parts(
     [
       MarkdownHover(
         range=OffsetRange(0, 1),
@@ -70,11 +94,11 @@ test "hover fenced code renders through the viewer token classes" {
     ],
     "moonbit",
     language_registry=languages,
-  )
+  ).join("")
   assert_true(moonbit.contains("monaco-tokenized-source"))
   assert_true(moonbit.contains("mtk3")) // keyword color id
   assert_true(moonbit.contains("fn"))
-  let mbt_alias = render_hover_shell(
+  let mbt_alias = render_hover_parts(
     [
       MarkdownHover(
         range=OffsetRange(0, 1),
@@ -84,7 +108,7 @@ test "hover fenced code renders through the viewer token classes" {
     ],
     "moonbit",
     language_registry=languages,
-  )
+  ).join("")
   assert_true(mbt_alias.contains("monaco-tokenized-source"))
   assert_true(mbt_alias.contains("mtk3")) // keyword color id
 }
@@ -92,7 +116,7 @@ test "hover fenced code renders through the viewer token classes" {
 ///|
 test "hover unknown fenced code keeps content as default plain text" {
   let languages = hover_test_languages()
-  let html = render_hover_shell(
+  let html = render_hover_parts(
     [
       MarkdownHover(
         range=OffsetRange(0, 1),
@@ -102,7 +126,7 @@ test "hover unknown fenced code keeps content as default plain text" {
     ],
     "moonbit",
     language_registry=languages,
-  )
+  ).join("")
   assert_true(html.contains("monaco-tokenized-source"))
   assert_true(html.contains("not"))
   assert_true(html.contains("really"))
@@ -114,7 +138,7 @@ test "hover unknown fenced code keeps content as default plain text" {
 }
 
 ///|
-test "marker hover renders Monaco status and copy affordances" {
+test "marker hover renders the row and status bar as separate rendered parts" {
   let marker : @markers.Marker = {
     owner: "test",
     resource: "memory://test.mbt",
@@ -124,14 +148,20 @@ test "marker hover renders Monaco status and copy affordances" {
     source: None,
     code: None,
   }
-  let html = render_hover_shell(
+  // Monaco renders a marker hover as its own part plus a distinct `statusBar`
+  // part, so the viewer emits two single-root rows.
+  let rows = render_hover_parts(
     [MarkerHover(range=OffsetRange(0, 1), marker~)],
     "moonbit",
   )
-  assert_true(html.contains("hover-row-with-copy"))
-  assert_true(html.contains("hover-copy-button"))
-  assert_true(html.contains("aria-label=\"Copy\""))
-  assert_true(html.contains("data-hover-copy=\"Configured diagnostic\""))
-  assert_true(html.contains("hover-row status-bar"))
-  assert_true(html.contains("View Problem"))
+  assert_eq(rows.length(), 2)
+  let marker_row = rows[0]
+  assert_true(marker_row.contains("hover-row-with-copy"))
+  assert_true(marker_row.contains("hover-copy-button"))
+  assert_true(marker_row.contains("aria-label=\"Copy\""))
+  assert_true(marker_row.contains("data-hover-copy=\"Configured diagnostic\""))
+  assert_false(marker_row.contains("status-bar"))
+  let status_bar = rows[1]
+  assert_true(status_bar.contains("hover-row status-bar"))
+  assert_true(status_bar.contains("View Problem"))
 }

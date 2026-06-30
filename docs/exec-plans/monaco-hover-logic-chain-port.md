@@ -426,6 +426,25 @@ keep+insist and the empty-keep; the hover conformance specs stay green.
 remain TODO; they land with their consumers (sashes / the per-part structure
 rework) rather than as committed dead code.
 
+**Increment 5 (per-part rendered structure, landed).** The first slice of the
+DOM rework: `RenderedContentHoverParts._renderParts` ported as
+`render_hover_parts` (`viewer/hover/hover_render.mbt`) — the content is rendered
+as one HTML string **per rendered hover part** (a single-root `.hover-row`) instead
+of one concatenated blob, with a multi-content markdown part grouped into a single
+row carrying one `.markdown-hover` block per content (Monaco `renderMarkdown`), and
+a marker hover split into its `.hover-row` plus a separate status-bar row (Monaco's
+distinct `statusBar` rendered part). The viewer core mounts the rows and applies
+the `_registerListenersOnRenderedParts` `tabIndex = 0` line to every part
+(`content_widgets.mbt::set_hover_parts`), so each rendered part is an independent
+focus stop. The participant-`renderHoverParts` indirection is collapsed — the
+`@hover` package renders parts directly (DI seam, Deviation 4) — so the per-part
+`focusin`/`focusout` index tracking, the `focus*` navigation it feeds, and the
+real action-backed status bar remain DEFERRED to their keyboard / verbosity
+(Phase 5/6) consumers rather than landing as dead state. Whitebox-tested for the
+markdown grouping and the marker/status-bar split
+(`viewer/hover/hover_render_wbtest.mbt`); the hover conformance specs stay green
+(a per-part `> .hover-row[tabindex="0"]` assertion added to `hover_rendering.spec.js`).
+
 ### Inventory (Phase 4)
 
 `contentHoverWidgetWrapper.ts` (whole, 419 lines):
@@ -508,11 +527,11 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 | `focus` (wrap :342-349) | `hoverPartsCount===1` → focus part 0 else widget | `wrapper_focus` (new) | TODO |
 | `focusedHoverPartIndex`/`focusHoverPartWithIndex`/`containsNode` (wrap :334-353) | part nav + node containment | focus-nav cluster | TODO |
 | `RenderedContentHover.computeHoverPositions` (rend :116-164) | view-line column clamp; `forceShowAtRange` vs anchor start; secondary column min/max | `compute_hover_positions` (`hover_widget_geometry.mbt`; wired at the render seam) | TESTED |
-| `_renderParts` (rend :274-305) | per-participant render → push `{participant, hoverPart, hoverElement}`; status bar | `render_parts` (new) | TODO |
-| `_createEditorDecorations` (rend :255-272) | fold `Range.plusRange`; set `hoverHighlight` decoration | per-part highlight (replaces single combined range) | TODO |
-| `_registerListenersOnRenderedParts` (rend :323-347) | per-part `tabIndex=0`; FOCUS_IN→index, FOCUS_OUT→−1; `MarkerHover`→copy button | `register_part_listeners` (new) | TODO |
+| `_renderParts` (rend :274-305) | per-participant render → one rendered part (`hoverElement`) per part; status bar split as its own part | `render_hover_parts` (`hover/hover_render.mbt`; participant-`renderHoverParts` indirection collapsed per Deviation 4 — markdown contents grouped into one `.hover-row`, marker row + status-bar row as separate single-root parts) | TESTED |
+| `_createEditorDecorations` (rend :255-272) | fold `Range.plusRange`; set `hoverHighlight` decoration | `HoverController::decorations` (single `Range.plusRange`-fold decoration over the union span = `hover_parts_range`) | PORTED (class `has-hover` per predecessor DOM plan) |
+| `_registerListenersOnRenderedParts` (rend :323-347) | per-part `tabIndex=0`; FOCUS_IN→index, FOCUS_OUT→−1; `MarkerHover`→copy button | `set_hover_parts` (`content_widgets.mbt`) sets `tabIndex=0` per part; FOCUS_IN/OUT index tracking DEFERRED (Phase 5/6 focus consumer), copy button N-A (global click delegation) | TESTED (tabIndex) |
 | `_normalizedIndexToMarkdownHoverIndexRange`/`_findRangeOfMarkdownHoverParts` (rend :445-470) | map global index ↔ markdown-part index range | index-mapping helpers (new) | DEFERRED (Phase 6 verbosity) |
-| `RenderedStatusBar` + `_renderStatusBar` (rend :203-220,:316-321) | append status bar element if `hasContent` | status-bar node (Phase 5 actions) | TODO |
+| `RenderedStatusBar` + `_renderStatusBar` (rend :203-220,:316-321) | append status bar element if `hasContent` | marker status bar now emitted as its own single-root rendered-part row (`marker_status_bar_row`); real action-backed `EditorHoverStatusBar` = Phase 5 | PORTED (structure split; actions Phase 5) |
 | `_DECORATION_OPTIONS hoverHighlight` (rend :224-227) | decoration class | `hoverHighlight` deco option | TODO |
 | `contentHoverWidget._resize` override (cHW :169-177) | `_lastDimensions`; adjust dims; relayout; `onDidResize.fire` | — | DEFERRED (sashes) |
 | `_updateResizableNodeMaxDimensions`/`_updateMaxDimensions` (cHW :162,:307) | `max(layoutInfo.h/4, 250, last.h)` × `max(w·0.66, 750, last.w)` | `hover_update_max_dimensions` (new) | DEFERRED (sashes) |
@@ -849,7 +868,7 @@ green is **necessary, not sufficient**.
 | 1/1b | resizable + cHW sizing | 23 | 9 / 11 / 3 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 2 | hoverOperation | 23 | 23 / 0 / 0 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 3 | controller + utils | 41 | 20 / 16 / 5 | ☑ | ☑ | ☑ | ☑ | ☑ |
-| 4 | wrapper + rendered + cHW rest | 78 | 7 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 4 | wrapper + rendered + cHW rest | 78 | 11 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 5 | statusbar + actions + ids + contrib + scroll | ~65 | 0 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 6 | markdown verbosity | 13 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 7 | glyph chain | 44 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |

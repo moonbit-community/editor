@@ -32,6 +32,11 @@ test('renders markdown hover content as safe HTML', async ({ page }) => {
   await expect(hover).toBeVisible();
   await expect(widget.locator('.monaco-scrollable-element')).toBeVisible();
   await expect(content.locator('.hover-row > .hover-row-contents > .markdown-hover > .hover-contents')).toHaveCount(1);
+  // Each rendered hover part is its own row, a direct child of the scrollable
+  // content, and an independent focus stop (Monaco
+  // `_registerListenersOnRenderedParts` sets `tabIndex = 0` on every part).
+  await expect(content.locator('> .hover-row')).toHaveCount(1);
+  await expect(content.locator('> .hover-row[tabindex="0"]')).toHaveCount(1);
   await expect(hover.locator('strong')).toHaveText('bold');
   await expect(hover.locator('code', { hasText: 'inline' })).toBeVisible();
   await expect(hover.locator('pre code')).toHaveCount(0);

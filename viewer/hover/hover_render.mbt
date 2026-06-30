@@ -1,38 +1,57 @@
 ///|
-/// Renders the content-hover widget's inner HTML from computed hover parts.
-/// Called by the viewer core's content-widget render pass.
-pub fn render_hover_shell(
+/// Renders the content-hover widget's parts, one HTML string per rendered hover
+/// part (Monaco `RenderedContentHoverParts._renderParts`: each participant's
+/// parts become their own `hoverElement`). Each returned string is a single root
+/// element so the viewer core can give every part its own focusable node. A
+/// markdown part with several contents is one `.hover-row` carrying one
+/// `.markdown-hover` block per content (Monaco `renderMarkdown`), and a marker
+/// part contributes its `.hover-row` plus a separate status-bar row (Monaco's
+/// distinct `statusBar` rendered part). Called by the viewer core's
+/// content-widget render pass.
+pub fn render_hover_parts(
   parts : Array[HoverPart],
   language_id : String,
   language_registry? : @languages.Languages = @languages.default_languages(),
-) -> String {
+) -> Array[String] {
   let rows : Array[String] = []
   for part in parts {
-    rows.append(render_hover_part(part, language_id, language_registry))
+    match part {
+      MarkdownHover(contents~, ..) =>
+        rows.push(
+          render_markdown_hover_row(contents, language_id, language_registry),
+        )
+      MarkerHover(marker~, ..) => {
+        rows.push(marker_hover_row(marker.message))
+        rows.push(marker_status_bar_row())
+      }
+      LoadingHover(message~, ..) =>
+        rows.push(standard_hover_row(hover_plaintext_html(message)))
+    }
   }
-  rows.join("")
+  rows
 }
 
 ///|
-fn render_hover_part(
-  part : HoverPart,
+/// One markdown hover part → one `.hover-row` whose `.hover-row-contents` holds a
+/// `.markdown-hover` block per content. Mirrors Monaco `renderMarkdown`, which
+/// appends every content's element into the single row rather than emitting one
+/// row per content.
+fn render_markdown_hover_row(
+  contents : Array[@language.HoverContent],
   language_id : String,
   language_registry : @languages.Languages,
-) -> Array[String] {
-  match part {
-    MarkdownHover(contents~, ..) => {
-      let rows : Array[String] = []
-      for content in contents {
-        rows.push(
-          render_markdown_hover_content(content, language_id, language_registry),
-        )
-      }
-      rows
-    }
-    MarkerHover(marker~, ..) => [marker_hover_row(marker.message)]
-    LoadingHover(message~, ..) =>
-      [standard_hover_row(hover_plaintext_html(message))]
+) -> String {
+  let inner = StringBuilder::new()
+  for content in contents {
+    inner.write_string("<div class=\"markdown-hover\"><div class=\"hover-contents\">")
+    inner.write_string(
+      render_markdown_hover_content(content, language_id, language_registry),
+    )
+    inner.write_string("</div></div>")
   }
+  "<div class=\"hover-row\"><div class=\"hover-row-contents\">" +
+  inner.to_string() +
+  "</div></div>"
 }
 
 ///|
@@ -42,11 +61,9 @@ fn render_markdown_hover_content(
   language_registry : @languages.Languages,
 ) -> String {
   match content {
-    PlainText(text) => standard_hover_row(hover_plaintext_html(text))
+    PlainText(text) => hover_plaintext_html(text)
     Markdown(markdown) =>
-      standard_hover_row(
-        hover_markdown_html(markdown, language_id, language_registry),
-      )
+      hover_markdown_html(markdown, language_id, language_registry)
   }
 }
 
@@ -65,13 +82,23 @@ fn hover_plaintext_html(text : String) -> String {
 }
 
 ///|
+/// The marker hover part's own `.hover-row` (Monaco `MarkerHover` rendered part),
+/// carrying the diagnostic message and the copy affordance.
 fn marker_hover_row(text : String) -> String {
   let escaped = @viewer_common.escape_html(text)
   "<div class=\"hover-row hover-row-with-copy\" tabindex=\"0\"><div class=\"marker hover-contents\">" +
   escaped +
   "</div><button type=\"button\" class=\"hover-copy-button\" aria-label=\"Copy\" data-hover-copy=\"" +
   escaped +
-  "\"><span class=\"codicon codicon-copy\" aria-hidden=\"true\"></span></button></div>" +
+  "\"><span class=\"codicon codicon-copy\" aria-hidden=\"true\"></span></button></div>"
+}
+
+///|
+/// The status-bar row Monaco renders as its own `statusBar` part below a marker
+/// hover (`RenderedStatusBar` / `_renderStatusBar`). The real action-backed
+/// `EditorHoverStatusBar` lands in Phase 5; for now this keeps the static
+/// "View Problem" affordance as a distinct rendered part.
+fn marker_status_bar_row() -> String {
   "<div class=\"hover-row status-bar\" tabindex=\"0\"><div class=\"actions\"><div class=\"action-container\"><a class=\"action\" role=\"button\" tabindex=\"0\">View Problem</a></div></div></div>"
 }
 

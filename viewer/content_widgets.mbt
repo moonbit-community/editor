@@ -258,8 +258,8 @@ fn ContentWidgets::render_hover_widget(
   widget.wrapper.set_attribute("class", class_name)
   widget.hover.set_attribute("class", "monaco-hover fade-in")
   widget.clear_sizing()
-  widget.scrollable.content.set_inner_html(
-    @hover.render_hover_shell(
+  widget.set_hover_parts(
+    @hover.render_hover_parts(
       hover_view.parts,
       frame.language_id,
       language_registry=context.languages,
@@ -514,6 +514,24 @@ fn ContentWidgets::remove_hover_widget(self : ContentWidgets) -> Unit {
 ///|
 fn HoverWidgetDom::clear_sizing(self : HoverWidgetDom) -> Unit {
   self.scrollable.content.set_attribute("style", "")
+}
+
+///|
+/// Mounts the rendered hover parts as the scrollable content's children — one
+/// `.hover-row` per rendered part — and gives each part its own `tabIndex` so it
+/// is an independent focus stop, mirroring Monaco
+/// `RenderedContentHoverParts._registerListenersOnRenderedParts`, which sets
+/// `element.tabIndex = 0` on every rendered part. The per-part `focusin` /
+/// `focusout` index tracking and the `focus*` navigation it feeds land with their
+/// keyboard / verbosity consumers (Phase 5 / 6).
+fn HoverWidgetDom::set_hover_parts(
+  self : HoverWidgetDom,
+  rows : Array[String],
+) -> Unit {
+  self.scrollable.content.set_inner_html(rows.join(""))
+  for part in self.scrollable.content.get_children() {
+    part.set_attribute("tabindex", "0")
+  }
 }
 
 ///|

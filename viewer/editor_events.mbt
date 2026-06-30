@@ -4,7 +4,6 @@
 /// controller sees raw DOM events.
 priv enum EditorEvent {
   MouseMoved(@viewer_common.MouseTarget)
-  MouseLeft
   EscapePressed
 }
 
@@ -46,21 +45,38 @@ fn Viewer::view_position_to_model_offset(
 }
 
 ///|
-/// Mouse-move entry point (Monaco's `ContentHoverController._onEditorMouseMove`).
-/// Once a hover widget is on screen, a move off the anchor is debounced by
-/// `hover_hiding_delay_ms` so the pointer can travel onto the widget without it
-/// closing; before the widget is visible the move reacts immediately. The
-/// pointer entering the widget cancels the deferred reaction (see
-/// `Viewer::keep_hover_open`).
-fn Viewer::on_mouse_moved(
+/// Monaco `ContentHoverController._onEditorMouseMove`. Records the move; keeps
+/// the current hover (cancelling the reaction) when the pointer is on it
+/// (sticky) or keep-open is set; gives a visible sticky hover the `hidingDelay`
+/// grace period — so the pointer can travel onto the widget without it closing —
+/// before reacting; otherwise reacts immediately. The grace runner mirrors
+/// Monaco's "only schedule when not already scheduled". `posx` / `posy` are read
+/// from the last recorded pointer position (`record_hover_pointer`).
+fn Viewer::on_editor_mouse_move(
   self : Viewer,
   target : @viewer_common.MouseTarget,
 ) -> Unit {
+  if self.hover_ignore_mouse_events {
+    return
+  }
   self.hover_pending_target = Some(target)
-  if self.hover.widget_visible() {
-    // Grace period: keep the earliest pending timer (Monaco only schedules when
-    // the runner is not already scheduled), so the reaction fires once the delay
-    // elapses unless the pointer reaches the widget first.
+  let mouse_on_widget = self.mouse_on_hover_widget(
+    self.hover_mouse_posx,
+    self.hover_mouse_posy,
+  )
+  if should_keep_current_hover(
+      self.hover_keep_open,
+      self.hover_settings.sticky,
+      mouse_on_widget,
+    ) {
+    self.cancel_hover_react()
+    return
+  }
+  if should_reschedule_hover(
+      self.hover.widget_visible(),
+      self.hover_settings.sticky,
+      self.hover_settings.hiding_delay,
+    ) {
     if !self.hover_react_pending {
       self.hover_react_pending = true
       let token = self.hover_react_token
@@ -70,13 +86,50 @@ fn Viewer::on_mouse_moved(
             self.run_hover_react()
           }
         },
-        hover_hiding_delay_ms,
+        self.hover_settings.hiding_delay,
       )
       |> ignore
     }
-  } else {
-    self.run_hover_react()
+    return
   }
+  self.react_to_editor_mouse_move()
+}
+
+///|
+/// Monaco `ContentHoverController._reactToEditorMouseMove`: when the hover may be
+/// shown for this pointer (`shouldShowHover` — always true for the default
+/// `enabled: 'on'`), drive the show-or-update path (Monaco's `showsOrWillShow`,
+/// here the `MouseMoved` → `start_delayed` arm, which clears when the pointer is
+/// off any token); otherwise, unless the dev sticky flag is set, hide.
+fn Viewer::react_to_editor_mouse_move(self : Viewer) -> Unit {
+  if should_show_hover(
+      self.hover_settings.enabled,
+      hover_multi_cursor_modifier,
+      self.hover_last_modifiers,
+    ) {
+    self.run_hover_react()
+    return
+  }
+  if hover_sticky_debug {
+    return
+  }
+  self.hide_content_hover()
+}
+
+///|
+/// Records the latest pointer client position and modifier flags so the
+/// controller handlers — which run from the pointer-handler seam that only
+/// carries a hit target — can evaluate `_isMouseOnContentHoverWidget` and
+/// `shouldShowHover`. Called by the input bridge before dispatching the move.
+fn Viewer::record_hover_pointer(
+  self : Viewer,
+  posx : Double,
+  posy : Double,
+  modifiers : EventModifiers,
+) -> Unit {
+  self.hover_mouse_posx = posx
+  self.hover_mouse_posy = posy
+  self.hover_last_modifiers = modifiers
 }
 
 ///|
@@ -118,14 +171,114 @@ fn Viewer::dismiss_hover(self : Viewer) -> Unit {
 }
 
 ///|
+/// Monaco `ContentHoverController.hideContentHover`: the dev sticky kill-switch
+/// (and the inline-completion dropdown guard, N-A here) suppress hiding;
+/// otherwise the widget hides. Wraps `dismiss_hover` with the repaint the
+/// imperative callers would otherwise own.
+fn Viewer::hide_content_hover(self : Viewer) -> Unit {
+  if hover_sticky_debug {
+    return
+  }
+  // `InlineSuggestionHintsContentWidget.dropDownVisible` guard is N-A — the
+  // viewer has no inline-completion hints widget.
+  let before = self.hover
+  self.dismiss_hover()
+  self.after_hover_transition(before)
+}
+
+///|
+/// Monaco `ContentHoverController._isMouseOnContentHoverWidget`: whether the
+/// pointer at client `(posx, posy)` is within the hover widget's box (false when
+/// no widget exists). The widget is measured with `getBoundingClientRect`, so the
+/// coordinates are client-space (see the plan's Deviations on client- vs page).
+fn Viewer::mouse_on_hover_widget(
+  self : Viewer,
+  posx : Double,
+  posy : Double,
+) -> Bool {
+  guard self.view is Some(view) else { return false }
+  guard view.content_widgets.hover_wrapper() is Some(wrapper) else {
+    return false
+  }
+  let rect = wrapper.get_bounding_client_rect()
+  mouse_within_element(
+    rect.get_left(),
+    rect.get_top(),
+    rect.get_width(),
+    rect.get_height(),
+    posx,
+    posy,
+  )
+}
+
+///|
+/// Monaco `ContentHoverController._onEditorMouseDown`: a press that is not on the
+/// hover widget hides it; a press on it keeps it. `_isMouseDown` tracking and the
+/// `_onEditorMouseUp` reset are omitted — only the color-picker arm of
+/// `_shouldKeepCurrentHover` reads them, and that arm is N-A.
+fn Viewer::on_editor_mouse_down(
+  self : Viewer,
+  posx : Double,
+  posy : Double,
+) -> Unit {
+  if self.hover_ignore_mouse_events {
+    return
+  }
+  if should_keep_hover_widget_visible(self.mouse_on_hover_widget(posx, posy)) {
+    return
+  }
+  self.hide_content_hover()
+}
+
+///|
+/// Monaco `ContentHoverController._onEditorMouseLeave`: with mouse events not
+/// ignored and keep-open unset, cancel the scheduler and hide — unless the
+/// pointer is still on the widget (or the dev sticky flag is set).
+fn Viewer::on_editor_mouse_leave(
+  self : Viewer,
+  posx : Double,
+  posy : Double,
+) -> Unit {
+  if self.hover_ignore_mouse_events {
+    return
+  }
+  if self.hover_keep_open {
+    return
+  }
+  self.cancel_hover_react()
+  if should_keep_hover_widget_visible(self.mouse_on_hover_widget(posx, posy)) {
+    return
+  }
+  if hover_sticky_debug {
+    return
+  }
+  self.hide_content_hover()
+}
+
+///|
+/// Monaco `ContentHoverController._onEditorScrollChanged`: a vertical or
+/// horizontal editor scroll hides the hover (unless mouse events are ignored).
+fn Viewer::on_editor_scroll_changed(
+  self : Viewer,
+  change : @view_layout.ScrollChange,
+) -> Unit {
+  if self.hover_ignore_mouse_events {
+    return
+  }
+  if change.top_changed || change.left_changed {
+    self.hide_content_hover()
+  }
+}
+
+///|
 /// Fans one editor event to every controller in a fixed order and applies
 /// their effects; the contribution model with imperative sub-updates.
 /// Hover is the only controller today.
 fn Viewer::dispatch_editor_event(self : Viewer, event : EditorEvent) -> Unit {
-  // A pointer leaving the editor or Escape hides immediately and must drop any
-  // deferred mouse-move reaction so a stale target cannot re-open the hover.
+  // Escape hides immediately and must drop any deferred mouse-move reaction so a
+  // stale target cannot re-open the hover.
   match event {
-    MouseLeft | EscapePressed => self.cancel_hover_react()
+    EscapePressed => self.cancel_hover_react()
     MouseMoved(_) => ()
   }
   let before = self.hover

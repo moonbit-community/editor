@@ -153,7 +153,7 @@ fn HoverController::on_event(
           }
         None => (HoverNoEffect, self)
       }
-    MouseLeft | EscapePressed => (HoverNoEffect, self.cleared())
+    EscapePressed => (HoverNoEffect, self.cleared())
   }
 }
 

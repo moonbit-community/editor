@@ -10,13 +10,28 @@ fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
   self.mouse_handler = Some(handler)
   view.root.add_event_listener("mousemove", event => {
     match event.to_mouse_event() {
-      Some(mouse) => handler.handle_mouse_move(mouse)
+      Some(mouse) => {
+        // Record the pointer position + modifiers for the hover controller before
+        // the hit test, then drive selection (which notifies the hover move).
+        self.record_hover_pointer(
+          mouse.get_client_x().to_double(),
+          mouse.get_client_y().to_double(),
+          mouse_modifiers(mouse),
+        )
+        handler.handle_mouse_move(mouse)
+      }
       None => ()
     }
   })
   view.root.add_event_listener("mousedown", event => {
     match event.to_mouse_event() {
-      Some(mouse) => handler.handle_mouse_down(event, mouse)
+      Some(mouse) => {
+        self.on_editor_mouse_down(
+          mouse.get_client_x().to_double(),
+          mouse.get_client_y().to_double(),
+        )
+        handler.handle_mouse_down(event, mouse)
+      }
       None => ()
     }
   })
@@ -24,7 +39,13 @@ fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
   .dom()
   .add_event_listener("mousedown", event => {
     match event.to_mouse_event() {
-      Some(mouse) => handler.handle_mouse_down(event, mouse)
+      Some(mouse) => {
+        self.on_editor_mouse_down(
+          mouse.get_client_x().to_double(),
+          mouse.get_client_y().to_double(),
+        )
+        handler.handle_mouse_down(event, mouse)
+      }
       None => ()
     }
   })
@@ -34,8 +55,13 @@ fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
       event.stop_propagation()
     }
   })
-  view.root.add_event_listener("mouseleave", _ => {
-    self.dispatch_editor_event(MouseLeft)
+  view.root.add_event_listener("mouseleave", event => {
+    let (posx, posy) = match event.to_mouse_event() {
+      Some(mouse) =>
+        (mouse.get_client_x().to_double(), mouse.get_client_y().to_double())
+      None => (-1.0, -1.0)
+    }
+    self.on_editor_mouse_leave(posx, posy)
   })
   view.overflow_guard.add_event_listener("wheel", event => {
     match event.to_wheel_event() {
@@ -62,6 +88,27 @@ fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
     handler.finish_selection()
   })
 }
+
+///|
+/// The pointer-event modifier flags the hover controller reads (`event.ctrlKey` /
+/// `metaKey` / `altKey`), following the local-extern pattern already used for
+/// `shiftKey` in `viewer/controller`.
+fn mouse_modifiers(mouse : @rdom.MouseEvent) -> EventModifiers {
+  {
+    ctrl: mouse_ctrl_key(mouse),
+    meta: mouse_meta_key(mouse),
+    alt: mouse_alt_key(mouse),
+  }
+}
+
+///|
+extern "js" fn mouse_ctrl_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.ctrlKey"
+
+///|
+extern "js" fn mouse_meta_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.metaKey"
+
+///|
+extern "js" fn mouse_alt_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.altKey"
 
 ///|
 /// Read phase of the render loop: the view box, the glyph probe, and

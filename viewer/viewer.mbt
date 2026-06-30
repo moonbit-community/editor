@@ -44,6 +44,19 @@ pub struct Viewer {
   priv mut hover_react_pending : Bool
   priv mut hover_react_token : Int
   priv mut hover_pending_target : @viewer_common.MouseTarget?
+  /// Monaco `ContentHoverController` interaction state. `hover_settings` is the
+  /// `editor.hover` snapshot taken at hook time; `hover_keep_open` is
+  /// `shouldKeepOpenOnEditorMouseMoveOrLeave`; `hover_ignore_mouse_events`
+  /// (`_ignoreMouseEvents`) suppresses every handler while a context menu is up;
+  /// the last pointer client position + modifiers stand in for `_mouseMoveEvent`
+  /// so `_isMouseOnContentHoverWidget` / `shouldShowHover` can be evaluated where
+  /// the controller reacts (the pointer-handler seam only carries a hit target).
+  priv hover_settings : HoverSettings
+  priv mut hover_keep_open : Bool
+  priv mut hover_ignore_mouse_events : Bool
+  priv mut hover_mouse_posx : Double
+  priv mut hover_mouse_posy : Double
+  priv mut hover_last_modifiers : EventModifiers
   /// The last anchor token for which the public hover-resolution status fired,
   /// so it fires exactly once per anchor when the operation completes.
   priv mut hover_notified_token : Int
@@ -184,6 +197,12 @@ pub fn Viewer::Viewer(
     hover_react_pending: false,
     hover_react_token: 0,
     hover_pending_target: None,
+    hover_settings: HoverSettings::defaults(),
+    hover_keep_open: false,
+    hover_ignore_mouse_events: false,
+    hover_mouse_posx: 0.0,
+    hover_mouse_posy: 0.0,
+    hover_last_modifiers: EventModifiers::none(),
     hover_notified_token: 0,
     char_width: 0.0,
     soft_wrap_column: 0,
@@ -524,6 +543,8 @@ fn Viewer::clear_current_model(
   self.cursor = None
   self.cancel_mouse_selection()
   self.hover = HoverController::empty()
+  self.hover_keep_open = false
+  self.hover_ignore_mouse_events = false
   self.cancel_hover_react()
   self.schedule_render()
 }
@@ -546,6 +567,7 @@ fn Viewer::apply_scroll_change(
   match change {
     Some(scroll_change) => {
       self.cancel_horizontal_reveal_on_scroll(scroll_change)
+      self.on_editor_scroll_changed(scroll_change)
       match self.view {
         Some(view) => view.editor_scrollbar.scrollable().reveal_for_scroll()
         None => ()

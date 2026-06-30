@@ -45,7 +45,9 @@ fn Viewer::dispatch_mouse(self : Viewer, data : MouseDispatchData) -> Unit {
   } else {
     @cursor.move_to(controller, data.view_position)
   }
-  self.dismiss_hover()
+  // Hiding the hover on a press is Monaco's `_onEditorMouseDown`
+  // (`Viewer::on_editor_mouse_down`), fired from the input bridge independently
+  // of cursor placement so a press on the hover widget keeps it open.
   self.schedule_render()
 }
 

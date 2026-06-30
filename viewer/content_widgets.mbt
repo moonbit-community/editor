@@ -91,6 +91,17 @@ fn ContentWidgets::hover_scrollable(
 }
 
 ///|
+/// The hover widget's outer node, for the controller's
+/// `_isMouseOnContentHoverWidget` hit test (none before the widget is first
+/// shown).
+fn ContentWidgets::hover_wrapper(self : ContentWidgets) -> @rdom.Element? {
+  match self.hover_widget {
+    Some(widget) => Some(widget.wrapper)
+    None => None
+  }
+}
+
+///|
 impl ViewPart for ContentWidgets with fn should_render(self) {
   self.should_render
 }

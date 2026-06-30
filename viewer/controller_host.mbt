@@ -29,7 +29,7 @@ fn Viewer::pointer_handler_helper(
         started_on_line_numbers: payload.started_on_line_numbers,
       })
     },
-    notify_mouse_moved: target => self.on_mouse_moved(target),
+    notify_mouse_moved: target => self.on_editor_mouse_move(target),
     schedule_render: () => self.schedule_render(),
   }
 }

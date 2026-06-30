@@ -77,6 +77,42 @@ fn View::is_line_rendered(self : View, view_line_number : Int) -> Bool {
 }
 
 ///|
+/// Pixel x of a 1-based view column on a rendered view line, relative to the
+/// line node's left edge — Monaco's `View.getOffsetForColumn` →
+/// `ViewLines.visibleRangeForPosition(...).left`. Measures the zero-width caret
+/// rect at the column (`keep_empty=true`). Returns `-1` when the line is not in
+/// the rendered window, mirroring Monaco's `visibleRangeForPosition` → `null`.
+fn View::offset_for_column(
+  self : View,
+  view_line_number : Int,
+  view_column : Int,
+) -> Double {
+  let rects = self.measure_line_selection(
+    view_line_number,
+    view_column - 1,
+    view_column - 1,
+    keep_empty=true,
+  )
+  match rects.get(0) {
+    Some(rect) => rect.0
+    None => -1.0
+  }
+}
+
+///|
+/// Rendered width of a view line, Monaco's `View.getLineWidth` →
+/// `ViewLines.getLineWidth`. The line's content width equals the x of the caret
+/// at its max column, so this measures that caret. Returns `-1` when the line is
+/// not in the rendered window.
+fn View::line_width(
+  self : View,
+  view_line_number : Int,
+  view_max_column : Int,
+) -> Double {
+  self.offset_for_column(view_line_number, view_max_column)
+}
+
+///|
 /// Measured horizontal selection rectangles `(left, width)` for the zero-based
 /// view-column range `[start_column, end_column)` on one rendered view line.
 /// Returns an empty list when the line is outside the rendered window.

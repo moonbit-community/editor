@@ -1,0 +1,13 @@
+import {
+  "moonbit-community/editor/base/common" @base_common,
+  "moonbit-community/editor/viewer",
+  "moonbit-community/editor/viewer/model",
+  "moonbit-community/editor/tests/browser/moonbit/support",
+  "moonbit-community/rabbita/dom" @rdom,
+}
+
+supported_targets = "js"
+
+options(
+  "is-main": true,
+)

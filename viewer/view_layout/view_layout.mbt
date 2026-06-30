@@ -132,6 +132,101 @@ pub fn ViewLayout::content_height(self : ViewLayout) -> Double {
 }
 
 ///|
+/// The widest measured content (the horizontal scroll extent before clamping to
+/// the viewport), Monaco's `ViewLayout.getContentWidth` / scroll-dimensions
+/// `contentWidth`. Read by `CodeEditorWidget.getContentWidth`.
+pub fn ViewLayout::get_content_width(self : ViewLayout) -> Double {
+  self.content_width
+}
+
+///|
+/// Scrollable content width = `max(viewport width, content width)`, Monaco's
+/// `ViewLayout.getScrollWidth`. Backed by `sync_dimensions`' `scroll_width`.
+pub fn ViewLayout::get_scroll_width(self : ViewLayout) -> Double {
+  self.scrollable.dimensions().scroll_width
+}
+
+///|
+/// Scrollable content height = `max(viewport height, content height)`, Monaco's
+/// `ViewLayout.getScrollHeight`.
+pub fn ViewLayout::get_scroll_height(self : ViewLayout) -> Double {
+  self.scrollable.dimensions().scroll_height
+}
+
+///|
+/// Current horizontal scroll offset, Monaco's `ViewLayout.getCurrentScrollLeft`.
+pub fn ViewLayout::get_current_scroll_left(self : ViewLayout) -> Double {
+  self.scrollable.position().scroll_left
+}
+
+///|
+/// Current vertical scroll offset, Monaco's `ViewLayout.getCurrentScrollTop`.
+pub fn ViewLayout::get_current_scroll_top(self : ViewLayout) -> Double {
+  self.scrollable.position().scroll_top
+}
+
+///|
+/// Content-space top of a 1-based view line, Monaco's
+/// `ViewLayout.getVerticalOffsetForLineNumber` (delegates straight to
+/// `LinesLayout`). `include_view_zones` controls whether the whitespace
+/// immediately above the line counts toward the offset.
+pub fn ViewLayout::vertical_offset_for_line_number(
+  self : ViewLayout,
+  line_number : Int,
+  include_view_zones? : Bool = false,
+) -> Double {
+  self.lines
+  .get_vertical_offset_for_line_number(line_number, include_view_zones~)
+  .to_double()
+}
+
+///|
+/// Content-space bottom of a 1-based view line (its top plus its height),
+/// Monaco's `ViewLayout.getVerticalOffsetAfterLineNumber`.
+pub fn ViewLayout::vertical_offset_after_line_number(
+  self : ViewLayout,
+  line_number : Int,
+  include_view_zones? : Bool = false,
+) -> Double {
+  self.lines
+  .get_vertical_offset_after_line_number(line_number, include_view_zones~)
+  .to_double()
+}
+
+///|
+/// The (uniform) height of a 1-based view line, Monaco's
+/// `ViewLayout.getLineHeightForLineNumber`.
+pub fn ViewLayout::line_height_for_line_number(
+  self : ViewLayout,
+  line_number : Int,
+) -> Int {
+  self.lines.get_line_height_for_line_number(line_number)
+}
+
+///|
+/// The 1-based view line range fully on screen at the current scroll, Monaco's
+/// `ViewLayout.getLinesViewportData().completelyVisible{Start,End}LineNumber`
+/// (the viewport is `[scrollTop, scrollTop + height]`). Returns `(1, 1)` for an
+/// empty document so callers never index a missing line.
+pub fn ViewLayout::completely_visible_line_range(
+  self : ViewLayout,
+) -> (Int, Int) {
+  if self.line_count <= 0 {
+    return (1, 1)
+  }
+  let scroll_top = self.scrollable.position().scroll_top
+  let viewport_height = self.scrollable.dimensions().height
+  let data = self.lines.get_lines_viewport_data(
+    scroll_top.to_int(),
+    (scroll_top + viewport_height).to_int(),
+  )
+  (
+    data.completely_visible_start_line_number,
+    data.completely_visible_end_line_number,
+  )
+}
+
+///|
 /// The top of a 1-based `line` in content space. Line numbers clamp to the
 /// document so callers can probe one-past-the-end (`line_count + 1`) for a
 /// bottom edge.

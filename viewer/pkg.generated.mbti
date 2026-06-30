@@ -28,6 +28,22 @@ pub(all) struct CurrentModel {
   scroll_left : Double
 } derive(@debug.Debug)
 
+pub(all) struct EditorLayoutInfo {
+  width : Double
+  height : Double
+  content_left : Double
+  content_width : Double
+  line_numbers_width : Double
+  glyph_margin_width : Double
+  decorations_width : Double
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ScrolledVisiblePosition {
+  top : Double
+  left : Double
+  height : Double
+} derive(Eq, @debug.Debug)
+
 pub(all) enum ViewStatePolicy {
   PreserveAnchor
   Reset
@@ -52,7 +68,29 @@ pub fn Viewer::create(@dom.Element, services? : ViewerServices, options? : Viewe
 pub fn Viewer::current_model(Self) -> CurrentModel?
 pub fn Viewer::dispose(Self) -> Unit
 pub fn Viewer::escape(Self) -> Unit
+pub fn Viewer::get_bottom_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
+pub fn Viewer::get_content_height(Self) -> Double
+pub fn Viewer::get_content_width(Self) -> Double
+pub fn Viewer::get_layout_info(Self) -> EditorLayoutInfo
+pub fn Viewer::get_line_height_for_position(Self, Int, Int) -> Double
 pub fn Viewer::get_model(Self) -> @model.TextModel?
+pub fn Viewer::get_offset_for_column(Self, Int, Int) -> Double
+pub fn Viewer::get_position(Self) -> @common.Position?
+pub fn Viewer::get_scroll_height(Self) -> Double
+pub fn Viewer::get_scroll_left(Self) -> Double
+pub fn Viewer::get_scroll_top(Self) -> Double
+pub fn Viewer::get_scroll_width(Self) -> Double
+pub fn Viewer::get_scrolled_visible_position(Self, Int, Int) -> ScrolledVisiblePosition?
+pub fn Viewer::get_selection(Self) -> @view_model.Selection?
+pub fn Viewer::get_selections(Self) -> Array[@view_model.Selection]?
+pub fn Viewer::get_statusbar_column(Self, Int, Int) -> Int
+pub fn Viewer::get_top_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
+pub fn Viewer::get_top_for_position(Self, Int, Int) -> Double
+pub fn Viewer::get_value(Self) -> String
+pub fn Viewer::get_visible_column_from_position(Self, Int, Int) -> Int
+pub fn Viewer::get_visible_ranges(Self) -> Array[@common.Range]
+pub fn Viewer::get_visible_ranges_plus_viewport_above_below(Self) -> Array[@common.Range]
+pub fn Viewer::get_width_of_line(Self, Int) -> Double
 pub fn Viewer::on_did_build_frame(Self, (ViewerFrameBuiltEvent) -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_change_diagnostics(Self, (ViewerDiagnosticsChangedEvent) -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_change_model(Self, (@model.TextModel) -> Unit) -> @common.Disposable

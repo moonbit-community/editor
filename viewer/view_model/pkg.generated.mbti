@@ -346,10 +346,16 @@ pub struct ViewModel {
 pub fn ViewModel::ViewModel(FrameSource) -> Self
 pub fn ViewModel::coordinates_converter(Self) -> ViewModelCoordinatesConverter
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
+pub fn ViewModel::get_hidden_areas(Self) -> Array[HiddenRange]
+pub fn ViewModel::get_line_max_column(Self, Int) -> Int
+pub fn ViewModel::get_line_min_column(Self, Int) -> Int
 pub fn ViewModel::language_id(Self) -> String
 pub fn ViewModel::line_count(Self) -> Int
 pub fn ViewModel::lines(Self) -> ViewModelLines
+pub fn ViewModel::model_line_max_column(Self, Int) -> Int
+pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
 pub fn ViewModel::render_frame(Self, FrameViewport) -> RenderFrame
+pub fn ViewModel::to_model_visible_ranges(Self, @view_line_renderer.ViewRange) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
 pub fn ViewModel::with_options(FrameSource, ViewModelOptions) -> Self
 pub fn ViewModel::with_options_and_folding(FrameSource, ViewModelOptions, FoldingModel) -> Self
@@ -381,9 +387,11 @@ pub(all) enum ViewModelLines {
   ModelAsIs(ViewModelLinesFromModelAsIs)
   ProjectedModel(ViewModelLinesFromProjectedModel)
 }
+pub fn ViewModelLines::get_hidden_areas(Self) -> Array[HiddenRange]
 pub fn ViewModelLines::get_view_line_content(Self, Int) -> String
 pub fn ViewModelLines::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLines::get_view_line_min_column(Self, Int) -> Int
+pub fn ViewModelLines::is_model_line_hidden(Self, Int) -> Bool
 pub fn ViewModelLines::line_count(Self) -> Int
 pub fn ViewModelLines::model_line_number_of_view_line(Self, Int) -> Int
 pub fn ViewModelLines::render_line(Self, Int) -> RenderLine
@@ -395,6 +403,7 @@ pub struct ViewModelLinesFromModelAsIs {
   hidden_model_lines : Array[Bool]
   injected_text_by_model_line : Array[Array[InjectedText]]
 }
+pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(Self) -> Array[HiddenRange]
 pub fn ViewModelLinesFromModelAsIs::get_model_line_content(Self, Int) -> String
 pub fn ViewModelLinesFromModelAsIs::get_view_line_content(Self, Int) -> String
 pub fn ViewModelLinesFromModelAsIs::get_view_line_max_column(Self, Int) -> Int
@@ -418,9 +427,11 @@ pub struct ViewModelLinesFromProjectedModel {
   projection : ModelLineProjection
   tab_size : Int
 }
+pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(Self) -> Array[HiddenRange]
 pub fn ViewModelLinesFromProjectedModel::get_view_line_content(Self, Int) -> String
 pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(Self, Int) -> Int
+pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(Self, Int) -> Bool
 pub fn ViewModelLinesFromProjectedModel::line_count(Self) -> Int
 pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(Self, @common.Position) -> @common.Position

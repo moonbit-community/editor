@@ -80,3 +80,53 @@ test "computeHoverPositions: forceShowAtRange overrides both positions, last one
   assert_eq(show_at_secondary.line_number, 7)
   assert_eq(show_at_secondary.column, 2)
 }
+
+///|
+test "computeDistanceFromPointToRectangle: inside, beside, and off a corner" {
+  // Rectangle at (100,100) sized 50x50 -> spans x[100,150], y[100,150].
+  // Inside the rectangle: distance 0.
+  assert_eq(
+    compute_distance_from_point_to_rectangle(
+      125.0, 125.0, 100.0, 100.0, 50.0, 50.0,
+    ),
+    0.0,
+  )
+  // Directly to the left: the horizontal gap only.
+  assert_eq(
+    compute_distance_from_point_to_rectangle(80.0, 125.0, 100.0, 100.0, 50.0, 50.0),
+    20.0,
+  )
+  // Off the bottom-right corner by (50,50): the diagonal gap.
+  let corner = compute_distance_from_point_to_rectangle(
+    200.0, 200.0, 100.0, 100.0, 50.0, 50.0,
+  )
+  assert_true((corner - 70.71067811865476).abs() < 0.0001)
+}
+
+///|
+test "isMouseGettingCloser: first call seeds the reference then tracks the running minimum" {
+  // Rectangle x[100,150], y[100,150].
+  let state = MouseCloserState::new()
+  // First move seeds the reference point and reports false (no closeness yet).
+  assert_false(
+    state.is_mouse_getting_closer(200.0, 125.0, 100.0, 100.0, 50.0, 50.0),
+  )
+  // Reference distance from (200,125) is 50. Moving to (160,125) is distance 10:
+  // well within the closest-so-far + 4, so it is getting closer.
+  assert_true(
+    state.is_mouse_getting_closer(160.0, 125.0, 100.0, 100.0, 50.0, 50.0),
+  )
+  // Back out to (200,125), distance 50 > 10 + 4: getting farther.
+  assert_false(
+    state.is_mouse_getting_closer(200.0, 125.0, 100.0, 100.0, 50.0, 50.0),
+  )
+  // (162,125) is distance 12, within 10 + 4: still counts as getting closer.
+  assert_true(
+    state.is_mouse_getting_closer(162.0, 125.0, 100.0, 100.0, 50.0, 50.0),
+  )
+  // After a reset the next move re-seeds (returns false again).
+  state.reset()
+  assert_false(
+    state.is_mouse_getting_closer(160.0, 125.0, 100.0, 100.0, 50.0, 50.0),
+  )
+}

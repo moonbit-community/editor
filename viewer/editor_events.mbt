@@ -83,7 +83,11 @@ fn Viewer::on_editor_mouse_move(
       set_timeout(
         () => {
           if self.hover_react_pending && token == self.hover_react_token {
-            self.run_hover_react()
+            // Monaco `_reactToEditorMouseMoveRunner` fires `_reactToEditorMouseMove`,
+            // so the deferred reaction re-gates `shouldShowHover` and the
+            // sticky mouse-getting-closer keep, not just the bare dispatch.
+            self.hover_react_pending = false
+            self.react_to_editor_mouse_move()
           }
         },
         self.hover_settings.hiding_delay,
@@ -107,6 +111,16 @@ fn Viewer::react_to_editor_mouse_move(self : Viewer) -> Unit {
       hover_multi_cursor_modifier,
       self.hover_last_modifiers,
     ) {
+    // Monaco `_startShowingOrUpdateHover`: a visible sticky hover the pointer is
+    // getting closer to is kept untouched rather than re-evaluated (which off
+    // the anchor token would hide it). The insist-on-keeping update Monaco kicks
+    // here lands with `_withResult`/`_setCurrentResult`.
+    if self.hover.widget_visible() &&
+      self.hover_settings.sticky &&
+      self.hover_mouse_getting_closer() {
+      self.cancel_hover_react()
+      return
+    }
     self.run_hover_react()
     return
   }
@@ -212,6 +226,27 @@ fn Viewer::mouse_on_hover_widget(
 }
 
 ///|
+/// Monaco `ContentHoverWidget.isMouseGettingCloser`: whether the last recorded
+/// pointer is approaching the hover widget rectangle (false when no widget
+/// exists). Measures the widget with `getBoundingClientRect`, so the recorded
+/// client pointer and the rectangle are both client-space.
+fn Viewer::hover_mouse_getting_closer(self : Viewer) -> Bool {
+  guard self.view is Some(view) else { return false }
+  guard view.content_widgets.hover_wrapper() is Some(wrapper) else {
+    return false
+  }
+  let rect = wrapper.get_bounding_client_rect()
+  self.hover_mouse_closer.is_mouse_getting_closer(
+    self.hover_mouse_posx,
+    self.hover_mouse_posy,
+    rect.get_left(),
+    rect.get_top(),
+    rect.get_width(),
+    rect.get_height(),
+  )
+}
+
+///|
 /// Monaco `ContentHoverController._onEditorMouseDown`: a press that is not on the
 /// hover widget hides it; a press on it keeps it. `_isMouseDown` tracking and the
 /// `_onEditorMouseUp` reset are omitted — only the color-picker arm of
@@ -301,6 +336,9 @@ fn Viewer::after_hover_transition(
   }
   if before.view != self.hover.view {
     self.content_generation += 1
+    // A new hover view is a fresh `RenderedContentHover`: reset the
+    // mouse-getting-closer reference so the next move re-seeds it.
+    self.hover_mouse_closer.reset()
   }
   self.schedule_render()
 }

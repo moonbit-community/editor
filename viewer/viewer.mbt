@@ -60,6 +60,10 @@ pub struct Viewer {
   /// The last anchor token for which the public hover-resolution status fired,
   /// so it fires exactly once per anchor when the operation completes.
   priv mut hover_notified_token : Int
+  /// Monaco `RenderedContentHover`'s mouse-getting-closer state (`isMouseGettingCloser`):
+  /// reset whenever a new hover view is shown, so a sticky hover the pointer is
+  /// approaching is kept open even off the anchor token.
+  priv hover_mouse_closer : MouseCloserState
   priv mut char_width : Double
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
@@ -204,6 +208,7 @@ pub fn Viewer::Viewer(
     hover_mouse_posy: 0.0,
     hover_last_modifiers: EventModifiers::none(),
     hover_notified_token: 0,
+    hover_mouse_closer: MouseCloserState::new(),
     char_width: 0.0,
     soft_wrap_column: 0,
     max_line_length: 0,

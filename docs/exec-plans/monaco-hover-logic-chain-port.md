@@ -360,7 +360,7 @@ text-selection arms, `getAccessibleWidgetContent(+AtIndex)`, `isColorPickerVisib
 
 ---
 
-## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — IN PROGRESS (pure-logic increment 1)
+## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — IN PROGRESS (pure-logic increments 1–2)
 
 Give rendered parts real structure instead of one HTML blob: a
 `RenderedContentHover` analog that owns per-part nodes, supports focus
@@ -379,10 +379,22 @@ horizontal anchor column from the secondary position. The wiring is
 behavior-neutral (proof: the viewer anchors at `hover.range.start`, the
 union-of-parts start = the global minimum start offset, so every on-anchor-line
 part's start column is ≥ that column and the secondary clamp resolves back to
-it). `isMouseGettingCloser` + `computeDistanceFromPointToRectangle`,
-`setMinimumDimensions`/`_updateMinimumWidth`, and the wrapper/rendered DOM rows
-remain TODO; they land with their consumers (sticky `_startShowingOrUpdateHover`
-/ sashes / the per-part structure rework) rather than as committed dead code.
+it).
+
+**Increment 2 (pure-logic-first, landed).** The sticky mouse-getting-closer
+keep: `isMouseGettingCloser` + `computeDistanceFromPointToRectangle` ported as
+`MouseCloserState::is_mouse_getting_closer` /
+`compute_distance_from_point_to_rectangle` (whitebox-tested), and **wired** —
+`react_to_editor_mouse_move` now keeps a visible sticky hover when the pointer
+is approaching the widget (Monaco `_startShowingOrUpdateHover` :114-124), with
+the closer state reset per shown view (`after_hover_transition`) to mirror
+Monaco's fresh `RenderedContentHover`. The deferred mouse-move runner now fires
+`react_to_editor_mouse_move` (Monaco's `_reactToEditorMouseMoveRunner` →
+`_reactToEditorMouseMove`) so the grace path re-gates `shouldShowHover` and the
+keep. Validated: the hover conformance specs (incl. keep-open + exact-pixel
+anchor) stay green. `setMinimumDimensions`/`_updateMinimumWidth` and the
+wrapper/rendered DOM rows remain TODO; they land with their consumers (sashes /
+the per-part structure rework) rather than as committed dead code.
 
 ### Inventory (Phase 4)
 
@@ -477,7 +489,7 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 | `setMinimumDimensions`/`_updateMinimumWidth` (cHW :387,:396) | combine min dims; min width = `min(contentWidth, minWidth)` | `hover_min_dimensions` (new) | TODO |
 | `handleContentsChanged` (cHW :406-428) | relayout, remeasure, re-pick position preference, fire contents-changed | `handle_contents_changed` (new) | TODO |
 | `_removeConstraintsRenderNormally` (cHW :379-385) | layout to editor box; dims `auto`; update max | `render_normally` (new) | TODO |
-| `isMouseGettingCloser` + `computeDistanceFromPointToRectangle` (cHW :238-276,:477-483) | point-to-rect distance, 4px tolerance, track closest | `mouse_getting_closer` (new) | TODO |
+| `isMouseGettingCloser` + `computeDistanceFromPointToRectangle` (cHW :238-276,:477-483) | point-to-rect distance, 4px tolerance, track closest | `MouseCloserState::is_mouse_getting_closer` / `compute_distance_from_point_to_rectangle` (`hover_widget_geometry.mbt`; wired into `react_to_editor_mouse_move`, reset per shown view) | TESTED |
 | `_render`/`_setRenderedHover`/`_updateContent`/`_layoutContentWidget` (cHW :314-322,:278-305) | render + visibility key + content swap | render pipeline | TODO |
 | dimension setters `_setHoverWidgetDimensions` etc. (cHW :113-160) | width/height px apply (4 setters) | DOM dim setters | PORTED (predecessor DOM plan) |
 | `onDidResize`/`onDidScroll`/`onContentsChanged` emitters (cHW :38-45) | participant fan-out events | event seams | TODO |
@@ -727,6 +739,19 @@ is **not** and must trace to a source line.
     makes the clamp a no-op), so the wiring is behavior-neutral. Justification:
     coordinates-converter / single-offset-anchor seams; the arithmetic matches
     source line-for-line and is whitebox-tested across all branches.
+11. **`isMouseGettingCloser` keep without insist-update (Phase 4, increment 2).**
+    Monaco's `_startShowingOrUpdateHover` sticky-getting-closer branch both keeps
+    the hover *and* kicks `_startHoverOperationIfNecessary(..., insistOnKeepingHoverVisible=true)`.
+    The viewer ports only the keep (no recompute); the insist-on-keeping update
+    needs `_withResult`/`_setCurrentResult` (later increment). The deferred
+    mouse-move runner was also rerouted from the bare `run_hover_react` dispatch
+    to `react_to_editor_mouse_move`, matching Monaco's
+    `_reactToEditorMouseMoveRunner` → `_reactToEditorMouseMove` (re-gates
+    `shouldShowHover` on the grace path). Justification: the keep is the
+    user-visible effect; the insist-update is an inert refinement until the
+    result-reconciliation rows land. The distance math is whitebox-tested and the
+    keep adds no hide path (it only prevents hides), validated against the hover
+    conformance specs.
 
 Any new logic line added during Phases 4–7 that is **not** traceable to a cited
 source line must be appended here before that phase's exit gate can be checked.
@@ -779,7 +804,7 @@ green is **necessary, not sufficient**.
 | 1/1b | resizable + cHW sizing | 23 | 9 / 11 / 3 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 2 | hoverOperation | 23 | 23 / 0 / 0 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 3 | controller + utils | 41 | 20 / 16 / 5 | ☑ | ☑ | ☑ | ☑ | ☑ |
-| 4 | wrapper + rendered + cHW rest | 78 | 1 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 4 | wrapper + rendered + cHW rest | 78 | 3 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 5 | statusbar + actions + ids + contrib + scroll | ~65 | 0 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 6 | markdown verbosity | 13 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 7 | glyph chain | 44 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |

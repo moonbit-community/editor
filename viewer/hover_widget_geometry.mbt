@@ -71,3 +71,96 @@ fn compute_hover_positions(
       )
   }
 }
+
+///|
+/// Monaco `computeDistanceFromPointToRectangle` (`contentHoverWidget.ts`
+/// :477-483): Euclidean distance from a point to the nearest edge of a
+/// rectangle, `0` when the point is inside it.
+fn compute_distance_from_point_to_rectangle(
+  point_x : Double,
+  point_y : Double,
+  left : Double,
+  top : Double,
+  width : Double,
+  height : Double,
+) -> Double {
+  let x = left + width / 2.0 // x center of rectangle
+  let y = top + height / 2.0 // y center of rectangle
+  let dx = max_hover_double((point_x - x).abs() - width / 2.0, 0.0)
+  let dy = max_hover_double((point_y - y).abs() - height / 2.0, 0.0)
+  (dx * dx + dy * dy).sqrt()
+}
+
+///|
+/// State Monaco's `RenderedContentHover` carries for `isMouseGettingCloser`
+/// (`contentHoverWidget.ts` :32-34, :238-276): the pointer position recorded on
+/// the first move after the hover showed, and the closest the pointer has been
+/// to the widget rectangle so far. Held mutably because the running minimum is
+/// updated in place per move, exactly as Monaco mutates the
+/// `RenderedContentHover`. Recreated per shown hover (the viewer resets it when
+/// the shown view changes, mirroring Monaco's fresh `RenderedContentHover`).
+priv struct MouseCloserState {
+  mut initial_pos_x : Double?
+  mut initial_pos_y : Double?
+  mut closest_distance : Double?
+}
+
+///|
+fn MouseCloserState::new() -> MouseCloserState {
+  { initial_pos_x: None, initial_pos_y: None, closest_distance: None }
+}
+
+///|
+/// Resets the running state so the next move re-seeds the reference point,
+/// standing in for Monaco recreating the `RenderedContentHover` on each show.
+fn MouseCloserState::reset(self : MouseCloserState) -> Unit {
+  self.initial_pos_x = None
+  self.initial_pos_y = None
+  self.closest_distance = None
+}
+
+///|
+/// Monaco `ContentHoverWidget.isMouseGettingCloser` (:238-276). On the first
+/// call it records the pointer as the reference point and returns `false`;
+/// afterwards it returns whether the pointer is no farther than 4px beyond the
+/// closest it has ever been to the widget rectangle, tracking that running
+/// minimum. The widget rectangle is measured by the host each call and passed in
+/// (Monaco's `getDomNodePagePosition(this.getDomNode())`). The `!_renderedHover`
+/// guard is implicit: this state only exists while a hover is rendered.
+fn MouseCloserState::is_mouse_getting_closer(
+  self : MouseCloserState,
+  posx : Double,
+  posy : Double,
+  rect_left : Double,
+  rect_top : Double,
+  rect_width : Double,
+  rect_height : Double,
+) -> Bool {
+  let (initial_x, initial_y) = match (self.initial_pos_x, self.initial_pos_y) {
+    (Some(x), Some(y)) => (x, y)
+    _ => {
+      self.initial_pos_x = Some(posx)
+      self.initial_pos_y = Some(posy)
+      return false
+    }
+  }
+  let closest_distance = match self.closest_distance {
+    Some(distance) => distance
+    None => {
+      let distance = compute_distance_from_point_to_rectangle(
+        initial_x, initial_y, rect_left, rect_top, rect_width, rect_height,
+      )
+      self.closest_distance = Some(distance)
+      distance
+    }
+  }
+  let distance = compute_distance_from_point_to_rectangle(
+    posx, posy, rect_left, rect_top, rect_width, rect_height,
+  )
+  if distance > closest_distance + 4.0 {
+    // The mouse is getting farther away.
+    return false
+  }
+  self.closest_distance = Some(min_hover_double(closest_distance, distance))
+  true
+}

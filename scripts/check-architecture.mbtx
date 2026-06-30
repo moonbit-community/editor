@@ -29,6 +29,8 @@ async fn main {
   }
   check_no_outside_shell_imports(errors)
   check_viewer_rabbita_bindings(errors)
+  check_tier_targets(errors)
+  check_external_viewer_imports(errors)
   if errors.length() > 0 {
     println(errors.join("\n"))
     fail("Architecture checks failed")
@@ -107,6 +109,96 @@ async fn check_viewer_rabbita_bindings(errors : Array[String]) -> Unit {
       }
     }
   }
+}
+
+///|
+/// Three-tier mirror target invariants (docs/exec-plans/viewer-directory-mirror.md,
+/// Increment A):
+///   (1) every `viewer/browser/**` and `viewer/contrib/*/browser/**` package
+///       declares `supported_targets = "js"`, and
+///   (2) no `viewer/common/**` package declares js-only.
+/// `moon check --target all` already fails the native build if a common-tier
+/// package imports a js-only one — these rules catch the *declaration* mistakes
+/// that would otherwise let such a leak slip in. They are vacuously satisfied
+/// until the carve-up creates the browser/contrib packages.
+async fn check_tier_targets(errors : Array[String]) -> Unit {
+  for manifest in package_manifests() {
+    let js_only = supported_targets_value(@fs.read_file(manifest).text()) ==
+      Some("js")
+    if is_browser_tier(manifest) && !js_only {
+      errors.push(
+        manifest +
+        " is in the browser tier and must declare supported_targets = \"js\"",
+      )
+    }
+    if manifest.has_prefix("viewer/common/") && js_only {
+      errors.push(
+        manifest +
+        " is in the common tier and must not declare supported_targets = \"js\" (keep it multi-target so the native check enforces the no-DOM boundary)",
+      )
+    }
+  }
+}
+
+///|
+/// A package is in the browser tier when it lives under `viewer/browser/` or in
+/// the `browser/` subtree of a `viewer/contrib/<feature>/` directory.
+fn is_browser_tier(manifest : String) -> Bool {
+  manifest.has_prefix("viewer/browser/") ||
+  (manifest.has_prefix("viewer/contrib/") && manifest.contains("/browser/"))
+}
+
+///|
+/// The browser tier lives behind the `viewer` facade (`export.mbt`): external
+/// consumers must reach DOM/widget internals through `viewer`, never by
+/// importing a `viewer/browser/**` or `viewer/contrib/**` package directly.
+/// Common-tier (`viewer/common/**`) logic stays importable because the facade
+/// is js-only and native/headless consumers (the shell server hosts) cannot
+/// link it (Decision D2). Same precedent as `check_no_outside_shell_imports`;
+/// vacuously satisfied until the browser/contrib packages exist.
+async fn check_external_viewer_imports(errors : Array[String]) -> Unit {
+  let browser_prefix = "moonbit-community/editor/viewer/browser"
+  let contrib_prefix = "moonbit-community/editor/viewer/contrib"
+  for manifest in package_manifests() {
+    if manifest.has_prefix("viewer/") {
+      continue
+    }
+    for imported in package_imports(@fs.read_file(manifest).text()) {
+      if import_matches(imported, browser_prefix) ||
+        import_matches(imported, contrib_prefix) {
+        errors.push(
+          manifest +
+          " must import the viewer facade (viewer), not the browser-tier package " +
+          imported,
+        )
+      }
+    }
+  }
+}
+
+///|
+/// The `supported_targets` value declared by a `moon.pkg`, if any: the first
+/// quoted string after the `supported_targets` key. `None` means the package is
+/// multi-target (the module-wide `+js+native` default applies). Target
+/// expressions never contain `/`, so this cannot collide with import paths.
+fn supported_targets_value(content : String) -> String? {
+  guard content.find("supported_targets") is Some(key) else { return None }
+  let mut i = key
+  while i < content.length() && content[i] != '"' {
+    i = i + 1
+  }
+  if i >= content.length() {
+    return None
+  }
+  let start = i + 1
+  let mut end = start
+  while end < content.length() && content[end] != '"' {
+    end = end + 1
+  }
+  if end >= content.length() {
+    return None
+  }
+  Some(content[start:end].to_owned())
 }
 
 ///|

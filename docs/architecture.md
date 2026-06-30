@@ -53,6 +53,39 @@ Reference trees are research inputs only. Product code must not import from
   with the viewer.
 - `platform/log`: host-neutral structured logging contracts.
 
+## Viewer Three-Tier Mirror (target structure)
+
+The `viewer/` tree is migrating to mirror Monaco's `vs/editor/{common,browser,contrib}`
+at directory granularity (one Monaco directory → one MoonBit package). The
+migration is staged in `docs/exec-plans/viewer-directory-mirror.md`; the flat
+`viewer/<feature>` packages and the root `viewer/*.mbt` god-package above are the
+*current* truth until each carve-up increment lands. The target tiers are:
+
+- `viewer/common/**` — DOM-free logic (model, view_model, view_layout, cursor,
+  languages, decorations, view-line renderer, core, tokens, services). Mirrors
+  `editor/common/*`. **Multi-target** (`+js+native`): the no-DOM rule is enforced
+  by the native build, not by convention.
+- `viewer/browser/**` — DOM-owning view, view parts (`view_parts/*`), controller,
+  and the `widget/code_editor` host. Mirrors `editor/browser/*`. **js-only**
+  (`supported_targets = "js"`).
+- `viewer/contrib/<feature>/browser/**` — browser-tier feature contributions
+  (`hover`, `folding`). Mirrors `editor/contrib/*/browser`. **js-only**.
+- root `viewer` — reduces to an `export.mbt` facade (the analog of
+  `vs/editor/editor.api.ts`) re-exporting the public surface; `viewer/pkg.generated.mbti`
+  is the reviewable public-API contract. Stays js-only because it re-exports
+  browser types.
+
+`scripts/check-architecture.mbtx` enforces three tier invariants (the
+MoonBit-toolchain-uncatchable half): every `viewer/browser/**` and
+`viewer/contrib/*/browser/**` package declares `supported_targets = "js"`; no
+`viewer/common/**` package does; and external consumers (the shell, web, app,
+tests) import the `viewer` facade — never a `viewer/browser/**` or
+`viewer/contrib/**` package directly. Native/headless consumers (the shell
+server hosts) may import `viewer/common/**` directly, since the js-only facade
+cannot link on native (Decision D2). The `common → browser` direction is caught
+by `moon check --target all` itself: a multi-target package importing a js-only
+one fails the native build.
+
 ## Reference Shell Map
 
 - `internal/shell/web`: generated browser entrypoint for the reference shell.
@@ -159,8 +192,11 @@ rules are:
 
 `scripts/check-architecture.mbtx`, run by `just check`, enforces the guardrails
 the MoonBit toolchain cannot catch directly: no reference-tree imports, no
-outside-shell imports of `internal/shell/*`, and no Rabbita framework imports
-from `viewer/*` packages.
+outside-shell imports of `internal/shell/*`, no Rabbita framework imports
+from `viewer/*` packages, the three-tier target invariants (browser-tier
+packages js-only, common-tier packages multi-target), and no external imports of
+the `viewer/browser/**` or `viewer/contrib/**` internals (see the Viewer
+Three-Tier Mirror section).
 
 ## Build Targets
 

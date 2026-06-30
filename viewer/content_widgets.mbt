@@ -421,49 +421,63 @@ fn Viewer::handle_hover_keydown(
   keyboard : @rdom.KeyboardEvent,
 ) -> Unit {
   event.stop_propagation()
+  // Monaco registers these as editor commands gated on `hoverFocused`
+  // (`hoverActions.ts`); until a viewer command registry lands, the focused
+  // widget's keydown dispatches them inline with the same key map. The
+  // arrow-key secondaries match Monaco: `Alt+Arrow` pages and `CtrlCmd+Arrow`
+  // jumps to an edge.
+  let alt = keyboard.alt_key()
+  // `KeyMod.CtrlCmd` is Ctrl on Windows/Linux and Cmd on macOS.
+  let ctrl_cmd = keyboard.ctrl_key() || keyboard.meta_key()
   match keyboard.key() {
     "Escape" => {
       event.prevent_default()
       self.dismiss_hover()
       self.schedule_render()
     }
-    "ArrowDown" => {
-      event.prevent_default()
-      scroll_hover_content(widget, editor_line_height.to_double())
-    }
     "ArrowUp" => {
       event.prevent_default()
-      scroll_hover_content(widget, -editor_line_height.to_double())
+      if alt {
+        widget.page_up()
+      } else if ctrl_cmd {
+        widget.go_to_top()
+      } else {
+        widget.scroll_up()
+      }
     }
-    "PageDown" => {
+    "ArrowDown" => {
       event.prevent_default()
-      scroll_hover_content(widget, hover_content_page_delta(widget))
-    }
-    "PageUp" => {
-      event.prevent_default()
-      scroll_hover_content(widget, -hover_content_page_delta(widget))
-    }
-    "Home" => {
-      event.prevent_default()
-      widget.scrollable.native_scroll_to(vertical=true, 0.0)
-    }
-    "End" => {
-      event.prevent_default()
-      widget.scrollable.native_scroll_to(
-        vertical=true,
-        widget.scrollable.content.get_scroll_height(),
-      )
-    }
-    "ArrowRight" => {
-      event.prevent_default()
-      scroll_hover_content_horizontal(widget, self.measured_char_width() * 4.0)
+      if alt {
+        widget.page_down()
+      } else if ctrl_cmd {
+        widget.go_to_bottom()
+      } else {
+        widget.scroll_down()
+      }
     }
     "ArrowLeft" => {
       event.prevent_default()
-      scroll_hover_content_horizontal(
-        widget,
-        -(self.measured_char_width() * 4.0),
-      )
+      widget.scroll_left()
+    }
+    "ArrowRight" => {
+      event.prevent_default()
+      widget.scroll_right()
+    }
+    "PageUp" => {
+      event.prevent_default()
+      widget.page_up()
+    }
+    "PageDown" => {
+      event.prevent_default()
+      widget.page_down()
+    }
+    "Home" => {
+      event.prevent_default()
+      widget.go_to_top()
+    }
+    "End" => {
+      event.prevent_default()
+      widget.go_to_bottom()
     }
     _ => ()
   }
@@ -483,21 +497,62 @@ fn handle_hover_wheel(
 }
 
 ///|
-fn scroll_hover_content(widget : HoverWidgetDom, delta : Double) -> Unit {
-  widget.scrollable.native_scroll_by(delta_top=delta)
+/// Monaco `contentHoverWidget.ts` `HORIZONTAL_SCROLLING_BY`: the fixed pixel
+/// step the hover scrolls left/right per arrow press (font-independent, unlike
+/// the previous `4 × charWidth` heuristic).
+let hover_horizontal_scrolling_by : Double = 30.0
+
+///|
+/// Monaco `ContentHoverWidget.scrollUp`: `scrollTop -= fontInfo.lineHeight`.
+fn HoverWidgetDom::scroll_up(self : HoverWidgetDom) -> Unit {
+  self.scrollable.native_scroll_by(delta_top=-editor_line_height.to_double())
 }
 
 ///|
-fn scroll_hover_content_horizontal(
-  widget : HoverWidgetDom,
-  delta : Double,
-) -> Unit {
-  widget.scrollable.native_scroll_by(delta_left=delta)
+/// Monaco `ContentHoverWidget.scrollDown`: `scrollTop += fontInfo.lineHeight`.
+fn HoverWidgetDom::scroll_down(self : HoverWidgetDom) -> Unit {
+  self.scrollable.native_scroll_by(delta_top=editor_line_height.to_double())
 }
 
 ///|
-fn hover_content_page_delta(widget : HoverWidgetDom) -> Double {
-  widget.scrollable.native_page_delta()
+/// Monaco `ContentHoverWidget.scrollLeft`: `scrollLeft -= HORIZONTAL_SCROLLING_BY`.
+fn HoverWidgetDom::scroll_left(self : HoverWidgetDom) -> Unit {
+  self.scrollable.native_scroll_by(delta_left=-hover_horizontal_scrolling_by)
+}
+
+///|
+/// Monaco `ContentHoverWidget.scrollRight`: `scrollLeft += HORIZONTAL_SCROLLING_BY`.
+fn HoverWidgetDom::scroll_right(self : HoverWidgetDom) -> Unit {
+  self.scrollable.native_scroll_by(delta_left=hover_horizontal_scrolling_by)
+}
+
+///|
+/// Monaco `ContentHoverWidget.pageUp`: `scrollTop -= getScrollDimensions().height`
+/// (the visible content height).
+fn HoverWidgetDom::page_up(self : HoverWidgetDom) -> Unit {
+  self.scrollable.native_scroll_by(delta_top=-self.scrollable.native_page_delta())
+}
+
+///|
+/// Monaco `ContentHoverWidget.pageDown`: `scrollTop += getScrollDimensions().height`.
+fn HoverWidgetDom::page_down(self : HoverWidgetDom) -> Unit {
+  self.scrollable.native_scroll_by(delta_top=self.scrollable.native_page_delta())
+}
+
+///|
+/// Monaco `ContentHoverWidget.goToTop`: `scrollTop = 0`.
+fn HoverWidgetDom::go_to_top(self : HoverWidgetDom) -> Unit {
+  self.scrollable.native_scroll_to(vertical=true, 0.0)
+}
+
+///|
+/// Monaco `ContentHoverWidget.goToBottom`: `scrollTop = getScrollDimensions().scrollHeight`
+/// (the total content height).
+fn HoverWidgetDom::go_to_bottom(self : HoverWidgetDom) -> Unit {
+  self.scrollable.native_scroll_to(
+    vertical=true,
+    self.scrollable.content.get_scroll_height(),
+  )
 }
 
 ///|

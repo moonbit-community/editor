@@ -549,13 +549,33 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 
 ---
 
-## Phase 5 — status bar actions + `hoverActionIds.ts` + `hoverActions.ts` + `hoverContribution.ts` + widget scroll cluster — TODO
+## Phase 5 — status bar actions + `hoverActionIds.ts` + `hoverActions.ts` + `hoverContribution.ts` + widget scroll cluster — IN PROGRESS (scroll cluster landed)
 
 Replace the static "View Problem" markup with a real `EditorHoverStatusBar`
 analog whose actions invoke commands, and register the `hoverActionIds` command
 set (scroll/page/goto, keyboard `showHover`, `hideHover`) as real editor
-commands, replacing inline-only `handle_hover_keydown` (`content_widgets.mbt:344`)
+commands, replacing inline-only `handle_hover_keydown` (`content_widgets.mbt`)
 with command-backed handlers (same key bindings).
+
+**Increment 1 (widget scroll cluster, landed).** The eight
+`ContentHoverWidget` scroll methods + `HORIZONTAL_SCROLLING_BY = 30` ported as
+`HoverWidgetDom::scroll_up`/`scroll_down`/`scroll_left`/`scroll_right`/`page_up`/
+`page_down`/`go_to_top`/`go_to_bottom` (`content_widgets.mbt`), each matching
+Monaco's arithmetic line-for-line (`scrollTop ± lineHeight`; `scrollLeft ± 30`;
+`scrollTop ± getScrollDimensions().height` for page; `0` / `scrollHeight` for the
+edges). The focused widget's `handle_hover_keydown` now dispatches to them with
+Monaco's exact key map from `hoverActions.ts`: arrow primaries
+(`Scroll{Up,Down,Left,Right}HoverAction`), `PageUp`/`PageDown`/`Home`/`End`, plus
+the previously-missing **secondary keybindings** — `Alt+Arrow` pages
+(`Page{Up,Down}HoverAction`) and `CtrlCmd+Arrow` jumps to an edge
+(`GoTo{Top,Bottom}HoverAction`). This corrects the only arithmetic divergence in
+the old inline handler — horizontal scroll used a font-dependent `4 × charWidth`
+nudge instead of Monaco's fixed `30` (Deviation 13). The command/contribution
+registration, the `hoverFocused` context key, and the real `EditorHoverStatusBar`
+remain TODO (they need the viewer command registry — Deviation 4). Proof: two new
+keyboard cases in `tests/browser/conformance/hover_rendering.spec.js` (the
+scroll-cluster keybindings incl. `Alt`/`CtrlCmd` secondaries; the fixed
+horizontal step), hover conformance specs stay green.
 
 ### Inventory (Phase 5)
 
@@ -604,10 +624,11 @@ Member count (Phase 5): 9 (status bar) + ~16 (ids; verbosity ids → Phase 6) +
 | `Scroll{Up,Down,Left,Right}HoverAction` (ha :171-297) | arrow keys; `hoverFocused`; delegate to widget (4) | `scroll_hover_*` commands (new) | TODO |
 | `Page{Up,Down}HoverAction` (ha :299-363) | PageUp/Down + `Alt+Arrow`; widget `pageUp/Down` (2) | `page_hover_*` commands (new) | TODO |
 | `GoTo{Top,Bottom}HoverAction` (ha :365-430) | Home/End + `Ctrl+Arrow`; widget `goToTop/Bottom` (2) | `goto_hover_*` commands (new) | TODO |
-| widget `scrollUp/Down` (cHW :434,:440) | `scrollTop ± lineHeight` | `hover_scroll_vertical` (new) | TODO |
-| widget `scrollLeft/Right` (cHW :446,:451) `HORIZONTAL_SCROLLING_BY=30` | `scrollLeft ± 30` | `hover_scroll_horizontal` (new) | TODO |
-| widget `pageUp/Down` (cHW :456,:462) | `scrollTop ± scrollHeight` | `hover_page` (new) | TODO |
-| widget `goToTop/Bottom` (cHW :468,:472) | `scrollTop = 0` / `scrollHeight` | `hover_goto_edge` (new) | TODO |
+| widget `scrollUp/Down` (cHW :434,:440) | `scrollTop ± lineHeight` | `HoverWidgetDom::scroll_up`/`scroll_down` (dispatched from `handle_hover_keydown` on `ArrowUp`/`ArrowDown`) | TESTED |
+| widget `scrollLeft/Right` (cHW :446,:451) `HORIZONTAL_SCROLLING_BY=30` | `scrollLeft ± 30` | `HoverWidgetDom::scroll_left`/`scroll_right` + `hover_horizontal_scrolling_by=30.0` (on `ArrowLeft`/`ArrowRight`) | TESTED |
+| widget `pageUp/Down` (cHW :456,:462) | `scrollTop ± getScrollDimensions().height` (visible height) | `HoverWidgetDom::page_up`/`page_down` (on `PageUp`/`PageDown` + `Alt+Arrow` secondary) | TESTED |
+| widget `goToTop/Bottom` (cHW :468,:472) | `scrollTop = 0` / `scrollHeight` | `HoverWidgetDom::go_to_top`/`go_to_bottom` (on `Home`/`End` + `CtrlCmd+Arrow` secondary) | TESTED |
+| `Scroll/Page/GoTo*HoverAction` key bindings (ha :171-430) | arrow / page / home-end primaries + `Alt`/`CtrlCmd+Arrow` secondaries, `hoverFocused` | `handle_hover_keydown` inline dispatch (key map ported; `hoverFocused` context key N-A until command registry — Deviation 13) | PORTED |
 | `registerEditorContribution`/`registerEditorAction`/participant registry (hc :22-38) | wire commands + key bindings (same as Monaco) | command registration table (new) | TODO |
 | theming participant `editorHoverBorder` (hc :44-51) | `.hover-row` / `hr` borders | CSS (predecessor DOM plan) | PORTED |
 | `ShowDefinitionPreviewHoverAction` (ha :109-150) | `goToDefinition` then `showContentHover` | — | DEFERRED (goToDefinition not ported) |
@@ -816,6 +837,22 @@ is **not** and must trace to a source line.
     `showAtPosition`). Justification: offset-vs-column is the viewer's data-model
     seam (single-line hover anchors make the two equivalent); the branch
     structure and containment test match source.
+13. **Inline scroll-cluster dispatch, no command registry (Phase 5,
+    increment 1).** Monaco registers `Scroll{Up,Down,Left,Right}HoverAction`,
+    `Page{Up,Down}HoverAction`, and `GoTo{Top,Bottom}HoverAction` as editor
+    commands gated on the `hoverFocused` context key, each delegating to a
+    `ContentHoverWidget` method. The viewer has no command/keybinding registry
+    (the controller-contribution-registry inversion is the outstanding
+    follow-up — Deviation 4), so the eight widget methods are ported faithfully
+    but invoked from the focused hover widget's `keydown` handler
+    (`handle_hover_keydown`) with Monaco's exact key map, including the `Alt+Arrow`
+    page and `CtrlCmd+Arrow` edge secondaries. The `hoverFocused` precondition is
+    implicit (the handler only fires when the widget — `tabIndex=0` — owns focus).
+    The arithmetic itself is unchanged from source; the only behavioral change is
+    replacing the old inline horizontal nudge (`4 × charWidth`, font-dependent)
+    with Monaco's fixed `HORIZONTAL_SCROLLING_BY = 30`. Justification: command-bus
+    seam; the methods and key bindings match source and are validated against the
+    hover conformance specs.
 
 Any new logic line added during Phases 4–7 that is **not** traceable to a cited
 source line must be appended here before that phase's exit gate can be checked.
@@ -869,7 +906,7 @@ green is **necessary, not sufficient**.
 | 2 | hoverOperation | 23 | 23 / 0 / 0 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 3 | controller + utils | 41 | 20 / 16 / 5 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 4 | wrapper + rendered + cHW rest | 78 | 11 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
-| 5 | statusbar + actions + ids + contrib + scroll | ~65 | 0 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 5 | statusbar + actions + ids + contrib + scroll | ~65 | 9 (scroll cluster) / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 6 | markdown verbosity | 13 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 7 | glyph chain | 44 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |
 

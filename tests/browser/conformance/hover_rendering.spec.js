@@ -127,6 +127,74 @@ test('keeps hover inspectable with pointer, wheel, focus, and Escape', async ({ 
   await expect(hover).toHaveCount(0);
 });
 
+test('scrolls the focused hover with the Monaco scroll-cluster keybindings', async ({ page }) => {
+  await page.goto('/');
+  await setHoverFixture(
+    page,
+    'markdown',
+    Array.from({ length: 120 }, (_, index) => `- hover item ${index}`).join('\n'),
+  );
+  await openMainFixture(page);
+
+  await hoverMainSymbol(page);
+  const widget = page.locator('[data-content-widget="hover"]');
+  const hover = widget.locator('.monaco-hover');
+  const content = widget.locator('.monaco-hover-content');
+  await expect(hover).toBeVisible();
+  const scrollTop = () => content.evaluate((node) => node.scrollTop);
+
+  await hover.focus();
+
+  // ScrollDown (DownArrow): one editor line height down.
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(scrollTop, { timeout: 2_000 }).toBeGreaterThan(0);
+  const lineStep = await scrollTop();
+
+  // GoToTop (CtrlCmd+UpArrow secondary keybinding): back to the top.
+  await page.keyboard.press('Control+ArrowUp');
+  await expect.poll(scrollTop, { timeout: 2_000 }).toBe(0);
+
+  // PageDown (Alt+DownArrow secondary keybinding): a full visible page, much
+  // further than a single line.
+  await page.keyboard.press('Alt+ArrowDown');
+  await expect.poll(scrollTop, { timeout: 2_000 }).toBeGreaterThan(lineStep);
+  const pageStep = await scrollTop();
+
+  // GoToBottom (End): all the way to the bottom (at least the page jump).
+  await page.keyboard.press('End');
+  await expect.poll(scrollTop, { timeout: 2_000 }).toBeGreaterThanOrEqual(pageStep);
+});
+
+test('scrolls the focused hover horizontally a fixed step with the arrow keys', async ({ page }) => {
+  const longName = `rendered_${'x'.repeat(320)}`;
+  await page.goto('/');
+  await setHoverFixture(
+    page,
+    'markdown',
+    ['```moonbit', `fn ${longName}() -> Unit {}`, '```'].join('\n'),
+  );
+  await openMainFixture(page);
+
+  await hoverMainSymbol(page);
+  const widget = page.locator('[data-content-widget="hover"]');
+  const hover = widget.locator('.monaco-hover');
+  const content = widget.locator('.monaco-hover-content');
+  await expect(hover).toBeVisible();
+  const scrollLeft = () => content.evaluate((node) => node.scrollLeft);
+
+  await hover.focus();
+
+  // ScrollRight (RightArrow): the fixed HORIZONTAL_SCROLLING_BY (30px) step —
+  // a small nudge, not a page-sized jump.
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(scrollLeft, { timeout: 2_000 }).toBeGreaterThan(0);
+  expect(await scrollLeft()).toBeLessThanOrEqual(31);
+
+  // ScrollLeft (LeftArrow): back to the start.
+  await page.keyboard.press('ArrowLeft');
+  await expect.poll(scrollLeft, { timeout: 2_000 }).toBe(0);
+});
+
 test('scrolls long fenced code horizontally with Monaco hover scrollbar', async ({ page }) => {
   const events = readonlyEvents(page);
   const longName = `rendered_${'x'.repeat(320)}`;

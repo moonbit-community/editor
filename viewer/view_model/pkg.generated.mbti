@@ -82,7 +82,7 @@ pub fn line_decorations_for_line(RenderLine, Array[ViewModelDecoration]) -> Arra
 
 pub fn line_tokens_from_syntax_tokens(String, Int, Array[@syntax.Token], LanguageIdCodec, language_id? : Int) -> LineTokens
 
-pub fn render_line_input_from_render_line(RenderLine, view_decorations? : Array[ViewModelDecoration], space_width? : Double, vertical_scrollbar_size? : Double) -> @view_line_renderer.RenderLineInput
+pub fn render_line_input_from_render_line(RenderLine, view_decorations? : Array[ViewModelDecoration], space_width? : Double, render_whitespace? : @view_line_renderer.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_line_renderer.RenderLineInput
 
 pub fn tag_foreground_color_id(@syntax.HighlightTag) -> Int
 

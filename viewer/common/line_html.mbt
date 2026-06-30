@@ -10,9 +10,16 @@
 pub fn render_line_html(
   line : @view_model.RenderLine,
   view_decorations : Array[@view_model.ViewModelDecoration],
+  render_whitespace? : @view_line_renderer.RenderWhitespace = None,
+  render_control_characters? : Bool = false,
 ) -> String {
   @view_line_renderer.render_view_line2(
-    @view_model.render_line_input_from_render_line(line, view_decorations~),
+    @view_model.render_line_input_from_render_line(
+      line,
+      view_decorations~,
+      render_whitespace~,
+      render_control_characters~,
+    ),
   ).html
 }
 

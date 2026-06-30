@@ -4,18 +4,31 @@ pub(all) struct ViewerOptions {
   soft_wrap : Bool
   tab_size : Int
   wrapping_indent : @view_model.WrappingIndent
+  render_whitespace : @view_line_renderer.RenderWhitespace
+  render_control_characters : Bool
 } derive(Eq, Debug)
 
 ///|
 /// Builds viewer options, normalizing `tab_size` to at least one column.
 /// `wrapping_indent` defaults to `Same`, Monaco's default, and applies only when
-/// `soft_wrap` is on.
+/// `soft_wrap` is on. `render_whitespace` defaults to `Selection`, Monaco's
+/// default — whitespace glyphs render under the active selection.
+/// `render_control_characters` defaults to `true`, also matching Monaco — it
+/// only changes output on lines that contain control characters.
 pub fn ViewerOptions::ViewerOptions(
   soft_wrap? : Bool = false,
   tab_size? : Int = 2,
   wrapping_indent? : @view_model.WrappingIndent = Same,
+  render_whitespace? : @view_line_renderer.RenderWhitespace = Selection,
+  render_control_characters? : Bool = true,
 ) -> ViewerOptions {
-  { soft_wrap, tab_size: tab_size.max(1), wrapping_indent }
+  {
+    soft_wrap,
+    tab_size: tab_size.max(1),
+    wrapping_indent,
+    render_whitespace,
+    render_control_characters,
+  }
 }
 
 ///|

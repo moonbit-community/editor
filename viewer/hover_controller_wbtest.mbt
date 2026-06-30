@@ -28,7 +28,9 @@ test "delayed start arms the operation and suppresses results before the delay" 
   let (proceed, second_wait) = moved.op_trigger_async(2)
   assert_true(proceed)
   assert_true(second_wait.operation.state is HoverOpSecondWait)
-  let async_during_wait = second_wait.op_async_item(2, [markdown_part(10, 14, "x")])
+  let async_during_wait = second_wait.op_async_item(2, [
+    markdown_part(10, 14, "x"),
+  ])
   assert_true(async_during_wait.view is None)
   assert_eq(async_during_wait.operation.parts.length(), 1)
   // The async stream finishes while still in SecondWait: emission stays

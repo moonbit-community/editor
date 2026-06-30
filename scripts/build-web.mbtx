@@ -41,6 +41,18 @@ async fn main {
   if read_api_status != 0 {
     fail("moon build failed with exit code \{read_api_status}")
   }
+  let whitespace_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/whitespace",
+  ])
+  if whitespace_status != 0 {
+    fail("moon build failed with exit code \{whitespace_status}")
+  }
+  let whitespace_selection_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/whitespace_selection",
+  ])
+  if whitespace_selection_status != 0 {
+    fail("moon build failed with exit code \{whitespace_selection_status}")
+  }
 
   let source_dir = "_build/js/debug/build/internal/shell/web"
   let embed_source_dir = "_build/js/debug/build/internal/shell/examples/embedded_viewer"
@@ -48,6 +60,8 @@ async fn main {
   let perf_source_dir = "_build/js/debug/build/tests/browser/moonbit/perf"
   let reveal_source_dir = "_build/js/debug/build/tests/browser/moonbit/reveal"
   let read_api_source_dir = "_build/js/debug/build/tests/browser/moonbit/read_api"
+  let whitespace_source_dir = "_build/js/debug/build/tests/browser/moonbit/whitespace"
+  let whitespace_selection_source_dir = "_build/js/debug/build/tests/browser/moonbit/whitespace_selection"
   let target_dir = "web/dist"
   let browser_tests_dir = "\{target_dir}/browser-tests"
   if !@fs.exists(target_dir) {
@@ -190,6 +204,54 @@ async fn main {
   @fs.write_file(
     "\{browser_tests_dir}/read_api.html",
     browser_test_html("MoonBit Viewer Read API Test", "/browser-tests/read_api.mjs"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  let whitespace_js = @fs.read_file("\{whitespace_source_dir}/whitespace.js").text()
+  @fs.write_file(
+    "\{browser_tests_dir}/whitespace.mjs",
+    whitespace_js.replace(
+      old="//# sourceMappingURL=whitespace.js.map",
+      new="//# sourceMappingURL=whitespace.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/whitespace.mjs.map",
+    @fs.read_file("\{whitespace_source_dir}/whitespace.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/whitespace.html",
+    browser_test_html(
+      "MoonBit Viewer Whitespace Test",
+      "/browser-tests/whitespace.mjs",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  let whitespace_selection_js = @fs.read_file(
+    "\{whitespace_selection_source_dir}/whitespace_selection.js",
+  ).text()
+  @fs.write_file(
+    "\{browser_tests_dir}/whitespace_selection.mjs",
+    whitespace_selection_js.replace(
+      old="//# sourceMappingURL=whitespace_selection.js.map",
+      new="//# sourceMappingURL=whitespace_selection.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/whitespace_selection.mjs.map",
+    @fs.read_file("\{whitespace_selection_source_dir}/whitespace_selection.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/whitespace_selection.html",
+    browser_test_html(
+      "MoonBit Viewer Whitespace Selection Test",
+      "/browser-tests/whitespace_selection.mjs",
+    ),
     create_mode=@fs.CreateOrTruncate,
   )
 

@@ -558,6 +558,38 @@ fn static_route(path : String) -> (String, String)? {
       Some(("browser-tests/reveal.mjs", "text/javascript; charset=utf-8"))
     "/browser-tests/reveal.mjs.map" =>
       Some(("browser-tests/reveal.mjs.map", "application/json; charset=utf-8"))
+    "/browser-tests/read_api.html" =>
+      Some(("browser-tests/read_api.html", "text/html; charset=utf-8"))
+    "/browser-tests/read_api.mjs" =>
+      Some(("browser-tests/read_api.mjs", "text/javascript; charset=utf-8"))
+    "/browser-tests/read_api.mjs.map" =>
+      Some(
+        ("browser-tests/read_api.mjs.map", "application/json; charset=utf-8"),
+      )
+    "/browser-tests/whitespace.html" =>
+      Some(("browser-tests/whitespace.html", "text/html; charset=utf-8"))
+    "/browser-tests/whitespace.mjs" =>
+      Some(("browser-tests/whitespace.mjs", "text/javascript; charset=utf-8"))
+    "/browser-tests/whitespace.mjs.map" =>
+      Some(
+        ("browser-tests/whitespace.mjs.map", "application/json; charset=utf-8"),
+      )
+    "/browser-tests/whitespace_selection.html" =>
+      Some(
+        ("browser-tests/whitespace_selection.html", "text/html; charset=utf-8"),
+      )
+    "/browser-tests/whitespace_selection.mjs" =>
+      Some(
+        (
+          "browser-tests/whitespace_selection.mjs", "text/javascript; charset=utf-8",
+        ),
+      )
+    "/browser-tests/whitespace_selection.mjs.map" =>
+      Some(
+        (
+          "browser-tests/whitespace_selection.mjs.map", "application/json; charset=utf-8",
+        ),
+      )
     _ => None
   }
 }

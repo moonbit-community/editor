@@ -15,6 +15,8 @@ priv struct ViewRenderInput {
   generation : Int
   gutter_width : Double
   space_width : Double
+  render_whitespace : @view_line_renderer.RenderWhitespace
+  render_control_characters : Bool
 }
 
 ///|

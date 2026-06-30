@@ -29,12 +29,16 @@ pub fn render_line_input_from_render_line(
   line : RenderLine,
   view_decorations? : Array[ViewModelDecoration] = [],
   space_width? : Double = 7.2,
+  render_whitespace? : @view_line_renderer.RenderWhitespace = None,
+  render_control_characters? : Bool = false,
   vertical_scrollbar_size? : Double = 0.0,
 ) -> @view_line_renderer.RenderLineInput {
   @view_line_renderer.RenderLineInput::from_view_line(
     view_line_rendering_data_from_render_line(line, view_decorations~),
     line_decorations=line_decorations_for_line(line, view_decorations),
     space_width~,
+    render_whitespace~,
+    render_control_characters~,
     vertical_scrollbar_size~,
   )
 }

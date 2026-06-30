@@ -12,14 +12,66 @@ fn render_line_input_for_viewport(
   viewport : @view_layout.ViewportData,
   index : Int,
   space_width : Double,
+  render_whitespace~ : @view_line_renderer.RenderWhitespace,
+  render_control_characters~ : Bool,
+  selection_view_range~ : @view_line_renderer.ViewRange?,
 ) -> @view_line_renderer.RenderLineInput {
   let line_number = viewport.start_line_number + index
+  let line_data = viewport.lines[index]
   @view_line_renderer.RenderLineInput::from_view_line(
-    viewport.lines[index],
+    line_data,
     line_decorations=viewport.decorations_for_line(line_number),
     space_width~,
+    render_whitespace~,
+    render_control_characters~,
+    selections_on_line=selections_on_line_for(
+      line_number, line_data, render_whitespace, selection_view_range,
+    ),
     vertical_scrollbar_size=editor_vertical_scrollbar_size,
   )
+}
+
+///|
+/// Per-line selected-column offsets for `RenderWhitespace::Selection`, the port
+/// of `viewLine.ts:122-149`. The whitespace renderer only paints dots inside a
+/// selection in this mode, so it needs the columns the selection covers on this
+/// line. Empty in every other mode and when the selection misses the line.
+///
+/// Deviations from the source: the high-contrast `inline-selected-text` push
+/// (`viewLine.ts:137-139`) is dropped — the viewer has no high-contrast theme,
+/// so the gather condition reduces to `render_whitespace == Selection`; and the
+/// viewer carries a single `selection_view_range`, not Monaco's `selections`
+/// array, so the loop is over zero-or-one selection.
+fn selections_on_line_for(
+  line_number : Int,
+  line_data : @view_line_renderer.ViewLineRenderingData,
+  render_whitespace : @view_line_renderer.RenderWhitespace,
+  selection_view_range : @view_line_renderer.ViewRange?,
+) -> Array[@base_common.OffsetRange] {
+  let result : Array[@base_common.OffsetRange] = []
+  guard render_whitespace == Selection else { return result }
+  guard selection_view_range is Some(selection) else { return result }
+  // Selection does not intersect this line.
+  if selection.end_line_number < line_number ||
+    selection.start_line_number > line_number {
+    return result
+  }
+  // On a non-anchor line the selection spans the line's full column extent;
+  // only the anchor lines clip to the selection's own start/end column.
+  let start_column = if selection.start_line_number == line_number {
+    selection.start_column
+  } else {
+    line_data.min_column
+  }
+  let end_column = if selection.end_line_number == line_number {
+    selection.end_column
+  } else {
+    line_data.max_column
+  }
+  if start_column < end_column {
+    result.push(OffsetRange(start_column - 1, end_column - 1))
+  }
+  result
 }
 
 ///|

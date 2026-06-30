@@ -5,6 +5,9 @@ priv struct ViewLinesPrepared {
   view_decorations : Array[@view_model.ViewModelDecoration]
   generation : Int
   space_width : Double
+  render_whitespace : @view_line_renderer.RenderWhitespace
+  render_control_characters : Bool
+  selection_view_range : @view_line_renderer.ViewRange?
 }
 
 ///|
@@ -17,6 +20,13 @@ priv struct ViewLines {
   line_mappings : Array[@view_line_renderer.CharacterMapping]
   mut should_render : Bool
   mut prepared : ViewLinesPrepared?
+  // The selection and whitespace mode of the last render, the viewer analog of
+  // Monaco `ViewLine`'s `_renderedViewLine.input`. They drive the selection-mode
+  // re-render coupling (`onSelectionChanged`, `viewLine.ts:94-100`): a selection
+  // change only invalidates the lines when whitespace is rendered under the
+  // selection.
+  mut last_selection : @view_line_renderer.ViewRange?
+  mut last_render_whitespace : @view_line_renderer.RenderWhitespace
 }
 
 ///|
@@ -33,6 +43,8 @@ fn ViewLines::new(document : @rdom.Document) -> ViewLines {
     line_mappings: [],
     should_render: true,
     prepared: None,
+    last_selection: None,
+    last_render_whitespace: None,
   }
 }
 
@@ -89,7 +101,7 @@ impl ViewPart for ViewLines with fn should_render(self) {
 }
 
 ///|
-impl ViewPart for ViewLines with fn on_view_event(_self, event) {
+impl ViewPart for ViewLines with fn on_view_event(self, event) {
   match event {
     ViewFlushed => true
     // Line content, tokens, and decorations are regenerated together.
@@ -97,6 +109,11 @@ impl ViewPart for ViewLines with fn on_view_event(_self, event) {
     ViewScrollChanged(e) =>
       e.window_changed || e.position_changed || e.dimensions_changed
     ViewConfigurationChanged(e) => e.gutter_width_changed || e.font_changed
+    // `viewLine.ts:94-100` `onSelectionChanged`: a selection change only
+    // dirties the lines when whitespace renders under the selection. Keyed off
+    // the *last rendered* whitespace mode, mirroring Monaco's check of
+    // `_renderedViewLine.input.renderWhitespace`.
+    ViewCursorStateChanged => self.last_render_whitespace == Selection
     _ => false
   }
 }
@@ -127,6 +144,9 @@ impl ViewPart for ViewLines with fn prepare_render(self, context) {
     view_decorations,
     generation: context.input.generation,
     space_width: context.input.space_width,
+    render_whitespace: context.input.render_whitespace,
+    render_control_characters: context.input.render_control_characters,
+    selection_view_range: context.input.selection_view_range,
   })
 }
 
@@ -140,6 +160,9 @@ impl ViewPart for ViewLines with fn render(self, context) {
         prepared.view_decorations,
         prepared.generation,
         prepared.space_width,
+        prepared.render_whitespace,
+        prepared.render_control_characters,
+        prepared.selection_view_range,
       )
       self.view_lines.set_attribute("style", context.content_transform)
     }
@@ -165,10 +188,22 @@ fn ViewLines::render_text(
   view_decorations : Array[@view_model.ViewModelDecoration],
   generation : Int,
   space_width : Double,
+  render_whitespace : @view_line_renderer.RenderWhitespace,
+  render_control_characters : Bool,
+  selection_view_range : @view_line_renderer.ViewRange?,
 ) -> Unit {
   let target = viewport_window(viewport)
   let document = @rdom.document()
-  if generation != self.generation {
+  // In `Selection` mode the per-line input depends on the selection, so a
+  // selection change must rewrite the affected lines even when the generation
+  // and window are unchanged (`viewLine.ts:94-100` `onSelectionChanged`). The
+  // `previous != input` diff inside the full-rewrite branch then limits the
+  // actual HTML writes to lines whose selected columns changed.
+  let selection_invalidated = render_whitespace == Selection &&
+    selection_view_range != self.last_selection
+  self.last_selection = selection_view_range
+  self.last_render_whitespace = render_whitespace
+  if generation != self.generation || selection_invalidated {
     while self.line_nodes.length() > viewport.lines.length() {
       match (self.line_nodes.pop(), self.render_inputs.pop()) {
         (Some(node), _) => self.view_lines.remove_child(node.as_node())
@@ -185,7 +220,14 @@ fn ViewLines::render_text(
     self.render_inputs.clear()
     self.line_mappings.clear()
     for index in 0..<viewport.lines.length() {
-      let input = render_line_input_for_viewport(viewport, index, space_width)
+      let input = render_line_input_for_viewport(
+        viewport,
+        index,
+        space_width,
+        render_whitespace~,
+        render_control_characters~,
+        selection_view_range~,
+      )
       let rewrite_html = match previous_inputs.get(index) {
         Some(previous) => previous != input
         None => true
@@ -229,7 +271,14 @@ fn ViewLines::render_text(
       next_mappings.push(self.line_mappings[line_index - previous.start])
     } else {
       let node = document.create_element("div")
-      let input = render_line_input_for_viewport(viewport, index, space_width)
+      let input = render_line_input_for_viewport(
+        viewport,
+        index,
+        space_width,
+        render_whitespace~,
+        render_control_characters~,
+        selection_view_range~,
+      )
       let mapping = write_line_node(
         node,
         frame.lines[index],

@@ -10,6 +10,24 @@ fn markdown_part(start : Int, end : Int, text : String) -> @hover.HoverPart {
 }
 
 ///|
+/// Test entry: arm a delayed operation for `[start, end)` as if no hover were
+/// shown, the way `on_event` arms one for a fresh anchor (line 1).
+fn HoverController::start_delayed(
+  self : HoverController,
+  start : Int,
+  end : Int,
+  injected_text_index? : Int = -1,
+) -> (HoverEffect, HoverController) {
+  self.start_showing_or_update_hover({
+    start,
+    end,
+    offset: (start + end) / 2,
+    injected_text_index,
+    line: 1,
+  })
+}
+
+///|
 test "delayed start arms the operation and suppresses results before the delay" {
   let controller = HoverController::empty()
   let (effect, armed) = controller.start_delayed(3, 7)

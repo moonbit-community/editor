@@ -10,7 +10,61 @@ priv struct HoverAnchor {
   end : Int
   offset : Int
   injected_text_index : Int
+  /// Model start line of the anchor, for `canAdoptVisibleHover` (Monaco compares
+  /// `showAtPosition.lineNumber` against the new anchor's start line).
+  line : Int
 } derive(Eq)
+
+///|
+/// Monaco `HoverRangeAnchor.equals`: two range anchors are equal when they cover
+/// the same span (the viewer also keys on the injected-text index so an inlay
+/// hint and the text under it are distinct anchors).
+fn hover_anchor_equals(left : HoverAnchor, right : HoverAnchor) -> Bool {
+  left.start == right.start &&
+  left.end == right.end &&
+  left.injected_text_index == right.injected_text_index
+}
+
+///|
+/// Monaco `HoverRangeAnchor.canAdoptVisibleHover`: the visible hover can be kept
+/// for a new anchor when the previous anchor was a range anchor (always true in
+/// the viewer) and the shown position is on the new anchor's start line — i.e.
+/// the two anchors share a model line.
+fn hover_anchor_can_adopt(
+  new_anchor : HoverAnchor,
+  last_anchor : HoverAnchor,
+) -> Bool {
+  last_anchor.line == new_anchor.line
+}
+
+///|
+/// Monaco `IHoverPart.isValidForHoverAnchor` (markdown + marker participants):
+/// the part still applies to the new anchor when its range contains the anchor
+/// range (`startColumn <= anchor.startColumn && endColumn >= anchor.endColumn`,
+/// here in document offsets).
+fn hover_part_valid_for_anchor(
+  part : @hover.HoverPart,
+  anchor : HoverAnchor,
+) -> Bool {
+  let range = hover_part_offset_range(part)
+  range.start <= anchor.start && range.end_exclusive >= anchor.end
+}
+
+///|
+/// Monaco `ContentHoverResult.filter`: keep the parts that are still valid for
+/// the new anchor.
+fn filter_hover_parts(
+  parts : Array[@hover.HoverPart],
+  anchor : HoverAnchor,
+) -> Array[@hover.HoverPart] {
+  let kept : Array[@hover.HoverPart] = []
+  for part in parts {
+    if hover_part_valid_for_anchor(part, anchor) {
+      kept.push(part)
+    }
+  }
+  kept
+}
 
 ///|
 /// The placement decided by the read-after-write measurement pass: which side
@@ -98,12 +152,25 @@ priv enum HoverEffect {
 ///|
 /// Editor hover feature state. The timing lives in the embedded `HoverOperation`
 /// (Monaco's `HoverOperation`); the controller adds the editor-facing concerns
-/// the operation does not: the anchor, the shown view, and its measured
-/// placement.
+/// the operation does not: the in-flight anchor, the currently shown result (the
+/// `_currentResult` analog — its parts, the anchor it was computed for, and
+/// whether it was complete), and the measured placement.
 priv struct HoverController {
+  /// Monaco `_hoverOperation.options.anchor`: the anchor the operation is
+  /// currently computing for (`None` once cleared).
   anchor : HoverAnchor?
   operation : HoverOperation
+  /// Monaco `ContentHoverWidgetWrapper._startHoverOperationIfNecessary`'s
+  /// `insistOnKeepingHoverVisible` for the in-flight operation. Set only by the
+  /// sticky mouse-getting-closer keep, which the viewer handles at the input
+  /// seam, so it is currently always `false` (see the plan's Deviation 11).
+  insist_on_keeping : Bool
+  /// Monaco `_currentResult`: the shown hover parts (`view`), the anchor that
+  /// produced them (`current_anchor`), and whether that result was complete
+  /// (`current_complete`). `view` is `None` exactly when no hover is shown.
   view : HoverView?
+  current_anchor : HoverAnchor?
+  current_complete : Bool
   placement : HoverPlacement?
 } derive(Eq)
 
@@ -112,15 +179,19 @@ fn HoverController::empty() -> HoverController {
   {
     anchor: None,
     operation: HoverOperation::idle(),
+    insist_on_keeping: false,
     view: None,
+    current_anchor: None,
+    current_complete: false,
     placement: None,
   }
 }
 
 ///|
 /// Monaco `HoverOperation.cancel()` paired with hiding the widget: drop the
-/// anchor and the shown view, reset the operation to Idle, and rotate the token
-/// so in-flight timers and streamed async results are dropped at their guards.
+/// in-flight anchor and the shown result, reset the operation to Idle, and rotate
+/// the token so in-flight timers and streamed async results are dropped at their
+/// guards.
 fn HoverController::cleared(self : HoverController) -> HoverController {
   {
     anchor: None,
@@ -130,7 +201,10 @@ fn HoverController::cleared(self : HoverController) -> HoverController {
       parts: [],
       async_done: false,
     },
+    insist_on_keeping: false,
     view: None,
+    current_anchor: None,
+    current_complete: false,
     placement: None,
   }
 }
@@ -147,8 +221,16 @@ fn HoverController::on_event(
         Some(frame) =>
           match
             token_anchor_for_target(frame, target, ctx.view_to_model_offset) {
-            Some((start, end, injected_text_index)) =>
-              self.start_delayed(start, end, injected_text_index~)
+            Some((start, end, injected_text_index)) => {
+              let anchor : HoverAnchor = {
+                start,
+                end,
+                offset: (start + end) / 2,
+                injected_text_index,
+                line: (ctx.offset_to_model_line)(start),
+              }
+              self.start_showing_or_update_hover(anchor)
+            }
             None => (HoverNoEffect, self.cleared())
           }
         None => (HoverNoEffect, self)
@@ -158,36 +240,79 @@ fn HoverController::on_event(
 }
 
 ///|
-/// Monaco `HoverOperation.start(Delayed)`: a new anchor rotates the token and
-/// arms the operation (Idle → FirstWait), asking the viewer to schedule the
-/// async and loading timers. The same anchor keeps the in-flight or shown hover
-/// untouched.
-fn HoverController::start_delayed(
+/// Monaco `ContentHoverWidgetWrapper._startShowingOrUpdateHover`. With no hover
+/// shown, start an operation for the anchor. With one shown, the sticky
+/// mouse-getting-closer keep is handled at the input seam before this point, so
+/// the remaining branches are: the same anchor keeps the hover untouched; a
+/// compatible anchor (same line) keeps the parts still valid for it and kicks a
+/// fresh operation; an incompatible anchor hides the current hover and restarts.
+fn HoverController::start_showing_or_update_hover(
   self : HoverController,
-  start : Int,
-  end : Int,
-  injected_text_index? : Int = -1,
+  anchor : HoverAnchor,
 ) -> (HoverEffect, HoverController) {
-  let same = match self.anchor {
-    Some(anchor) =>
-      anchor.start == start &&
-      anchor.end == end &&
-      anchor.injected_text_index == injected_text_index
+  let content_hover_is_visible = self.view is Some(_)
+  if !content_hover_is_visible {
+    return self.start_hover_operation_if_necessary(anchor, insist=false)
+  }
+  // A hover is shown. The new anchor equals the shown one: keep it untouched.
+  match self.current_anchor {
+    Some(current) =>
+      if hover_anchor_equals(current, anchor) {
+        return (HoverNoEffect, self)
+      }
+    None => ()
+  }
+  let compatible = match self.current_anchor {
+    Some(current) => hover_anchor_can_adopt(anchor, current)
     None => false
   }
-  if same {
-    return (HoverNoEffect, self)
+  if !compatible {
+    // Hide the incompatible hover, then start a fresh operation.
+    let hidden = self.set_current_result([], false, anchor)
+    return hidden.start_hover_operation_if_necessary(anchor, insist=false)
+  }
+  // Compatible: keep the parts still valid for the new anchor (Monaco
+  // `_currentResult.filter(anchor)`, which preserves the previous anchor and
+  // completeness), then kick a fresh operation.
+  let filtered_parts = match self.view {
+    Some(view) => filter_hover_parts(view.parts, anchor)
+    None => []
+  }
+  let result_anchor = match self.current_anchor {
+    Some(current) => current
+    None => anchor
+  }
+  let filtered = self.set_current_result(
+    filtered_parts,
+    self.current_complete,
+    result_anchor,
+  )
+  filtered.start_hover_operation_if_necessary(anchor, insist=false)
+}
+
+///|
+/// Monaco `ContentHoverWidgetWrapper._startHoverOperationIfNecessary`: skip when
+/// the operation is already computing this anchor; otherwise cancel the previous
+/// operation (rotating the token so its timers / async results are dropped) and
+/// arm a fresh delayed operation. The shown result is left untouched — it is
+/// replaced only when the new operation produces one.
+fn HoverController::start_hover_operation_if_necessary(
+  self : HoverController,
+  anchor : HoverAnchor,
+  insist~ : Bool,
+) -> (HoverEffect, HoverController) {
+  match self.anchor {
+    Some(current) =>
+      if hover_anchor_equals(current, anchor) {
+        return (HoverNoEffect, self)
+      }
+    None => ()
   }
   let token = self.operation.token + 1
-  let anchor : HoverAnchor = {
-    start,
-    end,
-    offset: (start + end) / 2,
-    injected_text_index,
-  }
   (
     HoverScheduleDelayed(token),
     {
+      ..self,
       anchor: Some(anchor),
       operation: {
         state: HoverOpFirstWait,
@@ -195,8 +320,7 @@ fn HoverController::start_delayed(
         parts: [],
         async_done: false,
       },
-      view: None,
-      placement: None,
+      insist_on_keeping: insist,
     },
   )
 }
@@ -298,41 +422,95 @@ fn HoverController::op_async_done(
 }
 
 ///|
-/// Monaco `HoverOperation._fireResult`: results are suppressed before the hover
-/// delay (`FirstWait` / `SecondWait`); otherwise the accumulated parts become
-/// the shown view. Placement is reset only when the shown parts actually change,
-/// so streamed additions re-measure but identical re-emits keep their placement.
+/// Monaco `HoverOperation._fireResult` feeding `ContentHoverWidgetWrapper._withResult`.
+/// `_fireResult` suppresses results before the hover delay (`FirstWait` /
+/// `SecondWait`). `_withResult` then gates the swap: while a complete hover is
+/// already shown, a still-incomplete result is held back (no flicker to a partial
+/// result); a complete-but-empty result is held back too when the operation
+/// insisted on keeping the hover visible; otherwise the accumulated parts become
+/// the shown result via `_setCurrentResult`.
 fn HoverController::emit(self : HoverController) -> HoverController {
   match self.operation.state {
     HoverOpFirstWait | HoverOpSecondWait => self
     _ => {
-      if self.operation.parts.length() == 0 {
-        return { ..self, view: None }
+      let result_anchor = match self.anchor {
+        Some(anchor) => anchor
+        None => return self
       }
-      let parts = self.operation.parts.copy()
-      parts.sort_by(@hover.compare_hover_parts)
-      // The fallback anchor span is built inline so the expected `OffsetRange`
-      // type flows from `hover_parts_range`'s parameter (the bare constructor
-      // does not resolve without an expected type on the JS target).
-      let range = @hover.hover_parts_range(
-        parts,
-        match self.anchor {
-          Some(anchor) => OffsetRange(anchor.start, anchor.end)
-          None => OffsetRange(0, 0)
-        },
-      )
-      let new_view : HoverView = { range, parts }
-      let placement = match self.view {
-        Some(existing) =>
-          if existing.parts == new_view.parts {
-            self.placement
-          } else {
-            None
-          }
-        None => None
+      let result_parts = self.operation.parts
+      let result_is_complete = self.operation.state is HoverOpIdle
+      let previous_visible_complete = self.view is Some(_) && self.current_complete
+      let updated = if !previous_visible_complete {
+        self.set_current_result(result_parts, result_is_complete, result_anchor)
+      } else {
+        self
       }
-      { ..self, view: Some(new_view), placement }
+      if !result_is_complete {
+        return updated
+      }
+      let result_empty = result_parts.length() == 0
+      let should_keep_previous = result_empty && self.insist_on_keeping
+      if should_keep_previous {
+        return updated
+      }
+      updated.set_current_result(result_parts, result_is_complete, result_anchor)
     }
+  }
+}
+
+///|
+/// Monaco `ContentHoverWidgetWrapper._setCurrentResult`: dedupe an unchanged
+/// result, treat an empty result as hiding the hover, and otherwise show the
+/// sorted parts. Placement is preserved only when the shown parts are unchanged,
+/// so streamed additions re-measure but identical re-emits keep their placement.
+fn HoverController::set_current_result(
+  self : HoverController,
+  parts : Array[@hover.HoverPart],
+  is_complete : Bool,
+  result_anchor : HoverAnchor,
+) -> HoverController {
+  if parts.length() == 0 {
+    // An empty result hides the hover (Monaco maps it to `null`).
+    return match self.view {
+      None => self
+      Some(_) =>
+        {
+          ..self,
+          view: None,
+          current_anchor: None,
+          current_complete: false,
+          placement: None,
+        }
+    }
+  }
+  let sorted = parts.copy()
+  sorted.sort_by(@hover.compare_hover_parts)
+  // Dedupe: identical shown parts at the same completeness are a no-op.
+  match self.view {
+    Some(existing) =>
+      if existing.parts == sorted && self.current_complete == is_complete {
+        return self
+      }
+    None => ()
+  }
+  // The fallback anchor span is built inline so the expected `OffsetRange` type
+  // flows from `hover_parts_range`'s parameter (the bare constructor does not
+  // resolve without an expected type on the JS target).
+  let range = @hover.hover_parts_range(
+    sorted,
+    OffsetRange(result_anchor.start, result_anchor.end),
+  )
+  let new_view : HoverView = { range, parts: sorted }
+  let placement = match self.view {
+    Some(existing) => if existing.parts == sorted { self.placement } else { None }
+    None => None
+  }
+  {
+    ..self,
+    view: Some(new_view),
+    current_anchor: Some(result_anchor),
+    current_complete: is_complete,
+    placement,
   }
 }
 

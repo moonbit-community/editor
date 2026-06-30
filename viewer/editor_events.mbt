@@ -16,6 +16,9 @@ priv enum EditorEvent {
 priv struct EditorContext {
   frame : @view_model.RenderFrame?
   view_to_model_offset : (@base_common.Position) -> Int
+  /// Model document offset → model line number, the seam the hover
+  /// reconciliation uses for `canAdoptVisibleHover` (same-line anchor adoption).
+  offset_to_model_line : (Int) -> Int
 }
 
 ///|
@@ -25,6 +28,17 @@ fn Viewer::editor_context(self : Viewer) -> EditorContext {
     view_to_model_offset: view_position => {
       self.view_position_to_model_offset(view_position)
     },
+    offset_to_model_line: offset => self.offset_to_model_line(offset),
+  }
+}
+
+///|
+/// Resolves a model document offset to its 1-based model line number through the
+/// model snapshot (1 when there is no model).
+fn Viewer::offset_to_model_line(self : Viewer, offset : Int) -> Int {
+  match self.text_model {
+    Some(model) => model.snapshot().position_at_offset(offset).line_number
+    None => 1
   }
 }
 

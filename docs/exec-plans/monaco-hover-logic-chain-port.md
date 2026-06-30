@@ -360,7 +360,7 @@ text-selection arms, `getAccessibleWidgetContent(+AtIndex)`, `isColorPickerVisib
 
 ---
 
-## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — IN PROGRESS (pure-logic increments 1–2)
+## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — IN PROGRESS (increments 1–3)
 
 Give rendered parts real structure instead of one HTML blob: a
 `RenderedContentHover` analog that owns per-part nodes, supports focus
@@ -392,9 +392,27 @@ Monaco's fresh `RenderedContentHover`. The deferred mouse-move runner now fires
 `react_to_editor_mouse_move` (Monaco's `_reactToEditorMouseMoveRunner` →
 `_reactToEditorMouseMove`) so the grace path re-gates `shouldShowHover` and the
 keep. Validated: the hover conformance specs (incl. keep-open + exact-pixel
-anchor) stay green. `setMinimumDimensions`/`_updateMinimumWidth` and the
-wrapper/rendered DOM rows remain TODO; they land with their consumers (sashes /
-the per-part structure rework) rather than as committed dead code.
+anchor) stay green.
+
+**Increment 3 (shown-hover reconciliation, landed).** The
+`_startShowingOrUpdateHover` / `_startHoverOperationIfNecessary` / `_withResult`
+/ `_setCurrentResult` chain, ported into `HoverController`
+(`hover_controller.mbt`). The controller now tracks the shown `_currentResult`
+(its parts, the anchor that produced them, and whether it was complete)
+separately from the in-flight operation, so: the same anchor keeps the hover
+untouched; a compatible (same model line) anchor keeps the still-valid parts
+(`filter`) and restarts the operation; an incompatible anchor hides then
+restarts; and `_withResult` holds a complete shown hover until the new result
+completes (no flicker to a partial). `canAdoptVisibleHover`,
+`isValidForHoverAnchor`, and `ContentHoverResult.filter` (from the otherwise
+out-of-scope `hoverTypes.ts`/`contentHoverTypes.ts`) are ported inline as
+`hover_anchor_can_adopt` / `hover_part_valid_for_anchor` / `filter_hover_parts`
+in offset space. The anchor's model start line flows through a new
+`EditorContext.offset_to_model_line` seam. Whitebox-tested across the six
+reconciliation branches; the hover conformance specs stay green.
+`setMinimumDimensions`/`_updateMinimumWidth` and the wrapper/rendered DOM rows
+remain TODO; they land with their consumers (sashes / the per-part structure
+rework) rather than as committed dead code.
 
 ### Inventory (Phase 4)
 
@@ -464,11 +482,11 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 | Source member (file:line) | Arithmetic / transition | MoonBit symbol (target) | Status |
 |---|---|---|---|
 | `_initializeHoverParticipants` fan-out (wrap :53-70) | sort by `hoverOrdinal`; on resize/scroll/contents → `participant.handle*` | `RenderedContentHover::wire_participants` (new) | TODO |
-| `_startShowingOrUpdateHover` (wrap :99-149) | 7-branch anchor reconciliation | `start_or_update_hover` (new) | TODO |
-| `_startHoverOperationIfNecessary` (wrap :151-164) | skip if anchor==prev; else cancel + `operation.start` | wraps Phase 2 `HoverOperation` | TODO |
-| `_setCurrentResult` (wrap :166-182) | dedupe; empty→null; show/hide | `set_current_result` (new) | TODO |
-| `_addLoadingMessage` (wrap :184-196) | first participant `createLoadingMessage` | `add_loading_message` (new) | TODO |
-| `_withResult` (wrap :198-217) | complete-vs-partial + insist-keep gating | `with_result` (new) | TODO |
+| `_startShowingOrUpdateHover` (wrap :99-149) | 7-branch anchor reconciliation | `HoverController::start_showing_or_update_hover` (sticky-getting-closer arm pre-handled at the input seam; no-anchor → `cleared`) | TESTED |
+| `_startHoverOperationIfNecessary` (wrap :151-164) | skip if anchor==prev; else cancel + `operation.start` | `HoverController::start_hover_operation_if_necessary` (wraps Phase 2 `HoverOperation`) | TESTED |
+| `_setCurrentResult` (wrap :166-182) | dedupe; empty→null; show/hide | `HoverController::set_current_result` | TESTED |
+| `_addLoadingMessage` (wrap :184-196) | first participant `createLoadingMessage` | loading hover synthesized in `widget_view` (Phase 2) | DEFERRED (participant `createLoadingMessage` seam; loading already shows) |
+| `_withResult` (wrap :198-217) | complete-vs-partial + insist-keep gating | `HoverController::emit` (`_fireResult` suppression + `_withResult` gating; insist arm inert per Deviation 11) | TESTED |
 | `_showHover`/`_hideHover` (wrap :219-232) | build `RenderedContentHover`; `handleHide` fan-out | `show_hover`/`hide_hover` | TODO |
 | `_getHoverContext` (wrap :234-246) | `{hide, onContentsChanged, setMinimumDimensions, focus}` | `HoverContext` record | TODO |
 | `showsOrWillShow` (wrap :249-261) | resizing→true; anchor[0] or null → start | `shows_or_will_show` (new) | TODO |
@@ -752,6 +770,19 @@ is **not** and must trace to a source line.
     result-reconciliation rows land. The distance math is whitebox-tested and the
     keep adds no hide path (it only prevents hides), validated against the hover
     conformance specs.
+12. **Reconciliation predicates in offset space (Phase 4, increment 3).**
+    `HoverRangeAnchor.canAdoptVisibleHover` (same model line),
+    `IHoverPart.isValidForHoverAnchor` (`startColumn <= anchor.startColumn &&
+    endColumn >= anchor.endColumn`), and `ContentHoverResult.filter` come from
+    the otherwise out-of-scope `hoverTypes.ts` / `contentHoverTypes.ts`; they are
+    ported inline (`hover_anchor_can_adopt`, `hover_part_valid_for_anchor`,
+    `filter_hover_parts`) using document **offsets** instead of line/column
+    `Range`s, matching the viewer's offset-based hover anchor. The same-line
+    comparison uses the anchor's model start line, resolved through the new
+    `EditorContext.offset_to_model_line` seam (Monaco reads it off the
+    `showAtPosition`). Justification: offset-vs-column is the viewer's data-model
+    seam (single-line hover anchors make the two equivalent); the branch
+    structure and containment test match source.
 
 Any new logic line added during Phases 4–7 that is **not** traceable to a cited
 source line must be appended here before that phase's exit gate can be checked.
@@ -804,7 +835,7 @@ green is **necessary, not sufficient**.
 | 1/1b | resizable + cHW sizing | 23 | 9 / 11 / 3 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 2 | hoverOperation | 23 | 23 / 0 / 0 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 3 | controller + utils | 41 | 20 / 16 / 5 | ☑ | ☑ | ☑ | ☑ | ☑ |
-| 4 | wrapper + rendered + cHW rest | 78 | 3 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 4 | wrapper + rendered + cHW rest | 78 | 7 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 5 | statusbar + actions + ids + contrib + scroll | ~65 | 0 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 6 | markdown verbosity | 13 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 7 | glyph chain | 44 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |

@@ -1,0 +1,109 @@
+// Phase 4 of `monaco-hover-logic-chain-port.md`, increment 3: the shown-hover
+// reconciliation (`_startShowingOrUpdateHover` / `_withResult` /
+// `_setCurrentResult`). One case per behavior-switching branch.
+
+///|
+fn anchor_at(start : Int, end : Int, line : Int) -> HoverAnchor {
+  { start, end, offset: (start + end) / 2, injected_text_index: -1, line }
+}
+
+///|
+/// A complete shown hover for the `[3, 7)` anchor on line 1, with one markdown
+/// part covering that span.
+fn shown_complete_hover() -> HoverController {
+  let (_, armed) = HoverController::empty().start_delayed(3, 7)
+  let (_, second) = armed.op_trigger_async(1)
+  // Async finishes before the sync compute, so the sync trigger completes
+  // straight to Idle: the shown result is complete.
+  let done = second.op_async_done(1)
+  done.op_trigger_sync(1, [markdown_part(3, 7, "hello")])
+}
+
+///|
+test "reconciliation: the same anchor keeps the shown hover untouched" {
+  let shown = shown_complete_hover()
+  assert_true(shown.view is Some(_))
+  let (effect, after) = shown.start_showing_or_update_hover(anchor_at(3, 7, 1))
+  assert_true(effect is HoverNoEffect)
+  // No operation restart, no result change.
+  assert_true(after == shown)
+}
+
+///|
+test "reconciliation: a compatible anchor keeps the still-valid parts and restarts the operation" {
+  let shown = shown_complete_hover()
+  let token_before = shown.operation.token
+  // (4, 6) is on the same line and inside the shown part's [3, 7) range.
+  let (effect, after) = shown.start_showing_or_update_hover(anchor_at(4, 6, 1))
+  assert_true(effect is HoverScheduleDelayed(_))
+  // The old part survives the filter, so the hover stays visible meanwhile.
+  match after.view {
+    Some(view) => {
+      assert_eq(view.parts.length(), 1)
+      assert_true(view.parts[0] == markdown_part(3, 7, "hello"))
+    }
+    None => fail("expected the compatible hover to stay visible")
+  }
+  // A fresh operation is armed for the new anchor.
+  assert_eq(after.operation.token, token_before + 1)
+  assert_true(after.operation.state is HoverOpFirstWait)
+}
+
+///|
+test "reconciliation: a compatible anchor outside the parts hides the hover then restarts" {
+  let shown = shown_complete_hover()
+  // Same line, but (10, 12) is outside the shown part's [3, 7) range.
+  let (effect, after) = shown.start_showing_or_update_hover(anchor_at(10, 12, 1))
+  assert_true(effect is HoverScheduleDelayed(_))
+  // The filter empties, so the hover hides while the new operation computes.
+  assert_true(after.view is None)
+  assert_true(after.operation.state is HoverOpFirstWait)
+}
+
+///|
+test "reconciliation: an incompatible anchor (different line) hides the hover and restarts" {
+  let shown = shown_complete_hover()
+  let (effect, after) = shown.start_showing_or_update_hover(anchor_at(20, 24, 5))
+  assert_true(effect is HoverScheduleDelayed(_))
+  assert_true(after.view is None)
+  assert_true(after.operation.state is HoverOpFirstWait)
+}
+
+///|
+test "withResult: a complete hover is kept until the new result completes" {
+  let shown = shown_complete_hover()
+  // Move to a compatible anchor: the old part stays visible, a new op is armed.
+  let (_, updating) = shown.start_showing_or_update_hover(anchor_at(4, 6, 1))
+  let token = updating.operation.token
+  assert_eq(updating.current_complete, true)
+  // The new operation produces a different, still-incomplete result.
+  let (_, second) = updating.op_trigger_async(token)
+  let partial = second.op_trigger_sync(token, [markdown_part(4, 6, "new")])
+  assert_true(partial.operation.state is HoverOpWaitingForAsync)
+  // The previous complete hover is still shown — no flicker to the partial.
+  match partial.view {
+    Some(view) => assert_true(view.parts[0] == markdown_part(3, 7, "hello"))
+    None => fail("expected the previous complete hover to remain")
+  }
+  // When the new operation completes, the shown result swaps to the new parts.
+  let completed = partial.op_async_done(token)
+  assert_true(completed.is_complete())
+  match completed.view {
+    Some(view) => assert_true(view.parts[0] == markdown_part(4, 6, "new"))
+    None => fail("expected the completed result to be shown")
+  }
+}
+
+///|
+test "setCurrentResult: an empty complete result hides the shown hover" {
+  let shown = shown_complete_hover()
+  let (_, updating) = shown.start_showing_or_update_hover(anchor_at(4, 6, 1))
+  let token = updating.operation.token
+  let (_, second) = updating.op_trigger_async(token)
+  // The new operation completes empty (sync produced nothing, async done).
+  let done = second.op_async_done(token)
+  let emptied = done.op_trigger_sync(token, [])
+  assert_true(emptied.is_complete())
+  // A complete empty result is not held back (no insist), so the hover hides.
+  assert_true(emptied.view is None)
+}

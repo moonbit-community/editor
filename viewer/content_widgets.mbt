@@ -187,7 +187,7 @@ fn ContentWidgets::render_hover_widget(
       return
     }
   }
-  let (line_number, column) = match
+  let (line_number, anchor_view_column) = match
     line_col_for_offset(frame, hover_view.anchor_offset) {
     Some(anchor) => anchor
     None => {
@@ -195,6 +195,34 @@ fn ContentWidgets::render_hover_widget(
       return
     }
   }
+  // Monaco `RenderedContentHover.computeHoverPositions`: the widget body
+  // left-aligns to the leftmost part column on the anchor line (the secondary
+  // position). The anchor offset is the union-of-parts start, so the secondary
+  // resolves to that same column today; routing it through the ported helper
+  // keeps placement faithful as later increments add the start-column-boundary
+  // clamp and forced ranges.
+  let placement_parts : Array[HoverPositionPart] = []
+  for part in hover_view.parts {
+    let part_range = hover_part_offset_range(part)
+    match
+      (
+        line_col_for_offset(frame, part_range.start),
+        line_col_for_offset(frame, part_range.end_exclusive),
+      ) {
+      (Some((start_line, start_column)), Some((end_line, end_column))) =>
+        placement_parts.push({
+          range: Range(start_line, start_column, end_line, end_column),
+          force_show_at_range: false,
+        })
+      _ => ()
+    }
+  }
+  let (_show_at, show_at_secondary) = compute_hover_positions(
+    Range(line_number, anchor_view_column, line_number, anchor_view_column),
+    placement_parts,
+    1,
+  )
+  let column = show_at_secondary.column
   let widget = self.ensure_hover_widget(context)
   let mut class_name = "monaco-resizable-hover"
   let mut shift_left = 0.0
@@ -666,6 +694,17 @@ fn ContentWidget::style(self : ContentWidget) -> String {
     style = style + ";margin-left:-" + self.shift_left.to_string() + "px"
   }
   style
+}
+
+///|
+fn hover_part_offset_range(
+  part : @hover.HoverPart,
+) -> @base_common.OffsetRange {
+  match part {
+    MarkdownHover(range~, ..) => range
+    MarkerHover(range~, ..) => range
+    LoadingHover(range~, ..) => range
+  }
 }
 
 ///|

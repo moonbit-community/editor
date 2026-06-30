@@ -360,13 +360,29 @@ text-selection arms, `getAccessibleWidgetContent(+AtIndex)`, `isColorPickerVisib
 
 ---
 
-## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — TODO
+## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — IN PROGRESS (pure-logic increment 1)
 
 Give rendered parts real structure instead of one HTML blob: a
 `RenderedContentHover` analog that owns per-part nodes, supports focus
 navigation, applies per-part `hoverHighlight` decorations, and fans
 `onDidResize`/`onDidScroll`/`onContentsChanged` out to participants. Rendering
 stays in `viewer/hover/`; node-ownership/focus wiring is viewer-core.
+
+**Increment 1 (pure-logic-first, landed).** Per the "internal refactor / no
+backward-compat / pure-logic-first" guidance, the side-effect-free placement row
+landed ahead of the DOM rework: `RenderedContentHover.computeHoverPositions`
+ported as `compute_hover_positions` (`viewer/hover_widget_geometry.mbt`),
+whitebox-tested across its branches
+(`viewer/hover_widget_geometry_wbtest.mbt`), and **wired** at the content-widget
+render seam (`content_widgets.mbt::render_hover_widget`) to drive the body's
+horizontal anchor column from the secondary position. The wiring is
+behavior-neutral (proof: the viewer anchors at `hover.range.start`, the
+union-of-parts start = the global minimum start offset, so every on-anchor-line
+part's start column is ≥ that column and the secondary clamp resolves back to
+it). `isMouseGettingCloser` + `computeDistanceFromPointToRectangle`,
+`setMinimumDimensions`/`_updateMinimumWidth`, and the wrapper/rendered DOM rows
+remain TODO; they land with their consumers (sticky `_startShowingOrUpdateHover`
+/ sashes / the per-part structure rework) rather than as committed dead code.
 
 ### Inventory (Phase 4)
 
@@ -449,7 +465,7 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 | `startShowingAtRange` (wrap :306-308) | range anchor → start | `start_showing_at_range` | TODO |
 | `focus` (wrap :342-349) | `hoverPartsCount===1` → focus part 0 else widget | `wrapper_focus` (new) | TODO |
 | `focusedHoverPartIndex`/`focusHoverPartWithIndex`/`containsNode` (wrap :334-353) | part nav + node containment | focus-nav cluster | TODO |
-| `RenderedContentHover.computeHoverPositions` (rend :116-164) | view-line column clamp; `forceShowAtRange` vs anchor start; secondary column min/max | `compute_hover_positions` (new) | TODO |
+| `RenderedContentHover.computeHoverPositions` (rend :116-164) | view-line column clamp; `forceShowAtRange` vs anchor start; secondary column min/max | `compute_hover_positions` (`hover_widget_geometry.mbt`; wired at the render seam) | TESTED |
 | `_renderParts` (rend :274-305) | per-participant render → push `{participant, hoverPart, hoverElement}`; status bar | `render_parts` (new) | TODO |
 | `_createEditorDecorations` (rend :255-272) | fold `Range.plusRange`; set `hoverHighlight` decoration | per-part highlight (replaces single combined range) | TODO |
 | `_registerListenersOnRenderedParts` (rend :323-347) | per-part `tabIndex=0`; FOCUS_IN→index, FOCUS_OUT→−1; `MarkerHover`→copy button | `register_part_listeners` (new) | TODO |
@@ -700,6 +716,17 @@ is **not** and must trace to a source line.
    `enabled:'off'` cancel path are therefore inert until hover options are
    modeled. Justification: option-model port is a separate unit; the snapshot +
    predicate logic is faithful and fully tested.
+10. **`computeHoverPositions` seam (Phase 4, increment 1).** Monaco derives
+    `startColumnBoundary` from the coordinates converter (view-line min column →
+    model column); the viewer passes `1` (Monaco's no-model default) until the
+    converter seam is threaded, and builds the `anchorRange` argument from the
+    hover's single offset anchor (`hover.range.start`) as a zero-width range
+    rather than a model `Range`. The per-part on-anchor-line clamp and
+    `forceShowAtRange` branch are ported and tested but inert in the live path
+    (no viewer participant sets `forceShowAtRange`, and the union-start anchor
+    makes the clamp a no-op), so the wiring is behavior-neutral. Justification:
+    coordinates-converter / single-offset-anchor seams; the arithmetic matches
+    source line-for-line and is whitebox-tested across all branches.
 
 Any new logic line added during Phases 4–7 that is **not** traceable to a cited
 source line must be appended here before that phase's exit gate can be checked.
@@ -752,7 +779,7 @@ green is **necessary, not sufficient**.
 | 1/1b | resizable + cHW sizing | 23 | 9 / 11 / 3 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 2 | hoverOperation | 23 | 23 / 0 / 0 | ☑ | ☑ | ☑ | ☑ | ☑ |
 | 3 | controller + utils | 41 | 20 / 16 / 5 | ☑ | ☑ | ☑ | ☑ | ☑ |
-| 4 | wrapper + rendered + cHW rest | 78 | 0 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 4 | wrapper + rendered + cHW rest | 78 | 1 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 5 | statusbar + actions + ids + contrib + scroll | ~65 | 0 / TBD / TBD | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 6 | markdown verbosity | 13 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |
 | 7 | glyph chain | 44 | 0 / 0 / 0 | ☐ | ☐ | ☐ | ☐ | ☐ |

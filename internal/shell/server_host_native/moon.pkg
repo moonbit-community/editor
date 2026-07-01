@@ -3,7 +3,7 @@ import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/internal/shell/remote_protocol",
   "moonbit-community/editor/internal/shell/server",
-  "moonbit-community/editor/viewer/model",
+  "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/internal/shell/workspace",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",

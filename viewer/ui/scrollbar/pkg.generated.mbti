@@ -2,7 +2,7 @@
 package "moonbit-community/editor/viewer/ui/scrollbar"
 
 import {
-  "moonbit-community/editor/viewer/view_layout",
+  "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/rabbita/dom",
 }
 

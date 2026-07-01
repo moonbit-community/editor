@@ -5,11 +5,11 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
-  "moonbit-community/editor/viewer/languages",
-  "moonbit-community/editor/viewer/markers",
-  "moonbit-community/editor/viewer/model",
-  "moonbit-community/editor/viewer/view_line_renderer",
-  "moonbit-community/editor/viewer/view_model",
+  "moonbit-community/editor/viewer/common/languages",
+  "moonbit-community/editor/viewer/common/markers",
+  "moonbit-community/editor/viewer/common/model",
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom",
   "moonbitlang/core/debug",
 }
@@ -161,10 +161,10 @@ pub(all) struct ViewerOptions {
   soft_wrap : Bool
   tab_size : Int
   wrapping_indent : @view_model.WrappingIndent
-  render_whitespace : @view_line_renderer.RenderWhitespace
+  render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
 } derive(Eq, @debug.Debug)
-pub fn ViewerOptions::ViewerOptions(soft_wrap? : Bool, tab_size? : Int, wrapping_indent? : @view_model.WrappingIndent, render_whitespace? : @view_line_renderer.RenderWhitespace, render_control_characters? : Bool) -> Self
+pub fn ViewerOptions::ViewerOptions(soft_wrap? : Bool, tab_size? : Int, wrapping_indent? : @view_model.WrappingIndent, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool) -> Self
 pub fn ViewerOptions::default() -> Self
 pub fn ViewerOptions::soft_wrap_column_for_content_width(Self, Double, Double) -> Int
 pub fn ViewerOptions::view_model_options(Self, Int) -> @view_model.ViewModelOptions

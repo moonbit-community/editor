@@ -2,36 +2,21 @@
 package "moonbit-community/editor/viewer/common"
 
 import {
-  "moonbit-community/editor/viewer/view_layout",
-  "moonbit-community/editor/viewer/view_line_renderer",
-  "moonbit-community/editor/viewer/view_model",
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/editor/viewer/common/view_model",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn column_from_visible_column(String, Int, Int) -> Int
-
 pub fn escape_html(String) -> String
 
 pub fn hit_test(@view_model.RenderFrame, ViewMetrics, Double, Double) -> MouseTarget
 
-pub fn next_indent_tab_stop(Int, Int) -> Int
-
-pub fn next_render_tab_stop(Int, Int) -> Int
-
-pub fn prev_indent_tab_stop(Int, Int) -> Int
-
-pub fn prev_render_tab_stop(Int, Int) -> Int
-
 pub fn render_line_class(@view_model.RenderLine, Array[@view_model.ViewModelDecoration]) -> String
 
-pub fn render_line_html(@view_model.RenderLine, Array[@view_model.ViewModelDecoration], render_whitespace? : @view_line_renderer.RenderWhitespace, render_control_characters? : Bool) -> String
+pub fn render_line_html(@view_model.RenderLine, Array[@view_model.ViewModelDecoration], render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool) -> String
 
 pub fn render_source_line_html(@view_model.RenderLine) -> String
-
-pub fn to_statusbar_column(String, Int, Int) -> Int
-
-pub fn visible_column_from_column(String, Int, Int) -> Int
 
 // Errors
 

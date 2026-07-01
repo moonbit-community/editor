@@ -9,7 +9,7 @@
 /// Builds the viewport a headless viewer projects for its first frame, the
 /// input `render_line_input_for_viewport` consumes during `render_text`.
 fn viewport_of(viewer : Viewer) -> @view_layout.ViewportData {
-  @view_layout.ViewportData::from_render_frame(
+  @view_model.viewport_data_from_render_frame(
     viewer.test_frame(),
     line_height=editor_line_height,
   )
@@ -24,7 +24,7 @@ test "viewer options default to Selection whitespace and control characters on" 
 
 ///|
 test "viewport line input carries each content-only whitespace mode from options" {
-  let modes : Array[@view_line_renderer.RenderWhitespace] = [
+  let modes : Array[@view_layout.RenderWhitespace] = [
     None,
     Boundary,
     Trailing,

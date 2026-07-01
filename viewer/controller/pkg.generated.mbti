@@ -2,9 +2,9 @@
 package "moonbit-community/editor/viewer/controller"
 
 import {
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/ui/scrollbar",
-  "moonbit-community/editor/viewer/view_layout",
-  "moonbit-community/editor/viewer/view_model",
   "moonbit-community/rabbita/dom",
 }
 

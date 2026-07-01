@@ -4,7 +4,7 @@ pub(all) struct ViewerOptions {
   soft_wrap : Bool
   tab_size : Int
   wrapping_indent : @view_model.WrappingIndent
-  render_whitespace : @view_line_renderer.RenderWhitespace
+  render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
 } derive(Eq, Debug)
 
@@ -19,7 +19,7 @@ pub fn ViewerOptions::ViewerOptions(
   soft_wrap? : Bool = false,
   tab_size? : Int = 2,
   wrapping_indent? : @view_model.WrappingIndent = Same,
-  render_whitespace? : @view_line_renderer.RenderWhitespace = Selection,
+  render_whitespace? : @view_layout.RenderWhitespace = Selection,
   render_control_characters? : Bool = true,
 ) -> ViewerOptions {
   {

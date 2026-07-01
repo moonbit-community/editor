@@ -329,7 +329,7 @@ fn Viewer::on_editor_scroll_changed(
 fn Viewer::dispatch_editor_event(
   self : Viewer,
   event : EditorEvent,
-  sticky_mouse_getting_closer~ : Bool = false,
+  sticky_mouse_getting_closer? : Bool = false,
 ) -> Unit {
   // Escape hides immediately and must drop any deferred mouse-move reaction so a
   // stale target cannot re-open the hover.
@@ -548,9 +548,7 @@ fn Viewer::maybe_notify_hover_resolved(self : Viewer, token : Int) -> Unit {
 
 ///|
 /// Span decorations contributed by every controller for the current state.
-fn Viewer::controller_decorations(
-  self : Viewer,
-) -> Array[@decorations.Decoration] {
+fn Viewer::controller_decorations(self : Viewer) -> Array[@model.Decoration] {
   match self.text_model {
     Some(model) => self.hover.decorations(model.snapshot)
     None => []

@@ -33,18 +33,24 @@ Reference trees are research inputs only. Product code must not import from
 - `viewer`: public browser-backed readonly viewer facade. It owns DOM creation,
   CSS-facing editor structure, browser input capture, widgets, lifecycle events,
   and model installation.
-- `viewer/model`: readonly `TextModel` and `TextSnapshot`. This is the editor
-  model identity used by viewer and language-provider APIs.
-- `viewer/view_model`, `viewer/view_layout`, `viewer/view_line_renderer`,
-  `viewer/common`, and `viewer/decorations`: DOM-free rendering, projection,
-  layout, geometry, and decoration logic.
-- `viewer/cursor`, `viewer/folding`, `viewer/markers`, `viewer/languages`, and
-  `viewer/hover`: focused feature packages used by the viewer.
+- `viewer/common/model`: readonly `TextModel` and `TextSnapshot` plus the
+  decoration types (`Decoration`, `DecorationSet`, merged from the former
+  `viewer/decorations`). This is the editor model identity used by viewer and
+  language-provider APIs.
+- `viewer/common/view_model`, `viewer/common/view_layout` (with the view-line
+  renderer merged in), and `viewer/common/core`: DOM-free rendering, projection,
+  layout, geometry, and cursor-column logic.
+- `viewer/common/cursor`, `viewer/common/folding`, `viewer/common/markers`,
+  `viewer/common/languages`, and `viewer/common/hover`: focused DOM-free feature
+  packages used by the viewer.
+- `viewer/common`: a shrinking residual of the former grab-bag (`line_html`,
+  `mouse_target`) pending the browser carve-up (`mouse_target` →
+  `viewer/browser/controller`).
 - `viewer/controller` and `viewer/ui/scrollbar`: browser-UI subpackages. They
   may use narrow browser bindings but do not import the parent `viewer` package.
-- `viewer/inline_decorations`: a dedicated Monaco conformance/support package
-  for inline-decoration algorithms. It is not part of the live viewer import
-  chain unless a future integration explicitly wires it in.
+- `viewer/common/inline_decorations`: a dedicated Monaco conformance/support
+  package for inline-decoration algorithms. It is not part of the live viewer
+  import chain unless a future integration explicitly wires it in.
 - `base/common`: host-neutral URI, lifecycle, and coordinate primitives.
 - `language`: backend-neutral readonly semantic provider contracts over
   `viewer/model.TextModel`.
@@ -143,10 +149,9 @@ surface.
 ### Rendering
 
 ```text
-viewer/model.TextModel
-  -> viewer/view_model
-  -> viewer/view_layout
-  -> viewer/view_line_renderer
+viewer/common/model.TextModel
+  -> viewer/common/view_model
+  -> viewer/common/view_layout   (view-line renderer merged in)
   -> viewer DOM view
 ```
 

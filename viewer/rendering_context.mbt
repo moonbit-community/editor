@@ -5,8 +5,8 @@ priv struct ViewRenderInput {
   view_model : @view_model.ViewModel?
   layout : @view_layout.ViewLayout
   browser_view_zones : Array[BrowserViewZone]
-  decorations : Array[@decorations.Decoration]
-  selection_view_range : @view_line_renderer.ViewRange?
+  decorations : Array[@model.Decoration]
+  selection_view_range : @view_layout.ViewRange?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   hover_state : HoverController
@@ -15,7 +15,7 @@ priv struct ViewRenderInput {
   generation : Int
   gutter_width : Double
   space_width : Double
-  render_whitespace : @view_line_renderer.RenderWhitespace
+  render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
 }
 
@@ -54,7 +54,7 @@ fn RenderingContext::from_input(
 ) -> RenderingContext {
   let viewport = match input.view_model {
     Some(model) =>
-      @view_layout.ViewportData::from_view_model(
+      @view_model.viewport_data_from_view_model(
         model,
         frame_window(input.frame),
         line_height=editor_line_height,
@@ -62,7 +62,7 @@ fn RenderingContext::from_input(
         layout=input.layout,
       )
     None =>
-      @view_layout.ViewportData::from_render_frame(
+      @view_model.viewport_data_from_render_frame(
         input.frame,
         line_height=editor_line_height,
       )
@@ -122,7 +122,7 @@ priv struct ViewRenderSnapshot {
   dimensions : @view_layout.ScrollDimensions
   gutter_width : Double
   space_width : Double
-  selection_view_range : @view_line_renderer.ViewRange?
+  selection_view_range : @view_layout.ViewRange?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   browser_view_zones : Array[BrowserViewZone]

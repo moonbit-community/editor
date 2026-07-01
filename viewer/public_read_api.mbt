@@ -162,7 +162,7 @@ pub fn Viewer::get_visible_column_from_position(
   guard self.text_model is Some(model) else { return column }
   let position = model.snapshot.validate_position(Position(line_number, column))
   let tab_size = self.options.tab_size
-  @viewer_common.visible_column_from_column(
+  @core.visible_column_from_column(
     model.snapshot.line_text(position.line_number - 1),
     position.column,
     tab_size,
@@ -181,7 +181,7 @@ pub fn Viewer::get_statusbar_column(
   guard self.text_model is Some(model) else { return column }
   let position = model.snapshot.validate_position(Position(line_number, column))
   let tab_size = self.options.tab_size
-  @viewer_common.to_statusbar_column(
+  @core.to_statusbar_column(
     model.snapshot.line_text(position.line_number - 1),
     position.column,
     tab_size,

@@ -5,9 +5,9 @@ priv struct ViewLinesPrepared {
   view_decorations : Array[@view_model.ViewModelDecoration]
   generation : Int
   space_width : Double
-  render_whitespace : @view_line_renderer.RenderWhitespace
+  render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
-  selection_view_range : @view_line_renderer.ViewRange?
+  selection_view_range : @view_layout.ViewRange?
 }
 
 ///|
@@ -16,8 +16,8 @@ priv struct ViewLines {
   mut window : @view_layout.LineWindow
   mut generation : Int
   line_nodes : Array[@rdom.Element]
-  render_inputs : Array[@view_line_renderer.RenderLineInput]
-  line_mappings : Array[@view_line_renderer.CharacterMapping]
+  render_inputs : Array[@view_layout.RenderLineInput]
+  line_mappings : Array[@view_layout.CharacterMapping]
   mut should_render : Bool
   mut prepared : ViewLinesPrepared?
   // The selection and whitespace mode of the last render, the viewer analog of
@@ -25,8 +25,8 @@ priv struct ViewLines {
   // re-render coupling (`onSelectionChanged`, `viewLine.ts:94-100`): a selection
   // change only invalidates the lines when whitespace is rendered under the
   // selection.
-  mut last_selection : @view_line_renderer.ViewRange?
-  mut last_render_whitespace : @view_line_renderer.RenderWhitespace
+  mut last_selection : @view_layout.ViewRange?
+  mut last_render_whitespace : @view_layout.RenderWhitespace
 }
 
 ///|
@@ -71,7 +71,7 @@ fn ViewLines::window_index(self : ViewLines, view_line_number : Int) -> Int {
 fn ViewLines::mapping_at(
   self : ViewLines,
   view_line_number : Int,
-) -> @view_line_renderer.CharacterMapping? {
+) -> @view_layout.CharacterMapping? {
   let index = self.window_index(view_line_number)
   if index < 0 {
     None
@@ -188,9 +188,9 @@ fn ViewLines::render_text(
   view_decorations : Array[@view_model.ViewModelDecoration],
   generation : Int,
   space_width : Double,
-  render_whitespace : @view_line_renderer.RenderWhitespace,
+  render_whitespace : @view_layout.RenderWhitespace,
   render_control_characters : Bool,
-  selection_view_range : @view_line_renderer.ViewRange?,
+  selection_view_range : @view_layout.ViewRange?,
 ) -> Unit {
   let target = viewport_window(viewport)
   let document = @rdom.document()
@@ -256,8 +256,8 @@ fn ViewLines::render_text(
   }
   let previous = self.window
   let next_lines : Array[@rdom.Element] = []
-  let next_inputs : Array[@view_line_renderer.RenderLineInput] = []
-  let next_mappings : Array[@view_line_renderer.CharacterMapping] = []
+  let next_inputs : Array[@view_layout.RenderLineInput] = []
+  let next_mappings : Array[@view_layout.CharacterMapping] = []
   for index in 0..<viewport.lines.length() {
     let line_index = target.start + index
     if line_index >= previous.start && line_index < previous.end {
@@ -320,13 +320,13 @@ fn ViewLines::render_text(
 /// HTML was rewritten, otherwise the carried-over previous mapping. The empty
 /// fallback only occurs on a logic error (no fresh and no previous mapping).
 fn resolve_line_mapping(
-  fresh : @view_line_renderer.CharacterMapping?,
-  previous : @view_line_renderer.CharacterMapping?,
-) -> @view_line_renderer.CharacterMapping {
+  fresh : @view_layout.CharacterMapping?,
+  previous : @view_layout.CharacterMapping?,
+) -> @view_layout.CharacterMapping {
   match (fresh, previous) {
     (Some(mapping), _) => mapping
     (None, Some(mapping)) => mapping
-    (None, None) => @view_line_renderer.CharacterMapping::new(0)
+    (None, None) => @view_layout.CharacterMapping::new(0)
   }
 }
 

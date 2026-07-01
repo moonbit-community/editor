@@ -2,7 +2,7 @@
 priv struct ContentViewOverlaysPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
-  selection_view_range : @view_line_renderer.ViewRange?
+  selection_view_range : @view_layout.ViewRange?
   view_model : @view_model.ViewModel?
   space_width : Double
 }
@@ -146,7 +146,7 @@ fn ContentViewOverlays::render_selection_overlays(
   self : ContentViewOverlays,
   frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
-  selection_view_range : @view_line_renderer.ViewRange?,
+  selection_view_range : @view_layout.ViewRange?,
   view_model : @view_model.ViewModel?,
   space_width : Double,
   measure : (Int, Int, Int) -> Array[(Double, Double)],
@@ -192,7 +192,7 @@ fn ContentViewOverlays::render_selection_overlays(
 /// matching Monaco's end-of-line extension.
 fn collect_line_selection_ranges(
   line : @view_model.RenderLine,
-  range : @view_line_renderer.ViewRange,
+  range : @view_layout.ViewRange,
   view_model : @view_model.ViewModel?,
   top : Int,
   space_width : Double,

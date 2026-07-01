@@ -23,7 +23,10 @@ fn shown_complete_hover() -> HoverController {
 test "reconciliation: the same anchor keeps the shown hover untouched" {
   let shown = shown_complete_hover()
   assert_true(shown.view is Some(_))
-  let (effect, after) = shown.start_showing_or_update_hover(anchor_at(3, 7, 1), false)
+  let (effect, after) = shown.start_showing_or_update_hover(
+    anchor_at(3, 7, 1),
+    false,
+  )
   assert_true(effect is HoverNoEffect)
   // No operation restart, no result change.
   assert_true(after == shown)
@@ -34,7 +37,10 @@ test "reconciliation: a compatible anchor keeps the still-valid parts and restar
   let shown = shown_complete_hover()
   let token_before = shown.operation.token
   // (4, 6) is on the same line and inside the shown part's [3, 7) range.
-  let (effect, after) = shown.start_showing_or_update_hover(anchor_at(4, 6, 1), false)
+  let (effect, after) = shown.start_showing_or_update_hover(
+    anchor_at(4, 6, 1),
+    false,
+  )
   assert_true(effect is HoverScheduleDelayed(_))
   // The old part survives the filter, so the hover stays visible meanwhile.
   match after.view {
@@ -53,7 +59,10 @@ test "reconciliation: a compatible anchor keeps the still-valid parts and restar
 test "reconciliation: a compatible anchor outside the parts hides the hover then restarts" {
   let shown = shown_complete_hover()
   // Same line, but (10, 12) is outside the shown part's [3, 7) range.
-  let (effect, after) = shown.start_showing_or_update_hover(anchor_at(10, 12, 1), false)
+  let (effect, after) = shown.start_showing_or_update_hover(
+    anchor_at(10, 12, 1),
+    false,
+  )
   assert_true(effect is HoverScheduleDelayed(_))
   // The filter empties, so the hover hides while the new operation computes.
   assert_true(after.view is None)
@@ -63,7 +72,10 @@ test "reconciliation: a compatible anchor outside the parts hides the hover then
 ///|
 test "reconciliation: an incompatible anchor (different line) hides the hover and restarts" {
   let shown = shown_complete_hover()
-  let (effect, after) = shown.start_showing_or_update_hover(anchor_at(20, 24, 5), false)
+  let (effect, after) = shown.start_showing_or_update_hover(
+    anchor_at(20, 24, 5),
+    false,
+  )
   assert_true(effect is HoverScheduleDelayed(_))
   assert_true(after.view is None)
   assert_true(after.operation.state is HoverOpFirstWait)
@@ -73,7 +85,10 @@ test "reconciliation: an incompatible anchor (different line) hides the hover an
 test "withResult: a complete hover is kept until the new result completes" {
   let shown = shown_complete_hover()
   // Move to a compatible anchor: the old part stays visible, a new op is armed.
-  let (_, updating) = shown.start_showing_or_update_hover(anchor_at(4, 6, 1), false)
+  let (_, updating) = shown.start_showing_or_update_hover(
+    anchor_at(4, 6, 1),
+    false,
+  )
   let token = updating.operation.token
   assert_eq(updating.current_complete, true)
   // The new operation produces a different, still-incomplete result.
@@ -97,7 +112,10 @@ test "withResult: a complete hover is kept until the new result completes" {
 ///|
 test "setCurrentResult: an empty complete result hides the shown hover" {
   let shown = shown_complete_hover()
-  let (_, updating) = shown.start_showing_or_update_hover(anchor_at(4, 6, 1), false)
+  let (_, updating) = shown.start_showing_or_update_hover(
+    anchor_at(4, 6, 1),
+    false,
+  )
   let token = updating.operation.token
   let (_, second) = updating.op_trigger_async(token)
   // The new operation completes empty (sync produced nothing, async done).
@@ -132,7 +150,10 @@ test "getting closer: keeps the shown hover and kicks an insist-update at the ne
 ///|
 test "getting closer: an empty insist-update keeps the previous hover instead of hiding" {
   let shown = shown_complete_hover()
-  let (_, updating) = shown.start_showing_or_update_hover(anchor_at(20, 24, 5), true)
+  let (_, updating) = shown.start_showing_or_update_hover(
+    anchor_at(20, 24, 5),
+    true,
+  )
   let token = updating.operation.token
   let (_, second) = updating.op_trigger_async(token)
   // The insist-update resolves empty (the new anchor has no hover).
@@ -143,6 +164,7 @@ test "getting closer: an empty insist-update keeps the previous hover instead of
   // `shouldKeepPreviousHoverVisible`), not hidden.
   match resolved.view {
     Some(view) => assert_true(view.parts[0] == markdown_part(3, 7, "hello"))
-    None => fail("expected the previous hover to be kept on an empty insist-update")
+    None =>
+      fail("expected the previous hover to be kept on an empty insist-update")
   }
 }

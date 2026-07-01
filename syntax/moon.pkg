@@ -1,6 +1,6 @@
 import {
   "moonbit-community/editor/base/common" @base_common,
-  "moonbit-community/editor/viewer/model",
+  "moonbit-community/editor/viewer/common/model",
 }
 
 import {

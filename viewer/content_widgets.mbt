@@ -530,13 +530,17 @@ fn HoverWidgetDom::scroll_right(self : HoverWidgetDom) -> Unit {
 /// Monaco `ContentHoverWidget.pageUp`: `scrollTop -= getScrollDimensions().height`
 /// (the visible content height).
 fn HoverWidgetDom::page_up(self : HoverWidgetDom) -> Unit {
-  self.scrollable.native_scroll_by(delta_top=-self.scrollable.native_page_delta())
+  self.scrollable.native_scroll_by(
+    delta_top=-self.scrollable.native_page_delta(),
+  )
 }
 
 ///|
 /// Monaco `ContentHoverWidget.pageDown`: `scrollTop += getScrollDimensions().height`.
 fn HoverWidgetDom::page_down(self : HoverWidgetDom) -> Unit {
-  self.scrollable.native_scroll_by(delta_top=self.scrollable.native_page_delta())
+  self.scrollable.native_scroll_by(
+    delta_top=self.scrollable.native_page_delta(),
+  )
 }
 
 ///|
@@ -770,9 +774,7 @@ fn ContentWidget::style(self : ContentWidget) -> String {
 }
 
 ///|
-fn hover_part_offset_range(
-  part : @hover.HoverPart,
-) -> @base_common.OffsetRange {
+fn hover_part_offset_range(part : @hover.HoverPart) -> @base_common.OffsetRange {
   match part {
     MarkdownHover(range~, ..) => range
     MarkerHover(range~, ..) => range

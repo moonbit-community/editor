@@ -39,7 +39,7 @@ test "line html escapes text and merges span decorations" {
 fn view_decoration(
   start_column : Int,
   end_column : Int,
-  kind : @decorations.DecorationKind,
+  kind : @model.DecorationKind,
   class_name : String,
 ) -> @view_model.ViewModelDecoration {
   {

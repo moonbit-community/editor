@@ -1,0 +1,95 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/common/hover"
+
+import {
+  "moonbit-community/editor/base/common",
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/platform/log",
+  "moonbit-community/editor/viewer/common/languages",
+  "moonbit-community/editor/viewer/common/markers",
+  "moonbit-community/editor/viewer/common/model",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn compare_hover_parts(HoverPart, HoverPart) -> Int
+
+pub let hover_participant_registry : HoverParticipantRegistry
+
+pub fn hover_parts_range(Array[HoverPart], @common.OffsetRange) -> @common.OffsetRange
+
+pub fn register_default_hover_participants(HoverParticipantRegistry) -> Unit
+
+pub fn render_hover_parts(Array[HoverPart], String, language_registry? : @languages.Languages) -> Array[String]
+
+// Errors
+
+// Types and methods
+pub(all) struct ComputedHover {
+  range : @common.OffsetRange
+  parts : Array[HoverPart]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ContentHoverComputer {
+  participants : Array[&HoverParticipant]
+}
+pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
+pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint], emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
+pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
+pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
+
+pub(all) struct HoverComputeContext {
+  model : @model.TextModel
+  anchor_range : @common.OffsetRange
+  offset : Int
+  injected_text_index : Int
+  inlay_hints : Array[@language.InlayHint]
+}
+
+pub(all) enum HoverPart {
+  MarkdownHover(range~ : @common.OffsetRange, contents~ : Array[@language.HoverContent], ordinal~ : Int)
+  MarkerHover(range~ : @common.OffsetRange, marker~ : @markers.Marker)
+  LoadingHover(range~ : @common.OffsetRange, message~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct HoverParticipantRegistry {
+  entries : Array[(HoverParticipantServices) -> &HoverParticipant]
+}
+pub fn HoverParticipantRegistry::build_all(Self, HoverParticipantServices) -> Array[&HoverParticipant]
+pub fn HoverParticipantRegistry::new() -> Self
+pub fn HoverParticipantRegistry::register(Self, (HoverParticipantServices) -> &HoverParticipant) -> Unit
+
+pub(all) struct HoverParticipantServices {
+  languages : @languages.Languages
+  marker_decorations : @markers.MarkerDecorationsService
+  log_service : @log.LogService
+}
+
+pub(all) struct InlayHintHoverParticipant {
+  identity : Unit
+}
+pub fn InlayHintHoverParticipant::new() -> Self
+pub impl HoverParticipant for InlayHintHoverParticipant
+
+pub(all) struct MarkdownHoverParticipant {
+  languages : @languages.Languages
+  log_service : @log.LogService
+}
+pub fn MarkdownHoverParticipant::new(@languages.Languages, @log.LogService) -> Self
+pub impl HoverParticipant for MarkdownHoverParticipant
+
+pub(all) struct MarkerHoverParticipant {
+  marker_decorations : @markers.MarkerDecorationsService
+}
+pub fn MarkerHoverParticipant::new(@markers.MarkerDecorationsService) -> Self
+pub impl HoverParticipant for MarkerHoverParticipant
+
+// Type aliases
+
+// Traits
+pub(open) trait HoverParticipant {
+  fn ordinal(Self) -> Int
+  fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart]
+  async fn compute_async(Self, HoverComputeContext) -> Array[HoverPart] noraise
+}
+

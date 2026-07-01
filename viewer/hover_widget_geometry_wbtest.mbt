@@ -7,7 +7,7 @@ fn pos_part(
   start_column : Int,
   end_line : Int,
   end_column : Int,
-  force~ : Bool = false,
+  force? : Bool = false,
 ) -> HoverPositionPart {
   {
     range: Range(start_line, start_column, end_line, end_column),
@@ -93,7 +93,9 @@ test "computeDistanceFromPointToRectangle: inside, beside, and off a corner" {
   )
   // Directly to the left: the horizontal gap only.
   assert_eq(
-    compute_distance_from_point_to_rectangle(80.0, 125.0, 100.0, 100.0, 50.0, 50.0),
+    compute_distance_from_point_to_rectangle(
+      80.0, 125.0, 100.0, 100.0, 50.0, 50.0,
+    ),
     20.0,
   )
   // Off the bottom-right corner by (50,50): the diagonal gap.

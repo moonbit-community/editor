@@ -11,7 +11,7 @@
 fn selection_line_data(
   min_column : Int,
   max_column : Int,
-) -> @view_line_renderer.ViewLineRenderingData {
+) -> @view_layout.ViewLineRenderingData {
   {
     min_column,
     max_column,
@@ -34,7 +34,7 @@ fn view_range(
   start_column : Int,
   end_line : Int,
   end_column : Int,
-) -> @view_line_renderer.ViewRange {
+) -> @view_layout.ViewRange {
   {
     start_line_number: start_line,
     start_column,

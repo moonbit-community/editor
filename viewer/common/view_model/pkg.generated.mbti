@@ -1,0 +1,490 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/common/view_model"
+
+import {
+  "moonbit-community/editor/base/common",
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/syntax",
+  "moonbit-community/editor/viewer/common/model",
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub const COLOR_ID_COMMENT : Int = 7
+
+pub const COLOR_ID_DEFAULT_BACKGROUND : Int = 2
+
+pub const COLOR_ID_DEFAULT_FOREGROUND : Int = 1
+
+pub const COLOR_ID_FUNCTION : Int = 10
+
+pub const COLOR_ID_INVALID : Int = 13
+
+pub const COLOR_ID_KEYWORD : Int = 3
+
+pub const COLOR_ID_NONE : Int = 0
+
+pub const COLOR_ID_NUMBER : Int = 6
+
+pub const COLOR_ID_PUNCTUATION : Int = 8
+
+pub const COLOR_ID_REGEXP : Int = 12
+
+pub const COLOR_ID_STRING : Int = 5
+
+pub const COLOR_ID_STRING_ESCAPE : Int = 11
+
+pub const COLOR_ID_TYPE : Int = 9
+
+pub const COLOR_ID_VARIABLE : Int = 4
+
+pub const FONT_STYLE_BOLD : Int = 2
+
+pub const FONT_STYLE_ITALIC : Int = 1
+
+pub const FONT_STYLE_NONE : Int = 0
+
+pub const FONT_STYLE_NOT_SET : Int = -1
+
+pub const FONT_STYLE_STRIKETHROUGH : Int = 8
+
+pub const FONT_STYLE_UNDERLINE : Int = 4
+
+pub const METADATA_BACKGROUND_OFFSET : Int = 24
+
+pub const METADATA_BALANCED_BRACKETS_OFFSET : Int = 10
+
+pub const METADATA_FONT_STYLE_OFFSET : Int = 11
+
+pub const METADATA_FOREGROUND_OFFSET : Int = 15
+
+pub const METADATA_LANGUAGEID_OFFSET : Int = 0
+
+pub const METADATA_TOKEN_TYPE_OFFSET : Int = 8
+
+pub const STANDARD_TOKEN_TYPE_COMMENT : Int = 1
+
+pub const STANDARD_TOKEN_TYPE_OTHER : Int = 0
+
+pub const STANDARD_TOKEN_TYPE_REGEX : Int = 3
+
+pub const STANDARD_TOKEN_TYPE_STRING : Int = 2
+
+pub fn build_frame(FrameSource, FrameViewport) -> RenderFrame
+
+pub fn default_token_color_map() -> Array[String]
+
+pub fn injected_text_from_inlay_hints(Array[@language.InlayHint]) -> Array[InjectedText]
+
+pub fn line_decorations_for_line(RenderLine, Array[ViewModelDecoration]) -> Array[@view_layout.LineDecoration]
+
+pub fn line_tokens_from_syntax_tokens(String, Int, Array[@syntax.Token], LanguageIdCodec, language_id? : Int) -> LineTokens
+
+pub fn render_line_input_from_render_line(RenderLine, view_decorations? : Array[ViewModelDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
+
+pub fn tag_foreground_color_id(@syntax.HighlightTag) -> Int
+
+pub fn tag_standard_token_type(@syntax.HighlightTag) -> Int
+
+pub fn tag_to_metadata(@syntax.HighlightTag, font_style? : Int, language_id? : Int) -> UInt
+
+pub fn token_theme_style_block(Array[String]) -> String
+
+pub fn tokenize_line_to_html(String, &IViewLineTokens, Array[String], Int, Int, Int, Bool) -> String
+
+pub fn tokenize_to_string(String, LanguageIdCodec, (String) -> Array[UInt]) -> String
+
+pub fn view_line_rendering_data_from_render_line(RenderLine, view_decorations? : Array[ViewModelDecoration]) -> @view_layout.ViewLineRenderingData
+
+pub fn viewport_data_from_render_frame(RenderFrame, line_height~ : Int) -> @view_layout.ViewportData
+
+pub fn viewport_data_from_view_model(ViewModel, @view_layout.LineWindow, line_height~ : Int, decorations? : Array[@model.Decoration], layout? : @view_layout.ViewLayout) -> @view_layout.ViewportData
+
+// Errors
+
+// Types and methods
+pub struct FoldingModel {
+  folding_ranges : Array[@language.FoldingRange]
+  hidden_ranges : Array[HiddenRange]
+} derive(@debug.Debug)
+pub fn FoldingModel::folding_ranges(Self) -> Array[@language.FoldingRange]
+pub fn FoldingModel::from_folded_ranges(Array[@language.FoldingRange], Int) -> Self
+pub fn FoldingModel::hidden_ranges(Self) -> Array[HiddenRange]
+pub fn FoldingModel::is_line_hidden(Self, Int) -> Bool
+pub fn FoldingModel::visible_line_count(Self, Int) -> Int
+
+pub struct FrameSource {
+  tokenized : TokenizedDocument
+  providers : @language.ProviderResult
+  decorations : Array[@model.Decoration]
+}
+pub fn FrameSource::FrameSource(TokenizedDocument, @model.DecorationSet, @language.ProviderResult) -> Self
+
+pub(all) struct FrameViewport {
+  start_line : Int
+  end_line : Int
+} derive(@debug.Debug)
+
+pub(all) struct HiddenRange {
+  start_line_number : Int
+  end_line_number : Int
+} derive(Eq, @debug.Debug)
+pub fn HiddenRange::HiddenRange(Int, Int) -> Self
+
+pub struct IdentityCoordinatesConverter {
+  identity : Unit
+}
+pub fn IdentityCoordinatesConverter::new() -> Self
+pub impl CoordinatesConverter for IdentityCoordinatesConverter
+
+pub(all) struct InjectedText {
+  position : @common.Position
+  text : String
+  class_name : String
+  source_index : Int
+} derive(Eq, @debug.Debug)
+pub fn InjectedText::InjectedText(@common.Position, String, String, source_index? : Int) -> Self
+pub fn InjectedText::from_inlay_hint(@language.InlayHint, Int) -> Self
+
+pub struct InsertedToken {
+  offset : Int
+  text : String
+  token_metadata : UInt
+}
+pub fn InsertedToken::new(Int, String, UInt) -> Self
+
+pub struct LanguageIdCodec {
+  language_id_to_language : Array[String]
+  language_to_language_id : Map[String, Int]
+  mut next_language_id : Int
+}
+pub fn LanguageIdCodec::decode_language_id(Self, Int) -> String
+pub fn LanguageIdCodec::encode_language_id(Self, String) -> Int
+pub fn LanguageIdCodec::new() -> Self
+pub fn LanguageIdCodec::register(Self, String) -> Int
+
+pub(all) struct LineBreaksComputer {
+  wrapping_column : Int
+  tab_size : Int
+  wrapping_indent : WrappingIndent
+} derive(Eq, @debug.Debug)
+pub fn LineBreaksComputer::LineBreaksComputer(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
+pub fn LineBreaksComputer::compute_model_line_projection(Self, Int, String) -> ModelLineProjectionData
+pub fn LineBreaksComputer::compute_projected_line_projection(Self, Int, ProjectedTextLine) -> ModelLineProjectionData
+
+pub struct LineTokens {
+  tokens : Array[UInt]
+  tokens_count : Int
+  text : String
+  language_id_codec : LanguageIdCodec
+}
+pub fn LineTokens::convert_to_end_offset(Array[UInt], Int) -> Unit
+pub fn LineTokens::create_empty(String, LanguageIdCodec) -> Self
+pub fn LineTokens::create_from_text_and_metadata(Array[(String, UInt)], LanguageIdCodec) -> Self
+pub fn LineTokens::default_token_metadata() -> UInt
+pub fn LineTokens::find_index_in_tokens_array(Array[UInt], Int) -> Int
+pub fn LineTokens::get_start_offset(Self, Int) -> Int
+pub fn LineTokens::get_text_length(Self) -> Int
+pub fn LineTokens::inflate(Self) -> &IViewLineTokens
+pub fn LineTokens::new(Array[UInt], String, LanguageIdCodec) -> Self
+pub fn LineTokens::slice_and_inflate(Self, Int, Int, Int) -> &IViewLineTokens
+pub fn LineTokens::slice_zero_copy(Self, @common.OffsetRange) -> &IViewLineTokens
+pub fn LineTokens::with_inserted(Self, Array[InsertedToken]) -> Self
+
+pub struct ModelLineProjection {
+  projections : Array[ModelLineProjectionData]
+  model_line_start_view_indices : Array[Int]
+  view_line_segments : Array[ModelLineProjectionSegment]
+}
+pub fn ModelLineProjection::build(ViewModelLinesFromModelAsIs, LineBreaksComputer) -> Self
+pub fn ModelLineProjection::model_position_to_view_position(Self, @common.Position) -> @common.Position
+pub fn ModelLineProjection::projected_line_for_model_line(Self, Int) -> ProjectedTextLine
+pub fn ModelLineProjection::segment_for_view_line_number(Self, Int) -> ModelLineProjectionSegment
+pub fn ModelLineProjection::view_line_count(Self) -> Int
+pub fn ModelLineProjection::view_position_to_model_position(Self, @common.Position) -> @common.Position
+
+pub(all) struct ModelLineProjectionData {
+  model_line_number : Int
+  line_length : Int
+  projected_line : ProjectedTextLine
+  segments : Array[ModelLineProjectionSegment]
+} derive(Eq, @debug.Debug)
+pub fn ModelLineProjectionData::ModelLineProjectionData(Int, Int, ProjectedTextLine, Array[ModelLineProjectionSegment]) -> Self
+pub fn ModelLineProjectionData::segment_at_view_line_index(Self, Int) -> ModelLineProjectionSegment
+pub fn ModelLineProjectionData::view_line_count(Self) -> Int
+pub fn ModelLineProjectionData::view_line_index_for_model_column(Self, Int) -> Int
+pub fn ModelLineProjectionData::view_line_index_for_projected_column(Self, Int) -> Int
+
+pub(all) struct ModelLineProjectionSegment {
+  model_line_number : Int
+  start_offset : Int
+  end_offset : Int
+  start_column : Int
+  end_column : Int
+  start_visible_column : Int
+  continues_with_wrapped_line : Bool
+  wrapped_text_indent_length : Int
+} derive(Eq, @debug.Debug)
+
+pub struct ProjectedCoordinatesConverter {
+  projection : ModelLineProjection
+}
+pub fn ProjectedCoordinatesConverter::new(ViewModelLinesFromProjectedModel) -> Self
+pub impl CoordinatesConverter for ProjectedCoordinatesConverter
+
+pub(all) struct ProjectedLinePart {
+  start : Int
+  end : Int
+  kind : ProjectedLinePartKind
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ProjectedLinePartKind {
+  SourceSegment(model_start~ : Int, model_end~ : Int)
+  InjectedSegment(model_column~ : Int, injected_text_index~ : Int, class_name~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ProjectedTextLine {
+  text : String
+  model_line_length : Int
+  model_columns : Array[Int]
+  injected_text_indices : Array[Int]
+  model_to_projected_columns : Array[Int]
+  parts : Array[ProjectedLinePart]
+} derive(Eq, @debug.Debug)
+pub fn ProjectedTextLine::from_injected_text(String, Array[InjectedText]) -> Self
+pub fn ProjectedTextLine::identity(String) -> Self
+pub fn ProjectedTextLine::injected_text_index_at_projected_column(Self, Int) -> Int
+pub fn ProjectedTextLine::model_column_to_projected_column(Self, Int) -> Int
+pub fn ProjectedTextLine::projected_column_to_model_column(Self, Int) -> Int
+
+pub struct RangePriorityQueueImpl {
+  ranges : Array[@common.OffsetRange]
+}
+pub fn RangePriorityQueueImpl::add_range(Self, @common.OffsetRange) -> Unit
+pub fn RangePriorityQueueImpl::add_range_and_resize(Self, @common.OffsetRange, Int) -> Unit
+pub fn RangePriorityQueueImpl::delete(Self, Int) -> Unit
+pub fn RangePriorityQueueImpl::get_ranges(Self) -> Array[@common.OffsetRange]
+pub fn RangePriorityQueueImpl::min(Self) -> Int?
+pub fn RangePriorityQueueImpl::new() -> Self
+pub fn RangePriorityQueueImpl::remove_min(Self) -> Int?
+
+pub(all) struct RenderFrame {
+  version : Int
+  language_id : String
+  line_count : Int
+  viewport : FrameViewport
+  lines : Array[RenderLine]
+  diagnostics : Array[@language.Diagnostic]
+  hovers : Array[@language.Hover]
+}
+pub impl ToJson for RenderFrame
+
+pub(all) struct RenderLine {
+  line_number : Int
+  offset : Int
+  text : String
+  model_columns : Array[Int]
+  injected_text_indices : Array[Int]
+  tokens : &IViewLineTokens
+  injected_inline_decorations : Array[@view_layout.InlineDecoration]
+}
+pub fn RenderLine::injected_text_index_at_column(Self, Int) -> Int
+pub fn RenderLine::model_column_at_column(Self, Int) -> Int
+pub fn RenderLine::model_line_start_offset(Self) -> Int
+pub fn RenderLine::source_offset_at_column(Self, Int) -> Int
+pub fn RenderLine::view_column_at_source_offset(Self, Int) -> Int
+
+pub(all) struct Selection {
+  selection_start : @common.Position
+  position : @common.Position
+} derive(Eq, @debug.Debug)
+pub fn Selection::direction(Self) -> SelectionDirection
+pub fn Selection::end(Self) -> @common.Position
+pub fn Selection::from_positions(@common.Position, @common.Position) -> Self
+pub fn Selection::get_position(Self) -> @common.Position
+pub fn Selection::get_selection_start(Self) -> @common.Position
+pub fn Selection::is_empty(Self) -> Bool
+pub fn Selection::new(@common.Position, @common.Position) -> Self
+pub fn Selection::start(Self) -> @common.Position
+
+pub(all) enum SelectionDirection {
+  LTR
+  RTL
+} derive(Eq, @debug.Debug)
+
+type TokenMetadata
+pub fn TokenMetadata::contains_balanced_brackets(UInt) -> Bool
+pub fn TokenMetadata::get_background(UInt) -> Int
+pub fn TokenMetadata::get_class_name_from_metadata(UInt) -> String
+pub fn TokenMetadata::get_font_style(UInt) -> Int
+pub fn TokenMetadata::get_foreground(UInt) -> Int
+pub fn TokenMetadata::get_inline_style_from_metadata(UInt, Array[String]) -> String
+pub fn TokenMetadata::get_language_id(UInt) -> Int
+pub fn TokenMetadata::get_presentation_from_metadata(UInt) -> TokenPresentation
+pub fn TokenMetadata::get_token_type(UInt) -> Int
+
+pub struct TokenPresentation {
+  foreground : Int
+  italic : Bool
+  bold : Bool
+  underline : Bool
+  strikethrough : Bool
+}
+
+pub struct TokenizedDocument {
+  snapshot : @model.TextSnapshot
+  token_count : Int
+  line_tokens : Array[LineTokens]
+}
+pub fn TokenizedDocument::build(@model.TextSnapshot, Array[@syntax.Token]) -> Self
+pub fn TokenizedDocument::line_tokens_for_line(Self, Int) -> LineTokens
+
+pub struct ViewModel {
+  source : FrameSource
+  lines : ViewModelLines
+  decorations : ViewModelDecorations
+  coordinates_converter : ViewModelCoordinatesConverter
+}
+pub fn ViewModel::ViewModel(FrameSource) -> Self
+pub fn ViewModel::coordinates_converter(Self) -> ViewModelCoordinatesConverter
+pub fn ViewModel::decorations(Self) -> ViewModelDecorations
+pub fn ViewModel::get_hidden_areas(Self) -> Array[HiddenRange]
+pub fn ViewModel::get_line_max_column(Self, Int) -> Int
+pub fn ViewModel::get_line_min_column(Self, Int) -> Int
+pub fn ViewModel::language_id(Self) -> String
+pub fn ViewModel::line_count(Self) -> Int
+pub fn ViewModel::lines(Self) -> ViewModelLines
+pub fn ViewModel::model_line_max_column(Self, Int) -> Int
+pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
+pub fn ViewModel::render_frame(Self, FrameViewport) -> RenderFrame
+pub fn ViewModel::to_model_visible_ranges(Self, @view_layout.ViewRange) -> Array[@common.Range]
+pub fn ViewModel::version(Self) -> Int
+pub fn ViewModel::with_options(FrameSource, ViewModelOptions) -> Self
+pub fn ViewModel::with_options_and_folding(FrameSource, ViewModelOptions, FoldingModel) -> Self
+pub fn ViewModel::with_options_and_inlay_hints(FrameSource, ViewModelOptions, Array[@language.InlayHint]) -> Self
+pub fn ViewModel::with_options_folding_and_inlay_hints(FrameSource, ViewModelOptions, FoldingModel, Array[@language.InlayHint]) -> Self
+
+pub(all) enum ViewModelCoordinatesConverter {
+  Identity(IdentityCoordinatesConverter)
+  Projected(ProjectedCoordinatesConverter)
+}
+pub impl CoordinatesConverter for ViewModelCoordinatesConverter
+
+pub(all) struct ViewModelDecoration {
+  range : @view_layout.ViewRange
+  kind : @model.DecorationKind
+  class_name : String
+  inline_class_name : String?
+  show_if_collapsed : Bool
+} derive(Eq, @debug.Debug)
+pub fn ViewModelDecoration::columns_on_view_line(Self, Int, Int) -> (Int, Int)?
+
+pub struct ViewModelDecorations {
+  converter : ViewModelCoordinatesConverter
+  decorations : Array[ViewModelDecoration]
+}
+pub fn ViewModelDecorations::new(ViewModelCoordinatesConverter, Array[@model.Decoration]) -> Self
+pub fn ViewModelDecorations::to_view_decorations(Self, Array[@model.Decoration]) -> Array[ViewModelDecoration]
+pub fn ViewModelDecorations::view_decorations(Self) -> Array[ViewModelDecoration]
+
+pub(all) enum ViewModelLines {
+  ModelAsIs(ViewModelLinesFromModelAsIs)
+  ProjectedModel(ViewModelLinesFromProjectedModel)
+}
+pub fn ViewModelLines::get_hidden_areas(Self) -> Array[HiddenRange]
+pub fn ViewModelLines::get_view_line_content(Self, Int) -> String
+pub fn ViewModelLines::get_view_line_max_column(Self, Int) -> Int
+pub fn ViewModelLines::get_view_line_min_column(Self, Int) -> Int
+pub fn ViewModelLines::is_model_line_hidden(Self, Int) -> Bool
+pub fn ViewModelLines::line_count(Self) -> Int
+pub fn ViewModelLines::model_line_number_of_view_line(Self, Int) -> Int
+pub fn ViewModelLines::render_line(Self, Int) -> RenderLine
+pub fn ViewModelLines::view_line_rendering_data(Self, Int, view_decorations? : Array[ViewModelDecoration]) -> @view_layout.ViewLineRenderingData
+
+pub struct ViewModelLinesFromModelAsIs {
+  source : FrameSource
+  visible_model_line_numbers : Array[Int]
+  hidden_model_lines : Array[Bool]
+  injected_text_by_model_line : Array[Array[InjectedText]]
+}
+pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(Self) -> Array[HiddenRange]
+pub fn ViewModelLinesFromModelAsIs::get_model_line_content(Self, Int) -> String
+pub fn ViewModelLinesFromModelAsIs::get_view_line_content(Self, Int) -> String
+pub fn ViewModelLinesFromModelAsIs::get_view_line_max_column(Self, Int) -> Int
+pub fn ViewModelLinesFromModelAsIs::get_view_line_min_column(Self, Int) -> Int
+pub fn ViewModelLinesFromModelAsIs::is_model_line_hidden(Self, Int) -> Bool
+pub fn ViewModelLinesFromModelAsIs::line_count(Self) -> Int
+pub fn ViewModelLinesFromModelAsIs::model_line_count(Self) -> Int
+pub fn ViewModelLinesFromModelAsIs::model_line_number_of_view_line(Self, Int) -> Int
+pub fn ViewModelLinesFromModelAsIs::model_line_tokens(Self, Int) -> LineTokens
+pub fn ViewModelLinesFromModelAsIs::new(FrameSource) -> Self
+pub fn ViewModelLinesFromModelAsIs::projected_text_line(Self, Int) -> ProjectedTextLine
+pub fn ViewModelLinesFromModelAsIs::render_line(Self, Int) -> RenderLine
+pub fn ViewModelLinesFromModelAsIs::render_model_line(Self, Int) -> RenderLine
+pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(Self, Int, view_decorations? : Array[ViewModelDecoration]) -> @view_layout.ViewLineRenderingData
+pub fn ViewModelLinesFromModelAsIs::with_folding_model(FrameSource, FoldingModel) -> Self
+pub fn ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(FrameSource, FoldingModel, Array[InjectedText]) -> Self
+pub fn ViewModelLinesFromModelAsIs::with_injected_text(FrameSource, Array[InjectedText]) -> Self
+
+pub struct ViewModelLinesFromProjectedModel {
+  base : ViewModelLinesFromModelAsIs
+  projection : ModelLineProjection
+  tab_size : Int
+}
+pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(Self) -> Array[HiddenRange]
+pub fn ViewModelLinesFromProjectedModel::get_view_line_content(Self, Int) -> String
+pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(Self, Int) -> Int
+pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(Self, Int) -> Int
+pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(Self, Int) -> Bool
+pub fn ViewModelLinesFromProjectedModel::line_count(Self) -> Int
+pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, Int) -> Int
+pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(Self, @common.Position) -> @common.Position
+pub fn ViewModelLinesFromProjectedModel::new(ViewModelLinesFromModelAsIs, LineBreaksComputer) -> Self
+pub fn ViewModelLinesFromProjectedModel::render_line(Self, Int) -> RenderLine
+pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(Self, Int, view_decorations? : Array[ViewModelDecoration]) -> @view_layout.ViewLineRenderingData
+pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(Self, @common.Position) -> @common.Position
+
+pub(all) struct ViewModelOptions {
+  soft_wrap_column : Int
+  tab_size : Int
+  wrapping_indent : WrappingIndent
+} derive(Eq, @debug.Debug)
+pub fn ViewModelOptions::ViewModelOptions(soft_wrap_column? : Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
+pub fn ViewModelOptions::is_soft_wrap_enabled(Self) -> Bool
+pub fn ViewModelOptions::no_wrap() -> Self
+pub fn ViewModelOptions::soft_wrap(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
+
+pub(all) enum WrappingIndent {
+  None
+  Same
+  Indent
+  DeepIndent
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+pub(open) trait CoordinatesConverter {
+  fn model_position_to_view_position(Self, @common.Position) -> @common.Position
+  fn view_position_to_model_position(Self, @common.Position) -> @common.Position
+  fn model_range_to_view_range(Self, @view_layout.ViewRange) -> @view_layout.ViewRange
+  fn view_range_to_model_range(Self, @view_layout.ViewRange) -> @view_layout.ViewRange
+}
+
+pub trait IViewLineTokens {
+  fn get_count(Self) -> Int
+  fn get_standard_token_type(Self, Int) -> Int
+  fn get_foreground(Self, Int) -> Int
+  fn get_end_offset(Self, Int) -> Int
+  fn get_class_name(Self, Int) -> String
+  fn get_inline_style(Self, Int, Array[String]) -> String
+  fn get_presentation(Self, Int) -> TokenPresentation
+  fn find_token_index_at_offset(Self, Int) -> Int
+  fn get_line_content(Self) -> String
+  fn get_metadata(Self, Int) -> UInt
+  fn get_language_id(Self, Int) -> String
+  fn get_token_text(Self, Int) -> String
+  fn for_each(Self, (Int) -> Unit) -> Unit
+}
+

@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/common/core"
+
+// Values
+pub fn column_from_visible_column(String, Int, Int) -> Int
+
+pub fn next_indent_tab_stop(Int, Int) -> Int
+
+pub fn next_render_tab_stop(Int, Int) -> Int
+
+pub fn prev_indent_tab_stop(Int, Int) -> Int
+
+pub fn prev_render_tab_stop(Int, Int) -> Int
+
+pub fn to_statusbar_column(String, Int, Int) -> Int
+
+pub fn visible_column_from_column(String, Int, Int) -> Int
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

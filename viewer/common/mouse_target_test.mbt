@@ -9,7 +9,7 @@ fn hit_test_frame(
   )
   let source = @view_model.FrameSource(
     tokenized,
-    @decorations.DecorationSet::empty(),
+    @model.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
   let viewport = match viewport {
@@ -28,7 +28,7 @@ fn projected_hit_test_frame() -> @view_model.RenderFrame {
   )
   let source = @view_model.FrameSource(
     tokenized,
-    @decorations.DecorationSet::empty(),
+    @model.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
   let view_model = @view_model.ViewModel::with_options(
@@ -50,7 +50,7 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
   )
   let source = @view_model.FrameSource(
     tokenized,
-    @decorations.DecorationSet::empty(),
+    @model.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
   let view_model = @view_model.ViewModel::with_options_and_inlay_hints(

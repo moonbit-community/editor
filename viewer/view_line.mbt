@@ -12,13 +12,13 @@ fn render_line_input_for_viewport(
   viewport : @view_layout.ViewportData,
   index : Int,
   space_width : Double,
-  render_whitespace~ : @view_line_renderer.RenderWhitespace,
+  render_whitespace~ : @view_layout.RenderWhitespace,
   render_control_characters~ : Bool,
-  selection_view_range~ : @view_line_renderer.ViewRange?,
-) -> @view_line_renderer.RenderLineInput {
+  selection_view_range~ : @view_layout.ViewRange?,
+) -> @view_layout.RenderLineInput {
   let line_number = viewport.start_line_number + index
   let line_data = viewport.lines[index]
-  @view_line_renderer.RenderLineInput::from_view_line(
+  @view_layout.RenderLineInput::from_view_line(
     line_data,
     line_decorations=viewport.decorations_for_line(line_number),
     space_width~,
@@ -44,9 +44,9 @@ fn render_line_input_for_viewport(
 /// array, so the loop is over zero-or-one selection.
 fn selections_on_line_for(
   line_number : Int,
-  line_data : @view_line_renderer.ViewLineRenderingData,
-  render_whitespace : @view_line_renderer.RenderWhitespace,
-  selection_view_range : @view_line_renderer.ViewRange?,
+  line_data : @view_layout.ViewLineRenderingData,
+  render_whitespace : @view_layout.RenderWhitespace,
+  selection_view_range : @view_layout.ViewRange?,
 ) -> Array[@base_common.OffsetRange] {
   let result : Array[@base_common.OffsetRange] = []
   guard render_whitespace == Selection else { return result }
@@ -84,10 +84,10 @@ fn write_line_node(
   node : @rdom.Element,
   line : @view_model.RenderLine,
   view_decorations : Array[@view_model.ViewModelDecoration],
-  input : @view_line_renderer.RenderLineInput,
+  input : @view_layout.RenderLineInput,
   top : Int,
   rewrite_html~ : Bool,
-) -> @view_line_renderer.CharacterMapping? {
+) -> @view_layout.CharacterMapping? {
   node.set_attribute(
     "class",
     @viewer_common.render_line_class(line, view_decorations),
@@ -95,7 +95,7 @@ fn write_line_node(
   node.set_attribute("data-line", line.line_number.to_string())
   node.set_attribute("style", line_node_style(top))
   if rewrite_html {
-    let output = @view_line_renderer.render_view_line2(input)
+    let output = @view_layout.render_view_line2(input)
     node.set_inner_html(output.html)
     Some(output.character_mapping)
   } else {

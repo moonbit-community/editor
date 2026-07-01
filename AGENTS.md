@@ -3,12 +3,17 @@
 ## Project Shape
 
 - Public product code lives at the repository root in MoonBit packages:
-  `base/common`, `language`, `platform/log`, `syntax`,
-  `syntax/lang_*`, `viewer`, `viewer/common`, `viewer/controller`,
-  `viewer/cursor`, `viewer/decorations`, `viewer/folding`, `viewer/hover`,
-  `viewer/inline_decorations`, `viewer/languages`, `viewer/markers`,
-  `viewer/model`, `viewer/ui/scrollbar`, `viewer/view_line_renderer`,
-  `viewer/view_model`, and `viewer/view_layout`.
+  `base/common`, `language`, `platform/log`, `syntax`, `syntax/lang_*`,
+  `viewer`, and the DOM-free common tier under `viewer/common/*`:
+  `viewer/common/core`, `viewer/common/cursor`, `viewer/common/folding`,
+  `viewer/common/hover`, `viewer/common/inline_decorations`,
+  `viewer/common/languages`, `viewer/common/markers`, `viewer/common/model`
+  (decorations merged in), `viewer/common/view_model`, and
+  `viewer/common/view_layout` (view-line renderer merged in). Browser-tier UI
+  lives in `viewer/controller` and `viewer/ui/scrollbar`; `viewer/common` itself
+  is a shrinking residual (`line_html`, `mouse_target`) pending the browser
+  carve-up. See `docs/exec-plans/viewer-directory-mirror.md` and the Viewer
+  Three-Tier Mirror section of `docs/architecture.md`.
 - Reference shell/backend code lives under `internal/shell`: `workspace`,
   `remote_protocol`, `workbench`, `web`, `widgets/file_tree`, `server`,
   `server_host_native`, and `examples/embedded_viewer`. These packages are

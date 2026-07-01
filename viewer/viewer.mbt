@@ -223,11 +223,11 @@ pub fn Viewer::Viewer(
   }
   // Marker decoration changes drive a render refresh (the event-driven
   // replacement for the diagnostics-path explicit re-render; plan increment E).
-  viewer.services.marker_decorations.on_did_change_marker_decorations(model => if viewer.is_current_model(
-      model,
-    ) {
+  viewer.services.marker_decorations.on_did_change_marker_decorations(model => {
+    if viewer.is_current_model(model) {
       viewer.render_feature_update()
-    })
+    }
+  })
   |> ignore
   viewer
 }

@@ -214,7 +214,7 @@ fn HoverController::on_event(
   self : HoverController,
   event : EditorEvent,
   ctx : EditorContext,
-  sticky_mouse_getting_closer~ : Bool = false,
+  sticky_mouse_getting_closer? : Bool = false,
 ) -> (HoverEffect, HoverController) {
   match event {
     MouseMoved(target) =>
@@ -231,8 +231,7 @@ fn HoverController::on_event(
                 line: (ctx.offset_to_model_line)(start),
               }
               self.start_showing_or_update_hover(
-                anchor,
-                sticky_mouse_getting_closer,
+                anchor, sticky_mouse_getting_closer,
               )
             }
             None =>
@@ -458,7 +457,8 @@ fn HoverController::emit(self : HoverController) -> HoverController {
       }
       let result_parts = self.operation.parts
       let result_is_complete = self.operation.state is HoverOpIdle
-      let previous_visible_complete = self.view is Some(_) && self.current_complete
+      let previous_visible_complete = self.view is Some(_) &&
+        self.current_complete
       let updated = if !previous_visible_complete {
         self.set_current_result(result_parts, result_is_complete, result_anchor)
       } else {
@@ -472,7 +472,9 @@ fn HoverController::emit(self : HoverController) -> HoverController {
       if should_keep_previous {
         return updated
       }
-      updated.set_current_result(result_parts, result_is_complete, result_anchor)
+      updated.set_current_result(
+        result_parts, result_is_complete, result_anchor,
+      )
     }
   }
 }
@@ -521,7 +523,12 @@ fn HoverController::set_current_result(
   )
   let new_view : HoverView = { range, parts: sorted }
   let placement = match self.view {
-    Some(existing) => if existing.parts == sorted { self.placement } else { None }
+    Some(existing) =>
+      if existing.parts == sorted {
+        self.placement
+      } else {
+        None
+      }
     None => None
   }
   {
@@ -554,7 +561,7 @@ fn HoverController::measured(
 fn HoverController::decorations(
   self : HoverController,
   snapshot : @model.TextSnapshot,
-) -> Array[@decorations.Decoration] {
+) -> Array[@model.Decoration] {
   // The hover view holds an offset span (the widget anchors by offset);
   // decorations are line/column `Range`, so convert at this boundary.
   match self.view {

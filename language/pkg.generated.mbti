@@ -3,7 +3,7 @@ package "moonbit-community/editor/language"
 
 import {
   "moonbit-community/editor/base/common",
-  "moonbit-community/editor/viewer/model",
+  "moonbit-community/editor/viewer/common/model",
   "moonbitlang/core/debug",
 }
 

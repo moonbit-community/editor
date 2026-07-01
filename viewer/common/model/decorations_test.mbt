@@ -1,0 +1,14 @@
+///|
+test "finds decorations by range and position" {
+  let first = @model.Decoration(
+    Range(1, 3, 1, 6),
+    Diagnostic,
+    "diag-error",
+    message="fixture",
+  )
+  let second = @model.Decoration(Range(1, 11, 1, 13), SearchMatch, "search-hit")
+  let set = DecorationSet::from_array([first, second])
+  assert_eq(set.between(Range(1, 5, 1, 12)).length(), 2)
+  assert_eq(set.at_position(Position(1, 4)).length(), 1)
+  assert_eq(set.at_position(Position(1, 9)).length(), 0)
+}

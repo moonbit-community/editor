@@ -5,7 +5,11 @@
 // multi-cursor modifier) so each source branch has a case that takes it.
 
 ///|
-fn mods(ctrl~ : Bool = false, meta~ : Bool = false, alt~ : Bool = false) -> EventModifiers {
+fn mods(
+  ctrl? : Bool = false,
+  meta? : Bool = false,
+  alt? : Bool = false,
+) -> EventModifiers {
   { ctrl, meta, alt }
 }
 
@@ -31,7 +35,9 @@ test "isTriggerModifierPressed inverts the multi-cursor modifier" {
   assert_true(is_trigger_modifier_pressed(MultiCursorAlt, mods(ctrl=true)))
   assert_true(is_trigger_modifier_pressed(MultiCursorAlt, mods(meta=true)))
   assert_false(is_trigger_modifier_pressed(MultiCursorAlt, mods(alt=true)))
-  assert_false(is_trigger_modifier_pressed(MultiCursorAlt, EventModifiers::none()))
+  assert_false(
+    is_trigger_modifier_pressed(MultiCursorAlt, EventModifiers::none()),
+  )
   // Multi-cursor = Ctrl or Meta -> trigger is Alt.
   assert_true(is_trigger_modifier_pressed(MultiCursorCtrl, mods(alt=true)))
   assert_false(is_trigger_modifier_pressed(MultiCursorCtrl, mods(ctrl=true)))
@@ -42,11 +48,19 @@ test "isTriggerModifierPressed inverts the multi-cursor modifier" {
 ///|
 test "shouldShowHover gates on the enabled setting and trigger modifier" {
   // 'on' always shows; 'off' never shows; both regardless of modifiers.
-  assert_true(should_show_hover(HoverEnabledOn, MultiCursorAlt, EventModifiers::none()))
-  assert_false(should_show_hover(HoverEnabledOff, MultiCursorAlt, mods(ctrl=true)))
+  assert_true(
+    should_show_hover(HoverEnabledOn, MultiCursorAlt, EventModifiers::none()),
+  )
+  assert_false(
+    should_show_hover(HoverEnabledOff, MultiCursorAlt, mods(ctrl=true)),
+  )
   // 'onKeyboardModifier' defers to the trigger modifier.
   assert_true(
-    should_show_hover(HoverEnabledOnKeyboardModifier, MultiCursorAlt, mods(meta=true)),
+    should_show_hover(
+      HoverEnabledOnKeyboardModifier,
+      MultiCursorAlt,
+      mods(meta=true),
+    ),
   )
   assert_false(
     should_show_hover(
@@ -87,7 +101,11 @@ test "shouldKeepHoverWidgetVisible tracks the pointer-on-widget flag" {
 test "hover settings default to enabled-on, sticky, 300ms hiding delay" {
   let settings = HoverSettings::defaults()
   assert_true(
-    should_show_hover(settings.enabled, hover_multi_cursor_modifier, EventModifiers::none()),
+    should_show_hover(
+      settings.enabled,
+      hover_multi_cursor_modifier,
+      EventModifiers::none(),
+    ),
   )
   assert_true(settings.sticky)
   assert_eq(settings.hiding_delay, 300)

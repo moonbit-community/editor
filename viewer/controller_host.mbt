@@ -6,7 +6,7 @@
 ///|
 fn Viewer::pointer_handler_helper(
   self : Viewer,
-  view : View,
+  view : @view.View,
 ) -> @controller.PointerHandlerHelper {
   {
     view_root: view.root,

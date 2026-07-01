@@ -5,7 +5,7 @@
 /// `viewer/controller` `MouseHandler`, which the viewer builds here with a
 /// `PointerHandlerHelper` closing over the view — the local analog of Monaco's
 /// `View._createPointerHandlerHelper`.
-fn Viewer::hook_view_input(self : Viewer, view : View) -> Unit {
+fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   let handler = @controller.MouseHandler::new(self.pointer_handler_helper(view))
   self.mouse_handler = Some(handler)
   view.root.add_event_listener("mousemove", event => {
@@ -115,7 +115,7 @@ extern "js" fn mouse_alt_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.alt
 /// the derived gutter width feed the layout model and every later hit
 /// test. DOM scroll offsets are treated only as browser reveal deltas;
 /// `ViewLayout` owns the editor scroll truth.
-fn Viewer::measure(self : Viewer, view : View) -> Unit {
+fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
   let rect = view.root.get_bounding_client_rect()
   let probe_width = view.probe.get_bounding_client_rect().get_width()
   if probe_width > 0.0 {

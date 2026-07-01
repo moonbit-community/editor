@@ -12,7 +12,7 @@ content widget.
   container pair, the hover widget's DOM (`HoverWidgetDom`), dirty flag, and
   prepared render input. `pub(all)` for the same reason as
   `viewer/browser/view_parts/view_zones`'s types — its `ViewPart` trait impl
-  lives in `viewer/view_part.mbt`, not here.
+  lives in `viewer/browser/view/view_part.mbt`, not here.
 - `render_hover_widget` / `ensure_hover_widget`: positions, sizes, and
   (once, read-after-write) measures the hover widget, mirroring Monaco's
   `RenderedContentHover`/`ResizableContentWidget` placement logic.

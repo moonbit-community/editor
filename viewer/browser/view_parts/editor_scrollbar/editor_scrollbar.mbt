@@ -2,9 +2,8 @@
 // The custom scrollbar geometry/DOM itself lives in `viewer/ui/scrollbar`
 // (Monaco's `base/browser/ui/scrollbar/`); this package is the thin
 // view-part wrapper around it. The `ViewPart` trait impl lives in
-// `viewer/view_part.mbt` (destined for `browser/view/`), not here — see the
-// exec-plan's cycle backlog and `viewer/browser/view_parts/view_zones`'s
-// README for why.
+// `viewer/browser/view/view_part.mbt`, not here — see the exec-plan's cycle
+// backlog and `viewer/browser/view_parts/view_zones`'s README for why.
 
 ///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes

@@ -1,6 +1,6 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/viewZones/viewZones.ts`.
-// The `ViewPart` trait impl for `ViewZones` lives in `viewer/view_part.mbt`
-// (destined for `browser/view/`), not here: MoonBit's orphan rule only lets
+// The `ViewPart` trait impl for `ViewZones` lives in
+// `viewer/browser/view/view_part.mbt`, not here: MoonBit's orphan rule only lets
 // the trait-owning package implement a trait for a foreign type, and
 // `browser/view/` needs the concrete view-part types anyway (`View`'s fields,
 // the `ViewPartHandle` enum) — keeping the impls there is what keeps this

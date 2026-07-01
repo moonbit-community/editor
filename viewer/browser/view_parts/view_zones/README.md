@@ -12,7 +12,7 @@ container and the DOM nodes of each browser-facing view zone.
   construct/read it directly.
 - `ViewZones`: the DOM container, its dirty flag, and the prepared render
   input for one frame. `pub(all)` for the same reason as `BrowserViewZone` —
-  its `ViewPart` trait impl lives in `viewer/view_part.mbt`, not here.
+  its `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, not here.
 - `ViewZones::render_view_zones`: places each visible zone's node at its
   computed top/height.
 

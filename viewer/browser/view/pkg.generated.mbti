@@ -1,0 +1,82 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser/view"
+
+import {
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
+  "moonbit-community/editor/viewer/browser/view_parts/editor_scrollbar",
+  "moonbit-community/editor/viewer/browser/view_parts/margin",
+  "moonbit-community/editor/viewer/browser/view_parts/overlay_widgets",
+  "moonbit-community/editor/viewer/browser/view_parts/selections",
+  "moonbit-community/editor/viewer/browser/view_parts/view_lines",
+  "moonbit-community/editor/viewer/browser/view_parts/view_zones",
+  "moonbit-community/editor/viewer/common/languages",
+  "moonbit-community/editor/viewer/common/model",
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/editor/viewer/contrib/hover",
+  "moonbit-community/editor/viewer/ui/scrollbar",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+pub fn frame_window(@view_model.RenderFrame) -> @view_layout.LineWindow
+
+// Errors
+
+// Types and methods
+pub(all) struct View {
+  root : @dom.Element
+  probe : @dom.Element
+  message_text : @dom.Element
+  overflow_guard : @dom.Element
+  view_lines : @view_lines.ViewLines
+  view_zones : @view_zones.ViewZones
+  content_view_overlays : @selections.ContentViewOverlays
+  margin_view_overlays : @margin.MarginViewOverlays
+  content_widgets : @content_widgets.ContentWidgets
+  overlay_widgets : @overlay_widgets.OverlayWidgets
+  editor_scrollbar : @editor_scrollbar.EditorScrollbar
+  // private fields
+}
+pub fn View::build() -> Self
+pub fn View::is_line_rendered(Self, Int) -> Bool
+pub fn View::line_width(Self, Int, Int) -> Double
+pub fn View::measure_line_selection(Self, Int, Int, Int, keep_empty? : Bool) -> Array[(Double, Double)]
+pub fn View::offset_for_column(Self, Int, Int) -> Double
+pub fn View::render(Self, ViewContext, ViewRenderInput) -> Unit
+pub fn View::render_empty(Self, String) -> Unit
+
+pub(all) struct ViewContext {
+  root : @dom.Element
+  languages : @languages.Languages
+  handle_hover_mousedown : (@dom.Event, @dom.MouseEvent) -> Unit
+  handle_hover_keydown : (@content_widgets.HoverWidgetDom, @dom.Event, @dom.KeyboardEvent) -> Unit
+  keep_hover_open : () -> Unit
+  hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
+  measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
+}
+
+pub(all) struct ViewRenderInput {
+  frame : @view_model.RenderFrame
+  view_model : @view_model.ViewModel?
+  layout : @view_layout.ViewLayout
+  browser_view_zones : Array[@view_zones.BrowserViewZone]
+  decorations : Array[@model.Decoration]
+  selection_view_range : @view_layout.ViewRange?
+  folding_ranges : Array[@language.FoldingRange]
+  folded_ranges : Array[@language.FoldingRange]
+  hover_state : @hover.HoverController
+  on_toggle_fold : (Int) -> Unit
+  on_hover_measured : (Bool, Double, Double) -> Unit
+  generation : Int
+  gutter_width : Double
+  space_width : Double
+  render_whitespace : @view_layout.RenderWhitespace
+  render_control_characters : Bool
+}
+
+// Type aliases
+
+// Traits
+

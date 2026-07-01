@@ -246,7 +246,7 @@ fn Viewer::send_reveal_range(
 /// Monaco `ViewLines.renderText` horizontal step (`viewLines.ts:623`–`:648`).
 /// Called from `flush_render` after the lines are in the DOM. Keeps the request
 /// pending if the line is not yet rendered, so a later frame can flush it.
-fn Viewer::flush_horizontal_reveal(self : Viewer, view : View) -> Unit {
+fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
   guard self.pending_horizontal_reveal is Some(request) else { return }
   // The line is not in the rendered window yet — keep waiting.
   guard view.is_line_rendered(request.view_line_number) else { return }

@@ -5,13 +5,11 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
-  "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
   "moonbitlang/core/debug",
 }
@@ -46,16 +44,6 @@ pub(all) struct ScrolledVisiblePosition {
   left : Double
   height : Double
 } derive(Eq, @debug.Debug)
-
-pub(all) struct ViewContext {
-  root : @dom.Element
-  languages : @languages.Languages
-  handle_hover_mousedown : (@dom.Event, @dom.MouseEvent) -> Unit
-  handle_hover_keydown : (@content_widgets.HoverWidgetDom, @dom.Event, @dom.KeyboardEvent) -> Unit
-  keep_hover_open : () -> Unit
-  hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
-  measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
-}
 
 pub(all) enum ViewStatePolicy {
   PreserveAnchor

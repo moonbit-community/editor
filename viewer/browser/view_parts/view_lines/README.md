@@ -12,7 +12,7 @@ into this one package since `viewLine.ts` has no consumer besides `ViewLines`.
   only on entering lines or a changed content generation), and the retained
   `CharacterMapping`s hit-testing and selection measurement read off it.
   `pub(all)` for the same reason as `viewer/browser/view_parts/view_zones`'s
-  types — its `ViewPart` trait impl lives in `viewer/view_part.mbt`, not here.
+  types — its `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, not here.
 - `write_line_number_node` / `line_node_style` / `is_first_view_line_for_model_line`:
   `pub` — also used by `viewer/margin.mbt`'s line-number gutter and
   folding-marker render, which position their nodes the same way `ViewLines`

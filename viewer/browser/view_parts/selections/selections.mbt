@@ -3,8 +3,8 @@
 // `vscode/src/vs/editor/browser/view/viewOverlays.ts` (`ContentViewOverlays`),
 // merged into one concrete type here since selection highlighting is the
 // only dynamic overlay this viewer registers. The `ViewPart` trait impl for
-// `ContentViewOverlays` lives in `viewer/view_part.mbt` (destined for
-// `browser/view/`), not here — see the exec-plan's cycle backlog and
+// `ContentViewOverlays` lives in `viewer/browser/view/view_part.mbt`, not
+// here — see the exec-plan's cycle backlog and
 // `viewer/browser/view_parts/view_zones`'s README for why.
 
 ///|

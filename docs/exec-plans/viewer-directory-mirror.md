@@ -1,7 +1,7 @@
 # Viewer ↔ Monaco Directory-Structure Mirror (platform tiers)
 
-Status: in progress (A, B, C landed on branch `viewer-directory-mirror`; D–I
-remain) — Date: 2026-06-30.
+Status: in progress (A, B, C, E (7/7), D landed on branch
+`viewer-directory-mirror`; F–I remain) — Date: 2026-07-01.
 
 Refactor (no behavior change). Mirror Monaco's `vs/editor` directory tree as
 MoonBit packages **at directory granularity** under three tiers —

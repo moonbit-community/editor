@@ -10,7 +10,7 @@ view-part wrapper: the custom scrollbar geometry/DOM itself lives in
 - `EditorScrollbar`: owns one `ScrollableElementDom` (the lines-content
   scrollable wrapper) and the dirty flag. `pub(all)` for the same reason as
   `viewer/browser/view_parts/view_zones`'s types — its `ViewPart` trait impl
-  lives in `viewer/view_part.mbt`, not here.
+  lives in `viewer/browser/view/view_part.mbt`, not here.
 - `wrapper` / `content` / `scrollable`: accessors the root `viewer` package's
   input-hookup glue (`hook_view_input`) and other view parts (`view.mbt`'s
   `View::build`) need.

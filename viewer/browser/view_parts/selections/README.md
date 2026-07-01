@@ -19,7 +19,7 @@ identified by its `.view-overlays` DOM class and `selections.css` styling.
 - `ContentViewOverlays`: the `.view-overlays` container, its dirty flag, and
   the prepared render input for one frame. `pub(all)` for the same reason as
   `viewer/browser/view_parts/view_zones`'s types — its `ViewPart` trait impl
-  lives in `viewer/view_part.mbt`, not here.
+  lives in `viewer/browser/view/view_part.mbt`, not here.
 - `render_selection_overlays`: paints the selection highlight as DOM-measured
   rectangles with rounded/reverse corners, reading pixel rects through the
   `measure` closure (`ViewContext.measure_line_selection`, off the live line

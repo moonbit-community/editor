@@ -11,7 +11,7 @@ the same `.margin` DOM region, so this port keeps them in one package).
   line-number layer), its dirty flag, and the prepared render input for one
   frame. `pub(all)` for the same reason as
   `viewer/browser/view_parts/view_zones`'s types — its `ViewPart` trait impl
-  lives in `viewer/view_part.mbt`, not here.
+  lives in `viewer/browser/view/view_part.mbt`, not here.
 - `render_line_numbers`: the line-number gutter recycler, mirroring
   `viewer/browser/view_parts/view_lines`'s text-line recycler (reuses its
   `viewport_window` / `write_line_number_node` / `line_node_style`).

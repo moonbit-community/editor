@@ -3,7 +3,14 @@
 /// overflow guard, root scheduling, and an ordered list of stateful parts.
 /// Each part owns its own DOM nodes, private state, dirty flag, prepare step,
 /// and write step.
-priv struct View {
+///
+/// `pub(all)`: `Viewer` (root `viewer` package) holds `view : View?` and
+/// reads several fields directly (`root`, `probe`, `overflow_guard`,
+/// `view_lines`, `editor_scrollbar`, `content_widgets`) from `view_host.mbt`,
+/// `input.mbt`, `hit_test_dom.mbt`, `controller_host.mbt`, and `reveal.mbt` —
+/// the foreign-method rule keeps those `Viewer::` methods out of this
+/// package, so cross-package field access is the only option.
+pub(all) struct View {
   root : @rdom.Element
   probe : @rdom.Element
   message_text : @rdom.Element
@@ -15,17 +22,19 @@ priv struct View {
   content_widgets : @content_widgets.ContentWidgets
   overlay_widgets : @overlay_widgets.OverlayWidgets
   editor_scrollbar : @editor_scrollbar.EditorScrollbar
-  view_parts : Array[ViewPartHandle]
-  mut last_snapshot : ViewRenderSnapshot?
+  priv view_parts : Array[ViewPartHandle]
+  priv mut last_snapshot : ViewRenderSnapshot?
 }
 
 ///|
-fn frame_window(frame : @view_model.RenderFrame) -> @view_layout.LineWindow {
+/// `pub`: `Viewer::synced_window_frame` (`view_host.mbt`) needs the same
+/// window derivation to decide whether a rebuild is due.
+pub fn frame_window(frame : @view_model.RenderFrame) -> @view_layout.LineWindow {
   { start: frame.viewport.start_line, end: frame.viewport.end_line }
 }
 
 ///|
-fn View::build() -> View {
+pub fn View::build() -> View {
   let document = @rdom.document()
   let root = document.create_element("section")
   root.set_attribute("class", view_root_class("source-empty"))
@@ -95,7 +104,7 @@ fn view_root_class(source_state : String) -> String {
 
 ///|
 /// Shows the host-provided placeholder when no document frame is loaded.
-fn View::render_empty(self : View, placeholder : String) -> Unit {
+pub fn View::render_empty(self : View, placeholder : String) -> Unit {
   self.root.set_attribute("class", view_root_class("source-empty"))
   self.message_text.set_node_value(@js.Nullable::from_option(Some(placeholder)))
   self.last_snapshot = None
@@ -117,7 +126,7 @@ fn View::mark_parts_dirty(self : View) -> Unit {
 /// Monaco-shaped coordinated rendering: collect dirty view parts, let them
 /// observe viewport data, render text lines first, then prepare/write the
 /// remaining browser concerns.
-fn View::render(
+pub fn View::render(
   self : View,
   view_context : ViewContext,
   input : ViewRenderInput,

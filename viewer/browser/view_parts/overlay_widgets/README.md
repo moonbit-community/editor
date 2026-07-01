@@ -10,7 +10,7 @@ is just the DOM shell — its `ViewPart` render/`prepare_render` are no-ops.
 - `OverlayWidgets`: the `.overlayWidgets` / `.overflowingOverlayWidgets`
   container pair and their dirty flag. `pub(all)` for the same reason as
   `viewer/browser/view_parts/view_zones`'s types — its `ViewPart` trait impl
-  lives in `viewer/view_part.mbt`, not here.
+  lives in `viewer/browser/view/view_part.mbt`, not here.
 
 ## Boundaries
 

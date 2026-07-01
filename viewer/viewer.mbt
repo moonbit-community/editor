@@ -67,7 +67,7 @@ pub struct Viewer {
   priv mut char_width : Double
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
-  priv mut view : View?
+  priv mut view : @view.View?
   priv mut render_pending : Bool
   priv mut measure_requested : Bool
   priv mut pending_rendered : PendingRendered?
@@ -334,7 +334,7 @@ pub fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   if self.view is Some(_) {
     return
   }
-  let view = View::build()
+  let view = @view.View::build()
   view.root.set_attribute("data-theme", self.theme)
   host.append_child(view.root.as_node())
   self.view = Some(view)

@@ -2,9 +2,8 @@
 // line-number gutter) and the folding-marker half of
 // `vscode/src/vs/editor/contrib/folding/browser/foldingDecorations.ts`. The
 // `ViewPart` trait impl for `MarginViewOverlays` lives in
-// `viewer/view_part.mbt` (destined for `browser/view/`), not here — see the
-// exec-plan's cycle backlog and `viewer/browser/view_parts/view_zones`'s
-// README for why.
+// `viewer/browser/view/view_part.mbt`, not here — see the exec-plan's cycle
+// backlog and `viewer/browser/view_parts/view_zones`'s README for why.
 
 ///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes

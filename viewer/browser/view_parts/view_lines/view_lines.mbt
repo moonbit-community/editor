@@ -1,9 +1,8 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/viewLines/viewLines.ts`
 // (`ViewLines`, the recycler) and `viewLine.ts` (the per-line render input +
 // DOM write). The `ViewPart` trait impl for `ViewLines` lives in
-// `viewer/view_part.mbt` (destined for `browser/view/`), not here — see the
-// exec-plan's cycle backlog and `viewer/browser/view_parts/view_zones`'s
-// README for why.
+// `viewer/browser/view/view_part.mbt`, not here — see the exec-plan's cycle
+// backlog and `viewer/browser/view_parts/view_zones`'s README for why.
 
 ///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes

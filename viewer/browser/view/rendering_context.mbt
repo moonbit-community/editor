@@ -1,6 +1,10 @@
 ///|
 /// Inputs `Viewer` provides to `View` for one readonly browser render.
-priv struct ViewRenderInput {
+/// `pub(all)`: `Viewer::flush_render` (`view_host.mbt`, root `viewer`
+/// package) builds this via a struct literal passed straight into
+/// `View::render` — the foreign-method rule keeps that call out of this
+/// package, so the literal construction crosses the package boundary.
+pub(all) struct ViewRenderInput {
   frame : @view_model.RenderFrame
   view_model : @view_model.ViewModel?
   layout : @view_layout.ViewLayout

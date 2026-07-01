@@ -2,8 +2,8 @@
 // plus the hover content widget's DOM/geometry half from
 // `vscode/src/vs/editor/contrib/hover/browser/contentHoverWidget.ts` (the
 // viewer's only content widget). The `ViewPart` trait impl for
-// `ContentWidgets` lives in `viewer/view_part.mbt` (destined for
-// `browser/view/`), not here — see the exec-plan's cycle backlog and
+// `ContentWidgets` lives in `viewer/browser/view/view_part.mbt`, not here —
+// see the exec-plan's cycle backlog and
 // `viewer/browser/view_parts/view_zones`'s README for why.
 
 ///|
@@ -46,12 +46,12 @@ pub(all) struct HoverWidgetDom {
 ///|
 /// The DOM/host capabilities `render_hover_widget`/`ensure_hover_widget` need
 /// from `Viewer`, unpacked from `ViewContext`'s fields rather than taking that
-/// struct directly — `ViewContext` lives in `viewer/view_context.mbt`
-/// (destined for `browser/view/`), which this package cannot import without
-/// creating a `browser/view/ ↔ browser/view_parts/content_widgets` cycle
-/// (`browser/view/` already needs `ContentWidgets` for `View`'s fields and the
-/// `ViewPartHandle` enum). Built from `context.view_context`'s fields at the
-/// `ViewPart` impl in `view_part.mbt`, the same host/callback pattern
+/// struct directly — `ViewContext` lives in
+/// `viewer/browser/view/view_context.mbt`, which this package cannot import
+/// without creating a `browser/view/ ↔ browser/view_parts/content_widgets`
+/// cycle (`browser/view/` already needs `ContentWidgets` for `View`'s fields
+/// and the `ViewPartHandle` enum). Built from `context.view_context`'s fields
+/// at the `ViewPart` impl in `view_part.mbt`, the same host/callback pattern
 /// `controller_host.mbt`'s `PointerHandlerHelper` already uses. `pub(all)`
 /// since it is constructed there, cross-package.
 pub(all) struct HoverWidgetHost {
@@ -683,7 +683,7 @@ fn line_col_for_offset(
 }
 
 ///|
-/// Duplicated from `viewer/view.mbt` (`browser/view/`), rather than imported:
+/// Duplicated from `viewer/browser/view/view.mbt`, rather than imported:
 /// this two-field record construction is small enough that pulling in a
 /// dependency on `browser/view/` — which needs `ContentWidgets` back for
 /// `View`'s fields and the `ViewPartHandle` enum — isn't worth avoiding a

@@ -94,7 +94,7 @@ fn frame_render_line(
 /// document offset.
 fn Viewer::dom_refine_content_target(
   self : Viewer,
-  view : View,
+  view : @view.View,
   frame : @view_model.RenderFrame,
   client_x : Double,
   client_y : Double,

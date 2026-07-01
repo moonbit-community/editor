@@ -1,9 +1,10 @@
 // Shared editor layout constants. DOM-free (plain numbers/strings), but used
-// pervasively across every browser tier package (view, every view_parts/*,
-// controller, widget/code_editor) — moved here rather than left in
-// `viewer/view.mbt` (which does not carve out until Increment D, last) so
-// that view-parts carved in Increment E don't need an import back into the
-// still-undivided root `viewer` package for just a numeric constant.
+// pervasively across every browser tier package (`viewer/browser/view`,
+// every `view_parts/*`, controller, widget/code_editor) — moved here rather
+// than left in `viewer/view.mbt` (which didn't carve out until Increment D,
+// after this file landed) so that view-parts carved in Increment E didn't
+// need an import back into the still-undivided root `viewer` package for
+// just a numeric constant.
 
 ///|
 /// Pixel height of one rendered code line. Keep in sync with

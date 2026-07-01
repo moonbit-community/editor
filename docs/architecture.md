@@ -54,11 +54,16 @@ Reference trees are research inputs only. Product code must not import from
   `viewer/browser/controller`).
 - `viewer/controller` and `viewer/ui/scrollbar`: browser-UI subpackages. They
   may use narrow browser bindings but do not import the parent `viewer` package.
-- `viewer/browser/view_parts/view_zones`: the first carved-out Three-Tier
-  Mirror browser view part (Increment E, `docs/exec-plans/viewer-directory-mirror.md`).
-  The other `view_parts/*` and `viewer/browser/view` land in later increments;
-  until then this package's sibling view parts and the `View`/`ViewPart`
-  machinery remain flat root `viewer/*.mbt` files.
+- `viewer/browser/view_parts/*` (`content_widgets`, `editor_scrollbar`, `margin`,
+  `overlay_widgets`, `selections`, `view_lines`, `view_zones`) and
+  `viewer/browser/view`: the carved-out Three-Tier Mirror browser view and
+  view parts (Increments D and E, `docs/exec-plans/viewer-directory-mirror.md`).
+  Each `impl ViewPart for X with ...` block lives in `viewer/browser/view/view_part.mbt`
+  (the trait-owning package), not in the concrete part's own package — MoonBit's
+  orphan rule and the cycle backlog in the exec-plan explain why. What remains
+  flat root `viewer/*.mbt` files is `Viewer`-facing glue only (`viewer.mbt`,
+  `view_host.mbt`, controller/input/reveal hosts, etc.) — the foreign-method
+  rule keeps every `Viewer::` method in `Viewer`'s own package.
 - `viewer/common/inline_decorations`: a dedicated Monaco conformance/support
   package for inline-decoration algorithms. It is not part of the live viewer
   import chain unless a future integration explicitly wires it in.

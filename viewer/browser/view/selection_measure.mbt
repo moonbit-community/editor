@@ -72,7 +72,7 @@ extern "js" fn RectList::get(self : RectList, index : Int) -> Double = "(a, i) =
 /// Whether a one-based view line currently has a rendered DOM node — the gate
 /// the deferred horizontal reveal waits on before measuring (the line node may
 /// not exist until a vertical scroll brings the line into the window).
-fn View::is_line_rendered(self : View, view_line_number : Int) -> Bool {
+pub fn View::is_line_rendered(self : View, view_line_number : Int) -> Bool {
   self.view_lines.line_node_at(view_line_number) is Some(_)
 }
 
@@ -82,7 +82,7 @@ fn View::is_line_rendered(self : View, view_line_number : Int) -> Bool {
 /// `ViewLines.visibleRangeForPosition(...).left`. Measures the zero-width caret
 /// rect at the column (`keep_empty=true`). Returns `-1` when the line is not in
 /// the rendered window, mirroring Monaco's `visibleRangeForPosition` → `null`.
-fn View::offset_for_column(
+pub fn View::offset_for_column(
   self : View,
   view_line_number : Int,
   view_column : Int,
@@ -104,7 +104,7 @@ fn View::offset_for_column(
 /// `ViewLines.getLineWidth`. The line's content width equals the x of the caret
 /// at its max column, so this measures that caret. Returns `-1` when the line is
 /// not in the rendered window.
-fn View::line_width(
+pub fn View::line_width(
   self : View,
   view_line_number : Int,
   view_max_column : Int,
@@ -121,7 +121,7 @@ fn View::line_width(
 /// before resolving its DOM position. `keep_empty` (default `false`) keeps
 /// zero-width rects so a collapsed range still yields its caret rect — horizontal
 /// reveal needs it, selection rendering does not.
-fn View::measure_line_selection(
+pub fn View::measure_line_selection(
   self : View,
   view_line_number : Int,
   start_column : Int,

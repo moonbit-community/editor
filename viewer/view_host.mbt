@@ -7,7 +7,7 @@
 // `browser/view ↔ browser/widget/code_editor` cross-package cycle.
 
 ///|
-fn Viewer::build_view_context(self : Viewer, view : View) -> ViewContext {
+fn Viewer::build_view_context(self : Viewer, view : @view.View) -> @view.ViewContext {
   {
     root: view.root,
     languages: self.services.languages,
@@ -194,7 +194,7 @@ fn Viewer::synced_window_frame(
   frame : @view_model.RenderFrame,
 ) -> @view_model.RenderFrame {
   guard self.view_model is Some(view_model) else { return frame }
-  let rendered = frame_window(frame)
+  let rendered = @view.frame_window(frame)
   let desired = self.layout.visible_window(overscan=@core.line_overscan)
   if desired != rendered &&
     @view_layout.window_needs_update(rendered, desired, @core.line_overscan) {

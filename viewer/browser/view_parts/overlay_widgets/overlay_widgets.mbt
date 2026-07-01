@@ -1,8 +1,8 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/overlayWidgets/overlayWidgets.ts`.
 // The viewer has no overlay-widget content yet (no minimap, no find widget),
 // so this port is just the DOM shell; render/prepare_render are no-ops. The
-// `ViewPart` trait impl lives in `viewer/view_part.mbt` (destined for
-// `browser/view/`), not here — see the exec-plan's cycle backlog and
+// `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, not
+// here — see the exec-plan's cycle backlog and
 // `viewer/browser/view_parts/view_zones`'s README for why.
 
 ///|

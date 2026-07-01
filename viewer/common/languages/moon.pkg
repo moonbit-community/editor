@@ -3,7 +3,6 @@ import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/syntax",
-  "moonbit-community/editor/viewer/common/folding",
   "moonbit-community/editor/viewer/common/model",
 }
 

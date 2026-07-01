@@ -5,11 +5,13 @@
 - Public product code lives at the repository root in MoonBit packages:
   `base/common`, `language`, `platform/log`, `syntax`, `syntax/lang_*`,
   `viewer`, and the DOM-free common tier under `viewer/common/*`:
-  `viewer/common/core`, `viewer/common/cursor`, `viewer/common/folding`,
-  `viewer/common/hover`, `viewer/common/inline_decorations`,
-  `viewer/common/languages`, `viewer/common/markers`, `viewer/common/model`
-  (decorations merged in), `viewer/common/view_model`, and
-  `viewer/common/view_layout` (view-line renderer merged in). Browser-tier UI
+  `viewer/common/core`, `viewer/common/cursor`,
+  `viewer/common/inline_decorations`, `viewer/common/languages`,
+  `viewer/common/markers`, `viewer/common/model` (decorations merged in),
+  `viewer/common/view_model`, and `viewer/common/view_layout` (view-line renderer
+  merged in). DOM-free contribution models live in the multi-target
+  `viewer/contrib/folding` and `viewer/contrib/hover` (their js-only
+  controllers/widgets land in `viewer/contrib/*/browser` later). Browser-tier UI
   lives in `viewer/controller` and `viewer/ui/scrollbar`; `viewer/common` itself
   is a shrinking residual (`line_html`, `mouse_target`) pending the browser
   carve-up. See `docs/exec-plans/viewer-directory-mirror.md` and the Viewer

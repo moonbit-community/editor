@@ -274,11 +274,11 @@ pub async fn Languages::folding_ranges_for_model(
     }
     ranges.append(result)
   }
-  if ranges.length() > 0 {
-    ranges
-  } else {
-    @folding.fallback_folding_ranges(model)
-  }
+  // Provider results only. The indent-based fallback (Monaco's
+  // `indentRangeProvider`) is applied by the folding controller (the caller),
+  // not the provider registry, so this common-tier package does not depend on
+  // the `contrib/folding` tier.
+  ranges
 }
 
 ///|

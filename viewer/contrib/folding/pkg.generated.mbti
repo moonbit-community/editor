@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/editor/viewer/common/folding"
+package "moonbit-community/editor/viewer/contrib/folding"
 
 import {
   "moonbit-community/editor/language",

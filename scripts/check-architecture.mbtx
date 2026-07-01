@@ -137,6 +137,18 @@ async fn check_tier_targets(errors : Array[String]) -> Unit {
         " is in the common tier and must not declare supported_targets = \"js\" (keep it multi-target so the native check enforces the no-DOM boundary)",
       )
     }
+    // A `viewer/contrib/<feature>/` package outside a `browser/` subtree holds
+    // the feature's DOM-free model (Monaco files it under contrib/*/browser only
+    // because it has no native target). Keep it multi-target so the native check
+    // still enforces the no-DOM boundary for contrib logic.
+    if manifest.has_prefix("viewer/contrib/") &&
+      !manifest.contains("/browser/") &&
+      js_only {
+      errors.push(
+        manifest +
+        " is a common-tier contrib package (viewer/contrib/<feature>/ outside browser/) and must not declare supported_targets = \"js\" (keep the DOM-free feature model multi-target)",
+      )
+    }
   }
 }
 

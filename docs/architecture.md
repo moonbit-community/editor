@@ -40,9 +40,15 @@ Reference trees are research inputs only. Product code must not import from
 - `viewer/common/view_model`, `viewer/common/view_layout` (with the view-line
   renderer merged in), and `viewer/common/core`: DOM-free rendering, projection,
   layout, geometry, and cursor-column logic.
-- `viewer/common/cursor`, `viewer/common/folding`, `viewer/common/markers`,
-  `viewer/common/languages`, and `viewer/common/hover`: focused DOM-free feature
-  packages used by the viewer.
+- `viewer/common/cursor`, `viewer/common/markers`, and `viewer/common/languages`:
+  focused DOM-free feature packages used by the viewer.
+- `viewer/contrib/folding` and `viewer/contrib/hover`: the DOM-free *models* of
+  Monaco contributions (`editor/contrib/{folding,hover}/browser` in Monaco, which
+  has no native target). They stay **multi-target** so the native check keeps
+  enforcing DOM-freeness; the js-only DOM controllers/widgets land in
+  `viewer/contrib/{folding,hover}/browser` in a later increment. `common` code
+  never imports these (the folding indent fallback was inverted into the folding
+  controller so the tier flows `contrib -> common`, not the reverse).
 - `viewer/common`: a shrinking residual of the former grab-bag (`line_html`,
   `mouse_target`) pending the browser carve-up (`mouse_target` →
   `viewer/browser/controller`).
@@ -74,18 +80,24 @@ migration is staged in `docs/exec-plans/viewer-directory-mirror.md`; the flat
 - `viewer/browser/**` — DOM-owning view, view parts (`view_parts/*`), controller,
   and the `widget/code_editor` host. Mirrors `editor/browser/*`. **js-only**
   (`supported_targets = "js"`).
-- `viewer/contrib/<feature>/browser/**` — browser-tier feature contributions
-  (`hover`, `folding`). Mirrors `editor/contrib/*/browser`. **js-only**.
+- `viewer/contrib/<feature>/` — the DOM-free *model* of a Monaco contribution
+  (`folding`, `hover`). **Multi-target**, like the common tier. Divergence from
+  Monaco (which files these under `contrib/*/browser` because it has no native
+  target): the viewer hoists the DOM-free logic up so the native check keeps
+  enforcing DOM-freeness.
+- `viewer/contrib/<feature>/browser/**` — the js-only DOM half of a contribution
+  (controllers/widgets). Mirrors `editor/contrib/*/browser`. **js-only**.
 - root `viewer` — reduces to an `export.mbt` facade (the analog of
   `vs/editor/editor.api.ts`) re-exporting the public surface; `viewer/pkg.generated.mbti`
   is the reviewable public-API contract. Stays js-only because it re-exports
   browser types.
 
-`scripts/check-architecture.mbtx` enforces three tier invariants (the
+`scripts/check-architecture.mbtx` enforces the tier invariants (the
 MoonBit-toolchain-uncatchable half): every `viewer/browser/**` and
 `viewer/contrib/*/browser/**` package declares `supported_targets = "js"`; no
-`viewer/common/**` package does; and external consumers (the shell, web, app,
-tests) import the `viewer` facade — never a `viewer/browser/**` or
+`viewer/common/**` or `viewer/contrib/<feature>/` (non-`browser`) package does
+(the DOM-free tiers stay multi-target); and external consumers (the shell, web,
+app, tests) import the `viewer` facade — never a `viewer/browser/**` or
 `viewer/contrib/**` package directly. Native/headless consumers (the shell
 server hosts) may import `viewer/common/**` directly, since the js-only facade
 cannot link on native (Decision D2). The `common → browser` direction is caught

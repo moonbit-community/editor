@@ -13,7 +13,7 @@ priv struct View {
   content_view_overlays : ContentViewOverlays
   margin_view_overlays : @margin.MarginViewOverlays
   content_widgets : ContentWidgets
-  overlay_widgets : OverlayWidgets
+  overlay_widgets : @overlay_widgets.OverlayWidgets
   editor_scrollbar : EditorScrollbar
   view_parts : Array[ViewPartHandle]
   mut last_snapshot : ViewRenderSnapshot?
@@ -48,7 +48,7 @@ fn View::build() -> View {
   let view_zones = @view_zones.ViewZones::new(document)
   let view_lines = @view_lines.ViewLines::new(document)
   let content_widgets = ContentWidgets::new(document)
-  let overlay_widgets = OverlayWidgets::new(document)
+  let overlay_widgets = @overlay_widgets.OverlayWidgets::new(document)
   let lines_content = editor_scrollbar.content()
   lines_content.append_child(content_view_overlays.dom().as_node())
   lines_content.append_child(view_zones.dom().as_node())
@@ -109,7 +109,7 @@ fn View::mark_parts_dirty(self : View) -> Unit {
   self.content_view_overlays.set_should_render(true)
   ViewPart::set_should_render(self.margin_view_overlays, true)
   self.content_widgets.set_should_render(true)
-  self.overlay_widgets.set_should_render(true)
+  ViewPart::set_should_render(self.overlay_widgets, true)
   self.editor_scrollbar.set_should_render(true)
 }
 

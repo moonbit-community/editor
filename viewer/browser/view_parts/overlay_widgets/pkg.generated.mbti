@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser/view_parts/overlay_widgets"
+
+import {
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct OverlayWidgets {
+  overlay_widgets : @dom.Element
+  overflowing_overlay_widgets : @dom.Element
+  mut should_render : Bool
+}
+pub fn OverlayWidgets::dom(Self) -> @dom.Element
+pub fn OverlayWidgets::new(@dom.Document) -> Self
+pub fn OverlayWidgets::overflowing_dom(Self) -> @dom.Element
+
+// Type aliases
+
+// Traits
+

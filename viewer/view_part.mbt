@@ -37,7 +37,7 @@ priv enum ViewPartHandle {
   ContentViewOverlaysPart(ContentViewOverlays)
   MarginViewOverlaysPart(@margin.MarginViewOverlays)
   ContentWidgetsPart(ContentWidgets)
-  OverlayWidgetsPart(OverlayWidgets)
+  OverlayWidgetsPart(@overlay_widgets.OverlayWidgets)
   EditorScrollbarPart(EditorScrollbar)
 }
 
@@ -48,7 +48,7 @@ fn default_view_parts(
   content_view_overlays : ContentViewOverlays,
   margin_view_overlays : @margin.MarginViewOverlays,
   content_widgets : ContentWidgets,
-  overlay_widgets : OverlayWidgets,
+  overlay_widgets : @overlay_widgets.OverlayWidgets,
   editor_scrollbar : EditorScrollbar,
 ) -> Array[ViewPartHandle] {
   [
@@ -70,7 +70,7 @@ impl ViewPart for ViewPartHandle with fn on_view_event(self, event) {
     ContentViewOverlaysPart(part) => part.on_view_event(event)
     MarginViewOverlaysPart(part) => ViewPart::on_view_event(part, event)
     ContentWidgetsPart(part) => part.on_view_event(event)
-    OverlayWidgetsPart(part) => part.on_view_event(event)
+    OverlayWidgetsPart(part) => ViewPart::on_view_event(part, event)
     EditorScrollbarPart(part) => part.on_view_event(event)
   }
 }
@@ -83,7 +83,7 @@ impl ViewPart for ViewPartHandle with fn should_render(self) {
     ContentViewOverlaysPart(part) => part.should_render()
     MarginViewOverlaysPart(part) => ViewPart::should_render(part)
     ContentWidgetsPart(part) => part.should_render()
-    OverlayWidgetsPart(part) => part.should_render()
+    OverlayWidgetsPart(part) => ViewPart::should_render(part)
     EditorScrollbarPart(part) => part.should_render()
   }
 }
@@ -96,7 +96,7 @@ impl ViewPart for ViewPartHandle with fn set_should_render(self, value) {
     ContentViewOverlaysPart(part) => part.set_should_render(value)
     MarginViewOverlaysPart(part) => ViewPart::set_should_render(part, value)
     ContentWidgetsPart(part) => part.set_should_render(value)
-    OverlayWidgetsPart(part) => part.set_should_render(value)
+    OverlayWidgetsPart(part) => ViewPart::set_should_render(part, value)
     EditorScrollbarPart(part) => part.set_should_render(value)
   }
 }
@@ -109,7 +109,7 @@ impl ViewPart for ViewPartHandle with fn on_before_render(self, viewport) {
     ContentViewOverlaysPart(part) => part.on_before_render(viewport)
     MarginViewOverlaysPart(part) => ViewPart::on_before_render(part, viewport)
     ContentWidgetsPart(part) => part.on_before_render(viewport)
-    OverlayWidgetsPart(part) => part.on_before_render(viewport)
+    OverlayWidgetsPart(part) => ViewPart::on_before_render(part, viewport)
     EditorScrollbarPart(part) => part.on_before_render(viewport)
   }
 }
@@ -122,7 +122,7 @@ impl ViewPart for ViewPartHandle with fn prepare_render(self, context) {
     ContentViewOverlaysPart(part) => part.prepare_render(context)
     MarginViewOverlaysPart(part) => ViewPart::prepare_render(part, context)
     ContentWidgetsPart(part) => part.prepare_render(context)
-    OverlayWidgetsPart(part) => part.prepare_render(context)
+    OverlayWidgetsPart(part) => ViewPart::prepare_render(part, context)
     EditorScrollbarPart(part) => part.prepare_render(context)
   }
 }
@@ -135,7 +135,7 @@ impl ViewPart for ViewPartHandle with fn render(self, context) {
     ContentViewOverlaysPart(part) => part.render(context)
     MarginViewOverlaysPart(part) => ViewPart::render(part, context)
     ContentWidgetsPart(part) => part.render(context)
-    OverlayWidgetsPart(part) => part.render(context)
+    OverlayWidgetsPart(part) => ViewPart::render(part, context)
     EditorScrollbarPart(part) => part.render(context)
   }
 }
@@ -148,7 +148,7 @@ impl ViewPart for ViewPartHandle with fn on_did_render(self) {
     ContentViewOverlaysPart(part) => part.on_did_render()
     MarginViewOverlaysPart(part) => ViewPart::on_did_render(part)
     ContentWidgetsPart(part) => part.on_did_render()
-    OverlayWidgetsPart(part) => part.on_did_render()
+    OverlayWidgetsPart(part) => ViewPart::on_did_render(part)
     EditorScrollbarPart(part) => part.on_did_render()
   }
 }
@@ -386,4 +386,62 @@ impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
 impl ViewPart for @margin.MarginViewOverlays with fn on_did_render(self) {
   self.should_render = false
   self.prepared = None
+}
+
+// `ViewPart` impl for `@overlay_widgets.OverlayWidgets`
+// (`browser/view_parts/overlay_widgets`). Kept here for the same reason as
+// the impls above.
+
+///|
+impl ViewPart for @overlay_widgets.OverlayWidgets with fn should_render(self) {
+  self.should_render
+}
+
+///|
+impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_view_event(
+  _self,
+  event,
+) {
+  match event {
+    ViewFlushed => true
+    ViewScrollChanged(e) => e.dimensions_changed
+    _ => false
+  }
+}
+
+///|
+impl ViewPart for @overlay_widgets.OverlayWidgets with fn set_should_render(
+  self,
+  value,
+) {
+  self.should_render = value
+}
+
+///|
+impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_before_render(
+  _self,
+  _viewport,
+) {
+  ()
+}
+
+///|
+impl ViewPart for @overlay_widgets.OverlayWidgets with fn prepare_render(
+  _self,
+  _context,
+) {
+  ()
+}
+
+///|
+impl ViewPart for @overlay_widgets.OverlayWidgets with fn render(
+  _self,
+  _context,
+) {
+  ()
+}
+
+///|
+impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_did_render(self) {
+  self.should_render = false
 }

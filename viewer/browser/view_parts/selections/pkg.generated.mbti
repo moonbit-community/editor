@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser/view_parts/selections"
+
+import {
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct ContentViewOverlays {
+  view_overlays : @dom.Element
+  mut should_render : Bool
+  mut prepared : ContentViewOverlaysPrepared?
+}
+pub fn ContentViewOverlays::dom(Self) -> @dom.Element
+pub fn ContentViewOverlays::new(@dom.Document) -> Self
+pub fn ContentViewOverlays::render_selection_overlays(Self, @view_model.RenderFrame, @view_layout.ViewportData, @view_layout.ViewRange?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Unit
+
+pub(all) struct ContentViewOverlaysPrepared {
+  frame : @view_model.RenderFrame
+  viewport : @view_layout.ViewportData
+  selection_view_range : @view_layout.ViewRange?
+  view_model : @view_model.ViewModel?
+  space_width : Double
+}
+
+// Type aliases
+
+// Traits
+

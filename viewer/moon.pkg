@@ -4,6 +4,7 @@ import {
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/browser/view_parts/editor_scrollbar",
   "moonbit-community/editor/viewer/browser/view_parts/margin",
+  "moonbit-community/editor/viewer/browser/view_parts/selections",
   "moonbit-community/editor/viewer/browser/view_parts/overlay_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",

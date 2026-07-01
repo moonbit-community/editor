@@ -1,5 +1,16 @@
+// Ported from `vscode/src/vs/editor/browser/viewParts/selections/selections.ts`
+// (`SelectionsOverlay`) plus the base-class DOM shell from
+// `vscode/src/vs/editor/browser/view/viewOverlays.ts` (`ContentViewOverlays`),
+// merged into one concrete type here since selection highlighting is the
+// only dynamic overlay this viewer registers. The `ViewPart` trait impl for
+// `ContentViewOverlays` lives in `viewer/view_part.mbt` (destined for
+// `browser/view/`), not here — see the exec-plan's cycle backlog and
+// `viewer/browser/view_parts/view_zones`'s README for why.
+
 ///|
-priv struct ContentViewOverlaysPrepared {
+/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `should_render` / `prepared` directly.
+pub(all) struct ContentViewOverlaysPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
   selection_view_range : @view_layout.ViewRange?
@@ -8,14 +19,16 @@ priv struct ContentViewOverlaysPrepared {
 }
 
 ///|
-priv struct ContentViewOverlays {
+pub(all) struct ContentViewOverlays {
   view_overlays : @rdom.Element
   mut should_render : Bool
   mut prepared : ContentViewOverlaysPrepared?
 }
 
 ///|
-fn ContentViewOverlays::new(document : @rdom.Document) -> ContentViewOverlays {
+pub fn ContentViewOverlays::new(
+  document : @rdom.Document,
+) -> ContentViewOverlays {
   let view_overlays = document.create_element("div")
   view_overlays.set_attribute("class", "view-overlays")
   view_overlays.set_attribute("data-view-part", "view-overlays")
@@ -23,70 +36,8 @@ fn ContentViewOverlays::new(document : @rdom.Document) -> ContentViewOverlays {
 }
 
 ///|
-fn ContentViewOverlays::dom(self : ContentViewOverlays) -> @rdom.Element {
+pub fn ContentViewOverlays::dom(self : ContentViewOverlays) -> @rdom.Element {
   self.view_overlays
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn should_render(self) {
-  self.should_render
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn on_view_event(_self, event) {
-  match event {
-    ViewFlushed => true
-    ViewLinesChanged => true
-    ViewScrollChanged(e) => e.window_changed || e.position_changed
-    ViewCursorStateChanged => true
-    ViewZonesChanged => true
-    _ => false
-  }
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn set_should_render(self, value) {
-  self.should_render = value
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn on_before_render(_self, _viewport) {
-  ()
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn prepare_render(self, context) {
-  self.prepared = Some({
-    frame: context.input.frame,
-    viewport: context.viewport,
-    selection_view_range: context.input.selection_view_range,
-    view_model: context.input.view_model,
-    space_width: context.input.space_width,
-  })
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn render(self, context) {
-  match self.prepared {
-    Some(prepared) => {
-      self.render_selection_overlays(
-        prepared.frame,
-        prepared.viewport,
-        prepared.selection_view_range,
-        prepared.view_model,
-        prepared.space_width,
-        context.view_context.measure_line_selection,
-      )
-      self.view_overlays.set_attribute("style", context.content_transform)
-    }
-    None => ()
-  }
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn on_did_render(self) {
-  self.should_render = false
-  self.prepared = None
 }
 
 ///|
@@ -142,7 +93,7 @@ fn new_styled_range(left : Double, width : Double) -> StyledRange {
 /// (`_actualRenderOneSelection`). There is one selection, so the multi-selection
 /// top/bottom margins are always zero; the previous-frame corner cache (a
 /// repaint optimization) is intentionally omitted.
-fn ContentViewOverlays::render_selection_overlays(
+pub fn ContentViewOverlays::render_selection_overlays(
   self : ContentViewOverlays,
   frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,

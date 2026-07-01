@@ -48,6 +48,15 @@ impl @language.HoverProvider for HarnessHoverProvider with fn provide_hover(
           range: model.snapshot.range_of(harness_marker_range(model)),
           contents: [],
         })
+      } else if fixture.kind == "markerAndMarkdown" {
+        // Reproduces the marker+LSP-hover-combo scenario (a diagnostic and a
+        // type/markdown hover on the same anchor) that exercises the
+        // participant-loop-then-status-bar-last ordering in
+        // `render_hover_parts`.
+        Some({
+          range: model.snapshot.range_of(harness_marker_range(model)),
+          contents: [PlainText(fixture.contents)],
+        })
       } else {
         let text = model.snapshot.text
         let offset = model.snapshot.offset_at_position(position)
@@ -75,7 +84,7 @@ impl @language.DiagnosticsProvider for HarnessHoverProvider with fn provide_diag
 ) {
   match harness_hover_fixture.val {
     Some(fixture) =>
-      if fixture.kind == "marker" {
+      if fixture.kind == "marker" || fixture.kind == "markerAndMarkdown" {
         [
           {
             range: model.snapshot.range_of(harness_marker_range(model)),

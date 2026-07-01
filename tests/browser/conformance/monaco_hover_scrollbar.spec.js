@@ -133,6 +133,47 @@ test('tall hover is capped to the available space and stays fully scrollable', a
   expect(Math.abs(reachedBottom.scrollTop - reachedBottom.maxScrollTop)).toBeLessThan(2);
 });
 
+test('a medium hover payload renders proportioned to its text, not collapsed to the CSS min-width floor', async ({
+  page,
+}) => {
+  // Bug fix regression, reproducing the exact reported symptom: a diagnostic
+  // hover message wrapped across many narrow lines instead of a well-
+  // proportioned box. Root cause was `apply_width_sizing` only ever setting
+  // `max-width` (a ceiling) with no explicit `width`, so a block-level
+  // `.monaco-hover-content` with no natural sizing pressure collapsed to
+  // `.monaco-resizable-hover`'s CSS `min-width: 150px` floor, forcing the
+  // text to wrap far more aggressively than its natural (nowrap) width
+  // needs. `hover_resolved_width` now locks an explicit width derived from
+  // that natural measurement instead.
+  await page.goto(readonlyBaseUrl);
+  await expect
+    .poll(() => page.evaluate(() => typeof globalThis.__readonlyEditorConformance), {
+      timeout: 10_000,
+    })
+    .toBe('object');
+  await page.evaluate((payloads) => {
+    globalThis.__readonlyEditorConformance.setPayloads(payloads);
+  }, hoverPayloads);
+  await openWorkspaceFile(page, 'src/monaco_conformance.mbt');
+
+  await showReadonlyHover(page, conformanceStates.markerHover);
+
+  const metrics = await page.evaluate(() => {
+    const editor = document.querySelector('.monaco-scrollable-element.editor-scrollable');
+    const content = document.querySelector('[data-content-widget="hover"] .monaco-hover-content');
+    return {
+      contentWidth: content.getBoundingClientRect().width,
+      availableWidth: editor.getBoundingClientRect().width,
+    };
+  });
+  // Pre-fix, this collapsed to the 150px CSS min-width floor regardless of
+  // the message's own natural width; post-fix it renders measurably wider
+  // (proportioned to the text) while staying well short of the full
+  // available width (proving it isn't just stretched to the other extreme).
+  expect(metrics.contentWidth).toBeGreaterThan(200);
+  expect(metrics.contentWidth).toBeLessThan(metrics.availableWidth * 0.5);
+});
+
 test('wrappable hover content is capped to the editor content area in a narrow window', async ({
   page,
 }) => {

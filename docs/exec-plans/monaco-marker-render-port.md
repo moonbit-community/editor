@@ -1,11 +1,16 @@
 # Monaco Marker Render 1:1 Port
 
-Status: implemented (A–G) — Date: 2026-06-30. Oracle commit: `294fb350837dbaee37b949533fead4df4e0e8971`.
+Status: implemented (A–G, I) — Date: 2026-07-01. Oracle commit: `294fb350837dbaee37b949533fead4df4e0e8971`.
 
 Increments A–G landed; H (overview ruler / minimap parts) stays deferred. `just
-check && just test` green (js 546 / native 487); `just test-browser` green except
+check && just test` green; `just test-browser` green except
 the pre-existing `dom_structure.spec.js:58` markdown-hover `tabindex` mismatch,
 which fails on `main` too (a hover-render-upgrade issue, out of scope here).
+
+**Increment I (runtime squiggle theming, landed 2026-07-01)** replaces the
+Increment G deviation that faked the visible squiggle by aliasing VS Code's
+normally-null `*-border` tokens to the foreground colors — see the Increment I
+section below and the updated Deviations entry.
 
 Follows `_PORT_PLAYBOOK.md`. Supersedes the simplified marker render that lives
 in `viewer/markers/markers.mbt` + `viewer/markers.css` today: a flat
@@ -331,6 +336,27 @@ increment ends green on `just check && just test`; render increments add
   classes as Monaco does.
 - **H — Overview ruler / minimap (DEFERRED).** Add the parts; consume the option
   carriers from D. Tracked, not in this port.
+- **I — Runtime squiggle theming (landed).** Monaco's *actual* visible squiggle
+  is not the static `border-bottom` rule G ported (that rule is a
+  high-contrast-only fallback, dead in normal themes because
+  `editorError/Warning/Info/Hint.border` default to `null` —
+  `editorColors.ts:66-111`); it's a runtime inline-SVG background image,
+  computed from `editorError/Warning/Info/Hint.foreground` and injected by a
+  theming participant (`codeEditorWidget.ts:2519-2558`,
+  `getSquigglySVGData`/`getDotDotDotSVGData` + `registerThemingParticipant`).
+  Ported as: pure, whitebox-tested SVG/CSS-text generators
+  (`viewer/common/markers/squiggly_theme.mbt`:
+  `squiggly_svg_data_uri`/`dotdotdot_svg_data_uri`/`squiggly_theme_css`/
+  `SquigglyThemeColors`); a browser-tier reader + injector
+  (`viewer/browser/view/squiggly_theme.mbt`: `View::apply_squiggly_theme`,
+  reading `--vscode-editor{Error,Warning,Info,Hint}-foreground` off the view
+  root via a new `computed_style_property` FFI and writing a dedicated
+  `<style data-squiggly-theme>` element); wired at both points the viewer
+  applies a theme (`Viewer::attach`, `Viewer::set_theme` in `viewer.mbt`).
+  `theme.css` no longer aliases the `*-border` tokens to the foreground colors
+  (Increment G's workaround) — they're correctly unset in both normal themes now,
+  matching Monaco, and a new `--vscode-editorHint-foreground` token was added
+  (Monaco's real default: dark `#eeeeeeb3`, light `#6c6c6c`).
 
 ---
 
@@ -361,13 +387,36 @@ increment ends green on `just check && just test`; render increments add
   (transparent) outside HC themes, and a `display:block` pseudo-element would
   inject a block box into the inline view-line span flow. The visible squiggle
   (the `border-bottom` double/dotted/dashed underline) is ported faithfully.
-- **`*-border` tokens default to the foreground (G).** VS Code's
-  `editorError/Warning/Info.border` and `editorHint.border` are `null` in normal
-  themes (the live squiggle there is a dynamically generated wavy underline from
-  `editor*.foreground`). The static `border-double` variant the plan ports is the
-  HC form, so the viewer defaults the `*-border` tokens to the foreground colors
-  (theme.css) to keep squiggles visible. `editorUnnecessaryCode.border` stays
-  unset (null in normal themes — unnecessary code is dimmed via opacity).
+- **`*-border` tokens default to the foreground (G) — SUPERSEDED by Increment
+  I.** G's workaround aliased the normally-null `editorError/Warning/Info/Hint
+  .border` tokens to the foreground colors so the static `border-double` HC
+  fallback would render in normal themes. Increment I ports the real mechanism
+  (a runtime inline-SVG background), so the tokens are unset again (matching
+  Monaco) and the `border-double`/`dotted` rule is correctly inert outside HC —
+  this viewer has no HC theme (`view_lines.mbt`'s equivalent note). `editorUnnecessaryCode.border`
+  was already, and stays, unset.
+- **No theme-registry object model (I).** Monaco's theming participant reacts
+  to a `Color` from an in-memory theme registry; the viewer has none — colors
+  cascade from the host's CSS custom properties instead (`Viewer::set_theme`'s
+  doc comment), so `View::apply_squiggly_theme` reads the *currently resolved*
+  `--vscode-editor*-foreground` values via `getComputedStyle` at apply time.
+- **`encodeURIComponent` port is ASCII-only (I).** `squiggly_theme.mbt`'s
+  `encode_uri_component` only handles the unreserved-set/percent-encode logic
+  for single code points, not full UTF-8 byte splitting — sufficient because
+  every input is a hex color or the fixed SVG markup, both ASCII.
+- **No `:root { --monaco-editor-*-decoration }` mirror rules (I).** Monaco's
+  theming participant also writes global custom-property mirrors of each data
+  URI; nothing in this viewer consumes them, so they're omitted (no dead state).
+- **Squiggle apply is deferred one macrotask (I).** `View::apply_squiggly_theme`
+  reads computed style inside a `setTimeout(fn, 0)`, not inline. This project's
+  `rabbita` TEA runtime patches the DOM asynchronously (`requestAnimationFrame`,
+  strictly after the command that calls `Viewer::set_theme` returns), so a host
+  whose theme-driving element (e.g. this project's `.editor-shell`) updates via
+  that same async render cycle would otherwise have its `data-theme` attribute
+  changed *after* an inline read — a real timing bug, not a hypothetical one
+  (caught by the theme-swap browser spec below). Monaco has no equivalent race:
+  VS Code's theme service updates its registry and the CSS it drives
+  synchronously.
 - **`showUnused`/`showDeprecated` always on (G).** Monaco gates the
   unnecessary/deprecated styling behind these editor-option classes, which default
   to `true`. The viewer has no editor-options port, so `view.mbt` adds both root
@@ -422,6 +471,16 @@ Prefer porting Monaco's own unit tests where they exist
 (`markerService.test.ts`, `wordHelper.test.ts`) per `docs/quality.md`
 "Conformance ports". Run the render matrix under `just test-browser`, not one
 config.
+
+**Increment I additions**: `encode_uri_component` against known
+`encodeURIComponent` outputs; `squiggly_svg_data_uri`/`dotdotdot_svg_data_uri`
+against hand-verified data URIs for a fixed color; `squiggly_theme_css`
+per-color-present/absent combinations and severity ordering
+(`squiggly_theme_wbtest.mbt`). Browser: `marker_squiggly.spec.js` asserts (a)
+a live `.squiggly-warning` node's computed `background-image` is the dynamic
+SVG data URI and `border-bottom-style` is `none`; (b) the injected
+`<style data-squiggly-theme>` content changes after a real theme-toggle click
+(the timing regression this increment's deferred-apply fixes).
 
 ---
 

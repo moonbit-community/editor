@@ -117,11 +117,26 @@ test('keeps the Monaco-shaped marker hover DOM structure', async ({ page }) => {
   await expectDirectChildren(page, `${widget} .hover-row.status-bar`, [
     element('div', ['actions']),
   ]);
+  // Monaco's `HoverAction.render` (`hoverWidget.ts:52-92`) puts `tabindex` on
+  // `.action-container`, never on the `<a>` inside it.
   await expectDirectChildren(page, `${widget} .hover-row.status-bar > .actions`, [
-    element('div', ['action-container']),
+    element('div', ['action-container'], { tabindex: '0' }),
   ]);
   await expectDirectChildren(page, `${widget} .action-container`, [
-    element('a', ['action'], { role: 'button', tabindex: '0' }),
+    element('a', ['action'], { role: 'button' }),
+  ]);
+  await expectDirectChildren(page, `${widget} .action`, [element('span', [])]);
+});
+
+test('renders a marker part, a later-ordinal hover part, then the status bar last', async ({ page }) => {
+  await openConformanceFixture(page);
+  await showReadonlyHover(page, conformanceStates.markerAndMarkdownHover);
+
+  const widget = '[data-content-widget="hover"]';
+  await expectDirectChildren(page, `${widget} .monaco-hover-content`, [
+    element('div', ['hover-row', 'hover-row-with-copy'], { tabindex: '0' }),
+    element('div', ['hover-row'], { tabindex: '0' }),
+    element('div', ['hover-row', 'status-bar'], { tabindex: '0' }),
   ]);
 });
 

@@ -13,7 +13,13 @@ pub fn create_decoration_option(Marker, @common.Range) -> @model.Decoration
 
 pub fn create_decoration_range(@model.TextSnapshot, Marker) -> @common.Range
 
+pub fn dotdotdot_svg_data_uri(String) -> String
+
 pub let max_value_column : Int
+
+pub fn squiggly_svg_data_uri(String) -> String
+
+pub fn squiggly_theme_css(SquigglyThemeColors) -> String
 
 // Errors
 
@@ -147,6 +153,13 @@ pub(all) struct RelatedInformation {
 pub(all) struct ResourceMarker {
   resource : @common.Uri
   marker : MarkerData
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SquigglyThemeColors {
+  error : String?
+  warning : String?
+  info : String?
+  hint : String?
 } derive(Eq, @debug.Debug)
 
 // Type aliases

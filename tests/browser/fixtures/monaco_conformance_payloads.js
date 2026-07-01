@@ -75,6 +75,10 @@ export const hoverPayloads = {
     kind: 'marker',
     contents: 'Conformance diagnostic message.',
   },
+  markerAndMarkdown: {
+    kind: 'markerAndMarkdown',
+    contents: 'Combined diagnostic and type hover.',
+  },
 };
 
 export const conformanceStates = {
@@ -83,4 +87,5 @@ export const conformanceStates = {
   wideHover: { payload: 'wideCode', line: 12, column: 8 },
   wrappableHover: { payload: 'wideWrappable', line: 12, column: 8 },
   markerHover: { payload: 'markerDiagnostic', line: 3, column: 8 },
+  markerAndMarkdownHover: { payload: 'markerAndMarkdown', line: 3, column: 8 },
 };

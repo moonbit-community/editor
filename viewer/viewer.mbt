@@ -337,6 +337,7 @@ pub fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   let view = @view.View::build()
   view.root.set_attribute("data-theme", self.theme)
   host.append_child(view.root.as_node())
+  view.apply_squiggly_theme()
   self.view = Some(view)
   self.hook_view_input(view)
   self.measure_requested = true
@@ -457,13 +458,17 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
 
 ///|
 /// Pushes the host's theme into the viewer. Colors cascade from the
-/// host's CSS theme variables, so this only mirrors the theme onto the
-/// view root as a `data-theme` attribute (for standalone styling); the
+/// host's CSS theme variables, so this mirrors the theme onto the view
+/// root as a `data-theme` attribute (for standalone styling) and
+/// recomputes the squiggle stylesheet from the newly cascaded colors; the
 /// view keeps its DOM and scroll position.
 pub fn Viewer::set_theme(self : Viewer, theme : String) -> Unit {
   self.theme = theme
   match self.view {
-    Some(view) => view.root.set_attribute("data-theme", theme)
+    Some(view) => {
+      view.root.set_attribute("data-theme", theme)
+      view.apply_squiggly_theme()
+    }
     None => ()
   }
 }

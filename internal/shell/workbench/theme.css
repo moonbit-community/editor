@@ -34,15 +34,14 @@
   --vscode-editorWarning-foreground: #cca700;
   --vscode-editorError-foreground: #f14c4c;
   --vscode-editorInfo-foreground: #59a4f9;
+  --vscode-editorHint-foreground: #eeeeeeb3;
 
-  /* Squiggle borders: VS Code defaults these to null (HC themes only); the
-     viewer mirrors the foreground so the ported border-double squiggle renders.
-     editorError/Warning/Info.background and editorUnnecessaryCode.border are
-     null in Dark Modern, so they stay unset (transparent). */
-  --vscode-editorError-border: #f14c4c;
-  --vscode-editorWarning-border: #cca700;
-  --vscode-editorInfo-border: #59a4f9;
-  --vscode-editorHint-border: #eeeeeeb3;
+  /* editorError/Warning/Info/Hint.border are null in VS Code's normal (non-HC)
+     themes, so they stay unset here too — the visible squiggle is the runtime
+     inline-SVG background computed from the *-foreground tokens above
+     (viewer/browser/view/squiggly_theme.mbt), not this border rule. The
+     border-double/dotted CSS in markers.css is a faithful copy of the HC
+     fallback and is correctly inert (this viewer has no high-contrast theme). */
   --vscode-editorUnnecessaryCode-opacity: 0.67;
 
   --vscode-editorHoverWidget-background: #202020;
@@ -118,12 +117,9 @@
   --vscode-editorWarning-foreground: #bf8803;
   --vscode-editorError-foreground: #e51400;
   --vscode-editorInfo-foreground: #0063d3;
+  --vscode-editorHint-foreground: #6c6c6c;
 
   /* See the Dark Modern block above. */
-  --vscode-editorError-border: #e51400;
-  --vscode-editorWarning-border: #bf8803;
-  --vscode-editorInfo-border: #0063d3;
-  --vscode-editorHint-border: #6c6c6c;
   --vscode-editorUnnecessaryCode-opacity: 0.47;
 
   --vscode-editorHoverWidget-background: #f8f8f8;

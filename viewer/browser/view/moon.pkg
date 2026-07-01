@@ -9,6 +9,7 @@ import {
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/languages",
+  "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",

@@ -146,6 +146,7 @@ test "marker hover renders the row and status bar as separate rendered parts" {
       range: Range(1, 1, 1, 2),
       severity: Warning,
       message: "Configured diagnostic",
+      tags: None,
     },
   )
   // Monaco renders a marker hover as its own part plus a distinct `statusBar`
@@ -164,4 +165,39 @@ test "marker hover renders the row and status bar as separate rendered parts" {
   let status_bar = rows[1]
   assert_true(status_bar.contains("hover-row status-bar"))
   assert_true(status_bar.contains("View Problem"))
+  // Monaco's `HoverAction.render` (`hoverWidget.ts:52-92`) puts `tabindex` on
+  // `.action-container`, never on the `<a>`, and wraps the label in a `<span>`.
+  assert_true(status_bar.contains("<div class=\"action-container\" tabindex=\"0\">"))
+  assert_true(status_bar.contains("<a class=\"action\" role=\"button\"><span>View Problem</span></a>"))
+}
+
+///|
+test "marker + later-ordinal hover part: status bar renders last, not sandwiched" {
+  let marker = @markers.Marker::from_diagnostic(
+    "test",
+    @base_common.Uri::memory("test.mbt"),
+    {
+      range: Range(1, 1, 1, 2),
+      severity: Warning,
+      message: "Unused variable 'c'",
+      tags: None,
+    },
+  )
+  // Sorted-by-ordinal input (MarkerHover=0, MarkdownHover=100), matching what
+  // `HoverController` actually feeds `render_hover_parts`. Monaco's
+  // `_renderParts` collects every participant's content row first and appends
+  // the single shared status bar last — never interleaved.
+  let rows = render_hover_parts(
+    [
+      MarkerHover(range=OffsetRange(0, 1), marker~),
+      MarkdownHover(range=OffsetRange(0, 1), contents=[PlainText("Int")], ordinal=100),
+    ],
+    "moonbit",
+  )
+  assert_eq(rows.length(), 3)
+  assert_true(rows[0].contains("Unused variable"))
+  assert_false(rows[0].contains("status-bar"))
+  assert_true(rows[1].contains("Int"))
+  assert_false(rows[1].contains("status-bar"))
+  assert_true(rows[2].contains("hover-row status-bar"))
 }

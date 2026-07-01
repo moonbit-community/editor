@@ -158,11 +158,16 @@ Member count (Phase 1): 17 (resizable) + 6 (sizing cluster) = **23**.
 |---|---|---|---|
 | `_setHoverWidgetMaxDimensions` `--vscode-hover-maxWidth` (cHW :153) | set the CSS custom property the markdown `.hover-contents` `max-width` reads, so it caps to available width not the 500px default | `hover_width_style` (sets `--vscode-hover-maxWidth` + `max-width`) | TESTED |
 | `_findMaximumRenderingWidth` (cHW :217-235) | cap to the editor **content area** (`width − contentLeft − 24`), not the whole editor box, so the right-aligned widget cannot push left into the gutter | `hover_available_width` (takes `gutter_width`) | TESTED |
-| `_isHoverTextOverflowing` (cHW :202-215) | nowrap probe: `scrollWidth > clientWidth` over children | folded into `hover_available_width` overflow check | TESTED |
+| `_isHoverTextOverflowing` (cHW :202-215) | nowrap probe: `scrollWidth > clientWidth` over children | `HoverWidgetDom::measure_natural_width` (`content_widgets.mbt`, Phase 4 width-sizing completion — see below) | TESTED — **correction**: this row previously claimed TESTED via "folded into `hover_available_width` overflow check", but `hover_available_width` was (and remains) a static box-derived cap with no DOM measurement at all; there was no real nowrap probe until the Phase 4 completion landed. |
 
 **Proof.** Verified directly against the real editor, no Monaco reference page:
 - `tall hover is capped to the available space and stays fully scrollable`
 - `wrappable hover content is capped to the editor content area in a narrow window`
+- `a medium hover payload renders proportioned to its text, not collapsed to the CSS min-width floor`
+  (added with the Phase 4 width-sizing completion; empirically confirmed to
+  *fail* against the pre-completion `apply_width_sizing` — the marker-hover
+  message collapsed to `.monaco-resizable-hover`'s CSS `min-width: 150px`
+  floor instead of its own natural width)
 
 both in `tests/browser/conformance/monaco_hover_scrollbar.spec.js`. These *fail*
 against the old `max(80, clientHeight−24)` `apply_sizing` and *pass* after the
@@ -360,7 +365,7 @@ text-selection arms, `getAccessibleWidgetContent(+AtIndex)`, `isColorPickerVisib
 
 ---
 
-## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — IN PROGRESS (increments 1–4)
+## Phase 4 — `contentHoverWidgetWrapper.ts` + `contentHoverRendered.ts` + `contentHoverWidget.ts` structure remainder — IN PROGRESS (increments 1–7 landed)
 
 Give rendered parts real structure instead of one HTML blob: a
 `RenderedContentHover` analog that owns per-part nodes, supports focus
@@ -444,6 +449,77 @@ real action-backed status bar remain DEFERRED to their keyboard / verbosity
 markdown grouping and the marker/status-bar split
 (`viewer/hover/hover_render_wbtest.mbt`); the hover conformance specs stay green
 (a per-part `> .hover-row[tabindex="0"]` assertion added to `hover_rendering.spec.js`).
+
+**Increment 6 (width-sizing completion, landed).** Fixed a real rendering bug
+found while auditing this phase: `apply_width_sizing` only ever set CSS
+`max-width` on `scrollable.content` — a *ceiling*, not a *lock*. Since nothing
+else in the DOM chain forced a shrink-to-fit width, a block-level element with
+only `max-width` set collapses to its container's default width behavior,
+which bottomed out at `.monaco-resizable-hover`'s CSS `min-width: 150px` —
+so *any* hover content, regardless of its own natural length, could render in
+a box as narrow as 150px, wrapping far more aggressively than Monaco's real
+box. Reproduces the reported symptom exactly (a diagnostic message wrapped
+across many narrow lines). Ported the missing half of Monaco's
+`handleContentsChanged`/`_setHoverWidgetDimensions`
+(`contentHoverWidget.ts:113-137,406-428`) width axis: `_isHoverTextOverflowing`
+(:202-215)'s nowrap probe as `HoverWidgetDom::measure_natural_width`
+(force `--vscode-hover-whiteSpace`/`--vscode-hover-sourceWhiteSpace: nowrap`
+via the CSS hooks `hover.css` already exposed but never drove, measure, then
+release); `_findMaximumRenderingWidth`'s decision (:217-236, no page-body
+branch — this port's non-overflowing-viewer deviation carries forward) as the
+pure, tested `hover_resolved_width` (natural width if it fits, else the
+available-width cap); and the width axis of `_setHoverWidgetDimensions`
+(applying an **explicit `width`**, not `max-width`) extended from the single
+`scrollable.content` node to all three DOM levels Monaco touches —
+`hover`/`scrollable.wrapper`/`scrollable.content` (`containerDomNode`/
+`scrollbar.getDomNode()`/`contentsDomNode`). The outermost `wrapper`
+(Monaco's `_resizableNode.domNode`) stays untouched — still the deferred
+sash machinery's job. `setMinimumDimensions`/`_updateMinimumWidth` stay
+un-ported (not just unconsumed): no caller exists for either side of that
+pair, and this repo's convention is to not commit dead code, not even a
+tested-only pure function — see the corrected Phase 1b `_isHoverTextOverflowing`
+row below, which had claimed this was already done. Proof: a new browser case
+in `tests/browser/conformance/monaco_hover_scrollbar.spec.js` reproducing the
+marker-hover scenario, empirically confirmed to fail (150px CSS-floor
+collapse) against the pre-completion code and pass (231px, proportioned to the
+text) after.
+
+**Increment 7 (faithful above/below positioning, landed — fixes a paint bug
+Increment 6 introduced).** Increment 6's extra style churn on `.hover`
+(`.monaco-hover`, the element carrying the theme background/border) exposed a
+latent bug: `ContentWidget::style()` positioned the widget's `top` at the
+anchor line unconditionally and relied on a CSS `transform:
+translateY(-100%)` on `.monaco-resizable-hover` to visually shift "above"
+placements up by their own height. That transform is **not** something
+Monaco does — grepping `contentHoverWidget.ts` and
+`contentWidgets.ts` for `transform`/`translateY` finds nothing; Monaco
+computes the exact top coordinate once in JS
+(`_layoutBoxInViewport`, `contentWidgets.ts:309-317`: `aboveTop = aboveLineTop
+- height`) and sets it directly via `domNode.setTop(...)`
+(`contentWidgets.ts:580-581`) — no transform, ever. It was an invented
+technique from a predecessor DOM/CSS plan. Combined with Increment 6's
+heavier synchronous style churn on `.hover` (an `innerHTML` remount +
+multiple style writes, all under a GPU-promoted transformed ancestor layer),
+this reproducibly left `.hover`'s background unpainted in Chromium — visible
+in a real window/full-page screenshot even though every computed style
+queried correctly (an element-scoped screenshot, which forces its own
+repaint as part of capture, never showed it — misleadingly "confirming" the
+port as correct during Increment 6's own validation).
+
+Fixed by porting the real mechanism instead of patching around the symptom:
+`ContentWidget` gained a `height` field (Monaco's `_cachedDomNodeOffsetHeight`
+parameter to `_layoutBoxInViewport`); `ContentWidget::style()`'s `top` for
+`ContentWidgetAbove` is now `anchor.top - height` (`ContentWidgetBelow`
+unchanged, already matching Monaco's `belowTop = underLineTop`); the CSS
+`transform` rules on `.monaco-resizable-hover`/`.monaco-resizable-hover.below`
+are deleted. `render_hover_widget` threads `hover_view.placement.max_height`
+in as `height` (`0.0` during the throwaway measuring pass, before placement
+is known — Monaco's own DOM-offset cache is similarly unset until a real
+layout has happened). Confirmed against a real full-page screenshot capture
+(not just `getComputedStyle`, which had passed throughout): the background
+paints correctly, and the final pixel position is unchanged (verified the
+computed `top` matches the old transform-shifted position exactly — this is
+a rendering-mechanism fix, not a visual/layout change).
 
 ### Inventory (Phase 4)
 
@@ -535,12 +611,12 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 | `_DECORATION_OPTIONS hoverHighlight` (rend :224-227) | decoration class | `hoverHighlight` deco option | TODO |
 | `contentHoverWidget._resize` override (cHW :169-177) | `_lastDimensions`; adjust dims; relayout; `onDidResize.fire` | — | DEFERRED (sashes) |
 | `_updateResizableNodeMaxDimensions`/`_updateMaxDimensions` (cHW :162,:307) | `max(layoutInfo.h/4, 250, last.h)` × `max(w·0.66, 750, last.w)` | `hover_update_max_dimensions` (new) | DEFERRED (sashes) |
-| `setMinimumDimensions`/`_updateMinimumWidth` (cHW :387,:396) | combine min dims; min width = `min(contentWidth, minWidth)` | `hover_min_dimensions` (new) | TODO |
-| `handleContentsChanged` (cHW :406-428) | relayout, remeasure, re-pick position preference, fire contents-changed | `handle_contents_changed` (new) | TODO |
-| `_removeConstraintsRenderNormally` (cHW :379-385) | layout to editor box; dims `auto`; update max | `render_normally` (new) | TODO |
+| `setMinimumDimensions`/`_updateMinimumWidth` (cHW :387,:396) | combine min dims; min width = `min(contentWidth, minWidth)` | — | DEFERRED (no caller — nothing calls the Monaco equivalent of `setMinimumDimensions` yet, `HoverContext` itself is still a TODO row above; not committed as untested dead code) |
+| `handleContentsChanged` (cHW :406-428) width subset | measure natural (nowrap) width, lock an explicit width | `HoverWidgetDom::measure_natural_width` + `hover_resolved_width` (`content_widgets.mbt`) | TESTED (the height/position-preference re-pick this function also does was already covered by the existing two-pass `render_hover_widget` flow, not re-ported as a discrete function) |
+| `_removeConstraintsRenderNormally` (cHW :379-385) | layout to editor box; dims `auto`; update max | folded into the existing two-pass flow's unconstrained-then-measured cycle (`render_hover_widget`'s `clear_sizing` + measuring pass) | PORTED (equivalent effect, not a discrete function) |
 | `isMouseGettingCloser` + `computeDistanceFromPointToRectangle` (cHW :238-276,:477-483) | point-to-rect distance, 4px tolerance, track closest | `MouseCloserState::is_mouse_getting_closer` / `compute_distance_from_point_to_rectangle` (`hover_widget_geometry.mbt`; `sticky && getting-closer` signal threaded into `start_showing_or_update_hover`'s insist-update; reset per shown view) | TESTED |
 | `_render`/`_setRenderedHover`/`_updateContent`/`_layoutContentWidget` (cHW :314-322,:278-305) | render + visibility key + content swap | render pipeline | TODO |
-| dimension setters `_setHoverWidgetDimensions` etc. (cHW :113-160) | width/height px apply (4 setters) | DOM dim setters | PORTED (predecessor DOM plan) |
+| dimension setters `_setHoverWidgetDimensions` etc. (cHW :113-160) | width/height px apply (4 setters) | `HoverWidgetDom::apply_width_sizing`/`apply_sizing`/`clear_sizing`, `hover_width_style` (`content_widgets.mbt`) | TESTED (width axis, applied to all 3 levels `_setHoverWidgetDimensions` touches — `hover`/`scrollable.wrapper`/`scrollable.content`; the outermost `wrapper`, Monaco's `_resizableNode.domNode`, stays untouched, its sizing is the deferred sash machinery's job. Height stays a `max-height` cap, not an exact height — Monaco's exact-height lock is part of the sash-resize `_resizableNode` sizing this port doesn't have a caller for) |
 | `onDidResize`/`onDidScroll`/`onContentsChanged` emitters (cHW :38-45) | participant fan-out events | event seams | TODO |
 | `getAccessibleWidgetContent*` (wrap/rend) | accessible text | — | N-A (accessibility) |
 | `isColorPickerVisible`/`_updateMarkdownAndColor…` colorPicker arm | colorPicker state | — | N-A (colorPicker out of scope) |
@@ -549,7 +625,7 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 
 ---
 
-## Phase 5 — status bar actions + `hoverActionIds.ts` + `hoverActions.ts` + `hoverContribution.ts` + widget scroll cluster — IN PROGRESS (scroll cluster landed)
+## Phase 5 — status bar actions + `hoverActionIds.ts` + `hoverActions.ts` + `hoverContribution.ts` + widget scroll cluster — IN PROGRESS (scroll cluster + status-bar structure landed)
 
 Replace the static "View Problem" markup with a real `EditorHoverStatusBar`
 analog whose actions invoke commands, and register the `hoverActionIds` command
@@ -571,11 +647,37 @@ the previously-missing **secondary keybindings** — `Alt+Arrow` pages
 (`GoTo{Top,Bottom}HoverAction`). This corrects the only arithmetic divergence in
 the old inline handler — horizontal scroll used a font-dependent `4 × charWidth`
 nudge instead of Monaco's fixed `30` (Deviation 13). The command/contribution
-registration, the `hoverFocused` context key, and the real `EditorHoverStatusBar`
-remain TODO (they need the viewer command registry — Deviation 4). Proof: two new
-keyboard cases in `tests/browser/conformance/hover_rendering.spec.js` (the
-scroll-cluster keybindings incl. `Alt`/`CtrlCmd` secondaries; the fixed
-horizontal step), hover conformance specs stay green.
+registration and the `hoverFocused` context key remain TODO (they need the
+viewer command registry — Deviation 4). Proof: two new keyboard cases in
+`tests/browser/conformance/hover_rendering.spec.js` (the scroll-cluster
+keybindings incl. `Alt`/`CtrlCmd` secondaries; the fixed horizontal step),
+hover conformance specs stay green.
+
+**Increment 2 (status-bar structure, landed).** Fixed a real rendering bug
+found while auditing this phase: `render_hover_parts`
+(`viewer/contrib/hover/hover_render.mbt`) pushed the marker's status-bar row
+*inline, mid-loop*, immediately after the marker's content row — so a
+later-ordinal part (e.g. an LSP/markdown hover on the same anchor) rendered
+*after* the status bar instead of before it, producing a visually disconnected
+extra row. Monaco's `_renderParts` (`contentHoverRendered.ts:274-305`) loops
+over every participant collecting content rows first and appends the single
+shared status bar **after the whole loop**, never interleaved. Ported that
+ordering: `render_hover_parts` now collects a `has_status_bar_content` flag
+during the loop and pushes `marker_status_bar_row()` once, after every part's
+content row. `marker_status_bar_row`'s DOM shape was also corrected to match
+`HoverAction.render` (`hoverWidget.ts:52-92`) exactly — `tabindex` moved from
+`<a class="action">` to `.action-container` (Monaco never sets it on the
+`<a>`), and the label text is now a `<span>` child rather than the `<a>`'s
+direct text. The still-static `run` handler (a documented no-op) and the
+missing `hoverActionIds`/`hoverActions`/`hoverContribution` command
+registration are unchanged — seeing this through end-to-end needs
+`markerController.showAtMarker`'s target, an in-editor peek widget
+(`MarkerNavigationWidget`) this codebase hasn't ported; that's its own future
+exec-plan, not folded into this one. Proof: a new ordering regression case in
+`hover_render_wbtest.mbt` (marker + later-ordinal markdown part → status bar
+row is last, not sandwiched) and a new browser case in
+`tests/browser/conformance/dom_structure.spec.js` (same scenario, asserting
+`.monaco-hover-content`'s direct children in order).
 
 ### Inventory (Phase 5)
 
@@ -617,7 +719,7 @@ Member count (Phase 5): 9 (status bar) + ~16 (ids; verbosity ids → Phase 6) +
 
 | Source member (file:line) | Arithmetic / transition | MoonBit symbol (target) | Status |
 |---|---|---|---|
-| `EditorHoverStatusBar` (csb :15-58) | `div.hover-row.status-bar` + `div.actions`; `addAction` keybinding + managed hover; `hasContent` | `EditorHoverStatusBar` (new) | TODO |
+| `EditorHoverStatusBar` (csb :15-58) | `div.hover-row.status-bar` + `div.actions`; `addAction` keybinding + managed hover; `hasContent` | `marker_status_bar_row` (`hover_render.mbt`) + participant-loop-then-status-bar-last ordering (`render_hover_parts`) | PORTED (structure/DOM shape/ordering; `addAction`-as-shared-object, keybinding lookup, and `run` command dispatch stay TODO — no command registry, no `MarkerController` target) |
 | `hoverActionIds` scroll/page/goto/show/hide consts (hai :7-17,:24) | id strings | `hover_action_ids.mbt` consts (new) | TODO |
 | `ShowOrFocusHoverAction` (ha :28-107) | visible+focusOption→focus vs `showContentHover(Immediate, Keyboard, focus)`; a11y-support focus | `show_or_focus_hover` (new) | TODO |
 | `HideContentHoverAction` (ha :152-169) | `hideContentHover()` | `hide_hover` command (new) | TODO |

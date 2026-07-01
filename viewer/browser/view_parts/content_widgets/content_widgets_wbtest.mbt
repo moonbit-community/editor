@@ -24,6 +24,20 @@ test "maximum rendering height is the lesser of available space and content" {
 }
 
 ///|
+/// Phase 4 sizing-cluster completion: `_findMaximumRenderingWidth`'s decision
+/// (`contentHoverWidget.ts:217-236`), adapted for the viewer's non-overflowing
+/// case — short/narrow content should render at its own natural width, not
+/// stretched to the available-width cap (the bug this increment fixes).
+test "resolved width is the lesser of the natural (nowrap) width and the available width" {
+  // A short one-line payload ("ok") fits well under the cap: render narrow.
+  assert_eq(hover_resolved_width(40.0, 480.0), 40.0)
+  // A long unwrapped payload exceeds the cap: wrap at the available width.
+  assert_eq(hover_resolved_width(900.0, 480.0), 480.0)
+  // Exactly at the boundary: either bound (both equal) resolves the same.
+  assert_eq(hover_resolved_width(480.0, 480.0), 480.0)
+}
+
+///|
 test "position preference honors editor.hover.above and the side that fits" {
   // Plenty of room above: prefer above.
   assert_eq(hover_prefer_above(100.0, 300.0, 300.0, true), true)

@@ -30,6 +30,7 @@ pub(all) struct View {
   probe : @dom.Element
   message_text : @dom.Element
   overflow_guard : @dom.Element
+  squiggly_style : @dom.Element
   view_lines : @view_lines.ViewLines
   view_zones : @view_zones.ViewZones
   content_view_overlays : @selections.ContentViewOverlays
@@ -39,6 +40,7 @@ pub(all) struct View {
   editor_scrollbar : @editor_scrollbar.EditorScrollbar
   // private fields
 }
+pub fn View::apply_squiggly_theme(Self) -> Unit
 pub fn View::build() -> Self
 pub fn View::is_line_rendered(Self, Int) -> Bool
 pub fn View::line_width(Self, Int, Int) -> Double

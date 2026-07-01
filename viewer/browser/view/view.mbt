@@ -15,6 +15,7 @@ pub(all) struct View {
   probe : @rdom.Element
   message_text : @rdom.Element
   overflow_guard : @rdom.Element
+  squiggly_style : @rdom.Element
   view_lines : @view_lines.ViewLines
   view_zones : @view_zones.ViewZones
   content_view_overlays : @selections.ContentViewOverlays
@@ -48,6 +49,8 @@ pub fn View::build() -> View {
   message.set_attribute("class", "source-message")
   let message_text = document.create_text_node("")
   message.append_child(message_text.as_node())
+  let squiggly_style = document.create_element("style")
+  squiggly_style.set_attribute("data-squiggly-theme", "")
   let overflow_guard = document.create_element("div")
   overflow_guard.set_attribute("class", "overflow-guard")
   overflow_guard.set_attribute("data-view-part", "overflow-guard")
@@ -68,6 +71,7 @@ pub fn View::build() -> View {
   overflow_guard.append_child(editor_scrollbar.wrapper().as_node())
   root.append_child(probe.as_node())
   root.append_child(message.as_node())
+  root.append_child(squiggly_style.as_node())
   root.append_child(overflow_guard.as_node())
   root.append_child(content_widgets.overflowing_dom().as_node())
   root.append_child(overlay_widgets.overflowing_dom().as_node())
@@ -80,6 +84,7 @@ pub fn View::build() -> View {
     probe,
     message_text,
     overflow_guard,
+    squiggly_style,
     view_lines,
     view_zones,
     content_view_overlays,

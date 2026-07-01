@@ -2,11 +2,14 @@
  * Marker squiggle decorations, ported from
  * vscode/src/vs/editor/browser/widget/codeEditor/editor.css:81-120.
  *
- * The visible squiggle is the `border-bottom` double/dotted/dashed underline.
- * The `*-border` color tokens default to `null` in VS Code's normal (non-HC)
- * themes — the live squiggle there is a dynamically generated wavy underline
- * from `editor*.foreground`. To keep the static port visible, the viewer
- * defaults the `*-border` tokens to the foreground colors (theme.css).
+ * This `border-bottom` double/dotted/dashed underline is Monaco's
+ * high-contrast-only fallback — the `*-border` color tokens default to `null`
+ * in normal (non-HC) themes, so this rule is correctly inert here (this
+ * viewer has no high-contrast theme; see view_lines.mbt's equivalent note).
+ * The real, visible wavy squiggle is a runtime inline-SVG background image
+ * computed from `editor*.foreground` (`viewer/browser/view/
+ * squiggly_theme.mbt`, porting `codeEditorWidget.ts`'s
+ * `registerThemingParticipant`), injected as a separate stylesheet.
  *
  * Deviation: Monaco's `::before { background: var(--vscode-editor*-background) }`
  * error-text fill is omitted. `editor*.background` is `null` (transparent) in

@@ -2,23 +2,23 @@
   background: var(--vscode-editor-hoverHighlightBackground);
 }
 
-/* Monaco-shaped editor hover, anchored as a content widget. */
+/* Monaco-shaped editor hover, anchored as a content widget. Positioned by an
+ * exact `top`/`left` computed in JS (`ContentWidget::style`, porting Monaco's
+ * `_layoutBoxInViewport`: `aboveTop = aboveLineTop - height`), not a CSS
+ * transform — a transform-based "shift up by own height" trick was tried
+ * here previously and reproducibly corrupted this element's background paint
+ * in Chromium under the sizing cluster's synchronous style churn. */
 .monaco-resizable-hover {
   position: absolute;
   z-index: 50;
   pointer-events: auto;
   min-width: 150px;
-  transform: translateY(-100%);
   cursor: default;
   user-select: text;
   box-sizing: content-box;
   border: 1px solid var(--vscode-editorHoverWidget-border);
   border-radius: var(--vscode-cornerRadius-large);
   background-color: var(--vscode-editorHoverWidget-background);
-}
-
-.monaco-resizable-hover.below {
-  transform: none;
 }
 
 .monaco-resizable-hover.measuring {
@@ -195,6 +195,17 @@
   overflow: hidden;
   text-wrap: nowrap;
   text-overflow: ellipsis;
+}
+
+.monaco-hover .hover-row.status-bar .actions .action-container .action .icon {
+  padding-right: 4px;
+  vertical-align: middle;
+  font-size: inherit;
+}
+
+.monaco-hover .hover-row.status-bar .actions .action-container a {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
 }
 
 .monaco-hover .hover-row.hover-row-with-copy {

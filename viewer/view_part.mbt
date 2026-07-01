@@ -38,7 +38,7 @@ priv enum ViewPartHandle {
   MarginViewOverlaysPart(@margin.MarginViewOverlays)
   ContentWidgetsPart(ContentWidgets)
   OverlayWidgetsPart(@overlay_widgets.OverlayWidgets)
-  EditorScrollbarPart(EditorScrollbar)
+  EditorScrollbarPart(@editor_scrollbar.EditorScrollbar)
 }
 
 ///|
@@ -49,7 +49,7 @@ fn default_view_parts(
   margin_view_overlays : @margin.MarginViewOverlays,
   content_widgets : ContentWidgets,
   overlay_widgets : @overlay_widgets.OverlayWidgets,
-  editor_scrollbar : EditorScrollbar,
+  editor_scrollbar : @editor_scrollbar.EditorScrollbar,
 ) -> Array[ViewPartHandle] {
   [
     ViewLinesPart(view_lines),
@@ -71,7 +71,7 @@ impl ViewPart for ViewPartHandle with fn on_view_event(self, event) {
     MarginViewOverlaysPart(part) => ViewPart::on_view_event(part, event)
     ContentWidgetsPart(part) => part.on_view_event(event)
     OverlayWidgetsPart(part) => ViewPart::on_view_event(part, event)
-    EditorScrollbarPart(part) => part.on_view_event(event)
+    EditorScrollbarPart(part) => ViewPart::on_view_event(part, event)
   }
 }
 
@@ -84,7 +84,7 @@ impl ViewPart for ViewPartHandle with fn should_render(self) {
     MarginViewOverlaysPart(part) => ViewPart::should_render(part)
     ContentWidgetsPart(part) => part.should_render()
     OverlayWidgetsPart(part) => ViewPart::should_render(part)
-    EditorScrollbarPart(part) => part.should_render()
+    EditorScrollbarPart(part) => ViewPart::should_render(part)
   }
 }
 
@@ -97,7 +97,7 @@ impl ViewPart for ViewPartHandle with fn set_should_render(self, value) {
     MarginViewOverlaysPart(part) => ViewPart::set_should_render(part, value)
     ContentWidgetsPart(part) => part.set_should_render(value)
     OverlayWidgetsPart(part) => ViewPart::set_should_render(part, value)
-    EditorScrollbarPart(part) => part.set_should_render(value)
+    EditorScrollbarPart(part) => ViewPart::set_should_render(part, value)
   }
 }
 
@@ -110,7 +110,7 @@ impl ViewPart for ViewPartHandle with fn on_before_render(self, viewport) {
     MarginViewOverlaysPart(part) => ViewPart::on_before_render(part, viewport)
     ContentWidgetsPart(part) => part.on_before_render(viewport)
     OverlayWidgetsPart(part) => ViewPart::on_before_render(part, viewport)
-    EditorScrollbarPart(part) => part.on_before_render(viewport)
+    EditorScrollbarPart(part) => ViewPart::on_before_render(part, viewport)
   }
 }
 
@@ -123,7 +123,7 @@ impl ViewPart for ViewPartHandle with fn prepare_render(self, context) {
     MarginViewOverlaysPart(part) => ViewPart::prepare_render(part, context)
     ContentWidgetsPart(part) => part.prepare_render(context)
     OverlayWidgetsPart(part) => ViewPart::prepare_render(part, context)
-    EditorScrollbarPart(part) => part.prepare_render(context)
+    EditorScrollbarPart(part) => ViewPart::prepare_render(part, context)
   }
 }
 
@@ -136,7 +136,7 @@ impl ViewPart for ViewPartHandle with fn render(self, context) {
     MarginViewOverlaysPart(part) => ViewPart::render(part, context)
     ContentWidgetsPart(part) => part.render(context)
     OverlayWidgetsPart(part) => ViewPart::render(part, context)
-    EditorScrollbarPart(part) => part.render(context)
+    EditorScrollbarPart(part) => ViewPart::render(part, context)
   }
 }
 
@@ -149,7 +149,7 @@ impl ViewPart for ViewPartHandle with fn on_did_render(self) {
     MarginViewOverlaysPart(part) => ViewPart::on_did_render(part)
     ContentWidgetsPart(part) => part.on_did_render()
     OverlayWidgetsPart(part) => ViewPart::on_did_render(part)
-    EditorScrollbarPart(part) => part.on_did_render()
+    EditorScrollbarPart(part) => ViewPart::on_did_render(part)
   }
 }
 
@@ -443,5 +443,72 @@ impl ViewPart for @overlay_widgets.OverlayWidgets with fn render(
 
 ///|
 impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_did_render(self) {
+  self.should_render = false
+}
+
+// `ViewPart` impl for `@editor_scrollbar.EditorScrollbar`
+// (`browser/view_parts/editor_scrollbar`). Kept here for the same reason as
+// the impls above.
+
+///|
+impl ViewPart for @editor_scrollbar.EditorScrollbar with fn should_render(self) {
+  self.should_render
+}
+
+///|
+impl ViewPart for @editor_scrollbar.EditorScrollbar with fn on_view_event(
+  _self,
+  event,
+) {
+  match event {
+    ViewFlushed => true
+    ViewScrollChanged(e) => e.position_changed || e.dimensions_changed
+    ViewConfigurationChanged(e) => e.gutter_width_changed
+    _ => false
+  }
+}
+
+///|
+impl ViewPart for @editor_scrollbar.EditorScrollbar with fn set_should_render(
+  self,
+  value,
+) {
+  self.should_render = value
+}
+
+///|
+impl ViewPart for @editor_scrollbar.EditorScrollbar with fn on_before_render(
+  _self,
+  _viewport,
+) {
+  ()
+}
+
+///|
+impl ViewPart for @editor_scrollbar.EditorScrollbar with fn prepare_render(
+  _self,
+  _context,
+) {
+  ()
+}
+
+///|
+impl ViewPart for @editor_scrollbar.EditorScrollbar with fn render(
+  self,
+  context,
+) {
+  self.editor_scrollable.content.set_attribute(
+    "style",
+    "left:" + context.gutter_width.to_string() + "px",
+  )
+  self.editor_scrollable.update_from_model(
+    context.dimensions,
+    context.position,
+    horizontal_left=context.gutter_width,
+  )
+}
+
+///|
+impl ViewPart for @editor_scrollbar.EditorScrollbar with fn on_did_render(self) {
   self.should_render = false
 }

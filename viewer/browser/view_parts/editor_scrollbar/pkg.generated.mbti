@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser/view_parts/editor_scrollbar"
+
+import {
+  "moonbit-community/editor/viewer/ui/scrollbar",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct EditorScrollbar {
+  editor_scrollable : @scrollbar.ScrollableElementDom
+  mut should_render : Bool
+}
+pub fn EditorScrollbar::content(Self) -> @dom.Element
+pub fn EditorScrollbar::new() -> Self
+pub fn EditorScrollbar::scrollable(Self) -> @scrollbar.ScrollableElementDom
+pub fn EditorScrollbar::wrapper(Self) -> @dom.Element
+
+// Type aliases
+
+// Traits
+

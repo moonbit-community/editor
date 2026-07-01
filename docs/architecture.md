@@ -50,10 +50,16 @@ Reference trees are research inputs only. Product code must not import from
   never imports these (the folding indent fallback was inverted into the folding
   controller so the tier flows `contrib -> common`, not the reverse).
 - `viewer/common`: a shrinking residual of the former grab-bag (`line_html`,
-  `mouse_target`) pending the browser carve-up (`mouse_target` →
-  `viewer/browser/controller`).
-- `viewer/controller` and `viewer/ui/scrollbar`: browser-UI subpackages. They
-  may use narrow browser bindings but do not import the parent `viewer` package.
+  `mouse_target`). `mouse_target.mbt`'s `MouseTargetKind`/`MouseTarget` value
+  types and its DOM-free `hit_test`/`ViewMetrics` algorithm stay here rather
+  than moving to `viewer/browser/controller` (Increment F correction,
+  `docs/exec-plans/viewer-directory-mirror.md`): `viewer/contrib/hover`
+  (multi-target) depends on `MouseTarget` directly, so moving it into a
+  js-only package would break hover's native build — the same reasoning that
+  keeps the folding/hover contrib models out of `contrib/*/browser`.
+- `viewer/browser/controller` and `viewer/ui/scrollbar`: browser-UI
+  subpackages. They may use narrow browser bindings but do not import the
+  parent `viewer` package.
 - `viewer/browser/view_parts/*` (`content_widgets`, `editor_scrollbar`, `margin`,
   `overlay_widgets`, `selections`, `view_lines`, `view_zones`) and
   `viewer/browser/view`: the carved-out Three-Tier Mirror browser view and
@@ -190,7 +196,7 @@ subpackages.
 - DOM-free model, layout, viewport, render-line, and decoration logic belongs in
   the focused `viewer/*` common-layer packages.
 - Browser input and browser widget helpers may live in browser-UI subpackages
-  such as `viewer/controller` and `viewer/ui/scrollbar`.
+  such as `viewer/browser/controller` and `viewer/ui/scrollbar`.
 - Semantic provider contracts belong in `language`; runtime provider
   registration belongs in `viewer/languages`.
 - Concrete tokenizers belong in `syntax/lang_*` and are imported only by

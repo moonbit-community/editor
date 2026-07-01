@@ -9,7 +9,7 @@
 // returns — DOM nodes as fields, view-dependent operations as closures. The
 // faithful MoonBit translation is the same: a struct of nodes + closures, built
 // by the viewer where the view is in scope (mirroring `ViewContext`). The edge
-// stays one-directional: `viewer -> viewer/controller`.
+// stays one-directional: `viewer -> viewer/browser/controller`.
 //
 // The dispatch side — turning a resolved pointer position into a selection
 // command — stays in the viewer core (`Viewer::dispatch_mouse`), as Monaco keeps

@@ -1,4 +1,4 @@
-# viewer/controller
+# viewer/browser/controller
 
 The browser input controller — the local analog of Monaco's
 `editor/browser/controller/`. It owns the DOM listener wiring for pointer input
@@ -40,9 +40,17 @@ which the controller feeds via a `MouseDispatch` intent.
 
 ## Boundaries
 
-- A browser-UI subpackage: it owns browser DOM, so it may import `rabbita/dom`
-  and declare JS FFI, but not the shell, the rabbita TEA/vdom/command layers, or
-  the `viewer` core. The edge is one-directional: `viewer -> viewer/controller`
-  (`scripts/check-architecture.mbtx`, `is_viewer_browser_subpackage`).
-- May depend on `base/common`, `viewer/common`, `viewer/view_model`,
-  `viewer/ui/scrollbar`, and `viewer/view_layout`.
+- A browser-tier package (`supported_targets = "js"`, enforced by
+  `check_tier_targets` in `scripts/check-architecture.mbtx`): it owns browser
+  DOM, so it may import `rabbita/dom` and declare JS FFI, but not the shell,
+  the rabbita TEA/vdom/command layers, or the root `viewer` package. The edge
+  is one-directional: `viewer -> viewer/browser/controller`.
+- `hit_test`/`ViewMetrics`/`MouseTarget`/`MouseTargetKind` — the DOM-free
+  hit-testing algorithm and value types Monaco's `mouseTarget.ts` also
+  defines — stay in `viewer/common` rather than moving here: they have no DOM
+  dependency, and `viewer/contrib/hover` (multi-target) depends on
+  `MouseTarget` directly, so moving them into this js-only package would
+  break hover's native build. See `viewer/common/mouse_target.mbt`'s header
+  comment.
+- May depend on `base/common`, `viewer/common`, `viewer/common/view_model`,
+  `viewer/ui/scrollbar`, and `viewer/common/view_layout`.

@@ -2,7 +2,7 @@
 /// Hooks the view's native pointer listeners. Copy and hover-relevant
 /// mouseleave stay on the viewer; all pointer input (mouse-select, scrollbar,
 /// wheel, drag-autoscroll, browser-reveal) is delegated to the
-/// `viewer/controller` `MouseHandler`, which the viewer builds here with a
+/// `viewer/browser/controller` `MouseHandler`, which the viewer builds here with a
 /// `PointerHandlerHelper` closing over the view — the local analog of Monaco's
 /// `View._createPointerHandlerHelper`.
 fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
@@ -92,7 +92,7 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
 ///|
 /// The pointer-event modifier flags the hover controller reads (`event.ctrlKey` /
 /// `metaKey` / `altKey`), following the local-extern pattern already used for
-/// `shiftKey` in `viewer/controller`.
+/// `shiftKey` in `viewer/browser/controller`.
 fn mouse_modifiers(mouse : @rdom.MouseEvent) -> @hover.EventModifiers {
   {
     ctrl: mouse_ctrl_key(mouse),

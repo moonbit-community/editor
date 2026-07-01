@@ -1,4 +1,4 @@
-// The viewer core's side of the `viewer/controller` seam: it builds the input
+// The viewer core's side of the `viewer/browser/controller` seam: it builds the input
 // controller's `PointerHandlerHelper`, the local analog of Monaco's
 // `View._createPointerHandlerHelper`. The closures capture the view and the
 // viewer so the controller never names the concrete `View`/`Viewer`.

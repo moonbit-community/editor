@@ -38,7 +38,7 @@ part of this package or the public import surface.
 
 - Own the browser editor DOM, CSS-facing class structure, measurement, native
   input capture (the pointer-input controller — mouse selection, hit test,
-  scrollbar, wheel, autoscroll — lives in `viewer/controller`; the viewer keeps
+  scrollbar, wheel, autoscroll — lives in `viewer/browser/controller`; the viewer keeps
   the measurement read-phase and the selection-command dispatch), custom
   scrollbars (the scrollable-element widget itself lives in
   `viewer/ui/scrollbar`), content widgets, overlay widgets, hover, folding
@@ -76,7 +76,7 @@ zones. Go-to-definition and find-references are not current viewer behavior.
 - May depend on `rabbita/dom` and `rabbita/js` for browser effects it owns.
   It must not depend on Rabbita TEA, vdom, or command packages.
 - May depend on `base/common`, `language`, `platform/log`, `viewer/common`,
-  `viewer/controller`, `viewer/cursor`, `viewer/folding`, `viewer/hover`,
+  `viewer/browser/controller`, `viewer/cursor`, `viewer/folding`, `viewer/hover`,
   `viewer/languages`, `viewer/markers`, `viewer/model`, `viewer/ui/scrollbar`,
   `viewer/view_line_renderer`, `viewer/view_layout`, `viewer/view_model`,
   `syntax`, and `viewer/decorations`.

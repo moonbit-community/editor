@@ -1,7 +1,7 @@
 # Viewer ↔ Monaco Directory-Structure Mirror (platform tiers)
 
-Status: in progress (A, B, C, E (7/7), D landed on branch
-`viewer-directory-mirror`; F–I remain) — Date: 2026-07-01.
+Status: in progress (A, B, C, E (7/7), D, F landed on branch
+`viewer-directory-mirror`; G–I remain) — Date: 2026-07-01.
 
 Refactor (no behavior change). Mirror Monaco's `vs/editor` directory tree as
 MoonBit packages **at directory granularity** under three tiers —
@@ -251,8 +251,21 @@ independent packages.
   `rendering_context.mbt`, `view_events.mbt`, `selection_measure.mbt` into one
   package (`view_controller.mbt` does *not* move here — reclassified to G).
 - **F — Rename `viewer/controller/` to `browser/controller/`.** Just the
-  existing `mouse_handler.mbt`/`mouse_target` content — `input.mbt` and
-  `hit_test_dom.mbt` do not merge in (reclassified to G in Phase 0).
+  existing `mouse_handler.mbt` — `input.mbt` and `hit_test_dom.mbt` do not
+  merge in (reclassified to G in Phase 0). **Correction found while landing
+  F:** `mouse_target.mbt` does **not** merge in either, despite the file name
+  matching this row's Monaco source (`editor/browser/controller/mouseTarget.ts`).
+  `viewer/contrib/hover` (multi-target, DOM-free) depends on `MouseTarget`
+  directly (`HoverController`'s `MouseMoved` event); moving `MouseTargetKind`/
+  `MouseTarget` into this js-only package would break hover's native build —
+  exactly the leak the tier-target guardrail exists to catch. `hit_test`/
+  `ViewMetrics` (the DOM-free hit-testing algorithm, also in `mouse_target.mbt`)
+  have no other cross-tier consumer, but stay alongside the types for the same
+  reason folding/hover's DOM-free contrib models stay hoisted out of
+  `contrib/*/browser`: Monaco's directory choice does not override "DOM-free
+  logic stays multi-target so the native check keeps enforcing it." So F ends
+  up a pure rename — `mouse_handler.mbt`/`README.md`/`moon.pkg` only, zero
+  content changes, same 546/513 js/native test counts before and after.
 - **G — Carve `browser/widget/code_editor/`.** The largest increment post-Phase-0:
   `viewer.mbt`, `viewer_options.mbt`, `public_read_api.mbt`, `reveal.mbt`,
   `view_host.mbt`, `view_zones_host.mbt`, plus the reclassified `input.mbt`,

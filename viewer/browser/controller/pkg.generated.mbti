@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/editor/viewer/controller"
+package "moonbit-community/editor/viewer/browser/controller"
 
 import {
   "moonbit-community/editor/viewer/common/view_layout",

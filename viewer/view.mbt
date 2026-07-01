@@ -12,7 +12,7 @@ priv struct View {
   view_zones : @view_zones.ViewZones
   content_view_overlays : @selections.ContentViewOverlays
   margin_view_overlays : @margin.MarginViewOverlays
-  content_widgets : ContentWidgets
+  content_widgets : @content_widgets.ContentWidgets
   overlay_widgets : @overlay_widgets.OverlayWidgets
   editor_scrollbar : @editor_scrollbar.EditorScrollbar
   view_parts : Array[ViewPartHandle]
@@ -47,7 +47,7 @@ fn View::build() -> View {
   let content_view_overlays = @selections.ContentViewOverlays::new(document)
   let view_zones = @view_zones.ViewZones::new(document)
   let view_lines = @view_lines.ViewLines::new(document)
-  let content_widgets = ContentWidgets::new(document)
+  let content_widgets = @content_widgets.ContentWidgets::new(document)
   let overlay_widgets = @overlay_widgets.OverlayWidgets::new(document)
   let lines_content = editor_scrollbar.content()
   lines_content.append_child(content_view_overlays.dom().as_node())
@@ -108,7 +108,7 @@ fn View::mark_parts_dirty(self : View) -> Unit {
   ViewPart::set_should_render(self.view_zones, true)
   ViewPart::set_should_render(self.content_view_overlays, true)
   ViewPart::set_should_render(self.margin_view_overlays, true)
-  self.content_widgets.set_should_render(true)
+  ViewPart::set_should_render(self.content_widgets, true)
   ViewPart::set_should_render(self.overlay_widgets, true)
   ViewPart::set_should_render(self.editor_scrollbar, true)
 }
@@ -136,7 +136,7 @@ fn View::render(
   // Hover content is not a view event: invalidate the hover content widget
   // directly, mirroring Monaco's contrib hover.
   if hover_changed_between(self.last_snapshot, rendering.snapshot) {
-    self.content_widgets.set_should_render(true)
+    ViewPart::set_should_render(self.content_widgets, true)
   }
   let dirty_parts = self.dirty_view_parts()
   for part in dirty_parts {

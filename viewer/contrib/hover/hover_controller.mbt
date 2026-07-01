@@ -615,6 +615,22 @@ pub(all) struct HoverWidgetView {
 }
 
 ///|
+/// Applies an after-write measurement to a resolved widget view, mirroring
+/// `HoverController::measured` but on the already-derived view — the seam
+/// `viewer/content_widgets.mbt`'s same-frame re-render (measure once,
+/// immediately re-render with the measurement) uses, since it only holds a
+/// `HoverWidgetView`, not the full `HoverController` (which stays with
+/// `Viewer` — the foreign-method rule keeps it out of the view-part package).
+pub fn HoverWidgetView::measured(
+  self : HoverWidgetView,
+  below : Bool,
+  shift_left : Double,
+  max_height : Double,
+) -> HoverWidgetView {
+  { ..self, placement: Some({ below, shift_left, max_height }) }
+}
+
+///|
 /// Whether a hover widget is currently on screen (resolved content or the
 /// loading placeholder). Monaco's `_contentWidget.isVisible`; the mouse-move
 /// grace period only applies once the widget is shown.

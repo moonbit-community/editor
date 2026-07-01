@@ -40,7 +40,7 @@ fn Viewer::build_view_context(self : Viewer, view : View) -> ViewContext {
 /// closure `build_view_context` wires up.
 fn Viewer::handle_hover_keydown(
   self : Viewer,
-  widget : HoverWidgetDom,
+  widget : @content_widgets.HoverWidgetDom,
   event : @rdom.Event,
   keyboard : @rdom.KeyboardEvent,
 ) -> Unit {

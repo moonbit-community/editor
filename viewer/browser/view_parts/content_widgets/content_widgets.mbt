@@ -1,3 +1,11 @@
+// Ported from `vscode/src/vs/editor/browser/viewParts/contentWidgets/contentWidgets.ts`
+// plus the hover content widget's DOM/geometry half from
+// `vscode/src/vs/editor/contrib/hover/browser/contentHoverWidget.ts` (the
+// viewer's only content widget). The `ViewPart` trait impl for
+// `ContentWidgets` lives in `viewer/view_part.mbt` (destined for
+// `browser/view/`), not here — see the exec-plan's cycle backlog and
+// `viewer/browser/view_parts/view_zones`'s README for why.
+
 ///|
 priv enum ContentWidgetPlacement {
   ContentWidgetAbove
@@ -25,10 +33,10 @@ priv struct ContentWidget {
 }
 
 ///|
-/// `pub(all)`: appears in `ViewContext.handle_hover_keydown` and
-/// `Viewer::handle_hover_keydown`'s signature (`view_host.mbt`), so it must be
-/// visible across the future `browser/view_parts/content_widgets` ↔
-/// `browser/widget/code_editor` package boundary.
+/// `pub(all)`: appears in `ViewContext.handle_hover_keydown` (`view_context.mbt`)
+/// and `Viewer::handle_hover_keydown`'s signature (`view_host.mbt`), so it must
+/// be visible across the `browser/view_parts/content_widgets` ↔ `browser/view/`
+/// / `browser/widget/code_editor` package boundaries.
 pub(all) struct HoverWidgetDom {
   wrapper : @rdom.Element
   hover : @rdom.Element
@@ -36,16 +44,47 @@ pub(all) struct HoverWidgetDom {
 }
 
 ///|
-priv struct ContentWidgetsPrepared {
+/// The DOM/host capabilities `render_hover_widget`/`ensure_hover_widget` need
+/// from `Viewer`, unpacked from `ViewContext`'s fields rather than taking that
+/// struct directly — `ViewContext` lives in `viewer/view_context.mbt`
+/// (destined for `browser/view/`), which this package cannot import without
+/// creating a `browser/view/ ↔ browser/view_parts/content_widgets` cycle
+/// (`browser/view/` already needs `ContentWidgets` for `View`'s fields and the
+/// `ViewPartHandle` enum). Built from `context.view_context`'s fields at the
+/// `ViewPart` impl in `view_part.mbt`, the same host/callback pattern
+/// `controller_host.mbt`'s `PointerHandlerHelper` already uses. `pub(all)`
+/// since it is constructed there, cross-package.
+pub(all) struct HoverWidgetHost {
+  root : @rdom.Element
+  languages : @languages.Languages
+  keep_hover_open : () -> Unit
+  handle_hover_mousedown : (@rdom.Event, @rdom.MouseEvent) -> Unit
+  hook_scrollable_scrollbar_input : (
+    @scrollbar.ScrollableElementDom,
+    @scrollbar.ScrollableElementOwner,
+  ) -> Unit
+  handle_hover_keydown : (HoverWidgetDom, @rdom.Event, @rdom.KeyboardEvent) -> Unit
+}
+
+///|
+/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` constructs/reads this
+/// directly.
+pub(all) struct ContentWidgetsPrepared {
   frame : @view_model.RenderFrame
   layout : @view_layout.ViewLayout
-  hover_state : @hover.HoverController
+  /// Resolved via `HoverController::widget_view` at `prepare_render` (staying
+  /// in `view_part.mbt`, which already imports the hover package) — this
+  /// package holds only the already-derived view, not the full
+  /// `HoverController` (which stays with `Viewer`; see `HoverWidgetHost`).
+  hover_view : @hover.HoverWidgetView?
   on_hover_measured : (Bool, Double, Double) -> Unit
   space_width : Double
 }
 
 ///|
-priv struct ContentWidgets {
+/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `should_render` / `prepared` / `content_widgets` directly.
+pub(all) struct ContentWidgets {
   content_widgets : @rdom.Element
   overflowing_content_widgets : @rdom.Element
   mut hover_widget : HoverWidgetDom?
@@ -54,7 +93,7 @@ priv struct ContentWidgets {
 }
 
 ///|
-fn ContentWidgets::new(document : @rdom.Document) -> ContentWidgets {
+pub fn ContentWidgets::new(document : @rdom.Document) -> ContentWidgets {
   let content_widgets = document.create_element("div")
   content_widgets.set_attribute("class", "contentWidgets")
   content_widgets.set_attribute("data-view-part", "contentWidgets")
@@ -75,17 +114,17 @@ fn ContentWidgets::new(document : @rdom.Document) -> ContentWidgets {
 }
 
 ///|
-fn ContentWidgets::dom(self : ContentWidgets) -> @rdom.Element {
+pub fn ContentWidgets::dom(self : ContentWidgets) -> @rdom.Element {
   self.content_widgets
 }
 
 ///|
-fn ContentWidgets::overflowing_dom(self : ContentWidgets) -> @rdom.Element {
+pub fn ContentWidgets::overflowing_dom(self : ContentWidgets) -> @rdom.Element {
   self.overflowing_content_widgets
 }
 
 ///|
-fn ContentWidgets::hover_scrollable(
+pub fn ContentWidgets::hover_scrollable(
   self : ContentWidgets,
 ) -> @scrollbar.ScrollableElementDom? {
   match self.hover_widget {
@@ -98,7 +137,7 @@ fn ContentWidgets::hover_scrollable(
 /// The hover widget's outer node, for the controller's
 /// `_isMouseOnContentHoverWidget` hit test (none before the widget is first
 /// shown).
-fn ContentWidgets::hover_wrapper(self : ContentWidgets) -> @rdom.Element? {
+pub fn ContentWidgets::hover_wrapper(self : ContentWidgets) -> @rdom.Element? {
   match self.hover_widget {
     Some(widget) => Some(widget.wrapper)
     None => None
@@ -106,85 +145,21 @@ fn ContentWidgets::hover_wrapper(self : ContentWidgets) -> @rdom.Element? {
 }
 
 ///|
-impl ViewPart for ContentWidgets with fn should_render(self) {
-  self.should_render
-}
-
-///|
-// Hover content changes invalidate this part directly (see `View::render`),
-// mirroring Monaco's contrib hover widget rather than a view event.
-impl ViewPart for ContentWidgets with fn on_view_event(_self, event) {
-  match event {
-    ViewFlushed => true
-    ViewLinesChanged => true
-    ViewScrollChanged(e) =>
-      e.window_changed || e.position_changed || e.dimensions_changed
-    ViewZonesChanged => true
-    _ => false
-  }
-}
-
-///|
-impl ViewPart for ContentWidgets with fn set_should_render(self, value) {
-  self.should_render = value
-}
-
-///|
-impl ViewPart for ContentWidgets with fn on_before_render(_self, _viewport) {
-  ()
-}
-
-///|
-impl ViewPart for ContentWidgets with fn prepare_render(self, context) {
-  self.prepared = Some({
-    frame: context.input.frame,
-    layout: context.input.layout,
-    hover_state: context.input.hover_state,
-    on_hover_measured: context.input.on_hover_measured,
-    space_width: context.input.space_width,
-  })
-}
-
-///|
-impl ViewPart for ContentWidgets with fn render(self, context) {
-  self.content_widgets.set_attribute("style", context.content_transform)
-  match self.prepared {
-    Some(prepared) =>
-      self.render_hover_widget(
-        context.view_context,
-        prepared.frame,
-        prepared.layout,
-        prepared.hover_state,
-        prepared.on_hover_measured,
-        prepared.space_width,
-        context.gutter_width,
-      )
-    None => ()
-  }
-}
-
-///|
-impl ViewPart for ContentWidgets with fn on_did_render(self) {
-  self.should_render = false
-  self.prepared = None
-}
-
-///|
 /// Renders, positions, and (once) measures the hover content widget,
 /// which shares the lines transform so it tracks content space. The
 /// placement measurement is a read-after-write on the freshly written
 /// widget, applied in the same flush.
-fn ContentWidgets::render_hover_widget(
+pub fn ContentWidgets::render_hover_widget(
   self : ContentWidgets,
-  context : ViewContext,
+  host : HoverWidgetHost,
   frame : @view_model.RenderFrame,
   layout : @view_layout.ViewLayout,
-  hover_state : @hover.HoverController,
+  hover_view : @hover.HoverWidgetView?,
   on_hover_measured : (Bool, Double, Double) -> Unit,
   space_width : Double,
   gutter_width : Double,
 ) -> Unit {
-  let hover_view = match hover_state.widget_view() {
+  let hover_view = match hover_view {
     Some(hover_view) => hover_view
     None => {
       self.remove_hover_widget()
@@ -227,7 +202,7 @@ fn ContentWidgets::render_hover_widget(
     1,
   )
   let column = show_at_secondary.column
-  let widget = self.ensure_hover_widget(context)
+  let widget = self.ensure_hover_widget(host)
   let mut class_name = "monaco-resizable-hover"
   let mut shift_left = 0.0
   let mut preferred_placement = ContentWidgetAbove
@@ -266,7 +241,7 @@ fn ContentWidgets::render_hover_widget(
     @hover.render_hover_parts(
       hover_view.parts,
       frame.language_id,
-      language_registry=context.languages,
+      language_registry=host.languages,
     ),
   )
   self.mount_content_widget(content_widget)
@@ -275,12 +250,12 @@ fn ContentWidgets::render_hover_widget(
   // need (`getScrolledVisiblePosition().top` and the editor DOM box).
   let line_top = layout.vertical_offset_for_line(line_number) -
     layout.position().scroll_top
-  let editor_height = context.root.get_bounding_client_rect().get_height()
+  let editor_height = host.root.get_bounding_client_rect().get_height()
   if hover_view.measurable && hover_view.placement is None {
     // First (measuring) pass: cap only the width so the natural wrapped height
     // is measurable, then choose the side and the available-space height cap
     // (Monaco `_findPositionPreference` + `_findMaximumRenderingHeight`).
-    widget.apply_width_sizing(context.root, gutter_width)
+    widget.apply_width_sizing(host.root, gutter_width)
     let content_height = widget.wrapper.get_bounding_client_rect().get_height()
     let space_above = hover_available_space_above(line_top)
     let space_below = hover_available_space_below(
@@ -294,15 +269,15 @@ fn ContentWidgets::render_hover_widget(
     let available = if below { space_below } else { space_above }
     let max_height = hover_maximum_rendering_height(available, content_height)
     let widget_rect = widget.wrapper.get_bounding_client_rect()
-    let root_rect = context.root.get_bounding_client_rect()
+    let root_rect = host.root.get_bounding_client_rect()
     let overflow = widget_rect.get_right() - root_rect.get_right() + 12.0
     let shift_left = if overflow > 0.0 { overflow } else { 0.0 }
     on_hover_measured(below, shift_left, max_height)
     self.render_hover_widget(
-      context,
+      host,
       frame,
       layout,
-      hover_state.measured(below, shift_left, max_height),
+      Some(hover_view.measured(below, shift_left, max_height)),
       on_hover_measured,
       space_width,
       gutter_width,
@@ -319,13 +294,13 @@ fn ContentWidgets::render_hover_widget(
         hover_available_space_above(line_top),
       )
   }
-  widget.apply_sizing(context.root, max_height, gutter_width)
+  widget.apply_sizing(host.root, max_height, gutter_width)
 }
 
 ///|
 fn ContentWidgets::ensure_hover_widget(
   self : ContentWidgets,
-  context : ViewContext,
+  host : HoverWidgetHost,
 ) -> HoverWidgetDom {
   match self.hover_widget {
     Some(widget) => widget
@@ -349,7 +324,7 @@ fn ContentWidgets::ensure_hover_widget(
         // The pointer is on the hover widget: keep it open. The editor never
         // sees this move (stop_propagation), so the controller's grace timer
         // would otherwise still fire and hide the widget out from under it.
-        (context.keep_hover_open)()
+        (host.keep_hover_open)()
         event.stop_propagation()
       })
       widget.wrapper.add_event_listener("mousedown", event => {
@@ -357,7 +332,7 @@ fn ContentWidgets::ensure_hover_widget(
           event.stop_propagation()
         } else {
           match event.to_mouse_event() {
-            Some(mouse) => (context.handle_hover_mousedown)(event, mouse)
+            Some(mouse) => (host.handle_hover_mousedown)(event, mouse)
             None => event.stop_propagation()
           }
         }
@@ -400,14 +375,13 @@ fn ContentWidgets::ensure_hover_widget(
       widget.scrollable.content.add_event_listener("scroll", _ => {
         widget.scrollable.update_from_native_content()
       })
-      (context.hook_scrollable_scrollbar_input)(
+      (host.hook_scrollable_scrollbar_input)(
         widget.scrollable,
         HoverScrollableElement,
       )
       widget.wrapper.add_event_listener("keydown", event => {
         match event.to_keyboard_event() {
-          Some(keyboard) =>
-            (context.handle_hover_keydown)(widget, event, keyboard)
+          Some(keyboard) => (host.handle_hover_keydown)(widget, event, keyboard)
           None => event.stop_propagation()
         }
       })
@@ -438,7 +412,7 @@ let hover_horizontal_scrolling_by : Double = 30.0
 
 ///|
 /// Monaco `ContentHoverWidget.scrollUp`: `scrollTop -= fontInfo.lineHeight`.
-fn HoverWidgetDom::scroll_up(self : HoverWidgetDom) -> Unit {
+pub fn HoverWidgetDom::scroll_up(self : HoverWidgetDom) -> Unit {
   self.scrollable.native_scroll_by(
     delta_top=-@core.editor_line_height.to_double(),
   )
@@ -446,7 +420,7 @@ fn HoverWidgetDom::scroll_up(self : HoverWidgetDom) -> Unit {
 
 ///|
 /// Monaco `ContentHoverWidget.scrollDown`: `scrollTop += fontInfo.lineHeight`.
-fn HoverWidgetDom::scroll_down(self : HoverWidgetDom) -> Unit {
+pub fn HoverWidgetDom::scroll_down(self : HoverWidgetDom) -> Unit {
   self.scrollable.native_scroll_by(
     delta_top=@core.editor_line_height.to_double(),
   )
@@ -454,20 +428,20 @@ fn HoverWidgetDom::scroll_down(self : HoverWidgetDom) -> Unit {
 
 ///|
 /// Monaco `ContentHoverWidget.scrollLeft`: `scrollLeft -= HORIZONTAL_SCROLLING_BY`.
-fn HoverWidgetDom::scroll_left(self : HoverWidgetDom) -> Unit {
+pub fn HoverWidgetDom::scroll_left(self : HoverWidgetDom) -> Unit {
   self.scrollable.native_scroll_by(delta_left=-hover_horizontal_scrolling_by)
 }
 
 ///|
 /// Monaco `ContentHoverWidget.scrollRight`: `scrollLeft += HORIZONTAL_SCROLLING_BY`.
-fn HoverWidgetDom::scroll_right(self : HoverWidgetDom) -> Unit {
+pub fn HoverWidgetDom::scroll_right(self : HoverWidgetDom) -> Unit {
   self.scrollable.native_scroll_by(delta_left=hover_horizontal_scrolling_by)
 }
 
 ///|
 /// Monaco `ContentHoverWidget.pageUp`: `scrollTop -= getScrollDimensions().height`
 /// (the visible content height).
-fn HoverWidgetDom::page_up(self : HoverWidgetDom) -> Unit {
+pub fn HoverWidgetDom::page_up(self : HoverWidgetDom) -> Unit {
   self.scrollable.native_scroll_by(
     delta_top=-self.scrollable.native_page_delta(),
   )
@@ -475,7 +449,7 @@ fn HoverWidgetDom::page_up(self : HoverWidgetDom) -> Unit {
 
 ///|
 /// Monaco `ContentHoverWidget.pageDown`: `scrollTop += getScrollDimensions().height`.
-fn HoverWidgetDom::page_down(self : HoverWidgetDom) -> Unit {
+pub fn HoverWidgetDom::page_down(self : HoverWidgetDom) -> Unit {
   self.scrollable.native_scroll_by(
     delta_top=self.scrollable.native_page_delta(),
   )
@@ -483,14 +457,14 @@ fn HoverWidgetDom::page_down(self : HoverWidgetDom) -> Unit {
 
 ///|
 /// Monaco `ContentHoverWidget.goToTop`: `scrollTop = 0`.
-fn HoverWidgetDom::go_to_top(self : HoverWidgetDom) -> Unit {
+pub fn HoverWidgetDom::go_to_top(self : HoverWidgetDom) -> Unit {
   self.scrollable.native_scroll_to(vertical=true, 0.0)
 }
 
 ///|
 /// Monaco `ContentHoverWidget.goToBottom`: `scrollTop = getScrollDimensions().scrollHeight`
 /// (the total content height).
-fn HoverWidgetDom::go_to_bottom(self : HoverWidgetDom) -> Unit {
+pub fn HoverWidgetDom::go_to_bottom(self : HoverWidgetDom) -> Unit {
   self.scrollable.native_scroll_to(
     vertical=true,
     self.scrollable.content.get_scroll_height(),
@@ -706,6 +680,16 @@ fn line_col_for_offset(
     }
   }
   None
+}
+
+///|
+/// Duplicated from `viewer/view.mbt` (`browser/view/`), rather than imported:
+/// this two-field record construction is small enough that pulling in a
+/// dependency on `browser/view/` — which needs `ContentWidgets` back for
+/// `View`'s fields and the `ViewPartHandle` enum — isn't worth avoiding a
+/// four-line duplicate.
+fn frame_window(frame : @view_model.RenderFrame) -> @view_layout.LineWindow {
+  { start: frame.viewport.start_line, end: frame.viewport.end_line }
 }
 
 ///|

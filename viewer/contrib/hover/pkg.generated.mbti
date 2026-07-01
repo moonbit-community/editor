@@ -219,6 +219,7 @@ pub(all) struct HoverWidgetView {
   measurable : Bool
   placement : HoverPlacement?
 }
+pub fn HoverWidgetView::measured(Self, Bool, Double, Double) -> Self
 
 pub(all) struct InlayHintHoverParticipant {
   identity : Unit

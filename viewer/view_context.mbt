@@ -11,7 +11,11 @@ pub(all) struct ViewContext {
   root : @rdom.Element
   languages : @languages.Languages
   handle_hover_mousedown : (@rdom.Event, @rdom.MouseEvent) -> Unit
-  handle_hover_keydown : (HoverWidgetDom, @rdom.Event, @rdom.KeyboardEvent) -> Unit
+  handle_hover_keydown : (
+    @content_widgets.HoverWidgetDom,
+    @rdom.Event,
+    @rdom.KeyboardEvent,
+  ) -> Unit
   // The pointer is over the hover widget: keep the hover open and drop any
   // pending hide (Monaco's `_shouldKeepCurrentHover` over the content widget).
   keep_hover_open : () -> Unit

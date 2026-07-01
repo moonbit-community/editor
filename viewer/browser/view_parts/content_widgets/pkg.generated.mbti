@@ -1,0 +1,66 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser/view_parts/content_widgets"
+
+import {
+  "moonbit-community/editor/viewer/common/languages",
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/editor/viewer/contrib/hover",
+  "moonbit-community/editor/viewer/ui/scrollbar",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct ContentWidgets {
+  content_widgets : @dom.Element
+  overflowing_content_widgets : @dom.Element
+  mut hover_widget : HoverWidgetDom?
+  mut should_render : Bool
+  mut prepared : ContentWidgetsPrepared?
+}
+pub fn ContentWidgets::dom(Self) -> @dom.Element
+pub fn ContentWidgets::hover_scrollable(Self) -> @scrollbar.ScrollableElementDom?
+pub fn ContentWidgets::hover_wrapper(Self) -> @dom.Element?
+pub fn ContentWidgets::new(@dom.Document) -> Self
+pub fn ContentWidgets::overflowing_dom(Self) -> @dom.Element
+pub fn ContentWidgets::render_hover_widget(Self, HoverWidgetHost, @view_model.RenderFrame, @view_layout.ViewLayout, @hover.HoverWidgetView?, (Bool, Double, Double) -> Unit, Double, Double) -> Unit
+
+pub(all) struct ContentWidgetsPrepared {
+  frame : @view_model.RenderFrame
+  layout : @view_layout.ViewLayout
+  hover_view : @hover.HoverWidgetView?
+  on_hover_measured : (Bool, Double, Double) -> Unit
+  space_width : Double
+}
+
+pub(all) struct HoverWidgetDom {
+  wrapper : @dom.Element
+  hover : @dom.Element
+  scrollable : @scrollbar.ScrollableElementDom
+}
+pub fn HoverWidgetDom::go_to_bottom(Self) -> Unit
+pub fn HoverWidgetDom::go_to_top(Self) -> Unit
+pub fn HoverWidgetDom::page_down(Self) -> Unit
+pub fn HoverWidgetDom::page_up(Self) -> Unit
+pub fn HoverWidgetDom::scroll_down(Self) -> Unit
+pub fn HoverWidgetDom::scroll_left(Self) -> Unit
+pub fn HoverWidgetDom::scroll_right(Self) -> Unit
+pub fn HoverWidgetDom::scroll_up(Self) -> Unit
+
+pub(all) struct HoverWidgetHost {
+  root : @dom.Element
+  languages : @languages.Languages
+  keep_hover_open : () -> Unit
+  handle_hover_mousedown : (@dom.Event, @dom.MouseEvent) -> Unit
+  hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
+  handle_hover_keydown : (HoverWidgetDom, @dom.Event, @dom.KeyboardEvent) -> Unit
+}
+
+// Type aliases
+
+// Traits
+

@@ -36,7 +36,7 @@ priv enum ViewPartHandle {
   ViewZonesPart(@view_zones.ViewZones)
   ContentViewOverlaysPart(@selections.ContentViewOverlays)
   MarginViewOverlaysPart(@margin.MarginViewOverlays)
-  ContentWidgetsPart(ContentWidgets)
+  ContentWidgetsPart(@content_widgets.ContentWidgets)
   OverlayWidgetsPart(@overlay_widgets.OverlayWidgets)
   EditorScrollbarPart(@editor_scrollbar.EditorScrollbar)
 }
@@ -47,7 +47,7 @@ fn default_view_parts(
   view_zones : @view_zones.ViewZones,
   content_view_overlays : @selections.ContentViewOverlays,
   margin_view_overlays : @margin.MarginViewOverlays,
-  content_widgets : ContentWidgets,
+  content_widgets : @content_widgets.ContentWidgets,
   overlay_widgets : @overlay_widgets.OverlayWidgets,
   editor_scrollbar : @editor_scrollbar.EditorScrollbar,
 ) -> Array[ViewPartHandle] {
@@ -69,7 +69,7 @@ impl ViewPart for ViewPartHandle with fn on_view_event(self, event) {
     ViewZonesPart(part) => ViewPart::on_view_event(part, event)
     ContentViewOverlaysPart(part) => ViewPart::on_view_event(part, event)
     MarginViewOverlaysPart(part) => ViewPart::on_view_event(part, event)
-    ContentWidgetsPart(part) => part.on_view_event(event)
+    ContentWidgetsPart(part) => ViewPart::on_view_event(part, event)
     OverlayWidgetsPart(part) => ViewPart::on_view_event(part, event)
     EditorScrollbarPart(part) => ViewPart::on_view_event(part, event)
   }
@@ -82,7 +82,7 @@ impl ViewPart for ViewPartHandle with fn should_render(self) {
     ViewZonesPart(part) => ViewPart::should_render(part)
     ContentViewOverlaysPart(part) => ViewPart::should_render(part)
     MarginViewOverlaysPart(part) => ViewPart::should_render(part)
-    ContentWidgetsPart(part) => part.should_render()
+    ContentWidgetsPart(part) => ViewPart::should_render(part)
     OverlayWidgetsPart(part) => ViewPart::should_render(part)
     EditorScrollbarPart(part) => ViewPart::should_render(part)
   }
@@ -95,7 +95,7 @@ impl ViewPart for ViewPartHandle with fn set_should_render(self, value) {
     ViewZonesPart(part) => ViewPart::set_should_render(part, value)
     ContentViewOverlaysPart(part) => ViewPart::set_should_render(part, value)
     MarginViewOverlaysPart(part) => ViewPart::set_should_render(part, value)
-    ContentWidgetsPart(part) => part.set_should_render(value)
+    ContentWidgetsPart(part) => ViewPart::set_should_render(part, value)
     OverlayWidgetsPart(part) => ViewPart::set_should_render(part, value)
     EditorScrollbarPart(part) => ViewPart::set_should_render(part, value)
   }
@@ -108,7 +108,7 @@ impl ViewPart for ViewPartHandle with fn on_before_render(self, viewport) {
     ViewZonesPart(part) => ViewPart::on_before_render(part, viewport)
     ContentViewOverlaysPart(part) => ViewPart::on_before_render(part, viewport)
     MarginViewOverlaysPart(part) => ViewPart::on_before_render(part, viewport)
-    ContentWidgetsPart(part) => part.on_before_render(viewport)
+    ContentWidgetsPart(part) => ViewPart::on_before_render(part, viewport)
     OverlayWidgetsPart(part) => ViewPart::on_before_render(part, viewport)
     EditorScrollbarPart(part) => ViewPart::on_before_render(part, viewport)
   }
@@ -121,7 +121,7 @@ impl ViewPart for ViewPartHandle with fn prepare_render(self, context) {
     ViewZonesPart(part) => ViewPart::prepare_render(part, context)
     ContentViewOverlaysPart(part) => ViewPart::prepare_render(part, context)
     MarginViewOverlaysPart(part) => ViewPart::prepare_render(part, context)
-    ContentWidgetsPart(part) => part.prepare_render(context)
+    ContentWidgetsPart(part) => ViewPart::prepare_render(part, context)
     OverlayWidgetsPart(part) => ViewPart::prepare_render(part, context)
     EditorScrollbarPart(part) => ViewPart::prepare_render(part, context)
   }
@@ -134,7 +134,7 @@ impl ViewPart for ViewPartHandle with fn render(self, context) {
     ViewZonesPart(part) => ViewPart::render(part, context)
     ContentViewOverlaysPart(part) => ViewPart::render(part, context)
     MarginViewOverlaysPart(part) => ViewPart::render(part, context)
-    ContentWidgetsPart(part) => part.render(context)
+    ContentWidgetsPart(part) => ViewPart::render(part, context)
     OverlayWidgetsPart(part) => ViewPart::render(part, context)
     EditorScrollbarPart(part) => ViewPart::render(part, context)
   }
@@ -147,7 +147,7 @@ impl ViewPart for ViewPartHandle with fn on_did_render(self) {
     ViewZonesPart(part) => ViewPart::on_did_render(part)
     ContentViewOverlaysPart(part) => ViewPart::on_did_render(part)
     MarginViewOverlaysPart(part) => ViewPart::on_did_render(part)
-    ContentWidgetsPart(part) => part.on_did_render()
+    ContentWidgetsPart(part) => ViewPart::on_did_render(part)
     OverlayWidgetsPart(part) => ViewPart::on_did_render(part)
     EditorScrollbarPart(part) => ViewPart::on_did_render(part)
   }
@@ -587,6 +587,101 @@ impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) 
 
 ///|
 impl ViewPart for @selections.ContentViewOverlays with fn on_did_render(self) {
+  self.should_render = false
+  self.prepared = None
+}
+
+// `ViewPart` impl for `@content_widgets.ContentWidgets`
+// (`browser/view_parts/content_widgets`). Kept here for the same reason as
+// the impls above — plus it is the one impl that also builds the
+// `HoverWidgetHost` capability struct (unpacking `context.view_context`'s
+// fields) and resolves `HoverController::widget_view` before handing the
+// content-widgets package only its already-derived `HoverWidgetView`, since
+// that package cannot import `ViewContext` (owned by `browser/view/`, which
+// needs `ContentWidgets` back) or the full `HoverController` (which stays
+// with `Viewer`) — see `content_widgets`'s README.
+
+///|
+impl ViewPart for @content_widgets.ContentWidgets with fn should_render(self) {
+  self.should_render
+}
+
+///|
+// Hover content changes invalidate this part directly (see `View::render`),
+// mirroring Monaco's contrib hover widget rather than a view event.
+impl ViewPart for @content_widgets.ContentWidgets with fn on_view_event(
+  _self,
+  event,
+) {
+  match event {
+    ViewFlushed => true
+    ViewLinesChanged => true
+    ViewScrollChanged(e) =>
+      e.window_changed || e.position_changed || e.dimensions_changed
+    ViewZonesChanged => true
+    _ => false
+  }
+}
+
+///|
+impl ViewPart for @content_widgets.ContentWidgets with fn set_should_render(
+  self,
+  value,
+) {
+  self.should_render = value
+}
+
+///|
+impl ViewPart for @content_widgets.ContentWidgets with fn on_before_render(
+  _self,
+  _viewport,
+) {
+  ()
+}
+
+///|
+impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
+  self,
+  context,
+) {
+  self.prepared = Some({
+    frame: context.input.frame,
+    layout: context.input.layout,
+    hover_view: context.input.hover_state.widget_view(),
+    on_hover_measured: context.input.on_hover_measured,
+    space_width: context.input.space_width,
+  })
+}
+
+///|
+impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) {
+  self.content_widgets.set_attribute("style", context.content_transform)
+  match self.prepared {
+    Some(prepared) => {
+      let host : @content_widgets.HoverWidgetHost = {
+        root: context.view_context.root,
+        languages: context.view_context.languages,
+        keep_hover_open: context.view_context.keep_hover_open,
+        handle_hover_mousedown: context.view_context.handle_hover_mousedown,
+        hook_scrollable_scrollbar_input: context.view_context.hook_scrollable_scrollbar_input,
+        handle_hover_keydown: context.view_context.handle_hover_keydown,
+      }
+      self.render_hover_widget(
+        host,
+        prepared.frame,
+        prepared.layout,
+        prepared.hover_view,
+        prepared.on_hover_measured,
+        prepared.space_width,
+        context.gutter_width,
+      )
+    }
+    None => ()
+  }
+}
+
+///|
+impl ViewPart for @content_widgets.ContentWidgets with fn on_did_render(self) {
   self.should_render = false
   self.prepared = None
 }

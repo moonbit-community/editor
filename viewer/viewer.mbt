@@ -35,10 +35,10 @@ pub struct Viewer {
   priv mut inlay_hints : Array[@language.InlayHint]
   priv mut view_zones : Array[@view_zones.BrowserViewZone]
   priv mut cursor : @cursor.CursorsController?
-  priv mut hover : HoverController
+  priv mut hover : @hover.HoverController
   /// Mouse-move grace state (Monaco's `_reactToEditorMouseMoveRunner`): while a
   /// hover widget is on screen, a move off the anchor is deferred by
-  /// `hover_hiding_delay_ms` instead of reacting immediately, so the pointer can
+  /// `@hover.hover_hiding_delay_ms` instead of reacting immediately, so the pointer can
   /// reach the widget. `hover_react_token` invalidates a deferred reaction that
   /// the pointer cancelled by entering the widget.
   priv mut hover_react_pending : Bool
@@ -51,19 +51,19 @@ pub struct Viewer {
   /// the last pointer client position + modifiers stand in for `_mouseMoveEvent`
   /// so `_isMouseOnContentHoverWidget` / `shouldShowHover` can be evaluated where
   /// the controller reacts (the pointer-handler seam only carries a hit target).
-  priv hover_settings : HoverSettings
+  priv hover_settings : @hover.HoverSettings
   priv mut hover_keep_open : Bool
   priv mut hover_ignore_mouse_events : Bool
   priv mut hover_mouse_posx : Double
   priv mut hover_mouse_posy : Double
-  priv mut hover_last_modifiers : EventModifiers
+  priv mut hover_last_modifiers : @hover.EventModifiers
   /// The last anchor token for which the public hover-resolution status fired,
   /// so it fires exactly once per anchor when the operation completes.
   priv mut hover_notified_token : Int
   /// Monaco `RenderedContentHover`'s mouse-getting-closer state (`isMouseGettingCloser`):
   /// reset whenever a new hover view is shown, so a sticky hover the pointer is
   /// approaching is kept open even off the anchor token.
-  priv hover_mouse_closer : MouseCloserState
+  priv hover_mouse_closer : @hover.MouseCloserState
   priv mut char_width : Double
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
@@ -197,18 +197,18 @@ pub fn Viewer::Viewer(
     inlay_hints: [],
     view_zones: [],
     cursor: None,
-    hover: HoverController::empty(),
+    hover: @hover.HoverController::empty(),
     hover_react_pending: false,
     hover_react_token: 0,
     hover_pending_target: None,
-    hover_settings: HoverSettings::defaults(),
+    hover_settings: @hover.HoverSettings::defaults(),
     hover_keep_open: false,
     hover_ignore_mouse_events: false,
     hover_mouse_posx: 0.0,
     hover_mouse_posy: 0.0,
-    hover_last_modifiers: EventModifiers::none(),
+    hover_last_modifiers: @hover.EventModifiers::none(),
     hover_notified_token: 0,
-    hover_mouse_closer: MouseCloserState::new(),
+    hover_mouse_closer: @hover.MouseCloserState::new(),
     char_width: 0.0,
     soft_wrap_column: 0,
     max_line_length: 0,
@@ -571,7 +571,7 @@ fn Viewer::clear_current_model(
   self.apply_view_state_policy(view_state)
   self.cursor = None
   self.cancel_mouse_selection()
-  self.hover = HoverController::empty()
+  self.hover = @hover.HoverController::empty()
   self.hover_keep_open = false
   self.hover_ignore_mouse_events = false
   self.cancel_hover_react()

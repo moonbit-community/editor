@@ -15,11 +15,11 @@ let hover_hit_padding : Double = 3.0
 /// `false` in shipped code) that, when flipped, keeps the hover from ever hiding
 /// on focus-out / mouse-leave / keydown. Kept as a named constant so the guard
 /// sites read 1:1 against the source.
-let hover_sticky_debug : Bool = false
+pub let hover_sticky_debug : Bool = false
 
 ///|
 /// Monaco `editor.hover.enabled` (`IHoverSettings.enabled`).
-priv enum HoverEnabled {
+pub(all) enum HoverEnabled {
   HoverEnabledOn
   HoverEnabledOff
   HoverEnabledOnKeyboardModifier
@@ -30,7 +30,7 @@ priv enum HoverEnabled {
 /// `'on' | 'off' | 'onKeyboardModifier'`) to the setting; unknown values fall
 /// back to the option default `'on'`. The config seam is not surfaced yet (see
 /// the plan's Deviations), so today only `'on'` is fed in.
-fn HoverEnabled::from_config(value : String) -> HoverEnabled {
+pub fn HoverEnabled::from_config(value : String) -> HoverEnabled {
   match value {
     "off" => HoverEnabledOff
     "onKeyboardModifier" => HoverEnabledOnKeyboardModifier
@@ -41,7 +41,7 @@ fn HoverEnabled::from_config(value : String) -> HoverEnabled {
 ///|
 /// Monaco `editor.multiCursorModifier` reduced to the modifier key it resolves to
 /// (`'altKey' | 'ctrlKey' | 'metaKey'`).
-priv enum MultiCursorModifier {
+pub(all) enum MultiCursorModifier {
   MultiCursorAlt
   MultiCursorCtrl
   MultiCursorMeta
@@ -52,7 +52,7 @@ priv enum MultiCursorModifier {
 /// `'ctrlCmd'` is Meta on macOS and Ctrl elsewhere; anything else (the default
 /// `'alt'`) is Alt — the platform split Monaco applies before
 /// `isTriggerModifierPressed` reads `'altKey' | 'ctrlKey' | 'metaKey'`.
-fn MultiCursorModifier::from_config(
+pub fn MultiCursorModifier::from_config(
   value : String,
   mac~ : Bool,
 ) -> MultiCursorModifier {
@@ -65,7 +65,7 @@ fn MultiCursorModifier::from_config(
 ///|
 /// VS Code's `editor.multiCursorModifier` default (`'alt'`). Threaded into
 /// `should_show_hover` for the `'onKeyboardModifier'` branch.
-let hover_multi_cursor_modifier : MultiCursorModifier = MultiCursorModifier::from_config(
+pub let hover_multi_cursor_modifier : MultiCursorModifier = MultiCursorModifier::from_config(
   "alt",
   mac=false,
 )
@@ -73,21 +73,21 @@ let hover_multi_cursor_modifier : MultiCursorModifier = MultiCursorModifier::fro
 ///|
 /// The modifier-key flags carried by a pointer (or keyboard) event — the subset
 /// `hoverUtils` reads (`event.ctrlKey` / `event.metaKey` / `event.altKey`).
-priv struct EventModifiers {
+pub(all) struct EventModifiers {
   ctrl : Bool
   meta : Bool
   alt : Bool
 }
 
 ///|
-fn EventModifiers::none() -> EventModifiers {
+pub fn EventModifiers::none() -> EventModifiers {
   { ctrl: false, meta: false, alt: false }
 }
 
 ///|
 /// Monaco `ContentHoverController` `IHoverSettings`: the snapshot of the
 /// `editor.hover` options taken in `_hookListeners`.
-priv struct HoverSettings {
+pub(all) struct HoverSettings {
   enabled : HoverEnabled
   sticky : Bool
   hiding_delay : Int
@@ -98,7 +98,7 @@ priv struct HoverSettings {
 /// `300`ms. The viewer does not surface hover options yet, so the controller
 /// snapshots these constants (see the plan's Deviations: config plumbing
 /// deferred until hover options are modeled).
-fn HoverSettings::defaults() -> HoverSettings {
+pub fn HoverSettings::defaults() -> HoverSettings {
   {
     enabled: HoverEnabled::from_config("on"),
     sticky: true,
@@ -113,7 +113,7 @@ fn HoverSettings::defaults() -> HoverSettings {
 /// `getBoundingClientRect`, so `posx` / `posy` are client coordinates (Monaco
 /// uses page coordinates against `getDomNodePagePosition`; both are consistent
 /// pairs — see the Deviations note on client- vs page-space).
-fn mouse_within_element(
+pub fn mouse_within_element(
   left : Double,
   top : Double,
   width : Double,
@@ -134,7 +134,7 @@ fn mouse_within_element(
 /// Monaco `hoverUtils.isTriggerModifierPressed`: the trigger modifier is the
 /// inverse of the multi-cursor modifier — when multi-cursor is Alt, the trigger
 /// is Ctrl/Meta; otherwise (multi-cursor is Ctrl/Meta) the trigger is Alt.
-fn is_trigger_modifier_pressed(
+pub fn is_trigger_modifier_pressed(
   multi_cursor_modifier : MultiCursorModifier,
   e : EventModifiers,
 ) -> Bool {
@@ -147,7 +147,7 @@ fn is_trigger_modifier_pressed(
 ///|
 /// Monaco `hoverUtils.shouldShowHover`: `'on'` always shows, `'off'` never, and
 /// `'onKeyboardModifier'` shows only while the trigger modifier is held.
-fn should_show_hover(
+pub fn should_show_hover(
   hover_enabled : HoverEnabled,
   multi_cursor_modifier : MultiCursorModifier,
   e : EventModifiers,
@@ -165,7 +165,7 @@ fn should_show_hover(
 /// widget is visible, a sticky hover with a positive hiding delay debounces the
 /// mouse-move reaction by that delay (the grace period for the pointer to travel
 /// onto the widget) instead of reacting immediately.
-fn should_reschedule_hover(
+pub fn should_reschedule_hover(
   widget_visible : Bool,
   sticky : Bool,
   hiding_delay : Int,
@@ -178,7 +178,7 @@ fn should_reschedule_hover(
 /// mouse-leave keeps the widget when the pointer is on it. The two other
 /// disjuncts — `_isContentWidgetResizing()` (sashes, DEFERRED) and
 /// `isOnColorDecorator` (color-picker, N-A) — are out of scope this phase.
-fn should_keep_hover_widget_visible(mouse_on_widget : Bool) -> Bool {
+pub fn should_keep_hover_widget_visible(mouse_on_widget : Bool) -> Bool {
   mouse_on_widget
 }
 
@@ -189,7 +189,7 @@ fn should_keep_hover_widget_visible(mouse_on_widget : Bool) -> Bool {
 /// the pointer resting on the widget (`isMouseOnStickyContentHoverWidget`). The
 /// `isFocused` / `isResizing` / sticky-from-keyboard arms need Phase 4 widget
 /// state, and the color-picker / text-selection arms are N-A; all omitted here.
-fn should_keep_current_hover(
+pub fn should_keep_current_hover(
   keep_open : Bool,
   sticky : Bool,
   mouse_on_widget : Bool,

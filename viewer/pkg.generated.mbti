@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/common/languages",
@@ -20,7 +21,7 @@ import {
 
 // Types and methods
 pub(all) struct CurrentModel {
-  uri : @moonbit-community/editor/base/common.Uri
+  uri : @common.Uri
   version : Int
   revision : String
   language_id : String
@@ -28,17 +29,6 @@ pub(all) struct CurrentModel {
   scroll_top : Double
   scroll_left : Double
 } derive(@debug.Debug)
-
-pub(all) struct EditorContext {
-  frame : @view_model.RenderFrame?
-  view_to_model_offset : (@moonbit-community/editor/base/common.Position) -> Int
-  offset_to_model_line : (Int) -> Int
-}
-
-pub(all) enum EditorEvent {
-  MouseMoved(@moonbit-community/editor/viewer/common.MouseTarget)
-  EscapePressed
-}
 
 pub(all) struct EditorLayoutInfo {
   width : Double
@@ -103,7 +93,7 @@ pub fn Viewer::get_layout_info(Self) -> EditorLayoutInfo
 pub fn Viewer::get_line_height_for_position(Self, Int, Int) -> Double
 pub fn Viewer::get_model(Self) -> @model.TextModel?
 pub fn Viewer::get_offset_for_column(Self, Int, Int) -> Double
-pub fn Viewer::get_position(Self) -> @moonbit-community/editor/base/common.Position?
+pub fn Viewer::get_position(Self) -> @common.Position?
 pub fn Viewer::get_scroll_height(Self) -> Double
 pub fn Viewer::get_scroll_left(Self) -> Double
 pub fn Viewer::get_scroll_top(Self) -> Double
@@ -116,16 +106,16 @@ pub fn Viewer::get_top_for_line_number(Self, Int, include_view_zones? : Bool) ->
 pub fn Viewer::get_top_for_position(Self, Int, Int) -> Double
 pub fn Viewer::get_value(Self) -> String
 pub fn Viewer::get_visible_column_from_position(Self, Int, Int) -> Int
-pub fn Viewer::get_visible_ranges(Self) -> Array[@moonbit-community/editor/base/common.Range]
-pub fn Viewer::get_visible_ranges_plus_viewport_above_below(Self) -> Array[@moonbit-community/editor/base/common.Range]
+pub fn Viewer::get_visible_ranges(Self) -> Array[@common.Range]
+pub fn Viewer::get_visible_ranges_plus_viewport_above_below(Self) -> Array[@common.Range]
 pub fn Viewer::get_width_of_line(Self, Int) -> Double
-pub fn Viewer::on_did_build_frame(Self, (ViewerFrameBuiltEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_did_change_diagnostics(Self, (ViewerDiagnosticsChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_did_change_model(Self, (@model.TextModel) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_did_render_model(Self, (ViewerModelRenderedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_did_resolve_hover(Self, (ViewerHoverResolvedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_did_scroll(Self, (ViewerScrollEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_build_frame(Self, (ViewerFrameBuiltEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_change_diagnostics(Self, (ViewerDiagnosticsChangedEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_change_model(Self, (@model.TextModel) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_render_model(Self, (ViewerModelRenderedEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_resolve_hover(Self, (ViewerHoverResolvedEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_scroll(Self, (ViewerScrollEvent) -> Unit) -> @common.Disposable
 pub fn Viewer::refresh_model_features(Self) -> Unit
 pub fn Viewer::remeasure(Self) -> Unit
 pub fn Viewer::restore_view_state(Self, ViewerViewState) -> Unit
@@ -138,11 +128,11 @@ pub fn Viewer::reveal_lines_near_top(Self, Int, Int) -> Unit
 pub fn Viewer::reveal_position(Self, Int, Int) -> Unit
 pub fn Viewer::reveal_position_in_center(Self, Int, Int) -> Unit
 pub fn Viewer::reveal_position_near_top(Self, Int, Int) -> Unit
-pub fn Viewer::reveal_range(Self, @moonbit-community/editor/base/common.Range) -> Unit
-pub fn Viewer::reveal_range_at_top(Self, @moonbit-community/editor/base/common.Range) -> Unit
-pub fn Viewer::reveal_range_in_center(Self, @moonbit-community/editor/base/common.Range) -> Unit
-pub fn Viewer::reveal_range_in_center_if_outside_viewport(Self, @moonbit-community/editor/base/common.Range) -> Unit
-pub fn Viewer::reveal_range_near_top(Self, @moonbit-community/editor/base/common.Range) -> Unit
+pub fn Viewer::reveal_range(Self, @common.Range) -> Unit
+pub fn Viewer::reveal_range_at_top(Self, @common.Range) -> Unit
+pub fn Viewer::reveal_range_in_center(Self, @common.Range) -> Unit
+pub fn Viewer::reveal_range_in_center_if_outside_viewport(Self, @common.Range) -> Unit
+pub fn Viewer::reveal_range_near_top(Self, @common.Range) -> Unit
 pub fn Viewer::save_view_state(Self) -> ViewerViewState
 pub fn Viewer::scroll_by_lines(Self, Int) -> Unit
 pub fn Viewer::scroll_by_pages(Self, Int) -> Unit

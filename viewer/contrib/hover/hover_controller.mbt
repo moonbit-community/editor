@@ -26,13 +26,13 @@ pub(all) struct EditorContext {
 }
 
 ///|
-priv struct HoverView {
+pub(all) struct HoverView {
   range : @base_common.OffsetRange
-  parts : Array[@hover.HoverPart]
+  parts : Array[HoverPart]
 } derive(Eq)
 
 ///|
-priv struct HoverAnchor {
+pub(all) struct HoverAnchor {
   start : Int
   end : Int
   offset : Int
@@ -46,7 +46,7 @@ priv struct HoverAnchor {
 /// Monaco `HoverRangeAnchor.equals`: two range anchors are equal when they cover
 /// the same span (the viewer also keys on the injected-text index so an inlay
 /// hint and the text under it are distinct anchors).
-fn hover_anchor_equals(left : HoverAnchor, right : HoverAnchor) -> Bool {
+pub fn hover_anchor_equals(left : HoverAnchor, right : HoverAnchor) -> Bool {
   left.start == right.start &&
   left.end == right.end &&
   left.injected_text_index == right.injected_text_index
@@ -57,7 +57,7 @@ fn hover_anchor_equals(left : HoverAnchor, right : HoverAnchor) -> Bool {
 /// for a new anchor when the previous anchor was a range anchor (always true in
 /// the viewer) and the shown position is on the new anchor's start line — i.e.
 /// the two anchors share a model line.
-fn hover_anchor_can_adopt(
+pub fn hover_anchor_can_adopt(
   new_anchor : HoverAnchor,
   last_anchor : HoverAnchor,
 ) -> Bool {
@@ -69,8 +69,8 @@ fn hover_anchor_can_adopt(
 /// the part still applies to the new anchor when its range contains the anchor
 /// range (`startColumn <= anchor.startColumn && endColumn >= anchor.endColumn`,
 /// here in document offsets).
-fn hover_part_valid_for_anchor(
-  part : @hover.HoverPart,
+pub fn hover_part_valid_for_anchor(
+  part : HoverPart,
   anchor : HoverAnchor,
 ) -> Bool {
   let range = hover_part_offset_range(part)
@@ -80,11 +80,11 @@ fn hover_part_valid_for_anchor(
 ///|
 /// Monaco `ContentHoverResult.filter`: keep the parts that are still valid for
 /// the new anchor.
-fn filter_hover_parts(
-  parts : Array[@hover.HoverPart],
+pub fn filter_hover_parts(
+  parts : Array[HoverPart],
   anchor : HoverAnchor,
-) -> Array[@hover.HoverPart] {
-  let kept : Array[@hover.HoverPart] = []
+) -> Array[HoverPart] {
+  let kept : Array[HoverPart] = []
   for part in parts {
     if hover_part_valid_for_anchor(part, anchor) {
       kept.push(part)
@@ -98,7 +98,7 @@ fn filter_hover_parts(
 /// of the anchor the widget renders on, how far it shifts left to stay inside
 /// the editor, and the available-space height cap (Monaco
 /// `ContentHoverWidget._findMaximumRenderingHeight`) the content scrolls within.
-priv struct HoverPlacement {
+pub(all) struct HoverPlacement {
   below : Bool
   shift_left : Double
   max_height : Double
@@ -114,13 +114,13 @@ let hover_delay_ms = 300
 /// delay, the sync (markers / decorations) compute runs after the remaining
 /// half — so at the full delay — and a loading message is shown at three times
 /// the delay if the async compute has not finished.
-let hover_first_wait_ms : Int = hover_delay_ms / 2
+pub let hover_first_wait_ms : Int = hover_delay_ms / 2
 
 ///|
-let hover_second_wait_ms : Int = hover_delay_ms - hover_first_wait_ms
+pub let hover_second_wait_ms : Int = hover_delay_ms - hover_first_wait_ms
 
 ///|
-let hover_loading_message_ms : Int = 3 * hover_delay_ms
+pub let hover_loading_message_ms : Int = 3 * hover_delay_ms
 
 ///|
 /// VS Code's default `editor.hover.hidingDelay`: once the widget is on screen,
@@ -128,7 +128,7 @@ let hover_loading_message_ms : Int = 3 * hover_delay_ms
 /// hover reacts, so the pointer can travel onto the hover widget without it
 /// closing. Mirrors `ContentHoverController`'s `_reactToEditorMouseMoveRunner`
 /// scheduled at `hidingDelay`.
-let hover_hiding_delay_ms = 300
+pub let hover_hiding_delay_ms = 300
 
 ///|
 /// Monaco `HoverOperationState` (`hoverOperation.ts`). `FirstWait` / `SecondWait`
@@ -136,7 +136,7 @@ let hover_hiding_delay_ms = 300
 /// `WaitingForAsync*` states cover the post-delay window while the async compute
 /// is still in flight (the second one shows the loading message); `Idle` is the
 /// complete (or quiescent) state.
-priv enum HoverOpState {
+pub(all) enum HoverOpState {
   HoverOpIdle
   HoverOpFirstWait
   HoverOpSecondWait
@@ -152,15 +152,15 @@ priv enum HoverOpState {
 /// methods. `parts` is Monaco's accumulating `_result`; `token` rotates per
 /// anchor so stale timers and streamed async results are dropped at their guards
 /// (the role Monaco's scheduler / iterable cancellation plays).
-priv struct HoverOperation {
+pub(all) struct HoverOperation {
   state : HoverOpState
   token : Int
-  parts : Array[@hover.HoverPart]
+  parts : Array[HoverPart]
   async_done : Bool
 } derive(Eq)
 
 ///|
-fn HoverOperation::idle() -> HoverOperation {
+pub fn HoverOperation::idle() -> HoverOperation {
   { state: HoverOpIdle, token: 0, parts: [], async_done: false }
 }
 
@@ -168,7 +168,7 @@ fn HoverOperation::idle() -> HoverOperation {
 /// What a hover transition asks the viewer to do; the controller stays a pure
 /// state machine and the viewer interprets these (timers through the
 /// browser-host timer bindings, computes through the hover computer).
-priv enum HoverEffect {
+pub(all) enum HoverEffect {
   HoverNoEffect
   /// Delayed start (Monaco `start(Delayed)`): schedule the async trigger at
   /// `hover_first_wait_ms` and the loading message at `hover_loading_message_ms`
@@ -182,7 +182,7 @@ priv enum HoverEffect {
 /// the operation does not: the in-flight anchor, the currently shown result (the
 /// `_currentResult` analog — its parts, the anchor it was computed for, and
 /// whether it was complete), and the measured placement.
-priv struct HoverController {
+pub(all) struct HoverController {
   /// Monaco `_hoverOperation.options.anchor`: the anchor the operation is
   /// currently computing for (`None` once cleared).
   anchor : HoverAnchor?
@@ -202,7 +202,7 @@ priv struct HoverController {
 } derive(Eq)
 
 ///|
-fn HoverController::empty() -> HoverController {
+pub fn HoverController::empty() -> HoverController {
   {
     anchor: None,
     operation: HoverOperation::idle(),
@@ -219,7 +219,7 @@ fn HoverController::empty() -> HoverController {
 /// in-flight anchor and the shown result, reset the operation to Idle, and rotate
 /// the token so in-flight timers and streamed async results are dropped at their
 /// guards.
-fn HoverController::cleared(self : HoverController) -> HoverController {
+pub fn HoverController::cleared(self : HoverController) -> HoverController {
   {
     anchor: None,
     operation: {
@@ -237,7 +237,7 @@ fn HoverController::cleared(self : HoverController) -> HoverController {
 }
 
 ///|
-fn HoverController::on_event(
+pub fn HoverController::on_event(
   self : HoverController,
   event : EditorEvent,
   ctx : EditorContext,
@@ -285,7 +285,7 @@ fn HoverController::on_event(
 /// and kicks a fresh operation; an incompatible anchor hides the current hover
 /// and restarts. `sticky_mouse_getting_closer` is computed at the input seam
 /// (`sticky && isMouseGettingCloser`, both host concerns).
-fn HoverController::start_showing_or_update_hover(
+pub fn HoverController::start_showing_or_update_hover(
   self : HoverController,
   anchor : HoverAnchor,
   sticky_mouse_getting_closer : Bool,
@@ -341,7 +341,7 @@ fn HoverController::start_showing_or_update_hover(
 /// operation (rotating the token so its timers / async results are dropped) and
 /// arm a fresh delayed operation. The shown result is left untouched — it is
 /// replaced only when the new operation produces one.
-fn HoverController::start_hover_operation_if_necessary(
+pub fn HoverController::start_hover_operation_if_necessary(
   self : HoverController,
   anchor : HoverAnchor,
   insist~ : Bool,
@@ -376,7 +376,7 @@ fn HoverController::start_hover_operation_if_necessary(
 /// compute. Returns whether the transition applied (the token is still current);
 /// a stale timer is a no-op. Invoking this then `op_trigger_sync` back to back
 /// — without the schedulers — is Monaco's immediate (`start(Immediate)`) path.
-fn HoverController::op_trigger_async(
+pub fn HoverController::op_trigger_async(
   self : HoverController,
   token : Int,
 ) -> (Bool, HoverController) {
@@ -390,10 +390,10 @@ fn HoverController::op_trigger_async(
 /// Monaco `_triggerSyncComputation`: append the sync parts, then move to `Idle`
 /// if the async compute already finished or `WaitingForAsync` otherwise, and
 /// emit the accumulated result.
-fn HoverController::op_trigger_sync(
+pub fn HoverController::op_trigger_sync(
   self : HoverController,
   token : Int,
-  sync_parts : Array[@hover.HoverPart],
+  sync_parts : Array[HoverPart],
 ) -> HoverController {
   if token != self.operation.token {
     return self
@@ -411,7 +411,7 @@ fn HoverController::op_trigger_sync(
 ///|
 /// Monaco `_triggerLoadingMessage`: when still waiting on the async compute,
 /// switch to showing the loading message.
-fn HoverController::op_trigger_loading(
+pub fn HoverController::op_trigger_loading(
   self : HoverController,
   token : Int,
 ) -> HoverController {
@@ -434,10 +434,10 @@ fn HoverController::op_trigger_loading(
 ///|
 /// One streamed async result arrived (Monaco pushes each iterable item onto
 /// `_result` and re-fires): accumulate and emit.
-fn HoverController::op_async_item(
+pub fn HoverController::op_async_item(
   self : HoverController,
   token : Int,
-  parts : Array[@hover.HoverPart],
+  parts : Array[HoverPart],
 ) -> HoverController {
   if token != self.operation.token {
     return self
@@ -450,7 +450,7 @@ fn HoverController::op_async_item(
 ///|
 /// The async compute finished (Monaco's `_asyncIterableDone`): mark it done and,
 /// if we were waiting on it, complete to `Idle`, then emit.
-fn HoverController::op_async_done(
+pub fn HoverController::op_async_done(
   self : HoverController,
   token : Int,
 ) -> HoverController {
@@ -474,7 +474,7 @@ fn HoverController::op_async_done(
 /// result); a complete-but-empty result is held back too when the operation
 /// insisted on keeping the hover visible; otherwise the accumulated parts become
 /// the shown result via `_setCurrentResult`.
-fn HoverController::emit(self : HoverController) -> HoverController {
+pub fn HoverController::emit(self : HoverController) -> HoverController {
   match self.operation.state {
     HoverOpFirstWait | HoverOpSecondWait => self
     _ => {
@@ -511,9 +511,9 @@ fn HoverController::emit(self : HoverController) -> HoverController {
 /// result, treat an empty result as hiding the hover, and otherwise show the
 /// sorted parts. Placement is preserved only when the shown parts are unchanged,
 /// so streamed additions re-measure but identical re-emits keep their placement.
-fn HoverController::set_current_result(
+pub fn HoverController::set_current_result(
   self : HoverController,
-  parts : Array[@hover.HoverPart],
+  parts : Array[HoverPart],
   is_complete : Bool,
   result_anchor : HoverAnchor,
 ) -> HoverController {
@@ -532,7 +532,7 @@ fn HoverController::set_current_result(
     }
   }
   let sorted = parts.copy()
-  sorted.sort_by(@hover.compare_hover_parts)
+  sorted.sort_by(compare_hover_parts)
   // Dedupe: identical shown parts at the same completeness are a no-op.
   match self.view {
     Some(existing) =>
@@ -544,7 +544,7 @@ fn HoverController::set_current_result(
   // The fallback anchor span is built inline so the expected `OffsetRange` type
   // flows from `hover_parts_range`'s parameter (the bare constructor does not
   // resolve without an expected type on the JS target).
-  let range = @hover.hover_parts_range(
+  let range = hover_parts_range(
     sorted,
     OffsetRange(result_anchor.start, result_anchor.end),
   )
@@ -570,12 +570,12 @@ fn HoverController::set_current_result(
 ///|
 /// Whether the async compute has finished for the current operation; the viewer
 /// reads this to fire the resolution status exactly once per anchor.
-fn HoverController::is_complete(self : HoverController) -> Bool {
+pub fn HoverController::is_complete(self : HoverController) -> Bool {
   self.operation.state is HoverOpIdle
 }
 
 ///|
-fn HoverController::measured(
+pub fn HoverController::measured(
   self : HoverController,
   below : Bool,
   shift_left : Double,
@@ -585,7 +585,7 @@ fn HoverController::measured(
 }
 
 ///|
-fn HoverController::decorations(
+pub fn HoverController::decorations(
   self : HoverController,
   snapshot : @model.TextSnapshot,
 ) -> Array[@model.Decoration] {
@@ -605,9 +605,9 @@ fn HoverController::decorations(
 /// overflow, shifted left when it would overflow the right edge), or the
 /// unmeasured loading hover while the async compute is still resolving past
 /// the loading delay.
-priv struct HoverWidgetView {
+pub(all) struct HoverWidgetView {
   anchor_offset : Int
-  parts : Array[@hover.HoverPart]
+  parts : Array[HoverPart]
   /// Whether this widget participates in placement measurement (the
   /// loading hover renders unmeasured at the anchor).
   measurable : Bool
@@ -618,12 +618,12 @@ priv struct HoverWidgetView {
 /// Whether a hover widget is currently on screen (resolved content or the
 /// loading placeholder). Monaco's `_contentWidget.isVisible`; the mouse-move
 /// grace period only applies once the widget is shown.
-fn HoverController::widget_visible(self : HoverController) -> Bool {
+pub fn HoverController::widget_visible(self : HoverController) -> Bool {
   self.widget_view() is Some(_)
 }
 
 ///|
-fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
+pub fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
   match self.view {
     Some(hover) =>
       Some({
@@ -653,4 +653,43 @@ fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
         _ => None
       }
   }
+}
+
+///|
+/// The token the target falls in, as `(start, end, injected_text_index)` in
+/// absolute document offsets. The token's view columns are resolved to model
+/// offsets through `view_to_model_offset` (the `CoordinatesConverter` + model
+/// snapshot boundary), the way Monaco maps a `MouseTarget`'s view position to
+/// the model — not via a render-line offset helper.
+pub fn token_anchor_for_target(
+  frame : @view_model.RenderFrame,
+  target : @viewer_common.MouseTarget,
+  view_to_model_offset : (@base_common.Position) -> Int,
+) -> (Int, Int, Int)? {
+  if target.token_index < 0 {
+    return None
+  }
+  let index = target.line_number - frame.viewport.start_line
+  if index < 0 || index >= frame.lines.length() {
+    return None
+  }
+  let line = frame.lines[index]
+  let tokens = line.tokens
+  if target.token_index >= tokens.get_count() {
+    return None
+  }
+  // The token's view columns: `IViewLineTokens` exposes end offsets, so the
+  // start is the previous token's end (or 0 for the first token).
+  let token_start = if target.token_index > 0 {
+    tokens.get_end_offset(target.token_index - 1)
+  } else {
+    0
+  }
+  let token_end = tokens.get_end_offset(target.token_index)
+  // `target.line_number` is the 1-based view line; token columns are 0-based, so
+  // shift them to 1-based `Position` columns.
+  let view_line = target.line_number
+  let start = view_to_model_offset(Position(view_line, token_start + 1))
+  let end = view_to_model_offset(Position(view_line, token_end + 1))
+  Some((start, end, target.injected_text_index))
 }

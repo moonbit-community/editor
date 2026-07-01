@@ -39,7 +39,7 @@ pub(all) struct HoverWidgetDom {
 priv struct ContentWidgetsPrepared {
   frame : @view_model.RenderFrame
   layout : @view_layout.ViewLayout
-  hover_state : HoverController
+  hover_state : @hover.HoverController
   on_hover_measured : (Bool, Double, Double) -> Unit
   space_width : Double
 }
@@ -179,7 +179,7 @@ fn ContentWidgets::render_hover_widget(
   context : ViewContext,
   frame : @view_model.RenderFrame,
   layout : @view_layout.ViewLayout,
-  hover_state : HoverController,
+  hover_state : @hover.HoverController,
   on_hover_measured : (Bool, Double, Double) -> Unit,
   space_width : Double,
   gutter_width : Double,
@@ -205,9 +205,9 @@ fn ContentWidgets::render_hover_widget(
   // resolves to that same column today; routing it through the ported helper
   // keeps placement faithful as later increments add the start-column-boundary
   // clamp and forced ranges.
-  let placement_parts : Array[HoverPositionPart] = []
+  let placement_parts : Array[@hover.HoverPositionPart] = []
   for part in hover_view.parts {
-    let part_range = hover_part_offset_range(part)
+    let part_range = @hover.hover_part_offset_range(part)
     match
       (
         line_col_for_offset(frame, part_range.start),
@@ -221,7 +221,7 @@ fn ContentWidgets::render_hover_widget(
       _ => ()
     }
   }
-  let (_show_at, show_at_secondary) = compute_hover_positions(
+  let (_show_at, show_at_secondary) = @hover.compute_hover_positions(
     Range(line_number, anchor_view_column, line_number, anchor_view_column),
     placement_parts,
     1,
@@ -314,7 +314,7 @@ fn ContentWidgets::render_hover_widget(
   let max_height = match hover_view.placement {
     Some(placement) => placement.max_height
     None =>
-      max_hover_double(
+      @hover.max_hover_double(
         hover_loading_min_height,
         hover_available_space_above(line_top),
       )
@@ -580,7 +580,7 @@ fn hover_maximum_rendering_height(
   available : Double,
   content_height : Double,
 ) -> Double {
-  min_hover_double(available, content_height)
+  @hover.min_hover_double(available, content_height)
 }
 
 ///|
@@ -592,13 +592,13 @@ fn hover_prefer_above(
   space_below : Double,
   prefer_above : Bool,
 ) -> Bool {
-  let max_above = min_hover_double(space_above, widget_height)
-  let max_below = min_hover_double(space_below, widget_height)
-  let max_height = min_hover_double(
-    max_hover_double(max_above, max_below),
+  let max_above = @hover.min_hover_double(space_above, widget_height)
+  let max_below = @hover.min_hover_double(space_below, widget_height)
+  let max_height = @hover.min_hover_double(
+    @hover.max_hover_double(max_above, max_below),
     widget_height,
   )
-  let height = min_hover_double(widget_height, max_height)
+  let height = @hover.min_hover_double(widget_height, max_height)
   if prefer_above {
     height <= max_above
   } else {
@@ -615,7 +615,7 @@ fn hover_prefer_above(
 /// width cap (`contentHoverWidget.ts` `_findMaximumRenderingWidth`).
 fn hover_available_width(root : @rdom.Element, gutter_width : Double) -> Double {
   let root_rect = root.get_bounding_client_rect()
-  max_hover_double(160.0, root_rect.get_width() - gutter_width - 24.0)
+  @hover.max_hover_double(160.0, root_rect.get_width() - gutter_width - 24.0)
 }
 
 ///|
@@ -661,24 +661,6 @@ fn hover_width_style(max_width : Double) -> String {
 }
 
 ///|
-fn max_hover_double(left : Double, right : Double) -> Double {
-  if left > right {
-    left
-  } else {
-    right
-  }
-}
-
-///|
-fn min_hover_double(left : Double, right : Double) -> Double {
-  if left < right {
-    left
-  } else {
-    right
-  }
-}
-
-///|
 fn ContentWidgets::mount_content_widget(
   self : ContentWidgets,
   widget : ContentWidget,
@@ -709,15 +691,6 @@ fn ContentWidget::style(self : ContentWidget) -> String {
     style = style + ";margin-left:-" + self.shift_left.to_string() + "px"
   }
   style
-}
-
-///|
-fn hover_part_offset_range(part : @hover.HoverPart) -> @base_common.OffsetRange {
-  match part {
-    MarkdownHover(range~, ..) => range
-    MarkerHover(range~, ..) => range
-    LoadingHover(range~, ..) => range
-  }
 }
 
 ///|

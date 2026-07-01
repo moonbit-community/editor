@@ -9,7 +9,7 @@ priv struct ViewRenderInput {
   selection_view_range : @view_layout.ViewRange?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
-  hover_state : HoverController
+  hover_state : @hover.HoverController
   on_toggle_fold : (Int) -> Unit
   on_hover_measured : (Bool, Double, Double) -> Unit
   generation : Int
@@ -126,7 +126,7 @@ priv struct ViewRenderSnapshot {
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   browser_view_zones : Array[@view_zones.BrowserViewZone]
-  hover_state : HoverController
+  hover_state : @hover.HoverController
 }
 
 ///|

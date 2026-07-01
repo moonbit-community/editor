@@ -1,5 +1,5 @@
 ///|
-fn Viewer::editor_context(self : Viewer) -> EditorContext {
+fn Viewer::editor_context(self : Viewer) -> @hover.EditorContext {
   {
     frame: self.frame,
     view_to_model_offset: view_position => {
@@ -55,7 +55,7 @@ fn Viewer::on_editor_mouse_move(
     self.hover_mouse_posx,
     self.hover_mouse_posy,
   )
-  if should_keep_current_hover(
+  if @hover.should_keep_current_hover(
       self.hover_keep_open,
       self.hover_settings.sticky,
       mouse_on_widget,
@@ -63,7 +63,7 @@ fn Viewer::on_editor_mouse_move(
     self.cancel_hover_react()
     return
   }
-  if should_reschedule_hover(
+  if @hover.should_reschedule_hover(
       self.hover.widget_visible(),
       self.hover_settings.sticky,
       self.hover_settings.hiding_delay,
@@ -97,9 +97,9 @@ fn Viewer::on_editor_mouse_move(
 /// here the `MouseMoved` → `start_delayed` arm, which clears when the pointer is
 /// off any token); otherwise, unless the dev sticky flag is set, hide.
 fn Viewer::react_to_editor_mouse_move(self : Viewer) -> Unit {
-  if should_show_hover(
+  if @hover.should_show_hover(
       self.hover_settings.enabled,
-      hover_multi_cursor_modifier,
+      @hover.hover_multi_cursor_modifier,
       self.hover_last_modifiers,
     ) {
     // The sticky mouse-getting-closer keep + insist-update is decided inside the
@@ -108,7 +108,7 @@ fn Viewer::react_to_editor_mouse_move(self : Viewer) -> Unit {
     self.run_hover_react()
     return
   }
-  if hover_sticky_debug {
+  if @hover.hover_sticky_debug {
     return
   }
   self.hide_content_hover()
@@ -123,7 +123,7 @@ fn Viewer::record_hover_pointer(
   self : Viewer,
   posx : Double,
   posy : Double,
-  modifiers : EventModifiers,
+  modifiers : @hover.EventModifiers,
 ) -> Unit {
   self.hover_mouse_posx = posx
   self.hover_mouse_posy = posy
@@ -184,7 +184,7 @@ fn Viewer::dismiss_hover(self : Viewer) -> Unit {
 /// otherwise the widget hides. Wraps `dismiss_hover` with the repaint the
 /// imperative callers would otherwise own.
 fn Viewer::hide_content_hover(self : Viewer) -> Unit {
-  if hover_sticky_debug {
+  if @hover.hover_sticky_debug {
     return
   }
   // `InlineSuggestionHintsContentWidget.dropDownVisible` guard is N-A — the
@@ -209,7 +209,7 @@ fn Viewer::mouse_on_hover_widget(
     return false
   }
   let rect = wrapper.get_bounding_client_rect()
-  mouse_within_element(
+  @hover.mouse_within_element(
     rect.get_left(),
     rect.get_top(),
     rect.get_width(),
@@ -253,7 +253,9 @@ fn Viewer::on_editor_mouse_down(
   if self.hover_ignore_mouse_events {
     return
   }
-  if should_keep_hover_widget_visible(self.mouse_on_hover_widget(posx, posy)) {
+  if @hover.should_keep_hover_widget_visible(
+      self.mouse_on_hover_widget(posx, posy),
+    ) {
     return
   }
   self.hide_content_hover()
@@ -275,10 +277,12 @@ fn Viewer::on_editor_mouse_leave(
     return
   }
   self.cancel_hover_react()
-  if should_keep_hover_widget_visible(self.mouse_on_hover_widget(posx, posy)) {
+  if @hover.should_keep_hover_widget_visible(
+      self.mouse_on_hover_widget(posx, posy),
+    ) {
     return
   }
-  if hover_sticky_debug {
+  if @hover.hover_sticky_debug {
     return
   }
   self.hide_content_hover()
@@ -305,7 +309,7 @@ fn Viewer::on_editor_scroll_changed(
 /// Hover is the only controller today.
 fn Viewer::dispatch_editor_event(
   self : Viewer,
-  event : EditorEvent,
+  event : @hover.EditorEvent,
   sticky_mouse_getting_closer? : Bool = false,
 ) -> Unit {
   // Escape hides immediately and must drop any deferred mouse-move reaction so a
@@ -331,7 +335,7 @@ fn Viewer::dispatch_editor_event(
 /// invalidates the rendered lines.
 fn Viewer::after_hover_transition(
   self : Viewer,
-  before : HoverController,
+  before : @hover.HoverController,
 ) -> Unit {
   if before == self.hover {
     return
@@ -346,18 +350,24 @@ fn Viewer::after_hover_transition(
 }
 
 ///|
-/// Interprets a hover transition. Monaco's `HoverOperation.start(Delayed)`
+/// Interprets a hover transition. Monaco's `@hover.HoverOperation.start(Delayed)`
 /// schedules only the async trigger and the loading message up front; the sync
 /// trigger is scheduled by the async trigger (see `hover_trigger_async`).
-fn Viewer::apply_hover_effect(self : Viewer, effect : HoverEffect) -> Unit {
+fn Viewer::apply_hover_effect(
+  self : Viewer,
+  effect : @hover.HoverEffect,
+) -> Unit {
   match effect {
     HoverNoEffect => ()
     HoverScheduleDelayed(token) => {
-      set_timeout(() => self.hover_trigger_async(token), hover_first_wait_ms)
+      set_timeout(
+        () => self.hover_trigger_async(token),
+        @hover.hover_first_wait_ms,
+      )
       |> ignore
       set_timeout(
         () => self.hover_trigger_loading(token),
-        hover_loading_message_ms,
+        @hover.hover_loading_message_ms,
       )
       |> ignore
     }
@@ -373,7 +383,10 @@ fn Viewer::hover_trigger_async(self : Viewer, token : Int) -> Unit {
   let (proceed, hover) = self.hover.op_trigger_async(token)
   self.hover = hover
   if proceed {
-    set_timeout(() => self.hover_trigger_sync(token), hover_second_wait_ms)
+    set_timeout(
+      () => self.hover_trigger_sync(token),
+      @hover.hover_second_wait_ms,
+    )
     |> ignore
     self.kick_hover_async(token)
   }

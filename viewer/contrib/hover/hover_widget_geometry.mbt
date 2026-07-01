@@ -8,7 +8,7 @@
 /// whether it forces the widget to anchor at that range. Mirrors the
 /// `range` / `forceShowAtRange` members `computeHoverPositions` reads off each
 /// `IHoverPart`; no viewer participant sets `force_show_at_range` yet.
-priv struct HoverPositionPart {
+pub(all) struct HoverPositionPart {
   range : @base_common.Range
   force_show_at_range : Bool
 }
@@ -29,7 +29,7 @@ priv struct HoverPositionPart {
 ///
 /// Returns `(show_at, show_at_secondary)`, Monaco's
 /// `{ showAtPosition, showAtSecondaryPosition }`.
-fn compute_hover_positions(
+pub fn compute_hover_positions(
   anchor_range : @base_common.Range,
   hover_parts : Array[HoverPositionPart],
   start_column_boundary : Int,
@@ -76,7 +76,7 @@ fn compute_hover_positions(
 /// Monaco `computeDistanceFromPointToRectangle` (`contentHoverWidget.ts`
 /// :477-483): Euclidean distance from a point to the nearest edge of a
 /// rectangle, `0` when the point is inside it.
-fn compute_distance_from_point_to_rectangle(
+pub fn compute_distance_from_point_to_rectangle(
   point_x : Double,
   point_y : Double,
   left : Double,
@@ -99,21 +99,21 @@ fn compute_distance_from_point_to_rectangle(
 /// updated in place per move, exactly as Monaco mutates the
 /// `RenderedContentHover`. Recreated per shown hover (the viewer resets it when
 /// the shown view changes, mirroring Monaco's fresh `RenderedContentHover`).
-priv struct MouseCloserState {
+pub(all) struct MouseCloserState {
   mut initial_pos_x : Double?
   mut initial_pos_y : Double?
   mut closest_distance : Double?
 }
 
 ///|
-fn MouseCloserState::new() -> MouseCloserState {
+pub fn MouseCloserState::new() -> MouseCloserState {
   { initial_pos_x: None, initial_pos_y: None, closest_distance: None }
 }
 
 ///|
 /// Resets the running state so the next move re-seeds the reference point,
 /// standing in for Monaco recreating the `RenderedContentHover` on each show.
-fn MouseCloserState::reset(self : MouseCloserState) -> Unit {
+pub fn MouseCloserState::reset(self : MouseCloserState) -> Unit {
   self.initial_pos_x = None
   self.initial_pos_y = None
   self.closest_distance = None
@@ -127,7 +127,7 @@ fn MouseCloserState::reset(self : MouseCloserState) -> Unit {
 /// minimum. The widget rectangle is measured by the host each call and passed in
 /// (Monaco's `getDomNodePagePosition(this.getDomNode())`). The `!_renderedHover`
 /// guard is implicit: this state only exists while a hover is rendered.
-fn MouseCloserState::is_mouse_getting_closer(
+pub fn MouseCloserState::is_mouse_getting_closer(
   self : MouseCloserState,
   posx : Double,
   posy : Double,
@@ -163,4 +163,31 @@ fn MouseCloserState::is_mouse_getting_closer(
   }
   self.closest_distance = Some(min_hover_double(closest_distance, distance))
   true
+}
+
+///|
+pub fn max_hover_double(left : Double, right : Double) -> Double {
+  if left > right {
+    left
+  } else {
+    right
+  }
+}
+
+///|
+pub fn min_hover_double(left : Double, right : Double) -> Double {
+  if left < right {
+    left
+  } else {
+    right
+  }
+}
+
+///|
+pub fn hover_part_offset_range(part : HoverPart) -> @base_common.OffsetRange {
+  match part {
+    MarkdownHover(range~, ..) => range
+    MarkerHover(range~, ..) => range
+    LoadingHover(range~, ..) => range
+  }
 }

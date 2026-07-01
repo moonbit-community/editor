@@ -1,7 +1,7 @@
 ///|
 /// Phase 2 of `monaco-hover-logic-chain-port.md`: the Monaco `HoverOperation`
 /// state machine ported into `HoverController`.
-fn markdown_part(start : Int, end : Int, text : String) -> @hover.HoverPart {
+fn markdown_part(start : Int, end : Int, text : String) -> HoverPart {
   MarkdownHover(
     range=OffsetRange(start, end),
     contents=[PlainText(text)],

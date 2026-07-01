@@ -2,54 +2,179 @@
 package "moonbit-community/editor/viewer/contrib/hover"
 
 import {
-  "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/model",
+  "moonbit-community/editor/viewer/common/view_model",
   "moonbitlang/core/debug",
 }
 
 // Values
 pub fn compare_hover_parts(HoverPart, HoverPart) -> Int
 
+pub fn compute_distance_from_point_to_rectangle(Double, Double, Double, Double, Double, Double) -> Double
+
+pub fn compute_hover_positions(@moonbit-community/editor/base/common.Range, Array[HoverPositionPart], Int) -> (@moonbit-community/editor/base/common.Position, @moonbit-community/editor/base/common.Position)
+
+pub fn filter_hover_parts(Array[HoverPart], HoverAnchor) -> Array[HoverPart]
+
+pub fn hover_anchor_can_adopt(HoverAnchor, HoverAnchor) -> Bool
+
+pub fn hover_anchor_equals(HoverAnchor, HoverAnchor) -> Bool
+
+pub let hover_first_wait_ms : Int
+
+pub let hover_hiding_delay_ms : Int
+
+pub let hover_loading_message_ms : Int
+
+pub let hover_multi_cursor_modifier : MultiCursorModifier
+
+pub fn hover_part_offset_range(HoverPart) -> @moonbit-community/editor/base/common.OffsetRange
+
+pub fn hover_part_valid_for_anchor(HoverPart, HoverAnchor) -> Bool
+
 pub let hover_participant_registry : HoverParticipantRegistry
 
-pub fn hover_parts_range(Array[HoverPart], @common.OffsetRange) -> @common.OffsetRange
+pub fn hover_parts_range(Array[HoverPart], @moonbit-community/editor/base/common.OffsetRange) -> @moonbit-community/editor/base/common.OffsetRange
+
+pub let hover_second_wait_ms : Int
+
+pub let hover_sticky_debug : Bool
+
+pub fn is_trigger_modifier_pressed(MultiCursorModifier, EventModifiers) -> Bool
+
+pub fn max_hover_double(Double, Double) -> Double
+
+pub fn min_hover_double(Double, Double) -> Double
+
+pub fn mouse_within_element(Double, Double, Double, Double, Double, Double) -> Bool
 
 pub fn register_default_hover_participants(HoverParticipantRegistry) -> Unit
 
 pub fn render_hover_parts(Array[HoverPart], String, language_registry? : @languages.Languages) -> Array[String]
 
+pub fn should_keep_current_hover(Bool, Bool, Bool) -> Bool
+
+pub fn should_keep_hover_widget_visible(Bool) -> Bool
+
+pub fn should_reschedule_hover(Bool, Bool, Int) -> Bool
+
+pub fn should_show_hover(HoverEnabled, MultiCursorModifier, EventModifiers) -> Bool
+
+pub fn token_anchor_for_target(@view_model.RenderFrame, @moonbit-community/editor/viewer/common.MouseTarget, (@moonbit-community/editor/base/common.Position) -> Int) -> (Int, Int, Int)?
+
 // Errors
 
 // Types and methods
 pub(all) struct ComputedHover {
-  range : @common.OffsetRange
+  range : @moonbit-community/editor/base/common.OffsetRange
   parts : Array[HoverPart]
 } derive(Eq, @debug.Debug)
 
 pub(all) struct ContentHoverComputer {
   participants : Array[&HoverParticipant]
 }
-pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
-pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint], emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
-pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
+pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @moonbit-community/editor/base/common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
+pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, @moonbit-community/editor/base/common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint], emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
+pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @moonbit-community/editor/base/common.OffsetRange, Int, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
 pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
+
+pub(all) struct EditorContext {
+  frame : @view_model.RenderFrame?
+  view_to_model_offset : (@moonbit-community/editor/base/common.Position) -> Int
+  offset_to_model_line : (Int) -> Int
+}
+
+pub(all) enum EditorEvent {
+  MouseMoved(@moonbit-community/editor/viewer/common.MouseTarget)
+  EscapePressed
+}
+
+pub(all) struct EventModifiers {
+  ctrl : Bool
+  meta : Bool
+  alt : Bool
+}
+pub fn EventModifiers::none() -> Self
+
+pub(all) struct HoverAnchor {
+  start : Int
+  end : Int
+  offset : Int
+  injected_text_index : Int
+  line : Int
+} derive(Eq)
 
 pub(all) struct HoverComputeContext {
   model : @model.TextModel
-  anchor_range : @common.OffsetRange
+  anchor_range : @moonbit-community/editor/base/common.OffsetRange
   offset : Int
   injected_text_index : Int
   inlay_hints : Array[@language.InlayHint]
 }
 
+pub(all) struct HoverController {
+  anchor : HoverAnchor?
+  operation : HoverOperation
+  insist_on_keeping : Bool
+  view : HoverView?
+  current_anchor : HoverAnchor?
+  current_complete : Bool
+  placement : HoverPlacement?
+} derive(Eq)
+pub fn HoverController::cleared(Self) -> Self
+pub fn HoverController::decorations(Self, @model.TextSnapshot) -> Array[@model.Decoration]
+pub fn HoverController::emit(Self) -> Self
+pub fn HoverController::empty() -> Self
+pub fn HoverController::is_complete(Self) -> Bool
+pub fn HoverController::measured(Self, Bool, Double, Double) -> Self
+pub fn HoverController::on_event(Self, EditorEvent, EditorContext, sticky_mouse_getting_closer? : Bool) -> (HoverEffect, Self)
+pub fn HoverController::op_async_done(Self, Int) -> Self
+pub fn HoverController::op_async_item(Self, Int, Array[HoverPart]) -> Self
+pub fn HoverController::op_trigger_async(Self, Int) -> (Bool, Self)
+pub fn HoverController::op_trigger_loading(Self, Int) -> Self
+pub fn HoverController::op_trigger_sync(Self, Int, Array[HoverPart]) -> Self
+pub fn HoverController::set_current_result(Self, Array[HoverPart], Bool, HoverAnchor) -> Self
+pub fn HoverController::start_hover_operation_if_necessary(Self, HoverAnchor, insist~ : Bool) -> (HoverEffect, Self)
+pub fn HoverController::start_showing_or_update_hover(Self, HoverAnchor, Bool) -> (HoverEffect, Self)
+pub fn HoverController::widget_view(Self) -> HoverWidgetView?
+pub fn HoverController::widget_visible(Self) -> Bool
+
+pub(all) enum HoverEffect {
+  HoverNoEffect
+  HoverScheduleDelayed(Int)
+}
+
+pub(all) enum HoverEnabled {
+  HoverEnabledOn
+  HoverEnabledOff
+  HoverEnabledOnKeyboardModifier
+}
+pub fn HoverEnabled::from_config(String) -> Self
+
+pub(all) enum HoverOpState {
+  HoverOpIdle
+  HoverOpFirstWait
+  HoverOpSecondWait
+  HoverOpWaitingForAsync
+  HoverOpWaitingForAsyncShowingLoading
+} derive(Eq)
+
+pub(all) struct HoverOperation {
+  state : HoverOpState
+  token : Int
+  parts : Array[HoverPart]
+  async_done : Bool
+} derive(Eq)
+pub fn HoverOperation::idle() -> Self
+
 pub(all) enum HoverPart {
-  MarkdownHover(range~ : @common.OffsetRange, contents~ : Array[@language.HoverContent], ordinal~ : Int)
-  MarkerHover(range~ : @common.OffsetRange, marker~ : @markers.Marker)
-  LoadingHover(range~ : @common.OffsetRange, message~ : String)
+  MarkdownHover(range~ : @moonbit-community/editor/base/common.OffsetRange, contents~ : Array[@language.HoverContent], ordinal~ : Int)
+  MarkerHover(range~ : @moonbit-community/editor/base/common.OffsetRange, marker~ : @markers.Marker)
+  LoadingHover(range~ : @moonbit-community/editor/base/common.OffsetRange, message~ : String)
 } derive(Eq, @debug.Debug)
 
 pub(all) struct HoverParticipantRegistry {
@@ -63,6 +188,36 @@ pub(all) struct HoverParticipantServices {
   languages : @languages.Languages
   marker_decorations : @markers.MarkerDecorationsService
   log_service : @log.LogService
+}
+
+pub(all) struct HoverPlacement {
+  below : Bool
+  shift_left : Double
+  max_height : Double
+} derive(Eq)
+
+pub(all) struct HoverPositionPart {
+  range : @moonbit-community/editor/base/common.Range
+  force_show_at_range : Bool
+}
+
+pub(all) struct HoverSettings {
+  enabled : HoverEnabled
+  sticky : Bool
+  hiding_delay : Int
+}
+pub fn HoverSettings::defaults() -> Self
+
+pub(all) struct HoverView {
+  range : @moonbit-community/editor/base/common.OffsetRange
+  parts : Array[HoverPart]
+} derive(Eq)
+
+pub(all) struct HoverWidgetView {
+  anchor_offset : Int
+  parts : Array[HoverPart]
+  measurable : Bool
+  placement : HoverPlacement?
 }
 
 pub(all) struct InlayHintHoverParticipant {
@@ -83,6 +238,22 @@ pub(all) struct MarkerHoverParticipant {
 }
 pub fn MarkerHoverParticipant::new(@markers.MarkerDecorationsService) -> Self
 pub impl HoverParticipant for MarkerHoverParticipant
+
+pub(all) struct MouseCloserState {
+  mut initial_pos_x : Double?
+  mut initial_pos_y : Double?
+  mut closest_distance : Double?
+}
+pub fn MouseCloserState::is_mouse_getting_closer(Self, Double, Double, Double, Double, Double, Double) -> Bool
+pub fn MouseCloserState::new() -> Self
+pub fn MouseCloserState::reset(Self) -> Unit
+
+pub(all) enum MultiCursorModifier {
+  MultiCursorAlt
+  MultiCursorCtrl
+  MultiCursorMeta
+}
+pub fn MultiCursorModifier::from_config(String, mac~ : Bool) -> Self
 
 // Type aliases
 

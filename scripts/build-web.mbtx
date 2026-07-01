@@ -274,7 +274,7 @@ fn css_sources() -> Array[String] {
     "viewer/content_widgets.css",
     "viewer/overlay_widgets.css",
     "viewer/selections.css",
-    "viewer/margin.css",
+    "viewer/browser/view_parts/margin/margin.css",
     "viewer/folding.css",
     "viewer/tokens.css",
     "viewer/inlay_hints.css",

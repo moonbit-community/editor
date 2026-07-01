@@ -1,5 +1,15 @@
+// Ported from `vscode/src/vs/editor/browser/viewParts/margin/margin.ts` (the
+// line-number gutter) and the folding-marker half of
+// `vscode/src/vs/editor/contrib/folding/browser/foldingDecorations.ts`. The
+// `ViewPart` trait impl for `MarginViewOverlays` lives in
+// `viewer/view_part.mbt` (destined for `browser/view/`), not here — see the
+// exec-plan's cycle backlog and `viewer/browser/view_parts/view_zones`'s
+// README for why.
+
 ///|
-priv struct MarginViewOverlaysPrepared {
+/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `should_render` / `prepared` directly.
+pub(all) struct MarginViewOverlaysPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
   view_model : @view_model.ViewModel?
@@ -10,7 +20,7 @@ priv struct MarginViewOverlaysPrepared {
 }
 
 ///|
-priv struct MarginViewOverlays {
+pub(all) struct MarginViewOverlays {
   margin : @rdom.Element
   folding : @rdom.Element
   line_numbers : @rdom.Element
@@ -22,7 +32,7 @@ priv struct MarginViewOverlays {
 }
 
 ///|
-fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays {
+pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays {
   let margin = document.create_element("div")
   margin.set_attribute("class", "margin")
   margin.set_attribute("data-view-part", "margin")
@@ -52,86 +62,12 @@ fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays {
 }
 
 ///|
-fn MarginViewOverlays::dom(self : MarginViewOverlays) -> @rdom.Element {
+pub fn MarginViewOverlays::dom(self : MarginViewOverlays) -> @rdom.Element {
   self.margin
 }
 
 ///|
-impl ViewPart for MarginViewOverlays with fn should_render(self) {
-  self.should_render
-}
-
-///|
-impl ViewPart for MarginViewOverlays with fn on_view_event(_self, event) {
-  match event {
-    ViewFlushed => true
-    ViewLinesChanged => true
-    ViewScrollChanged(e) => e.window_changed || e.position_changed
-    ViewConfigurationChanged(e) => e.gutter_width_changed
-    ViewLineMappingChanged => true
-    ViewZonesChanged => true
-    _ => false
-  }
-}
-
-///|
-impl ViewPart for MarginViewOverlays with fn set_should_render(self, value) {
-  self.should_render = value
-}
-
-///|
-impl ViewPart for MarginViewOverlays with fn on_before_render(_self, _viewport) {
-  ()
-}
-
-///|
-impl ViewPart for MarginViewOverlays with fn prepare_render(self, context) {
-  self.prepared = Some({
-    frame: context.input.frame,
-    viewport: context.viewport,
-    view_model: context.input.view_model,
-    folding_ranges: context.input.folding_ranges,
-    folded_ranges: context.input.folded_ranges,
-    on_toggle_fold: context.input.on_toggle_fold,
-    generation: context.input.generation,
-  })
-}
-
-///|
-impl ViewPart for MarginViewOverlays with fn render(self, context) {
-  match self.prepared {
-    Some(prepared) => {
-      self.render_line_numbers(
-        prepared.frame,
-        prepared.viewport,
-        prepared.generation,
-      )
-      self.render_folding_markers(
-        prepared.viewport,
-        prepared.view_model,
-        prepared.folding_ranges,
-        prepared.folded_ranges,
-        on_toggle_fold=prepared.on_toggle_fold,
-      )
-      self.margin.set_attribute(
-        "style",
-        "width:" + context.gutter_width.to_string() + "px",
-      )
-      self.line_numbers.set_attribute("style", context.margin_transform)
-      self.folding.set_attribute("style", context.margin_transform)
-    }
-    None => ()
-  }
-}
-
-///|
-impl ViewPart for MarginViewOverlays with fn on_did_render(self) {
-  self.should_render = false
-  self.prepared = None
-}
-
-///|
-fn MarginViewOverlays::render_line_numbers(
+pub fn MarginViewOverlays::render_line_numbers(
   self : MarginViewOverlays,
   frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
@@ -202,7 +138,7 @@ fn MarginViewOverlays::render_line_numbers(
 }
 
 ///|
-fn MarginViewOverlays::render_folding_markers(
+pub fn MarginViewOverlays::render_folding_markers(
   self : MarginViewOverlays,
   viewport : @view_layout.ViewportData,
   view_model : @view_model.ViewModel?,

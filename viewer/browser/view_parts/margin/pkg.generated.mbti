@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser/view_parts/margin"
+
+import {
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct MarginViewOverlays {
+  margin : @dom.Element
+  folding : @dom.Element
+  line_numbers : @dom.Element
+  line_number_nodes : Array[@dom.Element]
+  mut line_number_window : @view_layout.LineWindow
+  mut line_number_generation : Int
+  mut should_render : Bool
+  mut prepared : MarginViewOverlaysPrepared?
+}
+pub fn MarginViewOverlays::dom(Self) -> @dom.Element
+pub fn MarginViewOverlays::new(@dom.Document) -> Self
+pub fn MarginViewOverlays::render_folding_markers(Self, @view_layout.ViewportData, @view_model.ViewModel?, Array[@language.FoldingRange], Array[@language.FoldingRange], on_toggle_fold~ : (Int) -> Unit) -> Unit
+pub fn MarginViewOverlays::render_line_numbers(Self, @view_model.RenderFrame, @view_layout.ViewportData, Int) -> Unit
+
+pub(all) struct MarginViewOverlaysPrepared {
+  frame : @view_model.RenderFrame
+  viewport : @view_layout.ViewportData
+  view_model : @view_model.ViewModel?
+  folding_ranges : Array[@language.FoldingRange]
+  folded_ranges : Array[@language.FoldingRange]
+  on_toggle_fold : (Int) -> Unit
+  generation : Int
+}
+
+// Type aliases
+
+// Traits
+

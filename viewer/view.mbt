@@ -47,7 +47,7 @@ priv struct View {
   message_text : @rdom.Element
   overflow_guard : @rdom.Element
   view_lines : ViewLines
-  view_zones : ViewZones
+  view_zones : @view_zones.ViewZones
   content_view_overlays : ContentViewOverlays
   margin_view_overlays : MarginViewOverlays
   content_widgets : ContentWidgets
@@ -83,7 +83,7 @@ fn View::build() -> View {
   let margin_view_overlays = MarginViewOverlays::new(document)
   let editor_scrollbar = EditorScrollbar::new()
   let content_view_overlays = ContentViewOverlays::new(document)
-  let view_zones = ViewZones::new(document)
+  let view_zones = @view_zones.ViewZones::new(document)
   let view_lines = ViewLines::new(document)
   let content_widgets = ContentWidgets::new(document)
   let overlay_widgets = OverlayWidgets::new(document)
@@ -143,7 +143,7 @@ fn View::render_empty(self : View, placeholder : String) -> Unit {
 ///|
 fn View::mark_parts_dirty(self : View) -> Unit {
   self.view_lines.set_should_render(true)
-  self.view_zones.set_should_render(true)
+  ViewPart::set_should_render(self.view_zones, true)
   self.content_view_overlays.set_should_render(true)
   self.margin_view_overlays.set_should_render(true)
   self.content_widgets.set_should_render(true)
@@ -218,4 +218,3 @@ fn View::dirty_view_parts(self : View) -> Array[ViewPartHandle] {
   }
   parts
 }
-

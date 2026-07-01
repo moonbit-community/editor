@@ -1,0 +1,38 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser/view_parts/view_zones"
+
+import {
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct BrowserViewZone {
+  id : String
+  anchor_line : Int
+  height_px : Int
+  node : @dom.Element
+}
+
+pub(all) struct ViewZones {
+  view_zones : @dom.Element
+  mut should_render : Bool
+  mut prepared : ViewZonesPrepared?
+}
+pub fn ViewZones::dom(Self) -> @dom.Element
+pub fn ViewZones::new(@dom.Document) -> Self
+pub fn ViewZones::render_view_zones(Self, Array[BrowserViewZone], @view_layout.ViewportData) -> Unit
+
+pub(all) struct ViewZonesPrepared {
+  zones : Array[BrowserViewZone]
+  viewport : @view_layout.ViewportData
+}
+
+// Type aliases
+
+// Traits
+

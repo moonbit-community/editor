@@ -54,6 +54,11 @@ Reference trees are research inputs only. Product code must not import from
   `viewer/browser/controller`).
 - `viewer/controller` and `viewer/ui/scrollbar`: browser-UI subpackages. They
   may use narrow browser bindings but do not import the parent `viewer` package.
+- `viewer/browser/view_parts/view_zones`: the first carved-out Three-Tier
+  Mirror browser view part (Increment E, `docs/exec-plans/viewer-directory-mirror.md`).
+  The other `view_parts/*` and `viewer/browser/view` land in later increments;
+  until then this package's sibling view parts and the `View`/`ViewPart`
+  machinery remain flat root `viewer/*.mbt` files.
 - `viewer/common/inline_decorations`: a dedicated Monaco conformance/support
   package for inline-decoration algorithms. It is not part of the live viewer
   import chain unless a future integration explicitly wires it in.

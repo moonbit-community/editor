@@ -1,3 +1,11 @@
+// Ported from `vscode/src/vs/editor/browser/viewParts/viewZones/viewZones.ts`.
+// The `ViewPart` trait impl for `ViewZones` lives in `viewer/view_part.mbt`
+// (destined for `browser/view/`), not here: MoonBit's orphan rule only lets
+// the trait-owning package implement a trait for a foreign type, and
+// `browser/view/` needs the concrete view-part types anyway (`View`'s fields,
+// the `ViewPartHandle` enum) — keeping the impls there is what keeps this
+// package from needing an import back, see the exec-plan's cycle backlog.
+
 ///|
 /// `pub(all)`: `Viewer.view_zones : Array[BrowserViewZone]` (`viewer.mbt`) and
 /// the `view_zones_host.mbt` glue construct/read these fields from `Viewer`'s
@@ -11,20 +19,23 @@ pub(all) struct BrowserViewZone {
 }
 
 ///|
-priv struct ViewZonesPrepared {
+/// `pub(all)`: constructed by the `ViewPart` impl in `view_part.mbt`.
+pub(all) struct ViewZonesPrepared {
   zones : Array[BrowserViewZone]
   viewport : @view_layout.ViewportData
 }
 
 ///|
-priv struct ViewZones {
+/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `should_render`/`prepared` directly.
+pub(all) struct ViewZones {
   view_zones : @rdom.Element
   mut should_render : Bool
   mut prepared : ViewZonesPrepared?
 }
 
 ///|
-fn ViewZones::new(document : @rdom.Document) -> ViewZones {
+pub fn ViewZones::new(document : @rdom.Document) -> ViewZones {
   let view_zones = document.create_element("div")
   view_zones.set_attribute("class", "view-zones")
   view_zones.set_attribute("data-view-part", "view-zones")
@@ -32,64 +43,12 @@ fn ViewZones::new(document : @rdom.Document) -> ViewZones {
 }
 
 ///|
-fn ViewZones::dom(self : ViewZones) -> @rdom.Element {
+pub fn ViewZones::dom(self : ViewZones) -> @rdom.Element {
   self.view_zones
 }
 
 ///|
-impl ViewPart for ViewZones with fn should_render(self) {
-  self.should_render
-}
-
-///|
-impl ViewPart for ViewZones with fn on_view_event(_self, event) {
-  match event {
-    ViewFlushed => true
-    ViewLinesChanged => true
-    ViewScrollChanged(e) =>
-      e.window_changed || e.position_changed || e.dimensions_changed
-    ViewZonesChanged => true
-    _ => false
-  }
-}
-
-///|
-impl ViewPart for ViewZones with fn set_should_render(self, value) {
-  self.should_render = value
-}
-
-///|
-impl ViewPart for ViewZones with fn on_before_render(_self, _viewport) {
-  ()
-}
-
-///|
-impl ViewPart for ViewZones with fn prepare_render(self, context) {
-  self.prepared = Some({
-    zones: context.input.browser_view_zones,
-    viewport: context.viewport,
-  })
-}
-
-///|
-impl ViewPart for ViewZones with fn render(self, context) {
-  match self.prepared {
-    Some(prepared) => {
-      self.render_view_zones(prepared.zones, prepared.viewport)
-      self.view_zones.set_attribute("style", context.content_transform)
-    }
-    None => ()
-  }
-}
-
-///|
-impl ViewPart for ViewZones with fn on_did_render(self) {
-  self.should_render = false
-  self.prepared = None
-}
-
-///|
-fn ViewZones::render_view_zones(
+pub fn ViewZones::render_view_zones(
   self : ViewZones,
   zones : Array[BrowserViewZone],
   viewport : @view_layout.ViewportData,

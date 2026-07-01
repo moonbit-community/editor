@@ -33,7 +33,7 @@ pub struct Viewer {
   priv mut folding_ranges : Array[@language.FoldingRange]
   priv mut folded_ranges : Array[@language.FoldingRange]
   priv mut inlay_hints : Array[@language.InlayHint]
-  priv mut view_zones : Array[BrowserViewZone]
+  priv mut view_zones : Array[@view_zones.BrowserViewZone]
   priv mut cursor : @cursor.CursorsController?
   priv mut hover : HoverController
   /// Mouse-move grace state (Monaco's `_reactToEditorMouseMoveRunner`): while a

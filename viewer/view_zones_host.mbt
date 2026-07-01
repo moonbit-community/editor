@@ -74,7 +74,7 @@ fn Viewer::upsert_view_zone(
   height_px : Int,
   node : @rdom.Element,
 ) -> Unit {
-  let zone : BrowserViewZone = { id, anchor_line, height_px, node }
+  let zone : @view_zones.BrowserViewZone = { id, anchor_line, height_px, node }
   for index in 0..<self.view_zones.length() {
     if self.view_zones[index].id == id {
       self.view_zones[index] = zone
@@ -86,7 +86,7 @@ fn Viewer::upsert_view_zone(
 
 ///|
 fn Viewer::normalize_browser_view_zones(self : Viewer) -> Unit {
-  let normalized : Array[BrowserViewZone] = []
+  let normalized : Array[@view_zones.BrowserViewZone] = []
   let line_count = self.layout.line_count()
   for zone in self.view_zones {
     let max_anchor = if line_count > 0 {
@@ -106,8 +106,8 @@ fn Viewer::normalize_browser_view_zones(self : Viewer) -> Unit {
 
 ///|
 fn compare_browser_view_zones(
-  left : BrowserViewZone,
-  right : BrowserViewZone,
+  left : @view_zones.BrowserViewZone,
+  right : @view_zones.BrowserViewZone,
 ) -> Int {
   let anchor = left.anchor_line - right.anchor_line
   if anchor != 0 {

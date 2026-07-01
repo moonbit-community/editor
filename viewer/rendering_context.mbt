@@ -4,7 +4,7 @@ priv struct ViewRenderInput {
   frame : @view_model.RenderFrame
   view_model : @view_model.ViewModel?
   layout : @view_layout.ViewLayout
-  browser_view_zones : Array[BrowserViewZone]
+  browser_view_zones : Array[@view_zones.BrowserViewZone]
   decorations : Array[@model.Decoration]
   selection_view_range : @view_layout.ViewRange?
   folding_ranges : Array[@language.FoldingRange]
@@ -125,7 +125,7 @@ priv struct ViewRenderSnapshot {
   selection_view_range : @view_layout.ViewRange?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
-  browser_view_zones : Array[BrowserViewZone]
+  browser_view_zones : Array[@view_zones.BrowserViewZone]
   hover_state : HoverController
 }
 
@@ -152,8 +152,8 @@ fn ViewRenderSnapshot::from_input(
 
 ///|
 fn same_browser_view_zones(
-  left : Array[BrowserViewZone],
-  right : Array[BrowserViewZone],
+  left : Array[@view_zones.BrowserViewZone],
+  right : Array[@view_zones.BrowserViewZone],
 ) -> Bool {
   if left.length() != right.length() {
     return false

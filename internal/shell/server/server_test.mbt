@@ -476,6 +476,7 @@ impl @language.DiagnosticsProvider for FakeLanguageProvider with fn provide_diag
       range: Range(1, 1, 1, 5),
       severity: Warning,
       message: "Configured diagnostic",
+      tags: None,
     },
   ]
 }

@@ -305,7 +305,12 @@ test "encodes and decodes server document and language packets" {
     uri,
     revision: "rev-2",
     diagnostics: [
-      { range: Range(1, 1, 1, 4), severity: Warning, message: "check me" },
+      {
+        range: Range(1, 1, 1, 4),
+        severity: Warning,
+        message: "check me",
+        tags: None,
+      },
     ],
   })
   match
@@ -314,6 +319,32 @@ test "encodes and decodes server document and language packets" {
       assert_eq(payload.id, "diag-1")
       assert_eq(payload.diagnostics.length(), 1)
       assert_eq(payload.diagnostics[0].message, "check me")
+    }
+    DecodedServerPacket(_) => fail("unexpected diagnostics packet")
+    ServerPacketDecodeError(error) => fail(error.message)
+  }
+
+  let hint_diagnostics = @remote_protocol.ServerPacket::Diagnostics({
+    id: "diag-2",
+    uri,
+    revision: "rev-3",
+    diagnostics: [
+      {
+        range: Range(1, 1, 1, 4),
+        severity: Hint,
+        message: "unused",
+        tags: Some([Unnecessary, Deprecated]),
+      },
+    ],
+  })
+  match
+    @remote_protocol.decode_server_packet(
+      hint_diagnostics.to_json().stringify(),
+    ) {
+    DecodedServerPacket(Diagnostics(payload)) => {
+      assert_eq(payload.diagnostics.length(), 1)
+      assert_true(payload.diagnostics[0].severity == Hint)
+      assert_true(payload.diagnostics[0].tags == Some([Unnecessary, Deprecated]))
     }
     DecodedServerPacket(_) => fail("unexpected diagnostics packet")
     ServerPacketDecodeError(error) => fail(error.message)

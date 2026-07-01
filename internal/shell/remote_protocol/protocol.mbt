@@ -1118,11 +1118,17 @@ fn packet_fields(kind : String, id : String) -> Map[String, Json] {
 
 ///|
 fn diagnostic_json(diagnostic : @language.Diagnostic) -> Json {
-  {
+  let fields : Map[String, Json] = {
     "range": range_json(diagnostic.range),
     "severity": diagnostic.severity.label().to_json(),
     "message": diagnostic.message.to_json(),
   }
+  match diagnostic.tags {
+    Some(tags) =>
+      fields["tags"] = Json::array(tags.map(tag => tag.label().to_json()))
+    None => ()
+  }
+  Json::object(fields)
 }
 
 ///|
@@ -1259,11 +1265,30 @@ fn parse_diagnostic(value : Json) -> @language.Diagnostic? {
                   json_string_field(value, "severity").unwrap_or("Info"),
                 ),
                 message: json_string_field(value, "message").unwrap_or(""),
+                tags: parse_diagnostic_tags(value),
               })
             None => None
           }
         None => None
       }
+    _ => None
+  }
+}
+
+///|
+fn parse_diagnostic_tags(value : Json) -> Array[@language.DiagnosticTag]? {
+  match json_field(value, "tags") {
+    Some(Array(items)) => {
+      let tags : Array[@language.DiagnosticTag] = []
+      for item in items {
+        match item {
+          String("Unnecessary") => tags.push(Unnecessary)
+          String("Deprecated") => tags.push(Deprecated)
+          _ => ()
+        }
+      }
+      if tags.is_empty() { None } else { Some(tags) }
+    }
     _ => None
   }
 }
@@ -1519,6 +1544,7 @@ fn diagnostic_severity(label : String) -> @language.DiagnosticSeverity {
   match label {
     "Error" => Error
     "Warning" => Warning
+    "Hint" => Hint
     _ => Info
   }
 }

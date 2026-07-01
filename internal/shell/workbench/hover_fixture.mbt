@@ -90,6 +90,7 @@ impl @language.DiagnosticsProvider for HarnessHoverProvider with fn provide_diag
             range: model.snapshot.range_of(harness_marker_range(model)),
             severity: Warning,
             message: fixture.contents,
+            tags: None,
           },
         ]
       } else {

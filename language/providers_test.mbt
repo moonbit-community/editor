@@ -9,6 +9,7 @@ test "provider result finds hover and definition by offset" {
         range: Range(1, 1, 1, 3),
         severity: Warning,
         message: "Provider warning",
+        tags: None,
       },
     ],
     definitions: [

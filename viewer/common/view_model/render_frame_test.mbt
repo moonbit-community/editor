@@ -34,7 +34,12 @@ test "render frame contains highlighted spans and provider surfaces" {
   let providers = @language.ProviderResult::{
     hovers: [],
     diagnostics: [
-      { range: Range(1, 14, 1, 18), severity: Warning, message: "todo" },
+      {
+        range: Range(1, 14, 1, 18),
+        severity: Warning,
+        message: "todo",
+        tags: None,
+      },
     ],
     definitions: [],
     symbols: [],

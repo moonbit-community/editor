@@ -36,7 +36,7 @@ test "MarkerDecorationsService fires change event and honors suppression" {
     fired.push(m.uri.to_string())
   })
   markers.set_diagnostics("o", uri, [
-    { range: Range(1, 1, 1, 6), severity: Error, message: "x" },
+    { range: Range(1, 1, 1, 6), severity: Error, message: "x", tags: None },
   ])
   assert_eq(fired.length(), 1)
   assert_eq(svc.get_live_markers(uri).length(), 1)
@@ -58,7 +58,9 @@ test "MarkerDecorationsService take caps at 500" {
   svc.on_model_added(model)
   let diagnostics : Array[@language.Diagnostic] = []
   for _ in 0..<600 {
-    diagnostics.push({ range: Range(1, 1, 1, 2), severity: Error, message: "e" })
+    diagnostics.push(
+      { range: Range(1, 1, 1, 2), severity: Error, message: "e", tags: None },
+    )
   }
   markers.set_diagnostics("o", uri, diagnostics)
   assert_eq(svc.get_live_markers(uri).length(), 500)

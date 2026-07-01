@@ -20,7 +20,7 @@ test "marker decorations expose squiggles and marker hover lookup" {
     uri, "", "moonbit", 1, "rev", "diagnostic text here",
   )
   markers.set_diagnostics("owner", uri, [
-    { range: Range(1, 3, 1, 9), severity: Warning, message: "diagnostic" },
+    { range: Range(1, 3, 1, 9), severity: Warning, message: "diagnostic", tags: None },
   ])
   let decorations = MarkerDecorationsService::new(markers)
   decorations.on_model_added(model)
@@ -41,15 +41,20 @@ test "marker service replaces owner resource and supports limits" {
   let service = MarkerService::new()
   let uri = @base_common.Uri::memory("markers.mbt")
   service.set_diagnostics("owner-a", uri, [
-    { range: Range(1, 1, 1, 2), severity: Warning, message: "first" },
-    { range: Range(1, 3, 1, 4), severity: Error, message: "second" },
+    { range: Range(1, 1, 1, 2), severity: Warning, message: "first", tags: None },
+    { range: Range(1, 3, 1, 4), severity: Error, message: "second", tags: None },
   ])
   service.set_diagnostics("owner-b", uri, [
-    { range: Range(1, 5, 1, 6), severity: Info, message: "third" },
+    { range: Range(1, 5, 1, 6), severity: Info, message: "third", tags: None },
   ])
   assert_eq(service.markers_for_resource(uri).length(), 3)
   service.set_diagnostics("owner-a", uri, [
-    { range: Range(1, 7, 1, 8), severity: Warning, message: "replacement" },
+    {
+      range: Range(1, 7, 1, 8),
+      severity: Warning,
+      message: "replacement",
+      tags: None,
+    },
   ])
   let markers = service.markers_for_resource(uri)
   assert_eq(markers.length(), 2)
@@ -66,6 +71,26 @@ test "MarkerSeverity bit values and bridge" {
   // compare = b - a (markers.ts:65)
   assert_eq(MarkerSeverity::compare(Error, Warning), 4 - 8)
   assert_true(MarkerSeverity::from_diagnostic_severity(Warning) == Warning)
+  // Hint round-trips (no longer collapses to Info).
+  assert_true(MarkerSeverity::from_diagnostic_severity(Hint) == Hint)
+  assert_true(MarkerSeverity::Hint.to_diagnostic_severity() == Hint)
+}
+
+///|
+test "Marker::from_diagnostic/to_diagnostic carry Hint severity and tags" {
+  let uri = @base_common.Uri::memory("hint.mbt")
+  let diagnostic : @language.Diagnostic = {
+    range: Range(1, 1, 1, 2),
+    severity: Hint,
+    message: "unused import",
+    tags: Some([Unnecessary]),
+  }
+  let marker = Marker::from_diagnostic("owner", uri, diagnostic)
+  assert_true(marker.severity == Hint)
+  assert_true(marker.tags == Some([Unnecessary]))
+  let round_tripped = marker.to_diagnostic()
+  assert_true(round_tripped.severity == Hint)
+  assert_true(round_tripped.tags == Some([Unnecessary]))
 }
 
 ///|

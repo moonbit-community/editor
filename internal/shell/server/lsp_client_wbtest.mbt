@@ -438,3 +438,23 @@ fn TestLspTransport::publish(self : TestLspTransport, message : String) -> Unit 
     None => ()
   }
 }
+
+///|
+test "parse_diagnostic maps LSP Hint severity and tags" {
+  let item = parse_json(
+    "{\"range\":{\"start\":{\"line\":0,\"character\":0},\"end\":{\"line\":0,\"character\":3}},\"severity\":4,\"message\":\"unused\",\"tags\":[1,2]}",
+  ).unwrap()
+  let diagnostic = parse_diagnostic(item).unwrap()
+  assert_true(diagnostic.severity == Hint)
+  assert_true(diagnostic.tags == Some([Unnecessary, Deprecated]))
+}
+
+///|
+test "parse_diagnostic omits tags when absent" {
+  let item = parse_json(
+    "{\"range\":{\"start\":{\"line\":0,\"character\":0},\"end\":{\"line\":0,\"character\":3}},\"severity\":2,\"message\":\"warn\"}",
+  ).unwrap()
+  let diagnostic = parse_diagnostic(item).unwrap()
+  assert_true(diagnostic.severity == Warning)
+  assert_true(diagnostic.tags is None)
+}

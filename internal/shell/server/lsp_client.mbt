@@ -793,6 +793,7 @@ fn parse_diagnostic(item : Json) -> @language.Diagnostic? {
             range,
             severity: diagnostic_severity(json_int_field(item, "severity")),
             message: json_string_field(item, "message").unwrap_or(""),
+            tags: parse_diagnostic_tags(item),
           })
         None => None
       }
@@ -801,11 +802,33 @@ fn parse_diagnostic(item : Json) -> @language.Diagnostic? {
 }
 
 ///|
+/// LSP `DiagnosticSeverity`: `1=Error, 2=Warning, 3=Information, 4=Hint`.
+/// Missing/unrecognized values default to `Info`, matching prior behavior.
 fn diagnostic_severity(value : Int?) -> @language.DiagnosticSeverity {
   match value {
     Some(1) => Error
     Some(2) => Warning
+    Some(4) => Hint
     _ => Info
+  }
+}
+
+///|
+/// LSP `DiagnosticTag`: `1=Unnecessary, 2=Deprecated` (`item.tags: int[]`).
+fn parse_diagnostic_tags(item : Json) -> Array[@language.DiagnosticTag]? {
+  match json_field(item, "tags") {
+    Some(Array(items)) => {
+      let tags : Array[@language.DiagnosticTag] = []
+      for tag in items {
+        match json_int_value(tag) {
+          Some(1) => tags.push(Unnecessary)
+          Some(2) => tags.push(Deprecated)
+          _ => ()
+        }
+      }
+      if tags.is_empty() { None } else { Some(tags) }
+    }
+    _ => None
   }
 }
 

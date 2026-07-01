@@ -63,10 +63,9 @@ pub fn MarkerSeverity::label_plural(self : MarkerSeverity) -> String {
 }
 
 ///|
-/// Bridge `@language.DiagnosticSeverity` → `MarkerSeverity`. Diagnostics have no
-/// `Hint`, so the three LSP levels map straight across; `Hint` stays reachable
-/// for future LSP hints (see plan D1). Replaces Monaco's `fromSeverity`, whose
-/// `base/common/severity` source enum has no viewer analog (deferred).
+/// Bridge `@language.DiagnosticSeverity` → `MarkerSeverity`. Replaces Monaco's
+/// `fromSeverity`, whose `base/common/severity` source enum has no viewer
+/// analog (deferred).
 pub fn MarkerSeverity::from_diagnostic_severity(
   severity : @language.DiagnosticSeverity,
 ) -> MarkerSeverity {
@@ -74,13 +73,12 @@ pub fn MarkerSeverity::from_diagnostic_severity(
     Error => Error
     Warning => Warning
     Info => Info
+    Hint => Hint
   }
 }
 
 ///|
-/// Inverse bridge for the `to_diagnostic` shim. `Hint` collapses to `Info`
-/// (lossy, but diagnostics never carry hints, so this branch is unreachable from
-/// the diagnostics path).
+/// Inverse bridge for the `to_diagnostic` shim.
 pub fn MarkerSeverity::to_diagnostic_severity(
   self : MarkerSeverity,
 ) -> @language.DiagnosticSeverity {
@@ -88,7 +86,7 @@ pub fn MarkerSeverity::to_diagnostic_severity(
     Error => Error
     Warning => Warning
     Info => Info
-    Hint => Info
+    Hint => Hint
   }
 }
 
@@ -106,6 +104,24 @@ pub fn MarkerTag::value(self : MarkerTag) -> Int {
   match self {
     Unnecessary => 1
     Deprecated => 2
+  }
+}
+
+///|
+/// Bridge `@language.DiagnosticTag` → `MarkerTag`.
+pub fn MarkerTag::from_diagnostic_tag(tag : @language.DiagnosticTag) -> MarkerTag {
+  match tag {
+    Unnecessary => Unnecessary
+    Deprecated => Deprecated
+  }
+}
+
+///|
+/// Inverse bridge for the `to_diagnostic` shim.
+pub fn MarkerTag::to_diagnostic_tag(self : MarkerTag) -> @language.DiagnosticTag {
+  match self {
+    Unnecessary => Unnecessary
+    Deprecated => Deprecated
   }
 }
 
@@ -305,7 +321,7 @@ pub fn MarkerReadOptions::new(
 ///|
 /// Converts a language diagnostic into a marker owned by a specific provider.
 /// The shim the diagnostics render path uses; the `Marker` carries no marker-only
-/// metadata (tags/code/source) because diagnostics do not supply it.
+/// metadata (code/source) because diagnostics do not supply it.
 pub fn Marker::from_diagnostic(
   owner : String,
   resource : @base_common.Uri,
@@ -324,7 +340,7 @@ pub fn Marker::from_diagnostic(
     end_column: diagnostic.range.end_column,
     model_version_id: None,
     related_information: None,
-    tags: None,
+    tags: diagnostic.tags.map(tags => tags.map(MarkerTag::from_diagnostic_tag)),
     origin: None,
   }
 }
@@ -336,5 +352,6 @@ pub fn Marker::to_diagnostic(self : Marker) -> @language.Diagnostic {
     range: self.range(),
     severity: self.severity.to_diagnostic_severity(),
     message: self.message,
+    tags: self.tags.map(tags => tags.map(MarkerTag::to_diagnostic_tag)),
   }
 }

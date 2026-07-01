@@ -53,6 +53,7 @@ impl @language.DiagnosticsProvider for ComponentHoverProvider with fn provide_di
           ),
           severity: Warning,
           message: self.diagnostic_text,
+          tags: None,
         },
       ]
     None => []

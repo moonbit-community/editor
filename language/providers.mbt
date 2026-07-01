@@ -15,11 +15,23 @@ pub(all) struct Hover {
 
 ///|
 /// Diagnostic severity levels accepted from semantic providers and remote LSP
-/// adapters.
+/// adapters. `Hint` matches LSP `DiagnosticSeverity.Hint` (4) and Monaco's
+/// `MarkerSeverity.Hint`.
 pub(all) enum DiagnosticSeverity {
   Error
   Warning
   Info
+  Hint
+} derive(Eq, Debug)
+
+///|
+/// Diagnostic tag, mirroring Monaco's `MarkerTag` (`markers.ts:51`) and LSP's
+/// `DiagnosticTag` (`Unnecessary=1, Deprecated=2`). Kept local to `language`
+/// rather than reusing `viewer/common/markers`'s `MarkerTag`, since `language`
+/// sits below `viewer` in the package graph.
+pub(all) enum DiagnosticTag {
+  Unnecessary
+  Deprecated
 } derive(Eq, Debug)
 
 ///|
@@ -29,6 +41,7 @@ pub(all) struct Diagnostic {
   range : @base_common.Range
   severity : DiagnosticSeverity
   message : String
+  tags : Array[DiagnosticTag]?
 } derive(Debug)
 
 ///|
@@ -147,6 +160,16 @@ pub fn DiagnosticSeverity::label(self : DiagnosticSeverity) -> String {
     Error => "Error"
     Warning => "Warning"
     Info => "Info"
+    Hint => "Hint"
+  }
+}
+
+///|
+/// Diagnostic tag label, mirrored on the wire.
+pub fn DiagnosticTag::label(self : DiagnosticTag) -> String {
+  match self {
+    Unnecessary => "Unnecessary"
+    Deprecated => "Deprecated"
   }
 }
 

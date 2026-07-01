@@ -137,7 +137,7 @@ fn MarginViewOverlays::render_line_numbers(
   viewport : @view_layout.ViewportData,
   generation : Int,
 ) -> Unit {
-  let target = viewport_window(viewport)
+  let target = @view_lines.viewport_window(viewport)
   let document = @rdom.document()
   if generation != self.line_number_generation {
     while self.line_number_nodes.length() > viewport.lines.length() {
@@ -152,7 +152,7 @@ fn MarginViewOverlays::render_line_numbers(
       self.line_number_nodes.push(node)
     }
     for index in 0..<viewport.lines.length() {
-      write_line_number_node(
+      @view_lines.write_line_number_node(
         self.line_number_nodes[index],
         frame.lines[index],
         viewport.relative_vertical_offset[index],
@@ -173,12 +173,12 @@ fn MarginViewOverlays::render_line_numbers(
       let node = self.line_number_nodes[line_index - previous.start]
       node.set_attribute(
         "style",
-        line_node_style(viewport.relative_vertical_offset[index]),
+        @view_lines.line_node_style(viewport.relative_vertical_offset[index]),
       )
       next_numbers.push(node)
     } else {
       let node = document.create_element("div")
-      write_line_number_node(
+      @view_lines.write_line_number_node(
         node,
         frame.lines[index],
         viewport.relative_vertical_offset[index],
@@ -226,7 +226,7 @@ fn MarginViewOverlays::render_folding_markers(
         view_model_lines.model_line_number_of_view_line(view_line_number)
       None => view_line_number
     }
-    if !is_first_view_line_for_model_line(lines, view_line_number) {
+    if !@view_lines.is_first_view_line_for_model_line(lines, view_line_number) {
       continue
     }
     match
@@ -245,7 +245,7 @@ fn MarginViewOverlays::render_folding_markers(
         marker.set_attribute("data-folded", folded.to_string())
         marker.set_attribute(
           "style",
-          line_node_style(viewport.relative_vertical_offset[index]),
+          @view_lines.line_node_style(viewport.relative_vertical_offset[index]),
         )
         marker.set_inner_html(
           if folded {

@@ -8,7 +8,7 @@ priv struct View {
   probe : @rdom.Element
   message_text : @rdom.Element
   overflow_guard : @rdom.Element
-  view_lines : ViewLines
+  view_lines : @view_lines.ViewLines
   view_zones : @view_zones.ViewZones
   content_view_overlays : ContentViewOverlays
   margin_view_overlays : MarginViewOverlays
@@ -46,7 +46,7 @@ fn View::build() -> View {
   let editor_scrollbar = EditorScrollbar::new()
   let content_view_overlays = ContentViewOverlays::new(document)
   let view_zones = @view_zones.ViewZones::new(document)
-  let view_lines = ViewLines::new(document)
+  let view_lines = @view_lines.ViewLines::new(document)
   let content_widgets = ContentWidgets::new(document)
   let overlay_widgets = OverlayWidgets::new(document)
   let lines_content = editor_scrollbar.content()
@@ -104,7 +104,7 @@ fn View::render_empty(self : View, placeholder : String) -> Unit {
 
 ///|
 fn View::mark_parts_dirty(self : View) -> Unit {
-  self.view_lines.set_should_render(true)
+  ViewPart::set_should_render(self.view_lines, true)
   ViewPart::set_should_render(self.view_zones, true)
   self.content_view_overlays.set_should_render(true)
   self.margin_view_overlays.set_should_render(true)

@@ -32,7 +32,7 @@ fn ViewPartHandle::handle_view_events(
 
 ///|
 priv enum ViewPartHandle {
-  ViewLinesPart(ViewLines)
+  ViewLinesPart(@view_lines.ViewLines)
   ViewZonesPart(@view_zones.ViewZones)
   ContentViewOverlaysPart(ContentViewOverlays)
   MarginViewOverlaysPart(MarginViewOverlays)
@@ -43,7 +43,7 @@ priv enum ViewPartHandle {
 
 ///|
 fn default_view_parts(
-  view_lines : ViewLines,
+  view_lines : @view_lines.ViewLines,
   view_zones : @view_zones.ViewZones,
   content_view_overlays : ContentViewOverlays,
   margin_view_overlays : MarginViewOverlays,
@@ -65,7 +65,7 @@ fn default_view_parts(
 ///|
 impl ViewPart for ViewPartHandle with fn on_view_event(self, event) {
   match self {
-    ViewLinesPart(part) => part.on_view_event(event)
+    ViewLinesPart(part) => ViewPart::on_view_event(part, event)
     ViewZonesPart(part) => ViewPart::on_view_event(part, event)
     ContentViewOverlaysPart(part) => part.on_view_event(event)
     MarginViewOverlaysPart(part) => part.on_view_event(event)
@@ -78,7 +78,7 @@ impl ViewPart for ViewPartHandle with fn on_view_event(self, event) {
 ///|
 impl ViewPart for ViewPartHandle with fn should_render(self) {
   match self {
-    ViewLinesPart(part) => part.should_render()
+    ViewLinesPart(part) => ViewPart::should_render(part)
     ViewZonesPart(part) => ViewPart::should_render(part)
     ContentViewOverlaysPart(part) => part.should_render()
     MarginViewOverlaysPart(part) => part.should_render()
@@ -91,7 +91,7 @@ impl ViewPart for ViewPartHandle with fn should_render(self) {
 ///|
 impl ViewPart for ViewPartHandle with fn set_should_render(self, value) {
   match self {
-    ViewLinesPart(part) => part.set_should_render(value)
+    ViewLinesPart(part) => ViewPart::set_should_render(part, value)
     ViewZonesPart(part) => ViewPart::set_should_render(part, value)
     ContentViewOverlaysPart(part) => part.set_should_render(value)
     MarginViewOverlaysPart(part) => part.set_should_render(value)
@@ -104,7 +104,7 @@ impl ViewPart for ViewPartHandle with fn set_should_render(self, value) {
 ///|
 impl ViewPart for ViewPartHandle with fn on_before_render(self, viewport) {
   match self {
-    ViewLinesPart(part) => part.on_before_render(viewport)
+    ViewLinesPart(part) => ViewPart::on_before_render(part, viewport)
     ViewZonesPart(part) => ViewPart::on_before_render(part, viewport)
     ContentViewOverlaysPart(part) => part.on_before_render(viewport)
     MarginViewOverlaysPart(part) => part.on_before_render(viewport)
@@ -117,7 +117,7 @@ impl ViewPart for ViewPartHandle with fn on_before_render(self, viewport) {
 ///|
 impl ViewPart for ViewPartHandle with fn prepare_render(self, context) {
   match self {
-    ViewLinesPart(part) => part.prepare_render(context)
+    ViewLinesPart(part) => ViewPart::prepare_render(part, context)
     ViewZonesPart(part) => ViewPart::prepare_render(part, context)
     ContentViewOverlaysPart(part) => part.prepare_render(context)
     MarginViewOverlaysPart(part) => part.prepare_render(context)
@@ -130,7 +130,7 @@ impl ViewPart for ViewPartHandle with fn prepare_render(self, context) {
 ///|
 impl ViewPart for ViewPartHandle with fn render(self, context) {
   match self {
-    ViewLinesPart(part) => part.render(context)
+    ViewLinesPart(part) => ViewPart::render(part, context)
     ViewZonesPart(part) => ViewPart::render(part, context)
     ContentViewOverlaysPart(part) => part.render(context)
     MarginViewOverlaysPart(part) => part.render(context)
@@ -143,7 +143,7 @@ impl ViewPart for ViewPartHandle with fn render(self, context) {
 ///|
 impl ViewPart for ViewPartHandle with fn on_did_render(self) {
   match self {
-    ViewLinesPart(part) => part.on_did_render()
+    ViewLinesPart(part) => ViewPart::on_did_render(part)
     ViewZonesPart(part) => ViewPart::on_did_render(part)
     ContentViewOverlaysPart(part) => part.on_did_render()
     MarginViewOverlaysPart(part) => part.on_did_render()
@@ -211,6 +211,93 @@ impl ViewPart for @view_zones.ViewZones with fn render(self, context) {
 
 ///|
 impl ViewPart for @view_zones.ViewZones with fn on_did_render(self) {
+  self.should_render = false
+  self.prepared = None
+}
+
+// `ViewPart` impl for `@view_lines.ViewLines` (`browser/view_parts/view_lines`).
+// Kept here for the same reason as `@view_zones.ViewZones` above.
+
+///|
+impl ViewPart for @view_lines.ViewLines with fn should_render(self) {
+  self.should_render
+}
+
+///|
+impl ViewPart for @view_lines.ViewLines with fn on_view_event(self, event) {
+  match event {
+    ViewFlushed => true
+    // Line content, tokens, and decorations are regenerated together.
+    ViewLinesChanged => true
+    ViewScrollChanged(e) =>
+      e.window_changed || e.position_changed || e.dimensions_changed
+    ViewConfigurationChanged(e) => e.gutter_width_changed || e.font_changed
+    // `viewLine.ts:94-100` `onSelectionChanged`: a selection change only
+    // dirties the lines when whitespace renders under the selection. Keyed off
+    // the *last rendered* whitespace mode, mirroring Monaco's check of
+    // `_renderedViewLine.input.renderWhitespace`.
+    ViewCursorStateChanged => self.last_render_whitespace == Selection
+    _ => false
+  }
+}
+
+///|
+impl ViewPart for @view_lines.ViewLines with fn set_should_render(self, value) {
+  self.should_render = value
+}
+
+///|
+impl ViewPart for @view_lines.ViewLines with fn on_before_render(
+  _self,
+  _viewport,
+) {
+  ()
+}
+
+///|
+impl ViewPart for @view_lines.ViewLines with fn prepare_render(self, context) {
+  // The line node's own class carries current-line decorations; convert the
+  // controller decorations to view coordinates so the class test stays in
+  // view `Position`s like the inline path.
+  let view_decorations = match context.input.view_model {
+    Some(view_model) =>
+      view_model.decorations().to_view_decorations(context.input.decorations)
+    None => []
+  }
+  self.prepared = Some({
+    frame: context.input.frame,
+    viewport: context.viewport,
+    view_decorations,
+    generation: context.input.generation,
+    space_width: context.input.space_width,
+    render_whitespace: context.input.render_whitespace,
+    render_control_characters: context.input.render_control_characters,
+    selection_view_range: context.input.selection_view_range,
+  })
+}
+
+///|
+impl ViewPart for @view_lines.ViewLines with fn render(self, context) {
+  match self.prepared {
+    Some(prepared) => {
+      self.render_text(
+        prepared.frame,
+        prepared.viewport,
+        prepared.view_decorations,
+        prepared.generation,
+        prepared.space_width,
+        prepared.render_whitespace,
+        prepared.render_control_characters,
+        prepared.selection_view_range,
+      )
+      self.view_lines.set_attribute("style", context.content_transform)
+    }
+    None => ()
+  }
+}
+
+///|
+impl ViewPart for @view_lines.ViewLines with fn on_did_render(self) {
   self.should_render = false
   self.prepared = None
 }

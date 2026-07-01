@@ -1,0 +1,56 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser/view_parts/view_lines"
+
+import {
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+pub fn is_first_view_line_for_model_line(@view_model.ViewModelLines?, Int) -> Bool
+
+pub fn line_node_style(Int) -> String
+
+pub fn render_line_input_for_viewport(@view_layout.ViewportData, Int, Double, render_whitespace~ : @view_layout.RenderWhitespace, render_control_characters~ : Bool, selection_view_range~ : @view_layout.ViewRange?) -> @view_layout.RenderLineInput
+
+pub fn viewport_window(@view_layout.ViewportData) -> @view_layout.LineWindow
+
+pub fn write_line_number_node(@dom.Element, @view_model.RenderLine, Int) -> Unit
+
+// Errors
+
+// Types and methods
+pub(all) struct ViewLines {
+  view_lines : @dom.Element
+  mut window : @view_layout.LineWindow
+  mut generation : Int
+  line_nodes : Array[@dom.Element]
+  render_inputs : Array[@view_layout.RenderLineInput]
+  line_mappings : Array[@view_layout.CharacterMapping]
+  mut should_render : Bool
+  mut prepared : ViewLinesPrepared?
+  mut last_selection : @view_layout.ViewRange?
+  mut last_render_whitespace : @view_layout.RenderWhitespace
+}
+pub fn ViewLines::dom(Self) -> @dom.Element
+pub fn ViewLines::line_node_at(Self, Int) -> @dom.Element?
+pub fn ViewLines::mapping_at(Self, Int) -> @view_layout.CharacterMapping?
+pub fn ViewLines::new(@dom.Document) -> Self
+pub fn ViewLines::render_text(Self, @view_model.RenderFrame, @view_layout.ViewportData, Array[@view_model.ViewModelDecoration], Int, Double, @view_layout.RenderWhitespace, Bool, @view_layout.ViewRange?) -> Unit
+
+pub(all) struct ViewLinesPrepared {
+  frame : @view_model.RenderFrame
+  viewport : @view_layout.ViewportData
+  view_decorations : Array[@view_model.ViewModelDecoration]
+  generation : Int
+  space_width : Double
+  render_whitespace : @view_layout.RenderWhitespace
+  render_control_characters : Bool
+  selection_view_range : @view_layout.ViewRange?
+}
+
+// Type aliases
+
+// Traits
+

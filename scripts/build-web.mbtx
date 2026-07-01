@@ -268,7 +268,7 @@ fn css_sources() -> Array[String] {
     "internal/shell/widgets/file_tree/file_tree.css",
     "viewer/editor.css",
     "viewer/ui/scrollbar/scrollable_element.css",
-    "viewer/view_lines.css",
+    "viewer/browser/view_parts/view_lines/view_lines.css",
     "viewer/view_overlays.css",
     "viewer/browser/view_parts/view_zones/view_zones.css",
     "viewer/content_widgets.css",

@@ -1,5 +1,14 @@
+// Ported from `vscode/src/vs/editor/browser/viewParts/viewLines/viewLines.ts`
+// (`ViewLines`, the recycler) and `viewLine.ts` (the per-line render input +
+// DOM write). The `ViewPart` trait impl for `ViewLines` lives in
+// `viewer/view_part.mbt` (destined for `browser/view/`), not here — see the
+// exec-plan's cycle backlog and `viewer/browser/view_parts/view_zones`'s
+// README for why.
+
 ///|
-priv struct ViewLinesPrepared {
+/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `should_render` / `prepared` / `last_render_whitespace` directly.
+pub(all) struct ViewLinesPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
   view_decorations : Array[@view_model.ViewModelDecoration]
@@ -11,7 +20,7 @@ priv struct ViewLinesPrepared {
 }
 
 ///|
-priv struct ViewLines {
+pub(all) struct ViewLines {
   view_lines : @rdom.Element
   mut window : @view_layout.LineWindow
   mut generation : Int
@@ -30,7 +39,7 @@ priv struct ViewLines {
 }
 
 ///|
-fn ViewLines::new(document : @rdom.Document) -> ViewLines {
+pub fn ViewLines::new(document : @rdom.Document) -> ViewLines {
   let view_lines = document.create_element("div")
   view_lines.set_attribute("class", "view-lines")
   view_lines.set_attribute("data-view-part", "view-lines")
@@ -49,7 +58,7 @@ fn ViewLines::new(document : @rdom.Document) -> ViewLines {
 }
 
 ///|
-fn ViewLines::dom(self : ViewLines) -> @rdom.Element {
+pub fn ViewLines::dom(self : ViewLines) -> @rdom.Element {
   self.view_lines
 }
 
@@ -68,7 +77,7 @@ fn ViewLines::window_index(self : ViewLines, view_line_number : Int) -> Int {
 ///|
 /// The retained column-to-DOM `CharacterMapping` for a one-based view-line
 /// number, if in window.
-fn ViewLines::mapping_at(
+pub fn ViewLines::mapping_at(
   self : ViewLines,
   view_line_number : Int,
 ) -> @view_layout.CharacterMapping? {
@@ -83,7 +92,7 @@ fn ViewLines::mapping_at(
 ///|
 /// The rendered line node for a one-based view-line number, if in window. Used
 /// by selection measurement to read DOM client rects off the live line DOM.
-fn ViewLines::line_node_at(
+pub fn ViewLines::line_node_at(
   self : ViewLines,
   view_line_number : Int,
 ) -> @rdom.Element? {
@@ -96,92 +105,11 @@ fn ViewLines::line_node_at(
 }
 
 ///|
-impl ViewPart for ViewLines with fn should_render(self) {
-  self.should_render
-}
-
-///|
-impl ViewPart for ViewLines with fn on_view_event(self, event) {
-  match event {
-    ViewFlushed => true
-    // Line content, tokens, and decorations are regenerated together.
-    ViewLinesChanged => true
-    ViewScrollChanged(e) =>
-      e.window_changed || e.position_changed || e.dimensions_changed
-    ViewConfigurationChanged(e) => e.gutter_width_changed || e.font_changed
-    // `viewLine.ts:94-100` `onSelectionChanged`: a selection change only
-    // dirties the lines when whitespace renders under the selection. Keyed off
-    // the *last rendered* whitespace mode, mirroring Monaco's check of
-    // `_renderedViewLine.input.renderWhitespace`.
-    ViewCursorStateChanged => self.last_render_whitespace == Selection
-    _ => false
-  }
-}
-
-///|
-impl ViewPart for ViewLines with fn set_should_render(self, value) {
-  self.should_render = value
-}
-
-///|
-impl ViewPart for ViewLines with fn on_before_render(_self, _viewport) {
-  ()
-}
-
-///|
-impl ViewPart for ViewLines with fn prepare_render(self, context) {
-  // The line node's own class carries current-line decorations; convert the
-  // controller decorations to view coordinates so the class test stays in
-  // view `Position`s like the inline path.
-  let view_decorations = match context.input.view_model {
-    Some(view_model) =>
-      view_model.decorations().to_view_decorations(context.input.decorations)
-    None => []
-  }
-  self.prepared = Some({
-    frame: context.input.frame,
-    viewport: context.viewport,
-    view_decorations,
-    generation: context.input.generation,
-    space_width: context.input.space_width,
-    render_whitespace: context.input.render_whitespace,
-    render_control_characters: context.input.render_control_characters,
-    selection_view_range: context.input.selection_view_range,
-  })
-}
-
-///|
-impl ViewPart for ViewLines with fn render(self, context) {
-  match self.prepared {
-    Some(prepared) => {
-      self.render_text(
-        prepared.frame,
-        prepared.viewport,
-        prepared.view_decorations,
-        prepared.generation,
-        prepared.space_width,
-        prepared.render_whitespace,
-        prepared.render_control_characters,
-        prepared.selection_view_range,
-      )
-      self.view_lines.set_attribute("style", context.content_transform)
-    }
-    None => ()
-  }
-}
-
-///|
-impl ViewPart for ViewLines with fn on_did_render(self) {
-  self.should_render = false
-  self.prepared = None
-}
-
-///|
 /// The `ViewLayer` recycler: tracks the rendered line range, splices
 /// entering/leaving text line nodes, and writes `innerHTML` only on entering
 /// lines. A changed content generation (new frame source or changed
 /// controller decorations) rewrites every rendered line instead.
-fn ViewLines::render_text(
+pub fn ViewLines::render_text(
   self : ViewLines,
   frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
@@ -331,7 +259,9 @@ fn resolve_line_mapping(
 }
 
 ///|
-fn is_first_view_line_for_model_line(
+/// `pub`: called cross-package by `margin.mbt`'s folding-marker render (which
+/// only shows a marker on a model line's first view line).
+pub fn is_first_view_line_for_model_line(
   lines : @view_model.ViewModelLines?,
   view_line_number : Int,
 ) -> Bool {
@@ -340,4 +270,139 @@ fn is_first_view_line_for_model_line(
       view_model_lines.get_view_line_min_column(view_line_number) == 1
     None => true
   }
+}
+
+///|
+/// `pub`: called cross-package by `margin.mbt`'s line-number gutter render,
+/// which recycles its nodes the same way `ViewLines::render_text` does.
+pub fn viewport_window(
+  viewport : @view_layout.ViewportData,
+) -> @view_layout.LineWindow {
+  // ViewportData is a 1-based inclusive range `[start, end]`; the render window
+  // is the equivalent 1-based half-open `[start, end + 1)`.
+  { start: viewport.start_line_number, end: viewport.end_line_number + 1 }
+}
+
+///|
+/// `pub`: also called directly by `render_whitespace_options_test.mbt`'s
+/// (root `viewer` package) integration test proving `ViewerOptions` flow into
+/// the per-line render input, the same wiring `flush_render` performs.
+pub fn render_line_input_for_viewport(
+  viewport : @view_layout.ViewportData,
+  index : Int,
+  space_width : Double,
+  render_whitespace~ : @view_layout.RenderWhitespace,
+  render_control_characters~ : Bool,
+  selection_view_range~ : @view_layout.ViewRange?,
+) -> @view_layout.RenderLineInput {
+  let line_number = viewport.start_line_number + index
+  let line_data = viewport.lines[index]
+  @view_layout.RenderLineInput::from_view_line(
+    line_data,
+    line_decorations=viewport.decorations_for_line(line_number),
+    space_width~,
+    render_whitespace~,
+    render_control_characters~,
+    selections_on_line=selections_on_line_for(
+      line_number, line_data, render_whitespace, selection_view_range,
+    ),
+    vertical_scrollbar_size=@core.editor_vertical_scrollbar_size,
+  )
+}
+
+///|
+/// Per-line selected-column offsets for `RenderWhitespace::Selection`, the port
+/// of `viewLine.ts:122-149`. The whitespace renderer only paints dots inside a
+/// selection in this mode, so it needs the columns the selection covers on this
+/// line. Empty in every other mode and when the selection misses the line.
+///
+/// Deviations from the source: the high-contrast `inline-selected-text` push
+/// (`viewLine.ts:137-139`) is dropped — the viewer has no high-contrast theme,
+/// so the gather condition reduces to `render_whitespace == Selection`; and the
+/// viewer carries a single `selection_view_range`, not Monaco's `selections`
+/// array, so the loop is over zero-or-one selection.
+fn selections_on_line_for(
+  line_number : Int,
+  line_data : @view_layout.ViewLineRenderingData,
+  render_whitespace : @view_layout.RenderWhitespace,
+  selection_view_range : @view_layout.ViewRange?,
+) -> Array[@base_common.OffsetRange] {
+  let result : Array[@base_common.OffsetRange] = []
+  guard render_whitespace == Selection else { return result }
+  guard selection_view_range is Some(selection) else { return result }
+  // Selection does not intersect this line.
+  if selection.end_line_number < line_number ||
+    selection.start_line_number > line_number {
+    return result
+  }
+  // On a non-anchor line the selection spans the line's full column extent;
+  // only the anchor lines clip to the selection's own start/end column.
+  let start_column = if selection.start_line_number == line_number {
+    selection.start_column
+  } else {
+    line_data.min_column
+  }
+  let end_column = if selection.end_line_number == line_number {
+    selection.end_column
+  } else {
+    line_data.max_column
+  }
+  if start_column < end_column {
+    result.push(OffsetRange(start_column - 1, end_column - 1))
+  }
+  result
+}
+
+///|
+/// Writes a line node's attributes, and on `rewrite_html` its `innerHTML`.
+/// Returns the freshly produced `CharacterMapping` when the HTML is rewritten,
+/// or `None` when the existing DOM (and its previously stored mapping) is
+/// reused. The mapping is the DOM-truth bridge consumed by hit-testing and
+/// selection measurement.
+fn write_line_node(
+  node : @rdom.Element,
+  line : @view_model.RenderLine,
+  view_decorations : Array[@view_model.ViewModelDecoration],
+  input : @view_layout.RenderLineInput,
+  top : Int,
+  rewrite_html~ : Bool,
+) -> @view_layout.CharacterMapping? {
+  node.set_attribute(
+    "class",
+    @viewer_common.render_line_class(line, view_decorations),
+  )
+  node.set_attribute("data-line", line.line_number.to_string())
+  node.set_attribute("style", line_node_style(top))
+  if rewrite_html {
+    let output = @view_layout.render_view_line2(input)
+    node.set_inner_html(output.html)
+    Some(output.character_mapping)
+  } else {
+    None
+  }
+}
+
+///|
+/// `pub`: called cross-package by `margin.mbt`'s line-number gutter render.
+pub fn write_line_number_node(
+  gutter : @rdom.Element,
+  line : @view_model.RenderLine,
+  top : Int,
+) -> Unit {
+  gutter.set_attribute("class", "line-number")
+  gutter.set_attribute("data-line", line.line_number.to_string())
+  gutter.set_attribute("style", line_node_style(top))
+  gutter.set_inner_html(line.line_number.to_string())
+}
+
+///|
+/// `pub`: called cross-package by `margin.mbt`'s line-number and folding-marker
+/// render (both position their nodes the same way `ViewLines` positions text
+/// lines).
+pub fn line_node_style(top : Int) -> String {
+  "top:" +
+  top.to_string() +
+  "px;height:" +
+  @core.editor_line_height.to_string() +
+  "px"
 }

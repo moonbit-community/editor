@@ -35,7 +35,7 @@ test "viewport line input carries each content-only whitespace mode from options
     with_test_viewer(
       "  abc  ",
       viewer => {
-        let input = render_line_input_for_viewport(
+        let input = @view_lines.render_line_input_for_viewport(
           viewport_of(viewer),
           0,
           viewer.measured_char_width(),
@@ -56,7 +56,7 @@ test "viewport line input carries render_control_characters on a non-ascii line"
   with_test_viewer(
     "café\u{202E}",
     viewer => {
-      let input = render_line_input_for_viewport(
+      let input = @view_lines.render_line_input_for_viewport(
         viewport_of(viewer),
         0,
         viewer.measured_char_width(),
@@ -77,7 +77,7 @@ test "viewport line input leaves Selection mode inert without a threaded selecti
   with_test_viewer(
     "  abc  ",
     viewer => {
-      let input = render_line_input_for_viewport(
+      let input = @view_lines.render_line_input_for_viewport(
         viewport_of(viewer),
         0,
         viewer.measured_char_width(),

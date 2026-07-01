@@ -1,7 +1,8 @@
 # Viewer ↔ Monaco Directory-Structure Mirror (platform tiers)
 
-Status: in progress (A, B, C, E (7/7), D, F landed on branch
-`viewer-directory-mirror`; G–I remain) — Date: 2026-07-01.
+Status: A, B, C, E (7/7), D, F landed on branch `viewer-directory-mirror`; H
+already satisfied (see below); **G and I superseded by explicit decision, see
+D2-REVERSED — the plan is functionally complete.** — Date: 2026-07-01.
 
 Refactor (no behavior change). Mirror Monaco's `vs/editor` directory tree as
 MoonBit packages **at directory granularity** under three tiers —
@@ -9,9 +10,12 @@ MoonBit packages **at directory granularity** under three tiers —
 `editor/{common,browser,contrib}` (one Monaco directory → one MoonBit package;
 each `.ts` → a `.mbt` inside that package). Use `supported_targets` to make the
 `common` (DOM-free) vs `browser` (DOM) split a build-time invariant rather than
-a convention, and reduce the root `viewer/` package to a single `export.mbt`
-facade that curates the public API (the analog of Monaco's
-`vs/editor/editor.api.ts`).
+a convention. **The root `viewer/` package is the one deliberate exception to
+directory-granularity: it keeps the top-level `Viewer`/`ViewerOptions`/public
+read-API implementation directly (no `export.mbt` facade — see D2-REVERSED)**
+and doubles as the public entry point, the analog of Monaco's
+`vs/editor/editor.api.ts` *and* `editor/browser/widget/codeEditor/` combined
+into one package rather than two.
 
 Three payoffs:
 
@@ -22,11 +26,14 @@ Three payoffs:
 2. **Completeness checking.** When our tree mirrors `vscode/src/vs/editor`
    dir-for-dir across all three tiers, a directory diff against the reference is
    a mechanical port-coverage checklist for the *whole* editor module (the
-   `_PORT_PLAYBOOK.md` "own the denominator" rule, applied to structure).
-3. **A single public-API contract.** Everything real lives under
-   `common/`/`browser/`/`contrib/`; the root `viewer/` package holds only
-   `export.mbt`, which re-exports the intended surface. `viewer/pkg.generated.mbti`
-   then *is* the public API — every API change is a one-file diff at review time.
+   `_PORT_PLAYBOOK.md` "own the denominator" rule, applied to structure). The
+   root package is the one named exception — see above.
+3. **A single public-API contract.** Everything under `common/`/`browser/`/
+   `contrib/` is internal; the root `viewer/` package is the only public
+   entry point (Increment A's guardrail rule 3 still forbids external
+   consumers from importing tier packages directly). `viewer/pkg.generated.mbti`
+   *is* the public API — every API change is a one-file diff at review time,
+   same payoff as the originally-planned facade, without needing one.
 
 Why directory granularity (not file → package): MoonBit allows cycles *between
 files in the same package* but forbids *cross-package* cycles. Monaco's
@@ -54,9 +61,20 @@ real work. See "Cycle backlog" below.
   file's cited source path**, not a folder rename.
 - `viewer/*.mbt` root files = flattened `editor/browser/*` (+ two
   `editor/contrib/*/browser` features), all in one `supported_targets = "js"`
-  god-package. **This is what the refactor carves up.**
-- After the refactor the root `viewer/` package contains only `export.mbt` (+ its
-  `pkg.generated.mbti`): a js-only facade re-exporting the public surface.
+  god-package. **The refactor carves out everything with a real
+  directory-mirror home (`browser/view/`, `browser/view_parts/*`,
+  `browser/controller`); the remaining `Viewer::`-glue files — the
+  `browser/widget/code_editor/` row below — stay at the root by explicit
+  decision (D2-REVERSED), since carving them out would require rebuilding
+  their entire ~80-method public surface as a hand-written facade for no
+  behavior gain.**
+- After the refactor the root `viewer/` package holds the top-level `Viewer`
+  implementation directly (`viewer.mbt`, `viewer_options.mbt`,
+  `public_read_api.mbt`, `reveal.mbt`, `view_host.mbt`, `view_zones_host.mbt`,
+  `input.mbt`, `hit_test_dom.mbt`, `selection.mbt`, `view_controller.mbt`,
+  `folding_controls.mbt`, `render.mbt`, `registry.mbt`, `editor_events.mbt`,
+  `controller_host.mbt`, `browser_host.mbt`, `services.mbt`, plus their
+  `_wbtest.mbt` files) — no `export.mbt` facade.
 
 ### Target: common tier (`viewer/common/*`, multi-target)
 
@@ -65,8 +83,11 @@ Re-home the existing flat packages to mirror `editor/common/*`:
 `viewModel`), `view_layout` → `common/view_layout` (`viewLayout`), `cursor` →
 `common/cursor`, `languages` → `common/languages`, `decorations` →
 `common/model` decorations, `view_line_renderer` → `common/view_layout`
-renderer, plus `common/core`, `common/tokens`, `common/services` for the
-redistributed grab-bag files. **Phase 0 places each file by its header
+renderer, plus `common/core` for the redistributed grab-bag files. (Original
+guess also included `common/tokens`/`common/services` — neither exists as a
+literal package: token logic landed inside `common/markers`/`common/view_model`
+by actual header citation, and `services.mbt` stays at the root `viewer/`
+package per D2-REVERSED, see below.) **Phase 0 places each file by its header
 citation; do not guess.**
 
 ### Target: browser tier (`viewer/browser/*`, `supported_targets = "js"`)
@@ -90,26 +111,32 @@ by reading each file's actual content (not just its filename), per files:
 | `browser/view_parts/editor_scrollbar/` | `editor/browser/viewParts/editorScrollbar/`    | `editor_scrollbar.mbt` (minus its `impl ViewPart` block) |
 | `browser/view_parts/view_lines/`       | `editor/browser/viewParts/viewLines/`          | **Phase 0 correction:** `view_layer.mbt` (defines `ViewLines`, the actual recycler/view-part — the original guess placed this in `browser/view/`, wrong) + `view_line.mbt` (its per-line render helper) + `view_lines.css`, both minus their `impl ViewPart` block |
 | `browser/view_parts/selections/`       | `editor/browser/viewParts/selections/`         | **Phase 0 correction:** `view_overlays.mbt` (defines `ContentViewOverlays`, styled by `selections.css`+`view_overlays.css` — this is Monaco's `SelectionsOverlay`/`ContentViewOverlays` merged into one concrete type; `selection.mbt`/`selection_measure.mbt` do **not** go here, see reclassification below), minus its `impl ViewPart` block |
-| `browser/widget/code_editor/`          | `editor/browser/widget/codeEditor/`            | `viewer.mbt`, `viewer_options.mbt`, `public_read_api.mbt`, `reveal.mbt`, `view_host.mbt`, `view_zones_host.mbt`, plus the reclassified files below |
+| ~~`browser/widget/code_editor/`~~ **stays at root `viewer/`, see D2-REVERSED** | `editor/browser/widget/codeEditor/`            | `viewer.mbt`, `viewer_options.mbt`, `public_read_api.mbt`, `reveal.mbt`, `view_host.mbt`, `view_zones_host.mbt`, `controller_host.mbt`, `browser_host.mbt`, `services.mbt`, plus the reclassified files below |
 | `contrib/hover/browser/`               | `editor/contrib/hover/browser/`                | `hover_controller.mbt` (now also holds `EditorEvent`/`EditorContext`), `hover_utils.mbt`, `hover_widget_geometry.mbt` |
 | existing `viewer/controller/`, renamed `browser/controller/` | `editor/browser/controller/`   | just the existing `mouse_handler.mbt` — `input.mbt`/`hit_test_dom.mbt` do **not** merge in (see reclassified below) |
 
-**Reclassified to `browser/widget/code_editor/` (not their guessed target)** —
-each of these is 100% `Viewer::` methods (plus tiny pure helpers used only by
-that glue), so the foreign-method rule leaves no other place for them to live:
-`input.mbt` (guessed `browser/controller/`), `hit_test_dom.mbt` (guessed
-`browser/controller/`), `selection.mbt` (guessed `browser/view_parts/selections/`
-by filename — its actual content is cursor dispatch + clipboard copy, not the
-selection-overlay *renderer*; that's `view_overlays.mbt`, see the corrected
-table above), `view_controller.mbt` (guessed `browser/view/` per Monaco's
-directory, but `Viewer` isn't part of `editor/browser/view/`'s Monaco content),
-`folding_controls.mbt` (guessed `contrib/folding/browser/` — same fate as
-hover's controller glue, see below), `render.mbt` and `registry.mbt` (were
-already ambiguous; both are `Viewer::` model-attach orchestration).
+**Reclassified to stay at the root `viewer/` package (not their guessed
+target)** — each of these is 100% `Viewer::` methods (plus tiny pure helpers
+used only by that glue), so the foreign-method rule leaves no other place for
+them to live: `input.mbt` (guessed `browser/controller/`), `hit_test_dom.mbt`
+(guessed `browser/controller/`), `selection.mbt` (guessed
+`browser/view_parts/selections/` by filename — its actual content is cursor
+dispatch + clipboard copy, not the selection-overlay *renderer*; that's
+`view_overlays.mbt`, see the corrected table above), `view_controller.mbt`
+(guessed `browser/view/` per Monaco's directory, but `Viewer` isn't part of
+`editor/browser/view/`'s Monaco content), `folding_controls.mbt` (guessed
+`contrib/folding/browser/` — same fate as hover's controller glue, see below),
+`render.mbt` and `registry.mbt` (were already ambiguous; both are `Viewer::`
+model-attach orchestration).
 
-`services.mbt` (`ViewerServices`, DOM-free) → `common/services` (multi-target;
-`Viewer`'s `services` field, browser-tier, imports it one-directionally, which
-is always fine).
+`services.mbt` (`ViewerServices`, DOM-free) **stays at the root `viewer/`
+package** rather than moving to a `common/services` package as originally
+mapped: `ViewerServices` is part of `Viewer`'s public constructor surface
+(`Viewer(services?, ...)`), and per D2-REVERSED the root package is the
+public entry point directly — moving it would need the same
+typealias-forwarding ceremony the facade decision was reversed specifically
+to avoid, for a type with no interesting native-only logic to gain from the
+move (it is a plain service-object holder with one constructor).
 
 **`contrib/folding/browser/` does not end up existing as a package.** Its only
 candidate content (`folding_controls.mbt`) is pure `Viewer::` glue, same as
@@ -199,13 +226,20 @@ independent packages.
   and doing the common re-tier in the same epic means import paths churn once,
   not twice. (Reverses the earlier "leave common flat" lean.) Cost: the current
   `viewer/common` grab-bag must be redistributed by header citation — see Mapping.
-- **D2 — `export.mbt` facade. CONFIRMED: yes.** The root `viewer/` package keeps
-  only `export.mbt` — `pub typealias` for public types + thin `pub fn`/`pub let`
-  wrappers for entry points (MoonBit has no `export *`, so the surface is an
-  explicit hand-maintained list — intentional by design). It re-exports browser
-  types, so the facade package stays `supported_targets = "js"`; native/headless
-  consumers import `viewer/common/*` directly. `viewer/pkg.generated.mbti` is the
-  reviewable API contract. Analog: `vs/editor/editor.api.ts`.
+- **D2-REVERSED — no `export.mbt` facade. Decided 2026-07-01, overriding the
+  original "CONFIRMED: yes."** Scoping Increment G found the facade would need
+  ~80 hand-written forwarding items (67 `pub fn Viewer::` methods + 12 public
+  types across the 16 remaining root files) — MoonBit has no `export *` or
+  method-forwarding-through-typealias, so every single entry point would need
+  its own thin wrapper, for zero behavior change. Explicit user decision: drop
+  the facade; the root `viewer/` package keeps its current real implementation
+  files directly and *is* the public entry point (Increment A's guardrail
+  rule 3 — external consumers may import only the root `viewer` package, not
+  `viewer/{common,browser,contrib}/**` — still stands and is what makes this a
+  real boundary; it just no longer requires the root package to contain
+  *only* a facade file). `viewer/pkg.generated.mbti` is still the reviewable
+  API contract, generated from the real code instead of a hand-curated
+  re-export list. This supersedes Increments G and I below.
 - **D3 — Naming.** Monaco camelCase dir → MoonBit snake_case package
   (`contentWidgets` → `content_widgets`, `viewModel` → `view_model`). Keep
   `view_parts/` as the grouping dir under `browser/` (mirrors `viewParts/`).
@@ -266,20 +300,27 @@ independent packages.
   logic stays multi-target so the native check keeps enforcing it." So F ends
   up a pure rename — `mouse_handler.mbt`/`README.md`/`moon.pkg` only, zero
   content changes, same 546/513 js/native test counts before and after.
-- **G — Carve `browser/widget/code_editor/`.** The largest increment post-Phase-0:
-  `viewer.mbt`, `viewer_options.mbt`, `public_read_api.mbt`, `reveal.mbt`,
-  `view_host.mbt`, `view_zones_host.mbt`, plus the reclassified `input.mbt`,
-  `hit_test_dom.mbt`, `selection.mbt`, `view_controller.mbt`, `folding_controls.mbt`,
-  `render.mbt`, `registry.mbt`, and the `Viewer`-glue remainder of
-  `editor_events.mbt`. This becomes the top of the browser tier.
-- **H — Carve `contrib/hover/browser/`** (`hover_controller.mbt` incl.
-  `EditorEvent`/`EditorContext`, `hover_utils.mbt`, `hover_widget_geometry.mbt`).
-  No `contrib/folding/browser/` — see Phase 0's finding above.
-- **I — Reduce the root to `export.mbt`.** Once every real file has moved, write
-  the facade: `pub typealias`/wrappers for the intended public surface, drop the
-  root's `supported_targets = "js"` only if nothing browser remains (it won't —
-  the facade re-exports browser types, so it stays js). Regenerate
-  `viewer/pkg.generated.mbti` and review it as the public-API contract.
+- **G — SUPERSEDED by D2-REVERSED, not done.** Originally "carve
+  `browser/widget/code_editor/`" (`viewer.mbt`, `viewer_options.mbt`,
+  `public_read_api.mbt`, `reveal.mbt`, `view_host.mbt`, `view_zones_host.mbt`,
+  plus the reclassified `input.mbt`, `hit_test_dom.mbt`, `selection.mbt`,
+  `view_controller.mbt`, `folding_controls.mbt`, `render.mbt`, `registry.mbt`,
+  `editor_events.mbt`'s `Viewer`-glue remainder, `controller_host.mbt`,
+  `browser_host.mbt`). These files stay in the root `viewer/` package
+  permanently — see D2-REVERSED for why.
+- **H — already satisfied, no action needed.** Originally "carve
+  `contrib/hover/browser/`." The DOM-free hover state machine
+  (`hover_controller.mbt` incl. `EditorEvent`/`EditorContext`,
+  `hover_utils.mbt`, `hover_widget_geometry.mbt`) already landed in the
+  existing multi-target `viewer/contrib/hover` during Increment E (commit
+  `refactor(viewer): merge hover state machine into viewer/contrib/hover`) —
+  there is no separate DOM-touching hover controller left to carve into a
+  js-only `contrib/hover/browser/`; the only DOM-touching hover code is
+  `content_widgets` (already `browser/view_parts/content_widgets`) and the
+  root package's dispatch glue (`editor_events.mbt`, staying per D2-REVERSED).
+  No `contrib/folding/browser/` either — see Phase 0's finding above.
+- **I — SUPERSEDED by D2-REVERSED, not done.** Originally "reduce the root to
+  `export.mbt`." No longer applicable: the root package keeps its real files.
 
 ### Per-increment mechanics (the MoonBit grind)
 
@@ -306,12 +347,15 @@ For each package carved out:
 
 - `viewer/{common,browser,contrib}/` mirrors `vscode/src/vs/editor/{common,browser,contrib}/`
   dir-for-dir for every *ported* unit (checklist: the mapping table above, all
-  rows landed; un-ported dirs explicitly listed as out-of-scope).
+  rows landed except the one named exception below; un-ported dirs explicitly
+  listed as out-of-scope).
 - Every `viewer/browser/*` and `viewer/contrib/*/browser/*` package declares
   `supported_targets = "js"`; no `viewer/common/*` package does.
-- The root `viewer/` package contains only `export.mbt`; `viewer/pkg.generated.mbti`
+- The root `viewer/` package holds the top-level `Viewer` implementation
+  directly (no `export.mbt` facade — D2-REVERSED); `viewer/pkg.generated.mbti`
   is the reviewed public-API surface, and no external consumer imports a deep
-  `viewer/{common,browser,contrib}/**` package.
+  `viewer/{common,browser,contrib}/**` package (Increment A's rule 3, which
+  does not depend on the root package containing only a facade).
 - `moon check --target all` green ⇒ proves zero `common → browser` import leaks
   (the native build would fail otherwise). This is the real invariant.
 - `just check && just test && just test-browser` green, with the **same** test
@@ -319,6 +363,10 @@ For each package carved out:
   delta is a red flag (pre-existing `dom_structure.spec.js:58` hover `tabindex`
   failure on `main` excepted).
 - Extended `check-architecture.mbtx` green (the three Increment-A rules).
+
+**This gate is met as of Increment F** (plus the folding.css/editor.css/
+tokens.css/inlay_hints.css/markers.css placement fixes) — the plan is
+functionally complete; G and I are superseded, H is already satisfied.
 
 ## Deferred
 

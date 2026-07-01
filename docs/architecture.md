@@ -81,20 +81,23 @@ Reference trees are research inputs only. Product code must not import from
   with the viewer.
 - `platform/log`: host-neutral structured logging contracts.
 
-## Viewer Three-Tier Mirror (target structure)
+## Viewer Three-Tier Mirror
 
-The `viewer/` tree is migrating to mirror Monaco's `vs/editor/{common,browser,contrib}`
-at directory granularity (one Monaco directory → one MoonBit package). The
-migration is staged in `docs/exec-plans/viewer-directory-mirror.md`; the flat
-`viewer/<feature>` packages and the root `viewer/*.mbt` god-package above are the
-*current* truth until each carve-up increment lands. The target tiers are:
+The `viewer/` tree mirrors Monaco's `vs/editor/{common,browser,contrib}` at
+directory granularity (one Monaco directory → one MoonBit package), staged in
+`docs/exec-plans/viewer-directory-mirror.md`. The mirror is functionally
+complete as of that plan's Increment F, with one deliberate, permanent
+exception: the root `viewer` package keeps the top-level `Viewer`
+implementation directly rather than carving it into `browser/widget/code_editor/`
+behind an `export.mbt` facade (Decision D2-REVERSED — see the exec-plan for
+why). The tiers are:
 
 - `viewer/common/**` — DOM-free logic (model, view_model, view_layout, cursor,
-  languages, decorations, view-line renderer, core, tokens, services). Mirrors
+  languages, decorations, view-line renderer, core, tokens). Mirrors
   `editor/common/*`. **Multi-target** (`+js+native`): the no-DOM rule is enforced
   by the native build, not by convention.
-- `viewer/browser/**` — DOM-owning view, view parts (`view_parts/*`), controller,
-  and the `widget/code_editor` host. Mirrors `editor/browser/*`. **js-only**
+- `viewer/browser/**` — DOM-owning view and view parts (`view_parts/*`) and
+  the input controller. Mirrors `editor/browser/*`. **js-only**
   (`supported_targets = "js"`).
 - `viewer/contrib/<feature>/` — the DOM-free *model* of a Monaco contribution
   (`folding`, `hover`). **Multi-target**, like the common tier. Divergence from
@@ -102,21 +105,31 @@ migration is staged in `docs/exec-plans/viewer-directory-mirror.md`; the flat
   target): the viewer hoists the DOM-free logic up so the native check keeps
   enforcing DOM-freeness.
 - `viewer/contrib/<feature>/browser/**` — the js-only DOM half of a contribution
-  (controllers/widgets). Mirrors `editor/contrib/*/browser`. **js-only**.
-- root `viewer` — reduces to an `export.mbt` facade (the analog of
-  `vs/editor/editor.api.ts`) re-exporting the public surface; `viewer/pkg.generated.mbti`
-  is the reviewable public-API contract. Stays js-only because it re-exports
-  browser types.
+  (controllers/widgets). Mirrors `editor/contrib/*/browser`. **js-only**. Not
+  populated for `hover`: the DOM-free hover state machine already covers it
+  (see above); the only DOM-touching hover code is `content_widgets` and the
+  root package's dispatch glue.
+- root `viewer` — the one deliberate exception to directory-granularity
+  (`docs/exec-plans/viewer-directory-mirror.md`, Decision D2-REVERSED): it
+  holds the top-level `Viewer`/`ViewerOptions`/public read-API implementation
+  directly — Monaco's `editor/browser/widget/codeEditor/` role — and doubles
+  as the public entry point, the analog of `vs/editor/editor.api.ts`. There is
+  no `export.mbt` facade: scoping that carve found it would need ~80
+  hand-written forwarding items (every `pub fn Viewer::` method + public type)
+  for zero behavior change, so the decision was reversed and the root package
+  keeps its real files. `viewer/pkg.generated.mbti` is still the reviewable
+  public-API contract, generated from the real code. Stays js-only because it
+  owns DOM.
 
 `scripts/check-architecture.mbtx` enforces the tier invariants (the
 MoonBit-toolchain-uncatchable half): every `viewer/browser/**` and
 `viewer/contrib/*/browser/**` package declares `supported_targets = "js"`; no
 `viewer/common/**` or `viewer/contrib/<feature>/` (non-`browser`) package does
 (the DOM-free tiers stay multi-target); and external consumers (the shell, web,
-app, tests) import the `viewer` facade — never a `viewer/browser/**` or
+app, tests) import the root `viewer` package — never a `viewer/browser/**` or
 `viewer/contrib/**` package directly. Native/headless consumers (the shell
-server hosts) may import `viewer/common/**` directly, since the js-only facade
-cannot link on native (Decision D2). The `common → browser` direction is caught
+server hosts) may import `viewer/common/**` directly, since the js-only root
+package cannot link on native. The `common → browser` direction is caught
 by `moon check --target all` itself: a multi-target package importing a js-only
 one fails the native build.
 

@@ -1,4 +1,31 @@
 ///|
+/// Typed editor events produced by the input bridge. Feature controllers
+/// consume these the way VS Code contributions consume editor events; no
+/// controller sees raw DOM events. `pub(all)` because the viewer's dispatch
+/// glue (`browser/widget/code_editor`, wherever `Viewer` lives — the
+/// foreign-method rule keeps that glue out of this package) constructs these
+/// values while `HoverController::on_event` — this package's — consumes them.
+pub(all) enum EditorEvent {
+  MouseMoved(@viewer_common.MouseTarget)
+  EscapePressed
+}
+
+///|
+/// Read-only viewer state controllers may consult while handling an event.
+/// `view_to_model_offset` resolves a view position to a model document offset
+/// through the active `CoordinatesConverter` and model snapshot — Monaco's
+/// view→model boundary — so controllers anchor on the model without a bespoke
+/// render-line offset helper. `pub(all)` for the same cross-package reason as
+/// `EditorEvent`.
+pub(all) struct EditorContext {
+  frame : @view_model.RenderFrame?
+  view_to_model_offset : (@base_common.Position) -> Int
+  /// Model document offset → model line number, the seam the hover
+  /// reconciliation uses for `canAdoptVisibleHover` (same-line anchor adoption).
+  offset_to_model_line : (Int) -> Int
+}
+
+///|
 priv struct HoverView {
   range : @base_common.OffsetRange
   parts : Array[@hover.HoverPart]

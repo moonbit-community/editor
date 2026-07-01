@@ -25,7 +25,11 @@ priv struct ContentWidget {
 }
 
 ///|
-priv struct HoverWidgetDom {
+/// `pub(all)`: appears in `ViewContext.handle_hover_keydown` and
+/// `Viewer::handle_hover_keydown`'s signature (`view_host.mbt`), so it must be
+/// visible across the future `browser/view_parts/content_widgets` ↔
+/// `browser/widget/code_editor` package boundary.
+pub(all) struct HoverWidgetDom {
   wrapper : @rdom.Element
   hover : @rdom.Element
   scrollable : @scrollbar.ScrollableElementDom
@@ -410,76 +414,6 @@ fn ContentWidgets::ensure_hover_widget(
       self.hover_widget = Some(widget)
       widget
     }
-  }
-}
-
-///|
-fn Viewer::handle_hover_keydown(
-  self : Viewer,
-  widget : HoverWidgetDom,
-  event : @rdom.Event,
-  keyboard : @rdom.KeyboardEvent,
-) -> Unit {
-  event.stop_propagation()
-  // Monaco registers these as editor commands gated on `hoverFocused`
-  // (`hoverActions.ts`); until a viewer command registry lands, the focused
-  // widget's keydown dispatches them inline with the same key map. The
-  // arrow-key secondaries match Monaco: `Alt+Arrow` pages and `CtrlCmd+Arrow`
-  // jumps to an edge.
-  let alt = keyboard.alt_key()
-  // `KeyMod.CtrlCmd` is Ctrl on Windows/Linux and Cmd on macOS.
-  let ctrl_cmd = keyboard.ctrl_key() || keyboard.meta_key()
-  match keyboard.key() {
-    "Escape" => {
-      event.prevent_default()
-      self.dismiss_hover()
-      self.schedule_render()
-    }
-    "ArrowUp" => {
-      event.prevent_default()
-      if alt {
-        widget.page_up()
-      } else if ctrl_cmd {
-        widget.go_to_top()
-      } else {
-        widget.scroll_up()
-      }
-    }
-    "ArrowDown" => {
-      event.prevent_default()
-      if alt {
-        widget.page_down()
-      } else if ctrl_cmd {
-        widget.go_to_bottom()
-      } else {
-        widget.scroll_down()
-      }
-    }
-    "ArrowLeft" => {
-      event.prevent_default()
-      widget.scroll_left()
-    }
-    "ArrowRight" => {
-      event.prevent_default()
-      widget.scroll_right()
-    }
-    "PageUp" => {
-      event.prevent_default()
-      widget.page_up()
-    }
-    "PageDown" => {
-      event.prevent_default()
-      widget.page_down()
-    }
-    "Home" => {
-      event.prevent_default()
-      widget.go_to_top()
-    }
-    "End" => {
-      event.prevent_default()
-      widget.go_to_bottom()
-    }
-    _ => ()
   }
 }
 

@@ -1,6 +1,7 @@
 # Viewer ↔ Monaco Directory-Structure Mirror (platform tiers)
 
-Status: planned — Date: 2026-06-30.
+Status: in progress (A, B, C landed on branch `viewer-directory-mirror`; D–I
+remain) — Date: 2026-06-30.
 
 Refactor (no behavior change). Mirror Monaco's `vs/editor` directory tree as
 MoonBit packages **at directory granularity** under three tiers —
@@ -70,28 +71,51 @@ citation; do not guess.**
 
 ### Target: browser tier (`viewer/browser/*`, `supported_targets = "js"`)
 
-Mirrors `editor/browser` + the ported `editor/contrib/*/browser`:
+Mirrors `editor/browser` + the ported `editor/contrib/*/browser`. **Phase 0
+correction (Increment B):** the guessed mapping below undercounted how much
+root content is `Viewer::` glue. MoonBit forbids defining a method on a
+foreign type ([[moonbit-foreign-method-rule]]), so every `Viewer::` method
+must live in `Viewer`'s own package — there is no `browser/controller/` or
+`contrib/folding/browser/` *package* in the end, because the files guessed for
+them turned out to be 100% `Viewer::` glue with no other consumer. Confirmed
+by reading each file's actual content (not just its filename), per files:
 
-| target package (`viewer/…`)            | Monaco source dir                              | root files to move |
+| target package (`viewer/…`)            | Monaco source dir                              | root files that actually move here |
 |----------------------------------------|------------------------------------------------|--------------------|
-| `browser/view/`                        | `editor/browser/view/`                         | `view.mbt`, `view_context.mbt`, `view_controller.mbt`, `view_part.mbt`, `view_layer.mbt`, `view_overlays.mbt`, `rendering_context.mbt`, `render.mbt`? |
-| `browser/view_parts/content_widgets/`  | `editor/browser/viewParts/contentWidgets/`     | `content_widgets.mbt` + `.css` |
+| `browser/view/`                        | `editor/browser/view/`                         | `view.mbt` (minus `Viewer::` glue → `view_host.mbt`), `view_context.mbt`, `view_part.mbt`, `view_layer.mbt`, `view_overlays.mbt`, `rendering_context.mbt`, `view_events.mbt`, `selection_measure.mbt` (defines `View::` methods — foreign-method rule keeps it out of a separate `selections` package) |
+| `browser/view_parts/content_widgets/`  | `editor/browser/viewParts/contentWidgets/`     | `content_widgets.mbt` (minus `Viewer::handle_hover_keydown` → `view_host.mbt`) + `.css` |
 | `browser/view_parts/overlay_widgets/`  | `editor/browser/viewParts/overlayWidgets/`     | `overlay_widgets.mbt` + `.css` |
-| `browser/view_parts/view_zones/`       | `editor/browser/viewParts/viewZones/`          | `view_zones.mbt` + `.css` |
+| `browser/view_parts/view_zones/`       | `editor/browser/viewParts/viewZones/`          | `view_zones.mbt` (minus `ViewZoneChangeAccessor` + `Viewer::` glue → `view_zones_host.mbt`) + `.css` |
 | `browser/view_parts/margin/`           | `editor/browser/viewParts/margin/`             | `margin.mbt` + `.css` |
 | `browser/view_parts/editor_scrollbar/` | `editor/browser/viewParts/editorScrollbar/`    | `editor_scrollbar.mbt` |
-| `browser/view_parts/selections/`       | `editor/browser/viewParts/selections/`         | `selection.mbt`, `selection_measure.mbt` + `.css` |
 | `browser/view_parts/view_lines/`       | `editor/browser/viewParts/viewLines/`          | `view_line.mbt` + `view_lines.css` |
-| `browser/widget/code_editor/`          | `editor/browser/widget/codeEditor/`            | `viewer.mbt`, `viewer_options.mbt`, `public_read_api.mbt`, `reveal.mbt` |
-| `browser/controller/`                  | `editor/browser/controller/`                   | `input.mbt`, `hit_test_dom.mbt` (merge existing `viewer/controller/mouse_handler.mbt`) |
-| `contrib/hover/browser/`               | `editor/contrib/hover/browser/`                | `hover_controller.mbt`, `hover_utils.mbt`, `hover_widget_geometry.mbt` (+ existing `viewer/hover/*`?) |
-| `contrib/folding/browser/`             | `editor/contrib/folding/browser/`              | `folding_controls.mbt` |
+| `browser/widget/code_editor/`          | `editor/browser/widget/codeEditor/`            | `viewer.mbt`, `viewer_options.mbt`, `public_read_api.mbt`, `reveal.mbt`, `view_host.mbt`, `view_zones_host.mbt`, plus the reclassified files below |
+| `contrib/hover/browser/`               | `editor/contrib/hover/browser/`                | `hover_controller.mbt` (now also holds `EditorEvent`/`EditorContext`), `hover_utils.mbt`, `hover_widget_geometry.mbt` |
+| existing `viewer/controller/`, renamed `browser/controller/` | `editor/browser/controller/`   | just the existing `mouse_handler.mbt` — `input.mbt`/`hit_test_dom.mbt` do **not** merge in (see reclassified below) |
 
-`registry.mbt`, `services.mbt`, `editor_events.mbt`, `view_events.mbt`,
-`render.mbt` have ambiguous homes — **Phase 0 reads each file's header
-citation** (every conformance port cites its `vscode/` source path per
-`docs/quality.md`) to place it; do not guess. `view_events.mbt` in particular
-may be `editor/common/viewEvents.ts` (common-tier), not browser.
+**Reclassified to `browser/widget/code_editor/` (not their guessed target)** —
+each of these is 100% `Viewer::` methods (plus tiny pure helpers used only by
+that glue), so the foreign-method rule leaves no other place for them to live:
+`input.mbt` (guessed `browser/controller/`), `hit_test_dom.mbt` (guessed
+`browser/controller/`), `selection.mbt` (guessed `browser/view_parts/selections/`
+— its content is cursor dispatch + clipboard copy, not the selection-overlay
+renderer; that's `selection_measure.mbt`, reclassified above), `view_controller.mbt`
+(guessed `browser/view/` per Monaco's directory, but `Viewer` isn't part of
+`editor/browser/view/`'s Monaco content), `folding_controls.mbt` (guessed
+`contrib/folding/browser/` — same fate as hover's controller glue, see below),
+`render.mbt` and `registry.mbt` (were already ambiguous; both are `Viewer::`
+model-attach orchestration).
+
+`services.mbt` (`ViewerServices`, DOM-free) → `common/services` (multi-target;
+`Viewer`'s `services` field, browser-tier, imports it one-directionally, which
+is always fine).
+
+**`contrib/folding/browser/` does not end up existing as a package.** Its only
+candidate content (`folding_controls.mbt`) is pure `Viewer::` glue, same as
+`editor_events.mbt`'s hover-controller glue — Monaco's `FoldingController`
+equivalent is inseparable from `Viewer` in this port. Only the DOM-free folding
+*model* (already landed in Increment C at `viewer/contrib/folding`) is a real
+separate package.
 
 **Out of scope** (named, not "unseen"): `gpu/`, `viewParts/minimap`,
 `overviewRuler`, `glyphMargin`, `editor/browser/widget/diffEditor`,
@@ -102,28 +126,58 @@ viewer's inversion cost is small.
 
 ---
 
-## Cycle backlog (Phase 0 must produce the real list)
+## Cycle backlog (Phase 0's real list, found by reading root file content)
 
-Monaco `vs/editor` cross-directory cycles (the ones no granularity choice
-absorbs) by directory set:
+Monaco `vs/editor` cross-directory cycles in the un-ported subsystems (no
+granularity choice absorbs these, but they're out of scope — see above):
+35 files in `common/{,languages,languages/supports,tokens,viewModel}` +
+bracket-pair tree; 21 in `contrib/inlineCompletions`+`suggest`+`snippet`; 19 in
+`common/model/{bracketPairs,pieceTree,tokens/treeSitter}`; 14 in
+`browser/widget/diffEditor`; a handful of small ones in `common/core/{edits,text}`,
+`common/services{,/textModelSync}`, `common/languages{,/supports}`, `test/browser`.
 
-- 35 files — `common/{,languages,languages/supports,tokens,viewModel}` +
-  bracket-pair tree → mostly tokenization / bracket-pair colorization.
-- 21 files — `contrib/inlineCompletions` + `suggest` + `snippet`. **Not ported.**
-- 19 files — `common/model/{bracketPairs,pieceTree,tokens/treeSitter}`. Mostly **not ported**.
-- 14 files — `browser/widget/diffEditor`. **Not ported.**
-- 4 — `common/core/{edits,text}`; 4 — `common/services{,/textModelSync}`;
-  2 — `common/languages{,/supports}`; 2 — `test/browser`.
+**The real, in-scope backlog** — found by reading every root file's actual
+content against the target-package map above, not by guessing from Monaco's
+directory names — was three genuine cross-package cycles, all fixed in
+Increment B:
 
-Phase 0 step: intersect each SCC with the files the viewer actually ports
-(its existing `.mbt` set + the files this refactor moves). The big SCCs are in
-un-ported subsystems; the residual backlog is the small `common/*` ones **plus
-any cycle that the carve-up newly exposes between two target browser packages**
-(e.g. a content-widget ↔ view edge that was free inside the root god-package).
-Break each by the patterns already in use here: extract the shared interface
-into a `common`-tier package, or invert via the host/callback pattern
-(`controller_host.mbt`, `browser_host.mbt`). Do this **before** moving files
-(Increment B) so no move is blocked by a cycle.
+1. **`Viewer` ↔ `browser/view/`.** `ViewContext::new(viewer: Viewer, view: View)`
+   and `View::render(self, viewer: Viewer, input)` both referenced `Viewer`
+   directly from files that must live in `browser/view/` (a different package
+   from `Viewer`'s). Fix: `ViewContext` is now `pub(all)` and built by
+   `Viewer::build_view_context` in `view_host.mbt` (Viewer's package);
+   `View::render` takes the pre-built `ViewContext` instead of `Viewer`.
+2. **`EditorEvent`/`EditorContext` ↔ `HoverController`.** `HoverController::on_event`
+   (destined for `contrib/hover/browser/`) takes these two types as parameters;
+   they were defined in `editor_events.mbt` alongside `Viewer`'s dispatch glue
+   (destined for `browser/widget/code_editor/`). Fix: moved the type
+   definitions into `hover_controller.mbt` (now `pub(all)`) since
+   `contrib/hover/browser/` is downstream of `browser/widget/code_editor/`
+   anyway (`Viewer.hover : HoverController`); the glue that *constructs* them
+   (`Viewer::editor_context`, `Viewer::dispatch_editor_event`, etc.) stays put
+   and just references the relocated types.
+3. **`ViewZoneChangeAccessor` ↔ `browser/view_parts/view_zones/`.** Same shape
+   as #1: a public struct holding a `viewer : Viewer` field, defined in
+   `view_zones.mbt` (destined for `browser/view_parts/view_zones/`). Fix: moved
+   the accessor + its 4 `Viewer::` methods to `view_zones_host.mbt`; made
+   `BrowserViewZone` `pub(all)` since `Viewer.view_zones : Array[BrowserViewZone]`
+   and the host glue now construct/read it across the future package boundary.
+
+**A fourth cycle exists but its fix is self-contained within Increment E, not
+prerequisite work:** every `viewParts/*` file's `impl ViewPart for X with fn
+...(self, context: RenderingContext) ...` blocks reference `RenderingContext`/
+`RestrictedRenderingContext`/`ViewEvent` (owned by `browser/view/`, via the
+`ViewPart` trait), while `browser/view/` needs the concrete part types (`View`
+struct fields, the `ViewPartHandle` enum, `View::build()`'s constructors) —
+bidirectional if the impl blocks stay in each view-part's own file. **Fix
+pattern for Increment E:** MoonBit's orphan rule permits implementing a trait
+for a foreign type from the package that owns the *trait*; so leave every
+`impl ViewPart for X with ...` block behind in `view_part.mbt`
+(`browser/view/`) when carving out `margin.mbt`, `overlay_widgets.mbt`,
+`editor_scrollbar.mbt`, `view_line.mbt`, `content_widgets.mbt`, `view_zones.mbt`
+— only the struct/constructor/DOM-render logic moves to each `view_parts/*`
+package. This makes `browser/view/ → view_parts/*` one-directional (view/ needs
+the concrete types; view_parts/* needs nothing back), acyclic.
 
 ---
 
@@ -171,17 +225,30 @@ into a `common`-tier package, or invert via the host/callback pattern
   in Increment F, `cursor_columns` → `common/core`, etc.). Do this before the
   browser carve-up so the common import surface is final and the browser packages
   import their stable paths once.
-- **D — Carve `browser/view/`.** Move the `editor/browser/view/*` root files into
-  one package. Highest fan-in; doing it early stabilizes the import surface the
-  parts depend on.
+- **D — Carve `browser/view/`.** Move `view.mbt`, `view_context.mbt`,
+  `view_part.mbt`, `view_layer.mbt`, `view_overlays.mbt`, `rendering_context.mbt`,
+  `view_events.mbt`, `selection_measure.mbt` into one package (per Phase 0's
+  corrected mapping above — `view_controller.mbt` does *not* move here, it's
+  reclassified to G). Highest fan-in; doing it early stabilizes the import
+  surface the parts depend on.
 - **E — Carve `browser/view_parts/*`,** one part per increment, leaf parts first
   (fewest dependents): `view_zones` → `content_widgets` → `overlay_widgets` →
-  `margin` → `editor_scrollbar` → `selections` → `view_lines`.
-- **F — Carve `browser/controller/`** (`input`, `hit_test_dom`, redistributed
-  `mouse_target`); fold in the existing `viewer/controller/mouse_handler.mbt`.
-- **G — Carve `browser/widget/code_editor/`** (`viewer.mbt`, options,
-  `public_read_api`, `reveal`). This becomes the top of the browser tier.
-- **H — Carve `contrib/hover/browser/` and `contrib/folding/browser/`.**
+  `margin` → `editor_scrollbar` → `view_lines`. (No `selections` part — see
+  Phase 0's reclassification above.) For each part, apply the ViewPart-trait
+  fix from the cycle backlog: leave `impl ViewPart for X with fn ...` behind in
+  `view_part.mbt`, move only the struct/constructor/DOM-render logic.
+- **F — Rename `viewer/controller/` to `browser/controller/`.** Just the
+  existing `mouse_handler.mbt`/`mouse_target` content — `input.mbt` and
+  `hit_test_dom.mbt` do not merge in (reclassified to G in Phase 0).
+- **G — Carve `browser/widget/code_editor/`.** The largest increment post-Phase-0:
+  `viewer.mbt`, `viewer_options.mbt`, `public_read_api.mbt`, `reveal.mbt`,
+  `view_host.mbt`, `view_zones_host.mbt`, plus the reclassified `input.mbt`,
+  `hit_test_dom.mbt`, `selection.mbt`, `view_controller.mbt`, `folding_controls.mbt`,
+  `render.mbt`, `registry.mbt`, and the `Viewer`-glue remainder of
+  `editor_events.mbt`. This becomes the top of the browser tier.
+- **H — Carve `contrib/hover/browser/`** (`hover_controller.mbt` incl.
+  `EditorEvent`/`EditorContext`, `hover_utils.mbt`, `hover_widget_geometry.mbt`).
+  No `contrib/folding/browser/` — see Phase 0's finding above.
 - **I — Reduce the root to `export.mbt`.** Once every real file has moved, write
   the facade: `pub typealias`/wrappers for the intended public surface, drop the
   root's `supported_targets = "js"` only if nothing browser remains (it won't —

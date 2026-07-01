@@ -57,14 +57,14 @@ fn RenderingContext::from_input(
       @view_model.viewport_data_from_view_model(
         model,
         frame_window(input.frame),
-        line_height=editor_line_height,
+        line_height=@core.editor_line_height,
         decorations=input.decorations,
         layout=input.layout,
       )
     None =>
       @view_model.viewport_data_from_render_frame(
         input.frame,
-        line_height=editor_line_height,
+        line_height=@core.editor_line_height,
       )
   }
   let position = input.layout.position()
@@ -96,7 +96,7 @@ fn RenderingContext::restricted(
     translate_y: self.translate_y,
     content_transform: self.content_transform(),
     margin_transform: self.margin_transform(),
-    line_height: editor_line_height,
+    line_height: @core.editor_line_height,
   }
 }
 

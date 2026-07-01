@@ -119,7 +119,7 @@ fn Viewer::measure(self : Viewer, view : View) -> Unit {
   let rect = view.root.get_bounding_client_rect()
   let probe_width = view.probe.get_bounding_client_rect().get_width()
   if probe_width > 0.0 {
-    self.char_width = probe_width / char_probe_text.length().to_double()
+    self.char_width = probe_width / @core.char_probe_text.length().to_double()
   }
   let gutter_width = match self.frame {
     Some(frame) => self.gutter_width(frame)
@@ -149,7 +149,7 @@ fn Viewer::sync_content_width(self : Viewer) -> Unit {
     self.layout.dimensions().width
   } else {
     self.max_line_length.to_double() * self.measured_char_width() +
-    code_right_padding
+    @core.code_right_padding
   }
   self.layout.set_content_width(content_width) |> ignore
 }
@@ -159,7 +159,7 @@ fn Viewer::measured_char_width(self : Viewer) -> Double {
   if self.char_width > 0.0 {
     self.char_width
   } else {
-    fallback_char_width
+    @core.fallback_char_width
   }
 }
 
@@ -171,12 +171,13 @@ fn Viewer::gutter_width(
   frame : @view_model.RenderFrame,
 ) -> Double {
   let digits = frame.line_count.to_string().length()
-  let slots = if digits > gutter_min_digits {
+  let slots = if digits > @core.gutter_min_digits {
     digits
   } else {
-    gutter_min_digits
+    @core.gutter_min_digits
   }
-  slots.to_double() * self.measured_char_width() + gutter_padding_px.to_double()
+  slots.to_double() * self.measured_char_width() +
+  @core.gutter_padding_px.to_double()
 }
 
 ///|
@@ -192,7 +193,7 @@ fn Viewer::view_metrics(
     scroll_top: self.layout.position().scroll_top,
     scroll_left: self.layout.position().scroll_left,
     viewport_height: self.layout.dimensions().height,
-    line_height: editor_line_height,
+    line_height: @core.editor_line_height,
     char_width: self.measured_char_width(),
     gutter_width: self.gutter_width(frame),
     view_zones: self.layout.view_zones(),

@@ -48,7 +48,7 @@ fn Viewer::render_current_model(
   if fresh && (rotated || view_state is Restore(_)) {
     self.apply_view_state_policy(view_state)
   }
-  let window = self.layout.visible_window(overscan=line_overscan)
+  let window = self.layout.visible_window(overscan=@core.line_overscan)
   let frame = view_model.render_frame({
     start_line: window.start,
     end_line: window.end,
@@ -117,7 +117,7 @@ fn Viewer::rebuild_current_view_model_for_options(self : Viewer) -> Unit {
     Some(source) => {
       let view_model = self.build_view_model(source)
       self.apply_view_model_layout(view_model, source.tokenized.snapshot)
-      let window = self.layout.visible_window(overscan=line_overscan)
+      let window = self.layout.visible_window(overscan=@core.line_overscan)
       let frame = view_model.render_frame({
         start_line: window.start,
         end_line: window.end,

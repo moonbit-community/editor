@@ -2,7 +2,25 @@
 package "moonbit-community/editor/viewer/common/core"
 
 // Values
+pub let char_probe_text : String
+
+pub let code_right_padding : Double
+
 pub fn column_from_visible_column(String, Int, Int) -> Int
+
+pub let editor_horizontal_scrollbar_size : Double
+
+pub let editor_line_height : Int
+
+pub let editor_vertical_scrollbar_size : Double
+
+pub let fallback_char_width : Double
+
+pub let gutter_min_digits : Int
+
+pub let gutter_padding_px : Int
+
+pub let line_overscan : Int
 
 pub fn next_indent_tab_stop(Int, Int) -> Int
 

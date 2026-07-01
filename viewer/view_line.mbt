@@ -27,7 +27,7 @@ fn render_line_input_for_viewport(
     selections_on_line=selections_on_line_for(
       line_number, line_data, render_whitespace, selection_view_range,
     ),
-    vertical_scrollbar_size=editor_vertical_scrollbar_size,
+    vertical_scrollbar_size=@core.editor_vertical_scrollbar_size,
   )
 }
 
@@ -120,6 +120,6 @@ fn line_node_style(top : Int) -> String {
   "top:" +
   top.to_string() +
   "px;height:" +
-  editor_line_height.to_string() +
+  @core.editor_line_height.to_string() +
   "px"
 }

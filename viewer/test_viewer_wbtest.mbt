@@ -91,7 +91,7 @@ fn Viewer::test_set_viewport(
 /// `view is None`, so a windowing test calls this after scrolling.
 fn Viewer::test_refresh_frame(self : Viewer) -> @view_model.RenderFrame {
   let view_model = self.test_view_model()
-  let window = self.layout.visible_window(overscan=line_overscan)
+  let window = self.layout.visible_window(overscan=@core.line_overscan)
   let frame = view_model.render_frame({
     start_line: window.start,
     end_line: window.end,

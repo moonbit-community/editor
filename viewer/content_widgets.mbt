@@ -285,7 +285,7 @@ fn ContentWidgets::render_hover_widget(
     let space_above = hover_available_space_above(line_top)
     let space_below = hover_available_space_below(
       line_top,
-      editor_line_height.to_double(),
+      @core.editor_line_height.to_double(),
       editor_height,
     )
     let below = !hover_prefer_above(
@@ -424,7 +424,7 @@ fn handle_hover_wheel(
 ) -> Unit {
   let (delta_left, delta_top) = @scrollbar.normalized_wheel_delta(
     wheel,
-    editor_line_height.to_double(),
+    @core.editor_line_height.to_double(),
     widget.scrollable.native_page_delta(),
   )
   widget.scrollable.native_scroll_by(delta_left~, delta_top~)
@@ -439,13 +439,17 @@ let hover_horizontal_scrolling_by : Double = 30.0
 ///|
 /// Monaco `ContentHoverWidget.scrollUp`: `scrollTop -= fontInfo.lineHeight`.
 fn HoverWidgetDom::scroll_up(self : HoverWidgetDom) -> Unit {
-  self.scrollable.native_scroll_by(delta_top=-editor_line_height.to_double())
+  self.scrollable.native_scroll_by(
+    delta_top=-@core.editor_line_height.to_double(),
+  )
 }
 
 ///|
 /// Monaco `ContentHoverWidget.scrollDown`: `scrollTop += fontInfo.lineHeight`.
 fn HoverWidgetDom::scroll_down(self : HoverWidgetDom) -> Unit {
-  self.scrollable.native_scroll_by(delta_top=editor_line_height.to_double())
+  self.scrollable.native_scroll_by(
+    delta_top=@core.editor_line_height.to_double(),
+  )
 }
 
 ///|
@@ -692,7 +696,7 @@ fn ContentWidgets::mount_content_widget(
 ///|
 fn ContentWidget::style(self : ContentWidget) -> String {
   let top = match self.preferred_placement {
-    ContentWidgetBelow => self.anchor.top + editor_line_height
+    ContentWidgetBelow => self.anchor.top + @core.editor_line_height
     ContentWidgetAbove => self.anchor.top
   }
   let left = self.anchor.column.to_double() * self.char_width

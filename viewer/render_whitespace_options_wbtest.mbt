@@ -11,7 +11,7 @@
 fn viewport_of(viewer : Viewer) -> @view_layout.ViewportData {
   @view_model.viewport_data_from_render_frame(
     viewer.test_frame(),
-    line_height=editor_line_height,
+    line_height=@core.editor_line_height,
   )
 }
 

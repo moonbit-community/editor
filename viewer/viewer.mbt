@@ -184,7 +184,7 @@ pub fn Viewer::Viewer(
     did_resolve_hover: @base_common.Emitter::new(),
     did_scroll: @base_common.Emitter::new(),
     did_dispose: @base_common.Emitter::new(),
-    layout: @view_layout.ViewLayout::new(line_height=editor_line_height),
+    layout: @view_layout.ViewLayout::new(line_height=@core.editor_line_height),
     theme,
     placeholder,
     frame: None,
@@ -512,7 +512,9 @@ pub fn Viewer::scroll_to_position(
 /// Scrolls by a line-count delta using the viewer's fixed line height.
 pub fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
   self.apply_scroll_change(
-    self.layout.scroll_by(delta_top=(lines * editor_line_height).to_double()),
+    self.layout.scroll_by(
+      delta_top=(lines * @core.editor_line_height).to_double(),
+    ),
   )
 }
 

@@ -1,42 +1,4 @@
 ///|
-/// Pixel height of one rendered code line. Keep in sync with
-/// `--editor-line-height` in internal/shell/workbench/theme.css.
-let editor_line_height = 18
-
-///|
-/// Total horizontal padding of the line-number gutter. Keep in sync with
-/// `.line-number` padding in viewer/margin.css.
-let gutter_padding_px = 34
-
-///|
-/// Right padding of `.view-line-content`, part of the horizontal scroll extent.
-let code_right_padding = 16.0
-
-///|
-/// Minimum line-number digit slots.
-let gutter_min_digits = 5
-
-///|
-/// Editor scrollbar defaults from Monaco's `EditorScrollbar` option.
-let editor_vertical_scrollbar_size = 14.0
-
-///|
-let editor_horizontal_scrollbar_size = 12.0
-
-///|
-/// Lines rendered beyond each viewport edge so scrolling stays inside
-/// already-rendered DOM between window updates.
-let line_overscan = 20
-
-///|
-let char_probe_text = "0000000000"
-
-///|
-/// Fallback advance width for the editor's 12px monospace stack, used
-/// until the char probe is measured after attach.
-let fallback_char_width = 7.2
-
-///|
 /// The imperative browser `View` role: a root editor node owning an
 /// overflow guard, root scheduling, and an ordered list of stateful parts.
 /// Each part owns its own DOM nodes, private state, dirty flag, prepare step,
@@ -72,7 +34,7 @@ fn View::build() -> View {
   let probe = document.create_element("span")
   probe.set_attribute("class", "char-probe")
   probe.set_attribute("aria-hidden", "true")
-  probe.append_child(document.create_text_node(char_probe_text).as_node())
+  probe.append_child(document.create_text_node(@core.char_probe_text).as_node())
   let message = document.create_element("div")
   message.set_attribute("class", "source-message")
   let message_text = document.create_text_node("")

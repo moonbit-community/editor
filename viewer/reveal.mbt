@@ -264,7 +264,7 @@ fn Viewer::flush_horizontal_reveal(self : Viewer, view : View) -> Unit {
   match
     self.layout.compute_scroll_left_to_reveal(
       ranges,
-      vertical_scrollbar_width=editor_vertical_scrollbar_size,
+      vertical_scrollbar_width=@core.editor_vertical_scrollbar_size,
     ) {
     Some(scroll_left) => {
       // Set only `scroll_left`; the vertical reveal already settled `scroll_top`.

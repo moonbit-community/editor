@@ -195,9 +195,9 @@ fn Viewer::synced_window_frame(
 ) -> @view_model.RenderFrame {
   guard self.view_model is Some(view_model) else { return frame }
   let rendered = frame_window(frame)
-  let desired = self.layout.visible_window(overscan=line_overscan)
+  let desired = self.layout.visible_window(overscan=@core.line_overscan)
   if desired != rendered &&
-    @view_layout.window_needs_update(rendered, desired, line_overscan) {
+    @view_layout.window_needs_update(rendered, desired, @core.line_overscan) {
     let rebuilt = view_model.render_frame({
       start_line: desired.start,
       end_line: desired.end,

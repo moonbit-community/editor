@@ -8,8 +8,8 @@ priv struct EditorScrollbar {
 fn EditorScrollbar::new() -> EditorScrollbar {
   let editor_scrollable = @scrollbar.ScrollableElementDom::new(
     "lines-content moonbit-viewer-background",
-    vertical_size=editor_vertical_scrollbar_size,
-    horizontal_size=editor_horizontal_scrollbar_size,
+    vertical_size=@core.editor_vertical_scrollbar_size,
+    horizontal_size=@core.editor_horizontal_scrollbar_size,
   )
   editor_scrollable.set_wrapper_class(
     "monaco-scrollable-element editor-scrollable",

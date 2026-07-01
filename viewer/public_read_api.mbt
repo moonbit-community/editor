@@ -55,7 +55,7 @@ pub fn Viewer::get_visible_ranges_plus_viewport_above_below(
   self : Viewer,
 ) -> Array[@base_common.Range] {
   guard self.view_model is Some(view_model) else { return [] }
-  let line_height = editor_line_height.to_double()
+  let line_height = @core.editor_line_height.to_double()
   let height = self.layout.dimensions().height
   // `Math.round` of a non-negative ratio is `floor(x + 0.5)`.
   let rounded = (height / line_height + 0.5).to_int()

@@ -466,5 +466,5 @@ fn append_selection_piece(
 
 ///|
 fn selection_rect_style(top : Int, left : Double, width : Double) -> String {
-  "top:\{top}px;left:\{left}px;width:\{width}px;height:\{editor_line_height}px"
+  "top:\{top}px;left:\{left}px;width:\{width}px;height:\{@core.editor_line_height}px"
 }

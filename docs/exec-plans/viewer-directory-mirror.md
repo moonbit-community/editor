@@ -82,13 +82,14 @@ by reading each file's actual content (not just its filename), per files:
 
 | target package (`viewer/…`)            | Monaco source dir                              | root files that actually move here |
 |----------------------------------------|------------------------------------------------|--------------------|
-| `browser/view/`                        | `editor/browser/view/`                         | `view.mbt` (minus `Viewer::` glue → `view_host.mbt`), `view_context.mbt`, `view_part.mbt`, `view_layer.mbt`, `view_overlays.mbt`, `rendering_context.mbt`, `view_events.mbt`, `selection_measure.mbt` (defines `View::` methods — foreign-method rule keeps it out of a separate `selections` package) |
-| `browser/view_parts/content_widgets/`  | `editor/browser/viewParts/contentWidgets/`     | `content_widgets.mbt` (minus `Viewer::handle_hover_keydown` → `view_host.mbt`) + `.css` |
-| `browser/view_parts/overlay_widgets/`  | `editor/browser/viewParts/overlayWidgets/`     | `overlay_widgets.mbt` + `.css` |
-| `browser/view_parts/view_zones/`       | `editor/browser/viewParts/viewZones/`          | `view_zones.mbt` (minus `ViewZoneChangeAccessor` + `Viewer::` glue → `view_zones_host.mbt`) + `.css` |
-| `browser/view_parts/margin/`           | `editor/browser/viewParts/margin/`             | `margin.mbt` + `.css` |
-| `browser/view_parts/editor_scrollbar/` | `editor/browser/viewParts/editorScrollbar/`    | `editor_scrollbar.mbt` |
-| `browser/view_parts/view_lines/`       | `editor/browser/viewParts/viewLines/`          | `view_line.mbt` + `view_lines.css` |
+| `browser/view/`                        | `editor/browser/view/`                         | `view.mbt` (minus `Viewer::` glue → `view_host.mbt`), `view_context.mbt`, `view_part.mbt` (incl. every `impl ViewPart for X with ...` block — see cycle-backlog fix pattern below), `rendering_context.mbt`, `view_events.mbt`, `selection_measure.mbt` (defines `View::` methods — foreign-method rule keeps it out of a separate `selections` package) |
+| `browser/view_parts/content_widgets/`  | `editor/browser/viewParts/contentWidgets/`     | `content_widgets.mbt` (minus `Viewer::handle_hover_keydown` → `view_host.mbt`, minus its `impl ViewPart` block → `view_part.mbt`) + `.css` |
+| `browser/view_parts/overlay_widgets/`  | `editor/browser/viewParts/overlayWidgets/`     | `overlay_widgets.mbt` (minus its `impl ViewPart` block) + `.css` |
+| `browser/view_parts/view_zones/`       | `editor/browser/viewParts/viewZones/`          | `view_zones.mbt` (minus `ViewZoneChangeAccessor` + `Viewer::` glue → `view_zones_host.mbt`, minus its `impl ViewPart` block) + `.css` |
+| `browser/view_parts/margin/`           | `editor/browser/viewParts/margin/`             | `margin.mbt` (minus its `impl ViewPart` block) + `.css` |
+| `browser/view_parts/editor_scrollbar/` | `editor/browser/viewParts/editorScrollbar/`    | `editor_scrollbar.mbt` (minus its `impl ViewPart` block) |
+| `browser/view_parts/view_lines/`       | `editor/browser/viewParts/viewLines/`          | **Phase 0 correction:** `view_layer.mbt` (defines `ViewLines`, the actual recycler/view-part — the original guess placed this in `browser/view/`, wrong) + `view_line.mbt` (its per-line render helper) + `view_lines.css`, both minus their `impl ViewPart` block |
+| `browser/view_parts/selections/`       | `editor/browser/viewParts/selections/`         | **Phase 0 correction:** `view_overlays.mbt` (defines `ContentViewOverlays`, styled by `selections.css`+`view_overlays.css` — this is Monaco's `SelectionsOverlay`/`ContentViewOverlays` merged into one concrete type; `selection.mbt`/`selection_measure.mbt` do **not** go here, see reclassification below), minus its `impl ViewPart` block |
 | `browser/widget/code_editor/`          | `editor/browser/widget/codeEditor/`            | `viewer.mbt`, `viewer_options.mbt`, `public_read_api.mbt`, `reveal.mbt`, `view_host.mbt`, `view_zones_host.mbt`, plus the reclassified files below |
 | `contrib/hover/browser/`               | `editor/contrib/hover/browser/`                | `hover_controller.mbt` (now also holds `EditorEvent`/`EditorContext`), `hover_utils.mbt`, `hover_widget_geometry.mbt` |
 | existing `viewer/controller/`, renamed `browser/controller/` | `editor/browser/controller/`   | just the existing `mouse_handler.mbt` — `input.mbt`/`hit_test_dom.mbt` do **not** merge in (see reclassified below) |
@@ -98,13 +99,13 @@ each of these is 100% `Viewer::` methods (plus tiny pure helpers used only by
 that glue), so the foreign-method rule leaves no other place for them to live:
 `input.mbt` (guessed `browser/controller/`), `hit_test_dom.mbt` (guessed
 `browser/controller/`), `selection.mbt` (guessed `browser/view_parts/selections/`
-— its content is cursor dispatch + clipboard copy, not the selection-overlay
-renderer; that's `selection_measure.mbt`, reclassified above), `view_controller.mbt`
-(guessed `browser/view/` per Monaco's directory, but `Viewer` isn't part of
-`editor/browser/view/`'s Monaco content), `folding_controls.mbt` (guessed
-`contrib/folding/browser/` — same fate as hover's controller glue, see below),
-`render.mbt` and `registry.mbt` (were already ambiguous; both are `Viewer::`
-model-attach orchestration).
+by filename — its actual content is cursor dispatch + clipboard copy, not the
+selection-overlay *renderer*; that's `view_overlays.mbt`, see the corrected
+table above), `view_controller.mbt` (guessed `browser/view/` per Monaco's
+directory, but `Viewer` isn't part of `editor/browser/view/`'s Monaco content),
+`folding_controls.mbt` (guessed `contrib/folding/browser/` — same fate as
+hover's controller glue, see below), `render.mbt` and `registry.mbt` (were
+already ambiguous; both are `Viewer::` model-attach orchestration).
 
 `services.mbt` (`ViewerServices`, DOM-free) → `common/services` (multi-target;
 `Viewer`'s `services` field, browser-tier, imports it one-directionally, which
@@ -163,21 +164,29 @@ Increment B:
    `BrowserViewZone` `pub(all)` since `Viewer.view_zones : Array[BrowserViewZone]`
    and the host glue now construct/read it across the future package boundary.
 
-**A fourth cycle exists but its fix is self-contained within Increment E, not
-prerequisite work:** every `viewParts/*` file's `impl ViewPart for X with fn
-...(self, context: RenderingContext) ...` blocks reference `RenderingContext`/
+**A fourth cycle exists, and it forces Increment D and E to swap order.**
+Every `viewParts/*` file's `impl ViewPart for X with fn ...(self, context:
+RenderingContext) ...` blocks reference `RenderingContext`/
 `RestrictedRenderingContext`/`ViewEvent` (owned by `browser/view/`, via the
 `ViewPart` trait), while `browser/view/` needs the concrete part types (`View`
-struct fields, the `ViewPartHandle` enum, `View::build()`'s constructors) —
-bidirectional if the impl blocks stay in each view-part's own file. **Fix
-pattern for Increment E:** MoonBit's orphan rule permits implementing a trait
-for a foreign type from the package that owns the *trait*; so leave every
-`impl ViewPart for X with ...` block behind in `view_part.mbt`
-(`browser/view/`) when carving out `margin.mbt`, `overlay_widgets.mbt`,
-`editor_scrollbar.mbt`, `view_line.mbt`, `content_widgets.mbt`, `view_zones.mbt`
-— only the struct/constructor/DOM-render logic moves to each `view_parts/*`
-package. This makes `browser/view/ → view_parts/*` one-directional (view/ needs
-the concrete types; view_parts/* needs nothing back), acyclic.
+struct fields, the `ViewPartHandle` enum, `View::build()`'s 7 constructor
+calls) — bidirectional if the impl blocks stay in each view-part's own file.
+**Fix:** MoonBit's orphan rule permits implementing a trait for a foreign type
+from the package that owns the *trait*; so every `impl ViewPart for X with
+...` block moves into `view_part.mbt` (`browser/view/`) — only the
+struct/constructor/DOM-render logic moves to each `view_parts/*` package.
+This makes `browser/view/ → view_parts/*` one-directional (view/ needs the
+concrete types; view_parts/* needs nothing back), acyclic — **but only if
+all 7 `view_parts/*` packages already exist as separate packages before
+`browser/view/` is carved**, since `view_part.mbt`'s `ViewPartHandle` enum
+and `View::build()` reference all 7 concrete types at once. Carving
+`browser/view/` (D) before the parts (E) would make the still-undivided root
+`viewer` package and the new `browser/view/` package import each other — a
+real cycle, not just an anti-pattern. **So Increment E must run before D**,
+each part leaving its `impl ViewPart` block behind in the root's
+`view_part.mbt` until D finally carves it out last, once all 7 parts (plus
+`selections` and `view_lines`, per the corrected mapping above) are already
+independent packages.
 
 ---
 
@@ -225,18 +234,22 @@ the concrete types; view_parts/* needs nothing back), acyclic.
   in Increment F, `cursor_columns` → `common/core`, etc.). Do this before the
   browser carve-up so the common import surface is final and the browser packages
   import their stable paths once.
-- **D — Carve `browser/view/`.** Move `view.mbt`, `view_context.mbt`,
-  `view_part.mbt`, `view_layer.mbt`, `view_overlays.mbt`, `rendering_context.mbt`,
-  `view_events.mbt`, `selection_measure.mbt` into one package (per Phase 0's
-  corrected mapping above — `view_controller.mbt` does *not* move here, it's
-  reclassified to G). Highest fan-in; doing it early stabilizes the import
-  surface the parts depend on.
-- **E — Carve `browser/view_parts/*`,** one part per increment, leaf parts first
-  (fewest dependents): `view_zones` → `content_widgets` → `overlay_widgets` →
-  `margin` → `editor_scrollbar` → `view_lines`. (No `selections` part — see
-  Phase 0's reclassification above.) For each part, apply the ViewPart-trait
-  fix from the cycle backlog: leave `impl ViewPart for X with fn ...` behind in
-  `view_part.mbt`, move only the struct/constructor/DOM-render logic.
+- **E — Carve `browser/view_parts/*` first** (order swapped from the original
+  plan — see the cycle-backlog's 4th finding: `view_part.mbt`'s
+  `ViewPartHandle` enum needs all 7 concrete types, so carving `browser/view/`
+  before the parts exist as separate packages is a real cycle, not just an
+  anti-pattern), one part per increment, leaf parts first (fewest dependents):
+  `view_zones` → `content_widgets` → `overlay_widgets` → `margin` →
+  `editor_scrollbar` → `view_lines` (`view_layer.mbt`+`view_line.mbt`) →
+  `selections` (`view_overlays.mbt`). For each part, apply the ViewPart-trait
+  fix: leave its `impl ViewPart for X with fn ...` block behind in the root's
+  `view_part.mbt` (it moves to `browser/view/` only in D, below); move only
+  the struct/constructor/DOM-render logic + its `.css`.
+- **D — Carve `browser/view/` last**, once all 7 parts above are already
+  separate packages. Move `view.mbt`, `view_context.mbt`, `view_part.mbt`
+  (now also holding all 7 `impl ViewPart` blocks moved out of the parts in E),
+  `rendering_context.mbt`, `view_events.mbt`, `selection_measure.mbt` into one
+  package (`view_controller.mbt` does *not* move here — reclassified to G).
 - **F — Rename `viewer/controller/` to `browser/controller/`.** Just the
   existing `mouse_handler.mbt`/`mouse_target` content — `input.mbt` and
   `hit_test_dom.mbt` do not merge in (reclassified to G in Phase 0).

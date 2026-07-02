@@ -26,7 +26,7 @@ implementation details.
   `RemoteLanguageClient` (the `language` provider traits, registered with
   the viewer's selected `Languages` registry at startup).
 - Own active-model composition: selecting a URI closes the previous source,
-  reads the next source payload, converts it into `viewer/model.TextModel`,
+  reads the next source payload, converts it into `viewer/common/model.TextModel`,
   starts the host watch, applies watch updates through the viewer's model API,
   and decides how missing or failed documents affect the shell status and
   empty-viewer placeholder.

@@ -7,7 +7,7 @@ drives every `browser/view_parts/*` package.
 ## Responsibilities
 
 - `View` (`view.mbt`): the root `<section>`, its overflow guard/probe/message
-  nodes, one instance of each of the 7 view parts, and `View::render`'s
+  nodes, one instance of each of the 8 view parts, and `View::render`'s
   Monaco-shaped coordinated render (dispatch view events → collect dirty
   parts → render lines first → prepare/write the rest). `pub(all)`: `Viewer`
   (root `viewer` package) holds `view : View?` and reads several fields
@@ -18,7 +18,7 @@ drives every `browser/view_parts/*` package.
   (root `viewer` package's `view_host.mbt`) builds and `View::render` reads,
   the local analog of `View` reading its owning `CodeEditorWidget`.
 - `ViewPart` (`view_part.mbt`): the private `ViewEventHandler`/render-lifecycle
-  trait, plus every `impl ViewPart for X with ...` block for the 7 concrete
+  trait, plus every `impl ViewPart for X with ...` block for the 8 concrete
   view-part types. Kept here rather than in each view-part's own package —
   see "Boundaries" below.
 - `RenderingContext`/`RestrictedRenderingContext` (`rendering_context.mbt`):
@@ -32,10 +32,10 @@ drives every `browser/view_parts/*` package.
 
 ## Boundaries
 
-- Implements the `ViewPart` trait for all 7 concrete view-part types
+- Implements the `ViewPart` trait for all 8 concrete view-part types
   (`ViewZones`, `ViewLines`, `MarginViewOverlays`, `OverlayWidgets`,
-  `EditorScrollbar`, `ContentViewOverlays`, `ContentWidgets`) here, not in
-  each part's own package. MoonBit's orphan rule only lets the
+  `EditorScrollbar`, `ContentViewOverlays`, `ContentWidgets`, `ViewCursors`)
+  here, not in each part's own package. MoonBit's orphan rule only lets the
   *trait-owning* package implement a trait for a foreign type, and this
   package needs every concrete type anyway (`View`'s fields, the
   `ViewPartHandle` enum) — see `docs/exec-plans/viewer-directory-mirror.md`'s

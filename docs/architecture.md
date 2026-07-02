@@ -33,10 +33,9 @@ Reference trees are research inputs only. Product code must not import from
 - `viewer`: public browser-backed readonly viewer facade. It owns DOM creation,
   CSS-facing editor structure, browser input capture, widgets, lifecycle events,
   and model installation.
-- `viewer/common/model`: readonly `TextModel` and `TextSnapshot` plus the
-  decoration types (`Decoration`, `DecorationSet`, merged from the former
-  `viewer/decorations`). This is the editor model identity used by viewer and
-  language-provider APIs.
+- `viewer/common/model`: readonly `TextModel` and `TextSnapshot` plus model
+  decorations (interval-tree storage backing `TextModel::delta_decorations`).
+  This is the editor model identity used by viewer and language-provider APIs.
 - `viewer/common/view_model`, `viewer/common/view_layout` (with the view-line
   renderer merged in), and `viewer/common/core`: DOM-free rendering, projection,
   layout, geometry, and cursor-column logic.
@@ -50,32 +49,27 @@ Reference trees are research inputs only. Product code must not import from
   never imports these (the folding indent fallback was inverted into the folding
   controller so the tier flows `contrib -> common`, not the reverse).
 - `viewer/common`: a shrinking residual of the former grab-bag (`line_html`,
-  `mouse_target`). `mouse_target.mbt`'s `MouseTargetKind`/`MouseTarget` value
-  types and its DOM-free `hit_test`/`ViewMetrics` algorithm stay here rather
-  than moving to `viewer/browser/controller` (Increment F correction,
-  `docs/exec-plans/viewer-directory-mirror.md`): `viewer/contrib/hover`
-  (multi-target) depends on `MouseTarget` directly, so moving it into a
-  js-only package would break hover's native build — the same reasoning that
-  keeps the folding/hover contrib models out of `contrib/*/browser`.
+  `mouse_target`). The DOM-free hit-testing value types and algorithm stay
+  here (not in the js-only `viewer/browser/controller`) because the
+  multi-target `viewer/contrib/hover` depends on `MouseTarget` directly.
 - `viewer/browser/controller` and `viewer/ui/scrollbar`: browser-UI
   subpackages. They may use narrow browser bindings but do not import the
   parent `viewer` package.
-- `viewer/browser/view_parts/*` (`content_widgets`, `editor_scrollbar`, `margin`,
-  `overlay_widgets`, `selections`, `view_lines`, `view_zones`) and
-  `viewer/browser/view`: the carved-out Three-Tier Mirror browser view and
-  view parts (Increments D and E, `docs/exec-plans/viewer-directory-mirror.md`).
-  Each `impl ViewPart for X with ...` block lives in `viewer/browser/view/view_part.mbt`
-  (the trait-owning package), not in the concrete part's own package — MoonBit's
-  orphan rule and the cycle backlog in the exec-plan explain why. What remains
-  flat root `viewer/*.mbt` files is `Viewer`-facing glue only (`viewer.mbt`,
-  `view_host.mbt`, controller/input/reveal hosts, etc.) — the foreign-method
-  rule keeps every `Viewer::` method in `Viewer`'s own package.
-- `viewer/common/inline_decorations`: a dedicated Monaco conformance/support
-  package for inline-decoration algorithms. It is not part of the live viewer
-  import chain unless a future integration explicitly wires it in.
+- `viewer/browser/view` and `viewer/browser/view_parts/*` (`content_widgets`,
+  `editor_scrollbar`, `margin`, `overlay_widgets`, `selections`,
+  `view_cursors`, `view_lines`, `view_zones`): the browser view and its view
+  parts. Every `impl ViewPart for X` block lives in
+  `viewer/browser/view/view_part.mbt`, the trait-owning package — see its
+  README for the orphan-rule/cycle reasoning. The flat root `viewer/*.mbt`
+  files are `Viewer`-facing glue only: the foreign-method rule keeps every
+  `Viewer::` method in `Viewer`'s own package.
+- `viewer/common/inline_decorations`: the faithful port of Monaco's
+  inline-decoration computers, kept as its own package for name-collision
+  reasons (see its README). Live: `viewer/common/view_model`'s
+  `ViewModelDecorations` builds on it.
 - `base/common`: host-neutral URI, lifecycle, and coordinate primitives.
 - `language`: backend-neutral readonly semantic provider contracts over
-  `viewer/model.TextModel`.
+  `viewer/common/model.TextModel`.
 - `syntax` and `syntax/lang_*`: tokenization contracts and concrete
   compile-time lexers. Hosts import concrete language packages and register them
   with the viewer.
@@ -86,11 +80,8 @@ Reference trees are research inputs only. Product code must not import from
 The `viewer/` tree mirrors Monaco's `vs/editor/{common,browser,contrib}` at
 directory granularity (one Monaco directory → one MoonBit package), staged in
 `docs/exec-plans/viewer-directory-mirror.md`. The mirror is functionally
-complete as of that plan's Increment F, with one deliberate, permanent
-exception: the root `viewer` package keeps the top-level `Viewer`
-implementation directly rather than carving it into `browser/widget/code_editor/`
-behind an `export.mbt` facade (Decision D2-REVERSED — see the exec-plan for
-why). The tiers are:
+complete, with one deliberate, permanent exception — the root `viewer`
+package (last bullet below). The tiers are:
 
 - `viewer/common/**` — DOM-free logic (model, view_model, view_layout, cursor,
   languages, decorations, view-line renderer, core, tokens). Mirrors
@@ -109,17 +100,14 @@ why). The tiers are:
   populated for `hover`: the DOM-free hover state machine already covers it
   (see above); the only DOM-touching hover code is `content_widgets` and the
   root package's dispatch glue.
-- root `viewer` — the one deliberate exception to directory-granularity
-  (`docs/exec-plans/viewer-directory-mirror.md`, Decision D2-REVERSED): it
+- root `viewer` — the one deliberate exception to directory-granularity: it
   holds the top-level `Viewer`/`ViewerOptions`/public read-API implementation
-  directly — Monaco's `editor/browser/widget/codeEditor/` role — and doubles
-  as the public entry point, the analog of `vs/editor/editor.api.ts`. There is
-  no `export.mbt` facade: scoping that carve found it would need ~80
-  hand-written forwarding items (every `pub fn Viewer::` method + public type)
-  for zero behavior change, so the decision was reversed and the root package
-  keeps its real files. `viewer/pkg.generated.mbti` is still the reviewable
-  public-API contract, generated from the real code. Stays js-only because it
-  owns DOM.
+  directly (Monaco's `editor/browser/widget/codeEditor/` role) and doubles as
+  the public entry point, the analog of `vs/editor/editor.api.ts`. There is no
+  `export.mbt` facade (Decision D2-REVERSED,
+  `docs/exec-plans/viewer-directory-mirror.md`); `viewer/pkg.generated.mbti`
+  is the reviewable public-API contract, generated from the real code. Stays
+  js-only because it owns DOM.
 
 `scripts/check-architecture.mbtx` enforces the tier invariants (the
 MoonBit-toolchain-uncatchable half): every `viewer/browser/**` and
@@ -157,8 +145,8 @@ one fails the native build.
 ```text
 host app
   -> viewer.Viewer
-  -> viewer/model.TextModel
-  -> optional viewer/languages registrations
+  -> viewer/common/model.TextModel
+  -> optional viewer/common/languages registrations
 ```
 
 The host owns files, transport, persistence, reload policy, shell chrome, and
@@ -183,7 +171,7 @@ internal/shell/server_host_native/main
 ```
 
 The workbench adapts internal workspace/protocol payloads into host-owned
-providers and `viewer/model.TextModel` values before calling viewer APIs. The
+providers and `viewer/common/model.TextModel` values before calling viewer APIs. The
 backend stack exists to exercise the viewer, not to define the reusable viewer
 surface.
 
@@ -193,7 +181,7 @@ surface.
 viewer/common/model.TextModel
   -> viewer/common/view_model
   -> viewer/common/view_layout   (view-line renderer merged in)
-  -> viewer DOM view
+  -> viewer/browser/view (DOM)
 ```
 
 DOM-free text, projection, layout, viewport, scrollbar, and hit-test state live
@@ -204,14 +192,14 @@ subpackages.
 ## Placement Rules
 
 - Public readonly editor behavior belongs in `viewer`.
-- Editor text identity belongs in `viewer/model`; do not expose
+- Editor text identity belongs in `viewer/common/model`; do not expose
   `internal/shell/workspace.DocumentSnapshot` through viewer or provider APIs.
 - DOM-free model, layout, viewport, render-line, and decoration logic belongs in
   the focused `viewer/*` common-layer packages.
 - Browser input and browser widget helpers may live in browser-UI subpackages
   such as `viewer/browser/controller` and `viewer/ui/scrollbar`.
 - Semantic provider contracts belong in `language`; runtime provider
-  registration belongs in `viewer/languages`.
+  registration belongs in `viewer/common/languages`.
 - Concrete tokenizers belong in `syntax/lang_*` and are imported only by
   composition layers.
 - Reference app behavior belongs under `internal/shell`.
@@ -259,8 +247,8 @@ Offsets and columns are UTF-16 code units.
   convention: line numbers and columns are 1-based.
 - `base/common.OffsetRange` is a half-open 0-based UTF-16 offset span
   `[start, end_exclusive)`.
-- `viewer/model.TextSnapshot` owns conversion between offsets and line/column
-  positions/ranges.
+- `viewer/common/model.TextSnapshot` owns conversion between offsets and
+  line/column positions/ranges.
 - LSP wire positions are 0-based and convert at the shell/backend boundary.
 
 Keep conversions at the boundary where coordinate spaces meet. Code that needs

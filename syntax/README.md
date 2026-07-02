@@ -8,7 +8,7 @@ MoonBit's compile-time `lexmatch` lexer generator.
 
 - Own the tokenization contracts: `HighlightTag` (the semantic token
   classification; the viewer maps each tag to Monaco token metadata in
-  `viewer/view_model/token_theme.mbt`), `LineToken`, `TokenizerState`, and the
+  `viewer/common/view_model/token_theme.mbt`), `LineToken`, `TokenizerState`, and the
   `LineTokenizer`
   trait (Monaco's `ITokenizationSupport`/`IState` pair — line-at-a-time
   tokenization with an explicit carried state whose derived equality
@@ -35,7 +35,7 @@ is deliberately no runtime grammar loading (no
 importing a package, or implementing `LineTokenizer` yourself.
 
 Import rules (enforced by `scripts/check-architecture.mbtx`):
-`syntax/lang_*` may import only `syntax` plus `viewer/model` test support;
+`syntax/lang_*` may import only `syntax` plus `viewer/common/model` test support;
 only composition layers (`internal/shell/workbench`,
 `internal/shell/examples/*`, and browser test entrypoints) may import
 `syntax/lang_*`; `viewer/common`, `viewer`, and backend policy packages must not.
@@ -89,8 +89,8 @@ offsets are UTF-16 code units (the repo position convention);
 
 ## Boundaries
 
-- `syntax` may depend only on `base/common` and `viewer/model`;
-  `syntax/lang_*` only on `syntax` plus `viewer/model` test support. No
+- `syntax` may depend only on `base/common` and `viewer/common/model`;
+  `syntax/lang_*` only on `syntax` plus `viewer/common/model` test support. No
   module-level state anywhere in this subtree.
 - Must not depend on workspace loading, language providers, DOM,
   viewer backends, `internal/shell` packages, or reference submodules.

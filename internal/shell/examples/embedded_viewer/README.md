@@ -13,7 +13,7 @@ expands a folder, and navigates between files with no websocket opened.
 ## What it demonstrates
 
 - The host owns document storage and selection. Here it is a `Map` of URI to
-  text; opening a file should build a `viewer/model.TextModel` and pass it to
+  text; opening a file should build a `viewer/common/model.TextModel` and pass it to
   the viewer model API.
 - Implementing `@workspace.WorkspaceTreeProvider` (root + one-level
   resolve) is all the tree widget needs; here it is a `Map` of directory

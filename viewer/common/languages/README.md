@@ -1,4 +1,4 @@
-# viewer/languages
+# viewer/common/languages
 
 The viewer's language-feature registry: the MoonBit analog of Monaco's
 `ILanguageFeaturesService` together with the relevant `vs/editor/common`
@@ -21,9 +21,8 @@ the hover feature resolve them through it.
 ## Boundaries
 
 - Pure logic: no DOM, browser, or native FFI; builds on `js` and `native`.
-- Depends on `base/common`, `language`, `platform/log`, `syntax`,
-  `viewer/model`, and `viewer/folding` (the indentation fallback for
-  `folding_ranges_for_model`).
-- Depends on neither the `viewer` browser package nor `viewer/hover`. The
-  dependency edges are one-directional: `viewer -> viewer/languages` and
-  `viewer/hover -> viewer/languages`.
+- Depends on `base/common`, `language`, `platform/log`, `syntax`, and
+  `viewer/common/model`.
+- Depends on neither the root `viewer` package nor `viewer/contrib/hover`. The
+  dependency edges are one-directional: `viewer -> viewer/common/languages` and
+  `viewer/contrib/hover -> viewer/common/languages`.

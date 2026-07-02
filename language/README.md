@@ -17,7 +17,7 @@ Readonly language-provider contracts.
 
 ## Boundaries
 
-- May depend on `base/common`, `viewer/model`, and JSON support.
+- May depend on `base/common`, `viewer/common/model`, and JSON support.
 - Must not import viewer browser implementation packages, DOM, native host
   packages, server packages, or any `internal/shell` package.
 - Must not depend on source-provider payloads; host packages adapt them before

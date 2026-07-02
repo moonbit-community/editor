@@ -8,17 +8,14 @@ view-part wrapper: the custom scrollbar geometry/DOM itself lives in
 ## Responsibilities
 
 - `EditorScrollbar`: owns one `ScrollableElementDom` (the lines-content
-  scrollable wrapper) and the dirty flag. `pub(all)` for the same reason as
-  `viewer/browser/view_parts/view_zones`'s types — its `ViewPart` trait impl
-  lives in `viewer/browser/view/view_part.mbt`, not here.
+  scrollable wrapper) and the dirty flag.
 - `wrapper` / `content` / `scrollable`: accessors the root `viewer` package's
-  input-hookup glue (`hook_view_input`) and other view parts (`view.mbt`'s
-  `View::build`) need.
+  input-hookup glue (`hook_view_input`) and `View::build` need.
 
 ## Boundaries
 
-- Does not implement the `ViewPart` trait here — see this refactor's
-  cycle-backlog note in `docs/exec-plans/viewer-directory-mirror.md` and
-  `viewer/browser/view_parts/view_zones/README.md`.
+- The `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, the
+  trait-owning package — see its README for the orphan-rule/cycle reasoning.
+  That is also why the types here are `pub(all)`.
 - A browser-tier package (`supported_targets = "js"`); may import
   `viewer/common/core`, `viewer/ui/scrollbar`, and `rabbita/dom`.

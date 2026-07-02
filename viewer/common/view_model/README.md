@@ -1,52 +1,52 @@
-# viewer/view_model
+# viewer/common/view_model
 
 Pure common-layer view-model state, the MoonBit-owned package boundary for
-Monaco's readonly `ViewModel`, `ViewModelLinesFromModelAsIs`,
-`ViewModelLinesFromProjectedModel`, `CoordinatesConverter`, tokenized
-model-line source data, and viewport-scoped render frames.
+Monaco's readonly `ViewModel`, `ViewModelLines*`, `CoordinatesConverter`,
+`ViewModelDecorations`, tokenized model-line source data, and viewport-scoped
+render frames.
 
 ## Responsibilities
 
-- Own per-version token buckets through `TokenizedDocument`.
-- Own provider/decorator buckets through `FrameSource`.
+- Own per-version token buckets through `TokenizedDocument` and
+  provider/decorator buckets through `FrameSource`.
 - Own render-frame data: `FrameViewport`, `RenderLine`, and `RenderFrame`.
   Render lines carry token streams and injected inline decorations; the browser
   layer receives frame data rather than recomputing model state.
-- Own the readonly identity view model: `ViewModel`,
-  `ViewModelLinesFromModelAsIs`, `ViewModelDecorations`,
-  `CoordinatesConverter`, and `IdentityCoordinatesConverter`.
-- Own projected view-line data for soft wrap through
-  `ViewModelLinesFromProjectedModel`, `ModelLineProjection`,
-  `ModelLineProjectionData`, and `LineBreaksComputer`.
-- Own readonly folding normalization through `FoldingModel` and `HiddenRange`
-  data; projected view lines consume hidden ranges so folded model lines produce
-  no view lines while coordinates remain model-owned.
-- Own readonly injected text through `InjectedText` and `ProjectedTextLine`.
-  Inlay hints are projected before line breaking so hint width participates in
-  wrapping, while render-line source mappings keep hit testing and decorations
+- Own the readonly view models: `ViewModel`, `ViewModelLinesFromModelAsIs`,
+  `ViewModelLinesFromProjectedModel` (soft wrap: `ModelLineProjection`,
+  `ModelLineProjectionData`, `LineBreaksComputer`), and the coordinates
+  converters.
+- Own `ViewModelDecorations`: model decorations resolved into per-view-line
+  inline decorations through `viewer/common/inline_decorations`' computers,
+  with this package providing the concrete model/converter trait impls.
+- Own readonly folding normalization (`FoldingModel`, `HiddenRange`) and
+  readonly injected text (`InjectedText`, `ProjectedTextLine`). Inlay hints are
+  projected before line breaking so hint width participates in wrapping, while
+  render-line source mappings keep hit testing and decorations
   model-offset based.
 - Own readonly `Selection` model ranges and copy helpers. Plain copy slices the
   selected `TextSnapshot` range directly, so browser-only injected text is
   excluded by default; rich copy has a model-only escaped fallback while the
   browser layer styles visible source tokens with their token classes.
-- Own DOM-free conversion from `RenderLine` to
-  `@view_line_renderer.ViewLineRenderingData` and `RenderLineInput`.
+- Own the token metadata encoding (`LineTokens`, token-theme mapping in
+  `token_theme.mbt`) and the DOM-free conversion from `RenderLine` to the
+  renderer inputs in `viewer/common/view_layout`.
 
 ## Boundaries
 
-- May depend on `base/common`, `viewer/model`, `syntax`, `viewer/decorations`,
-  `language`, JSON support, and `viewer/view_line_renderer`.
-- Must not depend on parent `viewer/common`, `viewer/view_layout`,
-  `viewer`, `web`, server, transport, workspace, or host packages.
+- May depend on `base/common`, `viewer/common/model`,
+  `viewer/common/inline_decorations`, `viewer/common/view_layout` (the layout
+  and view-line-renderer layer below this one), `language`, `syntax`, and JSON
+  support.
+- Must not depend on the parent `viewer/common`, the root `viewer`, browser,
+  server, transport, workspace, or host packages.
 - Must not declare FFI.
-- `ViewportData` lives in `viewer/view_layout`, which can depend on this
-  package without a cycle.
 
 ## Token Model
 
 `TokenizedDocument` stores `LineTokens` per model line. MoonBit lexer tokens are
 encoded into Monaco-shaped metadata words, and render frames pass those token
-streams to `viewer/view_line_renderer`.
+streams to the view-line renderer.
 
 Projected and injected view lines derive from the same token model. Inlay-hint
 text is represented as inline decoration data, not as token color data.
@@ -56,9 +56,6 @@ part of the current readonly viewer contract.
 
 ## Checks
 
-- Package tests live in `tokenized_document_test.mbt`,
-  `render_frame_test.mbt`, `view_model_test.mbt`, and
-  `folding_model_test.mbt`, plus focused selection tests in
-  `selection_test.mbt`.
-- Run `moon test --target js viewer/view_model` and
-  `moon test --target native viewer/view_model` for this package.
+- Local tests plus `*_reference_test.mbt` / `*_reference_wbtest.mbt`
+  conformance ports (line tokens, line-breaks computer, text-model tokens).
+- Run `moon test --target all viewer/common/view_model` for this package.

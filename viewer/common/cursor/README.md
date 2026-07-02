@@ -1,7 +1,8 @@
-# viewer/cursor
+# viewer/common/cursor
 
-Backend-neutral cursor/selection state for the readonly viewing path. A faithful
-port of Monaco's cursor stack, reduced to what a selection-only viewer needs.
+Backend-neutral cursor/selection state for the readonly viewing path. A
+faithful port of Monaco's cursor stack, reduced to what a selection-only
+viewer needs.
 
 ## Responsibilities
 
@@ -21,8 +22,8 @@ port of Monaco's cursor stack, reduced to what a selection-only viewer needs.
 ## Boundaries
 
 - Pure logic: no DOM, browser, or native FFI; builds on `js` and `native`.
-- Depends only on `base/common` (positions) and `viewer/view_model` (the
-  coordinates converter and `Selection`).
+- Depends only on `base/common` (positions) and `viewer/common/view_model`
+  (the coordinates converter and `Selection`).
 
 ## Deliberate deviations from Monaco
 

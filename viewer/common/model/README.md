@@ -1,6 +1,7 @@
-# viewer/model
+# viewer/common/model
 
-Readonly editor text model and immutable text snapshots.
+Readonly editor text model, immutable text snapshots, and model decorations.
+Mirrors Monaco's `editor/common/model`.
 
 ## Responsibilities
 
@@ -8,8 +9,12 @@ Readonly editor text model and immutable text snapshots.
   UTF-16 length, line text, slicing, and offset/position conversion.
 - Own `TextModel`, the URI-bearing readonly editor model with display name,
   language id, version, revision, and snapshot identity.
-- Provide the current-document URI plus version comparison used by async feature
-  freshness guards.
+- Own model decorations: interval-tree storage (a port of Monaco's
+  `intervalTree.ts`) behind `TextModel::delta_decorations` and the
+  range-query accessors, with `DeltaDecoration` / `ModelDecorationOptions` as
+  the public shapes.
+- Provide the current-document URI plus version comparison used by async
+  feature freshness guards.
 
 ## Boundaries
 
@@ -20,6 +25,6 @@ Readonly editor text model and immutable text snapshots.
 
 ## Checks
 
-- Package tests live in `text_model_test.mbt`.
-- Run `moon test viewer/model` for focused coverage.
-
+- Local tests plus `*_reference_test.mbt` / `*_reference_wbtest.mbt`
+  conformance ports of Monaco's model and interval-tree suites.
+- Run `moon test --target all viewer/common/model` for focused coverage.

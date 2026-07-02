@@ -27,7 +27,7 @@ The geometry types are a 1:1 port of Monaco's range system:
   viewer avoids panics).
 
 `Position` is one-based on both axes (`line_number` starts at 1, `column` starts
-at 1). The offset-to-position boundary lives in `viewer/model.TextSnapshot`;
+at 1). The offset-to-position boundary lives in `viewer/common/model.TextSnapshot`;
 wire formats such as LSP convert at their adapter boundary.
 
 ## Boundaries

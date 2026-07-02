@@ -1,4 +1,4 @@
-# viewer/folding
+# viewer/contrib/folding
 
 Backend-neutral folding model for the readonly viewing path. A port of the pure
 parts of Monaco's `contrib/folding/`, reduced to what a readonly viewer needs.
@@ -19,14 +19,14 @@ parts of Monaco's `contrib/folding/`, reduced to what a readonly viewer needs.
   as matcher closures since there is no regex engine).
 
 The browser-side folding *controls* — the gutter toggle, `Viewer::toggle_fold`,
-`Viewer::set_folding_ranges`, and the re-render — stay on the viewer, which owns
-the DOM and the editor state. This package is the pure model those controls
-operate on.
+`Viewer::set_folding_ranges`, and the re-render — stay with the root `viewer`
+package, which owns the DOM and the editor state. This package is the pure
+model those controls operate on.
 
 ## Boundaries
 
 - Pure logic: no DOM, browser, or native FFI; builds on `js` and `native`.
-- Depends only on `language` (`FoldingRange`) and `viewer/model` (`TextModel` /
-  `TextSnapshot`, for the fallback computation).
-- Depends on neither the `viewer` browser package nor any other view part. The
-  dependency edge is one-directional: `viewer -> viewer/folding`.
+- Depends only on `language` (`FoldingRange`) and `viewer/common/model`
+  (`TextModel` / `TextSnapshot`, for the fallback computation).
+- Depends on neither the root `viewer` package nor any view part. The
+  dependency edge is one-directional: `viewer -> viewer/contrib/folding`.

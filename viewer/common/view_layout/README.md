@@ -1,47 +1,37 @@
-# viewer/view_layout
+# viewer/common/view_layout
 
-Pure common-layer layout and scroll state, the MoonBit-owned package boundary
-for Monaco's `viewLayout`, `linesLayout`, scrollable state, scrollbar geometry,
-viewport-window derivation, and readonly view-zone displacement.
+Pure common-layer layout, scroll state, and the view-line renderer: the
+MoonBit-owned package boundary for Monaco's `viewLayout`, `linesLayout`,
+scrollable state, scrollbar geometry, reveal math, view-zone layout, and
+`viewLineRenderer` (the renderer package was merged in here).
 
 ## Responsibilities
 
 - Own backend-neutral scroll truth: `Scrollable`, `ScrollDimensions`,
-  `ScrollPosition`, and `ScrollChange`.
+  `ScrollPosition`, and `ScrollChange`, plus the reveal-range math.
 - Own line layout and line-window derivation. `LinesLayout` is the
   Monaco-shaped line/whitespace layout primitive; `ViewLayout` adapts it to the
   viewer's viewport, view-zone, and scroll-window needs.
-- Own pre-DOM viewport data: `ViewportData` converts `ViewModel`/`RenderFrame`
-  data plus layout windows into visible `ViewLineRenderingData` and line
-  decorations, including `ViewZoneViewportData` for zones intersecting the
-  rendered window.
-- Own pure scrollbar geometry through `ScrollbarState`.
+- Own the DOM-free view-line renderer: `RenderLineInput` becomes escaped line
+  HTML plus `CharacterMapping`/`DomPosition` data, with inline/line decoration
+  normalization and current-line highlight logic.
+- Own pre-DOM viewport data (`ViewportData`, `ViewZoneViewportData`) and pure
+  scrollbar geometry (`ScrollbarState`).
 - Own view-zone layout data (`ViewZone`) as common-layer model state. Browser
-  DOM mounting and the add/update/remove accessor stay in `viewer`.
+  DOM mounting and the change accessor stay with the viewer packages.
 
 ## Boundaries
 
-- May depend on `base/common`, `viewer/decorations`,
-  `viewer/view_line_renderer`, and `viewer/view_model`. Tests may import
-  `language`, `viewer/model`, and `syntax` for fixture setup.
-- Must not depend on `viewer/common`, `viewer`, `web`, server, transport,
-  workspace, or host packages.
+- Depends only on `base/common`. This is the bottom layer of the viewer common
+  tier: `viewer/common/view_model` and the browser packages build on it.
+- Must not depend on `viewer/common`, `viewer/common/view_model`, the root
+  `viewer`, browser, server, transport, workspace, or host packages.
 - Must not declare FFI.
-- Browser DOM mounting and event handling stay in `viewer`.
-
-## Conformance
-
-- `lines_layout_reference_test.mbt` ports Monaco's `linesLayout.test.ts` for the
-  layout primitive.
-- `view_layout_test.mbt` covers the viewer adapter: viewport windows,
-  view-zone placement, and scroll-window decisions.
-- The current viewer assumes uniform line heights; variable line-height support
-  is outside the readonly contract.
 
 ## Checks
 
-- Package tests live in `view_layout_test.mbt`, `view_window_test.mbt`,
-  `scrollbar_state_test.mbt`, and `lines_layout_reference_test.mbt`, with
-  viewport integration in `view_model_viewport_test.mbt`.
-- Run `moon test --target js viewer/view_layout` and
-  `moon test --target native viewer/view_layout` for this package.
+- Local tests plus `*_reference_test.mbt` conformance ports (`linesLayout`,
+  `viewLineRenderer`, prefix-sum computer, current-line highlight).
+- The current viewer assumes uniform line heights; variable line-height support
+  is outside the readonly contract.
+- Run `moon test --target all viewer/common/view_layout` for this package.

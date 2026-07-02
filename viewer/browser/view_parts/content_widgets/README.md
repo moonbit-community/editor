@@ -10,9 +10,7 @@ content widget.
 
 - `ContentWidgets`: the `.contentWidgets`/`.overflowingContentWidgets`
   container pair, the hover widget's DOM (`HoverWidgetDom`), dirty flag, and
-  prepared render input. `pub(all)` for the same reason as
-  `viewer/browser/view_parts/view_zones`'s types — its `ViewPart` trait impl
-  lives in `viewer/browser/view/view_part.mbt`, not here.
+  prepared render input.
 - `render_hover_widget` / `ensure_hover_widget`: positions, sizes, and
   (once, read-after-write) measures the hover widget, mirroring Monaco's
   `RenderedContentHover`/`ResizableContentWidget` placement logic.
@@ -34,16 +32,15 @@ This is the one view part with real cross-cutting dependencies beyond the
   `HoverController::measured`.
 - `render_hover_widget`/`ensure_hover_widget` take a `HoverWidgetHost`, not
   `ViewContext` — `ViewContext` lives in `browser/view/`, which needs
-  `ContentWidgets` back for `View`'s fields and the `ViewPartHandle` enum, so
-  importing it here would cycle. `view_part.mbt`'s `render` impl unpacks
-  `context.view_context`'s fields into a `HoverWidgetHost` at the call
-  boundary.
+  `ContentWidgets` back for `View`'s fields, so importing it here would
+  cycle. `view_part.mbt`'s `render` impl unpacks `ViewContext` fields into a
+  `HoverWidgetHost` at the call boundary.
 
 ## Boundaries
 
-- Does not implement the `ViewPart` trait here — see this refactor's
-  cycle-backlog note in `docs/exec-plans/viewer-directory-mirror.md` and
-  `viewer/browser/view_parts/view_zones/README.md`.
+- The `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, the
+  trait-owning package — see its README for the orphan-rule/cycle reasoning.
+  That is also why the types here are `pub(all)`.
 - A browser-tier package (`supported_targets = "js"`); may import
   `viewer/common/*`, `viewer/contrib/hover`, `viewer/ui/scrollbar`, and
   `rabbita/dom`.

@@ -1,53 +1,25 @@
 # viewer/common
 
-Line HTML compatibility helpers and shared editor geometry. This package is the
-MoonBit-owned common facade for Monaco's `vscode/src/vs/editor/common/*`
-layer.
+A shrinking residual of the former common grab-bag. What remains here is the
+code with no better-focused `viewer/common/*` subpackage yet:
 
-## Responsibilities
-
-- Depend on the `viewer/view_model` package for the Monaco-shaped common
-  spine: `TokenizedDocument`, `FrameSource`, `RenderFrame`, `ViewModel`,
-  `ViewModelLinesFromModelAsIs`, and `IdentityCoordinatesConverter`.
-- Depend on `base/common` for UTF-16 coordinate primitives.
-- Depend on the `viewer/view_layout` package for the pre-DOM viewport layer:
-  `ViewportData` exposes 1-based inclusive visible line numbers, line-relative
-  vertical offsets, `@view_line_renderer.ViewLineRenderingData`, and normalized
-  line decorations derived from document/provider state.
-- Own compatibility helpers `render_line_html` and `render_line_class`.
-  Pure line-HTML emission belongs to the DOM-free
-  `viewer/view_line_renderer` package: `RenderLineInput` becomes escaped line
-  HTML plus `CharacterMapping`/`DomPosition` data.
-- Depend on the backend-neutral `viewer/view_layout` package for scroll and
-  layout model state: `Scrollable` (clamped scroll state answering
-  `ScrollChange` facts), the uniform-height `LinesLayout` (with view-zone
-  slots; displacement deferred), `ViewLayout` (viewport derivation absorbing
-  `visible_window` and `window_needs_update` semantics), and `ScrollbarState`
-  (thumb geometry, drags, and track jumps as pure arithmetic).
-- Own the pure editor geometry shared by backends: mouse hit-testing
-  (`MouseTargetKind`/`MouseTarget`/`ViewMetrics`/`hit_test`) resolved against
-  render frames plus `@view_layout.ViewZone` layout data. A `MouseTarget`
-  carries the hit line's `token_index` into its `IViewLineTokens` (Monaco's
-  `LineTokens.findTokenIndexAtOffset`), not a per-line span index.
-- Keep render output independent of concrete frontend hosts.
+- `line_html.mbt`: compatibility helpers `render_line_html` /
+  `render_line_class` over the view-line renderer in
+  `viewer/common/view_layout`.
+- `mouse_target.mbt`: the DOM-free mouse hit-testing value types and algorithm
+  (`MouseTargetKind`, `MouseTarget`, `ViewMetrics`, `hit_test`), resolved
+  against render frames plus view-zone layout data. A `MouseTarget` carries
+  the hit line's `token_index` into its `IViewLineTokens` (Monaco's
+  `LineTokens.findTokenIndexAtOffset`), not a per-line span index. These stay
+  here (not in the js-only `viewer/browser/controller`) because the
+  multi-target `viewer/contrib/hover` depends on `MouseTarget` directly.
 
 ## Boundaries
 
-- May depend on `viewer/decorations`, `base/common`,
-  `viewer/view_line_renderer`, `viewer/view_layout`, and `viewer/view_model`.
-  Tests may import `language`, `viewer/model`, and `syntax` for fixture setup.
-- Must not assume DOM nodes, browser APIs, CSS runtime behavior, native effects,
-  server routing, or filesystem providers. Layout, scrollbar, hit-test, and
-  window functions are pure arithmetic over frame data and caller-measured
-  metrics; `viewer/view_layout.ViewLayout` owns scroll truth as model state
-  while browser backends choose how to expose that model through DOM scrollable
-  elements.
-- Backend-specific mounting and event wiring belong in `viewer`.
-
-## Checks
-
-- Package tests live in `render_line_ir_test.mbt`, `line_html_test.mbt`,
-  `mouse_target_test.mbt`, and `view_model_viewport_test.mbt`.
-- View-model package tests live under `viewer/view_model`.
-- Layout package tests live under `viewer/view_layout`.
-- Run `just check` for the repository-level type check.
+- May depend on `viewer/common/view_layout` and `viewer/common/view_model`
+  (tests also use `language`, `viewer/common/model`, and `syntax` for
+  fixtures).
+- Must not assume DOM nodes, browser APIs, CSS runtime behavior, native
+  effects, server routing, or filesystem providers; hit-testing is pure
+  arithmetic over frame data and caller-measured metrics.
+- Must not declare FFI; builds on `js` and `native`.

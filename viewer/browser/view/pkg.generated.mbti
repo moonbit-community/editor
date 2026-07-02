@@ -8,6 +8,7 @@ import {
   "moonbit-community/editor/viewer/browser/view_parts/margin",
   "moonbit-community/editor/viewer/browser/view_parts/overlay_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/selections",
+  "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common/languages",
@@ -36,6 +37,7 @@ pub(all) struct View {
   content_view_overlays : @selections.ContentViewOverlays
   margin_view_overlays : @margin.MarginViewOverlays
   content_widgets : @content_widgets.ContentWidgets
+  view_cursors : @view_cursors.ViewCursors
   overlay_widgets : @overlay_widgets.OverlayWidgets
   editor_scrollbar : @editor_scrollbar.EditorScrollbar
   // private fields
@@ -57,6 +59,7 @@ pub(all) struct ViewContext {
   keep_hover_open : () -> Unit
   hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
+  offset_for_column : (Int, Int) -> Double
 }
 
 pub(all) struct ViewRenderInput {
@@ -66,6 +69,7 @@ pub(all) struct ViewRenderInput {
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   decorations : Array[@model.Decoration]
   selection_view_range : @view_layout.ViewRange?
+  view_selection : @view_model.Selection?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   hover_state : @hover.HoverController
@@ -76,6 +80,7 @@ pub(all) struct ViewRenderInput {
   space_width : Double
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
+  editor_has_focus : Bool
 }
 
 // Type aliases

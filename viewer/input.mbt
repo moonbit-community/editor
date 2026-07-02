@@ -44,13 +44,17 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   // as `ViewFocusChangedEvent`; the viewer's focusable surface is the root
   // itself. `focus`/`blur` do not bubble, so these observe only the root's own
   // focus. The next scheduled render diffs the flag into `ViewFocusChanged`.
-  view.root.add_event_listener("focus", _ => if !self.editor_has_focus {
-    self.editor_has_focus = true
-    self.schedule_render()
+  view.root.add_event_listener("focus", _ => {
+    if !self.editor_has_focus {
+      self.editor_has_focus = true
+      self.schedule_render()
+    }
   })
-  view.root.add_event_listener("blur", _ => if self.editor_has_focus {
-    self.editor_has_focus = false
-    self.schedule_render()
+  view.root.add_event_listener("blur", _ => {
+    if self.editor_has_focus {
+      self.editor_has_focus = false
+      self.schedule_render()
+    }
   })
   view.view_lines
   .dom()

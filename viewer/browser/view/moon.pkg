@@ -5,6 +5,7 @@ import {
   "moonbit-community/editor/viewer/browser/view_parts/margin",
   "moonbit-community/editor/viewer/browser/view_parts/overlay_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/selections",
+  "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common/core",

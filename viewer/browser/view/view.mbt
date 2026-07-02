@@ -21,6 +21,7 @@ pub(all) struct View {
   content_view_overlays : @selections.ContentViewOverlays
   margin_view_overlays : @margin.MarginViewOverlays
   content_widgets : @content_widgets.ContentWidgets
+  view_cursors : @view_cursors.ViewCursors
   overlay_widgets : @overlay_widgets.OverlayWidgets
   editor_scrollbar : @editor_scrollbar.EditorScrollbar
   priv view_parts : Array[ViewPartHandle]
@@ -60,12 +61,16 @@ pub fn View::build() -> View {
   let view_zones = @view_zones.ViewZones::new(document)
   let view_lines = @view_lines.ViewLines::new(document)
   let content_widgets = @content_widgets.ContentWidgets::new(document)
+  let view_cursors = @view_cursors.ViewCursors::new(document)
   let overlay_widgets = @overlay_widgets.OverlayWidgets::new(document)
   let lines_content = editor_scrollbar.content()
   lines_content.append_child(content_view_overlays.dom().as_node())
   lines_content.append_child(view_zones.dom().as_node())
   lines_content.append_child(view_lines.dom().as_node())
   lines_content.append_child(content_widgets.dom().as_node())
+  // Cursors render after (above) content widgets in lines content
+  // (`view.ts:280`).
+  lines_content.append_child(view_cursors.dom().as_node())
   overflow_guard.append_child(margin_view_overlays.dom().as_node())
   overflow_guard.append_child(editor_scrollbar.wrapper().as_node())
   // Overlay widgets are viewport-fixed: they live in the overflow guard, not
@@ -79,7 +84,7 @@ pub fn View::build() -> View {
   root.append_child(overlay_widgets.overflowing_dom().as_node())
   let view_parts = default_view_parts(
     view_lines, view_zones, content_view_overlays, margin_view_overlays, content_widgets,
-    overlay_widgets, editor_scrollbar,
+    view_cursors, overlay_widgets, editor_scrollbar,
   )
   let view : View = {
     root,
@@ -92,6 +97,7 @@ pub fn View::build() -> View {
     content_view_overlays,
     margin_view_overlays,
     content_widgets,
+    view_cursors,
     overlay_widgets,
     editor_scrollbar,
     view_parts,
@@ -128,6 +134,7 @@ fn View::mark_parts_dirty(self : View) -> Unit {
   ViewPart::set_should_render(self.content_view_overlays, true)
   ViewPart::set_should_render(self.margin_view_overlays, true)
   ViewPart::set_should_render(self.content_widgets, true)
+  ViewPart::set_should_render(self.view_cursors, true)
   ViewPart::set_should_render(self.overlay_widgets, true)
   ViewPart::set_should_render(self.editor_scrollbar, true)
 }

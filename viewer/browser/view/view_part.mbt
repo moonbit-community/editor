@@ -37,6 +37,7 @@ priv enum ViewPartHandle {
   ContentViewOverlaysPart(@selections.ContentViewOverlays)
   MarginViewOverlaysPart(@margin.MarginViewOverlays)
   ContentWidgetsPart(@content_widgets.ContentWidgets)
+  ViewCursorsPart(@view_cursors.ViewCursors)
   OverlayWidgetsPart(@overlay_widgets.OverlayWidgets)
   EditorScrollbarPart(@editor_scrollbar.EditorScrollbar)
 }
@@ -48,6 +49,7 @@ fn default_view_parts(
   content_view_overlays : @selections.ContentViewOverlays,
   margin_view_overlays : @margin.MarginViewOverlays,
   content_widgets : @content_widgets.ContentWidgets,
+  view_cursors : @view_cursors.ViewCursors,
   overlay_widgets : @overlay_widgets.OverlayWidgets,
   editor_scrollbar : @editor_scrollbar.EditorScrollbar,
 ) -> Array[ViewPartHandle] {
@@ -57,6 +59,9 @@ fn default_view_parts(
     ContentViewOverlaysPart(content_view_overlays),
     MarginViewOverlaysPart(margin_view_overlays),
     ContentWidgetsPart(content_widgets),
+    // Monaco pushes `viewCursors` after content widgets, before overlay
+    // widgets (`view.ts:246-252`).
+    ViewCursorsPart(view_cursors),
     OverlayWidgetsPart(overlay_widgets),
     EditorScrollbarPart(editor_scrollbar),
   ]
@@ -70,6 +75,7 @@ impl ViewPart for ViewPartHandle with fn on_view_event(self, event) {
     ContentViewOverlaysPart(part) => ViewPart::on_view_event(part, event)
     MarginViewOverlaysPart(part) => ViewPart::on_view_event(part, event)
     ContentWidgetsPart(part) => ViewPart::on_view_event(part, event)
+    ViewCursorsPart(part) => ViewPart::on_view_event(part, event)
     OverlayWidgetsPart(part) => ViewPart::on_view_event(part, event)
     EditorScrollbarPart(part) => ViewPart::on_view_event(part, event)
   }
@@ -83,6 +89,7 @@ impl ViewPart for ViewPartHandle with fn should_render(self) {
     ContentViewOverlaysPart(part) => ViewPart::should_render(part)
     MarginViewOverlaysPart(part) => ViewPart::should_render(part)
     ContentWidgetsPart(part) => ViewPart::should_render(part)
+    ViewCursorsPart(part) => ViewPart::should_render(part)
     OverlayWidgetsPart(part) => ViewPart::should_render(part)
     EditorScrollbarPart(part) => ViewPart::should_render(part)
   }
@@ -96,6 +103,7 @@ impl ViewPart for ViewPartHandle with fn set_should_render(self, value) {
     ContentViewOverlaysPart(part) => ViewPart::set_should_render(part, value)
     MarginViewOverlaysPart(part) => ViewPart::set_should_render(part, value)
     ContentWidgetsPart(part) => ViewPart::set_should_render(part, value)
+    ViewCursorsPart(part) => ViewPart::set_should_render(part, value)
     OverlayWidgetsPart(part) => ViewPart::set_should_render(part, value)
     EditorScrollbarPart(part) => ViewPart::set_should_render(part, value)
   }
@@ -109,6 +117,7 @@ impl ViewPart for ViewPartHandle with fn on_before_render(self, viewport) {
     ContentViewOverlaysPart(part) => ViewPart::on_before_render(part, viewport)
     MarginViewOverlaysPart(part) => ViewPart::on_before_render(part, viewport)
     ContentWidgetsPart(part) => ViewPart::on_before_render(part, viewport)
+    ViewCursorsPart(part) => ViewPart::on_before_render(part, viewport)
     OverlayWidgetsPart(part) => ViewPart::on_before_render(part, viewport)
     EditorScrollbarPart(part) => ViewPart::on_before_render(part, viewport)
   }
@@ -122,6 +131,7 @@ impl ViewPart for ViewPartHandle with fn prepare_render(self, context) {
     ContentViewOverlaysPart(part) => ViewPart::prepare_render(part, context)
     MarginViewOverlaysPart(part) => ViewPart::prepare_render(part, context)
     ContentWidgetsPart(part) => ViewPart::prepare_render(part, context)
+    ViewCursorsPart(part) => ViewPart::prepare_render(part, context)
     OverlayWidgetsPart(part) => ViewPart::prepare_render(part, context)
     EditorScrollbarPart(part) => ViewPart::prepare_render(part, context)
   }
@@ -135,6 +145,7 @@ impl ViewPart for ViewPartHandle with fn render(self, context) {
     ContentViewOverlaysPart(part) => ViewPart::render(part, context)
     MarginViewOverlaysPart(part) => ViewPart::render(part, context)
     ContentWidgetsPart(part) => ViewPart::render(part, context)
+    ViewCursorsPart(part) => ViewPart::render(part, context)
     OverlayWidgetsPart(part) => ViewPart::render(part, context)
     EditorScrollbarPart(part) => ViewPart::render(part, context)
   }
@@ -148,6 +159,7 @@ impl ViewPart for ViewPartHandle with fn on_did_render(self) {
     ContentViewOverlaysPart(part) => ViewPart::on_did_render(part)
     MarginViewOverlaysPart(part) => ViewPart::on_did_render(part)
     ContentWidgetsPart(part) => ViewPart::on_did_render(part)
+    ViewCursorsPart(part) => ViewPart::on_did_render(part)
     OverlayWidgetsPart(part) => ViewPart::on_did_render(part)
     EditorScrollbarPart(part) => ViewPart::on_did_render(part)
   }
@@ -686,6 +698,121 @@ impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) 
 
 ///|
 impl ViewPart for @content_widgets.ContentWidgets with fn on_did_render(self) {
+  self.should_render = false
+  self.prepared = None
+}
+
+// `ViewPart` impl for `@view_cursors.ViewCursors`
+// (`browser/view_parts/view_cursors`). Kept here for the same reason as the
+// impls above. The viewport math and DOM measurement live here (not in the
+// part package) because they need `RenderingContext` / `ViewContext`.
+
+///|
+impl ViewPart for @view_cursors.ViewCursors with fn should_render(self) {
+  self.should_render
+}
+
+///|
+// Event map from `viewCursors.ts`: `onFlushed` (:180), `onLinesChanged`
+// (:188; the port's merged lines/tokens/decorations event also covers
+// `onTokensChanged`/`onDecorationsChanged`, :176,:200), `onScrollChanged`
+// (:197, unconditionally true), `onCursorStateChanged` (:161),
+// `onConfigurationChanged` (:112), `onZonesChanged` (:219), `onFocusChanged`
+// (:183 — Monaco flips visibility inline and returns false; the readonly port
+// has no blink timers, so the flip happens in `render_cursor` instead and the
+// event marks the part dirty). No `onLineMappingChanged` handler in Monaco —
+// a remap that moves the cursor arrives as `ViewCursorStateChanged` via the
+// reprojected view selection.
+impl ViewPart for @view_cursors.ViewCursors with fn on_view_event(_self, event) {
+  match event {
+    ViewFlushed => true
+    ViewLinesChanged => true
+    ViewScrollChanged(_) => true
+    ViewCursorStateChanged => true
+    ViewConfigurationChanged(_) => true
+    ViewZonesChanged => true
+    ViewFocusChanged(_) => true
+    _ => false
+  }
+}
+
+///|
+impl ViewPart for @view_cursors.ViewCursors with fn set_should_render(
+  self,
+  value,
+) {
+  self.should_render = value
+}
+
+///|
+impl ViewPart for @view_cursors.ViewCursors with fn on_before_render(
+  _self,
+  _viewport,
+) {
+  ()
+}
+
+///|
+// `ViewCursor._prepareRender` (`viewCursor.ts:163-203`), Line-style arm: the
+// caret x is `ctx.visibleRangeForPosition(position)` — the port measures it
+// off the rendered line DOM (`View::offset_for_column` via the
+// `ViewContext.offset_for_column` seam; `-1` = line not rendered → Monaco's
+// "Outside viewport → null"). The caret top is the line's viewport-relative
+// vertical offset, like every flat overlay piece.
+impl ViewPart for @view_cursors.ViewCursors with fn prepare_render(
+  self,
+  context,
+) {
+  let input = context.input
+  let render_data : @view_cursors.CursorRenderData? = match
+    input.view_selection {
+    None => None
+    Some(selection) => {
+      let position = selection.get_position()
+      let index = position.line_number - context.viewport.start_line_number
+      if index < 0 || index >= context.viewport.lines.length() {
+        None
+      } else {
+        let left = (context.view_context.offset_for_column)(
+          position.line_number,
+          position.column,
+        )
+        if left < 0.0 {
+          None
+        } else {
+          Some(
+            @view_cursors.prepare_cursor_render_data(
+              left,
+              context.viewport.relative_vertical_offset[index],
+              @core.editor_line_height,
+              @view_cursors.device_pixel_ratio(),
+            ),
+          )
+        }
+      }
+    }
+  }
+  let has_selection = match input.view_selection {
+    Some(selection) => !selection.is_empty()
+    None => false
+  }
+  self.prepared = Some({
+    render_data,
+    has_selection,
+    editor_has_focus: input.editor_has_focus,
+  })
+}
+
+///|
+impl ViewPart for @view_cursors.ViewCursors with fn render(self, context) {
+  match self.prepared {
+    Some(prepared) => self.render_cursor(prepared, context.content_transform)
+    None => ()
+  }
+}
+
+///|
+impl ViewPart for @view_cursors.ViewCursors with fn on_did_render(self) {
   self.should_render = false
   self.prepared = None
 }

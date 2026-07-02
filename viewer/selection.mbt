@@ -22,6 +22,20 @@ fn Viewer::selection_view_range(self : Viewer) -> @view_layout.ViewRange? {
 }
 
 ///|
+/// The full view-space selection the render input carries for the cursor part
+/// (Monaco's `ViewCursorStateChangedEvent.selections[0]`): unlike
+/// `selection_view_range` it survives collapsing, so a caret-only
+/// `set_position` still renders. `None` until a cursor exists (deviation:
+/// Monaco always has a cursor at (1,1); the viewer creates one lazily on the
+/// first click / `set_position`, so no caret shows before that).
+fn Viewer::view_selection(self : Viewer) -> @view_model.Selection? {
+  match self.cursor {
+    Some(controller) => Some(controller.get_view_selection())
+    None => None
+  }
+}
+
+///|
 /// Moves the primary cursor to `position`, collapsing the selection there —
 /// Monaco's `setPosition` (`codeEditorWidget.ts:670-682`), which builds a
 /// selection with `selectionStart == position` and routes it through the

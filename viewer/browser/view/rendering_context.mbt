@@ -11,6 +11,11 @@ pub(all) struct ViewRenderInput {
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   decorations : Array[@model.Decoration]
   selection_view_range : @view_layout.ViewRange?
+  /// The full view-space selection (anchor + active position), Monaco's
+  /// `ViewCursorStateChangedEvent.selections[0]`. Unlike
+  /// `selection_view_range` (which is `None` when collapsed), this carries the
+  /// caret position of an empty selection — the cursor part renders from it.
+  view_selection : @view_model.Selection?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   hover_state : @hover.HoverController
@@ -129,7 +134,7 @@ priv struct ViewRenderSnapshot {
   dimensions : @view_layout.ScrollDimensions
   gutter_width : Double
   space_width : Double
-  selection_view_range : @view_layout.ViewRange?
+  view_selection : @view_model.Selection?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]
   browser_view_zones : Array[@view_zones.BrowserViewZone]
@@ -150,7 +155,7 @@ fn ViewRenderSnapshot::from_input(
     dimensions,
     gutter_width: input.gutter_width,
     space_width: input.space_width,
-    selection_view_range: input.selection_view_range,
+    view_selection: input.view_selection,
     folding_ranges: input.folding_ranges.copy(),
     folded_ranges: input.folded_ranges.copy(),
     browser_view_zones: input.browser_view_zones.copy(),

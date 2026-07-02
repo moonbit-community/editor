@@ -20,6 +20,7 @@ pub(all) struct ContentViewOverlays {
 pub fn ContentViewOverlays::dom(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::render_selection_overlays(Self, @view_model.RenderFrame, @view_layout.ViewportData, @view_layout.ViewRange?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Unit
+pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
 
 pub(all) struct ContentViewOverlaysPrepared {
   frame : @view_model.RenderFrame
@@ -27,6 +28,7 @@ pub(all) struct ContentViewOverlaysPrepared {
   selection_view_range : @view_layout.ViewRange?
   view_model : @view_model.ViewModel?
   space_width : Double
+  editor_has_focus : Bool
 }
 
 // Type aliases

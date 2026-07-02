@@ -27,4 +27,8 @@ pub(all) struct ViewContext {
   // pixel rects of a zero-based view-column range on a view line off the live
   // line DOM, which the selection overlay renders after `ViewLines` writes.
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
+  // Monaco's `RenderingContext.visibleRangeForPosition(...).left` seam: the
+  // caret x of a one-based view column on a rendered view line
+  // (`View::offset_for_column`; `-1` when the line is not rendered).
+  offset_for_column : (Int, Int) -> Double
 }

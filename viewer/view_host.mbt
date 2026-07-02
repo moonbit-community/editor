@@ -34,6 +34,9 @@ fn Viewer::build_view_context(
     measure_line_selection: (line_number, start_column, end_column) => {
       view.measure_line_selection(line_number, start_column, end_column)
     },
+    offset_for_column: (line_number, column) => {
+      view.offset_for_column(line_number, column)
+    },
   }
 }
 
@@ -136,6 +139,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         browser_view_zones: self.view_zones,
         decorations: self.controller_decorations(),
         selection_view_range: self.selection_view_range(),
+        view_selection: self.view_selection(),
         folding_ranges: self.folding_ranges,
         folded_ranges: self.folded_ranges,
         hover_state: self.hover,

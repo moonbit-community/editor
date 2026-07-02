@@ -87,7 +87,9 @@ fn view_events_from_snapshots(
           }),
         )
       }
-      if previous.selection_view_range != current.selection_view_range {
+      // The full view selection (not the collapsed-to-None overlay range), so
+      // a caret-only move still dispatches `ViewCursorStateChanged`.
+      if previous.view_selection != current.view_selection {
         events.push(ViewCursorStateChanged)
       }
       let gutter_width_changed = previous.gutter_width != current.gutter_width

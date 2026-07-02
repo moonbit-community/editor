@@ -48,6 +48,12 @@ test('keeps the Monaco-shaped editor shell DOM structure', async ({ page }) => {
     element('div', ['view-zones']),
     element('div', ['view-lines']),
     element('div', ['contentWidgets']),
+    // Monaco `view.ts:280`: the cursors layer renders above content widgets
+    // inside the scrolling lines content.
+    element('div', ['cursor-line-style', 'cursor-solid', 'cursors-layer'], {
+      role: 'presentation',
+      'aria-hidden': 'true',
+    }),
   ]);
   await expectDirectChildren(page, `${editorScrollable} > .scrollbar.horizontal`, [
     element('div', ['slider']),

@@ -18,9 +18,13 @@ priv enum ViewEvent {
   /// Everything must re-render (Monaco `ViewFlushedEvent`). Emitted on the
   /// first frame.
   ViewFlushed
-  /// Line content/tokens (and, for now, decorations) were regenerated
+  /// Line content/tokens were regenerated
   /// (Monaco `ViewLinesChangedEvent` / `ViewTokensChangedEvent`).
   ViewLinesChanged
+  /// The model's decorations changed (Monaco `ViewDecorationsChangedEvent`),
+  /// sourced from the snapshot's `decorations_generation` counter (plan
+  /// Deviation 3).
+  ViewDecorationsChanged
   /// Scroll position, scrollable dimensions, or the rendered line window
   /// changed (Monaco `ViewScrollChangedEvent`).
   ViewScrollChanged(ViewScrollChangedEvent)
@@ -74,6 +78,9 @@ fn view_events_from_snapshots(
       let events : Array[ViewEvent] = []
       if previous.generation != current.generation {
         events.push(ViewLinesChanged)
+      }
+      if previous.decorations_generation != current.decorations_generation {
+        events.push(ViewDecorationsChanged)
       }
       let position_changed = previous.position != current.position
       let dimensions_changed = previous.dimensions != current.dimensions

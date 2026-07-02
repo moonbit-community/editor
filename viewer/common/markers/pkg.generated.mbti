@@ -74,7 +74,6 @@ pub struct MarkerDecorationsService {
   mut subscription : @common.Disposable?
 }
 pub fn MarkerDecorationsService::add_marker_suppression(Self, @common.Uri, @common.Range) -> @common.Disposable
-pub fn MarkerDecorationsService::decorations_for_resource(Self, @model.TextModel) -> @model.DecorationSet
 pub fn MarkerDecorationsService::dispose(Self) -> Unit
 pub fn MarkerDecorationsService::get_live_markers(Self, @common.Uri) -> Array[(@common.Range, Marker)]
 pub fn MarkerDecorationsService::get_marker(Self, @common.Uri, String) -> Marker?

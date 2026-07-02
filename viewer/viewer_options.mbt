@@ -8,6 +8,11 @@ pub(all) struct ViewerOptions {
   render_control_characters : Bool
   render_line_highlight : @view_layout.RenderLineHighlight
   render_line_highlight_only_when_focus : Bool
+  /// `renderValidationDecorations`. Product default `On` — Monaco defaults to
+  /// `Editable`, which hides validation squiggles in readonly editors, and the
+  /// readonly viewer's diagnostics rendering is a shipped feature. Hosts can
+  /// pass `Editable`/`Off` for Monaco's semantics.
+  render_validation_decorations : @view_model.RenderValidationDecorations
 } derive(Eq, Debug)
 
 ///|
@@ -28,6 +33,7 @@ pub fn ViewerOptions::ViewerOptions(
   render_control_characters? : Bool = true,
   render_line_highlight? : @view_layout.RenderLineHighlight = Line,
   render_line_highlight_only_when_focus? : Bool = false,
+  render_validation_decorations? : @view_model.RenderValidationDecorations = On,
 ) -> ViewerOptions {
   {
     soft_wrap,
@@ -37,6 +43,7 @@ pub fn ViewerOptions::ViewerOptions(
     render_control_characters,
     render_line_highlight,
     render_line_highlight_only_when_focus,
+    render_validation_decorations,
   }
 }
 
@@ -66,14 +73,20 @@ pub fn ViewerOptions::soft_wrap_column_for_content_width(
 pub fn ViewerOptions::view_model_options(
   self : ViewerOptions,
   soft_wrap_column : Int,
+  editor_id? : Int = 0,
 ) -> @view_model.ViewModelOptions {
   if self.soft_wrap && soft_wrap_column > 0 {
-    @view_model.ViewModelOptions::soft_wrap(
-      soft_wrap_column,
+    ViewModelOptions(
+      soft_wrap_column~,
       tab_size=self.tab_size,
       wrapping_indent=self.wrapping_indent,
+      editor_id~,
+      render_validation_decorations=self.render_validation_decorations,
     )
   } else {
-    @view_model.ViewModelOptions::no_wrap()
+    ViewModelOptions(
+      editor_id~,
+      render_validation_decorations=self.render_validation_decorations,
+    )
   }
 }

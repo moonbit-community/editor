@@ -9,7 +9,6 @@ pub(all) struct ViewRenderInput {
   view_model : @view_model.ViewModel?
   layout : @view_layout.ViewLayout
   browser_view_zones : Array[@view_zones.BrowserViewZone]
-  decorations : Array[@model.Decoration]
   selection_view_range : @view_layout.ViewRange?
   /// The full view-space selection (anchor + active position), Monaco's
   /// `ViewCursorStateChangedEvent.selections[0]`. Unlike
@@ -22,6 +21,9 @@ pub(all) struct ViewRenderInput {
   on_toggle_fold : (Int) -> Unit
   on_hover_measured : (Bool, Double, Double) -> Unit
   generation : Int
+  /// Bumped by the `Viewer` per model `onDidChangeDecorations` event; a
+  /// change dispatches `ViewDecorationsChanged` (plan Deviation 3).
+  decorations_generation : Int
   gutter_width : Double
   space_width : Double
   render_whitespace : @view_layout.RenderWhitespace
@@ -77,7 +79,6 @@ fn RenderingContext::from_input(
         model,
         frame_window(input.frame),
         line_height=@core.editor_line_height,
-        decorations=input.decorations,
         layout=input.layout,
       )
     None =>
@@ -137,6 +138,7 @@ fn RenderingContext::margin_transform(self : RenderingContext) -> String {
 priv struct ViewRenderSnapshot {
   window : @view_layout.LineWindow
   generation : Int
+  decorations_generation : Int
   position : @view_layout.ScrollPosition
   dimensions : @view_layout.ScrollDimensions
   gutter_width : Double
@@ -158,6 +160,7 @@ fn ViewRenderSnapshot::from_input(
   {
     window: frame_window(input.frame),
     generation: input.generation,
+    decorations_generation: input.decorations_generation,
     position,
     dimensions,
     gutter_width: input.gutter_width,

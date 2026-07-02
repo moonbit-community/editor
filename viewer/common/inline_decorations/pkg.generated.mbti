@@ -3,22 +3,16 @@ package "moonbit-community/editor/viewer/common/inline_decorations"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/common/model",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn is_model_decoration_visible(TextModel, ModelDecoration) -> Bool
+pub fn[O] is_model_decoration_visible(&InlineDecorationsModel, ModelDecoration[O]) -> Bool
 
 // Errors
 
 // Types and methods
-pub(all) struct IdentityCoordinatesConverter {
-  model : TextModel
-}
-pub fn IdentityCoordinatesConverter::convert_model_position_to_view_position(Self, @common.Position) -> @common.Position
-pub fn IdentityCoordinatesConverter::convert_model_range_to_view_range(Self, @common.Range) -> @common.Range
-pub fn IdentityCoordinatesConverter::new(TextModel) -> Self
-
 pub(all) struct InjectedTextContext {
   get_injection_options : (Int) -> Array[InjectedTextOptions]?
   get_injection_offsets : (Int) -> Array[Int]?
@@ -54,59 +48,59 @@ pub(all) enum InlineDecorationType {
   RegularAffectingLetterSpacing
 } derive(Eq, @debug.Debug)
 
-pub(all) struct InlineModelContext {
-  get_model_decorations : (@common.Range, Bool, Bool) -> Array[ModelDecoration]
+pub(all) struct InlineModelContext[O] {
+  get_model_decorations : (@common.Range, Bool, Bool) -> Array[ModelDecoration[O]]
 }
 
-pub struct InlineModelDecorationsComputer {
+pub struct InlineModelDecorationsComputer[O] {
   // private fields
 }
-pub fn InlineModelDecorationsComputer::get_decorations(Self, @common.Range, Bool, Bool) -> ViewDecorationsCollection
-pub fn InlineModelDecorationsComputer::get_inline_decorations(Self, Int) -> Array[Array[InlineDecoration]]
-pub fn InlineModelDecorationsComputer::new(InlineModelContext, TextModel, IdentityCoordinatesConverter) -> Self
-pub fn InlineModelDecorationsComputer::reset(Self) -> Unit
+pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_decorations(Self[O], @common.Range, Bool, Bool) -> ViewDecorationsCollection[O]
+pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_inline_decorations(Self[O], Int) -> Array[Array[InlineDecoration]]
+pub fn[O] InlineModelDecorationsComputer::new(InlineModelContext[O], &InlineDecorationsModel, &CoordinatesConverter) -> Self[O]
+pub fn[O] InlineModelDecorationsComputer::on_line_mapping_changed(Self[O]) -> Unit
+pub fn[O] InlineModelDecorationsComputer::on_model_decorations_changed(Self[O]) -> Unit
+pub fn[O] InlineModelDecorationsComputer::reset(Self[O]) -> Unit
 
-pub(all) struct ModelDecoration {
+pub(all) struct ModelDecoration[O] {
   id : String
   owner_id : Int
   range : @common.Range
-  options : ModelDecorationOptions
-} derive(Eq, @debug.Debug)
-
-pub(all) struct ModelDecorationOptions {
-  description : String
-  class_name : String?
-  inline_class_name : String?
-  inline_class_name_affects_letter_spacing : Bool
-  before_content_class_name : String?
-  after_content_class_name : String?
-  affects_font : Bool
-  is_whole_line : Bool
-} derive(Eq, @debug.Debug)
-pub fn ModelDecorationOptions::new(description? : String, class_name? : String, inline_class_name? : String, inline_class_name_affects_letter_spacing? : Bool, before_content_class_name? : String, after_content_class_name? : String, affects_font? : Bool, is_whole_line? : Bool) -> Self
-
-pub(all) struct TextModel {
-  lines : Array[String]
+  options : O
 }
-pub fn TextModel::create(String) -> Self
-pub fn TextModel::get_line_count(Self) -> Int
-pub fn TextModel::get_line_max_column(Self, Int) -> Int
-pub fn TextModel::validate_position(Self, @common.Position) -> @common.Position
-pub fn TextModel::validate_range(Self, @common.Range) -> @common.Range
 
-pub(all) struct ViewDecorationsCollection {
-  decorations : Array[ViewModelDecoration]
+pub(all) struct ViewDecorationsCollection[O] {
+  decorations : Array[ViewModelDecoration[O]]
   inline_decorations : Array[Array[InlineDecoration]]
   has_variable_fonts : Array[Bool]
 }
 
-pub(all) struct ViewModelDecoration {
+pub(all) struct ViewModelDecoration[O] {
   range : @common.Range
-  options : ModelDecorationOptions
-} derive(Eq, @debug.Debug)
-pub fn ViewModelDecoration::new(@common.Range, ModelDecorationOptions) -> Self
+  options : O
+}
+pub fn[O] ViewModelDecoration::new(@common.Range, O) -> Self[O]
 
 // Type aliases
 
 // Traits
+pub(open) trait CoordinatesConverter {
+  fn convert_model_position_to_view_position(Self, @common.Position) -> @common.Position
+  fn convert_model_range_to_view_range(Self, @common.Range) -> @common.Range
+}
+
+pub(open) trait InlineDecorationOptions {
+  fn inline_class_name(Self) -> String?
+  fn inline_class_name_affects_letter_spacing(Self) -> Bool
+  fn before_content_class_name(Self) -> String?
+  fn after_content_class_name(Self) -> String?
+  fn affects_font(Self) -> Bool
+  fn is_whole_line(Self) -> Bool
+}
+pub impl InlineDecorationOptions for @model.Decoration
+
+pub(open) trait InlineDecorationsModel {
+  fn get_line_max_column(Self, Int) -> Int
+}
+pub impl InlineDecorationsModel for @model.TextModel
 

@@ -12,7 +12,6 @@ import {
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common/languages",
-  "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/contrib/hover",
@@ -67,7 +66,6 @@ pub(all) struct ViewRenderInput {
   view_model : @view_model.ViewModel?
   layout : @view_layout.ViewLayout
   browser_view_zones : Array[@view_zones.BrowserViewZone]
-  decorations : Array[@model.Decoration]
   selection_view_range : @view_layout.ViewRange?
   view_selection : @view_model.Selection?
   folding_ranges : Array[@language.FoldingRange]
@@ -76,6 +74,7 @@ pub(all) struct ViewRenderInput {
   on_toggle_fold : (Int) -> Unit
   on_hover_measured : (Bool, Double, Double) -> Unit
   generation : Int
+  decorations_generation : Int
   gutter_width : Double
   space_width : Double
   render_whitespace : @view_layout.RenderWhitespace

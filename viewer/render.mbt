@@ -33,10 +33,9 @@ fn Viewer::render_current_model(
     count: marker_diagnostics.length(),
     revision: model.revision,
   })
-  let decorations = self.services.marker_decorations.decorations_for_resource(
-    model,
-  )
-  let source = @view_model.FrameSource(tokenized, decorations, providers)
+  // Decorations live in the model's interval-tree storage now; the view
+  // model queries them lazily per viewport (no per-frame bake).
+  let source = @view_model.FrameSource(tokenized, providers, model~)
   let view_model = self.build_view_model(source)
   // Only a rotated model identity or version renders from the top when the
   // caller requested reset semantics.
@@ -89,7 +88,10 @@ fn Viewer::build_view_model(
   self : Viewer,
   source : @view_model.FrameSource,
 ) -> @view_model.ViewModel {
-  let options = self.options.view_model_options(self.soft_wrap_column)
+  let options = self.options.view_model_options(
+    self.soft_wrap_column,
+    editor_id=self.editor_id,
+  )
   if self.folded_ranges.length() > 0 {
     @view_model.ViewModel::with_options_folding_and_inlay_hints(
       source,

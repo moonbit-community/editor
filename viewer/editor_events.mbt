@@ -537,12 +537,25 @@ fn Viewer::maybe_notify_hover_resolved(self : Viewer, token : Int) -> Unit {
 }
 
 ///|
-/// Span decorations contributed by every controller for the current state.
-fn Viewer::controller_decorations(self : Viewer) -> Array[@model.Decoration] {
-  match self.text_model {
-    Some(model) => self.hover.decorations(model.snapshot)
-    None => []
+/// Syncs the hover highlight into the model's decoration storage (Monaco's
+/// hover-owned decorations collection: `delta_decorations` on show/hide).
+/// Runs at flush time — every hover state change schedules a flush.
+fn Viewer::sync_hover_decorations(self : Viewer) -> Unit {
+  guard self.text_model is Some(model) else { return }
+  let decorations = self.hover.highlight_decorations(model.snapshot)
+  let range = match decorations.get(0) {
+    Some(decoration) => Some(decoration.range)
+    None => None
   }
+  if range == self.hover_decoration_range {
+    return
+  }
+  self.hover_decoration_range = range
+  self.hover_decoration_ids = model.delta_decorations(
+    self.hover_decoration_ids,
+    decorations,
+    owner_id=self.editor_id,
+  )
 }
 
 ///|

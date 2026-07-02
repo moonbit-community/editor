@@ -10,8 +10,8 @@
 pub(all) struct ViewLinesPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
-  view_decorations : Array[@view_model.ViewModelDecoration]
   generation : Int
+  decorations_generation : Int
   space_width : Double
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
@@ -23,6 +23,7 @@ pub(all) struct ViewLines {
   view_lines : @rdom.Element
   mut window : @view_layout.LineWindow
   mut generation : Int
+  mut decorations_generation : Int
   line_nodes : Array[@rdom.Element]
   render_inputs : Array[@view_layout.RenderLineInput]
   line_mappings : Array[@view_layout.CharacterMapping]
@@ -46,6 +47,7 @@ pub fn ViewLines::new(document : @rdom.Document) -> ViewLines {
     view_lines,
     window: { start: 0, end: 0 },
     generation: -1,
+    decorations_generation: -1,
     line_nodes: [],
     render_inputs: [],
     line_mappings: [],
@@ -106,14 +108,16 @@ pub fn ViewLines::line_node_at(
 ///|
 /// The `ViewLayer` recycler: tracks the rendered line range, splices
 /// entering/leaving text line nodes, and writes `innerHTML` only on entering
-/// lines. A changed content generation (new frame source or changed
-/// controller decorations) rewrites every rendered line instead.
+/// lines. A changed content generation (new frame source) or decorations
+/// generation (model decoration change) rewrites every rendered line instead
+/// — the per-line `previous != input` diff then limits the actual HTML
+/// writes to lines whose rendered input changed.
 pub fn ViewLines::render_text(
   self : ViewLines,
   frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
-  view_decorations : Array[@view_model.ViewModelDecoration],
   generation : Int,
+  decorations_generation : Int,
   space_width : Double,
   render_whitespace : @view_layout.RenderWhitespace,
   render_control_characters : Bool,
@@ -130,7 +134,9 @@ pub fn ViewLines::render_text(
     selection_view_range != self.last_selection
   self.last_selection = selection_view_range
   self.last_render_whitespace = render_whitespace
-  if generation != self.generation || selection_invalidated {
+  if generation != self.generation ||
+    decorations_generation != self.decorations_generation ||
+    selection_invalidated {
     while self.line_nodes.length() > viewport.lines.length() {
       match (self.line_nodes.pop(), self.render_inputs.pop()) {
         (Some(node), _) => self.view_lines.remove_child(node.as_node())
@@ -162,7 +168,6 @@ pub fn ViewLines::render_text(
       let mapping = write_line_node(
         self.line_nodes[index],
         frame.lines[index],
-        view_decorations,
         input,
         viewport.relative_vertical_offset[index],
         rewrite_html~,
@@ -175,6 +180,7 @@ pub fn ViewLines::render_text(
       )
     }
     self.generation = generation
+    self.decorations_generation = decorations_generation
     self.window = target
     return
   }
@@ -209,7 +215,6 @@ pub fn ViewLines::render_text(
       let mapping = write_line_node(
         node,
         frame.lines[index],
-        view_decorations,
         input,
         viewport.relative_vertical_offset[index],
         rewrite_html=true,
@@ -361,15 +366,11 @@ fn selections_on_line_for(
 fn write_line_node(
   node : @rdom.Element,
   line : @view_model.RenderLine,
-  view_decorations : Array[@view_model.ViewModelDecoration],
   input : @view_layout.RenderLineInput,
   top : Int,
   rewrite_html~ : Bool,
 ) -> @view_layout.CharacterMapping? {
-  node.set_attribute(
-    "class",
-    @viewer_common.render_line_class(line, view_decorations),
-  )
+  node.set_attribute("class", @viewer_common.render_line_class(line))
   node.set_attribute("data-line", line.line_number.to_string())
   node.set_attribute("style", line_node_style(top))
   if rewrite_html {

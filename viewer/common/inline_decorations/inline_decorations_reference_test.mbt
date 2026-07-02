@@ -9,9 +9,189 @@
 fn create_model_decoration(
   id : String,
   range : @base_common.Range,
-  options : @inline_decorations.ModelDecorationOptions,
-) -> @inline_decorations.ModelDecoration {
+  options : ModelDecorationOptions,
+) -> @inline_decorations.ModelDecoration[ModelDecorationOptions] {
   { id, owner_id: 0, range, options }
+}
+
+// ---- Monaco-test-double collaborators (kept for this suite only; the
+// production seams are the real `@model` tier — see the package header) ----
+
+///|
+/// Minimal `ITextModel` stand-in (Monaco `createTextModel`): holds the document
+/// lines and answers the column/validation queries the computer and converter
+/// need.
+priv struct TestTextModel {
+  lines : Array[String]
+}
+
+///|
+/// Splits `text` into logical lines on `\n` (the suite uses `\n` only).
+fn TestTextModel::create(text : String) -> TestTextModel {
+  let lines : Array[String] = []
+  let mut buf = StringBuilder::new()
+  for ch in text {
+    if ch == '\n' {
+      lines.push(buf.to_string())
+      buf = StringBuilder::new()
+    } else {
+      buf.write_char(ch)
+    }
+  }
+  lines.push(buf.to_string())
+  { lines, }
+}
+
+///|
+fn TestTextModel::get_line_count(self : TestTextModel) -> Int {
+  self.lines.length()
+}
+
+///|
+impl @inline_decorations.InlineDecorationsModel for TestTextModel with fn get_line_max_column(
+  self,
+  line_number,
+) {
+  self.lines[line_number - 1].length() + 1
+}
+
+///|
+fn TestTextModel::validate_position(
+  self : TestTextModel,
+  pos : @base_common.Position,
+) -> @base_common.Position {
+  let line = @base_common.clamp_int(pos.line_number, 1, self.get_line_count())
+  let column = @base_common.clamp_int(
+    pos.column,
+    1,
+    self.lines[line - 1].length() + 1,
+  )
+  Position(line, column)
+}
+
+///|
+fn TestTextModel::validate_range(
+  self : TestTextModel,
+  range : @base_common.Range,
+) -> @base_common.Range {
+  let start = self.validate_position(
+    Position(range.start_line_number, range.start_column),
+  )
+  let end = self.validate_position(
+    Position(range.end_line_number, range.end_column),
+  )
+  Range(start.line_number, start.column, end.line_number, end.column)
+}
+
+///|
+/// The trivial 1:1 view-model converter (Monaco `IdentityCoordinatesConverter`):
+/// every conversion is a validation against the model.
+priv struct IdentityCoordinatesConverter {
+  model : TestTextModel
+}
+
+///|
+fn IdentityCoordinatesConverter::new(
+  model : TestTextModel,
+) -> IdentityCoordinatesConverter {
+  { model, }
+}
+
+///|
+impl @inline_decorations.CoordinatesConverter for IdentityCoordinatesConverter with fn convert_model_position_to_view_position(
+  self,
+  model_position,
+) {
+  self.model.validate_position(model_position)
+}
+
+///|
+impl @inline_decorations.CoordinatesConverter for IdentityCoordinatesConverter with fn convert_model_range_to_view_range(
+  self,
+  model_range,
+) {
+  self.model.validate_range(model_range)
+}
+
+///|
+/// Decoration render options double — the subset of `IModelDecorationOptions`
+/// the inline-decoration computer reads.
+priv struct ModelDecorationOptions {
+  // description/className are accepted by the ctor for Monaco's options shape
+  // but never read by the computer, so they are not stored.
+  inline_class_name : String?
+  inline_class_name_affects_letter_spacing : Bool
+  before_content_class_name : String?
+  after_content_class_name : String?
+  affects_font : Bool
+  is_whole_line : Bool
+}
+
+///|
+/// Builds decoration options, defaulting every optional field the way an absent
+/// JS property would.
+fn ModelDecorationOptions::new(
+  description? : String = "",
+  class_name? : String,
+  inline_class_name? : String,
+  inline_class_name_affects_letter_spacing? : Bool = false,
+  before_content_class_name? : String,
+  after_content_class_name? : String,
+  affects_font? : Bool = false,
+  is_whole_line? : Bool = false,
+) -> ModelDecorationOptions {
+  ignore(description)
+  ignore(class_name)
+  {
+    inline_class_name,
+    inline_class_name_affects_letter_spacing,
+    before_content_class_name,
+    after_content_class_name,
+    affects_font,
+    is_whole_line,
+  }
+}
+
+///|
+impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn inline_class_name(
+  self,
+) {
+  self.inline_class_name
+}
+
+///|
+impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn inline_class_name_affects_letter_spacing(
+  self,
+) {
+  self.inline_class_name_affects_letter_spacing
+}
+
+///|
+impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn before_content_class_name(
+  self,
+) {
+  self.before_content_class_name
+}
+
+///|
+impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn after_content_class_name(
+  self,
+) {
+  self.after_content_class_name
+}
+
+///|
+impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn affects_font(
+  self,
+) {
+  self.affects_font
+}
+
+///|
+impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn is_whole_line(
+  self,
+) {
+  self.is_whole_line
 }
 
 ///|
@@ -45,11 +225,9 @@ fn assert_bool_array_eq(
 
 ///|
 test "no decorations" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) { [] },
   }
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
@@ -63,17 +241,15 @@ test "no decorations" {
 
 ///|
 test "inline class name decoration on a single line" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 6),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             inline_class_name="test-class",
           ),
@@ -100,17 +276,15 @@ test "inline class name decoration on a single line" {
 
 ///|
 test "inlineClassName with affectsLetterSpacing" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 6),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             inline_class_name="test-class",
             inline_class_name_affects_letter_spacing=true,
@@ -136,17 +310,15 @@ test "inlineClassName with affectsLetterSpacing" {
 
 ///|
 test "beforeContentClassName decoration" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
           "dec1",
           Range(1, 3, 1, 8),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             before_content_class_name="before-class",
           ),
@@ -171,17 +343,15 @@ test "beforeContentClassName decoration" {
 
 ///|
 test "afterContentClassName decoration" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
           "dec1",
           Range(1, 3, 1, 8),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             after_content_class_name="after-class",
           ),
@@ -206,17 +376,15 @@ test "afterContentClassName decoration" {
 
 ///|
 test "all decoration types combined" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
           "dec1",
           Range(1, 2, 1, 6),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             inline_class_name="inline-class",
             before_content_class_name="before-class",
@@ -253,19 +421,15 @@ test "all decoration types combined" {
 
 ///|
 test "decoration spanning multiple lines" {
-  let model = @inline_decorations.TextModel::create(
-    "line one\nline two\nline three",
-  )
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("line one\nline two\nline three")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
           "dec1",
           Range(1, 3, 3, 5),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             inline_class_name="multi-line",
           ),
@@ -291,17 +455,15 @@ test "decoration spanning multiple lines" {
 
 ///|
 test "decoration with affectsFont sets hasVariableFonts" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 6),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             inline_class_name="font-class",
             affects_font=true,
@@ -319,17 +481,15 @@ test "decoration with affectsFont sets hasVariableFonts" {
 
 ///|
 test "multiple decorations on different lines" {
-  let model = @inline_decorations.TextModel::create("line one\nline two")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("line one\nline two")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 5),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             inline_class_name="class-a",
           ),
@@ -337,7 +497,7 @@ test "multiple decorations on different lines" {
         create_model_decoration(
           "dec2",
           Range(2, 1, 2, 5),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             inline_class_name="class-b",
           ),
@@ -369,19 +529,17 @@ test "multiple decorations on different lines" {
 
 ///|
 test "decoration cache is used for same decoration id" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
   let dec = create_model_decoration(
     "dec1",
     Range(1, 1, 1, 6),
-    @inline_decorations.ModelDecorationOptions::new(
+    ModelDecorationOptions::new(
       description="test",
       inline_class_name="test-class",
     ),
   )
-  let context : @inline_decorations.InlineModelContext = {
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) { [dec] },
   }
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
@@ -394,19 +552,17 @@ test "decoration cache is used for same decoration id" {
 
 ///|
 test "reset clears decoration cache" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
   let dec = create_model_decoration(
     "dec1",
     Range(1, 1, 1, 6),
-    @inline_decorations.ModelDecorationOptions::new(
+    ModelDecorationOptions::new(
       description="test",
       inline_class_name="test-class",
     ),
   )
-  let context : @inline_decorations.InlineModelContext = {
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) { [dec] },
   }
   let computer = @inline_decorations.InlineModelDecorationsComputer::new(
@@ -420,17 +576,15 @@ test "reset clears decoration cache" {
 
 ///|
 test "getInlineDecorations returns inline decorations for a model line" {
-  let model = @inline_decorations.TextModel::create("hello world")
-  let coordinates_converter = @inline_decorations.IdentityCoordinatesConverter::new(
-    model,
-  )
-  let context : @inline_decorations.InlineModelContext = {
+  let model = TestTextModel::create("hello world")
+  let coordinates_converter = IdentityCoordinatesConverter::new(model)
+  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 6),
-          @inline_decorations.ModelDecorationOptions::new(
+          ModelDecorationOptions::new(
             description="test",
             inline_class_name="test-class",
           ),

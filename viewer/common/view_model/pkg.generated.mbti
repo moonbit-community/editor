@@ -5,6 +5,7 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
   "moonbit-community/editor/syntax",
+  "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbitlang/core/debug",
@@ -75,13 +76,17 @@ pub fn build_frame(FrameSource, FrameViewport) -> RenderFrame
 
 pub fn default_token_color_map() -> Array[String]
 
+pub fn filter_validation_decorations(RenderValidationDecorations) -> Bool
+
 pub fn injected_text_from_inlay_hints(Array[@language.InlayHint]) -> Array[InjectedText]
 
-pub fn line_decorations_for_line(RenderLine, Array[ViewModelDecoration]) -> Array[@view_layout.LineDecoration]
+pub fn line_decorations_filter(Array[@inline_decorations.InlineDecoration], Int, Int, Int) -> Array[@view_layout.LineDecoration]
+
+pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.Decoration], Int, RenderLine) -> Array[@view_layout.LineDecoration]
 
 pub fn line_tokens_from_syntax_tokens(String, Int, Array[@syntax.Token], LanguageIdCodec, language_id? : Int) -> LineTokens
 
-pub fn render_line_input_from_render_line(RenderLine, view_decorations? : Array[ViewModelDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
+pub fn render_line_input_from_render_line(RenderLine, line_decorations? : Array[@view_layout.LineDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
 
 pub fn tag_foreground_color_id(@syntax.HighlightTag) -> Int
 
@@ -95,11 +100,11 @@ pub fn tokenize_line_to_html(String, &IViewLineTokens, Array[String], Int, Int, 
 
 pub fn tokenize_to_string(String, LanguageIdCodec, (String) -> Array[UInt]) -> String
 
-pub fn view_line_rendering_data_from_render_line(RenderLine, view_decorations? : Array[ViewModelDecoration]) -> @view_layout.ViewLineRenderingData
+pub fn view_line_rendering_data_from_render_line(RenderLine, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 
 pub fn viewport_data_from_render_frame(RenderFrame, line_height~ : Int) -> @view_layout.ViewportData
 
-pub fn viewport_data_from_view_model(ViewModel, @view_layout.LineWindow, line_height~ : Int, decorations? : Array[@model.Decoration], layout? : @view_layout.ViewLayout) -> @view_layout.ViewportData
+pub fn viewport_data_from_view_model(ViewModel, @view_layout.LineWindow, line_height~ : Int, layout? : @view_layout.ViewLayout) -> @view_layout.ViewportData
 
 // Errors
 
@@ -117,9 +122,9 @@ pub fn FoldingModel::visible_line_count(Self, Int) -> Int
 pub struct FrameSource {
   tokenized : TokenizedDocument
   providers : @language.ProviderResult
-  decorations : Array[@model.Decoration]
+  model : @model.TextModel?
 }
-pub fn FrameSource::FrameSource(TokenizedDocument, @model.DecorationSet, @language.ProviderResult) -> Self
+pub fn FrameSource::FrameSource(TokenizedDocument, @language.ProviderResult, model? : @model.TextModel) -> Self
 
 pub(all) struct FrameViewport {
   start_line : Int
@@ -295,6 +300,12 @@ pub fn RenderLine::model_line_start_offset(Self) -> Int
 pub fn RenderLine::source_offset_at_column(Self, Int) -> Int
 pub fn RenderLine::view_column_at_source_offset(Self, Int) -> Int
 
+pub(all) enum RenderValidationDecorations {
+  Editable
+  On
+  Off
+} derive(Eq, @debug.Debug)
+
 pub(all) struct Selection {
   selection_start : @common.Position
   position : @common.Position
@@ -369,24 +380,18 @@ pub(all) enum ViewModelCoordinatesConverter {
   Identity(IdentityCoordinatesConverter)
   Projected(ProjectedCoordinatesConverter)
 }
+pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConverter
 pub impl CoordinatesConverter for ViewModelCoordinatesConverter
 
-pub(all) struct ViewModelDecoration {
-  range : @view_layout.ViewRange
-  kind : @model.DecorationKind
-  class_name : String
-  inline_class_name : String?
-  show_if_collapsed : Bool
-} derive(Eq, @debug.Debug)
-pub fn ViewModelDecoration::columns_on_view_line(Self, Int, Int) -> (Int, Int)?
-
 pub struct ViewModelDecorations {
-  converter : ViewModelCoordinatesConverter
-  decorations : Array[ViewModelDecoration]
+  // private fields
 }
-pub fn ViewModelDecorations::new(ViewModelCoordinatesConverter, Array[@model.Decoration]) -> Self
-pub fn ViewModelDecorations::to_view_decorations(Self, Array[@model.Decoration]) -> Array[ViewModelDecoration]
-pub fn ViewModelDecorations::view_decorations(Self) -> Array[ViewModelDecoration]
+pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLines, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> @inline_decorations.ViewDecorationsCollection[@model.Decoration]
+pub fn ViewModelDecorations::get_decorations_viewport_data(Self, @common.Range) -> @inline_decorations.ViewDecorationsCollection[@model.Decoration]
+pub fn ViewModelDecorations::new(Int, @model.TextModel?, Bool, ViewModelLines, ViewModelCoordinatesConverter) -> Self
+pub fn ViewModelDecorations::on_line_mapping_changed(Self) -> Unit
+pub fn ViewModelDecorations::on_model_decorations_changed(Self) -> Unit
+pub fn ViewModelDecorations::reset(Self) -> Unit
 
 pub(all) enum ViewModelLines {
   ModelAsIs(ViewModelLinesFromModelAsIs)
@@ -400,7 +405,7 @@ pub fn ViewModelLines::is_model_line_hidden(Self, Int) -> Bool
 pub fn ViewModelLines::line_count(Self) -> Int
 pub fn ViewModelLines::model_line_number_of_view_line(Self, Int) -> Int
 pub fn ViewModelLines::render_line(Self, Int) -> RenderLine
-pub fn ViewModelLines::view_line_rendering_data(Self, Int, view_decorations? : Array[ViewModelDecoration]) -> @view_layout.ViewLineRenderingData
+pub fn ViewModelLines::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 
 pub struct ViewModelLinesFromModelAsIs {
   source : FrameSource
@@ -422,7 +427,7 @@ pub fn ViewModelLinesFromModelAsIs::new(FrameSource) -> Self
 pub fn ViewModelLinesFromModelAsIs::projected_text_line(Self, Int) -> ProjectedTextLine
 pub fn ViewModelLinesFromModelAsIs::render_line(Self, Int) -> RenderLine
 pub fn ViewModelLinesFromModelAsIs::render_model_line(Self, Int) -> RenderLine
-pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(Self, Int, view_decorations? : Array[ViewModelDecoration]) -> @view_layout.ViewLineRenderingData
+pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 pub fn ViewModelLinesFromModelAsIs::with_folding_model(FrameSource, FoldingModel) -> Self
 pub fn ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(FrameSource, FoldingModel, Array[InjectedText]) -> Self
 pub fn ViewModelLinesFromModelAsIs::with_injected_text(FrameSource, Array[InjectedText]) -> Self
@@ -442,15 +447,17 @@ pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, In
 pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(Self, @common.Position) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::new(ViewModelLinesFromModelAsIs, LineBreaksComputer) -> Self
 pub fn ViewModelLinesFromProjectedModel::render_line(Self, Int) -> RenderLine
-pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(Self, Int, view_decorations? : Array[ViewModelDecoration]) -> @view_layout.ViewLineRenderingData
+pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(Self, @common.Position) -> @common.Position
 
 pub(all) struct ViewModelOptions {
   soft_wrap_column : Int
   tab_size : Int
   wrapping_indent : WrappingIndent
+  editor_id : Int
+  render_validation_decorations : RenderValidationDecorations
 } derive(Eq, @debug.Debug)
-pub fn ViewModelOptions::ViewModelOptions(soft_wrap_column? : Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
+pub fn ViewModelOptions::ViewModelOptions(soft_wrap_column? : Int, tab_size? : Int, wrapping_indent? : WrappingIndent, editor_id? : Int, render_validation_decorations? : RenderValidationDecorations) -> Self
 pub fn ViewModelOptions::is_soft_wrap_enabled(Self) -> Bool
 pub fn ViewModelOptions::no_wrap() -> Self
 pub fn ViewModelOptions::soft_wrap(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
@@ -463,6 +470,9 @@ pub(all) enum WrappingIndent {
 } derive(Eq, @debug.Debug)
 
 // Type aliases
+pub type ViewDecorationsCollection = @inline_decorations.ViewDecorationsCollection[@model.Decoration]
+
+pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[@model.Decoration]
 
 // Traits
 pub(open) trait CoordinatesConverter {

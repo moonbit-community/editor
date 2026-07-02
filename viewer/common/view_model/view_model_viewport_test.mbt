@@ -6,11 +6,7 @@ test "view model produces viewport data from layout window" {
     @syntax.highlight(doc),
   )
   let view_model = @view_model.ViewModel(
-    FrameSource(
-      tokenized,
-      @model.DecorationSet::empty(),
-      @language.ProviderResult::empty(),
-    ),
+    FrameSource(tokenized, @language.ProviderResult::empty()),
   )
   let viewport = @view_model.viewport_data_from_view_model(
     view_model,
@@ -54,4 +50,89 @@ test "view model produces viewport data from layout window" {
       #|]
     ),
   )
+}
+
+///|
+/// End-to-end Phase-3 chain: decorations stored on the model reach the
+/// viewport's per-line `LineDecoration`s through `ViewModelDecorations` →
+/// `InlineModelDecorationsComputer` → `line_decorations_for_line`.
+test "viewport line decorations come from model decoration storage" {
+  let text = "alpha beta\ngamma delta\nepsilon"
+  let model = @model.TextModel(
+    @base_common.Uri::memory("storage.mbt"),
+    "",
+    "moonbit",
+    1,
+    "",
+    text,
+  )
+  let _ = model.delta_decorations([], [
+    {
+      range: Range(1, 1, 1, 6),
+      options: Decoration(
+        Range(1, 1, 1, 1),
+        Diagnostic,
+        "squiggly-warning",
+        inline_class_name="squiggly-inline-unnecessary",
+        show_if_collapsed=true,
+        description="test",
+      ),
+    },
+    // collapsed marker at EOL: only the transitional className span renders
+    // (1ch wide), never the inline class (Monaco drops empty-range inline
+    // decorations)
+    {
+      range: Range(2, 12, 2, 12),
+      options: Decoration(
+        Range(1, 1, 1, 1),
+        Diagnostic,
+        "squiggly-error",
+        show_if_collapsed=true,
+        description="test",
+      ),
+    },
+  ])
+  let tokenized = @view_model.TokenizedDocument::build(
+    model.snapshot,
+    @syntax.highlight(model.snapshot),
+  )
+  let view_model = @view_model.ViewModel::with_options(
+    FrameSource(tokenized, @language.ProviderResult::empty(), model~),
+    ViewModelOptions(render_validation_decorations=On),
+  )
+  let viewport = @view_model.viewport_data_from_view_model(
+    view_model,
+    { start: 1, end: 4 },
+    line_height=18,
+  )
+  let line1 = viewport.line_decorations[0]
+  assert_true(
+    line1.any(d => {
+      d.class_name == "squiggly-warning" &&
+      d.start_column == 1 &&
+      d.end_column == 6
+    }),
+  )
+  assert_true(line1.any(d => d.class_name == "squiggly-inline-unnecessary"))
+  let line2 = viewport.line_decorations[1]
+  assert_true(
+    line2.any(d => {
+      d.class_name == "squiggly-error" &&
+      d.start_column == 12 &&
+      d.end_column == 13
+    }),
+  )
+  assert_eq(viewport.line_decorations[2].length(), 0)
+  // renderValidationDecorations=Off filters squiggly-error/warning/info out
+  let filtered_view_model = @view_model.ViewModel::with_options(
+    FrameSource(tokenized, @language.ProviderResult::empty(), model~),
+    ViewModelOptions(render_validation_decorations=Off),
+  )
+  let filtered = @view_model.viewport_data_from_view_model(
+    filtered_view_model,
+    { start: 1, end: 4 },
+    line_height=18,
+  )
+  assert_eq(filtered.line_decorations[0].length(), 0)
+  assert_eq(filtered.line_decorations[1].length(), 0)
 }

@@ -329,11 +329,11 @@ pub fn ViewModelLinesFromModelAsIs::model_line_tokens(
 pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
-  view_decorations? : Array[ViewModelDecoration] = [],
+  line_decorations? : Array[@view_layout.LineDecoration] = [],
 ) -> @view_layout.ViewLineRenderingData {
   view_line_rendering_data_from_render_line(
     self.render_line(line_number),
-    view_decorations~,
+    line_decorations~,
   )
 }
 
@@ -492,13 +492,13 @@ pub fn ViewModelLines::render_line(
 pub fn ViewModelLines::view_line_rendering_data(
   self : ViewModelLines,
   line_number : Int,
-  view_decorations? : Array[ViewModelDecoration] = [],
+  line_decorations? : Array[@view_layout.LineDecoration] = [],
 ) -> @view_layout.ViewLineRenderingData {
   match self {
     ModelAsIs(lines) =>
-      lines.view_line_rendering_data(line_number, view_decorations~)
+      lines.view_line_rendering_data(line_number, line_decorations~)
     ProjectedModel(lines) =>
-      lines.view_line_rendering_data(line_number, view_decorations~)
+      lines.view_line_rendering_data(line_number, line_decorations~)
   }
 }
 
@@ -611,8 +611,11 @@ fn ViewModel::from_lines(
     source,
     lines,
     decorations: ViewModelDecorations::new(
+      options.editor_id,
+      source.model,
+      filter_validation_decorations(options.render_validation_decorations),
+      lines,
       coordinates_converter,
-      source.decorations,
     ),
     coordinates_converter,
   }

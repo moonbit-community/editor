@@ -327,23 +327,68 @@ explicit rows (they are deletions/wirings, not ports).
 
 | Source member / migration step | Arithmetic / transition | MoonBit symbol | Status |
 |---|---|---|---|
-| ctor context closure (:31-34) | `getModelDecorations` = linesCollection.getDecorationsInRange(viewRange→model, editorId, filterValidation, filterFont, …) | context struct closing over the real model + converter | TODO |
-| `_cachedModelDecorationsResolver`+ViewRange (:24-25,:39-42) | one-entry cache keyed by exact view range | cache fields | TODO |
-| `dispose`/`reset` (:44-52) | computer reset + cache clear | `::reset` | TODO |
-| `onModelDecorationsChanged` (:54-57) | computer + cache invalidate | `::on_model_decorations_changed` | TODO |
-| `onLineMappingChanged` (:59-63) | computer + cache invalidate | `::on_line_mapping_changed` | TODO |
+| ctor context closure (:31-34) | `getModelDecorations` = linesCollection.getDecorationsInRange(viewRange→model, editorId, filterValidation, filterFont, …) | context struct closing over the real model + converter | PASS |
+| `_cachedModelDecorationsResolver`+ViewRange (:24-25,:39-42) | one-entry cache keyed by exact view range | cache fields | PASS |
+| `dispose`/`reset` (:44-52) | computer reset + cache clear | `::reset` | PASS |
+| `onModelDecorationsChanged` (:54-57) | computer + cache invalidate | `::on_model_decorations_changed` | PASS |
+| `onLineMappingChanged` (:59-63) | computer + cache invalidate | `::on_line_mapping_changed` | PASS |
 | `getMinimapDecorationsInRange` (:65-67) | computer.getDecorations(range, true, false) | — | DEFERRED (minimap part) |
-| `getDecorationsViewportData` (:69-77) | cache-valid check → computer.getDecorations(viewRange,false,false) | `::get_decorations_viewport_data` | TODO |
-| `getDecorationsOnLine` (:79-82) | line min/max column range | `::get_decorations_on_line` | TODO |
-| `filterValidationDecorations` gate (editorOptions) | `renderValidationDecorations` option: on/off/editable (editable → readOnly ⇒ filter) | option default `editable`: readonly viewer ⇒ filter **on** unless overridden — port the option | TODO |
-| Migration: swap `inline_decorations` doubles | `IdentityCoordinatesConverter` → real `CoordinatesConverter` trait; mini `TextModel`/`ModelDecorationOptions` → model-tier types | seam interfaces in the package; doubles remain for its reference suite | TODO |
-| Migration: delete simplified `ViewModelDecoration` (`view_model_decorations.mbt`) + eager conversion | replaced by computer + cache | deletion | TODO |
-| Migration: restore `ViewModelDecoration → per-line InlineDecoration → LineDecoration` chain in `viewLines` prepare | today `to_view_decorations` short-circuits to renderer types | rewire `view_line_data.mbt` inputs | TODO |
-| Migration: marker producer | `marker_decorations_service` keeps its `_markerDecorations` per-model state but stores via `change_decorations` accessor (Monaco `markerDecorationsService.ts` `_handleMarkerChange` shape); frame-bake at `render.mbt:36-39` deleted; no `content_generation` bump for marker changes | re-plumb | TODO |
-| Migration: hover producer | `controller_decorations()` (hover highlight) → a hover-owned decoration collection (`delta_decorations` on show/hide); class `has-hover` → `hoverHighlight` + CSS update | re-plumb | TODO |
-| Migration: `ViewDecorationsChanged` view event | model `onDidChangeDecorations` → viewer glue pushes typed event; parts return dirty (viewLines: true — inline decorations; DecorationsOverlay: true; others false) | new `ViewEvent` variant (Deviation 3) | TODO |
+| `getDecorationsViewportData` (:69-77) | cache-valid check → computer.getDecorations(viewRange,false,false) | `::get_decorations_viewport_data` | PASS |
+| `getDecorationsOnLine` (:79-82) | line min/max column range | `::get_decorations_on_line` | PASS |
+| `filterValidationDecorations` gate (editorOptions) | `renderValidationDecorations` option: on/off/editable (editable → readOnly ⇒ filter) | option default `editable`: readonly viewer ⇒ filter **on** unless overridden — port the option | PASS |
+| Migration: swap `inline_decorations` doubles | `IdentityCoordinatesConverter` → real `CoordinatesConverter` trait; mini `TextModel`/`ModelDecorationOptions` → model-tier types | seam interfaces in the package; doubles remain for its reference suite | PASS |
+| Migration: delete simplified `ViewModelDecoration` (`view_model_decorations.mbt`) + eager conversion | replaced by computer + cache | deletion | PASS |
+| Migration: restore `ViewModelDecoration → per-line InlineDecoration → LineDecoration` chain in `viewLines` prepare | today `to_view_decorations` short-circuits to renderer types | rewire `view_line_data.mbt` inputs | PASS |
+| Migration: marker producer | `marker_decorations_service` keeps its `_markerDecorations` per-model state but stores via `change_decorations` accessor (Monaco `markerDecorationsService.ts` `_handleMarkerChange` shape); frame-bake at `render.mbt:36-39` deleted; no `content_generation` bump for marker changes | re-plumb | PASS |
+| Migration: hover producer | `controller_decorations()` (hover highlight) → a hover-owned decoration collection (`delta_decorations` on show/hide); class `has-hover` → `hoverHighlight` + CSS update | re-plumb | PASS |
+| Migration: `ViewDecorationsChanged` view event | model `onDidChangeDecorations` → viewer glue pushes typed event; parts return dirty (viewLines: true — inline decorations; DecorationsOverlay: true; others false) | new `ViewEvent` variant (Deviation 3) | PASS |
 
 Member count (Phase 3): **15 rows** (9 source + 6 migration).
+
+Landed notes (2026-07-02):
+
+- **Seam shape.** The promoted `inline_decorations` computer is generic over
+  three seams (`InlineDecorationsModel`, `CoordinatesConverter`,
+  `InlineDecorationOptions[O]`); the real impls for `@model.TextModel` /
+  `@model.Decoration` live in the package, the view-model converter implements
+  the converter trait in `view_model` (type's package), and the suite keeps
+  Monaco's doubles inside its reference test. `@model.Decoration` still
+  carries no `before/afterContentClassName`/`affectsFont` — those computer
+  arms are exercised by the suite's doubles only (deviation noted in the
+  package header).
+- **Missing-members fix.** The computer gained the source's
+  `onModelDecorationsChanged`/`onLineMappingChanged` (absent from the
+  original quarantined port).
+- **`viewModelLines.getDecorationsInRange`** (`:923`) is ported alongside
+  (fast path + hidden-line splitting + sort/dedupe) as the context closure's
+  target; `ViewModelLines::is_model_line_hidden` answers visibility.
+- **Render chain.** `viewport_data_from_view_model` resolves the viewport
+  collection via `get_decorations_viewport_data` and clips per line with the
+  `LineDecoration.filter` port (`line_decorations_filter`); a clearly-marked
+  TRANSITIONAL block still renders `className` decorations as line-internal
+  spans (with `showIfCollapsed` 1ch widening) until the Phase-4
+  `DecorationsOverlay` takes them over.
+- **Producers.** `MarkerDecorations` stores through
+  `model.delta_decorations` (ownerId 0), `get_markers` resolves ranges from
+  storage, and `decorations_for_resource` (the frame bake) is deleted; the
+  hover highlight is a hover-owned `delta_decorations` collection synced at
+  flush (`sync_hover_decorations`, ownerId = the viewer's editor id) with
+  class `hoverHighlight` (CSS updated).
+- **Event.** `ViewDecorationsChanged` is sourced from a
+  `decorations_generation` counter the `Viewer` bumps per model
+  `onDidChangeDecorations` (Deviation 3); `ViewLines` returns dirty for it
+  and its recycler rewrites when the generation moved. Marker changes no
+  longer bump `content_generation` (the old marker→`render_feature_update`
+  subscription now only refreshes the public diagnostics-count event).
+- **Option.** `renderValidationDecorations` is ported at the view-model tier
+  with Monaco's `Editable` default; `ViewerOptions` defaults it to `On` — a
+  recorded product deviation, because `Editable` hides validation squiggles
+  in readonly editors and the viewer's diagnostics rendering is a shipped
+  feature.
+- **Pulled forward from Phase 4.** The dead `kind == CurrentLine` consumers
+  (`line_html.mbt:68` line-class merge, `view_line_data.mbt:100,147`) were
+  deleted with the seam rewire (no producer existed); `render_line_class`
+  now returns the constant `view-line`.
 
 ## Phase 4 — `decorations.ts` `DecorationsOverlay` (whole) + `DecorationKind` retirement
 

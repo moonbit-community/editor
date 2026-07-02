@@ -15,45 +15,12 @@ test "line html escapes text and merges span decorations" {
   // A diagnostic decoration over `a` (view line 1, columns 5..6) lands on the
   // spans it intersects.
   let decorated = @common.render_line_html(line, [
-    view_decoration(5, 6, Diagnostic, "diag-warning"),
+    LineDecoration(5, 6, "diag-warning"),
   ])
   assert_true(decorated.contains("class=\"mtk4 diag-warning\""))
-  // The line class carries CurrentLine decorations only.
-  assert_eq(@common.render_line_class(line, []), "view-line")
-  assert_eq(
-    @common.render_line_class(line, [
-      view_decoration(1, 2, CurrentLine, "current-line"),
-    ]),
-    "view-line current-line",
-  )
-  assert_eq(
-    @common.render_line_html(line, [
-      view_decoration(1, 2, CurrentLine, "current-line"),
-    ]),
-    plain,
-  )
-}
-
-///|
-/// Builds a single-line view-coordinate decoration with one-based columns.
-fn view_decoration(
-  start_column : Int,
-  end_column : Int,
-  kind : @model.DecorationKind,
-  class_name : String,
-) -> @view_model.ViewModelDecoration {
-  {
-    range: {
-      start_line_number: 1,
-      start_column,
-      end_line_number: 1,
-      end_column,
-    },
-    kind,
-    class_name,
-    inline_class_name: None,
-    show_if_collapsed: false,
-  }
+  // The line node's own class is constant (the current-line highlight renders
+  // through its own overlay).
+  assert_eq(@common.render_line_class(line), "view-line")
 }
 
 ///|

@@ -1,127 +1,406 @@
+// 1:1 port of Monaco's `viewModel/viewModelDecorations.ts` (whole file) plus
+// the `viewModelLines.ts:923` `getDecorationsInRange` slice its context
+// closure delegates to, from vscode submodule commit
+// 294fb350837dbaee37b949533fead4df4e0e8971 (decoration plan Phase 3 — this
+// replaces the previous simplified eager-conversion `ViewModelDecorations`).
+//
+// Deviations:
+// - The editor configuration reads (`filterValidationDecorations(options)`,
+//   `filterFontDecorations(options)`) are resolved once at construction: the
+//   readonly viewer rebuilds its view model on every option change, so the
+//   per-call read has no observable difference. Font decorations are out of
+//   scope, so that filter is constantly `false`.
+// - `getMinimapDecorationsInRange` is DEFERRED with the minimap view part
+//   (plan out-of-scope list); `onlyMinimapDecorations` is carried through the
+//   context signature (it only forwards to the out-of-scope bracket provider
+//   in the source).
+// - `dispose` is folded into `reset` (no dispose lifecycle in the readonly
+//   view model; both bodies are identical in the source).
+
 ///|
-/// A decoration resolved into view coordinates, the Monaco `ViewModelDecoration`
-/// role: the model decoration's class/kind paired with its range already
-/// converted to view `Position`s. The viewer never round-trips decorations
-/// through raw document offsets when rendering; it converts once here and then
-/// works in view columns, exactly like `viewModelDecorations.ts`.
-pub(all) struct ViewModelDecoration {
-  range : @view_layout.ViewRange
-  kind : @model.DecorationKind
-  class_name : String
-  inline_class_name : String?
-  show_if_collapsed : Bool
+/// The production instantiation of the faithful inline-decorations middle
+/// layer: options are the real `@model.Decoration`.
+pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[
+  @model.Decoration,
+]
+
+///|
+pub type ViewDecorationsCollection = @inline_decorations.ViewDecorationsCollection[
+  @model.Decoration,
+]
+
+///|
+/// `renderValidationDecorations` (`editorOptions.ts`): whether validation
+/// (squiggly) decorations render. Monaco's default is `Editable`; the
+/// `Viewer` defaults its option to `On` instead — the readonly viewer's
+/// diagnostics rendering is a shipped feature that `Editable` (which hides
+/// validation decorations in readonly editors) would turn off.
+pub(all) enum RenderValidationDecorations {
+  Editable
+  On
+  Off
 } derive(Eq, Debug)
 
 ///|
-/// Decoration provider for one view model, the Monaco `ViewModelDecorations`
-/// role: it maps model decorations (line/column `Range`, as Monaco stores them)
-/// into view-coordinate `ViewModelDecoration`s through the `CoordinatesConverter`.
-/// Every consumer downstream of this works in view `Position`s.
-///
-/// Deliberate deviation (storage): this converts the *whole* flat decoration
-/// list eagerly at construction (`new` maps every decoration up front), where
-/// Monaco's `getDecorationsViewportData` resolves decorations lazily, scoped to
-/// the viewport and backed by a cached interval tree (`model/intervalTree.ts`).
-/// Conversion fidelity matches (a single model-`Range` → view-range projection);
-/// only the storage/lookup strategy is reduced. Interval-tree storage is the
-/// recorded remaining follow-up (see `monaco-one-to-one-port.md` and memory).
-pub struct ViewModelDecorations {
-  converter : ViewModelCoordinatesConverter
-  decorations : Array[ViewModelDecoration]
+/// `filterValidationDecorations` (`editorOptions.ts`): `editable` defers to
+/// `readOnly`, which is constantly `true` for this viewer.
+pub fn filter_validation_decorations(
+  option : RenderValidationDecorations,
+) -> Bool {
+  match option {
+    Editable => true // editable → readOnly; the viewer is always readonly
+    On => false
+    Off => true
+  }
 }
 
 ///|
-/// Builds the view-coordinate decorations for a view model from its model
-/// decorations, snapshot, and coordinate converter.
-pub fn ViewModelDecorations::new(
-  converter : ViewModelCoordinatesConverter,
-  decorations : Array[@model.Decoration],
-) -> ViewModelDecorations {
-  let view_decorations = decorations.map(decoration => {
-    to_view_decoration(converter, decoration)
+/// The `ICoordinatesConverter` seam of the promoted inline-decorations
+/// computer, implemented by the view model's converter (Range ↔ ViewRange
+/// bridging is the recorded `ViewRange`-duplication residual).
+pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConverter with fn convert_model_position_to_view_position(
+  self,
+  model_position,
+) {
+  self.model_position_to_view_position(model_position)
+}
+
+///|
+pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConverter with fn convert_model_range_to_view_range(
+  self,
+  model_range,
+) {
+  let view_range = self.model_range_to_view_range({
+    start_line_number: model_range.start_line_number,
+    start_column: model_range.start_column,
+    end_line_number: model_range.end_line_number,
+    end_column: model_range.end_column,
   })
-  { converter, decorations: view_decorations }
+  Range(
+    view_range.start_line_number,
+    view_range.start_column,
+    view_range.end_line_number,
+    view_range.end_column,
+  )
 }
 
 ///|
-/// The view-coordinate decorations baked into this view model (markers,
-/// diagnostics, semantic-token and current-line decorations from the source).
-pub fn ViewModelDecorations::view_decorations(
-  self : ViewModelDecorations,
-) -> Array[ViewModelDecoration] {
-  self.decorations
+/// `ViewModelDecorations` (`viewModelDecorations.ts:16`): the lazy,
+/// viewport-cached decoration provider for one view model. `computer` is
+/// `None` when the view model has no backing text model (headless test
+/// frames) — every query then yields an empty collection.
+pub struct ViewModelDecorations {
+  priv computer : @inline_decorations.InlineModelDecorationsComputer[
+    @model.Decoration,
+  ]?
+  priv mut cached_model_decorations_resolver : ViewDecorationsCollection?
+  priv mut cached_model_decorations_resolver_view_range : @base_common.Range?
 }
 
 ///|
-/// Converts controller-contributed model decorations (e.g. hover highlights)
-/// into view coordinates using the same snapshot and converter, so they share
-/// the rendering path with the baked-in decorations.
-pub fn ViewModelDecorations::to_view_decorations(
-  self : ViewModelDecorations,
-  decorations : Array[@model.Decoration],
-) -> Array[ViewModelDecoration] {
-  decorations.map(decoration => to_view_decoration(self.converter, decoration))
-}
-
-///|
-/// Converts one model decoration to view coordinates: the decoration's model
-/// `Range` is projected to a view range by the converter.
-fn to_view_decoration(
-  converter : ViewModelCoordinatesConverter,
-  decoration : @model.Decoration,
-) -> ViewModelDecoration {
-  let model_range : @view_layout.ViewRange = {
-    start_line_number: decoration.range.start_line_number,
-    start_column: decoration.range.start_column,
-    end_line_number: decoration.range.end_line_number,
-    end_column: decoration.range.end_column,
+/// Constructor (`viewModelDecorations.ts:27-37`): the context closure hands
+/// the computer model decorations for a view range via the lines collection.
+pub fn ViewModelDecorations::new(
+  editor_id : Int,
+  model : @model.TextModel?,
+  filter_validation : Bool,
+  lines : ViewModelLines,
+  coordinates_converter : ViewModelCoordinatesConverter,
+) -> ViewModelDecorations {
+  let computer = match model {
+    Some(model) => {
+      let context : @inline_decorations.InlineModelContext[@model.Decoration] = {
+        get_model_decorations: (
+          view_range,
+          only_minimap_decorations,
+          only_margin_decorations,
+        ) => {
+          view_model_lines_get_decorations_in_range(
+            lines, model, coordinates_converter, view_range, editor_id, filter_validation,
+            only_minimap_decorations, only_margin_decorations,
+          )
+        },
+      }
+      Some(
+        @inline_decorations.InlineModelDecorationsComputer::new(
+          context, model, coordinates_converter,
+        ),
+      )
+    }
+    None => None
   }
   {
-    range: converter.model_range_to_view_range(model_range),
-    kind: decoration.kind,
-    class_name: decoration.class_name,
-    inline_class_name: decoration.inline_class_name,
-    show_if_collapsed: decoration.show_if_collapsed,
+    computer,
+    cached_model_decorations_resolver: None,
+    cached_model_decorations_resolver_view_range: None,
   }
 }
 
 ///|
-/// Clips this decoration's view range to one view line, returning the one-based
-/// half-open `[start_column, end_column)` span local to that line, or `None`
-/// when the decoration does not cover the line or collapses to empty. This is
-/// the per-line projection `linesVisibleRangesForRange` performs, in columns.
-pub fn ViewModelDecoration::columns_on_view_line(
-  self : ViewModelDecoration,
-  view_line_number : Int,
-  max_column : Int,
-) -> (Int, Int)? {
-  let range = self.range
-  if view_line_number < range.start_line_number ||
-    view_line_number > range.end_line_number {
-    return None
+/// `_clearCachedModelDecorationsResolver` (`viewModelDecorations.ts:39-42`).
+fn ViewModelDecorations::clear_cached_model_decorations_resolver(
+  self : ViewModelDecorations,
+) -> Unit {
+  self.cached_model_decorations_resolver = None
+  self.cached_model_decorations_resolver_view_range = None
+}
+
+///|
+/// `reset` (`viewModelDecorations.ts:49-52`; `dispose` has the same body).
+pub fn ViewModelDecorations::reset(self : ViewModelDecorations) -> Unit {
+  match self.computer {
+    Some(computer) => computer.reset()
+    None => ()
   }
-  let start_column = if range.start_line_number == view_line_number {
-    range.start_column
-  } else {
-    1
+  self.clear_cached_model_decorations_resolver()
+}
+
+///|
+/// `onModelDecorationsChanged` (`viewModelDecorations.ts:54-57`).
+pub fn ViewModelDecorations::on_model_decorations_changed(
+  self : ViewModelDecorations,
+) -> Unit {
+  match self.computer {
+    Some(computer) => computer.on_model_decorations_changed()
+    None => ()
   }
-  let end_column = if range.end_line_number == view_line_number {
-    range.end_column
-  } else {
-    max_column
+  self.clear_cached_model_decorations_resolver()
+}
+
+///|
+/// `onLineMappingChanged` (`viewModelDecorations.ts:59-63`).
+pub fn ViewModelDecorations::on_line_mapping_changed(
+  self : ViewModelDecorations,
+) -> Unit {
+  match self.computer {
+    Some(computer) => computer.on_line_mapping_changed()
+    None => ()
   }
-  let start_column = @base_common.clamp_int(start_column, 1, max_column)
-  let end_column = @base_common.clamp_int(end_column, 1, max_column)
-  if start_column >= end_column {
-    // A collapsed span normally contributes nothing; Monaco's `showIfCollapsed`
-    // forces it to render one column wide (the squiggle on an empty line / at
-    // EOL). `markerDecorationsService.ts` sets `showIfCollapsed: true`.
-    if self.show_if_collapsed {
-      Some((start_column, start_column + 1))
-    } else {
-      None
+  self.clear_cached_model_decorations_resolver()
+}
+
+///|
+/// `getDecorationsViewportData` (`viewModelDecorations.ts:69-77`): one-entry
+/// cache keyed by the exact view range.
+pub fn ViewModelDecorations::get_decorations_viewport_data(
+  self : ViewModelDecorations,
+  view_range : @base_common.Range,
+) -> ViewDecorationsCollection {
+  let mut cache_is_valid = self.cached_model_decorations_resolver is Some(_)
+  cache_is_valid = cache_is_valid &&
+    self.cached_model_decorations_resolver_view_range == Some(view_range)
+  if !cache_is_valid {
+    self.cached_model_decorations_resolver = Some(
+      self.compute_decorations(view_range),
+    )
+    self.cached_model_decorations_resolver_view_range = Some(view_range)
+  }
+  self.cached_model_decorations_resolver.unwrap()
+}
+
+///|
+/// `getDecorationsOnLine` (`viewModelDecorations.ts:79-82`).
+pub fn ViewModelDecorations::get_decorations_on_line(
+  self : ViewModelDecorations,
+  lines : ViewModelLines,
+  line_number : Int,
+  only_minimap_decorations? : Bool = false,
+  only_margin_decorations? : Bool = false,
+) -> ViewDecorationsCollection {
+  let range : @base_common.Range = Range(
+    line_number,
+    lines.get_view_line_min_column(line_number),
+    line_number,
+    lines.get_view_line_max_column(line_number),
+  )
+  match self.computer {
+    Some(computer) =>
+      computer.get_decorations(
+        range, only_minimap_decorations, only_margin_decorations,
+      )
+    None => empty_view_decorations_collection(range)
+  }
+}
+
+///|
+fn ViewModelDecorations::compute_decorations(
+  self : ViewModelDecorations,
+  view_range : @base_common.Range,
+) -> ViewDecorationsCollection {
+  match self.computer {
+    Some(computer) => computer.get_decorations(view_range, false, false)
+    None => empty_view_decorations_collection(view_range)
+  }
+}
+
+///|
+fn empty_view_decorations_collection(
+  view_range : @base_common.Range,
+) -> ViewDecorationsCollection {
+  let inline_decorations : Array[Array[@inline_decorations.InlineDecoration]] = []
+  let has_variable_fonts : Array[Bool] = []
+  for _j in view_range.start_line_number..<=view_range.end_line_number {
+    inline_decorations.push([])
+    has_variable_fonts.push(false)
+  }
+  { decorations: [], inline_decorations, has_variable_fonts }
+}
+
+///|
+/// `getDecorationsInRange` (`viewModelLines.ts:923-975`): view-range query
+/// against the model with hidden-line (folding) splitting. The fast path
+/// covers the no-hidden-lines case; otherwise visible model-line runs are
+/// fetched separately, sorted, and deduplicated. Like the source, the
+/// split-path requests drop the `onlyMarginDecorations` argument.
+fn view_model_lines_get_decorations_in_range(
+  lines : ViewModelLines,
+  model : @model.TextModel,
+  converter : ViewModelCoordinatesConverter,
+  range : @base_common.Range,
+  owner_id : Int,
+  filter_out_validation : Bool,
+  only_minimap_decorations : Bool,
+  only_margin_decorations : Bool,
+) -> Array[@inline_decorations.ModelDecoration[@model.Decoration]] {
+  // onlyMinimapDecorations only forwards to the out-of-scope bracket
+  // provider in the source's model.getDecorationsInRange.
+  ignore(only_minimap_decorations)
+  let model_start = converter.view_position_to_model_position(
+    Position(range.start_line_number, range.start_column),
+  )
+  let model_end = converter.view_position_to_model_position(
+    Position(range.end_line_number, range.end_column),
+  )
+  if model_end.line_number - model_start.line_number <=
+    range.end_line_number - range.start_line_number {
+    // most likely there are no hidden lines => fast path
+    // fetch decorations from column 1 to cover the case of wrapped lines that
+    // have whole line decorations at column 1
+    return to_inline_model_decorations(
+      model.get_decorations_in_range(
+        Range(
+          model_start.line_number,
+          1,
+          model_end.line_number,
+          model_end.column,
+        ),
+        owner_id~,
+        filter_out_validation~,
+        only_margin_decorations~,
+      ),
+    )
+  }
+  let result : Array[@model.ModelDecoration] = []
+  let model_start_line_index = model_start.line_number - 1
+  let model_end_line_index = model_end.line_number - 1
+  let mut req_start : @base_common.Position? = None
+  for model_line_index in model_start_line_index..<=model_end_line_index {
+    if !lines.is_model_line_hidden(model_line_index + 1) {
+      // merge into previous request
+      if req_start is None {
+        req_start = Some(
+          Position(
+            model_line_index + 1,
+            if model_line_index == model_start_line_index {
+              model_start.column
+            } else {
+              1
+            },
+          ),
+        )
+      }
+    } else if req_start is Some(start) {
+      // hit invisible line => flush request
+      let max_line_column = model.snapshot.get_line_max_column(model_line_index)
+      result.append(
+        model.get_decorations_in_range(
+          Range(
+            start.line_number,
+            start.column,
+            model_line_index,
+            max_line_column,
+          ),
+          owner_id~,
+          filter_out_validation~,
+        ),
+      )
+      req_start = None
     }
-  } else {
-    Some((start_column, end_column))
   }
+  if req_start is Some(start) {
+    result.append(
+      model.get_decorations_in_range(
+        Range(
+          start.line_number,
+          start.column,
+          model_end.line_number,
+          model_end.column,
+        ),
+        owner_id~,
+        filter_out_validation~,
+      ),
+    )
+    req_start = None
+  }
+  result.sort_by((a, b) => {
+    let res = @base_common.Range::compare_ranges_using_starts(a.range, b.range)
+    if res == 0 {
+      // JS `<` on decoration ids; ids share one `<instance>;` prefix, where
+      // MoonBit's length-first compare and JS lexicographic order agree for
+      // the numeric suffixes only when lengths match — compare code units.
+      lexicographic_id_compare(a.id, b.id)
+    } else {
+      res
+    }
+  })
+
+  // Eliminate duplicate decorations that might have intersected our visible
+  // ranges multiple times
+  let final_result : Array[
+    @inline_decorations.ModelDecoration[@model.Decoration],
+  ] = []
+  let mut last_dec_id = ""
+  for dec in result {
+    let dec_id = dec.id
+    if last_dec_id == dec_id {
+      continue
+    }
+    last_dec_id = dec_id
+    final_result.push({
+      id: dec.id,
+      owner_id: dec.owner_id,
+      range: dec.range,
+      options: dec.options,
+    })
+  }
+  final_result
+}
+
+///|
+fn lexicographic_id_compare(left : String, right : String) -> Int {
+  let min_len = if left.length() < right.length() {
+    left.length()
+  } else {
+    right.length()
+  }
+  for i in 0..<min_len {
+    let l = left[i].to_int()
+    let r = right[i].to_int()
+    if l != r {
+      return l - r
+    }
+  }
+  left.length() - right.length()
+}
+
+///|
+fn to_inline_model_decorations(
+  decorations : Array[@model.ModelDecoration],
+) -> Array[@inline_decorations.ModelDecoration[@model.Decoration]] {
+  decorations.map(dec => {
+    id: dec.id,
+    owner_id: dec.owner_id,
+    range: dec.range,
+    options: dec.options,
+  })
 }

@@ -37,7 +37,6 @@ test "tokens bucket per line and multi-line tokens cover every line" {
   // with the keyword color, and the block comment colors every line it covers.
   let source = @view_model.FrameSource(
     tokenized,
-    @model.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
   let frame = @view_model.build_frame(source, {
@@ -65,7 +64,6 @@ test "bucketed window frames equal a full lexer pass" {
   )
   let source = @view_model.FrameSource(
     tokenized,
-    @model.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
   let frame = @view_model.build_frame(source, { start_line: 301, end_line: 361 })

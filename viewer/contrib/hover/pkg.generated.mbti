@@ -126,9 +126,9 @@ pub(all) struct HoverController {
   placement : HoverPlacement?
 } derive(Eq)
 pub fn HoverController::cleared(Self) -> Self
-pub fn HoverController::decorations(Self, @model.TextSnapshot) -> Array[@model.Decoration]
 pub fn HoverController::emit(Self) -> Self
 pub fn HoverController::empty() -> Self
+pub fn HoverController::highlight_decorations(Self, @model.TextSnapshot) -> Array[@model.DeltaDecoration]
 pub fn HoverController::is_complete(Self) -> Bool
 pub fn HoverController::measured(Self, Bool, Double, Double) -> Self
 pub fn HoverController::on_event(Self, EditorEvent, EditorContext, sticky_mouse_getting_closer? : Bool) -> (HoverEffect, Self)

@@ -1,36 +1,27 @@
 ///|
-/// Builds a single-line view decoration for the collapse tests.
-fn collapse_decoration(
-  start_column : Int,
-  end_column : Int,
-  show_if_collapsed : Bool,
-) -> ViewModelDecoration {
-  {
-    range: {
-      start_line_number: 1,
-      start_column,
-      end_line_number: 1,
-      end_column,
-    },
-    kind: Diagnostic,
-    class_name: "squiggly-error",
-    inline_class_name: None,
-    show_if_collapsed,
+/// The TRANSITIONAL `className`-span clip (`class_name_columns_on_view_line`,
+/// see `view_line_data.mbt`): Monaco's `showIfCollapsed` forces a collapsed
+/// span one column wide (the squiggle on an empty range / at EOL).
+test "class_name_columns_on_view_line forces a 1ch span when show_if_collapsed" {
+  fn clip(
+    start_column : Int,
+    end_column : Int,
+    show_if_collapsed : Bool,
+  ) -> (Int, Int)? {
+    class_name_columns_on_view_line(
+      Range(1, start_column, 1, end_column),
+      show_if_collapsed,
+      1,
+      10,
+    )
   }
-}
 
-///|
-test "columns_on_view_line forces a 1ch span when show_if_collapsed" {
   // collapsed range, show_if_collapsed → one column wide
-  let collapsed = collapse_decoration(3, 3, true)
-  assert_true(collapsed.columns_on_view_line(1, 10) == Some((3, 4)))
+  assert_true(clip(3, 3, true) == Some((3, 4)))
   // collapsed range without the flag → nothing
-  let plain = collapse_decoration(3, 3, false)
-  assert_true(plain.columns_on_view_line(1, 10) is None)
+  assert_true(clip(3, 3, false) is None)
   // collapsed at EOL (column == max_column) still renders 1ch
-  let at_eol = collapse_decoration(10, 10, true)
-  assert_true(at_eol.columns_on_view_line(1, 10) == Some((10, 11)))
+  assert_true(clip(10, 10, true) == Some((10, 11)))
   // a non-collapsed span is unchanged
-  let span = collapse_decoration(2, 5, true)
-  assert_true(span.columns_on_view_line(1, 10) == Some((2, 5)))
+  assert_true(clip(2, 5, true) == Some((2, 5)))
 }

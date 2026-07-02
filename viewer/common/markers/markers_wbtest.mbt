@@ -29,10 +29,11 @@ test "marker decorations expose squiggles and marker hover lookup" {
   ])
   let decorations = MarkerDecorationsService::new(markers)
   decorations.on_model_added(model)
-  let set = decorations.decorations_for_resource(model)
-  assert_eq(set.items.length(), 1)
-  assert_true(set.items[0].class_name == "squiggly-warning")
-  assert_true(set.items[0].range == Range(1, 3, 1, 9))
+  // Squiggles now live in the model's decoration storage.
+  let stored = model.get_all_decorations()
+  assert_eq(stored.length(), 1)
+  assert_true(stored[0].options.class_name == "squiggly-warning")
+  assert_true(stored[0].range == Range(1, 3, 1, 9))
   // get_live_markers exposes the transformed range + marker for hover lookup.
   let live = decorations.get_live_markers(uri)
   assert_eq(live.length(), 1)

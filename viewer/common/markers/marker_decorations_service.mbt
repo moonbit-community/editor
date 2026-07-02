@@ -79,6 +79,10 @@ pub fn MarkerDecorationsService::on_model_removed(
   self : MarkerDecorationsService,
   model : @model.TextModel,
 ) -> Unit {
+  match self.marker_decorations.get(model.uri.to_string()) {
+    Some(marker_decorations) => marker_decorations.dispose()
+    None => ()
+  }
   self.marker_decorations.remove(model.uri.to_string())
   // clean up markers for internal, transient models
   let scheme = model.uri.scheme()
@@ -199,24 +203,6 @@ pub fn MarkerDecorationsService::add_marker_suppression(
       None => ()
     }
   })
-}
-
-///|
-/// Builds squiggle decorations for a model, running each marker through the
-/// faithful range + option transform. The decorations are rebuilt per frame from
-/// the marker store rather than diffed into model-side stored decorations; the
-/// `update()` diff is ported (see `MarkerDecorations`) but storage stays a
-/// follow-up (plan D3 deviation, cross-referenced to the interval-tree note).
-pub fn MarkerDecorationsService::decorations_for_resource(
-  self : MarkerDecorationsService,
-  model : @model.TextModel,
-) -> @model.DecorationSet {
-  let items : Array[@model.Decoration] = []
-  for marker in self.markers.markers_for_resource(model.uri) {
-    let range = create_decoration_range(model.snapshot, marker)
-    items.push(create_decoration_option(marker, range))
-  }
-  @model.DecorationSet::from_array(items)
 }
 
 // Theme-color ids the option matrix carries (inert; plan D4). From

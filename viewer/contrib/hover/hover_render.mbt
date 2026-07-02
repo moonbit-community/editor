@@ -161,7 +161,6 @@ fn render_hover_code_block(
   let tokenized = @view_model.TokenizedDocument::build(snapshot, tokens)
   let source = @view_model.FrameSource(
     tokenized,
-    @model.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
   let frame = @view_model.build_frame(source, {

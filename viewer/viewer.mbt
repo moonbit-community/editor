@@ -78,6 +78,20 @@ pub struct Viewer {
   /// changed controller decorations); the recycler rewrites every
   /// rendered line when it differs, and only entering lines otherwise.
   priv mut content_generation : Int
+  /// This editor's decoration `ownerId` (Monaco's per-widget editor id): the
+  /// filter handed to `ViewModelDecorations` and the ownerId of the public
+  /// `delta_decorations` API.
+  priv editor_id : Int
+  /// Bumped per `TextModel.onDidChangeDecorations` event; the render snapshot
+  /// carries it, and a change dispatches `ViewDecorationsChanged` to the view
+  /// parts (plan Deviation 3 — the frame-snapshot event seam).
+  priv mut decorations_generation : Int
+  priv mut model_decorations_subscription : @base_common.Disposable?
+  /// The hover highlight's model decoration ids (Monaco's hover-owned
+  /// decorations collection): rewritten by `sync_hover_decorations` whenever
+  /// the hover view's highlighted range changes.
+  priv mut hover_decoration_ids : Array[String]
+  priv mut hover_decoration_range : @base_common.Range?
   priv mut mouse_handler : @controller.MouseHandler?
   /// Whether the editor root currently has DOM focus — the viewer's stand-in
   /// for Monaco's edit-context focus (`view.ts` `_getEditorClassName` /
@@ -228,19 +242,48 @@ pub fn Viewer::Viewer(
     pending_rendered: None,
     scroll_dirty: false,
     content_generation: 0,
+    editor_id: next_editor_id(),
+    decorations_generation: 0,
+    model_decorations_subscription: None,
+    hover_decoration_ids: [],
+    hover_decoration_range: None,
     mouse_handler: None,
     editor_has_focus: false,
     pending_horizontal_reveal: None,
   }
-  // Marker decoration changes drive a render refresh (the event-driven
-  // replacement for the diagnostics-path explicit re-render; plan increment E).
+  // Marker decoration changes reach the render through the model's
+  // decoration storage (`onDidChangeDecorations` → `ViewDecorationsChanged`);
+  // this subscription only keeps the public diagnostics-count event fresh
+  // without rebuilding the frame (no `content_generation` bump — decoration
+  // plan Phase 3).
   viewer.services.marker_decorations.on_did_change_marker_decorations(model => {
     if viewer.is_current_model(model) {
-      viewer.render_feature_update()
+      viewer.did_change_diagnostics.fire({
+        count: viewer.services.markers
+        .diagnostics_for_resource(model.uri)
+        .length(),
+        revision: model.revision,
+      })
+      viewer.schedule_render()
     }
   })
   |> ignore
   viewer
+}
+
+///|
+/// Process-wide editor id counter (Monaco's per-widget editor id).
+priv struct EditorIdCounter {
+  mut value : Int
+}
+
+///|
+let editor_id_counter : EditorIdCounter = { value: 0 }
+
+///|
+fn next_editor_id() -> Int {
+  editor_id_counter.value += 1
+  editor_id_counter.value
 }
 
 ///|
@@ -401,6 +444,21 @@ pub fn Viewer::set_model(
     None => ()
   }
   self.services.markers.clear_resource(model.uri)
+  // Rotate the decoration-change subscription with the model (plan D6:
+  // owners re-attach on swap). Attach before the marker service seeds the
+  // model so the seeding delta is observed too.
+  match self.model_decorations_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  self.hover_decoration_ids = []
+  self.hover_decoration_range = None
+  self.model_decorations_subscription = Some(
+    model.on_did_change_decorations(_event => {
+      self.decorations_generation += 1
+      self.schedule_render()
+    }),
+  )
   self.services.marker_decorations.on_model_added(model)
   self.provider_result = @language.ProviderResult::empty()
   self.folding_ranges = []
@@ -602,6 +660,13 @@ fn Viewer::clear_current_model(
   self : Viewer,
   view_state~ : ViewStatePolicy,
 ) -> Unit {
+  match self.model_decorations_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  self.model_decorations_subscription = None
+  self.hover_decoration_ids = []
+  self.hover_decoration_range = None
   self.frame = None
   self.view_model = None
   self.frame_source = None

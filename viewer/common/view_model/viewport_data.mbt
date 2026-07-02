@@ -20,8 +20,22 @@ pub fn viewport_data_from_render_frame(
   let relative_vertical_offset : Array[Int] = []
   for index in 0..<frame.lines.length() {
     let line = frame.lines[index]
-    lines.push(view_line_rendering_data_from_render_line(line))
-    line_decorations.push(line_decorations_for_line(line, []))
+    // No decorations on this path (no backing model); injected-text inline
+    // decorations still project onto the line.
+    let decorations = line_decorations_for_line(
+      empty_view_decorations_collection(
+        Range(line.line_number, 1, line.line_number, 1),
+      ),
+      line.line_number,
+      line,
+    )
+    lines.push(
+      view_line_rendering_data_from_render_line(
+        line,
+        line_decorations=decorations,
+      ),
+    )
+    line_decorations.push(decorations)
     relative_vertical_offset.push(index * line_height)
   }
   // The frame viewport is a 1-based half-open window; the inclusive last line is
@@ -56,7 +70,6 @@ pub fn viewport_data_from_view_model(
   view_model : ViewModel,
   window : @view_layout.LineWindow,
   line_height~ : Int,
-  decorations? : Array[@model.Decoration] = [],
   layout? : @view_layout.ViewLayout,
 ) -> @view_layout.ViewportData {
   let start_line = @base_common.clamp_int(
@@ -73,26 +86,35 @@ pub fn viewport_data_from_view_model(
   let line_decorations : Array[Array[@view_layout.LineDecoration]] = []
   let relative_vertical_offset : Array[Int] = []
   let view_model_lines = view_model.lines()
-  // Decorations baked into the source (markers/diagnostics) plus the
-  // controller-contributed ones (hover) are converted once to view
-  // coordinates, then clipped per line — no document-offset round-trips.
-  let model_decorations = view_model.decorations()
-  let view_decorations = [
-    ..model_decorations.view_decorations(),
-    ..model_decorations.to_view_decorations(decorations),
-  ]
+  // The Monaco flow (`viewModelImpl.getViewportViewLineRenderingData`):
+  // resolve the decorations for the whole viewport range lazily through
+  // `ViewModelDecorations`, then clip per line.
+  let end_line_inclusive = end_line - 1
+  let viewport_range : @base_common.Range = Range(
+    start_line,
+    view_model_lines.get_view_line_min_column(start_line),
+    end_line_inclusive,
+    view_model_lines.get_view_line_max_column(end_line_inclusive),
+  )
+  let collection = view_model
+    .decorations()
+    .get_decorations_viewport_data(viewport_range)
   let normalized_window : @view_layout.LineWindow = {
     start: start_line,
     end: end_line,
   }
   for line_number in start_line..<end_line {
     let render_line = view_model_lines.render_line(line_number)
+    let decorations = line_decorations_for_line(
+      collection, start_line, render_line,
+    )
     lines.push(
-      view_model_lines.view_line_rendering_data(line_number, view_decorations~),
+      view_line_rendering_data_from_render_line(
+        render_line,
+        line_decorations=decorations,
+      ),
     )
-    line_decorations.push(
-      line_decorations_for_line(render_line, view_decorations),
-    )
+    line_decorations.push(decorations)
     relative_vertical_offset.push(
       match layout {
         Some(layout) =>

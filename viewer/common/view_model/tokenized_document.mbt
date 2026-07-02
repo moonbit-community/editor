@@ -67,18 +67,20 @@ pub fn TokenizedDocument::line_tokens_for_line(
 pub struct FrameSource {
   tokenized : TokenizedDocument
   providers : @language.ProviderResult
-  decorations : Array[@model.Decoration]
+  /// The backing text model — the decoration storage the view model queries
+  /// lazily per viewport. `None` for headless frames built straight from a
+  /// tokenized document (no decorations render then).
+  model : @model.TextModel?
 }
 
 ///|
-/// Builds a frame source by retaining decorations (converted to view
-/// coordinates lazily by the view model).
+/// Builds a frame source.
 pub fn FrameSource::FrameSource(
   tokenized : TokenizedDocument,
-  decoration_set : @model.DecorationSet,
   providers : @language.ProviderResult,
+  model? : @model.TextModel,
 ) -> FrameSource {
-  { tokenized, providers, decorations: decoration_set.items }
+  { tokenized, providers, model }
 }
 
 ///|

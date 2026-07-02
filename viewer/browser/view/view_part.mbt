@@ -239,8 +239,10 @@ impl ViewPart for @view_lines.ViewLines with fn should_render(self) {
 impl ViewPart for @view_lines.ViewLines with fn on_view_event(self, event) {
   match event {
     ViewFlushed => true
-    // Line content, tokens, and decorations are regenerated together.
     ViewLinesChanged => true
+    // Inline decorations render inside the line HTML (`onDecorationsChanged`
+    // → true, `viewLines.ts`).
+    ViewDecorationsChanged => true
     ViewScrollChanged(e) =>
       e.window_changed || e.position_changed || e.dimensions_changed
     ViewConfigurationChanged(e) => e.gutter_width_changed || e.font_changed
@@ -268,19 +270,13 @@ impl ViewPart for @view_lines.ViewLines with fn on_before_render(
 
 ///|
 impl ViewPart for @view_lines.ViewLines with fn prepare_render(self, context) {
-  // The line node's own class carries current-line decorations; convert the
-  // controller decorations to view coordinates so the class test stays in
-  // view `Position`s like the inline path.
-  let view_decorations = match context.input.view_model {
-    Some(view_model) =>
-      view_model.decorations().to_view_decorations(context.input.decorations)
-    None => []
-  }
+  // Per-line decorations arrive inside the viewport data (built lazily from
+  // the model's decoration storage by `ViewModelDecorations`).
   self.prepared = Some({
     frame: context.input.frame,
     viewport: context.viewport,
-    view_decorations,
     generation: context.input.generation,
+    decorations_generation: context.input.decorations_generation,
     space_width: context.input.space_width,
     render_whitespace: context.input.render_whitespace,
     render_control_characters: context.input.render_control_characters,
@@ -295,8 +291,8 @@ impl ViewPart for @view_lines.ViewLines with fn render(self, context) {
       self.render_text(
         prepared.frame,
         prepared.viewport,
-        prepared.view_decorations,
         prepared.generation,
+        prepared.decorations_generation,
         prepared.space_width,
         prepared.render_whitespace,
         prepared.render_control_characters,
@@ -327,6 +323,9 @@ impl ViewPart for @margin.MarginViewOverlays with fn on_view_event(_self, event)
   match event {
     ViewFlushed => true
     ViewLinesChanged => true
+    // The glyph-margin view part is deferred; margin decorations do not
+    // render yet (`onDecorationsChanged` → false).
+    ViewDecorationsChanged => false
     ViewScrollChanged(e) => e.window_changed || e.position_changed
     ViewConfigurationChanged(e) => e.gutter_width_changed
     ViewLineMappingChanged => true

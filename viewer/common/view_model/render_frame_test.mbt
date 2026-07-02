@@ -2,17 +2,13 @@
 fn frame_for(
   doc : @model.TextSnapshot,
   viewport : @view_model.FrameViewport,
-  decorations? : @model.DecorationSet = @model.DecorationSet::empty(),
   providers? : @language.ProviderResult = @language.ProviderResult::empty(),
 ) -> @view_model.RenderFrame {
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
   )
-  @view_model.build_frame(
-    FrameSource(tokenized, decorations, providers),
-    viewport,
-  )
+  @view_model.build_frame(FrameSource(tokenized, providers), viewport)
 }
 
 ///|
@@ -28,9 +24,6 @@ fn join_token_text(line : @view_model.RenderLine) -> String {
 ///|
 test "render frame contains highlighted spans and provider surfaces" {
   let doc = @model.TextSnapshot("fn main { // TODO\n  let x = 1\n}")
-  let decorations = @model.DecorationSet::from_array([
-    Decoration(Range(1, 14, 1, 18), Diagnostic, "diag-warning", message="todo"),
-  ])
   let providers = @language.ProviderResult::{
     hovers: [],
     diagnostics: [
@@ -44,12 +37,7 @@ test "render frame contains highlighted spans and provider surfaces" {
     definitions: [],
     symbols: [],
   }
-  let frame = frame_for(
-    doc,
-    { start_line: 1, end_line: 3 },
-    decorations~,
-    providers~,
-  )
+  let frame = frame_for(doc, { start_line: 1, end_line: 3 }, providers~)
   assert_eq(frame.lines.length(), 2)
   assert_true(frame.lines[0].tokens.get_count() > 0)
   assert_eq(join_token_text(frame.lines[0]), frame.lines[0].text)

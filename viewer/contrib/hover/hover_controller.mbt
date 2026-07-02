@@ -585,15 +585,29 @@ pub fn HoverController::measured(
 }
 
 ///|
-pub fn HoverController::decorations(
+/// The hover highlight's model decoration, Monaco's
+/// `ContentHoverController` `_highlightDecorations` collection entry
+/// (`className: 'hoverHighlight'`, `contentHoverWidgetParticipants`): the
+/// range under the visible hover. The hover view holds an offset span (the
+/// widget anchors by offset); decorations are line/column `Range`, so
+/// convert at this boundary.
+pub fn HoverController::highlight_decorations(
   self : HoverController,
   snapshot : @model.TextSnapshot,
-) -> Array[@model.Decoration] {
-  // The hover view holds an offset span (the widget anchors by offset);
-  // decorations are line/column `Range`, so convert at this boundary.
+) -> Array[@model.DeltaDecoration] {
   match self.view {
     Some(hover) =>
-      [Decoration(snapshot.range_of(hover.range), HoverHighlight, "has-hover")]
+      [
+        {
+          range: snapshot.range_of(hover.range),
+          options: Decoration(
+            Range(1, 1, 1, 1),
+            HoverHighlight,
+            "hoverHighlight",
+            description="content-hover-highlight",
+          ),
+        },
+      ]
     None => []
   }
 }

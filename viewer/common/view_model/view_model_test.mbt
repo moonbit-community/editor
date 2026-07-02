@@ -27,11 +27,7 @@ test "view model lines as-is match render frame line data" {
     definitions: [],
     symbols: [],
   }
-  let source = @view_model.FrameSource(
-    tokenized,
-    @model.DecorationSet::empty(),
-    providers,
-  )
+  let source = @view_model.FrameSource(tokenized, providers)
   let view_model = @view_model.ViewModel(source)
   let lines = view_model.lines()
   let direct_line = lines.render_line(2)
@@ -79,11 +75,7 @@ fn test_view_model(
     @syntax.highlight(doc),
   )
   @view_model.ViewModel::with_options(
-    FrameSource(
-      tokenized,
-      @model.DecorationSet::empty(),
-      @language.ProviderResult::empty(),
-    ),
+    FrameSource(tokenized, @language.ProviderResult::empty()),
     options,
   )
 }
@@ -101,7 +93,6 @@ fn test_folded_view_model(
   )
   let source = @view_model.FrameSource(
     tokenized,
-    @model.DecorationSet::empty(),
     @language.ProviderResult::empty(),
   )
   @view_model.ViewModel::with_options_and_folding(
@@ -123,11 +114,7 @@ fn test_inlay_view_model(
     @syntax.highlight(doc),
   )
   @view_model.ViewModel::with_options_and_inlay_hints(
-    FrameSource(
-      tokenized,
-      @model.DecorationSet::empty(),
-      @language.ProviderResult::empty(),
-    ),
+    FrameSource(tokenized, @language.ProviderResult::empty()),
     options,
     hints,
   )

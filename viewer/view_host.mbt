@@ -126,6 +126,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
     self.measure(view)
   }
   // Write phase.
+  self.sync_hover_decorations()
   let write_started = now_ms()
   match self.frame {
     None => view.render_empty(self.placeholder)
@@ -137,7 +138,6 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         view_model: self.view_model,
         layout: self.layout,
         browser_view_zones: self.view_zones,
-        decorations: self.controller_decorations(),
         selection_view_range: self.selection_view_range(),
         view_selection: self.view_selection(),
         folding_ranges: self.folding_ranges,
@@ -148,6 +148,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
           self.hover = self.hover.measured(below, shift_left, max_height)
         },
         generation: self.content_generation,
+        decorations_generation: self.decorations_generation,
         gutter_width: self.gutter_width(frame),
         space_width: self.measured_char_width(),
         render_whitespace: self.options.render_whitespace,

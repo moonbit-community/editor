@@ -1,25 +1,109 @@
 ///|
 /// Faithful 1:1 port of Monaco's `viewModel/inlineDecorations.ts`
 /// (`InlineDecoration`, `InlineDecorationType`, `InlineModelDecorationsComputer`,
-/// `InjectedTextInlineDecorationsComputer`) plus the minimal collaborators its
-/// unit suite needs (`ViewModelDecoration` + `isModelDecorationVisible` from
-/// `viewModel/viewModelDecoration.ts`, `IdentityCoordinatesConverter` from
-/// `coordinatesConverter.ts`, and a `createTextModel`-style text model), from
+/// `InjectedTextInlineDecorationsComputer`) plus `ViewModelDecoration` +
+/// `isModelDecorationVisible` from `viewModel/viewModelDecoration.ts`, from
 /// vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971.
 ///
-/// This lives in its own package rather than `viewer/view_model` to keep the
-/// faithful Monaco type names (`InlineDecoration`, `ViewModelDecoration`) — the
-/// existing view-model pipeline already defines a simplified `ViewModelDecoration`
-/// (`{range, kind, class_name}`) and reuses the renderer's column-span
-/// `InlineDecoration`, both of which would collide here.
+/// Production middle layer (decoration plan Phase 3): the computer is generic
+/// over three seams so the real model tier plugs in while its conformance
+/// suite keeps Monaco's test doubles (Monaco's own test setup does the same):
+///   * `InlineDecorationsModel` — the line-geometry queries the computer makes
+///     (`&`-dispatched); implemented for the real `@model.TextModel` here and
+///     by the suite's mini text model double (kept inside the reference test).
+///   * `CoordinatesConverter` — `ICoordinatesConverter`'s two used members;
+///     implemented by the view model's converter (in `view_model`, the type's
+///     package) and by the suite's `IdentityCoordinatesConverter` double.
+///   * `InlineDecorationOptions` — the `IModelDecorationOptions` reads
+///     (type parameter `O`); implemented for the real `@model.Decoration`
+///     here and by the suite's options double.
 ///
 /// DEVIATIONS (recorded; none exercised by the suite):
 ///   * `isModelDecorationVisible` always returns `true`: the
 ///     `hideInCommentTokens`/`hideInStringTokens` paths need a tokenization seam
 ///     this readonly port does not carry, and no `inlineDecorations.test.ts` case
 ///     sets those flags.
-///   * line lengths use `String::length()` (UTF-16 code units, matching Monaco)
-///     over a `\n`-split model; the fixtures are single-`\n`, ASCII text.
+///   * `@model.Decoration` carries no `beforeContentClassName`/
+///     `afterContentClassName`/`affectsFont` (out of decoration-plan scope), so
+///     its trait impl answers `None`/`false` — the Before/After/variable-font
+///     arms are live code exercised by the suite's doubles only.
+
+///|
+/// The line-geometry seam the computer needs from `ITextModel`.
+pub(open) trait InlineDecorationsModel {
+  fn get_line_max_column(Self, Int) -> Int
+}
+
+///|
+/// `ICoordinatesConverter`, reduced to the two members the computer calls.
+pub(open) trait CoordinatesConverter {
+  fn convert_model_position_to_view_position(Self, @base_common.Position) -> @base_common.Position
+  fn convert_model_range_to_view_range(Self, @base_common.Range) -> @base_common.Range
+}
+
+///|
+/// The `IModelDecorationOptions` reads the computer makes.
+pub(open) trait InlineDecorationOptions {
+  fn inline_class_name(Self) -> String?
+  fn inline_class_name_affects_letter_spacing(Self) -> Bool
+  fn before_content_class_name(Self) -> String?
+  fn after_content_class_name(Self) -> String?
+  fn affects_font(Self) -> Bool
+  fn is_whole_line(Self) -> Bool
+}
+
+///|
+/// The real model tier: line geometry from the snapshot.
+pub impl InlineDecorationsModel for @model.TextModel with fn get_line_max_column(
+  self,
+  line_number,
+) {
+  self.snapshot.get_line_max_column(line_number)
+}
+
+///|
+/// The real options tier. `before/afterContentClassName` and `affectsFont`
+/// are not ported model fields (see header deviation), hence constant.
+pub impl InlineDecorationOptions for @model.Decoration with fn inline_class_name(
+  self,
+) {
+  self.inline_class_name
+}
+
+///|
+pub impl InlineDecorationOptions for @model.Decoration with fn inline_class_name_affects_letter_spacing(
+  self,
+) {
+  self.inline_class_name_affects_letter_spacing
+}
+
+///|
+pub impl InlineDecorationOptions for @model.Decoration with fn before_content_class_name(
+  _self,
+) {
+  None
+}
+
+///|
+pub impl InlineDecorationOptions for @model.Decoration with fn after_content_class_name(
+  _self,
+) {
+  None
+}
+
+///|
+pub impl InlineDecorationOptions for @model.Decoration with fn affects_font(
+  _self,
+) {
+  false
+}
+
+///|
+pub impl InlineDecorationOptions for @model.Decoration with fn is_whole_line(
+  self,
+) {
+  self.is_whole_line
+}
 
 ///|
 /// Placement of an inline decoration relative to the source text (Monaco's
@@ -50,68 +134,29 @@ pub fn InlineDecoration::new(
 }
 
 ///|
-/// Decoration render options — the subset of `IModelDecorationOptions` the
-/// inline-decoration computer reads.
-pub(all) struct ModelDecorationOptions {
-  description : String
-  class_name : String?
-  inline_class_name : String?
-  inline_class_name_affects_letter_spacing : Bool
-  before_content_class_name : String?
-  after_content_class_name : String?
-  affects_font : Bool
-  is_whole_line : Bool
-} derive(Eq, Debug)
-
-///|
-/// Builds decoration options, defaulting every optional field the way an absent
-/// JS property would.
-pub fn ModelDecorationOptions::new(
-  description? : String = "",
-  class_name? : String,
-  inline_class_name? : String,
-  inline_class_name_affects_letter_spacing? : Bool = false,
-  before_content_class_name? : String,
-  after_content_class_name? : String,
-  affects_font? : Bool = false,
-  is_whole_line? : Bool = false,
-) -> ModelDecorationOptions {
-  {
-    description,
-    class_name,
-    inline_class_name,
-    inline_class_name_affects_letter_spacing,
-    before_content_class_name,
-    after_content_class_name,
-    affects_font,
-    is_whole_line,
-  }
-}
-
-///|
-/// A model decoration (Monaco `IModelDecoration`).
-pub(all) struct ModelDecoration {
+/// A model decoration (Monaco `IModelDecoration`), generic in its options
+/// tier `O` (see header).
+pub(all) struct ModelDecoration[O] {
   id : String
   owner_id : Int
   range : @base_common.Range
-  options : ModelDecorationOptions
-} derive(Eq, Debug)
+  options : O
+}
 
 ///|
 /// A model decoration resolved into view coordinates (Monaco
-/// `ViewModelDecoration`). Held as the cache value / `decorations` output of the
-/// computer; the suite checks its identity and count, not its fields.
-pub(all) struct ViewModelDecoration {
+/// `ViewModelDecoration`).
+pub(all) struct ViewModelDecoration[O] {
   range : @base_common.Range
-  options : ModelDecorationOptions
-} derive(Eq, Debug)
+  options : O
+}
 
 ///|
 /// Builds a view-model decoration.
-pub fn ViewModelDecoration::new(
+pub fn[O] ViewModelDecoration::new(
   range : @base_common.Range,
-  options : ModelDecorationOptions,
-) -> ViewModelDecoration {
+  options : O,
+) -> ViewModelDecoration[O] {
   { range, options }
 }
 
@@ -119,121 +164,19 @@ pub fn ViewModelDecoration::new(
 /// Whether a model decoration is visible. See the file deviation: the
 /// comment/string-token hiding paths are not ported (no tokenization seam, and
 /// unused by the suite), so this is always `true`.
-pub fn is_model_decoration_visible(
-  _model : TextModel,
-  _decoration : ModelDecoration,
+pub fn[O] is_model_decoration_visible(
+  _model : &InlineDecorationsModel,
+  _decoration : ModelDecoration[O],
 ) -> Bool {
   true
-}
-
-///|
-/// Minimal `ITextModel` stand-in (Monaco `createTextModel`): holds the document
-/// lines and answers the column/validation queries the computer and converter
-/// need.
-pub(all) struct TextModel {
-  lines : Array[String]
-}
-
-///|
-/// Splits `text` into logical lines on `\n` (the suite uses `\n` only).
-pub fn TextModel::create(text : String) -> TextModel {
-  let lines : Array[String] = []
-  let mut buf = StringBuilder::new()
-  for ch in text {
-    if ch == '\n' {
-      lines.push(buf.to_string())
-      buf = StringBuilder::new()
-    } else {
-      buf.write_char(ch)
-    }
-  }
-  lines.push(buf.to_string())
-  { lines, }
-}
-
-///|
-/// Number of logical lines.
-pub fn TextModel::get_line_count(self : TextModel) -> Int {
-  self.lines.length()
-}
-
-///|
-/// One past the last column of `line_number` (1-based; UTF-16 length + 1).
-pub fn TextModel::get_line_max_column(
-  self : TextModel,
-  line_number : Int,
-) -> Int {
-  self.lines[line_number - 1].length() + 1
-}
-
-///|
-/// Clamps a position into the document (Monaco `validatePosition`).
-pub fn TextModel::validate_position(
-  self : TextModel,
-  pos : @base_common.Position,
-) -> @base_common.Position {
-  let line = @base_common.clamp_int(pos.line_number, 1, self.get_line_count())
-  let column = @base_common.clamp_int(
-    pos.column,
-    1,
-    self.get_line_max_column(line),
-  )
-  Position(line, column)
-}
-
-///|
-/// Clamps a range into the document (Monaco `validateRange`).
-pub fn TextModel::validate_range(
-  self : TextModel,
-  range : @base_common.Range,
-) -> @base_common.Range {
-  let start = self.validate_position(
-    Position(range.start_line_number, range.start_column),
-  )
-  let end = self.validate_position(
-    Position(range.end_line_number, range.end_column),
-  )
-  Range(start.line_number, start.column, end.line_number, end.column)
-}
-
-///|
-/// The trivial 1:1 view↔model converter (Monaco `IdentityCoordinatesConverter`):
-/// every conversion is a validation against the model. `PositionAffinity` is
-/// irrelevant here and omitted.
-pub(all) struct IdentityCoordinatesConverter {
-  model : TextModel
-}
-
-///|
-/// Builds an identity coordinates converter.
-pub fn IdentityCoordinatesConverter::new(
-  model : TextModel,
-) -> IdentityCoordinatesConverter {
-  { model, }
-}
-
-///|
-pub fn IdentityCoordinatesConverter::convert_model_position_to_view_position(
-  self : IdentityCoordinatesConverter,
-  model_position : @base_common.Position,
-) -> @base_common.Position {
-  self.model.validate_position(model_position)
-}
-
-///|
-pub fn IdentityCoordinatesConverter::convert_model_range_to_view_range(
-  self : IdentityCoordinatesConverter,
-  model_range : @base_common.Range,
-) -> @base_common.Range {
-  self.model.validate_range(model_range)
 }
 
 ///|
 /// Decorations in a range of lines: ungrouped, grouped per line as inline
 /// decorations, and a per-line "affects fonts" flag (Monaco
 /// `IViewDecorationsCollection`).
-pub(all) struct ViewDecorationsCollection {
-  decorations : Array[ViewModelDecoration]
+pub(all) struct ViewDecorationsCollection[O] {
+  decorations : Array[ViewModelDecoration[O]]
   inline_decorations : Array[Array[InlineDecoration]]
   has_variable_fonts : Array[Bool]
 }
@@ -241,9 +184,9 @@ pub(all) struct ViewDecorationsCollection {
 ///|
 /// Context for `InlineModelDecorationsComputer`: yields model decorations for a
 /// view range (Monaco `IInlineModelDecorationsComputerContext`).
-pub(all) struct InlineModelContext {
+pub(all) struct InlineModelContext[O] {
   get_model_decorations : (@base_common.Range, Bool, Bool) -> Array[
-    ModelDecoration,
+    ModelDecoration[O],
   ]
 }
 
@@ -251,27 +194,27 @@ pub(all) struct InlineModelContext {
 /// Computes inline decorations from a model's decorations, mapped into view
 /// coordinates and grouped per view line (Monaco
 /// `InlineModelDecorationsComputer`).
-pub struct InlineModelDecorationsComputer {
-  priv context : InlineModelContext
-  priv model : TextModel
-  priv coordinates_converter : IdentityCoordinatesConverter
-  priv mut decorations_cache : Map[String, ViewModelDecoration]
+pub struct InlineModelDecorationsComputer[O] {
+  priv context : InlineModelContext[O]
+  priv model : &InlineDecorationsModel
+  priv coordinates_converter : &CoordinatesConverter
+  priv mut decorations_cache : Map[String, ViewModelDecoration[O]]
 }
 
 ///|
 /// Builds an inline-model-decorations computer.
-pub fn InlineModelDecorationsComputer::new(
-  context : InlineModelContext,
-  model : TextModel,
-  coordinates_converter : IdentityCoordinatesConverter,
-) -> InlineModelDecorationsComputer {
+pub fn[O] InlineModelDecorationsComputer::new(
+  context : InlineModelContext[O],
+  model : &InlineDecorationsModel,
+  coordinates_converter : &CoordinatesConverter,
+) -> InlineModelDecorationsComputer[O] {
   { context, model, coordinates_converter, decorations_cache: {} }
 }
 
 ///|
 /// Inline decorations for one model line, split by view line.
-pub fn InlineModelDecorationsComputer::get_inline_decorations(
-  self : InlineModelDecorationsComputer,
+pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_inline_decorations(
+  self : InlineModelDecorationsComputer[O],
   model_line_number : Int,
 ) -> Array[Array[InlineDecoration]] {
   let model_range = @base_common.Range::Range(
@@ -288,18 +231,18 @@ pub fn InlineModelDecorationsComputer::get_inline_decorations(
 
 ///|
 /// Resolve the decorations intersecting a view range.
-pub fn InlineModelDecorationsComputer::get_decorations(
-  self : InlineModelDecorationsComputer,
+pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_decorations(
+  self : InlineModelDecorationsComputer[O],
   view_range : @base_common.Range,
   only_minimap_decorations : Bool,
   only_margin_decorations : Bool,
-) -> ViewDecorationsCollection {
+) -> ViewDecorationsCollection[O] {
   let model_decorations = (self.context.get_model_decorations)(
     view_range, only_minimap_decorations, only_margin_decorations,
   )
   let start_line_number = view_range.start_line_number
   let end_line_number = view_range.end_line_number
-  let decorations_in_viewport : Array[ViewModelDecoration] = []
+  let decorations_in_viewport : Array[ViewModelDecoration[O]] = []
   let inline_decorations : Array[Array[InlineDecoration]] = []
   let has_variable_fonts : Array[Bool] = []
   for _j in start_line_number..<=end_line_number {
@@ -316,9 +259,9 @@ pub fn InlineModelDecorationsComputer::get_decorations(
     )
     let view_range = view_model_decoration.range
     decorations_in_viewport.push(view_model_decoration)
-    match decoration_options.inline_class_name {
+    match decoration_options.inline_class_name() {
       Some(inline_class_name) => {
-        let type_ = if decoration_options.inline_class_name_affects_letter_spacing {
+        let type_ = if decoration_options.inline_class_name_affects_letter_spacing() {
           RegularAffectingLetterSpacing
         } else {
           Regular
@@ -334,14 +277,14 @@ pub fn InlineModelDecorationsComputer::get_decorations(
         )
         for j in intersected_start_line_number..<=intersected_end_line_number {
           inline_decorations[j - start_line_number].push(inline_decoration)
-          if decoration_options.affects_font {
+          if decoration_options.affects_font() {
             has_variable_fonts[j - start_line_number] = true
           }
         }
       }
       None => ()
     }
-    match decoration_options.before_content_class_name {
+    match decoration_options.before_content_class_name() {
       Some(before_content_class_name) =>
         if start_line_number <= view_range.start_line_number &&
           view_range.start_line_number <= end_line_number {
@@ -358,13 +301,13 @@ pub fn InlineModelDecorationsComputer::get_decorations(
           inline_decorations[view_range.start_line_number - start_line_number].push(
             inline_decoration,
           )
-          if decoration_options.affects_font {
+          if decoration_options.affects_font() {
             has_variable_fonts[view_range.start_line_number - start_line_number] = true
           }
         }
       None => ()
     }
-    match decoration_options.after_content_class_name {
+    match decoration_options.after_content_class_name() {
       Some(after_content_class_name) =>
         if start_line_number <= view_range.end_line_number &&
           view_range.end_line_number <= end_line_number {
@@ -381,7 +324,7 @@ pub fn InlineModelDecorationsComputer::get_decorations(
           inline_decorations[view_range.end_line_number - start_line_number].push(
             inline_decoration,
           )
-          if decoration_options.affects_font {
+          if decoration_options.affects_font() {
             has_variable_fonts[view_range.end_line_number - start_line_number] = true
           }
         }
@@ -397,25 +340,41 @@ pub fn InlineModelDecorationsComputer::get_decorations(
 
 ///|
 /// Drop the per-decoration view-model cache.
-pub fn InlineModelDecorationsComputer::reset(
-  self : InlineModelDecorationsComputer,
+pub fn[O] InlineModelDecorationsComputer::reset(
+  self : InlineModelDecorationsComputer[O],
 ) -> Unit {
   self.decorations_cache = {}
 }
 
 ///|
+/// `onModelDecorationsChanged` (`inlineDecorations.ts:155-157`).
+pub fn[O] InlineModelDecorationsComputer::on_model_decorations_changed(
+  self : InlineModelDecorationsComputer[O],
+) -> Unit {
+  self.reset()
+}
+
+///|
+/// `onLineMappingChanged` (`inlineDecorations.ts:159-161`).
+pub fn[O] InlineModelDecorationsComputer::on_line_mapping_changed(
+  self : InlineModelDecorationsComputer[O],
+) -> Unit {
+  self.reset()
+}
+
+///|
 /// Re-resolve, or reuse the cached, view-model decoration for a model decoration.
-fn InlineModelDecorationsComputer::get_or_create_view_model_decoration(
-  self : InlineModelDecorationsComputer,
-  model_decoration : ModelDecoration,
-) -> ViewModelDecoration {
+fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_or_create_view_model_decoration(
+  self : InlineModelDecorationsComputer[O],
+  model_decoration : ModelDecoration[O],
+) -> ViewModelDecoration[O] {
   let id = model_decoration.id
   match self.decorations_cache.get(id) {
     Some(r) => r
     None => {
       let model_range = model_decoration.range
       let options = model_decoration.options
-      let view_range = if options.is_whole_line {
+      let view_range = if options.is_whole_line() {
         // For backwards compatibility, whole-line decorations span min..max col.
         let start = self.coordinates_converter.convert_model_position_to_view_position(
           Position(model_range.start_line_number, 1),

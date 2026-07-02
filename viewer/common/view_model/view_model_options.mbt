@@ -4,6 +4,14 @@ pub(all) struct ViewModelOptions {
   soft_wrap_column : Int
   tab_size : Int
   wrapping_indent : WrappingIndent
+  /// The owning editor's id — the `ownerId` filter for decoration queries
+  /// (Monaco's `editorId` handed to `ViewModelDecorations`). `0` means "no
+  /// editor": only ownerId-0 decorations match.
+  editor_id : Int
+  /// `renderValidationDecorations`. Monaco defaults to `Editable` (which
+  /// hides validation decorations in readonly editors); the `Viewer` passes
+  /// `On` — see `filter_validation_decorations`.
+  render_validation_decorations : RenderValidationDecorations
 } derive(Eq, Debug)
 
 ///|
@@ -13,11 +21,15 @@ pub fn ViewModelOptions::ViewModelOptions(
   soft_wrap_column? : Int = 0,
   tab_size? : Int = 2,
   wrapping_indent? : WrappingIndent = Same,
+  editor_id? : Int = 0,
+  render_validation_decorations? : RenderValidationDecorations = Editable,
 ) -> ViewModelOptions {
   {
     soft_wrap_column: soft_wrap_column.max(0),
     tab_size: tab_size.max(1),
     wrapping_indent,
+    editor_id,
+    render_validation_decorations,
   }
 }
 

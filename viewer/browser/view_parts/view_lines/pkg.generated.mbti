@@ -25,6 +25,7 @@ pub(all) struct ViewLines {
   view_lines : @dom.Element
   mut window : @view_layout.LineWindow
   mut generation : Int
+  mut decorations_generation : Int
   line_nodes : Array[@dom.Element]
   render_inputs : Array[@view_layout.RenderLineInput]
   line_mappings : Array[@view_layout.CharacterMapping]
@@ -37,13 +38,13 @@ pub fn ViewLines::dom(Self) -> @dom.Element
 pub fn ViewLines::line_node_at(Self, Int) -> @dom.Element?
 pub fn ViewLines::mapping_at(Self, Int) -> @view_layout.CharacterMapping?
 pub fn ViewLines::new(@dom.Document) -> Self
-pub fn ViewLines::render_text(Self, @view_model.RenderFrame, @view_layout.ViewportData, Array[@view_model.ViewModelDecoration], Int, Double, @view_layout.RenderWhitespace, Bool, @view_layout.ViewRange?) -> Unit
+pub fn ViewLines::render_text(Self, @view_model.RenderFrame, @view_layout.ViewportData, Int, Int, Double, @view_layout.RenderWhitespace, Bool, @view_layout.ViewRange?) -> Unit
 
 pub(all) struct ViewLinesPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
-  view_decorations : Array[@view_model.ViewModelDecoration]
   generation : Int
+  decorations_generation : Int
   space_width : Double
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool

@@ -16,6 +16,9 @@ test('keeps the Monaco-shaped editor shell DOM structure', async ({ page }) => {
     element('div', ['editor-scrollable', 'monaco-scrollable-element'], {
       role: 'presentation',
     }),
+    // Monaco `view.ts:287`: overlay widgets are viewport-fixed children of the
+    // overflow guard, not of the scrolling lines content.
+    element('div', ['overlayWidgets']),
   ]);
   await expectDirectChildren(page, '.margin', [
     element('div', ['margin-view-overlays']),
@@ -45,7 +48,6 @@ test('keeps the Monaco-shaped editor shell DOM structure', async ({ page }) => {
     element('div', ['view-zones']),
     element('div', ['view-lines']),
     element('div', ['contentWidgets']),
-    element('div', ['overlayWidgets']),
   ]);
   await expectDirectChildren(page, `${editorScrollable} > .scrollbar.horizontal`, [
     element('div', ['slider']),

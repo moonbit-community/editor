@@ -66,9 +66,11 @@ pub fn View::build() -> View {
   lines_content.append_child(view_zones.dom().as_node())
   lines_content.append_child(view_lines.dom().as_node())
   lines_content.append_child(content_widgets.dom().as_node())
-  lines_content.append_child(overlay_widgets.dom().as_node())
   overflow_guard.append_child(margin_view_overlays.dom().as_node())
   overflow_guard.append_child(editor_scrollbar.wrapper().as_node())
+  // Overlay widgets are viewport-fixed: they live in the overflow guard, not
+  // the scrolling lines content (`view.ts:287`).
+  overflow_guard.append_child(overlay_widgets.dom().as_node())
   root.append_child(probe.as_node())
   root.append_child(message.as_node())
   root.append_child(squiggly_style.as_node())

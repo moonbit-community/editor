@@ -103,10 +103,13 @@ pub fn View::build() -> View {
 ///|
 /// Root classes. `showUnused`/`showDeprecated` mirror Monaco's editor options,
 /// which default to `true` (`editorOptions.ts`); they gate the unnecessary /
-/// deprecated marker styling (`editor.css:114-119`).
-fn view_root_class(source_state : String) -> String {
+/// deprecated marker styling (`editor.css:114-119`). `focused` mirrors
+/// `_getEditorClassName` (`view.ts:459-462`), appended while the editor root
+/// has DOM focus.
+fn view_root_class(source_state : String, focused? : Bool = false) -> String {
   "monaco-editor moonbit-viewer readonly-editor showUnused showDeprecated " +
-  source_state
+  source_state +
+  (if focused { " focused" } else { "" })
 }
 
 ///|
@@ -138,7 +141,10 @@ pub fn View::render(
   view_context : ViewContext,
   input : ViewRenderInput,
 ) -> Unit {
-  self.root.set_attribute("class", view_root_class("source-loaded"))
+  self.root.set_attribute(
+    "class",
+    view_root_class("source-loaded", focused=input.editor_has_focus),
+  )
   let rendering = RenderingContext::from_input(view_context, input)
   // Dispatch this frame's typed view events to every part, accumulating each
   // part's dirty flag (Monaco's `ViewEventHandler.handleEvents`).

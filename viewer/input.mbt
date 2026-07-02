@@ -26,6 +26,11 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   view.root.add_event_listener("mousedown", event => {
     match event.to_mouse_event() {
       Some(mouse) => {
+        // The mouse handler `preventDefault`s selection mousedowns, which
+        // suppresses the browser's native focusing of the `tabindex` root, so
+        // focus explicitly — Monaco equally focuses its hidden textarea
+        // explicitly on editor mouse down (`focusTextArea()`).
+        focus_element(view.root)
         self.on_editor_mouse_down(
           mouse.get_client_x().to_double(),
           mouse.get_client_y().to_double(),
@@ -34,6 +39,18 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
       }
       None => ()
     }
+  })
+  // Monaco tracks focus on the hidden textarea / edit context and fans it out
+  // as `ViewFocusChangedEvent`; the viewer's focusable surface is the root
+  // itself. `focus`/`blur` do not bubble, so these observe only the root's own
+  // focus. The next scheduled render diffs the flag into `ViewFocusChanged`.
+  view.root.add_event_listener("focus", _ => if !self.editor_has_focus {
+    self.editor_has_focus = true
+    self.schedule_render()
+  })
+  view.root.add_event_listener("blur", _ => if self.editor_has_focus {
+    self.editor_has_focus = false
+    self.schedule_render()
   })
   view.view_lines
   .dom()
@@ -109,6 +126,13 @@ extern "js" fn mouse_meta_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.me
 
 ///|
 extern "js" fn mouse_alt_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.altKey"
+
+///|
+/// FFI gap-fill (no `focus()` binding in the vendored `@rdom`).
+/// `preventScroll`: focusing must not double-scroll the root the layout model
+/// already positions.
+extern "js" fn focus_element(el : @rdom.Element) -> Unit =
+  #| (el) => el.focus({ preventScroll: true })
 
 ///|
 /// Read phase of the render loop: the view box, the glyph probe, and

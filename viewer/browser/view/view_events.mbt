@@ -11,7 +11,7 @@
 /// readonly view model is frame-based. This includes `ViewCursorStateChanged`,
 /// which is derived from the `selection_view_range` snapshot diff rather than
 /// emitted directly by the cursor stack (`view_events_from_snapshots:81-83`).
-/// The event set is the subset this viewer observes; composition/focus/theme/
+/// The event set is the subset this viewer observes; composition/theme/
 /// language and the fine-grained line insert/delete events have no readonly
 /// counterpart yet.
 priv enum ViewEvent {
@@ -34,6 +34,9 @@ priv enum ViewEvent {
   ViewLineMappingChanged
   /// View zones changed (Monaco `ViewZonesChangedEvent`).
   ViewZonesChanged
+  /// The editor root gained or lost DOM focus (Monaco
+  /// `ViewFocusChangedEvent.isFocused`).
+  ViewFocusChanged(Bool)
 }
 
 ///|
@@ -103,6 +106,9 @@ fn view_events_from_snapshots(
           current.browser_view_zones,
         ) {
         events.push(ViewZonesChanged)
+      }
+      if previous.editor_has_focus != current.editor_has_focus {
+        events.push(ViewFocusChanged(current.editor_has_focus))
       }
       events
     }

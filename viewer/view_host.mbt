@@ -148,6 +148,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         space_width: self.measured_char_width(),
         render_whitespace: self.options.render_whitespace,
         render_control_characters: self.options.render_control_characters,
+        editor_has_focus: self.editor_has_focus,
       })
     }
   }

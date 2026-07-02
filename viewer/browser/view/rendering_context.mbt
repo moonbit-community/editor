@@ -21,6 +21,9 @@ pub(all) struct ViewRenderInput {
   space_width : Double
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
+  /// Whether the editor root has DOM focus (Monaco `ViewFocusChangedEvent`
+  /// state; see `Viewer.editor_has_focus`).
+  editor_has_focus : Bool
 }
 
 ///|
@@ -131,6 +134,7 @@ priv struct ViewRenderSnapshot {
   folded_ranges : Array[@language.FoldingRange]
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   hover_state : @hover.HoverController
+  editor_has_focus : Bool
 }
 
 ///|
@@ -151,6 +155,7 @@ fn ViewRenderSnapshot::from_input(
     folded_ranges: input.folded_ranges.copy(),
     browser_view_zones: input.browser_view_zones.copy(),
     hover_state: input.hover_state,
+    editor_has_focus: input.editor_has_focus,
   }
 }
 

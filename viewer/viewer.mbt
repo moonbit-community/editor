@@ -79,6 +79,12 @@ pub struct Viewer {
   /// rendered line when it differs, and only entering lines otherwise.
   priv mut content_generation : Int
   priv mut mouse_handler : @controller.MouseHandler?
+  /// Whether the editor root currently has DOM focus — the viewer's stand-in
+  /// for Monaco's edit-context focus (`view.ts` `_getEditorClassName` /
+  /// `ViewFocusChangedEvent`). Sourced by `focus`/`blur` listeners on the root
+  /// (`input.mbt`); read into every render snapshot, where a change dispatches
+  /// `ViewFocusChanged` to the view parts.
+  priv mut editor_has_focus : Bool
   /// Monaco's `ViewLines._horizontalRevealRequest`: a single-line reveal whose
   /// horizontal scroll is deferred until the target view line renders (its
   /// client rects are unknown until then). Flushed in `flush_render`, cancelled
@@ -223,6 +229,7 @@ pub fn Viewer::Viewer(
     scroll_dirty: false,
     content_generation: 0,
     mouse_handler: None,
+    editor_has_focus: false,
     pending_horizontal_reveal: None,
   }
   // Marker decoration changes drive a render refresh (the event-driven

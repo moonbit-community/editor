@@ -533,6 +533,8 @@ impl ViewPart for @selections.ContentViewOverlays with fn on_view_event(
     ViewScrollChanged(e) => e.window_changed || e.position_changed
     ViewCursorStateChanged => true
     ViewZonesChanged => true
+    // `ViewOverlays.onFocusChanged` (`viewOverlays.ts:76-79`).
+    ViewFocusChanged(_) => true
     _ => false
   }
 }
@@ -564,6 +566,7 @@ impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
     selection_view_range: context.input.selection_view_range,
     view_model: context.input.view_model,
     space_width: context.input.space_width,
+    editor_has_focus: context.input.editor_has_focus,
   })
 }
 
@@ -579,6 +582,7 @@ impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) 
         prepared.space_width,
         context.view_context.measure_line_selection,
       )
+      self.set_focused(prepared.editor_has_focus)
       self.view_overlays.set_attribute("style", context.content_transform)
     }
     None => ()

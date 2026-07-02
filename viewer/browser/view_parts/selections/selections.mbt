@@ -16,6 +16,9 @@ pub(all) struct ContentViewOverlaysPrepared {
   selection_view_range : @view_layout.ViewRange?
   view_model : @view_model.ViewModel?
   space_width : Double
+  /// Monaco `ViewOverlays._isFocused` (`viewOverlays.ts:76-79`): drives the
+  /// `focused` class toggle on the overlay container at render.
+  editor_has_focus : Bool
 }
 
 ///|
@@ -38,6 +41,24 @@ pub fn ContentViewOverlays::new(
 ///|
 pub fn ContentViewOverlays::dom(self : ContentViewOverlays) -> @rdom.Element {
   self.view_overlays
+}
+
+///|
+/// Monaco `ViewOverlays.render` (`viewOverlays.ts:125`):
+/// `toggleClassName('focused', this._isFocused)` on the overlay container —
+/// selection colors key off `.focused .selected-text` (`selections.css`).
+pub fn ContentViewOverlays::set_focused(
+  self : ContentViewOverlays,
+  focused : Bool,
+) -> Unit {
+  self.view_overlays.set_attribute(
+    "class",
+    if focused {
+      "view-overlays focused"
+    } else {
+      "view-overlays"
+    },
+  )
 }
 
 ///|

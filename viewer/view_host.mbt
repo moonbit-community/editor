@@ -34,6 +34,14 @@ fn Viewer::build_view_context(
     measure_line_selection: (line_number, start_column, end_column) => {
       view.measure_line_selection(line_number, start_column, end_column)
     },
+    measure_line_decorations: (line_number, start_column, end_column) => {
+      view.measure_line_selection(
+        line_number,
+        start_column,
+        end_column,
+        keep_empty=true,
+      )
+    },
     offset_for_column: (line_number, column) => {
       view.offset_for_column(line_number, column)
     },

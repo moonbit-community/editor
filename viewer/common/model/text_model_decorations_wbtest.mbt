@@ -24,8 +24,6 @@ fn wb_options(
   overview_ruler? : OverviewRulerOptions,
 ) -> Decoration {
   Decoration(
-    Range(1, 1, 1, 1),
-    Diagnostic,
     class_name,
     stickiness~,
     collapse_on_replace_edit~,

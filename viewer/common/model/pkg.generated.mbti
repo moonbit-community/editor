@@ -38,8 +38,6 @@ pub struct ActiveIndentGuideInfo {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Decoration {
-  range : @common.Range
-  kind : DecorationKind
   class_name : String
   message : String?
   inline_class_name : String?
@@ -58,24 +56,7 @@ pub(all) struct Decoration {
   collapse_on_replace_edit : Bool
   description : String
 } derive(@debug.Debug)
-pub fn Decoration::Decoration(@common.Range, DecorationKind, String, message? : String, inline_class_name? : String, inline_class_name_affects_letter_spacing? : Bool, z_index? : Int, is_whole_line? : Bool, show_if_collapsed? : Bool, should_fill_line_on_line_break? : Bool, stickiness? : TrackedRangeStickiness, overview_ruler? : OverviewRulerOptions, minimap? : MinimapOptions, glyph_margin_class_name? : String, lines_decorations_class_name? : String, first_line_decoration_class_name? : String, margin_class_name? : String, collapse_on_replace_edit? : Bool, description? : String) -> Self
-
-pub(all) enum DecorationKind {
-  Diagnostic
-  SearchMatch
-  Link
-  SemanticToken
-  CurrentLine
-  HoverHighlight
-} derive(Eq, @debug.Debug)
-
-pub(all) struct DecorationSet {
-  items : Array[Decoration]
-} derive(@debug.Debug)
-pub fn DecorationSet::at_position(Self, @common.Position) -> Array[Decoration]
-pub fn DecorationSet::between(Self, @common.Range) -> Array[Decoration]
-pub fn DecorationSet::empty() -> Self
-pub fn DecorationSet::from_array(Array[Decoration]) -> Self
+pub fn Decoration::Decoration(String, message? : String, inline_class_name? : String, inline_class_name_affects_letter_spacing? : Bool, z_index? : Int, is_whole_line? : Bool, show_if_collapsed? : Bool, should_fill_line_on_line_break? : Bool, stickiness? : TrackedRangeStickiness, overview_ruler? : OverviewRulerOptions, minimap? : MinimapOptions, glyph_margin_class_name? : String, lines_decorations_class_name? : String, first_line_decoration_class_name? : String, margin_class_name? : String, collapse_on_replace_edit? : Bool, description? : String) -> Self
 
 pub(all) struct DecorationsChangeAccessor {
   mut add_decoration : (@common.Range, Decoration) -> String

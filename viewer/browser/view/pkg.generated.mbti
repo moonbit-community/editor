@@ -58,6 +58,7 @@ pub(all) struct ViewContext {
   keep_hover_open : () -> Unit
   hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
+  measure_line_decorations : (Int, Int, Int) -> Array[(Double, Double)]
   offset_for_column : (Int, Int) -> Double
 }
 

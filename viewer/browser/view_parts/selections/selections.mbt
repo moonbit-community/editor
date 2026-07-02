@@ -15,6 +15,9 @@ pub(all) struct ContentViewOverlaysPrepared {
   viewport : @view_layout.ViewportData
   selection_view_range : @view_layout.ViewRange?
   view_model : @view_model.ViewModel?
+  /// The viewport's decoration collection (`ctx.getDecorationsInViewport()`),
+  /// consumed by the decorations overlay.
+  decorations : Array[@view_model.ViewModelDecoration]
   space_width : Double
   /// Monaco `ViewOverlays._isFocused` (`viewOverlays.ts:76-79`): drives the
   /// `focused` class toggle on the overlay container at render.

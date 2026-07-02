@@ -27,6 +27,10 @@ pub(all) struct ViewContext {
   // pixel rects of a zero-based view-column range on a view line off the live
   // line DOM, which the selection overlay renders after `ViewLines` writes.
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
+  // The same measurement with `keep_empty=true`, for the decorations overlay:
+  // a collapsed range must yield its zero-width caret rect so the
+  // `showIfCollapsed` widening has geometry to center on.
+  measure_line_decorations : (Int, Int, Int) -> Array[(Double, Double)]
   // Monaco's `RenderingContext.visibleRangeForPosition(...).left` seam: the
   // caret x of a one-based view column on a rendered view line
   // (`View::offset_for_column`; `-1` when the line is not rendered).

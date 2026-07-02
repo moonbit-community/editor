@@ -229,13 +229,10 @@ let minimap_info : String = "minimap.infoHighlight"
 ///|
 /// `MarkerDecorations._createDecorationOption`
 /// (`markerDecorationsService.ts:226`): the severity→option matrix plus tag
-/// overrides. `range` is supplied by `create_decoration_range`; the viewer bundles
-/// range + options into one `Decoration`. An empty `class_name` is Monaco's
-/// `className: undefined` (Hint+Deprecated).
-pub fn create_decoration_option(
-  marker : Marker,
-  range : @base_common.Range,
-) -> @model.Decoration {
+/// overrides. An empty `class_name` is Monaco's `className: undefined`
+/// (Hint+Deprecated); the range travels separately as the
+/// `IModelDeltaDecoration` pair (`create_decoration_range`).
+pub fn create_decoration_option(marker : Marker) -> @model.Decoration {
   let mut class_name = ""
   let mut color : String? = None
   let mut z_index = 0
@@ -284,8 +281,6 @@ pub fn create_decoration_option(
     None => ()
   }
   Decoration(
-    range,
-    Diagnostic,
     class_name,
     message=marker.message,
     inline_class_name?,

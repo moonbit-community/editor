@@ -70,8 +70,6 @@ test "viewport line decorations come from model decoration storage" {
     {
       range: Range(1, 1, 1, 6),
       options: Decoration(
-        Range(1, 1, 1, 1),
-        Diagnostic,
         "squiggly-warning",
         inline_class_name="squiggly-inline-unnecessary",
         show_if_collapsed=true,
@@ -84,8 +82,6 @@ test "viewport line decorations come from model decoration storage" {
     {
       range: Range(2, 12, 2, 12),
       options: Decoration(
-        Range(1, 1, 1, 1),
-        Diagnostic,
         "squiggly-error",
         show_if_collapsed=true,
         description="test",
@@ -105,24 +101,27 @@ test "viewport line decorations come from model decoration storage" {
     { start: 1, end: 4 },
     line_height=18,
   )
+  // The inline chain feeds the line spans; className decorations render
+  // through the DecorationsOverlay instead (never as line spans).
   let line1 = viewport.line_decorations[0]
   assert_true(
     line1.any(d => {
-      d.class_name == "squiggly-warning" &&
+      d.class_name == "squiggly-inline-unnecessary" &&
       d.start_column == 1 &&
       d.end_column == 6
     }),
   )
-  assert_true(line1.any(d => d.class_name == "squiggly-inline-unnecessary"))
-  let line2 = viewport.line_decorations[1]
-  assert_true(
-    line2.any(d => {
-      d.class_name == "squiggly-error" &&
-      d.start_column == 12 &&
-      d.end_column == 13
-    }),
-  )
+  assert_false(line1.any(d => d.class_name == "squiggly-warning"))
+  assert_eq(viewport.line_decorations[1].length(), 0)
   assert_eq(viewport.line_decorations[2].length(), 0)
+  // …while the viewport collection carries both className decorations for
+  // the overlay.
+  let collection = view_model
+    .decorations()
+    .get_decorations_viewport_data(Range(1, 1, 3, 8))
+  let class_names = collection.decorations.map(d => d.options.class_name)
+  assert_true(class_names.contains("squiggly-warning"))
+  assert_true(class_names.contains("squiggly-error"))
   // renderValidationDecorations=Off filters squiggly-error/warning/info out
   let filtered_view_model = @view_model.ViewModel::with_options(
     FrameSource(tokenized, @language.ProviderResult::empty(), model~),

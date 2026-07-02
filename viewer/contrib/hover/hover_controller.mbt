@@ -601,8 +601,6 @@ pub fn HoverController::highlight_decorations(
         {
           range: snapshot.range_of(hover.range),
           options: Decoration(
-            Range(1, 1, 1, 1),
-            HoverHighlight,
             "hoverHighlight",
             description="content-hover-highlight",
           ),

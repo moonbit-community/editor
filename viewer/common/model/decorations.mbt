@@ -1,16 +1,4 @@
 ///|
-/// Semantic reason for a renderer decoration. Browser code maps these kinds to
-/// stable CSS classes and feature ownership.
-pub(all) enum DecorationKind {
-  Diagnostic
-  SearchMatch
-  Link
-  SemanticToken
-  CurrentLine
-  HoverHighlight
-} derive(Eq, Debug)
-
-///|
 /// How a decoration's range grows when text is typed at its edges,
 /// `TrackedRangeStickiness` (`model.ts`). Inert in the readonly viewer; carried
 /// for fidelity.
@@ -100,12 +88,10 @@ pub fn clean_class_name(class_name : String) -> String {
 }
 
 ///|
-/// The `ModelDecorationOptions` subset (`textModel.ts:2478-2580`) plus — for
-/// the duration of the decoration-system migration — the legacy simplified
-/// fields `range` and `kind` still consumed by the old render path (they are
-/// deleted in the plan's Phases 3-4). Monaco field mapping: `class_name` =
-/// `className` ("" = undefined), `message` = `hoverMessage`,
-/// `inline_class_name` = `inlineClassName`, the rest keep their names.
+/// The `ModelDecorationOptions` subset (`textModel.ts:2478-2580`). Monaco
+/// field mapping: `class_name` = `className` ("" = undefined), `message` =
+/// `hoverMessage`, `inline_class_name` = `inlineClassName`, the rest keep
+/// their names.
 ///
 /// Omitted `ModelDecorationOptions` fields (out of scope, plan
 /// `monaco-decoration-system-port.md`): `blockClassName`/`blockIsAfterEnd`/
@@ -118,8 +104,6 @@ pub fn clean_class_name(class_name : String) -> String {
 /// margin view part deferred). `overview_ruler`/`minimap` colors are carried
 /// as strings — no theme-object resolution (recorded theming design).
 pub(all) struct Decoration {
-  range : @base_common.Range
-  kind : DecorationKind
   class_name : String
   message : String?
   inline_class_name : String?
@@ -141,8 +125,7 @@ pub(all) struct Decoration {
 
 ///|
 /// A (range, options) pair handed to `TextModel::delta_decorations` —
-/// Monaco's `IModelDeltaDecoration`. The `options.range`/`options.kind`
-/// legacy fields are ignored by decoration storage.
+/// Monaco's `IModelDeltaDecoration`.
 pub(all) struct DeltaDecoration {
   range : @base_common.Range
   options : Decoration
@@ -170,12 +153,6 @@ pub(all) struct ModelDecorationsChangedEvent {
 } derive(Eq, Debug)
 
 ///|
-/// Immutable-style decoration collection queried by viewport and hover code.
-pub(all) struct DecorationSet {
-  items : Array[Decoration]
-} derive(Debug)
-
-///|
 /// The single decoration-options constructor. Monaco's `register`/
 /// `createDynamic`/`_normalizeOptions` collapse into this one function (plan
 /// Deviation 5 — `register` exists only to intern per-instance allocations).
@@ -184,8 +161,6 @@ pub(all) struct DecorationSet {
 /// AlwaysGrows, `zIndex` 0). Direct record literals bypass the cleaning, like
 /// nothing does in Monaco.
 pub fn Decoration::Decoration(
-  range : @base_common.Range,
-  kind : DecorationKind,
   class_name : String,
   message? : String,
   inline_class_name? : String,
@@ -205,8 +180,6 @@ pub fn Decoration::Decoration(
   description? : String = "",
 ) -> Decoration {
   {
-    range,
-    kind,
     class_name: clean_class_name(class_name),
     message,
     inline_class_name: inline_class_name.map(clean_class_name),
@@ -229,46 +202,4 @@ pub fn Decoration::Decoration(
     collapse_on_replace_edit,
     description,
   }
-}
-
-///|
-/// Empty decoration collection.
-pub fn DecorationSet::empty() -> DecorationSet {
-  { items: [] }
-}
-
-///|
-/// Wraps an array of decorations as a queryable set.
-pub fn DecorationSet::from_array(items : Array[Decoration]) -> DecorationSet {
-  { items, }
-}
-
-///|
-/// Decorations whose ranges intersect or touch `range`.
-pub fn DecorationSet::between(
-  self : DecorationSet,
-  range : @base_common.Range,
-) -> Array[Decoration] {
-  let found = []
-  for item in self.items {
-    if @base_common.Range::are_intersecting_or_touching(item.range, range) {
-      found.push(item)
-    }
-  }
-  found
-}
-
-///|
-/// Decorations whose ranges contain `position`.
-pub fn DecorationSet::at_position(
-  self : DecorationSet,
-  position : @base_common.Position,
-) -> Array[Decoration] {
-  let found = []
-  for item in self.items {
-    if item.range.contains_position(position) {
-      found.push(item)
-    }
-  }
-  found
 }

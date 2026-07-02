@@ -9,7 +9,7 @@ import {
 }
 
 // Values
-pub fn create_decoration_option(Marker, @common.Range) -> @model.Decoration
+pub fn create_decoration_option(Marker) -> @model.Decoration
 
 pub fn create_decoration_range(@model.TextSnapshot, Marker) -> @common.Range
 

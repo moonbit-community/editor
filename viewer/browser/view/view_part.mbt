@@ -571,6 +571,11 @@ impl ViewPart for @selections.ContentViewOverlays with fn on_view_event(
   match event {
     ViewFlushed => true
     ViewLinesChanged => true
+    // `DecorationsOverlay.onDecorationsChanged` (`decorations.ts:44-46`).
+    ViewDecorationsChanged => true
+    // `DecorationsOverlay.onConfigurationChanged` (`decorations.ts:39-43`):
+    // re-reads typicalHalfwidthCharacterWidth.
+    ViewConfigurationChanged(_) => true
     ViewScrollChanged(e) => e.window_changed || e.position_changed
     ViewCursorStateChanged => true
     ViewZonesChanged => true
@@ -609,11 +614,31 @@ impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
     Some(selection) => selection.is_empty()
     None => true
   }
+  // `ctx.getDecorationsInViewport()` (`decorations.ts:68`): the viewport's
+  // decoration collection (a cache hit — the viewport data resolved the same
+  // range).
+  let decorations = match context.input.view_model {
+    Some(view_model) => {
+      let visible = context.viewport.visible_range
+      view_model
+      .decorations()
+      .get_decorations_viewport_data(
+        Range(
+          visible.start_line_number,
+          visible.start_column,
+          visible.end_line_number,
+          visible.end_column,
+        ),
+      ).decorations
+    }
+    None => []
+  }
   self.prepared = Some({
     frame: context.input.frame,
     viewport: context.viewport,
     selection_view_range: context.input.selection_view_range,
     view_model: context.input.view_model,
+    decorations,
     space_width: context.input.space_width,
     editor_has_focus: context.input.editor_has_focus,
     cursor_view_line,
@@ -655,6 +680,21 @@ impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) 
         prepared.view_model,
         prepared.space_width,
         context.view_context.measure_line_selection,
+      )
+      // Decorations render after current-line and selections — Monaco's
+      // dynamic-overlay registration order (`view.ts:218-221`).
+      self.render_decorations_overlay(
+        prepared.decorations,
+        prepared.viewport,
+        line_number => {
+          match prepared.view_model {
+            Some(view_model) =>
+              view_model.lines().get_view_line_max_column(line_number)
+            None => 1
+          }
+        },
+        context.view_context.measure_line_decorations,
+        prepared.space_width,
       )
       self.set_focused(prepared.editor_has_focus)
       self.view_overlays.set_attribute("style", context.content_transform)

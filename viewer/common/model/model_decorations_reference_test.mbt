@@ -31,13 +31,12 @@
 ///
 /// Adaptation notes: Monaco `options.className: undefined` is this port's
 /// `class_name: ""`; options are built through the single `Decoration`
-/// constructor whose legacy `range`/`kind` fields are ignored by storage
-/// (they die with the migration's Phases 3-4).
+/// constructor.
 
 ///|
 /// Monaco `{ description: 'test', className }` options literal.
 fn dec_options(class_name : String) -> @model.Decoration {
-  Decoration(Range(1, 1, 1, 1), Diagnostic, class_name, description="test")
+  Decoration(class_name, description="test")
 }
 
 ///|
@@ -525,25 +524,13 @@ test "issue #4317: editor.setDecorations doesn't update the hover message" {
   let ids = model.delta_decorations([], [
     {
       range: Range(1, 1, 100, 1),
-      options: Decoration(
-        Range(1, 1, 1, 1),
-        Diagnostic,
-        "",
-        message="hello1",
-        description="test",
-      ),
+      options: Decoration("", message="hello1", description="test"),
     },
   ])
   let ids2 = model.delta_decorations(ids, [
     {
       range: Range(1, 1, 100, 1),
-      options: Decoration(
-        Range(1, 1, 1, 1),
-        Diagnostic,
-        "",
-        message="hello2",
-        description="test",
-      ),
+      options: Decoration("", message="hello2", description="test"),
     },
   ])
   let actual_decoration = model.get_decoration_options(ids2[0])
@@ -557,8 +544,6 @@ test "model doesn't get confused with individual tracked ranges" {
     (accessor.add_decoration)(
       Range(1, 1, 1, 1),
       Decoration(
-        Range(1, 1, 1, 1),
-        Diagnostic,
         "",
         stickiness=AlwaysGrowsWhenTypingAtEdges,
         description="test",

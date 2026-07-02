@@ -167,11 +167,9 @@ fn to_view_layout_decoration_type(
 ///|
 /// Per-line decorations for `line_number` from the viewport decorations
 /// collection: the faithful inline chain (`line_decorations_filter` over the
-/// per-line grouped inline decorations), the injected-text (inlay hint)
-/// decorations the line carries, and — TRANSITIONAL until the
-/// `DecorationsOverlay` lands (decoration plan Phase 4) — one span per
-/// `className` decoration covering the line, so squiggles and background
-/// highlights keep rendering as line-internal spans meanwhile.
+/// per-line grouped inline decorations) plus the injected-text (inlay hint)
+/// decorations the line carries. `className` decorations render through the
+/// `DecorationsOverlay` (decoration plan Phase 4), not as line spans.
 pub fn line_decorations_for_line(
   collection : ViewDecorationsCollection,
   viewport_start_line_number : Int,
@@ -197,73 +195,7 @@ pub fn line_decorations_for_line(
       ),
     )
   }
-  // TRANSITIONAL (Phase 4 deletes this in favor of the DecorationsOverlay):
-  // `className` decorations render as spans, with Monaco's `showIfCollapsed`
-  // 1ch widening for collapsed ranges (the squiggle on an empty range/EOL).
-  for decoration in collection.decorations {
-    if decoration.options.class_name == "" {
-      // Monaco `className: undefined` (e.g. Hint+Deprecated): no span.
-      continue
-    }
-    match
-      class_name_columns_on_view_line(
-        decoration.range,
-        decoration.options.show_if_collapsed,
-        line_number,
-        max_column,
-      ) {
-      Some((start_column, end_column)) =>
-        result.push(
-          LineDecoration(
-            start_column,
-            end_column,
-            decoration.options.class_name,
-          ),
-        )
-      None => ()
-    }
-  }
   result
-}
-
-///|
-/// Clips a `className` decoration's view range to one view line, returning
-/// the one-based half-open `[start_column, end_column)` span local to that
-/// line, or `None` when the decoration does not cover the line or collapses
-/// to empty. `show_if_collapsed` forces a collapsed span to render one
-/// column wide (`markerDecorationsService.ts` sets `showIfCollapsed: true`).
-/// TRANSITIONAL with its caller above.
-fn class_name_columns_on_view_line(
-  range : @base_common.Range,
-  show_if_collapsed : Bool,
-  view_line_number : Int,
-  max_column : Int,
-) -> (Int, Int)? {
-  if view_line_number < range.start_line_number ||
-    view_line_number > range.end_line_number {
-    return None
-  }
-  let start_column = if range.start_line_number == view_line_number {
-    range.start_column
-  } else {
-    1
-  }
-  let end_column = if range.end_line_number == view_line_number {
-    range.end_column
-  } else {
-    max_column
-  }
-  let start_column = @base_common.clamp_int(start_column, 1, max_column)
-  let end_column = @base_common.clamp_int(end_column, 1, max_column)
-  if start_column >= end_column {
-    if show_if_collapsed {
-      Some((start_column, start_column + 1))
-    } else {
-      None
-    }
-  } else {
-    Some((start_column, end_column))
-  }
 }
 
 ///|

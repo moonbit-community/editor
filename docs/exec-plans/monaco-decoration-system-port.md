@@ -411,20 +411,42 @@ CurrentLine < Selections < Decorations).
 
 | Source member / step (file:line) | Arithmetic / transition | MoonBit symbol | Status |
 |---|---|---|---|
-| ctor/fields (:17-29) | typicalHalfwidthCharacterWidth from fontInfo | prepared `space_width` (existing seam) | TODO |
-| event handlers (:39-64) | config/decorations/flush/lines/scroll(top‖width)/zones → dirty | ContentViewOverlays event map already covers; add `ViewDecorationsChanged` | TODO |
-| `prepareRender` filter+sort (:67-113) | keep className only; sort zIndex → className → range-starts | pure fn + wbtest | TODO |
-| `_renderWholeLineDecorations` (:115-139) | `<div class="cdr {className}" left:0;width:100%>` per visible line in range | pure piece builder | TODO |
-| `_renderNormalDecorations` merge loop (:141-184) | showIfCollapsed end-column-1 pullback (:160-162); same-class touching-range merge (:164-168); flush prev | pure fn + wbtest per branch | TODO |
-| `_renderNormalDecoration` (:186-228) | linesVisibleRangesForRange; collapsed-range widening to half-width centered (:199-208); shouldFillLineOnLineBreak → width:100% (:211,219) | measured via `measure_line_selection` seam (Deviation 8) | TODO |
-| `render` (:230-239) | per-line lookup | flat pieces appended between current-line and selection groups | TODO |
-| `decorations.css` | `.cdr { position:absolute; }` | `decorations.css` in selections pkg + css_sources | TODO |
-| Retirement: `DecorationKind` + `DecorationSet` deleted (`decorations.mbt`) | consumers moved to options tests | deletion | TODO |
-| Retirement: `kind == CurrentLine` consumers (`line_html.mbt:68`, `view_line_data.mbt:100,147`) | dead since the current-line overlay landed 2026-07-02 — verify no producer, then delete | deletion | TODO |
-| Retirement: `view_model_decorations.mbt:81` kind copy | gone with the simplified type (Phase 3) | — | TODO |
-| Theme CSS: `hoverHighlight`, `rangeHighlight` classes | `--vscode-editor-hoverHighlightBackground` / `-rangeHighlightBackground` already in `theme.css` | static rules for the stock classNames | TODO |
+| ctor/fields (:17-29) | typicalHalfwidthCharacterWidth from fontInfo | prepared `space_width` (existing seam) | PASS |
+| event handlers (:39-64) | config/decorations/flush/lines/scroll(top‖width)/zones → dirty | ContentViewOverlays event map already covers; add `ViewDecorationsChanged` | PASS |
+| `prepareRender` filter+sort (:67-113) | keep className only; sort zIndex → className → range-starts | pure fn + wbtest | PASS |
+| `_renderWholeLineDecorations` (:115-139) | `<div class="cdr {className}" left:0;width:100%>` per visible line in range | pure piece builder | PASS |
+| `_renderNormalDecorations` merge loop (:141-184) | showIfCollapsed end-column-1 pullback (:160-162); same-class touching-range merge (:164-168); flush prev | pure fn + wbtest per branch | PASS |
+| `_renderNormalDecoration` (:186-228) | linesVisibleRangesForRange; collapsed-range widening to half-width centered (:199-208); shouldFillLineOnLineBreak → width:100% (:211,219) | measured via `measure_line_selection` seam (Deviation 8) | PASS |
+| `render` (:230-239) | per-line lookup | flat pieces appended between current-line and selection groups | PASS |
+| `decorations.css` | `.cdr { position:absolute; }` | `decorations.css` in selections pkg + css_sources | PASS |
+| Retirement: `DecorationKind` + `DecorationSet` deleted (`decorations.mbt`) | consumers moved to options tests | deletion | PASS |
+| Retirement: `kind == CurrentLine` consumers (`line_html.mbt:68`, `view_line_data.mbt:100,147`) | dead since the current-line overlay landed 2026-07-02 — verify no producer, then delete | deletion | PASS |
+| Retirement: `view_model_decorations.mbt:81` kind copy | gone with the simplified type (Phase 3) | — | PASS |
+| Theme CSS: `hoverHighlight`, `rangeHighlight` classes | `--vscode-editor-hoverHighlightBackground` / `-rangeHighlightBackground` already in `theme.css` | static rules for the stock classNames | PASS |
 
 Member count (Phase 4): **12 rows**.
+
+Landed notes (2026-07-02): `decorations_overlay.mbt` in the `selections`
+package, registered in the `ContentViewOverlays` merge after the current-line
+and selection pieces (re-read `view.ts:218-221` at implementation as
+instructed: the order is CurrentLine, Selections, [IndentGuides — unported],
+Decorations — decorations render last). The piece computation
+(`compute_decoration_overlay_pieces`) is pure and covered by 7 wbtests with
+an injected fake measurement (filter/sort, whole-line clamping, same-class
+touching merge, `showIfCollapsed` endColumn-1 pullback, collapsed centered
+half-width widening incl. JS `Math.round` half-up semantics,
+`shouldFillLineOnLineBreak`, different-class no-merge). The measurement seam
+gained `measure_line_decorations` (`keep_empty=true`, so collapsed ranges
+yield their caret rect — Deviation 8). `typicalHalfwidthCharacterWidth` is
+the prepared `space_width` (existing seam). The `className === 'findMatch'`
+argument of `linesVisibleRangesForRange` is dropped (no find feature).
+Retirements executed: `DecorationKind`, `DecorationSet`, and `Decoration`'s
+legacy `range`/`kind` fields deleted (`Decoration` is now exactly the
+`ModelDecorationOptions` subset; `create_decoration_option` matches Monaco's
+marker-only signature); the Phase-3 TRANSITIONAL className line-span block
+deleted — `className` decorations render only through the overlay. Exit-gate
+grep confirms no decoration `kind` remains. `rangeHighlight` static rule
+added in `decorations.css`; `hoverHighlight` lives in `hover.css` (Phase 3).
 
 ## Phase 5 — public `Viewer::` decoration API (`codeEditorWidget.ts` slice)
 

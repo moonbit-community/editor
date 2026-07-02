@@ -24,6 +24,9 @@ test('keeps the Monaco-shaped editor shell DOM structure', async ({ page }) => {
     element('div', ['margin-view-overlays']),
   ]);
   await expectDirectChildren(page, '.margin > .margin-view-overlays', [
+    // First margin overlay — Monaco registers CurrentLineMarginHighlightOverlay
+    // before the line-number overlay (view.ts:225-229).
+    element('div', ['current-line-highlight', 'view-layer']),
     element('div', ['folding', 'view-layer']),
     element('div', ['line-numbers', 'view-layer']),
   ]);

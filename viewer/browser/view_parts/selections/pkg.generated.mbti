@@ -8,6 +8,7 @@ import {
 }
 
 // Values
+pub fn current_line_span(@view_model.ViewModel?, Int, Bool) -> (Int, Int)
 
 // Errors
 
@@ -19,6 +20,7 @@ pub(all) struct ContentViewOverlays {
 }
 pub fn ContentViewOverlays::dom(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
+pub fn ContentViewOverlays::render_current_line(Self, @view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Unit
 pub fn ContentViewOverlays::render_selection_overlays(Self, @view_model.RenderFrame, @view_layout.ViewportData, @view_layout.ViewRange?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Unit
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
 
@@ -29,6 +31,11 @@ pub(all) struct ContentViewOverlaysPrepared {
   view_model : @view_model.ViewModel?
   space_width : Double
   editor_has_focus : Bool
+  cursor_view_line : Int?
+  selection_is_empty : Bool
+  word_wrap : Bool
+  render_line_highlight : @view_layout.RenderLineHighlight
+  render_line_highlight_only_when_focus : Bool
 }
 
 // Type aliases

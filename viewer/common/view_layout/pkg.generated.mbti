@@ -7,9 +7,19 @@ import {
 }
 
 // Values
+pub fn current_line_content_class(in_margin~ : Bool, exact~ : Bool) -> String
+
+pub fn current_line_margin_class(in_margin~ : Bool, other~ : Bool, exact~ : Bool) -> String
+
 pub fn render_view_line(RenderLineInput, StringBuilder) -> RenderLineOutput
 
 pub fn render_view_line2(RenderLineInput) -> RenderLineOutput2
+
+pub fn should_render_line_highlight_in_content(RenderLineHighlight, Bool, Bool, Bool) -> Bool
+
+pub fn should_render_line_highlight_in_margin(RenderLineHighlight, Bool, Bool) -> Bool
+
+pub fn view_line_span_of_model_line(Int, Int, (Int) -> Int) -> (Int, Int)
 
 pub fn visible_window(Double, Double, Int, Int, Int) -> LineWindow
 
@@ -186,6 +196,13 @@ pub fn PrefixSumComputer::set_value(Self, Int, Int) -> Bool
 pub(all) struct PrefixSumIndexOfResult {
   index : Int
   remainder : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum RenderLineHighlight {
+  None
+  Gutter
+  Line
+  All
 } derive(Eq, @debug.Debug)
 
 pub(all) struct RenderLineInput {

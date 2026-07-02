@@ -331,7 +331,10 @@ impl ViewPart for @margin.MarginViewOverlays with fn on_view_event(_self, event)
     ViewConfigurationChanged(e) => e.gutter_width_changed
     ViewLineMappingChanged => true
     ViewZonesChanged => true
-    _ => false
+    // The margin current-line highlight follows the cursor and the focus
+    // state (`currentLineHighlight.ts:97-100,:116-123`).
+    ViewCursorStateChanged => true
+    ViewFocusChanged(_) => true
   }
 }
 
@@ -356,6 +359,14 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
   self,
   context,
 ) {
+  let cursor_view_line = match context.input.view_selection {
+    Some(selection) => Some(selection.get_position().line_number)
+    None => None
+  }
+  let selection_is_empty = match context.input.view_selection {
+    Some(selection) => selection.is_empty()
+    None => true
+  }
   self.prepared = Some({
     frame: context.input.frame,
     viewport: context.viewport,
@@ -364,6 +375,12 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
     folded_ranges: context.input.folded_ranges,
     on_toggle_fold: context.input.on_toggle_fold,
     generation: context.input.generation,
+    cursor_view_line,
+    selection_is_empty,
+    editor_has_focus: context.input.editor_has_focus,
+    word_wrap: context.input.word_wrap,
+    render_line_highlight: context.input.render_line_highlight,
+    render_line_highlight_only_when_focus: context.input.render_line_highlight_only_when_focus,
   })
 }
 
@@ -371,6 +388,18 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
 impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
   match self.prepared {
     Some(prepared) => {
+      self.render_current_line_margin(
+        prepared.viewport,
+        prepared.view_model,
+        prepared.cursor_view_line,
+        prepared.selection_is_empty,
+        prepared.editor_has_focus,
+        prepared.word_wrap,
+        prepared.render_line_highlight,
+        prepared.render_line_highlight_only_when_focus,
+        // `_contentLeft`, the margin width (cLH:227).
+        context.gutter_width,
+      )
       self.render_line_numbers(
         prepared.frame,
         prepared.viewport,
@@ -387,6 +416,7 @@ impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
         "style",
         "width:" + context.gutter_width.to_string() + "px",
       )
+      self.current_line.set_attribute("style", context.margin_transform)
       self.line_numbers.set_attribute("style", context.margin_transform)
       self.folding.set_attribute("style", context.margin_transform)
     }
@@ -572,6 +602,14 @@ impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
   self,
   context,
 ) {
+  let cursor_view_line = match context.input.view_selection {
+    Some(selection) => Some(selection.get_position().line_number)
+    None => None
+  }
+  let selection_is_empty = match context.input.view_selection {
+    Some(selection) => selection.is_empty()
+    None => true
+  }
   self.prepared = Some({
     frame: context.input.frame,
     viewport: context.viewport,
@@ -579,6 +617,11 @@ impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
     view_model: context.input.view_model,
     space_width: context.input.space_width,
     editor_has_focus: context.input.editor_has_focus,
+    cursor_view_line,
+    selection_is_empty,
+    word_wrap: context.input.word_wrap,
+    render_line_highlight: context.input.render_line_highlight,
+    render_line_highlight_only_when_focus: context.input.render_line_highlight_only_when_focus,
   })
 }
 
@@ -586,6 +629,26 @@ impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
 impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) {
   match self.prepared {
     Some(prepared) => {
+      // One clear per part render; the current-line highlight then paints
+      // before the selection pieces, preserving Monaco's dynamic-overlay
+      // registration order (`view.ts:218-219`).
+      self.view_overlays.set_inner_html("")
+      self.render_current_line(
+        prepared.viewport,
+        prepared.view_model,
+        prepared.cursor_view_line,
+        prepared.selection_is_empty,
+        prepared.editor_has_focus,
+        prepared.word_wrap,
+        prepared.render_line_highlight,
+        prepared.render_line_highlight_only_when_focus,
+        // `max(ctx.scrollWidth, this._contentWidth)` (cLH:211).
+        if context.dimensions.scroll_width > context.dimensions.width {
+          context.dimensions.scroll_width
+        } else {
+          context.dimensions.width
+        },
+      )
       self.render_selection_overlays(
         prepared.frame,
         prepared.viewport,

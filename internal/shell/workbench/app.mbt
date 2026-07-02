@@ -225,6 +225,14 @@ fn attach_workbench_viewer() -> Unit {
         set_harness_hover_fixture,
         (top, left) => viewer.scroll_to_position(top, left),
         () => viewer.escape(),
+        (anchor_line, anchor_column, line, column) => {
+          viewer.set_selection(
+            @view_model.Selection::new(
+              Position(anchor_line, anchor_column),
+              Position(line, column),
+            ),
+          )
+        },
       )
     }
     None => ()

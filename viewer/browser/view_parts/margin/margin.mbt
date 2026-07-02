@@ -16,11 +16,20 @@ pub(all) struct MarginViewOverlaysPrepared {
   folded_ranges : Array[@language.FoldingRange]
   on_toggle_fold : (Int) -> Unit
   generation : Int
+  /// Current-line margin highlight inputs (`currentLineHighlight.ts`; see
+  /// `current_line_highlight.mbt`).
+  cursor_view_line : Int?
+  selection_is_empty : Bool
+  editor_has_focus : Bool
+  word_wrap : Bool
+  render_line_highlight : @view_layout.RenderLineHighlight
+  render_line_highlight_only_when_focus : Bool
 }
 
 ///|
 pub(all) struct MarginViewOverlays {
   margin : @rdom.Element
+  current_line : @rdom.Element
   folding : @rdom.Element
   line_numbers : @rdom.Element
   line_number_nodes : Array[@rdom.Element]
@@ -39,17 +48,24 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
   let margin_view_overlays = document.create_element("div")
   margin_view_overlays.set_attribute("class", "margin-view-overlays")
   margin_view_overlays.set_attribute("data-view-part", "margin-view-overlays")
+  // First margin overlay, before line numbers — Monaco registers
+  // `CurrentLineMarginHighlightOverlay` first (`view.ts:225-229`).
+  let current_line = document.create_element("div")
+  current_line.set_attribute("class", "view-layer current-line-highlight")
+  current_line.set_attribute("data-view-part", "current-line-highlight")
   let folding = document.create_element("div")
   folding.set_attribute("class", "view-layer folding")
   folding.set_attribute("data-view-part", "folding")
   let line_numbers = document.create_element("div")
   line_numbers.set_attribute("class", "view-layer line-numbers")
   line_numbers.set_attribute("data-view-part", "line-numbers")
+  margin_view_overlays.append_child(current_line.as_node())
   margin_view_overlays.append_child(folding.as_node())
   margin_view_overlays.append_child(line_numbers.as_node())
   margin.append_child(margin_view_overlays.as_node())
   {
     margin,
+    current_line,
     folding,
     line_numbers,
     line_number_nodes: [],

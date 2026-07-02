@@ -153,6 +153,9 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         render_whitespace: self.options.render_whitespace,
         render_control_characters: self.options.render_control_characters,
         editor_has_focus: self.editor_has_focus,
+        word_wrap: self.options.soft_wrap && self.soft_wrap_column > 0,
+        render_line_highlight: self.options.render_line_highlight,
+        render_line_highlight_only_when_focus: self.options.render_line_highlight_only_when_focus,
       })
     }
   }

@@ -19,6 +19,14 @@ pub(all) struct ContentViewOverlaysPrepared {
   /// Monaco `ViewOverlays._isFocused` (`viewOverlays.ts:76-79`): drives the
   /// `focused` class toggle on the overlay container at render.
   editor_has_focus : Bool
+  /// Current-line highlight inputs (`currentLineHighlight.ts`): the cursor's
+  /// view line + selection emptiness (`_readFromSelections`, `:60-81`), the
+  /// wrapped-pass gate (`_wordWrap`, `:43`), and the two options (`:41-42`).
+  cursor_view_line : Int?
+  selection_is_empty : Bool
+  word_wrap : Bool
+  render_line_highlight : @view_layout.RenderLineHighlight
+  render_line_highlight_only_when_focus : Bool
 }
 
 ///|
@@ -123,7 +131,9 @@ pub fn ContentViewOverlays::render_selection_overlays(
   space_width : Double,
   measure : (Int, Int, Int) -> Array[(Double, Double)],
 ) -> Unit {
-  self.view_overlays.set_inner_html("")
+  // The container is cleared once per part render (before the current-line
+  // overlay paints; see the `ViewPart` impl) — selection pieces append after
+  // it, preserving Monaco's overlay registration order (`view.ts:218-219`).
   let range = match selection_view_range {
     Some(range) => range
     None => return

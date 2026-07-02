@@ -6,6 +6,8 @@ pub(all) struct ViewerOptions {
   wrapping_indent : @view_model.WrappingIndent
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
+  render_line_highlight : @view_layout.RenderLineHighlight
+  render_line_highlight_only_when_focus : Bool
 } derive(Eq, Debug)
 
 ///|
@@ -15,12 +17,17 @@ pub(all) struct ViewerOptions {
 /// default — whitespace glyphs render under the active selection.
 /// `render_control_characters` defaults to `true`, also matching Monaco — it
 /// only changes output on lines that contain control characters.
+/// `render_line_highlight` defaults to `Line` and
+/// `render_line_highlight_only_when_focus` to `false`, Monaco's defaults for
+/// the current-line highlight (`editorOptions.ts`).
 pub fn ViewerOptions::ViewerOptions(
   soft_wrap? : Bool = false,
   tab_size? : Int = 2,
   wrapping_indent? : @view_model.WrappingIndent = Same,
   render_whitespace? : @view_layout.RenderWhitespace = Selection,
   render_control_characters? : Bool = true,
+  render_line_highlight? : @view_layout.RenderLineHighlight = Line,
+  render_line_highlight_only_when_focus? : Bool = false,
 ) -> ViewerOptions {
   {
     soft_wrap,
@@ -28,6 +35,8 @@ pub fn ViewerOptions::ViewerOptions(
     wrapping_indent,
     render_whitespace,
     render_control_characters,
+    render_line_highlight,
+    render_line_highlight_only_when_focus,
   }
 }
 

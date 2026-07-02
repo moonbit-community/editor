@@ -29,6 +29,13 @@ pub(all) struct ViewRenderInput {
   /// Whether the editor root has DOM focus (Monaco `ViewFocusChangedEvent`
   /// state; see `Viewer.editor_has_focus`).
   editor_has_focus : Bool
+  /// Whether soft wrapping is in effect (Monaco `layoutInfo.isViewportWrapping`)
+  /// — gates the current-line highlight's wrapped-line pass.
+  word_wrap : Bool
+  /// The current-line highlight options (`renderLineHighlight` /
+  /// `renderLineHighlightOnlyWhenFocus`, Monaco defaults `'line'`/`false`).
+  render_line_highlight : @view_layout.RenderLineHighlight
+  render_line_highlight_only_when_focus : Bool
 }
 
 ///|

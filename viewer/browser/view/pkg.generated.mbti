@@ -81,6 +81,9 @@ pub(all) struct ViewRenderInput {
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
   editor_has_focus : Bool
+  word_wrap : Bool
+  render_line_highlight : @view_layout.RenderLineHighlight
+  render_line_highlight_only_when_focus : Bool
 }
 
 // Type aliases

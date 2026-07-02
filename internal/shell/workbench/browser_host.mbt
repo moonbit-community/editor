@@ -97,8 +97,9 @@ extern "js" fn install_conformance_control(
   configure_hover : (String, String) -> Unit,
   scroll_to : (Double, Double) -> Unit,
   hide_hover : () -> Unit,
+  set_selection : (Int, Int, Int, Int) -> Unit,
 ) -> Unit =
-  #| (configureHover, scrollTo, hideHoverFn) => {
+  #| (configureHover, scrollTo, hideHoverFn, setSelectionFn) => {
   #|   const STYLE_PROPS = [
   #|     "opacity",
   #|     "display",
@@ -266,6 +267,25 @@ extern "js" fn install_conformance_control(
   #|     },
   #|     scrollEditor(top, left = 0) {
   #|       scrollTo(Number(top) || 0, Number(left) || 0);
+  #|     },
+  #|     // Cursor / current-line conformance hooks (the caret spec drives the
+  #|     // public setPosition/setSelection API and the root focus seam).
+  #|     setPosition(line, column) {
+  #|       setSelectionFn(Number(line) || 1, Number(column) || 1, Number(line) || 1, Number(column) || 1);
+  #|     },
+  #|     setSelection(anchorLine, anchorColumn, line, column) {
+  #|       setSelectionFn(
+  #|         Number(anchorLine) || 1,
+  #|         Number(anchorColumn) || 1,
+  #|         Number(line) || 1,
+  #|         Number(column) || 1
+  #|       );
+  #|     },
+  #|     focusEditor() {
+  #|       document.querySelector(".moonbit-viewer.readonly-editor")?.focus({ preventScroll: true });
+  #|     },
+  #|     blurEditor() {
+  #|       document.querySelector(".moonbit-viewer.readonly-editor")?.blur();
   #|     },
   #|     measure
   #|   };

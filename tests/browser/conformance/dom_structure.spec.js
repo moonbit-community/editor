@@ -95,7 +95,9 @@ test('keeps the Monaco-shaped markdown hover DOM structure', async ({ page }) =>
     element('div', ['shadow']),
   ]);
   await expectDirectChildren(page, `${widget} .monaco-hover-content`, [
-    element('div', ['hover-row']),
+    // Monaco's `_registerListenersOnRenderedParts` puts `tabindex=0` on every
+    // rendered hover part row (as the marker-hover test below also expects).
+    element('div', ['hover-row'], { tabindex: '0' }),
   ]);
   await expectDirectChildren(page, `${widget} .hover-row`, [
     element('div', ['hover-row-contents']),

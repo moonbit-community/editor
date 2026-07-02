@@ -22,6 +22,70 @@ fn Viewer::selection_view_range(self : Viewer) -> @view_layout.ViewRange? {
 }
 
 ///|
+/// Moves the primary cursor to `position`, collapsing the selection there —
+/// Monaco's `setPosition` (`codeEditorWidget.ts:670-682`), which builds a
+/// selection with `selectionStart == position` and routes it through the
+/// selection path. No model → no-op, no event. Like every Monaco mutator this
+/// never scrolls; "move and reveal" is a composition with `reveal_*` at the
+/// call site (the `gotoLocation` pattern).
+pub fn Viewer::set_position(
+  self : Viewer,
+  position : @base_common.Position,
+) -> Unit {
+  self.set_selection(@view_model.Selection::new(position, position))
+}
+
+///|
+/// Sets the primary selection from an anchor+active pair — Monaco's
+/// `setSelection`/`_setSelectionImpl` (`codeEditorWidget.ts:797-830`) →
+/// `ViewModel.setSelections` (`viewModelImpl.ts:1185-1187`) →
+/// `CursorsController.setSelections`/`setStates` (`cursor.ts:309-311,118-134`),
+/// collapsed onto the viewer's single cursor. Monaco's five input overloads
+/// reduce to the one `Selection` type: the anchor may sit before or after the
+/// active position and the resulting direction is preserved; a caller with a
+/// plain range builds `Selection::from_positions(start, end)`. No model →
+/// no-op, no event. Never scrolls (see `set_position`).
+pub fn Viewer::set_selection(
+  self : Viewer,
+  selection : @view_model.Selection,
+) -> Unit {
+  guard self.text_model is Some(model) else { return }
+  guard self.ensure_cursor() is Some(controller) else { return }
+  // `CursorState.fromModelSelection` (cursorCommon.ts:283-289): the anchor
+  // becomes a collapsed `Simple` range at `selectionStart`, the active end is
+  // `position`. Then `_setState`'s model branch (oneCursor.ts:133-141):
+  // `validateRange` on the anchor, `validatePosition` on the active end.
+  // `set_model_cursor_state` trusts its input (its hit-test/converter callers
+  // are pre-validated), so the clamp must happen here at the boundary.
+  let snapshot = model.snapshot
+  let anchor = selection.get_selection_start()
+  let anchor_range = snapshot.validate_range(
+    Range(anchor.line_number, anchor.column, anchor.line_number, anchor.column),
+  )
+  let new_state = @cursor.SingleCursorState::new(
+    Position(anchor_range.start_line_number, anchor_range.start_column),
+    Position(anchor_range.end_line_number, anchor_range.end_column),
+    Simple,
+    snapshot.validate_position(selection.get_position()),
+  )
+  // `_emitStateChangedIfNecessary`'s equality gate (cursor.ts:404-406):
+  // setting the exact current state fires nothing. The view state is derived
+  // deterministically from the model state, so comparing the model
+  // `SingleCursorState` (`derive(Eq)`, anchor kind included — matching
+  // Monaco's `SingleCursorState.equals`) covers both of Monaco's gates.
+  if new_state == controller.model_state() {
+    return
+  }
+  controller.set_model_cursor_state(new_state)
+  // "Let the view get the event first" (cursor.ts:410-414): the selection
+  // overlay repaints before the outgoing events fire, the same order the
+  // mouse-driven path uses (`view_controller.mbt`).
+  self.schedule_render()
+  self.did_change_cursor_position.fire(new_state.position)
+  self.did_change_cursor_selection.fire(controller.get_model_selection())
+}
+
+///|
 /// Lazily resolves the cursor controller, building it from the active view
 /// model's coordinates converter on first use.
 fn Viewer::ensure_cursor(self : Viewer) -> @cursor.CursorsController? {

@@ -70,3 +70,150 @@ test "view and model selections coincide without wrapping" {
     )
   })
 }
+
+///|
+/// `setPosition` (cew:670-682) builds a collapsed selection
+/// (`selectionStart == position`); the read API reflects it immediately.
+test "set_position collapses the selection at the target" {
+  with_test_viewer("line one\nline two\nline three", viewer => {
+    viewer.set_position(Position(2, 5))
+    assert_cursor(
+      viewer,
+      @view_model.Selection::new(Position(2, 5), Position(2, 5)),
+    )
+    assert_position(viewer.get_position().unwrap(), Position(2, 5))
+    assert_true(viewer.get_selection().unwrap().is_empty())
+  })
+}
+
+///|
+/// `setSelection` preserves the anchor/active order it is given
+/// (cursorCommon.ts:283-289 → `SingleCursorState.selection()`): anchor before
+/// active is LTR, anchor after active (backward selecting) is RTL.
+test "set_selection preserves direction for forward and backward input" {
+  with_test_viewer("line one\nline two\nline three", viewer => {
+    viewer.set_selection(
+      @view_model.Selection::new(Position(1, 3), Position(2, 4)),
+    )
+    let forward = viewer.get_selection().unwrap()
+    assert_true(forward.direction() == LTR)
+    assert_position(forward.get_selection_start(), Position(1, 3))
+    assert_position(forward.get_position(), Position(2, 4))
+    viewer.set_selection(
+      @view_model.Selection::new(Position(2, 4), Position(1, 3)),
+    )
+    let backward = viewer.get_selection().unwrap()
+    assert_true(backward.direction() == RTL)
+    assert_position(backward.get_selection_start(), Position(2, 4))
+    assert_position(backward.get_position(), Position(1, 3))
+  })
+}
+
+///|
+/// Out-of-range input is clamped by the model, not stored raw
+/// (oneCursor.ts:133-141: `validateRange` on the anchor, `validatePosition`
+/// on the active end): a line past EOF snaps to the last line's max column, a
+/// column past line-end snaps to the line's max column, and a column splitting
+/// a surrogate pair snaps before the pair (the same snapping the
+/// `validate_position` reference suite pins on this fixture).
+test "set_selection clamps out-of-range positions to the model" {
+  with_test_viewer("line one\nline two", viewer => {
+    viewer.set_position(Position(99, 1))
+    assert_position(viewer.get_position().unwrap(), Position(2, 9))
+    viewer.set_selection(
+      @view_model.Selection::new(Position(1, 2), Position(1, 50)),
+    )
+    assert_selection_eq(
+      viewer.get_selection().unwrap(),
+      @view_model.Selection::new(Position(1, 2), Position(1, 9)),
+    )
+  })
+  with_test_viewer("a\u{1F4DA}b", viewer => {
+    // column 3 splits the U+1F4DA high-low pair; snaps before it, to column 2
+    viewer.set_position(Position(1, 3))
+    assert_cursor(
+      viewer,
+      @view_model.Selection::new(Position(1, 2), Position(1, 2)),
+    )
+  })
+}
+
+///|
+/// The equality gate (cursor.ts:404-406): the first set fires both cursor
+/// events carrying the new state; setting the exact same selection again
+/// fires neither.
+test "set_selection fires cursor events only when the state changes" {
+  with_test_viewer("line one\nline two", viewer => {
+    let mut position_fires = 0
+    let mut selection_fires = 0
+    let mut last_position : @base_common.Position = Position(1, 1)
+    let mut last_selection = @view_model.Selection::new(
+      Position(1, 1),
+      Position(1, 1),
+    )
+    viewer.on_did_change_cursor_position(position => {
+      position_fires += 1
+      last_position = position
+    })
+    |> ignore
+    viewer.on_did_change_cursor_selection(selection => {
+      selection_fires += 1
+      last_selection = selection
+    })
+    |> ignore
+    let target = @view_model.Selection::new(Position(1, 3), Position(2, 4))
+    viewer.set_selection(target)
+    assert_eq(position_fires, 1)
+    assert_eq(selection_fires, 1)
+    assert_position(last_position, Position(2, 4))
+    assert_selection_eq(last_selection, target)
+    viewer.set_selection(target)
+    assert_eq(position_fires, 1)
+    assert_eq(selection_fires, 1)
+  })
+}
+
+///|
+/// With wrap on, the model selection is stored as given while the view state
+/// is re-derived through the coordinates converter (oneCursor.ts:144-150):
+/// "abcdefghij" wrapped at column 6 puts model column 7 on view line 2, so
+/// the selection overlay's view range differs from the model selection.
+test "set_selection re-derives the view state under wrap" {
+  let options = ViewerOptions(soft_wrap=true)
+  with_test_viewer(
+    "abcdefghij",
+    viewer => {
+      viewer.test_set_soft_wrap_column(6)
+      viewer.set_selection(
+        @view_model.Selection::new(Position(1, 3), Position(1, 9)),
+      )
+      assert_selection_eq(
+        viewer.get_selection().unwrap(),
+        @view_model.Selection::new(Position(1, 3), Position(1, 9)),
+      )
+      let view_range = viewer.selection_view_range().unwrap()
+      assert_eq(view_range.start_line_number, 1)
+      assert_eq(view_range.start_column, 3)
+      assert_eq(view_range.end_line_number, 2)
+      assert_eq(view_range.end_column, 3)
+    },
+    options~,
+  )
+}
+
+///|
+/// The no-model guard (cew:671-673, :825-827): without a model both setters
+/// are no-ops and no cursor event fires.
+test "set_position and set_selection are no-ops without a model" {
+  let viewer = Viewer::Viewer()
+  let mut fires = 0
+  viewer.on_did_change_cursor_position(_ => fires += 1) |> ignore
+  viewer.on_did_change_cursor_selection(_ => fires += 1) |> ignore
+  viewer.set_position(Position(2, 2))
+  viewer.set_selection(
+    @view_model.Selection::new(Position(1, 1), Position(2, 2)),
+  )
+  assert_eq(fires, 0)
+  assert_true(viewer.get_selection() is None)
+  viewer.dispose()
+}

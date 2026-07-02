@@ -14,6 +14,8 @@ pub struct Viewer {
   priv services : ViewerServices
   priv mut options : ViewerOptions
   priv did_change_model : @base_common.Emitter[@model.TextModel]
+  priv did_change_cursor_position : @base_common.Emitter[@base_common.Position]
+  priv did_change_cursor_selection : @base_common.Emitter[@view_model.Selection]
   priv did_build_frame : @base_common.Emitter[ViewerFrameBuiltEvent]
   priv did_render_model : @base_common.Emitter[ViewerModelRenderedEvent]
   priv did_change_diagnostics : @base_common.Emitter[
@@ -178,6 +180,8 @@ pub fn Viewer::Viewer(
     services,
     options,
     did_change_model: @base_common.Emitter::new(),
+    did_change_cursor_position: @base_common.Emitter::new(),
+    did_change_cursor_selection: @base_common.Emitter::new(),
     did_build_frame: @base_common.Emitter::new(),
     did_render_model: @base_common.Emitter::new(),
     did_change_diagnostics: @base_common.Emitter::new(),
@@ -252,6 +256,33 @@ pub fn Viewer::on_did_change_model(
   listener : (@model.TextModel) -> Unit,
 ) -> @base_common.Disposable {
   self.did_change_model.event(listener)
+}
+
+///|
+/// Fires when the primary cursor's model position changed — Monaco's
+/// `onDidChangeCursorPosition` (`cew:117-118`, fired at `:1836-1845`). The
+/// payload is the new position; `secondaryPositions`/`reason`/`source` are
+/// dropped (no multi-cursor, no cause-distinguishing caller — see the
+/// set-selection port plan's deviations).
+pub fn Viewer::on_did_change_cursor_position(
+  self : Viewer,
+  listener : (@base_common.Position) -> Unit,
+) -> @base_common.Disposable {
+  self.did_change_cursor_position.event(listener)
+}
+
+///|
+/// Fires when the primary cursor's model selection changed — Monaco's
+/// `onDidChangeCursorSelection` (`cew:120-121`, fired at `:1846-1857`). The
+/// payload is the new selection; `secondarySelections`/`oldSelections`/
+/// `modelVersionId`/`reason`/`source` are dropped (no multi-cursor, no version
+/// counter on the swap-wholesale model — see the set-selection port plan's
+/// deviations).
+pub fn Viewer::on_did_change_cursor_selection(
+  self : Viewer,
+  listener : (@view_model.Selection) -> Unit,
+) -> @base_common.Disposable {
+  self.did_change_cursor_selection.event(listener)
 }
 
 ///|
@@ -446,6 +477,8 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.clear_model()
   self.did_dispose.fire(())
   self.did_change_model.dispose()
+  self.did_change_cursor_position.dispose()
+  self.did_change_cursor_selection.dispose()
   self.did_build_frame.dispose()
   self.did_render_model.dispose()
   self.did_change_diagnostics.dispose()

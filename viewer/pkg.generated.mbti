@@ -93,6 +93,8 @@ pub fn Viewer::get_visible_ranges(Self) -> Array[@common.Range]
 pub fn Viewer::get_visible_ranges_plus_viewport_above_below(Self) -> Array[@common.Range]
 pub fn Viewer::get_width_of_line(Self, Int) -> Double
 pub fn Viewer::on_did_build_frame(Self, (ViewerFrameBuiltEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_change_cursor_position(Self, (@common.Position) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_change_cursor_selection(Self, (@view_model.Selection) -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_change_diagnostics(Self, (ViewerDiagnosticsChangedEvent) -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_change_model(Self, (@model.TextModel) -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @common.Disposable
@@ -126,6 +128,8 @@ pub fn Viewer::scroll_to_position(Self, Double, Double) -> Unit
 pub fn Viewer::set_model(Self, @model.TextModel, view_state? : ViewStatePolicy) -> Unit
 pub fn Viewer::set_options(Self, ViewerOptions) -> Unit
 pub fn Viewer::set_placeholder(Self, String) -> Unit
+pub fn Viewer::set_position(Self, @common.Position) -> Unit
+pub fn Viewer::set_selection(Self, @view_model.Selection) -> Unit
 pub fn Viewer::set_theme(Self, String) -> Unit
 pub fn Viewer::update_options(Self, ViewerOptions) -> Unit
 

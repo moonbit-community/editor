@@ -1,33 +1,5 @@
 # Agent Notes
 
-## Project Shape
-
-- Public product code lives at the repository root in MoonBit packages:
-  `base/common`, `language`, `platform/log`, `syntax`, `syntax/lang_*`,
-  `viewer`, and the DOM-free common tier under `viewer/common/*`:
-  `viewer/common/core`, `viewer/common/cursor`,
-  `viewer/common/inline_decorations`, `viewer/common/languages`,
-  `viewer/common/markers`, `viewer/common/model` (decorations merged in),
-  `viewer/common/view_model`, and `viewer/common/view_layout` (view-line renderer
-  merged in). DOM-free contribution models live in the multi-target
-  `viewer/contrib/folding` and `viewer/contrib/hover` (their js-only
-  controllers/widgets land in `viewer/contrib/*/browser` later). Browser-tier UI
-  lives in `viewer/controller` and `viewer/ui/scrollbar`; `viewer/common` itself
-  is a shrinking residual (`line_html`, `mouse_target`) pending the browser
-  carve-up. See `docs/exec-plans/viewer-directory-mirror.md` and the Viewer
-  Three-Tier Mirror section of `docs/architecture.md`.
-- Reference shell/backend code lives under `internal/shell`: `workspace`,
-  `remote_protocol`, `workbench`, `web`, `widgets/file_tree`, `server`,
-  `server_host_native`, and `examples/embedded_viewer`. These packages are
-  not part of the external viewer API.
-- The browser-backed viewer package owns DOM creation, CSS, scroll input capture and output application, and Playwright-facing observability; scroll semantics and viewport derivation are backend-neutral model state in `viewer/common` and focused `viewer/*` common-layer packages.
-- MoonBit owns readonly editor model identity. The reference shell owns its
-  internal workspace semantics and backend-neutral filesystem-provider
-  contract.
-- Packages that only run on one host target may declare that host's FFI (for example, `viewer` may declare JavaScript FFI and use `rabbita/dom`; `internal/shell/server_host_native` may declare native FFI). Packages shared across targets must not declare FFI.
-- `codemirror/` and `vscode/` are reference-only submodules. Do not import product code from either tree.
-- The editor is a readonly viewer.
-
 ## Porting Monaco/VS Code (1:1)
 
 When a task is to port Monaco/VS Code (or CodeMirror) behavior, follow

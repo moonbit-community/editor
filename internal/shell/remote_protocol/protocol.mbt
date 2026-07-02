@@ -1287,7 +1287,11 @@ fn parse_diagnostic_tags(value : Json) -> Array[@language.DiagnosticTag]? {
           _ => ()
         }
       }
-      if tags.is_empty() { None } else { Some(tags) }
+      if tags.is_empty() {
+        None
+      } else {
+        Some(tags)
+      }
     }
     _ => None
   }

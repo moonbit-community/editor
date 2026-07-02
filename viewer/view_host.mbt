@@ -7,7 +7,10 @@
 // `browser/view ↔ browser/widget/code_editor` cross-package cycle.
 
 ///|
-fn Viewer::build_view_context(self : Viewer, view : @view.View) -> @view.ViewContext {
+fn Viewer::build_view_context(
+  self : Viewer,
+  view : @view.View,
+) -> @view.ViewContext {
   {
     root: view.root,
     languages: self.services.languages,

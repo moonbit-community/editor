@@ -344,7 +344,9 @@ test "encodes and decodes server document and language packets" {
     DecodedServerPacket(Diagnostics(payload)) => {
       assert_eq(payload.diagnostics.length(), 1)
       assert_true(payload.diagnostics[0].severity == Hint)
-      assert_true(payload.diagnostics[0].tags == Some([Unnecessary, Deprecated]))
+      assert_true(
+        payload.diagnostics[0].tags == Some([Unnecessary, Deprecated]),
+      )
     }
     DecodedServerPacket(_) => fail("unexpected diagnostics packet")
     ServerPacketDecodeError(error) => fail(error.message)

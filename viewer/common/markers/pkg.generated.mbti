@@ -139,6 +139,8 @@ pub(all) enum MarkerTag {
   Unnecessary
   Deprecated
 } derive(Eq, @debug.Debug)
+pub fn MarkerTag::from_diagnostic_tag(@language.DiagnosticTag) -> Self
+pub fn MarkerTag::to_diagnostic_tag(Self) -> @language.DiagnosticTag
 pub fn MarkerTag::value(Self) -> Int
 
 pub(all) struct RelatedInformation {

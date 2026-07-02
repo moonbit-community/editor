@@ -275,7 +275,9 @@ pub fn ContentWidgets::render_hover_widget(
     // (Monaco `_findPositionPreference` + `_findMaximumRenderingHeight`).
     let natural_width = widget.measure_natural_width()
     let available_width = hover_available_width(host.root, gutter_width)
-    widget.apply_width_sizing(hover_resolved_width(natural_width, available_width))
+    widget.apply_width_sizing(
+      hover_resolved_width(natural_width, available_width),
+    )
     let content_height = widget.wrapper.get_bounding_client_rect().get_height()
     let space_above = hover_available_space_above(line_top)
     let space_below = hover_available_space_below(
@@ -316,7 +318,10 @@ pub fn ContentWidgets::render_hover_widget(
   }
   let natural_width = widget.measure_natural_width()
   let available_width = hover_available_width(host.root, gutter_width)
-  widget.apply_sizing(hover_resolved_width(natural_width, available_width), max_height)
+  widget.apply_sizing(
+    hover_resolved_width(natural_width, available_width),
+    max_height,
+  )
 }
 
 ///|
@@ -623,7 +628,10 @@ fn hover_available_width(root : @rdom.Element, gutter_width : Double) -> Double 
 /// branch (Phase 1b's non-overflowing-viewer deviation carries forward), so
 /// there is no separate "overflowing → cap to document body" case — capping
 /// to `available_width` already is that fallback.
-fn hover_resolved_width(natural_width : Double, available_width : Double) -> Double {
+fn hover_resolved_width(
+  natural_width : Double,
+  available_width : Double,
+) -> Double {
   @hover.min_hover_double(natural_width, available_width)
 }
 
@@ -635,8 +643,7 @@ fn hover_resolved_width(natural_width : Double, available_width : Double) -> Dou
 /// never driven until now), read the natural width, then release the hooks.
 fn HoverWidgetDom::measure_natural_width(self : HoverWidgetDom) -> Double {
   self.hover.set_attribute(
-    "style",
-    "--vscode-hover-whiteSpace:nowrap;--vscode-hover-sourceWhiteSpace:nowrap",
+    "style", "--vscode-hover-whiteSpace:nowrap;--vscode-hover-sourceWhiteSpace:nowrap",
   )
   let width = self.scrollable.content.get_bounding_client_rect().get_width()
   self.hover.set_attribute("style", "")
@@ -670,7 +677,10 @@ fn HoverWidgetDom::apply_sizing(
   width : Double,
   max_height : Double,
 ) -> Unit {
-  let style = hover_width_style(width) + ";max-height:" + max_height.to_string() + "px"
+  let style = hover_width_style(width) +
+    ";max-height:" +
+    max_height.to_string() +
+    "px"
   self.hover.set_attribute("style", style)
   self.scrollable.wrapper.set_attribute("style", style)
   self.scrollable.content.set_attribute("style", style)

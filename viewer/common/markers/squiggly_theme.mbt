@@ -99,11 +99,13 @@ pub(all) struct SquigglyThemeColors {
 pub fn squiggly_theme_css(colors : SquigglyThemeColors) -> String {
   let sb = StringBuilder()
   match colors.error {
-    Some(color) => write_squiggly_rule(sb, "error", squiggly_svg_data_uri(color))
+    Some(color) =>
+      write_squiggly_rule(sb, "error", squiggly_svg_data_uri(color))
     None => ()
   }
   match colors.warning {
-    Some(color) => write_squiggly_rule(sb, "warning", squiggly_svg_data_uri(color))
+    Some(color) =>
+      write_squiggly_rule(sb, "warning", squiggly_svg_data_uri(color))
     None => ()
   }
   match colors.info {
@@ -118,7 +120,11 @@ pub fn squiggly_theme_css(colors : SquigglyThemeColors) -> String {
 }
 
 ///|
-fn write_squiggly_rule(sb : StringBuilder, severity : String, svg_data : String) -> Unit {
+fn write_squiggly_rule(
+  sb : StringBuilder,
+  severity : String,
+  svg_data : String,
+) -> Unit {
   sb.write_string(
     ".moonbit-viewer .squiggly-" +
     severity +

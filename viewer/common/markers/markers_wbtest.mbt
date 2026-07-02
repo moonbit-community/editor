@@ -20,7 +20,12 @@ test "marker decorations expose squiggles and marker hover lookup" {
     uri, "", "moonbit", 1, "rev", "diagnostic text here",
   )
   markers.set_diagnostics("owner", uri, [
-    { range: Range(1, 3, 1, 9), severity: Warning, message: "diagnostic", tags: None },
+    {
+      range: Range(1, 3, 1, 9),
+      severity: Warning,
+      message: "diagnostic",
+      tags: None,
+    },
   ])
   let decorations = MarkerDecorationsService::new(markers)
   decorations.on_model_added(model)
@@ -41,7 +46,12 @@ test "marker service replaces owner resource and supports limits" {
   let service = MarkerService::new()
   let uri = @base_common.Uri::memory("markers.mbt")
   service.set_diagnostics("owner-a", uri, [
-    { range: Range(1, 1, 1, 2), severity: Warning, message: "first", tags: None },
+    {
+      range: Range(1, 1, 1, 2),
+      severity: Warning,
+      message: "first",
+      tags: None,
+    },
     { range: Range(1, 3, 1, 4), severity: Error, message: "second", tags: None },
   ])
   service.set_diagnostics("owner-b", uri, [

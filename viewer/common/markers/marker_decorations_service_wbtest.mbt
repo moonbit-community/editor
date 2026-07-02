@@ -58,9 +58,12 @@ test "MarkerDecorationsService take caps at 500" {
   svc.on_model_added(model)
   let diagnostics : Array[@language.Diagnostic] = []
   for _ in 0..<600 {
-    diagnostics.push(
-      { range: Range(1, 1, 1, 2), severity: Error, message: "e", tags: None },
-    )
+    diagnostics.push({
+      range: Range(1, 1, 1, 2),
+      severity: Error,
+      message: "e",
+      tags: None,
+    })
   }
   markers.set_diagnostics("o", uri, diagnostics)
   assert_eq(svc.get_live_markers(uri).length(), 500)

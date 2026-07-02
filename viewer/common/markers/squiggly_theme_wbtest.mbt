@@ -37,10 +37,26 @@ test "squiggly_theme_css emits one rule per present color, in severity order" {
     info: Some("#59a4f9"),
     hint: Some("#eeeeeeb3"),
   })
-  assert_true(css.contains(".moonbit-viewer .squiggly-error { background: url(\"data:image/svg+xml,"))
-  assert_true(css.contains(".moonbit-viewer .squiggly-warning { background: url(\"data:image/svg+xml,"))
-  assert_true(css.contains(".moonbit-viewer .squiggly-info { background: url(\"data:image/svg+xml,"))
-  assert_true(css.contains(".moonbit-viewer .squiggly-hint { background: url(\"data:image/svg+xml,"))
+  assert_true(
+    css.contains(
+      ".moonbit-viewer .squiggly-error { background: url(\"data:image/svg+xml,",
+    ),
+  )
+  assert_true(
+    css.contains(
+      ".moonbit-viewer .squiggly-warning { background: url(\"data:image/svg+xml,",
+    ),
+  )
+  assert_true(
+    css.contains(
+      ".moonbit-viewer .squiggly-info { background: url(\"data:image/svg+xml,",
+    ),
+  )
+  assert_true(
+    css.contains(
+      ".moonbit-viewer .squiggly-hint { background: url(\"data:image/svg+xml,",
+    ),
+  )
   // wavy severities repeat horizontally; hint is a single no-repeat dot cluster.
   assert_true(css.contains("\") repeat-x bottom left; }"))
   assert_true(css.contains("\") no-repeat bottom left; }"))
@@ -55,7 +71,12 @@ test "squiggly_theme_css emits one rule per present color, in severity order" {
 
 ///|
 test "squiggly_theme_css omits a rule when its color is absent (theme.getColor undefined)" {
-  let css = squiggly_theme_css({ error: Some("#f14c4c"), warning: None, info: None, hint: None })
+  let css = squiggly_theme_css({
+    error: Some("#f14c4c"),
+    warning: None,
+    info: None,
+    hint: None,
+  })
   assert_true(css.contains(".squiggly-error"))
   assert_false(css.contains(".squiggly-warning"))
   assert_false(css.contains(".squiggly-info"))

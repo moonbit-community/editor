@@ -109,7 +109,9 @@ pub fn MarkerTag::value(self : MarkerTag) -> Int {
 
 ///|
 /// Bridge `@language.DiagnosticTag` → `MarkerTag`.
-pub fn MarkerTag::from_diagnostic_tag(tag : @language.DiagnosticTag) -> MarkerTag {
+pub fn MarkerTag::from_diagnostic_tag(
+  tag : @language.DiagnosticTag,
+) -> MarkerTag {
   match tag {
     Unnecessary => Unnecessary
     Deprecated => Deprecated
@@ -118,7 +120,9 @@ pub fn MarkerTag::from_diagnostic_tag(tag : @language.DiagnosticTag) -> MarkerTa
 
 ///|
 /// Inverse bridge for the `to_diagnostic` shim.
-pub fn MarkerTag::to_diagnostic_tag(self : MarkerTag) -> @language.DiagnosticTag {
+pub fn MarkerTag::to_diagnostic_tag(
+  self : MarkerTag,
+) -> @language.DiagnosticTag {
   match self {
     Unnecessary => Unnecessary
     Deprecated => Deprecated

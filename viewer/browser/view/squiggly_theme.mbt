@@ -34,7 +34,9 @@ fn optional_color(value : String) -> String? {
 }
 
 ///|
-fn read_squiggly_theme_colors(root : @rdom.Element) -> @markers.SquigglyThemeColors {
+fn read_squiggly_theme_colors(
+  root : @rdom.Element,
+) -> @markers.SquigglyThemeColors {
   {
     error: optional_color(
       computed_style_property(root, "--vscode-editorError-foreground"),

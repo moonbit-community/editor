@@ -24,14 +24,22 @@ pub(all) struct Diagnostic {
   range : @common.Range
   severity : DiagnosticSeverity
   message : String
+  tags : Array[DiagnosticTag]?
 } derive(@debug.Debug)
 
 pub(all) enum DiagnosticSeverity {
   Error
   Warning
   Info
+  Hint
 } derive(Eq, @debug.Debug)
 pub fn DiagnosticSeverity::label(Self) -> String
+
+pub(all) enum DiagnosticTag {
+  Unnecessary
+  Deprecated
+} derive(Eq, @debug.Debug)
+pub fn DiagnosticTag::label(Self) -> String
 
 pub(all) struct DocumentSymbol {
   name : String

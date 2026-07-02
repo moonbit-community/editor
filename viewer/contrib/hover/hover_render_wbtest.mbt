@@ -167,8 +167,14 @@ test "marker hover renders the row and status bar as separate rendered parts" {
   assert_true(status_bar.contains("View Problem"))
   // Monaco's `HoverAction.render` (`hoverWidget.ts:52-92`) puts `tabindex` on
   // `.action-container`, never on the `<a>`, and wraps the label in a `<span>`.
-  assert_true(status_bar.contains("<div class=\"action-container\" tabindex=\"0\">"))
-  assert_true(status_bar.contains("<a class=\"action\" role=\"button\"><span>View Problem</span></a>"))
+  assert_true(
+    status_bar.contains("<div class=\"action-container\" tabindex=\"0\">"),
+  )
+  assert_true(
+    status_bar.contains(
+      "<a class=\"action\" role=\"button\"><span>View Problem</span></a>",
+    ),
+  )
 }
 
 ///|
@@ -190,7 +196,11 @@ test "marker + later-ordinal hover part: status bar renders last, not sandwiched
   let rows = render_hover_parts(
     [
       MarkerHover(range=OffsetRange(0, 1), marker~),
-      MarkdownHover(range=OffsetRange(0, 1), contents=[PlainText("Int")], ordinal=100),
+      MarkdownHover(
+        range=OffsetRange(0, 1),
+        contents=[PlainText("Int")],
+        ordinal=100,
+      ),
     ],
     "moonbit",
   )

@@ -83,28 +83,6 @@ export function collectReadonlyEvents(page) {
   };
 }
 
-export async function setHoverFixture(page, kind, contents) {
-  await expect
-    .poll(() => page.evaluate(() => typeof globalThis.__readonlyEditorSetHover), {
-      timeout: 5_000,
-    })
-    .toBe('function');
-  await page.evaluate(
-    ([fixtureKind, fixtureContents]) =>
-      globalThis.__readonlyEditorSetHover(fixtureKind, fixtureContents),
-    [kind, contents],
-  );
-}
-
-export async function hoverMainSymbol(page) {
-  const target = page.locator('.view-line span', { hasText: 'main' }).first();
-  await expect(target).toBeVisible();
-  await target.hover();
-  await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toBeVisible({
-    timeout: 3_000,
-  });
-}
-
 export function lastScrollTop(events) {
   const latest = events.messages
     .filter((event) => event.includes('view:scroll'))

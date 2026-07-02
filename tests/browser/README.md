@@ -10,10 +10,8 @@ package contracts that test authors need while editing specs.
 tests/browser/
   support/        shared Playwright fixtures, app helpers, logging, reporters
   smoke/          user workflows against the real app or embedded viewer
-  conformance/    Monaco/VS Code parity and deterministic DOM checks
   component/      Playwright loaders for MoonBit browser component pages
   perf/           structured performance evidence
-  fixtures/       shared browser fixture data
   moonbit/        js-target MoonBit browser-test packages
 ```
 
@@ -39,12 +37,9 @@ or history updates.
 
 Smoke specs are user-like workflows. They may select stable visible targets, but
 they should not call deterministic state-control globals when a real user path
-exists.
-
-Conformance specs are allowed to be precise and internal. Monaco-specific
-hover, scrollbar, style, and geometry contracts are documented in
-`tests/browser/conformance/README.md`. They drive the real readonly editor;
-there is no Monaco reference page to diff against.
+exists. Monaco parity is held by porting Monaco logic and its unit tests into
+the viewer (`*_reference_test.mbt` suites run by `moon test`), not by
+browser-level DOM diffing.
 
 Component specs load MoonBit-authored browser pages and validate the compact
 JSON report. Perf specs collect structured timing evidence and stay
@@ -58,15 +53,11 @@ Keep globals narrow and classify them by purpose:
   `__readonlyEditorModel`, `__readonlyEditorDocument`,
   `__readonlyEditorSource`, and
   `__readonlyEditorCopiedText`.
-- Conformance/control only: `__readonlyEditorSetHover`,
-  `__readonlyEditorClearHover`, `__readonlyEditorScrollTo`, and
-  `__readonlyEditorConformance`.
 - MoonBit browser-test reporting:
   `__readonlyEditorBrowserTestReport`.
 
-Smoke specs should not use conformance/control globals unless there is no
-realistic browser path. Conformance specs may use them when deterministic setup
-or measurement is the point of the test.
+Specs observe application state through these globals but should drive the app
+through real user gestures.
 
 ## MoonBit Browser Pages
 

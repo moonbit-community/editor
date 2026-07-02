@@ -11,8 +11,7 @@ behavior inspectable without hidden setup.
 3. Headless viewer harness: drives a real `Viewer` + `ViewModel` +
    `CursorsController` with no DOM view, asserting on semantic state (vscode's
    `editor/test/browser/testCodeEditor.ts`). See "Headless Viewer Harness".
-4. Browser suites split by purpose: smoke, conformance, component, and
-   performance.
+4. Browser suites split by purpose: smoke, component, and performance.
 
 Baseline and unit layers should stay boring: no errors, and no new warnings.
 Browser tests use Playwright for process/browser lifecycle, user gestures,
@@ -28,8 +27,6 @@ outer assertions, logging, screenshots, traces, and final pass/fail decisions.
 - `just test-browser`: builds first, starts the native server, and runs all
   default Playwright browser suites.
 - `just test-browser-smoke`: user-like app workflows.
-- `just test-browser-conformance`: Monaco/VS Code parity and deterministic
-  geometry/control checks.
 - `just test-browser-component`: MoonBit-authored browser component checks.
 - `just test-browser-perf`: non-budgeted performance evidence.
 - `just dev ROOT=. PORT=5173`: build and run the reference backend shell for
@@ -62,9 +59,9 @@ and the viewport are normally measured from the DOM, so the harness exposes
 The rule: **a behavior expressible as a position, range, line string, token
 array, or frame is tested here with `with_test_viewer` (run by `just test`), not
 in Playwright.** Cursor motion, soft-wrap view↔model mapping, and scroll-window
-math are harness tests. Playwright is reserved for wiring (smoke) and the
-conformance specs that need a real browser for DOM structure, flush,
-measurement, and pointer hit-testing against the actual readonly editor.
+math are harness tests. Playwright is reserved for behavior that needs a real
+browser: wiring smoke, pointer hit-testing through the caret APIs, and
+DOM-measured selection geometry against the actual readonly editor.
 
 ## Browser Layout
 
@@ -73,10 +70,8 @@ tests/browser/
   README.md       browser package contracts, globals, and authoring rules
   support/        Playwright fixtures, app helpers, logger, MoonBit reporter
   smoke/          user workflows against the real app or embedded viewer
-  conformance/    exact DOM/style/geometry parity, deterministic hooks
   component/      Playwright loaders for MoonBit browser component pages
   perf/           Playwright and MoonBit performance evidence
-  fixtures/       shared browser fixture data
   moonbit/        js-target MoonBit browser-test packages
 ```
 
@@ -85,23 +80,18 @@ from the viewer and internal shell packages, and builds the MoonBit
 browser-test packages into
 `web/dist/browser-tests/component.html` and `web/dist/browser-tests/perf.html`.
 See `tests/browser/README.md` for package-level authoring rules, selectors, and
-globals. Monaco-specific hover and scrollbar contracts live in
-`tests/browser/conformance/README.md`.
+globals.
 
 ## Suite Boundaries
 
 - Smoke: startup, native-served assets, file-tree navigation, document opening,
   real hover through pointer interaction, scrolling by wheel/drag, theme
-  changes, embedded viewer loading, and file-watch recovery through the
-  reference shell. Smoke tests should not call deterministic state-control
-  globals when a user path exists.
-- Conformance: Monaco/VS Code parity against the real readonly editor — forced
-  hover payloads, exact scrollbar/hover DOM, computed style, geometry,
-  screenshots, and the DOM-wiring side of scroll/windowing (only visible nodes
-  mount, scrollbar, scroll-to-bottom reveal). Parity is held by porting Monaco
-  logic into the viewer, not by diffing a copied reference page. The *semantic*
-  windowing and view↔model projection assertions live in the headless viewer
-  harness, not here.
+  changes, embedded viewer loading, file-watch recovery through the reference
+  shell, and pointer-driven selection (caret-API hit-testing and DOM-measured
+  selection geometry against the embedded viewer). Smoke tests should not call
+  deterministic state-control globals when a user path exists. Monaco parity is
+  held by porting Monaco logic and its unit tests into the viewer
+  (`*_reference_test.mbt`), not by browser-level DOM diffing.
 - Component: MoonBit browser pages construct the public viewer API directly,
   without the internal workbench/backend shell, and report compact JSON through
   Playwright.
@@ -114,9 +104,7 @@ Workbench smoke tests should select files through the sidebar and native remote
 protocol. The active file is application state, not URL state; specs should not
 depend on `?uri=`, `?path=`, hashes, or history updates.
 
-Smoke specs should prefer user gestures and visible outcomes. Conformance specs
-may use deterministic hooks and exact DOM/style/geometry assertions when they
-are checking reference parity.
+Smoke specs should prefer user gestures and visible outcomes.
 
 The MoonBit reporter is passive. Playwright validates the report shape, attaches
 the JSON, and owns the final test result.

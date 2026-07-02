@@ -41,10 +41,9 @@ implementation details.
 - Own harness observability: the viewer reports lifecycle facts through typed
   subscriptions and the workbench formats and emits the
   structured `[readonly-editor]` events (`dom:mounted`, `moonbit:render`,
-  `view:scroll`, `language:*`) documented in `../../../docs/harness.md`, and
-  installs the `__readonlyEditorScrollTo` scroll control. Workbench owns the
-  browser-host helpers for harness globals, current-model exposure, theme
-  storage, and protocol URL derivation. Workbench also installs the concrete
+  `view:scroll`, `language:*`) documented in `../../../docs/harness.md`.
+  Workbench owns the browser-host helpers for harness globals, current-model
+  exposure, theme storage, and protocol URL derivation. Workbench also installs the concrete
   runtime logger sink: provider failures go through `LogService`, and
   warning/error entries become the existing `language:error` harness event.
 

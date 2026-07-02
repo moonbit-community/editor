@@ -148,7 +148,6 @@ fn install_viewer_event_subscriptions(viewer : @viewer.Viewer) -> Unit {
 pub fn start_app() -> Unit {
   install_host_capabilities()
   let services = workbench_services()
-  register_harness_hover_provider(services)
   register_remote_language_providers(services)
   install_language_tokenizers(services)
   mount_app()
@@ -213,28 +212,10 @@ pub fn mount_app() -> Unit {
 
 ///|
 /// Attaches the imperative viewer view into the shell-rendered host
-/// element and installs the harness scroll control
-/// (`__readonlyEditorScrollTo`) that drives synthetic scrolling.
+/// element.
 fn attach_workbench_viewer() -> Unit {
   match @rdom.document().query_selector(".viewer-host").to_option() {
-    Some(host) => {
-      let viewer = workbench_viewer()
-      viewer.attach(host)
-      install_scroll_control(top => viewer.scroll_to(top))
-      install_conformance_control(
-        set_harness_hover_fixture,
-        (top, left) => viewer.scroll_to_position(top, left),
-        () => viewer.escape(),
-        (anchor_line, anchor_column, line, column) => {
-          viewer.set_selection(
-            @view_model.Selection::new(
-              Position(anchor_line, anchor_column),
-              Position(line, column),
-            ),
-          )
-        },
-      )
-    }
+    Some(host) => workbench_viewer().attach(host)
     None => ()
   }
 }

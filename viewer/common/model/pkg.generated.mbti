@@ -9,7 +9,19 @@ import {
 // Values
 pub fn compute_indent_level(String, Int) -> Int
 
+pub fn get_node_color(IntervalNode) -> NodeColor
+
 pub fn get_word_at_text(Int, String, Int) -> WordAtPosition?
+
+pub fn interval_compare(Int, Int, Int, Int) -> Int
+
+pub fn node_accept_edit(IntervalNode, Int, Int, Int, Bool) -> Unit
+
+pub fn recompute_max_end(IntervalNode) -> Unit
+
+pub let sentinel : IntervalNode
+
+pub fn set_node_stickiness(IntervalNode, TrackedRangeStickiness) -> Unit
 
 pub let usual_word_separators : String
 
@@ -33,9 +45,11 @@ pub(all) struct Decoration {
   stickiness : TrackedRangeStickiness
   overview_ruler : OverviewRulerOptions?
   minimap : MinimapOptions?
+  glyph_margin_class_name : String?
+  collapse_on_replace_edit : Bool
   description : String
 } derive(@debug.Debug)
-pub fn Decoration::Decoration(@common.Range, DecorationKind, String, message? : String, inline_class_name? : String, z_index? : Int, show_if_collapsed? : Bool, stickiness? : TrackedRangeStickiness, overview_ruler? : OverviewRulerOptions, minimap? : MinimapOptions, description? : String) -> Self
+pub fn Decoration::Decoration(@common.Range, DecorationKind, String, message? : String, inline_class_name? : String, z_index? : Int, show_if_collapsed? : Bool, stickiness? : TrackedRangeStickiness, overview_ruler? : OverviewRulerOptions, minimap? : MinimapOptions, glyph_margin_class_name? : String, collapse_on_replace_edit? : Bool, description? : String) -> Self
 
 pub(all) enum DecorationKind {
   Diagnostic
@@ -64,6 +78,47 @@ pub fn GuidesTextModelPart::get_active_indent_guide(Self, Int, Int, Int) -> Acti
 pub fn GuidesTextModelPart::get_lines_indent_guides(Self, Int, Int) -> Array[Int]
 pub fn GuidesTextModelPart::new(TextSnapshot, tab_size? : Int, indent_size? : Int, off_side? : Bool) -> Self
 
+pub(all) struct IntervalNode {
+  mut metadata : Int
+  mut parent_ : IntervalNode?
+  mut left_ : IntervalNode?
+  mut right_ : IntervalNode?
+  mut start : Int
+  mut end : Int
+  mut delta : Int
+  mut max_end : Int
+  id : String
+  mut owner_id : Int
+  mut options : Decoration?
+  mut cached_version_id : Int
+  mut cached_absolute_start : Int
+  mut cached_absolute_end : Int
+  mut range : @common.Range?
+}
+pub fn IntervalNode::detach(Self) -> Unit
+pub fn IntervalNode::left(Self) -> Self
+pub fn IntervalNode::new(String, Int, Int) -> Self
+pub fn IntervalNode::parent(Self) -> Self
+pub fn IntervalNode::reset(Self, Int, Int, Int, @common.Range?) -> Unit
+pub fn IntervalNode::right(Self) -> Self
+pub fn IntervalNode::set_cached_offsets(Self, Int, Int, Int) -> Unit
+pub fn IntervalNode::set_options(Self, Decoration) -> Unit
+
+pub(all) struct IntervalTree {
+  mut root : IntervalNode
+  mut request_normalize_delta : Bool
+}
+pub fn IntervalTree::accept_replace(Self, Int, Int, Int, Bool) -> Unit
+pub fn IntervalTree::collect_nodes_from_owner(Self, Int) -> Array[IntervalNode]
+pub fn IntervalTree::collect_nodes_post_order(Self) -> Array[IntervalNode]
+pub fn IntervalTree::delete(Self, IntervalNode) -> Unit
+pub fn IntervalTree::get_all_in_order(Self) -> Array[IntervalNode]
+pub fn IntervalTree::insert(Self, IntervalNode) -> Unit
+pub fn IntervalTree::interval_search(Self, Int, Int, Int, Bool, Bool, Int, Bool) -> Array[IntervalNode]
+pub fn IntervalTree::new() -> Self
+pub fn IntervalTree::resolve_node(Self, IntervalNode, Int) -> Unit
+pub fn IntervalTree::search(Self, Int, Bool, Bool, Int, Bool) -> Array[IntervalNode]
+
 pub(all) struct MinimapOptions {
   color : String
   position : MinimapPosition
@@ -72,6 +127,11 @@ pub(all) struct MinimapOptions {
 pub(all) enum MinimapPosition {
   Inline
   Gutter
+} derive(Eq, @debug.Debug)
+
+pub(all) enum NodeColor {
+  Black
+  Red
 } derive(Eq, @debug.Debug)
 
 pub(all) enum OverviewRulerLane {
@@ -134,6 +194,8 @@ pub(all) enum TrackedRangeStickiness {
   GrowsOnlyWhenTypingBefore
   GrowsOnlyWhenTypingAfter
 } derive(Eq, @debug.Debug)
+pub fn TrackedRangeStickiness::from_int(Int) -> Self
+pub fn TrackedRangeStickiness::to_int(Self) -> Int
 
 pub(all) struct WordAtPosition {
   word : String

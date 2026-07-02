@@ -22,6 +22,31 @@ pub(all) enum TrackedRangeStickiness {
 } derive(Eq, Debug)
 
 ///|
+/// Numeric value of the stickiness, matching Monaco's
+/// `TrackedRangeStickiness` enum values (`model.ts`) — the interval tree
+/// packs it into the node metadata byte.
+pub fn TrackedRangeStickiness::to_int(self : TrackedRangeStickiness) -> Int {
+  match self {
+    AlwaysGrowsWhenTypingAtEdges => 0
+    NeverGrowsWhenTypingAtEdges => 1
+    GrowsOnlyWhenTypingBefore => 2
+    GrowsOnlyWhenTypingAfter => 3
+  }
+}
+
+///|
+/// Inverse of `to_int`. Values outside 0..=3 cannot come out of the 2-bit
+/// metadata field; the fallback mirrors Monaco's numeric default 0.
+pub fn TrackedRangeStickiness::from_int(value : Int) -> TrackedRangeStickiness {
+  match value {
+    1 => NeverGrowsWhenTypingAtEdges
+    2 => GrowsOnlyWhenTypingBefore
+    3 => GrowsOnlyWhenTypingAfter
+    _ => AlwaysGrowsWhenTypingAtEdges
+  }
+}
+
+///|
 /// Overview-ruler lane, `OverviewRulerLane` (`model.ts`).
 pub(all) enum OverviewRulerLane {
   Left
@@ -72,6 +97,8 @@ pub(all) struct Decoration {
   stickiness : TrackedRangeStickiness
   overview_ruler : OverviewRulerOptions?
   minimap : MinimapOptions?
+  glyph_margin_class_name : String?
+  collapse_on_replace_edit : Bool
   description : String
 } derive(Debug)
 
@@ -95,6 +122,8 @@ pub fn Decoration::Decoration(
   stickiness? : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
   overview_ruler? : OverviewRulerOptions,
   minimap? : MinimapOptions,
+  glyph_margin_class_name? : String,
+  collapse_on_replace_edit? : Bool = false,
   description? : String = "",
 ) -> Decoration {
   {
@@ -108,6 +137,8 @@ pub fn Decoration::Decoration(
     stickiness,
     overview_ruler,
     minimap,
+    glyph_margin_class_name,
+    collapse_on_replace_edit,
     description,
   }
 }

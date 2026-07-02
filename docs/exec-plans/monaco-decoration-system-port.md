@@ -132,6 +132,18 @@ mirror of `common/model`'s file, carved as a package so `model` can depend on
 it without cycles — final placement may fold into `viewer/common/model` if no
 cycle appears; decide at implementation, record the choice here).
 
+**Placement decided (2026-07-02): folded into `viewer/common/model`**
+(`interval_tree.mbt`). The node's `options` field is that package's
+`Decoration`, so a carved sibling package would cycle; Monaco keeps both in
+`common/model` too. Landed with `interval_tree_reference_test.mbt` (29 cases,
+js+native). Implementation notes: the `ClassName` row below could not reuse
+`@markers` constants (`markers` imports `model`); the three consulted
+constants are defined locally like the source file does. Link fields are
+`IntervalNode?` behind unwrap accessors (MoonBit cannot construct a
+self-referential literal); the sentinel is bootstrapped by two-step
+construction. `FORCE_OVERFLOWING_TEST` ports as an explicit forced-delta test
+mode (see conformance notes below).
+
 ### Inventory (Phase 1)
 
 Members read from the file (not memory): 3 enums + 2 delta constants, 8
@@ -142,49 +154,49 @@ metadata accessor pairs, `IntervalNode` (16 fields + 5 methods), `SENTINEL`,
 
 | Source member (file:line) | Arithmetic / transition | MoonBit symbol | Status |
 |---|---|---|---|
-| `ClassName` enum (:14-22) | 7 squiggly class constants | reuse `@markers` squiggly class constants (already ported) | TODO |
-| `NodeColor` (:24-27) | Black=0, Red=1 | `NodeColor` | TODO |
-| `Constants` bit layout (:29-56) | color/visited/forValidation/stickiness/collapseOnReplace/isMargin/affectsFont masks+offsets in one `metadata` byte | same bit constants | TODO |
-| `MIN/MAX_SAFE_DELTA` (:58-78) | ±(1<<30) SMI guard | same values | TODO |
-| `getNodeColor`/`setNodeColor` (:81-88) | mask ops | accessor pair | TODO |
-| `get/setNodeIsVisited` (:89-96) | mask ops | accessor pair | TODO |
-| `get/setNodeIsForValidation` (:97-104) | mask ops | accessor pair | TODO |
-| `get/setNodeIsInGlyphMargin` (:105-112) | mask ops | accessor pair | TODO |
-| `get/setNodeAffectsFont` (:113-120) | mask ops | accessor pair (bit carried; never set — see out-of-scope) | TODO |
-| `getNodeStickiness`/`_setNodeStickiness`/`setNodeStickiness` (:121-139) | mask ops | accessor pair + pub wrapper | TODO |
-| `get/setCollapseOnReplaceEdit` (:129-136) | mask ops | accessor pair | TODO |
-| `IntervalNode` fields (:141-164) | metadata/parent/left/right/start/end/delta/maxEnd/id/ownerId/options/cachedVersionId/cachedAbsoluteStart/cachedAbsoluteEnd/range | `IntervalNode` struct (self-referential via sentinel) | TODO |
-| `IntervalNode` ctor (:166-195) | red, self-parented, delta 0, stickiness NeverGrows | `IntervalNode::new` | TODO |
-| `reset` (:197-205) | reseed offsets + cached range | `::reset` | TODO |
-| `setOptions` (:207-219) | derive forValidation from squiggly classNames; isMargin from glyphMarginClassName; stickiness; collapseOnReplaceEdit; affectsFont | `::set_options` | TODO |
-| `setCachedOffsets` (:221-228) | version mismatch → drop cached range | `::set_cached_offsets` | TODO |
-| `detach` (:230-234) | null out links | `::detach` (sentinel out) | TODO |
-| `SENTINEL` (:237-241) | self-linked black node | package-level sentinel | TODO |
-| `IntervalTree` fields+ctor (:243-251) | root=SENTINEL; requestNormalizeDelta | `IntervalTree` | TODO |
-| `intervalSearch` (:253-258 → :775-866) | augmented-tree overlap search: maxEnd prune (b), start>end prune (a), delta accumulation, 4 include filters | `::interval_search` | TODO |
-| `search` (:260-265 → :711-773) | full in-order with filters + cache offsets | `::search` | TODO |
-| `collectNodesFromOwner` (:270-272 → :638-674) | in-order, ownerId match, no cached offsets | `::collect_nodes_from_owner` | TODO |
-| `collectNodesPostOrder` (:277-279 → :676-709) | post-order, no cached offsets | `::collect_nodes_post_order` | TODO |
-| `insert` (:281-284) | rbTreeInsert + normalize-if-necessary | `::insert` | TODO |
-| `delete` (:286-289) | rbTreeDelete + normalize-if-necessary | `::delete` | TODO |
-| `resolveNode` (:291-304) | walk to root summing right-child deltas | `::resolve_node` | TODO |
-| `acceptReplace` (:306-333) | remove intersecting → noOverlapReplace others → nodeAcceptEdit + reinsert | `::accept_replace` | TODO (conformance-only; Deviation 1) |
-| `getAllInOrder` (:335-337) | `search(0,false,false,0,false)` | `::get_all_in_order` | TODO |
-| `_normalizeDeltaIfNecessary` (:339-345) | flag-gated normalizeDelta | private | TODO |
-| `normalizeDelta` (:349-385) | iterative in-order visit pushing deltas into offsets | free fn | TODO |
-| `MarkerMoveSemantics` (:390-394) | MarkerDefined/ForceMove/ForceStay | enum | TODO (edit cluster) |
-| `adjustMarkerBeforeColumn` (:396-410) | <,>,ForceMove,ForceStay,stickiness order | free fn | TODO (edit cluster) |
-| `nodeAcceptEdit` (:416-490) | stickiness split; collapseOnReplaceEdit arm; 3 moveSemantics passes; deltaColumn finish; end>=start clamp | free fn | TODO (edit cluster) |
-| `searchForEditing` (:492-562) | overlap collect with cachedOffsets(…,0) | free fn | TODO (edit cluster) |
-| `noOverlapReplace` (:564-632) | editDelta shift right-of-edit; delta overflow flag; maxEnd recompute on way up | free fn | TODO (edit cluster) |
-| `rbTreeInsert` (:871-928) | CLRS insert + repair, rotations recolor | free fn | TODO |
-| `treeInsert` (:930-969) | delta-relative descent, `intervalCompare` order, subtract delta at link | free fn | TODO |
-| `rbTreeDelete` (:973-1155) | no-z/y-swap delete; delta hand-off in 3 shapes; maxEnd walks; RB-DELETE-FIXUP both sides | free fn | TODO |
-| `leftest` (:1157-1162) | min of right subtree | free fn | TODO |
-| `resetSentinel` (:1164-1169) | re-zero sentinel | free fn | TODO |
-| `leftRotate`/`rightRotate` (:1173-1231) | delta transfer ±x.delta, overflow flag, maxEnd recompute both | free fns | TODO |
-| `computeMaxEnd`/`recomputeMaxEnd`/`recomputeMaxEndWalkToRoot` (:1236-1270) | max of end, left.maxEnd, right.maxEnd+delta; early-out walk | free fns | TODO |
-| `intervalCompare` (:1275-1280) | start-major, end-minor | free fn | TODO |
+| `ClassName` enum (:14-22) | 7 squiggly class constants | 3 consulted constants local to `interval_tree.mbt` (dependency direction forbids `@markers` reuse; other 4 live in `@markers` strings) | PASS |
+| `NodeColor` (:24-27) | Black=0, Red=1 | `NodeColor` | PASS |
+| `Constants` bit layout (:29-56) | color/visited/forValidation/stickiness/collapseOnReplace/isMargin/affectsFont masks+offsets in one `metadata` byte | same bit constants | PASS |
+| `MIN/MAX_SAFE_DELTA` (:58-78) | ±(1<<30) SMI guard | same values | PASS |
+| `getNodeColor`/`setNodeColor` (:81-88) | mask ops | accessor pair | PASS |
+| `get/setNodeIsVisited` (:89-96) | mask ops | accessor pair | PASS |
+| `get/setNodeIsForValidation` (:97-104) | mask ops | accessor pair | PASS |
+| `get/setNodeIsInGlyphMargin` (:105-112) | mask ops | accessor pair | PASS |
+| `get/setNodeAffectsFont` (:113-120) | mask ops | accessor pair (bit carried; never set — see out-of-scope) | PASS |
+| `getNodeStickiness`/`_setNodeStickiness`/`setNodeStickiness` (:121-139) | mask ops | accessor pair + pub wrapper | PASS |
+| `get/setCollapseOnReplaceEdit` (:129-136) | mask ops | accessor pair | PASS |
+| `IntervalNode` fields (:141-164) | metadata/parent/left/right/start/end/delta/maxEnd/id/ownerId/options/cachedVersionId/cachedAbsoluteStart/cachedAbsoluteEnd/range | `IntervalNode` struct (self-referential via sentinel) | PASS |
+| `IntervalNode` ctor (:166-195) | red, self-parented, delta 0, stickiness NeverGrows | `IntervalNode::new` | PASS |
+| `reset` (:197-205) | reseed offsets + cached range | `::reset` | PASS |
+| `setOptions` (:207-219) | derive forValidation from squiggly classNames; isMargin from glyphMarginClassName; stickiness; collapseOnReplaceEdit; affectsFont | `::set_options` | PASS |
+| `setCachedOffsets` (:221-228) | version mismatch → drop cached range | `::set_cached_offsets` | PASS |
+| `detach` (:230-234) | null out links | `::detach` (sentinel out) | PASS |
+| `SENTINEL` (:237-241) | self-linked black node | package-level sentinel | PASS |
+| `IntervalTree` fields+ctor (:243-251) | root=SENTINEL; requestNormalizeDelta | `IntervalTree` | PASS |
+| `intervalSearch` (:253-258 → :775-866) | augmented-tree overlap search: maxEnd prune (b), start>end prune (a), delta accumulation, 4 include filters | `::interval_search` | PASS |
+| `search` (:260-265 → :711-773) | full in-order with filters + cache offsets | `::search` | PASS |
+| `collectNodesFromOwner` (:270-272 → :638-674) | in-order, ownerId match, no cached offsets | `::collect_nodes_from_owner` | PASS |
+| `collectNodesPostOrder` (:277-279 → :676-709) | post-order, no cached offsets | `::collect_nodes_post_order` | PASS |
+| `insert` (:281-284) | rbTreeInsert + normalize-if-necessary | `::insert` | PASS |
+| `delete` (:286-289) | rbTreeDelete + normalize-if-necessary | `::delete` | PASS |
+| `resolveNode` (:291-304) | walk to root summing right-child deltas | `::resolve_node` | PASS |
+| `acceptReplace` (:306-333) | remove intersecting → noOverlapReplace others → nodeAcceptEdit + reinsert | `::accept_replace` | PASS (conformance-only; Deviation 1) |
+| `getAllInOrder` (:335-337) | `search(0,false,false,0,false)` | `::get_all_in_order` | PASS |
+| `_normalizeDeltaIfNecessary` (:339-345) | flag-gated normalizeDelta | private | PASS |
+| `normalizeDelta` (:349-385) | iterative in-order visit pushing deltas into offsets | free fn | PASS |
+| `MarkerMoveSemantics` (:390-394) | MarkerDefined/ForceMove/ForceStay | enum | PASS (edit cluster; conformance-only) |
+| `adjustMarkerBeforeColumn` (:396-410) | <,>,ForceMove,ForceStay,stickiness order | free fn | PASS (edit cluster; conformance-only) |
+| `nodeAcceptEdit` (:416-490) | stickiness split; collapseOnReplaceEdit arm; 3 moveSemantics passes; deltaColumn finish; end>=start clamp | free fn | PASS (edit cluster; conformance-only) |
+| `searchForEditing` (:492-562) | overlap collect with cachedOffsets(…,0) | free fn | PASS (edit cluster; conformance-only) |
+| `noOverlapReplace` (:564-632) | editDelta shift right-of-edit; delta overflow flag; maxEnd recompute on way up | free fn | PASS (edit cluster; conformance-only) |
+| `rbTreeInsert` (:871-928) | CLRS insert + repair, rotations recolor | free fn | PASS |
+| `treeInsert` (:930-969) | delta-relative descent, `intervalCompare` order, subtract delta at link | free fn | PASS |
+| `rbTreeDelete` (:973-1155) | no-z/y-swap delete; delta hand-off in 3 shapes; maxEnd walks; RB-DELETE-FIXUP both sides | free fn | PASS |
+| `leftest` (:1157-1162) | min of right subtree | free fn | PASS |
+| `resetSentinel` (:1164-1169) | re-zero sentinel | free fn | PASS |
+| `leftRotate`/`rightRotate` (:1173-1231) | delta transfer ±x.delta, overflow flag, maxEnd recompute both | free fns | PASS |
+| `computeMaxEnd`/`recomputeMaxEnd`/`recomputeMaxEndWalkToRoot` (:1236-1270) | max of end, left.maxEnd, right.maxEnd+delta; early-out walk | free fns | PASS |
+| `intervalCompare` (:1275-1280) | start-major, end-minor | free fn | PASS |
 
 Member count (Phase 1): **41 rows**.
 
@@ -204,6 +216,17 @@ in MoonBit reference tests — no browser specs):
   ~250 assertions across stickiness × forceMoveMarkers × edit shapes).
 - The `getRandomInt` fuzz loop (:173-190) ports as a seeded-PRNG test with a
   fixed seed set (deterministic in CI; note the seeds).
+
+Landed notes (2026-07-02): all of the above are in
+`interval_tree_reference_test.mbt`. Seeds are xorshift32
+{11111, 22222, 33333, 44444, 55555}. The `force delta overflow` constants
+(~9e14) exceed MoonBit's 32-bit `Int` and are scaled by 1e-6; the real
+`normalize_delta` path is driven by a companion `accept_replace` test instead.
+Because the plain suite never creates nonzero deltas (true of Monaco's run
+too), the source's commented-out `FORCE_OVERFLOWING_TEST: this.delta = start`
+ctor line is ported as an explicit test mode that re-runs gen01–gen18 and the
+fuzz loop with forced deltas — a mutation check on the rotation delta
+transfer fails only under this mode, as in the source.
 
 ## Phase 2 — `textModel.ts` decoration cluster
 

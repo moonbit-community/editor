@@ -455,6 +455,14 @@ pub fn Viewer::set_model(
   self.hover_decoration_range = None
   self.model_decorations_subscription = Some(
     model.on_did_change_decorations(_event => {
+      // Monaco: `onDidChangeDecorations` → `viewModel.decorations
+      // .onModelDecorationsChanged()` (`viewModelImpl.ts`) — drop the
+      // computer + viewport caches before the re-render reads them.
+      match self.view_model {
+        Some(view_model) =>
+          view_model.decorations().on_model_decorations_changed()
+        None => ()
+      }
       self.decorations_generation += 1
       self.schedule_render()
     }),

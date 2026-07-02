@@ -67,12 +67,15 @@ pub fn Viewer::change_view_zones(Self, (ViewZoneChangeAccessor) -> Unit) -> Unit
 pub fn Viewer::clear_model(Self, view_state? : ViewStatePolicy) -> Unit
 pub fn Viewer::create(@dom.Element, services? : ViewerServices, options? : ViewerOptions, theme? : String, placeholder? : String) -> Self
 pub fn Viewer::current_model(Self) -> CurrentModel?
+pub fn Viewer::delta_decorations(Self, Array[String], Array[@model.DeltaDecoration]) -> Array[String]
 pub fn Viewer::dispose(Self) -> Unit
 pub fn Viewer::escape(Self) -> Unit
 pub fn Viewer::get_bottom_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn Viewer::get_content_height(Self) -> Double
 pub fn Viewer::get_content_width(Self) -> Double
+pub fn Viewer::get_decorations_in_range(Self, @common.Range) -> Array[@model.ModelDecoration]
 pub fn Viewer::get_layout_info(Self) -> EditorLayoutInfo
+pub fn Viewer::get_line_decorations(Self, Int) -> Array[@model.ModelDecoration]
 pub fn Viewer::get_line_height_for_position(Self, Int, Int) -> Double
 pub fn Viewer::get_model(Self) -> @model.TextModel?
 pub fn Viewer::get_offset_for_column(Self, Int, Int) -> Double
@@ -103,6 +106,7 @@ pub fn Viewer::on_did_resolve_hover(Self, (ViewerHoverResolvedEvent) -> Unit) ->
 pub fn Viewer::on_did_scroll(Self, (ViewerScrollEvent) -> Unit) -> @common.Disposable
 pub fn Viewer::refresh_model_features(Self) -> Unit
 pub fn Viewer::remeasure(Self) -> Unit
+pub fn Viewer::remove_decorations(Self, Array[String]) -> Unit
 pub fn Viewer::restore_view_state(Self, ViewerViewState) -> Unit
 pub fn Viewer::reveal_line(Self, Int) -> Unit
 pub fn Viewer::reveal_line_in_center(Self, Int) -> Unit

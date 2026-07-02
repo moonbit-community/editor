@@ -99,6 +99,11 @@ zones. Go-to-definition and find-references are not current viewer behavior.
   (`languages_registry_wbtest.mbt`, `languages_test.mbt`).
 - Marker store, squiggle decorations, and marker-hover lookup:
   `viewer/markers/markers_wbtest.mbt`.
+- Decoration storage (interval tree, model API) and the view conversion:
+  `viewer/model` reference suites, `viewer/inline_decorations`'
+  conformance suite, and the `DecorationsOverlay` piece tests in
+  `viewer/browser/view_parts/selections`. The public
+  `Viewer::delta_decorations` surface: `viewer/test_viewer_wbtest.mbt`.
 - Browser component tests cover public API construction, selection/copy,
   wrapping, hover overlap, folding, view zones, and inlay-hint copy behavior.
 - Embedding boundary: `internal/shell/examples/embedded_viewer` and

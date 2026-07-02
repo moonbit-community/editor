@@ -1,6 +1,6 @@
 # Monaco Decoration System 1:1 Port (storage → view conversion → overlay)
 
-Status: proposed — Date: 2026-07-02. Oracle commit:
+Status: **landed** — proposed and implemented 2026-07-02. Oracle commit:
 `294fb350837dbaee37b949533fead4df4e0e8971`.
 
 The "Option A" migration from the 2026-07-02 port audit (memory:
@@ -452,12 +452,12 @@ added in `decorations.css`; `hoverHighlight` lives in `hover.css` (Phase 3).
 
 | Source member | Behavior | MoonBit symbol | Status |
 |---|---|---|---|
-| `deltaDecorations(old, new)` | model delta with the editor's ownerId | `Viewer::delta_decorations` | TODO |
-| `removeDecorations(ids)` | delta to empty | `Viewer::remove_decorations` | TODO |
-| `getLineDecorations(line)` | model query with ownerId + filterOutValidation per option | `Viewer::get_line_decorations` | TODO |
-| `getDecorationsInRange(range)` | same, range | `Viewer::get_decorations_in_range` | TODO |
+| `deltaDecorations(old, new)` | model delta with the editor's ownerId | `Viewer::delta_decorations` | PASS |
+| `removeDecorations(ids)` | delta to empty | `Viewer::remove_decorations` | PASS |
+| `getLineDecorations(line)` | model query with ownerId + filterOutValidation per option | `Viewer::get_line_decorations` | PASS |
+| `getDecorationsInRange(range)` | same, range | `Viewer::get_decorations_in_range` | PASS |
 | `createDecorationsCollection` | sugar collection | — | DEFERRED (until a host asks) |
-| headless-harness proof | `delta_decorations` from a host → decorations queryable + render input carries them | `viewer/test_viewer_wbtest.mbt` cases | TODO |
+| headless-harness proof | `delta_decorations` from a host → decorations queryable + render input carries them | `viewer/test_viewer_wbtest.mbt` cases | PASS |
 
 ## Test matrix (Phase 4 of the playbook)
 
@@ -488,14 +488,68 @@ Behavior-switching variables, each with a case that takes it:
 
 ## Exit gate (Phase 5 of the playbook)
 
-- [ ] inventory reconciled (rows == members) per phase; report done/deferred/N-A
-- [ ] every ported fn diff-reviewed side-by-side vs source
-- [ ] matrix covered; `moon test --target all` green; headless harness cases green
-- [ ] deviations documented at code sites (1–8 above)
-- [ ] replacement map executed: `DecorationKind`/`DecorationSet`/simplified
+- [x] inventory reconciled (rows == members) per phase; report done/deferred/N-A
+- [x] every ported fn diff-reviewed side-by-side vs source
+- [x] matrix covered; `moon test --target all` green; headless harness cases green
+- [x] deviations documented at code sites (1–8 above)
+- [x] replacement map executed: `DecorationKind`/`DecorationSet`/simplified
       `ViewModelDecoration`/frame-baked marker path all deleted; grep proves
       no `kind` field remains
-- [ ] closing self-audit pasted here
+- [x] closing self-audit pasted here
+
+### Closing self-audit (2026-07-02)
+
+- **Denominators.** Phase 1: 41/41 rows PASS (edit cluster conformance-only
+  as planned). Phase 2: 33 rows + 2 added during implementation
+  (`_get/setTrackedRange`+`TRACKED_RANGE_OPTIONS` N-A,
+  `collectNodesPostOrder` N-A) — every member of the source cluster now has
+  a terminal status; `ensureAllNodesHaveRanges` flipped to N-A (only
+  consumer is the `_onBeforeEOLChange` edit path). Phase 3: 15/15
+  (`getMinimapDecorationsInRange` DEFERRED with the minimap part). Phase 4:
+  12/12. Phase 5: 4 API rows + harness proof PASS
+  (`createDecorationsCollection` DEFERRED until a host asks).
+- **Conformance.** `intervalTree.test.ts` ported whole (op harness +
+  invariants after every op, gen01–18, Cormen, 208-row `nodeAcceptEdit`
+  table, seeded fuzz, plus an explicit `FORCE_OVERFLOWING_TEST` mode —
+  verified to catch a rotation-delta mutation that the plain suite, like
+  Monaco's own run, cannot). `modelDecorations.test.ts` readonly subset
+  ported against real storage; `applyEdits` suites mapped to the Phase-1
+  suites in the test header; `issue #41492` ported at the offset level.
+  `inlineDecorations.test.ts` suite unchanged (23 cases) over the promoted
+  computer with its doubles.
+- **Deviations.** All 8 planned deviations landed with code-site notes; new
+  ones recorded at their sites: MoonBit `Int` is 32-bit (overflow-test
+  constants scaled; same ±2^30 delta guard), `IntervalNode` links are
+  `Option` behind unwrap accessors (no self-referential literals), the
+  `ClassName` constants live in `interval_tree.mbt` (dependency direction
+  forbids `@markers` reuse), query results are materialized
+  `ModelDecoration` copies (no node aliasing), `Viewer` defaults
+  `renderValidationDecorations` to `On` (product decision — `Editable`
+  would hide the shipped readonly diagnostics), the promoted computer keeps
+  Before/After/affectsFont arms live via its options seam though the real
+  `Decoration` never sets them, and the no-model `null` returns of the
+  public API are empty arrays.
+- **Bugs caught by the port.** The quarantined computer was missing
+  `onModelDecorationsChanged`/`onLineMappingChanged`; the first Phase-5
+  harness draft exposed that nothing invalidated the `ViewModelDecorations`
+  caches on decoration change (now wired: `onDidChangeDecorations` →
+  `on_model_decorations_changed`, matching `viewModelImpl.ts`); the
+  collapsed-widening rounding initially decomposed `round(center - w/2)` as
+  `center - round(w/2)` (caught by the pure-piece test against JS
+  `Math.round` semantics).
+- **Behavior changes beyond the plan text.** Squiggles/hover highlights
+  moved from line-internal spans to overlay divs (the plan's end state;
+  visual parity relies on the same class names — squiggly background images
+  and `hoverHighlight` background now paint on `.cdr` pieces). Marker
+  changes no longer rebuild the frame (`content_generation` untouched); the
+  public diagnostics-count event is fired by the marker subscription
+  directly, and `RenderFrame.diagnostics` (observability JSON) refreshes on
+  the next frame rebuild rather than per marker change.
+- **Checks.** `just check`, `moon test --target all` (625 js / 575 native),
+  `just build`, and `just test-browser-smoke` (18/18) green at every commit
+  slice; commits follow the suggested slicing (Phase 3a+3b merged into one
+  slice — the "old and new agree" checkpoint had no independent consumer
+  since the render seam flips atomically; recorded here).
 
 ## Suggested commit slicing
 

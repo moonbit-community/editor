@@ -208,3 +208,90 @@ test "render frame windows to the visible range, not the whole document" {
     )
   })
 }
+
+///|
+/// Decoration plan Phase 5 headless proof: `delta_decorations` from a host
+/// makes decorations queryable through the public API and carries them into
+/// the render inputs (the viewport's line-span chain and the
+/// DecorationsOverlay's viewport collection), including the
+/// `ViewModelDecorations` cache invalidation on decoration change.
+test "host delta_decorations flows through query API and render inputs" {
+  let viewer = Viewer::Viewer()
+  viewer.set_model(test_model("alpha beta\ngamma"))
+  let view_model = viewer.view_model.unwrap()
+  // Prime the viewport cache before the host adds decorations, so the second
+  // query proves onDidChangeDecorations invalidates it.
+  let viewport_range : @base_common.Range = Range(1, 1, 2, 6)
+  let before = view_model
+    .decorations()
+    .get_decorations_viewport_data(viewport_range)
+  assert_eq(before.decorations.length(), 0)
+  let ids = viewer.delta_decorations([], [
+    {
+      range: Range(1, 1, 1, 6),
+      options: Decoration("myHighlight", description="host"),
+    },
+    {
+      range: Range(2, 1, 2, 3),
+      options: Decoration(
+        "",
+        inline_class_name="host-inline",
+        description="host",
+      ),
+    },
+  ])
+  assert_eq(ids.length(), 2)
+  // Queryable back through the public API (ownerId-scoped).
+  assert_eq(viewer.get_line_decorations(1).length(), 1)
+  assert_eq(viewer.get_line_decorations(1)[0].options.class_name, "myHighlight")
+  assert_eq(viewer.get_decorations_in_range(Range(1, 1, 2, 6)).length(), 2)
+  // The same viewport range now resolves the new decorations (cache dropped).
+  let after = view_model
+    .decorations()
+    .get_decorations_viewport_data(viewport_range)
+  assert_eq(after.decorations.length(), 2)
+  assert_true(after.decorations.any(d => d.options.class_name == "myHighlight"))
+  // Render inputs: the inline chain produces the line span; the className
+  // decoration is the DecorationsOverlay's input, never a line span.
+  let viewport = @view_model.viewport_data_from_view_model(
+    view_model,
+    { start: 1, end: 3 },
+    line_height=18,
+  )
+  assert_true(
+    viewport.line_decorations[1].any(d => d.class_name == "host-inline"),
+  )
+  assert_false(
+    viewport.line_decorations[0].any(d => d.class_name == "myHighlight"),
+  )
+  // The decorations-changed signal reached the view event source.
+  assert_true(viewer.decorations_generation > 0)
+  // removeDecorations drops them everywhere.
+  viewer.remove_decorations(ids)
+  assert_eq(viewer.get_line_decorations(1).length(), 0)
+  assert_eq(viewer.get_decorations_in_range(Range(1, 1, 2, 6)).length(), 0)
+}
+
+///|
+/// The editor-id ownership filter: another editor's decorations (a different
+/// ownerId) stay invisible to this viewer's scoped queries, while ownerId-0
+/// (model-level, e.g. markers) decorations are included.
+test "decoration queries are scoped by editor id like Monaco" {
+  let viewer = Viewer::Viewer()
+  let model = test_model("alpha beta")
+  viewer.set_model(model)
+  // Model-level decoration (ownerId 0): visible to the scoped query.
+  let _ = model.delta_decorations([], [
+    { range: Range(1, 1, 1, 3), options: Decoration("model-level") },
+  ])
+  // Foreign editor's decoration: filtered out.
+  let _ = model.delta_decorations(
+    [],
+    [{ range: Range(1, 4, 1, 6), options: Decoration("foreign") }],
+    owner_id=viewer.editor_id + 1000,
+  )
+  let names = viewer.get_line_decorations(1).map(d => d.options.class_name)
+  if names != ["model-level"] {
+    fail("got \{to_repr(names)}")
+  }
+}

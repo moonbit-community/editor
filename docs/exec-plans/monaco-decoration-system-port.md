@@ -246,43 +246,45 @@ Fields `:225-226,:285-290`; event plumbing `:1624-1667`; public API
 
 | Source member (file:line) | Arithmetic / transition | MoonBit symbol | Status |
 |---|---|---|---|
-| `_onDidChangeDecorations` + `onDidChangeDecorations` (:225-226) | DidChangeDecorationsEmitter | `TextModel::on_did_change_decorations` | TODO |
-| `_lastDecorationId`/`_decorations`/`_decorationsTree` (:286-288) | id counter, id→node map, trees | model fields | TODO |
-| `_deltaDecorationCallCnt` re-entrancy warn (:285, :1717-1730) | warn if deltaDecorations called from the change event | ported guard (log service) | TODO |
+| `_onDidChangeDecorations` + `onDidChangeDecorations` (:225-226) | DidChangeDecorationsEmitter | `TextModel::on_did_change_decorations` | PASS |
+| `_lastDecorationId`/`_decorations`/`_decorationsTree` (:286-288) | id counter, id→node map, trees | model fields | PASS |
+| `_deltaDecorationCallCnt` re-entrancy warn (:285, :1717-1730) | warn if deltaDecorations called from the change event | ported guard (log service) | PASS |
 | `_decorationProvider`/`_fontTokenDecorationsProvider` (:289-290) | bracket/font providers composed into getters | — | N-A (out of scope; getters return tree results only, noted at code site) |
 | `handleBeforeFireDecorationsChangedEvent` (:1624-1634) | injected-text/line-height/font fan-out | — | DEFERRED (all three arms out of scope) |
 | `_fireOnDidChangeLineHeight`/`Font` (:1636-1667) | — | — | N-A (uniform line height) |
-| `changeDecorations` + `_changeDecorations` (:1669-1715) | accessor object {add,change,changeOptions,remove,delta} inside one deferred-emit bracket | `::change_decorations` with accessor struct | TODO |
-| `deltaDecorations` (:1717-1776) | guard empty fast path; deferred-emit bracket around `_deltaDecorationsImpl` | `::delta_decorations` | TODO |
-| `removeAllDecorationsWithOwnerId` (:1777-1789) | collectNodesFromOwner → delete + map cleanup | `::remove_all_decorations_with_owner_id` | TODO |
-| `getDecorationOptions`/`getDecorationRange` (:1790-1805) | id → node → options / resolved range | `::get_decoration_options` / `::get_decoration_range` | TODO |
-| `getLineDecorations` (:1806-1812) | delegates to getLinesDecorations(line,line) | `::get_line_decorations` | TODO |
-| `getLinesDecorations` (:1813-1825) | clamp lines; offsets via buffer; interval query | `::get_lines_decorations` | TODO |
-| `getDecorationsInRange` (:1826-1834) | validated range → `_getDecorationsInRange` | `::get_decorations_in_range` | TODO |
-| `getOverviewRulerDecorations` (:1835-1838) | getAll(overviewRulerOnly=true) | `::get_overview_ruler_decorations` | TODO (query only; part deferred) |
+| `changeDecorations` + `_changeDecorations` (:1669-1715) | accessor object {add,change,changeOptions,remove,delta} inside one deferred-emit bracket | `::change_decorations` with accessor struct | PASS |
+| `deltaDecorations` (:1717-1776) | guard empty fast path; deferred-emit bracket around `_deltaDecorationsImpl` | `::delta_decorations` | PASS |
+| `removeAllDecorationsWithOwnerId` (:1777-1789) | collectNodesFromOwner → delete + map cleanup | `::remove_all_decorations_with_owner_id` | PASS |
+| `getDecorationOptions`/`getDecorationRange` (:1790-1805) | id → node → options / resolved range | `::get_decoration_options` / `::get_decoration_range` | PASS |
+| `getLineDecorations` (:1806-1812) | delegates to getLinesDecorations(line,line) | `::get_line_decorations` | PASS |
+| `getLinesDecorations` (:1813-1825) | clamp lines; offsets via buffer; interval query | `::get_lines_decorations` | PASS |
+| `getDecorationsInRange` (:1826-1834) | validated range → `_getDecorationsInRange` | `::get_decorations_in_range` | PASS |
+| `getOverviewRulerDecorations` (:1835-1838) | getAll(overviewRulerOnly=true) | `::get_overview_ruler_decorations` | PASS (query only; part deferred) |
 | `getInjectedTextDecorations` (:1839-1842) | injected tree | — | DEFERRED (injected-text out of scope) |
 | `getCustomLineHeights*`/`getFontDecorationsInRange` (:1843-1868) | — | — | N-A (uniform line height / no font decorations) |
-| `getAllDecorations` (:1869-1875) | getAll + provider merge | `::get_all_decorations` (tree only) | TODO |
-| `getAllMarginDecorations` (:1876-1879) | getAll(onlyMarginDecorations) | `::get_all_margin_decorations` | TODO (query only) |
-| `_getDecorationsInRange` (:1880-1889) | offsets from buffer; getAllInInterval | private | TODO |
-| `_changeDecorationImpl` (:1890-1935) | delete node → reset offsets/range → reinsert; injected/lineHeight records | private (records deferred with their features) | TODO |
-| `_changeDecorationOptionsImpl` (:1936-1975) | tree1↔tree0 migration when overviewRuler-ness flips; setOptions | private | TODO |
-| `_deltaDecorationsImpl` (:1976-2062) | two-pointer old/new walk; node reuse; validateRange relaxed; offsets; checkAffectedAndFire per remove/add | private | TODO |
-| `DecorationsTrees` 3 trees (:2202-2218) | tree0 normal / tree1 overview-ruler / injected | 2 trees + stubbed third | TODO (injected slot DEFERRED) |
-| `ensureAllNodesHaveRanges`/`_ensureNodesHaveRanges` (:2220-2232) | resolve missing ranges via host.getRangeAt | `DecorationsTrees::…` | TODO |
-| `getAllInInterval`/`_intervalSearch` (:2233-2245) | both trees searched, ensure ranges | `::get_all_in_interval` | TODO |
+| `getAllDecorations` (:1869-1875) | getAll + provider merge | `::get_all_decorations` (tree only) | PASS |
+| `getAllMarginDecorations` (:1876-1879) | getAll(onlyMarginDecorations) | `::get_all_margin_decorations` | PASS (query only) |
+| `_getDecorationsInRange` (:1880-1889) | offsets from buffer; getAllInInterval | private | PASS |
+| `_changeDecorationImpl` (:1890-1935) | delete node → reset offsets/range → reinsert; injected/lineHeight records | private (records deferred with their features) | PASS |
+| `_changeDecorationOptionsImpl` (:1936-1975) | tree1↔tree0 migration when overviewRuler-ness flips; setOptions | private | PASS |
+| `_deltaDecorationsImpl` (:1976-2062) | two-pointer old/new walk; node reuse; validateRange relaxed; offsets; checkAffectedAndFire per remove/add | private | PASS |
+| `DecorationsTrees` 3 trees (:2202-2218) | tree0 normal / tree1 overview-ruler / injected | 2 trees + stubbed third | PASS (injected slot DEFERRED) |
+| `ensureAllNodesHaveRanges`/`_ensureNodesHaveRanges` (:2220-2232) | resolve missing ranges via host.getRangeAt | `::ensure_nodes_have_ranges` PASS; `ensureAllNodesHaveRanges` N-A (only consumer is the `_onBeforeEOLChange` edit path) | PASS/N-A |
+| `getAllInInterval`/`_intervalSearch` (:2233-2245) | both trees searched, ensure ranges | `::get_all_in_interval` | PASS |
 | `getInjectedTextInInterval`/`getAllInjectedText` (:2246-2263) | — | — | DEFERRED (injected-text) |
 | `getFontDecorations…`/`…CustomLineHeights…` (:2252-2275) | — | — | N-A |
-| `getAll`/`_search` (:2276-2326) | overviewRulerOnly → tree1 only, else both | `::get_all` | TODO |
-| `getNodeRange`/`resolveNode` dispatch/`acceptReplace` (:2327-2353) | per-tree routing by node bits | `::get_node_range` etc. (acceptReplace conformance-only) | TODO |
-| `cleanClassName` (:2355-2357) | `[^a-z0-9\-_]/gi → ' '` | free fn | TODO |
-| `DecorationOptions` base + `ModelDecorationOverviewRulerOptions` (:2359-2405) | color/darkColor strings; position default Center; theme resolution | struct with string colors (Deviation: no theme object — CSS cascade design) | TODO |
+| `getAll`/`_search` (:2276-2326) | overviewRulerOnly → tree1 only, else both | `::get_all` | PASS |
+| `getNodeRange`/`resolveNode` dispatch/`acceptReplace` (:2327-2353) | per-tree routing by node bits | `::get_node_range` etc. (acceptReplace conformance-only) | PASS |
+| `cleanClassName` (:2355-2357) | `[^a-z0-9\-_]/gi → ' '` | free fn | PASS |
+| `DecorationOptions` base + `ModelDecorationOverviewRulerOptions` (:2359-2405) | color/darkColor strings; position default Center; theme resolution | struct with string colors (Deviation: no theme object — CSS cascade design) | PASS |
 | `ModelDecorationGlyphMarginOptions` (:2407-2416) | lane + persistLane | — | DEFERRED (glyph margin part) |
-| `ModelDecorationMinimapOptions` (:2418-2451) | position + sectionHeader | carried inert (Increment-H precedent) | TODO |
+| `ModelDecorationMinimapOptions` (:2418-2451) | position + sectionHeader | carried inert (Increment-H precedent) | PASS |
 | `ModelDecorationInjectedTextOptions` (:2453-2476) | — | — | DEFERRED (injected-text) |
-| `ModelDecorationOptions` fields+ctor (:2478-2580) | ~35 fields; cleanClassName on all class names; stickiness default AlwaysGrows; zIndex default 0 | evolve `@model.Decoration`: port `description`, `stickiness`, `zIndex`, `className`, `hoverMessage`(kept as `message`), `isWholeLine`, `showIfCollapsed`, `collapseOnReplaceEdit`, `overviewRuler`, `minimap`, `glyphMarginClassName`, `linesDecorationsClassName`, `firstLineDecorationClassName`, `marginClassName`, `inlineClassName`, `inlineClassNameAffectsLetterSpacing`, `shouldFillLineOnLineBreak`; name every omitted field in the code-site note (block*, before/after, lineNumber*, hideIn*Tokens, font*, textDirection) | TODO |
-| `register`/`createDynamic`/`EMPTY` (:2481-2489) | interning memo | single constructor (Deviation 5) | TODO |
-| `DidChangeDecorationsEmitter` (:2586-2666): begin/endDeferredEmit, `checkAffectedAndFire`, `fire`, `_shouldFireDeferred` | batch depth counter; affects flags (minimap/overview) accumulated; one event per bracket | `DecorationsChangedEmitter` over `@base_common.Emitter` (Deviation 2); injected/lineHeight/font record fns DEFERRED/N-A with their features | TODO |
+| `ModelDecorationOptions` fields+ctor (:2478-2580) | ~35 fields; cleanClassName on all class names; stickiness default AlwaysGrows; zIndex default 0 | evolve `@model.Decoration`: port `description`, `stickiness`, `zIndex`, `className`, `hoverMessage`(kept as `message`), `isWholeLine`, `showIfCollapsed`, `collapseOnReplaceEdit`, `overviewRuler`, `minimap`, `glyphMarginClassName`, `linesDecorationsClassName`, `firstLineDecorationClassName`, `marginClassName`, `inlineClassName`, `inlineClassNameAffectsLetterSpacing`, `shouldFillLineOnLineBreak`; name every omitted field in the code-site note (block*, before/after, lineNumber*, hideIn*Tokens, font*, textDirection) | PASS |
+| `register`/`createDynamic`/`EMPTY` (:2481-2489) | interning memo | single constructor (Deviation 5) | PASS |
+| `DidChangeDecorationsEmitter` (:2586-2666): begin/endDeferredEmit, `checkAffectedAndFire`, `fire`, `_shouldFireDeferred` | batch depth counter; affects flags (minimap/overview) accumulated; one event per bracket | `DecorationsChangedEmitter` over `@base_common.Emitter` (Deviation 2); injected/lineHeight/font record fns DEFERRED/N-A with their features; `hasListeners` N-A (no consumer) | PASS |
+| `_getTrackedRange`/`_setTrackedRange`/`TRACKED_RANGE_OPTIONS` (:1741-1776) | editing-cursor tracked-range internals | — | N-A (no consumer in the readonly viewer) |
+| `DecorationsTrees.collectNodesPostOrder` (:2335-2340) | post-order collect | — | N-A (only consumer is TextModel.dispose) |
 
 Member count (Phase 2): **33 rows**.
 
@@ -296,6 +298,19 @@ and the full "deltaDecorations" suite (`modelDecorations.test.ts:1124+`). The
 stickiness) reach the port only through direct `IntervalTree::accept_replace`
 (no `applyEdits` on a readonly model) — they are covered by the Phase-1
 `nodeAcceptEdit` table + gen tests; record the mapping in the test header.
+
+Landed notes (2026-07-02): the reference file was rewritten against the real
+storage (its interim `DecorationSet` adaptations are gone); the mapping for
+the `applyEdits` suites is recorded in its header. `issue #41492`
+(collapseOnReplaceEdit) is ported as a white-box case driving
+`accept_replace` at the offset level, in `text_model_decorations_wbtest.mbt`
+together with matrix companions (emitter brackets + `fire`, delta id-reuse
+semantics, search filters incl. tree1 routing, options normalization, the
+tree0↔tree1 `changeDecorationOptions` migration, and the re-entrancy warn
+through `@log.LogService` — `TextModel::TextModel` gained an optional
+`log_service` parameter for it). The legacy `Decoration.range`/`kind` fields
+stay alive through this phase (old render path untouched, per the commit
+slicing); `DeltaDecoration` is the faithful (range, options) input pair.
 
 ## Phase 3 — `viewModelDecorations.ts` (whole) + promotion of `inline_decorations` + producer re-plumbing
 

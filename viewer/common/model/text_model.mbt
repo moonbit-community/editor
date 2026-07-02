@@ -1,5 +1,7 @@
 ///|
-/// Readonly editor model identity plus immutable text snapshot.
+/// Readonly editor model identity plus immutable text snapshot, plus the
+/// Monaco decoration storage cluster (`decorations_state` — the one mutable
+/// part; see `text_model_decorations.mbt`).
 pub(all) struct TextModel {
   uri : @base_common.Uri
   display_name : String
@@ -7,6 +9,7 @@ pub(all) struct TextModel {
   version : Int
   revision : String
   snapshot : TextSnapshot
+  decorations_state : DecorationsState
 } derive(Debug)
 
 ///|
@@ -24,6 +27,7 @@ pub fn TextModel::TextModel(
   version : Int,
   revision : String,
   text : String,
+  log_service? : @log.LogService = @log.LogService::new(),
 ) -> TextModel {
   let display_name = if display_name == "" {
     uri.to_string()
@@ -33,7 +37,15 @@ pub fn TextModel::TextModel(
   let language_id = if language_id == "" { "moonbit" } else { language_id }
   let version = if version < 1 { 1 } else { version }
   let snapshot = TextSnapshot(text, language_id~, version~)
-  { uri, display_name, language_id, version, revision, snapshot }
+  {
+    uri,
+    display_name,
+    language_id,
+    version,
+    revision,
+    snapshot,
+    decorations_state: DecorationsState::new(log_service),
+  }
 }
 
 ///|

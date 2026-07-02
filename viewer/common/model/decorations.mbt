@@ -80,27 +80,94 @@ pub(all) struct MinimapOptions {
 } derive(Eq, Debug)
 
 ///|
-/// One line/column `Range` decoration with the CSS class and optional message
-/// the renderer should attach to matching line spans. Mirrors Monaco's
-/// `IModelDeltaDecoration` (range) plus the `IModelDecorationOptions` fields the
-/// marker transform sets. An empty `class_name` means Monaco's
-/// `className: undefined` (e.g. Hint+Deprecated). The `overview_ruler`/`minimap`
-/// carriers are inert (plan D4).
+/// `cleanClassName` (`textModel.ts:2355-2357`): `[^a-z0-9\-_]/gi → ' '`,
+/// applied per UTF-16 code unit like the JS regex (no /u flag).
+pub fn clean_class_name(class_name : String) -> String {
+  let sb = StringBuilder()
+  for i in 0..<class_name.length() {
+    let c = class_name[i].to_int()
+    if (c >= 'a' && c <= 'z') ||
+      (c >= 'A' && c <= 'Z') ||
+      (c >= '0' && c <= '9') ||
+      c == '-' ||
+      c == '_' {
+      sb.write_char(c.unsafe_to_char())
+    } else {
+      sb.write_char(' ')
+    }
+  }
+  sb.to_string()
+}
+
+///|
+/// The `ModelDecorationOptions` subset (`textModel.ts:2478-2580`) plus — for
+/// the duration of the decoration-system migration — the legacy simplified
+/// fields `range` and `kind` still consumed by the old render path (they are
+/// deleted in the plan's Phases 3-4). Monaco field mapping: `class_name` =
+/// `className` ("" = undefined), `message` = `hoverMessage`,
+/// `inline_class_name` = `inlineClassName`, the rest keep their names.
+///
+/// Omitted `ModelDecorationOptions` fields (out of scope, plan
+/// `monaco-decoration-system-port.md`): `blockClassName`/`blockIsAfterEnd`/
+/// `blockDoesNotCollapse`/`blockPadding` (block decorations),
+/// `before`/`after` (injected text via decoration storage),
+/// `lineNumberClassName`/`lineNumberHoverMessage`/`linesDecorationsTooltip`/
+/// `glyphMarginHoverMessage` (no consumer), `hideInCommentTokens`/
+/// `hideInStringTokens`, `lineHeight`/`fontSize`/`affectsFont` (font/line-
+/// height decorations), `textDirection`, `glyphMargin` lane options (glyph
+/// margin view part deferred). `overview_ruler`/`minimap` colors are carried
+/// as strings — no theme-object resolution (recorded theming design).
 pub(all) struct Decoration {
   range : @base_common.Range
   kind : DecorationKind
   class_name : String
   message : String?
   inline_class_name : String?
+  inline_class_name_affects_letter_spacing : Bool
   z_index : Int
+  is_whole_line : Bool
   show_if_collapsed : Bool
+  should_fill_line_on_line_break : Bool
   stickiness : TrackedRangeStickiness
   overview_ruler : OverviewRulerOptions?
   minimap : MinimapOptions?
   glyph_margin_class_name : String?
+  lines_decorations_class_name : String?
+  first_line_decoration_class_name : String?
+  margin_class_name : String?
   collapse_on_replace_edit : Bool
   description : String
 } derive(Debug)
+
+///|
+/// A (range, options) pair handed to `TextModel::delta_decorations` —
+/// Monaco's `IModelDeltaDecoration`. The `options.range`/`options.kind`
+/// legacy fields are ignored by decoration storage.
+pub(all) struct DeltaDecoration {
+  range : @base_common.Range
+  options : Decoration
+} derive(Debug)
+
+///|
+/// A decoration query result — Monaco's `IModelDecoration` (id + ownerId +
+/// range + options). Monaco returns the tree's `IntervalNode`s cast to this
+/// interface; the port materializes value copies (same data, no aliasing).
+pub(all) struct ModelDecoration {
+  id : String
+  owner_id : Int
+  range : @base_common.Range
+  options : Decoration
+} derive(Debug)
+
+///|
+/// `IModelDecorationsChangedEvent` (`textModelEvents.ts`), fired by
+/// `TextModel::on_did_change_decorations`.
+pub(all) struct ModelDecorationsChangedEvent {
+  affects_minimap : Bool
+  affects_overview_ruler : Bool
+  affects_glyph_margin : Bool
+  affects_line_number : Bool
+} derive(Eq, Debug)
 
 ///|
 /// Immutable-style decoration collection queried by viewport and hover code.
@@ -109,35 +176,56 @@ pub(all) struct DecorationSet {
 } derive(Debug)
 
 ///|
-/// Builds a decoration from an explicit range, kind, CSS class, and optional
-/// message.
+/// The single decoration-options constructor. Monaco's `register`/
+/// `createDynamic`/`_normalizeOptions` collapse into this one function (plan
+/// Deviation 5 — `register` exists only to intern per-instance allocations).
+/// Class names are normalized with `clean_class_name` like the
+/// `ModelDecorationOptions` ctor; defaults mirror the source (`stickiness`
+/// AlwaysGrows, `zIndex` 0). Direct record literals bypass the cleaning, like
+/// nothing does in Monaco.
 pub fn Decoration::Decoration(
   range : @base_common.Range,
   kind : DecorationKind,
   class_name : String,
   message? : String,
   inline_class_name? : String,
+  inline_class_name_affects_letter_spacing? : Bool = false,
   z_index? : Int = 0,
+  is_whole_line? : Bool = false,
   show_if_collapsed? : Bool = false,
+  should_fill_line_on_line_break? : Bool = false,
   stickiness? : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
   overview_ruler? : OverviewRulerOptions,
   minimap? : MinimapOptions,
   glyph_margin_class_name? : String,
+  lines_decorations_class_name? : String,
+  first_line_decoration_class_name? : String,
+  margin_class_name? : String,
   collapse_on_replace_edit? : Bool = false,
   description? : String = "",
 ) -> Decoration {
   {
     range,
     kind,
-    class_name,
+    class_name: clean_class_name(class_name),
     message,
-    inline_class_name,
+    inline_class_name: inline_class_name.map(clean_class_name),
+    inline_class_name_affects_letter_spacing,
     z_index,
+    is_whole_line,
     show_if_collapsed,
+    should_fill_line_on_line_break,
     stickiness,
     overview_ruler,
     minimap,
-    glyph_margin_class_name,
+    glyph_margin_class_name: glyph_margin_class_name.map(clean_class_name),
+    lines_decorations_class_name: lines_decorations_class_name.map(
+      clean_class_name,
+    ),
+    first_line_decoration_class_name: first_line_decoration_class_name.map(
+      clean_class_name,
+    ),
+    margin_class_name: margin_class_name.map(clean_class_name),
     collapse_on_replace_edit,
     description,
   }

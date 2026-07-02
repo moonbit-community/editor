@@ -3,10 +3,13 @@ package "moonbit-community/editor/viewer/common/model"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/platform/log",
   "moonbitlang/core/debug",
 }
 
 // Values
+pub fn clean_class_name(String) -> String
+
 pub fn compute_indent_level(String, Int) -> Int
 
 pub fn get_node_color(IntervalNode) -> NodeColor
@@ -40,16 +43,22 @@ pub(all) struct Decoration {
   class_name : String
   message : String?
   inline_class_name : String?
+  inline_class_name_affects_letter_spacing : Bool
   z_index : Int
+  is_whole_line : Bool
   show_if_collapsed : Bool
+  should_fill_line_on_line_break : Bool
   stickiness : TrackedRangeStickiness
   overview_ruler : OverviewRulerOptions?
   minimap : MinimapOptions?
   glyph_margin_class_name : String?
+  lines_decorations_class_name : String?
+  first_line_decoration_class_name : String?
+  margin_class_name : String?
   collapse_on_replace_edit : Bool
   description : String
 } derive(@debug.Debug)
-pub fn Decoration::Decoration(@common.Range, DecorationKind, String, message? : String, inline_class_name? : String, z_index? : Int, show_if_collapsed? : Bool, stickiness? : TrackedRangeStickiness, overview_ruler? : OverviewRulerOptions, minimap? : MinimapOptions, glyph_margin_class_name? : String, collapse_on_replace_edit? : Bool, description? : String) -> Self
+pub fn Decoration::Decoration(@common.Range, DecorationKind, String, message? : String, inline_class_name? : String, inline_class_name_affects_letter_spacing? : Bool, z_index? : Int, is_whole_line? : Bool, show_if_collapsed? : Bool, should_fill_line_on_line_break? : Bool, stickiness? : TrackedRangeStickiness, overview_ruler? : OverviewRulerOptions, minimap? : MinimapOptions, glyph_margin_class_name? : String, lines_decorations_class_name? : String, first_line_decoration_class_name? : String, margin_class_name? : String, collapse_on_replace_edit? : Bool, description? : String) -> Self
 
 pub(all) enum DecorationKind {
   Diagnostic
@@ -67,6 +76,33 @@ pub fn DecorationSet::at_position(Self, @common.Position) -> Array[Decoration]
 pub fn DecorationSet::between(Self, @common.Range) -> Array[Decoration]
 pub fn DecorationSet::empty() -> Self
 pub fn DecorationSet::from_array(Array[Decoration]) -> Self
+
+pub(all) struct DecorationsChangeAccessor {
+  mut add_decoration : (@common.Range, Decoration) -> String
+  mut change_decoration : (String, @common.Range) -> Unit
+  mut change_decoration_options : (String, Decoration) -> Unit
+  mut remove_decoration : (String) -> Unit
+  mut delta_decorations : (Array[String], Array[DeltaDecoration]) -> Array[String]
+}
+
+type DecorationsChangedEmitter
+
+pub struct DecorationsState {
+  instance_id : String
+  log_service : @log.LogService
+  mut last_decoration_id : Int
+  decorations : Map[String, IntervalNode]
+  decorations_tree : DecorationsTrees
+  mut delta_decoration_call_cnt : Int
+  on_did_change : DecorationsChangedEmitter
+}
+
+type DecorationsTrees
+
+pub(all) struct DeltaDecoration {
+  range : @common.Range
+  options : Decoration
+} derive(@debug.Debug)
 
 pub struct GuidesTextModelPart {
   text_model : TextSnapshot
@@ -129,6 +165,20 @@ pub(all) enum MinimapPosition {
   Gutter
 } derive(Eq, @debug.Debug)
 
+pub(all) struct ModelDecoration {
+  id : String
+  owner_id : Int
+  range : @common.Range
+  options : Decoration
+} derive(@debug.Debug)
+
+pub(all) struct ModelDecorationsChangedEvent {
+  affects_minimap : Bool
+  affects_overview_ruler : Bool
+  affects_glyph_margin : Bool
+  affects_line_number : Bool
+} derive(Eq, @debug.Debug)
+
 pub(all) enum NodeColor {
   Black
   Red
@@ -153,8 +203,23 @@ pub(all) struct TextModel {
   version : Int
   revision : String
   snapshot : TextSnapshot
+  decorations_state : DecorationsState
 } derive(@debug.Debug)
-pub fn TextModel::TextModel(@common.Uri, String, String, Int, String, String) -> Self
+pub fn TextModel::TextModel(@common.Uri, String, String, Int, String, String, log_service? : @log.LogService) -> Self
+pub fn[T] TextModel::change_decorations(Self, (DecorationsChangeAccessor) -> T, owner_id? : Int) -> T
+pub fn TextModel::delta_decorations(Self, Array[String], Array[DeltaDecoration], owner_id? : Int) -> Array[String]
+pub fn TextModel::get_all_decorations(Self, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool) -> Array[ModelDecoration]
+pub fn TextModel::get_all_margin_decorations(Self, owner_id? : Int) -> Array[ModelDecoration]
+pub fn TextModel::get_decoration_options(Self, String) -> Decoration?
+pub fn TextModel::get_decoration_range(Self, String) -> @common.Range?
+pub fn TextModel::get_decorations_in_range(Self, @common.Range, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool, only_margin_decorations? : Bool) -> Array[ModelDecoration]
+pub fn TextModel::get_line_decorations(Self, Int, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool) -> Array[ModelDecoration]
+pub fn TextModel::get_lines_decorations(Self, Int, Int, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool, only_margin_decorations? : Bool) -> Array[ModelDecoration]
+pub fn TextModel::get_overview_ruler_decorations(Self, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool) -> Array[ModelDecoration]
+pub fn TextModel::get_range_at(Self, Int, Int) -> @common.Range
+pub fn TextModel::get_version_id(Self) -> Int
+pub fn TextModel::on_did_change_decorations(Self, (ModelDecorationsChangedEvent) -> Unit) -> @common.Disposable
+pub fn TextModel::remove_all_decorations_with_owner_id(Self, Int) -> Unit
 pub fn TextModel::same_identity_and_version(Self, Self) -> Bool
 pub fn TextModel::snapshot(Self) -> TextSnapshot
 
@@ -187,6 +252,7 @@ pub fn TextSnapshot::range_of(Self, @common.OffsetRange) -> @common.Range
 pub fn TextSnapshot::slice(Self, @common.OffsetRange) -> String
 pub fn TextSnapshot::validate_position(Self, @common.Position) -> @common.Position
 pub fn TextSnapshot::validate_range(Self, @common.Range) -> @common.Range
+pub fn TextSnapshot::validate_range_relaxed(Self, @common.Range) -> @common.Range
 
 pub(all) enum TrackedRangeStickiness {
   AlwaysGrowsWhenTypingAtEdges

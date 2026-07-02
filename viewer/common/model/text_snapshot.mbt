@@ -282,6 +282,27 @@ pub fn TextSnapshot::validate_position(
 }
 
 ///|
+/// Clamps a range into the snapshot without surrogate snapping. Mirrors
+/// Monaco's `_validateRangeRelaxedNoAllocations` (`textModel.ts:925`) — the
+/// decoration paths use this cheaper clamp instead of `validateRange`.
+pub fn TextSnapshot::validate_range_relaxed(
+  self : TextSnapshot,
+  range : @base_common.Range,
+) -> @base_common.Range {
+  let start = self.do_validate_position(
+    range.start_line_number,
+    range.start_column,
+    false,
+  )
+  let end = self.do_validate_position(
+    range.end_line_number,
+    range.end_column,
+    false,
+  )
+  Range(start.line_number, start.column, end.line_number, end.column)
+}
+
+///|
 /// Clamps a range into the snapshot, expanding out of any surrogate pair its
 /// ends land inside. Mirrors Monaco's `validateRange`.
 pub fn TextSnapshot::validate_range(

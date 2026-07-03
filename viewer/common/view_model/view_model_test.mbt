@@ -129,11 +129,11 @@ fn test_inlay_view_model(
         hint.position.line_number,
         hint.position.column,
       ),
-      options: @model.Decoration(
+      options: Decoration(
         "",
         description="inlay-hint",
         show_if_collapsed=true,
-        after=@model.ModelInjectedTextOptions(
+        after=ModelInjectedTextOptions(
           hint.label,
           inline_class_name=class_name,
           attached_index=index,

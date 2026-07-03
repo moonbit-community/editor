@@ -49,7 +49,7 @@ fn inlay_hint_delta_decorations(
         // A collapsed range must survive the injected-text tree's
         // `showIfCollapsed || !isEmpty` query filter (Monaco sets it too).
         show_if_collapsed=true,
-        after=@model.ModelInjectedTextOptions(
+        after=ModelInjectedTextOptions(
           content,
           inline_class_name=inlay_hint_class_name(hint),
           attached_index=index,

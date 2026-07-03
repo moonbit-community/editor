@@ -26,11 +26,11 @@ fn affinity_view_model(
     let (column, content) = hints[index]
     decorations.push({
       range: Range(1, column, 1, column),
-      options: @model.Decoration(
+      options: Decoration(
         "",
         description="inlay-hint",
         show_if_collapsed=true,
-        after=@model.ModelInjectedTextOptions(
+        after=ModelInjectedTextOptions(
           content,
           inline_class_name="inlay-hint inlay-hint-type",
           attached_index=index,

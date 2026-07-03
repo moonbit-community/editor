@@ -9,9 +9,7 @@ test "inlay hints flow through decoration storage into the projection" {
     assert_eq(viewer.test_view_model().lines().render_line(1).text, "let x = 1")
     // The producer path: hints arrive, decorations are rewritten, and the
     // change event rebuilds the projection — no explicit re-render call.
-    viewer.inlay_hints = [
-      @language.InlayHint(Position(1, 6), ": Int", kind=TypeHint),
-    ]
+    viewer.inlay_hints = [InlayHint(Position(1, 6), ": Int", kind=TypeHint)]
     viewer.sync_inlay_hint_decorations()
     let line = viewer.test_view_model().lines().render_line(1)
     assert_eq(line.text, "let x: Int = 1")
@@ -34,14 +32,10 @@ test "inlay hints flow through decoration storage into the projection" {
 ///|
 test "moving a hint re-projects at the new anchor" {
   with_test_viewer("abcdef", viewer => {
-    viewer.inlay_hints = [
-      @language.InlayHint(Position(1, 3), "XX", kind=ParameterHint),
-    ]
+    viewer.inlay_hints = [InlayHint(Position(1, 3), "XX", kind=ParameterHint)]
     viewer.sync_inlay_hint_decorations()
     assert_eq(viewer.test_view_model().lines().render_line(1).text, "abXXcdef")
-    viewer.inlay_hints = [
-      @language.InlayHint(Position(1, 5), "XX", kind=ParameterHint),
-    ]
+    viewer.inlay_hints = [InlayHint(Position(1, 5), "XX", kind=ParameterHint)]
     viewer.sync_inlay_hint_decorations()
     assert_eq(viewer.test_view_model().lines().render_line(1).text, "abcdXXef")
   })

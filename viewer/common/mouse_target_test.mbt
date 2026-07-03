@@ -54,11 +54,11 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
   model.delta_decorations([], [
     {
       range: Range(1, 6, 1, 6),
-      options: @model.Decoration(
+      options: Decoration(
         "",
         description="inlay-hint",
         show_if_collapsed=true,
-        after=@model.ModelInjectedTextOptions(
+        after=ModelInjectedTextOptions(
           ": Int",
           inline_class_name="inlay-hint inlay-hint-type",
           attached_index=0,

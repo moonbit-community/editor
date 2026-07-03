@@ -36,6 +36,12 @@ test('paints whitespace dots only under a selection and re-renders on change', a
   await expect.poll(() => line1Dots.count(), { timeout: 2_000 }).toBeGreaterThan(0);
   await expect(line2Dots).toHaveCount(0);
 
+  // Dots take editorWhitespace.foreground (viewLines.css `.mtkw`), not the
+  // token color: #e3e4e229 in the dark shell.
+  expect(
+    await line1Dots.first().evaluate((el) => getComputedStyle(el).color),
+  ).toBe('rgba(227, 228, 226, 0.16)');
+
   // Move the selection to line 2 → line 1 re-renders without dots (the
   // selection-change invalidation), line 2 gains them.
   await dragAcrossLine(page, page.locator('.view-line[data-line="2"]'));

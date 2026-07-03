@@ -35,3 +35,14 @@
   white-space: pre;
   cursor: text;
 }
+
+/* Rendered-whitespace parts (`·`/`→`), Monaco `viewLines.css:74-81`: the
+   faded `editorWhitespace.foreground` overrides the token color. */
+.monaco-editor .mtkw {
+  color: var(--vscode-editorWhitespace-foreground, #e3e4e229) !important;
+}
+
+.monaco-editor .mtkz {
+  display: inline-block;
+  color: var(--vscode-editorWhitespace-foreground, #e3e4e229) !important;
+}

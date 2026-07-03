@@ -331,8 +331,13 @@ fn CommentThreadWidgetDom::render_form(self : CommentThreadWidgetDom) -> Unit {
   self.form.set_inner_html("")
   self.form_textarea = None
   if !self.thread.is_template {
+    // `CommentReply.updateCanReply` hides the whole form container
+    // (`commentReply.ts:224`); an empty-but-padded form would otherwise leak
+    // its padding into the zone-height measurement.
+    self.form.set_attribute("style", "display:none")
     return
   }
+  self.form.set_attribute("style", "")
   let document = @rdom.document()
   let textarea = document.create_element("textarea")
   textarea.set_attribute("class", "comment-textarea")

@@ -116,20 +116,29 @@ pub fn ReviewZoneWidget::focus_form(self : ReviewZoneWidget) -> Unit {
 
 ///|
 /// `_refresh` (`commentThreadZoneWidget.ts:496-527`): measure the content
-/// and relayout — `computedLinesNumber = ceil((content + arrow + frame + 8)
-/// / lineHeight)` (`:509`; head and body heights collapse into the root's
-/// scroll height here), no-op when the line count is unchanged (`:511-513`),
-/// and the relayout runs inside a `StableEditorScrollState` bracket
-/// (`:521-523`) so a zone growing above the viewport does not shift the
-/// visible content.
+/// and relayout — `computedLinesNumber = ceil((headHeight + dimensions.height
+/// + arrowHeight + frameThickness + 8) / lineHeight)` (`:504-509`), where the
+/// head is *computed* (`ceil(lineHeight * 1.2)`) and `dimensions` is the
+/// natural size of the body container, which in the source also hosts the
+/// reply form (`commentThreadWidget.ts:287`) and is never height-constrained
+/// by the zone. Measuring the root `.review-widget` instead would read the
+/// zone's own height back (the root is `height:100%` with a scrolling body),
+/// latching a re-opened widget at its 2-line spacer size. No-op when the line
+/// count is unchanged (`:511-513`), and the relayout runs inside a
+/// `StableEditorScrollState` bracket (`:521-523`) so a zone growing above the
+/// viewport does not shift the visible content.
 pub fn ReviewZoneWidget::refresh(self : ReviewZoneWidget) -> Unit {
   guard self.zone.is_visible() else { return }
   let line_height = (self.zone.host.line_height)()
   guard line_height > 0 else { return }
-  let content = self.widget.dom().get_scroll_height()
+  // `ceil(lineHeight * 1.2)` (`:504`), as an integer ceiling.
+  let head = (line_height * 12 + 9) / 10
+  let content = self.widget.body_dom().get_scroll_height() +
+    self.widget.form_dom().get_scroll_height()
   let arrow = (line_height.to_double() / 3.0 + 0.5).to_int()
-  let frame = (line_height.to_double() / 9.0 + 0.5).to_int()
-  let total = content + (arrow + frame + 8).to_double()
+  // `frameThickness = Math.round(lineHeight / 9) * 2` (`:507`) — both borders.
+  let frame = (line_height.to_double() / 9.0 + 0.5).to_int() * 2
+  let total = content + (head + arrow + frame + 8).to_double()
   let mut lines = (total / line_height.to_double()).to_int()
   if lines.to_double() * line_height.to_double() < total {
     lines += 1

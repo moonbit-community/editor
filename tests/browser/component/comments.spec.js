@@ -100,6 +100,18 @@ test('comments: glyphs, create flow, edit/delete, folding, scroll', async ({ pag
   await expect(page.locator('.review-widget .comment-body')).toContainText('edited body');
   expect((await eventCounts(page)).updated).toBe(1);
 
+  // Collapse via the glyph and re-expand: the reopened zone must be sized
+  // from the thread content (ReviewZoneWidget._refresh's headHeight + body
+  // dimensions), not latch at the 2-line spacer and clip the comment away.
+  await clickCenter(page, threadGlyph.first());
+  await expect(widget).toBeHidden();
+  await clickCenter(page, threadGlyph.first());
+  await expect(widget).toBeVisible();
+  await expect(page.locator('.review-widget .comment-body')).toContainText('edited body');
+  await expect
+    .poll(async () => (await widget.boundingBox()).height, { timeout: 5_000 })
+    .toBeGreaterThan(70);
+
   // Deleting the only comment removes the thread, its widget, and its glyph.
   await clickCenter(page, page.locator('.review-widget [data-comment-action="delete"]'));
   await expect(widget).toHaveCount(0);
@@ -174,4 +186,17 @@ test('comments: glyphs, create flow, edit/delete, folding, scroll', async ({ pag
   await page.mouse.click(margin.x + margin.width - 12, lineSevenY);
   await expect(page.locator('.review-widget')).toHaveCount(1);
   await expect(widget).toBeVisible();
+
+  // The widget chrome follows the shell theme (editorWidget.background in
+  // theme.css): flipping to Light Modern restyles the open zone container.
+  await page.evaluate(() => {
+    document.querySelector('.editor-shell').setAttribute('data-theme', 'light');
+  });
+  await expect
+    .poll(() =>
+      page
+        .locator('.zone-widget-container')
+        .evaluate((el) => getComputedStyle(el).backgroundColor),
+    )
+    .toBe('rgb(248, 248, 248)');
 });

@@ -205,6 +205,14 @@ pub fn MarginViewOverlays::render_folding_markers(
             "<span class=\"codicon codicon-chevron-down\" aria-hidden=\"true\"></span>"
           },
         )
+        // The selection machinery starts on the root's `mousedown`, which
+        // fires before `click`; swallow it so toggling a fold never also
+        // starts a margin line-selection (Monaco's folding gutter equally
+        // keeps its clicks out of the cursor).
+        marker.add_event_listener("mousedown", event => {
+          event.prevent_default()
+          event.stop_propagation()
+        })
         marker.add_event_listener("click", event => {
           event.prevent_default()
           event.stop_propagation()

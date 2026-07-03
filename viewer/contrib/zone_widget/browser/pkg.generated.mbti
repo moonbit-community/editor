@@ -1,0 +1,48 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/contrib/zone_widget/browser"
+
+import {
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct ZoneWidget {
+  host : ZoneWidgetHost
+  id : String
+  dom_node : @dom.Element
+  container : @dom.Element
+  arrow : @dom.Element?
+  show_frame : Bool
+  mut visible : Bool
+  mut anchor_view_line : Int
+  mut height_in_lines : Int
+  mut top_px : Double
+  mut width_px : Double
+  mut dom_height_px : Int
+}
+pub fn ZoneWidget::dom(Self) -> @dom.Element
+pub fn ZoneWidget::hide(Self) -> Unit
+pub fn ZoneWidget::is_visible(Self) -> Bool
+pub fn ZoneWidget::new(ZoneWidgetHost, String, show_arrow~ : Bool, show_frame~ : Bool, class_name? : String, fill~ : (@dom.Element) -> Unit) -> Self
+pub fn ZoneWidget::relayout(Self, Int) -> Unit
+pub fn ZoneWidget::show(Self, Int, Int) -> Unit
+pub fn ZoneWidget::update_anchor(Self, Int) -> Unit
+
+pub(all) struct ZoneWidgetHost {
+  add_zone : (String, Int, Int, @dom.Element, (Double) -> Unit, (Int) -> Unit) -> Unit
+  remove_zone : (String) -> Unit
+  add_overlay_widget : (String, @dom.Element) -> Unit
+  remove_overlay_widget : (String) -> Unit
+  layout_width : () -> Double
+  viewport_height : () -> Double
+  line_height : () -> Int
+}
+
+// Type aliases
+
+// Traits
+

@@ -53,6 +53,12 @@ async fn main {
   if whitespace_selection_status != 0 {
     fail("moon build failed with exit code \{whitespace_selection_status}")
   }
+  let comments_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/comments",
+  ])
+  if comments_status != 0 {
+    fail("moon build failed with exit code \{comments_status}")
+  }
 
   let source_dir = "_build/js/debug/build/internal/shell/web"
   let embed_source_dir = "_build/js/debug/build/internal/shell/examples/embedded_viewer"
@@ -62,6 +68,7 @@ async fn main {
   let read_api_source_dir = "_build/js/debug/build/tests/browser/moonbit/read_api"
   let whitespace_source_dir = "_build/js/debug/build/tests/browser/moonbit/whitespace"
   let whitespace_selection_source_dir = "_build/js/debug/build/tests/browser/moonbit/whitespace_selection"
+  let comments_source_dir = "_build/js/debug/build/tests/browser/moonbit/comments"
   let target_dir = "web/dist"
   let browser_tests_dir = "\{target_dir}/browser-tests"
   if !@fs.exists(target_dir) {
@@ -251,6 +258,29 @@ async fn main {
     browser_test_html(
       "MoonBit Viewer Whitespace Selection Test",
       "/browser-tests/whitespace_selection.mjs",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  let comments_js = @fs.read_file("\{comments_source_dir}/comments.js").text()
+  @fs.write_file(
+    "\{browser_tests_dir}/comments.mjs",
+    comments_js.replace(
+      old="//# sourceMappingURL=comments.js.map",
+      new="//# sourceMappingURL=comments.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/comments.mjs.map",
+    @fs.read_file("\{comments_source_dir}/comments.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/comments.html",
+    browser_test_html(
+      "MoonBit Viewer Comments Test",
+      "/browser-tests/comments.mjs",
     ),
     create_mode=@fs.CreateOrTruncate,
   )

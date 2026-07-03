@@ -1,14 +1,7 @@
 // Behavior tests for the trimmed comment service (`comment_service.mbt`).
 // Upstream ships no unit tests for `commentService.ts`'s store role; these
 // cover the replace-diff, the template lifecycle, and each mutation event.
-
-///|
-fn uri(value : String) -> @base_common.Uri {
-  match @base_common.Uri::parse(value) {
-    ParsedUri(u) => u
-    UriError(_) => abort("bad test uri: " + value)
-  }
-}
+// The `uri` test helper lives in `comment_controller_wbtest.mbt`.
 
 ///|
 fn host_thread(
@@ -16,8 +9,8 @@ fn host_thread(
   resource : @base_common.Uri,
   line : Int,
   bodies : Array[String],
-) -> CommentThread {
-  let comments : Array[Comment] = []
+) -> @comments_common.CommentThread {
+  let comments : Array[@comments_common.Comment] = []
   for index in 0..<bodies.length() {
     comments.push({
       unique_id_in_thread: index + 1,

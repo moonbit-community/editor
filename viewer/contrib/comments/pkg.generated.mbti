@@ -37,6 +37,48 @@ pub fn CommentController::on_mouse_up(Self, @moonbit-community/editor/viewer/com
 pub fn CommentController::update_hover(Self, Int) -> Bool
 pub fn CommentController::update_selection(Self, Int, Int) -> Unit
 
+pub(all) struct CommentMutationEvent {
+  thread : @moonbit-community/editor/viewer/common/comments.CommentThread
+  comment : @moonbit-community/editor/viewer/common/comments.Comment
+} derive(@debug.Debug)
+
+pub struct CommentService {
+  did_update_comment_threads : @moonbit-community/editor/base/common.Emitter[CommentThreadChangedEvent]
+  did_change_commenting_ranges : @moonbit-community/editor/base/common.Emitter[@moonbit-community/editor/base/common.Uri]
+  did_create_comment : @moonbit-community/editor/base/common.Emitter[CommentMutationEvent]
+  did_update_comment : @moonbit-community/editor/base/common.Emitter[CommentMutationEvent]
+  did_delete_comment : @moonbit-community/editor/base/common.Emitter[CommentMutationEvent]
+  threads_by_resource : Map[String, Array[@moonbit-community/editor/viewer/common/comments.CommentThread]]
+  ranges_by_resource : Map[String, Array[@moonbit-community/editor/base/common.Range]]
+  mut next_thread_handle : Int
+  mut current_user_name : String
+}
+pub fn CommentService::commenting_ranges(Self, @moonbit-community/editor/base/common.Uri) -> Array[@moonbit-community/editor/base/common.Range]
+pub fn CommentService::create_thread_template(Self, @moonbit-community/editor/base/common.Uri, @moonbit-community/editor/base/common.Range) -> @moonbit-community/editor/viewer/common/comments.CommentThread
+pub fn CommentService::delete_comment(Self, String, Int) -> Unit
+pub fn CommentService::discard_template(Self, String) -> Unit
+pub fn CommentService::dispose(Self) -> Unit
+pub fn CommentService::new() -> Self
+pub fn CommentService::on_did_change_commenting_ranges(Self, (@moonbit-community/editor/base/common.Uri) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn CommentService::on_did_create_comment(Self, (CommentMutationEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn CommentService::on_did_delete_comment(Self, (CommentMutationEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn CommentService::on_did_update_comment(Self, (CommentMutationEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn CommentService::on_did_update_comment_threads(Self, (CommentThreadChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn CommentService::set_comment_threads(Self, @moonbit-community/editor/base/common.Uri, Array[@moonbit-community/editor/viewer/common/comments.CommentThread]) -> Unit
+pub fn CommentService::set_commenting_ranges(Self, @moonbit-community/editor/base/common.Uri, Array[@moonbit-community/editor/base/common.Range]) -> Unit
+pub fn CommentService::set_current_user_name(Self, String) -> Unit
+pub fn CommentService::submit_new_comment(Self, String, String, timestamp? : String) -> Unit
+pub fn CommentService::thread_by_id(Self, String) -> @moonbit-community/editor/viewer/common/comments.CommentThread?
+pub fn CommentService::threads(Self, @moonbit-community/editor/base/common.Uri) -> Array[@moonbit-community/editor/viewer/common/comments.CommentThread]
+pub fn CommentService::update_comment(Self, String, Int, String) -> Unit
+
+pub(all) struct CommentThreadChangedEvent {
+  resource : @moonbit-community/editor/base/common.Uri
+  added : Array[@moonbit-community/editor/viewer/common/comments.CommentThread]
+  removed : Array[@moonbit-community/editor/viewer/common/comments.CommentThread]
+  changed : Array[@moonbit-community/editor/viewer/common/comments.CommentThread]
+} derive(@debug.Debug)
+
 pub(all) enum MouseUpOutcome {
   NoAction
   LaneClick(Int)

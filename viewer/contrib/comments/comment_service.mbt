@@ -8,23 +8,29 @@
 // reactions, and resolved state are out of scope; comment mutations
 // (create/update/delete) are applied to the store directly and reported
 // through dedicated events so the host can persist them.
+//
+// Filed with its feature, mirroring Monaco: the service lives in the comments
+// contrib (Monaco: `workbench/contrib/comments/browser/commentService.ts`),
+// while the thread/comment types stay in `viewer/common/comments` (Monaco:
+// `editor/common/languages.ts`). The service is DOM-free, so this package
+// stays multi-target.
 
 ///|
 /// `ICommentThreadChangedEvent` reduced to one resource and the
 /// added/removed/changed thread lists.
 pub(all) struct CommentThreadChangedEvent {
   resource : @base_common.Uri
-  added : Array[CommentThread]
-  removed : Array[CommentThread]
-  changed : Array[CommentThread]
+  added : Array[@comments_common.CommentThread]
+  removed : Array[@comments_common.CommentThread]
+  changed : Array[@comments_common.CommentThread]
 } derive(Debug)
 
 ///|
 /// A single applied comment mutation, for host persistence: the thread it
 /// happened in and the comment that was created/updated/deleted.
 pub(all) struct CommentMutationEvent {
-  thread : CommentThread
-  comment : Comment
+  thread : @comments_common.CommentThread
+  comment : @comments_common.Comment
 } derive(Debug)
 
 ///|
@@ -36,7 +42,7 @@ pub struct CommentService {
   did_create_comment : @base_common.Emitter[CommentMutationEvent]
   did_update_comment : @base_common.Emitter[CommentMutationEvent]
   did_delete_comment : @base_common.Emitter[CommentMutationEvent]
-  threads_by_resource : Map[String, Array[CommentThread]]
+  threads_by_resource : Map[String, Array[@comments_common.CommentThread]]
   ranges_by_resource : Map[String, Array[@base_common.Range]]
   mut next_thread_handle : Int
   /// The author name stamped on comments created inside the viewer. VS Code
@@ -136,16 +142,16 @@ pub fn CommentService::set_current_user_name(
 pub fn CommentService::set_comment_threads(
   self : CommentService,
   resource : @base_common.Uri,
-  threads : Array[CommentThread],
+  threads : Array[@comments_common.CommentThread],
 ) -> Unit {
   let key = resource.to_string()
   let previous = match self.threads_by_resource.get(key) {
     Some(existing) => existing
     None => []
   }
-  let added : Array[CommentThread] = []
-  let removed : Array[CommentThread] = []
-  let changed : Array[CommentThread] = []
+  let added : Array[@comments_common.CommentThread] = []
+  let removed : Array[@comments_common.CommentThread] = []
+  let changed : Array[@comments_common.CommentThread] = []
   for thread in threads {
     if previous.search_by(p => p.thread_id == thread.thread_id) is Some(_) {
       changed.push(thread)
@@ -181,7 +187,7 @@ pub fn CommentService::set_commenting_ranges(
 pub fn CommentService::threads(
   self : CommentService,
   resource : @base_common.Uri,
-) -> Array[CommentThread] {
+) -> Array[@comments_common.CommentThread] {
   match self.threads_by_resource.get(resource.to_string()) {
     Some(threads) => threads
     None => []
@@ -205,7 +211,7 @@ pub fn CommentService::commenting_ranges(
 pub fn CommentService::thread_by_id(
   self : CommentService,
   thread_id : String,
-) -> CommentThread? {
+) -> @comments_common.CommentThread? {
   for _, threads in self.threads_by_resource {
     match threads.search_by(t => t.thread_id == thread_id) {
       Some(index) => return Some(threads[index])
@@ -227,8 +233,8 @@ pub fn CommentService::create_thread_template(
   self : CommentService,
   resource : @base_common.Uri,
   range : @base_common.Range,
-) -> CommentThread {
-  let thread : CommentThread = {
+) -> @comments_common.CommentThread {
+  let thread : @comments_common.CommentThread = {
     thread_id: "viewer-thread-" + self.next_thread_handle.to_string(),
     resource,
     range,
@@ -241,7 +247,7 @@ pub fn CommentService::create_thread_template(
   let threads = match self.threads_by_resource.get(key) {
     Some(existing) => existing
     None => {
-      let created : Array[CommentThread] = []
+      let created : Array[@comments_common.CommentThread] = []
       self.threads_by_resource.set(key, created)
       created
     }
@@ -291,7 +297,7 @@ pub fn CommentService::submit_new_comment(
       max_id = comment.unique_id_in_thread
     }
   }
-  let comment : Comment = {
+  let comment : @comments_common.Comment = {
     unique_id_in_thread: max_id + 1,
     body,
     user_name: self.current_user_name,
@@ -324,7 +330,7 @@ pub fn CommentService::update_comment(
     is Some(index) else {
     return
   }
-  let updated : Comment = { ..thread.comments[index], body, }
+  let updated : @comments_common.Comment = { ..thread.comments[index], body, }
   thread.comments[index] = updated
   self.did_update_comment.fire({ thread, comment: updated })
   self.did_update_comment_threads.fire({
@@ -373,7 +379,7 @@ pub fn CommentService::delete_comment(
 ///|
 fn CommentService::remove_thread(
   self : CommentService,
-  thread : CommentThread,
+  thread : @comments_common.CommentThread,
 ) -> Unit {
   let key = thread.resource.to_string()
   guard self.threads_by_resource.get(key) is Some(threads) else { return }

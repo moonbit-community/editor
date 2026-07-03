@@ -41,10 +41,10 @@ Reference trees are research inputs only. Product code must not import from
   layout, geometry, and cursor-column logic.
 - `viewer/common/cursor`, `viewer/common/markers`, `viewer/common/comments`,
   and `viewer/common/languages`: focused DOM-free feature packages used by the
-  viewer. `comments` holds the comment data model + `CommentService` in this
-  host-importable tier (Monaco keeps the types in `editor/common/languages.ts`
-  and the service in the workbench; the facade cannot re-export types, and
-  hosts feed comment data directly — the markers precedent).
+  viewer. `comments` holds the comment thread/comment data model only —
+  Monaco's `editor/common/languages.ts` filing; the `CommentService` lives
+  with its feature in `viewer/contrib/comments` (Monaco's
+  `workbench/contrib/comments/browser/commentService.ts` shape).
 - `viewer/contrib/folding`, `viewer/contrib/hover`, and
   `viewer/contrib/comments`: the DOM-free *models* of Monaco contributions
   (`editor/contrib/{folding,hover}/browser` and
@@ -124,13 +124,28 @@ package (last bullet below). The tiers are:
 MoonBit-toolchain-uncatchable half): every `viewer/browser/**` and
 `viewer/contrib/*/browser/**` package declares `supported_targets = "js"`; no
 `viewer/common/**` or `viewer/contrib/<feature>/` (non-`browser`) package does
-(the DOM-free tiers stay multi-target); and external consumers (the shell, web,
-app, tests) import the root `viewer` package — never a `viewer/browser/**` or
-`viewer/contrib/**` package directly. Native/headless consumers (the shell
-server hosts) may import `viewer/common/**` directly, since the js-only root
-package cannot link on native. The `common → browser` direction is caught
-by `moon check --target all` itself: a multi-target package importing a js-only
-one fails the native build.
+(the DOM-free tiers stay multi-target). The `common → browser` direction is
+caught by `moon check --target all` itself: a multi-target package importing a
+js-only one fails the native build. Likewise `viewer/common/**` never imports
+`viewer/contrib/**` (Monaco: editor core cannot import contribs), enforced by
+the package-cycle checker and that same target discipline.
+
+Imports into the viewer tree follow VS Code's consumer classes
+(`vscode/eslint.config.js`, `code-import-patterns`):
+
+- **Workbench tier** — `internal/shell/**` (except `internal/shell/examples/**`)
+  and `tests/**` may import any viewer package: `internal/shell` consumes
+  viewer internals the way VS Code's workbench consumes `vs/editor/**`
+  (`eslint.config.js:1735`).
+- **External hosts** — `internal/shell/examples/**` and every other product
+  package (`web`, `app`, future hosts) import only the root `viewer` package
+  and `viewer/common/**`: the analog of `monaco-editor` npm consumers behind
+  `editor.api.ts` (`eslint.config.js:1723`). Native/headless consumers (the
+  shell server hosts) import `viewer/common/**` directly, since the js-only
+  root package cannot link on native.
+  `internal/shell/examples/embedded_viewer` imports only `viewer`,
+  `viewer/common/languages`, and `viewer/common/model` — it is the named proof
+  that the public facade suffices for embedding.
 
 ## Reference Shell Map
 
@@ -217,6 +232,19 @@ subpackages.
 - Composition stays explicit. Hosts assemble traits, records, registries, and
   viewer calls; there is no global dependency-injection container.
 
+Controller access (documented pattern; no consumer yet, so no code lands):
+Monaco hosts reach a contribution's controller via
+`FoldingController.get(editor)` — `editor.getContribution<T>(id)`
+(`codeEditorWidget.ts`), a TypeScript downcast. MoonBit cannot downcast a
+trait object, so the faithful rendering is an instance table owned by each
+contrib package: a `Map[String, Controller]` keyed by `editor_id` (the
+WeakMap analog), populated by the feature's contribution ctor and cleared by
+its dispose, with hosts calling `@<feature>.get(viewer.get_id())`. The first
+real consumer (shell folding toggles, comments persistence UI) copies this
+pattern instead of inventing one; today the shell drives features through
+`ViewerServices`, and most feature state still lives as `Viewer` fields
+rather than controller values.
+
 ## Dependency Rules
 
 Read exact dependencies from `moon.pkg` manifests. The stable architectural
@@ -232,6 +260,14 @@ rules are:
   `rabbita/js`), not the Rabbita TEA framework packages.
 - Browser-UI viewer subpackages do not import the parent `viewer` package; the
   edge stays one-directional from `viewer` to those helpers.
+- `viewer/common/**` never imports `viewer/contrib/**` (Monaco: editor core
+  cannot import contribs).
+- `internal/shell/**` (except `internal/shell/examples/**`) and `tests/**` are
+  workbench-tier consumers: they may import any viewer package, including
+  `viewer/browser/**` and `viewer/contrib/**`, the way VS Code's workbench
+  consumes `vs/editor/**`. Every other non-`viewer` package — including the
+  embedding examples — imports only the root `viewer` package and
+  `viewer/common/**` (see the Viewer Three-Tier Mirror section).
 - Concrete `syntax/lang_*` packages are imported by hosts, examples, and tests,
   not by the reusable viewer core.
 
@@ -239,9 +275,10 @@ rules are:
 the MoonBit toolchain cannot catch directly: no reference-tree imports, no
 outside-shell imports of `internal/shell/*`, no Rabbita framework imports
 from `viewer/*` packages, the three-tier target invariants (browser-tier
-packages js-only, common-tier packages multi-target), and no external imports of
-the `viewer/browser/**` or `viewer/contrib/**` internals (see the Viewer
-Three-Tier Mirror section).
+packages js-only, common-tier packages multi-target), and the viewer consumer
+classes (workbench-tier shell/tests import viewer internals freely;
+external-host stand-ins only the root `viewer` package and `viewer/common/**`
+— see the Viewer Three-Tier Mirror section).
 
 ## Build Targets
 

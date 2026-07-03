@@ -2,11 +2,10 @@
 // `vscode/src/vs/editor/common/languages.ts` (`Comment`, `CommentThread`,
 // `CommentThreadCollapsibleState`), trimmed to the viewer's scope: no
 // provider/owner handles, no replies, no reactions, no resolved state, no
-// editing mode enum (edit state lives in the widget). Deviation: Monaco
-// defines these types in `editor/common/languages.ts` and the service in the
-// workbench; the viewer groups both in this host-importable common package
-// (the facade cannot re-export types, and hosts feed comment data directly —
-// the `viewer/common/markers` precedent).
+// editing mode enum (edit state lives in the widget). This common-tier
+// package matches Monaco's filing for the types; the `CommentService` lives
+// with its feature in `viewer/contrib/comments` (Monaco:
+// `workbench/contrib/comments/browser/commentService.ts`).
 
 ///|
 /// `CommentThreadCollapsibleState` (`languages.ts`): whether the thread's

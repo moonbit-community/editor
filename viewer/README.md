@@ -6,6 +6,15 @@ options and services, and the `Viewer::`-facing glue around the browser view.
 `viewer/pkg.generated.mbti` is the reviewable public-API contract; this README
 covers ownership and rules, not the API list.
 
+The public `Viewer::` API is a strict readonly subset of Monaco's
+`IEditor`/`ICodeEditor`: every `pub fn Viewer::*` maps 1:1 to a member of
+those interfaces. Host-facing feature capabilities beyond that subset (the
+comment store, feature controllers, contribution internals) are reached by
+importing the owning feature package — `viewer/contrib/<feature>` or
+`viewer/common/<feature>` — the way VS Code's workbench imports
+`vs/editor/**`; the `Viewer::` surface never grows to carry them (consumer
+classes: `docs/architecture.md`, Viewer Three-Tier Mirror).
+
 It ships without explorer chrome, transport, persistence, file watching, or
 reload policy. Hosts provide readonly `viewer/common/model.TextModel` values
 and call the viewer API. The reference `internal/shell/workbench` is one host;

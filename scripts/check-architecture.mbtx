@@ -161,31 +161,59 @@ fn is_browser_tier(manifest : String) -> Bool {
 }
 
 ///|
-/// The browser tier lives behind the `viewer` facade (`export.mbt`): external
-/// consumers must reach DOM/widget internals through `viewer`, never by
-/// importing a `viewer/browser/**` or `viewer/contrib/**` package directly.
-/// Common-tier (`viewer/common/**`) logic stays importable because the facade
-/// is js-only and native/headless consumers (the shell server hosts) cannot
-/// link it (Decision D2). Same precedent as `check_no_outside_shell_imports`;
-/// vacuously satisfied until the browser/contrib packages exist.
+/// Consumer classes for the viewer tree, copied from VS Code's import rules
+/// (`vscode/eslint.config.js`, `code-import-patterns` + `code-layering`): the
+/// workbench allow list (`eslint.config.js:1735`, workbench contribs `:1792`)
+/// reaches any `vs/editor/**` file directly — editor core keeps its own list
+/// (`:1669`, no contrib imports) and contribs cross-import freely (`:1680`) —
+/// while third parties bind only the `editor.api.ts`/`editor.main.ts` entry
+/// (`:1723`, the `monaco-editor` npm boundary). Mirrored here:
+///   - viewer-internal (`viewer/**`): governed by the tier-target rules above
+///     and the MoonBit cycle checker, not this check.
+///   - workbench tier (`internal/shell/**` except `internal/shell/examples/**`,
+///     plus `tests/**`): may import any viewer package, the way the workbench
+///     imports editor internals.
+///   - external-host stand-ins (`internal/shell/examples/**` and every other
+///     product package — `web`, `app`, future hosts): only the root `viewer`
+///     package and `viewer/common/**`. The root package is the `editor.api.ts`
+///     analog — there is no `export.mbt` facade (Decision D2-REVERSED,
+///     `docs/exec-plans/viewer-directory-mirror.md`); the package itself is
+///     the entry point — and it is js-only, so native/headless hosts (the
+///     shell server hosts) import `viewer/common/**` directly.
+///     `internal/shell/examples/embedded_viewer` is the named proof that this
+///     surface suffices for embedding.
 async fn check_external_viewer_imports(errors : Array[String]) -> Unit {
-  let browser_prefix = "moonbit-community/editor/viewer/browser"
-  let contrib_prefix = "moonbit-community/editor/viewer/contrib"
+  let viewer_prefix = "moonbit-community/editor/viewer"
+  let common_prefix = "moonbit-community/editor/viewer/common"
   for manifest in package_manifests() {
-    if manifest.has_prefix("viewer/") {
+    if manifest.has_prefix("viewer/") || is_workbench_tier(manifest) {
       continue
     }
     for imported in package_imports(@fs.read_file(manifest).text()) {
-      if import_matches(imported, browser_prefix) ||
-        import_matches(imported, contrib_prefix) {
-        errors.push(
-          manifest +
-          " must import the viewer facade (viewer), not the browser-tier package " +
-          imported,
-        )
+      if !import_matches(imported, viewer_prefix) {
+        continue
       }
+      if imported == viewer_prefix || import_matches(imported, common_prefix) {
+        continue
+      }
+      errors.push(
+        manifest +
+        " is an external-host consumer (not the workbench-tier shell/tests) and may import only the root viewer package or viewer/common/**, not " +
+        imported,
+      )
     }
   }
+}
+
+///|
+/// The workbench tier: the reference shell and the test suites consume viewer
+/// internals the way VS Code's workbench consumes `vs/editor/**`. The
+/// embedding examples are excluded — they stand in for external hosts behind
+/// the public surface.
+fn is_workbench_tier(manifest : String) -> Bool {
+  (manifest.has_prefix("internal/shell/") &&
+  !manifest.has_prefix("internal/shell/examples/")) ||
+  manifest.has_prefix("tests/")
 }
 
 ///|

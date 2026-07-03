@@ -4,12 +4,12 @@ package "moonbit-community/editor/viewer"
 import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
-  "moonbit-community/editor/viewer/common/comments",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/editor/viewer/contrib/comments",
   "moonbit-community/rabbita/dom",
   "moonbitlang/core/debug",
 }

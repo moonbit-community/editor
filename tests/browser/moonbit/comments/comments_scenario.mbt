@@ -23,7 +23,11 @@ fn run_comments_test() -> Unit {
   match mount_host() {
     Some((host, event_log)) => {
       let services = @viewer.ViewerServices::new()
-      services.comments.set_current_user_name("tester")
+      // Consume the feature service through its contrib package directly —
+      // the workbench-tier import class (the shell/tests reach viewer
+      // internals the way VS Code's workbench reaches `vs/editor/**`).
+      let comments : @comments_contrib.CommentService = services.comments
+      comments.set_current_user_name("tester")
       let created = Ref(0)
       let updated = Ref(0)
       let deleted = Ref(0)
@@ -34,19 +38,19 @@ fn run_comments_test() -> Unit {
         event_log.set_attribute("data-deleted", deleted.val.to_string())
         event_log.set_attribute("data-last-body", last_body.val)
       }
-      services.comments.on_did_create_comment(event => {
+      comments.on_did_create_comment(event => {
         created.val = created.val + 1
         last_body.val = event.comment.body
         write_log()
       })
       |> ignore
-      services.comments.on_did_update_comment(event => {
+      comments.on_did_update_comment(event => {
         updated.val = updated.val + 1
         last_body.val = event.comment.body
         write_log()
       })
       |> ignore
-      services.comments.on_did_delete_comment(event => {
+      comments.on_did_delete_comment(event => {
         deleted.val = deleted.val + 1
         last_body.val = event.comment.body
         write_log()
@@ -55,8 +59,8 @@ fn run_comments_test() -> Unit {
       write_log()
       // Seed the store before the model attaches: `set_model`'s comment sync
       // must pick the data up.
-      services.comments.set_commenting_ranges(uri, [Range(1, 1, 6, 1)])
-      services.comments.set_comment_threads(uri, [seed_thread(uri)])
+      comments.set_commenting_ranges(uri, [Range(1, 1, 6, 1)])
+      comments.set_comment_threads(uri, [seed_thread(uri)])
       let viewer = @viewer.Viewer::create(
         host,
         services~,

@@ -651,3 +651,22 @@ hover Phases 6–7; hover sashes/resize.
   suite green.
 - Each track's inventory pasted into this file before its port code; every
   new non-source-cited line appears in a Deviations note (playbook Phase 3).
+
+## Addendum (2026-07-03): `CommentService` re-homed — one "stays" row superseded
+
+`docs/exec-plans/viewer-import-rule-monaco-alignment.md` aligned the
+external-consumer import rule with VS Code's workbench rules (three consumer
+classes; `internal/shell/**` and `tests/**` may now import
+`viewer/contrib/**` directly) and moved `CommentService` — with its
+thread-changed and mutation events — from `viewer/common/comments` to
+`viewer/contrib/comments`. The thread/comment types stay in
+`viewer/common/comments` (Monaco's `editor/common/languages.ts` filing).
+
+This supersedes the "Deviations that stay" row *"`CommentService` in
+`viewer/common/comments` (Monaco: workbench contrib)"*: its justification
+("check-architecture forbids host imports of `contrib/**`") no longer holds.
+The residual deviation is re-justified — the service sits in
+`viewer/contrib/comments` rather than shell-side because comments ship as a
+reusable viewer feature (product scope, user decision of 2026-07-03), not
+because the import rule forces it; within the tree we own, the filing now
+mirrors Monaco's feature-owns-its-service shape.

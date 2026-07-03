@@ -25,6 +25,10 @@ pub(all) struct ViewRenderInput {
   /// change dispatches `ViewDecorationsChanged` (plan Deviation 3).
   decorations_generation : Int
   gutter_width : Double
+  /// Width of the line-decorations lane inside the gutter,
+  /// `layoutInfo.decorationsWidth` (the margin part renders the lane at
+  /// `left = gutter_width - line_decorations_width`).
+  line_decorations_width : Double
   space_width : Double
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool

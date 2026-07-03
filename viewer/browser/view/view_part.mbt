@@ -323,9 +323,10 @@ impl ViewPart for @margin.MarginViewOverlays with fn on_view_event(_self, event)
   match event {
     ViewFlushed => true
     ViewLinesChanged => true
-    // The glyph-margin view part is deferred; margin decorations do not
-    // render yet (`onDecorationsChanged` → false).
-    ViewDecorationsChanged => false
+    // The line-decorations lane renders margin decorations
+    // (`LinesDecorationsOverlay.onDecorationsChanged` → true); the
+    // glyph-margin view part stays deferred.
+    ViewDecorationsChanged => true
     ViewScrollChanged(e) => e.window_changed || e.position_changed
     ViewConfigurationChanged(e) => e.gutter_width_changed
     ViewLineMappingChanged => true
@@ -366,6 +367,24 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
     Some(selection) => selection.is_empty()
     None => true
   }
+  // `ctx.getDecorationsInViewport()` (`linesDecorations.ts:73`): the same
+  // cached viewport decoration collection the content overlays read.
+  let decorations = match context.input.view_model {
+    Some(view_model) => {
+      let visible = context.viewport.visible_range
+      view_model
+      .decorations()
+      .get_decorations_viewport_data(
+        Range(
+          visible.start_line_number,
+          visible.start_column,
+          visible.end_line_number,
+          visible.end_column,
+        ),
+      ).decorations
+    }
+    None => []
+  }
   self.prepared = Some({
     frame: context.input.frame,
     viewport: context.viewport,
@@ -374,6 +393,8 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
     folded_ranges: context.input.folded_ranges,
     on_toggle_fold: context.input.on_toggle_fold,
     generation: context.input.generation,
+    decorations,
+    line_decorations_width: context.input.line_decorations_width,
     cursor_view_line,
     selection_is_empty,
     editor_has_focus: context.input.editor_has_focus,
@@ -411,13 +432,44 @@ impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
         prepared.folded_ranges,
         on_toggle_fold=prepared.on_toggle_fold,
       )
+      // `layoutInfo.decorationsLeft`: the lane sits between the line numbers
+      // and the content. Deviation vs. Monaco: the viewer keeps line numbers
+      // and folding markers in the line-number band (Monaco renders folding
+      // chevrons *as* lane decorations), so those layers are constrained to
+      // `line_numbers_width` instead of the full margin.
+      let line_numbers_width = context.gutter_width -
+        prepared.line_decorations_width
+      let to_render = @view_model.lines_decorations_to_render(
+        prepared.decorations,
+      )
+      let class_names_per_line = @view_model.dedup_margin_decorations(
+        prepared.viewport.start_line_number,
+        prepared.viewport.start_line_number +
+        prepared.viewport.lines.length() -
+        1,
+        to_render,
+      )
+      self.render_lines_decorations(
+        prepared.viewport,
+        class_names_per_line,
+        decorations_left=line_numbers_width,
+        decorations_width=prepared.line_decorations_width,
+      )
       self.margin.set_attribute(
         "style",
         "width:" + context.gutter_width.to_string() + "px",
       )
+      let band_constraint = ";width:" + line_numbers_width.to_string() + "px"
       self.current_line.set_attribute("style", context.margin_transform)
-      self.line_numbers.set_attribute("style", context.margin_transform)
-      self.folding.set_attribute("style", context.margin_transform)
+      self.line_numbers.set_attribute(
+        "style",
+        context.margin_transform + band_constraint,
+      )
+      self.folding.set_attribute(
+        "style",
+        context.margin_transform + band_constraint,
+      )
+      self.lines_decorations.set_attribute("style", context.margin_transform)
     }
     None => ()
   }

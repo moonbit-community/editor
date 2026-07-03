@@ -1,0 +1,15 @@
+/* The line-decorations gutter lane (Monaco `linesDecorations.css` +
+   `glyphMargin.css` `.cldr`): a margin layer of absolutely-positioned pieces
+   between the line numbers and the content. Each `.cldr` carries inline
+   left/width/top/height (see lines_decorations.mbt). */
+.lines-decorations {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  will-change: transform;
+}
+
+.lines-decorations .cldr {
+  position: absolute;
+}

@@ -20,6 +20,12 @@ pub(all) struct ViewerOptions {
   /// The message shown while the viewer has no rendered frame — Monaco's
   /// `placeholder` editor option.
   placeholder : String
+  /// Width in pixels of the line-decorations gutter lane between the line
+  /// numbers and the content — Monaco's `lineDecorationsWidth` editor option.
+  /// `0` (the default) renders no lane, keeping the gutter pixel-identical to
+  /// the pre-lane viewer; features that draw gutter decorations (e.g.
+  /// comments) reserve their lane through `update_options`.
+  line_decorations_width : Int
 } derive(Eq, Debug)
 
 ///|
@@ -43,6 +49,7 @@ pub fn ViewerOptions::ViewerOptions(
   render_validation_decorations? : @view_model.RenderValidationDecorations = On,
   theme? : String = "dark",
   placeholder? : String = "",
+  line_decorations_width? : Int = 0,
 ) -> ViewerOptions {
   {
     soft_wrap,
@@ -55,6 +62,7 @@ pub fn ViewerOptions::ViewerOptions(
     render_validation_decorations,
     theme,
     placeholder,
+    line_decorations_width: line_decorations_width.max(0),
   }
 }
 

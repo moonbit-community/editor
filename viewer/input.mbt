@@ -251,9 +251,10 @@ fn Viewer::measured_char_width(self : Viewer) -> Double {
 }
 
 ///|
-/// The margin width: digit slots (at least the old `min-width: 5ch`)
-/// plus the gutter padding, in measured glyph advances.
-fn Viewer::gutter_width(
+/// The line-number band width: digit slots (at least the old `min-width: 5ch`)
+/// plus the gutter padding, in measured glyph advances — Monaco's
+/// `layoutInfo.lineNumbersWidth`.
+fn Viewer::line_numbers_width(
   self : Viewer,
   frame : @view_model.RenderFrame,
 ) -> Double {
@@ -265,6 +266,18 @@ fn Viewer::gutter_width(
   }
   slots.to_double() * self.measured_char_width() +
   @core.gutter_padding_px.to_double()
+}
+
+///|
+/// The full margin width: the line-number band plus the line-decorations
+/// lane — Monaco's `layoutInfo.contentLeft` (the viewer has no glyph margin,
+/// so `contentLeft = lineNumbersWidth + decorationsWidth`).
+fn Viewer::gutter_width(
+  self : Viewer,
+  frame : @view_model.RenderFrame,
+) -> Double {
+  self.line_numbers_width(frame) +
+  self.options.line_decorations_width.to_double()
 }
 
 ///|

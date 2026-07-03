@@ -158,6 +158,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         generation: self.content_generation,
         decorations_generation: self.decorations_generation,
         gutter_width: self.gutter_width(frame),
+        line_decorations_width: self.options.line_decorations_width.to_double(),
         space_width: self.measured_char_width(),
         render_whitespace: self.options.render_whitespace,
         render_control_characters: self.options.render_control_characters,

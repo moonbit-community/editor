@@ -344,10 +344,10 @@ fn Viewer::vertical_offset_after_position(
 ///|
 /// The reduced `EditorLayoutInfo`, Monaco's `getLayoutInfo` (`cew:1472`) trimmed
 /// to the parts the viewer renders and the read API consumes. The minimap /
-/// overview-ruler / glyph-margin fields Monaco carries are omitted; the viewer
-/// has no glyph margin or decorations gutter, so those widths are `0` and
-/// `content_left = line_numbers_width` is exactly the offset
-/// `get_scrolled_visible_position` adds.
+/// overview-ruler fields Monaco carries are omitted; the viewer has no glyph
+/// margin, so that width is `0` and
+/// `content_left = line_numbers_width + decorations_width` is exactly the
+/// offset `get_scrolled_visible_position` adds.
 pub(all) struct EditorLayoutInfo {
   width : Double
   height : Double
@@ -370,20 +370,27 @@ pub(all) struct ScrolledVisiblePosition {
 ///|
 /// Reduced editor layout info, Monaco's `CodeEditorWidget.getLayoutInfo`
 /// (`cew:1472`). Backed by the viewer's measured gutter width and content box;
-/// `content_left` is the line-number gutter (glyph-margin and decorations widths
-/// are `0`). Like Monaco this does not gate on a model.
+/// `content_left` is the full margin (line numbers plus the line-decorations
+/// lane; the glyph-margin width is `0`). Like Monaco this does not gate on a
+/// model.
 pub fn Viewer::get_layout_info(self : Viewer) -> EditorLayoutInfo {
   let content_left = self.read_api_content_left()
   let content_width = self.view_layout.dimensions().width
   let height = self.view_layout.dimensions().height
+  let decorations_width = if content_left > 0.0 {
+    self.options.line_decorations_width.to_double()
+  } else {
+    // No frame → no gutter at all; report the lane as absent too.
+    0.0
+  }
   {
     width: content_left + content_width,
     height,
     content_left,
     content_width,
-    line_numbers_width: content_left,
+    line_numbers_width: content_left - decorations_width,
     glyph_margin_width: 0.0,
-    decorations_width: 0.0,
+    decorations_width,
   }
 }
 

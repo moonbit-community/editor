@@ -74,6 +74,8 @@ pub const STANDARD_TOKEN_TYPE_STRING : Int = 2
 
 pub fn build_frame(FrameSource, FrameViewport) -> RenderFrame
 
+pub fn dedup_margin_decorations(Int, Int, Array[DecorationToRender]) -> Array[Array[String]]
+
 pub fn default_token_color_map() -> Array[String]
 
 pub fn filter_validation_decorations(RenderValidationDecorations) -> Bool
@@ -85,6 +87,8 @@ pub fn line_decorations_filter(Array[@inline_decorations.InlineDecoration], Int,
 pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.Decoration], Int, RenderLine) -> Array[@view_layout.LineDecoration]
 
 pub fn line_tokens_from_syntax_tokens(String, Int, Array[@syntax.Token], LanguageIdCodec, language_id? : Int) -> LineTokens
+
+pub fn lines_decorations_to_render(Array[@inline_decorations.ViewModelDecoration[@model.Decoration]]) -> Array[DecorationToRender]
 
 pub fn render_line_input_from_render_line(RenderLine, line_decorations? : Array[@view_layout.LineDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
 
@@ -109,6 +113,13 @@ pub fn viewport_data_from_view_model(ViewModel, @view_layout.LineWindow, line_he
 // Errors
 
 // Types and methods
+pub(all) struct DecorationToRender {
+  start_line_number : Int
+  end_line_number : Int
+  class_name : String
+  z_index : Int
+} derive(Eq, @debug.Debug)
+
 pub struct FoldingModel {
   folding_ranges : Array[@language.FoldingRange]
   hidden_ranges : Array[HiddenRange]

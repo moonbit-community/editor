@@ -77,6 +77,7 @@ pub(all) struct ViewRenderInput {
   generation : Int
   decorations_generation : Int
   gutter_width : Double
+  line_decorations_width : Double
   space_width : Double
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool

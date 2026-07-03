@@ -16,6 +16,11 @@ pub(all) struct MarginViewOverlaysPrepared {
   folded_ranges : Array[@language.FoldingRange]
   on_toggle_fold : (Int) -> Unit
   generation : Int
+  /// Viewport decorations for the line-decorations lane
+  /// (`LinesDecorationsOverlay`; see `lines_decorations.mbt`).
+  decorations : Array[@view_model.ViewModelDecoration]
+  /// The lane width, `layoutInfo.decorationsWidth`. `0` renders no lane.
+  line_decorations_width : Double
   /// Current-line margin highlight inputs (`currentLineHighlight.ts`; see
   /// `current_line_highlight.mbt`).
   cursor_view_line : Int?
@@ -31,6 +36,7 @@ pub(all) struct MarginViewOverlays {
   margin : @rdom.Element
   current_line : @rdom.Element
   folding : @rdom.Element
+  lines_decorations : @rdom.Element
   line_numbers : @rdom.Element
   line_number_nodes : Array[@rdom.Element]
   mut line_number_window : @view_layout.LineWindow
@@ -56,17 +62,25 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
   let folding = document.create_element("div")
   folding.set_attribute("class", "view-layer folding")
   folding.set_attribute("data-view-part", "folding")
+  // The line-decorations lane renders before line numbers, preserving
+  // Monaco's margin dynamic-overlay registration order
+  // (`LinesDecorationsOverlay` before `LineNumbersOverlay`, `view.ts`).
+  let lines_decorations = document.create_element("div")
+  lines_decorations.set_attribute("class", "view-layer lines-decorations")
+  lines_decorations.set_attribute("data-view-part", "lines-decorations")
   let line_numbers = document.create_element("div")
   line_numbers.set_attribute("class", "view-layer line-numbers")
   line_numbers.set_attribute("data-view-part", "line-numbers")
   margin_view_overlays.append_child(current_line.as_node())
   margin_view_overlays.append_child(folding.as_node())
+  margin_view_overlays.append_child(lines_decorations.as_node())
   margin_view_overlays.append_child(line_numbers.as_node())
   margin.append_child(margin_view_overlays.as_node())
   {
     margin,
     current_line,
     folding,
+    lines_decorations,
     line_numbers,
     line_number_nodes: [],
     line_number_window: { start: 0, end: 0 },

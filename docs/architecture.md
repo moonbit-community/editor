@@ -39,15 +39,21 @@ Reference trees are research inputs only. Product code must not import from
 - `viewer/common/view_model`, `viewer/common/view_layout` (with the view-line
   renderer merged in), and `viewer/common/core`: DOM-free rendering, projection,
   layout, geometry, and cursor-column logic.
-- `viewer/common/cursor`, `viewer/common/markers`, and `viewer/common/languages`:
-  focused DOM-free feature packages used by the viewer.
-- `viewer/contrib/folding` and `viewer/contrib/hover`: the DOM-free *models* of
-  Monaco contributions (`editor/contrib/{folding,hover}/browser` in Monaco, which
-  has no native target). They stay **multi-target** so the native check keeps
-  enforcing DOM-freeness; the js-only DOM controllers/widgets land in
-  `viewer/contrib/{folding,hover}/browser` in a later increment. `common` code
-  never imports these (the folding indent fallback was inverted into the folding
-  controller so the tier flows `contrib -> common`, not the reverse).
+- `viewer/common/cursor`, `viewer/common/markers`, `viewer/common/comments`,
+  and `viewer/common/languages`: focused DOM-free feature packages used by the
+  viewer. `comments` holds the comment data model + `CommentService` in this
+  host-importable tier (Monaco keeps the types in `editor/common/languages.ts`
+  and the service in the workbench; the facade cannot re-export types, and
+  hosts feed comment data directly — the markers precedent).
+- `viewer/contrib/folding`, `viewer/contrib/hover`, and
+  `viewer/contrib/comments`: the DOM-free *models* of Monaco contributions
+  (`editor/contrib/{folding,hover}/browser` and
+  `workbench/contrib/comments/browser` in Monaco, which has no native target).
+  They stay **multi-target** so the native check keeps enforcing DOM-freeness;
+  js-only DOM controllers/widgets live in `viewer/contrib/<feature>/browser`
+  (populated for `comments` and `zone_widget`). `common` code never imports
+  these (the folding indent fallback was inverted into the folding controller
+  so the tier flows `contrib -> common`, not the reverse).
 - `viewer/common`: a shrinking residual of the former grab-bag (`line_html`,
   `mouse_target`). The DOM-free hit-testing value types and algorithm stay
   here (not in the js-only `viewer/browser/controller`) because the
@@ -91,15 +97,17 @@ package (last bullet below). The tiers are:
   the input controller. Mirrors `editor/browser/*`. **js-only**
   (`supported_targets = "js"`).
 - `viewer/contrib/<feature>/` — the DOM-free *model* of a Monaco contribution
-  (`folding`, `hover`). **Multi-target**, like the common tier. Divergence from
-  Monaco (which files these under `contrib/*/browser` because it has no native
-  target): the viewer hoists the DOM-free logic up so the native check keeps
-  enforcing DOM-freeness.
+  (`folding`, `hover`, `comments`). **Multi-target**, like the common tier.
+  Divergence from Monaco (which files these under `contrib/*/browser` because
+  it has no native target): the viewer hoists the DOM-free logic up so the
+  native check keeps enforcing DOM-freeness.
 - `viewer/contrib/<feature>/browser/**` — the js-only DOM half of a contribution
-  (controllers/widgets). Mirrors `editor/contrib/*/browser`. **js-only**. Not
-  populated for `hover`: the DOM-free hover state machine already covers it
-  (see above); the only DOM-touching hover code is `content_widgets` and the
-  root package's dispatch glue.
+  (controllers/widgets). Mirrors `editor/contrib/*/browser`. **js-only**.
+  Populated for `zone_widget` (the `zoneWidget.ts` port: spacer view zone +
+  overlay widget) and `comments` (the thread widget over it). Not populated
+  for `hover`: the DOM-free hover state machine already covers it (see above);
+  the only DOM-touching hover code is `content_widgets` and the root package's
+  dispatch glue.
 - root `viewer` — the one deliberate exception to directory-granularity: it
   holds the top-level `Viewer`/`ViewerOptions`/public read-API implementation
   directly (Monaco's `editor/browser/widget/codeEditor/` role) and doubles as

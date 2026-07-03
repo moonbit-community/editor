@@ -1,0 +1,80 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/common/comments"
+
+import {
+  "moonbit-community/editor/base/common",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct Comment {
+  unique_id_in_thread : Int
+  body : String
+  user_name : String
+  timestamp : String?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CommentMutationEvent {
+  thread : CommentThread
+  comment : Comment
+} derive(@debug.Debug)
+
+pub struct CommentService {
+  did_update_comment_threads : @common.Emitter[CommentThreadChangedEvent]
+  did_change_commenting_ranges : @common.Emitter[@common.Uri]
+  did_create_comment : @common.Emitter[CommentMutationEvent]
+  did_update_comment : @common.Emitter[CommentMutationEvent]
+  did_delete_comment : @common.Emitter[CommentMutationEvent]
+  threads_by_resource : Map[String, Array[CommentThread]]
+  ranges_by_resource : Map[String, Array[@common.Range]]
+  mut next_thread_handle : Int
+  mut current_user_name : String
+}
+pub fn CommentService::commenting_ranges(Self, @common.Uri) -> Array[@common.Range]
+pub fn CommentService::create_thread_template(Self, @common.Uri, Int) -> CommentThread
+pub fn CommentService::delete_comment(Self, String, Int) -> Unit
+pub fn CommentService::discard_template(Self, String) -> Unit
+pub fn CommentService::dispose(Self) -> Unit
+pub fn CommentService::new() -> Self
+pub fn CommentService::on_did_change_commenting_ranges(Self, (@common.Uri) -> Unit) -> @common.Disposable
+pub fn CommentService::on_did_create_comment(Self, (CommentMutationEvent) -> Unit) -> @common.Disposable
+pub fn CommentService::on_did_delete_comment(Self, (CommentMutationEvent) -> Unit) -> @common.Disposable
+pub fn CommentService::on_did_update_comment(Self, (CommentMutationEvent) -> Unit) -> @common.Disposable
+pub fn CommentService::on_did_update_comment_threads(Self, (CommentThreadChangedEvent) -> Unit) -> @common.Disposable
+pub fn CommentService::set_comment_threads(Self, @common.Uri, Array[CommentThread]) -> Unit
+pub fn CommentService::set_commenting_ranges(Self, @common.Uri, Array[@common.Range]) -> Unit
+pub fn CommentService::set_current_user_name(Self, String) -> Unit
+pub fn CommentService::submit_new_comment(Self, String, String, timestamp? : String) -> Unit
+pub fn CommentService::thread_by_id(Self, String) -> CommentThread?
+pub fn CommentService::threads(Self, @common.Uri) -> Array[CommentThread]
+pub fn CommentService::update_comment(Self, String, Int, String) -> Unit
+
+pub(all) struct CommentThread {
+  thread_id : String
+  resource : @common.Uri
+  range : @common.Range
+  comments : Array[Comment]
+  mut collapsible_state : CommentThreadCollapsibleState
+  mut is_template : Bool
+} derive(@debug.Debug)
+
+pub(all) struct CommentThreadChangedEvent {
+  resource : @common.Uri
+  added : Array[CommentThread]
+  removed : Array[CommentThread]
+  changed : Array[CommentThread]
+} derive(@debug.Debug)
+
+pub(all) enum CommentThreadCollapsibleState {
+  Collapsed
+  Expanded
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

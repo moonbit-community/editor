@@ -29,15 +29,22 @@ pub fn Viewer::change_view_zones(
 }
 
 ///|
-/// Adds or replaces a view zone by id.
+/// Adds or replaces a view zone by id. `on_dom_node_top`/`on_computed_height`
+/// are `IViewZone.onDomNodeTop`/`onComputedHeight`: fired on every render
+/// with the zone's viewport-relative top / computed height, so widgets riding
+/// the zone (zone widgets) can position themselves.
 pub fn ViewZoneChangeAccessor::add_zone(
   self : ViewZoneChangeAccessor,
   id : String,
   anchor_line : Int,
   height_px : Int,
   node : @rdom.Element,
+  on_dom_node_top? : (Double) -> Unit,
+  on_computed_height? : (Int) -> Unit,
 ) -> Unit {
-  self.viewer.upsert_view_zone(id, anchor_line, height_px, node)
+  self.viewer.upsert_view_zone(
+    id, anchor_line, height_px, node, on_dom_node_top, on_computed_height,
+  )
 }
 
 ///|
@@ -48,8 +55,12 @@ pub fn ViewZoneChangeAccessor::update_zone(
   anchor_line : Int,
   height_px : Int,
   node : @rdom.Element,
+  on_dom_node_top? : (Double) -> Unit,
+  on_computed_height? : (Int) -> Unit,
 ) -> Unit {
-  self.viewer.upsert_view_zone(id, anchor_line, height_px, node)
+  self.viewer.upsert_view_zone(
+    id, anchor_line, height_px, node, on_dom_node_top, on_computed_height,
+  )
 }
 
 ///|
@@ -73,8 +84,17 @@ fn Viewer::upsert_view_zone(
   anchor_line : Int,
   height_px : Int,
   node : @rdom.Element,
+  on_dom_node_top : ((Double) -> Unit)?,
+  on_computed_height : ((Int) -> Unit)?,
 ) -> Unit {
-  let zone : @view_zones.BrowserViewZone = { id, anchor_line, height_px, node }
+  let zone : @view_zones.BrowserViewZone = {
+    id,
+    anchor_line,
+    height_px,
+    node,
+    on_dom_node_top,
+    on_computed_height,
+  }
   for index in 0..<self.view_zones.length() {
     if self.view_zones[index].id == id {
       self.view_zones[index] = zone

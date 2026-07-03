@@ -16,6 +16,8 @@ pub(all) struct BrowserViewZone {
   anchor_line : Int
   height_px : Int
   node : @dom.Element
+  on_dom_node_top : ((Double) -> Unit)?
+  on_computed_height : ((Int) -> Unit)?
 }
 
 pub(all) struct ViewZones {
@@ -25,7 +27,7 @@ pub(all) struct ViewZones {
 }
 pub fn ViewZones::dom(Self) -> @dom.Element
 pub fn ViewZones::new(@dom.Document) -> Self
-pub fn ViewZones::render_view_zones(Self, Array[BrowserViewZone], @view_layout.ViewportData) -> Unit
+pub fn ViewZones::render_view_zones(Self, Array[BrowserViewZone], @view_layout.ViewportData, Double) -> Unit
 
 pub(all) struct ViewZonesPrepared {
   zones : Array[BrowserViewZone]

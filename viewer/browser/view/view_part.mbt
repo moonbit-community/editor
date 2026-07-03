@@ -214,7 +214,11 @@ impl ViewPart for @view_zones.ViewZones with fn prepare_render(self, context) {
 impl ViewPart for @view_zones.ViewZones with fn render(self, context) {
   match self.prepared {
     Some(prepared) => {
-      self.render_view_zones(prepared.zones, prepared.viewport)
+      self.render_view_zones(
+        prepared.zones,
+        prepared.viewport,
+        context.translate_y,
+      )
       self.view_zones.set_attribute("style", context.content_transform)
     }
     None => ()

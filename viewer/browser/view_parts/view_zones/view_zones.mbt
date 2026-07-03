@@ -16,6 +16,13 @@ pub(all) struct BrowserViewZone {
   anchor_line : Int
   height_px : Int
   node : @rdom.Element
+  /// `IViewZone.onDomNodeTop`: called on render with the zone's
+  /// viewport-relative top (widgets riding the zone position themselves from
+  /// it). Zones outside the rendered viewport report a large negative top so
+  /// followers park offscreen (`viewZones.ts:396`).
+  on_dom_node_top : ((Double) -> Unit)?
+  /// `IViewZone.onComputedHeight`: called on render with the zone's height.
+  on_computed_height : ((Int) -> Unit)?
 }
 
 ///|
@@ -52,12 +59,15 @@ pub fn ViewZones::render_view_zones(
   self : ViewZones,
   zones : Array[BrowserViewZone],
   viewport : @view_layout.ViewportData,
+  translate_y : Double,
 ) -> Unit {
   self.view_zones.set_inner_html("")
+  let visible = Array::make(zones.length(), false)
   for data in viewport.view_zones {
     if data.zone_index < 0 || data.zone_index >= zones.length() {
       continue
     }
+    visible[data.zone_index] = true
     let zone = zones[data.zone_index]
     zone.node.set_attribute("class", "view-zone")
     zone.node.set_attribute("data-view-zone-id", zone.id)
@@ -66,8 +76,35 @@ pub fn ViewZones::render_view_zones(
       view_zone_style(data.relative_vertical_offset, data.height_px),
     )
     self.view_zones.append_child(zone.node.as_node())
+    // `_safeCallOnComputedHeight` / `_safeCallOnDomNodeTop`
+    // (`viewZones.ts:336-352`, invoked from `render` :382-395). The
+    // viewport-relative top is the window-relative offset plus the content
+    // translate — the analog of `getScrolledTopFromAbsoluteTop`.
+    match zone.on_computed_height {
+      Some(callback) => callback(data.height_px)
+      None => ()
+    }
+    match zone.on_dom_node_top {
+      Some(callback) =>
+        callback(data.relative_vertical_offset.to_double() + translate_y)
+      None => ()
+    }
+  }
+  // Zones outside the rendered viewport park their followers offscreen
+  // (`viewZones.ts:396` `getScrolledTopFromAbsoluteTop(-1000000)`).
+  for index in 0..<zones.length() {
+    if !visible[index] {
+      match zones[index].on_dom_node_top {
+        Some(callback) => callback(offscreen_zone_top)
+        None => ()
+      }
+    }
   }
 }
+
+///|
+/// `viewZones.ts:396`: the parked top for zones outside the viewport.
+let offscreen_zone_top : Double = -1000000.0
 
 ///|
 fn view_zone_style(top : Int, height : Int) -> String {

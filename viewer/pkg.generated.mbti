@@ -96,9 +96,9 @@ pub(all) struct ScrolledVisiblePosition {
 pub struct ViewZoneChangeAccessor {
   // private fields
 }
-pub fn ViewZoneChangeAccessor::add_zone(Self, String, Int, Int, @dom.Element) -> Unit
+pub fn ViewZoneChangeAccessor::add_zone(Self, String, Int, Int, @dom.Element, on_dom_node_top? : (Double) -> Unit, on_computed_height? : (Int) -> Unit) -> Unit
 pub fn ViewZoneChangeAccessor::remove_zone(Self, String) -> Unit
-pub fn ViewZoneChangeAccessor::update_zone(Self, String, Int, Int, @dom.Element) -> Unit
+pub fn ViewZoneChangeAccessor::update_zone(Self, String, Int, Int, @dom.Element, on_dom_node_top? : (Double) -> Unit, on_computed_height? : (Int) -> Unit) -> Unit
 
 pub struct Viewer {
   // private fields

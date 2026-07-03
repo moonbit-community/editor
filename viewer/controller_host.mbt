@@ -30,6 +30,8 @@ fn Viewer::pointer_handler_helper(
       })
     },
     notify_mouse_moved: target => self.on_editor_mouse_move(target),
+    notify_mouse_down: target => self.on_comments_mouse_down(target),
+    notify_mouse_up: target => self.on_comments_mouse_up(target),
     schedule_render: () => self.schedule_render(),
   }
 }

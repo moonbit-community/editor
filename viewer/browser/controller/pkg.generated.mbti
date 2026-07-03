@@ -39,6 +39,7 @@ pub fn MouseHandler::finish_selection(Self) -> Unit
 pub fn MouseHandler::handle_editor_wheel(Self, @dom.WheelEvent) -> Unit
 pub fn MouseHandler::handle_mouse_down(Self, @dom.Event, @dom.MouseEvent) -> Unit
 pub fn MouseHandler::handle_mouse_move(Self, @dom.MouseEvent) -> Unit
+pub fn MouseHandler::handle_mouse_up(Self, @dom.MouseEvent) -> Unit
 pub fn MouseHandler::handle_scrollable_drag_move(Self, @dom.Event) -> Unit
 pub fn MouseHandler::handle_selection_drag_move(Self, @dom.Event) -> Unit
 pub fn MouseHandler::hook_browser_desperate_reveal(Self) -> Unit
@@ -58,6 +59,8 @@ pub(all) struct PointerHandlerHelper {
   refine_content_target : (@view_model.RenderFrame, Double, Double, @moonbit-community/editor/viewer/common.MouseTarget) -> @moonbit-community/editor/viewer/common.MouseTarget
   dispatch_mouse : (MouseDispatch) -> Unit
   notify_mouse_moved : (@moonbit-community/editor/viewer/common.MouseTarget) -> Unit
+  notify_mouse_down : (@moonbit-community/editor/viewer/common.MouseTarget) -> Unit
+  notify_mouse_up : (@moonbit-community/editor/viewer/common.MouseTarget) -> Unit
   schedule_render : () -> Unit
 }
 

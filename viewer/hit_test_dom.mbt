@@ -126,5 +126,6 @@ fn Viewer::dom_refine_content_target(
     column: column0,
     token_index: -1,
     injected_text_index: line.injected_text_index_at_column(column0),
+    gutter_offset_x: 0.0,
   }
 }

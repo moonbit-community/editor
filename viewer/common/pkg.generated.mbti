@@ -27,10 +27,12 @@ pub(all) struct MouseTarget {
   column : Int
   token_index : Int
   injected_text_index : Int
+  gutter_offset_x : Double
 } derive(Eq, @debug.Debug)
 
 pub(all) enum MouseTargetKind {
   GutterLineNumbers
+  GutterLineDecorations
   ContentText
   ContentEmpty
   BelowContent
@@ -46,6 +48,7 @@ pub(all) struct ViewMetrics {
   line_height : Int
   char_width : Double
   gutter_width : Double
+  line_decorations_width : Double
   view_zones : Array[@view_layout.ViewZone]
 } derive(@debug.Debug)
 

@@ -65,6 +65,7 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
 fn test_metrics(
   scroll_top? : Double = 0.0,
   scroll_left? : Double = 0.0,
+  line_decorations_width? : Double = 0.0,
   view_zones? : Array[@view_layout.ViewZone] = [],
 ) -> @common.ViewMetrics {
   {
@@ -76,6 +77,7 @@ fn test_metrics(
     line_height: 18,
     char_width: 8.0,
     gutter_width: 50.0,
+    line_decorations_width,
     view_zones,
   }
 }
@@ -130,6 +132,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  column: 0,
       #|  token_index: -1,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
@@ -143,6 +146,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  column: 3,
       #|  token_index: 2,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
@@ -156,9 +160,35 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  column: 30,
       #|  token_index: -1,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
+}
+
+///|
+test "hit test splits the gutter into line numbers and the decorations lane" {
+  let frame = hit_test_frame()
+  let metrics = test_metrics(line_decorations_width=24.0)
+  // Left of the lane boundary (gutter_width 50 - lane 24 = 26): line numbers.
+  let numbers = @common.hit_test(frame, metrics, 25.0, 4.0)
+  assert_true(numbers.kind == GutterLineNumbers)
+  assert_eq(numbers.line_number, 1)
+  assert_eq(numbers.gutter_offset_x, 0.0)
+  // At and past the boundary: the line-decorations lane, with the offset
+  // measured from the lane's left edge (Monaco's comment gate reads it as
+  // `gutterOffsetX`).
+  let lane = @common.hit_test(frame, metrics, 26.0, 4.0)
+  assert_true(lane.kind == GutterLineDecorations)
+  assert_eq(lane.line_number, 1)
+  assert_eq(lane.gutter_offset_x, 0.0)
+  let lane_inner = @common.hit_test(frame, metrics, 40.0, 18.0 + 4.0)
+  assert_true(lane_inner.kind == GutterLineDecorations)
+  assert_eq(lane_inner.line_number, 2)
+  assert_eq(lane_inner.gutter_offset_x, 14.0)
+  // With no lane configured the whole band stays line numbers.
+  let no_lane = @common.hit_test(frame, test_metrics(), 40.0, 4.0)
+  assert_true(no_lane.kind == GutterLineNumbers)
 }
 
 ///|
@@ -174,6 +204,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  column: 2,
       #|  token_index: 1,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
@@ -187,6 +218,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  column: 0,
       #|  token_index: -1,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
@@ -200,6 +232,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  column: 0,
       #|  token_index: -1,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
@@ -219,6 +252,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  column: 0,
       #|  token_index: -1,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
@@ -232,6 +266,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  column: 2,
       #|  token_index: 1,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
@@ -245,6 +280,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  column: 3,
       #|  token_index: 2,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
@@ -264,6 +300,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|  column: 3,
       #|  token_index: -1,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )
@@ -278,6 +315,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|  column: 0,
       #|  token_index: -1,
       #|  injected_text_index: -1,
+      #|  gutter_offset_x: 0,
       #|}
     ),
   )

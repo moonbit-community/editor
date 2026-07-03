@@ -75,6 +75,12 @@ pub(all) struct PointerHandlerHelper {
   dispatch_mouse : (MouseDispatch) -> Unit
   /// Report a hover-relevant mouse move (Monaco's `ViewUserInputEvents` move).
   notify_mouse_moved : (@viewer_common.MouseTarget) -> Unit
+  /// Report a left-button mousedown's hit-tested target — Monaco's
+  /// `ViewController.emitMouseDown` (`mouseHandler.ts` `_onMouseDown` tail).
+  notify_mouse_down : (@viewer_common.MouseTarget) -> Unit
+  /// Report a left-button mouseup's hit-tested target — Monaco's
+  /// `ViewController.emitMouseUp`.
+  notify_mouse_up : (@viewer_common.MouseTarget) -> Unit
   /// Request a repaint.
   schedule_render : () -> Unit
 }
@@ -159,6 +165,12 @@ pub fn MouseHandler::handle_mouse_down(
     x,
     y,
   )
+  // Monaco emits the mouse-down event after its selection handling
+  // (`mouseHandler.ts:349` `emitMouseDown`); the viewer notifies before the
+  // early return below so non-selecting targets (the decorations lane) still
+  // reach listeners. Only left-button downs arrive here, matching the one
+  // consumer (comments gates on `e.event.leftButton`).
+  (self.helper.notify_mouse_down)(target)
   // Resolve the pointer to a view position and whether the drag started on the
   // line-number gutter (which selects whole lines).
   let resolved : (@base_common.Position, Bool)? = match target.kind {
@@ -169,6 +181,13 @@ pub fn MouseHandler::handle_mouse_down(
       Some((Position(refined.line_number, refined.column + 1), false))
     }
     GutterLineNumbers => Some((Position(target.line_number, 1), true))
+    // `_onMouseDown` (`mouseHandler.ts:314-336`): a gutter target other than
+    // the line numbers prevents the default ("Do not steal focus") but starts
+    // no selection.
+    GutterLineDecorations => {
+      event.prevent_default()
+      None
+    }
     _ => None
   }
   guard resolved is Some((view_position, started_on_line_numbers)) else {
@@ -185,6 +204,31 @@ pub fn MouseHandler::handle_mouse_down(
     mouse_down_count,
     started_on_line_numbers,
   })
+}
+
+///|
+/// Root `mouseup`: hit-tests the release position and notifies listeners —
+/// Monaco's `emitMouseUp`. Left button only, pairing with
+/// `handle_mouse_down`'s notification (the comments contrib matches the two
+/// by line).
+pub fn MouseHandler::handle_mouse_up(
+  self : MouseHandler,
+  mouse : @rdom.MouseEvent,
+) -> Unit {
+  if mouse.get_button() != 0 {
+    return
+  }
+  guard (self.helper.frame)() is Some(frame) else { return }
+  let rect = self.helper.view_root.get_bounding_client_rect()
+  let x = mouse.get_client_x().to_double() - rect.get_left()
+  let y = mouse.get_client_y().to_double() - rect.get_top()
+  let target = @viewer_common.hit_test(
+    frame,
+    (self.helper.view_metrics)(frame),
+    x,
+    y,
+  )
+  (self.helper.notify_mouse_up)(target)
 }
 
 ///|
@@ -374,7 +418,11 @@ fn drag_view_position(
   target : @viewer_common.MouseTarget,
 ) -> @base_common.Position? {
   match target.kind {
-    ContentText | ContentEmpty | BelowContent | GutterLineNumbers =>
+    ContentText
+    | ContentEmpty
+    | BelowContent
+    | GutterLineNumbers
+    | GutterLineDecorations =>
       if target.line_number >= 1 {
         Some(Position(target.line_number, target.column + 1))
       } else {

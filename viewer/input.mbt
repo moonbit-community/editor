@@ -70,6 +70,15 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
       None => ()
     }
   })
+  // Root-scoped mouseup for target-notified listeners (comments pairs it
+  // with the mousedown); the document-level mouseup below stays the
+  // drag-end/selection-finish path.
+  view.root.add_event_listener("mouseup", event => {
+    match event.to_mouse_event() {
+      Some(mouse) => handler.handle_mouse_up(mouse)
+      None => ()
+    }
+  })
   view.root.add_event_listener("copy", event => {
     if self.handle_copy_event(event) {
       event.prevent_default()
@@ -296,6 +305,7 @@ fn Viewer::view_metrics(
     line_height: @core.editor_line_height,
     char_width: self.measured_char_width(),
     gutter_width: self.gutter_width(frame),
+    line_decorations_width: self.options.line_decorations_width.to_double(),
     view_zones: self.view_layout.view_zones(),
   }
 }

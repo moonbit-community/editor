@@ -16,9 +16,7 @@ fn run_render_perf_test() -> Unit {
     Some(host) => {
       let viewer = @viewer.Viewer::create(
         host,
-        options=ViewerOptions(
-          placeholder="Loading performance fixture...",
-        ),
+        options=ViewerOptions(placeholder="Loading performance fixture..."),
       )
       @viewer.debug_on_did_render_model(viewer, event => {
         if event.fresh && event.model.uri.to_string().contains("large") {
@@ -86,14 +84,16 @@ fn run_next_sample(
   }
   let uri = @base_common.Uri::memory("perf/large_" + name + ".mbt")
   viewer.set_model(
-    Some(TextModel(
-      uri,
-      uri.display_name(),
-      "moonbit",
-      sample_index.val + 2,
-      "perf-" + name,
-      large_text,
-    )),
+    Some(
+      TextModel(
+        uri,
+        uri.display_name(),
+        "moonbit",
+        sample_index.val + 2,
+        "perf-" + name,
+        large_text,
+      ),
+    ),
   )
 }
 

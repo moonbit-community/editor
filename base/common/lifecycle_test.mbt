@@ -26,6 +26,49 @@ test "emitter listener disposable removes only that listener" {
 }
 
 ///|
+test "microtask emitter merges queued events into one flush" {
+  let scheduled : Array[() -> Unit] = []
+  let emitter : MicrotaskEmitter[Array[Int]] = MicrotaskEmitter::new(
+    merge=all => all.flatten(),
+    schedule=run => scheduled.push(run),
+  )
+  let fired : Array[Array[Int]] = []
+  emitter.event(values => fired.push(values)) |> ignore
+  emitter.fire([1])
+  emitter.fire([2, 3])
+  // One scheduled flush for the whole tick, nothing delivered yet.
+  assert_eq(scheduled.length(), 1)
+  assert_eq(fired.length(), 0)
+  scheduled[0]()
+  debug_inspect(fired, content="[[1, 2, 3]]")
+  // The flush resets the queue: the next fire schedules again.
+  emitter.fire([4])
+  assert_eq(scheduled.length(), 2)
+  scheduled[1]()
+  debug_inspect(fired, content="[[1, 2, 3], [4]]")
+}
+
+///|
+test "microtask emitter without listeners queues nothing" {
+  let scheduled : Array[() -> Unit] = []
+  let emitter : MicrotaskEmitter[Int] = MicrotaskEmitter::new(schedule=run => {
+    scheduled.push(run)
+  })
+  emitter.fire(1)
+  assert_eq(scheduled.length(), 0)
+}
+
+///|
+test "microtask emitter default schedule flushes inline" {
+  let emitter : MicrotaskEmitter[Int] = MicrotaskEmitter::new()
+  let fired : Array[Int] = []
+  emitter.event(value => fired.push(value)) |> ignore
+  emitter.fire(1)
+  emitter.fire(2)
+  debug_inspect(fired, content="[1, 2]")
+}
+
+///|
 test "emitter dispose stops active and later listeners" {
   let emitter : Emitter[String] = Emitter::new()
   let seen = Ref("")

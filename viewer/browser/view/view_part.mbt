@@ -377,8 +377,7 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
     Some(view_model) =>
       view_model
       .decorations()
-      .get_decorations_viewport_data(context.viewport.visible_range)
-      .decorations
+      .get_decorations_viewport_data(context.viewport.visible_range).decorations
     None => []
   }
   self.prepared = Some({
@@ -669,8 +668,7 @@ impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
     Some(view_model) =>
       view_model
       .decorations()
-      .get_decorations_viewport_data(context.viewport.visible_range)
-      .decorations
+      .get_decorations_viewport_data(context.viewport.visible_range).decorations
     None => []
   }
   self.prepared = Some({

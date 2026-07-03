@@ -57,6 +57,7 @@ pub struct Emitter[T] {
 pub fn[T] Emitter::dispose(Self[T]) -> Unit
 pub fn[T] Emitter::event(Self[T], (T) -> Unit) -> Disposable
 pub fn[T] Emitter::fire(Self[T], T) -> Unit
+pub fn[T] Emitter::has_listeners(Self[T]) -> Bool
 pub fn[T] Emitter::new() -> Self[T]
 
 pub(all) struct LineRange {
@@ -87,6 +88,14 @@ pub fn LineRangeSet::intersects(Self, LineRange) -> Bool
 pub fn LineRangeSet::new(normalized_ranges? : Array[LineRange]) -> Self
 pub fn LineRangeSet::ranges(Self) -> Array[LineRange]
 pub fn LineRangeSet::to_string(Self) -> String
+
+pub struct MicrotaskEmitter[T] {
+  // private fields
+}
+pub fn[T] MicrotaskEmitter::dispose(Self[T]) -> Unit
+pub fn[T] MicrotaskEmitter::event(Self[T], (T) -> Unit) -> Disposable
+pub fn[T] MicrotaskEmitter::fire(Self[T], T) -> Unit
+pub fn[T] MicrotaskEmitter::new(merge? : (Array[T]) -> T, schedule? : (() -> Unit) -> Unit) -> Self[T]
 
 pub(all) struct OffsetRange {
   start : Int

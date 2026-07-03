@@ -132,7 +132,9 @@ fn assert_read_api(
 
   // (5) Horizontal scroll shifts the scrolled left by exactly the scroll delta;
   // the relative-to-line offset itself is scroll-independent.
-  let left_before = viewer.get_scrolled_visible_position(Position(1, 5)).unwrap().left
+  let left_before = viewer
+    .get_scrolled_visible_position(Position(1, 5))
+    .unwrap().left
   viewer.set_scroll_position(scroll_top=0.0, scroll_left=20.0)
   let left_after = viewer.get_scrolled_visible_position(Position(1, 5)).unwrap().left
   ctx.assert_true(

@@ -239,20 +239,43 @@ fn MarkerStats::add(self : MarkerStats, op : MarkerStatistics) -> Unit {
 }
 
 ///|
+/// `_merge` (`markerService.ts:405`): unions every queued change's URI set,
+/// first-seen order, keyed like `ResourceMap.defaultToKey` (`uri.toString()`).
+fn merge_changed_uris(
+  all : Array[Array[@base_common.Uri]],
+) -> Array[@base_common.Uri] {
+  let set : Map[String, @base_common.Uri] = {}
+  for array in all {
+    for item in array {
+      set.set(item.to_string(), item)
+    }
+  }
+  set.values().collect()
+}
+
+///|
 /// In-memory marker store keyed by owner/resource pairs, `MarkerService`
 /// (`markerService.ts:150`).
 pub struct MarkerService {
-  did_change_markers : @base_common.Emitter[Array[@base_common.Uri]]
+  did_change_markers : @base_common.MicrotaskEmitter[Array[@base_common.Uri]]
   data : DoubleResourceMap
   filtered_resources : Map[String, Array[String]]
   mut stats : MarkerStats?
 }
 
 ///|
-/// Creates an empty marker store.
-pub fn MarkerService::new() -> MarkerService {
+/// Creates an empty marker store. `schedule` is the flush scheduler for the
+/// change event's `MicrotaskEmitter` (`markerService.ts:154-156` hardcodes
+/// `queueMicrotask`; the default here flushes inline — see the deviation note
+/// on `@base_common.MicrotaskEmitter`).
+pub fn MarkerService::new(schedule? : (() -> Unit) -> Unit) -> MarkerService {
+  let did_change_markers = match schedule {
+    Some(schedule) =>
+      @base_common.MicrotaskEmitter::new(merge=merge_changed_uris, schedule~)
+    None => @base_common.MicrotaskEmitter::new(merge=merge_changed_uris)
+  }
   let service : MarkerService = {
-    did_change_markers: @base_common.Emitter::new(),
+    did_change_markers,
     data: DoubleResourceMap::new(),
     filtered_resources: {},
     stats: None,

@@ -276,10 +276,7 @@ fn update_workbench(
         cmd,
         viewer_cmd(() => {
           let viewer = workbench_viewer()
-          viewer.update_options({
-            ..viewer.get_options(),
-            placeholder: message,
-          })
+          viewer.update_options({ ..viewer.get_options(), placeholder: message })
         }),
       ]),
       next,
@@ -380,10 +377,7 @@ fn active_document_read_update(
   match result {
     DocumentLoaded(document) => {
       let text_model = document_to_text_model(document)
-      (
-        viewer_cmd(() => set_workbench_model(text_model, view_state)),
-        model,
-      )
+      (viewer_cmd(() => set_workbench_model(text_model, view_state)), model)
     }
     DocumentNotFound(uri) =>
       active_document_error_update(
@@ -404,10 +398,7 @@ fn active_document_change_update(
       (reload_active_document_cmd(uri, PreserveScroll), model)
     DocumentUpdated(document) => {
       let text_model = document_to_text_model(document)
-      (
-        viewer_cmd(() => set_workbench_model(text_model, PreserveScroll)),
-        model,
-      )
+      (viewer_cmd(() => set_workbench_model(text_model, PreserveScroll)), model)
     }
     DocumentDeleted(uri) =>
       active_document_error_update(

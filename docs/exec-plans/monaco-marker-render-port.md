@@ -362,10 +362,15 @@ increment ends green on `just check && just test`; render increments add
 
 ## Deviations (Phase 3) — every non-source-cited divergence, justified
 
-- **Event model is synchronous.** Monaco's `onMarkerChanged` is a
-  `MicrotaskEmitter` with `_merge` dedup; the viewer fires synchronously and
-  relies on the existing render-coalescing (`render.mbt:72-81`). Seam difference
-  (no microtask queue in the readonly path), not logic. `_merge` rows DEFERRED.
+- **Event model — CLOSED (deviations-closeout Track A, 2026-07-03).** The
+  `MicrotaskEmitter` + `_merge` union is ported
+  (`@base_common.MicrotaskEmitter`, `merge_changed_uris` in
+  `marker_service.mbt`): N same-tick changes flush as one event carrying the
+  URI union, first-seen order. Residual deviation: Monaco hardcodes
+  `queueMicrotask` (`event.ts:1610`); `base/common` compiles for js *and*
+  native, so the scheduler is injected — the js host passes the real
+  microtask (`services.mbt`), and the parameterless default flushes inline
+  (the old synchronous semantics, which the conformance wbtests rely on).
 - **Per-frame decoration rebuild (D3).** `update()`'s diff is ported as pure
   logic + tested, but decorations are still rebuilt per frame from the marker
   store rather than stored in a model interval tree. Cross-referenced to the
@@ -381,12 +386,15 @@ increment ends green on `just check && just test`; render increments add
   readonly render path.
 - **Suppression/resource-filter UI N-A (D5).** Data path ported; the
   Problems-panel pause that drives it does not exist.
-- **Squiggle `::before` background fill omitted (G).** Monaco's
-  `.squiggly-*::before { background: var(--vscode-editor*-background) }`
-  (`editor.css:84-110`) is not ported. `editor*.background` is `null`
-  (transparent) outside HC themes, and a `display:block` pseudo-element would
-  inject a block box into the inline view-line span flow. The visible squiggle
-  (the `border-bottom` double/dotted/dashed underline) is ported faithfully.
+- **Squiggle `::before` background fill — CLOSED (deviations-closeout Track
+  A, 2026-07-03).** The `.squiggly-*::before { display: block; … background:
+  var(--vscode-editor*-background) }` layers (`editor.css:84-110`) are now in
+  `markers.css` line-for-line. The earlier omission rationale (block box in
+  inline flow) did not survive contact with the source — Monaco ships exactly
+  this rule, and the squiggle pieces are absolutely positioned overlay divs,
+  not inline spans. Inert outside HC (the `editor*.background` tokens are
+  `null`), asserted by the computed-style browser spec
+  (`viewer_api.spec.js`).
 - **`*-border` tokens default to the foreground (G) — SUPERSEDED by Increment
   I.** G's workaround aliased the normally-null `editorError/Warning/Info/Hint
   .border` tokens to the foreground colors so the static `border-double` HC
@@ -417,16 +425,24 @@ increment ends green on `just check && just test`; render increments add
   (caught by the theme-swap browser spec below). Monaco has no equivalent race:
   VS Code's theme service updates its registry and the CSS it drives
   synchronously.
-- **`showUnused`/`showDeprecated` always on (G).** Monaco gates the
-  unnecessary/deprecated styling behind these editor-option classes, which default
-  to `true`. The viewer has no editor-options port, so `view.mbt` adds both root
-  classes unconditionally (their faithful default). They are inert today: no
+- **`showUnused`/`showDeprecated` — CLOSED (deviations-closeout Track A,
+  2026-07-03).** Both are `ViewerOptions` fields now (defaults `true`,
+  `editorOptions.ts:6645-6653`); `view_root_class` ports
+  `EditorClassName.compute` (`editorOptions.ts:1660-1690`) and drops the
+  class when the option is off (wbtests in
+  `browser/view/view_root_class_wbtest.mbt`). Still inert in practice: no
   producer emits `MarkerTag` (diagnostics carry no tags).
-- **`Marker.resource` is a `Uri`, store keyed by `uri.to_string()`.** Monaco's
+- **`Marker.resource` is a `Uri`, store keyed by `uri.to_string()` — KEEP
+  (decided, deviations-closeout Track A, 2026-07-03).** Monaco's
   `IMarker.resource` is a `URI` and `ResourceMap`/`ResourceSet` key on
-  `uri.toString()`; MoonBit has no `ResourceMap`, so `DoubleResourceMap`,
-  `_filteredResources`, `_suppressedRanges`, and the `read` dedup `Set` key on the
-  string form — the same identity `ResourceMap` uses internally.
+  `ResourceMap.defaultToKey = uri.toString()` (`map.ts:50`); MoonBit has no
+  `ResourceMap`, so `DoubleResourceMap`, `_filteredResources`,
+  `_suppressedRanges`, the `read` dedup `Set`, and the `_merge` union key on
+  the string form — the same identity `ResourceMap` uses by default.
+  Scheme/authority-casing normalization is the workbench
+  `uriIdentityService`'s custom `toKey`, which `markerService.ts` does not
+  use; the viewer additionally has a single URI producer (the host), so
+  keys arrive pre-normalized. Not a fidelity gap.
 - **`MarkerDecorations` ids are synthetic; ranges stored inline.** No
   `model.deltaDecorations`/`getDecorationRange` exists (D3), so `update()` assigns
   `marker-decoration-N` ids and stores each decoration's computed range; the diff

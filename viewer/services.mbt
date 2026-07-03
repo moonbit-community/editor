@@ -22,7 +22,9 @@ pub fn ViewerServices::new(
   languages? : @languages.Languages = @languages.default_languages(),
   log_service? : @log.LogService = @log.LogService::new(),
 ) -> ViewerServices {
-  let markers = @markers.MarkerService::new()
+  // The change event merges same-tick updates on a real microtask here
+  // (Monaco's `MicrotaskEmitter`); headless tests use the sync default.
+  let markers = @markers.MarkerService::new(schedule=queue_microtask)
   {
     languages,
     markers,

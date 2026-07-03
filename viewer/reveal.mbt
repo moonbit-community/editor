@@ -312,7 +312,9 @@ fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
     Some(scroll_left) => {
       // Set only `scroll_left`; the vertical reveal already settled `scroll_top`.
       let scroll_top = self.view_layout.position().scroll_top
-      self.apply_scroll_change(self.view_layout.scroll_to(scroll_top~, scroll_left~))
+      self.apply_scroll_change(
+        self.view_layout.scroll_to(scroll_top~, scroll_left~),
+      )
     }
     None => ()
   }

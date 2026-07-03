@@ -107,21 +107,38 @@ pub fn View::build() -> View {
 }
 
 ///|
-/// Root classes. `showUnused`/`showDeprecated` mirror Monaco's editor options,
-/// which default to `true` (`editorOptions.ts`); they gate the unnecessary /
-/// deprecated marker styling (`editor.css:114-119`). `focused` mirrors
-/// `_getEditorClassName` (`view.ts:459-462`), appended while the editor root
-/// has DOM focus.
-fn view_root_class(source_state : String, focused? : Bool = false) -> String {
-  "monaco-editor moonbit-viewer readonly-editor showUnused showDeprecated " +
+/// Root classes, Monaco's `EditorClassName.compute`
+/// (`editorOptions.ts:1660-1690`): `showUnused`/`showDeprecated` mirror the
+/// editor options of the same names (defaults `true`), gating the
+/// unnecessary / deprecated marker styling (`editor.css:114-119`). `focused`
+/// mirrors `_getEditorClassName` (`view.ts:459-462`), appended while the
+/// editor root has DOM focus.
+fn view_root_class(
+  source_state : String,
+  focused? : Bool = false,
+  show_unused? : Bool = true,
+  show_deprecated? : Bool = true,
+) -> String {
+  "monaco-editor moonbit-viewer readonly-editor" +
+  (if show_unused { " showUnused" } else { "" }) +
+  (if show_deprecated { " showDeprecated" } else { "" }) +
+  " " +
   source_state +
   (if focused { " focused" } else { "" })
 }
 
 ///|
 /// Shows the host-provided placeholder when no document frame is loaded.
-pub fn View::render_empty(self : View, placeholder : String) -> Unit {
-  self.root.set_attribute("class", view_root_class("source-empty"))
+pub fn View::render_empty(
+  self : View,
+  placeholder : String,
+  show_unused? : Bool = true,
+  show_deprecated? : Bool = true,
+) -> Unit {
+  self.root.set_attribute(
+    "class",
+    view_root_class("source-empty", show_unused~, show_deprecated~),
+  )
   self.message_text.set_node_value(@js.Nullable::from_option(Some(placeholder)))
   self.last_snapshot = None
   self.mark_parts_dirty()
@@ -150,7 +167,12 @@ pub fn View::render(
 ) -> Unit {
   self.root.set_attribute(
     "class",
-    view_root_class("source-loaded", focused=input.editor_has_focus),
+    view_root_class(
+      "source-loaded",
+      focused=input.editor_has_focus,
+      show_unused=input.show_unused,
+      show_deprecated=input.show_deprecated,
+    ),
   )
   let rendering = RenderingContext::from_input(view_context, input)
   // Dispatch this frame's typed view events to every part, accumulating each

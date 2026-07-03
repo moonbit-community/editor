@@ -26,6 +26,15 @@ pub(all) struct ViewerOptions {
   /// the pre-lane viewer; features that draw gutter decorations (e.g.
   /// comments) reserve their lane through `update_options`.
   line_decorations_width : Int
+  /// Monaco's `showUnused` editor option (default `true`,
+  /// `editorOptions.ts:6645-6647`): adds the `showUnused` root class that
+  /// gates the `squiggly-unnecessary` / `squiggly-inline-unnecessary`
+  /// styling (`EditorClassName.compute`, `editorOptions.ts:1680-1682`).
+  show_unused : Bool
+  /// Monaco's `showDeprecated` editor option (default `true`,
+  /// `editorOptions.ts:6649-6653`): adds the `showDeprecated` root class
+  /// gating the `squiggly-inline-deprecated` strike-through.
+  show_deprecated : Bool
 } derive(Eq, Debug)
 
 ///|
@@ -50,6 +59,8 @@ pub fn ViewerOptions::ViewerOptions(
   theme? : String = "dark",
   placeholder? : String = "",
   line_decorations_width? : Int = 0,
+  show_unused? : Bool = true,
+  show_deprecated? : Bool = true,
 ) -> ViewerOptions {
   {
     soft_wrap,
@@ -63,17 +74,27 @@ pub fn ViewerOptions::ViewerOptions(
     theme,
     placeholder,
     line_decorations_width: line_decorations_width.max(0),
+    show_unused,
+    show_deprecated,
   }
 }
 
 ///|
 /// Whether the two option sets agree on every field that feeds view-model
-/// construction or layout — `theme` and `placeholder` apply without a rebuild.
+/// construction or layout — `theme`, `placeholder`, and the root-class flags
+/// (`show_unused`/`show_deprecated`) apply without a rebuild.
 fn ViewerOptions::same_layout_options(
   self : ViewerOptions,
   other : ViewerOptions,
 ) -> Bool {
-  { ..self, theme: other.theme, placeholder: other.placeholder } == other
+  {
+    ..self,
+    theme: other.theme,
+    placeholder: other.placeholder,
+    show_unused: other.show_unused,
+    show_deprecated: other.show_deprecated,
+  } ==
+  other
 }
 
 ///|

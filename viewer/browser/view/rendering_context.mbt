@@ -42,6 +42,10 @@ pub(all) struct ViewRenderInput {
   /// `renderLineHighlightOnlyWhenFocus`, Monaco defaults `'line'`/`false`).
   render_line_highlight : @view_layout.RenderLineHighlight
   render_line_highlight_only_when_focus : Bool
+  /// Root-class flags from Monaco's `showUnused`/`showDeprecated` editor
+  /// options (`EditorClassName.compute`, `editorOptions.ts:1680-1686`).
+  show_unused : Bool
+  show_deprecated : Bool
 }
 
 ///|

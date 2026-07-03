@@ -92,7 +92,7 @@ pub(all) struct MarkerReadOptions {
 pub fn MarkerReadOptions::new(owner? : String, resource? : @common.Uri, severities? : Int, take? : Int, ignore_resource_filters? : Bool) -> Self
 
 pub struct MarkerService {
-  did_change_markers : @common.Emitter[Array[@common.Uri]]
+  did_change_markers : @common.MicrotaskEmitter[Array[@common.Uri]]
   data : DoubleResourceMap
   filtered_resources : Map[String, Array[String]]
   mut stats : MarkerStats?
@@ -104,7 +104,7 @@ pub fn MarkerService::diagnostics_for_resource(Self, @common.Uri) -> Array[@lang
 pub fn MarkerService::dispose(Self) -> Unit
 pub fn MarkerService::install_resource_filter(Self, @common.Uri, String) -> @common.Disposable
 pub fn MarkerService::markers_for_resource(Self, @common.Uri, limit? : Int) -> Array[Marker]
-pub fn MarkerService::new() -> Self
+pub fn MarkerService::new(schedule? : (() -> Unit) -> Unit) -> Self
 pub fn MarkerService::on_did_change_markers(Self, (Array[@common.Uri]) -> Unit) -> @common.Disposable
 pub fn MarkerService::read(Self, MarkerReadOptions) -> Array[Marker]
 pub fn MarkerService::remove(Self, String, Array[@common.Uri]) -> Unit

@@ -273,6 +273,37 @@ test "multiple filters for same resource are handled correctly" {
 }
 
 ///|
+test "marker events merge: N changes in one tick fire one event with the URI union" {
+  // Manual scheduler standing in for the hardcoded `queueMicrotask`
+  // (`event.ts:1610`); flushing by hand keeps the test deterministic on
+  // every target.
+  let scheduled : Array[() -> Unit] = []
+  let service = MarkerService::new(schedule=run => scheduled.push(run))
+  let a = uri("file:///a.cs")
+  let b = uri("file:///b.cs")
+  let fired : Array[Array[@base_common.Uri]] = []
+  service.on_did_change_markers(changed => fired.push(changed)) |> ignore
+  service.change_one("far", a, [marker_data(Error, "a1")])
+  service.change_one("far", b, [marker_data(Error, "b1")])
+  service.change_one("boo", a, [marker_data(Warning, "a2")])
+  // Nothing delivered until the flush; one flush covers the whole tick.
+  assert_eq(fired.length(), 0)
+  assert_eq(scheduled.length(), 1)
+  scheduled[0]()
+  assert_eq(fired.length(), 1)
+  inspect(
+    fired[0].map(u => u.to_string()).join(","),
+    content="file:///a.cs,file:///b.cs",
+  )
+  // The flush resets the queue for the next tick.
+  service.change_one("far", b, [])
+  assert_eq(scheduled.length(), 2)
+  scheduled[1]()
+  assert_eq(fired.length(), 2)
+  inspect(fired[1].map(u => u.to_string()).join(","), content="file:///b.cs")
+}
+
+///|
 test "statistics buckets severities and excludes unsupported schemes" {
   let service = MarkerService::new()
   let file = uri("file:///stats.cs")

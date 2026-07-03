@@ -49,7 +49,7 @@ pub fn View::line_width(Self, Int, Int) -> Double
 pub fn View::measure_line_selection(Self, Int, Int, Int, keep_empty? : Bool) -> Array[(Double, Double)]
 pub fn View::offset_for_column(Self, Int, Int) -> Double
 pub fn View::render(Self, ViewContext, ViewRenderInput) -> Unit
-pub fn View::render_empty(Self, String) -> Unit
+pub fn View::render_empty(Self, String, show_unused? : Bool, show_deprecated? : Bool) -> Unit
 
 pub(all) struct ViewContext {
   root : @dom.Element
@@ -86,6 +86,8 @@ pub(all) struct ViewRenderInput {
   word_wrap : Bool
   render_line_highlight : @view_layout.RenderLineHighlight
   render_line_highlight_only_when_focus : Bool
+  show_unused : Bool
+  show_deprecated : Bool
 }
 
 // Type aliases

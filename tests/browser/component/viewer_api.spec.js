@@ -116,6 +116,28 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     await expect(page.locator('.cdr.squiggly-warning')).toHaveCount(1, {
       timeout: 10_000,
     });
+    // Non-HC squiggle form (editor.css:91-100 + codeEditorWidget.ts theming
+    // participant): the visible squiggle is the runtime SVG background from
+    // the foreground token; the `::before` background layer and the
+    // `border-double` underline exist but stay inert because the
+    // `editorWarning-background`/`-border` tokens are null outside
+    // high-contrast themes.
+    const squiggleForm = await page
+      .locator('.cdr.squiggly-warning')
+      .evaluate((node) => {
+        const style = window.getComputedStyle(node);
+        const before = window.getComputedStyle(node, '::before');
+        return {
+          backgroundImage: style.backgroundImage,
+          borderBottomStyle: style.borderBottomStyle,
+          beforeDisplay: before.display,
+          beforeBackgroundColor: before.backgroundColor,
+        };
+      });
+    expect(squiggleForm.backgroundImage).toContain('data:image/svg+xml');
+    expect(squiggleForm.borderBottomStyle).toBe('none');
+    expect(squiggleForm.beforeDisplay).toBe('block');
+    expect(squiggleForm.beforeBackgroundColor).toBe('rgba(0, 0, 0, 0)');
     const foldMarker = page.locator('.folding-marker[data-line="2"]');
     await expect(foldMarker).toHaveAttribute('data-folded', 'false', { timeout: 10_000 });
     await foldMarker.click();

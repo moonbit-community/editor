@@ -96,10 +96,7 @@ pub fn Viewer::create_decorations_collection(
   self : Viewer,
   decorations? : Array[@model.DeltaDecoration] = [],
 ) -> DecorationsCollection {
-  let collection : DecorationsCollection = {
-    viewer: self,
-    decoration_ids: [],
-  }
+  let collection : DecorationsCollection = { viewer: self, decoration_ids: [] }
   if decorations.length() > 0 {
     collection.set(decorations) |> ignore
   }
@@ -134,10 +131,7 @@ pub fn DecorationsCollection::append(
 ///|
 /// Removes every decoration in the collection.
 pub fn DecorationsCollection::clear(self : DecorationsCollection) -> Unit {
-  self.decoration_ids = self.viewer.delta_decorations(
-    self.decoration_ids,
-    [],
-  )
+  self.decoration_ids = self.viewer.delta_decorations(self.decoration_ids, [])
 }
 
 ///|

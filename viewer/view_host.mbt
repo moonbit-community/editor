@@ -137,7 +137,12 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   self.sync_hover_decorations()
   let write_started = now_ms()
   match self.frame {
-    None => view.render_empty(self.options.placeholder)
+    None =>
+      view.render_empty(
+        self.options.placeholder,
+        show_unused=self.options.show_unused,
+        show_deprecated=self.options.show_deprecated,
+      )
     Some(frame) => {
       let frame = self.synced_window_frame(frame)
       let view_context = self.build_view_context(view)
@@ -166,6 +171,8 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         word_wrap: self.options.soft_wrap && self.soft_wrap_column > 0,
         render_line_highlight: self.options.render_line_highlight,
         render_line_highlight_only_when_focus: self.options.render_line_highlight_only_when_focus,
+        show_unused: self.options.show_unused,
+        show_deprecated: self.options.show_deprecated,
       })
     }
   }

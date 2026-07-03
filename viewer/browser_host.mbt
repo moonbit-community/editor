@@ -9,3 +9,10 @@ extern "js" fn now_ms() -> Double =
 /// instead of framework commands.
 extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Double =
   #| (callback, ms) => globalThis.setTimeout(callback, ms)
+
+///|
+/// The microtask scheduler Monaco's `MicrotaskEmitter` hardcodes
+/// (`event.ts:1610`); injected into `MarkerService`'s change emitter here in
+/// the js-only host package (`@base_common` compiles for native too).
+extern "js" fn queue_microtask(callback : () -> Unit) -> Unit =
+  #| (callback) => globalThis.queueMicrotask(callback)

@@ -100,7 +100,6 @@ fn Viewer::dom_refine_content_target(
   client_y : Double,
   fallback : @viewer_common.MouseTarget,
 ) -> @viewer_common.MouseTarget {
-  ignore(self)
   let hit = dom_caret_hit(view.root, client_x, client_y)
   guard hit.ok() else { return fallback }
   let line_number = hit.line()
@@ -120,10 +119,23 @@ fn Viewer::dom_refine_content_target(
   } else {
     ContentEmpty
   }
+  // `doHitTest` (`mouseTarget.ts:1104-1112`): normalize the caret answer with
+  // affinity `None` so a hit inside injected text snaps to a cursor stop; the
+  // injected-text identity is taken from the *original* position, matching
+  // the source's `ContentHitTestResult(normalizedPosition, …, injectedText)`.
+  let normalized = match self.view_model {
+    Some(view_model) => {
+      // (`PositionAffinity.None` — the annotation-free variant name is
+      // enforced by warn 73.)
+      let affinity : @model.PositionAffinity = None
+      view_model.normalize_position(Position(line_number, column1), affinity)
+    }
+    None => Position(line_number, column1)
+  }
   {
     kind,
-    line_number,
-    column: column0,
+    line_number: normalized.line_number,
+    column: normalized.column - 1,
     token_index: -1,
     injected_text_index: line.injected_text_index_at_column(column0),
     gutter_offset_x: 0.0,

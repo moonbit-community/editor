@@ -67,18 +67,30 @@ pub fn ModelLineProjectionData::view_line_index_for_model_column(
 
 ///|
 /// View-line index containing the given projected display column.
+///
+/// The break-offset search of `offsetInInputWithInjectionsToOutputPosition`
+/// (`modelLineProjectionData.ts:130-167`): only `Left` treats a break offset
+/// as belonging to the segment that ends there (`(start, end]` bounds); every
+/// other affinity starts the next segment with it (`[start, end)`).
 pub fn ModelLineProjectionData::view_line_index_for_projected_column(
   self : ModelLineProjectionData,
   column : Int,
+  affinity? : @model.PositionAffinity,
 ) -> Int {
   let column = @base_common.clamp_int(
     column,
     0,
     self.projected_line.text.length(),
   )
+  let owns_break_offset = affinity is Some(Left)
   for index in 0..<self.segments.length() {
     let segment = self.segments[index]
-    if column < segment.end_offset || index + 1 == self.segments.length() {
+    let inside = if owns_break_offset {
+      column <= segment.end_offset
+    } else {
+      column < segment.end_offset
+    }
+    if inside || index + 1 == self.segments.length() {
       return index
     }
   }

@@ -214,7 +214,8 @@ pub struct ModelLineProjection {
   view_line_segments : Array[ModelLineProjectionSegment]
 }
 pub fn ModelLineProjection::build(ViewModelLinesFromModelAsIs, LineBreaksComputer) -> Self
-pub fn ModelLineProjection::model_position_to_view_position(Self, @common.Position) -> @common.Position
+pub fn ModelLineProjection::model_position_to_view_position(Self, @common.Position, affinity? : @model.PositionAffinity) -> @common.Position
+pub fn ModelLineProjection::normalize_view_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ModelLineProjection::projected_line_for_model_line(Self, Int) -> ProjectedTextLine
 pub fn ModelLineProjection::segment_for_view_line_number(Self, Int) -> ModelLineProjectionSegment
 pub fn ModelLineProjection::view_line_count(Self) -> Int
@@ -230,7 +231,7 @@ pub fn ModelLineProjectionData::ModelLineProjectionData(Int, Int, ProjectedTextL
 pub fn ModelLineProjectionData::segment_at_view_line_index(Self, Int) -> ModelLineProjectionSegment
 pub fn ModelLineProjectionData::view_line_count(Self) -> Int
 pub fn ModelLineProjectionData::view_line_index_for_model_column(Self, Int) -> Int
-pub fn ModelLineProjectionData::view_line_index_for_projected_column(Self, Int) -> Int
+pub fn ModelLineProjectionData::view_line_index_for_projected_column(Self, Int, affinity? : @model.PositionAffinity) -> Int
 
 pub(all) struct ModelLineProjectionSegment {
   model_line_number : Int
@@ -271,7 +272,8 @@ pub(all) struct ProjectedTextLine {
 pub fn ProjectedTextLine::from_injected_text(String, Array[InjectedText]) -> Self
 pub fn ProjectedTextLine::identity(String) -> Self
 pub fn ProjectedTextLine::injected_text_index_at_projected_column(Self, Int) -> Int
-pub fn ProjectedTextLine::model_column_to_projected_column(Self, Int) -> Int
+pub fn ProjectedTextLine::model_column_to_projected_column(Self, Int, affinity? : @model.PositionAffinity) -> Int
+pub fn ProjectedTextLine::normalize_projected_column_around_injections(Self, Int, @model.PositionAffinity) -> Int
 pub fn ProjectedTextLine::projected_column_to_model_column(Self, Int) -> Int
 
 pub struct RangePriorityQueueImpl {
@@ -379,6 +381,7 @@ pub fn ViewModel::line_count(Self) -> Int
 pub fn ViewModel::lines(Self) -> ViewModelLines
 pub fn ViewModel::model_line_max_column(Self, Int) -> Int
 pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
+pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ViewModel::render_frame(Self, FrameViewport) -> RenderFrame
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
@@ -487,9 +490,9 @@ pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[@model.De
 
 // Traits
 pub(open) trait CoordinatesConverter {
-  fn model_position_to_view_position(Self, @common.Position) -> @common.Position
+  fn model_position_to_view_position(Self, @common.Position, affinity? : @model.PositionAffinity) -> @common.Position
   fn view_position_to_model_position(Self, @common.Position) -> @common.Position
-  fn model_range_to_view_range(Self, @common.Range) -> @common.Range
+  fn model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
   fn view_range_to_model_range(Self, @common.Range) -> @common.Range
 }
 

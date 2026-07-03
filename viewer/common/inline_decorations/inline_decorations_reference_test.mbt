@@ -101,7 +101,9 @@ fn IdentityCoordinatesConverter::new(
 impl @inline_decorations.CoordinatesConverter for IdentityCoordinatesConverter with fn convert_model_position_to_view_position(
   self,
   model_position,
+  affinity? : @model.PositionAffinity,
 ) {
+  ignore(affinity)
   self.model.validate_position(model_position)
 }
 
@@ -109,7 +111,9 @@ impl @inline_decorations.CoordinatesConverter for IdentityCoordinatesConverter w
 impl @inline_decorations.CoordinatesConverter for IdentityCoordinatesConverter with fn convert_model_range_to_view_range(
   self,
   model_range,
+  affinity? : @model.PositionAffinity,
 ) {
+  ignore(affinity)
   self.model.validate_range(model_range)
 }
 

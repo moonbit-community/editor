@@ -1,9 +1,22 @@
 ///|
-/// Converts between model document coordinates and rendered view coordinates.
+/// Converts between model document coordinates and rendered view coordinates,
+/// `ICoordinatesConverter` (`coordinatesConverter.ts:15-30`). `affinity`
+/// picks the side of an injected-text or wrap boundary; absent it means the
+/// Monaco default of that member — `None` for positions
+/// (`viewModelLines.ts:848`) and `Left` for ranges (`:892`, where it only
+/// affects empty ranges).
 pub(open) trait CoordinatesConverter {
-  fn model_position_to_view_position(Self, @base_common.Position) -> @base_common.Position
+  fn model_position_to_view_position(
+    Self,
+    @base_common.Position,
+    affinity? : @model.PositionAffinity,
+  ) -> @base_common.Position
   fn view_position_to_model_position(Self, @base_common.Position) -> @base_common.Position
-  fn model_range_to_view_range(Self, @base_common.Range) -> @base_common.Range
+  fn model_range_to_view_range(
+    Self,
+    @base_common.Range,
+    affinity? : @model.PositionAffinity,
+  ) -> @base_common.Range
   fn view_range_to_model_range(Self, @base_common.Range) -> @base_common.Range
 }
 
@@ -21,11 +34,14 @@ pub fn IdentityCoordinatesConverter::new() -> IdentityCoordinatesConverter {
 }
 
 ///|
-/// Identity model-to-view position conversion.
+/// Identity model-to-view position conversion (affinity has no boundary to
+/// disambiguate — the identity tier has no injected text or wraps).
 pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn model_position_to_view_position(
   _self,
   position,
+  affinity? : @model.PositionAffinity,
 ) {
+  ignore(affinity)
   position
 }
 
@@ -43,7 +59,9 @@ pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn view_posi
 pub impl CoordinatesConverter for IdentityCoordinatesConverter with fn model_range_to_view_range(
   _self,
   range,
+  affinity? : @model.PositionAffinity,
 ) {
+  ignore(affinity)
   range
 }
 
@@ -68,10 +86,13 @@ pub(all) enum ViewModelCoordinatesConverter {
 pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn model_position_to_view_position(
   self,
   position,
+  affinity? : @model.PositionAffinity,
 ) {
   match self {
-    Identity(converter) => converter.model_position_to_view_position(position)
-    Projected(converter) => converter.model_position_to_view_position(position)
+    Identity(converter) =>
+      converter.model_position_to_view_position(position, affinity?)
+    Projected(converter) =>
+      converter.model_position_to_view_position(position, affinity?)
   }
 }
 
@@ -92,10 +113,12 @@ pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn view_pos
 pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn model_range_to_view_range(
   self,
   range,
+  affinity? : @model.PositionAffinity,
 ) {
   match self {
-    Identity(converter) => converter.model_range_to_view_range(range)
-    Projected(converter) => converter.model_range_to_view_range(range)
+    Identity(converter) => converter.model_range_to_view_range(range, affinity?)
+    Projected(converter) =>
+      converter.model_range_to_view_range(range, affinity?)
   }
 }
 
@@ -639,6 +662,23 @@ pub fn ViewModel::coordinates_converter(
   self : ViewModel,
 ) -> ViewModelCoordinatesConverter {
   self.coordinates_converter
+}
+
+///|
+/// Snaps a view position at injected-text/wrap boundaries per the affinity —
+/// `ViewModel.normalizePosition` (`viewModelImpl.ts:1281-1283`). The identity
+/// tier delegates to the model in Monaco (`viewModelLines.ts:1260-1262`),
+/// which is the identity here: the as-is tier carries no injected text.
+pub fn ViewModel::normalize_position(
+  self : ViewModel,
+  position : @base_common.Position,
+  affinity : @model.PositionAffinity,
+) -> @base_common.Position {
+  match self.coordinates_converter {
+    Identity(_) => position
+    Projected(converter) =>
+      converter.projection.normalize_view_position(position, affinity)
+  }
 }
 
 ///|

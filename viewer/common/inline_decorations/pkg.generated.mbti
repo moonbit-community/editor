@@ -85,8 +85,8 @@ pub fn[O] ViewModelDecoration::new(@common.Range, O) -> Self[O]
 
 // Traits
 pub(open) trait CoordinatesConverter {
-  fn convert_model_position_to_view_position(Self, @common.Position) -> @common.Position
-  fn convert_model_range_to_view_range(Self, @common.Range) -> @common.Range
+  fn convert_model_position_to_view_position(Self, @common.Position, affinity? : @model.PositionAffinity) -> @common.Position
+  fn convert_model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
 }
 
 pub(open) trait InlineDecorationOptions {

@@ -177,6 +177,14 @@ pub(all) struct OverviewRulerOptions {
   position : OverviewRulerLane
 } derive(Eq, @debug.Debug)
 
+pub(all) enum PositionAffinity {
+  Left
+  Right
+  None
+  LeftOfInjectedText
+  RightOfInjectedText
+} derive(Eq, @debug.Debug)
+
 pub(all) struct TextModel {
   uri : @common.Uri
   display_name : String

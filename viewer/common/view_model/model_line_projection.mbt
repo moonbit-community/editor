@@ -77,15 +77,15 @@ pub fn ModelLineProjection::projected_line_for_model_line(
 }
 
 ///|
-/// Converts a model position to the corresponding projected view position.
-///
-/// Monaco's `translateToOutputPosition` takes a `PositionAffinity`; this does
-/// not (see the deviation note on `ProjectedTextLine`). The boundary side is
-/// fixed by the column lookup table, which suffices for the caret-free readonly
-/// viewer.
+/// Converts a model position to the corresponding projected view position,
+/// Monaco's `translateToOutputPosition`
+/// (`modelLineProjectionData.ts:111-128`). The affinity picks the boundary
+/// side at injected text (`Right` → after it) and wrap breaks (`Left` → end
+/// of the earlier view line); absent it behaves as Monaco's default `None`.
 pub fn ModelLineProjection::model_position_to_view_position(
   self : ModelLineProjection,
   position : @base_common.Position,
+  affinity? : @model.PositionAffinity,
 ) -> @base_common.Position {
   // `position` is 1-based (Monaco); the projection tables are 0-based, so undo
   // the +1 on entry and re-apply it when building the view `Position`.
@@ -105,9 +105,28 @@ pub fn ModelLineProjection::model_position_to_view_position(
   }
   let projected_column = data.projected_line.model_column_to_projected_column(
     model_column,
+    affinity?,
   )
+  self.view_position_for_projected_column(
+    model_line,
+    projected_column,
+    affinity?,
+  )
+}
+
+///|
+/// Builds the view position for a projected display column on a model line
+/// (the tail of `offsetInInputWithInjectionsToOutputPosition`).
+fn ModelLineProjection::view_position_for_projected_column(
+  self : ModelLineProjection,
+  model_line : Int,
+  projected_column : Int,
+  affinity? : @model.PositionAffinity,
+) -> @base_common.Position {
+  let data = self.projections[model_line]
   let segment_index = data.view_line_index_for_projected_column(
     projected_column,
+    affinity?,
   )
   let segment = data.segment_at_view_line_index(segment_index)
   {
@@ -120,6 +139,81 @@ pub fn ModelLineProjection::model_position_to_view_position(
     segment.start_offset +
     1 +
     segment.wrapped_text_indent_length,
+  }
+}
+
+///|
+/// Snaps a view position at an injected-text or wrap boundary to the side the
+/// affinity asks for — `normalizePosition` (`modelLineProjection.ts:237-241`)
+/// over `normalizeOutputPosition` (`modelLineProjectionData.ts:169-192`),
+/// operating on the flat view-line table instead of Monaco's per-model-line
+/// output index.
+pub fn ModelLineProjection::normalize_view_position(
+  self : ModelLineProjection,
+  position : @base_common.Position,
+  affinity : @model.PositionAffinity,
+) -> @base_common.Position {
+  if self.view_line_segments.length() == 0 {
+    return position
+  }
+  let view_index = @base_common.clamp_int(
+    position.line_number - 1,
+    0,
+    self.view_line_segments.length() - 1,
+  )
+  let segment = self.view_line_segments[view_index]
+  let model_line = segment.model_line_number - 1
+  let data = self.projections[model_line]
+  let segment_index = view_index -
+    self.model_line_start_view_indices[model_line]
+  let width = segment.end_offset - segment.start_offset
+  // `outputPositionToOffsetInInputWithInjections`: undo the continuation
+  // indent and clamp into the segment.
+  let output_offset = @base_common.clamp_int(
+    position.column - 1 - segment.wrapped_text_indent_length,
+    0,
+    width,
+  )
+  let projected = segment.start_offset + output_offset
+  let normalized = data.projected_line.normalize_projected_column_around_injections(
+    projected, affinity,
+  )
+  if normalized != projected {
+    // Injected text caused a change: re-derive the output position with the
+    // same affinity.
+    return self.view_position_for_projected_column(
+      model_line,
+      normalized,
+      affinity~,
+    )
+  }
+  // Wrap-boundary snap: `Left` at the line's min output offset moves to the
+  // previous view line's max; `Right` at max moves to the next line's min.
+  match affinity {
+    Left =>
+      if segment_index > 0 && output_offset == 0 {
+        let previous = data.segment_at_view_line_index(segment_index - 1)
+        Position(
+          view_index,
+          previous.end_offset -
+          previous.start_offset +
+          1 +
+          previous.wrapped_text_indent_length,
+        )
+      } else {
+        position
+      }
+    Right =>
+      if segment_index + 1 < data.view_line_count() && output_offset == width {
+        Position(
+          view_index + 2,
+          1 +
+          data.segment_at_view_line_index(segment_index + 1).wrapped_text_indent_length,
+        )
+      } else {
+        position
+      }
+    _ => position
   }
 }
 

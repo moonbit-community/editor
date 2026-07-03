@@ -94,17 +94,15 @@ pub(all) struct ProjectedLinePart {
 /// One model line after injected text has been projected into display text,
 /// with column maps in both directions.
 ///
-/// Deliberate deviation (no `PositionAffinity`): Monaco's
-/// `ModelLineProjectionData` maps columns with offset arithmetic and binary
-/// search (`translateToOutputPosition` / `translateToInputOffset`), each
-/// parameterized by a `PositionAffinity` that disambiguates which side of an
-/// injected-text or wrap boundary a position resolves to. This type instead
-/// precomputes per-column lookup tables (`model_to_projected_columns`,
-/// `model_columns`) for O(1) `.get()` and models **no** affinity: the boundary
-/// side is fixed by the table. That disambiguation only matters for caret
-/// placement and cursor movement, which the readonly viewer omits (no caret,
-/// no keyboard navigation), so affinity has no role here. Same result as Monaco
-/// for the tested cases (`view_model_test.mbt`); reduced scope by design.
+/// Monaco's `ModelLineProjectionData` maps columns with offset arithmetic and
+/// binary search (`translateToOutputPosition` / `translateToInputOffset`);
+/// this type precomputes per-column lookup tables
+/// (`model_to_projected_columns`, `model_columns`) for O(1) `.get()`. The
+/// tables are first-write-wins, so a boundary column resolves to the *left*
+/// of the injections anchored there — exactly Monaco's non-`Right` affinity
+/// behavior; `model_column_to_projected_column` surfaces the `Right` side and
+/// `normalize_projected_column_around_injections` ports the normalization
+/// branches, closing the earlier no-`PositionAffinity` deviation.
 pub(all) struct ProjectedTextLine {
   text : String
   model_line_length : Int
@@ -185,14 +183,115 @@ pub fn ProjectedTextLine::from_injected_text(
 
 ///|
 /// Maps a model column to a projected display column.
+///
+/// The injection branch of `translateToOutputPosition`
+/// (`modelLineProjectionData.ts:111-128`): only `Right` resolves a boundary
+/// column to the far side of every injection anchored there; every other
+/// affinity (the `None` default included) stays left of them, which is what
+/// the first-write-wins lookup table already encodes.
 pub fn ProjectedTextLine::model_column_to_projected_column(
   self : ProjectedTextLine,
   model_column : Int,
+  affinity? : @model.PositionAffinity,
 ) -> Int {
   let column = @base_common.clamp_int(model_column, 0, self.model_line_length)
-  match self.model_to_projected_columns.get(column) {
+  let projected = match self.model_to_projected_columns.get(column) {
     Some(projected_column) => projected_column
     None => self.text.length()
+  }
+  match affinity {
+    Some(Right) => {
+      let mut result = projected
+      // Parts are in ascending projected order, so one pass walks every
+      // injection anchored at this model column.
+      for part in self.parts {
+        if part.start == result &&
+          part.kind is InjectedSegment(model_column=anchor, ..) &&
+          anchor == column {
+          result = part.end
+        }
+      }
+      result
+    }
+    _ => projected
+  }
+}
+
+///|
+/// Snaps a projected column that touches injected text to one of its sides,
+/// `normalizeOffsetInInputWithInjectionsAroundInjections`
+/// (`modelLineProjectionData.ts:204-252`). Containment mirrors
+/// `getInjectedTextAtOffset` (`:255-284`): inclusive on both ends, first
+/// match wins. The viewer's injected text carries no `cursorStops`, so `None`
+/// behaves as Monaco's default `InjectedTextCursorStops.Both`: only
+/// strictly-inside columns snap (to the injection start); boundary columns
+/// already are cursor stops.
+pub fn ProjectedTextLine::normalize_projected_column_around_injections(
+  self : ProjectedTextLine,
+  projected_column : Int,
+  affinity : @model.PositionAffinity,
+) -> Int {
+  let parts = self.parts
+  let mut found = -1
+  for index in 0..<parts.length() {
+    let part = parts[index]
+    guard part.kind is InjectedSegment(..) else { continue }
+    if part.start > projected_column {
+      // All later injections start even further right.
+      break
+    }
+    if projected_column <= part.end {
+      found = index
+      break
+    }
+  }
+  if found < 0 {
+    return projected_column
+  }
+  let part = parts[found]
+  match affinity {
+    None =>
+      // cursorStops = Both: the injection's end is a right cursor stop, its
+      // start a left one.
+      if projected_column == part.end {
+        projected_column
+      } else {
+        part.start
+      }
+    Right | RightOfInjectedText => {
+      // Past every injection anchored at the same model column.
+      let anchor = injected_part_anchor(part)
+      let mut result = part.end
+      let mut index = found + 1
+      while index < parts.length() &&
+            parts[index].kind is InjectedSegment(model_column=next_anchor, ..) &&
+            next_anchor == anchor {
+        result = parts[index].end
+        index += 1
+      }
+      result
+    }
+    Left | LeftOfInjectedText => {
+      // Before every injection anchored at the same model column.
+      let anchor = injected_part_anchor(part)
+      let mut result = part.start
+      let mut index = found - 1
+      while index >= 0 &&
+            parts[index].kind is InjectedSegment(model_column=prev_anchor, ..) &&
+            prev_anchor == anchor {
+        result = parts[index].start
+        index -= 1
+      }
+      result
+    }
+  }
+}
+
+///|
+fn injected_part_anchor(part : ProjectedLinePart) -> Int {
+  match part.kind {
+    InjectedSegment(model_column~, ..) => model_column
+    SourceSegment(..) => -1
   }
 }
 

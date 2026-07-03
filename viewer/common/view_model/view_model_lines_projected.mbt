@@ -311,8 +311,9 @@ pub fn ProjectedCoordinatesConverter::new(
 pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_to_view_position(
   self,
   position,
+  affinity? : @model.PositionAffinity,
 ) {
-  self.projection.model_position_to_view_position(position)
+  self.projection.model_position_to_view_position(position, affinity?)
 }
 
 ///|
@@ -325,18 +326,36 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_pos
 }
 
 ///|
-/// Converts model ranges through the projection table.
+/// Converts model ranges through the projection table,
+/// `convertModelRangeToViewRange` (`viewModelLines.ts:892-901`): the default
+/// affinity is `Left` and only applies to empty ranges; a non-empty range
+/// excludes injected text at its edges (start `Right`, end `Left`).
 pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_range_to_view_range(
   self,
   range,
+  affinity? : @model.PositionAffinity,
 ) {
-  let start = self.model_position_to_view_position(
-    Position(range.start_line_number, range.start_column),
-  )
-  let end = self.model_position_to_view_position(
-    Position(range.end_line_number, range.end_column),
-  )
-  Range(start.line_number, start.column, end.line_number, end.column)
+  if range.is_empty() {
+    let affinity = match affinity {
+      Some(a) => a
+      None => Left
+    }
+    let start = self.projection.model_position_to_view_position(
+      Position(range.start_line_number, range.start_column),
+      affinity~,
+    )
+    Range(start.line_number, start.column, start.line_number, start.column)
+  } else {
+    let start = self.projection.model_position_to_view_position(
+      Position(range.start_line_number, range.start_column),
+      affinity=Right,
+    )
+    let end = self.projection.model_position_to_view_position(
+      Position(range.end_line_number, range.end_column),
+      affinity=Left,
+    )
+    Range(start.line_number, start.column, end.line_number, end.column)
+  }
 }
 
 ///|

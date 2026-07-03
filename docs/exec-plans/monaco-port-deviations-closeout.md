@@ -181,6 +181,63 @@ all three "deliberate deviation" doc-comments.
 1. **Inventory** `translateToOutputPosition` + `normalizePosition` affinity
    branches from `modelLineProjection.ts` / `viewModelLines.ts`; enumerate
    which of the five variants each branch consumes; paste here.
+
+   **Inventory (pasted 2026-07-03):**
+
+   - **Enum:** `PositionAffinity` lives in `model.ts:1455-1480` (not
+     `position.ts`): `Left=0, Right=1, None=2, LeftOfInjectedText=3,
+     RightOfInjectedText=4`.
+   - **`translateToOutputPosition(inputOffset, affinity=None)`**
+     (`modelLineProjectionData.ts:111-128`): the injection loop consumes only
+     `Right` — at `inputOffset === injectionOffsets[i]` every non-`Right`
+     affinity breaks (stays left of all injections anchored there); `Right`
+     accumulates every touching injection's length. Then
+     `offsetInInputWithInjectionsToOutputPosition` (`:130-167`) consumes only
+     `Left` — the binary search treats a break offset as belonging to the
+     previous output line (`(midStart, midStop]`) under `Left`, and to the
+     next line (`[midStart, midStop)`) otherwise.
+     `LeftOfInjectedText`/`RightOfInjectedText` behave as `None` here.
+   - **`normalizeOutputPosition(outputLineIndex, outputOffset, affinity)`**
+     (`:169-192`): step 1 normalizes around injections
+     (`normalizeOffsetInInputWithInjectionsAroundInjections`, `:204-252`,
+     consumes all five: `None` honors `cursorStops` — default `Both`, so only
+     strictly-inside offsets snap, to the injection start;
+     `Right`/`RightOfInjectedText` → after all touching injections at the
+     same model offset; `Left`/`LeftOfInjectedText` → before them); when the
+     offset changed, the output position is re-derived with the same
+     affinity. Step 2 snaps wrap boundaries: `Left` at the line's min output
+     offset → previous output line's max; `Right` at max → next line's min.
+     `getInjectedTextAtOffset` (`:255-284`) containment is inclusive on both
+     ends, first match wins.
+   - **Converter surface:** `ICoordinatesConverter` (`coordinatesConverter.
+     ts:22-26`): `convertModelPositionToViewPosition(pos, affinity?,
+     allowZeroLineNumber?, belowHiddenRanges?)`,
+     `convertModelRangeToViewRange(range, affinity?)` (affinity only affects
+     empty ranges). Implementations (`viewModelLines.ts`): position
+     conversion defaults `None` (`:848`); range conversion defaults **`Left`**
+     (`:892-901`) and converts a *non-empty* range with start=`Right`,
+     end=`Left` (excludes injected text at the edges).
+   - **Non-default consumers with viewer counterparts (Phase 4 targets):**
+     `mouseTarget.ts:1096-1112` `doHitTest` → `viewModel.normalizePosition(
+     result.position, PositionAffinity.None)` after DOM caret hit-testing
+     (viewer: `Viewer::dom_refine_content_target`); `inlineDecorations.ts:
+     171-177` whole-line decorations (start `Left`, end `Right`) and
+     non-whole-line `convertModelRangeToViewRange(range, Right)` (viewer:
+     `inline_decorations.mbt` `get_or_create_view_model_decoration`). Cursor
+     move operations (`cursorMoveOperations.ts:79,148,191,220`,
+     `oneCursor.ts:88,96`) have no viewer counterpart (no keyboard caret
+     movement) — not adopted.
+   - **Viewer geometry facts:** `ProjectedTextLine.model_to_projected_columns`
+     is first-write-wins, so a boundary model column already resolves left of
+     its injections (≡ Monaco non-`Right`), and
+     `view_line_index_for_projected_column`'s `column < end_offset` already
+     resolves a break offset to the next segment (≡ Monaco non-`Left`) — the
+     current fixed behavior is exactly affinity `None`; the port surfaces the
+     other sides.
+   - **MoonBit constraint:** trait methods accept optional parameters but not
+     defaults, so the trait signature is `affinity? : @model.PositionAffinity`
+     (absent ⇒ the Monaco default of that member: `None` for positions,
+     `Left` for ranges).
 2. **Enum + default plumbing.** Add the parameter (optional, default `None`)
    to the converter trait and projection; no caller changes.
 3. **Branch port + tests.** Port the affinity branches; wbtest matrix:

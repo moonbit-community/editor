@@ -36,9 +36,20 @@ pub(open) trait InlineDecorationsModel {
 
 ///|
 /// `ICoordinatesConverter`, reduced to the two members the computer calls.
+/// `affinity` follows the source's optional parameter
+/// (`coordinatesConverter.ts:22-26`); absent means the Monaco default of the
+/// member (`None` for positions, `Left` for ranges).
 pub(open) trait CoordinatesConverter {
-  fn convert_model_position_to_view_position(Self, @base_common.Position) -> @base_common.Position
-  fn convert_model_range_to_view_range(Self, @base_common.Range) -> @base_common.Range
+  fn convert_model_position_to_view_position(
+    Self,
+    @base_common.Position,
+    affinity? : @model.PositionAffinity,
+  ) -> @base_common.Position
+  fn convert_model_range_to_view_range(
+    Self,
+    @base_common.Range,
+    affinity? : @model.PositionAffinity,
+  ) -> @base_common.Range
 }
 
 ///|
@@ -375,15 +386,20 @@ fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_or_create_vi
       let model_range = model_decoration.range
       let options = model_decoration.options
       let view_range = if options.is_whole_line() {
-        // For backwards compatibility, whole-line decorations span min..max col.
+        // For backwards compatibility, whole-line decorations span min..max
+        // col, kept outside injected text (`inlineDecorations.ts:171-172`;
+        // the source's `belowHiddenRanges` third argument has no viewer
+        // counterpart — hidden-line handling lives in the projection).
         let start = self.coordinates_converter.convert_model_position_to_view_position(
           Position(model_range.start_line_number, 1),
+          affinity=Left,
         )
         let end = self.coordinates_converter.convert_model_position_to_view_position(
           Position(
             model_range.end_line_number,
             self.model.get_line_max_column(model_range.end_line_number),
           ),
+          affinity=Right,
         )
         @base_common.Range::Range(
           start.line_number,
@@ -392,8 +408,11 @@ fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_or_create_vi
           end.column,
         )
       } else {
+        // `inlineDecorations.ts:177`: `Right` keeps an empty decoration
+        // right of injected text at its position.
         self.coordinates_converter.convert_model_range_to_view_range(
           model_range,
+          affinity=Right,
         )
       }
       let r = ViewModelDecoration::new(view_range, options)

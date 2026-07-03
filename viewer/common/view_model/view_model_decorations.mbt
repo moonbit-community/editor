@@ -60,16 +60,18 @@ pub fn filter_validation_decorations(
 pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConverter with fn convert_model_position_to_view_position(
   self,
   model_position,
+  affinity? : @model.PositionAffinity,
 ) {
-  self.model_position_to_view_position(model_position)
+  self.model_position_to_view_position(model_position, affinity?)
 }
 
 ///|
 pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConverter with fn convert_model_range_to_view_range(
   self,
   model_range,
+  affinity? : @model.PositionAffinity,
 ) {
-  self.model_range_to_view_range(model_range)
+  self.model_range_to_view_range(model_range, affinity?)
 }
 
 ///|

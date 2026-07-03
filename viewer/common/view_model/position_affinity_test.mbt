@@ -5,12 +5,41 @@
 // injected-text anchors and soft-wrap breaks.
 
 ///|
+/// Hints are written as `after` injected-text decorations on a backing
+/// model (Track F: injected text lives in decoration storage);
+/// `(column, content)` pairs are 1-based hint columns.
 fn affinity_view_model(
   text : String,
-  hints : Array[@language.InlayHint],
+  hints : Array[(Int, String)],
   soft_wrap_column~ : Int,
 ) -> @view_model.ViewModel {
-  let doc = @model.TextSnapshot(text)
+  let model = @model.TextModel(
+    @base_common.Uri::memory("affinity-test.mbt"),
+    "affinity-test.mbt",
+    "moonbit",
+    1,
+    "rev-1",
+    text,
+  )
+  let decorations : Array[@model.DeltaDecoration] = []
+  for index in 0..<hints.length() {
+    let (column, content) = hints[index]
+    decorations.push({
+      range: Range(1, column, 1, column),
+      options: @model.Decoration(
+        "",
+        description="inlay-hint",
+        show_if_collapsed=true,
+        after=@model.ModelInjectedTextOptions(
+          content,
+          inline_class_name="inlay-hint inlay-hint-type",
+          attached_index=index,
+        ),
+      ),
+    })
+  }
+  model.delta_decorations([], decorations) |> ignore
+  let doc = model.snapshot
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
@@ -21,11 +50,10 @@ fn affinity_view_model(
     definitions: [],
     symbols: [],
   }
-  let source = @view_model.FrameSource(tokenized, providers)
-  @view_model.ViewModel::with_options_and_inlay_hints(
+  let source = @view_model.FrameSource(tokenized, providers, model~)
+  @view_model.ViewModel::with_options(
     source,
     ViewModelOptions(soft_wrap_column~),
-    hints,
   )
 }
 
@@ -60,14 +88,7 @@ fn normalized(
 /// 1-based; `bucket_injected_text` converts), projecting to `abXXYYcdef` —
 /// the `Right` walks must cross both touching injections.
 fn hinted_view_model() -> @view_model.ViewModel {
-  affinity_view_model(
-    "abcdef",
-    [
-      InlayHint(Position(1, 3), "XX", kind=TypeHint),
-      InlayHint(Position(1, 3), "YY", kind=TypeHint),
-    ],
-    soft_wrap_column=0,
-  )
+  affinity_view_model("abcdef", [(3, "XX"), (3, "YY")], soft_wrap_column=0)
 }
 
 ///|

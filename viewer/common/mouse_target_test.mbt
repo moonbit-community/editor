@@ -41,7 +41,33 @@ fn projected_hit_test_frame() -> @view_model.RenderFrame {
 
 ///|
 fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
-  let doc = @model.TextSnapshot("let x = 1")
+  // The hint is written as an `after` injected-text decoration on the
+  // backing model (Track F: injected text lives in decoration storage).
+  let model = @model.TextModel(
+    @base_common.Uri::memory("hit-test.mbt"),
+    "hit-test.mbt",
+    "moonbit",
+    1,
+    "rev-1",
+    "let x = 1",
+  )
+  model.delta_decorations([], [
+    {
+      range: Range(1, 6, 1, 6),
+      options: @model.Decoration(
+        "",
+        description="inlay-hint",
+        show_if_collapsed=true,
+        after=@model.ModelInjectedTextOptions(
+          ": Int",
+          inline_class_name="inlay-hint inlay-hint-type",
+          attached_index=0,
+        ),
+      ),
+    },
+  ])
+  |> ignore
+  let doc = model.snapshot
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
@@ -49,11 +75,11 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
   let source = @view_model.FrameSource(
     tokenized,
     @language.ProviderResult::empty(),
+    model~,
   )
-  let view_model = @view_model.ViewModel::with_options_and_inlay_hints(
+  let view_model = @view_model.ViewModel::with_options(
     source,
     @view_model.ViewModelOptions::no_wrap(),
-    [InlayHint(Position(1, 6), ": Int", kind=TypeHint)],
   )
   view_model.render_frame({
     start_line: 1,

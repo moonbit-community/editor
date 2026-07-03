@@ -78,21 +78,16 @@ fn Viewer::build_view_model(
     self.soft_wrap_column,
     editor_id=self.editor_id,
   )
+  // Injected text (inlay hints) reaches the projection through the model's
+  // decoration storage (Track F), not through construction arguments.
   if self.folded_ranges.length() > 0 {
-    @view_model.ViewModel::with_options_folding_and_inlay_hints(
+    @view_model.ViewModel::with_options_and_folding(
       source,
       options,
       @view_model.FoldingModel::from_folded_ranges(
         self.folded_ranges,
         source.tokenized.snapshot.line_count(),
       ),
-      self.inlay_hints,
-    )
-  } else if self.inlay_hints.length() > 0 {
-    @view_model.ViewModel::with_options_and_inlay_hints(
-      source,
-      options,
-      self.inlay_hints,
     )
   } else {
     @view_model.ViewModel::with_options(source, options)

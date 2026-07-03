@@ -93,6 +93,7 @@ test "emitter batches one event per deferred bracket; fire() sets all flags" {
       #|  affects_minimap: false,
       #|  affects_overview_ruler: true,
       #|  affects_glyph_margin: false,
+      #|  affects_injected_text: false,
       #|  affects_line_number: false,
       #|}
     ),
@@ -106,6 +107,7 @@ test "emitter batches one event per deferred bracket; fire() sets all flags" {
       #|  affects_minimap: true,
       #|  affects_overview_ruler: true,
       #|  affects_glyph_margin: true,
+      #|  affects_injected_text: true,
       #|  affects_line_number: false,
       #|}
     ),

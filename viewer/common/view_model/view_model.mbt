@@ -144,19 +144,25 @@ pub struct ViewModelLinesFromModelAsIs {
 }
 
 ///|
-/// Creates unprojected view lines with every model line visible.
-pub fn ViewModelLinesFromModelAsIs::new(
-  source : FrameSource,
-) -> ViewModelLinesFromModelAsIs {
-  ViewModelLinesFromModelAsIs::with_injected_text(source, [])
+/// Whether any model line carries injected text.
+fn ViewModelLinesFromModelAsIs::has_injected_text(
+  self : ViewModelLinesFromModelAsIs,
+) -> Bool {
+  for bucket in self.injected_text_by_model_line {
+    if bucket.length() > 0 {
+      return true
+    }
+  }
+  false
 }
 
 ///|
-/// Creates unwrapped view lines with injected text projected into each model
-/// line.
-pub fn ViewModelLinesFromModelAsIs::with_injected_text(
+/// Creates unprojected view lines with every model line visible. Injected
+/// text is derived from the backing model's decoration storage
+/// (`getInjectedTextDecorations` — deviations-closeout Track F deleted the
+/// parallel `Array[InjectedText]` plumbing).
+pub fn ViewModelLinesFromModelAsIs::new(
   source : FrameSource,
-  injected_text : Array[InjectedText],
 ) -> ViewModelLinesFromModelAsIs {
   let line_count = source.tokenized.snapshot.line_count()
   let visible_model_line_numbers : Array[Int] = []
@@ -169,32 +175,16 @@ pub fn ViewModelLinesFromModelAsIs::with_injected_text(
     source,
     visible_model_line_numbers,
     hidden_model_lines,
-    injected_text_by_model_line: bucket_injected_text(
-      source.tokenized.snapshot,
-      injected_text,
-    ),
+    injected_text_by_model_line: bucket_injected_text_from_decorations(source),
   }
 }
 
 ///|
-/// Creates unwrapped view lines while hiding folded model lines.
+/// Creates unwrapped view lines while hiding folded model lines. Injected
+/// text comes from the model's decoration storage, like `new`.
 pub fn ViewModelLinesFromModelAsIs::with_folding_model(
   source : FrameSource,
   folding_model : FoldingModel,
-) -> ViewModelLinesFromModelAsIs {
-  ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(
-    source,
-    folding_model,
-    [],
-  )
-}
-
-///|
-/// Creates unwrapped view lines with folding and injected text applied.
-pub fn ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(
-  source : FrameSource,
-  folding_model : FoldingModel,
-  injected_text : Array[InjectedText],
 ) -> ViewModelLinesFromModelAsIs {
   let line_count = source.tokenized.snapshot.line_count()
   let visible_model_line_numbers : Array[Int] = []
@@ -210,10 +200,7 @@ pub fn ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(
     source,
     visible_model_line_numbers,
     hidden_model_lines,
-    injected_text_by_model_line: bucket_injected_text(
-      source.tokenized.snapshot,
-      injected_text,
-    ),
+    injected_text_by_model_line: bucket_injected_text_from_decorations(source),
   }
 }
 
@@ -377,41 +364,81 @@ fn ViewModelLinesFromModelAsIs::clamped_model_line_index(
 }
 
 ///|
-fn bucket_injected_text(
-  snapshot : @model.TextSnapshot,
-  injected_text : Array[InjectedText],
+/// Derives per-model-line injected text from the backing model's
+/// injected-text decorations — `LineInjectedText.fromDecorations`
+/// (`textModelEvents.ts`): `before` lands at the range start (order 0),
+/// `after` at the range end (order 1); sorted by line, column, order.
+/// Positions convert to the 0-based line/column space
+/// `ProjectedTextLine::from_injected_text` consumes. Headless frames
+/// (`source.model = None`) have no injected text.
+fn bucket_injected_text_from_decorations(
+  source : FrameSource,
 ) -> Array[Array[InjectedText]] {
+  let snapshot = source.tokenized.snapshot
   let buckets : Array[Array[InjectedText]] = []
   for _ in 0..<snapshot.line_count() {
     buckets.push([])
   }
-  for item in injected_text {
-    // Provider/inlay-hint positions are 1-based (Monaco); the projection
-    // pipeline (`ProjectedTextLine::from_injected_text`) consumes 0-based model
-    // line/column, so this boundary converts once and stores 0-based.
+  guard source.model is Some(model) else { return buckets }
+  let entries : Array[(Int, Int, Int, @model.ModelInjectedTextOptions)] = []
+  for decoration in model.get_injected_text_decorations() {
+    match decoration.options.before {
+      Some(before) =>
+        if before.content.length() > 0 {
+          entries.push(
+            (
+              decoration.range.start_line_number,
+              decoration.range.start_column,
+              0,
+              before,
+            ),
+          )
+        }
+      None => ()
+    }
+    match decoration.options.after {
+      Some(after) =>
+        if after.content.length() > 0 {
+          entries.push(
+            (
+              decoration.range.end_line_number,
+              decoration.range.end_column,
+              1,
+              after,
+            ),
+          )
+        }
+      None => ()
+    }
+  }
+  entries.sort_by((left, right) => {
+    let (l_line, l_column, l_order, _) = left
+    let (r_line, r_column, r_order, _) = right
+    if l_line != r_line {
+      l_line - r_line
+    } else if l_column != r_column {
+      l_column - r_column
+    } else {
+      l_order - r_order
+    }
+  })
+  for entry in entries {
+    let (line_number, column, _, options) = entry
     let line = @base_common.clamp_int(
-      item.position.line_number - 1,
+      line_number - 1,
       0,
       snapshot.line_count() - 1,
     )
     let line_text = snapshot.line_text(line)
-    let column = @base_common.clamp_int(
-      item.position.column - 1,
-      0,
-      line_text.length(),
+    let column0 = @base_common.clamp_int(column - 1, 0, line_text.length())
+    buckets[line].push(
+      InjectedText(
+        Position(line, column0),
+        options.content,
+        options.inline_class_name.unwrap_or(""),
+        source_index=options.attached_index,
+      ),
     )
-    if item.text.length() > 0 {
-      buckets[line].push({ ..item, position: { line_number: line, column } })
-    }
-  }
-  for bucket in buckets {
-    bucket.sort_by((left, right) => {
-      if left.position.column != right.position.column {
-        left.position.column - right.position.column
-      } else {
-        left.source_index - right.source_index
-      }
-    })
   }
   buckets
 }
@@ -552,25 +579,6 @@ pub fn ViewModel::with_options(
 }
 
 ///|
-/// Creates a view model with wrapping/tab options and inlay hints.
-pub fn ViewModel::with_options_and_inlay_hints(
-  source : FrameSource,
-  options : ViewModelOptions,
-  inlay_hints : Array[@language.InlayHint],
-) -> ViewModel {
-  let injected_text = injected_text_from_inlay_hints(inlay_hints)
-  let as_is = ViewModelLinesFromModelAsIs::with_injected_text(
-    source, injected_text,
-  )
-  ViewModel::from_lines(
-    source,
-    options,
-    as_is,
-    force_projected=injected_text.length() > 0,
-  )
-}
-
-///|
 /// Creates a view model with wrapping/tab options and folding.
 pub fn ViewModel::with_options_and_folding(
   source : FrameSource,
@@ -584,27 +592,15 @@ pub fn ViewModel::with_options_and_folding(
 }
 
 ///|
-/// Creates a view model with wrapping/tab options, folding, and inlay hints.
-pub fn ViewModel::with_options_folding_and_inlay_hints(
-  source : FrameSource,
-  options : ViewModelOptions,
-  folding_model : FoldingModel,
-  inlay_hints : Array[@language.InlayHint],
-) -> ViewModel {
-  let injected_text = injected_text_from_inlay_hints(inlay_hints)
-  let as_is = ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(
-    source, folding_model, injected_text,
-  )
-  ViewModel::from_lines(source, options, as_is, force_projected=true)
-}
-
-///|
 fn ViewModel::from_lines(
   source : FrameSource,
   options : ViewModelOptions,
   as_is : ViewModelLinesFromModelAsIs,
   force_projected~ : Bool,
 ) -> ViewModel {
+  // Injected text (from the model's decoration storage) needs the projected
+  // tier even without wrapping or folding.
+  let force_projected = force_projected || as_is.has_injected_text()
   let (lines, coordinates_converter) = if options.is_soft_wrap_enabled() {
     let projected = ViewModelLinesFromProjectedModel::new(
       as_is,

@@ -55,14 +55,20 @@ What gets **deleted**, what gets **promoted**, what stays:
 
 **Out of scope (named siblings, explicitly deferred — not "unseen"):**
 
-- **Injected text via decoration storage** (`_injectedTextDecorationsTree`,
-  `getInjectedTextDecorations`, `ModelDecorationInjectedTextOptions`,
-  `getAllInjectedText`/`getInjectedTextInInterval`,
-  `recordLineAffectedByInjectedText`, the `InjectedTextInlineDecorationsComputer`
-  arm of the faithful package). The viewer's inlay hints use their own
-  injected-text pipeline (`view_model/injected_text.mbt`); merging it into
-  decoration storage is its own future port. The third tree slot is stubbed
-  empty; the computer arm stays test-only.
+- **Injected text via decoration storage — CLOSED (deviations-closeout
+  Track F, 2026-07-03).** `Decoration` carries `before`/`after`
+  (`ModelInjectedTextOptions`), `is_node_injected_text` routes nodes into
+  the third tree, `get_injected_text_decorations` /
+  `get_injected_text_in_interval` are the query surface, and the
+  projection derives per-line injected text from the storage
+  (`bucket_injected_text_from_decorations`); inlay hints write `after`
+  decorations (`viewer/inlay_hints_host.mbt`) and the parallel
+  `Array[InjectedText]` constructors are deleted. Residual deviation: a
+  single `affects_injected_text` event flag triggers a whole-projection
+  rebuild instead of Monaco's per-line
+  `onDidChangeContentOrInjectedText` recompute
+  (`recordLineAffectedByInjectedText` stays unported with that
+  granularity).
 - **Line-height / font decorations** (`lineHeight`, `fontSize`,
   `affectsFont`, `filterFontDecorations`,
   `getCustomLineHeights*`/`getFontDecorations*`,

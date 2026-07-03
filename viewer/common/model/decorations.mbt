@@ -96,7 +96,6 @@ pub fn clean_class_name(class_name : String) -> String {
 /// Omitted `ModelDecorationOptions` fields (out of scope, plan
 /// `monaco-decoration-system-port.md`): `blockClassName`/`blockIsAfterEnd`/
 /// `blockDoesNotCollapse`/`blockPadding` (block decorations),
-/// `before`/`after` (injected text via decoration storage),
 /// `lineNumberClassName`/`lineNumberHoverMessage`/`linesDecorationsTooltip`/
 /// `glyphMarginHoverMessage` (no consumer), `hideInCommentTokens`/
 /// `hideInStringTokens`, `lineHeight`/`fontSize`/`affectsFont` (font/line-
@@ -121,7 +120,38 @@ pub(all) struct Decoration {
   margin_class_name : String?
   collapse_on_replace_edit : Bool
   description : String
+  /// Injected text rendered before/after the decoration range —
+  /// `ModelDecorationOptions.before`/`after` (`InjectedTextOptions`,
+  /// `model.ts`), stored in the interval tree's injected-text slot
+  /// (deviations-closeout Track F). Inlay hints are the producer.
+  before : ModelInjectedTextOptions?
+  after : ModelInjectedTextOptions?
 } derive(Debug)
+
+///|
+/// `InjectedTextOptions` at the model tier (`model.ts`): the rendered
+/// content, its inline class, and the producer's attachment
+/// (`attachedData`, reduced to the inlay-hint source index the hover
+/// pipeline reads). `cursorStops` is unported — the readonly viewer treats
+/// every injection as `InjectedTextCursorStops.Both` (the default), see
+/// `normalize_projected_column_around_injections`.
+pub(all) struct ModelInjectedTextOptions {
+  content : String
+  inline_class_name : String?
+  /// `attachedData` reduced: the producing inlay hint's index (`-1` = none),
+  /// carried through the projection into hit-testing/hover lookup.
+  attached_index : Int
+} derive(Debug, Eq)
+
+///|
+/// Builds injected-text options.
+pub fn ModelInjectedTextOptions::ModelInjectedTextOptions(
+  content : String,
+  inline_class_name? : String,
+  attached_index? : Int = -1,
+) -> ModelInjectedTextOptions {
+  { content, inline_class_name, attached_index }
+}
 
 ///|
 /// A (range, options) pair handed to `TextModel::delta_decorations` —
@@ -149,6 +179,11 @@ pub(all) struct ModelDecorationsChangedEvent {
   affects_minimap : Bool
   affects_overview_ruler : Bool
   affects_glyph_margin : Bool
+  /// Whether the change touched injected-text (`before`/`after`) options —
+  /// the viewer's whole-event stand-in for Monaco's per-line
+  /// `onDidChangeContentOrInjectedText` (Track F deviation; consumers
+  /// rebuild the projection when set).
+  affects_injected_text : Bool
   affects_line_number : Bool
 } derive(Eq, Debug)
 
@@ -178,6 +213,8 @@ pub fn Decoration::Decoration(
   margin_class_name? : String,
   collapse_on_replace_edit? : Bool = false,
   description? : String = "",
+  before? : ModelInjectedTextOptions,
+  after? : ModelInjectedTextOptions,
 ) -> Decoration {
   {
     class_name: clean_class_name(class_name),
@@ -201,5 +238,7 @@ pub fn Decoration::Decoration(
     margin_class_name: margin_class_name.map(clean_class_name),
     collapse_on_replace_edit,
     description,
+    before,
+    after,
   }
 }

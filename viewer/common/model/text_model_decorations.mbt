@@ -25,9 +25,10 @@
 //   no dispose lifecycle).
 //
 // Out-of-scope members (explicitly deferred/N-A, per plan):
-// - Injected text: `_injectedTextDecorationsTree` is carried as an
-//   always-empty third tree slot (`is_node_injected_text` is constantly
-//   false); `getInjectedTextDecorations`, `getAllInjectedText`,
+// - Injected text: LIVE since deviations-closeout Track F — `before`/`after`
+//   options route nodes into `_injectedTextDecorationsTree`, queried via
+//   `get_injected_text_decorations`/`get_injected_text_in_interval`;
+//   remaining unported injected-text members:
 //   `getInjectedTextInInterval`, `getLineInjectedText`,
 //   `recordLineAffectedByInjectedText` are DEFERRED with the feature.
 // - Line-height/font: `getCustomLineHeights*`, `getFontDecorations*`,
@@ -85,6 +86,13 @@ struct DecorationsChangedEmitter {
   mut affects_minimap : Bool
   mut affects_overview_ruler : Bool
   mut affects_glyph_margin : Bool
+  /// Whether any changed decoration carried injected-text options.
+  /// Deviation (Track F): Monaco routes injected-text deltas through
+  /// `onDidChangeContentOrInjectedText` with per-line granularity
+  /// (`handleBeforeFireDecorationsChangedEvent` → affected-lines event);
+  /// the viewer's pipeline rebuilds the projection whole, so a single
+  /// event flag is the seam.
+  mut affects_injected_text : Bool
   /// Carried for event shape only: `lineNumberClassName` is not ported, so
   /// nothing sets this (and, like the source's `doFire`, it is never reset).
   affects_line_number : Bool
@@ -99,6 +107,7 @@ fn DecorationsChangedEmitter::new() -> DecorationsChangedEmitter {
     affects_minimap: false,
     affects_overview_ruler: false,
     affects_glyph_margin: false,
+    affects_injected_text: false,
     affects_line_number: false,
   }
 }
@@ -144,6 +153,9 @@ fn DecorationsChangedEmitter::check_affected_and_fire(
     self.affects_glyph_margin = options.glyph_margin_class_name is Some(name) &&
       name != ""
   }
+  if !self.affects_injected_text {
+    self.affects_injected_text = options_is_injected_text(options)
+  }
   self.try_fire()
 }
 
@@ -152,6 +164,7 @@ fn DecorationsChangedEmitter::fire(self : DecorationsChangedEmitter) -> Unit {
   self.affects_minimap = true
   self.affects_overview_ruler = true
   self.affects_glyph_margin = true
+  self.affects_injected_text = true
   self.try_fire()
 }
 
@@ -173,12 +186,14 @@ fn DecorationsChangedEmitter::do_fire(self : DecorationsChangedEmitter) -> Unit 
     affects_minimap: self.affects_minimap,
     affects_overview_ruler: self.affects_overview_ruler,
     affects_glyph_margin: self.affects_glyph_margin,
+    affects_injected_text: self.affects_injected_text,
     affects_line_number: self.affects_line_number,
   }
   self.should_fire_deferred = false
   self.affects_minimap = false
   self.affects_overview_ruler = false
   self.affects_glyph_margin = false
+  self.affects_injected_text = false
   self.actual.fire(event)
 }
 
@@ -200,11 +215,17 @@ fn options_in_overview_ruler(options : Decoration) -> Bool {
 }
 
 ///|
-/// `isNodeInjectedText` (`textModel.ts:2188-2190`): constantly false —
-/// injected text via decoration storage is out of scope (`before`/`after`
-/// options are not ported); the third tree slot stays empty.
-fn is_node_injected_text(_node : IntervalNode) -> Bool {
-  false
+/// `isNodeInjectedText` (`textModel.ts:2188-2190`) over
+/// `isOptionsInjectedText`: the node carries `before`/`after` injected-text
+/// options (populated since deviations-closeout Track F; inlay hints are the
+/// producer).
+fn is_node_injected_text(node : IntervalNode) -> Bool {
+  node.options is Some(options) && options_is_injected_text(options)
+}
+
+///|
+fn options_is_injected_text(options : Decoration) -> Bool {
+  options.before is Some(_) || options.after is Some(_)
 }
 
 // #endregion
@@ -319,6 +340,42 @@ fn DecorationsTrees::get_all(
     version_id, only_margin_decorations,
   )
   self.ensure_nodes_have_ranges(host, result)
+}
+
+///|
+/// `getInjectedTextInInterval` (`textModel.ts`, DecorationsTrees): the
+/// injected-text tree's interval search with the
+/// `showIfCollapsed || !range.isEmpty()` filter.
+fn DecorationsTrees::get_injected_text_in_interval(
+  self : DecorationsTrees,
+  host : TextModel,
+  start : Int,
+  end : Int,
+  filter_owner_id : Int,
+) -> Array[ModelDecoration] {
+  let version_id = host.get_version_id()
+  let result = self.injected_text_decorations_tree.interval_search(
+    start, end, filter_owner_id, false, false, version_id, false,
+  )
+  self
+  .ensure_nodes_have_ranges(host, result)
+  .filter(d => d.options.show_if_collapsed || !d.range.is_empty())
+}
+
+///|
+/// `getAllInjectedText` (`textModel.ts`, DecorationsTrees).
+fn DecorationsTrees::get_all_injected_text(
+  self : DecorationsTrees,
+  host : TextModel,
+  filter_owner_id : Int,
+) -> Array[ModelDecoration] {
+  let version_id = host.get_version_id()
+  let result = self.injected_text_decorations_tree.search(
+    filter_owner_id, false, false, version_id, false,
+  )
+  self
+  .ensure_nodes_have_ranges(host, result)
+  .filter(d => d.options.show_if_collapsed || !d.range.is_empty())
 }
 
 ///|
@@ -756,6 +813,32 @@ pub fn TextModel::get_all_decorations(
 ) -> Array[ModelDecoration] {
   self.decorations_state.decorations_tree.get_all(
     self, owner_id, filter_out_validation, filter_font_decorations, false, false,
+  )
+}
+
+///|
+/// `getInjectedTextDecorations` (`textModel.ts`): every decoration carrying
+/// `before`/`after` injected-text options. `owner_id = 0` matches all
+/// owners (the tree's filter semantics).
+pub fn TextModel::get_injected_text_decorations(
+  self : TextModel,
+  owner_id? : Int = 0,
+) -> Array[ModelDecoration] {
+  self.decorations_state.decorations_tree.get_all_injected_text(self, owner_id)
+}
+
+///|
+/// `getInjectedTextInInterval` reduced to a line query — the seam
+/// `_getInjectedTextInLine` (`textModel.ts`) gives the view-model line
+/// projection.
+pub fn TextModel::get_injected_text_in_interval(
+  self : TextModel,
+  start_offset : Int,
+  end_offset : Int,
+  owner_id? : Int = 0,
+) -> Array[ModelDecoration] {
+  self.decorations_state.decorations_tree.get_injected_text_in_interval(
+    self, start_offset, end_offset, owner_id,
   )
 }
 

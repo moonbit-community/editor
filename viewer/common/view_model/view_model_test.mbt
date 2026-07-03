@@ -98,20 +98,58 @@ fn test_folded_view_model(
 }
 
 ///|
+/// Builds a view model whose inlay hints are written as `after`
+/// injected-text decorations on a backing `TextModel` (Track F: the
+/// projection reads injected text from the decoration storage).
 fn test_inlay_view_model(
   text : String,
   options : @view_model.ViewModelOptions,
   hints : Array[@language.InlayHint],
 ) -> @view_model.ViewModel {
-  let doc = @model.TextSnapshot(text)
+  let model = @model.TextModel(
+    @base_common.Uri::memory("inlay-test.mbt"),
+    "inlay-test.mbt",
+    "moonbit",
+    1,
+    "rev-1",
+    text,
+  )
+  let decorations : Array[@model.DeltaDecoration] = []
+  for index in 0..<hints.length() {
+    let hint = hints[index]
+    let class_name = match hint.kind {
+      Some(TypeHint) => "inlay-hint inlay-hint-type"
+      Some(ParameterHint) => "inlay-hint inlay-hint-parameter"
+      None => "inlay-hint"
+    }
+    decorations.push({
+      range: Range(
+        hint.position.line_number,
+        hint.position.column,
+        hint.position.line_number,
+        hint.position.column,
+      ),
+      options: @model.Decoration(
+        "",
+        description="inlay-hint",
+        show_if_collapsed=true,
+        after=@model.ModelInjectedTextOptions(
+          hint.label,
+          inline_class_name=class_name,
+          attached_index=index,
+        ),
+      ),
+    })
+  }
+  model.delta_decorations([], decorations) |> ignore
+  let doc = model.snapshot
   let tokenized = @view_model.TokenizedDocument::build(
     doc,
     @syntax.highlight(doc),
   )
-  @view_model.ViewModel::with_options_and_inlay_hints(
-    FrameSource(tokenized, @language.ProviderResult::empty()),
+  @view_model.ViewModel::with_options(
+    FrameSource(tokenized, @language.ProviderResult::empty(), model~),
     options,
-    hints,
   )
 }
 

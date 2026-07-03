@@ -80,8 +80,6 @@ pub fn default_token_color_map() -> Array[String]
 
 pub fn filter_validation_decorations(RenderValidationDecorations) -> Bool
 
-pub fn injected_text_from_inlay_hints(Array[@language.InlayHint]) -> Array[InjectedText]
-
 pub fn line_decorations_filter(Array[@inline_decorations.InlineDecoration], Int, Int, Int) -> Array[@view_layout.LineDecoration]
 
 pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.Decoration], Int, RenderLine) -> Array[@view_layout.LineDecoration]
@@ -161,7 +159,6 @@ pub(all) struct InjectedText {
   source_index : Int
 } derive(Eq, @debug.Debug)
 pub fn InjectedText::InjectedText(@common.Position, String, String, source_index? : Int) -> Self
-pub fn InjectedText::from_inlay_hint(@language.InlayHint, Int) -> Self
 
 pub struct InsertedToken {
   offset : Int
@@ -387,8 +384,6 @@ pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.
 pub fn ViewModel::version(Self) -> Int
 pub fn ViewModel::with_options(FrameSource, ViewModelOptions) -> Self
 pub fn ViewModel::with_options_and_folding(FrameSource, ViewModelOptions, FoldingModel) -> Self
-pub fn ViewModel::with_options_and_inlay_hints(FrameSource, ViewModelOptions, Array[@language.InlayHint]) -> Self
-pub fn ViewModel::with_options_folding_and_inlay_hints(FrameSource, ViewModelOptions, FoldingModel, Array[@language.InlayHint]) -> Self
 
 pub(all) enum ViewModelCoordinatesConverter {
   Identity(IdentityCoordinatesConverter)
@@ -443,8 +438,6 @@ pub fn ViewModelLinesFromModelAsIs::render_line(Self, Int) -> RenderLine
 pub fn ViewModelLinesFromModelAsIs::render_model_line(Self, Int) -> RenderLine
 pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 pub fn ViewModelLinesFromModelAsIs::with_folding_model(FrameSource, FoldingModel) -> Self
-pub fn ViewModelLinesFromModelAsIs::with_folding_model_and_injected_text(FrameSource, FoldingModel, Array[InjectedText]) -> Self
-pub fn ViewModelLinesFromModelAsIs::with_injected_text(FrameSource, Array[InjectedText]) -> Self
 
 pub struct ViewModelLinesFromProjectedModel {
   base : ViewModelLinesFromModelAsIs

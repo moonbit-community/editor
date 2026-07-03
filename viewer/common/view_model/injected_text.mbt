@@ -20,58 +20,6 @@ pub fn InjectedText::InjectedText(
 }
 
 ///|
-/// Converts a language inlay hint to injected renderer text.
-pub fn InjectedText::from_inlay_hint(
-  hint : @language.InlayHint,
-  source_index : Int,
-) -> InjectedText {
-  InjectedText(
-    hint.position,
-    padded_inlay_hint_label(hint),
-    inlay_hint_class_name(hint),
-    source_index~,
-  )
-}
-
-///|
-/// Converts all non-empty inlay hints into injected text while preserving source
-/// indices for hover lookup.
-pub fn injected_text_from_inlay_hints(
-  hints : Array[@language.InlayHint],
-) -> Array[InjectedText] {
-  let injected : Array[InjectedText] = []
-  for index in 0..<hints.length() {
-    let text = InjectedText::from_inlay_hint(hints[index], index)
-    if text.text.length() > 0 {
-      injected.push(text)
-    }
-  }
-  injected
-}
-
-///|
-fn padded_inlay_hint_label(hint : @language.InlayHint) -> String {
-  let builder = StringBuilder()
-  if hint.padding_left {
-    builder.write_string(" ")
-  }
-  builder.write_string(hint.label)
-  if hint.padding_right {
-    builder.write_string(" ")
-  }
-  builder.to_string()
-}
-
-///|
-fn inlay_hint_class_name(hint : @language.InlayHint) -> String {
-  match hint.kind {
-    Some(TypeHint) => "inlay-hint inlay-hint-type"
-    Some(ParameterHint) => "inlay-hint inlay-hint-parameter"
-    None => "inlay-hint"
-  }
-}
-
-///|
 /// Segment kind inside a projected line: source text or injected text.
 pub(all) enum ProjectedLinePartKind {
   SourceSegment(model_start~ : Int, model_end~ : Int)

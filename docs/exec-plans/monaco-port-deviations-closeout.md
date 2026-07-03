@@ -1,7 +1,17 @@
 # Closing the Remaining Monaco Port Deviations
 
-Status: **proposed** — Date: 2026-07-03.
+Status: **implemented** — Date: 2026-07-03 (proposed and landed the same day;
+tracks A–F committed individually in plan order).
 Oracle pin: `vscode` submodule at `294fb350` (2026-06-02, `heads/main`).
+
+Landing notes against the combined exit criteria: A, B, C, D, F landed in
+full (each track's inventory pasted below before its port code; state
+corrections found during inventory are recorded in the pastes). E landed the
+anchor rebase and every registry-blocked hover-plan row is terminal
+(PORTED or DEFERRED with reason in that plan's ledger); the hover plan's
+Phase 4 wrapper/focus-nav cluster remains its own open feature work — it is
+not registry-blocked and not a deviation inside a ported unit (see the
+Track E phase notes).
 
 ## Context
 
@@ -544,6 +554,42 @@ not depend on it; anything that lands before it shrinks its diff.
 1. **Inventory** `textModel`'s injected-text decoration handling +
    `viewModelLines.ts` `getInjectedTextAt`/`createLineBreaksComputer` seams
    (which events re-run the line-breaks computer); paste here.
+
+   **Inventory (pasted 2026-07-03):**
+
+   - **Storage:** `isNodeInjectedText` over `isOptionsInjectedText`
+     (`!!options.after || !!options.before`) routes nodes into
+     `_injectedTextDecorationsTree`; `getInjectedTextInInterval` /
+     `getAllInjectedText` filter `showIfCollapsed || !range.isEmpty()`.
+     `LineInjectedText.fromDecorations` (`textModelEvents.ts`): `before` at
+     the range start (order 0), `after` at the range end (order 1), sorted
+     by line, column, order.
+   - **Invalidation:** Monaco collects affected lines per changed
+     injected-text decoration (`recordLineAffectedByInjectedText` inside
+     `handleBeforeFireDecorationsChangedEvent`) and fires
+     `onDidChangeContentOrInjectedText`, which re-runs the line-breaks
+     computer for exactly those lines. **Viewer deviation (recorded on the
+     emitter and event):** a single `affects_injected_text` flag on
+     `ModelDecorationsChangedEvent`; the viewer's subscription rebuilds the
+     whole projection (the granularity it already uses for wrap-width
+     changes). The plan's "re-renders the affected lines only" wbtest
+     became add/remove/move correctness tests
+     (`inlay_hints_host_wbtest.mbt`) plus this documented granularity
+     deviation.
+   - **Producer:** `inlayHintsController.ts` `_updateHintsDecorators`
+     writes `{ range: fromPositions(position), options: { showIfCollapsed:
+     true, after: { content, inlineClassName, attachedData } } }` — ported
+     as `inlay_hints_host.mbt` (`attachedData` reduced to the hint's
+     source index, which the projection threads into hit-testing/hover
+     lookup). The raw `Array[InlayHint]` stays on the `Viewer` for hover
+     tooltips only.
+   - **Deleted (same commit, no dual pipeline):**
+     `ViewModel::with_options_and_inlay_hints`,
+     `with_options_folding_and_inlay_hints`,
+     `ViewModelLinesFromModelAsIs::with_injected_text`,
+     `with_folding_model_and_injected_text`,
+     `injected_text_from_inlay_hints`, `InjectedText::from_inlay_hint`,
+     and the hint-based `bucket_injected_text`.
 2. **Storage.** `Decoration` gains the `after`/`before` injected-text options
    subset; `DecorationsTrees` queries expose injected text per line range
    (Monaco `getInjectedTextInInterval`).

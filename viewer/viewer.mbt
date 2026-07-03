@@ -131,6 +131,11 @@ pub struct Viewer {
   /// client rects are unknown until then). Flushed in `flush_render`, cancelled
   /// when an unrelated scroll moves out of the reveal's band (`reveal.mbt`).
   priv mut pending_horizontal_reveal : PendingHorizontalReveal?
+  /// The inlay-hint contrib's decoration ids (Monaco
+  /// `InlayHintsController`'s per-editor decoration collection): rewritten
+  /// by `sync_inlay_hint_decorations` when the provider result changes;
+  /// injected text renders from these decorations (Track F).
+  priv mut inlay_hint_decoration_ids : Array[String]
   /// The per-editor contribution instances the registry constructed
   /// (`codeEditorContributions.ts`'s `_instances`, keyed by contribution
   /// id); disposed with the viewer.
@@ -320,6 +325,7 @@ pub fn Viewer::Viewer(
     last_mouse_buttons: 0,
     editor_has_focus: false,
     pending_horizontal_reveal: None,
+    inlay_hint_decoration_ids: [],
     contributions: {},
   }
   // Marker decoration changes reach the render through the model's
@@ -533,7 +539,7 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.comments_glyph_decoration_ids = []
   self.close_all_comment_widgets()
   self.model_decorations_subscription = Some(
-    model.on_did_change_decorations(_event => {
+    model.on_did_change_decorations(event => {
       // Monaco: `onDidChangeDecorations` → `viewModel.decorations
       // .onModelDecorationsChanged()` (`viewModelImpl.ts`) — drop the
       // computer + viewport caches before the re-render reads them.
@@ -543,6 +549,13 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
         None => ()
       }
       self.decorations_generation += 1
+      // Injected-text deltas re-run the line-breaks computer in Monaco
+      // (`onDidChangeContentOrInjectedText` → per-line recompute); the
+      // viewer's granularity is the whole-projection rebuild it already
+      // uses for wrap changes (Track F deviation on the change event).
+      if event.affects_injected_text {
+        self.rebuild_current_view_model_for_options()
+      }
       self.schedule_render()
     }),
   )
@@ -551,6 +564,7 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.folding_ranges = []
   self.folded_ranges = []
   self.inlay_hints = []
+  self.inlay_hint_decoration_ids = []
   self.cursor = None
   self.cancel_mouse_selection()
   self.dismiss_hover()
@@ -802,6 +816,7 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.folding_ranges = []
   self.folded_ranges = []
   self.inlay_hints = []
+  self.inlay_hint_decoration_ids = []
   self.view_zones = []
   self.view_layout.set_view_zones([]) |> ignore
   self.pending_horizontal_reveal = None

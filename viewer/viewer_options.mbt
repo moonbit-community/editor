@@ -13,6 +13,13 @@ pub(all) struct ViewerOptions {
   /// readonly viewer's diagnostics rendering is a shipped feature. Hosts can
   /// pass `Editable`/`Off` for Monaco's semantics.
   render_validation_decorations : @view_model.RenderValidationDecorations
+  /// The color theme, Monaco's standalone `theme` option
+  /// (`IStandaloneEditorConstructionOptions.theme`, also accepted by
+  /// `updateOptions`). Mirrored onto the view root as `data-theme`.
+  theme : String
+  /// The message shown while the viewer has no rendered frame — Monaco's
+  /// `placeholder` editor option.
+  placeholder : String
 } derive(Eq, Debug)
 
 ///|
@@ -34,6 +41,8 @@ pub fn ViewerOptions::ViewerOptions(
   render_line_highlight? : @view_layout.RenderLineHighlight = Line,
   render_line_highlight_only_when_focus? : Bool = false,
   render_validation_decorations? : @view_model.RenderValidationDecorations = On,
+  theme? : String = "dark",
+  placeholder? : String = "",
 ) -> ViewerOptions {
   {
     soft_wrap,
@@ -44,7 +53,19 @@ pub fn ViewerOptions::ViewerOptions(
     render_line_highlight,
     render_line_highlight_only_when_focus,
     render_validation_decorations,
+    theme,
+    placeholder,
   }
+}
+
+///|
+/// Whether the two option sets agree on every field that feeds view-model
+/// construction or layout — `theme` and `placeholder` apply without a rebuild.
+fn ViewerOptions::same_layout_options(
+  self : ViewerOptions,
+  other : ViewerOptions,
+) -> Bool {
+  { ..self, theme: other.theme, placeholder: other.placeholder } == other
 }
 
 ///|

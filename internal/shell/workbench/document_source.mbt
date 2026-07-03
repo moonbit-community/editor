@@ -88,7 +88,7 @@ impl @workspace.DocumentProvider for RemoteDocumentProvider with fn close(
 ///|
 fn open_active_document_cmd(
   uri : @base_common.Uri,
-  view_state : @viewer.ViewStatePolicy,
+  view_state : DocumentViewState,
 ) -> @rabbita.Cmd {
   @cmd.custom_cmd(_ => {
     active_document_generation.val = active_document_generation.val + 1
@@ -109,7 +109,7 @@ fn open_active_document_cmd(
 ///|
 fn reload_active_document_cmd(
   uri : @base_common.Uri,
-  view_state : @viewer.ViewStatePolicy,
+  view_state : DocumentViewState,
 ) -> @rabbita.Cmd {
   @cmd.custom_cmd(_ => {
     let generation = active_document_generation.val
@@ -137,7 +137,7 @@ fn close_active_document_source() -> Unit {
 fn read_active_document(
   uri : @base_common.Uri,
   generation : Int,
-  view_state : @viewer.ViewStatePolicy,
+  view_state : DocumentViewState,
 ) -> Unit {
   @js.async_run(() => {
     let result = document_provider.read(uri) catch {

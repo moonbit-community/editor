@@ -13,7 +13,7 @@ fn Viewer::pointer_handler_helper(
     overflow_guard: view.overflow_guard,
     editor_scrollable: view.editor_scrollbar.scrollable(),
     hover_scrollable: () => view.content_widgets.hover_scrollable(),
-    view_layout: () => self.layout,
+    view_layout: () => self.view_layout,
     apply_scroll: change => self.apply_scroll_change(change),
     line_height: () => @core.editor_line_height.to_double(),
     frame: () => self.frame,

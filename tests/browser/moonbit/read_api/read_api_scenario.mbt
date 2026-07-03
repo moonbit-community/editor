@@ -30,12 +30,14 @@ fn run_read_api_test() -> Unit {
   )
   match mount_host() {
     Some(host) => {
-      let viewer = @viewer.Viewer(
-        options=ViewerOptions(soft_wrap=false),
-        placeholder="Loading read-api fixture...",
+      let viewer = @viewer.Viewer::create(
+        host,
+        options=ViewerOptions(
+          soft_wrap=false,
+          placeholder="Loading read-api fixture...",
+        ),
       )
-      viewer.attach(host)
-      viewer.set_model(model, view_state=Reset)
+      viewer.set_model(Some(model))
       // Wait until the first line has rendered and been measured, then run the
       // measurement assertions synchronously (every getter flushes internally).
       @support.set_timeout(() => poll_read_api(ctx, viewer, done, 100), 100)
@@ -98,7 +100,7 @@ fn assert_read_api(
   // (3) getScrolledVisiblePosition at the top: top 0, the uniform line height,
   // and left == the content-left gutter (offset 0 + gutter - scrollLeft 0).
   let layout = viewer.get_layout_info()
-  let svp1 = viewer.get_scrolled_visible_position(1, 1).unwrap()
+  let svp1 = viewer.get_scrolled_visible_position(Position(1, 1)).unwrap()
   ctx.assert_true(
     svp1.top == 0.0,
     "scrolled top at line 1 is not 0 (\{svp1.top})",
@@ -111,7 +113,7 @@ fn assert_read_api(
     dabs(svp1.left - layout.content_left) < 1.0,
     "scrolled left (\{svp1.left}) is not the content-left gutter (\{layout.content_left})",
   )
-  let svp2 = viewer.get_scrolled_visible_position(2, 1).unwrap()
+  let svp2 = viewer.get_scrolled_visible_position(Position(2, 1)).unwrap()
   ctx.assert_true(
     svp2.top == 18.0,
     "scrolled top at line 2 is not one line down (\{svp2.top})",
@@ -130,9 +132,9 @@ fn assert_read_api(
 
   // (5) Horizontal scroll shifts the scrolled left by exactly the scroll delta;
   // the relative-to-line offset itself is scroll-independent.
-  let left_before = viewer.get_scrolled_visible_position(1, 5).unwrap().left
-  viewer.scroll_to_position(0.0, 20.0)
-  let left_after = viewer.get_scrolled_visible_position(1, 5).unwrap().left
+  let left_before = viewer.get_scrolled_visible_position(Position(1, 5)).unwrap().left
+  viewer.set_scroll_position(scroll_top=0.0, scroll_left=20.0)
+  let left_after = viewer.get_scrolled_visible_position(Position(1, 5)).unwrap().left
   ctx.assert_true(
     dabs(left_before - left_after - 20.0) < 0.1,
     "horizontal scroll did not shift the scrolled left by 20 (\{left_before} -> \{left_after})",
@@ -140,8 +142,8 @@ fn assert_read_api(
 
   // (6) Vertical scroll subtracts scrollTop: line 3 (offset 36) lands at top 0
   // after scrolling down two lines.
-  viewer.scroll_to_position(36.0, 0.0)
-  let svp3 = viewer.get_scrolled_visible_position(3, 1).unwrap()
+  viewer.set_scroll_position(scroll_top=36.0, scroll_left=0.0)
+  let svp3 = viewer.get_scrolled_visible_position(Position(3, 1)).unwrap()
   ctx.assert_true(
     svp3.top == 0.0,
     "vertical scroll did not subtract scrollTop (\{svp3.top})",

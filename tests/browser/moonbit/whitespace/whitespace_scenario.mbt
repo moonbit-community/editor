@@ -33,16 +33,16 @@ fn run_whitespace_test() -> Unit {
   )
   match mount_host() {
     Some(host) => {
-      let viewer = @viewer.Viewer(
+      let viewer = @viewer.Viewer::create(
+        host,
         options=ViewerOptions(
           soft_wrap=false,
           render_whitespace=All,
           render_control_characters=true,
+          placeholder="Loading whitespace fixture...",
         ),
-        placeholder="Loading whitespace fixture...",
       )
-      viewer.attach(host)
-      viewer.set_model(model, view_state=Reset)
+      viewer.set_model(Some(model))
       @support.set_timeout(() => poll_whitespace(ctx, done, 100), 50)
     }
     None => {

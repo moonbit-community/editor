@@ -14,8 +14,13 @@ fn run_render_perf_test() -> Unit {
   let viewer_ref : Ref[@viewer.Viewer?] = Ref(None)
   match mount_host() {
     Some(host) => {
-      let viewer = @viewer.Viewer(placeholder="Loading performance fixture...")
-      viewer.on_did_render_model(event => {
+      let viewer = @viewer.Viewer::create(
+        host,
+        options=ViewerOptions(
+          placeholder="Loading performance fixture...",
+        ),
+      )
+      @viewer.debug_on_did_render_model(viewer, event => {
         if event.fresh && event.model.uri.to_string().contains("large") {
           record_sample(
             ctx, viewer_ref, large_text, done, sample_index, sample_start, samples,
@@ -24,7 +29,6 @@ fn run_render_perf_test() -> Unit {
       })
       |> ignore
       viewer_ref.val = Some(viewer)
-      viewer.attach(host)
       @support.set_timeout(
         () => run_next_sample(viewer, large_text, sample_index, sample_start),
         50,
@@ -82,15 +86,14 @@ fn run_next_sample(
   }
   let uri = @base_common.Uri::memory("perf/large_" + name + ".mbt")
   viewer.set_model(
-    TextModel(
+    Some(TextModel(
       uri,
       uri.display_name(),
       "moonbit",
       sample_index.val + 2,
       "perf-" + name,
       large_text,
-    ),
-    view_state=Reset,
+    )),
   )
 }
 

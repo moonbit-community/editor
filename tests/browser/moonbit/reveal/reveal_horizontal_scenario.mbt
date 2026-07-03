@@ -24,23 +24,25 @@ fn run_reveal_horizontal_test() -> Unit {
     Some(host) => {
       // No soft wrap: long lines stay on one view line so a far-right column is
       // genuinely off-screen and needs a horizontal scroll to reveal.
-      let viewer = @viewer.Viewer(
-        options=ViewerOptions(soft_wrap=false),
-        placeholder="Loading reveal fixture...",
+      let viewer = @viewer.Viewer::create(
+        host,
+        options=ViewerOptions(
+          soft_wrap=false,
+          placeholder="Loading reveal fixture...",
+        ),
       )
-      viewer.on_did_scroll(event => {
+      viewer.on_did_scroll_change(event => {
         last_scroll_left.val = event.scroll_left
         last_scroll_top.val = event.scroll_top
       })
       |> ignore
-      viewer.attach(host)
-      viewer.set_model(model, view_state=Reset)
+      viewer.set_model(Some(model))
       // Give the first render time to measure the char width, content width, and
       // viewport box, then reveal a position below and to the right of the
       // viewport and poll until the deferred horizontal scroll lands.
       @support.set_timeout(
         () => {
-          viewer.reveal_position(reveal_line(), reveal_column())
+          viewer.reveal_position(Position(reveal_line(), reveal_column()))
           poll_reveal(ctx, last_scroll_left, last_scroll_top, done, 100)
         },
         100,

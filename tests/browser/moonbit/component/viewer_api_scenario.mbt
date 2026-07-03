@@ -131,12 +131,15 @@ fn run_viewer_api_test() -> Unit {
         provider,
       )
       |> ignore
-      let viewer = @viewer.Viewer(
+      let viewer = @viewer.Viewer::create(
+        host,
         services~,
-        options=ViewerOptions(soft_wrap=true),
-        placeholder="Loading component fixture...",
+        options=ViewerOptions(
+          soft_wrap=true,
+          placeholder="Loading component fixture...",
+        ),
       )
-      viewer.on_did_render_model(event => {
+      @viewer.debug_on_did_render_model(viewer, event => {
         if event.fresh {
           rendered_count.val = rendered_count.val + 1
           view_line_count.val = event.line_count
@@ -144,8 +147,7 @@ fn run_viewer_api_test() -> Unit {
         }
       })
       |> ignore
-      viewer.attach(host)
-      viewer.set_model(model, view_state=Reset)
+      viewer.set_model(Some(model))
       let zone = @rdom.document().create_element("div")
       zone.set_inner_html("component view zone")
       viewer.change_view_zones(accessor => {

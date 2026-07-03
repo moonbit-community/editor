@@ -24,27 +24,36 @@ priv struct WorkbenchModel {
 }
 
 ///|
+/// The shell's scroll policy for an incoming document read: a reload of the
+/// open document keeps the viewport (`save_view_state`/`restore_view_state`
+/// around `set_model`, the Monaco host pattern), a newly opened document
+/// starts at the top.
+priv enum DocumentViewState {
+  PreserveScroll
+  ResetScroll
+}
+
+///|
 priv enum WorkbenchMsg {
   ConnectProtocol
   ProtocolEvent(@websocket.Event)
   ProtocolSendFailed(String)
   SelectWorkspace(@base_common.Uri)
   AutoOpenResolved(@base_common.Uri?)
-  ActiveDocumentRead(@workspace.DocumentReadResult, @viewer.ViewStatePolicy)
+  ActiveDocumentRead(@workspace.DocumentReadResult, DocumentViewState)
   ActiveDocumentChanged(@workspace.DocumentChange)
   ViewerEvent(WorkbenchViewerEvent)
   ToggleTheme
-  GlobalKeyDown(@common.Keyboard)
   WindowResized
 }
 
 ///|
 priv enum WorkbenchViewerEvent {
-  DidChangeDiagnostics(@viewer.ViewerDiagnosticsChangedEvent)
+  DidChangeMarkers(Array[@base_common.Uri])
   DidBuildFrame(@viewer.ViewerFrameBuiltEvent)
   DidRenderModel(@viewer.ViewerModelRenderedEvent)
   DidResolveHover(@viewer.ViewerHoverResolvedEvent)
-  DidScroll(@viewer.ViewerScrollEvent)
+  DidScroll(@viewer.ScrollEvent)
   DidDispose
 }
 
@@ -101,14 +110,25 @@ fn workbench_services() -> @viewer.ViewerServices {
 }
 
 ///|
+/// Resolves the workbench viewer, creating it into the shell-rendered
+/// `.viewer-host` element on first use (`Viewer::create`, the
+/// `monaco.editor.create` pattern). First use happens in the after-render
+/// attach command, so the host element is always in the DOM by then.
 fn workbench_viewer() -> @viewer.Viewer {
   match viewer_cell.val {
     Some(viewer) => viewer
     None => {
-      let viewer = @viewer.Viewer(
+      let host = @rdom.document()
+        .query_selector(".viewer-host")
+        .to_option()
+        .unwrap()
+      let viewer = @viewer.Viewer::create(
+        host,
         services=workbench_services(),
-        theme=stored_theme(),
-        placeholder=source_message(initial_workbench_model()),
+        options=ViewerOptions(
+          theme=stored_theme(),
+          placeholder=source_message(initial_workbench_model()),
+        ),
       )
       install_viewer_event_subscriptions(viewer)
       viewer_cell.val = Some(viewer)
@@ -119,23 +139,25 @@ fn workbench_viewer() -> @viewer.Viewer {
 
 ///|
 fn install_viewer_event_subscriptions(viewer : @viewer.Viewer) -> Unit {
-  viewer.on_did_change_diagnostics(event => {
-    dispatch_workbench_msg(ViewerEvent(DidChangeDiagnostics(event)))
+  // Diagnostics counts live on the marker service (Monaco's
+  // `IMarkerService.onMarkerChanged`), not on the editor.
+  workbench_services().markers.on_did_change_markers(uris => {
+    dispatch_workbench_msg(ViewerEvent(DidChangeMarkers(uris)))
   })
   |> ignore
-  viewer.on_did_build_frame(event => {
+  @viewer.debug_on_did_build_frame(viewer, event => {
     dispatch_workbench_msg(ViewerEvent(DidBuildFrame(event)))
   })
   |> ignore
-  viewer.on_did_render_model(event => {
+  @viewer.debug_on_did_render_model(viewer, event => {
     dispatch_workbench_msg(ViewerEvent(DidRenderModel(event)))
   })
   |> ignore
-  viewer.on_did_resolve_hover(event => {
+  @viewer.debug_on_did_resolve_hover(viewer, event => {
     dispatch_workbench_msg(ViewerEvent(DidResolveHover(event)))
   })
   |> ignore
-  viewer.on_did_scroll(event => {
+  viewer.on_did_scroll_change(event => {
     dispatch_workbench_msg(ViewerEvent(DidScroll(event)))
   })
   |> ignore
@@ -201,7 +223,6 @@ pub fn mount_app() -> Unit {
             )
           }),
         ),
-        @sub.on_key_down(emit.map(keyboard => GlobalKeyDown(keyboard))),
         @sub.on_resize(emit.map(_ => WindowResized)),
       ])
     },
@@ -211,13 +232,10 @@ pub fn mount_app() -> Unit {
 }
 
 ///|
-/// Attaches the imperative viewer view into the shell-rendered host
-/// element.
+/// Creates the imperative viewer inside the shell-rendered host element and
+/// gives it keyboard focus (the viewer owns its own key handling).
 fn attach_workbench_viewer() -> Unit {
-  match @rdom.document().query_selector(".viewer-host").to_option() {
-    Some(host) => workbench_viewer().attach(host)
-    None => ()
-  }
+  workbench_viewer().focus()
 }
 
 ///|
@@ -256,7 +274,13 @@ fn update_workbench(
     (
       @rabbita.batch([
         cmd,
-        viewer_cmd(() => workbench_viewer().set_placeholder(message)),
+        viewer_cmd(() => {
+          let viewer = workbench_viewer()
+          viewer.update_options({
+            ..viewer.get_options(),
+            placeholder: message,
+          })
+        }),
       ]),
       next,
     )
@@ -303,29 +327,15 @@ fn workbench_update(
       (
         @rabbita.batch([
           persist_theme_cmd(theme),
-          viewer_cmd(() => workbench_viewer().set_theme(theme)),
+          viewer_cmd(() => {
+            let viewer = workbench_viewer()
+            viewer.update_options({ ..viewer.get_options(), theme, })
+          }),
         ]),
         { ..model, theme, },
       )
     }
-    GlobalKeyDown(keyboard) => (global_key_cmd(keyboard), model)
-    WindowResized => (viewer_cmd(() => workbench_viewer().remeasure()), model)
-  }
-}
-
-///|
-/// Host-captured keys route into the viewer the way Escape always has;
-/// scrolling keys drive the viewer's synthetic scroll methods.
-fn global_key_cmd(keyboard : @common.Keyboard) -> @rabbita.Cmd {
-  match keyboard.key() {
-    "Escape" => viewer_cmd(() => workbench_viewer().escape())
-    "PageUp" => viewer_cmd(() => workbench_viewer().scroll_by_pages(-1))
-    "PageDown" => viewer_cmd(() => workbench_viewer().scroll_by_pages(1))
-    "Home" => viewer_cmd(() => workbench_viewer().scroll_home())
-    "End" => viewer_cmd(() => workbench_viewer().scroll_end())
-    "ArrowUp" => viewer_cmd(() => workbench_viewer().scroll_by_lines(-1))
-    "ArrowDown" => viewer_cmd(() => workbench_viewer().scroll_by_lines(1))
-    _ => @rabbita.none
+    WindowResized => (viewer_cmd(() => workbench_viewer().layout()), model)
   }
 }
 
@@ -335,9 +345,28 @@ fn select_workspace_update(
   uri : @base_common.Uri,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   (
-    open_active_document_cmd(uri, Reset),
+    open_active_document_cmd(uri, ResetScroll),
     { ..model, status: "loading", status_message: "", viewer_has_frame: false },
   )
+}
+
+///|
+/// Installs a model, wrapping `set_model` with the Monaco host pattern for
+/// scroll continuity: `set_model` always resets the viewport, so a reload
+/// saves and restores the view state around it.
+fn set_workbench_model(
+  text_model : @model.TextModel,
+  view_state : DocumentViewState,
+) -> Unit {
+  let viewer = workbench_viewer()
+  match view_state {
+    PreserveScroll => {
+      let state = viewer.save_view_state()
+      viewer.set_model(Some(text_model))
+      viewer.restore_view_state(state)
+    }
+    ResetScroll => viewer.set_model(Some(text_model))
+  }
 }
 
 ///|
@@ -346,13 +375,13 @@ fn select_workspace_update(
 fn active_document_read_update(
   model : WorkbenchModel,
   result : @workspace.DocumentReadResult,
-  view_state : @viewer.ViewStatePolicy,
+  view_state : DocumentViewState,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   match result {
     DocumentLoaded(document) => {
       let text_model = document_to_text_model(document)
       (
-        viewer_cmd(() => workbench_viewer().set_model(text_model, view_state~)),
+        viewer_cmd(() => set_workbench_model(text_model, view_state)),
         model,
       )
     }
@@ -372,13 +401,11 @@ fn active_document_change_update(
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   match change {
     DocumentInvalidated(uri~, ..) =>
-      (reload_active_document_cmd(uri, PreserveAnchor), model)
+      (reload_active_document_cmd(uri, PreserveScroll), model)
     DocumentUpdated(document) => {
       let text_model = document_to_text_model(document)
       (
-        viewer_cmd(() => {
-          workbench_viewer().set_model(text_model, view_state=PreserveAnchor)
-        }),
+        viewer_cmd(() => set_workbench_model(text_model, PreserveScroll)),
         model,
       )
     }
@@ -398,9 +425,7 @@ fn active_document_error_update(
   error : @workspace.DocumentError,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   emit_event("language:error", error.to_json().stringify())
-  let clear = viewer_cmd(() => {
-    workbench_viewer().clear_model(view_state=PreserveAnchor)
-  })
+  let clear = viewer_cmd(() => workbench_viewer().set_model(None))
   if error.code == FileNotFound {
     (
       @rabbita.batch([clear, dom_mounted_status_cmd("missing")]),
@@ -433,8 +458,22 @@ fn viewer_event_update(
   event : WorkbenchViewerEvent,
 ) -> (@rabbita.Cmd, WorkbenchModel) {
   match event {
-    DidChangeDiagnostics(event) => {
-      emit_language_status(event.count, event.revision)
+    DidChangeMarkers(uris) => {
+      // The marker service reports per-resource changes; the status line only
+      // tracks the open document.
+      match workbench_viewer().get_model() {
+        Some(text_model) =>
+          if uris.search_by(uri => uri.to_string() == text_model.uri.to_string())
+            is Some(_) {
+            emit_language_status(
+              workbench_services().markers
+              .diagnostics_for_resource(text_model.uri)
+              .length(),
+              text_model.revision,
+            )
+          }
+        None => ()
+      }
       (@rabbita.none, model)
     }
     DidBuildFrame(event) => {

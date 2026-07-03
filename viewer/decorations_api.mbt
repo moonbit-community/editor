@@ -7,8 +7,7 @@
 // Deviations: the no-model `null` returns are empty arrays (MoonBit
 // signatures stay non-optional, matching the viewer's public read API
 // conventions); `filterFontDecorations` is constantly false (font
-// decorations out of scope); `createDecorationsCollection` stays DEFERRED
-// until a host asks (plan out-of-scope list).
+// decorations out of scope).
 
 ///|
 /// `deltaDecorations` (`codeEditorWidget.ts:1368-1378`): atomically replace
@@ -79,4 +78,98 @@ pub fn Viewer::get_decorations_in_range(
       self.options.render_validation_decorations,
     ),
   )
+}
+
+///|
+/// Monaco's `IEditorDecorationsCollection` (`editorCommon.ts:544`), the
+/// non-deprecated decoration entry point: an id-managing wrapper over
+/// `delta_decorations` bound to one viewer. `onDidChange` and `has` are not
+/// ported (no consumer; the model-decoration event seam stays internal).
+pub struct DecorationsCollection {
+  priv viewer : Viewer
+  priv mut decoration_ids : Array[String]
+}
+
+///|
+/// `createDecorationsCollection` (`codeEditorWidget.ts:1389`).
+pub fn Viewer::create_decorations_collection(
+  self : Viewer,
+  decorations? : Array[@model.DeltaDecoration] = [],
+) -> DecorationsCollection {
+  let collection : DecorationsCollection = {
+    viewer: self,
+    decoration_ids: [],
+  }
+  if decorations.length() > 0 {
+    collection.set(decorations) |> ignore
+  }
+  collection
+}
+
+///|
+/// Replaces all previous decorations with `new_decorations`; returns the new
+/// ids.
+pub fn DecorationsCollection::set(
+  self : DecorationsCollection,
+  new_decorations : Array[@model.DeltaDecoration],
+) -> Array[String] {
+  self.decoration_ids = self.viewer.delta_decorations(
+    self.decoration_ids,
+    new_decorations,
+  )
+  self.decoration_ids
+}
+
+///|
+/// Appends `new_decorations` to the collection; returns the appended ids.
+pub fn DecorationsCollection::append(
+  self : DecorationsCollection,
+  new_decorations : Array[@model.DeltaDecoration],
+) -> Array[String] {
+  let appended = self.viewer.delta_decorations([], new_decorations)
+  self.decoration_ids = self.decoration_ids + appended
+  appended
+}
+
+///|
+/// Removes every decoration in the collection.
+pub fn DecorationsCollection::clear(self : DecorationsCollection) -> Unit {
+  self.decoration_ids = self.viewer.delta_decorations(
+    self.decoration_ids,
+    [],
+  )
+}
+
+///|
+/// The decoration count.
+pub fn DecorationsCollection::length(self : DecorationsCollection) -> Int {
+  self.decoration_ids.length()
+}
+
+///|
+/// The current model range of the `index`-th decoration, `None` when the
+/// index is out of bounds or the decoration no longer resolves.
+pub fn DecorationsCollection::get_range(
+  self : DecorationsCollection,
+  index : Int,
+) -> @base_common.Range? {
+  guard index >= 0 && index < self.decoration_ids.length() else { return None }
+  guard self.viewer.text_model is Some(model) else { return None }
+  model.get_decoration_range(self.decoration_ids[index])
+}
+
+///|
+/// The current model ranges of every decoration that still resolves.
+pub fn DecorationsCollection::get_ranges(
+  self : DecorationsCollection,
+) -> Array[@base_common.Range] {
+  guard self.viewer.text_model is Some(model) else { return [] }
+  let ranges = []
+  for id in self.decoration_ids {
+    match model.get_decoration_range(id) {
+      Some(range) => ranges.push(range)
+      None => ()
+    }
+  }
+  ranges
 }

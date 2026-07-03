@@ -9,7 +9,6 @@ fn Viewer::render_current_model(
   model : @model.TextModel,
   fresh~ : Bool,
   request_language~ : Bool,
-  view_state? : ViewStatePolicy = PreserveAnchor,
 ) -> Unit {
   let marker_diagnostics = self.services.markers.diagnostics_for_resource(
     model.uri,
@@ -29,25 +28,12 @@ fn Viewer::render_current_model(
     }
   }
   let tokenize_finished = now_ms()
-  self.did_change_diagnostics.fire({
-    count: marker_diagnostics.length(),
-    revision: model.revision,
-  })
   // Decorations live in the model's interval-tree storage now; the view
   // model queries them lazily per viewport (no per-frame bake).
   let source = @view_model.FrameSource(tokenized, providers, model~)
   let view_model = self.build_view_model(source)
-  // Only a rotated model identity or version renders from the top when the
-  // caller requested reset semantics.
-  let rotated = match self.text_model {
-    Some(current) => !current.same_identity_and_version(model)
-    None => true
-  }
   self.apply_view_model_layout(view_model, tokenized.snapshot)
-  if fresh && (rotated || view_state is Restore(_)) {
-    self.apply_view_state_policy(view_state)
-  }
-  let window = self.layout.visible_window(overscan=@core.line_overscan)
+  let window = self.view_layout.visible_window(overscan=@core.line_overscan)
   let frame = view_model.render_frame({
     start_line: window.start,
     end_line: window.end,
@@ -119,7 +105,7 @@ fn Viewer::rebuild_current_view_model_for_options(self : Viewer) -> Unit {
     Some(source) => {
       let view_model = self.build_view_model(source)
       self.apply_view_model_layout(view_model, source.tokenized.snapshot)
-      let window = self.layout.visible_window(overscan=@core.line_overscan)
+      let window = self.view_layout.visible_window(overscan=@core.line_overscan)
       let frame = view_model.render_frame({
         start_line: window.start,
         end_line: window.end,
@@ -147,7 +133,7 @@ fn Viewer::apply_view_model_layout(
   view_model : @view_model.ViewModel,
   snapshot : @model.TextSnapshot,
 ) -> Unit {
-  self.layout.set_line_count(view_model.line_count()) |> ignore
+  self.view_layout.set_line_count(view_model.line_count()) |> ignore
   self.normalize_browser_view_zones()
   self.sync_view_zones_with_layout()
   self.max_line_length = if self.options.soft_wrap && self.soft_wrap_column > 0 {

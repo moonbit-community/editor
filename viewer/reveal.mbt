@@ -26,6 +26,16 @@ pub fn Viewer::reveal_line_near_top(self : Viewer, line_number : Int) -> Unit {
 }
 
 ///|
+/// Reveals a 1-based model line centered only if it is currently outside the
+/// viewport (`CenterIfOutsideViewport`).
+pub fn Viewer::reveal_line_in_center_if_outside_viewport(
+  self : Viewer,
+  line_number : Int,
+) -> Unit {
+  self.reveal_line_with(line_number, CenterIfOutsideViewport)
+}
+
+///|
 /// Reveals a model line span `[start, end]` (1-based), aligning its top
 /// (`Simple`). Like Monaco's `revealLines`, this is a line-only reveal:
 /// horizontal scroll is not adjusted.
@@ -58,34 +68,56 @@ pub fn Viewer::reveal_lines_near_top(
 }
 
 ///|
-/// Reveals a 1-based model position `(line, column)`, aligning its top
-/// (`Simple`) and revealing it horizontally.
+/// Reveals a model line span `[start, end]` (1-based) centered only if it is
+/// currently outside the viewport (`CenterIfOutsideViewport`).
+pub fn Viewer::reveal_lines_in_center_if_outside_viewport(
+  self : Viewer,
+  start_line_number : Int,
+  end_line_number : Int,
+) -> Unit {
+  self.reveal_lines_with(
+    start_line_number,
+    end_line_number,
+    CenterIfOutsideViewport,
+  )
+}
+
+///|
+/// Reveals a 1-based model position, aligning its top (`Simple`) and revealing
+/// it horizontally.
 pub fn Viewer::reveal_position(
   self : Viewer,
-  line_number : Int,
-  column : Int,
+  position : @base_common.Position,
 ) -> Unit {
-  self.reveal_position_with(line_number, column, Simple)
+  self.reveal_position_with(position, Simple)
 }
 
 ///|
 /// Reveals a 1-based model position centered (`Center`), horizontally too.
 pub fn Viewer::reveal_position_in_center(
   self : Viewer,
-  line_number : Int,
-  column : Int,
+  position : @base_common.Position,
 ) -> Unit {
-  self.reveal_position_with(line_number, column, Center)
+  self.reveal_position_with(position, Center)
 }
 
 ///|
 /// Reveals a 1-based model position near the top (`NearTop`), horizontally too.
 pub fn Viewer::reveal_position_near_top(
   self : Viewer,
-  line_number : Int,
-  column : Int,
+  position : @base_common.Position,
 ) -> Unit {
-  self.reveal_position_with(line_number, column, NearTop)
+  self.reveal_position_with(position, NearTop)
+}
+
+///|
+/// Reveals a 1-based model position centered only if it is currently outside
+/// the viewport (`CenterIfOutsideViewport`), horizontally too.
+pub fn Viewer::reveal_position_in_center_if_outside_viewport(
+  self : Viewer,
+  position : @base_common.Position,
+) -> Unit {
+  self.reveal_position_with(position, CenterIfOutsideViewport)
 }
 
 ///|
@@ -121,6 +153,20 @@ pub fn Viewer::reveal_range_near_top(
   range : @base_common.Range,
 ) -> Unit {
   self.send_reveal_range(range, NearTop, reveal_horizontal=true)
+}
+
+///|
+/// Reveals a model `Range` near the top only if it is currently outside the
+/// viewport (`NearTopIfOutsideViewport`), horizontally too.
+pub fn Viewer::reveal_range_near_top_if_outside_viewport(
+  self : Viewer,
+  range : @base_common.Range,
+) -> Unit {
+  self.send_reveal_range(
+    range,
+    NearTopIfOutsideViewport,
+    reveal_horizontal=true,
+  )
 }
 
 ///|
@@ -161,14 +207,16 @@ fn Viewer::reveal_lines_with(
 ///|
 fn Viewer::reveal_position_with(
   self : Viewer,
-  line_number : Int,
-  column : Int,
+  position : @base_common.Position,
   vertical_type : @view_layout.VerticalRevealType,
 ) -> Unit {
   // Monaco's `_revealPosition`: a collapsed range at the position, with
   // horizontal reveal.
   let range = @base_common.Range::Range(
-    line_number, column, line_number, column,
+    position.line_number,
+    position.column,
+    position.line_number,
+    position.column,
   )
   self.send_reveal_range(range, vertical_type, reveal_horizontal=true)
 }
@@ -198,7 +246,7 @@ fn Viewer::send_reveal_range(
       end_column: model_range.end_column,
     })
   // (2) Minimal vertical scroll for the view range.
-  let scroll_top = self.layout.compute_scroll_top_to_reveal(
+  let scroll_top = self.view_layout.compute_scroll_top_to_reveal(
     view_range.start_line_number,
     view_range.end_line_number,
     vertical_type,
@@ -210,14 +258,14 @@ fn Viewer::send_reveal_range(
     return
   }
   let multi_line = view_range.start_line_number != view_range.end_line_number
-  let start_scroll_top = self.layout.position().scroll_top
+  let start_scroll_top = self.view_layout.position().scroll_top
   // (3) Commit the vertical scroll. A multi-line range under horizontal reveal
   // also resets `scroll_left` to 0 so most of both lines show
   // (`viewLines.ts:282`–`:289`). Clamping is free via `Scrollable`.
   let change = if reveal_horizontal && multi_line {
-    self.layout.scroll_to(scroll_top~, scroll_left=0.0)
+    self.view_layout.scroll_to(scroll_top~, scroll_left=0.0)
   } else {
-    self.layout.scroll_to(scroll_top~)
+    self.view_layout.scroll_to(scroll_top~)
   }
   self.apply_scroll_change(change)
   // (4) Horizontal request bookkeeping, after the vertical scroll so the
@@ -231,7 +279,7 @@ fn Viewer::send_reveal_range(
       start_column: view_range.start_column,
       end_column: view_range.end_column,
       start_scroll_top,
-      stop_scroll_top: self.layout.position().scroll_top,
+      stop_scroll_top: self.view_layout.position().scroll_top,
     })
     // The vertical scroll may have been a no-op (line already visible); still
     // schedule a render so the deferred horizontal reveal gets a chance to flush.
@@ -262,14 +310,14 @@ fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
     keep_empty=true,
   )
   match
-    self.layout.compute_scroll_left_to_reveal(
+    self.view_layout.compute_scroll_left_to_reveal(
       ranges,
       vertical_scrollbar_width=@core.editor_vertical_scrollbar_size,
     ) {
     Some(scroll_left) => {
       // Set only `scroll_left`; the vertical reveal already settled `scroll_top`.
-      let scroll_top = self.layout.position().scroll_top
-      self.apply_scroll_change(self.layout.scroll_to(scroll_top~, scroll_left~))
+      let scroll_top = self.view_layout.position().scroll_top
+      self.apply_scroll_change(self.view_layout.scroll_to(scroll_top~, scroll_left~))
     }
     None => ()
   }

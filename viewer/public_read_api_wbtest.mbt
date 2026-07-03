@@ -15,7 +15,7 @@ fn Viewer::test_set_layout_view_zones(
   self : Viewer,
   zones : Array[@view_layout.ViewZone],
 ) -> Unit {
-  self.layout.set_view_zones(zones) |> ignore
+  self.view_layout.set_view_zones(zones) |> ignore
 }
 
 ///|
@@ -29,9 +29,9 @@ test "read API: no-model getters return Monaco sentinels" {
   assert_eq(viewer.get_top_for_line_number(1), -1.0)
   assert_eq(viewer.get_top_for_position(1, 1), -1.0)
   assert_eq(viewer.get_bottom_for_line_number(1), -1.0)
-  assert_eq(viewer.get_line_height_for_position(1, 1), -1.0)
-  assert_eq(viewer.get_visible_column_from_position(5, 7), 7)
-  assert_eq(viewer.get_statusbar_column(5, 7), 7)
+  assert_eq(viewer.get_line_height_for_position(Position(1, 1)), -1.0)
+  assert_eq(viewer.get_visible_column_from_position(Position(5, 7)), 7)
+  assert_eq(viewer.get_statusbar_column(Position(5, 7)), 7)
   assert_true(viewer.get_position() is None)
   assert_true(viewer.get_selection() is None)
   assert_true(viewer.get_selections() is None)
@@ -86,7 +86,7 @@ test "read API: include_view_zones shifts the vertical offset past a zone" {
 test "read API: scroll and content extents" {
   with_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=400.0)
-    viewer.scroll_to_position(720.0, 0.0)
+    viewer.set_scroll_position(scroll_top=720.0, scroll_left=0.0)
     assert_eq(viewer.get_scroll_top(), 720.0)
     assert_eq(viewer.get_scroll_left(), 0.0)
     assert_eq(viewer.get_content_height(), 3600.0) // 200 lines * 18px
@@ -103,7 +103,7 @@ test "read API: scroll and content extents" {
 test "read API: visible ranges at top span the on-screen model lines" {
   with_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=400.0)
-    viewer.scroll_to_position(0.0, 0.0)
+    viewer.set_scroll_position(scroll_top=0.0, scroll_left=0.0)
     let ranges = viewer.get_visible_ranges()
     assert_eq(ranges.length(), 1)
     assert_eq(ranges[0].start_line_number, 1)
@@ -116,7 +116,7 @@ test "read API: visible ranges at top span the on-screen model lines" {
 test "read API: visible ranges track the scrolled window" {
   with_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=400.0)
-    viewer.scroll_to_position(720.0, 0.0) // 40 lines down
+    viewer.set_scroll_position(scroll_top=720.0, scroll_left=0.0) // 40 lines down
     let ranges = viewer.get_visible_ranges()
     assert_eq(ranges.length(), 1)
     assert_eq(ranges[0].start_line_number, 41)
@@ -131,7 +131,7 @@ test "read API: visible ranges track the scrolled window" {
 test "read API: visible ranges plus viewport padding grows the window" {
   with_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=400.0)
-    viewer.scroll_to_position(720.0, 0.0)
+    viewer.set_scroll_position(scroll_top=720.0, scroll_left=0.0)
     let padded = viewer.get_visible_ranges_plus_viewport_above_below()
     assert_eq(padded.length(), 1)
     // completely visible [41,62]; linesAround = max(20, round(400/18)=22) = 22.
@@ -171,7 +171,7 @@ test "read API: visible ranges convert view to model coordinates under wrap" {
 test "read API: visible ranges split around a folded region" {
   with_test_viewer(long_document(30), viewer => {
     viewer.test_set_viewport(width=800.0, height=540.0) // fits all view lines
-    viewer.scroll_to_position(0.0, 0.0)
+    viewer.set_scroll_position(scroll_top=0.0, scroll_left=0.0)
     viewer.set_folding_ranges([FoldingRange(5, 10)])
     viewer.toggle_fold(5)
     let ranges = viewer.get_visible_ranges()
@@ -192,13 +192,13 @@ test "read API: visible and statusbar columns expand tabs" {
   with_test_viewer(
     "\tabc",
     viewer => {
-      assert_eq(viewer.get_visible_column_from_position(1, 1), 1)
-      assert_eq(viewer.get_statusbar_column(1, 1), 1)
-      assert_eq(viewer.get_visible_column_from_position(1, 2), 5)
-      assert_eq(viewer.get_statusbar_column(1, 2), 5)
+      assert_eq(viewer.get_visible_column_from_position(Position(1, 1)), 1)
+      assert_eq(viewer.get_statusbar_column(Position(1, 1)), 1)
+      assert_eq(viewer.get_visible_column_from_position(Position(1, 2)), 5)
+      assert_eq(viewer.get_statusbar_column(Position(1, 2)), 5)
       // column 99 validates down to max column 5 ("\tabc" is 4 chars):
       // tab(→4) + a + b + c = 7, then +1 = 8.
-      assert_eq(viewer.get_visible_column_from_position(1, 99), 8)
+      assert_eq(viewer.get_visible_column_from_position(Position(1, 99)), 8)
     },
     options~,
   )
@@ -250,9 +250,9 @@ test "read API: line height is zero inside a folded region" {
   with_test_viewer(long_document(30), viewer => {
     viewer.set_folding_ranges([FoldingRange(5, 10)])
     viewer.toggle_fold(5)
-    assert_eq(viewer.get_line_height_for_position(3, 1), 18.0)
-    assert_eq(viewer.get_line_height_for_position(5, 1), 18.0) // fold anchor visible
-    assert_eq(viewer.get_line_height_for_position(7, 1), 0.0) // hidden
+    assert_eq(viewer.get_line_height_for_position(Position(3, 1)), 18.0)
+    assert_eq(viewer.get_line_height_for_position(Position(5, 1)), 18.0) // fold anchor visible
+    assert_eq(viewer.get_line_height_for_position(Position(7, 1)), 0.0) // hidden
   })
 }
 
@@ -264,7 +264,7 @@ test "read API: DOM-measured getters return sentinels without a real view" {
   with_test_viewer("alpha\nbeta", viewer => {
     assert_eq(viewer.get_offset_for_column(1, 1), -1.0)
     assert_eq(viewer.get_width_of_line(1), -1.0)
-    assert_true(viewer.get_scrolled_visible_position(1, 1) is None)
+    assert_true(viewer.get_scrolled_visible_position(Position(1, 1)) is None)
   })
 }
 

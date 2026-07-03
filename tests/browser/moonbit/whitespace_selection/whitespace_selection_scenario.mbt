@@ -32,12 +32,13 @@ fn run_whitespace_selection_test() -> Unit {
       // Default options (`ViewerOptions()` = all defaults):
       // render_whitespace=Selection, render_control_characters on. No selection
       // is set, so nothing should dot.
-      let viewer = @viewer.Viewer(
-        options=ViewerOptions(),
-        placeholder="Loading whitespace-selection fixture...",
+      let viewer = @viewer.Viewer::create(
+        host,
+        options=ViewerOptions(
+          placeholder="Loading whitespace-selection fixture...",
+        ),
       )
-      viewer.attach(host)
-      viewer.set_model(model, view_state=Reset)
+      viewer.set_model(Some(model))
       @support.set_timeout(() => poll_selection(ctx, done, 100), 50)
     }
     None => {

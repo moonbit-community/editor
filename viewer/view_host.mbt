@@ -137,14 +137,14 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   self.sync_hover_decorations()
   let write_started = now_ms()
   match self.frame {
-    None => view.render_empty(self.placeholder)
+    None => view.render_empty(self.options.placeholder)
     Some(frame) => {
       let frame = self.synced_window_frame(frame)
       let view_context = self.build_view_context(view)
       view.render(view_context, {
         frame,
         view_model: self.view_model,
-        layout: self.layout,
+        layout: self.view_layout,
         browser_view_zones: self.view_zones,
         selection_view_range: self.selection_view_range(),
         view_selection: self.view_selection(),
@@ -188,11 +188,32 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   }
   if self.scroll_dirty {
     self.scroll_dirty = false
-    let position = self.layout.position()
-    self.did_scroll.fire({
+    let position = self.view_layout.position()
+    let event : ScrollEvent = {
       scroll_top: position.scroll_top,
       scroll_left: position.scroll_left,
-    })
+      scroll_width: self.view_layout.get_scroll_width(),
+      scroll_height: self.view_layout.get_scroll_height(),
+      // Change flags diff against the last fired event; the first event
+      // reports every axis as changed.
+      scroll_top_changed: true,
+      scroll_left_changed: true,
+      scroll_width_changed: true,
+      scroll_height_changed: true,
+    }
+    let event = match self.last_scroll_event {
+      Some(previous) =>
+        {
+          ..event,
+          scroll_top_changed: event.scroll_top != previous.scroll_top,
+          scroll_left_changed: event.scroll_left != previous.scroll_left,
+          scroll_width_changed: event.scroll_width != previous.scroll_width,
+          scroll_height_changed: event.scroll_height != previous.scroll_height,
+        }
+      None => event
+    }
+    self.last_scroll_event = Some(event)
+    self.did_scroll.fire(event)
   }
 }
 
@@ -215,7 +236,7 @@ fn Viewer::synced_window_frame(
 ) -> @view_model.RenderFrame {
   guard self.view_model is Some(view_model) else { return frame }
   let rendered = @view.frame_window(frame)
-  let desired = self.layout.visible_window(overscan=@core.line_overscan)
+  let desired = self.view_layout.visible_window(overscan=@core.line_overscan)
   if desired != rendered &&
     @view_layout.window_needs_update(rendered, desired, @core.line_overscan) {
     let rebuilt = view_model.render_frame({

@@ -179,12 +179,22 @@ fn dispatch_embed_msg(msg : EmbedMsg) -> Unit {
 let embed_viewer_cell : Ref[@viewer.Viewer?] = Ref(None)
 
 ///|
+/// Resolves the embedded viewer, creating it into the shell-rendered
+/// `.viewer-host` element on first use. First use happens in the boot
+/// after-render command, so the host element is always in the DOM by then.
 fn embed_viewer() -> @viewer.Viewer {
   match embed_viewer_cell.val {
     Some(viewer) => viewer
     None => {
-      let viewer = @viewer.Viewer(placeholder="Loading source...")
-      viewer.on_did_render_model(event => {
+      let host = @rdom.document()
+        .query_selector(".viewer-host")
+        .to_option()
+        .unwrap()
+      let viewer = @viewer.Viewer::create(
+        host,
+        options=ViewerOptions(placeholder="Loading source..."),
+      )
+      @viewer.debug_on_did_render_model(viewer, event => {
         dispatch_embed_msg(ViewerRendered(event))
       })
       |> ignore
@@ -245,7 +255,7 @@ fn update_embed(
 fn open_embed_document_cmd(uri : @base_common.Uri) -> @rabbita.Cmd {
   @cmd.custom_cmd(_ => {
     match workspace_backend.model(uri) {
-      Some(model) => embed_viewer().set_model(model, view_state=Reset)
+      Some(model) => embed_viewer().set_model(Some(model))
       None => dispatch_embed_msg(ViewerFailed)
     }
   })
@@ -304,11 +314,7 @@ fn main {
           scheduler.add(
             @cmd.custom_cmd(
               after => {
-                match
-                  @rdom.document().query_selector(".viewer-host").to_option() {
-                  Some(host) => embed_viewer().attach(host)
-                  None => ()
-                }
+                embed_viewer() |> ignore
                 after.add(emit(Boot))
               },
               kind=@cmd.after_render,

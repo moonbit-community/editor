@@ -151,14 +151,14 @@ test "set_selection fires cursor events only when the state changes" {
       Position(1, 1),
       Position(1, 1),
     )
-    viewer.on_did_change_cursor_position(position => {
+    viewer.on_did_change_cursor_position(event => {
       position_fires += 1
-      last_position = position
+      last_position = event.position
     })
     |> ignore
-    viewer.on_did_change_cursor_selection(selection => {
+    viewer.on_did_change_cursor_selection(event => {
       selection_fires += 1
-      last_selection = selection
+      last_selection = event.selection
     })
     |> ignore
     let target = @view_model.Selection::new(Position(1, 3), Position(2, 4))

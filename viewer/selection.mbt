@@ -65,6 +65,11 @@ pub fn Viewer::set_selection(
 ) -> Unit {
   guard self.text_model is Some(model) else { return }
   guard self.ensure_cursor() is Some(controller) else { return }
+  // The outgoing-event facts Monaco captures before mutating
+  // (`cursor.ts` `_emitStateChangedIfNecessary`): the previous selection set
+  // and model version.
+  let old_selections = [controller.get_model_selection()]
+  let old_model_version_id = model.version
   // `CursorState.fromModelSelection` (cursorCommon.ts:283-289): the anchor
   // becomes a collapsed `Simple` range at `selectionStart`, the active end is
   // `position`. Then `_setState`'s model branch (oneCursor.ts:133-141):
@@ -95,8 +100,36 @@ pub fn Viewer::set_selection(
   // overlay repaints before the outgoing events fire, the same order the
   // mouse-driven path uses (`view_controller.mbt`).
   self.schedule_render()
-  self.did_change_cursor_position.fire(new_state.position)
-  self.did_change_cursor_selection.fire(controller.get_model_selection())
+  self.did_change_cursor_position.fire({
+    position: new_state.position,
+    secondary_positions: [],
+    reason: Explicit,
+    source: "api",
+  })
+  self.did_change_cursor_selection.fire({
+    selection: controller.get_model_selection(),
+    secondary_selections: [],
+    model_version_id: model.version,
+    old_selections,
+    old_model_version_id,
+    source: "api",
+    reason: Explicit,
+  })
+}
+
+///|
+/// Sets all cursor selections — Monaco's `setSelections`
+/// (`codeEditorWidget.ts:832-849`). The viewer is single-selection (a
+/// documented scope cut, see `get_selections`), so the primary selection is
+/// applied and any secondaries are dropped. Like Monaco, an empty array is
+/// rejected as a no-op (Monaco throws an "Invalid arguments" error there; the
+/// readonly viewer's mutators never throw).
+pub fn Viewer::set_selections(
+  self : Viewer,
+  selections : Array[@view_model.Selection],
+) -> Unit {
+  guard selections.length() > 0 else { return }
+  self.set_selection(selections[0])
 }
 
 ///|

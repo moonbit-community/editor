@@ -76,6 +76,19 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
       event.stop_propagation()
     }
   })
+  // The editor owns its keyboard input (Monaco routes keys through the hidden
+  // textarea / edit context into editor commands); the focusable root receives
+  // keys once the mousedown handler above focuses it.
+  view.root.add_event_listener("keydown", event => {
+    match event.to_keyboard_event() {
+      Some(keyboard) =>
+        if self.handle_editor_key_down(keyboard.key()) {
+          event.prevent_default()
+          event.stop_propagation()
+        }
+      None => ()
+    }
+  })
   view.root.add_event_listener("mouseleave", event => {
     let (posx, posy) = match event.to_mouse_event() {
       Some(mouse) =>
@@ -111,6 +124,45 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
 }
 
 ///|
+/// The readonly viewer's keyboard commands: Escape dismisses the hover, the
+/// scroll keys drive the synthetic scroll (Monaco's `EditorScroll` command
+/// family). Returns whether the key was handled (and the browser default
+/// suppressed).
+fn Viewer::handle_editor_key_down(self : Viewer, key : String) -> Bool {
+  match key {
+    "Escape" => {
+      self.dispatch_editor_event(EscapePressed)
+      true
+    }
+    "PageUp" => {
+      self.scroll_by_pages(-1)
+      true
+    }
+    "PageDown" => {
+      self.scroll_by_pages(1)
+      true
+    }
+    "Home" => {
+      self.scroll_home()
+      true
+    }
+    "End" => {
+      self.scroll_end()
+      true
+    }
+    "ArrowUp" => {
+      self.scroll_by_lines(-1)
+      true
+    }
+    "ArrowDown" => {
+      self.scroll_by_lines(1)
+      true
+    }
+    _ => false
+  }
+}
+
+///|
 /// The pointer-event modifier flags the hover controller reads (`event.ctrlKey` /
 /// `metaKey` / `altKey`), following the local-extern pattern already used for
 /// `shiftKey` in `viewer/browser/controller`.
@@ -139,6 +191,13 @@ extern "js" fn focus_element(el : @rdom.Element) -> Unit =
   #| (el) => el.focus({ preventScroll: true })
 
 ///|
+/// Whether the document's active element sits inside `el` — the
+/// `hasWidgetFocus` containment test (no `document.activeElement` binding in
+/// the vendored `@rdom`).
+extern "js" fn element_contains_active(el : @rdom.Element) -> Bool =
+  #| (el) => el.contains(document.activeElement)
+
+///|
 /// Read phase of the render loop: the view box, the glyph probe, and
 /// the derived gutter width feed the layout model and every later hit
 /// test. DOM scroll offsets are treated only as browser reveal deltas;
@@ -154,7 +213,7 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
     None => 0.0
   }
   let content_width = rect.get_width() - gutter_width
-  self.layout.set_viewport_size(
+  self.view_layout.set_viewport_size(
     width=if content_width > 0.0 { content_width } else { 0.0 },
     height=rect.get_height(),
   )
@@ -174,12 +233,12 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
 ///|
 fn Viewer::sync_content_width(self : Viewer) -> Unit {
   let content_width = if self.options.soft_wrap && self.soft_wrap_column > 0 {
-    self.layout.dimensions().width
+    self.view_layout.dimensions().width
   } else {
     self.max_line_length.to_double() * self.measured_char_width() +
     @core.code_right_padding
   }
-  self.layout.set_content_width(content_width) |> ignore
+  self.view_layout.set_content_width(content_width) |> ignore
 }
 
 ///|
@@ -218,12 +277,12 @@ fn Viewer::view_metrics(
   {
     origin_x: 0.0,
     origin_y: 0.0,
-    scroll_top: self.layout.position().scroll_top,
-    scroll_left: self.layout.position().scroll_left,
-    viewport_height: self.layout.dimensions().height,
+    scroll_top: self.view_layout.position().scroll_top,
+    scroll_left: self.view_layout.position().scroll_left,
+    viewport_height: self.view_layout.dimensions().height,
     line_height: @core.editor_line_height,
     char_width: self.measured_char_width(),
     gutter_width: self.gutter_width(frame),
-    view_zones: self.layout.view_zones(),
+    view_zones: self.view_layout.view_zones(),
   }
 }

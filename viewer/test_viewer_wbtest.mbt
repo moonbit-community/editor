@@ -38,7 +38,7 @@ fn with_test_viewer(
   options? : ViewerOptions = ViewerOptions::default(),
 ) -> Unit raise {
   let viewer = Viewer::Viewer(options~) // NOTE: deliberately no attach()
-  viewer.set_model(test_model(text))
+  viewer.set_model(Some(test_model(text)))
   body(viewer)
   viewer.dispose()
 }
@@ -81,7 +81,7 @@ fn Viewer::test_set_viewport(
   width~ : Double,
   height~ : Double,
 ) -> Unit {
-  self.layout.set_viewport_size(width~, height~) |> ignore
+  self.view_layout.set_viewport_size(width~, height~) |> ignore
 }
 
 ///|
@@ -91,7 +91,7 @@ fn Viewer::test_set_viewport(
 /// `view is None`, so a windowing test calls this after scrolling.
 fn Viewer::test_refresh_frame(self : Viewer) -> @view_model.RenderFrame {
   let view_model = self.test_view_model()
-  let window = self.layout.visible_window(overscan=@core.line_overscan)
+  let window = self.view_layout.visible_window(overscan=@core.line_overscan)
   let frame = view_model.render_frame({
     start_line: window.start,
     end_line: window.end,
@@ -193,7 +193,7 @@ test "soft wrap maps a model column to the correct view position" {
 test "render frame windows to the visible range, not the whole document" {
   with_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=400.0)
-    viewer.scroll_to(720.0)
+    viewer.set_scroll_top(720.0)
     let frame = viewer.test_refresh_frame()
     // Document height is retained...
     assert_eq(frame.line_count, 200)
@@ -217,7 +217,7 @@ test "render frame windows to the visible range, not the whole document" {
 /// `ViewModelDecorations` cache invalidation on decoration change.
 test "host delta_decorations flows through query API and render inputs" {
   let viewer = Viewer::Viewer()
-  viewer.set_model(test_model("alpha beta\ngamma"))
+  viewer.set_model(Some(test_model("alpha beta\ngamma")))
   let view_model = viewer.view_model.unwrap()
   // Prime the viewport cache before the host adds decorations, so the second
   // query proves onDidChangeDecorations invalidates it.
@@ -279,7 +279,7 @@ test "host delta_decorations flows through query API and render inputs" {
 test "decoration queries are scoped by editor id like Monaco" {
   let viewer = Viewer::Viewer()
   let model = test_model("alpha beta")
-  viewer.set_model(model)
+  viewer.set_model(Some(model))
   // Model-level decoration (ownerId 0): visible to the scoped query.
   let _ = model.delta_decorations([], [
     { range: Range(1, 1, 1, 3), options: Decoration("model-level") },

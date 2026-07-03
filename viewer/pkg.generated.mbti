@@ -61,6 +61,19 @@ pub fn DecorationsCollection::get_ranges(Self) -> Array[@moonbit-community/edito
 pub fn DecorationsCollection::length(Self) -> Int
 pub fn DecorationsCollection::set(Self, Array[@model.DeltaDecoration]) -> Array[String]
 
+pub(all) struct EditorContribution {
+  id : String
+  dispose : () -> Unit
+}
+
+pub(all) enum EditorContributionInstantiation {
+  Eager
+  AfterFirstRender
+  BeforeFirstInteraction
+  Eventually
+  Lazy
+} derive(Eq, @debug.Debug)
+
 pub(all) struct EditorLayoutInfo {
   width : Double
   height : Double
@@ -120,6 +133,7 @@ pub fn Viewer::get_bottom_for_line_number(Self, Int, include_view_zones? : Bool)
 pub fn Viewer::get_container_dom_node(Self) -> @dom.Element?
 pub fn Viewer::get_content_height(Self) -> Double
 pub fn Viewer::get_content_width(Self) -> Double
+pub fn Viewer::get_contribution(Self, String) -> EditorContribution?
 pub fn Viewer::get_decorations_in_range(Self, @moonbit-community/editor/base/common.Range) -> Array[@model.ModelDecoration]
 pub fn Viewer::get_dom_node(Self) -> @dom.Element?
 pub fn Viewer::get_editor_type(Self) -> String

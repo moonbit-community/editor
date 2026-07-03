@@ -92,7 +92,11 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   view.root.add_event_listener("keydown", event => {
     match event.to_keyboard_event() {
       Some(keyboard) =>
-        if self.handle_editor_key_down(keyboard.key()) {
+        if self.handle_editor_key_down(
+            keyboard.key(),
+            alt=keyboard.alt_key(),
+            ctrl_cmd=keyboard.ctrl_key() || keyboard.meta_key(),
+          ) {
           event.prevent_default()
           event.stop_propagation()
         }
@@ -134,16 +138,26 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
 }
 
 ///|
-/// The readonly viewer's keyboard commands: Escape dismisses the hover, the
-/// scroll keys drive the synthetic scroll (Monaco's `EditorScroll` command
-/// family). Returns whether the key was handled (and the browser default
-/// suppressed).
-fn Viewer::handle_editor_key_down(self : Viewer, key : String) -> Bool {
+/// The readonly viewer's keyboard entry: the registered commands resolve
+/// first (`editor.action.hideHover` on Escape, gated on `hoverVisible` —
+/// deviations-closeout Track D), then the built-in scroll cluster (the
+/// synthetic-scroll analog of Monaco's `EditorScroll` command family).
+/// Returns whether the key was handled (and the browser default
+/// suppressed). Unmodified keys only for the built-ins; chords fall through
+/// to the browser like Monaco's unbound chords.
+fn Viewer::handle_editor_key_down(
+  self : Viewer,
+  key : String,
+  alt~ : Bool,
+  ctrl_cmd~ : Bool,
+) -> Bool {
+  if editor_registry().dispatch_keybinding(self, key, alt~, ctrl_cmd~) {
+    return true
+  }
+  if alt || ctrl_cmd {
+    return false
+  }
   match key {
-    "Escape" => {
-      self.dispatch_editor_event(EscapePressed)
-      true
-    }
     "PageUp" => {
       self.scroll_by_pages(-1)
       true

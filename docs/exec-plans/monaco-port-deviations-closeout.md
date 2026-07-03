@@ -345,6 +345,56 @@ deviation up front.
    `AfterFirstRender`/`Lazy`) and which modes the viewer's four features
    actually need; paste here. Expect most to be `Eager`; defer the lazy modes
    with a reason if nothing consumes them.
+
+   **Inventory (pasted 2026-07-03):**
+
+   - **Registration surface:** `registerEditorContribution(id, ctor,
+     instantiation)` → `EditorContributionRegistry.INSTANCE`
+     (`editorExtensions.ts:552-554`, class `:592+`);
+     `registerEditorCommand` (`:528-531`). `Command` (`:104-183`): id,
+     precondition, kbOpts; `register()` writes
+     `KeybindingsRegistry.registerKeybindingRule` rows with `when = kbExpr
+     AND precondition` plus a `CommandsRegistry` handler. `EditorCommand`
+     (`:270+`): `runEditorCommand(accessor, editor, args)`;
+     `bindToContribution` binds a command to a contribution via a
+     controller getter. `CodeEditorWidget` instantiates the registered
+     contributions per editor (`codeEditorWidget.ts:344`
+     `this._contributions.initialize(...)`,
+     `codeEditorContributions.ts`) and disposes them with the editor —
+     `setModel` does **not** re-create contributions (this plan's phase
+     text saying "dispose on `set_model`" was wrong; the port follows the
+     source: dispose with the editor only).
+   - **Instantiation modes** (`:34-65`): `Eager`, `AfterFirstRender`,
+     `BeforeFirstInteraction`, `Eventually`, `Lazy`. The features at this
+     pin: folding `Eager` (`folding.ts:1246` — "uses saveViewState"),
+     content hover `BeforeFirstInteraction` (`hoverContribution.ts:22`),
+     comments `AfterFirstRender`
+     (`commentsEditorContribution.ts:34`). The viewer has no idle
+     scheduler, interaction tracker, or on-demand `getContribution`, so
+     every mode instantiates eagerly (documented on the enum); the
+     deferred modes exist only so registrations can carry the source's
+     declared mode.
+   - **Scope correction — view zones are not a contribution.** Monaco's
+     view zones are `ICodeEditor.changeViewZones` editor API
+     (`codeEditorWidget.ts`), not a `registerEditorContribution` feature;
+     the viewer's `view_zones_host.mbt` is the faithful placement already.
+     The registry therefore carries the three real contributions (hover,
+     folding, comments); zones stay editor API.
+   - **Command consumers to re-land (Phase 3):** the hover scroll cluster
+     (`hoverActions.ts`): `editor.action.scrollUpHover` (ArrowUp),
+     `scrollDownHover` (ArrowDown), `scrollLeftHover`/`scrollRightHover`
+     (Arrow Left/Right), `pageUpHover` (PageUp, secondary Alt+ArrowUp),
+     `pageDownHover` (PageDown, secondary Alt+ArrowDown), `goToTopHover`
+     (Home, secondary CtrlCmd+ArrowUp), `goToBottomHover` (End, secondary
+     CtrlCmd+ArrowDown) — all preconditioned on
+     `EditorContextKeys.hoverFocused` — and `editor.action.hideHover`
+     (Escape, `hoverVisible`). Ids from `hoverActionIds.ts`.
+   - **Structural deviation (up front):** the foreign-method rule keeps
+     `Viewer::` glue in the root package and there is no DI/services
+     collection, so the registry inverts dispatch + lifecycle only; the
+     `*_host.mbt` files stay in the root package as the registered ctors,
+     and preconditions are live predicates over the `Viewer` instead of
+     `ContextKeyExpression`s.
 2. **Contribution registry.** Ctor closures keyed by id; `Viewer` constructor
    iterates the registry; hover/folding/comments/zones registered through it;
    the hand-wiring order is preserved (registration order = today's

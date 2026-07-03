@@ -2,6 +2,19 @@
 // viewer owns. The pure folded-range model lives in `viewer/folding`.
 
 ///|
+/// `registerEditorContribution(FoldingController.ID, …, Eager)`
+/// (`folding.ts:1246`, id `'editor.contrib.folding'`, `:70`). The folding
+/// state lives inline on `Viewer` (`folding_ranges`/`folded_ranges`, the
+/// closure-seam pattern) and the gutter toggle rides the render input's
+/// `on_toggle_fold`, so the ctor wires nothing extra.
+fn register_folding_contribution(registry : EditorContributionRegistry) -> Unit {
+  registry.register_editor_contribution("editor.contrib.folding", Eager, _viewer => {
+    id: "editor.contrib.folding",
+    dispose: () => (),
+  })
+}
+
+///|
 fn Viewer::set_folding_ranges(
   self : Viewer,
   ranges : Array[@language.FoldingRange],

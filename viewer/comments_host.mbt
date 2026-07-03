@@ -16,30 +16,57 @@
 let comment_lane_width_px : Int = 24
 
 ///|
-/// Subscribes the viewer to its comment service (constructor-time, like the
-/// marker-decorations subscription): thread and commenting-range changes on
-/// the current resource re-sync decorations, widgets, and the reserved lane.
+/// `registerEditorContribution(ID, CommentController, AfterFirstRender)`
+/// (`commentsEditorContribution.ts:34`; the id is `'editor.contrib.review'`,
+/// `commentsController.ts:52`). The ctor performs the service/mouse wiring
+/// below; the returned disposable tears the subscriptions down with the
+/// viewer.
+fn register_comments_contribution(
+  registry : EditorContributionRegistry,
+) -> Unit {
+  registry.register_editor_contribution(
+    "editor.contrib.review",
+    AfterFirstRender,
+    viewer => {
+      let subscriptions = viewer.hook_comment_service()
+      {
+        id: "editor.contrib.review",
+        dispose: () => {
+          for subscription in subscriptions {
+            subscription.dispose()
+          }
+        },
+      }
+    },
+  )
+}
+
+///|
+/// Subscribes the viewer to its comment service (contribution construction
+/// time): thread and commenting-range changes on the current resource
+/// re-sync decorations, widgets, and the reserved lane.
 /// The mouse listeners ride the public `onMouseDown`/`onMouseUp`/
 /// `onMouseMove`/`onMouseLeave` events, exactly Monaco's
 /// `CommentController.registerEditorListeners`.
-fn Viewer::hook_comment_service(self : Viewer) -> Unit {
-  self.services.comments.on_did_update_comment_threads(event => {
-    if self.is_current_resource(event.resource) {
-      self.sync_comments()
-    }
-  })
-  |> ignore
-  self.services.comments.on_did_change_commenting_ranges(resource => {
-    if self.is_current_resource(resource) {
-      self.sync_comments()
-    }
-  })
-  |> ignore
-  self.on_mouse_down(event => self.on_comments_mouse_down(event.target))
-  |> ignore
-  self.on_mouse_up(event => self.on_comments_mouse_up(event.target)) |> ignore
-  self.on_mouse_move(event => self.on_comments_mouse_move(event)) |> ignore
-  self.on_mouse_leave(_ => self.clear_comment_hover()) |> ignore
+fn Viewer::hook_comment_service(
+  self : Viewer,
+) -> Array[@base_common.Disposable] {
+  [
+    self.services.comments.on_did_update_comment_threads(event => {
+      if self.is_current_resource(event.resource) {
+        self.sync_comments()
+      }
+    }),
+    self.services.comments.on_did_change_commenting_ranges(resource => {
+      if self.is_current_resource(resource) {
+        self.sync_comments()
+      }
+    }),
+    self.on_mouse_down(event => self.on_comments_mouse_down(event.target)),
+    self.on_mouse_up(event => self.on_comments_mouse_up(event.target)),
+    self.on_mouse_move(event => self.on_comments_mouse_move(event)),
+    self.on_mouse_leave(_ => self.clear_comment_hover()),
+  ]
 }
 
 ///|

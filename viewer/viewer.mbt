@@ -131,6 +131,10 @@ pub struct Viewer {
   /// client rects are unknown until then). Flushed in `flush_render`, cancelled
   /// when an unrelated scroll moves out of the reveal's band (`reveal.mbt`).
   priv mut pending_horizontal_reveal : PendingHorizontalReveal?
+  /// The per-editor contribution instances the registry constructed
+  /// (`codeEditorContributions.ts`'s `_instances`, keyed by contribution
+  /// id); disposed with the viewer.
+  priv mut contributions : Map[String, EditorContribution]
 }
 
 ///|
@@ -316,6 +320,7 @@ pub fn Viewer::Viewer(
     last_mouse_buttons: 0,
     editor_has_focus: false,
     pending_horizontal_reveal: None,
+    contributions: {},
   }
   // Marker decoration changes reach the render through the model's
   // decoration storage (`onDidChangeDecorations` → `ViewDecorationsChanged`);
@@ -328,7 +333,10 @@ pub fn Viewer::Viewer(
     }
   })
   |> ignore
-  viewer.hook_comment_service()
+  // Editor contributions instantiate through the registry
+  // (`codeEditorWidget.ts:344` `this._contributions.initialize(...)`);
+  // they live until `dispose` — `set_model` does not re-create them.
+  viewer.contributions = editor_registry().instantiate_all(viewer)
   viewer
 }
 
@@ -663,6 +671,12 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   if self.text_model is Some(_) {
     self.clear_current_model()
   }
+  // Contributions dispose with the editor (`codeEditorWidget.dispose` →
+  // `this._contributions.dispose()`).
+  for _, contribution in self.contributions {
+    (contribution.dispose)()
+  }
+  self.contributions = {}
   self.did_dispose.fire(())
   self.did_change_model.dispose()
   self.did_change_cursor_position.dispose()

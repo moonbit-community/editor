@@ -18,6 +18,18 @@
 let max_safe_column : Int = 2147483647
 
 ///|
+/// The live contribution instance for an id, Monaco's
+/// `ICodeEditor.getContribution` (`codeEditorWidget.getContribution` →
+/// `this._contributions.get(id)`). `None` after `dispose` or for an
+/// unregistered id.
+pub fn Viewer::get_contribution(
+  self : Viewer,
+  id : String,
+) -> EditorContribution? {
+  self.contributions.get(id)
+}
+
+///|
 /// Full document text, Monaco's `CodeEditorWidget.getValue` (`cew:472`). No
 /// model → `''`. The `{preserveBOM, lineEnding}` option is dropped: the snapshot
 /// stores normalized LF text with no BOM/EOL concept (`TextSnapshot::get_value`).

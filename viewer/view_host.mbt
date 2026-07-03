@@ -51,73 +51,28 @@ fn Viewer::build_view_context(
 ///|
 /// Monaco `ContentHoverWidget`'s keydown handling, dispatched from the hover
 /// widget's own DOM listener via the `ViewContext.handle_hover_keydown`
-/// closure `build_view_context` wires up.
+/// closure `build_view_context` wires up. The keys resolve through the
+/// command registry (`hoverActions.ts`'s scroll cluster registered in
+/// `hover_contribution.mbt`, gated on `hoverFocused`/`hoverVisible`) —
+/// deviations-closeout Track D closed the inline-key-map caveat (hover plan
+/// Deviation 13). The `widget` parameter stays for the seam's shape; the
+/// commands reach the same singleton widget through the viewer.
 fn Viewer::handle_hover_keydown(
   self : Viewer,
   widget : @content_widgets.HoverWidgetDom,
   event : @rdom.Event,
   keyboard : @rdom.KeyboardEvent,
 ) -> Unit {
+  ignore(widget)
   event.stop_propagation()
-  // Monaco registers these as editor commands gated on `hoverFocused`
-  // (`hoverActions.ts`); until a viewer command registry lands, the focused
-  // widget's keydown dispatches them inline with the same key map. The
-  // arrow-key secondaries match Monaco: `Alt+Arrow` pages and `CtrlCmd+Arrow`
-  // jumps to an edge.
-  let alt = keyboard.alt_key()
   // `KeyMod.CtrlCmd` is Ctrl on Windows/Linux and Cmd on macOS.
-  let ctrl_cmd = keyboard.ctrl_key() || keyboard.meta_key()
-  match keyboard.key() {
-    "Escape" => {
-      event.prevent_default()
-      self.dismiss_hover()
-      self.schedule_render()
-    }
-    "ArrowUp" => {
-      event.prevent_default()
-      if alt {
-        widget.page_up()
-      } else if ctrl_cmd {
-        widget.go_to_top()
-      } else {
-        widget.scroll_up()
-      }
-    }
-    "ArrowDown" => {
-      event.prevent_default()
-      if alt {
-        widget.page_down()
-      } else if ctrl_cmd {
-        widget.go_to_bottom()
-      } else {
-        widget.scroll_down()
-      }
-    }
-    "ArrowLeft" => {
-      event.prevent_default()
-      widget.scroll_left()
-    }
-    "ArrowRight" => {
-      event.prevent_default()
-      widget.scroll_right()
-    }
-    "PageUp" => {
-      event.prevent_default()
-      widget.page_up()
-    }
-    "PageDown" => {
-      event.prevent_default()
-      widget.page_down()
-    }
-    "Home" => {
-      event.prevent_default()
-      widget.go_to_top()
-    }
-    "End" => {
-      event.prevent_default()
-      widget.go_to_bottom()
-    }
-    _ => ()
+  if editor_registry().dispatch_keybinding(
+      self,
+      keyboard.key(),
+      alt=keyboard.alt_key(),
+      ctrl_cmd=keyboard.ctrl_key() || keyboard.meta_key(),
+    ) {
+    event.prevent_default()
   }
 }
 

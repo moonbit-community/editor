@@ -328,7 +328,7 @@ Member count (Phase 3): 4 (`hoverUtils`) + 1 const + 1 iface + 11 fields +
 | `_getOrCreateContentWidget` (:317-323) | lazy create wrapper + wire `onContentsChanged` | wrapper accessor | DEFERRED (wrapper = Phase 4) |
 | `showContentHover` (:325-332) | `startShowingAtRange(range, mode, source, focus)` | `HoverController::show_at_range` | DEFERRED (immediate-mode product trigger = Phase 5, per Phase 2 note) |
 | `_isContentWidgetResizing` (:334-336) | `widget.isResizing` | resize probe | DEFERRED (sashes) |
-| static `get` (:90-92) / `ID` (:44) / `dispose` (:410-415) | contribution identity + teardown | direct construction (no registry) | DEFERRED (controller-contribution-registry inversion is the outstanding viewer follow-up) |
+| static `get` (:90-92) / `ID` (:44) / `dispose` (:410-415) | contribution identity + teardown | `editor.contrib.contentHover` registered in the contribution registry (`hover_contribution.mbt`); `Viewer::get_contribution` is the `get` analog; instance disposes with the viewer | PORTED (deviations-closeout Track D, 2026-07-03) |
 | `shouldKeepOpenOnEditorMouseMoveOrLeave` (:46) | external keep-open flag | `hover_keep_open` (read in mouse-move keep-current + mouse-leave) | PORTED |
 | `_onHoverContentsChanged`/`onHoverContentsChanged` (:41) | re-layout fan-out | contents-changed event | DEFERRED (Phase 4 wiring) |
 | color-picker arms of `_shouldKeepCurrentHover` (:195-201) | colorPicker visible/choosing | — | N-A (colorPicker out of scope) |
@@ -730,8 +730,8 @@ Member count (Phase 5): 9 (status bar) + ~16 (ids; verbosity ids → Phase 6) +
 | widget `scrollLeft/Right` (cHW :446,:451) `HORIZONTAL_SCROLLING_BY=30` | `scrollLeft ± 30` | `HoverWidgetDom::scroll_left`/`scroll_right` + `hover_horizontal_scrolling_by=30.0` (on `ArrowLeft`/`ArrowRight`) | TESTED |
 | widget `pageUp/Down` (cHW :456,:462) | `scrollTop ± getScrollDimensions().height` (visible height) | `HoverWidgetDom::page_up`/`page_down` (on `PageUp`/`PageDown` + `Alt+Arrow` secondary) | TESTED |
 | widget `goToTop/Bottom` (cHW :468,:472) | `scrollTop = 0` / `scrollHeight` | `HoverWidgetDom::go_to_top`/`go_to_bottom` (on `Home`/`End` + `CtrlCmd+Arrow` secondary) | TESTED |
-| `Scroll/Page/GoTo*HoverAction` key bindings (ha :171-430) | arrow / page / home-end primaries + `Alt`/`CtrlCmd+Arrow` secondaries, `hoverFocused` | `handle_hover_keydown` inline dispatch (key map ported; `hoverFocused` context key N-A until command registry — Deviation 13) | PORTED |
-| `registerEditorContribution`/`registerEditorAction`/participant registry (hc :22-38) | wire commands + key bindings (same as Monaco) | command registration table (new) | TODO |
+| `Scroll/Page/GoTo*HoverAction` key bindings (ha :171-430) | arrow / page / home-end primaries + `Alt`/`CtrlCmd+Arrow` secondaries, `hoverFocused` | registered commands with Monaco's ids + keybinding rows (`hover_contribution.mbt`), gated on a live `hoverFocused` predicate; both keyboard owners resolve through the registry | PORTED (registry dispatch since deviations-closeout Track D) |
+| `registerEditorContribution`/`registerEditorAction`/participant registry (hc :22-38) | wire commands + key bindings (same as Monaco) | contribution + scroll-cluster command registration through `editor_extensions.mbt` (deviations-closeout Track D); the remaining `registerEditorAction` rows (show/focus, verbosity) stay with their Phase 5/6 rows | PARTIAL (registry exists; scroll cluster + hideHover registered) |
 | theming participant `editorHoverBorder` (hc :44-51) | `.hover-row` / `hr` borders | CSS (predecessor DOM plan) | PORTED |
 | `ShowDefinitionPreviewHoverAction` (ha :109-150) | `goToDefinition` then `showContentHover` | — | DEFERRED (goToDefinition not ported) |
 | `HIDE_LONG_LINE_WARNING_HOVER` command (hc :39-41) | toggle `editor.hover.showLongLineWarning` | — | DEFERRED (long-line warning unported) |
@@ -940,7 +940,10 @@ is **not** and must trace to a source line.
     seam (single-line hover anchors make the two equivalent); the branch
     structure and containment test match source.
 13. **Inline scroll-cluster dispatch, no command registry (Phase 5,
-    increment 1).** Monaco registers `Scroll{Up,Down,Left,Right}HoverAction`,
+    increment 1) — CLOSED (deviations-closeout Track D, 2026-07-03): the
+    eight actions and `hideHover` are registered editor commands with
+    Monaco's ids and keybinding rows; `handle_hover_keydown` and the root
+    keydown both resolve through the registry.** Original record: Monaco registers `Scroll{Up,Down,Left,Right}HoverAction`,
     `Page{Up,Down}HoverAction`, and `GoTo{Top,Bottom}HoverAction` as editor
     commands gated on the `hoverFocused` context key, each delegating to a
     `ContentHoverWidget` method. The viewer has no command/keybinding registry

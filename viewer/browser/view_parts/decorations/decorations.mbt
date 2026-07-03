@@ -1,9 +1,12 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/decorations/decorations.ts`
 // (`DecorationsOverlay`), vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971. Registered in this package's
-// `ContentViewOverlays` merge after the current-line and selection pieces —
+// 294fb350837dbaee37b949533fead4df4e0e8971. Rendered into the shared
+// `.view-overlays` container owned by `view_parts/selections`'
+// `ContentViewOverlays`, after the current-line and selection pieces —
 // Monaco's dynamic-overlay registration order (`view.ts:218-221`:
-// CurrentLine, Selections, [IndentGuides — unported], Decorations).
+// CurrentLine, Selections, [IndentGuides — unported], Decorations). The
+// shared `ViewPart` shell in `viewer/browser/view/view_part.mbt` sequences
+// the three overlay packages.
 //
 // Deviations (decoration plan 7-8):
 // - Flat overlay pieces: absolutely positioned divs appended to the shared
@@ -309,8 +312,12 @@ fn render_normal_decoration(
 ///|
 /// The DOM half: appends one `div.cdr.{className}` per computed piece to the
 /// shared overlay container (flat-overlay deviation; `decorations.css`).
-pub fn ContentViewOverlays::render_decorations_overlay(
-  self : ContentViewOverlays,
+/// `container` is the `.view-overlays` element owned by
+/// `@selections.ContentViewOverlays` — the foreign-method rule keeps methods
+/// with their type's package, so this package exposes a free function the
+/// shared shell (`browser/view/view_part.mbt`) sequences.
+pub fn render_decorations_overlay(
+  container : @rdom.Element,
   decorations : Array[@view_model.ViewModelDecoration],
   viewport : @view_layout.ViewportData,
   get_line_max_column : (Int) -> Int,
@@ -346,6 +353,6 @@ pub fn ContentViewOverlays::render_decorations_overlay(
       width_css +
       ";",
     )
-    self.view_overlays.append_child(node.as_node())
+    container.append_child(node.as_node())
   }
 }

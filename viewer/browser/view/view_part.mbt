@@ -693,9 +693,13 @@ impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) 
     Some(prepared) => {
       // One clear per part render; the current-line highlight then paints
       // before the selection pieces, preserving Monaco's dynamic-overlay
-      // registration order (`view.ts:218-219`).
+      // registration order (`view.ts:218-219`). The overlay renderers live
+      // in their Monaco-mirroring packages
+      // (`view_parts/{current_line_highlight,decorations,selections}`) as
+      // free functions over the shared container.
       self.view_overlays.set_inner_html("")
-      self.render_current_line(
+      @current_line_highlight.render_current_line(
+        self.view_overlays,
         prepared.viewport,
         prepared.view_model,
         prepared.cursor_view_line,
@@ -721,7 +725,8 @@ impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) 
       )
       // Decorations render after current-line and selections — Monaco's
       // dynamic-overlay registration order (`view.ts:218-221`).
-      self.render_decorations_overlay(
+      @decorations.render_decorations_overlay(
+        self.view_overlays,
         prepared.decorations,
         prepared.viewport,
         line_number => {

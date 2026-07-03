@@ -1,8 +1,9 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/selections/selections.ts`
 // (`SelectionsOverlay`) plus the base-class DOM shell from
-// `vscode/src/vs/editor/browser/view/viewOverlays.ts` (`ContentViewOverlays`),
-// merged into one concrete type here since selection highlighting is the
-// only dynamic overlay this viewer registers. The `ViewPart` trait impl for
+// `vscode/src/vs/editor/browser/view/viewOverlays.ts` (`ContentViewOverlays`).
+// The sibling dynamic overlays (`view_parts/current_line_highlight`,
+// `view_parts/decorations`) render into this package's `.view-overlays`
+// container as free functions. The `ViewPart` trait impl for
 // `ContentViewOverlays` lives in `viewer/browser/view/view_part.mbt`, not
 // here — see the exec-plan's cycle backlog and
 // `viewer/browser/view_parts/view_zones`'s README for why.

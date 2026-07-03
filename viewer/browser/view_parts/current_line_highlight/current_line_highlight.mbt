@@ -1,11 +1,14 @@
 // The DOM half of Monaco's `CurrentLineHighlightOverlay`
 // (`viewParts/currentLineHighlight/currentLineHighlight.ts:207-219` over the
-// abstract `prepareRender`, `:126-171`), rendered into this package's
-// `.view-overlays` container because Monaco registers it there as the first
+// abstract `prepareRender`, `:126-171`), rendered into the shared
+// `.view-overlays` container owned by `view_parts/selections`'
+// `ContentViewOverlays` because Monaco registers it there as the first
 // dynamic overlay — before `SelectionsOverlay` (`view.ts:218-219`), which
-// keeps the highlight painting under the selection. The DOM-free predicates
-// and class strings live in `viewer/common/view_layout`
-// (`current_line_highlight.mbt`); the margin twin lives with the margin part.
+// keeps the highlight painting under the selection; the shared `ViewPart`
+// shell in `viewer/browser/view/view_part.mbt` sequences the overlay
+// packages. The DOM-free predicates and class strings live in
+// `viewer/common/view_layout` (`current_line_highlight.mbt`); the margin
+// twin lives with the margin part.
 //
 // Flat-overlay deviation (like the selection pieces): one absolutely
 // positioned div per highlighted view line instead of per-line container
@@ -17,9 +20,11 @@
 /// `ViewPart` impl) has already cleared the container; pieces are appended
 /// before the selection pieces so DOM order preserves Monaco's overlay
 /// z-order. `width` is `max(ctx.scrollWidth, contentWidth)`
-/// (`currentLineHighlight.ts:211`).
-pub fn ContentViewOverlays::render_current_line(
-  self : ContentViewOverlays,
+/// (`currentLineHighlight.ts:211`). `container` is the `.view-overlays`
+/// element owned by `@selections.ContentViewOverlays` (foreign-method rule:
+/// this sibling package exposes a free function instead of a method).
+pub fn render_current_line(
+  container : @rdom.Element,
   viewport : @view_layout.ViewportData,
   view_model : @view_model.ViewModel?,
   cursor_view_line : Int?,
@@ -63,7 +68,7 @@ pub fn ContentViewOverlays::render_current_line(
       "style",
       current_line_style(viewport.relative_vertical_offset[index], width),
     )
-    self.view_overlays.append_child(node.as_node())
+    container.append_child(node.as_node())
   }
 }
 

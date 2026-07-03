@@ -8,13 +8,9 @@ import {
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom",
-  "moonbitlang/core/debug",
 }
 
 // Values
-pub fn compute_decoration_overlay_pieces(Array[@inline_decorations.ViewModelDecoration[@model.Decoration]], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[DecorationOverlayPiece]
-
-pub fn current_line_span(@view_model.ViewModel?, Int, Bool) -> (Int, Int)
 
 // Errors
 
@@ -26,8 +22,6 @@ pub(all) struct ContentViewOverlays {
 }
 pub fn ContentViewOverlays::dom(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
-pub fn ContentViewOverlays::render_current_line(Self, @view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Unit
-pub fn ContentViewOverlays::render_decorations_overlay(Self, Array[@inline_decorations.ViewModelDecoration[@model.Decoration]], @view_layout.ViewportData, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Unit
 pub fn ContentViewOverlays::render_selection_overlays(Self, @view_model.RenderFrame, @view_layout.ViewportData, @common.Range?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Unit
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
 
@@ -45,13 +39,6 @@ pub(all) struct ContentViewOverlaysPrepared {
   render_line_highlight : @view_layout.RenderLineHighlight
   render_line_highlight_only_when_focus : Bool
 }
-
-pub(all) struct DecorationOverlayPiece {
-  line_index : Int
-  class_name : String
-  left : Double
-  width : Double?
-} derive(Eq, @debug.Debug)
 
 // Type aliases
 

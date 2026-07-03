@@ -1,26 +1,27 @@
 # viewer/browser/view_parts/selections
 
-The dynamic content-overlay view part: the DOM-shell base class from
-`editor/browser/view/viewOverlays.ts` (`ContentViewOverlays`) merged with the
-three Monaco overlays this viewer renders into `.view-overlays`:
+Mirrors `vscode/src/vs/editor/browser/viewParts/selections`
+(`SelectionsOverlay`) plus the DOM-shell base class from
+`editor/browser/view/viewOverlays.ts` (`ContentViewOverlays`): the selection
+highlight as DOM-measured rectangles with rounded/reverse corners, reading
+pixel rects through the `measure` closure
+(`ViewContext.measure_line_selection`, off the live line DOM written by
+`viewer/browser/view/selection_measure.mbt`).
 
-- `viewParts/selections/selections.ts` (`SelectionsOverlay`): the selection
-  highlight as DOM-measured rectangles with rounded/reverse corners, reading
-  pixel rects through the `measure` closure
-  (`ViewContext.measure_line_selection`, off the live line DOM written by
-  `viewer/browser/view/selection_measure.mbt`).
-- `viewParts/currentLineHighlight/currentLineHighlight.ts` (content half): the
-  current-line highlight; the margin half lives in
-  `viewer/browser/view_parts/margin`.
-- `viewParts/decorations/decorations.ts` (`DecorationsOverlay`): whole-line
-  and inline decoration rectangles, including the marker squiggles.
+The sibling dynamic overlays render into this package's `.view-overlays`
+container from their own Monaco-mirroring packages:
+`view_parts/current_line_highlight` (content half) and
+`view_parts/decorations` (whole-line/inline decoration rectangles, marker
+squiggles). The shared `ViewPart` shell in
+`viewer/browser/view/view_part.mbt` sequences them in Monaco's dynamic-
+overlay registration order (current-line → selection → decorations,
+`view.ts:218-221`).
 
 ## Responsibilities
 
 - `ContentViewOverlays`: the `.view-overlays` container, its dirty flag, and
   the prepared render input for one frame.
-- The per-overlay render functions listed above, driven from the prepared
-  input.
+- `SelectionsOverlay`'s piece computation and DOM writes.
 
 ## Boundaries
 

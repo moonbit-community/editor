@@ -62,11 +62,14 @@ Reference trees are research inputs only. Product code must not import from
   subpackages. They may use narrow browser bindings but do not import the
   parent `viewer` package.
 - `viewer/browser/view` and `viewer/browser/view_parts/*` (`content_widgets`,
-  `editor_scrollbar`, `margin`, `overlay_widgets`, `selections`,
-  `view_cursors`, `view_lines`, `view_zones`): the browser view and its view
-  parts. Every `impl ViewPart for X` block lives in
-  `viewer/browser/view/view_part.mbt`, the trait-owning package — see its
-  README for the orphan-rule/cycle reasoning. The flat root `viewer/*.mbt`
+  `current_line_highlight`, `decorations`, `editor_scrollbar`, `margin`,
+  `overlay_widgets`, `selections`, `view_cursors`, `view_lines`,
+  `view_zones`): the browser view and its view parts. Every
+  `impl ViewPart for X` block lives in `viewer/browser/view/view_part.mbt`,
+  the trait-owning package — see its README for the orphan-rule/cycle
+  reasoning. The dynamic overlays (`current_line_highlight`, `decorations`)
+  render into `selections`' shared `.view-overlays` container as free
+  functions, sequenced by the shell in Monaco's registration order. The flat root `viewer/*.mbt`
   files are `Viewer`-facing glue only: the foreign-method rule keeps every
   `Viewer::` method in `Viewer`'s own package.
 - `viewer/common/inline_decorations`: the faithful port of Monaco's

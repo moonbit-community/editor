@@ -1,0 +1,61 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/contrib/comments/browser"
+
+import {
+  "moonbit-community/editor/viewer/common/comments",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct CommentThreadWidgetDom {
+  host : CommentThreadWidgetHost
+  root : @dom.Element
+  head : @dom.Element
+  body : @dom.Element
+  form : @dom.Element
+  mut thread : @comments.CommentThread
+  mut editing_comment : Int?
+  mut form_textarea : @dom.Element?
+  mut edit_textarea : @dom.Element?
+}
+pub fn CommentThreadWidgetDom::dom(Self) -> @dom.Element
+pub fn CommentThreadWidgetDom::focus_form(Self) -> Unit
+pub fn CommentThreadWidgetDom::new(CommentThreadWidgetHost, @comments.CommentThread) -> Self
+pub fn CommentThreadWidgetDom::update(Self, @comments.CommentThread) -> Unit
+
+pub(all) struct CommentThreadWidgetHost {
+  on_submit_new : (String) -> Unit
+  on_save_edit : (Int, String) -> Unit
+  on_delete : (Int) -> Unit
+  on_collapse : () -> Unit
+  on_content_resized : () -> Unit
+}
+
+pub(all) struct CommentWidgetActions {
+  on_submit_new : (String) -> Unit
+  on_save_edit : (Int, String) -> Unit
+  on_delete : (Int) -> Unit
+  on_collapse : () -> Unit
+}
+
+pub struct ReviewZoneWidget {
+  zone : @moonbit-community/editor/viewer/contrib/zone_widget/browser.ZoneWidget
+  widget : CommentThreadWidgetDom
+}
+pub fn ReviewZoneWidget::display(Self, Int) -> Unit
+pub fn ReviewZoneWidget::focus_form(Self) -> Unit
+pub fn ReviewZoneWidget::hide(Self) -> Unit
+pub fn ReviewZoneWidget::is_visible(Self) -> Bool
+pub fn ReviewZoneWidget::new(@moonbit-community/editor/viewer/contrib/zone_widget/browser.ZoneWidgetHost, @comments.CommentThread, CommentWidgetActions) -> Self
+pub fn ReviewZoneWidget::refresh(Self) -> Unit
+pub fn ReviewZoneWidget::update(Self, @comments.CommentThread) -> Unit
+pub fn ReviewZoneWidget::update_anchor(Self, Int) -> Unit
+
+// Type aliases
+
+// Traits
+

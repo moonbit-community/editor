@@ -1,0 +1,209 @@
+/* Comments contrib styling: the gutter-glyph subset of vscode
+   workbench/contrib/comments/browser/media/review.css (:496-609) plus a
+   simplified review-widget skin. Deviations: codicon glyph content is
+   replaced by text ("+" / "●") — no codicon font ships in this repo — and
+   the `.margin-view-overlays > div:hover` selector is dropped (the viewer's
+   margin layers are flat; the hover affordance is the mouse-driven
+   line-hover decoration, which is VS Code's primary mechanism too). */
+
+/* --- gutter glyphs ---------------------------------------------------- */
+
+.comment-range-glyph {
+  margin-left: 10px;
+  width: 4px !important;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.comment-diff-added {
+  border-left-width: 3px;
+  border-left-style: solid;
+  border-left-color: var(--vscode-editorGutter-commentRangeForeground, #3794ff);
+}
+
+.margin-view-overlays .comment-range-glyph.line-hover,
+.margin-view-overlays .comment-range-glyph.comment-thread {
+  margin-left: 13px;
+}
+
+.margin-view-overlays .comment-range-glyph.line-hover:before,
+.margin-view-overlays .comment-range-glyph.comment-thread:before {
+  position: absolute;
+  height: 100%;
+  width: 9px;
+  left: -6px;
+  z-index: 10;
+  color: var(--vscode-editorGutter-commentGlyphForeground, #ffffff);
+  background: var(--vscode-editorGutter-commentRangeForeground, #3794ff);
+  text-align: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.margin-view-overlays .comment-range-glyph.line-hover:before {
+  content: "+";
+  border-radius: 3px;
+  width: 18px !important;
+  margin-left: -5px;
+  padding-left: 1px;
+  font-weight: 600;
+}
+
+.margin-view-overlays .comment-range-glyph.comment-thread {
+  z-index: 20;
+}
+
+.margin-view-overlays .comment-range-glyph.comment-thread:before {
+  content: "●";
+  font-size: 9px;
+  border-radius: 3px;
+  width: 18px !important;
+  margin-left: -5px;
+  padding-left: 1px;
+  z-index: 20;
+}
+
+/* --- thread widget ----------------------------------------------------- */
+
+.review-widget {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  color: var(--vscode-editorWidget-foreground, #cccccc);
+  font-family: var(--shell-font-family, system-ui, sans-serif);
+  font-size: 12px;
+}
+
+.review-widget .comment-thread-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  font-weight: 600;
+  flex: none;
+}
+
+.review-widget .comment-thread-collapse {
+  background: transparent;
+  border: 0;
+  padding: 0 2px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.review-widget .comment-thread-collapse:hover {
+  opacity: 1;
+}
+
+.review-widget .comment-thread-body {
+  padding: 0 12px;
+  overflow-y: auto;
+}
+
+.review-widget .review-comment {
+  padding: 4px 0 6px;
+}
+
+.review-widget .review-comment + .review-comment {
+  border-top: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+
+.review-widget .comment-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.review-widget .comment-author {
+  font-weight: 600;
+}
+
+.review-widget .comment-timestamp {
+  opacity: 0.7;
+  font-size: 11px;
+}
+
+.review-widget .comment-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.review-widget .comment-body {
+  margin-top: 2px;
+  line-height: 1.4;
+  user-select: text;
+}
+
+.review-widget .comment-body p {
+  margin: 4px 0;
+}
+
+.review-widget .comment-body code {
+  font-family: var(--editor-font-family, monospace);
+  font-size: 11px;
+  background: var(--vscode-textCodeBlock-background, #2b2b2b);
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+.review-widget .comment-thread-form {
+  padding: 4px 12px 8px;
+  flex: none;
+}
+
+.review-widget .comment-textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 52px;
+  resize: vertical;
+  padding: 6px;
+  border-radius: 2px;
+  background: var(--vscode-input-background, #3c3c3c);
+  color: var(--vscode-input-foreground, #cccccc);
+  border: 1px solid var(--vscode-input-border, #3c3c3c);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.review-widget .comment-textarea:focus {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+}
+
+.review-widget .comment-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.review-widget .comment-action {
+  background: transparent;
+  border: 0;
+  padding: 2px 6px;
+  border-radius: 2px;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.review-widget .comment-action:hover {
+  text-decoration: underline;
+}
+
+.review-widget .comment-action-primary {
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #ffffff);
+  padding: 3px 10px;
+}
+
+.review-widget .comment-action-primary:hover {
+  background: var(--vscode-button-hoverBackground, #1177bb);
+  text-decoration: none;
+}

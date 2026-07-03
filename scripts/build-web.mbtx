@@ -285,6 +285,7 @@ fn css_sources() -> Array[String] {
     "viewer/browser/view_parts/view_lines/markers.css",
     "viewer/contrib/hover/hover.css",
     "viewer/contrib/zone_widget/browser/zone_widget.css",
+    "viewer/contrib/comments/browser/comments.css",
   ]
 }
 

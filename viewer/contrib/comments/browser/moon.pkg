@@ -1,0 +1,9 @@
+import {
+  "moonbit-community/editor/viewer/common/comments" @comments_common,
+  "moonbit-community/editor/viewer/contrib/zone_widget/browser" @zone_widget,
+  "moonbit-community/rabbita/dom" @rdom,
+  "moonbit-community/cmark/cmark",
+  "moonbit-community/cmark/cmark_html",
+}
+
+supported_targets = "js"

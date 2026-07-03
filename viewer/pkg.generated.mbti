@@ -104,6 +104,7 @@ pub struct Viewer {
   // private fields
 }
 pub fn Viewer::Viewer(services? : ViewerServices, options? : ViewerOptions) -> Self
+pub fn Viewer::add_overlay_widget(Self, String, @dom.Element) -> Unit
 pub fn Viewer::change_view_zones(Self, (ViewZoneChangeAccessor) -> Unit) -> Unit
 pub fn Viewer::create(@dom.Element, services? : ViewerServices, options? : ViewerOptions) -> Self
 pub fn Viewer::create_decorations_collection(Self, decorations? : Array[@model.DeltaDecoration]) -> DecorationsCollection
@@ -150,6 +151,7 @@ pub fn Viewer::on_did_change_model(Self, (ModelChangedEvent) -> Unit) -> @common
 pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_scroll_change(Self, (ScrollEvent) -> Unit) -> @common.Disposable
 pub fn Viewer::remove_decorations(Self, Array[String]) -> Unit
+pub fn Viewer::remove_overlay_widget(Self, String) -> Unit
 pub fn Viewer::restore_view_state(Self, ViewerViewState) -> Unit
 pub fn Viewer::reveal_line(Self, Int) -> Unit
 pub fn Viewer::reveal_line_in_center(Self, Int) -> Unit

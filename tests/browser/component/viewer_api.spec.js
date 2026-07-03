@@ -104,7 +104,16 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     const copiedHtml = await page.evaluate(() => globalThis.__readonlyEditorCopiedHtml || '');
     expect(copiedHtml).toContain('mtk4');
     expect(copiedHtml).not.toContain('inlay-hint');
-    await expect(wrappedHoverLine.locator('.squiggly-warning', { hasText: 'keeps' })).toHaveCount(1, {
+    // Collapse the drag selection before the fold checks: with the default
+    // renderWhitespace=selection, a selection spanning the inlay hint renders
+    // whitespace glyphs inside the injected text (as Monaco does), which
+    // fragments the hint span the later assertions look for.
+    await page.locator('.view-line[data-line="1"]').click();
+    await expect.poll(() => page.locator('.selected-text').count(), { timeout: 2_000 }).toBe(0);
+    // The warning squiggle renders as an absolutely positioned overlay piece
+    // (`<div class="cdr squiggly-warning">`, Monaco's DecorationsOverlay), not
+    // as an inline span inside the view line.
+    await expect(page.locator('.cdr.squiggly-warning')).toHaveCount(1, {
       timeout: 10_000,
     });
     const foldMarker = page.locator('.folding-marker[data-line="2"]');
@@ -113,12 +122,15 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     await expect(foldMarker).toHaveAttribute('data-folded', 'true');
     await expect(inlayHint).toHaveCount(1);
     await expect(page.locator('.view-line').filter({ hasText: 'keeps' })).toHaveCount(0);
-    await expect(page.locator('.squiggly-warning', { hasText: 'keeps' })).toHaveCount(0);
+    // Marker decorations set `showIfCollapsed`, so folding the squiggled
+    // region leaves a min-width squiggle at the fold anchor (Monaco behavior:
+    // errors hidden in a folded region still surface on the folded line).
+    await expect(page.locator('.cdr.squiggly-warning')).toHaveCount(1);
     await foldMarker.click();
     await expect(foldMarker).toHaveAttribute('data-folded', 'false');
     await expect(inlayHint).toHaveCount(1);
     await expect(wrappedHoverLine).toHaveCount(1);
-    await expect(wrappedHoverLine.locator('.squiggly-warning', { hasText: 'keeps' })).toHaveCount(1);
+    await expect(page.locator('.cdr.squiggly-warning')).toHaveCount(1);
     const firstLineTop = async () =>
       page.locator('.view-line[data-line="1"]').evaluate((node) => {
         const root = node.closest('.monaco-editor');

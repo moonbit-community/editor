@@ -9,6 +9,10 @@ pub(all) struct ViewerServices {
   languages : @languages.Languages
   markers : @markers.MarkerService
   marker_decorations : @markers.MarkerDecorationsService
+  /// The comment store (`ICommentService` reduced): hosts feed threads and
+  /// commenting ranges through it and subscribe to its mutation events for
+  /// persistence; the viewer's comments contrib renders from it.
+  comments : @comments_common.CommentService
   log_service : @log.LogService
 }
 
@@ -23,6 +27,7 @@ pub fn ViewerServices::new(
     languages,
     markers,
     marker_decorations: @markers.MarkerDecorationsService::new(markers),
+    comments: @comments_common.CommentService::new(),
     log_service,
   }
 }

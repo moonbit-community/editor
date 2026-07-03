@@ -5,6 +5,7 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
+  "moonbit-community/editor/viewer/common/comments",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/model",
@@ -226,6 +227,7 @@ pub(all) struct ViewerServices {
   languages : @languages.Languages
   markers : @markers.MarkerService
   marker_decorations : @markers.MarkerDecorationsService
+  comments : @comments.CommentService
   log_service : @log.LogService
 }
 pub fn ViewerServices::new(languages? : @languages.Languages, log_service? : @log.LogService) -> Self

@@ -96,6 +96,17 @@ pub struct Viewer {
   /// the hover view's highlighted range changes.
   priv mut hover_decoration_ids : Array[String]
   priv mut hover_decoration_range : @base_common.Range?
+  /// Comments contrib state (`commentsController.ts` reduced; glue in
+  /// `comments_host.mbt`): the DOM-free mouse/hover gates, the two
+  /// owner-scoped decoration id sets (commenting ranges + thread glyphs),
+  /// the open thread widgets by thread id, and the host's
+  /// `line_decorations_width` before the contrib reserved the comment lane
+  /// (`None` = not reserved).
+  priv comments : @comments.CommentController
+  priv mut comments_range_decoration_ids : Array[String]
+  priv mut comments_glyph_decoration_ids : Array[String]
+  priv open_comment_widgets : Map[String, @comments_browser.ReviewZoneWidget]
+  priv mut comments_lane_base_width : Int?
   priv mut mouse_handler : @controller.MouseHandler?
   /// Whether the editor root currently has DOM focus — the viewer's stand-in
   /// for Monaco's edit-context focus (`view.ts` `_getEditorClassName` /
@@ -280,6 +291,11 @@ pub fn Viewer::Viewer(
     model_decorations_subscription: None,
     hover_decoration_ids: [],
     hover_decoration_range: None,
+    comments: @comments.CommentController::new(),
+    comments_range_decoration_ids: [],
+    comments_glyph_decoration_ids: [],
+    open_comment_widgets: {},
+    comments_lane_base_width: None,
     mouse_handler: None,
     editor_has_focus: false,
     pending_horizontal_reveal: None,
@@ -295,6 +311,7 @@ pub fn Viewer::Viewer(
     }
   })
   |> ignore
+  viewer.hook_comment_service()
   viewer
 }
 
@@ -434,6 +451,8 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   self.hook_view_input(view)
   self.measure_requested = true
   self.schedule_render()
+  // Threads that were expanded before the view existed can open now.
+  self.sync_comments()
 }
 
 ///|
@@ -483,6 +502,11 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   }
   self.hover_decoration_ids = []
   self.hover_decoration_range = None
+  // Comment decoration/widget state belongs to the outgoing model; the sync
+  // after the render re-applies the new resource's comment data.
+  self.comments_range_decoration_ids = []
+  self.comments_glyph_decoration_ids = []
+  self.close_all_comment_widgets()
   self.model_decorations_subscription = Some(
     model.on_did_change_decorations(_event => {
       // Monaco: `onDidChangeDecorations` → `viewModel.decorations
@@ -511,10 +535,8 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
     self.view_layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
   )
   self.render_current_model(model, fresh=true, request_language=true)
-  self.did_change_model.fire({
-    old_model_url,
-    new_model_url: Some(model.uri),
-  })
+  self.sync_comments()
+  self.did_change_model.fire({ old_model_url, new_model_url: Some(model.uri) })
 }
 
 ///|
@@ -635,6 +657,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_dispose.dispose()
   self.services.marker_decorations.dispose()
   self.services.markers.dispose()
+  self.services.comments.dispose()
 }
 
 ///|
@@ -650,15 +673,14 @@ pub fn Viewer::layout(self : Viewer) -> Unit {
 /// Sets the vertical synthetic scroll position — `setScrollTop`. Wheel and
 /// scrollbar input arrive through the view's own listeners.
 pub fn Viewer::set_scroll_top(self : Viewer, new_scroll_top : Double) -> Unit {
-  self.apply_scroll_change(self.view_layout.scroll_to(scroll_top=new_scroll_top))
+  self.apply_scroll_change(
+    self.view_layout.scroll_to(scroll_top=new_scroll_top),
+  )
 }
 
 ///|
 /// Sets the horizontal synthetic scroll position — `setScrollLeft`.
-pub fn Viewer::set_scroll_left(
-  self : Viewer,
-  new_scroll_left : Double,
-) -> Unit {
+pub fn Viewer::set_scroll_left(self : Viewer, new_scroll_left : Double) -> Unit {
   self.apply_scroll_change(
     self.view_layout.scroll_to(
       scroll_top=self.view_layout.position().scroll_top,
@@ -684,7 +706,9 @@ pub fn Viewer::set_scroll_position(
     Some(value) => value
     None => position.scroll_left
   }
-  self.apply_scroll_change(self.view_layout.scroll_to(scroll_top~, scroll_left~))
+  self.apply_scroll_change(
+    self.view_layout.scroll_to(scroll_top~, scroll_left~),
+  )
 }
 
 ///|
@@ -732,6 +756,9 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.model_decorations_subscription = None
   self.hover_decoration_ids = []
   self.hover_decoration_range = None
+  self.comments_range_decoration_ids = []
+  self.comments_glyph_decoration_ids = []
+  self.close_all_comment_widgets()
   self.frame = None
   self.view_model = None
   self.frame_source = None
@@ -759,8 +786,12 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
 /// Re-renders the current model with updated feature data.
 fn Viewer::render_feature_update(self : Viewer) -> Unit {
   match self.text_model {
-    Some(model) =>
+    Some(model) => {
       self.render_current_model(model, fresh=false, request_language=false)
+      // Folding/feature changes move the view-line axis; open comment
+      // widgets follow their model anchors (D8).
+      self.reanchor_comment_widgets()
+    }
     None => ()
   }
 }
@@ -784,4 +815,3 @@ fn Viewer::apply_scroll_change(
     None => ()
   }
 }
-

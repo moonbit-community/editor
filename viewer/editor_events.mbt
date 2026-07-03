@@ -47,6 +47,10 @@ fn Viewer::on_editor_mouse_move(
   self : Viewer,
   target : @viewer_common.MouseTarget,
 ) -> Unit {
+  // The comments hover ("+" affordance) tracks every move, independent of
+  // the hover controller's suppression — `commentsController.ts` registers
+  // its own `onMouseMove`.
+  self.update_comment_hover(target)
   if self.hover_ignore_mouse_events {
     return
   }
@@ -270,6 +274,8 @@ fn Viewer::on_editor_mouse_leave(
   posx : Double,
   posy : Double,
 ) -> Unit {
+  // `CommentController.onEditorMouseLeave` clears the "+" affordance.
+  self.clear_comment_hover()
   if self.hover_ignore_mouse_events {
     return
   }

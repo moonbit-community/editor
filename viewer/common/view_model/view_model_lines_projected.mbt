@@ -336,12 +336,7 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_ra
   let end = self.model_position_to_view_position(
     Position(range.end_line_number, range.end_column),
   )
-  {
-    start_line_number: start.line_number,
-    start_column: start.column,
-    end_line_number: end.line_number,
-    end_column: end.column,
-  }
+  Range(start.line_number, start.column, end.line_number, end.column)
 }
 
 ///|
@@ -356,10 +351,5 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_ran
   let end = self.view_position_to_model_position(
     Position(range.end_line_number, range.end_column),
   )
-  {
-    start_line_number: start.line_number,
-    start_column: start.column,
-    end_line_number: end.line_number,
-    end_column: end.column,
-  }
+  Range(start.line_number, start.column, end.line_number, end.column)
 }

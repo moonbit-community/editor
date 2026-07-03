@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer/browser/view_parts/selections"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
@@ -27,13 +28,13 @@ pub fn ContentViewOverlays::dom(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::render_current_line(Self, @view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Unit
 pub fn ContentViewOverlays::render_decorations_overlay(Self, Array[@inline_decorations.ViewModelDecoration[@model.Decoration]], @view_layout.ViewportData, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Unit
-pub fn ContentViewOverlays::render_selection_overlays(Self, @view_model.RenderFrame, @view_layout.ViewportData, @view_layout.ViewRange?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Unit
+pub fn ContentViewOverlays::render_selection_overlays(Self, @view_model.RenderFrame, @view_layout.ViewportData, @common.Range?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Unit
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
 
 pub(all) struct ContentViewOverlaysPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
-  selection_view_range : @view_layout.ViewRange?
+  selection_view_range : @common.Range?
   view_model : @view_model.ViewModel?
   decorations : Array[@inline_decorations.ViewModelDecoration[@model.Decoration]]
   space_width : Double

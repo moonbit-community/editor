@@ -9,7 +9,7 @@ pub(all) struct ViewRenderInput {
   view_model : @view_model.ViewModel?
   layout : @view_layout.ViewLayout
   browser_view_zones : Array[@view_zones.BrowserViewZone]
-  selection_view_range : @view_layout.ViewRange?
+  selection_view_range : @base_common.Range?
   /// The full view-space selection (anchor + active position), Monaco's
   /// `ViewCursorStateChangedEvent.selections[0]`. Unlike
   /// `selection_view_range` (which is `None` when collapsed), this carries the

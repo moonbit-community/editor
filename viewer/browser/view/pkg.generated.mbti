@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer/browser/view"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/editor_scrollbar",
@@ -67,7 +68,7 @@ pub(all) struct ViewRenderInput {
   view_model : @view_model.ViewModel?
   layout : @view_layout.ViewLayout
   browser_view_zones : Array[@view_zones.BrowserViewZone]
-  selection_view_range : @view_layout.ViewRange?
+  selection_view_range : @common.Range?
   view_selection : @view_model.Selection?
   folding_ranges : Array[@language.FoldingRange]
   folded_ranges : Array[@language.FoldingRange]

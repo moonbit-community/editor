@@ -5,20 +5,13 @@
 /// in view coordinates (its `viewState`), so the overlay never round-trips
 /// through raw document offsets. Columns are one-based and local to each view
 /// line (the convention `measure_line_selection` consumes).
-fn Viewer::selection_view_range(self : Viewer) -> @view_layout.ViewRange? {
+fn Viewer::selection_view_range(self : Viewer) -> @base_common.Range? {
   guard self.cursor is Some(controller) else { return None }
   let selection = controller.get_view_selection()
   if selection.is_empty() {
     return None
   }
-  let start = selection.start()
-  let end = selection.end()
-  Some({
-    start_line_number: start.line_number,
-    start_column: start.column,
-    end_line_number: end.line_number,
-    end_column: end.column,
-  })
+  Some(@base_common.Range::from_positions(selection.start(), selection.end()))
 }
 
 ///|

@@ -33,15 +33,6 @@ pub(all) enum ForeignElementType {
 } derive(Eq, Debug)
 
 ///|
-/// One-based line/column range used by line-renderer contracts.
-pub(all) struct ViewRange {
-  start_line_number : Int
-  start_column : Int
-  end_line_number : Int
-  end_column : Int
-} derive(Eq, Debug)
-
-///|
 /// Tokenized segment ending at `end_index` with CSS and metadata flags.
 pub(all) struct LinePart {
   end_index : Int

@@ -374,19 +374,11 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
   // `ctx.getDecorationsInViewport()` (`linesDecorations.ts:73`): the same
   // cached viewport decoration collection the content overlays read.
   let decorations = match context.input.view_model {
-    Some(view_model) => {
-      let visible = context.viewport.visible_range
+    Some(view_model) =>
       view_model
       .decorations()
-      .get_decorations_viewport_data(
-        Range(
-          visible.start_line_number,
-          visible.start_column,
-          visible.end_line_number,
-          visible.end_column,
-        ),
-      ).decorations
-    }
+      .get_decorations_viewport_data(context.viewport.visible_range)
+      .decorations
     None => []
   }
   self.prepared = Some({
@@ -674,19 +666,11 @@ impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
   // decoration collection (a cache hit — the viewport data resolved the same
   // range).
   let decorations = match context.input.view_model {
-    Some(view_model) => {
-      let visible = context.viewport.visible_range
+    Some(view_model) =>
       view_model
       .decorations()
-      .get_decorations_viewport_data(
-        Range(
-          visible.start_line_number,
-          visible.start_column,
-          visible.end_line_number,
-          visible.end_column,
-        ),
-      ).decorations
-    }
+      .get_decorations_viewport_data(context.viewport.visible_range)
+      .decorations
     None => []
   }
   self.prepared = Some({

@@ -15,7 +15,7 @@ pub(all) struct ViewLinesPrepared {
   space_width : Double
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
-  selection_view_range : @view_layout.ViewRange?
+  selection_view_range : @base_common.Range?
 }
 
 ///|
@@ -34,7 +34,7 @@ pub(all) struct ViewLines {
   // re-render coupling (`onSelectionChanged`, `viewLine.ts:94-100`): a selection
   // change only invalidates the lines when whitespace is rendered under the
   // selection.
-  mut last_selection : @view_layout.ViewRange?
+  mut last_selection : @base_common.Range?
   mut last_render_whitespace : @view_layout.RenderWhitespace
 }
 
@@ -121,7 +121,7 @@ pub fn ViewLines::render_text(
   space_width : Double,
   render_whitespace : @view_layout.RenderWhitespace,
   render_control_characters : Bool,
-  selection_view_range : @view_layout.ViewRange?,
+  selection_view_range : @base_common.Range?,
 ) -> Unit {
   let target = viewport_window(viewport)
   let document = @rdom.document()
@@ -297,7 +297,7 @@ pub fn render_line_input_for_viewport(
   space_width : Double,
   render_whitespace~ : @view_layout.RenderWhitespace,
   render_control_characters~ : Bool,
-  selection_view_range~ : @view_layout.ViewRange?,
+  selection_view_range~ : @base_common.Range?,
 ) -> @view_layout.RenderLineInput {
   let line_number = viewport.start_line_number + index
   let line_data = viewport.lines[index]
@@ -329,7 +329,7 @@ fn selections_on_line_for(
   line_number : Int,
   line_data : @view_layout.ViewLineRenderingData,
   render_whitespace : @view_layout.RenderWhitespace,
-  selection_view_range : @view_layout.ViewRange?,
+  selection_view_range : @base_common.Range?,
 ) -> Array[@base_common.OffsetRange] {
   let result : Array[@base_common.OffsetRange] = []
   guard render_whitespace == Selection else { return result }

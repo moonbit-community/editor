@@ -56,8 +56,7 @@ pub fn filter_validation_decorations(
 
 ///|
 /// The `ICoordinatesConverter` seam of the promoted inline-decorations
-/// computer, implemented by the view model's converter (Range ↔ ViewRange
-/// bridging is the recorded `ViewRange`-duplication residual).
+/// computer, implemented by the view model's converter.
 pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConverter with fn convert_model_position_to_view_position(
   self,
   model_position,
@@ -70,18 +69,7 @@ pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConver
   self,
   model_range,
 ) {
-  let view_range = self.model_range_to_view_range({
-    start_line_number: model_range.start_line_number,
-    start_column: model_range.start_column,
-    end_line_number: model_range.end_line_number,
-    end_column: model_range.end_column,
-  })
-  Range(
-    view_range.start_line_number,
-    view_range.start_column,
-    view_range.end_line_number,
-    view_range.end_column,
-  )
+  self.model_range_to_view_range(model_range)
 }
 
 ///|

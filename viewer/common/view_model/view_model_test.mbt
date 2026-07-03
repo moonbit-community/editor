@@ -4,12 +4,7 @@ test "identity coordinates converter preserves model and view positions" {
   let position = @base_common.Position(2, 7)
   assert_true(converter.model_position_to_view_position(position) == position)
   assert_true(converter.view_position_to_model_position(position) == position)
-  let range = @view_layout.ViewRange::{
-    start_line_number: 2,
-    start_column: 3,
-    end_line_number: 4,
-    end_column: 9,
-  }
+  let range = @base_common.Range::Range(2, 3, 4, 9)
   assert_true(converter.model_range_to_view_range(range) == range)
   assert_true(converter.view_range_to_model_range(range) == range)
 }
@@ -202,12 +197,7 @@ test "projected coordinates convert model and view positions at wrap boundaries"
   let line_end = converter.view_position_to_model_position(Position(2, 6))
   assert_eq(line_end.line_number, 1)
   assert_eq(line_end.column, 11)
-  let model_input_range : @view_layout.ViewRange = {
-    start_line_number: 1,
-    start_column: 6,
-    end_line_number: 1,
-    end_column: 10,
-  }
+  let model_input_range = @base_common.Range::Range(1, 6, 1, 10)
   let range = converter.model_range_to_view_range(model_input_range)
   assert_eq(range.start_line_number, 2)
   assert_eq(range.start_column, 1)

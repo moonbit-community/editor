@@ -6,7 +6,7 @@ pub(all) struct ViewportData {
   end_line_number : Int
   relative_vertical_offset : Array[Int]
   line_height : Int
-  visible_range : ViewRange
+  visible_range : @base_common.Range
   big_numbers_delta : Int
   lines : Array[ViewLineRenderingData]
   line_decorations : Array[Array[LineDecoration]]

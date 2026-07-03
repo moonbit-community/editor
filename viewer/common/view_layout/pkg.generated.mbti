@@ -365,13 +365,6 @@ pub(all) struct ViewLineRenderingData {
   has_variable_fonts : Bool
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ViewRange {
-  start_line_number : Int
-  start_column : Int
-  end_line_number : Int
-  end_column : Int
-} derive(Eq, @debug.Debug)
-
 pub struct ViewWhitespaceViewportData {
   id : String
   after_line_number : Int
@@ -396,7 +389,7 @@ pub(all) struct ViewportData {
   end_line_number : Int
   relative_vertical_offset : Array[Int]
   line_height : Int
-  visible_range : ViewRange
+  visible_range : @common.Range
   big_numbers_delta : Int
   lines : Array[ViewLineRenderingData]
   line_decorations : Array[Array[LineDecoration]]

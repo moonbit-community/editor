@@ -239,12 +239,7 @@ fn Viewer::send_reveal_range(
   // the pure core.
   let view_range = view_model
     .coordinates_converter()
-    .model_range_to_view_range({
-      start_line_number: model_range.start_line_number,
-      start_column: model_range.start_column,
-      end_line_number: model_range.end_line_number,
-      end_column: model_range.end_column,
-    })
+    .model_range_to_view_range(model_range)
   // (2) Minimal vertical scroll for the view range.
   let scroll_top = self.view_layout.compute_scroll_top_to_reveal(
     view_range.start_line_number,

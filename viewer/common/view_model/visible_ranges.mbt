@@ -130,16 +130,10 @@ pub fn ViewModel::model_line_max_column(
 /// model ranges actually on screen above/below it.
 pub fn ViewModel::to_model_visible_ranges(
   self : ViewModel,
-  visible_view_range : @view_layout.ViewRange,
+  visible_view_range : @base_common.Range,
 ) -> Array[@base_common.Range] {
-  let model_range = self.coordinates_converter.view_range_to_model_range(
+  let visible = self.coordinates_converter.view_range_to_model_range(
     visible_view_range,
-  )
-  let visible = @base_common.Range::Range(
-    model_range.start_line_number,
-    model_range.start_column,
-    model_range.end_line_number,
-    model_range.end_column,
   )
   let hidden_areas = self.get_hidden_areas()
   if hidden_areas.length() == 0 {

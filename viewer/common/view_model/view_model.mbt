@@ -3,8 +3,8 @@
 pub(open) trait CoordinatesConverter {
   fn model_position_to_view_position(Self, @base_common.Position) -> @base_common.Position
   fn view_position_to_model_position(Self, @base_common.Position) -> @base_common.Position
-  fn model_range_to_view_range(Self, @view_layout.ViewRange) -> @view_layout.ViewRange
-  fn view_range_to_model_range(Self, @view_layout.ViewRange) -> @view_layout.ViewRange
+  fn model_range_to_view_range(Self, @base_common.Range) -> @base_common.Range
+  fn view_range_to_model_range(Self, @base_common.Range) -> @base_common.Range
 }
 
 ///|

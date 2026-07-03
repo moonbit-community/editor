@@ -34,13 +34,8 @@ fn view_range(
   start_column : Int,
   end_line : Int,
   end_column : Int,
-) -> @view_layout.ViewRange {
-  {
-    start_line_number: start_line,
-    start_column,
-    end_line_number: end_line,
-    end_column,
-  }
+) -> @base_common.Range {
+  Range(start_line, start_column, end_line, end_column)
 }
 
 ///|

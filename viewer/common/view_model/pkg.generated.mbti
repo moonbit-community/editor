@@ -380,7 +380,7 @@ pub fn ViewModel::lines(Self) -> ViewModelLines
 pub fn ViewModel::model_line_max_column(Self, Int) -> Int
 pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
 pub fn ViewModel::render_frame(Self, FrameViewport) -> RenderFrame
-pub fn ViewModel::to_model_visible_ranges(Self, @view_layout.ViewRange) -> Array[@common.Range]
+pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
 pub fn ViewModel::with_options(FrameSource, ViewModelOptions) -> Self
 pub fn ViewModel::with_options_and_folding(FrameSource, ViewModelOptions, FoldingModel) -> Self
@@ -489,8 +489,8 @@ pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[@model.De
 pub(open) trait CoordinatesConverter {
   fn model_position_to_view_position(Self, @common.Position) -> @common.Position
   fn view_position_to_model_position(Self, @common.Position) -> @common.Position
-  fn model_range_to_view_range(Self, @view_layout.ViewRange) -> @view_layout.ViewRange
-  fn view_range_to_model_range(Self, @view_layout.ViewRange) -> @view_layout.ViewRange
+  fn model_range_to_view_range(Self, @common.Range) -> @common.Range
+  fn view_range_to_model_range(Self, @common.Range) -> @common.Range
 }
 
 pub trait IViewLineTokens {

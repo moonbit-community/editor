@@ -449,13 +449,61 @@ in lines.
 
 1. Inventory the offset-typed hover surface (`HoverPart.range : OffsetRange`,
    anchor construction in the input seam, geometry consumers); paste here.
+
+   **Inventory (pasted 2026-07-03):**
+
+   - **Offset-typed surface (before):** `HoverAnchor { start, end, offset,
+     injected_text_index, line }` (`hover_controller.mbt:35-43`),
+     `HoverView.range`/`ComputedHover.range`/`HoverPart` variant ranges
+     (`OffsetRange`), `HoverComputeContext.anchor_range`+`offset`,
+     `EditorContext.view_to_model_offset`+`offset_to_model_line`,
+     `HoverWidgetView.anchor_offset`, `token_anchor_for_target → (Int, Int,
+     Int)`, and the root's `view_position_to_model_offset` /
+     `offset_to_model_line` helpers. `hover_widget_geometry.mbt` already
+     reasoned in `Range`/`Position`.
+   - **The two boundary converters deleted:** `MarkerHoverParticipant`
+     (`snapshot.range_of(anchor)` on the way in,
+     `snapshot.offset_range_of(marker range)` on the way out) and the
+     markdown participant's `offset_range_of(hover.range)`; the
+     `hoverHighlight` decoration's `snapshot.range_of(hover.range)`.
+   - **The one offset consumer kept:** content-widget pixel placement
+     (`content_widgets.mbt` `line_col_for_offset`), now fed through the new
+     `ViewContext.model_position_to_offset` closure (the model-snapshot
+     boundary) — offsets no longer exist anywhere else in the hover chain.
+   - **Provider-query correction found while rebasing:** Monaco queries
+     hover providers at `anchor.range.getStartPosition()`, but Monaco's
+     anchor range is the *mouse position*; the viewer's anchor is the
+     hovered token's span (recorded deviation), so the query keeps the
+     span's midpoint as the pointer stand-in (the offset-anchored code's
+     `(start+end)/2`) — querying the span start regressed the wrapped-hover
+     browser spec (a string token's start is outside the provider's word
+     range).
+   - **`isValidForHoverAnchor`** now transcribes the source's column-only
+     comparison (markdown/marker participants) instead of offset
+     containment.
 2. Rebase types to `Range`; keep pixel placement converting at its boundary;
    hover browser suite green (`hover_rendering.spec.js` + scrollbar specs).
+   **DONE (2026-07-03)** — the browser hover coverage now lives in
+   `viewer_api.spec.js` + the smoke hover spec (the standalone hover specs
+   left with the conformance suite); both green.
 3. Land the Track-D-unblocked Phase 5 rows (commands, real status bar) — 
    update the hover plan's ledger statuses, not this file.
+   **DONE (2026-07-03)** — the scroll cluster, `hideHover`, and the
+   `hoverActionIds` ids are PORTED (Track D); the status-bar `run` dispatch
+   is terminal-DEFERRED in the hover ledger (its targets are the
+   gotoError/codeAction contribs, out of scope below);
+   `ShowOrFocusHoverAction` is terminal-DEFERRED (multi-chord keybinding +
+   Phase 4 focus cluster).
 4. Land the remaining Phase 4 wrapper/focus-nav rows per the hover plan.
    Phases 6 (verbosity) and 7 (glyph hover) remain feature work tracked
    there, not deviations — out of scope here.
+   **Status (2026-07-03):** the `hoverHighlight` decoration row is PORTED
+   (`Range`-native since the anchor rebase). The wrapper fan-out /
+   focus-nav cluster (`shows_or_will_show`, `find_anchor_candidates`,
+   `_getHoverContext`, `focus*`) is *not registry-blocked* — it is the
+   hover plan's own Phase 4 structural feature work and stays open there
+   (every row carries an explicit status); nothing in it is a deviation
+   inside a ported unit, which is this plan's scope.
 
 ---
 

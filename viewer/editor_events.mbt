@@ -2,36 +2,7 @@
 fn Viewer::editor_context(self : Viewer) -> @hover.EditorContext {
   {
     frame: self.frame,
-    view_to_model_offset: view_position => {
-      self.view_position_to_model_offset(view_position)
-    },
-    offset_to_model_line: offset => self.offset_to_model_line(offset),
-  }
-}
-
-///|
-/// Resolves a model document offset to its 1-based model line number through the
-/// model snapshot (1 when there is no model).
-fn Viewer::offset_to_model_line(self : Viewer, offset : Int) -> Int {
-  match self.text_model {
-    Some(model) => model.snapshot().position_at_offset(offset).line_number
-    None => 1
-  }
-}
-
-///|
-/// Resolves a view position to a model document offset, routing through the
-/// `CoordinatesConverter` (view→model position) and the model snapshot
-/// (model position→offset), the way Monaco resolves a `MouseTarget`'s view
-/// position. The offset only appears at this model boundary.
-fn Viewer::view_position_to_model_offset(
-  self : Viewer,
-  view_position : @base_common.Position,
-) -> Int {
-  let model_position = self.view_to_model(view_position)
-  match self.text_model {
-    Some(model) => model.snapshot().offset_at_position(model_position)
-    None => model_position.column
+    view_to_model_position: view_position => self.view_to_model(view_position),
   }
 }
 
@@ -455,8 +426,7 @@ fn Viewer::compute_hover_sync(
           .make_hover_computer()
           .compute_sync(
             model,
-            OffsetRange(anchor.start, anchor.end),
-            anchor.offset,
+            anchor.range,
             injected_text_index=anchor.injected_text_index,
             inlay_hints=self.inlay_hints,
           ) {
@@ -477,15 +447,13 @@ fn Viewer::kick_hover_async(self : Viewer, token : Int) -> Unit {
   match (self.text_model, self.hover.anchor) {
     (Some(model), Some(anchor)) => {
       let computer = self.make_hover_computer()
-      let range = @base_common.OffsetRange(anchor.start, anchor.end)
-      let offset = anchor.offset
+      let range = anchor.range
       let injected_text_index = anchor.injected_text_index
       let inlay_hints = self.inlay_hints
       @js.async_run(() => {
         computer.compute_async_each(
           model,
           range,
-          offset,
           injected_text_index~,
           inlay_hints~,
           emit=parts => self.hover_async_item(model, token, parts),
@@ -552,7 +520,7 @@ fn Viewer::maybe_notify_hover_resolved(self : Viewer, token : Int) -> Unit {
 /// Runs at flush time — every hover state change schedules a flush.
 fn Viewer::sync_hover_decorations(self : Viewer) -> Unit {
   guard self.text_model is Some(model) else { return }
-  let decorations = self.hover.highlight_decorations(model.snapshot)
+  let decorations = self.hover.highlight_decorations()
   let range = match decorations.get(0) {
     Some(decoration) => Some(decoration.range)
     None => None

@@ -12,34 +12,28 @@ pub(all) enum EditorEvent {
 
 ///|
 /// Read-only viewer state controllers may consult while handling an event.
-/// `view_to_model_offset` resolves a view position to a model document offset
-/// through the active `CoordinatesConverter` and model snapshot — Monaco's
-/// view→model boundary — so controllers anchor on the model without a bespoke
-/// render-line offset helper. `pub(all)` for the same cross-package reason as
-/// `EditorEvent`.
+/// `view_to_model_position` resolves a view position to a model position
+/// through the active `CoordinatesConverter` — Monaco's view→model boundary —
+/// so controllers anchor on the model in line/column space. `pub(all)` for
+/// the same cross-package reason as `EditorEvent`.
 pub(all) struct EditorContext {
   frame : @view_model.RenderFrame?
-  view_to_model_offset : (@base_common.Position) -> Int
-  /// Model document offset → model line number, the seam the hover
-  /// reconciliation uses for `canAdoptVisibleHover` (same-line anchor adoption).
-  offset_to_model_line : (Int) -> Int
+  view_to_model_position : (@base_common.Position) -> @base_common.Position
 }
 
 ///|
 pub(all) struct HoverView {
-  range : @base_common.OffsetRange
+  range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq)
 
 ///|
+/// The hovered span in model line/column space, Monaco's `HoverRangeAnchor`
+/// (`range` + the viewer's injected-text discriminator; the Range rebase of
+/// deviations-closeout Track E deleted the earlier offset quintuple).
 pub(all) struct HoverAnchor {
-  start : Int
-  end : Int
-  offset : Int
+  range : @base_common.Range
   injected_text_index : Int
-  /// Model start line of the anchor, for `canAdoptVisibleHover` (Monaco compares
-  /// `showAtPosition.lineNumber` against the new anchor's start line).
-  line : Int
 } derive(Eq)
 
 ///|
@@ -47,8 +41,7 @@ pub(all) struct HoverAnchor {
 /// the same span (the viewer also keys on the injected-text index so an inlay
 /// hint and the text under it are distinct anchors).
 pub fn hover_anchor_equals(left : HoverAnchor, right : HoverAnchor) -> Bool {
-  left.start == right.start &&
-  left.end == right.end &&
+  left.range == right.range &&
   left.injected_text_index == right.injected_text_index
 }
 
@@ -61,20 +54,21 @@ pub fn hover_anchor_can_adopt(
   new_anchor : HoverAnchor,
   last_anchor : HoverAnchor,
 ) -> Bool {
-  last_anchor.line == new_anchor.line
+  last_anchor.range.start_line_number == new_anchor.range.start_line_number
 }
 
 ///|
 /// Monaco `IHoverPart.isValidForHoverAnchor` (markdown + marker participants):
 /// the part still applies to the new anchor when its range contains the anchor
-/// range (`startColumn <= anchor.startColumn && endColumn >= anchor.endColumn`,
-/// here in document offsets).
+/// range (`startColumn <= anchor.range.startColumn && endColumn >=
+/// anchor.range.endColumn`, the source's column-only comparison).
 pub fn hover_part_valid_for_anchor(
   part : HoverPart,
   anchor : HoverAnchor,
 ) -> Bool {
-  let range = hover_part_offset_range(part)
-  range.start <= anchor.start && range.end_exclusive >= anchor.end
+  let range = hover_part_range(part)
+  range.start_column <= anchor.range.start_column &&
+  range.end_column >= anchor.range.end_column
 }
 
 ///|
@@ -248,15 +242,9 @@ pub fn HoverController::on_event(
       match ctx.frame {
         Some(frame) =>
           match
-            token_anchor_for_target(frame, target, ctx.view_to_model_offset) {
-            Some((start, end, injected_text_index)) => {
-              let anchor : HoverAnchor = {
-                start,
-                end,
-                offset: (start + end) / 2,
-                injected_text_index,
-                line: (ctx.offset_to_model_line)(start),
-              }
+            token_anchor_for_target(frame, target, ctx.view_to_model_position) {
+            Some((range, injected_text_index)) => {
+              let anchor : HoverAnchor = { range, injected_text_index }
               self.start_showing_or_update_hover(
                 anchor, sticky_mouse_getting_closer,
               )
@@ -541,13 +529,7 @@ pub fn HoverController::set_current_result(
       }
     None => ()
   }
-  // The fallback anchor span is built inline so the expected `OffsetRange` type
-  // flows from `hover_parts_range`'s parameter (the bare constructor does not
-  // resolve without an expected type on the JS target).
-  let range = hover_parts_range(
-    sorted,
-    OffsetRange(result_anchor.start, result_anchor.end),
-  )
+  let range = hover_parts_range(sorted, result_anchor.range)
   let new_view : HoverView = { range, parts: sorted }
   let placement = match self.view {
     Some(existing) =>
@@ -588,18 +570,16 @@ pub fn HoverController::measured(
 /// The hover highlight's model decoration, Monaco's
 /// `ContentHoverController` `_highlightDecorations` collection entry
 /// (`className: 'hoverHighlight'`, `contentHoverWidgetParticipants`): the
-/// range under the visible hover. The hover view holds an offset span (the
-/// widget anchors by offset); decorations are line/column `Range`, so
-/// convert at this boundary.
+/// range under the visible hover, used directly since the Range rebase
+/// (deviations-closeout Track E deleted the offset→Range conversion here).
 pub fn HoverController::highlight_decorations(
   self : HoverController,
-  snapshot : @model.TextSnapshot,
 ) -> Array[@model.DeltaDecoration] {
   match self.view {
     Some(hover) =>
       [
         {
-          range: snapshot.range_of(hover.range),
+          range: hover.range,
           options: Decoration(
             "hoverHighlight",
             description="content-hover-highlight",
@@ -618,7 +598,7 @@ pub fn HoverController::highlight_decorations(
 /// unmeasured loading hover while the async compute is still resolving past
 /// the loading delay.
 pub(all) struct HoverWidgetView {
-  anchor_offset : Int
+  anchor_range : @base_common.Range
   parts : Array[HoverPart]
   /// Whether this widget participates in placement measurement (the
   /// loading hover renders unmeasured at the anchor).
@@ -655,7 +635,7 @@ pub fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? 
   match self.view {
     Some(hover) =>
       Some({
-        anchor_offset: hover.range.start,
+        anchor_range: hover.range,
         parts: hover.parts,
         measurable: true,
         placement: self.placement,
@@ -666,13 +646,8 @@ pub fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? 
           match self.anchor {
             Some(anchor) =>
               Some({
-                anchor_offset: anchor.start,
-                parts: [
-                  LoadingHover(
-                    range=OffsetRange(anchor.start, anchor.end),
-                    message="Loading...",
-                  ),
-                ],
+                anchor_range: anchor.range,
+                parts: [LoadingHover(range=anchor.range, message="Loading...")],
                 measurable: false,
                 placement: self.placement,
               })
@@ -684,16 +659,15 @@ pub fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? 
 }
 
 ///|
-/// The token the target falls in, as `(start, end, injected_text_index)` in
-/// absolute document offsets. The token's view columns are resolved to model
-/// offsets through `view_to_model_offset` (the `CoordinatesConverter` + model
-/// snapshot boundary), the way Monaco maps a `MouseTarget`'s view position to
-/// the model — not via a render-line offset helper.
+/// The token the target falls in, as a model `Range` plus the injected-text
+/// index. The token's view columns are resolved to model positions through
+/// `view_to_model_position` (the `CoordinatesConverter` boundary), the way
+/// Monaco maps a `MouseTarget`'s view position to the model.
 pub fn token_anchor_for_target(
   frame : @view_model.RenderFrame,
   target : @viewer_common.MouseTarget,
-  view_to_model_offset : (@base_common.Position) -> Int,
-) -> (Int, Int, Int)? {
+  view_to_model_position : (@base_common.Position) -> @base_common.Position,
+) -> (@base_common.Range, Int)? {
   if target.token_index < 0 {
     return None
   }
@@ -717,7 +691,12 @@ pub fn token_anchor_for_target(
   // `target.line_number` is the 1-based view line; token columns are 0-based, so
   // shift them to 1-based `Position` columns.
   let view_line = target.line_number
-  let start = view_to_model_offset(Position(view_line, token_start + 1))
-  let end = view_to_model_offset(Position(view_line, token_end + 1))
-  Some((start, end, target.injected_text_index))
+  let start = view_to_model_position(Position(view_line, token_start + 1))
+  let end = view_to_model_position(Position(view_line, token_end + 1))
+  Some(
+    (
+      Range(start.line_number, start.column, end.line_number, end.column),
+      target.injected_text_index,
+    ),
+  )
 }

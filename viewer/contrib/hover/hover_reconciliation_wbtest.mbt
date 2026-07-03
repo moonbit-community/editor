@@ -4,7 +4,7 @@
 
 ///|
 fn anchor_at(start : Int, end : Int, line : Int) -> HoverAnchor {
-  { start, end, offset: (start + end) / 2, injected_text_index: -1, line }
+  { range: Range(line, start + 1, line, end + 1), injected_text_index: -1 }
 }
 
 ///|

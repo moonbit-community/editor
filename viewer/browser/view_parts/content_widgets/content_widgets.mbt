@@ -70,6 +70,11 @@ pub(all) struct HoverWidgetHost {
     @scrollbar.ScrollableElementOwner,
   ) -> Unit
   handle_hover_keydown : (HoverWidgetDom, @rdom.Event, @rdom.KeyboardEvent) -> Unit
+  /// Model position → document offset (the model-snapshot boundary): the
+  /// hover state is `Range`-typed (deviations-closeout Track E); this
+  /// pixel-placement site is the one offset consumer left, so the
+  /// conversion happens here, through the host.
+  model_position_to_offset : (@base_common.Position) -> Int
 }
 
 ///|
@@ -172,8 +177,15 @@ pub fn ContentWidgets::render_hover_widget(
       return
     }
   }
+  // The hover state is `Range`-typed; this pixel-placement site converts to
+  // document offsets (through the host's model-snapshot boundary) to locate
+  // the rendered view line + column, the one offset consumer left after the
+  // Range rebase (deviations-closeout Track E).
+  let anchor_offset = (host.model_position_to_offset)(
+    hover_view.anchor_range.get_start_position(),
+  )
   let (line_number, anchor_view_column) = match
-    line_col_for_offset(frame, hover_view.anchor_offset) {
+    line_col_for_offset(frame, anchor_offset) {
     Some(anchor) => anchor
     None => {
       self.remove_hover_widget()
@@ -188,11 +200,17 @@ pub fn ContentWidgets::render_hover_widget(
   // clamp and forced ranges.
   let placement_parts : Array[@hover.HoverPositionPart] = []
   for part in hover_view.parts {
-    let part_range = @hover.hover_part_offset_range(part)
+    let part_range = @hover.hover_part_range(part)
     match
       (
-        line_col_for_offset(frame, part_range.start),
-        line_col_for_offset(frame, part_range.end_exclusive),
+        line_col_for_offset(
+          frame,
+          (host.model_position_to_offset)(part_range.get_start_position()),
+        ),
+        line_col_for_offset(
+          frame,
+          (host.model_position_to_offset)(part_range.get_end_position()),
+        ),
       ) {
       (Some((start_line, start_column)), Some((end_line, end_column))) =>
         placement_parts.push({

@@ -184,7 +184,7 @@ pub fn min_hover_double(left : Double, right : Double) -> Double {
 }
 
 ///|
-pub fn hover_part_offset_range(part : HoverPart) -> @base_common.OffsetRange {
+pub fn hover_part_range(part : HoverPart) -> @base_common.Range {
   match part {
     MarkdownHover(range~, ..) => range
     MarkerHover(range~, ..) => range

@@ -61,6 +61,7 @@ pub(all) struct ViewContext {
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
   measure_line_decorations : (Int, Int, Int) -> Array[(Double, Double)]
   offset_for_column : (Int, Int) -> Double
+  model_position_to_offset : (@common.Position) -> Int
 }
 
 pub(all) struct ViewRenderInput {

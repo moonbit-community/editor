@@ -3,7 +3,7 @@
 /// state machine ported into `HoverController`.
 fn markdown_part(start : Int, end : Int, text : String) -> HoverPart {
   MarkdownHover(
-    range=OffsetRange(start, end),
+    range=Range(1, start + 1, 1, end + 1),
     contents=[PlainText(text)],
     ordinal=100,
   )
@@ -19,7 +19,7 @@ fn HoverController::start_delayed(
   injected_text_index? : Int = -1,
 ) -> (HoverEffect, HoverController) {
   self.start_showing_or_update_hover(
-    { start, end, offset: (start + end) / 2, injected_text_index, line: 1 },
+    { range: Range(1, start + 1, 1, end + 1), injected_text_index },
     false,
   )
 }

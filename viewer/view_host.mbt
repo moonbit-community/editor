@@ -45,6 +45,12 @@ fn Viewer::build_view_context(
     offset_for_column: (line_number, column) => {
       view.offset_for_column(line_number, column)
     },
+    model_position_to_offset: position => {
+      match self.text_model {
+        Some(model) => model.snapshot.offset_at_position(position)
+        None => 0
+      }
+    },
   }
 }
 

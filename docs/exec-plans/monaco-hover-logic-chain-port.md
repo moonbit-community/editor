@@ -323,7 +323,7 @@ Member count (Phase 3): 4 (`hoverUtils`) + 1 const + 1 iface + 11 fields +
 | `_shouldRescheduleHoverComputation` (:243-249) | `visible && sticky && hidingDelay>0` | `should_reschedule_hover` | TESTED |
 | `_reactToEditorMouseMove` (:251-266) | `shouldShowHover` gate → `showsOrWillShow`; else hide | `Viewer::react_to_editor_mouse_move` | TESTED (browser) |
 | `_onKeyDown` (:268-291) | onKeyboardModifier-trigger show; potential-shortcut/modifier → return; focused+Tab → return; else hide | — (Escape arm via `EscapePressed`) | DEFERRED (needs editor-keydown seam carrying keyCode/modifiers + Phase 4 `isFocused` + Phase 5 shortcut ids) |
-| `_isPotentialKeyboardShortcut` (:293-305) | `MoreChordsNeeded` \|\| (`KbFound` hover-action && visible) | `is_potential_hover_shortcut` | DEFERRED (needs Phase 5 command ids) |
+| `_isPotentialKeyboardShortcut` (:293-305) | `MoreChordsNeeded` \|\| (`KbFound` hover-action && visible) | `is_potential_hover_shortcut` | DEFERRED (the command ids exist since deviations-closeout Track D; still needs the editor-keydown seam carrying raw keyCodes for chord resolution plus Phase 4 `isFocused` — feature work tracked with `_onKeyDown`) |
 | `hideContentHover` (:307-315) | `_sticky`/dropdown-visible guards; widget hide | `Viewer::hide_content_hover` (dropdown guard N-A) | PORTED |
 | `_getOrCreateContentWidget` (:317-323) | lazy create wrapper + wire `onContentsChanged` | wrapper accessor | DEFERRED (wrapper = Phase 4) |
 | `showContentHover` (:325-332) | `startShowingAtRange(range, mode, source, focus)` | `HoverController::show_at_range` | DEFERRED (immediate-mode product trigger = Phase 5, per Phase 2 note) |
@@ -608,7 +608,7 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 | `_registerListenersOnRenderedParts` (rend :323-347) | per-part `tabIndex=0`; FOCUS_IN→index, FOCUS_OUT→−1; `MarkerHover`→copy button | `set_hover_parts` (`content_widgets.mbt`) sets `tabIndex=0` per part; FOCUS_IN/OUT index tracking DEFERRED (Phase 5/6 focus consumer), copy button N-A (global click delegation) | TESTED (tabIndex) |
 | `_normalizedIndexToMarkdownHoverIndexRange`/`_findRangeOfMarkdownHoverParts` (rend :445-470) | map global index ↔ markdown-part index range | index-mapping helpers (new) | DEFERRED (Phase 6 verbosity) |
 | `RenderedStatusBar` + `_renderStatusBar` (rend :203-220,:316-321) | append status bar element if `hasContent` | marker status bar now emitted as its own single-root rendered-part row (`marker_status_bar_row`); real action-backed `EditorHoverStatusBar` = Phase 5 | PORTED (structure split; actions Phase 5) |
-| `_DECORATION_OPTIONS hoverHighlight` (rend :224-227) | decoration class | `hoverHighlight` deco option | TODO |
+| `_DECORATION_OPTIONS hoverHighlight` (rend :224-227) | decoration class | `HoverController::highlight_decorations` (`className 'hoverHighlight'`, description `content-hover-highlight`), `Range`-native since the Track E anchor rebase | PORTED |
 | `contentHoverWidget._resize` override (cHW :169-177) | `_lastDimensions`; adjust dims; relayout; `onDidResize.fire` | — | DEFERRED (sashes) |
 | `_updateResizableNodeMaxDimensions`/`_updateMaxDimensions` (cHW :162,:307) | `max(layoutInfo.h/4, 250, last.h)` × `max(w·0.66, 750, last.w)` | `hover_update_max_dimensions` (new) | DEFERRED (sashes) |
 | `setMinimumDimensions`/`_updateMinimumWidth` (cHW :387,:396) | combine min dims; min width = `min(contentWidth, minWidth)` | — | DEFERRED (no caller — nothing calls the Monaco equivalent of `setMinimumDimensions` yet, `HoverContext` itself is still a TODO row above; not committed as untested dead code) |
@@ -719,13 +719,13 @@ Member count (Phase 5): 9 (status bar) + ~16 (ids; verbosity ids → Phase 6) +
 
 | Source member (file:line) | Arithmetic / transition | MoonBit symbol (target) | Status |
 |---|---|---|---|
-| `EditorHoverStatusBar` (csb :15-58) | `div.hover-row.status-bar` + `div.actions`; `addAction` keybinding + managed hover; `hasContent` | `marker_status_bar_row` (`hover_render.mbt`) + participant-loop-then-status-bar-last ordering (`render_hover_parts`) | PORTED (structure/DOM shape/ordering; `addAction`-as-shared-object, keybinding lookup, and `run` command dispatch stay TODO — no command registry, no `MarkerController` target) |
-| `hoverActionIds` scroll/page/goto/show/hide consts (hai :7-17,:24) | id strings | `hover_action_ids.mbt` consts (new) | TODO |
-| `ShowOrFocusHoverAction` (ha :28-107) | visible+focusOption→focus vs `showContentHover(Immediate, Keyboard, focus)`; a11y-support focus | `show_or_focus_hover` (new) | TODO |
-| `HideContentHoverAction` (ha :152-169) | `hideContentHover()` | `hide_hover` command (new) | TODO |
-| `Scroll{Up,Down,Left,Right}HoverAction` (ha :171-297) | arrow keys; `hoverFocused`; delegate to widget (4) | `scroll_hover_*` commands (new) | TODO |
-| `Page{Up,Down}HoverAction` (ha :299-363) | PageUp/Down + `Alt+Arrow`; widget `pageUp/Down` (2) | `page_hover_*` commands (new) | TODO |
-| `GoTo{Top,Bottom}HoverAction` (ha :365-430) | Home/End + `Ctrl+Arrow`; widget `goToTop/Bottom` (2) | `goto_hover_*` commands (new) | TODO |
+| `EditorHoverStatusBar` (csb :15-58) | `div.hover-row.status-bar` + `div.actions`; `addAction` keybinding + managed hover; `hasContent` | `marker_status_bar_row` (`hover_render.mbt`) + participant-loop-then-status-bar-last ordering (`render_hover_parts`) | PORTED (structure/DOM shape/ordering); `addAction` `run` dispatch DEFERRED — the command registry exists (deviations-closeout Track D), but the actions' targets (`MarkerController.showAtMarker`, quick fixes) are the gotoError/codeAction contribs, explicitly out of scope in the closeout plan |
+| `hoverActionIds` scroll/page/goto/show/hide consts (hai :7-17,:24) | id strings | Monaco id strings registered in `hover_contribution.mbt` (scroll/page/goto/hide) | PORTED (deviations-closeout Track D; show/definition-preview ids land with their actions) |
+| `ShowOrFocusHoverAction` (ha :28-107) | visible+focusOption→focus vs `showContentHover(Immediate, Keyboard, focus)`; a11y-support focus | `show_or_focus_hover` (new) | DEFERRED (needs multi-chord keybindings — Ctrl+K Ctrl+I — beyond the Track D single-chord table, plus the Phase 4 wrapper focus cluster; lands with focus-nav) |
+| `HideContentHoverAction` (ha :152-169) | `hideContentHover()` | `editor.action.hideHover` command (Escape, `hoverVisible`) → `Viewer::hide_content_hover` | PORTED (deviations-closeout Track D) |
+| `Scroll{Up,Down,Left,Right}HoverAction` (ha :171-297) | arrow keys; `hoverFocused`; delegate to widget (4) | `editor.action.scroll{Up,Down,Left,Right}Hover` commands | PORTED (deviations-closeout Track D) |
+| `Page{Up,Down}HoverAction` (ha :299-363) | PageUp/Down + `Alt+Arrow`; widget `pageUp/Down` (2) | `editor.action.page{Up,Down}Hover` commands (PageUp/PageDown + Alt+Arrow secondaries) | PORTED (deviations-closeout Track D) |
+| `GoTo{Top,Bottom}HoverAction` (ha :365-430) | Home/End + `Ctrl+Arrow`; widget `goToTop/Bottom` (2) | `editor.action.goTo{Top,Bottom}Hover` commands (Home/End + CtrlCmd+Arrow secondaries) | PORTED (deviations-closeout Track D) |
 | widget `scrollUp/Down` (cHW :434,:440) | `scrollTop ± lineHeight` | `HoverWidgetDom::scroll_up`/`scroll_down` (dispatched from `handle_hover_keydown` on `ArrowUp`/`ArrowDown`) | TESTED |
 | widget `scrollLeft/Right` (cHW :446,:451) `HORIZONTAL_SCROLLING_BY=30` | `scrollLeft ± 30` | `HoverWidgetDom::scroll_left`/`scroll_right` + `hover_horizontal_scrolling_by=30.0` (on `ArrowLeft`/`ArrowRight`) | TESTED |
 | widget `pageUp/Down` (cHW :456,:462) | `scrollTop ± getScrollDimensions().height` (visible height) | `HoverWidgetDom::page_up`/`page_down` (on `PageUp`/`PageDown` + `Alt+Arrow` secondary) | TESTED |

@@ -35,7 +35,7 @@ async test "content hover computer separates sync markers from async markdown" {
     log_service: @log.LogService::new(),
   }
   let computer = ContentHoverComputer::new(services)
-  let sync_hover = computer.compute_sync(model, OffsetRange(12, 17), 14)
+  let sync_hover = computer.compute_sync(model, Range(2, 3, 2, 8))
   match sync_hover {
     Some(hover) => {
       assert_eq(hover.parts.length(), 1)
@@ -43,7 +43,7 @@ async test "content hover computer separates sync markers from async markdown" {
     }
     None => fail("expected marker hover")
   }
-  let async_hover = computer.compute_async(model, OffsetRange(12, 17), 14)
+  let async_hover = computer.compute_async(model, Range(2, 3, 2, 8))
   match async_hover {
     Some(hover) => {
       assert_eq(hover.parts.length(), 1)

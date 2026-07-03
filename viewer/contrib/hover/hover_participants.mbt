@@ -2,18 +2,18 @@
 /// One renderable contribution to the content hover widget.
 pub(all) enum HoverPart {
   MarkdownHover(
-    range~ : @base_common.OffsetRange,
+    range~ : @base_common.Range,
     contents~ : Array[@language.HoverContent],
     ordinal~ : Int
   )
-  MarkerHover(range~ : @base_common.OffsetRange, marker~ : @markers.Marker)
-  LoadingHover(range~ : @base_common.OffsetRange, message~ : String)
+  MarkerHover(range~ : @base_common.Range, marker~ : @markers.Marker)
+  LoadingHover(range~ : @base_common.Range, message~ : String)
 } derive(Eq, Debug)
 
 ///|
 /// Complete hover result after participant parts have been merged and sorted.
 pub(all) struct ComputedHover {
-  range : @base_common.OffsetRange
+  range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq, Debug)
 
@@ -24,8 +24,7 @@ pub(all) struct ComputedHover {
 /// services they need at construction instead.
 pub(all) struct HoverComputeContext {
   model : @model.TextModel
-  anchor_range : @base_common.OffsetRange
-  offset : Int
+  anchor_range : @base_common.Range
   injected_text_index : Int
   inlay_hints : Array[@language.InlayHint]
 }
@@ -82,16 +81,14 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
     return []
   }
   let parts : Array[HoverPart] = []
-  // Markers carry a line/column `Range`; the offset-based hover widget consumes
-  // offset spans, so convert at this boundary through the snapshot. The live
-  // markers carry the transform's tracked range, which is what is rendered.
-  let snapshot = ctx.model.snapshot
-  let query = snapshot.range_of(ctx.anchor_range)
+  // The live markers carry the transform's tracked line/column `Range`, the
+  // hover's native span since the Range rebase (deviations-closeout Track E).
+  let query = ctx.anchor_range
   for entry in self.marker_decorations.get_live_markers(ctx.model.uri) {
     let (range, marker) = entry
     if @base_common.Range::are_intersecting(range, query) ||
       range.contains_position(query.get_start_position()) {
-      parts.push(MarkerHover(range=snapshot.offset_range_of(range), marker~))
+      parts.push(MarkerHover(range~, marker~))
     }
   }
   parts
@@ -146,16 +143,23 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
   if ctx.injected_text_index >= 0 {
     return []
   }
-  match self.languages.hover_at(ctx.model, ctx.offset, self.log_service) {
+  // Monaco queries providers at `anchor.range.getStartPosition()` — but its
+  // anchor range is the *mouse position*; the viewer's anchor is the hovered
+  // token's span (the recorded deviation), whose midpoint stands in for the
+  // pointer. The languages registry is offset-addressed, so the conversion
+  // happens at this query boundary only.
+  let snapshot = ctx.model.snapshot
+  let start = snapshot.offset_at_position(ctx.anchor_range.get_start_position())
+  let end = snapshot.offset_at_position(ctx.anchor_range.get_end_position())
+  match
+    self.languages.hover_at(ctx.model, (start + end) / 2, self.log_service) {
     Some(hover) =>
       if hover.contents.length() == 0 {
         []
       } else {
         [
-          // Provider hovers carry a line/column `Range`; the offset-based hover
-          // widget consumes offset spans, so convert at this boundary.
           MarkdownHover(
-            range=ctx.model.snapshot.offset_range_of(hover.range),
+            range=hover.range,
             contents=hover.contents,
             ordinal=self.ordinal(),
           ),
@@ -239,15 +243,13 @@ pub fn ContentHoverComputer::new(
 pub fn ContentHoverComputer::compute_sync(
   self : ContentHoverComputer,
   model : @model.TextModel,
-  anchor_range : @base_common.OffsetRange,
-  offset : Int,
+  anchor_range : @base_common.Range,
   injected_text_index? : Int = -1,
   inlay_hints? : Array[@language.InlayHint] = [],
 ) -> ComputedHover? {
   let ctx : HoverComputeContext = {
     model,
     anchor_range,
-    offset,
     injected_text_index,
     inlay_hints,
   }
@@ -263,15 +265,13 @@ pub fn ContentHoverComputer::compute_sync(
 pub async fn ContentHoverComputer::compute_async(
   self : ContentHoverComputer,
   model : @model.TextModel,
-  anchor_range : @base_common.OffsetRange,
-  offset : Int,
+  anchor_range : @base_common.Range,
   injected_text_index? : Int = -1,
   inlay_hints? : Array[@language.InlayHint] = [],
 ) -> ComputedHover? noraise {
   let ctx : HoverComputeContext = {
     model,
     anchor_range,
-    offset,
     injected_text_index,
     inlay_hints,
   }
@@ -290,8 +290,7 @@ pub async fn ContentHoverComputer::compute_async(
 pub async fn ContentHoverComputer::compute_async_each(
   self : ContentHoverComputer,
   model : @model.TextModel,
-  anchor_range : @base_common.OffsetRange,
-  offset : Int,
+  anchor_range : @base_common.Range,
   injected_text_index? : Int = -1,
   inlay_hints? : Array[@language.InlayHint] = [],
   emit~ : (Array[HoverPart]) -> Unit,
@@ -299,7 +298,6 @@ pub async fn ContentHoverComputer::compute_async_each(
   let ctx : HoverComputeContext = {
     model,
     anchor_range,
-    offset,
     injected_text_index,
     inlay_hints,
   }
@@ -312,12 +310,12 @@ pub async fn ContentHoverComputer::compute_async_each(
 }
 
 ///|
-/// Union range of accumulated hover parts, falling back to the anchor range when
-/// there are none. The offset-based hover widget anchors on this span.
+/// Union range of accumulated hover parts, falling back to the anchor range
+/// when there are none. The hover widget anchors on this span.
 pub fn hover_parts_range(
   parts : Array[HoverPart],
-  fallback : @base_common.OffsetRange,
-) -> @base_common.OffsetRange {
+  fallback : @base_common.Range,
+) -> @base_common.Range {
   let mut range = fallback
   for part in parts {
     range = union_range(range, hover_part_range(part))
@@ -327,7 +325,7 @@ pub fn hover_parts_range(
 
 ///|
 fn computed_hover_from_parts(
-  fallback_range : @base_common.OffsetRange,
+  fallback_range : @base_common.Range,
   parts : Array[HoverPart],
 ) -> ComputedHover? {
   if parts.length() == 0 {
@@ -350,7 +348,10 @@ pub fn compare_hover_parts(left : HoverPart, right : HoverPart) -> Int {
   if ordinal != 0 {
     ordinal
   } else {
-    hover_part_range(left).start - hover_part_range(right).start
+    @base_common.Range::compare_ranges_using_starts(
+      hover_part_range(left),
+      hover_part_range(right),
+    )
   }
 }
 
@@ -364,18 +365,9 @@ fn hover_part_ordinal(part : HoverPart) -> Int {
 }
 
 ///|
-fn hover_part_range(part : HoverPart) -> @base_common.OffsetRange {
-  match part {
-    MarkdownHover(range~, ..) => range
-    MarkerHover(range~, ..) => range
-    LoadingHover(range~, ..) => range
-  }
-}
-
-///|
 fn union_range(
-  left : @base_common.OffsetRange,
-  right : @base_common.OffsetRange,
-) -> @base_common.OffsetRange {
-  left.join(right)
+  left : @base_common.Range,
+  right : @base_common.Range,
+) -> @base_common.Range {
+  @base_common.Range::plus_range(left, right)
 }

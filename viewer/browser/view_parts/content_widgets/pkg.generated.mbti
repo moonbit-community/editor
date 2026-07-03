@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer/browser/view_parts/content_widgets"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
@@ -58,6 +59,7 @@ pub(all) struct HoverWidgetHost {
   handle_hover_mousedown : (@dom.Event, @dom.MouseEvent) -> Unit
   hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
   handle_hover_keydown : (HoverWidgetDom, @dom.Event, @dom.KeyboardEvent) -> Unit
+  model_position_to_offset : (@common.Position) -> Int
 }
 
 // Type aliases

@@ -11,7 +11,7 @@ test "hover markdown rows use the Monaco-shaped row wrappers" {
   let html = render_hover_parts(
     [
       MarkdownHover(
-        range=OffsetRange(0, 1),
+        range=Range(1, 1, 1, 2),
         contents=[Markdown("**bold**")],
         ordinal=100,
       ),
@@ -34,7 +34,7 @@ test "a markdown part with several contents renders one grouped hover row" {
   let rows = render_hover_parts(
     [
       MarkdownHover(
-        range=OffsetRange(0, 1),
+        range=Range(1, 1, 1, 2),
         contents=[Markdown("**first**"), Markdown("**second**")],
         ordinal=100,
       ),
@@ -55,7 +55,7 @@ test "hover markdown remains sanitized and plaintext remains escaped" {
   let sanitized = render_hover_parts(
     [
       MarkdownHover(
-        range=OffsetRange(0, 1),
+        range=Range(1, 1, 1, 2),
         contents=[
           Markdown(
             "<img src=x onerror=\"globalThis.__hoverUnsafe=1\"> [bad](javascript:alert(1))",
@@ -71,7 +71,7 @@ test "hover markdown remains sanitized and plaintext remains escaped" {
   let plain = render_hover_parts(
     [
       MarkdownHover(
-        range=OffsetRange(0, 1),
+        range=Range(1, 1, 1, 2),
         contents=[PlainText("<img src=x> plain")],
         ordinal=100,
       ),
@@ -87,7 +87,7 @@ test "hover fenced code renders through the viewer token classes" {
   let moonbit = render_hover_parts(
     [
       MarkdownHover(
-        range=OffsetRange(0, 1),
+        range=Range(1, 1, 1, 2),
         contents=[Markdown("```moonbit\nfn rendered() -> Unit {}\n```")],
         ordinal=100,
       ),
@@ -101,7 +101,7 @@ test "hover fenced code renders through the viewer token classes" {
   let mbt_alias = render_hover_parts(
     [
       MarkdownHover(
-        range=OffsetRange(0, 1),
+        range=Range(1, 1, 1, 2),
         contents=[Markdown("```mbt\nlet answer = 42\n```")],
         ordinal=100,
       ),
@@ -119,7 +119,7 @@ test "hover unknown fenced code keeps content as default plain text" {
   let html = render_hover_parts(
     [
       MarkdownHover(
-        range=OffsetRange(0, 1),
+        range=Range(1, 1, 1, 2),
         contents=[Markdown("```unknown\nnot really code\n```")],
         ordinal=100,
       ),
@@ -152,7 +152,7 @@ test "marker hover renders the row and status bar as separate rendered parts" {
   // Monaco renders a marker hover as its own part plus a distinct `statusBar`
   // part, so the viewer emits two single-root rows.
   let rows = render_hover_parts(
-    [MarkerHover(range=OffsetRange(0, 1), marker~)],
+    [MarkerHover(range=Range(1, 1, 1, 2), marker~)],
     "moonbit",
   )
   assert_eq(rows.length(), 2)
@@ -195,9 +195,9 @@ test "marker + later-ordinal hover part: status bar renders last, not sandwiched
   // the single shared status bar last — never interleaved.
   let rows = render_hover_parts(
     [
-      MarkerHover(range=OffsetRange(0, 1), marker~),
+      MarkerHover(range=Range(1, 1, 1, 2), marker~),
       MarkdownHover(
-        range=OffsetRange(0, 1),
+        range=Range(1, 1, 1, 2),
         contents=[PlainText("Int")],
         ordinal=100,
       ),

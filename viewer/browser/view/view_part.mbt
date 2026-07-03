@@ -826,6 +826,7 @@ impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) 
         handle_hover_mousedown: context.view_context.handle_hover_mousedown,
         hook_scrollable_scrollbar_input: context.view_context.hook_scrollable_scrollbar_input,
         handle_hover_keydown: context.view_context.handle_hover_keydown,
+        model_position_to_offset: context.view_context.model_position_to_offset,
       }
       self.render_hover_widget(
         host,

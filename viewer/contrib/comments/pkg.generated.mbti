@@ -1,0 +1,38 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/contrib/comments"
+
+import {
+  "moonbit-community/editor/viewer/common/model",
+}
+
+// Values
+pub let comment_glyph_decoration_description : String
+
+pub let commenting_range_decoration_description : String
+
+pub fn commenting_range_decorations(Array[@moonbit-community/editor/base/common.Range], Int, Array[Int]) -> Array[@model.DeltaDecoration]
+
+pub fn line_in_commenting_context(Array[@moonbit-community/editor/base/common.Range], Array[@moonbit-community/editor/viewer/common/comments.CommentThread], Int) -> Bool
+
+pub fn parse_mouse_down_info(@moonbit-community/editor/viewer/common.MouseTargetKind, Double, Int, Bool) -> Int?
+
+pub fn thread_glyph_decorations(Array[@moonbit-community/editor/viewer/common/comments.CommentThread]) -> Array[@model.DeltaDecoration]
+
+pub fn thread_lines(Array[@moonbit-community/editor/viewer/common/comments.CommentThread]) -> Array[Int]
+
+// Errors
+
+// Types and methods
+pub struct CommentController {
+  mut mouse_down_line : Int?
+  mut hover_line : Int
+}
+pub fn CommentController::new() -> Self
+pub fn CommentController::on_mouse_down(Self, @moonbit-community/editor/viewer/common.MouseTargetKind, Double, Int, Bool) -> Unit
+pub fn CommentController::on_mouse_up(Self, @moonbit-community/editor/viewer/common.MouseTargetKind, Int, Bool) -> Int?
+pub fn CommentController::update_hover(Self, Int) -> Bool
+
+// Type aliases
+
+// Traits
+

@@ -22,8 +22,10 @@ pub struct CommentThreadWidgetDom {
   mut form_textarea : @dom.Element?
   mut edit_textarea : @dom.Element?
 }
+pub fn CommentThreadWidgetDom::body_dom(Self) -> @dom.Element
 pub fn CommentThreadWidgetDom::dom(Self) -> @dom.Element
 pub fn CommentThreadWidgetDom::focus_form(Self) -> Unit
+pub fn CommentThreadWidgetDom::form_dom(Self) -> @dom.Element
 pub fn CommentThreadWidgetDom::new(CommentThreadWidgetHost, @comments.CommentThread) -> Self
 pub fn CommentThreadWidgetDom::update(Self, @comments.CommentThread) -> Unit
 
@@ -32,7 +34,6 @@ pub(all) struct CommentThreadWidgetHost {
   on_save_edit : (Int, String) -> Unit
   on_delete : (Int) -> Unit
   on_collapse : () -> Unit
-  on_content_resized : () -> Unit
 }
 
 pub(all) struct CommentWidgetActions {
@@ -45,8 +46,10 @@ pub(all) struct CommentWidgetActions {
 pub struct ReviewZoneWidget {
   zone : @moonbit-community/editor/viewer/contrib/zone_widget/browser.ZoneWidget
   widget : CommentThreadWidgetDom
+  mut observed : Bool
 }
 pub fn ReviewZoneWidget::display(Self, Int) -> Unit
+pub fn ReviewZoneWidget::dispose(Self) -> Unit
 pub fn ReviewZoneWidget::focus_form(Self) -> Unit
 pub fn ReviewZoneWidget::hide(Self) -> Unit
 pub fn ReviewZoneWidget::is_visible(Self) -> Bool

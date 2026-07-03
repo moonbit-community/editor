@@ -83,7 +83,7 @@ test "commenting ranges are stored per resource and fire their event" {
 test "template lifecycle: create, discard" {
   let service = CommentService::new()
   let resource = uri("memory://review/a.mbt")
-  let template = service.create_thread_template(resource, 4)
+  let template = service.create_thread_template(resource, Range(4, 1, 4, 1))
   assert_true(template.is_template)
   assert_eq(template.range.start_line_number, 4)
   assert_eq(service.threads(resource).length(), 1)
@@ -102,7 +102,7 @@ test "submit turns a template real and fires the create event" {
   let service = CommentService::new()
   let resource = uri("memory://review/a.mbt")
   service.set_current_user_name("bao")
-  let template = service.create_thread_template(resource, 4)
+  let template = service.create_thread_template(resource, Range(4, 1, 4, 1))
   let mut created_body = ""
   let mut created_author = ""
   service.on_did_create_comment(event => {

@@ -40,6 +40,7 @@ pub(all) struct ZoneWidgetHost {
   layout_width : () -> Double
   viewport_height : () -> Double
   line_height : () -> Int
+  capture_stable_scroll : () -> () -> Unit
 }
 
 // Type aliases

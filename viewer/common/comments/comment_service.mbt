@@ -219,17 +219,19 @@ pub fn CommentService::thread_by_id(
 
 ///|
 /// `createCommentThreadTemplate` (`commentService.ts:387`): an expanded,
-/// zero-comment thread at `line` that shows the new-comment form. Discarded
-/// by `discard_template`, made real by `submit_new_comment`.
+/// zero-comment thread over `range` (a single line for a gutter click, a
+/// multi-line span for a gutter drag or a commented text selection) that
+/// shows the new-comment form. Discarded by `discard_template`, made real by
+/// `submit_new_comment`.
 pub fn CommentService::create_thread_template(
   self : CommentService,
   resource : @base_common.Uri,
-  line : Int,
+  range : @base_common.Range,
 ) -> CommentThread {
   let thread : CommentThread = {
     thread_id: "viewer-thread-" + self.next_thread_handle.to_string(),
     resource,
-    range: Range(line, 1, line, 1),
+    range,
     comments: [],
     collapsible_state: Expanded,
     is_template: true,

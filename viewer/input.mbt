@@ -18,6 +18,7 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
           mouse.get_client_y().to_double(),
           mouse_modifiers(mouse),
         )
+        self.last_mouse_buttons = mouse.get_buttons()
         handler.handle_mouse_move(mouse)
       }
       None => ()

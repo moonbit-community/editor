@@ -19,6 +19,9 @@ let comment_lane_width_px : Int = 24
 /// Subscribes the viewer to its comment service (constructor-time, like the
 /// marker-decorations subscription): thread and commenting-range changes on
 /// the current resource re-sync decorations, widgets, and the reserved lane.
+/// The mouse listeners ride the public `onMouseDown`/`onMouseUp`/
+/// `onMouseMove`/`onMouseLeave` events, exactly Monaco's
+/// `CommentController.registerEditorListeners`.
 fn Viewer::hook_comment_service(self : Viewer) -> Unit {
   self.services.comments.on_did_update_comment_threads(event => {
     if self.is_current_resource(event.resource) {
@@ -32,6 +35,11 @@ fn Viewer::hook_comment_service(self : Viewer) -> Unit {
     }
   })
   |> ignore
+  self.on_mouse_down(event => self.on_comments_mouse_down(event.target))
+  |> ignore
+  self.on_mouse_up(event => self.on_comments_mouse_up(event.target)) |> ignore
+  self.on_mouse_move(event => self.on_comments_mouse_move(event)) |> ignore
+  self.on_mouse_leave(_ => self.clear_comment_hover()) |> ignore
 }
 
 ///|
@@ -67,7 +75,7 @@ fn Viewer::sync_comments(self : Viewer) -> Unit {
   }
   for thread_id in stale {
     match self.open_comment_widgets.get(thread_id) {
-      Some(widget) => widget.hide()
+      Some(widget) => widget.dispose()
       None => ()
     }
     self.open_comment_widgets.remove(thread_id)
@@ -156,6 +164,8 @@ fn Viewer::sync_comment_decorations(self : Viewer) -> Unit {
       ranges,
       self.comments.hover_line,
       @comments.thread_lines(threads),
+      selection?=self.comments.last_selection,
+      selection_cursor?=self.comments.last_selection_cursor,
     ),
     owner_id=self.editor_id,
   )
@@ -170,7 +180,7 @@ fn Viewer::sync_comment_decorations(self : Viewer) -> Unit {
 /// Drops all open thread widgets (model swap/detach).
 fn Viewer::close_all_comment_widgets(self : Viewer) -> Unit {
   for _, widget in self.open_comment_widgets {
-    widget.hide()
+    widget.dispose()
   }
   self.open_comment_widgets.clear()
 }
@@ -272,6 +282,10 @@ fn Viewer::comment_zone_widget_host(
     layout_width: () => self.get_layout_info().width,
     viewport_height: () => self.view_layout.dimensions().height,
     line_height: () => @core.editor_line_height,
+    capture_stable_scroll: () => {
+      let state = StableEditorScrollState::capture(self)
+      () => state.restore(self)
+    },
   }
 }
 
@@ -331,38 +345,104 @@ fn Viewer::on_comments_mouse_down(
 }
 
 ///|
-/// `CommentController.onEditorMouseUp` (`commentsController.ts:1111`) →
-/// `addOrToggleCommentAtLine`.
+/// `CommentController.onEditorMouseUp` (`commentsController.ts:1111-1145`) →
+/// `addOrToggleCommentAtLine`: a same-line lane click acts on the line (or
+/// the current text selection when it covers it); a gutter drag comments the
+/// dragged line span.
 fn Viewer::on_comments_mouse_up(
   self : Viewer,
   target : @viewer_common.MouseTarget,
 ) -> Unit {
-  guard self.text_model is Some(model) else { return }
+  guard self.text_model is Some(model) else {
+    self.comments.clear_selection()
+    return
+  }
   let service = self.services.comments
   let line = self.comments_target_model_line(target)
-  match
-    self.comments.on_mouse_up(
-      target.kind,
+  let outcome = self.comments.on_mouse_up(
+    target.kind,
+    line,
+    @comments.line_in_commenting_context(
+      service.commenting_ranges(model.uri),
+      service.threads(model.uri),
       line,
-      @comments.line_in_commenting_context(
-        service.commenting_ranges(model.uri),
-        service.threads(model.uri),
-        line,
-      ),
-    ) {
-    Some(matched_line) => self.add_or_toggle_comment_at_line(matched_line)
-    None => ()
+    ),
+  )
+  // The drag selection lived for the drag; drop its decorations.
+  let had_selection = self.comments.last_selection is Some(_)
+  self.comments.clear_selection()
+  if had_selection {
+    self.sync_comment_decorations()
+  }
+  match outcome {
+    NoAction => ()
+    LaneClick(line) => {
+      // `mouseUpIsOnDecorator → selection = this.editor.getSelection()`
+      // (`:1130`): clicking the glyph with a text selection covering the
+      // line comments the selection.
+      let text_selection : @base_common.Range? = match self.get_selection() {
+        Some(selection) =>
+          if !selection.is_empty() &&
+            selection.start().line_number <= line &&
+            line <= selection.end().line_number {
+            self.collapse_selection_to_line(selection.end().line_number)
+            Some(
+              Range(
+                selection.start().line_number,
+                selection.start().column,
+                selection.end().line_number,
+                selection.end().column,
+              ),
+            )
+          } else {
+            None
+          }
+        None => None
+      }
+      let range = match text_selection {
+        Some(range) => range
+        None => Range(line, 1, line, 1)
+      }
+      self.add_or_toggle_comment_at_range(range)
+    }
+    GutterDrag(down_line, up_line) => {
+      // "Check for drag along gutter decoration" (`:1124-1129`): the span
+      // between the down and up lines, end at the line's max column.
+      let (start, end) = if down_line <= up_line {
+        (down_line, up_line)
+      } else {
+        (up_line, down_line)
+      }
+      let end_column = model.snapshot.line_text(end - 1).length() + 1
+      self.collapse_selection_to_line(end)
+      self.add_or_toggle_comment_at_range(Range(start, 1, end, end_column))
+    }
   }
 }
 
 ///|
-/// `addOrToggleCommentAtLine` (`commentsController.ts:1151-1176`): a thread
-/// at the line toggles expanded/collapsed; a bare commenting-range line
-/// creates a template thread and focuses its form.
-fn Viewer::add_or_toggle_comment_at_line(self : Viewer, line : Int) -> Unit {
+/// `this.editor.setSelection(new Range(selection.endLineNumber, 1, ...))`
+/// (`commentsController.ts:1137`).
+fn Viewer::collapse_selection_to_line(self : Viewer, line : Int) -> Unit {
+  self.set_selection(
+    @view_model.Selection::from_positions(Position(line, 1), Position(line, 1)),
+  )
+}
+
+///|
+/// `addOrToggleCommentAtLine` (`commentsController.ts:1151-1176`) +
+/// `addCommentAtLine`'s `clipUserRangeToCommentRange` (`:1179-1187`): a
+/// thread whose glyph sits on the range's end line toggles
+/// expanded/collapsed; otherwise the range — clipped to its commenting
+/// range — becomes a template thread whose form is focused.
+fn Viewer::add_or_toggle_comment_at_range(
+  self : Viewer,
+  range : @base_common.Range,
+) -> Unit {
   guard self.text_model is Some(model) else { return }
   let service = self.services.comments
   let threads = service.threads(model.uri)
+  let line = range.end_line_number
   match threads.search_by(t => t.range.end_line_number == line) {
     Some(index) => {
       let thread = threads[index]
@@ -374,40 +454,75 @@ fn Viewer::add_or_toggle_comment_at_line(self : Viewer, line : Int) -> Unit {
       }
     }
     None => {
-      let mut in_range = false
-      for range in service.commenting_ranges(model.uri) {
-        if range.start_line_number <= line && line <= range.end_line_number {
-          in_range = true
-          break
+      let commenting_range = service
+        .commenting_ranges(model.uri)
+        .search_by(r => r.start_line_number <= line && line <= r.end_line_number)
+        .map(index => service.commenting_ranges(model.uri)[index])
+      match commenting_range {
+        Some(commenting_range) => {
+          let clipped = clip_user_range_to_comment_range(
+            range, commenting_range,
+          )
+          // Fires the threads-changed event; the subscription opens the
+          // widget synchronously, so the form is focusable right after.
+          let thread = service.create_thread_template(model.uri, clipped)
+          match self.open_comment_widgets.get(thread.thread_id) {
+            Some(widget) => widget.focus_form()
+            None => ()
+          }
         }
-      }
-      if in_range {
-        // Fires the threads-changed event; the subscription opens the widget
-        // synchronously, so the form is focusable right after.
-        let thread = service.create_thread_template(model.uri, line)
-        match self.open_comment_widgets.get(thread.thread_id) {
-          Some(widget) => widget.focus_form()
-          None => ()
-        }
+        None => ()
       }
     }
   }
 }
 
 ///|
-/// `CommentController.onEditorMouseMove` → `updateHover`
-/// (`commentsController.ts:626-633`): tracks the hovered model line and
-/// re-syncs the range decorations when it changed (the "+" affordance).
-fn Viewer::update_comment_hover(
+/// `clipUserRangeToCommentRange` (`commentsController.ts:1179-1187`).
+fn clip_user_range_to_comment_range(
+  user_range : @base_common.Range,
+  comment_range : @base_common.Range,
+) -> @base_common.Range {
+  let mut user_range = user_range
+  if user_range.start_line_number < comment_range.start_line_number {
+    user_range = Range(
+      comment_range.start_line_number,
+      comment_range.start_column,
+      user_range.end_line_number,
+      user_range.end_column,
+    )
+  }
+  if user_range.end_line_number > comment_range.end_line_number {
+    user_range = Range(
+      user_range.start_line_number,
+      user_range.start_column,
+      comment_range.end_line_number,
+      comment_range.end_column,
+    )
+  }
+  user_range
+}
+
+///|
+/// `CommentController.onEditorMouseMove` (`commentsController.ts:626-633`):
+/// a left-button move with a pending gutter mousedown drives the drag
+/// selection (`updateSelection`); otherwise the hovered line drives the "+"
+/// affordance (`updateHover`).
+fn Viewer::on_comments_mouse_move(
   self : Viewer,
-  target : @viewer_common.MouseTarget,
+  event : EditorMouseEvent,
 ) -> Unit {
-  let line = match target.kind {
+  let line = match event.target.kind {
     GutterLineNumbers | GutterLineDecorations | ContentText | ContentEmpty =>
-      self.comments_target_model_line(target)
+      self.comments_target_model_line(event.target)
     _ => -1
   }
-  if self.comments.update_hover(line) {
+  if event.left_button &&
+    line >= 1 &&
+    self.comments.mouse_down_line is Some(down) {
+    self.comments.update_selection(line, down)
+    self.sync_comment_decorations()
+  } else if self.comments.update_hover(line) {
     self.sync_comment_decorations()
   }
 }

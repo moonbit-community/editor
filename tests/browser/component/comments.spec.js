@@ -57,11 +57,19 @@ test('comments: glyphs, create flow, edit/delete, folding, scroll', async ({ pag
   const threadGlyph = page.locator('.lines-decorations .cldr.comment-thread');
   const widget = page.locator('.review-widget');
 
+  // The codicon font is served and the "+" affordance renders through it.
+  expect((await page.request.get('/codicon.ttf')).status()).toBe(200);
+
   // Hovering a commenting-range line swaps in the "+" affordance
   // (CommentingRangeDecorator.updateHover).
   const hoverBox = await boxOf(rangeGlyphs.nth(2));
   await page.mouse.move(hoverBox.x + 2, hoverBox.y + hoverBox.height / 2);
   await expect(page.locator('.lines-decorations .cldr.line-hover')).toHaveCount(1);
+  expect(
+    await page
+      .locator('.lines-decorations .cldr.line-hover')
+      .evaluate((el) => getComputedStyle(el, ':before').fontFamily),
+  ).toContain('codicon');
 
   // Gutter click on a commenting-range line opens a template thread with a
   // focused textarea.
@@ -97,6 +105,34 @@ test('comments: glyphs, create flow, edit/delete, folding, scroll', async ({ pag
   await expect(widget).toHaveCount(0);
   await expect(threadGlyph).toHaveCount(1);
   expect((await eventCounts(page)).deleted).toBe(1);
+
+  // Dragging along the gutter comments the dragged line span: the multiline
+  // dotted decoration tracks the drag, the released range becomes the
+  // thread (CommentingRangeDecorator.updateSelection + onEditorMouseUp's
+  // drag arm).
+  const dragMargin = await page.locator('.margin').boundingBox();
+  const dragEditor = await page
+    .locator('.monaco-editor.readonly-editor')
+    .boundingBox();
+  const laneX = dragMargin.x + dragMargin.width - 12;
+  const lineY = (line) => dragEditor.y + (line - 0.5) * 18;
+  await page.mouse.move(laneX, lineY(2));
+  await page.mouse.down();
+  await page.mouse.move(laneX, lineY(4), { steps: 3 });
+  await expect(
+    page.locator('.lines-decorations .cldr.multiline-add'),
+  ).toHaveCount(2);
+  await page.mouse.up();
+  await expect(widget).toBeVisible();
+  const dragForm = page.locator('.review-widget [data-comment-form]');
+  await expect(dragForm).toBeFocused();
+  await dragForm.fill('drag comment');
+  await page.keyboard.press('Control+Enter');
+  await expect(threadGlyph).toHaveCount(2);
+  expect((await eventCounts(page)).created).toBe(2);
+  // Clean the drag thread up so the seed-thread steps below see one glyph.
+  await clickCenter(page, page.locator('.review-widget [data-comment-action="delete"]'));
+  await expect(threadGlyph).toHaveCount(1);
 
   // Clicking the host-supplied thread's glyph expands both comments; a second
   // click collapses it (addOrToggleCommentAtLine).

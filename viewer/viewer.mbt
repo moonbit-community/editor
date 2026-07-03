@@ -25,6 +25,14 @@ pub struct Viewer {
   priv did_resolve_hover : @base_common.Emitter[ViewerHoverResolvedEvent]
   priv did_scroll : @base_common.Emitter[ScrollEvent]
   priv did_dispose : @base_common.Emitter[Unit]
+  /// Public mouse events (`onMouseDown`/`onMouseUp`/`onMouseMove`/
+  /// `onMouseLeave`, see `mouse_events.mbt`), fired from the controller's
+  /// notify seams; the comments contrib subscribes like Monaco's
+  /// `CommentController.registerEditorListeners`.
+  priv did_mouse_down : @base_common.Emitter[EditorMouseEvent]
+  priv did_mouse_up : @base_common.Emitter[EditorMouseEvent]
+  priv did_mouse_move : @base_common.Emitter[EditorMouseEvent]
+  priv did_mouse_leave : @base_common.Emitter[Unit]
   /// The last fired scroll event's facts, the diff base for the next event's
   /// `*_changed` flags (Monaco's `ScrollEvent` carries per-axis change bits).
   priv mut last_scroll_event : ScrollEvent?
@@ -108,6 +116,10 @@ pub struct Viewer {
   priv open_comment_widgets : Map[String, @comments_browser.ReviewZoneWidget]
   priv mut comments_lane_base_width : Int?
   priv mut mouse_handler : @controller.MouseHandler?
+  /// The last `mousemove`'s `MouseEvent.buttons` bitmask, recorded by the
+  /// root listener so `on_mouse_move` events can carry `event.leftButton`
+  /// (the notify seam only carries the hit target).
+  priv mut last_mouse_buttons : Int
   /// Whether the editor root currently has DOM focus — the viewer's stand-in
   /// for Monaco's edit-context focus (`view.ts` `_getEditorClassName` /
   /// `ViewFocusChangedEvent`). Sourced by `focus`/`blur` listeners on the root
@@ -250,6 +262,10 @@ pub fn Viewer::Viewer(
     did_resolve_hover: @base_common.Emitter::new(),
     did_scroll: @base_common.Emitter::new(),
     did_dispose: @base_common.Emitter::new(),
+    did_mouse_down: @base_common.Emitter::new(),
+    did_mouse_up: @base_common.Emitter::new(),
+    did_mouse_move: @base_common.Emitter::new(),
+    did_mouse_leave: @base_common.Emitter::new(),
     last_scroll_event: None,
     view_layout: @view_layout.ViewLayout::new(
       line_height=@core.editor_line_height,
@@ -297,6 +313,7 @@ pub fn Viewer::Viewer(
     open_comment_widgets: {},
     comments_lane_base_width: None,
     mouse_handler: None,
+    last_mouse_buttons: 0,
     editor_has_focus: false,
     pending_horizontal_reveal: None,
   }
@@ -655,6 +672,10 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_resolve_hover.dispose()
   self.did_scroll.dispose()
   self.did_dispose.dispose()
+  self.did_mouse_down.dispose()
+  self.did_mouse_up.dispose()
+  self.did_mouse_move.dispose()
+  self.did_mouse_leave.dispose()
   self.services.marker_decorations.dispose()
   self.services.markers.dispose()
   self.services.comments.dispose()

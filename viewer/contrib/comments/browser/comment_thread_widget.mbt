@@ -6,9 +6,9 @@
 // the new-comment form (`commentReply.ts`'s role for the *first* comment;
 // threads with comments never offer a second one, replies are out of scope).
 // Dropped: avatars, reactions, menus/context keys, the embedded
-// SimpleCommentEditor (a plain `<textarea>` instead), ResizeObserver-driven
-// resize (the widget reports `on_content_resized` after each content
-// mutation instead — recorded deviation).
+// SimpleCommentEditor (a plain `<textarea>` instead). Resizing follows the
+// source: the owning `ReviewZoneWidget` observes the body/form with a
+// ResizeObserver (`onDidResize` → `_refresh`).
 
 ///|
 /// The action closures the root glue wires to the comment service.
@@ -22,9 +22,6 @@ pub(all) struct CommentThreadWidgetHost {
   /// Collapse the widget (head ✕ / Escape); on a template thread the glue
   /// discards it.
   on_collapse : () -> Unit
-  /// Fired after every content re-render so the owner can re-measure and
-  /// relayout the zone.
-  on_content_resized : () -> Unit
 }
 
 ///|
@@ -78,6 +75,22 @@ pub fn CommentThreadWidgetDom::dom(
   self : CommentThreadWidgetDom,
 ) -> @rdom.Element {
   self.root
+}
+
+///|
+/// The content-sized body element, for the owner's resize observation.
+pub fn CommentThreadWidgetDom::body_dom(
+  self : CommentThreadWidgetDom,
+) -> @rdom.Element {
+  self.body
+}
+
+///|
+/// The new-comment form element, for the owner's resize observation.
+pub fn CommentThreadWidgetDom::form_dom(
+  self : CommentThreadWidgetDom,
+) -> @rdom.Element {
+  self.form
 }
 
 ///|
@@ -194,7 +207,6 @@ fn CommentThreadWidgetDom::render(self : CommentThreadWidgetDom) -> Unit {
   self.render_head()
   self.render_body()
   self.render_form()
-  (self.host.on_content_resized)()
 }
 
 ///|

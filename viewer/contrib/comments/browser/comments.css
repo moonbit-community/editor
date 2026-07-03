@@ -1,10 +1,11 @@
 /* Comments contrib styling: the gutter-glyph subset of vscode
    workbench/contrib/comments/browser/media/review.css (:496-609) plus a
-   simplified review-widget skin. Deviations: codicon glyph content is
-   replaced by text ("+" / "●") — no codicon font ships in this repo — and
-   the `.margin-view-overlays > div:hover` selector is dropped (the viewer's
-   margin layers are flat; the hover affordance is the mouse-driven
-   line-hover decoration, which is VS Code's primary mechanism too). */
+   simplified review-widget skin. Glyphs are the vendored codicon font
+   (plus \ea60, comment \ea6b — codiconsLibrary.ts codepoints, since the
+   viewer has no icon theme service resolving the --vscode-icon-* vars).
+   Deviation: the `.margin-view-overlays > div:hover` selector is dropped
+   (the viewer's margin layers are flat; the hover affordance is the
+   mouse-driven line-hover decoration, VS Code's primary mechanism too). */
 
 /* --- gutter glyphs ---------------------------------------------------- */
 
@@ -43,12 +44,12 @@
 }
 
 .margin-view-overlays .comment-range-glyph.line-hover:before {
-  content: "+";
+  content: "\ea60";
+  font-family: "codicon";
   border-radius: 3px;
   width: 18px !important;
   margin-left: -5px;
   padding-left: 1px;
-  font-weight: 600;
 }
 
 .margin-view-overlays .comment-range-glyph.comment-thread {
@@ -56,13 +57,24 @@
 }
 
 .margin-view-overlays .comment-range-glyph.comment-thread:before {
-  content: "●";
-  font-size: 9px;
+  content: "\ea6b";
+  font-family: "codicon";
+  font-size: 13px;
   border-radius: 3px;
   width: 18px !important;
+  line-height: 100%;
   margin-left: -5px;
+  padding-top: 1px;
   padding-left: 1px;
   z-index: 20;
+}
+
+.margin-view-overlays .comment-range-glyph.multiline-add {
+  border-left-width: 3px;
+  border-left-style: dotted;
+  border-left-color: var(--vscode-editorGutter-commentRangeForeground, #3794ff);
+  height: 16px;
+  margin-top: 2px;
 }
 
 /* --- thread widget ----------------------------------------------------- */

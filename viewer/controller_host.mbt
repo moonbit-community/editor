@@ -30,8 +30,15 @@ fn Viewer::pointer_handler_helper(
       })
     },
     notify_mouse_moved: target => self.on_editor_mouse_move(target),
-    notify_mouse_down: target => self.on_comments_mouse_down(target),
-    notify_mouse_up: target => self.on_comments_mouse_up(target),
+    // `ViewController.emitMouseDown/Up` land on the public `onMouseDown`/
+    // `onMouseUp` events (`mouse_events.mbt`); the seams only fire for the
+    // left button, so `left_button` is constantly true here.
+    notify_mouse_down: target => {
+      self.did_mouse_down.fire({ target, left_button: true })
+    },
+    notify_mouse_up: target => {
+      self.did_mouse_up.fire({ target, left_button: true })
+    },
     schedule_render: () => self.schedule_render(),
   }
 }

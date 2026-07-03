@@ -108,6 +108,12 @@ async fn main {
     assembled_style_css(),
     create_mode=@fs.CreateOrTruncate,
   )
+  // The vendored codicon icon font (referenced by codicon.css's @font-face).
+  @fs.write_file(
+    "\{target_dir}/codicon.ttf",
+    @fs.read_file("viewer/browser/view/codicon/codicon.ttf"),
+    create_mode=@fs.CreateOrTruncate,
+  )
   @fs.write_file(
     "\{target_dir}/index.html",
     index_html(),
@@ -296,6 +302,7 @@ fn css_sources() -> Array[String] {
     "internal/shell/workbench/theme.css",
     "internal/shell/workbench/shell.css",
     "internal/shell/widgets/file_tree/file_tree.css",
+    "viewer/browser/view/codicon/codicon.css",
     "viewer/browser/view/editor.css",
     "viewer/ui/scrollbar/scrollable_element.css",
     "viewer/browser/view_parts/view_lines/view_lines.css",

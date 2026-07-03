@@ -61,24 +61,97 @@ test "parse_mouse_down_info transcribes the gate branches" {
 }
 
 ///|
-test "mouse up only matches the mousedown line on the lane" {
+test "mouse up resolves lane clicks, gutter drags, and rejections" {
   let controller = CommentController::new()
-  // No prior mousedown → null.
-  assert_true(controller.on_mouse_up(GutterLineDecorations, 3, true) is None)
-  // Down and up on the same lane line → act.
+  // No prior mousedown → no action.
+  assert_true(
+    controller.on_mouse_up(GutterLineDecorations, 3, true) == NoAction,
+  )
+  // Down and up on the same lane line → lane click.
   controller.on_mouse_down(GutterLineDecorations, 4.0, 3, true)
-  assert_eq(controller.on_mouse_up(GutterLineDecorations, 3, true).unwrap(), 3)
+  assert_true(
+    controller.on_mouse_up(GutterLineDecorations, 3, true) == LaneClick(3),
+  )
   // The pending down is consumed.
-  assert_true(controller.on_mouse_up(GutterLineDecorations, 3, true) is None)
-  // Up on a different line → null (`isMouseUpEventMatchMouseDown:104`).
+  assert_true(
+    controller.on_mouse_up(GutterLineDecorations, 3, true) == NoAction,
+  )
+  // Up on a different line → gutter drag, regardless of the up target kind
+  // (`isMouseUpEventDragFromMouseDown` needs only a line).
   controller.on_mouse_down(GutterLineDecorations, 4.0, 3, true)
-  assert_true(controller.on_mouse_up(GutterLineDecorations, 5, true) is None)
-  // Up off the lane → null (`:106-108`).
+  assert_true(
+    controller.on_mouse_up(GutterLineDecorations, 5, true) == GutterDrag(3, 5),
+  )
   controller.on_mouse_down(GutterLineDecorations, 4.0, 3, true)
-  assert_true(controller.on_mouse_up(ContentText, 3, true) is None)
+  assert_true(controller.on_mouse_up(ContentText, 6, false) == GutterDrag(3, 6))
+  // Same-line up off the lane → no action (`isMouseUpEventMatchMouseDown:106-108`).
+  controller.on_mouse_down(GutterLineDecorations, 4.0, 3, true)
+  assert_true(controller.on_mouse_up(ContentText, 3, true) == NoAction)
   // Down rejected by the gates never matches an up.
   controller.on_mouse_down(GutterLineDecorations, 25.0, 3, true)
-  assert_true(controller.on_mouse_up(GutterLineDecorations, 3, true) is None)
+  assert_true(
+    controller.on_mouse_up(GutterLineDecorations, 3, true) == NoAction,
+  )
+}
+
+///|
+test "drag selection renders the multiline arm around the emphasis line" {
+  let ranges : Array[@base_common.Range] = [Range(2, 1, 8, 1)]
+  // Dragging down from line 3 to line 6: cursor (emphasis) on 6, the
+  // remainder 3-5 renders multiline-add, before-remainder 2, after 7-8
+  // (`_doUpdate:191-224`).
+  assert_eq(
+    lane_summary(
+      commenting_range_decorations(
+        ranges,
+        -1,
+        [],
+        selection=(3, 6),
+        selection_cursor=6,
+      ),
+    ),
+    "3-5:comment-range-glyph multiline-add | 6-6:comment-range-glyph line-hover | 2-2:comment-range-glyph comment-diff-added | 7-8:comment-range-glyph comment-diff-added",
+  )
+  // Dragging up from line 6 to line 3: emphasis at the selection start.
+  assert_eq(
+    lane_summary(
+      commenting_range_decorations(
+        ranges,
+        -1,
+        [],
+        selection=(3, 6),
+        selection_cursor=3,
+      ),
+    ),
+    "4-6:comment-range-glyph multiline-add | 3-3:comment-range-glyph line-hover | 2-2:comment-range-glyph comment-diff-added | 7-8:comment-range-glyph comment-diff-added",
+  )
+  // The selection clips to the commenting range (`:199` comment).
+  assert_eq(
+    lane_summary(
+      commenting_range_decorations(
+        [Range(4, 1, 6, 1)],
+        -1,
+        [],
+        selection=(1, 9),
+        selection_cursor=9,
+      ),
+    ),
+    "4-5:comment-range-glyph multiline-add | 6-6:comment-range-glyph line-hover",
+  )
+  // A single-line selection whose emphasis is that line falls back to the
+  // hover arm (`:193-195`).
+  assert_eq(
+    lane_summary(
+      commenting_range_decorations(
+        ranges,
+        -1,
+        [],
+        selection=(4, 4),
+        selection_cursor=4,
+      ),
+    ),
+    "2-3:comment-range-glyph comment-diff-added | 4-4:comment-range-glyph line-hover | 5-8:comment-range-glyph comment-diff-added",
+  )
 }
 
 ///|

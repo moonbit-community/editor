@@ -1,10 +1,12 @@
 // The thread's zone widget, porting the shell of
 // `vscode/src/vs/workbench/contrib/comments/browser/commentThreadZoneWidget.ts`
 // (`ReviewZoneWidget extends ZoneWidget`): arrow + frame on, the inner
-// `CommentThreadWidget` fills the container, and `_refresh` re-measures the
-// content to relayout the zone. The glyph decoration, expand/collapse
-// bookkeeping, and reveal policy live in the root glue
-// (`viewer/comments_host.mbt`).
+// `CommentThreadWidget` fills the container, resize observation drives
+// `_refresh` (`this._commentThreadWidget.onDidResize(dimensions =>
+// this._refresh(dimensions))`, `:436-438`), and the relayout is bracketed by
+// `StableEditorScrollState.capture/restore` (`:521-523`). The glyph
+// decoration, expand/collapse bookkeeping, and reveal policy live in the
+// root glue (`viewer/comments_host.mbt`).
 
 ///|
 /// The comment actions the glue routes to the `CommentService`.
@@ -19,6 +21,7 @@ pub(all) struct CommentWidgetActions {
 pub struct ReviewZoneWidget {
   zone : @zone_widget.ZoneWidget
   widget : CommentThreadWidgetDom
+  mut observed : Bool
 }
 
 ///|
@@ -27,21 +30,11 @@ pub fn ReviewZoneWidget::new(
   thread : @comments_common.CommentThread,
   actions : CommentWidgetActions,
 ) -> ReviewZoneWidget {
-  // The inner widget reports content changes before the ReviewZoneWidget
-  // exists; route them through a cell (VS Code wires the equivalent
-  // `onDidResize` after construction, `commentThreadZoneWidget.ts:436-438`).
-  let review_cell : Ref[ReviewZoneWidget?] = { val: None }
   let widget_host : CommentThreadWidgetHost = {
     on_submit_new: actions.on_submit_new,
     on_save_edit: actions.on_save_edit,
     on_delete: actions.on_delete,
     on_collapse: actions.on_collapse,
-    on_content_resized: () => {
-      match review_cell.val {
-        Some(review) => review.refresh()
-        None => ()
-      }
-    },
   }
   let widget = CommentThreadWidgetDom::new(widget_host, thread)
   let zone = @zone_widget.ZoneWidget::new(
@@ -52,9 +45,27 @@ pub fn ReviewZoneWidget::new(
     class_name="review-widget-zone",
     fill=container => container.append_child(widget.dom().as_node()),
   )
-  let review : ReviewZoneWidget = { zone, widget }
-  review_cell.val = Some(review)
+  let review : ReviewZoneWidget = { zone, widget, observed: false }
+  // `_commentThreadWidget.onDidResize(dimensions => this._refresh(dimensions))`
+  // (`commentThreadZoneWidget.ts:436-438`): content-size changes in the body
+  // or the form re-measure the zone. The head is fixed-height; the root's
+  // border box is pinned by the container, so the content-sized children are
+  // the observed elements.
+  observe_element_resize(widget.body_dom(), () => review.refresh())
+  observe_element_resize(widget.form_dom(), () => review.refresh())
+  review.observed = true
   review
+}
+
+///|
+/// Unhooks the resize observers; the zone/overlay side is `hide`.
+pub fn ReviewZoneWidget::dispose(self : ReviewZoneWidget) -> Unit {
+  if self.observed {
+    self.observed = false
+    unobserve_element_resize(self.widget.body_dom())
+    unobserve_element_resize(self.widget.form_dom())
+  }
+  self.hide()
 }
 
 ///|
@@ -88,13 +99,14 @@ pub fn ReviewZoneWidget::update_anchor(
 }
 
 ///|
-/// Applies an updated thread; the inner widget re-renders and reports the
-/// resize back into `refresh`.
+/// Applies an updated thread; the inner widget re-renders and the resize
+/// observers report the new content size back into `refresh`.
 pub fn ReviewZoneWidget::update(
   self : ReviewZoneWidget,
   thread : @comments_common.CommentThread,
 ) -> Unit {
   self.widget.update(thread)
+  self.refresh()
 }
 
 ///|
@@ -103,11 +115,13 @@ pub fn ReviewZoneWidget::focus_form(self : ReviewZoneWidget) -> Unit {
 }
 
 ///|
-/// `_refresh` (`commentThreadZoneWidget.ts:496-513`): measure the content
+/// `_refresh` (`commentThreadZoneWidget.ts:496-527`): measure the content
 /// and relayout — `computedLinesNumber = ceil((content + arrow + frame + 8)
 /// / lineHeight)` (`:509`; head and body heights collapse into the root's
-/// scroll height here). The zone widget's no-change guard keeps repeated
-/// refreshes scroll-stable.
+/// scroll height here), no-op when the line count is unchanged (`:511-513`),
+/// and the relayout runs inside a `StableEditorScrollState` bracket
+/// (`:521-523`) so a zone growing above the viewport does not shift the
+/// visible content.
 pub fn ReviewZoneWidget::refresh(self : ReviewZoneWidget) -> Unit {
   guard self.zone.is_visible() else { return }
   let line_height = (self.zone.host.line_height)()
@@ -120,5 +134,31 @@ pub fn ReviewZoneWidget::refresh(self : ReviewZoneWidget) -> Unit {
   if lines.to_double() * line_height.to_double() < total {
     lines += 1
   }
+  if lines == self.zone.height_in_lines {
+    return
+  }
+  let restore = (self.zone.host.capture_stable_scroll)()
   self.zone.relayout(lines)
+  restore()
 }
+
+///|
+/// FFI gap-fill (no ResizeObserver binding in the vendored `@rdom`): one
+/// observer per element, parked on an expando so `unobserve` can disconnect
+/// it.
+extern "js" fn observe_element_resize(
+  element : @rdom.Element,
+  callback : () -> Unit,
+) -> Unit =
+  #| (el, cb) => {
+  #|   const observer = new ResizeObserver(() => cb());
+  #|   observer.observe(el);
+  #|   el.__viewerResizeObserver = observer;
+  #| }
+
+///|
+extern "js" fn unobserve_element_resize(element : @rdom.Element) -> Unit =
+  #| (el) => {
+  #|   el.__viewerResizeObserver?.disconnect();
+  #|   delete el.__viewerResizeObserver;
+  #| }

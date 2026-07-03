@@ -36,6 +36,11 @@ pub(all) struct ZoneWidgetHost {
   viewport_height : () -> Double
   /// `editor.getOption(EditorOption.lineHeight)`.
   line_height : () -> Int
+  /// `StableEditorScrollState.capture(editor)`; the returned closure is the
+  /// matching `restore(editor)`. Consumers bracket a zone relayout with it so
+  /// a zone growing above the viewport does not shift the visible content
+  /// (`commentThreadZoneWidget.ts:521-523`).
+  capture_stable_scroll : () -> () -> Unit
 }
 
 ///|

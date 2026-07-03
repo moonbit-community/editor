@@ -47,10 +47,13 @@ fn Viewer::on_editor_mouse_move(
   self : Viewer,
   target : @viewer_common.MouseTarget,
 ) -> Unit {
-  // The comments hover ("+" affordance) tracks every move, independent of
-  // the hover controller's suppression — `commentsController.ts` registers
-  // its own `onMouseMove`.
-  self.update_comment_hover(target)
+  // The public `onMouseMove` fires for every hit-tested move, independent of
+  // the hover controller's suppression (Monaco emits it from
+  // `ViewController.emitMouseMove`; the comments contrib subscribes there).
+  self.did_mouse_move.fire({
+    target,
+    left_button: (self.last_mouse_buttons & 1) != 0,
+  })
   if self.hover_ignore_mouse_events {
     return
   }
@@ -274,8 +277,9 @@ fn Viewer::on_editor_mouse_leave(
   posx : Double,
   posy : Double,
 ) -> Unit {
-  // `CommentController.onEditorMouseLeave` clears the "+" affordance.
-  self.clear_comment_hover()
+  // The public `onMouseLeave` (the comments contrib clears its "+"
+  // affordance there).
+  self.did_mouse_leave.fire(())
   if self.hover_ignore_mouse_events {
     return
   }

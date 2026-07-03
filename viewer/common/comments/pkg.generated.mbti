@@ -35,7 +35,7 @@ pub struct CommentService {
   mut current_user_name : String
 }
 pub fn CommentService::commenting_ranges(Self, @common.Uri) -> Array[@common.Range]
-pub fn CommentService::create_thread_template(Self, @common.Uri, Int) -> CommentThread
+pub fn CommentService::create_thread_template(Self, @common.Uri, @common.Range) -> CommentThread
 pub fn CommentService::delete_comment(Self, String, Int) -> Unit
 pub fn CommentService::discard_template(Self, String) -> Unit
 pub fn CommentService::dispose(Self) -> Unit

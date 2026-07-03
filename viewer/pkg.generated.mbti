@@ -2,7 +2,6 @@
 package "moonbit-community/editor/viewer"
 
 import {
-  "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/common/comments",
@@ -16,11 +15,11 @@ import {
 }
 
 // Values
-pub fn debug_on_did_build_frame(Viewer, (ViewerFrameBuiltEvent) -> Unit) -> @common.Disposable
+pub fn debug_on_did_build_frame(Viewer, (ViewerFrameBuiltEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 
-pub fn debug_on_did_render_model(Viewer, (ViewerModelRenderedEvent) -> Unit) -> @common.Disposable
+pub fn debug_on_did_render_model(Viewer, (ViewerModelRenderedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 
-pub fn debug_on_did_resolve_hover(Viewer, (ViewerHoverResolvedEvent) -> Unit) -> @common.Disposable
+pub fn debug_on_did_resolve_hover(Viewer, (ViewerHoverResolvedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 
 // Errors
 
@@ -36,8 +35,8 @@ pub(all) enum CursorChangeReason {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct CursorPositionChangedEvent {
-  position : @common.Position
-  secondary_positions : Array[@common.Position]
+  position : @moonbit-community/editor/base/common.Position
+  secondary_positions : Array[@moonbit-community/editor/base/common.Position]
   reason : CursorChangeReason
   source : String
 } derive(@debug.Debug)
@@ -57,8 +56,8 @@ pub struct DecorationsCollection {
 }
 pub fn DecorationsCollection::append(Self, Array[@model.DeltaDecoration]) -> Array[String]
 pub fn DecorationsCollection::clear(Self) -> Unit
-pub fn DecorationsCollection::get_range(Self, Int) -> @common.Range?
-pub fn DecorationsCollection::get_ranges(Self) -> Array[@common.Range]
+pub fn DecorationsCollection::get_range(Self, Int) -> @moonbit-community/editor/base/common.Range?
+pub fn DecorationsCollection::get_ranges(Self) -> Array[@moonbit-community/editor/base/common.Range]
 pub fn DecorationsCollection::length(Self) -> Int
 pub fn DecorationsCollection::set(Self, Array[@model.DeltaDecoration]) -> Array[String]
 
@@ -72,9 +71,14 @@ pub(all) struct EditorLayoutInfo {
   decorations_width : Double
 } derive(Eq, @debug.Debug)
 
+pub(all) struct EditorMouseEvent {
+  target : @moonbit-community/editor/viewer/common.MouseTarget
+  left_button : Bool
+} derive(@debug.Debug)
+
 pub(all) struct ModelChangedEvent {
-  old_model_url : @common.Uri?
-  new_model_url : @common.Uri?
+  old_model_url : @moonbit-community/editor/base/common.Uri?
+  new_model_url : @moonbit-community/editor/base/common.Uri?
 } derive(@debug.Debug)
 
 pub(all) struct ScrollEvent {
@@ -116,41 +120,45 @@ pub fn Viewer::get_bottom_for_line_number(Self, Int, include_view_zones? : Bool)
 pub fn Viewer::get_container_dom_node(Self) -> @dom.Element?
 pub fn Viewer::get_content_height(Self) -> Double
 pub fn Viewer::get_content_width(Self) -> Double
-pub fn Viewer::get_decorations_in_range(Self, @common.Range) -> Array[@model.ModelDecoration]
+pub fn Viewer::get_decorations_in_range(Self, @moonbit-community/editor/base/common.Range) -> Array[@model.ModelDecoration]
 pub fn Viewer::get_dom_node(Self) -> @dom.Element?
 pub fn Viewer::get_editor_type(Self) -> String
 pub fn Viewer::get_id(Self) -> String
 pub fn Viewer::get_layout_info(Self) -> EditorLayoutInfo
 pub fn Viewer::get_line_decorations(Self, Int) -> Array[@model.ModelDecoration]
-pub fn Viewer::get_line_height_for_position(Self, @common.Position) -> Double
+pub fn Viewer::get_line_height_for_position(Self, @moonbit-community/editor/base/common.Position) -> Double
 pub fn Viewer::get_model(Self) -> @model.TextModel?
 pub fn Viewer::get_offset_for_column(Self, Int, Int) -> Double
 pub fn Viewer::get_options(Self) -> ViewerOptions
-pub fn Viewer::get_position(Self) -> @common.Position?
+pub fn Viewer::get_position(Self) -> @moonbit-community/editor/base/common.Position?
 pub fn Viewer::get_scroll_height(Self) -> Double
 pub fn Viewer::get_scroll_left(Self) -> Double
 pub fn Viewer::get_scroll_top(Self) -> Double
 pub fn Viewer::get_scroll_width(Self) -> Double
-pub fn Viewer::get_scrolled_visible_position(Self, @common.Position) -> ScrolledVisiblePosition?
+pub fn Viewer::get_scrolled_visible_position(Self, @moonbit-community/editor/base/common.Position) -> ScrolledVisiblePosition?
 pub fn Viewer::get_selection(Self) -> @view_model.Selection?
 pub fn Viewer::get_selections(Self) -> Array[@view_model.Selection]?
-pub fn Viewer::get_statusbar_column(Self, @common.Position) -> Int
+pub fn Viewer::get_statusbar_column(Self, @moonbit-community/editor/base/common.Position) -> Int
 pub fn Viewer::get_top_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn Viewer::get_top_for_position(Self, Int, Int) -> Double
 pub fn Viewer::get_value(Self) -> String
-pub fn Viewer::get_visible_column_from_position(Self, @common.Position) -> Int
-pub fn Viewer::get_visible_ranges(Self) -> Array[@common.Range]
-pub fn Viewer::get_visible_ranges_plus_viewport_above_below(Self) -> Array[@common.Range]
+pub fn Viewer::get_visible_column_from_position(Self, @moonbit-community/editor/base/common.Position) -> Int
+pub fn Viewer::get_visible_ranges(Self) -> Array[@moonbit-community/editor/base/common.Range]
+pub fn Viewer::get_visible_ranges_plus_viewport_above_below(Self) -> Array[@moonbit-community/editor/base/common.Range]
 pub fn Viewer::get_width_of_line(Self, Int) -> Double
 pub fn Viewer::has_model(Self) -> Bool
 pub fn Viewer::has_text_focus(Self) -> Bool
 pub fn Viewer::has_widget_focus(Self) -> Bool
 pub fn Viewer::layout(Self) -> Unit
-pub fn Viewer::on_did_change_cursor_position(Self, (CursorPositionChangedEvent) -> Unit) -> @common.Disposable
-pub fn Viewer::on_did_change_cursor_selection(Self, (CursorSelectionChangedEvent) -> Unit) -> @common.Disposable
-pub fn Viewer::on_did_change_model(Self, (ModelChangedEvent) -> Unit) -> @common.Disposable
-pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @common.Disposable
-pub fn Viewer::on_did_scroll_change(Self, (ScrollEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_change_cursor_position(Self, (CursorPositionChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_change_cursor_selection(Self, (CursorSelectionChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_change_model(Self, (ModelChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_scroll_change(Self, (ScrollEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_mouse_down(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_mouse_leave(Self, (Unit) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_mouse_move(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_mouse_up(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::remove_decorations(Self, Array[String]) -> Unit
 pub fn Viewer::remove_overlay_widget(Self, String) -> Unit
 pub fn Viewer::restore_view_state(Self, ViewerViewState) -> Unit
@@ -162,19 +170,19 @@ pub fn Viewer::reveal_lines(Self, Int, Int) -> Unit
 pub fn Viewer::reveal_lines_in_center(Self, Int, Int) -> Unit
 pub fn Viewer::reveal_lines_in_center_if_outside_viewport(Self, Int, Int) -> Unit
 pub fn Viewer::reveal_lines_near_top(Self, Int, Int) -> Unit
-pub fn Viewer::reveal_position(Self, @common.Position) -> Unit
-pub fn Viewer::reveal_position_in_center(Self, @common.Position) -> Unit
-pub fn Viewer::reveal_position_in_center_if_outside_viewport(Self, @common.Position) -> Unit
-pub fn Viewer::reveal_position_near_top(Self, @common.Position) -> Unit
-pub fn Viewer::reveal_range(Self, @common.Range) -> Unit
-pub fn Viewer::reveal_range_at_top(Self, @common.Range) -> Unit
-pub fn Viewer::reveal_range_in_center(Self, @common.Range) -> Unit
-pub fn Viewer::reveal_range_in_center_if_outside_viewport(Self, @common.Range) -> Unit
-pub fn Viewer::reveal_range_near_top(Self, @common.Range) -> Unit
-pub fn Viewer::reveal_range_near_top_if_outside_viewport(Self, @common.Range) -> Unit
+pub fn Viewer::reveal_position(Self, @moonbit-community/editor/base/common.Position) -> Unit
+pub fn Viewer::reveal_position_in_center(Self, @moonbit-community/editor/base/common.Position) -> Unit
+pub fn Viewer::reveal_position_in_center_if_outside_viewport(Self, @moonbit-community/editor/base/common.Position) -> Unit
+pub fn Viewer::reveal_position_near_top(Self, @moonbit-community/editor/base/common.Position) -> Unit
+pub fn Viewer::reveal_range(Self, @moonbit-community/editor/base/common.Range) -> Unit
+pub fn Viewer::reveal_range_at_top(Self, @moonbit-community/editor/base/common.Range) -> Unit
+pub fn Viewer::reveal_range_in_center(Self, @moonbit-community/editor/base/common.Range) -> Unit
+pub fn Viewer::reveal_range_in_center_if_outside_viewport(Self, @moonbit-community/editor/base/common.Range) -> Unit
+pub fn Viewer::reveal_range_near_top(Self, @moonbit-community/editor/base/common.Range) -> Unit
+pub fn Viewer::reveal_range_near_top_if_outside_viewport(Self, @moonbit-community/editor/base/common.Range) -> Unit
 pub fn Viewer::save_view_state(Self) -> ViewerViewState
 pub fn Viewer::set_model(Self, @model.TextModel?) -> Unit
-pub fn Viewer::set_position(Self, @common.Position) -> Unit
+pub fn Viewer::set_position(Self, @moonbit-community/editor/base/common.Position) -> Unit
 pub fn Viewer::set_scroll_left(Self, Double) -> Unit
 pub fn Viewer::set_scroll_position(Self, scroll_top? : Double, scroll_left? : Double) -> Unit
 pub fn Viewer::set_scroll_top(Self, Double) -> Unit

@@ -1,16 +1,23 @@
 // Contribution/command registry checks (deviations-closeout Track D): the
-// three registered features instantiate per `Viewer` through the registry
-// and dispose with it; the keybinding table gates on live preconditions.
+// registered features instantiate per `Viewer` through the registry and
+// dispose with it; the keybinding table gates on live preconditions.
 
 ///|
 test "contributions instantiate through the registry and dispose with the viewer" {
   let viewer = Viewer::Viewer()
-  assert_true(viewer.get_contribution("editor.contrib.review") is Some(_))
+  assert_true(
+    viewer.get_contribution("agentFeedback.editorInputContribution") is Some(_),
+  )
+  assert_true(
+    viewer.get_contribution("agentFeedback.editorWidgetContribution") is Some(_),
+  )
   assert_true(viewer.get_contribution("editor.contrib.contentHover") is Some(_))
   assert_true(viewer.get_contribution("editor.contrib.folding") is Some(_))
   assert_true(viewer.get_contribution("editor.contrib.unknown") is None)
   viewer.dispose()
-  assert_true(viewer.get_contribution("editor.contrib.review") is None)
+  assert_true(
+    viewer.get_contribution("agentFeedback.editorInputContribution") is None,
+  )
 }
 
 ///|

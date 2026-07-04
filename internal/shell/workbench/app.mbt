@@ -172,7 +172,7 @@ pub fn start_app() -> Unit {
   let services = workbench_services()
   register_remote_language_providers(services)
   install_language_tokenizers(services)
-  install_comment_persistence(services)
+  install_feedback_persistence(services)
   mount_app()
 }
 
@@ -357,7 +357,7 @@ fn set_workbench_model(
   view_state : DocumentViewState,
 ) -> Unit {
   let viewer = workbench_viewer()
-  sync_document_comments(text_model)
+  sync_document_feedback(text_model)
   match view_state {
     PreserveScroll => {
       let state = viewer.save_view_state()

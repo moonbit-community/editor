@@ -591,13 +591,17 @@ fn static_route(path : String) -> (String, String)? {
           "browser-tests/whitespace_selection.mjs.map", "application/json; charset=utf-8",
         ),
       )
-    "/browser-tests/comments.html" =>
-      Some(("browser-tests/comments.html", "text/html; charset=utf-8"))
-    "/browser-tests/comments.mjs" =>
-      Some(("browser-tests/comments.mjs", "text/javascript; charset=utf-8"))
-    "/browser-tests/comments.mjs.map" =>
+    "/browser-tests/agent_feedback.html" =>
+      Some(("browser-tests/agent_feedback.html", "text/html; charset=utf-8"))
+    "/browser-tests/agent_feedback.mjs" =>
       Some(
-        ("browser-tests/comments.mjs.map", "application/json; charset=utf-8"),
+        ("browser-tests/agent_feedback.mjs", "text/javascript; charset=utf-8"),
+      )
+    "/browser-tests/agent_feedback.mjs.map" =>
+      Some(
+        (
+          "browser-tests/agent_feedback.mjs.map", "application/json; charset=utf-8",
+        ),
       )
     _ => None
   }

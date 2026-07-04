@@ -9,7 +9,7 @@ import {
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/editor/viewer/contrib/comments",
+  "moonbit-community/editor/viewer/contrib/agent_feedback",
   "moonbit-community/rabbita/dom",
   "moonbitlang/core/debug",
 }
@@ -251,7 +251,7 @@ pub(all) struct ViewerServices {
   languages : @languages.Languages
   markers : @markers.MarkerService
   marker_decorations : @markers.MarkerDecorationsService
-  comments : @comments.CommentService
+  agent_feedback : @agent_feedback.AgentFeedbackService
   log_service : @log.LogService
 }
 pub fn ViewerServices::new(languages? : @languages.Languages, log_service? : @log.LogService) -> Self

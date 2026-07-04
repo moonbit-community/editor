@@ -104,17 +104,31 @@ pub struct Viewer {
   /// the hover view's highlighted range changes.
   priv mut hover_decoration_ids : Array[String]
   priv mut hover_decoration_range : @base_common.Range?
-  /// Comments contrib state (`commentsController.ts` reduced; glue in
-  /// `comments_host.mbt`): the DOM-free mouse/hover gates, the two
-  /// owner-scoped decoration id sets (commenting ranges + thread glyphs),
-  /// the open thread widgets by thread id, and the host's
-  /// `line_decorations_width` before the contrib reserved the comment lane
-  /// (`None` = not reserved).
-  priv comments : @comments.CommentController
-  priv mut comments_range_decoration_ids : Array[String]
-  priv mut comments_glyph_decoration_ids : Array[String]
-  priv open_comment_widgets : Map[String, @comments_browser.ReviewZoneWidget]
-  priv mut comments_lane_base_width : Int?
+  /// Agent-feedback contrib state (`agentFeedbackEditorInputContribution.ts`
+  /// reduced; glue in `agent_feedback_host.mbt`): the lazily-created inline
+  /// input widget and its visibility/pin state, the hover "+" glyph line and
+  /// its owner-scoped decoration ids, the reserved-lane base width, and the
+  /// mouse-down/suppress gates of `_onSelectionChanged`.
+  priv mut agent_feedback_input : @agent_feedback_browser.AgentFeedbackInputWidget?
+  priv mut agent_feedback_input_visible : Bool
+  priv mut agent_feedback_pinned_range : @base_common.Range?
+  priv mut agent_feedback_anchor : @base_common.Position?
+  priv mut agent_feedback_prefer_below : Bool
+  priv mut agent_feedback_hover_line : Int
+  priv mut agent_feedback_hover_decoration_ids : Array[String]
+  priv mut agent_feedback_lane_base_width : Int?
+  priv mut agent_feedback_mouse_down : Bool
+  priv mut agent_feedback_suppress_selection_once : Bool
+  /// Feedback bubble contrib state (`AgentFeedbackEditorWidgetContribution`
+  /// reduced; glue in `agent_feedback_widgets_host.mbt`): the mounted
+  /// bubbles, the rebuild-surviving reply drafts, the widget id pool, and
+  /// the hover range-highlight decoration ids.
+  priv agent_feedback_widgets : Array[
+    @agent_feedback_browser.AgentFeedbackEditorWidget,
+  ]
+  priv agent_feedback_reply_drafts : Map[String, String]
+  priv mut agent_feedback_widget_id_pool : Int
+  priv mut agent_feedback_highlight_decoration_ids : Array[String]
   priv mut mouse_handler : @controller.MouseHandler?
   /// The last `mousemove`'s `MouseEvent.buttons` bitmask, recorded by the
   /// root listener so `on_mouse_move` events can carry `event.leftButton`
@@ -316,11 +330,20 @@ pub fn Viewer::Viewer(
     model_decorations_subscription: None,
     hover_decoration_ids: [],
     hover_decoration_range: None,
-    comments: @comments.CommentController::new(),
-    comments_range_decoration_ids: [],
-    comments_glyph_decoration_ids: [],
-    open_comment_widgets: {},
-    comments_lane_base_width: None,
+    agent_feedback_input: None,
+    agent_feedback_input_visible: false,
+    agent_feedback_pinned_range: None,
+    agent_feedback_anchor: None,
+    agent_feedback_prefer_below: true,
+    agent_feedback_hover_line: -1,
+    agent_feedback_hover_decoration_ids: [],
+    agent_feedback_lane_base_width: None,
+    agent_feedback_mouse_down: false,
+    agent_feedback_suppress_selection_once: false,
+    agent_feedback_widgets: [],
+    agent_feedback_reply_drafts: {},
+    agent_feedback_widget_id_pool: 1,
+    agent_feedback_highlight_decoration_ids: [],
     mouse_handler: None,
     last_mouse_buttons: 0,
     editor_has_focus: false,
@@ -482,8 +505,8 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   self.hook_view_input(view)
   self.measure_requested = true
   self.schedule_render()
-  // Threads that were expanded before the view existed can open now.
-  self.sync_comments()
+  // Feedback bubbles seeded before the view existed can mount now.
+  self.rebuild_agent_feedback_widgets()
 }
 
 ///|
@@ -533,11 +556,12 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   }
   self.hover_decoration_ids = []
   self.hover_decoration_range = None
-  // Comment decoration/widget state belongs to the outgoing model; the sync
-  // after the render re-applies the new resource's comment data.
-  self.comments_range_decoration_ids = []
-  self.comments_glyph_decoration_ids = []
-  self.close_all_comment_widgets()
+  // Feedback decoration/widget state belongs to the outgoing model; the
+  // model-change event re-applies the new resource's feedback data.
+  self.agent_feedback_hover_decoration_ids = []
+  self.agent_feedback_hover_line = -1
+  self.agent_feedback_highlight_decoration_ids = []
+  self.clear_agent_feedback_widgets() |> ignore
   self.model_decorations_subscription = Some(
     model.on_did_change_decorations(event => {
       // Monaco: `onDidChangeDecorations` → `viewModel.decorations
@@ -574,7 +598,6 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
     self.view_layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
   )
   self.render_current_model(model, fresh=true, request_language=true)
-  self.sync_comments()
   self.did_change_model.fire({ old_model_url, new_model_url: Some(model.uri) })
 }
 
@@ -706,7 +729,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_mouse_leave.dispose()
   self.services.marker_decorations.dispose()
   self.services.markers.dispose()
-  self.services.comments.dispose()
+  self.services.agent_feedback.dispose()
 }
 
 ///|
@@ -805,9 +828,10 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.model_decorations_subscription = None
   self.hover_decoration_ids = []
   self.hover_decoration_range = None
-  self.comments_range_decoration_ids = []
-  self.comments_glyph_decoration_ids = []
-  self.close_all_comment_widgets()
+  self.agent_feedback_hover_decoration_ids = []
+  self.agent_feedback_hover_line = -1
+  self.agent_feedback_highlight_decoration_ids = []
+  self.clear_agent_feedback_widgets() |> ignore
   self.frame = None
   self.view_model = None
   self.frame_source = None
@@ -838,9 +862,9 @@ fn Viewer::render_feature_update(self : Viewer) -> Unit {
   match self.text_model {
     Some(model) => {
       self.render_current_model(model, fresh=false, request_language=false)
-      // Folding/feature changes move the view-line axis; open comment
-      // widgets follow their model anchors (D8).
-      self.reanchor_comment_widgets()
+      // Folding/feature changes move the view-line axis; the feedback
+      // bubbles follow their model anchors.
+      self.relayout_agent_feedback_widgets()
     }
     None => ()
   }

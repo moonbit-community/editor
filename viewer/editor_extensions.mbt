@@ -184,7 +184,7 @@ fn editor_registry() -> EditorContributionRegistry {
         commands: {},
         keybindings: [],
       }
-      register_comments_contribution(registry)
+      register_agent_feedback_contribution(registry)
       register_hover_contribution(registry)
       register_folding_contribution(registry)
       editor_registry_holder.registry = Some(registry)

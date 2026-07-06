@@ -59,10 +59,9 @@ fn Viewer::build_view_context(
 /// widget's own DOM listener via the `ViewContext.handle_hover_keydown`
 /// closure `build_view_context` wires up. The keys resolve through the
 /// command registry (`hoverActions.ts`'s scroll cluster registered in
-/// `hover_contribution.mbt`, gated on `hoverFocused`/`hoverVisible`) —
-/// deviations-closeout Track D closed the inline-key-map caveat (hover plan
-/// Deviation 13). The `widget` parameter stays for the seam's shape; the
-/// commands reach the same singleton widget through the viewer.
+/// `hover_contribution.mbt`, gated on `hoverFocused`/`hoverVisible`). The
+/// `widget` parameter stays for the seam's shape; the commands reach the
+/// same singleton widget through the viewer.
 fn Viewer::handle_hover_keydown(
   self : Viewer,
   widget : @content_widgets.HoverWidgetDom,

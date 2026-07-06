@@ -7,8 +7,8 @@
 // `KeybindingsRegistry.registerKeybindingRule` + `CommandsRegistry`,
 // `EditorCommand.runEditorCommand`).
 //
-// Structural deviation (deviations-closeout Track D, recorded up front):
-// MoonBit's foreign-method rule keeps `Viewer::` glue in this root package
+// Structural deviation: MoonBit's foreign-method rule keeps `Viewer::` glue
+// in this root package
 // and there is no DI/services collection to port, so the registry inverts
 // *dispatch and lifecycle* (who instantiates contributions, who routes
 // commands/keys) — not file placement. The `*_host.mbt` files stay here as

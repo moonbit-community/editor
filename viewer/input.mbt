@@ -139,8 +139,8 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
 
 ///|
 /// The readonly viewer's keyboard entry: the registered commands resolve
-/// first (`editor.action.hideHover` on Escape, gated on `hoverVisible` —
-/// deviations-closeout Track D), then the built-in scroll cluster (the
+/// first (`editor.action.hideHover` on Escape, gated on `hoverVisible`),
+/// then the built-in scroll cluster (the
 /// synthetic-scroll analog of Monaco's `EditorScroll` command family).
 /// Returns whether the key was handled (and the browser default
 /// suppressed). Unmodified keys only for the built-ins; chords fall through

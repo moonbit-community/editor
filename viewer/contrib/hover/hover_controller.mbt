@@ -29,8 +29,7 @@ pub(all) struct HoverView {
 
 ///|
 /// The hovered span in model line/column space, Monaco's `HoverRangeAnchor`
-/// (`range` + the viewer's injected-text discriminator; the Range rebase of
-/// deviations-closeout Track E deleted the earlier offset quintuple).
+/// (`range` + the viewer's injected-text discriminator).
 pub(all) struct HoverAnchor {
   range : @base_common.Range
   injected_text_index : Int
@@ -570,8 +569,7 @@ pub fn HoverController::measured(
 /// The hover highlight's model decoration, Monaco's
 /// `ContentHoverController` `_highlightDecorations` collection entry
 /// (`className: 'hoverHighlight'`, `contentHoverWidgetParticipants`): the
-/// range under the visible hover, used directly since the Range rebase
-/// (deviations-closeout Track E deleted the offset→Range conversion here).
+/// range under the visible hover, used directly.
 pub fn HoverController::highlight_decorations(
   self : HoverController,
 ) -> Array[@model.DeltaDecoration] {

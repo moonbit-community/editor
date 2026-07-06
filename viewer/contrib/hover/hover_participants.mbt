@@ -82,7 +82,7 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
   }
   let parts : Array[HoverPart] = []
   // The live markers carry the transform's tracked line/column `Range`, the
-  // hover's native span since the Range rebase (deviations-closeout Track E).
+  // hover's native span.
   let query = ctx.anchor_range
   for entry in self.marker_decorations.get_live_markers(ctx.model.uri) {
     let (range, marker) = entry

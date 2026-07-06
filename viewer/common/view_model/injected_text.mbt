@@ -50,7 +50,7 @@ pub(all) struct ProjectedLinePart {
 /// of the injections anchored there — exactly Monaco's non-`Right` affinity
 /// behavior; `model_column_to_projected_column` surfaces the `Right` side and
 /// `normalize_projected_column_around_injections` ports the normalization
-/// branches, closing the earlier no-`PositionAffinity` deviation.
+/// branches.
 pub(all) struct ProjectedTextLine {
   text : String
   model_line_length : Int

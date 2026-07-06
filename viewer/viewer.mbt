@@ -572,7 +572,7 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
       // Injected-text deltas re-run the line-breaks computer in Monaco
       // (`onDidChangeContentOrInjectedText` → per-line recompute); the
       // viewer's granularity is the whole-projection rebuild it already
-      // uses for wrap changes (Track F deviation on the change event).
+      // uses for wrap changes.
       if event.affects_injected_text {
         self.rebuild_current_view_model_for_options()
       }

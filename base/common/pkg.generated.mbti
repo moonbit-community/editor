@@ -22,6 +22,8 @@ pub fn is_low_surrogate(Int) -> Bool
 
 pub fn last_non_whitespace_index(String) -> Int
 
+pub fn single_letter_hash(Int) -> String
+
 pub fn to_disposable(() -> Unit) -> Disposable
 
 // Errors

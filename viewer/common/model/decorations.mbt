@@ -122,8 +122,8 @@ pub(all) struct Decoration {
   description : String
   /// Injected text rendered before/after the decoration range —
   /// `ModelDecorationOptions.before`/`after` (`InjectedTextOptions`,
-  /// `model.ts`), stored in the interval tree's injected-text slot
-  /// (deviations-closeout Track F). Inlay hints are the producer.
+  /// `model.ts`), stored in the interval tree's injected-text slot.
+  /// Inlay hints are the producer.
   before : ModelInjectedTextOptions?
   after : ModelInjectedTextOptions?
 } derive(Debug)
@@ -181,8 +181,8 @@ pub(all) struct ModelDecorationsChangedEvent {
   affects_glyph_margin : Bool
   /// Whether the change touched injected-text (`before`/`after`) options —
   /// the viewer's whole-event stand-in for Monaco's per-line
-  /// `onDidChangeContentOrInjectedText` (Track F deviation; consumers
-  /// rebuild the projection when set).
+  /// `onDidChangeContentOrInjectedText` (consumers rebuild the projection
+  /// when set).
   affects_injected_text : Bool
   affects_line_number : Bool
 } derive(Eq, Debug)

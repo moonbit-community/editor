@@ -71,9 +71,8 @@ pub(all) struct HoverWidgetHost {
   ) -> Unit
   handle_hover_keydown : (HoverWidgetDom, @rdom.Event, @rdom.KeyboardEvent) -> Unit
   /// Model position → document offset (the model-snapshot boundary): the
-  /// hover state is `Range`-typed (deviations-closeout Track E); this
-  /// pixel-placement site is the one offset consumer left, so the
-  /// conversion happens here, through the host.
+  /// hover state is `Range`-typed; this pixel-placement site is the one
+  /// offset consumer left, so the conversion happens here, through the host.
   model_position_to_offset : (@base_common.Position) -> Int
 }
 
@@ -179,8 +178,7 @@ pub fn ContentWidgets::render_hover_widget(
   }
   // The hover state is `Range`-typed; this pixel-placement site converts to
   // document offsets (through the host's model-snapshot boundary) to locate
-  // the rendered view line + column, the one offset consumer left after the
-  // Range rebase (deviations-closeout Track E).
+  // the rendered view line + column — the one offset consumer left.
   let anchor_offset = (host.model_position_to_offset)(
     hover_view.anchor_range.get_start_position(),
   )

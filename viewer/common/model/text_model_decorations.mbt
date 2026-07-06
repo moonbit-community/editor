@@ -8,14 +8,11 @@
 // node predicates `:2180-2190`, `DidChangeDecorationsEmitter` `:2586-2666`.
 //
 // Deviations (plan `monaco-decoration-system-port.md`):
-// - D2 (sync emitter): the deferred-emit brackets are ported, but the
-//   underlying emitter is the repo's sync `@base_common.Emitter` (no
-//   `MicrotaskEmitter`).
-// - D4 (id format): Monaco ids are `${instanceId};${counter}` with a
-//   process-wide single-letter-hash instance id; the port uses a numeric
-//   per-process model counter with the same shape. Ids are opaque strings.
 // - D5 (options interning): `register`/`createDynamic`/`_normalizeOptions`
-//   collapse into the `Decoration::Decoration` constructor.
+//   collapse into the `Decoration::Decoration` constructor (in the source
+//   both statics are the identical `new ModelDecorationOptions(options)`,
+//   and `_normalizeOptions` is an `instanceof` test that has no analogue
+//   with a single nominal options type).
 // - D6 (model swap): decoration state is per-`TextModel` instance; the viewer
 //   swaps whole models on version change, so owners re-attach on swap and
 //   `cached_version_id` only ever sees one version per tree lifetime.
@@ -26,12 +23,12 @@
 //   no dispose lifecycle).
 //
 // Out-of-scope members (explicitly deferred/N-A, per plan):
-// - Injected text: LIVE since deviations-closeout Track F — `before`/`after`
-//   options route nodes into `_injectedTextDecorationsTree`, queried via
-//   `get_injected_text_decorations`/`get_injected_text_in_interval`;
-//   remaining unported injected-text members:
-//   `getInjectedTextInInterval`, `getLineInjectedText`,
-//   `recordLineAffectedByInjectedText` are DEFERRED with the feature.
+// - Injected-text per-line events: the `LineInjectedText` event type and
+//   `recordLineAffectedByInjectedText` are DEFERRED with the whole-rebuild
+//   deviation (consumers rebuild the projection on `affects_injected_text`;
+//   the tree query surface itself is ported —
+//   `get_injected_text_decorations`/`get_injected_text_in_interval`, the
+//   latter subsuming `getLineInjectedText`'s tree query).
 // - Line-height/font: `getCustomLineHeights*`, `getFontDecorations*`,
 //   `handleBeforeFireDecorationsChangedEvent` fan-out,
 //   `recordLineAffectedByLineHeightChange`/`FontChange`,
@@ -58,19 +55,15 @@ let _test_only_member_anchor : Unit = {
 }
 
 ///|
-/// Process-wide model instance counter backing decoration id prefixes
-/// (Deviation D4).
-priv struct InstanceIdCounter {
-  mut value : Int
-}
-
-///|
-let model_instance_id_counter : InstanceIdCounter = { value: 0 }
+/// `MODEL_ID` (`textModel.ts:123`): process-wide model counter; each model's
+/// `_instanceId = strings.singleLetterHash(MODEL_ID)` (`:318,:377`) prefixes
+/// its decoration ids.
+let model_id : Ref[Int] = Ref(0)
 
 ///|
 fn next_model_instance_id() -> String {
-  model_instance_id_counter.value += 1
-  model_instance_id_counter.value.to_string()
+  model_id.val += 1
+  @base_common.single_letter_hash(model_id.val)
 }
 
 // #region DidChangeDecorationsEmitter (textModel.ts:2586-2666)
@@ -89,7 +82,7 @@ struct DidChangeDecorationsEmitter {
   mut affects_overview_ruler : Bool
   mut affects_glyph_margin : Bool
   /// Whether any changed decoration carried injected-text options.
-  /// Deviation (Track F): Monaco routes injected-text deltas through
+  /// Deviation: Monaco routes injected-text deltas through
   /// `onDidChangeContentOrInjectedText` with per-line granularity
   /// (`handleBeforeFireDecorationsChangedEvent` → affected-lines event);
   /// the viewer's pipeline rebuilds the projection whole, so a single
@@ -223,8 +216,7 @@ fn options_in_overview_ruler(options : Decoration) -> Bool {
 ///|
 /// `isNodeInjectedText` (`textModel.ts:2188-2190`) over
 /// `isOptionsInjectedText`: the node carries `before`/`after` injected-text
-/// options (populated since deviations-closeout Track F; inlay hints are the
-/// producer).
+/// options (inlay hints are the producer).
 fn is_node_injected_text(node : IntervalNode) -> Bool {
   node.options is Some(options) && options_is_injected_text(options)
 }
@@ -523,8 +515,8 @@ fn DecorationsTrees::accept_replace(
 
 ///|
 /// `onDidChangeDecorations` (`textModel.ts:225-226`): one event per
-/// deferred-emit bracket (sync emitter — Deviation D2). The backing
-/// `_onDidChangeDecorations` emitter is the same-named `TextModel` field.
+/// deferred-emit bracket. The backing `_onDidChangeDecorations` emitter is
+/// the same-named `TextModel` field.
 pub fn TextModel::on_did_change_decorations(
   self : TextModel,
   listener : (ModelDecorationsChangedEvent) -> Unit,

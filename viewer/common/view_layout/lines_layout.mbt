@@ -204,7 +204,9 @@ pub fn LinesLayout::new(
 ) -> LinesLayout {
   lines_layout_instance_count.val = lines_layout_instance_count.val + 1
   {
-    instance_id: single_letter_hash(lines_layout_instance_count.val),
+    instance_id: @base_common.single_letter_hash(
+      lines_layout_instance_count.val,
+    ),
     pending_changes: PendingChanges::new(),
     last_whitespace_id: 0,
     arr: [],
@@ -1019,17 +1021,3 @@ fn LinesLayout::accumulated_line_heights_including_line_number(
   }
 }
 
-///|
-/// Port of Monaco's `strings.singleLetterHash`: maps `n` to a single letter
-/// (`a..z` then `A..Z`, wrapping), used to prefix whitespace ids per instance.
-fn single_letter_hash(n : Int) -> String {
-  let letters_cnt = 26
-  let n = n % (2 * letters_cnt)
-  if n < letters_cnt {
-    let code = 'a'.to_int() + n
-    Int::unsafe_to_char(code).to_string()
-  } else {
-    let code = 'A'.to_int() + n - letters_cnt
-    Int::unsafe_to_char(code).to_string()
-  }
-}

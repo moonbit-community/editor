@@ -159,8 +159,7 @@ fn ViewModelLinesFromModelAsIs::has_injected_text(
 ///|
 /// Creates unprojected view lines with every model line visible. Injected
 /// text is derived from the backing model's decoration storage
-/// (`getInjectedTextDecorations` — deviations-closeout Track F deleted the
-/// parallel `Array[InjectedText]` plumbing).
+/// (`getInjectedTextDecorations`).
 pub fn ViewModelLinesFromModelAsIs::new(
   source : FrameSource,
 ) -> ViewModelLinesFromModelAsIs {

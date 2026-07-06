@@ -37,6 +37,6 @@ pub(all) struct ViewContext {
   offset_for_column : (Int, Int) -> Double
   // Model position → document offset through the model snapshot. The hover
   // state is `Range`-typed; the content-widget pixel placement is the one
-  // offset consumer left (deviations-closeout Track E), converting here.
+  // offset consumer left, converting here.
   model_position_to_offset : (@base_common.Position) -> Int
 }

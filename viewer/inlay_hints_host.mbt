@@ -3,10 +3,7 @@
 // writes (`inlayHintsController.ts` `_updateHintsDecorators`:
 // `{ range: fromPositions(position), options: { description, showIfCollapsed,
 // after: { content, inlineClassName, attachedData } } }`). The projection
-// reads injected text back from the model's decoration storage
-// (deviations-closeout Track F deleted the parallel `Array[InjectedText]`
-// pipeline). The label padding / class-name derivation previously lived with
-// the deleted `InjectedText::from_inlay_hint`.
+// reads injected text back from the model's decoration storage.
 
 ///|
 /// Rewrites this editor's inlay-hint decorations from the current provider

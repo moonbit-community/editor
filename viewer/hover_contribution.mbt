@@ -5,7 +5,7 @@
 // closure-seam pattern), so the contribution ctor wires nothing; what the
 // registry inverts here is command/keyboard dispatch: the hover widget's
 // keydown resolves through the keybinding table instead of an inline key
-// map (closing the hover plan's Deviation 13 registry caveat).
+// map.
 
 ///|
 /// `registerEditorContribution(ContentHoverController.ID, …,

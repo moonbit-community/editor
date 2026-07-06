@@ -71,6 +71,20 @@ pub fn is_full_width_character(char_code : Int) -> Bool {
 }
 
 ///|
+/// Maps `n` to a single letter (`a..z` then `A..Z`, wrapping). Mirrors
+/// `strings.singleLetterHash`; Monaco uses it to prefix per-instance id
+/// namespaces (model decoration ids, whitespace ids).
+pub fn single_letter_hash(n : Int) -> String {
+  let letters_cnt = 'Z'.to_int() - 'A'.to_int() + 1
+  let n = n % (2 * letters_cnt)
+  if n < letters_cnt {
+    Int::unsafe_to_char('a'.to_int() + n).to_string()
+  } else {
+    Int::unsafe_to_char('A'.to_int() + n - letters_cnt).to_string()
+  }
+}
+
+///|
 /// HTML-escapes `&`, `<`, `>`. Mirrors `strings.escape` (note: unlike the view's
 /// `escape_html`, it does not escape `"`, matching Monaco's `_tokenizeToString`).
 pub fn escape(text : String) -> String {

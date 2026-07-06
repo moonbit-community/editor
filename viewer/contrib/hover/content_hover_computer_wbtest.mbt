@@ -63,7 +63,7 @@ impl @language.HoverProvider for ComputerHoverProvider with fn provide_hover(
   position,
   _token,
 ) {
-  let offset = model.snapshot.offset_at_position(position)
+  let offset = model.get_offset_at(position)
   Some({
     range: model.snapshot.range_of(OffsetRange(offset, offset + 1)),
     contents: [PlainText("provider hover")],

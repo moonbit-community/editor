@@ -148,9 +148,8 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
   // token's span (the recorded deviation), whose midpoint stands in for the
   // pointer. The languages registry is offset-addressed, so the conversion
   // happens at this query boundary only.
-  let snapshot = ctx.model.snapshot
-  let start = snapshot.offset_at_position(ctx.anchor_range.get_start_position())
-  let end = snapshot.offset_at_position(ctx.anchor_range.get_end_position())
+  let start = ctx.model.get_offset_at(ctx.anchor_range.get_start_position())
+  let end = ctx.model.get_offset_at(ctx.anchor_range.get_end_position())
   match
     self.languages.hover_at(ctx.model, (start + end) / 2, self.log_service) {
     Some(hover) =>

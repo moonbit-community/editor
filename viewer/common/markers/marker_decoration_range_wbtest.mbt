@@ -27,39 +27,44 @@ fn make_marker(
 }
 
 ///|
+fn wb_range_model(text : String) -> @model.TextModel {
+  TextModel(@base_common.Uri::memory("markers.mbt"), "", "moonbit", 1, "", text)
+}
+
+///|
 test "create_decoration_range branch 1: hint truncated to start line +2" {
-  let snapshot = @model.TextSnapshot("hello world\nsecond\nthird")
+  let model = wb_range_model("hello world\nsecond\nthird")
   // multi-line hint, no tags → single line, endColumn = startColumn + 2
   let marker = make_marker(Hint, 1, 3, 3, 5)
-  assert_true(create_decoration_range(snapshot, marker) == Range(1, 3, 1, 5))
+  assert_true(create_decoration_range(model, marker) == Range(1, 3, 1, 5))
 }
 
 ///|
 test "create_decoration_range branch 3: empty range expands to word" {
-  let snapshot = @model.TextSnapshot("hello world")
+  let model = wb_range_model("hello world")
   let marker = make_marker(Error, 1, 3, 1, 3)
-  assert_true(create_decoration_range(snapshot, marker) == Range(1, 1, 1, 6))
+  assert_true(create_decoration_range(model, marker) == Range(1, 1, 1, 6))
 }
 
 ///|
 test "create_decoration_range branch 3: empty range on empty line kept 1ch" {
-  let snapshot = @model.TextSnapshot("hello\n\nworld")
+  let model = wb_range_model("hello\n\nworld")
   let marker = make_marker(Error, 2, 1, 2, 1)
-  assert_true(create_decoration_range(snapshot, marker) == Range(2, 1, 2, 1))
+  assert_true(create_decoration_range(model, marker) == Range(2, 1, 2, 1))
 }
 
 ///|
 test "create_decoration_range branch 3: empty range behind eol kept 1ch" {
-  let snapshot = @model.TextSnapshot("hello")
+  let model = wb_range_model("hello")
   let marker = make_marker(Error, 1, 6, 1, 6)
-  assert_true(create_decoration_range(snapshot, marker) == Range(1, 6, 1, 6))
+  assert_true(create_decoration_range(model, marker) == Range(1, 6, 1, 6))
 }
 
 ///|
 test "create_decoration_range branch 4: full-line marker snaps to first non-ws" {
-  let snapshot = @model.TextSnapshot("    code here")
+  let model = wb_range_model("    code here")
   let marker = make_marker(Error, 1, 1, 1, max_value_column)
-  let ret = create_decoration_range(snapshot, marker)
+  let ret = create_decoration_range(model, marker)
   // line max column is 14 ("    code here" is 13 chars); start snaps to col 5.
   assert_true(ret == Range(1, 5, 1, 14))
   // Monaco mutates rawMarker.startColumn (markerDecorationsService.ts:220)

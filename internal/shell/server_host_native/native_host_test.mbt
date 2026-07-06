@@ -266,7 +266,7 @@ async test "native workspace language provider bridges remote documents to file 
     match
       provider.provide_hover(
         model,
-        model.snapshot.position_at_offset(7),
+        model.get_position_at(7),
         @language.CancellationToken::none(),
       ) {
       Some(hover) => {
@@ -281,7 +281,7 @@ async test "native workspace language provider bridges remote documents to file 
     match
       provider.provide_definition(
         model,
-        model.snapshot.position_at_offset(7),
+        model.get_position_at(7),
         @language.CancellationToken::none(),
       ) {
       Some(location) => {

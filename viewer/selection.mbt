@@ -69,16 +69,15 @@ pub fn Viewer::set_selection(
   // `validateRange` on the anchor, `validatePosition` on the active end.
   // `set_model_cursor_state` trusts its input (its hit-test/converter callers
   // are pre-validated), so the clamp must happen here at the boundary.
-  let snapshot = model.snapshot
   let anchor = selection.get_selection_start()
-  let anchor_range = snapshot.validate_range(
+  let anchor_range = model.validate_range(
     Range(anchor.line_number, anchor.column, anchor.line_number, anchor.column),
   )
   let new_state = @cursor.SingleCursorState::new(
     Position(anchor_range.start_line_number, anchor_range.start_column),
     Position(anchor_range.end_line_number, anchor_range.end_column),
     Simple,
-    snapshot.validate_position(selection.get_position()),
+    model.validate_position(selection.get_position()),
   )
   // `_emitStateChangedIfNecessary`'s equality gate (cursor.ts:404-406):
   // setting the exact current state fires nothing. The view state is derived
@@ -212,8 +211,8 @@ fn selection_normalized_range(
   snapshot : @model.TextSnapshot,
 ) -> @base_common.OffsetRange {
   OffsetRange(
-    snapshot.offset_at_position(selection.start()),
-    snapshot.offset_at_position(selection.end()),
+    snapshot.get_offset_at(selection.start().line_number, selection.start().column),
+    snapshot.get_offset_at(selection.end().line_number, selection.end().column),
   )
 }
 

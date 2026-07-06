@@ -638,7 +638,7 @@ impl @language.HoverProvider for LspLanguageProvider with fn provide_hover(
   _token,
 ) {
   let document = document_from_text_model(model)
-  let offset = model.snapshot.offset_at_position(position)
+  let offset = model.get_offset_at(position)
   self.client.hover_at(document, offset)
 }
 
@@ -650,7 +650,7 @@ impl @language.DefinitionProvider for LspLanguageProvider with fn provide_defini
   _token,
 ) {
   let document = document_from_text_model(model)
-  let offset = model.snapshot.offset_at_position(position)
+  let offset = model.get_offset_at(position)
   self.client.definition_at(document, offset)
 }
 
@@ -662,7 +662,7 @@ impl @language.ReferencesProvider for LspLanguageProvider with fn provide_refere
   _token,
 ) {
   let document = document_from_text_model(model)
-  let offset = model.snapshot.offset_at_position(position)
+  let offset = model.get_offset_at(position)
   self.client.references_at(document, offset)
 }
 

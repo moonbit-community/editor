@@ -143,13 +143,37 @@ pub fn get_word_at_text(
 }
 
 ///|
-/// `TextModel.getWordAtPosition` (textModel.ts), default word definition: the
-/// word at `position` on its line, or `None`.
-pub fn TextSnapshot::get_word_at_position(
-  self : TextSnapshot,
+/// `TextModel.getWordAtPosition` (`textModel.ts:2108`), default word
+/// definition: the word at `position` on its line, or `None`.
+pub fn TextModel::get_word_at_position(
+  self : TextModel,
   position : @base_common.Position,
 ) -> WordAtPosition? {
   let position = self.validate_position(position)
-  let line_content = self.line_text(position.line_number - 1)
+  let line_content = self.get_line_content(position.line_number)
   get_word_at_text(position.column, line_content, 0)
+}
+
+///|
+/// `TextModel.getWordUntilPosition` (`textModel.ts:2112`, body
+/// `tokenizationTextModelPart.ts:342-352`): the word at `position` truncated
+/// at the position's column, or an empty word anchored there. Deviation: the
+/// position is surrogate-validated up front (Monaco truncates with the raw
+/// column, which can split a pair — MoonBit slicing raises on that).
+pub fn TextModel::get_word_until_position(
+  self : TextModel,
+  position : @base_common.Position,
+) -> WordAtPosition {
+  let position = self.validate_position(position)
+  match self.get_word_at_position(position) {
+    None =>
+      { word: "", start_column: position.column, end_column: position.column }
+    Some(word_at_position) =>
+      {
+        word: word_at_position.word[0:position.column -
+          word_at_position.start_column].to_owned(),
+        start_column: word_at_position.start_column,
+        end_column: position.column,
+      }
+  }
 }

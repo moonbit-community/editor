@@ -118,16 +118,6 @@ pub(all) struct DecorationToRender {
   z_index : Int
 } derive(Eq, @debug.Debug)
 
-pub struct FoldingModel {
-  folding_ranges : Array[@language.FoldingRange]
-  hidden_ranges : Array[HiddenRange]
-} derive(@debug.Debug)
-pub fn FoldingModel::folding_ranges(Self) -> Array[@language.FoldingRange]
-pub fn FoldingModel::from_folded_ranges(Array[@language.FoldingRange], Int) -> Self
-pub fn FoldingModel::hidden_ranges(Self) -> Array[HiddenRange]
-pub fn FoldingModel::is_line_hidden(Self, Int) -> Bool
-pub fn FoldingModel::visible_line_count(Self, Int) -> Int
-
 pub struct FrameSource {
   tokenized : TokenizedDocument
   providers : @language.ProviderResult
@@ -355,10 +345,12 @@ pub struct TokenPresentation {
 
 pub struct TokenizedDocument {
   snapshot : @model.TextSnapshot
+  language_id : String
+  version : Int
   token_count : Int
   line_tokens : Array[LineTokens]
 }
-pub fn TokenizedDocument::build(@model.TextSnapshot, Array[@syntax.Token]) -> Self
+pub fn TokenizedDocument::build(@model.TextSnapshot, Array[@syntax.Token], language_id? : String, version? : Int) -> Self
 pub fn TokenizedDocument::line_tokens_for_line(Self, Int) -> LineTokens
 
 pub struct ViewModel {
@@ -383,7 +375,6 @@ pub fn ViewModel::render_frame(Self, FrameViewport) -> RenderFrame
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
 pub fn ViewModel::with_options(FrameSource, ViewModelOptions) -> Self
-pub fn ViewModel::with_options_and_folding(FrameSource, ViewModelOptions, FoldingModel) -> Self
 
 pub(all) enum ViewModelCoordinatesConverter {
   Identity(IdentityCoordinatesConverter)
@@ -437,7 +428,6 @@ pub fn ViewModelLinesFromModelAsIs::projected_text_line(Self, Int) -> ProjectedT
 pub fn ViewModelLinesFromModelAsIs::render_line(Self, Int) -> RenderLine
 pub fn ViewModelLinesFromModelAsIs::render_model_line(Self, Int) -> RenderLine
 pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
-pub fn ViewModelLinesFromModelAsIs::with_folding_model(FrameSource, FoldingModel) -> Self
 
 pub struct ViewModelLinesFromProjectedModel {
   base : ViewModelLinesFromModelAsIs

@@ -22,7 +22,6 @@ test "tokens bucket per line and multi-line tokens cover every line" {
       #|line comment */
       #|let b = 2
     ),
-    language_id="moonbit",
   )
   // Hand-built tokens with doc offsets: the block comment spans lines 1-2.
   let comment_range = @base_common.OffsetRange(10, 32)

@@ -20,7 +20,7 @@ impl @language.HoverProvider for ComponentHoverProvider with fn provide_hover(
   _token,
 ) {
   let needle = "keeps"
-  let offset = model.snapshot.offset_at_position(position)
+  let offset = model.get_offset_at(position)
   match model.snapshot.text.find(needle) {
     Some(start) =>
       if offset >= start && offset < start + needle.length() {

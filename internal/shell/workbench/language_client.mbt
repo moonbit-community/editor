@@ -55,7 +55,7 @@ impl @language.HoverProvider for RemoteLanguageClient with fn provide_hover(
   position,
   _token,
 ) {
-  let offset = model.snapshot.offset_at_position(position)
+  let offset = model.get_offset_at(position)
   let response = protocol_request("hover", id => {
     Hover({ id, uri: model.uri, document_revision: model.revision, offset })
   })

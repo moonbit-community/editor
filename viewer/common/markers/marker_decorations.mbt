@@ -56,7 +56,7 @@ fn MarkerDecorations::update(
     }
   }
   let new_decorations : Array[@model.DeltaDecoration] = added.map(marker => {
-    let range = create_decoration_range(self.model.snapshot, marker)
+    let range = create_decoration_range(self.model, marker)
     { range, options: create_decoration_option(marker) }
   })
   let ids = self.model.delta_decorations(old_ids, new_decorations)

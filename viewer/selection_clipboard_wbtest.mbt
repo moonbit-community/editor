@@ -9,8 +9,8 @@ fn selection_from_offsets(
   focus_offset : Int,
 ) -> @view_model.Selection {
   @view_model.Selection::new(
-    snapshot.position_at_offset(anchor_offset),
-    snapshot.position_at_offset(focus_offset),
+    snapshot.get_position_at(anchor_offset),
+    snapshot.get_position_at(focus_offset),
   )
 }
 
@@ -27,7 +27,7 @@ test "selection normalizes model ranges and copies plain source text" {
 ///|
 test "selection rich copy escapes source text" {
   let snapshot = @model.TextSnapshot("a < b && c")
-  let selection = selection_from_offsets(snapshot, 0, snapshot.length())
+  let selection = selection_from_offsets(snapshot, 0, snapshot.get_length())
   assert_eq(
     selection_rich_text_to_copy(selection, snapshot),
     "<pre class=\"readonly-editor-copy\">a &lt; b &amp;&amp; c</pre>",
@@ -37,6 +37,6 @@ test "selection rich copy escapes source text" {
 ///|
 test "selection copy uses model text not injected text" {
   let snapshot = @model.TextSnapshot("let x = 1")
-  let selection = selection_from_offsets(snapshot, 0, snapshot.length())
+  let selection = selection_from_offsets(snapshot, 0, snapshot.get_length())
   assert_eq(selection_plain_text_to_copy(selection, snapshot), "let x = 1")
 }

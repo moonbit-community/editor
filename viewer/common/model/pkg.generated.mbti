@@ -212,48 +212,66 @@ pub fn TextModel::get_all_margin_decorations(Self, owner_id? : Int) -> Array[Mod
 pub fn TextModel::get_decoration_options(Self, String) -> Decoration?
 pub fn TextModel::get_decoration_range(Self, String) -> @common.Range?
 pub fn TextModel::get_decorations_in_range(Self, @common.Range, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool, only_margin_decorations? : Bool) -> Array[ModelDecoration]
+pub fn TextModel::get_full_model_range(Self) -> @common.Range
 pub fn TextModel::get_injected_text_decorations(Self, owner_id? : Int) -> Array[ModelDecoration]
 pub fn TextModel::get_injected_text_in_interval(Self, Int, Int, owner_id? : Int) -> Array[ModelDecoration]
+pub fn TextModel::get_language_id(Self) -> String
+pub fn TextModel::get_line_content(Self, Int) -> String
+pub fn TextModel::get_line_count(Self) -> Int
 pub fn TextModel::get_line_decorations(Self, Int, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool) -> Array[ModelDecoration]
+pub fn TextModel::get_line_first_non_whitespace_column(Self, Int) -> Int
+pub fn TextModel::get_line_last_non_whitespace_column(Self, Int) -> Int
+pub fn TextModel::get_line_length(Self, Int) -> Int
+pub fn TextModel::get_line_max_column(Self, Int) -> Int
+pub fn TextModel::get_line_min_column(Self, Int) -> Int
+pub fn TextModel::get_lines_content(Self) -> Array[String]
 pub fn TextModel::get_lines_decorations(Self, Int, Int, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool, only_margin_decorations? : Bool) -> Array[ModelDecoration]
+pub fn TextModel::get_offset_at(Self, @common.Position) -> Int
 pub fn TextModel::get_overview_ruler_decorations(Self, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool) -> Array[ModelDecoration]
+pub fn TextModel::get_position_at(Self, Int) -> @common.Position
 pub fn TextModel::get_range_at(Self, Int, Int) -> @common.Range
+pub fn TextModel::get_value(Self) -> String
+pub fn TextModel::get_value_in_range(Self, @common.Range) -> String
+pub fn TextModel::get_value_length(Self) -> Int
+pub fn TextModel::get_value_length_in_range(Self, @common.Range) -> Int
 pub fn TextModel::get_version_id(Self) -> Int
+pub fn TextModel::get_word_at_position(Self, @common.Position) -> WordAtPosition?
+pub fn TextModel::get_word_until_position(Self, @common.Position) -> WordAtPosition
+pub fn TextModel::might_contain_rtl(Self) -> Bool
+pub fn TextModel::modify_position(Self, @common.Position, Int) -> @common.Position
 pub fn TextModel::on_did_change_decorations(Self, (ModelDecorationsChangedEvent) -> Unit) -> @common.Disposable
 pub fn TextModel::remove_all_decorations_with_owner_id(Self, Int) -> Unit
 pub fn TextModel::same_identity_and_version(Self, Self) -> Bool
 pub fn TextModel::snapshot(Self) -> TextSnapshot
+pub fn TextModel::validate_position(Self, @common.Position) -> @common.Position
+pub fn TextModel::validate_range(Self, @common.Range) -> @common.Range
+pub fn TextModel::validate_range_relaxed(Self, @common.Range) -> @common.Range
 
 pub(all) struct TextSnapshot {
   text : String
-  language_id : String
-  version : Int
   line_starts : Array[Int]
 } derive(@debug.Debug)
-pub fn TextSnapshot::TextSnapshot(String, language_id? : String, version? : Int) -> Self
+pub fn TextSnapshot::TextSnapshot(String) -> Self
+pub fn TextSnapshot::get_length(Self) -> Int
+pub fn TextSnapshot::get_line_content(Self, Int) -> String
 pub fn TextSnapshot::get_line_first_non_whitespace_column(Self, Int) -> Int
 pub fn TextSnapshot::get_line_last_non_whitespace_column(Self, Int) -> Int
+pub fn TextSnapshot::get_line_length(Self, Int) -> Int
 pub fn TextSnapshot::get_line_max_column(Self, Int) -> Int
+pub fn TextSnapshot::get_offset_at(Self, Int, Int) -> Int
+pub fn TextSnapshot::get_position_at(Self, Int) -> @common.Position
 pub fn TextSnapshot::get_value(Self) -> String
 pub fn TextSnapshot::get_value_in_range(Self, @common.Range) -> String
 pub fn TextSnapshot::get_value_length_in_range(Self, @common.Range) -> Int
-pub fn TextSnapshot::get_word_at_position(Self, @common.Position) -> WordAtPosition?
-pub fn TextSnapshot::length(Self) -> Int
 pub fn TextSnapshot::line_at_offset(Self, Int) -> Int
 pub fn TextSnapshot::line_count(Self) -> Int
 pub fn TextSnapshot::line_end_offset(Self, Int) -> Int
 pub fn TextSnapshot::line_start_offset(Self, Int) -> Int
 pub fn TextSnapshot::line_text(Self, Int) -> String
 pub fn TextSnapshot::might_contain_rtl(Self) -> Bool
-pub fn TextSnapshot::modify_position(Self, @common.Position, Int) -> @common.Position
-pub fn TextSnapshot::offset_at_position(Self, @common.Position) -> Int
 pub fn TextSnapshot::offset_range_of(Self, @common.Range) -> @common.OffsetRange
-pub fn TextSnapshot::position_at_offset(Self, Int) -> @common.Position
 pub fn TextSnapshot::range_of(Self, @common.OffsetRange) -> @common.Range
 pub fn TextSnapshot::slice(Self, @common.OffsetRange) -> String
-pub fn TextSnapshot::validate_position(Self, @common.Position) -> @common.Position
-pub fn TextSnapshot::validate_range(Self, @common.Range) -> @common.Range
-pub fn TextSnapshot::validate_range_relaxed(Self, @common.Range) -> @common.Range
 
 pub(all) enum TrackedRangeStickiness {
   AlwaysGrowsWhenTypingAtEdges

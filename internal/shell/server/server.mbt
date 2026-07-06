@@ -355,7 +355,7 @@ pub async fn RemoteServer::hover(
         revision: document.revision,
         hover: self.hover_provider.provide_hover(
           model,
-          model.snapshot.position_at_offset(request.offset),
+          model.get_position_at(request.offset),
           @language.CancellationToken::none(),
         ),
       })
@@ -406,7 +406,7 @@ pub async fn RemoteServer::definition(
         revision: document.revision,
         location: self.definition_provider.provide_definition(
           model,
-          model.snapshot.position_at_offset(request.offset),
+          model.get_position_at(request.offset),
           @language.CancellationToken::none(),
         ),
       })
@@ -427,7 +427,7 @@ pub async fn RemoteServer::references(
       let model = text_model_from_document(document)
       let locations = self.references_provider.provide_references(
         model,
-        model.snapshot.position_at_offset(request.offset),
+        model.get_position_at(request.offset),
         @language.CancellationToken::none(),
       )
       let references = []
@@ -532,7 +532,7 @@ pub async fn RemoteServer::inlay_hints(
         revision: document.revision,
         inlay_hints: self.inlay_hints_provider.provide_inlay_hints(
           model,
-          OffsetRange(0, model.snapshot.length()),
+          OffsetRange(0, model.get_value_length()),
           @language.CancellationToken::none(),
         ),
       })

@@ -1,6 +1,6 @@
 ///|
 fn render_tokens(source : String) -> String {
-  let doc = @model.TextSnapshot(source, language_id="json")
+  let doc = @model.TextSnapshot(source)
   let tokens = @syntax.tokenize_document(doc, @lang_json.JsonTokenizer::new())
   let lines : Array[String] = []
   for token in tokens {

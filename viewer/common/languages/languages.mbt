@@ -161,7 +161,7 @@ pub async fn Languages::hover_at(
   offset : Int,
   log_service : @log.LogService,
 ) -> @language.Hover? noraise {
-  let position = model.snapshot.position_at_offset(offset)
+  let position = model.get_position_at(offset)
   let token = @language.CancellationToken::none()
   for index in 0..<self.hover_provider.entries.length() {
     let entry = self.hover_provider.entries[index]
@@ -244,7 +244,7 @@ pub async fn Languages::inlay_hints_for_model(
 ) -> Array[@language.InlayHint] noraise {
   let hints : Array[@language.InlayHint] = []
   let token = @language.CancellationToken::none()
-  let full_range = @base_common.OffsetRange(0, model.snapshot.length())
+  let full_range = @base_common.OffsetRange(0, model.get_value_length())
   for index in 0..<self.inlay_hints_provider.entries.length() {
     let entry = self.inlay_hints_provider.entries[index]
     if !entry.active.val || !entry.selector.matches(model) {

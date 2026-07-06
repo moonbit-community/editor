@@ -36,7 +36,7 @@ pub fn Viewer::get_contribution(
 pub fn Viewer::get_value(self : Viewer) -> String {
   match self.text_model {
     None => ""
-    Some(model) => model.snapshot.get_value()
+    Some(model) => model.get_value()
   }
 }
 
@@ -169,10 +169,10 @@ pub fn Viewer::get_visible_column_from_position(
   position : @base_common.Position,
 ) -> Int {
   guard self.text_model is Some(model) else { return position.column }
-  let position = model.snapshot.validate_position(position)
+  let position = model.validate_position(position)
   let tab_size = self.options.tab_size
   @core.visible_column_from_column(
-    model.snapshot.line_text(position.line_number - 1),
+    model.get_line_content(position.line_number),
     position.column,
     tab_size,
   ) +
@@ -187,10 +187,10 @@ pub fn Viewer::get_statusbar_column(
   position : @base_common.Position,
 ) -> Int {
   guard self.text_model is Some(model) else { return position.column }
-  let position = model.snapshot.validate_position(position)
+  let position = model.validate_position(position)
   let tab_size = self.options.tab_size
   @core.to_statusbar_column(
-    model.snapshot.line_text(position.line_number - 1),
+    model.get_line_content(position.line_number),
     position.column,
     tab_size,
   )
@@ -295,7 +295,7 @@ fn Viewer::model_to_view_position(
   guard (self.text_model, self.view_model) is (Some(model), Some(view_model)) else {
     return None
   }
-  let model_position = model.snapshot.validate_position(
+  let model_position = model.validate_position(
     Position(line_number, column),
   )
   Some(
@@ -419,7 +419,7 @@ pub fn Viewer::get_offset_for_column(
     is (Some(model), Some(view_model), Some(view)) else {
     return -1.0
   }
-  let model_position = model.snapshot.validate_position(
+  let model_position = model.validate_position(
     Position(line_number, column),
   )
   let view_position = view_model
@@ -439,9 +439,9 @@ pub fn Viewer::get_width_of_line(self : Viewer, line_number : Int) -> Double {
     is (Some(model), Some(view_model), Some(view)) else {
     return -1.0
   }
-  let line_count = model.snapshot.line_count()
+  let line_count = model.get_line_count()
   let clamped_line = @base_common.clamp_int(line_number, 1, line_count)
-  let max_column = model.snapshot.line_text(clamped_line - 1).length() + 1
+  let max_column = model.get_line_max_column(clamped_line)
   let view_position = view_model
     .coordinates_converter()
     .model_position_to_view_position(Position(clamped_line, max_column))
@@ -465,7 +465,7 @@ pub fn Viewer::get_scrolled_visible_position(
     is (Some(model), Some(view_model), Some(view)) else {
     return None
   }
-  let position = model.snapshot.validate_position(position)
+  let position = model.validate_position(position)
   let content_left = self.read_api_content_left()
   let top = self.vertical_offset_for_position(
       position.line_number,

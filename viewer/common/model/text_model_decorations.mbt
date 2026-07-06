@@ -781,7 +781,7 @@ pub fn TextModel::get_decorations_in_range(
   filter_font_decorations? : Bool = false,
   only_margin_decorations? : Bool = false,
 ) -> Array[ModelDecoration] {
-  let validated_range = self.snapshot.validate_range(range)
+  let validated_range = self.validate_range(range)
   self.get_decorations_in_range_impl(
     validated_range, owner_id, filter_out_validation, filter_font_decorations, only_margin_decorations,
   )
@@ -863,12 +863,11 @@ fn TextModel::get_decorations_in_range_impl(
   filter_font_decorations : Bool,
   only_margin_decorations : Bool,
 ) -> Array[ModelDecoration] {
-  let start_offset = self.snapshot.offset_at_position(
-    filter_range.get_start_position(),
+  let start_offset = self.snapshot.get_offset_at(
+    filter_range.start_line_number,
+    filter_range.start_column,
   )
-  let end_offset = self.snapshot.offset_at_position(
-    filter_range.get_end_position(),
-  )
+  let end_offset = self.snapshot.get_offset_at(filter_range.end_line_number, filter_range.end_column)
   self.decorations_state.decorations_tree.get_all_in_interval(
     self, start_offset, end_offset, filter_owner_id, filter_out_validation, filter_font_decorations,
     only_margin_decorations,
@@ -887,11 +886,12 @@ fn TextModel::change_decoration_impl(
 ) -> Unit {
   let state = self.decorations_state
   guard state.decorations.get(decoration_id) is Some(node) else { return }
-  let range = self.snapshot.validate_range_relaxed(range)
-  let start_offset = self.snapshot.offset_at_position(
-    range.get_start_position(),
+  let range = self.validate_range_relaxed(range)
+  let start_offset = self.snapshot.get_offset_at(
+    range.start_line_number,
+    range.start_column,
   )
-  let end_offset = self.snapshot.offset_at_position(range.get_end_position())
+  let end_offset = self.snapshot.get_offset_at(range.end_line_number, range.end_column)
   state.decorations_tree.delete(node)
   node.reset(self.get_version_id(), start_offset, end_offset, Some(range))
   state.decorations_tree.insert(node)
@@ -980,16 +980,15 @@ fn TextModel::delta_decorations_impl(
       }
       // (4) initialize node
       let new_decoration = new_decorations[new_decoration_index]
-      let range = self.snapshot.validate_range_relaxed(new_decoration.range)
+      let range = self.validate_range_relaxed(new_decoration.range)
       // _normalizeOptions: the single Decoration constructor already
       // normalized (Deviation D5)
       let options = new_decoration.options
-      let start_offset = self.snapshot.offset_at_position(
-        range.get_start_position(),
-      )
-      let end_offset = self.snapshot.offset_at_position(
-        range.get_end_position(),
-      )
+      let start_offset = self.snapshot.get_offset_at(
+    range.start_line_number,
+    range.start_column,
+  )
+      let end_offset = self.snapshot.get_offset_at(range.end_line_number, range.end_column)
       live_node.owner_id = owner_id
       live_node.reset(version_id, start_offset, end_offset, Some(range))
       live_node.set_options(options)

@@ -1,28 +1,28 @@
 ///|
-/// Immutable text plus cached line starts. Offsets and columns are UTF-16
-/// code units so browser, Monaco, and LSP-facing code share one convention.
+/// Immutable text plus cached line starts, the readonly analog of Monaco's
+/// text buffer: the field pair is the piece tree's leaf (`StringBuffer
+/// { buffer, lineStarts }`, `pieceTreeBase.ts:147`) and the 1-based methods
+/// are the `IReadonlyTextBuffer` read surface (`model.ts:1524`). Offsets and
+/// columns are UTF-16 code units so browser, Monaco, and LSP-facing code
+/// share one convention. Document identity (language id, version) lives on
+/// `TextModel`, not the buffer — same split as Monaco.
 pub(all) struct TextSnapshot {
   text : String
-  language_id : String
-  version : Int
   line_starts : Array[Int]
 } derive(Debug)
 
 ///|
 /// Builds a snapshot and derives the line-start table used by all position
 /// conversion helpers.
-pub fn TextSnapshot::TextSnapshot(
-  text : String,
-  language_id? : String = "moonbit",
-  version? : Int = 1,
-) -> TextSnapshot {
+pub fn TextSnapshot::TextSnapshot(text : String) -> TextSnapshot {
   let line_starts = build_line_starts(text)
-  { text, language_id, version, line_starts }
+  { text, line_starts }
 }
 
 ///|
 /// Snapshot length in the repo's JavaScript-compatible UTF-16 indexing model.
-pub fn TextSnapshot::length(self : TextSnapshot) -> Int {
+/// Mirrors `IReadonlyTextBuffer.getLength`.
+pub fn TextSnapshot::get_length(self : TextSnapshot) -> Int {
   self.text.length()
 }
 
@@ -48,7 +48,7 @@ pub fn TextSnapshot::line_end_offset(self : TextSnapshot, line : Int) -> Int {
   let raw_end = if line + 1 < self.line_count() {
     self.line_starts[line + 1] - 1
   } else {
-    self.length()
+    self.get_length()
   }
   if raw_end > self.line_starts[line] && self.text[raw_end - 1].to_int() == 13 {
     raw_end - 1
@@ -58,11 +58,24 @@ pub fn TextSnapshot::line_end_offset(self : TextSnapshot, line : Int) -> Int {
 }
 
 ///|
-/// Text of one logical line without its line break.
+/// Text of one logical line without its line break. Zero-based, part of the
+/// offset-centric internal layer (see the README parity ledger); the
+/// `IReadonlyTextBuffer` surface is `get_line_content`.
 pub fn TextSnapshot::line_text(self : TextSnapshot, line : Int) -> String {
   let start = self.line_start_offset(line)
   let end = self.line_end_offset(line)
   self.text[start:end].to_owned()
+}
+
+///|
+/// Text of the one-based `line_number` without its line break, clamped into
+/// the snapshot. Mirrors `IReadonlyTextBuffer.getLineContent` (the viewer
+/// clamps where Monaco throws `Illegal value for lineNumber`).
+pub fn TextSnapshot::get_line_content(
+  self : TextSnapshot,
+  line_number : Int,
+) -> String {
+  self.line_text(line_number - 1)
 }
 
 ///|
@@ -135,8 +148,8 @@ pub fn TextSnapshot::slice(
   self : TextSnapshot,
   range : @base_common.OffsetRange,
 ) -> String {
-  let start = @base_common.clamp_int(range.start, 0, self.length())
-  let end = @base_common.clamp_int(range.end_exclusive, start, self.length())
+  let start = @base_common.clamp_int(range.start, 0, self.get_length())
+  let end = @base_common.clamp_int(range.end_exclusive, start, self.get_length())
   self.text[start:end].to_owned()
 }
 
@@ -144,7 +157,7 @@ pub fn TextSnapshot::slice(
 /// Zero-based line containing `offset`, with out-of-range offsets clamped to
 /// the snapshot.
 pub fn TextSnapshot::line_at_offset(self : TextSnapshot, offset : Int) -> Int {
-  let offset = @base_common.clamp_int(offset, 0, self.length())
+  let offset = @base_common.clamp_int(offset, 0, self.get_length())
   let mut found = 0
   for i in 0..<self.line_starts.length() {
     if self.line_starts[i] <= offset {
@@ -157,12 +170,13 @@ pub fn TextSnapshot::line_at_offset(self : TextSnapshot, offset : Int) -> Int {
 ///|
 /// Converts an offset to a one-based line/column `Position` (Monaco's
 /// convention; this is the offset↔position boundary, so it adds the +1 on both
-/// axes that keeps the rest of the viewer in 1-based coordinates).
-pub fn TextSnapshot::position_at_offset(
+/// axes that keeps the rest of the viewer in 1-based coordinates). Mirrors
+/// `IReadonlyTextBuffer.getPositionAt`.
+pub fn TextSnapshot::get_position_at(
   self : TextSnapshot,
   offset : Int,
 ) -> @base_common.Position {
-  let offset = @base_common.clamp_int(offset, 0, self.length())
+  let offset = @base_common.clamp_int(offset, 0, self.get_length())
   let line = self.line_at_offset(offset)
   { line_number: line + 1, column: offset - self.line_starts[line] + 1 }
 }
@@ -175,8 +189,8 @@ pub fn TextSnapshot::range_of(
   offset_range : @base_common.OffsetRange,
 ) -> @base_common.Range {
   @base_common.Range::from_positions(
-    self.position_at_offset(offset_range.start),
-    self.position_at_offset(offset_range.end_exclusive),
+    self.get_position_at(offset_range.start),
+    self.get_position_at(offset_range.end_exclusive),
   )
 }
 
@@ -187,32 +201,31 @@ pub fn TextSnapshot::offset_range_of(
   range : @base_common.Range,
 ) -> @base_common.OffsetRange {
   OffsetRange(
-    self.offset_at_position(range.get_start_position()),
-    self.offset_at_position(range.get_end_position()),
+    self.get_offset_at(range.start_line_number, range.start_column),
+    self.get_offset_at(range.end_line_number, range.end_column),
   )
 }
 
 ///|
-/// Converts a one-based line/column `Position` to a clamped document offset,
-/// undoing the +1 this boundary added in `position_at_offset`.
-pub fn TextSnapshot::offset_at_position(
+/// Converts a one-based line/column pair to a clamped document offset,
+/// undoing the +1 this boundary added in `get_position_at`. Mirrors
+/// `IReadonlyTextBuffer.getOffsetAt` (same arity; the `Position`-taking
+/// form is `TextModel::get_offset_at`).
+pub fn TextSnapshot::get_offset_at(
   self : TextSnapshot,
-  position : @base_common.Position,
+  line_number : Int,
+  column : Int,
 ) -> Int {
-  let line = @base_common.clamp_int(
-    position.line_number - 1,
-    0,
-    self.line_count() - 1,
-  )
+  let line = @base_common.clamp_int(line_number - 1, 0, self.line_count() - 1)
   let start = self.line_start_offset(line)
   let end = self.line_end_offset(line)
-  @base_common.clamp_int(start + position.column - 1, start, end)
+  @base_common.clamp_int(start + column - 1, start, end)
 }
 
 ///|
 /// Length, in UTF-16 code units, of `line`'s content (1-based, EOL excluded).
-/// Mirrors Monaco's `getLineLength`.
-fn TextSnapshot::get_line_length(self : TextSnapshot, line : Int) -> Int {
+/// Mirrors `IReadonlyTextBuffer.getLineLength`.
+pub fn TextSnapshot::get_line_length(self : TextSnapshot, line : Int) -> Int {
   self.line_text(line - 1).length()
 }
 
@@ -234,140 +247,6 @@ fn TextSnapshot::get_line_char_code(
   index : Int,
 ) -> Int {
   self.line_text(line - 1)[index].to_int()
-}
-
-///|
-/// Core of `validate_position` (Monaco's `_validatePosition`). When `surrogate`
-/// is true, a column landing in the middle of a high-low surrogate pair is
-/// moved to before the pair. `surrogate=false` is Monaco's `Relaxed` mode (a
-/// plain clamp). Inputs are integers, so Monaco's `NaN`/float coercion is moot.
-fn TextSnapshot::do_validate_position(
-  self : TextSnapshot,
-  line_number : Int,
-  column : Int,
-  surrogate : Bool,
-) -> @base_common.Position {
-  let line_count = self.line_count()
-  if line_number < 1 {
-    return Position(1, 1)
-  }
-  if line_number > line_count {
-    return Position(line_count, self.get_line_max_column(line_count))
-  }
-  if column <= 1 {
-    return Position(line_number, 1)
-  }
-  let max_column = self.get_line_max_column(line_number)
-  if column >= max_column {
-    return Position(line_number, max_column)
-  }
-  if surrogate {
-    // column > 1 here; if it would split a high-low pair, move before it.
-    let char_code_before = self.get_line_char_code(line_number, column - 2)
-    if @base_common.is_high_surrogate(char_code_before) {
-      return Position(line_number, column - 1)
-    }
-  }
-  Position(line_number, column)
-}
-
-///|
-/// Clamps a position into the snapshot, snapping out of the middle of a
-/// surrogate pair. Mirrors Monaco's `validatePosition`.
-pub fn TextSnapshot::validate_position(
-  self : TextSnapshot,
-  position : @base_common.Position,
-) -> @base_common.Position {
-  self.do_validate_position(position.line_number, position.column, true)
-}
-
-///|
-/// Clamps a range into the snapshot without surrogate snapping. Mirrors
-/// Monaco's `_validateRangeRelaxedNoAllocations` (`textModel.ts:925`) — the
-/// decoration paths use this cheaper clamp instead of `validateRange`.
-pub fn TextSnapshot::validate_range_relaxed(
-  self : TextSnapshot,
-  range : @base_common.Range,
-) -> @base_common.Range {
-  let start = self.do_validate_position(
-    range.start_line_number,
-    range.start_column,
-    false,
-  )
-  let end = self.do_validate_position(
-    range.end_line_number,
-    range.end_column,
-    false,
-  )
-  Range(start.line_number, start.column, end.line_number, end.column)
-}
-
-///|
-/// Clamps a range into the snapshot, expanding out of any surrogate pair its
-/// ends land inside. Mirrors Monaco's `validateRange`.
-pub fn TextSnapshot::validate_range(
-  self : TextSnapshot,
-  range : @base_common.Range,
-) -> @base_common.Range {
-  let start = self.do_validate_position(
-    range.start_line_number,
-    range.start_column,
-    false,
-  )
-  let end = self.do_validate_position(
-    range.end_line_number,
-    range.end_column,
-    false,
-  )
-  let sl = start.line_number
-  let sc = start.column
-  let el = end.line_number
-  let ec = end.column
-  let char_before_start = if sc > 1 {
-    self.get_line_char_code(sl, sc - 2)
-  } else {
-    0
-  }
-  let char_before_end = if ec > 1 && ec <= self.get_line_length(el) {
-    self.get_line_char_code(el, ec - 2)
-  } else {
-    0
-  }
-  let start_inside = @base_common.is_high_surrogate(char_before_start)
-  let end_inside = @base_common.is_high_surrogate(char_before_end)
-  if !start_inside && !end_inside {
-    return Range(sl, sc, el, ec)
-  }
-  if sl == el && sc == ec {
-    // do not expand a collapsed range, simply move it to a valid location
-    return Range(sl, sc - 1, el, ec - 1)
-  }
-  if start_inside && end_inside {
-    return Range(sl, sc - 1, el, ec + 1)
-  }
-  if start_inside {
-    return Range(sl, sc - 1, el, ec)
-  }
-  Range(sl, sc, el, ec + 1)
-}
-
-///|
-/// Position `offset` UTF-16 code units away from `position`, clamped to the
-/// snapshot. Mirrors Monaco's `modifyPosition` (relaxed-validate, then offset
-/// round-trip).
-pub fn TextSnapshot::modify_position(
-  self : TextSnapshot,
-  position : @base_common.Position,
-  offset : Int,
-) -> @base_common.Position {
-  let valid = self.do_validate_position(
-    position.line_number,
-    position.column,
-    false,
-  )
-  let candidate = self.offset_at_position(valid) + offset
-  let clamped = @base_common.clamp_int(candidate, 0, self.length())
-  self.position_at_offset(clamped)
 }
 
 ///|

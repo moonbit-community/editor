@@ -24,7 +24,12 @@ fn Viewer::render_current_model(
         Some(tokenizer) => @syntax.tokenize_document(snapshot, tokenizer)
         None => []
       }
-      @view_model.TokenizedDocument::build(snapshot, tokens)
+      @view_model.TokenizedDocument::build(
+        snapshot,
+        tokens,
+        language_id=model.language_id,
+        version=model.version,
+      )
     }
   }
   let tokenize_finished = now_ms()
@@ -138,7 +143,7 @@ fn Viewer::cached_tokenized(
   match (self.frame_source, self.text_model) {
     (Some(source), Some(current)) =>
       if current.same_identity_and_version(model) &&
-        source.tokenized.snapshot.version == model.version {
+        source.tokenized.version == model.version {
         Some(source.tokenized)
       } else {
         None

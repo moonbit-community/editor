@@ -648,13 +648,13 @@ pub fn ViewModel::line_count(self : ViewModel) -> Int {
 ///|
 /// Source document version.
 pub fn ViewModel::version(self : ViewModel) -> Int {
-  self.source.tokenized.snapshot.version
+  self.source.tokenized.version
 }
 
 ///|
 /// Source document language id.
 pub fn ViewModel::language_id(self : ViewModel) -> String {
-  self.source.tokenized.snapshot.language_id
+  self.source.tokenized.language_id
 }
 
 ///|

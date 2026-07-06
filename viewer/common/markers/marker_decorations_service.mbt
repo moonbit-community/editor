@@ -305,7 +305,7 @@ pub fn create_decoration_option(marker : Marker) -> @model.Decoration {
 ///      line) → snap the start to the first non-whitespace column (and mutate the
 ///      raw marker, as Monaco does).
 pub fn create_decoration_range(
-  snapshot : @model.TextSnapshot,
+  model : @model.TextModel,
   raw_marker : Marker,
 ) -> @base_common.Range {
   let mut ret = raw_marker.range()
@@ -316,22 +316,22 @@ pub fn create_decoration_range(
     // * make enough space for three dots
     ret = ret.set_end_position(ret.start_line_number, ret.start_column + 2)
   }
-  ret = snapshot.validate_range(ret)
+  ret = model.validate_range(ret)
   if ret.is_empty() {
-    let last_non_ws = snapshot.get_line_last_non_whitespace_column(
+    let last_non_ws = model.get_line_last_non_whitespace_column(
       ret.start_line_number,
     )
     let max_column = if last_non_ws != 0 {
       last_non_ws
     } else {
-      snapshot.get_line_max_column(ret.start_line_number)
+      model.get_line_max_column(ret.start_line_number)
     }
     if max_column == 1 || ret.end_column >= max_column {
       // empty line or behind eol
       // keep the range as is, it will be rendered 1ch wide
       return ret
     }
-    match snapshot.get_word_at_position(ret.get_start_position()) {
+    match model.get_word_at_position(ret.get_start_position()) {
       Some(word) =>
         ret = Range(
           ret.start_line_number,
@@ -344,7 +344,7 @@ pub fn create_decoration_range(
   } else if raw_marker.end_column == max_value_column &&
     raw_marker.start_column == 1 &&
     ret.start_line_number == ret.end_line_number {
-    let min_column = snapshot.get_line_first_non_whitespace_column(
+    let min_column = model.get_line_first_non_whitespace_column(
       raw_marker.start_line_number,
     )
     if min_column < ret.end_column {

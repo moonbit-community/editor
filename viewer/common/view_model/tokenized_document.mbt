@@ -6,6 +6,12 @@
 /// O(window) instead of O(document x tokens).
 pub struct TokenizedDocument {
   snapshot : @model.TextSnapshot
+  /// Document identity carried alongside the buffer: the snapshot is the
+  /// pure text buffer (Monaco's `StringBuffer` role holds no identity), so
+  /// the per-version token store records which language/version it was
+  /// built for.
+  language_id : String
+  version : Int
   token_count : Int
   // Faithful per-line binary token store (Monaco's `TextModel` line tokens),
   // the production token model. Per-line so a wrapped view line can later slice
@@ -22,13 +28,15 @@ pub struct TokenizedDocument {
 pub fn TokenizedDocument::build(
   snapshot : @model.TextSnapshot,
   tokens : Array[@syntax.Token],
+  language_id? : String = "moonbit",
+  version? : Int = 1,
 ) -> TokenizedDocument {
   let buckets = bucket_by_line(snapshot, tokens, token => token.range)
   // One codec shared by every line of the document (Monaco threads a single
   // codec through a model). Register the model's language once and pack its
   // numeric id into each line's tokens.
   let codec = LanguageIdCodec::new()
-  let language_id = codec.register(snapshot.language_id)
+  let encoded_language_id = codec.register(language_id)
   let line_tokens : Array[LineTokens] = []
   for line in 0..<snapshot.line_count() {
     line_tokens.push(
@@ -37,11 +45,11 @@ pub fn TokenizedDocument::build(
         snapshot.line_start_offset(line),
         buckets[line],
         codec,
-        language_id~,
+        language_id=encoded_language_id,
       ),
     )
   }
-  { snapshot, token_count: tokens.length(), line_tokens }
+  { snapshot, language_id, version, token_count: tokens.length(), line_tokens }
 }
 
 ///|

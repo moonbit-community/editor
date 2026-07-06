@@ -11,7 +11,7 @@ import {
 // Values
 pub fn create_decoration_option(Marker) -> @model.Decoration
 
-pub fn create_decoration_range(@model.TextSnapshot, Marker) -> @common.Range
+pub fn create_decoration_range(@model.TextModel, Marker) -> @common.Range
 
 pub fn dotdotdot_svg_data_uri(String) -> String
 

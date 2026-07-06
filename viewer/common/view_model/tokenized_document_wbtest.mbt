@@ -11,7 +11,6 @@ test "line_tokens_for_line encodes each line and covers its content" {
       #|line comment */
       #|let b = 2
     ),
-    language_id="moonbit",
   )
   let comment_range = @base_common.OffsetRange(10, 32)
   let tokens : Array[@syntax.Token] = [
@@ -60,7 +59,6 @@ test "language id round-trips through the per-document codec" {
       #|
       #|let b = 2
     ),
-    language_id="moonbit",
   )
   let tokenized = TokenizedDocument::build(doc, @syntax.highlight(doc))
 
@@ -88,16 +86,20 @@ test "language id round-trips through the per-document codec" {
 /// A different model language decodes to its own string, and a language outside
 /// the built-in seed is allocated an id on demand and still round-trips.
 test "non-default and unregistered languages round-trip" {
-  let js = @model.TextSnapshot("var x = 1", language_id="javascript")
-  let js_doc = TokenizedDocument::build(js, @syntax.highlight(js))
+  let js = @model.TextSnapshot("var x = 1")
+  let js_doc = TokenizedDocument::build(
+    js,
+    @syntax.highlight(js),
+    language_id="javascript",
+  )
   let js_tokens = js_doc.line_tokens_for_line(0)
   for i in 0..<js_tokens.get_count() {
     assert_eq(js_tokens.get_language_id(i), "javascript")
   }
 
   // "toy" is not a built-in language; `register` allocates it on build.
-  let toy = @model.TextSnapshot("x", language_id="toy")
-  let toy_doc = TokenizedDocument::build(toy, [])
+  let toy = @model.TextSnapshot("x")
+  let toy_doc = TokenizedDocument::build(toy, [], language_id="toy")
   let toy_tokens = toy_doc.line_tokens_for_line(0)
   assert_eq(toy_tokens.get_language_id(0), "toy")
 }

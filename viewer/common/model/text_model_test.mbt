@@ -11,11 +11,11 @@ test "text snapshot handles lf and crlf" {
 ///|
 test "offset and position use utf16 code units" {
   let doc = @model.TextSnapshot("a😊\n中")
-  assert_eq(doc.length(), 5)
-  let pos = doc.position_at_offset(3)
+  assert_eq(doc.get_length(), 5)
+  let pos = doc.get_position_at(3)
   assert_eq(pos.line_number, 1)
   assert_eq(pos.column, 4)
-  assert_eq(doc.offset_at_position(Position(2, 2)), 5)
+  assert_eq(doc.get_offset_at(2, 2), 5)
 }
 
 ///|

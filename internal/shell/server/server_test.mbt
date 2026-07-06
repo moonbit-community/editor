@@ -393,7 +393,7 @@ impl @language.HoverProvider for FakeLanguageProvider with fn provide_hover(
   position,
   _token,
 ) {
-  let offset = model.snapshot.offset_at_position(position)
+  let offset = model.get_offset_at(position)
   Some({
     range: model.snapshot.range_of(OffsetRange(offset, offset + 4)),
     contents: [PlainText("Configured hover")],
@@ -418,8 +418,8 @@ impl @language.DefinitionProvider for FakeLanguageProvider with fn provide_defin
   position,
   _token,
 ) {
-  let offset = model.snapshot.offset_at_position(position)
-  let end_pos = model.snapshot.position_at_offset(offset + 4)
+  let offset = model.get_offset_at(position)
+  let end_pos = model.get_position_at(offset + 4)
   Some({
     uri: model.uri,
     range: @base_common.Range::from_positions(position, end_pos),
@@ -433,8 +433,8 @@ impl @language.ReferencesProvider for FakeLanguageProvider with fn provide_refer
   position,
   _token,
 ) {
-  let offset = model.snapshot.offset_at_position(position)
-  let end_pos = model.snapshot.position_at_offset(offset + 4)
+  let offset = model.get_offset_at(position)
+  let end_pos = model.get_position_at(offset + 4)
   [
     {
       uri: model.uri,
@@ -443,8 +443,8 @@ impl @language.ReferencesProvider for FakeLanguageProvider with fn provide_refer
     {
       uri: model.uri,
       range: @base_common.Range::from_positions(
-        model.snapshot.position_at_offset(0),
-        model.snapshot.position_at_offset(4),
+        model.get_position_at(0),
+        model.get_position_at(4),
       ),
     },
   ]

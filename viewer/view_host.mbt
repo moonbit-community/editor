@@ -47,7 +47,7 @@ fn Viewer::build_view_context(
     },
     model_position_to_offset: position => {
       match self.text_model {
-        Some(model) => model.snapshot.offset_at_position(position)
+        Some(model) => model.get_offset_at(position)
         None => 0
       }
     },

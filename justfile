@@ -3,6 +3,7 @@ default:
 
 check:
     moon check --target all --warn-list +73
+    moon fmt
     moon run --target native scripts/check-architecture.mbtx
 
 test-moon:

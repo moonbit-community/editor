@@ -10,10 +10,10 @@ the hover feature resolve them through it.
 - The tokenizer registry (`set_tokens_provider` / `lookup_tokens_provider`) used
   by render and code-block highlighting.
 - Ordered provider registries with disposal-safe registration for hover,
-  diagnostics, document symbols, semantic tokens, folding ranges, and inlay
+  diagnostics, document symbols, semantic tokens, and inlay
   hints, plus the per-feature resolution methods (`hover_at`,
   `diagnostics_for_model`, `document_symbols`, `semantic_tokens_for_model`,
-  `folding_ranges_for_model`, `inlay_hints_for_model`).
+  `inlay_hints_for_model`).
 - The process-wide `languages` value (and `default_languages()`), which hosts
   register against and which `ViewerServices::new()` uses by default; tests and
   embedded viewers can pass an isolated `Languages::new()` instead.

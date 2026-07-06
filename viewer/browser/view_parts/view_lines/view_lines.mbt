@@ -263,20 +263,6 @@ fn resolve_line_mapping(
 }
 
 ///|
-/// `pub`: called cross-package by `margin.mbt`'s folding-marker render (which
-/// only shows a marker on a model line's first view line).
-pub fn is_first_view_line_for_model_line(
-  lines : @view_model.ViewModelLines?,
-  view_line_number : Int,
-) -> Bool {
-  match lines {
-    Some(view_model_lines) =>
-      view_model_lines.get_view_line_min_column(view_line_number) == 1
-    None => true
-  }
-}
-
-///|
 /// `pub`: called cross-package by `margin.mbt`'s line-number gutter render,
 /// which recycles its nodes the same way `ViewLines::render_text` does.
 pub fn viewport_window(
@@ -396,8 +382,8 @@ pub fn write_line_number_node(
 }
 
 ///|
-/// `pub`: called cross-package by `margin.mbt`'s line-number and folding-marker
-/// render (both position their nodes the same way `ViewLines` positions text
+/// `pub`: called cross-package by `margin.mbt`'s line-number render
+/// (which positions its nodes the same way `ViewLines` positions text
 /// lines).
 pub fn line_node_style(top : Int) -> String {
   "top:" +

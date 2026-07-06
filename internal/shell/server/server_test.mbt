@@ -192,7 +192,7 @@ async test "answers hover and definition from cached provider state" {
 }
 
 ///|
-async test "answers diagnostics symbols folding ranges and inlay hints from cached provider state" {
+async test "answers diagnostics symbols and inlay hints from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("main.mbt", "pub fn main { // TODO }\n")
   let server = test_remote_server("/workspace", host)
@@ -214,15 +214,6 @@ async test "answers diagnostics symbols folding ranges and inlay hints from cach
       assert_eq(payload.symbols[0].name, "configured")
     }
     _ => fail("expected document symbols result")
-  }
-
-  match server.folding_ranges({ id: "fold-1", uri, document_revision: "" }) {
-    FoldingRangesResult(payload) => {
-      assert_eq(payload.folding_ranges.length(), 1)
-      assert_eq(payload.folding_ranges[0].start_line_number, 1)
-      assert_eq(payload.folding_ranges[0].end_line_number, 3)
-    }
-    _ => fail("expected folding ranges result")
   }
 
   match server.inlay_hints({ id: "hints-1", uri, document_revision: "" }) {
@@ -274,12 +265,6 @@ async test "dispatches language requests through configured providers" {
     _ => fail("expected document symbols result")
   }
 
-  match server.folding_ranges({ id: "fold-1", uri, document_revision: "" }) {
-    FoldingRangesResult(payload) =>
-      assert_eq(payload.folding_ranges[0].start_line_number, 1)
-    _ => fail("expected folding ranges result")
-  }
-
   match server.inlay_hints({ id: "hints-1", uri, document_revision: "" }) {
     InlayHintsResult(payload) =>
       assert_eq(payload.inlay_hints[0].label, ": Int")
@@ -310,7 +295,7 @@ fn test_remote_server(
 ) -> @server.RemoteServer {
   let provider = FakeLanguageProvider::{  }
   @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider, provider, provider,
+    root, host, provider, provider, provider, provider, provider, provider,
   )
 }
 
@@ -488,15 +473,6 @@ impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_d
   _token,
 ) {
   [{ name: "configured", kind: "function", range: Range(1, 8, 1, 18) }]
-}
-
-///|
-impl @language.FoldingRangeProvider for FakeLanguageProvider with fn provide_folding_ranges(
-  _self,
-  _model,
-  _token,
-) {
-  [FoldingRange(1, 3, kind=Region)]
 }
 
 ///|

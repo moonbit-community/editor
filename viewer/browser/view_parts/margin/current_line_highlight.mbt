@@ -6,7 +6,7 @@
 // strings live in `viewer/common/view_layout` (`current_line_highlight.mbt`);
 // the content twin lives with the selections part.
 //
-// Local structure deviation (the folding/line-numbers `view-layer` precedent):
+// Local structure deviation (the line-numbers `view-layer` precedent):
 // the pieces live in a dedicated first-child layer div so this overlay can
 // rebuild without touching the recycled line-number nodes.
 

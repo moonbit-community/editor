@@ -7,9 +7,26 @@
 // helpers it needs.
 
 ///|
+/// One-based hidden model-line interval, the element type of Monaco's
+/// `IViewModelLines.getHiddenAreas` result.
+pub(all) struct HiddenRange {
+  start_line_number : Int
+  end_line_number : Int
+} derive(Eq, Debug)
+
+///|
+/// Builds a hidden line interval.
+pub fn HiddenRange::HiddenRange(
+  start_line_number : Int,
+  end_line_number : Int,
+) -> HiddenRange {
+  { start_line_number, end_line_number }
+}
+
+///|
 /// Merged one-based hidden model-line intervals, Monaco's
 /// `IViewModelLines.getHiddenAreas`. Computed from the retained per-line hidden
-/// flags (the folding result), so a rebuilt view model reports the same ranges
+/// flags, so a rebuilt view model reports the same ranges
 /// the projection hid.
 pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(
   self : ViewModelLinesFromModelAsIs,
@@ -35,8 +52,8 @@ pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(
 }
 
 ///|
-/// Merged hidden intervals for projected (wrapped/folded) view lines — folding
-/// is applied to the unprojected base, so the hidden set is the base's.
+/// Merged hidden intervals for projected (wrapped) view lines — hiding
+/// applies to the unprojected base, so the hidden set is the base's.
 pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(
   self : ViewModelLinesFromProjectedModel,
 ) -> Array[HiddenRange] {
@@ -44,7 +61,7 @@ pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(
 }
 
 ///|
-/// Whether a one-based model line is hidden by folding, for projected lines.
+/// Whether a one-based model line is hidden, for projected lines.
 pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(
   self : ViewModelLinesFromProjectedModel,
   model_line_number : Int,
@@ -64,7 +81,7 @@ pub fn ViewModelLines::get_hidden_areas(
 }
 
 ///|
-/// Whether a one-based model line is hidden by folding.
+/// Whether a one-based model line is hidden.
 pub fn ViewModelLines::is_model_line_hidden(
   self : ViewModelLines,
   model_line_number : Int,
@@ -83,7 +100,7 @@ pub fn ViewModel::get_hidden_areas(self : ViewModel) -> Array[HiddenRange] {
 }
 
 ///|
-/// Whether a model position lands on a visible (non-folded) line, Monaco's
+/// Whether a model position lands on a visible (non-hidden) line, Monaco's
 /// `CoordinatesConverter.modelPositionIsVisible`. The read API gates
 /// `getLineHeightForPosition` on this.
 pub fn ViewModel::model_position_is_visible(
@@ -125,7 +142,7 @@ pub fn ViewModel::model_line_max_column(
 ///|
 /// Splits a completely-visible *view* range into the model ranges it covers,
 /// Monaco's `ViewModelImpl._toModelVisibleRanges`
-/// (`viewModelImpl.ts:655`). With no folded regions the converted model range is
+/// (`viewModelImpl.ts:655`). With no hidden regions the converted model range is
 /// returned whole; otherwise each hidden region carves the visible span into the
 /// model ranges actually on screen above/below it.
 pub fn ViewModel::to_model_visible_ranges(

@@ -77,7 +77,6 @@ pub(all) enum ClientPacket {
   Definition(DocumentPositionRequest)
   References(DocumentPositionRequest)
   DocumentSymbols(DocumentRevisionRequest)
-  FoldingRanges(DocumentRevisionRequest)
   InlayHints(DocumentRevisionRequest)
 } derive(Debug)
 
@@ -154,15 +153,6 @@ pub(all) struct DocumentSymbolsResultPayload {
 } derive(Debug)
 
 ///|
-/// Folding ranges response for a specific URI and document revision.
-pub(all) struct FoldingRangesResultPayload {
-  id : String
-  uri : @base_common.Uri
-  revision : String
-  folding_ranges : Array[@language.FoldingRange]
-} derive(Debug)
-
-///|
 /// Inlay hints response for a specific URI and document revision.
 pub(all) struct InlayHintsResultPayload {
   id : String
@@ -182,7 +172,6 @@ pub(all) enum ServerPacket {
   DefinitionResult(DefinitionResultPayload)
   ReferencesResult(ReferencesResultPayload)
   DocumentSymbolsResult(DocumentSymbolsResultPayload)
-  FoldingRangesResult(FoldingRangesResultPayload)
   InlayHintsResult(InlayHintsResultPayload)
   RemoteError(ProtocolError)
 } derive(Debug)
@@ -293,7 +282,6 @@ pub impl ToJson for ClientPacket with fn to_json(self) {
     References(request) => position_request_json("References", request)
     DocumentSymbols(request) =>
       revision_request_json("DocumentSymbols", request)
-    FoldingRanges(request) => revision_request_json("FoldingRanges", request)
     InlayHints(request) => revision_request_json("InlayHints", request)
   }
 }
@@ -311,7 +299,6 @@ pub impl ToJson for ServerPacket with fn to_json(self) {
     DefinitionResult(payload) => definition_result_json(payload)
     ReferencesResult(payload) => references_result_json(payload)
     DocumentSymbolsResult(payload) => document_symbols_result_json(payload)
-    FoldingRangesResult(payload) => folding_ranges_result_json(payload)
     InlayHintsResult(payload) => inlay_hints_result_json(payload)
     RemoteError(error) => error_packet_json(error)
   }
@@ -362,10 +349,6 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
             Some("DocumentSymbols") =>
               decode_version_client(packet, request_id(packet), request => {
                 DocumentSymbols(request)
-              })
-            Some("FoldingRanges") =>
-              decode_version_client(packet, request_id(packet), request => {
-                FoldingRanges(request)
               })
             Some("InlayHints") =>
               decode_version_client(packet, request_id(packet), request => {
@@ -425,8 +408,6 @@ pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
               decode_references_result_payload(packet, request_id(packet))
             Some("DocumentSymbolsResult") =>
               decode_document_symbols_result_payload(packet, request_id(packet))
-            Some("FoldingRangesResult") =>
-              decode_folding_ranges_result_payload(packet, request_id(packet))
             Some("InlayHintsResult") =>
               decode_inlay_hints_result_payload(packet, request_id(packet))
             Some("Error") => decode_error_payload(packet, request_id(packet))
@@ -695,37 +676,6 @@ fn decode_document_symbols_result_payload(
           uri,
           revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           symbols,
-        }),
-      )
-    }
-    ProtocolUriError(error) => ServerPacketDecodeError(error)
-  }
-}
-
-///|
-fn decode_folding_ranges_result_payload(
-  packet : Json,
-  id : String,
-) -> ServerPacketDecodeResult {
-  match parse_uri_field(packet, "uri", id) {
-    ParsedProtocolUri(uri) => {
-      let folding_ranges = []
-      match json_field(packet, "foldingRanges") {
-        Some(Array(items)) =>
-          for item in items {
-            match parse_folding_range(item) {
-              Some(range) => folding_ranges.push(range)
-              None => ()
-            }
-          }
-        _ => ()
-      }
-      DecodedServerPacket(
-        FoldingRangesResult({
-          id,
-          uri,
-          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
-          folding_ranges,
         }),
       )
     }
@@ -1064,17 +1014,6 @@ fn document_symbols_result_json(payload : DocumentSymbolsResultPayload) -> Json 
 }
 
 ///|
-fn folding_ranges_result_json(payload : FoldingRangesResultPayload) -> Json {
-  let fields = packet_fields("FoldingRangesResult", payload.id)
-  fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentRevision"] = payload.revision.to_json()
-  fields["foldingRanges"] = Json::array(
-    payload.folding_ranges.map(folding_range_json),
-  )
-  Json::object(fields)
-}
-
-///|
 fn inlay_hints_result_json(payload : InlayHintsResultPayload) -> Json {
   let fields = packet_fields("InlayHintsResult", payload.id)
   fields["uri"] = payload.uri.to_string().to_json()
@@ -1137,28 +1076,6 @@ fn document_symbol_json(symbol : @language.DocumentSymbol) -> Json {
     "name": symbol.name.to_json(),
     "kind": symbol.kind.to_json(),
     "range": range_json(symbol.range),
-  }
-}
-
-///|
-fn folding_range_json(range : @language.FoldingRange) -> Json {
-  let fields : Map[String, Json] = {
-    "startLineNumber": range.start_line_number.to_json(),
-    "endLineNumber": range.end_line_number.to_json(),
-  }
-  match range.kind {
-    Some(kind) => fields["kind"] = folding_range_kind_json(kind)
-    None => ()
-  }
-  Json::object(fields)
-}
-
-///|
-fn folding_range_kind_json(kind : @language.FoldingRangeKind) -> Json {
-  match kind {
-    Comment => Json::string("comment")
-    Imports => Json::string("imports")
-    Region => Json::string("region")
   }
 }
 
@@ -1293,37 +1210,6 @@ fn parse_diagnostic_tags(value : Json) -> Array[@language.DiagnosticTag]? {
         Some(tags)
       }
     }
-    _ => None
-  }
-}
-
-///|
-fn parse_folding_range(value : Json) -> @language.FoldingRange? {
-  match value {
-    Object(_) => {
-      let start_line_number = json_int_field(value, "startLineNumber").unwrap_or(
-        0,
-      )
-      let end_line_number = json_int_field(value, "endLineNumber").unwrap_or(0)
-      if start_line_number <= 0 || end_line_number <= 0 {
-        return None
-      }
-      match folding_range_kind(json_string_field(value, "kind").unwrap_or("")) {
-        Some(kind) =>
-          Some(FoldingRange(start_line_number, end_line_number, kind~))
-        None => Some(FoldingRange(start_line_number, end_line_number))
-      }
-    }
-    _ => None
-  }
-}
-
-///|
-fn folding_range_kind(raw : String) -> @language.FoldingRangeKind? {
-  match raw {
-    "comment" => Some(Comment)
-    "imports" => Some(Imports)
-    "region" => Some(Region)
     _ => None
   }
 }

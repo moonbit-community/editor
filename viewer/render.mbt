@@ -80,18 +80,7 @@ fn Viewer::build_view_model(
   )
   // Injected text (inlay hints) reaches the projection through the model's
   // decoration storage (Track F), not through construction arguments.
-  if self.folded_ranges.length() > 0 {
-    @view_model.ViewModel::with_options_and_folding(
-      source,
-      options,
-      @view_model.FoldingModel::from_folded_ranges(
-        self.folded_ranges,
-        source.tokenized.snapshot.line_count(),
-      ),
-    )
-  } else {
-    @view_model.ViewModel::with_options(source, options)
-  }
+  @view_model.ViewModel::with_options(source, options)
 }
 
 ///|

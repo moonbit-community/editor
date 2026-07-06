@@ -19,7 +19,6 @@ fn register_remote_language_providers(
   services.languages.register_diagnostics_provider(selector, client) |> ignore
   services.languages.register_document_symbol_provider(selector, client)
   |> ignore
-  services.languages.register_folding_range_provider(selector, client) |> ignore
   services.languages.register_inlay_hints_provider(selector, client) |> ignore
 }
 
@@ -100,24 +99,6 @@ impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn provide_d
     DocumentSymbolsResult(payload) => payload.symbols
     packet => {
       self.emit_remote_error("documentSymbols", model, packet)
-      []
-    }
-  }
-}
-
-///|
-impl @language.FoldingRangeProvider for RemoteLanguageClient with fn provide_folding_ranges(
-  self,
-  model,
-  _token,
-) {
-  let response = protocol_request("folding-ranges", id => {
-    FoldingRanges({ id, uri: model.uri, document_revision: model.revision })
-  })
-  match response {
-    FoldingRangesResult(payload) => payload.folding_ranges
-    packet => {
-      self.emit_remote_error("foldingRanges", model, packet)
       []
     }
   }

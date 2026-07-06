@@ -1,6 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/margin/margin.ts` (the
-// line-number gutter) and the folding-marker half of
-// `vscode/src/vs/editor/contrib/folding/browser/foldingDecorations.ts`. The
+// line-number gutter). The
 // `ViewPart` trait impl for `MarginViewOverlays` lives in
 // `viewer/browser/view/view_part.mbt`, not here — see the exec-plan's cycle
 // backlog and `viewer/browser/view_parts/view_zones`'s README for why.
@@ -12,9 +11,6 @@ pub(all) struct MarginViewOverlaysPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
   view_model : @view_model.ViewModel?
-  folding_ranges : Array[@language.FoldingRange]
-  folded_ranges : Array[@language.FoldingRange]
-  on_toggle_fold : (Int) -> Unit
   generation : Int
   /// Viewport decorations for the line-decorations lane
   /// (`LinesDecorationsOverlay`; see `lines_decorations.mbt`).
@@ -35,7 +31,6 @@ pub(all) struct MarginViewOverlaysPrepared {
 pub(all) struct MarginViewOverlays {
   margin : @rdom.Element
   current_line : @rdom.Element
-  folding : @rdom.Element
   lines_decorations : @rdom.Element
   line_numbers : @rdom.Element
   line_number_nodes : Array[@rdom.Element]
@@ -59,9 +54,6 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
   let current_line = document.create_element("div")
   current_line.set_attribute("class", "view-layer current-line-highlight")
   current_line.set_attribute("data-view-part", "current-line-highlight")
-  let folding = document.create_element("div")
-  folding.set_attribute("class", "view-layer folding")
-  folding.set_attribute("data-view-part", "folding")
   // The line-decorations lane renders before line numbers, preserving
   // Monaco's margin dynamic-overlay registration order
   // (`LinesDecorationsOverlay` before `LineNumbersOverlay`, `view.ts`).
@@ -72,14 +64,12 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
   line_numbers.set_attribute("class", "view-layer line-numbers")
   line_numbers.set_attribute("data-view-part", "line-numbers")
   margin_view_overlays.append_child(current_line.as_node())
-  margin_view_overlays.append_child(folding.as_node())
   margin_view_overlays.append_child(lines_decorations.as_node())
   margin_view_overlays.append_child(line_numbers.as_node())
   margin.append_child(margin_view_overlays.as_node())
   {
     margin,
     current_line,
-    folding,
     lines_decorations,
     line_numbers,
     line_number_nodes: [],
@@ -166,75 +156,3 @@ pub fn MarginViewOverlays::render_line_numbers(
   self.line_number_window = target
 }
 
-///|
-pub fn MarginViewOverlays::render_folding_markers(
-  self : MarginViewOverlays,
-  viewport : @view_layout.ViewportData,
-  view_model : @view_model.ViewModel?,
-  folding_ranges : Array[@language.FoldingRange],
-  folded_ranges : Array[@language.FoldingRange],
-  on_toggle_fold~ : (Int) -> Unit,
-) -> Unit {
-  self.folding.set_inner_html("")
-  if folding_ranges.length() == 0 {
-    return
-  }
-  let document = @rdom.document()
-  let lines = match view_model {
-    Some(model) => Some(model.lines())
-    None => None
-  }
-  for index in 0..<viewport.lines.length() {
-    let view_line_number = viewport.start_line_number + index
-    let model_line_number = match lines {
-      Some(view_model_lines) =>
-        view_model_lines.model_line_number_of_view_line(view_line_number)
-      None => view_line_number
-    }
-    if !@view_lines.is_first_view_line_for_model_line(lines, view_line_number) {
-      continue
-    }
-    match
-      @folding.folding_range_for_start_line(folding_ranges, model_line_number) {
-      Some(_) => {
-        let marker = document.create_element("button")
-        let folded = @folding.is_line_folded(folded_ranges, model_line_number)
-        let class_name = if folded {
-          "folding-marker collapsed"
-        } else {
-          "folding-marker expanded"
-        }
-        marker.set_attribute("class", class_name)
-        marker.set_attribute("type", "button")
-        marker.set_attribute("data-line", model_line_number.to_string())
-        marker.set_attribute("data-folded", folded.to_string())
-        marker.set_attribute(
-          "style",
-          @view_lines.line_node_style(viewport.relative_vertical_offset[index]),
-        )
-        marker.set_inner_html(
-          if folded {
-            "<span class=\"codicon codicon-chevron-right\" aria-hidden=\"true\"></span>"
-          } else {
-            "<span class=\"codicon codicon-chevron-down\" aria-hidden=\"true\"></span>"
-          },
-        )
-        // The selection machinery starts on the root's `mousedown`, which
-        // fires before `click`; swallow it so toggling a fold never also
-        // starts a margin line-selection (Monaco's folding gutter equally
-        // keeps its clicks out of the cursor).
-        marker.add_event_listener("mousedown", event => {
-          event.prevent_default()
-          event.stop_propagation()
-        })
-        marker.add_event_listener("click", event => {
-          event.prevent_default()
-          event.stop_propagation()
-          on_toggle_fold(model_line_number)
-        })
-        self.folding.append_child(marker.as_node())
-      }
-      None => ()
-    }
-  }
-}

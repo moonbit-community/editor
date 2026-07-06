@@ -53,9 +53,6 @@ pub struct Languages {
   priv document_symbol_provider : LanguageFeatureRegistry[
     &@language.DocumentSymbolProvider,
   ]
-  priv folding_range_provider : LanguageFeatureRegistry[
-    &@language.FoldingRangeProvider,
-  ]
   priv inlay_hints_provider : LanguageFeatureRegistry[
     &@language.InlayHintsProvider,
   ]
@@ -70,7 +67,6 @@ pub fn Languages::new() -> Languages {
     hover_provider: LanguageFeatureRegistry::new(),
     diagnostics_provider: LanguageFeatureRegistry::new(),
     document_symbol_provider: LanguageFeatureRegistry::new(),
-    folding_range_provider: LanguageFeatureRegistry::new(),
     inlay_hints_provider: LanguageFeatureRegistry::new(),
   }
 }
@@ -145,16 +141,6 @@ pub fn Languages::register_document_symbol_provider(
   provider : &@language.DocumentSymbolProvider,
 ) -> @base_common.Disposable {
   self.document_symbol_provider.register(selector, provider)
-}
-
-///|
-/// Registers an ordered folding-range provider.
-pub fn Languages::register_folding_range_provider(
-  self : Languages,
-  selector : @language.LanguageSelector,
-  provider : &@language.FoldingRangeProvider,
-) -> @base_common.Disposable {
-  self.folding_range_provider.register(selector, provider)
 }
 
 ///|
@@ -247,38 +233,6 @@ pub async fn Languages::document_symbols(
     symbols.append(result)
   }
   symbols
-}
-
-///|
-/// Concatenates folding-range results, falling back to MoonBit indentation
-/// ranges when no provider answers.
-pub async fn Languages::folding_ranges_for_model(
-  self : Languages,
-  model : @model.TextModel,
-  log_service : @log.LogService,
-) -> Array[@language.FoldingRange] noraise {
-  let ranges : Array[@language.FoldingRange] = []
-  let token = @language.CancellationToken::none()
-  for index in 0..<self.folding_range_provider.entries.length() {
-    let entry = self.folding_range_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(model) {
-      continue
-    }
-    let result = entry.provider.provide_folding_ranges(model, token) catch {
-      _ => {
-        log_provider_failure(
-          log_service, "language.foldingRanges", model, index,
-        )
-        []
-      }
-    }
-    ranges.append(result)
-  }
-  // Provider results only. The indent-based fallback (Monaco's
-  // `indentRangeProvider`) is applied by the folding controller (the caller),
-  // not the provider registry, so this common-tier package does not depend on
-  // the `contrib/folding` tier.
-  ranges
 }
 
 ///|

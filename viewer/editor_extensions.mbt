@@ -22,8 +22,8 @@
 /// readonly viewer has no idle scheduler, interaction tracker, or on-demand
 /// `getContribution`, so every mode instantiates eagerly at `Viewer`
 /// construction; the deferred modes exist so a registration can carry its
-/// source's declared mode (folding is `Eager`, content hover
-/// `BeforeFirstInteraction`, comments `AfterFirstRender`).
+/// source's declared mode (content hover is `BeforeFirstInteraction`,
+/// comments `AfterFirstRender`).
 pub(all) enum EditorContributionInstantiation {
   Eager
   AfterFirstRender
@@ -173,8 +173,8 @@ let editor_registry_holder : EditorRegistryHolder = { registry: None }
 ///|
 /// The singleton (`EditorContributionRegistry.INSTANCE`), populated once.
 /// Registration order preserves the construction order the hand-wiring had
-/// (comments was the only constructor-time wiring; hover and folding
-/// registrations follow their Monaco contribution files).
+/// (comments was the only constructor-time wiring; the hover
+/// registration follows its Monaco contribution file).
 fn editor_registry() -> EditorContributionRegistry {
   match editor_registry_holder.registry {
     Some(registry) => registry
@@ -186,7 +186,6 @@ fn editor_registry() -> EditorContributionRegistry {
       }
       register_agent_feedback_contribution(registry)
       register_hover_contribution(registry)
-      register_folding_contribution(registry)
       editor_registry_holder.registry = Some(registry)
       registry
     }

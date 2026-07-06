@@ -1,6 +1,5 @@
 import {
   "moonbit-community/editor/base/common" @base_common,
-  "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/current_line_highlight",
   "moonbit-community/editor/viewer/browser/view_parts/decorations",

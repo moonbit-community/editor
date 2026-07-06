@@ -333,7 +333,6 @@ impl ViewPart for @margin.MarginViewOverlays with fn on_view_event(_self, event)
     ViewDecorationsChanged => true
     ViewScrollChanged(e) => e.window_changed || e.position_changed
     ViewConfigurationChanged(e) => e.gutter_width_changed
-    ViewLineMappingChanged => true
     ViewZonesChanged => true
     // The margin current-line highlight follows the cursor and the focus
     // state (`currentLineHighlight.ts:97-100,:116-123`).
@@ -384,9 +383,6 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
     frame: context.input.frame,
     viewport: context.viewport,
     view_model: context.input.view_model,
-    folding_ranges: context.input.folding_ranges,
-    folded_ranges: context.input.folded_ranges,
-    on_toggle_fold: context.input.on_toggle_fold,
     generation: context.input.generation,
     decorations,
     line_decorations_width: context.input.line_decorations_width,
@@ -420,17 +416,9 @@ impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
         prepared.viewport,
         prepared.generation,
       )
-      self.render_folding_markers(
-        prepared.viewport,
-        prepared.view_model,
-        prepared.folding_ranges,
-        prepared.folded_ranges,
-        on_toggle_fold=prepared.on_toggle_fold,
-      )
       // `layoutInfo.decorationsLeft`: the lane sits between the line numbers
       // and the content. Deviation vs. Monaco: the viewer keeps line numbers
-      // and folding markers in the line-number band (Monaco renders folding
-      // chevrons *as* lane decorations), so those layers are constrained to
+      // in the line-number band, so that layer is constrained to
       // `line_numbers_width` instead of the full margin.
       let line_numbers_width = context.gutter_width -
         prepared.line_decorations_width
@@ -457,10 +445,6 @@ impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
       let band_constraint = ";width:" + line_numbers_width.to_string() + "px"
       self.current_line.set_attribute("style", context.margin_transform)
       self.line_numbers.set_attribute(
-        "style",
-        context.margin_transform + band_constraint,
-      )
-      self.folding.set_attribute(
         "style",
         context.margin_transform + band_constraint,
       )
@@ -628,7 +612,6 @@ impl ViewPart for @selections.ContentViewOverlays with fn on_view_event(
     ViewZonesChanged => true
     // `ViewOverlays.onFocusChanged` (`viewOverlays.ts:76-79`).
     ViewFocusChanged(_) => true
-    _ => false
   }
 }
 

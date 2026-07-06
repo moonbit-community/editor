@@ -1,6 +1,6 @@
 ///|
 /// Model-level features requested after a fresh render: diagnostics,
-/// symbols, semantic tokens, folding ranges, and inlay hints, each resolving
+/// symbols, semantic tokens, and inlay hints, each resolving
 /// independently.
 fn Viewer::request_model_features(
   self : Viewer,
@@ -26,23 +26,6 @@ fn Viewer::request_model_features(
     if self.is_current_model(model) {
       self.provider_result = { ..self.provider_result, symbols, }
       self.render_feature_update()
-    }
-  })
-  @js.async_run(() => {
-    let provider_ranges = self.services.languages.folding_ranges_for_model(
-      model,
-      self.services.log_service,
-    )
-    // Apply the indent-based fallback here (the folding controller), mirroring
-    // Monaco's FoldingController falling back to `indentRangeProvider` when no
-    // language provider yields ranges.
-    let folding_ranges = if provider_ranges.length() > 0 {
-      provider_ranges
-    } else {
-      @folding.fallback_folding_ranges(model)
-    }
-    if self.is_current_model(model) {
-      self.set_folding_ranges(folding_ranges)
     }
   })
   @js.async_run(() => {

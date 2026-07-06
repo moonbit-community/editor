@@ -42,8 +42,6 @@ pub struct Viewer {
   priv mut frame_source : @view_model.FrameSource?
   priv mut text_model : @model.TextModel?
   priv mut provider_result : @language.ProviderResult
-  priv mut folding_ranges : Array[@language.FoldingRange]
-  priv mut folded_ranges : Array[@language.FoldingRange]
   priv mut inlay_hints : Array[@language.InlayHint]
   priv mut view_zones : Array[@view_zones.BrowserViewZone]
   priv mut cursor : @cursor.CursorsController?
@@ -298,8 +296,6 @@ pub fn Viewer::Viewer(
     frame_source: None,
     text_model: None,
     provider_result: @language.ProviderResult::empty(),
-    folding_ranges: [],
-    folded_ranges: [],
     inlay_hints: [],
     view_zones: [],
     cursor: None,
@@ -585,8 +581,6 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   )
   self.services.marker_decorations.on_model_added(model)
   self.provider_result = @language.ProviderResult::empty()
-  self.folding_ranges = []
-  self.folded_ranges = []
   self.inlay_hints = []
   self.inlay_hint_decoration_ids = []
   self.cursor = None
@@ -837,8 +831,6 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.frame_source = None
   self.text_model = None
   self.provider_result = @language.ProviderResult::empty()
-  self.folding_ranges = []
-  self.folded_ranges = []
   self.inlay_hints = []
   self.inlay_hint_decoration_ids = []
   self.view_zones = []
@@ -862,7 +854,7 @@ fn Viewer::render_feature_update(self : Viewer) -> Unit {
   match self.text_model {
     Some(model) => {
       self.render_current_model(model, fresh=false, request_language=false)
-      // Folding/feature changes move the view-line axis; the feedback
+      // Feature changes can move the view-line axis; the feedback
       // bubbles follow their model anchors.
       self.relayout_agent_feedback_widgets()
     }

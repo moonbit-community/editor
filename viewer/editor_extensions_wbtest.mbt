@@ -12,7 +12,6 @@ test "contributions instantiate through the registry and dispose with the viewer
     viewer.get_contribution("agentFeedback.editorWidgetContribution") is Some(_),
   )
   assert_true(viewer.get_contribution("editor.contrib.contentHover") is Some(_))
-  assert_true(viewer.get_contribution("editor.contrib.folding") is Some(_))
   assert_true(viewer.get_contribution("editor.contrib.unknown") is None)
   viewer.dispose()
   assert_true(

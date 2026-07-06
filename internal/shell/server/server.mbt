@@ -53,7 +53,6 @@ pub struct RemoteServer {
   priv references_provider : &@language.ReferencesProvider
   priv diagnostics_provider : &@language.DiagnosticsProvider
   priv document_symbol_provider : &@language.DocumentSymbolProvider
-  priv folding_range_provider : &@language.FoldingRangeProvider
   priv inlay_hints_provider : &@language.InlayHintsProvider
   priv documents : Map[String, @workspace.DocumentSnapshot]
   priv watches : Map[String, ServerWatch]
@@ -81,7 +80,6 @@ pub fn RemoteServer::with_language_providers(
   references_provider : &@language.ReferencesProvider,
   diagnostics_provider : &@language.DiagnosticsProvider,
   document_symbol_provider : &@language.DocumentSymbolProvider,
-  folding_range_provider : &@language.FoldingRangeProvider,
   inlay_hints_provider : &@language.InlayHintsProvider,
 ) -> RemoteServer {
   {
@@ -92,7 +90,6 @@ pub fn RemoteServer::with_language_providers(
     references_provider,
     diagnostics_provider,
     document_symbol_provider,
-    folding_range_provider,
     inlay_hints_provider,
     documents: Map::default(),
     watches: Map::default(),
@@ -207,7 +204,6 @@ pub async fn RemoteServer::handle_client_packet(
     Definition(request) => [self.definition(request)]
     References(request) => [self.references(request)]
     DocumentSymbols(request) => [self.document_symbols(request)]
-    FoldingRanges(request) => [self.folding_ranges(request)]
     InlayHints(request) => [self.inlay_hints(request)]
   }
 }
@@ -511,30 +507,6 @@ pub async fn RemoteServer::document_symbols(
         uri: request.uri,
         revision: document.revision,
         symbols: self.document_symbol_provider.provide_document_symbols(
-          model,
-          @language.CancellationToken::none(),
-        ),
-      })
-    }
-    None => self.missing_cached_document_error(request.id)
-  }
-}
-
-///|
-/// Routes a folding-range request for the cached document revision.
-pub async fn RemoteServer::folding_ranges(
-  self : RemoteServer,
-  request : @remote_protocol.DocumentRevisionRequest,
-) -> @remote_protocol.ServerPacket {
-  match
-    self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) => {
-      let model = text_model_from_document(document)
-      FoldingRangesResult({
-        id: request.id,
-        uri: request.uri,
-        revision: document.revision,
-        folding_ranges: self.folding_range_provider.provide_folding_ranges(
           model,
           @language.CancellationToken::none(),
         ),

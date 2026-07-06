@@ -148,7 +148,7 @@ fn Viewer::ensure_cursor(self : Viewer) -> @cursor.CursorsController? {
 ///|
 /// Re-points the cursor at the rebuilt view model and re-projects its selection
 /// from the model positions, keeping the view selection correct after a reflow
-/// (folding, wrapping, inlay hints).
+/// (wrapping, inlay hints).
 fn Viewer::refresh_cursor_context(self : Viewer) -> Unit {
   match (self.cursor, self.view_model) {
     (Some(controller), Some(view_model)) =>

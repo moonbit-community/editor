@@ -3,7 +3,7 @@
 // The DOM-free half (decoration filtering + `DedupOverlay` expansion) lives
 // in `viewer/common/view_model/margin_decorations.mbt`. Deviation: the
 // viewer's margin layers are flat absolutely-positioned divs (like the
-// folding markers), not Monaco's per-line wrapper divs, so each `.cldr`
+// line numbers), not Monaco's per-line wrapper divs, so each `.cldr`
 // carries its own `top`/`height` instead of inheriting them from a line
 // wrapper.
 

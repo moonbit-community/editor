@@ -5,7 +5,7 @@ Readonly language-provider contracts.
 ## Responsibilities
 
 - Define hover, diagnostic, definition, references, symbol, semantic-token,
-  folding-range, inlay-hint, and provider result types.
+  inlay-hint, and provider result types.
 - Define feature-specific semantic provider traits over readonly
   `@model.TextModel` inputs, `LanguageSelector` / `LanguageFilter` matching,
   and lightweight cancellation tokens for async provider calls. Pure

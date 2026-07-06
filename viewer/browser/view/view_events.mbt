@@ -33,9 +33,6 @@ priv enum ViewEvent {
   /// A layout/font configuration input changed (Monaco
   /// `ViewConfigurationChangedEvent`).
   ViewConfigurationChanged(ViewConfigurationChangedEvent)
-  /// The model→view line mapping changed, e.g. folding (Monaco
-  /// `ViewLineMappingChangedEvent`).
-  ViewLineMappingChanged
   /// View zones changed (Monaco `ViewZonesChangedEvent`).
   ViewZonesChanged
   /// The editor root gained or lost DOM focus (Monaco
@@ -105,10 +102,6 @@ fn view_events_from_snapshots(
         events.push(
           ViewConfigurationChanged({ gutter_width_changed, font_changed }),
         )
-      }
-      if previous.folding_ranges != current.folding_ranges ||
-        previous.folded_ranges != current.folded_ranges {
-        events.push(ViewLineMappingChanged)
       }
       if !same_browser_view_zones(
           previous.browser_view_zones,

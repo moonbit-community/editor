@@ -2,8 +2,8 @@
 // the MoonBit analog of vscode's codeEditorWidget read-state tests. Runs over the
 // unattached `with_test_viewer` harness (no DOM), so it covers every non-DOM
 // getter across the behavior-switching variables the plan calls out: model
-// present {no, yes} x wrap {off, on} x folding {none, hidden region} x scroll
-// {top, scrolled} x position {start, mid, past-EOL, in-fold}. The DOM-measured
+// present {no, yes} x wrap {off, on} x scroll
+// {top, scrolled} x position {start, mid, past-EOL}. The DOM-measured
 // trio (`get_offset_for_column` / `get_width_of_line` /
 // `get_scrolled_visible_position`) is asserted in the browser suite.
 
@@ -164,26 +164,6 @@ test "read API: visible ranges convert view to model coordinates under wrap" {
 }
 
 ///|
-/// Folding on: the hidden region carves the visible span into the model ranges
-/// actually on screen — the `_toModelVisibleRanges` multi-range branch. Folding
-/// lines 5..10 hides model lines 6..10, so the visible ranges are [1..5] and
-/// [11..30].
-test "read API: visible ranges split around a folded region" {
-  with_test_viewer(long_document(30), viewer => {
-    viewer.test_set_viewport(width=800.0, height=540.0) // fits all view lines
-    viewer.set_scroll_position(scroll_top=0.0, scroll_left=0.0)
-    viewer.set_folding_ranges([FoldingRange(5, 10)])
-    viewer.toggle_fold(5)
-    let ranges = viewer.get_visible_ranges()
-    assert_eq(ranges.length(), 2)
-    assert_eq(ranges[0].start_line_number, 1)
-    assert_eq(ranges[0].end_line_number, 5)
-    assert_eq(ranges[1].start_line_number, 11)
-    assert_eq(ranges[1].end_line_number, 30)
-  })
-}
-
-///|
 /// Columns: tab expansion and the `+1` offset. With tab size 4, a tab snaps to
 /// stop 4; column 2 (just after the tab) reports visible column 5. Past-EOL
 /// columns are validated down to the line's max column first.
@@ -244,15 +224,11 @@ test "read API: position defaults to (1,1) before any cursor interaction" {
 }
 
 ///|
-/// `getLineHeightForPosition` returns the uniform height on a visible line and
-/// `0` inside a folded (hidden) region; the fold anchor itself stays visible.
-test "read API: line height is zero inside a folded region" {
+/// `getLineHeightForPosition` returns the configured uniform line height.
+test "read API: line height reports the uniform height" {
   with_test_viewer(long_document(30), viewer => {
-    viewer.set_folding_ranges([FoldingRange(5, 10)])
-    viewer.toggle_fold(5)
     assert_eq(viewer.get_line_height_for_position(Position(3, 1)), 18.0)
-    assert_eq(viewer.get_line_height_for_position(Position(5, 1)), 18.0) // fold anchor visible
-    assert_eq(viewer.get_line_height_for_position(Position(7, 1)), 0.0) // hidden
+    assert_eq(viewer.get_line_height_for_position(Position(7, 1)), 18.0)
   })
 }
 

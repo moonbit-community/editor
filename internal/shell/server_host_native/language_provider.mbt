@@ -113,16 +113,6 @@ pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider wi
 }
 
 ///|
-/// Folding ranges currently come from the browser fallback service.
-pub impl @language.FoldingRangeProvider for NativeWorkspaceLanguageProvider with fn provide_folding_ranges(
-  _self,
-  _document,
-  _token,
-) {
-  []
-}
-
-///|
 /// Native LSP inlay hints are not wired yet.
 pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with fn provide_inlay_hints(
   _self,

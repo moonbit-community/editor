@@ -99,20 +99,6 @@ test "encodes and decodes semantic client packets" {
     ClientPacketDecodeError(error) => fail(error.message)
   }
 
-  let folds = @remote_protocol.FoldingRanges({
-    id: "folds-1",
-    uri,
-    document_revision: "rev-7",
-  })
-  match @remote_protocol.decode_client_packet(folds.to_json().stringify()) {
-    DecodedClientPacket(FoldingRanges(request)) => {
-      assert_eq(request.id, "folds-1")
-      assert_eq(request.document_revision, "rev-7")
-    }
-    DecodedClientPacket(_) => fail("unexpected folding ranges packet")
-    ClientPacketDecodeError(error) => fail(error.message)
-  }
-
   let hints = @remote_protocol.InlayHints({
     id: "hints-1",
     uri,
@@ -364,24 +350,6 @@ test "encodes and decodes server document and language packets" {
       assert_eq(payload.symbols[0].name, "main")
     }
     DecodedServerPacket(_) => fail("unexpected document symbols result packet")
-    ServerPacketDecodeError(error) => fail(error.message)
-  }
-
-  let folding_ranges = @remote_protocol.FoldingRangesResult({
-    id: "folds-1",
-    uri,
-    revision: "rev-2",
-    folding_ranges: [FoldingRange(1, 3, kind=Region)],
-  })
-  match
-    @remote_protocol.decode_server_packet(folding_ranges.to_json().stringify()) {
-    DecodedServerPacket(FoldingRangesResult(payload)) => {
-      assert_eq(payload.folding_ranges.length(), 1)
-      assert_eq(payload.folding_ranges[0].start_line_number, 1)
-      assert_eq(payload.folding_ranges[0].end_line_number, 3)
-      assert_true(payload.folding_ranges[0].kind == Some(Region))
-    }
-    DecodedServerPacket(_) => fail("unexpected folding ranges result packet")
     ServerPacketDecodeError(error) => fail(error.message)
   }
 

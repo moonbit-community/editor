@@ -44,7 +44,7 @@ pub fn Viewer::get_value(self : Viewer) -> String {
 /// Model ranges currently fully visible on screen, Monaco's
 /// `CodeEditorWidget.getVisibleRanges` (`cew:563`) → `viewModel.getVisibleRanges`
 /// (`vmi:646`): the completely-visible *view* range (from the layout) converted
-/// to model ranges, split around any folded region. No model → `[]`.
+/// to model ranges, split around any hidden region. No model → `[]`.
 pub fn Viewer::get_visible_ranges(self : Viewer) -> Array[@base_common.Range] {
   guard self.view_model is Some(view_model) else { return [] }
   let (start_view_line, end_view_line) = self.view_layout.completely_visible_line_range()
@@ -138,7 +138,7 @@ pub fn Viewer::get_bottom_for_line_number(
 ///|
 /// Pixel height of a 1-based model position's line, Monaco's
 /// `getLineHeightForPosition` (`cew:623`). No model → `-1`; a position inside a
-/// folded (hidden) region → `0`; otherwise the configured uniform line height.
+/// hidden region → `0`; otherwise the configured uniform line height.
 /// Like Monaco the raw position is not validated before the visibility test.
 pub fn Viewer::get_line_height_for_position(
   self : Viewer,

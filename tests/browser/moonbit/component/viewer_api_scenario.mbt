@@ -61,15 +61,6 @@ impl @language.DiagnosticsProvider for ComponentHoverProvider with fn provide_di
 }
 
 ///|
-impl @language.FoldingRangeProvider for ComponentHoverProvider with fn provide_folding_ranges(
-  _self,
-  _model,
-  _token,
-) {
-  [FoldingRange(2, 5)]
-}
-
-///|
 impl @language.InlayHintsProvider for ComponentHoverProvider with fn provide_inlay_hints(
   _self,
   _model,
@@ -117,11 +108,6 @@ fn run_viewer_api_test() -> Unit {
       )
       |> ignore
       services.languages.register_diagnostics_provider(
-        LanguageId("moonbit"),
-        provider,
-      )
-      |> ignore
-      services.languages.register_folding_range_provider(
         LanguageId("moonbit"),
         provider,
       )

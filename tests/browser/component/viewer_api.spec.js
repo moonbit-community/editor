@@ -104,7 +104,7 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     const copiedHtml = await page.evaluate(() => globalThis.__readonlyEditorCopiedHtml || '');
     expect(copiedHtml).toContain('mtk4');
     expect(copiedHtml).not.toContain('inlay-hint');
-    // Collapse the drag selection before the fold checks: with the default
+    // Collapse the drag selection before the later checks: with the default
     // renderWhitespace=selection, a selection spanning the inlay hint renders
     // whitespace glyphs inside the injected text (as Monaco does), which
     // fragments the hint span the later assertions look for.
@@ -138,21 +138,6 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(squiggleForm.borderBottomStyle).toBe('none');
     expect(squiggleForm.beforeDisplay).toBe('block');
     expect(squiggleForm.beforeBackgroundColor).toBe('rgba(0, 0, 0, 0)');
-    const foldMarker = page.locator('.folding-marker[data-line="2"]');
-    await expect(foldMarker).toHaveAttribute('data-folded', 'false', { timeout: 10_000 });
-    await foldMarker.click();
-    await expect(foldMarker).toHaveAttribute('data-folded', 'true');
-    await expect(inlayHint).toHaveCount(1);
-    await expect(page.locator('.view-line').filter({ hasText: 'keeps' })).toHaveCount(0);
-    // Marker decorations set `showIfCollapsed`, so folding the squiggled
-    // region leaves a min-width squiggle at the fold anchor (Monaco behavior:
-    // errors hidden in a folded region still surface on the folded line).
-    await expect(page.locator('.cdr.squiggly-warning')).toHaveCount(1);
-    await foldMarker.click();
-    await expect(foldMarker).toHaveAttribute('data-folded', 'false');
-    await expect(inlayHint).toHaveCount(1);
-    await expect(wrappedHoverLine).toHaveCount(1);
-    await expect(page.locator('.cdr.squiggly-warning')).toHaveCount(1);
     const firstLineTop = async () =>
       page.locator('.view-line[data-line="1"]').evaluate((node) => {
         const root = node.closest('.monaco-editor');

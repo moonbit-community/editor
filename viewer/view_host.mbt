@@ -114,10 +114,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         browser_view_zones: self.view_zones,
         selection_view_range: self.selection_view_range(),
         view_selection: self.view_selection(),
-        folding_ranges: self.folding_ranges,
-        folded_ranges: self.folded_ranges,
         hover_state: self.hover,
-        on_toggle_fold: line => self.toggle_fold(line),
         on_hover_measured: (below, shift_left, max_height) => {
           self.hover = self.hover.measured(below, shift_left, max_height)
         },

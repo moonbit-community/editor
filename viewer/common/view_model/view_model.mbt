@@ -180,31 +180,6 @@ pub fn ViewModelLinesFromModelAsIs::new(
 }
 
 ///|
-/// Creates unwrapped view lines while hiding folded model lines. Injected
-/// text comes from the model's decoration storage, like `new`.
-pub fn ViewModelLinesFromModelAsIs::with_folding_model(
-  source : FrameSource,
-  folding_model : FoldingModel,
-) -> ViewModelLinesFromModelAsIs {
-  let line_count = source.tokenized.snapshot.line_count()
-  let visible_model_line_numbers : Array[Int] = []
-  let hidden_model_lines : Array[Bool] = []
-  for line_number in 1..<=line_count {
-    let hidden = folding_model.is_line_hidden(line_number)
-    hidden_model_lines.push(hidden)
-    if !hidden {
-      visible_model_line_numbers.push(line_number)
-    }
-  }
-  {
-    source,
-    visible_model_line_numbers,
-    hidden_model_lines,
-    injected_text_by_model_line: bucket_injected_text_from_decorations(source),
-  }
-}
-
-///|
 /// Number of visible view lines.
 pub fn ViewModelLinesFromModelAsIs::line_count(
   self : ViewModelLinesFromModelAsIs,
@@ -221,7 +196,7 @@ pub fn ViewModelLinesFromModelAsIs::model_line_count(
 }
 
 ///|
-/// Whether a one-based model line is hidden by folding.
+/// Whether a one-based model line is hidden.
 pub fn ViewModelLinesFromModelAsIs::is_model_line_hidden(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
@@ -303,7 +278,7 @@ pub fn ViewModelLinesFromModelAsIs::render_line(
 }
 
 ///|
-/// Renders a one-based model line regardless of folding visibility.
+/// Renders a one-based model line regardless of visibility.
 pub fn ViewModelLinesFromModelAsIs::render_model_line(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
@@ -579,19 +554,6 @@ pub fn ViewModel::with_options(
 }
 
 ///|
-/// Creates a view model with wrapping/tab options and folding.
-pub fn ViewModel::with_options_and_folding(
-  source : FrameSource,
-  options : ViewModelOptions,
-  folding_model : FoldingModel,
-) -> ViewModel {
-  let as_is = ViewModelLinesFromModelAsIs::with_folding_model(
-    source, folding_model,
-  )
-  ViewModel::from_lines(source, options, as_is, force_projected=true)
-}
-
-///|
 fn ViewModel::from_lines(
   source : FrameSource,
   options : ViewModelOptions,
@@ -599,7 +561,7 @@ fn ViewModel::from_lines(
   force_projected~ : Bool,
 ) -> ViewModel {
   // Injected text (from the model's decoration storage) needs the projected
-  // tier even without wrapping or folding.
+  // tier even without wrapping.
   let force_projected = force_projected || as_is.has_injected_text()
   let (lines, coordinates_converter) = if options.is_soft_wrap_enabled() {
     let projected = ViewModelLinesFromProjectedModel::new(

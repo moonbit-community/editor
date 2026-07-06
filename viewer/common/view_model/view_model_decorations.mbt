@@ -238,7 +238,7 @@ fn empty_view_decorations_collection(
 
 ///|
 /// `getDecorationsInRange` (`viewModelLines.ts:923-975`): view-range query
-/// against the model with hidden-line (folding) splitting. The fast path
+/// against the model with hidden-line splitting. The fast path
 /// covers the no-hidden-lines case; otherwise visible model-line runs are
 /// fetched separately, sorted, and deduplicated. Like the source, the
 /// split-path requests drop the `onlyMarginDecorations` argument.

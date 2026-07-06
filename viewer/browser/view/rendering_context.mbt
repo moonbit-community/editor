@@ -15,10 +15,7 @@ pub(all) struct ViewRenderInput {
   /// `selection_view_range` (which is `None` when collapsed), this carries the
   /// caret position of an empty selection — the cursor part renders from it.
   view_selection : @view_model.Selection?
-  folding_ranges : Array[@language.FoldingRange]
-  folded_ranges : Array[@language.FoldingRange]
   hover_state : @hover.HoverController
-  on_toggle_fold : (Int) -> Unit
   on_hover_measured : (Bool, Double, Double) -> Unit
   generation : Int
   /// Bumped by the `Viewer` per model `onDidChangeDecorations` event; a
@@ -152,8 +149,6 @@ priv struct ViewRenderSnapshot {
   gutter_width : Double
   space_width : Double
   view_selection : @view_model.Selection?
-  folding_ranges : Array[@language.FoldingRange]
-  folded_ranges : Array[@language.FoldingRange]
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   hover_state : @hover.HoverController
   editor_has_focus : Bool
@@ -174,8 +169,6 @@ fn ViewRenderSnapshot::from_input(
     gutter_width: input.gutter_width,
     space_width: input.space_width,
     view_selection: input.view_selection,
-    folding_ranges: input.folding_ranges.copy(),
-    folded_ranges: input.folded_ranges.copy(),
     browser_view_zones: input.browser_view_zones.copy(),
     hover_state: input.hover_state,
     editor_has_focus: input.editor_has_focus,

@@ -368,11 +368,7 @@ pub fn Viewer::Viewer(
       Some(model) =>
         if event.changed_languages.contains(model.language_id) {
           model.tokenization.reset_tokenization()
-          viewer.render_current_model(
-            model,
-            fresh=false,
-            request_language=false,
-          )
+          viewer.retokenize_current_model(model)
         }
       None => ()
     }
@@ -484,7 +480,7 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
     self.view_layout.dimensions().width,
     self.measured_char_width(),
   )
-  self.rebuild_current_view_model_for_options()
+  self.on_configuration_changed()
   self.measure_requested = true
   self.schedule_render()
 }
@@ -584,18 +580,20 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
       // .onModelDecorationsChanged()` (`viewModelImpl.ts`) — drop the
       // computer + viewport caches before the re-render reads them.
       match self.view_model {
-        Some(view_model) =>
+        Some(view_model) => {
           view_model.decorations().on_model_decorations_changed()
+          // Injected-text deltas re-run the line-breaks computer per line in
+          // Monaco (`onDidChangeContentOrInjectedText`); the viewer's
+          // granularity is the whole-projection reconstruct, applied to the
+          // live view model.
+          if event.affects_injected_text {
+            view_model.on_did_change_content_or_injected_text()
+            self.on_line_mapping_changed(view_model, model)
+          }
+        }
         None => ()
       }
       self.decorations_generation += 1
-      // Injected-text deltas re-run the line-breaks computer in Monaco
-      // (`onDidChangeContentOrInjectedText` → per-line recompute); the
-      // viewer's granularity is the whole-projection rebuild it already
-      // uses for wrap changes.
-      if event.affects_injected_text {
-        self.rebuild_current_view_model_for_options()
-      }
       self.schedule_render()
     }),
   )
@@ -610,7 +608,7 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.apply_scroll_change(
     self.view_layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
   )
-  self.render_current_model(model, fresh=true, request_language=true)
+  self.render_current_model(model)
   self.did_change_model.fire({ old_model_url, new_model_url: Some(model.uri) })
 }
 

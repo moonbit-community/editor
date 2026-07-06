@@ -248,7 +248,7 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
   )
   if next_wrap_column != self.soft_wrap_column {
     self.soft_wrap_column = next_wrap_column
-    self.rebuild_current_view_model_for_options()
+    self.on_configuration_changed()
   } else {
     self.sync_content_width()
   }

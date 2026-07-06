@@ -6,8 +6,9 @@
 // these for telemetry and render synchronization.
 
 ///|
-/// Fires after a view model is (re)built from a model — tokenize/build
-/// timings and counts for telemetry and test synchronization.
+/// Fires after a model's content is prepared for rendering (view-model build
+/// at attach, token re-warm on tokenizer changes) — tokenize/build timings
+/// and counts for telemetry and test synchronization.
 pub fn debug_on_did_build_view_model(
   viewer : Viewer,
   listener : (ViewerViewModelBuiltEvent) -> Unit,

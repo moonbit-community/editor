@@ -1,13 +1,14 @@
 ///|
-/// Warms the model's memoized tokenization part and builds the view model
-/// for the current options. Only a model's first render pays the tokenize
-/// sweep; later renders hit the part's memo. Synchronous CPU work; the
-/// paint happens in the next render flush.
+/// Warms the model's memoized tokenization part and builds the long-lived
+/// view model — the tail of Monaco's `_attachModel`. Only a model attach
+/// pays this: later option and decoration changes update the view model in
+/// place (`ViewModel::on_configuration_changed`,
+/// `on_did_change_content_or_injected_text`) and tokenizer changes only
+/// re-warm the token memo (`retokenize_current_model`). Synchronous CPU
+/// work; the paint happens in the next render flush.
 fn Viewer::render_current_model(
   self : Viewer,
   model : @model.TextModel,
-  fresh~ : Bool,
-  request_language~ : Bool,
 ) -> Unit {
   let tokenize_started = now_ms()
   model.tokenization.force_tokenization()
@@ -33,20 +34,10 @@ fn Viewer::render_current_model(
     tokenize_ms: tokenize_finished - tokenize_started,
     build_ms: build_finished - tokenize_finished,
   })
-  // Several renders can coalesce into one flush (feature data often
-  // resolves before the next animation frame); a pending fresh paint
-  // stays fresh so the host still sees the document switch.
-  let fresh = fresh ||
-    (match self.pending_rendered {
-      Some(pending) => pending.fresh
-      None => false
-    })
-  self.pending_rendered = Some({ model, fresh })
+  self.pending_rendered = Some({ model, fresh: true })
   self.measure_requested = true
   self.schedule_render()
-  if request_language {
-    self.request_model_features(model)
-  }
+  self.request_model_features(model)
 }
 
 ///|
@@ -64,23 +55,79 @@ fn Viewer::build_view_model(
 }
 
 ///|
-fn Viewer::rebuild_current_view_model_for_options(self : Viewer) -> Unit {
-  match self.text_model {
-    Some(model) => {
-      let view_model = self.build_view_model(model)
-      self.apply_view_model_layout(view_model, model.snapshot)
-      self.view_model = Some(view_model)
-      self.rendered_window = None
-      self.refresh_cursor_context()
-      self.content_generation += 1
-      let fresh = match self.pending_rendered {
-        Some(pending) => pending.fresh
-        None => false
-      }
-      self.pending_rendered = Some({ model, fresh })
-    }
-    None => self.sync_content_width()
+/// Re-tokenizes the current model after a tokenizer (re)registration and
+/// schedules a repaint — Monaco's `ModelTokensChangedEvent` →
+/// `ViewTokensChangedEvent` round trip. The long-lived view model survives;
+/// only the token memo and the paint are redone.
+fn Viewer::retokenize_current_model(
+  self : Viewer,
+  model : @model.TextModel,
+) -> Unit {
+  let tokenize_started = now_ms()
+  model.tokenization.force_tokenization()
+  let tokenize_finished = now_ms()
+  guard self.view_model is Some(view_model) else { return }
+  self.content_generation += 1
+  self.did_build_view_model.fire({
+    model,
+    line_count: view_model.line_count(),
+    token_count: model.tokenization.token_count(),
+    diagnostic_count: self.services.markers
+    .diagnostics_for_resource(model.uri)
+    .length(),
+    tokenize_ms: tokenize_finished - tokenize_started,
+    build_ms: 0.0,
+  })
+  let fresh = match self.pending_rendered {
+    Some(pending) => pending.fresh
+    None => false
   }
+  self.pending_rendered = Some({ model, fresh })
+  self.schedule_render()
+}
+
+///|
+/// Routes a layout-affecting option change into the live view model —
+/// Monaco's `_configuration.onDidChangeFast` → `_onConfigurationChanged`
+/// subscription. A changed view-line mapping re-flushes the layout; anything
+/// else only re-syncs the content width.
+fn Viewer::on_configuration_changed(self : Viewer) -> Unit {
+  match (self.view_model, self.text_model) {
+    (Some(view_model), Some(model)) => {
+      let options = self.options.view_model_options(
+        self.soft_wrap_column,
+        editor_id=self.editor_id,
+      )
+      if view_model.on_configuration_changed(options) {
+        self.on_line_mapping_changed(view_model, model)
+      } else {
+        self.sync_content_width()
+      }
+    }
+    _ => self.sync_content_width()
+  }
+}
+
+///|
+/// The viewer's side of a changed view-line mapping (wrapping reflow,
+/// injected text): re-flush the layout, drop the rendered window, re-point
+/// the cursor at the reconstructed projection, and mark the content stale —
+/// Monaco's `ViewFlushedEvent`/`ViewLineMappingChangedEvent` handling
+/// (`viewLayout.onFlushed` + `_cursor.onLineMappingChanged`).
+fn Viewer::on_line_mapping_changed(
+  self : Viewer,
+  view_model : @view_model.ViewModel,
+  model : @model.TextModel,
+) -> Unit {
+  self.apply_view_model_layout(view_model, model.snapshot)
+  self.rendered_window = None
+  self.refresh_cursor_context()
+  self.content_generation += 1
+  let fresh = match self.pending_rendered {
+    Some(pending) => pending.fresh
+    None => false
+  }
+  self.pending_rendered = Some({ model, fresh })
 }
 
 ///|

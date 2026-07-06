@@ -7,9 +7,10 @@
 // Deviations:
 // - The editor configuration reads (`filterValidationDecorations(options)`,
 //   `filterFontDecorations(options)`) are resolved once at construction: the
-//   readonly viewer rebuilds its view model on every option change, so the
-//   per-call read has no observable difference. Font decorations are out of
-//   scope, so that filter is constantly `false`.
+//   view model rotates its decoration provider when those options change
+//   (`ViewModel::on_configuration_changed`), so the per-call read has no
+//   observable difference. Font decorations are out of scope, so that filter
+//   is constantly `false`.
 // - `getMinimapDecorationsInRange` is DEFERRED with the minimap view part
 //   (plan out-of-scope list); `onlyMinimapDecorations` is carried through the
 //   context signature (it only forwards to the out-of-scope bracket provider

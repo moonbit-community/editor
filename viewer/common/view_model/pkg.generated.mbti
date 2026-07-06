@@ -164,9 +164,10 @@ pub(all) struct ViewLineData {
 
 pub struct ViewModel {
   model : @model.TextModel
-  lines : ViewModelLines
-  decorations : ViewModelDecorations
-  coordinates_converter : ViewModelCoordinatesConverter
+  mut options : ViewModelOptions
+  mut lines : ViewModelLines
+  mut decorations : ViewModelDecorations
+  mut coordinates_converter : ViewModelCoordinatesConverter
 }
 pub fn ViewModel::ViewModel(@model.TextModel) -> Self
 pub fn ViewModel::clamp_window(Self, @view_layout.LineWindow) -> @view_layout.LineWindow
@@ -182,6 +183,8 @@ pub fn ViewModel::lines(Self) -> ViewModelLines
 pub fn ViewModel::model_line_max_column(Self, Int) -> Int
 pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
 pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
+pub fn ViewModel::on_configuration_changed(Self, ViewModelOptions) -> Bool
+pub fn ViewModel::on_did_change_content_or_injected_text(Self) -> Unit
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
 pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions) -> Self

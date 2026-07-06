@@ -67,14 +67,14 @@ fn Viewer::test_window(self : Viewer) -> @view_layout.LineWindow {
 }
 
 ///|
-/// Forces a soft-wrap column and rebuilds the view model, the headless analog
+/// Forces a soft-wrap column and reflows the view model, the headless analog
 /// of the wrap width an attached viewer derives from its measured content box.
 /// `ViewerOptions` carries no wrap-column field (the real column is measured
 /// from the DOM via `soft_wrap_column_for_content_width`), so a headless wrap
 /// test sets the private column directly. Requires `options.soft_wrap`.
 fn Viewer::test_set_soft_wrap_column(self : Viewer, column : Int) -> Unit {
   self.soft_wrap_column = column
-  self.rebuild_current_view_model_for_options()
+  self.on_configuration_changed()
 }
 
 ///|

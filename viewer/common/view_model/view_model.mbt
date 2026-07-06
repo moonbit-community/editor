@@ -515,12 +515,16 @@ pub fn ViewModelLines::view_line_rendering_data(
 
 ///|
 /// Backend-neutral document view model: the backing text model plus line
-/// projection, decorations, and coordinate conversion.
+/// projection, decorations, and coordinate conversion. Long-lived like
+/// Monaco's `ViewModel` (`viewModelImpl.ts`): constructed once at model
+/// attach and updated in place through `on_configuration_changed` and
+/// `on_did_change_content_or_injected_text`.
 pub struct ViewModel {
   model : @model.TextModel
-  lines : ViewModelLines
-  decorations : ViewModelDecorations
-  coordinates_converter : ViewModelCoordinatesConverter
+  mut options : ViewModelOptions
+  mut lines : ViewModelLines
+  mut decorations : ViewModelDecorations
+  mut coordinates_converter : ViewModelCoordinatesConverter
 }
 
 ///|
@@ -535,20 +539,23 @@ pub fn ViewModel::with_options(
   model : @model.TextModel,
   options : ViewModelOptions,
 ) -> ViewModel {
-  let as_is = ViewModelLinesFromModelAsIs::new(model)
-  ViewModel::from_lines(model, options, as_is, force_projected=false)
+  let (lines, coordinates_converter, decorations) = construct_lines(
+    model, options,
+  )
+  { model, options, lines, decorations, coordinates_converter }
 }
 
 ///|
-fn ViewModel::from_lines(
+/// Selects the line tier and builds its converter and decoration provider —
+/// Monaco's `_constructLines` (`viewModelLines.ts`), lifted onto the view
+/// model because the viewer re-picks the tier on every reconstruct: injected
+/// text (from the model's decoration storage) needs the projected tier even
+/// without wrapping.
+fn construct_lines(
   model : @model.TextModel,
   options : ViewModelOptions,
-  as_is : ViewModelLinesFromModelAsIs,
-  force_projected~ : Bool,
-) -> ViewModel {
-  // Injected text (from the model's decoration storage) needs the projected
-  // tier even without wrapping.
-  let force_projected = force_projected || as_is.has_injected_text()
+) -> (ViewModelLines, ViewModelCoordinatesConverter, ViewModelDecorations) {
+  let as_is = ViewModelLinesFromModelAsIs::new(model)
   let (lines, coordinates_converter) = if options.is_soft_wrap_enabled() {
     let projected = ViewModelLinesFromProjectedModel::new(
       as_is,
@@ -562,7 +569,7 @@ fn ViewModel::from_lines(
       ProjectedModel(projected),
       Projected(ProjectedCoordinatesConverter::new(projected)),
     )
-  } else if force_projected {
+  } else if as_is.has_injected_text() {
     let projected = ViewModelLinesFromProjectedModel::new(
       as_is,
       LineBreaksComputer(0, tab_size=options.tab_size),
@@ -574,18 +581,76 @@ fn ViewModel::from_lines(
   } else {
     (ModelAsIs(as_is), Identity(IdentityCoordinatesConverter::new()))
   }
-  {
+  let decorations = ViewModelDecorations::new(
+    options.editor_id,
     model,
+    filter_validation_decorations(options.render_validation_decorations),
     lines,
-    decorations: ViewModelDecorations::new(
-      options.editor_id,
-      model,
-      filter_validation_decorations(options.render_validation_decorations),
-      lines,
-      coordinates_converter,
-    ),
     coordinates_converter,
+  )
+  (lines, coordinates_converter, decorations)
+}
+
+///|
+/// Reconstructs the line tier in place; the converter and decoration
+/// provider close over the lines, so they rotate with it.
+fn ViewModel::reconstruct_lines(self : ViewModel) -> Unit {
+  let (lines, coordinates_converter, decorations) = construct_lines(
+    self.model,
+    self.options,
+  )
+  self.lines = lines
+  self.coordinates_converter = coordinates_converter
+  self.decorations = decorations
+}
+
+///|
+/// Applies changed options to the live view model — Monaco's
+/// `ViewModel._onConfigurationChanged` (`viewModelImpl.ts:274`) collapsed
+/// onto the one options struct: `_lines.setWrappingSettings` + `setTabSize`
+/// become one wrapping comparison that reconstructs the projection in place,
+/// and a changed decoration filter input (`renderValidationDecorations`,
+/// `editorId`) rotates the decoration provider (Monaco's
+/// `_decorations.reset()` — the viewer's provider closes over the filter at
+/// construction). Returns whether the view-line mapping changed (Monaco
+/// emits `ViewFlushedEvent`/`ViewLineMappingChangedEvent`), so the caller
+/// re-flushes the layout.
+pub fn ViewModel::on_configuration_changed(
+  self : ViewModel,
+  options : ViewModelOptions,
+) -> Bool {
+  let previous = self.options
+  if previous == options {
+    return false
   }
+  self.options = options
+  if previous.soft_wrap_column != options.soft_wrap_column ||
+    previous.tab_size != options.tab_size ||
+    previous.wrapping_indent != options.wrapping_indent {
+    self.reconstruct_lines()
+    return true
+  }
+  self.decorations = ViewModelDecorations::new(
+    options.editor_id,
+    self.model,
+    filter_validation_decorations(options.render_validation_decorations),
+    self.lines,
+    self.coordinates_converter,
+  )
+  false
+}
+
+///|
+/// Injected-text decorations changed — the readonly viewer's form of
+/// Monaco's `onDidChangeContentOrInjectedText` (`viewModelImpl.ts:319`,
+/// called directly by the text model). Monaco re-runs the line-breaks
+/// computer per changed line; the viewer's granularity is the
+/// whole-projection reconstruct, which also re-picks the tier (injected
+/// text forces the projected one).
+pub fn ViewModel::on_did_change_content_or_injected_text(
+  self : ViewModel,
+) -> Unit {
+  self.reconstruct_lines()
 }
 
 ///|

@@ -1,34 +1,39 @@
 ///|
+/// Registers the generic fallback lexer for the `moonbit` language id the test
+/// models carry (the real lexers are registered by the shell, not the common
+/// tier), so the goldens keep PlainTokenizer's token segmentation. Idempotent;
+/// the registration lives for the test binary.
+fn register_plain_moonbit() -> Unit {
+  @syntax.tokenization_registry.register(
+    "moonbit",
+    @syntax.PlainTokenizer::new(),
+  )
+  |> ignore
+}
+
+///|
+fn plain_text_model(text : String) -> @model.TextModel {
+  register_plain_moonbit()
+  TextModel(@base_common.Uri::memory("plain.mbt"), "", "moonbit", 1, "", text)
+}
+
+///|
 fn hit_test_frame(
   viewport? : @view_model.FrameViewport,
 ) -> @view_model.RenderFrame {
-  let doc = @model.TextSnapshot("fn main {\n  let x = 1\n}\n\nfn other {}")
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
-  let source = @view_model.FrameSource(
-    tokenized,
-    @language.ProviderResult::empty(),
-  )
+  let model = plain_text_model("fn main {\n  let x = 1\n}\n\nfn other {}")
+  let source = @view_model.FrameSource(model, @language.ProviderResult::empty())
   let viewport = match viewport {
     Some(viewport) => viewport
-    None => { start_line: 1, end_line: doc.line_count() + 1 }
+    None => { start_line: 1, end_line: model.get_line_count() + 1 }
   }
   @view_model.build_frame(source, viewport)
 }
 
 ///|
 fn projected_hit_test_frame() -> @view_model.RenderFrame {
-  let doc = @model.TextSnapshot("abcdefghij")
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
-  let source = @view_model.FrameSource(
-    tokenized,
-    @language.ProviderResult::empty(),
-  )
+  let model = plain_text_model("abcdefghij")
+  let source = @view_model.FrameSource(model, @language.ProviderResult::empty())
   let view_model = @view_model.ViewModel::with_options(
     source,
     @view_model.ViewModelOptions::soft_wrap(5),
@@ -67,16 +72,8 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
     },
   ])
   |> ignore
-  let doc = model.snapshot
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
-  let source = @view_model.FrameSource(
-    tokenized,
-    @language.ProviderResult::empty(),
-    model~,
-  )
+  register_plain_moonbit()
+  let source = @view_model.FrameSource(model, @language.ProviderResult::empty())
   let view_model = @view_model.ViewModel::with_options(
     source,
     @view_model.ViewModelOptions::no_wrap(),

@@ -346,7 +346,8 @@ pub fn AgentFeedbackService::remove_feedback(
   let key = resource.to_string()
   match self.navigation_anchor_by_resource.get(key) {
     Some(anchor) =>
-      if anchor == feedback_id || anchor == to_session_editor_comment_id(feedback_id) {
+      if anchor == feedback_id ||
+        anchor == to_session_editor_comment_id(feedback_id) {
         self.navigation_anchor_by_resource.remove(key)
       }
     None => ()

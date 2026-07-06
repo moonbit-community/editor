@@ -12,15 +12,15 @@
 /// Builds a metadata word from a foreground color id and a font-style mask, as
 /// the suite does with `<<` against `MetadataConsts.*_OFFSET`.
 fn make_meta(foreground : Int, font_style : Int) -> UInt {
-  ((foreground << METADATA_FOREGROUND_OFFSET) |
-  (font_style << METADATA_FONT_STYLE_OFFSET)).reinterpret_as_uint()
+  ((foreground << @tokens.METADATA_FOREGROUND_OFFSET) |
+  (font_style << @tokens.METADATA_FONT_STYLE_OFFSET)).reinterpret_as_uint()
 }
 
 ///|
 /// Inflated `IViewLineTokens` over `text` with explicit end-offset/metadata
 /// tokens (mirrors the suite's `TestLineTokens`).
-fn view_tokens(text : String, tokens : Array[UInt]) -> &IViewLineTokens {
-  LineTokens::new(tokens, text, LanguageIdCodec::new()).inflate()
+fn view_tokens(text : String, tokens : Array[UInt]) -> &@tokens.IViewLineTokens {
+  @tokens.LineTokens::new(tokens, text, @services.LanguageIdCodec::new()).inflate()
 }
 
 ///|
@@ -33,7 +33,9 @@ fn tth_mode(line : String) -> Array[UInt] {
     let color = if line[i].to_int() == 46 { 7 } else { 9 } // '.' == 46
     if prev != color {
       arr.push(i.reinterpret_as_uint())
-      arr.push((color << METADATA_FOREGROUND_OFFSET).reinterpret_as_uint())
+      arr.push(
+        (color << @tokens.METADATA_FOREGROUND_OFFSET).reinterpret_as_uint(),
+      )
     }
     prev = color
   }
@@ -44,7 +46,7 @@ fn tth_mode(line : String) -> Array[UInt] {
 test "TextToHtmlTokenizer 1" {
   let actual = tokenize_to_string(
     ".abc..def...gh",
-    LanguageIdCodec::new(),
+    @services.LanguageIdCodec::new(),
     tth_mode,
   )
   assert_eq(
@@ -64,7 +66,7 @@ test "TextToHtmlTokenizer 1" {
 test "TextToHtmlTokenizer 2" {
   let actual = tokenize_to_string(
     ".abc..def...gh\n.abc..def...gh",
-    LanguageIdCodec::new(),
+    @services.LanguageIdCodec::new(),
     tth_mode,
   )
   let one = "<span class=\"mtk7\">.</span>" +
@@ -84,15 +86,15 @@ test "tokenizeLineToHTML" {
   let text = "Ciao hello world!"
   let tokens : Array[UInt] = [
     4U,
-    make_meta(3, FONT_STYLE_BOLD | FONT_STYLE_ITALIC),
+    make_meta(3, @tokens.FONT_STYLE_BOLD | @tokens.FONT_STYLE_ITALIC),
     5U,
-    make_meta(1, FONT_STYLE_NONE),
+    make_meta(1, @tokens.FONT_STYLE_NONE),
     10U,
-    make_meta(4, FONT_STYLE_NONE),
+    make_meta(4, @tokens.FONT_STYLE_NONE),
     11U,
-    make_meta(1, FONT_STYLE_NONE),
+    make_meta(1, @tokens.FONT_STYLE_NONE),
     17U,
-    make_meta(5, FONT_STYLE_UNDERLINE),
+    make_meta(5, @tokens.FONT_STYLE_UNDERLINE),
   ]
   let color_map = ["", "#000000", "#ffffff", "#ff0000", "#00ff00", "#0000ff"]
   let view = view_tokens(text, tokens)
@@ -159,17 +161,17 @@ test "tokenizeLineToHTML handle spaces #35954" {
   let text = "  Ciao   hello world!"
   let tokens : Array[UInt] = [
     2U,
-    make_meta(1, FONT_STYLE_NONE),
+    make_meta(1, @tokens.FONT_STYLE_NONE),
     6U,
-    make_meta(3, FONT_STYLE_BOLD | FONT_STYLE_ITALIC),
+    make_meta(3, @tokens.FONT_STYLE_BOLD | @tokens.FONT_STYLE_ITALIC),
     9U,
-    make_meta(1, FONT_STYLE_NONE),
+    make_meta(1, @tokens.FONT_STYLE_NONE),
     14U,
-    make_meta(4, FONT_STYLE_NONE),
+    make_meta(4, @tokens.FONT_STYLE_NONE),
     15U,
-    make_meta(1, FONT_STYLE_NONE),
+    make_meta(1, @tokens.FONT_STYLE_NONE),
     21U,
-    make_meta(5, FONT_STYLE_UNDERLINE),
+    make_meta(5, @tokens.FONT_STYLE_UNDERLINE),
   ]
   let color_map = ["", "#000000", "#ffffff", "#ff0000", "#00ff00", "#0000ff"]
   let view = view_tokens(text, tokens)
@@ -209,13 +211,13 @@ test "tokenizeLineToHTML with tabs and non-zero startOffset #263387" {
   let text = "\ta\tb"
   let tokens : Array[UInt] = [
     1U,
-    make_meta(1, FONT_STYLE_NONE),
+    make_meta(1, @tokens.FONT_STYLE_NONE),
     2U,
-    make_meta(3, FONT_STYLE_NONE),
+    make_meta(3, @tokens.FONT_STYLE_NONE),
     3U,
-    make_meta(1, FONT_STYLE_NONE),
+    make_meta(1, @tokens.FONT_STYLE_NONE),
     4U,
-    make_meta(4, FONT_STYLE_NONE),
+    make_meta(4, @tokens.FONT_STYLE_NONE),
   ]
   let color_map = ["", "#000000", "#ffffff", "#ff0000", "#00ff00"]
   let view = view_tokens(text, tokens)

@@ -1,0 +1,61 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/common/model/tokens"
+
+import {
+  "moonbit-community/editor/syntax",
+  "moonbit-community/editor/viewer/common/services",
+}
+
+// Values
+pub const COLOR_ID_COMMENT : Int = 7
+
+pub const COLOR_ID_FUNCTION : Int = 10
+
+pub const COLOR_ID_INVALID : Int = 13
+
+pub const COLOR_ID_KEYWORD : Int = 3
+
+pub const COLOR_ID_NUMBER : Int = 6
+
+pub const COLOR_ID_PUNCTUATION : Int = 8
+
+pub const COLOR_ID_REGEXP : Int = 12
+
+pub const COLOR_ID_STRING : Int = 5
+
+pub const COLOR_ID_STRING_ESCAPE : Int = 11
+
+pub const COLOR_ID_TYPE : Int = 9
+
+pub const COLOR_ID_VARIABLE : Int = 4
+
+pub fn default_token_color_map() -> Array[String]
+
+pub fn line_tokens_from_lexer_tokens(String, Array[@syntax.LineToken], @services.LanguageIdCodec, language_id? : Int) -> @moonbit-community/editor/viewer/common/tokens.LineTokens
+
+pub fn tag_foreground_color_id(@syntax.HighlightTag) -> Int
+
+pub fn tag_standard_token_type(@syntax.HighlightTag) -> Int
+
+pub fn tag_to_metadata(@syntax.HighlightTag, font_style? : Int, language_id? : Int) -> UInt
+
+pub fn token_theme_style_block(Array[String]) -> String
+
+// Errors
+
+// Types and methods
+pub struct TokenizationTextModelPart {
+  // private fields
+}
+pub fn TokenizationTextModelPart::force_tokenization(Self) -> Unit
+pub fn TokenizationTextModelPart::get_language_id(Self) -> String
+pub fn TokenizationTextModelPart::get_line_tokens(Self, Int) -> @moonbit-community/editor/viewer/common/tokens.LineTokens
+pub fn TokenizationTextModelPart::has_tokens(Self) -> Bool
+pub fn TokenizationTextModelPart::new(Array[String], String) -> Self
+pub fn TokenizationTextModelPart::reset_tokenization(Self) -> Unit
+pub fn TokenizationTextModelPart::token_count(Self) -> Int
+
+// Type aliases
+
+// Traits
+

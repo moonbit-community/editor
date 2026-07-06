@@ -144,7 +144,7 @@ pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(
 /// the spliced injected tokens carry only default syntactic metadata.
 fn render_projected_line(
   line : RenderLine,
-  base_tokens : LineTokens,
+  base_tokens : @tokens.LineTokens,
   projected_line : ProjectedTextLine,
   view_line_number : Int,
   start_offset : Int,
@@ -198,16 +198,16 @@ fn spaces(n : Int) -> String {
 /// `with_inserted`'s precondition.
 fn injected_tokens_for_projected_line(
   projected_line : ProjectedTextLine,
-) -> Array[InsertedToken] {
-  let inserts : Array[InsertedToken] = []
+) -> Array[@tokens.InsertedToken] {
+  let inserts : Array[@tokens.InsertedToken] = []
   for part in projected_line.parts {
     match part.kind {
       InjectedSegment(model_column~, ..) =>
         inserts.push(
-          InsertedToken::new(
+          @tokens.InsertedToken::new(
             model_column,
             projected_line.text[part.start:part.end].to_owned(),
-            LineTokens::default_token_metadata(),
+            @tokens.LineTokens::default_token_metadata(),
           ),
         )
       SourceSegment(_) => ()

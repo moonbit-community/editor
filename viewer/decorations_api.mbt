@@ -96,7 +96,10 @@ pub fn Viewer::create_decorations_collection(
   self : Viewer,
   decorations? : Array[@model.ModelDeltaDecoration] = [],
 ) -> EditorDecorationsCollection {
-  let collection : EditorDecorationsCollection = { viewer: self, decoration_ids: [] }
+  let collection : EditorDecorationsCollection = {
+    viewer: self,
+    decoration_ids: [],
+  }
   if decorations.length() > 0 {
     collection.set(decorations) |> ignore
   }
@@ -130,13 +133,17 @@ pub fn EditorDecorationsCollection::append(
 
 ///|
 /// Removes every decoration in the collection.
-pub fn EditorDecorationsCollection::clear(self : EditorDecorationsCollection) -> Unit {
+pub fn EditorDecorationsCollection::clear(
+  self : EditorDecorationsCollection,
+) -> Unit {
   self.decoration_ids = self.viewer.delta_decorations(self.decoration_ids, [])
 }
 
 ///|
 /// The decoration count.
-pub fn EditorDecorationsCollection::length(self : EditorDecorationsCollection) -> Int {
+pub fn EditorDecorationsCollection::length(
+  self : EditorDecorationsCollection,
+) -> Int {
   self.decoration_ids.length()
 }
 

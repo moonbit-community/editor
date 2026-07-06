@@ -1,10 +1,4 @@
 ///|
-struct TokenProviderEntry {
-  id : Int
-  tokenizer : &@syntax.LineTokenizer
-}
-
-///|
 struct LanguageFeatureRegistry[T] {
   entries : Array[LanguageFeatureEntry[T]]
 }
@@ -44,8 +38,6 @@ fn[T] LanguageFeatureRegistry::register(
 /// embedded viewers that need isolation can create a fresh registry and pass it
 /// through `ViewerServices::new(languages~)`.
 pub struct Languages {
-  priv tokenizers : Map[String, TokenProviderEntry]
-  priv token_provider_generation : Ref[Int]
   priv hover_provider : LanguageFeatureRegistry[&@language.HoverProvider]
   priv diagnostics_provider : LanguageFeatureRegistry[
     &@language.DiagnosticsProvider,
@@ -62,8 +54,6 @@ pub struct Languages {
 /// Creates an isolated language registry.
 pub fn Languages::new() -> Languages {
   {
-    tokenizers: {},
-    token_provider_generation: Ref(0),
     hover_provider: LanguageFeatureRegistry::new(),
     diagnostics_provider: LanguageFeatureRegistry::new(),
     document_symbol_provider: LanguageFeatureRegistry::new(),
@@ -81,36 +71,18 @@ pub fn default_languages() -> Languages {
 }
 
 ///|
-/// Registers or replaces the tokenizer for `language_id`.
-///
-/// Disposing the returned handle clears the provider only if it is still the
-/// active registration for that language, so disposing an older registration
-/// cannot remove a newer replacement.
+/// Registers or replaces the tokenizer for `language_id` in the process-wide
+/// `@syntax.tokenization_registry`, exactly monaco-editor's standalone
+/// `monaco.languages.setTokensProvider` forwarding into
+/// `TokenizationRegistry.register`. Tokenizers are global even for isolated
+/// `Languages` instances, as in Monaco; disposing the returned handle clears
+/// the provider only if it is still the active registration.
 pub fn Languages::set_tokens_provider(
-  self : Languages,
+  _self : Languages,
   language_id : String,
   tokenizer : &@syntax.LineTokenizer,
 ) -> @base_common.Disposable {
-  let id = self.token_provider_generation.val
-  self.token_provider_generation.val = id + 1
-  self.tokenizers[language_id] = { id, tokenizer }
-  @base_common.Disposable::from(() => {
-    match self.tokenizers.get(language_id) {
-      Some(entry) => if entry.id == id { self.tokenizers.remove(language_id) }
-      None => ()
-    }
-  })
-}
-
-///|
-pub fn Languages::lookup_tokens_provider(
-  self : Languages,
-  language_id : String,
-) -> &@syntax.LineTokenizer? {
-  match self.tokenizers.get(language_id) {
-    Some(entry) => Some(entry.tokenizer)
-    None => None
-  }
+  @syntax.tokenization_registry.register(language_id, tokenizer)
 }
 
 ///|

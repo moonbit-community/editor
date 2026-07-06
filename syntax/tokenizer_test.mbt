@@ -64,22 +64,23 @@ fn find_marker(
 }
 
 ///|
-test "driver carries state across lines and converts to doc offsets" {
-  let doc = @model.TextSnapshot("aa /* bb\ncc */ dd")
-  let tokens = @syntax.tokenize_document(doc, BlockCommentToy::{  })
+test "block comment state threads across lines" {
+  let toy : &@syntax.LineTokenizer = BlockCommentToy::{  }
+  let (line0, after_open) = toy.tokenize_line("aa /* bb", toy.initial_state())
   debug_inspect(
-    tokens,
+    line0,
     content=(
-      #|[
-      #|  { range: { start: 3, end_exclusive: 8 }, tag: Comment, text: "/* bb" },
-      #|  {
-      #|    range: { start: 9, end_exclusive: 14 },
-      #|    tag: Comment,
-      #|    text: "cc */",
-      #|  },
-      #|]
+      #|[{ start: 3, end: 8, tag: Comment }]
     ),
   )
+  let (line1, after_close) = toy.tokenize_line("cc */ dd", after_open)
+  debug_inspect(
+    line1,
+    content=(
+      #|[{ start: 0, end: 5, tag: Comment }]
+    ),
+  )
+  assert_true(after_close == toy_code)
 }
 
 ///|
@@ -95,30 +96,26 @@ test "tokenizer state equality detects convergence" {
 
 ///|
 test "registry lookup resolves registered languages only" {
-  let registry = @syntax.TokenizerRegistry::new()
-  assert_true(registry.lookup("toy") is None)
-  registry.register("toy", BlockCommentToy::{  })
-  assert_true(registry.lookup("toy") is Some(_))
-  assert_true(registry.lookup("unknown") is None)
+  let registry = @syntax.TokenizationRegistry::new()
+  assert_true(registry.get("toy") is None)
+  registry.register("toy", BlockCommentToy::{  }) |> ignore
+  assert_true(registry.get("toy") is Some(_))
+  assert_true(registry.get("unknown") is None)
 }
 
 ///|
 test "plain tokenizer counts UTF-16 code units and keeps pairs whole" {
   // 𐍈 (U+10348) is two UTF-16 code units; the identifier after it must
   // start at offset 4 and the pair must stay one token.
-  let doc = @model.TextSnapshot("a \u{10348}b")
-  let tokens = @syntax.tokenize_document(doc, @syntax.PlainTokenizer::new())
+  let plain : &@syntax.LineTokenizer = @syntax.PlainTokenizer::new()
+  let (tokens, _) = plain.tokenize_line("a \u{10348}b", plain.initial_state())
   debug_inspect(
     tokens,
     content=(
       #|[
-      #|  { range: { start: 0, end_exclusive: 1 }, tag: Identifier, text: "a" },
-      #|  {
-      #|    range: { start: 2, end_exclusive: 4 },
-      #|    tag: Punctuation,
-      #|    text: "𐍈",
-      #|  },
-      #|  { range: { start: 4, end_exclusive: 5 }, tag: Identifier, text: "b" },
+      #|  { start: 0, end: 1, tag: Identifier },
+      #|  { start: 2, end: 4, tag: Punctuation },
+      #|  { start: 4, end: 5, tag: Identifier },
       #|]
     ),
   )

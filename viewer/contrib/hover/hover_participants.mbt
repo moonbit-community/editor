@@ -188,10 +188,7 @@ pub impl HoverParticipant for InlayHintsHover with fn ordinal(_self) {
 
 ///|
 /// Computes tooltip hovers for injected inlay-hint text.
-pub impl HoverParticipant for InlayHintsHover with fn compute_sync(
-  self,
-  ctx,
-) {
+pub impl HoverParticipant for InlayHintsHover with fn compute_sync(self, ctx) {
   if ctx.injected_text_index < 0 {
     return []
   }
@@ -214,10 +211,7 @@ pub impl HoverParticipant for InlayHintsHover with fn compute_sync(
 
 ///|
 /// Inlay-hint hover data is fully synchronous.
-pub impl HoverParticipant for InlayHintsHover with fn compute_async(
-  _self,
-  _ctx,
-) {
+pub impl HoverParticipant for InlayHintsHover with fn compute_async(_self, _ctx) {
   []
 }
 

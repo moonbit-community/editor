@@ -6,6 +6,12 @@
 /// metadata word is held as `UInt` (Monaco packs it into a `Uint32Array`); the
 /// background field occupies the top byte, so an `Int` cannot hold a fully
 /// populated word.
+///
+/// Placement: Monaco keeps this file at the `editor/common/` root. The
+/// `viewer/common` root package imports `view_model`, which sits above this
+/// code in the import graph, so a root placement would cycle; it lives one
+/// directory down with its primary consumer (`lineTokens.ts` is in
+/// `common/tokens/` in Monaco too).
 
 ///|
 /// `FontStyle` — values are 2^x so a bit mask can be used.

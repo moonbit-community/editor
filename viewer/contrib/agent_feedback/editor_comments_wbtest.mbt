@@ -63,7 +63,10 @@ test "a long first comment widens the group to items below it" {
   )
   // The same span without the long text splits: 12 > 5 + 2.
   let split = group_nearby_session_editor_comments(
-    get_session_editor_comments([feedback_at("f1", a, 1), feedback_at("f2", a, 13)]),
+    get_session_editor_comments([
+      feedback_at("f1", a, 1),
+      feedback_at("f2", a, 13),
+    ]),
   )
   assert_eq(
     split.map(group => group.map(c => c.source_id).join(",")).join(";"),

@@ -4,6 +4,9 @@
 /// submodule). The binary token store is a flat `Array[UInt]` mirroring
 /// Monaco's `Uint32Array`: even slots hold a token's exclusive end offset,
 /// odd slots its packed metadata word (see `encoded_token_attributes.mbt`).
+/// The codec parameter is `@services.LanguageIdCodec`
+/// (`services/languages_registry.mbt`), the `ILanguageIdCodec` role
+/// `lineTokens.ts` takes.
 ///
 /// Deviations from the source, none of which the conformance suite exercises:
 ///   - The `IViewLineTokens` trait omits `equals` (needs concrete-type
@@ -13,92 +16,9 @@
 ///     unported `TokenArray` family).
 ///   - The constructor skips Monaco's soft token-length/text-length mismatch
 ///     warning (`onUnexpectedError`); the readonly viewer has no such reporter.
-///   - `LanguageIdCodec` is a real string↔numeric registry (Monaco's
-///     `LanguageIdCodec` from `languagesRegistry.ts`) seeded with the viewer's
-///     built-in languages, but is shared per document rather than the one global
-///     instance Monaco threads through every model.
 ///   - `with_inserted` guards the middle-insert metadata read against a
 ///     past-end token index (Monaco reads `undefined`); the read is unreachable
 ///     for valid in-bounds insert offsets.
-
-///|
-/// The built-in languages the codec is seeded with, so their numeric ids are
-/// stable across documents. Mirrors Monaco reserving `null`/`plaintext` at ids
-/// `0`/`1` (`LanguageId.Null` / `LanguageId.PlainText`), followed by the
-/// languages the shell registers via `Languages::set_tokens_provider`
-/// (`internal/shell/workbench/app.mbt`). Any other language (e.g. a test
-/// language) is allocated an id on demand by `register`.
-let builtin_language_ids : Array[String] = [
-  "null", "plaintext", "moonbit", "javascript", "typescript", "json",
-]
-
-///|
-/// Faithful `ILanguageIdCodec` (`languagesRegistry.ts`). Maps string language
-/// ids to a stable numeric id (and back), the value the metadata word's low 8
-/// bits carry. Seeded with the built-in languages; `register` extends it.
-pub struct LanguageIdCodec {
-  language_id_to_language : Array[String]
-  language_to_language_id : Map[String, Int]
-  mut next_language_id : Int
-}
-
-///|
-pub fn LanguageIdCodec::new() -> LanguageIdCodec {
-  let codec = {
-    language_id_to_language: [],
-    language_to_language_id: {},
-    next_language_id: 0,
-  }
-  for language in builtin_language_ids {
-    codec.register(language) |> ignore
-  }
-  codec
-}
-
-///|
-/// Registers `language`, returning its numeric id (the existing id if already
-/// registered). Mirrors Monaco's `register` + `encodeLanguageId` allocation:
-/// ids are handed out sequentially, so the first registered language is `0`.
-pub fn LanguageIdCodec::register(
-  self : LanguageIdCodec,
-  language : String,
-) -> Int {
-  match self.language_to_language_id.get(language) {
-    Some(id) => id
-    None => {
-      let id = self.next_language_id
-      self.next_language_id = id + 1
-      self.language_id_to_language.push(language)
-      self.language_to_language_id[language] = id
-      id
-    }
-  }
-}
-
-///|
-/// Numeric id for `language`, or `0` (the null language) when unregistered.
-/// Mirrors Monaco's `encodeLanguageId` (lookup only — `register` allocates).
-pub fn LanguageIdCodec::encode_language_id(
-  self : LanguageIdCodec,
-  language : String,
-) -> Int {
-  match self.language_to_language_id.get(language) {
-    Some(id) => id
-    None => 0
-  }
-}
-
-///|
-pub fn LanguageIdCodec::decode_language_id(
-  self : LanguageIdCodec,
-  language_id : Int,
-) -> String {
-  if language_id >= 0 && language_id < self.language_id_to_language.length() {
-    self.language_id_to_language[language_id]
-  } else {
-    "null"
-  }
-}
 
 ///|
 /// A line's tokens, viewed as a sequence with per-token end offset and
@@ -126,14 +46,14 @@ pub struct LineTokens {
   tokens : Array[UInt]
   tokens_count : Int
   text : String
-  language_id_codec : LanguageIdCodec
+  language_id_codec : @services.LanguageIdCodec
 }
 
 ///|
 pub fn LineTokens::new(
   tokens : Array[UInt],
   text : String,
-  decoder : LanguageIdCodec,
+  decoder : @services.LanguageIdCodec,
 ) -> LineTokens {
   {
     tokens,
@@ -154,7 +74,7 @@ pub fn LineTokens::default_token_metadata() -> UInt {
 ///|
 pub fn LineTokens::create_empty(
   line_content : String,
-  decoder : LanguageIdCodec,
+  decoder : @services.LanguageIdCodec,
 ) -> LineTokens {
   let tokens : Array[UInt] = [
     line_content.length().reinterpret_as_uint(),
@@ -166,7 +86,7 @@ pub fn LineTokens::create_empty(
 ///|
 pub fn LineTokens::create_from_text_and_metadata(
   data : Array[(String, UInt)],
-  decoder : LanguageIdCodec,
+  decoder : @services.LanguageIdCodec,
 ) -> LineTokens {
   let mut offset = 0
   let mut full_text = ""
@@ -343,27 +263,50 @@ pub fn LineTokens::with_inserted(
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_count(self) {
+pub fn LineTokens::get_count(self : LineTokens) -> Int {
   self.tokens_count
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_line_content(self) {
+impl IViewLineTokens for LineTokens with fn get_count(self) {
+  LineTokens::get_count(self)
+}
+
+///|
+pub fn LineTokens::get_line_content(self : LineTokens) -> String {
   self.text
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_end_offset(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_line_content(self) {
+  LineTokens::get_line_content(self)
+}
+
+///|
+pub fn LineTokens::get_end_offset(self : LineTokens, token_index : Int) -> Int {
   self.tokens[token_index << 1].reinterpret_as_int()
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_metadata(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_end_offset(self, token_index) {
+  LineTokens::get_end_offset(self, token_index)
+}
+
+///|
+pub fn LineTokens::get_metadata(self : LineTokens, token_index : Int) -> UInt {
   self.tokens[(token_index << 1) + 1]
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_language_id(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_metadata(self, token_index) {
+  LineTokens::get_metadata(self, token_index)
+}
+
+///|
+pub fn LineTokens::get_language_id(
+  self : LineTokens,
+  token_index : Int,
+) -> String {
   let metadata = self.tokens[(token_index << 1) + 1]
   self.language_id_codec.decode_language_id(
     TokenMetadata::get_language_id(metadata),
@@ -371,22 +314,60 @@ impl IViewLineTokens for LineTokens with fn get_language_id(self, token_index) {
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_standard_token_type(
-  self,
-  token_index,
-) {
+impl IViewLineTokens for LineTokens with fn get_language_id(self, token_index) {
+  LineTokens::get_language_id(self, token_index)
+}
+
+///|
+pub fn LineTokens::get_standard_token_type(
+  self : LineTokens,
+  token_index : Int,
+) -> Int {
   TokenMetadata::get_token_type(self.tokens[(token_index << 1) + 1])
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_foreground(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_standard_token_type(
+  self,
+  token_index,
+) {
+  LineTokens::get_standard_token_type(self, token_index)
+}
+
+///|
+pub fn LineTokens::get_foreground(self : LineTokens, token_index : Int) -> Int {
   TokenMetadata::get_foreground(self.tokens[(token_index << 1) + 1])
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_class_name(self, token_index) {
+impl IViewLineTokens for LineTokens with fn get_foreground(self, token_index) {
+  LineTokens::get_foreground(self, token_index)
+}
+
+///|
+pub fn LineTokens::get_class_name(
+  self : LineTokens,
+  token_index : Int,
+) -> String {
   TokenMetadata::get_class_name_from_metadata(
     self.tokens[(token_index << 1) + 1],
+  )
+}
+
+///|
+impl IViewLineTokens for LineTokens with fn get_class_name(self, token_index) {
+  LineTokens::get_class_name(self, token_index)
+}
+
+///|
+pub fn LineTokens::get_inline_style(
+  self : LineTokens,
+  token_index : Int,
+  color_map : Array[String],
+) -> String {
+  TokenMetadata::get_inline_style_from_metadata(
+    self.tokens[(token_index << 1) + 1],
+    color_map,
   )
 }
 
@@ -396,17 +377,30 @@ impl IViewLineTokens for LineTokens with fn get_inline_style(
   token_index,
   color_map,
 ) {
-  TokenMetadata::get_inline_style_from_metadata(
+  LineTokens::get_inline_style(self, token_index, color_map)
+}
+
+///|
+pub fn LineTokens::get_presentation(
+  self : LineTokens,
+  token_index : Int,
+) -> TokenPresentation {
+  TokenMetadata::get_presentation_from_metadata(
     self.tokens[(token_index << 1) + 1],
-    color_map,
   )
 }
 
 ///|
 impl IViewLineTokens for LineTokens with fn get_presentation(self, token_index) {
-  TokenMetadata::get_presentation_from_metadata(
-    self.tokens[(token_index << 1) + 1],
-  )
+  LineTokens::get_presentation(self, token_index)
+}
+
+///|
+pub fn LineTokens::find_token_index_at_offset(
+  self : LineTokens,
+  offset : Int,
+) -> Int {
+  LineTokens::find_index_in_tokens_array(self.tokens, offset)
 }
 
 ///|
@@ -414,11 +408,14 @@ impl IViewLineTokens for LineTokens with fn find_token_index_at_offset(
   self,
   offset,
 ) {
-  LineTokens::find_index_in_tokens_array(self.tokens, offset)
+  LineTokens::find_token_index_at_offset(self, offset)
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_token_text(self, token_index) {
+pub fn LineTokens::get_token_text(
+  self : LineTokens,
+  token_index : Int,
+) -> String {
   substr(
     self.text,
     self.get_start_offset(token_index),
@@ -427,10 +424,23 @@ impl IViewLineTokens for LineTokens with fn get_token_text(self, token_index) {
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn for_each(self, callback) {
+impl IViewLineTokens for LineTokens with fn get_token_text(self, token_index) {
+  LineTokens::get_token_text(self, token_index)
+}
+
+///|
+pub fn LineTokens::for_each(
+  self : LineTokens,
+  callback : (Int) -> Unit,
+) -> Unit {
   for token_index in 0..<self.get_count() {
     callback(token_index)
   }
+}
+
+///|
+impl IViewLineTokens for LineTokens with fn for_each(self, callback) {
+  LineTokens::for_each(self, callback)
 }
 
 ///|

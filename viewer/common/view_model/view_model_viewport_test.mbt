@@ -1,12 +1,10 @@
 ///|
 test "view model produces viewport data from layout window" {
-  let doc = @model.TextSnapshot("a\nbb\nccc")
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
   let view_model = @view_model.ViewModel(
-    FrameSource(tokenized, @language.ProviderResult::empty()),
+    FrameSource(
+      plain_text_model("a\nbb\nccc"),
+      @language.ProviderResult::empty(),
+    ),
   )
   let viewport = @view_model.viewport_data_from_view_model(
     view_model,
@@ -88,12 +86,9 @@ test "viewport line decorations come from model decoration storage" {
       ),
     },
   ])
-  let tokenized = @view_model.TokenizedDocument::build(
-    model.snapshot,
-    @syntax.highlight(model.snapshot),
-  )
+  register_plain_moonbit()
   let view_model = @view_model.ViewModel::with_options(
-    FrameSource(tokenized, @language.ProviderResult::empty(), model~),
+    FrameSource(model, @language.ProviderResult::empty()),
     ViewModelOptions(render_validation_decorations=On),
   )
   let viewport = @view_model.viewport_data_from_view_model(
@@ -124,7 +119,7 @@ test "viewport line decorations come from model decoration storage" {
   assert_true(class_names.contains("squiggly-error"))
   // renderValidationDecorations=Off filters squiggly-error/warning/info out
   let filtered_view_model = @view_model.ViewModel::with_options(
-    FrameSource(tokenized, @language.ProviderResult::empty(), model~),
+    FrameSource(model, @language.ProviderResult::empty()),
     ViewModelOptions(render_validation_decorations=Off),
   )
   let filtered = @view_model.viewport_data_from_view_model(

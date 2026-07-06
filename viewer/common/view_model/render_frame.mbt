@@ -1,4 +1,24 @@
 ///|
+/// Everything needed to emit viewport-scoped frames for one document
+/// version: the backing text model (whose `tokenization` part memoizes the
+/// grammar tokens and whose decoration storage the view model queries
+/// lazily per viewport) plus the feature data pushed by providers.
+/// Building a frame from a source never re-tokenizes.
+pub struct FrameSource {
+  model : @model.TextModel
+  providers : @language.ProviderResult
+}
+
+///|
+/// Builds a frame source.
+pub fn FrameSource::FrameSource(
+  model : @model.TextModel,
+  providers : @language.ProviderResult,
+) -> FrameSource {
+  { model, providers }
+}
+
+///|
 /// 1-based half-open view-line window to render: covers 1-based view lines
 /// `start_line ..< end_line` (Monaco's view coordinate space).
 pub(all) struct FrameViewport {
@@ -18,7 +38,7 @@ pub(all) struct RenderLine {
   text : String
   model_columns : Array[Int]
   injected_text_indices : Array[Int]
-  tokens : &IViewLineTokens
+  tokens : &@tokens.IViewLineTokens
   injected_inline_decorations : Array[@view_layout.InlineDecoration]
 }
 

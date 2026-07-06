@@ -36,17 +36,17 @@ async test "provider failures are logged and isolated" {
 test "token providers dispose only the active registration" {
   let languages = Languages::new()
   let first = languages.set_tokens_provider(
-    "toy",
+    "toy-dispose",
     @syntax.PlainTokenizer::new(),
   )
   let second = languages.set_tokens_provider(
-    "toy",
+    "toy-dispose",
     @syntax.PlainTokenizer::new(),
   )
   first.dispose()
-  assert_true(languages.lookup_tokens_provider("toy") is Some(_))
+  assert_true(@syntax.tokenization_registry.get("toy-dispose") is Some(_))
   second.dispose()
-  assert_true(languages.lookup_tokens_provider("toy") is None)
+  assert_true(@syntax.tokenization_registry.get("toy-dispose") is None)
 }
 
 ///|

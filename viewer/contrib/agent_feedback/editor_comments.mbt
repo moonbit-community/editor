@@ -61,7 +61,10 @@ pub fn get_session_editor_comments(
 /// `compareSessionEditorComments`: resource, then range start, then id.
 /// (Upstream uses `localeCompare`; the viewer uses MoonBit's `String`
 /// ordering — only determinism matters here, not collation.)
-pub fn compare_session_editor_comments(a : SessionEditorComment, b : SessionEditorComment) -> Int {
+pub fn compare_session_editor_comments(
+  a : SessionEditorComment,
+  b : SessionEditorComment,
+) -> Int {
   let by_resource = a.resource.to_string().compare(b.resource.to_string())
   if by_resource != 0 {
     return by_resource

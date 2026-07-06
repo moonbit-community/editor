@@ -358,6 +358,27 @@ pub fn Viewer::Viewer(
     }
   })
   |> ignore
+  // Tokenizer (re)registration invalidates the current model's memoized
+  // tokens and re-renders. Monaco's `TokenizerSyntaxTokenBackend` subscribes
+  // to `TokenizationRegistry.onDidChange` per model; the readonly `TextModel`
+  // has no dispose, so a per-model subscription would leak — the long-lived
+  // `Viewer` relays the event instead (see
+  // `common/model/tokens/tokenization_text_model_part.mbt`).
+  @syntax.tokenization_registry.on_did_change(event => {
+    match viewer.text_model {
+      Some(model) =>
+        if event.changed_languages.contains(model.language_id) {
+          model.tokenization.reset_tokenization()
+          viewer.render_current_model(
+            model,
+            fresh=false,
+            request_language=false,
+          )
+        }
+      None => ()
+    }
+  })
+  |> ignore
   // Editor contributions instantiate through the registry
   // (`codeEditorWidget.ts:344` `this._contributions.initialize(...)`);
   // they live until `dispose` — `set_model` does not re-create them.

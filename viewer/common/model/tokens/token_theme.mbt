@@ -62,7 +62,7 @@ pub fn tag_foreground_color_id(tag : @syntax.HighlightTag) -> Int {
     Number => COLOR_ID_NUMBER
     Comment => COLOR_ID_COMMENT
     Punctuation => COLOR_ID_PUNCTUATION
-    Plain => COLOR_ID_DEFAULT_FOREGROUND
+    Plain => @common_tokens.COLOR_ID_DEFAULT_FOREGROUND
     Operator => COLOR_ID_PUNCTUATION
     Delimiter => COLOR_ID_PUNCTUATION
     Type => COLOR_ID_TYPE
@@ -84,10 +84,10 @@ pub fn tag_foreground_color_id(tag : @syntax.HighlightTag) -> Int {
 /// characters, autoclosing, …); every other tag's identity is in its color.
 pub fn tag_standard_token_type(tag : @syntax.HighlightTag) -> Int {
   match tag {
-    Comment | CommentDoc => STANDARD_TOKEN_TYPE_COMMENT
-    String | StringEscape => STANDARD_TOKEN_TYPE_STRING
-    Regexp => STANDARD_TOKEN_TYPE_REGEX
-    _ => STANDARD_TOKEN_TYPE_OTHER
+    Comment | CommentDoc => @common_tokens.STANDARD_TOKEN_TYPE_COMMENT
+    String | StringEscape => @common_tokens.STANDARD_TOKEN_TYPE_STRING
+    Regexp => @common_tokens.STANDARD_TOKEN_TYPE_REGEX
+    _ => @common_tokens.STANDARD_TOKEN_TYPE_OTHER
   }
 }
 
@@ -98,14 +98,17 @@ pub fn tag_standard_token_type(tag : @syntax.HighlightTag) -> Int {
 /// `LineTokens::default_token_metadata` for fields the renderer ignores.
 pub fn tag_to_metadata(
   tag : @syntax.HighlightTag,
-  font_style? : Int = FONT_STYLE_NONE,
+  font_style? : Int = @common_tokens.FONT_STYLE_NONE,
   language_id? : Int = 0,
 ) -> UInt {
-  ((language_id << METADATA_LANGUAGEID_OFFSET) |
-  (tag_standard_token_type(tag) << METADATA_TOKEN_TYPE_OFFSET) |
-  (font_style << METADATA_FONT_STYLE_OFFSET) |
-  (tag_foreground_color_id(tag) << METADATA_FOREGROUND_OFFSET) |
-  (COLOR_ID_DEFAULT_BACKGROUND << METADATA_BACKGROUND_OFFSET)).reinterpret_as_uint()
+  ((language_id << @common_tokens.METADATA_LANGUAGEID_OFFSET) |
+  (tag_standard_token_type(tag) << @common_tokens.METADATA_TOKEN_TYPE_OFFSET) |
+  (font_style << @common_tokens.METADATA_FONT_STYLE_OFFSET) |
+  (tag_foreground_color_id(tag) << @common_tokens.METADATA_FOREGROUND_OFFSET) |
+  (
+    @common_tokens.COLOR_ID_DEFAULT_BACKGROUND <<
+    @common_tokens.METADATA_BACKGROUND_OFFSET
+  )).reinterpret_as_uint()
 }
 
 ///|

@@ -163,7 +163,7 @@ fn ViewModelLinesFromModelAsIs::has_injected_text(
 pub fn ViewModelLinesFromModelAsIs::new(
   source : FrameSource,
 ) -> ViewModelLinesFromModelAsIs {
-  let line_count = source.tokenized.snapshot.line_count()
+  let line_count = source.model.snapshot.line_count()
   let visible_model_line_numbers : Array[Int] = []
   let hidden_model_lines : Array[Bool] = []
   for line_number in 1..<=line_count {
@@ -191,7 +191,7 @@ pub fn ViewModelLinesFromModelAsIs::line_count(
 pub fn ViewModelLinesFromModelAsIs::model_line_count(
   self : ViewModelLinesFromModelAsIs,
 ) -> Int {
-  self.source.tokenized.snapshot.line_count()
+  self.source.model.snapshot.line_count()
 }
 
 ///|
@@ -213,7 +213,7 @@ pub fn ViewModelLinesFromModelAsIs::get_model_line_content(
   model_line_number : Int,
 ) -> String {
   let line_index = self.clamped_model_line_index(model_line_number)
-  self.source.tokenized.snapshot.line_text(line_index)
+  self.source.model.snapshot.line_text(line_index)
 }
 
 ///|
@@ -282,7 +282,7 @@ pub fn ViewModelLinesFromModelAsIs::render_model_line(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
 ) -> RenderLine {
-  let doc = self.source.tokenized.snapshot
+  let doc = self.source.model.snapshot
   let line_index = self.clamped_model_line_index(model_line_number)
   let line_start = doc.line_start_offset(line_index)
   let line_end = doc.line_end_offset(line_index)
@@ -300,12 +300,13 @@ pub fn ViewModelLinesFromModelAsIs::render_model_line(
 ///|
 /// The faithful `LineTokens` for a one-based model line, the concrete token
 /// store the projection slices through `with_inserted` / `slice_and_inflate`.
+/// Reads `model.tokenization.get_line_tokens` (Monaco's
+/// `model.tokenization.getLineTokens`), which clamps out-of-range lines.
 pub fn ViewModelLinesFromModelAsIs::model_line_tokens(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
-) -> LineTokens {
-  let line_index = self.clamped_model_line_index(model_line_number)
-  self.source.tokenized.line_tokens_for_line(line_index)
+) -> @tokens.LineTokens {
+  self.source.model.tokenization.get_line_tokens(model_line_number)
 }
 
 ///|
@@ -343,17 +344,16 @@ fn ViewModelLinesFromModelAsIs::clamped_model_line_index(
 /// (`textModelEvents.ts`): `before` lands at the range start (order 0),
 /// `after` at the range end (order 1); sorted by line, column, order.
 /// Positions convert to the 0-based line/column space
-/// `ProjectedTextLine::from_injected_text` consumes. Headless frames
-/// (`source.model = None`) have no injected text.
+/// `ProjectedTextLine::from_injected_text` consumes.
 fn bucket_injected_text_from_decorations(
   source : FrameSource,
 ) -> Array[Array[InjectedText]] {
-  let snapshot = source.tokenized.snapshot
+  let snapshot = source.model.snapshot
   let buckets : Array[Array[InjectedText]] = []
   for _ in 0..<snapshot.line_count() {
     buckets.push([])
   }
-  guard source.model is Some(model) else { return buckets }
+  let model = source.model
   let entries : Array[(Int, Int, Int, @model.InjectedTextOptions)] = []
   for decoration in model.get_injected_text_decorations() {
     match decoration.options.before {
@@ -647,13 +647,13 @@ pub fn ViewModel::line_count(self : ViewModel) -> Int {
 ///|
 /// Source document version.
 pub fn ViewModel::version(self : ViewModel) -> Int {
-  self.source.tokenized.version
+  self.source.model.version
 }
 
 ///|
 /// Source document language id.
 pub fn ViewModel::language_id(self : ViewModel) -> String {
-  self.source.tokenized.language_id
+  self.source.model.language_id
 }
 
 ///|

@@ -1,14 +1,10 @@
 ///|
 fn frame_for(
-  doc : @model.TextSnapshot,
+  model : @model.TextModel,
   viewport : @view_model.FrameViewport,
   providers? : @language.ProviderResult = @language.ProviderResult::empty(),
 ) -> @view_model.RenderFrame {
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
-  @view_model.build_frame(FrameSource(tokenized, providers), viewport)
+  @view_model.build_frame(FrameSource(model, providers), viewport)
 }
 
 ///|
@@ -23,7 +19,7 @@ fn join_token_text(line : @view_model.RenderLine) -> String {
 
 ///|
 test "render frame contains highlighted spans and provider surfaces" {
-  let doc = @model.TextSnapshot("fn main { // TODO\n  let x = 1\n}")
+  let model = plain_text_model("fn main { // TODO\n  let x = 1\n}")
   let providers = @language.ProviderResult::{
     hovers: [],
     diagnostics: [
@@ -37,7 +33,7 @@ test "render frame contains highlighted spans and provider surfaces" {
     definitions: [],
     symbols: [],
   }
-  let frame = frame_for(doc, { start_line: 1, end_line: 3 }, providers~)
+  let frame = frame_for(model, { start_line: 1, end_line: 3 }, providers~)
   assert_eq(frame.lines.length(), 2)
   assert_true(frame.lines[0].tokens.get_count() > 0)
   assert_eq(join_token_text(frame.lines[0]), frame.lines[0].text)
@@ -47,7 +43,7 @@ test "render frame contains highlighted spans and provider surfaces" {
 
 ///|
 test "window builds match the matching slice of a whole-document build" {
-  let doc = @model.TextSnapshot(
+  let model = plain_text_model(
     "fn main { // TODO\n  let x = 1\n  let y = 2\n}\n\nfn other {\n  3\n}",
   )
   let providers = @language.ProviderResult::{
@@ -57,11 +53,11 @@ test "window builds match the matching slice of a whole-document build" {
     symbols: [],
   }
   let whole = frame_for(
-    doc,
-    { start_line: 1, end_line: doc.line_count() + 1 },
+    model,
+    { start_line: 1, end_line: model.get_line_count() + 1 },
     providers~,
   )
-  let window = frame_for(doc, { start_line: 3, end_line: 6 }, providers~)
+  let window = frame_for(model, { start_line: 3, end_line: 6 }, providers~)
   assert_eq(window.line_count, whole.line_count)
   assert_eq(window.lines.length(), 3)
   for index in 0..<window.lines.length() {
@@ -86,15 +82,15 @@ test "window builds match the matching slice of a whole-document build" {
 
 ///|
 test "viewport bounds clamp to the document" {
-  let doc = @model.TextSnapshot("a\nb\nc")
-  let frame = frame_for(doc, { start_line: -5, end_line: 99 })
+  let model = plain_text_model("a\nb\nc")
+  let frame = frame_for(model, { start_line: -5, end_line: 99 })
   debug_inspect(
     frame.viewport,
     content=(
       #|{ start_line: 1, end_line: 4 }
     ),
   )
-  let pinned = frame_for(doc, { start_line: 99, end_line: 99 })
+  let pinned = frame_for(model, { start_line: 99, end_line: 99 })
   debug_inspect(
     pinned.viewport,
     content=(

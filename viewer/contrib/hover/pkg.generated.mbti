@@ -54,7 +54,7 @@ pub fn mouse_within_element(Double, Double, Double, Double, Double, Double) -> B
 
 pub fn register_default_hover_participants(HoverParticipantRegistry) -> Unit
 
-pub fn render_hover_parts(Array[HoverPart], String, language_registry? : @languages.Languages) -> Array[String]
+pub fn render_hover_parts(Array[HoverPart], String) -> Array[String]
 
 pub fn should_keep_current_hover(Bool, Bool, Bool) -> Bool
 

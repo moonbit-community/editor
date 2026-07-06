@@ -3,6 +3,7 @@ package "moonbit-community/editor/viewer/common/model"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/common/model/tokens",
   "moonbitlang/core/debug",
 }
 
@@ -184,6 +185,17 @@ pub(all) enum PositionAffinity {
   RightOfInjectedText
 } derive(Eq, @debug.Debug)
 
+pub struct RangePriorityQueueImpl {
+  ranges : Array[@common.OffsetRange]
+}
+pub fn RangePriorityQueueImpl::add_range(Self, @common.OffsetRange) -> Unit
+pub fn RangePriorityQueueImpl::add_range_and_resize(Self, @common.OffsetRange, Int) -> Unit
+pub fn RangePriorityQueueImpl::delete(Self, Int) -> Unit
+pub fn RangePriorityQueueImpl::get_ranges(Self) -> Array[@common.OffsetRange]
+pub fn RangePriorityQueueImpl::min(Self) -> Int?
+pub fn RangePriorityQueueImpl::new() -> Self
+pub fn RangePriorityQueueImpl::remove_min(Self) -> Int?
+
 pub struct TextModel {
   uri : @common.Uri
   display_name : String
@@ -191,6 +203,7 @@ pub struct TextModel {
   version : Int
   revision : String
   snapshot : TextSnapshot
+  tokenization : @tokens.TokenizationTextModelPart
   instance_id : String
   mut delta_decoration_call_cnt : Int
   mut last_decoration_id : Int

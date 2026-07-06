@@ -6,24 +6,28 @@ MoonBit's compile-time `lexmatch` lexer generator.
 
 ## Responsibilities
 
-- Own the tokenization contracts: `HighlightTag` (the semantic token
-  classification; the viewer maps each tag to Monaco token metadata in
-  `viewer/common/view_model/token_theme.mbt`), `LineToken`, `TokenizerState`, and the
-  `LineTokenizer`
-  trait (Monaco's `ITokenizationSupport`/`IState` pair — line-at-a-time
-  tokenization with an explicit carried state whose derived equality
-  lets callers detect convergence).
-- Own `TokenizerRegistry`, a plain value mapping language ids to
-  tokenizers (Monaco's `TokenizationRegistry`). No global instance
-  lives here; the embedding layer owns its singleton.
-- Drive whole-document tokenization (`tokenize_document`): lines are
-  fed through a `LineTokenizer` carrying state, line-local tokens
-  convert to doc-offset `Token`s, and per-line entry states are
-  recorded internally so a windowed/incremental pass later is a driver
-  change, not a contract change.
-- Provide `PlainTokenizer` and `highlight()` as explicit generic-lexer helpers.
-  Viewer registry misses stay un-tokenized so the renderer uses plain/default
-  text, matching Monaco's unknown-language behavior.
+- Own the tokenization contracts (the `common/languages.ts` contract
+  subset): `HighlightTag` (the semantic token classification; the
+  viewer maps each tag to Monaco token metadata in
+  `viewer/common/model/tokens/token_theme.mbt`), `LineToken`,
+  `TokenizerState`, and the `LineTokenizer` trait (Monaco's
+  `ITokenizationSupport`/`IState` pair — line-at-a-time tokenization
+  with an explicit carried state whose derived equality lets callers
+  detect convergence).
+- Own `TokenizationRegistry` and its process-wide singleton
+  `tokenization_registry` (Monaco's `export const TokenizationRegistry`
+  in `common/languages.ts`): `register` returns a disposable and fires
+  `on_did_change`; `TextModel`'s tokenization part resolves languages
+  through it, and `Languages::set_tokens_provider` (the
+  `monaco.languages.setTokensProvider` analog) registers into it.
+- Provide `PlainTokenizer` as the explicit generic lexer. Registry
+  misses stay un-tokenized so the renderer uses plain/default text,
+  matching Monaco's unknown-language behavior.
+
+The whole-document sweep lives with the model — 
+`viewer/common/model/tokens/tokenization_text_model_part.mbt` threads
+`TokenizerState` line to line (Monaco's `TokenizerWithStateStore` role)
+and stores the encoded per-line tokens.
 
 ## Language packages (`syntax/lang_*`)
 
@@ -35,7 +39,7 @@ is deliberately no runtime grammar loading (no
 importing a package, or implementing `LineTokenizer` yourself.
 
 Import rules (enforced by `scripts/check-architecture.mbtx`):
-`syntax/lang_*` may import only `syntax` plus `viewer/common/model` test support;
+`syntax/lang_*` may import only `syntax`;
 only composition layers (`internal/shell/workbench`,
 `internal/shell/examples/*`, and browser test entrypoints) may import
 `syntax/lang_*`; `viewer/common`, `viewer`, and backend policy packages must not.
@@ -89,9 +93,9 @@ offsets are UTF-16 code units (the repo position convention);
 
 ## Boundaries
 
-- `syntax` may depend only on `base/common` and `viewer/common/model`;
-  `syntax/lang_*` only on `syntax` plus `viewer/common/model` test support. No
-  module-level state anywhere in this subtree.
+- `syntax` may depend only on `base/common`; `syntax/lang_*` only on
+  `syntax`. The `tokenization_registry` singleton is the one piece of
+  module-level state (mirroring Monaco's global registry).
 - Must not depend on workspace loading, language providers, DOM,
   viewer backends, `internal/shell` packages, or reference submodules.
 - Does not own semantic tokens or diagnostics; those belong to
@@ -99,7 +103,7 @@ offsets are UTF-16 code units (the repo position convention);
 
 ## Checks
 
-- Package tests: `highlight_test.mbt`, `tokenizer_test.mbt`,
-  `driver_wbtest.mbt`, and golden token-stream tests in each
-  `lang_*` package.
+- Package tests: `tokenizer_test.mbt` and golden token-stream tests in
+  each `lang_*` package; the whole-document sweep is covered by
+  `viewer/common/model/tokens` part tests.
 - Run `just check` for the repository-level type check.

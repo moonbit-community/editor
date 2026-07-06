@@ -1,9 +1,12 @@
 ///|
-fn hover_test_languages() -> @languages.Languages {
-  let languages = @languages.Languages::new()
-  languages.set_tokens_provider("moonbit", @syntax.PlainTokenizer::new())
+/// Registers the fallback lexer for the `moonbit` fences (idempotent; the
+/// global registry lives for the test binary).
+fn register_hover_test_tokenizer() -> Unit {
+  @syntax.tokenization_registry.register(
+    "moonbit",
+    @syntax.PlainTokenizer::new(),
+  )
   |> ignore
-  languages
 }
 
 ///|
@@ -83,7 +86,7 @@ test "hover markdown remains sanitized and plaintext remains escaped" {
 
 ///|
 test "hover fenced code renders through the viewer token classes" {
-  let languages = hover_test_languages()
+  register_hover_test_tokenizer()
   let moonbit = render_hover_parts(
     [
       MarkdownHover(
@@ -93,7 +96,6 @@ test "hover fenced code renders through the viewer token classes" {
       ),
     ],
     "moonbit",
-    language_registry=languages,
   ).join("")
   assert_true(moonbit.contains("monaco-tokenized-source"))
   assert_true(moonbit.contains("mtk3")) // keyword color id
@@ -107,7 +109,6 @@ test "hover fenced code renders through the viewer token classes" {
       ),
     ],
     "moonbit",
-    language_registry=languages,
   ).join("")
   assert_true(mbt_alias.contains("monaco-tokenized-source"))
   assert_true(mbt_alias.contains("mtk3")) // keyword color id
@@ -115,7 +116,7 @@ test "hover fenced code renders through the viewer token classes" {
 
 ///|
 test "hover unknown fenced code keeps content as default plain text" {
-  let languages = hover_test_languages()
+  register_hover_test_tokenizer()
   let html = render_hover_parts(
     [
       MarkdownHover(
@@ -125,7 +126,6 @@ test "hover unknown fenced code keeps content as default plain text" {
       ),
     ],
     "moonbit",
-    language_registry=languages,
   ).join("")
   assert_true(html.contains("monaco-tokenized-source"))
   assert_true(html.contains("not"))

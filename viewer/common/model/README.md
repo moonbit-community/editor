@@ -11,7 +11,12 @@ Mirrors Monaco's `editor/common/model`.
 - Own `TextModel`, the URI-bearing readonly editor model with display name,
   language id, version, revision, and snapshot identity, plus the Monaco
   `textModel.ts` read API (value/line reads, validation, word lookup)
-  delegating to the snapshot buffer.
+  delegating to the snapshot buffer, and the `tokenization` part
+  (`viewer/common/model/tokens`, Monaco's `TokenizationTextModelPart`)
+  wired in the constructor.
+- Own `text_model_tokens.mbt`, the `common/model/textModelTokens.ts` port
+  (`RangePriorityQueueImpl`, conformance-only — the readonly viewer runs no
+  background tokenizer).
 - Own model decorations: interval-tree storage (a port of Monaco's
   `intervalTree.ts`) behind `TextModel::delta_decorations` and the
   range-query accessors, with `ModelDeltaDecoration` / `ModelDecorationOptions` as
@@ -36,8 +41,9 @@ arrive as whole new models).
 | --- | --- | --- |
 | `uri` | `_associatedResource` / `get uri` (:671) | PORTED |
 | `version` | `_versionId` / `getVersionId()` (:737) | PORTED |
-| `snapshot` | `_buffer : ITextBuffer` | PORTED — public (Monaco: private) so headless paths (`TokenizedDocument`, guides) can read the buffer without a model |
-| `language_id` | `TokenizationTextModelPart._languageId`, read via `getLanguageId()` (:2085) | RELOCATED — no tokenization part; `get_language_id()` gives the Monaco read shape |
+| `snapshot` | `_buffer : ITextBuffer` | PORTED — public (Monaco: private) so headless paths (guides) can read the buffer without a model |
+| `tokenization` | `_tokenizationTextModelPart` / `get tokenization` (:301) | PORTED — readonly subset in `viewer/common/model/tokens` |
+| `language_id` | `TokenizationTextModelPart._languageId`, read via `getLanguageId()` (:2085) | PORTED — `get_language_id()` delegates to the part as Monaco does |
 | `instance_id`, `delta_decoration_call_cnt`, `last_decoration_id`, `decorations`, `decorations_tree`, `on_did_change_decorations` | `_instanceId` / `_deltaDecorationCallCnt` / `_lastDecorationId` / `_decorations` / `_decorationsTree` (:285-290), `_onDidChangeDecorations` (:225) | PORTED — API ledgered in `text_model_decorations.mbt` |
 | `display_name`, `revision` | — | EXTRA — host metadata the provider payloads carry (`languages.mbt`, editor events, shell workbench); Monaco hosts get these from workbench services the viewer doesn't have |
 | — | `id` (`'$model' + counter`) | N-A — model identity is uri+version by design (`same_identity_and_version`) |
@@ -57,12 +63,12 @@ N-A (readonly / LF-only): `setValue`, edits, undo/redo, `pushEOL`,
 `getEOL`/`getEndOfLineSequence`, options/indentation
 (`detectIndentation`/`normalizeIndentation`), attach/dispose,
 `mightContainUnusualLineTerminators`/`NonBasicASCII`,
-`isDominatedByLongLines`, tokenization/bracket delegates (guides is its own
-`GuidesTextModelPart`).
+`isDominatedByLongLines`, bracket delegates (guides is its own
+`GuidesTextModelPart`; tokenization is the ported `tokenization` part).
 
 `TextSnapshot` fields: `text`/`line_starts` ↔ `StringBuffer.buffer`/
-`.lineStarts` 1:1. Its former `language_id`/`version` fields moved to
-`TokenizedDocument` (the buffer carries no identity, matching Monaco).
+`.lineStarts` 1:1. The buffer carries no identity, matching Monaco —
+language id and version live on `TextModel`.
 
 `TextSnapshot` methods are two ledgered layers:
 
@@ -80,8 +86,9 @@ N-A (readonly / LF-only): `setValue`, edits, undo/redo, `pushEOL`,
 
 ## Boundaries
 
-- May depend on `base/common` for `Uri`, `Position`, `Range`, and clamping.
-- Must not depend on workspace providers, language providers, syntax,
+- May depend on `base/common` for `Uri`, `Position`, `Range`, and clamping,
+  plus `viewer/common/model/tokens` for the tokenization part.
+- Must not depend on workspace providers, language providers,
   viewer, DOM, server routing, or host effects.
 - Does not expose edit, undo/redo, cursor, IME, or model event APIs.
 

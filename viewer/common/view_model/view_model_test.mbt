@@ -11,18 +11,14 @@ test "identity coordinates converter preserves model and view positions" {
 
 ///|
 test "view model lines as-is match render frame line data" {
-  let doc = @model.TextSnapshot("fn main {\n  let x = 1\n}")
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
+  let model = plain_text_model("fn main {\n  let x = 1\n}")
   let providers = @language.ProviderResult::{
     hovers: [],
     diagnostics: [],
     definitions: [],
     symbols: [],
   }
-  let source = @view_model.FrameSource(tokenized, providers)
+  let source = @view_model.FrameSource(model, providers)
   let view_model = @view_model.ViewModel(source)
   let lines = view_model.lines()
   let direct_line = lines.render_line(2)
@@ -64,13 +60,8 @@ fn test_view_model(
   text : String,
   options : @view_model.ViewModelOptions,
 ) -> @view_model.ViewModel {
-  let doc = @model.TextSnapshot(text)
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
   @view_model.ViewModel::with_options(
-    FrameSource(tokenized, @language.ProviderResult::empty()),
+    FrameSource(plain_text_model(text), @language.ProviderResult::empty()),
     options,
   )
 }
@@ -120,13 +111,9 @@ fn test_inlay_view_model(
     })
   }
   model.delta_decorations([], decorations) |> ignore
-  let doc = model.snapshot
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
+  register_plain_moonbit()
   @view_model.ViewModel::with_options(
-    FrameSource(tokenized, @language.ProviderResult::empty(), model~),
+    FrameSource(model, @language.ProviderResult::empty()),
     options,
   )
 }

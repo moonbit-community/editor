@@ -1,17 +1,39 @@
 ///|
+/// Golden token-stream rendering: one `start-end tag text` line per token in
+/// document offsets — lines split on `\n`, lexer state threaded line to line
+/// exactly as the tokenization part's whole-document sweep does.
 fn render_tokens(source : String) -> String {
-  let doc = @model.TextSnapshot(source)
-  let tokens = @syntax.tokenize_document(
-    doc,
-    @lang_javascript.JavascriptTokenizer::new(),
-  )
-  let lines : Array[String] = []
-  for token in tokens {
-    lines.push(
-      "\{token.range.start}-\{token.range.end_exclusive} \{token.tag} \{token.text}",
-    )
+  let tokenizer : &@syntax.LineTokenizer = @lang_javascript.JavascriptTokenizer::new()
+  let rendered : Array[String] = []
+  let mut state = tokenizer.initial_state()
+  let mut line_start = 0
+  for line in split_lines(source) {
+    let (tokens, next_state) = tokenizer.tokenize_line(line, state)
+    for token in tokens {
+      let text = line[token.start:token.end].to_owned()
+      rendered.push(
+        "\{line_start + token.start}-\{line_start + token.end} \{token.tag} \{text}",
+      )
+    }
+    state = next_state
+    line_start += line.length() + 1
   }
-  lines.join("\n")
+  rendered.join("\n")
+}
+
+///|
+/// Splits on `\n` only, matching the snapshot line table the part consumes.
+fn split_lines(source : String) -> Array[String] {
+  let lines : Array[String] = []
+  let mut start = 0
+  for i in 0..<source.length() {
+    if source[i] == '\n' {
+      lines.push(source[start:i].to_owned())
+      start = i + 1
+    }
+  }
+  lines.push(source[start:source.length()].to_owned())
+  lines
 }
 
 ///|

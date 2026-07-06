@@ -3,7 +3,12 @@ import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/inline_decorations",
+  "moonbit-community/editor/viewer/common/tokens",
   "moonbit-community/editor/viewer/common/view_layout",
-  "moonbit-community/editor/syntax",
   "moonbitlang/core/json",
 }
+
+import {
+  "moonbit-community/editor/language",
+  "moonbit-community/editor/syntax",
+} for "test"

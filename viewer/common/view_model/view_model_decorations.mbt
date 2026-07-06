@@ -76,13 +76,11 @@ pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConver
 
 ///|
 /// `ViewModelDecorations` (`viewModelDecorations.ts:16`): the lazy,
-/// viewport-cached decoration provider for one view model. `computer` is
-/// `None` when the view model has no backing text model (headless test
-/// frames) — every query then yields an empty collection.
+/// viewport-cached decoration provider for one view model.
 pub struct ViewModelDecorations {
   priv computer : @inline_decorations.InlineModelDecorationsComputer[
     @model.ModelDecorationOptions,
-  ]?
+  ]
   priv mut cached_model_decorations_resolver : ViewDecorationsCollection?
   priv mut cached_model_decorations_resolver_view_range : @base_common.Range?
 }
@@ -92,35 +90,29 @@ pub struct ViewModelDecorations {
 /// the computer model decorations for a view range via the lines collection.
 pub fn ViewModelDecorations::new(
   editor_id : Int,
-  model : @model.TextModel?,
+  model : @model.TextModel,
   filter_validation : Bool,
   lines : ViewModelLines,
   coordinates_converter : ViewModelCoordinatesConverter,
 ) -> ViewModelDecorations {
-  let computer = match model {
-    Some(model) => {
-      let context : @inline_decorations.InlineModelContext[@model.ModelDecorationOptions] = {
-        get_model_decorations: (
-          view_range,
-          only_minimap_decorations,
-          only_margin_decorations,
-        ) => {
-          view_model_lines_get_decorations_in_range(
-            lines, model, coordinates_converter, view_range, editor_id, filter_validation,
-            only_minimap_decorations, only_margin_decorations,
-          )
-        },
-      }
-      Some(
-        @inline_decorations.InlineModelDecorationsComputer::new(
-          context, model, coordinates_converter,
-        ),
+  let context : @inline_decorations.InlineModelContext[
+    @model.ModelDecorationOptions,
+  ] = {
+    get_model_decorations: (
+      view_range,
+      only_minimap_decorations,
+      only_margin_decorations,
+    ) => {
+      view_model_lines_get_decorations_in_range(
+        lines, model, coordinates_converter, view_range, editor_id, filter_validation,
+        only_minimap_decorations, only_margin_decorations,
       )
-    }
-    None => None
+    },
   }
   {
-    computer,
+    computer: @inline_decorations.InlineModelDecorationsComputer::new(
+      context, model, coordinates_converter,
+    ),
     cached_model_decorations_resolver: None,
     cached_model_decorations_resolver_view_range: None,
   }
@@ -138,10 +130,7 @@ fn ViewModelDecorations::clear_cached_model_decorations_resolver(
 ///|
 /// `reset` (`viewModelDecorations.ts:49-52`; `dispose` has the same body).
 pub fn ViewModelDecorations::reset(self : ViewModelDecorations) -> Unit {
-  match self.computer {
-    Some(computer) => computer.reset()
-    None => ()
-  }
+  self.computer.reset()
   self.clear_cached_model_decorations_resolver()
 }
 
@@ -150,10 +139,7 @@ pub fn ViewModelDecorations::reset(self : ViewModelDecorations) -> Unit {
 pub fn ViewModelDecorations::on_model_decorations_changed(
   self : ViewModelDecorations,
 ) -> Unit {
-  match self.computer {
-    Some(computer) => computer.on_model_decorations_changed()
-    None => ()
-  }
+  self.computer.on_model_decorations_changed()
   self.clear_cached_model_decorations_resolver()
 }
 
@@ -162,10 +148,7 @@ pub fn ViewModelDecorations::on_model_decorations_changed(
 pub fn ViewModelDecorations::on_line_mapping_changed(
   self : ViewModelDecorations,
 ) -> Unit {
-  match self.computer {
-    Some(computer) => computer.on_line_mapping_changed()
-    None => ()
-  }
+  self.computer.on_line_mapping_changed()
   self.clear_cached_model_decorations_resolver()
 }
 
@@ -203,13 +186,9 @@ pub fn ViewModelDecorations::get_decorations_on_line(
     line_number,
     lines.get_view_line_max_column(line_number),
   )
-  match self.computer {
-    Some(computer) =>
-      computer.get_decorations(
-        range, only_minimap_decorations, only_margin_decorations,
-      )
-    None => empty_view_decorations_collection(range)
-  }
+  self.computer.get_decorations(
+    range, only_minimap_decorations, only_margin_decorations,
+  )
 }
 
 ///|
@@ -217,23 +196,7 @@ fn ViewModelDecorations::compute_decorations(
   self : ViewModelDecorations,
   view_range : @base_common.Range,
 ) -> ViewDecorationsCollection {
-  match self.computer {
-    Some(computer) => computer.get_decorations(view_range, false, false)
-    None => empty_view_decorations_collection(view_range)
-  }
-}
-
-///|
-fn empty_view_decorations_collection(
-  view_range : @base_common.Range,
-) -> ViewDecorationsCollection {
-  let inline_decorations : Array[Array[@inline_decorations.InlineDecoration]] = []
-  let has_variable_fonts : Array[Bool] = []
-  for _j in view_range.start_line_number..<=view_range.end_line_number {
-    inline_decorations.push([])
-    has_variable_fonts.push(false)
-  }
-  { decorations: [], inline_decorations, has_variable_fonts }
+  self.computer.get_decorations(view_range, false, false)
 }
 
 ///|

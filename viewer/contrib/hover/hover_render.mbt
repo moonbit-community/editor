@@ -14,16 +14,13 @@
 pub fn render_hover_parts(
   parts : Array[HoverPart],
   language_id : String,
-  language_registry? : @languages.Languages = @languages.default_languages(),
 ) -> Array[String] {
   let rows : Array[String] = []
   let mut has_status_bar_content = false
   for part in parts {
     match part {
       MarkdownHover(contents~, ..) =>
-        rows.push(
-          render_markdown_hover_row(contents, language_id, language_registry),
-        )
+        rows.push(render_markdown_hover_row(contents, language_id))
       MarkerHover(marker~, ..) => {
         rows.push(marker_hover_row(marker.message))
         has_status_bar_content = true
@@ -46,16 +43,13 @@ pub fn render_hover_parts(
 fn render_markdown_hover_row(
   contents : Array[@language.HoverContent],
   language_id : String,
-  language_registry : @languages.Languages,
 ) -> String {
   let inner = StringBuilder::new()
   for content in contents {
     inner.write_string(
       "<div class=\"markdown-hover\"><div class=\"hover-contents\">",
     )
-    inner.write_string(
-      render_markdown_hover_content(content, language_id, language_registry),
-    )
+    inner.write_string(render_markdown_hover_content(content, language_id))
     inner.write_string("</div></div>")
   }
   "<div class=\"hover-row\"><div class=\"hover-row-contents\">" +
@@ -67,12 +61,10 @@ fn render_markdown_hover_row(
 fn render_markdown_hover_content(
   content : @language.HoverContent,
   language_id : String,
-  language_registry : @languages.Languages,
 ) -> String {
   match content {
     PlainText(text) => hover_plaintext_html(text)
-    Markdown(markdown) =>
-      hover_markdown_html(markdown, language_id, language_registry)
+    Markdown(markdown) => hover_markdown_html(markdown, language_id)
   }
 }
 
@@ -121,18 +113,12 @@ fn marker_status_bar_row() -> String {
 }
 
 ///|
-fn hover_markdown_html(
-  markdown : String,
-  language_id : String,
-  language_registry : @languages.Languages,
-) -> String {
+fn hover_markdown_html(markdown : String, language_id : String) -> String {
   let base = @cmark_html.renderer(safe=true)
   let code_override = @cmark_renderer.Renderer::new(block=fn(ctx, block) {
     match block {
       CodeBlock(code_block) => {
-        ctx.string(
-          render_hover_code_block(code_block.v, language_id, language_registry),
-        )
+        ctx.string(render_hover_code_block(code_block.v, language_id))
         true
       }
       _ => false
@@ -148,28 +134,24 @@ fn hover_markdown_html(
 fn render_hover_code_block(
   code_block : @cmark.CodeBlock,
   active_language_id : String,
-  language_registry : @languages.Languages,
 ) -> String {
   let language_id = hover_code_language(code_block, active_language_id)
   let code = hover_code_text(code_block)
-  let snapshot = @model.TextSnapshot(code)
-  let tokens : Array[@syntax.Token] = match
-    language_registry.lookup_tokens_provider(language_id) {
-    Some(tokenizer) => @syntax.tokenize_document(snapshot, tokenizer)
-    None => []
-  }
-  let tokenized = @view_model.TokenizedDocument::build(
-    snapshot,
-    tokens,
-    language_id~,
+  // A throwaway readonly model: its tokenization part resolves the fenced
+  // language through the global `tokenization_registry` (Monaco's markdown
+  // code blocks tokenize through `tokenizeToString` + `TokenizationRegistry`).
+  let model = @model.TextModel(
+    @base_common.Uri::memory("hover-code-block"),
+    "",
+    language_id,
+    1,
+    "",
+    code,
   )
-  let source = @view_model.FrameSource(
-    tokenized,
-    @language.ProviderResult::empty(),
-  )
+  let source = @view_model.FrameSource(model, @language.ProviderResult::empty())
   let frame = @view_model.build_frame(source, {
     start_line: 1,
-    end_line: snapshot.line_count() + 1,
+    end_line: model.get_line_count() + 1,
   })
   let html = StringBuilder::new()
   html.write_string("<div class=\"monaco-tokenized-source\">")

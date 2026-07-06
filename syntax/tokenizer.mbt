@@ -7,6 +7,62 @@
 pub(all) struct TokenizerState(String) derive(Eq, Debug)
 
 ///|
+/// Highlight classification, widened toward Monaco's standard token
+/// types. Existing tags and class names are stable for specs; new tags
+/// extend the set for the per-language lexers.
+pub(all) enum HighlightTag {
+  Keyword
+  Identifier
+  String
+  Number
+  Comment
+  Punctuation
+  Plain
+  Operator
+  Delimiter
+  Type
+  Function
+  Variable
+  Constant
+  StringEscape
+  CommentDoc
+  Regexp
+  Tag
+  Attribute
+  Invalid
+} derive(Eq, Debug)
+
+///|
+/// Renders the tag's variant name. Used by the per-language lexer golden tests
+/// to label each token; production styling is the view model's metadata
+/// encoding (`mtk<colorId>`), not a per-tag string.
+pub impl Show for HighlightTag with fn output(self, logger) {
+  logger.write_string(
+    match self {
+      Keyword => "Keyword"
+      Identifier => "Identifier"
+      String => "String"
+      Number => "Number"
+      Comment => "Comment"
+      Punctuation => "Punctuation"
+      Plain => "Plain"
+      Operator => "Operator"
+      Delimiter => "Delimiter"
+      Type => "Type"
+      Function => "Function"
+      Variable => "Variable"
+      Constant => "Constant"
+      StringEscape => "StringEscape"
+      CommentDoc => "CommentDoc"
+      Regexp => "Regexp"
+      Tag => "Tag"
+      Attribute => "Attribute"
+      Invalid => "Invalid"
+    },
+  )
+}
+
+///|
 /// One highlighted span within a single line, in line-local UTF-16
 /// code-unit offsets. Token ranges must never split a surrogate pair: the
 /// viewer slices the document text at these offsets.
@@ -29,38 +85,93 @@ pub(open) trait LineTokenizer {
 }
 
 ///|
+/// Registration change notification, the ported subset of Monaco's
+/// `ITokenizationSupportChangedEvent` (`changedColorMap` has no viewer
+/// analog — the token color map is static).
+pub(all) struct TokenizationChangedEvent {
+  changed_languages : Array[String]
+}
+
+///|
+priv struct TokenizationSupportEntry {
+  id : Int
+  tokenizer : &LineTokenizer
+}
+
+///|
 /// Tokenization support keyed by language id, Monaco's
-/// `TokenizationRegistry`. A plain value with no global instance here:
-/// the embedding layer owns its singleton (`viewer`, per the
-/// module-`Ref` convention) and registers languages at startup.
-pub struct TokenizerRegistry {
-  priv tokenizers : Map[String, &LineTokenizer]
+/// `TokenizationRegistry` (`common/languages.ts` /
+/// `languages/tokenizationRegistry.ts`). The process-wide instance is
+/// `tokenization_registry` below; isolated instances remain constructible
+/// for tests.
+pub struct TokenizationRegistry {
+  priv tokenizers : Map[String, TokenizationSupportEntry]
+  priv next_id : Ref[Int]
+  priv did_change : @base_common.Emitter[TokenizationChangedEvent]
 }
 
 ///|
-/// Creates an empty tokenizer registry for host-side language composition.
-pub fn TokenizerRegistry::new() -> TokenizerRegistry {
-  { tokenizers: {} }
+/// Creates an empty tokenization registry.
+pub fn TokenizationRegistry::new() -> TokenizationRegistry {
+  { tokenizers: {}, next_id: Ref(0), did_change: @base_common.Emitter::new() }
 }
 
 ///|
-/// Registers or replaces the tokenizer for a language id.
-pub fn TokenizerRegistry::register(
-  self : TokenizerRegistry,
+/// Registers or replaces the tokenization support for a language id and
+/// fires `on_did_change`. Mirrors `TokenizationRegistry.register`; disposing
+/// the returned handle removes the support only if it is still the active
+/// registration (Monaco's `=== support` identity check, kept as a
+/// registration id so trait objects need no identity comparison).
+pub fn TokenizationRegistry::register(
+  self : TokenizationRegistry,
   language_id : String,
   tokenizer : &LineTokenizer,
-) -> Unit {
-  self.tokenizers[language_id] = tokenizer
+) -> @base_common.Disposable {
+  let id = self.next_id.val
+  self.next_id.val = id + 1
+  self.tokenizers[language_id] = { id, tokenizer }
+  self.did_change.fire({ changed_languages: [language_id] })
+  @base_common.Disposable::from(() => {
+    match self.tokenizers.get(language_id) {
+      Some(entry) =>
+        if entry.id == id {
+          self.tokenizers.remove(language_id)
+          self.did_change.fire({ changed_languages: [language_id] })
+        }
+      None => ()
+    }
+  })
 }
 
 ///|
-/// Returns the tokenizer for `language_id`, leaving fallback choice to callers.
-pub fn TokenizerRegistry::lookup(
-  self : TokenizerRegistry,
+/// The tokenization support for `language_id`, or `None` when unregistered
+/// (Monaco's null tokenization fallback is the caller's choice). Mirrors
+/// `TokenizationRegistry.get`.
+pub fn TokenizationRegistry::get(
+  self : TokenizationRegistry,
   language_id : String,
 ) -> &LineTokenizer? {
-  self.tokenizers.get(language_id)
+  match self.tokenizers.get(language_id) {
+    Some(entry) => Some(entry.tokenizer)
+    None => None
+  }
 }
+
+///|
+/// Subscribes to registration changes. Mirrors
+/// `TokenizationRegistry.onDidChange`.
+pub fn TokenizationRegistry::on_did_change(
+  self : TokenizationRegistry,
+  listener : (TokenizationChangedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.did_change.event(listener)
+}
+
+///|
+/// The process-wide registry, Monaco's `export const TokenizationRegistry`
+/// singleton (`common/languages.ts`). `Languages::set_tokens_provider`
+/// (the `monaco.languages.setTokensProvider` analog) registers into it.
+pub let tokenization_registry : TokenizationRegistry = TokenizationRegistry::new()
 
 ///|
 /// Whether `word` begins with an uppercase ASCII letter (`A`–`Z`), the shared

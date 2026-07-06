@@ -1,0 +1,127 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/common/tokens"
+
+import {
+  "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/common/services",
+}
+
+// Values
+pub const COLOR_ID_DEFAULT_BACKGROUND : Int = 2
+
+pub const COLOR_ID_DEFAULT_FOREGROUND : Int = 1
+
+pub const COLOR_ID_NONE : Int = 0
+
+pub const FONT_STYLE_BOLD : Int = 2
+
+pub const FONT_STYLE_ITALIC : Int = 1
+
+pub const FONT_STYLE_NONE : Int = 0
+
+pub const FONT_STYLE_NOT_SET : Int = -1
+
+pub const FONT_STYLE_STRIKETHROUGH : Int = 8
+
+pub const FONT_STYLE_UNDERLINE : Int = 4
+
+pub const METADATA_BACKGROUND_OFFSET : Int = 24
+
+pub const METADATA_BALANCED_BRACKETS_OFFSET : Int = 10
+
+pub const METADATA_FONT_STYLE_OFFSET : Int = 11
+
+pub const METADATA_FOREGROUND_OFFSET : Int = 15
+
+pub const METADATA_LANGUAGEID_OFFSET : Int = 0
+
+pub const METADATA_TOKEN_TYPE_OFFSET : Int = 8
+
+pub const STANDARD_TOKEN_TYPE_COMMENT : Int = 1
+
+pub const STANDARD_TOKEN_TYPE_OTHER : Int = 0
+
+pub const STANDARD_TOKEN_TYPE_REGEX : Int = 3
+
+pub const STANDARD_TOKEN_TYPE_STRING : Int = 2
+
+// Errors
+
+// Types and methods
+pub struct InsertedToken {
+  offset : Int
+  text : String
+  token_metadata : UInt
+}
+pub fn InsertedToken::new(Int, String, UInt) -> Self
+
+pub struct LineTokens {
+  tokens : Array[UInt]
+  tokens_count : Int
+  text : String
+  language_id_codec : @services.LanguageIdCodec
+}
+pub fn LineTokens::convert_to_end_offset(Array[UInt], Int) -> Unit
+pub fn LineTokens::create_empty(String, @services.LanguageIdCodec) -> Self
+pub fn LineTokens::create_from_text_and_metadata(Array[(String, UInt)], @services.LanguageIdCodec) -> Self
+pub fn LineTokens::default_token_metadata() -> UInt
+pub fn LineTokens::find_index_in_tokens_array(Array[UInt], Int) -> Int
+pub fn LineTokens::find_token_index_at_offset(Self, Int) -> Int
+pub fn LineTokens::for_each(Self, (Int) -> Unit) -> Unit
+pub fn LineTokens::get_class_name(Self, Int) -> String
+pub fn LineTokens::get_count(Self) -> Int
+pub fn LineTokens::get_end_offset(Self, Int) -> Int
+pub fn LineTokens::get_foreground(Self, Int) -> Int
+pub fn LineTokens::get_inline_style(Self, Int, Array[String]) -> String
+pub fn LineTokens::get_language_id(Self, Int) -> String
+pub fn LineTokens::get_line_content(Self) -> String
+pub fn LineTokens::get_metadata(Self, Int) -> UInt
+pub fn LineTokens::get_presentation(Self, Int) -> TokenPresentation
+pub fn LineTokens::get_standard_token_type(Self, Int) -> Int
+pub fn LineTokens::get_start_offset(Self, Int) -> Int
+pub fn LineTokens::get_text_length(Self) -> Int
+pub fn LineTokens::get_token_text(Self, Int) -> String
+pub fn LineTokens::inflate(Self) -> &IViewLineTokens
+pub fn LineTokens::new(Array[UInt], String, @services.LanguageIdCodec) -> Self
+pub fn LineTokens::slice_and_inflate(Self, Int, Int, Int) -> &IViewLineTokens
+pub fn LineTokens::slice_zero_copy(Self, @common.OffsetRange) -> &IViewLineTokens
+pub fn LineTokens::with_inserted(Self, Array[InsertedToken]) -> Self
+
+type TokenMetadata
+pub fn TokenMetadata::contains_balanced_brackets(UInt) -> Bool
+pub fn TokenMetadata::get_background(UInt) -> Int
+pub fn TokenMetadata::get_class_name_from_metadata(UInt) -> String
+pub fn TokenMetadata::get_font_style(UInt) -> Int
+pub fn TokenMetadata::get_foreground(UInt) -> Int
+pub fn TokenMetadata::get_inline_style_from_metadata(UInt, Array[String]) -> String
+pub fn TokenMetadata::get_language_id(UInt) -> Int
+pub fn TokenMetadata::get_presentation_from_metadata(UInt) -> TokenPresentation
+pub fn TokenMetadata::get_token_type(UInt) -> Int
+
+pub struct TokenPresentation {
+  foreground : Int
+  italic : Bool
+  bold : Bool
+  underline : Bool
+  strikethrough : Bool
+}
+
+// Type aliases
+
+// Traits
+pub trait IViewLineTokens {
+  fn get_count(Self) -> Int
+  fn get_standard_token_type(Self, Int) -> Int
+  fn get_foreground(Self, Int) -> Int
+  fn get_end_offset(Self, Int) -> Int
+  fn get_class_name(Self, Int) -> String
+  fn get_inline_style(Self, Int, Array[String]) -> String
+  fn get_presentation(Self, Int) -> TokenPresentation
+  fn find_token_index_at_offset(Self, Int) -> Int
+  fn get_line_content(Self) -> String
+  fn get_metadata(Self, Int) -> UInt
+  fn get_language_id(Self, Int) -> String
+  fn get_token_text(Self, Int) -> String
+  fn for_each(Self, (Int) -> Unit) -> Unit
+}
+

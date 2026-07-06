@@ -1,9 +1,9 @@
 ///|
-/// Builds (or reuses) the per-version tokenized model, buckets the
-/// feature data into a frame source, and emits the frame for the current
-/// layout window. Only the tokenize step depends on model size; cache
-/// hits skip it entirely. Synchronous CPU work; the paint happens in the
-/// next render flush.
+/// Warms the model's memoized tokenization part, buckets the feature data
+/// into a frame source, and emits the frame for the current layout window.
+/// Only a model's first render pays the tokenize sweep; later renders hit
+/// the part's memo. Synchronous CPU work; the paint happens in the next
+/// render flush.
 fn Viewer::render_current_model(
   self : Viewer,
   model : @model.TextModel,
@@ -15,29 +15,13 @@ fn Viewer::render_current_model(
   )
   let providers = { ..self.provider_result, diagnostics: marker_diagnostics }
   let tokenize_started = now_ms()
-  let tokenized = match self.cached_tokenized(model) {
-    Some(tokenized) => tokenized
-    None => {
-      let snapshot = model.snapshot
-      let tokens : Array[@syntax.Token] = match
-        self.services.languages.lookup_tokens_provider(model.language_id) {
-        Some(tokenizer) => @syntax.tokenize_document(snapshot, tokenizer)
-        None => []
-      }
-      @view_model.TokenizedDocument::build(
-        snapshot,
-        tokens,
-        language_id=model.language_id,
-        version=model.version,
-      )
-    }
-  }
+  model.tokenization.force_tokenization()
   let tokenize_finished = now_ms()
   // Decorations live in the model's interval-tree storage now; the view
   // model queries them lazily per viewport (no per-frame bake).
-  let source = @view_model.FrameSource(tokenized, providers, model~)
+  let source = @view_model.FrameSource(model, providers)
   let view_model = self.build_view_model(source)
-  self.apply_view_model_layout(view_model, tokenized.snapshot)
+  self.apply_view_model_layout(view_model, model.snapshot)
   let window = self.view_layout.visible_window(overscan=@core.line_overscan)
   let frame = view_model.render_frame({
     start_line: window.start,
@@ -53,7 +37,7 @@ fn Viewer::render_current_model(
   self.did_build_frame.fire({
     model,
     line_count: frame.line_count,
-    token_count: tokenized.token_count,
+    token_count: model.tokenization.token_count(),
     diagnostic_count: marker_diagnostics.length(),
     tokenize_ms: tokenize_finished - tokenize_started,
     build_ms: build_finished - tokenize_finished,
@@ -93,7 +77,7 @@ fn Viewer::rebuild_current_view_model_for_options(self : Viewer) -> Unit {
   match self.frame_source {
     Some(source) => {
       let view_model = self.build_view_model(source)
-      self.apply_view_model_layout(view_model, source.tokenized.snapshot)
+      self.apply_view_model_layout(view_model, source.model.snapshot)
       let window = self.view_layout.visible_window(overscan=@core.line_overscan)
       let frame = view_model.render_frame({
         start_line: window.start,
@@ -131,25 +115,6 @@ fn Viewer::apply_view_model_layout(
     max_line_length(snapshot)
   }
   self.sync_content_width()
-}
-
-///|
-/// The cached tokenized document, valid only for the same document
-/// identity and version (the Monaco model-version guard).
-fn Viewer::cached_tokenized(
-  self : Viewer,
-  model : @model.TextModel,
-) -> @view_model.TokenizedDocument? {
-  match (self.frame_source, self.text_model) {
-    (Some(source), Some(current)) =>
-      if current.same_identity_and_version(model) &&
-        source.tokenized.version == model.version {
-        Some(source.tokenized)
-      } else {
-        None
-      }
-    _ => None
-  }
 }
 
 ///|

@@ -95,8 +95,8 @@ fn line_parts_from_render_line(
     parts.push(
       LinePart(
         line.text.length(),
-        TokenMetadata::get_class_name_from_metadata(
-          LineTokens::default_token_metadata(),
+        @tokens.TokenMetadata::get_class_name_from_metadata(
+          @tokens.LineTokens::default_token_metadata(),
         ),
       ),
     )

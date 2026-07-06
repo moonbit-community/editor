@@ -9,6 +9,9 @@ pub struct TextModel {
   version : Int
   revision : String
   snapshot : TextSnapshot
+  /// The `model.tokenization` part (Monaco's `TokenizationTextModelPart`,
+  /// wired in the `TextModel` constructor exactly as `textModel.ts` does).
+  tokenization : @tokens.TokenizationTextModelPart
   // #region Decorations (textModel.ts:285-290; `_onDidChangeDecorations` :225)
   instance_id : String
   mut delta_decoration_call_cnt : Int
@@ -50,6 +53,13 @@ pub fn TextModel::TextModel(
   let language_id = if language_id == "" { "moonbit" } else { language_id }
   let version = if version < 1 { 1 } else { version }
   let snapshot = TextSnapshot(text)
+  // The part is constructed from the frozen line array (see the deviation
+  // note in `tokens/tokenization_text_model_part.mbt`); tokenization itself
+  // runs lazily on first read.
+  let lines : Array[String] = []
+  for line in 0..<snapshot.line_count() {
+    lines.push(snapshot.line_text(line))
+  }
   {
     uri,
     display_name,
@@ -57,6 +67,7 @@ pub fn TextModel::TextModel(
     version,
     revision,
     snapshot,
+    tokenization: @tokens.TokenizationTextModelPart::new(lines, language_id),
     instance_id: next_model_instance_id(),
     delta_decoration_call_cnt: 0,
     last_decoration_id: 0,
@@ -90,10 +101,10 @@ pub fn TextModel::same_identity_and_version(
 // `BugIndicatingError`; see the README parity ledger.
 
 ///|
-/// Source document language id. Mirrors `getLanguageId` (`textModel.ts:2085`;
-/// Monaco delegates to its tokenization part, which the viewer doesn't carry).
+/// Source document language id. Mirrors `getLanguageId` (`textModel.ts:2085`),
+/// delegating to the tokenization part as Monaco does.
 pub fn TextModel::get_language_id(self : TextModel) -> String {
-  self.language_id
+  self.tokenization.get_language_id()
 }
 
 ///|

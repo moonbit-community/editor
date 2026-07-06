@@ -4,79 +4,17 @@ package "moonbit-community/editor/viewer/common/view_model"
 import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
-  "moonbit-community/editor/syntax",
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
+  "moonbit-community/editor/viewer/common/tokens",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub const COLOR_ID_COMMENT : Int = 7
-
-pub const COLOR_ID_DEFAULT_BACKGROUND : Int = 2
-
-pub const COLOR_ID_DEFAULT_FOREGROUND : Int = 1
-
-pub const COLOR_ID_FUNCTION : Int = 10
-
-pub const COLOR_ID_INVALID : Int = 13
-
-pub const COLOR_ID_KEYWORD : Int = 3
-
-pub const COLOR_ID_NONE : Int = 0
-
-pub const COLOR_ID_NUMBER : Int = 6
-
-pub const COLOR_ID_PUNCTUATION : Int = 8
-
-pub const COLOR_ID_REGEXP : Int = 12
-
-pub const COLOR_ID_STRING : Int = 5
-
-pub const COLOR_ID_STRING_ESCAPE : Int = 11
-
-pub const COLOR_ID_TYPE : Int = 9
-
-pub const COLOR_ID_VARIABLE : Int = 4
-
-pub const FONT_STYLE_BOLD : Int = 2
-
-pub const FONT_STYLE_ITALIC : Int = 1
-
-pub const FONT_STYLE_NONE : Int = 0
-
-pub const FONT_STYLE_NOT_SET : Int = -1
-
-pub const FONT_STYLE_STRIKETHROUGH : Int = 8
-
-pub const FONT_STYLE_UNDERLINE : Int = 4
-
-pub const METADATA_BACKGROUND_OFFSET : Int = 24
-
-pub const METADATA_BALANCED_BRACKETS_OFFSET : Int = 10
-
-pub const METADATA_FONT_STYLE_OFFSET : Int = 11
-
-pub const METADATA_FOREGROUND_OFFSET : Int = 15
-
-pub const METADATA_LANGUAGEID_OFFSET : Int = 0
-
-pub const METADATA_TOKEN_TYPE_OFFSET : Int = 8
-
-pub const STANDARD_TOKEN_TYPE_COMMENT : Int = 1
-
-pub const STANDARD_TOKEN_TYPE_OTHER : Int = 0
-
-pub const STANDARD_TOKEN_TYPE_REGEX : Int = 3
-
-pub const STANDARD_TOKEN_TYPE_STRING : Int = 2
-
 pub fn build_frame(FrameSource, FrameViewport) -> RenderFrame
 
 pub fn dedup_margin_decorations(Int, Int, Array[DecorationToRender]) -> Array[Array[String]]
-
-pub fn default_token_color_map() -> Array[String]
 
 pub fn filter_validation_decorations(RenderValidationDecorations) -> Bool
 
@@ -84,23 +22,9 @@ pub fn line_decorations_filter(Array[@inline_decorations.InlineDecoration], Int,
 
 pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions], Int, RenderLine) -> Array[@view_layout.LineDecoration]
 
-pub fn line_tokens_from_syntax_tokens(String, Int, Array[@syntax.Token], LanguageIdCodec, language_id? : Int) -> LineTokens
-
 pub fn lines_decorations_to_render(Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]]) -> Array[DecorationToRender]
 
 pub fn render_line_input_from_render_line(RenderLine, line_decorations? : Array[@view_layout.LineDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
-
-pub fn tag_foreground_color_id(@syntax.HighlightTag) -> Int
-
-pub fn tag_standard_token_type(@syntax.HighlightTag) -> Int
-
-pub fn tag_to_metadata(@syntax.HighlightTag, font_style? : Int, language_id? : Int) -> UInt
-
-pub fn token_theme_style_block(Array[String]) -> String
-
-pub fn tokenize_line_to_html(String, &IViewLineTokens, Array[String], Int, Int, Int, Bool) -> String
-
-pub fn tokenize_to_string(String, LanguageIdCodec, (String) -> Array[UInt]) -> String
 
 pub fn view_line_rendering_data_from_render_line(RenderLine, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 
@@ -119,11 +43,10 @@ pub(all) struct DecorationToRender {
 } derive(Eq, @debug.Debug)
 
 pub struct FrameSource {
-  tokenized : TokenizedDocument
+  model : @model.TextModel
   providers : @language.ProviderResult
-  model : @model.TextModel?
 }
-pub fn FrameSource::FrameSource(TokenizedDocument, @language.ProviderResult, model? : @model.TextModel) -> Self
+pub fn FrameSource::FrameSource(@model.TextModel, @language.ProviderResult) -> Self
 
 pub(all) struct FrameViewport {
   start_line : Int
@@ -144,23 +67,6 @@ pub(all) struct InjectedText {
 } derive(Eq, @debug.Debug)
 pub fn InjectedText::InjectedText(@common.Position, String, String, source_index? : Int) -> Self
 
-pub struct InsertedToken {
-  offset : Int
-  text : String
-  token_metadata : UInt
-}
-pub fn InsertedToken::new(Int, String, UInt) -> Self
-
-pub struct LanguageIdCodec {
-  language_id_to_language : Array[String]
-  language_to_language_id : Map[String, Int]
-  mut next_language_id : Int
-}
-pub fn LanguageIdCodec::decode_language_id(Self, Int) -> String
-pub fn LanguageIdCodec::encode_language_id(Self, String) -> Int
-pub fn LanguageIdCodec::new() -> Self
-pub fn LanguageIdCodec::register(Self, String) -> Int
-
 pub(all) struct LineBreaksComputer {
   wrapping_column : Int
   tab_size : Int
@@ -169,25 +75,6 @@ pub(all) struct LineBreaksComputer {
 pub fn LineBreaksComputer::LineBreaksComputer(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
 pub fn LineBreaksComputer::compute_model_line_projection(Self, Int, String) -> ModelLineProjectionData
 pub fn LineBreaksComputer::compute_projected_line_projection(Self, Int, ProjectedTextLine) -> ModelLineProjectionData
-
-pub struct LineTokens {
-  tokens : Array[UInt]
-  tokens_count : Int
-  text : String
-  language_id_codec : LanguageIdCodec
-}
-pub fn LineTokens::convert_to_end_offset(Array[UInt], Int) -> Unit
-pub fn LineTokens::create_empty(String, LanguageIdCodec) -> Self
-pub fn LineTokens::create_from_text_and_metadata(Array[(String, UInt)], LanguageIdCodec) -> Self
-pub fn LineTokens::default_token_metadata() -> UInt
-pub fn LineTokens::find_index_in_tokens_array(Array[UInt], Int) -> Int
-pub fn LineTokens::get_start_offset(Self, Int) -> Int
-pub fn LineTokens::get_text_length(Self) -> Int
-pub fn LineTokens::inflate(Self) -> &IViewLineTokens
-pub fn LineTokens::new(Array[UInt], String, LanguageIdCodec) -> Self
-pub fn LineTokens::slice_and_inflate(Self, Int, Int, Int) -> &IViewLineTokens
-pub fn LineTokens::slice_zero_copy(Self, @common.OffsetRange) -> &IViewLineTokens
-pub fn LineTokens::with_inserted(Self, Array[InsertedToken]) -> Self
 
 pub struct ModelLineProjection {
   projections : Array[ModelLineProjectionData]
@@ -257,17 +144,6 @@ pub fn ProjectedTextLine::model_column_to_projected_column(Self, Int, affinity? 
 pub fn ProjectedTextLine::normalize_projected_column_around_injections(Self, Int, @model.PositionAffinity) -> Int
 pub fn ProjectedTextLine::projected_column_to_model_column(Self, Int) -> Int
 
-pub struct RangePriorityQueueImpl {
-  ranges : Array[@common.OffsetRange]
-}
-pub fn RangePriorityQueueImpl::add_range(Self, @common.OffsetRange) -> Unit
-pub fn RangePriorityQueueImpl::add_range_and_resize(Self, @common.OffsetRange, Int) -> Unit
-pub fn RangePriorityQueueImpl::delete(Self, Int) -> Unit
-pub fn RangePriorityQueueImpl::get_ranges(Self) -> Array[@common.OffsetRange]
-pub fn RangePriorityQueueImpl::min(Self) -> Int?
-pub fn RangePriorityQueueImpl::new() -> Self
-pub fn RangePriorityQueueImpl::remove_min(Self) -> Int?
-
 pub(all) struct RenderFrame {
   version : Int
   language_id : String
@@ -285,7 +161,7 @@ pub(all) struct RenderLine {
   text : String
   model_columns : Array[Int]
   injected_text_indices : Array[Int]
-  tokens : &IViewLineTokens
+  tokens : &@tokens.IViewLineTokens
   injected_inline_decorations : Array[@view_layout.InlineDecoration]
 }
 pub fn RenderLine::injected_text_index_at_column(Self, Int) -> Int
@@ -317,35 +193,6 @@ pub(all) enum SelectionDirection {
   LTR
   RTL
 } derive(Eq, @debug.Debug)
-
-type TokenMetadata
-pub fn TokenMetadata::contains_balanced_brackets(UInt) -> Bool
-pub fn TokenMetadata::get_background(UInt) -> Int
-pub fn TokenMetadata::get_class_name_from_metadata(UInt) -> String
-pub fn TokenMetadata::get_font_style(UInt) -> Int
-pub fn TokenMetadata::get_foreground(UInt) -> Int
-pub fn TokenMetadata::get_inline_style_from_metadata(UInt, Array[String]) -> String
-pub fn TokenMetadata::get_language_id(UInt) -> Int
-pub fn TokenMetadata::get_presentation_from_metadata(UInt) -> TokenPresentation
-pub fn TokenMetadata::get_token_type(UInt) -> Int
-
-pub struct TokenPresentation {
-  foreground : Int
-  italic : Bool
-  bold : Bool
-  underline : Bool
-  strikethrough : Bool
-}
-
-pub struct TokenizedDocument {
-  snapshot : @model.TextSnapshot
-  language_id : String
-  version : Int
-  token_count : Int
-  line_tokens : Array[LineTokens]
-}
-pub fn TokenizedDocument::build(@model.TextSnapshot, Array[@syntax.Token], language_id? : String, version? : Int) -> Self
-pub fn TokenizedDocument::line_tokens_for_line(Self, Int) -> LineTokens
 
 pub struct ViewModel {
   source : FrameSource
@@ -382,7 +229,7 @@ pub struct ViewModelDecorations {
 }
 pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLines, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
 pub fn ViewModelDecorations::get_decorations_viewport_data(Self, @common.Range) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
-pub fn ViewModelDecorations::new(Int, @model.TextModel?, Bool, ViewModelLines, ViewModelCoordinatesConverter) -> Self
+pub fn ViewModelDecorations::new(Int, @model.TextModel, Bool, ViewModelLines, ViewModelCoordinatesConverter) -> Self
 pub fn ViewModelDecorations::on_line_mapping_changed(Self) -> Unit
 pub fn ViewModelDecorations::on_model_decorations_changed(Self) -> Unit
 pub fn ViewModelDecorations::reset(Self) -> Unit
@@ -416,7 +263,7 @@ pub fn ViewModelLinesFromModelAsIs::is_model_line_hidden(Self, Int) -> Bool
 pub fn ViewModelLinesFromModelAsIs::line_count(Self) -> Int
 pub fn ViewModelLinesFromModelAsIs::model_line_count(Self) -> Int
 pub fn ViewModelLinesFromModelAsIs::model_line_number_of_view_line(Self, Int) -> Int
-pub fn ViewModelLinesFromModelAsIs::model_line_tokens(Self, Int) -> LineTokens
+pub fn ViewModelLinesFromModelAsIs::model_line_tokens(Self, Int) -> @tokens.LineTokens
 pub fn ViewModelLinesFromModelAsIs::new(FrameSource) -> Self
 pub fn ViewModelLinesFromModelAsIs::projected_text_line(Self, Int) -> ProjectedTextLine
 pub fn ViewModelLinesFromModelAsIs::render_line(Self, Int) -> RenderLine
@@ -471,21 +318,5 @@ pub(open) trait CoordinatesConverter {
   fn view_position_to_model_position(Self, @common.Position) -> @common.Position
   fn model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
   fn view_range_to_model_range(Self, @common.Range) -> @common.Range
-}
-
-pub trait IViewLineTokens {
-  fn get_count(Self) -> Int
-  fn get_standard_token_type(Self, Int) -> Int
-  fn get_foreground(Self, Int) -> Int
-  fn get_end_offset(Self, Int) -> Int
-  fn get_class_name(Self, Int) -> String
-  fn get_inline_style(Self, Int, Array[String]) -> String
-  fn get_presentation(Self, Int) -> TokenPresentation
-  fn find_token_index_at_offset(Self, Int) -> Int
-  fn get_line_content(Self) -> String
-  fn get_metadata(Self, Int) -> UInt
-  fn get_language_id(Self, Int) -> String
-  fn get_token_text(Self, Int) -> String
-  fn for_each(Self, (Int) -> Unit) -> Unit
 }
 

@@ -8,6 +8,21 @@
 /// here as free functions over the `pub(all)` `ViewportData`.
 
 ///|
+/// An empty per-line decoration collection for the frame-only path below,
+/// which has no coordinate converter and so carries no decorations.
+fn empty_view_decorations_collection(
+  view_range : @base_common.Range,
+) -> ViewDecorationsCollection {
+  let inline_decorations : Array[Array[@inline_decorations.InlineDecoration]] = []
+  let has_variable_fonts : Array[Bool] = []
+  for _j in view_range.start_line_number..<=view_range.end_line_number {
+    inline_decorations.push([])
+    has_variable_fonts.push(false)
+  }
+  { decorations: [], inline_decorations, has_variable_fonts }
+}
+
+///|
 /// Builds viewport data from a precomputed render frame. This path has no
 /// coordinate converter, so it carries no decorations; the view-model path
 /// below is the one the running viewer uses.

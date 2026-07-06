@@ -3,16 +3,13 @@ package "moonbit-community/editor/syntax"
 
 import {
   "moonbit-community/editor/base/common",
-  "moonbit-community/editor/viewer/common/model",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn highlight(@model.TextSnapshot) -> Array[Token]
-
 pub fn is_capitalized(StringView) -> Bool
 
-pub fn tokenize_document(@model.TextSnapshot, &LineTokenizer) -> Array[Token]
+pub let tokenization_registry : TokenizationRegistry
 
 // Errors
 
@@ -52,18 +49,17 @@ pub enum PlainTokenizer {
 pub fn PlainTokenizer::new() -> Self
 pub impl LineTokenizer for PlainTokenizer
 
-pub(all) struct Token {
-  range : @common.OffsetRange
-  tag : HighlightTag
-  text : String
-} derive(@debug.Debug)
+pub(all) struct TokenizationChangedEvent {
+  changed_languages : Array[String]
+}
 
-pub struct TokenizerRegistry {
+pub struct TokenizationRegistry {
   // private fields
 }
-pub fn TokenizerRegistry::lookup(Self, String) -> &LineTokenizer?
-pub fn TokenizerRegistry::new() -> Self
-pub fn TokenizerRegistry::register(Self, String, &LineTokenizer) -> Unit
+pub fn TokenizationRegistry::get(Self, String) -> &LineTokenizer?
+pub fn TokenizationRegistry::new() -> Self
+pub fn TokenizationRegistry::on_did_change(Self, (TokenizationChangedEvent) -> Unit) -> @common.Disposable
+pub fn TokenizationRegistry::register(Self, String, &LineTokenizer) -> @common.Disposable
 
 pub(all) struct TokenizerState(String) derive(Eq, @debug.Debug)
 

@@ -1,8 +1,8 @@
 ///| Faithful port of vscode's `common/languages/textToHtmlTokenizer.ts` (pinned
 /// `vscode/` submodule, commit 294fb350): the two pure HTML emitters
-/// `tokenizeLineToHTML` and `_tokenizeToString`. Lives in `view_model`,
-/// co-located with the ported `LineTokens`/`IViewLineTokens` (as in Monaco,
-/// where this file imports `tokens/lineTokens`).
+/// `tokenizeLineToHTML` and `_tokenizeToString`, consuming the ported
+/// `@tokens.LineTokens`/`IViewLineTokens` (as in Monaco, where this file
+/// imports `tokens/lineTokens`).
 ///
 /// `_tokenizeToString`'s `IReducedTokenizationSupport` is adapted to the viewer
 /// seam as a stateless `tokenize_encoded : (String) -> Array[UInt]` closure
@@ -43,7 +43,7 @@ fn split_lines(text : String) -> Array[String] {
 /// `tokenizeLineToHTML`.
 pub fn tokenize_line_to_html(
   text : String,
-  view_line_tokens : &IViewLineTokens,
+  view_line_tokens : &@tokens.IViewLineTokens,
   color_map : Array[String],
   start_offset : Int,
   end_offset : Int,
@@ -159,7 +159,7 @@ pub fn tokenize_line_to_html(
 /// seam (see file header).
 pub fn tokenize_to_string(
   text : String,
-  codec : LanguageIdCodec,
+  codec : @services.LanguageIdCodec,
   tokenize_encoded : (String) -> Array[UInt],
 ) -> String {
   let result = StringBuilder::new()
@@ -170,8 +170,8 @@ pub fn tokenize_to_string(
       result.write_string("<br/>")
     }
     let tokens = tokenize_encoded(line)
-    LineTokens::convert_to_end_offset(tokens, line.length())
-    let line_tokens = LineTokens::new(tokens, line, codec)
+    @tokens.LineTokens::convert_to_end_offset(tokens, line.length())
+    let line_tokens = @tokens.LineTokens::new(tokens, line, codec)
     let view_line_tokens = line_tokens.inflate()
     let mut start_offset = 0
     for j in 0..<view_line_tokens.get_count() {

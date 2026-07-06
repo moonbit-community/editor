@@ -39,18 +39,14 @@ fn affinity_view_model(
     })
   }
   model.delta_decorations([], decorations) |> ignore
-  let doc = model.snapshot
-  let tokenized = @view_model.TokenizedDocument::build(
-    doc,
-    @syntax.highlight(doc),
-  )
+  register_plain_moonbit()
   let providers = @language.ProviderResult::{
     hovers: [],
     diagnostics: [],
     definitions: [],
     symbols: [],
   }
-  let source = @view_model.FrameSource(tokenized, providers, model~)
+  let source = @view_model.FrameSource(model, providers)
   @view_model.ViewModel::with_options(
     source,
     ViewModelOptions(soft_wrap_column~),

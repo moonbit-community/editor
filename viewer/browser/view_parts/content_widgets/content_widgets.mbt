@@ -270,11 +270,7 @@ pub fn ContentWidgets::render_hover_widget(
   widget.hover.set_attribute("class", "monaco-hover fade-in")
   widget.clear_sizing()
   widget.set_hover_parts(
-    @hover.render_hover_parts(
-      hover_view.parts,
-      frame.language_id,
-      language_registry=host.languages,
-    ),
+    @hover.render_hover_parts(hover_view.parts, frame.language_id),
   )
   self.mount_content_widget(content_widget)
   // The anchor line's top edge in editor-viewport pixels and the editor height,

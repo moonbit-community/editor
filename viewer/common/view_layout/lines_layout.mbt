@@ -1020,4 +1020,3 @@ fn LinesLayout::accumulated_line_heights_including_line_number(
     line_number * self.default_line_height
   }
 }
-

@@ -80,7 +80,9 @@ pub fn ViewModelLines::is_model_line_hidden(
 ///|
 /// Merged one-based hidden model-line intervals, Monaco's
 /// `ViewModel.getHiddenAreas` (`this._lines.getHiddenAreas()`).
-pub fn ViewModel::get_hidden_areas(self : ViewModel) -> Array[@base_common.Range] {
+pub fn ViewModel::get_hidden_areas(
+  self : ViewModel,
+) -> Array[@base_common.Range] {
   self.lines.get_hidden_areas()
 }
 
@@ -121,7 +123,7 @@ pub fn ViewModel::model_line_max_column(
   self : ViewModel,
   model_line_number : Int,
 ) -> Int {
-  self.source.tokenized.snapshot.line_text(model_line_number - 1).length() + 1
+  self.source.model.snapshot.line_text(model_line_number - 1).length() + 1
 }
 
 ///|

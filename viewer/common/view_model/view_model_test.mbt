@@ -10,38 +10,15 @@ test "identity coordinates converter preserves model and view positions" {
 }
 
 ///|
-test "view model lines as-is match render frame line data" {
+test "view model lines as-is match view line rendering data" {
   let model = plain_text_model("fn main {\n  let x = 1\n}")
-  let providers = @language.ProviderResult::{
-    hovers: [],
-    diagnostics: [],
-    definitions: [],
-    symbols: [],
-  }
-  let source = @view_model.FrameSource(model, providers)
-  let view_model = @view_model.ViewModel(source)
+  let view_model = @view_model.ViewModel(model)
   let lines = view_model.lines()
-  let direct_line = lines.render_line(2)
-  let frame = view_model.render_frame({ start_line: 2, end_line: 3 })
-  let frame_line = frame.lines[0]
-  assert_eq(direct_line.line_number, frame_line.line_number)
-  assert_eq(direct_line.offset, frame_line.offset)
-  assert_eq(direct_line.text, frame_line.text)
-  assert_eq(direct_line.tokens.get_count(), frame_line.tokens.get_count())
-  for index in 0..<direct_line.tokens.get_count() {
-    assert_eq(
-      direct_line.tokens.get_end_offset(index),
-      frame_line.tokens.get_end_offset(index),
-    )
-    assert_eq(
-      direct_line.tokens.get_class_name(index),
-      frame_line.tokens.get_class_name(index),
-    )
-  }
+  let direct_line = lines.get_view_line_data(2)
   let data = lines.view_line_rendering_data(2)
   assert_eq(data.min_column, 1)
-  assert_eq(data.max_column, direct_line.text.length() + 1)
-  assert_eq(data.content, direct_line.text)
+  assert_eq(data.max_column, direct_line.content.length() + 1)
+  assert_eq(data.content, direct_line.content)
   assert_eq(data.tokens.length(), direct_line.tokens.get_count())
   for index in 0..<data.tokens.length() {
     assert_eq(
@@ -60,10 +37,7 @@ fn test_view_model(
   text : String,
   options : @view_model.ViewModelOptions,
 ) -> @view_model.ViewModel {
-  @view_model.ViewModel::with_options(
-    FrameSource(plain_text_model(text), @language.ProviderResult::empty()),
-    options,
-  )
+  @view_model.ViewModel::with_options(plain_text_model(text), options)
 }
 
 ///|
@@ -112,10 +86,7 @@ fn test_inlay_view_model(
   }
   model.delta_decorations([], decorations) |> ignore
   register_plain_moonbit()
-  @view_model.ViewModel::with_options(
-    FrameSource(model, @language.ProviderResult::empty()),
-    options,
-  )
+  @view_model.ViewModel::with_options(model, options)
 }
 
 ///|
@@ -286,14 +257,26 @@ test "inlay hints render as injected text without changing model offsets" {
     [InlayHint(Position(1, 6), ": Int", kind=TypeHint)],
   )
   assert_eq(view_model.line_count(), 1)
-  let line = view_model.lines().render_line(1)
-  assert_eq(line.text, "let x: Int = 1")
-  assert_eq(line.source_offset_at_column(0), 0)
-  assert_eq(line.source_offset_at_column(5), 5)
-  assert_eq(line.source_offset_at_column(10), 5)
-  assert_eq(line.source_offset_at_column(line.text.length()), 9)
-  assert_eq(line.injected_text_index_at_column(5), 0)
-  assert_eq(line.injected_text_index_at_column(10), -1)
+  let line = view_model.lines().get_view_line_data(1)
+  assert_eq(line.content, "let x: Int = 1")
+  // View positions map back to unshifted model positions through the
+  // coordinates converter (Monaco's view->model boundary).
+  let converter = view_model.coordinates_converter()
+  assert_eq(converter.view_position_to_model_position(Position(1, 1)).column, 1)
+  assert_eq(converter.view_position_to_model_position(Position(1, 6)).column, 6)
+  assert_eq(
+    converter.view_position_to_model_position(Position(1, 11)).column,
+    6,
+  )
+  assert_eq(
+    converter.view_position_to_model_position(
+      Position(1, line.content.length() + 1),
+    ).column,
+    10,
+  )
+  // The injected span carries the hint's source index for hover lookup.
+  assert_eq(view_model.injected_text_index_at(Position(1, 6)), 0)
+  assert_eq(view_model.injected_text_index_at(Position(1, 11)), -1)
   let data = view_model.lines().view_line_rendering_data(1)
   assert_eq(data.content, "let x: Int = 1")
   // The inlay-hint color is now an inline decoration (Monaco's
@@ -301,14 +284,14 @@ test "inlay hints render as injected text without changing model offsets" {
   // injected token carries only default syntactic metadata (`mtk1`).
   assert_false(data.tokens.any(part => part.class_name.contains("inlay-hint")))
   assert_true(
-    line.injected_inline_decorations.any(decoration => {
+    line.inline_decorations.any(decoration => {
       decoration.class_name.contains("inlay-hint")
     }),
   )
   // The decoration still merges onto the injected token in the rendered DOM, so
   // the inlay text is styled `mtk1 inlay-hint inlay-hint-type`.
   let html = @view_layout.render_view_line2(
-      @view_model.render_line_input_from_render_line(line),
+      @view_model.render_line_input_from_view_line_data(line),
     ).html
   assert_true(html.contains("mtk1 inlay-hint inlay-hint-type"))
 }
@@ -347,11 +330,12 @@ test "injected text can sit at line boundaries" {
       InlayHint(Position(1, 3), "]", kind=TypeHint),
     ],
   )
-  let line = view_model.lines().render_line(1)
-  assert_eq(line.text, "[ab]")
-  assert_eq(line.source_offset_at_column(0), 0)
-  assert_eq(line.source_offset_at_column(1), 0)
-  assert_eq(line.source_offset_at_column(3), 2)
-  assert_eq(line.injected_text_index_at_column(0), 0)
-  assert_eq(line.injected_text_index_at_column(3), 1)
+  let line = view_model.lines().get_view_line_data(1)
+  assert_eq(line.content, "[ab]")
+  let converter = view_model.coordinates_converter()
+  assert_eq(converter.view_position_to_model_position(Position(1, 1)).column, 1)
+  assert_eq(converter.view_position_to_model_position(Position(1, 2)).column, 1)
+  assert_eq(converter.view_position_to_model_position(Position(1, 4)).column, 3)
+  assert_eq(view_model.injected_text_index_at(Position(1, 1)), 0)
+  assert_eq(view_model.injected_text_index_at(Position(1, 4)), 1)
 }

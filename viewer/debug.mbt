@@ -6,17 +6,17 @@
 // these for telemetry and render synchronization.
 
 ///|
-/// Fires after a frame is (re)built from a model — tokenize/build timings and
-/// counts for telemetry and test synchronization.
-pub fn debug_on_did_build_frame(
+/// Fires after a view model is (re)built from a model — tokenize/build
+/// timings and counts for telemetry and test synchronization.
+pub fn debug_on_did_build_view_model(
   viewer : Viewer,
-  listener : (ViewerFrameBuiltEvent) -> Unit,
+  listener : (ViewerViewModelBuiltEvent) -> Unit,
 ) -> @base_common.Disposable {
-  viewer.did_build_frame.event(listener)
+  viewer.did_build_view_model.event(listener)
 }
 
 ///|
-/// Fires after a built frame is patched into the DOM.
+/// Fires after the built content is patched into the DOM.
 pub fn debug_on_did_render_model(
   viewer : Viewer,
   listener : (ViewerModelRenderedEvent) -> Unit,

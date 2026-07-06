@@ -8,78 +8,6 @@
 /// here as free functions over the `pub(all)` `ViewportData`.
 
 ///|
-/// An empty per-line decoration collection for the frame-only path below,
-/// which has no coordinate converter and so carries no decorations.
-fn empty_view_decorations_collection(
-  view_range : @base_common.Range,
-) -> ViewDecorationsCollection {
-  let inline_decorations : Array[Array[@inline_decorations.InlineDecoration]] = []
-  let has_variable_fonts : Array[Bool] = []
-  for _j in view_range.start_line_number..<=view_range.end_line_number {
-    inline_decorations.push([])
-    has_variable_fonts.push(false)
-  }
-  { decorations: [], inline_decorations, has_variable_fonts }
-}
-
-///|
-/// Builds viewport data from a precomputed render frame. This path has no
-/// coordinate converter, so it carries no decorations; the view-model path
-/// below is the one the running viewer uses.
-pub fn viewport_data_from_render_frame(
-  frame : RenderFrame,
-  line_height~ : Int,
-) -> @view_layout.ViewportData {
-  let lines : Array[@view_layout.ViewLineRenderingData] = []
-  let line_decorations : Array[Array[@view_layout.LineDecoration]] = []
-  let relative_vertical_offset : Array[Int] = []
-  for index in 0..<frame.lines.length() {
-    let line = frame.lines[index]
-    // No decorations on this path (no backing model); injected-text inline
-    // decorations still project onto the line.
-    let decorations = line_decorations_for_line(
-      empty_view_decorations_collection(
-        Range(line.line_number, 1, line.line_number, 1),
-      ),
-      line.line_number,
-      line,
-    )
-    lines.push(
-      view_line_rendering_data_from_render_line(
-        line,
-        line_decorations=decorations,
-      ),
-    )
-    line_decorations.push(decorations)
-    relative_vertical_offset.push(index * line_height)
-  }
-  // The frame viewport is a 1-based half-open window; the inclusive last line is
-  // `end_line - 1`.
-  let start_line_number = frame.viewport.start_line
-  let end_line_number = frame.viewport.end_line - 1
-  let end_column = match lines.last() {
-    Some(line) => line.max_column
-    None => 1
-  }
-  {
-    start_line_number,
-    end_line_number,
-    relative_vertical_offset,
-    line_height,
-    visible_range: {
-      start_line_number,
-      start_column: 1,
-      end_line_number,
-      end_column,
-    },
-    big_numbers_delta: 0,
-    lines,
-    line_decorations,
-    view_zones: [],
-  }
-}
-
-///|
 /// Builds viewport data directly from a view model and layout window.
 pub fn viewport_data_from_view_model(
   view_model : ViewModel,
@@ -119,14 +47,15 @@ pub fn viewport_data_from_view_model(
     end: end_line,
   }
   for line_number in start_line..<end_line {
-    let render_line = view_model_lines.render_line(line_number)
+    let line_data = view_model_lines.get_view_line_data(line_number)
     let decorations = line_decorations_for_line(
-      collection, start_line, render_line,
+      collection, start_line, line_number, line_data,
     )
     lines.push(
-      view_line_rendering_data_from_render_line(
-        render_line,
+      view_line_rendering_data_from_view_line_data(
+        line_data,
         line_decorations=decorations,
+        tab_size=view_model_lines.tab_size(),
       ),
     )
     line_decorations.push(decorations)

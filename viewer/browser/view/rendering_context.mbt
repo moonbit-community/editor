@@ -5,8 +5,10 @@
 /// `View::render` — the foreign-method rule keeps that call out of this
 /// package, so the literal construction crosses the package boundary.
 pub(all) struct ViewRenderInput {
-  frame : @view_model.RenderFrame
-  view_model : @view_model.ViewModel?
+  /// The rendered 1-based half-open view-line window (already clamped to the
+  /// document and stabilized by the overscan hysteresis).
+  window : @view_layout.LineWindow
+  view_model : @view_model.ViewModel
   layout : @view_layout.ViewLayout
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   selection_view_range : @base_common.Range?
@@ -78,23 +80,17 @@ fn RenderingContext::from_input(
   view_context : ViewContext,
   input : ViewRenderInput,
 ) -> RenderingContext {
-  let viewport = match input.view_model {
-    Some(model) =>
-      @view_model.viewport_data_from_view_model(
-        model,
-        frame_window(input.frame),
-        line_height=@core.editor_line_height,
-        layout=input.layout,
-      )
-    None =>
-      @view_model.viewport_data_from_render_frame(
-        input.frame,
-        line_height=@core.editor_line_height,
-      )
-  }
+  // Pulled from the view model per render pass — Monaco's `view.ts` building
+  // a fresh `ViewportData` over `viewLayout.getLinesViewportData()`.
+  let viewport = @view_model.viewport_data_from_view_model(
+    input.view_model,
+    input.window,
+    line_height=@core.editor_line_height,
+    layout=input.layout,
+  )
   let position = input.layout.position()
   let dimensions = input.layout.dimensions()
-  let origin = input.layout.window_origin(frame_window(input.frame))
+  let origin = input.layout.window_origin(input.window)
   let snapshot = ViewRenderSnapshot::from_input(input, position, dimensions)
   {
     view_context,
@@ -161,7 +157,7 @@ fn ViewRenderSnapshot::from_input(
   dimensions : @view_layout.ScrollDimensions,
 ) -> ViewRenderSnapshot {
   {
-    window: frame_window(input.frame),
+    window: input.window,
     generation: input.generation,
     decorations_generation: input.decorations_generation,
     position,

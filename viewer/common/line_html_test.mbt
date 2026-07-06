@@ -1,8 +1,7 @@
 ///|
 test "line html escapes text and merges span decorations" {
   let doc = @model.TextSnapshot("let a = \"<b> & 'c'\"")
-  let frame = frame_for(doc, { start_line: 1, end_line: 2 })
-  let line = frame.lines[0]
+  let line = view_model_for(doc).lines().get_view_line_data(1)
   let plain = @common.render_line_html(line, [])
   assert_true(plain.contains("<span class=\"view-line-content\">"))
   // `<`, `>`, `&` are escaped; like Monaco, `"` is left literal in text content
@@ -20,16 +19,18 @@ test "line html escapes text and merges span decorations" {
   assert_true(decorated.contains("class=\"mtk4 diag-warning\""))
   // The line node's own class is constant (the current-line highlight renders
   // through its own overlay).
-  assert_eq(@common.render_line_class(line), "view-line")
+  assert_eq(@common.render_line_class(), "view-line")
 }
 
 ///|
 test "empty lines emit an empty view-line content wrapper" {
   let doc = @model.TextSnapshot("a\n\nb")
-  let frame = frame_for(doc, { start_line: 1, end_line: 4 })
   // Monaco emits an empty inner `<span></span>` for a blank line.
   assert_eq(
-    @common.render_line_html(frame.lines[1], []),
+    @common.render_line_html(
+      view_model_for(doc).lines().get_view_line_data(2),
+      [],
+    ),
     "<span class=\"view-line-content\"><span></span></span>",
   )
 }

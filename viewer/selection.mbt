@@ -185,16 +185,17 @@ fn Viewer::get_rich_text_to_copy(
   selection : @view_model.Selection,
   snapshot : @model.TextSnapshot,
 ) -> String {
-  match self.frame {
-    Some(frame) =>
-      match
-        rich_text_to_copy_from_frame(
-          selection_normalized_range(selection, snapshot),
-          frame,
-        ) {
-        Some(html) => html
-        None => selection_rich_text_to_copy(selection, snapshot)
-      }
+  match self.text_model {
+    Some(model) =>
+      get_rich_text_to_copy(
+        model,
+        Range(
+          selection.start().line_number,
+          selection.start().column,
+          selection.end().line_number,
+          selection.end().column,
+        ),
+      )
     None => selection_rich_text_to_copy(selection, snapshot)
   }
 }
@@ -230,7 +231,7 @@ fn selection_plain_text_to_copy(
 
 ///|
 /// Minimal HTML clipboard payload preserving preformatted text, used as the
-/// fallback when no render frame is available to produce styled spans.
+/// fallback when no model is available to produce styled spans.
 fn selection_rich_text_to_copy(
   selection : @view_model.Selection,
   snapshot : @model.TextSnapshot,
@@ -256,75 +257,82 @@ fn escape_copy_html(text : String) -> String {
 }
 
 ///|
-fn rich_text_to_copy_from_frame(
-  range : @base_common.OffsetRange,
-  frame : @view_model.RenderFrame,
-) -> String? {
-  let html = StringBuilder()
-  html.write_string("<pre class=\"readonly-editor-copy\">")
-  let mut wrote_line = false
-  let mut previous_model_line_start = -1
-  for line in frame.lines {
-    let model_line_start = line.model_line_start_offset()
-    let model_line_end = line.source_offset_at_column(line.text.length())
-    if model_line_start != previous_model_line_start &&
-      range.start <= model_line_end &&
-      model_line_start <= range.end_exclusive {
-      if wrote_line {
-        html.write_string("\n")
-      }
-      wrote_line = true
-      previous_model_line_start = model_line_start
-    }
-    append_rich_copy_line_segments(html, line, range)
-  }
-  if !wrote_line {
-    return None
-  }
-  html.write_string("</pre>")
-  Some(html.to_string())
+/// Styled clipboard HTML for a model range, the faithful
+/// `ViewModel.getRichTextToCopy` / `_getHTMLToCopy` pair
+/// (`viewModelImpl.ts:1051-1134`): per model line, the model's `LineTokens`
+/// render through `tokenize_line_to_html` (injected text never appears — it
+/// lives in decorations, not the model tokens), wrapped in a styled `<div>`
+/// carrying the default foreground/background and the editor font.
+/// Deviations: no `fontInfo` option surface (the editor font constants stand
+/// in) and no PLAINTEXT/multi-selection `null` arms (the viewer always has a
+/// single selection and a concrete language).
+fn get_rich_text_to_copy(
+  model : @model.TextModel,
+  model_range : @base_common.Range,
+) -> String {
+  let color_map = @model_tokens.default_token_color_map()
+  "<div style=\"" +
+  "color: " +
+  color_map[1] +
+  ";" +
+  "background-color: " +
+  color_map[2] +
+  ";" +
+  "font-family: Menlo, Monaco, 'Courier New', monospace;" +
+  "line-height: " +
+  @core.editor_line_height.to_string() +
+  "px;" +
+  "white-space: pre;" +
+  "\">" +
+  get_html_to_copy(model, model_range, color_map) +
+  "</div>"
 }
 
 ///|
-fn append_rich_copy_line_segments(
-  html : StringBuilder,
-  line : @view_model.RenderLine,
-  range : @base_common.OffsetRange,
-) -> Unit {
-  let tokens = line.tokens
-  let mut token_start = 0
-  for i in 0..<tokens.get_count() {
-    let token_end = tokens.get_end_offset(i)
-    // Injected (inlay-hint) tokens have no source text; skip them so the rich
-    // copy holds only real document content (Monaco never copies injected text).
-    if token_start < token_end &&
-      line.injected_text_index_at_column(token_start) < 0 {
-      let model_start = line.source_offset_at_column(token_start)
-      let model_end = line.source_offset_at_column(token_end)
-      if range.intersects(OffsetRange(model_start, model_end)) {
-        let start_column = token_start +
-          range.start.max(model_start) -
-          model_start
-        let end_column = token_start +
-          range.end_exclusive.min(model_end) -
-          model_start
-        if start_column < end_column {
-          html.write_string("<span class=\"")
-          html.write_string(
-            @viewer_common.escape_html(tokens.get_class_name(i)),
-          )
-          html.write_string("\">")
-          html.write_string(
-            @viewer_common.escape_html(
-              line.text[start_column:end_column].to_owned(),
-            ),
-          )
-          html.write_string("</span>")
-        }
-      }
+/// `ViewModelImpl._getHTMLToCopy` (`viewModelImpl.ts:1110-1134`): one
+/// `tokenize_line_to_html` div per model line clipped to the range's
+/// columns; an empty line contributes a `<br>`.
+fn get_html_to_copy(
+  model : @model.TextModel,
+  model_range : @base_common.Range,
+  color_map : Array[String],
+) -> String {
+  let start_line_number = model_range.start_line_number
+  let start_column = model_range.start_column
+  let end_line_number = model_range.end_line_number
+  let end_column = model_range.end_column
+  let tab_size = 2
+  let result = StringBuilder()
+  for line_number in start_line_number..<=end_line_number {
+    let line_tokens = model.tokenization.get_line_tokens(line_number)
+    let line_content = line_tokens.get_line_content()
+    let start_offset = if line_number == start_line_number {
+      start_column - 1
+    } else {
+      0
     }
-    token_start = token_end
+    let end_offset = if line_number == end_line_number {
+      end_column - 1
+    } else {
+      line_content.length()
+    }
+    if line_content == "" {
+      result.write_string("<br>")
+    } else {
+      result.write_string(
+        @languages.tokenize_line_to_html(
+          line_content,
+          line_tokens.inflate(),
+          color_map,
+          start_offset,
+          end_offset,
+          tab_size,
+          false,
+        ),
+      )
+    }
   }
+  result.to_string()
 }
 
 ///|

@@ -57,9 +57,13 @@ fn Viewer::test_cursor(self : Viewer) -> @cursor.CursorsController {
 }
 
 ///|
-/// The frame the viewer last built for its visible window.
-fn Viewer::test_frame(self : Viewer) -> @view_model.RenderFrame {
-  self.frame.unwrap()
+/// The clamped view-line window the viewer would render for the layout's
+/// current visible window — the headless analog of `synced_window`, which
+/// only runs inside a DOM flush.
+fn Viewer::test_window(self : Viewer) -> @view_layout.LineWindow {
+  self
+  .test_view_model()
+  .clamp_window(self.view_layout.visible_window(overscan=@core.line_overscan))
 }
 
 ///|
@@ -82,22 +86,6 @@ fn Viewer::test_set_viewport(
   height~ : Double,
 ) -> Unit {
   self.view_layout.set_viewport_size(width~, height~) |> ignore
-}
-
-///|
-/// Rebuilds and returns the render frame for the layout's current visible
-/// window — the headless analog of `synced_window_frame`, which only runs
-/// inside a DOM flush. Scroll/viewport changes do not rebuild the frame while
-/// `view is None`, so a windowing test calls this after scrolling.
-fn Viewer::test_refresh_frame(self : Viewer) -> @view_model.RenderFrame {
-  let view_model = self.test_view_model()
-  let window = self.view_layout.visible_window(overscan=@core.line_overscan)
-  let frame = view_model.render_frame({
-    start_line: window.start,
-    end_line: window.end,
-  })
-  self.frame = Some(frame)
-  frame
 }
 
 ///|
@@ -149,14 +137,13 @@ fn assert_cursor(
 
 ///|
 /// The seam this harness rests on: an unattached viewer (no `attach()`, no DOM
-/// view) still has a fully-populated view model and render frame synchronously
-/// after `set_model`. The whole short document fits the default window.
-test "set_model populates frame and view model without attaching" {
+/// view) still has a fully-populated view model synchronously after
+/// `set_model`. The whole short document fits the default window.
+test "set_model populates the view model without attaching" {
   with_test_viewer("alpha\nbeta\ngamma", viewer => {
-    let frame = viewer.test_frame()
-    assert_eq(frame.line_count, 3)
-    assert_eq(frame.viewport.start_line, 1)
-    assert_eq(frame.lines.length(), 3)
+    let window = viewer.test_window()
+    assert_eq(window.start, 1)
+    assert_eq(window.end, 4)
     assert_eq(viewer.test_view_model().line_count(), 3)
   })
 }
@@ -194,17 +181,15 @@ test "render frame windows to the visible range, not the whole document" {
   with_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=400.0)
     viewer.set_scroll_top(720.0)
-    let frame = viewer.test_refresh_frame()
+    let window = viewer.test_window()
     // Document height is retained...
-    assert_eq(frame.line_count, 200)
-    // ...but only a window around the scrolled viewport is materialized.
+    assert_eq(viewer.test_view_model().line_count(), 200)
+    // ...but only a window around the scrolled viewport is rendered.
     // scroll_top 720 = 40 lines * 18px line height; with the 20-line overscan
     // the window starts at line 21.
-    assert_eq(frame.viewport.start_line, 21)
-    assert_true(frame.lines.length() < frame.line_count)
-    assert_eq(
-      frame.lines.length(),
-      frame.viewport.end_line - frame.viewport.start_line,
+    assert_eq(window.start, 21)
+    assert_true(
+      window.end - window.start < viewer.test_view_model().line_count(),
     )
   })
 }

@@ -3,7 +3,6 @@ import {
   "moonbit-community/editor/viewer/common" @viewer_common,
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/view_layout",
-  "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom" @rdom,
 }
 

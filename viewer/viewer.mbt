@@ -1,6 +1,6 @@
 ///|
 /// The embeddable readonly code viewer, the `vs/editor` (Monaco) role: an
-/// browser `View` owning the rendered frame, the scroll and
+/// browser `View` owning the rendered lines, the scroll and
 /// layout model, the input bridge, and the feature controllers. It is
 /// constructed independently from document sources, attached into a
 /// host-provided stable element, and reports lifecycle facts through typed
@@ -20,7 +20,7 @@ pub struct Viewer {
   priv did_change_cursor_selection : @base_common.Emitter[
     CursorSelectionChangedEvent,
   ]
-  priv did_build_frame : @base_common.Emitter[ViewerFrameBuiltEvent]
+  priv did_build_view_model : @base_common.Emitter[ViewerViewModelBuiltEvent]
   priv did_render_model : @base_common.Emitter[ViewerModelRenderedEvent]
   priv did_resolve_hover : @base_common.Emitter[ViewerHoverResolvedEvent]
   priv did_scroll : @base_common.Emitter[ScrollEvent]
@@ -37,11 +37,12 @@ pub struct Viewer {
   /// `*_changed` flags (Monaco's `ScrollEvent` carries per-axis change bits).
   priv mut last_scroll_event : ScrollEvent?
   priv view_layout : @view_layout.ViewLayout
-  priv mut frame : @view_model.RenderFrame?
   priv mut view_model : @view_model.ViewModel?
-  priv mut frame_source : @view_model.FrameSource?
+  /// The last rendered view-line window (clamped, half-open). Scrolls inside
+  /// the overscan hysteresis band reuse it; drifting past the band resyncs it
+  /// to the layout's visible window at the next flush.
+  priv mut rendered_window : @view_layout.LineWindow?
   priv mut text_model : @model.TextModel?
-  priv mut provider_result : @language.ProviderResult
   priv mut inlay_hints : Array[@language.InlayHint]
   priv mut view_zones : Array[@view_zones.BrowserViewZone]
   priv mut cursor : @cursor.CursorsController?
@@ -84,7 +85,7 @@ pub struct Viewer {
   priv mut measure_requested : Bool
   priv mut pending_rendered : PendingRendered?
   priv mut scroll_dirty : Bool
-  /// Bumped whenever the inputs of line HTML change (new frame source or
+  /// Bumped whenever the inputs of line HTML change (new view model or
   /// changed controller decorations); the recycler rewrites every
   /// rendered line when it differs, and only entering lines otherwise.
   priv mut content_generation : Int
@@ -94,7 +95,7 @@ pub struct Viewer {
   priv editor_id : Int
   /// Bumped per `TextModel.onDidChangeDecorations` event; the render snapshot
   /// carries it, and a change dispatches `ViewDecorationsChanged` to the view
-  /// parts (plan Deviation 3 — the frame-snapshot event seam).
+  /// parts (plan Deviation 3 — the render-snapshot event seam).
   priv mut decorations_generation : Int
   priv mut model_decorations_subscription : @base_common.Disposable?
   /// The hover highlight's model decoration ids (Monaco's hover-owned
@@ -240,7 +241,7 @@ pub(all) struct ScrollEvent {
 } derive(Debug)
 
 ///|
-pub(all) struct ViewerFrameBuiltEvent {
+pub(all) struct ViewerViewModelBuiltEvent {
   model : @model.TextModel
   line_count : Int
   token_count : Int
@@ -278,7 +279,7 @@ pub fn Viewer::Viewer(
     did_change_model: @base_common.Emitter::new(),
     did_change_cursor_position: @base_common.Emitter::new(),
     did_change_cursor_selection: @base_common.Emitter::new(),
-    did_build_frame: @base_common.Emitter::new(),
+    did_build_view_model: @base_common.Emitter::new(),
     did_render_model: @base_common.Emitter::new(),
     did_resolve_hover: @base_common.Emitter::new(),
     did_scroll: @base_common.Emitter::new(),
@@ -291,11 +292,9 @@ pub fn Viewer::Viewer(
     view_layout: @view_layout.ViewLayout::new(
       line_height=@core.editor_line_height,
     ),
-    frame: None,
     view_model: None,
-    frame_source: None,
+    rendered_window: None,
     text_model: None,
-    provider_result: @language.ProviderResult::empty(),
     inlay_hints: [],
     view_zones: [],
     cursor: None,
@@ -349,7 +348,7 @@ pub fn Viewer::Viewer(
   }
   // Marker decoration changes reach the render through the model's
   // decoration storage (`onDidChangeDecorations` → `ViewDecorationsChanged`);
-  // this subscription only schedules the refresh without rebuilding the frame
+  // this subscription only schedules the refresh without rebuilding the view model
   // (no `content_generation` bump — decoration plan Phase 3). Hosts observe
   // marker changes on `MarkerService::on_did_change_markers`.
   viewer.services.marker_decorations.on_did_change_marker_decorations(model => {
@@ -529,7 +528,7 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
 ///|
 /// Renders caller-owned immutable text model state — `setModel`. Source reads,
 /// watches, reloads, and error policy belong to the host. `None` detaches the
-/// current model and clears the rendered frame. Like Monaco, swapping the
+/// current model and clears the rendered content. Like Monaco, swapping the
 /// model resets the scroll position and controller state; hosts preserve or
 /// restore scroll through `save_view_state`/`restore_view_state`.
 pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
@@ -601,7 +600,6 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
     }),
   )
   self.services.marker_decorations.on_model_added(model)
-  self.provider_result = @language.ProviderResult::empty()
   self.inlay_hints = []
   self.inlay_hint_decoration_ids = []
   self.cursor = None
@@ -733,7 +731,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_change_model.dispose()
   self.did_change_cursor_position.dispose()
   self.did_change_cursor_selection.dispose()
-  self.did_build_frame.dispose()
+  self.did_build_view_model.dispose()
   self.did_render_model.dispose()
   self.did_resolve_hover.dispose()
   self.did_scroll.dispose()
@@ -847,11 +845,9 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.agent_feedback_hover_line = -1
   self.agent_feedback_highlight_decoration_ids = []
   self.clear_agent_feedback_widgets() |> ignore
-  self.frame = None
   self.view_model = None
-  self.frame_source = None
+  self.rendered_window = None
   self.text_model = None
-  self.provider_result = @language.ProviderResult::empty()
   self.inlay_hints = []
   self.inlay_hint_decoration_ids = []
   self.view_zones = []
@@ -867,20 +863,6 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.hover_ignore_mouse_events = false
   self.cancel_hover_react()
   self.schedule_render()
-}
-
-///|
-/// Re-renders the current model with updated feature data.
-fn Viewer::render_feature_update(self : Viewer) -> Unit {
-  match self.text_model {
-    Some(model) => {
-      self.render_current_model(model, fresh=false, request_language=false)
-      // Feature changes can move the view-line axis; the feedback
-      // bubbles follow their model anchors.
-      self.relayout_agent_feedback_widgets()
-    }
-    None => ()
-  }
 }
 
 ///|

@@ -17,7 +17,7 @@ pub(all) struct ViewerOptions {
   /// (`IStandaloneEditorConstructionOptions.theme`, also accepted by
   /// `updateOptions`). Mirrored onto the view root as `data-theme`.
   theme : String
-  /// The message shown while the viewer has no rendered frame — Monaco's
+  /// The message shown while the viewer has no rendered model — Monaco's
   /// `placeholder` editor option.
   placeholder : String
   /// Width in pixels of the line-decorations gutter lane between the line

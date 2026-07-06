@@ -1,7 +1,6 @@
 ///|
-/// Model-level features requested after a fresh render: diagnostics,
-/// symbols, semantic tokens, and inlay hints, each resolving
-/// independently.
+/// Model-level features requested after a fresh render: diagnostics and
+/// inlay hints, each resolving independently.
 fn Viewer::request_model_features(
   self : Viewer,
   model : @model.TextModel,
@@ -17,16 +16,6 @@ fn Viewer::request_model_features(
       },
       self.services.log_service,
     )
-  })
-  @js.async_run(() => {
-    let symbols = self.services.languages.document_symbols(
-      model,
-      self.services.log_service,
-    )
-    if self.is_current_model(model) {
-      self.provider_result = { ..self.provider_result, symbols, }
-      self.render_feature_update()
-    }
   })
   @js.async_run(() => {
     let inlay_hints = self.services.languages.inlay_hints_for_model(

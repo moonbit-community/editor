@@ -29,13 +29,6 @@ pub(all) struct View {
 }
 
 ///|
-/// `pub`: `Viewer::synced_window_frame` (`view_host.mbt`) needs the same
-/// window derivation to decide whether a rebuild is due.
-pub fn frame_window(frame : @view_model.RenderFrame) -> @view_layout.LineWindow {
-  { start: frame.viewport.start_line, end: frame.viewport.end_line }
-}
-
-///|
 pub fn View::build() -> View {
   let document = @rdom.document()
   let root = document.create_element("section")
@@ -128,7 +121,7 @@ fn view_root_class(
 }
 
 ///|
-/// Shows the host-provided placeholder when no document frame is loaded.
+/// Shows the host-provided placeholder when no document is loaded.
 pub fn View::render_empty(
   self : View,
   placeholder : String,

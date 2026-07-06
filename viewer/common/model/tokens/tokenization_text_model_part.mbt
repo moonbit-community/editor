@@ -97,7 +97,7 @@ pub fn TokenizationTextModelPart::reset_tokenization(
 
 ///|
 /// Total binary token count across the document, the viewer's debug
-/// telemetry for `ViewerFrameBuiltEvent.token_count` (no Monaco analog).
+/// telemetry for `ViewerViewModelBuiltEvent.token_count` (no Monaco analog).
 /// Counts every stored token, including the plain fill segments.
 pub fn TokenizationTextModelPart::token_count(
   self : TokenizationTextModelPart,

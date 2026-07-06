@@ -35,8 +35,9 @@ pub(all) struct ViewContext {
   // caret x of a one-based view column on a rendered view line
   // (`View::offset_for_column`; `-1` when the line is not rendered).
   offset_for_column : (Int, Int) -> Double
-  // Model position → document offset through the model snapshot. The hover
-  // state is `Range`-typed; the content-widget pixel placement is the one
-  // offset consumer left, converting here.
-  model_position_to_offset : (@base_common.Position) -> Int
+  // Model position → view position through the active coordinates converter
+  // (Monaco `convertModelPositionToViewPosition`). The hover state is
+  // model-`Range`-typed; the content-widget pixel placement anchors it on
+  // the view-line axis here.
+  model_position_to_view_position : (@base_common.Position) -> @base_common.Position
 }

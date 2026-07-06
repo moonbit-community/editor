@@ -45,10 +45,10 @@ fn Viewer::build_view_context(
     offset_for_column: (line_number, column) => {
       view.offset_for_column(line_number, column)
     },
-    model_position_to_offset: position => {
-      match self.text_model {
-        Some(model) => model.get_offset_at(position)
-        None => 0
+    model_position_to_view_position: position => {
+      match self.model_to_view_position(position.line_number, position.column) {
+        Some(view_position) => view_position
+        None => position
       }
     },
   }
@@ -96,19 +96,19 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   // Write phase.
   self.sync_hover_decorations()
   let write_started = now_ms()
-  match self.frame {
+  match self.view_model {
     None =>
       view.render_empty(
         self.options.placeholder,
         show_unused=self.options.show_unused,
         show_deprecated=self.options.show_deprecated,
       )
-    Some(frame) => {
-      let frame = self.synced_window_frame(frame)
+    Some(view_model) => {
+      let window = self.synced_window(view_model)
       let view_context = self.build_view_context(view)
       view.render(view_context, {
-        frame,
-        view_model: self.view_model,
+        window,
+        view_model,
         layout: self.view_layout,
         browser_view_zones: self.view_zones,
         selection_view_range: self.selection_view_range(),
@@ -119,7 +119,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         },
         generation: self.content_generation,
         decorations_generation: self.decorations_generation,
-        gutter_width: self.gutter_width(frame),
+        gutter_width: self.gutter_width(view_model.line_count()),
         line_decorations_width: self.options.line_decorations_width.to_double(),
         space_width: self.measured_char_width(),
         render_whitespace: self.options.render_whitespace,
@@ -137,14 +137,16 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   // target line's client rects and apply the horizontal scroll.
   self.flush_horizontal_reveal(view)
   let patch_ms = now_ms() - write_started
-  match (self.pending_rendered, self.frame) {
-    (Some(pending), Some(frame)) => {
+  match (self.pending_rendered, self.view_model, self.rendered_window) {
+    (Some(pending), Some(view_model), Some(window)) => {
       self.pending_rendered = None
       self.did_render_model.fire({
         model: pending.model,
-        line_count: frame.line_count,
-        rendered_lines: frame.lines.length(),
-        diagnostics: frame.diagnostics,
+        line_count: view_model.line_count(),
+        rendered_lines: window.end - window.start,
+        diagnostics: self.services.markers.diagnostics_for_resource(
+          pending.model.uri,
+        ),
         patch_ms,
         fresh: pending.fresh,
       })
@@ -192,25 +194,28 @@ fn Viewer::schedule_render(self : Viewer) -> Unit {
 }
 
 ///|
-/// When scroll or viewport changes moved the desired window past the
-/// hysteresis band, rebuilds the window frame from the cached source (an
-/// O(window) build) so hit tests and the recycler stay aligned.
-fn Viewer::synced_window_frame(
+/// The view-line window this flush renders: the last rendered window while
+/// the desired window stays inside the overscan hysteresis band, resynced to
+/// the layout's visible window once it drifts past it. The window is clamped
+/// to the document so every consumer (viewport build, DOM recycler, hit
+/// tests) agrees on the rendered range.
+fn Viewer::synced_window(
   self : Viewer,
-  frame : @view_model.RenderFrame,
-) -> @view_model.RenderFrame {
-  guard self.view_model is Some(view_model) else { return frame }
-  let rendered = @view.frame_window(frame)
-  let desired = self.view_layout.visible_window(overscan=@core.line_overscan)
-  if desired != rendered &&
-    @view_layout.window_needs_update(rendered, desired, @core.line_overscan) {
-    let rebuilt = view_model.render_frame({
-      start_line: desired.start,
-      end_line: desired.end,
-    })
-    self.frame = Some(rebuilt)
-    rebuilt
-  } else {
-    frame
+  view_model : @view_model.ViewModel,
+) -> @view_layout.LineWindow {
+  let desired = view_model.clamp_window(
+    self.view_layout.visible_window(overscan=@core.line_overscan),
+  )
+  let window = match self.rendered_window {
+    Some(rendered) =>
+      if desired != rendered &&
+        @view_layout.window_needs_update(rendered, desired, @core.line_overscan) {
+        desired
+      } else {
+        rendered
+      }
+    None => desired
   }
+  self.rendered_window = Some(window)
+  window
 }

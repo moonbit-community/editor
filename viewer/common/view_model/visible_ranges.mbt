@@ -123,7 +123,7 @@ pub fn ViewModel::model_line_max_column(
   self : ViewModel,
   model_line_number : Int,
 ) -> Int {
-  self.source.model.snapshot.line_text(model_line_number - 1).length() + 1
+  self.model.snapshot.line_text(model_line_number - 1).length() + 1
 }
 
 ///|

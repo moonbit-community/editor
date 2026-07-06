@@ -64,7 +64,7 @@ pub fn should_reschedule_hover(Bool, Bool, Int) -> Bool
 
 pub fn should_show_hover(HoverEnabled, MultiCursorModifier, EventModifiers) -> Bool
 
-pub fn token_anchor_for_target(@view_model.RenderFrame, @moonbit-community/editor/viewer/common.MouseTarget, (@moonbit-community/editor/base/common.Position) -> @moonbit-community/editor/base/common.Position) -> (@moonbit-community/editor/base/common.Range, Int)?
+pub fn token_anchor_for_target(@view_model.ViewModel, @moonbit-community/editor/viewer/common.MouseTarget, (@moonbit-community/editor/base/common.Position) -> @moonbit-community/editor/base/common.Position) -> (@moonbit-community/editor/base/common.Range, Int)?
 
 // Errors
 
@@ -83,7 +83,7 @@ pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @moonbit-commu
 pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
 
 pub(all) struct EditorContext {
-  frame : @view_model.RenderFrame?
+  view_model : @view_model.ViewModel?
   view_to_model_position : (@moonbit-community/editor/base/common.Position) -> @moonbit-community/editor/base/common.Position
 }
 

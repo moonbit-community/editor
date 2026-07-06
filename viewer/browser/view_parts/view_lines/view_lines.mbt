@@ -8,7 +8,6 @@
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` / `prepared` / `last_render_whitespace` directly.
 pub(all) struct ViewLinesPrepared {
-  frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
   generation : Int
   decorations_generation : Int
@@ -108,13 +107,12 @@ pub fn ViewLines::line_node_at(
 ///|
 /// The `ViewLayer` recycler: tracks the rendered line range, splices
 /// entering/leaving text line nodes, and writes `innerHTML` only on entering
-/// lines. A changed content generation (new frame source) or decorations
+/// lines. A changed content generation (new view model) or decorations
 /// generation (model decoration change) rewrites every rendered line instead
 /// — the per-line `previous != input` diff then limits the actual HTML
 /// writes to lines whose rendered input changed.
 pub fn ViewLines::render_text(
   self : ViewLines,
-  frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
   generation : Int,
   decorations_generation : Int,
@@ -167,14 +165,14 @@ pub fn ViewLines::render_text(
       }
       let mapping = write_line_node(
         self.line_nodes[index],
-        frame.lines[index],
+        viewport.start_line_number + index,
         input,
         viewport.relative_vertical_offset[index],
         rewrite_html~,
       )
       self.render_inputs.push(input)
       // `None` only when `!rewrite_html`, which only happens when the line was
-      // present last frame with the same input — so its mapping is unchanged.
+      // present last render with the same input — so its mapping is unchanged.
       self.line_mappings.push(
         resolve_line_mapping(mapping, previous_mappings.get(index)),
       )
@@ -214,7 +212,7 @@ pub fn ViewLines::render_text(
       )
       let mapping = write_line_node(
         node,
-        frame.lines[index],
+        viewport.start_line_number + index,
         input,
         viewport.relative_vertical_offset[index],
         rewrite_html=true,
@@ -351,13 +349,13 @@ fn selections_on_line_for(
 /// selection measurement.
 fn write_line_node(
   node : @rdom.Element,
-  line : @view_model.RenderLine,
+  line_number : Int,
   input : @view_layout.RenderLineInput,
   top : Int,
   rewrite_html~ : Bool,
 ) -> @view_layout.CharacterMapping? {
-  node.set_attribute("class", @viewer_common.render_line_class(line))
-  node.set_attribute("data-line", line.line_number.to_string())
+  node.set_attribute("class", @viewer_common.render_line_class())
+  node.set_attribute("data-line", line_number.to_string())
   node.set_attribute("style", line_node_style(top))
   if rewrite_html {
     let output = @view_layout.render_view_line2(input)
@@ -372,13 +370,13 @@ fn write_line_node(
 /// `pub`: called cross-package by `margin.mbt`'s line-number gutter render.
 pub fn write_line_number_node(
   gutter : @rdom.Element,
-  line : @view_model.RenderLine,
+  line_number : Int,
   top : Int,
 ) -> Unit {
   gutter.set_attribute("class", "line-number")
-  gutter.set_attribute("data-line", line.line_number.to_string())
+  gutter.set_attribute("data-line", line_number.to_string())
   gutter.set_attribute("style", line_node_style(top))
-  gutter.set_inner_html(line.line_number.to_string())
+  gutter.set_inner_html(line_number.to_string())
 }
 
 ///|

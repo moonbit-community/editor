@@ -102,7 +102,10 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(copiedText).toContain('let really_l');
     expect(copiedText).not.toContain(': T');
     const copiedHtml = await page.evaluate(() => globalThis.__readonlyEditorCopiedHtml || '');
-    expect(copiedHtml).toContain('mtk4');
+    // Monaco's getRichTextToCopy shape: a styled wrapper div with per-token
+    // inline color styles from the token color map (viewModelImpl.ts:1051).
+    expect(copiedHtml).toContain('white-space: pre;');
+    expect(copiedHtml).toContain('var(--vscode-token-variable)');
     expect(copiedHtml).not.toContain('inlay-hint');
     // Collapse the drag selection before the later checks: with the default
     // renderWhitespace=selection, a selection spanning the inlay hint renders

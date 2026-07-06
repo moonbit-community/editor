@@ -137,34 +137,38 @@ fn render_hover_code_block(
 ) -> String {
   let language_id = hover_code_language(code_block, active_language_id)
   let code = hover_code_text(code_block)
-  // A throwaway readonly model: its tokenization part resolves the fenced
-  // language through the global `tokenization_registry` (Monaco's markdown
-  // code blocks tokenize through `tokenizeToString` + `TokenizationRegistry`).
-  let model = @model.TextModel(
-    @base_common.Uri::memory("hover-code-block"),
-    "",
-    language_id,
-    1,
-    "",
-    code,
-  )
-  let source = @view_model.FrameSource(model, @language.ProviderResult::empty())
-  let frame = @view_model.build_frame(source, {
-    start_line: 1,
-    end_line: model.get_line_count() + 1,
-  })
-  let html = StringBuilder::new()
-  html.write_string("<div class=\"monaco-tokenized-source\">")
-  for index in 0..<frame.lines.length() {
-    if index > 0 {
-      html.write_string("<br/>")
+  // Monaco's markdown code blocks render through `tokenizeToString` +
+  // `TokenizationRegistry` (`markdownRenderer.ts`). The fenced language's
+  // tokenizer state threads line to line inside the closure, the way
+  // `_tokenizeToString` carries `currentState`; a registry miss falls back
+  // to language-tagged plain lines (Monaco's null tokenization).
+  let codec = @services.language_id_codec
+  let encoded_language_id = codec.register(language_id)
+  let tokenizer = @syntax.tokenization_registry.get(language_id)
+  let mut state = tokenizer.map(tokenizer => tokenizer.initial_state())
+  @languages.tokenize_to_string(code, codec, line => {
+    let lexer_tokens = match (tokenizer, state) {
+      (Some(tokenizer), Some(current)) => {
+        let (tokens, next) = tokenizer.tokenize_line(line, current)
+        state = Some(next)
+        tokens
+      }
+      _ => []
     }
-    html.write_string(
-      @viewer_common.render_source_line_html(frame.lines[index]),
+    let line_tokens = @model_tokens.line_tokens_from_lexer_tokens(
+      line,
+      lexer_tokens,
+      codec,
+      language_id=encoded_language_id,
     )
-  }
-  html.write_string("</div>")
-  html.to_string()
+    // `tokenize_to_string`'s seam takes raw start-offset token pairs.
+    let pairs : Array[UInt] = []
+    for index in 0..<line_tokens.get_count() {
+      pairs.push(line_tokens.get_start_offset(index).reinterpret_as_uint())
+      pairs.push(line_tokens.get_metadata(index))
+    }
+    pairs
+  })
 }
 
 ///|

@@ -390,7 +390,7 @@ pub fn Viewer::get_layout_info(self : Viewer) -> EditorLayoutInfo {
   let decorations_width = if content_left > 0.0 {
     self.options.line_decorations_width.to_double()
   } else {
-    // No frame → no gutter at all; report the lane as absent too.
+    // No rendered content → no gutter at all; report the lane as absent too.
     0.0
   }
   {
@@ -485,10 +485,10 @@ pub fn Viewer::get_scrolled_visible_position(
 ///|
 /// The content-left gutter width (Monaco's `glyphMarginWidth + lineNumbersWidth +
 /// decorationsWidth`), the offset DOM-measured line x's are relative to. Backed
-/// by the current frame's measured `gutter_width`; `0` with no frame.
+/// by the view model's measured `gutter_width`; `0` with no model.
 fn Viewer::read_api_content_left(self : Viewer) -> Double {
-  match self.frame {
-    Some(frame) => self.gutter_width(frame)
+  match self.view_model {
+    Some(view_model) => self.gutter_width(view_model.line_count())
     None => 0.0
   }
 }
@@ -496,7 +496,7 @@ fn Viewer::read_api_content_left(self : Viewer) -> Double {
 ///|
 /// Flushes a pending render so DOM-measured getters read current client rects,
 /// Monaco's `_flushAccumulatedAndRenderNow`. A no-op when nothing is pending (the
-/// DOM already reflects the latest frame) or when there is no view.
+/// DOM already reflects the latest content) or when there is no view.
 fn Viewer::flush_render_now(self : Viewer) -> Unit {
   if self.render_pending {
     self.flush_render()

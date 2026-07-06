@@ -232,8 +232,8 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
   if probe_width > 0.0 {
     self.char_width = probe_width / @core.char_probe_text.length().to_double()
   }
-  let gutter_width = match self.frame {
-    Some(frame) => self.gutter_width(frame)
+  let gutter_width = match self.view_model {
+    Some(view_model) => self.gutter_width(view_model.line_count())
     None => 0.0
   }
   let content_width = rect.get_width() - gutter_width
@@ -278,11 +278,8 @@ fn Viewer::measured_char_width(self : Viewer) -> Double {
 /// The line-number band width: digit slots (at least the old `min-width: 5ch`)
 /// plus the gutter padding, in measured glyph advances — Monaco's
 /// `layoutInfo.lineNumbersWidth`.
-fn Viewer::line_numbers_width(
-  self : Viewer,
-  frame : @view_model.RenderFrame,
-) -> Double {
-  let digits = frame.line_count.to_string().length()
+fn Viewer::line_numbers_width(self : Viewer, line_count : Int) -> Double {
+  let digits = line_count.to_string().length()
   let slots = if digits > @core.gutter_min_digits {
     digits
   } else {
@@ -296,20 +293,17 @@ fn Viewer::line_numbers_width(
 /// The full margin width: the line-number band plus the line-decorations
 /// lane — Monaco's `layoutInfo.contentLeft` (the viewer has no glyph margin,
 /// so `contentLeft = lineNumbersWidth + decorationsWidth`).
-fn Viewer::gutter_width(
-  self : Viewer,
-  frame : @view_model.RenderFrame,
-) -> Double {
-  self.line_numbers_width(frame) +
+fn Viewer::gutter_width(self : Viewer, line_count : Int) -> Double {
+  self.line_numbers_width(line_count) +
   self.options.line_decorations_width.to_double()
 }
 
 ///|
-/// Builds the hit-test geometry for the current frame from the layout
+/// Builds the hit-test geometry for the current content from the layout
 /// model, falling back to font constants before the first measurement.
 fn Viewer::view_metrics(
   self : Viewer,
-  frame : @view_model.RenderFrame,
+  line_count : Int,
 ) -> @viewer_common.ViewMetrics {
   {
     origin_x: 0.0,
@@ -319,7 +313,7 @@ fn Viewer::view_metrics(
     viewport_height: self.view_layout.dimensions().height,
     line_height: @core.editor_line_height,
     char_width: self.measured_char_width(),
-    gutter_width: self.gutter_width(frame),
+    gutter_width: self.gutter_width(line_count),
     line_decorations_width: self.options.line_decorations_width.to_double(),
     view_zones: self.view_layout.view_zones(),
   }

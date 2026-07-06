@@ -1,6 +1,6 @@
 // Stage-1 white-box for the `renderWhitespace` / `renderControlCharacters`
 // option passthrough (plan: monaco-render-whitespace-control-options-port.md).
-// Asserts the headless `render_line_input_from_render_line` seam carries the
+// Asserts the headless `render_line_input_from_view_line_data` seam carries the
 // option values into `RenderLineInput` — the values an embedder sets on
 // `ViewerOptions`. The *rendering* of the resulting glyphs is already proven by
 // the conformance suite in `view_line_renderer/`; here we only prove the feed.
@@ -8,30 +8,35 @@
 ///|
 test "render line input passes through each content-only whitespace mode" {
   let doc = @model.TextSnapshot("  abc  ")
-  let frame = frame_for(doc, { start_line: 1, end_line: 2 })
-  let line = frame.lines[0]
+  let line = view_model_for(doc).lines().get_view_line_data(1)
   // None / Boundary / Trailing / All are pure passthroughs of the option value
   // (Stage 1 — no per-line selection needed).
   assert_true(
-    @view_model.render_line_input_from_render_line(line, render_whitespace=None).render_whitespace ==
+    @view_model.render_line_input_from_view_line_data(
+      line,
+      render_whitespace=None,
+    ).render_whitespace ==
     None,
   )
   assert_true(
-    @view_model.render_line_input_from_render_line(
+    @view_model.render_line_input_from_view_line_data(
       line,
       render_whitespace=Boundary,
     ).render_whitespace ==
     Boundary,
   )
   assert_true(
-    @view_model.render_line_input_from_render_line(
+    @view_model.render_line_input_from_view_line_data(
       line,
       render_whitespace=Trailing,
     ).render_whitespace ==
     Trailing,
   )
   assert_true(
-    @view_model.render_line_input_from_render_line(line, render_whitespace=All).render_whitespace ==
+    @view_model.render_line_input_from_view_line_data(
+      line,
+      render_whitespace=All,
+    ).render_whitespace ==
     All,
   )
 }
@@ -39,9 +44,8 @@ test "render line input passes through each content-only whitespace mode" {
 ///|
 test "render line input passes through render_control_characters on a non-ascii line" {
   let doc = @model.TextSnapshot("café\u{202E}")
-  let frame = frame_for(doc, { start_line: 1, end_line: 2 })
-  let line = frame.lines[0]
-  let on = @view_model.render_line_input_from_render_line(
+  let line = view_model_for(doc).lines().get_view_line_data(1)
+  let on = @view_model.render_line_input_from_view_line_data(
     line,
     render_control_characters=true,
   )
@@ -49,7 +53,7 @@ test "render line input passes through render_control_characters on a non-ascii 
   // gate fires; assert both the flag is carried and the line trips that gate.
   assert_true(on.render_control_characters)
   assert_false(on.is_basic_ascii)
-  let off = @view_model.render_line_input_from_render_line(
+  let off = @view_model.render_line_input_from_view_line_data(
     line,
     render_control_characters=false,
   )
@@ -59,13 +63,12 @@ test "render line input passes through render_control_characters on a non-ascii 
 ///|
 test "selection mode with no threaded selection is an inert no-op" {
   let doc = @model.TextSnapshot("  abc  ")
-  let frame = frame_for(doc, { start_line: 1, end_line: 2 })
-  let line = frame.lines[0]
+  let line = view_model_for(doc).lines().get_view_line_data(1)
   // Stage 1 has no path to thread per-line selection through this seam, so
   // Selection mode resolves to empty `selections_on_line`; the renderer's
   // Selection branch then produces nothing. The no-op is intentional, not a
   // silent gap — Stage 2 fills `selections_on_line`.
-  let input = @view_model.render_line_input_from_render_line(
+  let input = @view_model.render_line_input_from_view_line_data(
     line,
     render_whitespace=Selection,
   )

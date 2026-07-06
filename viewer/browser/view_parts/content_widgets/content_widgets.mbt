@@ -70,17 +70,22 @@ pub(all) struct HoverWidgetHost {
     @scrollbar.ScrollableElementOwner,
   ) -> Unit
   handle_hover_keydown : (HoverWidgetDom, @rdom.Event, @rdom.KeyboardEvent) -> Unit
-  /// Model position → document offset (the model-snapshot boundary): the
-  /// hover state is `Range`-typed; this pixel-placement site is the one
-  /// offset consumer left, so the conversion happens here, through the host.
-  model_position_to_offset : (@base_common.Position) -> Int
+  /// Model position → view position through the active coordinates
+  /// converter (Monaco `convertModelPositionToViewPosition`): the hover
+  /// state is model-`Range`-typed; this pixel-placement site anchors it on
+  /// the view-line axis.
+  model_position_to_view_position : (@base_common.Position) -> @base_common.Position
 }
 
 ///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` constructs/reads this
 /// directly.
 pub(all) struct ContentWidgetsPrepared {
-  frame : @view_model.RenderFrame
+  /// The rendered view-line window; hovers anchored outside it are not
+  /// rendered (their anchor line has no DOM).
+  window : @view_layout.LineWindow
+  /// The model's language id, the markdown renderer's default fence language.
+  language_id : String
   layout : @view_layout.ViewLayout
   /// Resolved via `HoverController::widget_view` at `prepare_render` (staying
   /// in `view_part.mbt`, which already imports the hover package) — this
@@ -162,7 +167,8 @@ pub fn ContentWidgets::hover_wrapper(self : ContentWidgets) -> @rdom.Element? {
 pub fn ContentWidgets::render_hover_widget(
   self : ContentWidgets,
   host : HoverWidgetHost,
-  frame : @view_model.RenderFrame,
+  window : @view_layout.LineWindow,
+  language_id : String,
   layout : @view_layout.ViewLayout,
   hover_view : @hover.HoverWidgetView?,
   on_hover_measured : (Bool, Double, Double) -> Unit,
@@ -176,20 +182,20 @@ pub fn ContentWidgets::render_hover_widget(
       return
     }
   }
-  // The hover state is `Range`-typed; this pixel-placement site converts to
-  // document offsets (through the host's model-snapshot boundary) to locate
-  // the rendered view line + column — the one offset consumer left.
-  let anchor_offset = (host.model_position_to_offset)(
+  // The hover state is model-`Range`-typed; the anchor resolves to the view
+  // axis through the coordinates converter (Monaco anchors content widgets
+  // at view positions). A widget whose anchor line is outside the rendered
+  // window has no line DOM to align with, so it is not rendered.
+  let anchor_position = (host.model_position_to_view_position)(
     hover_view.anchor_range.get_start_position(),
   )
-  let (line_number, anchor_view_column) = match
-    line_col_for_offset(frame, anchor_offset) {
-    Some(anchor) => anchor
-    None => {
-      self.remove_hover_widget()
-      return
-    }
+  if anchor_position.line_number < window.start ||
+    anchor_position.line_number >= window.end {
+    self.remove_hover_widget()
+    return
   }
+  let line_number = anchor_position.line_number
+  let anchor_view_column = anchor_position.column - 1
   // Monaco `RenderedContentHover.computeHoverPositions`: the widget body
   // left-aligns to the leftmost part column on the anchor line (the secondary
   // position). The anchor offset is the union-of-parts start, so the secondary
@@ -199,24 +205,21 @@ pub fn ContentWidgets::render_hover_widget(
   let placement_parts : Array[@hover.HoverPositionPart] = []
   for part in hover_view.parts {
     let part_range = @hover.hover_part_range(part)
-    match
-      (
-        line_col_for_offset(
-          frame,
-          (host.model_position_to_offset)(part_range.get_start_position()),
-        ),
-        line_col_for_offset(
-          frame,
-          (host.model_position_to_offset)(part_range.get_end_position()),
-        ),
-      ) {
-      (Some((start_line, start_column)), Some((end_line, end_column))) =>
-        placement_parts.push({
-          range: Range(start_line, start_column, end_line, end_column),
-          force_show_at_range: false,
-        })
-      _ => ()
-    }
+    let start = (host.model_position_to_view_position)(
+      part_range.get_start_position(),
+    )
+    let end = (host.model_position_to_view_position)(
+      part_range.get_end_position(),
+    )
+    placement_parts.push({
+      range: Range(
+        start.line_number,
+        start.column - 1,
+        end.line_number,
+        end.column - 1,
+      ),
+      force_show_at_range: false,
+    })
   }
   let (_show_at, show_at_secondary) = @hover.compute_hover_positions(
     Range(line_number, anchor_view_column, line_number, anchor_view_column),
@@ -255,10 +258,7 @@ pub fn ContentWidgets::render_hover_widget(
     node: widget.wrapper,
     anchor: {
       column,
-      top: layout.relative_vertical_offset_for_line(
-        frame_window(frame),
-        line_number,
-      ),
+      top: layout.relative_vertical_offset_for_line(window, line_number),
     },
     preferred_placement,
     allow_overflow: false,
@@ -270,7 +270,7 @@ pub fn ContentWidgets::render_hover_widget(
   widget.hover.set_attribute("class", "monaco-hover fade-in")
   widget.clear_sizing()
   widget.set_hover_parts(
-    @hover.render_hover_parts(hover_view.parts, frame.language_id),
+    @hover.render_hover_parts(hover_view.parts, language_id),
   )
   self.mount_content_widget(content_widget)
   // The anchor line's top edge in editor-viewport pixels and the editor height,
@@ -309,7 +309,8 @@ pub fn ContentWidgets::render_hover_widget(
     on_hover_measured(below, shift_left, max_height)
     self.render_hover_widget(
       host,
-      frame,
+      window,
+      language_id,
       layout,
       Some(hover_view.measured(below, shift_left, max_height)),
       on_hover_measured,
@@ -751,31 +752,6 @@ fn ContentWidget::style(self : ContentWidget) -> String {
     style = style + ";margin-left:-" + self.shift_left.to_string() + "px"
   }
   style
-}
-
-///|
-fn line_col_for_offset(
-  frame : @view_model.RenderFrame,
-  offset : Int,
-) -> (Int, Int)? {
-  for line in frame.lines {
-    let start = line.source_offset_at_column(0)
-    let end = line.source_offset_at_column(line.text.length())
-    if offset >= start && offset <= end {
-      return Some((line.line_number, line.view_column_at_source_offset(offset)))
-    }
-  }
-  None
-}
-
-///|
-/// Duplicated from `viewer/browser/view/view.mbt`, rather than imported:
-/// this two-field record construction is small enough that pulling in a
-/// dependency on `browser/view/` — which needs `ContentWidgets` back for
-/// `View`'s fields and the `ViewPartHandle` enum — isn't worth avoiding a
-/// four-line duplicate.
-fn frame_window(frame : @view_model.RenderFrame) -> @view_layout.LineWindow {
-  { start: frame.viewport.start_line, end: frame.viewport.end_line }
 }
 
 ///|

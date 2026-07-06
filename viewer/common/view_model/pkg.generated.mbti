@@ -3,7 +3,6 @@ package "moonbit-community/editor/viewer/common/view_model"
 
 import {
   "moonbit-community/editor/base/common",
-  "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/tokens",
@@ -12,23 +11,19 @@ import {
 }
 
 // Values
-pub fn build_frame(FrameSource, FrameViewport) -> RenderFrame
-
 pub fn dedup_margin_decorations(Int, Int, Array[DecorationToRender]) -> Array[Array[String]]
 
 pub fn filter_validation_decorations(RenderValidationDecorations) -> Bool
 
 pub fn line_decorations_filter(Array[@inline_decorations.InlineDecoration], Int, Int, Int) -> Array[@view_layout.LineDecoration]
 
-pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions], Int, RenderLine) -> Array[@view_layout.LineDecoration]
+pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions], Int, Int, ViewLineData) -> Array[@view_layout.LineDecoration]
 
 pub fn lines_decorations_to_render(Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]]) -> Array[DecorationToRender]
 
-pub fn render_line_input_from_render_line(RenderLine, line_decorations? : Array[@view_layout.LineDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
+pub fn render_line_input_from_view_line_data(ViewLineData, line_decorations? : Array[@view_layout.LineDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
 
-pub fn view_line_rendering_data_from_render_line(RenderLine, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
-
-pub fn viewport_data_from_render_frame(RenderFrame, line_height~ : Int) -> @view_layout.ViewportData
+pub fn view_line_rendering_data_from_view_line_data(ViewLineData, line_decorations? : Array[@view_layout.LineDecoration], tab_size? : Int) -> @view_layout.ViewLineRenderingData
 
 pub fn viewport_data_from_view_model(ViewModel, @view_layout.LineWindow, line_height~ : Int, layout? : @view_layout.ViewLayout) -> @view_layout.ViewportData
 
@@ -41,17 +36,6 @@ pub(all) struct DecorationToRender {
   class_name : String
   z_index : Int
 } derive(Eq, @debug.Debug)
-
-pub struct FrameSource {
-  model : @model.TextModel
-  providers : @language.ProviderResult
-}
-pub fn FrameSource::FrameSource(@model.TextModel, @language.ProviderResult) -> Self
-
-pub(all) struct FrameViewport {
-  start_line : Int
-  end_line : Int
-} derive(@debug.Debug)
 
 pub struct IdentityCoordinatesConverter {
   identity : Unit
@@ -144,32 +128,6 @@ pub fn ProjectedTextLine::model_column_to_projected_column(Self, Int, affinity? 
 pub fn ProjectedTextLine::normalize_projected_column_around_injections(Self, Int, @model.PositionAffinity) -> Int
 pub fn ProjectedTextLine::projected_column_to_model_column(Self, Int) -> Int
 
-pub(all) struct RenderFrame {
-  version : Int
-  language_id : String
-  line_count : Int
-  viewport : FrameViewport
-  lines : Array[RenderLine]
-  diagnostics : Array[@language.Diagnostic]
-  hovers : Array[@language.Hover]
-}
-pub impl ToJson for RenderFrame
-
-pub(all) struct RenderLine {
-  line_number : Int
-  offset : Int
-  text : String
-  model_columns : Array[Int]
-  injected_text_indices : Array[Int]
-  tokens : &@tokens.IViewLineTokens
-  injected_inline_decorations : Array[@view_layout.InlineDecoration]
-}
-pub fn RenderLine::injected_text_index_at_column(Self, Int) -> Int
-pub fn RenderLine::model_column_at_column(Self, Int) -> Int
-pub fn RenderLine::model_line_start_offset(Self) -> Int
-pub fn RenderLine::source_offset_at_column(Self, Int) -> Int
-pub fn RenderLine::view_column_at_source_offset(Self, Int) -> Int
-
 pub(all) enum RenderValidationDecorations {
   Editable
   On
@@ -194,28 +152,39 @@ pub(all) enum SelectionDirection {
   RTL
 } derive(Eq, @debug.Debug)
 
+pub(all) struct ViewLineData {
+  content : String
+  continues_with_wrapped_line : Bool
+  min_column : Int
+  max_column : Int
+  start_visible_column : Int
+  tokens : &@tokens.IViewLineTokens
+  inline_decorations : Array[@view_layout.InlineDecoration]
+}
+
 pub struct ViewModel {
-  source : FrameSource
+  model : @model.TextModel
   lines : ViewModelLines
   decorations : ViewModelDecorations
   coordinates_converter : ViewModelCoordinatesConverter
 }
-pub fn ViewModel::ViewModel(FrameSource) -> Self
+pub fn ViewModel::ViewModel(@model.TextModel) -> Self
+pub fn ViewModel::clamp_window(Self, @view_layout.LineWindow) -> @view_layout.LineWindow
 pub fn ViewModel::coordinates_converter(Self) -> ViewModelCoordinatesConverter
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
 pub fn ViewModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModel::get_line_max_column(Self, Int) -> Int
 pub fn ViewModel::get_line_min_column(Self, Int) -> Int
+pub fn ViewModel::injected_text_index_at(Self, @common.Position) -> Int
 pub fn ViewModel::language_id(Self) -> String
 pub fn ViewModel::line_count(Self) -> Int
 pub fn ViewModel::lines(Self) -> ViewModelLines
 pub fn ViewModel::model_line_max_column(Self, Int) -> Int
 pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
 pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
-pub fn ViewModel::render_frame(Self, FrameViewport) -> RenderFrame
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
-pub fn ViewModel::with_options(FrameSource, ViewModelOptions) -> Self
+pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions) -> Self
 
 pub(all) enum ViewModelCoordinatesConverter {
   Identity(IdentityCoordinatesConverter)
@@ -240,16 +209,17 @@ pub(all) enum ViewModelLines {
 }
 pub fn ViewModelLines::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModelLines::get_view_line_content(Self, Int) -> String
+pub fn ViewModelLines::get_view_line_data(Self, Int) -> ViewLineData
 pub fn ViewModelLines::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLines::get_view_line_min_column(Self, Int) -> Int
 pub fn ViewModelLines::is_model_line_hidden(Self, Int) -> Bool
 pub fn ViewModelLines::line_count(Self) -> Int
 pub fn ViewModelLines::model_line_number_of_view_line(Self, Int) -> Int
-pub fn ViewModelLines::render_line(Self, Int) -> RenderLine
+pub fn ViewModelLines::tab_size(Self) -> Int
 pub fn ViewModelLines::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 
 pub struct ViewModelLinesFromModelAsIs {
-  source : FrameSource
+  model : @model.TextModel
   visible_model_line_numbers : Array[Int]
   hidden_model_lines : Array[Bool]
   injected_text_by_model_line : Array[Array[InjectedText]]
@@ -257,6 +227,7 @@ pub struct ViewModelLinesFromModelAsIs {
 pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModelLinesFromModelAsIs::get_model_line_content(Self, Int) -> String
 pub fn ViewModelLinesFromModelAsIs::get_view_line_content(Self, Int) -> String
+pub fn ViewModelLinesFromModelAsIs::get_view_line_data(Self, Int) -> ViewLineData
 pub fn ViewModelLinesFromModelAsIs::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLinesFromModelAsIs::get_view_line_min_column(Self, Int) -> Int
 pub fn ViewModelLinesFromModelAsIs::is_model_line_hidden(Self, Int) -> Bool
@@ -264,10 +235,8 @@ pub fn ViewModelLinesFromModelAsIs::line_count(Self) -> Int
 pub fn ViewModelLinesFromModelAsIs::model_line_count(Self) -> Int
 pub fn ViewModelLinesFromModelAsIs::model_line_number_of_view_line(Self, Int) -> Int
 pub fn ViewModelLinesFromModelAsIs::model_line_tokens(Self, Int) -> @tokens.LineTokens
-pub fn ViewModelLinesFromModelAsIs::new(FrameSource) -> Self
+pub fn ViewModelLinesFromModelAsIs::new(@model.TextModel) -> Self
 pub fn ViewModelLinesFromModelAsIs::projected_text_line(Self, Int) -> ProjectedTextLine
-pub fn ViewModelLinesFromModelAsIs::render_line(Self, Int) -> RenderLine
-pub fn ViewModelLinesFromModelAsIs::render_model_line(Self, Int) -> RenderLine
 pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 
 pub struct ViewModelLinesFromProjectedModel {
@@ -277,14 +246,15 @@ pub struct ViewModelLinesFromProjectedModel {
 }
 pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModelLinesFromProjectedModel::get_view_line_content(Self, Int) -> String
+pub fn ViewModelLinesFromProjectedModel::get_view_line_data(Self, Int) -> ViewLineData
 pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(Self, Int) -> Int
+pub fn ViewModelLinesFromProjectedModel::injected_text_index_at(Self, Int, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(Self, Int) -> Bool
 pub fn ViewModelLinesFromProjectedModel::line_count(Self) -> Int
 pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(Self, @common.Position) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::new(ViewModelLinesFromModelAsIs, LineBreaksComputer) -> Self
-pub fn ViewModelLinesFromProjectedModel::render_line(Self, Int) -> RenderLine
 pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(Self, @common.Position) -> @common.Position
 

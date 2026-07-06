@@ -1,7 +1,7 @@
 ///|
 fn Viewer::editor_context(self : Viewer) -> @hover.EditorContext {
   {
-    frame: self.frame,
+    view_model: self.view_model,
     view_to_model_position: view_position => self.view_to_model(view_position),
   }
 }

@@ -12,7 +12,6 @@
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` / `prepared` directly.
 pub(all) struct ContentViewOverlaysPrepared {
-  frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
   selection_view_range : @base_common.Range?
   view_model : @view_model.ViewModel?
@@ -128,7 +127,6 @@ fn new_styled_range(left : Double, width : Double) -> StyledRange {
 /// repaint optimization) is intentionally omitted.
 pub fn ContentViewOverlays::render_selection_overlays(
   self : ContentViewOverlays,
-  frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
   selection_view_range : @base_common.Range?,
   view_model : @view_model.ViewModel?,
@@ -143,10 +141,11 @@ pub fn ContentViewOverlays::render_selection_overlays(
     None => return
   }
   let lines : Array[LineSelectionRanges] = []
-  for index in 0..<frame.lines.length() {
+  for index in 0..<viewport.lines.length() {
     match
       collect_line_selection_ranges(
-        frame.lines[index],
+        viewport.start_line_number + index,
+        viewport.lines[index].max_column,
         range,
         view_model,
         viewport.relative_vertical_offset[index],
@@ -177,14 +176,14 @@ pub fn ContentViewOverlays::render_selection_overlays(
 /// continuation) has the trailing newline folded into the last range's width,
 /// matching Monaco's end-of-line extension.
 fn collect_line_selection_ranges(
-  line : @view_model.RenderLine,
+  view_line_number : Int,
+  max_column : Int,
   range : @base_common.Range,
   view_model : @view_model.ViewModel?,
   top : Int,
   space_width : Double,
   measure : (Int, Int, Int) -> Array[(Double, Double)],
 ) -> LineSelectionRanges? {
-  let view_line_number = line.line_number
   if view_line_number < range.start_line_number ||
     view_line_number > range.end_line_number {
     return None
@@ -196,7 +195,7 @@ fn collect_line_selection_ranges(
   }
   let continues_in_next_line = view_line_number != range.end_line_number
   let end_column = if continues_in_next_line {
-    line.text.length() + 1
+    max_column
   } else {
     range.end_column
   }

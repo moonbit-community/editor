@@ -137,7 +137,7 @@ pub impl CoordinatesConverter for ViewModelCoordinatesConverter with fn view_ran
 ///|
 /// View lines that preserve one visible view line per visible model line.
 pub struct ViewModelLinesFromModelAsIs {
-  source : FrameSource
+  model : @model.TextModel
   visible_model_line_numbers : Array[Int]
   hidden_model_lines : Array[Bool]
   injected_text_by_model_line : Array[Array[InjectedText]]
@@ -161,9 +161,9 @@ fn ViewModelLinesFromModelAsIs::has_injected_text(
 /// text is derived from the backing model's decoration storage
 /// (`getInjectedTextDecorations`).
 pub fn ViewModelLinesFromModelAsIs::new(
-  source : FrameSource,
+  model : @model.TextModel,
 ) -> ViewModelLinesFromModelAsIs {
-  let line_count = source.model.snapshot.line_count()
+  let line_count = model.snapshot.line_count()
   let visible_model_line_numbers : Array[Int] = []
   let hidden_model_lines : Array[Bool] = []
   for line_number in 1..<=line_count {
@@ -171,10 +171,10 @@ pub fn ViewModelLinesFromModelAsIs::new(
     hidden_model_lines.push(false)
   }
   {
-    source,
+    model,
     visible_model_line_numbers,
     hidden_model_lines,
-    injected_text_by_model_line: bucket_injected_text_from_decorations(source),
+    injected_text_by_model_line: bucket_injected_text_from_decorations(model),
   }
 }
 
@@ -191,7 +191,7 @@ pub fn ViewModelLinesFromModelAsIs::line_count(
 pub fn ViewModelLinesFromModelAsIs::model_line_count(
   self : ViewModelLinesFromModelAsIs,
 ) -> Int {
-  self.source.model.snapshot.line_count()
+  self.model.snapshot.line_count()
 }
 
 ///|
@@ -213,7 +213,7 @@ pub fn ViewModelLinesFromModelAsIs::get_model_line_content(
   model_line_number : Int,
 ) -> String {
   let line_index = self.clamped_model_line_index(model_line_number)
-  self.source.model.snapshot.line_text(line_index)
+  self.model.snapshot.line_text(line_index)
 }
 
 ///|
@@ -268,32 +268,26 @@ pub fn ViewModelLinesFromModelAsIs::model_line_number_of_view_line(
 }
 
 ///|
-/// Renders a one-based view line.
-pub fn ViewModelLinesFromModelAsIs::render_line(
+/// The view-line data of a one-based view line — Monaco
+/// `ViewModelLinesFromModelAsIs.getViewLineData` (`viewModelLines.ts`): the
+/// as-is tier serves the model line whole, with no wrapping and no injected
+/// text.
+pub fn ViewModelLinesFromModelAsIs::get_view_line_data(
   self : ViewModelLinesFromModelAsIs,
   line_number : Int,
-) -> RenderLine {
-  self.render_model_line(self.model_line_number_of_view_line(line_number))
-}
-
-///|
-/// Renders a one-based model line regardless of visibility.
-pub fn ViewModelLinesFromModelAsIs::render_model_line(
-  self : ViewModelLinesFromModelAsIs,
-  model_line_number : Int,
-) -> RenderLine {
-  let doc = self.source.model.snapshot
+) -> ViewLineData {
+  let model_line_number = self.model_line_number_of_view_line(line_number)
+  let doc = self.model.snapshot
   let line_index = self.clamped_model_line_index(model_line_number)
-  let line_start = doc.line_start_offset(line_index)
-  let line_end = doc.line_end_offset(line_index)
+  let content = doc.line_text(line_index)
   {
-    line_number: line_index + 1,
-    offset: line_start,
-    text: doc.line_text(line_index),
-    model_columns: identity_model_columns(line_end - line_start),
-    injected_text_indices: identity_injected_text_indices(line_end - line_start),
+    content,
+    continues_with_wrapped_line: false,
+    min_column: 1,
+    max_column: content.length() + 1,
+    start_visible_column: 0,
     tokens: self.model_line_tokens(model_line_number).inflate(),
-    injected_inline_decorations: [],
+    inline_decorations: [],
   }
 }
 
@@ -306,7 +300,7 @@ pub fn ViewModelLinesFromModelAsIs::model_line_tokens(
   self : ViewModelLinesFromModelAsIs,
   model_line_number : Int,
 ) -> @tokens.LineTokens {
-  self.source.model.tokenization.get_line_tokens(model_line_number)
+  self.model.tokenization.get_line_tokens(model_line_number)
 }
 
 ///|
@@ -316,8 +310,8 @@ pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(
   line_number : Int,
   line_decorations? : Array[@view_layout.LineDecoration] = [],
 ) -> @view_layout.ViewLineRenderingData {
-  view_line_rendering_data_from_render_line(
-    self.render_line(line_number),
+  view_line_rendering_data_from_view_line_data(
+    self.get_view_line_data(line_number),
     line_decorations~,
   )
 }
@@ -346,14 +340,13 @@ fn ViewModelLinesFromModelAsIs::clamped_model_line_index(
 /// Positions convert to the 0-based line/column space
 /// `ProjectedTextLine::from_injected_text` consumes.
 fn bucket_injected_text_from_decorations(
-  source : FrameSource,
+  model : @model.TextModel,
 ) -> Array[Array[InjectedText]] {
-  let snapshot = source.model.snapshot
+  let snapshot = model.snapshot
   let buckets : Array[Array[InjectedText]] = []
   for _ in 0..<snapshot.line_count() {
     buckets.push([])
   }
-  let model = source.model
   let entries : Array[(Int, Int, Int, @model.InjectedTextOptions)] = []
   for decoration in model.get_injected_text_decorations() {
     match decoration.options.before {
@@ -415,24 +408,6 @@ fn bucket_injected_text_from_decorations(
     )
   }
   buckets
-}
-
-///|
-fn identity_model_columns(line_length : Int) -> Array[Int] {
-  let columns : Array[Int] = []
-  for column in 0..<=line_length {
-    columns.push(column)
-  }
-  columns
-}
-
-///|
-fn identity_injected_text_indices(line_length : Int) -> Array[Int] {
-  let indices : Array[Int] = []
-  for _ in 0..<line_length {
-    indices.push(-1)
-  }
-  indices
 }
 
 ///|
@@ -500,14 +475,26 @@ pub fn ViewModelLines::model_line_number_of_view_line(
 }
 
 ///|
-/// Renders a one-based view line.
-pub fn ViewModelLines::render_line(
+/// The view-line data of a one-based view line, Monaco's
+/// `IViewModelLines.getViewLineData`.
+pub fn ViewModelLines::get_view_line_data(
   self : ViewModelLines,
   line_number : Int,
-) -> RenderLine {
+) -> ViewLineData {
   match self {
-    ModelAsIs(lines) => lines.render_line(line_number)
-    ProjectedModel(lines) => lines.render_line(line_number)
+    ModelAsIs(lines) => lines.get_view_line_data(line_number)
+    ProjectedModel(lines) => lines.get_view_line_data(line_number)
+  }
+}
+
+///|
+/// The model's tab size as the renderer consumes it (Monaco threads
+/// `model.getOptions().tabSize` into `ViewLineRenderingData`; the viewer's
+/// tab size rides the projection options).
+pub fn ViewModelLines::tab_size(self : ViewModelLines) -> Int {
+  match self {
+    ModelAsIs(_) => 2
+    ProjectedModel(lines) => lines.tab_size
   }
 }
 
@@ -527,10 +514,10 @@ pub fn ViewModelLines::view_line_rendering_data(
 }
 
 ///|
-/// Backend-neutral document view model: source data plus line projection,
-/// decorations, and coordinate conversion.
+/// Backend-neutral document view model: the backing text model plus line
+/// projection, decorations, and coordinate conversion.
 pub struct ViewModel {
-  source : FrameSource
+  model : @model.TextModel
   lines : ViewModelLines
   decorations : ViewModelDecorations
   coordinates_converter : ViewModelCoordinatesConverter
@@ -538,23 +525,23 @@ pub struct ViewModel {
 
 ///|
 /// Creates a view model with default no-wrap options.
-pub fn ViewModel::ViewModel(source : FrameSource) -> ViewModel {
-  ViewModel::with_options(source, ViewModelOptions::no_wrap())
+pub fn ViewModel::ViewModel(model : @model.TextModel) -> ViewModel {
+  ViewModel::with_options(model, ViewModelOptions::no_wrap())
 }
 
 ///|
 /// Creates a view model with wrapping/tab options.
 pub fn ViewModel::with_options(
-  source : FrameSource,
+  model : @model.TextModel,
   options : ViewModelOptions,
 ) -> ViewModel {
-  let as_is = ViewModelLinesFromModelAsIs::new(source)
-  ViewModel::from_lines(source, options, as_is, force_projected=false)
+  let as_is = ViewModelLinesFromModelAsIs::new(model)
+  ViewModel::from_lines(model, options, as_is, force_projected=false)
 }
 
 ///|
 fn ViewModel::from_lines(
-  source : FrameSource,
+  model : @model.TextModel,
   options : ViewModelOptions,
   as_is : ViewModelLinesFromModelAsIs,
   force_projected~ : Bool,
@@ -588,11 +575,11 @@ fn ViewModel::from_lines(
     (ModelAsIs(as_is), Identity(IdentityCoordinatesConverter::new()))
   }
   {
-    source,
+    model,
     lines,
     decorations: ViewModelDecorations::new(
       options.editor_id,
-      source.model,
+      model,
       filter_validation_decorations(options.render_validation_decorations),
       lines,
       coordinates_converter,
@@ -645,44 +632,44 @@ pub fn ViewModel::line_count(self : ViewModel) -> Int {
 }
 
 ///|
+/// The injected-text (inlay hint) source index at a view position, or `-1`
+/// for source text — the viewer's index-valued form of Monaco's
+/// `ViewModel.getInjectedTextAt` (`viewModelImpl.ts`, delegating to the line
+/// projection). The as-is tier carries no injected text by construction
+/// (injected text forces the projected tier).
+pub fn ViewModel::injected_text_index_at(
+  self : ViewModel,
+  position : @base_common.Position,
+) -> Int {
+  match self.lines {
+    ModelAsIs(_) => -1
+    ProjectedModel(lines) =>
+      lines.injected_text_index_at(position.line_number, position.column - 1)
+  }
+}
+
+///|
 /// Source document version.
 pub fn ViewModel::version(self : ViewModel) -> Int {
-  self.source.model.version
+  self.model.version
 }
 
 ///|
 /// Source document language id.
 pub fn ViewModel::language_id(self : ViewModel) -> String {
-  self.source.model.language_id
+  self.model.language_id
 }
 
 ///|
-/// Builds a render frame for the requested 1-based viewport line window.
-pub fn ViewModel::render_frame(
+/// Clamps a 1-based half-open view-line window to the document, the same
+/// clamping the viewport-data builder applies (`viewport_data_from_view_model`)
+/// so window consumers (the DOM recycler, hit tests) agree on the rendered
+/// range.
+pub fn ViewModel::clamp_window(
   self : ViewModel,
-  viewport : FrameViewport,
-) -> RenderFrame {
-  let start_line = @base_common.clamp_int(
-    viewport.start_line,
-    1,
-    self.line_count(),
-  )
-  let end_line = @base_common.clamp_int(
-    viewport.end_line,
-    start_line + 1,
-    self.line_count() + 1,
-  )
-  let lines : Array[RenderLine] = []
-  for line in start_line..<end_line {
-    lines.push(self.lines.render_line(line))
-  }
-  {
-    version: self.version(),
-    language_id: self.language_id(),
-    line_count: self.line_count(),
-    viewport: { start_line, end_line },
-    lines,
-    diagnostics: self.source.providers.diagnostics,
-    hovers: self.source.providers.hovers,
-  }
+  window : @view_layout.LineWindow,
+) -> @view_layout.LineWindow {
+  let start = @base_common.clamp_int(window.start, 1, self.line_count())
+  let end = @base_common.clamp_int(window.end, start + 1, self.line_count() + 1)
+  { start, end }
 }

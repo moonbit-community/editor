@@ -15,7 +15,7 @@ import {
 }
 
 // Values
-pub fn debug_on_did_build_frame(Viewer, (ViewerFrameBuiltEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn debug_on_did_build_view_model(Viewer, (ViewerViewModelBuiltEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 
 pub fn debug_on_did_render_model(Viewer, (ViewerModelRenderedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 
@@ -204,15 +204,6 @@ pub fn Viewer::set_selection(Self, @view_model.Selection) -> Unit
 pub fn Viewer::set_selections(Self, Array[@view_model.Selection]) -> Unit
 pub fn Viewer::update_options(Self, ViewerOptions) -> Unit
 
-pub(all) struct ViewerFrameBuiltEvent {
-  model : @model.TextModel
-  line_count : Int
-  token_count : Int
-  diagnostic_count : Int
-  tokenize_ms : Double
-  build_ms : Double
-} derive(@debug.Debug)
-
 pub(all) struct ViewerHoverResolvedEvent {
   ok : Bool
   revision : String
@@ -255,6 +246,15 @@ pub(all) struct ViewerServices {
   log_service : @log.LogService
 }
 pub fn ViewerServices::new(languages? : @languages.Languages, log_service? : @log.LogService) -> Self
+
+pub(all) struct ViewerViewModelBuiltEvent {
+  model : @model.TextModel
+  line_count : Int
+  token_count : Int
+  diagnostic_count : Int
+  tokenize_ms : Double
+  build_ms : Double
+} derive(@debug.Debug)
 
 pub(all) struct ViewerViewState {
   scroll_top : Double

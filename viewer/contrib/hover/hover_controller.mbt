@@ -17,7 +17,7 @@ pub(all) enum EditorEvent {
 /// so controllers anchor on the model in line/column space. `pub(all)` for
 /// the same cross-package reason as `EditorEvent`.
 pub(all) struct EditorContext {
-  frame : @view_model.RenderFrame?
+  view_model : @view_model.ViewModel?
   view_to_model_position : (@base_common.Position) -> @base_common.Position
 }
 
@@ -238,10 +238,14 @@ pub fn HoverController::on_event(
 ) -> (HoverEffect, HoverController) {
   match event {
     MouseMoved(target) =>
-      match ctx.frame {
-        Some(frame) =>
+      match ctx.view_model {
+        Some(view_model) =>
           match
-            token_anchor_for_target(frame, target, ctx.view_to_model_position) {
+            token_anchor_for_target(
+              view_model,
+              target,
+              ctx.view_to_model_position,
+            ) {
             Some((range, injected_text_index)) => {
               let anchor : HoverAnchor = { range, injected_text_index }
               self.start_showing_or_update_hover(
@@ -662,18 +666,17 @@ pub fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? 
 /// `view_to_model_position` (the `CoordinatesConverter` boundary), the way
 /// Monaco maps a `MouseTarget`'s view position to the model.
 pub fn token_anchor_for_target(
-  frame : @view_model.RenderFrame,
+  view_model : @view_model.ViewModel,
   target : @viewer_common.MouseTarget,
   view_to_model_position : (@base_common.Position) -> @base_common.Position,
 ) -> (@base_common.Range, Int)? {
   if target.token_index < 0 {
     return None
   }
-  let index = target.line_number - frame.viewport.start_line
-  if index < 0 || index >= frame.lines.length() {
+  if target.line_number < 1 || target.line_number > view_model.line_count() {
     return None
   }
-  let line = frame.lines[index]
+  let line = view_model.lines().get_view_line_data(target.line_number)
   let tokens = line.tokens
   if target.token_index >= tokens.get_count() {
     return None

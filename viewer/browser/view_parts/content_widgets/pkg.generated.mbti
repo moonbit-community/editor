@@ -5,7 +5,6 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/view_layout",
-  "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/contrib/hover",
   "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
@@ -28,10 +27,11 @@ pub fn ContentWidgets::hover_scrollable(Self) -> @scrollbar.ScrollableElementDom
 pub fn ContentWidgets::hover_wrapper(Self) -> @dom.Element?
 pub fn ContentWidgets::new(@dom.Document) -> Self
 pub fn ContentWidgets::overflowing_dom(Self) -> @dom.Element
-pub fn ContentWidgets::render_hover_widget(Self, HoverWidgetHost, @view_model.RenderFrame, @view_layout.ViewLayout, @hover.HoverWidgetView?, (Bool, Double, Double) -> Unit, Double, Double) -> Unit
+pub fn ContentWidgets::render_hover_widget(Self, HoverWidgetHost, @view_layout.LineWindow, String, @view_layout.ViewLayout, @hover.HoverWidgetView?, (Bool, Double, Double) -> Unit, Double, Double) -> Unit
 
 pub(all) struct ContentWidgetsPrepared {
-  frame : @view_model.RenderFrame
+  window : @view_layout.LineWindow
+  language_id : String
   layout : @view_layout.ViewLayout
   hover_view : @hover.HoverWidgetView?
   on_hover_measured : (Bool, Double, Double) -> Unit
@@ -59,7 +59,7 @@ pub(all) struct HoverWidgetHost {
   handle_hover_mousedown : (@dom.Event, @dom.MouseEvent) -> Unit
   hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
   handle_hover_keydown : (HoverWidgetDom, @dom.Event, @dom.KeyboardEvent) -> Unit
-  model_position_to_offset : (@common.Position) -> Int
+  model_position_to_view_position : (@common.Position) -> @common.Position
 }
 
 // Type aliases

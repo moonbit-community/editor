@@ -1,7 +1,6 @@
 import {
   "moonbit-community/editor/base/common" @base_common,
   "moonbit-community/editor/viewer/common" @viewer_common,
-  "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/rabbita/dom" @rdom,

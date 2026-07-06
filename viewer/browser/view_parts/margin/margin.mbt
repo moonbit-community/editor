@@ -8,7 +8,6 @@
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` / `prepared` directly.
 pub(all) struct MarginViewOverlaysPrepared {
-  frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
   view_model : @view_model.ViewModel?
   generation : Int
@@ -88,7 +87,6 @@ pub fn MarginViewOverlays::dom(self : MarginViewOverlays) -> @rdom.Element {
 ///|
 pub fn MarginViewOverlays::render_line_numbers(
   self : MarginViewOverlays,
-  frame : @view_model.RenderFrame,
   viewport : @view_layout.ViewportData,
   generation : Int,
 ) -> Unit {
@@ -109,7 +107,7 @@ pub fn MarginViewOverlays::render_line_numbers(
     for index in 0..<viewport.lines.length() {
       @view_lines.write_line_number_node(
         self.line_number_nodes[index],
-        frame.lines[index],
+        viewport.start_line_number + index,
         viewport.relative_vertical_offset[index],
       )
     }
@@ -135,7 +133,7 @@ pub fn MarginViewOverlays::render_line_numbers(
       let node = document.create_element("div")
       @view_lines.write_line_number_node(
         node,
-        frame.lines[index],
+        viewport.start_line_number + index,
         viewport.relative_vertical_offset[index],
       )
       self.line_numbers.append_child(node.as_node())

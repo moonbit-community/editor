@@ -1,44 +1,35 @@
 ///|
-/// Warms the model's memoized tokenization part, buckets the feature data
-/// into a frame source, and emits the frame for the current layout window.
-/// Only a model's first render pays the tokenize sweep; later renders hit
-/// the part's memo. Synchronous CPU work; the paint happens in the next
-/// render flush.
+/// Warms the model's memoized tokenization part and builds the view model
+/// for the current options. Only a model's first render pays the tokenize
+/// sweep; later renders hit the part's memo. Synchronous CPU work; the
+/// paint happens in the next render flush.
 fn Viewer::render_current_model(
   self : Viewer,
   model : @model.TextModel,
   fresh~ : Bool,
   request_language~ : Bool,
 ) -> Unit {
-  let marker_diagnostics = self.services.markers.diagnostics_for_resource(
-    model.uri,
-  )
-  let providers = { ..self.provider_result, diagnostics: marker_diagnostics }
   let tokenize_started = now_ms()
   model.tokenization.force_tokenization()
   let tokenize_finished = now_ms()
-  // Decorations live in the model's interval-tree storage now; the view
-  // model queries them lazily per viewport (no per-frame bake).
-  let source = @view_model.FrameSource(model, providers)
-  let view_model = self.build_view_model(source)
+  // Decorations live in the model's interval-tree storage; the view
+  // model queries them lazily per viewport (no per-frame bake). The render
+  // pass pulls its viewport data from the view model at flush time.
+  let view_model = self.build_view_model(model)
   self.apply_view_model_layout(view_model, model.snapshot)
-  let window = self.view_layout.visible_window(overscan=@core.line_overscan)
-  let frame = view_model.render_frame({
-    start_line: window.start,
-    end_line: window.end,
-  })
   let build_finished = now_ms()
-  self.frame_source = Some(source)
   self.view_model = Some(view_model)
-  self.frame = Some(frame)
+  self.rendered_window = None
   self.text_model = Some(model)
   self.refresh_cursor_context()
   self.content_generation += 1
-  self.did_build_frame.fire({
+  self.did_build_view_model.fire({
     model,
-    line_count: frame.line_count,
+    line_count: view_model.line_count(),
     token_count: model.tokenization.token_count(),
-    diagnostic_count: marker_diagnostics.length(),
+    diagnostic_count: self.services.markers
+    .diagnostics_for_resource(model.uri)
+    .length(),
     tokenize_ms: tokenize_finished - tokenize_started,
     build_ms: build_finished - tokenize_finished,
   })
@@ -61,7 +52,7 @@ fn Viewer::render_current_model(
 ///|
 fn Viewer::build_view_model(
   self : Viewer,
-  source : @view_model.FrameSource,
+  model : @model.TextModel,
 ) -> @view_model.ViewModel {
   let options = self.options.view_model_options(
     self.soft_wrap_column,
@@ -69,32 +60,24 @@ fn Viewer::build_view_model(
   )
   // Injected text (inlay hints) reaches the projection through the model's
   // decoration storage (Track F), not through construction arguments.
-  @view_model.ViewModel::with_options(source, options)
+  @view_model.ViewModel::with_options(model, options)
 }
 
 ///|
 fn Viewer::rebuild_current_view_model_for_options(self : Viewer) -> Unit {
-  match self.frame_source {
-    Some(source) => {
-      let view_model = self.build_view_model(source)
-      self.apply_view_model_layout(view_model, source.model.snapshot)
-      let window = self.view_layout.visible_window(overscan=@core.line_overscan)
-      let frame = view_model.render_frame({
-        start_line: window.start,
-        end_line: window.end,
-      })
+  match self.text_model {
+    Some(model) => {
+      let view_model = self.build_view_model(model)
+      self.apply_view_model_layout(view_model, model.snapshot)
       self.view_model = Some(view_model)
-      self.frame = Some(frame)
+      self.rendered_window = None
       self.refresh_cursor_context()
       self.content_generation += 1
       let fresh = match self.pending_rendered {
         Some(pending) => pending.fresh
         None => false
       }
-      match self.text_model {
-        Some(model) => self.pending_rendered = Some({ model, fresh })
-        None => ()
-      }
+      self.pending_rendered = Some({ model, fresh })
     }
     None => self.sync_content_width()
   }

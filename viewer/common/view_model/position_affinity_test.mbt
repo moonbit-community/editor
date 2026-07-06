@@ -40,15 +40,8 @@ fn affinity_view_model(
   }
   model.delta_decorations([], decorations) |> ignore
   register_plain_moonbit()
-  let providers = @language.ProviderResult::{
-    hovers: [],
-    diagnostics: [],
-    definitions: [],
-    symbols: [],
-  }
-  let source = @view_model.FrameSource(model, providers)
   @view_model.ViewModel::with_options(
-    source,
+    model,
     ViewModelOptions(soft_wrap_column~),
   )
 }

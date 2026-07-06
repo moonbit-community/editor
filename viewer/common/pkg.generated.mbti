@@ -10,13 +10,11 @@ import {
 // Values
 pub fn escape_html(String) -> String
 
-pub fn hit_test(@view_model.RenderFrame, ViewMetrics, Double, Double) -> MouseTarget
+pub fn hit_test(@view_model.ViewModel, @view_layout.LineWindow, ViewMetrics, Double, Double) -> MouseTarget
 
-pub fn render_line_class(@view_model.RenderLine) -> String
+pub fn render_line_class() -> String
 
-pub fn render_line_html(@view_model.RenderLine, Array[@view_layout.LineDecoration], render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool) -> String
-
-pub fn render_source_line_html(@view_model.RenderLine) -> String
+pub fn render_line_html(@view_model.ViewLineData, Array[@view_layout.LineDecoration], render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool) -> String
 
 // Errors
 

@@ -16,10 +16,9 @@ fn Viewer::pointer_handler_helper(
     view_layout: () => self.view_layout,
     apply_scroll: change => self.apply_scroll_change(change),
     line_height: () => @core.editor_line_height.to_double(),
-    frame: () => self.frame,
-    view_metrics: frame => self.view_metrics(frame),
-    refine_content_target: (frame, client_x, client_y, fallback) => {
-      self.dom_refine_content_target(view, frame, client_x, client_y, fallback)
+    hit_test: (x, y) => self.hit_test_at(x, y),
+    refine_content_target: (client_x, client_y, fallback) => {
+      self.dom_refine_content_target(view, client_x, client_y, fallback)
     },
     dispatch_mouse: payload => {
       self.dispatch_mouse({
@@ -40,6 +39,39 @@ fn Viewer::pointer_handler_helper(
       self.did_mouse_up.fire({ target, left_button: true })
     },
     schedule_render: () => self.schedule_render(),
+  }
+}
+
+///|
+/// Hit-tests view-relative coordinates against the rendered view model —
+/// the `MouseTargetFactory.createMouseTarget` seam the pointer handler calls
+/// back into. `None` when no model is rendered. Before the first flush the
+/// rendered window is not yet fixed; the layout's visible window stands in.
+fn Viewer::hit_test_at(
+  self : Viewer,
+  x : Double,
+  y : Double,
+) -> @viewer_common.MouseTarget? {
+  match self.view_model {
+    Some(view_model) => {
+      let window = match self.rendered_window {
+        Some(window) => window
+        None =>
+          view_model.clamp_window(
+            self.view_layout.visible_window(overscan=@core.line_overscan),
+          )
+      }
+      Some(
+        @viewer_common.hit_test(
+          view_model,
+          window,
+          self.view_metrics(view_model.line_count()),
+          x,
+          y,
+        ),
+      )
+    }
+    None => None
   }
 }
 

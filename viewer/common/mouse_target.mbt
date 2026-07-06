@@ -34,7 +34,7 @@ pub(all) struct MouseTarget {
 } derive(Eq, Debug)
 
 ///|
-/// Geometry needed to hit-test viewer coordinates against a `RenderFrame`.
+/// Geometry needed to hit-test viewer coordinates against the view model.
 /// `origin_x`/`origin_y` locate the viewer's top-left in the same coordinate
 /// space as the `x`/`y` passed to `hit_test`. All values are pixels.
 pub(all) struct ViewMetrics {
@@ -66,12 +66,17 @@ fn outside_target() -> MouseTarget {
 }
 
 ///|
-/// Resolves a mouse position to a typed editor target using only render
-/// data and metrics; no DOM access. View zones consume their own vertical
-/// band (widgets over them stop event propagation, so a zone hit resolves
-/// to `OutsideEditor`) and shift every line below their anchor.
+/// Resolves a mouse position to a typed editor target using only view-model
+/// data and metrics; no DOM access (Monaco's `MouseTargetFactory` over its
+/// `HitTestContext`-wrapped view model). `window` is the rendered 1-based
+/// half-open view-line window; hits on lines outside it resolve to
+/// `ContentEmpty`, matching the DOM (those lines have no nodes). View zones
+/// consume their own vertical band (widgets over them stop event propagation,
+/// so a zone hit resolves to `OutsideEditor`) and shift every line below
+/// their anchor.
 pub fn hit_test(
-  frame : @view_model.RenderFrame,
+  view_model : @view_model.ViewModel,
+  window : @view_layout.LineWindow,
   metrics : ViewMetrics,
   x : Double,
   y : Double,
@@ -97,10 +102,10 @@ pub fn hit_test(
   }
   let line_index = ((content_y - zone_offset.to_double()) /
   metrics.line_height.to_double()).to_int()
-  if line_index >= frame.line_count {
+  if line_index >= view_model.line_count() {
     return {
       kind: BelowContent,
-      line_number: frame.line_count,
+      line_number: view_model.line_count(),
       column: 0,
       token_index: -1,
       injected_text_index: -1,
@@ -108,7 +113,7 @@ pub fn hit_test(
     }
   }
   let line_number = line_index + 1
-  let line = match rendered_line(frame, line_number) {
+  let line = match rendered_line(view_model, window, line_number) {
     Some(line) => line
     None =>
       // The line exists in the document but is outside the rendered window.
@@ -158,13 +163,15 @@ pub fn hit_test(
   } else {
     0
   }
-  if column < line.text.length() {
+  if column < line.content.length() {
     {
       kind: ContentText,
       line_number,
       column,
       token_index: token_index_at_column(line, column),
-      injected_text_index: line.injected_text_index_at_column(column),
+      injected_text_index: view_model.injected_text_index_at(
+        Position(line_number, column + 1),
+      ),
       gutter_offset_x: 0.0,
     }
   } else {
@@ -180,13 +187,16 @@ pub fn hit_test(
 }
 
 ///|
+/// The view line's render data when `line_number` falls inside the rendered
+/// window, pulled lazily from the view model (Monaco reads the line through
+/// `HitTestContext`'s view model accessors).
 fn rendered_line(
-  frame : @view_model.RenderFrame,
+  view_model : @view_model.ViewModel,
+  window : @view_layout.LineWindow,
   line_number : Int,
-) -> @view_model.RenderLine? {
-  let index = line_number - frame.viewport.start_line
-  if index >= 0 && index < frame.lines.length() {
-    Some(frame.lines[index])
+) -> @view_model.ViewLineData? {
+  if line_number >= window.start && line_number < window.end {
+    Some(view_model.lines().get_view_line_data(line_number))
   } else {
     None
   }
@@ -196,6 +206,6 @@ fn rendered_line(
 /// Index of the token covering a zero-based view column, Monaco's
 /// `LineTokens.findTokenIndexAtOffset`. Only called for an in-text column, so
 /// the offset always lands inside a token.
-fn token_index_at_column(line : @view_model.RenderLine, column : Int) -> Int {
+fn token_index_at_column(line : @view_model.ViewLineData, column : Int) -> Int {
   line.tokens.find_token_index_at_offset(column)
 }

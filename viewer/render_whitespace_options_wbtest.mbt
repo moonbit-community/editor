@@ -6,11 +6,12 @@
 // `flush_render` performs (`render_whitespace: self.options.render_whitespace`).
 
 ///|
-/// Builds the viewport a headless viewer projects for its first frame, the
+/// Builds the viewport a headless viewer projects for its first render, the
 /// input `render_line_input_for_viewport` consumes during `render_text`.
 fn viewport_of(viewer : Viewer) -> @view_layout.ViewportData {
-  @view_model.viewport_data_from_render_frame(
-    viewer.test_frame(),
+  @view_model.viewport_data_from_view_model(
+    viewer.test_view_model(),
+    viewer.test_window(),
     line_height=@core.editor_line_height,
   )
 }

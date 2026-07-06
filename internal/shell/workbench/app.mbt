@@ -50,7 +50,7 @@ priv enum WorkbenchMsg {
 ///|
 priv enum WorkbenchViewerEvent {
   DidChangeMarkers(Array[@base_common.Uri])
-  DidBuildFrame(@viewer.ViewerFrameBuiltEvent)
+  DidBuildViewModel(@viewer.ViewerViewModelBuiltEvent)
   DidRenderModel(@viewer.ViewerModelRenderedEvent)
   DidResolveHover(@viewer.ViewerHoverResolvedEvent)
   DidScroll(@viewer.ScrollEvent)
@@ -145,8 +145,8 @@ fn install_viewer_event_subscriptions(viewer : @viewer.Viewer) -> Unit {
     dispatch_workbench_msg(ViewerEvent(DidChangeMarkers(uris)))
   })
   |> ignore
-  @viewer.debug_on_did_build_frame(viewer, event => {
-    dispatch_workbench_msg(ViewerEvent(DidBuildFrame(event)))
+  @viewer.debug_on_did_build_view_model(viewer, event => {
+    dispatch_workbench_msg(ViewerEvent(DidBuildViewModel(event)))
   })
   |> ignore
   @viewer.debug_on_did_render_model(viewer, event => {
@@ -469,7 +469,7 @@ fn viewer_event_update(
       }
       (@rabbita.none, model)
     }
-    DidBuildFrame(event) => {
+    DidBuildViewModel(event) => {
       set_current_model(text_model_harness_json(event.model))
       emit_render_event(
         event.line_count,

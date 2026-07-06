@@ -4,7 +4,6 @@ package "moonbit-community/editor/viewer/browser/view_parts/view_lines"
 import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/view_layout",
-  "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom",
 }
 
@@ -15,7 +14,7 @@ pub fn render_line_input_for_viewport(@view_layout.ViewportData, Int, Double, re
 
 pub fn viewport_window(@view_layout.ViewportData) -> @view_layout.LineWindow
 
-pub fn write_line_number_node(@dom.Element, @view_model.RenderLine, Int) -> Unit
+pub fn write_line_number_node(@dom.Element, Int, Int) -> Unit
 
 // Errors
 
@@ -37,10 +36,9 @@ pub fn ViewLines::dom(Self) -> @dom.Element
 pub fn ViewLines::line_node_at(Self, Int) -> @dom.Element?
 pub fn ViewLines::mapping_at(Self, Int) -> @view_layout.CharacterMapping?
 pub fn ViewLines::new(@dom.Document) -> Self
-pub fn ViewLines::render_text(Self, @view_model.RenderFrame, @view_layout.ViewportData, Int, Int, Double, @view_layout.RenderWhitespace, Bool, @common.Range?) -> Unit
+pub fn ViewLines::render_text(Self, @view_layout.ViewportData, Int, Int, Double, @view_layout.RenderWhitespace, Bool, @common.Range?) -> Unit
 
 pub(all) struct ViewLinesPrepared {
-  frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
   generation : Int
   decorations_generation : Int

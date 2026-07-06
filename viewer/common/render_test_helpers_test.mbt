@@ -1,12 +1,8 @@
 ///|
-/// Builds a windowed frame over `doc`, with the generic fallback lexer
+/// Builds a view model over `doc`, with the generic fallback lexer
 /// registered for the model's `moonbit` language id
 /// (`register_plain_moonbit`, shared with the mouse-target tests).
-fn frame_for(
-  doc : @model.TextSnapshot,
-  viewport : @view_model.FrameViewport,
-  providers? : @language.ProviderResult = @language.ProviderResult::empty(),
-) -> @view_model.RenderFrame {
+fn view_model_for(doc : @model.TextSnapshot) -> @view_model.ViewModel {
   register_plain_moonbit()
   let model = @model.TextModel(
     @base_common.Uri::memory("frame.mbt"),
@@ -16,5 +12,5 @@ fn frame_for(
     "",
     doc.get_value(),
   )
-  @view_model.build_frame(FrameSource(model, providers), viewport)
+  ViewModel(model)
 }

@@ -70,32 +70,16 @@ extern "js" fn CaretHit::char_index(self : CaretHit) -> Int = "(h) => h.charInde
 extern "js" fn CaretHit::part_length(self : CaretHit) -> Int = "(h) => h.partLength"
 
 ///|
-/// The render line for a one-based view-line number within the frame window.
-fn frame_render_line(
-  frame : @view_model.RenderFrame,
-  line_number : Int,
-) -> @view_model.RenderLine? {
-  let index = line_number - 1 - frame.viewport.start_line
-  if index >= 0 && index < frame.lines.length() {
-    Some(frame.lines[index])
-  } else {
-    None
-  }
-}
-
-///|
 /// Refines a monospace content hit test into a pixel-accurate one using the
 /// browser caret APIs bridged through the line's `CharacterMapping`. Returns
 /// `fallback` unchanged when the caret API misses, the line is outside the
 /// window, or its mapping is unavailable.
 ///
-/// The mapping is one-based (Monaco semantics); `RenderLine` columns are
-/// zero-based, so the resolved column is shifted by one before deriving the
-/// document offset.
+/// The mapping is one-based (Monaco semantics); `MouseTarget` columns are
+/// zero-based, so the resolved column shifts by one at the boundary.
 fn Viewer::dom_refine_content_target(
   self : Viewer,
   view : @view.View,
-  frame : @view_model.RenderFrame,
   client_x : Double,
   client_y : Double,
   fallback : @viewer_common.MouseTarget,
@@ -106,15 +90,17 @@ fn Viewer::dom_refine_content_target(
   guard view.view_lines.mapping_at(line_number) is Some(mapping) else {
     return fallback
   }
-  guard frame_render_line(frame, line_number) is Some(line) else {
+  guard self.view_model is Some(view_model) else { return fallback }
+  guard line_number >= 1 && line_number <= view_model.line_count() else {
     return fallback
   }
+  let line = view_model.lines().get_view_line_data(line_number)
   let column1 = mapping.get_column(
     { part_index: hit.part(), char_index: hit.char_index() },
     hit.part_length(),
   )
   let column0 = column1 - 1
-  let kind : @viewer_common.MouseTargetType = if column0 < line.text.length() {
+  let kind : @viewer_common.MouseTargetType = if column0 < line.content.length() {
     ContentText
   } else {
     ContentEmpty
@@ -137,7 +123,9 @@ fn Viewer::dom_refine_content_target(
     line_number: normalized.line_number,
     column: normalized.column - 1,
     token_index: -1,
-    injected_text_index: line.injected_text_index_at_column(column0),
+    injected_text_index: view_model.injected_text_index_at(
+      Position(line_number, column1),
+    ),
     gutter_offset_x: 0.0,
   }
 }

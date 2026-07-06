@@ -21,7 +21,7 @@ fn plain_text_model(text : String) -> @model.TextModel {
 ///|
 /// Whether any of a rendered line's tokens carries `class_name`.
 fn line_has_token_class(
-  line : @view_model.RenderLine,
+  line : @view_model.ViewLineData,
   class_name : String,
 ) -> Bool {
   let tokens = line.tokens
@@ -121,24 +121,21 @@ test "grammar tokens land per line and multi-line tokens cover every line" {
       #|let b = 2
     ),
   )
-  // Render the frame and read the encoded `mtk<colorId>` classes: line 0 opens
-  // with the keyword color, and the block comment colors every line it covers.
-  let source = @view_model.FrameSource(model, @language.ProviderResult::empty())
-  let frame = @view_model.build_frame(source, {
-    start_line: 1,
-    end_line: model.get_line_count() + 1,
-  })
-  assert_eq(frame.lines[0].tokens.get_class_name(0), "mtk3") // Keyword
-  assert_true(line_has_token_class(frame.lines[1], "mtk7")) // Comment
-  assert_true(line_has_token_class(frame.lines[2], "mtk7")) // Comment
-  assert_eq(frame.lines[3].tokens.get_class_name(0), "mtk3") // Keyword
+  // Render the view lines and read the encoded `mtk<colorId>` classes: line 1
+  // opens with the keyword color, and the block comment colors every line it
+  // covers.
+  let lines = @view_model.ViewModel(model).lines()
+  assert_eq(lines.get_view_line_data(1).tokens.get_class_name(0), "mtk3") // Keyword
+  assert_true(line_has_token_class(lines.get_view_line_data(2), "mtk7")) // Comment
+  assert_true(line_has_token_class(lines.get_view_line_data(3), "mtk7")) // Comment
+  assert_eq(lines.get_view_line_data(4).tokens.get_class_name(0), "mtk3") // Keyword
   // Per-line segments: `let`+trailing fill, one comment run, one comment run,
   // `let`+trailing fill.
   assert_eq(model.tokenization.token_count(), 6)
 }
 
 ///|
-test "windowed frames read the memoized whole-document sweep" {
+test "windowed view lines read the memoized whole-document sweep" {
   let chunks = []
   for i in 0..<200 {
     chunks.push("pub fn generated_value_" + i.to_string() + "() -> Int {")
@@ -146,16 +143,14 @@ test "windowed frames read the memoized whole-document sweep" {
     chunks.push("}")
   }
   let model = plain_text_model(chunks.join("\n"))
-  let source = @view_model.FrameSource(model, @language.ProviderResult::empty())
-  let frame = @view_model.build_frame(source, { start_line: 301, end_line: 361 })
-  assert_eq(frame.lines.length(), 60)
-  assert_eq(frame.lines[0].line_number, 301)
-  for line in frame.lines {
+  let lines = @view_model.ViewModel(model).lines()
+  for line_number in 301..<361 {
+    let line = lines.get_view_line_data(line_number)
     let mut joined = ""
     let tokens = line.tokens
     for i in 0..<tokens.get_count() {
       joined = joined + tokens.get_token_text(i)
     }
-    assert_eq(joined, line.text)
+    assert_eq(joined, line.content)
   }
 }

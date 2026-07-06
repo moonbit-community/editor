@@ -1,9 +1,10 @@
 ///|
 test "viewport data exposes one-based inclusive line data" {
   let doc = @model.TextSnapshot("a\nbb\nccc")
-  let frame = frame_for(doc, { start_line: 2, end_line: 4 })
-  let viewport = @view_model.viewport_data_from_render_frame(
-    frame,
+  let view_model = view_model_for(doc)
+  let viewport = @view_model.viewport_data_from_view_model(
+    view_model,
+    { start: 2, end: 4 },
     line_height=18,
   )
   assert_eq(viewport.start_line_number, 2)
@@ -19,7 +20,10 @@ test "viewport data exposes one-based inclusive line data" {
       assert_eq(line.min_column, 1)
       assert_eq(line.max_column, 3)
       assert_eq(line.content, "bb")
-      assert_eq(line.tokens.length(), frame.lines[0].tokens.get_count())
+      assert_eq(
+        line.tokens.length(),
+        view_model.lines().get_view_line_data(2).tokens.get_count(),
+      )
     }
     None => fail("expected line 2 data")
   }
@@ -29,10 +33,9 @@ test "viewport data exposes one-based inclusive line data" {
 ///|
 test "render line input carries readonly defaults and equality" {
   let doc = @model.TextSnapshot("let x = 1")
-  let frame = frame_for(doc, { start_line: 1, end_line: 2 })
-  let line = frame.lines[0]
-  let input = @view_model.render_line_input_from_render_line(line)
-  let same = @view_model.render_line_input_from_render_line(line)
+  let line = view_model_for(doc).lines().get_view_line_data(1)
+  let input = @view_model.render_line_input_from_view_line_data(line)
+  let same = @view_model.render_line_input_from_view_line_data(line)
   assert_true(input == same)
   assert_true(input.use_monospace_optimizations)
   assert_true(input.can_use_halfwidth_rightwards_arrow)
@@ -41,7 +44,7 @@ test "render line input carries readonly defaults and equality" {
   assert_eq(input.stop_rendering_line_after, -1)
   assert_false(input.render_control_characters)
   let changed = @view_layout.RenderLineInput::from_view_line(
-    @view_model.view_line_rendering_data_from_render_line(line),
+    @view_model.view_line_rendering_data_from_view_line_data(line),
     render_whitespace=All,
   )
   assert_false(input == changed)
@@ -122,10 +125,12 @@ test "render view line supports pseudo decorations and large token splitting" {
 ///|
 test "empty line preserves compatibility wrapper" {
   let doc = @model.TextSnapshot("a\n\nb")
-  let frame = frame_for(doc, { start_line: 1, end_line: 4 })
   // Monaco emits an empty inner `<span></span>` for a blank line.
   assert_eq(
-    @common.render_line_html(frame.lines[1], []),
+    @common.render_line_html(
+      view_model_for(doc).lines().get_view_line_data(2),
+      [],
+    ),
     "<span class=\"view-line-content\"><span></span></span>",
   )
 }

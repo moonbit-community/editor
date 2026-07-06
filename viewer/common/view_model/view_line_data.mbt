@@ -1,20 +1,44 @@
 ///|
-/// Converts a rendered view-model line to line-renderer data. Decorations
-/// arrive as per-line `@view_layout.LineDecoration`s already produced by the
-/// faithful chain (`ViewModelDecoration` → per-line `InlineDecoration` →
+/// One view line's data, Monaco's `ViewLineData` (`common/viewModel.ts`) —
+/// field-for-field. The view↔model coordinate mapping and injected-text
+/// identity queries live on the `CoordinatesConverter` and
+/// `ViewModel::injected_text_index_at`, not on the line data.
+pub(all) struct ViewLineData {
+  /// The content at this view line.
+  content : String
+  /// Does this line continue with a wrapped line?
+  continues_with_wrapped_line : Bool
+  /// The minimum allowed column at this view line.
+  min_column : Int
+  /// The maximum allowed column at this view line.
+  max_column : Int
+  /// The visible column at the start of the line (after the fauxIndent).
+  start_visible_column : Int
+  /// The tokens at this view line.
+  tokens : &@tokens.IViewLineTokens
+  /// Additional inline decorations for this line (the injected-text /
+  /// inlay-hint classes, Monaco's `SingleLineInlineDecoration[]`).
+  inline_decorations : Array[@view_layout.InlineDecoration]
+}
+
+///|
+/// Converts view-line data to line-renderer data. Decorations arrive as
+/// per-line `@view_layout.LineDecoration`s already produced by the faithful
+/// chain (`ViewModelDecoration` → per-line `InlineDecoration` →
 /// `LineDecoration`, see `line_decorations_for_line`).
-pub fn view_line_rendering_data_from_render_line(
-  line : RenderLine,
+pub fn view_line_rendering_data_from_view_line_data(
+  line : ViewLineData,
   line_decorations? : Array[@view_layout.LineDecoration] = [],
+  tab_size? : Int = 2,
 ) -> @view_layout.ViewLineRenderingData {
   {
-    min_column: 1,
-    max_column: line.text.length() + 1,
-    content: line.text,
-    continues_with_wrapped_line: false,
-    contains_rtl: @base_common.contains_rtl(line.text),
-    is_basic_ascii: is_basic_ascii(line.text),
-    tokens: line_parts_from_render_line(line),
+    min_column: line.min_column,
+    max_column: line.max_column,
+    content: line.content,
+    continues_with_wrapped_line: line.continues_with_wrapped_line,
+    contains_rtl: @base_common.contains_rtl(line.content),
+    is_basic_ascii: is_basic_ascii(line.content),
+    tokens: line_parts_from_view_line_data(line),
     // The offset-based mirror of the line decorations (write-only for the
     // renderer; participates in the render-input equality diff).
     inline_decorations: line_decorations.map(decoration => {
@@ -24,20 +48,20 @@ pub fn view_line_rendering_data_from_render_line(
         decoration_type=decoration.decoration_type,
       )
     }),
-    tab_size: 2,
-    start_visible_column: 0,
+    tab_size,
+    start_visible_column: line.start_visible_column,
     text_direction: LTR,
     has_variable_fonts: false,
   }
 }
 
 ///|
-/// Builds full line-renderer input from a rendered view-model line and its
-/// per-line decorations. The line's own injected-text (inlay hint) inline
-/// decorations are always merged in — callers pass only the model-decoration
-/// spans (the viewport path in `line_decorations_for_line` produces both).
-pub fn render_line_input_from_render_line(
-  line : RenderLine,
+/// Builds full line-renderer input from view-line data and its per-line
+/// decorations. The line's own injected-text (inlay hint) inline decorations
+/// are always merged in — callers pass only the model-decoration spans (the
+/// viewport path in `line_decorations_for_line` produces both).
+pub fn render_line_input_from_view_line_data(
+  line : ViewLineData,
   line_decorations? : Array[@view_layout.LineDecoration] = [],
   space_width? : Double = 7.2,
   render_whitespace? : @view_layout.RenderWhitespace = None,
@@ -45,7 +69,7 @@ pub fn render_line_input_from_render_line(
   vertical_scrollbar_size? : Double = 0.0,
 ) -> @view_layout.RenderLineInput {
   let merged = line_decorations.copy()
-  for injected in line.injected_inline_decorations {
+  for injected in line.inline_decorations {
     merged.push(
       LineDecoration(
         injected.range.start + 1,
@@ -55,7 +79,7 @@ pub fn render_line_input_from_render_line(
     )
   }
   @view_layout.RenderLineInput::from_view_line(
-    view_line_rendering_data_from_render_line(line, line_decorations=merged),
+    view_line_rendering_data_from_view_line_data(line, line_decorations=merged),
     line_decorations=merged,
     space_width~,
     render_whitespace~,
@@ -65,8 +89,8 @@ pub fn render_line_input_from_render_line(
 }
 
 ///|
-fn line_parts_from_render_line(
-  line : RenderLine,
+fn line_parts_from_view_line_data(
+  line : ViewLineData,
 ) -> Array[@view_layout.LinePart] {
   // Monaco's `renderViewLine` token loop: one `LinePart` per token, ending at
   // the token's exclusive offset with its `mtk<colorId>` class. Zero-length
@@ -88,13 +112,13 @@ fn line_parts_from_render_line(
     }
     start = end
   }
-  if parts.length() == 0 && line.text.length() > 0 {
+  if parts.length() == 0 && line.content.length() > 0 {
     // Defensive fallback: a non-empty line always tokenizes to at least one
     // non-empty token, so this covers only degenerate input. Style it with the
     // default-foreground class (`mtk1`), never a `tok-*`.
     parts.push(
       LinePart(
-        line.text.length(),
+        line.content.length(),
         @tokens.TokenMetadata::get_class_name_from_metadata(
           @tokens.LineTokens::default_token_metadata(),
         ),
@@ -173,10 +197,10 @@ fn to_view_layout_decoration_type(
 pub fn line_decorations_for_line(
   collection : ViewDecorationsCollection,
   viewport_start_line_number : Int,
-  line : RenderLine,
+  line_number : Int,
+  line : ViewLineData,
 ) -> Array[@view_layout.LineDecoration] {
-  let line_number = line.line_number
-  let max_column = line.text.length() + 1
+  let max_column = line.content.length() + 1
   let index = line_number - viewport_start_line_number
   let result = match collection.inline_decorations.get(index) {
     Some(inline_decorations) =>
@@ -186,7 +210,7 @@ pub fn line_decorations_for_line(
   // Injected-text inline decorations (inlay-hint classes) render through the
   // same renderer merge as model inline decorations; project each onto a
   // one-based `LineDecoration` over the injected run's view columns.
-  for injected in line.injected_inline_decorations {
+  for injected in line.inline_decorations {
     result.push(
       LineDecoration(
         injected.range.start + 1,

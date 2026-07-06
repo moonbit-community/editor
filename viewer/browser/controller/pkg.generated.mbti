@@ -3,7 +3,6 @@ package "moonbit-community/editor/viewer/browser/controller"
 
 import {
   "moonbit-community/editor/viewer/common/view_layout",
-  "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
 }
@@ -54,9 +53,8 @@ pub(all) struct PointerHandlerHelper {
   view_layout : () -> @view_layout.ViewLayout
   apply_scroll : (@view_layout.ScrollChange?) -> Unit
   line_height : () -> Double
-  frame : () -> @view_model.RenderFrame?
-  view_metrics : (@view_model.RenderFrame) -> @moonbit-community/editor/viewer/common.ViewMetrics
-  refine_content_target : (@view_model.RenderFrame, Double, Double, @moonbit-community/editor/viewer/common.MouseTarget) -> @moonbit-community/editor/viewer/common.MouseTarget
+  hit_test : (Double, Double) -> @moonbit-community/editor/viewer/common.MouseTarget?
+  refine_content_target : (Double, Double, @moonbit-community/editor/viewer/common.MouseTarget) -> @moonbit-community/editor/viewer/common.MouseTarget
   dispatch_mouse : (MouseDispatch) -> Unit
   notify_mouse_moved : (@moonbit-community/editor/viewer/common.MouseTarget) -> Unit
   notify_mouse_down : (@moonbit-community/editor/viewer/common.MouseTarget) -> Unit

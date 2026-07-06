@@ -59,18 +59,13 @@ pub(all) struct PointerHandlerHelper {
   apply_scroll : (@view_layout.ScrollChange?) -> Unit
   /// The editor line height in pixels.
   line_height : () -> Double
-  /// The current render frame, if a model is rendered.
-  frame : () -> @view_model.RenderFrame?
-  /// The hit-test geometry for a frame (Monaco's `ViewContext`-derived metrics).
-  view_metrics : (@view_model.RenderFrame) -> @viewer_common.ViewMetrics
+  /// Hit-tests view-relative coordinates against the rendered view model
+  /// (Monaco's `MouseTargetFactory.createMouseTarget` over the view model);
+  /// `None` when no model is rendered.
+  hit_test : (Double, Double) -> @viewer_common.MouseTarget?
   /// Refines a content target with DOM caret hit-testing (Monaco's
-  /// `viewHelper.getPositionFromDOMInfo`): frame, client x/y, fallback target.
-  refine_content_target : (
-    @view_model.RenderFrame,
-    Double,
-    Double,
-    @viewer_common.MouseTarget,
-  ) -> @viewer_common.MouseTarget
+  /// `viewHelper.getPositionFromDOMInfo`): client x/y, fallback target.
+  refine_content_target : (Double, Double, @viewer_common.MouseTarget) -> @viewer_common.MouseTarget
   /// Dispatch a resolved pointer intent (Monaco's `ViewController.dispatchMouse`).
   dispatch_mouse : (MouseDispatch) -> Unit
   /// Report a hover-relevant mouse move (Monaco's `ViewUserInputEvents` move).
@@ -130,16 +125,10 @@ pub fn MouseHandler::handle_mouse_move(
   self : MouseHandler,
   mouse : @rdom.MouseEvent,
 ) -> Unit {
-  guard (self.helper.frame)() is Some(frame) else { return }
   let rect = self.helper.view_root.get_bounding_client_rect()
   let x = mouse.get_client_x().to_double() - rect.get_left()
   let y = mouse.get_client_y().to_double() - rect.get_top()
-  let target = @viewer_common.hit_test(
-    frame,
-    (self.helper.view_metrics)(frame),
-    x,
-    y,
-  )
+  guard (self.helper.hit_test)(x, y) is Some(target) else { return }
   (self.helper.notify_mouse_moved)(target)
 }
 
@@ -152,19 +141,13 @@ pub fn MouseHandler::handle_mouse_down(
   if mouse.get_button() != 0 {
     return
   }
-  guard (self.helper.frame)() is Some(frame) else { return }
   focus_element(self.helper.view_root)
   let client_x = mouse.get_client_x().to_double()
   let client_y = mouse.get_client_y().to_double()
   let rect = self.helper.view_root.get_bounding_client_rect()
   let x = client_x - rect.get_left()
   let y = client_y - rect.get_top()
-  let target = @viewer_common.hit_test(
-    frame,
-    (self.helper.view_metrics)(frame),
-    x,
-    y,
-  )
+  guard (self.helper.hit_test)(x, y) is Some(target) else { return }
   // Monaco emits the mouse-down event after its selection handling
   // (`mouseHandler.ts:349` `emitMouseDown`); the viewer notifies before the
   // early return below so non-selecting targets (the decorations lane) still
@@ -176,7 +159,7 @@ pub fn MouseHandler::handle_mouse_down(
   let resolved : (@base_common.Position, Bool)? = match target.kind {
     ContentText | ContentEmpty => {
       let refined = (self.helper.refine_content_target)(
-        frame, client_x, client_y, target,
+        client_x, client_y, target,
       )
       Some((Position(refined.line_number, refined.column + 1), false))
     }
@@ -218,16 +201,10 @@ pub fn MouseHandler::handle_mouse_up(
   if mouse.get_button() != 0 {
     return
   }
-  guard (self.helper.frame)() is Some(frame) else { return }
   let rect = self.helper.view_root.get_bounding_client_rect()
   let x = mouse.get_client_x().to_double() - rect.get_left()
   let y = mouse.get_client_y().to_double() - rect.get_top()
-  let target = @viewer_common.hit_test(
-    frame,
-    (self.helper.view_metrics)(frame),
-    x,
-    y,
-  )
+  guard (self.helper.hit_test)(x, y) is Some(target) else { return }
   (self.helper.notify_mouse_up)(target)
 }
 
@@ -290,19 +267,13 @@ fn MouseHandler::extend_selection_at(
   client_y : Double,
 ) -> Unit {
   guard self.selection_dragging else { return }
-  guard (self.helper.frame)() is Some(frame) else { return }
   let rect = self.helper.view_root.get_bounding_client_rect()
   let x = client_x - rect.get_left()
   let y = client_y - rect.get_top()
-  let target = @viewer_common.hit_test(
-    frame,
-    (self.helper.view_metrics)(frame),
-    x,
-    y,
-  )
+  guard (self.helper.hit_test)(x, y) is Some(target) else { return }
   let refined = match target.kind {
     ContentText | ContentEmpty =>
-      (self.helper.refine_content_target)(frame, client_x, client_y, target)
+      (self.helper.refine_content_target)(client_x, client_y, target)
     _ => target
   }
   match drag_view_position(refined) {

@@ -277,7 +277,6 @@ impl ViewPart for @view_lines.ViewLines with fn prepare_render(self, context) {
   // Per-line decorations arrive inside the viewport data (built lazily from
   // the model's decoration storage by `ViewModelDecorations`).
   self.prepared = Some({
-    frame: context.input.frame,
     viewport: context.viewport,
     generation: context.input.generation,
     decorations_generation: context.input.decorations_generation,
@@ -293,7 +292,6 @@ impl ViewPart for @view_lines.ViewLines with fn render(self, context) {
   match self.prepared {
     Some(prepared) => {
       self.render_text(
-        prepared.frame,
         prepared.viewport,
         prepared.generation,
         prepared.decorations_generation,
@@ -372,17 +370,12 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
   }
   // `ctx.getDecorationsInViewport()` (`linesDecorations.ts:73`): the same
   // cached viewport decoration collection the content overlays read.
-  let decorations = match context.input.view_model {
-    Some(view_model) =>
-      view_model
-      .decorations()
-      .get_decorations_viewport_data(context.viewport.visible_range).decorations
-    None => []
-  }
+  let decorations = context.input.view_model
+    .decorations()
+    .get_decorations_viewport_data(context.viewport.visible_range).decorations
   self.prepared = Some({
-    frame: context.input.frame,
     viewport: context.viewport,
-    view_model: context.input.view_model,
+    view_model: Some(context.input.view_model),
     generation: context.input.generation,
     decorations,
     line_decorations_width: context.input.line_decorations_width,
@@ -411,11 +404,7 @@ impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
         // `_contentLeft`, the margin width (cLH:227).
         context.gutter_width,
       )
-      self.render_line_numbers(
-        prepared.frame,
-        prepared.viewport,
-        prepared.generation,
-      )
+      self.render_line_numbers(prepared.viewport, prepared.generation)
       // `layoutInfo.decorationsLeft`: the lane sits between the line numbers
       // and the content. Deviation vs. Monaco: the viewer keeps line numbers
       // in the line-number band, so that layer is constrained to
@@ -647,18 +636,13 @@ impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
   // `ctx.getDecorationsInViewport()` (`decorations.ts:68`): the viewport's
   // decoration collection (a cache hit — the viewport data resolved the same
   // range).
-  let decorations = match context.input.view_model {
-    Some(view_model) =>
-      view_model
-      .decorations()
-      .get_decorations_viewport_data(context.viewport.visible_range).decorations
-    None => []
-  }
+  let decorations = context.input.view_model
+    .decorations()
+    .get_decorations_viewport_data(context.viewport.visible_range).decorations
   self.prepared = Some({
-    frame: context.input.frame,
     viewport: context.viewport,
     selection_view_range: context.input.selection_view_range,
-    view_model: context.input.view_model,
+    view_model: Some(context.input.view_model),
     decorations,
     space_width: context.input.space_width,
     editor_has_focus: context.input.editor_has_focus,
@@ -699,7 +683,6 @@ impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) 
         },
       )
       self.render_selection_overlays(
-        prepared.frame,
         prepared.viewport,
         prepared.selection_view_range,
         prepared.view_model,
@@ -789,7 +772,8 @@ impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
   context,
 ) {
   self.prepared = Some({
-    frame: context.input.frame,
+    window: context.input.window,
+    language_id: context.input.view_model.language_id(),
     layout: context.input.layout,
     hover_view: context.input.hover_state.widget_view(),
     on_hover_measured: context.input.on_hover_measured,
@@ -809,11 +793,12 @@ impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) 
         handle_hover_mousedown: context.view_context.handle_hover_mousedown,
         hook_scrollable_scrollbar_input: context.view_context.hook_scrollable_scrollbar_input,
         handle_hover_keydown: context.view_context.handle_hover_keydown,
-        model_position_to_offset: context.view_context.model_position_to_offset,
+        model_position_to_view_position: context.view_context.model_position_to_view_position,
       }
       self.render_hover_widget(
         host,
-        prepared.frame,
+        prepared.window,
+        prepared.language_id,
         prepared.layout,
         prepared.hover_view,
         prepared.on_hover_measured,

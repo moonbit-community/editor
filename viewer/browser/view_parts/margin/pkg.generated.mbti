@@ -2,7 +2,6 @@
 package "moonbit-community/editor/viewer/browser/view_parts/margin"
 
 import {
-  "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
@@ -18,7 +17,6 @@ import {
 pub(all) struct MarginViewOverlays {
   margin : @dom.Element
   current_line : @dom.Element
-  folding : @dom.Element
   lines_decorations : @dom.Element
   line_numbers : @dom.Element
   line_number_nodes : Array[@dom.Element]
@@ -30,7 +28,6 @@ pub(all) struct MarginViewOverlays {
 pub fn MarginViewOverlays::dom(Self) -> @dom.Element
 pub fn MarginViewOverlays::new(@dom.Document) -> Self
 pub fn MarginViewOverlays::render_current_line_margin(Self, @view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Unit
-pub fn MarginViewOverlays::render_folding_markers(Self, @view_layout.ViewportData, @view_model.ViewModel?, Array[@language.FoldingRange], Array[@language.FoldingRange], on_toggle_fold~ : (Int) -> Unit) -> Unit
 pub fn MarginViewOverlays::render_line_numbers(Self, @view_model.RenderFrame, @view_layout.ViewportData, Int) -> Unit
 pub fn MarginViewOverlays::render_lines_decorations(Self, @view_layout.ViewportData, Array[Array[String]], decorations_left~ : Double, decorations_width~ : Double) -> Unit
 
@@ -38,9 +35,6 @@ pub(all) struct MarginViewOverlaysPrepared {
   frame : @view_model.RenderFrame
   viewport : @view_layout.ViewportData
   view_model : @view_model.ViewModel?
-  folding_ranges : Array[@language.FoldingRange]
-  folded_ranges : Array[@language.FoldingRange]
-  on_toggle_fold : (Int) -> Unit
   generation : Int
   decorations : Array[@inline_decorations.ViewModelDecoration[@model.Decoration]]
   line_decorations_width : Double

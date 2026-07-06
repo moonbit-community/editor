@@ -3,7 +3,6 @@ package "moonbit-community/editor/viewer/browser/view"
 
 import {
   "moonbit-community/editor/base/common",
-  "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/editor_scrollbar",
   "moonbit-community/editor/viewer/browser/view_parts/margin",
@@ -71,10 +70,7 @@ pub(all) struct ViewRenderInput {
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   selection_view_range : @common.Range?
   view_selection : @view_model.Selection?
-  folding_ranges : Array[@language.FoldingRange]
-  folded_ranges : Array[@language.FoldingRange]
   hover_state : @hover.HoverController
-  on_toggle_fold : (Int) -> Unit
   on_hover_measured : (Bool, Double, Double) -> Unit
   generation : Int
   decorations_generation : Int

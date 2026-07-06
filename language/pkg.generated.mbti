@@ -47,19 +47,6 @@ pub(all) struct DocumentSymbol {
   range : @common.Range
 } derive(@debug.Debug)
 
-pub(all) struct FoldingRange {
-  start_line_number : Int
-  end_line_number : Int
-  kind : FoldingRangeKind?
-} derive(Eq, @debug.Debug)
-pub fn FoldingRange::FoldingRange(Int, Int, kind? : FoldingRangeKind) -> Self
-
-pub(all) enum FoldingRangeKind {
-  Comment
-  Imports
-  Region
-} derive(Eq, @debug.Debug)
-
 pub(all) struct Hover {
   range : @common.Range
   contents : Array[HoverContent]
@@ -128,10 +115,6 @@ pub(open) trait DiagnosticsProvider {
 
 pub(open) trait DocumentSymbolProvider {
   async fn provide_document_symbols(Self, @model.TextModel, CancellationToken) -> Array[DocumentSymbol]
-}
-
-pub(open) trait FoldingRangeProvider {
-  async fn provide_folding_ranges(Self, @model.TextModel, CancellationToken) -> Array[FoldingRange]
 }
 
 pub(open) trait HoverProvider {

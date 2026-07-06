@@ -155,4 +155,3 @@ pub fn MarginViewOverlays::render_line_numbers(
   }
   self.line_number_window = target
 }
-

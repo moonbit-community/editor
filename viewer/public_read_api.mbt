@@ -295,9 +295,7 @@ fn Viewer::model_to_view_position(
   guard (self.text_model, self.view_model) is (Some(model), Some(view_model)) else {
     return None
   }
-  let model_position = model.validate_position(
-    Position(line_number, column),
-  )
+  let model_position = model.validate_position(Position(line_number, column))
   Some(
     view_model
     .coordinates_converter()
@@ -419,9 +417,7 @@ pub fn Viewer::get_offset_for_column(
     is (Some(model), Some(view_model), Some(view)) else {
     return -1.0
   }
-  let model_position = model.validate_position(
-    Position(line_number, column),
-  )
+  let model_position = model.validate_position(Position(line_number, column))
   let view_position = view_model
     .coordinates_converter()
     .model_position_to_view_position(model_position)

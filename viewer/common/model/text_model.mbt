@@ -1,16 +1,30 @@
 ///|
 /// Readonly editor model identity plus immutable text snapshot, plus the
-/// Monaco decoration storage cluster (`decorations_state` — the one mutable
-/// part; see `text_model_decorations.mbt`).
-pub(all) struct TextModel {
+/// Monaco decoration fields (the one mutable part; the decoration API lives
+/// in `text_model_decorations.mbt`).
+pub struct TextModel {
   uri : @base_common.Uri
   display_name : String
   language_id : String
   version : Int
   revision : String
   snapshot : TextSnapshot
-  decorations_state : DecorationsState
-} derive(Debug)
+  // #region Decorations (textModel.ts:285-290; `_onDidChangeDecorations` :225)
+  instance_id : String
+  mut delta_decoration_call_cnt : Int
+  mut last_decoration_id : Int
+  decorations : Map[String, IntervalNode]
+  decorations_tree : DecorationsTrees
+  on_did_change_decorations : DidChangeDecorationsEmitter
+  // #endregion
+}
+
+///|
+pub impl Debug for TextModel with fn to_repr(self) {
+  to_repr(
+    "<TextModel \{self.uri.to_string()} v\{self.version} decorations: \{self.decorations.length()}>",
+  )
+}
 
 ///|
 /// Builds a readonly text model.
@@ -27,7 +41,6 @@ pub fn TextModel::TextModel(
   version : Int,
   revision : String,
   text : String,
-  log_service? : @log.LogService = @log.LogService::new(),
 ) -> TextModel {
   let display_name = if display_name == "" {
     uri.to_string()
@@ -44,7 +57,12 @@ pub fn TextModel::TextModel(
     version,
     revision,
     snapshot,
-    decorations_state: DecorationsState::new(log_service),
+    instance_id: next_model_instance_id(),
+    delta_decoration_call_cnt: 0,
+    last_decoration_id: 0,
+    decorations: {},
+    decorations_tree: DecorationsTrees::new(),
+    on_did_change_decorations: DidChangeDecorationsEmitter::new(),
   }
 }
 

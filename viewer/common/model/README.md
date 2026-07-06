@@ -38,7 +38,7 @@ arrive as whole new models).
 | `version` | `_versionId` / `getVersionId()` (:737) | PORTED |
 | `snapshot` | `_buffer : ITextBuffer` | PORTED — public (Monaco: private) so headless paths (`TokenizedDocument`, guides) can read the buffer without a model |
 | `language_id` | `TokenizationTextModelPart._languageId`, read via `getLanguageId()` (:2085) | RELOCATED — no tokenization part; `get_language_id()` gives the Monaco read shape |
-| `decorations_state` | decoration field cluster (:285-290) | PORTED — ledgered in `text_model_decorations.mbt` |
+| `instance_id`, `delta_decoration_call_cnt`, `last_decoration_id`, `decorations`, `decorations_tree`, `on_did_change_decorations` | `_instanceId` / `_deltaDecorationCallCnt` / `_lastDecorationId` / `_decorations` / `_decorationsTree` (:285-290), `_onDidChangeDecorations` (:225) | PORTED — API ledgered in `text_model_decorations.mbt` |
 | `display_name`, `revision` | — | EXTRA — host metadata the provider payloads carry (`languages.mbt`, editor events, shell workbench); Monaco hosts get these from workbench services the viewer doesn't have |
 | — | `id` (`'$model' + counter`) | N-A — model identity is uri+version by design (`same_identity_and_version`) |
 | — | edit/undo/attach/dispose/options/too-large fields | N-A — readonly, no lifecycle |

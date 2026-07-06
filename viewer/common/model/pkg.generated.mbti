@@ -3,7 +3,6 @@ package "moonbit-community/editor/viewer/common/model"
 
 import {
   "moonbit-community/editor/base/common",
-  "moonbit-community/editor/platform/log",
   "moonbitlang/core/debug",
 }
 
@@ -68,24 +67,14 @@ pub(all) struct DecorationsChangeAccessor {
   mut delta_decorations : (Array[String], Array[DeltaDecoration]) -> Array[String]
 }
 
-type DecorationsChangedEmitter
-
-pub struct DecorationsState {
-  instance_id : String
-  log_service : @log.LogService
-  mut last_decoration_id : Int
-  decorations : Map[String, IntervalNode]
-  decorations_tree : DecorationsTrees
-  mut delta_decoration_call_cnt : Int
-  on_did_change : DecorationsChangedEmitter
-}
-
 type DecorationsTrees
 
 pub(all) struct DeltaDecoration {
   range : @common.Range
   options : Decoration
 } derive(@debug.Debug)
+
+type DidChangeDecorationsEmitter
 
 pub struct GuidesTextModelPart {
   text_model : TextSnapshot
@@ -195,16 +184,21 @@ pub(all) enum PositionAffinity {
   RightOfInjectedText
 } derive(Eq, @debug.Debug)
 
-pub(all) struct TextModel {
+pub struct TextModel {
   uri : @common.Uri
   display_name : String
   language_id : String
   version : Int
   revision : String
   snapshot : TextSnapshot
-  decorations_state : DecorationsState
-} derive(@debug.Debug)
-pub fn TextModel::TextModel(@common.Uri, String, String, Int, String, String, log_service? : @log.LogService) -> Self
+  instance_id : String
+  mut delta_decoration_call_cnt : Int
+  mut last_decoration_id : Int
+  decorations : Map[String, IntervalNode]
+  decorations_tree : DecorationsTrees
+  on_did_change_decorations : DidChangeDecorationsEmitter
+}
+pub fn TextModel::TextModel(@common.Uri, String, String, Int, String, String) -> Self
 pub fn[T] TextModel::change_decorations(Self, (DecorationsChangeAccessor) -> T, owner_id? : Int) -> T
 pub fn TextModel::delta_decorations(Self, Array[String], Array[DeltaDecoration], owner_id? : Int) -> Array[String]
 pub fn TextModel::get_all_decorations(Self, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool) -> Array[ModelDecoration]
@@ -246,6 +240,7 @@ pub fn TextModel::snapshot(Self) -> TextSnapshot
 pub fn TextModel::validate_position(Self, @common.Position) -> @common.Position
 pub fn TextModel::validate_range(Self, @common.Range) -> @common.Range
 pub fn TextModel::validate_range_relaxed(Self, @common.Range) -> @common.Range
+pub impl @debug.Debug for TextModel
 
 pub(all) struct TextSnapshot {
   text : String

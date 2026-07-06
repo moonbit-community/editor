@@ -171,7 +171,7 @@ pub fn TextModel::get_word_until_position(
     Some(word_at_position) =>
       {
         word: word_at_position.word[0:position.column -
-          word_at_position.start_column].to_owned(),
+        word_at_position.start_column].to_owned(),
         start_column: word_at_position.start_column,
         end_column: position.column,
       }

@@ -2,7 +2,8 @@
 //
 // Source: vscode/src/vs/editor/common/model/textModel.ts
 // (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971):
-// fields `:285-290`, event plumbing `:225-226,:1624-1667`, public API
+// fields `:285-290` (carried on `TextModel`, `text_model.mbt`), event
+// plumbing `:225-226,:1624-1667`, public API
 // `:1669-1886`, private impls `:1890-2062`, `DecorationsTrees` `:2196-2353`,
 // node predicates `:2180-2190`, `DidChangeDecorationsEmitter` `:2586-2666`.
 //
@@ -48,12 +49,12 @@
 
 ///|
 /// `DecorationsTrees::accept_replace` (conformance-only, Deviation 1) and
-/// `DecorationsChangedEmitter::fire` (event-contract member with no product
+/// `DidChangeDecorationsEmitter::fire` (event-contract member with no product
 /// caller) are consumed only by `text_model_decorations_wbtest.mbt`; anchor
 /// them so the non-test build keeps them (the `moon explain 1` idiom).
 let _test_only_member_anchor : Unit = {
   ignore(DecorationsTrees::accept_replace)
-  ignore(DecorationsChangedEmitter::fire)
+  ignore(DidChangeDecorationsEmitter::fire)
 }
 
 ///|
@@ -75,11 +76,12 @@ fn next_model_instance_id() -> String {
 // #region DidChangeDecorationsEmitter (textModel.ts:2586-2666)
 
 ///|
-/// `DidChangeDecorationsEmitter`: batches decoration-change notifications into
-/// one event per deferred-emit bracket, accumulating the affects flags.
-/// The injected-text/line-height/font record sets and the `handleBeforeFire`
-/// fan-out are dropped with their out-of-scope features (see file header).
-struct DecorationsChangedEmitter {
+/// `DidChangeDecorationsEmitter` (`textModel.ts:2586`): batches
+/// decoration-change notifications into one event per deferred-emit bracket,
+/// accumulating the affects flags. The injected-text/line-height/font record
+/// sets and the `handleBeforeFire` fan-out are dropped with their
+/// out-of-scope features (see file header).
+struct DidChangeDecorationsEmitter {
   actual : @base_common.Emitter[ModelDecorationsChangedEvent]
   mut deferred_cnt : Int
   mut should_fire_deferred : Bool
@@ -99,7 +101,7 @@ struct DecorationsChangedEmitter {
 }
 
 ///|
-fn DecorationsChangedEmitter::new() -> DecorationsChangedEmitter {
+fn DidChangeDecorationsEmitter::new() -> DidChangeDecorationsEmitter {
   {
     actual: @base_common.Emitter::new(),
     deferred_cnt: 0,
@@ -113,15 +115,15 @@ fn DecorationsChangedEmitter::new() -> DecorationsChangedEmitter {
 }
 
 ///|
-fn DecorationsChangedEmitter::begin_deferred_emit(
-  self : DecorationsChangedEmitter,
+fn DidChangeDecorationsEmitter::begin_deferred_emit(
+  self : DidChangeDecorationsEmitter,
 ) -> Unit {
   self.deferred_cnt += 1
 }
 
 ///|
-fn DecorationsChangedEmitter::end_deferred_emit(
-  self : DecorationsChangedEmitter,
+fn DidChangeDecorationsEmitter::end_deferred_emit(
+  self : DidChangeDecorationsEmitter,
 ) -> Unit {
   self.deferred_cnt -= 1
   if self.deferred_cnt == 0 {
@@ -137,8 +139,8 @@ fn DecorationsChangedEmitter::end_deferred_emit(
 /// `checkAffectedAndFire`: `_affectsLineNumber ||= !!options.lineNumberClassName`
 /// is dropped (field not ported). Truthiness of `overviewRuler?.color` and
 /// `glyphMarginClassName` means a present, non-empty string.
-fn DecorationsChangedEmitter::check_affected_and_fire(
-  self : DecorationsChangedEmitter,
+fn DidChangeDecorationsEmitter::check_affected_and_fire(
+  self : DidChangeDecorationsEmitter,
   options : Decoration,
 ) -> Unit {
   if !self.affects_minimap {
@@ -160,7 +162,9 @@ fn DecorationsChangedEmitter::check_affected_and_fire(
 }
 
 ///|
-fn DecorationsChangedEmitter::fire(self : DecorationsChangedEmitter) -> Unit {
+fn DidChangeDecorationsEmitter::fire(
+  self : DidChangeDecorationsEmitter,
+) -> Unit {
   self.affects_minimap = true
   self.affects_overview_ruler = true
   self.affects_glyph_margin = true
@@ -169,8 +173,8 @@ fn DecorationsChangedEmitter::fire(self : DecorationsChangedEmitter) -> Unit {
 }
 
 ///|
-fn DecorationsChangedEmitter::try_fire(
-  self : DecorationsChangedEmitter,
+fn DidChangeDecorationsEmitter::try_fire(
+  self : DidChangeDecorationsEmitter,
 ) -> Unit {
   if self.deferred_cnt == 0 {
     self.do_fire()
@@ -180,7 +184,9 @@ fn DecorationsChangedEmitter::try_fire(
 }
 
 ///|
-fn DecorationsChangedEmitter::do_fire(self : DecorationsChangedEmitter) -> Unit {
+fn DidChangeDecorationsEmitter::do_fire(
+  self : DidChangeDecorationsEmitter,
+) -> Unit {
   // handleBeforeFire fan-out: N-A (all three arms out of scope)
   let event : ModelDecorationsChangedEvent = {
     affects_minimap: self.affects_minimap,
@@ -289,7 +295,7 @@ fn DecorationsTrees::get_all_in_interval(
   only_margin_decorations : Bool,
 ) -> Array[ModelDecoration] {
   let version_id = host.get_version_id()
-  let result = self.interval_search_impl(
+  let result = self.interval_search(
     start, end, filter_owner_id, filter_out_validation, filter_font_decorations,
     version_id, only_margin_decorations,
   )
@@ -298,7 +304,7 @@ fn DecorationsTrees::get_all_in_interval(
 
 ///|
 /// `_intervalSearch` (`textModel.ts:2240-2245`).
-fn DecorationsTrees::interval_search_impl(
+fn DecorationsTrees::interval_search(
   self : DecorationsTrees,
   start : Int,
   end : Int,
@@ -335,7 +341,7 @@ fn DecorationsTrees::get_all(
   only_margin_decorations : Bool,
 ) -> Array[ModelDecoration] {
   let version_id = host.get_version_id()
-  let result = self.search_impl(
+  let result = self.search(
     filter_owner_id, filter_out_validation, filter_font_decorations, overview_ruler_only,
     version_id, only_margin_decorations,
   )
@@ -380,7 +386,7 @@ fn DecorationsTrees::get_all_injected_text(
 
 ///|
 /// `_search` (`textModel.ts:2308-2326`).
-fn DecorationsTrees::search_impl(
+fn DecorationsTrees::search(
   self : DecorationsTrees,
   filter_owner_id : Int,
   filter_out_validation : Bool,
@@ -464,7 +470,7 @@ fn DecorationsTrees::get_node_range(
 ) -> @base_common.Range {
   let version_id = host.get_version_id()
   if node.cached_version_id != version_id {
-    self.resolve_node_impl(node, version_id)
+    self.resolve_node(node, version_id)
   }
   if node.range is None {
     node.range = Some(
@@ -476,7 +482,7 @@ fn DecorationsTrees::get_node_range(
 
 ///|
 /// `_resolveNode`.
-fn DecorationsTrees::resolve_node_impl(
+fn DecorationsTrees::resolve_node(
   self : DecorationsTrees,
   node : IntervalNode,
   cached_version_id : Int,
@@ -513,52 +519,17 @@ fn DecorationsTrees::accept_replace(
 
 // #endregion
 
-// #region TextModel decoration state (textModel.ts:225-226, 285-290)
-
-///|
-/// The `mut` decoration cluster carried by the readonly `TextModel`:
-/// `_instanceId`/`_lastDecorationId`/`_decorations`/`_decorationsTree`/
-/// `_deltaDecorationCallCnt`/`_onDidChangeDecorations`.
-pub struct DecorationsState {
-  instance_id : String
-  log_service : @log.LogService
-  mut last_decoration_id : Int
-  decorations : Map[String, IntervalNode]
-  decorations_tree : DecorationsTrees
-  mut delta_decoration_call_cnt : Int
-  on_did_change : DecorationsChangedEmitter
-}
-
-///|
-impl Debug for DecorationsState with fn to_repr(self) {
-  to_repr("<decorations: \{self.decorations.length()}>")
-}
-
-///|
-fn DecorationsState::new(log_service : @log.LogService) -> DecorationsState {
-  {
-    instance_id: next_model_instance_id(),
-    log_service,
-    last_decoration_id: 0,
-    decorations: {},
-    decorations_tree: DecorationsTrees::new(),
-    delta_decoration_call_cnt: 0,
-    on_did_change: DecorationsChangedEmitter::new(),
-  }
-}
-
-// #endregion
-
 // #region TextModel decoration API (textModel.ts:1669-2062)
 
 ///|
 /// `onDidChangeDecorations` (`textModel.ts:225-226`): one event per
-/// deferred-emit bracket (sync emitter — Deviation D2).
+/// deferred-emit bracket (sync emitter — Deviation D2). The backing
+/// `_onDidChangeDecorations` emitter is the same-named `TextModel` field.
 pub fn TextModel::on_did_change_decorations(
   self : TextModel,
   listener : (ModelDecorationsChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
-  self.decorations_state.on_did_change.actual.event(listener)
+  self.on_did_change_decorations.actual.event(listener)
 }
 
 ///|
@@ -602,9 +573,9 @@ pub fn[T] TextModel::change_decorations(
   owner_id? : Int = 0,
 ) -> T {
   // _assertNotDisposed: N-A (readonly model)
-  self.decorations_state.on_did_change.begin_deferred_emit()
+  self.on_did_change_decorations.begin_deferred_emit()
   let result = self.change_decorations_impl(owner_id, callback)
-  self.decorations_state.on_did_change.end_deferred_emit()
+  self.on_did_change_decorations.end_deferred_emit()
   result
 }
 
@@ -661,23 +632,24 @@ pub fn TextModel::delta_decorations(
   owner_id? : Int = 0,
 ) -> Array[String] {
   // _assertNotDisposed: N-A (readonly model)
-  let state = self.decorations_state
   if old_decorations.length() == 0 && new_decorations.length() == 0 {
     // nothing to do
     return []
   }
-  state.delta_decoration_call_cnt += 1
-  if state.delta_decoration_call_cnt > 1 {
-    state.log_service.warn(
-      "model.decorations", "Invoking deltaDecorations recursively could lead to leaking decorations.",
+  self.delta_decoration_call_cnt += 1
+  if self.delta_decoration_call_cnt > 1 {
+    // console.warn + onUnexpectedError in the source; println is the js
+    // backend's console.
+    println(
+      "Invoking deltaDecorations recursively could lead to leaking decorations.",
     )
   }
-  state.on_did_change.begin_deferred_emit()
+  self.on_did_change_decorations.begin_deferred_emit()
   let result = self.delta_decorations_impl(
     owner_id, old_decorations, new_decorations,
   )
-  state.on_did_change.end_deferred_emit()
-  state.delta_decoration_call_cnt -= 1
+  self.on_did_change_decorations.end_deferred_emit()
+  self.delta_decoration_call_cnt -= 1
   result
 }
 
@@ -689,11 +661,10 @@ pub fn TextModel::remove_all_decorations_with_owner_id(
   owner_id : Int,
 ) -> Unit {
   // _isDisposed guard: N-A (readonly model)
-  let state = self.decorations_state
-  let nodes = state.decorations_tree.collect_nodes_from_owner(owner_id)
+  let nodes = self.decorations_tree.collect_nodes_from_owner(owner_id)
   for node in nodes {
-    state.decorations_tree.delete(node)
-    state.decorations.remove(node.id)
+    self.decorations_tree.delete(node)
+    self.decorations.remove(node.id)
   }
 }
 
@@ -703,7 +674,7 @@ pub fn TextModel::get_decoration_options(
   self : TextModel,
   decoration_id : String,
 ) -> Decoration? {
-  match self.decorations_state.decorations.get(decoration_id) {
+  match self.decorations.get(decoration_id) {
     Some(node) => node.options
     None => None
   }
@@ -715,9 +686,8 @@ pub fn TextModel::get_decoration_range(
   self : TextModel,
   decoration_id : String,
 ) -> @base_common.Range? {
-  match self.decorations_state.decorations.get(decoration_id) {
-    Some(node) =>
-      Some(self.decorations_state.decorations_tree.get_node_range(self, node))
+  match self.decorations.get(decoration_id) {
+    Some(node) => Some(self.decorations_tree.get_node_range(self, node))
     None => None
   }
 }
@@ -797,7 +767,7 @@ pub fn TextModel::get_overview_ruler_decorations(
   filter_out_validation? : Bool = false,
   filter_font_decorations? : Bool = false,
 ) -> Array[ModelDecoration] {
-  self.decorations_state.decorations_tree.get_all(
+  self.decorations_tree.get_all(
     self, owner_id, filter_out_validation, filter_font_decorations, true, false,
   )
 }
@@ -811,7 +781,7 @@ pub fn TextModel::get_all_decorations(
   filter_out_validation? : Bool = false,
   filter_font_decorations? : Bool = false,
 ) -> Array[ModelDecoration] {
-  self.decorations_state.decorations_tree.get_all(
+  self.decorations_tree.get_all(
     self, owner_id, filter_out_validation, filter_font_decorations, false, false,
   )
 }
@@ -824,7 +794,7 @@ pub fn TextModel::get_injected_text_decorations(
   self : TextModel,
   owner_id? : Int = 0,
 ) -> Array[ModelDecoration] {
-  self.decorations_state.decorations_tree.get_all_injected_text(self, owner_id)
+  self.decorations_tree.get_all_injected_text(self, owner_id)
 }
 
 ///|
@@ -837,7 +807,7 @@ pub fn TextModel::get_injected_text_in_interval(
   end_offset : Int,
   owner_id? : Int = 0,
 ) -> Array[ModelDecoration] {
-  self.decorations_state.decorations_tree.get_injected_text_in_interval(
+  self.decorations_tree.get_injected_text_in_interval(
     self, start_offset, end_offset, owner_id,
   )
 }
@@ -848,9 +818,7 @@ pub fn TextModel::get_all_margin_decorations(
   self : TextModel,
   owner_id? : Int = 0,
 ) -> Array[ModelDecoration] {
-  self.decorations_state.decorations_tree.get_all(
-    self, owner_id, false, false, false, true,
-  )
+  self.decorations_tree.get_all(self, owner_id, false, false, false, true)
 }
 
 ///|
@@ -867,8 +835,11 @@ fn TextModel::get_decorations_in_range_impl(
     filter_range.start_line_number,
     filter_range.start_column,
   )
-  let end_offset = self.snapshot.get_offset_at(filter_range.end_line_number, filter_range.end_column)
-  self.decorations_state.decorations_tree.get_all_in_interval(
+  let end_offset = self.snapshot.get_offset_at(
+    filter_range.end_line_number,
+    filter_range.end_column,
+  )
+  self.decorations_tree.get_all_in_interval(
     self, start_offset, end_offset, filter_owner_id, filter_out_validation, filter_font_decorations,
     only_margin_decorations,
   )
@@ -884,18 +855,20 @@ fn TextModel::change_decoration_impl(
   decoration_id : String,
   range : @base_common.Range,
 ) -> Unit {
-  let state = self.decorations_state
-  guard state.decorations.get(decoration_id) is Some(node) else { return }
+  guard self.decorations.get(decoration_id) is Some(node) else { return }
   let range = self.validate_range_relaxed(range)
   let start_offset = self.snapshot.get_offset_at(
     range.start_line_number,
     range.start_column,
   )
-  let end_offset = self.snapshot.get_offset_at(range.end_line_number, range.end_column)
-  state.decorations_tree.delete(node)
+  let end_offset = self.snapshot.get_offset_at(
+    range.end_line_number,
+    range.end_column,
+  )
+  self.decorations_tree.delete(node)
   node.reset(self.get_version_id(), start_offset, end_offset, Some(range))
-  state.decorations_tree.insert(node)
-  state.on_did_change.check_affected_and_fire(node.options.unwrap())
+  self.decorations_tree.insert(node)
+  self.on_did_change_decorations.check_affected_and_fire(node.options.unwrap())
 }
 
 ///|
@@ -909,18 +882,17 @@ fn TextModel::change_decoration_options_impl(
   decoration_id : String,
   options : Decoration,
 ) -> Unit {
-  let state = self.decorations_state
-  guard state.decorations.get(decoration_id) is Some(node) else { return }
+  guard self.decorations.get(decoration_id) is Some(node) else { return }
   let node_was_in_overview_ruler = is_node_in_overview_ruler(node)
   let node_is_in_overview_ruler = options_in_overview_ruler(options)
-  state.on_did_change.check_affected_and_fire(node.options.unwrap())
-  state.on_did_change.check_affected_and_fire(options)
+  self.on_did_change_decorations.check_affected_and_fire(node.options.unwrap())
+  self.on_did_change_decorations.check_affected_and_fire(options)
   let moved_in_overview_ruler = node_was_in_overview_ruler !=
     node_is_in_overview_ruler
   if moved_in_overview_ruler {
-    state.decorations_tree.delete(node)
+    self.decorations_tree.delete(node)
     node.set_options(options)
-    state.decorations_tree.insert(node)
+    self.decorations_tree.insert(node)
   } else {
     node.set_options(options)
   }
@@ -937,13 +909,12 @@ fn TextModel::delta_decorations_impl(
   new_decorations : Array[DeltaDecoration],
   suppress_events? : Bool = false,
 ) -> Array[String] {
-  let state = self.decorations_state
   let version_id = self.get_version_id()
   let old_decorations_len = old_decorations_ids.length()
   let mut old_decoration_index = 0
   let new_decorations_len = new_decorations.length()
   let mut new_decoration_index = 0
-  state.on_did_change.begin_deferred_emit()
+  self.on_did_change_decorations.begin_deferred_emit()
   let result : Array[String] = Array::make(new_decorations_len, "")
   while old_decoration_index < old_decorations_len ||
         new_decoration_index < new_decorations_len {
@@ -953,16 +924,18 @@ fn TextModel::delta_decorations_impl(
       for ;; {
         let decoration_id = old_decorations_ids[old_decoration_index]
         old_decoration_index += 1
-        node = state.decorations.get(decoration_id)
+        node = self.decorations.get(decoration_id)
         if node is Some(_) || old_decoration_index >= old_decorations_len {
           break
         }
       }
       // (2) remove the node from the tree (if it exists)
       if node is Some(found) {
-        state.decorations_tree.delete(found)
+        self.decorations_tree.delete(found)
         if !suppress_events {
-          state.on_did_change.check_affected_and_fire(found.options.unwrap())
+          self.on_did_change_decorations.check_affected_and_fire(
+            found.options.unwrap(),
+          )
         }
       }
     }
@@ -971,10 +944,10 @@ fn TextModel::delta_decorations_impl(
       let live_node = match node {
         Some(found) => found
         None => {
-          state.last_decoration_id += 1
-          let decoration_id = "\{state.instance_id};\{state.last_decoration_id}"
+          self.last_decoration_id += 1
+          let decoration_id = "\{self.instance_id};\{self.last_decoration_id}"
           let created = IntervalNode::new(decoration_id, 0, 0)
-          state.decorations[decoration_id] = created
+          self.decorations[decoration_id] = created
           created
         }
       }
@@ -985,24 +958,27 @@ fn TextModel::delta_decorations_impl(
       // normalized (Deviation D5)
       let options = new_decoration.options
       let start_offset = self.snapshot.get_offset_at(
-    range.start_line_number,
-    range.start_column,
-  )
-      let end_offset = self.snapshot.get_offset_at(range.end_line_number, range.end_column)
+        range.start_line_number,
+        range.start_column,
+      )
+      let end_offset = self.snapshot.get_offset_at(
+        range.end_line_number,
+        range.end_column,
+      )
       live_node.owner_id = owner_id
       live_node.reset(version_id, start_offset, end_offset, Some(range))
       live_node.set_options(options)
       if !suppress_events {
-        state.on_did_change.check_affected_and_fire(options)
+        self.on_did_change_decorations.check_affected_and_fire(options)
       }
-      state.decorations_tree.insert(live_node)
+      self.decorations_tree.insert(live_node)
       result[new_decoration_index] = live_node.id
       new_decoration_index += 1
     } else if node is Some(found) {
-      state.decorations.remove(found.id)
+      self.decorations.remove(found.id)
     }
   }
-  state.on_did_change.end_deferred_emit()
+  self.on_did_change_decorations.end_deferred_emit()
   result
 }
 

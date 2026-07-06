@@ -211,7 +211,10 @@ fn selection_normalized_range(
   snapshot : @model.TextSnapshot,
 ) -> @base_common.OffsetRange {
   OffsetRange(
-    snapshot.get_offset_at(selection.start().line_number, selection.start().column),
+    snapshot.get_offset_at(
+      selection.start().line_number,
+      selection.start().column,
+    ),
     snapshot.get_offset_at(selection.end().line_number, selection.end().column),
   )
 }

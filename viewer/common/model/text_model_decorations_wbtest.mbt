@@ -69,13 +69,13 @@ test "issue #41492 (adapted): collapseOnReplaceEdit via accept_replace" {
       },
     ])[0]
   // applyEdits(range (1,1)-(1,14), 51 chars) at the offset level:
-  model.decorations_state.decorations_tree.accept_replace(0, 13, 51, false)
+  model.decorations_tree.accept_replace(0, 13, 51, false)
   assert_range_opt_eq(model.get_decoration_range(id), Some(Range(1, 1, 1, 1)))
 }
 
 ///|
 test "emitter batches one event per deferred bracket; fire() sets all flags" {
-  let emitter = DecorationsChangedEmitter::new()
+  let emitter = DidChangeDecorationsEmitter::new()
   let events : Array[ModelDecorationsChangedEvent] = []
   let _ = emitter.actual.event(e => events.push(e))
   emitter.begin_deferred_emit()
@@ -144,17 +144,10 @@ test "delta semantics: unknown old ids skipped, node reuse keeps the id" {
 }
 
 ///|
-test "re-entrant deltaDecorations warns through the log service" {
-  let memory_logger = @log.MemoryLogger::new()
-  let model = TextModel(
-    @base_common.Uri::memory("wb.mbt"),
-    "",
-    "moonbit",
-    1,
-    "",
-    "alpha",
-    log_service=@log.LogService::new(level=Warning, logger=memory_logger),
-  )
+test "re-entrant deltaDecorations still lands both decorations" {
+  // The recursion warning itself goes to the console (as in the source);
+  // asserted behavior is that the nested call is not lost.
+  let model = wb_model("alpha")
   let re_entered = Ref(false)
   let _ = model.on_did_change_decorations(_e => {
     if !re_entered.val {
@@ -167,12 +160,6 @@ test "re-entrant deltaDecorations warns through the log service" {
   let _ = model.delta_decorations([], [
     { range: Range(1, 1, 1, 2), options: wb_options("outer") },
   ])
-  let warnings = memory_logger.entries().filter(entry => entry.level is Warning)
-  assert_eq(warnings.length(), 1)
-  assert_eq(
-    warnings[0].message,
-    "Invoking deltaDecorations recursively could lead to leaking decorations.",
-  )
   assert_eq(model.get_all_decorations().length(), 2)
 }
 

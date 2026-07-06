@@ -368,4 +368,3 @@ test "injected text can sit at line boundaries" {
   assert_eq(line.injected_text_index_at_column(0), 0)
   assert_eq(line.injected_text_index_at_column(3), 1)
 }
-

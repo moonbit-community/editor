@@ -149,7 +149,11 @@ pub fn TextSnapshot::slice(
   range : @base_common.OffsetRange,
 ) -> String {
   let start = @base_common.clamp_int(range.start, 0, self.get_length())
-  let end = @base_common.clamp_int(range.end_exclusive, start, self.get_length())
+  let end = @base_common.clamp_int(
+    range.end_exclusive,
+    start,
+    self.get_length(),
+  )
   self.text[start:end].to_owned()
 }
 

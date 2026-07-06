@@ -39,7 +39,7 @@ pub(all) enum VerticalRevealType {
 /// The returned value is unclamped (it may be negative, e.g. a `NearTop` reveal
 /// near the document top); `Scrollable::set_position` clamps it into the valid
 /// scroll range, mirroring Monaco's `validateScrollPosition` step.
-pub fn ViewLayout::compute_scroll_top_to_reveal(
+pub fn ViewLayout::compute_scroll_top_to_reveal_range(
   self : ViewLayout,
   start_line : Int,
   end_line : Int,

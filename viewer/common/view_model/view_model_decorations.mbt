@@ -19,14 +19,14 @@
 
 ///|
 /// The production instantiation of the faithful inline-decorations middle
-/// layer: options are the real `@model.Decoration`.
+/// layer: options are the real `@model.ModelDecorationOptions`.
 pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[
-  @model.Decoration,
+  @model.ModelDecorationOptions,
 ]
 
 ///|
 pub type ViewDecorationsCollection = @inline_decorations.ViewDecorationsCollection[
-  @model.Decoration,
+  @model.ModelDecorationOptions,
 ]
 
 ///|
@@ -81,7 +81,7 @@ pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConver
 /// frames) — every query then yields an empty collection.
 pub struct ViewModelDecorations {
   priv computer : @inline_decorations.InlineModelDecorationsComputer[
-    @model.Decoration,
+    @model.ModelDecorationOptions,
   ]?
   priv mut cached_model_decorations_resolver : ViewDecorationsCollection?
   priv mut cached_model_decorations_resolver_view_range : @base_common.Range?
@@ -99,7 +99,7 @@ pub fn ViewModelDecorations::new(
 ) -> ViewModelDecorations {
   let computer = match model {
     Some(model) => {
-      let context : @inline_decorations.InlineModelContext[@model.Decoration] = {
+      let context : @inline_decorations.InlineModelContext[@model.ModelDecorationOptions] = {
         get_model_decorations: (
           view_range,
           only_minimap_decorations,
@@ -251,7 +251,7 @@ fn view_model_lines_get_decorations_in_range(
   filter_out_validation : Bool,
   only_minimap_decorations : Bool,
   only_margin_decorations : Bool,
-) -> Array[@inline_decorations.ModelDecoration[@model.Decoration]] {
+) -> Array[@inline_decorations.ModelDecoration[@model.ModelDecorationOptions]] {
   // onlyMinimapDecorations only forwards to the out-of-scope bracket
   // provider in the source's model.getDecorationsInRange.
   ignore(only_minimap_decorations)
@@ -347,7 +347,7 @@ fn view_model_lines_get_decorations_in_range(
   // Eliminate duplicate decorations that might have intersected our visible
   // ranges multiple times
   let final_result : Array[
-    @inline_decorations.ModelDecoration[@model.Decoration],
+    @inline_decorations.ModelDecoration[@model.ModelDecorationOptions],
   ] = []
   let mut last_dec_id = ""
   for dec in result {
@@ -386,7 +386,7 @@ fn lexicographic_id_compare(left : String, right : String) -> Int {
 ///|
 fn to_inline_model_decorations(
   decorations : Array[@model.ModelDecoration],
-) -> Array[@inline_decorations.ModelDecoration[@model.Decoration]] {
+) -> Array[@inline_decorations.ModelDecoration[@model.ModelDecorationOptions]] {
   decorations.map(dec => {
     id: dec.id,
     owner_id: dec.owner_id,

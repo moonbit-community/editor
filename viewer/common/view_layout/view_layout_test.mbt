@@ -113,10 +113,10 @@ test "lines layout answers offsets and lines for uniform heights" {
   assert_eq(lines.line_at_vertical_offset(17.9), 1)
   assert_eq(lines.line_at_vertical_offset(18.0), 2)
   assert_eq(lines.line_at_vertical_offset(99999.0), 100)
-  assert_eq(lines.content_height(), 1800.0)
+  assert_eq(lines.get_content_height(), 1800.0)
   let empty = @view_layout.ViewLayout::new(line_height=18)
   assert_eq(empty.line_at_vertical_offset(50.0), 1)
-  assert_eq(empty.content_height(), 0.0)
+  assert_eq(empty.get_content_height(), 0.0)
 }
 
 ///|
@@ -132,14 +132,14 @@ test "lines layout accounts for view zone displacement" {
   assert_eq(lines.vertical_offset_for_line(2), 54.0)
   assert_eq(lines.vertical_offset_for_line(4), 108.0)
   assert_eq(lines.vertical_offset_for_line(6), 144.0)
-  assert_eq(lines.content_height(), 144.0)
+  assert_eq(lines.get_content_height(), 144.0)
   assert_eq(lines.line_at_vertical_offset(18.0), 2)
   assert_eq(lines.line_at_vertical_offset(53.0), 2)
   assert_eq(lines.line_at_vertical_offset(54.0), 2)
   assert_eq(lines.line_at_vertical_offset(90.0), 4)
   lines.set_view_zones([]) |> ignore
   assert_eq(lines.vertical_offset_for_line(6), 90.0)
-  assert_eq(lines.content_height(), 90.0)
+  assert_eq(lines.get_content_height(), 90.0)
 }
 
 ///|
@@ -152,7 +152,7 @@ test "lines layout supports top and bottom view zones" {
   |> ignore
   assert_eq(lines.vertical_offset_for_line(1), 10.0)
   assert_eq(lines.vertical_offset_for_line(4), 84.0)
-  assert_eq(lines.content_height(), 84.0)
+  assert_eq(lines.get_content_height(), 84.0)
   debug_inspect(
     lines.view_zone_viewport_data({ start: 1, end: 4 }),
     content=(

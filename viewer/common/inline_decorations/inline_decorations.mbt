@@ -15,7 +15,7 @@
 ///     implemented by the view model's converter (in `view_model`, the type's
 ///     package) and by the suite's `IdentityCoordinatesConverter` double.
 ///   * `InlineDecorationOptions` — the `IModelDecorationOptions` reads
-///     (type parameter `O`); implemented for the real `@model.Decoration`
+///     (type parameter `O`); implemented for the real `@model.ModelDecorationOptions`
 ///     here and by the suite's options double.
 ///
 /// DEVIATIONS (recorded; none exercised by the suite):
@@ -23,7 +23,7 @@
 ///     `hideInCommentTokens`/`hideInStringTokens` paths need a tokenization seam
 ///     this readonly port does not carry, and no `inlineDecorations.test.ts` case
 ///     sets those flags.
-///   * `@model.Decoration` carries no `beforeContentClassName`/
+///   * `@model.ModelDecorationOptions` carries no `beforeContentClassName`/
 ///     `afterContentClassName`/`affectsFont` (out of decoration-plan scope), so
 ///     its trait impl answers `None`/`false` — the Before/After/variable-font
 ///     arms are live code exercised by the suite's doubles only.
@@ -75,42 +75,42 @@ pub impl InlineDecorationsModel for @model.TextModel with fn get_line_max_column
 ///|
 /// The real options tier. `before/afterContentClassName` and `affectsFont`
 /// are not ported model fields (see header deviation), hence constant.
-pub impl InlineDecorationOptions for @model.Decoration with fn inline_class_name(
+pub impl InlineDecorationOptions for @model.ModelDecorationOptions with fn inline_class_name(
   self,
 ) {
   self.inline_class_name
 }
 
 ///|
-pub impl InlineDecorationOptions for @model.Decoration with fn inline_class_name_affects_letter_spacing(
+pub impl InlineDecorationOptions for @model.ModelDecorationOptions with fn inline_class_name_affects_letter_spacing(
   self,
 ) {
   self.inline_class_name_affects_letter_spacing
 }
 
 ///|
-pub impl InlineDecorationOptions for @model.Decoration with fn before_content_class_name(
+pub impl InlineDecorationOptions for @model.ModelDecorationOptions with fn before_content_class_name(
   _self,
 ) {
   None
 }
 
 ///|
-pub impl InlineDecorationOptions for @model.Decoration with fn after_content_class_name(
+pub impl InlineDecorationOptions for @model.ModelDecorationOptions with fn after_content_class_name(
   _self,
 ) {
   None
 }
 
 ///|
-pub impl InlineDecorationOptions for @model.Decoration with fn affects_font(
+pub impl InlineDecorationOptions for @model.ModelDecorationOptions with fn affects_font(
   _self,
 ) {
   false
 }
 
 ///|
-pub impl InlineDecorationOptions for @model.Decoration with fn is_whole_line(
+pub impl InlineDecorationOptions for @model.ModelDecorationOptions with fn is_whole_line(
   self,
 ) {
   self.is_whole_line

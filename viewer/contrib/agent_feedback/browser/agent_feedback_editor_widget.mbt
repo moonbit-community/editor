@@ -22,19 +22,19 @@
 /// glue can find the instance in its list.
 pub(all) struct AgentFeedbackEditorWidgetHost {
   /// Remove the comment (`_removeComment` → `removeFeedback`).
-  on_remove : (@agent_feedback.EditorComment) -> Unit
+  on_remove : (@agent_feedback.SessionEditorComment) -> Unit
   /// Accept a `Created` comment (`_acceptFeedback`).
-  on_accept : (@agent_feedback.EditorComment) -> Unit
+  on_accept : (@agent_feedback.SessionEditorComment) -> Unit
   /// Save an edited body (`_saveEdit` → `updateFeedback`).
-  on_edit : (@agent_feedback.EditorComment, String) -> Unit
+  on_edit : (@agent_feedback.SessionEditorComment, String) -> Unit
   /// Append a reply (`_saveReply` → `addReply`).
-  on_reply : (@agent_feedback.EditorComment, String) -> Unit
+  on_reply : (@agent_feedback.SessionEditorComment, String) -> Unit
   /// Item click: the glue anchors navigation on the comment and reveals its
   /// range (the widget already marked the item focused).
-  on_click : (@agent_feedback.EditorComment) -> Unit
+  on_click : (@agent_feedback.SessionEditorComment) -> Unit
   /// Item hover: highlight the comment's range in the editor
   /// (`_highlightRange`).
-  on_hover : (@agent_feedback.EditorComment) -> Unit
+  on_hover : (@agent_feedback.SessionEditorComment) -> Unit
   /// Hover ended: clear the highlight.
   on_hover_end : () -> Unit
   /// The widget expanded; the glue collapses the file's other widgets.
@@ -48,7 +48,7 @@ pub(all) struct AgentFeedbackEditorWidgetHost {
 pub struct AgentFeedbackEditorWidget {
   host : AgentFeedbackEditorWidgetHost
   id : String
-  comments : Array[@agent_feedback.EditorComment]
+  comments : Array[@agent_feedback.SessionEditorComment]
   /// The contribution-owned reply drafts (comment id → draft text), shared
   /// across rebuilds (`IReplyDraftState.drafts`).
   drafts : Map[String, String]
@@ -71,7 +71,7 @@ pub struct AgentFeedbackEditorWidget {
 pub fn AgentFeedbackEditorWidget::new(
   host : AgentFeedbackEditorWidgetHost,
   id : String,
-  comments : Array[@agent_feedback.EditorComment],
+  comments : Array[@agent_feedback.SessionEditorComment],
   drafts : Map[String, String],
   focused_reply? : String,
 ) -> AgentFeedbackEditorWidget {
@@ -245,7 +245,7 @@ fn AgentFeedbackEditorWidget::build_items(
 ///|
 fn AgentFeedbackEditorWidget::build_item(
   self : AgentFeedbackEditorWidget,
-  comment : @agent_feedback.EditorComment,
+  comment : @agent_feedback.SessionEditorComment,
 ) -> @rdom.Element {
   let document = @rdom.document()
   let item = document.create_element("div")
@@ -344,7 +344,7 @@ fn AgentFeedbackEditorWidget::build_item(
 /// `_renderReplies`.
 fn AgentFeedbackEditorWidget::build_replies(
   self : AgentFeedbackEditorWidget,
-  comment : @agent_feedback.EditorComment,
+  comment : @agent_feedback.SessionEditorComment,
 ) -> @rdom.Element {
   ignore(self)
   let document = @rdom.document()
@@ -366,7 +366,7 @@ fn AgentFeedbackEditorWidget::build_replies(
 /// `_renderActionButtons`: the Accept / Delete bar under a `Created` item.
 fn AgentFeedbackEditorWidget::build_action_buttons(
   self : AgentFeedbackEditorWidget,
-  comment : @agent_feedback.EditorComment,
+  comment : @agent_feedback.SessionEditorComment,
 ) -> @rdom.Element {
   let document = @rdom.document()
   let bar = document.create_element("div")
@@ -404,7 +404,7 @@ fn AgentFeedbackEditorWidget::build_action_buttons(
 /// Escape restores.
 fn AgentFeedbackEditorWidget::start_editing(
   self : AgentFeedbackEditorWidget,
-  comment : @agent_feedback.EditorComment,
+  comment : @agent_feedback.SessionEditorComment,
   text_container : @rdom.Element,
 ) -> Unit {
   let document = @rdom.document()
@@ -459,7 +459,7 @@ fn AgentFeedbackEditorWidget::start_editing(
 /// rebuilds restore the composer).
 fn AgentFeedbackEditorWidget::start_reply(
   self : AgentFeedbackEditorWidget,
-  comment : @agent_feedback.EditorComment,
+  comment : @agent_feedback.SessionEditorComment,
 ) -> Unit {
   match self.reply_textareas.get(comment.id) {
     Some(existing) => {
@@ -478,7 +478,7 @@ fn AgentFeedbackEditorWidget::start_reply(
 /// The reply composer body shared by user opens and draft restores.
 fn AgentFeedbackEditorWidget::open_reply_composer(
   self : AgentFeedbackEditorWidget,
-  comment : @agent_feedback.EditorComment,
+  comment : @agent_feedback.SessionEditorComment,
   item : @rdom.Element,
   initial_text : String,
   focus~ : Bool,

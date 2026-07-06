@@ -142,7 +142,7 @@ pub struct Viewer {
   /// horizontal scroll is deferred until the target view line renders (its
   /// client rects are unknown until then). Flushed in `flush_render`, cancelled
   /// when an unrelated scroll moves out of the reveal's band (`reveal.mbt`).
-  priv mut pending_horizontal_reveal : PendingHorizontalReveal?
+  priv mut horizontal_reveal_request : HorizontalRevealRangeRequest?
   /// The inlay-hint contrib's decoration ids (Monaco
   /// `InlayHintsController`'s per-editor decoration collection): rewritten
   /// by `sync_inlay_hint_decorations` when the provider result changes;
@@ -165,7 +165,7 @@ priv struct PendingRendered {
 /// the 1-based view line/columns to measure once rendered, plus the scroll-top
 /// band (`[start_scroll_top, stop_scroll_top]`) outside which an intervening
 /// vertical scroll cancels the request.
-priv struct PendingHorizontalReveal {
+priv struct HorizontalRevealRangeRequest {
   view_line_number : Int
   start_column : Int
   end_column : Int
@@ -343,7 +343,7 @@ pub fn Viewer::Viewer(
     mouse_handler: None,
     last_mouse_buttons: 0,
     editor_has_focus: false,
-    pending_horizontal_reveal: None,
+    horizontal_reveal_request: None,
     inlay_hint_decoration_ids: [],
     contributions: {},
   }
@@ -835,7 +835,7 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.inlay_hint_decoration_ids = []
   self.view_zones = []
   self.view_layout.set_view_zones([]) |> ignore
-  self.pending_horizontal_reveal = None
+  self.horizontal_reveal_request = None
   self.apply_scroll_change(
     self.view_layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
   )

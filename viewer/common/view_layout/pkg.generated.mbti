@@ -320,17 +320,19 @@ pub struct ViewLayout {
 }
 pub fn ViewLayout::completely_visible_line_range(Self) -> (Int, Int)
 pub fn ViewLayout::compute_scroll_left_to_reveal(Self, Array[(Double, Double)], vertical_scrollbar_width~ : Double) -> Double?
-pub fn ViewLayout::compute_scroll_top_to_reveal(Self, Int, Int, VerticalRevealType) -> Double
-pub fn ViewLayout::content_height(Self) -> Double
+pub fn ViewLayout::compute_scroll_top_to_reveal_range(Self, Int, Int, VerticalRevealType) -> Double
 pub fn ViewLayout::dimensions(Self) -> ScrollDimensions
+pub fn ViewLayout::get_content_height(Self) -> Double
 pub fn ViewLayout::get_content_width(Self) -> Double
 pub fn ViewLayout::get_current_scroll_left(Self) -> Double
 pub fn ViewLayout::get_current_scroll_top(Self) -> Double
+pub fn ViewLayout::get_line_height_for_line_number(Self, Int) -> Int
 pub fn ViewLayout::get_scroll_height(Self) -> Double
 pub fn ViewLayout::get_scroll_width(Self) -> Double
+pub fn ViewLayout::get_vertical_offset_after_line_number(Self, Int, include_view_zones? : Bool) -> Double
+pub fn ViewLayout::get_vertical_offset_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn ViewLayout::line_at_vertical_offset(Self, Double) -> Int
 pub fn ViewLayout::line_count(Self) -> Int
-pub fn ViewLayout::line_height_for_line_number(Self, Int) -> Int
 pub fn ViewLayout::new(line_height~ : Int, line_count? : Int) -> Self
 pub fn ViewLayout::position(Self) -> ScrollPosition
 pub fn ViewLayout::relative_vertical_offset_for_line(Self, LineWindow, Int) -> Int
@@ -340,9 +342,7 @@ pub fn ViewLayout::set_content_width(Self, Double) -> ScrollChange?
 pub fn ViewLayout::set_line_count(Self, Int) -> ScrollChange?
 pub fn ViewLayout::set_view_zones(Self, Array[ViewZone]) -> ScrollChange?
 pub fn ViewLayout::set_viewport_size(Self, width~ : Double, height~ : Double) -> ScrollChange?
-pub fn ViewLayout::vertical_offset_after_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn ViewLayout::vertical_offset_for_line(Self, Int) -> Double
-pub fn ViewLayout::vertical_offset_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn ViewLayout::view_zone_vertical_offset(Self, Int) -> Double
 pub fn ViewLayout::view_zone_viewport_data(Self, LineWindow) -> Array[ViewZoneViewportData]
 pub fn ViewLayout::view_zones(Self) -> Array[ViewZone]

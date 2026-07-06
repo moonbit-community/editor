@@ -114,7 +114,7 @@ fn Viewer::dom_refine_content_target(
     hit.part_length(),
   )
   let column0 = column1 - 1
-  let kind : @viewer_common.MouseTargetKind = if column0 < line.text.length() {
+  let kind : @viewer_common.MouseTargetType = if column0 < line.text.length() {
     ContentText
   } else {
     ContentEmpty

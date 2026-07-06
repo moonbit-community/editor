@@ -3,13 +3,13 @@
 /// Monaco's `MouseTargetType` for the readonly viewer's needs.
 /// `GutterLineDecorations` is the line-decorations lane between the line
 /// numbers and the content (Monaco's `GUTTER_LINE_DECORATIONS`).
-pub(all) enum MouseTargetKind {
+pub(all) enum MouseTargetType {
   GutterLineNumbers
   GutterLineDecorations
   ContentText
   ContentEmpty
   BelowContent
-  Outside
+  OutsideEditor
 } derive(Eq, Debug)
 
 ///|
@@ -25,7 +25,7 @@ pub(all) enum MouseTargetKind {
 /// viewer's glyph-margin terms are `0`). Fields that do not apply to the kind
 /// are `0`/`-1`.
 pub(all) struct MouseTarget {
-  kind : MouseTargetKind
+  kind : MouseTargetType
   line_number : Int
   column : Int
   token_index : Int
@@ -56,7 +56,7 @@ pub(all) struct ViewMetrics {
 ///|
 fn outside_target() -> MouseTarget {
   {
-    kind: Outside,
+    kind: OutsideEditor,
     line_number: 0,
     column: 0,
     token_index: -1,
@@ -69,7 +69,7 @@ fn outside_target() -> MouseTarget {
 /// Resolves a mouse position to a typed editor target using only render
 /// data and metrics; no DOM access. View zones consume their own vertical
 /// band (widgets over them stop event propagation, so a zone hit resolves
-/// to `Outside`) and shift every line below their anchor.
+/// to `OutsideEditor`) and shift every line below their anchor.
 pub fn hit_test(
   frame : @view_model.RenderFrame,
   metrics : ViewMetrics,

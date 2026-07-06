@@ -118,7 +118,7 @@ impl @inline_decorations.CoordinatesConverter for IdentityCoordinatesConverter w
 }
 
 ///|
-/// Decoration render options double — the subset of `IModelDecorationOptions`
+/// ModelDecorationOptions render options double — the subset of `IModelDecorationOptions`
 /// the inline-decoration computer reads.
 priv struct ModelDecorationOptions {
   // description/className are accepted by the ctor for Monaco's options shape

@@ -104,12 +104,12 @@ test "remove_feedback drops the item and a navigation anchor pointing at it" {
   let resource = uri("memory://session/a.mbt")
   let item = service.add_feedback(resource, Range(4, 1, 4, 8), "typo")
   let keep = service.add_feedback(resource, Range(9, 1, 9, 8), "keep")
-  service.set_navigation_anchor(resource, Some(to_editor_comment_id(item.id)))
+  service.set_navigation_anchor(resource, Some(to_session_editor_comment_id(item.id)))
   service.remove_feedback(resource, item.id)
   assert_eq(service.get_feedback(resource).map(i => i.id).join(","), keep.id)
   let bearing = service.get_navigation_bearing(resource, [
-    to_editor_comment_id(item.id),
-    to_editor_comment_id(keep.id),
+    to_session_editor_comment_id(item.id),
+    to_session_editor_comment_id(keep.id),
   ])
   assert_eq(bearing.active_idx, -1)
   // Removing the last item empties the store for the resource.

@@ -572,13 +572,13 @@ pub fn HoverController::measured(
 /// range under the visible hover, used directly.
 pub fn HoverController::highlight_decorations(
   self : HoverController,
-) -> Array[@model.DeltaDecoration] {
+) -> Array[@model.ModelDeltaDecoration] {
   match self.view {
     Some(hover) =>
       [
         {
           range: hover.range,
-          options: Decoration(
+          options: ModelDecorationOptions(
             "hoverHighlight",
             description="content-hover-highlight",
           ),

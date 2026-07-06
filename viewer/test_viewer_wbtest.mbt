@@ -210,7 +210,7 @@ test "render frame windows to the visible range, not the whole document" {
 }
 
 ///|
-/// Decoration plan Phase 5 headless proof: `delta_decorations` from a host
+/// ModelDecorationOptions plan Phase 5 headless proof: `delta_decorations` from a host
 /// makes decorations queryable through the public API and carries them into
 /// the render inputs (the viewport's line-span chain and the
 /// DecorationsOverlay's viewport collection), including the
@@ -229,11 +229,11 @@ test "host delta_decorations flows through query API and render inputs" {
   let ids = viewer.delta_decorations([], [
     {
       range: Range(1, 1, 1, 6),
-      options: Decoration("myHighlight", description="host"),
+      options: ModelDecorationOptions("myHighlight", description="host"),
     },
     {
       range: Range(2, 1, 2, 3),
-      options: Decoration(
+      options: ModelDecorationOptions(
         "",
         inline_class_name="host-inline",
         description="host",
@@ -282,12 +282,12 @@ test "decoration queries are scoped by editor id like Monaco" {
   viewer.set_model(Some(model))
   // Model-level decoration (ownerId 0): visible to the scoped query.
   let _ = model.delta_decorations([], [
-    { range: Range(1, 1, 1, 3), options: Decoration("model-level") },
+    { range: Range(1, 1, 1, 3), options: ModelDecorationOptions("model-level") },
   ])
   // Foreign editor's decoration: filtered out.
   let _ = model.delta_decorations(
     [],
-    [{ range: Range(1, 4, 1, 6), options: Decoration("foreign") }],
+    [{ range: Range(1, 4, 1, 6), options: ModelDecorationOptions("foreign") }],
     owner_id=viewer.editor_id + 1000,
   )
   let names = viewer.get_line_decorations(1).map(d => d.options.class_name)

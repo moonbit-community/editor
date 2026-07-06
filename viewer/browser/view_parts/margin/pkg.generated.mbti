@@ -36,7 +36,7 @@ pub(all) struct MarginViewOverlaysPrepared {
   viewport : @view_layout.ViewportData
   view_model : @view_model.ViewModel?
   generation : Int
-  decorations : Array[@inline_decorations.ViewModelDecoration[@model.Decoration]]
+  decorations : Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]]
   line_decorations_width : Double
   cursor_view_line : Int?
   selection_is_empty : Bool

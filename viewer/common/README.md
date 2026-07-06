@@ -7,7 +7,7 @@ code with no better-focused `viewer/common/*` subpackage yet:
   `render_line_class` over the view-line renderer in
   `viewer/common/view_layout`.
 - `mouse_target.mbt`: the DOM-free mouse hit-testing value types and algorithm
-  (`MouseTargetKind`, `MouseTarget`, `ViewMetrics`, `hit_test`), resolved
+  (`MouseTargetType`, `MouseTarget`, `ViewMetrics`, `hit_test`), resolved
   against render frames plus view-zone layout data. A `MouseTarget` carries
   the hit line's `token_index` into its `IViewLineTokens` (Monaco's
   `LineTokens.findTokenIndexAtOffset`), not a per-line span index. These stay

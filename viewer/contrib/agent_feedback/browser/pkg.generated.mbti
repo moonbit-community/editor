@@ -15,7 +15,7 @@ pub let input_max_width_editor_fraction : Double
 pub struct AgentFeedbackEditorWidget {
   host : AgentFeedbackEditorWidgetHost
   id : String
-  comments : Array[@agent_feedback.EditorComment]
+  comments : Array[@agent_feedback.SessionEditorComment]
   drafts : Map[String, String]
   root : @dom.Element
   header : @dom.Element
@@ -42,18 +42,18 @@ pub fn AgentFeedbackEditorWidget::mark_disposed(Self) -> Unit
 pub fn AgentFeedbackEditorWidget::measured_header_height(Self) -> Double
 pub fn AgentFeedbackEditorWidget::measured_height(Self) -> Double
 pub fn AgentFeedbackEditorWidget::measured_width(Self) -> Double
-pub fn AgentFeedbackEditorWidget::new(AgentFeedbackEditorWidgetHost, String, Array[@agent_feedback.EditorComment], Map[String, String], focused_reply? : String) -> Self
+pub fn AgentFeedbackEditorWidget::new(AgentFeedbackEditorWidgetHost, String, Array[@agent_feedback.SessionEditorComment], Map[String, String], focused_reply? : String) -> Self
 pub fn AgentFeedbackEditorWidget::set_anchor_line(Self, Int) -> Unit
 pub fn AgentFeedbackEditorWidget::set_position(Self, Double, Double) -> Unit
 pub fn AgentFeedbackEditorWidget::widget_id(Self) -> String
 
 pub(all) struct AgentFeedbackEditorWidgetHost {
-  on_remove : (@agent_feedback.EditorComment) -> Unit
-  on_accept : (@agent_feedback.EditorComment) -> Unit
-  on_edit : (@agent_feedback.EditorComment, String) -> Unit
-  on_reply : (@agent_feedback.EditorComment, String) -> Unit
-  on_click : (@agent_feedback.EditorComment) -> Unit
-  on_hover : (@agent_feedback.EditorComment) -> Unit
+  on_remove : (@agent_feedback.SessionEditorComment) -> Unit
+  on_accept : (@agent_feedback.SessionEditorComment) -> Unit
+  on_edit : (@agent_feedback.SessionEditorComment, String) -> Unit
+  on_reply : (@agent_feedback.SessionEditorComment, String) -> Unit
+  on_click : (@agent_feedback.SessionEditorComment) -> Unit
+  on_hover : (@agent_feedback.SessionEditorComment) -> Unit
   on_hover_end : () -> Unit
   on_did_expand : (String) -> Unit
   on_layout : (String) -> Unit

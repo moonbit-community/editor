@@ -9,7 +9,7 @@
 //
 // Deviations (plan `monaco-decoration-system-port.md`):
 // - D5 (options interning): `register`/`createDynamic`/`_normalizeOptions`
-//   collapse into the `Decoration::Decoration` constructor (in the source
+//   collapse into the `ModelDecorationOptions::ModelDecorationOptions` constructor (in the source
 //   both statics are the identical `new ModelDecorationOptions(options)`,
 //   and `_normalizeOptions` is an `instanceof` test that has no analogue
 //   with a single nominal options type).
@@ -134,7 +134,7 @@ fn DidChangeDecorationsEmitter::end_deferred_emit(
 /// `glyphMarginClassName` means a present, non-empty string.
 fn DidChangeDecorationsEmitter::check_affected_and_fire(
   self : DidChangeDecorationsEmitter,
-  options : Decoration,
+  options : ModelDecorationOptions,
 ) -> Unit {
   if !self.affects_minimap {
     self.affects_minimap = options.minimap is Some(_)
@@ -198,7 +198,7 @@ fn DidChangeDecorationsEmitter::do_fire(
 
 // #endregion
 
-// #region Decoration node predicates (textModel.ts:2180-2190)
+// #region ModelDecorationOptions node predicates (textModel.ts:2180-2190)
 
 ///|
 /// `isNodeInOverviewRuler` (`textModel.ts:2180-2182`).
@@ -207,7 +207,7 @@ fn is_node_in_overview_ruler(node : IntervalNode) -> Bool {
 }
 
 ///|
-fn options_in_overview_ruler(options : Decoration) -> Bool {
+fn options_in_overview_ruler(options : ModelDecorationOptions) -> Bool {
   options.overview_ruler is Some(ruler) &&
   ruler.color is Some(color) &&
   color != ""
@@ -222,7 +222,7 @@ fn is_node_injected_text(node : IntervalNode) -> Bool {
 }
 
 ///|
-fn options_is_injected_text(options : Decoration) -> Bool {
+fn options_is_injected_text(options : ModelDecorationOptions) -> Bool {
   options.before is Some(_) || options.after is Some(_)
 }
 
@@ -546,12 +546,12 @@ pub fn TextModel::get_range_at(
 /// The `IModelDecorationsChangeAccessor` handed to `change_decorations`
 /// callbacks (`textModel.ts:1681-1701`). Fields are invalidated after the
 /// callback returns, like the source's `invalidFunc` swap.
-pub(all) struct DecorationsChangeAccessor {
-  mut add_decoration : (@base_common.Range, Decoration) -> String
+pub(all) struct ModelDecorationsChangeAccessor {
+  mut add_decoration : (@base_common.Range, ModelDecorationOptions) -> String
   mut change_decoration : (String, @base_common.Range) -> Unit
-  mut change_decoration_options : (String, Decoration) -> Unit
+  mut change_decoration_options : (String, ModelDecorationOptions) -> Unit
   mut remove_decoration : (String) -> Unit
-  mut delta_decorations : (Array[String], Array[DeltaDecoration]) -> Array[
+  mut delta_decorations : (Array[String], Array[ModelDeltaDecoration]) -> Array[
     String,
   ]
 }
@@ -561,7 +561,7 @@ pub(all) struct DecorationsChangeAccessor {
 /// change accessor inside one deferred-emit bracket.
 pub fn[T] TextModel::change_decorations(
   self : TextModel,
-  callback : (DecorationsChangeAccessor) -> T,
+  callback : (ModelDecorationsChangeAccessor) -> T,
   owner_id? : Int = 0,
 ) -> T {
   // _assertNotDisposed: N-A (readonly model)
@@ -576,9 +576,9 @@ pub fn[T] TextModel::change_decorations(
 fn[T] TextModel::change_decorations_impl(
   self : TextModel,
   owner_id : Int,
-  callback : (DecorationsChangeAccessor) -> T,
+  callback : (ModelDecorationsChangeAccessor) -> T,
 ) -> T {
-  let accessor : DecorationsChangeAccessor = {
+  let accessor : ModelDecorationsChangeAccessor = {
     add_decoration: (range, options) => {
       self.delta_decorations_impl(owner_id, [], [{ range, options }])[0]
     },
@@ -620,7 +620,7 @@ fn[T] TextModel::change_decorations_impl(
 pub fn TextModel::delta_decorations(
   self : TextModel,
   old_decorations : Array[String],
-  new_decorations : Array[DeltaDecoration],
+  new_decorations : Array[ModelDeltaDecoration],
   owner_id? : Int = 0,
 ) -> Array[String] {
   // _assertNotDisposed: N-A (readonly model)
@@ -665,7 +665,7 @@ pub fn TextModel::remove_all_decorations_with_owner_id(
 pub fn TextModel::get_decoration_options(
   self : TextModel,
   decoration_id : String,
-) -> Decoration? {
+) -> ModelDecorationOptions? {
   match self.decorations.get(decoration_id) {
     Some(node) => node.options
     None => None
@@ -872,7 +872,7 @@ fn TextModel::change_decoration_options_impl(
   self : TextModel,
   _owner_id : Int,
   decoration_id : String,
-  options : Decoration,
+  options : ModelDecorationOptions,
 ) -> Unit {
   guard self.decorations.get(decoration_id) is Some(node) else { return }
   let node_was_in_overview_ruler = is_node_in_overview_ruler(node)
@@ -898,7 +898,7 @@ fn TextModel::delta_decorations_impl(
   self : TextModel,
   owner_id : Int,
   old_decorations_ids : Array[String],
-  new_decorations : Array[DeltaDecoration],
+  new_decorations : Array[ModelDeltaDecoration],
   suppress_events? : Bool = false,
 ) -> Array[String] {
   let version_id = self.get_version_id()
@@ -946,7 +946,7 @@ fn TextModel::delta_decorations_impl(
       // (4) initialize node
       let new_decoration = new_decorations[new_decoration_index]
       let range = self.validate_range_relaxed(new_decoration.range)
-      // _normalizeOptions: the single Decoration constructor already
+      // _normalizeOptions: the single ModelDecorationOptions constructor already
       // normalized (Deviation D5)
       let options = new_decoration.options
       let start_offset = self.snapshot.get_offset_at(

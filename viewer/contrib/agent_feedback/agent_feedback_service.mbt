@@ -70,7 +70,7 @@ pub struct AgentFeedbackService {
   did_add_reply : @base_common.Emitter[AgentFeedbackReplyAddedEvent]
   did_submit_feedback : @base_common.Emitter[AgentFeedbackSubmittedEvent]
   items_by_resource : Map[String, Array[AgentFeedback]]
-  /// resource key → the item id (an `EditorComment.id`) the prev/next
+  /// resource key → the item id (an `SessionEditorComment.id`) the prev/next
   /// navigation is anchored on — upstream's `_navigationAnchorBySession`.
   navigation_anchor_by_resource : Map[String, String]
   /// Resources whose editors offer the feedback affordances — the viewer's
@@ -257,7 +257,7 @@ pub fn AgentFeedbackService::set_feedback_items(
 
 ///|
 /// All stored items for a resource, including resolved ones (the editor view
-/// filters those out — `get_editor_comments`). The array is live service
+/// filters those out — `get_session_editor_comments`). The array is live service
 /// state; mutations go through the service methods so events fire.
 pub fn AgentFeedbackService::get_feedback(
   self : AgentFeedbackService,
@@ -337,7 +337,7 @@ pub fn AgentFeedbackService::accept_feedback(
 ///|
 /// `removeFeedback`: deletes an item; a navigation anchor pointing at it is
 /// cleared (upstream checks the raw id; the viewer also checks the prefixed
-/// `EditorComment` id the widget anchors with).
+/// `SessionEditorComment` id the widget anchors with).
 pub fn AgentFeedbackService::remove_feedback(
   self : AgentFeedbackService,
   resource : @base_common.Uri,
@@ -346,7 +346,7 @@ pub fn AgentFeedbackService::remove_feedback(
   let key = resource.to_string()
   match self.navigation_anchor_by_resource.get(key) {
     Some(anchor) =>
-      if anchor == feedback_id || anchor == to_editor_comment_id(feedback_id) {
+      if anchor == feedback_id || anchor == to_session_editor_comment_id(feedback_id) {
         self.navigation_anchor_by_resource.remove(key)
       }
     None => ()
@@ -474,7 +474,7 @@ fn AgentFeedbackService::feedback_by_id(
 
 ///|
 /// `setNavigationAnchor`: pins prev/next navigation on an item (by the id the
-/// caller navigates over — the editor widgets use `EditorComment.id`) or
+/// caller navigates over — the editor widgets use `SessionEditorComment.id`) or
 /// clears it with `None`. Fires the navigation event either way.
 pub fn AgentFeedbackService::set_navigation_anchor(
   self : AgentFeedbackService,

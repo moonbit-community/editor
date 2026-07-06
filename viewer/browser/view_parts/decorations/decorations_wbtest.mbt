@@ -17,7 +17,7 @@ fn overlay_dec(
 ) -> @view_model.ViewModelDecoration {
   {
     range,
-    options: Decoration(
+    options: ModelDecorationOptions(
       class_name,
       z_index~,
       is_whole_line~,

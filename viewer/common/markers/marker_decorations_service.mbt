@@ -232,12 +232,12 @@ let minimap_info : String = "minimap.infoHighlight"
 /// overrides. An empty `class_name` is Monaco's `className: undefined`
 /// (Hint+Deprecated); the range travels separately as the
 /// `IModelDeltaDecoration` pair (`create_decoration_range`).
-pub fn create_decoration_option(marker : Marker) -> @model.Decoration {
+pub fn create_decoration_option(marker : Marker) -> @model.ModelDecorationOptions {
   let mut class_name = ""
   let mut color : String? = None
   let mut z_index = 0
   let mut inline_class_name : String? = None
-  let mut minimap : @model.MinimapOptions? = None
+  let mut minimap : @model.ModelDecorationMinimapOptions? = None
   match marker.severity {
     Hint => {
       if marker.has_tag(Deprecated) {
@@ -280,7 +280,7 @@ pub fn create_decoration_option(marker : Marker) -> @model.Decoration {
     }
     None => ()
   }
-  Decoration(
+  ModelDecorationOptions(
     class_name,
     message=marker.message,
     inline_class_name?,

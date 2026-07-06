@@ -121,7 +121,7 @@ pub fn render_view_line(
       contains_foreign_elements: None,
     }
   }
-  render_resolved(resolve_render_line_input(input), html)
+  render_line(resolve_render_line_input(input), html)
 }
 
 ///|
@@ -740,7 +740,7 @@ fn apply_inline_decorations(
 
 ///|
 /// Monaco's `_renderLine`: emit `<span>`-wrapped parts and fill the mapping.
-fn render_resolved(
+fn render_line(
   input : ResolvedRenderLineInput,
   html : StringBuilder,
 ) -> RenderLineOutput {

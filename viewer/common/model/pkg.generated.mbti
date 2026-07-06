@@ -36,43 +36,7 @@ pub struct ActiveIndentGuideInfo {
   indent : Int
 } derive(Eq, @debug.Debug)
 
-pub(all) struct Decoration {
-  class_name : String
-  message : String?
-  inline_class_name : String?
-  inline_class_name_affects_letter_spacing : Bool
-  z_index : Int
-  is_whole_line : Bool
-  show_if_collapsed : Bool
-  should_fill_line_on_line_break : Bool
-  stickiness : TrackedRangeStickiness
-  overview_ruler : OverviewRulerOptions?
-  minimap : MinimapOptions?
-  glyph_margin_class_name : String?
-  lines_decorations_class_name : String?
-  first_line_decoration_class_name : String?
-  margin_class_name : String?
-  collapse_on_replace_edit : Bool
-  description : String
-  before : ModelInjectedTextOptions?
-  after : ModelInjectedTextOptions?
-} derive(@debug.Debug)
-pub fn Decoration::Decoration(String, message? : String, inline_class_name? : String, inline_class_name_affects_letter_spacing? : Bool, z_index? : Int, is_whole_line? : Bool, show_if_collapsed? : Bool, should_fill_line_on_line_break? : Bool, stickiness? : TrackedRangeStickiness, overview_ruler? : OverviewRulerOptions, minimap? : MinimapOptions, glyph_margin_class_name? : String, lines_decorations_class_name? : String, first_line_decoration_class_name? : String, margin_class_name? : String, collapse_on_replace_edit? : Bool, description? : String, before? : ModelInjectedTextOptions, after? : ModelInjectedTextOptions) -> Self
-
-pub(all) struct DecorationsChangeAccessor {
-  mut add_decoration : (@common.Range, Decoration) -> String
-  mut change_decoration : (String, @common.Range) -> Unit
-  mut change_decoration_options : (String, Decoration) -> Unit
-  mut remove_decoration : (String) -> Unit
-  mut delta_decorations : (Array[String], Array[DeltaDecoration]) -> Array[String]
-}
-
 type DecorationsTrees
-
-pub(all) struct DeltaDecoration {
-  range : @common.Range
-  options : Decoration
-} derive(@debug.Debug)
 
 type DidChangeDecorationsEmitter
 
@@ -86,6 +50,13 @@ pub fn GuidesTextModelPart::get_active_indent_guide(Self, Int, Int, Int) -> Acti
 pub fn GuidesTextModelPart::get_lines_indent_guides(Self, Int, Int) -> Array[Int]
 pub fn GuidesTextModelPart::new(TextSnapshot, tab_size? : Int, indent_size? : Int, off_side? : Bool) -> Self
 
+pub(all) struct InjectedTextOptions {
+  content : String
+  inline_class_name : String?
+  attached_index : Int
+} derive(Eq, @debug.Debug)
+pub fn InjectedTextOptions::InjectedTextOptions(String, inline_class_name? : String, attached_index? : Int) -> Self
+
 pub(all) struct IntervalNode {
   mut metadata : Int
   mut parent_ : IntervalNode?
@@ -97,7 +68,7 @@ pub(all) struct IntervalNode {
   mut max_end : Int
   id : String
   mut owner_id : Int
-  mut options : Decoration?
+  mut options : ModelDecorationOptions?
   mut cached_version_id : Int
   mut cached_absolute_start : Int
   mut cached_absolute_end : Int
@@ -110,7 +81,7 @@ pub fn IntervalNode::parent(Self) -> Self
 pub fn IntervalNode::reset(Self, Int, Int, Int, @common.Range?) -> Unit
 pub fn IntervalNode::right(Self) -> Self
 pub fn IntervalNode::set_cached_offsets(Self, Int, Int, Int) -> Unit
-pub fn IntervalNode::set_options(Self, Decoration) -> Unit
+pub fn IntervalNode::set_options(Self, ModelDecorationOptions) -> Unit
 
 pub(all) struct IntervalTree {
   mut root : IntervalNode
@@ -127,11 +98,6 @@ pub fn IntervalTree::new() -> Self
 pub fn IntervalTree::resolve_node(Self, IntervalNode, Int) -> Unit
 pub fn IntervalTree::search(Self, Int, Bool, Bool, Int, Bool) -> Array[IntervalNode]
 
-pub(all) struct MinimapOptions {
-  color : String
-  position : MinimapPosition
-} derive(Eq, @debug.Debug)
-
 pub(all) enum MinimapPosition {
   Inline
   Gutter
@@ -141,8 +107,49 @@ pub(all) struct ModelDecoration {
   id : String
   owner_id : Int
   range : @common.Range
-  options : Decoration
+  options : ModelDecorationOptions
 } derive(@debug.Debug)
+
+pub(all) struct ModelDecorationMinimapOptions {
+  color : String
+  position : MinimapPosition
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ModelDecorationOptions {
+  class_name : String
+  message : String?
+  inline_class_name : String?
+  inline_class_name_affects_letter_spacing : Bool
+  z_index : Int
+  is_whole_line : Bool
+  show_if_collapsed : Bool
+  should_fill_line_on_line_break : Bool
+  stickiness : TrackedRangeStickiness
+  overview_ruler : ModelDecorationOverviewRulerOptions?
+  minimap : ModelDecorationMinimapOptions?
+  glyph_margin_class_name : String?
+  lines_decorations_class_name : String?
+  first_line_decoration_class_name : String?
+  margin_class_name : String?
+  collapse_on_replace_edit : Bool
+  description : String
+  before : InjectedTextOptions?
+  after : InjectedTextOptions?
+} derive(@debug.Debug)
+pub fn ModelDecorationOptions::ModelDecorationOptions(String, message? : String, inline_class_name? : String, inline_class_name_affects_letter_spacing? : Bool, z_index? : Int, is_whole_line? : Bool, show_if_collapsed? : Bool, should_fill_line_on_line_break? : Bool, stickiness? : TrackedRangeStickiness, overview_ruler? : ModelDecorationOverviewRulerOptions, minimap? : ModelDecorationMinimapOptions, glyph_margin_class_name? : String, lines_decorations_class_name? : String, first_line_decoration_class_name? : String, margin_class_name? : String, collapse_on_replace_edit? : Bool, description? : String, before? : InjectedTextOptions, after? : InjectedTextOptions) -> Self
+
+pub(all) struct ModelDecorationOverviewRulerOptions {
+  color : String?
+  position : OverviewRulerLane
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ModelDecorationsChangeAccessor {
+  mut add_decoration : (@common.Range, ModelDecorationOptions) -> String
+  mut change_decoration : (String, @common.Range) -> Unit
+  mut change_decoration_options : (String, ModelDecorationOptions) -> Unit
+  mut remove_decoration : (String) -> Unit
+  mut delta_decorations : (Array[String], Array[ModelDeltaDecoration]) -> Array[String]
+}
 
 pub(all) struct ModelDecorationsChangedEvent {
   affects_minimap : Bool
@@ -152,12 +159,10 @@ pub(all) struct ModelDecorationsChangedEvent {
   affects_line_number : Bool
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ModelInjectedTextOptions {
-  content : String
-  inline_class_name : String?
-  attached_index : Int
-} derive(Eq, @debug.Debug)
-pub fn ModelInjectedTextOptions::ModelInjectedTextOptions(String, inline_class_name? : String, attached_index? : Int) -> Self
+pub(all) struct ModelDeltaDecoration {
+  range : @common.Range
+  options : ModelDecorationOptions
+} derive(@debug.Debug)
 
 pub(all) enum NodeColor {
   Black
@@ -169,11 +174,6 @@ pub(all) enum OverviewRulerLane {
   Center
   Right
   Full
-} derive(Eq, @debug.Debug)
-
-pub(all) struct OverviewRulerOptions {
-  color : String?
-  position : OverviewRulerLane
 } derive(Eq, @debug.Debug)
 
 pub(all) enum PositionAffinity {
@@ -199,11 +199,11 @@ pub struct TextModel {
   on_did_change_decorations : DidChangeDecorationsEmitter
 }
 pub fn TextModel::TextModel(@common.Uri, String, String, Int, String, String) -> Self
-pub fn[T] TextModel::change_decorations(Self, (DecorationsChangeAccessor) -> T, owner_id? : Int) -> T
-pub fn TextModel::delta_decorations(Self, Array[String], Array[DeltaDecoration], owner_id? : Int) -> Array[String]
+pub fn[T] TextModel::change_decorations(Self, (ModelDecorationsChangeAccessor) -> T, owner_id? : Int) -> T
+pub fn TextModel::delta_decorations(Self, Array[String], Array[ModelDeltaDecoration], owner_id? : Int) -> Array[String]
 pub fn TextModel::get_all_decorations(Self, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool) -> Array[ModelDecoration]
 pub fn TextModel::get_all_margin_decorations(Self, owner_id? : Int) -> Array[ModelDecoration]
-pub fn TextModel::get_decoration_options(Self, String) -> Decoration?
+pub fn TextModel::get_decoration_options(Self, String) -> ModelDecorationOptions?
 pub fn TextModel::get_decoration_range(Self, String) -> @common.Range?
 pub fn TextModel::get_decorations_in_range(Self, @common.Range, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool, only_margin_decorations? : Bool) -> Array[ModelDecoration]
 pub fn TextModel::get_full_model_range(Self) -> @common.Range

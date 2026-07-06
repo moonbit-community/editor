@@ -72,7 +72,7 @@ test "reveal_range over a single line defers the horizontal scroll" {
     viewer.reveal_range(range)
     // A pending horizontal reveal is registered; the reveal's own vertical
     // scroll did not cancel it.
-    assert_true(viewer.pending_horizontal_reveal is Some(_))
+    assert_true(viewer.horizontal_reveal_request is Some(_))
     // No synchronous horizontal movement.
     assert_eq(viewer.view_layout.position().scroll_left, 500.0)
   })
@@ -87,10 +87,10 @@ test "multi-line reveal_range clears a pending horizontal reveal" {
     viewer.view_layout.set_content_width(2000.0) |> ignore
     let single = @base_common.Range::Range(50, 3, 50, 8)
     viewer.reveal_range(single)
-    assert_true(viewer.pending_horizontal_reveal is Some(_))
+    assert_true(viewer.horizontal_reveal_request is Some(_))
     let multi = @base_common.Range::Range(60, 1, 62, 1)
     viewer.reveal_range(multi)
-    assert_true(viewer.pending_horizontal_reveal is None)
+    assert_true(viewer.horizontal_reveal_request is None)
   })
 }
 
@@ -106,9 +106,9 @@ test "vertical scroll inside the band keeps, outside cancels, the deferral" {
     let range = @base_common.Range::Range(50, 3, 50, 8)
     viewer.reveal_range(range)
     viewer.set_scroll_top(100.0)
-    assert_true(viewer.pending_horizontal_reveal is Some(_))
+    assert_true(viewer.horizontal_reveal_request is Some(_))
     viewer.set_scroll_top(2000.0)
-    assert_true(viewer.pending_horizontal_reveal is None)
+    assert_true(viewer.horizontal_reveal_request is None)
   })
 }
 
@@ -120,9 +120,9 @@ test "horizontal scroll cancels a pending horizontal reveal" {
     viewer.view_layout.set_content_width(2000.0) |> ignore
     let range = @base_common.Range::Range(50, 3, 50, 8)
     viewer.reveal_range(range)
-    assert_true(viewer.pending_horizontal_reveal is Some(_))
+    assert_true(viewer.horizontal_reveal_request is Some(_))
     // Keep scroll_top at the settled 738 (inside the band) but move scroll_left.
     viewer.set_scroll_position(scroll_top=738.0, scroll_left=300.0)
-    assert_true(viewer.pending_horizontal_reveal is None)
+    assert_true(viewer.horizontal_reveal_request is None)
   })
 }

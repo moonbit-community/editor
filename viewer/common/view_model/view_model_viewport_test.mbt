@@ -69,7 +69,7 @@ test "viewport line decorations come from model decoration storage" {
   let _ = model.delta_decorations([], [
     {
       range: Range(1, 1, 1, 6),
-      options: Decoration(
+      options: ModelDecorationOptions(
         "squiggly-warning",
         inline_class_name="squiggly-inline-unnecessary",
         show_if_collapsed=true,
@@ -81,7 +81,7 @@ test "viewport line decorations come from model decoration storage" {
     // decorations)
     {
       range: Range(2, 12, 2, 12),
-      options: Decoration(
+      options: ModelDecorationOptions(
         "squiggly-error",
         show_if_collapsed=true,
         description="test",

@@ -13,12 +13,12 @@
 /// `deltaDecorations` (`codeEditorWidget.ts:1368-1378`): atomically replace
 /// `old_decorations` (ids) with `new_decorations`, owned by this viewer
 /// (`ownerId` = the viewer's editor id). Returns the new decoration ids.
-/// Decoration state lives on the model, so it follows the model across
+/// ModelDecorationOptions state lives on the model, so it follows the model across
 /// `set_model` swaps like Monaco's — re-apply on swap.
 pub fn Viewer::delta_decorations(
   self : Viewer,
   old_decorations : Array[String],
-  new_decorations : Array[@model.DeltaDecoration],
+  new_decorations : Array[@model.ModelDeltaDecoration],
 ) -> Array[String] {
   guard self.text_model is Some(model) else { return [] }
   if old_decorations.length() == 0 && new_decorations.length() == 0 {
@@ -85,7 +85,7 @@ pub fn Viewer::get_decorations_in_range(
 /// non-deprecated decoration entry point: an id-managing wrapper over
 /// `delta_decorations` bound to one viewer. `onDidChange` and `has` are not
 /// ported (no consumer; the model-decoration event seam stays internal).
-pub struct DecorationsCollection {
+pub struct EditorDecorationsCollection {
   priv viewer : Viewer
   priv mut decoration_ids : Array[String]
 }
@@ -94,9 +94,9 @@ pub struct DecorationsCollection {
 /// `createDecorationsCollection` (`codeEditorWidget.ts:1389`).
 pub fn Viewer::create_decorations_collection(
   self : Viewer,
-  decorations? : Array[@model.DeltaDecoration] = [],
-) -> DecorationsCollection {
-  let collection : DecorationsCollection = { viewer: self, decoration_ids: [] }
+  decorations? : Array[@model.ModelDeltaDecoration] = [],
+) -> EditorDecorationsCollection {
+  let collection : EditorDecorationsCollection = { viewer: self, decoration_ids: [] }
   if decorations.length() > 0 {
     collection.set(decorations) |> ignore
   }
@@ -106,9 +106,9 @@ pub fn Viewer::create_decorations_collection(
 ///|
 /// Replaces all previous decorations with `new_decorations`; returns the new
 /// ids.
-pub fn DecorationsCollection::set(
-  self : DecorationsCollection,
-  new_decorations : Array[@model.DeltaDecoration],
+pub fn EditorDecorationsCollection::set(
+  self : EditorDecorationsCollection,
+  new_decorations : Array[@model.ModelDeltaDecoration],
 ) -> Array[String] {
   self.decoration_ids = self.viewer.delta_decorations(
     self.decoration_ids,
@@ -119,9 +119,9 @@ pub fn DecorationsCollection::set(
 
 ///|
 /// Appends `new_decorations` to the collection; returns the appended ids.
-pub fn DecorationsCollection::append(
-  self : DecorationsCollection,
-  new_decorations : Array[@model.DeltaDecoration],
+pub fn EditorDecorationsCollection::append(
+  self : EditorDecorationsCollection,
+  new_decorations : Array[@model.ModelDeltaDecoration],
 ) -> Array[String] {
   let appended = self.viewer.delta_decorations([], new_decorations)
   self.decoration_ids = self.decoration_ids + appended
@@ -130,21 +130,21 @@ pub fn DecorationsCollection::append(
 
 ///|
 /// Removes every decoration in the collection.
-pub fn DecorationsCollection::clear(self : DecorationsCollection) -> Unit {
+pub fn EditorDecorationsCollection::clear(self : EditorDecorationsCollection) -> Unit {
   self.decoration_ids = self.viewer.delta_decorations(self.decoration_ids, [])
 }
 
 ///|
 /// The decoration count.
-pub fn DecorationsCollection::length(self : DecorationsCollection) -> Int {
+pub fn EditorDecorationsCollection::length(self : EditorDecorationsCollection) -> Int {
   self.decoration_ids.length()
 }
 
 ///|
 /// The current model range of the `index`-th decoration, `None` when the
 /// index is out of bounds or the decoration no longer resolves.
-pub fn DecorationsCollection::get_range(
-  self : DecorationsCollection,
+pub fn EditorDecorationsCollection::get_range(
+  self : EditorDecorationsCollection,
   index : Int,
 ) -> @base_common.Range? {
   guard index >= 0 && index < self.decoration_ids.length() else { return None }
@@ -154,8 +154,8 @@ pub fn DecorationsCollection::get_range(
 
 ///|
 /// The current model ranges of every decoration that still resolves.
-pub fn DecorationsCollection::get_ranges(
-  self : DecorationsCollection,
+pub fn EditorDecorationsCollection::get_ranges(
+  self : EditorDecorationsCollection,
 ) -> Array[@base_common.Range] {
   guard self.viewer.text_model is Some(model) else { return [] }
   let ranges = []

@@ -7,31 +7,16 @@
 // helpers it needs.
 
 ///|
-/// One-based hidden model-line interval, the element type of Monaco's
-/// `IViewModelLines.getHiddenAreas` result.
-pub(all) struct HiddenRange {
-  start_line_number : Int
-  end_line_number : Int
-} derive(Eq, Debug)
-
-///|
-/// Builds a hidden line interval.
-pub fn HiddenRange::HiddenRange(
-  start_line_number : Int,
-  end_line_number : Int,
-) -> HiddenRange {
-  { start_line_number, end_line_number }
-}
-
-///|
-/// Merged one-based hidden model-line intervals, Monaco's
-/// `IViewModelLines.getHiddenAreas`. Computed from the retained per-line hidden
-/// flags, so a rebuilt view model reports the same ranges
-/// the projection hid.
+/// Merged one-based hidden model-line ranges, Monaco's
+/// `IViewModelLines.getHiddenAreas(): Range[]`. Computed from the retained
+/// per-line hidden flags, so a rebuilt view model reports the same ranges
+/// the projection hid. Whole lines are hidden, so the columns are `1`
+/// (only the line numbers are consulted, as in Monaco's
+/// `_toModelVisibleRanges`).
 pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(
   self : ViewModelLinesFromModelAsIs,
-) -> Array[HiddenRange] {
-  let result : Array[HiddenRange] = []
+) -> Array[@base_common.Range] {
+  let result : Array[@base_common.Range] = []
   let mut run_start = -1
   for index, hidden in self.hidden_model_lines {
     if hidden {
@@ -41,12 +26,12 @@ pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(
       }
     } else if run_start != -1 {
       // The previous index (`index - 1`) is the last hidden line = model line `index`.
-      result.push(HiddenRange(run_start, index))
+      result.push(Range(run_start, 1, index, 1))
       run_start = -1
     }
   }
   if run_start != -1 {
-    result.push(HiddenRange(run_start, self.hidden_model_lines.length()))
+    result.push(Range(run_start, 1, self.hidden_model_lines.length(), 1))
   }
   result
 }
@@ -56,7 +41,7 @@ pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(
 /// applies to the unprojected base, so the hidden set is the base's.
 pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(
   self : ViewModelLinesFromProjectedModel,
-) -> Array[HiddenRange] {
+) -> Array[@base_common.Range] {
   self.base.get_hidden_areas()
 }
 
@@ -73,7 +58,7 @@ pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(
 /// Merged hidden model-line intervals for the active line model.
 pub fn ViewModelLines::get_hidden_areas(
   self : ViewModelLines,
-) -> Array[HiddenRange] {
+) -> Array[@base_common.Range] {
   match self {
     ModelAsIs(lines) => lines.get_hidden_areas()
     ProjectedModel(lines) => lines.get_hidden_areas()
@@ -95,7 +80,7 @@ pub fn ViewModelLines::is_model_line_hidden(
 ///|
 /// Merged one-based hidden model-line intervals, Monaco's
 /// `ViewModel.getHiddenAreas` (`this._lines.getHiddenAreas()`).
-pub fn ViewModel::get_hidden_areas(self : ViewModel) -> Array[HiddenRange] {
+pub fn ViewModel::get_hidden_areas(self : ViewModel) -> Array[@base_common.Range] {
   self.lines.get_hidden_areas()
 }
 

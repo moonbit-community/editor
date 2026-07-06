@@ -25,8 +25,8 @@ fn Viewer::sync_inlay_hint_decorations(self : Viewer) -> Unit {
 /// One collapsed `after`-injected-text decoration per non-empty hint.
 fn inlay_hint_delta_decorations(
   hints : Array[@language.InlayHint],
-) -> Array[@model.DeltaDecoration] {
-  let decorations : Array[@model.DeltaDecoration] = []
+) -> Array[@model.ModelDeltaDecoration] {
+  let decorations : Array[@model.ModelDeltaDecoration] = []
   for index in 0..<hints.length() {
     let hint = hints[index]
     let content = padded_inlay_hint_label(hint)
@@ -40,13 +40,13 @@ fn inlay_hint_delta_decorations(
         hint.position.line_number,
         hint.position.column,
       ),
-      options: Decoration(
+      options: ModelDecorationOptions(
         "",
         description="inlay-hint",
         // A collapsed range must survive the injected-text tree's
         // `showIfCollapsed || !isEmpty` query filter (Monaco sets it too).
         show_if_collapsed=true,
-        after=ModelInjectedTextOptions(
+        after=InjectedTextOptions(
           content,
           inline_class_name=inlay_hint_class_name(hint),
           attached_index=index,

@@ -21,16 +21,16 @@ fn affinity_view_model(
     "rev-1",
     text,
   )
-  let decorations : Array[@model.DeltaDecoration] = []
+  let decorations : Array[@model.ModelDeltaDecoration] = []
   for index in 0..<hints.length() {
     let (column, content) = hints[index]
     decorations.push({
       range: Range(1, column, 1, column),
-      options: Decoration(
+      options: ModelDecorationOptions(
         "",
         description="inlay-hint",
         show_if_collapsed=true,
-        after=ModelInjectedTextOptions(
+        after=InjectedTextOptions(
           content,
           inline_class_name="inlay-hint inlay-hint-type",
           attached_index=index,

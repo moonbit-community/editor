@@ -241,7 +241,7 @@ fn Viewer::send_reveal_range(
     .coordinates_converter()
     .model_range_to_view_range(model_range)
   // (2) Minimal vertical scroll for the view range.
-  let scroll_top = self.view_layout.compute_scroll_top_to_reveal(
+  let scroll_top = self.view_layout.compute_scroll_top_to_reveal_range(
     view_range.start_line_number,
     view_range.end_line_number,
     vertical_type,
@@ -269,7 +269,7 @@ fn Viewer::send_reveal_range(
   // are unknown until it renders — and flushed in `flush_render`. Every other
   // case clears any stale request.
   if reveal_horizontal && !multi_line {
-    self.pending_horizontal_reveal = Some({
+    self.horizontal_reveal_request = Some({
       view_line_number: view_range.start_line_number,
       start_column: view_range.start_column,
       end_column: view_range.end_column,
@@ -280,7 +280,7 @@ fn Viewer::send_reveal_range(
     // schedule a render so the deferred horizontal reveal gets a chance to flush.
     self.schedule_render()
   } else {
-    self.pending_horizontal_reveal = None
+    self.horizontal_reveal_request = None
   }
 }
 
@@ -290,12 +290,12 @@ fn Viewer::send_reveal_range(
 /// Called from `flush_render` after the lines are in the DOM. Keeps the request
 /// pending if the line is not yet rendered, so a later frame can flush it.
 fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
-  guard self.pending_horizontal_reveal is Some(request) else { return }
+  guard self.horizontal_reveal_request is Some(request) else { return }
   // The line is not in the rendered window yet — keep waiting.
   guard view.is_line_rendered(request.view_line_number) else { return }
   // The line is rendered: consume the request (Monaco nulls it here) and apply
   // the horizontal scroll, if any was measurable.
-  self.pending_horizontal_reveal = None
+  self.horizontal_reveal_request = None
   // `keep_empty=true`: a collapsed range (a `reveal_position` caret) measures to
   // a single zero-width rect at the caret x, which Monaco keeps and reveals.
   let ranges = view.measure_line_selection(
@@ -331,9 +331,9 @@ fn Viewer::cancel_horizontal_reveal_on_scroll(
   self : Viewer,
   change : @view_layout.ScrollChange,
 ) -> Unit {
-  guard self.pending_horizontal_reveal is Some(request) else { return }
+  guard self.horizontal_reveal_request is Some(request) else { return }
   if change.left_changed {
-    self.pending_horizontal_reveal = None
+    self.horizontal_reveal_request = None
     return
   }
   if change.top_changed {
@@ -343,7 +343,7 @@ fn Viewer::cancel_horizontal_reveal_on_scroll(
     let low = if a < b { a } else { b }
     let high = if a > b { a } else { b }
     if scroll_top < low || scroll_top > high {
-      self.pending_horizontal_reveal = None
+      self.horizontal_reveal_request = None
     }
   }
 }

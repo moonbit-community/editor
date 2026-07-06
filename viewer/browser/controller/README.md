@@ -45,7 +45,7 @@ which the controller feeds via a `MouseDispatch` intent.
   DOM, so it may import `rabbita/dom` and declare JS FFI, but not the shell,
   the rabbita TEA/vdom/command layers, or the root `viewer` package. The edge
   is one-directional: `viewer -> viewer/browser/controller`.
-- `hit_test`/`ViewMetrics`/`MouseTarget`/`MouseTargetKind` — the DOM-free
+- `hit_test`/`ViewMetrics`/`MouseTarget`/`MouseTargetType` — the DOM-free
   hit-testing algorithm and value types Monaco's `mouseTarget.ts` also
   defines — stay in `viewer/common` rather than moving here: they have no DOM
   dependency, and `viewer/contrib/hover` (multi-target) depends on

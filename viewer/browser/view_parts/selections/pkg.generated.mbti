@@ -30,7 +30,7 @@ pub(all) struct ContentViewOverlaysPrepared {
   viewport : @view_layout.ViewportData
   selection_view_range : @common.Range?
   view_model : @view_model.ViewModel?
-  decorations : Array[@inline_decorations.ViewModelDecoration[@model.Decoration]]
+  decorations : Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]]
   space_width : Double
   editor_has_focus : Bool
   cursor_view_line : Int?

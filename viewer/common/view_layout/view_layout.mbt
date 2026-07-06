@@ -127,7 +127,7 @@ pub fn ViewLayout::line_count(self : ViewLayout) -> Int {
 
 ///|
 /// Total scrollable content height, including view zones.
-pub fn ViewLayout::content_height(self : ViewLayout) -> Double {
+pub fn ViewLayout::get_content_height(self : ViewLayout) -> Double {
   self.lines.get_lines_total_height().to_double()
 }
 
@@ -170,7 +170,7 @@ pub fn ViewLayout::get_current_scroll_top(self : ViewLayout) -> Double {
 /// `ViewLayout.getVerticalOffsetForLineNumber` (delegates straight to
 /// `LinesLayout`). `include_view_zones` controls whether the whitespace
 /// immediately above the line counts toward the offset.
-pub fn ViewLayout::vertical_offset_for_line_number(
+pub fn ViewLayout::get_vertical_offset_for_line_number(
   self : ViewLayout,
   line_number : Int,
   include_view_zones? : Bool = false,
@@ -183,7 +183,7 @@ pub fn ViewLayout::vertical_offset_for_line_number(
 ///|
 /// Content-space bottom of a 1-based view line (its top plus its height),
 /// Monaco's `ViewLayout.getVerticalOffsetAfterLineNumber`.
-pub fn ViewLayout::vertical_offset_after_line_number(
+pub fn ViewLayout::get_vertical_offset_after_line_number(
   self : ViewLayout,
   line_number : Int,
   include_view_zones? : Bool = false,
@@ -196,7 +196,7 @@ pub fn ViewLayout::vertical_offset_after_line_number(
 ///|
 /// The (uniform) height of a 1-based view line, Monaco's
 /// `ViewLayout.getLineHeightForLineNumber`.
-pub fn ViewLayout::line_height_for_line_number(
+pub fn ViewLayout::get_line_height_for_line_number(
   self : ViewLayout,
   line_number : Int,
 ) -> Int {
@@ -401,7 +401,7 @@ fn ViewLayout::sync_dimensions(self : ViewLayout) -> ScrollChange? {
   self.scrollable.set_dimensions({
     ..dimensions,
     scroll_width: max_double(self.content_width, dimensions.width),
-    scroll_height: max_double(self.content_height(), dimensions.height),
+    scroll_height: max_double(self.get_content_height(), dimensions.height),
   })
 }
 

@@ -21,7 +21,7 @@ fn test_decoration(
 test "lines_decorations_to_render filters on lines_decorations_class_name" {
   let with_lane : ViewModelDecoration = {
     range: Range(2, 1, 2, 1),
-    options: Decoration(
+    options: ModelDecorationOptions(
       "",
       lines_decorations_class_name="comment-range-glyph comment-diff-added",
       is_whole_line=true,
@@ -30,7 +30,7 @@ test "lines_decorations_to_render filters on lines_decorations_class_name" {
   }
   let without_lane : ViewModelDecoration = {
     range: Range(3, 1, 3, 5),
-    options: Decoration("squiggly-error"),
+    options: ModelDecorationOptions("squiggly-error"),
   }
   let rendered = lines_decorations_to_render([without_lane, with_lane])
   assert_eq(rendered.length(), 1)

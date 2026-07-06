@@ -30,13 +30,13 @@
 ///   N-A — the readonly model has no dispose lifecycle.
 ///
 /// Adaptation notes: Monaco `options.className: undefined` is this port's
-/// `class_name: ""`; options are built through the single `Decoration`
+/// `class_name: ""`; options are built through the single `ModelDecorationOptions`
 /// constructor.
 
 ///|
 /// Monaco `{ description: 'test', className }` options literal.
-fn dec_options(class_name : String) -> @model.Decoration {
-  Decoration(class_name, description="test")
+fn dec_options(class_name : String) -> @model.ModelDecorationOptions {
+  ModelDecorationOptions(class_name, description="test")
 }
 
 ///|
@@ -352,7 +352,7 @@ fn decoration(
 ///|
 fn to_model_delta_decoration(
   dec : LightWeightDecoration,
-) -> @model.DeltaDecoration {
+) -> @model.ModelDeltaDecoration {
   { range: dec.range, options: dec_options(dec.id) }
 }
 
@@ -524,13 +524,13 @@ test "issue #4317: editor.setDecorations doesn't update the hover message" {
   let ids = model.delta_decorations([], [
     {
       range: Range(1, 1, 100, 1),
-      options: Decoration("", message="hello1", description="test"),
+      options: ModelDecorationOptions("", message="hello1", description="test"),
     },
   ])
   let ids2 = model.delta_decorations(ids, [
     {
       range: Range(1, 1, 100, 1),
-      options: Decoration("", message="hello2", description="test"),
+      options: ModelDecorationOptions("", message="hello2", description="test"),
     },
   ])
   let actual_decoration = model.get_decoration_options(ids2[0])
@@ -543,7 +543,7 @@ test "model doesn't get confused with individual tracked ranges" {
   let tracked_range_id = model.change_decorations(accessor => {
     (accessor.add_decoration)(
       Range(1, 1, 1, 1),
-      Decoration(
+      ModelDecorationOptions(
         "",
         stickiness=AlwaysGrowsWhenTypingAtEdges,
         description="test",

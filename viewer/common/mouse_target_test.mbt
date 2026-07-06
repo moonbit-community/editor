@@ -54,11 +54,11 @@ fn inlay_hint_hit_test_frame() -> @view_model.RenderFrame {
   model.delta_decorations([], [
     {
       range: Range(1, 6, 1, 6),
-      options: Decoration(
+      options: ModelDecorationOptions(
         "",
         description="inlay-hint",
         show_if_collapsed=true,
-        after=ModelInjectedTextOptions(
+        after=InjectedTextOptions(
           ": Int",
           inline_class_name="inlay-hint inlay-hint-type",
           attached_index=0,
@@ -253,7 +253,7 @@ test "hit test maps scrolled coordinates and below-content space" {
     @common.hit_test(frame, test_metrics(), -2.0, 4.0),
     content=(
       #|{
-      #|  kind: Outside,
+      #|  kind: OutsideEditor,
       #|  line_number: 0,
       #|  column: 0,
       #|  token_index: -1,
@@ -273,7 +273,7 @@ test "hit test accounts for view zones displacing following lines" {
     @common.hit_test(frame, metrics, 60.0, 18.0 + 4.0),
     content=(
       #|{
-      #|  kind: Outside,
+      #|  kind: OutsideEditor,
       #|  line_number: 0,
       #|  column: 0,
       #|  token_index: -1,

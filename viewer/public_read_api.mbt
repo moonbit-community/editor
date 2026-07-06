@@ -99,7 +99,7 @@ pub fn Viewer::get_top_for_line_number(
   line_number : Int,
   include_view_zones? : Bool = false,
 ) -> Double {
-  self.vertical_offset_for_position(line_number, 1, include_view_zones~)
+  self.get_vertical_offset_for_position(line_number, 1, include_view_zones~)
 }
 
 ///|
@@ -111,7 +111,7 @@ pub fn Viewer::get_top_for_position(
   line_number : Int,
   column : Int,
 ) -> Double {
-  self.vertical_offset_for_position(
+  self.get_vertical_offset_for_position(
     line_number,
     column,
     include_view_zones=false,
@@ -128,7 +128,7 @@ pub fn Viewer::get_bottom_for_line_number(
   line_number : Int,
   include_view_zones? : Bool = false,
 ) -> Double {
-  self.vertical_offset_after_position(
+  self.get_vertical_offset_after_position(
     line_number,
     max_safe_column,
     include_view_zones~,
@@ -152,7 +152,7 @@ pub fn Viewer::get_line_height_for_position(
       .coordinates_converter()
       .model_position_to_view_position(position)
     self.view_layout
-    .line_height_for_line_number(view_position.line_number)
+    .get_line_height_for_line_number(view_position.line_number)
     .to_double()
   } else {
     0.0
@@ -263,7 +263,7 @@ pub fn Viewer::get_scroll_left(self : Viewer) -> Double {
 /// (`cew:983`). No model → `-1`.
 pub fn Viewer::get_content_height(self : Viewer) -> Double {
   guard self.text_model is Some(_) else { return -1.0 }
-  self.view_layout.content_height()
+  self.view_layout.get_content_height()
 }
 
 ///|
@@ -307,7 +307,7 @@ fn Viewer::model_to_view_position(
 /// Monaco's `CodeEditorWidget._getVerticalOffsetForPosition` (`cew:607`):
 /// validate → convert to view position → `viewLayout.getVerticalOffsetForLineNumber`.
 /// No model → `-1`.
-fn Viewer::vertical_offset_for_position(
+fn Viewer::get_vertical_offset_for_position(
   self : Viewer,
   line_number : Int,
   column : Int,
@@ -315,7 +315,7 @@ fn Viewer::vertical_offset_for_position(
 ) -> Double {
   match self.model_to_view_position(line_number, column) {
     Some(view_position) =>
-      self.view_layout.vertical_offset_for_line_number(
+      self.view_layout.get_vertical_offset_for_line_number(
         view_position.line_number,
         include_view_zones~,
       )
@@ -327,7 +327,7 @@ fn Viewer::vertical_offset_for_position(
 /// Monaco's `CodeEditorWidget._getVerticalOffsetAfterPosition` (`cew:584`):
 /// validate → convert → `viewLayout.getVerticalOffsetAfterLineNumber`. No model
 /// → `-1`.
-fn Viewer::vertical_offset_after_position(
+fn Viewer::get_vertical_offset_after_position(
   self : Viewer,
   line_number : Int,
   column : Int,
@@ -335,7 +335,7 @@ fn Viewer::vertical_offset_after_position(
 ) -> Double {
   match self.model_to_view_position(line_number, column) {
     Some(view_position) =>
-      self.view_layout.vertical_offset_after_line_number(
+      self.view_layout.get_vertical_offset_after_line_number(
         view_position.line_number,
         include_view_zones~,
       )
@@ -463,7 +463,7 @@ pub fn Viewer::get_scrolled_visible_position(
   }
   let position = model.validate_position(position)
   let content_left = self.read_api_content_left()
-  let top = self.vertical_offset_for_position(
+  let top = self.get_vertical_offset_for_position(
       position.line_number,
       position.column,
       include_view_zones=false,

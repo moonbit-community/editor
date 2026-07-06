@@ -2,7 +2,7 @@
 fn option_for(
   severity : MarkerSeverity,
   tags? : Array[MarkerTag],
-) -> @model.Decoration {
+) -> @model.ModelDecorationOptions {
   let marker = make_marker(severity, 1, 1, 1, 2, tags?)
   create_decoration_option(marker)
 }

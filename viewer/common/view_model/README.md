@@ -19,8 +19,9 @@ render frames.
 - Own `ViewModelDecorations`: model decorations resolved into per-view-line
   inline decorations through `viewer/common/inline_decorations`' computers,
   with this package providing the concrete model/converter trait impls.
-- Own readonly folding normalization (`FoldingModel`, `HiddenRange`) and
-  readonly injected text (`InjectedText`, `ProjectedTextLine`). Inlay hints are
+- Own the hidden-area plumbing (`get_hidden_areas` over per-line hidden
+  flags) and readonly injected text (`InjectedText`, `ProjectedTextLine`).
+  Inlay hints are
   projected before line breaking so hint width participates in wrapping, while
   render-line source mappings keep hit testing and decorations
   model-offset based.

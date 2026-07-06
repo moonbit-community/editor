@@ -97,7 +97,7 @@ pub(open) trait InlineDecorationOptions {
   fn affects_font(Self) -> Bool
   fn is_whole_line(Self) -> Bool
 }
-pub impl InlineDecorationOptions for @model.Decoration
+pub impl InlineDecorationOptions for @model.ModelDecorationOptions
 
 pub(open) trait InlineDecorationsModel {
   fn get_line_max_column(Self, Int) -> Int

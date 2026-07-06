@@ -111,7 +111,7 @@ pub fn TextModel::get_offset_at(
   self : TextModel,
   position : @base_common.Position,
 ) -> Int {
-  let position = self.do_validate_position(
+  let position = self.validate_position_impl(
     position.line_number,
     position.column,
     false,
@@ -253,7 +253,7 @@ pub fn TextModel::get_full_model_range(self : TextModel) -> @base_common.Range {
 /// is true, a column landing in the middle of a high-low surrogate pair is
 /// moved to before the pair. `surrogate=false` is Monaco's `Relaxed` mode (a
 /// plain clamp). Inputs are integers, so Monaco's `NaN`/float coercion is moot.
-fn TextModel::do_validate_position(
+fn TextModel::validate_position_impl(
   self : TextModel,
   line_number : Int,
   column : Int,
@@ -291,7 +291,7 @@ pub fn TextModel::validate_position(
   self : TextModel,
   position : @base_common.Position,
 ) -> @base_common.Position {
-  self.do_validate_position(position.line_number, position.column, true)
+  self.validate_position_impl(position.line_number, position.column, true)
 }
 
 ///|
@@ -302,12 +302,12 @@ pub fn TextModel::validate_range_relaxed(
   self : TextModel,
   range : @base_common.Range,
 ) -> @base_common.Range {
-  let start = self.do_validate_position(
+  let start = self.validate_position_impl(
     range.start_line_number,
     range.start_column,
     false,
   )
-  let end = self.do_validate_position(
+  let end = self.validate_position_impl(
     range.end_line_number,
     range.end_column,
     false,
@@ -323,12 +323,12 @@ pub fn TextModel::validate_range(
   range : @base_common.Range,
 ) -> @base_common.Range {
   let snapshot = self.snapshot
-  let start = self.do_validate_position(
+  let start = self.validate_position_impl(
     range.start_line_number,
     range.start_column,
     false,
   )
-  let end = self.do_validate_position(
+  let end = self.validate_position_impl(
     range.end_line_number,
     range.end_column,
     false,
@@ -374,7 +374,7 @@ pub fn TextModel::modify_position(
   position : @base_common.Position,
   offset : Int,
 ) -> @base_common.Position {
-  let valid = self.do_validate_position(
+  let valid = self.validate_position_impl(
     position.line_number,
     position.column,
     false,

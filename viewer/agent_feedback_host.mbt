@@ -240,7 +240,7 @@ fn Viewer::update_agent_feedback_hover_glyph(self : Viewer, line : Int) -> Unit 
     [
       {
         range: Range(line, 1, line, 1),
-        options: Decoration(
+        options: ModelDecorationOptions(
           "",
           is_whole_line=true,
           lines_decorations_class_name="agent-feedback-glyph line-hover",

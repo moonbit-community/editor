@@ -170,25 +170,25 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
 
 ///|
 /// Hover participant for inlay-hint tooltips.
-pub(all) struct InlayHintHoverParticipant {
+pub(all) struct InlayHintsHover {
   identity : Unit
 }
 
 ///|
 /// Creates the inlay-hint hover participant.
-pub fn InlayHintHoverParticipant::new() -> InlayHintHoverParticipant {
+pub fn InlayHintsHover::new() -> InlayHintsHover {
   { identity: () }
 }
 
 ///|
 /// Inlay-hint hovers render after markers and before language markdown hovers.
-pub impl HoverParticipant for InlayHintHoverParticipant with fn ordinal(_self) {
+pub impl HoverParticipant for InlayHintsHover with fn ordinal(_self) {
   50
 }
 
 ///|
 /// Computes tooltip hovers for injected inlay-hint text.
-pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_sync(
+pub impl HoverParticipant for InlayHintsHover with fn compute_sync(
   self,
   ctx,
 ) {
@@ -214,7 +214,7 @@ pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_sync(
 
 ///|
 /// Inlay-hint hover data is fully synchronous.
-pub impl HoverParticipant for InlayHintHoverParticipant with fn compute_async(
+pub impl HoverParticipant for InlayHintsHover with fn compute_async(
   _self,
   _ctx,
 ) {

@@ -92,7 +92,7 @@ fn test_inlay_view_model(
     "rev-1",
     text,
   )
-  let decorations : Array[@model.DeltaDecoration] = []
+  let decorations : Array[@model.ModelDeltaDecoration] = []
   for index in 0..<hints.length() {
     let hint = hints[index]
     let class_name = match hint.kind {
@@ -107,11 +107,11 @@ fn test_inlay_view_model(
         hint.position.line_number,
         hint.position.column,
       ),
-      options: Decoration(
+      options: ModelDecorationOptions(
         "",
         description="inlay-hint",
         show_if_collapsed=true,
-        after=ModelInjectedTextOptions(
+        after=InjectedTextOptions(
           hint.label,
           inline_class_name=class_name,
           attached_index=index,

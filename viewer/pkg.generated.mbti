@@ -51,16 +51,6 @@ pub(all) struct CursorSelectionChangedEvent {
   reason : CursorChangeReason
 } derive(@debug.Debug)
 
-pub struct DecorationsCollection {
-  // private fields
-}
-pub fn DecorationsCollection::append(Self, Array[@model.DeltaDecoration]) -> Array[String]
-pub fn DecorationsCollection::clear(Self) -> Unit
-pub fn DecorationsCollection::get_range(Self, Int) -> @moonbit-community/editor/base/common.Range?
-pub fn DecorationsCollection::get_ranges(Self) -> Array[@moonbit-community/editor/base/common.Range]
-pub fn DecorationsCollection::length(Self) -> Int
-pub fn DecorationsCollection::set(Self, Array[@model.DeltaDecoration]) -> Array[String]
-
 pub(all) struct EditorContribution {
   id : String
   dispose : () -> Unit
@@ -73,6 +63,16 @@ pub(all) enum EditorContributionInstantiation {
   Eventually
   Lazy
 } derive(Eq, @debug.Debug)
+
+pub struct EditorDecorationsCollection {
+  // private fields
+}
+pub fn EditorDecorationsCollection::append(Self, Array[@model.ModelDeltaDecoration]) -> Array[String]
+pub fn EditorDecorationsCollection::clear(Self) -> Unit
+pub fn EditorDecorationsCollection::get_range(Self, Int) -> @moonbit-community/editor/base/common.Range?
+pub fn EditorDecorationsCollection::get_ranges(Self) -> Array[@moonbit-community/editor/base/common.Range]
+pub fn EditorDecorationsCollection::length(Self) -> Int
+pub fn EditorDecorationsCollection::set(Self, Array[@model.ModelDeltaDecoration]) -> Array[String]
 
 pub(all) struct EditorLayoutInfo {
   width : Double
@@ -125,8 +125,8 @@ pub fn Viewer::Viewer(services? : ViewerServices, options? : ViewerOptions) -> S
 pub fn Viewer::add_overlay_widget(Self, String, @dom.Element) -> Unit
 pub fn Viewer::change_view_zones(Self, (ViewZoneChangeAccessor) -> Unit) -> Unit
 pub fn Viewer::create(@dom.Element, services? : ViewerServices, options? : ViewerOptions) -> Self
-pub fn Viewer::create_decorations_collection(Self, decorations? : Array[@model.DeltaDecoration]) -> DecorationsCollection
-pub fn Viewer::delta_decorations(Self, Array[String], Array[@model.DeltaDecoration]) -> Array[String]
+pub fn Viewer::create_decorations_collection(Self, decorations? : Array[@model.ModelDeltaDecoration]) -> EditorDecorationsCollection
+pub fn Viewer::delta_decorations(Self, Array[String], Array[@model.ModelDeltaDecoration]) -> Array[String]
 pub fn Viewer::dispose(Self) -> Unit
 pub fn Viewer::focus(Self) -> Unit
 pub fn Viewer::get_bottom_for_line_number(Self, Int, include_view_zones? : Bool) -> Double

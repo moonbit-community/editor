@@ -22,7 +22,7 @@ pub fn render_source_line_html(@view_model.RenderLine) -> String
 
 // Types and methods
 pub(all) struct MouseTarget {
-  kind : MouseTargetKind
+  kind : MouseTargetType
   line_number : Int
   column : Int
   token_index : Int
@@ -30,13 +30,13 @@ pub(all) struct MouseTarget {
   gutter_offset_x : Double
 } derive(Eq, @debug.Debug)
 
-pub(all) enum MouseTargetKind {
+pub(all) enum MouseTargetType {
   GutterLineNumbers
   GutterLineDecorations
   ContentText
   ContentEmpty
   BelowContent
-  Outside
+  OutsideEditor
 } derive(Eq, @debug.Debug)
 
 pub(all) struct ViewMetrics {

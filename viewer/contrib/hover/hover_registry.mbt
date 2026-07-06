@@ -57,7 +57,7 @@ pub fn register_default_hover_participants(
   registry.register(services => {
     MarkerHoverParticipant::new(services.marker_decorations)
   })
-  registry.register(_services => InlayHintHoverParticipant::new())
+  registry.register(_services => InlayHintsHover::new())
   registry.register(services => {
     MarkdownHoverParticipant::new(services.languages, services.log_service)
   })

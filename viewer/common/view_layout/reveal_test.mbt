@@ -15,27 +15,27 @@ fn reveal_layout() -> @view_layout.ViewLayout {
 test "reveal Simple scrolls a line just into view" {
   let layout = reveal_layout()
   // Line above the viewport: scroll up so its top aligns.
-  assert_eq(layout.compute_scroll_top_to_reveal(5, 5, Simple), 72.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(5, 5, Simple), 72.0)
   // Line already inside the viewport: no scroll.
-  assert_eq(layout.compute_scroll_top_to_reveal(25, 25, Simple), 360.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(25, 25, Simple), 360.0)
   // Line below the viewport: scroll down, keeping the +1 bottom pad clear of
   // the horizontal scrollbar (box_end 918 - viewport 180 = 738).
-  assert_eq(layout.compute_scroll_top_to_reveal(50, 50, Simple), 738.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(50, 50, Simple), 738.0)
 }
 
 ///|
 test "reveal Center and CenterIfOutsideViewport" {
   let layout = reveal_layout()
   // Center: box middle 891, minus half the viewport (90) = 801.
-  assert_eq(layout.compute_scroll_top_to_reveal(50, 50, Center), 801.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(50, 50, Center), 801.0)
   // CenterIfOutsideViewport, already visible: no scroll.
   assert_eq(
-    layout.compute_scroll_top_to_reveal(25, 25, CenterIfOutsideViewport),
+    layout.compute_scroll_top_to_reveal_range(25, 25, CenterIfOutsideViewport),
     360.0,
   )
   // CenterIfOutsideViewport, outside: same as Center.
   assert_eq(
-    layout.compute_scroll_top_to_reveal(50, 50, CenterIfOutsideViewport),
+    layout.compute_scroll_top_to_reveal_range(50, 50, CenterIfOutsideViewport),
     801.0,
   )
 }
@@ -45,15 +45,15 @@ test "reveal NearTop and NearTopIfOutsideViewport" {
   let layout = reveal_layout()
   // NearTop: 20% of 180 = 36, but min 5 lines = 90 wins; box top 882 - 90 = 792
   // (and the min-scroll-top floor 900 - 180 = 720 does not bind).
-  assert_eq(layout.compute_scroll_top_to_reveal(50, 50, NearTop), 792.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(50, 50, NearTop), 792.0)
   // NearTopIfOutsideViewport, already visible: no scroll.
   assert_eq(
-    layout.compute_scroll_top_to_reveal(25, 25, NearTopIfOutsideViewport),
+    layout.compute_scroll_top_to_reveal_range(25, 25, NearTopIfOutsideViewport),
     360.0,
   )
   // NearTopIfOutsideViewport, outside: same as NearTop.
   assert_eq(
-    layout.compute_scroll_top_to_reveal(50, 50, NearTopIfOutsideViewport),
+    layout.compute_scroll_top_to_reveal_range(50, 50, NearTopIfOutsideViewport),
     792.0,
   )
 }
@@ -62,9 +62,9 @@ test "reveal NearTop and NearTopIfOutsideViewport" {
 test "reveal Top and Bottom align to viewport edges" {
   let layout = reveal_layout()
   // Top: box top straight to the viewport top (no +1 bottom pad).
-  assert_eq(layout.compute_scroll_top_to_reveal(50, 50, Top), 882.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(50, 50, Top), 882.0)
   // Bottom: +1 bottom pad, box_end 918 - viewport 180 = 738.
-  assert_eq(layout.compute_scroll_top_to_reveal(50, 50, Bottom), 738.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(50, 50, Bottom), 738.0)
 }
 
 ///|
@@ -72,9 +72,9 @@ test "reveal oversized single range scrolls to its top, never -1" {
   let layout = reveal_layout()
   // Lines 5..30 span 26 lines (468px) > the 180px viewport. A single range, so
   // Monaco reveals its top rather than aborting with -1.
-  assert_eq(layout.compute_scroll_top_to_reveal(5, 30, Simple), 72.0)
-  assert_eq(layout.compute_scroll_top_to_reveal(5, 30, Center), 72.0)
-  assert_eq(layout.compute_scroll_top_to_reveal(5, 30, Top), 72.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(5, 30, Simple), 72.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(5, 30, Center), 72.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(5, 30, Top), 72.0)
 }
 
 ///|
@@ -82,7 +82,7 @@ test "reveal NearTop near the document top yields an unclamped offset" {
   let layout = reveal_layout()
   // Box top 0 (line 1) - desired gap 90 = -90; min-scroll-top -180 does not
   // bind. The core returns the raw -90; Scrollable clamps it to 0 downstream.
-  assert_eq(layout.compute_scroll_top_to_reveal(1, 1, NearTop), -90.0)
+  assert_eq(layout.compute_scroll_top_to_reveal_range(1, 1, NearTop), -90.0)
 }
 
 ///|

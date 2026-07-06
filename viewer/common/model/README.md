@@ -14,7 +14,7 @@ Mirrors Monaco's `editor/common/model`.
   delegating to the snapshot buffer.
 - Own model decorations: interval-tree storage (a port of Monaco's
   `intervalTree.ts`) behind `TextModel::delta_decorations` and the
-  range-query accessors, with `DeltaDecoration` / `ModelDecorationOptions` as
+  range-query accessors, with `ModelDeltaDecoration` / `ModelDecorationOptions` as
   the public shapes.
 - Provide the current-document URI plus version comparison used by async
   feature freshness guards.

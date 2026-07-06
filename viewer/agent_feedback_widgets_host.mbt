@@ -90,14 +90,14 @@ fn Viewer::clear_agent_feedback_widgets(self : Viewer) -> String? {
 fn Viewer::rebuild_agent_feedback_widgets(self : Viewer) -> Unit {
   let focused_reply = self.clear_agent_feedback_widgets()
   guard self.view is Some(_) && self.text_model is Some(model) else { return }
-  let comments = @agent_feedback.get_editor_comments(
+  let comments = @agent_feedback.get_session_editor_comments(
     self.services.agent_feedback.get_feedback(model.uri),
   )
   if comments.is_empty() {
     self.prune_agent_feedback_reply_drafts()
     return
   }
-  let groups = @agent_feedback.group_nearby_editor_comments(comments)
+  let groups = @agent_feedback.group_nearby_session_editor_comments(comments)
   for index = groups.length() - 1; index >= 0; index = index - 1 {
     let group = groups[index]
     let widget_id = "agent-feedback-widget-" +
@@ -217,7 +217,7 @@ fn Viewer::relayout_agent_feedback_widgets(self : Viewer) -> Unit {
 /// collapse the rest, focus the item, and reveal its range.
 fn Viewer::handle_agent_feedback_navigation(self : Viewer) -> Unit {
   guard self.view is Some(_) && self.text_model is Some(model) else { return }
-  let comments = @agent_feedback.get_editor_comments(
+  let comments = @agent_feedback.get_session_editor_comments(
     self.services.agent_feedback.get_feedback(model.uri),
   )
   let bearing = self.services.agent_feedback.get_navigation_bearing(
@@ -245,7 +245,7 @@ fn Viewer::handle_agent_feedback_navigation(self : Viewer) -> Unit {
 /// companion decoration is skipped — no overview ruler).
 fn Viewer::highlight_agent_feedback_range(
   self : Viewer,
-  comment : @agent_feedback.EditorComment,
+  comment : @agent_feedback.SessionEditorComment,
 ) -> Unit {
   guard self.text_model is Some(model) else { return }
   let line_count = model.snapshot.line_count()
@@ -265,7 +265,7 @@ fn Viewer::highlight_agent_feedback_range(
     [
       {
         range: Range(start_line, 1, end_line, max_column),
-        options: Decoration(
+        options: ModelDecorationOptions(
           "rangeHighlight",
           is_whole_line=true,
           lines_decorations_class_name="agent-feedback-widget-range-glyph",

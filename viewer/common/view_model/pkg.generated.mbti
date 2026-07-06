@@ -82,11 +82,11 @@ pub fn filter_validation_decorations(RenderValidationDecorations) -> Bool
 
 pub fn line_decorations_filter(Array[@inline_decorations.InlineDecoration], Int, Int, Int) -> Array[@view_layout.LineDecoration]
 
-pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.Decoration], Int, RenderLine) -> Array[@view_layout.LineDecoration]
+pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions], Int, RenderLine) -> Array[@view_layout.LineDecoration]
 
 pub fn line_tokens_from_syntax_tokens(String, Int, Array[@syntax.Token], LanguageIdCodec, language_id? : Int) -> LineTokens
 
-pub fn lines_decorations_to_render(Array[@inline_decorations.ViewModelDecoration[@model.Decoration]]) -> Array[DecorationToRender]
+pub fn lines_decorations_to_render(Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]]) -> Array[DecorationToRender]
 
 pub fn render_line_input_from_render_line(RenderLine, line_decorations? : Array[@view_layout.LineDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
 
@@ -129,12 +129,6 @@ pub(all) struct FrameViewport {
   start_line : Int
   end_line : Int
 } derive(@debug.Debug)
-
-pub(all) struct HiddenRange {
-  start_line_number : Int
-  end_line_number : Int
-} derive(Eq, @debug.Debug)
-pub fn HiddenRange::HiddenRange(Int, Int) -> Self
 
 pub struct IdentityCoordinatesConverter {
   identity : Unit
@@ -362,7 +356,7 @@ pub struct ViewModel {
 pub fn ViewModel::ViewModel(FrameSource) -> Self
 pub fn ViewModel::coordinates_converter(Self) -> ViewModelCoordinatesConverter
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
-pub fn ViewModel::get_hidden_areas(Self) -> Array[HiddenRange]
+pub fn ViewModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModel::get_line_max_column(Self, Int) -> Int
 pub fn ViewModel::get_line_min_column(Self, Int) -> Int
 pub fn ViewModel::language_id(Self) -> String
@@ -386,8 +380,8 @@ pub impl CoordinatesConverter for ViewModelCoordinatesConverter
 pub struct ViewModelDecorations {
   // private fields
 }
-pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLines, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> @inline_decorations.ViewDecorationsCollection[@model.Decoration]
-pub fn ViewModelDecorations::get_decorations_viewport_data(Self, @common.Range) -> @inline_decorations.ViewDecorationsCollection[@model.Decoration]
+pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLines, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
+pub fn ViewModelDecorations::get_decorations_viewport_data(Self, @common.Range) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
 pub fn ViewModelDecorations::new(Int, @model.TextModel?, Bool, ViewModelLines, ViewModelCoordinatesConverter) -> Self
 pub fn ViewModelDecorations::on_line_mapping_changed(Self) -> Unit
 pub fn ViewModelDecorations::on_model_decorations_changed(Self) -> Unit
@@ -397,7 +391,7 @@ pub(all) enum ViewModelLines {
   ModelAsIs(ViewModelLinesFromModelAsIs)
   ProjectedModel(ViewModelLinesFromProjectedModel)
 }
-pub fn ViewModelLines::get_hidden_areas(Self) -> Array[HiddenRange]
+pub fn ViewModelLines::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModelLines::get_view_line_content(Self, Int) -> String
 pub fn ViewModelLines::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLines::get_view_line_min_column(Self, Int) -> Int
@@ -413,7 +407,7 @@ pub struct ViewModelLinesFromModelAsIs {
   hidden_model_lines : Array[Bool]
   injected_text_by_model_line : Array[Array[InjectedText]]
 }
-pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(Self) -> Array[HiddenRange]
+pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModelLinesFromModelAsIs::get_model_line_content(Self, Int) -> String
 pub fn ViewModelLinesFromModelAsIs::get_view_line_content(Self, Int) -> String
 pub fn ViewModelLinesFromModelAsIs::get_view_line_max_column(Self, Int) -> Int
@@ -434,7 +428,7 @@ pub struct ViewModelLinesFromProjectedModel {
   projection : ModelLineProjection
   tab_size : Int
 }
-pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(Self) -> Array[HiddenRange]
+pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModelLinesFromProjectedModel::get_view_line_content(Self, Int) -> String
 pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(Self, Int) -> Int
@@ -467,9 +461,9 @@ pub(all) enum WrappingIndent {
 } derive(Eq, @debug.Debug)
 
 // Type aliases
-pub type ViewDecorationsCollection = @inline_decorations.ViewDecorationsCollection[@model.Decoration]
+pub type ViewDecorationsCollection = @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
 
-pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[@model.Decoration]
+pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]
 
 // Traits
 pub(open) trait CoordinatesConverter {

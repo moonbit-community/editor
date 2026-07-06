@@ -123,7 +123,7 @@ pub(all) struct HoverController {
 pub fn HoverController::cleared(Self) -> Self
 pub fn HoverController::emit(Self) -> Self
 pub fn HoverController::empty() -> Self
-pub fn HoverController::highlight_decorations(Self) -> Array[@model.DeltaDecoration]
+pub fn HoverController::highlight_decorations(Self) -> Array[@model.ModelDeltaDecoration]
 pub fn HoverController::is_complete(Self) -> Bool
 pub fn HoverController::measured(Self, Bool, Double, Double) -> Self
 pub fn HoverController::on_event(Self, EditorEvent, EditorContext, sticky_mouse_getting_closer? : Bool) -> (HoverEffect, Self)
@@ -216,11 +216,11 @@ pub(all) struct HoverWidgetView {
 }
 pub fn HoverWidgetView::measured(Self, Bool, Double, Double) -> Self
 
-pub(all) struct InlayHintHoverParticipant {
+pub(all) struct InlayHintsHover {
   identity : Unit
 }
-pub fn InlayHintHoverParticipant::new() -> Self
-pub impl HoverParticipant for InlayHintHoverParticipant
+pub fn InlayHintsHover::new() -> Self
+pub impl HoverParticipant for InlayHintsHover
 
 pub(all) struct MarkdownHoverParticipant {
   languages : @languages.Languages

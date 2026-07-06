@@ -11,7 +11,7 @@
 // Placement decision (plan `monaco-decoration-system-port.md`, Phase 1): the
 // tree folds into `viewer/common/model` (the mirror of Monaco's
 // `common/model/`) instead of a carved sibling package — the node's `options`
-// field is this package's `Decoration`, so a sibling package would cycle.
+// field is this package's `ModelDecorationOptions`, so a sibling package would cycle.
 //
 // Deviations (plan Deviations 1):
 // - `accept_replace` and the edit cluster (`node_accept_edit`,
@@ -256,7 +256,7 @@ pub(all) struct IntervalNode {
   mut max_end : Int
   id : String
   mut owner_id : Int
-  mut options : Decoration?
+  mut options : ModelDecorationOptions?
   mut cached_version_id : Int
   mut cached_absolute_start : Int
   mut cached_absolute_end : Int
@@ -354,7 +354,7 @@ pub fn IntervalNode::reset(
 /// decorations are out of scope (see header).
 pub fn IntervalNode::set_options(
   self : IntervalNode,
-  options : Decoration,
+  options : ModelDecorationOptions,
 ) -> Unit {
   self.options = Some(options)
   let class_name = options.class_name

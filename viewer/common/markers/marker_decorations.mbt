@@ -1,7 +1,7 @@
 // Per-model marker decorations ported from the inner `MarkerDecorations` class,
 // vscode/src/vs/editor/common/services/markerDecorationsService.ts:132
 //
-// Decoration plan Phase 3: the class now stores through the model's
+// ModelDecorationOptions plan Phase 3: the class now stores through the model's
 // interval-tree decoration storage (`model.delta_decorations`), replacing the
 // prior synthetic-id array (the plan-D3 deferral this migration closes).
 
@@ -55,7 +55,7 @@ fn MarkerDecorations::update(
       old_ids.push(entry.1)
     }
   }
-  let new_decorations : Array[@model.DeltaDecoration] = added.map(marker => {
+  let new_decorations : Array[@model.ModelDeltaDecoration] = added.map(marker => {
     let range = create_decoration_range(self.model, marker)
     { range, options: create_decoration_option(marker) }
   })

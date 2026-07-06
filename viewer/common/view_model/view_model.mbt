@@ -354,7 +354,7 @@ fn bucket_injected_text_from_decorations(
     buckets.push([])
   }
   guard source.model is Some(model) else { return buckets }
-  let entries : Array[(Int, Int, Int, @model.ModelInjectedTextOptions)] = []
+  let entries : Array[(Int, Int, Int, @model.InjectedTextOptions)] = []
   for decoration in model.get_injected_text_decorations() {
     match decoration.options.before {
       Some(before) =>
@@ -608,7 +608,7 @@ pub fn ViewModel::lines(self : ViewModel) -> ViewModelLines {
 }
 
 ///|
-/// Decoration buckets for this view model.
+/// ModelDecorationOptions buckets for this view model.
 pub fn ViewModel::decorations(self : ViewModel) -> ViewModelDecorations {
   self.decorations
 }

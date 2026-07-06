@@ -54,7 +54,7 @@ pub(all) enum MinimapPosition {
 /// Overview-ruler decoration options, `IModelDecorationOverviewRulerOptions`.
 /// `color` is a theme-color id (`themeColorFromId`), carried inert (no overview
 /// ruler part paints it — plan D4).
-pub(all) struct OverviewRulerOptions {
+pub(all) struct ModelDecorationOverviewRulerOptions {
   color : String?
   position : OverviewRulerLane
 } derive(Eq, Debug)
@@ -62,7 +62,7 @@ pub(all) struct OverviewRulerOptions {
 ///|
 /// Minimap decoration options, `IModelDecorationMinimapOptions`. `color` is a
 /// theme-color id, carried inert (plan D4).
-pub(all) struct MinimapOptions {
+pub(all) struct ModelDecorationMinimapOptions {
   color : String
   position : MinimapPosition
 } derive(Eq, Debug)
@@ -102,7 +102,7 @@ pub fn clean_class_name(class_name : String) -> String {
 /// height decorations), `textDirection`, `glyphMargin` lane options (glyph
 /// margin view part deferred). `overview_ruler`/`minimap` colors are carried
 /// as strings — no theme-object resolution (recorded theming design).
-pub(all) struct Decoration {
+pub(all) struct ModelDecorationOptions {
   class_name : String
   message : String?
   inline_class_name : String?
@@ -112,8 +112,8 @@ pub(all) struct Decoration {
   show_if_collapsed : Bool
   should_fill_line_on_line_break : Bool
   stickiness : TrackedRangeStickiness
-  overview_ruler : OverviewRulerOptions?
-  minimap : MinimapOptions?
+  overview_ruler : ModelDecorationOverviewRulerOptions?
+  minimap : ModelDecorationMinimapOptions?
   glyph_margin_class_name : String?
   lines_decorations_class_name : String?
   first_line_decoration_class_name : String?
@@ -124,8 +124,8 @@ pub(all) struct Decoration {
   /// `ModelDecorationOptions.before`/`after` (`InjectedTextOptions`,
   /// `model.ts`), stored in the interval tree's injected-text slot.
   /// Inlay hints are the producer.
-  before : ModelInjectedTextOptions?
-  after : ModelInjectedTextOptions?
+  before : InjectedTextOptions?
+  after : InjectedTextOptions?
 } derive(Debug)
 
 ///|
@@ -135,7 +135,7 @@ pub(all) struct Decoration {
 /// pipeline reads). `cursorStops` is unported — the readonly viewer treats
 /// every injection as `InjectedTextCursorStops.Both` (the default), see
 /// `normalize_projected_column_around_injections`.
-pub(all) struct ModelInjectedTextOptions {
+pub(all) struct InjectedTextOptions {
   content : String
   inline_class_name : String?
   /// `attachedData` reduced: the producing inlay hint's index (`-1` = none),
@@ -145,20 +145,20 @@ pub(all) struct ModelInjectedTextOptions {
 
 ///|
 /// Builds injected-text options.
-pub fn ModelInjectedTextOptions::ModelInjectedTextOptions(
+pub fn InjectedTextOptions::InjectedTextOptions(
   content : String,
   inline_class_name? : String,
   attached_index? : Int = -1,
-) -> ModelInjectedTextOptions {
+) -> InjectedTextOptions {
   { content, inline_class_name, attached_index }
 }
 
 ///|
 /// A (range, options) pair handed to `TextModel::delta_decorations` —
 /// Monaco's `IModelDeltaDecoration`.
-pub(all) struct DeltaDecoration {
+pub(all) struct ModelDeltaDecoration {
   range : @base_common.Range
-  options : Decoration
+  options : ModelDecorationOptions
 } derive(Debug)
 
 ///|
@@ -169,7 +169,7 @@ pub(all) struct ModelDecoration {
   id : String
   owner_id : Int
   range : @base_common.Range
-  options : Decoration
+  options : ModelDecorationOptions
 } derive(Debug)
 
 ///|
@@ -195,7 +195,7 @@ pub(all) struct ModelDecorationsChangedEvent {
 /// `ModelDecorationOptions` ctor; defaults mirror the source (`stickiness`
 /// AlwaysGrows, `zIndex` 0). Direct record literals bypass the cleaning, like
 /// nothing does in Monaco.
-pub fn Decoration::Decoration(
+pub fn ModelDecorationOptions::ModelDecorationOptions(
   class_name : String,
   message? : String,
   inline_class_name? : String,
@@ -205,17 +205,17 @@ pub fn Decoration::Decoration(
   show_if_collapsed? : Bool = false,
   should_fill_line_on_line_break? : Bool = false,
   stickiness? : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
-  overview_ruler? : OverviewRulerOptions,
-  minimap? : MinimapOptions,
+  overview_ruler? : ModelDecorationOverviewRulerOptions,
+  minimap? : ModelDecorationMinimapOptions,
   glyph_margin_class_name? : String,
   lines_decorations_class_name? : String,
   first_line_decoration_class_name? : String,
   margin_class_name? : String,
   collapse_on_replace_edit? : Bool = false,
   description? : String = "",
-  before? : ModelInjectedTextOptions,
-  after? : ModelInjectedTextOptions,
-) -> Decoration {
+  before? : InjectedTextOptions,
+  after? : InjectedTextOptions,
+) -> ModelDecorationOptions {
   {
     class_name: clean_class_name(class_name),
     message,

@@ -10,9 +10,9 @@ import {
 }
 
 // Values
-pub fn compute_decoration_overlay_pieces(Array[@inline_decorations.ViewModelDecoration[@model.Decoration]], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[DecorationOverlayPiece]
+pub fn compute_decoration_overlay_pieces(Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[DecorationOverlayPiece]
 
-pub fn render_decorations_overlay(@dom.Element, Array[@inline_decorations.ViewModelDecoration[@model.Decoration]], @view_layout.ViewportData, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Unit
+pub fn render_decorations_overlay(@dom.Element, Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]], @view_layout.ViewportData, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Unit
 
 // Errors
 

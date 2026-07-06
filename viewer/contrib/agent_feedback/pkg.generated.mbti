@@ -7,15 +7,15 @@ import {
 }
 
 // Values
-pub fn compare_editor_comments(EditorComment, EditorComment) -> Int
+pub fn compare_session_editor_comments(SessionEditorComment, SessionEditorComment) -> Int
 
-pub fn get_accepted_feedback_comment_count(Array[EditorComment]) -> Int
+pub fn get_accepted_agent_feedback_comment_count(Array[SessionEditorComment]) -> Int
 
-pub fn get_editor_comments(Array[AgentFeedback]) -> Array[EditorComment]
+pub fn get_session_editor_comments(Array[AgentFeedback]) -> Array[SessionEditorComment]
 
-pub fn group_nearby_editor_comments(Array[EditorComment], line_threshold? : Int) -> Array[Array[EditorComment]]
+pub fn group_nearby_session_editor_comments(Array[SessionEditorComment], line_threshold? : Int) -> Array[Array[SessionEditorComment]]
 
-pub fn to_editor_comment_id(String) -> String
+pub fn to_session_editor_comment_id(String) -> String
 
 // Errors
 
@@ -104,7 +104,7 @@ pub(all) struct AgentFeedbackSubmittedEvent {
   reply_count : Int
 } derive(@debug.Debug)
 
-pub(all) struct EditorComment {
+pub(all) struct SessionEditorComment {
   id : String
   source_id : String
   kind : AgentFeedbackKind

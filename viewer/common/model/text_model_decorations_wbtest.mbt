@@ -21,9 +21,9 @@ fn wb_options(
   stickiness? : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
   collapse_on_replace_edit? : Bool = false,
   glyph_margin_class_name? : String,
-  overview_ruler? : OverviewRulerOptions,
-) -> Decoration {
-  Decoration(
+  overview_ruler? : ModelDecorationOverviewRulerOptions,
+) -> ModelDecorationOptions {
+  ModelDecorationOptions(
     class_name,
     stickiness~,
     collapse_on_replace_edit~,

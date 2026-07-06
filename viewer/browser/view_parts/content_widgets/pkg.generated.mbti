@@ -20,7 +20,6 @@ pub(all) struct ContentWidgets {
   overflowing_content_widgets : @dom.Element
   mut hover_widget : HoverWidgetDom?
   mut should_render : Bool
-  mut prepared : ContentWidgetsPrepared?
 }
 pub fn ContentWidgets::dom(Self) -> @dom.Element
 pub fn ContentWidgets::hover_scrollable(Self) -> @scrollbar.ScrollableElementDom?
@@ -28,15 +27,6 @@ pub fn ContentWidgets::hover_wrapper(Self) -> @dom.Element?
 pub fn ContentWidgets::new(@dom.Document) -> Self
 pub fn ContentWidgets::overflowing_dom(Self) -> @dom.Element
 pub fn ContentWidgets::render_hover_widget(Self, HoverWidgetHost, @view_layout.LineWindow, String, @view_layout.ViewLayout, @hover.HoverWidgetView?, (Bool, Double, Double) -> Unit, Double, Double) -> Unit
-
-pub(all) struct ContentWidgetsPrepared {
-  window : @view_layout.LineWindow
-  language_id : String
-  layout : @view_layout.ViewLayout
-  hover_view : @hover.HoverWidgetView?
-  on_hover_measured : (Bool, Double, Double) -> Unit
-  space_width : Double
-}
 
 pub(all) struct HoverWidgetDom {
   wrapper : @dom.Element

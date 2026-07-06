@@ -30,17 +30,11 @@ pub(all) struct ViewCursors {
   cursors_layer : @dom.Element
   cursor : @dom.Element
   mut should_render : Bool
-  mut prepared : ViewCursorsPrepared?
+  mut render_data : CursorRenderData?
 }
 pub fn ViewCursors::dom(Self) -> @dom.Element
 pub fn ViewCursors::new(@dom.Document) -> Self
-pub fn ViewCursors::render_cursor(Self, ViewCursorsPrepared, String) -> Unit
-
-pub(all) struct ViewCursorsPrepared {
-  render_data : CursorRenderData?
-  has_selection : Bool
-  editor_has_focus : Bool
-}
+pub fn ViewCursors::render_cursor(Self, has_selection~ : Bool, editor_has_focus~ : Bool, String) -> Unit
 
 // Type aliases
 

@@ -23,16 +23,10 @@ pub(all) struct BrowserViewZone {
 pub(all) struct ViewZones {
   view_zones : @dom.Element
   mut should_render : Bool
-  mut prepared : ViewZonesPrepared?
 }
 pub fn ViewZones::dom(Self) -> @dom.Element
 pub fn ViewZones::new(@dom.Document) -> Self
 pub fn ViewZones::render_view_zones(Self, Array[BrowserViewZone], @view_layout.ViewportData, Double) -> Unit
-
-pub(all) struct ViewZonesPrepared {
-  zones : Array[BrowserViewZone]
-  viewport : @view_layout.ViewportData
-}
 
 // Type aliases
 

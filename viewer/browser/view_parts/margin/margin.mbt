@@ -6,27 +6,7 @@
 
 ///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
-/// `should_render` / `prepared` directly.
-pub(all) struct MarginViewOverlaysPrepared {
-  viewport : @view_layout.ViewportData
-  view_model : @view_model.ViewModel?
-  generation : Int
-  /// Viewport decorations for the line-decorations lane
-  /// (`LinesDecorationsOverlay`; see `lines_decorations.mbt`).
-  decorations : Array[@view_model.ViewModelDecoration]
-  /// The lane width, `layoutInfo.decorationsWidth`. `0` renders no lane.
-  line_decorations_width : Double
-  /// Current-line margin highlight inputs (`currentLineHighlight.ts`; see
-  /// `current_line_highlight.mbt`).
-  cursor_view_line : Int?
-  selection_is_empty : Bool
-  editor_has_focus : Bool
-  word_wrap : Bool
-  render_line_highlight : @view_layout.RenderLineHighlight
-  render_line_highlight_only_when_focus : Bool
-}
-
-///|
+/// `should_render` directly.
 pub(all) struct MarginViewOverlays {
   margin : @rdom.Element
   current_line : @rdom.Element
@@ -36,7 +16,6 @@ pub(all) struct MarginViewOverlays {
   mut line_number_window : @view_layout.LineWindow
   mut line_number_generation : Int
   mut should_render : Bool
-  mut prepared : MarginViewOverlaysPrepared?
 }
 
 ///|
@@ -75,7 +54,6 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
     line_number_window: { start: 0, end: 0 },
     line_number_generation: -1,
     should_render: true,
-    prepared: None,
   }
 }
 

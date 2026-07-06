@@ -26,19 +26,11 @@ pub(all) struct BrowserViewZone {
 }
 
 ///|
-/// `pub(all)`: constructed by the `ViewPart` impl in `view_part.mbt`.
-pub(all) struct ViewZonesPrepared {
-  zones : Array[BrowserViewZone]
-  viewport : @view_layout.ViewportData
-}
-
-///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
-/// `should_render`/`prepared` directly.
+/// `should_render` directly.
 pub(all) struct ViewZones {
   view_zones : @rdom.Element
   mut should_render : Bool
-  mut prepared : ViewZonesPrepared?
 }
 
 ///|
@@ -46,7 +38,7 @@ pub fn ViewZones::new(document : @rdom.Document) -> ViewZones {
   let view_zones = document.create_element("div")
   view_zones.set_attribute("class", "view-zones")
   view_zones.set_attribute("data-view-part", "view-zones")
-  { view_zones, should_render: true, prepared: None }
+  { view_zones, should_render: true }
 }
 
 ///|

@@ -4,13 +4,13 @@
 /// / `on_did_render`) mirrors Monaco's `ViewEventHandler`: a typed view event is
 /// offered to every part, and a part that returns `true` is marked dirty for the
 /// next render. `should_render` returns that accumulated flag (no longer a
-/// snapshot diff). The render half (`on_before_render` / `prepare_render` /
-/// `render`) mirrors Monaco's `ViewPart`/`DynamicViewOverlay`.
+/// snapshot diff). The render half (`prepare_render` / `render`) mirrors
+/// Monaco's `ViewPart`/`DynamicViewOverlay`: `prepare_render` computes and
+/// stores any state that needs the read phase, `render` writes the DOM.
 priv trait ViewPart {
   fn on_view_event(Self, ViewEvent) -> Bool
   fn should_render(Self) -> Bool
   fn set_should_render(Self, Bool) -> Unit
-  fn on_before_render(Self, @view_layout.ViewportData) -> Unit
   fn prepare_render(Self, RenderingContext) -> Unit
   fn render(Self, RestrictedRenderingContext) -> Unit
   fn on_did_render(Self) -> Unit
@@ -110,20 +110,6 @@ impl ViewPart for ViewPartHandle with fn set_should_render(self, value) {
 }
 
 ///|
-impl ViewPart for ViewPartHandle with fn on_before_render(self, viewport) {
-  match self {
-    ViewLinesPart(part) => ViewPart::on_before_render(part, viewport)
-    ViewZonesPart(part) => ViewPart::on_before_render(part, viewport)
-    ContentViewOverlaysPart(part) => ViewPart::on_before_render(part, viewport)
-    MarginViewOverlaysPart(part) => ViewPart::on_before_render(part, viewport)
-    ContentWidgetsPart(part) => ViewPart::on_before_render(part, viewport)
-    ViewCursorsPart(part) => ViewPart::on_before_render(part, viewport)
-    OverlayWidgetsPart(part) => ViewPart::on_before_render(part, viewport)
-    EditorScrollbarPart(part) => ViewPart::on_before_render(part, viewport)
-  }
-}
-
-///|
 impl ViewPart for ViewPartHandle with fn prepare_render(self, context) {
   match self {
     ViewLinesPart(part) => ViewPart::prepare_render(part, context)
@@ -195,40 +181,23 @@ impl ViewPart for @view_zones.ViewZones with fn set_should_render(self, value) {
 }
 
 ///|
-impl ViewPart for @view_zones.ViewZones with fn on_before_render(
-  _self,
-  _viewport,
-) {
-  ()
-}
-
-///|
-impl ViewPart for @view_zones.ViewZones with fn prepare_render(self, context) {
-  self.prepared = Some({
-    zones: context.input.browser_view_zones,
-    viewport: context.viewport,
-  })
+impl ViewPart for @view_zones.ViewZones with fn prepare_render(_self, _context) {
+  // Monaco `ViewZones.prepareRender`: nothing to read.
 }
 
 ///|
 impl ViewPart for @view_zones.ViewZones with fn render(self, context) {
-  match self.prepared {
-    Some(prepared) => {
-      self.render_view_zones(
-        prepared.zones,
-        prepared.viewport,
-        context.translate_y,
-      )
-      self.view_zones.set_attribute("style", context.content_transform)
-    }
-    None => ()
-  }
+  self.render_view_zones(
+    context.input.browser_view_zones,
+    context.viewport,
+    context.translate_y,
+  )
+  self.view_zones.set_attribute("style", context.content_transform)
 }
 
 ///|
 impl ViewPart for @view_zones.ViewZones with fn on_did_render(self) {
   self.should_render = false
-  self.prepared = None
 }
 
 // `ViewPart` impl for `@view_lines.ViewLines` (`browser/view_parts/view_lines`).
@@ -265,51 +234,22 @@ impl ViewPart for @view_lines.ViewLines with fn set_should_render(self, value) {
 }
 
 ///|
-impl ViewPart for @view_lines.ViewLines with fn on_before_render(
-  _self,
-  _viewport,
-) {
-  ()
+impl ViewPart for @view_lines.ViewLines with fn prepare_render(_self, _context) {
+  // Monaco `ViewLines.prepareRender` throws "Not supported": the lines
+  // render through `renderText`, which `View::render` drives directly ahead
+  // of the part loops (like `View._actualRender`).
+  abort("Not supported")
 }
 
 ///|
-impl ViewPart for @view_lines.ViewLines with fn prepare_render(self, context) {
-  // Per-line decorations arrive inside the viewport data (built lazily from
-  // the model's decoration storage by `ViewModelDecorations`).
-  self.prepared = Some({
-    viewport: context.viewport,
-    generation: context.input.generation,
-    decorations_generation: context.input.decorations_generation,
-    space_width: context.input.space_width,
-    render_whitespace: context.input.render_whitespace,
-    render_control_characters: context.input.render_control_characters,
-    selection_view_range: context.input.selection_view_range,
-  })
-}
-
-///|
-impl ViewPart for @view_lines.ViewLines with fn render(self, context) {
-  match self.prepared {
-    Some(prepared) => {
-      self.render_text(
-        prepared.viewport,
-        prepared.generation,
-        prepared.decorations_generation,
-        prepared.space_width,
-        prepared.render_whitespace,
-        prepared.render_control_characters,
-        prepared.selection_view_range,
-      )
-      self.view_lines.set_attribute("style", context.content_transform)
-    }
-    None => ()
-  }
+impl ViewPart for @view_lines.ViewLines with fn render(_self, _context) {
+  // Monaco `ViewLines.render` throws "Not supported" — see `prepare_render`.
+  abort("Not supported")
 }
 
 ///|
 impl ViewPart for @view_lines.ViewLines with fn on_did_render(self) {
   self.should_render = false
-  self.prepared = None
 }
 
 // `ViewPart` impl for `@margin.MarginViewOverlays` (`browser/view_parts/margin`).
@@ -348,18 +288,17 @@ impl ViewPart for @margin.MarginViewOverlays with fn set_should_render(
 }
 
 ///|
-impl ViewPart for @margin.MarginViewOverlays with fn on_before_render(
+impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
   _self,
-  _viewport,
+  _context,
 ) {
-  ()
+  // The margin overlays (current-line, line numbers, lines-decorations lane)
+  // render in one pass over the render context (the flat-overlay deviation;
+  // Monaco's dynamic overlays build `_renderResult` here).
 }
 
 ///|
-impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
-  self,
-  context,
-) {
+impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
   let cursor_view_line = match context.input.view_selection {
     Some(selection) => Some(selection.get_position().line_number)
     None => None
@@ -368,85 +307,58 @@ impl ViewPart for @margin.MarginViewOverlays with fn prepare_render(
     Some(selection) => selection.is_empty()
     None => true
   }
+  self.render_current_line_margin(
+    context.viewport,
+    Some(context.input.view_model),
+    cursor_view_line,
+    selection_is_empty,
+    context.input.editor_has_focus,
+    context.input.word_wrap,
+    context.input.render_line_highlight,
+    context.input.render_line_highlight_only_when_focus,
+    // `_contentLeft`, the margin width (cLH:227).
+    context.gutter_width,
+  )
+  self.render_line_numbers(context.viewport, context.input.generation)
+  // `layoutInfo.decorationsLeft`: the lane sits between the line numbers
+  // and the content. Deviation vs. Monaco: the viewer keeps line numbers
+  // in the line-number band, so that layer is constrained to
+  // `line_numbers_width` instead of the full margin.
+  let line_numbers_width = context.gutter_width -
+    context.input.line_decorations_width
   // `ctx.getDecorationsInViewport()` (`linesDecorations.ts:73`): the same
   // cached viewport decoration collection the content overlays read.
   let decorations = context.input.view_model
     .decorations()
     .get_decorations_viewport_data(context.viewport.visible_range).decorations
-  self.prepared = Some({
-    viewport: context.viewport,
-    view_model: Some(context.input.view_model),
-    generation: context.input.generation,
-    decorations,
-    line_decorations_width: context.input.line_decorations_width,
-    cursor_view_line,
-    selection_is_empty,
-    editor_has_focus: context.input.editor_has_focus,
-    word_wrap: context.input.word_wrap,
-    render_line_highlight: context.input.render_line_highlight,
-    render_line_highlight_only_when_focus: context.input.render_line_highlight_only_when_focus,
-  })
-}
-
-///|
-impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
-  match self.prepared {
-    Some(prepared) => {
-      self.render_current_line_margin(
-        prepared.viewport,
-        prepared.view_model,
-        prepared.cursor_view_line,
-        prepared.selection_is_empty,
-        prepared.editor_has_focus,
-        prepared.word_wrap,
-        prepared.render_line_highlight,
-        prepared.render_line_highlight_only_when_focus,
-        // `_contentLeft`, the margin width (cLH:227).
-        context.gutter_width,
-      )
-      self.render_line_numbers(prepared.viewport, prepared.generation)
-      // `layoutInfo.decorationsLeft`: the lane sits between the line numbers
-      // and the content. Deviation vs. Monaco: the viewer keeps line numbers
-      // in the line-number band, so that layer is constrained to
-      // `line_numbers_width` instead of the full margin.
-      let line_numbers_width = context.gutter_width -
-        prepared.line_decorations_width
-      let to_render = @view_model.lines_decorations_to_render(
-        prepared.decorations,
-      )
-      let class_names_per_line = @view_model.dedup_margin_decorations(
-        prepared.viewport.start_line_number,
-        prepared.viewport.start_line_number +
-        prepared.viewport.lines.length() -
-        1,
-        to_render,
-      )
-      self.render_lines_decorations(
-        prepared.viewport,
-        class_names_per_line,
-        decorations_left=line_numbers_width,
-        decorations_width=prepared.line_decorations_width,
-      )
-      self.margin.set_attribute(
-        "style",
-        "width:" + context.gutter_width.to_string() + "px",
-      )
-      let band_constraint = ";width:" + line_numbers_width.to_string() + "px"
-      self.current_line.set_attribute("style", context.margin_transform)
-      self.line_numbers.set_attribute(
-        "style",
-        context.margin_transform + band_constraint,
-      )
-      self.lines_decorations.set_attribute("style", context.margin_transform)
-    }
-    None => ()
-  }
+  let to_render = @view_model.lines_decorations_to_render(decorations)
+  let class_names_per_line = @view_model.dedup_margin_decorations(
+    context.viewport.start_line_number,
+    context.viewport.start_line_number + context.viewport.lines.length() - 1,
+    to_render,
+  )
+  self.render_lines_decorations(
+    context.viewport,
+    class_names_per_line,
+    decorations_left=line_numbers_width,
+    decorations_width=context.input.line_decorations_width,
+  )
+  self.margin.set_attribute(
+    "style",
+    "width:" + context.gutter_width.to_string() + "px",
+  )
+  let band_constraint = ";width:" + line_numbers_width.to_string() + "px"
+  self.current_line.set_attribute("style", context.margin_transform)
+  self.line_numbers.set_attribute(
+    "style",
+    context.margin_transform + band_constraint,
+  )
+  self.lines_decorations.set_attribute("style", context.margin_transform)
 }
 
 ///|
 impl ViewPart for @margin.MarginViewOverlays with fn on_did_render(self) {
   self.should_render = false
-  self.prepared = None
 }
 
 // `ViewPart` impl for `@overlay_widgets.OverlayWidgets`
@@ -476,14 +388,6 @@ impl ViewPart for @overlay_widgets.OverlayWidgets with fn set_should_render(
   value,
 ) {
   self.should_render = value
-}
-
-///|
-impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_before_render(
-  _self,
-  _viewport,
-) {
-  ()
 }
 
 ///|
@@ -535,14 +439,6 @@ impl ViewPart for @editor_scrollbar.EditorScrollbar with fn set_should_render(
   value,
 ) {
   self.should_render = value
-}
-
-///|
-impl ViewPart for @editor_scrollbar.EditorScrollbar with fn on_before_render(
-  _self,
-  _viewport,
-) {
-  ()
 }
 
 ///|
@@ -613,18 +509,18 @@ impl ViewPart for @selections.ContentViewOverlays with fn set_should_render(
 }
 
 ///|
-impl ViewPart for @selections.ContentViewOverlays with fn on_before_render(
+impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
   _self,
-  _viewport,
+  _context,
 ) {
-  ()
+  // The dynamic overlays this container hosts (current-line, selections,
+  // decorations) render in one measured pass over the render context (the
+  // flat-overlay deviation; Monaco's overlays build `_renderResult` here).
 }
 
 ///|
-impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
-  self,
-  context,
-) {
+impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) {
+  let view_model = Some(context.input.view_model)
   let cursor_view_line = match context.input.view_selection {
     Some(selection) => Some(selection.get_position().line_number)
     None => None
@@ -633,89 +529,61 @@ impl ViewPart for @selections.ContentViewOverlays with fn prepare_render(
     Some(selection) => selection.is_empty()
     None => true
   }
+  // One clear per part render; the current-line highlight then paints
+  // before the selection pieces, preserving Monaco's dynamic-overlay
+  // registration order (`view.ts:218-219`). The overlay renderers live
+  // in their Monaco-mirroring packages
+  // (`view_parts/{current_line_highlight,decorations,selections}`) as
+  // free functions over the shared container.
+  self.view_overlays.set_inner_html("")
+  @current_line_highlight.render_current_line(
+    self.view_overlays,
+    context.viewport,
+    view_model,
+    cursor_view_line,
+    selection_is_empty,
+    context.input.editor_has_focus,
+    context.input.word_wrap,
+    context.input.render_line_highlight,
+    context.input.render_line_highlight_only_when_focus,
+    // `max(ctx.scrollWidth, this._contentWidth)` (cLH:211).
+    if context.dimensions.scroll_width > context.dimensions.width {
+      context.dimensions.scroll_width
+    } else {
+      context.dimensions.width
+    },
+  )
+  self.render_selection_overlays(
+    context.viewport,
+    context.input.selection_view_range,
+    view_model,
+    context.input.space_width,
+    context.view_context.measure_line_selection,
+  )
   // `ctx.getDecorationsInViewport()` (`decorations.ts:68`): the viewport's
   // decoration collection (a cache hit — the viewport data resolved the same
-  // range).
+  // range). Decorations render after current-line and selections — Monaco's
+  // dynamic-overlay registration order (`view.ts:218-221`).
   let decorations = context.input.view_model
     .decorations()
     .get_decorations_viewport_data(context.viewport.visible_range).decorations
-  self.prepared = Some({
-    viewport: context.viewport,
-    selection_view_range: context.input.selection_view_range,
-    view_model: Some(context.input.view_model),
+  @decorations.render_decorations_overlay(
+    self.view_overlays,
     decorations,
-    space_width: context.input.space_width,
-    editor_has_focus: context.input.editor_has_focus,
-    cursor_view_line,
-    selection_is_empty,
-    word_wrap: context.input.word_wrap,
-    render_line_highlight: context.input.render_line_highlight,
-    render_line_highlight_only_when_focus: context.input.render_line_highlight_only_when_focus,
-  })
-}
-
-///|
-impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) {
-  match self.prepared {
-    Some(prepared) => {
-      // One clear per part render; the current-line highlight then paints
-      // before the selection pieces, preserving Monaco's dynamic-overlay
-      // registration order (`view.ts:218-219`). The overlay renderers live
-      // in their Monaco-mirroring packages
-      // (`view_parts/{current_line_highlight,decorations,selections}`) as
-      // free functions over the shared container.
-      self.view_overlays.set_inner_html("")
-      @current_line_highlight.render_current_line(
-        self.view_overlays,
-        prepared.viewport,
-        prepared.view_model,
-        prepared.cursor_view_line,
-        prepared.selection_is_empty,
-        prepared.editor_has_focus,
-        prepared.word_wrap,
-        prepared.render_line_highlight,
-        prepared.render_line_highlight_only_when_focus,
-        // `max(ctx.scrollWidth, this._contentWidth)` (cLH:211).
-        if context.dimensions.scroll_width > context.dimensions.width {
-          context.dimensions.scroll_width
-        } else {
-          context.dimensions.width
-        },
-      )
-      self.render_selection_overlays(
-        prepared.viewport,
-        prepared.selection_view_range,
-        prepared.view_model,
-        prepared.space_width,
-        context.view_context.measure_line_selection,
-      )
-      // Decorations render after current-line and selections — Monaco's
-      // dynamic-overlay registration order (`view.ts:218-221`).
-      @decorations.render_decorations_overlay(
-        self.view_overlays,
-        prepared.decorations,
-        prepared.viewport,
-        line_number => {
-          match prepared.view_model {
-            Some(view_model) =>
-              view_model.lines().get_view_line_max_column(line_number)
-            None => 1
-          }
-        },
-        context.view_context.measure_line_decorations,
-        prepared.space_width,
-      )
-      self.set_focused(prepared.editor_has_focus)
-      self.view_overlays.set_attribute("style", context.content_transform)
-    }
-    None => ()
-  }
+    context.viewport,
+    line_number => {
+      context.input.view_model.lines().get_view_line_max_column(line_number)
+    },
+    context.view_context.measure_line_decorations,
+    context.input.space_width,
+  )
+  self.set_focused(context.input.editor_has_focus)
+  self.view_overlays.set_attribute("style", context.content_transform)
 }
 
 ///|
 impl ViewPart for @selections.ContentViewOverlays with fn on_did_render(self) {
   self.should_render = false
-  self.prepared = None
 }
 
 // `ViewPart` impl for `@content_widgets.ContentWidgets`
@@ -759,61 +627,46 @@ impl ViewPart for @content_widgets.ContentWidgets with fn set_should_render(
 }
 
 ///|
-impl ViewPart for @content_widgets.ContentWidgets with fn on_before_render(
-  _self,
-  _viewport,
-) {
-  ()
-}
-
-///|
 impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
-  self,
-  context,
+  _self,
+  _context,
 ) {
-  self.prepared = Some({
-    window: context.input.window,
-    language_id: context.input.view_model.language_id(),
-    layout: context.input.layout,
-    hover_view: context.input.hover_state.widget_view(),
-    on_hover_measured: context.input.on_hover_measured,
-    space_width: context.input.space_width,
-  })
+  // The hover widget lays itself out against its own live DOM inside
+  // `render_hover_widget` (the measured-height feedback loop through
+  // `on_hover_measured`), so there is nothing to precompute here.
 }
 
 ///|
 impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) {
   self.content_widgets.set_attribute("style", context.content_transform)
-  match self.prepared {
-    Some(prepared) => {
-      let host : @content_widgets.HoverWidgetHost = {
-        root: context.view_context.root,
-        languages: context.view_context.languages,
-        keep_hover_open: context.view_context.keep_hover_open,
-        handle_hover_mousedown: context.view_context.handle_hover_mousedown,
-        hook_scrollable_scrollbar_input: context.view_context.hook_scrollable_scrollbar_input,
-        handle_hover_keydown: context.view_context.handle_hover_keydown,
-        model_position_to_view_position: context.view_context.model_position_to_view_position,
-      }
-      self.render_hover_widget(
-        host,
-        prepared.window,
-        prepared.language_id,
-        prepared.layout,
-        prepared.hover_view,
-        prepared.on_hover_measured,
-        prepared.space_width,
-        context.gutter_width,
-      )
-    }
-    None => ()
+  let host : @content_widgets.HoverWidgetHost = {
+    root: context.view_context.root,
+    languages: context.view_context.languages,
+    keep_hover_open: context.view_context.keep_hover_open,
+    handle_hover_mousedown: context.view_context.handle_hover_mousedown,
+    hook_scrollable_scrollbar_input: context.view_context.hook_scrollable_scrollbar_input,
+    handle_hover_keydown: context.view_context.handle_hover_keydown,
+    model_position_to_view_position: context.view_context.model_position_to_view_position,
   }
+  self.render_hover_widget(
+    host,
+    context.input.window,
+    context.input.view_model.language_id(),
+    context.input.layout,
+    // Resolved via `HoverController::widget_view` here (this package already
+    // imports the hover package) — `content_widgets` holds only the derived
+    // `HoverWidgetView`, not the full `HoverController` (which stays with
+    // `Viewer`; see `HoverWidgetHost`).
+    context.input.hover_state.widget_view(),
+    context.input.on_hover_measured,
+    context.input.space_width,
+    context.gutter_width,
+  )
 }
 
 ///|
 impl ViewPart for @content_widgets.ContentWidgets with fn on_did_render(self) {
   self.should_render = false
-  self.prepared = None
 }
 
 // `ViewPart` impl for `@view_cursors.ViewCursors`
@@ -859,27 +712,18 @@ impl ViewPart for @view_cursors.ViewCursors with fn set_should_render(
 }
 
 ///|
-impl ViewPart for @view_cursors.ViewCursors with fn on_before_render(
-  _self,
-  _viewport,
-) {
-  ()
-}
-
-///|
 // `ViewCursor._prepareRender` (`viewCursor.ts:163-203`), Line-style arm: the
 // caret x is `ctx.visibleRangeForPosition(position)` — the port measures it
 // off the rendered line DOM (`View::offset_for_column` via the
 // `ViewContext.offset_for_column` seam; `-1` = line not rendered → Monaco's
 // "Outside viewport → null"). The caret top is the line's viewport-relative
-// vertical offset, like every flat overlay piece.
+// vertical offset, like every flat overlay piece. The result is stored as
+// the part's `render_data` (Monaco's `this._renderData`).
 impl ViewPart for @view_cursors.ViewCursors with fn prepare_render(
   self,
   context,
 ) {
-  let input = context.input
-  let render_data : @view_cursors.CursorRenderData? = match
-    input.view_selection {
+  self.render_data = match context.input.view_selection {
     None => None
     Some(selection) => {
       let position = selection.get_position()
@@ -906,27 +750,22 @@ impl ViewPart for @view_cursors.ViewCursors with fn prepare_render(
       }
     }
   }
-  let has_selection = match input.view_selection {
-    Some(selection) => !selection.is_empty()
-    None => false
-  }
-  self.prepared = Some({
-    render_data,
-    has_selection,
-    editor_has_focus: input.editor_has_focus,
-  })
 }
 
 ///|
 impl ViewPart for @view_cursors.ViewCursors with fn render(self, context) {
-  match self.prepared {
-    Some(prepared) => self.render_cursor(prepared, context.content_transform)
-    None => ()
+  let has_selection = match context.input.view_selection {
+    Some(selection) => !selection.is_empty()
+    None => false
   }
+  self.render_cursor(
+    has_selection~,
+    editor_has_focus=context.input.editor_has_focus,
+    context.content_transform,
+  )
 }
 
 ///|
 impl ViewPart for @view_cursors.ViewCursors with fn on_did_render(self) {
   self.should_render = false
-  self.prepared = None
 }

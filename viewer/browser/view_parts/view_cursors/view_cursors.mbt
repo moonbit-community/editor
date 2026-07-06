@@ -16,20 +16,6 @@
 // `viewer/browser/view_parts/view_zones`'s README for why.
 
 ///|
-/// The prepared render state for one frame. `render_data` is `None` when the
-/// cursor's view line is outside the rendered window or its line node is not
-/// measurable yet — Monaco's "Outside viewport → null" arms
-/// (`viewCursor.ts:177-180`).
-///
-/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` builds this and
-/// reads/writes `should_render` / `prepared` directly.
-pub(all) struct ViewCursorsPrepared {
-  render_data : CursorRenderData?
-  has_selection : Bool
-  editor_has_focus : Bool
-}
-
-///|
 /// Monaco's `ViewCursorRenderData` (`viewCursor.ts:26-36`), minus the
 /// block-cursor `textContent`/`textContentClassName` (N-A for the Line style).
 pub(all) struct CursorRenderData {
@@ -41,11 +27,17 @@ pub(all) struct CursorRenderData {
 } derive(Eq, Debug)
 
 ///|
+/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `should_render` / `render_data` directly.
 pub(all) struct ViewCursors {
   cursors_layer : @rdom.Element
   cursor : @rdom.Element
   mut should_render : Bool
-  mut prepared : ViewCursorsPrepared?
+  /// Monaco `ViewCursor._renderData`, stored by `prepare_render` and written
+  /// out by `render`. `None` when the cursor's view line is outside the
+  /// rendered window or its line node is not measurable yet — Monaco's
+  /// "Outside viewport → null" arms (`viewCursor.ts:177-180`).
+  mut render_data : CursorRenderData?
 }
 
 ///|
@@ -63,7 +55,7 @@ pub fn ViewCursors::new(document : @rdom.Document) -> ViewCursors {
   cursor.set_attribute("class", "cursor monaco-mouse-cursor-text")
   cursor.set_attribute("style", "display:none")
   cursors_layer.append_child(cursor.as_node())
-  { cursors_layer, cursor, should_render: true, prepared: None }
+  { cursors_layer, cursor, should_render: true, render_data: None }
 }
 
 ///|
@@ -125,27 +117,25 @@ pub fn prepare_cursor_render_data(
 }
 
 ///|
-/// Writes one prepared frame — `ViewCursors.render` + `ViewCursor.render`
-/// (`viewCursor.ts:254-282`) plus the show/hide half of `_updateBlinking`
-/// (`viewCursors.ts:242-256`): in this readonly product the blinking style is
-/// `focused ? Solid : Hidden`, and with no blink timers the visibility flip
-/// happens here rather than between renders.
+/// Writes the prepared `render_data` out — `ViewCursors.render` +
+/// `ViewCursor.render` (`viewCursor.ts:254-282`) plus the show/hide half of
+/// `_updateBlinking` (`viewCursors.ts:242-256`): in this readonly product the
+/// blinking style is `focused ? Solid : Hidden`, and with no blink timers the
+/// visibility flip happens here rather than between renders.
 pub fn ViewCursors::render_cursor(
   self : ViewCursors,
-  prepared : ViewCursorsPrepared,
+  has_selection~ : Bool,
+  editor_has_focus~ : Bool,
   content_transform : String,
 ) -> Unit {
-  self.cursors_layer.set_attribute(
-    "class",
-    cursors_layer_class(prepared.has_selection),
-  )
+  self.cursors_layer.set_attribute("class", cursors_layer_class(has_selection))
   self.cursors_layer.set_attribute("style", content_transform)
-  match prepared.render_data {
+  match self.render_data {
     None => self.cursor.set_attribute("style", "display:none")
     Some(data) =>
       self.cursor.set_attribute(
         "style",
-        cursor_style(data, visible=prepared.editor_has_focus),
+        cursor_style(data, visible=editor_has_focus),
       )
   }
 }

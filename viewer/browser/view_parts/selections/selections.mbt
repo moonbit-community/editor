@@ -10,33 +10,10 @@
 
 ///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
-/// `should_render` / `prepared` directly.
-pub(all) struct ContentViewOverlaysPrepared {
-  viewport : @view_layout.ViewportData
-  selection_view_range : @base_common.Range?
-  view_model : @view_model.ViewModel?
-  /// The viewport's decoration collection (`ctx.getDecorationsInViewport()`),
-  /// consumed by the decorations overlay.
-  decorations : Array[@view_model.ViewModelDecoration]
-  space_width : Double
-  /// Monaco `ViewOverlays._isFocused` (`viewOverlays.ts:76-79`): drives the
-  /// `focused` class toggle on the overlay container at render.
-  editor_has_focus : Bool
-  /// Current-line highlight inputs (`currentLineHighlight.ts`): the cursor's
-  /// view line + selection emptiness (`_readFromSelections`, `:60-81`), the
-  /// wrapped-pass gate (`_wordWrap`, `:43`), and the two options (`:41-42`).
-  cursor_view_line : Int?
-  selection_is_empty : Bool
-  word_wrap : Bool
-  render_line_highlight : @view_layout.RenderLineHighlight
-  render_line_highlight_only_when_focus : Bool
-}
-
-///|
+/// `should_render` directly.
 pub(all) struct ContentViewOverlays {
   view_overlays : @rdom.Element
   mut should_render : Bool
-  mut prepared : ContentViewOverlaysPrepared?
 }
 
 ///|
@@ -46,7 +23,7 @@ pub fn ContentViewOverlays::new(
   let view_overlays = document.create_element("div")
   view_overlays.set_attribute("class", "view-overlays")
   view_overlays.set_attribute("data-view-part", "view-overlays")
-  { view_overlays, should_render: true, prepared: None }
+  { view_overlays, should_render: true }
 }
 
 ///|

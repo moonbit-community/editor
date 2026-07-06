@@ -183,32 +183,29 @@ pub fn View::render(
     ViewPart::set_should_render(self.content_widgets, true)
   }
   let dirty_parts = self.dirty_view_parts()
-  for part in dirty_parts {
-    part.on_before_render(rendering.viewport)
-  }
   let restricted = rendering.restricted()
-  for part in dirty_parts {
-    match part {
-      ViewLinesPart(_) => {
-        part.prepare_render(rendering)
-        part.render(restricted)
-      }
-      _ => ()
-    }
+  // `_actualRender`: the text lines render first, through `renderText`
+  // directly (`ViewLines.prepareRender`/`render` throw "Not supported" in
+  // the source), so the remaining parts' `prepare_render` can measure the
+  // fresh line DOM.
+  if ViewPart::should_render(self.view_lines) {
+    self.view_lines.render_text(
+      rendering.viewport,
+      input.generation,
+      input.decorations_generation,
+      input.space_width,
+      input.render_whitespace,
+      input.render_control_characters,
+      input.selection_view_range,
+    )
+    self.view_lines.dom().set_attribute("style", restricted.content_transform)
+    ViewPart::on_did_render(self.view_lines)
   }
   for part in dirty_parts {
-    match part {
-      ViewLinesPart(_) => ()
-      _ => part.prepare_render(rendering)
-    }
+    part.prepare_render(rendering)
   }
   for part in dirty_parts {
-    match part {
-      ViewLinesPart(_) => ()
-      _ => part.render(restricted)
-    }
-  }
-  for part in dirty_parts {
+    part.render(restricted)
     part.on_did_render()
   }
   self.last_snapshot = Some(rendering.snapshot)
@@ -218,6 +215,13 @@ pub fn View::render(
 fn View::dirty_view_parts(self : View) -> Array[ViewPartHandle] {
   let parts : Array[ViewPartHandle] = []
   for part in self.view_parts {
+    // `_getViewPartsToRender` walks Monaco's `_viewParts`, which does not
+    // contain the special-cased `ViewLines` — `View::render` drives its
+    // `renderText` directly.
+    match part {
+      ViewLinesPart(_) => continue
+      _ => ()
+    }
     if part.should_render() {
       parts.push(part)
     }

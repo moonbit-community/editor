@@ -28,7 +28,6 @@ pub(all) struct ViewLines {
   render_inputs : Array[@view_layout.RenderLineInput]
   line_mappings : Array[@view_layout.CharacterMapping]
   mut should_render : Bool
-  mut prepared : ViewLinesPrepared?
   mut last_selection : @common.Range?
   mut last_render_whitespace : @view_layout.RenderWhitespace
 }
@@ -37,16 +36,6 @@ pub fn ViewLines::line_node_at(Self, Int) -> @dom.Element?
 pub fn ViewLines::mapping_at(Self, Int) -> @view_layout.CharacterMapping?
 pub fn ViewLines::new(@dom.Document) -> Self
 pub fn ViewLines::render_text(Self, @view_layout.ViewportData, Int, Int, Double, @view_layout.RenderWhitespace, Bool, @common.Range?) -> Unit
-
-pub(all) struct ViewLinesPrepared {
-  viewport : @view_layout.ViewportData
-  generation : Int
-  decorations_generation : Int
-  space_width : Double
-  render_whitespace : @view_layout.RenderWhitespace
-  render_control_characters : Bool
-  selection_view_range : @common.Range?
-}
 
 // Type aliases
 

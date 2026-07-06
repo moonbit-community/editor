@@ -78,33 +78,13 @@ pub(all) struct HoverWidgetHost {
 }
 
 ///|
-/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` constructs/reads this
-/// directly.
-pub(all) struct ContentWidgetsPrepared {
-  /// The rendered view-line window; hovers anchored outside it are not
-  /// rendered (their anchor line has no DOM).
-  window : @view_layout.LineWindow
-  /// The model's language id, the markdown renderer's default fence language.
-  language_id : String
-  layout : @view_layout.ViewLayout
-  /// Resolved via `HoverController::widget_view` at `prepare_render` (staying
-  /// in `view_part.mbt`, which already imports the hover package) — this
-  /// package holds only the already-derived view, not the full
-  /// `HoverController` (which stays with `Viewer`; see `HoverWidgetHost`).
-  hover_view : @hover.HoverWidgetView?
-  on_hover_measured : (Bool, Double, Double) -> Unit
-  space_width : Double
-}
-
-///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
-/// `should_render` / `prepared` / `content_widgets` directly.
+/// `should_render` / `content_widgets` directly.
 pub(all) struct ContentWidgets {
   content_widgets : @rdom.Element
   overflowing_content_widgets : @rdom.Element
   mut hover_widget : HoverWidgetDom?
   mut should_render : Bool
-  mut prepared : ContentWidgetsPrepared?
 }
 
 ///|
@@ -124,7 +104,6 @@ pub fn ContentWidgets::new(document : @rdom.Document) -> ContentWidgets {
     overflowing_content_widgets,
     hover_widget: None,
     should_render: true,
-    prepared: None,
   }
 }
 

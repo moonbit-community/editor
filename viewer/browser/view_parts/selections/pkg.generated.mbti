@@ -3,8 +3,6 @@ package "moonbit-community/editor/viewer/browser/view_parts/selections"
 
 import {
   "moonbit-community/editor/base/common",
-  "moonbit-community/editor/viewer/common/inline_decorations",
-  "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom",
@@ -18,26 +16,11 @@ import {
 pub(all) struct ContentViewOverlays {
   view_overlays : @dom.Element
   mut should_render : Bool
-  mut prepared : ContentViewOverlaysPrepared?
 }
 pub fn ContentViewOverlays::dom(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::render_selection_overlays(Self, @view_layout.ViewportData, @common.Range?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Unit
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
-
-pub(all) struct ContentViewOverlaysPrepared {
-  viewport : @view_layout.ViewportData
-  selection_view_range : @common.Range?
-  view_model : @view_model.ViewModel?
-  decorations : Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]]
-  space_width : Double
-  editor_has_focus : Bool
-  cursor_view_line : Int?
-  selection_is_empty : Bool
-  word_wrap : Bool
-  render_line_highlight : @view_layout.RenderLineHighlight
-  render_line_highlight_only_when_focus : Bool
-}
 
 // Type aliases
 

@@ -62,9 +62,14 @@ priv struct RenderingContext {
 }
 
 ///|
-/// Write-only render context for view parts.
+/// Write-phase render context for view parts — Monaco's
+/// `RestrictedRenderingContext`, which carries the viewport data, scroll
+/// state, and viewport decorations into `render`. The viewer's frame inputs
+/// ride along as `input` (its stand-in for Monaco parts reading
+/// `this._context` and event-tracked fields during render).
 priv struct RestrictedRenderingContext {
   view_context : ViewContext
+  input : ViewRenderInput
   viewport : @view_layout.ViewportData
   gutter_width : Double
   position : @view_layout.ScrollPosition
@@ -110,6 +115,7 @@ fn RenderingContext::restricted(
 ) -> RestrictedRenderingContext {
   {
     view_context: self.view_context,
+    input: self.input,
     viewport: self.viewport,
     gutter_width: self.gutter_width,
     position: self.position,

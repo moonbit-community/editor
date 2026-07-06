@@ -2,8 +2,6 @@
 package "moonbit-community/editor/viewer/browser/view_parts/margin"
 
 import {
-  "moonbit-community/editor/viewer/common/inline_decorations",
-  "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom",
@@ -23,27 +21,12 @@ pub(all) struct MarginViewOverlays {
   mut line_number_window : @view_layout.LineWindow
   mut line_number_generation : Int
   mut should_render : Bool
-  mut prepared : MarginViewOverlaysPrepared?
 }
 pub fn MarginViewOverlays::dom(Self) -> @dom.Element
 pub fn MarginViewOverlays::new(@dom.Document) -> Self
 pub fn MarginViewOverlays::render_current_line_margin(Self, @view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Unit
 pub fn MarginViewOverlays::render_line_numbers(Self, @view_layout.ViewportData, Int) -> Unit
 pub fn MarginViewOverlays::render_lines_decorations(Self, @view_layout.ViewportData, Array[Array[String]], decorations_left~ : Double, decorations_width~ : Double) -> Unit
-
-pub(all) struct MarginViewOverlaysPrepared {
-  viewport : @view_layout.ViewportData
-  view_model : @view_model.ViewModel?
-  generation : Int
-  decorations : Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]]
-  line_decorations_width : Double
-  cursor_view_line : Int?
-  selection_is_empty : Bool
-  editor_has_focus : Bool
-  word_wrap : Bool
-  render_line_highlight : @view_layout.RenderLineHighlight
-  render_line_highlight_only_when_focus : Bool
-}
 
 // Type aliases
 

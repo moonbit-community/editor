@@ -6,18 +6,7 @@
 
 ///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
-/// `should_render` / `prepared` / `last_render_whitespace` directly.
-pub(all) struct ViewLinesPrepared {
-  viewport : @view_layout.ViewportData
-  generation : Int
-  decorations_generation : Int
-  space_width : Double
-  render_whitespace : @view_layout.RenderWhitespace
-  render_control_characters : Bool
-  selection_view_range : @base_common.Range?
-}
-
-///|
+/// `should_render` / `last_render_whitespace` directly.
 pub(all) struct ViewLines {
   view_lines : @rdom.Element
   mut window : @view_layout.LineWindow
@@ -27,7 +16,6 @@ pub(all) struct ViewLines {
   render_inputs : Array[@view_layout.RenderLineInput]
   line_mappings : Array[@view_layout.CharacterMapping]
   mut should_render : Bool
-  mut prepared : ViewLinesPrepared?
   // The selection and whitespace mode of the last render, the viewer analog of
   // Monaco `ViewLine`'s `_renderedViewLine.input`. They drive the selection-mode
   // re-render coupling (`onSelectionChanged`, `viewLine.ts:94-100`): a selection
@@ -51,7 +39,6 @@ pub fn ViewLines::new(document : @rdom.Document) -> ViewLines {
     render_inputs: [],
     line_mappings: [],
     should_render: true,
-    prepared: None,
     last_selection: None,
     last_render_whitespace: None,
   }

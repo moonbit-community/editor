@@ -9,7 +9,10 @@ pub(all) struct ModelLineProjectionSegment {
   end_offset : Int
   start_column : Int
   end_column : Int
-  start_visible_column : Int
+  /// Monaco `breakOffsetsVisibleColumn[k - 1]` for segment `k` (`0` for the
+  /// first): fractional when `columnsForFullWidthChar` is (full-width
+  /// advance / half-width advance) of a measured font.
+  start_visible_column : Double
   continues_with_wrapped_line : Bool
   wrapped_text_indent_length : Int
 } derive(Eq, Debug)
@@ -102,7 +105,7 @@ fn model_line_projection_segment(
   model_line_number : Int,
   start_offset : Int,
   end_offset : Int,
-  start_visible_column : Int,
+  start_visible_column : Double,
   continues_with_wrapped_line : Bool,
   wrapped_text_indent_length : Int,
 ) -> ModelLineProjectionSegment {

@@ -324,7 +324,11 @@ fn view_line_data_for_segment(
     continues_with_wrapped_line: segment.continues_with_wrapped_line,
     min_column: segment.start_column,
     max_column: segment.end_column,
-    start_visible_column: segment.start_visible_column,
+    // The renderer's whitespace math counts code units in Int columns;
+    // Monaco feeds the raw (possibly fractional) number into the same
+    // formulas. Truncation only diverges when `columnsForFullWidthChar` is
+    // fractional, and only for whitespace glyph tab stops.
+    start_visible_column: segment.start_visible_column.to_int(),
     tokens: with_injections.slice_and_inflate(start_offset, end_offset, indent),
     inline_decorations: projected_injected_inline_decorations(
       projected_line, start_offset, end_offset, indent,

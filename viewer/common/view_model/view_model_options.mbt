@@ -1,6 +1,10 @@
 ///|
 /// Backend-neutral view-model options derived from browser layout settings.
 pub(all) struct ViewModelOptions {
+  /// The measured font facts (Monaco threads `fontInfo` into the view model
+  /// the same way): the line-breaks computer derives
+  /// `columnsForFullWidthChar` from the typical advance widths.
+  font_info : @config.FontInfo
   soft_wrap_column : Int
   tab_size : Int
   wrapping_indent : WrappingIndent
@@ -18,6 +22,7 @@ pub(all) struct ViewModelOptions {
 /// Builds options while clamping wrapping column and tab size.
 /// `wrapping_indent` defaults to `Same`, Monaco's default.
 pub fn ViewModelOptions::ViewModelOptions(
+  font_info? : @config.FontInfo = @config.FontInfo::default(),
   soft_wrap_column? : Int = 0,
   tab_size? : Int = 2,
   wrapping_indent? : WrappingIndent = Same,
@@ -25,6 +30,7 @@ pub fn ViewModelOptions::ViewModelOptions(
   render_validation_decorations? : RenderValidationDecorations = Editable,
 ) -> ViewModelOptions {
   {
+    font_info,
     soft_wrap_column: soft_wrap_column.max(0),
     tab_size: tab_size.max(1),
     wrapping_indent,

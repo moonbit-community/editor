@@ -53,6 +53,7 @@ pub fn ViewModel::with_options(
 ) -> ViewModel {
   let lines = ViewModelLinesFromProjectedModel::new(
     model,
+    font_info=options.font_info,
     tab_size=options.tab_size,
     wrapping_column=options.soft_wrap_column,
     wrapping_indent=options.wrapping_indent,
@@ -88,6 +89,7 @@ pub fn ViewModel::on_configuration_changed(
   }
   self.options = options
   let wrapping_changed = self.lines.set_wrapping_settings(
+    options.font_info,
     options.soft_wrap_column,
     options.wrapping_indent,
   )

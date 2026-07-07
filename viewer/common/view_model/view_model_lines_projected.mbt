@@ -8,6 +8,7 @@
 /// injected text produce per-line `Projected` data.
 pub struct ViewModelLinesFromProjectedModel {
   model : @model.TextModel
+  mut font_info : @config.FontInfo
   mut tab_size : Int
   mut wrapping_column : Int
   mut wrapping_indent : WrappingIndent
@@ -32,15 +33,17 @@ priv struct ViewLineInfo {
 /// Builds the collection and its projections — the constructor tail of
 /// Monaco's `ViewModelLinesFromProjectedModel` (`viewModelLines.ts:85-112`),
 /// minus the DOM/monospace computer-factory split (the viewer is
-/// monospace-only) and font/word-break settings it has no use for.
+/// monospace-only, so the monospace factory is the only one).
 pub fn ViewModelLinesFromProjectedModel::new(
   model : @model.TextModel,
+  font_info~ : @config.FontInfo,
   tab_size~ : Int,
   wrapping_column~ : Int,
   wrapping_indent~ : WrappingIndent,
 ) -> ViewModelLinesFromProjectedModel {
   let lines = {
     model,
+    font_info,
     tab_size,
     wrapping_column,
     wrapping_indent,
@@ -73,33 +76,25 @@ fn ViewModelLinesFromProjectedModel::construct_lines(
   let model_line_projections : Array[ModelLineProjection] = []
   let prefix_sums : Array[Int] = [0]
   let injected_text_buckets = line_injected_text_from_decorations(self.model)
-  let computer = LineBreaksComputer(
-    self.wrapping_column,
+  let computer = monospace_line_breaks_computer_factory.create_line_breaks_computer(
+    font_info=self.font_info,
     tab_size=self.tab_size,
+    wrapping_column=self.wrapping_column,
     wrapping_indent=self.wrapping_indent,
   )
   let line_count = self.model.snapshot.line_count()
   for model_line_number in 1..<=line_count {
-    let injected_text = injected_text_buckets[model_line_number - 1]
-    let data : ModelLineProjectionData? = if injected_text.length() == 0 &&
-      self.wrapping_column <= 0 {
-      None
-    } else {
-      let projected_line = ProjectedTextLine::from_injected_text(
-        self.model.snapshot.line_text(model_line_number - 1),
-        injected_text,
-      )
-      let data = computer.compute_projected_line_projection(
-        model_line_number, projected_line,
-      )
-      if injected_text.length() == 0 && data.segments.length() <= 1 {
-        // The line fits its wrapping column: Monaco's computer returns null.
-        None
-      } else {
-        Some(data)
-      }
-    }
-    let projection = create_model_line_projection(data)
+    computer.add_request(
+      model_line_number,
+      self.model.snapshot.line_text(model_line_number - 1),
+      injected_text_buckets[model_line_number - 1],
+    )
+  }
+  let line_break_data = computer.finalize()
+  for model_line_number in 1..<=line_count {
+    let projection = create_model_line_projection(
+      line_break_data[model_line_number - 1],
+    )
     model_line_projections.push(projection)
     prefix_sums.push(
       prefix_sums[model_line_number - 1] + projection.get_view_line_count(),
@@ -111,16 +106,21 @@ fn ViewModelLinesFromProjectedModel::construct_lines(
 
 ///|
 /// Applies changed wrapping settings in place — `setWrappingSettings`
-/// (`viewModelLines.ts:277`). Returns whether the view-line mapping changed.
+/// (`viewModelLines.ts:277`, which equally takes the `fontInfo` whose
+/// full-width/half-width ratio feeds the break widths). Returns whether the
+/// view-line mapping changed.
 pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(
   self : ViewModelLinesFromProjectedModel,
+  font_info : @config.FontInfo,
   wrapping_column : Int,
   wrapping_indent : WrappingIndent,
 ) -> Bool {
-  if self.wrapping_column == wrapping_column &&
+  if self.font_info == font_info &&
+    self.wrapping_column == wrapping_column &&
     self.wrapping_indent == wrapping_indent {
     return false
   }
+  self.font_info = font_info
   self.wrapping_column = wrapping_column
   self.wrapping_indent = wrapping_indent
   self.construct_lines()

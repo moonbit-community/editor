@@ -103,8 +103,12 @@ test "projected view lines cover one two and many wrapped segments" {
   assert_eq(two.lines().get_view_line_content(1), "abcde")
   assert_eq(two.lines().get_view_line_content(2), "f")
   assert_eq(two.lines().model_line_number_of_view_line(2), 1)
+  // Monaco `continuesWithWrappedLine = outputLineIndex + 1 < viewLineCount`:
+  // the first view line continues into the wrap; the last does not.
+  let first = two.lines().view_line_rendering_data(1)
+  assert_true(first.continues_with_wrapped_line)
   let second = two.lines().view_line_rendering_data(2)
-  assert_true(second.continues_with_wrapped_line)
+  assert_false(second.continues_with_wrapped_line)
   assert_eq(second.min_column, 6)
   assert_eq(second.max_column, 7)
   let many = test_view_model(
@@ -196,10 +200,11 @@ test "projected line breaks account for tabs and full width characters" {
   assert_eq(first_tab_line.content, "a\t")
   assert_eq(first_tab_line.start_visible_column, 0)
   assert_eq(first_tab_line.max_column, 3)
+  assert_true(first_tab_line.continues_with_wrapped_line)
   let second_tab_line = tabs.lines().view_line_rendering_data(2)
   assert_eq(second_tab_line.content, "b")
   assert_eq(second_tab_line.start_visible_column, 4)
-  assert_true(second_tab_line.continues_with_wrapped_line)
+  assert_false(second_tab_line.continues_with_wrapped_line)
   let full_width = test_view_model(
     "ab中c",
     @view_model.ViewModelOptions::soft_wrap(4),

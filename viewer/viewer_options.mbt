@@ -161,13 +161,17 @@ pub fn ViewerOptions::soft_wrap_column_for_content_width(
 
 ///|
 /// Converts browser-level options into backend-neutral view-model options.
+/// `font_info` is the viewer's measured font (Monaco's `EditorOption.fontInfo`),
+/// not an option field, so it rides in as an argument.
 pub fn ViewerOptions::view_model_options(
   self : ViewerOptions,
   soft_wrap_column : Int,
+  font_info~ : @config.FontInfo,
   editor_id? : Int = 0,
 ) -> @view_model.ViewModelOptions {
   if self.soft_wrap && soft_wrap_column > 0 {
     ViewModelOptions(
+      font_info~,
       soft_wrap_column~,
       tab_size=self.tab_size,
       wrapping_indent=self.wrapping_indent,
@@ -176,6 +180,7 @@ pub fn ViewerOptions::view_model_options(
     )
   } else {
     ViewModelOptions(
+      font_info~,
       editor_id~,
       render_validation_decorations=self.render_validation_decorations,
     )

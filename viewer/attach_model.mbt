@@ -45,6 +45,7 @@ fn Viewer::build_view_model(
 ) -> @view_model.ViewModel {
   let options = self.options.view_model_options(
     self.soft_wrap_column,
+    font_info=self.font_info,
     editor_id=self.editor_id,
   )
   // Injected text (inlay hints) reaches the projection through the model's
@@ -94,6 +95,7 @@ fn Viewer::on_configuration_changed(self : Viewer) -> Unit {
     (Some(view_model), Some(model)) => {
       let options = self.options.view_model_options(
         self.soft_wrap_column,
+        font_info=self.font_info,
         editor_id=self.editor_id,
       )
       if view_model.on_configuration_changed(options) {

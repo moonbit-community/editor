@@ -126,7 +126,7 @@ pub fn AgentFeedbackEditorWidget::new(
 }
 
 ///|
-pub fn AgentFeedbackEditorWidget::dom(
+pub fn AgentFeedbackEditorWidget::get_dom_node(
   self : AgentFeedbackEditorWidget,
 ) -> @rdom.Element {
   self.root

@@ -41,10 +41,10 @@ pub(all) struct View {
   // private fields
 }
 pub fn View::apply_squiggly_theme(Self) -> Unit
-pub fn View::build() -> Self
 pub fn View::is_line_rendered(Self, Int) -> Bool
 pub fn View::line_width(Self, Int, Int) -> Double
 pub fn View::measure_line_selection(Self, Int, Int, Int, keep_empty? : Bool) -> Array[(Double, Double)]
+pub fn View::new() -> Self
 pub fn View::offset_for_column(Self, Int, Int) -> Double
 pub fn View::render(Self, ViewContext, ViewRenderInput) -> Unit
 pub fn View::render_empty(Self, String, show_unused? : Bool, show_deprecated? : Bool) -> Unit

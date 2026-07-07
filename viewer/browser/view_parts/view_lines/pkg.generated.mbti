@@ -20,7 +20,7 @@ pub fn write_line_number_node(@dom.Element, Int, Int) -> Unit
 
 // Types and methods
 pub(all) struct ViewLines {
-  view_lines : @dom.Element
+  dom_node : @dom.Element
   mut window : @view_layout.LineWindow
   mut generation : Int
   mut decorations_generation : Int
@@ -31,7 +31,7 @@ pub(all) struct ViewLines {
   mut last_selection : @common.Range?
   mut last_render_whitespace : @view_layout.RenderWhitespace
 }
-pub fn ViewLines::dom(Self) -> @dom.Element
+pub fn ViewLines::get_dom_node(Self) -> @dom.Element
 pub fn ViewLines::line_node_at(Self, Int) -> @dom.Element?
 pub fn ViewLines::mapping_at(Self, Int) -> @view_layout.CharacterMapping?
 pub fn ViewLines::new(@dom.Document) -> Self

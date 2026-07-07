@@ -13,7 +13,7 @@ import {
 
 // Types and methods
 pub(all) struct MarginViewOverlays {
-  margin : @dom.Element
+  dom_node : @dom.Element
   current_line : @dom.Element
   lines_decorations : @dom.Element
   line_numbers : @dom.Element
@@ -22,7 +22,7 @@ pub(all) struct MarginViewOverlays {
   mut line_number_generation : Int
   mut should_render : Bool
 }
-pub fn MarginViewOverlays::dom(Self) -> @dom.Element
+pub fn MarginViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn MarginViewOverlays::new(@dom.Document) -> Self
 pub fn MarginViewOverlays::render_current_line_margin(Self, @view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Unit
 pub fn MarginViewOverlays::render_line_numbers(Self, @view_layout.ViewportData, Int) -> Unit

@@ -8,7 +8,7 @@
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` directly.
 pub(all) struct MarginViewOverlays {
-  margin : @rdom.Element
+  dom_node : @rdom.Element
   current_line : @rdom.Element
   lines_decorations : @rdom.Element
   line_numbers : @rdom.Element
@@ -20,10 +20,10 @@ pub(all) struct MarginViewOverlays {
 
 ///|
 pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays {
-  let margin = document.create_element("div")
-  margin.set_attribute("class", "margin")
-  margin.set_attribute("data-view-part", "margin")
-  margin.set_attribute("aria-hidden", "true")
+  let dom_node = document.create_element("div")
+  dom_node.set_attribute("class", "margin")
+  dom_node.set_attribute("data-view-part", "margin")
+  dom_node.set_attribute("aria-hidden", "true")
   let margin_view_overlays = document.create_element("div")
   margin_view_overlays.set_attribute("class", "margin-view-overlays")
   margin_view_overlays.set_attribute("data-view-part", "margin-view-overlays")
@@ -44,9 +44,9 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
   margin_view_overlays.append_child(current_line.as_node())
   margin_view_overlays.append_child(lines_decorations.as_node())
   margin_view_overlays.append_child(line_numbers.as_node())
-  margin.append_child(margin_view_overlays.as_node())
+  dom_node.append_child(margin_view_overlays.as_node())
   {
-    margin,
+    dom_node,
     current_line,
     lines_decorations,
     line_numbers,
@@ -58,8 +58,10 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
 }
 
 ///|
-pub fn MarginViewOverlays::dom(self : MarginViewOverlays) -> @rdom.Element {
-  self.margin
+pub fn MarginViewOverlays::get_dom_node(
+  self : MarginViewOverlays,
+) -> @rdom.Element {
+  self.dom_node
 }
 
 ///|

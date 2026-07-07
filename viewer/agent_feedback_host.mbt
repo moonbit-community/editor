@@ -449,7 +449,10 @@ fn Viewer::ensure_agent_feedback_input(
         },
       })
       self.agent_feedback_input = Some(widget)
-      self.add_overlay_widget(agent_feedback_input_widget_id, widget.dom())
+      self.add_overlay_widget(
+        agent_feedback_input_widget_id,
+        widget.get_dom_node(),
+      )
       widget
     }
   }

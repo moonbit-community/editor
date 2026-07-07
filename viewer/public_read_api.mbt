@@ -421,7 +421,7 @@ pub fn Viewer::get_offset_for_column(
   let view_position = view_model
     .coordinates_converter()
     .model_position_to_view_position(model_position)
-  self.flush_render_now()
+  self.flush_accumulated_and_render_now()
   view.offset_for_column(view_position.line_number, view_position.column)
 }
 
@@ -441,7 +441,7 @@ pub fn Viewer::get_width_of_line(self : Viewer, line_number : Int) -> Double {
   let view_position = view_model
     .coordinates_converter()
     .model_position_to_view_position(Position(clamped_line, max_column))
-  self.flush_render_now()
+  self.flush_accumulated_and_render_now()
   view.line_width(
     view_position.line_number,
     view_model.get_line_max_column(view_position.line_number),
@@ -472,7 +472,7 @@ pub fn Viewer::get_scrolled_visible_position(
   let view_position = view_model
     .coordinates_converter()
     .model_position_to_view_position(position)
-  self.flush_render_now()
+  self.flush_accumulated_and_render_now()
   let offset = view.offset_for_column(
     view_position.line_number,
     view_position.column,
@@ -497,7 +497,7 @@ fn Viewer::read_api_content_left(self : Viewer) -> Double {
 /// Flushes a pending render so DOM-measured getters read current client rects,
 /// Monaco's `_flushAccumulatedAndRenderNow`. A no-op when nothing is pending (the
 /// DOM already reflects the latest content) or when there is no view.
-fn Viewer::flush_render_now(self : Viewer) -> Unit {
+fn Viewer::flush_accumulated_and_render_now(self : Viewer) -> Unit {
   if self.render_pending {
     self.flush_render()
   }

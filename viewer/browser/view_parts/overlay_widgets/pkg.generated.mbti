@@ -11,15 +11,15 @@ import {
 
 // Types and methods
 pub(all) struct OverlayWidgets {
-  overlay_widgets : @dom.Element
-  overflowing_overlay_widgets : @dom.Element
+  dom_node : @dom.Element
+  overflowing_overlay_widgets_dom_node : @dom.Element
   widgets : Map[String, @dom.Element]
   mut should_render : Bool
 }
 pub fn OverlayWidgets::add_widget(Self, String, @dom.Element) -> Unit
-pub fn OverlayWidgets::dom(Self) -> @dom.Element
+pub fn OverlayWidgets::get_dom_node(Self) -> @dom.Element
 pub fn OverlayWidgets::new(@dom.Document) -> Self
-pub fn OverlayWidgets::overflowing_dom(Self) -> @dom.Element
+pub fn OverlayWidgets::overflowing_overlay_widgets_dom_node(Self) -> @dom.Element
 pub fn OverlayWidgets::remove_widget(Self, String) -> Unit
 
 // Type aliases

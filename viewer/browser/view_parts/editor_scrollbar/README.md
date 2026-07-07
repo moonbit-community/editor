@@ -10,7 +10,7 @@ view-part wrapper: the custom scrollbar geometry/DOM itself lives in
 - `EditorScrollbar`: owns one `ScrollableElementDom` (the lines-content
   scrollable wrapper) and the dirty flag.
 - `wrapper` / `content` / `scrollable`: accessors the root `viewer` package's
-  input-hookup glue (`hook_view_input`) and `View::build` need.
+  input-hookup glue (`hook_view_input`) and `View::new` need.
 
 ## Boundaries
 

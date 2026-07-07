@@ -21,10 +21,10 @@ pub(all) struct BrowserViewZone {
 }
 
 pub(all) struct ViewZones {
-  view_zones : @dom.Element
+  dom_node : @dom.Element
   mut should_render : Bool
 }
-pub fn ViewZones::dom(Self) -> @dom.Element
+pub fn ViewZones::dom_node(Self) -> @dom.Element
 pub fn ViewZones::new(@dom.Document) -> Self
 pub fn ViewZones::render_view_zones(Self, Array[BrowserViewZone], @view_layout.ViewportData, Double) -> Unit
 

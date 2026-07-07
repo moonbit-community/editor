@@ -14,10 +14,10 @@ import {
 
 // Types and methods
 pub(all) struct ContentViewOverlays {
-  view_overlays : @dom.Element
+  dom_node : @dom.Element
   mut should_render : Bool
 }
-pub fn ContentViewOverlays::dom(Self) -> @dom.Element
+pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::render_selection_overlays(Self, @view_layout.ViewportData, @common.Range?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Unit
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit

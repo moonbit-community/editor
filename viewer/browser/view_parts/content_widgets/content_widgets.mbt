@@ -79,42 +79,44 @@ pub(all) struct HoverWidgetHost {
 
 ///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
-/// `should_render` / `content_widgets` directly.
+/// `should_render` / `dom_node` directly.
 pub(all) struct ContentWidgets {
-  content_widgets : @rdom.Element
-  overflowing_content_widgets : @rdom.Element
+  dom_node : @rdom.Element
+  overflowing_content_widgets_dom_node : @rdom.Element
   mut hover_widget : HoverWidgetDom?
   mut should_render : Bool
 }
 
 ///|
 pub fn ContentWidgets::new(document : @rdom.Document) -> ContentWidgets {
-  let content_widgets = document.create_element("div")
-  content_widgets.set_attribute("class", "contentWidgets")
-  content_widgets.set_attribute("data-view-part", "contentWidgets")
-  let overflowing_content_widgets = document.create_element("div")
-  overflowing_content_widgets.set_attribute(
+  let dom_node = document.create_element("div")
+  dom_node.set_attribute("class", "contentWidgets")
+  dom_node.set_attribute("data-view-part", "contentWidgets")
+  let overflowing_content_widgets_dom_node = document.create_element("div")
+  overflowing_content_widgets_dom_node.set_attribute(
     "class", "overflowingContentWidgets",
   )
-  overflowing_content_widgets.set_attribute(
+  overflowing_content_widgets_dom_node.set_attribute(
     "data-view-part", "overflowingContentWidgets",
   )
   {
-    content_widgets,
-    overflowing_content_widgets,
+    dom_node,
+    overflowing_content_widgets_dom_node,
     hover_widget: None,
     should_render: true,
   }
 }
 
 ///|
-pub fn ContentWidgets::dom(self : ContentWidgets) -> @rdom.Element {
-  self.content_widgets
+pub fn ContentWidgets::dom_node(self : ContentWidgets) -> @rdom.Element {
+  self.dom_node
 }
 
 ///|
-pub fn ContentWidgets::overflowing_dom(self : ContentWidgets) -> @rdom.Element {
-  self.overflowing_content_widgets
+pub fn ContentWidgets::overflowing_content_widgets_dom_node(
+  self : ContentWidgets,
+) -> @rdom.Element {
+  self.overflowing_content_widgets_dom_node
 }
 
 ///|
@@ -494,7 +496,7 @@ pub fn HoverWidgetDom::go_to_bottom(self : HoverWidgetDom) -> Unit {
 fn ContentWidgets::remove_hover_widget(self : ContentWidgets) -> Unit {
   match self.hover_widget {
     Some(widget) => {
-      self.content_widgets.remove_child(widget.wrapper.as_node())
+      self.dom_node.remove_child(widget.wrapper.as_node())
       self.hover_widget = None
     }
     None => ()
@@ -695,9 +697,9 @@ fn ContentWidgets::mount_content_widget(
   widget : ContentWidget,
 ) -> Unit {
   let parent = if widget.allow_overflow {
-    self.overflowing_content_widgets
+    self.overflowing_content_widgets_dom_node
   } else {
-    self.content_widgets
+    self.dom_node
   }
   parent.append_child(widget.node.as_node())
   widget.node.set_attribute("data-content-widget", widget.id)

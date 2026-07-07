@@ -8,7 +8,7 @@
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` / `last_render_whitespace` directly.
 pub(all) struct ViewLines {
-  view_lines : @rdom.Element
+  dom_node : @rdom.Element
   mut window : @view_layout.LineWindow
   mut generation : Int
   mut decorations_generation : Int
@@ -27,11 +27,11 @@ pub(all) struct ViewLines {
 
 ///|
 pub fn ViewLines::new(document : @rdom.Document) -> ViewLines {
-  let view_lines = document.create_element("div")
-  view_lines.set_attribute("class", "view-lines")
-  view_lines.set_attribute("data-view-part", "view-lines")
+  let dom_node = document.create_element("div")
+  dom_node.set_attribute("class", "view-lines")
+  dom_node.set_attribute("data-view-part", "view-lines")
   {
-    view_lines,
+    dom_node,
     window: { start: 0, end: 0 },
     generation: -1,
     decorations_generation: -1,
@@ -45,8 +45,8 @@ pub fn ViewLines::new(document : @rdom.Document) -> ViewLines {
 }
 
 ///|
-pub fn ViewLines::dom(self : ViewLines) -> @rdom.Element {
-  self.view_lines
+pub fn ViewLines::get_dom_node(self : ViewLines) -> @rdom.Element {
+  self.dom_node
 }
 
 ///|
@@ -124,13 +124,13 @@ pub fn ViewLines::render_text(
     selection_invalidated {
     while self.line_nodes.length() > viewport.lines.length() {
       match (self.line_nodes.pop(), self.render_inputs.pop()) {
-        (Some(node), _) => self.view_lines.remove_child(node.as_node())
+        (Some(node), _) => self.dom_node.remove_child(node.as_node())
         _ => ()
       }
     }
     while self.line_nodes.length() < viewport.lines.length() {
       let node = document.create_element("div")
-      self.view_lines.append_child(node.as_node())
+      self.dom_node.append_child(node.as_node())
       self.line_nodes.push(node)
     }
     let previous_inputs = self.render_inputs.copy()
@@ -204,7 +204,7 @@ pub fn ViewLines::render_text(
         viewport.relative_vertical_offset[index],
         rewrite_html=true,
       )
-      self.view_lines.append_child(node.as_node())
+      self.dom_node.append_child(node.as_node())
       next_lines.push(node)
       next_inputs.push(input)
       next_mappings.push(resolve_line_mapping(mapping, None))
@@ -212,7 +212,7 @@ pub fn ViewLines::render_text(
   }
   for line_index in previous.start..<previous.end {
     if line_index < target.start || line_index >= target.end {
-      self.view_lines.remove_child(
+      self.dom_node.remove_child(
         self.line_nodes[line_index - previous.start].as_node(),
       )
     }

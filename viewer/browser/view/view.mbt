@@ -29,10 +29,10 @@ pub(all) struct View {
 }
 
 ///|
-pub fn View::build() -> View {
+pub fn View::new() -> View {
   let document = @rdom.document()
   let root = document.create_element("section")
-  root.set_attribute("class", view_root_class("source-empty"))
+  root.set_attribute("class", get_editor_class_name("source-empty"))
   root.set_attribute("aria-label", "Readonly code viewer")
   root.set_attribute("tabindex", "0")
   let probe = document.create_element("span")
@@ -57,24 +57,28 @@ pub fn View::build() -> View {
   let view_cursors = @view_cursors.ViewCursors::new(document)
   let overlay_widgets = @overlay_widgets.OverlayWidgets::new(document)
   let lines_content = editor_scrollbar.content()
-  lines_content.append_child(content_view_overlays.dom().as_node())
-  lines_content.append_child(view_zones.dom().as_node())
-  lines_content.append_child(view_lines.dom().as_node())
-  lines_content.append_child(content_widgets.dom().as_node())
+  lines_content.append_child(content_view_overlays.get_dom_node().as_node())
+  lines_content.append_child(view_zones.dom_node().as_node())
+  lines_content.append_child(view_lines.get_dom_node().as_node())
+  lines_content.append_child(content_widgets.dom_node().as_node())
   // Cursors render after (above) content widgets in lines content
   // (`view.ts:280`).
-  lines_content.append_child(view_cursors.dom().as_node())
-  overflow_guard.append_child(margin_view_overlays.dom().as_node())
-  overflow_guard.append_child(editor_scrollbar.wrapper().as_node())
+  lines_content.append_child(view_cursors.get_dom_node().as_node())
+  overflow_guard.append_child(margin_view_overlays.get_dom_node().as_node())
+  overflow_guard.append_child(editor_scrollbar.get_dom_node().as_node())
   // Overlay widgets are viewport-fixed: they live in the overflow guard, not
   // the scrolling lines content (`view.ts:287`).
-  overflow_guard.append_child(overlay_widgets.dom().as_node())
+  overflow_guard.append_child(overlay_widgets.get_dom_node().as_node())
   root.append_child(probe.as_node())
   root.append_child(message.as_node())
   root.append_child(squiggly_style.as_node())
   root.append_child(overflow_guard.as_node())
-  root.append_child(content_widgets.overflowing_dom().as_node())
-  root.append_child(overlay_widgets.overflowing_dom().as_node())
+  root.append_child(
+    content_widgets.overflowing_content_widgets_dom_node().as_node(),
+  )
+  root.append_child(
+    overlay_widgets.overflowing_overlay_widgets_dom_node().as_node(),
+  )
   let view_parts = default_view_parts(
     view_lines, view_zones, content_view_overlays, margin_view_overlays, content_widgets,
     view_cursors, overlay_widgets, editor_scrollbar,
@@ -106,7 +110,7 @@ pub fn View::build() -> View {
 /// unnecessary / deprecated marker styling (`editor.css:114-119`). `focused`
 /// mirrors `_getEditorClassName` (`view.ts:459-462`), appended while the
 /// editor root has DOM focus.
-fn view_root_class(
+fn get_editor_class_name(
   source_state : String,
   focused? : Bool = false,
   show_unused? : Bool = true,
@@ -130,7 +134,7 @@ pub fn View::render_empty(
 ) -> Unit {
   self.root.set_attribute(
     "class",
-    view_root_class("source-empty", show_unused~, show_deprecated~),
+    get_editor_class_name("source-empty", show_unused~, show_deprecated~),
   )
   self.message_text.set_node_value(@js.Nullable::from_option(Some(placeholder)))
   self.last_snapshot = None
@@ -139,14 +143,14 @@ pub fn View::render_empty(
 
 ///|
 fn View::mark_parts_dirty(self : View) -> Unit {
-  ViewPart::set_should_render(self.view_lines, true)
-  ViewPart::set_should_render(self.view_zones, true)
-  ViewPart::set_should_render(self.content_view_overlays, true)
-  ViewPart::set_should_render(self.margin_view_overlays, true)
-  ViewPart::set_should_render(self.content_widgets, true)
-  ViewPart::set_should_render(self.view_cursors, true)
-  ViewPart::set_should_render(self.overlay_widgets, true)
-  ViewPart::set_should_render(self.editor_scrollbar, true)
+  ViewPart::force_should_render(self.view_lines)
+  ViewPart::force_should_render(self.view_zones)
+  ViewPart::force_should_render(self.content_view_overlays)
+  ViewPart::force_should_render(self.margin_view_overlays)
+  ViewPart::force_should_render(self.content_widgets)
+  ViewPart::force_should_render(self.view_cursors)
+  ViewPart::force_should_render(self.overlay_widgets)
+  ViewPart::force_should_render(self.editor_scrollbar)
 }
 
 ///|
@@ -160,7 +164,7 @@ pub fn View::render(
 ) -> Unit {
   self.root.set_attribute(
     "class",
-    view_root_class(
+    get_editor_class_name(
       "source-loaded",
       focused=input.editor_has_focus,
       show_unused=input.show_unused,
@@ -180,9 +184,9 @@ pub fn View::render(
   // Hover content is not a view event: invalidate the hover content widget
   // directly, mirroring Monaco's contrib hover.
   if hover_changed_between(self.last_snapshot, rendering.snapshot) {
-    ViewPart::set_should_render(self.content_widgets, true)
+    ViewPart::force_should_render(self.content_widgets)
   }
-  let dirty_parts = self.dirty_view_parts()
+  let view_parts_to_render = self.get_view_parts_to_render()
   let restricted = rendering.restricted()
   // `_actualRender`: the text lines render first, through `renderText`
   // directly (`ViewLines.prepareRender`/`render` throw "Not supported" in
@@ -198,13 +202,15 @@ pub fn View::render(
       input.render_control_characters,
       input.selection_view_range,
     )
-    self.view_lines.dom().set_attribute("style", restricted.content_transform)
+    self.view_lines
+    .get_dom_node()
+    .set_attribute("style", restricted.content_transform)
     ViewPart::on_did_render(self.view_lines)
   }
-  for part in dirty_parts {
+  for part in view_parts_to_render {
     part.prepare_render(rendering)
   }
-  for part in dirty_parts {
+  for part in view_parts_to_render {
     part.render(restricted)
     part.on_did_render()
   }
@@ -212,7 +218,7 @@ pub fn View::render(
 }
 
 ///|
-fn View::dirty_view_parts(self : View) -> Array[ViewPartHandle] {
+fn View::get_view_parts_to_render(self : View) -> Array[ViewPartHandle] {
   let parts : Array[ViewPartHandle] = []
   for part in self.view_parts {
     // `_getViewPartsToRender` walks Monaco's `_viewParts`, which does not

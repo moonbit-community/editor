@@ -29,21 +29,21 @@ pub(all) struct BrowserViewZone {
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` directly.
 pub(all) struct ViewZones {
-  view_zones : @rdom.Element
+  dom_node : @rdom.Element
   mut should_render : Bool
 }
 
 ///|
 pub fn ViewZones::new(document : @rdom.Document) -> ViewZones {
-  let view_zones = document.create_element("div")
-  view_zones.set_attribute("class", "view-zones")
-  view_zones.set_attribute("data-view-part", "view-zones")
-  { view_zones, should_render: true }
+  let dom_node = document.create_element("div")
+  dom_node.set_attribute("class", "view-zones")
+  dom_node.set_attribute("data-view-part", "view-zones")
+  { dom_node, should_render: true }
 }
 
 ///|
-pub fn ViewZones::dom(self : ViewZones) -> @rdom.Element {
-  self.view_zones
+pub fn ViewZones::dom_node(self : ViewZones) -> @rdom.Element {
+  self.dom_node
 }
 
 ///|
@@ -53,7 +53,7 @@ pub fn ViewZones::render_view_zones(
   viewport : @view_layout.ViewportData,
   translate_y : Double,
 ) -> Unit {
-  self.view_zones.set_inner_html("")
+  self.dom_node.set_inner_html("")
   let visible = Array::make(zones.length(), false)
   for data in viewport.view_zones {
     if data.zone_index < 0 || data.zone_index >= zones.length() {
@@ -67,7 +67,7 @@ pub fn ViewZones::render_view_zones(
       "style",
       view_zone_style(data.relative_vertical_offset, data.height_px),
     )
-    self.view_zones.append_child(zone.node.as_node())
+    self.dom_node.append_child(zone.node.as_node())
     // `_safeCallOnComputedHeight` / `_safeCallOnDomNodeTop`
     // (`viewZones.ts:336-352`, invoked from `render` :382-395). The
     // viewport-relative top is the window-relative offset plus the content

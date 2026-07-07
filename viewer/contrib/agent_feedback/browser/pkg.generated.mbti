@@ -33,10 +33,10 @@ pub fn AgentFeedbackEditorWidget::clear_focus(Self) -> Unit
 pub fn AgentFeedbackEditorWidget::collapse(Self) -> Unit
 pub fn AgentFeedbackEditorWidget::comment_ids(Self) -> Array[String]
 pub fn AgentFeedbackEditorWidget::contains_feedback(Self, String) -> Bool
-pub fn AgentFeedbackEditorWidget::dom(Self) -> @dom.Element
 pub fn AgentFeedbackEditorWidget::expand(Self) -> Unit
 pub fn AgentFeedbackEditorWidget::focus_feedback(Self, String) -> Unit
 pub fn AgentFeedbackEditorWidget::focused_reply_comment_id(Self) -> String?
+pub fn AgentFeedbackEditorWidget::get_dom_node(Self) -> @dom.Element
 pub fn AgentFeedbackEditorWidget::is_expanded(Self) -> Bool
 pub fn AgentFeedbackEditorWidget::mark_disposed(Self) -> Unit
 pub fn AgentFeedbackEditorWidget::measured_header_height(Self) -> Double
@@ -69,8 +69,8 @@ pub struct AgentFeedbackInputWidget {
 }
 pub fn AgentFeedbackInputWidget::auto_size(Self) -> Unit
 pub fn AgentFeedbackInputWidget::clear_input(Self) -> Unit
-pub fn AgentFeedbackInputWidget::dom(Self) -> @dom.Element
 pub fn AgentFeedbackInputWidget::focus_input(Self) -> Unit
+pub fn AgentFeedbackInputWidget::get_dom_node(Self) -> @dom.Element
 pub fn AgentFeedbackInputWidget::has_text(Self) -> Bool
 pub fn AgentFeedbackInputWidget::hide(Self) -> Unit
 pub fn AgentFeedbackInputWidget::measured_height(Self) -> Double

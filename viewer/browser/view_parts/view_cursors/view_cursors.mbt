@@ -30,7 +30,7 @@ pub(all) struct CursorRenderData {
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` / `render_data` directly.
 pub(all) struct ViewCursors {
-  cursors_layer : @rdom.Element
+  dom_node : @rdom.Element
   cursor : @rdom.Element
   mut should_render : Bool
   /// Monaco `ViewCursor._renderData`, stored by `prepare_render` and written
@@ -46,21 +46,21 @@ pub(all) struct ViewCursors {
 /// constructor (`viewCursor.ts:74-80`; `monaco-mouse-cursor-text` is Monaco's
 /// `MOUSE_CURSOR_TEXT_CSS_CLASS_NAME`).
 pub fn ViewCursors::new(document : @rdom.Document) -> ViewCursors {
-  let cursors_layer = document.create_element("div")
-  cursors_layer.set_attribute("class", cursors_layer_class(false))
-  cursors_layer.set_attribute("role", "presentation")
-  cursors_layer.set_attribute("aria-hidden", "true")
-  cursors_layer.set_attribute("data-view-part", "cursors-layer")
+  let dom_node = document.create_element("div")
+  dom_node.set_attribute("class", cursors_layer_class(false))
+  dom_node.set_attribute("role", "presentation")
+  dom_node.set_attribute("aria-hidden", "true")
+  dom_node.set_attribute("data-view-part", "cursors-layer")
   let cursor = document.create_element("div")
   cursor.set_attribute("class", "cursor monaco-mouse-cursor-text")
   cursor.set_attribute("style", "display:none")
-  cursors_layer.append_child(cursor.as_node())
-  { cursors_layer, cursor, should_render: true, render_data: None }
+  dom_node.append_child(cursor.as_node())
+  { dom_node, cursor, should_render: true, render_data: None }
 }
 
 ///|
-pub fn ViewCursors::dom(self : ViewCursors) -> @rdom.Element {
-  self.cursors_layer
+pub fn ViewCursors::get_dom_node(self : ViewCursors) -> @rdom.Element {
+  self.dom_node
 }
 
 ///|
@@ -128,8 +128,8 @@ pub fn ViewCursors::render_cursor(
   editor_has_focus~ : Bool,
   content_transform : String,
 ) -> Unit {
-  self.cursors_layer.set_attribute("class", cursors_layer_class(has_selection))
-  self.cursors_layer.set_attribute("style", content_transform)
+  self.dom_node.set_attribute("class", cursors_layer_class(has_selection))
+  self.dom_node.set_attribute("style", content_transform)
   match self.render_data {
     None => self.cursor.set_attribute("style", "display:none")
     Some(data) =>

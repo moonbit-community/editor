@@ -58,7 +58,7 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
     }
   })
   view.view_lines
-  .dom()
+  .get_dom_node()
   .add_event_listener("mousedown", event => {
     match event.to_mouse_event() {
       Some(mouse) => {

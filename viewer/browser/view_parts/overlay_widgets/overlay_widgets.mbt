@@ -11,27 +11,27 @@
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` directly.
 pub(all) struct OverlayWidgets {
-  overlay_widgets : @rdom.Element
-  overflowing_overlay_widgets : @rdom.Element
+  dom_node : @rdom.Element
+  overflowing_overlay_widgets_dom_node : @rdom.Element
   widgets : Map[String, @rdom.Element]
   mut should_render : Bool
 }
 
 ///|
 pub fn OverlayWidgets::new(document : @rdom.Document) -> OverlayWidgets {
-  let overlay_widgets = document.create_element("div")
-  overlay_widgets.set_attribute("class", "overlayWidgets")
-  overlay_widgets.set_attribute("data-view-part", "overlayWidgets")
-  let overflowing_overlay_widgets = document.create_element("div")
-  overflowing_overlay_widgets.set_attribute(
+  let dom_node = document.create_element("div")
+  dom_node.set_attribute("class", "overlayWidgets")
+  dom_node.set_attribute("data-view-part", "overlayWidgets")
+  let overflowing_overlay_widgets_dom_node = document.create_element("div")
+  overflowing_overlay_widgets_dom_node.set_attribute(
     "class", "overflowingOverlayWidgets",
   )
-  overflowing_overlay_widgets.set_attribute(
+  overflowing_overlay_widgets_dom_node.set_attribute(
     "data-view-part", "overflowingOverlayWidgets",
   )
   {
-    overlay_widgets,
-    overflowing_overlay_widgets,
+    dom_node,
+    overflowing_overlay_widgets_dom_node,
     widgets: {},
     should_render: true,
   }
@@ -49,7 +49,7 @@ pub fn OverlayWidgets::add_widget(
 ) -> Unit {
   self.remove_widget(widget_id)
   node.set_attribute("data-overlay-widget-id", widget_id)
-  self.overlay_widgets.append_child(node.as_node())
+  self.dom_node.append_child(node.as_node())
   self.widgets.set(widget_id, node)
 }
 
@@ -62,7 +62,7 @@ pub fn OverlayWidgets::remove_widget(
 ) -> Unit {
   match self.widgets.get(widget_id) {
     Some(node) => {
-      self.overlay_widgets.remove_child(node.as_node())
+      self.dom_node.remove_child(node.as_node())
       self.widgets.remove(widget_id)
     }
     None => ()
@@ -70,11 +70,13 @@ pub fn OverlayWidgets::remove_widget(
 }
 
 ///|
-pub fn OverlayWidgets::dom(self : OverlayWidgets) -> @rdom.Element {
-  self.overlay_widgets
+pub fn OverlayWidgets::get_dom_node(self : OverlayWidgets) -> @rdom.Element {
+  self.dom_node
 }
 
 ///|
-pub fn OverlayWidgets::overflowing_dom(self : OverlayWidgets) -> @rdom.Element {
-  self.overflowing_overlay_widgets
+pub fn OverlayWidgets::overflowing_overlay_widgets_dom_node(
+  self : OverlayWidgets,
+) -> @rdom.Element {
+  self.overflowing_overlay_widgets_dom_node
 }

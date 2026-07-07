@@ -508,7 +508,7 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   if self.view is Some(_) {
     return
   }
-  let view = @view.View::build()
+  let view = @view.View::new()
   view.root.set_attribute("data-theme", self.options.theme)
   host.append_child(view.root.as_node())
   view.apply_squiggly_theme()

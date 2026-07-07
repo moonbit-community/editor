@@ -33,7 +33,7 @@ pub fn EditorScrollbar::new() -> EditorScrollbar {
 }
 
 ///|
-pub fn EditorScrollbar::wrapper(self : EditorScrollbar) -> @rdom.Element {
+pub fn EditorScrollbar::get_dom_node(self : EditorScrollbar) -> @rdom.Element {
   self.editor_scrollable.wrapper
 }
 

@@ -16,9 +16,9 @@ pub(all) struct EditorScrollbar {
   mut should_render : Bool
 }
 pub fn EditorScrollbar::content(Self) -> @dom.Element
+pub fn EditorScrollbar::get_dom_node(Self) -> @dom.Element
 pub fn EditorScrollbar::new() -> Self
 pub fn EditorScrollbar::scrollable(Self) -> @scrollbar.ScrollableElementDom
-pub fn EditorScrollbar::wrapper(Self) -> @dom.Element
 
 // Type aliases
 

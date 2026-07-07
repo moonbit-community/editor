@@ -16,16 +16,16 @@ import {
 
 // Types and methods
 pub(all) struct ContentWidgets {
-  content_widgets : @dom.Element
-  overflowing_content_widgets : @dom.Element
+  dom_node : @dom.Element
+  overflowing_content_widgets_dom_node : @dom.Element
   mut hover_widget : HoverWidgetDom?
   mut should_render : Bool
 }
-pub fn ContentWidgets::dom(Self) -> @dom.Element
+pub fn ContentWidgets::dom_node(Self) -> @dom.Element
 pub fn ContentWidgets::hover_scrollable(Self) -> @scrollbar.ScrollableElementDom?
 pub fn ContentWidgets::hover_wrapper(Self) -> @dom.Element?
 pub fn ContentWidgets::new(@dom.Document) -> Self
-pub fn ContentWidgets::overflowing_dom(Self) -> @dom.Element
+pub fn ContentWidgets::overflowing_content_widgets_dom_node(Self) -> @dom.Element
 pub fn ContentWidgets::render_hover_widget(Self, HoverWidgetHost, @view_layout.LineWindow, String, @view_layout.ViewLayout, @hover.HoverWidgetView?, (Bool, Double, Double) -> Unit, Double, Double) -> Unit
 
 pub(all) struct HoverWidgetDom {

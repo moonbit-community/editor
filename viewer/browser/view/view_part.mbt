@@ -1,6 +1,6 @@
 ///|
 /// Private Monaco-shaped render lifecycle for browser view concerns. The
-/// event-handling half (`on_view_event` / `should_render` / `set_should_render`
+/// event-handling half (`on_view_event` / `should_render` / `force_should_render`
 /// / `on_did_render`) mirrors Monaco's `ViewEventHandler`: a typed view event is
 /// offered to every part, and a part that returns `true` is marked dirty for the
 /// next render. `should_render` returns that accumulated flag (no longer a
@@ -10,7 +10,7 @@
 priv trait ViewPart {
   fn on_view_event(Self, ViewEvent) -> Bool
   fn should_render(Self) -> Bool
-  fn set_should_render(Self, Bool) -> Unit
+  fn force_should_render(Self) -> Unit
   fn prepare_render(Self, RenderingContext) -> Unit
   fn render(Self, RestrictedRenderingContext) -> Unit
   fn on_did_render(Self) -> Unit
@@ -25,7 +25,7 @@ fn ViewPartHandle::handle_view_events(
 ) -> Unit {
   for event in events {
     if self.on_view_event(event) {
-      self.set_should_render(true)
+      self.force_should_render()
     }
   }
 }
@@ -96,16 +96,16 @@ impl ViewPart for ViewPartHandle with fn should_render(self) {
 }
 
 ///|
-impl ViewPart for ViewPartHandle with fn set_should_render(self, value) {
+impl ViewPart for ViewPartHandle with fn force_should_render(self) {
   match self {
-    ViewLinesPart(part) => ViewPart::set_should_render(part, value)
-    ViewZonesPart(part) => ViewPart::set_should_render(part, value)
-    ContentViewOverlaysPart(part) => ViewPart::set_should_render(part, value)
-    MarginViewOverlaysPart(part) => ViewPart::set_should_render(part, value)
-    ContentWidgetsPart(part) => ViewPart::set_should_render(part, value)
-    ViewCursorsPart(part) => ViewPart::set_should_render(part, value)
-    OverlayWidgetsPart(part) => ViewPart::set_should_render(part, value)
-    EditorScrollbarPart(part) => ViewPart::set_should_render(part, value)
+    ViewLinesPart(part) => ViewPart::force_should_render(part)
+    ViewZonesPart(part) => ViewPart::force_should_render(part)
+    ContentViewOverlaysPart(part) => ViewPart::force_should_render(part)
+    MarginViewOverlaysPart(part) => ViewPart::force_should_render(part)
+    ContentWidgetsPart(part) => ViewPart::force_should_render(part)
+    ViewCursorsPart(part) => ViewPart::force_should_render(part)
+    OverlayWidgetsPart(part) => ViewPart::force_should_render(part)
+    EditorScrollbarPart(part) => ViewPart::force_should_render(part)
   }
 }
 
@@ -176,8 +176,8 @@ impl ViewPart for @view_zones.ViewZones with fn on_view_event(_self, event) {
 }
 
 ///|
-impl ViewPart for @view_zones.ViewZones with fn set_should_render(self, value) {
-  self.should_render = value
+impl ViewPart for @view_zones.ViewZones with fn force_should_render(self) {
+  self.should_render = true
 }
 
 ///|
@@ -192,7 +192,7 @@ impl ViewPart for @view_zones.ViewZones with fn render(self, context) {
     context.viewport,
     context.translate_y,
   )
-  self.view_zones.set_attribute("style", context.content_transform)
+  self.dom_node.set_attribute("style", context.content_transform)
 }
 
 ///|
@@ -229,8 +229,8 @@ impl ViewPart for @view_lines.ViewLines with fn on_view_event(self, event) {
 }
 
 ///|
-impl ViewPart for @view_lines.ViewLines with fn set_should_render(self, value) {
-  self.should_render = value
+impl ViewPart for @view_lines.ViewLines with fn force_should_render(self) {
+  self.should_render = true
 }
 
 ///|
@@ -280,11 +280,8 @@ impl ViewPart for @margin.MarginViewOverlays with fn on_view_event(_self, event)
 }
 
 ///|
-impl ViewPart for @margin.MarginViewOverlays with fn set_should_render(
-  self,
-  value,
-) {
-  self.should_render = value
+impl ViewPart for @margin.MarginViewOverlays with fn force_should_render(self) {
+  self.should_render = true
 }
 
 ///|
@@ -343,7 +340,7 @@ impl ViewPart for @margin.MarginViewOverlays with fn render(self, context) {
     decorations_left=line_numbers_width,
     decorations_width=context.input.line_decorations_width,
   )
-  self.margin.set_attribute(
+  self.dom_node.set_attribute(
     "style",
     "width:" + context.gutter_width.to_string() + "px",
   )
@@ -383,11 +380,10 @@ impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_view_event(
 }
 
 ///|
-impl ViewPart for @overlay_widgets.OverlayWidgets with fn set_should_render(
+impl ViewPart for @overlay_widgets.OverlayWidgets with fn force_should_render(
   self,
-  value,
 ) {
-  self.should_render = value
+  self.should_render = true
 }
 
 ///|
@@ -434,11 +430,10 @@ impl ViewPart for @editor_scrollbar.EditorScrollbar with fn on_view_event(
 }
 
 ///|
-impl ViewPart for @editor_scrollbar.EditorScrollbar with fn set_should_render(
+impl ViewPart for @editor_scrollbar.EditorScrollbar with fn force_should_render(
   self,
-  value,
 ) {
-  self.should_render = value
+  self.should_render = true
 }
 
 ///|
@@ -501,11 +496,10 @@ impl ViewPart for @selections.ContentViewOverlays with fn on_view_event(
 }
 
 ///|
-impl ViewPart for @selections.ContentViewOverlays with fn set_should_render(
+impl ViewPart for @selections.ContentViewOverlays with fn force_should_render(
   self,
-  value,
 ) {
-  self.should_render = value
+  self.should_render = true
 }
 
 ///|
@@ -535,9 +529,9 @@ impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) 
   // in their Monaco-mirroring packages
   // (`view_parts/{current_line_highlight,decorations,selections}`) as
   // free functions over the shared container.
-  self.view_overlays.set_inner_html("")
+  self.dom_node.set_inner_html("")
   @current_line_highlight.render_current_line(
-    self.view_overlays,
+    self.dom_node,
     context.viewport,
     view_model,
     cursor_view_line,
@@ -568,7 +562,7 @@ impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) 
     .decorations()
     .get_decorations_viewport_data(context.viewport.visible_range).decorations
   @decorations.render_decorations_overlay(
-    self.view_overlays,
+    self.dom_node,
     decorations,
     context.viewport,
     line_number => {
@@ -578,7 +572,7 @@ impl ViewPart for @selections.ContentViewOverlays with fn render(self, context) 
     context.input.space_width,
   )
   self.set_focused(context.input.editor_has_focus)
-  self.view_overlays.set_attribute("style", context.content_transform)
+  self.dom_node.set_attribute("style", context.content_transform)
 }
 
 ///|
@@ -619,11 +613,10 @@ impl ViewPart for @content_widgets.ContentWidgets with fn on_view_event(
 }
 
 ///|
-impl ViewPart for @content_widgets.ContentWidgets with fn set_should_render(
+impl ViewPart for @content_widgets.ContentWidgets with fn force_should_render(
   self,
-  value,
 ) {
-  self.should_render = value
+  self.should_render = true
 }
 
 ///|
@@ -638,7 +631,7 @@ impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
 
 ///|
 impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) {
-  self.content_widgets.set_attribute("style", context.content_transform)
+  self.dom_node.set_attribute("style", context.content_transform)
   let host : @content_widgets.HoverWidgetHost = {
     root: context.view_context.root,
     languages: context.view_context.languages,
@@ -704,11 +697,8 @@ impl ViewPart for @view_cursors.ViewCursors with fn on_view_event(_self, event) 
 }
 
 ///|
-impl ViewPart for @view_cursors.ViewCursors with fn set_should_render(
-  self,
-  value,
-) {
-  self.should_render = value
+impl ViewPart for @view_cursors.ViewCursors with fn force_should_render(self) {
+  self.should_render = true
 }
 
 ///|

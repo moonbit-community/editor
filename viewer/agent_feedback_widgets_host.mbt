@@ -111,7 +111,7 @@ fn Viewer::rebuild_agent_feedback_widgets(self : Viewer) -> Unit {
       focused_reply?,
     )
     self.agent_feedback_widgets.push(widget)
-    self.add_overlay_widget(widget_id, widget.dom())
+    self.add_overlay_widget(widget_id, widget.get_dom_node())
     self.layout_agent_feedback_widget(widget, group[0].range.start_line_number)
   }
   self.prune_agent_feedback_reply_drafts()

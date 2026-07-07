@@ -27,12 +27,12 @@ pub(all) struct CursorRenderData {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct ViewCursors {
-  cursors_layer : @dom.Element
+  dom_node : @dom.Element
   cursor : @dom.Element
   mut should_render : Bool
   mut render_data : CursorRenderData?
 }
-pub fn ViewCursors::dom(Self) -> @dom.Element
+pub fn ViewCursors::get_dom_node(Self) -> @dom.Element
 pub fn ViewCursors::new(@dom.Document) -> Self
 pub fn ViewCursors::render_cursor(Self, has_selection~ : Bool, editor_has_focus~ : Bool, String) -> Unit
 

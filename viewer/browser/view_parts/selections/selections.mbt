@@ -12,7 +12,7 @@
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` directly.
 pub(all) struct ContentViewOverlays {
-  view_overlays : @rdom.Element
+  dom_node : @rdom.Element
   mut should_render : Bool
 }
 
@@ -20,15 +20,17 @@ pub(all) struct ContentViewOverlays {
 pub fn ContentViewOverlays::new(
   document : @rdom.Document,
 ) -> ContentViewOverlays {
-  let view_overlays = document.create_element("div")
-  view_overlays.set_attribute("class", "view-overlays")
-  view_overlays.set_attribute("data-view-part", "view-overlays")
-  { view_overlays, should_render: true }
+  let dom_node = document.create_element("div")
+  dom_node.set_attribute("class", "view-overlays")
+  dom_node.set_attribute("data-view-part", "view-overlays")
+  { dom_node, should_render: true }
 }
 
 ///|
-pub fn ContentViewOverlays::dom(self : ContentViewOverlays) -> @rdom.Element {
-  self.view_overlays
+pub fn ContentViewOverlays::get_dom_node(
+  self : ContentViewOverlays,
+) -> @rdom.Element {
+  self.dom_node
 }
 
 ///|
@@ -39,7 +41,7 @@ pub fn ContentViewOverlays::set_focused(
   self : ContentViewOverlays,
   focused : Bool,
 ) -> Unit {
-  self.view_overlays.set_attribute(
+  self.dom_node.set_attribute(
     "class",
     if focused {
       "view-overlays focused"
@@ -140,7 +142,7 @@ pub fn ContentViewOverlays::render_selection_overlays(
   }
   let document = @rdom.document()
   for line in lines {
-    render_styled_line(self.view_overlays, document, line, styled)
+    render_styled_line(self.dom_node, document, line, styled)
   }
 }
 

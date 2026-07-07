@@ -97,9 +97,9 @@ pub fn RemoteServer::with_language_providers(
 
 ///|
 /// Installs a listener notified whenever the server caches a fresh document
-/// snapshot (open or watch update). The native host uses it to forward
-/// `didOpen`/`didChange` to the LSP without waiting for a feature request, so
-/// the checker runs and publishes diagnostics as soon as content is known.
+/// snapshot (open or watch update). The native host uses it to schedule a
+/// `moon check` run without waiting for a feature request, so diagnostics are
+/// published as soon as content is known.
 pub fn RemoteServer::set_document_sync_listener(
   self : RemoteServer,
   listener : ((@workspace.DocumentSnapshot) -> Unit)?,

@@ -1,104 +1,97 @@
 ///|
-/// Adapter that translates remote workspace URIs to native `file://` URIs
-/// before delegating semantic features to the LSP-backed provider.
-pub(all) struct NativeWorkspaceLanguageProvider {
+/// Language provider backed by the `moon` command line. Hover shells out to
+/// `moon ide hover --output-json` against the workspace on disk; diagnostics
+/// flow through the `moon check` push path (`MoonCheckDiagnostics`) instead of
+/// a pull provider. The remaining semantic features have no `moon` subcommand
+/// equivalent and return empty results.
+pub(all) struct MoonWorkspaceLanguageProvider {
   root : String
-  provider : @server.LspLanguageProvider
+  moon_command : String
 }
 
 ///|
-/// Creates a native workspace provider rooted at `root`.
-pub fn NativeWorkspaceLanguageProvider::NativeWorkspaceLanguageProvider(
+/// Creates a moon-command language provider rooted at `root`.
+pub fn MoonWorkspaceLanguageProvider::MoonWorkspaceLanguageProvider(
   root : String,
-  provider : @server.LspLanguageProvider,
-) -> NativeWorkspaceLanguageProvider {
-  { root: normalize_host_path(root), provider }
+  moon_command? : String = "moon",
+) -> MoonWorkspaceLanguageProvider {
+  { root: normalize_host_path(root), moon_command }
 }
 
 ///|
-/// Delegates hover requests after translating the model URI to `file://`.
-pub impl @language.HoverProvider for NativeWorkspaceLanguageProvider with fn provide_hover(
+/// Runs `moon ide hover` at the requested position. `--no-check` reuses the
+/// check artifacts the diagnostics runner keeps fresh instead of re-checking
+/// the workspace per hover.
+pub impl @language.HoverProvider for MoonWorkspaceLanguageProvider with fn provide_hover(
   self,
   model,
   position,
-  token,
+  _token,
 ) {
-  match self.lsp_model(model) {
-    Some(lsp_model) =>
-      self.provider
-      .as_hover_provider()
-      .provide_hover(lsp_model, position, token)
-    None => None
-  }
-}
-
-///|
-/// Delegates definition requests and maps returned file locations back to
-/// `readonly-remote://workspace/...` URIs.
-pub impl @language.DefinitionProvider for NativeWorkspaceLanguageProvider with fn provide_definition(
-  self,
-  model,
-  position,
-  token,
-) {
-  match self.lsp_model(model) {
-    Some(lsp_model) =>
-      match
-        self.provider
-        .as_definition_provider()
-        .provide_definition(lsp_model, position, token) {
-        Some(location) => self.remote_location(location)
-        None => None
+  match @server.resolve_remote_document_uri(model.uri) {
+    ParsedRemotePath(path) => {
+      let loc = "\{path.to_string()}:\{position.line_number}:\{position.column}"
+      let output = Some(
+        @process.collect_stdout(
+          self.moon_command,
+          ["ide", "hover", "--loc", loc, "--output-json", "--no-check"],
+          cwd=self.root,
+        ),
+      ) catch {
+        _ => None
       }
-    None => None
-  }
-}
-
-///|
-/// Delegates references requests and drops locations outside the workspace root.
-pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with fn provide_references(
-  self,
-  model,
-  position,
-  token,
-) {
-  match self.lsp_model(model) {
-    Some(lsp_model) => {
-      let locations = self.provider
-        .as_references_provider()
-        .provide_references(lsp_model, position, token)
-      let mapped = []
-      for location in locations {
-        match self.remote_location(location) {
-          Some(remote) => mapped.push(remote)
-          None => ()
-        }
+      match output {
+        // A missing hover exits nonzero with a plain-text notice, so only an
+        // exit-0 payload is parsed.
+        Some((0, data)) =>
+          match (Some(data.text()) catch { _ => None }) {
+            Some(raw) => parse_moon_hover_output(raw, position)
+            None => None
+          }
+        _ => None
       }
-      mapped
     }
-    None => []
+    RemotePathError(_) => None
   }
 }
 
 ///|
-/// Delegates document-symbol requests after URI translation.
-pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider with fn provide_document_symbols(
-  self,
-  model,
-  token,
+/// `moon` has no definition query; the feature is unavailable.
+pub impl @language.DefinitionProvider for MoonWorkspaceLanguageProvider with fn provide_definition(
+  _self,
+  _model,
+  _position,
+  _token,
 ) {
-  match self.lsp_model(model) {
-    Some(lsp_model) =>
-      self.provider
-      .as_document_symbol_provider()
-      .provide_document_symbols(lsp_model, token)
-    None => []
-  }
+  None
 }
 
 ///|
-/// Native LSP inlay hints are not wired yet.
-pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with fn provide_inlay_hints(
+/// `moon` has no machine-readable references query; the feature is
+/// unavailable.
+pub impl @language.ReferencesProvider for MoonWorkspaceLanguageProvider with fn provide_references(
+  _self,
+  _model,
+  _position,
+  _token,
+) {
+  []
+}
+
+///|
+/// `moon` has no machine-readable document-symbol query; the feature is
+/// unavailable.
+pub impl @language.DocumentSymbolProvider for MoonWorkspaceLanguageProvider with fn provide_document_symbols(
+  _self,
+  _model,
+  _token,
+) {
+  []
+}
+
+///|
+/// `moon` has no inlay-hints query; the feature is unavailable.
+pub impl @language.InlayHintsProvider for MoonWorkspaceLanguageProvider with fn provide_inlay_hints(
   _self,
   _document,
   _range,
@@ -108,69 +101,58 @@ pub impl @language.InlayHintsProvider for NativeWorkspaceLanguageProvider with f
 }
 
 ///|
-fn NativeWorkspaceLanguageProvider::lsp_model(
-  self : NativeWorkspaceLanguageProvider,
-  model : @model.TextModel,
-) -> @model.TextModel? {
-  match @server.resolve_remote_document_uri(model.uri) {
-    ParsedRemotePath(path) =>
-      match self.file_uri(path) {
-        Some(uri) =>
-          Some(
-            TextModel(
-              uri,
-              model.display_name,
-              model.language_id,
-              model.version,
-              model.revision,
-              model.snapshot.text,
-            ),
-          )
-        None => None
+/// Parses `moon ide hover --output-json` output: a 1-based line/character
+/// range plus markdown content strings. A malformed or empty payload yields
+/// no hover; a missing range degrades to a one-column range at the requested
+/// position.
+pub fn parse_moon_hover_output(
+  raw : String,
+  position : @base_common.Position,
+) -> @language.Hover? {
+  guard (Some(@json.parse(raw)) catch { _ => None }) is Some(json) else {
+    return None
+  }
+  let contents : Array[@language.HoverContent] = []
+  if json is { "contents": Array(items), .. } {
+    for item in items {
+      if item is String(text) && text != "" {
+        contents.push(Markdown(text))
       }
-    RemotePathError(_) => None
+    }
   }
-}
-
-///|
-fn NativeWorkspaceLanguageProvider::file_uri(
-  self : NativeWorkspaceLanguageProvider,
-  path : @workspace.SourcePath,
-) -> @base_common.Uri? {
-  let raw = file_uri_for_host_path(self.root + "/" + path.to_string())
-  match @base_common.Uri::parse(raw) {
-    ParsedUri(uri) => Some(uri)
-    UriError(_) => None
+  if contents.is_empty() {
+    return None
   }
-}
-
-///|
-fn NativeWorkspaceLanguageProvider::remote_location(
-  self : NativeWorkspaceLanguageProvider,
-  location : @language.Location,
-) -> @language.Location? {
-  match self.remote_uri(location.uri) {
-    Some(uri) => Some({ ..location, uri, })
-    None => None
-  }
-}
-
-///|
-fn NativeWorkspaceLanguageProvider::remote_uri(
-  self : NativeWorkspaceLanguageProvider,
-  uri : @base_common.Uri,
-) -> @base_common.Uri? {
-  let prefix = file_uri_for_host_path(self.root) + "/"
-  let raw = uri.to_string()
-  if raw.has_prefix(prefix) {
-    @server.remote_document_uri(raw[prefix.length():].to_owned())
+  let range = if json
+    is {
+      "range": {
+        "start": {
+          "line": Number(start_line, ..),
+          "character": Number(start_column, ..),
+          ..
+        },
+        "end": {
+          "line": Number(end_line, ..),
+          "character": Number(end_column, ..),
+          ..
+        },
+        ..
+      },
+      ..
+    } {
+    @base_common.Range(
+      start_line.to_int(),
+      start_column.to_int(),
+      end_line.to_int(),
+      end_column.to_int(),
+    )
   } else {
-    None
+    @base_common.Range(
+      position.line_number,
+      position.column,
+      position.line_number,
+      position.column + 1,
+    )
   }
-}
-
-///|
-/// Converts an absolute host path to a `file://` URI string.
-pub fn file_uri_for_host_path(path : String) -> String {
-  "file://" + normalize_host_path(path)
+  Some({ range, contents })
 }

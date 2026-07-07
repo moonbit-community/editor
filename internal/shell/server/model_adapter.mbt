@@ -11,16 +11,3 @@ fn text_model_from_document(
     document.text,
   )
 }
-
-///|
-fn document_from_text_model(
-  model : @model.TextModel,
-) -> @workspace.DocumentSnapshot {
-  DocumentSnapshot(
-    model.uri,
-    model.display_name,
-    model.language_id,
-    model.revision,
-    model.snapshot.text,
-  )
-}

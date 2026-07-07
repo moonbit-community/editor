@@ -170,143 +170,161 @@ async fn wait_for_events(
 }
 
 ///|
-async test "native lsp transport reports unavailable process host" {
-  let transport = @server_host_native.native_lsp_transport()
-  let response = transport.request("{\"jsonrpc\":\"2.0\",\"id\":1}")
-  assert_true(response.contains("Native LSP process host is not attached"))
-  transport.notify("{\"jsonrpc\":\"2.0\",\"method\":\"exit\"}")
-  let subscription = transport.subscribe(_message => ())
-  subscription.dispose()
-}
-
-///|
-async test "configured native lsp transport exchanges stdio frames" {
-  let script = "dd bs=1 count=62 of=/dev/null 2>/dev/null; printf 'Content-Length: 38\\r\\n\\r\\n{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":null}'"
-  let transport = @server_host_native.native_lsp_transport_for_command(
-    "/bin/sh",
-    ["-c", script],
-  )
-  let response = transport.request(
-    "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"test\"}",
-  )
-  assert_true(response.contains("\"result\":null"))
-}
-
-///|
-async test "configured native lsp transport reports mid-frame process exit" {
-  let script = "printf 'Content-Length: 38\\r\\n\\r\\n{\"jsonrpc\"'"
-  let transport = @server_host_native.native_lsp_transport_for_command(
-    "/bin/sh",
-    ["-c", script],
-  )
-  let response = transport.request(
-    "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"test\"}",
-  )
-  assert_true(response.contains("Native LSP process response failed."))
-}
-
-///|
-test "native lsp stdio framing uses content length headers" {
-  let message = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":null}"
-  let frame = @server_host_native.lsp_stdio_frame(message)
-  assert_true(frame.has_prefix("Content-Length: 38\r\n\r\n"))
-  assert_true(frame.has_suffix(message))
-  match
-    @server_host_native.lsp_content_length_header("Content-Length: 38\r\n") {
-    Some(length) => assert_eq(length, 38)
-    None => fail("expected content length")
+test "parses moon ide hover json output" {
+  let raw =
+    #|{"range":{"start":{"line":20,"character":15},"end":{"line":20,"character":33}},"contents":["```moonbit\nenum DiagnosticSeverity {}\n```","\n Doc text."]}
+  match @server_host_native.parse_moon_hover_output(raw, Position(3, 7)) {
+    Some(hover) => {
+      assert_true(hover.range == Range(20, 15, 20, 33))
+      match hover.contents {
+        [Markdown(code), Markdown(doc)] => {
+          assert_true(code.has_prefix("```moonbit"))
+          assert_eq(doc, "\n Doc text.")
+        }
+        _ => fail("expected two markdown contents")
+      }
+    }
+    None => fail("expected hover")
   }
-  match @server_host_native.lsp_content_length_header("content-length: 38\n") {
-    Some(length) => assert_eq(length, 38)
-    None => fail("expected lower-case content length")
+
+  // A payload without a range degrades to a one-column range at the request
+  // position.
+  let rangeless =
+    #|{"contents":["plain"]}
+  match @server_host_native.parse_moon_hover_output(rangeless, Position(3, 7)) {
+    Some(hover) => assert_true(hover.range == Range(3, 7, 3, 8))
+    None => fail("expected rangeless hover")
   }
   assert_true(
-    @server_host_native.lsp_content_length_header("X-Header: 38\r\n") is None,
+    @server_host_native.parse_moon_hover_output(
+      "No hover information found at src/main.mbt:1:1",
+      Position(1, 1),
+    )
+    is None,
   )
-}
-
-///|
-test "native lsp stdio framing counts utf8 bytes" {
-  let message = "{\"jsonrpc\":\"2.0\",\"id\":1,\"params\":{\"text\":\"汉\"}}"
-  let byte_length = @utf8.encode(message).length()
-  assert_true(byte_length > message.length())
-  let frame = @server_host_native.lsp_stdio_frame(message)
   assert_true(
-    frame.has_prefix("Content-Length: " + byte_length.to_string() + "\r\n\r\n"),
+    @server_host_native.parse_moon_hover_output(
+      "{\"contents\":[]}",
+      Position(1, 1),
+    )
+    is None,
   )
-  assert_true(frame.has_suffix(message))
 }
 
 ///|
-async test "native workspace language provider bridges remote documents to file uri lsp" {
-  let root = "_build/native_host_lsp_provider_test"
+test "parses moon check json diagnostics grouped by workspace uri" {
+  let raw =
+    #|{"$message_type":"diagnostic","level":"warning","error_code":1,"path":"/workspace/demo/src/bad.mbt","loc":"2:4-2:17","message":"Warning (unused_value): Unused function 'unused_helper'","context":"1 |///|\n"}
+    #|{"$message_type":"diagnostic","level":"error","error_code":4014,"path":"/workspace/demo/src/bad.mbt","loc":"4:7-4:8","message":"Expr Type Mismatch"}
+    #|{"$message_type":"diagnostic","level":"error","error_code":1,"path":"/elsewhere/other.mbt","loc":"1:1-1:2","message":"outside the workspace root"}
+    #|Finished. moon: no work to do
+    #|
+  let grouped = @server_host_native.parse_moon_check_diagnostics(
+    "/workspace/demo", raw,
+  )
+  assert_eq(grouped.length(), 1)
+  match grouped.get("readonly-remote://workspace/src/bad.mbt") {
+    Some(diagnostics) => {
+      assert_eq(diagnostics.length(), 2)
+      assert_true(diagnostics[0].severity == Warning)
+      assert_true(diagnostics[0].range == Range(2, 4, 2, 17))
+      assert_true(
+        diagnostics[0].message.contains("Unused function 'unused_helper'"),
+      )
+      assert_true(diagnostics[1].severity == Error)
+      assert_true(diagnostics[1].range == Range(4, 7, 4, 8))
+    }
+    None => fail("expected diagnostics for src/bad.mbt")
+  }
+}
+
+///|
+async test "moon backend answers hover and pushes check diagnostics" {
+  let root = "_build/native_host_moon_backend_test"
   reset_dir(root)
   @async.with_task_group() <| group => {
     group.add_defer(() => @fs.rmdir(root, recursive=true))
     @fs.mkdir(root, recursive=true)
     @fs.write_file(
-      root + "/simple.mbt",
-      "pub fn startup_event() -> Unit {}\n",
+      root + "/moon.mod",
+      "name = \"fixture/moon_backend\"\n",
       create_mode=CreateOrTruncate,
     )
+    @fs.write_file(root + "/moon.pkg", "\n", create_mode=CreateOrTruncate)
+    let source = "///|\nfn helper(x : Int) -> Int {\n  x + 1\n}\n"
+    @fs.write_file(root + "/lib.mbt", source, create_mode=CreateOrTruncate)
     let root_real = @fs.realpath(root)
-    let root_uri = @server_host_native.file_uri_for_host_path(root_real)
-    let file_uri = root_uri + "/simple.mbt"
-    let transport = RecordingLanguageTransport::new(file_uri)
-    let client = @server.LspClient::with_root_uri(transport, root_uri)
-    let provider = @server_host_native.NativeWorkspaceLanguageProvider(
-      root_real,
-      client.language_provider(),
-    )
-    let remote_uri = expect_remote_uri("simple.mbt")
-    let model = @model.TextModel(
-      remote_uri, "simple.mbt", "moonbit", 1, "rev-1", "pub fn startup_event() -> Unit {}\n",
-    )
+    let uri = expect_remote_uri("lib.mbt")
+    let uri_key = uri.to_string()
 
+    // First check run: the private unused `helper` yields one warning.
+    let published : Array[(String, Array[@language.Diagnostic])] = []
+    let diagnostics = @server_host_native.MoonCheckDiagnostics(root_real, (
+      uri,
+      _revision,
+      file_diagnostics,
+    ) => published.push((uri.to_string(), file_diagnostics)))
+    let spawn_task = task => group.spawn_bg(task, no_wait=true)
+    diagnostics.schedule(spawn_task)
+    wait_for_publishes(published, 1)
+    assert_eq(published[0].0, uri_key)
+    assert_eq(published[0].1.length(), 1)
+    assert_true(published[0].1[0].severity == Warning)
+    assert_true(published[0].1[0].message.contains("helper"))
+    assert_eq(published[0].1[0].range.start_line_number, 2)
+
+    // Syncing the document replays the published set with its revision.
+    diagnostics.note_document(
+      DocumentSnapshot(uri, "lib.mbt", "moonbit", "rev-1", source),
+    )
+    assert_eq(published.length(), 2)
+    assert_eq(published[1].0, uri_key)
+    assert_eq(published[1].1.length(), 1)
+
+    // Fixing the warning pushes an empty set that clears the stale markers.
+    @fs.write_file(
+      root + "/lib.mbt",
+      "///|\npub fn helper(x : Int) -> Int {\n  x + 1\n}\n",
+      create_mode=CreateOrTruncate,
+    )
+    diagnostics.schedule(spawn_task)
+    wait_for_publishes(published, 3)
+    assert_eq(published[2].0, uri_key)
+    assert_eq(published[2].1.length(), 0)
+
+    // Hover reuses the check artifacts through `--no-check`.
+    let provider = @server_host_native.MoonWorkspaceLanguageProvider(root_real)
+    let model = @model.TextModel(uri, "lib.mbt", "moonbit", 1, "rev-1", source)
     match
       provider.provide_hover(
         model,
-        model.get_position_at(7),
+        Position(2, 8),
         @language.CancellationToken::none(),
       ) {
       Some(hover) => {
+        assert_eq(hover.range.start_line_number, 2)
         match hover.contents {
-          [PlainText(text)] => assert_eq(text, "LSP hover for startup_event")
-          _ => fail("expected plaintext hover")
+          [Markdown(code), ..] => assert_true(code.contains("helper"))
+          _ => fail("expected markdown hover content")
         }
-        assert_true(hover.range == Range(1, 8, 1, 21))
       }
-      None => fail("expected lsp hover")
+      None => fail("expected moon ide hover result")
     }
-    match
-      provider.provide_definition(
-        model,
-        model.get_position_at(7),
-        @language.CancellationToken::none(),
-      ) {
-      Some(location) => {
-        assert_eq(location.uri.to_string(), remote_uri.to_string())
-        assert_true(location.range == Range(1, 8, 1, 21))
-      }
-      None => fail("expected lsp definition")
-    }
-    assert_true(
-      transport.requests.any(message => {
-        message.contains("\"rootUri\":\"" + root_uri + "\"")
-      }),
-    )
-    assert_true(
-      transport.requests.any(message => {
-        message.contains("\"uri\":\"" + file_uri + "\"") &&
-        message.contains("\"method\":\"textDocument/hover\"")
-      }),
-    )
-    assert_true(
-      transport.notifications.any(message => {
-        message.contains("\"method\":\"textDocument/didOpen\"") &&
-        message.contains("\"uri\":\"" + file_uri + "\"")
-      }),
-    )
+  }
+}
+
+///|
+async fn wait_for_publishes(
+  published : Array[(String, Array[@language.Diagnostic])],
+  count : Int,
+) -> Unit {
+  let mut remaining = 300
+  while published.length() < count && remaining > 0 {
+    @async.sleep(100)
+    remaining = remaining - 1
+  }
+  if published.length() < count {
+    fail("timed out waiting for moon check diagnostics publish")
   }
 }
 
@@ -324,55 +342,4 @@ fn expect_remote_uri(path : String) -> @base_common.Uri raise {
     Some(uri) => uri
     None => fail("invalid remote path " + path)
   }
-}
-
-///|
-struct RecordingLanguageTransport {
-  file_uri : String
-  requests : Array[String]
-  notifications : Array[String]
-  listener : Ref[((String) -> Unit)?]
-}
-
-///|
-fn RecordingLanguageTransport::new(
-  file_uri : String,
-) -> RecordingLanguageTransport {
-  { file_uri, requests: [], notifications: [], listener: Ref(None) }
-}
-
-///|
-impl @server.LspTransport for RecordingLanguageTransport with fn request(
-  self,
-  message,
-) {
-  self.requests.push(message)
-  if message.contains("\"method\":\"initialize\"") {
-    "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"hoverProvider\":true,\"definitionProvider\":true}}}"
-  } else if message.contains("\"method\":\"textDocument/hover\"") {
-    "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"contents\":\"LSP hover for startup_event\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":20}}}}"
-  } else if message.contains("\"method\":\"textDocument/definition\"") {
-    "{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"uri\":\"" +
-    self.file_uri +
-    "\",\"range\":{\"start\":{\"line\":0,\"character\":7},\"end\":{\"line\":0,\"character\":20}}}}"
-  } else {
-    "{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":null}"
-  }
-}
-
-///|
-impl @server.LspTransport for RecordingLanguageTransport with fn notify(
-  self,
-  message,
-) {
-  self.notifications.push(message)
-}
-
-///|
-impl @server.LspTransport for RecordingLanguageTransport with fn subscribe(
-  self,
-  listener,
-) {
-  self.listener.val = Some(listener)
-  LspSubscription(() => self.listener.val = None)
 }

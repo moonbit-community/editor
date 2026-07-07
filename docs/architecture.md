@@ -160,8 +160,9 @@ Imports into the viewer tree follow VS Code's consumer classes
 - `internal/shell/remote_protocol`: packets between the reference browser shell
   and reference backend.
 - `internal/shell/server`: reference backend policy and semantic feature routing.
-- `internal/shell/server_host_native`: native filesystem, watch, process,
-  socket, static-serving, and LSP-process effects.
+- `internal/shell/server_host_native`: native filesystem, watch, socket, and
+  static-serving effects, plus the `moon` command backend for hover
+  (`moon ide hover`) and diagnostics (`moon check`).
 - `internal/shell/examples/embedded_viewer`: non-remote embedding proof.
 
 ## Core Flows
@@ -297,7 +298,8 @@ Offsets and columns are UTF-16 code units.
   `[start, end_exclusive)`.
 - `viewer/common/model.TextSnapshot` owns conversion between offsets and
   line/column positions/ranges.
-- LSP wire positions are 0-based and convert at the shell/backend boundary.
+- `moon ide hover --output-json` and `moon check --output-json` locations are
+  1-based line/column with exclusive end columns and map directly onto `Range`.
 
 Keep conversions at the boundary where coordinate spaces meet. Code that needs
 offset spans should say `OffsetRange`; code that models editor positions should

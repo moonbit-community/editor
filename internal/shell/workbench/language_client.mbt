@@ -69,14 +69,14 @@ impl @language.HoverProvider for RemoteLanguageClient with fn provide_hover(
 
 ///|
 /// Applies a server-pushed diagnostics packet to the marker service — the
-/// workbench's `publishDiagnostics` sink, Monaco's `setModelMarkers` path.
+/// sink for backend `moon check` pushes, Monaco's `setModelMarkers` path.
 /// The marker-change event re-renders the viewer; no pull exists.
 fn apply_remote_diagnostics_cmd(
   payload : @remote_protocol.DiagnosticsPayload,
 ) -> @rabbita.Cmd {
   @cmd.custom_cmd(_ => {
     workbench_services().markers.set_diagnostics(
-      "lsp",
+      "moon",
       payload.uri,
       payload.diagnostics,
     )

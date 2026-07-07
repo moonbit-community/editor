@@ -31,7 +31,8 @@ pub fn ProtocolErrorCode::label(self : ProtocolErrorCode) -> String {
 
 ///|
 /// Remote protocol error packet payload. `request_id` correlates failures to a
-/// request; `provider_code` preserves lower-level filesystem/LSP categories.
+/// request; `provider_code` preserves lower-level filesystem/provider
+/// categories.
 pub(all) struct ProtocolError {
   code : ProtocolErrorCode
   message : String
@@ -95,9 +96,9 @@ pub(all) struct DirectoryResolvedPayload {
 } derive(Debug)
 
 ///|
-/// Server-initiated diagnostics push for a URI at a document revision — the
-/// wire form of the LSP `textDocument/publishDiagnostics` notification, so it
-/// carries no request id.
+/// Server-initiated diagnostics push for a URI at a document revision. The
+/// backend publishes these from `moon check` runs, so the packet carries no
+/// request id.
 pub(all) struct DiagnosticsPayload {
   uri : @base_common.Uri
   revision : String

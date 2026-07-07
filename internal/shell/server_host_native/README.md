@@ -5,18 +5,17 @@ Native effect adapter for the reference backend shell.
 ## Responsibilities
 
 - Provide the native implementation point for the `server.ServerHost` trait.
-- Provide the native implementation point for the server-owned
-  `server.LspTransport` trait.
-- Keep filesystem reads, file watching, process spawning, timers, sockets, and
-  `moon-lsp --stdio` lifecycle effects outside server policy code.
+- Keep filesystem reads, file watching, process spawning, timers, and sockets
+  outside server policy code.
 - Serve the browser client from `web/dist` and bridge `/protocol` WebSocket
   traffic into `server.RemoteServer`, serializing outbound packets through a
   per-connection writer task so concurrent watch pushes and responses never
   interleave on the socket.
 - List workspace entries, validate root-relative paths, and poll watched files
   under the configured workspace root.
-- Own configured stdio LSP process startup, `Content-Length` framing, and
-  structured JSON-RPC errors when no process command is configured.
+- Back semantic features with the `moon` command line: hover shells out to
+  `moon ide hover --output-json`, and diagnostics come from single-flight
+  `moon check --output-json` runs pushed to every connected session.
 - Return structured host errors for invalid paths, missing files, directories,
   and unavailable native capabilities.
 

@@ -4,7 +4,6 @@ import {
   "moonbit-community/editor/internal/shell/remote_protocol",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/internal/shell/workspace",
-  "moonbitlang/core/json",
 }
 
 supported_targets = "native"
@@ -12,7 +11,3 @@ supported_targets = "native"
 import {
   "moonbitlang/async",
 } for "test"
-
-import {
-  "moonbitlang/async",
-} for "wbtest"

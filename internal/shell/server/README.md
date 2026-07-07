@@ -10,14 +10,13 @@ Reference backend policy for remote readonly workspaces.
 - Manage file watches, close/dispose behavior, semantic language-feature
   requests, and remote protocol dispatch.
 - Dispatch semantic feature requests through explicitly injected `language`
-  provider traits.
-- Own the hidden LSP client, request/notification flow, capability gating, and
-  LSP-to-semantic result conversion for server-backed providers.
+  provider traits. Backends (such as the native `moon` command host) supply
+  the concrete providers.
 
 ## Boundaries
 
 - May depend on public domain packages plus internal shell `workspace` and
-  `remote_protocol`, and JSON support.
+  `remote_protocol`.
 - Must not import browser shell packages, the public `viewer` package, or
   `internal/shell/web`.
 - Native effects stay behind the `ServerHost` trait; server code owns policy and

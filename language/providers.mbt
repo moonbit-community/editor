@@ -14,9 +14,8 @@ pub(all) struct Hover {
 } derive(Debug)
 
 ///|
-/// Diagnostic severity levels accepted from semantic providers and remote LSP
-/// adapters. `Hint` matches LSP `DiagnosticSeverity.Hint` (4) and Monaco's
-/// `MarkerSeverity.Hint`.
+/// Diagnostic severity levels accepted from semantic providers. `Hint`
+/// matches Monaco's `MarkerSeverity.Hint`.
 pub(all) enum DiagnosticSeverity {
   Error
   Warning
@@ -25,8 +24,8 @@ pub(all) enum DiagnosticSeverity {
 } derive(Eq, Debug)
 
 ///|
-/// Diagnostic tag, mirroring Monaco's `MarkerTag` (`markers.ts:51`) and LSP's
-/// `DiagnosticTag` (`Unnecessary=1, Deprecated=2`). Kept local to `language`
+/// Diagnostic tag, mirroring Monaco's `MarkerTag` (`markers.ts:51`). Kept
+/// local to `language`
 /// rather than reusing `viewer/common/markers`'s `MarkerTag`, since `language`
 /// sits below `viewer` in the package graph.
 pub(all) enum DiagnosticTag {

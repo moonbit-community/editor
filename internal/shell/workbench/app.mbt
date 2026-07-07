@@ -587,8 +587,8 @@ fn server_packet_update(
     // routes them to the listener registered for their URI.
     DocumentLoaded(payload) => (route_watched_document_cmd(payload), model)
     DocumentChanged(payload) => (route_watched_document_cmd(payload), model)
-    // Diagnostics are always a server push (the LSP `publishDiagnostics`
-    // relay); they land in the marker service keyed by resource.
+    // Diagnostics are always a server push (relayed from backend `moon check`
+    // runs); they land in the marker service keyed by resource.
     Diagnostics(payload) => (apply_remote_diagnostics_cmd(payload), model)
     // Feature results without a waiting request are unsolicited; provider
     // commands consume theirs through the pending table.

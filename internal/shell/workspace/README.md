@@ -21,7 +21,7 @@ Readonly source and tree provider contracts for host packages.
 ## Boundaries
 
 - May depend on `base/common` and JSON support.
-- Must not contain browser, native, DOM, server routing, or LSP process effects.
+- Must not contain browser, native, DOM, server routing, or process effects.
 - Host packages implement filesystem behavior through the provider contract.
 - Must not become the viewer model API. `DocumentSnapshot` is source-provider
   data; editor model identity belongs in `viewer/common/model`.

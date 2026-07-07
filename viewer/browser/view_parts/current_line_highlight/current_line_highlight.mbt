@@ -66,7 +66,11 @@ pub fn render_current_line(
     node.set_attribute("class", class_name)
     node.set_attribute(
       "style",
-      current_line_style(viewport.relative_vertical_offset[index], width),
+      current_line_style(
+        viewport.relative_vertical_offset[index],
+        width,
+        viewport.line_height,
+      ),
     )
     container.append_child(node.as_node())
   }
@@ -98,6 +102,6 @@ pub fn current_line_span(
 }
 
 ///|
-fn current_line_style(top : Int, width : Double) -> String {
-  "top:\{top}px;width:\{width}px;height:\{@core.editor_line_height}px"
+fn current_line_style(top : Int, width : Double, line_height : Int) -> String {
+  "top:\{top}px;width:\{width}px;height:\{line_height}px"
 }

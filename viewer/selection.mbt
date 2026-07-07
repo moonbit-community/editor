@@ -195,6 +195,7 @@ fn Viewer::get_rich_text_to_copy(
           selection.end().line_number,
           selection.end().column,
         ),
+        self.font_info,
       )
     None => selection_rich_text_to_copy(selection, snapshot)
   }
@@ -262,13 +263,13 @@ fn escape_copy_html(text : String) -> String {
 /// (`viewModelImpl.ts:1051-1134`): per model line, the model's `LineTokens`
 /// render through `tokenize_line_to_html` (injected text never appears — it
 /// lives in decorations, not the model tokens), wrapped in a styled `<div>`
-/// carrying the default foreground/background and the editor font.
-/// Deviations: no `fontInfo` option surface (the editor font constants stand
-/// in) and no PLAINTEXT/multi-selection `null` arms (the viewer always has a
-/// single selection and a concrete language).
+/// carrying the default foreground/background and the configured `fontInfo`.
+/// Deviation: no PLAINTEXT/multi-selection `null` arms (the viewer always
+/// has a single selection and a concrete language).
 fn get_rich_text_to_copy(
   model : @model.TextModel,
   model_range : @base_common.Range,
+  font_info : @config.FontInfo,
 ) -> String {
   let color_map = @model_tokens.default_token_color_map()
   "<div style=\"" +
@@ -278,9 +279,17 @@ fn get_rich_text_to_copy(
   "background-color: " +
   color_map[2] +
   ";" +
-  "font-family: Menlo, Monaco, 'Courier New', monospace;" +
+  "font-family: " +
+  font_info.bare().get_massaged_font_family() +
+  ";" +
+  "font-weight: " +
+  font_info.font_weight +
+  ";" +
+  "font-size: " +
+  font_info.font_size.to_string() +
+  "px;" +
   "line-height: " +
-  @core.editor_line_height.to_string() +
+  font_info.line_height.to_string() +
   "px;" +
   "white-space: pre;" +
   "\">" +

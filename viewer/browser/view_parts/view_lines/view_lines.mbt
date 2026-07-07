@@ -23,6 +23,12 @@ pub(all) struct ViewLines {
   // selection.
   mut last_selection : @base_common.Range?
   mut last_render_whitespace : @view_layout.RenderWhitespace
+  // The font facts of the last render — a change re-enters the full-rewrite
+  // branch (Monaco `ViewLines.onConfigurationChanged` invalidating every
+  // line when `fontInfo` changed); the per-line `previous != input` diff
+  // then limits the actual HTML writes.
+  mut last_space_width : Double
+  mut last_can_use_halfwidth_rightwards_arrow : Bool
 }
 
 ///|
@@ -41,6 +47,8 @@ pub fn ViewLines::new(document : @rdom.Document) -> ViewLines {
     should_render: true,
     last_selection: None,
     last_render_whitespace: None,
+    last_space_width: 0.0,
+    last_can_use_halfwidth_rightwards_arrow: true,
   }
 }
 
@@ -104,6 +112,7 @@ pub fn ViewLines::render_text(
   generation : Int,
   decorations_generation : Int,
   space_width : Double,
+  can_use_halfwidth_rightwards_arrow : Bool,
   render_whitespace : @view_layout.RenderWhitespace,
   render_control_characters : Bool,
   selection_view_range : @base_common.Range?,
@@ -117,11 +126,17 @@ pub fn ViewLines::render_text(
   // actual HTML writes to lines whose selected columns changed.
   let selection_invalidated = render_whitespace == Selection &&
     selection_view_range != self.last_selection
+  let font_invalidated = space_width != self.last_space_width ||
+    can_use_halfwidth_rightwards_arrow !=
+    self.last_can_use_halfwidth_rightwards_arrow
   self.last_selection = selection_view_range
   self.last_render_whitespace = render_whitespace
+  self.last_space_width = space_width
+  self.last_can_use_halfwidth_rightwards_arrow = can_use_halfwidth_rightwards_arrow
   if generation != self.generation ||
     decorations_generation != self.decorations_generation ||
-    selection_invalidated {
+    selection_invalidated ||
+    font_invalidated {
     while self.line_nodes.length() > viewport.lines.length() {
       match (self.line_nodes.pop(), self.render_inputs.pop()) {
         (Some(node), _) => self.dom_node.remove_child(node.as_node())
@@ -142,6 +157,7 @@ pub fn ViewLines::render_text(
         viewport,
         index,
         space_width,
+        can_use_halfwidth_rightwards_arrow~,
         render_whitespace~,
         render_control_characters~,
         selection_view_range~,
@@ -155,6 +171,7 @@ pub fn ViewLines::render_text(
         viewport.start_line_number + index,
         input,
         viewport.relative_vertical_offset[index],
+        viewport.line_height,
         rewrite_html~,
       )
       self.render_inputs.push(input)
@@ -182,7 +199,10 @@ pub fn ViewLines::render_text(
       let node = self.line_nodes[line_index - previous.start]
       node.set_attribute(
         "style",
-        line_node_style(viewport.relative_vertical_offset[index]),
+        line_node_style(
+          viewport.relative_vertical_offset[index],
+          viewport.line_height,
+        ),
       )
       next_lines.push(node)
       next_inputs.push(self.render_inputs[line_index - previous.start])
@@ -193,6 +213,7 @@ pub fn ViewLines::render_text(
         viewport,
         index,
         space_width,
+        can_use_halfwidth_rightwards_arrow~,
         render_whitespace~,
         render_control_characters~,
         selection_view_range~,
@@ -202,6 +223,7 @@ pub fn ViewLines::render_text(
         viewport.start_line_number + index,
         input,
         viewport.relative_vertical_offset[index],
+        viewport.line_height,
         rewrite_html=true,
       )
       self.dom_node.append_child(node.as_node())
@@ -266,6 +288,7 @@ pub fn render_line_input_for_viewport(
   viewport : @view_layout.ViewportData,
   index : Int,
   space_width : Double,
+  can_use_halfwidth_rightwards_arrow? : Bool = true,
   render_whitespace~ : @view_layout.RenderWhitespace,
   render_control_characters~ : Bool,
   selection_view_range~ : @base_common.Range?,
@@ -276,6 +299,7 @@ pub fn render_line_input_for_viewport(
     line_data,
     line_decorations=viewport.decorations_for_line(line_number),
     space_width~,
+    can_use_halfwidth_rightwards_arrow~,
     render_whitespace~,
     render_control_characters~,
     selections_on_line=selections_on_line_for(
@@ -339,11 +363,12 @@ fn write_line_node(
   line_number : Int,
   input : @view_layout.RenderLineInput,
   top : Int,
+  line_height : Int,
   rewrite_html~ : Bool,
 ) -> @view_layout.CharacterMapping? {
   node.set_attribute("class", @viewer_common.render_line_class())
   node.set_attribute("data-line", line_number.to_string())
-  node.set_attribute("style", line_node_style(top))
+  node.set_attribute("style", line_node_style(top, line_height))
   if rewrite_html {
     let output = @view_layout.render_view_line2(input)
     node.set_inner_html(output.html)
@@ -359,10 +384,11 @@ pub fn write_line_number_node(
   gutter : @rdom.Element,
   line_number : Int,
   top : Int,
+  line_height : Int,
 ) -> Unit {
   gutter.set_attribute("class", "line-number")
   gutter.set_attribute("data-line", line_number.to_string())
-  gutter.set_attribute("style", line_node_style(top))
+  gutter.set_attribute("style", line_node_style(top, line_height))
   gutter.set_inner_html(line_number.to_string())
 }
 
@@ -370,10 +396,6 @@ pub fn write_line_number_node(
 /// `pub`: called cross-package by `margin.mbt`'s line-number render
 /// (which positions its nodes the same way `ViewLines` positions text
 /// lines).
-pub fn line_node_style(top : Int) -> String {
-  "top:" +
-  top.to_string() +
-  "px;height:" +
-  @core.editor_line_height.to_string() +
-  "px"
+pub fn line_node_style(top : Int, line_height : Int) -> String {
+  "top:" + top.to_string() + "px;height:" + line_height.to_string() + "px"
 }

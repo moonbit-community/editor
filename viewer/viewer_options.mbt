@@ -35,6 +35,16 @@ pub(all) struct ViewerOptions {
   /// `editorOptions.ts:6649-6653`): adds the `showDeprecated` root class
   /// gating the `squiggly-inline-deprecated` strike-through.
   show_deprecated : Bool
+  /// Monaco's `fontFamily`/`fontWeight`/`fontSize`/`lineHeight`/
+  /// `letterSpacing` editor options, defaulting to `EDITOR_FONT_DEFAULTS`.
+  /// `line_height` follows `BareFontInfo._create`'s rules: `0` derives the
+  /// golden-ratio height from `font_size`, values below `8` multiply the
+  /// font size (ems), anything else is pixels.
+  font_family : String
+  font_weight : String
+  font_size : Double
+  line_height : Double
+  letter_spacing : Double
 } derive(Eq, Debug)
 
 ///|
@@ -61,6 +71,11 @@ pub fn ViewerOptions::ViewerOptions(
   line_decorations_width? : Int = 0,
   show_unused? : Bool = true,
   show_deprecated? : Bool = true,
+  font_family? : String = @config.editor_font_defaults.font_family,
+  font_weight? : String = @config.editor_font_defaults.font_weight,
+  font_size? : Double = @config.editor_font_defaults.font_size,
+  line_height? : Double = @config.editor_font_defaults.line_height,
+  letter_spacing? : Double = @config.editor_font_defaults.letter_spacing,
 ) -> ViewerOptions {
   {
     soft_wrap,
@@ -76,6 +91,11 @@ pub fn ViewerOptions::ViewerOptions(
     line_decorations_width: line_decorations_width.max(0),
     show_unused,
     show_deprecated,
+    font_family,
+    font_weight,
+    font_size,
+    line_height,
+    letter_spacing,
   }
 }
 
@@ -101,6 +121,27 @@ fn ViewerOptions::same_layout_options(
 /// Default readonly viewer options.
 pub fn ViewerOptions::default() -> ViewerOptions {
   ViewerOptions()
+}
+
+///|
+/// The `BareFontInfo` these options request — Monaco's
+/// `BareFontInfo.createFromValidatedSettings`. The viewer has no
+/// `fontLigatures` option, so `font-feature-settings` is constantly
+/// `EditorFontLigatures.OFF` (Monaco's default).
+fn ViewerOptions::bare_font_info(
+  self : ViewerOptions,
+  pixel_ratio~ : Double,
+) -> @config.BareFontInfo {
+  @config.BareFontInfo::create(
+    font_family=self.font_family,
+    font_weight=self.font_weight,
+    font_size=self.font_size,
+    font_feature_settings=@config.editor_font_ligatures_off,
+    font_variation_settings=@config.font_variation_off,
+    line_height=self.line_height,
+    letter_spacing=self.letter_spacing,
+    pixel_ratio~,
+  )
 }
 
 ///|

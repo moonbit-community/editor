@@ -7,11 +7,6 @@
 // just a numeric constant.
 
 ///|
-/// Pixel height of one rendered code line. Keep in sync with
-/// `--editor-line-height` in internal/shell/workbench/theme.css.
-pub let editor_line_height = 18
-
-///|
 /// Total horizontal padding of the line-number gutter. Keep in sync with
 /// `.line-number` padding in viewer/margin.css.
 pub let gutter_padding_px = 34
@@ -30,11 +25,3 @@ pub let editor_vertical_scrollbar_size = 14.0
 
 ///|
 pub let editor_horizontal_scrollbar_size = 12.0
-
-///|
-pub let char_probe_text = "0000000000"
-
-///|
-/// Fallback advance width for the editor's 12px monospace stack, used
-/// until the char probe is measured after attach.
-pub let fallback_char_width = 7.2

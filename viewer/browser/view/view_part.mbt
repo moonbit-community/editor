@@ -732,7 +732,7 @@ impl ViewPart for @view_cursors.ViewCursors with fn prepare_render(
             @view_cursors.prepare_cursor_render_data(
               left,
               context.viewport.relative_vertical_offset[index],
-              @core.editor_line_height,
+              context.viewport.line_height,
               @view_cursors.device_pixel_ratio(),
             ),
           )

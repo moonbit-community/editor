@@ -142,7 +142,13 @@ pub fn ContentViewOverlays::render_selection_overlays(
   }
   let document = @rdom.document()
   for line in lines {
-    render_styled_line(self.dom_node, document, line, styled)
+    render_styled_line(
+      self.dom_node,
+      document,
+      line,
+      styled,
+      viewport.line_height,
+    )
   }
 }
 
@@ -276,6 +282,7 @@ fn render_styled_line(
   document : @rdom.Document,
   line : LineSelectionRanges,
   styled : Bool,
+  line_height : Int,
 ) -> Unit {
   for range in line.ranges {
     if styled {
@@ -288,6 +295,7 @@ fn render_styled_line(
           left,
           rounded_piece_width,
           "selected-text",
+          line_height,
         )
         let mut class_name = "selection-corner-piece"
         if range.start_top == Intern {
@@ -303,6 +311,7 @@ fn render_styled_line(
           left,
           rounded_piece_width,
           class_name,
+          line_height,
         )
       }
       if range.end_top == Intern || range.end_bottom == Intern {
@@ -314,6 +323,7 @@ fn render_styled_line(
           left,
           rounded_piece_width,
           "selected-text",
+          line_height,
         )
         let mut class_name = "selection-corner-piece"
         if range.end_top == Intern {
@@ -329,6 +339,7 @@ fn render_styled_line(
           left,
           rounded_piece_width,
           class_name,
+          line_height,
         )
       }
     }
@@ -354,6 +365,7 @@ fn render_styled_line(
       range.left,
       range.width,
       class_name,
+      line_height,
     )
   }
 }
@@ -421,14 +433,23 @@ fn append_selection_piece(
   left : Double,
   width : Double,
   class_name : String,
+  line_height : Int,
 ) -> Unit {
   let node = document.create_element("div")
   node.set_attribute("class", class_name)
-  node.set_attribute("style", selection_rect_style(top, left, width))
+  node.set_attribute(
+    "style",
+    selection_rect_style(top, left, width, line_height),
+  )
   parent.append_child(node.as_node())
 }
 
 ///|
-fn selection_rect_style(top : Int, left : Double, width : Double) -> String {
-  "top:\{top}px;left:\{left}px;width:\{width}px;height:\{@core.editor_line_height}px"
+fn selection_rect_style(
+  top : Int,
+  left : Double,
+  width : Double,
+  line_height : Int,
+) -> String {
+  "top:\{top}px;left:\{left}px;width:\{width}px;height:\{line_height}px"
 }

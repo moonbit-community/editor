@@ -16,6 +16,10 @@ priv enum ContentWidgetPlacement {
 priv struct ContentWidgetAnchor {
   column : Int
   top : Int
+  /// The anchor line's height — Monaco `AnchorCoordinate.height`
+  /// (`fontInfo.lineHeight`), the `belowTop = anchor.top + anchor.height`
+  /// input of `_layoutBoxInViewport`.
+  height : Double
 }
 
 ///|
@@ -47,6 +51,10 @@ pub(all) struct HoverWidgetDom {
   wrapper : @rdom.Element
   hover : @rdom.Element
   scrollable : @scrollbar.ScrollableElementDom
+  /// The configured `fontInfo.lineHeight` at the last hover render — the
+  /// line step of the wheel/keyboard scroll (Monaco reads it live off the
+  /// editor options).
+  mut line_height : Double
 }
 
 ///|
@@ -209,6 +217,7 @@ pub fn ContentWidgets::render_hover_widget(
   )
   let column = show_at_secondary.column
   let widget = self.ensure_hover_widget(host)
+  widget.line_height = layout.line_height().to_double()
   let mut class_name = "monaco-resizable-hover"
   let mut shift_left = 0.0
   let mut preferred_placement = ContentWidgetAbove
@@ -240,6 +249,7 @@ pub fn ContentWidgets::render_hover_widget(
     anchor: {
       column,
       top: layout.relative_vertical_offset_for_line(window, line_number),
+      height: layout.line_height().to_double(),
     },
     preferred_placement,
     allow_overflow: false,
@@ -275,7 +285,7 @@ pub fn ContentWidgets::render_hover_widget(
     let space_above = hover_available_space_above(line_top)
     let space_below = hover_available_space_below(
       line_top,
-      @core.editor_line_height.to_double(),
+      layout.line_height().to_double(),
       editor_height,
     )
     let below = !hover_prefer_above(
@@ -337,7 +347,12 @@ fn ContentWidgets::ensure_hover_widget(
       )
       hover.append_child(scrollable.wrapper.as_node())
       wrapper.append_child(hover.as_node())
-      let widget : HoverWidgetDom = { wrapper, hover, scrollable }
+      let widget : HoverWidgetDom = {
+        wrapper,
+        hover,
+        scrollable,
+        line_height: 0.0,
+      }
       // Content widgets swallow pointer motion, but a hover may overlap source
       // text; non-interactive mousedown should still start editor selection at
       // the underlying coordinate.
@@ -419,7 +434,7 @@ fn handle_hover_wheel(
 ) -> Unit {
   let (delta_left, delta_top) = @scrollbar.normalized_wheel_delta(
     wheel,
-    @core.editor_line_height.to_double(),
+    widget.line_height,
     widget.scrollable.native_page_delta(),
   )
   widget.scrollable.native_scroll_by(delta_left~, delta_top~)
@@ -434,17 +449,13 @@ let hover_horizontal_scrolling_by : Double = 30.0
 ///|
 /// Monaco `ContentHoverWidget.scrollUp`: `scrollTop -= fontInfo.lineHeight`.
 pub fn HoverWidgetDom::scroll_up(self : HoverWidgetDom) -> Unit {
-  self.scrollable.native_scroll_by(
-    delta_top=-@core.editor_line_height.to_double(),
-  )
+  self.scrollable.native_scroll_by(delta_top=-self.line_height)
 }
 
 ///|
 /// Monaco `ContentHoverWidget.scrollDown`: `scrollTop += fontInfo.lineHeight`.
 pub fn HoverWidgetDom::scroll_down(self : HoverWidgetDom) -> Unit {
-  self.scrollable.native_scroll_by(
-    delta_top=@core.editor_line_height.to_double(),
-  )
+  self.scrollable.native_scroll_by(delta_top=self.line_height)
 }
 
 ///|
@@ -719,8 +730,7 @@ fn ContentWidget::style(self : ContentWidget) -> String {
   // transformed layer — see `hover.css`'s removed `.monaco-resizable-hover`
   // transform rules).
   let top = match self.preferred_placement {
-    ContentWidgetBelow =>
-      self.anchor.top.to_double() + @core.editor_line_height.to_double()
+    ContentWidgetBelow => self.anchor.top.to_double() + self.anchor.height
     ContentWidgetAbove => self.anchor.top.to_double() - self.height
   }
   let left = self.anchor.column.to_double() * self.char_width

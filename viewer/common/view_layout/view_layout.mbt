@@ -12,7 +12,7 @@
 pub struct ViewLayout {
   scrollable : Scrollable
   priv mut lines : LinesLayout
-  priv line_height : Int
+  priv mut line_height : Int
   priv mut line_count : Int
   priv mut view_zones_arr : Array[ViewZone]
   priv mut content_width : Double
@@ -72,6 +72,28 @@ pub fn ViewLayout::set_line_count(
     self.line_height,
     self.view_zones_arr,
   )
+  self.sync_dimensions()
+}
+
+///|
+/// The uniform line height in pixels (`fontInfo.lineHeight`).
+pub fn ViewLayout::line_height(self : ViewLayout) -> Int {
+  self.line_height
+}
+
+///|
+/// Applies a changed line height and re-derives the scroll dimensions —
+/// Monaco's `ViewLayout.onConfigurationChanged` `lineHeight` branch
+/// (`this._linesLayout.setLineHeight(...)`).
+pub fn ViewLayout::set_line_height(
+  self : ViewLayout,
+  line_height : Int,
+) -> ScrollChange? {
+  if line_height == self.line_height {
+    return None
+  }
+  self.line_height = line_height
+  self.lines.set_default_line_height(line_height)
   self.sync_dimensions()
 }
 

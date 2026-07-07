@@ -29,6 +29,9 @@ pub(all) struct ViewRenderInput {
   /// `left = gutter_width - line_decorations_width`).
   line_decorations_width : Double
   space_width : Double
+  /// `fontInfo.canUseHalfwidthRightwardsArrow`: whether the whitespace
+  /// renderer may paint tabs as U+FFEB without breaking monospace.
+  can_use_halfwidth_rightwards_arrow : Bool
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
   /// Whether the editor root has DOM focus (Monaco `ViewFocusChangedEvent`
@@ -90,7 +93,7 @@ fn RenderingContext::from_input(
   let viewport = @view_model.viewport_data_from_view_model(
     input.view_model,
     input.window,
-    line_height=@core.editor_line_height,
+    line_height=input.layout.line_height(),
     layout=input.layout,
   )
   let position = input.layout.position()
@@ -123,7 +126,7 @@ fn RenderingContext::restricted(
     translate_y: self.translate_y,
     content_transform: self.content_transform(),
     margin_transform: self.margin_transform(),
-    line_height: @core.editor_line_height,
+    line_height: self.viewport.line_height,
   }
 }
 

@@ -12,7 +12,7 @@ fn viewport_of(viewer : Viewer) -> @view_layout.ViewportData {
   @view_model.viewport_data_from_view_model(
     viewer.test_view_model(),
     viewer.test_window(),
-    line_height=@core.editor_line_height,
+    line_height=viewer.font_info.line_height,
   )
 }
 

@@ -57,7 +57,7 @@ pub fn MarginViewOverlays::render_current_line_margin(
     node.set_attribute("class", class_name)
     node.set_attribute(
       "style",
-      "top:\{viewport.relative_vertical_offset[index]}px;width:\{width}px;height:\{@core.editor_line_height}px",
+      "top:\{viewport.relative_vertical_offset[index]}px;width:\{width}px;height:\{viewport.line_height}px",
     )
     self.current_line.append_child(node.as_node())
   }

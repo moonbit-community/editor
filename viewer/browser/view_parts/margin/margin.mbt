@@ -89,6 +89,7 @@ pub fn MarginViewOverlays::render_line_numbers(
         self.line_number_nodes[index],
         viewport.start_line_number + index,
         viewport.relative_vertical_offset[index],
+        viewport.line_height,
       )
     }
     self.line_number_generation = generation
@@ -106,7 +107,10 @@ pub fn MarginViewOverlays::render_line_numbers(
       let node = self.line_number_nodes[line_index - previous.start]
       node.set_attribute(
         "style",
-        @view_lines.line_node_style(viewport.relative_vertical_offset[index]),
+        @view_lines.line_node_style(
+          viewport.relative_vertical_offset[index],
+          viewport.line_height,
+        ),
       )
       next_numbers.push(node)
     } else {
@@ -115,6 +119,7 @@ pub fn MarginViewOverlays::render_line_numbers(
         node,
         viewport.start_line_number + index,
         viewport.relative_vertical_offset[index],
+        viewport.line_height,
       )
       self.line_numbers.append_child(node.as_node())
       next_numbers.push(node)

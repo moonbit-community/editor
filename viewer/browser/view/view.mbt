@@ -5,14 +5,13 @@
 /// and write step.
 ///
 /// `pub(all)`: `Viewer` (root `viewer` package) holds `view : View?` and
-/// reads several fields directly (`root`, `probe`, `overflow_guard`,
-/// `view_lines`, `editor_scrollbar`, `content_widgets`) from `view_host.mbt`,
-/// `input.mbt`, `hit_test_dom.mbt`, `controller_host.mbt`, and `reveal.mbt` —
-/// the foreign-method rule keeps those `Viewer::` methods out of this
-/// package, so cross-package field access is the only option.
+/// reads several fields directly (`root`, `overflow_guard`, `view_lines`,
+/// `editor_scrollbar`, `content_widgets`) from `view_host.mbt`, `input.mbt`,
+/// `hit_test_dom.mbt`, `controller_host.mbt`, and `reveal.mbt` — the
+/// foreign-method rule keeps those `Viewer::` methods out of this package,
+/// so cross-package field access is the only option.
 pub(all) struct View {
   root : @rdom.Element
-  probe : @rdom.Element
   message_text : @rdom.Element
   overflow_guard : @rdom.Element
   squiggly_style : @rdom.Element
@@ -35,10 +34,6 @@ pub fn View::new() -> View {
   root.set_attribute("class", get_editor_class_name("source-empty"))
   root.set_attribute("aria-label", "Readonly code viewer")
   root.set_attribute("tabindex", "0")
-  let probe = document.create_element("span")
-  probe.set_attribute("class", "char-probe")
-  probe.set_attribute("aria-hidden", "true")
-  probe.append_child(document.create_text_node(@core.char_probe_text).as_node())
   let message = document.create_element("div")
   message.set_attribute("class", "source-message")
   let message_text = document.create_text_node("")
@@ -69,7 +64,6 @@ pub fn View::new() -> View {
   // Overlay widgets are viewport-fixed: they live in the overflow guard, not
   // the scrolling lines content (`view.ts:287`).
   overflow_guard.append_child(overlay_widgets.get_dom_node().as_node())
-  root.append_child(probe.as_node())
   root.append_child(message.as_node())
   root.append_child(squiggly_style.as_node())
   root.append_child(overflow_guard.as_node())
@@ -85,7 +79,6 @@ pub fn View::new() -> View {
   )
   let view : View = {
     root,
-    probe,
     message_text,
     overflow_guard,
     squiggly_style,
@@ -198,6 +191,7 @@ pub fn View::render(
       input.generation,
       input.decorations_generation,
       input.space_width,
+      input.can_use_halfwidth_rightwards_arrow,
       input.render_whitespace,
       input.render_control_characters,
       input.selection_view_range,

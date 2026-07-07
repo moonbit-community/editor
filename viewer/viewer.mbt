@@ -75,7 +75,10 @@ pub struct Viewer {
   /// reset whenever a new hover view is shown, so a sticky hover the pointer is
   /// approaching is kept open even off the anchor token.
   priv hover_mouse_closer : @hover.MouseCloserState
-  priv mut char_width : Double
+  /// The measured font facts (Monaco's `EditorOption.fontInfo`): starts as
+  /// the untrusted headless estimate and is replaced by
+  /// `FontMeasurements.readFontInfo` at the first attached measure.
+  priv mut font_info : @config.FontInfo
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
   priv mut view : @view.View?
@@ -273,6 +276,9 @@ pub fn Viewer::Viewer(
   services? : ViewerServices = ViewerServices::new(),
   options? : ViewerOptions = ViewerOptions::default(),
 ) -> Viewer {
+  let font_info = @config.FontInfo::estimated(
+    options.bare_font_info(pixel_ratio=@browser_config.device_pixel_ratio()),
+  )
   let viewer : Viewer = {
     services,
     options,
@@ -289,9 +295,7 @@ pub fn Viewer::Viewer(
     did_mouse_move: @base_common.Emitter::new(),
     did_mouse_leave: @base_common.Emitter::new(),
     last_scroll_event: None,
-    view_layout: @view_layout.ViewLayout::new(
-      line_height=@core.editor_line_height,
-    ),
+    view_layout: @view_layout.ViewLayout::new(line_height=font_info.line_height),
     view_model: None,
     rendered_window: None,
     text_model: None,
@@ -310,7 +314,7 @@ pub fn Viewer::Viewer(
     hover_last_modifiers: @hover.EventModifiers::none(),
     hover_notified_token: 0,
     hover_mouse_closer: @hover.MouseCloserState::new(),
-    char_width: 0.0,
+    font_info,
     soft_wrap_column: 0,
     max_line_length: 0,
     view: None,
@@ -476,6 +480,10 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
     self.schedule_render()
     return
   }
+  // A changed font option resolves through `FontMeasurements` immediately
+  // (Monaco's synchronous `_recomputeOptions`), so the wrap column below
+  // already uses the new advance width.
+  self.refresh_font_info()
   self.soft_wrap_column = self.options.soft_wrap_column_for_content_width(
     self.view_layout.dimensions().width,
     self.measured_char_width(),
@@ -514,6 +522,18 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   view.apply_squiggly_theme()
   self.view = Some(view)
   self.container = Some(host)
+  // The editor root carries the configured font — Monaco's
+  // `applyFontInfo(this.domNode, fontInfo)` in `view.ts`. The measured
+  // `FontInfo` replaces the headless estimate at the first flush's measure.
+  self.apply_font_info_to_view(view)
+  // Untrusted readings re-measure after 5s (`FontMeasurements.onDidChange`,
+  // e.g. once a web font finished loading) — Monaco's
+  // `_recomputeOptions` subscription in `editorConfiguration.ts`.
+  @browser_config.font_measurements().on_did_change(() => {
+    self.measure_requested = true
+    self.schedule_render()
+  })
+  |> ignore
   self.hook_view_input(view)
   self.measure_requested = true
   self.schedule_render()
@@ -795,12 +815,12 @@ pub fn Viewer::set_scroll_position(
 }
 
 ///|
-/// Scrolls by a line-count delta using the viewer's fixed line height — the
+/// Scrolls by a line-count delta using the configured line height — the
 /// keyboard arrow-scroll step.
 fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
   self.apply_scroll_change(
     self.view_layout.scroll_by(
-      delta_top=(lines * @core.editor_line_height).to_double(),
+      delta_top=(lines * self.font_info.line_height).to_double(),
     ),
   )
 }

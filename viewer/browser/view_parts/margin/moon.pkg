@@ -1,6 +1,5 @@
 import {
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
-  "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom" @rdom,

@@ -222,16 +222,62 @@ extern "js" fn element_contains_active(el : @rdom.Element) -> Bool =
   #| (el) => el.contains(document.activeElement)
 
 ///|
-/// Read phase of the render loop: the view box, the glyph probe, and
+/// Re-derives the active `FontInfo` from the current options: through
+/// `FontMeasurements.readFontInfo` when a DOM view exists (Monaco's
+/// `_readConfiguration`), the headless estimate otherwise. A changed line
+/// height re-flows the layout; the view root is restyled in place.
+fn Viewer::refresh_font_info(self : Viewer) -> Unit {
+  let bare = self.options.bare_font_info(
+    pixel_ratio=@browser_config.device_pixel_ratio(),
+  )
+  let font_info = match self.view {
+    Some(_) => @browser_config.font_measurements().read_font_info(bare)
+    None => @config.FontInfo::estimated(bare)
+  }
+  if font_info.equals(self.font_info) {
+    return
+  }
+  self.font_info = font_info
+  self.view_layout.set_line_height(font_info.line_height) |> ignore
+  match self.view {
+    Some(view) => self.apply_font_info_to_view(view)
+    None => ()
+  }
+}
+
+///|
+/// Monaco `applyFontInfo` on the editor root (`view.ts`). The stylesheets
+/// consume the font through the `--editor-*` custom properties
+/// (`view_lines.css` / `margin.css` / `theme.css`), so those are refreshed
+/// alongside the inline font style.
+fn Viewer::apply_font_info_to_view(self : Viewer, view : @view.View) -> Unit {
+  let bare = self.font_info.bare()
+  @browser_config.apply_font_info(view.root, bare)
+  @browser_config.set_style_property(
+    view.root,
+    "--editor-font-family",
+    bare.get_massaged_font_family(),
+  )
+  @browser_config.set_style_property(
+    view.root,
+    "--editor-font-size",
+    "\{bare.font_size}px",
+  )
+  @browser_config.set_style_property(
+    view.root,
+    "--editor-line-height",
+    "\{bare.line_height}px",
+  )
+}
+
+///|
+/// Read phase of the render loop: the view box, the measured font, and
 /// the derived gutter width feed the layout model and every later hit
 /// test. DOM scroll offsets are treated only as browser reveal deltas;
 /// `ViewLayout` owns the editor scroll truth.
 fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
   let rect = view.root.get_bounding_client_rect()
-  let probe_width = view.probe.get_bounding_client_rect().get_width()
-  if probe_width > 0.0 {
-    self.char_width = probe_width / @core.char_probe_text.length().to_double()
-  }
+  self.refresh_font_info()
   let gutter_width = match self.view_model {
     Some(view_model) => self.gutter_width(view_model.line_count())
     None => 0.0
@@ -266,18 +312,16 @@ fn Viewer::sync_content_width(self : Viewer) -> Unit {
 }
 
 ///|
+/// `fontInfo.typicalHalfwidthCharacterWidth`, the uniform monospace advance
+/// every width computation keys on.
 fn Viewer::measured_char_width(self : Viewer) -> Double {
-  if self.char_width > 0.0 {
-    self.char_width
-  } else {
-    @core.fallback_char_width
-  }
+  self.font_info.typical_halfwidth_character_width
 }
 
 ///|
 /// The line-number band width: digit slots (at least the old `min-width: 5ch`)
-/// plus the gutter padding, in measured glyph advances — Monaco's
-/// `layoutInfo.lineNumbersWidth`.
+/// plus the gutter padding — Monaco's `layoutInfo.lineNumbersWidth`
+/// (`digitCount * fontInfo.maxDigitWidth`).
 fn Viewer::line_numbers_width(self : Viewer, line_count : Int) -> Double {
   let digits = line_count.to_string().length()
   let slots = if digits > @core.gutter_min_digits {
@@ -285,7 +329,7 @@ fn Viewer::line_numbers_width(self : Viewer, line_count : Int) -> Double {
   } else {
     @core.gutter_min_digits
   }
-  slots.to_double() * self.measured_char_width() +
+  slots.to_double() * self.font_info.max_digit_width +
   @core.gutter_padding_px.to_double()
 }
 
@@ -311,7 +355,7 @@ fn Viewer::view_metrics(
     scroll_top: self.view_layout.position().scroll_top,
     scroll_left: self.view_layout.position().scroll_left,
     viewport_height: self.view_layout.dimensions().height,
-    line_height: @core.editor_line_height,
+    line_height: self.font_info.line_height,
     char_width: self.measured_char_width(),
     gutter_width: self.gutter_width(line_count),
     line_decorations_width: self.options.line_decorations_width.to_double(),

@@ -32,6 +32,7 @@ pub(all) struct HoverWidgetDom {
   wrapper : @dom.Element
   hover : @dom.Element
   scrollable : @scrollbar.ScrollableElementDom
+  mut line_height : Double
 }
 pub fn HoverWidgetDom::go_to_bottom(Self) -> Unit
 pub fn HoverWidgetDom::go_to_top(Self) -> Unit

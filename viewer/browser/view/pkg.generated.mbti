@@ -26,7 +26,6 @@ import {
 // Types and methods
 pub(all) struct View {
   root : @dom.Element
-  probe : @dom.Element
   message_text : @dom.Element
   overflow_guard : @dom.Element
   squiggly_style : @dom.Element
@@ -76,6 +75,7 @@ pub(all) struct ViewRenderInput {
   gutter_width : Double
   line_decorations_width : Double
   space_width : Double
+  can_use_halfwidth_rightwards_arrow : Bool
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool
   editor_has_focus : Bool

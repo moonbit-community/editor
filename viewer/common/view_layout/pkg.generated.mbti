@@ -21,10 +21,6 @@ pub fn should_render_line_highlight_in_margin(RenderLineHighlight, Bool, Bool) -
 
 pub fn view_line_span_of_model_line(Int, Int, (Int) -> Int) -> (Int, Int)
 
-pub fn visible_window(Double, Double, Int, Int, Int) -> LineWindow
-
-pub fn window_needs_update(LineWindow, LineWindow, Int) -> Bool
-
 // Errors
 
 // Types and methods
@@ -327,12 +323,14 @@ pub fn ViewLayout::get_content_width(Self) -> Double
 pub fn ViewLayout::get_current_scroll_left(Self) -> Double
 pub fn ViewLayout::get_current_scroll_top(Self) -> Double
 pub fn ViewLayout::get_line_height_for_line_number(Self, Int) -> Int
+pub fn ViewLayout::get_lines_viewport_data(Self) -> PartialViewLinesViewportData
 pub fn ViewLayout::get_scroll_height(Self) -> Double
 pub fn ViewLayout::get_scroll_width(Self) -> Double
 pub fn ViewLayout::get_vertical_offset_after_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn ViewLayout::get_vertical_offset_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn ViewLayout::line_at_vertical_offset(Self, Double) -> Int
 pub fn ViewLayout::line_count(Self) -> Int
+pub fn ViewLayout::line_height(Self) -> Int
 pub fn ViewLayout::new(line_height~ : Int, line_count? : Int) -> Self
 pub fn ViewLayout::position(Self) -> ScrollPosition
 pub fn ViewLayout::relative_vertical_offset_for_line(Self, LineWindow, Int) -> Int
@@ -340,14 +338,14 @@ pub fn ViewLayout::scroll_by(Self, delta_left? : Double, delta_top? : Double) ->
 pub fn ViewLayout::scroll_to(Self, scroll_top~ : Double, scroll_left? : Double) -> ScrollChange?
 pub fn ViewLayout::set_content_width(Self, Double) -> ScrollChange?
 pub fn ViewLayout::set_line_count(Self, Int) -> ScrollChange?
+pub fn ViewLayout::set_line_height(Self, Int) -> ScrollChange?
 pub fn ViewLayout::set_view_zones(Self, Array[ViewZone]) -> ScrollChange?
 pub fn ViewLayout::set_viewport_size(Self, width~ : Double, height~ : Double) -> ScrollChange?
 pub fn ViewLayout::vertical_offset_for_line(Self, Int) -> Double
 pub fn ViewLayout::view_zone_vertical_offset(Self, Int) -> Double
 pub fn ViewLayout::view_zone_viewport_data(Self, LineWindow) -> Array[ViewZoneViewportData]
 pub fn ViewLayout::view_zones(Self) -> Array[ViewZone]
-pub fn ViewLayout::visible_window(Self, overscan~ : Int) -> LineWindow
-pub fn ViewLayout::window_needs_update(Self, LineWindow, overscan~ : Int) -> Bool
+pub fn ViewLayout::visible_window(Self) -> LineWindow
 pub fn ViewLayout::window_origin(Self, LineWindow) -> Double
 
 pub(all) struct ViewLineRenderingData {

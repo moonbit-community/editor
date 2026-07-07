@@ -18,7 +18,13 @@ pub fn is_full_width_character(Int) -> Bool
 
 pub fn is_high_surrogate(Int) -> Bool
 
+pub let is_linux : Bool
+
 pub fn is_low_surrogate(Int) -> Bool
+
+pub let is_macintosh : Bool
+
+pub let is_windows : Bool
 
 pub fn last_non_whitespace_index(String) -> Int
 

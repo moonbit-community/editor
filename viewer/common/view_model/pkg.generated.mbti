@@ -3,6 +3,7 @@ package "moonbit-community/editor/viewer/common/view_model"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/tokens",
@@ -22,6 +23,8 @@ pub fn line_decorations_filter(Array[@inline_decorations.InlineDecoration], Int,
 pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions], Int, Int, ViewLineData) -> Array[@view_layout.LineDecoration]
 
 pub fn lines_decorations_to_render(Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]]) -> Array[DecorationToRender]
+
+pub let monospace_line_breaks_computer_factory : MonospaceLineBreaksComputerFactory
 
 pub fn render_line_input_from_view_line_data(ViewLineData, line_decorations? : Array[@view_layout.LineDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
 
@@ -47,14 +50,11 @@ pub(all) struct InjectedText {
 } derive(Eq, @debug.Debug)
 pub fn InjectedText::InjectedText(@common.Position, String, String, source_index? : Int) -> Self
 
-pub(all) struct LineBreaksComputer {
-  wrapping_column : Int
-  tab_size : Int
-  wrapping_indent : WrappingIndent
-} derive(Eq, @debug.Debug)
-pub fn LineBreaksComputer::LineBreaksComputer(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
-pub fn LineBreaksComputer::compute_model_line_projection(Self, Int, String) -> ModelLineProjectionData
-pub fn LineBreaksComputer::compute_projected_line_projection(Self, Int, ProjectedTextLine) -> ModelLineProjectionData
+pub struct LineBreaksComputer {
+  // private fields
+}
+pub fn LineBreaksComputer::add_request(Self, Int, String, Array[InjectedText]) -> Unit
+pub fn LineBreaksComputer::finalize(Self) -> Array[ModelLineProjectionData?]
 
 pub(all) enum ModelLineProjection {
   Identity
@@ -88,10 +88,17 @@ pub(all) struct ModelLineProjectionSegment {
   end_offset : Int
   start_column : Int
   end_column : Int
-  start_visible_column : Int
+  start_visible_column : Double
   continues_with_wrapped_line : Bool
   wrapped_text_indent_length : Int
 } derive(Eq, @debug.Debug)
+
+pub struct MonospaceLineBreaksComputerFactory {
+  // private fields
+}
+pub fn MonospaceLineBreaksComputerFactory::create() -> Self
+pub fn MonospaceLineBreaksComputerFactory::create_line_breaks_computer(Self, font_info~ : @config.FontInfo, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : WrappingIndent, word_break? : WordBreak) -> LineBreaksComputer
+pub fn MonospaceLineBreaksComputerFactory::new(String, String) -> Self
 
 pub struct ProjectedCoordinatesConverter {
   lines : ViewModelLinesFromProjectedModel
@@ -199,6 +206,7 @@ pub fn ViewModelDecorations::reset(Self) -> Unit
 
 pub struct ViewModelLinesFromProjectedModel {
   model : @model.TextModel
+  mut font_info : @config.FontInfo
   mut tab_size : Int
   mut wrapping_column : Int
   mut wrapping_indent : WrappingIndent
@@ -219,24 +227,30 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(Self, Int) -> 
 pub fn ViewModelLinesFromProjectedModel::injected_text_index_at(Self, Int, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(Self, Int) -> Bool
 pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, Int) -> Int
-pub fn ViewModelLinesFromProjectedModel::new(@model.TextModel, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : WrappingIndent) -> Self
+pub fn ViewModelLinesFromProjectedModel::new(@model.TextModel, font_info~ : @config.FontInfo, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : WrappingIndent) -> Self
 pub fn ViewModelLinesFromProjectedModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::on_model_flushed(Self) -> Unit
 pub fn ViewModelLinesFromProjectedModel::set_tab_size(Self, Int) -> Bool
-pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(Self, Int, WrappingIndent) -> Bool
+pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(Self, @config.FontInfo, Int, WrappingIndent) -> Bool
 pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 
 pub(all) struct ViewModelOptions {
+  font_info : @config.FontInfo
   soft_wrap_column : Int
   tab_size : Int
   wrapping_indent : WrappingIndent
   editor_id : Int
   render_validation_decorations : RenderValidationDecorations
 } derive(Eq, @debug.Debug)
-pub fn ViewModelOptions::ViewModelOptions(soft_wrap_column? : Int, tab_size? : Int, wrapping_indent? : WrappingIndent, editor_id? : Int, render_validation_decorations? : RenderValidationDecorations) -> Self
+pub fn ViewModelOptions::ViewModelOptions(font_info? : @config.FontInfo, soft_wrap_column? : Int, tab_size? : Int, wrapping_indent? : WrappingIndent, editor_id? : Int, render_validation_decorations? : RenderValidationDecorations) -> Self
 pub fn ViewModelOptions::is_soft_wrap_enabled(Self) -> Bool
 pub fn ViewModelOptions::no_wrap() -> Self
 pub fn ViewModelOptions::soft_wrap(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
+
+pub(all) enum WordBreak {
+  Normal
+  KeepAll
+} derive(Eq, @debug.Debug)
 
 pub(all) enum WrappingIndent {
   None

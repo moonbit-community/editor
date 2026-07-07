@@ -56,7 +56,6 @@
   --vscode-editorHoverWidget-background: #202020;
   --vscode-editorHoverWidget-foreground: #cccccc;
   --vscode-editorHoverWidget-border: #313131;
-  --vscode-editorHoverWidget-statusBarBackground: #2b2b2b;
   /* editorWidget/input/button: Dark Modern theme values; editorWidget.border
      and .foreground are registry defaults (editorColors.ts:53-59 —
      `transparent(foreground, 0.2)` and `foreground`). */
@@ -159,7 +158,6 @@
   --vscode-editorHoverWidget-background: #f8f8f8;
   --vscode-editorHoverWidget-foreground: #3b3b3b;
   --vscode-editorHoverWidget-border: #e5e5e5;
-  --vscode-editorHoverWidget-statusBarBackground: #f0f0f0;
   /* See the Dark Modern block above (Light Modern theme values + registry
      defaults). commentRangeForeground = `darken(opaque(
      listInactiveSelectionBackground #e4e6f1, #ffffff), .05)`. */

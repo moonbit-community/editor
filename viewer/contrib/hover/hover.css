@@ -176,38 +176,6 @@
   background: var(--vscode-editorHoverWidget-border);
 }
 
-.monaco-hover .hover-row.status-bar {
-  font-size: 12px;
-  line-height: 22px;
-}
-
-.monaco-hover .hover-row.status-bar .actions {
-  display: flex;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 0 8px;
-  background-color: var(--vscode-editorHoverWidget-statusBarBackground);
-}
-
-.monaco-hover .hover-row.status-bar .actions .action-container {
-  margin-right: 16px;
-  cursor: pointer;
-  overflow: hidden;
-  text-wrap: nowrap;
-  text-overflow: ellipsis;
-}
-
-.monaco-hover .hover-row.status-bar .actions .action-container .action .icon {
-  padding-right: 4px;
-  vertical-align: middle;
-  font-size: inherit;
-}
-
-.monaco-hover .hover-row.status-bar .actions .action-container a {
-  color: var(--vscode-textLink-foreground);
-  text-decoration: none;
-}
-
 .monaco-hover .hover-row.hover-row-with-copy {
   position: relative;
   padding-right: 20px;

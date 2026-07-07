@@ -4,33 +4,24 @@
 /// parts become their own `hoverElement`). Each returned string is a single root
 /// element so the viewer core can give every part its own focusable node. A
 /// markdown part with several contents is one `.hover-row` carrying one
-/// `.markdown-hover` block per content (Monaco `renderMarkdown`). Monaco loops
-/// over *participants*, collecting every participant's content rows into one
-/// shared `EditorHoverStatusBar` as it goes, and appends that single status bar
-/// **after the whole loop** — so it always renders last, never interleaved with
-/// a later-ordinal part's content. Mirrored here: the status-bar row is
-/// collected but not pushed until every part's content row has been emitted.
+/// `.markdown-hover` block per content (Monaco `renderMarkdown`).
+/// Deviation: Monaco additionally collects a shared `EditorHoverStatusBar`
+/// ("View Problem") and appends it after the loop; the viewer deliberately
+/// renders no hover status bar.
 /// Called by the viewer core's content-widget render pass.
 pub fn render_hover_parts(
   parts : Array[HoverPart],
   language_id : String,
 ) -> Array[String] {
   let rows : Array[String] = []
-  let mut has_status_bar_content = false
   for part in parts {
     match part {
       MarkdownHover(contents~, ..) =>
         rows.push(render_markdown_hover_row(contents, language_id))
-      MarkerHover(marker~, ..) => {
-        rows.push(marker_hover_row(marker.message))
-        has_status_bar_content = true
-      }
+      MarkerHover(marker~, ..) => rows.push(marker_hover_row(marker.message))
       LoadingHover(message~, ..) =>
         rows.push(standard_hover_row(hover_plaintext_html(message)))
     }
-  }
-  if has_status_bar_content {
-    rows.push(marker_status_bar_row())
   }
   rows
 }
@@ -92,24 +83,6 @@ fn marker_hover_row(text : String) -> String {
   "</div><button type=\"button\" class=\"hover-copy-button\" aria-label=\"Copy\" data-hover-copy=\"" +
   escaped +
   "\"><span class=\"codicon codicon-copy\" aria-hidden=\"true\"></span></button></div>"
-}
-
-///|
-/// The status-bar row Monaco renders as its own `statusBar` part below a marker
-/// hover (`RenderedStatusBar`/`_renderStatusBar`, `EditorHoverStatusBar` in
-/// `contentHoverStatusBar.ts`, one action rendered via `HoverAction.render` in
-/// `hoverWidget.ts:52-92`). `tabindex` lives on `.action-container`, not the
-/// `<a>` (Monaco never sets it there), and the label is a `<span>` child.
-/// Deviation: the click/keyboard `run` handler is a no-op — Monaco's real
-/// "View Problem" action calls `markerController.showAtMarker(marker)`, an
-/// in-editor peek widget (`MarkerNavigationWidget`) this codebase hasn't
-/// ported; that's its own future exec-plan. The command-id/keybinding-lookup
-/// machinery (`hoverActionIds`/`hoverActions`/`hoverContribution`) is also
-/// still TODO (needs the viewer command registry).
-fn marker_status_bar_row() -> String {
-  "<div class=\"hover-row status-bar\" tabindex=\"0\"><div class=\"actions\">" +
-  "<div class=\"action-container\" tabindex=\"0\"><a class=\"action\" role=\"button\">" +
-  "<span>View Problem</span></a></div></div></div>"
 }
 
 ///|

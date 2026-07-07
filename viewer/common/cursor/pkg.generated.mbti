@@ -23,10 +23,10 @@ pub fn Cursor::new() -> Self
 pub fn Cursor::set_model_state(Self, CursorContext, SingleCursorState) -> Unit
 
 pub struct CursorContext {
-  coordinates_converter : @view_model.ViewModelCoordinatesConverter
+  coordinates_converter : @view_model.ProjectedCoordinatesConverter
 }
 pub fn CursorContext::model_to_view(Self, @common.Position) -> @common.Position
-pub fn CursorContext::new(@view_model.ViewModelCoordinatesConverter) -> Self
+pub fn CursorContext::new(@view_model.ProjectedCoordinatesConverter) -> Self
 pub fn CursorContext::view_to_model(Self, @common.Position) -> @common.Position
 
 pub struct CursorsController {

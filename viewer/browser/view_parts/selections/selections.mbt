@@ -369,7 +369,7 @@ fn ends_model_line(
   match view_model {
     Some(view_model) => {
       let lines = view_model.lines()
-      if view_line_number >= lines.line_count() {
+      if view_line_number >= lines.get_view_line_count() {
         true
       } else {
         lines.model_line_number_of_view_line(view_line_number) !=

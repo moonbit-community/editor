@@ -584,8 +584,8 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
           view_model.decorations().on_model_decorations_changed()
           // Injected-text deltas re-run the line-breaks computer per line in
           // Monaco (`onDidChangeContentOrInjectedText`); the viewer's
-          // granularity is the whole-projection reconstruct, applied to the
-          // live view model.
+          // granularity is the whole-document reproject
+          // (`_lines.onModelFlushed()`), applied to the live view model.
           if event.affects_injected_text {
             view_model.on_did_change_content_or_injected_text()
             self.on_line_mapping_changed(view_model, model)
@@ -608,7 +608,7 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.apply_scroll_change(
     self.view_layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
   )
-  self.render_current_model(model)
+  self.attach_model(model)
   self.did_change_model.fire({ old_model_url, new_model_url: Some(model.uri) })
 }
 

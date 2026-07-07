@@ -58,7 +58,7 @@ pub fn filter_validation_decorations(
 ///|
 /// The `ICoordinatesConverter` seam of the promoted inline-decorations
 /// computer, implemented by the view model's converter.
-pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConverter with fn convert_model_position_to_view_position(
+pub impl @inline_decorations.CoordinatesConverter for ProjectedCoordinatesConverter with fn convert_model_position_to_view_position(
   self,
   model_position,
   affinity? : @model.PositionAffinity,
@@ -67,7 +67,7 @@ pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConver
 }
 
 ///|
-pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConverter with fn convert_model_range_to_view_range(
+pub impl @inline_decorations.CoordinatesConverter for ProjectedCoordinatesConverter with fn convert_model_range_to_view_range(
   self,
   model_range,
   affinity? : @model.PositionAffinity,
@@ -93,8 +93,8 @@ pub fn ViewModelDecorations::new(
   editor_id : Int,
   model : @model.TextModel,
   filter_validation : Bool,
-  lines : ViewModelLines,
-  coordinates_converter : ViewModelCoordinatesConverter,
+  lines : ViewModelLinesFromProjectedModel,
+  coordinates_converter : ProjectedCoordinatesConverter,
 ) -> ViewModelDecorations {
   let context : @inline_decorations.InlineModelContext[
     @model.ModelDecorationOptions,
@@ -176,7 +176,7 @@ pub fn ViewModelDecorations::get_decorations_viewport_data(
 /// `getDecorationsOnLine` (`viewModelDecorations.ts:79-82`).
 pub fn ViewModelDecorations::get_decorations_on_line(
   self : ViewModelDecorations,
-  lines : ViewModelLines,
+  lines : ViewModelLinesFromProjectedModel,
   line_number : Int,
   only_minimap_decorations? : Bool = false,
   only_margin_decorations? : Bool = false,
@@ -207,9 +207,9 @@ fn ViewModelDecorations::compute_decorations(
 /// fetched separately, sorted, and deduplicated. Like the source, the
 /// split-path requests drop the `onlyMarginDecorations` argument.
 fn view_model_lines_get_decorations_in_range(
-  lines : ViewModelLines,
+  lines : ViewModelLinesFromProjectedModel,
   model : @model.TextModel,
-  converter : ViewModelCoordinatesConverter,
+  converter : ProjectedCoordinatesConverter,
   range : @base_common.Range,
   owner_id : Int,
   filter_out_validation : Bool,

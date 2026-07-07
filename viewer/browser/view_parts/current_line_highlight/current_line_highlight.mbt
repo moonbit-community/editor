@@ -89,7 +89,7 @@ pub fn current_line_span(
       let lines = view_model.lines()
       @view_layout.view_line_span_of_model_line(
         cursor_view_line,
-        lines.line_count(),
+        lines.get_view_line_count(),
         view_line => lines.model_line_number_of_view_line(view_line),
       )
     }

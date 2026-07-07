@@ -8,73 +8,23 @@
 
 ///|
 /// Merged one-based hidden model-line ranges, Monaco's
-/// `IViewModelLines.getHiddenAreas(): Range[]`. Computed from the retained
-/// per-line hidden flags, so a rebuilt view model reports the same ranges
-/// the projection hid. Whole lines are hidden, so the columns are `1`
-/// (only the line numbers are consulted, as in Monaco's
-/// `_toModelVisibleRanges`).
-pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(
-  self : ViewModelLinesFromModelAsIs,
-) -> Array[@base_common.Range] {
-  let result : Array[@base_common.Range] = []
-  let mut run_start = -1
-  for index, hidden in self.hidden_model_lines {
-    if hidden {
-      if run_start == -1 {
-        // index `i` is 0-based; model line numbers are one-based.
-        run_start = index + 1
-      }
-    } else if run_start != -1 {
-      // The previous index (`index - 1`) is the last hidden line = model line `index`.
-      result.push(Range(run_start, 1, index, 1))
-      run_start = -1
-    }
-  }
-  if run_start != -1 {
-    result.push(Range(run_start, 1, self.hidden_model_lines.length(), 1))
-  }
-  result
-}
-
-///|
-/// Merged hidden intervals for projected (wrapped) view lines — hiding
-/// applies to the unprojected base, so the hidden set is the base's.
+/// `IViewModelLines.getHiddenAreas(): Range[]`. The folding feature is gone
+/// and nothing can hide a line, so the set is empty; the read API's
+/// hidden-area plumbing stays so consumers keep Monaco's shape.
 pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(
-  self : ViewModelLinesFromProjectedModel,
+  _self : ViewModelLinesFromProjectedModel,
 ) -> Array[@base_common.Range] {
-  self.base.get_hidden_areas()
+  []
 }
 
 ///|
-/// Whether a one-based model line is hidden, for projected lines.
+/// Whether a one-based model line is hidden — constantly `false` without
+/// folding (every projection is visible).
 pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(
-  self : ViewModelLinesFromProjectedModel,
-  model_line_number : Int,
+  _self : ViewModelLinesFromProjectedModel,
+  _model_line_number : Int,
 ) -> Bool {
-  self.base.is_model_line_hidden(model_line_number)
-}
-
-///|
-/// Merged hidden model-line intervals for the active line model.
-pub fn ViewModelLines::get_hidden_areas(
-  self : ViewModelLines,
-) -> Array[@base_common.Range] {
-  match self {
-    ModelAsIs(lines) => lines.get_hidden_areas()
-    ProjectedModel(lines) => lines.get_hidden_areas()
-  }
-}
-
-///|
-/// Whether a one-based model line is hidden.
-pub fn ViewModelLines::is_model_line_hidden(
-  self : ViewModelLines,
-  model_line_number : Int,
-) -> Bool {
-  match self {
-    ModelAsIs(lines) => lines.is_model_line_hidden(model_line_number)
-    ProjectedModel(lines) => lines.is_model_line_hidden(model_line_number)
-  }
+  false
 }
 
 ///|

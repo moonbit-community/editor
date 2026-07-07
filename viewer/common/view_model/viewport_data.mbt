@@ -55,7 +55,7 @@ pub fn viewport_data_from_view_model(
       view_line_rendering_data_from_view_line_data(
         line_data,
         line_decorations=decorations,
-        tab_size=view_model_lines.tab_size(),
+        tab_size=view_model_lines.tab_size,
       ),
     )
     line_decorations.push(decorations)

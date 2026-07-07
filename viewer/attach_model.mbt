@@ -1,15 +1,13 @@
 ///|
 /// Warms the model's memoized tokenization part and builds the long-lived
-/// view model — the tail of Monaco's `_attachModel`. Only a model attach
+/// view model — the tail of Monaco's `_attachModel`
+/// (`codeEditorWidget.ts`, reached from `setModel`). Only a model attach
 /// pays this: later option and decoration changes update the view model in
 /// place (`ViewModel::on_configuration_changed`,
 /// `on_did_change_content_or_injected_text`) and tokenizer changes only
 /// re-warm the token memo (`retokenize_current_model`). Synchronous CPU
 /// work; the paint happens in the next render flush.
-fn Viewer::render_current_model(
-  self : Viewer,
-  model : @model.TextModel,
-) -> Unit {
+fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   let tokenize_started = now_ms()
   model.tokenization.force_tokenization()
   let tokenize_finished = now_ms()
@@ -163,9 +161,11 @@ fn max_line_length(snapshot : @model.TextSnapshot) -> Int {
 }
 
 ///|
-fn max_view_line_length(lines : @view_model.ViewModelLines) -> Int {
+fn max_view_line_length(
+  lines : @view_model.ViewModelLinesFromProjectedModel,
+) -> Int {
   let mut widest = 0
-  for line_number in 1..<=lines.line_count() {
+  for line_number in 1..<=lines.get_view_line_count() {
     let length = lines.get_view_line_content(line_number).length()
     if length > widest {
       widest = length

@@ -1,324 +1,407 @@
 ///|
-/// View-line implementation for projected model lines, used for wrapping and
-/// injected text.
+/// The line collection for every view model — Monaco's
+/// `ViewModelLinesFromProjectedModel` (`viewModelLines.ts:60`), which Monaco
+/// uses for all normal editors, wrapping on or off (its
+/// `ViewModelLinesFromModelAsIs` is only the too-large-for-tokenization
+/// escape hatch, which a readonly viewer never needs). Lines that need no
+/// mapping project as `Identity` and stay allocation-free; wrapping and
+/// injected text produce per-line `Projected` data.
 pub struct ViewModelLinesFromProjectedModel {
-  base : ViewModelLinesFromModelAsIs
-  projection : ModelLineProjection
-  tab_size : Int
+  model : @model.TextModel
+  mut tab_size : Int
+  mut wrapping_column : Int
+  mut wrapping_indent : WrappingIndent
+  mut model_line_projections : Array[ModelLineProjection]
+  /// Monaco's `projectedModelLineLineCounts` (a
+  /// `ConstantTimePrefixSumComputer` over per-line view-line counts). The
+  /// viewer reconstructs wholesale instead of editing incrementally, so it
+  /// stores the prefix sums directly: entry `i` is the number of view lines
+  /// before one-based model line `i + 1`, and the last entry is the total.
+  mut projected_model_line_line_counts : Array[Int]
 }
 
 ///|
-/// Builds projected view lines from an unwrapped base and line-break computer.
+/// A view line as (model line, wrapped-line index) — Monaco's `ViewLineInfo`
+/// (`viewModelLines.ts:1054`).
+priv struct ViewLineInfo {
+  model_line_number : Int
+  model_line_wrapped_line_idx : Int
+}
+
+///|
+/// Builds the collection and its projections — the constructor tail of
+/// Monaco's `ViewModelLinesFromProjectedModel` (`viewModelLines.ts:85-112`),
+/// minus the DOM/monospace computer-factory split (the viewer is
+/// monospace-only) and font/word-break settings it has no use for.
 pub fn ViewModelLinesFromProjectedModel::new(
-  base : ViewModelLinesFromModelAsIs,
-  computer : LineBreaksComputer,
+  model : @model.TextModel,
+  tab_size~ : Int,
+  wrapping_column~ : Int,
+  wrapping_indent~ : WrappingIndent,
 ) -> ViewModelLinesFromProjectedModel {
+  let lines = {
+    model,
+    tab_size,
+    wrapping_column,
+    wrapping_indent,
+    model_line_projections: [],
+    projected_model_line_line_counts: [0],
+  }
+  lines.construct_lines()
+  lines
+}
+
+///|
+/// Creates the coordinate converter over this collection —
+/// `createCoordinatesConverter` (`viewModelLines.ts:118`).
+pub fn ViewModelLinesFromProjectedModel::create_coordinates_converter(
+  self : ViewModelLinesFromProjectedModel,
+) -> ProjectedCoordinatesConverter {
+  ProjectedCoordinatesConverter::new(self)
+}
+
+///|
+/// Recomputes every line's projection — Monaco's `_constructLines`
+/// (`viewModelLines.ts:122`), minus hidden-area reset (no folding) and
+/// previous-line-break reuse (the readonly viewer rebuilds wholesale). A
+/// `None` projection is the line-breaks computer's null result: a line that
+/// neither wraps nor carries injected text needs no mapping and projects as
+/// `Identity`.
+fn ViewModelLinesFromProjectedModel::construct_lines(
+  self : ViewModelLinesFromProjectedModel,
+) -> Unit {
+  let model_line_projections : Array[ModelLineProjection] = []
+  let prefix_sums : Array[Int] = [0]
+  let injected_text_buckets = line_injected_text_from_decorations(self.model)
+  let computer = LineBreaksComputer(
+    self.wrapping_column,
+    tab_size=self.tab_size,
+    wrapping_indent=self.wrapping_indent,
+  )
+  let line_count = self.model.snapshot.line_count()
+  for model_line_number in 1..<=line_count {
+    let injected_text = injected_text_buckets[model_line_number - 1]
+    let data : ModelLineProjectionData? = if injected_text.length() == 0 &&
+      self.wrapping_column <= 0 {
+      None
+    } else {
+      let projected_line = ProjectedTextLine::from_injected_text(
+        self.model.snapshot.line_text(model_line_number - 1),
+        injected_text,
+      )
+      let data = computer.compute_projected_line_projection(
+        model_line_number, projected_line,
+      )
+      if injected_text.length() == 0 && data.segments.length() <= 1 {
+        // The line fits its wrapping column: Monaco's computer returns null.
+        None
+      } else {
+        Some(data)
+      }
+    }
+    let projection = create_model_line_projection(data)
+    model_line_projections.push(projection)
+    prefix_sums.push(
+      prefix_sums[model_line_number - 1] + projection.get_view_line_count(),
+    )
+  }
+  self.model_line_projections = model_line_projections
+  self.projected_model_line_line_counts = prefix_sums
+}
+
+///|
+/// Applies changed wrapping settings in place — `setWrappingSettings`
+/// (`viewModelLines.ts:277`). Returns whether the view-line mapping changed.
+pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(
+  self : ViewModelLinesFromProjectedModel,
+  wrapping_column : Int,
+  wrapping_indent : WrappingIndent,
+) -> Bool {
+  if self.wrapping_column == wrapping_column &&
+    self.wrapping_indent == wrapping_indent {
+    return false
+  }
+  self.wrapping_column = wrapping_column
+  self.wrapping_indent = wrapping_indent
+  self.construct_lines()
+  true
+}
+
+///|
+/// Applies a changed tab size in place — `setTabSize`
+/// (`viewModelLines.ts:266`). Returns whether the view-line mapping changed.
+pub fn ViewModelLinesFromProjectedModel::set_tab_size(
+  self : ViewModelLinesFromProjectedModel,
+  new_tab_size : Int,
+) -> Bool {
+  if self.tab_size == new_tab_size {
+    return false
+  }
+  self.tab_size = new_tab_size
+  self.construct_lines()
+  true
+}
+
+///|
+/// Reprojects after the backing content or injected text changed —
+/// `onModelFlushed` (`viewModelLines.ts:325`). Monaco also applies per-line
+/// deltas (`onModelLineChanged` and friends); the readonly viewer's only
+/// in-place change is an injected-text delta, and its granularity is the
+/// whole-document reproject.
+pub fn ViewModelLinesFromProjectedModel::on_model_flushed(
+  self : ViewModelLinesFromProjectedModel,
+) -> Unit {
+  self.construct_lines()
+}
+
+///|
+/// Total number of view lines — `getViewLineCount`.
+pub fn ViewModelLinesFromProjectedModel::get_view_line_count(
+  self : ViewModelLinesFromProjectedModel,
+) -> Int {
+  let prefix_sums = self.projected_model_line_line_counts
+  prefix_sums[prefix_sums.length() - 1]
+}
+
+///|
+/// Clamps a view line number into the document — `_toValidViewLineNumber`.
+fn ViewModelLinesFromProjectedModel::to_valid_view_line_number(
+  self : ViewModelLinesFromProjectedModel,
+  view_line_number : Int,
+) -> Int {
+  @base_common.clamp_int(view_line_number, 1, self.get_view_line_count())
+}
+
+///|
+/// Decomposes a view line into (model line, wrapped-line index) —
+/// `getViewLineInfo` (`viewModelLines.ts:478`), the prefix-sum `getIndexOf`
+/// as a binary search over the stored sums.
+fn ViewModelLinesFromProjectedModel::get_view_line_info(
+  self : ViewModelLinesFromProjectedModel,
+  view_line_number : Int,
+) -> ViewLineInfo {
+  let view_index = self.to_valid_view_line_number(view_line_number) - 1
+  let prefix_sums = self.projected_model_line_line_counts
+  // Greatest model-line index whose first view line is at or before
+  // `view_index`.
+  let mut low = 0
+  let mut high = self.model_line_projections.length() - 1
+  while low < high {
+    let mid = (low + high + 1) / 2
+    if prefix_sums[mid] <= view_index {
+      low = mid
+    } else {
+      high = mid - 1
+    }
+  }
   {
-    base,
-    projection: ModelLineProjection::build(base, computer),
-    tab_size: computer.tab_size,
+    model_line_number: low + 1,
+    model_line_wrapped_line_idx: view_index - prefix_sums[low],
   }
 }
 
 ///|
-/// Number of visible projected view lines.
-pub fn ViewModelLinesFromProjectedModel::line_count(
-  self : ViewModelLinesFromProjectedModel,
-) -> Int {
-  self.projection.view_line_count()
-}
-
-///|
-/// Text for one projected view line segment, with the continuation indent
-/// prepended (Monaco's `getViewLineContent`: `spaces(...) + r`).
+/// Returns text for a one-based view line — `getViewLineContent`.
 pub fn ViewModelLinesFromProjectedModel::get_view_line_content(
   self : ViewModelLinesFromProjectedModel,
-  line_number : Int,
+  view_line_number : Int,
 ) -> String {
-  let segment = self.projection.segment_for_view_line_number(line_number)
-  let line = self.projection.projected_line_for_model_line(
-    segment.model_line_number,
+  let info = self.get_view_line_info(view_line_number)
+  self.model_line_projections[info.model_line_number - 1].get_view_line_content(
+    self.model,
+    info.model_line_number,
+    info.model_line_wrapped_line_idx,
   )
-  let content = line.text[segment.start_offset:segment.end_offset].to_owned()
-  if segment.wrapped_text_indent_length > 0 {
-    spaces(segment.wrapped_text_indent_length) + content
-  } else {
-    content
-  }
 }
 
 ///|
-/// Minimum one-based column in a projected view line.
+/// Minimum one-based column for a view line — `getViewLineMinColumn`.
 pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(
   self : ViewModelLinesFromProjectedModel,
-  line_number : Int,
+  view_line_number : Int,
 ) -> Int {
-  self.projection.segment_for_view_line_number(line_number).start_column
+  let info = self.get_view_line_info(view_line_number)
+  self.model_line_projections[info.model_line_number - 1].get_view_line_min_column(
+    info.model_line_wrapped_line_idx,
+  )
 }
 
 ///|
-/// Maximum one-based column in a projected view line.
+/// Maximum one-based column for a view line — `getViewLineMaxColumn`.
 pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(
   self : ViewModelLinesFromProjectedModel,
-  line_number : Int,
+  view_line_number : Int,
 ) -> Int {
-  self.projection.segment_for_view_line_number(line_number).end_column
+  let info = self.get_view_line_info(view_line_number)
+  self.model_line_projections[info.model_line_number - 1].get_view_line_max_column(
+    self.model,
+    info.model_line_number,
+    info.model_line_wrapped_line_idx,
+  )
 }
 
 ///|
-/// Maps a projected view line to its source model line.
+/// Maps a one-based view line to its one-based model line — the line-number
+/// half of Monaco's `getViewLineInfo`, kept as the viewer's shorthand for
+/// consumers that only need the line.
 pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(
   self : ViewModelLinesFromProjectedModel,
-  line_number : Int,
+  view_line_number : Int,
 ) -> Int {
-  self.projection.segment_for_view_line_number(line_number).model_line_number
+  self.get_view_line_info(view_line_number).model_line_number
 }
 
 ///|
-/// The view-line data of one projected view line segment — Monaco
-/// `ModelLineProjection.getViewLineData` reached through
-/// `ViewModelLinesFromProjectedModel.getViewLineData` (`viewModelLines.ts`).
+/// The view-line data of a one-based view line — `getViewLineData`.
 pub fn ViewModelLinesFromProjectedModel::get_view_line_data(
   self : ViewModelLinesFromProjectedModel,
-  line_number : Int,
+  view_line_number : Int,
 ) -> ViewLineData {
-  let segment = self.projection.segment_for_view_line_number(line_number)
-  let projected_line = self.projection.projected_line_for_model_line(
-    segment.model_line_number,
-  )
-  view_line_data_for_segment(
-    self.base.model_line_tokens(segment.model_line_number),
-    projected_line,
-    segment,
+  let info = self.get_view_line_info(view_line_number)
+  self.model_line_projections[info.model_line_number - 1].get_view_line_data(
+    self.model,
+    info.model_line_number,
+    info.model_line_wrapped_line_idx,
   )
 }
 
 ///|
-/// Builds line-renderer input data for one projected view line.
+/// Builds line-renderer input data for a one-based view line — the viewer's
+/// bridge to `ViewLineRenderingData` (Monaco builds it in
+/// `ViewModel.getViewLineRenderingData`).
 pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(
   self : ViewModelLinesFromProjectedModel,
-  line_number : Int,
+  view_line_number : Int,
   line_decorations? : Array[@view_layout.LineDecoration] = [],
 ) -> @view_layout.ViewLineRenderingData {
   view_line_rendering_data_from_view_line_data(
-    self.get_view_line_data(line_number),
+    self.get_view_line_data(view_line_number),
     line_decorations~,
     tab_size=self.tab_size,
   )
 }
 
 ///|
-/// Converts a model position to its projected view position.
-pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(
-  self : ViewModelLinesFromProjectedModel,
-  position : @base_common.Position,
-) -> @base_common.Position {
-  self.projection.model_position_to_view_position(position)
-}
-
-///|
-/// Converts a projected view position back to the nearest model position.
-pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(
-  self : ViewModelLinesFromProjectedModel,
-  position : @base_common.Position,
-) -> @base_common.Position {
-  self.projection.view_position_to_model_position(position)
-}
-
-///|
-/// Builds one view line the Monaco `_getViewLineData` way: splice the injected
-/// text into the model line's tokens with `with_inserted`
-/// (`getLineTokensWithInjections`), then slice the output line's segment with
-/// `slice_and_inflate`. Injected-text classes become inline decorations
-/// (`InjectedTextInlineDecorationsComputer`), never token colors — the
-/// spliced injected tokens carry only default syntactic metadata.
-/// Continuation lines render `wrapped_text_indent_length` leading spaces and
-/// shift their token offsets by the same amount (`spaces(...) + lineContent`
-/// and `sliceAndInflate(..., deltaStartIndex)`).
-fn view_line_data_for_segment(
-  base_tokens : @tokens.LineTokens,
-  projected_line : ProjectedTextLine,
-  segment : ModelLineProjectionSegment,
-) -> ViewLineData {
-  let indent = segment.wrapped_text_indent_length
-  let start_offset = segment.start_offset
-  let end_offset = segment.end_offset
-  let content = projected_line.text[start_offset:end_offset].to_owned()
-  let content = if indent > 0 { spaces(indent) + content } else { content }
-  let with_injections = base_tokens.with_inserted(
-    injected_tokens_for_projected_line(projected_line),
-  )
-  {
-    content,
-    continues_with_wrapped_line: segment.continues_with_wrapped_line,
-    min_column: segment.start_column,
-    max_column: segment.end_column,
-    start_visible_column: segment.start_visible_column,
-    tokens: with_injections.slice_and_inflate(start_offset, end_offset, indent),
-    inline_decorations: projected_injected_inline_decorations(
-      projected_line, start_offset, end_offset, indent,
-    ),
-  }
-}
-
-///|
 /// The injected-text (inlay hint) source index at a 0-based view column of a
-/// projected view line, or `-1` for source text (including the synthetic
-/// continuation indent). The single-column form of the per-column map the
-/// render path used to bake — Monaco's `getInjectedTextAt` role.
+/// view line, or `-1` for source text — the index-valued form of Monaco's
+/// `getInjectedTextAt` (`viewModelLines.ts:991`).
 pub fn ViewModelLinesFromProjectedModel::injected_text_index_at(
   self : ViewModelLinesFromProjectedModel,
-  line_number : Int,
+  view_line_number : Int,
   column : Int,
 ) -> Int {
-  let segment = self.projection.segment_for_view_line_number(line_number)
-  let indent = segment.wrapped_text_indent_length
-  if column < indent {
-    return -1
-  }
-  let offset = segment.start_offset + (column - indent)
-  if offset >= segment.end_offset {
-    return -1
-  }
-  let projected_line = self.projection.projected_line_for_model_line(
-    segment.model_line_number,
+  let info = self.get_view_line_info(view_line_number)
+  self.model_line_projections[info.model_line_number - 1].injected_text_index_at(
+    info.model_line_wrapped_line_idx,
+    column,
   )
-  projected_line.injected_text_index_at_projected_column(offset)
 }
 
 ///|
-/// A run of `n` spaces — the leading indent prepended to a wrapped continuation
-/// line. Monaco's `spaces(count)`.
-fn spaces(n : Int) -> String {
-  let sb = StringBuilder::new()
-  for _ in 0..<n {
-    sb.write_char(' ')
-  }
-  sb.to_string()
+/// Snaps a view position at injected-text/wrap boundaries per the affinity —
+/// `normalizePosition` (`viewModelLines.ts:996`).
+pub fn ViewModelLinesFromProjectedModel::normalize_position(
+  self : ViewModelLinesFromProjectedModel,
+  position : @base_common.Position,
+  affinity : @model.PositionAffinity,
+) -> @base_common.Position {
+  let info = self.get_view_line_info(position.line_number)
+  self.model_line_projections[info.model_line_number - 1].normalize_position(
+    info.model_line_wrapped_line_idx,
+    position,
+    affinity,
+  )
 }
 
 ///|
-/// The injected text of a projected line as `with_inserted` splice tokens —
-/// Monaco's `getLineTokensWithInjections`. Each run inserts at its 0-based model
-/// column with default token metadata (no per-token color); the inlay color is
-/// applied as an inline decoration instead. Offsets are ascending, satisfying
-/// `with_inserted`'s precondition.
-fn injected_tokens_for_projected_line(
-  projected_line : ProjectedTextLine,
-) -> Array[@tokens.InsertedToken] {
-  let inserts : Array[@tokens.InsertedToken] = []
-  for part in projected_line.parts {
-    match part.kind {
-      InjectedSegment(model_column~, ..) =>
-        inserts.push(
-          @tokens.InsertedToken::new(
-            model_column,
-            projected_line.text[part.start:part.end].to_owned(),
-            @tokens.LineTokens::default_token_metadata(),
-          ),
-        )
-      SourceSegment(_) => ()
-    }
-  }
-  inserts
+/// Converts a view position to model coordinates —
+/// `convertViewPositionToModelPosition` (`viewModelLines.ts:834`).
+pub fn ViewModelLinesFromProjectedModel::convert_view_position_to_model_position(
+  self : ViewModelLinesFromProjectedModel,
+  view_line_number : Int,
+  view_column : Int,
+) -> @base_common.Position {
+  let info = self.get_view_line_info(view_line_number)
+  let input_column = self.model_line_projections[info.model_line_number - 1].get_model_column_of_view_position(
+    info.model_line_wrapped_line_idx,
+    view_column,
+  )
+  Position(info.model_line_number, input_column)
 }
 
 ///|
-/// Inline decorations for the injected text of a projected line, clipped to the
-/// output (view-local) segment `[start_offset, end_offset)` — Monaco's
-/// `InjectedTextInlineDecorationsComputer.getInlineDecorations`. Each injected
-/// run with a class emits one decoration over its projected columns.
-fn projected_injected_inline_decorations(
-  projected_line : ProjectedTextLine,
-  start_offset : Int,
-  end_offset : Int,
-  indent : Int,
-) -> Array[@view_layout.InlineDecoration] {
-  let decorations : Array[@view_layout.InlineDecoration] = []
-  for part in projected_line.parts {
-    match part.kind {
-      InjectedSegment(class_name~, ..) => {
-        let start = part.start.max(start_offset)
-        let end = part.end.min(end_offset)
-        if start < end {
-          // View-local columns shift right by the continuation indent.
-          decorations.push(
-            InlineDecoration(
-              OffsetRange(
-                start - start_offset + indent,
-                end - start_offset + indent,
-              ),
-              class_name,
-            ),
-          )
-        }
-      }
-      SourceSegment(_) => ()
-    }
-  }
-  decorations
+/// Converts a view range to model coordinates —
+/// `convertViewRangeToModelRange` (`viewModelLines.ts:842`).
+pub fn ViewModelLinesFromProjectedModel::convert_view_range_to_model_range(
+  self : ViewModelLinesFromProjectedModel,
+  view_range : @base_common.Range,
+) -> @base_common.Range {
+  let start = self.convert_view_position_to_model_position(
+    view_range.start_line_number,
+    view_range.start_column,
+  )
+  let end = self.convert_view_position_to_model_position(
+    view_range.end_line_number,
+    view_range.end_column,
+  )
+  Range(start.line_number, start.column, end.line_number, end.column)
 }
 
 ///|
-/// Coordinate converter backed by a `ModelLineProjection`.
-pub struct ProjectedCoordinatesConverter {
-  projection : ModelLineProjection
-}
-
-///|
-/// Creates a coordinate converter from projected view lines.
-pub fn ProjectedCoordinatesConverter::new(
-  lines : ViewModelLinesFromProjectedModel,
-) -> ProjectedCoordinatesConverter {
-  { projection: lines.projection }
-}
-
-///|
-/// Converts model positions through the projection table.
-pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_to_view_position(
-  self,
-  position,
+/// Converts a model position to view coordinates —
+/// `convertModelPositionToViewPosition` (`viewModelLines.ts:848`), minus the
+/// hidden-line walk (nothing can hide a line). The affinity picks the
+/// boundary side at injected text and wrap breaks; absent it behaves as
+/// Monaco's default `None`.
+pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position(
+  self : ViewModelLinesFromProjectedModel,
+  model_line_number : Int,
+  model_column : Int,
   affinity? : @model.PositionAffinity,
-) {
-  self.projection.model_position_to_view_position(position, affinity?)
+) -> @base_common.Position {
+  let line_index = @base_common.clamp_int(
+    model_line_number - 1,
+    0,
+    self.model_line_projections.length() - 1,
+  )
+  let delta_line_number = 1 + self.projected_model_line_line_counts[line_index]
+  self.model_line_projections[line_index].get_view_position_of_model_position(
+    delta_line_number,
+    model_column,
+    affinity?,
+  )
 }
 
 ///|
-/// Converts view positions through the projection table.
-pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_position_to_model_position(
-  self,
-  position,
-) {
-  self.projection.view_position_to_model_position(position)
-}
-
-///|
-/// Converts model ranges through the projection table,
+/// Converts a model range to view coordinates —
 /// `convertModelRangeToViewRange` (`viewModelLines.ts:892-901`): the default
 /// affinity is `Left` and only applies to empty ranges; a non-empty range
 /// excludes injected text at its edges (start `Right`, end `Left`).
-pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_range_to_view_range(
-  self,
-  range,
+pub fn ViewModelLinesFromProjectedModel::convert_model_range_to_view_range(
+  self : ViewModelLinesFromProjectedModel,
+  model_range : @base_common.Range,
   affinity? : @model.PositionAffinity,
-) {
-  if range.is_empty() {
+) -> @base_common.Range {
+  if model_range.is_empty() {
     let affinity = match affinity {
       Some(a) => a
       None => Left
     }
-    let start = self.projection.model_position_to_view_position(
-      Position(range.start_line_number, range.start_column),
+    let start = self.convert_model_position_to_view_position(
+      model_range.start_line_number,
+      model_range.start_column,
       affinity~,
     )
     Range(start.line_number, start.column, start.line_number, start.column)
   } else {
-    let start = self.projection.model_position_to_view_position(
-      Position(range.start_line_number, range.start_column),
+    let start = self.convert_model_position_to_view_position(
+      model_range.start_line_number,
+      model_range.start_column,
       affinity=Right,
     )
-    let end = self.projection.model_position_to_view_position(
-      Position(range.end_line_number, range.end_column),
+    let end = self.convert_model_position_to_view_position(
+      model_range.end_line_number,
+      model_range.end_column,
       affinity=Left,
     )
     Range(start.line_number, start.column, end.line_number, end.column)
@@ -326,16 +409,141 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_ra
 }
 
 ///|
-/// Converts view ranges through the projection table.
+/// Derives per-model-line injected text from the backing model's
+/// injected-text decorations — `LineInjectedText.fromDecorations`
+/// (`textModelEvents.ts`): `before` lands at the range start (order 0),
+/// `after` at the range end (order 1); sorted by line, column, order.
+/// Positions convert to the 0-based line/column space
+/// `ProjectedTextLine::from_injected_text` consumes.
+fn line_injected_text_from_decorations(
+  model : @model.TextModel,
+) -> Array[Array[InjectedText]] {
+  let snapshot = model.snapshot
+  let buckets : Array[Array[InjectedText]] = []
+  for _ in 0..<snapshot.line_count() {
+    buckets.push([])
+  }
+  let entries : Array[(Int, Int, Int, @model.InjectedTextOptions)] = []
+  for decoration in model.get_injected_text_decorations() {
+    match decoration.options.before {
+      Some(before) =>
+        if before.content.length() > 0 {
+          entries.push(
+            (
+              decoration.range.start_line_number,
+              decoration.range.start_column,
+              0,
+              before,
+            ),
+          )
+        }
+      None => ()
+    }
+    match decoration.options.after {
+      Some(after) =>
+        if after.content.length() > 0 {
+          entries.push(
+            (
+              decoration.range.end_line_number,
+              decoration.range.end_column,
+              1,
+              after,
+            ),
+          )
+        }
+      None => ()
+    }
+  }
+  entries.sort_by((left, right) => {
+    let (l_line, l_column, l_order, _) = left
+    let (r_line, r_column, r_order, _) = right
+    if l_line != r_line {
+      l_line - r_line
+    } else if l_column != r_column {
+      l_column - r_column
+    } else {
+      l_order - r_order
+    }
+  })
+  for entry in entries {
+    let (line_number, column, _, options) = entry
+    let line = @base_common.clamp_int(
+      line_number - 1,
+      0,
+      snapshot.line_count() - 1,
+    )
+    let line_text = snapshot.line_text(line)
+    let column0 = @base_common.clamp_int(column - 1, 0, line_text.length())
+    buckets[line].push(
+      InjectedText(
+        Position(line, column0),
+        options.content,
+        options.inline_class_name.unwrap_or(""),
+        source_index=options.attached_index,
+      ),
+    )
+  }
+  buckets
+}
+
+///|
+/// Coordinate converter over the projected line collection — the
+/// `CoordinatesConverter` class of `viewModelLines.ts:1073`. (That plain name
+/// is taken by this package's `ICoordinatesConverter` trait, so the class
+/// keeps the `Projected` prefix.)
+pub struct ProjectedCoordinatesConverter {
+  lines : ViewModelLinesFromProjectedModel
+}
+
+///|
+/// Creates a coordinate converter from the projected line collection.
+pub fn ProjectedCoordinatesConverter::new(
+  lines : ViewModelLinesFromProjectedModel,
+) -> ProjectedCoordinatesConverter {
+  { lines, }
+}
+
+///|
+/// Converts model positions through the line collection.
+pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_to_view_position(
+  self,
+  position,
+  affinity? : @model.PositionAffinity,
+) {
+  self.lines.convert_model_position_to_view_position(
+    position.line_number,
+    position.column,
+    affinity?,
+  )
+}
+
+///|
+/// Converts view positions through the line collection.
+pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_position_to_model_position(
+  self,
+  position,
+) {
+  self.lines.convert_view_position_to_model_position(
+    position.line_number,
+    position.column,
+  )
+}
+
+///|
+/// Converts model ranges through the line collection.
+pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_range_to_view_range(
+  self,
+  range,
+  affinity? : @model.PositionAffinity,
+) {
+  self.lines.convert_model_range_to_view_range(range, affinity?)
+}
+
+///|
+/// Converts view ranges through the line collection.
 pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_range_to_model_range(
   self,
   range,
 ) {
-  let start = self.view_position_to_model_position(
-    Position(range.start_line_number, range.start_column),
-  )
-  let end = self.view_position_to_model_position(
-    Position(range.end_line_number, range.end_column),
-  )
-  Range(start.line_number, start.column, end.line_number, end.column)
+  self.lines.convert_view_range_to_model_range(range)
 }

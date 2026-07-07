@@ -11,6 +11,8 @@ import {
 }
 
 // Values
+pub fn create_model_line_projection(ModelLineProjectionData?) -> ModelLineProjection
+
 pub fn dedup_margin_decorations(Int, Int, Array[DecorationToRender]) -> Array[Array[String]]
 
 pub fn filter_validation_decorations(RenderValidationDecorations) -> Bool
@@ -37,12 +39,6 @@ pub(all) struct DecorationToRender {
   z_index : Int
 } derive(Eq, @debug.Debug)
 
-pub struct IdentityCoordinatesConverter {
-  identity : Unit
-}
-pub fn IdentityCoordinatesConverter::new() -> Self
-pub impl CoordinatesConverter for IdentityCoordinatesConverter
-
 pub(all) struct InjectedText {
   position : @common.Position
   text : String
@@ -60,18 +56,19 @@ pub fn LineBreaksComputer::LineBreaksComputer(Int, tab_size? : Int, wrapping_ind
 pub fn LineBreaksComputer::compute_model_line_projection(Self, Int, String) -> ModelLineProjectionData
 pub fn LineBreaksComputer::compute_projected_line_projection(Self, Int, ProjectedTextLine) -> ModelLineProjectionData
 
-pub struct ModelLineProjection {
-  projections : Array[ModelLineProjectionData]
-  model_line_start_view_indices : Array[Int]
-  view_line_segments : Array[ModelLineProjectionSegment]
+pub(all) enum ModelLineProjection {
+  Identity
+  Projected(ModelLineProjectionData)
 }
-pub fn ModelLineProjection::build(ViewModelLinesFromModelAsIs, LineBreaksComputer) -> Self
-pub fn ModelLineProjection::model_position_to_view_position(Self, @common.Position, affinity? : @model.PositionAffinity) -> @common.Position
-pub fn ModelLineProjection::normalize_view_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
-pub fn ModelLineProjection::projected_line_for_model_line(Self, Int) -> ProjectedTextLine
-pub fn ModelLineProjection::segment_for_view_line_number(Self, Int) -> ModelLineProjectionSegment
-pub fn ModelLineProjection::view_line_count(Self) -> Int
-pub fn ModelLineProjection::view_position_to_model_position(Self, @common.Position) -> @common.Position
+pub fn ModelLineProjection::get_model_column_of_view_position(Self, Int, Int) -> Int
+pub fn ModelLineProjection::get_view_line_content(Self, @model.TextModel, Int, Int) -> String
+pub fn ModelLineProjection::get_view_line_count(Self) -> Int
+pub fn ModelLineProjection::get_view_line_data(Self, @model.TextModel, Int, Int) -> ViewLineData
+pub fn ModelLineProjection::get_view_line_max_column(Self, @model.TextModel, Int, Int) -> Int
+pub fn ModelLineProjection::get_view_line_min_column(Self, Int) -> Int
+pub fn ModelLineProjection::get_view_position_of_model_position(Self, Int, Int, affinity? : @model.PositionAffinity) -> @common.Position
+pub fn ModelLineProjection::injected_text_index_at(Self, Int, Int) -> Int
+pub fn ModelLineProjection::normalize_position(Self, Int, @common.Position, @model.PositionAffinity) -> @common.Position
 
 pub(all) struct ModelLineProjectionData {
   model_line_number : Int
@@ -97,9 +94,10 @@ pub(all) struct ModelLineProjectionSegment {
 } derive(Eq, @debug.Debug)
 
 pub struct ProjectedCoordinatesConverter {
-  projection : ModelLineProjection
+  lines : ViewModelLinesFromProjectedModel
 }
 pub fn ProjectedCoordinatesConverter::new(ViewModelLinesFromProjectedModel) -> Self
+pub impl @inline_decorations.CoordinatesConverter for ProjectedCoordinatesConverter
 pub impl CoordinatesConverter for ProjectedCoordinatesConverter
 
 pub(all) struct ProjectedLinePart {
@@ -165,13 +163,13 @@ pub(all) struct ViewLineData {
 pub struct ViewModel {
   model : @model.TextModel
   mut options : ViewModelOptions
-  mut lines : ViewModelLines
+  lines : ViewModelLinesFromProjectedModel
   mut decorations : ViewModelDecorations
-  mut coordinates_converter : ViewModelCoordinatesConverter
+  coordinates_converter : ProjectedCoordinatesConverter
 }
 pub fn ViewModel::ViewModel(@model.TextModel) -> Self
 pub fn ViewModel::clamp_window(Self, @view_layout.LineWindow) -> @view_layout.LineWindow
-pub fn ViewModel::coordinates_converter(Self) -> ViewModelCoordinatesConverter
+pub fn ViewModel::coordinates_converter(Self) -> ProjectedCoordinatesConverter
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
 pub fn ViewModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModel::get_line_max_column(Self, Int) -> Int
@@ -179,7 +177,7 @@ pub fn ViewModel::get_line_min_column(Self, Int) -> Int
 pub fn ViewModel::injected_text_index_at(Self, @common.Position) -> Int
 pub fn ViewModel::language_id(Self) -> String
 pub fn ViewModel::line_count(Self) -> Int
-pub fn ViewModel::lines(Self) -> ViewModelLines
+pub fn ViewModel::lines(Self) -> ViewModelLinesFromProjectedModel
 pub fn ViewModel::model_line_max_column(Self, Int) -> Int
 pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
 pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
@@ -189,77 +187,44 @@ pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.
 pub fn ViewModel::version(Self) -> Int
 pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions) -> Self
 
-pub(all) enum ViewModelCoordinatesConverter {
-  Identity(IdentityCoordinatesConverter)
-  Projected(ProjectedCoordinatesConverter)
-}
-pub impl @inline_decorations.CoordinatesConverter for ViewModelCoordinatesConverter
-pub impl CoordinatesConverter for ViewModelCoordinatesConverter
-
 pub struct ViewModelDecorations {
   // private fields
 }
-pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLines, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
+pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLinesFromProjectedModel, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
 pub fn ViewModelDecorations::get_decorations_viewport_data(Self, @common.Range) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
-pub fn ViewModelDecorations::new(Int, @model.TextModel, Bool, ViewModelLines, ViewModelCoordinatesConverter) -> Self
+pub fn ViewModelDecorations::new(Int, @model.TextModel, Bool, ViewModelLinesFromProjectedModel, ProjectedCoordinatesConverter) -> Self
 pub fn ViewModelDecorations::on_line_mapping_changed(Self) -> Unit
 pub fn ViewModelDecorations::on_model_decorations_changed(Self) -> Unit
 pub fn ViewModelDecorations::reset(Self) -> Unit
 
-pub(all) enum ViewModelLines {
-  ModelAsIs(ViewModelLinesFromModelAsIs)
-  ProjectedModel(ViewModelLinesFromProjectedModel)
-}
-pub fn ViewModelLines::get_hidden_areas(Self) -> Array[@common.Range]
-pub fn ViewModelLines::get_view_line_content(Self, Int) -> String
-pub fn ViewModelLines::get_view_line_data(Self, Int) -> ViewLineData
-pub fn ViewModelLines::get_view_line_max_column(Self, Int) -> Int
-pub fn ViewModelLines::get_view_line_min_column(Self, Int) -> Int
-pub fn ViewModelLines::is_model_line_hidden(Self, Int) -> Bool
-pub fn ViewModelLines::line_count(Self) -> Int
-pub fn ViewModelLines::model_line_number_of_view_line(Self, Int) -> Int
-pub fn ViewModelLines::tab_size(Self) -> Int
-pub fn ViewModelLines::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
-
-pub struct ViewModelLinesFromModelAsIs {
-  model : @model.TextModel
-  visible_model_line_numbers : Array[Int]
-  hidden_model_lines : Array[Bool]
-  injected_text_by_model_line : Array[Array[InjectedText]]
-}
-pub fn ViewModelLinesFromModelAsIs::get_hidden_areas(Self) -> Array[@common.Range]
-pub fn ViewModelLinesFromModelAsIs::get_model_line_content(Self, Int) -> String
-pub fn ViewModelLinesFromModelAsIs::get_view_line_content(Self, Int) -> String
-pub fn ViewModelLinesFromModelAsIs::get_view_line_data(Self, Int) -> ViewLineData
-pub fn ViewModelLinesFromModelAsIs::get_view_line_max_column(Self, Int) -> Int
-pub fn ViewModelLinesFromModelAsIs::get_view_line_min_column(Self, Int) -> Int
-pub fn ViewModelLinesFromModelAsIs::is_model_line_hidden(Self, Int) -> Bool
-pub fn ViewModelLinesFromModelAsIs::line_count(Self) -> Int
-pub fn ViewModelLinesFromModelAsIs::model_line_count(Self) -> Int
-pub fn ViewModelLinesFromModelAsIs::model_line_number_of_view_line(Self, Int) -> Int
-pub fn ViewModelLinesFromModelAsIs::model_line_tokens(Self, Int) -> @tokens.LineTokens
-pub fn ViewModelLinesFromModelAsIs::new(@model.TextModel) -> Self
-pub fn ViewModelLinesFromModelAsIs::projected_text_line(Self, Int) -> ProjectedTextLine
-pub fn ViewModelLinesFromModelAsIs::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
-
 pub struct ViewModelLinesFromProjectedModel {
-  base : ViewModelLinesFromModelAsIs
-  projection : ModelLineProjection
-  tab_size : Int
+  model : @model.TextModel
+  mut tab_size : Int
+  mut wrapping_column : Int
+  mut wrapping_indent : WrappingIndent
+  mut model_line_projections : Array[ModelLineProjection]
+  mut projected_model_line_line_counts : Array[Int]
 }
+pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position(Self, Int, Int, affinity? : @model.PositionAffinity) -> @common.Position
+pub fn ViewModelLinesFromProjectedModel::convert_model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
+pub fn ViewModelLinesFromProjectedModel::convert_view_position_to_model_position(Self, Int, Int) -> @common.Position
+pub fn ViewModelLinesFromProjectedModel::convert_view_range_to_model_range(Self, @common.Range) -> @common.Range
+pub fn ViewModelLinesFromProjectedModel::create_coordinates_converter(Self) -> ProjectedCoordinatesConverter
 pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModelLinesFromProjectedModel::get_view_line_content(Self, Int) -> String
+pub fn ViewModelLinesFromProjectedModel::get_view_line_count(Self) -> Int
 pub fn ViewModelLinesFromProjectedModel::get_view_line_data(Self, Int) -> ViewLineData
 pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::injected_text_index_at(Self, Int, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(Self, Int) -> Bool
-pub fn ViewModelLinesFromProjectedModel::line_count(Self) -> Int
 pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, Int) -> Int
-pub fn ViewModelLinesFromProjectedModel::model_position_to_view_position(Self, @common.Position) -> @common.Position
-pub fn ViewModelLinesFromProjectedModel::new(ViewModelLinesFromModelAsIs, LineBreaksComputer) -> Self
+pub fn ViewModelLinesFromProjectedModel::new(@model.TextModel, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : WrappingIndent) -> Self
+pub fn ViewModelLinesFromProjectedModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
+pub fn ViewModelLinesFromProjectedModel::on_model_flushed(Self) -> Unit
+pub fn ViewModelLinesFromProjectedModel::set_tab_size(Self, Int) -> Bool
+pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(Self, Int, WrappingIndent) -> Bool
 pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
-pub fn ViewModelLinesFromProjectedModel::view_position_to_model_position(Self, @common.Position) -> @common.Position
 
 pub(all) struct ViewModelOptions {
   soft_wrap_column : Int

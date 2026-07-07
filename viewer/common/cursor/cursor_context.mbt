@@ -5,13 +5,13 @@
 /// viewer needs only the coordinates converter to bridge model and view
 /// positions (no validation against a mutating model, no edit config).
 pub struct CursorContext {
-  coordinates_converter : @view_model.ViewModelCoordinatesConverter
+  coordinates_converter : @view_model.ProjectedCoordinatesConverter
 }
 
 ///|
 /// Builds a cursor context from the active view model's coordinates converter.
 pub fn CursorContext::new(
-  coordinates_converter : @view_model.ViewModelCoordinatesConverter,
+  coordinates_converter : @view_model.ProjectedCoordinatesConverter,
 ) -> CursorContext {
   { coordinates_converter, }
 }

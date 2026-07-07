@@ -5,8 +5,8 @@
 // semantic state — positions, ranges, projected view lines, frames — instead
 // of rendered pixels.
 //
-// The seam is `Viewer::render_current_model` (render.mbt): it builds the
-// tokenized document, view model, render frame, and cursor context and stores
+// The seam is `Viewer::attach_model` (attach_model.mbt): it builds the
+// tokenized document, view model, and cursor context and stores
 // them synchronously before `schedule_render`. Only the DOM flush is deferred,
 // and `schedule_render`/`flush_render` already no-op while `view is None`
 // (view.mbt). So an unattached viewer has fully-populated semantic state after

@@ -38,9 +38,9 @@ pub struct Viewer {
   priv mut last_scroll_event : ScrollEvent?
   priv view_layout : @view_layout.ViewLayout
   priv mut view_model : @view_model.ViewModel?
-  /// The last rendered view-line window (clamped, half-open). Scrolls inside
-  /// the overscan hysteresis band reuse it; drifting past the band resyncs it
-  /// to the layout's visible window at the next flush.
+  /// The last rendered view-line window (clamped, half-open): exactly the
+  /// lines intersecting the viewport at the last flush, resynced from the
+  /// layout every flush.
   priv mut rendered_window : @view_layout.LineWindow?
   priv mut text_model : @model.TextModel?
   priv mut inlay_hints : Array[@language.InlayHint]

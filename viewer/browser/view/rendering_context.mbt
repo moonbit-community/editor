@@ -5,8 +5,8 @@
 /// `View::render` — the foreign-method rule keeps that call out of this
 /// package, so the literal construction crosses the package boundary.
 pub(all) struct ViewRenderInput {
-  /// The rendered 1-based half-open view-line window (already clamped to the
-  /// document and stabilized by the overscan hysteresis).
+  /// The rendered 1-based half-open view-line window: exactly the lines
+  /// intersecting the viewport (already clamped to the document).
   window : @view_layout.LineWindow
   view_model : @view_model.ViewModel
   layout : @view_layout.ViewLayout

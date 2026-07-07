@@ -56,10 +56,7 @@ fn Viewer::hit_test_at(
     Some(view_model) => {
       let window = match self.rendered_window {
         Some(window) => window
-        None =>
-          view_model.clamp_window(
-            self.view_layout.visible_window(overscan=@core.line_overscan),
-          )
+        None => view_model.clamp_window(self.view_layout.visible_window())
       }
       Some(
         @viewer_common.hit_test(

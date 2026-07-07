@@ -16,15 +16,11 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expectMoonBitReportPassed(report, { suite: 'viewer_api' });
     expect(report.metrics.renderedLines).toBeGreaterThan(0);
     expect(report.metrics.viewLines).toBeGreaterThan(report.metrics.modelLines);
+    // The 'keeps' continuation of the wrapped long line sits below the
+    // viewport: exactly like Monaco, only the lines intersecting the viewport
+    // are in the DOM, so it is asserted after the scroll further down.
     const wrappedHoverLine = page.locator('.view-line').filter({ hasText: 'keeps' });
-    await expect(wrappedHoverLine).toHaveCount(1);
-    expect(Number(await wrappedHoverLine.getAttribute('data-line'))).toBeGreaterThan(
-      report.metrics.modelLines,
-    );
-    // wrappingIndent=Same (the default): the wrapped continuation of the
-    // two-space-indented line is itself indented, so its first visible glyph
-    // sits to the right of a flush-left line's first glyph (the DOM left offset
-    // proves the indent renders, not just that the content carries spaces).
+    await expect(wrappedHoverLine).toHaveCount(0);
     const firstGlyphLeft = (locator) =>
       locator.first().evaluate((node) => {
         const text = node.textContent || '';
@@ -53,11 +49,10 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
           range.getBoundingClientRect().left - root.getBoundingClientRect().left,
         );
       });
+    // Captured while line 1 is still rendered; the horizontal offset is
+    // unaffected by the vertical scroll below.
     const flushLeftGlyph = await firstGlyphLeft(page.locator('.view-line[data-line="1"]'));
-    const wrappedGlyph = await firstGlyphLeft(wrappedHoverLine);
-    expect(wrappedGlyph).not.toBeNull();
     expect(flushLeftGlyph).not.toBeNull();
-    expect(wrappedGlyph).toBeGreaterThan(flushLeftGlyph + 5);
     const inlayHint = page.locator('.view-line .inlay-hint', { hasText: ': T' });
     await expect(inlayHint).toHaveCount(1, { timeout: 10_000 });
     await expect(inlayHint).toHaveClass(/inlay-hint-type/);
@@ -113,9 +108,29 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     // fragments the hint span the later assertions look for.
     await page.locator('.view-line[data-line="1"]').click();
     await expect.poll(() => page.locator('.selected-text').count(), { timeout: 2_000 }).toBe(0);
+    // Scroll the wrapped continuation into the viewport (4 line heights).
+    // Exact-viewport rendering: lines leaving the viewport leave the DOM, so
+    // line 1 disappears and the 'keeps' continuation appears.
+    await page.locator('.overflow-guard').hover();
+    await page.mouse.wheel(0, 72);
+    await expect(page.locator('.view-line[data-line="1"]')).toHaveCount(0, {
+      timeout: 2_000,
+    });
+    await expect(wrappedHoverLine).toHaveCount(1);
+    expect(Number(await wrappedHoverLine.getAttribute('data-line'))).toBeGreaterThan(
+      report.metrics.modelLines,
+    );
+    // wrappingIndent=Same (the default): the wrapped continuation of the
+    // two-space-indented line is itself indented, so its first visible glyph
+    // sits to the right of a flush-left line's first glyph (the DOM left offset
+    // proves the indent renders, not just that the content carries spaces).
+    const wrappedGlyph = await firstGlyphLeft(wrappedHoverLine);
+    expect(wrappedGlyph).not.toBeNull();
+    expect(wrappedGlyph).toBeGreaterThan(flushLeftGlyph + 5);
     // The warning squiggle renders as an absolutely positioned overlay piece
     // (`<div class="cdr squiggly-warning">`, Monaco's DecorationsOverlay), not
-    // as an inline span inside the view line.
+    // as an inline span inside the view line. Its 'keeps' range is only
+    // decorated now that the line is inside the rendered viewport.
     await expect(page.locator('.cdr.squiggly-warning')).toHaveCount(1, {
       timeout: 10_000,
     });
@@ -141,15 +156,6 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(squiggleForm.borderBottomStyle).toBe('none');
     expect(squiggleForm.beforeDisplay).toBe('block');
     expect(squiggleForm.beforeBackgroundColor).toBe('rgba(0, 0, 0, 0)');
-    const firstLineTop = async () =>
-      page.locator('.view-line[data-line="1"]').evaluate((node) => {
-        const root = node.closest('.monaco-editor');
-        return Math.round(node.getBoundingClientRect().top - root.getBoundingClientRect().top);
-      });
-    const beforeScrollTop = await firstLineTop();
-    await page.locator('.overflow-guard').hover();
-    await page.mouse.wheel(0, 72);
-    await expect.poll(firstLineTop, { timeout: 2_000 }).toBeLessThan(beforeScrollTop - 20);
     await wrappedHoverLine.hover();
     await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
       'wrapped component hover',

@@ -32,11 +32,6 @@ pub let editor_vertical_scrollbar_size = 14.0
 pub let editor_horizontal_scrollbar_size = 12.0
 
 ///|
-/// Lines rendered beyond each viewport edge so scrolling stays inside
-/// already-rendered DOM between window updates.
-pub let line_overscan = 20
-
-///|
 pub let char_probe_text = "0000000000"
 
 ///|

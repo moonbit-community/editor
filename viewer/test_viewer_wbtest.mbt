@@ -61,9 +61,7 @@ fn Viewer::test_cursor(self : Viewer) -> @cursor.CursorsController {
 /// current visible window — the headless analog of `synced_window`, which
 /// only runs inside a DOM flush.
 fn Viewer::test_window(self : Viewer) -> @view_layout.LineWindow {
-  self
-  .test_view_model()
-  .clamp_window(self.view_layout.visible_window(overscan=@core.line_overscan))
+  self.test_view_model().clamp_window(self.view_layout.visible_window())
 }
 
 ///|
@@ -138,9 +136,11 @@ fn assert_cursor(
 ///|
 /// The seam this harness rests on: an unattached viewer (no `attach()`, no DOM
 /// view) still has a fully-populated view model synchronously after
-/// `set_model`. The whole short document fits the default window.
+/// `set_model`. With a measured viewport the whole short document is the
+/// window.
 test "set_model populates the view model without attaching" {
   with_test_viewer("alpha\nbeta\ngamma", viewer => {
+    viewer.test_set_viewport(width=800.0, height=400.0)
     let window = viewer.test_window()
     assert_eq(window.start, 1)
     assert_eq(window.end, 4)
@@ -184,10 +184,10 @@ test "render frame windows to the visible range, not the whole document" {
     let window = viewer.test_window()
     // Document height is retained...
     assert_eq(viewer.test_view_model().line_count(), 200)
-    // ...but only a window around the scrolled viewport is rendered.
-    // scroll_top 720 = 40 lines * 18px line height; with the 20-line overscan
-    // the window starts at line 21.
-    assert_eq(window.start, 21)
+    // ...but only the lines intersecting the viewport are rendered.
+    // scroll_top 720 = 40 lines * 18px line height: line 41 is the first
+    // visible line.
+    assert_eq(window.start, 41)
     assert_true(
       window.end - window.start < viewer.test_view_model().line_count(),
     )

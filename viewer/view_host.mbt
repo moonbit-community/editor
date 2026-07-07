@@ -194,28 +194,16 @@ fn Viewer::schedule_render(self : Viewer) -> Unit {
 }
 
 ///|
-/// The view-line window this flush renders: the last rendered window while
-/// the desired window stays inside the overscan hysteresis band, resynced to
-/// the layout's visible window once it drifts past it. The window is clamped
-/// to the document so every consumer (viewport build, DOM recycler, hit
-/// tests) agrees on the rendered range.
+/// The view-line window this flush renders: exactly the lines intersecting
+/// the viewport (Monaco's `ViewLayout.getLinesViewportData()` band,
+/// partially visible edge lines included), recomputed every flush and
+/// clamped to the document so every consumer (viewport build, DOM recycler,
+/// hit tests) agrees on the rendered range.
 fn Viewer::synced_window(
   self : Viewer,
   view_model : @view_model.ViewModel,
 ) -> @view_layout.LineWindow {
-  let desired = view_model.clamp_window(
-    self.view_layout.visible_window(overscan=@core.line_overscan),
-  )
-  let window = match self.rendered_window {
-    Some(rendered) =>
-      if desired != rendered &&
-        @view_layout.window_needs_update(rendered, desired, @core.line_overscan) {
-        desired
-      } else {
-        rendered
-      }
-    None => desired
-  }
+  let window = view_model.clamp_window(self.view_layout.visible_window())
   self.rendered_window = Some(window)
   window
 }

@@ -1,8 +1,7 @@
 ///|
 /// The Monaco `ViewLayout` role: combines the scroll truth (`Scrollable`)
 /// with the line layout (`LinesLayout`) and derives the render viewport
-/// from them, absorbing the `visible_window`/`window_needs_update`
-/// semantics the browser cell uses today. Pure model state — input
+/// from them via `get_lines_viewport_data`. Pure model state — input
 /// capture and DOM application stay backend-side.
 ///
 /// Like Monaco, the entire view layer is 1-based, so `ViewLayout` and the
@@ -204,22 +203,32 @@ pub fn ViewLayout::get_line_height_for_line_number(
 }
 
 ///|
+/// All lines (and their relative vertical offsets) inside the current
+/// viewport, Monaco's `ViewLayout.getLinesViewportData` (delegates to
+/// `LinesLayout` with the viewport `[scrollTop, scrollTop + height]`).
+pub fn ViewLayout::get_lines_viewport_data(
+  self : ViewLayout,
+) -> PartialViewLinesViewportData {
+  let scroll_top = self.scrollable.position().scroll_top
+  let viewport_height = self.scrollable.dimensions().height
+  self.lines.get_lines_viewport_data(
+    scroll_top.to_int(),
+    (scroll_top + viewport_height).to_int(),
+  )
+}
+
+///|
 /// The 1-based view line range fully on screen at the current scroll, Monaco's
-/// `ViewLayout.getLinesViewportData().completelyVisible{Start,End}LineNumber`
-/// (the viewport is `[scrollTop, scrollTop + height]`). Returns `(1, 1)` for an
-/// empty document so callers never index a missing line.
+/// `ViewLayout.getLinesViewportData().completelyVisible{Start,End}LineNumber`.
+/// Returns `(1, 1)` for an empty document so callers never index a missing
+/// line.
 pub fn ViewLayout::completely_visible_line_range(
   self : ViewLayout,
 ) -> (Int, Int) {
   if self.line_count <= 0 {
     return (1, 1)
   }
-  let scroll_top = self.scrollable.position().scroll_top
-  let viewport_height = self.scrollable.dimensions().height
-  let data = self.lines.get_lines_viewport_data(
-    scroll_top.to_int(),
-    (scroll_top + viewport_height).to_int(),
-  )
+  let data = self.get_lines_viewport_data()
   (
     data.completely_visible_start_line_number,
     data.completely_visible_end_line_number,
@@ -338,51 +347,16 @@ pub fn ViewLayout::dimensions(self : ViewLayout) -> ScrollDimensions {
 }
 
 ///|
-/// The window of lines worth rendering for the current scroll state: the
-/// visible band plus `overscan` lines on each side, clamped to the
-/// document — including the unmeasured-viewport default band.
-pub fn ViewLayout::visible_window(
-  self : ViewLayout,
-  overscan~ : Int,
-) -> LineWindow {
-  let scroll_top = self.scrollable.position().scroll_top
-  let viewport_height = self.scrollable.dimensions().height
+/// The half-open window of view lines intersecting the current viewport —
+/// the `[startLineNumber, endLineNumber]` band of Monaco's
+/// `ViewLayout.getLinesViewportData()`, partially visible edge lines
+/// included. Recomputed every frame; the view renders exactly these lines.
+pub fn ViewLayout::visible_window(self : ViewLayout) -> LineWindow {
   if self.line_count <= 0 {
     return { start: 1, end: 1 }
   }
-  if viewport_height <= 0.0 {
-    let end = @base_common.clamp_int(
-      default_visible_lines + overscan + 1,
-      1,
-      self.line_count + 1,
-    )
-    return { start: 1, end }
-  }
-  let first_visible = self.line_at_vertical_offset(scroll_top)
-  let last_visible = self.line_at_vertical_offset(scroll_top + viewport_height)
-  let start = @base_common.clamp_int(
-    first_visible - overscan,
-    1,
-    self.line_count + 1,
-  )
-  let end = @base_common.clamp_int(
-    last_visible + 1 + overscan,
-    start,
-    self.line_count + 1,
-  )
-  { start, end }
-}
-
-///|
-/// Hysteresis for window updates, unchanged from `window_needs_update`:
-/// re-render only when the desired window drifted by more than half the
-/// overscan from the rendered one.
-pub fn ViewLayout::window_needs_update(
-  self : ViewLayout,
-  rendered : LineWindow,
-  overscan~ : Int,
-) -> Bool {
-  window_needs_update(rendered, self.visible_window(overscan~), overscan)
+  let data = self.get_lines_viewport_data()
+  { start: data.start_line_number, end: data.end_line_number + 1 }
 }
 
 ///|

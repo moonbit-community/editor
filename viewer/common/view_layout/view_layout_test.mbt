@@ -182,32 +182,39 @@ test "lines layout supports top and bottom view zones" {
 }
 
 ///|
-/// The layout-derived window must agree with the free `visible_window`
-/// the browser cell uses today, for the same scroll state.
-test "view layout windows match visible_window" {
+/// The window is exactly the `getLinesViewportData` band — every line
+/// intersecting `[scrollTop, scrollTop + height)`, partial edge lines
+/// included, no overscan.
+test "view layout window is exactly the viewport lines" {
   let layout = @view_layout.ViewLayout::new(line_height=18, line_count=10000)
   layout.set_viewport_size(width=800.0, height=600.0) |> ignore
-  for scroll_top in ([0.0, 9000.0, 179400.0] : Array[Double]) {
-    layout.scroll_to(scroll_top~) |> ignore
-    let expected = @view_layout.visible_window(scroll_top, 600.0, 18, 10000, 20)
-    let derived = layout.visible_window(overscan=20)
-    assert_eq(derived.start, expected.start)
-    assert_eq(derived.end, expected.end)
-  }
-  // Unmeasured viewport falls back to the same default band.
-  let unmeasured = @view_layout.ViewLayout::new(
-    line_height=18,
-    line_count=10000,
+  // 600px / 18px = 33.3 line heights: 34 lines intersect the viewport.
+  debug_inspect(
+    layout.visible_window(),
+    content=(
+      #|{ start: 1, end: 35 }
+    ),
   )
-  let expected = @view_layout.visible_window(0.0, 0.0, 18, 10000, 20)
-  let derived = unmeasured.visible_window(overscan=20)
-  assert_eq(derived.start, expected.start)
-  assert_eq(derived.end, expected.end)
+  layout.scroll_to(scroll_top=9000.0) |> ignore
+  debug_inspect(
+    layout.visible_window(),
+    content=(
+      #|{ start: 501, end: 535 }
+    ),
+  )
+  // Bottom of the document clamps the end.
+  layout.scroll_to(scroll_top=179400.0) |> ignore
+  debug_inspect(
+    layout.visible_window(),
+    content=(
+      #|{ start: 9967, end: 10001 }
+    ),
+  )
   // Tiny documents render entirely.
   let tiny = @view_layout.ViewLayout::new(line_height=18, line_count=10)
   tiny.set_viewport_size(width=800.0, height=600.0) |> ignore
   debug_inspect(
-    tiny.visible_window(overscan=20),
+    tiny.visible_window(),
     content=(
       #|{ start: 1, end: 11 }
     ),
@@ -215,17 +222,33 @@ test "view layout windows match visible_window" {
 }
 
 ///|
-test "view layout hysteresis matches window_needs_update" {
+/// Every full-line scroll shifts the window immediately (no hysteresis);
+/// a sub-line scroll inside the same band keeps it.
+test "view layout window tracks every scroll" {
   let layout = @view_layout.ViewLayout::new(line_height=18, line_count=10000)
   layout.set_viewport_size(width=800.0, height=600.0) |> ignore
   layout.scroll_to(scroll_top=9000.0) |> ignore
-  let rendered = layout.visible_window(overscan=20)
-  // Drift inside half the overscan keeps the rendered window.
-  layout.scroll_to(scroll_top=9000.0 + 18.0 * 8.0) |> ignore
-  assert_false(layout.window_needs_update(rendered, overscan=20))
-  // Drift beyond half the overscan re-renders.
-  layout.scroll_to(scroll_top=9000.0 + 18.0 * 11.0) |> ignore
-  assert_true(layout.window_needs_update(rendered, overscan=20))
+  debug_inspect(
+    layout.visible_window(),
+    content=(
+      #|{ start: 501, end: 535 }
+    ),
+  )
+  layout.scroll_to(scroll_top=9018.0) |> ignore
+  debug_inspect(
+    layout.visible_window(),
+    content=(
+      #|{ start: 502, end: 536 }
+    ),
+  )
+  // 9 px further is still inside line 502's band.
+  layout.scroll_to(scroll_top=9027.0) |> ignore
+  debug_inspect(
+    layout.visible_window(),
+    content=(
+      #|{ start: 502, end: 536 }
+    ),
+  )
 }
 
 ///|
@@ -234,21 +257,23 @@ test "view layout windows and dimensions account for view zones" {
   layout.set_viewport_size(width=200.0, height=54.0) |> ignore
   layout.set_view_zones([{ anchor_line: 1, height_px: 36 }]) |> ignore
   assert_eq(layout.dimensions().scroll_height, 396.0)
+  // Line 1 (18px) plus the 36px zone fill the 54px viewport exactly; line 2
+  // starts at the bottom edge and is not rendered.
   debug_inspect(
-    layout.visible_window(overscan=0),
+    layout.visible_window(),
     content=(
-      #|{ start: 1, end: 3 }
+      #|{ start: 1, end: 2 }
     ),
   )
   layout.scroll_to(scroll_top=54.0) |> ignore
   debug_inspect(
-    layout.visible_window(overscan=0),
+    layout.visible_window(),
     content=(
-      #|{ start: 2, end: 6 }
+      #|{ start: 2, end: 5 }
     ),
   )
   assert_eq(
-    layout.relative_vertical_offset_for_line({ start: 2, end: 6 }, 3),
+    layout.relative_vertical_offset_for_line({ start: 2, end: 5 }, 3),
     18,
   )
 }
@@ -286,6 +311,6 @@ test "view layout derives scroll dimensions from document and viewport" {
   )
   // The window origin is the content-space top of the window start (the
   // 1-based start line's offset, `(start - 1) * line_height`).
-  let window = layout.visible_window(overscan=20)
+  let window = layout.visible_window()
   assert_eq(layout.window_origin(window), ((window.start - 1) * 18).to_double())
 }

@@ -16,7 +16,6 @@ fn register_remote_language_providers(
     LanguageFilter(scheme="readonly-remote"),
   )
   services.languages.register_hover_provider(selector, client) |> ignore
-  services.languages.register_diagnostics_provider(selector, client) |> ignore
   services.languages.register_document_symbol_provider(selector, client)
   |> ignore
   services.languages.register_inlay_hints_provider(selector, client) |> ignore
@@ -69,21 +68,19 @@ impl @language.HoverProvider for RemoteLanguageClient with fn provide_hover(
 }
 
 ///|
-impl @language.DiagnosticsProvider for RemoteLanguageClient with fn provide_diagnostics(
-  self,
-  model,
-  _token,
-) {
-  let response = protocol_request("diagnostics", id => {
-    Diagnostics({ id, uri: model.uri, document_revision: model.revision })
+/// Applies a server-pushed diagnostics packet to the marker service — the
+/// workbench's `publishDiagnostics` sink, Monaco's `setModelMarkers` path.
+/// The marker-change event re-renders the viewer; no pull exists.
+fn apply_remote_diagnostics_cmd(
+  payload : @remote_protocol.DiagnosticsPayload,
+) -> @rabbita.Cmd {
+  @cmd.custom_cmd(_ => {
+    workbench_services().markers.set_diagnostics(
+      "lsp",
+      payload.uri,
+      payload.diagnostics,
+    )
   })
-  match response {
-    Diagnostics(payload) => payload.diagnostics
-    packet => {
-      self.emit_remote_error("diagnostics", model, packet)
-      []
-    }
-  }
 }
 
 ///|

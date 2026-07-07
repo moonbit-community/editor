@@ -100,7 +100,8 @@ fn server_packet_request_id(packet : @remote_protocol.ServerPacket) -> String {
     DirectoryResolved(payload) => payload.id
     DocumentLoaded(payload) => payload.id
     DocumentChanged(payload) => payload.id
-    Diagnostics(payload) => payload.id
+    // Diagnostics packets are server pushes and never answer a request.
+    Diagnostics(_) => ""
     HoverResult(payload) => payload.id
     DefinitionResult(payload) => payload.id
     ReferencesResult(payload) => payload.id

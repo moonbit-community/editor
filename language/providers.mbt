@@ -62,16 +62,6 @@ pub(all) struct DocumentSymbol {
 } derive(Debug)
 
 ///|
-/// Aggregated feature result used by the renderer model when several semantic
-/// feature families are computed together.
-pub(all) struct ProviderResult {
-  hovers : Array[Hover]
-  diagnostics : Array[Diagnostic]
-  definitions : Array[Location]
-  symbols : Array[DocumentSymbol]
-} derive(Debug)
-
-///|
 /// Asynchronous hover provider for a readonly text model and
 /// zero-based UTF-16 position.
 pub(open) trait HoverProvider {
@@ -106,51 +96,11 @@ pub(open) trait ReferencesProvider {
 }
 
 ///|
-/// Document diagnostics provider. Results replace diagnostics for the queried
-/// document/resource owner.
-pub(open) trait DiagnosticsProvider {
-  async fn provide_diagnostics(Self, @model.TextModel, CancellationToken) -> Array[
-    Diagnostic,
-  ]
-}
-
-///|
 /// Document symbol provider for outline/navigation views.
 pub(open) trait DocumentSymbolProvider {
   async fn provide_document_symbols(Self, @model.TextModel, CancellationToken) -> Array[
     DocumentSymbol,
   ]
-}
-
-///|
-/// Empty feature aggregate used when no provider has answered.
-pub fn ProviderResult::empty() -> ProviderResult {
-  { hovers: [], diagnostics: [], definitions: [], symbols: [] }
-}
-
-///|
-/// Last hover containing `position`, matching the viewer's later-result-wins
-/// behavior for overlapping hover ranges.
-pub fn ProviderResult::hover_at(
-  self : ProviderResult,
-  position : @base_common.Position,
-) -> Hover? {
-  let mut found : Hover? = None
-  for hover in self.hovers {
-    if hover.range.contains_position(position) {
-      found = Some(hover)
-    }
-  }
-  found
-}
-
-///|
-/// First definition location containing `position`.
-pub fn ProviderResult::definition_at(
-  self : ProviderResult,
-  position : @base_common.Position,
-) -> Location? {
-  definition_at(self, position)
 }
 
 ///|
@@ -171,18 +121,4 @@ pub fn DiagnosticTag::label(self : DiagnosticTag) -> String {
     Unnecessary => "Unnecessary"
     Deprecated => "Deprecated"
   }
-}
-
-///|
-fn definition_at(
-  providers : ProviderResult,
-  position : @base_common.Position,
-) -> Location? {
-  let mut found : Location? = None
-  for location in providers.definitions {
-    if found is None && location.range.contains_position(position) {
-      found = Some(location)
-    }
-  }
-  found
 }

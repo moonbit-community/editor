@@ -1,22 +1,12 @@
 ///|
-/// Model-level features requested after a fresh render: diagnostics and
-/// inlay hints, each resolving independently.
+/// Model-level features requested after a fresh render. Only inlay hints
+/// resolve here: diagnostics are push-only — whoever owns them feeds
+/// `services.markers` (Monaco's `setModelMarkers`), and the marker-change
+/// event drives the render refresh.
 fn Viewer::request_model_features(
   self : Viewer,
   model : @model.TextModel,
 ) -> Unit {
-  @js.async_run(() => {
-    // `set_diagnostics` fires the marker-change event, which the viewer turns
-    // into a render refresh via `on_did_change_marker_decorations` (plan E); no
-    // explicit re-render is needed here.
-    self.services.languages.diagnostics_for_model(
-      model,
-      (owner, diagnostics) => {
-        self.services.markers.set_diagnostics(owner, model.uri, diagnostics)
-      },
-      self.services.log_service,
-    )
-  })
   @js.async_run(() => {
     let inlay_hints = self.services.languages.inlay_hints_for_model(
       model,

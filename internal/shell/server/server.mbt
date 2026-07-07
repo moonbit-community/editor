@@ -51,11 +51,11 @@ pub struct RemoteServer {
   priv hover_provider : &@language.HoverProvider
   priv definition_provider : &@language.DefinitionProvider
   priv references_provider : &@language.ReferencesProvider
-  priv diagnostics_provider : &@language.DiagnosticsProvider
   priv document_symbol_provider : &@language.DocumentSymbolProvider
   priv inlay_hints_provider : &@language.InlayHintsProvider
   priv documents : Map[String, @workspace.DocumentSnapshot]
   priv watches : Map[String, ServerWatch]
+  priv document_sync_listener : Ref[((@workspace.DocumentSnapshot) -> Unit)?]
 }
 
 ///|
@@ -78,7 +78,6 @@ pub fn RemoteServer::with_language_providers(
   hover_provider : &@language.HoverProvider,
   definition_provider : &@language.DefinitionProvider,
   references_provider : &@language.ReferencesProvider,
-  diagnostics_provider : &@language.DiagnosticsProvider,
   document_symbol_provider : &@language.DocumentSymbolProvider,
   inlay_hints_provider : &@language.InlayHintsProvider,
 ) -> RemoteServer {
@@ -88,11 +87,34 @@ pub fn RemoteServer::with_language_providers(
     hover_provider,
     definition_provider,
     references_provider,
-    diagnostics_provider,
     document_symbol_provider,
     inlay_hints_provider,
     documents: Map::default(),
     watches: Map::default(),
+    document_sync_listener: Ref(None),
+  }
+}
+
+///|
+/// Installs a listener notified whenever the server caches a fresh document
+/// snapshot (open or watch update). The native host uses it to forward
+/// `didOpen`/`didChange` to the LSP without waiting for a feature request, so
+/// the checker runs and publishes diagnostics as soon as content is known.
+pub fn RemoteServer::set_document_sync_listener(
+  self : RemoteServer,
+  listener : ((@workspace.DocumentSnapshot) -> Unit)?,
+) -> Unit {
+  self.document_sync_listener.val = listener
+}
+
+///|
+fn RemoteServer::notify_document_cached(
+  self : RemoteServer,
+  document : @workspace.DocumentSnapshot,
+) -> Unit {
+  match self.document_sync_listener.val {
+    Some(listener) => listener(document)
+    None => ()
   }
 }
 
@@ -199,7 +221,6 @@ pub async fn RemoteServer::handle_client_packet(
       self.close_document(request)
       []
     }
-    Diagnostics(request) => [self.diagnostics(request)]
     Hover(request) => [self.hover(request)]
     Definition(request) => [self.definition(request)]
     References(request) => [self.references(request)]
@@ -251,6 +272,7 @@ pub async fn RemoteServer::open_document(
     DocumentLoaded(document) => {
       let document = self.tracked_document(document)
       self.documents.set(request.uri.to_string(), document)
+      self.notify_document_cached(document)
       DocumentLoaded({ id: request.id, document })
     }
     DocumentNotFound(uri) =>
@@ -356,31 +378,6 @@ pub async fn RemoteServer::hover(
         hover: self.hover_provider.provide_hover(
           model,
           model.get_position_at(request.offset),
-          @language.CancellationToken::none(),
-        ),
-      })
-    }
-    None => self.missing_cached_document_error(request.id)
-  }
-}
-
-///|
-/// Routes a diagnostics request only when the cached document URI/revision still
-/// matches the request.
-pub async fn RemoteServer::diagnostics(
-  self : RemoteServer,
-  request : @remote_protocol.DocumentRevisionRequest,
-) -> @remote_protocol.ServerPacket {
-  match
-    self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) => {
-      let model = text_model_from_document(document)
-      Diagnostics({
-        id: request.id,
-        uri: request.uri,
-        revision: document.revision,
-        diagnostics: self.diagnostics_provider.provide_diagnostics(
-          model,
           @language.CancellationToken::none(),
         ),
       })
@@ -593,6 +590,7 @@ async fn RemoteServer::handle_watch_event(
         DocumentLoaded(document) => {
           let document = self.tracked_document(document)
           self.documents.set(uri.to_string(), document)
+          self.notify_document_cached(document)
           emit(DocumentChanged({ id: request_id, document }))
         }
         DocumentNotFound(uri) =>

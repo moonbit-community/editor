@@ -39,9 +39,6 @@ fn[T] LanguageFeatureRegistry::register(
 /// through `ViewerServices::new(languages~)`.
 pub struct Languages {
   priv hover_provider : LanguageFeatureRegistry[&@language.HoverProvider]
-  priv diagnostics_provider : LanguageFeatureRegistry[
-    &@language.DiagnosticsProvider,
-  ]
   priv document_symbol_provider : LanguageFeatureRegistry[
     &@language.DocumentSymbolProvider,
   ]
@@ -55,7 +52,6 @@ pub struct Languages {
 pub fn Languages::new() -> Languages {
   {
     hover_provider: LanguageFeatureRegistry::new(),
-    diagnostics_provider: LanguageFeatureRegistry::new(),
     document_symbol_provider: LanguageFeatureRegistry::new(),
     inlay_hints_provider: LanguageFeatureRegistry::new(),
   }
@@ -93,16 +89,6 @@ pub fn Languages::register_hover_provider(
   provider : &@language.HoverProvider,
 ) -> @base_common.Disposable {
   self.hover_provider.register(selector, provider)
-}
-
-///|
-/// Registers an ordered diagnostics provider.
-pub fn Languages::register_diagnostics_provider(
-  self : Languages,
-  selector : @language.LanguageSelector,
-  provider : &@language.DiagnosticsProvider,
-) -> @base_common.Disposable {
-  self.diagnostics_provider.register(selector, provider)
 }
 
 ///|
@@ -152,32 +138,6 @@ pub async fn Languages::hover_at(
     }
   }
   None
-}
-
-///|
-/// Refreshes diagnostics from every provider, passing each provider's owner id
-/// to the caller so marker ownership can be replaced independently.
-pub async fn Languages::diagnostics_for_model(
-  self : Languages,
-  model : @model.TextModel,
-  apply : (String, Array[@language.Diagnostic]) -> Unit,
-  log_service : @log.LogService,
-) -> Unit noraise {
-  let token = @language.CancellationToken::none()
-  for index in 0..<self.diagnostics_provider.entries.length() {
-    let entry = self.diagnostics_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(model) {
-      continue
-    }
-    let owner = "diagnostics:" + index.to_string()
-    let diagnostics = entry.provider.provide_diagnostics(model, token) catch {
-      _ => {
-        log_provider_failure(log_service, "language.diagnostics", model, index)
-        []
-      }
-    }
-    apply(owner, diagnostics)
-  }
 }
 
 ///|

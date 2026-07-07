@@ -81,22 +81,6 @@ pub impl @language.ReferencesProvider for NativeWorkspaceLanguageProvider with f
 }
 
 ///|
-/// Delegates diagnostics requests after URI translation.
-pub impl @language.DiagnosticsProvider for NativeWorkspaceLanguageProvider with fn provide_diagnostics(
-  self,
-  model,
-  token,
-) {
-  match self.lsp_model(model) {
-    Some(lsp_model) =>
-      self.provider
-      .as_diagnostics_provider()
-      .provide_diagnostics(lsp_model, token)
-    None => []
-  }
-}
-
-///|
 /// Delegates document-symbol requests after URI translation.
 pub impl @language.DocumentSymbolProvider for NativeWorkspaceLanguageProvider with fn provide_document_symbols(
   self,

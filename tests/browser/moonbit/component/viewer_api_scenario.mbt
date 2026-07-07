@@ -1,15 +1,11 @@
 ///|
 priv struct ComponentHoverProvider {
   hover_text : String
-  diagnostic_text : String
 }
 
 ///|
 fn ComponentHoverProvider::new() -> ComponentHoverProvider {
-  {
-    hover_text: "wrapped component hover",
-    diagnostic_text: "wrapped component diagnostic",
-  }
+  { hover_text: "wrapped component hover" }
 }
 
 ///|
@@ -38,25 +34,27 @@ impl @language.HoverProvider for ComponentHoverProvider with fn provide_hover(
 }
 
 ///|
-impl @language.DiagnosticsProvider for ComponentHoverProvider with fn provide_diagnostics(
-  self,
-  model,
-  _token,
-) {
+/// Diagnostics are push-only: the embedder feeds the marker service directly
+/// (Monaco's `setModelMarkers`), and the marker-change event drives the
+/// squiggle render.
+fn set_component_diagnostics(
+  services : @viewer.ViewerServices,
+  model : @model.TextModel,
+) -> Unit {
   let needle = "keeps"
   match model.snapshot.text.find(needle) {
     Some(start) =>
-      [
+      services.markers.set_diagnostics("lsp", model.uri, [
         {
           range: model.snapshot.range_of(
             OffsetRange(start, start + needle.length()),
           ),
           severity: Warning,
-          message: self.diagnostic_text,
+          message: "wrapped component diagnostic",
           tags: None,
         },
-      ]
-    None => []
+      ])
+    None => ()
   }
 }
 
@@ -107,11 +105,6 @@ fn run_viewer_api_test() -> Unit {
         provider,
       )
       |> ignore
-      services.languages.register_diagnostics_provider(
-        LanguageId("moonbit"),
-        provider,
-      )
-      |> ignore
       services.languages.register_inlay_hints_provider(
         LanguageId("moonbit"),
         provider,
@@ -134,6 +127,7 @@ fn run_viewer_api_test() -> Unit {
       })
       |> ignore
       viewer.set_model(Some(model))
+      set_component_diagnostics(services, model)
       let zone = @rdom.document().create_element("div")
       zone.set_inner_html("component view zone")
       viewer.change_view_zones(accessor => {

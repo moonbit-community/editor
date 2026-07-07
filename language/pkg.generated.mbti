@@ -92,25 +92,11 @@ pub(all) struct Location {
   range : @common.Range
 } derive(@debug.Debug)
 
-pub(all) struct ProviderResult {
-  hovers : Array[Hover]
-  diagnostics : Array[Diagnostic]
-  definitions : Array[Location]
-  symbols : Array[DocumentSymbol]
-} derive(@debug.Debug)
-pub fn ProviderResult::definition_at(Self, @common.Position) -> Location?
-pub fn ProviderResult::empty() -> Self
-pub fn ProviderResult::hover_at(Self, @common.Position) -> Hover?
-
 // Type aliases
 
 // Traits
 pub(open) trait DefinitionProvider {
   async fn provide_definition(Self, @model.TextModel, @common.Position, CancellationToken) -> Location?
-}
-
-pub(open) trait DiagnosticsProvider {
-  async fn provide_diagnostics(Self, @model.TextModel, CancellationToken) -> Array[Diagnostic]
 }
 
 pub(open) trait DocumentSymbolProvider {

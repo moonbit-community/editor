@@ -148,6 +148,33 @@ async test "routes watch events to document changed packets" {
 }
 
 ///|
+async test "notifies the document sync listener on open and watch change" {
+  let host = FakeServerHost::new()
+  host.files.set("main.mbt", "pub fn main {}\n")
+  let server = test_remote_server("/workspace/", host)
+  let uri = expect_remote_uri("main.mbt")
+  let synced : Array[String] = []
+  server.set_document_sync_listener(
+    Some(document => synced.push(document.text)),
+  )
+  ignore(server.open_document({ id: "open-1", uri }))
+  assert_eq(synced.length(), 1)
+  assert_eq(synced[0], "pub fn main {}\n")
+  ignore(
+    server.watch_document(
+      { id: "watch-1", uri },
+      _packet => (),
+      noop_watch_spawner,
+    ),
+  )
+  assert_eq(synced.length(), 2)
+  host.files.set("main.mbt", "pub fn main { 1 }\n")
+  host.emit("main.mbt", Changed)
+  assert_eq(synced.length(), 3)
+  assert_eq(synced[2], "pub fn main { 1 }\n")
+}
+
+///|
 async test "answers hover and definition from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("main.mbt", "pub fn main {}\n")
@@ -192,21 +219,12 @@ async test "answers hover and definition from cached provider state" {
 }
 
 ///|
-async test "answers diagnostics symbols and inlay hints from cached provider state" {
+async test "answers symbols and inlay hints from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("main.mbt", "pub fn main { // TODO }\n")
   let server = test_remote_server("/workspace", host)
   let uri = expect_remote_uri("main.mbt")
   ignore(server.open_document({ id: "open-1", uri }))
-
-  match server.diagnostics({ id: "diag-1", uri, document_revision: "" }) {
-    Diagnostics(payload) => {
-      assert_eq(payload.id, "diag-1")
-      assert_eq(payload.diagnostics.length(), 1)
-    }
-    _ => fail("expected diagnostics result")
-  }
-
   match
     server.document_symbols({ id: "symbols-1", uri, document_revision: "" }) {
     DocumentSymbolsResult(payload) => {
@@ -252,12 +270,6 @@ async test "dispatches language requests through configured providers" {
     _ => fail("expected definition result")
   }
 
-  match server.diagnostics({ id: "diag-1", uri, document_revision: "" }) {
-    Diagnostics(payload) =>
-      assert_eq(payload.diagnostics[0].message, "Configured diagnostic")
-    _ => fail("expected diagnostics result")
-  }
-
   match
     server.document_symbols({ id: "symbols-1", uri, document_revision: "" }) {
     DocumentSymbolsResult(payload) =>
@@ -295,7 +307,7 @@ fn test_remote_server(
 ) -> @server.RemoteServer {
   let provider = FakeLanguageProvider::{  }
   @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider, provider,
+    root, host, provider, provider, provider, provider, provider,
   )
 }
 
@@ -446,22 +458,6 @@ impl @language.ReferencesProvider for FakeLanguageProvider with fn provide_refer
         model.get_position_at(0),
         model.get_position_at(4),
       ),
-    },
-  ]
-}
-
-///|
-impl @language.DiagnosticsProvider for FakeLanguageProvider with fn provide_diagnostics(
-  _self,
-  _model,
-  _token,
-) {
-  [
-    {
-      range: Range(1, 1, 1, 5),
-      severity: Warning,
-      message: "Configured diagnostic",
-      tags: None,
     },
   ]
 }

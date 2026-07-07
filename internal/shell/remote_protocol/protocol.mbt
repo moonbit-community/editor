@@ -72,7 +72,6 @@ pub(all) enum ClientPacket {
   OpenDocument(DocumentRequest)
   WatchDocument(DocumentRequest)
   CloseDocument(DocumentRequest)
-  Diagnostics(DocumentRevisionRequest)
   Hover(DocumentPositionRequest)
   Definition(DocumentPositionRequest)
   References(DocumentPositionRequest)
@@ -96,9 +95,10 @@ pub(all) struct DirectoryResolvedPayload {
 } derive(Debug)
 
 ///|
-/// Diagnostics response for a specific URI and document revision.
+/// Server-initiated diagnostics push for a URI at a document revision — the
+/// wire form of the LSP `textDocument/publishDiagnostics` notification, so it
+/// carries no request id.
 pub(all) struct DiagnosticsPayload {
-  id : String
   uri : @base_common.Uri
   revision : String
   diagnostics : Array[@language.Diagnostic]
@@ -276,7 +276,6 @@ pub impl ToJson for ClientPacket with fn to_json(self) {
     OpenDocument(request) => document_request_json("OpenDocument", request)
     WatchDocument(request) => document_request_json("WatchDocument", request)
     CloseDocument(request) => document_request_json("CloseDocument", request)
-    Diagnostics(request) => revision_request_json("Diagnostics", request)
     Hover(request) => position_request_json("Hover", request)
     Definition(request) => position_request_json("Definition", request)
     References(request) => position_request_json("References", request)
@@ -329,10 +328,6 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
             Some("CloseDocument") =>
               decode_document_client(packet, request_id(packet), request => {
                 CloseDocument(request)
-              })
-            Some("Diagnostics") =>
-              decode_version_client(packet, request_id(packet), request => {
-                Diagnostics(request)
               })
             Some("Hover") =>
               decode_position_client(packet, request_id(packet), request => {
@@ -546,8 +541,7 @@ fn decode_directory_resolved_payload(
 
 ///|
 fn decode_diagnostics_payload(packet : Json) -> ServerPacketDecodeResult {
-  let id = request_id(packet)
-  match parse_uri_field(packet, "uri", id) {
+  match parse_uri_field(packet, "uri", "") {
     ParsedProtocolUri(uri) => {
       let diagnostics = []
       match json_field(packet, "diagnostics") {
@@ -562,7 +556,6 @@ fn decode_diagnostics_payload(packet : Json) -> ServerPacketDecodeResult {
       }
       DecodedServerPacket(
         Diagnostics({
-          id,
           uri,
           revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           diagnostics,
@@ -951,7 +944,7 @@ fn parse_workspace_stat(value : Json) -> @workspace.WorkspaceStat? {
 
 ///|
 fn diagnostics_payload_json(payload : DiagnosticsPayload) -> Json {
-  let fields = packet_fields("Diagnostics", payload.id)
+  let fields = packet_fields("Diagnostics", "")
   fields["uri"] = payload.uri.to_string().to_json()
   fields["documentRevision"] = payload.revision.to_json()
   fields["diagnostics"] = Json::array(payload.diagnostics.map(diagnostic_json))

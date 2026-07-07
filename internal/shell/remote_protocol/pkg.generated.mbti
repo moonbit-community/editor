@@ -25,7 +25,6 @@ pub(all) enum ClientPacket {
   OpenDocument(DocumentRequest)
   WatchDocument(DocumentRequest)
   CloseDocument(DocumentRequest)
-  Diagnostics(DocumentRevisionRequest)
   Hover(DocumentPositionRequest)
   Definition(DocumentPositionRequest)
   References(DocumentPositionRequest)
@@ -47,7 +46,6 @@ pub(all) struct DefinitionResultPayload {
 } derive(@debug.Debug)
 
 pub(all) struct DiagnosticsPayload {
-  id : String
   uri : @common.Uri
   revision : String
   diagnostics : Array[@language.Diagnostic]

@@ -6,14 +6,24 @@ pub struct NativeServerHost {
 
 ///|
 /// Native stdio transport for a spawned LSP process.
+///
+/// With a task spawner attached (`attach_spawner`), the transport runs in
+/// pumped mode: one background task owns stdin writes and one owns stdout
+/// reads, so server-initiated notifications (`publishDiagnostics`) are
+/// consumed the moment they arrive instead of only while a request is in
+/// flight. Without a spawner it degrades to inline request/response reads.
 pub struct NativeLspTransport {
   priv unavailable_message : String
   priv command : String
   priv args : Array[String]
   priv cwd : String
+  priv spawn_task : Ref[((async () -> Unit) -> Unit)?]
   priv pid : Ref[Int]
   priv writer : Ref[@process.WriteToProcess?]
   priv reader : Ref[@process.ReadFromProcess?]
+  priv outgoing : @aqueue.Queue[String]
+  priv pending_responses : Map[String, @aqueue.Queue[String]]
+  priv pumps_started : Ref[Bool]
   priv listener : Ref[((String) -> Unit)?]
 }
 
@@ -46,9 +56,13 @@ pub fn NativeLspTransport::NativeLspTransport() -> NativeLspTransport {
     command: "",
     args: [],
     cwd: "",
+    spawn_task: Ref(None),
     pid: Ref(0),
     writer: Ref(None),
     reader: Ref(None),
+    outgoing: Queue(kind=Unbounded),
+    pending_responses: Map::default(),
+    pumps_started: Ref(false),
     listener: Ref(None),
   }
 }
@@ -65,11 +79,25 @@ pub fn NativeLspTransport::configured(
     command,
     args,
     cwd,
+    spawn_task: Ref(None),
     pid: Ref(0),
     writer: Ref(None),
     reader: Ref(None),
+    outgoing: Queue(kind=Unbounded),
+    pending_responses: Map::default(),
+    pumps_started: Ref(false),
     listener: Ref(None),
   }
+}
+
+///|
+/// Attaches a background-task spawner, switching the transport to pumped mode
+/// the next time the LSP process starts.
+pub fn NativeLspTransport::attach_spawner(
+  self : NativeLspTransport,
+  spawn_task : (async () -> Unit) -> Unit,
+) -> Unit {
+  self.spawn_task.val = Some(spawn_task)
 }
 
 ///|
@@ -338,6 +366,48 @@ fn skip_workspace_entry(path~ : String, name~ : String) -> Bool {
 }
 
 ///|
+/// Live protocol websocket outboxes, keyed by session id. Server-initiated
+/// pushes (diagnostics) broadcast one encoded frame to every session.
+priv struct ProtocolSessions {
+  next_session_id : Ref[Int]
+  outboxes : Map[Int, @aqueue.Queue[String]]
+}
+
+///|
+fn ProtocolSessions::new() -> ProtocolSessions {
+  { next_session_id: Ref(0), outboxes: Map::default() }
+}
+
+///|
+fn ProtocolSessions::attach(
+  self : ProtocolSessions,
+  outbox : @aqueue.Queue[String],
+) -> Int {
+  self.next_session_id.val = self.next_session_id.val + 1
+  self.outboxes.set(self.next_session_id.val, outbox)
+  self.next_session_id.val
+}
+
+///|
+fn ProtocolSessions::detach(self : ProtocolSessions, session : Int) -> Unit {
+  self.outboxes.remove(session)
+}
+
+///|
+fn ProtocolSessions::broadcast(self : ProtocolSessions, raw : String) -> Unit {
+  for _session, outbox in self.outboxes {
+    enqueue(outbox, raw)
+  }
+}
+
+///|
+/// Enqueues without suspending: the transport and session queues are all
+/// unbounded, so `try_put` only fails when a queue was closed at teardown.
+fn enqueue(queue : @aqueue.Queue[String], message : String) -> Unit {
+  (queue.try_put(message) catch { _ => false }) |> ignore
+}
+
+///|
 /// Starts the native reference server: static assets over HTTP and the remote
 /// workspace protocol over WebSocket.
 pub async fn run_native_editor_server(
@@ -349,26 +419,48 @@ pub async fn run_native_editor_server(
 ) -> Unit {
   let host = NativeServerHost::NativeServerHost()
   let root = realpath_or_normalized(root)
-  let remote_server = native_lsp_remote_server(root, host, lsp_command)
   let addr = @socket.Addr::parse("127.0.0.1:\{port}")
   let http_server = @http.Server(addr, reuse_addr=true)
-  log("Readonly editor native server listening on http://127.0.0.1:\{port}/")
-  http_server.run_forever() <| ((request, _body, conn) => {
-    handle_native_editor_request(remote_server, asset_dir, request, conn)
-  })
+  // The LSP transport pumps and document-sync tasks outlive any single
+  // protocol connection, so they run on the server-lifetime task group.
+  @async.with_task_group() <| group => {
+    let spawn_task = task => {
+      group.spawn_bg(task, no_wait=true, allow_failure=true)
+    }
+    let sessions = ProtocolSessions::new()
+    let remote_server = native_lsp_remote_server(
+      root, host, lsp_command, spawn_task, sessions,
+    )
+    log("Readonly editor native server listening on http://127.0.0.1:\{port}/")
+    http_server.run_forever() <| ((request, _body, conn) => {
+      handle_native_editor_request(
+        remote_server, sessions, asset_dir, request, conn,
+      )
+    })
+  }
 }
 
 ///|
+/// Builds the LSP-backed remote server and wires the two push paths that keep
+/// diagnostics live without any client pulling (the `publishDiagnostics` →
+/// marker-service flow of VS Code):
+/// - every cached document snapshot is synced to the LSP in the background,
+///   so the checker runs as soon as content is known;
+/// - published diagnostics broadcast to every connected session as a
+///   `Diagnostics` push packet, translated back to workspace URIs.
 fn native_lsp_remote_server(
   root : String,
   host : &@server.ServerHost,
   lsp_command : String,
+  spawn_task : (async () -> Unit) -> Unit,
+  sessions : ProtocolSessions,
 ) -> @server.RemoteServer {
   let transport = NativeLspTransport::configured(
     lsp_command,
     ["--stdio"],
     cwd=root,
   )
+  transport.attach_spawner(spawn_task)
   let client = @server.LspClient::with_root_uri(
     transport,
     file_uri_for_host_path(root),
@@ -377,20 +469,111 @@ fn native_lsp_remote_server(
     root,
     client.language_provider(),
   )
-  @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider, provider,
+  let remote_server = @server.RemoteServer::with_language_providers(
+    root, host, provider, provider, provider, provider, provider,
   )
+  // Last published diagnostics per workspace URI. The LSP only publishes on
+  // `didOpen`/`didChange`, so a session opening a document the LSP already
+  // has at that revision gets the cached set replayed instead of silence.
+  let published : Map[String, (String, Array[@language.Diagnostic])] = Map::default()
+  client.set_diagnostics_listener(
+    Some((file_uri, revision, diagnostics) => {
+      match remote_uri_for_file_uri(root, file_uri) {
+        Some(uri) => {
+          published.set(uri.to_string(), (revision, diagnostics))
+          sessions.broadcast(
+            diagnostics_push_packet(uri, revision, diagnostics),
+          )
+        }
+        None => ()
+      }
+    }),
+  )
+  remote_server.set_document_sync_listener(
+    Some(document => {
+      spawn_task(() => {
+        match lsp_document_snapshot(root, document) {
+          Some(lsp_document) => client.sync_document(lsp_document)
+          None => ()
+        }
+        match published.get(document.uri.to_string()) {
+          Some((revision, diagnostics)) =>
+            if revision == document.revision {
+              sessions.broadcast(
+                diagnostics_push_packet(document.uri, revision, diagnostics),
+              )
+            }
+          None => ()
+        }
+      })
+    }),
+  )
+  remote_server
+}
+
+///|
+fn diagnostics_push_packet(
+  uri : @base_common.Uri,
+  revision : String,
+  diagnostics : Array[@language.Diagnostic],
+) -> String {
+  @remote_protocol.ServerPacket::Diagnostics({ uri, revision, diagnostics })
+  .to_json()
+  .stringify()
+}
+
+///|
+/// Rebuilds a workspace document snapshot against its native `file://` URI so
+/// the LSP sees host paths, mirroring `NativeWorkspaceLanguageProvider`'s
+/// model translation.
+fn lsp_document_snapshot(
+  root : String,
+  document : @workspace.DocumentSnapshot,
+) -> @workspace.DocumentSnapshot? {
+  match @server.resolve_remote_document_uri(document.uri) {
+    ParsedRemotePath(path) =>
+      match
+        @base_common.Uri::parse(
+          file_uri_for_host_path(root + "/" + path.to_string()),
+        ) {
+        ParsedUri(uri) =>
+          Some(
+            DocumentSnapshot(
+              uri,
+              document.display_name,
+              document.language_id,
+              document.revision,
+              document.text,
+            ),
+          )
+        UriError(_) => None
+      }
+    RemotePathError(_) => None
+  }
+}
+
+///|
+/// Maps a native `file://` URI string under the workspace root back to its
+/// `readonly-remote://workspace/...` form.
+fn remote_uri_for_file_uri(root : String, raw : String) -> @base_common.Uri? {
+  let prefix = file_uri_for_host_path(root) + "/"
+  if raw.has_prefix(prefix) {
+    @server.remote_document_uri(raw[prefix.length():].to_owned())
+  } else {
+    None
+  }
 }
 
 ///|
 async fn handle_native_editor_request(
   remote_server : @server.RemoteServer,
+  sessions : ProtocolSessions,
   asset_dir : String,
   request : @http.Request,
   conn : @http.ServerConnection,
 ) -> Unit {
   if request.path == "/protocol" {
-    handle_protocol_connection(remote_server, request, conn)
+    handle_protocol_connection(remote_server, sessions, request, conn)
   } else {
     serve_static_route(asset_dir, request, conn)
   }
@@ -399,6 +582,7 @@ async fn handle_native_editor_request(
 ///|
 async fn handle_protocol_connection(
   remote_server : @server.RemoteServer,
+  sessions : ProtocolSessions,
   request : @http.Request,
   conn : @http.ServerConnection,
 ) -> Unit {
@@ -408,6 +592,8 @@ async fn handle_protocol_connection(
   // websocket connection rejects interleaved sends; one writer task owns
   // the socket and everything else enqueues outbound frames.
   let outbox : @aqueue.Queue[String] = Queue(kind=Unbounded)
+  let session = sessions.attach(outbox)
+  defer sessions.detach(session)
   @async.with_task_group() <| group => {
     group.spawn_bg(no_wait=true, allow_failure=true, () => {
       for ;; {
@@ -620,19 +806,35 @@ impl @server.LspTransport for NativeLspTransport with fn request(self, message) 
   if !self.ensure_process() {
     return lsp_error_response(self.unavailable_message)
   }
-  if !self.write_message(message) {
-    return lsp_error_response("Native LSP process write failed.")
+  if !self.pumps_started.val {
+    if !self.write_message(message) {
+      return lsp_error_response("Native LSP process write failed.")
+    }
+    return match self.read_response_message() {
+      Some(response) => response
+      None => lsp_error_response("Native LSP process response failed.")
+    }
   }
-  match self.read_response_message() {
-    Some(response) => response
-    None => lsp_error_response("Native LSP process response failed.")
+  let id = json_rpc_message_id(message)
+  if id == "" {
+    return lsp_error_response("Native LSP request message has no id.")
   }
+  let waiter : @aqueue.Queue[String] = Queue(kind=Unbounded)
+  self.pending_responses.set(id, waiter)
+  self.outgoing.put(message)
+  let response = waiter.get()
+  self.pending_responses.remove(id)
+  response
 }
 
 ///|
 impl @server.LspTransport for NativeLspTransport with fn notify(self, message) {
   if self.ensure_process() {
-    ignore(self.write_message(message))
+    if self.pumps_started.val {
+      self.outgoing.put(message)
+    } else {
+      ignore(self.write_message(message))
+    }
   }
 }
 
@@ -699,12 +901,168 @@ async fn NativeLspTransport::ensure_process(self : NativeLspTransport) -> Bool {
       self.pid.val = pid
       self.writer.val = Some(stdin_writer)
       self.reader.val = Some(stdout_reader)
+      self.start_pumps(stdin_writer, stdout_reader)
       true
     },
   ) catch {
     _ => None
   }
   started.unwrap_or(false)
+}
+
+///|
+/// Starts the single-writer and standing-reader pumps for a freshly spawned
+/// process when a task spawner is attached. The pumps capture this spawn's
+/// pipe ends, so a pump outliving its process cannot touch a respawn's state.
+fn NativeLspTransport::start_pumps(
+  self : NativeLspTransport,
+  writer : @process.WriteToProcess,
+  reader : @process.ReadFromProcess,
+) -> Unit {
+  match self.spawn_task.val {
+    Some(spawn_task) => {
+      self.pumps_started.val = true
+      spawn_task(() => self.pump_outgoing(writer))
+      spawn_task(() => self.pump_incoming(reader))
+    }
+    None => self.pumps_started.val = false
+  }
+}
+
+///|
+/// Drains the outbound frame queue into the process stdin. One task owns the
+/// pipe, so concurrently issued requests and notifications cannot interleave
+/// partial frames.
+async fn NativeLspTransport::pump_outgoing(
+  self : NativeLspTransport,
+  writer : @process.WriteToProcess,
+) -> Unit {
+  for ;; {
+    let message = self.outgoing.get()
+    let written = (Some(
+      {
+        writer.write(lsp_stdio_frame(message))
+        true
+      },
+    ) catch {
+      _ => None
+    }).unwrap_or(false)
+    if !written {
+      self.fail_process(writer, "Native LSP process write failed.")
+      break
+    }
+  }
+}
+
+///|
+/// Reads process stdout continuously: responses resume their waiting request,
+/// and everything else — notifications such as
+/// `textDocument/publishDiagnostics` and server-initiated requests — reaches
+/// the subscribed listener the moment it arrives.
+async fn NativeLspTransport::pump_incoming(
+  self : NativeLspTransport,
+  reader : @process.ReadFromProcess,
+) -> Unit {
+  for ;; {
+    match read_lsp_stdio_frame(reader) {
+      Some(message) => self.dispatch_incoming(message)
+      None => break
+    }
+  }
+  self.fail_process_reader(reader, "Native LSP process response failed.")
+}
+
+///|
+fn NativeLspTransport::dispatch_incoming(
+  self : NativeLspTransport,
+  message : String,
+) -> Unit {
+  if json_rpc_has_method(message) {
+    self.emit_message(message)
+  } else {
+    match self.pending_responses.get(json_rpc_message_id(message)) {
+      Some(waiter) => enqueue(waiter, message)
+      None => ()
+    }
+  }
+}
+
+///|
+/// Tears down a dead process (guarded by the writer identity so a stale pump
+/// cannot clobber a respawn) and resolves every in-flight request with an
+/// error response; the next request respawns the process.
+fn NativeLspTransport::fail_process(
+  self : NativeLspTransport,
+  writer : @process.WriteToProcess,
+  message : String,
+) -> Unit {
+  match self.writer.val {
+    Some(current) => if !physical_equal(current, writer) { return }
+    None => return
+  }
+  self.reset_process(message)
+}
+
+///|
+fn NativeLspTransport::fail_process_reader(
+  self : NativeLspTransport,
+  reader : @process.ReadFromProcess,
+  message : String,
+) -> Unit {
+  match self.reader.val {
+    Some(current) => if !physical_equal(current, reader) { return }
+    None => return
+  }
+  self.reset_process(message)
+}
+
+///|
+fn NativeLspTransport::reset_process(
+  self : NativeLspTransport,
+  message : String,
+) -> Unit {
+  self.writer.val = None
+  self.reader.val = None
+  self.pid.val = 0
+  self.pumps_started.val = false
+  let ids : Array[String] = []
+  for id, _waiter in self.pending_responses {
+    ids.push(id)
+  }
+  for id in ids {
+    match self.pending_responses.get(id) {
+      Some(waiter) => {
+        self.pending_responses.remove(id)
+        enqueue(waiter, lsp_error_response(message))
+      }
+      None => ()
+    }
+  }
+}
+
+///|
+/// The JSON-RPC `id` as a canonical string ("" when absent or null), used to
+/// pair pumped responses with their waiting requests.
+fn json_rpc_message_id(message : String) -> String {
+  match (Some(@json.parse(message)) catch { _ => None }) {
+    Some(Object(fields)) =>
+      match fields.get("id") {
+        Some(String(id)) => id
+        Some(Number(id, ..)) => id.to_int().to_string()
+        _ => ""
+      }
+    _ => ""
+  }
+}
+
+///|
+/// Whether the JSON-RPC message carries a `method`, marking it as a server
+/// notification or server-initiated request rather than a response.
+fn json_rpc_has_method(message : String) -> Bool {
+  match (Some(@json.parse(message)) catch { _ => None }) {
+    Some(Object(fields)) => fields.get("method") is Some(String(_))
+    _ => false
+  }
 }
 
 ///|

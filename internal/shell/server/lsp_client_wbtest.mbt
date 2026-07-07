@@ -120,28 +120,43 @@ test "normalizes definition result shapes" {
 }
 
 ///|
-async test "lsp client syncs documents and discards stale diagnostics" {
+async test "lsp client pushes published diagnostics and drops stale versions" {
   let transport = TestLspTransport::new()
   let client = LspClient::LspClient(transport)
+  let published : Array[(String, String, Array[@language.Diagnostic])] = []
+  client.set_diagnostics_listener(
+    Some((uri, revision, diagnostics) => {
+      published.push((uri, revision, diagnostics))
+    }),
+  )
   let first = test_document(1, "pub fn main {\n  // TODO\n}\n")
 
   assert_true(client.state() == Idle)
-  let first_result = client.sync_document(first)
+  client.sync_document(first)
   assert_true(client.is_initialized())
   assert_true(client.state() == Ready)
   assert_eq(client.pending_request_count(), 0)
-  assert_eq(first_result.diagnostics.length(), 1)
-  assert_true(first_result.diagnostics[0].severity == Warning)
-  assert_true(first_result.diagnostics[0].range == Range(2, 6, 2, 10))
+  // `didOpen` makes the fake server publish for version 1; the listener
+  // receives parsed diagnostics bound to the synced revision.
+  assert_eq(published.length(), 1)
+  let (first_uri, first_revision, first_diagnostics) = published[0]
+  assert_eq(first_uri, first.uri.to_string())
+  assert_eq(first_revision, first.revision)
+  assert_eq(first_diagnostics.length(), 1)
+  assert_true(first_diagnostics[0].severity == Warning)
+  assert_true(first_diagnostics[0].range == Range(2, 6, 2, 10))
 
+  // A publish for an outdated document version never reaches the listener.
   transport.publish_diagnostics(first, 0, 3, 0, 6, version=0)
-  let stale_result = client.sync_document(first)
-  assert_eq(stale_result.diagnostics.length(), 1)
-  assert_true(stale_result.diagnostics[0].range == Range(2, 6, 2, 10))
+  assert_eq(published.length(), 1)
 
+  // `didChange` republishes (empty) for the bumped version.
   let second = test_document(2, "pub fn main {\n  // DONE\n}\n")
-  let second_result = client.sync_document(second)
-  assert_eq(second_result.diagnostics.length(), 0)
+  client.sync_document(second)
+  assert_eq(published.length(), 2)
+  let (_, second_revision, second_diagnostics) = published[1]
+  assert_eq(second_revision, second.revision)
+  assert_eq(second_diagnostics.length(), 0)
   assert_true(
     transport.notifications.any(message => {
       message.contains("\"method\":\"textDocument/didChange\"")

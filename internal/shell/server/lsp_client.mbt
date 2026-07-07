@@ -75,8 +75,9 @@ pub struct LspClient {
   priv active_snapshot : Ref[@workspace.DocumentSnapshot?]
   priv capabilities : Ref[LspServerCapabilities]
   priv pending_requests : Map[Int, LspPendingRequest]
-  priv diagnostics : Map[String, LspCachedDiagnostics]
-  priv diagnostics_listener : Ref[((String, Int) -> Unit)?]
+  priv diagnostics_listener : Ref[
+    ((String, String, Array[@language.Diagnostic]) -> Unit)?,
+  ]
   priv last_error : Ref[String]
 }
 
@@ -84,12 +85,6 @@ pub struct LspClient {
 /// Adapter that exposes one `LspClient` through the language provider traits.
 pub(all) struct LspLanguageProvider {
   priv client : LspClient
-}
-
-///|
-priv struct LspCachedDiagnostics {
-  version : Int
-  diagnostics : Array[@language.Diagnostic]
 }
 
 ///|
@@ -128,7 +123,6 @@ pub fn LspClient::with_root_uri(
     active_snapshot: Ref(None),
     capabilities: Ref(default_lsp_capabilities()),
     pending_requests: Map::default(),
-    diagnostics: Map::default(),
     diagnostics_listener: Ref(None),
     last_error: Ref(""),
   }
@@ -161,14 +155,6 @@ pub fn LspLanguageProvider::as_definition_provider(
 pub fn LspLanguageProvider::as_references_provider(
   self : LspLanguageProvider,
 ) -> &@language.ReferencesProvider {
-  self
-}
-
-///|
-/// Views the adapter as a diagnostics provider.
-pub fn LspLanguageProvider::as_diagnostics_provider(
-  self : LspLanguageProvider,
-) -> &@language.DiagnosticsProvider {
   self
 }
 
@@ -211,32 +197,30 @@ pub fn LspClient::clear_last_error(self : LspClient) -> Unit {
 }
 
 ///|
-/// Installs a listener notified when diagnostics arrive for a URI/version.
+/// Installs a listener fired when the server publishes diagnostics for the
+/// active document's current version. The listener receives the LSP document
+/// URI, the synced document revision, and the parsed diagnostics — the push
+/// path that replaces Monaco-foreign diagnostics pulling.
 pub fn LspClient::set_diagnostics_listener(
   self : LspClient,
-  listener : ((String, Int) -> Unit)?,
+  listener : ((String, String, Array[@language.Diagnostic]) -> Unit)?,
 ) -> Unit {
   self.diagnostics_listener.val = listener
 }
 
 ///|
-/// Ensures the LSP server is initialized and synchronized to `document`, then
-/// returns cached document-level feature data available without extra requests.
+/// Ensures the LSP server is initialized and synchronized to `document`,
+/// sending `didOpen`/`didChange` as needed. Diagnostics arrive later through
+/// the publish listener.
 pub async fn LspClient::sync_document(
   self : LspClient,
   document : @workspace.DocumentSnapshot,
-) -> @language.ProviderResult {
+) -> Unit {
   self.ensure_subscribed()
   if !self.ensure_initialized(document) {
-    return @language.ProviderResult::empty()
+    return
   }
   self.sync_active_document(document)
-  {
-    hovers: [],
-    diagnostics: self.cached_diagnostics_for_document(document),
-    definitions: [],
-    symbols: [],
-  }
 }
 
 ///|
@@ -247,7 +231,7 @@ pub async fn LspClient::hover_at(
   document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> @language.Hover? {
-  ignore(self.sync_document(document))
+  self.sync_document(document)
   if self.state.val != Ready || !self.capabilities.val.hover_provider {
     return None
   }
@@ -275,7 +259,7 @@ pub async fn LspClient::definition_at(
   document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> @language.Location? {
-  ignore(self.sync_document(document))
+  self.sync_document(document)
   if self.state.val != Ready || !self.capabilities.val.definition_provider {
     return None
   }
@@ -305,7 +289,7 @@ pub async fn LspClient::references_at(
   document : @workspace.DocumentSnapshot,
   offset : Int,
 ) -> Array[@language.Location] {
-  ignore(self.sync_document(document))
+  self.sync_document(document)
   if self.state.val != Ready || !self.capabilities.val.references_provider {
     return []
   }
@@ -334,7 +318,7 @@ pub async fn LspClient::document_symbols(
   self : LspClient,
   document : @workspace.DocumentSnapshot,
 ) -> Array[@language.DocumentSymbol] {
-  ignore(self.sync_document(document))
+  self.sync_document(document)
   if self.state.val != Ready || !self.capabilities.val.document_symbol_provider {
     return []
   }
@@ -601,36 +585,6 @@ async fn LspClient::sync_active_document(
 }
 
 ///|
-fn LspClient::cached_diagnostics_for_document(
-  self : LspClient,
-  document : @workspace.DocumentSnapshot,
-) -> Array[@language.Diagnostic] {
-  if self.active_uri.val != document.uri.to_string() ||
-    self.active_revision.val != document.revision {
-    return []
-  }
-  match self.diagnostics.get(document.uri.to_string()) {
-    Some(cached) =>
-      if cached.version == -1 || cached.version == self.active_version.val {
-        cached.diagnostics
-      } else {
-        []
-      }
-    None => []
-  }
-}
-
-///|
-impl @language.DiagnosticsProvider for LspLanguageProvider with fn provide_diagnostics(
-  self,
-  model,
-  _token,
-) {
-  let document = document_from_text_model(model)
-  self.client.sync_document(document).diagnostics
-}
-
-///|
 impl @language.HoverProvider for LspLanguageProvider with fn provide_hover(
   self,
   model,
@@ -721,6 +675,9 @@ fn LspClient::handle_message(self : LspClient, raw : String) -> Unit {
 }
 
 ///|
+/// Routes a `textDocument/publishDiagnostics` notification for the active
+/// document version to the diagnostics listener; stale versions and other
+/// URIs are dropped.
 fn LspClient::handle_publish_diagnostics(
   self : LspClient,
   message : Json,
@@ -731,12 +688,13 @@ fn LspClient::handle_publish_diagnostics(
         Some(parsed) =>
           if parsed.uri == self.active_uri.val {
             if parsed.version == -1 || parsed.version == self.active_version.val {
-              self.diagnostics.set(parsed.uri, {
-                version: parsed.version,
-                diagnostics: parsed.diagnostics,
-              })
               match self.diagnostics_listener.val {
-                Some(listener) => listener(parsed.uri, parsed.version)
+                Some(listener) =>
+                  listener(
+                    parsed.uri,
+                    self.active_revision.val,
+                    parsed.diagnostics,
+                  )
                 None => ()
               }
             }

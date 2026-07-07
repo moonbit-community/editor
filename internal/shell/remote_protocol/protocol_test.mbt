@@ -21,21 +21,6 @@ test "encodes and decodes document client packets" {
 ///|
 test "encodes and decodes semantic client packets" {
   let uri = expect_uri("readonly-remote://workspace/src/main.mbt")
-  let diagnostics = @remote_protocol.ClientPacket::Diagnostics({
-    id: "diag-1",
-    uri,
-    document_revision: "rev-4",
-  })
-  match
-    @remote_protocol.decode_client_packet(diagnostics.to_json().stringify()) {
-    DecodedClientPacket(Diagnostics(request)) => {
-      assert_eq(request.id, "diag-1")
-      assert_eq(request.document_revision, "rev-4")
-    }
-    DecodedClientPacket(_) => fail("unexpected diagnostics packet")
-    ClientPacketDecodeError(error) => fail(error.message)
-  }
-
   let hover = @remote_protocol.Hover({
     id: "hover-1",
     uri,
@@ -286,8 +271,8 @@ test "encodes and decodes server document and language packets" {
     ServerPacketDecodeError(error) => fail(error.message)
   }
 
+  // Diagnostics packets are server pushes: no request id on the wire.
   let diagnostics = @remote_protocol.ServerPacket::Diagnostics({
-    id: "diag-1",
     uri,
     revision: "rev-2",
     diagnostics: [
@@ -299,10 +284,12 @@ test "encodes and decodes server document and language packets" {
       },
     ],
   })
-  match
-    @remote_protocol.decode_server_packet(diagnostics.to_json().stringify()) {
+  let encoded_diagnostics = diagnostics.to_json().stringify()
+  assert_true(!encoded_diagnostics.contains("\"id\""))
+  match @remote_protocol.decode_server_packet(encoded_diagnostics) {
     DecodedServerPacket(Diagnostics(payload)) => {
-      assert_eq(payload.id, "diag-1")
+      assert_eq(payload.uri.to_string(), uri.to_string())
+      assert_eq(payload.revision, "rev-2")
       assert_eq(payload.diagnostics.length(), 1)
       assert_eq(payload.diagnostics[0].message, "check me")
     }
@@ -311,7 +298,6 @@ test "encodes and decodes server document and language packets" {
   }
 
   let hint_diagnostics = @remote_protocol.ServerPacket::Diagnostics({
-    id: "diag-2",
     uri,
     revision: "rev-3",
     diagnostics: [

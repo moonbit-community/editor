@@ -33,7 +33,9 @@ it is not part of this package or the public import surface.
   `viewer/common/languages` registry — the process-wide default, or an isolated
   `Languages` value passed through `ViewerServices::new(languages~)`.
   `ViewerServices` owns per-viewer service objects (markers, hover
-  participants, logging).
+  participants, logging). Diagnostics have no provider seam: hosts push them
+  into `services.markers` (Monaco's `setModelMarkers`) and the marker-change
+  event drives the render.
 
 ## Responsibilities
 

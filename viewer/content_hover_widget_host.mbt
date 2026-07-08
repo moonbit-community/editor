@@ -64,7 +64,7 @@ fn Viewer::rendered_content_hover(
     placement_parts,
     start_column_boundary,
   )
-  let language_id = match self.view_model {
+  let language_id = match self.get_view_model() {
     Some(view_model) => view_model.language_id()
     None => ""
   }
@@ -76,17 +76,18 @@ fn Viewer::rendered_content_hover(
 }
 
 ///|
-/// Lazily constructs the widget and mounts it exactly once — Monaco's
-/// `ContentHoverWidget` constructor calling `_editor.addContentWidget(this)`
-/// (the `View` itself is created once per `Viewer`, so the mount is
-/// once-per-lifetime). `None` before the view exists.
+/// Lazily constructs the widget and mounts it — Monaco's
+/// `ContentHoverWidget` constructor calling `_editor.addContentWidget(this)`.
+/// The widget itself is created once per `Viewer`; each per-model `View`
+/// re-adds it through `create_view`'s widget re-add loop (`cew:1893-1899`).
+/// `None` before a view exists.
 fn Viewer::ensure_content_hover_widget(
   self : Viewer,
 ) -> @hover_browser.ContentHoverWidget? {
   match self.content_hover_widget {
     Some(widget) => Some(widget)
     None => {
-      guard self.view is Some(view) else { return None }
+      guard self.get_view() is Some(view) else { return None }
       let widget = @hover_browser.ContentHoverWidget::new({
         root: view.root,
         layout_content_widget: () => self.layout_content_hover_widget(),
@@ -98,7 +99,7 @@ fn Viewer::ensure_content_hover_widget(
         // Monaco reads `EditorOption.lineHeight` — configuration, not layout.
         line_height: () => self.font_info.line_height.to_double(),
         gutter_width: () => {
-          match self.view_model {
+          match self.get_view_model() {
             Some(view_model) => self.gutter_width(view_model.line_count())
             None => 0.0
           }
@@ -132,7 +133,7 @@ fn Viewer::ensure_content_hover_widget(
 /// Monaco `ICodeEditor.layoutContentWidget(widget)`: re-read the widget's
 /// `get_position()` into the content-widgets part and repaint.
 fn Viewer::layout_content_hover_widget(self : Viewer) -> Unit {
-  guard self.view is Some(view) else { return }
+  guard self.get_view() is Some(view) else { return }
   guard self.content_hover_widget is Some(widget) else { return }
   view.content_widgets.set_widget_position(widget)
   self.schedule_render()
@@ -145,7 +146,7 @@ fn Viewer::scrolled_visible_position_top(
   self : Viewer,
   position : @base_common.Position,
 ) -> Double {
-  guard self.view_model is Some(view_model) else { return 0.0 }
+  guard self.get_view_model() is Some(view_model) else { return 0.0 }
   match self.model_to_view_position(position.line_number, position.column) {
     Some(view_position) =>
       view_model.view_layout.vertical_offset_for_line(view_position.line_number) -

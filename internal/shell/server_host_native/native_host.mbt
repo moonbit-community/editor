@@ -613,6 +613,14 @@ fn static_route(path : String) -> (String, String)? {
       Some(
         ("browser-tests/agent_feedback.mjs", "text/javascript; charset=utf-8"),
       )
+    "/browser-tests/model_swap.html" =>
+      Some(("browser-tests/model_swap.html", "text/html; charset=utf-8"))
+    "/browser-tests/model_swap.mjs" =>
+      Some(("browser-tests/model_swap.mjs", "text/javascript; charset=utf-8"))
+    "/browser-tests/model_swap.mjs.map" =>
+      Some(
+        ("browser-tests/model_swap.mjs.map", "application/json; charset=utf-8"),
+      )
     "/browser-tests/agent_feedback.mjs.map" =>
       Some(
         (

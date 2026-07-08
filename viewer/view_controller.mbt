@@ -18,7 +18,7 @@ priv struct MouseDispatchData {
 /// multi-cursor-modifier, and bracket/string double-click-block branches are
 /// omitted (no column selection or multi-cursor in the readonly viewer).
 fn Viewer::dispatch_mouse(self : Viewer, data : MouseDispatchData) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   let controller = view_model.cursor
   if data.started_on_line_numbers {
     // A drag that started in the gutter operates on whole lines.
@@ -58,7 +58,7 @@ fn Viewer::select_all(
   self : Viewer,
   controller : @cursor.CursorsController,
 ) -> Unit {
-  guard self.text_model is Some(model) else { return }
+  guard self.get_model() is Some(model) else { return }
   let snapshot = model.snapshot
   let last_line = snapshot.line_count() - 1
   let end = @base_common.Position::Position(
@@ -79,7 +79,7 @@ fn Viewer::line_select(
   controller : @cursor.CursorsController,
   view_position : @base_common.Position,
 ) -> Unit {
-  guard self.text_model is Some(model) else { return }
+  guard self.get_model() is Some(model) else { return }
   let snapshot = model.snapshot
   let position = self.view_to_model(view_position)
   let (to_line, to_column) = line_select_end(snapshot, position.line_number - 1)
@@ -100,7 +100,7 @@ fn Viewer::line_select_drag(
   controller : @cursor.CursorsController,
   view_position : @base_common.Position,
 ) -> Unit {
-  guard self.text_model is Some(model) else { return }
+  guard self.get_model() is Some(model) else { return }
   let snapshot = model.snapshot
   let position = self.view_to_model(view_position)
   let state = controller.model_state()
@@ -127,7 +127,7 @@ fn Viewer::word_select(
   controller : @cursor.CursorsController,
   view_position : @base_common.Position,
 ) -> Unit {
-  guard self.text_model is Some(model) else { return }
+  guard self.get_model() is Some(model) else { return }
   let snapshot = model.snapshot
   let position = self.view_to_model(view_position)
   let (start_column, end_column) = word_range(
@@ -156,7 +156,7 @@ fn Viewer::word_select_drag(
   controller : @cursor.CursorsController,
   view_position : @base_common.Position,
 ) -> Unit {
-  guard self.text_model is Some(model) else { return }
+  guard self.get_model() is Some(model) else { return }
   let snapshot = model.snapshot
   let position = self.view_to_model(view_position)
   let state = controller.model_state()
@@ -184,7 +184,7 @@ fn Viewer::view_to_model(
   self : Viewer,
   view_position : @base_common.Position,
 ) -> @base_common.Position {
-  match self.view_model {
+  match self.get_view_model() {
     Some(view_model) =>
       view_model
       .coordinates_converter()

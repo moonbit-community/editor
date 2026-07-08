@@ -20,6 +20,7 @@ import {
 }
 
 // Values
+pub fn empty_editor_class_name(show_unused? : Bool, show_deprecated? : Bool) -> String
 
 // Errors
 
@@ -48,7 +49,6 @@ pub fn MarginViewOverlays::new(@dom.Document) -> Self
 
 pub(all) struct View {
   root : @dom.Element
-  message_text : @dom.Element
   overflow_guard : @dom.Element
   squiggly_style : @dom.Element
   view_lines : @view_lines.ViewLines
@@ -68,7 +68,6 @@ pub fn View::measure_line_selection(Self, Int, Int, Int, keep_empty? : Bool) -> 
 pub fn View::new() -> Self
 pub fn View::offset_for_column(Self, Int, Int) -> Double
 pub fn View::render(Self, ViewContext, ViewRenderInput) -> Unit
-pub fn View::render_empty(Self, String, show_unused? : Bool, show_deprecated? : Bool) -> Unit
 
 pub(all) struct ViewContext {
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]

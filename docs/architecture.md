@@ -106,11 +106,10 @@ package (last bullet below). The tiers are:
   native check keeps enforcing DOM-freeness.
 - `viewer/contrib/<feature>/browser/**` — the js-only DOM half of a contribution
   (controllers/widgets). Mirrors `editor/contrib/*/browser`. **js-only**.
-  Populated for `zone_widget` (the `zoneWidget.ts` port: spacer view zone +
-  overlay widget) and `comments` (the thread widget over it). Not populated
-  for `hover`: the DOM-free hover state machine already covers it (see above);
-  the only DOM-touching hover code is `content_widgets` and the root package's
-  dispatch glue.
+  Populated for `hover` (the `ContentHoverWidget` + the
+  `ContentHoverController` per-editor state, see "Controller access") and
+  `agent_feedback` (the input/bubble widgets + the two contribution
+  controllers).
 - root `viewer` — the one deliberate exception to directory-granularity: it
   holds the top-level `Viewer`/`ViewerOptions`/public read-API implementation
   directly (Monaco's `editor/browser/widget/codeEditor/` role) and doubles as
@@ -118,7 +117,13 @@ package (last bullet below). The tiers are:
   `export.mbt` facade (Decision D2-REVERSED,
   `docs/exec-plans/viewer-directory-mirror.md`); `viewer/pkg.generated.mbti`
   is the reviewable public-API contract, generated from the real code. Stays
-  js-only because it owns DOM.
+  js-only because it owns DOM. Like Monaco's `_modelData`
+  (`codeEditorWidget.ts:2123`), the `Viewer` bundles `model + view model +
+  view + swap listeners` behind one nullable `ModelData`: `set_model` is
+  detach-then-attach, each model gets a fresh per-model `View` (and scroll
+  state and cursor, which live on the per-model `ViewModel`), and with no
+  model attached only the Viewer-owned placeholder element sits in the
+  container.
 
 `scripts/check-architecture.mbtx` enforces the tier invariants (the
 MoonBit-toolchain-uncatchable half): every `viewer/browser/**` and

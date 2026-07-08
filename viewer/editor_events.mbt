@@ -5,7 +5,7 @@ fn Viewer::editor_context(self : Viewer) -> @hover.EditorContext {
     None => (None, None)
   }
   {
-    view_model: self.view_model,
+    view_model: self.get_view_model(),
     view_to_model_position: view_position => self.view_to_model(view_position),
     // The wrapper's `_participants` for the `suggestHoverAnchor` pass;
     // participants are stateless captures of the services, so a per-dispatch
@@ -457,7 +457,7 @@ fn Viewer::compute_hover_sync(
   token : Int,
 ) -> Array[@hover.HoverPart] {
   guard self.content_hover_controller() is Some(hc) else { return [] }
-  match (self.text_model, hc.hover.anchor) {
+  match (self.get_model(), hc.hover.anchor) {
     (Some(model), Some(anchor)) =>
       if token != hc.hover.operation.token {
         []
@@ -481,7 +481,7 @@ fn Viewer::compute_hover_sync(
 /// so stale responses are dropped at their guards.
 fn Viewer::kick_hover_async(self : Viewer, token : Int) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
-  match (self.text_model, hc.hover.anchor) {
+  match (self.get_model(), hc.hover.anchor) {
     (Some(model), Some(anchor)) => {
       let computer = self.make_hover_computer()
       let inlay_hints = self.current_inlay_hints()
@@ -541,7 +541,7 @@ fn Viewer::maybe_notify_hover_resolved(self : Viewer, token : Int) -> Unit {
     return
   }
   hc.hover_notified_token = token
-  let revision = match self.text_model {
+  let revision = match self.get_model() {
     Some(model) => model.revision
     None => ""
   }
@@ -554,7 +554,7 @@ fn Viewer::maybe_notify_hover_resolved(self : Viewer, token : Int) -> Unit {
 /// Runs at flush time — every hover state change schedules a flush.
 fn Viewer::sync_hover_decorations(self : Viewer) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
-  guard self.text_model is Some(model) else { return }
+  guard self.get_model() is Some(model) else { return }
   let decorations = hc.hover.highlight_decorations()
   let range = match decorations.get(0) {
     Some(decoration) => Some(decoration.range)
@@ -583,7 +583,7 @@ fn Viewer::current_inlay_hints(self : Viewer) -> Array[@language.InlayHint] {
 
 ///|
 fn Viewer::is_current_model(self : Viewer, model : @model.TextModel) -> Bool {
-  match self.text_model {
+  match self.get_model() {
     Some(current) => current.same_identity_and_version(model)
     None => false
   }

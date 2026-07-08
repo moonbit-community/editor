@@ -34,7 +34,7 @@ pub fn Viewer::get_contribution(
 /// model → `''`. The `{preserveBOM, lineEnding}` option is dropped: the snapshot
 /// stores normalized LF text with no BOM/EOL concept (`TextSnapshot::get_value`).
 pub fn Viewer::get_value(self : Viewer) -> String {
-  match self.text_model {
+  match self.get_model() {
     None => ""
     Some(model) => model.get_value()
   }
@@ -46,7 +46,7 @@ pub fn Viewer::get_value(self : Viewer) -> String {
 /// (`vmi:646`): the completely-visible *view* range (from the layout) converted
 /// to model ranges, split around any hidden region. No model → `[]`.
 pub fn Viewer::get_visible_ranges(self : Viewer) -> Array[@base_common.Range] {
-  guard self.view_model is Some(view_model) else { return [] }
+  guard self.get_view_model() is Some(view_model) else { return [] }
   let (start_view_line, end_view_line) = view_model.view_layout.completely_visible_line_range()
   view_model.to_model_visible_ranges({
     start_line_number: start_view_line,
@@ -66,7 +66,7 @@ pub fn Viewer::get_visible_ranges(self : Viewer) -> Array[@base_common.Range] {
 pub fn Viewer::get_visible_ranges_plus_viewport_above_below(
   self : Viewer,
 ) -> Array[@base_common.Range] {
-  guard self.view_model is Some(view_model) else { return [] }
+  guard self.get_view_model() is Some(view_model) else { return [] }
   let line_height = self.font_info.line_height.to_double()
   let height = view_model.view_layout.dimensions().height
   // `Math.round` of a non-negative ratio is `floor(x + 0.5)`.
@@ -144,7 +144,7 @@ pub fn Viewer::get_line_height_for_position(
   self : Viewer,
   position : @base_common.Position,
 ) -> Double {
-  guard (self.text_model, self.view_model) is (Some(_), Some(view_model)) else {
+  guard (self.get_model(), self.get_view_model()) is (Some(_), Some(view_model)) else {
     return -1.0
   }
   if view_model.model_position_is_visible(position) {
@@ -168,7 +168,7 @@ pub fn Viewer::get_visible_column_from_position(
   self : Viewer,
   position : @base_common.Position,
 ) -> Int {
-  guard self.text_model is Some(model) else { return position.column }
+  guard self.get_model() is Some(model) else { return position.column }
   let position = model.validate_position(position)
   let tab_size = self.options.tab_size
   @core.visible_column_from_column(
@@ -186,7 +186,7 @@ pub fn Viewer::get_statusbar_column(
   self : Viewer,
   position : @base_common.Position,
 ) -> Int {
-  guard self.text_model is Some(model) else { return position.column }
+  guard self.get_model() is Some(model) else { return position.column }
   let position = model.validate_position(position)
   let tab_size = self.options.tab_size
   @core.to_statusbar_column(
@@ -201,7 +201,7 @@ pub fn Viewer::get_statusbar_column(
 /// `viewModel.getPosition`. No model → `null`; the view model's cursor always
 /// exists, starting collapsed at `(1,1)` like Monaco's.
 pub fn Viewer::get_position(self : Viewer) -> @base_common.Position? {
-  guard self.view_model is Some(view_model) else { return None }
+  guard self.get_view_model() is Some(view_model) else { return None }
   Some(view_model.cursor.model_state().position)
 }
 
@@ -209,7 +209,7 @@ pub fn Viewer::get_position(self : Viewer) -> @base_common.Position? {
 /// The primary cursor's model selection, Monaco's `getSelection` (`cew:783`) →
 /// `viewModel.getSelection`. No model → `null`.
 pub fn Viewer::get_selection(self : Viewer) -> @core.Selection? {
-  guard self.view_model is Some(view_model) else { return None }
+  guard self.get_view_model() is Some(view_model) else { return None }
   Some(view_model.cursor.get_model_selection())
 }
 
@@ -228,7 +228,7 @@ pub fn Viewer::get_selections(self : Viewer) -> Array[@core.Selection]? {
 /// Widest content width (horizontal scroll extent before viewport clamping),
 /// Monaco's `getContentWidth` (`cew:963`). No model → `-1`.
 pub fn Viewer::get_content_width(self : Viewer) -> Double {
-  guard self.view_model is Some(view_model) else { return -1.0 }
+  guard self.get_view_model() is Some(view_model) else { return -1.0 }
   view_model.view_layout.get_content_width()
 }
 
@@ -236,7 +236,7 @@ pub fn Viewer::get_content_width(self : Viewer) -> Double {
 /// Scrollable content width = `max(viewport width, content width)`, Monaco's
 /// `getScrollWidth` (`cew:970`). No model → `-1`.
 pub fn Viewer::get_scroll_width(self : Viewer) -> Double {
-  guard self.view_model is Some(view_model) else { return -1.0 }
+  guard self.get_view_model() is Some(view_model) else { return -1.0 }
   view_model.view_layout.get_scroll_width()
 }
 
@@ -244,7 +244,7 @@ pub fn Viewer::get_scroll_width(self : Viewer) -> Double {
 /// Current horizontal scroll offset, Monaco's `getScrollLeft` (`cew:976`). No
 /// model → `-1`.
 pub fn Viewer::get_scroll_left(self : Viewer) -> Double {
-  guard self.view_model is Some(view_model) else { return -1.0 }
+  guard self.get_view_model() is Some(view_model) else { return -1.0 }
   view_model.view_layout.get_current_scroll_left()
 }
 
@@ -252,7 +252,7 @@ pub fn Viewer::get_scroll_left(self : Viewer) -> Double {
 /// Total content height including view zones, Monaco's `getContentHeight`
 /// (`cew:983`). No model → `-1`.
 pub fn Viewer::get_content_height(self : Viewer) -> Double {
-  guard self.view_model is Some(view_model) else { return -1.0 }
+  guard self.get_view_model() is Some(view_model) else { return -1.0 }
   view_model.view_layout.get_content_height()
 }
 
@@ -260,7 +260,7 @@ pub fn Viewer::get_content_height(self : Viewer) -> Double {
 /// Scrollable content height = `max(viewport height, content height)`, Monaco's
 /// `getScrollHeight` (`cew:990`). No model → `-1`.
 pub fn Viewer::get_scroll_height(self : Viewer) -> Double {
-  guard self.view_model is Some(view_model) else { return -1.0 }
+  guard self.get_view_model() is Some(view_model) else { return -1.0 }
   view_model.view_layout.get_scroll_height()
 }
 
@@ -268,7 +268,7 @@ pub fn Viewer::get_scroll_height(self : Viewer) -> Double {
 /// Current vertical scroll offset, Monaco's `getScrollTop` (`cew:996`). No model
 /// → `-1`.
 pub fn Viewer::get_scroll_top(self : Viewer) -> Double {
-  guard self.view_model is Some(view_model) else { return -1.0 }
+  guard self.get_view_model() is Some(view_model) else { return -1.0 }
   view_model.view_layout.get_current_scroll_top()
 }
 
@@ -282,7 +282,8 @@ fn Viewer::model_to_view_position(
   line_number : Int,
   column : Int,
 ) -> @base_common.Position? {
-  guard (self.text_model, self.view_model) is (Some(model), Some(view_model)) else {
+  guard (self.get_model(), self.get_view_model())
+    is (Some(model), Some(view_model)) else {
     return None
   }
   let model_position = model.validate_position(Position(line_number, column))
@@ -303,7 +304,7 @@ fn Viewer::get_vertical_offset_for_position(
   column : Int,
   include_view_zones~ : Bool,
 ) -> Double {
-  guard self.view_model is Some(view_model) else { return -1.0 }
+  guard self.get_view_model() is Some(view_model) else { return -1.0 }
   match self.model_to_view_position(line_number, column) {
     Some(view_position) =>
       view_model.view_layout.get_vertical_offset_for_line_number(
@@ -324,7 +325,7 @@ fn Viewer::get_vertical_offset_after_position(
   column : Int,
   include_view_zones~ : Bool,
 ) -> Double {
-  guard self.view_model is Some(view_model) else { return -1.0 }
+  guard self.get_view_model() is Some(view_model) else { return -1.0 }
   match self.model_to_view_position(line_number, column) {
     Some(view_position) =>
       view_model.view_layout.get_vertical_offset_after_line_number(
@@ -405,7 +406,7 @@ pub fn Viewer::get_offset_for_column(
   line_number : Int,
   column : Int,
 ) -> Double {
-  guard (self.text_model, self.view_model, self.view)
+  guard (self.get_model(), self.get_view_model(), self.get_view())
     is (Some(model), Some(view_model), Some(view)) else {
     return -1.0
   }
@@ -423,7 +424,7 @@ pub fn Viewer::get_offset_for_column(
 /// line (the last wrapped segment), then measure that view line's width. No real
 /// view → `-1`; line not in the rendered window → `-1`.
 pub fn Viewer::get_width_of_line(self : Viewer, line_number : Int) -> Double {
-  guard (self.text_model, self.view_model, self.view)
+  guard (self.get_model(), self.get_view_model(), self.get_view())
     is (Some(model), Some(view_model), Some(view)) else {
     return -1.0
   }
@@ -449,7 +450,7 @@ pub fn Viewer::get_scrolled_visible_position(
   self : Viewer,
   position : @base_common.Position,
 ) -> ScrolledVisiblePosition? {
-  guard (self.text_model, self.view_model, self.view)
+  guard (self.get_model(), self.get_view_model(), self.get_view())
     is (Some(model), Some(view_model), Some(view)) else {
     return None
   }
@@ -481,7 +482,7 @@ pub fn Viewer::get_scrolled_visible_position(
 /// decorationsWidth`), the offset DOM-measured line x's are relative to. Backed
 /// by the view model's measured `gutter_width`; `0` with no model.
 fn Viewer::read_api_content_left(self : Viewer) -> Double {
-  match self.view_model {
+  match self.get_view_model() {
     Some(view_model) => self.gutter_width(view_model.line_count())
     None => 0.0
   }

@@ -233,7 +233,7 @@ fn Viewer::send_reveal_range(
   vertical_type : @view_layout.VerticalRevealType,
   reveal_horizontal~ : Bool,
 ) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   // (1) Model range → view range: the wrapping-aware step (with word-wrap on,
   // model line ≠ view line). The conversion belongs at this boundary, never in
   // the pure core.
@@ -291,7 +291,7 @@ fn Viewer::send_reveal_range(
 /// pending if the line is not yet rendered, so a later frame can flush it.
 fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
   guard self.horizontal_reveal_request is Some(request) else { return }
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   // The line is not in the rendered window yet — keep waiting.
   guard view.is_line_rendered(request.view_line_number) else { return }
   // The line is rendered: consume the request (Monaco nulls it here) and apply

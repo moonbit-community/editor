@@ -15,7 +15,7 @@ fn Viewer::test_set_layout_view_zones(
   self : Viewer,
   zones : Array[@view_layout.ViewZone],
 ) -> Unit {
-  match self.view_model {
+  match self.get_view_model() {
     Some(view_model) => view_model.view_layout.set_view_zones(zones) |> ignore
     None => ()
   }

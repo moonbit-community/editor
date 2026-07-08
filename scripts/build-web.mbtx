@@ -59,6 +59,12 @@ async fn main {
   if agent_feedback_status != 0 {
     fail("moon build failed with exit code \{agent_feedback_status}")
   }
+  let model_swap_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/model_swap",
+  ])
+  if model_swap_status != 0 {
+    fail("moon build failed with exit code \{model_swap_status}")
+  }
 
   let source_dir = "_build/js/debug/build/internal/shell/web"
   let embed_source_dir = "_build/js/debug/build/internal/shell/examples/embedded_viewer"
@@ -69,6 +75,7 @@ async fn main {
   let whitespace_source_dir = "_build/js/debug/build/tests/browser/moonbit/whitespace"
   let whitespace_selection_source_dir = "_build/js/debug/build/tests/browser/moonbit/whitespace_selection"
   let agent_feedback_source_dir = "_build/js/debug/build/tests/browser/moonbit/agent_feedback"
+  let model_swap_source_dir = "_build/js/debug/build/tests/browser/moonbit/model_swap"
   let target_dir = "web/dist"
   let browser_tests_dir = "\{target_dir}/browser-tests"
   if !@fs.exists(target_dir) {
@@ -289,6 +296,29 @@ async fn main {
     browser_test_html(
       "MoonBit Viewer Agent Feedback Test",
       "/browser-tests/agent_feedback.mjs",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  let model_swap_js = @fs.read_file("\{model_swap_source_dir}/model_swap.js").text()
+  @fs.write_file(
+    "\{browser_tests_dir}/model_swap.mjs",
+    model_swap_js.replace(
+      old="//# sourceMappingURL=model_swap.js.map",
+      new="//# sourceMappingURL=model_swap.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/model_swap.mjs.map",
+    @fs.read_file("\{model_swap_source_dir}/model_swap.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/model_swap.html",
+    browser_test_html(
+      "MoonBit Viewer Model Swap Test",
+      "/browser-tests/model_swap.mjs",
     ),
     create_mode=@fs.CreateOrTruncate,
   )

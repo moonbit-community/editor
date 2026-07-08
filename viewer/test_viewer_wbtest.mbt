@@ -46,7 +46,7 @@ fn with_test_viewer(
 ///|
 /// `ITestCodeEditor.getViewModel()` — whitebox read of the private field.
 fn Viewer::test_view_model(self : Viewer) -> @view_model.ViewModel {
-  self.view_model.unwrap()
+  self.get_view_model().unwrap()
 }
 
 ///|
@@ -86,7 +86,7 @@ fn Viewer::test_set_viewport(
 ) -> Unit {
   self.measured_content_width = width
   self.measured_height = height
-  match self.view_model {
+  match self.get_view_model() {
     Some(view_model) =>
       view_model.view_layout.set_viewport_size(width~, height~) |> ignore
     None => ()
@@ -207,7 +207,7 @@ test "render frame windows to the visible range, not the whole document" {
 test "host delta_decorations flows through query API and render inputs" {
   let viewer = Viewer::Viewer()
   viewer.set_model(Some(test_model("alpha beta\ngamma")))
-  let view_model = viewer.view_model.unwrap()
+  let view_model = viewer.get_view_model().unwrap()
   // Prime the viewport cache before the host adds decorations, so the second
   // query proves onDidChangeDecorations invalidates it.
   let viewport_range : @base_common.Range = Range(1, 1, 2, 6)

@@ -64,7 +64,13 @@ fn Viewer::handle_hover_keydown(
 /// facts that were waiting on this flush.
 fn Viewer::flush_render(self : Viewer) -> Unit {
   self.render_pending = false
-  guard self.view is Some(view) else { return }
+  guard self.model_data is Some(model_data) else {
+    // No model → no view; the Viewer-owned placeholder is the whole paint.
+    self.render_placeholder()
+    return
+  }
+  guard model_data.view is Some(view) else { return }
+  let view_model = model_data.view_model
   // Read phase: measure only when a re-measure was requested.
   if self.measure_requested {
     self.measure_requested = false
@@ -73,47 +79,37 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   // Write phase.
   self.sync_hover_decorations()
   let write_started = now_ms()
-  match self.view_model {
-    None =>
-      view.render_empty(
-        self.options.placeholder,
-        show_unused=self.options.show_unused,
-        show_deprecated=self.options.show_deprecated,
-      )
-    Some(view_model) => {
-      let window = self.synced_window(view_model)
-      let view_context = self.build_view_context(view)
-      view.render(view_context, {
-        window,
-        view_model,
-        layout: view_model.view_layout,
-        browser_view_zones: self.view_zones,
-        selection_view_range: self.selection_view_range(),
-        view_selection: self.view_selection(),
-        generation: self.content_generation,
-        decorations_generation: self.decorations_generation,
-        gutter_width: self.gutter_width(view_model.line_count()),
-        line_decorations_width: self.options.line_decorations_width.to_double(),
-        space_width: self.font_info.space_width,
-        typical_fullwidth_character_width: self.font_info.typical_fullwidth_character_width,
-        can_use_halfwidth_rightwards_arrow: self.font_info.can_use_halfwidth_rightwards_arrow,
-        render_whitespace: self.options.render_whitespace,
-        render_control_characters: self.options.render_control_characters,
-        editor_has_focus: self.editor_has_focus,
-        word_wrap: self.options.soft_wrap && self.soft_wrap_column > 0,
-        render_line_highlight: self.options.render_line_highlight,
-        render_line_highlight_only_when_focus: self.options.render_line_highlight_only_when_focus,
-        show_unused: self.options.show_unused,
-        show_deprecated: self.options.show_deprecated,
-      })
-    }
-  }
+  let window = self.synced_window(view_model)
+  let view_context = self.build_view_context(view)
+  view.render(view_context, {
+    window,
+    view_model,
+    layout: view_model.view_layout,
+    browser_view_zones: self.view_zones,
+    selection_view_range: self.selection_view_range(),
+    view_selection: self.view_selection(),
+    generation: self.content_generation,
+    decorations_generation: self.decorations_generation,
+    gutter_width: self.gutter_width(view_model.line_count()),
+    line_decorations_width: self.options.line_decorations_width.to_double(),
+    space_width: self.font_info.space_width,
+    typical_fullwidth_character_width: self.font_info.typical_fullwidth_character_width,
+    can_use_halfwidth_rightwards_arrow: self.font_info.can_use_halfwidth_rightwards_arrow,
+    render_whitespace: self.options.render_whitespace,
+    render_control_characters: self.options.render_control_characters,
+    editor_has_focus: self.editor_has_focus,
+    word_wrap: self.options.soft_wrap && self.soft_wrap_column > 0,
+    render_line_highlight: self.options.render_line_highlight,
+    render_line_highlight_only_when_focus: self.options.render_line_highlight_only_when_focus,
+    show_unused: self.options.show_unused,
+    show_deprecated: self.options.show_deprecated,
+  })
   // The lines are now in the DOM: a deferred horizontal reveal can measure its
   // target line's client rects and apply the horizontal scroll.
   self.flush_horizontal_reveal(view)
   let patch_ms = now_ms() - write_started
-  match (self.pending_rendered, self.view_model, self.rendered_window) {
-    (Some(pending), Some(view_model), Some(window)) => {
+  match (self.pending_rendered, self.rendered_window) {
+    (Some(pending), Some(window)) => {
       self.pending_rendered = None
       self.did_render_model.fire({
         model: pending.model,
@@ -130,9 +126,6 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   }
   if self.scroll_dirty {
     self.scroll_dirty = false
-    // No model → no live layout → no scroll event: Monaco's
-    // `onDidScrollChange` relays the attached view layout's events.
-    guard self.view_model is Some(view_model) else { return }
     let position = view_model.view_layout.position()
     let event : ScrollEvent = {
       scroll_top: position.scroll_top,
@@ -163,8 +156,32 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
 }
 
 ///|
+/// Repaints the Viewer-owned no-model placeholder (the `flush_render`
+/// no-model arm): the empty-state classes plus the `placeholder` option's
+/// message text.
+fn Viewer::render_placeholder(self : Viewer) -> Unit {
+  match (self.placeholder_element, self.placeholder_text) {
+    (Some(placeholder), Some(text)) => {
+      placeholder.set_attribute(
+        "class",
+        @view.empty_editor_class_name(
+          show_unused=self.options.show_unused,
+          show_deprecated=self.options.show_deprecated,
+        ),
+      )
+      text.set_node_value(
+        @js.Nullable::from_option(Some(self.options.placeholder)),
+      )
+    }
+    _ => ()
+  }
+}
+
+///|
 fn Viewer::schedule_render(self : Viewer) -> Unit {
-  if self.render_pending || self.view is None {
+  // Headless (never attached) → no rAF loop; with a container the flush
+  // paints either the per-model view or the no-model placeholder.
+  if self.render_pending || self.container is None {
     return
   }
   self.render_pending = true

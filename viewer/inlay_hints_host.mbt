@@ -86,7 +86,7 @@ fn register_inlay_hints_contribution(
 /// triggers the projection rebuild.
 fn Viewer::sync_inlay_hint_decorations(self : Viewer) -> Unit {
   guard self.inlay_hints_controller() is Some(controller) else { return }
-  guard self.text_model is Some(model) else { return }
+  guard self.get_model() is Some(model) else { return }
   if controller.inlay_hints.is_empty() &&
     controller.inlay_hint_decoration_ids.is_empty() {
     return

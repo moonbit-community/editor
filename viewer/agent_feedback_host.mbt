@@ -124,7 +124,7 @@ fn Viewer::is_current_resource(
   self : Viewer,
   resource : @base_common.Uri,
 ) -> Bool {
-  match self.text_model {
+  match self.get_model() {
     Some(model) => model.uri.to_string() == resource.to_string()
     None => false
   }
@@ -159,7 +159,7 @@ fn Viewer::mouse_target_model_line(
   target : @viewer_common.MouseTarget,
 ) -> Int {
   guard target.line_number >= 1 else { return 0 }
-  match self.view_model {
+  match self.get_view_model() {
     Some(view_model) =>
       view_model.lines().model_line_number_of_view_line(target.line_number)
     None => target.line_number
@@ -170,7 +170,7 @@ fn Viewer::mouse_target_model_line(
 /// Whether the current model's resource has the feedback affordances on —
 /// the `_getSessionForFile` stand-in.
 fn Viewer::agent_feedback_enabled(self : Viewer) -> Bool {
-  match self.text_model {
+  match self.get_model() {
     Some(model) => self.services.agent_feedback.is_feedback_enabled(model.uri)
     None => false
   }
@@ -242,7 +242,7 @@ fn Viewer::on_agent_feedback_mouse_move(
 /// resource whose line has no existing feedback.
 fn Viewer::update_agent_feedback_hover_glyph(self : Viewer, line : Int) -> Unit {
   guard self.agent_feedback_input_contribution() is Some(ic) else { return }
-  guard self.text_model is Some(model) else {
+  guard self.get_model() is Some(model) else {
     self.clear_agent_feedback_hover_glyph()
     return
   }
@@ -312,7 +312,7 @@ fn Viewer::clear_agent_feedback_hover_glyph(self : Viewer) -> Unit {
     return
   }
   ic.hover_line_number = -1
-  guard self.text_model is Some(model) else {
+  guard self.get_model() is Some(model) else {
     ic.hover_decoration_ids = []
     return
   }
@@ -389,7 +389,7 @@ fn Viewer::select_agent_feedback_line(self : Viewer, line : Int) -> Unit {
     self.focus_agent_feedback_input()
     return
   }
-  guard self.text_model is Some(model) else { return }
+  guard self.get_model() is Some(model) else { return }
   if line < 1 || line > model.snapshot.line_count() {
     return
   }
@@ -432,7 +432,7 @@ fn Viewer::on_agent_feedback_selection_changed(self : Viewer) -> Unit {
     self.auto_hide_agent_feedback_input()
     return
   }
-  guard self.text_model is Some(_) && self.agent_feedback_enabled() else {
+  guard self.get_model() is Some(_) && self.agent_feedback_enabled() else {
     self.auto_hide_agent_feedback_input()
     return
   }
@@ -473,8 +473,8 @@ fn Viewer::show_agent_feedback_input(
 }
 
 ///|
-/// `_ensureWidget`: the widget and its overlay mount are created once per
-/// viewer, on first use.
+/// `_ensureWidget`: the widget is created once per viewer, on first use;
+/// the overlay registration re-adds it to each per-model view.
 fn Viewer::ensure_agent_feedback_input(
   self : Viewer,
 ) -> @agent_feedback_browser.AgentFeedbackInputWidget {
@@ -601,7 +601,7 @@ fn Viewer::add_agent_feedback_from_input(self : Viewer, submit~ : Bool) -> Unit 
         None => None
       }
   }
-  guard range is Some(range) && self.text_model is Some(model) else { return }
+  guard range is Some(range) && self.get_model() is Some(model) else { return }
   let service = self.services.agent_feedback
   service.add_feedback(model.uri, range, text) |> ignore
   self.hide_agent_feedback_input(refocus_editor=true)

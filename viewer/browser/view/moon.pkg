@@ -16,7 +16,6 @@ import {
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom" @rdom,
-  "moonbit-community/rabbita/js",
 }
 
 supported_targets = "js"

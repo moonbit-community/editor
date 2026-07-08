@@ -20,7 +20,7 @@ pub fn Viewer::delta_decorations(
   old_decorations : Array[String],
   new_decorations : Array[@model.ModelDeltaDecoration],
 ) -> Array[String] {
-  guard self.text_model is Some(model) else { return [] }
+  guard self.get_model() is Some(model) else { return [] }
   if old_decorations.length() == 0 && new_decorations.length() == 0 {
     return old_decorations
   }
@@ -38,7 +38,7 @@ pub fn Viewer::remove_decorations(
   self : Viewer,
   decoration_ids : Array[String],
 ) -> Unit {
-  guard self.text_model is Some(model) && decoration_ids.length() > 0 else {
+  guard self.get_model() is Some(model) && decoration_ids.length() > 0 else {
     return
   }
   model.change_decorations(accessor => {
@@ -54,7 +54,7 @@ pub fn Viewer::get_line_decorations(
   self : Viewer,
   line_number : Int,
 ) -> Array[@model.ModelDecoration] {
-  guard self.text_model is Some(model) else { return [] }
+  guard self.get_model() is Some(model) else { return [] }
   model.get_line_decorations(
     line_number,
     owner_id=self.editor_id,
@@ -70,7 +70,7 @@ pub fn Viewer::get_decorations_in_range(
   self : Viewer,
   range : @base_common.Range,
 ) -> Array[@model.ModelDecoration] {
-  guard self.text_model is Some(model) else { return [] }
+  guard self.get_model() is Some(model) else { return [] }
   model.get_decorations_in_range(
     range,
     owner_id=self.editor_id,
@@ -155,7 +155,7 @@ pub fn EditorDecorationsCollection::get_range(
   index : Int,
 ) -> @base_common.Range? {
   guard index >= 0 && index < self.decoration_ids.length() else { return None }
-  guard self.viewer.text_model is Some(model) else { return None }
+  guard self.viewer.get_model() is Some(model) else { return None }
   model.get_decoration_range(self.decoration_ids[index])
 }
 
@@ -164,7 +164,7 @@ pub fn EditorDecorationsCollection::get_range(
 pub fn EditorDecorationsCollection::get_ranges(
   self : EditorDecorationsCollection,
 ) -> Array[@base_common.Range] {
-  guard self.viewer.text_model is Some(model) else { return [] }
+  guard self.viewer.get_model() is Some(model) else { return [] }
   let ranges = []
   for id in self.decoration_ids {
     match model.get_decoration_range(id) {

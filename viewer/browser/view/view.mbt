@@ -12,7 +12,6 @@
 /// so cross-package field access is the only option.
 pub(all) struct View {
   root : @rdom.Element
-  message_text : @rdom.Element
   overflow_guard : @rdom.Element
   squiggly_style : @rdom.Element
   view_lines : @view_lines.ViewLines
@@ -34,10 +33,6 @@ pub fn View::new() -> View {
   root.set_attribute("class", get_editor_class_name("source-empty"))
   root.set_attribute("aria-label", "Readonly code viewer")
   root.set_attribute("tabindex", "0")
-  let message = document.create_element("div")
-  message.set_attribute("class", "source-message")
-  let message_text = document.create_text_node("")
-  message.append_child(message_text.as_node())
   let squiggly_style = document.create_element("style")
   squiggly_style.set_attribute("data-squiggly-theme", "")
   let overflow_guard = document.create_element("div")
@@ -64,7 +59,6 @@ pub fn View::new() -> View {
   // Overlay widgets are viewport-fixed: they live in the overflow guard, not
   // the scrolling lines content (`view.ts:287`).
   overflow_guard.append_child(overlay_widgets.get_dom_node().as_node())
-  root.append_child(message.as_node())
   root.append_child(squiggly_style.as_node())
   root.append_child(overflow_guard.as_node())
   root.append_child(
@@ -79,7 +73,6 @@ pub fn View::new() -> View {
   )
   let view : View = {
     root,
-    message_text,
     overflow_guard,
     squiggly_style,
     view_lines,
@@ -118,32 +111,13 @@ fn get_editor_class_name(
 }
 
 ///|
-/// Shows the host-provided placeholder when no document is loaded.
-pub fn View::render_empty(
-  self : View,
-  placeholder : String,
+/// The empty-state root classes for the Viewer-owned no-model placeholder
+/// element (the `View` itself only exists while a model is attached).
+pub fn empty_editor_class_name(
   show_unused? : Bool = true,
   show_deprecated? : Bool = true,
-) -> Unit {
-  self.root.set_attribute(
-    "class",
-    get_editor_class_name("source-empty", show_unused~, show_deprecated~),
-  )
-  self.message_text.set_node_value(@js.Nullable::from_option(Some(placeholder)))
-  self.last_snapshot = None
-  self.mark_parts_dirty()
-}
-
-///|
-fn View::mark_parts_dirty(self : View) -> Unit {
-  ViewPart::force_should_render(self.view_lines)
-  ViewPart::force_should_render(self.view_zones)
-  ViewPart::force_should_render(self.content_view_overlays)
-  ViewPart::force_should_render(self.margin_view_overlays)
-  ViewPart::force_should_render(self.content_widgets)
-  ViewPart::force_should_render(self.view_cursors)
-  ViewPart::force_should_render(self.overlay_widgets)
-  ViewPart::force_should_render(self.editor_scrollbar)
+) -> String {
+  get_editor_class_name("source-empty", show_unused~, show_deprecated~)
 }
 
 ///|

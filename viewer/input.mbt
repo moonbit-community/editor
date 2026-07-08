@@ -126,14 +126,38 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
     EditorScrollableElement,
   )
   handler.hook_browser_desperate_reveal()
+}
+
+///|
+/// The once-per-viewer document-level drag listeners (drag moves and drag
+/// ends land outside the editor box). They delegate to the *current*
+/// per-view `mouse_handler` — the per-view listeners above die with the
+/// view's DOM subtree at detach, but document listeners cannot, so these
+/// hook once at `attach` (Monaco monitors global pointer events per drag
+/// with `GlobalPointerMoveMonitor` instead).
+fn Viewer::hook_document_input(self : Viewer) -> Unit {
+  if self.document_input_hooked {
+    return
+  }
+  self.document_input_hooked = true
   let document = @rdom.document()
   document.add_event_listener("mousemove", event => {
-    handler.handle_scrollable_drag_move(event)
-    handler.handle_selection_drag_move(event)
+    match self.mouse_handler {
+      Some(handler) => {
+        handler.handle_scrollable_drag_move(event)
+        handler.handle_selection_drag_move(event)
+      }
+      None => ()
+    }
   })
   document.add_event_listener("mouseup", _ => {
-    handler.end_scrollable_drag()
-    handler.finish_selection()
+    match self.mouse_handler {
+      Some(handler) => {
+        handler.end_scrollable_drag()
+        handler.finish_selection()
+      }
+      None => ()
+    }
   })
 }
 
@@ -230,7 +254,7 @@ fn Viewer::refresh_font_info(self : Viewer) -> Unit {
   let bare = self.options.bare_font_info(
     pixel_ratio=@browser_config.device_pixel_ratio(),
   )
-  let font_info = match self.view {
+  let font_info = match self.get_view() {
     Some(_) => @browser_config.font_measurements().read_font_info(bare)
     None => @config.FontInfo::estimated(bare)
   }
@@ -238,12 +262,12 @@ fn Viewer::refresh_font_info(self : Viewer) -> Unit {
     return
   }
   self.font_info = font_info
-  match self.view_model {
+  match self.get_view_model() {
     Some(view_model) =>
       view_model.view_layout.set_line_height(font_info.line_height) |> ignore
     None => ()
   }
-  match self.view {
+  match self.get_view() {
     Some(view) => self.apply_font_info_to_view(view)
     None => ()
   }
@@ -282,7 +306,7 @@ fn Viewer::apply_font_info_to_view(self : Viewer, view : @view.View) -> Unit {
 fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
   let rect = view.root.get_bounding_client_rect()
   self.refresh_font_info()
-  let gutter_width = match self.view_model {
+  let gutter_width = match self.get_view_model() {
     Some(view_model) => self.gutter_width(view_model.line_count())
     None => 0.0
   }
@@ -293,7 +317,7 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
     0.0
   }
   self.measured_height = rect.get_height()
-  match self.view_model {
+  match self.get_view_model() {
     Some(view_model) =>
       view_model.view_layout.set_viewport_size(
         width=self.measured_content_width,
@@ -316,7 +340,7 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
 
 ///|
 fn Viewer::sync_content_width(self : Viewer) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   let content_width = if self.options.soft_wrap && self.soft_wrap_column > 0 {
     self.measured_content_width
   } else {

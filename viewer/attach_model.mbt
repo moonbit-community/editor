@@ -1,13 +1,57 @@
 ///|
-/// Warms the model's memoized tokenization part and builds the long-lived
-/// view model — the tail of Monaco's `_attachModel`
-/// (`codeEditorWidget.ts`, reached from `setModel`). Only a model attach
-/// pays this: later option and decoration changes update the view model in
-/// place (`ViewModel::on_configuration_changed`,
+/// Monaco's `_attachModel` (`codeEditorWidget.ts:1745-1913`): hook the
+/// swap-scoped listeners, warm the model's memoized tokenization part,
+/// build the per-model `ViewModel`, create the per-model `View` inside the
+/// container, and bundle everything into `ModelData`. Later option and
+/// decoration changes update the view model in place
+/// (`ViewModel::on_configuration_changed`,
 /// `on_did_change_content_or_injected_text`) and tokenizer changes only
 /// re-warm the token memo (`retokenize_current_model`). Synchronous CPU
 /// work; the paint happens in the next render flush.
 fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
+  let listeners_to_remove : Array[@base_common.Disposable] = []
+  // `data-mode-id` on the container (`cew:1758`), removed at detach.
+  match self.container {
+    Some(host) => host.set_attribute("data-mode-id", model.language_id)
+    None => ()
+  }
+  self.services.markers.clear_resource(model.uri)
+  // The decoration-change subscription attaches before the marker service
+  // seeds the model so the seeding delta is observed too.
+  listeners_to_remove.push(
+    model.on_did_change_decorations(event => {
+      // Monaco: `onDidChangeDecorations` → `viewModel.decorations
+      // .onModelDecorationsChanged()` (`viewModelImpl.ts`) — drop the
+      // computer + viewport caches before the re-render reads them.
+      match self.get_view_model() {
+        Some(view_model) => {
+          view_model.decorations().on_model_decorations_changed()
+          // Injected-text deltas re-run the line-breaks computer per line in
+          // Monaco (`onDidChangeContentOrInjectedText`); the viewer's
+          // granularity is the whole-document reproject
+          // (`_lines.onModelFlushed()`), applied to the live view model.
+          if event.affects_injected_text {
+            view_model.on_did_change_content_or_injected_text()
+            self.on_line_mapping_changed(view_model, model)
+          }
+        }
+        None => ()
+      }
+      self.decorations_generation += 1
+      self.schedule_render()
+    }),
+  )
+  // A disposed model detaches itself
+  // (`codeEditorWidget.ts:1787` `model.onWillDispose(() => this.setModel(null))`).
+  listeners_to_remove.push(model.on_will_dispose(() => self.set_model(None)))
+  // Token changes (the part's registry subscription fires them on tokenizer
+  // (re)registration) re-warm the memo and repaint — Monaco's
+  // `ModelTokensChangedEvent` handling. The viewer's granularity is the whole
+  // document, so the event's ranges are not consulted.
+  listeners_to_remove.push(
+    model.on_did_change_tokens(_ => self.retokenize_current_model(model)),
+  )
+  self.services.marker_decorations.on_model_added(model)
   let tokenize_started = now_ms()
   model.tokenization.force_tokenization()
   let tokenize_finished = now_ms()
@@ -15,9 +59,9 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // model queries them lazily per viewport (no per-frame bake). The render
   // pass pulls its viewport data from the view model at flush time.
   let view_model = self.build_view_model(model)
-  self.view_model = Some(view_model)
+  let view = self.create_view(model)
+  self.model_data = Some({ model, view_model, view, listeners_to_remove })
   self.rendered_window = None
-  self.text_model = Some(model)
   self.apply_view_model_layout(view_model, model.snapshot)
   let build_finished = now_ms()
   self.content_generation += 1
@@ -35,6 +79,41 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.measure_requested = true
   self.schedule_render()
   self.request_model_features(model)
+}
+
+///|
+/// Monaco's `_createView` + the widget re-add loop (`cew:1889-1912`): build
+/// the browser `View` inside the container, hook its per-view input, re-add
+/// every registered content/overlay widget, and stamp `data-uri`. `None`
+/// while unattached (the headless harness).
+fn Viewer::create_view(self : Viewer, model : @model.TextModel) -> @view.View? {
+  guard self.container is Some(host) else { return None }
+  let view = @view.View::new()
+  view.root.set_attribute("data-theme", self.options.theme)
+  host.append_child(view.root.as_node())
+  view.apply_squiggly_theme()
+  // The editor root carries the configured font — Monaco's
+  // `applyFontInfo(this.domNode, fontInfo)` in `view.ts`.
+  self.apply_font_info_to_view(view)
+  // The pointer handler is view-owned (Monaco's `PointerHandler` lives in
+  // the `View`), so a fresh `MouseHandler` hooks each new view.
+  self.hook_view_input(view)
+  // Re-add every registered widget to the new view (`cew:1893-1909`).
+  match self.content_hover_widget {
+    Some(widget) => view.content_widgets.add_widget(widget)
+    None => ()
+  }
+  for widget_id, node in self.overlay_widgets {
+    view.overlay_widgets.add_widget(widget_id, node)
+  }
+  // `data-uri` (`cew:1912`).
+  view.root.set_attribute("data-uri", model.uri.to_string())
+  // The no-model placeholder yields to the per-model view.
+  match self.placeholder_element {
+    Some(placeholder) => host.remove_child(placeholder.as_node())
+    None => ()
+  }
+  Some(view)
 }
 
 ///|
@@ -73,7 +152,7 @@ fn Viewer::retokenize_current_model(
   let tokenize_started = now_ms()
   model.tokenization.force_tokenization()
   let tokenize_finished = now_ms()
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   self.content_generation += 1
   self.did_build_view_model.fire({
     model,
@@ -99,7 +178,7 @@ fn Viewer::retokenize_current_model(
 /// subscription. A changed view-line mapping re-flushes the layout; anything
 /// else only re-syncs the content width.
 fn Viewer::on_configuration_changed(self : Viewer) -> Unit {
-  match (self.view_model, self.text_model) {
+  match (self.get_view_model(), self.get_model()) {
     (Some(view_model), Some(model)) => {
       let options = self.options.view_model_options(
         self.soft_wrap_column,

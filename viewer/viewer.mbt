@@ -36,12 +36,14 @@ pub struct Viewer {
   /// The last fired scroll event's facts, the diff base for the next event's
   /// `*_changed` flags (Monaco's `ScrollEvent` carries per-axis change bits).
   priv mut last_scroll_event : ScrollEvent?
-  priv mut view_model : @view_model.ViewModel?
+  /// The per-model bundle (Monaco's `_modelData`, `codeEditorWidget.ts:2123`):
+  /// model + view model + view + swap-scoped listeners behind one nullable
+  /// field, so the states are legal by construction.
+  priv mut model_data : ModelData?
   /// The last rendered view-line window (clamped, half-open): exactly the
   /// lines intersecting the viewport at the last flush, resynced from the
   /// layout every flush.
   priv mut rendered_window : @view_layout.LineWindow?
-  priv mut text_model : @model.TextModel?
   priv mut view_zones : Array[@view_zones.BrowserViewZone]
   /// The persistent content-hover widget (Monaco `ContentHoverWidget`),
   /// created lazily and mounted once through the content-widgets part.
@@ -64,9 +66,22 @@ pub struct Viewer {
   priv mut measured_height : Double
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
-  priv mut view : @view.View?
   /// The host element handed to `attach` — Monaco's `_containerDomElement`.
   priv mut container : @rdom.Element?
+  /// The Viewer-owned no-model placeholder (deviation: Monaco has no
+  /// no-model view at all — its `placeholder` option is the empty-*model*
+  /// `PlaceholderTextContribution`; the viewer's placeholder is an existing
+  /// option whose DOM now lives here, in the container, instead of on the
+  /// per-model `View`).
+  priv mut placeholder_element : @rdom.Element?
+  priv mut placeholder_text : @rdom.Element?
+  /// Registered overlay widgets by id (Monaco's `_overlayWidgets`), re-added
+  /// to every per-model view (`cew:1901-1905`).
+  priv overlay_widgets : Map[String, @rdom.Element]
+  /// Whether the once-per-viewer document-level drag listeners are hooked
+  /// (they delegate to the current per-view `mouse_handler`; Monaco monitors
+  /// global pointer events per drag instead).
+  priv mut document_input_hooked : Bool
   priv mut render_pending : Bool
   priv mut measure_requested : Bool
   priv mut pending_rendered : PendingRendered?
@@ -83,9 +98,6 @@ pub struct Viewer {
   /// carries it, and a change dispatches `ViewDecorationsChanged` to the view
   /// parts (plan Deviation 3 — the render-snapshot event seam).
   priv mut decorations_generation : Int
-  priv mut model_decorations_subscription : @base_common.Disposable?
-  priv mut model_tokens_subscription : @base_common.Disposable?
-  priv mut model_will_dispose_subscription : @base_common.Disposable?
   priv mut mouse_handler : @controller.MouseHandler?
   /// The last `mousemove`'s `MouseEvent.buttons` bitmask, recorded by the
   /// root listener so `on_mouse_move` events can carry `event.leftButton`
@@ -112,6 +124,29 @@ pub struct Viewer {
 priv struct PendingRendered {
   model : @model.TextModel
   fresh : Bool
+}
+
+///|
+/// Monaco's `ModelData` (`codeEditorWidget.ts:2123-2143`): everything whose
+/// lifetime is one model attach. `view` is `None` while unattached (the
+/// headless harness — the `hasRealView=false` analog); `attached_view` is
+/// N-A (no attached-view protocol).
+priv struct ModelData {
+  model : @model.TextModel
+  view_model : @view_model.ViewModel
+  view : @view.View?
+  listeners_to_remove : Array[@base_common.Disposable]
+}
+
+///|
+/// `ModelData.dispose` (`cew:2133-2141`): remove the swap-scoped listeners.
+/// The view's DOM subtree is removed by `detach_model`, where the container
+/// is in scope; neither the viewer's `View` nor `ViewModel` owns timers or
+/// subscriptions of its own.
+fn ModelData::dispose(self : ModelData) -> Unit {
+  for listener in self.listeners_to_remove {
+    listener.dispose()
+  }
 }
 
 ///|
@@ -245,9 +280,8 @@ pub fn Viewer::Viewer(
     did_mouse_move: @base_common.Emitter::new(),
     did_mouse_leave: @base_common.Emitter::new(),
     last_scroll_event: None,
-    view_model: None,
+    model_data: None,
     rendered_window: None,
-    text_model: None,
     view_zones: [],
     content_hover_widget: None,
     hover_widget_view: None,
@@ -256,8 +290,11 @@ pub fn Viewer::Viewer(
     measured_height: 0.0,
     soft_wrap_column: 0,
     max_line_length: 0,
-    view: None,
     container: None,
+    placeholder_element: None,
+    placeholder_text: None,
+    overlay_widgets: {},
+    document_input_hooked: false,
     render_pending: false,
     measure_requested: false,
     pending_rendered: None,
@@ -265,9 +302,6 @@ pub fn Viewer::Viewer(
     content_generation: 0,
     editor_id: next_editor_id(),
     decorations_generation: 0,
-    model_decorations_subscription: None,
-    model_tokens_subscription: None,
-    model_will_dispose_subscription: None,
     mouse_handler: None,
     last_mouse_buttons: 0,
     editor_has_focus: false,
@@ -406,7 +440,12 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
 /// squiggle stylesheet from the newly cascaded colors; the view keeps its DOM
 /// and scroll position.
 fn Viewer::apply_theme(self : Viewer) -> Unit {
-  match self.view {
+  match self.placeholder_element {
+    Some(placeholder) =>
+      placeholder.set_attribute("data-theme", self.options.theme)
+    None => ()
+  }
+  match self.get_view() {
     Some(view) => {
       view.root.set_attribute("data-theme", self.options.theme)
       view.apply_squiggly_theme()
@@ -416,36 +455,40 @@ fn Viewer::apply_theme(self : Viewer) -> Unit {
 }
 
 ///|
-/// Builds the browser `View` inside the host element and hooks its
-/// listeners. The host element must stay mounted and must never receive
-/// host-rendered children; the view owns its whole subtree.
+/// Takes ownership of the host element: stores the container and mounts the
+/// Viewer-owned no-model placeholder. The per-model `View` is created by
+/// `attach_model` and destroyed by `detach_model` (Monaco's `_attachModel`
+/// → `_createView` / `_detachModel`). The host element must stay mounted
+/// and must never receive host-rendered children.
 fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
-  if self.view is Some(_) {
+  if self.container is Some(_) {
     return
   }
-  let view = @view.View::new()
-  view.root.set_attribute("data-theme", self.options.theme)
-  host.append_child(view.root.as_node())
-  view.apply_squiggly_theme()
-  self.view = Some(view)
   self.container = Some(host)
-  // The editor root carries the configured font — Monaco's
-  // `applyFontInfo(this.domNode, fontInfo)` in `view.ts`. The measured
-  // `FontInfo` replaces the headless estimate at the first flush's measure.
-  self.apply_font_info_to_view(view)
+  let document = @rdom.document()
+  let placeholder = document.create_element("section")
+  placeholder.set_attribute("class", @view.empty_editor_class_name())
+  placeholder.set_attribute("data-theme", self.options.theme)
+  let message = document.create_element("div")
+  message.set_attribute("class", "source-message")
+  let message_text = document.create_text_node("")
+  message.append_child(message_text.as_node())
+  placeholder.append_child(message.as_node())
+  host.append_child(placeholder.as_node())
+  self.placeholder_element = Some(placeholder)
+  self.placeholder_text = Some(message_text)
   // Untrusted readings re-measure after 5s (`FontMeasurements.onDidChange`,
   // e.g. once a web font finished loading) — Monaco's
-  // `_recomputeOptions` subscription in `editorConfiguration.ts`.
+  // `_recomputeOptions` subscription in `editorConfiguration.ts`. Viewer-
+  // level: it outlives any per-model view.
   @browser_config.font_measurements().on_did_change(() => {
     self.measure_requested = true
     self.schedule_render()
   })
   |> ignore
-  self.hook_view_input(view)
+  self.hook_document_input()
   self.measure_requested = true
   self.schedule_render()
-  // Feedback bubbles seeded before the view existed can mount now.
-  self.rebuild_agent_feedback_widgets()
 }
 
 ///|
@@ -455,60 +498,91 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
 /// model resets the scroll position and controller state; hosts preserve or
 /// restore scroll through `save_view_state`/`restore_view_state`.
 pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
-  match model {
-    Some(model) => self.set_current_model(model)
-    None =>
-      match self.text_model {
-        Some(prev) => {
-          let old_model_url = Some(prev.uri)
-          self.clear_current_model()
-          self.did_change_model.fire({ old_model_url, new_model_url: None })
-        }
-        None => ()
+  // `setModel` (`cew:506-546`): same-model no-ops, then detach-then-attach,
+  // carrying text focus across the swap.
+  if self.model_data is None && model is None {
+    return
+  }
+  match (self.model_data, model) {
+    (Some(model_data), Some(model)) =>
+      if physical_equal(model_data.model, model) {
+        return
       }
+    _ => ()
+  }
+  let old_model_url = match self.model_data {
+    Some(model_data) => Some(model_data.model.uri)
+    None => None
+  }
+  let new_model_url = match model {
+    Some(model) => Some(model.uri)
+    None => None
+  }
+  // Rotate the per-model marker decorations: drop the previous model's set
+  // when switching resources, so marker changes resolve against the new
+  // snapshot (Monaco's `_onModelRemoved`/`_onModelAdded`; the add half runs
+  // in `attach_model`).
+  match (self.model_data, model) {
+    (Some(model_data), Some(model)) =>
+      if model_data.model.uri.to_string() != model.uri.to_string() {
+        self.services.marker_decorations.on_model_removed(model_data.model)
+      }
+    _ => ()
+  }
+  let had_text_focus = self.has_text_focus()
+  let detached_model = self.detach_model()
+  match model {
+    Some(model) => self.attach_model(model)
+    // `_attachModel(null)` just nulls `_modelData` (`cew:1751-1754`); the
+    // scheduled flush repaints the placeholder. Browser view zones ride
+    // model *swaps* (they re-push into each new view) but clear with the
+    // content on a plain detach.
+    None => {
+      self.view_zones = []
+      self.schedule_render()
+    }
+  }
+  if self.has_model() {
+    // "we have a new model (with a new view)!" (`cew:528-532`).
+    if had_text_focus {
+      self.focus()
+    }
+  } else {
+    // "make sure the outside world knows we are not focused" (`cew:536`).
+    self.editor_has_focus = false
+  }
+  self.did_change_model.fire({ old_model_url, new_model_url })
+  // `_postDetachModelCleanup` (`cew:2008-2010`): sweep this editor's
+  // decorations off the outgoing model by owner id.
+  match detached_model {
+    Some(detached) =>
+      detached.remove_all_decorations_with_owner_id(self.editor_id)
+    None => ()
   }
 }
 
 ///|
-fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
-  let old_model_url = match self.text_model {
-    Some(prev) => Some(prev.uri)
-    None => None
-  }
-  // Rotate the per-model marker decorations: drop the previous model's set when
-  // switching resources, then (re)register this model so marker changes resolve
-  // against its snapshot (Monaco's `_onModelRemoved`/`_onModelAdded`).
-  match self.text_model {
-    Some(prev) =>
-      if prev.uri.to_string() != model.uri.to_string() {
-        self.services.marker_decorations.on_model_removed(prev)
-      }
-    None => ()
-  }
-  self.services.markers.clear_resource(model.uri)
-  // Rotate the per-model subscriptions with the model (plan D6: owners
-  // re-attach on swap) — Monaco's `listenersToRemove` set in `_attachModel`.
-  // The decoration-change subscription attaches before the marker service
-  // seeds the model so the seeding delta is observed too.
-  match self.model_decorations_subscription {
-    Some(subscription) => subscription.dispose()
-    None => ()
-  }
-  match self.model_tokens_subscription {
-    Some(subscription) => subscription.dispose()
-    None => ()
-  }
-  match self.model_will_dispose_subscription {
-    Some(subscription) => subscription.dispose()
-    None => ()
-  }
-  // The hover-owned decoration ids belong to the outgoing model's storage.
+/// Monaco's `_detachModel` (`cew:2012-2032`): reset the per-model feature
+/// state, dispose the bundle's listeners, remove the view's DOM subtree from
+/// the container (restoring the no-model placeholder), drop `data-mode-id`,
+/// and hand back the outgoing model for the owner-id decoration sweep.
+fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
+  guard self.model_data is Some(model_data) else { return None }
+  let model = model_data.model
+  // Feature state belongs to the outgoing model: the per-model resets Track
+  // C moved onto the controllers, plus the widget teardown.
+  self.cancel_mouse_selection()
   match self.content_hover_controller() {
-    Some(hc) => hc.reset_model_state()
+    Some(hc) => {
+      hc.reset_model_state()
+      hc.hover = @hover.HoverController::empty()
+      hc.hover_keep_open = false
+      hc.hover_ignore_mouse_events = false
+      hc.cancel_react()
+    }
     None => ()
   }
-  // Feedback decoration/widget state belongs to the outgoing model; the
-  // model-change event re-applies the new resource's feedback data.
+  self.sync_content_hover_widget()
   match self.agent_feedback_input_contribution() {
     Some(ic) => ic.reset_model_state()
     None => ()
@@ -518,63 +592,68 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
     None => ()
   }
   self.clear_agent_feedback_widgets() |> ignore
-  self.model_decorations_subscription = Some(
-    model.on_did_change_decorations(event => {
-      // Monaco: `onDidChangeDecorations` → `viewModel.decorations
-      // .onModelDecorationsChanged()` (`viewModelImpl.ts`) — drop the
-      // computer + viewport caches before the re-render reads them.
-      match self.view_model {
-        Some(view_model) => {
-          view_model.decorations().on_model_decorations_changed()
-          // Injected-text deltas re-run the line-breaks computer per line in
-          // Monaco (`onDidChangeContentOrInjectedText`); the viewer's
-          // granularity is the whole-document reproject
-          // (`_lines.onModelFlushed()`), applied to the live view model.
-          if event.affects_injected_text {
-            view_model.on_did_change_content_or_injected_text()
-            self.on_line_mapping_changed(view_model, model)
-          }
-        }
-        None => ()
-      }
-      self.decorations_generation += 1
-      self.schedule_render()
-    }),
-  )
-  // A disposed model detaches itself
-  // (`codeEditorWidget.ts:1787` `model.onWillDispose(() => this.setModel(null))`).
-  self.model_will_dispose_subscription = Some(
-    model.on_will_dispose(() => self.set_model(None)),
-  )
-  // Token changes (the part's registry subscription fires them on tokenizer
-  // (re)registration) re-warm the memo and repaint — Monaco's
-  // `ModelTokensChangedEvent` handling. The viewer's granularity is the whole
-  // document, so the event's ranges are not consulted.
-  self.model_tokens_subscription = Some(
-    model.on_did_change_tokens(_ => self.retokenize_current_model(model)),
-  )
-  self.services.marker_decorations.on_model_added(model)
   match self.inlay_hints_controller() {
     Some(controller) => controller.reset_model_state()
     None => ()
   }
-  self.cancel_mouse_selection()
-  self.dismiss_hover()
-  self.attach_model(model)
-  self.did_change_model.fire({ old_model_url, new_model_url: Some(model.uri) })
+  model_data.dispose()
+  self.model_data = None
+  match self.container {
+    Some(host) => {
+      host.remove_attribute("data-mode-id")
+      match model_data.view {
+        Some(view) => {
+          host.remove_child(view.root.as_node())
+          // The no-model placeholder returns while no view is attached.
+          match self.placeholder_element {
+            Some(placeholder) => host.append_child(placeholder.as_node())
+            None => ()
+          }
+        }
+        None => ()
+      }
+    }
+    None => ()
+  }
+  self.mouse_handler = None
+  self.rendered_window = None
+  self.horizontal_reveal_request = None
+  Some(model)
 }
 
 ///|
 /// Returns the current model installed on the viewer.
 pub fn Viewer::get_model(self : Viewer) -> @model.TextModel? {
-  self.text_model
+  match self.model_data {
+    Some(model_data) => Some(model_data.model)
+    None => None
+  }
 }
 
 ///|
 /// Whether a model is installed — `hasModel`, Monaco's type-guard companion to
 /// `getModel`.
 pub fn Viewer::has_model(self : Viewer) -> Bool {
-  self.text_model is Some(_)
+  self.model_data is Some(_)
+}
+
+///|
+/// The attached bundle's view model — Monaco's `_getViewModel()`.
+fn Viewer::get_view_model(self : Viewer) -> @view_model.ViewModel? {
+  match self.model_data {
+    Some(model_data) => Some(model_data.view_model)
+    None => None
+  }
+}
+
+///|
+/// The attached bundle's view — `None` with no model, and `None` headless
+/// (the `hasRealView = false` analog).
+fn Viewer::get_view(self : Viewer) -> @view.View? {
+  match self.model_data {
+    Some(model_data) => model_data.view
+    None => None
+  }
 }
 
 ///|
@@ -600,9 +679,10 @@ pub fn Viewer::get_id(self : Viewer) -> String {
 }
 
 ///|
-/// The editor's own root element — `getDomNode`; `None` until attached.
+/// The editor's own root element — `getDomNode` (`cew:1489-1494`): the
+/// view's node only while a model is attached with a real view.
 pub fn Viewer::get_dom_node(self : Viewer) -> @rdom.Element? {
-  match self.view {
+  match self.get_view() {
     Some(view) => Some(view.root)
     None => None
   }
@@ -621,7 +701,7 @@ pub fn Viewer::get_container_dom_node(self : Viewer) -> @rdom.Element? {
 /// hidden textarea / edit context; the viewer's focusable surface is the view
 /// root itself.
 pub fn Viewer::focus(self : Viewer) -> Unit {
-  match self.view {
+  match self.get_view() {
     Some(view) => focus_element(view.root)
     None => ()
   }
@@ -637,7 +717,7 @@ pub fn Viewer::has_text_focus(self : Viewer) -> Bool {
 /// Whether focus is anywhere inside the editor widget, including hover
 /// widgets — `hasWidgetFocus()`.
 pub fn Viewer::has_widget_focus(self : Viewer) -> Bool {
-  match self.view {
+  match self.get_view() {
     Some(view) => self.editor_has_focus || element_contains_active(view.root)
     None => false
   }
@@ -647,7 +727,7 @@ pub fn Viewer::has_widget_focus(self : Viewer) -> Bool {
 /// Returns the current scroll state in host-restorable form — Monaco's
 /// `saveViewState` (`cew:1038-1041`). No model → `None`.
 pub fn Viewer::save_view_state(self : Viewer) -> ViewerViewState? {
-  guard self.view_model is Some(view_model) else { return None }
+  guard self.get_view_model() is Some(view_model) else { return None }
   let position = view_model.view_layout.position()
   Some({ scroll_top: position.scroll_top, scroll_left: position.scroll_left })
 }
@@ -659,7 +739,7 @@ pub fn Viewer::restore_view_state(
   self : Viewer,
   state : ViewerViewState?,
 ) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   match state {
     Some(state) =>
       self.apply_scroll_change(
@@ -676,8 +756,12 @@ pub fn Viewer::restore_view_state(
 /// Disposes viewer-owned external resources. Like Monaco's dispose, the model
 /// detaches silently (no `onDidChangeModel`).
 pub fn Viewer::dispose(self : Viewer) -> Unit {
-  if self.text_model is Some(_) {
-    self.clear_current_model()
+  // The model detaches silently (no `onDidChangeModel`), but the owner-id
+  // sweep still runs (`_postDetachModelCleanup`).
+  match self.detach_model() {
+    Some(detached) =>
+      detached.remove_all_decorations_with_owner_id(self.editor_id)
+    None => ()
   }
   // Contributions dispose with the editor (`codeEditorWidget.dispose` →
   // `this._contributions.dispose()`).
@@ -717,7 +801,7 @@ pub fn Viewer::layout(self : Viewer) -> Unit {
 /// (`cew:1014-1017`, no model → no-op). Wheel and scrollbar input arrive
 /// through the view's own listeners.
 pub fn Viewer::set_scroll_top(self : Viewer, new_scroll_top : Double) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   self.apply_scroll_change(
     view_model.view_layout.scroll_to(scroll_top=new_scroll_top),
   )
@@ -727,7 +811,7 @@ pub fn Viewer::set_scroll_top(self : Viewer, new_scroll_top : Double) -> Unit {
 /// Sets the horizontal synthetic scroll position — `setScrollLeft`
 /// (`cew:1003-1006`, no model → no-op).
 pub fn Viewer::set_scroll_left(self : Viewer, new_scroll_left : Double) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   self.apply_scroll_change(
     view_model.view_layout.scroll_to(
       scroll_top=view_model.view_layout.position().scroll_top,
@@ -745,7 +829,7 @@ pub fn Viewer::set_scroll_position(
   scroll_top? : Double,
   scroll_left? : Double,
 ) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   let position = view_model.view_layout.position()
   let scroll_top = match scroll_top {
     Some(value) => value
@@ -764,7 +848,7 @@ pub fn Viewer::set_scroll_position(
 /// Scrolls by a line-count delta using the configured line height — the
 /// keyboard arrow-scroll step.
 fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   self.apply_scroll_change(
     view_model.view_layout.scroll_by(
       delta_top=(lines * self.font_info.line_height).to_double(),
@@ -775,7 +859,7 @@ fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
 ///|
 /// Scrolls by a viewport-height page delta — the PageUp/PageDown step.
 fn Viewer::scroll_by_pages(self : Viewer, pages : Int) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   self.apply_scroll_change(
     view_model.view_layout.scroll_by(
       delta_top=pages.to_double() * view_model.view_layout.dimensions().height,
@@ -786,71 +870,18 @@ fn Viewer::scroll_by_pages(self : Viewer, pages : Int) -> Unit {
 ///|
 /// Scrolls to the top of the document — the Home key.
 fn Viewer::scroll_home(self : Viewer) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   self.apply_scroll_change(view_model.view_layout.scroll_to(scroll_top=0.0))
 }
 
 ///|
 /// Scrolls to the bottom of the document — the End key.
 fn Viewer::scroll_end(self : Viewer) -> Unit {
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   let dimensions = view_model.view_layout.dimensions()
   self.apply_scroll_change(
     view_model.view_layout.scroll_to(scroll_top=dimensions.scroll_height),
   )
-}
-
-///|
-fn Viewer::clear_current_model(self : Viewer) -> Unit {
-  match self.model_decorations_subscription {
-    Some(subscription) => subscription.dispose()
-    None => ()
-  }
-  self.model_decorations_subscription = None
-  match self.model_tokens_subscription {
-    Some(subscription) => subscription.dispose()
-    None => ()
-  }
-  self.model_tokens_subscription = None
-  match self.model_will_dispose_subscription {
-    Some(subscription) => subscription.dispose()
-    None => ()
-  }
-  self.model_will_dispose_subscription = None
-  match self.content_hover_controller() {
-    Some(hc) => hc.reset_model_state()
-    None => ()
-  }
-  match self.agent_feedback_input_contribution() {
-    Some(ic) => ic.reset_model_state()
-    None => ()
-  }
-  match self.agent_feedback_widget_contribution() {
-    Some(wc) => wc.reset_model_state()
-    None => ()
-  }
-  self.clear_agent_feedback_widgets() |> ignore
-  self.view_model = None
-  self.rendered_window = None
-  self.text_model = None
-  match self.inlay_hints_controller() {
-    Some(controller) => controller.reset_model_state()
-    None => ()
-  }
-  self.view_zones = []
-  self.horizontal_reveal_request = None
-  self.cancel_mouse_selection()
-  match self.content_hover_controller() {
-    Some(hc) => {
-      hc.hover = @hover.HoverController::empty()
-      hc.hover_keep_open = false
-      hc.hover_ignore_mouse_events = false
-      hc.cancel_react()
-    }
-    None => ()
-  }
-  self.sync_content_hover_widget()
-  self.schedule_render()
 }
 
 ///|
@@ -862,7 +893,7 @@ fn Viewer::apply_scroll_change(
     Some(scroll_change) => {
       self.cancel_horizontal_reveal_on_scroll(scroll_change)
       self.on_editor_scroll_changed(scroll_change)
-      match self.view {
+      match self.get_view() {
         Some(view) => view.editor_scrollbar.scrollable().reveal_for_scroll()
         None => ()
       }

@@ -24,7 +24,7 @@ test "inlay hints flow through decoration storage into the projection" {
       0,
     )
     // The model's injected-text query surfaces the stored decoration.
-    match viewer.text_model {
+    match viewer.get_model() {
       Some(model) =>
         assert_eq(model.get_injected_text_decorations().length(), 1)
       None => fail("expected a model")

@@ -19,7 +19,7 @@ fn Viewer::pointer_handler_helper(
       }
     },
     view_layout: () => {
-      match self.view_model {
+      match self.get_view_model() {
         Some(view_model) => Some(view_model.view_layout)
         None => None
       }
@@ -61,7 +61,7 @@ fn Viewer::hit_test_at(
   x : Double,
   y : Double,
 ) -> @viewer_common.MouseTarget? {
-  match self.view_model {
+  match self.get_view_model() {
     Some(view_model) => {
       let window = match self.rendered_window {
         Some(window) => window

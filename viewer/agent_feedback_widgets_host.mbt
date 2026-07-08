@@ -112,7 +112,9 @@ fn Viewer::clear_agent_feedback_widgets(self : Viewer) -> String? {
 fn Viewer::rebuild_agent_feedback_widgets(self : Viewer) -> Unit {
   guard self.agent_feedback_widget_contribution() is Some(wc) else { return }
   let focused_reply = self.clear_agent_feedback_widgets()
-  guard self.view is Some(_) && self.text_model is Some(model) else { return }
+  guard self.get_view() is Some(_) && self.get_model() is Some(model) else {
+    return
+  }
   let comments = @agent_feedback.get_session_editor_comments(
     self.services.agent_feedback.get_feedback(model.uri),
   )
@@ -247,7 +249,9 @@ fn Viewer::relayout_agent_feedback_widgets(self : Viewer) -> Unit {
 /// `_handleNavigation`: expand the widget containing the anchored comment,
 /// collapse the rest, focus the item, and reveal its range.
 fn Viewer::handle_agent_feedback_navigation(self : Viewer) -> Unit {
-  guard self.view is Some(_) && self.text_model is Some(model) else { return }
+  guard self.get_view() is Some(_) && self.get_model() is Some(model) else {
+    return
+  }
   let comments = @agent_feedback.get_session_editor_comments(
     self.services.agent_feedback.get_feedback(model.uri),
   )
@@ -279,7 +283,7 @@ fn Viewer::highlight_agent_feedback_range(
   self : Viewer,
   comment : @agent_feedback.SessionEditorComment,
 ) -> Unit {
-  guard self.text_model is Some(model) else { return }
+  guard self.get_model() is Some(model) else { return }
   let line_count = model.snapshot.line_count()
   let end_line = @base_common.clamp_int(
     comment.range.end_line_number,
@@ -316,7 +320,7 @@ fn Viewer::clear_agent_feedback_highlight(self : Viewer) -> Unit {
   if wc.highlight_decoration_ids.is_empty() {
     return
   }
-  guard self.text_model is Some(model) else {
+  guard self.get_model() is Some(model) else {
     wc.highlight_decoration_ids = []
     return
   }

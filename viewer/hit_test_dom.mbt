@@ -90,7 +90,7 @@ fn Viewer::dom_refine_content_target(
   guard view.view_lines.mapping_at(line_number) is Some(mapping) else {
     return fallback
   }
-  guard self.view_model is Some(view_model) else { return fallback }
+  guard self.get_view_model() is Some(view_model) else { return fallback }
   guard line_number >= 1 && line_number <= view_model.line_count() else {
     return fallback
   }
@@ -109,7 +109,7 @@ fn Viewer::dom_refine_content_target(
   // affinity `None` so a hit inside injected text snaps to a cursor stop; the
   // injected-text identity is taken from the *original* position, matching
   // the source's `ContentHitTestResult(normalizedPosition, …, injectedText)`.
-  let normalized = match self.view_model {
+  let normalized = match self.get_view_model() {
     Some(view_model) => {
       // (`PositionAffinity.None` — the annotation-free variant name is
       // enforced by warn 73.)

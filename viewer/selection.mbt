@@ -6,7 +6,7 @@
 /// through raw document offsets. Columns are one-based and local to each view
 /// line (the convention `measure_line_selection` consumes).
 fn Viewer::selection_view_range(self : Viewer) -> @base_common.Range? {
-  guard self.view_model is Some(view_model) else { return None }
+  guard self.get_view_model() is Some(view_model) else { return None }
   let selection = view_model.cursor.get_view_selection()
   if selection.is_empty() {
     return None
@@ -21,7 +21,7 @@ fn Viewer::selection_view_range(self : Viewer) -> @base_common.Range? {
 /// `set_position` still renders. `None` only without a model — the view
 /// model's cursor always exists, collapsed at (1,1) like Monaco's.
 fn Viewer::view_selection(self : Viewer) -> @core.Selection? {
-  match self.view_model {
+  match self.get_view_model() {
     Some(view_model) => Some(view_model.cursor.get_view_selection())
     None => None
   }
@@ -55,8 +55,8 @@ pub fn Viewer::set_selection(
   self : Viewer,
   selection : @core.Selection,
 ) -> Unit {
-  guard self.text_model is Some(model) else { return }
-  guard self.view_model is Some(view_model) else { return }
+  guard self.get_model() is Some(model) else { return }
+  guard self.get_view_model() is Some(view_model) else { return }
   let controller = view_model.cursor
   // The outgoing-event facts Monaco captures before mutating
   // (`cursor.ts` `_emitStateChangedIfNecessary`): the previous selection set
@@ -129,7 +129,7 @@ fn Viewer::handle_copy_event(self : Viewer, event : @rdom.Event) -> Bool {
   guard event.to_clipboard_event() is Some(clipboard_event) else {
     return false
   }
-  match (self.view_model, self.text_model) {
+  match (self.get_view_model(), self.get_model()) {
     (Some(view_model), Some(model)) => {
       let selection = view_model.cursor.get_model_selection()
       let snapshot = model.snapshot
@@ -151,7 +151,7 @@ fn Viewer::get_rich_text_to_copy(
   selection : @core.Selection,
   snapshot : @model.TextSnapshot,
 ) -> String {
-  match self.text_model {
+  match self.get_model() {
     Some(model) =>
       get_rich_text_to_copy(
         model,

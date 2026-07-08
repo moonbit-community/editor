@@ -27,6 +27,9 @@ test "hover markdown rows use the Monaco-shaped row wrappers" {
     ),
   )
   assert_true(html.contains("<strong>bold</strong>"))
+  // No code block in the markdown: the `asyncRenderCallback` class swap
+  // (`markdownHoverParticipant.ts:528`) never fires.
+  assert_false(html.contains("code-hover-contents"))
 }
 
 ///|
@@ -100,6 +103,11 @@ test "hover fenced code renders through the viewer token classes" {
   assert_true(moonbit.contains("monaco-tokenized-source"))
   assert_true(moonbit.contains("mtk3")) // keyword color id
   assert_true(moonbit.contains("fn"))
+  // A rendered code block swaps the contents class to `code-hover-contents`
+  // (Monaco `markdownHoverParticipant.ts:528`), lifting the max-width cap.
+  assert_true(
+    moonbit.contains("<div class=\"hover-contents code-hover-contents\">"),
+  )
   let mbt_alias = render_hover_parts(
     [
       MarkdownHover(

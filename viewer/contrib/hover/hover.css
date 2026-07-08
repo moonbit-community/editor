@@ -90,12 +90,11 @@
 
 .hover-contents {
   padding: 4px 8px;
-  overflow-wrap: break-word;
 }
 
 .monaco-hover .markdown-hover > .hover-contents:not(.code-hover-contents) {
-  width: max-content;
   max-width: var(--vscode-hover-maxWidth, 500px);
+  overflow-wrap: break-word;
 }
 
 .hover-plaintext {
@@ -139,13 +138,12 @@
   font-family: var(--monaco-monospace-font);
 }
 
+/* No box styling (background/padding/radius): the editor hover renders
+ * tokenized code directly on the widget background; `textCodeBlock-background`
+ * applies only to inline `code` above. The font-family stands in for Monaco's
+ * `applyFontInfo` on the code element (`editorMarkdownCodeBlockRenderer.ts`). */
 .monaco-tokenized-source {
-  padding: 6px 8px;
-  border-radius: 3px;
-  background: var(--vscode-textCodeBlock-background);
   font-family: var(--monaco-monospace-font);
-  overflow-wrap: normal;
-  word-break: normal;
   white-space: var(--vscode-hover-sourceWhiteSpace, pre-wrap);
 }
 

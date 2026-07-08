@@ -30,17 +30,28 @@ pub fn render_hover_parts(
 /// One markdown hover part → one `.hover-row` whose `.hover-row-contents` holds a
 /// `.markdown-hover` block per content. Mirrors Monaco `renderMarkdown`, which
 /// appends every content's element into the single row rather than emitting one
-/// row per content.
+/// row per content. A content whose markdown rendered a code block gets
+/// `code-hover-contents` — Monaco's `asyncRenderCallback` class swap
+/// (`markdownHoverParticipant.ts:528`), which fires exactly when a code block
+/// went through the editor code-block renderer and exempts the contents from
+/// the `--vscode-hover-maxWidth` cap.
 fn render_markdown_hover_row(
   contents : Array[@language.HoverContent],
   language_id : String,
 ) -> String {
   let inner = StringBuilder::new()
   for content in contents {
-    inner.write_string(
-      "<div class=\"markdown-hover\"><div class=\"hover-contents\">",
+    let (html, has_code_block) = render_markdown_hover_content(
+      content, language_id,
     )
-    inner.write_string(render_markdown_hover_content(content, language_id))
+    inner.write_string(
+      if has_code_block {
+        "<div class=\"markdown-hover\"><div class=\"hover-contents code-hover-contents\">"
+      } else {
+        "<div class=\"markdown-hover\"><div class=\"hover-contents\">"
+      },
+    )
+    inner.write_string(html)
     inner.write_string("</div></div>")
   }
   "<div class=\"hover-row\"><div class=\"hover-row-contents\">" +
@@ -49,12 +60,14 @@ fn render_markdown_hover_row(
 }
 
 ///|
+/// The content's HTML plus whether a fenced code block was rendered (the
+/// `code-hover-contents` trigger).
 fn render_markdown_hover_content(
   content : @language.HoverContent,
   language_id : String,
-) -> String {
+) -> (String, Bool) {
   match content {
-    PlainText(text) => hover_plaintext_html(text)
+    PlainText(text) => (hover_plaintext_html(text), false)
     Markdown(markdown) => hover_markdown_html(markdown, language_id)
   }
 }
@@ -86,11 +99,16 @@ fn marker_hover_row(text : String) -> String {
 }
 
 ///|
-fn hover_markdown_html(markdown : String, language_id : String) -> String {
+fn hover_markdown_html(
+  markdown : String,
+  language_id : String,
+) -> (String, Bool) {
   let base = @cmark_html.renderer(safe=true)
+  let mut has_code_block = false
   let code_override = @cmark_renderer.Renderer::new(block=fn(ctx, block) {
     match block {
       CodeBlock(code_block) => {
+        has_code_block = true
         ctx.string(render_hover_code_block(code_block.v, language_id))
         true
       }
@@ -98,9 +116,10 @@ fn hover_markdown_html(markdown : String, language_id : String) -> String {
     }
   })
   let doc = @cmark.Doc::from_string(markdown, strict=false)
-  base.compose(code_override).doc_to_string(doc) catch {
-    _ => hover_plaintext_html(markdown)
-  }
+  let html = base.compose(code_override).doc_to_string(doc) catch {
+      _ => return (hover_plaintext_html(markdown), false)
+    }
+  (html, has_code_block)
 }
 
 ///|

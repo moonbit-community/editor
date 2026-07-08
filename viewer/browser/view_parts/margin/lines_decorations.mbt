@@ -1,47 +1,53 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/linesDecorations/
-// linesDecorations.ts` (`LinesDecorationsOverlay.prepareRender`/`render`).
-// The DOM-free half (decoration filtering + `DedupOverlay` expansion) lives
-// in `viewer/common/view_model/margin_decorations.mbt`. Deviation: the
-// viewer's margin layers are flat absolutely-positioned divs (like the
-// line numbers), not Monaco's per-line wrapper divs, so each `.cldr`
-// carries its own `top`/`height` instead of inheriting them from a line
-// wrapper.
+// linesDecorations.ts` (`LinesDecorationsOverlay.prepareRender`/`render`), as
+// a pure per-line HTML builder for `browser/view`'s `MarginViewOverlays`
+// rows. The DOM-free half (decoration filtering + `DedupOverlay` expansion)
+// lives in `viewer/common/view_model/margin_decorations.mbt`; the
+// `DynamicViewOverlay` impl lives in `viewer/browser/view/view_part.mbt`
+// (the trait-owning package).
 
 ///|
-/// Rebuilds the `.lines-decorations` layer: per visible line, one
-/// `div.cldr.<class>` at `left = decorations_left`,
-/// `width = decorations_width` (`LinesDecorationsOverlay.prepareRender`).
-pub fn MarginViewOverlays::render_lines_decorations(
-  self : MarginViewOverlays,
-  viewport : @view_layout.ViewportData,
+/// The lines-decorations dynamic overlay's state: the prepared per-line HTML
+/// (`_renderResult`). `pub(all)`: the `DynamicViewOverlay` impl in
+/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+pub(all) struct LinesDecorationsOverlay {
+  mut render_result : Array[String]
+}
+
+///|
+pub fn LinesDecorationsOverlay::new() -> LinesDecorationsOverlay {
+  { render_result: [] }
+}
+
+///|
+/// `LinesDecorationsOverlay.prepareRender` (`linesDecorations.ts:96-118`):
+/// per visible line, one `div.cldr.<class>` at `left = decorations_left`,
+/// `width = decorations_width` (the shared `common` suffix); height comes
+/// from the row (`height: 100%` in `lines_decorations.css`). A zero-width
+/// lane renders nothing.
+pub fn prepare_lines_decorations_render(
   class_names_per_line : Array[Array[String]],
   decorations_left~ : Double,
   decorations_width~ : Double,
-) -> Unit {
+) -> Array[String] {
+  let output : Array[String] = []
   if decorations_width <= 0.0 {
-    self.lines_decorations.set_inner_html("")
-    return
+    for _ in 0..<class_names_per_line.length() {
+      output.push("")
+    }
+    return output
   }
   let common = "\" style=\"left:" +
     decorations_left.to_string() +
     "px;width:" +
     decorations_width.to_string() +
-    "px;"
-  let mut html = ""
-  for index in 0..<viewport.lines.length() {
-    if index >= class_names_per_line.length() {
-      break
+    "px;\"></div>"
+  for class_names in class_names_per_line {
+    let mut line_output = ""
+    for class_name in class_names {
+      line_output = line_output + "<div class=\"cldr " + class_name + common
     }
-    for class_name in class_names_per_line[index] {
-      html += "<div class=\"cldr " +
-        class_name +
-        common +
-        "top:" +
-        viewport.relative_vertical_offset[index].to_string() +
-        "px;height:" +
-        viewport.line_height.to_string() +
-        "px;\"></div>"
-    }
+    output.push(line_output)
   }
-  self.lines_decorations.set_inner_html(html)
+  output
 }

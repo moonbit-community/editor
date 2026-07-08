@@ -4,15 +4,13 @@ package "moonbit-community/editor/viewer/browser/view_parts/decorations"
 import {
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
-  "moonbit-community/editor/viewer/common/view_layout",
-  "moonbit-community/rabbita/dom",
   "moonbitlang/core/debug",
 }
 
 // Values
 pub fn compute_decoration_overlay_pieces(Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[DecorationOverlayPiece]
 
-pub fn render_decorations_overlay(@dom.Element, Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]], @view_layout.ViewportData, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Unit
+pub fn prepare_decorations_render(Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[String]
 
 // Errors
 
@@ -22,7 +20,13 @@ pub(all) struct DecorationOverlayPiece {
   class_name : String
   left : Double
   width : Double?
+  whole_line : Bool
 } derive(Eq, @debug.Debug)
+
+pub(all) struct DecorationsOverlay {
+  mut render_result : Array[String]
+}
+pub fn DecorationsOverlay::new() -> Self
 
 // Type aliases
 

@@ -65,7 +65,7 @@ test('clicking the line-number gutter selects that line', async ({ page }) => {
   const line = page.locator('.view-line').filter({ hasText: 'component_answe' });
   await expect(line).toHaveCount(1);
   const lineBox = await line.boundingBox();
-  const gutterBox = await page.locator('.line-numbers').boundingBox();
+  const gutterBox = await page.locator('.margin-view-overlays .line-numbers').first().boundingBox();
   expect(lineBox).not.toBeNull();
   expect(gutterBox).not.toBeNull();
 

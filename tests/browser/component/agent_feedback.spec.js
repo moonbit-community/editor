@@ -109,7 +109,7 @@ test('agent feedback: bubbles, glyph add flow, reply, remove, scroll', async ({ 
     .first();
   await quietLine.hover();
   const glyph = page.locator(
-    '.lines-decorations .cldr.agent-feedback-glyph.line-hover',
+    '.margin-view-overlays .cldr.agent-feedback-glyph.line-hover',
   );
   const glyphBox = await boxOf(glyph);
   await page.mouse.click(

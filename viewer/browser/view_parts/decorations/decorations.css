@@ -1,9 +1,9 @@
 /* Ported from vscode/src/vs/editor/browser/viewParts/decorations/decorations.css.
- * cdr = core decorations rendering (div). The flat-overlay pieces carry an
- * explicit top/height (see decorations_overlay.mbt) instead of Monaco's
- * per-line container, so height comes inline rather than `height: 100%`. */
-.moonbit-viewer .view-overlays .cdr {
+ * cdr = core decorations rendering (div); pieces sit inside the per-line
+ * overlay rows, so `height: 100%` is the row's line height. */
+.moonbit-viewer .lines-content .cdr {
   position: absolute;
+  height: 100%;
 }
 
 /* Stock classNames for the standard decoration colors (Monaco registers

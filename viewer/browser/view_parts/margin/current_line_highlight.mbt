@@ -1,23 +1,33 @@
-// The DOM half of Monaco's `CurrentLineMarginHighlightOverlay`
+// Monaco's `CurrentLineMarginHighlightOverlay`
 // (`viewParts/currentLineHighlight/currentLineHighlight.ts:224-235` over the
-// abstract `prepareRender`, `:126-171`), rendered into this package because
-// Monaco registers it as the first margin dynamic overlay — before the
-// line-number overlay (`view.ts:225-229`). The DOM-free predicates and class
-// strings live in `viewer/common/view_layout` (`current_line_highlight.mbt`);
-// the content twin lives with the selections part.
-//
-// Local structure deviation (the line-numbers `view-layer` precedent):
-// the pieces live in a dedicated first-child layer div so this overlay can
-// rebuild without touching the recycled line-number nodes.
+// abstract `prepareRender`, `:126-171`), as a pure per-line HTML builder for
+// `browser/view`'s `MarginViewOverlays` rows — the first registered margin
+// dynamic overlay, before the line-number overlay (`view.ts:225-229`). The
+// `DynamicViewOverlay` impl lives in `viewer/browser/view/view_part.mbt`
+// (the trait-owning package); the DOM-free predicates and class strings live
+// in `viewer/common/view_layout` (`current_line_highlight.mbt`); the content
+// twin lives with `view_parts/current_line_highlight`.
 
 ///|
-/// Renders the margin current-line highlight for one frame.
-/// `_shouldRenderThis` is `true` for the margin overlay (`:229-231`) — an
-/// unhighlighted mode simply produces pieces with the bare `current-line`
-/// class (no `current-line-margin`), which no CSS rule paints; `width` is
-/// `_contentLeft`, the margin width (`:227`).
-pub fn MarginViewOverlays::render_current_line_margin(
-  self : MarginViewOverlays,
+/// The margin current-line dynamic overlay's state: the prepared per-line
+/// HTML (`_renderData`). `pub(all)`: the `DynamicViewOverlay` impl in
+/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+pub(all) struct CurrentLineMarginHighlightOverlay {
+  mut render_result : Array[String]
+}
+
+///|
+pub fn CurrentLineMarginHighlightOverlay::new() -> CurrentLineMarginHighlightOverlay {
+  { render_result: [] }
+}
+
+///|
+/// `AbstractLineHighlightOverlay.prepareRender` (`:126-171`) over the margin
+/// overlay's predicates. `_shouldRenderThis` is `true` for the margin overlay
+/// (`:229-231`) — an unhighlighted mode simply produces pieces with the bare
+/// `current-line` class (no `current-line-margin`), which no CSS rule paints.
+/// `width` is `_contentLeft`, the margin width (`:227`).
+pub fn prepare_current_line_margin_render(
   viewport : @view_layout.ViewportData,
   view_model : @view_model.ViewModel?,
   cursor_view_line : Int?,
@@ -27,9 +37,12 @@ pub fn MarginViewOverlays::render_current_line_margin(
   render_line_highlight : @view_layout.RenderLineHighlight,
   render_line_highlight_only_when_focus : Bool,
   width : Double,
-) -> Unit {
-  self.current_line.set_inner_html("")
-  guard cursor_view_line is Some(cursor_line) else { return }
+) -> Array[String] {
+  let render_data : Array[String] = []
+  for _ in 0..<viewport.lines.length() {
+    render_data.push("")
+  }
+  guard cursor_view_line is Some(cursor_line) else { return render_data }
   let in_margin = @view_layout.should_render_line_highlight_in_margin(
     render_line_highlight, render_line_highlight_only_when_focus, editor_has_focus,
   )
@@ -39,33 +52,34 @@ pub fn MarginViewOverlays::render_current_line_margin(
     render_line_highlight, render_line_highlight_only_when_focus, editor_has_focus,
     selection_is_empty,
   )
-  let document = @rdom.document()
   let (first_line, last_line) = margin_current_line_span(
     view_model, cursor_line, word_wrap,
   )
   for view_line in first_line..<=last_line {
     let index = view_line - viewport.start_line_number
-    if index < 0 || index >= viewport.relative_vertical_offset.length() {
+    if index < 0 || index >= render_data.length() {
       continue
     }
+    // `CurrentLineMarginHighlightOverlay._renderOne` (`:225-228`): height
+    // comes from the row (`height: 100%`), and the source writes no
+    // trailing `;` after the margin width.
     let class_name = @view_layout.current_line_margin_class(
       in_margin~,
       other~,
       exact=view_line == cursor_line,
     )
-    let node = document.create_element("div")
-    node.set_attribute("class", class_name)
-    node.set_attribute(
-      "style",
-      "top:\{viewport.relative_vertical_offset[index]}px;width:\{width}px;height:\{viewport.line_height}px",
-    )
-    self.current_line.append_child(node.as_node())
+    render_data[index] = "<div class=\"" +
+      class_name +
+      "\" style=\"width:" +
+      width.to_string() +
+      "px\"></div>"
   }
+  render_data
 }
 
 ///|
 /// The view-line span (wrapped pass, `currentLineHighlight.ts:141-158`) —
-/// the margin twin of the selections package's `current_line_span`.
+/// the margin twin of the content package's `current_line_span`.
 fn margin_current_line_span(
   view_model : @view_model.ViewModel?,
   cursor_view_line : Int,

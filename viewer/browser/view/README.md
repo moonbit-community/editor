@@ -17,6 +17,11 @@ drives every `browser/view_parts/*` package.
 - `ViewContext` (`view_context.mbt`): the capability struct `Viewer::build_view_context`
   (root `viewer` package's `view_host.mbt`) builds and `View::render` reads,
   the local analog of `View` reading its owning `CodeEditorWidget`.
+- `ViewOverlays`/`ViewOverlayLine`/`ContentViewOverlays`/`MarginViewOverlays`
+  (`view_overlays.mbt`): Monaco's `viewOverlays.ts` — the per-line overlay
+  row recycler and its two containers, plus the private `DynamicViewOverlay`
+  seam whose impls (this package, the orphan-rule pattern) feed the overlay
+  packages' pure per-line HTML builders the render context.
 - `ViewPart` (`view_part.mbt`): the private `ViewEventHandler`/render-lifecycle
   trait, plus every `impl ViewPart for X with ...` block for the 8 concrete
   view-part types. Kept here rather than in each view-part's own package —

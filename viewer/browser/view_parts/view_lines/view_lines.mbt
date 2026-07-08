@@ -270,8 +270,9 @@ fn resolve_line_mapping(
 }
 
 ///|
-/// `pub`: called cross-package by `margin.mbt`'s line-number gutter render,
-/// which recycles its nodes the same way `ViewLines::render_text` does.
+/// `pub`: called cross-package by `browser/view`'s `ViewOverlays` row
+/// recycler, which windows its rows the same way `ViewLines::render_text`
+/// windows text lines.
 pub fn viewport_window(
   viewport : @view_layout.ViewportData,
 ) -> @view_layout.LineWindow {
@@ -379,23 +380,6 @@ fn write_line_node(
 }
 
 ///|
-/// `pub`: called cross-package by `margin.mbt`'s line-number gutter render.
-pub fn write_line_number_node(
-  gutter : @rdom.Element,
-  line_number : Int,
-  top : Int,
-  line_height : Int,
-) -> Unit {
-  gutter.set_attribute("class", "line-number")
-  gutter.set_attribute("data-line", line_number.to_string())
-  gutter.set_attribute("style", line_node_style(top, line_height))
-  gutter.set_inner_html(line_number.to_string())
-}
-
-///|
-/// `pub`: called cross-package by `margin.mbt`'s line-number render
-/// (which positions its nodes the same way `ViewLines` positions text
-/// lines).
-pub fn line_node_style(top : Int, line_height : Int) -> String {
+fn line_node_style(top : Int, line_height : Int) -> String {
   "top:" + top.to_string() + "px;height:" + line_height.to_string() + "px"
 }

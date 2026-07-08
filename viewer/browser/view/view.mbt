@@ -17,8 +17,8 @@ pub(all) struct View {
   squiggly_style : @rdom.Element
   view_lines : @view_lines.ViewLines
   view_zones : @view_zones.ViewZones
-  content_view_overlays : @selections.ContentViewOverlays
-  margin_view_overlays : @margin.MarginViewOverlays
+  content_view_overlays : ContentViewOverlays
+  margin_view_overlays : MarginViewOverlays
   content_widgets : @content_widgets.ContentWidgets
   view_cursors : @view_cursors.ViewCursors
   overlay_widgets : @overlay_widgets.OverlayWidgets
@@ -43,9 +43,9 @@ pub fn View::new() -> View {
   let overflow_guard = document.create_element("div")
   overflow_guard.set_attribute("class", "overflow-guard")
   overflow_guard.set_attribute("data-view-part", "overflow-guard")
-  let margin_view_overlays = @margin.MarginViewOverlays::new(document)
+  let margin_view_overlays = MarginViewOverlays::new(document)
   let editor_scrollbar = @editor_scrollbar.EditorScrollbar::new()
-  let content_view_overlays = @selections.ContentViewOverlays::new(document)
+  let content_view_overlays = ContentViewOverlays::new(document)
   let view_zones = @view_zones.ViewZones::new(document)
   let view_lines = @view_lines.ViewLines::new(document)
   let content_widgets = @content_widgets.ContentWidgets::new(document)

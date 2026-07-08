@@ -1,30 +1,37 @@
-// The DOM half of Monaco's `CurrentLineHighlightOverlay`
-// (`viewParts/currentLineHighlight/currentLineHighlight.ts:207-219` over the
-// abstract `prepareRender`, `:126-171`), rendered into the shared
-// `.view-overlays` container owned by `view_parts/selections`'
-// `ContentViewOverlays` because Monaco registers it there as the first
+// Monaco's `CurrentLineHighlightOverlay`
+// (`viewParts/currentLineHighlight/currentLineHighlight.ts`): the content
+// half of the abstract `AbstractLineHighlightOverlay.prepareRender`
+// (`:126-171`) plus `CurrentLineHighlightOverlay._renderOne` (`:209-212`),
+// as a pure per-line HTML builder. The overlay renders into
+// `browser/view`'s `ContentViewOverlays` rows as the first registered
 // dynamic overlay — before `SelectionsOverlay` (`view.ts:218-219`), which
-// keeps the highlight painting under the selection; the shared `ViewPart`
-// shell in `viewer/browser/view/view_part.mbt` sequences the overlay
-// packages. The DOM-free predicates and class strings live in
+// keeps the highlight painting under the selection. The `DynamicViewOverlay`
+// impl lives in `viewer/browser/view/view_part.mbt` (the trait-owning
+// package); the DOM-free predicates and class strings live in
 // `viewer/common/view_layout` (`current_line_highlight.mbt`); the margin
 // twin lives with the margin part.
-//
-// Flat-overlay deviation (like the selection pieces): one absolutely
-// positioned div per highlighted view line instead of per-line container
-// HTML, sized inline (`height:100%` in Monaco's CSS becomes an explicit
-// line-height px).
 
 ///|
-/// Renders the current-line highlight for one frame. The caller (the
-/// `ViewPart` impl) has already cleared the container; pieces are appended
-/// before the selection pieces so DOM order preserves Monaco's overlay
-/// z-order. `width` is `max(ctx.scrollWidth, contentWidth)`
-/// (`currentLineHighlight.ts:211`). `container` is the `.view-overlays`
-/// element owned by `@selections.ContentViewOverlays` (foreign-method rule:
-/// this sibling package exposes a free function instead of a method).
-pub fn render_current_line(
-  container : @rdom.Element,
+/// The content current-line dynamic overlay's state: the prepared per-line
+/// HTML (`_renderData`). `pub(all)`: the `DynamicViewOverlay` impl in
+/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+pub(all) struct CurrentLineHighlightOverlay {
+  mut render_result : Array[String]
+}
+
+///|
+pub fn CurrentLineHighlightOverlay::new() -> CurrentLineHighlightOverlay {
+  { render_result: [] }
+}
+
+///|
+/// `AbstractLineHighlightOverlay.prepareRender` (`:126-171`) over the content
+/// overlay's predicates: every line starts empty; when the highlight should
+/// render in content, the wrapped pass (`:141-158`) fills the cursor's whole
+/// model-line span with the non-exact div and the exact pass (`:160-168`)
+/// claims the cursor's own view line. `width` is
+/// `max(ctx.scrollWidth, contentWidth)` (`_renderOne`, `:211`).
+pub fn prepare_current_line_render(
   viewport : @view_layout.ViewportData,
   view_model : @view_model.ViewModel?,
   cursor_view_line : Int?,
@@ -34,46 +41,52 @@ pub fn render_current_line(
   render_line_highlight : @view_layout.RenderLineHighlight,
   render_line_highlight_only_when_focus : Bool,
   width : Double,
-) -> Unit {
+) -> Array[String] {
+  let render_data : Array[String] = []
+  for _ in 0..<viewport.lines.length() {
+    render_data.push("")
+  }
   // `_shouldRenderThis` (`:213-215`) → `_shouldRenderInContent` (`:191-197`).
   if !@view_layout.should_render_line_highlight_in_content(
       render_line_highlight, render_line_highlight_only_when_focus, editor_has_focus,
       selection_is_empty,
     ) {
-    return
+    return render_data
   }
-  guard cursor_view_line is Some(cursor_line) else { return }
+  guard cursor_view_line is Some(cursor_line) else { return render_data }
   let in_margin = @view_layout.should_render_line_highlight_in_margin(
     render_line_highlight, render_line_highlight_only_when_focus, editor_has_focus,
   )
-  let document = @rdom.document()
-  // Wrapped pass (`:141-158`): every view line of the cursor's model line
-  // gets the non-exact class; the exact pass (`:160-168`) then claims the
-  // cursor's own view line.
+  // Wrapped pass (`:141-158`), gated on word wrap like the source's
+  // `_wordWrap`; then the exact pass (`:160-168`).
   let (first_line, last_line) = current_line_span(
     view_model, cursor_line, word_wrap,
   )
   for view_line in first_line..<=last_line {
     let index = view_line - viewport.start_line_number
-    if index < 0 || index >= viewport.relative_vertical_offset.length() {
+    if index < 0 || index >= render_data.length() {
       continue
     }
-    let class_name = @view_layout.current_line_content_class(
+    render_data[index] = render_one(
       in_margin~,
       exact=view_line == cursor_line,
+      width~,
     )
-    let node = document.create_element("div")
-    node.set_attribute("class", class_name)
-    node.set_attribute(
-      "style",
-      current_line_style(
-        viewport.relative_vertical_offset[index],
-        width,
-        viewport.line_height,
-      ),
-    )
-    container.append_child(node.as_node())
   }
+  render_data
+}
+
+///|
+/// `CurrentLineHighlightOverlay._renderOne` (`:209-212`); the class string
+/// comes from the ported `current_line_content_class`, height from the row
+/// (`height: 100%` in `current_line_highlight.css`).
+fn render_one(in_margin~ : Bool, exact~ : Bool, width~ : Double) -> String {
+  let class_name = @view_layout.current_line_content_class(in_margin~, exact~)
+  "<div class=\"" +
+  class_name +
+  "\" style=\"width:" +
+  width.to_string() +
+  "px;\"></div>"
 }
 
 ///|
@@ -99,9 +112,4 @@ pub fn current_line_span(
     }
     None => (cursor_view_line, cursor_view_line)
   }
-}
-
-///|
-fn current_line_style(top : Int, width : Double, line_height : Int) -> String {
-  "top:\{top}px;width:\{width}px;height:\{line_height}px"
 }

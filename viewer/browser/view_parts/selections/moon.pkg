@@ -2,7 +2,6 @@ import {
   "moonbit-community/editor/base/common" @base_common,
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/rabbita/dom" @rdom,
 }
 
 supported_targets = "js"

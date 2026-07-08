@@ -2,23 +2,21 @@
 
 Mirrors `vscode/src/vs/editor/browser/viewParts/currentLineHighlight`
 (content half of `CurrentLineHighlightOverlay`): the current-line highlight
-divs, painted under the selection. The margin half lives in
-`viewer/browser/view_parts/margin`; the DOM-free predicates and class
-strings live in `viewer/common/view_layout`.
+as per-line HTML for `viewer/browser/view`'s `ContentViewOverlays` rows
+(`view_overlays.mbt`, Monaco's `viewOverlays.ts`) — the first registered
+content overlay, painted under the selection (`view.ts:218-219`). The margin
+half lives in `viewer/browser/view_parts/margin`; the DOM-free predicates
+and class strings live in `viewer/common/view_layout`.
 
 ## Responsibilities
 
-- `render_current_line`: the wrapped-line and exact passes appending
-  highlight divs for one frame.
+- `CurrentLineHighlightOverlay` (the `_renderData` state) and
+  `prepare_current_line_render`: the wrapped-line and exact passes.
 - `current_line_span`: the view-line span the highlight covers.
 
 ## Boundaries
 
-- The `.view-overlays` container and its `ViewPart` shell belong to
-  `view_parts/selections` (`ContentViewOverlays`) and
-  `viewer/browser/view/view_part.mbt` respectively — the foreign-method rule
-  keeps methods with their type's package, so this package exposes free
-  functions the shell sequences (current-line → selection → decorations,
-  Monaco's `view.ts:218-221` registration order).
-- A browser-tier package (`supported_targets = "js"`); may import
-  `viewer/common/*` and `rabbita/dom`.
+- The `DynamicViewOverlay` impl lives in `viewer/browser/view/view_part.mbt`,
+  the trait-owning package — see its README for the orphan-rule/cycle
+  reasoning. That is also why the types here are `pub(all)`.
+- Pure per-line HTML: no DOM writes (the rows belong to `browser/view`).

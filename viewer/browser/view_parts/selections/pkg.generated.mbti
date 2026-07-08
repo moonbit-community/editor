@@ -5,22 +5,18 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/rabbita/dom",
 }
 
 // Values
+pub fn prepare_selections_render(@view_layout.ViewportData, @common.Range?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Array[String]
 
 // Errors
 
 // Types and methods
-pub(all) struct ContentViewOverlays {
-  dom_node : @dom.Element
-  mut should_render : Bool
+pub(all) struct SelectionsOverlay {
+  mut render_result : Array[String]
 }
-pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
-pub fn ContentViewOverlays::new(@dom.Document) -> Self
-pub fn ContentViewOverlays::render_selection_overlays(Self, @view_layout.ViewportData, @common.Range?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Unit
-pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
+pub fn SelectionsOverlay::new() -> Self
 
 // Type aliases
 

@@ -4,17 +4,20 @@ package "moonbit-community/editor/viewer/browser/view_parts/current_line_highlig
 import {
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/rabbita/dom",
 }
 
 // Values
 pub fn current_line_span(@view_model.ViewModel?, Int, Bool) -> (Int, Int)
 
-pub fn render_current_line(@dom.Element, @view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Unit
+pub fn prepare_current_line_render(@view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Array[String]
 
 // Errors
 
 // Types and methods
+pub(all) struct CurrentLineHighlightOverlay {
+  mut render_result : Array[String]
+}
+pub fn CurrentLineHighlightOverlay::new() -> Self
 
 // Type aliases
 

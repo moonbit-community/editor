@@ -1,18 +1,15 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/decorations/decorations.ts`
 // (`DecorationsOverlay`), vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971. Rendered into the shared
-// `.view-overlays` container owned by `view_parts/selections`'
-// `ContentViewOverlays`, after the current-line and selection pieces —
-// Monaco's dynamic-overlay registration order (`view.ts:218-221`:
-// CurrentLine, Selections, [IndentGuides — unported], Decorations). The
-// shared `ViewPart` shell in `viewer/browser/view/view_part.mbt` sequences
-// the three overlay packages.
+// 294fb350837dbaee37b949533fead4df4e0e8971. A dynamic overlay of
+// `browser/view`'s `ContentViewOverlays` rows, registered after the
+// current-line and selection overlays — Monaco's registration order
+// (`view.ts:218-221`: CurrentLine, Selections, [IndentGuides — unported],
+// Decorations). The `DynamicViewOverlay` impl lives in
+// `viewer/browser/view/view_part.mbt` (the trait-owning package); this
+// package is the pure per-line piece/HTML computation, unit-testable
+// headlessly.
 //
-// Deviations (decoration plan 7-8):
-// - Flat overlay pieces: absolutely positioned divs appended to the shared
-//   overlay container (the selections/current-line precedent) instead of
-//   Monaco's per-line container HTML strings; the per-line piece computation
-//   is the pure transcription below and unit-testable headlessly.
+// Deviations:
 // - `linesVisibleRangesForRange` reuses the DOM caret-measurement seam
 //   (`measure_line_decorations`, `keep_empty=true` so a collapsed range
 //   yields its zero-width caret rect) — Monaco reads the same geometry from
@@ -22,8 +19,8 @@
 //   measurement; no find feature exists here, so it is dropped.
 
 ///|
-/// One absolutely positioned decoration piece (`<div class="cdr {className}">`),
-/// positioned at `top`/`left` with either a pixel width or `width:100%`.
+/// One decoration piece (`<div class="cdr {className}">`) inside its line's
+/// overlay row, at `left` with either a pixel width or `width:100%`.
 pub(all) struct DecorationOverlayPiece {
   line_index : Int
   class_name : String
@@ -31,6 +28,10 @@ pub(all) struct DecorationOverlayPiece {
   /// `None` renders `width:100%` (whole-line pieces and the
   /// `shouldFillLineOnLineBreak` expansion).
   width : Double?
+  /// Whole-line pieces serialize Monaco's `left:0;width:100%;`
+  /// (`_renderWholeLineDecorations`) rather than the normal pieces'
+  /// `left:{n}px;…` (`_renderNormalDecoration`).
+  whole_line : Bool
 } derive(Eq, Debug)
 
 ///|
@@ -135,6 +136,7 @@ fn render_whole_line_decorations(
         class_name: d.options.class_name,
         left: 0.0,
         width: None,
+        whole_line: true,
       })
     }
   }
@@ -304,55 +306,68 @@ fn render_normal_decoration(
         } else {
           Some(width)
         },
+        whole_line: false,
       })
     }
   }
 }
 
 ///|
-/// The DOM half: appends one `div.cdr.{className}` per computed piece to the
-/// shared overlay container (flat-overlay deviation; `decorations.css`).
-/// `container` is the `.view-overlays` element owned by
-/// `@selections.ContentViewOverlays` — the foreign-method rule keeps methods
-/// with their type's package, so this package exposes a free function the
-/// shared shell (`browser/view/view_part.mbt`) sequences.
-pub fn render_decorations_overlay(
-  container : @rdom.Element,
+/// The decorations dynamic overlay's state: the prepared per-line HTML
+/// (`_renderResult`). `pub(all)`: the `DynamicViewOverlay` impl in
+/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+pub(all) struct DecorationsOverlay {
+  mut render_result : Array[String]
+}
+
+///|
+pub fn DecorationsOverlay::new() -> DecorationsOverlay {
+  { render_result: [] }
+}
+
+///|
+/// `prepareRender` (`decorations.ts:67-113`): the computed pieces serialized
+/// into per-line HTML. Whole-line pieces emit `_renderWholeLineDecorations`'s
+/// exact `left:0;width:100%;` string; normal pieces emit
+/// `_renderNormalDecoration`'s `left:{n}px;width:{n}px|100%;`. Height comes
+/// from the row (`height: 100%` in `decorations.css`).
+pub fn prepare_decorations_render(
   decorations : Array[@view_model.ViewModelDecoration],
-  viewport : @view_layout.ViewportData,
+  visible_start_line_number : Int,
+  visible_end_line_number : Int,
   get_line_max_column : (Int) -> Int,
   measure : (Int, Int, Int) -> Array[(Double, Double)],
   typical_half_width : Double,
-) -> Unit {
+) -> Array[String] {
   let pieces = compute_decoration_overlay_pieces(
-    decorations,
-    viewport.start_line_number,
-    viewport.end_line_number,
-    get_line_max_column,
-    measure,
-    typical_half_width,
+    decorations, visible_start_line_number, visible_end_line_number, get_line_max_column,
+    measure, typical_half_width,
   )
-  let document = @rdom.document()
+  let output : Array[String] = []
+  for _ in visible_start_line_number..<=visible_end_line_number {
+    output.push("")
+  }
   for piece in pieces {
-    let node = document.create_element("div")
-    node.set_attribute("class", "cdr " + piece.class_name)
-    let top = viewport.relative_vertical_offset[piece.line_index]
-    let width_css = match piece.width {
-      Some(width) => width.to_string() + "px"
-      None => "100%"
+    if piece.line_index < 0 || piece.line_index >= output.length() {
+      continue
     }
-    node.set_attribute(
-      "style",
-      "top:" +
-      top.to_string() +
-      "px;height:" +
-      viewport.line_height.to_string() +
-      "px;left:" +
+    let style = if piece.whole_line {
+      "left:0;width:100%;"
+    } else {
+      "left:" +
       piece.left.to_string() +
       "px;width:" +
-      width_css +
-      ";",
-    )
-    container.append_child(node.as_node())
+      (match piece.width {
+        Some(width) => width.to_string() + "px;"
+        None => "100%;"
+      })
+    }
+    output[piece.line_index] = output[piece.line_index] +
+      "<div class=\"cdr " +
+      piece.class_name +
+      "\" style=\"" +
+      style +
+      "\"></div>"
   }
+  output
 }

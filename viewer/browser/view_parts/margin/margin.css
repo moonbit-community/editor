@@ -1,5 +1,5 @@
 /* Margin layer: viewport-fixed clip that occludes horizontally scrolled
-   content; the inner rail translates vertically only. */
+   content; the inner rows container translates vertically only. */
 .margin {
   position: absolute;
   top: 0;
@@ -10,26 +10,28 @@
   background: var(--vscode-editor-background);
 }
 
-.margin-view-overlays,
-.line-numbers {
+.margin-view-overlays {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-}
-
-.line-numbers {
   will-change: transform;
 }
 
-.line-number {
+/* Monaco `lineNumbers.css` (`.monaco-editor .margin-view-overlays
+   .line-numbers`) merged with the viewer's number styling (var()-based
+   theming): one absolutely positioned div per model-line-starting row,
+   sized inline (left/width) by `LineNumbersOverlay`. */
+.margin-view-overlays .line-numbers {
+  bottom: 0;
+  font-variant-numeric: tabular-nums;
   position: absolute;
-  left: 0;
-  right: 0;
+  text-align: right;
+  display: inline-block;
+  vertical-align: middle;
   box-sizing: border-box;
+  cursor: default;
   padding: 0 26px 0 8px;
   color: var(--vscode-editorLineNumber-foreground);
-  text-align: right;
   font: var(--editor-font-size) / var(--editor-line-height)
     var(--editor-font-family);
   user-select: none;

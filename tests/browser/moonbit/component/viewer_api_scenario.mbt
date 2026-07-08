@@ -207,10 +207,14 @@ fn poll_rendered(
       "dark",
       "viewer did not mirror the dark theme onto its root",
     )
+    // Monaco's `LineNumbersOverlay`: a number renders only on a model line's
+    // first view line, so soft-wrap continuations thin the count below the
+    // rendered view lines (never above).
     ctx.assert_true(
-      @support.query_count(".line-number") ==
+      @support.query_count(".margin-view-overlays .line-numbers") > 0 &&
+      @support.query_count(".margin-view-overlays .line-numbers") <=
       @support.query_count(".monaco-editor.readonly-editor .view-line"),
-      "line numbers did not stay aligned with rendered view lines",
+      "line numbers did not track model-line-starting view lines",
     )
     ctx.metric_int("renderedNotifications", rendered_count.val)
     ctx.metric_int("renderedLines", rendered_lines.val)

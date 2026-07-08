@@ -4,29 +4,32 @@ package "moonbit-community/editor/viewer/browser/view_parts/margin"
 import {
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/rabbita/dom",
 }
 
 // Values
+pub fn prepare_current_line_margin_render(@view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Array[String]
+
+pub fn prepare_line_numbers_render(@view_layout.ViewportData, @view_model.ViewModel?, left~ : Double, width~ : Double) -> Array[String]
+
+pub fn prepare_lines_decorations_render(Array[Array[String]], decorations_left~ : Double, decorations_width~ : Double) -> Array[String]
 
 // Errors
 
 // Types and methods
-pub(all) struct MarginViewOverlays {
-  dom_node : @dom.Element
-  current_line : @dom.Element
-  lines_decorations : @dom.Element
-  line_numbers : @dom.Element
-  line_number_nodes : Array[@dom.Element]
-  mut line_number_window : @view_layout.LineWindow
-  mut line_number_generation : Int
-  mut should_render : Bool
+pub(all) struct CurrentLineMarginHighlightOverlay {
+  mut render_result : Array[String]
 }
-pub fn MarginViewOverlays::get_dom_node(Self) -> @dom.Element
-pub fn MarginViewOverlays::new(@dom.Document) -> Self
-pub fn MarginViewOverlays::render_current_line_margin(Self, @view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Unit
-pub fn MarginViewOverlays::render_line_numbers(Self, @view_layout.ViewportData, Int) -> Unit
-pub fn MarginViewOverlays::render_lines_decorations(Self, @view_layout.ViewportData, Array[Array[String]], decorations_left~ : Double, decorations_width~ : Double) -> Unit
+pub fn CurrentLineMarginHighlightOverlay::new() -> Self
+
+pub(all) struct LineNumbersOverlay {
+  mut render_result : Array[String]
+}
+pub fn LineNumbersOverlay::new() -> Self
+
+pub(all) struct LinesDecorationsOverlay {
+  mut render_result : Array[String]
+}
+pub fn LinesDecorationsOverlay::new() -> Self
 
 // Type aliases
 

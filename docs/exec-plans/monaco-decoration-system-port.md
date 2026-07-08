@@ -127,6 +127,11 @@ What gets **deleted**, what gets **promoted**, what stays:
    per-line container HTML (recorded flat-overlay deviation); the per-line
    *piece computation* is a pure transcription of `_renderWholeLine…`/
    `_renderNormal…` and unit-testable headlessly.
+   **Superseded (2026-07-08):** the `viewOverlays.ts` rows port landed
+   (`browser/view/view_overlays.mbt` — the `ViewOverlays`/`ViewOverlayLine`
+   recycler plus the `DynamicViewOverlay` seam); all content and margin
+   overlays now emit Monaco's per-line HTML strings into recycled row divs,
+   so the flat-overlay deviation is gone tree-wide.
 8. **`linesVisibleRangesForRange`** for the overlay reuses the DOM
    measurement seam (`measure_line_selection`), like the selection overlay —
    Monaco reads the same geometry from its rendered lines.

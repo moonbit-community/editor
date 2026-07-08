@@ -100,8 +100,20 @@ test "whole-line decorations clamp to the visible window as width:100% pieces" {
     pieces,
     content=(
       #|[
-      #|  { line_index: 1, class_name: "wl", left: 0, width: None },
-      #|  { line_index: 2, class_name: "wl", left: 0, width: None },
+      #|  {
+      #|    line_index: 1,
+      #|    class_name: "wl",
+      #|    left: 0,
+      #|    width: None,
+      #|    whole_line: true,
+      #|  },
+      #|  {
+      #|    line_index: 2,
+      #|    class_name: "wl",
+      #|    left: 0,
+      #|    width: None,
+      #|    whole_line: true,
+      #|  },
       #|]
     ),
   )
@@ -118,7 +130,15 @@ test "same-class touching ranges merge into one flushed decoration" {
   debug_inspect(
     pieces,
     content=(
-      #|[{ line_index: 0, class_name: "m", left: 7, width: Some(28) }]
+      #|[
+      #|  {
+      #|    line_index: 0,
+      #|    class_name: "m",
+      #|    left: 7,
+      #|    width: Some(28),
+      #|    whole_line: false,
+      #|  },
+      #|]
     ),
   )
 }
@@ -142,7 +162,15 @@ test "showIfCollapsed pulls an endColumn=1 range back to the previous line" {
   debug_inspect(
     pieces,
     content=(
-      #|[{ line_index: 0, class_name: "sq", left: 14, width: Some(56) }]
+      #|[
+      #|  {
+      #|    line_index: 0,
+      #|    class_name: "sq",
+      #|    left: 14,
+      #|    width: Some(56),
+      #|    whole_line: false,
+      #|  },
+      #|]
     ),
   )
 }
@@ -163,7 +191,15 @@ test "collapsed range widens to a centered half-width" {
   debug_inspect(
     pieces,
     content=(
-      #|[{ line_index: 0, class_name: "sq", left: 67, width: Some(7) }]
+      #|[
+      #|  {
+      #|    line_index: 0,
+      #|    class_name: "sq",
+      #|    left: 67,
+      #|    width: Some(7),
+      #|    whole_line: false,
+      #|  },
+      #|]
     ),
   )
 }
@@ -179,8 +215,20 @@ test "shouldFillLineOnLineBreak expands continuing lines to width:100%" {
     pieces,
     content=(
       #|[
-      #|  { line_index: 0, class_name: "fill", left: 7, width: None },
-      #|  { line_index: 1, class_name: "fill", left: 0, width: Some(21) },
+      #|  {
+      #|    line_index: 0,
+      #|    class_name: "fill",
+      #|    left: 7,
+      #|    width: None,
+      #|    whole_line: false,
+      #|  },
+      #|  {
+      #|    line_index: 1,
+      #|    class_name: "fill",
+      #|    left: 0,
+      #|    width: Some(21),
+      #|    whole_line: false,
+      #|  },
       #|]
     ),
   )

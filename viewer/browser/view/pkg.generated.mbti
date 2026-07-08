@@ -4,6 +4,8 @@ package "moonbit-community/editor/viewer/browser/view"
 import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
+  "moonbit-community/editor/viewer/browser/view_parts/current_line_highlight",
+  "moonbit-community/editor/viewer/browser/view_parts/decorations",
   "moonbit-community/editor/viewer/browser/view_parts/editor_scrollbar",
   "moonbit-community/editor/viewer/browser/view_parts/margin",
   "moonbit-community/editor/viewer/browser/view_parts/overlay_widgets",
@@ -24,6 +26,28 @@ import {
 // Errors
 
 // Types and methods
+pub(all) struct ContentViewOverlays {
+  overlays : ViewOverlays
+  current_line : @current_line_highlight.CurrentLineHighlightOverlay
+  selections : @selections.SelectionsOverlay
+  decorations : @decorations.DecorationsOverlay
+  mut should_render : Bool
+}
+pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
+pub fn ContentViewOverlays::new(@dom.Document) -> Self
+pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
+
+pub(all) struct MarginViewOverlays {
+  dom_node : @dom.Element
+  overlays : ViewOverlays
+  current_line_margin : @margin.CurrentLineMarginHighlightOverlay
+  lines_decorations : @margin.LinesDecorationsOverlay
+  line_numbers : @margin.LineNumbersOverlay
+  mut should_render : Bool
+}
+pub fn MarginViewOverlays::get_dom_node(Self) -> @dom.Element
+pub fn MarginViewOverlays::new(@dom.Document) -> Self
+
 pub(all) struct View {
   root : @dom.Element
   message_text : @dom.Element
@@ -31,8 +55,8 @@ pub(all) struct View {
   squiggly_style : @dom.Element
   view_lines : @view_lines.ViewLines
   view_zones : @view_zones.ViewZones
-  content_view_overlays : @selections.ContentViewOverlays
-  margin_view_overlays : @margin.MarginViewOverlays
+  content_view_overlays : ContentViewOverlays
+  margin_view_overlays : MarginViewOverlays
   content_widgets : @content_widgets.ContentWidgets
   view_cursors : @view_cursors.ViewCursors
   overlay_widgets : @overlay_widgets.OverlayWidgets
@@ -59,6 +83,11 @@ pub(all) struct ViewContext {
   measure_line_decorations : (Int, Int, Int) -> Array[(Double, Double)]
   offset_for_column : (Int, Int) -> Double
   model_position_to_view_position : (@common.Position) -> @common.Position
+}
+
+pub struct ViewOverlays {
+  dom_node : @dom.Element
+  // private fields
 }
 
 pub(all) struct ViewRenderInput {

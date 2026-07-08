@@ -1,54 +1,22 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/selections/selections.ts`
-// (`SelectionsOverlay`) plus the base-class DOM shell from
-// `vscode/src/vs/editor/browser/view/viewOverlays.ts` (`ContentViewOverlays`).
-// The sibling dynamic overlays (`view_parts/current_line_highlight`,
-// `view_parts/decorations`) render into this package's `.view-overlays`
-// container as free functions. The `ViewPart` trait impl for
-// `ContentViewOverlays` lives in `viewer/browser/view/view_part.mbt`, not
-// here — see the exec-plan's cycle backlog and
-// `viewer/browser/view_parts/view_zones`'s README for why.
+// (`SelectionsOverlay`), vscode submodule commit
+// 294fb350837dbaee37b949533fead4df4e0e8971. The `ContentViewOverlays` rows
+// shell lives with `viewer/browser/view` (`view_overlays.mbt`), mirroring
+// Monaco's `viewOverlays.ts`; this package is the selection dynamic overlay
+// only. The `DynamicViewOverlay` impl lives in
+// `viewer/browser/view/view_part.mbt` (the trait-owning package).
 
 ///|
-/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
-/// `should_render` directly.
-pub(all) struct ContentViewOverlays {
-  dom_node : @rdom.Element
-  mut should_render : Bool
+/// The selection dynamic overlay's state: the prepared per-line HTML
+/// (`_renderResult`). `pub(all)`: the `DynamicViewOverlay` impl in
+/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+pub(all) struct SelectionsOverlay {
+  mut render_result : Array[String]
 }
 
 ///|
-pub fn ContentViewOverlays::new(
-  document : @rdom.Document,
-) -> ContentViewOverlays {
-  let dom_node = document.create_element("div")
-  dom_node.set_attribute("class", "view-overlays")
-  dom_node.set_attribute("data-view-part", "view-overlays")
-  { dom_node, should_render: true }
-}
-
-///|
-pub fn ContentViewOverlays::get_dom_node(
-  self : ContentViewOverlays,
-) -> @rdom.Element {
-  self.dom_node
-}
-
-///|
-/// Monaco `ViewOverlays.render` (`viewOverlays.ts:125`):
-/// `toggleClassName('focused', this._isFocused)` on the overlay container —
-/// selection colors key off `.focused .selected-text` (`selections.css`).
-pub fn ContentViewOverlays::set_focused(
-  self : ContentViewOverlays,
-  focused : Bool,
-) -> Unit {
-  self.dom_node.set_attribute(
-    "class",
-    if focused {
-      "view-overlays focused"
-    } else {
-      "view-overlays"
-    },
-  )
+pub fn SelectionsOverlay::new() -> SelectionsOverlay {
+  { render_result: [] }
 }
 
 ///|
@@ -75,9 +43,9 @@ priv struct StyledRange {
 
 ///|
 /// The styled selection rectangles for one view line, Monaco's
-/// `LineVisibleRangesWithStyle`, plus the line's pixel top in the overlay.
+/// `LineVisibleRangesWithStyle`.
 priv struct LineSelectionRanges {
-  top : Int
+  line_number : Int
   ranges : Array[StyledRange]
 }
 
@@ -94,30 +62,32 @@ fn new_styled_range(left : Double, width : Double) -> StyledRange {
 }
 
 ///|
-/// Renders the selection highlight as DOM-measured rectangles, Monaco's
-/// `SelectionsOverlay`. The selection arrives as a view-coordinate range
-/// (already bridged from the model selection through the `CoordinatesConverter`),
-/// so this stays entirely in view `Position`s. It collects the per-line
-/// horizontal ranges (`linesVisibleRangesForRange`), enriches them with
-/// rounded-corner styles (`_enrichVisibleRangesWithStyle`), then paints each
-/// range with its corner radii and reverse-corner pieces
-/// (`_actualRenderOneSelection`). There is one selection, so the multi-selection
-/// top/bottom margins are always zero; the previous-frame corner cache (a
-/// repaint optimization) is intentionally omitted.
-pub fn ContentViewOverlays::render_selection_overlays(
-  self : ContentViewOverlays,
+/// `SelectionsOverlay.prepareRender` (`selections.ts:361-390`) for the
+/// viewer's single selection: collect the per-line horizontal ranges
+/// (`linesVisibleRangesForRange` over the DOM caret-measurement seam), enrich
+/// them with rounded-corner styles (`_enrichVisibleRangesWithStyle`), then
+/// build each line's HTML with the inner-corner pieces placed before the
+/// selection rectangles (`_actualRenderOneSelection`'s two buckets — issue
+/// #77777's ordering). The previous-frame corner cache (a repaint
+/// optimization) is intentionally omitted.
+pub fn prepare_selections_render(
   viewport : @view_layout.ViewportData,
   selection_view_range : @base_common.Range?,
   view_model : @view_model.ViewModel?,
   space_width : Double,
   measure : (Int, Int, Int) -> Array[(Double, Double)],
-) -> Unit {
-  // The container is cleared once per part render (before the current-line
-  // overlay paints; see the `ViewPart` impl) — selection pieces append after
-  // it, preserving Monaco's overlay registration order (`view.ts:218-219`).
+) -> Array[String] {
+  let inner_corners : Array[String] = []
+  let rest_of_selection : Array[String] = []
+  for _ in 0..<viewport.lines.length() {
+    inner_corners.push("")
+    rest_of_selection.push("")
+  }
   let range = match selection_view_range {
     Some(range) => range
-    None => return
+    None =>
+      // An empty selection renders nothing (`selection.isEmpty()` skip).
+      return rest_of_selection
   }
   let lines : Array[LineSelectionRanges] = []
   for index in 0..<viewport.lines.length() {
@@ -127,7 +97,6 @@ pub fn ContentViewOverlays::render_selection_overlays(
         viewport.lines[index].max_column,
         range,
         view_model,
-        viewport.relative_vertical_offset[index],
         space_width,
         measure,
       ) {
@@ -140,16 +109,22 @@ pub fn ContentViewOverlays::render_selection_overlays(
   if styled {
     enrich_visible_ranges_with_style(lines, space_width)
   }
-  let document = @rdom.document()
   for line in lines {
-    render_styled_line(
-      self.dom_node,
-      document,
-      line,
-      styled,
-      viewport.line_height,
-    )
+    let line_index = line.line_number - viewport.start_line_number
+    if line_index < 0 || line_index >= rest_of_selection.length() {
+      continue
+    }
+    let (corner_html, selection_html) = render_styled_line_html(line, styled)
+    inner_corners[line_index] = inner_corners[line_index] + corner_html
+    rest_of_selection[line_index] = rest_of_selection[line_index] +
+      selection_html
   }
+  // `output.map(([innerCorners, rest]) => innerCorners + rest)`.
+  let result : Array[String] = []
+  for index in 0..<rest_of_selection.length() {
+    result.push(inner_corners[index] + rest_of_selection[index])
+  }
+  result
 }
 
 ///|
@@ -165,7 +140,6 @@ fn collect_line_selection_ranges(
   max_column : Int,
   range : @base_common.Range,
   view_model : @view_model.ViewModel?,
-  top : Int,
   space_width : Double,
   measure : (Int, Int, Int) -> Array[(Double, Double)],
 ) -> LineSelectionRanges? {
@@ -207,7 +181,7 @@ fn collect_line_selection_ranges(
   if ranges.length() == 0 {
     return None
   }
-  Some({ top, ranges })
+  Some({ line_number: view_line_number, ranges })
 }
 
 ///|
@@ -272,78 +246,53 @@ fn enrich_visible_ranges_with_style(
 }
 
 ///|
-/// Paints one line's styled ranges, transcribing Monaco's
-/// `_actualRenderOneSelection` for the single-selection case (no top/bottom
-/// margins): reverse-corner pieces first (a selection layer plus a
-/// background layer with the inverse radius), then the main rectangle with its
-/// outward corner radii.
-fn render_styled_line(
-  parent : @rdom.Element,
-  document : @rdom.Document,
+/// One line's `(innerCornerOutput, restOfSelectionOutput)` pair, transcribing
+/// Monaco's `_actualRenderOneSelection` loop body for the single-selection
+/// case (`hasMultipleSelections` false → `top`/`bottom` are `0`): reverse
+/// corners are a selection layer plus an editor-background layer carrying the
+/// inverse radius classes; the main rectangle carries its outward radius
+/// classes.
+fn render_styled_line_html(
   line : LineSelectionRanges,
   styled : Bool,
-  line_height : Int,
-) -> Unit {
+) -> (String, String) {
+  let mut inner_corner_output = ""
+  let mut rest_of_selection_output = ""
   for range in line.ranges {
     if styled {
       if range.start_top == Intern || range.start_bottom == Intern {
+        // Reverse rounded corner to the left: first the selection (blue
+        // layer), then the background (white layer) with inverse radius.
         let left = range.left - rounded_piece_width
-        append_selection_piece(
-          parent,
-          document,
-          line.top,
-          left,
-          rounded_piece_width,
-          "selected-text",
-          line_height,
-        )
-        let mut class_name = "selection-corner-piece"
+        inner_corner_output = inner_corner_output +
+          selection_piece_html(selection_class_name, left, rounded_piece_width)
+        let mut class_name = editor_background_class_name
         if range.start_top == Intern {
           class_name = class_name + " top-right-radius"
         }
         if range.start_bottom == Intern {
           class_name = class_name + " bottom-right-radius"
         }
-        append_selection_piece(
-          parent,
-          document,
-          line.top,
-          left,
-          rounded_piece_width,
-          class_name,
-          line_height,
-        )
+        inner_corner_output = inner_corner_output +
+          selection_piece_html(class_name, left, rounded_piece_width)
       }
       if range.end_top == Intern || range.end_bottom == Intern {
+        // Reverse rounded corner to the right.
         let left = range.left + range.width
-        append_selection_piece(
-          parent,
-          document,
-          line.top,
-          left,
-          rounded_piece_width,
-          "selected-text",
-          line_height,
-        )
-        let mut class_name = "selection-corner-piece"
+        inner_corner_output = inner_corner_output +
+          selection_piece_html(selection_class_name, left, rounded_piece_width)
+        let mut class_name = editor_background_class_name
         if range.end_top == Intern {
           class_name = class_name + " top-left-radius"
         }
         if range.end_bottom == Intern {
           class_name = class_name + " bottom-left-radius"
         }
-        append_selection_piece(
-          parent,
-          document,
-          line.top,
-          left,
-          rounded_piece_width,
-          class_name,
-          line_height,
-        )
+        inner_corner_output = inner_corner_output +
+          selection_piece_html(class_name, left, rounded_piece_width)
       }
     }
-    let mut class_name = "selected-text"
+    let mut class_name = selection_class_name
     if styled {
       if range.start_top == Extern {
         class_name = class_name + " top-left-radius"
@@ -358,16 +307,10 @@ fn render_styled_line(
         class_name = class_name + " bottom-right-radius"
       }
     }
-    append_selection_piece(
-      parent,
-      document,
-      line.top,
-      range.left,
-      range.width,
-      class_name,
-      line_height,
-    )
+    rest_of_selection_output = rest_of_selection_output +
+      selection_piece_html(class_name, range.left, range.width)
   }
+  (inner_corner_output, rest_of_selection_output)
 }
 
 ///|
@@ -419,37 +362,31 @@ fn eol_anchor_x(
 }
 
 ///|
+/// `SelectionsOverlay.SELECTION_CLASS_NAME`.
+let selection_class_name = "selected-text"
+
+///|
+/// `SelectionsOverlay.EDITOR_BACKGROUND_CLASS_NAME`: the reverse-corner white
+/// layer's class.
+let editor_background_class_name = "monaco-editor-background"
+
+///|
 /// Width of a reverse-corner piece, Monaco's `ROUNDED_PIECE_WIDTH`.
 let rounded_piece_width = 10.0
 
 ///|
-/// Appends one absolutely-positioned selection piece (a `selected-text`
-/// rectangle, or a `selection-corner-piece` reverse corner) with the given
-/// class names, Monaco's `_createSelectionPiece`.
-fn append_selection_piece(
-  parent : @rdom.Element,
-  document : @rdom.Document,
-  top : Int,
-  left : Double,
-  width : Double,
+/// `_createSelectionPiece` (`selections.ts:258-269`); the single selection
+/// makes `top`/`bottom` constantly `0`.
+fn selection_piece_html(
   class_name : String,
-  line_height : Int,
-) -> Unit {
-  let node = document.create_element("div")
-  node.set_attribute("class", class_name)
-  node.set_attribute(
-    "style",
-    selection_rect_style(top, left, width, line_height),
-  )
-  parent.append_child(node.as_node())
-}
-
-///|
-fn selection_rect_style(
-  top : Int,
   left : Double,
   width : Double,
-  line_height : Int,
 ) -> String {
-  "top:\{top}px;left:\{left}px;width:\{width}px;height:\{line_height}px"
+  "<div class=\"cslr " +
+  class_name +
+  "\" style=\"top:0px;bottom:0px;left:" +
+  left.to_string() +
+  "px;width:" +
+  width.to_string() +
+  "px;\"></div>"
 }

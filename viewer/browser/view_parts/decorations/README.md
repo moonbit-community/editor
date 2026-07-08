@@ -2,23 +2,23 @@
 
 Mirrors `vscode/src/vs/editor/browser/viewParts/decorations`
 (`DecorationsOverlay`): whole-line and inline decoration rectangles,
-including the marker squiggles, rendered as flat `div.cdr` pieces.
+including the marker squiggles, as per-line `div.cdr` HTML for
+`viewer/browser/view`'s `ContentViewOverlays` rows (`view_overlays.mbt`,
+Monaco's `viewOverlays.ts`) — the last registered content overlay
+(current-line → selection → decorations, `view.ts:218-221`).
 
 ## Responsibilities
 
 - The pure piece computation (`compute_decoration_overlay_pieces`):
   filter/sort, whole-line spans, same-class touching merge,
   `showIfCollapsed` widening, `shouldFillLineOnLineBreak` expansion.
-- The DOM half (`render_decorations_overlay`), appending pieces to the
-  shared `.view-overlays` container.
+- `DecorationsOverlay` (the `_renderResult` state) and
+  `prepare_decorations_render`, serializing the pieces into Monaco's exact
+  per-line strings.
 
 ## Boundaries
 
-- The `.view-overlays` container and its `ViewPart` shell belong to
-  `view_parts/selections` (`ContentViewOverlays`) and
-  `viewer/browser/view/view_part.mbt` respectively — the foreign-method rule
-  keeps methods with their type's package, so this package exposes free
-  functions the shell sequences (current-line → selection → decorations,
-  Monaco's `view.ts:218-221` registration order).
-- A browser-tier package (`supported_targets = "js"`); may import
-  `viewer/common/*` and `rabbita/dom`.
+- The `DynamicViewOverlay` impl lives in `viewer/browser/view/view_part.mbt`,
+  the trait-owning package — see its README for the orphan-rule/cycle
+  reasoning. That is also why the types here are `pub(all)`.
+- Pure per-line HTML: no DOM writes (the rows belong to `browser/view`).

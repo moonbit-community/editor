@@ -1,6 +1,6 @@
 ///|
 test "scrollable clamps positions inside its dimensions" {
-  let scrollable = @view_layout.Scrollable::new()
+  let scrollable = @view_layout.Scrollable::new(force_integer_values=false)
   // Without dimensions everything clamps to the origin.
   assert_true(
     scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0 }) is None,
@@ -52,7 +52,7 @@ test "scrollable clamps positions inside its dimensions" {
 
 ///|
 test "shrinking dimensions re-clamps the position as one change fact" {
-  let scrollable = @view_layout.Scrollable::new()
+  let scrollable = @view_layout.Scrollable::new(force_integer_values=false)
   scrollable.set_dimensions({
     width: 100.0,
     scroll_width: 100.0,
@@ -94,6 +94,44 @@ test "shrinking dimensions re-clamps the position as one change fact" {
     scrollable.dimensions(),
     content=(
       #|{ width: 500, scroll_width: 500, height: 600, scroll_height: 600 }
+    ),
+  )
+}
+
+///|
+/// Monaco `ScrollState`'s `width | 0` block under `forceIntegerValues: true`
+/// (the editor's configuration): raw dimensions and positions truncate toward
+/// zero before clamping, so scroll truth is always whole pixels.
+test "force_integer_values truncates dimensions and positions" {
+  let scrollable = @view_layout.Scrollable::new(force_integer_values=true)
+  scrollable.set_dimensions({
+    width: 800.4,
+    scroll_width: 1000.9,
+    height: 600.7,
+    scroll_height: 1800.2,
+  })
+  |> ignore
+  debug_inspect(
+    scrollable.dimensions(),
+    content=(
+      #|{ width: 800, scroll_width: 1000, height: 600, scroll_height: 1800 }
+    ),
+  )
+  // A fractional trackpad delta lands on the truncated integer...
+  scrollable.set_position({ scroll_left: 0.0, scroll_top: 2.37 }) |> ignore
+  debug_inspect(
+    scrollable.position(),
+    content=(
+      #|{ scroll_left: 0, scroll_top: 2 }
+    ),
+  )
+  // ...and truncation happens on the raw request, not the accumulated sum:
+  // 2 + 2.37 = 4.37 truncates to 4 (fractions never accumulate).
+  scrollable.scroll_by(delta_top=2.37) |> ignore
+  debug_inspect(
+    scrollable.position(),
+    content=(
+      #|{ scroll_left: 0, scroll_top: 4 }
     ),
   )
 }

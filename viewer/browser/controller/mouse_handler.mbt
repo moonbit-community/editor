@@ -57,8 +57,6 @@ pub(all) struct PointerHandlerHelper {
   view_layout : () -> @view_layout.ViewLayout
   /// Commit a scroll change produced from `view_layout()` (repaint + reveal).
   apply_scroll : (@view_layout.ScrollChange?) -> Unit
-  /// The editor line height in pixels.
-  line_height : () -> Double
   /// Hit-tests view-relative coordinates against the rendered view model
   /// (Monaco's `MouseTargetFactory.createMouseTarget` over the view model);
   /// `None` when no model is rendered.
@@ -474,16 +472,19 @@ pub fn MouseHandler::hook_scrollable_scrollbar_input(
 }
 
 ///|
-/// Wheel delta normalization is shared with widget scrollables: line and
-/// page delta modes scale to pixels; pixel deltas pass through.
+/// The editor's `ScrollableElement._onMouseWheel`: normalize into wheel
+/// units, run the shared delta pipeline (Monaco's editor scrollbar options —
+/// sensitivity 1, predominant axis, alt fast-scroll), and apply as an
+/// immediate scroll (the trackpad `setScrollPositionNow` path; the
+/// physical-wheel smooth-scroll fork is unported).
 pub fn MouseHandler::handle_editor_wheel(
   self : MouseHandler,
   wheel : @rdom.WheelEvent,
 ) -> Unit {
-  let (delta_left, delta_top) = @scrollbar.normalized_wheel_delta(
-    wheel,
-    (self.helper.line_height)(),
-    (self.helper.view_layout)().dimensions().height,
+  let (delta_left, delta_top) = @scrollbar.mouse_wheel_scroll_deltas(
+    @scrollbar.StandardWheelEvent::new(wheel),
+    alt_key=wheel.get_alt_key(),
+    shift_key=wheel.get_shift_key(),
   )
   (self.helper.apply_scroll)(
     (self.helper.view_layout)().scroll_by(delta_left~, delta_top~),

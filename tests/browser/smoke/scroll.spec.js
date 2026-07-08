@@ -46,6 +46,33 @@ test('reveals editor scrollbar for wheel input then fades it after idle', async 
   });
 });
 
+test('scrolls wheel input through the Monaco delta pipeline at integer positions', async ({ page }) => {
+  const events = collectReadonlyEvents(page);
+  await page.goto('/');
+  await openWorkspaceFile(page, 'src/generated_scroll.mbt', { waitForActiveReveal: false });
+
+  const editorScrollable = page.locator('.monaco-scrollable-element.editor-scrollable');
+  await editorScrollable.hover();
+  // `StandardWheelEvent` (`deltaY / 40`) x `SCROLL_WHEEL_SENSITIVITY` (50):
+  // a 72px pixel-mode wheel delta scrolls 90px, 1.25x, like Monaco.
+  await page.mouse.wheel(0, 72);
+  await expect.poll(() => lastScrollTop(events), { timeout: 3_000 }).toBe(90);
+
+  // Fractional trackpad deltas round away from zero (2.37 x 1.25 = 2.9625
+  // -> 3px) and the scroll truth stays whole pixels (`forceIntegerValues`),
+  // so the lines content never sits at a subpixel transform offset.
+  await page.evaluate(() => {
+    document.querySelector('.overflow-guard').dispatchEvent(
+      new WheelEvent('wheel', { deltaY: 2.37, deltaMode: 0, bubbles: true, cancelable: true }),
+    );
+  });
+  await expect.poll(() => lastScrollTop(events), { timeout: 3_000 }).toBe(93);
+  const transform = await page.evaluate(
+    () => document.querySelector('.view-lines').style.transform,
+  );
+  expect(transform).toMatch(/^translate\(-?\d+px, -?\d+px\)$/);
+});
+
 test('drags editor scrollbar thumb after auto reveal', async ({ page }) => {
   await page.goto('/');
   await openWorkspaceFile(page, 'src/generated_scroll.mbt', { waitForActiveReveal: false });

@@ -550,17 +550,66 @@ pub fn ScrollableElementDom::native_page_delta(
 }
 
 ///|
-pub fn normalized_wheel_delta(
-  wheel : @rdom.WheelEvent,
-  line_height : Double,
-  page_size : Double,
+/// `SCROLL_WHEEL_SENSITIVITY` (scrollableElement.ts): pixels scrolled per
+/// normalized wheel unit.
+let scroll_wheel_sensitivity : Double = 50.0
+
+///|
+/// The wheel-delta computation of `ScrollableElement._onMouseWheel`
+/// (scrollableElement.ts): `mouseWheelScrollSensitivity` scaling,
+/// `scrollPredominantAxis` filtering, the non-mac shift-to-horizontal
+/// conversion, alt-key `fastScrollSensitivity`, then
+/// `SCROLL_WHEEL_SENSITIVITY` with away-from-zero rounding so low-speed
+/// scrolling still moves a whole pixel. Answers pixel deltas to add to the
+/// scroll position — the sign flip back out of wheel units is Monaco's
+/// `futureScrollPosition.scrollTop - deltaScrollTop`. Option defaults mirror
+/// `resolveOptions`; the smooth-scroll fork stays unported (every consumer
+/// takes the trackpad `setScrollPositionNow` path).
+pub fn mouse_wheel_scroll_deltas(
+  event : StandardWheelEvent,
+  alt_key? : Bool = false,
+  shift_key? : Bool = false,
+  mouse_wheel_scroll_sensitivity? : Double = 1.0,
+  fast_scroll_sensitivity? : Double = 5.0,
+  scroll_predominant_axis? : Bool = true,
 ) -> (Double, Double) {
-  let scale = match wheel.get_delta_mode() {
-    1 => line_height
-    2 => page_size
-    _ => 1.0
+  let mut delta_y = event.delta_y * mouse_wheel_scroll_sensitivity
+  let mut delta_x = event.delta_x * mouse_wheel_scroll_sensitivity
+  if scroll_predominant_axis {
+    if delta_y.abs() >= delta_x.abs() {
+      delta_x = 0.0
+    } else {
+      delta_y = 0.0
+    }
   }
-  (wheel.get_delta_x() * scale, wheel.get_delta_y() * scale)
+  // Convert vertical scrolling to horizontal if shift is held, this
+  // is handled at a higher level on Mac
+  let shift_convert = !@base_common.is_macintosh && shift_key
+  if shift_convert && delta_x == 0.0 {
+    delta_x = delta_y
+    delta_y = 0.0
+  }
+  if alt_key {
+    // fastScrolling
+    delta_x = delta_x * fast_scroll_sensitivity
+    delta_y = delta_y * fast_scroll_sensitivity
+  }
+  (
+    -away_from_zero(scroll_wheel_sensitivity * delta_x),
+    -away_from_zero(scroll_wheel_sensitivity * delta_y),
+  )
+}
+
+///|
+/// `deltaScrollTop < 0 ? Math.floor(...) : Math.ceil(...)` — "Here we convert
+/// values such as -0.3 to -1 or 0.3 to 1, otherwise low speed scrolling will
+/// never scroll".
+fn away_from_zero(value : Double) -> Double {
+  if value < 0.0 {
+    value.floor()
+  } else {
+    value.ceil()
+  }
 }
 
 ///|

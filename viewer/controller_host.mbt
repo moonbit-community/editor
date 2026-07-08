@@ -15,7 +15,6 @@ fn Viewer::pointer_handler_helper(
     hover_scrollable: () => view.content_widgets.hover_scrollable(),
     view_layout: () => self.view_layout,
     apply_scroll: change => self.apply_scroll_change(change),
-    line_height: () => self.font_info.line_height.to_double(),
     hit_test: (x, y) => self.hit_test_at(x, y),
     refine_content_target: (client_x, client_y, fallback) => {
       self.dom_refine_content_target(view, client_x, client_y, fallback)

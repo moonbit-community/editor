@@ -271,7 +271,7 @@ pub struct Scrollable {
   // private fields
 }
 pub fn Scrollable::dimensions(Self) -> ScrollDimensions
-pub fn Scrollable::new() -> Self
+pub fn Scrollable::new(force_integer_values~ : Bool) -> Self
 pub fn Scrollable::position(Self) -> ScrollPosition
 pub fn Scrollable::scroll_by(Self, delta_left? : Double, delta_top? : Double) -> ScrollChange?
 pub fn Scrollable::set_dimensions(Self, ScrollDimensions) -> ScrollChange?

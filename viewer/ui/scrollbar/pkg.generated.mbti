@@ -9,7 +9,7 @@ import {
 // Values
 pub fn drag_coord(@dom.MouseEvent, Bool) -> Double
 
-pub fn normalized_wheel_delta(@dom.WheelEvent, Double, Double) -> (Double, Double)
+pub fn mouse_wheel_scroll_deltas(StandardWheelEvent, alt_key? : Bool, shift_key? : Bool, mouse_wheel_scroll_sensitivity? : Double, fast_scroll_sensitivity? : Double, scroll_predominant_axis? : Bool) -> (Double, Double)
 
 // Errors
 
@@ -65,6 +65,12 @@ pub(all) struct ScrollbarDrag {
   start_coord : Double
   start_slider : Double
 }
+
+pub(all) struct StandardWheelEvent {
+  delta_x : Double
+  delta_y : Double
+}
+pub fn StandardWheelEvent::new(@dom.WheelEvent) -> Self
 
 // Type aliases
 

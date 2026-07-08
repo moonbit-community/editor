@@ -52,7 +52,6 @@ pub(all) struct PointerHandlerHelper {
   hover_scrollable : () -> @scrollbar.ScrollableElementDom?
   view_layout : () -> @view_layout.ViewLayout
   apply_scroll : (@view_layout.ScrollChange?) -> Unit
-  line_height : () -> Double
   hit_test : (Double, Double) -> @moonbit-community/editor/viewer/common.MouseTarget?
   refine_content_target : (Double, Double, @moonbit-community/editor/viewer/common.MouseTarget) -> @moonbit-community/editor/viewer/common.MouseTarget
   dispatch_mouse : (MouseDispatch) -> Unit

@@ -44,7 +44,10 @@ fn build_lines(
 pub fn ViewLayout::new(line_height~ : Int, line_count? : Int = 0) -> ViewLayout {
   let line_count = line_count.max(0)
   let layout : ViewLayout = {
-    scrollable: Scrollable::new(),
+    // `forceIntegerValues: true` (viewLayout.ts): the editor's scroll truth is
+    // whole pixels, so fractional trackpad deltas never render at a subpixel
+    // transform offset.
+    scrollable: Scrollable::new(force_integer_values=true),
     lines: build_lines(line_count, line_height, []),
     line_height,
     line_count,

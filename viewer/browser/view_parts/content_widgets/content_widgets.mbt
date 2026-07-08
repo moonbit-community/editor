@@ -428,14 +428,17 @@ fn ContentWidgets::ensure_hover_widget(
 }
 
 ///|
+/// The hover's `DomScrollableElement` wheel path: the same `_onMouseWheel`
+/// delta pipeline as the editor, at `resolveOptions` defaults, applied to the
+/// widget's native scroll offsets.
 fn handle_hover_wheel(
   widget : HoverWidgetDom,
   wheel : @rdom.WheelEvent,
 ) -> Unit {
-  let (delta_left, delta_top) = @scrollbar.normalized_wheel_delta(
-    wheel,
-    widget.line_height,
-    widget.scrollable.native_page_delta(),
+  let (delta_left, delta_top) = @scrollbar.mouse_wheel_scroll_deltas(
+    @scrollbar.StandardWheelEvent::new(wheel),
+    alt_key=wheel.get_alt_key(),
+    shift_key=wheel.get_shift_key(),
   )
   widget.scrollable.native_scroll_by(delta_left~, delta_top~)
 }

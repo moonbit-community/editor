@@ -36,14 +36,20 @@ pub(all) struct ScrollChange {
 /// `ScrollChange` fact when anything moved, `None` when the request was a
 /// no-op after clamping.
 pub struct Scrollable {
+  priv force_integer_values : Bool
   priv mut dimensions : ScrollDimensions
   priv mut position : ScrollPosition
 }
 
 ///|
 /// Creates a scrollable model with zero viewport/content dimensions.
-pub fn Scrollable::new() -> Scrollable {
+/// `force_integer_values` is Monaco's `IScrollableOptions.forceIntegerValues`:
+/// every incoming dimension and position is truncated to a whole pixel
+/// (`ScrollState`'s `width | 0` block) before clamping, so fractional wheel
+/// deltas and measured rects never leave the content at a subpixel offset.
+pub fn Scrollable::new(force_integer_values~ : Bool) -> Scrollable {
   {
+    force_integer_values,
     dimensions: {
       width: 0.0,
       scroll_width: 0.0,
@@ -72,16 +78,18 @@ pub fn Scrollable::set_dimensions(
   self : Scrollable,
   dimensions : ScrollDimensions,
 ) -> ScrollChange? {
+  let width = self.to_integer(dimensions.width)
+  let height = self.to_integer(dimensions.height)
   let normalized : ScrollDimensions = {
-    width: max_double(dimensions.width, 0.0),
+    width: max_double(width, 0.0),
     scroll_width: max_double(
-      dimensions.scroll_width,
-      max_double(dimensions.width, 0.0),
+      self.to_integer(dimensions.scroll_width),
+      max_double(width, 0.0),
     ),
-    height: max_double(dimensions.height, 0.0),
+    height: max_double(height, 0.0),
     scroll_height: max_double(
-      dimensions.scroll_height,
-      max_double(dimensions.height, 0.0),
+      self.to_integer(dimensions.scroll_height),
+      max_double(height, 0.0),
     ),
   }
   let dimensions_changed = normalized != self.dimensions
@@ -94,15 +102,31 @@ pub fn Scrollable::set_dimensions(
 }
 
 ///|
-/// Moves to the requested position, clamped inside the dimensions.
+/// Moves to the requested position, truncated (when `force_integer_values`)
+/// and clamped inside the dimensions.
 pub fn Scrollable::set_position(
   self : Scrollable,
   position : ScrollPosition,
 ) -> ScrollChange? {
+  let requested : ScrollPosition = {
+    scroll_left: self.to_integer(position.scroll_left),
+    scroll_top: self.to_integer(position.scroll_top),
+  }
   self.change_to(
-    clamp_position(self.dimensions, position),
+    clamp_position(self.dimensions, requested),
     dimensions_changed=false,
   )
+}
+
+///|
+/// `ScrollState`'s `value | 0`: truncation toward zero, applied to raw
+/// dimensions and positions before validation when `force_integer_values`.
+fn Scrollable::to_integer(self : Scrollable, value : Double) -> Double {
+  if self.force_integer_values {
+    value.to_int().to_double()
+  } else {
+    value
+  }
 }
 
 ///|

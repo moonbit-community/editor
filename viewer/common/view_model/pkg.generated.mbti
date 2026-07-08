@@ -171,6 +171,7 @@ pub struct ViewModel {
   model : @model.TextModel
   mut options : ViewModelOptions
   lines : ViewModelLinesFromProjectedModel
+  view_layout : @view_layout.ViewLayout
   mut decorations : ViewModelDecorations
   coordinates_converter : ProjectedCoordinatesConverter
 }

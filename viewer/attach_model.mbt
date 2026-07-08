@@ -15,11 +15,11 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // model queries them lazily per viewport (no per-frame bake). The render
   // pass pulls its viewport data from the view model at flush time.
   let view_model = self.build_view_model(model)
-  self.apply_view_model_layout(view_model, model.snapshot)
-  let build_finished = now_ms()
   self.view_model = Some(view_model)
   self.rendered_window = None
   self.text_model = Some(model)
+  self.apply_view_model_layout(view_model, model.snapshot)
+  let build_finished = now_ms()
   self.refresh_cursor_context()
   self.content_generation += 1
   self.did_build_view_model.fire({
@@ -50,7 +50,16 @@ fn Viewer::build_view_model(
   )
   // Injected text (inlay hints) reaches the projection through the model's
   // decoration storage (Track F), not through construction arguments.
-  @view_model.ViewModel::with_options(model, options)
+  let view_model = @view_model.ViewModel::with_options(model, options)
+  // Seed the fresh layout's viewport box from the widget's measured
+  // dimensions — Monaco's `ViewLayout` reads `EditorOption.layoutInfo` from
+  // the configuration at construction.
+  view_model.view_layout.set_viewport_size(
+    width=self.measured_content_width,
+    height=self.measured_height,
+  )
+  |> ignore
+  view_model
 }
 
 ///|
@@ -136,7 +145,7 @@ fn Viewer::apply_view_model_layout(
   view_model : @view_model.ViewModel,
   snapshot : @model.TextSnapshot,
 ) -> Unit {
-  self.view_layout.set_line_count(view_model.line_count()) |> ignore
+  view_model.view_layout.set_line_count(view_model.line_count()) |> ignore
   self.normalize_browser_view_zones()
   self.sync_view_zones_with_layout()
   self.max_line_length = if self.options.soft_wrap && self.soft_wrap_column > 0 {

@@ -61,7 +61,8 @@ fn Viewer::test_cursor(self : Viewer) -> @cursor.CursorsController {
 /// current visible window — the headless analog of `synced_window`, which
 /// only runs inside a DOM flush.
 fn Viewer::test_window(self : Viewer) -> @view_layout.LineWindow {
-  self.test_view_model().clamp_window(self.view_layout.visible_window())
+  let view_model = self.test_view_model()
+  view_model.clamp_window(view_model.view_layout.visible_window())
 }
 
 ///|
@@ -83,7 +84,13 @@ fn Viewer::test_set_viewport(
   width~ : Double,
   height~ : Double,
 ) -> Unit {
-  self.view_layout.set_viewport_size(width~, height~) |> ignore
+  self.measured_content_width = width
+  self.measured_height = height
+  match self.view_model {
+    Some(view_model) =>
+      view_model.view_layout.set_viewport_size(width~, height~) |> ignore
+    None => ()
+  }
 }
 
 ///|

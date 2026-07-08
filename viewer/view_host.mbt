@@ -86,7 +86,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
       view.render(view_context, {
         window,
         view_model,
-        layout: self.view_layout,
+        layout: view_model.view_layout,
         browser_view_zones: self.view_zones,
         selection_view_range: self.selection_view_range(),
         view_selection: self.view_selection(),
@@ -130,12 +130,15 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   }
   if self.scroll_dirty {
     self.scroll_dirty = false
-    let position = self.view_layout.position()
+    // No model → no live layout → no scroll event: Monaco's
+    // `onDidScrollChange` relays the attached view layout's events.
+    guard self.view_model is Some(view_model) else { return }
+    let position = view_model.view_layout.position()
     let event : ScrollEvent = {
       scroll_top: position.scroll_top,
       scroll_left: position.scroll_left,
-      scroll_width: self.view_layout.get_scroll_width(),
-      scroll_height: self.view_layout.get_scroll_height(),
+      scroll_width: view_model.view_layout.get_scroll_width(),
+      scroll_height: view_model.view_layout.get_scroll_height(),
       // Change flags diff against the last fired event; the first event
       // reports every axis as changed.
       scroll_top_changed: true,
@@ -178,7 +181,7 @@ fn Viewer::synced_window(
   self : Viewer,
   view_model : @view_model.ViewModel,
 ) -> @view_layout.LineWindow {
-  let window = view_model.clamp_window(self.view_layout.visible_window())
+  let window = view_model.clamp_window(view_model.view_layout.visible_window())
   self.rendered_window = Some(window)
   window
 }

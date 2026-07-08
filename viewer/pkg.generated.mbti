@@ -176,7 +176,7 @@ pub fn Viewer::on_mouse_move(Self, (EditorMouseEvent) -> Unit) -> @moonbit-commu
 pub fn Viewer::on_mouse_up(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::remove_decorations(Self, Array[String]) -> Unit
 pub fn Viewer::remove_overlay_widget(Self, String) -> Unit
-pub fn Viewer::restore_view_state(Self, ViewerViewState) -> Unit
+pub fn Viewer::restore_view_state(Self, ViewerViewState?) -> Unit
 pub fn Viewer::reveal_line(Self, Int) -> Unit
 pub fn Viewer::reveal_line_in_center(Self, Int) -> Unit
 pub fn Viewer::reveal_line_in_center_if_outside_viewport(Self, Int) -> Unit
@@ -195,7 +195,7 @@ pub fn Viewer::reveal_range_in_center(Self, @moonbit-community/editor/base/commo
 pub fn Viewer::reveal_range_in_center_if_outside_viewport(Self, @moonbit-community/editor/base/common.Range) -> Unit
 pub fn Viewer::reveal_range_near_top(Self, @moonbit-community/editor/base/common.Range) -> Unit
 pub fn Viewer::reveal_range_near_top_if_outside_viewport(Self, @moonbit-community/editor/base/common.Range) -> Unit
-pub fn Viewer::save_view_state(Self) -> ViewerViewState
+pub fn Viewer::save_view_state(Self) -> ViewerViewState?
 pub fn Viewer::set_model(Self, @model.TextModel?) -> Unit
 pub fn Viewer::set_position(Self, @moonbit-community/editor/base/common.Position) -> Unit
 pub fn Viewer::set_scroll_left(Self, Double) -> Unit

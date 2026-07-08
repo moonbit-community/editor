@@ -92,7 +92,8 @@ fn Viewer::ensure_content_hover_widget(
         scrolled_visible_position_top: position => {
           self.scrolled_visible_position_top(position)
         },
-        line_height: () => self.view_layout.line_height().to_double(),
+        // Monaco reads `EditorOption.lineHeight` — configuration, not layout.
+        line_height: () => self.font_info.line_height.to_double(),
         gutter_width: () => {
           match self.view_model {
             Some(view_model) => self.gutter_width(view_model.line_count())
@@ -141,10 +142,11 @@ fn Viewer::scrolled_visible_position_top(
   self : Viewer,
   position : @base_common.Position,
 ) -> Double {
+  guard self.view_model is Some(view_model) else { return 0.0 }
   match self.model_to_view_position(position.line_number, position.column) {
     Some(view_position) =>
-      self.view_layout.vertical_offset_for_line(view_position.line_number) -
-      self.view_layout.position().scroll_top
+      view_model.view_layout.vertical_offset_for_line(view_position.line_number) -
+      view_model.view_layout.position().scroll_top
     None => 0.0
   }
 }

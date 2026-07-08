@@ -15,7 +15,10 @@ fn Viewer::test_set_layout_view_zones(
   self : Viewer,
   zones : Array[@view_layout.ViewZone],
 ) -> Unit {
-  self.view_layout.set_view_zones(zones) |> ignore
+  match self.view_model {
+    Some(view_model) => view_model.view_layout.set_view_zones(zones) |> ignore
+    None => ()
+  }
 }
 
 ///|
@@ -41,6 +44,39 @@ test "read API: no-model getters return Monaco sentinels" {
   assert_eq(viewer.get_content_height(), -1.0)
   assert_eq(viewer.get_scroll_height(), -1.0)
   assert_eq(viewer.get_scroll_top(), -1.0)
+  viewer.dispose()
+}
+
+///|
+/// No model: the scroll setters no-op (`cew:1003-1029`) and `save_view_state`
+/// returns `None` (`cew:1038-1041`).
+test "read API: no-model scroll writes no-op and view state is None" {
+  let viewer = Viewer::Viewer()
+  viewer.set_scroll_top(120.0)
+  viewer.set_scroll_left(80.0)
+  viewer.set_scroll_position(scroll_top=50.0, scroll_left=60.0)
+  assert_eq(viewer.get_scroll_top(), -1.0)
+  assert_eq(viewer.get_scroll_left(), -1.0)
+  assert_true(viewer.save_view_state() is None)
+  viewer.restore_view_state(Some({ scroll_top: 10.0, scroll_left: 20.0 }))
+  assert_eq(viewer.get_scroll_top(), -1.0)
+  viewer.dispose()
+}
+
+///|
+/// Swapping models starts the fresh model at the scroll origin *structurally*
+/// (the layout lives on the per-model view model, `viewModelImpl.ts:126`) —
+/// no manual reset runs in `set_model`.
+test "read API: set_model twice starts the new model at the origin" {
+  let viewer = Viewer::Viewer()
+  viewer.set_model(Some(test_model(long_document(200))))
+  viewer.test_set_viewport(width=800.0, height=180.0)
+  viewer.set_scroll_top(500.0)
+  assert_eq(viewer.get_scroll_top(), 500.0)
+  let second = test_model(long_document(150))
+  viewer.set_model(Some(second))
+  assert_eq(viewer.get_scroll_top(), 0.0)
+  assert_eq(viewer.get_scroll_left(), 0.0)
   viewer.dispose()
 }
 

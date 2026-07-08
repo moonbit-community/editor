@@ -33,6 +33,12 @@ pub struct ViewModel {
   model : @model.TextModel
   mut options : ViewModelOptions
   lines : ViewModelLinesFromProjectedModel
+  /// The scroll/layout model, owned per view model like Monaco's
+  /// `public readonly viewLayout` (`viewModelImpl.ts:64,126`): a new model
+  /// starts at the scroll origin structurally. The viewport box is seeded
+  /// from the widget's measured dimensions after construction (Monaco's
+  /// `ViewLayout` reads `EditorOption.layoutInfo` from the configuration).
+  view_layout : @view_layout.ViewLayout
   mut decorations : ViewModelDecorations
   coordinates_converter : ProjectedCoordinatesConverter
 }
@@ -59,6 +65,12 @@ pub fn ViewModel::with_options(
     wrapping_indent=options.wrapping_indent,
   )
   let coordinates_converter = lines.create_coordinates_converter()
+  // Monaco's member order: `_lines` → `coordinatesConverter` → `_cursor` →
+  // `viewLayout` (`viewModelImpl.ts:122-126`) → `_decorations` (`:146`).
+  let view_layout = @view_layout.ViewLayout::new(
+    line_height=options.font_info.line_height,
+    line_count=lines.get_view_line_count(),
+  )
   let decorations = ViewModelDecorations::new(
     options.editor_id,
     model,
@@ -66,7 +78,7 @@ pub fn ViewModel::with_options(
     lines,
     coordinates_converter,
   )
-  { model, options, lines, decorations, coordinates_converter }
+  { model, options, lines, view_layout, decorations, coordinates_converter }
 }
 
 ///|

@@ -18,7 +18,12 @@ fn Viewer::pointer_handler_helper(
         None => None
       }
     },
-    view_layout: () => self.view_layout,
+    view_layout: () => {
+      match self.view_model {
+        Some(view_model) => Some(view_model.view_layout)
+        None => None
+      }
+    },
     apply_scroll: change => self.apply_scroll_change(change),
     hit_test: (x, y) => self.hit_test_at(x, y),
     refine_content_target: (client_x, client_y, fallback) => {
@@ -60,13 +65,13 @@ fn Viewer::hit_test_at(
     Some(view_model) => {
       let window = match self.rendered_window {
         Some(window) => window
-        None => view_model.clamp_window(self.view_layout.visible_window())
+        None => view_model.clamp_window(view_model.view_layout.visible_window())
       }
       Some(
         @viewer_common.hit_test(
           view_model,
           window,
-          self.view_metrics(view_model.line_count()),
+          self.view_metrics(view_model),
           x,
           y,
         ),

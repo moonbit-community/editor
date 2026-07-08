@@ -238,7 +238,11 @@ fn Viewer::refresh_font_info(self : Viewer) -> Unit {
     return
   }
   self.font_info = font_info
-  self.view_layout.set_line_height(font_info.line_height) |> ignore
+  match self.view_model {
+    Some(view_model) =>
+      view_model.view_layout.set_line_height(font_info.line_height) |> ignore
+    None => ()
+  }
   match self.view {
     Some(view) => self.apply_font_info_to_view(view)
     None => ()
@@ -283,11 +287,21 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
     None => 0.0
   }
   let content_width = rect.get_width() - gutter_width
-  self.view_layout.set_viewport_size(
-    width=if content_width > 0.0 { content_width } else { 0.0 },
-    height=rect.get_height(),
-  )
-  |> ignore
+  self.measured_content_width = if content_width > 0.0 {
+    content_width
+  } else {
+    0.0
+  }
+  self.measured_height = rect.get_height()
+  match self.view_model {
+    Some(view_model) =>
+      view_model.view_layout.set_viewport_size(
+        width=self.measured_content_width,
+        height=self.measured_height,
+      )
+      |> ignore
+    None => ()
+  }
   let next_wrap_column = self.options.soft_wrap_column_for_content_width(
     content_width,
     self.measured_char_width(),
@@ -302,13 +316,14 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
 
 ///|
 fn Viewer::sync_content_width(self : Viewer) -> Unit {
+  guard self.view_model is Some(view_model) else { return }
   let content_width = if self.options.soft_wrap && self.soft_wrap_column > 0 {
-    self.view_layout.dimensions().width
+    self.measured_content_width
   } else {
     self.max_line_length.to_double() * self.measured_char_width() +
     @core.code_right_padding
   }
-  self.view_layout.set_content_width(content_width) |> ignore
+  view_model.view_layout.set_content_width(content_width) |> ignore
 }
 
 ///|
@@ -338,22 +353,24 @@ fn Viewer::gutter_width(self : Viewer, line_count : Int) -> Double {
 }
 
 ///|
-/// Builds the hit-test geometry for the current content from the layout
-/// model, falling back to font constants before the first measurement.
+/// Builds the hit-test geometry for the current content from the view
+/// model's layout, falling back to font constants before the first
+/// measurement.
 fn Viewer::view_metrics(
   self : Viewer,
-  line_count : Int,
+  view_model : @view_model.ViewModel,
 ) -> @viewer_common.ViewMetrics {
+  let layout = view_model.view_layout
   {
     origin_x: 0.0,
     origin_y: 0.0,
-    scroll_top: self.view_layout.position().scroll_top,
-    scroll_left: self.view_layout.position().scroll_left,
-    viewport_height: self.view_layout.dimensions().height,
+    scroll_top: layout.position().scroll_top,
+    scroll_left: layout.position().scroll_left,
+    viewport_height: layout.dimensions().height,
     line_height: self.font_info.line_height,
     char_width: self.measured_char_width(),
-    gutter_width: self.gutter_width(line_count),
+    gutter_width: self.gutter_width(view_model.line_count()),
     line_decorations_width: self.options.line_decorations_width.to_double(),
-    view_zones: self.view_layout.view_zones(),
+    view_zones: layout.view_zones(),
   }
 }

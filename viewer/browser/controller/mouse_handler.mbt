@@ -53,8 +53,10 @@ pub(all) struct PointerHandlerHelper {
   /// The hover content widget's scrollable, if the hover widget is mounted
   /// (lazily created, so this is a closure, not a field).
   hover_scrollable : () -> @scrollbar.ScrollableElementDom?
-  /// The editor scroll/layout model.
-  view_layout : () -> @view_layout.ViewLayout
+  /// The editor scroll/layout model — the attached view model's layout;
+  /// `None` while no model is attached (Monaco's pointer handler only
+  /// exists while a view does), so every scroll path no-ops.
+  view_layout : () -> @view_layout.ViewLayout?
   /// Commit a scroll change produced from `view_layout()` (repaint + reveal).
   apply_scroll : (@view_layout.ScrollChange?) -> Unit
   /// Hit-tests view-relative coordinates against the rendered view model
@@ -315,9 +317,10 @@ fn MouseHandler::selection_drag_edge_delta(
   self : MouseHandler,
   client_y : Double,
 ) -> Double {
+  guard (self.helper.view_layout)() is Some(view_layout) else { return 0.0 }
   let rect = self.helper.view_root.get_bounding_client_rect()
   let y = client_y - rect.get_top()
-  let viewport_height = (self.helper.view_layout)().dimensions().height
+  let viewport_height = view_layout.dimensions().height
   if y < 0.0 {
     y
   } else if viewport_height > 0.0 && y > viewport_height {
@@ -351,9 +354,13 @@ fn MouseHandler::selection_autoscroll_tick(self : MouseHandler) -> Unit {
     min=-selection_autoscroll_max_step,
     max=selection_autoscroll_max_step,
   )
-  (self.helper.apply_scroll)(
-    (self.helper.view_layout)().scroll_by(delta_left=0.0, delta_top=step),
-  )
+  match (self.helper.view_layout)() {
+    Some(view_layout) =>
+      (self.helper.apply_scroll)(
+        view_layout.scroll_by(delta_left=0.0, delta_top=step),
+      )
+    None => ()
+  }
   self.extend_selection_at(
     self.selection_autoscroll_x,
     self.selection_autoscroll_y,
@@ -481,14 +488,13 @@ pub fn MouseHandler::handle_editor_wheel(
   self : MouseHandler,
   wheel : @rdom.WheelEvent,
 ) -> Unit {
+  guard (self.helper.view_layout)() is Some(view_layout) else { return }
   let (delta_left, delta_top) = @scrollbar.mouse_wheel_scroll_deltas(
     @scrollbar.StandardWheelEvent::new(wheel),
     alt_key=wheel.get_alt_key(),
     shift_key=wheel.get_shift_key(),
   )
-  (self.helper.apply_scroll)(
-    (self.helper.view_layout)().scroll_by(delta_left~, delta_top~),
-  )
+  (self.helper.apply_scroll)(view_layout.scroll_by(delta_left~, delta_top~))
 }
 
 ///|
@@ -576,18 +582,22 @@ fn MouseHandler::apply_scrollable_position(
 ) -> Unit {
   match owner {
     EditorScrollableElement =>
-      if vertical {
-        (self.helper.apply_scroll)(
-          (self.helper.view_layout)().scroll_to(scroll_top=desired),
-        )
-      } else {
-        let position = (self.helper.view_layout)().position()
-        (self.helper.apply_scroll)(
-          (self.helper.view_layout)().scroll_to(
-            scroll_top=position.scroll_top,
-            scroll_left=desired,
-          ),
-        )
+      match (self.helper.view_layout)() {
+        Some(view_layout) =>
+          if vertical {
+            (self.helper.apply_scroll)(
+              view_layout.scroll_to(scroll_top=desired),
+            )
+          } else {
+            let position = view_layout.position()
+            (self.helper.apply_scroll)(
+              view_layout.scroll_to(
+                scroll_top=position.scroll_top,
+                scroll_left=desired,
+              ),
+            )
+          }
+        None => ()
       }
     HoverScrollableElement => scrollable.native_scroll_to(vertical~, desired)
   }
@@ -665,9 +675,13 @@ fn MouseHandler::handle_browser_desperate_reveal(
     }
   }
   if delta_top != 0.0 || delta_left != 0.0 {
-    (self.helper.apply_scroll)(
-      (self.helper.view_layout)().scroll_by(delta_left~, delta_top~),
-    )
+    match (self.helper.view_layout)() {
+      Some(view_layout) =>
+        (self.helper.apply_scroll)(
+          view_layout.scroll_by(delta_left~, delta_top~),
+        )
+      None => ()
+    }
   } else {
     ()
   }

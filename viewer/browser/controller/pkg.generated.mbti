@@ -50,7 +50,7 @@ pub(all) struct PointerHandlerHelper {
   overflow_guard : @dom.Element
   editor_scrollable : @scrollbar.ScrollableElementDom
   hover_scrollable : () -> @scrollbar.ScrollableElementDom?
-  view_layout : () -> @view_layout.ViewLayout
+  view_layout : () -> @view_layout.ViewLayout?
   apply_scroll : (@view_layout.ScrollChange?) -> Unit
   hit_test : (Double, Double) -> @moonbit-community/editor/viewer/common.MouseTarget?
   refine_content_target : (Double, Double, @moonbit-community/editor/viewer/common.MouseTarget) -> @moonbit-community/editor/viewer/common.MouseTarget

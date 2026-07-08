@@ -241,7 +241,7 @@ fn Viewer::send_reveal_range(
     .coordinates_converter()
     .model_range_to_view_range(model_range)
   // (2) Minimal vertical scroll for the view range.
-  let scroll_top = self.view_layout.compute_scroll_top_to_reveal_range(
+  let scroll_top = view_model.view_layout.compute_scroll_top_to_reveal_range(
     view_range.start_line_number,
     view_range.end_line_number,
     vertical_type,
@@ -253,14 +253,14 @@ fn Viewer::send_reveal_range(
     return
   }
   let multi_line = view_range.start_line_number != view_range.end_line_number
-  let start_scroll_top = self.view_layout.position().scroll_top
+  let start_scroll_top = view_model.view_layout.position().scroll_top
   // (3) Commit the vertical scroll. A multi-line range under horizontal reveal
   // also resets `scroll_left` to 0 so most of both lines show
   // (`viewLines.ts:282`–`:289`). Clamping is free via `Scrollable`.
   let change = if reveal_horizontal && multi_line {
-    self.view_layout.scroll_to(scroll_top~, scroll_left=0.0)
+    view_model.view_layout.scroll_to(scroll_top~, scroll_left=0.0)
   } else {
-    self.view_layout.scroll_to(scroll_top~)
+    view_model.view_layout.scroll_to(scroll_top~)
   }
   self.apply_scroll_change(change)
   // (4) Horizontal request bookkeeping, after the vertical scroll so the
@@ -274,7 +274,7 @@ fn Viewer::send_reveal_range(
       start_column: view_range.start_column,
       end_column: view_range.end_column,
       start_scroll_top,
-      stop_scroll_top: self.view_layout.position().scroll_top,
+      stop_scroll_top: view_model.view_layout.position().scroll_top,
     })
     // The vertical scroll may have been a no-op (line already visible); still
     // schedule a render so the deferred horizontal reveal gets a chance to flush.
@@ -291,6 +291,7 @@ fn Viewer::send_reveal_range(
 /// pending if the line is not yet rendered, so a later frame can flush it.
 fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
   guard self.horizontal_reveal_request is Some(request) else { return }
+  guard self.view_model is Some(view_model) else { return }
   // The line is not in the rendered window yet — keep waiting.
   guard view.is_line_rendered(request.view_line_number) else { return }
   // The line is rendered: consume the request (Monaco nulls it here) and apply
@@ -305,15 +306,15 @@ fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
     keep_empty=true,
   )
   match
-    self.view_layout.compute_scroll_left_to_reveal(
+    view_model.view_layout.compute_scroll_left_to_reveal(
       ranges,
       vertical_scrollbar_width=@core.editor_vertical_scrollbar_size,
     ) {
     Some(scroll_left) => {
       // Set only `scroll_left`; the vertical reveal already settled `scroll_top`.
-      let scroll_top = self.view_layout.position().scroll_top
+      let scroll_top = view_model.view_layout.position().scroll_top
       self.apply_scroll_change(
-        self.view_layout.scroll_to(scroll_top~, scroll_left~),
+        view_model.view_layout.scroll_to(scroll_top~, scroll_left~),
       )
     }
     None => ()

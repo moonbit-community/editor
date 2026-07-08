@@ -36,7 +36,6 @@ pub struct Viewer {
   /// The last fired scroll event's facts, the diff base for the next event's
   /// `*_changed` flags (Monaco's `ScrollEvent` carries per-axis change bits).
   priv mut last_scroll_event : ScrollEvent?
-  priv view_layout : @view_layout.ViewLayout
   priv mut view_model : @view_model.ViewModel?
   /// The last rendered view-line window (clamped, half-open): exactly the
   /// lines intersecting the viewport at the last flush, resynced from the
@@ -86,6 +85,14 @@ pub struct Viewer {
   /// the untrusted headless estimate and is replaced by
   /// `FontMeasurements.readFontInfo` at the first attached measure.
   priv mut font_info : @config.FontInfo
+  /// The measured editor box (Monaco's `EditorOption.layoutInfo` role — the
+  /// container observer lives in `editorConfiguration.ts`, and `ViewLayout`
+  /// *reads* layout info from the configuration): the content width (view box
+  /// minus the gutter) and the viewport height. Written by `measure`; read
+  /// pre-model by the wrap-column math and `get_layout_info`, and seeded into
+  /// each per-model `ViewLayout` at construction.
+  priv mut measured_content_width : Double
+  priv mut measured_height : Double
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
   priv mut view : @view.View?
@@ -304,7 +311,6 @@ pub fn Viewer::Viewer(
     did_mouse_move: @base_common.Emitter::new(),
     did_mouse_leave: @base_common.Emitter::new(),
     last_scroll_event: None,
-    view_layout: @view_layout.ViewLayout::new(line_height=font_info.line_height),
     view_model: None,
     rendered_window: None,
     text_model: None,
@@ -326,6 +332,8 @@ pub fn Viewer::Viewer(
     hover_notified_token: 0,
     hover_mouse_closer: @hover.MouseCloserState::new(),
     font_info,
+    measured_content_width: 0.0,
+    measured_height: 0.0,
     soft_wrap_column: 0,
     max_line_length: 0,
     view: None,
@@ -481,7 +489,7 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
   // already uses the new advance width.
   self.refresh_font_info()
   self.soft_wrap_column = self.options.soft_wrap_column_for_content_width(
-    self.view_layout.dimensions().width,
+    self.measured_content_width,
     self.measured_char_width(),
   )
   self.on_configuration_changed()
@@ -640,11 +648,6 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.cursor = None
   self.cancel_mouse_selection()
   self.dismiss_hover()
-  // Monaco's `_attachModel` starts the fresh view at the origin; callers that
-  // want continuity restore a saved view state afterwards.
-  self.apply_scroll_change(
-    self.view_layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
-  )
   self.attach_model(model)
   self.did_change_model.fire({ old_model_url, new_model_url: Some(model.uri) })
 }
@@ -729,24 +732,32 @@ pub fn Viewer::has_widget_focus(self : Viewer) -> Bool {
 }
 
 ///|
-/// Returns the current scroll state in host-restorable form.
-pub fn Viewer::save_view_state(self : Viewer) -> ViewerViewState {
-  let position = self.view_layout.position()
-  { scroll_top: position.scroll_top, scroll_left: position.scroll_left }
+/// Returns the current scroll state in host-restorable form — Monaco's
+/// `saveViewState` (`cew:1038-1041`). No model → `None`.
+pub fn Viewer::save_view_state(self : Viewer) -> ViewerViewState? {
+  guard self.view_model is Some(view_model) else { return None }
+  let position = view_model.view_layout.position()
+  Some({ scroll_top: position.scroll_top, scroll_left: position.scroll_left })
 }
 
 ///|
-/// Restores a previously captured scroll state.
+/// Restores a previously captured scroll state — Monaco's `restoreViewState`
+/// (`cew:1052`): a no-op without a model, and `None` state restores nothing.
 pub fn Viewer::restore_view_state(
   self : Viewer,
-  state : ViewerViewState,
+  state : ViewerViewState?,
 ) -> Unit {
-  self.apply_scroll_change(
-    self.view_layout.scroll_to(
-      scroll_top=state.scroll_top,
-      scroll_left=state.scroll_left,
-    ),
-  )
+  guard self.view_model is Some(view_model) else { return }
+  match state {
+    Some(state) =>
+      self.apply_scroll_change(
+        view_model.view_layout.scroll_to(
+          scroll_top=state.scroll_top,
+          scroll_left=state.scroll_left,
+        ),
+      )
+    None => ()
+  }
 }
 
 ///|
@@ -790,20 +801,24 @@ pub fn Viewer::layout(self : Viewer) -> Unit {
 }
 
 ///|
-/// Sets the vertical synthetic scroll position — `setScrollTop`. Wheel and
-/// scrollbar input arrive through the view's own listeners.
+/// Sets the vertical synthetic scroll position — `setScrollTop`
+/// (`cew:1014-1017`, no model → no-op). Wheel and scrollbar input arrive
+/// through the view's own listeners.
 pub fn Viewer::set_scroll_top(self : Viewer, new_scroll_top : Double) -> Unit {
+  guard self.view_model is Some(view_model) else { return }
   self.apply_scroll_change(
-    self.view_layout.scroll_to(scroll_top=new_scroll_top),
+    view_model.view_layout.scroll_to(scroll_top=new_scroll_top),
   )
 }
 
 ///|
-/// Sets the horizontal synthetic scroll position — `setScrollLeft`.
+/// Sets the horizontal synthetic scroll position — `setScrollLeft`
+/// (`cew:1003-1006`, no model → no-op).
 pub fn Viewer::set_scroll_left(self : Viewer, new_scroll_left : Double) -> Unit {
+  guard self.view_model is Some(view_model) else { return }
   self.apply_scroll_change(
-    self.view_layout.scroll_to(
-      scroll_top=self.view_layout.position().scroll_top,
+    view_model.view_layout.scroll_to(
+      scroll_top=view_model.view_layout.position().scroll_top,
       scroll_left=new_scroll_left,
     ),
   )
@@ -811,13 +826,15 @@ pub fn Viewer::set_scroll_left(self : Viewer, new_scroll_left : Double) -> Unit 
 
 ///|
 /// Sets both synthetic scroll axes — `setScrollPosition` with Monaco's
-/// `INewScrollPosition` semantics: an omitted axis keeps its position.
+/// `INewScrollPosition` semantics: an omitted axis keeps its position
+/// (`cew:1025-1028`, no model → no-op).
 pub fn Viewer::set_scroll_position(
   self : Viewer,
   scroll_top? : Double,
   scroll_left? : Double,
 ) -> Unit {
-  let position = self.view_layout.position()
+  guard self.view_model is Some(view_model) else { return }
+  let position = view_model.view_layout.position()
   let scroll_top = match scroll_top {
     Some(value) => value
     None => position.scroll_top
@@ -827,7 +844,7 @@ pub fn Viewer::set_scroll_position(
     None => position.scroll_left
   }
   self.apply_scroll_change(
-    self.view_layout.scroll_to(scroll_top~, scroll_left~),
+    view_model.view_layout.scroll_to(scroll_top~, scroll_left~),
   )
 }
 
@@ -835,8 +852,9 @@ pub fn Viewer::set_scroll_position(
 /// Scrolls by a line-count delta using the configured line height — the
 /// keyboard arrow-scroll step.
 fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
+  guard self.view_model is Some(view_model) else { return }
   self.apply_scroll_change(
-    self.view_layout.scroll_by(
+    view_model.view_layout.scroll_by(
       delta_top=(lines * self.font_info.line_height).to_double(),
     ),
   )
@@ -845,9 +863,10 @@ fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
 ///|
 /// Scrolls by a viewport-height page delta — the PageUp/PageDown step.
 fn Viewer::scroll_by_pages(self : Viewer, pages : Int) -> Unit {
+  guard self.view_model is Some(view_model) else { return }
   self.apply_scroll_change(
-    self.view_layout.scroll_by(
-      delta_top=pages.to_double() * self.view_layout.dimensions().height,
+    view_model.view_layout.scroll_by(
+      delta_top=pages.to_double() * view_model.view_layout.dimensions().height,
     ),
   )
 }
@@ -855,15 +874,17 @@ fn Viewer::scroll_by_pages(self : Viewer, pages : Int) -> Unit {
 ///|
 /// Scrolls to the top of the document — the Home key.
 fn Viewer::scroll_home(self : Viewer) -> Unit {
-  self.apply_scroll_change(self.view_layout.scroll_to(scroll_top=0.0))
+  guard self.view_model is Some(view_model) else { return }
+  self.apply_scroll_change(view_model.view_layout.scroll_to(scroll_top=0.0))
 }
 
 ///|
 /// Scrolls to the bottom of the document — the End key.
 fn Viewer::scroll_end(self : Viewer) -> Unit {
-  let dimensions = self.view_layout.dimensions()
+  guard self.view_model is Some(view_model) else { return }
+  let dimensions = view_model.view_layout.dimensions()
   self.apply_scroll_change(
-    self.view_layout.scroll_to(scroll_top=dimensions.scroll_height),
+    view_model.view_layout.scroll_to(scroll_top=dimensions.scroll_height),
   )
 }
 
@@ -896,11 +917,7 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.inlay_hints = []
   self.inlay_hint_decoration_ids = []
   self.view_zones = []
-  self.view_layout.set_view_zones([]) |> ignore
   self.horizontal_reveal_request = None
-  self.apply_scroll_change(
-    self.view_layout.scroll_to(scroll_top=0.0, scroll_left=0.0),
-  )
   self.cursor = None
   self.cancel_mouse_selection()
   self.hover = @hover.HoverController::empty()

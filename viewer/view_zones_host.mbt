@@ -107,7 +107,10 @@ fn Viewer::upsert_view_zone(
 ///|
 fn Viewer::normalize_browser_view_zones(self : Viewer) -> Unit {
   let normalized : Array[@view_zones.BrowserViewZone] = []
-  let line_count = self.view_layout.line_count()
+  let line_count = match self.view_model {
+    Some(view_model) => view_model.view_layout.line_count()
+    None => 0
+  }
   for zone in self.view_zones {
     let max_anchor = if line_count > 0 {
       line_count
@@ -148,9 +151,12 @@ fn compare_browser_view_zones(
 
 ///|
 fn Viewer::sync_view_zones_with_layout(self : Viewer) -> Unit {
+  // No model → no live layout; the zones re-sync at the next attach via
+  // `apply_view_model_layout`.
+  guard self.view_model is Some(view_model) else { return }
   let zones : Array[@view_layout.ViewZone] = []
   for zone in self.view_zones {
     zones.push({ anchor_line: zone.anchor_line, height_px: zone.height_px })
   }
-  self.apply_scroll_change(self.view_layout.set_view_zones(zones))
+  self.apply_scroll_change(view_model.view_layout.set_view_zones(zones))
 }

@@ -233,18 +233,22 @@ subpackages.
 - Composition stays explicit. Hosts assemble traits, records, registries, and
   viewer calls; there is no global dependency-injection container.
 
-Controller access (documented pattern; no consumer yet, so no code lands):
-Monaco hosts reach a contribution's controller via
+Controller access: Monaco hosts reach a contribution's controller via
 `FoldingController.get(editor)` — `editor.getContribution<T>(id)`
 (`codeEditorWidget.ts`), a TypeScript downcast. MoonBit cannot downcast a
 trait object, so the faithful rendering is an instance table owned by each
 contrib package: a `Map[String, Controller]` keyed by `editor_id` (the
 WeakMap analog), populated by the feature's contribution ctor and cleared by
-its dispose, with hosts calling `@<feature>.get(viewer.get_id())`. The first
-real consumer (shell folding toggles, comments persistence UI) copies this
-pattern instead of inventing one; today the shell drives features through
-`ViewerServices`, and most feature state still lives as `Viewer` fields
-rather than controller values.
+its dispose, with hosts calling `@<feature>.get(viewer.get_id())`. The
+pattern has three real consumers: `ContentHoverController`
+(`viewer/contrib/hover/browser` — the mirror package for
+`editor/contrib/hover/browser`, js-only), the two agent-feedback
+contributions (`viewer/contrib/agent_feedback/browser`), and
+`InlayHintsController` (root package, next to its `inlay_hints_host.mbt`
+glue — the mirror has no `contrib/inlay_hints` package yet). Per-feature
+state lives on those controller instances; the `Viewer::` glue methods keep
+the dispatch role (the foreign-method rule pins them to the root package)
+and read/write state through the instance.
 
 ## Dependency Rules
 

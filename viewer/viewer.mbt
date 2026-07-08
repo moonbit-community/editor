@@ -42,7 +42,6 @@ pub struct Viewer {
   /// layout every flush.
   priv mut rendered_window : @view_layout.LineWindow?
   priv mut text_model : @model.TextModel?
-  priv mut inlay_hints : Array[@language.InlayHint]
   priv mut view_zones : Array[@view_zones.BrowserViewZone]
   /// The persistent content-hover widget (Monaco `ContentHoverWidget`),
   /// created lazily and mounted once through the content-widgets part.
@@ -87,31 +86,6 @@ pub struct Viewer {
   priv mut model_decorations_subscription : @base_common.Disposable?
   priv mut model_tokens_subscription : @base_common.Disposable?
   priv mut model_will_dispose_subscription : @base_common.Disposable?
-  /// Agent-feedback contrib state (`agentFeedbackEditorInputContribution.ts`
-  /// reduced; glue in `agent_feedback_host.mbt`): the lazily-created inline
-  /// input widget and its visibility/pin state, the hover "+" glyph line and
-  /// its owner-scoped decoration ids, the reserved-lane base width, and the
-  /// mouse-down/suppress gates of `_onSelectionChanged`.
-  priv mut agent_feedback_input : @agent_feedback_browser.AgentFeedbackInputWidget?
-  priv mut agent_feedback_input_visible : Bool
-  priv mut agent_feedback_pinned_range : @base_common.Range?
-  priv mut agent_feedback_anchor : @base_common.Position?
-  priv mut agent_feedback_prefer_below : Bool
-  priv mut agent_feedback_hover_line : Int
-  priv mut agent_feedback_hover_decoration_ids : Array[String]
-  priv mut agent_feedback_lane_base_width : Int?
-  priv mut agent_feedback_mouse_down : Bool
-  priv mut agent_feedback_suppress_selection_once : Bool
-  /// Feedback bubble contrib state (`AgentFeedbackEditorWidgetContribution`
-  /// reduced; glue in `agent_feedback_widgets_host.mbt`): the mounted
-  /// bubbles, the rebuild-surviving reply drafts, the widget id pool, and
-  /// the hover range-highlight decoration ids.
-  priv agent_feedback_widgets : Array[
-    @agent_feedback_browser.AgentFeedbackEditorWidget,
-  ]
-  priv agent_feedback_reply_drafts : Map[String, String]
-  priv mut agent_feedback_widget_id_pool : Int
-  priv mut agent_feedback_highlight_decoration_ids : Array[String]
   priv mut mouse_handler : @controller.MouseHandler?
   /// The last `mousemove`'s `MouseEvent.buttons` bitmask, recorded by the
   /// root listener so `on_mouse_move` events can carry `event.leftButton`
@@ -128,11 +102,6 @@ pub struct Viewer {
   /// client rects are unknown until then). Flushed in `flush_render`, cancelled
   /// when an unrelated scroll moves out of the reveal's band (`reveal.mbt`).
   priv mut horizontal_reveal_request : HorizontalRevealRangeRequest?
-  /// The inlay-hint contrib's decoration ids (Monaco
-  /// `InlayHintsController`'s per-editor decoration collection): rewritten
-  /// by `sync_inlay_hint_decorations` when the provider result changes;
-  /// injected text renders from these decorations (Track F).
-  priv mut inlay_hint_decoration_ids : Array[String]
   /// The per-editor contribution instances the registry constructed
   /// (`codeEditorContributions.ts`'s `_instances`, keyed by contribution
   /// id); disposed with the viewer.
@@ -279,7 +248,6 @@ pub fn Viewer::Viewer(
     view_model: None,
     rendered_window: None,
     text_model: None,
-    inlay_hints: [],
     view_zones: [],
     content_hover_widget: None,
     hover_widget_view: None,
@@ -300,25 +268,10 @@ pub fn Viewer::Viewer(
     model_decorations_subscription: None,
     model_tokens_subscription: None,
     model_will_dispose_subscription: None,
-    agent_feedback_input: None,
-    agent_feedback_input_visible: false,
-    agent_feedback_pinned_range: None,
-    agent_feedback_anchor: None,
-    agent_feedback_prefer_below: true,
-    agent_feedback_hover_line: -1,
-    agent_feedback_hover_decoration_ids: [],
-    agent_feedback_lane_base_width: None,
-    agent_feedback_mouse_down: false,
-    agent_feedback_suppress_selection_once: false,
-    agent_feedback_widgets: [],
-    agent_feedback_reply_drafts: {},
-    agent_feedback_widget_id_pool: 1,
-    agent_feedback_highlight_decoration_ids: [],
     mouse_handler: None,
     last_mouse_buttons: 0,
     editor_has_focus: false,
     horizontal_reveal_request: None,
-    inlay_hint_decoration_ids: [],
     contributions: {},
   }
   // Marker decoration changes reach the render through the model's
@@ -556,9 +509,14 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   }
   // Feedback decoration/widget state belongs to the outgoing model; the
   // model-change event re-applies the new resource's feedback data.
-  self.agent_feedback_hover_decoration_ids = []
-  self.agent_feedback_hover_line = -1
-  self.agent_feedback_highlight_decoration_ids = []
+  match self.agent_feedback_input_contribution() {
+    Some(ic) => ic.reset_model_state()
+    None => ()
+  }
+  match self.agent_feedback_widget_contribution() {
+    Some(wc) => wc.reset_model_state()
+    None => ()
+  }
   self.clear_agent_feedback_widgets() |> ignore
   self.model_decorations_subscription = Some(
     model.on_did_change_decorations(event => {
@@ -596,8 +554,10 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
     model.on_did_change_tokens(_ => self.retokenize_current_model(model)),
   )
   self.services.marker_decorations.on_model_added(model)
-  self.inlay_hints = []
-  self.inlay_hint_decoration_ids = []
+  match self.inlay_hints_controller() {
+    Some(controller) => controller.reset_model_state()
+    None => ()
+  }
   self.cancel_mouse_selection()
   self.dismiss_hover()
   self.attach_model(model)
@@ -861,15 +821,22 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
     Some(hc) => hc.reset_model_state()
     None => ()
   }
-  self.agent_feedback_hover_decoration_ids = []
-  self.agent_feedback_hover_line = -1
-  self.agent_feedback_highlight_decoration_ids = []
+  match self.agent_feedback_input_contribution() {
+    Some(ic) => ic.reset_model_state()
+    None => ()
+  }
+  match self.agent_feedback_widget_contribution() {
+    Some(wc) => wc.reset_model_state()
+    None => ()
+  }
   self.clear_agent_feedback_widgets() |> ignore
   self.view_model = None
   self.rendered_window = None
   self.text_model = None
-  self.inlay_hints = []
-  self.inlay_hint_decoration_ids = []
+  match self.inlay_hints_controller() {
+    Some(controller) => controller.reset_model_state()
+    None => ()
+  }
   self.view_zones = []
   self.horizontal_reveal_request = None
   self.cancel_mouse_selection()

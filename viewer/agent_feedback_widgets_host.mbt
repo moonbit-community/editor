@@ -25,6 +25,10 @@ fn register_agent_feedback_widgets_contribution(
     "agentFeedback.editorWidgetContribution",
     Eventually,
     viewer => {
+      @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::attach(
+        viewer.get_id(),
+      )
+      |> ignore
       let subscriptions = viewer.hook_agent_feedback_widgets()
       {
         id: "agentFeedback.editorWidgetContribution",
@@ -33,9 +37,24 @@ fn register_agent_feedback_widgets_contribution(
           for subscription in subscriptions {
             subscription.dispose()
           }
+          @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::detach(
+            viewer.get_id(),
+          )
         },
       }
     },
+  )
+}
+
+///|
+/// The live widget-contribution instance for this editor — the
+/// `getContribution(AgentFeedbackEditorWidgetContribution.ID)` analog.
+/// `None` after the contribution disposed.
+fn Viewer::agent_feedback_widget_contribution(
+  self : Viewer,
+) -> @agent_feedback_browser.AgentFeedbackEditorWidgetContribution? {
+  @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::get(
+    self.get_id(),
   )
 }
 
@@ -69,15 +88,18 @@ fn Viewer::hook_agent_feedback_widgets(
 /// fires during teardown and would clear the state), then dispose every
 /// widget. Returns the snapshot for the rebuild.
 fn Viewer::clear_agent_feedback_widgets(self : Viewer) -> String? {
+  guard self.agent_feedback_widget_contribution() is Some(wc) else {
+    return None
+  }
   let mut focused_reply : String? = None
-  for widget in self.agent_feedback_widgets {
+  for widget in wc.widgets {
     if focused_reply is None {
       focused_reply = widget.focused_reply_comment_id()
     }
     widget.mark_disposed()
     self.remove_overlay_widget(widget.widget_id())
   }
-  self.agent_feedback_widgets.clear()
+  wc.widgets.clear()
   self.clear_agent_feedback_highlight()
   focused_reply
 }
@@ -88,6 +110,7 @@ fn Viewer::clear_agent_feedback_widgets(self : Viewer) -> String? {
 /// top. Widget DOM is only built while a real view is attached (the
 /// comments contrib's `sync_comments` gate).
 fn Viewer::rebuild_agent_feedback_widgets(self : Viewer) -> Unit {
+  guard self.agent_feedback_widget_contribution() is Some(wc) else { return }
   let focused_reply = self.clear_agent_feedback_widgets()
   guard self.view is Some(_) && self.text_model is Some(model) else { return }
   let comments = @agent_feedback.get_session_editor_comments(
@@ -100,17 +123,16 @@ fn Viewer::rebuild_agent_feedback_widgets(self : Viewer) -> Unit {
   let groups = @agent_feedback.group_nearby_session_editor_comments(comments)
   for index = groups.length() - 1; index >= 0; index = index - 1 {
     let group = groups[index]
-    let widget_id = "agent-feedback-widget-" +
-      self.agent_feedback_widget_id_pool.to_string()
-    self.agent_feedback_widget_id_pool += 1
+    let widget_id = "agent-feedback-widget-" + wc.widget_id_pool.to_string()
+    wc.widget_id_pool += 1
     let widget = @agent_feedback_browser.AgentFeedbackEditorWidget::new(
       self.agent_feedback_widget_host(),
       widget_id,
       group,
-      self.agent_feedback_reply_drafts,
+      wc.reply_drafts,
       focused_reply?,
     )
-    self.agent_feedback_widgets.push(widget)
+    wc.widgets.push(widget)
     self.add_overlay_widget(widget_id, widget.get_dom_node())
     self.layout_agent_feedback_widget(widget, group[0].range.start_line_number)
   }
@@ -147,18 +169,26 @@ fn Viewer::agent_feedback_widget_host(
     on_hover_end: () => self.clear_agent_feedback_highlight(),
     // One expanded widget per file: expanding one collapses the others.
     on_did_expand: widget_id => {
-      for other in self.agent_feedback_widgets {
-        if other.widget_id() != widget_id && other.is_expanded() {
-          other.collapse()
-        }
+      match self.agent_feedback_widget_contribution() {
+        Some(wc) =>
+          for other in wc.widgets {
+            if other.widget_id() != widget_id && other.is_expanded() {
+              other.collapse()
+            }
+          }
+        None => ()
       }
     },
     on_layout: widget_id => {
-      for widget in self.agent_feedback_widgets {
-        if widget.widget_id() == widget_id {
-          self.layout_agent_feedback_widget(widget, widget.anchor_line())
-          break
-        }
+      match self.agent_feedback_widget_contribution() {
+        Some(wc) =>
+          for widget in wc.widgets {
+            if widget.widget_id() == widget_id {
+              self.layout_agent_feedback_widget(widget, widget.anchor_line())
+              break
+            }
+          }
+        None => ()
       }
     },
   }
@@ -207,7 +237,8 @@ fn Viewer::layout_agent_feedback_widget(
 
 ///|
 fn Viewer::relayout_agent_feedback_widgets(self : Viewer) -> Unit {
-  for widget in self.agent_feedback_widgets {
+  guard self.agent_feedback_widget_contribution() is Some(wc) else { return }
+  for widget in wc.widgets {
     self.layout_agent_feedback_widget(widget, widget.anchor_line())
   }
 }
@@ -225,8 +256,9 @@ fn Viewer::handle_agent_feedback_navigation(self : Viewer) -> Unit {
     comments.map(comment => comment.id),
   )
   guard bearing.active_idx >= 0 else { return }
+  guard self.agent_feedback_widget_contribution() is Some(wc) else { return }
   let active = comments[bearing.active_idx]
-  for widget in self.agent_feedback_widgets {
+  for widget in wc.widgets {
     if widget.contains_feedback(active.id) {
       widget.expand()
       widget.focus_feedback(active.id)
@@ -259,9 +291,10 @@ fn Viewer::highlight_agent_feedback_range(
     1,
     end_line,
   )
+  guard self.agent_feedback_widget_contribution() is Some(wc) else { return }
   let max_column = model.snapshot.line_text(end_line - 1).length() + 1
-  self.agent_feedback_highlight_decoration_ids = model.delta_decorations(
-    self.agent_feedback_highlight_decoration_ids,
+  wc.highlight_decoration_ids = model.delta_decorations(
+    wc.highlight_decoration_ids,
     [
       {
         range: Range(start_line, 1, end_line, max_column),
@@ -279,15 +312,16 @@ fn Viewer::highlight_agent_feedback_range(
 
 ///|
 fn Viewer::clear_agent_feedback_highlight(self : Viewer) -> Unit {
-  if self.agent_feedback_highlight_decoration_ids.is_empty() {
+  guard self.agent_feedback_widget_contribution() is Some(wc) else { return }
+  if wc.highlight_decoration_ids.is_empty() {
     return
   }
   guard self.text_model is Some(model) else {
-    self.agent_feedback_highlight_decoration_ids = []
+    wc.highlight_decoration_ids = []
     return
   }
-  self.agent_feedback_highlight_decoration_ids = model.delta_decorations(
-    self.agent_feedback_highlight_decoration_ids,
+  wc.highlight_decoration_ids = model.delta_decorations(
+    wc.highlight_decoration_ids,
     [],
     owner_id=self.editor_id,
   )
@@ -296,22 +330,23 @@ fn Viewer::clear_agent_feedback_highlight(self : Viewer) -> Unit {
 ///|
 /// `_pruneOrphanedReplyDrafts`: drop drafts for comments no widget renders.
 fn Viewer::prune_agent_feedback_reply_drafts(self : Viewer) -> Unit {
-  if self.agent_feedback_reply_drafts.is_empty() {
+  guard self.agent_feedback_widget_contribution() is Some(wc) else { return }
+  if wc.reply_drafts.is_empty() {
     return
   }
   let known : Map[String, Bool] = {}
-  for widget in self.agent_feedback_widgets {
+  for widget in wc.widgets {
     for comment_id in widget.comment_ids() {
       known.set(comment_id, true)
     }
   }
   let orphaned : Array[String] = []
-  for comment_id, _ in self.agent_feedback_reply_drafts {
+  for comment_id, _ in wc.reply_drafts {
     if known.get(comment_id) is None {
       orphaned.push(comment_id)
     }
   }
   for comment_id in orphaned {
-    self.agent_feedback_reply_drafts.remove(comment_id)
+    wc.reply_drafts.remove(comment_id)
   }
 }

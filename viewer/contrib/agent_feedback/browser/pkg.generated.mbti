@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer/contrib/agent_feedback/browser"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/contrib/agent_feedback",
   "moonbit-community/rabbita/dom",
 }
@@ -12,6 +13,23 @@ pub let input_max_width_editor_fraction : Double
 // Errors
 
 // Types and methods
+pub(all) struct AgentFeedbackEditorInputContribution {
+  mut widget : AgentFeedbackInputWidget?
+  mut visible : Bool
+  mut pinned_range : @common.Range?
+  mut anchor_position : @common.Position?
+  mut prefer_below : Bool
+  mut hover_line_number : Int
+  mut hover_decoration_ids : Array[String]
+  mut lane_base_width : Int?
+  mut mouse_down : Bool
+  mut suppress_selection_change_once : Bool
+}
+pub fn AgentFeedbackEditorInputContribution::attach(String) -> Self
+pub fn AgentFeedbackEditorInputContribution::detach(String) -> Unit
+pub fn AgentFeedbackEditorInputContribution::get(String) -> Self?
+pub fn AgentFeedbackEditorInputContribution::reset_model_state(Self) -> Unit
+
 pub struct AgentFeedbackEditorWidget {
   host : AgentFeedbackEditorWidgetHost
   id : String
@@ -46,6 +64,17 @@ pub fn AgentFeedbackEditorWidget::new(AgentFeedbackEditorWidgetHost, String, Arr
 pub fn AgentFeedbackEditorWidget::set_anchor_line(Self, Int) -> Unit
 pub fn AgentFeedbackEditorWidget::set_position(Self, Double, Double) -> Unit
 pub fn AgentFeedbackEditorWidget::widget_id(Self) -> String
+
+pub(all) struct AgentFeedbackEditorWidgetContribution {
+  widgets : Array[AgentFeedbackEditorWidget]
+  reply_drafts : Map[String, String]
+  mut widget_id_pool : Int
+  mut highlight_decoration_ids : Array[String]
+}
+pub fn AgentFeedbackEditorWidgetContribution::attach(String) -> Self
+pub fn AgentFeedbackEditorWidgetContribution::detach(String) -> Unit
+pub fn AgentFeedbackEditorWidgetContribution::get(String) -> Self?
+pub fn AgentFeedbackEditorWidgetContribution::reset_model_state(Self) -> Unit
 
 pub(all) struct AgentFeedbackEditorWidgetHost {
   on_remove : (@agent_feedback.SessionEditorComment) -> Unit

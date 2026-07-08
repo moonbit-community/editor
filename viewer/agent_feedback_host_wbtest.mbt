@@ -12,6 +12,14 @@ fn test_model_uri() -> @base_common.Uri {
 }
 
 ///|
+/// Whitebox read of the per-editor input-contribution instance.
+fn Viewer::test_feedback_input_contribution(
+  self : Viewer,
+) -> @agent_feedback_browser.AgentFeedbackEditorInputContribution {
+  self.agent_feedback_input_contribution().unwrap()
+}
+
+///|
 test "feedback lane reserves 18px while enabled and restores the base" {
   with_test_viewer("alpha\nbeta\ngamma", viewer => {
     let service = viewer.services.agent_feedback
@@ -29,18 +37,24 @@ test "hover glyph follows non-empty lines of an enabled resource" {
     let service = viewer.services.agent_feedback
     // Disabled resource: no glyph.
     viewer.update_agent_feedback_hover_glyph(1)
-    assert_eq(viewer.agent_feedback_hover_line, -1)
+    assert_eq(viewer.test_feedback_input_contribution().hover_line_number, -1)
     service.set_feedback_enabled(test_model_uri(), true)
     viewer.update_agent_feedback_hover_glyph(1)
-    assert_eq(viewer.agent_feedback_hover_line, 1)
-    assert_eq(viewer.agent_feedback_hover_decoration_ids.length(), 1)
+    assert_eq(viewer.test_feedback_input_contribution().hover_line_number, 1)
+    assert_eq(
+      viewer.test_feedback_input_contribution().hover_decoration_ids.length(),
+      1,
+    )
     // Whitespace-only line: cleared.
     viewer.update_agent_feedback_hover_glyph(2)
-    assert_eq(viewer.agent_feedback_hover_line, -1)
-    assert_eq(viewer.agent_feedback_hover_decoration_ids.length(), 0)
+    assert_eq(viewer.test_feedback_input_contribution().hover_line_number, -1)
+    assert_eq(
+      viewer.test_feedback_input_contribution().hover_decoration_ids.length(),
+      0,
+    )
     // Out-of-range line: stays cleared.
     viewer.update_agent_feedback_hover_glyph(9)
-    assert_eq(viewer.agent_feedback_hover_line, -1)
+    assert_eq(viewer.test_feedback_input_contribution().hover_line_number, -1)
   })
 }
 
@@ -51,11 +65,11 @@ test "lines with unresolved feedback refuse the add glyph" {
     service.set_feedback_enabled(test_model_uri(), true)
     let item = service.add_feedback(test_model_uri(), Range(3, 1, 3, 6), "note")
     viewer.update_agent_feedback_hover_glyph(3)
-    assert_eq(viewer.agent_feedback_hover_line, -1)
+    assert_eq(viewer.test_feedback_input_contribution().hover_line_number, -1)
     // Resolved feedback frees the line again.
     service.set_feedback_resolved(test_model_uri(), item.id, true)
     viewer.update_agent_feedback_hover_glyph(3)
-    assert_eq(viewer.agent_feedback_hover_line, 3)
+    assert_eq(viewer.test_feedback_input_contribution().hover_line_number, 3)
   })
 }
 
@@ -65,10 +79,10 @@ test "feedback landing on the glyph line clears the glyph" {
     let service = viewer.services.agent_feedback
     service.set_feedback_enabled(test_model_uri(), true)
     viewer.update_agent_feedback_hover_glyph(2)
-    assert_eq(viewer.agent_feedback_hover_line, 2)
+    assert_eq(viewer.test_feedback_input_contribution().hover_line_number, 2)
     // The change subscription re-evaluates the glyph gates.
     service.add_feedback(test_model_uri(), Range(2, 1, 2, 5), "note") |> ignore
-    assert_eq(viewer.agent_feedback_hover_line, -1)
+    assert_eq(viewer.test_feedback_input_contribution().hover_line_number, -1)
   })
 }
 
@@ -83,7 +97,7 @@ test "selection changes without editor focus never open the input" {
     // The unattached harness has no DOM focus, so `_onSelectionChanged`'s
     // `hasTextFocus` gate holds the input closed (and no widget DOM is
     // ever created headlessly).
-    assert_eq(viewer.agent_feedback_input_visible, false)
-    assert_true(viewer.agent_feedback_input is None)
+    assert_eq(viewer.test_feedback_input_contribution().visible, false)
+    assert_true(viewer.test_feedback_input_contribution().widget is None)
   })
 }

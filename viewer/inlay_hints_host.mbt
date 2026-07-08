@@ -6,17 +6,94 @@
 // reads injected text back from the model's decoration storage.
 
 ///|
+/// Monaco `InlayHintsController` (`inlayHintsController.ts`,
+/// `editor.contrib.InlayHints`): the per-editor provider result and its
+/// decoration collection, reached through the instance table
+/// (`docs/architecture.md`, "Controller access"). Filed in the root package
+/// next to the glue below — the mirror has no `contrib/inlay_hints`
+/// package yet.
+pub(all) struct InlayHintsController {
+  /// The last provider result; kept for hover tooltip lookup.
+  mut inlay_hints : Array[@language.InlayHint]
+  /// The controller's per-editor decoration collection
+  /// (`_updateHintsDecorators`' owner-scoped ids).
+  mut inlay_hint_decoration_ids : Array[String]
+}
+
+///|
+/// Per-editor instances keyed by `viewer.get_id()`.
+let inlay_hints_instances : Map[String, InlayHintsController] = {}
+
+///|
+pub fn InlayHintsController::attach(editor_id : String) -> InlayHintsController {
+  let controller : InlayHintsController = {
+    inlay_hints: [],
+    inlay_hint_decoration_ids: [],
+  }
+  inlay_hints_instances[editor_id] = controller
+  controller
+}
+
+///|
+pub fn InlayHintsController::get(editor_id : String) -> InlayHintsController? {
+  inlay_hints_instances.get(editor_id)
+}
+
+///|
+pub fn InlayHintsController::detach(editor_id : String) -> Unit {
+  inlay_hints_instances.remove(editor_id)
+}
+
+///|
+/// Drops the per-model state on a model swap: the provider result and the
+/// decoration ids belong to the outgoing model.
+pub fn InlayHintsController::reset_model_state(
+  self : InlayHintsController,
+) -> Unit {
+  self.inlay_hints = []
+  self.inlay_hint_decoration_ids = []
+}
+
+///|
+/// The live controller instance for this editor — Monaco's
+/// `InlayHintsController.get(editor)`. `None` after dispose.
+fn Viewer::inlay_hints_controller(self : Viewer) -> InlayHintsController? {
+  InlayHintsController::get(self.get_id())
+}
+
+///|
+/// `registerEditorContribution(InlayHintsController.ID, …,
+/// AfterFirstRender)` (`inlayHints.contribution.ts`).
+fn register_inlay_hints_contribution(
+  registry : EditorContributionRegistry,
+) -> Unit {
+  registry.register_editor_contribution(
+    "editor.contrib.InlayHints",
+    AfterFirstRender,
+    viewer => {
+      InlayHintsController::attach(viewer.get_id()) |> ignore
+      {
+        id: "editor.contrib.InlayHints",
+        dispose: () => InlayHintsController::detach(viewer.get_id()),
+      }
+    },
+  )
+}
+
+///|
 /// Rewrites this editor's inlay-hint decorations from the current provider
 /// result. The decoration-change event (with `affects_injected_text`)
 /// triggers the projection rebuild.
 fn Viewer::sync_inlay_hint_decorations(self : Viewer) -> Unit {
+  guard self.inlay_hints_controller() is Some(controller) else { return }
   guard self.text_model is Some(model) else { return }
-  if self.inlay_hints.is_empty() && self.inlay_hint_decoration_ids.is_empty() {
+  if controller.inlay_hints.is_empty() &&
+    controller.inlay_hint_decoration_ids.is_empty() {
     return
   }
-  self.inlay_hint_decoration_ids = model.delta_decorations(
-    self.inlay_hint_decoration_ids,
-    inlay_hint_delta_decorations(self.inlay_hints),
+  controller.inlay_hint_decoration_ids = model.delta_decorations(
+    controller.inlay_hint_decoration_ids,
+    inlay_hint_delta_decorations(controller.inlay_hints),
     owner_id=self.editor_id,
   )
 }

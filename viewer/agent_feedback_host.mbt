@@ -42,6 +42,10 @@ fn register_agent_feedback_contribution(
     "agentFeedback.editorInputContribution",
     Eventually,
     viewer => {
+      @agent_feedback_browser.AgentFeedbackEditorInputContribution::attach(
+        viewer.get_id(),
+      )
+      |> ignore
       let subscriptions = viewer.hook_agent_feedback()
       {
         id: "agentFeedback.editorInputContribution",
@@ -49,6 +53,9 @@ fn register_agent_feedback_contribution(
           for subscription in subscriptions {
             subscription.dispose()
           }
+          @agent_feedback_browser.AgentFeedbackEditorInputContribution::detach(
+            viewer.get_id(),
+          )
         },
       }
     },
@@ -58,14 +65,14 @@ fn register_agent_feedback_contribution(
   // focus. Escape inside the textarea is the widget's own keydown.
   registry.register_editor_command(
     "agentFeedback.cancelInput",
-    viewer => viewer.agent_feedback_input_visible,
+    viewer => viewer.agent_feedback_input_visible(),
     viewer => viewer.hide_agent_feedback_input(refocus_editor=false),
     [("Escape", false, false)],
   )
   // "Ctrl+I / Cmd+I explicitly focuses the feedback input".
   registry.register_editor_command(
     "agentFeedback.focusInput",
-    viewer => viewer.agent_feedback_input_visible,
+    viewer => viewer.agent_feedback_input_visible(),
     viewer => viewer.focus_agent_feedback_input(),
     [("i", false, true)],
   )
@@ -83,7 +90,10 @@ fn Viewer::hook_agent_feedback(self : Viewer) -> Array[@base_common.Disposable] 
         self.sync_agent_feedback_lane()
         // A feedback item may have landed on the glyph line; re-evaluate
         // the "line already has feedback" gate.
-        let line = self.agent_feedback_hover_line
+        let line = match self.agent_feedback_input_contribution() {
+          Some(ic) => ic.hover_line_number
+          None => -1
+        }
         if line >= 1 {
           self.clear_agent_feedback_hover_glyph()
           self.update_agent_feedback_hover_glyph(line)
@@ -95,7 +105,7 @@ fn Viewer::hook_agent_feedback(self : Viewer) -> Array[@base_common.Disposable] 
       self.on_agent_feedback_selection_changed()
     }),
     self.on_did_scroll_change(_ => {
-      if self.agent_feedback_input_visible {
+      if self.agent_feedback_input_visible() {
         self.update_agent_feedback_input_position()
       }
     }),
@@ -116,6 +126,28 @@ fn Viewer::is_current_resource(
 ) -> Bool {
   match self.text_model {
     Some(model) => model.uri.to_string() == resource.to_string()
+    None => false
+  }
+}
+
+///|
+/// The live input-contribution instance for this editor — the
+/// `getContribution(AgentFeedbackEditorInputContribution.ID)` analog.
+/// `None` after the contribution disposed.
+fn Viewer::agent_feedback_input_contribution(
+  self : Viewer,
+) -> @agent_feedback_browser.AgentFeedbackEditorInputContribution? {
+  @agent_feedback_browser.AgentFeedbackEditorInputContribution::get(
+    self.get_id(),
+  )
+}
+
+///|
+/// Whether the inline input is showing — the `_visible` read the keybinding
+/// gates and the scroll hook consult.
+fn Viewer::agent_feedback_input_visible(self : Viewer) -> Bool {
+  match self.agent_feedback_input_contribution() {
+    Some(ic) => ic.visible
     None => false
   }
 }
@@ -150,7 +182,10 @@ fn Viewer::agent_feedback_enabled(self : Viewer) -> Bool {
 fn Viewer::on_agent_feedback_model_changed(self : Viewer) -> Unit {
   self.hide_agent_feedback_input(refocus_editor=false)
   self.clear_agent_feedback_hover_glyph()
-  self.agent_feedback_suppress_selection_once = false
+  match self.agent_feedback_input_contribution() {
+    Some(ic) => ic.suppress_selection_change_once = false
+    None => ()
+  }
   self.sync_agent_feedback_lane()
 }
 
@@ -162,18 +197,19 @@ fn Viewer::on_agent_feedback_model_changed(self : Viewer) -> Unit {
 /// when it no longer does (the comments contrib's store/restore shape; the
 /// upstream added/subtracted a delta).
 fn Viewer::sync_agent_feedback_lane(self : Viewer) -> Unit {
+  guard self.agent_feedback_input_contribution() is Some(ic) else { return }
   let needed = self.agent_feedback_enabled()
-  match (needed, self.agent_feedback_lane_base_width) {
+  match (needed, ic.lane_base_width) {
     (true, None) => {
       let base = self.options.line_decorations_width
-      self.agent_feedback_lane_base_width = Some(base)
+      ic.lane_base_width = Some(base)
       self.update_options({
         ..self.options,
         line_decorations_width: base + agent_feedback_reserved_gutter_px,
       })
     }
     (false, Some(base)) => {
-      self.agent_feedback_lane_base_width = None
+      ic.lane_base_width = None
       self.update_options({ ..self.options, line_decorations_width: base })
     }
     _ => ()
@@ -189,7 +225,7 @@ fn Viewer::on_agent_feedback_mouse_move(
   self : Viewer,
   event : EditorMouseEvent,
 ) -> Unit {
-  if self.agent_feedback_input_visible || self.agent_feedback_has_draft() {
+  if self.agent_feedback_input_visible() || self.agent_feedback_has_draft() {
     self.clear_agent_feedback_hover_glyph()
     return
   }
@@ -205,6 +241,7 @@ fn Viewer::on_agent_feedback_mouse_move(
 /// `_updateHoverGlyph` and its gates: a valid, non-empty line in an enabled
 /// resource whose line has no existing feedback.
 fn Viewer::update_agent_feedback_hover_glyph(self : Viewer, line : Int) -> Unit {
+  guard self.agent_feedback_input_contribution() is Some(ic) else { return }
   guard self.text_model is Some(model) else {
     self.clear_agent_feedback_hover_glyph()
     return
@@ -218,7 +255,7 @@ fn Viewer::update_agent_feedback_hover_glyph(self : Viewer, line : Int) -> Unit 
     self.clear_agent_feedback_hover_glyph()
     return
   }
-  if self.agent_feedback_hover_line == line {
+  if ic.hover_line_number == line {
     return
   }
   if !self.agent_feedback_enabled() {
@@ -234,9 +271,9 @@ fn Viewer::update_agent_feedback_hover_glyph(self : Viewer, line : Int) -> Unit 
     self.clear_agent_feedback_hover_glyph()
     return
   }
-  self.agent_feedback_hover_line = line
-  self.agent_feedback_hover_decoration_ids = model.delta_decorations(
-    self.agent_feedback_hover_decoration_ids,
+  ic.hover_line_number = line
+  ic.hover_decoration_ids = model.delta_decorations(
+    ic.hover_decoration_ids,
     [
       {
         range: Range(line, 1, line, 1),
@@ -270,16 +307,17 @@ fn agent_feedback_line_has_feedback(
 ///|
 /// `_clearHoverGlyph`.
 fn Viewer::clear_agent_feedback_hover_glyph(self : Viewer) -> Unit {
-  if self.agent_feedback_hover_line == -1 {
+  guard self.agent_feedback_input_contribution() is Some(ic) else { return }
+  if ic.hover_line_number == -1 {
     return
   }
-  self.agent_feedback_hover_line = -1
+  ic.hover_line_number = -1
   guard self.text_model is Some(model) else {
-    self.agent_feedback_hover_decoration_ids = []
+    ic.hover_decoration_ids = []
     return
   }
-  self.agent_feedback_hover_decoration_ids = model.delta_decorations(
-    self.agent_feedback_hover_decoration_ids,
+  ic.hover_decoration_ids = model.delta_decorations(
+    ic.hover_decoration_ids,
     [],
     owner_id=self.editor_id,
   )
@@ -296,9 +334,12 @@ fn Viewer::is_agent_feedback_glyph_target(
   self : Viewer,
   target : @viewer_common.MouseTarget,
 ) -> Bool {
+  guard self.agent_feedback_input_contribution() is Some(ic) else {
+    return false
+  }
   target.kind == GutterLineDecorations &&
-  self.agent_feedback_hover_line >= 1 &&
-  self.mouse_target_model_line(target) == self.agent_feedback_hover_line
+  ic.hover_line_number >= 1 &&
+  self.mouse_target_model_line(target) == ic.hover_line_number
 }
 
 ///|
@@ -315,7 +356,10 @@ fn Viewer::on_agent_feedback_mouse_down(
     self.select_agent_feedback_line(line)
     return
   }
-  self.agent_feedback_mouse_down = true
+  match self.agent_feedback_input_contribution() {
+    Some(ic) => ic.mouse_down = true
+    None => ()
+  }
   self.auto_hide_agent_feedback_input()
 }
 
@@ -326,7 +370,10 @@ fn Viewer::on_agent_feedback_mouse_up(
   self : Viewer,
   target : @viewer_common.MouseTarget,
 ) -> Unit {
-  self.agent_feedback_mouse_down = false
+  match self.agent_feedback_input_contribution() {
+    Some(ic) => ic.mouse_down = false
+    None => ()
+  }
   if self.is_agent_feedback_glyph_target(target) {
     return
   }
@@ -338,7 +385,7 @@ fn Viewer::on_agent_feedback_mouse_up(
 /// selection-change handler opens the input synchronously), then move focus
 /// into the input so typing can start immediately.
 fn Viewer::select_agent_feedback_line(self : Viewer, line : Int) -> Unit {
-  if self.agent_feedback_input_visible && self.agent_feedback_has_draft() {
+  if self.agent_feedback_input_visible() && self.agent_feedback_has_draft() {
     self.focus_agent_feedback_input()
     return
   }
@@ -370,14 +417,15 @@ fn Viewer::select_agent_feedback_line(self : Viewer, line : Int) -> Unit {
 /// presence; a draft freezes it; the anchor follows the selection's active
 /// end (below an LTR selection, above an RTL one).
 fn Viewer::on_agent_feedback_selection_changed(self : Viewer) -> Unit {
-  if self.agent_feedback_suppress_selection_once {
-    self.agent_feedback_suppress_selection_once = false
+  guard self.agent_feedback_input_contribution() is Some(ic) else { return }
+  if ic.suppress_selection_change_once {
+    ic.suppress_selection_change_once = false
     return
   }
-  if self.agent_feedback_mouse_down || !self.has_text_focus() {
+  if ic.mouse_down || !self.has_text_focus() {
     return
   }
-  if self.agent_feedback_input_visible && self.agent_feedback_has_draft() {
+  if ic.visible && self.agent_feedback_has_draft() {
     return
   }
   guard self.get_selection() is Some(selection) && !selection.is_empty() else {
@@ -408,12 +456,13 @@ fn Viewer::show_agent_feedback_input(
   prefer_below : Bool,
   focus_input~ : Bool,
 ) -> Unit {
+  guard self.agent_feedback_input_contribution() is Some(ic) else { return }
   let widget = self.ensure_agent_feedback_input()
   self.clear_agent_feedback_hover_glyph()
-  self.agent_feedback_input_visible = true
-  self.agent_feedback_pinned_range = Some(range)
-  self.agent_feedback_anchor = Some(anchor)
-  self.agent_feedback_prefer_below = prefer_below
+  ic.visible = true
+  ic.pinned_range = Some(range)
+  ic.anchor_position = Some(anchor)
+  ic.prefer_below = prefer_below
   widget.set_placeholder("Add Feedback")
   widget.clear_input()
   widget.show()
@@ -429,7 +478,12 @@ fn Viewer::show_agent_feedback_input(
 fn Viewer::ensure_agent_feedback_input(
   self : Viewer,
 ) -> @agent_feedback_browser.AgentFeedbackInputWidget {
-  match self.agent_feedback_input {
+  let ic = self.agent_feedback_input_contribution()
+  let existing = match ic {
+    Some(ic) => ic.widget
+    None => None
+  }
+  match existing {
     Some(widget) => widget
     None => {
       let widget = @agent_feedback_browser.AgentFeedbackInputWidget::new({
@@ -448,7 +502,10 @@ fn Viewer::ensure_agent_feedback_input(
           }
         },
       })
-      self.agent_feedback_input = Some(widget)
+      match ic {
+        Some(ic) => ic.widget = Some(widget)
+        None => ()
+      }
       self.add_overlay_widget(
         agent_feedback_input_widget_id,
         widget.get_dom_node(),
@@ -460,9 +517,9 @@ fn Viewer::ensure_agent_feedback_input(
 
 ///|
 fn Viewer::agent_feedback_has_draft(self : Viewer) -> Bool {
-  match self.agent_feedback_input {
-    Some(widget) => widget.has_text()
-    None => false
+  match self.agent_feedback_input_contribution() {
+    Some({ widget: Some(widget), .. }) => widget.has_text()
+    _ => false
   }
 }
 
@@ -473,13 +530,14 @@ fn Viewer::hide_agent_feedback_input(
   self : Viewer,
   refocus_editor~ : Bool,
 ) -> Unit {
-  if !self.agent_feedback_input_visible {
+  guard self.agent_feedback_input_contribution() is Some(ic) else { return }
+  if !ic.visible {
     return
   }
-  self.agent_feedback_input_visible = false
-  self.agent_feedback_pinned_range = None
-  self.agent_feedback_anchor = None
-  match self.agent_feedback_input {
+  ic.visible = false
+  ic.pinned_range = None
+  ic.anchor_position = None
+  match ic.widget {
     Some(widget) => {
       widget.hide()
       widget.clear_input()
@@ -487,7 +545,7 @@ fn Viewer::hide_agent_feedback_input(
     None => ()
   }
   if refocus_editor {
-    self.agent_feedback_suppress_selection_once = true
+    ic.suppress_selection_change_once = true
     self.focus()
   }
 }
@@ -503,8 +561,9 @@ fn Viewer::auto_hide_agent_feedback_input(self : Viewer) -> Unit {
 
 ///|
 fn Viewer::focus_agent_feedback_input(self : Viewer) -> Unit {
-  if self.agent_feedback_input_visible {
-    match self.agent_feedback_input {
+  guard self.agent_feedback_input_contribution() is Some(ic) else { return }
+  if ic.visible {
+    match ic.widget {
       Some(widget) => widget.focus_input()
       None => ()
     }
@@ -520,12 +579,13 @@ fn Viewer::focus_agent_feedback_input(self : Viewer) -> Unit {
 /// reacts to the service's submit event (the chat hand-off upstream drives
 /// here stays outside the viewer).
 fn Viewer::add_agent_feedback_from_input(self : Viewer, submit~ : Bool) -> Unit {
-  guard self.agent_feedback_input is Some(widget) else { return }
+  guard self.agent_feedback_input_contribution() is Some(ic) else { return }
+  guard ic.widget is Some(widget) else { return }
   let text = widget.value().trim().to_owned()
   if text.is_empty() {
     return
   }
-  let range = match self.agent_feedback_pinned_range {
+  let range = match ic.pinned_range {
     Some(range) => Some(range)
     None =>
       match self.get_selection() {
@@ -558,13 +618,11 @@ fn Viewer::add_agent_feedback_from_input(self : Viewer, submit~ : Bool) -> Unit 
 /// selection direction, flip when out of bounds, clamp into the editor and
 /// right of the gutter.
 fn Viewer::update_agent_feedback_input_position(self : Viewer) -> Unit {
-  guard self.agent_feedback_input is Some(widget) &&
-    self.agent_feedback_input_visible else {
-    return
-  }
+  guard self.agent_feedback_input_contribution() is Some(ic) else { return }
+  guard ic.widget is Some(widget) && ic.visible else { return }
   let target : (@base_common.Position, Bool)? = match
-    (self.agent_feedback_pinned_range, self.agent_feedback_anchor) {
-    (Some(_), Some(anchor)) => Some((anchor, self.agent_feedback_prefer_below))
+    (ic.pinned_range, ic.anchor_position) {
+    (Some(_), Some(anchor)) => Some((anchor, ic.prefer_below))
     _ =>
       match self.get_selection() {
         Some(selection) =>

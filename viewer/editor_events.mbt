@@ -465,7 +465,7 @@ fn Viewer::compute_hover_sync(
         match
           self
           .make_hover_computer()
-          .compute_sync(model, anchor, inlay_hints=self.inlay_hints) {
+          .compute_sync(model, anchor, inlay_hints=self.current_inlay_hints()) {
           Some(hover) => hover.parts
           None => []
         }
@@ -484,7 +484,7 @@ fn Viewer::kick_hover_async(self : Viewer, token : Int) -> Unit {
   match (self.text_model, hc.hover.anchor) {
     (Some(model), Some(anchor)) => {
       let computer = self.make_hover_computer()
-      let inlay_hints = self.inlay_hints
+      let inlay_hints = self.current_inlay_hints()
       @js.async_run(() => {
         computer.compute_async_each(model, anchor, inlay_hints~, emit=parts => {
           self.hover_async_item(model, token, parts)
@@ -569,6 +569,16 @@ fn Viewer::sync_hover_decorations(self : Viewer) -> Unit {
     decorations,
     owner_id=self.editor_id,
   )
+}
+
+///|
+/// The current provider hints, read off the inlay-hints controller (empty
+/// while the contribution is disposed).
+fn Viewer::current_inlay_hints(self : Viewer) -> Array[@language.InlayHint] {
+  match self.inlay_hints_controller() {
+    Some(controller) => controller.inlay_hints
+    None => []
+  }
 }
 
 ///|

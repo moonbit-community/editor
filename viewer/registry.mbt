@@ -16,9 +16,14 @@ fn Viewer::request_model_features(
       // The hints render as `after` injected-text decorations (Track F);
       // the decoration-change event carries `affects_injected_text`, which
       // rebuilds the projection — no explicit feature re-render here. The
-      // raw hints stay on the viewer for hover tooltip lookup.
-      self.inlay_hints = inlay_hints
-      self.sync_inlay_hint_decorations()
+      // raw hints stay on the controller for hover tooltip lookup.
+      match self.inlay_hints_controller() {
+        Some(controller) => {
+          controller.inlay_hints = inlay_hints
+          self.sync_inlay_hint_decorations()
+        }
+        None => ()
+      }
     }
   })
 }

@@ -231,6 +231,7 @@ pub(all) struct ViewerOptions {
   theme : String
   placeholder : String
   line_decorations_width : Int
+  line_numbers_min_chars : Int
   show_unused : Bool
   show_deprecated : Bool
   font_family : String
@@ -239,7 +240,7 @@ pub(all) struct ViewerOptions {
   line_height : Double
   letter_spacing : Double
 } derive(Eq, @debug.Debug)
-pub fn ViewerOptions::ViewerOptions(soft_wrap? : Bool, tab_size? : Int, wrapping_indent? : @view_model.WrappingIndent, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, render_line_highlight? : @view_layout.RenderLineHighlight, render_line_highlight_only_when_focus? : Bool, render_validation_decorations? : @view_model.RenderValidationDecorations, theme? : String, placeholder? : String, line_decorations_width? : Int, show_unused? : Bool, show_deprecated? : Bool, font_family? : String, font_weight? : String, font_size? : Double, line_height? : Double, letter_spacing? : Double) -> Self
+pub fn ViewerOptions::ViewerOptions(soft_wrap? : Bool, tab_size? : Int, wrapping_indent? : @view_model.WrappingIndent, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, render_line_highlight? : @view_layout.RenderLineHighlight, render_line_highlight_only_when_focus? : Bool, render_validation_decorations? : @view_model.RenderValidationDecorations, theme? : String, placeholder? : String, line_decorations_width? : Int, line_numbers_min_chars? : Int, show_unused? : Bool, show_deprecated? : Bool, font_family? : String, font_weight? : String, font_size? : Double, line_height? : Double, letter_spacing? : Double) -> Self
 pub fn ViewerOptions::default() -> Self
 pub fn ViewerOptions::soft_wrap_column_for_content_width(Self, Double, Double) -> Int
 pub fn ViewerOptions::view_model_options(Self, Int, font_info~ : @config.FontInfo, editor_id? : Int) -> @view_model.ViewModelOptions

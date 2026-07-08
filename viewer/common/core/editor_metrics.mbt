@@ -16,10 +16,6 @@ pub let gutter_padding_px = 34
 pub let code_right_padding = 16.0
 
 ///|
-/// Minimum line-number digit slots.
-pub let gutter_min_digits = 5
-
-///|
 /// Editor scrollbar defaults from Monaco's `EditorScrollbar` option.
 pub let editor_vertical_scrollbar_size = 14.0
 

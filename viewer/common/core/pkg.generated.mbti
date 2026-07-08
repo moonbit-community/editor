@@ -10,8 +10,6 @@ pub let editor_horizontal_scrollbar_size : Double
 
 pub let editor_vertical_scrollbar_size : Double
 
-pub let gutter_min_digits : Int
-
 pub let gutter_padding_px : Int
 
 pub fn next_indent_tab_stop(Int, Int) -> Int

@@ -26,6 +26,11 @@ pub(all) struct ViewerOptions {
   /// the pre-lane viewer; features that draw gutter decorations (e.g.
   /// comments) reserve their lane through `update_options`.
   line_decorations_width : Int
+  /// Minimum digit slots reserved by the line-number band — Monaco's
+  /// `lineNumbersMinChars` editor option (default `5`, minimum `1`,
+  /// `editorOptions.ts:6379-6381`). The band widens past this when the model
+  /// has more-digit line numbers.
+  line_numbers_min_chars : Int
   /// Monaco's `showUnused` editor option (default `true`,
   /// `editorOptions.ts:6645-6647`): adds the `showUnused` root class that
   /// gates the `squiggly-unnecessary` / `squiggly-inline-unnecessary`
@@ -69,6 +74,7 @@ pub fn ViewerOptions::ViewerOptions(
   theme? : String = "dark",
   placeholder? : String = "",
   line_decorations_width? : Int = 0,
+  line_numbers_min_chars? : Int = 5,
   show_unused? : Bool = true,
   show_deprecated? : Bool = true,
   font_family? : String = @config.editor_font_defaults.font_family,
@@ -89,6 +95,7 @@ pub fn ViewerOptions::ViewerOptions(
     theme,
     placeholder,
     line_decorations_width: line_decorations_width.max(0),
+    line_numbers_min_chars: line_numbers_min_chars.max(1),
     show_unused,
     show_deprecated,
     font_family,

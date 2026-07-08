@@ -15,11 +15,11 @@ fn test_model_uri() -> @base_common.Uri {
 test "feedback lane reserves 18px while enabled and restores the base" {
   with_test_viewer("alpha\nbeta\ngamma", viewer => {
     let service = viewer.services.agent_feedback
-    assert_eq(viewer.options.line_decorations_width, 0)
+    assert_eq(viewer.options.line_decorations_width, 10)
     service.set_feedback_enabled(test_model_uri(), true)
-    assert_eq(viewer.options.line_decorations_width, 18)
+    assert_eq(viewer.options.line_decorations_width, 28)
     service.set_feedback_enabled(test_model_uri(), false)
-    assert_eq(viewer.options.line_decorations_width, 0)
+    assert_eq(viewer.options.line_decorations_width, 10)
   })
 }
 

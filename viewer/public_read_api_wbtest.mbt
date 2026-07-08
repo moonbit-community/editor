@@ -245,16 +245,17 @@ test "read API: DOM-measured getters return sentinels without a real view" {
 }
 
 ///|
-/// `getLayoutInfo` reduced struct invariants: glyph-margin and decorations
-/// widths are `0`, `content_left == line_numbers_width` (the gutter), and the
-/// total width is the gutter plus the content box.
+/// `getLayoutInfo` reduced struct invariants: the glyph-margin width is `0`,
+/// the decorations width is the default `lineDecorationsWidth` (10),
+/// `content_left == line_numbers_width + decorations_width` (the gutter), and
+/// the total width is the gutter plus the content box.
 test "read API: layout info reduces to gutter + content box" {
   with_test_viewer("alpha\nbeta", viewer => {
     viewer.test_set_viewport(width=800.0, height=400.0)
     let info = viewer.get_layout_info()
     assert_eq(info.glyph_margin_width, 0.0)
-    assert_eq(info.decorations_width, 0.0)
-    assert_eq(info.content_left, info.line_numbers_width)
+    assert_eq(info.decorations_width, 10.0)
+    assert_eq(info.content_left, info.line_numbers_width + 10.0)
     assert_eq(info.width, info.content_left + info.content_width)
     assert_eq(info.height, 400.0)
     assert_true(info.content_left > 0.0)

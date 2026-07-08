@@ -319,14 +319,13 @@ fn Viewer::measured_char_width(self : Viewer) -> Double {
 }
 
 ///|
-/// The line-number band width: digit slots (at least `line_numbers_min_chars`)
-/// plus the gutter padding — Monaco's `layoutInfo.lineNumbersWidth`
-/// (`digitCount * fontInfo.maxDigitWidth`).
+/// The line-number band width — Monaco's `layoutInfo.lineNumbersWidth`,
+/// `Math.round(digitCount * maxDigitWidth)` with the digit count at least
+/// `line_numbers_min_chars` (`editorOptions.ts:2914-2917`).
 fn Viewer::line_numbers_width(self : Viewer, line_count : Int) -> Double {
   let digits = line_count.to_string().length()
   let slots = digits.max(self.options.line_numbers_min_chars)
-  slots.to_double() * self.font_info.max_digit_width +
-  @core.gutter_padding_px.to_double()
+  (slots.to_double() * self.font_info.max_digit_width).round()
 }
 
 ///|

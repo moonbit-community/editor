@@ -21,10 +21,10 @@ pub(all) struct ViewerOptions {
   /// `placeholder` editor option.
   placeholder : String
   /// Width in pixels of the line-decorations gutter lane between the line
-  /// numbers and the content — Monaco's `lineDecorationsWidth` editor option.
-  /// `0` (the default) renders no lane, keeping the gutter pixel-identical to
-  /// the pre-lane viewer; features that draw gutter decorations (e.g.
-  /// comments) reserve their lane through `update_options`.
+  /// numbers and the content — Monaco's `lineDecorationsWidth` editor option
+  /// (default `10`, `editorOptions.ts:3304-3307`). Features that draw gutter
+  /// decorations (e.g. agent feedback) reserve extra lane width on top
+  /// through `update_options`.
   line_decorations_width : Int
   /// Minimum digit slots reserved by the line-number band — Monaco's
   /// `lineNumbersMinChars` editor option (default `5`, minimum `1`,
@@ -73,7 +73,7 @@ pub fn ViewerOptions::ViewerOptions(
   render_validation_decorations? : @view_model.RenderValidationDecorations = On,
   theme? : String = "dark",
   placeholder? : String = "",
-  line_decorations_width? : Int = 0,
+  line_decorations_width? : Int = 10,
   line_numbers_min_chars? : Int = 5,
   show_unused? : Bool = true,
   show_deprecated? : Bool = true,

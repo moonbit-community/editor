@@ -156,7 +156,24 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(squiggleForm.borderBottomStyle).toBe('none');
     expect(squiggleForm.beforeDisplay).toBe('block');
     expect(squiggleForm.beforeBackgroundColor).toBe('rgba(0, 0, 0, 0)');
-    await wrappedHoverLine.hover();
+    // Hover the 'keeps' glyphs themselves: the hover anchors on the mouse
+    // position, and the wrap segment's center is not guaranteed to fall
+    // inside the provider's 'keeps' range.
+    const keepsPoint = await wrappedHoverLine.evaluate((node) => {
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+        const index = text.textContent.indexOf('keeps');
+        if (index < 0) continue;
+        const range = document.createRange();
+        range.setStart(text, index);
+        range.setEnd(text, index + 'keeps'.length);
+        const rect = range.getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      }
+      return null;
+    });
+    expect(keepsPoint).not.toBeNull();
+    await page.mouse.move(keepsPoint.x, keepsPoint.y);
     await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
       'wrapped component hover',
       { timeout: 3_000 },

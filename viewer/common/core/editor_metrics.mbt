@@ -7,11 +7,6 @@
 // just a numeric constant.
 
 ///|
-/// Total horizontal padding of the line-number gutter. Keep in sync with
-/// `.line-number` padding in viewer/margin.css.
-pub let gutter_padding_px = 34
-
-///|
 /// Right padding of `.view-line-content`, part of the horizontal scroll extent.
 pub let code_right_padding = 16.0
 

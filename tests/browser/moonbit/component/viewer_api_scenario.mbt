@@ -131,7 +131,11 @@ fn run_viewer_api_test() -> Unit {
       let zone = @rdom.document().create_element("div")
       zone.set_inner_html("component view zone")
       viewer.change_view_zones(accessor => {
-        accessor.add_zone("component-zone", 4, 36, zone)
+        // After view line 3: model line 2 wraps as `pub fn` /
+        // `component_answe` / `r : T() -> Int {` in the 180px host, so the
+        // zone sits between wrap rows, directly above the `{` segment the
+        // spec measures against.
+        accessor.add_zone("component-zone", 3, 36, zone)
       })
       @support.set_timeout(
         () => {

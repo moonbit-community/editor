@@ -32,12 +32,13 @@
 ///   - mutation / DI (3): `setValue resets 1/2`, `TextModel does not use events
 ///     internally`.
 ///
-/// DEFERRED — EOL preference / buffer metadata (same EOL/lonely-CR gap as
-/// `model.test`, see Deferred): `getValueLengthInRange` (its CRLF model expects
-/// `\r\n`-counted lengths), `getValueLengthInRange different EOL`
-/// (`EndOfLinePreference`), and the whole `TextModelData.fromString` suite
-/// (`one line text`, `multiline text`, `Non Basic ASCII 1`, `containsRTL 1/2` —
-/// `createTextBuffer` EOL guessing + lonely-CR splitting + `getLinesContent`).
+/// DEFERRED — EOL preference / buffer metadata (the viewer always joins lines
+/// with `\n`; it has no EOL guessing or `EndOfLinePreference`):
+/// `getValueLengthInRange` (its CRLF model expects `\r\n`-counted lengths),
+/// `getValueLengthInRange different EOL` (`EndOfLinePreference`), and the whole
+/// `TextModelData.fromString` suite (`one line text`, `multiline text`, `Non
+/// Basic ASCII 1`, `containsRTL 1/2` — `createTextBuffer` EOL guessing +
+/// `getLinesContent` buffer shape).
 
 ///|
 fn pos(line : Int, column : Int) -> @base_common.Position {

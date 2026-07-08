@@ -2,10 +2,12 @@
 /// submodule, commit 294fb350).
 ///
 /// Readonly-subset triage of the file's 32 cases. In scope: 7 readonly reads,
-/// of which 5 are ported here against `TextSnapshot`:
+/// of which 6 are ported here against `TextSnapshot` (the 7th, `Get word at
+/// position`, is ported in `word_helper_wbtest.mbt`):
 ///   - `Editor Model - Model`: `model getValue`, `getValueInRange`,
 ///     `getValueLengthInRange`
-///   - `Editor Model - Model Line Separators`: `model getValue`, `model lines`
+///   - `Editor Model - Model Line Separators`: `model getValue`, `model lines`,
+///     `Bug 13333: Model should line break on lonely CR too`
 ///
 /// SKIPPED (out of scope, not silently dropped):
 ///   - 23 `Editor Model - Model` editing/eventing cases — `model insert*`
@@ -19,14 +21,6 @@
 ///     boundaries` and `issue #61296` — need DI language services, per-language
 ///     word patterns, and tokenization (out of scope).
 ///
-/// DEFERRED (in scope, blocked on a follow-up):
-///   - `Bug 13333: Model should line break on lonely CR too` — the viewer's
-///     `TextSnapshot` line-start table splits only on `\n`; faithfully breaking
-///     on a lonely `\r` changes the production line table and every offset
-///     derived from it, so it is a scoped production change, not a test port.
-///   - `Get word at position` — needs a port of Monaco's `core/wordHelper.ts`
-///     `getWordAtText` + the default word regexp (no regex engine in the viewer
-///     yet); grouped with the Phase 5 controller word-select work.
 
 ///|
 /// The suite's shared 5-line model (`LINE1..LINE5` joined with mixed CRLF/LF, as
@@ -110,7 +104,7 @@ test "getValueLengthInRange" {
 
 ///|
 /// `Editor Model - Model Line Separators` suite: `\u{2028}` (LINE SEPARATOR) is
-/// not a line break — only `\n`/`\r\n` are.
+/// not a line break — only `\n`/`\r`/`\r\n` are.
 fn this_model_line_separators() -> TextSnapshot {
   TextSnapshot(
     "My First Line\u{2028}\t\tMy Second Line\n    Third Line\u{2028}\r\n1",
@@ -128,4 +122,14 @@ test "model getValue [Line Separators]" {
 ///|
 test "model lines" {
   assert_eq(this_model_line_separators().line_count(), 3)
+}
+
+///|
+/// Adaptation: Monaco expects `getValue()` = `"Hello\r\nWorld!\r\nAnother
+/// line"` because `createTextBuffer` normalizes to the majority EOL (`\r\n`
+/// here); the viewer has no EOL option and always joins with `\n`.
+test "Bug 13333: Model should line break on lonely CR too" {
+  let m = TextSnapshot("Hello\rWorld!\r\nAnother line")
+  assert_eq(m.line_count(), 3)
+  assert_eq(m.get_value(), "Hello\nWorld!\nAnother line")
 }

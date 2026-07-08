@@ -9,6 +9,23 @@ test "text snapshot handles lf and crlf" {
 }
 
 ///|
+test "text snapshot handles lonely cr" {
+  let doc = @model.TextSnapshot("one\rtwo\r\rthree\r")
+  assert_eq(doc.line_count(), 5)
+  assert_eq(doc.line_text(0), "one")
+  assert_eq(doc.line_text(1), "two")
+  assert_eq(doc.line_text(2), "")
+  assert_eq(doc.line_text(3), "three")
+  assert_eq(doc.line_text(4), "")
+  // Offset↔position round trip across the CR break: offset 4 is the 't' of
+  // "two" (line 2, column 1); the position converts back to the same offset.
+  let pos = doc.get_position_at(4)
+  assert_eq(pos.line_number, 2)
+  assert_eq(pos.column, 1)
+  assert_eq(doc.get_offset_at(2, 1), 4)
+}
+
+///|
 test "offset and position use utf16 code units" {
   let doc = @model.TextSnapshot("a😊\n中")
   assert_eq(doc.get_length(), 5)

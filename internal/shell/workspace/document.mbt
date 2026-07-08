@@ -281,17 +281,33 @@ pub fn DocumentError::status(self : DocumentError) -> Int {
 }
 
 ///|
-/// Offsets where each line begins (0-based), splitting only on `\n` (LF). A
-/// lonely `\r` (classic-Mac CR EOL) does not start a new line. This LF-only
-/// limitation is shared with the byte-identical copy in
-/// `viewer/model/text_snapshot.mbt`; the two straddle the product/shell
-/// boundary, so they are intentionally not unified but must change together if
-/// CR handling is ever added.
+/// Offsets where each line begins (0-based). Mirrors Monaco's
+/// `createLineStartsFast` (`pieceTreeBase.ts:37`): `\n`, a lonely `\r`
+/// (classic-Mac CR EOL), and `\r\n` each end a line, with the `\r\n` pair
+/// counted as one line break. Byte-identical copy in
+/// `viewer/common/model/text_snapshot.mbt`; the two straddle the product/shell
+/// boundary, so they are intentionally not unified but must change together.
 fn build_line_starts(text : String) -> Array[Int] {
   let starts = [0]
-  for i in 0..<text.length() {
-    if text[i].to_int() == 10 {
-      starts.push(i + 1)
+  let len = text.length()
+  let mut i = 0
+  while i < len {
+    let code = text[i].to_int()
+    if code == 13 {
+      if i + 1 < len && text[i + 1].to_int() == 10 {
+        // \r\n... case
+        starts.push(i + 2)
+        i += 2
+      } else {
+        // \r... case
+        starts.push(i + 1)
+        i += 1
+      }
+    } else {
+      if code == 10 {
+        starts.push(i + 1)
+      }
+      i += 1
     }
   }
   starts

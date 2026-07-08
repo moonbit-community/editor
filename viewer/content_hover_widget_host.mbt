@@ -11,7 +11,10 @@
 /// hover-state chokepoint may call it: Monaco's `_setCurrentResult` calls
 /// `_showHover`/`_hideHover` exactly when the result object changed.
 fn Viewer::sync_content_hover_widget(self : Viewer) -> Unit {
-  let widget_view = self.hover.widget_view()
+  let widget_view = match self.content_hover_controller() {
+    Some(hc) => hc.hover.widget_view()
+    None => None
+  }
   if widget_view == self.hover_widget_view {
     return
   }

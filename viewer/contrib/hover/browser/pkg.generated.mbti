@@ -2,8 +2,8 @@
 package "moonbit-community/editor/viewer/contrib/hover/browser"
 
 import {
-  "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
+  "moonbit-community/editor/viewer/contrib/hover",
   "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
 }
@@ -28,6 +28,29 @@ pub fn hover_resolved_width(Double, Double) -> Double
 // Errors
 
 // Types and methods
+pub(all) struct ContentHoverController {
+  mut hover : @hover.HoverController
+  mut hover_react_pending : Bool
+  mut hover_react_token : Int
+  mut hover_pending_target : @moonbit-community/editor/viewer/common.MouseTarget?
+  hover_settings : @hover.HoverSettings
+  mut hover_keep_open : Bool
+  mut hover_ignore_mouse_events : Bool
+  mut hover_mouse_posx : Double
+  mut hover_mouse_posy : Double
+  mut hover_last_modifiers : @hover.EventModifiers
+  hover_mouse_closer : @hover.MouseCloserState
+  mut hover_notified_token : Int
+  mut hover_decoration_ids : Array[String]
+  mut hover_decoration_range : @moonbit-community/editor/base/common.Range?
+}
+pub fn ContentHoverController::attach(String) -> Self
+pub fn ContentHoverController::cancel_react(Self) -> Unit
+pub fn ContentHoverController::detach(String) -> Unit
+pub fn ContentHoverController::get(String) -> Self?
+pub fn ContentHoverController::record_pointer(Self, Double, Double, @hover.EventModifiers) -> Unit
+pub fn ContentHoverController::reset_model_state(Self) -> Unit
+
 pub(all) struct ContentHoverWidget {
   wrapper : @dom.Element
   hover : @dom.Element
@@ -56,7 +79,7 @@ pub(all) struct ContentHoverWidgetHost {
   layout_content_widget : () -> Unit
   render_now : () -> Unit
   focus_editor : () -> Unit
-  scrolled_visible_position_top : (@common.Position) -> Double
+  scrolled_visible_position_top : (@moonbit-community/editor/base/common.Position) -> Double
   line_height : () -> Double
   gutter_width : () -> Double
   keep_hover_open : () -> Unit
@@ -66,8 +89,8 @@ pub(all) struct ContentHoverWidgetHost {
 }
 
 pub(all) struct RenderedContentHover {
-  show_at_position : @common.Position
-  show_at_secondary_position : @common.Position
+  show_at_position : @moonbit-community/editor/base/common.Position
+  show_at_secondary_position : @moonbit-community/editor/base/common.Position
   rows : Array[String]
 }
 

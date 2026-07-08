@@ -1,9 +1,9 @@
 // The hover feature's registrations — the viewer's
 // `vscode/src/vs/editor/contrib/hover/browser/hoverContribution.ts` +
 // `hoverActions.ts` (scroll cluster) + `hoverActionIds.ts`. The controller
-// state itself lives inline on `Viewer` (`hover*` fields — the recorded
-// closure-seam pattern), so the contribution ctor wires nothing; what the
-// registry inverts here is command/keyboard dispatch: the hover widget's
+// state lives in `@hover_browser.ContentHoverController`'s per-editor
+// instance table; the ctor below populates it and dispose clears it, and
+// the registry also inverts command/keyboard dispatch: the hover widget's
 // keydown resolves through the keybinding table instead of an inline key
 // map.
 
@@ -15,18 +15,26 @@ fn register_hover_contribution(registry : EditorContributionRegistry) -> Unit {
   registry.register_editor_contribution(
     "editor.contrib.contentHover",
     BeforeFirstInteraction,
-    _viewer => {
-      id: "editor.contrib.contentHover",
-      // The controller state is `Viewer.hover*`, created with the viewer;
-      // there is nothing extra to construct or tear down.
-      dispose: () => (),
+    viewer => {
+      @hover_browser.ContentHoverController::attach(viewer.get_id()) |> ignore
+      {
+        id: "editor.contrib.contentHover",
+        dispose: () => {
+          @hover_browser.ContentHoverController::detach(viewer.get_id())
+        },
+      }
     },
   )
   // `HideContentHoverAction` (`hoverActions.ts`): Escape, gated on
   // `hoverVisible`.
   registry.register_editor_command(
     "editor.action.hideHover",
-    viewer => viewer.hover.widget_visible(),
+    viewer => {
+      match viewer.content_hover_controller() {
+        Some(hc) => hc.hover.widget_visible()
+        None => false
+      }
+    },
     viewer => viewer.hide_content_hover(),
     [("Escape", false, false)],
   )

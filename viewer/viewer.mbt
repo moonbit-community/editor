@@ -44,7 +44,6 @@ pub struct Viewer {
   priv mut text_model : @model.TextModel?
   priv mut inlay_hints : Array[@language.InlayHint]
   priv mut view_zones : Array[@view_zones.BrowserViewZone]
-  priv mut hover : @hover.HoverController
   /// The persistent content-hover widget (Monaco `ContentHoverWidget`),
   /// created lazily and mounted once through the content-widgets part.
   priv mut content_hover_widget : @hover_browser.ContentHoverWidget?
@@ -52,34 +51,6 @@ pub struct Viewer {
   /// `sync_content_hover_widget` shows/hides exactly when the derived view
   /// changed (Monaco `_setCurrentResult`'s changed-result gate).
   priv mut hover_widget_view : @hover.HoverWidgetView?
-  /// Mouse-move grace state (Monaco's `_reactToEditorMouseMoveRunner`): while a
-  /// hover widget is on screen, a move off the anchor is deferred by
-  /// `@hover.hover_hiding_delay_ms` instead of reacting immediately, so the pointer can
-  /// reach the widget. `hover_react_token` invalidates a deferred reaction that
-  /// the pointer cancelled by entering the widget.
-  priv mut hover_react_pending : Bool
-  priv mut hover_react_token : Int
-  priv mut hover_pending_target : @viewer_common.MouseTarget?
-  /// Monaco `ContentHoverController` interaction state. `hover_settings` is the
-  /// `editor.hover` snapshot taken at hook time; `hover_keep_open` is
-  /// `shouldKeepOpenOnEditorMouseMoveOrLeave`; `hover_ignore_mouse_events`
-  /// (`_ignoreMouseEvents`) suppresses every handler while a context menu is up;
-  /// the last pointer client position + modifiers stand in for `_mouseMoveEvent`
-  /// so `_isMouseOnContentHoverWidget` / `shouldShowHover` can be evaluated where
-  /// the controller reacts (the pointer-handler seam only carries a hit target).
-  priv hover_settings : @hover.HoverSettings
-  priv mut hover_keep_open : Bool
-  priv mut hover_ignore_mouse_events : Bool
-  priv mut hover_mouse_posx : Double
-  priv mut hover_mouse_posy : Double
-  priv mut hover_last_modifiers : @hover.EventModifiers
-  /// The last anchor token for which the public hover-resolution status fired,
-  /// so it fires exactly once per anchor when the operation completes.
-  priv mut hover_notified_token : Int
-  /// Monaco `RenderedContentHover`'s mouse-getting-closer state (`isMouseGettingCloser`):
-  /// reset whenever a new hover view is shown, so a sticky hover the pointer is
-  /// approaching is kept open even off the anchor token.
-  priv hover_mouse_closer : @hover.MouseCloserState
   /// The measured font facts (Monaco's `EditorOption.fontInfo`): starts as
   /// the untrusted headless estimate and is replaced by
   /// `FontMeasurements.readFontInfo` at the first attached measure.
@@ -116,11 +87,6 @@ pub struct Viewer {
   priv mut model_decorations_subscription : @base_common.Disposable?
   priv mut model_tokens_subscription : @base_common.Disposable?
   priv mut model_will_dispose_subscription : @base_common.Disposable?
-  /// The hover highlight's model decoration ids (Monaco's hover-owned
-  /// decorations collection): rewritten by `sync_hover_decorations` whenever
-  /// the hover view's highlighted range changes.
-  priv mut hover_decoration_ids : Array[String]
-  priv mut hover_decoration_range : @base_common.Range?
   /// Agent-feedback contrib state (`agentFeedbackEditorInputContribution.ts`
   /// reduced; glue in `agent_feedback_host.mbt`): the lazily-created inline
   /// input widget and its visibility/pin state, the hover "+" glyph line and
@@ -315,20 +281,8 @@ pub fn Viewer::Viewer(
     text_model: None,
     inlay_hints: [],
     view_zones: [],
-    hover: @hover.HoverController::empty(),
     content_hover_widget: None,
     hover_widget_view: None,
-    hover_react_pending: false,
-    hover_react_token: 0,
-    hover_pending_target: None,
-    hover_settings: @hover.HoverSettings::defaults(),
-    hover_keep_open: false,
-    hover_ignore_mouse_events: false,
-    hover_mouse_posx: 0.0,
-    hover_mouse_posy: 0.0,
-    hover_last_modifiers: @hover.EventModifiers::none(),
-    hover_notified_token: 0,
-    hover_mouse_closer: @hover.MouseCloserState::new(),
     font_info,
     measured_content_width: 0.0,
     measured_height: 0.0,
@@ -346,8 +300,6 @@ pub fn Viewer::Viewer(
     model_decorations_subscription: None,
     model_tokens_subscription: None,
     model_will_dispose_subscription: None,
-    hover_decoration_ids: [],
-    hover_decoration_range: None,
     agent_feedback_input: None,
     agent_feedback_input_visible: false,
     agent_feedback_pinned_range: None,
@@ -597,8 +549,11 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
     Some(subscription) => subscription.dispose()
     None => ()
   }
-  self.hover_decoration_ids = []
-  self.hover_decoration_range = None
+  // The hover-owned decoration ids belong to the outgoing model's storage.
+  match self.content_hover_controller() {
+    Some(hc) => hc.reset_model_state()
+    None => ()
+  }
   // Feedback decoration/widget state belongs to the outgoing model; the
   // model-change event re-applies the new resource's feedback data.
   self.agent_feedback_hover_decoration_ids = []
@@ -902,8 +857,10 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
     None => ()
   }
   self.model_will_dispose_subscription = None
-  self.hover_decoration_ids = []
-  self.hover_decoration_range = None
+  match self.content_hover_controller() {
+    Some(hc) => hc.reset_model_state()
+    None => ()
+  }
   self.agent_feedback_hover_decoration_ids = []
   self.agent_feedback_hover_line = -1
   self.agent_feedback_highlight_decoration_ids = []
@@ -916,11 +873,16 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.view_zones = []
   self.horizontal_reveal_request = None
   self.cancel_mouse_selection()
-  self.hover = @hover.HoverController::empty()
+  match self.content_hover_controller() {
+    Some(hc) => {
+      hc.hover = @hover.HoverController::empty()
+      hc.hover_keep_open = false
+      hc.hover_ignore_mouse_events = false
+      hc.cancel_react()
+    }
+    None => ()
+  }
   self.sync_content_hover_widget()
-  self.hover_keep_open = false
-  self.hover_ignore_mouse_events = false
-  self.cancel_hover_react()
   self.schedule_render()
 }
 

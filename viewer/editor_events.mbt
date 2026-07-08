@@ -1,5 +1,9 @@
 ///|
 fn Viewer::editor_context(self : Viewer) -> @hover.EditorContext {
+  let (mouse_posx, mouse_posy) = match self.content_hover_controller() {
+    Some(hc) => (Some(hc.hover_mouse_posx), Some(hc.hover_mouse_posy))
+    None => (None, None)
+  }
   {
     view_model: self.view_model,
     view_to_model_position: view_position => self.view_to_model(view_position),
@@ -8,9 +12,19 @@ fn Viewer::editor_context(self : Viewer) -> @hover.EditorContext {
     // build matches Monaco's per-editor set observably.
     participants: self.make_hover_computer().participants,
     typical_halfwidth_character_width: self.font_info.typical_halfwidth_character_width,
-    mouse_posx: Some(self.hover_mouse_posx),
-    mouse_posy: Some(self.hover_mouse_posy),
+    mouse_posx,
+    mouse_posy,
   }
+}
+
+///|
+/// The live hover controller instance for this editor — Monaco's
+/// `ContentHoverController.get(editor)` (`contentHoverController.ts`).
+/// `None` after the contribution disposed.
+fn Viewer::content_hover_controller(
+  self : Viewer,
+) -> @hover_browser.ContentHoverController? {
+  @hover_browser.ContentHoverController::get(self.get_id())
 }
 
 ///|
@@ -32,41 +46,42 @@ fn Viewer::on_editor_mouse_move(
     target,
     left_button: (self.last_mouse_buttons & 1) != 0,
   })
-  if self.hover_ignore_mouse_events {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if hc.hover_ignore_mouse_events {
     return
   }
-  self.hover_pending_target = Some(target)
+  hc.hover_pending_target = Some(target)
   let mouse_on_widget = self.mouse_on_hover_widget(
-    self.hover_mouse_posx,
-    self.hover_mouse_posy,
+    hc.hover_mouse_posx,
+    hc.hover_mouse_posy,
   )
   if @hover.should_keep_current_hover(
-      self.hover_keep_open,
-      self.hover_settings.sticky,
+      hc.hover_keep_open,
+      hc.hover_settings.sticky,
       mouse_on_widget,
     ) {
-    self.cancel_hover_react()
+    hc.cancel_react()
     return
   }
   if @hover.should_reschedule_hover(
-      self.hover.widget_visible(),
-      self.hover_settings.sticky,
-      self.hover_settings.hiding_delay,
+      hc.hover.widget_visible(),
+      hc.hover_settings.sticky,
+      hc.hover_settings.hiding_delay,
     ) {
-    if !self.hover_react_pending {
-      self.hover_react_pending = true
-      let token = self.hover_react_token
+    if !hc.hover_react_pending {
+      hc.hover_react_pending = true
+      let token = hc.hover_react_token
       set_timeout(
         () => {
-          if self.hover_react_pending && token == self.hover_react_token {
+          if hc.hover_react_pending && token == hc.hover_react_token {
             // Monaco `_reactToEditorMouseMoveRunner` fires `_reactToEditorMouseMove`,
             // so the deferred reaction re-gates `shouldShowHover` and the
             // sticky mouse-getting-closer keep, not just the bare dispatch.
-            self.hover_react_pending = false
+            hc.hover_react_pending = false
             self.react_to_editor_mouse_move()
           }
         },
-        self.hover_settings.hiding_delay,
+        hc.hover_settings.hiding_delay,
       )
       |> ignore
     }
@@ -82,10 +97,11 @@ fn Viewer::on_editor_mouse_move(
 /// here the `MouseMoved` → `start_delayed` arm, which clears when the pointer is
 /// off any token); otherwise, unless the dev sticky flag is set, hide.
 fn Viewer::react_to_editor_mouse_move(self : Viewer) -> Unit {
+  guard self.content_hover_controller() is Some(hc) else { return }
   if @hover.should_show_hover(
-      self.hover_settings.enabled,
+      hc.hover_settings.enabled,
       @hover.hover_multi_cursor_modifier,
-      self.hover_last_modifiers,
+      hc.hover_last_modifiers,
     ) {
     // The sticky mouse-getting-closer keep + insist-update is decided inside the
     // controller's `_startShowingOrUpdateHover`; `run_hover_react` measures the
@@ -110,9 +126,10 @@ fn Viewer::record_hover_pointer(
   posy : Double,
   modifiers : @hover.EventModifiers,
 ) -> Unit {
-  self.hover_mouse_posx = posx
-  self.hover_mouse_posy = posy
-  self.hover_last_modifiers = modifiers
+  match self.content_hover_controller() {
+    Some(hc) => hc.record_pointer(posx, posy, modifiers)
+    None => ()
+  }
 }
 
 ///|
@@ -121,10 +138,11 @@ fn Viewer::record_hover_pointer(
 /// isMouseGettingCloser`) is measured here — the one point that reacts to a
 /// move — and threaded into the controller, which owns the keep/insist-update.
 fn Viewer::run_hover_react(self : Viewer) -> Unit {
-  self.hover_react_pending = false
-  match self.hover_pending_target {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  hc.hover_react_pending = false
+  match hc.hover_pending_target {
     Some(target) => {
-      let sticky_mouse_getting_closer = self.hover_settings.sticky &&
+      let sticky_mouse_getting_closer = hc.hover_settings.sticky &&
         self.hover_mouse_getting_closer()
       self.dispatch_editor_event(
         MouseMoved(target),
@@ -137,12 +155,12 @@ fn Viewer::run_hover_react(self : Viewer) -> Unit {
 
 ///|
 /// Cancels any deferred mouse-move reaction (Monaco's
-/// `_reactToEditorMouseMoveRunner.cancel()`). Bumping the token invalidates a
-/// timer that is already in flight.
+/// `_reactToEditorMouseMoveRunner.cancel()`).
 fn Viewer::cancel_hover_react(self : Viewer) -> Unit {
-  self.hover_react_token += 1
-  self.hover_react_pending = false
-  self.hover_pending_target = None
+  match self.content_hover_controller() {
+    Some(hc) => hc.cancel_react()
+    None => ()
+  }
 }
 
 ///|
@@ -159,8 +177,9 @@ fn Viewer::keep_hover_open(self : Viewer) -> Unit {
 /// fold toggle, model reset, Escape). Monaco's `hideContentHover()` pairs with
 /// `_cancelScheduler()`. Callers own their own re-render.
 fn Viewer::dismiss_hover(self : Viewer) -> Unit {
-  self.cancel_hover_react()
-  self.hover = self.hover.cleared()
+  guard self.content_hover_controller() is Some(hc) else { return }
+  hc.cancel_react()
+  hc.hover = hc.hover.cleared()
   // Callers own their re-render, but the widget reconciliation must not wait
   // on one (idempotent; the imperative dismiss paths bypass
   // `after_hover_transition`).
@@ -178,7 +197,8 @@ fn Viewer::hide_content_hover(self : Viewer) -> Unit {
   }
   // `InlineSuggestionHintsContentWidget.dropDownVisible` guard is N-A — the
   // viewer has no inline-completion hints widget.
-  let before = self.hover
+  guard self.content_hover_controller() is Some(hc) else { return }
+  let before = hc.hover
   self.dismiss_hover()
   self.after_hover_transition(before)
 }
@@ -214,12 +234,13 @@ fn Viewer::mouse_on_hover_widget(
 /// with `getBoundingClientRect`, so the recorded client pointer and the
 /// rectangle are both client-space.
 fn Viewer::hover_mouse_getting_closer(self : Viewer) -> Bool {
+  guard self.content_hover_controller() is Some(hc) else { return false }
   guard self.content_hover_widget is Some(widget) else { return false }
   guard widget.is_visible() else { return false }
   let rect = widget.wrapper.get_bounding_client_rect()
-  self.hover_mouse_closer.is_mouse_getting_closer(
-    self.hover_mouse_posx,
-    self.hover_mouse_posy,
+  hc.hover_mouse_closer.is_mouse_getting_closer(
+    hc.hover_mouse_posx,
+    hc.hover_mouse_posy,
     rect.get_left(),
     rect.get_top(),
     rect.get_width(),
@@ -237,7 +258,8 @@ fn Viewer::on_editor_mouse_down(
   posx : Double,
   posy : Double,
 ) -> Unit {
-  if self.hover_ignore_mouse_events {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if hc.hover_ignore_mouse_events {
     return
   }
   if @hover.should_keep_hover_widget_visible(
@@ -260,13 +282,14 @@ fn Viewer::on_editor_mouse_leave(
   // The public `onMouseLeave` (the comments contrib clears its "+"
   // affordance there).
   self.did_mouse_leave.fire(())
-  if self.hover_ignore_mouse_events {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if hc.hover_ignore_mouse_events {
     return
   }
-  if self.hover_keep_open {
+  if hc.hover_keep_open {
     return
   }
-  self.cancel_hover_react()
+  hc.cancel_react()
   if @hover.should_keep_hover_widget_visible(
       self.mouse_on_hover_widget(posx, posy),
     ) {
@@ -285,7 +308,8 @@ fn Viewer::on_editor_scroll_changed(
   self : Viewer,
   change : @view_layout.ScrollChange,
 ) -> Unit {
-  if self.hover_ignore_mouse_events {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if hc.hover_ignore_mouse_events {
     return
   }
   if change.top_changed || change.left_changed {
@@ -302,19 +326,20 @@ fn Viewer::dispatch_editor_event(
   event : @hover.EditorEvent,
   sticky_mouse_getting_closer? : Bool = false,
 ) -> Unit {
+  guard self.content_hover_controller() is Some(hc) else { return }
   // Escape hides immediately and must drop any deferred mouse-move reaction so a
   // stale target cannot re-open the hover.
   match event {
-    EscapePressed => self.cancel_hover_react()
+    EscapePressed => hc.cancel_react()
     MouseMoved(_) => ()
   }
-  let before = self.hover
-  let (effect, hover) = self.hover.on_event(
+  let before = hc.hover
+  let (effect, hover) = hc.hover.on_event(
     event,
     self.editor_context(),
     sticky_mouse_getting_closer~,
   )
-  self.hover = hover
+  hc.hover = hover
   self.apply_hover_effect(effect)
   self.after_hover_transition(before)
 }
@@ -328,14 +353,15 @@ fn Viewer::after_hover_transition(
   self : Viewer,
   before : @hover.HoverController,
 ) -> Unit {
-  if before == self.hover {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if before == hc.hover {
     return
   }
-  if before.view != self.hover.view {
+  if before.view != hc.hover.view {
     self.content_generation += 1
     // A new hover view is a fresh `RenderedContentHover`: reset the
     // mouse-getting-closer reference so the next move re-seeds it.
-    self.hover_mouse_closer.reset()
+    hc.hover_mouse_closer.reset()
   }
   self.sync_content_hover_widget()
   self.schedule_render()
@@ -372,8 +398,9 @@ fn Viewer::apply_hover_effect(
 /// `hover_second_wait_ms`, and kick the streamed async compute. No view changes
 /// yet (emission is still suppressed), so no re-render is needed here.
 fn Viewer::hover_trigger_async(self : Viewer, token : Int) -> Unit {
-  let (proceed, hover) = self.hover.op_trigger_async(token)
-  self.hover = hover
+  guard self.content_hover_controller() is Some(hc) else { return }
+  let (proceed, hover) = hc.hover.op_trigger_async(token)
+  hc.hover = hover
   if proceed {
     set_timeout(
       () => self.hover_trigger_sync(token),
@@ -388,11 +415,12 @@ fn Viewer::hover_trigger_async(self : Viewer, token : Int) -> Unit {
 /// Monaco `_triggerSyncComputation` fired (at the full delay): run the sync
 /// participants and feed their parts into the operation.
 fn Viewer::hover_trigger_sync(self : Viewer, token : Int) -> Unit {
-  if token != self.hover.operation.token {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if token != hc.hover.operation.token {
     return
   }
-  let before = self.hover
-  self.hover = self.hover.op_trigger_sync(token, self.compute_hover_sync(token))
+  let before = hc.hover
+  hc.hover = hc.hover.op_trigger_sync(token, self.compute_hover_sync(token))
   self.after_hover_transition(before)
   self.maybe_notify_hover_resolved(token)
 }
@@ -401,11 +429,12 @@ fn Viewer::hover_trigger_sync(self : Viewer, token : Int) -> Unit {
 /// Monaco `_triggerLoadingMessage` fired (at three times the delay): show the
 /// loading message if the async compute is still pending.
 fn Viewer::hover_trigger_loading(self : Viewer, token : Int) -> Unit {
-  if token != self.hover.operation.token {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if token != hc.hover.operation.token {
     return
   }
-  let before = self.hover
-  self.hover = self.hover.op_trigger_loading(token)
+  let before = hc.hover
+  hc.hover = hc.hover.op_trigger_loading(token)
   self.after_hover_transition(before)
 }
 
@@ -427,9 +456,10 @@ fn Viewer::compute_hover_sync(
   self : Viewer,
   token : Int,
 ) -> Array[@hover.HoverPart] {
-  match (self.text_model, self.hover.anchor) {
+  guard self.content_hover_controller() is Some(hc) else { return [] }
+  match (self.text_model, hc.hover.anchor) {
     (Some(model), Some(anchor)) =>
-      if token != self.hover.operation.token {
+      if token != hc.hover.operation.token {
         []
       } else {
         match
@@ -450,7 +480,8 @@ fn Viewer::compute_hover_sync(
 /// operation is marked done. Results carry the requesting model and anchor token
 /// so stale responses are dropped at their guards.
 fn Viewer::kick_hover_async(self : Viewer, token : Int) -> Unit {
-  match (self.text_model, self.hover.anchor) {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  match (self.text_model, hc.hover.anchor) {
     (Some(model), Some(anchor)) => {
       let computer = self.make_hover_computer()
       let inlay_hints = self.inlay_hints
@@ -472,11 +503,12 @@ fn Viewer::hover_async_item(
   token : Int,
   parts : Array[@hover.HoverPart],
 ) -> Unit {
-  if !self.is_current_model(model) || token != self.hover.operation.token {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if !self.is_current_model(model) || token != hc.hover.operation.token {
     return
   }
-  let before = self.hover
-  self.hover = self.hover.op_async_item(token, parts)
+  let before = hc.hover
+  hc.hover = hc.hover.op_async_item(token, parts)
   self.after_hover_transition(before)
 }
 
@@ -486,11 +518,12 @@ fn Viewer::hover_async_done(
   model : @model.TextModel,
   token : Int,
 ) -> Unit {
-  if !self.is_current_model(model) || token != self.hover.operation.token {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if !self.is_current_model(model) || token != hc.hover.operation.token {
     return
   }
-  let before = self.hover
-  self.hover = self.hover.op_async_done(token)
+  let before = hc.hover
+  hc.hover = hc.hover.op_async_done(token)
   self.after_hover_transition(before)
   self.maybe_notify_hover_resolved(token)
 }
@@ -500,18 +533,19 @@ fn Viewer::hover_async_done(
 /// operation completes (reaches `Idle`): `ok` reports whether any hover content
 /// was produced. Replaces the old per-result notification.
 fn Viewer::maybe_notify_hover_resolved(self : Viewer, token : Int) -> Unit {
-  if token != self.hover.operation.token || !self.hover.is_complete() {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if token != hc.hover.operation.token || !hc.hover.is_complete() {
     return
   }
-  if self.hover_notified_token == token {
+  if hc.hover_notified_token == token {
     return
   }
-  self.hover_notified_token = token
+  hc.hover_notified_token = token
   let revision = match self.text_model {
     Some(model) => model.revision
     None => ""
   }
-  self.did_resolve_hover.fire({ ok: self.hover.view is Some(_), revision })
+  self.did_resolve_hover.fire({ ok: hc.hover.view is Some(_), revision })
 }
 
 ///|
@@ -519,18 +553,19 @@ fn Viewer::maybe_notify_hover_resolved(self : Viewer, token : Int) -> Unit {
 /// hover-owned decorations collection: `delta_decorations` on show/hide).
 /// Runs at flush time — every hover state change schedules a flush.
 fn Viewer::sync_hover_decorations(self : Viewer) -> Unit {
+  guard self.content_hover_controller() is Some(hc) else { return }
   guard self.text_model is Some(model) else { return }
-  let decorations = self.hover.highlight_decorations()
+  let decorations = hc.hover.highlight_decorations()
   let range = match decorations.get(0) {
     Some(decoration) => Some(decoration.range)
     None => None
   }
-  if range == self.hover_decoration_range {
+  if range == hc.hover_decoration_range {
     return
   }
-  self.hover_decoration_range = range
-  self.hover_decoration_ids = model.delta_decorations(
-    self.hover_decoration_ids,
+  hc.hover_decoration_range = range
+  hc.hover_decoration_ids = model.delta_decorations(
+    hc.hover_decoration_ids,
     decorations,
     owner_id=self.editor_id,
   )

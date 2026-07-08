@@ -54,8 +54,8 @@ fn Viewer::build_view_model(
 }
 
 ///|
-/// Re-tokenizes the current model after a tokenizer (re)registration and
-/// schedules a repaint — Monaco's `ModelTokensChangedEvent` →
+/// The viewer's `model.onDidChangeTokens` handler: re-warms the reset token
+/// memo and schedules a repaint — Monaco's `ModelTokensChangedEvent` →
 /// `ViewTokensChangedEvent` round trip. The long-lived view model survives;
 /// only the token memo and the paint are redone.
 fn Viewer::retokenize_current_model(

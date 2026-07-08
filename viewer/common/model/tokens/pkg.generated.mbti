@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer/common/model/tokens"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/editor/syntax",
   "moonbit-community/editor/viewer/common/services",
 }
@@ -44,14 +45,26 @@ pub fn token_theme_style_block(Array[String]) -> String
 // Errors
 
 // Types and methods
+pub struct ModelTokensChangedEvent {
+  semantic_tokens_applied : Bool
+  ranges : Array[ModelTokensChangedRange]
+}
+
+pub struct ModelTokensChangedRange {
+  from_line_number : Int
+  to_line_number : Int
+}
+
 pub struct TokenizationTextModelPart {
   // private fields
 }
+pub fn TokenizationTextModelPart::dispose(Self) -> Unit
 pub fn TokenizationTextModelPart::force_tokenization(Self) -> Unit
 pub fn TokenizationTextModelPart::get_language_id(Self) -> String
 pub fn TokenizationTextModelPart::get_line_tokens(Self, Int) -> @moonbit-community/editor/viewer/common/tokens.LineTokens
 pub fn TokenizationTextModelPart::has_tokens(Self) -> Bool
 pub fn TokenizationTextModelPart::new(Array[String], String) -> Self
+pub fn TokenizationTextModelPart::on_did_change_tokens(Self, (ModelTokensChangedEvent) -> Unit) -> @common.Disposable
 pub fn TokenizationTextModelPart::reset_tokenization(Self) -> Unit
 pub fn TokenizationTextModelPart::token_count(Self) -> Int
 

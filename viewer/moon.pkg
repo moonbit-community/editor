@@ -24,9 +24,12 @@ import {
   "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/editor/syntax",
   "moonbit-community/rabbita/dom" @rdom,
   "moonbit-community/rabbita/js",
 }
+
+import {
+  "moonbit-community/editor/syntax",
+} for "wbtest"
 
 supported_targets = "js"

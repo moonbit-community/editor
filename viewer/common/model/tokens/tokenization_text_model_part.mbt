@@ -15,11 +15,24 @@
 ///     no edits there is no role for the background tokenizer, its
 ///     `RangePriorityQueueImpl` scheduling (ported for conformance in
 ///     `common/model/text_model_tokens.mbt`), or per-line `forceTokenization`.
-///   - The part does not subscribe to `tokenization_registry.on_did_change`
-///     (Monaco's backend does): the readonly `TextModel` has no dispose, so a
-///     per-model subscription would leak. The `Viewer` relays the event by
-///     calling `reset_tokenization` on its current model.
 ///   - No semantic-token overlay (`SparseTokensStore` is not ported).
+
+///|
+/// `IModelTokensChangedEvent` (`common/textModelEvents.ts`): grammar tokens
+/// changed for the listed line ranges. The part's only producer is the
+/// whole-document reset, so `ranges` always spans the document.
+pub struct ModelTokensChangedEvent {
+  semantic_tokens_applied : Bool
+  ranges : Array[ModelTokensChangedRange]
+}
+
+///|
+/// One contiguous run of changed lines, an `IModelTokensChangedEvent.ranges`
+/// element.
+pub struct ModelTokensChangedRange {
+  from_line_number : Int
+  to_line_number : Int
+}
 
 ///|
 /// The `model.tokenization` role: per-line grammar tokens for one document
@@ -28,16 +41,60 @@ pub struct TokenizationTextModelPart {
   priv lines : Array[String]
   priv language_id : String
   priv mut line_tokens : Array[@common_tokens.LineTokens]?
+  priv did_change_tokens : @base_common.Emitter[ModelTokensChangedEvent]
+  priv mut registry_subscription : @base_common.Disposable?
 }
 
 ///|
 /// Builds the part for a document's lines (EOL excluded, one entry per
 /// logical line) and language id. Tokenization runs lazily on first read.
+/// Like `TokenizerSyntaxTokenBackend`'s constructor, the part subscribes to
+/// `tokenization_registry.on_did_change` — a (re)registration touching this
+/// language resets the memo — and the subscription lives until `dispose`.
 pub fn TokenizationTextModelPart::new(
   lines : Array[String],
   language_id : String,
 ) -> TokenizationTextModelPart {
-  { lines, language_id, line_tokens: None }
+  let part : TokenizationTextModelPart = {
+    lines,
+    language_id,
+    line_tokens: None,
+    did_change_tokens: @base_common.Emitter::new(),
+    registry_subscription: None,
+  }
+  part.registry_subscription = Some(
+    @syntax.tokenization_registry.on_did_change(event => {
+      if event.changed_languages.contains(part.language_id) {
+        part.reset_tokenization()
+      }
+    }),
+  )
+  part
+}
+
+///|
+/// Subscribes to grammar-token changes — the backend's `onDidChangeTokens`
+/// (`abstractSyntaxTokenBackend.ts`).
+pub fn TokenizationTextModelPart::on_did_change_tokens(
+  self : TokenizationTextModelPart,
+  listener : (ModelTokensChangedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.did_change_tokens.event(listener)
+}
+
+///|
+/// Drops the registry subscription and the token-change listeners — the
+/// part's share of `TextModel::dispose` (`_register`ed cleanup in the
+/// backend).
+pub fn TokenizationTextModelPart::dispose(
+  self : TokenizationTextModelPart,
+) -> Unit {
+  match self.registry_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  self.registry_subscription = None
+  self.did_change_tokens.dispose()
 }
 
 ///|
@@ -86,13 +143,18 @@ pub fn TokenizationTextModelPart::has_tokens(
 
 ///|
 /// Drops the memoized tokens so the next read re-resolves the language
-/// through `tokenization_registry` and re-tokenizes. Mirrors
-/// `resetTokenization` (fired there by the registry-change subscription the
-/// viewer relays instead — see the file header).
+/// through `tokenization_registry` and re-tokenizes, then announces the
+/// whole document as changed. Mirrors `todo_resetTokenization` — flush, then
+/// fire `IModelTokensChangedEvent` over every line (the
+/// `fireTokenChangeEvent=false` arm serves the background tokenizer, N-A).
 pub fn TokenizationTextModelPart::reset_tokenization(
   self : TokenizationTextModelPart,
 ) -> Unit {
   self.line_tokens = None
+  self.did_change_tokens.fire({
+    semantic_tokens_applied: false,
+    ranges: [{ from_line_number: 1, to_line_number: self.lines.length() }],
+  })
 }
 
 ///|

@@ -47,7 +47,8 @@ arrive as whole new models).
 | `instance_id`, `delta_decoration_call_cnt`, `last_decoration_id`, `decorations`, `decorations_tree`, `on_did_change_decorations` | `_instanceId` / `_deltaDecorationCallCnt` / `_lastDecorationId` / `_decorations` / `_decorationsTree` (:285-290), `_onDidChangeDecorations` (:225) | PORTED — API ledgered in `text_model_decorations.mbt` |
 | `display_name`, `revision` | — | EXTRA — host metadata the provider payloads carry (`languages.mbt`, editor events, shell workbench); Monaco hosts get these from workbench services the viewer doesn't have |
 | — | `id` (`'$model' + counter`) | N-A — model identity is uri+version by design (`same_identity_and_version`) |
-| — | edit/undo/attach/dispose/options/too-large fields | N-A — readonly, no lifecycle |
+| `on_will_dispose`, `is_disposed` | `_onWillDispose` (:222), `_isDisposed` (:190), `dispose()` (:414), `isDisposed()` (:445) | PORTED — `dispose` fires `onWillDispose`, disposes the tokenization part (its registry subscription) and the emitters; the disposed-buffer swap is N-A (immutable snapshot, GC) |
+| — | edit/undo/attach/options/too-large fields | N-A — readonly |
 
 `TextModel` methods: the read API is ported 1:1 as snake_case of the
 `textModel.ts` names (`get_value*`, `get_line_*`, `get_offset_at` /
@@ -56,12 +57,13 @@ arrive as whole new models).
 `might_contain_rtl`, `get_word_at_position` / `get_word_until_position`,
 `get_language_id`), each doc comment citing its source line. The viewer clamps
 where Monaco throws `BugIndicatingError`, and `_assertNotDisposed` guards are
-N-A. DEFERRED (no consumer yet): `findMatches`/`findNextMatch`/
+not ported (the immutable snapshot stays readable after `dispose`). DEFERRED
+(no consumer yet): `findMatches`/`findNextMatch`/
 `findPreviousMatch`, `getCharacterCountInRange`, `createSnapshot`,
 `isValidRange`, `getLinesDecorations` beyond the ported decoration cluster.
 N-A (readonly / LF-only): `setValue`, edits, undo/redo, `pushEOL`,
 `getEOL`/`getEndOfLineSequence`, options/indentation
-(`detectIndentation`/`normalizeIndentation`), attach/dispose,
+(`detectIndentation`/`normalizeIndentation`), attach,
 `mightContainUnusualLineTerminators`/`NonBasicASCII`,
 `isDominatedByLongLines`, bracket delegates (guides is its own
 `GuidesTextModelPart`; tokenization is the ported `tokenization` part).

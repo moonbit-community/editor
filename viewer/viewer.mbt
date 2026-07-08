@@ -108,6 +108,8 @@ pub struct Viewer {
   /// parts (plan Deviation 3 — the render-snapshot event seam).
   priv mut decorations_generation : Int
   priv mut model_decorations_subscription : @base_common.Disposable?
+  priv mut model_tokens_subscription : @base_common.Disposable?
+  priv mut model_will_dispose_subscription : @base_common.Disposable?
   /// The hover highlight's model decoration ids (Monaco's hover-owned
   /// decorations collection): rewritten by `sync_hover_decorations` whenever
   /// the hover view's highlighted range changes.
@@ -336,6 +338,8 @@ pub fn Viewer::Viewer(
     editor_id: next_editor_id(),
     decorations_generation: 0,
     model_decorations_subscription: None,
+    model_tokens_subscription: None,
+    model_will_dispose_subscription: None,
     hover_decoration_ids: [],
     hover_decoration_range: None,
     agent_feedback_input: None,
@@ -367,23 +371,6 @@ pub fn Viewer::Viewer(
   viewer.services.marker_decorations.on_did_change_marker_decorations(model => {
     if viewer.is_current_model(model) {
       viewer.schedule_render()
-    }
-  })
-  |> ignore
-  // Tokenizer (re)registration invalidates the current model's memoized
-  // tokens and re-renders. Monaco's `TokenizerSyntaxTokenBackend` subscribes
-  // to `TokenizationRegistry.onDidChange` per model; the readonly `TextModel`
-  // has no dispose, so a per-model subscription would leak — the long-lived
-  // `Viewer` relays the event instead (see
-  // `common/model/tokens/tokenization_text_model_part.mbt`).
-  @syntax.tokenization_registry.on_did_change(event => {
-    match viewer.text_model {
-      Some(model) =>
-        if event.changed_languages.contains(model.language_id) {
-          model.tokenization.reset_tokenization()
-          viewer.retokenize_current_model(model)
-        }
-      None => ()
     }
   })
   |> ignore
@@ -588,10 +575,19 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
     None => ()
   }
   self.services.markers.clear_resource(model.uri)
-  // Rotate the decoration-change subscription with the model (plan D6:
-  // owners re-attach on swap). Attach before the marker service seeds the
-  // model so the seeding delta is observed too.
+  // Rotate the per-model subscriptions with the model (plan D6: owners
+  // re-attach on swap) — Monaco's `listenersToRemove` set in `_attachModel`.
+  // The decoration-change subscription attaches before the marker service
+  // seeds the model so the seeding delta is observed too.
   match self.model_decorations_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  match self.model_tokens_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  match self.model_will_dispose_subscription {
     Some(subscription) => subscription.dispose()
     None => ()
   }
@@ -625,6 +621,18 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
       self.decorations_generation += 1
       self.schedule_render()
     }),
+  )
+  // A disposed model detaches itself
+  // (`codeEditorWidget.ts:1787` `model.onWillDispose(() => this.setModel(null))`).
+  self.model_will_dispose_subscription = Some(
+    model.on_will_dispose(() => self.set_model(None)),
+  )
+  // Token changes (the part's registry subscription fires them on tokenizer
+  // (re)registration) re-warm the memo and repaint — Monaco's
+  // `ModelTokensChangedEvent` handling. The viewer's granularity is the whole
+  // document, so the event's ranges are not consulted.
+  self.model_tokens_subscription = Some(
+    model.on_did_change_tokens(_ => self.retokenize_current_model(model)),
   )
   self.services.marker_decorations.on_model_added(model)
   self.inlay_hints = []
@@ -866,6 +874,16 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
     None => ()
   }
   self.model_decorations_subscription = None
+  match self.model_tokens_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  self.model_tokens_subscription = None
+  match self.model_will_dispose_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  self.model_will_dispose_subscription = None
   self.hover_decoration_ids = []
   self.hover_decoration_range = None
   self.agent_feedback_hover_decoration_ids = []

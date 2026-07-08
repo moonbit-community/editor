@@ -12,6 +12,9 @@ pub struct TextModel {
   /// The `model.tokenization` part (Monaco's `TokenizationTextModelPart`,
   /// wired in the `TextModel` constructor exactly as `textModel.ts` does).
   tokenization : @tokens.TokenizationTextModelPart
+  // Lifecycle (`_onWillDispose` textModel.ts:222, `_isDisposed` :190)
+  on_will_dispose : @base_common.Emitter[Unit]
+  priv mut is_disposed : Bool
   // #region Decorations (textModel.ts:285-290; `_onDidChangeDecorations` :225)
   instance_id : String
   mut delta_decoration_call_cnt : Int
@@ -68,6 +71,8 @@ pub fn TextModel::TextModel(
     revision,
     snapshot,
     tokenization: @tokens.TokenizationTextModelPart::new(lines, language_id),
+    on_will_dispose: @base_common.Emitter::new(),
+    is_disposed: false,
     instance_id: next_model_instance_id(),
     delta_decoration_call_cnt: 0,
     last_decoration_id: 0,
@@ -75,6 +80,45 @@ pub fn TextModel::TextModel(
     decorations_tree: DecorationsTrees::new(),
     on_did_change_decorations: DidChangeDecorationsEmitter::new(),
   }
+}
+
+///|
+/// Releases the model — `dispose` (`textModel.ts:414`). Fires `onWillDispose`
+/// first (the attached editor detaches itself there), then disposes the
+/// tokenization part — dropping its registry subscription — and the emitters.
+/// Monaco's disposed-buffer swap is N-A: the snapshot is immutable and
+/// garbage-collected.
+pub fn TextModel::dispose(self : TextModel) -> Unit {
+  self.on_will_dispose.fire(())
+  self.tokenization.dispose()
+  self.is_disposed = true
+  self.on_will_dispose.dispose()
+  self.on_did_change_decorations.actual.dispose()
+}
+
+///|
+/// Whether `dispose` has run — `isDisposed` (`textModel.ts:445`).
+pub fn TextModel::is_disposed(self : TextModel) -> Bool {
+  self.is_disposed
+}
+
+///|
+/// Subscribes to the start of `dispose` — `onWillDispose` (`textModel.ts:223`).
+pub fn TextModel::on_will_dispose(
+  self : TextModel,
+  listener : () -> Unit,
+) -> @base_common.Disposable {
+  self.on_will_dispose.event(_ => listener())
+}
+
+///|
+/// Subscribes to grammar-token changes — `onDidChangeTokens`, delegating to
+/// the tokenization part as the source's forwarded emitter does.
+pub fn TextModel::on_did_change_tokens(
+  self : TextModel,
+  listener : (@tokens.ModelTokensChangedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.tokenization.on_did_change_tokens(listener)
 }
 
 ///|
@@ -96,9 +140,10 @@ pub fn TextModel::same_identity_and_version(
 
 // #region Reading text — the `textModel.ts` read section (:737-1176, word
 // cluster :2085-2124), delegating to the snapshot buffer exactly as Monaco's
-// members delegate to `this._buffer`. `_assertNotDisposed` guards are N-A
-// (no dispose lifecycle) and the viewer clamps where Monaco throws
-// `BugIndicatingError`; see the README parity ledger.
+// members delegate to `this._buffer`. `_assertNotDisposed` guards are not
+// ported (the immutable snapshot stays readable after `dispose`) and the
+// viewer clamps where Monaco throws `BugIndicatingError`; see the README
+// parity ledger.
 
 ///|
 /// Source document language id. Mirrors `getLanguageId` (`textModel.ts:2085`),

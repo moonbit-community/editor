@@ -204,16 +204,19 @@ pub struct TextModel {
   revision : String
   snapshot : TextSnapshot
   tokenization : @tokens.TokenizationTextModelPart
+  on_will_dispose : @common.Emitter[Unit]
   instance_id : String
   mut delta_decoration_call_cnt : Int
   mut last_decoration_id : Int
   decorations : Map[String, IntervalNode]
   decorations_tree : DecorationsTrees
   on_did_change_decorations : DidChangeDecorationsEmitter
+  // private fields
 }
 pub fn TextModel::TextModel(@common.Uri, String, String, Int, String, String) -> Self
 pub fn[T] TextModel::change_decorations(Self, (ModelDecorationsChangeAccessor) -> T, owner_id? : Int) -> T
 pub fn TextModel::delta_decorations(Self, Array[String], Array[ModelDeltaDecoration], owner_id? : Int) -> Array[String]
+pub fn TextModel::dispose(Self) -> Unit
 pub fn TextModel::get_all_decorations(Self, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool) -> Array[ModelDecoration]
 pub fn TextModel::get_all_margin_decorations(Self, owner_id? : Int) -> Array[ModelDecoration]
 pub fn TextModel::get_decoration_options(Self, String) -> ModelDecorationOptions?
@@ -244,9 +247,12 @@ pub fn TextModel::get_value_length_in_range(Self, @common.Range) -> Int
 pub fn TextModel::get_version_id(Self) -> Int
 pub fn TextModel::get_word_at_position(Self, @common.Position) -> WordAtPosition?
 pub fn TextModel::get_word_until_position(Self, @common.Position) -> WordAtPosition
+pub fn TextModel::is_disposed(Self) -> Bool
 pub fn TextModel::might_contain_rtl(Self) -> Bool
 pub fn TextModel::modify_position(Self, @common.Position, Int) -> @common.Position
 pub fn TextModel::on_did_change_decorations(Self, (ModelDecorationsChangedEvent) -> Unit) -> @common.Disposable
+pub fn TextModel::on_did_change_tokens(Self, (@tokens.ModelTokensChangedEvent) -> Unit) -> @common.Disposable
+pub fn TextModel::on_will_dispose(Self, () -> Unit) -> @common.Disposable
 pub fn TextModel::remove_all_decorations_with_owner_id(Self, Int) -> Unit
 pub fn TextModel::same_identity_and_version(Self, Self) -> Bool
 pub fn TextModel::snapshot(Self) -> TextSnapshot

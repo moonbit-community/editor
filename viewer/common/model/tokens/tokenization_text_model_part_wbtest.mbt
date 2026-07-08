@@ -159,6 +159,49 @@ test "language id round-trips through the process-wide codec" {
 }
 
 ///|
+/// The part's own registry subscription (the backend constructor's
+/// `_register(TokenizationRegistry.onDidChange(...))`): a (re)registration
+/// touching the part's language resets the memo and fires
+/// `on_did_change_tokens`; `dispose` unsubscribes.
+test "registry changes reset the part and fire on_did_change_tokens" {
+  let part = TokenizationTextModelPart::new(
+    ["let a = 1", "let b = 2"],
+    "part-registry-sub",
+  )
+  let events : Array[ModelTokensChangedEvent] = []
+  part.on_did_change_tokens(event => events.push(event)) |> ignore
+  // Registry miss warms the memo with one default token per line.
+  assert_eq(part.get_line_tokens(1).get_count(), 1)
+  let registration = @syntax.tokenization_registry.register(
+    "part-registry-sub",
+    BlockCommentToy::{  },
+  )
+  // The part observed the registration itself: memo dropped, whole-document
+  // change announced.
+  assert_false(part.has_tokens())
+  assert_eq(events.length(), 1)
+  assert_false(events[0].semantic_tokens_applied)
+  assert_eq(events[0].ranges.length(), 1)
+  assert_eq(events[0].ranges[0].from_line_number, 1)
+  assert_eq(events[0].ranges[0].to_line_number, 2)
+  // The re-read resolves the just-registered tokenizer.
+  assert_eq(part.get_line_tokens(1).get_count(), 2)
+  // Other languages' registrations do not touch the part.
+  let other = @syntax.tokenization_registry.register(
+    "part-registry-sub-other",
+    BlockCommentToy::{  },
+  )
+  assert_true(part.has_tokens())
+  assert_eq(events.length(), 1)
+  other.dispose()
+  // dispose unsubscribes: the deregistration no longer reaches the part.
+  part.dispose()
+  registration.dispose()
+  assert_true(part.has_tokens())
+  assert_eq(events.length(), 1)
+}
+
+///|
 test "reset_tokenization drops the memo and re-reads the registry" {
   let part = TokenizationTextModelPart::new(["let a = 1"], "part-reset")
   assert_false(part.has_tokens())

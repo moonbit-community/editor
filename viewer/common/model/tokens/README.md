@@ -20,8 +20,9 @@ The model-facing tokenization part. Mirrors Monaco's
 
 Deviations from Monaco (all consequences of the readonly `TextModel`) are
 listed in `tokenization_text_model_part.mbt`'s header: frozen-line-array
-construction, no background tokenizer, viewer-relayed registry-change resets,
-no semantic-token overlay.
+construction, no background tokenizer, no semantic-token overlay. Like
+Monaco's backend, the part subscribes to registry changes on construction and
+unsubscribes in `dispose` (reached from `TextModel::dispose`).
 
 ## Boundaries
 

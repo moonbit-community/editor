@@ -87,12 +87,16 @@ pub fn[T] Emitter::has_listeners(self : Emitter[T]) -> Bool {
 }
 
 ///|
-/// Notifies currently active listeners in registration order.
+/// Notifies currently active listeners in registration order. Delivery
+/// iterates a snapshot: a listener disposing itself (or a sibling) mid-fire
+/// must not disturb the walk, and the `active` flag keeps listeners removed
+/// mid-fire from running.
 pub fn[T] Emitter::fire(self : Emitter[T], event : T) -> Unit {
   if self.disposed.val {
     return
   }
-  for cell in self.listeners {
+  let cells = self.listeners.copy()
+  for cell in cells {
     if cell.active.val {
       (cell.listener)(event)
     }

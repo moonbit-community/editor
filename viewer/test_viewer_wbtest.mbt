@@ -280,3 +280,83 @@ test "decoration queries are scoped by editor id like Monaco" {
     fail("got \{to_repr(names)}")
   }
 }
+
+///|
+/// Single-state toy tokenizer tagging the first character as a keyword — the
+/// encoder's gap fill makes every non-empty line exactly two tokens, so the
+/// token count discriminates a registry hit (2) from the null fallback (1).
+priv struct FirstCharKeywordToy {}
+
+///|
+let first_char_toy_state : @syntax.TokenizerState = TokenizerState("s")
+
+///|
+impl @syntax.LineTokenizer for FirstCharKeywordToy with fn initial_state(_self) {
+  first_char_toy_state
+}
+
+///|
+impl @syntax.LineTokenizer for FirstCharKeywordToy with fn tokenize_line(
+  _self,
+  line_text,
+  state,
+) {
+  ignore(line_text)
+  let tokens : Array[@syntax.LineToken] = [{ start: 0, end: 1, tag: Keyword }]
+  (tokens, state)
+}
+
+///|
+/// Tokenizer (re)registration reaches the viewer through the model's own
+/// registry subscription: part reset → `model.onDidChangeTokens` →
+/// `retokenize_current_model` — the Monaco fan-out (no viewer-level relay).
+test "tokenizer registration recolors the current model" {
+  let viewer = Viewer::Viewer()
+  viewer.set_model(Some(test_model("alpha beta", language_id="recolor-toy")))
+  let model = viewer.get_model().unwrap()
+  // Warmed by attach; registry miss → one default token on the line.
+  assert_eq(model.tokenization.token_count(), 1)
+  let registration = @syntax.tokenization_registry.register("recolor-toy", FirstCharKeywordToy::{
+
+  })
+  // The viewer re-warmed the reset memo synchronously.
+  assert_true(model.tokenization.has_tokens())
+  assert_eq(model.tokenization.token_count(), 2)
+  // Deregistration walks the same path back to the null fallback.
+  registration.dispose()
+  assert_true(model.tokenization.has_tokens())
+  assert_eq(model.tokenization.token_count(), 1)
+  viewer.dispose()
+  model.dispose()
+}
+
+///|
+/// A disposed model detaches itself from the viewer —
+/// `model.onWillDispose(() => this.setModel(null))` (`codeEditorWidget.ts:1787`).
+test "disposing the installed model detaches it from the viewer" {
+  let viewer = Viewer::Viewer()
+  let model = test_model("alpha")
+  viewer.set_model(Some(model))
+  let mut model_change_events = 0
+  viewer.on_did_change_model(_ => model_change_events += 1) |> ignore
+  model.dispose()
+  assert_true(viewer.get_model() is None)
+  assert_eq(model_change_events, 1)
+  assert_true(model.is_disposed())
+  viewer.dispose()
+}
+
+///|
+/// Swapping models rotates the will-dispose subscription: disposing the
+/// replaced model must not detach the current one.
+test "disposing a replaced model leaves the current model attached" {
+  let viewer = Viewer::Viewer()
+  let first = test_model("one")
+  viewer.set_model(Some(first))
+  let second = test_model("two")
+  viewer.set_model(Some(second))
+  first.dispose()
+  assert_eq(viewer.get_model().unwrap().get_value(), "two")
+  viewer.dispose()
+  second.dispose()
+}

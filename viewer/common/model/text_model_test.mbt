@@ -52,3 +52,27 @@ test "text model version is the freshness guard" {
   assert_true(baseline.same_identity_and_version(same_version_new_revision))
   assert_true(!baseline.same_identity_and_version(new_version))
 }
+
+///|
+test "dispose fires on_will_dispose once and flips is_disposed" {
+  let model = @model.TextModel(
+    @base_common.Uri::memory("dispose.mbt"),
+    "dispose.mbt",
+    "moonbit",
+    1,
+    "",
+    "pub fn main {}\n",
+  )
+  let mut will_dispose_count = 0
+  model.on_will_dispose(() => will_dispose_count += 1) |> ignore
+  assert_false(model.is_disposed())
+  model.dispose()
+  assert_eq(will_dispose_count, 1)
+  assert_true(model.is_disposed())
+  // Reads survive dispose: the snapshot is immutable, `_assertNotDisposed`
+  // guards are not ported.
+  assert_eq(model.get_line_count(), 2)
+  // A second dispose is inert — the emitter is already disposed.
+  model.dispose()
+  assert_eq(will_dispose_count, 1)
+}

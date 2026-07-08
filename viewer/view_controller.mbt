@@ -18,7 +18,8 @@ priv struct MouseDispatchData {
 /// multi-cursor-modifier, and bracket/string double-click-block branches are
 /// omitted (no column selection or multi-cursor in the readonly viewer).
 fn Viewer::dispatch_mouse(self : Viewer, data : MouseDispatchData) -> Unit {
-  guard self.ensure_cursor() is Some(controller) else { return }
+  guard self.view_model is Some(view_model) else { return }
+  let controller = view_model.cursor
   if data.started_on_line_numbers {
     // A drag that started in the gutter operates on whole lines.
     if data.in_selection_mode {

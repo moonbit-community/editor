@@ -195,3 +195,37 @@ test "set_position and set_selection are no-ops without a model" {
   assert_true(viewer.get_selection() is None)
   viewer.dispose()
 }
+
+///|
+/// A wrapping-width change re-projects the live selection *inside* the view
+/// model (`_cursor.onLineMappingChanged`, `viewModelImpl.ts:287`): the model
+/// selection is unchanged and the view selection lands on the new projection
+/// with no Viewer-side re-point call in between.
+test "wrap-width change re-projects the selection inside the view model" {
+  let options = ViewerOptions(soft_wrap=true)
+  with_test_viewer(
+    "abcdefghij",
+    viewer => {
+      viewer.test_set_soft_wrap_column(6)
+      viewer.set_selection(@core.Selection::new(Position(1, 9), Position(1, 9)))
+      // Wrapped at 6: model col 9 sits on view line 2, col 3.
+      assert_position(
+        viewer.test_cursor().get_view_selection().get_position(),
+        Position(2, 3),
+      )
+      // Reflow to a narrower column straight through the view model — the
+      // Viewer-side path (`on_configuration_changed`) adds nothing on top.
+      viewer.test_set_soft_wrap_column(4)
+      assert_selection_eq(
+        viewer.get_selection().unwrap(),
+        @core.Selection::new(Position(1, 9), Position(1, 9)),
+      )
+      // Wrapped at 4: model col 9 starts the third view line.
+      assert_position(
+        viewer.test_cursor().get_view_selection().get_position(),
+        Position(3, 1),
+      )
+    },
+    options~,
+  )
+}

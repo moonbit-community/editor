@@ -6,8 +6,8 @@
 /// through raw document offsets. Columns are one-based and local to each view
 /// line (the convention `measure_line_selection` consumes).
 fn Viewer::selection_view_range(self : Viewer) -> @base_common.Range? {
-  guard self.cursor is Some(controller) else { return None }
-  let selection = controller.get_view_selection()
+  guard self.view_model is Some(view_model) else { return None }
+  let selection = view_model.cursor.get_view_selection()
   if selection.is_empty() {
     return None
   }
@@ -18,12 +18,11 @@ fn Viewer::selection_view_range(self : Viewer) -> @base_common.Range? {
 /// The full view-space selection the render input carries for the cursor part
 /// (Monaco's `ViewCursorStateChangedEvent.selections[0]`): unlike
 /// `selection_view_range` it survives collapsing, so a caret-only
-/// `set_position` still renders. `None` until a cursor exists (deviation:
-/// Monaco always has a cursor at (1,1); the viewer creates one lazily on the
-/// first click / `set_position`, so no caret shows before that).
+/// `set_position` still renders. `None` only without a model — the view
+/// model's cursor always exists, collapsed at (1,1) like Monaco's.
 fn Viewer::view_selection(self : Viewer) -> @core.Selection? {
-  match self.cursor {
-    Some(controller) => Some(controller.get_view_selection())
+  match self.view_model {
+    Some(view_model) => Some(view_model.cursor.get_view_selection())
     None => None
   }
 }
@@ -57,7 +56,8 @@ pub fn Viewer::set_selection(
   selection : @core.Selection,
 ) -> Unit {
   guard self.text_model is Some(model) else { return }
-  guard self.ensure_cursor() is Some(controller) else { return }
+  guard self.view_model is Some(view_model) else { return }
+  let controller = view_model.cursor
   // The outgoing-event facts Monaco captures before mutating
   // (`cursor.ts` `_emitStateChangedIfNecessary`): the previous selection set
   // and model version.
@@ -125,47 +125,13 @@ pub fn Viewer::set_selections(
 }
 
 ///|
-/// Lazily resolves the cursor controller, building it from the active view
-/// model's coordinates converter on first use.
-fn Viewer::ensure_cursor(self : Viewer) -> @cursor.CursorsController? {
-  match self.cursor {
-    Some(controller) => Some(controller)
-    None =>
-      match self.view_model {
-        Some(view_model) => {
-          let controller = @cursor.CursorsController::new(
-            @cursor.CursorContext::new(view_model.coordinates_converter()),
-          )
-          self.cursor = Some(controller)
-          Some(controller)
-        }
-        None => None
-      }
-  }
-}
-
-///|
-/// Re-points the cursor at the rebuilt view model and re-projects its selection
-/// from the model positions, keeping the view selection correct after a reflow
-/// (wrapping, inlay hints).
-fn Viewer::refresh_cursor_context(self : Viewer) -> Unit {
-  match (self.cursor, self.view_model) {
-    (Some(controller), Some(view_model)) =>
-      controller.set_context(
-        @cursor.CursorContext::new(view_model.coordinates_converter()),
-      )
-    _ => ()
-  }
-}
-
-///|
 fn Viewer::handle_copy_event(self : Viewer, event : @rdom.Event) -> Bool {
   guard event.to_clipboard_event() is Some(clipboard_event) else {
     return false
   }
-  match (self.cursor, self.text_model) {
-    (Some(controller), Some(model)) => {
-      let selection = controller.get_model_selection()
+  match (self.view_model, self.text_model) {
+    (Some(view_model), Some(model)) => {
+      let selection = view_model.cursor.get_model_selection()
       let snapshot = model.snapshot
       if selection.is_empty() {
         return false

@@ -50,10 +50,10 @@ fn Viewer::test_view_model(self : Viewer) -> @view_model.ViewModel {
 }
 
 ///|
-/// vscode keeps one cursor controller live per editor; here it is lazy
-/// (created on first interaction), so force it for tests.
+/// `ITestCodeEditor`'s cursor read — the view model's always-present
+/// controller (`viewModelImpl.ts:124`).
 fn Viewer::test_cursor(self : Viewer) -> @cursor.CursorsController {
-  self.ensure_cursor().unwrap()
+  self.test_view_model().cursor
 }
 
 ///|

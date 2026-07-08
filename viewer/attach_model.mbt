@@ -20,7 +20,6 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.text_model = Some(model)
   self.apply_view_model_layout(view_model, model.snapshot)
   let build_finished = now_ms()
-  self.refresh_cursor_context()
   self.content_generation += 1
   self.did_build_view_model.fire({
     model,
@@ -119,10 +118,10 @@ fn Viewer::on_configuration_changed(self : Viewer) -> Unit {
 
 ///|
 /// The viewer's side of a changed view-line mapping (wrapping reflow,
-/// injected text): re-flush the layout, drop the rendered window, re-point
-/// the cursor at the reconstructed projection, and mark the content stale —
-/// Monaco's `ViewFlushedEvent`/`ViewLineMappingChangedEvent` handling
-/// (`viewLayout.onFlushed` + `_cursor.onLineMappingChanged`).
+/// injected text): re-flush the layout, drop the rendered window, and mark
+/// the content stale — Monaco's `ViewFlushedEvent`/
+/// `ViewLineMappingChangedEvent` handling (`viewLayout.onFlushed`; the view
+/// model already re-pointed its own cursor).
 fn Viewer::on_line_mapping_changed(
   self : Viewer,
   view_model : @view_model.ViewModel,
@@ -130,7 +129,6 @@ fn Viewer::on_line_mapping_changed(
 ) -> Unit {
   self.apply_view_model_layout(view_model, model.snapshot)
   self.rendered_window = None
-  self.refresh_cursor_context()
   self.content_generation += 1
   let fresh = match self.pending_rendered {
     Some(pending) => pending.fresh

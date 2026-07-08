@@ -11,6 +11,11 @@ pub struct ViewModel {
   model : @model.TextModel
   mut options : ViewModelOptions
   lines : ViewModelLinesFromProjectedModel
+  /// The cursor state, owned per view model like Monaco's `_cursor`
+  /// (`viewModelImpl.ts:65,124`): a new model starts with a fresh cursor at
+  /// the origin, and reflows re-point it internally
+  /// (`_cursor.onLineMappingChanged`, `viewModelImpl.ts:287`).
+  cursor : @cursor.CursorsController
   /// The scroll/layout model, owned per view model like Monaco's
   /// `public readonly viewLayout` (`viewModelImpl.ts:64,126`): a new model
   /// starts at the scroll origin structurally. The viewport box is seeded
@@ -45,6 +50,9 @@ pub fn ViewModel::with_options(
   let coordinates_converter = lines.create_coordinates_converter()
   // Monaco's member order: `_lines` → `coordinatesConverter` → `_cursor` →
   // `viewLayout` (`viewModelImpl.ts:122-126`) → `_decorations` (`:146`).
+  let cursor = @cursor.CursorsController::new(
+    @cursor.CursorContext::new(coordinates_converter),
+  )
   let view_layout = @view_layout.ViewLayout::new(
     line_height=options.font_info.line_height,
     line_count=lines.get_view_line_count(),
@@ -56,7 +64,15 @@ pub fn ViewModel::with_options(
     lines,
     coordinates_converter,
   )
-  { model, options, lines, view_layout, decorations, coordinates_converter }
+  {
+    model,
+    options,
+    lines,
+    cursor,
+    view_layout,
+    decorations,
+    coordinates_converter,
+  }
 }
 
 ///|
@@ -87,6 +103,12 @@ pub fn ViewModel::on_configuration_changed(
   let mapping_changed = wrapping_changed || tab_size_changed
   if mapping_changed {
     self.decorations.on_line_mapping_changed()
+    // `this._cursor.onLineMappingChanged(...)` (`viewModelImpl.ts:287`): the
+    // view model re-points its own cursor, re-projecting the selection from
+    // its model positions.
+    self.cursor.set_context(
+      @cursor.CursorContext::new(self.coordinates_converter),
+    )
   }
   if previous.editor_id != options.editor_id ||
     previous.render_validation_decorations !=
@@ -113,6 +135,12 @@ pub fn ViewModel::on_did_change_content_or_injected_text(
 ) -> Unit {
   self.lines.on_model_flushed()
   self.decorations.reset()
+  // The reprojection changed the view-line mapping; re-point the cursor
+  // (Monaco's `onDidChangeContentOrInjectedText` handling routes the
+  // line-mapping change into `_cursor.onLineMappingChanged`).
+  self.cursor.set_context(
+    @cursor.CursorContext::new(self.coordinates_converter),
+  )
 }
 
 ///|

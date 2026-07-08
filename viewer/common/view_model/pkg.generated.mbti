@@ -5,6 +5,7 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/core",
+  "moonbit-community/editor/viewer/common/cursor",
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/tokens",
@@ -154,6 +155,7 @@ pub struct ViewModel {
   model : @model.TextModel
   mut options : ViewModelOptions
   lines : ViewModelLinesFromProjectedModel
+  cursor : @cursor.CursorsController
   view_layout : @view_layout.ViewLayout
   mut decorations : ViewModelDecorations
   coordinates_converter : ProjectedCoordinatesConverter

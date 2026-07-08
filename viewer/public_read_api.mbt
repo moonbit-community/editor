@@ -198,27 +198,19 @@ pub fn Viewer::get_statusbar_column(
 
 ///|
 /// The primary cursor's model position, Monaco's `getPosition` (`cew:663`) →
-/// `viewModel.getPosition`. No model → `null`. With a model but no cursor yet
-/// (the viewer creates it lazily), Monaco's always-present cursor default `(1,1)`.
+/// `viewModel.getPosition`. No model → `null`; the view model's cursor always
+/// exists, starting collapsed at `(1,1)` like Monaco's.
 pub fn Viewer::get_position(self : Viewer) -> @base_common.Position? {
-  guard self.text_model is Some(_) else { return None }
-  match self.cursor {
-    Some(controller) => Some(controller.model_state().position)
-    None => Some(Position(1, 1))
-  }
+  guard self.view_model is Some(view_model) else { return None }
+  Some(view_model.cursor.model_state().position)
 }
 
 ///|
 /// The primary cursor's model selection, Monaco's `getSelection` (`cew:783`) →
-/// `viewModel.getSelection`. No model → `null`; no cursor yet → a collapsed
-/// selection at `(1,1)`.
+/// `viewModel.getSelection`. No model → `null`.
 pub fn Viewer::get_selection(self : Viewer) -> @core.Selection? {
-  guard self.text_model is Some(_) else { return None }
-  match self.cursor {
-    Some(controller) => Some(controller.get_model_selection())
-    None =>
-      Some(@core.Selection::from_positions(Position(1, 1), Position(1, 1)))
-  }
+  guard self.view_model is Some(view_model) else { return None }
+  Some(view_model.cursor.get_model_selection())
 }
 
 ///|

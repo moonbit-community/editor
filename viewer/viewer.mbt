@@ -44,7 +44,6 @@ pub struct Viewer {
   priv mut text_model : @model.TextModel?
   priv mut inlay_hints : Array[@language.InlayHint]
   priv mut view_zones : Array[@view_zones.BrowserViewZone]
-  priv mut cursor : @cursor.CursorsController?
   priv mut hover : @hover.HoverController
   /// The persistent content-hover widget (Monaco `ContentHoverWidget`),
   /// created lazily and mounted once through the content-widgets part.
@@ -316,7 +315,6 @@ pub fn Viewer::Viewer(
     text_model: None,
     inlay_hints: [],
     view_zones: [],
-    cursor: None,
     hover: @hover.HoverController::empty(),
     content_hover_widget: None,
     hover_widget_view: None,
@@ -645,7 +643,6 @@ fn Viewer::set_current_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.services.marker_decorations.on_model_added(model)
   self.inlay_hints = []
   self.inlay_hint_decoration_ids = []
-  self.cursor = None
   self.cancel_mouse_selection()
   self.dismiss_hover()
   self.attach_model(model)
@@ -918,7 +915,6 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.inlay_hint_decoration_ids = []
   self.view_zones = []
   self.horizontal_reveal_request = None
-  self.cursor = None
   self.cancel_mouse_selection()
   self.hover = @hover.HoverController::empty()
   self.sync_content_hover_widget()

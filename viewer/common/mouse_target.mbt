@@ -31,6 +31,12 @@ pub(all) struct MouseTarget {
   token_index : Int
   injected_text_index : Int
   gutter_offset_x : Double
+  /// `IMouseTargetContentEmptyData.horizontalDistanceToText`: how far the
+  /// pointer sits past the end of the line's text, in px. Carried only by
+  /// `ContentEmpty` targets whose line is rendered; `-1.0` elsewhere
+  /// (Monaco's `undefined` — the hover's epsilon arm checks
+  /// `typeof … === 'number'`).
+  horizontal_distance_to_text : Double
 } derive(Eq, Debug)
 
 ///|
@@ -62,6 +68,7 @@ fn outside_target() -> MouseTarget {
     token_index: -1,
     injected_text_index: -1,
     gutter_offset_x: 0.0,
+    horizontal_distance_to_text: -1.0,
   }
 }
 
@@ -110,6 +117,7 @@ pub fn hit_test(
       token_index: -1,
       injected_text_index: -1,
       gutter_offset_x: 0.0,
+      horizontal_distance_to_text: -1.0,
     }
   }
   let line_number = line_index + 1
@@ -124,6 +132,7 @@ pub fn hit_test(
         token_index: -1,
         injected_text_index: -1,
         gutter_offset_x: 0.0,
+        horizontal_distance_to_text: -1.0,
       }
   }
   if viewer_x < metrics.gutter_width {
@@ -141,6 +150,7 @@ pub fn hit_test(
         token_index: -1,
         injected_text_index: -1,
         gutter_offset_x: viewer_x - line_numbers_width,
+        horizontal_distance_to_text: -1.0,
       }
     }
     return {
@@ -150,6 +160,7 @@ pub fn hit_test(
       token_index: -1,
       injected_text_index: -1,
       gutter_offset_x: 0.0,
+      horizontal_distance_to_text: -1.0,
     }
   }
   // Horizontal scroll moves content left under the sticky gutter, so the
@@ -157,8 +168,8 @@ pub fn hit_test(
   // the nearest character boundary (the browser's caret APIs round; this
   // monospace path is only the caret-API-miss fallback) instead of truncating,
   // which would bias every hit to the left edge of the glyph under the pointer.
+  let content_x = viewer_x - metrics.gutter_width + metrics.scroll_left
   let column = if metrics.char_width > 0.0 {
-    let content_x = viewer_x - metrics.gutter_width + metrics.scroll_left
     (content_x / metrics.char_width + 0.5).to_int()
   } else {
     0
@@ -173,15 +184,27 @@ pub fn hit_test(
         Position(line_number, column + 1),
       ),
       gutter_offset_x: 0.0,
+      horizontal_distance_to_text: -1.0,
     }
   } else {
+    // `createMouseTargetContentEmpty` (`mouseTarget.ts`): the position snaps
+    // to the end of the line; the pointer's distance past the last rendered
+    // character travels as `horizontalDistanceToText` (the hover's
+    // CONTENT_EMPTY epsilon arm reads it).
+    let eol_column = line.content.length()
+    let distance = content_x - eol_column.to_double() * metrics.char_width
     {
       kind: ContentEmpty,
       line_number,
-      column,
+      column: eol_column,
       token_index: -1,
       injected_text_index: -1,
       gutter_offset_x: 0.0,
+      horizontal_distance_to_text: if distance > 0.0 {
+        distance
+      } else {
+        0.0
+      },
     }
   }
 }

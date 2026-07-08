@@ -596,8 +596,8 @@ Member count (Phase 4): 30 (wrapper) + 28 (rendered) + 20 (widget remainder) =
 | `_withResult` (wrap :198-217) | complete-vs-partial + insist-keep gating | `HoverController::emit` (`_fireResult` suppression + `_withResult` gating; insist arm inert per Deviation 11) | TESTED |
 | `_showHover`/`_hideHover` (wrap :219-232) | build `RenderedContentHover`; `handleHide` fan-out | `show_hover`/`hide_hover` | TODO |
 | `_getHoverContext` (wrap :234-246) | `{hide, onContentsChanged, setMinimumDimensions, focus}` | `HoverContext` record | TODO |
-| `showsOrWillShow` (wrap :249-261) | resizing→true; anchor[0] or null → start | `shows_or_will_show` (new) | TODO |
-| `_findHoverAnchorCandidates` (wrap :263-296) | participant anchors + CONTENT_TEXT / CONTENT_EMPTY epsilon; sort by priority | `find_anchor_candidates` (new) | TODO |
+| `showsOrWillShow` (wrap :249-261) | resizing→true; anchor[0] or null → start | `HoverController::on_event(MouseMoved)` arm (`isResizing`/code-action early-keeps N-A: no sashes, no action widget) | TESTED |
+| `_findHoverAnchorCandidates` (wrap :263-296) | participant anchors + CONTENT_TEXT / CONTENT_EMPTY epsilon; sort by priority | `find_anchor_candidates` (`hover_anchor.mbt`, with the `hoverTypes.ts` `HoverAnchor` enum: range anchor at the mouse position, `suggestHoverAnchor` trait seam, inlay `HoverForeignElementAnchor` priority 10 / `supportsMarkerHover`; `MouseTarget.horizontal_distance_to_text` feeds the CONTENT_EMPTY epsilon) | TESTED |
 | `_onMouseLeave` (wrap :298-304) | hide if mouse outside editor | mouse-leave bridge | TODO |
 | `startShowingAtRange` (wrap :306-308) | range anchor → start | `start_showing_at_range` | TODO |
 | `focus` (wrap :342-349) | `hoverPartsCount===1` → focus part 0 else widget | `wrapper_focus` (new) | TODO |

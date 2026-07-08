@@ -14,11 +14,19 @@ pub(all) enum EditorEvent {
 /// Read-only viewer state controllers may consult while handling an event.
 /// `view_to_model_position` resolves a view position to a model position
 /// through the active `CoordinatesConverter` — Monaco's view→model boundary —
-/// so controllers anchor on the model in line/column space. `pub(all)` for
-/// the same cross-package reason as `EditorEvent`.
+/// so controllers anchor on the model in line/column space. `participants`
+/// are the wrapper's `_participants` (their `suggestHoverAnchor` pass runs
+/// inside `on_event`), `typical_halfwidth_character_width` feeds the
+/// `CONTENT_EMPTY` epsilon arm, and `mouse_posx`/`mouse_posy` are the
+/// recorded pointer position the anchors carry. `pub(all)` for the same
+/// cross-package reason as `EditorEvent`.
 pub(all) struct EditorContext {
   view_model : @view_model.ViewModel?
   view_to_model_position : (@base_common.Position) -> @base_common.Position
+  participants : Array[&HoverParticipant]
+  typical_halfwidth_character_width : Double
+  mouse_posx : Double?
+  mouse_posy : Double?
 }
 
 ///|
@@ -28,46 +36,19 @@ pub(all) struct HoverView {
 } derive(Eq)
 
 ///|
-/// The hovered span in model line/column space, Monaco's `HoverRangeAnchor`
-/// (`range` + the viewer's injected-text discriminator).
-pub(all) struct HoverAnchor {
-  range : @base_common.Range
-  injected_text_index : Int
-} derive(Eq)
-
-///|
-/// Monaco `HoverRangeAnchor.equals`: two range anchors are equal when they cover
-/// the same span (the viewer also keys on the injected-text index so an inlay
-/// hint and the text under it are distinct anchors).
-pub fn hover_anchor_equals(left : HoverAnchor, right : HoverAnchor) -> Bool {
-  left.range == right.range &&
-  left.injected_text_index == right.injected_text_index
-}
-
-///|
-/// Monaco `HoverRangeAnchor.canAdoptVisibleHover`: the visible hover can be kept
-/// for a new anchor when the previous anchor was a range anchor (always true in
-/// the viewer) and the shown position is on the new anchor's start line — i.e.
-/// the two anchors share a model line.
-pub fn hover_anchor_can_adopt(
-  new_anchor : HoverAnchor,
-  last_anchor : HoverAnchor,
-) -> Bool {
-  last_anchor.range.start_line_number == new_anchor.range.start_line_number
-}
-
-///|
 /// Monaco `IHoverPart.isValidForHoverAnchor` (markdown + marker participants):
-/// the part still applies to the new anchor when its range contains the anchor
-/// range (`startColumn <= anchor.range.startColumn && endColumn >=
-/// anchor.range.endColumn`, the source's column-only comparison).
+/// the part still applies to the new anchor when the anchor is a range anchor
+/// and the part's range contains the anchor range (`anchor.type ===
+/// HoverAnchorType.Range && startColumn <= anchor.range.startColumn &&
+/// endColumn >= anchor.range.endColumn`, the source's column-only comparison).
 pub fn hover_part_valid_for_anchor(
   part : HoverPart,
   anchor : HoverAnchor,
 ) -> Bool {
+  guard anchor is HoverRangeAnchor(range=anchor_range, ..) else { return false }
   let range = hover_part_range(part)
-  range.start_column <= anchor.range.start_column &&
-  range.end_column >= anchor.range.end_column
+  range.start_column <= anchor_range.start_column &&
+  range.end_column >= anchor_range.end_column
 }
 
 ///|
@@ -239,21 +220,31 @@ pub fn HoverController::on_event(
   match event {
     MouseMoved(target) =>
       match ctx.view_model {
-        Some(view_model) =>
-          match
-            token_anchor_for_target(
-              view_model,
+        Some(view_model) => {
+          // `showsOrWillShow` (`contentHoverWidgetWrapper.ts:249-261`): find
+          // the anchor candidates and start at the best one; no candidate is
+          // the `_startShowingOrUpdateHover(null)` arm. (The `isResizing` and
+          // code-action-widget early-keeps are sashes/N-A concerns.)
+          let candidates = if target.line_number >= 1 &&
+            target.line_number <= view_model.line_count() {
+            find_anchor_candidates(
+              ctx.participants,
               target,
-              ctx.view_to_model_position,
-            ) {
-            Some((range, injected_text_index)) => {
-              let anchor : HoverAnchor = { range, injected_text_index }
+              target_model_range(target, ctx.view_to_model_position),
+              ctx.typical_halfwidth_character_width,
+              initial_mouse_pos_x?=ctx.mouse_posx,
+              initial_mouse_pos_y?=ctx.mouse_posy,
+            )
+          } else {
+            []
+          }
+          match candidates.get(0) {
+            Some(anchor) =>
               self.start_showing_or_update_hover(
                 anchor, sticky_mouse_getting_closer,
               )
-            }
             None =>
-              // No token under the pointer (Monaco `_startShowingOrUpdateHover(null)`):
+              // No anchor under the pointer (Monaco `_startShowingOrUpdateHover(null)`):
               // a visible hover the pointer is approaching is kept; otherwise hide.
               if sticky_mouse_getting_closer && self.view is Some(_) {
                 (HoverNoEffect, self)
@@ -261,10 +252,31 @@ pub fn HoverController::on_event(
                 (HoverNoEffect, self.cleared())
               }
           }
+        }
         None => (HoverNoEffect, self)
       }
     EscapePressed => (HoverNoEffect, self.cleared())
   }
+}
+
+///|
+/// The hit position as a collapsed model range — Monaco's `target.range`
+/// (model-space by construction there; the viewer's `MouseTarget` is
+/// view-space, so the conversion happens at this seam). `MouseTarget.column`
+/// is zero-based.
+fn target_model_range(
+  target : @viewer_common.MouseTarget,
+  view_to_model_position : (@base_common.Position) -> @base_common.Position,
+) -> @base_common.Range {
+  let position = view_to_model_position(
+    Position(target.line_number, target.column + 1),
+  )
+  Range(
+    position.line_number,
+    position.column,
+    position.line_number,
+    position.column,
+  )
 }
 
 ///|
@@ -532,7 +544,7 @@ pub fn HoverController::set_current_result(
       }
     None => ()
   }
-  let range = hover_parts_range(sorted, result_anchor.range)
+  let range = hover_parts_range(sorted, result_anchor.range())
   let new_view : HoverView = { range, parts: sorted }
   let placement = match self.view {
     Some(existing) =>
@@ -648,8 +660,10 @@ pub fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? 
           match self.anchor {
             Some(anchor) =>
               Some({
-                anchor_range: anchor.range,
-                parts: [LoadingHover(range=anchor.range, message="Loading...")],
+                anchor_range: anchor.range(),
+                parts: [
+                  LoadingHover(range=anchor.range(), message="Loading..."),
+                ],
                 measurable: false,
                 placement: self.placement,
               })
@@ -658,46 +672,4 @@ pub fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? 
         _ => None
       }
   }
-}
-
-///|
-/// The token the target falls in, as a model `Range` plus the injected-text
-/// index. The token's view columns are resolved to model positions through
-/// `view_to_model_position` (the `CoordinatesConverter` boundary), the way
-/// Monaco maps a `MouseTarget`'s view position to the model.
-pub fn token_anchor_for_target(
-  view_model : @view_model.ViewModel,
-  target : @viewer_common.MouseTarget,
-  view_to_model_position : (@base_common.Position) -> @base_common.Position,
-) -> (@base_common.Range, Int)? {
-  if target.token_index < 0 {
-    return None
-  }
-  if target.line_number < 1 || target.line_number > view_model.line_count() {
-    return None
-  }
-  let line = view_model.lines().get_view_line_data(target.line_number)
-  let tokens = line.tokens
-  if target.token_index >= tokens.get_count() {
-    return None
-  }
-  // The token's view columns: `IViewLineTokens` exposes end offsets, so the
-  // start is the previous token's end (or 0 for the first token).
-  let token_start = if target.token_index > 0 {
-    tokens.get_end_offset(target.token_index - 1)
-  } else {
-    0
-  }
-  let token_end = tokens.get_end_offset(target.token_index)
-  // `target.line_number` is the 1-based view line; token columns are 0-based, so
-  // shift them to 1-based `Position` columns.
-  let view_line = target.line_number
-  let start = view_to_model_position(Position(view_line, token_start + 1))
-  let end = view_to_model_position(Position(view_line, token_end + 1))
-  Some(
-    (
-      Range(start.line_number, start.column, end.line_number, end.column),
-      target.injected_text_index,
-    ),
-  )
 }

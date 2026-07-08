@@ -16,10 +16,14 @@ fn HoverController::start_delayed(
   self : HoverController,
   start : Int,
   end : Int,
-  injected_text_index? : Int = -1,
 ) -> (HoverEffect, HoverController) {
   self.start_showing_or_update_hover(
-    { range: Range(1, start + 1, 1, end + 1), injected_text_index },
+    HoverRangeAnchor(
+      priority=0,
+      range=Range(1, start + 1, 1, end + 1),
+      initial_mouse_pos_x=None,
+      initial_mouse_pos_y=None,
+    ),
     false,
   )
 }

@@ -487,7 +487,11 @@ in lines.
      span's midpoint as the pointer stand-in (the offset-anchored code's
      `(start+end)/2`) — querying the span start regressed the wrapped-hover
      browser spec (a string token's start is outside the provider's word
-     range).
+     range). **Superseded (2026-07-08):** the anchor is now Monaco's
+     mouse-position `HoverRangeAnchor` (`hover_anchor.mbt`), so the provider
+     query is `anchor.range.getStartPosition()` verbatim and the midpoint
+     stand-in is gone; the pointer position sits inside the provider's word
+     range by construction, and the wrapped-hover spec stays green.
    - **`isValidForHoverAnchor`** now transcribes the source's column-only
      comparison (markdown/marker participants) instead of offset
      containment.

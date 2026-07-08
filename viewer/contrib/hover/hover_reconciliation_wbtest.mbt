@@ -4,7 +4,12 @@
 
 ///|
 fn anchor_at(start : Int, end : Int, line : Int) -> HoverAnchor {
-  { range: Range(line, start + 1, line, end + 1), injected_text_index: -1 }
+  HoverRangeAnchor(
+    priority=0,
+    range=Range(line, start + 1, line, end + 1),
+    initial_mouse_pos_x=None,
+    initial_mouse_pos_y=None,
+  )
 }
 
 ///|

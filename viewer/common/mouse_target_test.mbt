@@ -165,6 +165,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  token_index: -1,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: -1,
       #|}
     ),
   )
@@ -179,6 +180,7 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|  token_index: 2,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: -1,
       #|}
     ),
   )
@@ -189,10 +191,11 @@ test "hit test resolves gutter, text, and empty content targets" {
       #|{
       #|  kind: ContentEmpty,
       #|  line_number: 1,
-      #|  column: 30,
+      #|  column: 9,
       #|  token_index: -1,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: 168,
       #|}
     ),
   )
@@ -249,6 +252,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  token_index: 1,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: -1,
       #|}
     ),
   )
@@ -263,6 +267,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  token_index: -1,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: -1,
       #|}
     ),
   )
@@ -277,6 +282,7 @@ test "hit test maps scrolled coordinates and below-content space" {
       #|  token_index: -1,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: -1,
       #|}
     ),
   )
@@ -297,6 +303,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  token_index: -1,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: -1,
       #|}
     ),
   )
@@ -317,6 +324,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  token_index: 1,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: -1,
       #|}
     ),
   )
@@ -331,6 +339,7 @@ test "hit test accounts for view zones displacing following lines" {
       #|  token_index: 2,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: -1,
       #|}
     ),
   )
@@ -347,10 +356,11 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|{
       #|  kind: ContentEmpty,
       #|  line_number: 4,
-      #|  column: 3,
+      #|  column: 0,
       #|  token_index: -1,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: 20,
       #|}
     ),
   )
@@ -375,6 +385,7 @@ test "hit test reports empty lines and windowed-out lines as content empty" {
       #|  token_index: -1,
       #|  injected_text_index: -1,
       #|  gutter_offset_x: 0,
+      #|  horizontal_distance_to_text: -1,
       #|}
     ),
   )

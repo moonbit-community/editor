@@ -3,6 +3,13 @@ fn Viewer::editor_context(self : Viewer) -> @hover.EditorContext {
   {
     view_model: self.view_model,
     view_to_model_position: view_position => self.view_to_model(view_position),
+    // The wrapper's `_participants` for the `suggestHoverAnchor` pass;
+    // participants are stateless captures of the services, so a per-dispatch
+    // build matches Monaco's per-editor set observably.
+    participants: self.make_hover_computer().participants,
+    typical_halfwidth_character_width: self.font_info.typical_halfwidth_character_width,
+    mouse_posx: Some(self.hover_mouse_posx),
+    mouse_posy: Some(self.hover_mouse_posy),
   }
 }
 
@@ -424,12 +431,7 @@ fn Viewer::compute_hover_sync(
         match
           self
           .make_hover_computer()
-          .compute_sync(
-            model,
-            anchor.range,
-            injected_text_index=anchor.injected_text_index,
-            inlay_hints=self.inlay_hints,
-          ) {
+          .compute_sync(model, anchor, inlay_hints=self.inlay_hints) {
           Some(hover) => hover.parts
           None => []
         }
@@ -447,17 +449,11 @@ fn Viewer::kick_hover_async(self : Viewer, token : Int) -> Unit {
   match (self.text_model, self.hover.anchor) {
     (Some(model), Some(anchor)) => {
       let computer = self.make_hover_computer()
-      let range = anchor.range
-      let injected_text_index = anchor.injected_text_index
       let inlay_hints = self.inlay_hints
       @js.async_run(() => {
-        computer.compute_async_each(
-          model,
-          range,
-          injected_text_index~,
-          inlay_hints~,
-          emit=parts => self.hover_async_item(model, token, parts),
-        )
+        computer.compute_async_each(model, anchor, inlay_hints~, emit=parts => {
+          self.hover_async_item(model, token, parts)
+        })
         self.hover_async_done(model, token)
       })
     }

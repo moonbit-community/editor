@@ -21,20 +21,32 @@ pub(all) struct ComputedHover {
 /// Inputs shared by synchronous and asynchronous hover participants. Mirrors
 /// Monaco's `(anchor, lineDecorations, source)` compute arguments: it carries
 /// only the hovered state, never a services bag — participants capture the
-/// services they need at construction instead.
+/// services they need at construction instead. (`inlay_hints` backs the
+/// foreign anchor's payload lookup; Monaco's anchor carries the rendered
+/// hint object itself.)
 pub(all) struct HoverComputeContext {
   model : @model.TextModel
-  anchor_range : @base_common.Range
-  injected_text_index : Int
+  anchor : HoverAnchor
   inlay_hints : Array[@language.InlayHint]
 }
 
 ///|
 /// Pluggable content-hover participant. Synchronous participants provide data
 /// already in viewer state; asynchronous participants may call language
-/// providers.
+/// providers. `suggest_hover_anchor` is Monaco's optional
+/// `IEditorHoverParticipant.suggestHoverAnchor(mouseEvent)` — participants
+/// without one answer `None`; the viewer resolves the hit position to a
+/// collapsed model range at the seam and passes the recorded pointer
+/// position alongside.
 pub(open) trait HoverParticipant {
   fn ordinal(Self) -> Int noraise
+  fn suggest_hover_anchor(
+    Self,
+    @viewer_common.MouseTarget,
+    @base_common.Range,
+    Double?,
+    Double?,
+  ) -> HoverAnchor? noraise
   fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart] noraise
   async fn compute_async(Self, HoverComputeContext) -> Array[HoverPart] noraise
 }
@@ -72,24 +84,72 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn ordinal(_self) {
 }
 
 ///|
-/// Computes marker hover parts from the current marker decorations.
+/// The marker participant suggests no anchor of its own.
+pub impl HoverParticipant for MarkerHoverParticipant with fn suggest_hover_anchor(
+  _self,
+  _target,
+  _target_model_range,
+  _initial_mouse_pos_x,
+  _initial_mouse_pos_y,
+) {
+  None
+}
+
+///|
+/// Computes marker hover parts from the current marker decorations —
+/// `computeSync` (`markerHoverParticipant.ts:74-101`) with
+/// `ContentHoverComputer._getLineDecorations`'s anchor-line column filter
+/// (`contentHoverComputer.ts:29-60`) folded in: the viewer's marker
+/// decorations arrive as live `(range, marker)` pairs rather than as line
+/// decorations, so the containment check — with the `showIfCollapsed` ±1
+/// relaxation; marker decorations always set `showIfCollapsed` — applies
+/// here. Part ranges clamp to the anchor's start line, per the source.
 pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
   self,
   ctx,
 ) {
-  if ctx.injected_text_index >= 0 {
+  let anchor = ctx.anchor
+  if !(anchor is HoverRangeAnchor(..)) && !anchor.supports_marker_hover() {
     return []
   }
+  let anchor_range = anchor.range()
+  let line_number = anchor_range.start_line_number
+  if line_number > ctx.model.get_line_count() {
+    // invalid line (`contentHoverComputer.ts:37-40`)
+    return []
+  }
+  let max_column = ctx.model.get_line_max_column(line_number)
   let parts : Array[HoverPart] = []
-  // The live markers carry the transform's tracked line/column `Range`, the
-  // hover's native span.
-  let query = ctx.anchor_range
   for entry in self.marker_decorations.get_live_markers(ctx.model.uri) {
     let (range, marker) = entry
-    if @base_common.Range::are_intersecting(range, query) ||
-      range.contains_position(query.get_start_position()) {
-      parts.push(MarkerHover(range~, marker~))
+    // `editor.getLineDecorations(lineNumber)`: only decorations touching the
+    // anchor line participate.
+    if range.start_line_number > line_number ||
+      range.end_line_number < line_number {
+      continue
     }
+    let start_column = if range.start_line_number == line_number {
+      range.start_column
+    } else {
+      1
+    }
+    let end_column = if range.end_line_number == line_number {
+      range.end_column
+    } else {
+      max_column
+    }
+    // Relax check around `showIfCollapsed` decorations to also include +/- 1
+    // character (`contentHoverComputer.ts:52-57`).
+    if start_column > anchor_range.start_column + 1 ||
+      anchor_range.end_column - 1 > end_column {
+      continue
+    }
+    parts.push(
+      MarkerHover(
+        range=Range(line_number, start_column, line_number, end_column),
+        marker~,
+      ),
+    )
   }
   parts
 }
@@ -126,6 +186,18 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn ordinal(_self) {
 }
 
 ///|
+/// The markdown participant suggests no anchor of its own.
+pub impl HoverParticipant for MarkdownHoverParticipant with fn suggest_hover_anchor(
+  _self,
+  _target,
+  _target_model_range,
+  _initial_mouse_pos_x,
+  _initial_mouse_pos_y,
+) {
+  None
+}
+
+///|
 /// Markdown provider hovers are asynchronous only.
 pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_sync(
   _self,
@@ -135,23 +207,20 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_sync(
 }
 
 ///|
-/// Queries language hover providers for the anchor offset.
+/// Queries language hover providers at the anchor position — `computeAsync`
+/// (`markdownHoverParticipant.ts:168-171`): range anchors only, queried at
+/// `anchor.range.getStartPosition()` (the mouse position). The languages
+/// registry is offset-addressed, so the conversion happens at this query
+/// boundary only.
 pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
   self,
   ctx,
 ) {
-  if ctx.injected_text_index >= 0 {
+  guard ctx.anchor is HoverRangeAnchor(range=anchor_range, ..) else {
     return []
   }
-  // Monaco queries providers at `anchor.range.getStartPosition()` — but its
-  // anchor range is the *mouse position*; the viewer's anchor is the hovered
-  // token's span (the recorded deviation), whose midpoint stands in for the
-  // pointer. The languages registry is offset-addressed, so the conversion
-  // happens at this query boundary only.
-  let start = ctx.model.get_offset_at(ctx.anchor_range.get_start_position())
-  let end = ctx.model.get_offset_at(ctx.anchor_range.get_end_position())
-  match
-    self.languages.hover_at(ctx.model, (start + end) / 2, self.log_service) {
+  let offset = ctx.model.get_offset_at(anchor_range.get_start_position())
+  match self.languages.hover_at(ctx.model, offset, self.log_service) {
     Some(hover) =>
       if hover.contents.length() == 0 {
         []
@@ -187,19 +256,51 @@ pub impl HoverParticipant for InlayHintsHover with fn ordinal(_self) {
 }
 
 ///|
-/// Computes tooltip hovers for injected inlay-hint text.
+/// `InlayHintsHover.suggestHoverAnchor` (`inlayHintsHover.ts:59-72`): a
+/// content hit inside injected inlay-hint text anchors a foreign element
+/// with the hint as payload — `InlayHintsHoverAnchor`: priority 10,
+/// `supportsMarkerHover` true.
+pub impl HoverParticipant for InlayHintsHover with fn suggest_hover_anchor(
+  _self,
+  target,
+  target_model_range,
+  initial_mouse_pos_x,
+  initial_mouse_pos_y,
+) {
+  if !(target.kind is ContentText) || target.injected_text_index < 0 {
+    return None
+  }
+  Some(
+    HoverForeignElementAnchor(
+      priority=10,
+      injected_text_index=target.injected_text_index,
+      range=target_model_range,
+      initial_mouse_pos_x~,
+      initial_mouse_pos_y~,
+      supports_marker_hover=true,
+    ),
+  )
+}
+
+///|
+/// Computes tooltip hovers for injected inlay-hint text — gated on this
+/// participant's own foreign anchor, Monaco's `anchor instanceof
+/// InlayHintsHoverAnchor` (`inlayHintsHover.ts:79`; the tooltip itself is
+/// local viewer state, so the compute stays synchronous — recorded
+/// deviation).
 pub impl HoverParticipant for InlayHintsHover with fn compute_sync(self, ctx) {
-  if ctx.injected_text_index < 0 {
+  guard ctx.anchor
+    is HoverForeignElementAnchor(injected_text_index~, range=anchor_range, ..) else {
     return []
   }
-  match ctx.inlay_hints.get(ctx.injected_text_index) {
+  match ctx.inlay_hints.get(injected_text_index) {
     Some(hint) =>
       if hint.tooltip.length() == 0 {
         []
       } else {
         [
           MarkdownHover(
-            range=ctx.anchor_range,
+            range=anchor_range,
             contents=hint.tooltip,
             ordinal=self.ordinal(),
           ),
@@ -236,21 +337,15 @@ pub fn ContentHoverComputer::new(
 pub fn ContentHoverComputer::compute_sync(
   self : ContentHoverComputer,
   model : @model.TextModel,
-  anchor_range : @base_common.Range,
-  injected_text_index? : Int = -1,
+  anchor : HoverAnchor,
   inlay_hints? : Array[@language.InlayHint] = [],
 ) -> ComputedHover? {
-  let ctx : HoverComputeContext = {
-    model,
-    anchor_range,
-    injected_text_index,
-    inlay_hints,
-  }
+  let ctx : HoverComputeContext = { model, anchor, inlay_hints }
   let parts : Array[HoverPart] = []
   for participant in self.participants {
     parts.append(participant.compute_sync(ctx))
   }
-  computed_hover_from_parts(anchor_range, parts)
+  computed_hover_from_parts(anchor.range(), parts)
 }
 
 ///|
@@ -258,21 +353,15 @@ pub fn ContentHoverComputer::compute_sync(
 pub async fn ContentHoverComputer::compute_async(
   self : ContentHoverComputer,
   model : @model.TextModel,
-  anchor_range : @base_common.Range,
-  injected_text_index? : Int = -1,
+  anchor : HoverAnchor,
   inlay_hints? : Array[@language.InlayHint] = [],
 ) -> ComputedHover? noraise {
-  let ctx : HoverComputeContext = {
-    model,
-    anchor_range,
-    injected_text_index,
-    inlay_hints,
-  }
+  let ctx : HoverComputeContext = { model, anchor, inlay_hints }
   let parts : Array[HoverPart] = []
   for participant in self.participants {
     parts.append(participant.compute_async(ctx))
   }
-  computed_hover_from_parts(anchor_range, parts)
+  computed_hover_from_parts(anchor.range(), parts)
 }
 
 ///|
@@ -283,17 +372,11 @@ pub async fn ContentHoverComputer::compute_async(
 pub async fn ContentHoverComputer::compute_async_each(
   self : ContentHoverComputer,
   model : @model.TextModel,
-  anchor_range : @base_common.Range,
-  injected_text_index? : Int = -1,
+  anchor : HoverAnchor,
   inlay_hints? : Array[@language.InlayHint] = [],
   emit~ : (Array[HoverPart]) -> Unit,
 ) -> Unit noraise {
-  let ctx : HoverComputeContext = {
-    model,
-    anchor_range,
-    injected_text_index,
-    inlay_hints,
-  }
+  let ctx : HoverComputeContext = { model, anchor, inlay_hints }
   for participant in self.participants {
     let parts = participant.compute_async(ctx)
     if parts.length() > 0 {

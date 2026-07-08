@@ -26,6 +26,7 @@ pub(all) struct MouseTarget {
   token_index : Int
   injected_text_index : Int
   gutter_offset_x : Double
+  horizontal_distance_to_text : Double
 } derive(Eq, @debug.Debug)
 
 pub(all) enum MouseTargetType {

@@ -127,5 +127,8 @@ fn Viewer::dom_refine_content_target(
       Position(line_number, column1),
     ),
     gutter_offset_x: 0.0,
+    // This refinement only feeds the mouse-down/selection path; the hover's
+    // CONTENT_EMPTY epsilon arm reads the monospace hit test's distance.
+    horizontal_distance_to_text: -1.0,
   }
 }

@@ -20,6 +20,8 @@ pub fn compute_hover_positions(@moonbit-community/editor/base/common.Range, Arra
 
 pub fn filter_hover_parts(Array[HoverPart], HoverAnchor) -> Array[HoverPart]
 
+pub fn find_anchor_candidates(Array[&HoverParticipant], @moonbit-community/editor/viewer/common.MouseTarget, @moonbit-community/editor/base/common.Range, Double, initial_mouse_pos_x? : Double, initial_mouse_pos_y? : Double) -> Array[HoverAnchor]
+
 pub fn hover_anchor_can_adopt(HoverAnchor, HoverAnchor) -> Bool
 
 pub fn hover_anchor_equals(HoverAnchor, HoverAnchor) -> Bool
@@ -64,8 +66,6 @@ pub fn should_reschedule_hover(Bool, Bool, Int) -> Bool
 
 pub fn should_show_hover(HoverEnabled, MultiCursorModifier, EventModifiers) -> Bool
 
-pub fn token_anchor_for_target(@view_model.ViewModel, @moonbit-community/editor/viewer/common.MouseTarget, (@moonbit-community/editor/base/common.Position) -> @moonbit-community/editor/base/common.Position) -> (@moonbit-community/editor/base/common.Range, Int)?
-
 // Errors
 
 // Types and methods
@@ -77,14 +77,18 @@ pub(all) struct ComputedHover {
 pub(all) struct ContentHoverComputer {
   participants : Array[&HoverParticipant]
 }
-pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, @moonbit-community/editor/base/common.Range, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
-pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, @moonbit-community/editor/base/common.Range, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint], emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
-pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, @moonbit-community/editor/base/common.Range, injected_text_index? : Int, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
+pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
+pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint], emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
+pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
 pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
 
 pub(all) struct EditorContext {
   view_model : @view_model.ViewModel?
   view_to_model_position : (@moonbit-community/editor/base/common.Position) -> @moonbit-community/editor/base/common.Position
+  participants : Array[&HoverParticipant]
+  typical_halfwidth_character_width : Double
+  mouse_posx : Double?
+  mouse_posy : Double?
 }
 
 pub(all) enum EditorEvent {
@@ -99,15 +103,23 @@ pub(all) struct EventModifiers {
 }
 pub fn EventModifiers::none() -> Self
 
-pub(all) struct HoverAnchor {
-  range : @moonbit-community/editor/base/common.Range
-  injected_text_index : Int
+pub(all) enum HoverAnchor {
+  HoverRangeAnchor(priority~ : Int, range~ : @moonbit-community/editor/base/common.Range, initial_mouse_pos_x~ : Double?, initial_mouse_pos_y~ : Double?)
+  HoverForeignElementAnchor(priority~ : Int, injected_text_index~ : Int, range~ : @moonbit-community/editor/base/common.Range, initial_mouse_pos_x~ : Double?, initial_mouse_pos_y~ : Double?, supports_marker_hover~ : Bool)
 } derive(Eq)
+pub fn HoverAnchor::anchor_type(Self) -> HoverAnchorType
+pub fn HoverAnchor::priority(Self) -> Int
+pub fn HoverAnchor::range(Self) -> @moonbit-community/editor/base/common.Range
+pub fn HoverAnchor::supports_marker_hover(Self) -> Bool
+
+pub(all) enum HoverAnchorType {
+  Range
+  ForeignElement
+} derive(Eq, @debug.Debug)
 
 pub(all) struct HoverComputeContext {
   model : @model.TextModel
-  anchor_range : @moonbit-community/editor/base/common.Range
-  injected_text_index : Int
+  anchor : HoverAnchor
   inlay_hints : Array[@language.InlayHint]
 }
 
@@ -256,6 +268,7 @@ pub fn MultiCursorModifier::from_config(String, mac~ : Bool) -> Self
 // Traits
 pub(open) trait HoverParticipant {
   fn ordinal(Self) -> Int
+  fn suggest_hover_anchor(Self, @moonbit-community/editor/viewer/common.MouseTarget, @moonbit-community/editor/base/common.Range, Double?, Double?) -> HoverAnchor?
   fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart]
   async fn compute_async(Self, HoverComputeContext) -> Array[HoverPart] noraise
 }

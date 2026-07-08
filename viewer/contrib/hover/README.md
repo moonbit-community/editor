@@ -14,8 +14,14 @@ into it and mounts the widget DOM through
   `on_event(EditorEvent, EditorContext)`; the `Viewer`-facing dispatch glue
   stays in the root package (foreign-method rule).
 - Hover-part types and the merged result: `HoverPart`, `ComputedHover`,
-  `HoverComputeContext` (the compute inputs — model, anchor, offset, inlay
-  hints; never a services bag).
+  `HoverComputeContext` (the compute inputs — model, anchor, inlay hints;
+  never a services bag).
+- The `hoverTypes.ts` anchor types (`hover_anchor.mbt`): `HoverAnchor` as
+  Monaco's `HoverRangeAnchor` (the mouse position as a collapsed model range)
+  / `HoverForeignElementAnchor` (the inlay participant's, carrying the hint
+  index), with the source's `equals`/`canAdoptVisibleHover` semantics, plus
+  `find_anchor_candidates` — the wrapper's `suggestHoverAnchor` +
+  CONTENT_TEXT / CONTENT_EMPTY-epsilon candidate pass.
 - The `HoverParticipant` trait and the built-in participants — marker,
   inlay-hint, and markdown — each capturing the services it needs at
   construction (Monaco's DI constructors), described by

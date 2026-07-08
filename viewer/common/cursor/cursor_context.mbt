@@ -3,15 +3,18 @@
 /// Monaco's `cursorContext.ts` `CursorContext`. Monaco's holds the model, view
 /// model, coordinates converter, and cursor config; the immutable readonly
 /// viewer needs only the coordinates converter to bridge model and view
-/// positions (no validation against a mutating model, no edit config).
+/// positions (no validation against a mutating model, no edit config). The
+/// converter is held through the `ICoordinatesConverter` interface
+/// (`viewer/common/core`), like Monaco's
+/// `coordinatesConverter: ICoordinatesConverter` member.
 pub struct CursorContext {
-  coordinates_converter : @view_model.ProjectedCoordinatesConverter
+  coordinates_converter : &@core.CoordinatesConverter
 }
 
 ///|
 /// Builds a cursor context from the active view model's coordinates converter.
 pub fn CursorContext::new(
-  coordinates_converter : @view_model.ProjectedCoordinatesConverter,
+  coordinates_converter : &@core.CoordinatesConverter,
 ) -> CursorContext {
   { coordinates_converter, }
 }

@@ -351,7 +351,7 @@ fn Viewer::select_agent_feedback_line(self : Viewer, line : Int) -> Unit {
   }
   let max_column = model.snapshot.line_text(line - 1).length() + 1
   self.set_selection(
-    @view_model.Selection::from_positions(
+    @core.Selection::from_positions(
       Position(line, 1),
       Position(line, max_column),
     ),

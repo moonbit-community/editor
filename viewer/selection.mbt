@@ -21,7 +21,7 @@ fn Viewer::selection_view_range(self : Viewer) -> @base_common.Range? {
 /// `set_position` still renders. `None` until a cursor exists (deviation:
 /// Monaco always has a cursor at (1,1); the viewer creates one lazily on the
 /// first click / `set_position`, so no caret shows before that).
-fn Viewer::view_selection(self : Viewer) -> @view_model.Selection? {
+fn Viewer::view_selection(self : Viewer) -> @core.Selection? {
   match self.cursor {
     Some(controller) => Some(controller.get_view_selection())
     None => None
@@ -39,7 +39,7 @@ pub fn Viewer::set_position(
   self : Viewer,
   position : @base_common.Position,
 ) -> Unit {
-  self.set_selection(@view_model.Selection::new(position, position))
+  self.set_selection(@core.Selection::new(position, position))
 }
 
 ///|
@@ -54,7 +54,7 @@ pub fn Viewer::set_position(
 /// no-op, no event. Never scrolls (see `set_position`).
 pub fn Viewer::set_selection(
   self : Viewer,
-  selection : @view_model.Selection,
+  selection : @core.Selection,
 ) -> Unit {
   guard self.text_model is Some(model) else { return }
   guard self.ensure_cursor() is Some(controller) else { return }
@@ -118,7 +118,7 @@ pub fn Viewer::set_selection(
 /// readonly viewer's mutators never throw).
 pub fn Viewer::set_selections(
   self : Viewer,
-  selections : Array[@view_model.Selection],
+  selections : Array[@core.Selection],
 ) -> Unit {
   guard selections.length() > 0 else { return }
   self.set_selection(selections[0])
@@ -182,7 +182,7 @@ fn Viewer::handle_copy_event(self : Viewer, event : @rdom.Event) -> Bool {
 ///|
 fn Viewer::get_rich_text_to_copy(
   self : Viewer,
-  selection : @view_model.Selection,
+  selection : @core.Selection,
   snapshot : @model.TextSnapshot,
 ) -> String {
   match self.text_model {
@@ -209,7 +209,7 @@ fn Viewer::get_rich_text_to_copy(
 /// it here in the controller layer. The offset round-trip is allowed only
 /// because this is the model/clipboard boundary (the port's rule #3).
 fn selection_normalized_range(
-  selection : @view_model.Selection,
+  selection : @core.Selection,
   snapshot : @model.TextSnapshot,
 ) -> @base_common.OffsetRange {
   OffsetRange(
@@ -224,7 +224,7 @@ fn selection_normalized_range(
 ///|
 /// Plain selected text for clipboard writes.
 fn selection_plain_text_to_copy(
-  selection : @view_model.Selection,
+  selection : @core.Selection,
   snapshot : @model.TextSnapshot,
 ) -> String {
   snapshot.slice(selection_normalized_range(selection, snapshot))
@@ -234,7 +234,7 @@ fn selection_plain_text_to_copy(
 /// Minimal HTML clipboard payload preserving preformatted text, used as the
 /// fallback when no model is available to produce styled spans.
 fn selection_rich_text_to_copy(
-  selection : @view_model.Selection,
+  selection : @core.Selection,
   snapshot : @model.TextSnapshot,
 ) -> String {
   "<pre class=\"readonly-editor-copy\">" +

@@ -4,6 +4,7 @@ package "moonbit-community/editor/viewer/common/view_model"
 import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/config",
+  "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/tokens",
@@ -104,8 +105,8 @@ pub struct ProjectedCoordinatesConverter {
   lines : ViewModelLinesFromProjectedModel
 }
 pub fn ProjectedCoordinatesConverter::new(ViewModelLinesFromProjectedModel) -> Self
+pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter
 pub impl @inline_decorations.CoordinatesConverter for ProjectedCoordinatesConverter
-pub impl CoordinatesConverter for ProjectedCoordinatesConverter
 
 pub(all) struct ProjectedLinePart {
   start : Int
@@ -139,24 +140,6 @@ pub(all) enum RenderValidationDecorations {
   Off
 } derive(Eq, @debug.Debug)
 
-pub(all) struct Selection {
-  selection_start : @common.Position
-  position : @common.Position
-} derive(Eq, @debug.Debug)
-pub fn Selection::direction(Self) -> SelectionDirection
-pub fn Selection::end(Self) -> @common.Position
-pub fn Selection::from_positions(@common.Position, @common.Position) -> Self
-pub fn Selection::get_position(Self) -> @common.Position
-pub fn Selection::get_selection_start(Self) -> @common.Position
-pub fn Selection::is_empty(Self) -> Bool
-pub fn Selection::new(@common.Position, @common.Position) -> Self
-pub fn Selection::start(Self) -> @common.Position
-
-pub(all) enum SelectionDirection {
-  LTR
-  RTL
-} derive(Eq, @debug.Debug)
-
 pub(all) struct ViewLineData {
   content : String
   continues_with_wrapped_line : Bool
@@ -177,7 +160,7 @@ pub struct ViewModel {
 }
 pub fn ViewModel::ViewModel(@model.TextModel) -> Self
 pub fn ViewModel::clamp_window(Self, @view_layout.LineWindow) -> @view_layout.LineWindow
-pub fn ViewModel::coordinates_converter(Self) -> ProjectedCoordinatesConverter
+pub fn ViewModel::coordinates_converter(Self) -> &@core.CoordinatesConverter
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
 pub fn ViewModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModel::get_line_max_column(Self, Int) -> Int
@@ -266,10 +249,4 @@ pub type ViewDecorationsCollection = @inline_decorations.ViewDecorationsCollecti
 pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]
 
 // Traits
-pub(open) trait CoordinatesConverter {
-  fn model_position_to_view_position(Self, @common.Position, affinity? : @model.PositionAffinity) -> @common.Position
-  fn view_position_to_model_position(Self, @common.Position) -> @common.Position
-  fn model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
-  fn view_range_to_model_range(Self, @common.Range) -> @common.Range
-}
 

@@ -489,8 +489,8 @@ fn line_injected_text_from_decorations(
 ///|
 /// Coordinate converter over the projected line collection — the
 /// `CoordinatesConverter` class of `viewModelLines.ts:1073`. (That plain name
-/// is taken by this package's `ICoordinatesConverter` trait, so the class
-/// keeps the `Projected` prefix.)
+/// is taken by the `ICoordinatesConverter` trait in `viewer/common/core`, so
+/// the class keeps the `Projected` prefix.)
 pub struct ProjectedCoordinatesConverter {
   lines : ViewModelLinesFromProjectedModel
 }
@@ -505,7 +505,7 @@ pub fn ProjectedCoordinatesConverter::new(
 
 ///|
 /// Converts model positions through the line collection.
-pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_to_view_position(
+pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_to_view_position(
   self,
   position,
   affinity? : @model.PositionAffinity,
@@ -519,7 +519,7 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_po
 
 ///|
 /// Converts view positions through the line collection.
-pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_position_to_model_position(
+pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn view_position_to_model_position(
   self,
   position,
 ) {
@@ -531,7 +531,7 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_pos
 
 ///|
 /// Converts model ranges through the line collection.
-pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_range_to_view_range(
+pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn model_range_to_view_range(
   self,
   range,
   affinity? : @model.PositionAffinity,
@@ -541,7 +541,7 @@ pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn model_ra
 
 ///|
 /// Converts view ranges through the line collection.
-pub impl CoordinatesConverter for ProjectedCoordinatesConverter with fn view_range_to_model_range(
+pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn view_range_to_model_range(
   self,
   range,
 ) {

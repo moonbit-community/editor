@@ -1,4 +1,4 @@
 import {
   "moonbit-community/editor/base/common" @base_common,
-  "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/editor/viewer/common/core",
 }

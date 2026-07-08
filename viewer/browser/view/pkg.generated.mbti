@@ -13,6 +13,7 @@ import {
   "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
+  "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom",
@@ -87,7 +88,7 @@ pub(all) struct ViewRenderInput {
   layout : @view_layout.ViewLayout
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   selection_view_range : @common.Range?
-  view_selection : @view_model.Selection?
+  view_selection : @core.Selection?
   generation : Int
   decorations_generation : Int
   gutter_width : Double

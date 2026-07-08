@@ -16,7 +16,7 @@ pub(all) struct ViewRenderInput {
   /// `ViewCursorStateChangedEvent.selections[0]`. Unlike
   /// `selection_view_range` (which is `None` when collapsed), this carries the
   /// caret position of an empty selection — the cursor part renders from it.
-  view_selection : @view_model.Selection?
+  view_selection : @core.Selection?
   generation : Int
   /// Bumped by the `Viewer` per model `onDidChangeDecorations` event; a
   /// change dispatches `ViewDecorationsChanged` (plan Deviation 3).
@@ -154,7 +154,7 @@ priv struct ViewRenderSnapshot {
   dimensions : @view_layout.ScrollDimensions
   gutter_width : Double
   space_width : Double
-  view_selection : @view_model.Selection?
+  view_selection : @core.Selection?
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   editor_has_focus : Bool
 }

@@ -78,7 +78,7 @@ test "selection changes without editor focus never open the input" {
     let service = viewer.services.agent_feedback
     service.set_feedback_enabled(test_model_uri(), true)
     viewer.set_selection(
-      @view_model.Selection::from_positions(Position(1, 1), Position(1, 6)),
+      @core.Selection::from_positions(Position(1, 1), Position(1, 6)),
     )
     // The unattached harness has no DOM focus, so `_onSelectionChanged`'s
     // `hasTextFocus` gate holds the input closed (and no widget DOM is

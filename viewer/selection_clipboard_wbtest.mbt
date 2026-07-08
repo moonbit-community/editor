@@ -7,8 +7,8 @@ fn selection_from_offsets(
   snapshot : @model.TextSnapshot,
   anchor_offset : Int,
   focus_offset : Int,
-) -> @view_model.Selection {
-  @view_model.Selection::new(
+) -> @core.Selection {
+  @core.Selection::new(
     snapshot.get_position_at(anchor_offset),
     snapshot.get_position_at(focus_offset),
   )

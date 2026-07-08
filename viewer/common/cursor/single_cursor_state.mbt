@@ -62,12 +62,12 @@ fn SingleCursorState::selection_start_is_empty(
 /// end.
 pub fn SingleCursorState::selection(
   self : SingleCursorState,
-) -> @view_model.Selection {
+) -> @core.Selection {
   if self.selection_start_is_empty() ||
     not_before_or_equal(self.position, self.selection_start_start) {
-    @view_model.Selection::new(self.selection_start_start, self.position)
+    @core.Selection::new(self.selection_start_start, self.position)
   } else {
-    @view_model.Selection::new(self.selection_start_end, self.position)
+    @core.Selection::new(self.selection_start_end, self.position)
   }
 }
 

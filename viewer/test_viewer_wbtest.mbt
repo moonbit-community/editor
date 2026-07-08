@@ -124,8 +124,8 @@ fn assert_position(
 /// Selection equality by endpoints (anchor + active), for the same `Show` reason
 /// as `assert_position`.
 fn assert_selection_eq(
-  actual : @view_model.Selection,
-  expected : @view_model.Selection,
+  actual : @core.Selection,
+  expected : @core.Selection,
 ) -> Unit raise {
   assert_position(actual.get_selection_start(), expected.get_selection_start())
   assert_position(actual.get_position(), expected.get_position())
@@ -133,10 +133,7 @@ fn assert_selection_eq(
 
 ///|
 /// `assertCursor`: compare the controller's model selection to an expected one.
-fn assert_cursor(
-  viewer : Viewer,
-  expected : @view_model.Selection,
-) -> Unit raise {
+fn assert_cursor(viewer : Viewer, expected : @core.Selection) -> Unit raise {
   assert_selection_eq(viewer.test_cursor().get_model_selection(), expected)
 }
 

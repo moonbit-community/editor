@@ -212,14 +212,12 @@ pub fn Viewer::get_position(self : Viewer) -> @base_common.Position? {
 /// The primary cursor's model selection, Monaco's `getSelection` (`cew:783`) →
 /// `viewModel.getSelection`. No model → `null`; no cursor yet → a collapsed
 /// selection at `(1,1)`.
-pub fn Viewer::get_selection(self : Viewer) -> @view_model.Selection? {
+pub fn Viewer::get_selection(self : Viewer) -> @core.Selection? {
   guard self.text_model is Some(_) else { return None }
   match self.cursor {
     Some(controller) => Some(controller.get_model_selection())
     None =>
-      Some(
-        @view_model.Selection::from_positions(Position(1, 1), Position(1, 1)),
-      )
+      Some(@core.Selection::from_positions(Position(1, 1), Position(1, 1)))
   }
 }
 
@@ -227,7 +225,7 @@ pub fn Viewer::get_selection(self : Viewer) -> @view_model.Selection? {
 /// All cursor model selections, Monaco's `getSelections` (`cew:790`). The viewer
 /// is single-selection, so this is a 1-element array (a documented prior scope
 /// cut). No model → `null`.
-pub fn Viewer::get_selections(self : Viewer) -> Array[@view_model.Selection]? {
+pub fn Viewer::get_selections(self : Viewer) -> Array[@core.Selection]? {
   match self.get_selection() {
     Some(selection) => Some([selection])
     None => None

@@ -1,26 +1,4 @@
 ///|
-/// Converts between model document coordinates and rendered view coordinates,
-/// `ICoordinatesConverter` (`coordinatesConverter.ts:15-30`) with Monaco's
-/// `convert` prefix dropped. `affinity` picks the side of an injected-text or
-/// wrap boundary; absent it means the Monaco default of that member — `None`
-/// for positions (`viewModelLines.ts:848`) and `Left` for ranges (`:892`,
-/// where it only affects empty ranges).
-pub(open) trait CoordinatesConverter {
-  fn model_position_to_view_position(
-    Self,
-    @base_common.Position,
-    affinity? : @model.PositionAffinity,
-  ) -> @base_common.Position
-  fn view_position_to_model_position(Self, @base_common.Position) -> @base_common.Position
-  fn model_range_to_view_range(
-    Self,
-    @base_common.Range,
-    affinity? : @model.PositionAffinity,
-  ) -> @base_common.Range
-  fn view_range_to_model_range(Self, @base_common.Range) -> @base_common.Range
-}
-
-///|
 /// Backend-neutral document view model: the backing text model plus line
 /// projection, decorations, and coordinate conversion. Long-lived like
 /// Monaco's `ViewModel` (`viewModelImpl.ts`): constructed once at model
@@ -150,10 +128,12 @@ pub fn ViewModel::decorations(self : ViewModel) -> ViewModelDecorations {
 }
 
 ///|
-/// Coordinate converter for this view model.
+/// Coordinate converter for this view model, typed as the interface like
+/// Monaco's `public readonly coordinatesConverter: ICoordinatesConverter`
+/// (`viewModelImpl.ts:62,122`).
 pub fn ViewModel::coordinates_converter(
   self : ViewModel,
-) -> ProjectedCoordinatesConverter {
+) -> &@core.CoordinatesConverter {
   self.coordinates_converter
 }
 

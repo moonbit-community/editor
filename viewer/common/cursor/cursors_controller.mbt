@@ -67,7 +67,7 @@ pub fn CursorsController::set_model_cursor_state(
 /// The selection in model coordinates (for the clipboard boundary).
 pub fn CursorsController::get_model_selection(
   self : CursorsController,
-) -> @view_model.Selection {
+) -> @core.Selection {
   self.cursor.model_state.selection()
 }
 
@@ -75,6 +75,6 @@ pub fn CursorsController::get_model_selection(
 /// The selection in view coordinates (for the selection overlay).
 pub fn CursorsController::get_view_selection(
   self : CursorsController,
-) -> @view_model.Selection {
+) -> @core.Selection {
   self.cursor.view_state.selection()
 }

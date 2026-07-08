@@ -5,6 +5,7 @@ import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/common/config",
+  "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/model",
@@ -43,10 +44,10 @@ pub(all) struct CursorPositionChangedEvent {
 } derive(@debug.Debug)
 
 pub(all) struct CursorSelectionChangedEvent {
-  selection : @view_model.Selection
-  secondary_selections : Array[@view_model.Selection]
+  selection : @core.Selection
+  secondary_selections : Array[@core.Selection]
   model_version_id : Int
-  old_selections : Array[@view_model.Selection]
+  old_selections : Array[@core.Selection]
   old_model_version_id : Int
   source : String
   reason : CursorChangeReason
@@ -151,8 +152,8 @@ pub fn Viewer::get_scroll_left(Self) -> Double
 pub fn Viewer::get_scroll_top(Self) -> Double
 pub fn Viewer::get_scroll_width(Self) -> Double
 pub fn Viewer::get_scrolled_visible_position(Self, @moonbit-community/editor/base/common.Position) -> ScrolledVisiblePosition?
-pub fn Viewer::get_selection(Self) -> @view_model.Selection?
-pub fn Viewer::get_selections(Self) -> Array[@view_model.Selection]?
+pub fn Viewer::get_selection(Self) -> @core.Selection?
+pub fn Viewer::get_selections(Self) -> Array[@core.Selection]?
 pub fn Viewer::get_statusbar_column(Self, @moonbit-community/editor/base/common.Position) -> Int
 pub fn Viewer::get_top_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn Viewer::get_top_for_position(Self, Int, Int) -> Double
@@ -201,8 +202,8 @@ pub fn Viewer::set_position(Self, @moonbit-community/editor/base/common.Position
 pub fn Viewer::set_scroll_left(Self, Double) -> Unit
 pub fn Viewer::set_scroll_position(Self, scroll_top? : Double, scroll_left? : Double) -> Unit
 pub fn Viewer::set_scroll_top(Self, Double) -> Unit
-pub fn Viewer::set_selection(Self, @view_model.Selection) -> Unit
-pub fn Viewer::set_selections(Self, Array[@view_model.Selection]) -> Unit
+pub fn Viewer::set_selection(Self, @core.Selection) -> Unit
+pub fn Viewer::set_selections(Self, Array[@core.Selection]) -> Unit
 pub fn Viewer::update_options(Self, ViewerOptions) -> Unit
 
 pub(all) struct ViewerHoverResolvedEvent {

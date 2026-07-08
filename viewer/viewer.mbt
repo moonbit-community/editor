@@ -236,10 +236,10 @@ pub(all) struct CursorPositionChangedEvent {
 /// arrays are always empty, and `old_selections` is at most one element
 /// (empty before the first cursor exists).
 pub(all) struct CursorSelectionChangedEvent {
-  selection : @view_model.Selection
-  secondary_selections : Array[@view_model.Selection]
+  selection : @core.Selection
+  secondary_selections : Array[@core.Selection]
   model_version_id : Int
-  old_selections : Array[@view_model.Selection]
+  old_selections : Array[@core.Selection]
   old_model_version_id : Int
   source : String
   reason : CursorChangeReason

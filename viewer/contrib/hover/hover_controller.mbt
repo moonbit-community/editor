@@ -68,17 +68,6 @@ pub fn filter_hover_parts(
 }
 
 ///|
-/// The placement decided by the read-after-write measurement pass: which side
-/// of the anchor the widget renders on, how far it shifts left to stay inside
-/// the editor, and the available-space height cap (Monaco
-/// `ContentHoverWidget._findMaximumRenderingHeight`) the content scrolls within.
-pub(all) struct HoverPlacement {
-  below : Bool
-  shift_left : Double
-  max_height : Double
-} derive(Eq)
-
-///|
 /// VS Code's default `editor.hover.delay`.
 let hover_delay_ms = 300
 
@@ -153,9 +142,11 @@ pub(all) enum HoverEffect {
 ///|
 /// Editor hover feature state. The timing lives in the embedded `HoverOperation`
 /// (Monaco's `HoverOperation`); the controller adds the editor-facing concerns
-/// the operation does not: the in-flight anchor, the currently shown result (the
-/// `_currentResult` analog — its parts, the anchor it was computed for, and
-/// whether it was complete), and the measured placement.
+/// the operation does not: the in-flight anchor and the currently shown result
+/// (the `_currentResult` analog — its parts, the anchor it was computed for,
+/// and whether it was complete). Placement (above/below, sizing) is the
+/// content-hover widget's own state, as in the source
+/// (`ContentHoverWidget._positionPreference`).
 pub(all) struct HoverController {
   /// Monaco `_hoverOperation.options.anchor`: the anchor the operation is
   /// currently computing for (`None` once cleared).
@@ -172,7 +163,6 @@ pub(all) struct HoverController {
   view : HoverView?
   current_anchor : HoverAnchor?
   current_complete : Bool
-  placement : HoverPlacement?
 } derive(Eq)
 
 ///|
@@ -184,7 +174,6 @@ pub fn HoverController::empty() -> HoverController {
     view: None,
     current_anchor: None,
     current_complete: false,
-    placement: None,
   }
 }
 
@@ -206,7 +195,6 @@ pub fn HoverController::cleared(self : HoverController) -> HoverController {
     view: None,
     current_anchor: None,
     current_complete: false,
-    placement: None,
   }
 }
 
@@ -512,8 +500,7 @@ pub fn HoverController::emit(self : HoverController) -> HoverController {
 ///|
 /// Monaco `ContentHoverWidgetWrapper._setCurrentResult`: dedupe an unchanged
 /// result, treat an empty result as hiding the hover, and otherwise show the
-/// sorted parts. Placement is preserved only when the shown parts are unchanged,
-/// so streamed additions re-measure but identical re-emits keep their placement.
+/// sorted parts.
 pub fn HoverController::set_current_result(
   self : HoverController,
   parts : Array[HoverPart],
@@ -525,13 +512,7 @@ pub fn HoverController::set_current_result(
     return match self.view {
       None => self
       Some(_) =>
-        {
-          ..self,
-          view: None,
-          current_anchor: None,
-          current_complete: false,
-          placement: None,
-        }
+        { ..self, view: None, current_anchor: None, current_complete: false }
     }
   }
   let sorted = parts.copy()
@@ -546,21 +527,11 @@ pub fn HoverController::set_current_result(
   }
   let range = hover_parts_range(sorted, result_anchor.range())
   let new_view : HoverView = { range, parts: sorted }
-  let placement = match self.view {
-    Some(existing) =>
-      if existing.parts == sorted {
-        self.placement
-      } else {
-        None
-      }
-    None => None
-  }
   {
     ..self,
     view: Some(new_view),
     current_anchor: Some(result_anchor),
     current_complete: is_complete,
-    placement,
   }
 }
 
@@ -569,16 +540,6 @@ pub fn HoverController::set_current_result(
 /// reads this to fire the resolution status exactly once per anchor.
 pub fn HoverController::is_complete(self : HoverController) -> Bool {
   self.operation.state is HoverOpIdle
-}
-
-///|
-pub fn HoverController::measured(
-  self : HoverController,
-  below : Bool,
-  shift_left : Double,
-  max_height : Double,
-) -> HoverController {
-  { ..self, placement: Some({ below, shift_left, max_height }) }
 }
 
 ///|
@@ -605,36 +566,16 @@ pub fn HoverController::highlight_decorations(
 }
 
 ///|
-/// What the hover layer should draw, as data: the widget anchored at the
-/// hovered range like VS Code's editor hover (above the line by default,
-/// flipped below when the after-write measurement detects viewport
-/// overflow, shifted left when it would overflow the right edge), or the
-/// unmeasured loading hover while the async compute is still resolving past
-/// the loading delay.
+/// What the hover widget should show, as data: the anchor range and the
+/// resolved hover parts (or the loading placeholder while the async compute
+/// is still resolving past the loading delay). The `Viewer` renders this into
+/// a `RenderedContentHover` and drives the content-hover widget's `show` /
+/// `hide` when it changes — Monaco's `_setCurrentResult` →
+/// `_showHover`/`_hideHover` seam. Placement is the widget's own concern.
 pub(all) struct HoverWidgetView {
   anchor_range : @base_common.Range
   parts : Array[HoverPart]
-  /// Whether this widget participates in placement measurement (the
-  /// loading hover renders unmeasured at the anchor).
-  measurable : Bool
-  placement : HoverPlacement?
-}
-
-///|
-/// Applies an after-write measurement to a resolved widget view, mirroring
-/// `HoverController::measured` but on the already-derived view — the seam
-/// `viewer/content_widgets.mbt`'s same-frame re-render (measure once,
-/// immediately re-render with the measurement) uses, since it only holds a
-/// `HoverWidgetView`, not the full `HoverController` (which stays with
-/// `Viewer` — the foreign-method rule keeps it out of the view-part package).
-pub fn HoverWidgetView::measured(
-  self : HoverWidgetView,
-  below : Bool,
-  shift_left : Double,
-  max_height : Double,
-) -> HoverWidgetView {
-  { ..self, placement: Some({ below, shift_left, max_height }) }
-}
+} derive(Eq)
 
 ///|
 /// Whether a hover widget is currently on screen (resolved content or the
@@ -647,13 +588,7 @@ pub fn HoverController::widget_visible(self : HoverController) -> Bool {
 ///|
 pub fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? {
   match self.view {
-    Some(hover) =>
-      Some({
-        anchor_range: hover.range,
-        parts: hover.parts,
-        measurable: true,
-        placement: self.placement,
-      })
+    Some(hover) => Some({ anchor_range: hover.range, parts: hover.parts })
     None =>
       match self.operation.state {
         HoverOpWaitingForAsyncShowingLoading =>
@@ -664,8 +599,6 @@ pub fn HoverController::widget_view(self : HoverController) -> HoverWidgetView? 
                 parts: [
                   LoadingHover(range=anchor.range(), message="Loading..."),
                 ],
-                measurable: false,
-                placement: self.placement,
               })
             None => None
           }

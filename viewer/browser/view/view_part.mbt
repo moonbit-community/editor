@@ -687,13 +687,10 @@ impl DynamicViewOverlay for @decorations.DecorationsOverlay with fn render(
 
 // `ViewPart` impl for `@content_widgets.ContentWidgets`
 // (`browser/view_parts/content_widgets`). Kept here for the same reason as
-// the impls above — plus it is the one impl that also builds the
-// `HoverWidgetHost` capability struct (unpacking `context.view_context`'s
-// fields) and resolves `HoverController::widget_view` before handing the
-// content-widgets package only its already-derived `HoverWidgetView`, since
-// that package cannot import `ViewContext` (owned by `browser/view/`, which
-// needs `ContentWidgets` back) or the full `HoverController` (which stays
-// with `Viewer`) — see `content_widgets`'s README.
+// the impls above. It unpacks the render context into the package's
+// `ContentWidgetsRenderContext` capability struct, since that package cannot
+// import `ViewContext`/`RenderingContext` (owned by `browser/view/`, which
+// needs `ContentWidgets` back for `View`'s fields).
 
 ///|
 impl ViewPart for @content_widgets.ContentWidgets with fn should_render(self) {
@@ -701,8 +698,10 @@ impl ViewPart for @content_widgets.ContentWidgets with fn should_render(self) {
 }
 
 ///|
-// Hover content changes invalidate this part directly (see `View::render`),
-// mirroring Monaco's contrib hover widget rather than a view event.
+// Widget position changes invalidate this part directly through
+// `set_widget_position` (Monaco `setWidgetPosition`'s `setShouldRender`),
+// so the events here are only the view-geometry ones (`contentWidgets.ts`
+// `onFlushed`/`onLinesChanged`/`onScrollChanged`/`onZonesChanged`).
 impl ViewPart for @content_widgets.ContentWidgets with fn on_view_event(
   _self,
   event,
@@ -725,41 +724,35 @@ impl ViewPart for @content_widgets.ContentWidgets with fn force_should_render(
 }
 
 ///|
+/// Monaco `ViewContentWidgets.prepareRender`: compute each widget's box
+/// layout for this frame from its recorded anchors.
 impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
-  _self,
-  _context,
+  self,
+  context,
 ) {
-  // The hover widget lays itself out against its own live DOM inside
-  // `render_hover_widget` (the measured-height feedback loop through
-  // `on_hover_measured`), so there is nothing to precompute here.
+  self.prepare_render_widgets({
+    model_position_to_view_position: context.view_context.model_position_to_view_position,
+    vertical_offset_for_line: line => {
+      context.input.layout.vertical_offset_for_line(line)
+    },
+    window_start: context.input.window.start,
+    window_end: context.input.window.end,
+    line_height: context.input.layout.line_height().to_double(),
+    char_width: context.input.space_width,
+    typical_fullwidth_character_width: context.input.typical_fullwidth_character_width,
+    scroll_top: context.position.scroll_top,
+    scroll_left: context.position.scroll_left,
+    viewport_width: context.dimensions.width,
+    viewport_height: context.dimensions.height,
+  })
 }
 
 ///|
+/// Monaco `ViewContentWidgets.render`: write each widget's `top`/`left`/
+/// `visibility` onto its mounted DOM — never content, never a re-mount.
 impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) {
   self.dom_node.set_attribute("style", context.content_transform)
-  let host : @content_widgets.HoverWidgetHost = {
-    root: context.view_context.root,
-    languages: context.view_context.languages,
-    keep_hover_open: context.view_context.keep_hover_open,
-    handle_hover_mousedown: context.view_context.handle_hover_mousedown,
-    hook_scrollable_scrollbar_input: context.view_context.hook_scrollable_scrollbar_input,
-    handle_hover_keydown: context.view_context.handle_hover_keydown,
-    model_position_to_view_position: context.view_context.model_position_to_view_position,
-  }
-  self.render_hover_widget(
-    host,
-    context.input.window,
-    context.input.view_model.language_id(),
-    context.input.layout,
-    // Resolved via `HoverController::widget_view` here (this package already
-    // imports the hover package) — `content_widgets` holds only the derived
-    // `HoverWidgetView`, not the full `HoverController` (which stays with
-    // `Viewer`; see `HoverWidgetHost`).
-    context.input.hover_state.widget_view(),
-    context.input.on_hover_measured,
-    context.input.space_width,
-    context.gutter_width,
-  )
+  self.render_widgets(context.translate_y)
 }
 
 ///|

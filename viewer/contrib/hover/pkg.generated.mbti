@@ -130,14 +130,12 @@ pub(all) struct HoverController {
   view : HoverView?
   current_anchor : HoverAnchor?
   current_complete : Bool
-  placement : HoverPlacement?
 } derive(Eq)
 pub fn HoverController::cleared(Self) -> Self
 pub fn HoverController::emit(Self) -> Self
 pub fn HoverController::empty() -> Self
 pub fn HoverController::highlight_decorations(Self) -> Array[@model.ModelDeltaDecoration]
 pub fn HoverController::is_complete(Self) -> Bool
-pub fn HoverController::measured(Self, Bool, Double, Double) -> Self
 pub fn HoverController::on_event(Self, EditorEvent, EditorContext, sticky_mouse_getting_closer? : Bool) -> (HoverEffect, Self)
 pub fn HoverController::op_async_done(Self, Int) -> Self
 pub fn HoverController::op_async_item(Self, Int, Array[HoverPart]) -> Self
@@ -197,12 +195,6 @@ pub(all) struct HoverParticipantServices {
   log_service : @log.LogService
 }
 
-pub(all) struct HoverPlacement {
-  below : Bool
-  shift_left : Double
-  max_height : Double
-} derive(Eq)
-
 pub(all) struct HoverPositionPart {
   range : @moonbit-community/editor/base/common.Range
   force_show_at_range : Bool
@@ -223,10 +215,7 @@ pub(all) struct HoverView {
 pub(all) struct HoverWidgetView {
   anchor_range : @moonbit-community/editor/base/common.Range
   parts : Array[HoverPart]
-  measurable : Bool
-  placement : HoverPlacement?
-}
-pub fn HoverWidgetView::measured(Self, Bool, Double, Double) -> Self
+} derive(Eq)
 
 pub(all) struct InlayHintsHover {
   identity : Unit

@@ -3,10 +3,6 @@ package "moonbit-community/editor/viewer/browser/view_parts/content_widgets"
 
 import {
   "moonbit-community/editor/base/common",
-  "moonbit-community/editor/viewer/common/languages",
-  "moonbit-community/editor/viewer/common/view_layout",
-  "moonbit-community/editor/viewer/contrib/hover",
-  "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
 }
 
@@ -15,45 +11,54 @@ import {
 // Errors
 
 // Types and methods
+pub(all) struct ContentWidgetPosition {
+  position : @common.Position?
+  secondary_position : @common.Position?
+  preference : Array[ContentWidgetPositionPreference]
+}
+
+pub(all) enum ContentWidgetPositionPreference {
+  Above
+  Below
+  Exact
+} derive(Eq)
+
 pub(all) struct ContentWidgets {
   dom_node : @dom.Element
   overflowing_content_widgets_dom_node : @dom.Element
-  mut hover_widget : HoverWidgetDom?
   mut should_render : Bool
+  // private fields
 }
+pub fn ContentWidgets::add_widget(Self, &ContentWidget) -> Unit
 pub fn ContentWidgets::dom_node(Self) -> @dom.Element
-pub fn ContentWidgets::hover_scrollable(Self) -> @scrollbar.ScrollableElementDom?
-pub fn ContentWidgets::hover_wrapper(Self) -> @dom.Element?
 pub fn ContentWidgets::new(@dom.Document) -> Self
 pub fn ContentWidgets::overflowing_content_widgets_dom_node(Self) -> @dom.Element
-pub fn ContentWidgets::render_hover_widget(Self, HoverWidgetHost, @view_layout.LineWindow, String, @view_layout.ViewLayout, @hover.HoverWidgetView?, (Bool, Double, Double) -> Unit, Double, Double) -> Unit
+pub fn ContentWidgets::prepare_render_widgets(Self, ContentWidgetsRenderContext) -> Unit
+pub fn ContentWidgets::remove_widget(Self, &ContentWidget) -> Unit
+pub fn ContentWidgets::render_widgets(Self, Double) -> Unit
+pub fn ContentWidgets::set_widget_position(Self, &ContentWidget) -> Unit
 
-pub(all) struct HoverWidgetDom {
-  wrapper : @dom.Element
-  hover : @dom.Element
-  scrollable : @scrollbar.ScrollableElementDom
-  mut line_height : Double
-}
-pub fn HoverWidgetDom::go_to_bottom(Self) -> Unit
-pub fn HoverWidgetDom::go_to_top(Self) -> Unit
-pub fn HoverWidgetDom::page_down(Self) -> Unit
-pub fn HoverWidgetDom::page_up(Self) -> Unit
-pub fn HoverWidgetDom::scroll_down(Self) -> Unit
-pub fn HoverWidgetDom::scroll_left(Self) -> Unit
-pub fn HoverWidgetDom::scroll_right(Self) -> Unit
-pub fn HoverWidgetDom::scroll_up(Self) -> Unit
-
-pub(all) struct HoverWidgetHost {
-  root : @dom.Element
-  languages : @languages.Languages
-  keep_hover_open : () -> Unit
-  handle_hover_mousedown : (@dom.Event, @dom.MouseEvent) -> Unit
-  hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
-  handle_hover_keydown : (HoverWidgetDom, @dom.Event, @dom.KeyboardEvent) -> Unit
+pub(all) struct ContentWidgetsRenderContext {
   model_position_to_view_position : (@common.Position) -> @common.Position
+  vertical_offset_for_line : (Int) -> Double
+  window_start : Int
+  window_end : Int
+  line_height : Double
+  char_width : Double
+  typical_fullwidth_character_width : Double
+  scroll_top : Double
+  scroll_left : Double
+  viewport_width : Double
+  viewport_height : Double
 }
 
 // Type aliases
 
 // Traits
+pub(open) trait ContentWidget {
+  fn get_id(Self) -> String
+  fn get_dom_node(Self) -> @dom.Element
+  fn get_position(Self) -> ContentWidgetPosition?
+  fn allow_editor_overflow(Self) -> Bool
+}
 

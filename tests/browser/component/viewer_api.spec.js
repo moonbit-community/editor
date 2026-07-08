@@ -66,7 +66,7 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(braceBox).not.toBeNull();
     expect(Math.abs(Math.round(braceBox.y - (zoneBox.y + zoneBox.height)))).toBeLessThanOrEqual(1);
     await inlayHint.hover();
-    await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
+    await expect(page.locator('[data-content-widget="editor.contrib.resizableContentHoverWidget"] .monaco-hover')).toContainText(
       'component inlay hint',
       { timeout: 3_000 },
     );
@@ -174,7 +174,7 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     });
     expect(keepsPoint).not.toBeNull();
     await page.mouse.move(keepsPoint.x, keepsPoint.y);
-    await expect(page.locator('[data-content-widget="hover"] .monaco-hover')).toContainText(
+    await expect(page.locator('[data-content-widget="editor.contrib.resizableContentHoverWidget"] .monaco-hover')).toContainText(
       'wrapped component hover',
       { timeout: 3_000 },
     );

@@ -12,7 +12,12 @@ fn Viewer::pointer_handler_helper(
     view_root: view.root,
     overflow_guard: view.overflow_guard,
     editor_scrollable: view.editor_scrollbar.scrollable(),
-    hover_scrollable: () => view.content_widgets.hover_scrollable(),
+    hover_scrollable: () => {
+      match self.content_hover_widget {
+        Some(widget) => Some(widget.scrollable)
+        None => None
+      }
+    },
     view_layout: () => self.view_layout,
     apply_scroll: change => self.apply_scroll_change(change),
     hit_test: (x, y) => self.hit_test_at(x, y),

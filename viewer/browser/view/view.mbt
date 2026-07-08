@@ -174,11 +174,6 @@ pub fn View::render(
   for part in self.view_parts {
     part.handle_view_events(events)
   }
-  // Hover content is not a view event: invalidate the hover content widget
-  // directly, mirroring Monaco's contrib hover.
-  if hover_changed_between(self.last_snapshot, rendering.snapshot) {
-    ViewPart::force_should_render(self.content_widgets)
-  }
   let view_parts_to_render = self.get_view_parts_to_render()
   let restricted = rendering.restricted()
   // `_actualRender`: the text lines render first, through `renderText`

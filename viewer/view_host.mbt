@@ -12,25 +12,6 @@ fn Viewer::build_view_context(
   view : @view.View,
 ) -> @view.ViewContext {
   {
-    root: view.root,
-    languages: self.services.languages,
-    handle_hover_mousedown: (event, mouse) => {
-      match self.mouse_handler {
-        Some(handler) => handler.handle_mouse_down(event, mouse)
-        None => ()
-      }
-    },
-    handle_hover_keydown: (widget, event, keyboard) => {
-      self.handle_hover_keydown(widget, event, keyboard)
-    },
-    keep_hover_open: () => self.keep_hover_open(),
-    hook_scrollable_scrollbar_input: (scrollable, owner) => {
-      match self.mouse_handler {
-        Some(handler) =>
-          handler.hook_scrollable_scrollbar_input(scrollable, owner)
-        None => ()
-      }
-    },
     measure_line_selection: (line_number, start_column, end_column) => {
       view.measure_line_selection(line_number, start_column, end_column)
     },
@@ -56,19 +37,15 @@ fn Viewer::build_view_context(
 
 ///|
 /// Monaco `ContentHoverWidget`'s keydown handling, dispatched from the hover
-/// widget's own DOM listener via the `ViewContext.handle_hover_keydown`
-/// closure `build_view_context` wires up. The keys resolve through the
-/// command registry (`hoverActions.ts`'s scroll cluster registered in
-/// `hover_contribution.mbt`, gated on `hoverFocused`/`hoverVisible`). The
-/// `widget` parameter stays for the seam's shape; the commands reach the
-/// same singleton widget through the viewer.
+/// widget's own DOM listener via the `ContentHoverWidgetHost.handle_keydown`
+/// closure. The keys resolve through the command registry
+/// (`hoverActions.ts`'s scroll cluster registered in
+/// `hover_contribution.mbt`, gated on `hoverFocused`/`hoverVisible`).
 fn Viewer::handle_hover_keydown(
   self : Viewer,
-  widget : @content_widgets.HoverWidgetDom,
   event : @rdom.Event,
   keyboard : @rdom.KeyboardEvent,
 ) -> Unit {
-  ignore(widget)
   event.stop_propagation()
   // `KeyMod.CtrlCmd` is Ctrl on Windows/Linux and Cmd on macOS.
   if editor_registry().dispatch_keybinding(
@@ -113,15 +90,12 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
         browser_view_zones: self.view_zones,
         selection_view_range: self.selection_view_range(),
         view_selection: self.view_selection(),
-        hover_state: self.hover,
-        on_hover_measured: (below, shift_left, max_height) => {
-          self.hover = self.hover.measured(below, shift_left, max_height)
-        },
         generation: self.content_generation,
         decorations_generation: self.decorations_generation,
         gutter_width: self.gutter_width(view_model.line_count()),
         line_decorations_width: self.options.line_decorations_width.to_double(),
         space_width: self.font_info.space_width,
+        typical_fullwidth_character_width: self.font_info.typical_fullwidth_character_width,
         can_use_halfwidth_rightwards_arrow: self.font_info.can_use_halfwidth_rightwards_arrow,
         render_whitespace: self.options.render_whitespace,
         render_control_characters: self.options.render_control_characters,

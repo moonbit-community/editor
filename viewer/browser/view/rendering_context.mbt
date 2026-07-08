@@ -17,8 +17,6 @@ pub(all) struct ViewRenderInput {
   /// `selection_view_range` (which is `None` when collapsed), this carries the
   /// caret position of an empty selection — the cursor part renders from it.
   view_selection : @view_model.Selection?
-  hover_state : @hover.HoverController
-  on_hover_measured : (Bool, Double, Double) -> Unit
   generation : Int
   /// Bumped by the `Viewer` per model `onDidChangeDecorations` event; a
   /// change dispatches `ViewDecorationsChanged` (plan Deviation 3).
@@ -29,6 +27,9 @@ pub(all) struct ViewRenderInput {
   /// `left = gutter_width - line_decorations_width`).
   line_decorations_width : Double
   space_width : Double
+  /// `fontInfo.typicalFullwidthCharacterWidth`: the content-widget layer's
+  /// `_reduceAnchorCoordinates` clamp unit.
+  typical_fullwidth_character_width : Double
   /// `fontInfo.canUseHalfwidthRightwardsArrow`: whether the whitespace
   /// renderer may paint tabs as U+FFEB without breaking monospace.
   can_use_halfwidth_rightwards_arrow : Bool
@@ -155,7 +156,6 @@ priv struct ViewRenderSnapshot {
   space_width : Double
   view_selection : @view_model.Selection?
   browser_view_zones : Array[@view_zones.BrowserViewZone]
-  hover_state : @hover.HoverController
   editor_has_focus : Bool
 }
 
@@ -175,7 +175,6 @@ fn ViewRenderSnapshot::from_input(
     space_width: input.space_width,
     view_selection: input.view_selection,
     browser_view_zones: input.browser_view_zones.copy(),
-    hover_state: input.hover_state,
     editor_has_focus: input.editor_has_focus,
   }
 }

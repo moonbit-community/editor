@@ -18,6 +18,7 @@ import {
   "moonbit-community/editor/viewer/contrib/agent_feedback",
   "moonbit-community/editor/viewer/contrib/agent_feedback/browser" @agent_feedback_browser,
   "moonbit-community/editor/viewer/contrib/hover",
+  "moonbit-community/editor/viewer/contrib/hover/browser" @hover_browser,
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/ui/scrollbar",

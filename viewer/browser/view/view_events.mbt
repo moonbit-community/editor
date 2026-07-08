@@ -116,17 +116,3 @@ fn view_events_from_snapshots(
     }
   }
 }
-
-///|
-/// Whether the hover content changed between frames; the hover widget is
-/// invalidated directly rather than through a view event (Monaco's hover is a
-/// contrib content widget, not a view-event participant).
-fn hover_changed_between(
-  previous : ViewRenderSnapshot?,
-  current : ViewRenderSnapshot,
-) -> Bool {
-  match previous {
-    None => true
-    Some(previous) => previous.hover_state != current.hover_state
-  }
-}

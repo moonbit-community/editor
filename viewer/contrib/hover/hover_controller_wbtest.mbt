@@ -78,10 +78,7 @@ test "loading message appears only while waiting for a slow async compute" {
   assert_true(loading.operation.state is HoverOpWaitingForAsyncShowingLoading)
   assert_true(loading.widget_view() is Some(_))
   match loading.widget_view() {
-    Some(view) => {
-      assert_false(view.measurable)
-      assert_eq(view.parts.length(), 1)
-    }
+    Some(view) => assert_eq(view.parts.length(), 1)
     None => ()
   }
   // A streamed async result replaces the loading message and completes.

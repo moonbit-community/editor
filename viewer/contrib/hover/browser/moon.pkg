@@ -1,0 +1,9 @@
+import {
+  "moonbit-community/editor/base/common" @base_common,
+  "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
+  "moonbit-community/editor/viewer/contrib/hover",
+  "moonbit-community/editor/viewer/ui/scrollbar",
+  "moonbit-community/rabbita/dom" @rdom,
+}
+
+supported_targets = "js"

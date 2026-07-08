@@ -84,15 +84,13 @@ fn register_hover_contribution(registry : EditorContributionRegistry) -> Unit {
 }
 
 ///|
-/// Runs `f` on the live hover widget DOM, the run-body plumbing of
-/// `ContentHoverController.get(editor)?.scrollUp()` — the widget is the
-/// content-widgets part's singleton hover widget.
+/// Runs `f` on the persistent content-hover widget, the run-body plumbing of
+/// `ContentHoverController.get(editor)?.scrollUp()`.
 fn Viewer::with_hover_widget(
   self : Viewer,
-  f : (@content_widgets.HoverWidgetDom) -> Unit,
+  f : (@hover_browser.ContentHoverWidget) -> Unit,
 ) -> Unit {
-  guard self.view is Some(view) else { return }
-  match view.content_widgets.hover_widget {
+  match self.content_hover_widget {
     Some(widget) => f(widget)
     None => ()
   }
@@ -102,8 +100,7 @@ fn Viewer::with_hover_widget(
 /// The `EditorContextKeys.hoverFocused` context key as a live predicate:
 /// whether the document's active element sits inside the hover widget.
 fn Viewer::is_hover_focused(self : Viewer) -> Bool {
-  guard self.view is Some(view) else { return false }
-  match view.content_widgets.hover_widget {
+  match self.content_hover_widget {
     Some(widget) => element_contains_active(widget.wrapper)
     None => false
   }

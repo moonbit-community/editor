@@ -13,11 +13,8 @@ import {
   "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
-  "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/editor/viewer/contrib/hover",
-  "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
 }
 
@@ -73,12 +70,6 @@ pub fn View::render(Self, ViewContext, ViewRenderInput) -> Unit
 pub fn View::render_empty(Self, String, show_unused? : Bool, show_deprecated? : Bool) -> Unit
 
 pub(all) struct ViewContext {
-  root : @dom.Element
-  languages : @languages.Languages
-  handle_hover_mousedown : (@dom.Event, @dom.MouseEvent) -> Unit
-  handle_hover_keydown : (@content_widgets.HoverWidgetDom, @dom.Event, @dom.KeyboardEvent) -> Unit
-  keep_hover_open : () -> Unit
-  hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
   measure_line_decorations : (Int, Int, Int) -> Array[(Double, Double)]
   offset_for_column : (Int, Int) -> Double
@@ -97,13 +88,12 @@ pub(all) struct ViewRenderInput {
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   selection_view_range : @common.Range?
   view_selection : @view_model.Selection?
-  hover_state : @hover.HoverController
-  on_hover_measured : (Bool, Double, Double) -> Unit
   generation : Int
   decorations_generation : Int
   gutter_width : Double
   line_decorations_width : Double
   space_width : Double
+  typical_fullwidth_character_width : Double
   can_use_halfwidth_rightwards_arrow : Bool
   render_whitespace : @view_layout.RenderWhitespace
   render_control_characters : Bool

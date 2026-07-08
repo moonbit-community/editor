@@ -3,8 +3,8 @@
 }
 
 /* Monaco-shaped editor hover, anchored as a content widget. Positioned by an
- * exact `top`/`left` computed in JS (`ContentWidget::style`, porting Monaco's
- * `_layoutBoxInViewport`: `aboveTop = aboveLineTop - height`), not a CSS
+ * exact `top`/`left` computed in JS (the content-widget layer's
+ * `_layoutBoxInViewport` port: `aboveTop = aboveLineTop - height`), not a CSS
  * transform — a transform-based "shift up by own height" trick was tried
  * here previously and reproducibly corrupted this element's background paint
  * in Chromium under the sizing cluster's synchronous style churn. */
@@ -21,8 +21,10 @@
   background-color: var(--vscode-editorHoverWidget-background);
 }
 
-.monaco-resizable-hover.measuring {
-  visibility: hidden;
+/* Monaco `hoverWidget.css`: a hidden hover keeps its DOM mounted; `fade-in`
+ * replays only on the hidden→shown transition. */
+.monaco-hover.hidden {
+  display: none;
 }
 
 .monaco-hover {

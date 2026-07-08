@@ -161,6 +161,10 @@ fn Viewer::keep_hover_open(self : Viewer) -> Unit {
 fn Viewer::dismiss_hover(self : Viewer) -> Unit {
   self.cancel_hover_react()
   self.hover = self.hover.cleared()
+  // Callers own their re-render, but the widget reconciliation must not wait
+  // on one (idempotent; the imperative dismiss paths bypass
+  // `after_hover_transition`).
+  self.sync_content_hover_widget()
 }
 
 ///|
@@ -182,18 +186,17 @@ fn Viewer::hide_content_hover(self : Viewer) -> Unit {
 ///|
 /// Monaco `ContentHoverController._isMouseOnContentHoverWidget`: whether the
 /// pointer at client `(posx, posy)` is within the hover widget's box (false when
-/// no widget exists). The widget is measured with `getBoundingClientRect`, so the
-/// coordinates are client-space (see the plan's Deviations on client- vs page).
+/// no widget exists or it is hidden). The widget is measured with
+/// `getBoundingClientRect`, so the coordinates are client-space (see the
+/// plan's Deviations on client- vs page).
 fn Viewer::mouse_on_hover_widget(
   self : Viewer,
   posx : Double,
   posy : Double,
 ) -> Bool {
-  guard self.view is Some(view) else { return false }
-  guard view.content_widgets.hover_wrapper() is Some(wrapper) else {
-    return false
-  }
-  let rect = wrapper.get_bounding_client_rect()
+  guard self.content_hover_widget is Some(widget) else { return false }
+  guard widget.is_visible() else { return false }
+  let rect = widget.wrapper.get_bounding_client_rect()
   @hover.mouse_within_element(
     rect.get_left(),
     rect.get_top(),
@@ -206,15 +209,14 @@ fn Viewer::mouse_on_hover_widget(
 
 ///|
 /// Monaco `ContentHoverWidget.isMouseGettingCloser`: whether the last recorded
-/// pointer is approaching the hover widget rectangle (false when no widget
-/// exists). Measures the widget with `getBoundingClientRect`, so the recorded
-/// client pointer and the rectangle are both client-space.
+/// pointer is approaching the hover widget rectangle (false when no hover is
+/// rendered — the source's `!this._renderedHover` guard). Measures the widget
+/// with `getBoundingClientRect`, so the recorded client pointer and the
+/// rectangle are both client-space.
 fn Viewer::hover_mouse_getting_closer(self : Viewer) -> Bool {
-  guard self.view is Some(view) else { return false }
-  guard view.content_widgets.hover_wrapper() is Some(wrapper) else {
-    return false
-  }
-  let rect = wrapper.get_bounding_client_rect()
+  guard self.content_hover_widget is Some(widget) else { return false }
+  guard widget.is_visible() else { return false }
+  let rect = widget.wrapper.get_bounding_client_rect()
   self.hover_mouse_closer.is_mouse_getting_closer(
     self.hover_mouse_posx,
     self.hover_mouse_posy,
@@ -318,9 +320,10 @@ fn Viewer::dispatch_editor_event(
 }
 
 ///|
-/// Repaints after a hover transition. The hover highlight is baked into
-/// the line HTML as a span decoration, so a changed hover view also
-/// invalidates the rendered lines.
+/// Repaints after a hover transition and reconciles the persistent hover
+/// widget (Monaco `_setCurrentResult` → `_showHover`/`_hideHover`). The hover
+/// highlight is baked into the line HTML as a span decoration, so a changed
+/// hover view also invalidates the rendered lines.
 fn Viewer::after_hover_transition(
   self : Viewer,
   before : @hover.HoverController,
@@ -334,6 +337,7 @@ fn Viewer::after_hover_transition(
     // mouse-getting-closer reference so the next move re-seeds it.
     self.hover_mouse_closer.reset()
   }
+  self.sync_content_hover_widget()
   self.schedule_render()
 }
 

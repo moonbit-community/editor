@@ -56,7 +56,7 @@ test('shows hover through pointer interaction', async ({ page }) => {
   await expect(symbol).toBeVisible();
   await expect(async () => {
     await symbol.hover();
-    const hover = page.locator('[data-content-widget="hover"] .monaco-hover');
+    const hover = page.locator('[data-content-widget="editor.contrib.resizableContentHoverWidget"] .monaco-hover');
     await expect(hover).toBeVisible({ timeout: 3_000 });
     await expect
       .poll(() => hover.textContent().then((text) => text.trim().length), {

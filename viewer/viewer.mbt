@@ -47,6 +47,13 @@ pub struct Viewer {
   priv mut view_zones : Array[@view_zones.BrowserViewZone]
   priv mut cursor : @cursor.CursorsController?
   priv mut hover : @hover.HoverController
+  /// The persistent content-hover widget (Monaco `ContentHoverWidget`),
+  /// created lazily and mounted once through the content-widgets part.
+  priv mut content_hover_widget : @hover_browser.ContentHoverWidget?
+  /// The `HoverWidgetView` last driven into the widget, so
+  /// `sync_content_hover_widget` shows/hides exactly when the derived view
+  /// changed (Monaco `_setCurrentResult`'s changed-result gate).
+  priv mut hover_widget_view : @hover.HoverWidgetView?
   /// Mouse-move grace state (Monaco's `_reactToEditorMouseMoveRunner`): while a
   /// hover widget is on screen, a move off the anchor is deferred by
   /// `@hover.hover_hiding_delay_ms` instead of reacting immediately, so the pointer can
@@ -303,6 +310,8 @@ pub fn Viewer::Viewer(
     view_zones: [],
     cursor: None,
     hover: @hover.HoverController::empty(),
+    content_hover_widget: None,
+    hover_widget_view: None,
     hover_react_pending: false,
     hover_react_token: 0,
     hover_pending_target: None,
@@ -877,6 +886,7 @@ fn Viewer::clear_current_model(self : Viewer) -> Unit {
   self.cursor = None
   self.cancel_mouse_selection()
   self.hover = @hover.HoverController::empty()
+  self.sync_content_hover_widget()
   self.hover_keep_open = false
   self.hover_ignore_mouse_events = false
   self.cancel_hover_react()

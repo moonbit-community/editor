@@ -20,4 +20,5 @@ import {
   "moonbit-community/cmark@0.4.4",
   "moonbitlang/async@0.19.1",
   "moonbit-community/rabbita@0.12.4",
+  "moonbit-community/piediff@0.0.10",
 }

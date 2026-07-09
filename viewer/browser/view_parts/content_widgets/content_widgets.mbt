@@ -62,12 +62,19 @@ priv enum WidgetRenderData {
 priv struct Widget {
   dom_node : @rdom.Element
   id : String
+  /// Monaco `Widget.allowEditorOverflow` (the `EditorOption.allowOverflow`
+  /// gate is N-A: the viewer has no such option and it defaults `true`).
+  allow_editor_overflow : Bool
   mut position : @base_common.Position?
   mut secondary_position : @base_common.Position?
   mut preference : Array[ContentWidgetPositionPreference]
   /// Monaco `_cachedDomNodeOffsetWidth/Height`, invalidated by `set_position`.
   mut cached_dom_node_offset_width : Double
   mut cached_dom_node_offset_height : Double
+  /// Monaco `Widget._maxWidth` (`_getMaxWidth`), refreshed per prepared frame
+  /// (the source refreshes in the constructor, `onConfigurationChanged`, and
+  /// `onBeforeRender`). `-1` until the first prepare pass measures it.
+  mut max_width : Double
   mut is_visible : Bool
   /// Whether `setPosition` switched the node to `display:block` so
   /// `prepare_render` can measure it (`contentWidgets.ts:296-304`).
@@ -85,12 +92,18 @@ priv struct Widget {
 pub(all) struct ContentWidgets {
   dom_node : @rdom.Element
   overflowing_content_widgets_dom_node : @rdom.Element
+  /// Monaco `ViewContentWidgets._viewDomNode`: the editor's root node, the
+  /// page-space reference box for `_layoutBoxInPage`.
+  view_dom_node : @rdom.Element
   priv widgets : Map[String, Widget]
   mut should_render : Bool
 }
 
 ///|
-pub fn ContentWidgets::new(document : @rdom.Document) -> ContentWidgets {
+pub fn ContentWidgets::new(
+  document : @rdom.Document,
+  view_dom_node : @rdom.Element,
+) -> ContentWidgets {
   let dom_node = document.create_element("div")
   dom_node.set_attribute("class", "contentWidgets")
   dom_node.set_attribute("data-view-part", "contentWidgets")
@@ -104,6 +117,7 @@ pub fn ContentWidgets::new(document : @rdom.Document) -> ContentWidgets {
   {
     dom_node,
     overflowing_content_widgets_dom_node,
+    view_dom_node,
     widgets: {},
     should_render: true,
   }
@@ -133,11 +147,13 @@ pub fn ContentWidgets::add_widget(
   let widget : Widget = {
     dom_node,
     id: actual.get_id(),
+    allow_editor_overflow: actual.allow_editor_overflow(),
     position: None,
     secondary_position: None,
     preference: [],
     cached_dom_node_offset_width: -1.0,
     cached_dom_node_offset_height: -1.0,
+    max_width: -1.0,
     is_visible: false,
     display_block: false,
     top: 0.0,
@@ -147,7 +163,7 @@ pub fn ContentWidgets::add_widget(
   self.widgets[widget.id] = widget
   dom_node.set_attribute("data-content-widget", widget.id)
   widget.apply_style()
-  if actual.allow_editor_overflow() {
+  if widget.allow_editor_overflow {
     self.overflowing_content_widgets_dom_node.append_child(dom_node.as_node())
   } else {
     self.dom_node.append_child(dom_node.as_node())
@@ -229,6 +245,9 @@ pub(all) struct ContentWidgetsRenderContext {
   /// `fontInfo.typicalFullwidthCharacterWidth`, the `_reduceAnchorCoordinates`
   /// clamp unit.
   typical_fullwidth_character_width : Double
+  /// `layoutInfo.contentLeft` (the gutter width): converts a content-space
+  /// `left` into editor-root space for the overflowing `_layoutBoxInPage` arm.
+  content_left : Double
   scroll_top : Double
   scroll_left : Double
   viewport_width : Double
@@ -237,13 +256,16 @@ pub(all) struct ContentWidgetsRenderContext {
 
 ///|
 /// Monaco `ViewContentWidgets.prepareRender` (`contentWidgets.ts:152-157`):
-/// compute each widget's render data for this frame.
+/// compute each widget's render data for this frame. The max-width refresh
+/// folds in Monaco's `Widget.onBeforeRender` (`setMaxWidth(this._maxWidth)`,
+/// run before the box is measured) and `_getMaxWidth`'s recompute.
 pub fn ContentWidgets::prepare_render_widgets(
   self : ContentWidgets,
   ctx : ContentWidgetsRenderContext,
 ) -> Unit {
   for _, widget in self.widgets {
-    widget.render_data = widget.prepare_render_widget(ctx)
+    widget.update_max_width(ctx)
+    widget.render_data = widget.prepare_render_widget(ctx, self.view_dom_node)
   }
 }
 
@@ -281,13 +303,34 @@ priv struct BoxLayoutResult {
 }
 
 ///|
-/// Monaco `Widget._prepareRenderWidget` (`contentWidgets.ts:447-534`), the
-/// non-overflowing arm only (the viewer's hover is clipped to
-/// `.overflow-guard` — the Phase 1b non-overflowing deviation — so
-/// `_layoutBoxInPage` is N-A).
+/// Monaco `Widget._getMaxWidth` (`contentWidgets.ts:284-293`) applied through
+/// the FastDomNode-style per-property write: an overflowing widget may grow to
+/// the window width; a clipped one to the content area width.
+fn Widget::update_max_width(
+  self : Widget,
+  ctx : ContentWidgetsRenderContext,
+) -> Unit {
+  self.max_width = if self.allow_editor_overflow {
+    @rdom.window().inner_width().to_double()
+  } else {
+    ctx.viewport_width
+  }
+  set_style_property(
+    self.dom_node,
+    "max-width",
+    self.max_width.to_string() + "px",
+  )
+}
+
+///|
+/// Monaco `Widget._prepareRenderWidget` (`contentWidgets.ts:447-534`):
+/// `_layoutBoxInPage` for overflowing widgets (`allowEditorOverflow`, e.g.
+/// the content hover), `_layoutBoxInViewport` for widgets clipped to the
+/// content area.
 fn Widget::prepare_render_widget(
   self : Widget,
   ctx : ContentWidgetsRenderContext,
+  view_dom_node : @rdom.Element,
 ) -> WidgetRenderData? {
   if self.preference.length() == 0 {
     return None
@@ -312,12 +355,22 @@ fn Widget::prepare_render_widget(
     self.cached_dom_node_offset_width,
     ctx.typical_fullwidth_character_width,
   )
-  let placement = layout_box_in_viewport(
-    anchor,
-    self.cached_dom_node_offset_width,
-    self.cached_dom_node_offset_height,
-    ctx,
-  )
+  let placement = if self.allow_editor_overflow {
+    layout_box_in_page(
+      anchor,
+      self.cached_dom_node_offset_width,
+      self.cached_dom_node_offset_height,
+      ctx,
+      view_dom_node,
+    )
+  } else {
+    layout_box_in_viewport(
+      anchor,
+      self.cached_dom_node_offset_width,
+      self.cached_dom_node_offset_height,
+      ctx,
+    )
+  }
   // Do two passes, first for perfect fit, second picks first option.
   for pass in 1..<=2 {
     for pref in self.preference {
@@ -334,7 +387,17 @@ fn Widget::prepare_render_widget(
               InViewport(top=placement.below_top, left=placement.left),
             )
           }
-        Exact => return Some(InViewport(top=anchor.top, left=anchor.left))
+        Exact =>
+          // `_prepareRenderWidgetAtExactPositionOverflowing`: the overflowing
+          // layer's coordinate space is the editor root, so the content-space
+          // `left` shifts right by `contentLeft`.
+          if self.allow_editor_overflow {
+            return Some(
+              InViewport(top=anchor.top, left=anchor.left + ctx.content_left),
+            )
+          } else {
+            return Some(InViewport(top=anchor.top, left=anchor.left))
+          }
       }
     }
   }
@@ -451,13 +514,114 @@ fn layout_box_in_viewport(
 }
 
 ///|
+/// Monaco `dom.getDomNodePagePosition` narrowed to the fields
+/// `_layoutBoxInPage` reads: the node's page-space box (client rect plus the
+/// window scroll offset).
+priv struct DomNodePagePosition {
+  top : Double
+  left : Double
+  width : Double
+}
+
+///|
+fn dom_node_page_position(node : @rdom.Element) -> DomNodePagePosition {
+  let rect = node.get_bounding_client_rect()
+  let window = @rdom.window()
+  {
+    top: rect.get_top() + window.scroll_y().to_double(),
+    left: rect.get_left() + window.scroll_x().to_double(),
+    width: rect.get_width(),
+  }
+}
+
+///|
+/// Monaco `Widget._layoutHorizontalSegmentInPage` (`contentWidgets.ts:
+/// 337-362`): clamp the widget's horizontal segment so it stays inside the
+/// window (15px side clearance) while staying within one widget-width of the
+/// editor box. Returns the clamped editor-root-relative `left` (the absolute
+/// variant only feeds the unported `fixedOverflowWidgets` arm).
+fn layout_horizontal_segment_in_page(
+  window_width : Double,
+  dom_node_position : DomNodePagePosition,
+  left : Double,
+  width : Double,
+) -> Double {
+  // Leave some clearance to the left/right
+  let left_padding = 15.0
+  let right_padding = 15.0
+
+  // Initially, the limits are defined as the dom node limits
+  let min_limit = double_max(left_padding, dom_node_position.left - width)
+  let max_limit = double_min(
+    dom_node_position.left + dom_node_position.width + width,
+    window_width - right_padding,
+  )
+  let scroll_x = @rdom.window().scroll_x().to_double()
+  let mut left = left
+  let mut absolute_left = dom_node_position.left + left - scroll_x
+  if absolute_left + width > max_limit {
+    let delta = absolute_left - (max_limit - width)
+    absolute_left -= delta
+    left -= delta
+  }
+  if absolute_left < min_limit {
+    let delta = absolute_left - min_limit
+    absolute_left -= delta
+    left -= delta
+  }
+  left
+}
+
+///|
+/// Monaco `Widget._layoutBoxInPage` (`contentWidgets.ts:364-395`): the
+/// overflowing widget renders in the editor root's coordinate space but its
+/// fit is judged against the *page* (22px top/bottom clearance), so a narrow
+/// or short editor no longer constrains the widget. The
+/// `fixedOverflowWidgets` arm is unported (the viewer never sets the option).
+fn layout_box_in_page(
+  anchor : AnchorCoordinate,
+  width : Double,
+  height : Double,
+  ctx : ContentWidgetsRenderContext,
+  view_dom_node : @rdom.Element,
+) -> BoxLayoutResult {
+  let above_top = anchor.top - height
+  let below_top = anchor.top + anchor.height
+  let dom_node_position = dom_node_page_position(view_dom_node)
+  let window = @rdom.window()
+  let scroll_y = window.scroll_y().to_double()
+  let absolute_above_top = dom_node_position.top + above_top - scroll_y
+  let absolute_below_top = dom_node_position.top + below_top - scroll_y
+  let (window_width, window_height) = body_client_area(view_dom_node)
+  let left = layout_horizontal_segment_in_page(
+    window_width,
+    dom_node_position,
+    anchor.left - ctx.scroll_left + ctx.content_left,
+    width,
+  )
+
+  // Leave some clearance to the top/bottom
+  let top_padding = 22.0
+  let bottom_padding = 22.0
+  let fits_above = absolute_above_top >= top_padding
+  let fits_below = absolute_below_top + height <= window_height - bottom_padding
+  { fits_above, above_top, fits_below, below_top, left }
+}
+
+///|
 /// Monaco `Widget.render` (`contentWidgets.ts:556-596`), the write half: only
-/// `top`/`left`/`visibility` change per frame; the DOM stays mounted.
+/// `top`/`left`/`visibility` change per frame; the DOM stays mounted. An
+/// overflowing widget's coordinates are already editor-root-relative, so the
+/// content layer's `translate_y` does not apply (`contentWidgets.ts:585-591`).
 fn Widget::render(self : Widget, translate_y : Double) -> Unit {
   let was_visible = self.is_visible
   match self.render_data {
     Some(InViewport(top~, left~)) => {
-      self.top = top - translate_y
+      self.top = if self.allow_editor_overflow {
+        top
+      } else {
+        top - translate_y
+      }
       self.left = left
       self.is_visible = true
       self.apply_style()
@@ -489,25 +653,21 @@ fn Widget::render(self : Widget, translate_y : Double) -> Unit {
 }
 
 ///|
-/// Writes the widget's positioning style in one attribute set — the stand-in
-/// for the source's per-property `FastDomNode` mutations (`setTop`/`setLeft`/
-/// `setVisibility`/`setDisplay`). The widget's own classes/styles live on its
-/// descendants, so owning the wrapper's `style` here is safe.
+/// Writes the widget's positioning style through per-property mutations — the
+/// source's `FastDomNode` writes (`setTop`/`setLeft`/`setVisibility`/
+/// `setDisplay`). Property-level (not a whole-attribute rewrite) because the
+/// widget owner writes sizing properties onto the same node: the content
+/// hover's `_resizableNode.layout` sets `width`/`height` on its wrapper,
+/// exactly as Monaco's `ResizableHTMLElement` shares the node with
+/// `ViewContentWidgets`.
 fn Widget::apply_style(self : Widget) -> Unit {
   let display = if self.display_block { "block" } else { "none" }
   let visibility = if self.is_visible { "inherit" } else { "hidden" }
-  self.dom_node.set_attribute(
-    "style",
-    "position:absolute;display:" +
-    display +
-    ";visibility:" +
-    visibility +
-    ";top:" +
-    self.top.to_string() +
-    "px;left:" +
-    self.left.to_string() +
-    "px",
-  )
+  set_style_property(self.dom_node, "position", "absolute")
+  set_style_property(self.dom_node, "display", display)
+  set_style_property(self.dom_node, "visibility", visibility)
+  set_style_property(self.dom_node, "top", self.top.to_string() + "px")
+  set_style_property(self.dom_node, "left", self.left.to_string() + "px")
 }
 
 ///|
@@ -536,3 +696,27 @@ extern "js" fn element_contains_active_element(element : @rdom.Element) -> Bool 
   #|   const active = element?.ownerDocument?.activeElement;
   #|   return Boolean(active && element.contains(active));
   #| }
+
+///|
+/// `element.style.setProperty` — the `FastDomNode` per-property style write.
+extern "js" fn set_style_property(
+  element : @rdom.Element,
+  name : String,
+  value : String,
+) -> Unit =
+  #| (element, name, value) => { element.style.setProperty(name, value); }
+
+///|
+/// Monaco `dom.getClientArea(elDocument.body)`: the page box the overflowing
+/// placement is clamped to.
+fn body_client_area(node : @rdom.Element) -> (Double, Double) {
+  (body_client_width(node), body_client_height(node))
+}
+
+///|
+extern "js" fn body_client_width(node : @rdom.Element) -> Double =
+  #| (node) => node.ownerDocument.body.clientWidth
+
+///|
+extern "js" fn body_client_height(node : @rdom.Element) -> Double =
+  #| (node) => node.ownerDocument.body.clientHeight

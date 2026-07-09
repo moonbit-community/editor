@@ -1,40 +1,39 @@
 ///|
-/// Phase 1 of `monaco-hover-logic-chain-port.md`: the available-space arithmetic
-/// ported from Monaco `resizableContentWidget.ts` / `contentHoverWidget.ts`.
-test "hover available space is measured to the editor edges minus Monaco margins" {
-  // Anchor line 200px below the editor top, in a 600px-tall editor, 18px lines.
-  let line_top = 200.0
-  let editor_height = 600.0
+/// The available-space arithmetic ported from Monaco
+/// `resizableContentWidget.ts` (`_availableVerticalSpaceAbove`/`Below`,
+/// page-space because the hover is an overflowing content widget).
+test "hover available space is measured against the page minus Monaco margins" {
+  // Editor top 100px into the page; anchor line 200px below the editor top;
+  // 800px-tall page body; 18px lines.
+  let editor_box_top = 100.0
+  let mouse_box_top = 200.0
+  let body_height = 800.0
   let line_height = 18.0
-  // Above: line_top - TOP_HEIGHT(30).
-  assert_eq(hover_available_space_above(line_top), 170.0)
-  // Below: editor_height - (line_top + line_height) - BOTTOM_HEIGHT(24).
+  // Above: editorBox.top + mouseBox.top - TOP_HEIGHT(30).
+  assert_eq(hover_available_space_above(editor_box_top, mouse_box_top), 270.0)
+  // Below: bodyBox.height - (editorBox.top + mouseBox.top + height) -
+  // BOTTOM_HEIGHT(24).
   assert_eq(
-    hover_available_space_below(line_top, line_height, editor_height),
-    358.0,
+    hover_available_space_below(
+      body_height, editor_box_top, mouse_box_top, line_height,
+    ),
+    458.0,
   )
 }
 
 ///|
-test "maximum rendering height is the lesser of available space and content" {
-  // Content shorter than the room: render at content height (no scrollbar).
-  assert_eq(hover_maximum_rendering_height(170.0, 90.0), 90.0)
-  // Content taller than the room: cap to the room (scrollbar engages).
-  assert_eq(hover_maximum_rendering_height(170.0, 400.0), 170.0)
-}
-
-///|
-/// Phase 4 sizing-cluster completion: `_findMaximumRenderingWidth`'s decision
-/// (`contentHoverWidget.ts:217-236`), adapted for the viewer's non-overflowing
-/// case — short/narrow content should render at its own natural width, not
-/// stretched to the available-width cap (the bug this increment fixes).
-test "resolved width is the lesser of the natural (nowrap) width and the available width" {
-  // A short one-line payload ("ok") fits well under the cap: render narrow.
-  assert_eq(hover_resolved_width(40.0, 480.0), 40.0)
-  // A long unwrapped payload exceeds the cap: wrap at the available width.
-  assert_eq(hover_resolved_width(900.0, 480.0), 480.0)
-  // Exactly at the boundary: either bound (both equal) resolves the same.
-  assert_eq(hover_resolved_width(480.0, 480.0), 480.0)
+/// Monaco `_updateMaxDimensions` (`contentHoverWidget.ts:307-312`): the max
+/// dimensions scale with the editor but never drop below 750×250 — the floor
+/// that keeps the hover readable in a narrow editor window.
+test "hover max dimensions keep the 750x250 floor in a narrow editor" {
+  // A wide editor: two thirds of the width wins over the floor.
+  assert_eq(hover_max_width(1500.0), 990.0)
+  // A narrow editor: the 750px floor wins (the narrow-viewer readability fix).
+  assert_eq(hover_max_width(600.0), 750.0)
+  // A tall editor: a quarter of the height wins over the floor.
+  assert_eq(hover_max_height(1200.0), 300.0)
+  // A short editor: the 250px floor wins.
+  assert_eq(hover_max_height(600.0), 250.0)
 }
 
 ///|
@@ -50,25 +49,24 @@ test "position preference honors editor.hover.above and the side that fits" {
 }
 
 ///|
-test "a tall hover near the editor bottom caps to the room above" {
-  // Anchor near the bottom: little room below, lots above -> render above and
-  // cap the height to the room above so the scrollbar engages within bounds.
-  let line_top = 560.0
-  let editor_height = 600.0
+test "a tall hover near the page bottom flips above" {
+  // Anchor near the page bottom: little room below, lots above.
+  let editor_box_top = 100.0
+  let mouse_box_top = 460.0
+  let body_height = 600.0
   let line_height = 18.0
-  let content_height = 500.0
-  let space_above = hover_available_space_above(line_top)
+  let content_height = 400.0
+  let space_above = hover_available_space_above(editor_box_top, mouse_box_top)
   let space_below = hover_available_space_below(
-    line_top, line_height, editor_height,
+    body_height, editor_box_top, mouse_box_top, line_height,
   )
-  // space_above = 530, space_below = 600 - 578 - 24 = -2.
+  // space_above = 100 + 460 - 30 = 530; space_below = 600 - 578 - 24 = -2.
   assert_eq(space_above, 530.0)
   assert_eq(space_below, -2.0)
-  let above = hover_prefer_above(
-    content_height, space_above, space_below, hover_prefer_above_default,
+  assert_eq(
+    hover_prefer_above(
+      content_height, space_above, space_below, hover_prefer_above_default,
+    ),
+    true,
   )
-  assert_eq(above, true)
-  let available = if above { space_above } else { space_below }
-  // Content (500) fits within the room above (530): no clipping needed.
-  assert_eq(hover_maximum_rendering_height(available, content_height), 500.0)
 }

@@ -740,6 +740,7 @@ impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
     line_height: context.input.layout.line_height().to_double(),
     char_width: context.input.space_width,
     typical_fullwidth_character_width: context.input.typical_fullwidth_character_width,
+    content_left: context.gutter_width,
     scroll_top: context.position.scroll_top,
     scroll_left: context.position.scroll_left,
     viewport_width: context.dimensions.width,

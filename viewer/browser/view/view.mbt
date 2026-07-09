@@ -43,7 +43,7 @@ pub fn View::new() -> View {
   let content_view_overlays = ContentViewOverlays::new(document)
   let view_zones = @view_zones.ViewZones::new(document)
   let view_lines = @view_lines.ViewLines::new(document)
-  let content_widgets = @content_widgets.ContentWidgets::new(document)
+  let content_widgets = @content_widgets.ContentWidgets::new(document, root)
   let view_cursors = @view_cursors.ViewCursors::new(document)
   let overlay_widgets = @overlay_widgets.OverlayWidgets::new(document)
   let lines_content = editor_scrollbar.content()

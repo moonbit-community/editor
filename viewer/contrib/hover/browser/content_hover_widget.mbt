@@ -8,14 +8,16 @@
 // unmount, so the `fade-in` animation plays only on a genuine hidden→shown
 // transition.
 //
-// Standing deviations carried forward from the previous port:
-//   - No resize sashes (`ResizableHTMLElement` machinery unported); the
-//     widget is not user-resizable.
-//   - `allowEditorOverflow` is `false` (source: `true`): the viewer's hover is
-//     clipped to `.overflow-guard` (the Phase 1b non-overflowing deviation),
-//     so available space is measured against the editor box, not the page.
-//   - Width sizing keeps the nowrap-probe / available-width cap adaptation of
-//     `_findMaximumRenderingWidth` (no page-body overflow branch).
+// Standing deviations:
+//   - No resize sashes (`ResizableHTMLElement`'s sash/drag machinery
+//     unported): the widget is not user-resizable, so `_resize`,
+//     `_lastDimensions`, `_contentWidth`/`_updateMinimumWidth`, and the
+//     `_findMaximumRenderingWidth`/`_findMaximumRenderingHeight` /
+//     `_isHoverTextOverflowing` cluster (all only reachable from the resize
+//     path) are N-A. `_resizableNode.layout` survives as direct `width`/
+//     `height` writes on the wrapper.
+//   - No `onDidLayoutChange` re-run of `_updateMaxDimensions` while visible;
+//     the constraints refresh on the next show instead.
 
 ///|
 /// Monaco `RenderedContentHover` (`contentHoverRendered.ts`), narrowed to what
@@ -34,9 +36,9 @@ pub(all) struct RenderedContentHover {
 /// closures (Monaco's `this._editor` + DI services). Built once at widget
 /// construction.
 pub(all) struct ContentHoverWidgetHost {
-  /// The editor's root node — the available-space / width-cap box (Monaco
-  /// measures the page body; the non-overflowing deviation measures the
-  /// editor).
+  /// The editor's root node — Monaco's `this._editor.getDomNode()` /
+  /// `getLayoutInfo()` box: the `_updateMaxDimensions` width/height source and
+  /// the page-space reference for `_availableVerticalSpaceAbove`/`Below`.
   root : @rdom.Element
   /// `editor.layoutContentWidget(this)`: re-read `get_position()` and
   /// reposition on the next render.
@@ -52,9 +54,6 @@ pub(all) struct ContentHoverWidgetHost {
   scrolled_visible_position_top : (@base_common.Position) -> Double
   /// `fontInfo.lineHeight`, read live like the source's option access.
   line_height : () -> Double
-  /// `layoutInfo` gutter width: the hover may occupy the content area right of
-  /// the gutter (see `hover_available_width`).
-  gutter_width : () -> Double
   /// The pointer is on the hover widget: keep the hover open (the controller's
   /// `_shouldKeepCurrentHover` arm over the content widget).
   keep_hover_open : () -> Unit
@@ -103,12 +102,14 @@ pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn get_dom_n
 }
 
 ///|
-/// Source: `true`. The viewer's hover stays clipped to `.overflow-guard`
-/// (non-overflowing deviation), so the widget renders in the content layer.
+/// Monaco `ResizableContentWidget.allowEditorOverflow = true`: the hover
+/// renders in the `.overflowingContentWidgets` layer, outside
+/// `.overflow-guard`, and is placed/fitted against the page
+/// (`_layoutBoxInPage`), so a narrow editor does not shrink it.
 pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn allow_editor_overflow(
   _self,
 ) {
-  false
+  true
 }
 
 ///|
@@ -271,8 +272,8 @@ fn ContentHoverWidget::render_rendered_hover(
 }
 
 ///|
-/// Monaco `show` (`contentHoverWidget.ts:336-362`): render, then re-derive the
-/// position preference from the freshly measured box and lay out again (the
+/// Monaco `show` (`contentHoverWidget.ts:336-362`): render, derive the
+/// position preference from the freshly measured box, then lay out again (the
 /// source's post-render second layout; the accessible-view hint and
 /// keyboard-focus arms are N-A).
 pub fn ContentHoverWidget::show(
@@ -280,6 +281,13 @@ pub fn ContentHoverWidget::show(
   rendered_hover : RenderedContentHover,
 ) -> Unit {
   self.render_rendered_hover(rendered_hover)
+  let widget_height = self.hover.get_bounding_client_rect().get_height()
+  self.position_preference = Some(
+    self.find_position_preference(
+      widget_height,
+      rendered_hover.show_at_position,
+    ),
+  )
   // See https://github.com/microsoft/vscode/issues/140339
   // TODO: Doing a second layout of the hover after force rendering the editor
   self.handle_contents_changed()
@@ -301,119 +309,159 @@ pub fn ContentHoverWidget::hide(self : ContentHoverWidget) -> Unit {
 }
 
 ///|
-/// Monaco `handleContentsChanged` (`contentHoverWidget.ts:406-428`), with the
-/// port's adapted sizing pass: probe the natural (nowrap) width, cap it to the
-/// available content-area width, measure the width-constrained height, choose
-/// the side (`_findPositionPreference`) and its available-space height cap
-/// (`_findMaximumRenderingHeight`), then reposition and rescan the scrollbar
+/// Monaco `handleContentsChanged` (`contentHoverWidget.ts:406-428`): release
+/// the constraints and re-establish the max dimensions
+/// (`_removeConstraintsRenderNormally`), measure the naturally rendered
+/// contents, lock the explicit dimensions on the widget and its wrapper
+/// (`_resizableNode.layout`), re-derive the position preference from the
+/// measured box, then reposition and rescan the scrollbar
 /// (`_layoutContentWidget`).
 pub fn ContentHoverWidget::handle_contents_changed(
   self : ContentHoverWidget,
 ) -> Unit {
-  self.clear_sizing()
-  let natural_width = self.measure_natural_width()
-  let available_width = hover_available_width(
-    self.host.root,
-    (self.host.gutter_width)(),
-  )
-  let width = hover_resolved_width(natural_width, available_width)
-  self.apply_width_sizing(width)
+  self.remove_constraints_render_normally()
+  let contents_dom_node = self.scrollable.content
+  let mut height = contents_dom_node.get_bounding_client_rect().get_height()
+  let mut width = contents_dom_node.get_bounding_client_rect().get_width() + 2.0
+  self.resizable_layout(height, width)
+  self.set_hover_widget_dimensions(px(width), px(height))
+  height = contents_dom_node.get_bounding_client_rect().get_height()
+  width = contents_dom_node.get_bounding_client_rect().get_width()
+  // `_contentWidth` / `_updateMinimumWidth` feed the resize sashes' min-size
+  // bookkeeping — unported.
+  self.resizable_layout(height, width)
   match self.rendered_hover {
     Some(rendered) => {
-      let content_height = self.wrapper.get_bounding_client_rect().get_height()
-      // `_availableVerticalSpaceAbove/Below` measured editor-relative (the
-      // non-overflowing deviation; the source measures against the page).
-      let line_top = (self.host.scrolled_visible_position_top)(
-        rendered.show_at_position,
+      let widget_height = self.hover.get_bounding_client_rect().get_height()
+      self.position_preference = Some(
+        self.find_position_preference(widget_height, rendered.show_at_position),
       )
-      let editor_height = self.host.root.get_bounding_client_rect().get_height()
-      let space_above = hover_available_space_above(line_top)
-      let space_below = hover_available_space_below(
-        line_top,
-        (self.host.line_height)(),
-        editor_height,
-      )
-      let above = hover_prefer_above(
-        content_height, space_above, space_below, hover_prefer_above_default,
-      )
-      self.position_preference = Some(if above { Above } else { Below })
-      let available = if above { space_above } else { space_below }
-      let max_height = hover_maximum_rendering_height(available, content_height)
-      self.apply_sizing(width, max_height)
     }
     None => ()
   }
+  self.layout_content_widget()
+}
+
+///|
+/// Monaco `_removeConstraintsRenderNormally` (`contentHoverWidget.ts:379-385`):
+/// spread the wrapper over the whole editor box and let the (absolutely
+/// positioned, shrink-to-fit) hover render at its natural size under only the
+/// max-dimension caps, so the follow-up measurement is unconstrained by the
+/// widget's previous box or anchor position.
+fn ContentHoverWidget::remove_constraints_render_normally(
+  self : ContentHoverWidget,
+) -> Unit {
+  // Added because otherwise the initial size of the hover content is smaller
+  // than should be
+  let layout_info = self.host.root.get_bounding_client_rect()
+  self.resizable_layout(layout_info.get_height(), layout_info.get_width())
+  self.set_hover_widget_dimensions("auto", "auto")
+  self.update_max_dimensions()
+}
+
+///|
+/// Monaco `_updateMaxDimensions` (`contentHoverWidget.ts:307-312`): the hover
+/// may grow to two thirds of the editor width but never has a cap below
+/// 750×250 — the floor that keeps the hover readable in a narrow editor
+/// (`_lastDimensions` is resize-sash memory, unported).
+fn ContentHoverWidget::update_max_dimensions(self : ContentHoverWidget) -> Unit {
+  let layout_info = self.host.root.get_bounding_client_rect()
+  let height = hover_max_height(layout_info.get_height())
+  let width = hover_max_width(layout_info.get_width())
+  self.set_hover_widget_max_dimensions(px(width), px(height))
+}
+
+///|
+/// Monaco `_updateMaxDimensions`' width arm:
+/// `Math.max(this._editor.getLayoutInfo().width * 0.66, 750)`.
+pub fn hover_max_width(editor_width : Double) -> Double {
+  @hover.max_hover_double(editor_width * 0.66, 750.0)
+}
+
+///|
+/// Monaco `_updateMaxDimensions`' height arm:
+/// `Math.max(this._editor.getLayoutInfo().height / 4, 250)`.
+pub fn hover_max_height(editor_height : Double) -> Double {
+  @hover.max_hover_double(editor_height / 4.0, 250.0)
+}
+
+///|
+/// Monaco `_setHoverWidgetDimensions` (`contentHoverWidget.ts:135-140`) over
+/// `_applyDimensions`: explicit `width`/`height` on the container
+/// (`.monaco-hover`), the scrollable element, and the contents.
+fn ContentHoverWidget::set_hover_widget_dimensions(
+  self : ContentHoverWidget,
+  width : String,
+  height : String,
+) -> Unit {
+  apply_dimensions(self.hover, width, height)
+  apply_dimensions(self.scrollable.wrapper, width, height)
+  apply_dimensions(self.scrollable.content, width, height)
+  self.layout_content_widget()
+}
+
+///|
+fn apply_dimensions(
+  container : @rdom.Element,
+  width : String,
+  height : String,
+) -> Unit {
+  set_style_property(container, "width", width)
+  set_style_property(container, "height", height)
+}
+
+///|
+/// Monaco `_setHoverWidgetMaxDimensions` (`contentHoverWidget.ts:149-155`)
+/// over `_applyMaxDimensions`, plus the `--vscode-hover-maxWidth` custom
+/// property `.markdown-hover .hover-contents` reads (`hover.css`).
+fn ContentHoverWidget::set_hover_widget_max_dimensions(
+  self : ContentHoverWidget,
+  width : String,
+  height : String,
+) -> Unit {
+  apply_max_dimensions(self.scrollable.content, width, height)
+  apply_max_dimensions(self.scrollable.wrapper, width, height)
+  apply_max_dimensions(self.hover, width, height)
+  set_style_property(self.hover, "--vscode-hover-maxWidth", width)
+  self.layout_content_widget()
+}
+
+///|
+fn apply_max_dimensions(
+  container : @rdom.Element,
+  width : String,
+  height : String,
+) -> Unit {
+  set_style_property(container, "max-width", width)
+  set_style_property(container, "max-height", height)
+}
+
+///|
+/// Monaco `this._resizableNode.layout(height, width)` (`resizable.ts`
+/// `ResizableHTMLElement.layout`): explicit `height`/`width` on the wrapper.
+/// Property-level writes coexist with the content-widget layer's positioning
+/// writes on the same node.
+fn ContentHoverWidget::resizable_layout(
+  self : ContentHoverWidget,
+  height : Double,
+  width : Double,
+) -> Unit {
+  set_style_property(self.wrapper, "height", px(height))
+  set_style_property(self.wrapper, "width", px(width))
+}
+
+///|
+/// Monaco `_layoutContentWidget` (`contentHoverWidget.ts:302-305`):
+/// reposition through the editor, then `this._hover.onContentsChanged()` —
+/// rescan the widget's scroll box.
+fn ContentHoverWidget::layout_content_widget(self : ContentHoverWidget) -> Unit {
   (self.host.layout_content_widget)()
   self.scrollable.update_from_native_content()
 }
 
 ///|
-fn ContentHoverWidget::clear_sizing(self : ContentHoverWidget) -> Unit {
-  self.hover.set_attribute("style", "")
-  self.scrollable.wrapper.set_attribute("style", "")
-  self.scrollable.content.set_attribute("style", "")
-}
-
-///|
-/// `ContentHoverWidget._isHoverTextOverflowing`'s nowrap probe
-/// (`contentHoverWidget.ts:202-215`), narrowed to just the measurement: force
-/// single-line rendering via the CSS hooks `hover.css` exposes
-/// (`--vscode-hover-whiteSpace`/`--vscode-hover-sourceWhiteSpace`), read the
-/// natural width, then release the hooks.
-fn ContentHoverWidget::measure_natural_width(
-  self : ContentHoverWidget,
-) -> Double {
-  self.hover.set_attribute(
-    "style", "--vscode-hover-whiteSpace:nowrap;--vscode-hover-sourceWhiteSpace:nowrap",
-  )
-  let width = self.scrollable.content.get_bounding_client_rect().get_width()
-  self.hover.set_attribute("style", "")
-  width
-}
-
-///|
-/// Locks the hover to an explicit width (not `max-width`), leaving height
-/// natural so the width-constrained wrapped content height can be measured
-/// for the placement decision. Applied to all three DOM levels Monaco's
-/// `_setHoverWidgetDimensions` touches (`contentHoverWidget.ts:113-137`) —
-/// this port's `hover`/`scrollable.wrapper`/`scrollable.content`. The
-/// outermost `wrapper` (Monaco's `_resizableNode.domNode`) is untouched; its
-/// sizing is the unported sash/resize machinery's job.
-fn ContentHoverWidget::apply_width_sizing(
-  self : ContentHoverWidget,
-  width : Double,
-) -> Unit {
-  let style = hover_width_style(width)
-  self.hover.set_attribute("style", style)
-  self.scrollable.wrapper.set_attribute("style", style)
-  self.scrollable.content.set_attribute("style", style)
-  self.scrollable.update_from_native_content()
-}
-
-///|
-fn ContentHoverWidget::apply_sizing(
-  self : ContentHoverWidget,
-  width : Double,
-  max_height : Double,
-) -> Unit {
-  let style = hover_width_style(width) +
-    ";max-height:" +
-    max_height.to_string() +
-    "px"
-  self.hover.set_attribute("style", style)
-  self.scrollable.wrapper.set_attribute("style", style)
-  self.scrollable.content.set_attribute("style", style)
-  self.scrollable.update_from_native_content()
-}
-
-///|
-/// The explicit `width`, plus the `--vscode-hover-maxWidth` custom property
-/// `.markdown-hover .hover-contents` reads (`hover.css`) so nested content
-/// tracks the same resolved width instead of falling back to its 500px
-/// default.
-fn hover_width_style(width : Double) -> String {
-  let px = width.to_string() + "px"
-  "width:" + px + ";--vscode-hover-maxWidth:" + px
+fn px(value : Double) -> String {
+  value.to_string() + "px"
 }
 
 ///|
@@ -508,41 +556,79 @@ let hover_bottom_height : Double = 24.0
 pub let hover_prefer_above_default : Bool = true
 
 ///|
-/// Monaco `ResizableContentWidget._availableVerticalSpaceAbove`, adapted to the
-/// non-overflowing (clipped to `.overflow-guard`) hover: the room from the
-/// anchor line top up to the editor top edge, less `TOP_HEIGHT`. `line_top` is
-/// the anchor line's top in editor-viewport pixels.
-pub fn hover_available_space_above(line_top : Double) -> Double {
-  line_top - hover_top_height
+/// Monaco `ResizableContentWidget._availableVerticalSpaceAbove`
+/// (`resizableContentWidget.ts:64-72`): the page-space room above the anchor
+/// line, `editorBox.top + mouseBox.top - TOP_HEIGHT`. Page-based because the
+/// overflowing hover may extend past the editor box.
+pub fn hover_available_space_above(
+  editor_box_top : Double,
+  mouse_box_top : Double,
+) -> Double {
+  editor_box_top + mouse_box_top - hover_top_height
 }
 
 ///|
-/// Monaco `ResizableContentWidget._availableVerticalSpaceBelow`, editor-relative:
-/// the room from the anchor line bottom down to the editor bottom edge, less
-/// `BOTTOM_HEIGHT`.
+/// Monaco `ResizableContentWidget._availableVerticalSpaceBelow`
+/// (`resizableContentWidget.ts:74-84`): the page-space room below the anchor
+/// line, `bodyBox.height - mouseBottom - BOTTOM_HEIGHT`.
 pub fn hover_available_space_below(
-  line_top : Double,
-  line_height : Double,
-  editor_height : Double,
+  body_height : Double,
+  editor_box_top : Double,
+  mouse_box_top : Double,
+  mouse_box_height : Double,
 ) -> Double {
-  editor_height - (line_top + line_height) - hover_bottom_height
+  body_height -
+  (editor_box_top + mouse_box_top + mouse_box_height) -
+  hover_bottom_height
 }
 
 ///|
-/// Monaco `ContentHoverWidget._findMaximumRenderingHeight`: the rendered hover
-/// height is the lesser of the chosen side's available space and the natural
-/// content height, so the `.monaco-hover-content` `overflow:auto` scrollbar
-/// engages exactly when the content does not fit the available room.
-pub fn hover_maximum_rendering_height(
-  available : Double,
-  content_height : Double,
+fn ContentHoverWidget::available_vertical_space_above(
+  self : ContentHoverWidget,
+  position : @base_common.Position,
 ) -> Double {
-  @hover.min_hover_double(available, content_height)
+  hover_available_space_above(
+    dom_node_page_top(self.host.root),
+    (self.host.scrolled_visible_position_top)(position),
+  )
 }
 
 ///|
-/// Monaco `ResizableContentWidget._findPositionPreference`: choose ABOVE vs
-/// BELOW. Returns `true` for ABOVE. `prefer_above` mirrors `editor.hover.above`.
+fn ContentHoverWidget::available_vertical_space_below(
+  self : ContentHoverWidget,
+  position : @base_common.Position,
+) -> Double {
+  hover_available_space_below(
+    body_client_height(self.host.root),
+    dom_node_page_top(self.host.root),
+    (self.host.scrolled_visible_position_top)(position),
+    (self.host.line_height)(),
+  )
+}
+
+///|
+/// Monaco `ResizableContentWidget._findPositionPreference`
+/// (`resizableContentWidget.ts:86-105`); the sash-enable arms are N-A.
+fn ContentHoverWidget::find_position_preference(
+  self : ContentHoverWidget,
+  widget_height : Double,
+  show_at_position : @base_common.Position,
+) -> @content_widgets.ContentWidgetPositionPreference {
+  let space_above = self.available_vertical_space_above(show_at_position)
+  let space_below = self.available_vertical_space_below(show_at_position)
+  if hover_prefer_above(
+      widget_height, space_above, space_below, hover_prefer_above_default,
+    ) {
+    Above
+  } else {
+    Below
+  }
+}
+
+///|
+/// Monaco `ResizableContentWidget._findPositionPreference`'s fit math: choose
+/// ABOVE vs BELOW. Returns `true` for ABOVE. `prefer_above` mirrors
+/// `editor.hover.above`.
 pub fn hover_prefer_above(
   widget_height : Double,
   space_above : Double,
@@ -564,32 +650,11 @@ pub fn hover_prefer_above(
 }
 
 ///|
-/// Horizontal space the hover may occupy: the editor content area to the right
-/// of the line-number/glyph gutter, less a trailing gap for the vertical
-/// scrollbar. Capping to the *content area* (not the whole editor box) keeps the
-/// right-aligned widget from being shifted left into the gutter, where the
-/// margin overlays clip its leading text. Mirrors Monaco's content-relative
-/// width cap (`contentHoverWidget.ts` `_findMaximumRenderingWidth`).
-pub fn hover_available_width(
-  root : @rdom.Element,
-  gutter_width : Double,
-) -> Double {
-  let root_rect = root.get_bounding_client_rect()
-  @hover.max_hover_double(160.0, root_rect.get_width() - gutter_width - 24.0)
-}
-
-///|
-/// `ContentHoverWidget._findMaximumRenderingWidth` (`contentHoverWidget.ts:
-/// 217-236`), adapted: the natural (unwrapped) width if it fits the available
-/// space, else the available-width cap. The viewer has no page-body overflow
-/// branch (Phase 1b's non-overflowing-viewer deviation carries forward), so
-/// there is no separate "overflowing → cap to document body" case — capping
-/// to `available_width` already is that fallback.
-pub fn hover_resolved_width(
-  natural_width : Double,
-  available_width : Double,
-) -> Double {
-  @hover.min_hover_double(natural_width, available_width)
+/// Monaco `dom.getDomNodePagePosition(editorDomNode).top`: client-rect top
+/// plus the window's vertical scroll.
+fn dom_node_page_top(node : @rdom.Element) -> Double {
+  node.get_bounding_client_rect().get_top() +
+  @rdom.window().scroll_y().to_double()
 }
 
 ///|
@@ -626,3 +691,21 @@ extern "js" fn hover_element_contains_active(el : @rdom.Element) -> Bool =
   #|   const active = el?.ownerDocument?.activeElement;
   #|   return Boolean(active && el.contains(active));
   #| }
+
+///|
+/// `element.style.setProperty` — Monaco's per-property style writes
+/// (`container.style.width = …`, `style.setProperty('--vscode-hover-maxWidth',
+/// …)`), kept property-level so the content-widget layer's positioning writes
+/// on the wrapper survive.
+extern "js" fn set_style_property(
+  element : @rdom.Element,
+  name : String,
+  value : String,
+) -> Unit =
+  #| (element, name, value) => { element.style.setProperty(name, value); }
+
+///|
+/// Monaco `dom.getClientArea(editorDomNode.ownerDocument.body).height`
+/// (`resizableContentWidget.ts:81`).
+extern "js" fn body_client_height(node : @rdom.Element) -> Double =
+  #| (node) => node.ownerDocument.body.clientHeight

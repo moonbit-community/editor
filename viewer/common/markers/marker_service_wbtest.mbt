@@ -3,10 +3,7 @@
 
 ///|
 fn uri(value : String) -> @base_common.Uri {
-  match @base_common.Uri::parse(value) {
-    ParsedUri(u) => u
-    UriError(_) => abort("bad test uri: " + value)
-  }
+  try! @base_common.Uri::parse(value)
 }
 
 ///|

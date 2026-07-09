@@ -82,12 +82,16 @@ fn run_next_sample(
   } else {
     "sample_" + sample_index.val.to_string()
   }
-  let uri = @base_common.Uri::memory("perf/large_" + name + ".mbt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/" + "perf/large_" + name + ".mbt",
+  )
   viewer.set_model(
     Some(
       TextModel(
         uri,
-        uri.display_name(),
+        @base_common.basename_or_authority(uri),
         "moonbit",
         sample_index.val + 2,
         "perf-" + name,

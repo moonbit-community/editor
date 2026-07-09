@@ -19,7 +19,11 @@ fn test_model(
   language_id? : String = "plaintext",
 ) -> @model.TextModel {
   TextModel(
-    @base_common.Uri::memory("test-model"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/test-model",
+    ),
     "test-model",
     language_id,
     1,

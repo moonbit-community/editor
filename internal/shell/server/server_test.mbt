@@ -294,10 +294,7 @@ fn expect_remote_uri(path : String) -> @base_common.Uri raise {
 
 ///|
 fn expect_uri(raw : String) -> @base_common.Uri raise {
-  match @base_common.Uri::parse(raw) {
-    ParsedUri(uri) => uri
-    UriError(error) => fail("unexpected URI error " + error.to_string())
-  }
+  @base_common.Uri::parse(raw)
 }
 
 ///|

@@ -22,7 +22,11 @@ fn whitespace_source_text() -> String {
 fn run_whitespace_test() -> Unit {
   let ctx = @support.BrowserTestContext::new("whitespace")
   let done = Ref(false)
-  let uri = @base_common.Uri::memory("whitespace.txt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/whitespace.txt",
+  )
   let model = @model.TextModel(
     uri,
     "whitespace.txt",

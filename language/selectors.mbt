@@ -55,11 +55,14 @@ pub fn LanguageFilter::matches(
     None => ()
   }
   match self.scheme {
-    Some(scheme) => if scheme != model.uri.scheme() { return false }
+    Some(scheme) => if scheme != model.uri.scheme { return false }
     None => ()
   }
   match self.pattern {
-    Some(pattern) => path_pattern_matches(pattern, model.uri.path())
+    // Monaco's `score()` matches globs against `uri.path` (leading slash
+    // included); `path_pattern_matches` strips that slash so the relative
+    // patterns hosts register keep matching.
+    Some(pattern) => path_pattern_matches(pattern, model.uri.path)
     None => true
   }
 }

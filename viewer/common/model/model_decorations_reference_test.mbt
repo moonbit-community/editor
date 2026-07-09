@@ -41,7 +41,18 @@ fn dec_options(class_name : String) -> @model.ModelDecorationOptions {
 
 ///|
 fn create_text_model(text : String) -> @model.TextModel {
-  TextModel(@base_common.Uri::memory("dec.mbt"), "", "moonbit", 1, "", text)
+  TextModel(
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/dec.mbt",
+    ),
+    "",
+    "moonbit",
+    1,
+    "",
+    text,
+  )
 }
 
 ///|

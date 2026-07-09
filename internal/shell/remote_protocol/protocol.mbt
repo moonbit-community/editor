@@ -771,6 +771,17 @@ priv enum ProtocolUriResult {
 }
 
 ///|
+/// `Uri::parse` raises `UriError` (D6); the protocol keeps its own error
+/// mapping, so decode failures collapse to `None` here. Strict mode keeps
+/// the old contract of rejecting scheme-less strings — the protocol only
+/// ever transports `to_string()` output, which always carries a scheme.
+fn try_parse_uri(raw : String) -> @base_common.Uri? {
+  Some(@base_common.Uri::parse(raw, strict=true)) catch {
+    _ => None
+  }
+}
+
+///|
 fn parse_uri_field(
   packet : Json,
   key : String,
@@ -778,9 +789,9 @@ fn parse_uri_field(
 ) -> ProtocolUriResult {
   match json_string_field(packet, key) {
     Some(raw) =>
-      match @base_common.Uri::parse(raw) {
-        ParsedUri(uri) => ParsedProtocolUri(uri)
-        UriError(_) =>
+      match try_parse_uri(raw) {
+        Some(uri) => ParsedProtocolUri(uri)
+        None =>
           ProtocolUriError(
             ProtocolError(
               ProtocolInvalidUri,
@@ -812,8 +823,8 @@ fn parse_source_document(value : Json, id : String) -> ProtocolDocumentResult {
     Object(_) =>
       match json_string_field(value, "uri") {
         Some(raw_uri) =>
-          match @base_common.Uri::parse(raw_uri) {
-            ParsedUri(uri) =>
+          match try_parse_uri(raw_uri) {
+            Some(uri) =>
               ParsedProtocolDocument(
                 DocumentSnapshot(
                   uri,
@@ -823,7 +834,7 @@ fn parse_source_document(value : Json, id : String) -> ProtocolDocumentResult {
                   json_string_field(value, "text").unwrap_or(""),
                 ),
               )
-            UriError(_) =>
+            None =>
               ProtocolDocumentError(
                 ProtocolError(
                   ProtocolInvalidUri,
@@ -917,7 +928,7 @@ fn workspace_stat_json(stat : @workspace.WorkspaceStat) -> Json {
 fn parse_workspace_stat(value : Json) -> @workspace.WorkspaceStat? {
   guard value is Object(_) else { return None }
   guard json_string_field(value, "uri") is Some(raw_uri) else { return None }
-  guard @base_common.Uri::parse(raw_uri) is ParsedUri(uri) else { return None }
+  guard try_parse_uri(raw_uri) is Some(uri) else { return None }
   guard json_string_field(value, "kind") is Some(raw_kind) else { return None }
   guard @workspace.WorkspaceEntryKind::from_string(raw_kind) is Some(kind) else {
     return None
@@ -937,7 +948,9 @@ fn parse_workspace_stat(value : Json) -> @workspace.WorkspaceStat? {
   }
   Some({
     uri,
-    name: json_string_field(value, "name").unwrap_or(uri.display_name()),
+    name: json_string_field(value, "name").unwrap_or(
+      @base_common.basename_or_authority(uri),
+    ),
     kind,
     children,
   })
@@ -1357,8 +1370,8 @@ fn parse_location(value : Json) -> @language.Location? {
     Object(_) =>
       match (json_string_field(value, "uri"), json_field(value, "range")) {
         (Some(raw_uri), Some(range_json)) =>
-          match (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
-            (ParsedUri(uri), Some(range)) => Some({ uri, range })
+          match (try_parse_uri(raw_uri), parse_range(range_json)) {
+            (Some(uri), Some(range)) => Some({ uri, range })
             _ => None
           }
         _ => None
@@ -1373,8 +1386,8 @@ fn parse_reference_item(value : Json) -> ReferenceItem? {
     Object(_) =>
       match (json_string_field(value, "uri"), json_field(value, "range")) {
         (Some(raw_uri), Some(range_json)) =>
-          match (@base_common.Uri::parse(raw_uri), parse_range(range_json)) {
-            (ParsedUri(uri), Some(range)) =>
+          match (try_parse_uri(raw_uri), parse_range(range_json)) {
+            (Some(uri), Some(range)) =>
               Some({
                 uri,
                 range,

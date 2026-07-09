@@ -145,7 +145,9 @@ fn ancestor_uris(
   }
   for i in 0..<(segments.length() - 1) {
     prefix = prefix + "/" + segments[i]
-    ancestors.push({ value: prefix })
+    // `prefix` extends the canonical form of a valid URI with path
+    // segments, so re-parsing cannot fail.
+    ancestors.push(try! @base_common.Uri::parse(prefix))
   }
   Some(ancestors)
 }

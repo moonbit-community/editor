@@ -11,7 +11,11 @@ fn run_reveal_horizontal_test() -> Unit {
   let last_scroll_left = Ref(0.0)
   let last_scroll_top = Ref(0.0)
   let done = Ref(false)
-  let uri = @base_common.Uri::memory("reveal.txt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/reveal.txt",
+  )
   let model = @model.TextModel(
     uri,
     "reveal.txt",

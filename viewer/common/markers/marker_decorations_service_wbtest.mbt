@@ -1,7 +1,11 @@
 ///|
 test "MarkerDecorations diff: no-op and add/remove" {
   let model = @model.TextModel(
-    @base_common.Uri::memory("diff.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/diff.mbt",
+    ),
     "",
     "moonbit",
     1,
@@ -28,7 +32,11 @@ test "MarkerDecorations diff: no-op and add/remove" {
 test "MarkerDecorationsService fires change event and honors suppression" {
   let markers = MarkerService::new()
   let svc = MarkerDecorationsService::new(markers)
-  let uri = @base_common.Uri::memory("svc.mbt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/svc.mbt",
+  )
   let model = @model.TextModel(uri, "", "moonbit", 1, "rev", "alpha beta gamma")
   svc.on_model_added(model)
   let fired : Array[String] = []
@@ -53,7 +61,11 @@ test "MarkerDecorationsService fires change event and honors suppression" {
 test "MarkerDecorationsService take caps at 500" {
   let markers = MarkerService::new()
   let svc = MarkerDecorationsService::new(markers)
-  let uri = @base_common.Uri::memory("cap.mbt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/cap.mbt",
+  )
   let model = @model.TextModel(uri, "", "moonbit", 1, "rev", "x")
   svc.on_model_added(model)
   let diagnostics : Array[@language.Diagnostic] = []

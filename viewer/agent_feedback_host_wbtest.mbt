@@ -8,7 +8,11 @@
 
 ///|
 fn test_model_uri() -> @base_common.Uri {
-  @base_common.Uri::memory("test-model")
+  try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/test-model",
+  )
 }
 
 ///|

@@ -52,7 +52,11 @@ test "view model produces viewport data from layout window" {
 test "viewport line decorations come from model decoration storage" {
   let text = "alpha beta\ngamma delta\nepsilon"
   let model = @model.TextModel(
-    @base_common.Uri::memory("storage.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/storage.mbt",
+    ),
     "",
     "moonbit",
     1,

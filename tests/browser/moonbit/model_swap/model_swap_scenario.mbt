@@ -24,7 +24,11 @@ fn swap_model(name : String, marker : String) -> @model.TextModel {
     lines.write_string("line_\{index}_of_\{name}")
   }
   @model.TextModel(
-    @base_common.Uri::memory(name),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/" + name,
+    ),
     name,
     "plaintext",
     1,

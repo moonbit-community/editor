@@ -1,45 +1,49 @@
-///|
-test "parses uris and extracts labels" {
-  let memory = expect_uri("memory://main.mbt")
-  assert_eq(memory.scheme(), "memory")
-  assert_eq(memory.to_string(), "memory://main.mbt")
+// MoonBit-surface tests for the `Uri` port that the transcribed oracle
+// suite (`uri_reference_test.mbt`) does not cover: the D5 cache-ignoring
+// `Eq`/`Hash`/`Debug` impls and the D6 error shape.
 
-  let file = expect_uri("file://server/nested/file.mbt")
-  assert_eq(file.scheme(), "file")
-  assert_eq(file.path(), "nested/file.mbt")
-  assert_eq(file.display_name(), "file.mbt")
-  assert_eq(file.to_string(), "file://server/nested/file.mbt")
+///|
+test "Eq/Hash ignore the lazy caches (D5)" {
+  let a = Uri::parse("file:///x/y.txt")
+  let b = Uri::parse("file:///x/y.txt")
+  // populate a's caches only
+  ignore(a.to_string())
+  ignore(a.fs_path())
+  assert_true(a == b)
+  let table : Map[Uri, Int] = {}
+  table[a] = 1
+  assert_true(table.get(b) == Some(1))
 }
 
 ///|
-test "creates memory uris" {
-  assert_eq(Uri::memory("").to_string(), "memory://document")
-  assert_eq(
-    Uri::memory("nested\\file.mbt").to_string(),
-    "memory://nested/file.mbt",
+test "Debug repr uses the formatted form (D5)" {
+  let uri = Uri::parse("http://example.com/p")
+  debug_inspect(
+    uri,
+    content=(
+      #|"URI(http://example.com/p)"
+    ),
   )
 }
 
 ///|
-test "rejects invalid uris" {
-  expect_uri_error("missing-scheme", InvalidUri)
-  expect_uri_error("://missing-scheme", InvalidUri)
-  expect_uri_error("file://", InvalidUri)
-  expect_uri_error("1file://path", InvalidUri)
+test "UriError carries the Monaco message (D6)" {
+  // `fäil` has an illegal scheme char, so even non-strict parse raises;
+  // note `1:path` would be legal — `\w` includes digits.
+  try Uri::parse("fäil:path") |> ignore catch {
+    UriError(message) => assert_true(message.contains("[UriError]"))
+  } noraise {
+    _ => fail("expected UriError")
+  }
+  assert_eq(Uri::parse("1:path").scheme, "1")
 }
 
 ///|
-fn expect_uri(raw_uri : String) -> Uri raise {
-  match Uri::parse(raw_uri) {
-    ParsedUri(uri) => uri
-    UriError(error) => fail("unexpected uri error " + error.to_string())
-  }
-}
-
-///|
-fn expect_uri_error(raw_uri : String, expected : UriError) -> Unit raise {
-  match Uri::parse(raw_uri) {
-    UriError(error) => assert_true(error == expected)
-    ParsedUri(uri) => fail("unexpected uri " + uri.to_string())
-  }
+test "to_string caches only the encoded form" {
+  let uri = Uri::parse("file:///a b")
+  let encoded1 = uri.to_string()
+  let encoded2 = uri.to_string()
+  assert_eq(encoded1, "file:///a%20b")
+  assert_eq(encoded1, encoded2)
+  assert_eq(uri.to_string(skip_encoding=true), "file:///a b")
 }

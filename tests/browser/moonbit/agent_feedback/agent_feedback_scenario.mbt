@@ -12,7 +12,11 @@
 fn run_agent_feedback_test() -> Unit {
   let ctx = @support.BrowserTestContext::new("agent_feedback")
   let done = Ref(false)
-  let uri = @base_common.Uri::memory("feedback.mbt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/feedback.mbt",
+  )
   let model = @model.TextModel(
     uri,
     "feedback.mbt",

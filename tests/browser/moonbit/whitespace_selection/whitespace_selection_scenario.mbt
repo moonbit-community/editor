@@ -18,7 +18,11 @@ fn whitespace_selection_source_text() -> String {
 fn run_whitespace_selection_test() -> Unit {
   let ctx = @support.BrowserTestContext::new("whitespace_selection")
   let done = Ref(false)
-  let uri = @base_common.Uri::memory("whitespace-selection.txt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/whitespace-selection.txt",
+  )
   let model = @model.TextModel(
     uri,
     "whitespace-selection.txt",

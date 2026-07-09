@@ -118,11 +118,11 @@ pub async fn read_document(
   provider : &FileSystemProvider,
   uri : @base_common.Uri,
 ) -> DocumentReadResult {
-  if uri.scheme() != provider.scheme() {
+  if uri.scheme != provider.scheme() {
     return DocumentReadFailed(
       DocumentError(
         InvalidUri,
-        "No filesystem provider is registered for URI scheme " + uri.scheme(),
+        "No filesystem provider is registered for URI scheme " + uri.scheme,
         uri~,
       ),
     )
@@ -145,7 +145,7 @@ pub fn watch_file(
   uri : @base_common.Uri,
   listener : (Array[FileChange]) -> Unit,
 ) -> FileWatch {
-  if uri.scheme() == provider.scheme() {
+  if uri.scheme == provider.scheme() {
     provider.watch(uri, WatchOptions::default(), listener)
   } else {
     { dispose: () => () }
@@ -164,7 +164,7 @@ pub impl ToJson for FileSystemProviderError with fn to_json(self) {
   match self.uri {
     Some(uri) => {
       fields["uri"] = uri.to_string().to_json()
-      fields["displayName"] = uri.display_name().to_json()
+      fields["displayName"] = @base_common.basename_or_authority(uri).to_json()
     }
     None => ()
   }

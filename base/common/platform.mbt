@@ -32,3 +32,28 @@ pub let is_windows : Bool = host_platform == Windows
 ///|
 /// Monaco `platform.isLinux`.
 pub let is_linux : Bool = host_platform == Linux
+
+///|
+/// D8 test seam for the URI/path stack: `None` reads the host platform.
+let is_windows_override : Ref[Bool?] = { val: None }
+
+///|
+/// Debug-only override so non-Windows CI exercises the win32 branches that
+/// `path.ts`/`uri.ts`/`resources.ts` gate on the global `isWindows`
+/// (Deviation D8 of the URI-system port). Call with no argument to restore
+/// the host platform.
+pub fn set_is_windows_for_testing(value? : Bool) -> Unit {
+  is_windows_override.val = value
+}
+
+///|
+/// `path.ts:82 platformIsWin32` / the `platform.isWindows` reads inside
+/// `uri.ts` and `resources.ts`. Monaco binds the value at module load; we
+/// read it per call so the D8 test seam can flip it (observationally
+/// identical — the platform never changes mid-session, Deviation D1).
+pub fn platform_is_win32() -> Bool {
+  match is_windows_override.val {
+    Some(value) => value
+    None => is_windows
+  }
+}

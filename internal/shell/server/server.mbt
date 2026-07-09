@@ -123,12 +123,12 @@ fn RemoteServer::notify_document_cached(
 pub fn remote_document_uri(raw_path : String) -> @base_common.Uri? {
   match @workspace.SourcePath::normalize_root_relative_path(raw_path) {
     ParsedSourcePath(path) =>
-      match
+      Some(
         @base_common.Uri::parse(
           "readonly-remote://workspace/" + path.to_string(),
-        ) {
-        ParsedUri(uri) => Some(uri)
-        UriError(_) => None
+        ),
+      ) catch {
+        _ => None
       }
     SourcePathError(_) => None
   }

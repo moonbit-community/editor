@@ -51,7 +51,11 @@ fn test_inlay_view_model(
   hints : Array[@language.InlayHint],
 ) -> @view_model.ViewModel {
   let model = @model.TextModel(
-    @base_common.Uri::memory("inlay-test.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/inlay-test.mbt",
+    ),
     "inlay-test.mbt",
     "moonbit",
     1,

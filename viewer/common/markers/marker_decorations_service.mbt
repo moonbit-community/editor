@@ -85,7 +85,7 @@ pub fn MarkerDecorationsService::on_model_removed(
   }
   self.marker_decorations.remove(model.uri.to_string())
   // clean up markers for internal, transient models
-  let scheme = model.uri.scheme()
+  let scheme = model.uri.scheme
   if scheme == "inmemory" || scheme == "internal" || scheme == "vscode" {
     for
       owner in self.markers

@@ -1,7 +1,11 @@
 ///|
 fn test_model() -> @model.TextModel {
   TextModel(
-    @base_common.Uri::memory("language-test.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/language-test.mbt",
+    ),
     "language-test.mbt",
     "moonbit",
     7,

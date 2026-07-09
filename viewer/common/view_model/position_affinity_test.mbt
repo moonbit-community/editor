@@ -14,7 +14,11 @@ fn affinity_view_model(
   soft_wrap_column~ : Int,
 ) -> @view_model.ViewModel {
   let model = @model.TextModel(
-    @base_common.Uri::memory("affinity-test.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/affinity-test.mbt",
+    ),
     "affinity-test.mbt",
     "moonbit",
     1,

@@ -19,7 +19,11 @@ fn dabs(value : Double) -> Double {
 fn run_read_api_test() -> Unit {
   let ctx = @support.BrowserTestContext::new("read_api")
   let done = Ref(false)
-  let uri = @base_common.Uri::memory("read-api.txt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/read-api.txt",
+  )
   let model = @model.TextModel(
     uri,
     "read-api.txt",

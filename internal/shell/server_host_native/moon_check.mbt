@@ -106,14 +106,15 @@ fn MoonCheckDiagnostics::emit(
   uri_key : String,
   diagnostics : Array[@language.Diagnostic],
 ) -> Unit {
-  match @base_common.Uri::parse(uri_key) {
-    ParsedUri(uri) =>
+  let uri = Some(@base_common.Uri::parse(uri_key)) catch { _ => None }
+  match uri {
+    Some(uri) =>
       (self.publish)(
         uri,
         self.revisions.get(uri_key).unwrap_or(""),
         diagnostics,
       )
-    UriError(_) => ()
+    None => ()
   }
 }
 

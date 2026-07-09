@@ -32,8 +32,5 @@ test "language selectors match language scheme and path" {
 
 ///|
 fn expect_uri(raw_uri : String) -> @base_common.Uri raise {
-  match @base_common.Uri::parse(raw_uri) {
-    ParsedUri(uri) => uri
-    UriError(error) => fail("unexpected uri error " + error.to_string())
-  }
+  @base_common.Uri::parse(raw_uri)
 }

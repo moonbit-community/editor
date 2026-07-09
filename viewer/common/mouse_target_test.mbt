@@ -14,7 +14,18 @@ fn register_plain_moonbit() -> Unit {
 ///|
 fn plain_text_model(text : String) -> @model.TextModel {
   register_plain_moonbit()
-  TextModel(@base_common.Uri::memory("plain.mbt"), "", "moonbit", 1, "", text)
+  TextModel(
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/plain.mbt",
+    ),
+    "",
+    "moonbit",
+    1,
+    "",
+    text,
+  )
 }
 
 ///|
@@ -48,7 +59,11 @@ fn inlay_hint_hit_test_view() -> (
   // The hint is written as an `after` injected-text decoration on the
   // backing model (Track F: injected text lives in decoration storage).
   let model = @model.TextModel(
-    @base_common.Uri::memory("hit-test.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/hit-test.mbt",
+    ),
     "hit-test.mbt",
     "moonbit",
     1,

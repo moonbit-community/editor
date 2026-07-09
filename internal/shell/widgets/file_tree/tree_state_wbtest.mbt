@@ -1,6 +1,6 @@
 ///|
 fn uri(raw : String) -> @base_common.Uri {
-  { value: raw }
+  try! @base_common.Uri::parse(raw)
 }
 
 ///|
@@ -174,7 +174,7 @@ impl @workspace.WorkspaceTreeProvider for MemoryTreeProvider with fn resolve(
     Some(children) =>
       WorkspaceResolved({
         uri,
-        name: uri.display_name(),
+        name: @base_common.basename_or_authority(uri),
         kind: Directory,
         children: Some(children),
       })

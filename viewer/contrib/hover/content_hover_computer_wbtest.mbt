@@ -1,7 +1,11 @@
 ///|
 fn computer_test_model() -> @model.TextModel {
   TextModel(
-    @base_common.Uri::memory("hover-test.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/hover-test.mbt",
+    ),
     "hover-test.mbt",
     "moonbit",
     7,

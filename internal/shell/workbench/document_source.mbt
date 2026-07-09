@@ -193,13 +193,15 @@ fn route_watched_error_cmd(
   @cmd.custom_cmd(_ => {
     match watch_listeners.get(uri_key) {
       Some(listener) => {
-        let uri = match @base_common.Uri::parse(uri_key) {
-          ParsedUri(uri) => Some(uri)
-          UriError(_) => None
-        }
+        let uri = Some(@base_common.Uri::parse(uri_key)) catch { _ => None }
         let document_uri = match uri {
           Some(uri) => uri
-          None => @base_common.Uri::memory(uri_key)
+          None =>
+            try! @base_common.Uri::from(
+              scheme=@base_common.schemas_in_memory,
+              authority="model",
+              path="/" + uri_key,
+            )
         }
         let document_error = match uri {
           Some(uri) =>

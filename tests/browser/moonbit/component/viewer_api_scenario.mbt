@@ -79,7 +79,11 @@ fn run_viewer_api_test() -> Unit {
   let rendered_line_count = Ref(0)
   let view_line_count = Ref(0)
   let done = Ref(false)
-  let uri = @base_common.Uri::memory("component.mbt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/component.mbt",
+  )
   let model = @model.TextModel(
     uri,
     "component.mbt",

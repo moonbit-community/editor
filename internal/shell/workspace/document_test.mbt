@@ -5,7 +5,11 @@
 /// line, with the `\r\n` pair counted as one line break.
 test "document snapshot splits on lf, lonely cr, and crlf" {
   let doc = @workspace.DocumentSnapshot(
-    @base_common.Uri::memory("eol.txt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/eol.txt",
+    ),
     "",
     "",
     "",

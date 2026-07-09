@@ -181,7 +181,11 @@ test "hover parts are valid only for range anchors that their columns contain" {
 ///|
 fn anchor_test_model() -> @model.TextModel {
   TextModel(
-    @base_common.Uri::memory("anchor-test.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/anchor-test.mbt",
+    ),
     "anchor-test.mbt",
     "moonbit",
     1,

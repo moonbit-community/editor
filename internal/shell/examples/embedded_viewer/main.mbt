@@ -35,7 +35,7 @@ priv struct MemoryWorkspace {
 
 ///|
 fn memory_uri(raw : String) -> @base_common.Uri {
-  { value: raw }
+  try! @base_common.Uri::parse(raw)
 }
 
 ///|
@@ -105,7 +105,7 @@ impl @workspace.WorkspaceTreeProvider for MemoryWorkspace with fn resolve(
     Some(children) =>
       WorkspaceResolved({
         uri,
-        name: uri.display_name(),
+        name: @base_common.basename_or_authority(uri),
         kind: Directory,
         children: Some(children),
       })
@@ -139,8 +139,8 @@ fn MemoryWorkspace::model(
       Some(
         TextModel(
           uri,
-          uri.display_name(),
-          @workspace.infer_language_id(uri.display_name()),
+          @base_common.basename_or_authority(uri),
+          @workspace.infer_language_id(@base_common.basename_or_authority(uri)),
           version,
           "memory-" + version.to_string(),
           text,

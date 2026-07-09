@@ -15,7 +15,11 @@ fn marker_data(severity : MarkerSeverity, message : String) -> MarkerData {
 ///|
 test "marker decorations expose squiggles and marker hover lookup" {
   let markers = MarkerService::new()
-  let uri = @base_common.Uri::memory("decorations.mbt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/decorations.mbt",
+  )
   let model = @model.TextModel(
     uri, "", "moonbit", 1, "rev", "diagnostic text here",
   )
@@ -45,7 +49,11 @@ test "marker decorations expose squiggles and marker hover lookup" {
 ///|
 test "marker service replaces owner resource and supports limits" {
   let service = MarkerService::new()
-  let uri = @base_common.Uri::memory("markers.mbt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/markers.mbt",
+  )
   service.set_diagnostics("owner-a", uri, [
     {
       range: Range(1, 1, 1, 2),
@@ -89,7 +97,11 @@ test "MarkerSeverity bit values and bridge" {
 
 ///|
 test "Marker::from_diagnostic/to_diagnostic carry Hint severity and tags" {
-  let uri = @base_common.Uri::memory("hint.mbt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/hint.mbt",
+  )
   let diagnostic : @language.Diagnostic = {
     range: Range(1, 1, 1, 2),
     severity: Hint,
@@ -106,7 +118,11 @@ test "Marker::from_diagnostic/to_diagnostic carry Hint severity and tags" {
 
 ///|
 test "MarkerData sanitize clamps line/column and drops empty message" {
-  let uri = @base_common.Uri::memory("sanitize.mbt")
+  let uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/sanitize.mbt",
+  )
   // empty message dropped (markerService.ts:238)
   assert_true(marker_data(Error, "").to_marker("o", uri) is None)
   // start/end clamping (markerService.ts:243-246)

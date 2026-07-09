@@ -6,13 +6,55 @@ import {
 }
 
 // Values
+pub fn add_trailing_path_separator(Uri, sep? : String) -> Uri
+
+pub fn basename(Uri) -> String
+
+pub fn basename_or_authority(Uri) -> String
+
 pub fn clamp_int(Int, Int, Int) -> Int
+
+pub fn compare(String, String) -> Int
+
+pub fn compare_substring(String, String, a_start? : Int, a_end? : Int, b_start? : Int, b_end? : Int) -> Int
+
+pub fn compare_substring_ignore_case(String, String, a_start? : Int, a_end? : Int, b_start? : Int, b_end? : Int) -> Int
 
 pub fn contains_rtl(String) -> Bool
 
+pub fn cwd() -> String
+
+pub fn dirname(String) -> String
+
+pub fn env(String) -> String?
+
+pub fn equals_ignore_case(String, String) -> Bool
+
 pub fn escape(String) -> String
 
+pub let ext_uri : ExtUri
+
+pub let ext_uri_biased_ignore_path_case : ExtUri
+
+pub let ext_uri_ignore_path_case : ExtUri
+
+pub fn extname(Uri) -> String
+
 pub fn first_non_whitespace_index(String) -> Int
+
+pub fn get_comparison_key(Uri, ignore_fragment? : Bool) -> String
+
+pub fn get_root(String, sep? : String) -> String
+
+pub fn has_trailing_path_separator(Uri, sep? : String) -> Bool
+
+pub fn is_absolute_path(Uri) -> Bool
+
+pub fn is_equal(Uri?, Uri?, ignore_fragment? : Bool) -> Bool
+
+pub fn is_equal_authority(String, String) -> Bool
+
+pub fn is_equal_or_parent(String, String, Bool, force_posix_semantics? : Bool) -> Bool
 
 pub fn is_full_width_character(Int) -> Bool
 
@@ -22,17 +64,64 @@ pub let is_linux : Bool
 
 pub fn is_low_surrogate(Int) -> Bool
 
+pub fn is_lower_ascii_letter(Int) -> Bool
+
 pub let is_macintosh : Bool
+
+pub fn is_upper_ascii_letter(Int) -> Bool
 
 pub let is_windows : Bool
 
+pub fn is_windows_drive_letter(Int) -> Bool
+
+pub fn join_path(Uri, Array[String]) -> Uri
+
 pub fn last_non_whitespace_index(String) -> Int
+
+pub fn normalize(String) -> String
+
+pub fn normalize_path(Uri) -> Uri
+
+pub fn original_fs_path(Uri) -> String
+
+pub fn platform_is_win32() -> Bool
+
+pub fn relative(String, String) -> String
+
+pub fn relative_path(Uri, Uri) -> String?
+
+pub fn remove_trailing_path_separator(Uri, sep? : String) -> Uri
+
+pub fn resolve(Array[String]) -> String
+
+pub fn resolve_path(Uri, String) -> Uri
+
+pub let schemas_file : String
+
+pub let schemas_in_memory : String
+
+pub let schemas_untitled : String
+
+pub fn sep() -> String
+
+pub fn set_is_windows_for_testing(value? : Bool) -> Unit
 
 pub fn single_letter_hash(Int) -> String
 
+pub fn starts_with_ignore_case(String, String) -> Bool
+
 pub fn to_disposable(() -> Unit) -> Disposable
 
+pub fn to_posix_path(String) -> String
+
+pub fn to_slashes(String) -> String
+
+pub fn uri_to_fs_path(Uri, Bool) -> String
+
 // Errors
+pub suberror UriError {
+  UriError(String)
+} derive(@debug.Debug)
 
 // Types and methods
 pub struct CharacterClassifier {
@@ -67,6 +156,29 @@ pub fn[T] Emitter::event(Self[T], (T) -> Unit) -> Disposable
 pub fn[T] Emitter::fire(Self[T], T) -> Unit
 pub fn[T] Emitter::has_listeners(Self[T]) -> Bool
 pub fn[T] Emitter::new() -> Self[T]
+
+pub struct ExtUri {
+  // private fields
+}
+pub fn ExtUri::add_trailing_path_separator(Self, Uri, sep? : String) -> Uri
+pub fn ExtUri::basename(Self, Uri, suffix? : String) -> String
+pub fn ExtUri::basename_or_authority(Self, Uri) -> String
+pub fn ExtUri::compare(Self, Uri, Uri, ignore_fragment? : Bool) -> Int
+pub fn ExtUri::dirname(Self, Uri) -> Uri
+pub fn ExtUri::extname(Self, Uri) -> String
+pub fn ExtUri::get_comparison_key(Self, Uri, ignore_fragment? : Bool) -> String
+pub fn ExtUri::has_trailing_path_separator(Self, Uri, sep? : String) -> Bool
+pub fn ExtUri::ignore_path_casing(Self, Uri) -> Bool
+pub fn ExtUri::is_absolute_path(Self, Uri) -> Bool
+pub fn ExtUri::is_equal(Self, Uri?, Uri?, ignore_fragment? : Bool) -> Bool
+pub fn ExtUri::is_equal_authority(Self, String, String) -> Bool
+pub fn ExtUri::is_equal_or_parent(Self, Uri, Uri, ignore_fragment? : Bool) -> Bool
+pub fn ExtUri::join_path(Self, Uri, Array[String]) -> Uri
+pub fn ExtUri::new((Uri) -> Bool) -> Self
+pub fn ExtUri::normalize_path(Self, Uri) -> Uri
+pub fn ExtUri::relative_path(Self, Uri, Uri) -> String?
+pub fn ExtUri::remove_trailing_path_separator(Self, Uri, sep? : String) -> Uri
+pub fn ExtUri::resolve_path(Self, Uri, String) -> Uri
 
 pub(all) struct LineRange {
   start_line_number : Int
@@ -147,6 +259,19 @@ pub fn Position::is_before_or_equal(Self, Self) -> Bool
 pub fn Position::to_string(Self) -> String
 pub fn Position::with_(Self, line_number? : Int, column? : Int) -> Self
 
+pub enum Posix {
+}
+pub fn Posix::basename(String, suffix? : String) -> String
+pub fn Posix::delimiter() -> String
+pub fn Posix::dirname(String) -> String
+pub fn Posix::extname(String) -> String
+pub fn Posix::is_absolute(String) -> Bool
+pub fn Posix::join(Array[String]) -> String
+pub fn Posix::normalize(String) -> String
+pub fn Posix::relative(String, String) -> String
+pub fn Posix::resolve(Array[String]) -> String
+pub fn Posix::sep() -> String
+
 pub(all) struct Range {
   start_line_number : Int
   start_column : Int
@@ -184,25 +309,37 @@ pub fn Range::strict_contains_range(Self, Self) -> Bool
 pub fn Range::strict_contains_range_in(Self, Self) -> Bool
 pub fn Range::to_string(Self) -> String
 
-pub(all) struct Uri {
-  value : String
-} derive(Eq, @debug.Debug)
-pub fn Uri::display_name(Self) -> String
-pub fn Uri::memory(String) -> Self
-pub fn Uri::parse(String) -> UriResult
-pub fn Uri::path(Self) -> String
-pub fn Uri::scheme(Self) -> String
-pub fn Uri::to_string(Self) -> String
+pub struct Uri {
+  scheme : String
+  authority : String
+  path : String
+  query : String
+  fragment : String
+  // private fields
+}
+pub fn Uri::file(String) -> Self
+pub fn Uri::from(scheme~ : String, authority? : String, path? : String, query? : String, fragment? : String, strict? : Bool) -> Self raise UriError
+pub fn Uri::fs_path(Self) -> String
+pub fn Uri::join_path(Self, Array[String]) -> Self
+pub fn Uri::parse(String, strict? : Bool) -> Self raise UriError
+pub fn Uri::to_string(Self, skip_encoding? : Bool) -> String
+pub fn Uri::with_(Self, scheme? : String, authority? : String, path? : String, query? : String, fragment? : String) -> Self raise UriError
+pub impl Eq for Uri
+pub impl Hash for Uri
+pub impl @debug.Debug for Uri
 
-pub(all) enum UriError {
-  InvalidUri
-} derive(Eq, @debug.Debug)
-pub fn UriError::to_string(Self) -> String
-
-pub(all) enum UriResult {
-  ParsedUri(Uri)
-  UriError(UriError)
-} derive(Eq, @debug.Debug)
+pub enum Win32 {
+}
+pub fn Win32::basename(String, suffix? : String) -> String
+pub fn Win32::delimiter() -> String
+pub fn Win32::dirname(String) -> String
+pub fn Win32::extname(String) -> String
+pub fn Win32::is_absolute(String) -> Bool
+pub fn Win32::join(Array[String]) -> String
+pub fn Win32::normalize(String) -> String
+pub fn Win32::relative(String, String) -> String
+pub fn Win32::resolve(Array[String]) -> String
+pub fn Win32::sep() -> String
 
 // Type aliases
 

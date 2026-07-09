@@ -3,7 +3,7 @@ test "normalizes accepted root relative paths" {
   let simple = expect_path("foo.mbt")
   assert_eq(simple.to_string(), "foo.mbt")
   assert_eq(simple.display_name(), "foo.mbt")
-  assert_eq(simple.file_uri().to_string(), "file://local/foo.mbt")
+  assert_eq(simple.file_uri().to_string(), "file:///local/foo.mbt")
 
   let nested = expect_path("nested/file.txt")
   assert_eq(nested.to_string(), "nested/file.txt")
@@ -26,18 +26,22 @@ test "rejects invalid root relative paths" {
 ///|
 test "parses document uris" {
   let memory = expect_uri("memory://main.mbt")
-  assert_eq(memory.scheme(), "memory")
+  assert_eq(memory.scheme, "memory")
   assert_eq(memory.to_string(), "memory://main.mbt")
 
   let file = expect_uri("file://server/nested/file.mbt")
-  assert_eq(file.scheme(), "file")
-  assert_eq(file.path(), "nested/file.mbt")
-  assert_eq(file.display_name(), "file.mbt")
+  assert_eq(file.scheme, "file")
+  assert_eq(file.path, "/nested/file.mbt")
+  assert_eq(@base_common.basename_or_authority(file), "file.mbt")
   assert_eq(file.to_string(), "file://server/nested/file.mbt")
 
-  match @base_common.Uri::parse("missing-scheme") {
-    UriError(error) => assert_true(error == InvalidUri)
-    ParsedUri(uri) => fail("unexpected uri " + uri.to_string())
+  // Non-strict parse falls back to the file scheme (Monaco `_schemeFix`);
+  // only strict mode rejects a missing scheme.
+  assert_eq(@base_common.Uri::parse("missing-scheme").scheme, "file")
+  try @base_common.Uri::parse("missing-scheme", strict=true) |> ignore catch {
+    UriError(_) => ()
+  } noraise {
+    _ => fail("expected UriError for missing scheme in strict mode")
   }
 }
 
@@ -91,7 +95,11 @@ test "infers language ids from source names" {
 ///|
 test "document snapshot owns identity and text helpers" {
   let document = @workspace.DocumentSnapshot(
-    @base_common.Uri::memory("main.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/main.mbt",
+    ),
     "main.mbt",
     "",
     "rev-3",
@@ -130,10 +138,7 @@ fn expect_path_error(
 
 ///|
 fn expect_uri(raw_uri : String) -> @base_common.Uri raise {
-  match @base_common.Uri::parse(raw_uri) {
-    ParsedUri(uri) => uri
-    UriError(error) => fail("unexpected uri error " + error.to_string())
-  }
+  @base_common.Uri::parse(raw_uri)
 }
 
 ///|

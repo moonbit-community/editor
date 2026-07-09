@@ -15,7 +15,18 @@ fn register_plain_moonbit() -> Unit {
 /// A readonly model over `text` tokenizing with the fallback lexer.
 fn plain_text_model(text : String) -> @model.TextModel {
   register_plain_moonbit()
-  TextModel(@base_common.Uri::memory("plain.mbt"), "", "moonbit", 1, "", text)
+  TextModel(
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/plain.mbt",
+    ),
+    "",
+    "moonbit",
+    1,
+    "",
+    text,
+  )
 }
 
 ///|
@@ -109,7 +120,11 @@ fn find_marker(
 test "grammar tokens land per line and multi-line tokens cover every line" {
   @syntax.tokenization_registry.register("frame-toy", FrameToy::{  }) |> ignore
   let model = @model.TextModel(
-    @base_common.Uri::memory("frame-toy.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/frame-toy.mbt",
+    ),
     "",
     "frame-toy",
     1,

@@ -206,7 +206,7 @@ fn MarkerStats::resource_stats(
     unknowns: 0,
   }
   // TODO this is a hack (markerService.ts:115)
-  if unsupported_schemes.contains(resource.scheme()) {
+  if unsupported_schemes.contains(resource.scheme) {
     return result
   }
   for marker in self.service.read(MarkerReadOptions::new(resource~)) {

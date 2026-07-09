@@ -149,7 +149,11 @@ test "hover unknown fenced code keeps content as default plain text" {
 test "marker hover renders one row with no status bar" {
   let marker = @markers.Marker::from_diagnostic(
     "test",
-    @base_common.Uri::memory("test.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/test.mbt",
+    ),
     {
       range: Range(1, 1, 1, 2),
       severity: Warning,
@@ -175,7 +179,11 @@ test "marker hover renders one row with no status bar" {
 test "marker + later-ordinal hover part render one row each in ordinal order" {
   let marker = @markers.Marker::from_diagnostic(
     "test",
-    @base_common.Uri::memory("test.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/test.mbt",
+    ),
     {
       range: Range(1, 1, 1, 2),
       severity: Warning,

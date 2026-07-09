@@ -5,7 +5,11 @@
 fn view_model_for(doc : @model.TextSnapshot) -> @view_model.ViewModel {
   register_plain_moonbit()
   let model = @model.TextModel(
-    @base_common.Uri::memory("frame.mbt"),
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/frame.mbt",
+    ),
     "",
     "moonbit",
     1,

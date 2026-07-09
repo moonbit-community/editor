@@ -81,7 +81,7 @@ pub fn DocumentSnapshot::DocumentSnapshot(
   text : String,
 ) -> DocumentSnapshot {
   let display_name = if display_name == "" {
-    uri.display_name()
+    @base_common.basename_or_authority(uri)
   } else {
     display_name
   }
@@ -266,7 +266,7 @@ pub impl ToJson for DocumentError with fn to_json(self) {
   match self.uri {
     Some(uri) => {
       fields["uri"] = uri.to_string().to_json()
-      fields["displayName"] = uri.display_name().to_json()
+      fields["displayName"] = @base_common.basename_or_authority(uri).to_json()
     }
     None => ()
   }

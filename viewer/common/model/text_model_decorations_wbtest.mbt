@@ -12,7 +12,18 @@
 
 ///|
 fn wb_model(text : String) -> TextModel {
-  TextModel(@base_common.Uri::memory("wb.mbt"), "", "moonbit", 1, "", text)
+  TextModel(
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/wb.mbt",
+    ),
+    "",
+    "moonbit",
+    1,
+    "",
+    text,
+  )
 }
 
 ///|

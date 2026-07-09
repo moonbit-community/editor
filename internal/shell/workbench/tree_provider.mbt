@@ -13,7 +13,7 @@ let workspace_tree_provider : &@workspace.WorkspaceTreeProvider = RemoteWorkspac
 impl @workspace.WorkspaceTreeProvider for RemoteWorkspaceTreeProvider with fn root(
   _self,
 ) {
-  { value: "readonly-remote://workspace" }
+  try! @base_common.Uri::parse("readonly-remote://workspace")
 }
 
 ///|

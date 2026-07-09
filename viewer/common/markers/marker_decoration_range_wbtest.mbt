@@ -10,7 +10,11 @@ fn make_marker(
 ) -> Marker {
   {
     owner: "o",
-    resource: @base_common.Uri::memory("range.mbt"),
+    resource: try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/range.mbt",
+    ),
     severity,
     code: None,
     message: "m",
@@ -28,7 +32,18 @@ fn make_marker(
 
 ///|
 fn wb_range_model(text : String) -> @model.TextModel {
-  TextModel(@base_common.Uri::memory("markers.mbt"), "", "moonbit", 1, "", text)
+  TextModel(
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/markers.mbt",
+    ),
+    "",
+    "moonbit",
+    1,
+    "",
+    text,
+  )
 }
 
 ///|

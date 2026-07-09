@@ -162,6 +162,9 @@ pub fn ContentWidgets::add_widget(
   }
   self.widgets[widget.id] = widget
   dom_node.set_attribute("data-content-widget", widget.id)
+  // `widgetId` is the attribute Monaco's hit test resolves through
+  // `HitTestContext.findAttribute` (contentWidgets.ts:246).
+  dom_node.set_attribute("widgetId", widget.id)
   widget.apply_style()
   if widget.allow_editor_overflow {
     self.overflowing_content_widgets_dom_node.append_child(dom_node.as_node())

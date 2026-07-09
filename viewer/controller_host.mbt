@@ -1,7 +1,10 @@
-// The viewer core's side of the `viewer/browser/controller` seam: it builds the input
-// controller's `PointerHandlerHelper`, the local analog of Monaco's
-// `View._createPointerHandlerHelper`. The closures capture the view and the
-// viewer so the controller never names the concrete `View`/`Viewer`.
+// The viewer core's side of the `viewer/browser/controller` seam: it builds
+// the input controller's `PointerHandlerHelper`, the local analog of Monaco's
+// `View._createPointerHandlerHelper` (view.ts:378-429) plus the
+// `ViewContext`/`ViewController` reads the helper substitutes for (the
+// helper's header in `mouse_handler.mbt` records the grouping). The closures
+// capture the view and the viewer so the controller never names the concrete
+// `View`/`Viewer`.
 
 ///|
 fn Viewer::pointer_handler_helper(
@@ -9,7 +12,45 @@ fn Viewer::pointer_handler_helper(
   view : @view.View,
 ) -> @controller.PointerHandlerHelper {
   {
-    view_root: view.root,
+    // --- IPointerHandlerHelper members ---
+    view_dom_node: view.root,
+    lines_content_dom_node: view.editor_scrollbar.content(),
+    view_lines_dom_node: view.view_lines.get_dom_node(),
+    // No textarea part: the root section is the focusable surface
+    // (mouse_handler.mbt header).
+    focus_text_area: () => focus_element(view.root),
+    get_last_render_data: () => {
+      last_view_cursors_render_data: view.view_cursors.get_last_render_data(),
+    },
+    render_now: () => self.flush_render(),
+    should_suppress_mouse_down_on_view_zone: _ => false,
+    should_suppress_mouse_down_on_widget: _ => false,
+    get_position_from_dom_info: (span_node, offset) => {
+      match self.get_view_model() {
+        Some(view_model) =>
+          view.view_lines.get_position_from_dom_info(
+            view_model, span_node, offset,
+          )
+        None => None
+      }
+    },
+    visible_range_for_position: (line_number, column) => {
+      view.visible_range_for_position(line_number, column)
+    },
+    get_line_width: line_number => view.view_lines.get_line_width(line_number),
+    // --- ViewContext substitutes ---
+    view_model: () => self.get_view_model(),
+    get_layout_info: () => self.get_layout_info(),
+    get_font_info: () => self.font_info,
+    get_current_selection: () => self.view_selection(),
+    // --- ViewController substitutes ---
+    dispatch_mouse: data => self.dispatch_mouse(data),
+    emit_mouse_down: (event, target) => self.emit_mouse_down(event, target),
+    emit_mouse_up: (event, target) => self.emit_mouse_up(event, target),
+    emit_mouse_move: (event, target) => self.emit_mouse_move(event, target),
+    emit_mouse_drag: (event, target) => self.emit_mouse_drag(event, target),
+    emit_mouse_leave: event => self.emit_mouse_leave(event),
+    // --- retained viewer scroll seams ---
     overflow_guard: view.overflow_guard,
     editor_scrollable: view.editor_scrollbar.scrollable(),
     hover_scrollable: () => {
@@ -25,59 +66,7 @@ fn Viewer::pointer_handler_helper(
       }
     },
     apply_scroll: change => self.apply_scroll_change(change),
-    hit_test: (x, y) => self.hit_test_at(x, y),
-    refine_content_target: (client_x, client_y, fallback) => {
-      self.dom_refine_content_target(view, client_x, client_y, fallback)
-    },
-    dispatch_mouse: payload => {
-      self.dispatch_mouse({
-        view_position: payload.view_position,
-        in_selection_mode: payload.in_selection_mode,
-        mouse_down_count: payload.mouse_down_count,
-        started_on_line_numbers: payload.started_on_line_numbers,
-      })
-    },
-    notify_mouse_moved: target => self.on_editor_mouse_move(target),
-    // `ViewController.emitMouseDown/Up` land on the public `onMouseDown`/
-    // `onMouseUp` events (`mouse_events.mbt`); the seams only fire for the
-    // left button, so `left_button` is constantly true here.
-    notify_mouse_down: target => {
-      self.did_mouse_down.fire({ target, left_button: true })
-    },
-    notify_mouse_up: target => {
-      self.did_mouse_up.fire({ target, left_button: true })
-    },
     schedule_render: () => self.schedule_render(),
-  }
-}
-
-///|
-/// Hit-tests view-relative coordinates against the rendered view model —
-/// the `MouseTargetFactory.createMouseTarget` seam the pointer handler calls
-/// back into. `None` when no model is rendered. Before the first flush the
-/// rendered window is not yet fixed; the layout's visible window stands in.
-fn Viewer::hit_test_at(
-  self : Viewer,
-  x : Double,
-  y : Double,
-) -> @viewer_common.MouseTarget? {
-  match self.get_view_model() {
-    Some(view_model) => {
-      let window = match self.rendered_window {
-        Some(window) => window
-        None => view_model.clamp_window(view_model.view_layout.visible_window())
-      }
-      Some(
-        @viewer_common.hit_test(
-          view_model,
-          window,
-          self.view_metrics(view_model),
-          x,
-          y,
-        ),
-      )
-    }
-    None => None
   }
 }
 

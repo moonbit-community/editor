@@ -67,6 +67,24 @@ pub fn View::new() -> View {
   root.append_child(
     overlay_widgets.overflowing_overlay_widgets_dom_node().as_node(),
   )
+  // Monaco stamps each part's fingerprint inside the part's constructor
+  // (`viewLines.ts:154`, `editorScrollbar.ts:69`, `contentWidgets.ts:39/45`,
+  // `overlayWidgets.ts:62/66`, `view.ts:160`); the part packages here cannot
+  // import `@view`, so the stamping is hoisted to this constructor
+  // (view_part.mbt header).
+  PartFingerprints::write(overflow_guard, OverflowGuard)
+  PartFingerprints::write(view_lines.get_dom_node(), ViewLines)
+  PartFingerprints::write(editor_scrollbar.get_dom_node(), ScrollableElement)
+  PartFingerprints::write(content_widgets.dom_node(), ContentWidgets)
+  PartFingerprints::write(
+    content_widgets.overflowing_content_widgets_dom_node(),
+    OverflowingContentWidgets,
+  )
+  PartFingerprints::write(overlay_widgets.get_dom_node(), OverlayWidgets)
+  PartFingerprints::write(
+    overlay_widgets.overflowing_overlay_widgets_dom_node(),
+    OverflowingOverlayWidgets,
+  )
   let view_parts = default_view_parts(
     view_lines, view_zones, content_view_overlays, margin_view_overlays, content_widgets,
     view_cursors, overlay_widgets, editor_scrollbar,

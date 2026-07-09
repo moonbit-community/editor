@@ -26,12 +26,13 @@ pub(all) enum ContentWidgetPositionPreference {
 pub(all) struct ContentWidgets {
   dom_node : @dom.Element
   overflowing_content_widgets_dom_node : @dom.Element
+  view_dom_node : @dom.Element
   mut should_render : Bool
   // private fields
 }
 pub fn ContentWidgets::add_widget(Self, &ContentWidget) -> Unit
 pub fn ContentWidgets::dom_node(Self) -> @dom.Element
-pub fn ContentWidgets::new(@dom.Document) -> Self
+pub fn ContentWidgets::new(@dom.Document, @dom.Element) -> Self
 pub fn ContentWidgets::overflowing_content_widgets_dom_node(Self) -> @dom.Element
 pub fn ContentWidgets::prepare_render_widgets(Self, ContentWidgetsRenderContext) -> Unit
 pub fn ContentWidgets::remove_widget(Self, &ContentWidget) -> Unit
@@ -46,6 +47,7 @@ pub(all) struct ContentWidgetsRenderContext {
   line_height : Double
   char_width : Double
   typical_fullwidth_character_width : Double
+  content_left : Double
   scroll_top : Double
   scroll_left : Double
   viewport_width : Double

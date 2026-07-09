@@ -1,0 +1,81 @@
+// Ported from
+// `vscode/src/vs/editor/browser/viewParts/viewLines/domReadingContext.ts`
+// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): the
+// lazy client-rect cache shared by one batch of DOM reads off the view-lines
+// node. `end_node` is the source's `_textRangeRestingSpot`, the detached span
+// `RangeUtil` parks DOM ranges on between reads.
+
+///|
+pub struct DomReadingContext {
+  priv dom_node : @rdom.Element
+  end_node : @rdom.Element
+  priv mut did_dom_layout_flag : Bool
+  priv mut client_rect_delta_left_value : Double
+  priv mut client_rect_scale_value : Double
+  priv mut client_rect_read : Bool
+}
+
+///|
+pub fn DomReadingContext::new(
+  dom_node : @rdom.Element,
+  end_node : @rdom.Element,
+) -> DomReadingContext {
+  {
+    dom_node,
+    end_node,
+    did_dom_layout_flag: false,
+    client_rect_delta_left_value: 0.0,
+    client_rect_scale_value: 1.0,
+    client_rect_read: false,
+  }
+}
+
+///|
+fn DomReadingContext::read_client_rect(self : DomReadingContext) -> Unit {
+  if !self.client_rect_read {
+    self.client_rect_read = true
+    let rect = self.dom_node.get_bounding_client_rect()
+    self.mark_did_dom_layout()
+    self.client_rect_delta_left_value = rect.get_left()
+    let offset_width = element_offset_width(self.dom_node)
+    self.client_rect_scale_value = if offset_width > 0.0 {
+      rect.get_width() / offset_width
+    } else {
+      1.0
+    }
+  }
+}
+
+///|
+pub fn DomReadingContext::client_rect_delta_left(
+  self : DomReadingContext,
+) -> Double {
+  if !self.client_rect_read {
+    self.read_client_rect()
+  }
+  self.client_rect_delta_left_value
+}
+
+///|
+pub fn DomReadingContext::client_rect_scale(self : DomReadingContext) -> Double {
+  if !self.client_rect_read {
+    self.read_client_rect()
+  }
+  self.client_rect_scale_value
+}
+
+///|
+pub fn DomReadingContext::did_dom_layout(self : DomReadingContext) -> Bool {
+  self.did_dom_layout_flag
+}
+
+///|
+pub fn DomReadingContext::mark_did_dom_layout(self : DomReadingContext) -> Unit {
+  self.did_dom_layout_flag = true
+}
+
+///|
+/// FFI gap-fill (no `offsetWidth` binding for `Element` in the vendored
+/// `@rdom`).
+extern "js" fn element_offset_width(el : @rdom.Element) -> Double =
+  #| (el) => el.offsetWidth

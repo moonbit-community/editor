@@ -286,6 +286,17 @@ pub fn ViewLayout::line_at_vertical_offset(
 }
 
 ///|
+/// Monaco `IViewLayout.getWhitespaceAtVerticalOffset` (viewLayout.ts): the
+/// whitespace (view zone) whose band contains a content-space vertical
+/// offset, forwarded to `LinesLayout`.
+pub fn ViewLayout::get_whitespace_at_vertical_offset(
+  self : ViewLayout,
+  vertical_offset : Double,
+) -> ViewWhitespaceViewportData? {
+  self.lines.get_whitespace_at_vertical_offset(vertical_offset.to_int())
+}
+
+///|
 /// Content-space top offset of a view zone by index.
 pub fn ViewLayout::view_zone_vertical_offset(
   self : ViewLayout,
@@ -435,4 +446,34 @@ fn compare_view_zones(left : ViewZone, right : ViewZone) -> Int {
   } else {
     left.height_px - right.height_px
   }
+}
+
+///|
+/// Monaco `IViewLayout.isAfterLines`: whether a content-space vertical offset
+/// sits below every line (and every trailing view zone), forwarded to
+/// `LinesLayout`.
+pub fn ViewLayout::is_after_lines(
+  self : ViewLayout,
+  vertical_offset : Double,
+) -> Bool {
+  self.lines.is_after_lines(vertical_offset.to_int())
+}
+
+///|
+/// Monaco `IViewLayout.isInTopPadding`, forwarded to `LinesLayout` (the
+/// viewer carries no padding options, so its paddings are 0).
+pub fn ViewLayout::is_in_top_padding(
+  self : ViewLayout,
+  vertical_offset : Double,
+) -> Bool {
+  self.lines.is_in_top_padding(vertical_offset.to_int())
+}
+
+///|
+/// Monaco `IViewLayout.isInBottomPadding`, forwarded to `LinesLayout`.
+pub fn ViewLayout::is_in_bottom_padding(
+  self : ViewLayout,
+  vertical_offset : Double,
+) -> Bool {
+  self.lines.is_in_bottom_padding(vertical_offset.to_int())
 }

@@ -1,12 +1,11 @@
 ///|
-fn Viewer::editor_context(self : Viewer) -> @hover.EditorContext {
+fn Viewer::editor_context(self : Viewer) -> @hover_browser.EditorContext {
   let (mouse_posx, mouse_posy) = match self.content_hover_controller() {
     Some(hc) => (Some(hc.hover_mouse_posx), Some(hc.hover_mouse_posy))
     None => (None, None)
   }
   {
     view_model: self.get_view_model(),
-    view_to_model_position: view_position => self.view_to_model(view_position),
     // The wrapper's `_participants` for the `suggestHoverAnchor` pass;
     // participants are stateless captures of the services, so a per-dispatch
     // build matches Monaco's per-editor set observably.
@@ -37,15 +36,10 @@ fn Viewer::content_hover_controller(
 /// from the last recorded pointer position (`record_hover_pointer`).
 fn Viewer::on_editor_mouse_move(
   self : Viewer,
-  target : @viewer_common.MouseTarget,
+  target : @editor_browser.MouseTarget,
 ) -> Unit {
-  // The public `onMouseMove` fires for every hit-tested move, independent of
-  // the hover controller's suppression (Monaco emits it from
-  // `ViewController.emitMouseMove`; the comments contrib subscribes there).
-  self.did_mouse_move.fire({
-    target,
-    left_button: (self.last_mouse_buttons & 1) != 0,
-  })
+  // The public `onMouseMove` fired already (`emit_mouse_move`); this is the
+  // hover controller's subscription body. `target` is model-space.
   guard self.content_hover_controller() is Some(hc) else { return }
   if hc.hover_ignore_mouse_events {
     return
@@ -279,9 +273,7 @@ fn Viewer::on_editor_mouse_leave(
   posx : Double,
   posy : Double,
 ) -> Unit {
-  // The public `onMouseLeave` (the comments contrib clears its "+"
-  // affordance there).
-  self.did_mouse_leave.fire(())
+  // The public `onMouseLeave` fired already (`emit_mouse_leave`).
   guard self.content_hover_controller() is Some(hc) else { return }
   if hc.hover_ignore_mouse_events {
     return
@@ -323,7 +315,7 @@ fn Viewer::on_editor_scroll_changed(
 /// Hover is the only controller today.
 fn Viewer::dispatch_editor_event(
   self : Viewer,
-  event : @hover.EditorEvent,
+  event : @hover_browser.EditorEvent,
   sticky_mouse_getting_closer? : Bool = false,
 ) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
@@ -334,7 +326,8 @@ fn Viewer::dispatch_editor_event(
     MouseMoved(_) => ()
   }
   let before = hc.hover
-  let (effect, hover) = hc.hover.on_event(
+  let (effect, hover) = @hover_browser.hover_on_event(
+    hc.hover,
     event,
     self.editor_context(),
     sticky_mouse_getting_closer~,

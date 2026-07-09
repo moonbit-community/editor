@@ -2,7 +2,9 @@
 package "moonbit-community/editor/viewer/contrib/hover/browser"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
+  "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/contrib/hover",
   "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
@@ -11,19 +13,21 @@ import {
 // Values
 pub let content_hover_widget_id : String
 
-pub fn hover_available_space_above(Double) -> Double
+pub fn find_anchor_candidates(Array[&@hover.HoverParticipant], @moonbit-community/editor/viewer/browser.MouseTarget, Double, initial_mouse_pos_x? : Double, initial_mouse_pos_y? : Double) -> Array[@hover.HoverAnchor]
 
-pub fn hover_available_space_below(Double, Double, Double) -> Double
+pub fn hover_available_space_above(Double, Double) -> Double
 
-pub fn hover_available_width(@dom.Element, Double) -> Double
+pub fn hover_available_space_below(Double, Double, Double, Double) -> Double
 
-pub fn hover_maximum_rendering_height(Double, Double) -> Double
+pub fn hover_max_height(Double) -> Double
+
+pub fn hover_max_width(Double) -> Double
+
+pub fn hover_on_event(@hover.HoverController, EditorEvent, EditorContext, sticky_mouse_getting_closer? : Bool) -> (@hover.HoverEffect, @hover.HoverController)
 
 pub fn hover_prefer_above(Double, Double, Double, Bool) -> Bool
 
 pub let hover_prefer_above_default : Bool
-
-pub fn hover_resolved_width(Double, Double) -> Double
 
 // Errors
 
@@ -32,7 +36,7 @@ pub(all) struct ContentHoverController {
   mut hover : @hover.HoverController
   mut hover_react_pending : Bool
   mut hover_react_token : Int
-  mut hover_pending_target : @moonbit-community/editor/viewer/common.MouseTarget?
+  mut hover_pending_target : @moonbit-community/editor/viewer/browser.MouseTarget?
   hover_settings : @hover.HoverSettings
   mut hover_keep_open : Bool
   mut hover_ignore_mouse_events : Bool
@@ -42,7 +46,7 @@ pub(all) struct ContentHoverController {
   hover_mouse_closer : @hover.MouseCloserState
   mut hover_notified_token : Int
   mut hover_decoration_ids : Array[String]
-  mut hover_decoration_range : @moonbit-community/editor/base/common.Range?
+  mut hover_decoration_range : @common.Range?
 }
 pub fn ContentHoverController::attach(String) -> Self
 pub fn ContentHoverController::cancel_react(Self) -> Unit
@@ -79,18 +83,29 @@ pub(all) struct ContentHoverWidgetHost {
   layout_content_widget : () -> Unit
   render_now : () -> Unit
   focus_editor : () -> Unit
-  scrolled_visible_position_top : (@moonbit-community/editor/base/common.Position) -> Double
+  scrolled_visible_position_top : (@common.Position) -> Double
   line_height : () -> Double
-  gutter_width : () -> Double
   keep_hover_open : () -> Unit
-  handle_mousedown : (@dom.Event, @dom.MouseEvent) -> Unit
   handle_keydown : (@dom.Event, @dom.KeyboardEvent) -> Unit
   hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
 }
 
+pub(all) struct EditorContext {
+  view_model : @view_model.ViewModel?
+  participants : Array[&@hover.HoverParticipant]
+  typical_halfwidth_character_width : Double
+  mouse_posx : Double?
+  mouse_posy : Double?
+}
+
+pub(all) enum EditorEvent {
+  MouseMoved(@moonbit-community/editor/viewer/browser.MouseTarget)
+  EscapePressed
+}
+
 pub(all) struct RenderedContentHover {
-  show_at_position : @moonbit-community/editor/base/common.Position
-  show_at_secondary_position : @moonbit-community/editor/base/common.Position
+  show_at_position : @common.Position
+  show_at_secondary_position : @common.Position
   rows : Array[String]
 }
 

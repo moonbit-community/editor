@@ -111,8 +111,8 @@ fn Viewer::hook_agent_feedback(self : Viewer) -> Array[@base_common.Disposable] 
     }),
     self.on_mouse_move(event => self.on_agent_feedback_mouse_move(event)),
     self.on_mouse_leave(_ => self.clear_agent_feedback_hover_glyph()),
-    self.on_mouse_down(event => self.on_agent_feedback_mouse_down(event.target)),
-    self.on_mouse_up(event => self.on_agent_feedback_mouse_up(event.target)),
+    self.on_mouse_down(event => self.on_agent_feedback_mouse_down(event)),
+    self.on_mouse_up(event => self.on_agent_feedback_mouse_up(event)),
   ]
 }
 
@@ -149,20 +149,6 @@ fn Viewer::agent_feedback_input_visible(self : Viewer) -> Bool {
   match self.agent_feedback_input_contribution() {
     Some(ic) => ic.visible
     None => false
-  }
-}
-
-///|
-/// The model line under a mouse target (gutter targets carry view lines).
-fn Viewer::mouse_target_model_line(
-  self : Viewer,
-  target : @viewer_common.MouseTarget,
-) -> Int {
-  guard target.line_number >= 1 else { return 0 }
-  match self.get_view_model() {
-    Some(view_model) =>
-      view_model.lines().model_line_number_of_view_line(target.line_number)
-    None => target.line_number
   }
 }
 
@@ -229,10 +215,12 @@ fn Viewer::on_agent_feedback_mouse_move(
     self.clear_agent_feedback_hover_glyph()
     return
   }
-  let line = match event.target.kind {
-    GutterLineNumbers | GutterLineDecorations | ContentText | ContentEmpty =>
-      self.mouse_target_model_line(event.target)
-    _ => -1
+  // `_updateHoverGlyph(e.target.position?.lineNumber)` — every
+  // position-carrying kind updates the glyph (scrollbar targets included,
+  // upstream behavior); positionless kinds clear it.
+  let line = match event.target.position() {
+    Some(position) => position.line_number
+    None => -1
   }
   self.update_agent_feedback_hover_glyph(line)
 }
@@ -327,20 +315,28 @@ fn Viewer::clear_agent_feedback_hover_glyph(self : Viewer) -> Unit {
 
 ///|
 /// Whether the mouse target is the rendered hover glyph. Upstream checks the
-/// DOM class (`_isHoverGlyphTarget`); the viewer's lane class *is* the
-/// hover-line decoration, so "a line-decorations hit on the glyph's line" is
-/// the same predicate, DOM-free (the comments contrib precedent).
+/// DOM class — `_isHoverGlyphTarget`
+/// (`agentFeedbackEditorInputContribution.ts:346-348`): the hit element
+/// carries `agent-feedback-glyph`. Targets carry their DOM element now, so
+/// the upstream predicate ports verbatim.
 fn Viewer::is_agent_feedback_glyph_target(
   self : Viewer,
-  target : @viewer_common.MouseTarget,
+  target : @editor_browser.MouseTarget,
 ) -> Bool {
-  guard self.agent_feedback_input_contribution() is Some(ic) else {
+  guard self.agent_feedback_input_contribution() is Some(_) else {
     return false
   }
-  target.kind == GutterLineDecorations &&
-  ic.hover_line_number >= 1 &&
-  self.mouse_target_model_line(target) == ic.hover_line_number
+  guard target.element() is Some(element) else { return false }
+  element_class_list_contains(element, "agent-feedback-glyph")
 }
+
+///|
+/// FFI gap-fill (no `classList` binding in the vendored `@rdom`).
+extern "js" fn element_class_list_contains(
+  element : @rdom.Element,
+  class_name : String,
+) -> Bool =
+  #| (el, cls) => !!el.classList && el.classList.contains(cls)
 
 ///|
 /// `onMouseDown`: a glyph hit selects the line (which opens the input via
@@ -349,11 +345,16 @@ fn Viewer::is_agent_feedback_glyph_target(
 /// containment stops propagation (`_isWidgetTarget`).
 fn Viewer::on_agent_feedback_mouse_down(
   self : Viewer,
-  target : @viewer_common.MouseTarget,
+  event : EditorMouseEvent,
 ) -> Unit {
-  if self.is_agent_feedback_glyph_target(target) {
-    let line = self.mouse_target_model_line(target)
-    self.select_agent_feedback_line(line)
+  if self.is_agent_feedback_glyph_target(event.target) {
+    // upstream: `e.event.preventDefault(); e.event.stopPropagation()`
+    event.event.prevent_default()
+    event.event.stop_propagation()
+    match event.target.position() {
+      Some(position) => self.select_agent_feedback_line(position.line_number)
+      None => ()
+    }
     return
   }
   match self.agent_feedback_input_contribution() {
@@ -368,13 +369,13 @@ fn Viewer::on_agent_feedback_mouse_down(
 /// finished here opens the input).
 fn Viewer::on_agent_feedback_mouse_up(
   self : Viewer,
-  target : @viewer_common.MouseTarget,
+  event : EditorMouseEvent,
 ) -> Unit {
   match self.agent_feedback_input_contribution() {
     Some(ic) => ic.mouse_down = false
     None => ()
   }
-  if self.is_agent_feedback_glyph_target(target) {
+  if self.is_agent_feedback_glyph_target(event.target) {
     return
   }
   self.on_agent_feedback_selection_changed()

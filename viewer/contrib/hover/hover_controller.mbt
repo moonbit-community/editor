@@ -1,35 +1,4 @@
 ///|
-/// Typed editor events produced by the input bridge. Feature controllers
-/// consume these the way VS Code contributions consume editor events; no
-/// controller sees raw DOM events. `pub(all)` because the viewer's dispatch
-/// glue (`browser/widget/code_editor`, wherever `Viewer` lives — the
-/// foreign-method rule keeps that glue out of this package) constructs these
-/// values while `HoverController::on_event` — this package's — consumes them.
-pub(all) enum EditorEvent {
-  MouseMoved(@viewer_common.MouseTarget)
-  EscapePressed
-}
-
-///|
-/// Read-only viewer state controllers may consult while handling an event.
-/// `view_to_model_position` resolves a view position to a model position
-/// through the active `CoordinatesConverter` — Monaco's view→model boundary —
-/// so controllers anchor on the model in line/column space. `participants`
-/// are the wrapper's `_participants` (their `suggestHoverAnchor` pass runs
-/// inside `on_event`), `typical_halfwidth_character_width` feeds the
-/// `CONTENT_EMPTY` epsilon arm, and `mouse_posx`/`mouse_posy` are the
-/// recorded pointer position the anchors carry. `pub(all)` for the same
-/// cross-package reason as `EditorEvent`.
-pub(all) struct EditorContext {
-  view_model : @view_model.ViewModel?
-  view_to_model_position : (@base_common.Position) -> @base_common.Position
-  participants : Array[&HoverParticipant]
-  typical_halfwidth_character_width : Double
-  mouse_posx : Double?
-  mouse_posy : Double?
-}
-
-///|
 pub(all) struct HoverView {
   range : @base_common.Range
   parts : Array[HoverPart]
@@ -196,75 +165,6 @@ pub fn HoverController::cleared(self : HoverController) -> HoverController {
     current_anchor: None,
     current_complete: false,
   }
-}
-
-///|
-pub fn HoverController::on_event(
-  self : HoverController,
-  event : EditorEvent,
-  ctx : EditorContext,
-  sticky_mouse_getting_closer? : Bool = false,
-) -> (HoverEffect, HoverController) {
-  match event {
-    MouseMoved(target) =>
-      match ctx.view_model {
-        Some(view_model) => {
-          // `showsOrWillShow` (`contentHoverWidgetWrapper.ts:249-261`): find
-          // the anchor candidates and start at the best one; no candidate is
-          // the `_startShowingOrUpdateHover(null)` arm. (The `isResizing` and
-          // code-action-widget early-keeps are sashes/N-A concerns.)
-          let candidates = if target.line_number >= 1 &&
-            target.line_number <= view_model.line_count() {
-            find_anchor_candidates(
-              ctx.participants,
-              target,
-              target_model_range(target, ctx.view_to_model_position),
-              ctx.typical_halfwidth_character_width,
-              initial_mouse_pos_x?=ctx.mouse_posx,
-              initial_mouse_pos_y?=ctx.mouse_posy,
-            )
-          } else {
-            []
-          }
-          match candidates.get(0) {
-            Some(anchor) =>
-              self.start_showing_or_update_hover(
-                anchor, sticky_mouse_getting_closer,
-              )
-            None =>
-              // No anchor under the pointer (Monaco `_startShowingOrUpdateHover(null)`):
-              // a visible hover the pointer is approaching is kept; otherwise hide.
-              if sticky_mouse_getting_closer && self.view is Some(_) {
-                (HoverNoEffect, self)
-              } else {
-                (HoverNoEffect, self.cleared())
-              }
-          }
-        }
-        None => (HoverNoEffect, self)
-      }
-    EscapePressed => (HoverNoEffect, self.cleared())
-  }
-}
-
-///|
-/// The hit position as a collapsed model range — Monaco's `target.range`
-/// (model-space by construction there; the viewer's `MouseTarget` is
-/// view-space, so the conversion happens at this seam). `MouseTarget.column`
-/// is zero-based.
-fn target_model_range(
-  target : @viewer_common.MouseTarget,
-  view_to_model_position : (@base_common.Position) -> @base_common.Position,
-) -> @base_common.Range {
-  let position = view_to_model_position(
-    Position(target.line_number, target.column + 1),
-  )
-  Range(
-    position.line_number,
-    position.column,
-    position.line_number,
-    position.column,
-  )
 }
 
 ///|

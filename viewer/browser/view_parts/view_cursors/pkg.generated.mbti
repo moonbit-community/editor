@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer/browser/view_parts/view_cursors"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/rabbita/dom",
   "moonbitlang/core/debug",
 }
@@ -26,13 +27,23 @@ pub(all) struct CursorRenderData {
   height : Int
 } derive(Eq, @debug.Debug)
 
+pub(all) struct ViewCursorRenderData {
+  dom_node : @dom.Element
+  position : @common.Position
+  content_left : Double
+  width : Double
+  height : Int
+}
+
 pub(all) struct ViewCursors {
   dom_node : @dom.Element
   cursor : @dom.Element
   mut should_render : Bool
   mut render_data : CursorRenderData?
+  mut last_position : @common.Position?
 }
 pub fn ViewCursors::get_dom_node(Self) -> @dom.Element
+pub fn ViewCursors::get_last_render_data(Self) -> Array[ViewCursorRenderData]
 pub fn ViewCursors::new(@dom.Document) -> Self
 pub fn ViewCursors::render_cursor(Self, has_selection~ : Bool, editor_has_focus~ : Bool, String) -> Unit
 

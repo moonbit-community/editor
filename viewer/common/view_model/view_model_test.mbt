@@ -113,8 +113,10 @@ test "projected view lines cover one two and many wrapped segments" {
   assert_true(first.continues_with_wrapped_line)
   let second = two.lines().view_line_rendering_data(2)
   assert_false(second.continues_with_wrapped_line)
-  assert_eq(second.min_column, 6)
-  assert_eq(second.max_column, 7)
+  // View columns are segment-local (Monaco `getViewLineMinColumn`/`MaxColumn`
+  // = `getMin/MaxOutputOffset + 1`): the continuation "f" spans [1, 2).
+  assert_eq(second.min_column, 1)
+  assert_eq(second.max_column, 2)
   let many = test_view_model(
     "abcdefghijkl",
     @view_model.ViewModelOptions::soft_wrap(5),

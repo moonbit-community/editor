@@ -1,688 +1,913 @@
-// Browser input controller — the local analog of Monaco's
-// `editor/browser/controller/mouseHandler.ts`. Like Monaco's `MouseHandler`,
-// it owns the DOM listener wiring and the pointer-input state (the active
-// scrollbar-thumb drag and the `MouseDownState` multi-click/selection-drag), and
-// it never reaches into the concrete view: it calls back through a
-// `PointerHandlerHelper`, the analog of Monaco's `IPointerHandlerHelper`.
+// Ported from `vscode/src/vs/editor/browser/controller/mouseHandler.ts`
+// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd):
+// `IPointerHandlerHelper`, `MouseHandler`, `MouseDownOperation` and
+// `MouseDownState`. The handler registers its own DOM listeners through
+// `EditorMouseEventFactory` on the view DOM node, exactly like the source —
+// the root package only constructs it (`pointerHandler.ts`'s touch/pen
+// dispatch is not ported; the plain `MouseHandler` is the one handler).
 //
-// In Monaco that helper is the object literal `View._createPointerHandlerHelper`
-// returns — DOM nodes as fields, view-dependent operations as closures. The
-// faithful MoonBit translation is the same: a struct of nodes + closures, built
-// by the viewer where the view is in scope (mirroring `ViewContext`). The edge
-// stays one-directional: `viewer -> viewer/browser/controller`.
+// Shape notes:
+//   * Monaco's `MouseHandler` also holds a `ViewContext` (view model, view
+//     layout, configuration) and a `ViewController` (dispatch + event
+//     emission). The viewer has neither type; their reads/dispatches ride on
+//     `PointerHandlerHelper` closures (grouped and marked in the struct).
+//   * `onCursorStateChanged` kept `MouseDownOperation._currentSelection`
+//     fresh; this port reads the selection lazily through the helper's
+//     `get_current_selection` instead of tracking view events.
 //
-// The dispatch side — turning a resolved pointer position into a selection
-// command — stays in the viewer core (`Viewer::dispatch_mouse`), as Monaco keeps
-// `view/viewController.ts` under `view/`, not `controller/`. The controller only
-// builds the `MouseDispatch` intent and hands it back through the helper.
+// Omissions:
+//   * pointer capture and the `pointerdown` capture-id dance
+//     (mouseHandler.ts:118-133) — no pointer-capture bindings; the global
+//     monitor listens on the window (see
+//     `base/browser/global_pointer_move_monitor.mbt`). The raw `pointerup`
+//     compensation listener is kept.
+//   * `_setupMouseWheelZoomListener` (mouseHandler.ts:140-199) — no
+//     mouse-wheel zoom; the viewer's wheel path stays on the overflow guard
+//     (scrollbar_input.mbt).
+//   * `onContextMenu`/`emitContextMenu` (no consumer) and
+//     `emitMouseWheel`.
+//   * the drag-and-drop text-move branch (`isDragAndDrop`,
+//     mouseHandler.ts:461-497) and `emitMouseDrop/DropCanceled` — readonly
+//     viewer (`EditorOption.readOnly` is constant `true`, so the source's
+//     gate never passes either).
+//   * `onConfigurationChanged`/`onHeightChanged` (no layout-change view
+//     event reaches the handler; a mid-drag layout change keeps monitoring).
+//   * `selectOnLineNumbers` reads as the Monaco default `true` (option not
+//     modeled).
+//   * `getTargetAtClientPoint`'s multi-window `getWindow` indirection
+//     (single window).
 
 ///|
-/// VS Code's default multi-click time/distance gating (`MouseDownState`).
-let multi_click_time = 500.0
-
-///|
-let multi_click_distance = 6.0
-
-///|
-/// Cap on one drag-autoscroll step (Monaco's `dragScrolling`).
-let selection_autoscroll_max_step = 36.0
-
-///|
-/// A resolved pointer intent the controller hands back to the viewer's dispatch
-/// (Monaco's `IMouseDispatchData`, here kept controller-side to honor the
-/// one-directional edge, then mapped to the core dispatch type by the helper).
-pub(all) struct MouseDispatch {
-  view_position : @base_common.Position
+/// `IMouseDispatchData` (`vscode/src/vs/editor/browser/view/viewController.ts:21-40`):
+/// the resolved pointer intent the handler hands to the viewer's
+/// `ViewController.dispatchMouse` analog. `position` is a 1-based **view**
+/// position (the view→model conversion happens per cursor command, exactly
+/// like the source). `revealType` is omitted — the viewer's cursor commands
+/// take no reveal types (ledger).
+pub(all) struct MouseDispatchData {
+  position : @base_common.Position
+  /// Desired visual viewport column (`IMouseTarget.mouseColumn`).
+  mouse_column : Int
+  started_on_line_numbers : Bool
   in_selection_mode : Bool
   mouse_down_count : Int
-  started_on_line_numbers : Bool
+  alt_key : Bool
+  ctrl_key : Bool
+  meta_key : Bool
+  shift_key : Bool
+  left_button : Bool
+  middle_button : Bool
+  on_injected_text : Bool
 }
 
 ///|
-/// The narrow view capabilities the input controller calls back into, the local
-/// analog of Monaco's `IPointerHandlerHelper`. The viewer builds one of these in
-/// `hook_view_input` (where the view exists), closing over the view and itself —
-/// exactly as Monaco's `View._createPointerHandlerHelper` closes over `this`.
+/// `IPointerHandlerHelper` (`mouseHandler.ts:28-57`), the closure-struct form
+/// (Monaco's is the object literal `View._createPointerHandlerHelper`
+/// builds; the root `viewer` package builds this one — the foreign-method
+/// rule keeps `Viewer::`/`View::` calls out of this package).
+///
+/// Grouped deviations, each marked below:
+///   * Monaco's `MouseHandler` also holds a `ViewContext` (view model, view
+///     layout, configuration options) and a `ViewController`. The viewer has
+///     neither type; their reads/dispatches ride on this same struct.
+///   * omissions: `viewLinesGpu`/`dispatchTextAreaEvent` (no GPU renderer, no
+///     textarea part; `focus_text_area` focuses the root section, exactly
+///     Monaco's behavior sans textarea).
 pub(all) struct PointerHandlerHelper {
-  /// Monaco `viewDomNode`: the view root element.
-  view_root : @rdom.Element
-  /// The overflow guard element that owns wheel + browser-reveal scroll events.
+  // --- IPointerHandlerHelper members (mouseHandler.ts:29-56) ---
+  view_dom_node : @rdom.Element
+  lines_content_dom_node : @rdom.Element
+  view_lines_dom_node : @rdom.Element
+  focus_text_area : () -> Unit
+  get_last_render_data : () -> PointerHandlerLastRenderData
+  render_now : () -> Unit
+  should_suppress_mouse_down_on_view_zone : (String) -> Bool
+  should_suppress_mouse_down_on_widget : (String) -> Bool
+  get_position_from_dom_info : (@rdom.Element, Int) -> @base_common.Position?
+  visible_range_for_position : (Int, Int) -> @view.HorizontalPosition?
+  get_line_width : (Int) -> Double
+  // --- ViewContext substitutes (deviation, see header) ---
+  /// The attached view model; `None` while the viewer has no model (Monaco's
+  /// pointer handler only exists while a view — and thus a model — does).
+  view_model : () -> @view_model.ViewModel?
+  get_layout_info : () -> @config.EditorLayoutInfo
+  get_font_info : () -> @config.FontInfo
+  /// The current view-space selection (`MouseDownOperation._currentSelection`
+  /// via `onCursorStateChanged` in the source; read lazily here).
+  get_current_selection : () -> @core.Selection?
+  // --- ViewController substitutes (deviation, see header) ---
+  dispatch_mouse : (MouseDispatchData) -> Unit
+  emit_mouse_down : (
+    @editor_browser.EditorMouseEvent,
+    @editor_browser.MouseTarget,
+  ) -> Unit
+  emit_mouse_up : (
+    @editor_browser.EditorMouseEvent,
+    @editor_browser.MouseTarget,
+  ) -> Unit
+  emit_mouse_move : (
+    @editor_browser.EditorMouseEvent,
+    @editor_browser.MouseTarget,
+  ) -> Unit
+  emit_mouse_drag : (
+    @editor_browser.EditorMouseEvent,
+    @editor_browser.MouseTarget,
+  ) -> Unit
+  emit_mouse_leave : (@editor_browser.EditorMouseEvent) -> Unit
+  // --- retained viewer scroll seams (scrollbar_input.mbt, no Monaco mirror) ---
   overflow_guard : @rdom.Element
-  /// The editor's scrollable element (Monaco's editor scrollbar target).
   editor_scrollable : @scrollbar.ScrollableElementDom
-  /// The hover content widget's scrollable, if the hover widget is mounted
-  /// (lazily created, so this is a closure, not a field).
   hover_scrollable : () -> @scrollbar.ScrollableElementDom?
-  /// The editor scroll/layout model — the attached view model's layout;
-  /// `None` while no model is attached (Monaco's pointer handler only
-  /// exists while a view does), so every scroll path no-ops.
   view_layout : () -> @view_layout.ViewLayout?
-  /// Commit a scroll change produced from `view_layout()` (repaint + reveal).
   apply_scroll : (@view_layout.ScrollChange?) -> Unit
-  /// Hit-tests view-relative coordinates against the rendered view model
-  /// (Monaco's `MouseTargetFactory.createMouseTarget` over the view model);
-  /// `None` when no model is rendered.
-  hit_test : (Double, Double) -> @viewer_common.MouseTarget?
-  /// Refines a content target with DOM caret hit-testing (Monaco's
-  /// `viewHelper.getPositionFromDOMInfo`): client x/y, fallback target.
-  refine_content_target : (Double, Double, @viewer_common.MouseTarget) -> @viewer_common.MouseTarget
-  /// Dispatch a resolved pointer intent (Monaco's `ViewController.dispatchMouse`).
-  dispatch_mouse : (MouseDispatch) -> Unit
-  /// Report a hover-relevant mouse move (Monaco's `ViewUserInputEvents` move).
-  notify_mouse_moved : (@viewer_common.MouseTarget) -> Unit
-  /// Report a left-button mousedown's hit-tested target — Monaco's
-  /// `ViewController.emitMouseDown` (`mouseHandler.ts` `_onMouseDown` tail).
-  notify_mouse_down : (@viewer_common.MouseTarget) -> Unit
-  /// Report a left-button mouseup's hit-tested target — Monaco's
-  /// `ViewController.emitMouseUp`.
-  notify_mouse_up : (@viewer_common.MouseTarget) -> Unit
-  /// Request a repaint.
   schedule_render : () -> Unit
 }
 
 ///|
-/// Owns the active scrollbar-thumb drag and the multi-click/selection-drag
-/// state, plus the scroll- and pointer-input wiring. Mirrors Monaco's
-/// `MouseHandler` holding its `MouseDownOperation`/`MouseDownState`.
+/// `MouseHandler` (mouseHandler.ts:59-358). Also carries the viewer's
+/// retained scrollbar-drag slot (scrollbar_input.mbt).
 pub struct MouseHandler {
-  helper : PointerHandlerHelper
-  mut drag : @scrollbar.ScrollbarDrag?
-  mut selection_dragging : Bool
-  mut selection_started_on_line_numbers : Bool
-  mut last_mouse_down_count : Int
-  mut last_mouse_down_time : Double
-  mut last_mouse_down_x : Double
-  mut last_mouse_down_y : Double
-  mut selection_autoscroll_active : Bool
-  mut selection_autoscroll_x : Double
-  mut selection_autoscroll_y : Double
+  priv view_helper : PointerHandlerHelper
+  priv mouse_target_factory : MouseTargetFactory
+  priv mouse_down_operation : MouseDownOperation
+  priv mut last_mouse_leave_time : Double
+  priv mut mouse_leave_monitor : @base_common.Disposable?
+  priv listeners : Array[@base_common.Disposable]
+  /// The active scrollbar-thumb drag (scrollbar_input.mbt).
+  priv mut drag : @scrollbar.ScrollbarDrag?
 }
 
 ///|
-/// Creates the input controller over a view helper.
-pub fn MouseHandler::new(helper : PointerHandlerHelper) -> MouseHandler {
-  {
-    helper,
+pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
+  let mouse_target_factory = MouseTargetFactory::new(view_helper)
+  let handler : MouseHandler = {
+    view_helper,
+    mouse_target_factory,
+    mouse_down_operation: MouseDownOperation::new(
+      view_helper, mouse_target_factory,
+    ),
+    last_mouse_leave_time: -1.0,
+    mouse_leave_monitor: None,
+    listeners: [],
     drag: None,
-    selection_dragging: false,
-    selection_started_on_line_numbers: false,
-    last_mouse_down_count: 0,
-    last_mouse_down_time: 0.0,
-    last_mouse_down_x: 0.0,
-    last_mouse_down_y: 0.0,
-    selection_autoscroll_active: false,
-    selection_autoscroll_x: 0.0,
-    selection_autoscroll_y: 0.0,
   }
-}
+  let mouse_events = @editor_browser.EditorMouseEventFactory::new(
+    view_helper.view_dom_node,
+  )
+  handler.listeners.push(
+    mouse_events.on_mouse_move(view_helper.view_dom_node, e => {
+      handler.on_mouse_move(e)
 
-// === Mouse selection + hit test (Monaco MouseDownOperation / mouseTarget) ===
-
-///|
-/// Converts a container mouse event into view-relative coordinates using the
-/// view root, so hit-testing is independent of page layout.
-pub fn MouseHandler::handle_mouse_move(
-  self : MouseHandler,
-  mouse : @rdom.MouseEvent,
-) -> Unit {
-  let rect = self.helper.view_root.get_bounding_client_rect()
-  let x = mouse.get_client_x().to_double() - rect.get_left()
-  let y = mouse.get_client_y().to_double() - rect.get_top()
-  guard (self.helper.hit_test)(x, y) is Some(target) else { return }
-  (self.helper.notify_mouse_moved)(target)
-}
-
-///|
-pub fn MouseHandler::handle_mouse_down(
-  self : MouseHandler,
-  event : @rdom.Event,
-  mouse : @rdom.MouseEvent,
-) -> Unit {
-  if mouse.get_button() != 0 {
-    return
+      // See https://github.com/microsoft/vscode/issues/138789
+      // When moving the mouse really quickly, the browser sometimes forgets
+      // to send us a `mouseleave` or `mouseout` event. We therefore install
+      // here a global `mousemove` listener to manually recover if the mouse
+      // goes outside the editor. As soon as the mouse leaves outside of the
+      // editor, we remove this listener
+      if handler.mouse_leave_monitor is None {
+        let recover = (event : @rdom.Event) => {
+          match event.to_mouse_event() {
+            Some(mouse) =>
+              if !mouse_event_target_within(
+                  mouse,
+                  handler.view_helper.view_dom_node,
+                ) {
+                // went outside the editor!
+                handler.on_mouse_leave(
+                  @editor_browser.EditorMouseEvent::new(
+                    mouse,
+                    false,
+                    handler.view_helper.view_dom_node,
+                  ),
+                )
+              }
+            None => ()
+          }
+        }
+        @rdom.document().add_event_listener("mousemove", recover)
+        handler.mouse_leave_monitor = Some(
+          @base_common.Disposable::from(() => {
+            @rdom.document().remove_event_listener("mousemove", recover)
+          }),
+        )
+      }
+    }),
+  )
+  handler.listeners.push(
+    mouse_events.on_mouse_up(view_helper.view_dom_node, e => {
+      handler.on_mouse_up(e)
+    }),
+  )
+  handler.listeners.push(
+    mouse_events.on_mouse_leave(view_helper.view_dom_node, e => {
+      handler.on_mouse_leave(e)
+    }),
+  )
+  // The `pointerup` listener registered by `GlobalEditorPointerMoveMonitor`
+  // does not get invoked 100% of the times (mouseHandler.ts:126-133); this
+  // compensation listener simply communicates it.
+  let pointer_up = (_event : @rdom.Event) => {
+    handler.mouse_down_operation.on_pointer_up()
   }
-  focus_element(self.helper.view_root)
-  let client_x = mouse.get_client_x().to_double()
-  let client_y = mouse.get_client_y().to_double()
-  let rect = self.helper.view_root.get_bounding_client_rect()
-  let x = client_x - rect.get_left()
-  let y = client_y - rect.get_top()
-  guard (self.helper.hit_test)(x, y) is Some(target) else { return }
-  // Monaco emits the mouse-down event after its selection handling
-  // (`mouseHandler.ts:349` `emitMouseDown`); the viewer notifies before the
-  // early return below so non-selecting targets (the decorations lane) still
-  // reach listeners. Only left-button downs arrive here, matching the one
-  // consumer (comments gates on `e.event.leftButton`).
-  (self.helper.notify_mouse_down)(target)
-  // Resolve the pointer to a view position and whether the drag started on the
-  // line-number gutter (which selects whole lines).
-  let resolved : (@base_common.Position, Bool)? = match target.kind {
-    ContentText | ContentEmpty => {
-      let refined = (self.helper.refine_content_target)(
-        client_x, client_y, target,
-      )
-      Some((Position(refined.line_number, refined.column + 1), false))
-    }
-    GutterLineNumbers => Some((Position(target.line_number, 1), true))
-    // `_onMouseDown` (`mouseHandler.ts:314-336`): a gutter target other than
-    // the line numbers prevents the default ("Do not steal focus") but starts
-    // no selection.
-    GutterLineDecorations => {
-      event.prevent_default()
-      None
-    }
-    _ => None
-  }
-  guard resolved is Some((view_position, started_on_line_numbers)) else {
-    return
-  }
-  event.prevent_default()
-  event.stop_propagation()
-  let mouse_down_count = self.next_mouse_down_count(client_x, client_y)
-  self.selection_started_on_line_numbers = started_on_line_numbers
-  self.selection_dragging = true
-  (self.helper.dispatch_mouse)({
-    view_position,
-    in_selection_mode: mouse_shift_key(mouse),
-    mouse_down_count,
-    started_on_line_numbers,
-  })
+  view_helper.view_dom_node.add_event_listener("pointerup", pointer_up)
+  handler.listeners.push(
+    @base_common.Disposable::from(() => {
+      view_helper.view_dom_node.remove_event_listener("pointerup", pointer_up)
+    }),
+  )
+  handler.listeners.push(
+    mouse_events.on_mouse_down(view_helper.view_dom_node, e => {
+      handler.on_mouse_down(e)
+    }),
+  )
+  handler
 }
 
 ///|
-/// Root `mouseup`: hit-tests the release position and notifies listeners —
-/// Monaco's `emitMouseUp`. Left button only, pairing with
-/// `handle_mouse_down`'s notification (the comments contrib matches the two
-/// by line).
-pub fn MouseHandler::handle_mouse_up(
-  self : MouseHandler,
-  mouse : @rdom.MouseEvent,
-) -> Unit {
-  if mouse.get_button() != 0 {
-    return
+pub fn MouseHandler::dispose(self : MouseHandler) -> Unit {
+  for listener in self.listeners {
+    listener.dispose()
   }
-  let rect = self.helper.view_root.get_bounding_client_rect()
-  let x = mouse.get_client_x().to_double() - rect.get_left()
-  let y = mouse.get_client_y().to_double() - rect.get_top()
-  guard (self.helper.hit_test)(x, y) is Some(target) else { return }
-  (self.helper.notify_mouse_up)(target)
-}
-
-///|
-extern "js" fn focus_element(element : @rdom.Element) -> Unit = "(element) => element.focus?.()"
-
-///|
-extern "js" fn mouse_shift_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.shiftKey"
-
-///|
-extern "js" fn now_ms() -> Double =
-  #| () => globalThis.performance?.now() ?? Date.now()
-
-///|
-/// The multi-click count for a fresh mousedown, transcribing the timing/distance
-/// gating of Monaco's `MouseDownState`: a mousedown close to the previous one in
-/// time and space increments the count (single → double → triple → quad), else
-/// it resets to a single click.
-fn MouseHandler::next_mouse_down_count(
-  self : MouseHandler,
-  client_x : Double,
-  client_y : Double,
-) -> Int {
-  let now = now_ms()
-  let dx = (client_x - self.last_mouse_down_x).abs()
-  let dy = (client_y - self.last_mouse_down_y).abs()
-  let close = now - self.last_mouse_down_time <= multi_click_time &&
-    dx <= multi_click_distance &&
-    dy <= multi_click_distance
-  let count = if close { self.last_mouse_down_count + 1 } else { 1 }
-  self.last_mouse_down_count = count
-  self.last_mouse_down_time = now
-  self.last_mouse_down_x = client_x
-  self.last_mouse_down_y = client_y
-  count
-}
-
-///|
-/// Applies an in-progress selection drag (document `mousemove`).
-pub fn MouseHandler::handle_selection_drag_move(
-  self : MouseHandler,
-  event : @rdom.Event,
-) -> Unit {
-  guard self.selection_dragging else { return }
-  guard event.to_mouse_event() is Some(mouse) else { return }
-  event.prevent_default()
-  let client_x = mouse.get_client_x().to_double()
-  let client_y = mouse.get_client_y().to_double()
-  self.extend_selection_at(client_x, client_y)
-  self.update_selection_autoscroll(client_x, client_y)
-}
-
-///|
-/// Extends the in-progress selection to a pointer position (in client
-/// coordinates), re-running the hit test against the current scroll. Shared by
-/// pointer moves and the drag-autoscroll loop.
-fn MouseHandler::extend_selection_at(
-  self : MouseHandler,
-  client_x : Double,
-  client_y : Double,
-) -> Unit {
-  guard self.selection_dragging else { return }
-  let rect = self.helper.view_root.get_bounding_client_rect()
-  let x = client_x - rect.get_left()
-  let y = client_y - rect.get_top()
-  guard (self.helper.hit_test)(x, y) is Some(target) else { return }
-  let refined = match target.kind {
-    ContentText | ContentEmpty =>
-      (self.helper.refine_content_target)(client_x, client_y, target)
-    _ => target
-  }
-  match drag_view_position(refined) {
-    Some(view_position) =>
-      (self.helper.dispatch_mouse)({
-        view_position,
-        in_selection_mode: true,
-        mouse_down_count: self.last_mouse_down_count,
-        started_on_line_numbers: self.selection_started_on_line_numbers,
-      })
+  self.listeners.clear()
+  match self.mouse_leave_monitor {
+    Some(monitor) => monitor.dispose()
     None => ()
   }
-}
-
-///|
-/// Updates the drag-autoscroll state from the latest pointer position. When the
-/// pointer is dragged past the top or bottom of the content viewport, the
-/// remembered position drives a continuous scroll-and-extend loop (Monaco's
-/// `dragScrolling`); when it returns inside, the loop stops on its next tick.
-fn MouseHandler::update_selection_autoscroll(
-  self : MouseHandler,
-  client_x : Double,
-  client_y : Double,
-) -> Unit {
-  self.selection_autoscroll_x = client_x
-  self.selection_autoscroll_y = client_y
-  if self.selection_drag_edge_delta(client_y) != 0.0 {
-    if !self.selection_autoscroll_active {
-      self.selection_autoscroll_active = true
-      self.schedule_selection_autoscroll()
-    }
-  } else {
-    self.selection_autoscroll_active = false
-  }
-}
-
-///|
-/// The signed vertical overshoot of a client-Y past the content viewport edges:
-/// negative above the top, positive below the bottom, zero inside.
-fn MouseHandler::selection_drag_edge_delta(
-  self : MouseHandler,
-  client_y : Double,
-) -> Double {
-  guard (self.helper.view_layout)() is Some(view_layout) else { return 0.0 }
-  let rect = self.helper.view_root.get_bounding_client_rect()
-  let y = client_y - rect.get_top()
-  let viewport_height = view_layout.dimensions().height
-  if y < 0.0 {
-    y
-  } else if viewport_height > 0.0 && y > viewport_height {
-    y - viewport_height
-  } else {
-    0.0
-  }
-}
-
-///|
-fn MouseHandler::schedule_selection_autoscroll(self : MouseHandler) -> Unit {
-  @rdom.window().request_animation_frame(_ => self.selection_autoscroll_tick())
-  |> ignore
-}
-
-///|
-/// One frame of drag autoscroll: scroll toward the remembered off-edge pointer,
-/// re-extend the selection at the new scroll, and reschedule until the drag ends
-/// or the pointer returns inside the viewport.
-fn MouseHandler::selection_autoscroll_tick(self : MouseHandler) -> Unit {
-  guard self.selection_dragging && self.selection_autoscroll_active else {
-    self.selection_autoscroll_active = false
-    return
-  }
-  let delta = self.selection_drag_edge_delta(self.selection_autoscroll_y)
-  if delta == 0.0 {
-    self.selection_autoscroll_active = false
-    return
-  }
-  let step = delta.clamp(
-    min=-selection_autoscroll_max_step,
-    max=selection_autoscroll_max_step,
-  )
-  match (self.helper.view_layout)() {
-    Some(view_layout) =>
-      (self.helper.apply_scroll)(
-        view_layout.scroll_by(delta_left=0.0, delta_top=step),
-      )
-    None => ()
-  }
-  self.extend_selection_at(
-    self.selection_autoscroll_x,
-    self.selection_autoscroll_y,
-  )
-  self.schedule_selection_autoscroll()
-}
-
-///|
-/// Ends an in-progress selection drag (document `mouseup`).
-pub fn MouseHandler::finish_selection(self : MouseHandler) -> Unit {
-  if !self.selection_dragging {
-    return
-  }
-  self.selection_dragging = false
-  self.selection_autoscroll_active = false
-  (self.helper.schedule_render)()
+  self.mouse_leave_monitor = None
+  self.mouse_down_operation.dispose()
 }
 
 ///|
 /// Cancels an in-progress selection drag without a repaint, for viewer
-/// lifecycle resets (model change/clear). The autoscroll loop self-cancels on
-/// its next tick once `selection_dragging` is false.
+/// lifecycle resets (model change/clear) — stops the down-operation monitor.
 pub fn MouseHandler::cancel_selection(self : MouseHandler) -> Unit {
-  self.selection_dragging = false
+  self.mouse_down_operation.on_pointer_up()
 }
 
 ///|
-/// The view position a drag should extend the selection to, for any target that
-/// resolves to a line (content, below-content, or the line-number gutter).
-fn drag_view_position(
-  target : @viewer_common.MouseTarget,
+/// `getTargetAtClientPoint` (mouseHandler.ts:231-242).
+pub fn MouseHandler::get_target_at_client_point(
+  self : MouseHandler,
+  client_x : Double,
+  client_y : Double,
+) -> @editor_browser.MouseTarget? {
+  let client_pos : @editor_browser.ClientCoordinates = { client_x, client_y }
+  let pos = client_pos.to_page_coordinates()
+  let editor_pos = @editor_browser.create_editor_page_position(
+    self.view_helper.view_dom_node,
+  )
+  if pos.y < editor_pos.y ||
+    pos.y > editor_pos.y + editor_pos.height ||
+    pos.x < editor_pos.x ||
+    pos.x > editor_pos.x + editor_pos.width {
+    return None
+  }
+  let relative_pos = @editor_browser.create_coordinates_relative_to_editor(
+    self.view_helper.view_dom_node,
+    editor_pos,
+    pos,
+  )
+  Some(
+    self.mouse_target_factory.create_mouse_target(
+      (self.view_helper.get_last_render_data)(),
+      editor_pos,
+      pos,
+      relative_pos,
+      None,
+    ),
+  )
+}
+
+///|
+/// `_createMouseTarget` (mouseHandler.ts:244-256), sans the shadow-root
+/// `elementsFromPoint` recovery (no shadow DOM).
+fn MouseHandler::create_mouse_target(
+  self : MouseHandler,
+  e : @editor_browser.EditorMouseEvent,
+  test_event_target : Bool,
+) -> @editor_browser.MouseTarget {
+  self.mouse_target_factory.create_mouse_target(
+    (self.view_helper.get_last_render_data)(),
+    e.editor_pos(),
+    e.pos,
+    e.relative_pos(),
+    if test_event_target {
+      e.target
+    } else {
+      None
+    },
+  )
+}
+
+///|
+/// `_onMouseMove` (mouseHandler.ts:269-289).
+fn MouseHandler::on_mouse_move(
+  self : MouseHandler,
+  e : @editor_browser.EditorMouseEvent,
+) -> Unit {
+  let target_is_widget = self.mouse_target_factory.mouse_target_is_widget(e)
+  if !target_is_widget {
+    e.prevent_default()
+  }
+  if self.mouse_down_operation.is_active() {
+    // In selection/drag operation
+    return
+  }
+  let actual_mouse_move_time = e.timestamp
+  if actual_mouse_move_time < self.last_mouse_leave_time {
+    // Due to throttling, this event occurred before the mouse left the
+    // editor, therefore ignore it.
+    return
+  }
+  (self.view_helper.emit_mouse_move)(e, self.create_mouse_target(e, true))
+}
+
+///|
+/// `_onMouseLeave` (mouseHandler.ts:291-301).
+fn MouseHandler::on_mouse_leave(
+  self : MouseHandler,
+  e : @editor_browser.EditorMouseEvent,
+) -> Unit {
+  match self.mouse_leave_monitor {
+    Some(monitor) => monitor.dispose()
+    None => ()
+  }
+  self.mouse_leave_monitor = None
+  self.last_mouse_leave_time = handler_now()
+  (self.view_helper.emit_mouse_leave)(e)
+}
+
+///|
+/// `_onMouseUp` (mouseHandler.ts:303-308).
+fn MouseHandler::on_mouse_up(
+  self : MouseHandler,
+  e : @editor_browser.EditorMouseEvent,
+) -> Unit {
+  (self.view_helper.emit_mouse_up)(e, self.create_mouse_target(e, true))
+}
+
+///|
+/// `_onMouseDown` (mouseHandler.ts:310-353). `selectOnLineNumbers` reads as
+/// the Monaco default `true`; the `pointerId` parameter is dropped with the
+/// pointer-capture omission.
+fn MouseHandler::on_mouse_down(
+  self : MouseHandler,
+  e : @editor_browser.EditorMouseEvent,
+) -> Unit {
+  let t = self.create_mouse_target(e, true)
+  let target_type = t.type_()
+  let target_is_content = target_type is ContentText ||
+    target_type is ContentEmpty
+  let target_is_gutter = target_type is GutterGlyphMargin ||
+    target_type is GutterLineNumbers ||
+    target_type is GutterLineDecorations
+  let target_is_line_numbers = target_type is GutterLineNumbers
+  let select_on_line_numbers = true
+  let target_is_view_zone = target_type is ContentViewZone ||
+    target_type is GutterViewZone
+  let target_is_widget = target_type is ContentWidget
+  let mut should_handle = e.left_button || e.middle_button
+  if @base_common.is_macintosh && e.left_button && e.ctrl_key {
+    should_handle = false
+  }
+  let focus = () => {
+    e.prevent_default()
+    (self.view_helper.focus_text_area)()
+  }
+  if should_handle &&
+    (target_is_content || (target_is_line_numbers && select_on_line_numbers)) {
+    focus()
+    self.mouse_down_operation.start(target_type, e)
+  } else if target_is_gutter {
+    // Do not steal focus
+    e.prevent_default()
+  } else if target_is_view_zone {
+    match t {
+      MouseTargetViewZone(detail~, ..) =>
+        if should_handle &&
+          (self.view_helper.should_suppress_mouse_down_on_view_zone)(
+            detail.view_zone_id,
+          ) {
+          focus()
+          self.mouse_down_operation.start(target_type, e)
+          e.prevent_default()
+        }
+      _ => ()
+    }
+  } else if target_is_widget {
+    match t {
+      MouseTargetContentWidget(detail~, ..) =>
+        if (self.view_helper.should_suppress_mouse_down_on_widget)(detail) {
+          focus()
+          e.prevent_default()
+        }
+      _ => ()
+    }
+  }
+  (self.view_helper.emit_mouse_down)(e, t)
+}
+
+///|
+/// `MouseDownOperation` (mouseHandler.ts:360-656).
+priv struct MouseDownOperation {
+  view_helper : PointerHandlerHelper
+  mouse_target_factory : MouseTargetFactory
+  mouse_move_monitor : @editor_browser.GlobalEditorPointerMoveMonitor
+  top_bottom_drag_scrolling : DragScrolling
+  left_right_drag_scrolling : DragScrolling
+  mouse_state : MouseDownState
+  mut is_active_flag : Bool
+}
+
+///|
+fn MouseDownOperation::new(
+  view_helper : PointerHandlerHelper,
+  mouse_target_factory : MouseTargetFactory,
+) -> MouseDownOperation {
+  let operation : MouseDownOperation = {
+    view_helper,
+    mouse_target_factory,
+    mouse_move_monitor: @editor_browser.GlobalEditorPointerMoveMonitor::new(
+      view_helper.view_dom_node,
+    ),
+    top_bottom_drag_scrolling: DragScrolling::new(
+      TopBottom,
+      view_helper,
+      mouse_target_factory,
+      (_position, _in_selection_mode) => (),
+    ),
+    left_right_drag_scrolling: DragScrolling::new(
+      LeftRight,
+      view_helper,
+      mouse_target_factory,
+      (_position, _in_selection_mode) => (),
+    ),
+    mouse_state: MouseDownState::new(),
+    is_active_flag: false,
+  }
+  // The drag-scrolling dispatch closures need the operation itself; rebuild
+  // them now that it exists (the source passes
+  // `(position, inSelectionMode, revealType) => this._dispatchMouse(...)`
+  // into the constructors directly).
+  operation.top_bottom_drag_scrolling.set_dispatch((position, in_selection_mode) => {
+    operation.dispatch_mouse_target(position, in_selection_mode)
+  })
+  operation.left_right_drag_scrolling.set_dispatch((position, in_selection_mode) => {
+    operation.dispatch_mouse_target(position, in_selection_mode)
+  })
+  operation
+}
+
+///|
+fn MouseDownOperation::dispose(self : MouseDownOperation) -> Unit {
+  self.mouse_move_monitor.stop_monitoring()
+  self.top_bottom_drag_scrolling.dispose()
+  self.left_right_drag_scrolling.dispose()
+}
+
+///|
+fn MouseDownOperation::is_active(self : MouseDownOperation) -> Bool {
+  self.is_active_flag
+}
+
+///|
+/// `_onMouseDownThenMove` (mouseHandler.ts:410-440), sans the drag-and-drop
+/// branch (header).
+fn MouseDownOperation::on_mouse_down_then_move(
+  self : MouseDownOperation,
+  e : @editor_browser.EditorMouseEvent,
+) -> Unit {
+  self.mouse_state.set_modifiers(e)
+  guard self.find_mouse_position(e, false) is Some(position) else {
+    // Ignoring because position is unknown
+    return
+  }
+  if position is MouseTargetOutsideEditor(outside_position~, ..) {
+    if outside_position is Above || outside_position is Below {
+      self.top_bottom_drag_scrolling.start(position, e)
+      self.left_right_drag_scrolling.stop()
+    } else {
+      self.left_right_drag_scrolling.start(position, e)
+      self.top_bottom_drag_scrolling.stop()
+    }
+  } else {
+    self.top_bottom_drag_scrolling.stop()
+    self.left_right_drag_scrolling.stop()
+    self.dispatch_mouse_target(position, true)
+  }
+}
+
+///|
+/// `start` (mouseHandler.ts:442-512), sans the drag-and-drop gate (header:
+/// `readOnly` is constant `true`, so the source's gate never passes).
+fn MouseDownOperation::start(
+  self : MouseDownOperation,
+  target_type : @editor_browser.MouseTargetType,
+  e : @editor_browser.EditorMouseEvent,
+) -> Unit {
+  self.mouse_state.set_started_on_line_numbers(target_type is GutterLineNumbers)
+  self.mouse_state.set_start_buttons(e)
+  self.mouse_state.set_modifiers(e)
+  guard self.find_mouse_position(e, true) is Some(position) else {
+    // Ignoring because position is unknown
+    return
+  }
+  guard position.position() is Some(target_position) else { return }
+  self.mouse_state.try_set_count(e.detail, target_position)
+
+  // Overwrite the detail of the MouseEvent, as it will be sent out in an
+  // event and contributions might rely on it.
+  e.set_detail(self.mouse_state.count())
+  self.dispatch_mouse_target(position, e.shift_key)
+  if !self.is_active_flag {
+    self.is_active_flag = true
+    self.mouse_move_monitor.start_monitoring(
+      self.view_helper.view_lines_dom_node,
+      e.buttons,
+      moved => self.on_mouse_down_then_move(moved),
+      _browser_event => self.stop(),
+    )
+  }
+}
+
+///|
+fn MouseDownOperation::stop(self : MouseDownOperation) -> Unit {
+  self.is_active_flag = false
+  self.top_bottom_drag_scrolling.stop()
+  self.left_right_drag_scrolling.stop()
+}
+
+///|
+fn MouseDownOperation::on_pointer_up(self : MouseDownOperation) -> Unit {
+  self.mouse_move_monitor.stop_monitoring()
+}
+
+///|
+/// `_getPositionOutsideEditor` (mouseHandler.ts:532-593). The RTL arms read
+/// LTR-only (mouse_target.mbt header); `contentRight` takes the
+/// minimap-hidden branch (no minimap part).
+fn MouseDownOperation::get_position_outside_editor(
+  self : MouseDownOperation,
+  e : @editor_browser.EditorMouseEvent,
+) -> @editor_browser.MouseTarget? {
+  let editor_content = e.editor_pos()
+  guard (self.view_helper.view_model)() is Some(view_model) else { return None }
+  let view_layout = view_model.view_layout
+  let mouse_column = self.mouse_target_factory.get_mouse_column(
+    e.relative_pos(),
+  )
+  if e.posy < editor_content.y {
+    let outside_distance = editor_content.y - e.posy
+    let vertical_offset = controller_double_max(
+      view_layout.get_current_scroll_top() - outside_distance,
+      0.0,
+    )
+    match hit_test_get_zone_at_coord(view_model, vertical_offset) {
+      Some(view_zone_data) =>
+        match self.help_position_jump_over_view_zone(view_zone_data) {
+          Some(new_position) =>
+            return Some(
+              create_outside_editor(
+                mouse_column,
+                new_position,
+                Above,
+                outside_distance,
+              ),
+            )
+          None => ()
+        }
+      None => ()
+    }
+    let above_line_number = view_layout.line_at_vertical_offset(vertical_offset)
+    return Some(
+      create_outside_editor(
+        mouse_column,
+        Position(above_line_number, 1),
+        Above,
+        outside_distance,
+      ),
+    )
+  }
+  if e.posy > editor_content.y + editor_content.height {
+    let outside_distance = e.posy - editor_content.y - editor_content.height
+    let vertical_offset = view_layout.get_current_scroll_top() +
+      e.relative_pos().y
+    match hit_test_get_zone_at_coord(view_model, vertical_offset) {
+      Some(view_zone_data) =>
+        match self.help_position_jump_over_view_zone(view_zone_data) {
+          Some(new_position) =>
+            return Some(
+              create_outside_editor(
+                mouse_column,
+                new_position,
+                Below,
+                outside_distance,
+              ),
+            )
+          None => ()
+        }
+      None => ()
+    }
+    let below_line_number = view_layout.line_at_vertical_offset(vertical_offset)
+    return Some(
+      create_outside_editor(
+        mouse_column,
+        Position(
+          below_line_number,
+          view_model.get_line_max_column(below_line_number),
+        ),
+        Below,
+        outside_distance,
+      ),
+    )
+  }
+  let possible_line_number = view_layout.line_at_vertical_offset(
+    view_layout.get_current_scroll_top() + e.relative_pos().y,
+  )
+  let layout_info = (self.view_helper.get_layout_info)()
+  let x_left_boundary = layout_info.content_left
+  if e.relative_pos().x <= x_left_boundary {
+    let outside_distance = x_left_boundary - e.relative_pos().x
+    return Some(
+      create_outside_editor(
+        mouse_column,
+        Position(possible_line_number, 1),
+        Left,
+        outside_distance,
+      ),
+    )
+  }
+  let content_right = layout_info.width - layout_info.vertical_scrollbar_width
+  let x_right_boundary = content_right
+  if e.relative_pos().x >= x_right_boundary {
+    let outside_distance = e.relative_pos().x - x_right_boundary
+    return Some(
+      create_outside_editor(
+        mouse_column,
+        Position(
+          possible_line_number,
+          view_model.get_line_max_column(possible_line_number),
+        ),
+        Right,
+        outside_distance,
+      ),
+    )
+  }
+  None
+}
+
+///|
+/// `_findMousePosition` (mouseHandler.ts:595-615).
+fn MouseDownOperation::find_mouse_position(
+  self : MouseDownOperation,
+  e : @editor_browser.EditorMouseEvent,
+  test_event_target : Bool,
+) -> @editor_browser.MouseTarget? {
+  match self.get_position_outside_editor(e) {
+    Some(position_outside_editor) => return Some(position_outside_editor)
+    None => ()
+  }
+  let t = self.mouse_target_factory.create_mouse_target(
+    (self.view_helper.get_last_render_data)(),
+    e.editor_pos(),
+    e.pos,
+    e.relative_pos(),
+    if test_event_target {
+      e.target
+    } else {
+      None
+    },
+  )
+  guard t.position() is Some(_) else { return None }
+  match t {
+    MouseTargetViewZone(type_~, element~, mouse_column~, detail~, ..) =>
+      match self.help_position_jump_over_view_zone(detail) {
+        Some(new_position) =>
+          return Some(
+            create_view_zone(type_, element, mouse_column, new_position, detail),
+          )
+        None => ()
+      }
+    _ => ()
+  }
+  Some(t)
+}
+
+///|
+/// `_helpPositionJumpOverViewZone` (mouseHandler.ts:617-631): force the
+/// position on view zones to go above or below depending on where the
+/// selection started from.
+fn MouseDownOperation::help_position_jump_over_view_zone(
+  self : MouseDownOperation,
+  view_zone_data : @editor_browser.MouseTargetViewZoneData,
 ) -> @base_common.Position? {
-  match target.kind {
-    ContentText
-    | ContentEmpty
-    | BelowContent
-    | GutterLineNumbers
-    | GutterLineDecorations =>
-      if target.line_number >= 1 {
-        Some(Position(target.line_number, target.column + 1))
+  guard (self.view_helper.get_current_selection)() is Some(current_selection) else {
+    return None
+  }
+  let selection_start = current_selection.get_selection_start()
+  match (view_zone_data.position_before, view_zone_data.position_after) {
+    (Some(position_before), Some(position_after)) =>
+      if position_before.is_before(selection_start) {
+        Some(position_before)
       } else {
-        None
+        Some(position_after)
       }
     _ => None
   }
 }
 
-// === Scroll / scrollbar interaction (Monaco ScrollableElement pointer input) ===
-
 ///|
-/// Wires one scrollable element's scrollbar interactions: reveal-on-hover and
-/// thumb/track drags. Shared by the editor scrollbar and the hover widget
-/// scrollbar (Monaco's `ScrollableElement` pointer handling).
-pub fn MouseHandler::hook_scrollable_scrollbar_input(
-  self : MouseHandler,
-  scrollable : @scrollbar.ScrollableElementDom,
-  owner : @scrollbar.ScrollableElementOwner,
+/// `_dispatchMouse` (mouseHandler.ts:633-655).
+fn MouseDownOperation::dispatch_mouse_target(
+  self : MouseDownOperation,
+  position : @editor_browser.MouseTarget,
+  in_selection_mode : Bool,
 ) -> Unit {
-  scrollable.wrapper.add_event_listener("mouseover", _ => {
-    scrollable.mouse_entered()
-  })
-  scrollable.wrapper.add_event_listener("mousemove", _ => {
-    scrollable.mouse_entered()
-  })
-  scrollable.wrapper.add_event_listener("mouseleave", _ => {
-    scrollable.mouse_left()
-  })
-  scrollable
-  .slider(true)
-  .add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        event.stop_propagation()
-        self.start_scrollable_drag(scrollable, owner, vertical=true, mouse)
-      }
-      None => ()
-    }
-  })
-  scrollable
-  .slider(false)
-  .add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        event.stop_propagation()
-        self.start_scrollable_drag(scrollable, owner, vertical=false, mouse)
-      }
-      None => ()
-    }
-  })
-  scrollable
-  .track(true)
-  .add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        event.stop_propagation()
-        self.scrollable_track_jump(scrollable, owner, vertical=true, mouse)
-      }
-      None => ()
-    }
-  })
-  scrollable
-  .track(false)
-  .add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        event.prevent_default()
-        event.stop_propagation()
-        self.scrollable_track_jump(scrollable, owner, vertical=false, mouse)
-      }
-      None => ()
-    }
+  guard position.position() is Some(target_position) else { return }
+  let on_injected_text = match position {
+    MouseTargetContentText(detail~, ..) => detail.injected_text is Some(_)
+    _ => false
+  }
+  (self.view_helper.dispatch_mouse)({
+    position: target_position,
+    mouse_column: position.mouse_column(),
+    started_on_line_numbers: self.mouse_state.started_on_line_numbers(),
+    in_selection_mode,
+    mouse_down_count: self.mouse_state.count(),
+    alt_key: self.mouse_state.alt_key(),
+    ctrl_key: self.mouse_state.ctrl_key(),
+    meta_key: self.mouse_state.meta_key(),
+    shift_key: self.mouse_state.shift_key(),
+    left_button: self.mouse_state.left_button(),
+    middle_button: self.mouse_state.middle_button(),
+    on_injected_text,
   })
 }
 
 ///|
-/// The editor's `ScrollableElement._onMouseWheel`: normalize into wheel
-/// units, run the shared delta pipeline (Monaco's editor scrollbar options —
-/// sensitivity 1, predominant axis, alt fast-scroll), and apply as an
-/// immediate scroll (the trackpad `setScrollPositionNow` path; the
-/// physical-wheel smooth-scroll fork is unported).
-pub fn MouseHandler::handle_editor_wheel(
-  self : MouseHandler,
-  wheel : @rdom.WheelEvent,
+/// `MouseDownState` (mouseHandler.ts:658-749).
+pub struct MouseDownState {
+  priv mut alt_key_flag : Bool
+  priv mut ctrl_key_flag : Bool
+  priv mut meta_key_flag : Bool
+  priv mut shift_key_flag : Bool
+  priv mut left_button_flag : Bool
+  priv mut middle_button_flag : Bool
+  priv mut started_on_line_numbers_flag : Bool
+  priv mut last_mouse_down_position : @base_common.Position?
+  priv mut last_mouse_down_position_equal_count : Int
+  priv mut last_mouse_down_count : Int
+  priv mut last_set_mouse_down_count_time : Double
+}
+
+///|
+/// `CLEAR_MOUSE_DOWN_COUNT_TIME` (mouseHandler.ts:660).
+const CLEAR_MOUSE_DOWN_COUNT_TIME : Double = 400.0 // ms
+
+///|
+pub fn MouseDownState::new() -> MouseDownState {
+  {
+    alt_key_flag: false,
+    ctrl_key_flag: false,
+    meta_key_flag: false,
+    shift_key_flag: false,
+    left_button_flag: false,
+    middle_button_flag: false,
+    started_on_line_numbers_flag: false,
+    last_mouse_down_position: None,
+    last_mouse_down_position_equal_count: 0,
+    last_mouse_down_count: 0,
+    last_set_mouse_down_count_time: 0.0,
+  }
+}
+
+///|
+pub fn MouseDownState::alt_key(self : MouseDownState) -> Bool {
+  self.alt_key_flag
+}
+
+///|
+pub fn MouseDownState::ctrl_key(self : MouseDownState) -> Bool {
+  self.ctrl_key_flag
+}
+
+///|
+pub fn MouseDownState::meta_key(self : MouseDownState) -> Bool {
+  self.meta_key_flag
+}
+
+///|
+pub fn MouseDownState::shift_key(self : MouseDownState) -> Bool {
+  self.shift_key_flag
+}
+
+///|
+pub fn MouseDownState::left_button(self : MouseDownState) -> Bool {
+  self.left_button_flag
+}
+
+///|
+pub fn MouseDownState::middle_button(self : MouseDownState) -> Bool {
+  self.middle_button_flag
+}
+
+///|
+pub fn MouseDownState::started_on_line_numbers(self : MouseDownState) -> Bool {
+  self.started_on_line_numbers_flag
+}
+
+///|
+pub fn MouseDownState::count(self : MouseDownState) -> Int {
+  self.last_mouse_down_count
+}
+
+///|
+fn MouseDownState::set_modifiers(
+  self : MouseDownState,
+  source : @editor_browser.EditorMouseEvent,
 ) -> Unit {
-  guard (self.helper.view_layout)() is Some(view_layout) else { return }
-  let (delta_left, delta_top) = @scrollbar.mouse_wheel_scroll_deltas(
-    @scrollbar.StandardWheelEvent::new(wheel),
-    alt_key=wheel.get_alt_key(),
-    shift_key=wheel.get_shift_key(),
+  self.alt_key_flag = source.alt_key
+  self.ctrl_key_flag = source.ctrl_key
+  self.meta_key_flag = source.meta_key
+  self.shift_key_flag = source.shift_key
+}
+
+///|
+fn MouseDownState::set_start_buttons(
+  self : MouseDownState,
+  source : @editor_browser.EditorMouseEvent,
+) -> Unit {
+  self.left_button_flag = source.left_button
+  self.middle_button_flag = source.middle_button
+}
+
+///|
+fn MouseDownState::set_started_on_line_numbers(
+  self : MouseDownState,
+  started_on_line_numbers : Bool,
+) -> Unit {
+  self.started_on_line_numbers_flag = started_on_line_numbers
+}
+
+///|
+/// `trySetCount` (mouseHandler.ts:724-747). `now` is injectable for tests;
+/// the source reads `new Date().getTime()`.
+pub fn MouseDownState::try_set_count(
+  self : MouseDownState,
+  set_mouse_down_count : Int,
+  new_mouse_down_position : @base_common.Position,
+  now? : Double,
+) -> Unit {
+  let mut set_mouse_down_count = set_mouse_down_count
+  // a. Invalidate multiple clicking if too much time has passed
+  let current_time = match now {
+    Some(now) => now
+    None => handler_now()
+  }
+  if current_time - self.last_set_mouse_down_count_time >
+    CLEAR_MOUSE_DOWN_COUNT_TIME {
+    set_mouse_down_count = 1
+  }
+  self.last_set_mouse_down_count_time = current_time
+
+  // b. Ensure that we don't jump from single click to triple click in one go
+  if set_mouse_down_count > self.last_mouse_down_count + 1 {
+    set_mouse_down_count = self.last_mouse_down_count + 1
+  }
+
+  // c. Invalidate multiple clicking if the logical position is different
+  match self.last_mouse_down_position {
+    Some(last) if last.equals(new_mouse_down_position) =>
+      self.last_mouse_down_position_equal_count += 1
+    _ => self.last_mouse_down_position_equal_count = 1
+  }
+  self.last_mouse_down_position = Some(new_mouse_down_position)
+
+  // Finally set the lastMouseDownCount
+  self.last_mouse_down_count = int_min(
+    set_mouse_down_count,
+    self.last_mouse_down_position_equal_count,
   )
-  (self.helper.apply_scroll)(view_layout.scroll_by(delta_left~, delta_top~))
 }
 
 ///|
-fn MouseHandler::start_scrollable_drag(
-  self : MouseHandler,
-  scrollable : @scrollbar.ScrollableElementDom,
-  owner : @scrollbar.ScrollableElementOwner,
-  vertical~ : Bool,
-  mouse : @rdom.MouseEvent,
-) -> Unit {
-  scrollable.drag_started()
-  self.drag = Some({
-    owner,
-    vertical,
-    start_coord: @scrollbar.drag_coord(mouse, vertical),
-    start_slider: scrollable.state(vertical).slider_position(),
-  })
-  scrollable.set_slider_active(vertical~, true)
-}
-
-///|
-/// Ends an in-progress thumb drag (document `mouseup`).
-pub fn MouseHandler::end_scrollable_drag(self : MouseHandler) -> Unit {
-  match self.drag {
-    Some(drag) =>
-      match self.scrollable_for_drag(drag.owner) {
-        Some(scrollable) => {
-          scrollable.set_slider_active(vertical=drag.vertical, false)
-          scrollable.drag_ended()
-        }
-        None => ()
-      }
-    None => ()
-  }
-  self.drag = None
-}
-
-///|
-/// Applies an in-progress thumb drag (document `mousemove`).
-pub fn MouseHandler::handle_scrollable_drag_move(
-  self : MouseHandler,
-  event : @rdom.Event,
-) -> Unit {
-  guard self.drag is Some(drag) else { return }
-  guard event.to_mouse_event() is Some(mouse) else { return }
-  event.prevent_default()
-  let delta = @scrollbar.drag_coord(mouse, drag.vertical) - drag.start_coord
-  guard self.scrollable_for_drag(drag.owner) is Some(scrollable) else {
-    self.drag = None
-    return
-  }
-  let desired = scrollable
-    .state(drag.vertical)
-    .desired_position_from_slider(drag.start_slider + delta)
-  self.apply_scrollable_position(
-    scrollable,
-    drag.owner,
-    vertical=drag.vertical,
-    desired,
-  )
-}
-
-///|
-/// A mousedown on the track (outside the thumb, which stops propagation)
-/// uses Monaco's editor default `scrollByPage: false`: jump so the thumb
-/// centers on the pointer.
-fn MouseHandler::scrollable_track_jump(
-  self : MouseHandler,
-  scrollable : @scrollbar.ScrollableElementDom,
-  owner : @scrollbar.ScrollableElementOwner,
-  vertical~ : Bool,
-  mouse : @rdom.MouseEvent,
-) -> Unit {
-  let desired = scrollable.desired_position_from_track(vertical~, mouse)
-  self.apply_scrollable_position(scrollable, owner, vertical~, desired)
-}
-
-///|
-fn MouseHandler::apply_scrollable_position(
-  self : MouseHandler,
-  scrollable : @scrollbar.ScrollableElementDom,
-  owner : @scrollbar.ScrollableElementOwner,
-  vertical~ : Bool,
-  desired : Double,
-) -> Unit {
-  match owner {
-    EditorScrollableElement =>
-      match (self.helper.view_layout)() {
-        Some(view_layout) =>
-          if vertical {
-            (self.helper.apply_scroll)(
-              view_layout.scroll_to(scroll_top=desired),
-            )
-          } else {
-            let position = view_layout.position()
-            (self.helper.apply_scroll)(
-              view_layout.scroll_to(
-                scroll_top=position.scroll_top,
-                scroll_left=desired,
-              ),
-            )
-          }
-        None => ()
-      }
-    HoverScrollableElement => scrollable.native_scroll_to(vertical~, desired)
-  }
-}
-
-///|
-fn MouseHandler::scrollable_for_drag(
-  self : MouseHandler,
-  owner : @scrollbar.ScrollableElementOwner,
-) -> @scrollbar.ScrollableElementDom? {
-  match owner {
-    EditorScrollableElement => Some(self.helper.editor_scrollable)
-    HoverScrollableElement => (self.helper.hover_scrollable)()
-  }
-}
-
-///|
-/// Wires the browser-driven reveal listeners: when focus or the browser mutates
-/// a DOM scroll offset, the delta is translated into the model and the DOM
-/// offset reset (Monaco's editor scrollbar bridge).
-pub fn MouseHandler::hook_browser_desperate_reveal(self : MouseHandler) -> Unit {
-  let editor_scrollable = self.helper.editor_scrollable
-  self.helper.view_root.add_event_listener("scroll", _ => {
-    self.handle_browser_desperate_reveal(
-      self.helper.view_root,
-      look_at_scroll_top=true,
-      look_at_scroll_left=true,
-    )
-  })
-  self.helper.overflow_guard.add_event_listener("scroll", _ => {
-    self.handle_browser_desperate_reveal(
-      self.helper.overflow_guard,
-      look_at_scroll_top=true,
-      look_at_scroll_left=false,
-    )
-  })
-  editor_scrollable.content.add_event_listener("scroll", _ => {
-    self.handle_browser_desperate_reveal(
-      editor_scrollable.content,
-      look_at_scroll_top=true,
-      look_at_scroll_left=false,
-    )
-  })
-  editor_scrollable.wrapper.add_event_listener("scroll", _ => {
-    self.handle_browser_desperate_reveal(
-      editor_scrollable.wrapper,
-      look_at_scroll_top=true,
-      look_at_scroll_left=false,
-    )
-  })
-}
-
-///|
-/// Mirrors Monaco's editor scrollbar bridge for browser-driven reveal:
-/// when focus or the browser mutates a DOM scroll offset, translate that
-/// delta into the model and reset the DOM offset to zero.
-fn MouseHandler::handle_browser_desperate_reveal(
-  self : MouseHandler,
-  element : @rdom.Element,
-  look_at_scroll_top~ : Bool,
-  look_at_scroll_left~ : Bool,
-) -> Unit {
-  let mut delta_top = 0.0
-  let mut delta_left = 0.0
-  if look_at_scroll_top {
-    delta_top = element.get_scroll_top()
-    if delta_top != 0.0 {
-      element.set_scroll_top(0.0)
-    }
-  }
-  if look_at_scroll_left {
-    delta_left = element.get_scroll_left()
-    if delta_left != 0.0 {
-      element.set_scroll_left(0.0)
-    }
-  }
-  if delta_top != 0.0 || delta_left != 0.0 {
-    match (self.helper.view_layout)() {
-      Some(view_layout) =>
-        (self.helper.apply_scroll)(
-          view_layout.scroll_by(delta_left~, delta_top~),
-        )
-      None => ()
-    }
+fn controller_double_max(a : Double, b : Double) -> Double {
+  if a > b {
+    a
   } else {
-    ()
+    b
   }
 }
+
+///|
+/// Monaco reads `new Date().getTime()` (mouseHandler.ts:296,726).
+extern "js" fn handler_now() -> Double = "() => Date.now()"
+
+///|
+/// FFI gap-fill: whether a raw mouse event's target sits inside `container`
+/// (`viewDomNode.contains(e.target)`, mouseHandler.ts:106).
+extern "js" fn mouse_event_target_within(
+  mouse : @rdom.MouseEvent,
+  container : @rdom.Element,
+) -> Bool =
+  #| (m, container) => container.contains(m.target)

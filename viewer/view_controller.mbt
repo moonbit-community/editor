@@ -1,55 +1,93 @@
 ///|
-/// The data a pointer gesture carries into `dispatch_mouse`, the readonly
-/// subset of Monaco's `IMouseDispatchData`. `view_position` is the one-based
-/// view position the hit test resolved; `mouse_down_count` is the multi-click
-/// count (1 = single, 2 = double, 3 = triple, >=4 = quad); `started_on_line_numbers`
-/// routes gutter drags to whole-line selection.
-priv struct MouseDispatchData {
-  view_position : @base_common.Position
-  in_selection_mode : Bool
-  mouse_down_count : Int
-  started_on_line_numbers : Bool
-}
-
-///|
 /// Maps a pointer gesture to a `CoreNavigationCommands` call on the cursor
-/// stack, transcribing the selection branches of Monaco's
-/// `browser/view/viewController.ts` `dispatchMouse`. The column-select,
-/// multi-cursor-modifier, and bracket/string double-click-block branches are
-/// omitted (no column selection or multi-cursor in the readonly viewer).
-fn Viewer::dispatch_mouse(self : Viewer, data : MouseDispatchData) -> Unit {
+/// stack — Monaco's `ViewController.dispatchMouse`
+/// (`vscode/src/vs/editor/browser/view/viewController.ts:217-311`, vscode
+/// submodule commit b18492a288de038fbc7643aae6de8247029d11bd), branch for
+/// branch over the full `IMouseDispatchData` (`@controller.MouseDispatchData`;
+/// `data.position` is a 1-based view position).
+///
+/// Omitted branches (each an explicit early-out below, ledger):
+///   * `middleButton` — no `ColumnSelect` command and no middle-click-scroll
+///     contribution (viewController.ts:222-227);
+///   * every `_hasMulticursorModifier` arm (`multiCursorModifier` reads as
+///     the Monaco default `altKey`; the viewer's cursor stack is
+///     single-cursor: no `_createCursor`/`_lastCursor*`,
+///     viewController.ts:230-235, 246-251, 261-262, 282-294);
+///   * `doubleClickSelectsBlock` (viewController.ts:267-278) — option not
+///     modeled, no bracket-pair/tokenization query surface;
+///   * `columnSelection` / alt-drag column select (viewController.ts:297-302)
+///     — no column selection;
+///   * `revealType` — the viewer's cursor commands take none.
+fn Viewer::dispatch_mouse(
+  self : Viewer,
+  data : @controller.MouseDispatchData,
+) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
   let controller = view_model.cursor
-  if data.started_on_line_numbers {
-    // A drag that started in the gutter operates on whole lines.
-    if data.in_selection_mode {
-      self.line_select_drag(controller, data.view_position)
+  if data.middle_button {
+    // `middleButton && !selectionClipboardIsOn` → middle-click scroll /
+    // column select, both unported: a middle-button gesture must not fall
+    // into the left-button arms.
+    ()
+  } else if data.started_on_line_numbers {
+    // If the dragging started on the gutter, then have operations work on
+    // the entire line
+    if has_multicursor_modifier(data) {
+      // `_lastCursorLineSelect` / `_createCursor` (multi-cursor) — unported.
+      ()
+    } else if data.in_selection_mode {
+      self.line_select_drag(controller, data.position)
     } else {
-      self.line_select(controller, data.view_position)
+      self.line_select(controller, data.position)
     }
   } else if data.mouse_down_count >= 4 {
     self.select_all(controller)
   } else if data.mouse_down_count == 3 {
-    if data.in_selection_mode {
-      self.line_select_drag(controller, data.view_position)
+    if has_multicursor_modifier(data) {
+      // `_lastCursorLineSelect(Drag)` — unported.
+      ()
+    } else if data.in_selection_mode {
+      self.line_select_drag(controller, data.position)
     } else {
-      self.line_select(controller, data.view_position)
+      self.line_select(controller, data.position)
     }
   } else if data.mouse_down_count == 2 {
-    if data.in_selection_mode {
-      self.word_select_drag(controller, data.view_position)
-    } else {
-      self.word_select(controller, data.view_position)
+    // A double-click on injected text (an inlay hint) selects nothing
+    // (viewController.ts:260).
+    if !data.on_injected_text {
+      if has_multicursor_modifier(data) {
+        // `_lastCursorWordSelect` — unported.
+        ()
+      } else if data.in_selection_mode {
+        self.word_select_drag(controller, data.position)
+      } else {
+        // `doubleClickSelectsBlock` bracket/string block select — unported.
+        self.word_select(controller, data.position)
+      }
     }
+  } else if has_multicursor_modifier(data) {
+    // Purely-alt multi-cursor operations and the shift+alt column select —
+    // unported (`!_hasNonMulticursorModifier` inner gate included).
+    ()
   } else if data.in_selection_mode {
-    @cursor.move_to_select(controller, data.view_position)
+    if data.alt_key {
+      // alt-drag column select — unported.
+      ()
+    } else {
+      // `columnSelection` reads as the Monaco default `false`.
+      @cursor.move_to_select(controller, data.position)
+    }
   } else {
-    @cursor.move_to(controller, data.view_position)
+    @cursor.move_to(controller, data.position)
   }
-  // Hiding the hover on a press is Monaco's `_onEditorMouseDown`
-  // (`Viewer::on_editor_mouse_down`), fired from the input bridge independently
-  // of cursor placement so a press on the hover widget keeps it open.
   self.schedule_render()
+}
+
+///|
+/// `_hasMulticursorModifier` (viewController.ts:109-120) with
+/// `multiCursorModifier` at its Monaco default `'altKey'`.
+fn has_multicursor_modifier(data : @controller.MouseDispatchData) -> Bool {
+  data.alt_key
 }
 
 ///|

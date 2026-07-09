@@ -30,6 +30,7 @@ test "keybinding dispatch honors preconditions" {
       "Escape",
       alt=false,
       ctrl_cmd=false,
+      shift=false,
     ),
   )
   // The hover scroll cluster is gated on `hoverFocused`; without a widget
@@ -40,6 +41,7 @@ test "keybinding dispatch honors preconditions" {
       "ArrowUp",
       alt=false,
       ctrl_cmd=false,
+      shift=false,
     ),
   )
   viewer.dispose()

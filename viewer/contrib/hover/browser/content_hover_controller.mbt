@@ -15,7 +15,7 @@ pub(all) struct ContentHoverController {
   /// the pointer cancelled by entering the widget.
   mut hover_react_pending : Bool
   mut hover_react_token : Int
-  mut hover_pending_target : @viewer_common.MouseTarget?
+  mut hover_pending_target : @editor_browser.MouseTarget?
   /// The `editor.hover` snapshot (`_hoverSettings`).
   hover_settings : @hover.HoverSettings
   /// `shouldKeepOpenOnEditorMouseMoveOrLeave`.

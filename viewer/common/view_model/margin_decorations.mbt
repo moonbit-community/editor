@@ -21,10 +21,10 @@ pub(all) struct DecorationToRender {
 
 ///|
 /// `LinesDecorationsOverlay._getDecorations`: the viewport decorations that
-/// carry a `linesDecorationsClassName`, as render entries. Ranges are
-/// view-space (the viewport decoration collection already converted them).
-/// `firstLineDecorationClassName` is not carried by the viewer's options, so
-/// its branch has no analog here.
+/// carry a `linesDecorationsClassName` — plus, on their first line only, a
+/// `firstLineDecorationClassName` (the folding chevron's lane) — as render
+/// entries. Ranges are view-space (the viewport decoration collection
+/// already converted them).
 pub fn lines_decorations_to_render(
   decorations : Array[ViewModelDecoration],
 ) -> Array[DecorationToRender] {
@@ -35,6 +35,16 @@ pub fn lines_decorations_to_render(
         result.push({
           start_line_number: decoration.range.start_line_number,
           end_line_number: decoration.range.end_line_number,
+          class_name,
+          z_index: decoration.options.z_index,
+        })
+      None => ()
+    }
+    match decoration.options.first_line_decoration_class_name {
+      Some(class_name) =>
+        result.push({
+          start_line_number: decoration.range.start_line_number,
+          end_line_number: decoration.range.start_line_number,
           class_name,
           z_index: decoration.options.z_index,
         })

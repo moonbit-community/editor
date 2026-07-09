@@ -1,46 +1,15 @@
 ///|
-/// Hooks the view's native pointer listeners. Copy and hover-relevant
-/// mouseleave stay on the viewer; all pointer input (mouse-select, scrollbar,
-/// wheel, drag-autoscroll, browser-reveal) is delegated to the
-/// `viewer/browser/controller` `MouseHandler`, which the viewer builds here with a
-/// `PointerHandlerHelper` closing over the view — the local analog of Monaco's
-/// `View._createPointerHandlerHelper`.
+/// Hooks the view's native input listeners. The pointer input (moves, downs,
+/// ups, leaves, selection drags) is owned entirely by the
+/// `viewer/browser/controller` `MouseHandler`, which registers its own DOM
+/// listeners on the view root through `EditorMouseEventFactory` — the viewer
+/// builds it here with a `PointerHandlerHelper` closing over the view (the
+/// local analog of Monaco's `View._createPointerHandlerHelper`). Copy,
+/// keyboard, focus tracking, wheel and the scrollbar/browser-reveal cluster
+/// stay here.
 fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   let handler = @controller.MouseHandler::new(self.pointer_handler_helper(view))
   self.mouse_handler = Some(handler)
-  view.root.add_event_listener("mousemove", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        // Record the pointer position + modifiers for the hover controller before
-        // the hit test, then drive selection (which notifies the hover move).
-        self.record_hover_pointer(
-          mouse.get_client_x().to_double(),
-          mouse.get_client_y().to_double(),
-          mouse_modifiers(mouse),
-        )
-        self.last_mouse_buttons = mouse.get_buttons()
-        handler.handle_mouse_move(mouse)
-      }
-      None => ()
-    }
-  })
-  view.root.add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        // The mouse handler `preventDefault`s selection mousedowns, which
-        // suppresses the browser's native focusing of the `tabindex` root, so
-        // focus explicitly — Monaco equally focuses its hidden textarea
-        // explicitly on editor mouse down (`focusTextArea()`).
-        focus_element(view.root)
-        self.on_editor_mouse_down(
-          mouse.get_client_x().to_double(),
-          mouse.get_client_y().to_double(),
-        )
-        handler.handle_mouse_down(event, mouse)
-      }
-      None => ()
-    }
-  })
   // Monaco tracks focus on the hidden textarea / edit context and fans it out
   // as `ViewFocusChangedEvent`; the viewer's focusable surface is the root
   // itself. `focus`/`blur` do not bubble, so these observe only the root's own
@@ -57,29 +26,6 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
       self.schedule_render()
     }
   })
-  view.view_lines
-  .get_dom_node()
-  .add_event_listener("mousedown", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => {
-        self.on_editor_mouse_down(
-          mouse.get_client_x().to_double(),
-          mouse.get_client_y().to_double(),
-        )
-        handler.handle_mouse_down(event, mouse)
-      }
-      None => ()
-    }
-  })
-  // Root-scoped mouseup for target-notified listeners (comments pairs it
-  // with the mousedown); the document-level mouseup below stays the
-  // drag-end/selection-finish path.
-  view.root.add_event_listener("mouseup", event => {
-    match event.to_mouse_event() {
-      Some(mouse) => handler.handle_mouse_up(mouse)
-      None => ()
-    }
-  })
   view.root.add_event_listener("copy", event => {
     if self.handle_copy_event(event) {
       event.prevent_default()
@@ -88,7 +34,7 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   })
   // The editor owns its keyboard input (Monaco routes keys through the hidden
   // textarea / edit context into editor commands); the focusable root receives
-  // keys once the mousedown handler above focuses it.
+  // keys once the mousedown handler focuses it.
   view.root.add_event_listener("keydown", event => {
     match event.to_keyboard_event() {
       Some(keyboard) =>
@@ -96,20 +42,13 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
             keyboard.key(),
             alt=keyboard.alt_key(),
             ctrl_cmd=keyboard.ctrl_key() || keyboard.meta_key(),
+            shift=keyboard.shift_key(),
           ) {
           event.prevent_default()
           event.stop_propagation()
         }
       None => ()
     }
-  })
-  view.root.add_event_listener("mouseleave", event => {
-    let (posx, posy) = match event.to_mouse_event() {
-      Some(mouse) =>
-        (mouse.get_client_x().to_double(), mouse.get_client_y().to_double())
-      None => (-1.0, -1.0)
-    }
-    self.on_editor_mouse_leave(posx, posy)
   })
   view.overflow_guard.add_event_listener("wheel", event => {
     match event.to_wheel_event() {
@@ -129,12 +68,13 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
 }
 
 ///|
-/// The once-per-viewer document-level drag listeners (drag moves and drag
-/// ends land outside the editor box). They delegate to the *current*
-/// per-view `mouse_handler` — the per-view listeners above die with the
-/// view's DOM subtree at detach, but document listeners cannot, so these
-/// hook once at `attach` (Monaco monitors global pointer events per drag
-/// with `GlobalPointerMoveMonitor` instead).
+/// The once-per-viewer document-level drag listeners for scrollbar-thumb
+/// drags (drag moves and drag ends land outside the editor box). They
+/// delegate to the *current* per-view `mouse_handler` — the per-view
+/// listeners die with the view's DOM subtree at detach, but document
+/// listeners cannot, so these hook once at `attach`. Selection drags no
+/// longer ride here: the `MouseDownOperation`'s
+/// `GlobalEditorPointerMoveMonitor` monitors them per gesture, like Monaco.
 fn Viewer::hook_document_input(self : Viewer) -> Unit {
   if self.document_input_hooked {
     return
@@ -143,19 +83,13 @@ fn Viewer::hook_document_input(self : Viewer) -> Unit {
   let document = @rdom.document()
   document.add_event_listener("mousemove", event => {
     match self.mouse_handler {
-      Some(handler) => {
-        handler.handle_scrollable_drag_move(event)
-        handler.handle_selection_drag_move(event)
-      }
+      Some(handler) => handler.handle_scrollable_drag_move(event)
       None => ()
     }
   })
   document.add_event_listener("mouseup", _ => {
     match self.mouse_handler {
-      Some(handler) => {
-        handler.end_scrollable_drag()
-        handler.finish_selection()
-      }
+      Some(handler) => handler.end_scrollable_drag()
       None => ()
     }
   })
@@ -174,8 +108,9 @@ fn Viewer::handle_editor_key_down(
   key : String,
   alt~ : Bool,
   ctrl_cmd~ : Bool,
+  shift? : Bool = false,
 ) -> Bool {
-  if editor_registry().dispatch_keybinding(self, key, alt~, ctrl_cmd~) {
+  if editor_registry().dispatch_keybinding(self, key, alt~, ctrl_cmd~, shift~) {
     return true
   }
   if alt || ctrl_cmd {
@@ -209,27 +144,6 @@ fn Viewer::handle_editor_key_down(
     _ => false
   }
 }
-
-///|
-/// The pointer-event modifier flags the hover controller reads (`event.ctrlKey` /
-/// `metaKey` / `altKey`), following the local-extern pattern already used for
-/// `shiftKey` in `viewer/browser/controller`.
-fn mouse_modifiers(mouse : @rdom.MouseEvent) -> @hover.EventModifiers {
-  {
-    ctrl: mouse_ctrl_key(mouse),
-    meta: mouse_meta_key(mouse),
-    alt: mouse_alt_key(mouse),
-  }
-}
-
-///|
-extern "js" fn mouse_ctrl_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.ctrlKey"
-
-///|
-extern "js" fn mouse_meta_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.metaKey"
-
-///|
-extern "js" fn mouse_alt_key(mouse : @rdom.MouseEvent) -> Bool = "(m) => !!m.altKey"
 
 ///|
 /// FFI gap-fill (no `focus()` binding in the vendored `@rdom`).
@@ -368,33 +282,24 @@ fn Viewer::line_numbers_width(self : Viewer, line_count : Int) -> Double {
 }
 
 ///|
+/// The line-decorations lane width the layout uses — Monaco's
+/// `EditorLayoutInfoComputer` (`editorOptions.ts:2906-2910`): the configured
+/// `lineDecorationsWidth`, plus 16px for the folding controls when folding
+/// is enabled and `showFoldingControls` is not `never`.
+fn Viewer::layout_decorations_width(self : Viewer) -> Double {
+  let folding_reserve : Double = if self.options.folding &&
+    self.options.show_folding_controls != Never {
+    16.0
+  } else {
+    0.0
+  }
+  self.options.line_decorations_width.to_double() + folding_reserve
+}
+
+///|
 /// The full margin width: the line-number band plus the line-decorations
 /// lane — Monaco's `layoutInfo.contentLeft` (the viewer has no glyph margin,
 /// so `contentLeft = lineNumbersWidth + decorationsWidth`).
 fn Viewer::gutter_width(self : Viewer, line_count : Int) -> Double {
-  self.line_numbers_width(line_count) +
-  self.options.line_decorations_width.to_double()
-}
-
-///|
-/// Builds the hit-test geometry for the current content from the view
-/// model's layout, falling back to font constants before the first
-/// measurement.
-fn Viewer::view_metrics(
-  self : Viewer,
-  view_model : @view_model.ViewModel,
-) -> @viewer_common.ViewMetrics {
-  let layout = view_model.view_layout
-  {
-    origin_x: 0.0,
-    origin_y: 0.0,
-    scroll_top: layout.position().scroll_top,
-    scroll_left: layout.position().scroll_left,
-    viewport_height: layout.dimensions().height,
-    line_height: self.font_info.line_height,
-    char_width: self.measured_char_width(),
-    gutter_width: self.gutter_width(view_model.line_count()),
-    line_decorations_width: self.options.line_decorations_width.to_double(),
-    view_zones: layout.view_zones(),
-  }
+  self.line_numbers_width(line_count) + self.layout_decorations_width()
 }

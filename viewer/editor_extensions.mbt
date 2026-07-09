@@ -61,15 +61,20 @@ priv struct EditorCommand {
 
 ///|
 /// One keybinding rule (`KeybindingsRegistry.registerKeybindingRule` row):
-/// a `KeyboardEvent.key` value plus the two modifier axes the viewer's
-/// bindings use (`KeyMod.Alt`, `KeyMod.CtrlCmd`). The rule's `when` is the
-/// command's precondition (`Command.register` ANDs `kbExpr` with the
-/// precondition; the viewer's rules carry no extra `kbExpr`). Chords match
-/// exactly: a rule with `alt=false` does not fire while Alt is held.
+/// a `KeyboardEvent.key` value plus the three modifier axes the viewer's
+/// bindings use (`KeyMod.Alt`, `KeyMod.CtrlCmd`, `KeyMod.Shift`). The
+/// rule's `when` is the command's precondition (`Command.register` ANDs
+/// `kbExpr` with the precondition; the viewer's rules carry no extra
+/// `kbExpr`). Chords match exactly: a rule with `alt=false` does not fire
+/// while Alt is held. Monaco matches layout-independent key codes; `key` is
+/// layout-transformed, so a Shift rule for a punctuation key registers both
+/// the base and the shifted character (synthetic events carry the base,
+/// hardware events the shifted one).
 priv struct KeybindingRule {
   key : String
   alt : Bool
   ctrl_cmd : Bool
+  shift : Bool
   command_id : String
 }
 
@@ -102,12 +107,17 @@ fn EditorContributionRegistry::register_editor_command(
   precondition : (Viewer) -> Bool,
   run : (Viewer) -> Unit,
   keybindings : Array[(String, Bool, Bool)],
+  shift_keybindings? : Array[(String, Bool, Bool)] = [],
 ) -> Unit {
   let command : EditorCommand = { id, precondition, run }
   self.commands.set(command.id, command)
   for binding in keybindings {
     let (key, alt, ctrl_cmd) = binding
-    self.keybindings.push({ key, alt, ctrl_cmd, command_id: id })
+    self.keybindings.push({ key, alt, ctrl_cmd, shift: false, command_id: id })
+  }
+  for binding in shift_keybindings {
+    let (key, alt, ctrl_cmd) = binding
+    self.keybindings.push({ key, alt, ctrl_cmd, shift: true, command_id: id })
   }
 }
 
@@ -142,9 +152,13 @@ fn EditorContributionRegistry::dispatch_keybinding(
   key : String,
   alt~ : Bool,
   ctrl_cmd~ : Bool,
+  shift~ : Bool,
 ) -> Bool {
   for rule in self.keybindings {
-    if rule.key == key && rule.alt == alt && rule.ctrl_cmd == ctrl_cmd {
+    if rule.key == key &&
+      rule.alt == alt &&
+      rule.ctrl_cmd == ctrl_cmd &&
+      rule.shift == shift {
       match self.commands.get(rule.command_id) {
         Some(command) =>
           if (command.precondition)(viewer) {
@@ -185,6 +199,7 @@ fn editor_registry() -> EditorContributionRegistry {
         keybindings: [],
       }
       register_agent_feedback_contribution(registry)
+      register_folding_contribution(registry)
       register_hover_contribution(registry)
       register_inlay_hints_contribution(registry)
       editor_registry_holder.registry = Some(registry)

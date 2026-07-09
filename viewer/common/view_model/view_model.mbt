@@ -24,6 +24,12 @@ pub struct ViewModel {
   view_layout : @view_layout.ViewLayout
   mut decorations : ViewModelDecorations
   coordinates_converter : ProjectedCoordinatesConverter
+  /// Per-source hidden-area sets, merged before they reach the line
+  /// collection — Monaco's `hiddenAreasModel` (`viewModelImpl.ts:70`).
+  priv hidden_areas_model : HiddenAreasModel
+  /// The last merged hidden-area union, for `setHiddenAreas`'s no-change
+  /// short-circuit — Monaco's `previousHiddenAreas` (`viewModelImpl.ts:71`).
+  priv mut previous_hidden_areas : Array[@base_common.Range]
 }
 
 ///|
@@ -72,6 +78,8 @@ pub fn ViewModel::with_options(
     view_layout,
     decorations,
     coordinates_converter,
+    hidden_areas_model: HiddenAreasModel::new(),
+    previous_hidden_areas: [],
   }
 }
 
@@ -218,4 +226,42 @@ pub fn ViewModel::clamp_window(
   let start = @base_common.clamp_int(window.start, 1, self.line_count())
   let end = @base_common.clamp_int(window.end, start + 1, self.line_count() + 1)
   { start, end }
+}
+
+///|
+/// Monaco `ViewModel.getLineContent`: the text of a view line.
+pub fn ViewModel::get_line_content(
+  self : ViewModel,
+  line_number : Int,
+) -> String {
+  self.lines.get_view_line_data(line_number).content
+}
+
+///|
+/// Monaco `ViewModel.getLineLength`: the text length of a view line.
+pub fn ViewModel::get_line_length(self : ViewModel, line_number : Int) -> Int {
+  self.lines.get_view_line_data(line_number).content.length()
+}
+
+///|
+/// Monaco `ViewModel.getInjectedTextAt` (`viewModelImpl.ts`): the injected
+/// text at a view position, or `None` on source text. The object is
+/// re-derived from the position's model line (the projections retain only
+/// per-column indices); `source_index` is the decoration's `attached_index`,
+/// the same value `injected_text_index_at` reports.
+pub fn ViewModel::get_injected_text_at(
+  self : ViewModel,
+  position : @base_common.Position,
+) -> InjectedText? {
+  let index = self.injected_text_index_at(position)
+  if index < 0 {
+    return None
+  }
+  let info = self.lines.get_view_line_info(position.line_number)
+  for text in injected_text_for_model_line(self.model, info.model_line_number) {
+    if text.source_index == index {
+      return Some(text)
+    }
+  }
+  None
 }

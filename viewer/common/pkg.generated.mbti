@@ -4,13 +4,10 @@ package "moonbit-community/editor/viewer/common"
 import {
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbitlang/core/debug",
 }
 
 // Values
 pub fn escape_html(String) -> String
-
-pub fn hit_test(@view_model.ViewModel, @view_layout.LineWindow, ViewMetrics, Double, Double) -> MouseTarget
 
 pub fn render_line_class() -> String
 
@@ -19,37 +16,6 @@ pub fn render_line_html(@view_model.ViewLineData, Array[@view_layout.LineDecorat
 // Errors
 
 // Types and methods
-pub(all) struct MouseTarget {
-  kind : MouseTargetType
-  line_number : Int
-  column : Int
-  token_index : Int
-  injected_text_index : Int
-  gutter_offset_x : Double
-  horizontal_distance_to_text : Double
-} derive(Eq, @debug.Debug)
-
-pub(all) enum MouseTargetType {
-  GutterLineNumbers
-  GutterLineDecorations
-  ContentText
-  ContentEmpty
-  BelowContent
-  OutsideEditor
-} derive(Eq, @debug.Debug)
-
-pub(all) struct ViewMetrics {
-  origin_x : Double
-  origin_y : Double
-  scroll_top : Double
-  scroll_left : Double
-  viewport_height : Double
-  line_height : Int
-  char_width : Double
-  gutter_width : Double
-  line_decorations_width : Double
-  view_zones : Array[@view_layout.ViewZone]
-} derive(@debug.Debug)
 
 // Type aliases
 

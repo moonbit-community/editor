@@ -198,3 +198,25 @@ fn same_browser_view_zones(
   }
   true
 }
+
+///|
+/// `HorizontalPosition` (`vscode/src/vs/editor/browser/view/renderingContext.ts:196-209`,
+/// vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): a
+/// measured caret x on a rendered line. `left` is `Math.round(original_left)`.
+pub(all) struct HorizontalPosition {
+  outside_rendered_line : Bool
+  left : Int
+  original_left : Double
+} derive(Eq, Debug)
+
+///|
+pub fn HorizontalPosition::new(
+  outside_rendered_line : Bool,
+  left : Double,
+) -> HorizontalPosition {
+  {
+    outside_rendered_line,
+    original_left: left,
+    left: (left + 0.5).floor().to_int(),
+  }
+}

@@ -54,13 +54,26 @@ Reference trees are research inputs only. Product code must not import from
   (populated for `comments` and `zone_widget`). `common` code never imports
   these (the folding indent fallback was inverted into the folding controller
   so the tier flows `contrib -> common`, not the reverse).
-- `viewer/common`: a shrinking residual of the former grab-bag (`line_html`,
-  `mouse_target`). The DOM-free hit-testing value types and algorithm stay
-  here (not in the js-only `viewer/browser/controller`) because the
-  multi-target `viewer/contrib/hover` depends on `MouseTarget` directly.
+- `viewer/common`: a shrinking residual of the former grab-bag (`line_html`).
+  The old DOM-free geometric hit test that lived here was deleted with the
+  Monaco mouse-subsystem port: hit testing is now the DOM-fingerprint
+  `MouseTargetFactory` in `viewer/browser/controller/mouse_target.mbt`, the
+  `IMouseTarget` contract lives in the js-only `viewer/browser` root package
+  (mirroring `editorBrowser.ts`/`editorDom.ts`), and the hover's
+  target-consuming surface moved to `viewer/contrib/hover/browser`
+  (`hover_events.mbt`).
+- `viewer/browser` (root, alias `@editor_browser`): the `IMouseTarget`
+  contract and `editorDom.ts` coordinate model (`EditorMouseEvent`,
+  `EditorMouseEventFactory`, `GlobalEditorPointerMoveMonitor`).
 - `viewer/browser/controller` and `viewer/ui/scrollbar`: browser-UI
   subpackages. They may use narrow browser bindings but do not import the
-  parent `viewer` package.
+  parent `viewer` package. `mouse_target.mbt`/`mouse_handler.mbt`/
+  `drag_scrolling.mbt` are the 1:1 `MouseTargetFactory`/`MouseHandler`/
+  `dragScrolling.ts` ports (the handler registers its own DOM listeners;
+  the root package only builds its `PointerHandlerHelper`); the viewer's
+  scrollbar pointer cluster stays in `scrollbar_input.mbt`.
+- `base/browser`: js-only base primitives (`StandardMouseEvent`,
+  `GlobalPointerMoveMonitor`), mirroring `vs/base/browser`.
 - `viewer/browser/view` and `viewer/browser/view_parts/*` (`content_widgets`,
   `current_line_highlight`, `decorations`, `editor_scrollbar`, `margin`,
   `overlay_widgets`, `selections`, `view_cursors`, `view_lines`,

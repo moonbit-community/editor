@@ -38,6 +38,9 @@ pub(all) struct ViewCursors {
   /// rendered window or its line node is not measurable yet — Monaco's
   /// "Outside viewport → null" arms (`viewCursor.ts:177-180`).
   mut render_data : CursorRenderData?
+  /// The caret's view position captured alongside `render_data` — Monaco's
+  /// `ViewCursor._position`, which `getLastRenderData` reports.
+  mut last_position : @base_common.Position?
 }
 
 ///|
@@ -55,7 +58,13 @@ pub fn ViewCursors::new(document : @rdom.Document) -> ViewCursors {
   cursor.set_attribute("class", "cursor monaco-mouse-cursor-text")
   cursor.set_attribute("style", "display:none")
   dom_node.append_child(cursor.as_node())
-  { dom_node, cursor, should_render: true, render_data: None }
+  {
+    dom_node,
+    cursor,
+    should_render: true,
+    render_data: None,
+    last_position: None,
+  }
 }
 
 ///|
@@ -148,4 +157,40 @@ fn cursor_style(data : CursorRenderData, visible~ : Bool) -> String {
   "display:block;visibility:" +
   (if visible { "inherit" } else { "hidden" }) +
   ";top:\{data.top}px;left:\{data.left}px;padding-left:\{data.padding_left}px;width:\{data.width}px;height:\{data.height}px;line-height:\{data.height}px"
+}
+
+///|
+/// Monaco's `IViewCursorRenderData` (`viewCursor.ts:18-24`): the painted
+/// caret facts the mouse hit test reads (`_hitTestViewCursor`). `position` is
+/// a view position; `content_left` is the caret's x in content space
+/// (`ViewCursor.render` returns `contentLeft: this._renderData.left`,
+/// `viewCursor.ts:274-281`); `width` is the source's hardcoded `2`.
+pub(all) struct ViewCursorRenderData {
+  dom_node : @rdom.Element
+  position : @base_common.Position
+  content_left : Double
+  width : Double
+  height : Int
+}
+
+///|
+/// `ViewCursors.getLastRenderData` (`viewCursors.ts:386-388`), collapsed to
+/// the single primary cursor: one entry while the caret has prepared render
+/// data (i.e. its line is rendered), empty otherwise.
+pub fn ViewCursors::get_last_render_data(
+  self : ViewCursors,
+) -> Array[ViewCursorRenderData] {
+  match (self.render_data, self.last_position) {
+    (Some(data), Some(position)) =>
+      [
+        {
+          dom_node: self.cursor,
+          position,
+          content_left: data.left,
+          width: 2.0,
+          height: data.height,
+        },
+      ]
+    _ => []
+  }
 }

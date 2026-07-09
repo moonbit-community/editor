@@ -49,6 +49,9 @@ pub fn OverlayWidgets::add_widget(
 ) -> Unit {
   self.remove_widget(widget_id)
   node.set_attribute("data-overlay-widget-id", widget_id)
+  // `widgetId` is the attribute Monaco's hit test resolves through
+  // `HitTestContext.findAttribute` (overlayWidgets.ts:112).
+  node.set_attribute("widgetId", widget_id)
   self.dom_node.append_child(node.as_node())
   self.widgets.set(widget_id, node)
 }

@@ -249,7 +249,7 @@ fn view_model_lines_get_decorations_in_range(
   let model_end_line_index = model_end.line_number - 1
   let mut req_start : @base_common.Position? = None
   for model_line_index in model_start_line_index..<=model_end_line_index {
-    if !lines.is_model_line_hidden(model_line_index + 1) {
+    if lines.model_position_is_visible(model_line_index + 1) {
       // merge into previous request
       if req_start is None {
         req_start = Some(

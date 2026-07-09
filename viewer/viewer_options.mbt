@@ -31,6 +31,19 @@ pub(all) struct ViewerOptions {
   /// `editorOptions.ts:6379-6381`). The band widens past this when the model
   /// has more-digit line numbers.
   line_numbers_min_chars : Int
+  /// Monaco's `folding` editor option (default `true`): whether code folding
+  /// is enabled.
+  folding : Bool
+  /// Monaco's `showFoldingControls` editor option (default `mouseover`):
+  /// when the gutter chevrons are visible. `always`/`never`/`mouseover`.
+  show_folding_controls : @folding_browser.ShowFoldingControls
+  /// Monaco's `foldingHighlight` editor option (default `true`): whether
+  /// folded ranges get the `folded-background` highlight.
+  folding_highlight : Bool
+  /// Monaco's `foldingMaximumRegions` editor option (default `5000`).
+  folding_maximum_regions : Int
+  /// Monaco's `unfoldOnClickAfterEndOfLine` editor option (default `false`).
+  unfold_on_click_after_end_of_line : Bool
   /// Monaco's `showUnused` editor option (default `true`,
   /// `editorOptions.ts:6645-6647`): adds the `showUnused` root class that
   /// gates the `squiggly-unnecessary` / `squiggly-inline-unnecessary`
@@ -75,6 +88,11 @@ pub fn ViewerOptions::ViewerOptions(
   placeholder? : String = "",
   line_decorations_width? : Int = 10,
   line_numbers_min_chars? : Int = 5,
+  folding? : Bool = true,
+  show_folding_controls? : @folding_browser.ShowFoldingControls = Mouseover,
+  folding_highlight? : Bool = true,
+  folding_maximum_regions? : Int = 5000,
+  unfold_on_click_after_end_of_line? : Bool = false,
   show_unused? : Bool = true,
   show_deprecated? : Bool = true,
   font_family? : String = @config.editor_font_defaults.font_family,
@@ -96,6 +114,11 @@ pub fn ViewerOptions::ViewerOptions(
     placeholder,
     line_decorations_width: line_decorations_width.max(0),
     line_numbers_min_chars: line_numbers_min_chars.max(1),
+    folding,
+    show_folding_controls,
+    folding_highlight,
+    folding_maximum_regions,
+    unfold_on_click_after_end_of_line,
     show_unused,
     show_deprecated,
     font_family,

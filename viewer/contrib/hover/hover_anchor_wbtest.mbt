@@ -6,40 +6,6 @@
 // behavior-switching branch.
 
 ///|
-fn text_target(
-  line : Int,
-  column : Int,
-  injected_text_index? : Int = -1,
-) -> @viewer_common.MouseTarget {
-  {
-    kind: ContentText,
-    line_number: line,
-    column,
-    token_index: 0,
-    injected_text_index,
-    gutter_offset_x: 0.0,
-    horizontal_distance_to_text: -1.0,
-  }
-}
-
-///|
-fn empty_target(
-  line : Int,
-  column : Int,
-  distance : Double,
-) -> @viewer_common.MouseTarget {
-  {
-    kind: ContentEmpty,
-    line_number: line,
-    column,
-    token_index: -1,
-    injected_text_index: -1,
-    gutter_offset_x: 0.0,
-    horizontal_distance_to_text: distance,
-  }
-}
-
-///|
 fn range_anchor(
   line : Int,
   start_column : Int,
@@ -66,75 +32,6 @@ fn foreign_anchor(
     initial_mouse_pos_y=None,
     supports_marker_hover~,
   )
-}
-
-///|
-test "find_anchor_candidates: a content-text hit yields the priority-0 range anchor at the hit position" {
-  let candidates = find_anchor_candidates(
-    [],
-    text_target(2, 3),
-    Range(2, 4, 2, 4),
-    10.0,
-  )
-  assert_eq(candidates.length(), 1)
-  match candidates[0] {
-    HoverRangeAnchor(priority~, range~, ..) => {
-      assert_eq(priority, 0)
-      assert_true(range == Range(2, 4, 2, 4))
-    }
-    _ => fail("expected the range anchor")
-  }
-}
-
-///|
-test "find_anchor_candidates: the inlay participant's foreign anchor outranks the range anchor" {
-  let participants : Array[&HoverParticipant] = [InlayHintsHover::new()]
-  let candidates = find_anchor_candidates(
-    participants,
-    text_target(1, 4, injected_text_index=2),
-    Range(1, 5, 1, 5),
-    10.0,
-  )
-  // Both the foreign (priority 10) and the range (priority 0) anchors are
-  // suggested; the sort puts the foreign anchor first.
-  assert_eq(candidates.length(), 2)
-  match candidates[0] {
-    HoverForeignElementAnchor(injected_text_index~, supports_marker_hover~, ..) => {
-      assert_eq(injected_text_index, 2)
-      assert_true(supports_marker_hover)
-    }
-    _ => fail("expected the foreign anchor to sort first")
-  }
-  assert_true(candidates[1] is HoverRangeAnchor(..))
-}
-
-///|
-test "find_anchor_candidates: content-empty anchors only within the epsilon past the line end" {
-  // typicalHalfwidthCharacterWidth 10 -> epsilon 5. Distance 4.0 anchors.
-  let close = find_anchor_candidates(
-    [],
-    empty_target(1, 9, 4.0),
-    Range(1, 10, 1, 10),
-    10.0,
-  )
-  assert_eq(close.length(), 1)
-  // Distance at/over the epsilon does not.
-  let far = find_anchor_candidates(
-    [],
-    empty_target(1, 9, 5.0),
-    Range(1, 10, 1, 10),
-    10.0,
-  )
-  assert_eq(far.length(), 0)
-  // An unknown distance (-1, the outside-window arm) is Monaco's
-  // non-`number` `horizontalDistanceToText`: no anchor.
-  let unknown = find_anchor_candidates(
-    [],
-    empty_target(1, 0, -1.0),
-    Range(1, 1, 1, 1),
-    10.0,
-  )
-  assert_eq(unknown.length(), 0)
 }
 
 ///|

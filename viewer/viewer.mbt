@@ -32,7 +32,7 @@ pub struct Viewer {
   priv did_mouse_down : @base_common.Emitter[EditorMouseEvent]
   priv did_mouse_up : @base_common.Emitter[EditorMouseEvent]
   priv did_mouse_move : @base_common.Emitter[EditorMouseEvent]
-  priv did_mouse_leave : @base_common.Emitter[Unit]
+  priv did_mouse_leave : @base_common.Emitter[PartialEditorMouseEvent]
   /// The last fired scroll event's facts, the diff base for the next event's
   /// `*_changed` flags (Monaco's `ScrollEvent` carries per-axis change bits).
   priv mut last_scroll_event : ScrollEvent?
@@ -101,8 +101,6 @@ pub struct Viewer {
   priv mut mouse_handler : @controller.MouseHandler?
   /// The last `mousemove`'s `MouseEvent.buttons` bitmask, recorded by the
   /// root listener so `on_mouse_move` events can carry `event.leftButton`
-  /// (the notify seam only carries the hit target).
-  priv mut last_mouse_buttons : Int
   /// Whether the editor root currently has DOM focus — the viewer's stand-in
   /// for Monaco's edit-context focus (`view.ts` `_getEditorClassName` /
   /// `ViewFocusChangedEvent`). Sourced by `focus`/`blur` listeners on the root
@@ -303,7 +301,6 @@ pub fn Viewer::Viewer(
     editor_id: next_editor_id(),
     decorations_generation: 0,
     mouse_handler: None,
-    last_mouse_buttons: 0,
     editor_has_focus: false,
     horizontal_reveal_request: None,
     contributions: {},
@@ -417,6 +414,9 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
   if previous.theme != options.theme {
     self.apply_theme()
   }
+  // The folding half of Monaco's `onDidChangeConfiguration` subscription
+  // (`folding.ts:155-180`).
+  self.folding_on_configuration_changed(previous)
   if previous.same_layout_options(options) {
     self.schedule_render()
     return

@@ -94,6 +94,40 @@ pub fn Selection::is_empty(self : Selection) -> Bool {
 }
 
 ///|
+/// A copy with the ordered start moved. Mirrors `Selection.setStartPosition`:
+/// the orientation is kept.
+pub fn Selection::set_start_position(
+  self : Selection,
+  start_line_number : Int,
+  start_column : Int,
+) -> Selection {
+  let new_start : @base_common.Position = Position(
+    start_line_number, start_column,
+  )
+  if self.direction() == LTR {
+    Selection::new(new_start, self.end())
+  } else {
+    Selection::new(self.end(), new_start)
+  }
+}
+
+///|
+/// A copy with the ordered end moved. Mirrors `Selection.setEndPosition`:
+/// the orientation is kept.
+pub fn Selection::set_end_position(
+  self : Selection,
+  end_line_number : Int,
+  end_column : Int,
+) -> Selection {
+  let new_end : @base_common.Position = Position(end_line_number, end_column)
+  if self.direction() == LTR {
+    Selection::new(self.start(), new_end)
+  } else {
+    Selection::new(new_end, self.start())
+  }
+}
+
+///|
 /// Whether `a` is at or before `b` in reading order (line, then column).
 fn position_le(a : @base_common.Position, b : @base_common.Position) -> Bool {
   a.is_before_or_equal(b)

@@ -7,27 +7,6 @@
 // helpers it needs.
 
 ///|
-/// Merged one-based hidden model-line ranges, Monaco's
-/// `IViewModelLines.getHiddenAreas(): Range[]`. The folding feature is gone
-/// and nothing can hide a line, so the set is empty; the read API's
-/// hidden-area plumbing stays so consumers keep Monaco's shape.
-pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(
-  _self : ViewModelLinesFromProjectedModel,
-) -> Array[@base_common.Range] {
-  []
-}
-
-///|
-/// Whether a one-based model line is hidden — constantly `false` without
-/// folding (every projection is visible).
-pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(
-  _self : ViewModelLinesFromProjectedModel,
-  _model_line_number : Int,
-) -> Bool {
-  false
-}
-
-///|
 /// Merged one-based hidden model-line intervals, Monaco's
 /// `ViewModel.getHiddenAreas` (`this._lines.getHiddenAreas()`).
 pub fn ViewModel::get_hidden_areas(
@@ -44,7 +23,7 @@ pub fn ViewModel::model_position_is_visible(
   self : ViewModel,
   position : @base_common.Position,
 ) -> Bool {
-  !self.lines.is_model_line_hidden(position.line_number)
+  self.lines.model_position_is_visible(position.line_number)
 }
 
 ///|

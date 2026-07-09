@@ -33,3 +33,23 @@
 .codicon-chevron-right:before {
   content: "\eab6";
 }
+
+/* The folding icons registered in foldingDecorations.ts:
+   folding-expanded = chevron-down, folding-collapsed = chevron-right, and
+   the manual variants alias them (registerIcon(...) — Monaco emits these
+   through the theme service's icon stylesheet). */
+.codicon-folding-expanded:before {
+  content: "\eab4";
+}
+
+.codicon-folding-collapsed:before {
+  content: "\eab6";
+}
+
+.codicon-folding-manual-expanded:before {
+  content: "\eab4";
+}
+
+.codicon-folding-manual-collapsed:before {
+  content: "\eab6";
+}

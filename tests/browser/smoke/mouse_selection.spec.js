@@ -42,12 +42,20 @@ test('triple-click selects the whole model line', async ({ page }) => {
   const box = await line.boundingBox();
   expect(box).not.toBeNull();
 
-  // Three rapid clicks at the same point escalate to line selection.
+  // Three rapid clicks at the same point escalate to line selection. Real
+  // browsers stamp `MouseEvent.detail` 1/2/3 across the burst, and Monaco's
+  // `MouseDownState.trySetCount` is detail-driven — `page.mouse.click()`
+  // always sends detail 1, so the escalation is written as explicit
+  // down/up pairs with growing `clickCount`.
   const x = box.x + 40;
   const y = box.y + box.height / 2;
-  await page.mouse.click(x, y);
-  await page.mouse.click(x, y);
-  await page.mouse.click(x, y);
+  await page.mouse.move(x, y);
+  await page.mouse.down({ clickCount: 1 });
+  await page.mouse.up({ clickCount: 1 });
+  await page.mouse.down({ clickCount: 2 });
+  await page.mouse.up({ clickCount: 2 });
+  await page.mouse.down({ clickCount: 3 });
+  await page.mouse.up({ clickCount: 3 });
   await expect.poll(() => page.locator('.selected-text').count()).toBeGreaterThan(0);
 
   const copied = await copySelection(page);

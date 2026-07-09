@@ -43,6 +43,21 @@ pub(all) struct EditorFontDefaults {
   letter_spacing : Double
 } derive(Eq, @debug.Debug)
 
+pub(all) struct EditorLayoutInfo {
+  width : Double
+  height : Double
+  glyph_margin_left : Double
+  glyph_margin_width : Double
+  line_numbers_left : Double
+  line_numbers_width : Double
+  decorations_left : Double
+  decorations_width : Double
+  content_left : Double
+  content_width : Double
+  horizontal_scrollbar_height : Double
+  vertical_scrollbar_width : Double
+} derive(Eq, @debug.Debug)
+
 pub(all) struct FontInfo {
   pixel_ratio : Double
   font_family : String

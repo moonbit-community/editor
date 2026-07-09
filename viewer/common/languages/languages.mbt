@@ -45,6 +45,9 @@ pub struct Languages {
   priv inlay_hints_provider : LanguageFeatureRegistry[
     &@language.InlayHintsProvider,
   ]
+  /// Per-language configuration (folding rules) — the viewer's stand-in for
+  /// Monaco's `ILanguageConfigurationService` registrations.
+  priv language_configurations : Map[String, LanguageConfiguration]
 }
 
 ///|
@@ -54,6 +57,7 @@ pub fn Languages::new() -> Languages {
     hover_provider: LanguageFeatureRegistry::new(),
     document_symbol_provider: LanguageFeatureRegistry::new(),
     inlay_hints_provider: LanguageFeatureRegistry::new(),
+    language_configurations: {},
   }
 }
 

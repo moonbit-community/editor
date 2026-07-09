@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer/contrib/hover"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/common/languages",
@@ -16,11 +17,9 @@ pub fn compare_hover_parts(HoverPart, HoverPart) -> Int
 
 pub fn compute_distance_from_point_to_rectangle(Double, Double, Double, Double, Double, Double) -> Double
 
-pub fn compute_hover_positions(@moonbit-community/editor/base/common.Range, Array[HoverPositionPart], Int) -> (@moonbit-community/editor/base/common.Position, @moonbit-community/editor/base/common.Position)
+pub fn compute_hover_positions(@common.Range, Array[HoverPositionPart], Int) -> (@common.Position, @common.Position)
 
 pub fn filter_hover_parts(Array[HoverPart], HoverAnchor) -> Array[HoverPart]
-
-pub fn find_anchor_candidates(Array[&HoverParticipant], @moonbit-community/editor/viewer/common.MouseTarget, @moonbit-community/editor/base/common.Range, Double, initial_mouse_pos_x? : Double, initial_mouse_pos_y? : Double) -> Array[HoverAnchor]
 
 pub fn hover_anchor_can_adopt(HoverAnchor, HoverAnchor) -> Bool
 
@@ -34,13 +33,13 @@ pub let hover_loading_message_ms : Int
 
 pub let hover_multi_cursor_modifier : MultiCursorModifier
 
-pub fn hover_part_range(HoverPart) -> @moonbit-community/editor/base/common.Range
+pub fn hover_part_range(HoverPart) -> @common.Range
 
 pub fn hover_part_valid_for_anchor(HoverPart, HoverAnchor) -> Bool
 
 pub let hover_participant_registry : HoverParticipantRegistry
 
-pub fn hover_parts_range(Array[HoverPart], @moonbit-community/editor/base/common.Range) -> @moonbit-community/editor/base/common.Range
+pub fn hover_parts_range(Array[HoverPart], @common.Range) -> @common.Range
 
 pub let hover_second_wait_ms : Int
 
@@ -70,7 +69,7 @@ pub fn should_show_hover(HoverEnabled, MultiCursorModifier, EventModifiers) -> B
 
 // Types and methods
 pub(all) struct ComputedHover {
-  range : @moonbit-community/editor/base/common.Range
+  range : @common.Range
   parts : Array[HoverPart]
 } derive(Eq, @debug.Debug)
 
@@ -82,20 +81,6 @@ pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, Ho
 pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
 pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
 
-pub(all) struct EditorContext {
-  view_model : @view_model.ViewModel?
-  view_to_model_position : (@moonbit-community/editor/base/common.Position) -> @moonbit-community/editor/base/common.Position
-  participants : Array[&HoverParticipant]
-  typical_halfwidth_character_width : Double
-  mouse_posx : Double?
-  mouse_posy : Double?
-}
-
-pub(all) enum EditorEvent {
-  MouseMoved(@moonbit-community/editor/viewer/common.MouseTarget)
-  EscapePressed
-}
-
 pub(all) struct EventModifiers {
   ctrl : Bool
   meta : Bool
@@ -104,12 +89,12 @@ pub(all) struct EventModifiers {
 pub fn EventModifiers::none() -> Self
 
 pub(all) enum HoverAnchor {
-  HoverRangeAnchor(priority~ : Int, range~ : @moonbit-community/editor/base/common.Range, initial_mouse_pos_x~ : Double?, initial_mouse_pos_y~ : Double?)
-  HoverForeignElementAnchor(priority~ : Int, injected_text_index~ : Int, range~ : @moonbit-community/editor/base/common.Range, initial_mouse_pos_x~ : Double?, initial_mouse_pos_y~ : Double?, supports_marker_hover~ : Bool)
+  HoverRangeAnchor(priority~ : Int, range~ : @common.Range, initial_mouse_pos_x~ : Double?, initial_mouse_pos_y~ : Double?)
+  HoverForeignElementAnchor(priority~ : Int, injected_text_index~ : Int, range~ : @common.Range, initial_mouse_pos_x~ : Double?, initial_mouse_pos_y~ : Double?, supports_marker_hover~ : Bool)
 } derive(Eq)
 pub fn HoverAnchor::anchor_type(Self) -> HoverAnchorType
 pub fn HoverAnchor::priority(Self) -> Int
-pub fn HoverAnchor::range(Self) -> @moonbit-community/editor/base/common.Range
+pub fn HoverAnchor::range(Self) -> @common.Range
 pub fn HoverAnchor::supports_marker_hover(Self) -> Bool
 
 pub(all) enum HoverAnchorType {
@@ -136,7 +121,6 @@ pub fn HoverController::emit(Self) -> Self
 pub fn HoverController::empty() -> Self
 pub fn HoverController::highlight_decorations(Self) -> Array[@model.ModelDeltaDecoration]
 pub fn HoverController::is_complete(Self) -> Bool
-pub fn HoverController::on_event(Self, EditorEvent, EditorContext, sticky_mouse_getting_closer? : Bool) -> (HoverEffect, Self)
 pub fn HoverController::op_async_done(Self, Int) -> Self
 pub fn HoverController::op_async_item(Self, Int, Array[HoverPart]) -> Self
 pub fn HoverController::op_trigger_async(Self, Int) -> (Bool, Self)
@@ -177,9 +161,9 @@ pub(all) struct HoverOperation {
 pub fn HoverOperation::idle() -> Self
 
 pub(all) enum HoverPart {
-  MarkdownHover(range~ : @moonbit-community/editor/base/common.Range, contents~ : Array[@language.HoverContent], ordinal~ : Int)
-  MarkerHover(range~ : @moonbit-community/editor/base/common.Range, marker~ : @markers.Marker)
-  LoadingHover(range~ : @moonbit-community/editor/base/common.Range, message~ : String)
+  MarkdownHover(range~ : @common.Range, contents~ : Array[@language.HoverContent], ordinal~ : Int)
+  MarkerHover(range~ : @common.Range, marker~ : @markers.Marker)
+  LoadingHover(range~ : @common.Range, message~ : String)
 } derive(Eq, @debug.Debug)
 
 pub(all) struct HoverParticipantRegistry {
@@ -196,7 +180,7 @@ pub(all) struct HoverParticipantServices {
 }
 
 pub(all) struct HoverPositionPart {
-  range : @moonbit-community/editor/base/common.Range
+  range : @common.Range
   force_show_at_range : Bool
 }
 
@@ -208,12 +192,12 @@ pub(all) struct HoverSettings {
 pub fn HoverSettings::defaults() -> Self
 
 pub(all) struct HoverView {
-  range : @moonbit-community/editor/base/common.Range
+  range : @common.Range
   parts : Array[HoverPart]
 } derive(Eq)
 
 pub(all) struct HoverWidgetView {
-  anchor_range : @moonbit-community/editor/base/common.Range
+  anchor_range : @common.Range
   parts : Array[HoverPart]
 } derive(Eq)
 
@@ -257,7 +241,7 @@ pub fn MultiCursorModifier::from_config(String, mac~ : Bool) -> Self
 // Traits
 pub(open) trait HoverParticipant {
   fn ordinal(Self) -> Int
-  fn suggest_hover_anchor(Self, @moonbit-community/editor/viewer/common.MouseTarget, @moonbit-community/editor/base/common.Range, Double?, Double?) -> HoverAnchor?
+  fn suggest_hover_anchor(Self, @view_model.InjectedText?, @common.Range, Double?, Double?) -> HoverAnchor?
   fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart]
   async fn compute_async(Self, HoverComputeContext) -> Array[HoverPart] noraise
 }

@@ -53,6 +53,7 @@ fn Viewer::handle_hover_keydown(
       keyboard.key(),
       alt=keyboard.alt_key(),
       ctrl_cmd=keyboard.ctrl_key() || keyboard.meta_key(),
+      shift=keyboard.shift_key(),
     ) {
     event.prevent_default()
   }
@@ -91,7 +92,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
     generation: self.content_generation,
     decorations_generation: self.decorations_generation,
     gutter_width: self.gutter_width(view_model.line_count()),
-    line_decorations_width: self.options.line_decorations_width.to_double(),
+    line_decorations_width: self.layout_decorations_width(),
     space_width: self.font_info.space_width,
     typical_fullwidth_character_width: self.font_info.typical_fullwidth_character_width,
     can_use_halfwidth_rightwards_arrow: self.font_info.can_use_halfwidth_rightwards_arrow,

@@ -35,14 +35,17 @@ pub(all) struct HoverComputeContext {
 /// already in viewer state; asynchronous participants may call language
 /// providers. `suggest_hover_anchor` is Monaco's optional
 /// `IEditorHoverParticipant.suggestHoverAnchor(mouseEvent)` — participants
-/// without one answer `None`; the viewer resolves the hit position to a
-/// collapsed model range at the seam and passes the recorded pointer
-/// position alongside.
+/// without one answer `None`. Deviation: Monaco's signature receives the
+/// whole `IEditorMouseEvent`; that type is js-only here, so this multi-target
+/// trait receives the extracted facts the ported participants read — the
+/// content-text hit's injected text (if any), the hit's model range, and the
+/// recorded pointer position (`viewer/contrib/hover/browser/hover_events.mbt`
+/// extracts them).
 pub(open) trait HoverParticipant {
   fn ordinal(Self) -> Int noraise
   fn suggest_hover_anchor(
     Self,
-    @viewer_common.MouseTarget,
+    @view_model.InjectedText?,
     @base_common.Range,
     Double?,
     Double?,
@@ -87,8 +90,8 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn ordinal(_self) {
 /// The marker participant suggests no anchor of its own.
 pub impl HoverParticipant for MarkerHoverParticipant with fn suggest_hover_anchor(
   _self,
-  _target,
-  _target_model_range,
+  _injected_text,
+  _target_range,
   _initial_mouse_pos_x,
   _initial_mouse_pos_y,
 ) {
@@ -190,7 +193,7 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn ordinal(_self) {
 pub impl HoverParticipant for MarkdownHoverParticipant with fn suggest_hover_anchor(
   _self,
   _target,
-  _target_model_range,
+  _target_range,
   _initial_mouse_pos_x,
   _initial_mouse_pos_y,
 ) {
@@ -262,19 +265,17 @@ pub impl HoverParticipant for InlayHintsHover with fn ordinal(_self) {
 /// `supportsMarkerHover` true.
 pub impl HoverParticipant for InlayHintsHover with fn suggest_hover_anchor(
   _self,
-  target,
-  target_model_range,
+  injected_text,
+  target_range,
   initial_mouse_pos_x,
   initial_mouse_pos_y,
 ) {
-  if !(target.kind is ContentText) || target.injected_text_index < 0 {
-    return None
-  }
+  guard injected_text is Some(injected) else { return None }
   Some(
     HoverForeignElementAnchor(
       priority=10,
-      injected_text_index=target.injected_text_index,
-      range=target_model_range,
+      injected_text_index=injected.source_index,
+      range=target_range,
       initial_mouse_pos_x~,
       initial_mouse_pos_y~,
       supports_marker_hover=true,

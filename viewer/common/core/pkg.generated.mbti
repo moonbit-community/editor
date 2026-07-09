@@ -42,6 +42,8 @@ pub fn Selection::get_position(Self) -> @common.Position
 pub fn Selection::get_selection_start(Self) -> @common.Position
 pub fn Selection::is_empty(Self) -> Bool
 pub fn Selection::new(@common.Position, @common.Position) -> Self
+pub fn Selection::set_end_position(Self, Int, Int) -> Self
+pub fn Selection::set_start_position(Self, Int, Int) -> Self
 pub fn Selection::start(Self) -> @common.Position
 
 pub(all) enum SelectionDirection {

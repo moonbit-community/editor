@@ -14,7 +14,7 @@ import {
 }
 
 // Values
-pub fn create_model_line_projection(ModelLineProjectionData?) -> ModelLineProjection
+pub fn create_model_line_projection(ModelLineProjectionData?, Bool) -> ModelLineProjection
 
 pub fn dedup_margin_decorations(Int, Int, Array[DecorationToRender]) -> Array[Array[String]]
 
@@ -60,7 +60,8 @@ pub fn LineBreaksComputer::finalize(Self) -> Array[ModelLineProjectionData?]
 
 pub(all) enum ModelLineProjection {
   Identity
-  Projected(ModelLineProjectionData)
+  Hidden
+  Projected(ModelLineProjectionData, is_visible~ : Bool)
 }
 pub fn ModelLineProjection::get_model_column_of_view_position(Self, Int, Int) -> Int
 pub fn ModelLineProjection::get_view_line_content(Self, @model.TextModel, Int, Int) -> String
@@ -70,7 +71,9 @@ pub fn ModelLineProjection::get_view_line_max_column(Self, @model.TextModel, Int
 pub fn ModelLineProjection::get_view_line_min_column(Self, Int) -> Int
 pub fn ModelLineProjection::get_view_position_of_model_position(Self, Int, Int, affinity? : @model.PositionAffinity) -> @common.Position
 pub fn ModelLineProjection::injected_text_index_at(Self, Int, Int) -> Int
+pub fn ModelLineProjection::is_visible(Self) -> Bool
 pub fn ModelLineProjection::normalize_position(Self, Int, @common.Position, @model.PositionAffinity) -> @common.Position
+pub fn ModelLineProjection::set_visible(Self, Bool) -> Self
 
 pub(all) struct ModelLineProjectionData {
   model_line_number : Int
@@ -159,12 +162,16 @@ pub struct ViewModel {
   view_layout : @view_layout.ViewLayout
   mut decorations : ViewModelDecorations
   coordinates_converter : ProjectedCoordinatesConverter
+  // private fields
 }
 pub fn ViewModel::ViewModel(@model.TextModel) -> Self
 pub fn ViewModel::clamp_window(Self, @view_layout.LineWindow) -> @view_layout.LineWindow
 pub fn ViewModel::coordinates_converter(Self) -> &@core.CoordinatesConverter
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
 pub fn ViewModel::get_hidden_areas(Self) -> Array[@common.Range]
+pub fn ViewModel::get_injected_text_at(Self, @common.Position) -> InjectedText?
+pub fn ViewModel::get_line_content(Self, Int) -> String
+pub fn ViewModel::get_line_length(Self, Int) -> Int
 pub fn ViewModel::get_line_max_column(Self, Int) -> Int
 pub fn ViewModel::get_line_min_column(Self, Int) -> Int
 pub fn ViewModel::injected_text_index_at(Self, @common.Position) -> Int
@@ -176,6 +183,7 @@ pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
 pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ViewModel::on_configuration_changed(Self, ViewModelOptions) -> Bool
 pub fn ViewModel::on_did_change_content_or_injected_text(Self) -> Unit
+pub fn ViewModel::set_hidden_areas(Self, Array[@common.Range], source? : String, force_update? : Bool) -> Bool
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
 pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions) -> Self
@@ -198,8 +206,9 @@ pub struct ViewModelLinesFromProjectedModel {
   mut wrapping_indent : WrappingIndent
   mut model_line_projections : Array[ModelLineProjection]
   mut projected_model_line_line_counts : Array[Int]
+  mut hidden_areas_decoration_ids : Array[String]
 }
-pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position(Self, Int, Int, affinity? : @model.PositionAffinity) -> @common.Position
+pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position(Self, Int, Int, affinity? : @model.PositionAffinity, allow_zero_line_number? : Bool, below_hidden_ranges? : Bool) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::convert_model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
 pub fn ViewModelLinesFromProjectedModel::convert_view_position_to_model_position(Self, Int, Int) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::convert_view_range_to_model_range(Self, @common.Range) -> @common.Range
@@ -211,11 +220,12 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_data(Self, Int) -> ViewLi
 pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::injected_text_index_at(Self, Int, Int) -> Int
-pub fn ViewModelLinesFromProjectedModel::is_model_line_hidden(Self, Int) -> Bool
 pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, Int) -> Int
+pub fn ViewModelLinesFromProjectedModel::model_position_is_visible(Self, Int) -> Bool
 pub fn ViewModelLinesFromProjectedModel::new(@model.TextModel, font_info~ : @config.FontInfo, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : WrappingIndent) -> Self
 pub fn ViewModelLinesFromProjectedModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::on_model_flushed(Self) -> Unit
+pub fn ViewModelLinesFromProjectedModel::set_hidden_areas(Self, Array[@common.Range]) -> Bool
 pub fn ViewModelLinesFromProjectedModel::set_tab_size(Self, Int) -> Bool
 pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(Self, @config.FontInfo, Int, WrappingIndent) -> Bool
 pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData

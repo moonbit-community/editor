@@ -2,38 +2,79 @@
 /// Per-model-line projection, Monaco's `IModelLineProjection`
 /// (`modelLineProjection.ts:16`) with the package's enum dispatch standing in
 /// for interface polymorphism. `Identity` is Monaco's
-/// `IdentityModelLineProjection.INSTANCE`: a line with no wrapping and no
-/// injected text that delegates straight to the model, so the common no-wrap
-/// document allocates no per-line projection data at all. `Projected` is
+/// `IdentityModelLineProjection.INSTANCE`: a visible line with no wrapping
+/// and no injected text that delegates straight to the model, so the common
+/// no-wrap document allocates no per-line projection data at all. `Hidden` is
+/// Monaco's `HiddenModelLineProjection.INSTANCE`: a line hidden by
+/// `setHiddenAreas` (folding), producing zero view lines. `Projected` is
 /// Monaco's `ModelLineProjection` class, used to wrap model lines and inject
-/// text. Monaco's `HiddenModelLineProjection` has no variant: the folding
-/// feature is gone and nothing can hide a model line.
+/// text; it carries its own visibility like Monaco's `_isVisible`.
+///
+/// Content queries on an invisible projection abort — the `Hidden` arms are
+/// the port of both `HiddenModelLineProjection`'s `throw new Error('Not
+/// supported')` and `ModelLineProjection._assertVisible` (an invisible
+/// `Projected` is not asserted per method; only valid view lines reach these
+/// accessors).
 pub(all) enum ModelLineProjection {
   Identity
-  Projected(ModelLineProjectionData)
+  Hidden
+  Projected(ModelLineProjectionData, is_visible~ : Bool)
 }
 
 ///|
 /// `createModelLineProjection` (`modelLineProjection.ts:52`): `None`
-/// line-break data means no mapping is needed. Visibility is not a parameter
-/// — without folding every line is visible.
+/// line-break data means no mapping is needed.
 pub fn create_model_line_projection(
   data : ModelLineProjectionData?,
+  is_visible : Bool,
 ) -> ModelLineProjection {
   match data {
-    None => Identity
-    Some(data) => Projected(data)
+    None => if is_visible { Identity } else { Hidden }
+    Some(data) => Projected(data, is_visible~)
   }
 }
 
 ///|
-/// Number of view lines this model line produces — `getViewLineCount`.
+/// Whether this model line is visible — `isVisible`.
+pub fn ModelLineProjection::is_visible(self : ModelLineProjection) -> Bool {
+  match self {
+    Identity => true
+    Hidden => false
+    Projected(_, is_visible~) => is_visible
+  }
+}
+
+///|
+/// Returns this projection with the given visibility — `setVisible`
+/// (`modelLineProjection.ts:22`, "this invalidates the current instance"):
+/// callers store the returned projection back, exactly Monaco's
+/// `projections[i] = projections[i].setVisible(v)` pattern. The identity
+/// singletons swap between `Identity` and `Hidden`.
+pub fn ModelLineProjection::set_visible(
+  self : ModelLineProjection,
+  is_visible : Bool,
+) -> ModelLineProjection {
+  match self {
+    Identity | Hidden => if is_visible { Identity } else { Hidden }
+    Projected(data, ..) => Projected(data, is_visible~)
+  }
+}
+
+///|
+/// Number of view lines this model line produces — `getViewLineCount`:
+/// zero while hidden.
 pub fn ModelLineProjection::get_view_line_count(
   self : ModelLineProjection,
 ) -> Int {
   match self {
     Identity => 1
-    Projected(data) => data.view_line_count()
+    Hidden => 0
+    Projected(data, is_visible~) =>
+      if is_visible {
+        data.view_line_count()
+      } else {
+        0
+      }
   }
 }
 
@@ -49,7 +90,8 @@ pub fn ModelLineProjection::get_view_line_content(
 ) -> String {
   match self {
     Identity => model.snapshot.line_text(model_line_number - 1)
-    Projected(data) => {
+    Hidden => abort("Not supported")
+    Projected(data, ..) => {
       let segment = data.segment_at_view_line_index(output_line_index)
       let content = data.projected_line.text[segment.start_offset:segment.end_offset].to_owned()
       if segment.wrapped_text_indent_length > 0 {
@@ -62,15 +104,20 @@ pub fn ModelLineProjection::get_view_line_content(
 }
 
 ///|
-/// Minimum one-based column of one view line — `getViewLineMinColumn`.
+/// Minimum one-based column of one view line — `getViewLineMinColumn`
+/// (`modelLineProjection.ts:141-144`): `getMinOutputOffset + 1`, i.e. the
+/// continuation indent width plus one (view columns are segment-local; the
+/// segment's `start_column` is a projected-line column, a different axis).
 pub fn ModelLineProjection::get_view_line_min_column(
   self : ModelLineProjection,
   output_line_index : Int,
 ) -> Int {
   match self {
     Identity => 1
-    Projected(data) =>
-      data.segment_at_view_line_index(output_line_index).start_column
+    Hidden => abort("Not supported")
+    Projected(data, ..) =>
+      data.segment_at_view_line_index(output_line_index).wrapped_text_indent_length +
+      1
   }
 }
 
@@ -84,8 +131,17 @@ pub fn ModelLineProjection::get_view_line_max_column(
 ) -> Int {
   match self {
     Identity => model.snapshot.line_text(model_line_number - 1).length() + 1
-    Projected(data) =>
-      data.segment_at_view_line_index(output_line_index).end_column
+    Hidden => abort("Not supported")
+    Projected(data, ..) => {
+      // `getMaxOutputOffset + 1` (`modelLineProjectionData.ts:73-79`): the
+      // segment's rendered length (indent included) plus one — segment-local,
+      // like `get_view_line_min_column`.
+      let segment = data.segment_at_view_line_index(output_line_index)
+      segment.end_offset -
+      segment.start_offset +
+      segment.wrapped_text_indent_length +
+      1
+    }
   }
 }
 
@@ -113,7 +169,8 @@ pub fn ModelLineProjection::get_view_line_data(
         inline_decorations: [],
       }
     }
-    Projected(data) =>
+    Hidden => abort("Not supported")
+    Projected(data, ..) =>
       view_line_data_for_segment(
         model.tokenization.get_line_tokens(model_line_number),
         data.projected_line,
@@ -133,7 +190,8 @@ pub fn ModelLineProjection::get_model_column_of_view_position(
 ) -> Int {
   match self {
     Identity => output_column
-    Projected(data) => {
+    Hidden => abort("Not supported")
+    Projected(data, ..) => {
       let segment = data.segment_at_view_line_index(output_line_index)
       let width = segment.end_offset - segment.start_offset
       let projected_column = segment.start_offset +
@@ -164,7 +222,8 @@ pub fn ModelLineProjection::get_view_position_of_model_position(
       ignore(affinity)
       Position(delta_line_number, input_column)
     }
-    Projected(data) => {
+    Hidden => abort("Not supported")
+    Projected(data, ..) => {
       let model_column = @base_common.clamp_int(
         input_column - 1,
         0,
@@ -202,7 +261,8 @@ pub fn ModelLineProjection::normalize_position(
 ) -> @base_common.Position {
   match self {
     Identity => position
-    Projected(data) => {
+    Hidden => abort("Not supported")
+    Projected(data, ..) => {
       let segment = data.segment_at_view_line_index(output_line_index)
       let width = segment.end_offset - segment.start_offset
       // `outputPositionToOffsetInInputWithInjections`: undo the continuation
@@ -281,7 +341,8 @@ pub fn ModelLineProjection::injected_text_index_at(
 ) -> Int {
   match self {
     Identity => -1
-    Projected(data) => {
+    Hidden => abort("Not supported")
+    Projected(data, ..) => {
       let segment = data.segment_at_view_line_index(output_line_index)
       let indent = segment.wrapped_text_indent_length
       if column < indent {
@@ -322,8 +383,10 @@ fn view_line_data_for_segment(
   {
     content,
     continues_with_wrapped_line: segment.continues_with_wrapped_line,
-    min_column: segment.start_column,
-    max_column: segment.end_column,
+    // Segment-local view columns (`getViewLineMinColumn`/`MaxColumn`): the
+    // indent-prefixed rendered content's bounds.
+    min_column: segment.wrapped_text_indent_length + 1,
+    max_column: content.length() + 1,
     // The renderer's whitespace math counts code units in Int columns;
     // Monaco feeds the raw (possibly fractional) number into the same
     // formulas. Truncation only diverges when `columnsForFullWidthChar` is

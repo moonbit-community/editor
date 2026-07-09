@@ -1,0 +1,156 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser"
+
+import {
+  "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/rabbita/dom",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn create_coordinates_relative_to_editor(@dom.Element, EditorPagePosition, PageCoordinates) -> CoordinatesRelativeToEditor
+
+pub fn create_editor_page_position(@dom.Element) -> EditorPagePosition
+
+// Errors
+
+// Types and methods
+pub(all) struct ClientCoordinates {
+  client_x : Double
+  client_y : Double
+} derive(Eq, @debug.Debug)
+pub fn ClientCoordinates::to_page_coordinates(Self) -> PageCoordinates
+
+pub(all) struct CoordinatesRelativeToEditor {
+  x : Double
+  y : Double
+} derive(Eq, @debug.Debug)
+
+pub struct EditorMouseEvent {
+  browser_event : @dom.MouseEvent
+  left_button : Bool
+  middle_button : Bool
+  right_button : Bool
+  buttons : Int
+  target : @dom.Element?
+  mut detail : Int
+  posx : Double
+  posy : Double
+  ctrl_key : Bool
+  shift_key : Bool
+  alt_key : Bool
+  meta_key : Bool
+  timestamp : Double
+  default_prevented : Bool
+  is_from_pointer_capture : Bool
+  pos : PageCoordinates
+  // private fields
+}
+pub fn EditorMouseEvent::editor_pos(Self) -> EditorPagePosition
+pub fn EditorMouseEvent::new(@dom.MouseEvent, Bool, @dom.Element) -> Self
+pub fn EditorMouseEvent::prevent_default(Self) -> Unit
+pub fn EditorMouseEvent::relative_pos(Self) -> CoordinatesRelativeToEditor
+pub fn EditorMouseEvent::set_detail(Self, Int) -> Unit
+pub fn EditorMouseEvent::stop_propagation(Self) -> Unit
+
+pub struct EditorMouseEventFactory {
+  // private fields
+}
+pub fn EditorMouseEventFactory::new(@dom.Element) -> Self
+pub fn EditorMouseEventFactory::on_mouse_down(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
+pub fn EditorMouseEventFactory::on_mouse_leave(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
+pub fn EditorMouseEventFactory::on_mouse_move(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
+pub fn EditorMouseEventFactory::on_mouse_up(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
+
+pub(all) struct EditorPagePosition {
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+} derive(Eq, @debug.Debug)
+
+pub struct GlobalEditorPointerMoveMonitor {
+  // private fields
+}
+pub fn GlobalEditorPointerMoveMonitor::new(@dom.Element) -> Self
+pub fn GlobalEditorPointerMoveMonitor::start_monitoring(Self, @dom.Element, Int, (EditorMouseEvent) -> Unit, (@dom.Event?) -> Unit) -> Unit
+pub fn GlobalEditorPointerMoveMonitor::stop_monitoring(Self) -> Unit
+
+pub(all) enum MouseTarget {
+  MouseTargetUnknown(element~ : @dom.Element?, mouse_column~ : Int, position~ : @common.Position?, range~ : @common.Range?)
+  MouseTargetMargin(type_~ : MouseTargetType, element~ : @dom.Element?, mouse_column~ : Int, position~ : @common.Position, range~ : @common.Range, detail~ : MouseTargetMarginData)
+  MouseTargetViewZone(type_~ : MouseTargetType, element~ : @dom.Element?, mouse_column~ : Int, position~ : @common.Position, range~ : @common.Range, detail~ : MouseTargetViewZoneData)
+  MouseTargetContentText(element~ : @dom.Element?, mouse_column~ : Int, position~ : @common.Position, range~ : @common.Range, detail~ : MouseTargetContentTextData)
+  MouseTargetContentEmpty(element~ : @dom.Element?, mouse_column~ : Int, position~ : @common.Position, range~ : @common.Range, detail~ : MouseTargetContentEmptyData)
+  MouseTargetContentWidget(element~ : @dom.Element?, mouse_column~ : Int, detail~ : String)
+  MouseTargetScrollbar(element~ : @dom.Element?, mouse_column~ : Int, position~ : @common.Position, range~ : @common.Range)
+  MouseTargetOverlayWidget(element~ : @dom.Element?, mouse_column~ : Int, detail~ : String)
+  MouseTargetOutsideEditor(mouse_column~ : Int, position~ : @common.Position, range~ : @common.Range, outside_position~ : OutsidePosition, outside_distance~ : Double)
+}
+pub fn MouseTarget::element(Self) -> @dom.Element?
+pub fn MouseTarget::mouse_column(Self) -> Int
+pub fn MouseTarget::position(Self) -> @common.Position?
+pub fn MouseTarget::range(Self) -> @common.Range?
+pub fn MouseTarget::type_(Self) -> MouseTargetType
+
+pub(all) struct MouseTargetContentEmptyData {
+  is_after_lines : Bool
+  horizontal_distance_to_text : Double?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct MouseTargetContentTextData {
+  might_be_foreign_element : Bool
+  injected_text : @view_model.InjectedText?
+}
+
+pub(all) struct MouseTargetMarginData {
+  is_after_lines : Bool
+  glyph_margin_left : Double
+  glyph_margin_width : Double
+  line_numbers_width : Double
+  offset_x : Double
+} derive(Eq, @debug.Debug)
+
+pub(all) enum MouseTargetType {
+  Unknown
+  Textarea
+  GutterGlyphMargin
+  GutterLineNumbers
+  GutterLineDecorations
+  GutterViewZone
+  ContentText
+  ContentEmpty
+  ContentViewZone
+  ContentWidget
+  OverviewRuler
+  Scrollbar
+  OverlayWidget
+  OutsideEditor
+} derive(Eq, @debug.Debug)
+
+pub(all) struct MouseTargetViewZoneData {
+  view_zone_id : String
+  position_before : @common.Position?
+  position_after : @common.Position?
+  position : @common.Position
+  after_line_number : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum OutsidePosition {
+  Above
+  Below
+  Left
+  Right
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PageCoordinates {
+  x : Double
+  y : Double
+} derive(Eq, @debug.Debug)
+pub fn PageCoordinates::to_client_coordinates(Self) -> ClientCoordinates
+
+// Type aliases
+
+// Traits
+

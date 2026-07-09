@@ -3,6 +3,7 @@ package "moonbit-community/editor/viewer/browser/view"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/browser",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/current_line_highlight",
   "moonbit-community/editor/viewer/browser/view_parts/decorations",
@@ -17,9 +18,12 @@ import {
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom",
+  "moonbitlang/core/debug",
 }
 
 // Values
+pub fn convert_view_to_model_mouse_target(@browser.MouseTarget, &@core.CoordinatesConverter) -> @browser.MouseTarget
+
 pub fn empty_editor_class_name(show_unused? : Bool, show_deprecated? : Bool) -> String
 
 // Errors
@@ -36,6 +40,13 @@ pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
 
+pub(all) struct HorizontalPosition {
+  outside_rendered_line : Bool
+  left : Int
+  original_left : Double
+} derive(Eq, @debug.Debug)
+pub fn HorizontalPosition::new(Bool, Double) -> Self
+
 pub(all) struct MarginViewOverlays {
   dom_node : @dom.Element
   overlays : ViewOverlays
@@ -46,6 +57,28 @@ pub(all) struct MarginViewOverlays {
 }
 pub fn MarginViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn MarginViewOverlays::new(@dom.Document) -> Self
+
+pub(all) enum PartFingerprint {
+  None
+  ContentWidgets
+  OverflowingContentWidgets
+  OverflowGuard
+  OverlayWidgets
+  OverflowingOverlayWidgets
+  ScrollableElement
+  TextArea
+  ViewLines
+  Minimap
+  ViewLinesGpu
+} derive(Eq, @debug.Debug)
+pub fn PartFingerprint::from_int(Int) -> Self
+pub fn PartFingerprint::to_int(Self) -> Int
+
+pub(all) struct PartFingerprints {
+}
+pub fn PartFingerprints::collect(@dom.Element?, @dom.Element) -> Bytes
+pub fn PartFingerprints::read(@dom.Element) -> PartFingerprint
+pub fn PartFingerprints::write(@dom.Element, PartFingerprint) -> Unit
 
 pub(all) struct View {
   root : @dom.Element
@@ -68,6 +101,7 @@ pub fn View::measure_line_selection(Self, Int, Int, Int, keep_empty? : Bool) -> 
 pub fn View::new() -> Self
 pub fn View::offset_for_column(Self, Int, Int) -> Double
 pub fn View::render(Self, ViewContext, ViewRenderInput) -> Unit
+pub fn View::visible_range_for_position(Self, Int, Int) -> HorizontalPosition?
 
 pub(all) struct ViewContext {
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]

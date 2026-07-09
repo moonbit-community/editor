@@ -203,3 +203,23 @@ fn merge_adjacent_ranges(
   result.push((prev_left, prev_width))
   result
 }
+
+///|
+/// `ViewLines.visibleRangeForPosition` (viewLines.ts:502-508) in the shape
+/// the mouse hit test consumes: the measured caret x of a view position as a
+/// `HorizontalPosition`, `None` when the line is outside the rendered window
+/// (the source's `null`). Deviation: `outside_rendered_line` is always
+/// `false` — the caret-rect measurement answers for any valid column on a
+/// rendered line, so the source's `RangeUtil` outside-flag arm is
+/// unreachable here.
+pub fn View::visible_range_for_position(
+  self : View,
+  view_line_number : Int,
+  view_column : Int,
+) -> HorizontalPosition? {
+  let left = self.offset_for_column(view_line_number, view_column)
+  if left < 0.0 {
+    return None
+  }
+  Some(HorizontalPosition::new(false, left))
+}

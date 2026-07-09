@@ -9,6 +9,9 @@
 /// `should_render` / `last_render_whitespace` directly.
 pub(all) struct ViewLines {
   dom_node : @rdom.Element
+  /// Monaco's `_textRangeRestingSpot` (viewLines.ts ctor): the detached node
+  /// `DomReadingContext.endNode` parks DOM ranges on between reads.
+  text_range_resting_spot : @rdom.Element
   mut window : @view_layout.LineWindow
   mut generation : Int
   mut decorations_generation : Int
@@ -38,6 +41,7 @@ pub fn ViewLines::new(document : @rdom.Document) -> ViewLines {
   dom_node.set_attribute("data-view-part", "view-lines")
   {
     dom_node,
+    text_range_resting_spot: document.create_element("div"),
     window: { start: 0, end: 0 },
     generation: -1,
     decorations_generation: -1,
@@ -382,4 +386,122 @@ fn write_line_node(
 ///|
 fn line_node_style(top : Int, line_height : Int) -> String {
   "top:" + top.to_string() + "px;height:" + line_height.to_string() + "px"
+}
+
+///|
+/// `getPositionFromDOMInfo` (viewLines.ts:337-372): resolves a browser caret
+/// answer (token span node + character offset) to a view `Position`, walking
+/// the span up to its `.view-line` node, scanning the rendered window for the
+/// line number, and mapping the span/offset through the line's
+/// `CharacterMapping`. `view_model` is passed per call — this recycler has no
+/// `ViewContext` (the port's standing deviation).
+pub fn ViewLines::get_position_from_dom_info(
+  self : ViewLines,
+  view_model : @view_model.ViewModel,
+  span_node : @rdom.Element,
+  offset : Int,
+) -> @base_common.Position? {
+  guard get_view_line_dom_node(span_node) is Some(view_line_dom_node) else {
+    // Couldn't find view line node
+    return None
+  }
+  let line_number = self.get_line_number_for(view_line_dom_node)
+  if line_number == -1 {
+    // Couldn't find view line node
+    return None
+  }
+  if line_number < 1 || line_number > view_model.line_count() {
+    // lineNumber is outside range
+    return None
+  }
+  if view_model.get_line_max_column(line_number) == 1 {
+    // Line is empty
+    return Some(Position(line_number, 1))
+  }
+  guard self.mapping_at(line_number) is Some(mapping) else {
+    // Couldn't find line
+    return None
+  }
+  let mut column = get_column_of_node_offset(mapping, span_node, offset)
+  let min_column = view_model.get_line_min_column(line_number)
+  if column < min_column {
+    column = min_column
+  }
+  Some(Position(line_number, column))
+}
+
+///|
+/// `_getViewLineDomNode` (viewLines.ts:375-384): the enclosing `.view-line`
+/// node of a DOM node, or `None`.
+fn get_view_line_dom_node(node : @rdom.Element) -> @rdom.Element? {
+  for current = Some(node)
+      current is Some(el)
+      current = view_lines_parent_element(el) {
+    if element_class_name(el) == VIEW_LINE_CLASS_NAME {
+      return Some(el)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+/// `_getLineNumberFor` (viewLines.ts:388-398): the view-line number of a
+/// rendered `.view-line` node, by scanning the window; `-1` when not found.
+fn ViewLines::get_line_number_for(
+  self : ViewLines,
+  dom_node : @rdom.Element,
+) -> Int {
+  for index, node in self.line_nodes {
+    if node.is_same_node(dom_node.as_node()) {
+      return self.window.start + index
+    }
+  }
+  -1
+}
+
+///|
+/// `getLineWidth` (viewLines.ts:400-413): the rendered width of a view line
+/// in pixels, `-1` when the line is outside the rendered window. The read
+/// includes CSS-generated content (`::after` ellipses etc.) because it is the
+/// reading target's `offsetWidth`. The source's
+/// `_updateLineWidthsSlowIfDomDidLayout` piggyback (its `scrollWidth`
+/// machinery) is not ported — this layout model computes scroll width from
+/// line content, not DOM sweeps.
+pub fn ViewLines::get_line_width(self : ViewLines, line_number : Int) -> Double {
+  let index = self.window_index(line_number)
+  if index < 0 {
+    // Couldn't find line
+    return -1.0
+  }
+  let context = DomReadingContext::new(
+    self.dom_node,
+    self.text_range_resting_spot,
+  )
+  rendered_view_line_width(self.line_nodes[index], Some(context))
+}
+
+///|
+/// FFI gap-fills for the `.view-line` ancestor walk (element-typed
+/// `parentElement` / `className` are not bound in the vendored `@rdom`).
+extern "js" fn element_class_name(el : @rdom.Element) -> String =
+  #| (el) => el.className || ""
+
+///|
+extern "js" fn view_lines_parent_element_raw(
+  el : @rdom.Element,
+) -> @rdom.Element =
+  #| (el) => el.parentElement
+
+///|
+extern "js" fn has_parent_element(el : @rdom.Element) -> Bool =
+  #| (el) => el.parentElement !== null && el.parentElement.nodeType === 1
+
+///|
+fn view_lines_parent_element(el : @rdom.Element) -> @rdom.Element? {
+  if has_parent_element(el) {
+    Some(view_lines_parent_element_raw(el))
+  } else {
+    None
+  }
 }

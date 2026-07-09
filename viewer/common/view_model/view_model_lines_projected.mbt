@@ -19,6 +19,9 @@ pub struct ViewModelLinesFromProjectedModel {
   /// stores the prefix sums directly: entry `i` is the number of view lines
   /// before one-based model line `i + 1`, and the last entry is the total.
   mut projected_model_line_line_counts : Array[Int]
+  /// Monaco's `hiddenAreasDecorationIds`: the hidden (folded) model ranges
+  /// live as empty-options model decorations so edits keep them anchored.
+  mut hidden_areas_decoration_ids : Array[String]
 }
 
 ///|
@@ -49,8 +52,9 @@ pub fn ViewModelLinesFromProjectedModel::new(
     wrapping_indent,
     model_line_projections: [],
     projected_model_line_line_counts: [0],
+    hidden_areas_decoration_ids: [],
   }
-  lines.construct_lines()
+  lines.construct_lines(reset_hidden_areas=true)
   lines
 }
 
@@ -65,16 +69,25 @@ pub fn ViewModelLinesFromProjectedModel::create_coordinates_converter(
 
 ///|
 /// Recomputes every line's projection — Monaco's `_constructLines`
-/// (`viewModelLines.ts:122`), minus hidden-area reset (no folding) and
-/// previous-line-break reuse (the readonly viewer rebuilds wholesale). A
-/// `None` projection is the line-breaks computer's null result: a line that
-/// neither wraps nor carries injected text needs no mapping and projects as
-/// `Identity`.
+/// (`viewModelLines.ts:122`), minus previous-line-break reuse (the readonly
+/// viewer rebuilds wholesale). A `None` projection is the line-breaks
+/// computer's null result: a line that neither wraps nor carries injected
+/// text needs no mapping and projects as `Identity`. Lines inside a hidden
+/// area project invisible (`createModelLineProjection(-, false)`); the
+/// hidden areas are read back from their tracking decorations, so a rebuild
+/// keeps folded regions folded unless `reset_hidden_areas` clears them.
 fn ViewModelLinesFromProjectedModel::construct_lines(
   self : ViewModelLinesFromProjectedModel,
+  reset_hidden_areas~ : Bool,
 ) -> Unit {
   let model_line_projections : Array[ModelLineProjection] = []
   let prefix_sums : Array[Int] = [0]
+  if reset_hidden_areas {
+    self.hidden_areas_decoration_ids = self.model.delta_decorations(
+      self.hidden_areas_decoration_ids,
+      [],
+    )
+  }
   let injected_text_buckets = line_injected_text_from_decorations(self.model)
   let computer = monospace_line_breaks_computer_factory.create_line_breaks_computer(
     font_info=self.font_info,
@@ -91,9 +104,37 @@ fn ViewModelLinesFromProjectedModel::construct_lines(
     )
   }
   let line_break_data = computer.finalize()
+  // The sorted hidden-area walk of `_constructLines` (`viewModelLines.ts:140`).
+  let hidden_areas = self.get_hidden_areas()
+  hidden_areas.sort_by((a, b) => {
+    @base_common.Range::compare_ranges_using_starts(a, b)
+  })
+  let mut hidden_area_start = 1
+  let mut hidden_area_end = 0
+  let mut hidden_area_idx = -1
+  let mut next_line_number_to_update_hidden_area = if hidden_area_idx + 1 <
+    hidden_areas.length() {
+    hidden_area_end + 1
+  } else {
+    line_count + 2
+  }
   for model_line_number in 1..<=line_count {
+    if model_line_number == next_line_number_to_update_hidden_area {
+      hidden_area_idx += 1
+      hidden_area_start = hidden_areas[hidden_area_idx].start_line_number
+      hidden_area_end = hidden_areas[hidden_area_idx].end_line_number
+      next_line_number_to_update_hidden_area = if hidden_area_idx + 1 <
+        hidden_areas.length() {
+        hidden_area_end + 1
+      } else {
+        line_count + 2
+      }
+    }
+    let is_in_hidden_area = model_line_number >= hidden_area_start &&
+      model_line_number <= hidden_area_end
     let projection = create_model_line_projection(
       line_break_data[model_line_number - 1],
+      !is_in_hidden_area,
     )
     model_line_projections.push(projection)
     prefix_sums.push(
@@ -102,6 +143,179 @@ fn ViewModelLinesFromProjectedModel::construct_lines(
   }
   self.model_line_projections = model_line_projections
   self.projected_model_line_line_counts = prefix_sums
+  self.ensure_at_least_one_visible_line()
+}
+
+///|
+/// `_ensureAtLeastOneVisibleLine` (`viewModelLines.ts:435`): a document may
+/// never hide every line; reveal the first when it would.
+fn ViewModelLinesFromProjectedModel::ensure_at_least_one_visible_line(
+  self : ViewModelLinesFromProjectedModel,
+) -> Unit {
+  if self.get_view_line_count() == 0 && self.model_line_projections.length() > 0 {
+    self.model_line_projections[0] = self.model_line_projections[0].set_visible(
+      true,
+    )
+    self.rebuild_prefix_sums()
+  }
+}
+
+///|
+/// Recomputes the stored prefix sums from the projections' view-line counts
+/// — the viewer's stand-in for Monaco's incremental
+/// `projectedModelLineLineCounts.setValue` (the collection stores the sums
+/// directly and rebuilds at its wholesale granularity).
+fn ViewModelLinesFromProjectedModel::rebuild_prefix_sums(
+  self : ViewModelLinesFromProjectedModel,
+) -> Unit {
+  let prefix_sums : Array[Int] = [0]
+  for i, projection in self.model_line_projections {
+    prefix_sums.push(prefix_sums[i] + projection.get_view_line_count())
+  }
+  self.projected_model_line_line_counts = prefix_sums
+}
+
+///|
+/// Merged one-based hidden model-line ranges — `getHiddenAreas`
+/// (`viewModelLines.ts:168`), read back from the tracking decorations.
+pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(
+  self : ViewModelLinesFromProjectedModel,
+) -> Array[@base_common.Range] {
+  let ranges : Array[@base_common.Range] = []
+  for decoration_id in self.hidden_areas_decoration_ids {
+    match self.model.get_decoration_range(decoration_id) {
+      Some(range) => ranges.push(range)
+      None => ()
+    }
+  }
+  ranges
+}
+
+///|
+/// Applies a new hidden-area set — `setHiddenAreas` (`viewModelLines.ts:174`).
+/// Returns whether the view-line mapping changed. Ranges are validated,
+/// normalized into merged whole-line ranges, and diffed against the current
+/// decoration-tracked set before any projection is touched.
+pub fn ViewModelLinesFromProjectedModel::set_hidden_areas(
+  self : ViewModelLinesFromProjectedModel,
+  ranges : Array[@base_common.Range],
+) -> Bool {
+  let validated_ranges = ranges.map(r => self.model.validate_range(r))
+  let new_ranges = normalize_line_ranges(validated_ranges)
+
+  // This checks if there really was a change
+  let old_ranges = self.get_hidden_areas()
+  old_ranges.sort_by((a, b) => {
+    @base_common.Range::compare_ranges_using_starts(a, b)
+  })
+  if new_ranges.length() == old_ranges.length() {
+    let mut has_difference = false
+    for i in 0..<new_ranges.length() {
+      if new_ranges[i] != old_ranges[i] {
+        has_difference = true
+        break
+      }
+    }
+    if !has_difference {
+      return false
+    }
+  }
+  let new_decorations : Array[@model.ModelDeltaDecoration] = new_ranges.map(r => {
+    range: r,
+    options: ModelDecorationOptions("", description="empty"),
+  })
+  self.hidden_areas_decoration_ids = self.model.delta_decorations(
+    self.hidden_areas_decoration_ids,
+    new_decorations,
+  )
+  let hidden_areas = new_ranges
+  let mut hidden_area_start = 1
+  let mut hidden_area_end = 0
+  let mut hidden_area_idx = -1
+  let mut next_line_number_to_update_hidden_area = if hidden_area_idx + 1 <
+    hidden_areas.length() {
+    hidden_area_end + 1
+  } else {
+    self.model_line_projections.length() + 2
+  }
+  let mut has_visible_line = false
+  for i, projection in self.model_line_projections {
+    let line_number = i + 1
+    if line_number == next_line_number_to_update_hidden_area {
+      hidden_area_idx += 1
+      hidden_area_start = hidden_areas[hidden_area_idx].start_line_number
+      hidden_area_end = hidden_areas[hidden_area_idx].end_line_number
+      next_line_number_to_update_hidden_area = if hidden_area_idx + 1 <
+        hidden_areas.length() {
+        hidden_area_end + 1
+      } else {
+        self.model_line_projections.length() + 2
+      }
+    }
+    if line_number >= hidden_area_start && line_number <= hidden_area_end {
+      // Line should be hidden
+      if projection.is_visible() {
+        self.model_line_projections[i] = projection.set_visible(false)
+      }
+    } else {
+      has_visible_line = true
+      // Line should be visible
+      if !projection.is_visible() {
+        self.model_line_projections[i] = projection.set_visible(true)
+      }
+    }
+  }
+  self.rebuild_prefix_sums()
+  if !has_visible_line {
+    // Cannot have everything be hidden => reveal everything!
+    self.set_hidden_areas([]) |> ignore
+  }
+  true
+}
+
+///|
+/// Whether a one-based model line is visible (not folded away) —
+/// `modelPositionIsVisible` (`viewModelLines.ts:250`).
+pub fn ViewModelLinesFromProjectedModel::model_position_is_visible(
+  self : ViewModelLinesFromProjectedModel,
+  model_line_number : Int,
+) -> Bool {
+  if model_line_number < 1 ||
+    model_line_number > self.model_line_projections.length() {
+    // invalid arguments
+    return false
+  }
+  self.model_line_projections[model_line_number - 1].is_visible()
+}
+
+///|
+/// Sorts and merges touching/overlapping line ranges into whole-line ranges
+/// — `normalizeLineRanges` (`viewModelLines.ts:1024`).
+fn normalize_line_ranges(
+  ranges : Array[@base_common.Range],
+) -> Array[@base_common.Range] {
+  if ranges.length() == 0 {
+    return []
+  }
+  let sorted_ranges = ranges.copy()
+  sorted_ranges.sort_by((a, b) => {
+    @base_common.Range::compare_ranges_using_starts(a, b)
+  })
+  let result : Array[@base_common.Range] = []
+  let mut current_range_start = sorted_ranges[0].start_line_number
+  let mut current_range_end = sorted_ranges[0].end_line_number
+  for i in 1..<sorted_ranges.length() {
+    let range = sorted_ranges[i]
+    if range.start_line_number > current_range_end + 1 {
+      result.push(Range(current_range_start, 1, current_range_end, 1))
+      current_range_start = range.start_line_number
+      current_range_end = range.end_line_number
+    } else if range.end_line_number > current_range_end {
+      current_range_end = range.end_line_number
+    }
+  }
+  result.push(Range(current_range_start, 1, current_range_end, 1))
+  result
 }
 
 ///|
@@ -123,7 +337,7 @@ pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(
   self.font_info = font_info
   self.wrapping_column = wrapping_column
   self.wrapping_indent = wrapping_indent
-  self.construct_lines()
+  self.construct_lines(reset_hidden_areas=false)
   true
 }
 
@@ -138,7 +352,7 @@ pub fn ViewModelLinesFromProjectedModel::set_tab_size(
     return false
   }
   self.tab_size = new_tab_size
-  self.construct_lines()
+  self.construct_lines(reset_hidden_areas=false)
   true
 }
 
@@ -147,11 +361,13 @@ pub fn ViewModelLinesFromProjectedModel::set_tab_size(
 /// `onModelFlushed` (`viewModelLines.ts:325`). Monaco also applies per-line
 /// deltas (`onModelLineChanged` and friends); the readonly viewer's only
 /// in-place change is an injected-text delta, and its granularity is the
-/// whole-document reproject.
+/// whole-document reproject. Monaco's `onModelFlushed` resets hidden areas
+/// (a flush replaces the document); this producer is the injected-text delta
+/// — Monaco's per-line path, which keeps them — so folded regions survive.
 pub fn ViewModelLinesFromProjectedModel::on_model_flushed(
   self : ViewModelLinesFromProjectedModel,
 ) -> Unit {
-  self.construct_lines()
+  self.construct_lines(reset_hidden_areas=false)
 }
 
 ///|
@@ -349,27 +565,65 @@ pub fn ViewModelLinesFromProjectedModel::convert_view_range_to_model_range(
 
 ///|
 /// Converts a model position to view coordinates —
-/// `convertModelPositionToViewPosition` (`viewModelLines.ts:848`), minus the
-/// hidden-line walk (nothing can hide a line). The affinity picks the
-/// boundary side at injected text and wrap breaks; absent it behaves as
-/// Monaco's default `None`.
+/// `convertModelPositionToViewPosition` (`viewModelLines.ts:848`). A position
+/// on a hidden (folded) line walks up to the nearest visible line's end —
+/// or, with `below_hidden_ranges`, down to the next visible line's start.
+/// The affinity picks the boundary side at injected text and wrap breaks;
+/// absent it behaves as Monaco's default `None`.
 pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position(
   self : ViewModelLinesFromProjectedModel,
   model_line_number : Int,
   model_column : Int,
   affinity? : @model.PositionAffinity,
+  allow_zero_line_number? : Bool = false,
+  below_hidden_ranges? : Bool = false,
 ) -> @base_common.Position {
-  let line_index = @base_common.clamp_int(
-    model_line_number - 1,
-    0,
-    self.model_line_projections.length() - 1,
+  let input_line_number = @base_common.clamp_int(
+    model_line_number,
+    1,
+    self.model_line_projections.length(),
   )
+  let mut line_index = input_line_number - 1
+  let mut line_index_changed = false
+  if below_hidden_ranges {
+    while line_index < self.model_line_projections.length() &&
+          !self.model_line_projections[line_index].is_visible() {
+      line_index += 1
+      line_index_changed = true
+    }
+  } else {
+    while line_index > 0 &&
+          !self.model_line_projections[line_index].is_visible() {
+      line_index -= 1
+      line_index_changed = true
+    }
+  }
+  if line_index == 0 && !self.model_line_projections[line_index].is_visible() {
+    // Could not reach a real line
+    return Position(if allow_zero_line_number { 0 } else { 1 }, 1)
+  }
   let delta_line_number = 1 + self.projected_model_line_line_counts[line_index]
-  self.model_line_projections[line_index].get_view_position_of_model_position(
-    delta_line_number,
-    model_column,
-    affinity?,
-  )
+  if line_index_changed {
+    if below_hidden_ranges {
+      self.model_line_projections[line_index].get_view_position_of_model_position(
+        delta_line_number,
+        1,
+        affinity?,
+      )
+    } else {
+      self.model_line_projections[line_index].get_view_position_of_model_position(
+        delta_line_number,
+        self.model.snapshot.get_line_max_column(line_index + 1),
+        affinity?,
+      )
+    }
+  } else {
+    self.model_line_projections[input_line_number - 1].get_view_position_of_model_position(
+      delta_line_number,
+      model_column,
+      affinity?,
+    )
+  }
 }
 
 ///|
@@ -546,4 +800,76 @@ pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn vi
   range,
 ) {
   self.lines.convert_view_range_to_model_range(range)
+}
+
+///|
+/// The injected texts of one 1-based model line — the single-line form of
+/// `line_injected_text_from_decorations` (same derivation, same clamping,
+/// filtered to the line and sorted by column then before/after order).
+fn injected_text_for_model_line(
+  model : @model.TextModel,
+  model_line_number : Int,
+) -> Array[InjectedText] {
+  let snapshot = model.snapshot
+  if snapshot.line_count() == 0 {
+    return []
+  }
+  let target_line0 = @base_common.clamp_int(
+    model_line_number - 1,
+    0,
+    snapshot.line_count() - 1,
+  )
+  let entries : Array[(Int, Int, @model.InjectedTextOptions)] = []
+  for decoration in model.get_injected_text_decorations() {
+    match decoration.options.before {
+      Some(before) =>
+        if before.content.length() > 0 &&
+          @base_common.clamp_int(
+            decoration.range.start_line_number - 1,
+            0,
+            snapshot.line_count() - 1,
+          ) ==
+          target_line0 {
+          entries.push((decoration.range.start_column, 0, before))
+        }
+      None => ()
+    }
+    match decoration.options.after {
+      Some(after) =>
+        if after.content.length() > 0 &&
+          @base_common.clamp_int(
+            decoration.range.end_line_number - 1,
+            0,
+            snapshot.line_count() - 1,
+          ) ==
+          target_line0 {
+          entries.push((decoration.range.end_column, 1, after))
+        }
+      None => ()
+    }
+  }
+  entries.sort_by((left, right) => {
+    let (l_column, l_order, _) = left
+    let (r_column, r_order, _) = right
+    if l_column != r_column {
+      l_column - r_column
+    } else {
+      l_order - r_order
+    }
+  })
+  let line_text = snapshot.line_text(target_line0)
+  let out : Array[InjectedText] = []
+  for entry in entries {
+    let (column, _, options) = entry
+    let column0 = @base_common.clamp_int(column - 1, 0, line_text.length())
+    out.push(
+      InjectedText(
+        Position(target_line0, column0),
+        options.content,
+        options.inline_class_name.unwrap_or(""),
+        source_index=options.attached_index,
+      ),
+    )
+  }
+  out
 }

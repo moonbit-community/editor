@@ -328,6 +328,10 @@ pub fn ViewLayout::get_scroll_height(Self) -> Double
 pub fn ViewLayout::get_scroll_width(Self) -> Double
 pub fn ViewLayout::get_vertical_offset_after_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn ViewLayout::get_vertical_offset_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
+pub fn ViewLayout::get_whitespace_at_vertical_offset(Self, Double) -> ViewWhitespaceViewportData?
+pub fn ViewLayout::is_after_lines(Self, Double) -> Bool
+pub fn ViewLayout::is_in_bottom_padding(Self, Double) -> Bool
+pub fn ViewLayout::is_in_top_padding(Self, Double) -> Bool
 pub fn ViewLayout::line_at_vertical_offset(Self, Double) -> Int
 pub fn ViewLayout::line_count(Self) -> Int
 pub fn ViewLayout::line_height(Self) -> Int

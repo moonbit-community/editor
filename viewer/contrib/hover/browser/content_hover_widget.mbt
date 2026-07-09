@@ -57,9 +57,6 @@ pub(all) struct ContentHoverWidgetHost {
   /// The pointer is on the hover widget: keep the hover open (the controller's
   /// `_shouldKeepCurrentHover` arm over the content widget).
   keep_hover_open : () -> Unit
-  /// Non-interactive mousedown on the hover starts editor selection at the
-  /// underlying coordinate.
-  handle_mousedown : (@rdom.Event, @rdom.MouseEvent) -> Unit
   /// Widget keydown resolves through the keybinding table (`hoverActions.ts`'s
   /// scroll cluster).
   handle_keydown : (@rdom.Event, @rdom.KeyboardEvent) -> Unit
@@ -170,13 +167,12 @@ pub fn ContentHoverWidget::new(
     event.stop_propagation()
   })
   wrapper.add_event_listener("mousedown", event => {
+    // Interactive pieces (links, the copy affordance) own their click;
+    // anything else bubbles to the editor's `MouseHandler`, which classifies
+    // it `CONTENT_WIDGET` (fingerprint walk) and starts no selection —
+    // Monaco's hover widget equally forwards nothing.
     if hover_mousedown_is_interactive(event) {
       event.stop_propagation()
-    } else {
-      match event.to_mouse_event() {
-        Some(mouse) => (host.handle_mousedown)(event, mouse)
-        None => event.stop_propagation()
-      }
     }
   })
   wrapper.add_event_listener("click", event => {

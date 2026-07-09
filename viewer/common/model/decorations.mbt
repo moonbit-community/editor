@@ -118,6 +118,10 @@ pub(all) struct ModelDecorationOptions {
   lines_decorations_class_name : String?
   first_line_decoration_class_name : String?
   margin_class_name : String?
+  /// CSS applied as an `::after` pseudo-element behind the range's last
+  /// line — `afterContentClassName`. Folding's `inline-folded` "⋯" is the
+  /// producer.
+  after_content_class_name : String?
   collapse_on_replace_edit : Bool
   description : String
   /// Injected text rendered before/after the decoration range —
@@ -211,6 +215,7 @@ pub fn ModelDecorationOptions::ModelDecorationOptions(
   lines_decorations_class_name? : String,
   first_line_decoration_class_name? : String,
   margin_class_name? : String,
+  after_content_class_name? : String,
   collapse_on_replace_edit? : Bool = false,
   description? : String = "",
   before? : InjectedTextOptions,
@@ -236,6 +241,7 @@ pub fn ModelDecorationOptions::ModelDecorationOptions(
       clean_class_name,
     ),
     margin_class_name: margin_class_name.map(clean_class_name),
+    after_content_class_name: after_content_class_name.map(clean_class_name),
     collapse_on_replace_edit,
     description,
     before,

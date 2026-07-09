@@ -99,12 +99,6 @@ fn Viewer::ensure_content_hover_widget(
         // Monaco reads `EditorOption.lineHeight` — configuration, not layout.
         line_height: () => self.font_info.line_height.to_double(),
         keep_hover_open: () => self.keep_hover_open(),
-        handle_mousedown: (event, mouse) => {
-          match self.mouse_handler {
-            Some(handler) => handler.handle_mouse_down(event, mouse)
-            None => ()
-          }
-        },
         handle_keydown: (event, keyboard) => {
           self.handle_hover_keydown(event, keyboard)
         },

@@ -24,9 +24,9 @@
 ///     this readonly port does not carry, and no `inlineDecorations.test.ts` case
 ///     sets those flags.
 ///   * `@model.ModelDecorationOptions` carries no `beforeContentClassName`/
-///     `afterContentClassName`/`affectsFont` (out of decoration-plan scope), so
-///     its trait impl answers `None`/`false` — the Before/After/variable-font
-///     arms are live code exercised by the suite's doubles only.
+///     `affectsFont` (out of decoration-plan scope), so those trait impls
+///     answer `None`/`false`; `afterContentClassName` is ported (folding's
+///     `inline-folded` is the producer), so the After arm runs in production.
 
 ///|
 /// The line-geometry seam the computer needs from `ITextModel`.
@@ -73,8 +73,8 @@ pub impl InlineDecorationsModel for @model.TextModel with fn get_line_max_column
 }
 
 ///|
-/// The real options tier. `before/afterContentClassName` and `affectsFont`
-/// are not ported model fields (see header deviation), hence constant.
+/// The real options tier. `beforeContentClassName` and `affectsFont` are
+/// not ported model fields (see header deviation), hence constant.
 pub impl InlineDecorationOptions for @model.ModelDecorationOptions with fn inline_class_name(
   self,
 ) {
@@ -97,9 +97,9 @@ pub impl InlineDecorationOptions for @model.ModelDecorationOptions with fn befor
 
 ///|
 pub impl InlineDecorationOptions for @model.ModelDecorationOptions with fn after_content_class_name(
-  _self,
+  self,
 ) {
-  None
+  self.after_content_class_name
 }
 
 ///|

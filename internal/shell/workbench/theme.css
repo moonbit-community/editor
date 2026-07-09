@@ -30,6 +30,15 @@
   --vscode-editor-selectionBackground: #264f78;
   --vscode-editor-hoverHighlightBackground: #264f7840;
   --vscode-editor-rangeHighlightBackground: #ffffff0b;
+  /* editor.foldBackground = transparent(editor.selectionBackground, 0.3),
+     editor.foldPlaceholderForeground = #808080,
+     editorGutter.foldingControlForeground = iconForeground
+     (foldingDecorations.ts registerColor calls). */
+  --vscode-editor-foldBackground: #264f784d;
+  --vscode-editor-foldPlaceholderForeground: #808080;
+  --vscode-editorGutter-foldingControlForeground: var(
+    --vscode-icon-foreground
+  );
   /* editorCursor.foreground / editor.lineHighlightBorder registry defaults
      (editorColorRegistry.ts:16,22); Dark Modern does not override them.
      editor.lineHighlightBackground stays null like VS Code's defaults, so the
@@ -140,6 +149,12 @@
   --vscode-editor-selectionBackground: #add6ff;
   --vscode-editor-hoverHighlightBackground: #add6ff26;
   --vscode-editor-rangeHighlightBackground: #fdff0033;
+  /* See the Dark Modern block above (folding colors). */
+  --vscode-editor-foldBackground: #add6ff4d;
+  --vscode-editor-foldPlaceholderForeground: #808080;
+  --vscode-editorGutter-foldingControlForeground: var(
+    --vscode-icon-foreground
+  );
   /* See the Dark Modern block above (light defaults: black caret, #eeeeee
      line-highlight border). */
   --vscode-editorCursor-foreground: #000000;

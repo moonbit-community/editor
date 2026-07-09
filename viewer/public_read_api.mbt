@@ -345,23 +345,6 @@ fn Viewer::get_vertical_offset_after_position(
 // analog of Monaco's `_flushAccumulatedAndRenderNow`.
 
 ///|
-/// The reduced `EditorLayoutInfo`, Monaco's `getLayoutInfo` (`cew:1472`) trimmed
-/// to the parts the viewer renders and the read API consumes. The minimap /
-/// overview-ruler fields Monaco carries are omitted; the viewer has no glyph
-/// margin, so that width is `0` and
-/// `content_left = line_numbers_width + decorations_width` is exactly the
-/// offset `get_scrolled_visible_position` adds.
-pub(all) struct EditorLayoutInfo {
-  width : Double
-  height : Double
-  content_left : Double
-  content_width : Double
-  line_numbers_width : Double
-  glyph_margin_width : Double
-  decorations_width : Double
-} derive(Eq, Debug)
-
-///|
 /// A model position projected to scrolled viewport pixels, Monaco's
 /// `getScrolledVisiblePosition` return shape `{ top, left, height }`.
 pub(all) struct ScrolledVisiblePosition {
@@ -372,28 +355,38 @@ pub(all) struct ScrolledVisiblePosition {
 
 ///|
 /// Reduced editor layout info, Monaco's `CodeEditorWidget.getLayoutInfo`
-/// (`cew:1472`). Backed by the viewer's measured gutter width and content box;
+/// (`cew:1472`); the shape lives in `viewer/common/config/editor_options.mbt`.
+/// Backed by the viewer's measured gutter width and content box;
 /// `content_left` is the full margin (line numbers plus the line-decorations
-/// lane; the glyph-margin width is `0`). Like Monaco this does not gate on a
+/// lane; the glyph-margin terms are `0`). Like Monaco this does not gate on a
 /// model.
-pub fn Viewer::get_layout_info(self : Viewer) -> EditorLayoutInfo {
+pub fn Viewer::get_layout_info(self : Viewer) -> @config.EditorLayoutInfo {
   let content_left = self.read_api_content_left()
   let content_width = self.measured_content_width
   let height = self.measured_height
   let decorations_width = if content_left > 0.0 {
-    self.options.line_decorations_width.to_double()
+    self.layout_decorations_width()
   } else {
     // No rendered content → no gutter at all; report the lane as absent too.
     0.0
   }
+  let line_numbers_width = content_left - decorations_width
   {
     width: content_left + content_width,
     height,
+    glyph_margin_left: 0.0,
+    glyph_margin_width: 0.0,
+    line_numbers_left: 0.0,
+    line_numbers_width,
+    decorations_left: line_numbers_width,
+    decorations_width,
     content_left,
     content_width,
-    line_numbers_width: content_left - decorations_width,
-    glyph_margin_width: 0.0,
-    decorations_width,
+    // The scrollbar cluster is otherwise unmodeled; this mirrors the
+    // `default_scrollbar_size` the viewer's scrollable element renders with
+    // (`viewer/ui/scrollbar/scrollable_element.mbt`).
+    horizontal_scrollbar_height: 10.0,
+    vertical_scrollbar_width: 10.0,
   }
 }
 

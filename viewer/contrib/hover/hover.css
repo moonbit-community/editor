@@ -8,14 +8,15 @@
  * "shift up by own height" trick was tried here previously and reproducibly
  * corrupted this element's background paint in Chromium under the sizing
  * cluster's synchronous style churn.
- * `min-width` transcribes the constructor's `minimumWidth = 150`
- * (`contentHoverWidget.ts:67`); `z-index: 50` its
- * `_resizableNode.domNode.style.zIndex = '50'`. */
+ * No `min-width`: the constructor's `minimumWidth = 150` is
+ * `_resizableNode.minSize`, a sash-drag clamp only (sashes unported) — the
+ * layout pass always sizes this wrapper and `.monaco-hover` identically, and
+ * a CSS floor on the wrapper alone leaves a dead strip past the hover.
+ * `z-index: 50` transcribes `_resizableNode.domNode.style.zIndex = '50'`. */
 .monaco-resizable-hover {
   position: absolute;
   z-index: 50;
   pointer-events: auto;
-  min-width: 150px;
   cursor: default;
   user-select: text;
   box-sizing: content-box;

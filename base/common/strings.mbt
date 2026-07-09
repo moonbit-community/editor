@@ -226,6 +226,32 @@ fn to_lower_js(s : String) -> String {
 }
 
 ///|
+/// Splits `text` on `\r\n` / `\r` / `\n`. Mirrors `strings.splitLines`
+/// (strings.ts:251), whose split regex treats `\r\n` as one separator.
+pub fn split_lines(text : String) -> Array[String] {
+  let lines = []
+  let len = text.length()
+  let mut line_start = 0
+  let mut i = 0
+  while i < len {
+    let code = text[i].to_int()
+    if code == 13 { // \r
+      lines.push(text[line_start:i].to_owned())
+      if i + 1 < len && text[i + 1].to_int() == 10 {
+        i += 1 // consume the \n of a \r\n pair
+      }
+      line_start = i + 1
+    } else if code == 10 { // \n
+      lines.push(text[line_start:i].to_owned())
+      line_start = i + 1
+    }
+    i += 1
+  }
+  lines.push(text[line_start:].to_owned())
+  lines
+}
+
+///|
 /// Mirrors `strings.isLowerAsciiLetter` (strings.ts:428).
 pub fn is_lower_ascii_letter(code : Int) -> Bool {
   code >= 'a'.to_int() && code <= 'z'.to_int()

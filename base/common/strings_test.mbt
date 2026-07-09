@@ -37,3 +37,16 @@ test "startsWithIgnoreCase (strings.ts:444)" {
   assert_true(starts_with_ignore_case("alles klar", "alles k"))
   assert_false(starts_with_ignore_case("alles klar", "ö"))
 }
+
+///|
+test "splitLines (strings.ts:251)" {
+  assert_eq(split_lines("").join("|"), "")
+  assert_eq(split_lines("one").join("|"), "one")
+  assert_eq(split_lines("a\nb").join("|"), "a|b")
+  // \r\n is one separator, lone \r and \n each split.
+  assert_eq(split_lines("a\r\nb\rc\nd").join("|"), "a|b|c|d")
+  // A trailing newline yields a trailing empty line, like the JS split.
+  assert_eq(split_lines("a\n").length(), 2)
+  assert_eq(split_lines("a\n")[1], "")
+  assert_eq(split_lines("\n\n").length(), 3)
+}

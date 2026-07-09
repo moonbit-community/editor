@@ -20,6 +20,8 @@ import {
   "moonbit-community/editor/viewer/contrib/folding/browser" @folding_browser,
   "moonbit-community/editor/viewer/contrib/hover",
   "moonbit-community/editor/viewer/contrib/hover/browser" @hover_browser,
+  "moonbit-community/editor/viewer/contrib/quick_diff/common" @quick_diff,
+  "moonbit-community/editor/viewer/contrib/quick_diff/browser" @quick_diff_browser,
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/ui/scrollbar",

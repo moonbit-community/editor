@@ -90,7 +90,7 @@ pub fn LineRangeMapping::to_string(self : LineRangeMapping) -> String {
 }
 
 ///|
-pub impl Show for LineRangeMapping with output(self, logger) {
+pub impl Show for LineRangeMapping with fn output(self, logger) {
   logger.write_string(self.to_string())
 }
 
@@ -146,7 +146,7 @@ pub fn DetailedLineRangeMapping::to_string(
 }
 
 ///|
-pub impl Show for DetailedLineRangeMapping with output(self, logger) {
+pub impl Show for DetailedLineRangeMapping with fn output(self, logger) {
   logger.write_string(self.to_string())
 }
 
@@ -189,7 +189,7 @@ pub fn RangeMapping::to_string(self : RangeMapping) -> String {
 }
 
 ///|
-pub impl Show for RangeMapping with output(self, logger) {
+pub impl Show for RangeMapping with fn output(self, logger) {
   logger.write_string(self.to_string())
 }
 

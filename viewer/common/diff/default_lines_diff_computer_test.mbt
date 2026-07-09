@@ -59,7 +59,8 @@ fn apply_changes(
     for line in next_original_line..<change.original.start_line_number {
       result.push(original[line - 1])
     }
-    for line in change.modified.start_line_number..<change.modified.end_line_number_exclusive {
+    for
+      line in change.modified.start_line_number..<change.modified.end_line_number_exclusive {
       result.push(modified[line - 1])
     }
     next_original_line = change.original.end_line_number_exclusive
@@ -195,11 +196,13 @@ test "ignore trim whitespace treats reindented lines as unchanged" {
   let original = ["fn main {", "  body", "}"]
   let modified = ["fn main {", "      body", "}"]
   assert_eq(
-    hunks(compute(original, modified, options={
-      ignore_trim_whitespace: true,
-      max_computation_time_ms: 0,
-      compute_moves: false,
-    })),
+    hunks(
+      compute(original, modified, options={
+        ignore_trim_whitespace: true,
+        max_computation_time_ms: 0,
+        compute_moves: false,
+      }),
+    ),
     "",
   )
   // ...while the default options see a modification.

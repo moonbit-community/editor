@@ -108,6 +108,8 @@ pub fn set_is_windows_for_testing(value? : Bool) -> Unit
 
 pub fn single_letter_hash(Int) -> String
 
+pub fn split_lines(String) -> Array[String]
+
 pub fn starts_with_ignore_case(String, String) -> Bool
 
 pub fn to_disposable(() -> Unit) -> Disposable

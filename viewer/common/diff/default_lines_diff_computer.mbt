@@ -40,7 +40,7 @@ pub fn DefaultLinesDiffComputer::new() -> DefaultLinesDiffComputer {
 }
 
 ///|
-pub impl LinesDiffComputer for DefaultLinesDiffComputer with compute_diff(
+pub impl LinesDiffComputer for DefaultLinesDiffComputer with fn compute_diff(
   _self : DefaultLinesDiffComputer,
   original_lines : Array[String],
   modified_lines : Array[String],

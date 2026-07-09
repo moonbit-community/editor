@@ -13,6 +13,10 @@ pub(all) struct ViewerServices {
   /// enable it per resource and subscribe to its add/submit events; the
   /// viewer's agent-feedback contrib renders from it.
   agent_feedback : @agent_feedback.AgentFeedbackService
+  /// The quick-diff store (`IQuickDiffService` reduced): hosts push each
+  /// resource's baseline content and the viewer's quick-diff contrib
+  /// renders git-gutter decorations from it.
+  quick_diff : @quick_diff.QuickDiffService
   log_service : @log.LogService
 }
 
@@ -30,6 +34,7 @@ pub fn ViewerServices::new(
     markers,
     marker_decorations: @markers.MarkerDecorationsService::new(markers),
     agent_feedback: @agent_feedback.AgentFeedbackService::new(),
+    quick_diff: @quick_diff.QuickDiffService::new(),
     log_service,
   }
 }

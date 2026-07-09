@@ -84,6 +84,11 @@
      `editorForeground`. */
   --vscode-editorGutter-commentRangeForeground: #37373d;
   --vscode-editorGutter-commentGlyphForeground: #cccccc;
+  /* editorGutter.added/modified/deletedBackground: Dark Modern overrides
+     the quickDiff.ts registry defaults (dark_modern.json:39-41). */
+  --vscode-editorGutter-addedBackground: #2ea043;
+  --vscode-editorGutter-modifiedBackground: #0078d4;
+  --vscode-editorGutter-deletedBackground: #f85149;
   --vscode-toolbar-hoverBackground: #ffffff1a;
   --vscode-textLink-foreground: #4e94ce;
   --vscode-textLink-activeForeground: #4e94ce;
@@ -188,6 +193,10 @@
   --vscode-descriptionForeground: #3b3b3b;
   --vscode-editorGutter-commentRangeForeground: #d5d8e9;
   --vscode-editorGutter-commentGlyphForeground: #3b3b3b;
+  /* editorGutter.added/modified/deletedBackground (light_modern.json:39-41). */
+  --vscode-editorGutter-addedBackground: #2ea043;
+  --vscode-editorGutter-modifiedBackground: #005fb8;
+  --vscode-editorGutter-deletedBackground: #f85149;
   --vscode-toolbar-hoverBackground: #00000014;
   --vscode-textLink-foreground: #006ab1;
   --vscode-textLink-activeForeground: #0000ff;

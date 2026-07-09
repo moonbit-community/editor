@@ -71,6 +71,12 @@ async fn main {
   if folding_status != 0 {
     fail("moon build failed with exit code \{folding_status}")
   }
+  let folding_nested_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/folding_nested",
+  ])
+  if folding_nested_status != 0 {
+    fail("moon build failed with exit code \{folding_nested_status}")
+  }
 
   let source_dir = "_build/js/debug/build/internal/shell/web"
   let embed_source_dir = "_build/js/debug/build/internal/shell/examples/embedded_viewer"
@@ -83,6 +89,7 @@ async fn main {
   let agent_feedback_source_dir = "_build/js/debug/build/tests/browser/moonbit/agent_feedback"
   let model_swap_source_dir = "_build/js/debug/build/tests/browser/moonbit/model_swap"
   let folding_source_dir = "_build/js/debug/build/tests/browser/moonbit/folding"
+  let folding_nested_source_dir = "_build/js/debug/build/tests/browser/moonbit/folding_nested"
   let target_dir = "web/dist"
   let browser_tests_dir = "\{target_dir}/browser-tests"
   if !@fs.exists(target_dir) {
@@ -349,6 +356,31 @@ async fn main {
     browser_test_html(
       "MoonBit Viewer Folding Test",
       "/browser-tests/folding.mjs",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  let folding_nested_js = @fs.read_file(
+    "\{folding_nested_source_dir}/folding_nested.js",
+  ).text()
+  @fs.write_file(
+    "\{browser_tests_dir}/folding_nested.mjs",
+    folding_nested_js.replace(
+      old="//# sourceMappingURL=folding_nested.js.map",
+      new="//# sourceMappingURL=folding_nested.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/folding_nested.mjs.map",
+    @fs.read_file("\{folding_nested_source_dir}/folding_nested.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/folding_nested.html",
+    browser_test_html(
+      "MoonBit Viewer Nested Folding Test",
+      "/browser-tests/folding_nested.mjs",
     ),
     create_mode=@fs.CreateOrTruncate,
   )

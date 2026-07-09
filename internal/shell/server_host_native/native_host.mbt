@@ -627,6 +627,18 @@ fn static_route(path : String) -> (String, String)? {
       Some(("browser-tests/folding.mjs", "text/javascript; charset=utf-8"))
     "/browser-tests/folding.mjs.map" =>
       Some(("browser-tests/folding.mjs.map", "application/json; charset=utf-8"))
+    "/browser-tests/folding_nested.html" =>
+      Some(("browser-tests/folding_nested.html", "text/html; charset=utf-8"))
+    "/browser-tests/folding_nested.mjs" =>
+      Some(
+        ("browser-tests/folding_nested.mjs", "text/javascript; charset=utf-8"),
+      )
+    "/browser-tests/folding_nested.mjs.map" =>
+      Some(
+        (
+          "browser-tests/folding_nested.mjs.map", "application/json; charset=utf-8",
+        ),
+      )
     "/browser-tests/agent_feedback.mjs.map" =>
       Some(
         (

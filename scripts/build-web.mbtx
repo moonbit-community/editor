@@ -77,6 +77,12 @@ async fn main {
   if folding_nested_status != 0 {
     fail("moon build failed with exit code \{folding_nested_status}")
   }
+  let quick_diff_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/quick_diff",
+  ])
+  if quick_diff_status != 0 {
+    fail("moon build failed with exit code \{quick_diff_status}")
+  }
 
   let source_dir = "_build/js/debug/build/internal/shell/web"
   let embed_source_dir = "_build/js/debug/build/internal/shell/examples/embedded_viewer"
@@ -90,6 +96,7 @@ async fn main {
   let model_swap_source_dir = "_build/js/debug/build/tests/browser/moonbit/model_swap"
   let folding_source_dir = "_build/js/debug/build/tests/browser/moonbit/folding"
   let folding_nested_source_dir = "_build/js/debug/build/tests/browser/moonbit/folding_nested"
+  let quick_diff_source_dir = "_build/js/debug/build/tests/browser/moonbit/quick_diff"
   let target_dir = "web/dist"
   let browser_tests_dir = "\{target_dir}/browser-tests"
   if !@fs.exists(target_dir) {
@@ -381,6 +388,29 @@ async fn main {
     browser_test_html(
       "MoonBit Viewer Nested Folding Test",
       "/browser-tests/folding_nested.mjs",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  let quick_diff_js = @fs.read_file("\{quick_diff_source_dir}/quick_diff.js").text()
+  @fs.write_file(
+    "\{browser_tests_dir}/quick_diff.mjs",
+    quick_diff_js.replace(
+      old="//# sourceMappingURL=quick_diff.js.map",
+      new="//# sourceMappingURL=quick_diff.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/quick_diff.mjs.map",
+    @fs.read_file("\{quick_diff_source_dir}/quick_diff.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/quick_diff.html",
+    browser_test_html(
+      "MoonBit Viewer Quick Diff Test",
+      "/browser-tests/quick_diff.mjs",
     ),
     create_mode=@fs.CreateOrTruncate,
   )

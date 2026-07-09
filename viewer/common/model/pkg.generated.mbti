@@ -18,13 +18,9 @@ pub fn get_word_at_text(Int, String, Int) -> WordAtPosition?
 
 pub fn interval_compare(Int, Int, Int, Int) -> Int
 
-pub fn node_accept_edit(IntervalNode, Int, Int, Int, Bool) -> Unit
-
 pub fn recompute_max_end(IntervalNode) -> Unit
 
 pub let sentinel : IntervalNode
-
-pub fn set_node_stickiness(IntervalNode, TrackedRangeStickiness) -> Unit
 
 pub let usual_word_separators : String
 
@@ -88,7 +84,6 @@ pub(all) struct IntervalTree {
   mut root : IntervalNode
   mut request_normalize_delta : Bool
 }
-pub fn IntervalTree::accept_replace(Self, Int, Int, Int, Bool) -> Unit
 pub fn IntervalTree::collect_nodes_from_owner(Self, Int) -> Array[IntervalNode]
 pub fn IntervalTree::collect_nodes_post_order(Self) -> Array[IntervalNode]
 pub fn IntervalTree::delete(Self, IntervalNode) -> Unit

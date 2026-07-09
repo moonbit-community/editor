@@ -14,18 +14,15 @@
 ///   `model doesn't get confused with individual tracked ranges`,
 ///   `issue #16922`.
 ///
-/// Deferred cases (need `applyEdits` — the model is readonly; the range
-/// tracking they exercise is covered by the Phase-1 interval-tree port):
+/// N-A cases (need `applyEdits` — the model is readonly, and the interval
+/// tree's edit cluster is not ported, see `interval_tree.mbt`'s header):
 /// - the ~17 `decorations are updated when inserting/deleting …` rows,
 ///   `decorations emit event when inserting one line text before it`,
 ///   `decorations are updated when changing EOL`, and `an apparently simple
-///   edit` → covered by `interval_tree_reference_test.mbt`'s `nodeAcceptEdit`
-///   table + gen01–gen18 (`accept_replace` is ported conformance-only).
+///   edit`.
 /// - the whole "Decorations and editing" suite (62 insert/delete/replace ×
-///   collapsed × stickiness rows) → same mapping.
-/// - `issue #41492` (collapseOnReplaceEdit through `applyEdits`) → ported as
-///   a white-box case in `text_model_decorations_wbtest.mbt` driving
-///   `accept_replace` at the offset level.
+///   collapsed × stickiness rows).
+/// - `issue #41492` (collapseOnReplaceEdit through `applyEdits`).
 /// - `removeAllDecorationsWithOwnerId can be called after model dispose`:
 ///   N-A — the readonly model has no dispose lifecycle.
 ///

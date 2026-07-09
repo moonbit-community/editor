@@ -1,14 +1,9 @@
 ///| White-box tests for the TextModel decoration storage
-/// (`text_model_decorations.mbt`):
-/// - the adapted port of `modelDecorations.test.ts` `issue #41492` (needs
-///   `applyEdits`; driven here through `DecorationsTrees::accept_replace` at
-///   the offset level — see the mapping note in
-///   `model_decorations_reference_test.mbt`);
-/// - local companions for the plan's test matrix rows: emitter deferred
-///   brackets + `fire`, delta id/node reuse semantics, search filters
-///   (ownerId / filterOutValidation / margin / overview-ruler tree routing),
-///   options normalization, and the tree0↔tree1 migration in
-///   `change_decoration_options`.
+/// (`text_model_decorations.mbt`): local companions for the plan's test
+/// matrix rows — emitter deferred brackets + `fire`, delta id/node reuse
+/// semantics, search filters (ownerId / filterOutValidation / margin /
+/// overview-ruler tree routing), options normalization, and the tree0↔tree1
+/// migration in `change_decoration_options`.
 
 ///|
 fn wb_model(text : String) -> TextModel {
@@ -30,14 +25,12 @@ fn wb_model(text : String) -> TextModel {
 fn wb_options(
   class_name : String,
   stickiness? : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
-  collapse_on_replace_edit? : Bool = false,
   glyph_margin_class_name? : String,
   overview_ruler? : ModelDecorationOverviewRulerOptions,
 ) -> ModelDecorationOptions {
   ModelDecorationOptions(
     class_name,
     stickiness~,
-    collapse_on_replace_edit~,
     glyph_margin_class_name?,
     overview_ruler?,
     description="test",
@@ -62,26 +55,6 @@ fn assert_range_opt_eq(
   if actual != expected {
     fail("got \{to_repr(actual)}, expected \{to_repr(expected)}")
   }
-}
-
-///|
-test "issue #41492 (adapted): collapseOnReplaceEdit via accept_replace" {
-  // Monaco: paste over 'My First Line'[1..14) with a longer text; the
-  // NeverGrows+collapseOnReplaceEdit decoration collapses to (1,1,1,1).
-  let model = wb_model("My First Line")
-  let id = model.delta_decorations([], [
-      {
-        range: Range(1, 2, 1, 14),
-        options: wb_options(
-          "",
-          stickiness=NeverGrowsWhenTypingAtEdges,
-          collapse_on_replace_edit=true,
-        ),
-      },
-    ])[0]
-  // applyEdits(range (1,1)-(1,14), 51 chars) at the offset level:
-  model.decorations_tree.accept_replace(0, 13, 51, false)
-  assert_range_opt_eq(model.get_decoration_range(id), Some(Range(1, 1, 1, 1)))
 }
 
 ///|

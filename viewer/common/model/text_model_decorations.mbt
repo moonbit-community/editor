@@ -23,6 +23,9 @@
 //   no dispose lifecycle).
 //
 // Out-of-scope members (explicitly deferred/N-A, per plan):
+// - `DecorationsTrees.acceptReplace` and the model edit path: N-A — the
+//   readonly viewer never edits a model (the interval tree's edit cluster is
+//   not ported, see `interval_tree.mbt`'s header).
 // - Injected-text per-line events: the `LineInjectedText` event type and
 //   `recordLineAffectedByInjectedText` are DEFERRED with the whole-rebuild
 //   deviation (consumers rebuild the projection on `affects_injected_text`;
@@ -45,14 +48,10 @@
 //   ported slices.
 
 ///|
-/// `DecorationsTrees::accept_replace` (conformance-only, Deviation 1) and
 /// `DidChangeDecorationsEmitter::fire` (event-contract member with no product
-/// caller) are consumed only by `text_model_decorations_wbtest.mbt`; anchor
-/// them so the non-test build keeps them (the `moon explain 1` idiom).
-let _test_only_member_anchor : Unit = {
-  ignore(DecorationsTrees::accept_replace)
-  ignore(DidChangeDecorationsEmitter::fire)
-}
+/// caller) is consumed only by `text_model_decorations_wbtest.mbt`; anchor
+/// it so the non-test build keeps it (the `moon explain 1` idiom).
+let _test_only_member_anchor : Unit = ignore(DidChangeDecorationsEmitter::fire)
 
 ///|
 /// `MODEL_ID` (`textModel.ts:123`): process-wide model counter; each model's
@@ -486,27 +485,6 @@ fn DecorationsTrees::resolve_node(
   } else {
     self.decorations_tree_0.resolve_node(node, cached_version_id)
   }
-}
-
-///|
-/// `acceptReplace` — conformance-only in the readonly viewer (plan
-/// Deviation 1; no model edits reach it from product code).
-fn DecorationsTrees::accept_replace(
-  self : DecorationsTrees,
-  offset : Int,
-  length : Int,
-  text_length : Int,
-  force_move_markers : Bool,
-) -> Unit {
-  self.decorations_tree_0.accept_replace(
-    offset, length, text_length, force_move_markers,
-  )
-  self.decorations_tree_1.accept_replace(
-    offset, length, text_length, force_move_markers,
-  )
-  self.injected_text_decorations_tree.accept_replace(
-    offset, length, text_length, force_move_markers,
-  )
 }
 
 // #endregion

@@ -14,10 +14,11 @@
 // field is this package's `ModelDecorationOptions`, so a sibling package would cycle.
 //
 // Deviations (plan Deviations 1):
-// - `accept_replace` and the edit cluster (`node_accept_edit`,
-//   `search_for_editing`, `no_overlap_replace`) are ported for conformance
-//   (they are pure offset math exercised by Monaco's own suites) but are
-//   unreachable from product code — the viewer never edits a model.
+// - The edit cluster (`acceptReplace`, `nodeAcceptEdit`, `searchForEditing`,
+//   `noOverlapReplace`, `adjustMarkerBeforeColumn`, `MarkerMoveSemantics`) is
+//   not ported: the readonly viewer never edits a model. The delta machinery
+//   those edits fed (`delta`, `normalizeDelta`, the safe-delta bounds) stays —
+//   it is interwoven with the ported insert/delete/rotation paths.
 // - The `ClassName` squiggly constants are defined here like the source file
 //   does; the plan's "reuse `@markers` constants" is dependency-infeasible
 //   (`markers` imports `model`).
@@ -81,16 +82,10 @@ const IS_FOR_VALIDATION_MASK_INVERSE : Int = 0b11111011
 const IS_FOR_VALIDATION_OFFSET : Int = 2
 
 ///|
-const STICKINESS_MASK : Int = 0b00011000
-
-///|
 const STICKINESS_MASK_INVERSE : Int = 0b11100111
 
 ///|
 const STICKINESS_OFFSET : Int = 3
-
-///|
-const COLLAPSE_ON_REPLACE_EDIT_MASK : Int = 0b00100000
 
 ///|
 const COLLAPSE_ON_REPLACE_EDIT_MASK_INVERSE : Int = 0b11011111
@@ -202,14 +197,6 @@ fn set_node_affects_font(node : IntervalNode, value : Bool) -> Unit {
 }
 
 ///|
-/// `getNodeStickiness` (`intervalTree.ts:121-123`).
-fn get_node_stickiness(node : IntervalNode) -> TrackedRangeStickiness {
-  TrackedRangeStickiness::from_int(
-    (node.metadata & STICKINESS_MASK) >> STICKINESS_OFFSET,
-  )
-}
-
-///|
 /// `_setNodeStickiness` (`intervalTree.ts:124-128`).
 fn set_node_stickiness_int(node : IntervalNode, stickiness : Int) -> Unit {
   node.metadata = (node.metadata & STICKINESS_MASK_INVERSE) |
@@ -217,27 +204,10 @@ fn set_node_stickiness_int(node : IntervalNode, stickiness : Int) -> Unit {
 }
 
 ///|
-/// `getCollapseOnReplaceEdit` (`intervalTree.ts:129-131`).
-fn get_collapse_on_replace_edit(node : IntervalNode) -> Bool {
-  (node.metadata & COLLAPSE_ON_REPLACE_EDIT_MASK) >>
-  COLLAPSE_ON_REPLACE_EDIT_OFFSET ==
-  1
-}
-
-///|
 /// `setCollapseOnReplaceEdit` (`intervalTree.ts:132-136`).
 fn set_collapse_on_replace_edit(node : IntervalNode, value : Bool) -> Unit {
   node.metadata = (node.metadata & COLLAPSE_ON_REPLACE_EDIT_MASK_INVERSE) |
     ((if value { 1 } else { 0 }) << COLLAPSE_ON_REPLACE_EDIT_OFFSET)
-}
-
-///|
-/// `setNodeStickiness` (public wrapper, `intervalTree.ts:137-139`).
-pub fn set_node_stickiness(
-  node : IntervalNode,
-  stickiness : TrackedRangeStickiness,
-) -> Unit {
-  set_node_stickiness_int(node, stickiness.to_int())
 }
 
 ///|
@@ -515,47 +485,6 @@ pub fn IntervalTree::resolve_node(
 }
 
 ///|
-/// `acceptReplace` (`intervalTree.ts:306-333`). Conformance-only in the
-/// readonly viewer (plan Deviation 1): remove all directly impacted nodes,
-/// edit the remainder in place, then edit and re-insert the removed ones.
-pub fn IntervalTree::accept_replace(
-  self : IntervalTree,
-  offset : Int,
-  length : Int,
-  text_length : Int,
-  force_move_markers : Bool,
-) -> Unit {
-  // (1) collect all nodes that are intersecting this edit as nodes of interest
-  let nodes_of_interest = search_for_editing(self, offset, offset + length)
-
-  // (2) remove all nodes that are intersecting this edit
-  for node in nodes_of_interest {
-    rb_tree_delete(self, node)
-  }
-  self.normalize_delta_if_necessary()
-
-  // (3) edit all tree nodes except the nodes of interest
-  no_overlap_replace(self, offset, offset + length, text_length)
-  self.normalize_delta_if_necessary()
-
-  // (4) edit the nodes of interest and insert them back in the tree
-  for node in nodes_of_interest {
-    node.start = node.cached_absolute_start
-    node.end = node.cached_absolute_end
-    node_accept_edit(
-      node,
-      offset,
-      offset + length,
-      text_length,
-      force_move_markers,
-    )
-    node.max_end = node.end
-    ignore(rb_tree_insert(self, node))
-  }
-  self.normalize_delta_if_necessary()
-}
-
-///|
 /// `getAllInOrder` (`intervalTree.ts:335-337`).
 pub fn IntervalTree::get_all_in_order(
   self : IntervalTree,
@@ -610,321 +539,6 @@ fn normalize_delta(t : IntervalTree) -> Unit {
       delta -= node.parent().delta
     }
     node = node.parent()
-  }
-  set_node_is_visited(t.root, false)
-}
-
-// #endregion
-
-// #region Editing
-
-///|
-/// `MarkerMoveSemantics` (`intervalTree.ts:390-394`).
-priv enum MarkerMoveSemantics {
-  MarkerDefined
-  ForceMove
-  ForceStay
-} derive(Eq)
-
-///|
-/// `adjustMarkerBeforeColumn` (`intervalTree.ts:396-410`).
-fn adjust_marker_before_column(
-  marker_offset : Int,
-  marker_stick_to_previous_character : Bool,
-  check_offset : Int,
-  move_semantics : MarkerMoveSemantics,
-) -> Bool {
-  if marker_offset < check_offset {
-    return true
-  }
-  if marker_offset > check_offset {
-    return false
-  }
-  if move_semantics == ForceMove {
-    return false
-  }
-  if move_semantics == ForceStay {
-    return true
-  }
-  marker_stick_to_previous_character
-}
-
-///|
-/// `nodeAcceptEdit` (`intervalTree.ts:416-490`). This is a lot more
-/// complicated than strictly necessary to maintain the same behaviour as when
-/// decorations were implemented using two markers.
-pub fn node_accept_edit(
-  node : IntervalNode,
-  start : Int,
-  end : Int,
-  text_length : Int,
-  force_move_markers : Bool,
-) -> Unit {
-  let node_stickiness = get_node_stickiness(node)
-  let start_stick_to_previous_character = node_stickiness ==
-    AlwaysGrowsWhenTypingAtEdges ||
-    node_stickiness == GrowsOnlyWhenTypingBefore
-  let end_stick_to_previous_character = node_stickiness ==
-    NeverGrowsWhenTypingAtEdges ||
-    node_stickiness == GrowsOnlyWhenTypingBefore
-  let deleting_cnt = end - start
-  let inserting_cnt = text_length
-  let common_length = if deleting_cnt < inserting_cnt {
-    deleting_cnt
-  } else {
-    inserting_cnt
-  }
-  let node_start = node.start
-  let mut start_done = false
-  let node_end = node.end
-  let mut end_done = false
-  if start <= node_start &&
-    node_end <= end &&
-    get_collapse_on_replace_edit(node) {
-    // This edit encompasses the entire decoration range
-    // and the decoration has asked to become collapsed
-    node.start = start
-    start_done = true
-    node.end = start
-    end_done = true
-  }
-
-  //
-  {
-    let move_semantics = if force_move_markers {
-      MarkerMoveSemantics::ForceMove
-    } else if deleting_cnt > 0 {
-      ForceStay
-    } else {
-      MarkerDefined
-    }
-    if !start_done &&
-      adjust_marker_before_column(
-        node_start, start_stick_to_previous_character, start, move_semantics,
-      ) {
-      start_done = true
-    }
-    if !end_done &&
-      adjust_marker_before_column(
-        node_end, end_stick_to_previous_character, start, move_semantics,
-      ) {
-      end_done = true
-    }
-  }
-  if common_length > 0 && !force_move_markers {
-    let move_semantics = if deleting_cnt > inserting_cnt {
-      ForceStay
-    } else {
-      MarkerDefined
-    }
-    if !start_done &&
-      adjust_marker_before_column(
-        node_start,
-        start_stick_to_previous_character,
-        start + common_length,
-        move_semantics,
-      ) {
-      start_done = true
-    }
-    if !end_done &&
-      adjust_marker_before_column(
-        node_end,
-        end_stick_to_previous_character,
-        start + common_length,
-        move_semantics,
-      ) {
-      end_done = true
-    }
-  }
-
-  //
-  {
-    let move_semantics = if force_move_markers {
-      MarkerMoveSemantics::ForceMove
-    } else {
-      MarkerDefined
-    }
-    if !start_done &&
-      adjust_marker_before_column(
-        node_start, start_stick_to_previous_character, end, move_semantics,
-      ) {
-      node.start = start + inserting_cnt
-      start_done = true
-    }
-    if !end_done &&
-      adjust_marker_before_column(
-        node_end, end_stick_to_previous_character, end, move_semantics,
-      ) {
-      node.end = start + inserting_cnt
-      end_done = true
-    }
-  }
-
-  // Finish
-  let delta_column = inserting_cnt - deleting_cnt
-  if !start_done {
-    node.start = if node_start + delta_column > 0 {
-      node_start + delta_column
-    } else {
-      0
-    }
-  }
-  if !end_done {
-    node.end = if node_end + delta_column > 0 {
-      node_end + delta_column
-    } else {
-      0
-    }
-  }
-  if node.start > node.end {
-    node.end = node.start
-  }
-}
-
-///|
-/// `searchForEditing` (`intervalTree.ts:492-562`): collect all nodes
-/// overlapping the edit, caching their absolute offsets with version 0.
-fn search_for_editing(
-  t : IntervalTree,
-  start : Int,
-  end : Int,
-) -> Array[IntervalNode] {
-  // https://en.wikipedia.org/wiki/Interval_tree#Augmented_tree
-  // Now, it is known that two intervals A and B overlap only when both
-  // A.low <= B.high and A.high >= B.low. When searching the trees for
-  // nodes overlapping with a given interval, you can immediately skip:
-  //  a) all nodes to the right of nodes whose low value is past the end of the given interval.
-  //  b) all nodes that have their maximum 'high' value below the start of the given interval.
-  let mut node = t.root
-  let mut delta = 0
-  let mut node_max_end = 0
-  let mut node_start = 0
-  let mut node_end = 0
-  let result : Array[IntervalNode] = []
-  while !physical_equal(node, sentinel) {
-    if get_node_is_visited(node) {
-      // going up from this node
-      set_node_is_visited(node.left(), false)
-      set_node_is_visited(node.right(), false)
-      if physical_equal(node, node.parent().right()) {
-        delta -= node.parent().delta
-      }
-      node = node.parent()
-      continue
-    }
-    if !get_node_is_visited(node.left()) {
-      // first time seeing this node
-      node_max_end = delta + node.max_end
-      if node_max_end < start {
-        // cover case b) from above
-        // there is no need to search this node or its children
-        set_node_is_visited(node, true)
-        continue
-      }
-      if !physical_equal(node.left(), sentinel) {
-        // go left
-        node = node.left()
-        continue
-      }
-    }
-
-    // handle current node
-    node_start = delta + node.start
-    if node_start > end {
-      // cover case a) from above
-      // there is no need to search this node or its right subtree
-      set_node_is_visited(node, true)
-      continue
-    }
-    node_end = delta + node.end
-    if node_end >= start {
-      node.set_cached_offsets(node_start, node_end, 0)
-      result.push(node)
-    }
-    set_node_is_visited(node, true)
-    if !physical_equal(node.right(), sentinel) &&
-      !get_node_is_visited(node.right()) {
-      // go right
-      delta += node.delta
-      node = node.right()
-      continue
-    }
-  }
-  set_node_is_visited(t.root, false)
-  result
-}
-
-///|
-/// `noOverlapReplace` (`intervalTree.ts:564-632`): shift every node strictly
-/// right of the edit by the edit delta, flag delta overflow, and recompute
-/// `max_end` on the way back up.
-fn no_overlap_replace(
-  t : IntervalTree,
-  start : Int,
-  end : Int,
-  text_length : Int,
-) -> Unit {
-  // https://en.wikipedia.org/wiki/Interval_tree#Augmented_tree
-  // Now, it is known that two intervals A and B overlap only when both
-  // A.low <= B.high and A.high >= B.low. When searching the trees for
-  // nodes overlapping with a given interval, you can immediately skip:
-  //  a) all nodes to the right of nodes whose low value is past the end of the given interval.
-  //  b) all nodes that have their maximum 'high' value below the start of the given interval.
-  let mut node = t.root
-  let mut delta = 0
-  let mut node_max_end = 0
-  let mut node_start = 0
-  let edit_delta = text_length - (end - start)
-  while !physical_equal(node, sentinel) {
-    if get_node_is_visited(node) {
-      // going up from this node
-      set_node_is_visited(node.left(), false)
-      set_node_is_visited(node.right(), false)
-      if physical_equal(node, node.parent().right()) {
-        delta -= node.parent().delta
-      }
-      recompute_max_end(node)
-      node = node.parent()
-      continue
-    }
-    if !get_node_is_visited(node.left()) {
-      // first time seeing this node
-      node_max_end = delta + node.max_end
-      if node_max_end < start {
-        // cover case b) from above
-        // there is no need to search this node or its children
-        set_node_is_visited(node, true)
-        continue
-      }
-      if !physical_equal(node.left(), sentinel) {
-        // go left
-        node = node.left()
-        continue
-      }
-    }
-
-    // handle current node
-    node_start = delta + node.start
-    if node_start > end {
-      node.start += edit_delta
-      node.end += edit_delta
-      node.delta += edit_delta
-      if node.delta < MIN_SAFE_DELTA || node.delta > MAX_SAFE_DELTA {
-        t.request_normalize_delta = true
-      }
-      // cover case a) from above
-      // there is no need to search this node or its right subtree
-      set_node_is_visited(node, true)
-      continue
-    }
-    set_node_is_visited(node, true)
-    if !physical_equal(node.right(), sentinel) &&
-      !get_node_is_visited(node.right()) {
-      // go right
-      delta += node.delta
-      node = node.right()
-      continue
-    }
   }
   set_node_is_visited(t.root, false)
 }

@@ -130,12 +130,27 @@ test "omitted services are owned and Viewer disposal is idempotent" {
   seed_lifecycle_marker(services, model)
   viewer.set_model(Some(model))
   let mut dispose_events = 0
-  viewer.on_did_dispose(() => dispose_events += 1) |> ignore
+  let contribution_alive_in_event = Ref(false)
+  let lifetime_store_alive_in_event = Ref(false)
+  let model_detached_in_event = Ref(false)
+  viewer.on_did_dispose(() => {
+    dispose_events += 1
+    contribution_alive_in_event.val = viewer.get_contribution(
+        "editor.contrib.contentHover",
+      )
+      is Some(_)
+    lifetime_store_alive_in_event.val = !viewer.lifetime_disposables.is_empty()
+    model_detached_in_event.val = viewer.get_model() is None
+  })
+  |> ignore
   viewer.dispose()
   viewer.dispose()
   assert_true(viewer.owns_services)
   assert_true(viewer.disposed)
   assert_eq(dispose_events, 1)
+  assert_true(contribution_alive_in_event.val)
+  assert_true(lifetime_store_alive_in_event.val)
+  assert_true(model_detached_in_event.val)
   assert_eq(viewer.lifetime_disposables.length(), 0)
   assert_true(viewer.render_frame is None)
   assert_true(viewer.container is None)

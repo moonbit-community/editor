@@ -72,9 +72,28 @@ extern "js" fn view_lifecycle_test_clear_count() -> Int =
   #| () => globalThis.__viewLifecycleClearCount
 
 ///|
+extern "js" fn view_lifecycle_test_has_parent(
+  child : @rdom.Element,
+  parent : @rdom.Element,
+) -> Bool =
+  #| (child, parent) => child.parentNode === parent
+
+///|
 test "View disposes ViewParts before its lifetime store exactly once" {
   install_view_lifecycle_test_browser()
   let view = View::new()
+  assert_true(
+    view_lifecycle_test_has_parent(
+      view.content_widgets.overflowing_content_widgets_dom_node(),
+      view.root,
+    ),
+  )
+  assert_true(
+    view_lifecycle_test_has_parent(
+      view.overlay_widgets.overflowing_overlay_widgets_dom_node(),
+      view.root,
+    ),
+  )
   let scrollable = view.editor_scrollbar.scrollable()
   scrollable.update_from_model(
     { width: 100.0, scroll_width: 1000.0, height: 100.0, scroll_height: 1000.0 },

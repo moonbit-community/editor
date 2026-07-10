@@ -185,6 +185,35 @@ test "set_value refreshes one owner once without acquiring another lease" {
 }
 
 ///|
+test "lease release disposes owner before deleting registration indexes" {
+  let markers = MarkerService::new()
+  let uri = lifecycle_uri("file", "/release-order.mbt")
+  markers.change_one("host", uri, [lifecycle_marker("ordered")])
+  let service = MarkerDecorationsService::new(markers)
+  let model = lifecycle_model(uri, "release-order.mbt", "alpha")
+  let lease = service.acquire_model(model)
+  let saw_source_order = Ref(false)
+  let model_subscription = model.on_did_change_decorations(_ => {
+    match service.model_registrations.get(model.instance_id) {
+      Some(registration) =>
+        saw_source_order.val = !registration.active &&
+          registration.content_subscription is None &&
+          registration.dispose_subscription is None &&
+          service.model_ids_by_uri.contains(uri.to_string())
+      None => ()
+    }
+  })
+
+  lease.dispose()
+  assert_true(saw_source_order.val)
+  assert_false(service.model_registrations.contains(model.instance_id))
+  assert_false(service.model_ids_by_uri.contains(uri.to_string()))
+  model_subscription.dispose()
+  model.dispose()
+  service.dispose()
+}
+
+///|
 test "service disposal blocks reentrant marker and model ingress first" {
   let markers = MarkerService::new()
   let uri = lifecycle_uri("file", "/dispose-reentrant.mbt")
@@ -299,7 +328,17 @@ fn assert_active_model_dispose_cleanup(
   let service = MarkerDecorationsService::new(markers)
   let model = lifecycle_model(uri, "active-dispose.mbt", "value")
   let lease = service.acquire_model(model)
+  let saw_source_order = Ref(false)
+  let model_subscription = model.on_did_change_decorations(_ => {
+    match service.model_registrations.get(model.instance_id) {
+      Some(registration) =>
+        saw_source_order.val = !registration.active &&
+          service.model_ids_by_uri.contains(uri.to_string())
+      None => ()
+    }
+  })
   model.dispose()
+  assert_true(saw_source_order.val)
   assert_eq(service.model_registrations.length(), 0)
   assert_eq(service.model_ids_by_uri.length(), 0)
   assert_eq(
@@ -311,6 +350,7 @@ fn assert_active_model_dispose_cleanup(
     },
   )
   lease.dispose()
+  model_subscription.dispose()
   service.dispose()
 }
 

@@ -238,10 +238,14 @@ fn MarkerDecorationsService::remove_model_registration(
   }
   registration.active = false
   self.blocked_model_ids.set(model_id, ())
+  // Source order is observable through the model-decoration callback fired by
+  // owner disposal: make the owner inert first, dispose it while both indexes
+  // still identify the registration, then delete those indexes. `active` and
+  // `blocked_model_ids` prevent every reentrant update/acquisition lane.
+  self.finalize_registration(registration, reason)
   self.model_registrations.remove(model_id)
   self.remove_model_from_uri_index(registration.model.uri, model_id)
   self.legacy_leases.remove(model_id)
-  self.finalize_registration(registration, reason)
   match reason {
     LeaseReleased => self.blocked_model_ids.remove(model_id)
     ModelDisposed =>

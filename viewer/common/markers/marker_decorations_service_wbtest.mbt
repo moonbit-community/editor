@@ -29,6 +29,37 @@ test "MarkerDecorations diff: no-op and add/remove" {
 }
 
 ///|
+test "MarkerDecorations diff preserves duplicate multiplicity" {
+  let model = @model.TextModel(
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="model",
+      path="/duplicate-diff.mbt",
+    ),
+    "",
+    "moonbit",
+    1,
+    "rev",
+    "hello world",
+  )
+  let md = MarkerDecorations::new(model)
+  let first = make_marker(Error, 1, 1, 1, 3)
+  let second = make_marker(Error, 1, 1, 1, 3)
+  assert_true(md.update([first, second]))
+  assert_eq(md.get_markers().length(), 2)
+
+  // A fresh but structurally equal singleton matches one occurrence and
+  // removes exactly the other, just as Monaco's identity-keyed map does.
+  assert_true(md.update([make_marker(Error, 1, 1, 1, 3)]))
+  assert_eq(md.get_markers().length(), 1)
+  // Growing the duplicate multiset again adds exactly one decoration.
+  assert_true(
+    md.update([make_marker(Error, 1, 1, 1, 3), make_marker(Error, 1, 1, 1, 3)]),
+  )
+  assert_eq(md.get_markers().length(), 2)
+}
+
+///|
 test "MarkerDecorationsService fires change event and honors suppression" {
   let markers = MarkerService::new()
   let svc = MarkerDecorationsService::new(markers)

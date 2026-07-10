@@ -8,9 +8,9 @@
 ///|
 /// Per-model marker decorations, `MarkerDecorations`
 /// (`markerDecorationsService.ts:132`). The `BidirectionalMap<IMarker, id>` is
-/// an entry list keyed by structural marker equality (Monaco compares marker
-/// references, which are stable when unchanged, so structural equality is
-/// observationally equivalent).
+/// represented as an entry list. Monaco compares stable marker references;
+/// the local marker bridge recreates values, so updates pair structurally equal
+/// entries one occurrence at a time. This preserves duplicate multiplicity.
 priv struct MarkerDecorations {
   model : @model.TextModel
   mut entries : Array[(Marker, String)]
@@ -70,20 +70,38 @@ fn MarkerDecorations::update(
   }
   self.generation += 1
   let generation = self.generation
-  // We use the fact that marker instances are not recreated when different
-  // owners update. So we can compare (structurally) to find out what changed
-  // since the last update.
-  let current = self.entries.map(e => e.0)
-  let added = markers.filter(m => !current.contains(m))
-  let removed = current.filter(m => !markers.contains(m))
-  if added.length() == 0 && removed.length() == 0 {
-    return false
-  }
-  let old_ids : Array[String] = []
-  for entry in self.entries {
-    if removed.contains(entry.0) {
-      old_ids.push(entry.1)
+  // Pair each incoming marker with at most one structurally equal live entry.
+  // A set-style `contains` diff loses multiplicity: shrinking two identical
+  // diagnostics to one would otherwise retain both decorations. Monaco's
+  // identity-keyed map distinguishes those marker objects, so this stable
+  // multiset pairing is the local equivalent.
+  let matched_entries = Array::make(self.entries.length(), false)
+  let added : Array[Marker] = []
+  for marker in markers {
+    let mut matched_index = -1
+    for index in 0..<self.entries.length() {
+      if !matched_entries[index] && self.entries[index].0 == marker {
+        matched_index = index
+        break
+      }
     }
+    if matched_index >= 0 {
+      matched_entries[matched_index] = true
+    } else {
+      added.push(marker)
+    }
+  }
+  let retained : Array[(Marker, String)] = []
+  let old_ids : Array[String] = []
+  for index in 0..<self.entries.length() {
+    if matched_entries[index] {
+      retained.push(self.entries[index])
+    } else {
+      old_ids.push(self.entries[index].1)
+    }
+  }
+  if added.length() == 0 && old_ids.length() == 0 {
+    return false
   }
   let new_decorations : Array[@model.ModelDeltaDecoration] = added.map(marker => {
     let range = create_decoration_range(self.model, marker)
@@ -99,7 +117,7 @@ fn MarkerDecorations::update(
     let _ = self.model.delta_decorations(stale_ids, [])
     return false
   }
-  self.entries = self.entries.filter(e => markers.contains(e.0))
+  self.entries = retained
   for index in 0..<ids.length() {
     self.entries.push((added[index], ids[index]))
   }

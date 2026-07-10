@@ -858,6 +858,10 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   }
   self.disposed = true
   self.cancel_render_frame()
+  // `CodeEditorWidget.dispose` clears widget registries before model teardown.
+  // The contribution instances and Viewer-lifetime store remain live until
+  // after `onDidDispose` fires (they are owned by the source base store).
+  self.overlay_widgets.clear()
   // The model detaches silently (no `onDidChangeModel`), but the owner-id
   // sweep still runs (`_postDetachModelCleanup`).
   match self.detach_model() {
@@ -865,28 +869,28 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
       detached.remove_all_decorations_with_owner_id(self.editor_id)
     None => ()
   }
-  // Contributions dispose with the editor (`codeEditorWidget.dispose` →
-  // `this._contributions.dispose()`).
-  for _, contribution in self.contributions {
-    (contribution.dispose)()
-  }
-  self.contributions = {}
-  self.dispose_lifetime_disposables()
-  // Viewer-owned attach DOM is removed; the caller's host stays mounted and
-  // is merely forgotten. `detach_model` deliberately did not re-append the
-  // placeholder because `disposed` was set before teardown began.
+  self.view_zones = []
+  // Viewer-owned attach DOM is removed before the dispose event; the caller's
+  // host remains mounted and is merely forgotten after observers return.
   match (self.container, self.placeholder_element) {
     (Some(host), Some(placeholder)) =>
       remove_element_if_contained(host, placeholder)
     _ => ()
   }
+  self.did_dispose.fire(())
+  // Contributions dispose with the editor (`codeEditorWidget.dispose` →
+  // `_onDidDispose.fire()` → `super.dispose()` → contributions/base store).
+  for _, contribution in self.contributions {
+    (contribution.dispose)()
+  }
+  self.contributions = {}
+  self.dispose_lifetime_disposables()
   self.container = None
   self.placeholder_element = None
   self.placeholder_text = None
   self.mouse_handler = None
   self.editor_has_focus = false
   self.last_scroll_event = None
-  self.view_zones = []
   self.overlay_widgets.clear()
   match self.content_hover_widget {
     Some(widget) => widget.scrollable.dispose()
@@ -899,7 +903,6 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.horizontal_reveal_request = None
   self.measure_requested = false
   self.scroll_dirty = false
-  self.did_dispose.fire(())
   self.did_change_model.dispose()
   self.did_change_model_content.dispose()
   self.did_change_cursor_position.dispose()

@@ -296,6 +296,42 @@ test "decoration queries are scoped by editor id like Monaco" {
 }
 
 ///|
+test "editor ids are process-unique and preincrement in construction order" {
+  let first = Viewer::Viewer()
+  let second = Viewer::Viewer()
+  assert_eq(second.editor_id, first.editor_id + 1)
+  first.dispose()
+  second.dispose()
+}
+
+///|
+test "model change fires before outgoing owner decorations are swept" {
+  let viewer = Viewer::Viewer()
+  let model = test_model("alpha")
+  viewer.set_model(Some(model))
+  let ids = viewer.delta_decorations([], [
+    {
+      range: Range(1, 1, 1, 3),
+      options: ModelDecorationOptions("owned", description="ordering"),
+    },
+  ])
+  assert_eq(ids.length(), 1)
+  let decorations_seen_in_event = Ref(-1)
+  let subscription = viewer.on_did_change_model(_ => {
+    decorations_seen_in_event.val = model
+      .get_all_decorations(owner_id=viewer.editor_id)
+      .length()
+  })
+
+  viewer.set_model(None)
+  assert_eq(decorations_seen_in_event.val, 1)
+  assert_eq(model.get_all_decorations(owner_id=viewer.editor_id).length(), 0)
+  subscription.dispose()
+  viewer.dispose()
+  model.dispose()
+}
+
+///|
 /// Single-state toy tokenizer tagging the first character as a keyword — the
 /// encoder's gap fill makes every non-empty line exactly two tokens, so the
 /// token count discriminates a registry hit (2) from the null fallback (1).

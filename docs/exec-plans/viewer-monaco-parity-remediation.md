@@ -327,9 +327,12 @@ The independent closing task is:
   rows were mechanically contiguous but umbrella rows compressed declared
   members/branches/CSS facts and two derived notes were counted as source.
   No product/test file changed.
-- 2026-07-10: the corrected async-model-features inventory stop gate has
-  759/759 TODO rows (156 inlay-controller, 41 inlay-fragment, 489 hover, and
-  73 model-version/cancellation members), plus the separate 87-row current-
-  MoonBit ownership/test-authority audit and a branch-derived matrix. The
-  corrected documentation must be committed and independently approved before
+- 2026-07-10: corrected inventory commit `811e1a2` was also rejected at Gate B.
+  Its 759 rows still compressed nested callbacks, interface/object properties,
+  DOM/CSS/custom properties, and exact arithmetic. No product/test file changed.
+- 2026-07-10: the calibrated async-model-features inventory stop gate has
+  924/924 TODO rows (248 inlay-controller, 58 inlay-fragment, 529 hover, and
+  89 model-version/cancellation members), plus the separate 87-row current-
+  MoonBit ownership/test-authority audit and branch-derived matrix. The
+  calibrated documentation must be committed and independently approved before
   implementation.

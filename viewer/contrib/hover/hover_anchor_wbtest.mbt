@@ -150,3 +150,49 @@ test "marker participant filters by anchor-line columns with the showIfCollapsed
     0,
   )
 }
+
+///|
+test "marker participant isolates distinct live models sharing one URI" {
+  let uri = try! @base_common.Uri::from(
+    scheme="file",
+    authority="model",
+    path="/same-uri-hover.mbt",
+  )
+  let model_a : @model.TextModel = TextModel(
+    uri, "a.mbt", "moonbit", 1, "a", "alpha",
+  )
+  let model_b : @model.TextModel = TextModel(
+    uri, "b.mbt", "moonbit", 1, "b", "x yz",
+  )
+  let markers = @markers.MarkerService::new()
+  // The same raw empty range expands against each model's own word facts:
+  // A -> [1,6), B -> [3,5). A URI-union hover lookup would therefore leak
+  // A's marker into B at column 1.
+  markers.set_diagnostics("host", uri, [
+    {
+      range: Range(1, 3, 1, 3),
+      severity: Error,
+      message: "same URI",
+      tags: None,
+    },
+  ])
+  let marker_decorations = @markers.MarkerDecorationsService::new(markers)
+  let lease_a = marker_decorations.acquire_model(model_a)
+  let lease_b = marker_decorations.acquire_model(model_b)
+  let participant = MarkerHoverParticipant::new(marker_decorations)
+
+  let compute = (model : @model.TextModel, column : Int) => {
+    participant.compute_sync({
+      model,
+      anchor: range_anchor(1, column, column),
+      inlay_hints: [],
+    })
+  }
+  assert_eq(compute(model_a, 1).length(), 1)
+  assert_eq(compute(model_b, 1).length(), 0)
+  assert_eq(compute(model_b, 3).length(), 1)
+
+  lease_b.dispose()
+  lease_a.dispose()
+  marker_decorations.dispose()
+}

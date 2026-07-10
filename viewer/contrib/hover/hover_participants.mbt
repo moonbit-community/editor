@@ -123,7 +123,7 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
   }
   let max_column = ctx.model.get_line_max_column(line_number)
   let parts : Array[HoverPart] = []
-  for entry in self.marker_decorations.get_live_markers(ctx.model.uri) {
+  for entry in self.marker_decorations.get_live_markers_for_model(ctx.model) {
     let (range, marker) = entry
     // `editor.getLineDecorations(lineNumber)`: only decorations touching the
     // anchor line participate.

@@ -11,23 +11,48 @@
 /// an entry list keyed by structural marker equality (Monaco compares marker
 /// references, which are stable when unchanged, so structural equality is
 /// observationally equivalent).
-struct MarkerDecorations {
+priv struct MarkerDecorations {
   model : @model.TextModel
   mut entries : Array[(Marker, String)]
+  mut disposed : Bool
+  mut generation : Int
 }
 
 ///|
 /// Builds an empty per-model decoration map bound to `model`.
 fn MarkerDecorations::new(model : @model.TextModel) -> MarkerDecorations {
-  { model, entries: [] }
+  { model, entries: [], disposed: false, generation: 0 }
 }
 
 ///|
 /// The ctor's dispose hook (`markerDecorationsService.ts:140-143`): remove
 /// this owner's decorations from the model and clear the map.
 fn MarkerDecorations::dispose(self : MarkerDecorations) -> Unit {
-  let _ = self.model.delta_decorations(self.entries.map(e => e.1), [])
+  if !self.disposed {
+    self.disposed = true
+    self.generation += 1
+    self.clear()
+  }
+}
+
+///|
+/// Clears the current decoration ids without ending this model owner's
+/// lifetime. A whole-model content flush destroys the model's decoration tree;
+/// the retained owner uses this reset before seeding fresh ids from the marker
+/// store. It is deliberately not `dispose`: `set_value` does not release or
+/// reacquire the model registration.
+fn MarkerDecorations::reset(self : MarkerDecorations) -> Unit {
+  if !self.disposed {
+    self.generation += 1
+    self.clear()
+  }
+}
+
+///|
+fn MarkerDecorations::clear(self : MarkerDecorations) -> Unit {
+  let old_ids = self.entries.map(e => e.1)
   self.entries = []
+  let _ = self.model.delta_decorations(old_ids, [])
 }
 
 ///|
@@ -40,6 +65,11 @@ fn MarkerDecorations::update(
   self : MarkerDecorations,
   markers : Array[Marker],
 ) -> Bool {
+  if self.disposed {
+    return false
+  }
+  self.generation += 1
+  let generation = self.generation
   // We use the fact that marker instances are not recreated when different
   // owners update. So we can compare (structurally) to find out what changed
   // since the last update.
@@ -60,6 +90,15 @@ fn MarkerDecorations::update(
     { range, options: create_decoration_option(marker) }
   })
   let ids = self.model.delta_decorations(old_ids, new_decorations)
+  // `delta_decorations` fires the model event before it returns. A listener
+  // may synchronously release this owner or flush the model; do not resurrect
+  // ids after that terminal/reset transition.
+  if self.disposed || self.generation != generation {
+    let newer_ids = self.entries.map(entry => entry.1)
+    let stale_ids = ids.filter(id => !newer_ids.contains(id))
+    let _ = self.model.delta_decorations(stale_ids, [])
+    return false
+  }
   self.entries = self.entries.filter(e => markers.contains(e.0))
   for index in 0..<ids.length() {
     self.entries.push((added[index], ids[index]))

@@ -2,16 +2,46 @@
 // vscode/src/vs/editor/common/services/markerDecorationsService.ts
 
 ///|
-/// Converts marker state into render decorations and the live-marker lookup,
-/// `MarkerDecorationsService` (`markerDecorationsService.ts:24`). Models are
-/// registered by the viewer (`on_model_added`/`on_model_removed`) in place of
-/// Monaco's `IModelService` seeding.
+/// Why an active model registration is being finalized. The local viewer has
+/// no process-wide `IModelService`, so editor leases and a real model disposal
+/// are deliberately different authorities.
+priv enum ModelRegistrationRemovalReason {
+  LeaseReleased
+  ModelDisposed
+  ServiceDisposed
+}
+
+///|
+/// One identity-owned decoration projection. Reacquiring the exact same
+/// `TextModel` increments `ref_count`; it never adds another model watch.
+priv struct ModelMarkerRegistration {
+  model : @model.TextModel
+  marker_decorations : MarkerDecorations
+  mut ref_count : Int
+  mut active : Bool
+  mut content_subscription : @base_common.Disposable?
+  mut dispose_subscription : @base_common.Disposable?
+  mut update_in_progress : Bool
+  mut update_requested : Bool
+  mut reset_requested : Bool
+}
+
+///|
+/// Converts marker state into render decorations and live-marker lookups,
+/// `MarkerDecorationsService` (`markerDecorationsService.ts:24`). In place of
+/// Monaco's global `IModelService`, callers acquire identity-keyed leases. A
+/// secondary URI index preserves source-compatible URI queries while allowing
+/// distinct live models to share one URI.
 pub struct MarkerDecorationsService {
-  markers : MarkerService
-  marker_decorations : Map[String, MarkerDecorations]
-  suppressed_ranges : Map[String, Array[@base_common.Range]]
-  did_change_marker_decorations : @base_common.Emitter[@model.TextModel]
-  mut subscription : @base_common.Disposable?
+  priv markers : MarkerService
+  priv model_registrations : Map[String, ModelMarkerRegistration]
+  priv model_ids_by_uri : Map[String, Array[String]]
+  priv blocked_model_ids : Map[String, Unit]
+  priv legacy_leases : Map[String, @base_common.Disposable]
+  priv suppressed_ranges : Map[String, Array[@base_common.Range]]
+  priv did_change_marker_decorations : @base_common.Emitter[@model.TextModel]
+  priv mut subscription : @base_common.Disposable?
+  priv mut disposed : Bool
 }
 
 ///|
@@ -22,10 +52,14 @@ pub fn MarkerDecorationsService::new(
 ) -> MarkerDecorationsService {
   let service : MarkerDecorationsService = {
     markers,
-    marker_decorations: {},
+    model_registrations: {},
+    model_ids_by_uri: {},
+    blocked_model_ids: {},
+    legacy_leases: {},
     suppressed_ranges: {},
     did_change_marker_decorations: @base_common.Emitter::new(),
     subscription: None,
+    disposed: false,
   }
   service.subscription = Some(
     markers.on_did_change_markers(resources => {
@@ -46,51 +80,241 @@ pub fn MarkerDecorationsService::on_did_change_marker_decorations(
 }
 
 ///|
-/// Releases the marker subscription and change emitter (`dispose`,
-/// `markerDecorationsService.ts:46`).
+/// Releases service-owned subscriptions and per-model owners (`dispose`,
+/// `markerDecorationsService.ts:46`). Ingress is blocked first; model watches
+/// and owners are then finalized exactly once; indexes are cleared last. The
+/// injected `MarkerService` and its host-owned diagnostics remain untouched.
 pub fn MarkerDecorationsService::dispose(
   self : MarkerDecorationsService,
 ) -> Unit {
+  if self.disposed {
+    return
+  }
+  // Block both marker-service and outward-emitter ingress before any owner can
+  // reenter through a model-decoration callback.
+  self.disposed = true
   match self.subscription {
-    Some(d) => d.dispose()
+    Some(d) => {
+      self.subscription = None
+      d.dispose()
+    }
     None => ()
   }
   self.did_change_marker_decorations.dispose()
-  self.marker_decorations.clear()
+  let registrations : Array[ModelMarkerRegistration] = []
+  for _, registration in self.model_registrations {
+    registrations.push(registration)
+  }
+  for registration in registrations {
+    self.finalize_registration(registration, ServiceDisposed)
+  }
+  // These are the two ownership indexes. They intentionally survive until
+  // every watch/owner is inert so teardown callbacks cannot observe a partial
+  // service as live ingress.
+  self.blocked_model_ids.clear()
+  self.legacy_leases.clear()
+  self.suppressed_ranges.clear()
+  self.model_registrations.clear()
+  self.model_ids_by_uri.clear()
 }
 
 ///|
-/// Registers a model and seeds its decorations, `_onModelAdded`
-/// (`markerDecorationsService.ts:93`). A re-add (model version rotation) replaces
-/// the prior per-model set.
+/// Acquires one independently idempotent lease for `model.instance_id`.
+/// The first lease installs exactly one content watch and one model-dispose
+/// watch, appends the identity to its URI bucket, and seeds decorations.
+/// Reacquisition only increments the refcount and preserves URI order.
+pub fn MarkerDecorationsService::acquire_model(
+  self : MarkerDecorationsService,
+  model : @model.TextModel,
+) -> @base_common.Disposable {
+  let model_id = model.instance_id
+  if self.disposed ||
+    model.is_disposed() ||
+    self.blocked_model_ids.contains(model_id) {
+    return @base_common.Disposable::from(() => ())
+  }
+  match self.model_registrations.get(model_id) {
+    Some(registration) => registration.ref_count += 1
+    None => {
+      let registration : ModelMarkerRegistration = {
+        model,
+        marker_decorations: MarkerDecorations::new(model),
+        ref_count: 1,
+        active: true,
+        content_subscription: None,
+        dispose_subscription: None,
+        update_in_progress: false,
+        update_requested: false,
+        reset_requested: false,
+      }
+      self.model_registrations.set(model_id, registration)
+      let uri_key = model.uri.to_string()
+      let model_ids = match self.model_ids_by_uri.get(uri_key) {
+        Some(ids) => ids
+        None => {
+          let ids : Array[String] = []
+          self.model_ids_by_uri.set(uri_key, ids)
+          ids
+        }
+      }
+      model_ids.push(model_id)
+      // Ordering is contractual: content watch, model-dispose watch, seed.
+      registration.content_subscription = Some(
+        model.on_did_change_content(_ => {
+          self.refresh_model_registration(model_id)
+        }),
+      )
+      registration.dispose_subscription = Some(
+        model.on_will_dispose(() => {
+          self.remove_model_registration(model_id, ModelDisposed)
+        }),
+      )
+      self.update_decorations(registration)
+    }
+  }
+  @base_common.Disposable::from(() => {
+    self.remove_model_registration(model_id, LeaseReleased)
+  })
+}
+
+///|
+/// Compatibility entry point for callers that still use the historical
+/// paired add/remove API. New viewer ownership uses `acquire_model` directly.
+/// A repeated add refreshes the existing owner and never increments its lease.
 pub fn MarkerDecorationsService::on_model_added(
   self : MarkerDecorationsService,
   model : @model.TextModel,
 ) -> Unit {
-  let marker_decorations = MarkerDecorations::new(model)
-  self.marker_decorations.set(model.uri.to_string(), marker_decorations)
-  self.update_decorations(marker_decorations)
+  if self.disposed {
+    return
+  }
+  let model_id = model.instance_id
+  match self.model_registrations.get(model_id) {
+    Some(_) => self.refresh_model_registration(model_id)
+    None => {
+      let lease = self.acquire_model(model)
+      if self.model_registrations.contains(model_id) {
+        self.legacy_leases.set(model_id, lease)
+      }
+    }
+  }
 }
 
 ///|
-/// Drops a model's decorations and cleans up markers for transient schemes,
-/// `_onModelRemoved` (`markerDecorationsService.ts:99`).
+/// Compatibility counterpart to `on_model_added`. Ordinary paired removal is
+/// a lease release and therefore never deletes host-owned diagnostics.
 pub fn MarkerDecorationsService::on_model_removed(
   self : MarkerDecorationsService,
   model : @model.TextModel,
 ) -> Unit {
-  match self.marker_decorations.get(model.uri.to_string()) {
-    Some(marker_decorations) => marker_decorations.dispose()
+  let model_id = model.instance_id
+  match self.legacy_leases.get(model_id) {
+    Some(lease) => {
+      self.legacy_leases.remove(model_id)
+      lease.dispose()
+    }
     None => ()
   }
-  self.marker_decorations.remove(model.uri.to_string())
-  // clean up markers for internal, transient models
+}
+
+///|
+fn MarkerDecorationsService::remove_model_registration(
+  self : MarkerDecorationsService,
+  model_id : String,
+  reason : ModelRegistrationRemovalReason,
+) -> Unit {
+  if self.disposed && !(reason is ServiceDisposed) {
+    return
+  }
+  guard self.model_registrations.get(model_id) is Some(registration) else {
+    return
+  }
+  if !registration.active {
+    return
+  }
+  if reason is LeaseReleased && registration.ref_count > 1 {
+    registration.ref_count -= 1
+    return
+  }
+  registration.active = false
+  self.blocked_model_ids.set(model_id, ())
+  self.model_registrations.remove(model_id)
+  self.remove_model_from_uri_index(registration.model.uri, model_id)
+  self.legacy_leases.remove(model_id)
+  self.finalize_registration(registration, reason)
+  match reason {
+    LeaseReleased => self.blocked_model_ids.remove(model_id)
+    ModelDisposed =>
+      // Transient diagnostics belong to the dying model lifetime, but a
+      // distinct live identity sharing the URI still owns that URI bucket.
+      if !self.model_ids_by_uri.contains(registration.model.uri.to_string()) {
+        self.remove_transient_markers(registration.model)
+      }
+    ServiceDisposed => ()
+  }
+}
+
+///|
+fn MarkerDecorationsService::finalize_registration(
+  _self : MarkerDecorationsService,
+  registration : ModelMarkerRegistration,
+  _reason : ModelRegistrationRemovalReason,
+) -> Unit {
+  if registration.active {
+    registration.active = false
+  }
+  registration.update_requested = false
+  registration.reset_requested = false
+  match registration.content_subscription {
+    Some(subscription) => {
+      registration.content_subscription = None
+      subscription.dispose()
+    }
+    None => ()
+  }
+  match registration.dispose_subscription {
+    Some(subscription) => {
+      registration.dispose_subscription = None
+      subscription.dispose()
+    }
+    None => ()
+  }
+  registration.marker_decorations.dispose()
+}
+
+///|
+fn MarkerDecorationsService::remove_model_from_uri_index(
+  self : MarkerDecorationsService,
+  uri : @base_common.Uri,
+  model_id : String,
+) -> Unit {
+  let uri_key = uri.to_string()
+  match self.model_ids_by_uri.get(uri_key) {
+    Some(model_ids) => {
+      match model_ids.search(model_id) {
+        Some(index) => model_ids.remove(index) |> ignore
+        None => ()
+      }
+      if model_ids.length() == 0 {
+        self.model_ids_by_uri.remove(uri_key)
+      }
+    }
+    None => ()
+  }
+}
+
+///|
+fn MarkerDecorationsService::remove_transient_markers(
+  self : MarkerDecorationsService,
+  model : @model.TextModel,
+) -> Unit {
   let scheme = model.uri.scheme
   if scheme == "inmemory" || scheme == "internal" || scheme == "vscode" {
-    for
-      owner in self.markers
-      .read(MarkerReadOptions::new(resource=model.uri))
-      .map(m => m.owner) {
+    let owners : Map[String, Unit] = {}
+    for marker in self.markers.read(MarkerReadOptions::new(resource=model.uri)) {
+      owners.set(marker.owner, ())
+    }
+    for owner, _ in owners {
       self.markers.remove(owner, [model.uri])
     }
   }
@@ -103,12 +327,44 @@ fn MarkerDecorationsService::handle_marker_change(
   self : MarkerDecorationsService,
   changed_resources : Array[@base_common.Uri],
 ) -> Unit {
+  if self.disposed {
+    return
+  }
   for resource in changed_resources {
-    match self.marker_decorations.get(resource.to_string()) {
-      Some(marker_decorations) => self.update_decorations(marker_decorations)
+    if self.disposed {
+      return
+    }
+    match self.model_ids_by_uri.get(resource.to_string()) {
+      Some(model_ids) =>
+        for model_id in model_ids.copy() {
+          if self.disposed {
+            return
+          }
+          match self.model_registrations.get(model_id) {
+            Some(registration) => self.update_decorations(registration)
+            None => ()
+          }
+        }
       None => ()
     }
   }
+}
+
+///|
+fn MarkerDecorationsService::refresh_model_registration(
+  self : MarkerDecorationsService,
+  model_id : String,
+) -> Unit {
+  if self.disposed {
+    return
+  }
+  guard self.model_registrations.get(model_id) is Some(registration) else {
+    return
+  }
+  if !registration.active {
+    return
+  }
+  self.update_decorations(registration, reset=true)
 }
 
 ///|
@@ -117,8 +373,53 @@ fn MarkerDecorationsService::handle_marker_change(
 /// fire the change event when something changed.
 fn MarkerDecorationsService::update_decorations(
   self : MarkerDecorationsService,
-  marker_decorations : MarkerDecorations,
+  registration : ModelMarkerRegistration,
+  reset? : Bool = false,
 ) -> Unit {
+  if self.disposed || !registration.active {
+    return
+  }
+  registration.update_requested = true
+  if reset {
+    registration.reset_requested = true
+  }
+  if registration.update_in_progress {
+    return
+  }
+  registration.update_in_progress = true
+  for ;; {
+    if self.disposed || !registration.active {
+      break
+    }
+    let reset_before_update = registration.reset_requested
+    registration.reset_requested = false
+    registration.update_requested = false
+    if reset_before_update {
+      registration.marker_decorations.reset()
+    }
+    if self.disposed || !registration.active {
+      break
+    }
+    self.update_decorations_once(registration)
+    if !registration.update_requested && !registration.reset_requested {
+      break
+    }
+  }
+  registration.update_in_progress = false
+}
+
+///|
+/// Runs one stable marker-store read and owner update. Reentrant marker or
+/// model-content callbacks only set the registration's pending flags; the
+/// outer update drains them after `delta_decorations` has returned.
+fn MarkerDecorationsService::update_decorations_once(
+  self : MarkerDecorationsService,
+  registration : ModelMarkerRegistration,
+) -> Unit {
+  if self.disposed || !registration.active {
+    return
+  }
+  let marker_decorations = registration.marker_decorations
   // Limit to the first 500 errors/warnings
   let mut markers = self.markers.read(
     MarkerReadOptions::new(resource=marker_decorations.model.uri, take=500),
@@ -136,35 +437,71 @@ fn MarkerDecorationsService::update_decorations(
       })
     None => ()
   }
-  if marker_decorations.update(markers) {
+  if marker_decorations.update(markers) && !self.disposed && registration.active {
     self.did_change_marker_decorations.fire(marker_decorations.model)
   }
 }
 
 ///|
 /// `getMarker` (`markerDecorationsService.ts:52`): the marker behind a decoration
-/// id on `uri`. Ported for fidelity; the viewer hover consumes `get_live_markers`.
+/// id on `uri`. The URI bucket is scanned in acquisition order; model-generated
+/// decoration ids carry the model identity prefix, so distinct live same-URI
+/// models remain unambiguous.
 pub fn MarkerDecorationsService::get_marker(
   self : MarkerDecorationsService,
   uri : @base_common.Uri,
   decoration_id : String,
 ) -> Marker? {
-  match self.marker_decorations.get(uri.to_string()) {
-    Some(marker_decorations) => marker_decorations.get_marker(decoration_id)
-    None => None
+  guard self.model_ids_by_uri.get(uri.to_string()) is Some(model_ids) else {
+    return None
   }
+  for model_id in model_ids {
+    match self.model_registrations.get(model_id) {
+      Some(registration) =>
+        match registration.marker_decorations.get_marker(decoration_id) {
+          Some(marker) => return Some(marker)
+          None => ()
+        }
+      None => ()
+    }
+  }
+  None
 }
 
 ///|
 /// `getLiveMarkers` (`markerDecorationsService.ts:57`): `(range, marker)` pairs for
-/// the resource. Replaces the prior `markers_at`; the marker hover participant
-/// filters these by the anchor range.
+/// every live identity at the resource, concatenated in acquisition order.
+/// Identity-sensitive consumers such as hover use
+/// `get_live_markers_for_model` instead.
 pub fn MarkerDecorationsService::get_live_markers(
   self : MarkerDecorationsService,
   uri : @base_common.Uri,
 ) -> Array[(@base_common.Range, Marker)] {
-  match self.marker_decorations.get(uri.to_string()) {
-    Some(marker_decorations) => marker_decorations.get_markers()
+  let result : Array[(@base_common.Range, Marker)] = []
+  match self.model_ids_by_uri.get(uri.to_string()) {
+    Some(model_ids) =>
+      for model_id in model_ids {
+        match self.model_registrations.get(model_id) {
+          Some(registration) =>
+            result.append(registration.marker_decorations.get_markers())
+          None => ()
+        }
+      }
+    None => ()
+  }
+  result
+}
+
+///|
+/// Returns only the live marker decorations owned by this exact model
+/// identity. Hover uses this helper so two live models sharing one URI cannot
+/// contribute ranges from each other's snapshots.
+pub fn MarkerDecorationsService::get_live_markers_for_model(
+  self : MarkerDecorationsService,
+  model : @model.TextModel,
+) -> Array[(@base_common.Range, Marker)] {
+  match self.model_registrations.get(model.instance_id) {
+    Some(registration) => registration.marker_decorations.get_markers()
     None => []
   }
 }
@@ -177,6 +514,9 @@ pub fn MarkerDecorationsService::add_marker_suppression(
   uri : @base_common.Uri,
   range : @base_common.Range,
 ) -> @base_common.Disposable {
+  if self.disposed {
+    return @base_common.Disposable::from(() => ())
+  }
   let key = uri.to_string()
   let suppressed_ranges = match self.suppressed_ranges.get(key) {
     Some(r) => r

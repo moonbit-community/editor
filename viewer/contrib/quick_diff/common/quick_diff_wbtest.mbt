@@ -16,10 +16,10 @@ fn test_change(
 ///|
 test "get_change_type mirrors quickDiff.ts:121" {
   // originalEndLineNumber === 0 → Add
-  assert_eq(get_change_type(test_change(1, 0, 2, 3)), ChangeType::Add)
+  assert_eq(get_change_type(test_change(1, 0, 2, 3)), Add)
   // modifiedEndLineNumber === 0 → Delete
-  assert_eq(get_change_type(test_change(2, 4, 1, 0)), ChangeType::Delete)
-  assert_eq(get_change_type(test_change(2, 2, 2, 2)), ChangeType::Modify)
+  assert_eq(get_change_type(test_change(2, 4, 1, 0)), Delete)
+  assert_eq(get_change_type(test_change(2, 2, 2, 2)), Modify)
 }
 
 ///|

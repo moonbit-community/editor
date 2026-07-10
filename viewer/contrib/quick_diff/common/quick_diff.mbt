@@ -41,11 +41,11 @@ pub impl Show for ChangeType with fn output(self, logger) {
 /// `getChangeType` (`quickDiff.ts:121`).
 pub fn get_change_type(change : @diff.Change) -> ChangeType {
   if change.original_end_line_number == 0 {
-    ChangeType::Add
+    Add
   } else if change.modified_end_line_number == 0 {
-    ChangeType::Delete
+    Delete
   } else {
-    ChangeType::Modify
+    Modify
   }
 }
 

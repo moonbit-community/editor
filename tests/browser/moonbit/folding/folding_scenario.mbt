@@ -10,7 +10,7 @@ fn folding_fixture_model() -> @model.TextModel {
   let lines = [
     "fold_top", "  fold_child_a", "  fold_child_b", "fold_mid", "  fold_tail",
   ]
-  @model.TextModel(
+  TextModel(
     try! @base_common.Uri::from(
       scheme="inmemory",
       authority="model",

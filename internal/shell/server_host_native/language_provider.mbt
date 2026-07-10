@@ -147,7 +147,7 @@ pub fn parse_moon_hover_output(
       end_column.to_int(),
     )
   } else {
-    @base_common.Range(
+    Range(
       position.line_number,
       position.column,
       position.line_number,

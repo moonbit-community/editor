@@ -31,7 +31,7 @@ const FOLDING_MANUAL_EXPANDED_ICON_CLASS : String = "codicon codicon-folding-man
 
 ///|
 /// `COLLAPSED_VISUAL_DECORATION`.
-let collapsed_visual_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let collapsed_visual_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="folding-collapsed-visual-decoration",
   stickiness=AlwaysGrowsWhenTypingAtEdges,
@@ -42,7 +42,7 @@ let collapsed_visual_decoration : @model.ModelDecorationOptions = @model.ModelDe
 
 ///|
 /// `COLLAPSED_HIGHLIGHTED_VISUAL_DECORATION`.
-let collapsed_highlighted_visual_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let collapsed_highlighted_visual_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "folded-background",
   description="folding-collapsed-highlighted-visual-decoration",
   stickiness=AlwaysGrowsWhenTypingAtEdges,
@@ -53,7 +53,7 @@ let collapsed_highlighted_visual_decoration : @model.ModelDecorationOptions = @m
 
 ///|
 /// `MANUALLY_COLLAPSED_VISUAL_DECORATION`.
-let manually_collapsed_visual_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let manually_collapsed_visual_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="folding-manually-collapsed-visual-decoration",
   stickiness=AlwaysGrowsWhenTypingAtEdges,
@@ -64,7 +64,7 @@ let manually_collapsed_visual_decoration : @model.ModelDecorationOptions = @mode
 
 ///|
 /// `MANUALLY_COLLAPSED_HIGHLIGHTED_VISUAL_DECORATION`.
-let manually_collapsed_highlighted_visual_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let manually_collapsed_highlighted_visual_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "folded-background",
   description="folding-manually-collapsed-highlighted-visual-decoration",
   stickiness=AlwaysGrowsWhenTypingAtEdges,
@@ -75,7 +75,7 @@ let manually_collapsed_highlighted_visual_decoration : @model.ModelDecorationOpt
 
 ///|
 /// `NO_CONTROLS_COLLAPSED_RANGE_DECORATION`.
-let no_controls_collapsed_range_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let no_controls_collapsed_range_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="folding-no-controls-range-decoration",
   stickiness=AlwaysGrowsWhenTypingAtEdges,
@@ -85,7 +85,7 @@ let no_controls_collapsed_range_decoration : @model.ModelDecorationOptions = @mo
 
 ///|
 /// `NO_CONTROLS_COLLAPSED_HIGHLIGHTED_RANGE_DECORATION`.
-let no_controls_collapsed_highlighted_range_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let no_controls_collapsed_highlighted_range_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "folded-background",
   description="folding-no-controls-range-decoration",
   stickiness=AlwaysGrowsWhenTypingAtEdges,
@@ -95,7 +95,7 @@ let no_controls_collapsed_highlighted_range_decoration : @model.ModelDecorationO
 
 ///|
 /// `EXPANDED_VISUAL_DECORATION`.
-let expanded_visual_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let expanded_visual_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="folding-expanded-visual-decoration",
   stickiness=NeverGrowsWhenTypingAtEdges,
@@ -106,7 +106,7 @@ let expanded_visual_decoration : @model.ModelDecorationOptions = @model.ModelDec
 
 ///|
 /// `EXPANDED_AUTO_HIDE_VISUAL_DECORATION`.
-let expanded_auto_hide_visual_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let expanded_auto_hide_visual_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="folding-expanded-auto-hide-visual-decoration",
   stickiness=NeverGrowsWhenTypingAtEdges,
@@ -116,7 +116,7 @@ let expanded_auto_hide_visual_decoration : @model.ModelDecorationOptions = @mode
 
 ///|
 /// `MANUALLY_EXPANDED_VISUAL_DECORATION`.
-let manually_expanded_visual_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let manually_expanded_visual_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="folding-manually-expanded-visual-decoration",
   stickiness=AlwaysGrowsWhenTypingAtEdges,
@@ -127,7 +127,7 @@ let manually_expanded_visual_decoration : @model.ModelDecorationOptions = @model
 
 ///|
 /// `MANUALLY_EXPANDED_AUTO_HIDE_VISUAL_DECORATION`.
-let manually_expanded_auto_hide_visual_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let manually_expanded_auto_hide_visual_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="folding-manually-expanded-auto-hide-visual-decoration",
   stickiness=AlwaysGrowsWhenTypingAtEdges,
@@ -137,7 +137,7 @@ let manually_expanded_auto_hide_visual_decoration : @model.ModelDecorationOption
 
 ///|
 /// `NO_CONTROLS_EXPANDED_RANGE_DECORATION`.
-let no_controls_expanded_range_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let no_controls_expanded_range_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="folding-no-controls-range-decoration",
   stickiness=AlwaysGrowsWhenTypingAtEdges,
@@ -146,7 +146,7 @@ let no_controls_expanded_range_decoration : @model.ModelDecorationOptions = @mod
 
 ///|
 /// `HIDDEN_RANGE_DECORATION`.
-let hidden_range_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let hidden_range_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="folding-hidden-range-decoration",
   stickiness=NeverGrowsWhenTypingAtEdges,

@@ -5,9 +5,9 @@ fn mapping(
   modified_start : Int,
   modified_end_exclusive : Int,
 ) -> @diff.DetailedLineRangeMapping {
-  @diff.DetailedLineRangeMapping(
-    @base_common.LineRange(original_start, original_end_exclusive),
-    @base_common.LineRange(modified_start, modified_end_exclusive),
+  DetailedLineRangeMapping(
+    LineRange(original_start, original_end_exclusive),
+    LineRange(modified_start, modified_end_exclusive),
     None,
   )
 }
@@ -43,15 +43,9 @@ test "compute_changes runs the full pipeline over line arrays" {
   ])
   assert_eq(changes.length(), 2)
   assert_eq(change_str(changes[0]), "(2,2)->(2,2)")
-  assert_eq(
-    @quick_diff.get_change_type(changes[0]),
-    @quick_diff.ChangeType::Modify,
-  )
+  assert_eq(@quick_diff.get_change_type(changes[0]), Modify)
   assert_eq(change_str(changes[1]), "(3,0)->(4,4)")
-  assert_eq(
-    @quick_diff.get_change_type(changes[1]),
-    @quick_diff.ChangeType::Add,
-  )
+  assert_eq(@quick_diff.get_change_type(changes[1]), Add)
 }
 
 ///|

@@ -8,7 +8,7 @@
 // `RegExp` markers become predicates like the indent-provider suite's.
 
 ///|
-let test_collapsed_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let test_collapsed_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="test-collapsed",
   stickiness=NeverGrowsWhenTypingAtEdges,
@@ -16,7 +16,7 @@ let test_collapsed_decoration : @model.ModelDecorationOptions = @model.ModelDeco
 )
 
 ///|
-let test_expanded_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let test_expanded_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="test-expanded",
   stickiness=NeverGrowsWhenTypingAtEdges,
@@ -24,7 +24,7 @@ let test_expanded_decoration : @model.ModelDecorationOptions = @model.ModelDecor
 )
 
 ///|
-let test_hidden_decoration : @model.ModelDecorationOptions = @model.ModelDecorationOptions(
+let test_hidden_decoration : @model.ModelDecorationOptions = ModelDecorationOptions(
   "",
   description="test-hidden",
   stickiness=NeverGrowsWhenTypingAtEdges,

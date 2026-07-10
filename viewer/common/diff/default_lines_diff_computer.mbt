@@ -36,6 +36,8 @@ pub(all) struct DefaultLinesDiffComputer {} derive(Eq, Debug)
 
 ///|
 pub fn DefaultLinesDiffComputer::new() -> DefaultLinesDiffComputer {
+  // The qualifier is load-bearing despite the unnecessary-annotation lint:
+  // a bare `{}` parses as an empty `Map` literal, not this struct.
   DefaultLinesDiffComputer::{  }
 }
 
@@ -59,17 +61,17 @@ pub impl LinesDiffComputer for DefaultLinesDiffComputer with fn compute_diff(
     return {
       changes: [
         DetailedLineRangeMapping(
-          @base_common.LineRange(1, original_lines.length() + 1),
-          @base_common.LineRange(1, modified_lines.length() + 1),
+          LineRange(1, original_lines.length() + 1),
+          LineRange(1, modified_lines.length() + 1),
           Some([
             RangeMapping(
-              @base_common.Range(
+              Range(
                 1,
                 1,
                 original_lines.length(),
                 original_lines[original_lines.length() - 1].length() + 1,
               ),
-              @base_common.Range(
+              Range(
                 1,
                 1,
                 modified_lines.length(),
@@ -144,12 +146,12 @@ pub impl LinesDiffComputer for DefaultLinesDiffComputer with fn compute_diff(
         let original = if old_end >= 0 {
           @base_common.LineRange(old_start + 1, old_end + 1)
         } else {
-          @base_common.LineRange(anchor_old + 1, anchor_old + 1)
+          LineRange(anchor_old + 1, anchor_old + 1)
         }
         let modified = if new_end >= 0 {
           @base_common.LineRange(new_start + 1, new_end + 1)
         } else {
-          @base_common.LineRange(anchor_new + 1, anchor_new + 1)
+          LineRange(anchor_new + 1, anchor_new + 1)
         }
         changes.push(DetailedLineRangeMapping(original, modified, None))
       }

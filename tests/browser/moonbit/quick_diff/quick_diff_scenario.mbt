@@ -11,7 +11,7 @@ fn quick_diff_fixture_model() -> @model.TextModel {
   // vs the original ["alpha","bravo","charlie","delta","echo"]:
   //   line 2 modified, line 4 inserted, "echo" deleted after line 5.
   let lines = ["alpha", "bravo_changed", "charlie", "inserted_line", "delta"]
-  @model.TextModel(
+  TextModel(
     try! @base_common.Uri::from(
       scheme="inmemory",
       authority="model",

@@ -20,10 +20,6 @@ test "part fingerprint numeric slots round-trip" {
     assert_true(@view.PartFingerprint::from_int(expected_int) == fingerprint)
   }
   // Unknown values collapse to `None`, Monaco's missing-attribute default.
-  assert_true(
-    @view.PartFingerprint::from_int(99) == @view.PartFingerprint::None,
-  )
-  assert_true(
-    @view.PartFingerprint::from_int(-1) == @view.PartFingerprint::None,
-  )
+  assert_true(@view.PartFingerprint::from_int(99) == None)
+  assert_true(@view.PartFingerprint::from_int(-1) == None)
 }

@@ -1,6 +1,6 @@
 # Viewer Cursor Input and Events Parity
 
-Status: inventory amendment ready — STOP FOR RE-REVIEW
+Status: second inventory amendment ready — STOP FOR FINAL GATE B REVIEW
 
 Date: 2026-07-10
 
@@ -136,8 +136,8 @@ CUR 68 + COL 49 + ONE 28 + CCM 50 + CEV 18
 = 802 source rows
 ```
 
-Proposed Gate-B map after the failed-review amendment: **337 TESTED, 71
-PORTED, 213 DEFERRED, 181 N-A = 802**. These totals must be recomputed after
+Proposed Gate-B map after the two failed-review amendments: **334 TESTED, 71
+PORTED, 216 DEFERRED, 181 N-A = 802**. These totals must be recomputed after
 any further review amendment.
 
 The review must approve one shared transition/emission contract so API, mouse,
@@ -271,7 +271,7 @@ pass-through at this pin because the called helper never reads it.
 | ONE-002 | `viewState` (`:19,31`) | View-state field is initialized to origin through `_setState`. | existing `Cursor.view_state` | TESTED | TODO |
 | ONE-003 | `_selTrackedRange` (`:21,25`) | Marker ID field starts null. | no readonly cursor marker owner | DEFERRED (editable marker-recovery lane) | TODO |
 | ONE-004 | `_trackSelection` (`:22,26`) | Tracking flag starts true. | no edit transaction | DEFERRED (editable marker-recovery lane) | TODO |
-| ONE-005 | `Cursor` constructor (`:24-33`) | Calls `_setState` with independent model/view `(1,1)`, Simple, zero-leftover states. | `Cursor::new` plus new leftovers | TESTED | TODO |
+| ONE-005 | `Cursor` constructor (`:24-33`) | Source calls `_setState` with independent model/view `(1,1)`, Simple, zero-leftover states. The local constructor directly creates the same unambiguous origin pair; dual-side cross-validation remains ONE-028. | `Cursor::new` plus new leftovers | TESTED | TODO |
 | ONE-006 | `dispose` (`:35-37`) | Removes owned tracked range. | no marker resource | DEFERRED (editable marker-recovery lane) | TODO |
 | ONE-007 | `startTrackingSelection` (`:39-42`) | Enables tracking then refreshes the marker. | no edit transaction | DEFERRED (editable marker-recovery lane) | TODO |
 | ONE-008 | `stopTrackingSelection` (`:44-47`) | Disables tracking then removes the marker. | no edit transaction | DEFERRED (editable marker-recovery lane) | TODO |
@@ -281,7 +281,7 @@ pass-through at this pin because the called helper never reads it.
 | ONE-012 | `asCursorState` (`:61-63`) | Snapshots model and view state together. | add/source-shape CursorState | TESTED | TODO |
 | ONE-013 | `readSelectionFromMarkers` (`:65-74`) | Reads marker and otherwise returns it with preserved old direction. | no cursor markers | DEFERRED (editable marker-recovery lane) | TODO |
 | ONE-014 | collapsed-marker branch (`:68-71`) | Empty old selection plus grown marker collapses to marker end. | no cursor markers | DEFERRED (editable marker-recovery lane) | TODO |
-| ONE-015 | `ensureValidState` (`:76-78`) | Re-runs `_setState` with both current sides. | shared validation/reprojection | TESTED | TODO |
+| ONE-015 | `ensureValidState` (`:76-78`) | Re-runs `_setState` with both current sides and therefore consumes the ONE-028 cross-validation branch. | no dual-side converter validation surface; local mapping change re-derives view state from validated model state only | DEFERRED (dual-side validation dependency absent) | TODO |
 | ONE-016 | `setState` (`:80-82`) | Forwards nullable model/view inputs unchanged. | central cursor transition | TESTED | TODO |
 | ONE-017 | `_validatePositionWithCache` (`:84-89`) | Cache miss normalizes with `PositionAffinity.None`. | cursor/view adapter | TESTED | TODO |
 | ONE-018 | validation-cache branch (`:85-87`) | Equal cache input returns cache output early. | cursor validation tests | TESTED | TODO |
@@ -293,8 +293,8 @@ pass-through at this pin because the called helper never reads it.
 | ONE-024 | both-sides-null early return (`:120-122`) | Missing model and view returns without mutation. | Option-input no-op test | TESTED | TODO |
 | ONE-025 | anchor-leftover conditional (`:136`) | Preserve iff validated anchor unchanged, otherwise exact `0`. | add leftover field | TESTED | TODO |
 | ONE-026 | active-leftover conditional (`:141`) | Preserve iff validated active unchanged, otherwise exact `0`. | add leftover field | TESTED | TODO |
-| ONE-027 | missing-view branch (`:146-155`) | Missing view converts both validated model anchor endpoints and the active position to view coordinates, preserving model kind and leftovers. | model-driven transition through the existing converter | TESTED | TODO |
-| ONE-028 | supplied-both validation branch (`:156-160`) | When both model and view states are supplied, source cross-validates the view range/position against the model range/position before rebuilding the view state. | no local dual-state caller and no `validateViewRange`/`validateViewPosition` converter surface | DEFERRED (dual-state validation seam absent; live callers supply exactly one coordinate side) | TODO |
+| ONE-027 | missing-view branch (`:146-152`) | Missing view converts both validated model anchor endpoints and the active position to view coordinates, preserving model kind and leftovers. | model-driven transition through the existing converter | TESTED | TODO |
+| ONE-028 | supplied-both validation branch (`:153-158`) | When both model and view states are supplied, source cross-validates the view range/position against the model range/position before rebuilding the view state. | no `validateViewRange`/`validateViewPosition` converter surface; constructor origin is direct, while ensure/reflow dependents are deferred | DEFERRED (dual-side validation seam absent) | TODO |
 
 ##### `cursorCollection.ts` ledger (`COL`, 49 rows)
 
@@ -308,7 +308,7 @@ pass-through at this pin because the called helper never reads it.
 | COL-006 | `startTrackingSelections` (`:41-45`) | Starts tracking on every cursor. | no edit transaction | DEFERRED (editable marker-recovery lane) | TODO |
 | COL-007 | `stopTrackingSelections` (`:47-51`) | Stops tracking on every cursor. | no edit transaction | DEFERRED (editable marker-recovery lane) | TODO |
 | COL-008 | `updateContext` (`:53-55`) | Replaces context without implicit validation. | split current set-context/reproject ordering | TESTED | TODO |
-| COL-009 | `ensureValidState` (`:57-61`) | Validates every cursor with current context. | one-cursor validation | TESTED | TODO |
+| COL-009 | `ensureValidState` (`:57-61`) | Calls ONE-015 for every cursor, requiring both-side range/position cross-validation. | no dual-side converter validation surface; local one-cursor reflow is model-side reprojection | DEFERRED (dual-side validation dependency absent) | TODO |
 | COL-010 | `readSelectionFromMarkers` (`:63-65`) | Maps cursors to recovered selections. | no marker recovery | DEFERRED (editable marker-recovery lane) | TODO |
 | COL-011 | marker-read map callback (`:64`) | Calls each cursor with current context. | no marker recovery | DEFERRED (editable marker-recovery lane) | TODO |
 | COL-012 | `getAll` (`:67-69`) | Maps cursors to full snapshots. | single-state getter | TESTED | TODO |
@@ -365,7 +365,7 @@ pass-through at this pin because the called helper never reads it.
 | CUR-009 | `CursorsController` constructor (`:43-58`) | Captures dependencies, builds context then collection, and initializes scoped/excluded controller state. | controller construction | TESTED | TODO |
 | CUR-010 | `dispose` (`:60-64`) | Disposes collection, auto-close actions, then superclass. | no marker/auto-close cursor resources | N-A (readonly resource seam) | TODO |
 | CUR-011 | `updateConfiguration` (`:66-69`) | Rebuilds context then updates collection context. | preserve context/reprojection order | TESTED | TODO |
-| CUR-012 | `onLineMappingChanged` (`:71-84`) | Revalidates current states with source `viewModel`, reason NotSet. | shared mapping-change transition | TESTED | TODO |
+| CUR-012 | `onLineMappingChanged` (`:71-84`) | Revalidates the current full model/view states with source `viewModel`, reason NotSet, consuming COL-009/ONE-015/ONE-028. | local mapping change re-derives view state from the validated model side only | DEFERRED (dual-side validation dependency absent) | TODO |
 | CUR-013 | mapping-version early return (`:72-81`) | Known/live version mismatch returns until content event arrives. | view/content event ordering | TESTED | TODO |
 | CUR-014 | `setHasFocus` (`:86-88`) | Replaces focus fact. | Viewer focus callback | DEFERRED (editable incremental-content lane) | TODO |
 | CUR-015 | `getPrimaryCursorState` (`:106-108`) | Returns primary full state. | state getter | TESTED | TODO |
@@ -492,12 +492,12 @@ sibling units: multi-cursor and marker atoms are ledgered as N-A/DEFERRED.
 
 | Prefix/file | Rows | TESTED | PORTED | DEFERRED | N-A |
 |---|---:|---:|---:|---:|---:|
-| `CUR` / `cursor.ts` | 68 | 41 | 0 | 6 | 21 |
-| `COL` / `cursorCollection.ts` | 49 | 23 | 0 | 5 | 21 |
-| `ONE` / `oneCursor.ts` | 28 | 17 | 0 | 11 | 0 |
+| `CUR` / `cursor.ts` | 68 | 40 | 0 | 7 | 21 |
+| `COL` / `cursorCollection.ts` | 49 | 22 | 0 | 6 | 21 |
+| `ONE` / `oneCursor.ts` | 28 | 16 | 0 | 12 | 0 |
 | `CCM` / `cursorCommon.ts` | 50 | 44 | 0 | 4 | 2 |
 | `CEV` / `cursorEvents.ts` | 18 | 14 | 4 | 0 | 0 |
-| **Total** | **213** | **139** | **4** | **26** | **44** |
+| **Total** | **213** | **136** | **4** | **29** | **44** |
 
 ##### Required local seams exposed by the inventory
 
@@ -1431,9 +1431,13 @@ The normalization reread specifically split fields from constructors, named-clas
    derive view state through the existing converter. View-driven movement is
    normalized in the ViewModel package before entering `CursorsController`,
    because the cursor package cannot import its owner without a cycle. Live
-   callers supply exactly one coordinate side. ONE-028 records the source's
-   absent dual-model-and-view cross-validation surface instead of inventing
-   unledgered `validateViewRange`/`validateViewPosition` behavior.
+   mutation callers supply exactly one coordinate side, and the constructor's
+   fixed origin pair is built directly. Source `ensureValidState` and
+   line-mapping revalidation supply both sides; ONE-015/028, COL-009, and
+   CUR-012 defer that absent cross-validation surface. Local mapping changes
+   continue their existing model-side reprojection as an ordinary reduced-seam
+   test, not as source-parity evidence. Do not invent unledgered
+   `validateViewRange`/`validateViewPosition` behavior.
 6. **Versions, sources, and reasons.** Payload versions come only from
    `TextModel.get_version_id()`. API setters default source `api` and reason
    `NotSet`; keyboard defaults source `keyboard` and reason `Explicit`;
@@ -1468,7 +1472,7 @@ The normalization reread specifically split fields from constructors, named-clas
 - Source rows: **802**; every active prefix ID is unique and every working
   status is `TODO`. CUR/COL/ONE/CCM/CEV/CMC/CMO/VC/CEW/VED/VMI are contiguous;
   CORE has the explicitly retired non-denominator IDs recorded above.
-- Proposed map: **337 TESTED + 71 PORTED + 213 DEFERRED + 181 N-A = 802**.
+- Proposed map: **334 TESTED + 71 PORTED + 216 DEFERRED + 181 N-A = 802**.
 - Current-MoonBit gaps and inherited lifecycle authority are recorded outside
   the denominator.
 - The three source reports were normalized independently, then reconciled under
@@ -1508,7 +1512,8 @@ rg '^\| (CUR|COL|ONE|CCM|CEV|CMC|CMO|CORE|VC|CEW|VED|VMI)-[0-9]{3} \|' \
   and no-op/version gates.
 - [ ] Reviewer approves every planned DEFERRED/N-A seam, especially atomic tabs,
   visual RTL, generic/buffer commands, alternate bindings, token-aware word
-  selection, dual-side view validation, generic view collection, and
+  selection, the ONE-015/COL-009/CUR-012 dual-side validation dependency,
+  generic view collection, and
   multi-cursor/column/block/edit paths.
 - [ ] Reviewer confirms the branch/configuration matrix covers all required
   keyboard, pointer, event, reentrancy, wrap, page-size (including exact zero),
@@ -1854,9 +1859,11 @@ implementation:
   view-event queues remain with the render-invalidation child. The root
   cursor-delivery FIFO is the local content-barrier/reentrancy seam.
 - Live cursor transitions supply exactly one coordinate side. ViewModel
-  normalizes view inputs and TextModel validates model inputs; ONE-028 defers
-  the absent source branch that cross-validates simultaneously supplied model
-  and view states.
+  normalizes view inputs and TextModel validates model inputs. The fixed origin
+  constructor is direct; ONE-015/028, COL-009, and CUR-012 defer the absent
+  source path that cross-validates simultaneously supplied model and view
+  states. Local mapping reflow remains model-side reprojection and is not
+  claimed as parity at ambiguous wrap/injected-text mappings.
 - CMC-033's token-aware `WordOperations` algorithm remains unscoped. Selected
   word cases are regression/routing evidence only, and the `//` punctuation
   case is an explicit exact-label skip.
@@ -1922,3 +1929,22 @@ remain row-local deferred/N-A boundaries.
 - No product/test file changed and no runtime test ran. Implementation remains
   forbidden until a fresh independent Gate B re-review approves this amended
   document and the amendment itself is committed.
+
+### 2026-07-10 — second Gate B rejection and validation amendment
+
+- The first amendment commit is
+  `805dad49b61df087bdf27810e3b6145dec5b46e0`; its committed child-plan
+  SHA-256 is
+  `11d61984838e710f0bc3823051755d2920162c03c3f48e241082936822ac57fb`.
+- Fresh browser/public/event and cursor-core rereads passed, but the independent
+  design review rejected ONE-015/COL-009/CUR-012: source reflow passes both
+  model and view state into ONE-028's `validateViewRange`/
+  `validateViewPosition` branch. Model-only reprojection is not equivalent at
+  ambiguous wrap/injected-text mappings.
+- The second amendment keeps **802/802 TODO rows** and corrects the source
+  ranges to ONE-027 `:146-152` and ONE-028 `:153-158`. ONE-015, COL-009, and
+  CUR-012 now defer with their absent dual-side converter dependency. The
+  recomputed map is **334 TESTED, 71 PORTED, 216 DEFERRED, and 181 N-A**.
+- No product/test file changed and no runtime test ran. Product implementation
+  remains forbidden until this correction is committed and a final fresh Gate
+  B review passes.

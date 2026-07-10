@@ -81,7 +81,7 @@ product contract and belongs in an ordinary local test.
 | Order | Child plan | Primary ownership | Depends on | Status |
 |---:|---|---|---|---|
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
-| 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | inventory ready — STOP FOR REVIEW |
+| 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | approved for implementation |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | proposed |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | proposed |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
@@ -335,9 +335,10 @@ The independent closing task is:
   straight-line statement ordering and property arithmetic separately from the
   owning member/property, contrary to the uniform atom rule. No product/test
   file changed.
-- 2026-07-10: the normalized async-model-features inventory stop gate has
+- 2026-07-10: normalized async-model-features inventory commit `e108586` has
   810/810 TODO rows: 232 inlay-controller, 49 inlay-fragment, 448 hover, and
   81 model-version/cancellation members, plus the separate 87-row current-
-  MoonBit ownership/test-authority audit and branch-derived matrix. The
-  normalized documentation must be committed and independently approved before
-  implementation.
+  MoonBit ownership/test-authority audit and branch-derived matrix. Independent
+  full and split cross-checks found zero missing/duplicate rows and approved the
+  exhaustive target map: 373 planned TESTED, 7 PORTED, 345 DEFERRED, and 85
+  N-A. Gate B is passed and async product/test implementation may begin.

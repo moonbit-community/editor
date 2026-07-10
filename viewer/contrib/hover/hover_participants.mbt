@@ -37,7 +37,7 @@ pub(all) struct HoverComputeContext {
 /// Monaco `ContentHoverComputer._getLineDecorations`: selects the anchor line's
 /// decorations with whole-line acceptance, strict ordinary containment, and
 /// the `showIfCollapsed` one-column relaxation.
-pub fn hover_line_decorations(
+fn hover_line_decorations(
   model : @model.TextModel,
   anchor : HoverAnchor,
 ) -> Array[@model.ModelDecoration] {
@@ -594,12 +594,32 @@ fn computed_hover_from_parts(
   if parts.length() == 0 {
     return None
   }
-  parts.sort_by(compare_hover_parts)
+  let sorted = sort_hover_parts_stably(parts)
   let mut range = fallback_range
-  for part in parts {
+  for part in sorted {
     range = union_range(range, hover_part_range(part))
   }
-  Some({ range, parts })
+  Some({ range, parts: sorted })
+}
+
+///|
+/// JavaScript's source sort is stable while MoonBit's `Array::sort_by` is not.
+/// Carry the arrival index as the final comparator key so equal participant
+/// ordinal/range-start parts retain provider completion order on every target.
+fn sort_hover_parts_stably(parts : Array[HoverPart]) -> Array[HoverPart] {
+  let indexed : Array[(Int, HoverPart)] = []
+  for index, part in parts {
+    indexed.push((index, part))
+  }
+  indexed.sort_by((left, right) => {
+    let order = compare_hover_parts(left.1, right.1)
+    if order != 0 {
+      order
+    } else {
+      left.0 - right.0
+    }
+  })
+  indexed.map(item => item.1)
 }
 
 ///|

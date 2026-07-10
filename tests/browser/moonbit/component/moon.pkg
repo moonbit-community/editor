@@ -8,6 +8,7 @@ import {
   "moonbit-community/editor/syntax/lang_moonbit",
   "moonbit-community/editor/tests/browser/moonbit/support",
   "moonbit-community/rabbita/dom" @rdom,
+  "moonbit-community/rabbita/js",
 }
 
 supported_targets = "js"

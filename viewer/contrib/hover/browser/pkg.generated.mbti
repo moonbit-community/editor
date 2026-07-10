@@ -3,6 +3,7 @@ package "moonbit-community/editor/viewer/contrib/hover/browser"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/contrib/hover",
@@ -34,9 +35,14 @@ pub let hover_prefer_above_default : Bool
 // Types and methods
 pub(all) struct ContentHoverController {
   mut hover : @hover.HoverController
+  inlay_hover_owner : @hover.HoverParticipantOwner
   mut hover_react_pending : Bool
   mut hover_react_token : Int
   mut hover_pending_target : @moonbit-community/editor/viewer/browser.MouseTarget?
+  mut hover_async_debouncer : @hover.HoverDebouncer
+  mut hover_sync_debouncer : @hover.HoverDebouncer
+  mut hover_loading_debouncer : @hover.HoverDebouncer
+  mut hover_is_mouse_down : Bool
   hover_settings : @hover.HoverSettings
   mut hover_keep_open : Bool
   mut hover_ignore_mouse_events : Bool
@@ -47,11 +53,21 @@ pub(all) struct ContentHoverController {
   mut hover_notified_token : Int
   mut hover_decoration_ids : Array[String]
   mut hover_decoration_range : @common.Range?
+  // private fields
 }
 pub fn ContentHoverController::attach(String) -> Self
+pub fn ContentHoverController::begin_request(Self, @language.CancellationTokenSource, Int) -> Unit
+pub fn ContentHoverController::cancel_all_timers(Self) -> Unit
+pub fn ContentHoverController::cancel_operation_timers(Self) -> Unit
 pub fn ContentHoverController::cancel_react(Self) -> Unit
+pub fn ContentHoverController::cancel_request(Self) -> Unit
 pub fn ContentHoverController::detach(String) -> Unit
+pub fn ContentHoverController::finish_request(Self, Int) -> Unit
 pub fn ContentHoverController::get(String) -> Self?
+pub fn ContentHoverController::install_async_timer(Self, @common.Disposable) -> Unit
+pub fn ContentHoverController::install_loading_timer(Self, @common.Disposable) -> Unit
+pub fn ContentHoverController::install_react_timer(Self, @common.Disposable) -> Unit
+pub fn ContentHoverController::install_sync_timer(Self, @common.Disposable) -> Unit
 pub fn ContentHoverController::record_pointer(Self, Double, Double, @hover.EventModifiers) -> Unit
 pub fn ContentHoverController::reset_model_state(Self) -> Unit
 
@@ -86,6 +102,7 @@ pub(all) struct ContentHoverWidgetHost {
   scrolled_visible_position_top : (@common.Position) -> Double
   line_height : () -> Double
   keep_hover_open : () -> Unit
+  handle_mouseleave : (Double, Double) -> Unit
   handle_keydown : (@dom.Event, @dom.KeyboardEvent) -> Unit
   hook_scrollable_scrollbar_input : (@scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
 }
@@ -96,6 +113,8 @@ pub(all) struct EditorContext {
   typical_halfwidth_character_width : Double
   mouse_posx : Double?
   mouse_posy : Double?
+  show_at_position : @common.Position?
+  content_hover_visible : Bool
 }
 
 pub(all) enum EditorEvent {

@@ -1,21 +1,21 @@
 ///|
 /// Which side of its anchor range an inlay hint attaches to.
-pub(all) enum InlayHintAnchorDirection {
+priv enum InlayHintAnchorDirection {
   Before
   After
-} derive(Eq, Debug)
+} derive(Eq)
 
 ///|
 /// Stable model range and direction used to reattach an inlay hint after a
 /// model-scoped request completes.
-pub struct InlayHintAnchor {
+priv struct InlayHintAnchor {
   range : @base_common.Range
   direction : InlayHintAnchorDirection
-} derive(Eq, Debug)
+} derive(Eq)
 
 ///|
 /// Builds an inlay-hint anchor.
-pub fn InlayHintAnchor::new(
+fn InlayHintAnchor::new(
   range : @base_common.Range,
   direction : InlayHintAnchorDirection,
 ) -> InlayHintAnchor {
@@ -24,7 +24,7 @@ pub fn InlayHintAnchor::new(
 
 ///|
 /// One retained hint together with its derived anchor and owning provider.
-pub struct InlayHintItem {
+priv struct InlayHintItem {
   hint : @language.InlayHint
   anchor : InlayHintAnchor
   provider : &@language.InlayHintsProvider
@@ -32,7 +32,7 @@ pub struct InlayHintItem {
 
 ///|
 /// Builds a retained inlay-hint item.
-pub fn InlayHintItem::new(
+fn InlayHintItem::new(
   hint : @language.InlayHint,
   anchor : InlayHintAnchor,
   provider : &@language.InlayHintsProvider,
@@ -43,11 +43,58 @@ pub fn InlayHintItem::new(
 ///|
 /// Complete result of one range/provider request. Items are position-sorted;
 /// `provider` is identity-deduplicated in provider-completion order.
-pub struct InlayHintsFragments {
+priv struct InlayHintsFragments {
   items : Array[InlayHintItem]
   ranges : Array[@base_common.Range]
   provider : Array[&@language.InlayHintsProvider]
 }
+
+///|
+/// These internal accessors keep the source-shaped fragment/anchor fields in
+/// the ordinary build while the exhaustive consumers remain white-box tests.
+fn InlayHintItem::test_anchor(self : InlayHintItem) -> InlayHintAnchor {
+  self.anchor
+}
+
+///|
+fn InlayHintItem::test_provider(
+  self : InlayHintItem,
+) -> &@language.InlayHintsProvider {
+  self.provider
+}
+
+///|
+fn InlayHintsFragments::test_ranges(
+  self : InlayHintsFragments,
+) -> Array[@base_common.Range] {
+  self.ranges
+}
+
+///|
+fn InlayHintsFragments::test_providers(
+  self : InlayHintsFragments,
+) -> Array[&@language.InlayHintsProvider] {
+  self.provider
+}
+
+///|
+fn inlay_anchor_test_equal(
+  left : InlayHintAnchor,
+  right : InlayHintAnchor,
+) -> Bool {
+  left == right && left.direction == right.direction
+}
+
+///|
+let _inlay_fragment_whitebox_surface_anchor : Unit = ignore(
+  (
+    InlayHintItem::test_anchor,
+    InlayHintItem::test_provider,
+    InlayHintsFragments::test_ranges,
+    InlayHintsFragments::test_providers,
+    inlay_anchor_test_equal,
+  ),
+)
 
 ///|
 /// Internal cancellation signal matching the pinned source's post-settlement
@@ -85,7 +132,7 @@ priv struct InlayHintsProviderData {
 /// receives the exact caller-owned cancellation token. The default runner is
 /// runtime-neutral and sequential; browser hosts may inject a concurrent
 /// runner without coupling this package to their coroutine implementation.
-pub async fn Languages::inlay_hints_for_ranges(
+async fn Languages::inlay_hints_for_ranges(
   self : Languages,
   model : @model.TextModel,
   ranges : Array[@base_common.Range],

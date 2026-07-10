@@ -21,8 +21,9 @@ pub struct TextModel {
   priv mut is_disposed : Bool
   priv mut is_disposing : Bool
   /// `_versionId` (`textModel.ts:262`, init 1 at `:370`): bumped by the
-  /// content lane (`_increaseVersionId`). Distinct from the host-facing
-  /// `version` freshness guard, which is caller-owned metadata.
+  /// content lane (`_increaseVersionId`). Together with physical model
+  /// identity this is async freshness authority; the host-facing `version` is
+  /// caller-owned metadata.
   priv mut version_id : Int
   // Content events (`_eventEmitter` textModel.ts:244; `_viewModels` :303)
   priv event_emitter : DidChangeContentEmitter
@@ -49,9 +50,8 @@ pub impl Debug for TextModel with fn to_repr(self) {
 ///|
 /// Builds a readonly text model.
 ///
-/// `version` is the editor-model freshness guard: hosts should increment it
-/// whenever they install new content for the same URI. `revision` is optional
-/// source metadata such as a remote provider revision or content hash.
+/// `version` and `revision` are caller-owned metadata, not async freshness
+/// keys. Request owners use physical model identity plus `get_version_id()`.
 /// Empty display name and language id are normalized; non-positive versions
 /// become version 1.
 pub fn TextModel::TextModel(
@@ -150,16 +150,6 @@ pub fn TextModel::on_did_change_tokens(
 /// rendering.
 pub fn TextModel::snapshot(self : TextModel) -> TextSnapshot {
   self.snapshot
-}
-
-///|
-/// Stable current-model identity guard used to drop stale async work.
-/// URI and model version decide freshness; source revisions are metadata.
-pub fn TextModel::same_identity_and_version(
-  self : TextModel,
-  other : TextModel,
-) -> Bool {
-  self.uri.to_string() == other.uri.to_string() && self.version == other.version
 }
 
 // #region Reading text — the `textModel.ts` read section (:737-1176, word

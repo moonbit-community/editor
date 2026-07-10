@@ -5,9 +5,15 @@ The viewer's DOM-free language registry and token-to-HTML helpers.
 ## Registered features
 
 - Ordered, disposable registries exist for hover, document symbols, and inlay
-  hints. `hover_at` returns the first non-empty matching result; symbols and hints
-  concatenate all matching results. Provider failures are logged and converted to
-  an empty result.
+  hints. Hover and inlay requests snapshot matching registrations before their
+  first await, forward the caller's exact cancellation token, reject a result
+  from a registration disposed during the await, and keep cancellation silent;
+  ordinary provider failures are logged and contained. `hover_at` returns the
+  first non-empty live result. Inlay range/provider tasks are all constructed
+  before suspension and use an injected runner: the cross-target default is
+  sequential, while the Viewer supplies a browser-concurrent runner so results
+  accumulate in completion order without coupling this package to one coroutine
+  runtime.
 - `set_language_configuration` stores only the folding-rules slice of Monaco's
   `LanguageConfiguration`; region markers are whole-line predicates, not regular
   expressions.

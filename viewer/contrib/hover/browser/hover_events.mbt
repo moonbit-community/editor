@@ -33,6 +33,10 @@ pub(all) struct EditorContext {
   typical_halfwidth_character_width : Double
   mouse_posx : Double?
   mouse_posy : Double?
+  /// Actual rendered widget primary position used by range-anchor adoption.
+  show_at_position : @base_common.Position?
+  /// Participant-selected logical visibility, including loading-only views.
+  content_hover_visible : Bool
 }
 
 ///|
@@ -66,13 +70,16 @@ pub fn hover_on_event(
           match candidates.get(0) {
             Some(anchor) =>
               controller.start_showing_or_update_hover(
-                anchor, sticky_mouse_getting_closer,
+                anchor,
+                sticky_mouse_getting_closer,
+                show_at_position?=ctx.show_at_position,
+                live_widget_visible=ctx.content_hover_visible,
               )
             None =>
               // No anchor under the pointer (Monaco
               // `_startShowingOrUpdateHover(null)`): a visible hover the
               // pointer is approaching is kept; otherwise hide.
-              if sticky_mouse_getting_closer && controller.view is Some(_) {
+              if sticky_mouse_getting_closer && ctx.content_hover_visible {
                 (HoverNoEffect, controller)
               } else {
                 (HoverNoEffect, controller.cleared())
@@ -151,6 +158,26 @@ pub fn find_anchor_candidates(
     }
     _ => ()
   }
-  anchor_candidates.sort_by((a, b) => b.priority() - a.priority())
-  anchor_candidates
+  sort_hover_anchor_candidates_stably(anchor_candidates)
+}
+
+///|
+/// Source JavaScript sorting is stable. MoonBit sorting is not, so retain the
+/// insertion index as an explicit tie-breaker after descending priority.
+fn sort_hover_anchor_candidates_stably(
+  candidates : Array[@hover.HoverAnchor],
+) -> Array[@hover.HoverAnchor] {
+  let indexed : Array[(Int, @hover.HoverAnchor)] = []
+  for index, anchor in candidates {
+    indexed.push((index, anchor))
+  }
+  indexed.sort_by((left, right) => {
+    let priority = right.1.priority() - left.1.priority()
+    if priority != 0 {
+      priority
+    } else {
+      left.0 - right.0
+    }
+  })
+  indexed.map(item => item.1)
 }

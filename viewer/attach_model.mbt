@@ -61,6 +61,29 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
         Some(view_model) => self.on_line_mapping_changed(view_model, model)
         None => ()
       }
+      // Monaco cancels the pending mouse reaction on content change. The
+      // Viewer also retires provider/timer ownership and rotates the operation
+      // generation while preserving only an already settled hover until a new
+      // pointer request replaces it. Incomplete/loading state is retired.
+      match self.content_hover_controller() {
+        Some(hc) => {
+          hc.cancel_react()
+          hc.cancel_operation_timers()
+          hc.cancel_request()
+          hc.hover = hc.hover.cancel_operation_preserving_view()
+          // `set_value` just destroyed every model decoration. Retire the
+          // matching hover bookkeeping. If a settled result stays visible, a
+          // later accepted result still must not falsely dedupe against
+          // decoration IDs/range that no longer exist.
+          hc.reset_model_state()
+          // The operation transition can remove an incomplete/loading-only
+          // view. Reconcile the logical widget cache immediately; render
+          // flushing only owns model decorations and cannot retire stale hover
+          // DOM or headless visibility state for us.
+          self.sync_content_hover_widget()
+        }
+        None => ()
+      }
       // Inlay hints: re-request from the providers and re-apply as
       // injected-text decorations against the new content.
       self.request_model_features(model)

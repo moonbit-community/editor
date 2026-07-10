@@ -19,6 +19,9 @@ Host-neutral primitives at the bottom of the editor dependency graph.
   from a snapshot. `MicrotaskEmitter` merges queued events; its default scheduler
   flushes inline, so browser hosts must inject a real microtask scheduler when that
   timing matters.
+- `run_async_tasks_sequentially` is the host-neutral default for a closed task
+  set. Browser owners may inject a concurrent runner at the call boundary
+  without coupling shared packages to a particular coroutine runtime.
 - String, character-classification, RTL/full-width, and line-splitting helpers are
   shared here so higher layers do not duplicate coordinate-sensitive logic.
 

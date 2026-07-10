@@ -16,9 +16,20 @@ pub struct CancellationToken {
   // private fields
 }
 pub fn CancellationToken::cancel(Self) -> Unit
+pub fn CancellationToken::cancelled() -> Self
 pub fn CancellationToken::is_cancellation_requested(Self) -> Bool
 pub fn CancellationToken::new() -> Self
 pub fn CancellationToken::none() -> Self
+pub fn CancellationToken::on_cancellation_requested(Self, () -> Unit, disposables? : Array[@common.Disposable]) -> @common.Disposable
+
+pub struct CancellationTokenSource {
+  // private fields
+}
+#alias(new)
+pub fn CancellationTokenSource::CancellationTokenSource(parent? : CancellationToken, schedule? : (() -> Unit) -> @common.Disposable) -> Self
+pub fn CancellationTokenSource::cancel(Self) -> Unit
+pub fn CancellationTokenSource::dispose(Self, cancel? : Bool) -> Unit
+pub fn CancellationTokenSource::token(Self) -> CancellationToken
 
 pub(all) struct Diagnostic {
   range : @common.Range

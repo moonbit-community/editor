@@ -57,6 +57,9 @@ pub(all) struct ContentHoverWidgetHost {
   /// The pointer is on the hover widget: keep the hover open (the controller's
   /// `_shouldKeepCurrentHover` arm over the content widget).
   keep_hover_open : () -> Unit
+  /// Wrapper mouseleave forwarding; the host checks whether the pointer also
+  /// left the editor DOM before hiding.
+  handle_mouseleave : (Double, Double) -> Unit
   /// Widget keydown resolves through the keybinding table (`hoverActions.ts`'s
   /// scroll cluster).
   handle_keydown : (@rdom.Event, @rdom.KeyboardEvent) -> Unit
@@ -164,6 +167,17 @@ pub fn ContentHoverWidget::new(
     // sees this move (stop_propagation), so the controller's grace timer
     // would otherwise still fire and hide the widget out from under it.
     (host.keep_hover_open)()
+    event.stop_propagation()
+  })
+  wrapper.add_event_listener("mouseleave", event => {
+    match event.to_mouse_event() {
+      Some(mouse) =>
+        (host.handle_mouseleave)(
+          mouse.get_client_x().to_double(),
+          mouse.get_client_y().to_double(),
+        )
+      None => ()
+    }
     event.stop_propagation()
   })
   wrapper.add_event_listener("mousedown", event => {

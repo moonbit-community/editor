@@ -73,8 +73,14 @@ TextModel (caller-owned)
 The root package owns every `Viewer::` method and the cross-package glue for
 input, reveal, widgets, folding, hover, inlay hints, quick diff, feedback, and
 decorations. Feature mechanisms remain in their `viewer/common/**`,
-`viewer/browser/**`, or `viewer/contrib/**` owner packages. Async results are
-guarded against the current model/revision before application.
+`viewer/browser/**`, or `viewer/contrib/**` owner packages. Each inlay/hover
+request captures the physical `TextModel`, its internal content version, a
+Viewer-lifetime monotonic generation, and a caller-owned cancellation token.
+Replacement, content invalidation, detach, model disposal, and Viewer disposal
+cancel before retiring the request; only a stamp that is still fully current
+may mutate decorations, hover state, rendering, or resolution events. Hover
+mouse/async/sync/loading delays are clearable owned handles with a generation
+guard retained for dispatch races.
 
 ## Boundaries and checks
 

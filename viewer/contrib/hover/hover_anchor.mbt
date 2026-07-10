@@ -17,7 +17,7 @@ pub(all) enum HoverAnchorType {
 /// port mints an explicit identity so trait-object boxing cannot change anchor
 /// equality or adoption.
 pub struct HoverParticipantOwner {
-  id : Int
+  priv id : Int
 } derive(Eq, Debug)
 
 ///|

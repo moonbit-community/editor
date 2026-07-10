@@ -58,27 +58,6 @@ test "text model owns uri and version identity" {
 }
 
 ///|
-test "text model version is the freshness guard" {
-  let uri = try! @base_common.Uri::from(
-    scheme="inmemory",
-    authority="model",
-    path="/main.mbt",
-  )
-  let baseline = @model.TextModel(uri, "", "", 0, "rev-a", "one")
-  let same_version_new_revision = @model.TextModel(
-    uri, "main.mbt", "moonbit", 1, "rev-b", "two",
-  )
-  let new_version = @model.TextModel(
-    uri, "main.mbt", "moonbit", 2, "rev-b", "two",
-  )
-  assert_eq(baseline.display_name, "inmemory://model/main.mbt")
-  assert_eq(baseline.language_id, "moonbit")
-  assert_eq(baseline.version, 1)
-  assert_true(baseline.same_identity_and_version(same_version_new_revision))
-  assert_true(!baseline.same_identity_and_version(new_version))
-}
-
-///|
 test "dispose fires on_will_dispose once and flips is_disposed" {
   let model = @model.TextModel(
     try! @base_common.Uri::from(

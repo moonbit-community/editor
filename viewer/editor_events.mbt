@@ -13,6 +13,15 @@ fn Viewer::editor_context(self : Viewer) -> @hover_browser.EditorContext {
     typical_halfwidth_character_width: self.font_info.typical_halfwidth_character_width,
     mouse_posx,
     mouse_posy,
+    show_at_position: match self.content_hover_widget {
+      Some(widget) =>
+        match widget.rendered_hover {
+          Some(rendered) => Some(rendered.show_at_position)
+          None => None
+        }
+      None => None
+    },
+    content_hover_visible: self.content_hover_visible(),
   }
 }
 
@@ -58,26 +67,27 @@ fn Viewer::on_editor_mouse_move(
     return
   }
   if @hover.should_reschedule_hover(
-      hc.hover.widget_visible(),
+      self.content_hover_visible(),
       hc.hover_settings.sticky,
       hc.hover_settings.hiding_delay,
     ) {
     if !hc.hover_react_pending {
       hc.hover_react_pending = true
       let token = hc.hover_react_token
-      set_timeout(
-        () => {
-          if hc.hover_react_pending && token == hc.hover_react_token {
-            // Monaco `_reactToEditorMouseMoveRunner` fires `_reactToEditorMouseMove`,
-            // so the deferred reaction re-gates `shouldShowHover` and the
-            // sticky mouse-getting-closer keep, not just the bare dispatch.
-            hc.hover_react_pending = false
-            self.react_to_editor_mouse_move()
-          }
-        },
-        hc.hover_settings.hiding_delay,
+      hc.install_react_timer(
+        (self.hover_schedule_timeout)(
+          () => {
+            if hc.hover_react_pending && token == hc.hover_react_token {
+              // Monaco `_reactToEditorMouseMoveRunner` fires `_reactToEditorMouseMove`,
+              // so the deferred reaction re-gates `shouldShowHover` and the
+              // sticky mouse-getting-closer keep, not just the bare dispatch.
+              hc.hover_react_pending = false
+              self.react_to_editor_mouse_move()
+            }
+          },
+          hc.hover_settings.hiding_delay,
+        ),
       )
-      |> ignore
     }
     return
   }
@@ -173,6 +183,8 @@ fn Viewer::keep_hover_open(self : Viewer) -> Unit {
 fn Viewer::dismiss_hover(self : Viewer) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
   hc.cancel_react()
+  hc.cancel_operation_timers()
+  hc.cancel_request()
   hc.hover = hc.hover.cleared()
   // Callers own their re-render, but the widget reconciliation must not wait
   // on one (idempotent; the imperative dismiss paths bypass
@@ -244,9 +256,8 @@ fn Viewer::hover_mouse_getting_closer(self : Viewer) -> Bool {
 
 ///|
 /// Monaco `ContentHoverController._onEditorMouseDown`: a press that is not on the
-/// hover widget hides it; a press on it keeps it. `_isMouseDown` tracking and the
-/// `_onEditorMouseUp` reset are omitted — only the color-picker arm of
-/// `_shouldKeepCurrentHover` reads them, and that arm is N-A.
+/// hover widget hides it; a press on it keeps it. Accepted presses set the
+/// controller's down-state before that decision, and mouse-up clears it.
 fn Viewer::on_editor_mouse_down(
   self : Viewer,
   posx : Double,
@@ -256,12 +267,24 @@ fn Viewer::on_editor_mouse_down(
   if hc.hover_ignore_mouse_events {
     return
   }
+  hc.hover_is_mouse_down = true
   if @hover.should_keep_hover_widget_visible(
       self.mouse_on_hover_widget(posx, posy),
     ) {
     return
   }
   self.hide_content_hover()
+}
+
+///|
+/// Monaco `_onEditorMouseUp`: an accepted release retires the down-state used
+/// by hover-retention predicates; ignored mouse input leaves it unchanged.
+fn Viewer::on_editor_mouse_up(self : Viewer) -> Unit {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  if hc.hover_ignore_mouse_events {
+    return
+  }
+  hc.hover_is_mouse_down = false
 }
 
 ///|
@@ -333,6 +356,10 @@ fn Viewer::dispatch_editor_event(
     sticky_mouse_getting_closer~,
   )
   hc.hover = hover
+  if before.operation.token != hover.operation.token {
+    hc.cancel_operation_timers()
+    hc.cancel_request()
+  }
   self.apply_hover_effect(effect)
   self.after_hover_transition(before)
 }
@@ -371,18 +398,95 @@ fn Viewer::apply_hover_effect(
   match effect {
     HoverNoEffect => ()
     HoverScheduleDelayed(token) => {
-      set_timeout(
-        () => self.hover_trigger_async(token),
-        @hover.hover_first_wait_ms,
+      guard self.content_hover_controller() is Some(hc) else { return }
+      guard self.get_model() is Some(model) else { return }
+      guard hc.hover.operation.options is Some(options) else { return }
+      let source = new_feature_cancellation_source()
+      hc.begin_request(source, token)
+      let request = hc.hover.request_stamp(model, source.token())
+      let (async_generation, async_debouncer) = hc.hover_async_debouncer.schedule(
+        options,
+        delay_ms=@hover.hover_first_wait_ms,
       )
-      |> ignore
-      set_timeout(
-        () => self.hover_trigger_loading(token),
-        @hover.hover_loading_message_ms,
+      hc.hover_async_debouncer = async_debouncer
+      hc.install_async_timer(
+        (self.hover_schedule_timeout)(
+          () => {
+            let (latest, debouncer) = hc.hover_async_debouncer.take(
+              async_generation,
+            )
+            hc.hover_async_debouncer = debouncer
+            if latest is Some(_) {
+              self.hover_trigger_async(request)
+            }
+          },
+          @hover.hover_first_wait_ms,
+        ),
       )
-      |> ignore
+      let (loading_generation, loading_debouncer) = hc.hover_loading_debouncer.schedule(
+        options,
+        delay_ms=@hover.hover_loading_message_ms,
+      )
+      hc.hover_loading_debouncer = loading_debouncer
+      hc.install_loading_timer(
+        (self.hover_schedule_timeout)(
+          () => {
+            let (latest, debouncer) = hc.hover_loading_debouncer.take(
+              loading_generation,
+            )
+            hc.hover_loading_debouncer = debouncer
+            if latest is Some(_) {
+              self.hover_trigger_loading(request)
+            }
+          },
+          @hover.hover_loading_message_ms,
+        ),
+      )
+    }
+    HoverRunAsyncAndSync(token) => {
+      guard self.content_hover_controller() is Some(hc) else { return }
+      guard self.get_model() is Some(model) else { return }
+      let source = new_feature_cancellation_source()
+      hc.begin_request(source, token)
+      let request = hc.hover.request_stamp(model, source.token())
+      self.kick_hover_async(request)
+      self.hover_trigger_sync(request)
     }
   }
+}
+
+///|
+/// Programmatic wrapper entry matching `startShowingAtRange`: constructs the
+/// priority-zero range anchor and forwards mode, source, and focus unchanged.
+fn Viewer::start_showing_hover_at_range(
+  self : Viewer,
+  range : @base_common.Range,
+  mode : @hover.HoverStartMode,
+  source : @hover.HoverStartSource,
+  should_focus : Bool,
+) -> Unit {
+  guard self.content_hover_controller() is Some(hc) else { return }
+  let before = hc.hover
+  let (effect, hover) = hc.hover.start_showing_or_update_hover(
+    HoverRangeAnchor(
+      priority=0,
+      range~,
+      initial_mouse_pos_x=None,
+      initial_mouse_pos_y=None,
+    ),
+    false,
+    mode~,
+    source~,
+    should_focus~,
+    live_widget_visible=self.content_hover_visible(),
+  )
+  hc.hover = hover
+  if before.operation.token != hover.operation.token {
+    hc.cancel_operation_timers()
+    hc.cancel_request()
+  }
+  self.apply_hover_effect(effect)
+  self.after_hover_transition(before)
 }
 
 ///|
@@ -390,44 +494,75 @@ fn Viewer::apply_hover_effect(
 /// the operation to `SecondWait`, schedule the sync compute at
 /// `hover_second_wait_ms`, and kick the streamed async compute. No view changes
 /// yet (emission is still suppressed), so no re-render is needed here.
-fn Viewer::hover_trigger_async(self : Viewer, token : Int) -> Unit {
+fn Viewer::hover_trigger_async(
+  self : Viewer,
+  request : @hover.HoverRequestStamp,
+) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
-  let (proceed, hover) = hc.hover.op_trigger_async(token)
+  let (proceed, hover) = hc.hover.op_trigger_async_request(
+    request,
+    self.get_model(),
+    hc.hover.operation.token,
+  )
   hc.hover = hover
   if proceed {
-    set_timeout(
-      () => self.hover_trigger_sync(token),
-      @hover.hover_second_wait_ms,
+    guard hc.hover.operation.options is Some(options) else { return }
+    let (sync_generation, sync_debouncer) = hc.hover_sync_debouncer.schedule(
+      options,
+      delay_ms=@hover.hover_second_wait_ms,
     )
-    |> ignore
-    self.kick_hover_async(token)
+    hc.hover_sync_debouncer = sync_debouncer
+    hc.install_sync_timer(
+      (self.hover_schedule_timeout)(
+        () => {
+          let (latest, debouncer) = hc.hover_sync_debouncer.take(
+            sync_generation,
+          )
+          hc.hover_sync_debouncer = debouncer
+          if latest is Some(_) {
+            self.hover_trigger_sync(request)
+          }
+        },
+        @hover.hover_second_wait_ms,
+      ),
+    )
+    self.kick_hover_async(request)
   }
 }
 
 ///|
 /// Monaco `_triggerSyncComputation` fired (at the full delay): run the sync
 /// participants and feed their parts into the operation.
-fn Viewer::hover_trigger_sync(self : Viewer, token : Int) -> Unit {
+fn Viewer::hover_trigger_sync(
+  self : Viewer,
+  request : @hover.HoverRequestStamp,
+) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
-  if token != hc.hover.operation.token {
-    return
-  }
   let before = hc.hover
-  hc.hover = hc.hover.op_trigger_sync(token, self.compute_hover_sync(token))
+  hc.hover = hc.hover.op_trigger_sync_request(
+    request,
+    self.get_model(),
+    hc.hover.operation.token,
+    self.compute_hover_sync(request),
+  )
   self.after_hover_transition(before)
-  self.maybe_notify_hover_resolved(token)
+  self.maybe_notify_hover_resolved(request)
 }
 
 ///|
 /// Monaco `_triggerLoadingMessage` fired (at three times the delay): show the
 /// loading message if the async compute is still pending.
-fn Viewer::hover_trigger_loading(self : Viewer, token : Int) -> Unit {
+fn Viewer::hover_trigger_loading(
+  self : Viewer,
+  request : @hover.HoverRequestStamp,
+) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
-  if token != hc.hover.operation.token {
-    return
-  }
   let before = hc.hover
-  hc.hover = hc.hover.op_trigger_loading(token)
+  hc.hover = hc.hover.op_trigger_loading_request(
+    request,
+    self.get_model(),
+    hc.hover.operation.token,
+  )
   self.after_hover_transition(before)
 }
 
@@ -435,10 +570,15 @@ fn Viewer::hover_trigger_loading(self : Viewer, token : Int) -> Unit {
 /// Builds a content-hover computer over the current viewer services (Monaco
 /// `ContentHoverWidgetWrapper._initializeHoverParticipants`).
 fn Viewer::make_hover_computer(self : Viewer) -> @hover.ContentHoverComputer {
+  let inlay_hover_owner = match self.content_hover_controller() {
+    Some(hc) => hc.inlay_hover_owner
+    None => @hover.HoverParticipantOwner::new()
+  }
   let services : @hover.HoverParticipantServices = {
     languages: self.services.languages,
     marker_decorations: self.services.marker_decorations,
     log_service: self.services.log_service,
+    inlay_hover_owner,
   }
   @hover.ContentHoverComputer::new(services)
 }
@@ -447,18 +587,27 @@ fn Viewer::make_hover_computer(self : Viewer) -> @hover.ContentHoverComputer {
 /// Runs the synchronous hover participants for the current anchor.
 fn Viewer::compute_hover_sync(
   self : Viewer,
-  token : Int,
+  request : @hover.HoverRequestStamp,
 ) -> Array[@hover.HoverPart] {
   guard self.content_hover_controller() is Some(hc) else { return [] }
   match (self.get_model(), hc.hover.anchor) {
     (Some(model), Some(anchor)) =>
-      if token != hc.hover.operation.token {
+      if !request.is_current(Some(model), hc.hover.operation.token) {
         []
       } else {
+        let source = match hc.hover.operation.options {
+          Some(options) => options.source
+          None => HoverStartMouse
+        }
         match
           self
           .make_hover_computer()
-          .compute_sync(model, anchor, inlay_hints=self.current_inlay_hints()) {
+          .compute_sync(
+            model,
+            anchor,
+            inlay_hints=self.current_inlay_hints(),
+            source~,
+          ) {
           Some(hover) => hover.parts
           None => []
         }
@@ -472,17 +621,31 @@ fn Viewer::compute_hover_sync(
 /// participant's parts are fed to the operation as they resolve, then the
 /// operation is marked done. Results carry the requesting model and anchor token
 /// so stale responses are dropped at their guards.
-fn Viewer::kick_hover_async(self : Viewer, token : Int) -> Unit {
+fn Viewer::kick_hover_async(
+  self : Viewer,
+  request : @hover.HoverRequestStamp,
+) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
-  match (self.get_model(), hc.hover.anchor) {
-    (Some(model), Some(anchor)) => {
+  match hc.hover.anchor {
+    Some(anchor) => {
       let computer = self.make_hover_computer()
       let inlay_hints = self.current_inlay_hints()
-      @js.async_run(() => {
-        computer.compute_async_each(model, anchor, inlay_hints~, emit=parts => {
-          self.hover_async_item(model, token, parts)
-        })
-        self.hover_async_done(model, token)
+      let source = match hc.hover.operation.options {
+        Some(options) => options.source
+        None => HoverStartMouse
+      }
+      (self.hover_launch_async_task)(() => {
+        computer.compute_async_each(
+          request.model(),
+          anchor,
+          inlay_hints~,
+          token=request.cancellation_token(),
+          source~,
+          is_current=() => self.is_current_hover_request(request),
+          run_tasks=run_async_tasks_concurrently,
+          emit=parts => self.hover_async_item(request, parts),
+        )
+        self.hover_async_done(request)
       })
     }
     _ => ()
@@ -492,47 +655,69 @@ fn Viewer::kick_hover_async(self : Viewer, token : Int) -> Unit {
 ///|
 fn Viewer::hover_async_item(
   self : Viewer,
-  model : @model.TextModel,
-  token : Int,
+  request : @hover.HoverRequestStamp,
   parts : Array[@hover.HoverPart],
 ) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
-  if !self.is_current_model(model) || token != hc.hover.operation.token {
-    return
-  }
   let before = hc.hover
-  hc.hover = hc.hover.op_async_item(token, parts)
+  hc.hover = hc.hover.op_async_item_request(
+    request,
+    self.get_model(),
+    hc.hover.operation.token,
+    parts,
+  )
   self.after_hover_transition(before)
 }
 
 ///|
 fn Viewer::hover_async_done(
   self : Viewer,
-  model : @model.TextModel,
-  token : Int,
+  request : @hover.HoverRequestStamp,
 ) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
-  if !self.is_current_model(model) || token != hc.hover.operation.token {
-    return
-  }
   let before = hc.hover
-  hc.hover = hc.hover.op_async_done(token)
+  hc.hover = hc.hover.op_async_done_request(
+    request,
+    self.get_model(),
+    hc.hover.operation.token,
+  )
   self.after_hover_transition(before)
-  self.maybe_notify_hover_resolved(token)
+  self.maybe_notify_hover_resolved(request)
+}
+
+///|
+fn Viewer::is_current_hover_request(
+  self : Viewer,
+  request : @hover.HoverRequestStamp,
+) -> Bool {
+  if self.disposed {
+    return false
+  }
+  match self.content_hover_controller() {
+    Some(hc) => request.is_current(self.get_model(), hc.hover.operation.token)
+    None => false
+  }
 }
 
 ///|
 /// Fires the public hover-resolution status exactly once per anchor, when the
 /// operation completes (reaches `Idle`): `ok` reports whether any hover content
 /// was produced. Replaces the old per-result notification.
-fn Viewer::maybe_notify_hover_resolved(self : Viewer, token : Int) -> Unit {
+fn Viewer::maybe_notify_hover_resolved(
+  self : Viewer,
+  request : @hover.HoverRequestStamp,
+) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
-  if token != hc.hover.operation.token || !hc.hover.is_complete() {
+  let token = request.generation()
+  if !request.is_current(self.get_model(), hc.hover.operation.token) ||
+    !hc.hover.is_complete() {
     return
   }
   if hc.hover_notified_token == token {
     return
   }
+  hc.cancel_operation_timers()
+  hc.finish_request(token)
   hc.hover_notified_token = token
   let revision = match self.get_model() {
     Some(model) => model.revision
@@ -577,7 +762,7 @@ fn Viewer::current_inlay_hints(self : Viewer) -> Array[@language.InlayHint] {
 ///|
 fn Viewer::is_current_model(self : Viewer, model : @model.TextModel) -> Bool {
   match self.get_model() {
-    Some(current) => current.same_identity_and_version(model)
+    Some(current) => physical_equal(current, model)
     None => false
   }
 }

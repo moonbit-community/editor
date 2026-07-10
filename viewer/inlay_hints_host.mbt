@@ -12,12 +12,27 @@
 /// (`docs/architecture.md`, "Controller access"). Filed in the root package
 /// next to the glue below — the mirror has no `contrib/inlay_hints`
 /// package yet.
-pub(all) struct InlayHintsController {
+priv struct InlayHintsController {
   /// The last provider result; kept for hover tooltip lookup.
   mut inlay_hints : Array[@language.InlayHint]
   /// The controller's per-editor decoration collection
   /// (`_updateHintsDecorators`' owner-scoped ids).
   mut inlay_hint_decoration_ids : Array[String]
+  /// Viewer-lifetime request generation. It is never reset on model swaps;
+  /// every replacement or invalidation advances it before new work begins.
+  mut request_generation : Int
+  /// Caller-owned cancellation source for the one current provider request.
+  mut request_source : @language.CancellationTokenSource?
+}
+
+///|
+/// Immutable authority captured at inlay request creation. URI, host version,
+/// revision, and decoration instance id are deliberately absent.
+priv struct InlayRequestStamp {
+  model : @model.TextModel
+  internal_version : Int
+  generation : Int
+  token : @language.CancellationToken
 }
 
 ///|
@@ -25,31 +40,111 @@ pub(all) struct InlayHintsController {
 let inlay_hints_instances : Map[String, InlayHintsController] = {}
 
 ///|
-pub fn InlayHintsController::attach(editor_id : String) -> InlayHintsController {
+fn InlayHintsController::attach(editor_id : String) -> InlayHintsController {
   let controller : InlayHintsController = {
     inlay_hints: [],
     inlay_hint_decoration_ids: [],
+    request_generation: 0,
+    request_source: None,
   }
   inlay_hints_instances[editor_id] = controller
   controller
 }
 
 ///|
-pub fn InlayHintsController::get(editor_id : String) -> InlayHintsController? {
+fn InlayHintsController::get(editor_id : String) -> InlayHintsController? {
   inlay_hints_instances.get(editor_id)
 }
 
 ///|
-pub fn InlayHintsController::detach(editor_id : String) -> Unit {
+fn InlayHintsController::detach(editor_id : String) -> Unit {
+  match inlay_hints_instances.get(editor_id) {
+    Some(controller) => controller.cancel_request()
+    None => ()
+  }
   inlay_hints_instances.remove(editor_id)
+}
+
+///|
+fn new_feature_cancellation_source() -> @language.CancellationTokenSource {
+  @language.CancellationTokenSource::new(schedule=callback => {
+    schedule_timeout(callback, 0)
+  })
+}
+
+///|
+/// Cancels/retires old work and captures one fresh model/version/generation
+/// request authority.
+fn InlayHintsController::begin_request(
+  self : InlayHintsController,
+  model : @model.TextModel,
+) -> InlayRequestStamp {
+  match self.request_source {
+    Some(source) => source.dispose(cancel=true)
+    None => ()
+  }
+  self.request_generation += 1
+  let source = new_feature_cancellation_source()
+  self.request_source = Some(source)
+  {
+    model,
+    internal_version: model.get_version_id(),
+    generation: self.request_generation,
+    token: source.token(),
+  }
+}
+
+///|
+/// Invalidates the current generation even when no provider request exists, so
+/// a completion captured before detach/content change can never become current
+/// again.
+fn InlayHintsController::cancel_request(self : InlayHintsController) -> Unit {
+  match self.request_source {
+    Some(source) => source.dispose(cancel=true)
+    None => ()
+  }
+  self.request_source = None
+  self.request_generation += 1
+}
+
+///|
+fn InlayHintsController::accepts_request(
+  self : InlayHintsController,
+  stamp : InlayRequestStamp,
+  current_model : @model.TextModel?,
+) -> Bool {
+  !stamp.token.is_cancellation_requested() &&
+  !stamp.model.is_disposed() &&
+  self.request_generation == stamp.generation &&
+  (match current_model {
+    Some(model) =>
+      !model.is_disposed() &&
+      physical_equal(model, stamp.model) &&
+      model.get_version_id() == stamp.internal_version
+    None => false
+  })
+}
+
+///|
+fn InlayHintsController::finish_request(
+  self : InlayHintsController,
+  generation : Int,
+) -> Unit {
+  if self.request_generation != generation {
+    return
+  }
+  match self.request_source {
+    Some(source) => source.dispose()
+    None => ()
+  }
+  self.request_source = None
 }
 
 ///|
 /// Drops the per-model state on a model swap: the provider result and the
 /// decoration ids belong to the outgoing model.
-pub fn InlayHintsController::reset_model_state(
-  self : InlayHintsController,
-) -> Unit {
+fn InlayHintsController::reset_model_state(self : InlayHintsController) -> Unit {
+  self.cancel_request()
   self.inlay_hints = []
   self.inlay_hint_decoration_ids = []
 }

@@ -173,3 +173,35 @@ test "getting closer: an empty insist-update keeps the previous hover instead of
       fail("expected the previous hover to be kept on an empty insist-update")
   }
 }
+
+///|
+test "withResult: empty insist still clears a previous incomplete hover" {
+  let (_, first) = HoverController::empty().start_showing_or_update_hover(
+    anchor_at(3, 7, 1),
+    false,
+  )
+  let first_token = first.operation.token
+  let (_, first_async) = first.op_trigger_async(first_token)
+  let incomplete = first_async.op_trigger_sync(first_token, [
+    markdown_part(3, 7, "incomplete"),
+  ])
+  assert_true(incomplete.view is Some(_))
+  assert_false(incomplete.current_complete)
+
+  // A sticky getting-closer update preserves the incomplete result while it
+  // starts, but its empty complete result still enters `_setCurrentResult`
+  // before `_withResult` reaches the insist early return: the special keep is
+  // only for a previous visible *complete* result.
+  let (_, insisting) = incomplete.start_showing_or_update_hover(
+    anchor_at(20, 24, 5),
+    true,
+  )
+  assert_true(insisting.insist_on_keeping)
+  let insisting_token = insisting.operation.token
+  let (_, insisting_async) = insisting.op_trigger_async(insisting_token)
+  let async_done = insisting_async.op_async_done(insisting_token)
+  let empty_complete = async_done.op_trigger_sync(insisting_token, [])
+  assert_true(empty_complete.is_complete())
+  assert_true(empty_complete.view is None)
+  assert_true(empty_complete.current_anchor is None)
+}

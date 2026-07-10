@@ -68,6 +68,25 @@ test "cancel before token" {
 }
 
 ///|
+test "cancel before first token read keeps shortcut scheduling" {
+  let scheduled : Array[ScheduledCancellation] = []
+  let source = CancellationTokenSource::new(
+    schedule=manual_cancellation_scheduler(scheduled),
+  )
+  source.cancel()
+  let token = source.token()
+  assert_true(token.is_cancellation_requested())
+  assert_true(physical_equal(token, source.token()))
+  let count = Ref(0)
+  let subscription = token.on_cancellation_requested(() => count.val += 1)
+  assert_eq(count.val, 0)
+  assert_eq(scheduled.length(), 1)
+  subscription.dispose()
+  flush_cancellations(scheduled)
+  assert_eq(count.val, 0)
+}
+
+///|
 test "cancel happens only once" {
   let source = CancellationTokenSource::new()
   let token = source.token()
@@ -124,7 +143,12 @@ test "token stays the same" {
   canceled_before_read.cancel()
   let canceled = canceled_before_read.token()
   assert_true(physical_equal(canceled, canceled_before_read.token()))
-  assert_true(physical_equal(canceled, CancellationToken::cancelled()))
+  assert_true(
+    physical_equal(
+      CancellationToken::cancelled(),
+      CancellationToken::cancelled(),
+    ),
+  )
 }
 
 ///|
@@ -143,6 +167,22 @@ test "dispose calls no listeners (unless told to cancel)" {
   let count = Ref(0)
   source.token().on_cancellation_requested(() => count.val += 1) |> ignore
   source.dispose(cancel=true)
+  assert_eq(count.val, 1)
+}
+
+///|
+test "dispose with cancellation before first token read stays cancelled" {
+  let scheduled : Array[ScheduledCancellation] = []
+  let source = CancellationTokenSource::new(
+    schedule=manual_cancellation_scheduler(scheduled),
+  )
+  source.dispose(cancel=true)
+  let token = source.token()
+  assert_true(token.is_cancellation_requested())
+  let count = Ref(0)
+  token.on_cancellation_requested(() => count.val += 1) |> ignore
+  assert_eq(count.val, 0)
+  flush_cancellations(scheduled)
   assert_eq(count.val, 1)
 }
 

@@ -32,6 +32,67 @@ extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Double =
   #| (callback, ms) => globalThis.setTimeout(callback, ms)
 
 ///|
+extern "js" fn clear_timeout(handle : Double) -> Unit =
+  #| (handle) => globalThis.clearTimeout(handle)
+
+///|
+/// Owns one timeout as an idempotent disposable. Disposal prevents delivery
+/// and clears the browser handle; the callback also retires the handle before
+/// invoking user code so a reentrant cancel is a no-op.
+fn schedule_timeout(callback : () -> Unit, ms : Int) -> @base_common.Disposable {
+  let active = Ref(true)
+  let handle = set_timeout(
+    () => {
+      if active.val {
+        active.val = false
+        callback()
+      }
+    },
+    ms,
+  )
+  @base_common.Disposable::from(() => {
+    if active.val {
+      active.val = false
+      clear_timeout(handle)
+    }
+  })
+}
+
+///|
+/// Starts every task in its own JavaScript async continuation and resumes when
+/// the last continuation finishes. Completion callbacks therefore observe real
+/// completion order while shared packages remain independent of the browser's
+/// async runtime.
+async fn run_async_tasks_concurrently(tasks : Array[async () -> Unit]) -> Unit {
+  if tasks.is_empty() {
+    return
+  }
+  @js.suspend((resolve : (Unit) -> Unit, _reject : (Error) -> Unit) => {
+    let remaining = Ref(tasks.length())
+    for task in tasks {
+      @js.async_run(() => {
+        task() catch {
+          _ => ()
+        }
+        remaining.val -= 1
+        if remaining.val == 0 {
+          resolve(())
+        }
+      })
+    }
+  }) catch {
+    _ => ()
+  }
+}
+
+///|
+/// Starts one detached JS async continuation. Freshness/cancellation ownership
+/// remains with the request stamp captured by the continuation.
+fn launch_async_task(task : async () -> Unit noraise) -> Unit {
+  @js.async_run(task)
+}
+
+///|
 /// The microtask scheduler Monaco's `MicrotaskEmitter` hardcodes
 /// (`event.ts:1610`); injected into `MarkerService`'s change emitter here in
 /// the js-only host package (`@base_common` compiles for native too).

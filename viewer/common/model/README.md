@@ -9,14 +9,17 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   and `\r\n` as line breaks; line reads exclude the terminator, while `get_value`
   and `get_value_in_range` normalize returned line breaks to `\n`. Raw offset
   helpers and `get_length` still use the original UTF-16 text.
-- `TextModel` adds URI, display name, language id, version, revision, lifecycle,
-  and a `TokenizationTextModelPart`. Reads, position/offset conversion, range
-  validation, and word lookup delegate to the snapshot.
-- `same_identity_and_version` compares serialized URI plus model version;
-  `revision` is host metadata, not part of that freshness guard.
-- Content is never edited in place: a host installs new text as a new model.
-  There is no edit/undo/redo, EOL option, IME, attachment, or content-change event.
-  Ranges are generally clamped where Monaco throws, and the immutable snapshot
+- `TextModel` adds URI, display name, language id, caller-owned host version,
+  revision, lifecycle, and a `TokenizationTextModelPart`. Reads,
+  position/offset conversion, range validation, and word lookup delegate to the
+  current snapshot.
+- Model-scoped async freshness uses physical `TextModel` identity plus the
+  internal `get_version_id()` counter. URI, host version, revision, and
+  decoration IDs are metadata and cannot substitute for that authority.
+- `set_value` replaces the complete snapshot in the same model, increments the
+  internal version once, destroys old decorations, and fires the content-flush
+  event. There is no incremental edit/undo/redo, EOL option, IME, or attachment
+  surface. Ranges are generally clamped where Monaco throws, and the snapshot
   remains readable after `TextModel::dispose`.
 
 ## Mutable model-side state

@@ -29,12 +29,7 @@ fn register_hover_contribution(registry : EditorContributionRegistry) -> Unit {
   // `hoverVisible`.
   registry.register_editor_command(
     "editor.action.hideHover",
-    viewer => {
-      match viewer.content_hover_controller() {
-        Some(hc) => hc.hover.widget_visible()
-        None => false
-      }
-    },
+    viewer => viewer.content_hover_visible(),
     viewer => viewer.hide_content_hover(),
     [("Escape", false, false)],
   )

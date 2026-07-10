@@ -109,6 +109,7 @@ fn Viewer::emit_mouse_up(
   target : @editor_browser.MouseTarget,
 ) -> Unit {
   self.did_mouse_up.fire({ event, target: self.convert_mouse_target(target) })
+  self.on_editor_mouse_up()
 }
 
 ///|

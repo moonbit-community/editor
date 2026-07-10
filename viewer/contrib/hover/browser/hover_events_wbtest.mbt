@@ -35,6 +35,11 @@ fn empty_target(
 }
 
 ///|
+fn candidate_range(column : Int) -> @base_common.Range {
+  Range(1, column, 1, column)
+}
+
+///|
 test "find_anchor_candidates: a content-text hit yields the priority-0 range anchor at the hit position" {
   let candidates = find_anchor_candidates([], text_target(2, 4), 10.0)
   assert_eq(candidates.length(), 1)
@@ -45,6 +50,32 @@ test "find_anchor_candidates: a content-text hit yields the priority-0 range anc
     }
     _ => fail("expected the range anchor")
   }
+}
+
+///|
+test "equal-priority anchor candidates retain insertion order" {
+  let first = @hover.HoverRangeAnchor(
+    priority=10,
+    range=candidate_range(1),
+    initial_mouse_pos_x=None,
+    initial_mouse_pos_y=None,
+  )
+  let second = @hover.HoverRangeAnchor(
+    priority=10,
+    range=candidate_range(2),
+    initial_mouse_pos_x=None,
+    initial_mouse_pos_y=None,
+  )
+  let highest = @hover.HoverRangeAnchor(
+    priority=20,
+    range=candidate_range(3),
+    initial_mouse_pos_x=None,
+    initial_mouse_pos_y=None,
+  )
+  let sorted = sort_hover_anchor_candidates_stably([first, second, highest])
+  assert_true(sorted[0] == highest)
+  assert_true(sorted[1] == first)
+  assert_true(sorted[2] == second)
 }
 
 ///|

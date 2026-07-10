@@ -102,6 +102,52 @@ test "loading message appears only while waiting for a slow async compute" {
 }
 
 ///|
+test "replacement loading never augments a previous complete hover" {
+  let (_, first) = HoverController::empty().start_delayed(3, 7)
+  let (_, first_async) = first.op_trigger_async(1)
+  let shown = first_async
+    .op_trigger_sync(1, [markdown_part(3, 7, "complete")])
+    .op_async_done(1)
+  let (_, replacement) = shown.start_delayed(4, 5)
+  let (_, replacement_async) = replacement.op_trigger_async(2)
+  let waiting = replacement_async.op_trigger_sync(2, [])
+  let loading = waiting.op_trigger_loading(2)
+  assert_true(loading.operation.state is HoverOpWaitingForAsyncShowingLoading)
+  assert_true(loading.current_complete)
+  match loading.widget_view() {
+    Some(view) => {
+      assert_eq(view.parts.length(), 1)
+      assert_true(view.parts[0] is MarkdownHover(_))
+    }
+    None => fail("expected retained complete hover")
+  }
+}
+
+///|
+test "loading-only live visibility keeps an equal anchor operation" {
+  let anchor = HoverRangeAnchor(
+    priority=0,
+    range=Range(1, 4, 1, 4),
+    initial_mouse_pos_x=None,
+    initial_mouse_pos_y=None,
+  )
+  let (_, armed) = HoverController::empty().start_showing_or_update_hover(
+    anchor, false,
+  )
+  let (_, second_wait) = armed.op_trigger_async(1)
+  let loading = second_wait.op_trigger_sync(1, []).op_trigger_loading(1)
+  assert_true(loading.view is None)
+  assert_true(loading.widget_view() is Some(_))
+  let (effect, unchanged) = loading.start_showing_or_update_hover(
+    anchor,
+    false,
+    live_widget_visible=true,
+  )
+  assert_true(effect is HoverNoEffect)
+  assert_true(unchanged == loading)
+}
+
+///|
 test "immediate path shows the hover synchronously without the schedulers" {
   // Monaco start(Immediate): invoke the async + sync triggers back to back,
   // skipping the waits. The view is shown right away.
@@ -192,13 +238,22 @@ test "typed operation start covers delayed and every immediate state branch" {
   assert_true(first_wait.state is HoverOpFirstWait)
   assert_true(first_wait.options == Some(options))
 
-  // Delayed start is Idle-only.
-  let (delayed_again, delayed_unchanged) = first_wait.start(
-    HoverStartDelayed,
-    operation_options(4),
-  )
-  assert_true(delayed_again is HoverOperationNoStart)
-  assert_true(delayed_unchanged == first_wait)
+  // Delayed start is Idle-only across every other typed state.
+  for
+    state in [
+      HoverOpFirstWait,
+      HoverOpSecondWait,
+      HoverOpWaitingForAsync,
+      HoverOpWaitingForAsyncShowingLoading,
+    ] {
+    let operation = { ..first_wait, state, }
+    let (delayed_again, delayed_unchanged) = operation.start(
+      HoverStartDelayed,
+      operation_options(4),
+    )
+    assert_true(delayed_again is HoverOperationNoStart)
+    assert_true(delayed_unchanged == operation)
+  }
 
   // Immediate Idle runs async then sync; SecondWait runs only sync.
   let immediate_options = operation_options(5, source=HoverStartKeyboard)
@@ -233,6 +288,45 @@ test "typed operation start covers delayed and every immediate state branch" {
     assert_true(effect is HoverOperationNoStart)
     assert_true(unchanged == operation)
   }
+}
+
+///|
+test "async item accumulation preserves arrival order around the sync result" {
+  let async_a = markdown_part(3, 7, "async-a")
+  let async_b = markdown_part(3, 7, "async-b")
+  let sync = markdown_part(3, 7, "sync")
+
+  // Two streamed items can arrive before the full-delay sync computation.
+  let (_, before_armed) = HoverController::empty().start_delayed(3, 7)
+  let before_token = before_armed.operation.token
+  let (_, before_async) = before_armed.op_trigger_async(before_token)
+  let before_one = before_async.op_async_item(before_token, [async_a])
+  let before_two = before_one.op_async_item(before_token, [async_b])
+  assert_true(before_two.view is None)
+  assert_true(before_two.operation.parts == [async_a, async_b])
+  let before_sync = before_two.op_trigger_sync(before_token, [sync])
+  assert_true(before_sync.operation.parts == [async_a, async_b, sync])
+  match before_sync.view {
+    Some(view) => assert_true(view.parts == [async_a, async_b, sync])
+    None => fail("expected pre-sync async items to be shown at full delay")
+  }
+
+  // When sync wins the race, later async items append after it in their own
+  // arrival order. An empty local item is the typed no-data seam and is inert.
+  let (_, after_armed) = HoverController::empty().start_delayed(3, 7)
+  let after_token = after_armed.operation.token
+  let (_, after_async) = after_armed.op_trigger_async(after_token)
+  let after_sync = after_async.op_trigger_sync(after_token, [sync])
+  assert_true(after_sync.op_async_item(after_token, []) == after_sync)
+  let after_one = after_sync.op_async_item(after_token, [async_a])
+  let after_two = after_one.op_async_item(after_token, [async_b])
+  assert_true(after_two.operation.parts == [sync, async_a, async_b])
+  match after_two.view {
+    Some(view) => assert_true(view.parts == [sync, async_a, async_b])
+    None => fail("expected post-sync async items to update the shown hover")
+  }
+  let completed = after_two.op_async_done(after_token)
+  assert_true(completed.is_complete())
 }
 
 ///|
@@ -372,11 +466,14 @@ test "request-aware transitions reject cancellation and stale generations" {
 }
 
 ///|
-test "canceling pending work preserves the shown view and rotates generation" {
+test "canceling pending work preserves a complete shown view and rotates generation" {
   let (_, armed) = HoverController::empty().start_delayed(3, 7)
   let (_, second_wait) = armed.op_trigger_async(1)
-  let shown = second_wait.op_trigger_sync(1, [markdown_part(3, 7, "visible")])
+  let shown = second_wait
+    .op_trigger_sync(1, [markdown_part(3, 7, "visible")])
+    .op_async_done(1)
   assert_true(shown.view is Some(_))
+  assert_true(shown.current_complete)
   let canceled = shown.cancel_operation_preserving_view()
   assert_true(canceled.view == shown.view)
   assert_true(canceled.current_anchor == shown.current_anchor)
@@ -388,6 +485,37 @@ test "canceling pending work preserves the shown view and rotates generation" {
   assert_true(canceled.operation.options is None)
   let late = canceled.op_async_item(1, [markdown_part(3, 7, "late")])
   assert_true(late.view == shown.view)
+}
+
+///|
+test "canceling an incomplete shown view clears it so the same anchor restarts" {
+  let anchor : HoverAnchor = HoverRangeAnchor(
+    priority=0,
+    range=Range(1, 4, 1, 8),
+    initial_mouse_pos_x=None,
+    initial_mouse_pos_y=None,
+  )
+  let (_, armed) = HoverController::empty().start_showing_or_update_hover(
+    anchor, false,
+  )
+  let token = armed.operation.token
+  let (_, second_wait) = armed.op_trigger_async(token)
+  let partial = second_wait.op_trigger_sync(token, [
+    markdown_part(3, 7, "partial"),
+  ])
+  assert_true(partial.view is Some(_))
+  assert_false(partial.current_complete)
+
+  let canceled = partial.cancel_operation_preserving_view()
+  assert_true(canceled.view is None)
+  assert_true(canceled.current_anchor is None)
+  assert_true(canceled.anchor is None)
+  let (effect, restarted) = canceled.start_showing_or_update_hover(
+    anchor, false,
+  )
+  assert_true(effect is HoverScheduleDelayed(_))
+  assert_true(restarted.anchor == Some(anchor))
+  assert_eq(restarted.operation.token, canceled.operation.token + 1)
 }
 
 ///|
@@ -411,4 +539,28 @@ test "equal parts at a new anchor still replace current result identity" {
   let second = first.set_current_result(parts, true, second_anchor)
   assert_true(second.current_anchor == Some(second_anchor))
   assert_false(second == first)
+}
+
+///|
+test "equal-key hover parts retain arrival order on every target" {
+  let first = markdown_part(2, 6, "first")
+  let second = markdown_part(2, 6, "second")
+  assert_true(sort_hover_parts_stably([first, second]) == [first, second])
+  assert_true(sort_hover_parts_stably([second, first]) == [second, first])
+
+  let anchor : HoverAnchor = HoverRangeAnchor(
+    priority=0,
+    range=Range(1, 3, 1, 7),
+    initial_mouse_pos_x=None,
+    initial_mouse_pos_y=None,
+  )
+  let shown = HoverController::empty().set_current_result(
+    [second, first],
+    true,
+    anchor,
+  )
+  match shown.view {
+    Some(view) => assert_true(view.parts == [second, first])
+    None => fail("expected equal-key hover parts to remain visible")
+  }
 }

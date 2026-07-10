@@ -11,6 +11,12 @@ Backend-neutral contracts for readonly language features.
   `ReferencesProvider`, `DocumentSymbolProvider`, and `InlayHintsProvider`.
   Providers receive a readonly `TextModel` and a cooperative
   `CancellationToken`.
+- `CancellationTokenSource` owns cancellation. Repeated token reads are
+  identity-stable; cancellation notifies listeners once in registration order,
+  parent cancellation propagates, and `dispose(cancel=...)` separates listener
+  teardown from cancellation. The host-neutral late-listener scheduler is
+  injectable: browser request owners pass a clearable zero-delay scheduler,
+  while the cross-target default delivers inline.
 - `LanguageSelector` matches by language id, filter, or selector list. Filters
   combine optional language, URI scheme, and path pattern checks. Pattern matching
   is deliberately simpler than Monaco scoring: it strips one leading `/` from the

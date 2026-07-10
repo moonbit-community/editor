@@ -377,6 +377,81 @@ async fn run_hover_tasks_in_reverse(tasks : Array[async () -> Unit]) -> Unit {
 }
 
 ///|
+/// Starts every participant task before waiting for the group. The per-
+/// participant semaphores below control completion independently, so the test
+/// can observe one emitted result while its sibling is still suspended.
+async fn run_hover_test_tasks_concurrently(
+  tasks : Array[async () -> Unit],
+) -> Unit {
+  @async.with_task_group() <| group => {
+    for task in tasks {
+      group.spawn_bg(task)
+    }
+  }
+}
+
+///|
+priv struct SuspendedHoverParticipant {
+  ordinal_value : Int
+  text : String
+  started : @async.Semaphore
+  release_gate : @async.Semaphore
+  finished : Ref[Bool]
+}
+
+///|
+impl HoverParticipant for SuspendedHoverParticipant with fn ordinal(self) {
+  self.ordinal_value
+}
+
+///|
+impl HoverParticipant for SuspendedHoverParticipant with fn suggest_hover_anchor(
+  _self,
+  _injected_text,
+  _target_range,
+  _initial_mouse_pos_x,
+  _initial_mouse_pos_y,
+) {
+  None
+}
+
+///|
+impl HoverParticipant for SuspendedHoverParticipant with fn compute_sync(
+  _self,
+  _ctx,
+) {
+  []
+}
+
+///|
+impl HoverParticipant for SuspendedHoverParticipant with fn compute_async(
+  self,
+  ctx,
+  _token,
+) {
+  self.started.release()
+  self.release_gate.acquire() catch {
+    _ => return []
+  }
+  self.finished.val = true
+  [
+    MarkdownHover(
+      range=ctx.anchor.range(),
+      contents=[PlainText(self.text)],
+      ordinal=self.ordinal_value,
+    ),
+  ]
+}
+
+///|
+impl HoverParticipant for SuspendedHoverParticipant with fn create_loading_message(
+  _self,
+  _anchor,
+) {
+  None
+}
+
+///|
 async test "async-each eagerly builds tasks and preserves A then B completion" {
   let a = ParticipantProbe::new()
   let b = ParticipantProbe::new()
@@ -407,6 +482,24 @@ async test "async-each eagerly builds tasks and preserves A then B completion" {
 }
 
 ///|
+async test "async-each with zero participants builds and runs an empty task set" {
+  let computer : ContentHoverComputer = { participants: [] }
+  let runner_called = Ref(false)
+  let emitted = Ref(0)
+  computer.compute_async_each(
+    computer_test_model(),
+    async_test_anchor(),
+    run_tasks=tasks => {
+      runner_called.val = true
+      assert_true(tasks.is_empty())
+    },
+    emit=_parts => emitted.val += 1,
+  )
+  assert_true(runner_called.val)
+  assert_eq(emitted.val, 0)
+}
+
+///|
 async test "async-each injected runner preserves B then A completion" {
   let computer : ContentHoverComputer = {
     participants: [
@@ -422,6 +515,68 @@ async test "async-each injected runner preserves B then A completion" {
     emit=parts => emitted.push(first_plain_text(parts)),
   )
   assert_eq(emitted.join(","), "b,a")
+}
+
+///|
+async test "async-each emits B while A remains suspended then preserves B-to-A arrival order" {
+  let started = @async.Semaphore(2, initial_value=0)
+  let release_a = @async.Semaphore(1, initial_value=0)
+  let release_b = @async.Semaphore(1, initial_value=0)
+  let emitted_signal = @async.Semaphore(2, initial_value=0)
+  let finished_a = Ref(false)
+  let finished_b = Ref(false)
+  let computer : ContentHoverComputer = {
+    participants: [
+      SuspendedHoverParticipant::{
+        ordinal_value: 10,
+        text: "a",
+        started,
+        release_gate: release_a,
+        finished: finished_a,
+      },
+      SuspendedHoverParticipant::{
+        ordinal_value: 20,
+        text: "b",
+        started,
+        release_gate: release_b,
+        finished: finished_b,
+      },
+    ],
+  }
+  let emitted : Array[String] = []
+  @async.with_task_group() <| group => {
+    let request = group.spawn(() => {
+      computer.compute_async_each(
+        computer_test_model(),
+        async_test_anchor(),
+        run_tasks=run_hover_test_tasks_concurrently,
+        emit=parts => {
+          emitted.push(first_plain_text(parts))
+          emitted_signal.release()
+        },
+      )
+    })
+
+    // Both producers have started and are suspended on independent gates.
+    started.acquire()
+    started.acquire()
+    assert_false(finished_a.val)
+    assert_false(finished_b.val)
+
+    // B completes first. Its partial result is observable while A remains
+    // blocked, proving emission does not wait for the whole participant set.
+    release_b.release()
+    emitted_signal.acquire()
+    assert_true(finished_b.val)
+    assert_false(finished_a.val)
+    assert_eq(emitted.join(","), "b")
+
+    release_a.release()
+    emitted_signal.acquire()
+    request.wait()
+    assert_true(finished_a.val)
+    assert_eq(emitted.join(","), "b,a")
+  }
 }
 
 ///|

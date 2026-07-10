@@ -95,6 +95,13 @@ pub struct Viewer {
   /// The cancellable root render request. `None` is both the idle state and
   /// the disposed state; callbacks clear the slot before flushing.
   priv mut render_frame : @base_common.Disposable?
+  /// Host scheduler used by hover's async/sync/loading and mouse-react lanes.
+  /// Production installs the clearable browser timeout; white-box tests may
+  /// inject logical time without sleeping.
+  priv mut hover_schedule_timeout : (() -> Unit, Int) -> @base_common.Disposable
+  /// Fire-and-forget launcher for hover participant work. Production uses the
+  /// JS host; white-box timing tests may suppress launch deterministically.
+  priv mut hover_launch_async_task : (async () -> Unit noraise) -> Unit
   priv mut measure_requested : Bool
   priv mut pending_rendered : PendingRendered?
   priv mut scroll_dirty : Bool
@@ -322,6 +329,8 @@ pub fn Viewer::Viewer(
     placeholder_text: None,
     overlay_widgets: {},
     render_frame: None,
+    hover_schedule_timeout: schedule_timeout,
+    hover_launch_async_task: launch_async_task,
     measure_requested: false,
     pending_rendered: None,
     scroll_dirty: false,
@@ -351,6 +360,25 @@ pub fn Viewer::Viewer(
   viewer.contributions = editor_registry().instantiate_all(viewer)
   viewer
 }
+
+///|
+/// Package-private scheduler seam for deterministic hover timing tests. The
+/// production constructor always installs the clearable browser timeout.
+fn Viewer::set_hover_host_for_test(
+  self : Viewer,
+  schedule : (() -> Unit, Int) -> @base_common.Disposable,
+  test_launch_async_task : (async () -> Unit noraise) -> Unit,
+) -> Unit {
+  self.hover_schedule_timeout = schedule
+  self.hover_launch_async_task = test_launch_async_task
+}
+
+///|
+/// The test seam is intentionally package-private and therefore only called
+/// by a white-box test build; retain it in the ordinary library build too.
+let _hover_scheduler_test_seam_anchor : Unit = ignore(
+  (Viewer::set_hover_host_for_test, Viewer::start_showing_hover_at_range),
+)
 
 ///|
 /// Retains a Viewer-lifetime handle, disposing immediately when registration
@@ -666,11 +694,13 @@ fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
   self.cancel_mouse_selection()
   match self.content_hover_controller() {
     Some(hc) => {
+      hc.cancel_all_timers()
+      hc.cancel_request()
       hc.reset_model_state()
-      hc.hover = @hover.HoverController::empty()
+      hc.hover = hc.hover.cleared()
       hc.hover_keep_open = false
       hc.hover_ignore_mouse_events = false
-      hc.cancel_react()
+      hc.hover_is_mouse_down = false
     }
     None => ()
   }

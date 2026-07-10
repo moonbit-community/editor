@@ -12,7 +12,19 @@
 /// `_showHover`/`_hideHover` exactly when the result object changed.
 fn Viewer::sync_content_hover_widget(self : Viewer) -> Unit {
   let widget_view = match self.content_hover_controller() {
-    Some(hc) => hc.hover.widget_view()
+    Some(hc) => {
+      let loading_message = if hc.hover.operation.state
+        is HoverOpWaitingForAsyncShowingLoading {
+        match hc.hover.anchor {
+          Some(anchor) =>
+            self.make_hover_computer().create_loading_message(anchor)
+          None => None
+        }
+      } else {
+        None
+      }
+      hc.hover.widget_view_with_loading(loading_message)
+    }
     None => None
   }
   if widget_view == self.hover_widget_view {
@@ -30,6 +42,38 @@ fn Viewer::sync_content_hover_widget(self : Viewer) -> Unit {
         Some(widget) => widget.hide()
         None => ()
       }
+  }
+}
+
+///|
+/// Logical live visibility after participant-selected loading augmentation.
+/// This is the source of truth for controller scheduling/command predicates;
+/// it stays correct in headless tests where no DOM widget can be mounted.
+fn Viewer::content_hover_visible(self : Viewer) -> Bool {
+  self.hover_widget_view is Some(_)
+}
+
+///|
+/// Wrapper mouseleave: hide only when the pointer also left the editor root.
+fn Viewer::on_content_hover_widget_mouse_leave(
+  self : Viewer,
+  posx : Double,
+  posy : Double,
+) -> Unit {
+  guard self.get_view() is Some(view) else {
+    self.hide_content_hover()
+    return
+  }
+  let rect = view.root.get_bounding_client_rect()
+  if !@hover.mouse_within_element(
+      rect.get_left(),
+      rect.get_top(),
+      rect.get_width(),
+      rect.get_height(),
+      posx,
+      posy,
+    ) {
+    self.hide_content_hover()
   }
 }
 
@@ -99,6 +143,9 @@ fn Viewer::ensure_content_hover_widget(
         // Monaco reads `EditorOption.lineHeight` — configuration, not layout.
         line_height: () => self.font_info.line_height.to_double(),
         keep_hover_open: () => self.keep_hover_open(),
+        handle_mouseleave: (posx, posy) => {
+          self.on_content_hover_widget_mouse_leave(posx, posy)
+        },
         handle_keydown: (event, keyboard) => {
           self.handle_hover_keydown(event, keyboard)
         },

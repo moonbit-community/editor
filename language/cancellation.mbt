@@ -222,11 +222,12 @@ pub fn CancellationTokenSource::token(
 }
 
 ///|
-/// Requests cancellation once. Cancellation before the first token read reuses
-/// the shared already-cancelled token without allocating mutable listener state.
+/// Requests cancellation once. Cancellation before the first token read avoids
+/// mutable listener state but retains this source's scheduler, so a late
+/// listener still has next-turn/disposable delivery semantics.
 pub fn CancellationTokenSource::cancel(self : CancellationTokenSource) -> Unit {
   match self.token_value {
-    None => self.token_value = Some(cancellation_cancelled)
+    None => self.token_value = Some({ state: AlreadyCancelled(self.schedule) })
     Some({ state: SourceMutable(token) }) => token.cancel()
     Some(
       { state: NeverCancelled | AlreadyCancelled(_) | CompatibilityMutable(_) }

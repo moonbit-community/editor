@@ -31,8 +31,6 @@ pub let hover_first_wait_ms : Int
 
 pub let hover_hiding_delay_ms : Int
 
-pub fn hover_line_decorations(@model.TextModel, HoverAnchor) -> Array[@model.ModelDecoration]
-
 pub let hover_loading_message_ms : Int
 
 pub let hover_multi_cursor_modifier : MultiCursorModifier
@@ -142,17 +140,14 @@ pub fn HoverController::op_trigger_sync(Self, Int, Array[HoverPart]) -> Self
 pub fn HoverController::op_trigger_sync_request(Self, HoverRequestStamp, @model.TextModel?, Int, Array[HoverPart]) -> Self
 pub fn HoverController::request_stamp(Self, @model.TextModel, @language.CancellationToken) -> HoverRequestStamp
 pub fn HoverController::set_current_result(Self, Array[HoverPart], Bool, HoverAnchor) -> Self
-pub fn HoverController::start_hover_operation_if_necessary(Self, HoverAnchor, insist~ : Bool) -> (HoverEffect, Self)
-pub fn HoverController::start_showing_or_update_hover(Self, HoverAnchor, Bool, show_at_position? : @common.Position) -> (HoverEffect, Self)
+pub fn HoverController::start_hover_operation_if_necessary(Self, HoverAnchor, insist~ : Bool, mode? : HoverStartMode, source? : HoverStartSource, should_focus? : Bool) -> (HoverEffect, Self)
+pub fn HoverController::start_showing_or_update_hover(Self, HoverAnchor, Bool, show_at_position? : @common.Position, mode? : HoverStartMode, source? : HoverStartSource, should_focus? : Bool, live_widget_visible? : Bool) -> (HoverEffect, Self)
 pub fn HoverController::widget_view(Self) -> HoverWidgetView?
+pub fn HoverController::widget_view_with_loading(Self, HoverPart?) -> HoverWidgetView?
 pub fn HoverController::widget_visible(Self) -> Bool
 
-pub(all) struct HoverDebouncer {
-  default_delay_ms : Int
-  generation : Int
-  scheduled : Bool
-  delay_ms : Int
-  options : HoverOperationOptions?
+pub struct HoverDebouncer {
+  // private fields
 } derive(Eq, @debug.Debug)
 pub fn HoverDebouncer::cancel(Self) -> Self
 pub fn HoverDebouncer::new(default_delay_ms? : Int) -> Self
@@ -162,6 +157,7 @@ pub fn HoverDebouncer::take(Self, Int) -> (HoverOperationOptions?, Self)
 pub(all) enum HoverEffect {
   HoverNoEffect
   HoverScheduleDelayed(Int)
+  HoverRunAsyncAndSync(Int)
 }
 
 pub(all) enum HoverEnabled {
@@ -214,7 +210,7 @@ pub(all) enum HoverPart {
 } derive(Eq, @debug.Debug)
 
 pub struct HoverParticipantOwner {
-  id : Int
+  // private fields
 } derive(Eq, @debug.Debug)
 pub fn HoverParticipantOwner::new() -> Self
 
@@ -238,14 +234,13 @@ pub(all) struct HoverPositionPart {
   force_show_at_range : Bool
 }
 
-pub(all) struct HoverRequestStamp {
-  model : @model.TextModel
-  model_version_id : Int
-  generation : Int
-  cancellation_token : @language.CancellationToken
+pub struct HoverRequestStamp {
+  // private fields
 }
+pub fn HoverRequestStamp::cancellation_token(Self) -> @language.CancellationToken
+pub fn HoverRequestStamp::generation(Self) -> Int
 pub fn HoverRequestStamp::is_current(Self, @model.TextModel?, Int) -> Bool
-pub fn HoverRequestStamp::new(@model.TextModel, Int, @language.CancellationToken) -> Self
+pub fn HoverRequestStamp::model(Self) -> @model.TextModel
 
 pub(all) struct HoverResult {
   value : Array[HoverPart]

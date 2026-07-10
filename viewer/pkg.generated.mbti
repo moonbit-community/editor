@@ -81,15 +81,6 @@ pub(all) struct EditorMouseEvent {
   target : @moonbit-community/editor/viewer/browser.MouseTarget
 }
 
-pub(all) struct InlayHintsController {
-  mut inlay_hints : Array[@language.InlayHint]
-  mut inlay_hint_decoration_ids : Array[String]
-}
-pub fn InlayHintsController::attach(String) -> Self
-pub fn InlayHintsController::detach(String) -> Unit
-pub fn InlayHintsController::get(String) -> Self?
-pub fn InlayHintsController::reset_model_state(Self) -> Unit
-
 pub(all) struct ModelChangedEvent {
   old_model_url : @moonbit-community/editor/base/common.Uri?
   new_model_url : @moonbit-community/editor/base/common.Uri?

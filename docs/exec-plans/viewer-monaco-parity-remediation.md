@@ -74,7 +74,7 @@ product contract and belongs in an ordinary local test.
 | P1-09 | ViewCursors ignores decoration changes that move rendered text | REQUIRED PARITY | viewer-render-invalidation-parity.md |
 | P1-10 | ViewZone rendering overwrites host class/style and callback exceptions abort the frame | REQUIRED PARITY | viewer-view-zones-parity.md |
 | P1-11 | Attaching a model synchronously tokenizes the entire document | REQUIRED non-blocking behavior; exact scheduling comes from inventory | viewer-tokenization-parity.md |
-| P1-12 | CRLF value length and offset/position conversion use different coordinate systems | REQUIRED coherent buffer invariant; exact EOL policy requires the child review gate | viewer-text-buffer-eol-parity.md |
+| P1-12 | CRLF value length and offset/position conversion use different coordinate systems | REQUIRED coherent buffer invariant; Gate A approved coherent LF-only storage | viewer-text-buffer-eol-parity.md |
 
 ## Child Plans and Landing Order
 
@@ -150,12 +150,13 @@ Approved 2026-07-10:
   not a reason to replace Monaco navigation, ownership, cancellation,
   geometry, callback, buffer-coherence, or bounded-work behavior.
 - Text-buffer EOL policy is **Option B — coherent LF-only product seam**. The
-  current model/read API contracts expose normalized LF text and no EOL
-  preference. Construction and `set_value` must therefore normalize every
-  input EOL form to LF before storing text or deriving offsets. Raw CRLF/CR
-  indices may not survive behind LF-returning reads. Every affected Monaco
-  EOL-selection/preference member still receives an intentional-deviation
-  ledger row and contract/test evidence.
+  current Viewer read API commits to normalized LF and exposes no EOL
+  preference. Gate A therefore chooses to bring snapshot storage and
+  coordinates into that read contract. Construction and `set_value` must
+  normalize every input EOL form to LF before storing text or deriving
+  offsets. Raw CRLF/CR indices may not survive behind LF-returning reads.
+  Every affected Monaco EOL-selection/preference member still receives an
+  intentional-deviation ledger row and contract/test evidence.
 - Tokenization semantic policy is **Option B — syntactic scheduling now,
   semantic overlay deferred**. Readonly does not make semantic highlighting
   N-A, but this repository has no semantic-token value/legend/provider
@@ -163,15 +164,19 @@ Approved 2026-07-10:
   model-version cancellation pipeline, theme-to-sparse-metadata encoder, or
   full/partial sparse-token update seam. A separately approved semantic-token
   acquisition/application plan must own those dependencies and include
-  `sparseMultilineTokens.ts` in its source denominator. The tokenization child
-  must preserve source-shaped event/update seams and give every semantic row a
-  concrete DEFERRED reason.
+  `sparseMultilineTokens.ts` in its source denominator. This child preserves
+  the existing `ModelTokensChangedEvent.semantic_tokens_applied` field and
+  centralized `get_line_tokens` access boundary; full/partial semantic update
+  APIs and sparse types remain future-plan work. Every semantic source row
+  still needs a concrete DEFERRED reason.
 - P1-04 remains REQUIRED PARITY, but its lifecycle inventory must distinguish
   Monaco's model-service add/remove lifetime from an editor attach/detach.
   Shared `ViewerServices` cannot be made correct by mechanically deleting a
   URI-keyed marker owner whenever one Viewer detaches; the approved design must
-  account for model identity and shared registrations while still removing the
-  final Viewer-owned registration on every detach/dispose path.
+  account for model identity and shared registrations. Release that Viewer's
+  model registration on every detach/dispose path; dispose the per-model
+  marker owner only when the final registration for that model identity is
+  released.
 
 Before any child implementation:
 

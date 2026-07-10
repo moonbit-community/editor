@@ -22,9 +22,9 @@ getValue/getValueLength, range length, getPositionAt, getOffsetAt, provider
 full ranges, and content-change events must agree for LF, CRLF, CR, mixed-EOL,
 and trailing-EOL input.
 
-The plan must decide whether the readonly Viewer ports Monaco's detected/default
-model EOL or deliberately normalizes all input to LF. Either choice must
-normalize the internal representation coherently; preserving raw CRLF offsets
+Gate A chose a coherent LF-only product seam: normalize all input to LF before
+storage and derive every value, length, range, offset, position, provider range,
+and content-change fact from that representation. Preserving raw CRLF offsets
 while returning LF values is not an allowed deviation.
 
 ## Scope (Phase 0)
@@ -79,7 +79,7 @@ range derived from model length.
 - TextModel _emitContentChangedEvent tokenization forwarding; the tokenization
   plan owns that complete member while consuming the EOL event contract.
 
-## Required Policy Decision
+## Approved Policy Decision
 
 Program Gate A approved **Option B — Coherent LF-only product seam** on
 2026-07-10. The inventory must still account for every Option-A source member,
@@ -87,14 +87,12 @@ record the affected rows as reviewed intentional deviations, and prove that
 all non-preference coordinate behavior remains source-faithful. Reopening the
 choice requires updating the parent coordination plan and stopping for review.
 
-The inventory review must choose exactly one:
-
-### Option A — Monaco model EOL
+### Rejected Option A — Monaco model EOL
 
 Port the builder's EOL counting/default selection and store the chosen model
 EOL. TextDefined, LF, and CRLF preferences follow the source read APIs.
 
-### Option B — Coherent LF-only product seam
+### Approved Option B — Coherent LF-only product seam
 
 Normalize all incoming text to LF at buffer construction and set_value, store
 only LF line starts, and document that the Viewer has no TextDefined/CRLF
@@ -113,7 +111,7 @@ It may not retain raw CRLF indices.
 | getPositionAt/getOffsetAt use a different length basis from getValueLength | REQUIRED coherent invariant |
 | provider full range can stop before the final content | REQUIRED PARITY |
 | content-change range_length/eol disagree with stored buffer | REQUIRED coherent invariant |
-| exact TextDefined/default-EOL semantics | DECISION REQUIRED: Option A or B |
+| exact TextDefined/default-EOL semantics | INTENTIONAL DEVIATION: Gate A approved LF-only storage |
 | invalid positions clamp instead of throwing | sibling inventory row; do not expand without an explicit decision |
 
 This register is not the parity ledger and does not count toward the
@@ -128,16 +126,16 @@ DEFERRED, or N-A ledger row.
 
 Required invariants must be written algebraically in the plan before code:
 
-- getValueLength(preference) equals the UTF-16 length of getValue(preference);
+- getValueLength equals the UTF-16 length of getValue in the single LF
+  representation;
 - getOffsetAt(getPositionAt(offset)) round-trips every valid logical offset,
   with source-defined behavior at EOL interiors/boundaries;
-- full range length equals the text returned for that range under the same EOL
-  preference;
+- full range length equals the LF text returned for that range;
 - set_value change-event old/new ranges and lengths use the chosen buffer
   representation.
 
-Review gate: stop after inventory, ledger, invariant list, and Option A/B
-decision are committed.
+Review gate: stop after inventory, ledger, invariant list, and the approved
+Option-B source-member mapping are committed.
 
 ## Test-Authority Corrections
 
@@ -152,7 +150,8 @@ decision are committed.
 Port upstream cases and add local invariants for:
 
 - empty, one-line, LF, CRLF, CR, mixed LF/CRLF/CR, and trailing EOL;
-- majority/default-EOL ties if Option A is selected;
+- majority/default-EOL selection and ties receive explicit source-member
+  disposition for the approved LF-only seam;
 - non-ASCII BMP, surrogate pairs, combining text, and positions beside EOL;
 - every offset from zero through document length for small fixtures;
 - every valid line/column boundary and invalid inputs according to the approved
@@ -163,8 +162,8 @@ Port upstream cases and add local invariants for:
 
 ## Milestones
 
-1. Complete source/test inventory, ledger, invariants, and Option A/B proposal;
-   commit and stop.
+1. Complete source/test inventory, ledger, invariants, and the approved
+   Option-B source-member mapping; commit and stop.
 2. Port the approved immutable buffer construction/EOL representation.
 3. Port read/length/range/position/offset methods over that representation.
 4. Correct set_value events and provider full ranges.
@@ -175,14 +174,14 @@ Port upstream cases and add local invariants for:
 
 ## Deviations (Phase 3)
 
-No deviation is approved yet. Option B, if chosen, must be recorded here with
-the exact source members affected and proof that all remaining coordinate
-behavior is source-faithful.
+Gate A approved the LF-only policy deviation. Populate this section during
+inventory with the exact affected source members and proof obligations showing
+that all remaining coordinate behavior is source-faithful.
 
 ## Exit Gate
 
 - [ ] inventory rows equal ledger rows
-- [ ] Option A or B is explicitly approved
+- [ ] approved Option B is reflected in every affected source-member row
 - [ ] value length and returned value always agree
 - [ ] offset/position/range invariants cover every EOL form
 - [ ] provider full range reaches the complete document

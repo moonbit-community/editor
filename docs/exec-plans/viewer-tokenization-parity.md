@@ -26,8 +26,8 @@ scheduling, registry changes, token-store updates, and token-change events.
 
 The adjacent semantic-token overlay is currently absent. Because
 TokenizationTextModelPart merges syntactic and semantic tokens in the source,
-the inventory must account for SparseTokensStore and every merge branch even if
-the program review ultimately records semantic support as DEFERRED.
+the inventory must account for SparseTokensStore and every merge branch; Gate A
+approved explicit DEFERRED rows owned by a future semantic-token plan.
 
 ## Scope (Phase 0)
 
@@ -105,7 +105,7 @@ of eager whole-model tokenization. Its member ledger belongs to the lifecycle
 plan and must not be duplicated here. The local syntax registry currently lives
 in syntax/tokenizer.mbt; do not invent a second tokenization_registry module.
 
-## Required Semantic Decision
+## Approved Semantic Decision
 
 Program Gate A approved **Option B — Syntactic scheduling now, semantic overlay
 deferred** on 2026-07-10. The inventory must still enumerate every semantic
@@ -117,15 +117,13 @@ metadata encoding, `SparseMultilineTokens`, `SparseTokensStore`, and full plus
 partial update APIs. Reopening the choice requires updating the parent plan and
 stopping for review.
 
-After inventory, choose one:
-
-### Option A — Complete source-shaped tokenization part
+### Rejected Option A — Complete source-shaped tokenization part
 
 Port SparseTokensStore integration and semantic/syntactic per-line merging in
 this child, together with the minimum semantic-token update API required to
 exercise the source branches.
 
-### Option B — Syntactic scheduling now, semantic overlay deferred
+### Approved Option B — Syntactic scheduling now, semantic overlay deferred
 
 Port the complete syntactic backend and demand/background lifecycle. Give every
 semantic member an explicit DEFERRED row naming the future provider/update
@@ -144,7 +142,7 @@ semantic highlighting applies to readonly models.
 | background/priority tokenizer is absent from the live model part | REQUIRED PARITY for readonly-applicable scheduling |
 | registry change resets and retokenizes with correct event ranges | REQUIRED PARITY |
 | missing tokenizer yields source-shaped default tokens | REQUIRED PARITY |
-| semantic overlay is absent | DECISION REQUIRED: Option A or explicit DEFERRED |
+| semantic overlay is absent | DEFERRED: Gate A approved the future acquisition/application dependency |
 | whole-document reprojection after token events | sibling decision; inventory exact source/local dependency before expanding |
 
 This register is not the parity ledger and does not count toward the
@@ -194,8 +192,9 @@ Use a counting/stateful tokenizer so work is deterministic:
 - missing support produces default tokens;
 - long lines, many short lines, multiline tokenizer state, and thrown/failing
   support behavior;
-- syntactic/semantic overlap, partial deletion, and merge cases if Option A;
-  contract-shape tests for deferred semantic rows if Option B.
+- syntactic/semantic overlap, partial deletion, and merge cases remain the
+  future semantic-token plan's matrix; this child adds contract-shape tests
+  for every deferred semantic row.
 
 Browser/perf evidence may verify responsiveness on a large fixture, but
 correctness must use call counts, scheduled-step counts, and event ranges rather
@@ -204,14 +203,14 @@ than a flaky elapsed-time threshold.
 ## Milestones
 
 1. Complete all scoped inventories, equal-size ledgers, upstream test map, and
-   Option A/B proposal; commit and stop.
+   the approved Option-B source-member mapping; commit and stop.
 2. Wire the existing queue/state-store structures into the live syntactic
    backend.
 3. Remove attach-time whole-document force and port demand/priority/background
    scheduling.
 4. Port content/registry/dispose invalidation and token-change event ranges.
-5. Implement Option A semantic merge or preserve the approved Option B
-   source-shaped deferred seam.
+5. Preserve the approved Option-B event/access boundary and record every
+   semantic member as DEFERRED to the named future plan.
 6. Port/rewrite tests from whole-sweep expectations to branch-derived source
    behavior.
 7. Update model/tokens/token contracts and run all quality gates.
@@ -219,7 +218,7 @@ than a flaky elapsed-time threshold.
 
 ## Deviations (Phase 3)
 
-Expected candidates are editable incremental edits and, if approved, deferred
+Expected candidates are editable incremental edits and the approved deferred
 semantic-provider acquisition. No scheduling, state, event-range, or merge row
 is implicitly excused by the readonly boundary.
 
@@ -230,7 +229,7 @@ is implicitly excused by the readonly boundary.
 - [ ] per-line state propagation and invalid ranges match source behavior
 - [ ] visible/priority/background work is deterministic and tested
 - [ ] registry, content, and dispose transitions are covered
-- [ ] semantic rows implement Option A or carry approved Option B reasons
+- [ ] every semantic row carries its approved Option-B dependency reason
 - [ ] all upstream tests are ported or have explicit DEFERRED/N-A ledger rows
 - [ ] all repository quality gates pass
 - [ ] independent closing reread finds no unaccounted scoped member

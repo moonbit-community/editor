@@ -36,10 +36,16 @@ fn test_model(
 /// `withTestCodeEditor`: spin up a headless viewer over `text`, run `body`,
 /// dispose. No `attach()` — no DOM view — but `set_model` still builds the
 /// tokenized doc, view model, render frame, and cursor context synchronously.
+///
+/// The font is pinned (the macOS defaults) rather than platform-derived:
+/// `editor_font_defaults`/`golden_line_height_ratio` differ per host OS
+/// (12px/1.5 on macOS, 14px/1.35 elsewhere → line height 18 vs 19), and the
+/// layout tests assert absolute pixel offsets. Monaco's testCodeEditor
+/// likewise runs over a fixed `TestConfiguration`, not the host font.
 fn with_test_viewer(
   text : String,
   body : (Viewer) -> Unit raise,
-  options? : ViewerOptions = ViewerOptions::default(),
+  options? : ViewerOptions = ViewerOptions(font_size=12, line_height=18),
 ) -> Unit raise {
   let viewer = Viewer::Viewer(options~) // NOTE: deliberately no attach()
   viewer.set_model(Some(test_model(text)))

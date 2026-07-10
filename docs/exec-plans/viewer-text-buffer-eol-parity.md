@@ -1,6 +1,6 @@
 # Viewer Text Buffer EOL Parity
 
-Status: proposed — Phase 0 drafted; inventory and EOL-policy decision pending
+Status: proposed — Phase 0 drafted; inventory pending; EOL Option B approved
 
 Date: 2026-07-10
 
@@ -80,6 +80,12 @@ range derived from model length.
   plan owns that complete member while consuming the EOL event contract.
 
 ## Required Policy Decision
+
+Program Gate A approved **Option B — Coherent LF-only product seam** on
+2026-07-10. The inventory must still account for every Option-A source member,
+record the affected rows as reviewed intentional deviations, and prove that
+all non-preference coordinate behavior remains source-faithful. Reopening the
+choice requires updating the parent coordination plan and stopping for review.
 
 The inventory review must choose exactly one:
 
@@ -187,6 +193,9 @@ behavior is source-faithful.
 
 ## Execution Record
 
-Not started. Append the policy decision, dated inventory approval,
-implementation commits, validation results, and final ledger totals here.
-Freeze after implementation.
+- 2026-07-10: parent Gate A approved Option B. The current public contracts
+  expose normalized LF reads and no EOL preference; construction and
+  `set_value` must normalize before storing text or deriving coordinates.
+
+Append the dated inventory approval, implementation commits, validation
+results, and final ledger totals here. Freeze after implementation.

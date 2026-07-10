@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: proposed — portfolio plan; child inventories pending
+Status: active — Gate A approved; child inventories pending
 
 Date: 2026-07-10
 
@@ -143,16 +143,42 @@ complete.
 
 ### Gate A — Classification Review
 
+Approved 2026-07-10:
+
+- The P1 register decisions remain as written. Readonly is a capability seam
+  for text mutation, multi-cursor editing, and editable-only commands; it is
+  not a reason to replace Monaco navigation, ownership, cancellation,
+  geometry, callback, buffer-coherence, or bounded-work behavior.
+- Text-buffer EOL policy is **Option B — coherent LF-only product seam**. The
+  current model/read API contracts expose normalized LF text and no EOL
+  preference. Construction and `set_value` must therefore normalize every
+  input EOL form to LF before storing text or deriving offsets. Raw CRLF/CR
+  indices may not survive behind LF-returning reads. Every affected Monaco
+  EOL-selection/preference member still receives an intentional-deviation
+  ledger row and contract/test evidence.
+- Tokenization semantic policy is **Option B — syntactic scheduling now,
+  semantic overlay deferred**. Readonly does not make semantic highlighting
+  N-A, but this repository has no semantic-token value/legend/provider
+  contract, language registry, host/protocol/backend acquisition path,
+  model-version cancellation pipeline, theme-to-sparse-metadata encoder, or
+  full/partial sparse-token update seam. A separately approved semantic-token
+  acquisition/application plan must own those dependencies and include
+  `sparseMultilineTokens.ts` in its source denominator. The tokenization child
+  must preserve source-shaped event/update seams and give every semantic row a
+  concrete DEFERRED reason.
+- P1-04 remains REQUIRED PARITY, but its lifecycle inventory must distinguish
+  Monaco's model-service add/remove lifetime from an editor attach/detach.
+  Shared `ViewerServices` cannot be made correct by mechanically deleting a
+  URI-keyed marker owner whenever one Viewer detaches; the approved design must
+  account for model identity and shared registrations while still removing the
+  final Viewer-owned registration on every detach/dispose path.
+
 Before any child implementation:
 
-- confirm the P1 register decisions;
-- confirm that readonly is a capability seam, not a blanket reason to replace
-  Monaco navigation, ownership, cancellation, geometry, or callback behavior;
-- resolve the two deliberately open decisions:
-  - whether the model stores Monaco-selected EOL or normalizes all input to LF
-    while preserving a single coherent coordinate system;
-  - whether semantic-token overlay belongs in the tokenization child or remains
-    a separately approved DEFERRED row.
+- carry these approved decisions into the child inventory and equal-size
+  ledger;
+- do not reopen them during implementation without updating this coordination
+  plan and stopping for another classification review.
 
 ### Gate B — Inventory Review
 
@@ -282,3 +308,7 @@ The independent closing task is:
 - 2026-07-10: created the portfolio and eight child plan shells from the P1
   audit. No product implementation or Phase-1 source-member inventory has
   started.
+- 2026-07-10: Gate A approved all P1 classifications, coherent LF-only EOL
+  storage (EOL Option B), and deferred semantic overlay with source-shaped
+  seams (tokenization Option B). The lifecycle inventory must resolve shared
+  marker-service registration ownership before implementation.

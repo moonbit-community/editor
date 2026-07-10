@@ -1,6 +1,6 @@
 # Viewer Tokenization Parity
 
-Status: proposed — Phase 0 drafted; inventory and semantic decision pending
+Status: proposed — Phase 0 drafted; inventory pending; semantic Option B approved
 
 Date: 2026-07-10
 
@@ -106,6 +106,16 @@ plan and must not be duplicated here. The local syntax registry currently lives
 in syntax/tokenizer.mbt; do not invent a second tokenization_registry module.
 
 ## Required Semantic Decision
+
+Program Gate A approved **Option B — Syntactic scheduling now, semantic overlay
+deferred** on 2026-07-10. The inventory must still enumerate every semantic
+store/merge/event member and preserve source-shaped update seams. The future
+dependency is a separately approved semantic-token acquisition/application
+plan owning value and legend types, provider and `Languages` registration,
+host/protocol/backend acquisition, model-version cancellation, theme-to-sparse
+metadata encoding, `SparseMultilineTokens`, `SparseTokensStore`, and full plus
+partial update APIs. Reopening the choice requires updating the parent plan and
+stopping for review.
 
 After inventory, choose one:
 
@@ -227,6 +237,10 @@ is implicitly excused by the readonly boundary.
 
 ## Execution Record
 
-Not started. Append the semantic decision, dated inventory approval,
-implementation commits, validation results, and final ledger totals here.
-Freeze after implementation.
+- 2026-07-10: parent Gate A approved Option B. Semantic highlighting remains
+  applicable to readonly models, but acquisition/application is deferred to
+  the named future dependency rather than expanded inside this P1 scheduling
+  child.
+
+Append the dated inventory approval, implementation commits, validation
+results, and final ledger totals here. Freeze after implementation.

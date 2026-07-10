@@ -81,7 +81,7 @@ product contract and belongs in an ordinary local test.
 | Order | Child plan | Primary ownership | Depends on | Status |
 |---:|---|---|---|---|
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
-| 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | proposed |
+| 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | inventory ready — STOP FOR REVIEW |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | proposed |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | proposed |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
@@ -323,3 +323,9 @@ The independent closing task is:
   marker multiplicity, finalization/dispose ordering, evidence precision, and
   malformed rows. Final gates pass: check, JS 880/880, native 690/690, build,
   and browser 41/41. The portfolio proceeds to the async-model-features child.
+- 2026-07-10: the async-model-features child reached its documentation-only
+  inventory stop gate. The pinned-source denominator is 581/581 TODO rows
+  (103 inlay-controller, 41 inlay-fragment, 396 hover, and 41 model-version /
+  cancellation members), with a separate 87-row audit of current MoonBit
+  ownership and test authority. No product or test file changed; independent
+  denominator review is required before implementation approval.

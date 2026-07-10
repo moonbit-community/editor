@@ -1,328 +1,174 @@
 # Architecture
 
-This repository has two main parts:
+This repository contains a reusable MoonBit readonly viewer and a reference
+host/backend:
 
-1. `viewer`: the reusable MoonBit readonly viewer. It owns the public viewer API
-   and the browser editor surface.
-2. `internal/shell`: a reference host/backend used for development, demos, and
-   end-to-end validation. It is not an external import surface.
+- `viewer` is the js-only public editor facade and browser surface.
+- `internal/shell` is the demo, development, and end-to-end host. It is not an
+  external import surface.
 
-This file is the high-level map. Exact type lists, algorithms, DOM details, and
-test cases belong in the relevant package README and source files.
+For exact APIs use the owning package's `pkg.generated.mbti`; for exact
+dependencies use `moon.pkg`. Implemented files under `docs/exec-plans/` are
+historical evidence, not current architecture.
 
-## Current Truth
+Monaco/VS Code is the primary behavioral and structural reference. CodeMirror
+is secondary. `vscode/` and `codemirror/` are pinned research trees only;
+product code never imports them and public names remain MoonBit-owned.
 
-Use current architecture docs, package READMEs, `moon.pkg` manifests, and tests
-for active behavior. Execution plans in `docs/exec-plans/` are historical once
-implemented or superseded; do not treat old package names or intermediate steps
-there as current contracts.
-
-## References
-
-Monaco/VS Code is the primary reference for behavior, API shape, rendering
-roles, and conformance checks. Start at `docs/references/monaco.md`.
-
-CodeMirror is a secondary reference for simpler state/view ideas. Start at
-`docs/references/codemirror.md`.
-
-Reference trees are research inputs only. Product code must not import from
-`vscode/` or `codemirror/`, and local public names should stay MoonBit-owned.
-
-## Product Package Map
-
-- `viewer`: public browser-backed readonly viewer facade. It owns DOM creation,
-  CSS-facing editor structure, browser input capture, widgets, lifecycle events,
-  and model installation.
-- `viewer/common/model`: readonly `TextModel` and `TextSnapshot` plus model
-  decorations (interval-tree storage backing `TextModel::delta_decorations`).
-  This is the editor model identity used by viewer and language-provider APIs.
-- `viewer/common/view_model`, `viewer/common/view_layout` (with the view-line
-  renderer merged in), and `viewer/common/core`: DOM-free rendering, projection,
-  layout, geometry, and cursor-column logic.
-- `viewer/common/cursor`, `viewer/common/markers`, `viewer/common/comments`,
-  and `viewer/common/languages`: focused DOM-free feature packages used by the
-  viewer. `comments` holds the comment thread/comment data model only —
-  Monaco's `editor/common/languages.ts` filing; the `CommentService` lives
-  with its feature in `viewer/contrib/comments` (Monaco's
-  `workbench/contrib/comments/browser/commentService.ts` shape).
-- `viewer/contrib/folding`, `viewer/contrib/hover`, and
-  `viewer/contrib/comments`: the DOM-free *models* of Monaco contributions
-  (`editor/contrib/{folding,hover}/browser` and
-  `workbench/contrib/comments/browser` in Monaco, which has no native target).
-  They stay **multi-target** so the native check keeps enforcing DOM-freeness;
-  js-only DOM controllers/widgets live in `viewer/contrib/<feature>/browser`
-  (populated for `comments` and `zone_widget`). `common` code never imports
-  these (the folding indent fallback was inverted into the folding controller
-  so the tier flows `contrib -> common`, not the reverse).
-- `viewer/common`: a shrinking residual of the former grab-bag (`line_html`).
-  The old DOM-free geometric hit test that lived here was deleted with the
-  Monaco mouse-subsystem port: hit testing is now the DOM-fingerprint
-  `MouseTargetFactory` in `viewer/browser/controller/mouse_target.mbt`, the
-  `IMouseTarget` contract lives in the js-only `viewer/browser` root package
-  (mirroring `editorBrowser.ts`/`editorDom.ts`), and the hover's
-  target-consuming surface moved to `viewer/contrib/hover/browser`
-  (`hover_events.mbt`).
-- `viewer/browser` (root, alias `@editor_browser`): the `IMouseTarget`
-  contract and `editorDom.ts` coordinate model (`EditorMouseEvent`,
-  `EditorMouseEventFactory`, `GlobalEditorPointerMoveMonitor`).
-- `viewer/browser/controller` and `viewer/ui/scrollbar`: browser-UI
-  subpackages. They may use narrow browser bindings but do not import the
-  parent `viewer` package. `mouse_target.mbt`/`mouse_handler.mbt`/
-  `drag_scrolling.mbt` are the 1:1 `MouseTargetFactory`/`MouseHandler`/
-  `dragScrolling.ts` ports (the handler registers its own DOM listeners;
-  the root package only builds its `PointerHandlerHelper`); the viewer's
-  scrollbar pointer cluster stays in `scrollbar_input.mbt`.
-- `base/browser`: js-only base primitives (`StandardMouseEvent`,
-  `GlobalPointerMoveMonitor`), mirroring `vs/base/browser`.
-- `viewer/browser/view` and `viewer/browser/view_parts/*` (`content_widgets`,
-  `current_line_highlight`, `decorations`, `editor_scrollbar`, `margin`,
-  `overlay_widgets`, `selections`, `view_cursors`, `view_lines`,
-  `view_zones`): the browser view and its view parts. Every
-  `impl ViewPart for X` block lives in `viewer/browser/view/view_part.mbt`,
-  the trait-owning package — see its README for the orphan-rule/cycle
-  reasoning. The dynamic overlays (`current_line_highlight`, `decorations`)
-  render into `selections`' shared `.view-overlays` container as free
-  functions, sequenced by the shell in Monaco's registration order. The flat root `viewer/*.mbt`
-  files are `Viewer`-facing glue only: the foreign-method rule keeps every
-  `Viewer::` method in `Viewer`'s own package.
-- `viewer/common/inline_decorations`: the faithful port of Monaco's
-  inline-decoration computers, kept as its own package for name-collision
-  reasons (see its README). Live: `viewer/common/view_model`'s
-  `ViewModelDecorations` builds on it.
-- `base/common`: host-neutral URI, lifecycle, and coordinate primitives.
-- `language`: backend-neutral readonly semantic provider contracts over
-  `viewer/common/model.TextModel`.
-- `syntax` and `syntax/lang_*`: tokenization contracts and concrete
-  compile-time lexers. Hosts import concrete language packages and register them
-  with the viewer.
-- `platform/log`: host-neutral structured logging contracts.
-
-## Viewer Three-Tier Mirror
-
-The `viewer/` tree mirrors Monaco's `vs/editor/{common,browser,contrib}` at
-directory granularity (one Monaco directory → one MoonBit package), staged in
-`docs/exec-plans/viewer-directory-mirror.md`. The mirror is functionally
-complete, with one deliberate, permanent exception — the root `viewer`
-package (last bullet below). The tiers are:
-
-- `viewer/common/**` — DOM-free logic (model, view_model, view_layout, cursor,
-  languages, decorations, view-line renderer, core, tokens). Mirrors
-  `editor/common/*`. **Multi-target** (`+js+native`): the no-DOM rule is enforced
-  by the native build, not by convention.
-- `viewer/browser/**` — DOM-owning view and view parts (`view_parts/*`) and
-  the input controller. Mirrors `editor/browser/*`. **js-only**
-  (`supported_targets = "js"`).
-- `viewer/contrib/<feature>/` — the DOM-free *model* of a Monaco contribution
-  (`folding`, `hover`, `comments`). **Multi-target**, like the common tier.
-  Divergence from Monaco (which files these under `contrib/*/browser` because
-  it has no native target): the viewer hoists the DOM-free logic up so the
-  native check keeps enforcing DOM-freeness.
-- `viewer/contrib/<feature>/browser/**` — the js-only DOM half of a contribution
-  (controllers/widgets). Mirrors `editor/contrib/*/browser`. **js-only**.
-  Populated for `hover` (the `ContentHoverWidget` + the
-  `ContentHoverController` per-editor state, see "Controller access") and
-  `agent_feedback` (the input/bubble widgets + the two contribution
-  controllers).
-- root `viewer` — the one deliberate exception to directory-granularity: it
-  holds the top-level `Viewer`/`ViewerOptions`/public read-API implementation
-  directly (Monaco's `editor/browser/widget/codeEditor/` role) and doubles as
-  the public entry point, the analog of `vs/editor/editor.api.ts`. There is no
-  `export.mbt` facade (Decision D2-REVERSED,
-  `docs/exec-plans/viewer-directory-mirror.md`); `viewer/pkg.generated.mbti`
-  is the reviewable public-API contract, generated from the real code. Stays
-  js-only because it owns DOM. Like Monaco's `_modelData`
-  (`codeEditorWidget.ts:2123`), the `Viewer` bundles `model + view model +
-  view + swap listeners` behind one nullable `ModelData`: `set_model` is
-  detach-then-attach, each model gets a fresh per-model `View` (and scroll
-  state and cursor, which live on the per-model `ViewModel`), and with no
-  model attached only the Viewer-owned placeholder element sits in the
-  container.
-
-`scripts/check-architecture.mbtx` enforces the tier invariants (the
-MoonBit-toolchain-uncatchable half): every `viewer/browser/**` and
-`viewer/contrib/*/browser/**` package declares `supported_targets = "js"`; no
-`viewer/common/**` or `viewer/contrib/<feature>/` (non-`browser`) package does
-(the DOM-free tiers stay multi-target). The `common → browser` direction is
-caught by `moon check --target all` itself: a multi-target package importing a
-js-only one fails the native build. Likewise `viewer/common/**` never imports
-`viewer/contrib/**` (Monaco: editor core cannot import contribs), enforced by
-the package-cycle checker and that same target discipline.
-
-Imports into the viewer tree follow VS Code's consumer classes
-(`vscode/eslint.config.js`, `code-import-patterns`):
-
-- **Workbench tier** — `internal/shell/**` (except `internal/shell/examples/**`)
-  and `tests/**` may import any viewer package: `internal/shell` consumes
-  viewer internals the way VS Code's workbench consumes `vs/editor/**`
-  (`eslint.config.js:1735`).
-- **External hosts** — `internal/shell/examples/**` and every other product
-  package (`web`, `app`, future hosts) import only the root `viewer` package
-  and `viewer/common/**`: the analog of `monaco-editor` npm consumers behind
-  `editor.api.ts` (`eslint.config.js:1723`). Native/headless consumers (the
-  shell server hosts) import `viewer/common/**` directly, since the js-only
-  root package cannot link on native.
-  `internal/shell/examples/embedded_viewer` imports only `viewer`,
-  `viewer/common/languages`, and `viewer/common/model` — it is the named proof
-  that the public facade suffices for embedding.
-
-## Reference Shell Map
-
-- `internal/shell/web`: generated browser entrypoint for the reference shell.
-- `internal/shell/workbench`: browser shell composition around the viewer,
-  file-tree widget, protocol client, language registration, theme state, and
-  harness observability.
-- `internal/shell/widgets/file_tree`: explorer widget over internal workspace
-  providers.
-- `internal/shell/workspace`: host-side source, document, filesystem, and tree
-  provider contracts. It is not the viewer model API.
-- `internal/shell/remote_protocol`: packets between the reference browser shell
-  and reference backend.
-- `internal/shell/server`: reference backend policy and semantic feature routing.
-- `internal/shell/server_host_native`: native filesystem, watch, socket, and
-  static-serving effects, plus the `moon` command backend for hover
-  (`moon ide hover`) and diagnostics (`moon check`).
-- `internal/shell/examples/embedded_viewer`: non-remote embedding proof.
-
-## Core Flows
-
-### Embedding
+## Runtime Shape
 
 ```text
-host app
-  -> viewer.Viewer
+host document
   -> viewer/common/model.TextModel
-  -> optional viewer/common/languages registrations
+  -> viewer/common/view_model.ViewModel
+  -> viewer/common/view_layout.ViewLayout
+  -> viewer/browser/view.View
+  -> viewer/browser/view_parts/*
+  -> DOM
 ```
+
+`Viewer` owns a nullable per-model `ModelData` bundle containing the model,
+view model, browser view, and swap-scoped listeners. `set_model` detaches that
+bundle and creates a fresh one. With no attached DOM, the same model/view-model
+pipeline remains usable by white-box tests; only the browser `View` is absent.
 
 The host owns files, transport, persistence, reload policy, shell chrome, and
-error display. The viewer owns readonly editor rendering, scrolling, selection,
-widgets, hover presentation, and lifecycle events.
+error presentation. The viewer owns readonly rendering, selection, scrolling,
+widgets, language-feature presentation, and editor events.
 
-Hosts may compute language features locally, call a backend, or read host state.
-The viewer depends only on provider contracts and result values.
+## Package Tiers
 
-### Reference Workbench
+### Shared foundations
+
+- `base/common`: URI/path, positions/ranges, events, and disposables.
+- `base/browser`: browser mouse and global pointer-move primitives.
+- `language`: backend-neutral diagnostic, hover, location, symbol, and inlay
+  provider contracts.
+- `syntax` and `syntax/lang_*`: stateful line-tokenization contracts and
+  concrete compile-time lexers.
+- `platform/log`: host-neutral logging.
+
+### Viewer common tier
+
+`viewer/common/**` is DOM-free and multi-target:
+
+- `model` and `model/tokens`: immutable text snapshots, model identity,
+  decorations, and tokenization state.
+- `services` and `tokens`: language-id encoding and compact line tokens.
+- `languages` and `markers`: runtime provider registration and
+  diagnostics-to-decoration flow.
+- `core`, `cursor`, `config`: coordinates, selection/cursor state, and editor
+  configuration values.
+- `inline_decorations`, `view_model`, `view_layout`: injected text,
+  wrapping/folding projection, model/view conversion, scrolling, viewport,
+  zones, and view-line rendering data.
+- `diff`: line diff contracts used by quick diff.
+- the root `viewer/common` package is a small compatibility surface for line
+  HTML helpers.
+
+Common code never imports browser or contribution packages.
+
+### Viewer browser tier
+
+The root `viewer`, `viewer/browser/**`, and `viewer/ui/scrollbar` are js-only:
+
+- `viewer` is the public facade, the Monaco `CodeEditorWidget` and
+  `editor.api.ts` role. Public browser construction is `Viewer::create`.
+- `viewer/browser` owns editor mouse events, target kinds, and DOM coordinates.
+- `viewer/browser/config` measures fonts and browser geometry.
+- `viewer/browser/controller` owns hit testing, mouse selection, drag
+  scrolling, and scrollbar input.
+- `viewer/browser/view` owns the DOM tree and render ordering.
+- `viewer/browser/view_parts/*` owns content/overlay widgets, current-line and
+  model decorations, margin, selections, cursor, virtualized lines, zones, and
+  the scrollbar view part.
+- `viewer/ui/scrollbar` owns custom scrollbar DOM and pointer behavior; its
+  arithmetic lives in `viewer/common/view_layout`.
+
+MoonBit's orphan rule keeps `impl ViewPart for <foreign part>` blocks in the
+trait-owning `viewer/browser/view` package. Root `viewer/*.mbt` contains
+`Viewer::` glue because foreign methods must live with `Viewer`.
+
+### Contributions
+
+Contributions depend on editor common/browser layers; editor common never
+depends on them.
+
+- `viewer/contrib/hover` is the DOM-free state/computation layer;
+  `hover/browser` owns its widget and browser controller.
+- `viewer/contrib/agent_feedback` owns feedback data/service projection;
+  `agent_feedback/browser` owns input and bubble widgets.
+- `viewer/contrib/quick_diff/common` owns baseline state and diff contracts;
+  `quick_diff/browser` produces gutter decorations.
+- `viewer/contrib/folding/browser` currently owns the complete js-only folding
+  implementation, including ranges, hidden areas, decorations, and controller.
+- inlay-hint host glue currently lives in the root `viewer` package and
+  projects hints as injected-text decorations.
+
+The root editor registry constructs contributions once per `Viewer` and routes
+their commands/keybindings. Declared instantiation modes are retained for
+source parity, but all modes currently instantiate eagerly.
+
+## Reference Shell
+
+The direct embedding proof is:
 
 ```text
-internal/shell/web -> internal/shell/workbench -> viewer
-                                           -> internal/shell/widgets/file_tree
-                                           -> internal/shell/remote_protocol
+internal/shell/examples/embedded_viewer
+  -> viewer
+  -> viewer/common/{model,languages}
+```
+
+The full reference app is:
+
+```text
+internal/shell/web
+  -> internal/shell/workbench
+     -> viewer
+     -> internal/shell/widgets/file_tree
+     -> internal/shell/remote_protocol
 
 internal/shell/server_host_native/main
-  -> internal/shell/server_host_native -> internal/shell/server
-                                      -> internal/shell/remote_protocol
-                                      -> internal/shell/workspace
-                                      -> language
+  -> internal/shell/server_host_native
+  -> internal/shell/server
+  -> internal/shell/{remote_protocol,workspace}
+  -> language + viewer/common/model
 ```
 
-The workbench adapts internal workspace/protocol payloads into host-owned
-providers and `viewer/common/model.TextModel` values before calling viewer APIs. The
-backend stack exists to exercise the viewer, not to define the reusable viewer
-surface.
-
-### Rendering
-
-```text
-viewer/common/model.TextModel
-  -> viewer/common/view_model
-  -> viewer/common/view_layout   (view-line renderer merged in)
-  -> viewer/browser/view (DOM)
-```
-
-DOM-free text, projection, layout, viewport, scrollbar, and hit-test state live
-in the viewer common-layer packages. Browser DOM, CSS, measurement, native
-events, custom scrollbars, and widget DOM live in `viewer` or its browser-UI
-subpackages.
-
-## Placement Rules
-
-- Public readonly editor behavior belongs in `viewer`.
-- Editor text identity belongs in `viewer/common/model`; do not expose
-  `internal/shell/workspace.DocumentSnapshot` through viewer or provider APIs.
-- DOM-free model, layout, viewport, render-line, and decoration logic belongs in
-  the focused `viewer/*` common-layer packages.
-- Browser input and browser widget helpers may live in browser-UI subpackages
-  such as `viewer/browser/controller` and `viewer/ui/scrollbar`.
-- Semantic provider contracts belong in `language`; runtime provider
-  registration belongs in `viewer/common/languages`.
-- Concrete tokenizers belong in `syntax/lang_*` and are imported only by
-  composition layers.
-- Reference app behavior belongs under `internal/shell`.
-- Composition stays explicit. Hosts assemble traits, records, registries, and
-  viewer calls; there is no global dependency-injection container.
-
-Controller access: Monaco hosts reach a contribution's controller via
-`FoldingController.get(editor)` — `editor.getContribution<T>(id)`
-(`codeEditorWidget.ts`), a TypeScript downcast. MoonBit cannot downcast a
-trait object, so the faithful rendering is an instance table owned by each
-contrib package: a `Map[String, Controller]` keyed by `editor_id` (the
-WeakMap analog), populated by the feature's contribution ctor and cleared by
-its dispose, with hosts calling `@<feature>.get(viewer.get_id())`. The
-pattern has three real consumers: `ContentHoverController`
-(`viewer/contrib/hover/browser` — the mirror package for
-`editor/contrib/hover/browser`, js-only), the two agent-feedback
-contributions (`viewer/contrib/agent_feedback/browser`), and
-`InlayHintsController` (root package, next to its `inlay_hints_host.mbt`
-glue — the mirror has no `contrib/inlay_hints` package yet). Per-feature
-state lives on those controller instances; the `Viewer::` glue methods keep
-the dispatch role (the foreign-method rule pins them to the root package)
-and read/write state through the instance.
+- `workspace` defines host-side source paths, document snapshots, filesystem,
+  and tree-provider contracts. Its `DocumentSnapshot` is not the editor model.
+- `remote_protocol` is the reference app's versioned WebSocket JSON protocol,
+  not LSP.
+- `server` validates/caches documents and routes file and language requests.
+- `server_host_native` provides filesystem/watch/HTTP/WebSocket effects and the
+  current `moon ide hover`/`moon check` backend.
+- `workbench` adapts protocol payloads into `TextModel`, language providers,
+  markers, the file tree, theme, and harness events.
 
 ## Dependency Rules
 
-Read exact dependencies from `moon.pkg` manifests. The stable architectural
-rules are:
+`scripts/check-architecture.mbtx`, target checks, and MoonBit cycle checks
+enforce these rules:
 
-- Product packages must not import `moonbit-community/editor/internal/shell/*`.
-- Product code must not import from `vscode/` or `codemirror/`.
-- `internal/shell/*` packages may depend on product packages, but product
-  packages must not depend on the reference shell.
-- Shared packages must stay FFI-free. Packages that only run on one host target
-  may declare that host's FFI.
-- `viewer/*` packages may use only the Rabbita API bindings (`rabbita/dom`,
-  `rabbita/js`), not the Rabbita TEA framework packages.
-- Browser-UI viewer subpackages do not import the parent `viewer` package; the
-  edge stays one-directional from `viewer` to those helpers.
-- `viewer/common/**` never imports `viewer/contrib/**` (Monaco: editor core
-  cannot import contribs).
-- `internal/shell/**` (except `internal/shell/examples/**`) and `tests/**` are
-  workbench-tier consumers: they may import any viewer package, including
-  `viewer/browser/**` and `viewer/contrib/**`, the way VS Code's workbench
-  consumes `vs/editor/**`. Every other non-`viewer` package — including the
-  embedding examples — imports only the root `viewer` package and
-  `viewer/common/**` (see the Viewer Three-Tier Mirror section).
-- Concrete `syntax/lang_*` packages are imported by hosts, examples, and tests,
+- Product code does not import `vscode/` or `codemirror/`.
+- Only `internal/shell/**` imports `internal/shell/*` packages.
+- `viewer/common/**` and non-browser contribution packages stay multi-target;
+  `viewer/browser/**`, contribution `browser/**` packages, and root `viewer`
+  stay js-only.
+- Viewer packages may use `rabbita/dom` and `rabbita/js`, not Rabbita's TEA
+  framework packages. The reference shell owns the app framework.
+- Browser helper packages do not import the parent `viewer` facade.
+- `viewer/common/**` does not import `viewer/contrib/**`.
+- Workbench-tier packages (`internal/shell/**`, except examples, and `tests/**`)
+  may import viewer internals. External-host stand-ins may import only root
+  `viewer` and `viewer/common/**`.
+- Concrete `syntax/lang_*` packages are selected by hosts, examples, or tests,
   not by the reusable viewer core.
 
-`scripts/check-architecture.mbtx`, run by `just check`, enforces the guardrails
-the MoonBit toolchain cannot catch directly: no reference-tree imports, no
-outside-shell imports of `internal/shell/*`, no Rabbita framework imports
-from `viewer/*` packages, the three-tier target invariants (browser-tier
-packages js-only, common-tier packages multi-target), and the viewer consumer
-classes (workbench-tier shell/tests import viewer internals freely;
-external-host stand-ins only the root `viewer` package and `viewer/common/**`
-— see the Viewer Three-Tier Mirror section).
+## Coordinates
 
-## Build Targets
-
-Browser packages use `supported_targets = "js"`. Native host packages use
-`supported_targets = "native"`. Shared packages stay target-neutral.
-
-Repository-level validation starts with `just check`.
-
-## Position And Range Convention
-
-Offsets and columns are UTF-16 code units.
-
-- `base/common.Position`, `Range`, and `LineRange` follow Monaco's line/column
-  convention: line numbers and columns are 1-based.
-- `base/common.OffsetRange` is a half-open 0-based UTF-16 offset span
-  `[start, end_exclusive)`.
-- `viewer/common/model.TextSnapshot` owns conversion between offsets and
-  line/column positions/ranges.
-- `moon ide hover --output-json` and `moon check --output-json` locations are
-  1-based line/column with exclusive end columns and map directly onto `Range`.
-
-Keep conversions at the boundary where coordinate spaces meet. Code that needs
-offset spans should say `OffsetRange`; code that models editor positions should
-use the Monaco-style line/column types.
+- `Position`, `Range`, and `LineRange` use 1-based UTF-16 line/column values.
+- `OffsetRange` is a 0-based half-open UTF-16 span.
+- `TextSnapshot` owns offset/position conversion.
+- Keep conversions at model/view, protocol, and DOM boundaries; do not pass an
+  unlabelled integer between coordinate spaces.

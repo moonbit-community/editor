@@ -1,176 +1,126 @@
 # 1:1 Port Playbook
 
-How to write — and finish — an execution plan that ports Monaco/VS Code (or
-CodeMirror) behavior so that "done" actually means a faithful 1:1 port, not a
-faithful port of the slice someone happened to look at.
+Use this protocol for Monaco/VS Code or CodeMirror ports. A port is complete
+only when it accounts for the whole named source unit, not merely the code
+needed for one observed symptom.
 
-This is a meta-plan: a template plus the rules every `monaco-*-port.md` must
-follow. It exists because past "1:1 port" plans still shipped gaps and bugs.
-The root cause was always the same: the plan owned a *numerator* (the methods it
-chose to port) and called it a fraction. A real port must own the
-**denominator** — the entire surface of the named source unit.
+Reference maps: `docs/references/{monaco,codemirror}.md`. Reference-test rules:
+`docs/quality.md`. Reference trees are read-only research inputs.
 
-Reference map: `docs/references/monaco.md`. Conformance-test conventions:
-`docs/quality.md` ("Conformance ports") and
-`docs/exec-plans/monaco-test-conformance-port.md`. Submodules `vscode/` and
-`codemirror/` are reference-only; never import from them.
+## Phase 0: Close the Scope
 
-## Why ports leak (the failure modes to design against)
+Name complete source files/classes. A smaller scope must be a complete method
+cluster and explicitly name excluded sibling clusters. Scope by source unit,
+not bug symptom. Record the pinned source commit.
 
-Diagnosed from real regressions (e.g. the hover horizontal-clipping bug: the
-plan ported the *vertical* available-space methods and marked them `PASS`, while
-the *horizontal* counterparts `_findMaximumRenderingWidth` /
-`_setHoverWidgetMaxDimensions` were never in the ledger, and `shift_left` was
-hand-invented).
+## Phase 1: Inventory the Denominator
 
-1. **Selective porting framed as complete.** A subset is ported faithfully, the
-   plan is declared done. Un-ported members are *unseen*, not deferred. No step
-   ever enumerated the source's full surface, so completeness was uncheckable.
-2. **Homegrown logic masquerading as a port.** Invented geometry/layout/timing
-   math reintroduces the exact bugs the source already solved. Nothing flagged
-   "this line has no source citation."
-3. **Tests prove the slice, not parity.** `TESTED` meant "the thing I built
-   passes the test I wrote for it" — circular — and ran at one configuration.
-   Bugs on the orthogonal axis / at boundary conditions survive.
-4. **Symptom-driven scope.** Scope is set by one observed symptom; the fix
-   covers that symptom's axis and leaves the rest broken.
-5. **"1:1 port" never operationalized.** With no definition of done, the model
-   optimizes for the stated symptom + green tests, which it can always satisfy
-   without being complete.
+Read every scoped source file and enumerate:
 
-The fix is to remove the two kinds of discretion that let this happen: discretion
-over **scope** (enumerate the denominator) and over **correctness criteria**
-(tie every "done" to a source diff + a boundary test), and to **forbid
-invention**.
+- every public/private method, getter, setter, and static member;
+- every constant, enum value, and magic number;
+- every behavior-changing branch and early return;
+- every owned DOM attribute, class, CSS property, and custom property.
 
-## Protocol (every port plan follows these phases in order)
+The inventory is a review deliverable. Record its member count and stop for
+review before writing port code. A search such as
+`rg -n '<member-pattern>' vscode/<path>` is only a discovery aid; reading the
+whole source unit is authoritative.
 
-### Phase 0 — Scope by source unit, not by symptom
+## Phase 2: Build the Parity Ledger
 
-State the port as a closed set of source files/classes, e.g. "port
-`contentHoverWidget.ts` + `resizableContentWidget.ts` (whole files)". If you
-scope smaller, scope to a complete *method cluster* and name the sibling
-clusters that are explicitly **out**. The plan title names the source unit, not
-the bug.
+Give every inventory member exactly one row:
 
-### Phase 1 — Inventory (the denominator), before any port code
-
-Produce, *by reading the source files* (not from memory), the complete member
-list of the scoped unit:
-
-- every method (public **and** private), getter, and static;
-- every constant / magic number / enum value;
-- every behavior-switching branch and early-return inside ported methods
-  (each implies an input that takes it — these become test cases);
-- every CSS property / custom property / class name and DOM attribute the unit
-  sets, if it owns DOM.
-
-This inventory is a reviewable deliverable. Completeness later becomes
-arithmetic: `count(ledger rows) == count(inventory members)`. Stop here for
-review before writing port code — the inventory is where "unseen" gaps are
-caught.
-
-> Aid: list a TypeScript file's members with
-> `grep -nE '^\s*(private|public|protected|static|get |set )?\s*[_a-zA-Z]+\s*\(' vscode/<path>`
-> and reconcile by hand. The grep is a starting net, not the authority — read
-> the file.
-
-### Phase 2 — Parity ledger (one row per inventory member)
-
-Use the table format from `monaco-hover-logic-chain-port.md`. Every member from
-Phase 1 gets exactly one row, and every row resolves to one status — never
-absent:
-
-| Source member (file:line) | Arithmetic / transition | MoonBit symbol | Status |
+| Source member (file:line) | Arithmetic/transition | MoonBit symbol | Status |
 |---|---|---|---|
 
-- **Source ref** is filled by reading the file (line numbers + the actual
-  arithmetic/branch), not recalled.
-- **Status** ∈ `TODO` / `PORTED` (code matches source) / `TESTED`
-  (whitebox/oracle/browser proof exists) / `PASS` (proof green) /
-  `DEFERRED (reason)` / `N-A (reason)`. A member with no work and no reason is a
-  bug in the plan, not an omission.
-- No row is `PASS` without a linked test whose failure would specifically catch
-  a regression in *that* row, at its boundary conditions.
+Use `TODO` while working. A completed row ends in `PORTED`, `TESTED`, `PASS`,
+`DEFERRED (reason)`, or `N-A (reason)`. Absence is not deferral. No row is
+`PASS` without a linked test that would fail for a regression in that row,
+including its boundary cases.
 
-### Phase 3 — Port by copying structure; never invent
+## Phase 3: Copy Structure, Do Not Invent
 
-Match the source's control flow, branch order, early returns, and constants.
-**Any logic line not traceable to a source location is a divergence** and must
-appear in a `## Deviations` section with justification (a genuine
-host/seam difference, not "I thought this was simpler"). If you cannot cite the
-source line, you are inventing — stop and find the source behavior. Local seams
-(DOM/FFI, async, services) are expected deviations; *layout/geometry/timing math
-is not*.
+Preserve control flow, branch order, early returns, constants, geometry,
+layout, and timing arithmetic. Cite the source location for each logic line.
 
-### Phase 4 — Tests derived from the source's branches
+List every uncited line in `## Deviations` with a concrete reason. DOM/FFI,
+async, service, and type-system seams can justify a deviation; convenience or
+locally invented math cannot. If a line cannot be traced or justified, stop and
+research the source behavior.
 
-- For each behavior-switching branch in Phase 1, add a case that takes it.
-- List the **behavior-switching variables** explicitly and cover their
-  combinations, not one happy path. (Hover example: viewport width, anchor near
-  each edge, scroll offset, content shape tall/wide/both — the missing
-  narrow-width × wide-content cell was the bug.)
-- Run the verification harness across that matrix, not a single configuration —
-  single-config green is the dominant source of false confidence.
-- Where a Monaco unit test exists, prefer porting it per `docs/quality.md`
-  "Conformance ports".
+## Phase 4: Derive Tests from Branches
 
-### Phase 5 — Exit gate (a plan is not "done" until all pass)
+- Give every behavior-changing branch an input that takes it.
+- List all behavior-switching variables and cover their meaningful
+  combinations, boundaries, and orthogonal axes.
+- Run the harness across configurations such as viewport, content shape,
+  options, platform, or target where they affect behavior.
+- Prefer porting the corresponding upstream unit tests under the conformance
+  rules in `docs/quality.md`.
 
-1. **Inventory reconciled:** every Phase-1 member has a ledger row with a
-   terminal status; report the `done / deferred / N-A` counts.
-2. **Diff review:** every ported function read side-by-side against its source;
-   branch order, constants, early returns confirmed present.
-3. **Matrix coverage:** every behavior-switching variable/combination has a
-   test; harness run across configurations.
-4. **Deviations documented:** every non-source-cited line is listed and
-   justified.
-5. **Closing self-audit:** re-read the source unit and confirm each member is
-   present + behavior-matching; paste the reconciliation into the plan.
+One passing happy path proves neither the source branches nor 1:1 parity.
 
-"`just check` / `just test` / `just test-browser` green" is **necessary, not
-sufficient** — it gates merge, the exit gate gates "1:1".
+## Phase 5: Exit Gate
 
-## Plan skeleton (copy into the new `monaco-<unit>-port.md`)
+A plan may claim 1:1 only after all five checks pass:
+
+1. Inventory count equals ledger-row count; report
+   `done / deferred / N-A` totals.
+2. Every ported function has been reread side-by-side with the source for
+   order, branches, early returns, and constants.
+3. Every behavior-variable combination has test evidence across the required
+   configurations.
+4. Every non-source-cited line is recorded and justified under `Deviations`.
+5. A closing reread of the complete source unit finds no unaccounted member.
+
+Repository checks (`just check`, `just test`, `just test-browser`) are necessary
+merge gates; this reconciliation is the additional 1:1 gate.
+
+## Plan Template
 
 ```markdown
-# Monaco <unit> 1:1 Port
-Status: proposed — Date: <YYYY-MM-DD>. Oracle commit: <vscode submodule sha>.
+# <Source Unit> 1:1 Port
+
+Status: proposed
+Date: <YYYY-MM-DD>
+Oracle commit: <submodule SHA>
 
 ## Scope (Phase 0)
-Source unit (whole): vscode/<file>.ts [+ siblings]. Out of scope: <clusters>.
 
-## Inventory (Phase 1)   <!-- reviewed before port code -->
-- Methods: <list public+private>
-- Constants: <list>
-- Branches to cover: <list>
-- DOM/CSS owned: <list, if any>
-Member count: N.
+Whole source unit: `vscode/<path>` [+ siblings].
+Explicitly out of scope: <complete sibling clusters>.
 
-## Parity ledger (Phase 2)   <!-- N rows, every member accounted for -->
-| Source member (file:line) | Arithmetic / transition | MoonBit symbol | Status |
+## Inventory (Phase 1)
+
+- Members: <all public/private/static/getter/setter members>
+- Constants: <all constants/enums/magic numbers>
+- Branches: <all behavior-changing branches and early returns>
+- DOM/CSS: <all owned attributes/classes/properties, or N-A>
+- Member count: N
+
+Review gate: stop here before implementation.
+
+## Parity Ledger (Phase 2)
+
+| Source member (file:line) | Arithmetic/transition | MoonBit symbol | Status |
 |---|---|---|---|
 
-## Deviations (Phase 3)   <!-- every non-source-cited line, justified -->
+## Deviations (Phase 3)
 
-## Test matrix (Phase 4)
-Behavior-switching variables: <list>. Cases cover: <combinations>.
+<Every uncited logic line and its seam-based reason, or None.>
 
-## Exit gate (Phase 5)
-- [ ] inventory reconciled (rows == members): done/deferred/N-A = _/_/_
-- [ ] every ported fn diff-reviewed vs source
-- [ ] matrix covered, harness run across configs
-- [ ] deviations documented
-- [ ] closing self-audit pasted
+## Test Matrix (Phase 4)
+
+- Behavior-switching variables: <list>
+- Combinations and boundaries: <list>
+- Harness/configurations: <list>
+
+## Exit Gate (Phase 5)
+
+- [ ] rows == members; done/deferred/N-A = _/_/_
+- [ ] every ported function diff-reviewed against the source
+- [ ] branch/configuration matrix covered and green
+- [ ] all deviations recorded and justified
+- [ ] closing whole-source reread pasted below
 ```
-
-## Anti-pattern checklist (reject a plan that does any of these)
-
-- Lists "the methods to port" without first enumerating the whole source unit.
-- Has a ledger row marked `PASS`/`TESTED` with no linked test, or a test at one
-  config only.
-- Contains geometry/layout/timing logic with no source citation and no
-  `Deviations` entry.
-- Scopes by symptom ("fix truncated hover") instead of by source unit.
-- Treats absence of a member as "deferred" — deferral must be an explicit row
-  with a reason.

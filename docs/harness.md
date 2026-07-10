@@ -1,123 +1,85 @@
 # Harness
 
-The harness exists to validate the reusable viewer through both direct
-component pages and the reference workbench/backend shell. It should make
-behavior inspectable without hidden setup.
-
-## Layers
-
-1. Baseline compiler/build checks.
-2. MoonBit unit tests: DOM-free package tests (vscode's `editor/test/common`).
-3. Headless viewer harness: drives a real `Viewer` + `ViewModel` +
-   `CursorsController` with no DOM view, asserting on semantic state (vscode's
-   `editor/test/browser/testCodeEditor.ts`). See "Headless Viewer Harness".
-4. Browser suites split by purpose: smoke, component, and performance.
-
-Baseline and unit layers should stay boring: no errors, and no new warnings.
-Browser tests use Playwright for process/browser lifecycle, user gestures,
-outer assertions, logging, screenshots, traces, and final pass/fail decisions.
+Use the lowest layer that can observe the behavior. Browser tests are for DOM,
+pointer, browser-layout, and full-shell behavior—not for state that a MoonBit
+test can assert directly.
 
 ## Commands
 
-- `just check`: runs `moon check --target all --warn-list +73` plus
-  `scripts/check-architecture.mbtx`.
-- `just build`: runs `just check`, builds `web/dist` including browser-test
-  assets, and builds `internal/shell/server_host_native/main`.
-- `just test`: runs `moon test --target all`.
-- `just test-browser`: builds first, starts the native server, and runs all
-  default Playwright browser suites.
-- `just test-browser-smoke`: user-like app workflows.
-- `just test-browser-component`: MoonBit-authored browser component checks.
-- `just test-browser-perf`: non-budgeted performance evidence.
-- `just dev ROOT=. PORT=5173`: build and run the reference backend shell for
-  local inspection. Use `ROOT=/path/to/project` to point the workbench at a
-  fixture or real MoonBit project.
+```sh
+just check                   # check all targets, format, architecture guards
+just test                    # all MoonBit tests
+just build                   # check + browser assets + native server
+just test-browser            # all Playwright suites
+just test-browser-smoke      # reference app and user workflows
+just test-browser-component  # direct Viewer component pages
+just test-browser-perf       # non-budgeted performance evidence
+just dev ROOT=. PORT=5173    # build and run the reference app
+```
 
-Playwright targets `http://127.0.0.1:5173` by default. Set
-`READONLY_EDITOR_BASE_URL=http://127.0.0.1:<port>` to run browser tests against
-an already-started server. The default Playwright server uses the deterministic
-workspace fixture at `tests/fixtures/workspace`.
+Playwright defaults to `http://127.0.0.1:5173` and the deterministic
+`tests/fixtures/workspace`. Set `READONLY_EDITOR_BASE_URL` to target an already
+running server.
 
-## Headless Viewer Harness
+## Test Layers
 
-`viewer/test_viewer_wbtest.mbt` is the MoonBit analog of vscode's
-`editor/test/browser/testCodeEditor.ts` (`withTestCodeEditor`). It constructs a
-real `Viewer` *without* `attach()` — no DOM view, mirroring
-`TestCodeEditor._createView` returning `null` — and drives the full
-model/view-model/cursor pipeline over an in-memory model. `set_model` builds the
-tokenized document, view model, render frame, and cursor context synchronously;
-`schedule_render`/`flush_render` no-op while the view is `None`, so the semantic
-state is fully populated with no `requestAnimationFrame` and no measurement.
+### MoonBit package tests
 
-Use `with_test_viewer(text, viewer => { ... })` and assert on semantic state:
-positions, ranges, projected view lines (`coordinates_converter()`), and render
-frames (`test_frame()` / `test_refresh_frame()`). `RenderFrame` is `pub(all)`
-with a `ToJson` impl, so a frame can also be asserted as golden JSON. Soft wrap
-and the viewport are normally measured from the DOM, so the harness exposes
-`test_set_soft_wrap_column` and `test_set_viewport` to drive them headlessly.
+Use ordinary tests for DOM-free algorithms and `*_reference_test.mbt` /
+`*_reference_wbtest.mbt` for traceable Monaco conformance ports. See
+`docs/quality.md` for the reference-test contract.
 
-The rule: **a behavior expressible as a position, range, line string, token
-array, or frame is tested here with `with_test_viewer` (run by `just test`), not
-in Playwright.** Cursor motion, soft-wrap view↔model mapping, and scroll-window
-math are harness tests. Playwright is reserved for behavior that needs a real
-browser: wiring smoke, pointer hit-testing through the caret APIs, and
-DOM-measured selection geometry against the actual readonly editor.
+### Headless Viewer tests
 
-## Browser Layout
+`viewer/test_viewer_wbtest.mbt` constructs a real, unattached `Viewer`, installs
+a `TextModel`, and exercises its synchronous model/view-model/cursor/layout
+state. No browser `View`, DOM measurement, or animation frame is created.
+
+Useful white-box seams are:
+
+- `with_test_viewer`
+- `test_view_model` and `test_cursor`
+- `test_window`
+- `test_set_soft_wrap_column`
+- `test_set_viewport`
+
+Use this layer for positions, selections, wrapping, model/view conversion,
+visible windows, scroll/reveal math, decoration inputs, and contribution state.
+
+### Browser suites
 
 ```text
 tests/browser/
-  README.md       browser package contracts, globals, and authoring rules
-  support/        Playwright fixtures, app helpers, logger, MoonBit reporter
-  smoke/          user workflows against the real app or embedded viewer
-  component/      Playwright loaders for MoonBit browser component pages
-  perf/           Playwright and MoonBit performance evidence
-  moonbit/        js-target MoonBit browser-test packages
+  smoke/       real workbench/embed workflows and real pointer input
+  component/   direct public-Viewer scenarios reported as compact JSON
+  perf/        timing evidence; non-failing unless a budget is documented
+  moonbit/     js-target scenario packages
+  support/     Playwright fixtures, logging, and reporters
 ```
 
-`scripts/build-web.mbtx` assembles owner-adjacent CSS into `web/dist/style.css`
-from the viewer and internal shell packages, and builds the MoonBit
-browser-test packages into
-`web/dist/browser-tests/component.html` and `web/dist/browser-tests/perf.html`.
-See `tests/browser/README.md` for package-level authoring rules, selectors, and
-globals.
-
-## Suite Boundaries
-
-- Smoke: startup, native-served assets, file-tree navigation, document opening,
-  real hover through pointer interaction, scrolling by wheel/drag, theme
-  changes, embedded viewer loading, file-watch recovery through the reference
-  shell, and pointer-driven selection (caret-API hit-testing and DOM-measured
-  selection geometry against the embedded viewer). Smoke tests should not call
-  deterministic state-control globals when a user path exists. Monaco parity is
-  held by porting Monaco logic and its unit tests into the viewer
-  (`*_reference_test.mbt`), not by browser-level DOM diffing.
-- Component: MoonBit browser pages construct the public viewer API directly,
-  without the internal workbench/backend shell, and report compact JSON through
-  Playwright.
-- Performance: structured JSON evidence and attachments. Perf tests remain
-  non-failing unless an explicit documented budget is added.
+`scripts/build-web.mbtx` builds the reference app, embed page, and MoonBit
+scenario bundles, then assembles owner-adjacent CSS and codicons under
+`web/dist`.
 
 ## Browser Rules
 
-Workbench smoke tests should select files through the sidebar and native remote
-protocol. The active file is application state, not URL state; specs should not
-depend on `?uri=`, `?path=`, hashes, or history updates.
-
-Smoke specs should prefer user gestures and visible outcomes.
-
-The MoonBit reporter is passive. Playwright validates the report shape, attaches
-the JSON, and owns the final test result.
+- Smoke tests use the sidebar and remote protocol when testing the workbench;
+  the active file is application state, not a URL query/hash.
+- Prefer real gestures and visible outcomes. Use deterministic test globals only
+  when no user path exists.
+- Use Playwright for caret-API hit testing, measured selection/widget geometry,
+  browser event wiring, server/file-watch integration, and screenshots/traces.
+- Monaco parity comes from source-faithful code plus ported conformance tests,
+  not browser DOM snapshots against Monaco.
+- The MoonBit reporter only emits data; Playwright validates the report and
+  owns pass/fail.
 
 ## Failure Evidence
 
-`tests/browser/support/test.js` records:
+`tests/browser/support/test.js` records `runner.log`, console/page/request
+failures, traces, and screenshots under `test-results/browser/**`. Component and
+perf suites also attach their JSON reports. Set
+`READONLY_EDITOR_TEST_VERBOSE=1` or `PW_VERBOSE=1` to mirror logs to the terminal.
 
-- `runner.log` under `test-results/browser/...`;
-- browser console messages, page errors, failed requests, and HTTP errors;
-- Playwright traces and screenshots on failure.
-
-Component and perf specs attach MoonBit report JSON through
-`tests/browser/support/moonbit_reporter.js`; perf specs also attach structured
-timing JSON. Set `READONLY_EDITOR_TEST_VERBOSE=1` or `PW_VERBOSE=1` to mirror
-logs to the terminal.
+Package globals, selectors, and scenario-authoring details live in
+`tests/browser/README.md`.

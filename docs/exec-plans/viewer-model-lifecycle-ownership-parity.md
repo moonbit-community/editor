@@ -1,6 +1,6 @@
 # Viewer Model Lifecycle and Service Ownership Parity
 
-Status: inventory ready — STOP FOR REVIEW
+Status: approved for implementation
 
 Date: 2026-07-10
 
@@ -989,37 +989,37 @@ mapping the 427 source rows, not extra source-parity members.
 
 ### Inventory review checklist — stop gate
 
-- [ ] Reviewer confirms all 427 source IDs are within the closed Phase 0 scope.
-- [ ] Reviewer confirms the denominator formula and mechanical 427-row count.
-- [ ] Reviewer confirms every named source member/constant/owned disposable has
+- [x] Reviewer confirms all 427 source IDs are within the closed Phase 0 scope.
+- [x] Reviewer confirms the denominator formula and mechanical 427-row count.
+- [x] Reviewer confirms every named source member/constant/owned disposable has
   one row and every behavior-changing branch/early return has its own stable
   source-ledger row.
-- [ ] Reviewer confirms all ViewParts, external overflow nodes, root/placeholder
+- [x] Reviewer confirms all ViewParts, external overflow nodes, root/placeholder
   nodes, DOM attributes/classes/custom properties, and 2^24 rail constants are
   accounted for.
-- [ ] Reviewer confirms ModelData disposal order and setModel event/focus/
+- [x] Reviewer confirms ModelData disposal order and setModel event/focus/
   post-cleanup order against `codeEditorWidget.ts` side by side.
-- [ ] Reviewer approves or amends the shared marker registration proposal:
+- [x] Reviewer approves or amends the shared marker registration proposal:
   identity-keyed acquisitions stored in ModelData, same-identity refcounts,
   acquisition-ordered `URI -> Array[instance_id]` fanout, no `set_value`
   acquisition, reasoned removal,
   ordinary-release diagnostic preservation, active-`ModelDisposed`-only
   transient cleanup, zero-refcount watch removal, and model-specific lookup.
-- [ ] Reviewer confirms the proposed distinct-live-model same-URI behavior for
+- [x] Reviewer confirms the proposed distinct-live-model same-URI behavior for
   owner storage, instance-prefixed decoration ids, acquisition-order
   `get_live_markers(uri)` union, and model-specific hover helper.
-- [ ] Reviewer confirms caller-injected/shared ViewerServices remain borrowed
+- [x] Reviewer confirms caller-injected/shared ViewerServices remain borrowed
   and approves the omitted-services `owns_services=true` contract above.
-- [ ] Reviewer confirms every Viewer/attach/model/View/font/marker/document/
+- [x] Reviewer confirms every Viewer/attach/model/View/font/marker/document/
   window subscription has a retained exactly-once release path in the future
   implementation design.
-- [ ] Reviewer confirms repeated dispose, partial attach, headless View=None,
+- [x] Reviewer confirms repeated dispose, partial attach, headless View=None,
   and callback-after-dispose cases are represented in the later test matrix.
-- [ ] Inventory approved and committed separately; only then may Milestone 2
+- [x] Inventory approved and committed separately; only then may Milestone 2
   product/test work begin.
 
-**Review gate:** stop here. This inventory deliberately makes no product-code
-change and no parity status transition.
+**Review gate passed:** independent review approved the fixed inventory hash
+recorded below. Product/test implementation may now begin from this denominator.
 
 ## Test-Authority Corrections
 
@@ -1195,12 +1195,14 @@ No deviation is approved yet. The stop-gate recommendation is:
 | MDS-015, MDS-040, MDS-069 | `PORTED` / `TESTED` after implementation | Identity-keyed reasoned removal ports the present/absent owner disposal branches and exact-once finalization. Record the local identity/refcount seam under Deviations; these rows are not blocked by the absent global ModelService. |
 | MDS-063 (planned) | `N-A (local MarkerService is non-optional)` | The source optional-chain branch has no local state: every MarkerDecorationsService is constructed with a concrete MarkerService. |
 
-All listed source-ledger statuses remain `TODO` until review approves these
-seam-based dispositions and their required tests.
+Review approved these seam-based planned dispositions. Source-ledger statuses
+remain `TODO` until implementation and the required tests supply row evidence.
 
 ## Execution Record
 
-2026-07-10 inventory milestone prepared for review (uncommitted by instruction):
+2026-07-10 inventory milestone committed as `3dbc1e7` and independently
+approved at SHA-256
+`4d1e57457a08528d88e2e3e86fa5dde14b6d0caf617f0170635a2d3173ccc52e`:
 
 - oracle verified at `b18492a288de038fbc7643aae6de8247029d11bd`;
 - Phase 0 closed with every excluded sibling cluster named;
@@ -1212,8 +1214,11 @@ seam-based dispositions and their required tests.
   rAF/timeout teardown, borrowed ViewerServices, `TextModel.instance_id`,
   same-model refcount, distinct same-URI fanout, registration watches, and
   lookup ambiguity;
-- no product code/test change, no implementation status transition, and no
-  commit. Review checklist above is the active stop gate.
+- no product code/test change or implementation status transition occurred in
+  the inventory commit;
+- independent review approved the denominator, shared-marker lifecycle,
+  compatible lookup surface, reasoned removal, service disposal ordering,
+  ViewerServices provenance, and the required test matrices.
 
-Append approval, implementation commits, validation results, and final ledger
-totals after review. Freeze after implementation.
+Append implementation commits, validation results, and final ledger totals
+below. Freeze after implementation.

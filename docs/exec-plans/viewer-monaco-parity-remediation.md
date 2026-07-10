@@ -1,0 +1,284 @@
+# Viewer–Monaco Parity Remediation Program
+
+Status: proposed — portfolio plan; child inventories pending
+
+Date: 2026-07-10
+
+Viewer baseline: 84326d48437bc71267f5f9b0e45395b63e7c6511
+
+Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+
+This is the coordination plan for the current Viewer-versus-Monaco audit. It
+does not replace or rewrite any implemented execution plan. Implemented plans
+remain historical evidence; this plan and its child plans describe the new
+work required by the 2026-07-10 audit.
+
+The program follows _PORT_PLAYBOOK.md. In particular, each child plan must name
+complete source units or complete method clusters, inventory every member and
+behavior-changing branch, build an equal-size parity ledger, and stop for
+review before product code changes.
+
+## Outcome
+
+Close the confirmed P1 Viewer/Monaco divergences without turning the audit into
+one unreviewable cross-repository rewrite. The work is split by ownership and
+source unit so that every implementation milestone can be source-reviewed,
+tested, committed, and independently audited.
+
+This program is complete only when:
+
+- every P1 finding below is closed by an implemented child plan;
+- every child inventory count equals its parity-ledger row count;
+- all required behavior is proven by branch-derived tests at the lowest useful
+  harness layer;
+- browser geometry is measured, not inferred from green repository checks;
+- every intentional reduction is written into the owning package contract;
+- an independent closing audit finds no unaccounted member in the scoped
+  Monaco source units.
+
+## Program Decision Vocabulary
+
+Audit findings and the child plans' initial decision registers use:
+
+- REQUIRED PARITY: the readonly/product boundary does not justify the
+  divergence.
+- INTENTIONAL DEVIATION: the product deliberately differs; the owning README
+  must state the contract and the ledger must name the seam.
+- DEFERRED (reason): valid parity work that is postponed with an explicit
+  dependency or product decision.
+- N-A (reason): the source member cannot apply to the readonly Viewer.
+
+These are program decisions, not member-ledger statuses. After inventory, the
+real parity ledger uses only TODO while working and PORTED, TESTED, PASS,
+DEFERRED (reason), or N-A (reason) as terminal statuses. The initial decision
+register does not count toward the source-member denominator.
+
+An existing local test is evidence only after its expected behavior has been
+checked against the pinned source. An unreviewed or unapproved divergence
+assertion is a test bug, not a compatibility contract. A reviewed
+INTENTIONAL DEVIATION recorded in the owning README and parity ledger is a
+product contract and belongs in an ordinary local test.
+
+## P1 Audit Register
+
+| ID | Finding | Initial decision | Child plan |
+|---|---|---|---|
+| P1-01 | Arrow/Page/Home/End keys scroll instead of performing Monaco cursor navigation and Shift selection | REQUIRED PARITY | viewer-cursor-input-events-parity.md |
+| P1-02 | Mouse selection and model-content flush mutate cursor state without public cursor events | REQUIRED PARITY | viewer-cursor-input-events-parity.md |
+| P1-03 | Inlay and hover async work can write stale results after content or same-URI model changes | REQUIRED PARITY | viewer-async-model-features-parity.md |
+| P1-04 | Model attach clears host diagnostics and marker decorations are not removed for every detach path | REQUIRED PARITY | viewer-model-lifecycle-ownership-parity.md |
+| P1-05 | Viewer.dispose leaks global subscriptions and disposes caller-owned shared services | REQUIRED PARITY | viewer-model-lifecycle-ownership-parity.md |
+| P1-06 | Runtime option changes do not invalidate all affected ViewParts | REQUIRED PARITY | viewer-render-invalidation-parity.md |
+| P1-07 | Horizontal extent is estimated from UTF-16 length rather than measured rendered width | REQUIRED PARITY | viewer-browser-geometry-parity.md |
+| P1-08 | ContentWidget x geometry is a uniform-width estimate and decoration changes do not reposition it | REQUIRED PARITY; render invalidation is a prerequisite source cluster | viewer-browser-geometry-parity.md |
+| P1-09 | ViewCursors ignores decoration changes that move rendered text | REQUIRED PARITY | viewer-render-invalidation-parity.md |
+| P1-10 | ViewZone rendering overwrites host class/style and callback exceptions abort the frame | REQUIRED PARITY | viewer-view-zones-parity.md |
+| P1-11 | Attaching a model synchronously tokenizes the entire document | REQUIRED non-blocking behavior; exact scheduling comes from inventory | viewer-tokenization-parity.md |
+| P1-12 | CRLF value length and offset/position conversion use different coordinate systems | REQUIRED coherent buffer invariant; exact EOL policy requires the child review gate | viewer-text-buffer-eol-parity.md |
+
+## Child Plans and Landing Order
+
+| Order | Child plan | Primary ownership | Depends on | Status |
+|---:|---|---|---|---|
+| 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | proposed |
+| 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | proposed |
+| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | proposed |
+| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | proposed |
+| 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
+| 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
+| 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
+| 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
+
+The order is intentional. Several plans touch viewer/viewer.mbt,
+viewer/attach_model.mbt, or viewer/browser/view/view_part.mbt. Do not execute
+overlapping plans in parallel worktrees and then merge them mechanically.
+
+## Cross-Plan Source Ownership
+
+Shared files do not permit duplicate ledger ownership. Use these non-overlapping
+method clusters:
+
+| Shared source/local area | Owning child plan |
+|---|---|
+| codeEditorWidget attach/detach/dispose and ModelData lifetime | model lifecycle |
+| codeEditorWidget cursor event forwarding and cursor API methods | cursor/input events |
+| codeEditorWidget updateOptions notification | render invalidation |
+| codeEditorWidget changeViewZones/accessor transaction | ViewZones |
+| TextModel value/range/offset/EOL plus setValue buffer/event construction | text-buffer EOL |
+| TextModel version/request freshness methods | async model features |
+| TextModel _emitContentChangedEvent token forwarding plus token-part construction/disposal | tokenization |
+| ViewLines event handlers | render invalidation |
+| ViewLines width measurement and max-width feedback | browser geometry |
+| ContentWidgets event handlers and dirty-state transitions | render invalidation |
+| ContentWidgets validation, visible ranges, placement, and focus preservation | browser geometry |
+| ViewLayout general scroll/content dimensions | browser geometry |
+| ViewZone-owned min-width/container-width writes | ViewZones, consuming geometry's extent contract |
+| LinesLayout/ViewLayout zone insertion, ordering, and zone viewport data | ViewZones |
+| ViewModelEventDispatcher cursor outgoing events | cursor/input events |
+| ViewModelEventDispatcher configuration/decorations events | render invalidation |
+| ViewModelEventDispatcher ViewZonesChanged event | ViewZones |
+| Viewer/attach_model resource lifetime | model lifecycle |
+| Viewer/attach_model async request creation/cancellation | async model features |
+
+Each child inventory must list its excluded sibling clusters using this table.
+If a member cannot be assigned unambiguously, stop and update this coordination
+plan before creating duplicate ledger rows.
+
+## Status Protocol
+
+Child plans use these states:
+
+- proposed — Phase 0 drafted; inventory pending
+- inventory ready — STOP FOR REVIEW
+- approved for implementation
+- in progress
+- implemented
+- superseded
+
+Once a child reaches implemented it becomes immutable historical evidence.
+The portfolio remains active until every child closes and the P1 re-audit is
+complete.
+
+## Program Gates
+
+### Gate A — Classification Review
+
+Before any child implementation:
+
+- confirm the P1 register decisions;
+- confirm that readonly is a capability seam, not a blanket reason to replace
+  Monaco navigation, ownership, cancellation, geometry, or callback behavior;
+- resolve the two deliberately open decisions:
+  - whether the model stores Monaco-selected EOL or normalizes all input to LF
+    while preserving a single coherent coordinate system;
+  - whether semantic-token overlay belongs in the tokenization child or remains
+    a separately approved DEFERRED row.
+
+### Gate B — Inventory Review
+
+For one child plan at a time:
+
+1. Complete Phase 0 and Phase 1 in the child document.
+2. Record every member, constant, branch, early return, DOM/CSS property, and
+   source-owned callback.
+3. Record the member count and create exactly that many ledger rows.
+4. Commit the documentation-only inventory milestone.
+5. Stop. A reviewer must approve the denominator before product edits.
+
+### Gate C — Implementation
+
+After inventory approval:
+
+- add or correct branch-derived tests;
+- port source structure, ordering, constants, and timing behavior;
+- commit each coherent green milestone;
+- do not absorb adjacent P2 work unless it is an inventoried sibling member of
+  the same complete source unit;
+- record all such sibling rows as PORTED, TESTED, DEFERRED, or N-A rather than
+  silently omitting them.
+
+### Gate D — Independent Review
+
+Use a fresh task that begins in read-only review mode. It must reconcile:
+
+- pinned Monaco source;
+- approved inventory and ledger;
+- actual product diff;
+- test matrix and observed evidence.
+
+The implementer does not self-certify 1:1 completion. Any missing row, invented
+arithmetic, changed branch order, untested configuration, or unsupported PASS
+returns the child plan to implementation.
+
+### Gate E — Closeout
+
+For each child:
+
+- run the required focused package tests and any exact upstream reference tests;
+- run just check, just test, just build, and just test-browser before declaring
+  cross-package/browser-visible work complete;
+- update owning package READMEs, generated public contracts when applicable,
+  docs/architecture.md or docs/harness.md only where the landed contract
+  changes;
+- record done/deferred/N-A totals and the closing whole-source reread;
+- mark the plan implemented and then treat it as immutable history.
+
+## Test-Authority Audit
+
+The following expectations must not be used as oracles until reconciled:
+
+- viewer/set_value_api_wbtest.mbt documents that attach clears markers.
+- viewer/common/model/text_model_test.mbt treats URI plus host version as a
+  sufficient freshness identity even when the model instance/revision changes.
+- tests/browser/component/model_swap.spec.js and
+  tests/browser/moonbit/model_swap currently describe ViewZones as surviving
+  model replacement.
+- viewer/common/languages/languages_registry_wbtest.mbt fixes oldest-provider
+  first behavior; it belongs to the P2 provider backlog, not to a future
+  Monaco-parity proof.
+- reveal tests that require immediate movement belong to the P2 state/reveal
+  backlog and are not evidence for Monaco default reveal semantics.
+
+Tests that merely omit the failing axis are also insufficient. The child plans
+must add the missing matrices for pointer/flush cursor events, out-of-order
+async results, shared-service disposal, runtime option mutation, dynamic inline
+decorations, complex rendered widths, throwing ViewZone callbacks, CRLF
+round-trips, and bounded tokenization work.
+
+## Harness Policy
+
+Use docs/harness.md and docs/quality.md:
+
+- MoonBit package tests for deterministic model, cursor, layout, event,
+  cancellation, and tokenization state. Use reference filenames only when an
+  actual upstream suite/test is ported with its original label, source path,
+  and current pin.
+- Headless Viewer tests for model/view-model/cursor/layout integration without
+  DOM measurement.
+- Browser component tests for public Viewer behavior and measured DOM geometry.
+- Browser smoke tests only for real user gestures and workbench/embed behavior.
+- Perf tests as evidence unless a deterministic budget and environment are
+  explicitly documented.
+
+For browser geometry, a pinned local Monaco fixture may be used only as
+non-gating diagnostic evidence to discover and compare measured facts. Pass or
+fail comes from pinned source/ported branches plus deterministic local
+offsetWidth, DOM Range, computed-style, callback-sequence, and reachability
+invariants. Cross-fixture pixel equality and screenshots do not establish
+parity.
+
+## P2 Backlog Boundary
+
+This program does not authorize a general P2 cleanup. Provider scoring and
+aggregation, full ViewZone API shape, quick diff scheduling, reveal/view-state
+parity, syntax folding, agent-feedback storage, scrollbar platform tails,
+shadow/iframe support, semantic-token overlay, and visual/theme tails remain in
+the audit backlog unless a complete source unit in a P1 child requires an
+explicit PORTED/DEFERRED/N-A decision.
+
+After all P1 children close, perform a fresh audit against the then-current
+Viewer HEAD and the same pinned oracle before creating P2 execution plans.
+
+## Agent Handoff Contract
+
+The first task for each child plan is:
+
+> Complete Phase 0–2 inventory and parity-ledger work in this plan. Read every
+> named source unit. Do not edit product code. Commit the documentation-only
+> milestone and stop for review.
+
+Only after approval should a new task receive:
+
+> Implement the approved child plan through its exit gate. Preserve source
+> control flow, commit each validated milestone, and do not expand scope.
+
+The independent closing task is:
+
+> Audit the implementation against the pinned source, approved ledger, diff,
+> and test matrix. Report discrepancies before making fixes.
+
+## Decision and Execution Log
+
+- 2026-07-10: created the portfolio and eight child plan shells from the P1
+  audit. No product implementation or Phase-1 source-member inventory has
+  started.

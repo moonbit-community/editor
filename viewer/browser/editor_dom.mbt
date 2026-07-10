@@ -14,9 +14,9 @@
 //
 // Omissions:
 //   * `EditorPointerEventFactory`'s touch/pen dispatch and
-//     `EditorMouseEventFactory.onContextMenu` (no consumers). The existing
-//     mouse-down seam listens to `pointerdown` so selection can carry the
-//     source pointer id into the global move monitor.
+//     `EditorMouseEventFactory.onContextMenu` (no consumers). The mouse path
+//     retains Monaco's paired pointerdown-id capture plus mousedown delivery,
+//     because only mousedown carries double/triple-click detail.
 //   * `DynamicCssRules` and friends (editorDom.ts:288-429) — decoration CSS
 //     helpers unrelated to mouse handling.
 //   * The keydown monitor-cancel check reads `KeyboardEvent.key` instead of
@@ -225,11 +225,6 @@ pub fn EditorMouseEvent::stop_propagation(self : EditorMouseEvent) -> Unit {
 }
 
 ///|
-pub fn EditorMouseEvent::pointer_id(self : EditorMouseEvent) -> Int {
-  @base_browser.mouse_event_pointer_id(self.browser_event)
-}
-
-///|
 /// `EditorMouseEventFactory` (editorDom.ts:149-194): DOM-listener wrappers
 /// producing `EditorMouseEvent`s anchored to the editor's view DOM node.
 pub struct EditorMouseEventFactory {
@@ -278,7 +273,33 @@ pub fn EditorMouseEventFactory::on_mouse_down(
   target : @rdom.Element,
   callback : (EditorMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
-  self.listen(target, "pointerdown", callback)
+  self.listen(target, "mousedown", callback)
+}
+
+///|
+/// `EditorPointerEventFactory.onPointerDown`'s mouse seam: capture the
+/// PointerEvent id separately, then reuse it when the following mousedown
+/// starts global monitoring. PointerEvent.detail is always zero and therefore
+/// cannot replace the ordinary mousedown event.
+pub fn EditorMouseEventFactory::on_pointer_down(
+  self : EditorMouseEventFactory,
+  target : @rdom.Element,
+  callback : (EditorMouseEvent, Int) -> Unit,
+) -> @base_common.Disposable {
+  let handler = (event : @rdom.Event) => {
+    match event.to_mouse_event() {
+      Some(mouse) =>
+        callback(
+          EditorMouseEvent::new(mouse, false, self.editor_view_dom_node),
+          @base_browser.mouse_event_pointer_id(mouse),
+        )
+      None => ()
+    }
+  }
+  target.add_event_listener("pointerdown", handler)
+  @base_common.Disposable::from(() => {
+    target.remove_event_listener("pointerdown", handler)
+  })
 }
 
 ///|

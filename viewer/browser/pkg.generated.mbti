@@ -49,7 +49,6 @@ pub struct EditorMouseEvent {
 }
 pub fn EditorMouseEvent::editor_pos(Self) -> EditorPagePosition
 pub fn EditorMouseEvent::new(@dom.MouseEvent, Bool, @dom.Element) -> Self
-pub fn EditorMouseEvent::pointer_id(Self) -> Int
 pub fn EditorMouseEvent::prevent_default(Self) -> Unit
 pub fn EditorMouseEvent::relative_pos(Self) -> CoordinatesRelativeToEditor
 pub fn EditorMouseEvent::set_detail(Self, Int) -> Unit
@@ -63,6 +62,7 @@ pub fn EditorMouseEventFactory::on_mouse_down(Self, @dom.Element, (EditorMouseEv
 pub fn EditorMouseEventFactory::on_mouse_leave(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
 pub fn EditorMouseEventFactory::on_mouse_move(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
 pub fn EditorMouseEventFactory::on_mouse_up(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
+pub fn EditorMouseEventFactory::on_pointer_down(Self, @dom.Element, (EditorMouseEvent, Int) -> Unit) -> @common.Disposable
 
 pub(all) struct EditorPagePosition {
   x : Double

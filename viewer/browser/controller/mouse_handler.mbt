@@ -203,6 +203,15 @@ pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
       handler.on_mouse_leave(e)
     }),
   )
+  // PointerEvent.detail is always zero, so it cannot drive double/triple
+  // click semantics. Capture only its id and reuse it in the following
+  // mousedown, exactly like MouseHandler's EditorPointerEventFactory seam.
+  let capture_pointer_id = Ref(0)
+  handler.listeners.push(
+    mouse_events.on_pointer_down(view_helper.view_dom_node, (_event, pointer_id) => {
+      capture_pointer_id.val = pointer_id
+    }),
+  )
   // The `pointerup` listener registered by `GlobalEditorPointerMoveMonitor`
   // does not get invoked 100% of the times (mouseHandler.ts:126-133); this
   // compensation listener simply communicates it.
@@ -217,7 +226,7 @@ pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
   )
   handler.listeners.push(
     mouse_events.on_mouse_down(view_helper.view_dom_node, e => {
-      handler.on_mouse_down(e)
+      handler.on_mouse_down(e, capture_pointer_id.val)
     }),
   )
   handler
@@ -359,6 +368,7 @@ fn MouseHandler::on_mouse_up(
 fn MouseHandler::on_mouse_down(
   self : MouseHandler,
   e : @editor_browser.EditorMouseEvent,
+  pointer_id : Int,
 ) -> Unit {
   let t = self.create_mouse_target(e, true)
   let target_type = t.type_()
@@ -383,7 +393,7 @@ fn MouseHandler::on_mouse_down(
   if should_handle &&
     (target_is_content || (target_is_line_numbers && select_on_line_numbers)) {
     focus()
-    self.mouse_down_operation.start(target_type, e)
+    self.mouse_down_operation.start(target_type, e, pointer_id)
   } else if target_is_gutter {
     // Do not steal focus
     e.prevent_default()
@@ -395,7 +405,7 @@ fn MouseHandler::on_mouse_down(
             detail.view_zone_id,
           ) {
           focus()
-          self.mouse_down_operation.start(target_type, e)
+          self.mouse_down_operation.start(target_type, e, pointer_id)
           e.prevent_default()
         }
       _ => ()
@@ -510,6 +520,7 @@ fn MouseDownOperation::start(
   self : MouseDownOperation,
   target_type : @editor_browser.MouseTargetType,
   e : @editor_browser.EditorMouseEvent,
+  pointer_id : Int,
 ) -> Unit {
   self.mouse_state.set_started_on_line_numbers(target_type is GutterLineNumbers)
   self.mouse_state.set_start_buttons(e)
@@ -529,7 +540,7 @@ fn MouseDownOperation::start(
     self.is_active_flag = true
     self.mouse_move_monitor.start_monitoring(
       self.view_helper.view_lines_dom_node,
-      e.pointer_id(),
+      pointer_id,
       e.buttons,
       moved => self.on_mouse_down_then_move(moved),
       _browser_event => self.stop(),

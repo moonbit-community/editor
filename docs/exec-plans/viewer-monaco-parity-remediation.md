@@ -330,9 +330,14 @@ The independent closing task is:
 - 2026-07-10: corrected inventory commit `811e1a2` was also rejected at Gate B.
   Its 759 rows still compressed nested callbacks, interface/object properties,
   DOM/CSS/custom properties, and exact arithmetic. No product/test file changed.
-- 2026-07-10: the calibrated async-model-features inventory stop gate has
-  924/924 TODO rows (248 inlay-controller, 58 inlay-fragment, 529 hover, and
-  89 model-version/cancellation members), plus the separate 87-row current-
+- 2026-07-10: third inventory commit `d34b20a` was rejected at Gate B. Its
+  924 rows split source-owned callbacks and CSS facts, but also counted
+  straight-line statement ordering and property arithmetic separately from the
+  owning member/property, contrary to the uniform atom rule. No product/test
+  file changed.
+- 2026-07-10: the normalized async-model-features inventory stop gate has
+  810/810 TODO rows: 232 inlay-controller, 49 inlay-fragment, 448 hover, and
+  81 model-version/cancellation members, plus the separate 87-row current-
   MoonBit ownership/test-authority audit and branch-derived matrix. The
-  calibrated documentation must be committed and independently approved before
+  normalized documentation must be committed and independently approved before
   implementation.

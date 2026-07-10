@@ -52,6 +52,7 @@ test "delayed start arms the operation and suppresses results before the delay" 
   ])
   assert_true(async_during_wait.view is None)
   assert_eq(async_during_wait.operation.parts.length(), 1)
+  assert_true(async_during_wait.op_async_item(2, []) == async_during_wait)
   // The async stream finishes while still in SecondWait: emission stays
   // suppressed, but the operation records that async is done.
   let async_finished = async_during_wait.op_async_done(2)
@@ -81,11 +82,23 @@ test "loading message appears only while waiting for a slow async compute" {
     Some(view) => assert_eq(view.parts.length(), 1)
     None => ()
   }
-  // A streamed async result replaces the loading message and completes.
+  // A streamed async result is shown while the loading message remains until
+  // the iterable finishes.
   let resolved = loading.op_async_item(1, [markdown_part(3, 7, "fn main")])
   assert_true(resolved.view is Some(_))
+  match resolved.widget_view() {
+    Some(view) => {
+      assert_eq(view.parts.length(), 2)
+      assert_true(view.parts[1] is LoadingHover(_))
+    }
+    None => fail("expected partial result plus loading")
+  }
   let done = resolved.op_async_done(1)
   assert_true(done.is_complete())
+  match done.widget_view() {
+    Some(view) => assert_eq(view.parts.length(), 1)
+    None => fail("expected resolved hover")
+  }
 }
 
 ///|
@@ -127,4 +140,275 @@ test "clearing rotates the token and drops the shown hover" {
   assert_eq(cleared.operation.token, shown.operation.token + 1)
   let late = cleared.op_async_item(1, [markdown_part(3, 7, "late")])
   assert_true(late.view is None)
+}
+
+///|
+fn operation_options(
+  start : Int,
+  source? : HoverStartSource = HoverStartMouse,
+) -> HoverOperationOptions {
+  HoverOperationOptions::new(
+    HoverRangeAnchor(
+      priority=0,
+      range=Range(1, start, 1, start),
+      initial_mouse_pos_x=None,
+      initial_mouse_pos_y=None,
+    ),
+    should_focus=source is HoverStartKeyboard,
+    source~,
+    insist_on_keeping_hover_visible=source is HoverStartClick,
+  )
+}
+
+///|
+test "hover timing derives the two waits and loading delay from 300ms" {
+  assert_eq(hover_first_wait_ms, 150)
+  assert_eq(hover_second_wait_ms, 150)
+  assert_eq(hover_first_wait_ms + hover_second_wait_ms, 300)
+  assert_eq(hover_loading_message_ms, 900)
+  let cases : Array[(Int, Double, Double, Double)] = [
+    (0, 0.0, 0.0, 0.0),
+    (1, 0.5, 0.5, 3.0),
+    (2, 1.0, 1.0, 6.0),
+    (300, 150.0, 150.0, 900.0),
+    (301, 150.5, 150.5, 903.0),
+  ]
+  for case in cases {
+    let (delay, first, second, loading) = case
+    let timing = HoverTiming::from_delay(delay)
+    assert_eq(timing.hover_time_ms, delay.to_double())
+    assert_eq(timing.first_wait_ms, first)
+    assert_eq(timing.second_wait_ms, second)
+    assert_eq(timing.loading_message_ms, loading)
+  }
+}
+
+///|
+test "typed operation start covers delayed and every immediate state branch" {
+  let options = operation_options(3)
+  let idle = HoverOperation::idle_at(7)
+  let (delayed_effect, first_wait) = idle.start(HoverStartDelayed, options)
+  assert_true(delayed_effect is HoverOperationScheduleDelayed(7))
+  assert_true(first_wait.state is HoverOpFirstWait)
+  assert_true(first_wait.options == Some(options))
+
+  // Delayed start is Idle-only.
+  let (delayed_again, delayed_unchanged) = first_wait.start(
+    HoverStartDelayed,
+    operation_options(4),
+  )
+  assert_true(delayed_again is HoverOperationNoStart)
+  assert_true(delayed_unchanged == first_wait)
+
+  // Immediate Idle runs async then sync; SecondWait runs only sync.
+  let immediate_options = operation_options(5, source=HoverStartKeyboard)
+  let (immediate_idle, idle_with_options) = idle.start(
+    HoverStartImmediate,
+    immediate_options,
+  )
+  assert_true(immediate_idle is HoverOperationRunAsyncAndSync(7))
+  assert_true(idle_with_options.state is HoverOpSecondWait)
+  assert_true(idle_with_options.options == Some(immediate_options))
+  let second_wait = { ..first_wait, state: HoverOpSecondWait }
+  let (immediate_second, second_with_options) = second_wait.start(
+    HoverStartImmediate,
+    immediate_options,
+  )
+  assert_true(immediate_second is HoverOperationRunSync(7))
+  assert_true(second_with_options.options == Some(immediate_options))
+
+  // FirstWait and both post-sync waiting states are the complete typed no-op
+  // matrix for immediate start.
+  for
+    state in [
+      HoverOpFirstWait,
+      HoverOpWaitingForAsync,
+      HoverOpWaitingForAsyncShowingLoading,
+    ] {
+    let operation = { ..first_wait, state, }
+    let (effect, unchanged) = operation.start(
+      HoverStartImmediate,
+      immediate_options,
+    )
+    assert_true(effect is HoverOperationNoStart)
+    assert_true(unchanged == operation)
+  }
+}
+
+///|
+test "operation result snapshots wait, complete, and loading facts" {
+  let options = operation_options(3, source=HoverStartClick)
+  let part = markdown_part(2, 4, "snapshot")
+  let waiting : HoverOperation = {
+    state: HoverOpWaitingForAsync,
+    token: 3,
+    parts: [part],
+    async_done: false,
+    options: Some(options),
+  }
+  match waiting.result() {
+    Some(result) => {
+      assert_false(result.is_complete)
+      assert_false(result.has_loading_message)
+      assert_true(result.options == options)
+      result.value.push(markdown_part(4, 5, "local mutation"))
+      // Emission snapshots the array; consumers cannot mutate operation state.
+      assert_eq(waiting.parts.length(), 1)
+    }
+    None => fail("expected an incomplete result")
+  }
+  assert_true({ ..waiting, state: HoverOpFirstWait }.result() is None)
+  assert_true({ ..waiting, state: HoverOpSecondWait }.result() is None)
+  match { ..waiting, state: HoverOpWaitingForAsyncShowingLoading }.result() {
+    Some(result) => assert_true(result.has_loading_message)
+    None => fail("expected a loading result")
+  }
+  match { ..waiting, state: HoverOpIdle, async_done: true }.result() {
+    Some(result) => assert_true(result.is_complete)
+    None => fail("expected a complete result")
+  }
+  assert_true(HoverOperation::idle().result() is None)
+}
+
+///|
+test "pure debouncer retains latest options and rejects stale or canceled runs" {
+  assert_eq(HoverDebouncer::new().default_delay_ms, 0)
+  let initial = HoverDebouncer::new(default_delay_ms=25)
+  assert_eq(initial.default_delay_ms, 25)
+  let first_options = operation_options(3)
+  let (first_generation, first) = initial.schedule(first_options)
+  assert_eq(first_generation, 1)
+  assert_eq(first.delay_ms, 25)
+  let second_options = operation_options(5, source=HoverStartClick)
+  let (second_generation, second) = first.schedule(second_options, delay_ms=90)
+  assert_eq(second_generation, 2)
+  assert_eq(second.delay_ms, 90)
+  let (stale, still_scheduled) = second.take(first_generation)
+  assert_true(stale is None)
+  assert_true(still_scheduled.scheduled)
+  let (latest, consumed) = still_scheduled.take(second_generation)
+  assert_true(latest == Some(second_options))
+  assert_false(consumed.scheduled)
+
+  let (third_generation, third) = consumed.schedule(first_options)
+  let canceled = third.cancel()
+  assert_false(canceled.scheduled)
+  assert_true(canceled.options == Some(first_options))
+  let (after_cancel, _) = canceled.take(third_generation)
+  assert_true(after_cancel is None)
+}
+
+///|
+fn request_test_model(path : String, text : String) -> @model.TextModel {
+  TextModel(
+    try! @base_common.Uri::from(scheme="inmemory", authority="request", path~),
+    path,
+    "moonbit",
+    1,
+    "same-host-revision",
+    text,
+  )
+}
+
+///|
+test "request stamp requires physical model, internal version, generation, and live token" {
+  let current = request_test_model("/stamp.mbt", "one")
+  let same_uri_version = request_test_model("/stamp.mbt", "one")
+  let token = @language.CancellationToken::new()
+  let stamp = HoverRequestStamp::new(current, 11, token)
+  assert_true(stamp.is_current(Some(current), 11))
+  assert_false(stamp.is_current(Some(same_uri_version), 11))
+  assert_false(stamp.is_current(Some(current), 10))
+  assert_false(stamp.is_current(Some(current), 12))
+  assert_false(stamp.is_current(None, 11))
+
+  current.set_value("two")
+  assert_false(stamp.is_current(Some(current), 11))
+
+  let equal_content = request_test_model("/equal.mbt", "same")
+  let equal_stamp = HoverRequestStamp::new(equal_content, 12, token)
+  equal_content.set_value("same")
+  assert_false(equal_stamp.is_current(Some(equal_content), 12))
+
+  let disposed_model = request_test_model("/disposed.mbt", "live")
+  let disposed_stamp = HoverRequestStamp::new(disposed_model, 13, token)
+  disposed_model.dispose()
+  assert_false(disposed_stamp.is_current(Some(disposed_model), 13))
+
+  let live = request_test_model("/cancel.mbt", "one")
+  let canceled_token = @language.CancellationToken::new()
+  let canceled = HoverRequestStamp::new(live, 12, canceled_token)
+  canceled_token.cancel()
+  assert_false(canceled.is_current(Some(live), 12))
+}
+
+///|
+test "request-aware transitions reject cancellation and stale generations" {
+  let model = request_test_model("/transition.mbt", "one")
+  let (_, armed) = HoverController::empty().start_delayed(3, 7)
+  let token = @language.CancellationToken::new()
+  let request = armed.request_stamp(model, token)
+  let (proceed, second_wait) = armed.op_trigger_async_request(
+    request,
+    Some(model),
+    1,
+  )
+  assert_true(proceed)
+  let waiting = second_wait.op_trigger_sync_request(request, Some(model), 1, [])
+  assert_true(waiting.operation.state is HoverOpWaitingForAsync)
+
+  let stale_generation = waiting.op_async_item_request(
+    request,
+    Some(model),
+    2,
+    [markdown_part(3, 7, "stale")],
+  )
+  assert_eq(stale_generation.operation.parts.length(), 0)
+  token.cancel()
+  let canceled = waiting.op_async_item_request(request, Some(model), 1, [
+    markdown_part(3, 7, "canceled"),
+  ])
+  assert_eq(canceled.operation.parts.length(), 0)
+}
+
+///|
+test "canceling pending work preserves the shown view and rotates generation" {
+  let (_, armed) = HoverController::empty().start_delayed(3, 7)
+  let (_, second_wait) = armed.op_trigger_async(1)
+  let shown = second_wait.op_trigger_sync(1, [markdown_part(3, 7, "visible")])
+  assert_true(shown.view is Some(_))
+  let canceled = shown.cancel_operation_preserving_view()
+  assert_true(canceled.view == shown.view)
+  assert_true(canceled.current_anchor == shown.current_anchor)
+  assert_eq(canceled.current_complete, shown.current_complete)
+  assert_true(canceled.anchor is None)
+  assert_true(canceled.operation.state is HoverOpIdle)
+  assert_eq(canceled.operation.token, shown.operation.token + 1)
+  assert_eq(canceled.operation.parts.length(), 0)
+  assert_true(canceled.operation.options is None)
+  let late = canceled.op_async_item(1, [markdown_part(3, 7, "late")])
+  assert_true(late.view == shown.view)
+}
+
+///|
+test "equal parts at a new anchor still replace current result identity" {
+  let first_anchor : HoverAnchor = HoverRangeAnchor(
+    priority=0,
+    range=Range(1, 3, 1, 3),
+    initial_mouse_pos_x=None,
+    initial_mouse_pos_y=None,
+  )
+  let second_anchor : HoverAnchor = HoverRangeAnchor(
+    priority=0,
+    range=Range(1, 4, 1, 4),
+    initial_mouse_pos_x=None,
+    initial_mouse_pos_y=None,
+  )
+  let parts = [markdown_part(2, 6, "same")]
+  let first = HoverController::empty().set_current_result(
+    parts, true, first_anchor,
+  )
+  let second = first.set_current_result(parts, true, second_anchor)
+  assert_true(second.current_anchor == Some(second_anchor))
+  assert_false(second == first)
 }

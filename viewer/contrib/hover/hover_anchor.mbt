@@ -12,11 +12,31 @@ pub(all) enum HoverAnchorType {
 } derive(Eq, Debug)
 
 ///|
+/// Stable identity of the participant that owns a foreign-element anchor.
+/// Monaco compares participant objects by identity; the multi-target MoonBit
+/// port mints an explicit identity so trait-object boxing cannot change anchor
+/// equality or adoption.
+pub struct HoverParticipantOwner {
+  id : Int
+} derive(Eq, Debug)
+
+///|
+let next_hover_participant_owner_id : Ref[Int] = Ref(0)
+
+///|
+/// Mints one logical participant identity. A factory that rebuilds a
+/// participant for separate input/compute passes must retain and reuse this
+/// value across those instances.
+pub fn HoverParticipantOwner::new() -> HoverParticipantOwner {
+  next_hover_participant_owner_id.val += 1
+  { id: next_hover_participant_owner_id.val }
+}
+
+///|
 /// Monaco `HoverRangeAnchor` / `HoverForeignElementAnchor`
 /// (`hoverTypes.ts:47-82`). `range` is model-space. The foreign variant's
-/// `owner` (the suggesting participant, compared by identity in the source)
-/// has exactly one producer here — `InlayHintsHover` — so the owner is
-/// implicit; `injected_text_index` is the anchor's payload, the viewer's
+/// `owner` is the explicitly minted identity of the suggesting participant;
+/// `injected_text_index` is the anchor's payload, the viewer's
 /// stand-in for `InlayHintsHoverAnchor.part` (the rendered hint the hover
 /// describes), and takes no part in `equals` (the source inherits the
 /// owner-only comparison). `initial_mouse_pos_*` are carried per the source
@@ -31,13 +51,14 @@ pub(all) enum HoverAnchor {
   )
   HoverForeignElementAnchor(
     priority~ : Int,
+    owner~ : HoverParticipantOwner,
     injected_text_index~ : Int,
     range~ : @base_common.Range,
     initial_mouse_pos_x~ : Double?,
     initial_mouse_pos_y~ : Double?,
     supports_marker_hover~ : Bool
   )
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub fn HoverAnchor::anchor_type(self : HoverAnchor) -> HoverAnchorType {
@@ -77,16 +98,16 @@ pub fn HoverAnchor::supports_marker_hover(self : HoverAnchor) -> Bool {
 
 ///|
 /// Monaco `HoverAnchor.equals` (`hoverTypes.ts:56-58,:75-77`): range anchors
-/// compare their ranges; foreign anchors compare their owners only — with the
-/// single foreign owner (`InlayHintsHover`), any two foreign anchors are
-/// equal, exactly the source's inherited comparison (`InlayHintsHoverAnchor`
-/// overrides no `equals`).
+/// compare their ranges; foreign anchors compare their explicit participant
+/// owners only.
 pub fn hover_anchor_equals(left : HoverAnchor, right : HoverAnchor) -> Bool {
   match left {
     HoverRangeAnchor(range=left_range, ..) =>
       right is HoverRangeAnchor(range=right_range, ..) &&
       left_range == right_range
-    HoverForeignElementAnchor(..) => right is HoverForeignElementAnchor(..)
+    HoverForeignElementAnchor(owner=left_owner, ..) =>
+      right is HoverForeignElementAnchor(owner=right_owner, ..) &&
+      left_owner == right_owner
   }
 }
 
@@ -101,11 +122,28 @@ pub fn hover_anchor_can_adopt(
   new_anchor : HoverAnchor,
   last_anchor : HoverAnchor,
 ) -> Bool {
+  hover_anchor_can_adopt_at(
+    new_anchor,
+    last_anchor,
+    last_anchor.range().get_start_position(),
+  )
+}
+
+///|
+/// Source-exact adoption predicate with the currently shown widget position.
+/// Range adoption compares that position's line with the new anchor; foreign
+/// adoption ignores it and compares only participant owner identity.
+pub fn hover_anchor_can_adopt_at(
+  new_anchor : HoverAnchor,
+  last_anchor : HoverAnchor,
+  show_at_position : @base_common.Position,
+) -> Bool {
   match new_anchor {
     HoverRangeAnchor(range~, ..) =>
       last_anchor is HoverRangeAnchor(..) &&
-      last_anchor.range().start_line_number == range.start_line_number
-    HoverForeignElementAnchor(..) =>
-      last_anchor is HoverForeignElementAnchor(..)
+      show_at_position.line_number == range.start_line_number
+    HoverForeignElementAnchor(owner=new_owner, ..) =>
+      last_anchor is HoverForeignElementAnchor(owner=last_owner, ..) &&
+      new_owner == last_owner
   }
 }

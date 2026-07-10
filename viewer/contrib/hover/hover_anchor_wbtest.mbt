@@ -20,12 +20,17 @@ fn range_anchor(
 }
 
 ///|
+let test_foreign_owner : HoverParticipantOwner = HoverParticipantOwner::new()
+
+///|
 fn foreign_anchor(
   injected_text_index : Int,
   supports_marker_hover? : Bool = true,
+  owner? : HoverParticipantOwner = test_foreign_owner,
 ) -> HoverAnchor {
   HoverForeignElementAnchor(
     priority=10,
+    owner~,
     injected_text_index~,
     range=Range(1, 5, 1, 5),
     initial_mouse_pos_x=None,
@@ -41,10 +46,68 @@ test "anchor equals: range anchors compare ranges, foreign anchors compare owner
     hover_anchor_equals(range_anchor(1, 4, 4), range_anchor(1, 5, 5)),
   )
   assert_false(hover_anchor_equals(range_anchor(1, 4, 4), foreign_anchor(0)))
-  // The single foreign owner (the inlay participant) makes any two foreign
-  // anchors equal — the source's inherited owner-only comparison.
+  // Payload/range do not participate when the explicit owner is the same.
   assert_true(hover_anchor_equals(foreign_anchor(0), foreign_anchor(3)))
+  let other_owner = HoverParticipantOwner::new()
+  assert_false(
+    hover_anchor_equals(foreign_anchor(0), foreign_anchor(0, owner=other_owner)),
+  )
   assert_false(hover_anchor_equals(foreign_anchor(0), range_anchor(1, 4, 4)))
+}
+
+///|
+test "range and foreign anchor constructors retain every source field" {
+  let range : HoverAnchor = HoverRangeAnchor(
+    priority=4,
+    range=Range(2, 3, 2, 5),
+    initial_mouse_pos_x=Some(12.0),
+    initial_mouse_pos_y=Some(18.0),
+  )
+  match range {
+    HoverRangeAnchor(
+      priority~,
+      range=stored_range,
+      initial_mouse_pos_x~,
+      initial_mouse_pos_y~
+    ) => {
+      assert_eq(priority, 4)
+      assert_true(stored_range == Range(2, 3, 2, 5))
+      assert_true(initial_mouse_pos_x == Some(12.0))
+      assert_true(initial_mouse_pos_y == Some(18.0))
+    }
+    _ => fail("expected range anchor")
+  }
+
+  let owner = HoverParticipantOwner::new()
+  let foreign : HoverAnchor = HoverForeignElementAnchor(
+    priority=10,
+    owner~,
+    injected_text_index=7,
+    range=Range(3, 6, 3, 6),
+    initial_mouse_pos_x=Some(20.0),
+    initial_mouse_pos_y=Some(24.0),
+    supports_marker_hover=true,
+  )
+  match foreign {
+    HoverForeignElementAnchor(
+      priority~,
+      owner=stored_owner,
+      injected_text_index~,
+      range=stored_range,
+      initial_mouse_pos_x~,
+      initial_mouse_pos_y~,
+      supports_marker_hover~
+    ) => {
+      assert_eq(priority, 10)
+      assert_true(stored_owner == owner)
+      assert_eq(injected_text_index, 7)
+      assert_true(stored_range == Range(3, 6, 3, 6))
+      assert_true(initial_mouse_pos_x == Some(20.0))
+      assert_true(initial_mouse_pos_y == Some(24.0))
+      assert_true(supports_marker_hover)
+    }
+    _ => fail("expected foreign anchor")
+  }
 }
 
 ///|
@@ -59,7 +122,32 @@ test "anchor canAdoptVisibleHover is type-gated" {
   assert_false(hover_anchor_can_adopt(range_anchor(1, 4, 4), foreign_anchor(0)))
   // Foreign adopts foreign (same owner).
   assert_true(hover_anchor_can_adopt(foreign_anchor(1), foreign_anchor(0)))
+  assert_false(
+    hover_anchor_can_adopt(
+      foreign_anchor(1),
+      foreign_anchor(0, owner=HoverParticipantOwner::new()),
+    ),
+  )
   assert_false(hover_anchor_can_adopt(foreign_anchor(1), range_anchor(1, 4, 4)))
+}
+
+///|
+test "range adoption uses shown position while foreign adoption ignores it" {
+  let old_range = range_anchor(1, 4, 4)
+  let new_range = range_anchor(2, 9, 9)
+  assert_true(hover_anchor_can_adopt_at(new_range, old_range, Position(2, 1)))
+  assert_false(hover_anchor_can_adopt_at(new_range, old_range, Position(1, 9)))
+  let foreign = foreign_anchor(0)
+  assert_true(
+    hover_anchor_can_adopt_at(foreign_anchor(3), foreign, Position(99, 1)),
+  )
+  assert_false(
+    hover_anchor_can_adopt_at(
+      foreign_anchor(3, owner=HoverParticipantOwner::new()),
+      foreign,
+      Position(1, 1),
+    ),
+  )
 }
 
 ///|
@@ -107,7 +195,13 @@ test "marker participant filters by anchor-line columns with the showIfCollapsed
   ])
   let participant = MarkerHoverParticipant::new(marker_decorations)
   let compute = (anchor : HoverAnchor) => {
-    participant.compute_sync({ model, anchor, inlay_hints: [] })
+    participant.compute_sync({
+      model,
+      anchor,
+      inlay_hints: [],
+      source: HoverStartMouse,
+      line_decorations: [],
+    })
   }
   // A position inside the marker span hits; the part range clamps to the
   // anchor line's marker columns.
@@ -127,6 +221,7 @@ test "marker participant filters by anchor-line columns with the showIfCollapsed
     compute(
       HoverForeignElementAnchor(
         priority=10,
+        owner=test_foreign_owner,
         injected_text_index=0,
         range=Range(2, 5, 2, 5),
         initial_mouse_pos_x=None,
@@ -140,6 +235,7 @@ test "marker participant filters by anchor-line columns with the showIfCollapsed
     compute(
       HoverForeignElementAnchor(
         priority=10,
+        owner=test_foreign_owner,
         injected_text_index=0,
         range=Range(2, 5, 2, 5),
         initial_mouse_pos_x=None,
@@ -186,6 +282,8 @@ test "marker participant isolates distinct live models sharing one URI" {
       model,
       anchor: range_anchor(1, column, column),
       inlay_hints: [],
+      source: HoverStartMouse,
+      line_decorations: [],
     })
   }
   assert_eq(compute(model_a, 1).length(), 1)
@@ -195,4 +293,51 @@ test "marker participant isolates distinct live models sharing one URI" {
   lease_b.dispose()
   lease_a.dispose()
   marker_decorations.dispose()
+}
+
+///|
+test "inlay participant keeps a stable explicit owner across factory calls" {
+  let logical_owner = HoverParticipantOwner::new()
+  let owner = InlayHintsHover::with_owner(logical_owner)
+  let rebuilt = InlayHintsHover::with_owner(logical_owner)
+  assert_true(owner.owner == rebuilt.owner)
+  let anchor : HoverAnchor = HoverForeignElementAnchor(
+    priority=10,
+    owner=owner.owner,
+    injected_text_index=0,
+    range=Range(2, 3, 2, 3),
+    initial_mouse_pos_x=Some(12.0),
+    initial_mouse_pos_y=Some(18.0),
+    supports_marker_hover=true,
+  )
+  assert_true(anchor.anchor_type() is ForeignElement)
+  assert_eq(anchor.priority(), 10)
+  assert_true(anchor.range() == Range(2, 3, 2, 3))
+  assert_true(anchor.supports_marker_hover())
+  let context : HoverComputeContext = {
+    model: anchor_test_model(),
+    anchor,
+    source: HoverStartMouse,
+    line_decorations: [],
+    inlay_hints: [
+      InlayHint(Position(2, 3), ": Int", tooltip=[PlainText("inlay tooltip")]),
+    ],
+  }
+  assert_eq(owner.compute_sync(context).length(), 1)
+  assert_eq(rebuilt.compute_sync(context).length(), 1)
+  let foreign_owner = HoverParticipantOwner::new()
+  let foreign_anchor : HoverAnchor = HoverForeignElementAnchor(
+    priority=10,
+    owner=foreign_owner,
+    injected_text_index=0,
+    range=Range(2, 3, 2, 3),
+    initial_mouse_pos_x=Some(12.0),
+    initial_mouse_pos_y=Some(18.0),
+    supports_marker_hover=true,
+  )
+  assert_eq(
+    owner.compute_sync({ ..context, anchor: foreign_anchor }).length(),
+    0,
+  )
+  assert_false(hover_anchor_equals(anchor, foreign_anchor))
 }

@@ -23,11 +23,57 @@ pub(all) struct ComputedHover {
 /// only the hovered state, never a services bag — participants capture the
 /// services they need at construction instead. (`inlay_hints` backs the
 /// foreign anchor's payload lookup; Monaco's anchor carries the rendered
-/// hint object itself.)
+/// hint object itself.) `line_decorations` is selected once by the computer and
+/// `source` is forwarded unchanged to every sync/async participant.
 pub(all) struct HoverComputeContext {
   model : @model.TextModel
   anchor : HoverAnchor
   inlay_hints : Array[@language.InlayHint]
+  source : HoverStartSource
+  line_decorations : Array[@model.ModelDecoration]
+}
+
+///|
+/// Monaco `ContentHoverComputer._getLineDecorations`: selects the anchor line's
+/// decorations with whole-line acceptance, strict ordinary containment, and
+/// the `showIfCollapsed` one-column relaxation.
+pub fn hover_line_decorations(
+  model : @model.TextModel,
+  anchor : HoverAnchor,
+) -> Array[@model.ModelDecoration] {
+  if !(anchor is HoverRangeAnchor(..)) && !anchor.supports_marker_hover() {
+    return []
+  }
+  let anchor_range = anchor.range()
+  let line_number = anchor_range.start_line_number
+  if line_number > model.get_line_count() {
+    return []
+  }
+  let max_column = model.get_line_max_column(line_number)
+  model
+  .get_line_decorations(line_number)
+  .filter(decoration => {
+    if decoration.options.is_whole_line {
+      return true
+    }
+    let start_column = if decoration.range.start_line_number == line_number {
+      decoration.range.start_column
+    } else {
+      1
+    }
+    let end_column = if decoration.range.end_line_number == line_number {
+      decoration.range.end_column
+    } else {
+      max_column
+    }
+    if decoration.options.show_if_collapsed {
+      !(start_column > anchor_range.start_column + 1 ||
+      anchor_range.end_column - 1 > end_column)
+    } else {
+      !(start_column > anchor_range.start_column ||
+      anchor_range.end_column > end_column)
+    }
+  })
 }
 
 ///|
@@ -51,7 +97,10 @@ pub(open) trait HoverParticipant {
     Double?,
   ) -> HoverAnchor? noraise
   fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart] noraise
-  async fn compute_async(Self, HoverComputeContext) -> Array[HoverPart] noraise
+  async fn compute_async(Self, HoverComputeContext, @language.CancellationToken) -> Array[
+    HoverPart,
+  ] noraise
+  fn create_loading_message(Self, HoverAnchor) -> HoverPart? noraise
 }
 
 ///|
@@ -64,6 +113,7 @@ pub(all) struct HoverParticipantServices {
   languages : @languages.Languages
   marker_decorations : @markers.MarkerDecorationsService
   log_service : @log.LogService
+  inlay_hover_owner : HoverParticipantOwner
 }
 
 ///|
@@ -162,8 +212,18 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
 pub impl HoverParticipant for MarkerHoverParticipant with fn compute_async(
   _self,
   _ctx,
+  _token,
 ) {
   []
+}
+
+///|
+/// Marker hovers have no asynchronous loading contribution.
+pub impl HoverParticipant for MarkerHoverParticipant with fn create_loading_message(
+  _self,
+  _anchor,
+) {
+  None
 }
 
 ///|
@@ -218,12 +278,25 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_sync(
 pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
   self,
   ctx,
+  token,
 ) {
+  if token.is_cancellation_requested() {
+    return []
+  }
   guard ctx.anchor is HoverRangeAnchor(range=anchor_range, ..) else {
     return []
   }
   let offset = ctx.model.get_offset_at(anchor_range.get_start_position())
-  match self.languages.hover_at(ctx.model, offset, self.log_service) {
+  let hover = self.languages.hover_at(
+    ctx.model,
+    offset,
+    self.log_service,
+    token~,
+  )
+  if token.is_cancellation_requested() {
+    return []
+  }
+  match hover {
     Some(hover) =>
       if hover.contents.length() == 0 {
         []
@@ -241,15 +314,34 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
 }
 
 ///|
+/// Markdown is the asynchronous hover participant, so it contributes the
+/// source-shaped loading placeholder while its provider request is pending.
+pub impl HoverParticipant for MarkdownHoverParticipant with fn create_loading_message(
+  _self,
+  anchor,
+) {
+  Some(LoadingHover(range=anchor.range(), message="Loading..."))
+}
+
+///|
 /// Hover participant for inlay-hint tooltips.
 pub(all) struct InlayHintsHover {
-  identity : Unit
+  owner : HoverParticipantOwner
 }
 
 ///|
 /// Creates the inlay-hint hover participant.
 pub fn InlayHintsHover::new() -> InlayHintsHover {
-  { identity: () }
+  InlayHintsHover::with_owner(HoverParticipantOwner::new())
+}
+
+///|
+/// Rebuilds the stateless participant with one editor-scoped logical owner.
+/// The wrapper retains that owner across its input and compute factory passes.
+pub fn InlayHintsHover::with_owner(
+  owner : HoverParticipantOwner,
+) -> InlayHintsHover {
+  { owner, }
 }
 
 ///|
@@ -264,7 +356,7 @@ pub impl HoverParticipant for InlayHintsHover with fn ordinal(_self) {
 /// with the hint as payload — `InlayHintsHoverAnchor`: priority 10,
 /// `supportsMarkerHover` true.
 pub impl HoverParticipant for InlayHintsHover with fn suggest_hover_anchor(
-  _self,
+  self,
   injected_text,
   target_range,
   initial_mouse_pos_x,
@@ -274,6 +366,7 @@ pub impl HoverParticipant for InlayHintsHover with fn suggest_hover_anchor(
   Some(
     HoverForeignElementAnchor(
       priority=10,
+      owner=self.owner,
       injected_text_index=injected.source_index,
       range=target_range,
       initial_mouse_pos_x~,
@@ -291,7 +384,15 @@ pub impl HoverParticipant for InlayHintsHover with fn suggest_hover_anchor(
 /// deviation).
 pub impl HoverParticipant for InlayHintsHover with fn compute_sync(self, ctx) {
   guard ctx.anchor
-    is HoverForeignElementAnchor(injected_text_index~, range=anchor_range, ..) else {
+    is HoverForeignElementAnchor(
+      owner~,
+      injected_text_index~,
+      range=anchor_range,
+      ..
+    ) else {
+    return []
+  }
+  if owner != self.owner {
     return []
   }
   match ctx.inlay_hints.get(injected_text_index) {
@@ -313,8 +414,21 @@ pub impl HoverParticipant for InlayHintsHover with fn compute_sync(self, ctx) {
 
 ///|
 /// Inlay-hint hover data is fully synchronous.
-pub impl HoverParticipant for InlayHintsHover with fn compute_async(_self, _ctx) {
+pub impl HoverParticipant for InlayHintsHover with fn compute_async(
+  _self,
+  _ctx,
+  _token,
+) {
   []
+}
+
+///|
+/// Inlay-hint tooltip data is synchronous and has no loading contribution.
+pub impl HoverParticipant for InlayHintsHover with fn create_loading_message(
+  _self,
+  _anchor,
+) {
+  None
 }
 
 ///|
@@ -334,14 +448,38 @@ pub fn ContentHoverComputer::new(
 }
 
 ///|
+/// Selects the first participant-provided loading message in participant order,
+/// matching `ContentHoverWidgetWrapper._addLoadingMessage`'s absent/null/present
+/// control flow.
+pub fn ContentHoverComputer::create_loading_message(
+  self : ContentHoverComputer,
+  anchor : HoverAnchor,
+) -> HoverPart? {
+  for participant in self.participants {
+    match participant.create_loading_message(anchor) {
+      Some(message) => return Some(message)
+      None => ()
+    }
+  }
+  None
+}
+
+///|
 /// Computes hover parts that are immediately available from viewer state.
 pub fn ContentHoverComputer::compute_sync(
   self : ContentHoverComputer,
   model : @model.TextModel,
   anchor : HoverAnchor,
   inlay_hints? : Array[@language.InlayHint] = [],
+  source? : HoverStartSource = HoverStartMouse,
 ) -> ComputedHover? {
-  let ctx : HoverComputeContext = { model, anchor, inlay_hints }
+  let ctx : HoverComputeContext = {
+    model,
+    anchor,
+    inlay_hints,
+    source,
+    line_decorations: hover_line_decorations(model, anchor),
+  }
   let parts : Array[HoverPart] = []
   for participant in self.participants {
     parts.append(participant.compute_sync(ctx))
@@ -356,11 +494,30 @@ pub async fn ContentHoverComputer::compute_async(
   model : @model.TextModel,
   anchor : HoverAnchor,
   inlay_hints? : Array[@language.InlayHint] = [],
+  source? : HoverStartSource = HoverStartMouse,
+  token? : @language.CancellationToken = @language.CancellationToken::none(),
+  is_current? : () -> Bool = () => true,
 ) -> ComputedHover? noraise {
-  let ctx : HoverComputeContext = { model, anchor, inlay_hints }
+  if token.is_cancellation_requested() || !is_current() {
+    return None
+  }
+  let ctx : HoverComputeContext = {
+    model,
+    anchor,
+    inlay_hints,
+    source,
+    line_decorations: hover_line_decorations(model, anchor),
+  }
   let parts : Array[HoverPart] = []
   for participant in self.participants {
-    parts.append(participant.compute_async(ctx))
+    if token.is_cancellation_requested() || !is_current() {
+      return None
+    }
+    let participant_parts = participant.compute_async(ctx, token)
+    if token.is_cancellation_requested() || !is_current() {
+      return None
+    }
+    parts.append(participant_parts)
   }
   computed_hover_from_parts(anchor.range(), parts)
 }
@@ -375,14 +532,43 @@ pub async fn ContentHoverComputer::compute_async_each(
   model : @model.TextModel,
   anchor : HoverAnchor,
   inlay_hints? : Array[@language.InlayHint] = [],
+  source? : HoverStartSource = HoverStartMouse,
+  token? : @language.CancellationToken = @language.CancellationToken::none(),
+  is_current? : () -> Bool = () => true,
+  run_tasks? : async (Array[async () -> Unit]) -> Unit = @base_common.run_async_tasks_sequentially,
   emit~ : (Array[HoverPart]) -> Unit,
 ) -> Unit noraise {
-  let ctx : HoverComputeContext = { model, anchor, inlay_hints }
+  if token.is_cancellation_requested() || !is_current() {
+    return
+  }
+  let ctx : HoverComputeContext = {
+    model,
+    anchor,
+    inlay_hints,
+    source,
+    line_decorations: hover_line_decorations(model, anchor),
+  }
+  // Package callers use the runtime-neutral sequential runner. The browser
+  // host injects its Promise runner, starting every participant concurrently
+  // without coupling this multi-target package to the JS or moonbitlang/async
+  // runtimes. Emits therefore follow completion order under the host runner.
+  let tasks : Array[async () -> Unit] = []
   for participant in self.participants {
-    let parts = participant.compute_async(ctx)
-    if parts.length() > 0 {
-      emit(parts)
-    }
+    tasks.push(() => {
+      if token.is_cancellation_requested() || !is_current() {
+        return
+      }
+      let parts = participant.compute_async(ctx, token)
+      if token.is_cancellation_requested() || !is_current() {
+        return
+      }
+      if parts.length() > 0 {
+        emit(parts)
+      }
+    })
+  }
+  run_tasks(tasks) catch {
+    _ => ()
   }
 }
 
@@ -437,7 +623,9 @@ fn hover_part_ordinal(part : HoverPart) -> Int {
   match part {
     MarkdownHover(ordinal~, ..) => ordinal
     MarkerHover(_) => 0
-    LoadingHover(_) => -1
+    // `MarkdownHoverParticipant.createLoadingMessage` uses ordinal 2000 so
+    // the placeholder follows resolved marker/inlay/markdown content.
+    LoadingHover(_) => 2000
   }
 }
 

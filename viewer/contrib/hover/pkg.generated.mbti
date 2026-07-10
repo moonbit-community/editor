@@ -23,11 +23,15 @@ pub fn filter_hover_parts(Array[HoverPart], HoverAnchor) -> Array[HoverPart]
 
 pub fn hover_anchor_can_adopt(HoverAnchor, HoverAnchor) -> Bool
 
+pub fn hover_anchor_can_adopt_at(HoverAnchor, HoverAnchor, @common.Position) -> Bool
+
 pub fn hover_anchor_equals(HoverAnchor, HoverAnchor) -> Bool
 
 pub let hover_first_wait_ms : Int
 
 pub let hover_hiding_delay_ms : Int
+
+pub fn hover_line_decorations(@model.TextModel, HoverAnchor) -> Array[@model.ModelDecoration]
 
 pub let hover_loading_message_ms : Int
 
@@ -76,9 +80,10 @@ pub(all) struct ComputedHover {
 pub(all) struct ContentHoverComputer {
   participants : Array[&HoverParticipant]
 }
-pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover? noraise
-pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint], emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
-pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint]) -> ComputedHover?
+pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint], source? : HoverStartSource, token? : @language.CancellationToken, is_current? : () -> Bool) -> ComputedHover? noraise
+pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint], source? : HoverStartSource, token? : @language.CancellationToken, is_current? : () -> Bool, run_tasks? : async (Array[async () -> Unit]) -> Unit, emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
+pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint], source? : HoverStartSource) -> ComputedHover?
+pub fn ContentHoverComputer::create_loading_message(Self, HoverAnchor) -> HoverPart?
 pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
 
 pub(all) struct EventModifiers {
@@ -90,8 +95,8 @@ pub fn EventModifiers::none() -> Self
 
 pub(all) enum HoverAnchor {
   HoverRangeAnchor(priority~ : Int, range~ : @common.Range, initial_mouse_pos_x~ : Double?, initial_mouse_pos_y~ : Double?)
-  HoverForeignElementAnchor(priority~ : Int, injected_text_index~ : Int, range~ : @common.Range, initial_mouse_pos_x~ : Double?, initial_mouse_pos_y~ : Double?, supports_marker_hover~ : Bool)
-} derive(Eq)
+  HoverForeignElementAnchor(priority~ : Int, owner~ : HoverParticipantOwner, injected_text_index~ : Int, range~ : @common.Range, initial_mouse_pos_x~ : Double?, initial_mouse_pos_y~ : Double?, supports_marker_hover~ : Bool)
+} derive(Eq, @debug.Debug)
 pub fn HoverAnchor::anchor_type(Self) -> HoverAnchorType
 pub fn HoverAnchor::priority(Self) -> Int
 pub fn HoverAnchor::range(Self) -> @common.Range
@@ -106,6 +111,8 @@ pub(all) struct HoverComputeContext {
   model : @model.TextModel
   anchor : HoverAnchor
   inlay_hints : Array[@language.InlayHint]
+  source : HoverStartSource
+  line_decorations : Array[@model.ModelDecoration]
 }
 
 pub(all) struct HoverController {
@@ -116,21 +123,41 @@ pub(all) struct HoverController {
   current_anchor : HoverAnchor?
   current_complete : Bool
 } derive(Eq)
+pub fn HoverController::cancel_operation_preserving_view(Self) -> Self
 pub fn HoverController::cleared(Self) -> Self
 pub fn HoverController::emit(Self) -> Self
 pub fn HoverController::empty() -> Self
+pub fn HoverController::empty_at(Int) -> Self
 pub fn HoverController::highlight_decorations(Self) -> Array[@model.ModelDeltaDecoration]
 pub fn HoverController::is_complete(Self) -> Bool
 pub fn HoverController::op_async_done(Self, Int) -> Self
+pub fn HoverController::op_async_done_request(Self, HoverRequestStamp, @model.TextModel?, Int) -> Self
 pub fn HoverController::op_async_item(Self, Int, Array[HoverPart]) -> Self
+pub fn HoverController::op_async_item_request(Self, HoverRequestStamp, @model.TextModel?, Int, Array[HoverPart]) -> Self
 pub fn HoverController::op_trigger_async(Self, Int) -> (Bool, Self)
+pub fn HoverController::op_trigger_async_request(Self, HoverRequestStamp, @model.TextModel?, Int) -> (Bool, Self)
 pub fn HoverController::op_trigger_loading(Self, Int) -> Self
+pub fn HoverController::op_trigger_loading_request(Self, HoverRequestStamp, @model.TextModel?, Int) -> Self
 pub fn HoverController::op_trigger_sync(Self, Int, Array[HoverPart]) -> Self
+pub fn HoverController::op_trigger_sync_request(Self, HoverRequestStamp, @model.TextModel?, Int, Array[HoverPart]) -> Self
+pub fn HoverController::request_stamp(Self, @model.TextModel, @language.CancellationToken) -> HoverRequestStamp
 pub fn HoverController::set_current_result(Self, Array[HoverPart], Bool, HoverAnchor) -> Self
 pub fn HoverController::start_hover_operation_if_necessary(Self, HoverAnchor, insist~ : Bool) -> (HoverEffect, Self)
-pub fn HoverController::start_showing_or_update_hover(Self, HoverAnchor, Bool) -> (HoverEffect, Self)
+pub fn HoverController::start_showing_or_update_hover(Self, HoverAnchor, Bool, show_at_position? : @common.Position) -> (HoverEffect, Self)
 pub fn HoverController::widget_view(Self) -> HoverWidgetView?
 pub fn HoverController::widget_visible(Self) -> Bool
+
+pub(all) struct HoverDebouncer {
+  default_delay_ms : Int
+  generation : Int
+  scheduled : Bool
+  delay_ms : Int
+  options : HoverOperationOptions?
+} derive(Eq, @debug.Debug)
+pub fn HoverDebouncer::cancel(Self) -> Self
+pub fn HoverDebouncer::new(default_delay_ms? : Int) -> Self
+pub fn HoverDebouncer::schedule(Self, HoverOperationOptions, delay_ms? : Int) -> (Int, Self)
+pub fn HoverDebouncer::take(Self, Int) -> (HoverOperationOptions?, Self)
 
 pub(all) enum HoverEffect {
   HoverNoEffect
@@ -157,8 +184,28 @@ pub(all) struct HoverOperation {
   token : Int
   parts : Array[HoverPart]
   async_done : Bool
+  options : HoverOperationOptions?
 } derive(Eq)
+pub fn HoverOperation::cancelled(Self) -> Self
 pub fn HoverOperation::idle() -> Self
+pub fn HoverOperation::idle_at(Int) -> Self
+pub fn HoverOperation::result(Self) -> HoverResult?
+pub fn HoverOperation::start(Self, HoverStartMode, HoverOperationOptions) -> (HoverOperationStartEffect, Self)
+
+pub(all) struct HoverOperationOptions {
+  should_focus : Bool
+  anchor : HoverAnchor
+  source : HoverStartSource
+  insist_on_keeping_hover_visible : Bool
+} derive(Eq, @debug.Debug)
+pub fn HoverOperationOptions::new(HoverAnchor, should_focus? : Bool, source? : HoverStartSource, insist_on_keeping_hover_visible? : Bool) -> Self
+
+pub(all) enum HoverOperationStartEffect {
+  HoverOperationNoStart
+  HoverOperationScheduleDelayed(Int)
+  HoverOperationRunAsyncAndSync(Int)
+  HoverOperationRunSync(Int)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum HoverPart {
   MarkdownHover(range~ : @common.Range, contents~ : Array[@language.HoverContent], ordinal~ : Int)
@@ -166,10 +213,16 @@ pub(all) enum HoverPart {
   LoadingHover(range~ : @common.Range, message~ : String)
 } derive(Eq, @debug.Debug)
 
+pub struct HoverParticipantOwner {
+  id : Int
+} derive(Eq, @debug.Debug)
+pub fn HoverParticipantOwner::new() -> Self
+
 pub(all) struct HoverParticipantRegistry {
   entries : Array[(HoverParticipantServices) -> &HoverParticipant]
 }
 pub fn HoverParticipantRegistry::build_all(Self, HoverParticipantServices) -> Array[&HoverParticipant]
+pub fn HoverParticipantRegistry::get_all(Self) -> Array[(HoverParticipantServices) -> &HoverParticipant]
 pub fn HoverParticipantRegistry::new() -> Self
 pub fn HoverParticipantRegistry::register(Self, (HoverParticipantServices) -> &HoverParticipant) -> Unit
 
@@ -177,6 +230,7 @@ pub(all) struct HoverParticipantServices {
   languages : @languages.Languages
   marker_decorations : @markers.MarkerDecorationsService
   log_service : @log.LogService
+  inlay_hover_owner : HoverParticipantOwner
 }
 
 pub(all) struct HoverPositionPart {
@@ -184,12 +238,47 @@ pub(all) struct HoverPositionPart {
   force_show_at_range : Bool
 }
 
+pub(all) struct HoverRequestStamp {
+  model : @model.TextModel
+  model_version_id : Int
+  generation : Int
+  cancellation_token : @language.CancellationToken
+}
+pub fn HoverRequestStamp::is_current(Self, @model.TextModel?, Int) -> Bool
+pub fn HoverRequestStamp::new(@model.TextModel, Int, @language.CancellationToken) -> Self
+
+pub(all) struct HoverResult {
+  value : Array[HoverPart]
+  is_complete : Bool
+  has_loading_message : Bool
+  options : HoverOperationOptions
+} derive(Eq, @debug.Debug)
+
 pub(all) struct HoverSettings {
   enabled : HoverEnabled
   sticky : Bool
   hiding_delay : Int
 }
 pub fn HoverSettings::defaults() -> Self
+
+pub(all) enum HoverStartMode {
+  HoverStartDelayed
+  HoverStartImmediate
+} derive(Eq, @debug.Debug)
+
+pub(all) enum HoverStartSource {
+  HoverStartMouse
+  HoverStartClick
+  HoverStartKeyboard
+} derive(Eq, @debug.Debug)
+
+pub(all) struct HoverTiming {
+  hover_time_ms : Double
+  first_wait_ms : Double
+  second_wait_ms : Double
+  loading_message_ms : Double
+} derive(Eq, @debug.Debug)
+pub fn HoverTiming::from_delay(Int) -> Self
 
 pub(all) struct HoverView {
   range : @common.Range
@@ -202,9 +291,10 @@ pub(all) struct HoverWidgetView {
 } derive(Eq)
 
 pub(all) struct InlayHintsHover {
-  identity : Unit
+  owner : HoverParticipantOwner
 }
 pub fn InlayHintsHover::new() -> Self
+pub fn InlayHintsHover::with_owner(HoverParticipantOwner) -> Self
 pub impl HoverParticipant for InlayHintsHover
 
 pub(all) struct MarkdownHoverParticipant {
@@ -243,6 +333,7 @@ pub(open) trait HoverParticipant {
   fn ordinal(Self) -> Int
   fn suggest_hover_anchor(Self, @view_model.InjectedText?, @common.Range, Double?, Double?) -> HoverAnchor?
   fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart]
-  async fn compute_async(Self, HoverComputeContext) -> Array[HoverPart] noraise
+  async fn compute_async(Self, HoverComputeContext, @language.CancellationToken) -> Array[HoverPart] noraise
+  fn create_loading_message(Self, HoverAnchor) -> HoverPart?
 }
 

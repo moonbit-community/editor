@@ -7,18 +7,25 @@ timing, and rendering can be tested on JS and native targets.
 ## Contract
 
 - `HoverAnchor` models range and injected-text foreign-element anchors.
-  Equality/adoption/filter helpers decide whether a visible result survives a
-  pointer move.
+  Foreign anchors carry an explicit editor-scoped participant-owner identity;
+  equality/adoption/filter helpers decide whether a visible result survives a
+  pointer move without conflating rebuilt participants or separate Viewers.
 - `HoverOperation` and `HoverController` are the pure delayed-operation state
-  machine. Tokens invalidate stale timers/results; sync and streamed async
-  parts are merged into `HoverView`/`HoverWidgetView`. The browser/root host
-  executes requested timers and computations.
+  machine. Typed start modes/sources preserve the source branches;
+  `HoverRequestStamp` combines physical model identity, internal content
+  version, monotonic generation, and caller token. Sync and streamed async
+  parts are merged into `HoverView`/`HoverWidgetView`; content invalidation can
+  cancel pending work while preserving an already shown view. The browser/root
+  host owns clearable timers and executes the requested computations.
 - `HoverParticipant` has anchor suggestion plus sync/async computation.
   `HoverParticipantRegistry` builds participants from
   `HoverParticipantServices`; the process-wide registry currently installs
   marker, inlay-hint, and language-Markdown participants.
 - `ContentHoverComputer` runs those participants. Marker and inlay tooltips are
-  synchronous; registered language hover providers are asynchronous.
+  synchronous; registered language hover providers are asynchronous. The
+  caller token/freshness predicate guard both sides of each await, and an
+  injected task runner lets the browser merge participant results in completion
+  order without a multi-target runtime dependency.
 - `render_hover_parts` turns parts into safe row HTML, including tokenized
   fenced code blocks. This package produces strings, never DOM nodes.
 

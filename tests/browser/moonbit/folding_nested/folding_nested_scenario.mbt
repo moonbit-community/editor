@@ -14,7 +14,7 @@ fn folding_nested_fixture_model() -> @model.TextModel {
     "nest_root", "  nest_branch", "    nest_leaf_a", "    nest_leaf_b", "  nest_after",
     "nest_end",
   ]
-  @model.TextModel(
+  TextModel(
     try! @base_common.Uri::from(
       scheme="inmemory",
       authority="model",

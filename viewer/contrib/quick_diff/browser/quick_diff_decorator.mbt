@@ -41,7 +41,7 @@ fn create_decoration(
   class_name : String,
   is_whole_line~ : Bool,
 ) -> @model.ModelDecorationOptions {
-  @model.ModelDecorationOptions(
+  ModelDecorationOptions(
     "",
     description="dirty-diff-decoration",
     is_whole_line~,
@@ -89,12 +89,12 @@ pub fn changes_to_decorations(
     match @quick_diff.get_change_type(change) {
       Add =>
         decorations.push({
-          range: @base_common.Range(start_line_number, 1, end_line_number, 1),
+          range: Range(start_line_number, 1, end_line_number, 1),
           options: added_options,
         })
       Delete =>
         decorations.push({
-          range: @base_common.Range(
+          range: Range(
             start_line_number,
             MAX_COLUMN,
             start_line_number,
@@ -104,7 +104,7 @@ pub fn changes_to_decorations(
         })
       Modify =>
         decorations.push({
-          range: @base_common.Range(start_line_number, 1, end_line_number, 1),
+          range: Range(start_line_number, 1, end_line_number, 1),
           options: modified_options,
         })
     }

@@ -93,14 +93,8 @@ test "adjustSelections moves endpoints out of hidden ranges" {
   assert_hidden_ranges(hidden_range_model.hidden_ranges(), [(2, 3)], "hidden")
   // A caret on hidden line 2 snaps to the fold header's end (line 1).
   let selections = [
-    @core.Selection::from_positions(
-      @base_common.Position(2, 4),
-      @base_common.Position(2, 4),
-    ),
-    @core.Selection::from_positions(
-      @base_common.Position(5, 1),
-      @base_common.Position(5, 1),
-    ),
+    @core.Selection::from_positions(Position(2, 4), Position(2, 4)),
+    @core.Selection::from_positions(Position(5, 1), Position(5, 1)),
   ]
   assert_true(hidden_range_model.adjust_selections(selections))
   debug_inspect(

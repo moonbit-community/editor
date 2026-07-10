@@ -53,14 +53,8 @@ pub fn LineRangeMapping::inverse(
   let mut last_modified_end_line_number = 1
   for m in mapping {
     let r = LineRangeMapping(
-      @base_common.LineRange(
-        last_original_end_line_number,
-        m.original.start_line_number,
-      ),
-      @base_common.LineRange(
-        last_modified_end_line_number,
-        m.modified.start_line_number,
-      ),
+      LineRange(last_original_end_line_number, m.original.start_line_number),
+      LineRange(last_modified_end_line_number, m.modified.start_line_number),
     )
     if !r.modified.is_empty() {
       result.push(r)
@@ -69,14 +63,8 @@ pub fn LineRangeMapping::inverse(
     last_modified_end_line_number = m.modified.end_line_number_exclusive
   }
   let r = LineRangeMapping(
-    @base_common.LineRange(
-      last_original_end_line_number,
-      original_line_count + 1,
-    ),
-    @base_common.LineRange(
-      last_modified_end_line_number,
-      modified_line_count + 1,
-    ),
+    LineRange(last_original_end_line_number, original_line_count + 1),
+    LineRange(last_modified_end_line_number, modified_line_count + 1),
   )
   if !r.modified.is_empty() {
     result.push(r)

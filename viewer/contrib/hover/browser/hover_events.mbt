@@ -73,15 +73,15 @@ pub fn hover_on_event(
               // `_startShowingOrUpdateHover(null)`): a visible hover the
               // pointer is approaching is kept; otherwise hide.
               if sticky_mouse_getting_closer && controller.view is Some(_) {
-                (@hover.HoverNoEffect, controller)
+                (HoverNoEffect, controller)
               } else {
-                (@hover.HoverNoEffect, controller.cleared())
+                (HoverNoEffect, controller.cleared())
               }
           }
         }
-        None => (@hover.HoverNoEffect, controller)
+        None => (HoverNoEffect, controller)
       }
-    EscapePressed => (@hover.HoverNoEffect, controller.cleared())
+    EscapePressed => (HoverNoEffect, controller.cleared())
   }
 }
 
@@ -124,7 +124,7 @@ pub fn find_anchor_candidates(
   match target {
     MouseTargetContentText(range~, ..) =>
       anchor_candidates.push(
-        @hover.HoverRangeAnchor(
+        HoverRangeAnchor(
           priority=0,
           range~,
           initial_mouse_pos_x~,
@@ -140,7 +140,7 @@ pub fn find_anchor_candidates(
         distance < epsilon
       if mouse_is_within_lines_and_close_to_hover {
         anchor_candidates.push(
-          @hover.HoverRangeAnchor(
+          HoverRangeAnchor(
             priority=0,
             range~,
             initial_mouse_pos_x~,

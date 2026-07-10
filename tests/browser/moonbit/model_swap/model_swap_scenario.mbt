@@ -23,7 +23,7 @@ fn swap_model(name : String, marker : String) -> @model.TextModel {
     lines.write_char('\n')
     lines.write_string("line_\{index}_of_\{name}")
   }
-  @model.TextModel(
+  TextModel(
     try! @base_common.Uri::from(
       scheme="inmemory",
       authority="model",

@@ -1,5 +1,4 @@
 import {
-  "moonbit-community/editor/base/common" @base_common,
   "moonbit-community/editor/viewer/common/diff",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/contrib/quick_diff/common" @quick_diff,

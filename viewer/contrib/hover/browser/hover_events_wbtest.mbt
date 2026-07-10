@@ -39,7 +39,7 @@ test "find_anchor_candidates: a content-text hit yields the priority-0 range anc
   let candidates = find_anchor_candidates([], text_target(2, 4), 10.0)
   assert_eq(candidates.length(), 1)
   match candidates[0] {
-    @hover.HoverRangeAnchor(priority~, range~, ..) => {
+    HoverRangeAnchor(priority~, range~, ..) => {
       assert_eq(priority, 0)
       assert_true(range == Range(2, 4, 2, 4))
     }
@@ -67,17 +67,13 @@ test "find_anchor_candidates: the inlay participant's foreign anchor outranks th
   // suggested; the sort puts the foreign anchor first.
   assert_eq(candidates.length(), 2)
   match candidates[0] {
-    @hover.HoverForeignElementAnchor(
-      injected_text_index~,
-      supports_marker_hover~,
-      ..
-    ) => {
+    HoverForeignElementAnchor(injected_text_index~, supports_marker_hover~, ..) => {
       assert_eq(injected_text_index, 2)
       assert_true(supports_marker_hover)
     }
     _ => fail("expected the foreign anchor to sort first")
   }
-  assert_true(candidates[1] is @hover.HoverRangeAnchor(..))
+  assert_true(candidates[1] is HoverRangeAnchor(..))
 }
 
 ///|

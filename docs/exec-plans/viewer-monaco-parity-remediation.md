@@ -323,9 +323,13 @@ The independent closing task is:
   marker multiplicity, finalization/dispose ordering, evidence precision, and
   malformed rows. Final gates pass: check, JS 880/880, native 690/690, build,
   and browser 41/41. The portfolio proceeds to the async-model-features child.
-- 2026-07-10: the async-model-features child reached its documentation-only
-  inventory stop gate. The pinned-source denominator is 581/581 TODO rows
-  (103 inlay-controller, 41 inlay-fragment, 396 hover, and 41 model-version /
-  cancellation members), with a separate 87-row audit of current MoonBit
-  ownership and test authority. No product or test file changed; independent
-  denominator review is required before implementation approval.
+- 2026-07-10: async inventory commit `5721b8e` was rejected at Gate B. Its 581
+  rows were mechanically contiguous but umbrella rows compressed declared
+  members/branches/CSS facts and two derived notes were counted as source.
+  No product/test file changed.
+- 2026-07-10: the corrected async-model-features inventory stop gate has
+  759/759 TODO rows (156 inlay-controller, 41 inlay-fragment, 489 hover, and
+  73 model-version/cancellation members), plus the separate 87-row current-
+  MoonBit ownership/test-authority audit and a branch-derived matrix. The
+  corrected documentation must be committed and independently approved before
+  implementation.

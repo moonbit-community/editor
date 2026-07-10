@@ -104,13 +104,15 @@ it is named here with its seam reason.
 - `inlayHintsController.ts`: include `InlayHintsCache` (43–66), decoration
   apply metadata (87–91), `CancellationStore` (103–123), and the controller
   request-lifetime members in 129–312 except the exact sibling declarations
-  below, plus the gesture-install/schedule boundary (309–311, 394),
-  cache/anchor-range helpers (434–474), decoration replacement
-  and scroll preservation (705–728), and cleanup (764–770). Exclude rendered
+  below. The gesture-install calls at 309–311 are already inside that range;
+  include the complete double-click method (380–396) because its successful
+  edit branch invokes the update schedule. Also include cache/anchor-range
+  helpers (434–474), the complete decoration construction/replacement/scroll
+  member (476–728), and cleanup (764–770). Exclude rendered
   label/active-label/render-mode and render-only dependency declarations
   (70–85, 93–96, 133–134, 144, 147–148, 155–157, 159),
-  link/double-click/context-menu/command members (314–393, 395–432),
-  decoration text/CSS construction (476–703), color/layout styling (730–762),
+  link/context-menu/command members (314–379, 399–432),
+  color/layout styling (730–762),
   accessibility lookup (775–789), `fixSpace` (793–797), and the standalone
   execute-provider command (799–815). Visual mode arithmetic at 193–207 remains
   inventoried sibling behavior; the modifier session listener at 209–221 is
@@ -180,15 +182,16 @@ source-member denominator.
 
 ## Inventory and Parity Ledger (Phases 1–2)
 
-The authoritative whole-unit reread produced **581 source inventory members**:
+The authoritative strict whole-unit reread produced **759 source inventory
+members**:
 
-`IHC 103 + IHF 41 + CHC 120 + CHW 101 + HOP 79 + CHCMP 31 + GHR 25 + HTY 40 + TMV 18 + CTS 23 = 581`.
+`IHC 156 + IHF 41 + CHC 152 + CHW 140 + HOP 78 + CHCMP 31 + GHR 25 + HTY 63 + TMV 24 + CTS 49 = 759`.
 
-Every source inventory member below is already a first-class parity-ledger row;
-there is no separate summary count that can hide an omission. `MoonBit symbol`
-stays `TBD at review` and every status stays `TODO` at this stop gate. Review
-must decide whether the local identity helper is removed, strengthened, or
-replaced by captured model identity plus internal version ID.
+Every declared member, behavior-changing branch/early return, and scoped
+constant/CSS fact below is a first-class parity-ledger row; excluded sibling
+members are atomic rows too. `MoonBit symbol` stays `TBD at review` and every
+status stays `TODO` at this stop gate. Review must approve targets and planned
+dispositions without pretending implementation evidence already exists.
 
 Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 `CHC` = `contentHoverController.ts`; `CHW` =
@@ -199,149 +202,202 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | ID | Source member (file:line) | Arithmetic/transition | MoonBit symbol | Status |
 |---|---|---|---|---|
 | IHC-001 | IHC:45 | `_serviceBrand` DI brand field. | TBD at review | TODO |
-| IHC-002 | IHC:47 | `_entries` owns `LRUCache<string, InlayHintItem[]>` with capacity `50`. | TBD at review | TODO |
-| IHC-003 | IHC:49-52 | `get(model)` derives the key then returns the cache lookup. | TBD at review | TODO |
-| IHC-004 | IHC:54-57 | `set(model,value)` derives the key then inserts/replaces. | TBD at review | TODO |
-| IHC-005 | IHC:59-61 | `_key(model)` is URI string plus `/` plus `getVersionId()`. | TBD at review | TODO |
-| IHC-006 | IHC:64-66 | Cache decorator name and delayed singleton registration. | TBD at review | TODO |
-| IHC-007 | IHC:87-89 | Decoration metadata retains originating item. | TBD at review | TODO |
-| IHC-008 | IHC:89 | Decoration metadata retains model delta decoration. | TBD at review | TODO |
-| IHC-009 | IHC:90 | Decoration metadata owns disposable CSS class reference. | TBD at review | TODO |
-| IHC-010 | IHC:105 | `CancellationStore._store` owns replaceable operation disposables. | TBD at review | TODO |
-| IHC-011 | IHC:106 | `_tokenSource` starts as a fresh source. | TBD at review | TODO |
-| IHC-012 | IHC:108-109 | Store disposal runs first. | TBD at review | TODO |
-| IHC-013 | IHC:110 | Token source then disposes with `cancel=true`. | TBD at review | TODO |
-| IHC-014 | IHC:113-115 | `reset` cancels/disposes old source before replacement. | TBD at review | TODO |
-| IHC-015 | IHC:115 | `reset` creates a new token source. | TBD at review | TODO |
-| IHC-016 | IHC:116 | `reset` installs a new disposable store. | TBD at review | TODO |
-| IHC-017 | IHC:118-121 | `reset` returns the matching new store/token pair. | TBD at review | TODO |
-| IHC-018 | IHC:131 | Contribution ID is `editor.contrib.InlayHints`. | TBD at review | TODO |
-| IHC-019 | IHC:136-138 | Static `get` reads the contribution and normalizes nullish. | TBD at review | TODO |
-| IHC-020 | IHC:140 | `_disposables` owns controller-lifetime resources. | TBD at review | TODO |
-| IHC-021 | IHC:141 | `_sessionDisposables` owns current-model/session resources. | TBD at review | TODO |
-| IHC-022 | IHC:142 | `_decorationsMetadata` owns decoration apply metadata. | TBD at review | TODO |
-| IHC-023 | IHC:143 | `_debounceInfo` stores provider/model debounce state. | TBD at review | TODO |
-| IHC-024 | IHC:146 | `_cursorInfo` stores position plus absolute freshness deadline. | TBD at review | TODO |
-| IHC-025 | IHC:151 | `_editor` is the captured editor/session owner. | TBD at review | TODO |
-| IHC-026 | IHC:152 | Language-features service owns the consulted registry. | TBD at review | TODO |
-| IHC-027 | IHC:154 | Injected inlay cache is the fast-restore cache. | TBD at review | TODO |
-| IHC-028 | IHC:160 | Debounce uses provider registry, key `InlayHint`, minimum `25` ms. | TBD at review | TODO |
-| IHC-029 | IHC:161 | Provider-registry changes invoke `_update`. | TBD at review | TODO |
-| IHC-030 | IHC:162 | Editor model changes invoke `_update`. | TBD at review | TODO |
-| IHC-031 | IHC:163 | Model-language changes invoke `_update`. | TBD at review | TODO |
-| IHC-032 | IHC:164-168 | Only inlay-hint configuration changes invoke `_update`. | TBD at review | TODO |
-| IHC-033 | IHC:169 | Construction performs one immediate `_update`. | TBD at review | TODO |
-| IHC-034 | IHC:173-174 | Dispose first retires the current session. | TBD at review | TODO |
-| IHC-035 | IHC:175 | Dispose next removes all owned decorations. | TBD at review | TODO |
-| IHC-036 | IHC:176 | Dispose finally retires controller-lifetime resources. | TBD at review | TODO |
-| IHC-037 | IHC:179-181 | `_update` clears prior session before removing decorations. | TBD at review | TODO |
-| IHC-038 | IHC:183-186 | Enabled mode `off` returns after cleanup. | TBD at review | TODO |
-| IHC-039 | IHC:188-191 | Absent model or no matching provider returns after cleanup. | TBD at review | TODO |
-| IHC-040 | IHC:193-196 | Mode `on` uses normal render and no modifier subscription. | TBD at review | TODO |
-| IHC-041 | IHC:197-207 | Other modes choose default/alternate modes; `onUnlessPressed` reverses them. | TBD at review | TODO |
-| IHC-042 | IHC:209-212 | Session owns modifier event; callback returns if model vanished. | TBD at review | TODO |
-| IHC-043 | IHC:213-220 | Alt+Ctrl without Shift/Meta selects alternate; changed mode copies/applies/schedules `0`. | TBD at review | TODO |
-| IHC-044 | IHC:224-228 | Truthy cache hit applies over full model range. | TBD at review | TODO |
-| IHC-045 | IHC:229-234 | Session teardown caches anchors only while model is live. | TBD at review | TODO |
-| IHC-046 | IHC:236 | Local request `cts` is declared undefined and never assigned. | TBD at review | TODO |
-| IHC-047 | IHC:237 | `watchedProviders` deduplicates session listeners. | TBD at review | TODO |
-| IHC-048 | IHC:239 | Model disposal invokes no-op `cts?.cancel` in pinned source. | TBD at review | TODO |
-| IHC-049 | IHC:241 | Session owns one `CancellationStore`. | TBD at review | TODO |
-| IHC-050 | IHC:243-276 | One scheduler owns request callback and initial debounce delay. | TBD at review | TODO |
-| IHC-051 | IHC:244 | Each run captures `Date.now()` start time. | TBD at review | TODO |
-| IHC-052 | IHC:246 | Each run resets store, cancelling the preceding operation. | TBD at review | TODO |
-| IHC-053 | IHC:248-249 | Request gets registry, captured model, visible ranges, fresh token. | TBD at review | TODO |
-| IHC-054 | IHC:250 | Measured duration updates scheduler delay before cancel guard. | TBD at review | TODO |
-| IHC-055 | IHC:251-254 | Canceled post-await result is disposed and returns before mutation. | TBD at review | TODO |
-| IHC-056 | IHC:256-257 | Every provider represented by fragments is inspected. | TBD at review | TODO |
-| IHC-057 | IHC:258 | Watcher requires change event function and unwatched provider. | TBD at review | TODO |
-| IHC-058 | IHC:259 | Provider is marked watched before subscribing. | TBD at review | TODO |
-| IHC-059 | IHC:260-264 | Provider event schedules only when no run is already scheduled. | TBD at review | TODO |
-| IHC-060 | IHC:260-264 | Provider subscription belongs to current operation store. | TBD at review | TODO |
-| IHC-061 | IHC:268 | Returned fragments belong to current operation store. | TBD at review | TODO |
-| IHC-062 | IHC:269 | Operation store also clears `watchedProviders`. | TBD at review | TODO |
-| IHC-063 | IHC:270 | Successful current result applies ranges/items. | TBD at review | TODO |
-| IHC-064 | IHC:271 | Apply is followed by cache refresh. | TBD at review | TODO |
-| IHC-065 | IHC:273-275 | Thrown errors, including cancellation, go to `onUnexpectedError`. | TBD at review | TODO |
-| IHC-066 | IHC:278 | Session owns scheduler disposal. | TBD at review | TODO |
-| IHC-067 | IHC:279 | New session schedules first request with delay `0`. | TBD at review | TODO |
-| IHC-068 | IHC:281-288 | Scroll schedules on top change or idle scheduler; otherwise no-op. | TBD at review | TODO |
-| IHC-069 | IHC:290 | Session owns mutable delayed-content timeout. | TBD at review | TODO |
-| IHC-070 | IHC:291-292 | Content change invokes same unassigned no-op `cts?.cancel`. | TBD at review | TODO |
-| IHC-071 | IHC:294-295 | Stabilization delay is `max(scheduler.delay, 800)`. | TBD at review | TODO |
-| IHC-072 | IHC:296 | Content captures cursor and `Date.now() + delay`. | TBD at review | TODO |
-| IHC-073 | IHC:297 | Replacing timeout cancels prior; new timeout schedules delay `0`. | TBD at review | TODO |
-| IHC-074 | IHC:299 | Content change also schedules normal debounced run. | TBD at review | TODO |
-| IHC-075 | IHC:302-306 | Session option listener schedules only for inlay-hint changes. | TBD at review | TODO |
-| IHC-076 | IHC:434-437 | Fast restore copies current anchors then caches by model key. | TBD at review | TODO |
-| IHC-077 | IHC:441-443 | Anchor copy deduplicates by original item while scanning metadata. | TBD at review | TODO |
-| IHC-078 | IHC:444-448 | Second decoration for one item takes early `continue`. | TBD at review | TODO |
-| IHC-079 | IHC:449-450 | Missing current decoration range omits the item. | TBD at review | TODO |
-| IHC-080 | IHC:451-455 | Existing range creates same-direction anchor and `with` copy. | TBD at review | TODO |
-| IHC-081 | IHC:457 | Copies return in map insertion order. | TBD at review | TODO |
-| IHC-082 | IHC:460-464 | Request ranges extend viewport by `30` lines. | TBD at review | TODO |
-| IHC-083 | IHC:465 | Visible ranges sort by start before merge. | TBD at review | TODO |
-| IHC-084 | IHC:466 | Each range extends `-30/+30` and is model-validated. | TBD at review | TODO |
-| IHC-085 | IHC:467-469 | Empty result or non-touching range appends. | TBD at review | TODO |
-| IHC-086 | IHC:469-471 | Touching/intersecting range merges with last via `plusRange`. | TBD at review | TODO |
-| IHC-087 | IHC:473 | Merged ranges return in sorted order. | TBD at review | TODO |
-| IHC-088 | IHC:705-709 | Apply scans metadata and queries each active decoration range. | TBD at review | TODO |
-| IHC-089 | IHC:709-710 | Old decoration is affected only when a request range contains it. | TBD at review | TODO |
-| IHC-090 | IHC:711-714 | Affected ID queues, CSS ref disposes, metadata deletes, in order. | TBD at review | TODO |
-| IHC-091 | IHC:717 | Stable scroll state captures before mutation. | TBD at review | TODO |
-| IHC-092 | IHC:719-720 | One transaction deltas affected old IDs against new decorations. | TBD at review | TODO |
-| IHC-093 | IHC:721-724 | Returned IDs pair by index with new metadata. | TBD at review | TODO |
-| IHC-094 | IHC:727 | Stable scroll state restores after mutation. | TBD at review | TODO |
-| IHC-095 | IHC:764-765 | Cleanup removes every metadata key from editor at once. | TBD at review | TODO |
-| IHC-096 | IHC:766-768 | Cleanup disposes every retained CSS class reference. | TBD at review | TODO |
-| IHC-097 | IHC:769 | Cleanup clears metadata last. | TBD at review | TODO |
-| IHC-098 | IHC:70-85,93-96,133-134,144,147-148,155-157,159 | Required sibling row: rendered/active label, render mode, cap/sentinel, CSS-rule field/init, active state, and command/notification/instantiation dependencies. | TBD at review | TODO |
-| IHC-099 | IHC:314-393,395-432 | Required sibling row: link, double-click, context-menu, label-resolve, and command implementation; request scheduling at the install boundary remains scoped. | TBD at review | TODO |
-| IHC-100 | IHC:476-703 | Required sibling row: decorator text/CSS/padding/truncation/whitespace/cursor-stop production and `1500` cap. | TBD at review | TODO |
-| IHC-101 | IHC:730-762 | Required sibling row: color and layout styling, including font-size bounds and fallback. | TBD at review | TODO |
-| IHC-102 | IHC:775-789,793-797,799-815 | Required sibling row: accessibility lookup, `fixSpace`, and execute-provider command/model-reference cluster. | TBD at review | TODO |
-| IHC-103 | IHC:309-311,394 | Session owns all gesture installs; the double-click update callback schedules the request with delay `0`. | TBD at review | TODO |
-| IHF-001 | IHF:16-18 | `InlayHintAnchor` retains exact range and direction `before`/`after`. | TBD at review | TODO |
-| IHF-002 | IHF:22-23 | Item resolve state starts false/undefined. | TBD at review | TODO |
-| IHF-003 | IHF:25 | Item retains hint, anchor, and provider. | TBD at review | TODO |
-| IHF-004 | IHF:27-28 | `with` creates same hint/provider with replacement anchor. | TBD at review | TODO |
-| IHF-005 | IHF:29-31 | `with` preserves resolve flag/promise before return. | TBD at review | TODO |
-| IHF-006 | IHF:70 | Frozen empty list has empty hints and no-op disposer. | TBD at review | TODO |
-| IHF-007 | IHF:72-74 | `create` accumulates list/provider pairs. | TBD at review | TODO |
-| IHF-008 | IHF:76 | Providers come from `ordered(model).reverse()`. | TBD at review | TODO |
-| IHF-009 | IHF:76 | Every provider fans out over every requested range. | TBD at review | TODO |
-| IHF-010 | IHF:77-78 | Each call receives captured model, one range, same token. | TBD at review | TODO |
-| IHF-011 | IHF:79 | Response retained only with hints or provider change event. | TBD at review | TODO |
-| IHF-012 | IHF:80 | Missing retained result uses frozen empty list. | TBD at review | TODO |
-| IHF-013 | IHF:82-84 | Each provider/range failure is independently contained. | TBD at review | TODO |
-| IHF-014 | IHF:87 | Flattened `Promise.all` waits for all calls. | TBD at review | TODO |
-| IHF-015 | IHF:89-91 | After all settle, cancel or disposed model throws `CancellationError`. | TBD at review | TODO |
-| IHF-016 | IHF:93 | Live result constructs fragments from ranges/data/model. | TBD at review | TODO |
-| IHF-017 | IHF:96 | Fragments owns provider lists in a `DisposableStore`. | TBD at review | TODO |
-| IHF-018 | IHF:98-100 | Readonly result is items, ranges, deduplicated providers. | TBD at review | TODO |
-| IHF-019 | IHF:102-105 | Constructor stores ranges, new provider set, empty items. | TBD at review | TODO |
-| IHF-020 | IHF:106 | Pairs process in accumulation order. | TBD at review | TODO |
-| IHF-021 | IHF:107 | Every returned list enters disposable store. | TBD at review | TODO |
-| IHF-022 | IHF:108 | Every contributing provider enters set. | TBD at review | TODO |
-| IHF-023 | IHF:110 | Every list hint converts to an item. | TBD at review | TODO |
-| IHF-024 | IHF:112 | Hint position is model-validated. | TBD at review | TODO |
-| IHF-025 | IHF:113 | Anchor direction defaults `before`. | TBD at review | TODO |
-| IHF-026 | IHF:115-116 | Anchoring consults `_getRangeAtPosition`. | TBD at review | TODO |
-| IHF-027 | IHF:118-120 | Word start before hint yields start-to-hint range and `after`. | TBD at review | TODO |
-| IHF-028 | IHF:121-124 | Otherwise hint-to-word-end range remains `before`. | TBD at review | TODO |
-| IHF-029 | IHF:126 | Item retains original hint, computed anchor, provider. | TBD at review | TODO |
-| IHF-030 | IHF:129 | Items sort by hint position. | TBD at review | TODO |
-| IHF-031 | IHF:132-134 | Dispose retires every retained provider list. | TBD at review | TODO |
-| IHF-032 | IHF:136-142 | Exact word range is preferred and returns early. | TBD at review | TODO |
-| IHF-033 | IHF:144 | No word calls `tokenizeIfCheap(line)`. | TBD at review | TODO |
-| IHF-034 | IHF:145-147 | Column becomes zero-based offset; token index is found. | TBD at review | TODO |
-| IHF-035 | IHF:149-150 | Initial bounds are selected token offsets. | TBD at review | TODO |
-| IHF-036 | IHF:152-153 | Neighbor adjustment only for token length `1`. | TBD at review | TODO |
-| IHF-037 | IHF:154-157 | Leading adjustment requires start=offset and index greater than `1`. | TBD at review | TODO |
-| IHF-038 | IHF:158-162 | Trailing adjustment requires end=offset and index below count minus `1`. | TBD at review | TODO |
-| IHF-039 | IHF:165 | Offsets return as one-based columns via `+1`. | TBD at review | TODO |
-| IHF-040 | IHF:34-65 | Explicit excluded sibling: inlay-item resolve serialization, cancellation, provider mutation, and error handling; review must record the final seam disposition. | TBD at review | TODO |
-| IHF-041 | IHF:169-171 | Explicit excluded sibling: command-link URI construction. | TBD at review | TODO |
+| IHC-002 | IHC:47 | `_entries` owns the inlay-item LRU cache. | TBD at review | TODO |
+| IHC-003 | IHC:47 | LRU capacity magic value is exactly `50`. | TBD at review | TODO |
+| IHC-004 | IHC:49-52 | `get(model)` derives one cache key, then returns that lookup. | TBD at review | TODO |
+| IHC-005 | IHC:54-57 | `set(model,value)` derives one cache key, then inserts/replaces. | TBD at review | TODO |
+| IHC-006 | IHC:59-61 | `_key(model)` concatenates URI text, the separator, and `getVersionId()` in that order. | TBD at review | TODO |
+| IHC-007 | IHC:60 | Cache-key separator magic value is exactly `/`. | TBD at review | TODO |
+| IHC-008 | IHC:64 | `IInlayHintsCache` is the service interface extending `InlayHintsCache`. | TBD at review | TODO |
+| IHC-009 | IHC:65 | Cache decorator ID is exactly `IInlayHintsCache`. | TBD at review | TODO |
+| IHC-010 | IHC:66 | The cache is registered as a delayed singleton. | TBD at review | TODO |
+| IHC-011 | IHC:71 | Rendered label-part `item` parameter-property. | TBD at review | TODO |
+| IHC-012 | IHC:71 | Rendered label-part `index` parameter-property. | TBD at review | TODO |
+| IHC-013 | IHC:71 | `RenderedInlayHintLabelPart` constructor retains item and index. | TBD at review | TODO |
+| IHC-014 | IHC:73-80 | `part` getter reads the hint label and returns one label part. | TBD at review | TODO |
+| IHC-015 | IHC:75-79 | String labels become `{ label }`; structured labels select the exact indexed part. | TBD at review | TODO |
+| IHC-016 | IHC:84 | Active-label `part` parameter-property. | TBD at review | TODO |
+| IHC-017 | IHC:84 | Active-label `hasTriggerModifier` parameter-property. | TBD at review | TODO |
+| IHC-018 | IHC:84 | `ActiveInlayHintInfo` constructor retains part and modifier state. | TBD at review | TODO |
+| IHC-019 | IHC:88 | Decoration metadata retains the originating item. | TBD at review | TODO |
+| IHC-020 | IHC:89 | Decoration metadata retains the model delta decoration. | TBD at review | TODO |
+| IHC-021 | IHC:90 | Decoration metadata owns the disposable CSS class reference. | TBD at review | TODO |
+| IHC-022 | IHC:94 | `RenderMode.Normal` enum value. | TBD at review | TODO |
+| IHC-023 | IHC:95 | `RenderMode.Invisible` enum value. | TBD at review | TODO |
+| IHC-024 | IHC:105 | `CancellationStore._store` owns replaceable operation disposables. | TBD at review | TODO |
+| IHC-025 | IHC:106 | `_tokenSource` starts as a fresh source. | TBD at review | TODO |
+| IHC-026 | IHC:108-111 | `dispose` retires the operation store first, then disposes the token source with `cancel=true`. | TBD at review | TODO |
+| IHC-027 | IHC:113-121 | `reset` cancels/disposes the old source, creates the new source, replaces and thereby disposes the old operation store, then returns the matching new store/token pair. | TBD at review | TODO |
+| IHC-028 | IHC:131 | Contribution ID is exactly `editor.contrib.InlayHints`. | TBD at review | TODO |
+| IHC-029 | IHC:133 | Maximum-decoration constant is exactly `1500`. | TBD at review | TODO |
+| IHC-030 | IHC:134 | `_whitespaceData` is one shared empty-object sentinel. | TBD at review | TODO |
+| IHC-031 | IHC:136-138 | Static `get` reads this contribution from the editor. | TBD at review | TODO |
+| IHC-032 | IHC:137 | A nullish contribution is normalized to `undefined`. | TBD at review | TODO |
+| IHC-033 | IHC:140 | `_disposables` owns controller-lifetime resources. | TBD at review | TODO |
+| IHC-034 | IHC:141 | `_sessionDisposables` owns the current-model session. | TBD at review | TODO |
+| IHC-035 | IHC:142 | `_decorationsMetadata` owns active decoration metadata. | TBD at review | TODO |
+| IHC-036 | IHC:143 | `_debounceInfo` owns provider/model debounce state. | TBD at review | TODO |
+| IHC-037 | IHC:144 | `_ruleFactory` owns dynamic CSS rules. | TBD at review | TODO |
+| IHC-038 | IHC:146 | `_cursorInfo` stores cursor position plus absolute freshness deadline. | TBD at review | TODO |
+| IHC-039 | IHC:147 | `_activeRenderMode` starts `Normal`. | TBD at review | TODO |
+| IHC-040 | IHC:148 | `_activeInlayHintPart` starts absent. | TBD at review | TODO |
+| IHC-041 | IHC:151 | `_editor` parameter-property owns the captured editor reference. | TBD at review | TODO |
+| IHC-042 | IHC:152 | Language-features service parameter-property owns the consulted registry. | TBD at review | TODO |
+| IHC-043 | IHC:154 | Inlay-cache parameter-property owns the fast-restore cache. | TBD at review | TODO |
+| IHC-044 | IHC:155 | Command-service parameter-property. | TBD at review | TODO |
+| IHC-045 | IHC:156 | Notification-service parameter-property. | TBD at review | TODO |
+| IHC-046 | IHC:157 | Instantiation-service parameter-property. | TBD at review | TODO |
+| IHC-047 | IHC:150-171 | Constructor creates the owned rule factory, debounce state, provider/model/language/configuration subscriptions in source order, then performs one immediate `_update`. | TBD at review | TODO |
+| IHC-048 | IHC:160 | Debounce key is `InlayHint` and minimum delay is exactly `25` ms. | TBD at review | TODO |
+| IHC-049 | IHC:164-168 | Constructor configuration callback invokes `_update` only when `EditorOption.inlayHints` changed. | TBD at review | TODO |
+| IHC-050 | IHC:173-177 | `dispose` retires the current session, removes every decoration, then retires controller-lifetime resources. | TBD at review | TODO |
+| IHC-051 | IHC:179-312 | `_update` clears session then decorations; establishes mode/cache/session; each run timestamps, resets cancellation, awaits fragments for the captured model and current-editor ranges, updates debounce before the cancel guard, retains provider listeners/fragments, applies then caches; finally it owns scroll/content/configuration/gesture subscriptions in source order. | TBD at review | TODO |
+| IHC-052 | IHC:183-186 | Enabled mode `off` returns after cleanup. | TBD at review | TODO |
+| IHC-053 | IHC:188-191 | Missing model or no matching provider returns after cleanup. | TBD at review | TODO |
+| IHC-054 | IHC:193-196 | Enabled mode `on` selects normal rendering and skips modifier subscription. | TBD at review | TODO |
+| IHC-055 | IHC:196-222 | Every non-`on` mode enters default/alternate selection and installs the modifier subscription. | TBD at review | TODO |
+| IHC-056 | IHC:200-202 | `onUnlessPressed` selects normal default and invisible alternate. | TBD at review | TODO |
+| IHC-057 | IHC:203-205 | The other non-`on` mode selects invisible default and normal alternate. | TBD at review | TODO |
+| IHC-058 | IHC:209-212 | Modifier callback returns when the editor no longer has a model. | TBD at review | TODO |
+| IHC-059 | IHC:213 | Alt+Ctrl without Shift/Meta selects alternate mode; every other combination selects default. | TBD at review | TODO |
+| IHC-060 | IHC:214-220 | A changed render mode updates state, copies current anchors, replaces full-model decorations, then schedules refresh. | TBD at review | TODO |
+| IHC-061 | IHC:219 | Modifier-triggered refresh uses exact delay `0`. | TBD at review | TODO |
+| IHC-062 | IHC:224-228 | A truthy cache hit applies over the full captured-model range. | TBD at review | TODO |
+| IHC-063 | IHC:229-234 | Session teardown caches anchors only while the captured model is not disposed. | TBD at review | TODO |
+| IHC-064 | IHC:236-239 | Model disposal invokes optional `cts?.cancel()`; `cts` is never assigned in this source, so the call is a no-op. | TBD at review | TODO |
+| IHC-065 | IHC:243-276 | Scheduler request passes the captured `model`, while `_getHintsRanges()` independently reads `editor.getModel()!` at execution time. | TBD at review | TODO |
+| IHC-066 | IHC:250-254 | Debounce delay updates before the post-await cancellation guard; cancellation disposes fragments and returns before mutation. | TBD at review | TODO |
+| IHC-067 | IHC:258-264 | Only providers with a change function and absent from `watchedProviders` are subscribed. | TBD at review | TODO |
+| IHC-068 | IHC:260-264 | Provider change schedules only while no run is already scheduled. | TBD at review | TODO |
+| IHC-069 | IHC:273-275 | Every thrown request error, including cancellation reaching this catch, is passed to `onUnexpectedError`. | TBD at review | TODO |
+| IHC-070 | IHC:279 | First session request uses exact delay `0`. | TBD at review | TODO |
+| IHC-071 | IHC:281-288 | Scroll schedules when top changed or the scheduler is idle; otherwise it is a no-op. | TBD at review | TODO |
+| IHC-072 | IHC:291-292 | Content change invokes the same unassigned optional `cts?.cancel()` no-op. | TBD at review | TODO |
+| IHC-073 | IHC:294-296 | Content stabilization floor is exactly `800` ms via `max(scheduler.delay, 800)`. | TBD at review | TODO |
+| IHC-074 | IHC:296-299 | Replacing the cursor timeout cancels its predecessor; the new timeout waits `delay`, then its callback calls `scheduler.schedule(0)` before normal debounced scheduling. | TBD at review | TODO |
+| IHC-075 | IHC:302-305 | Session configuration schedules only when `EditorOption.inlayHints` changed. | TBD at review | TODO |
+| IHC-076 | IHC:314-368 | `_installLinkGesture` creates one owning store, nested session store, link gesture, move/cancel/execute subscriptions, and returns the owner. | TBD at review | TODO |
+| IHC-077 | IHC:329-332 | Missing label part or model clears the nested session and returns. | TBD at review | TODO |
+| IHC-078 | IHC:340-342 | Command or location creates active-label state; neither clears it. | TBD at review | TODO |
+| IHC-079 | IHC:354-366 | Execute callback does work only when a label part exists. | TBD at review | TODO |
+| IHC-080 | IHC:358-360 | A location invokes go-to-definition. | TBD at review | TODO |
+| IHC-081 | IHC:361-364 | Otherwise a valid command is awaited through `_invokeCommand`. | TBD at review | TODO |
+| IHC-082 | IHC:370-378 | `_getInlineHintsForRange` deduplicates matching items in metadata iteration order. | TBD at review | TODO |
+| IHC-083 | IHC:373-375 | An item is added only when the requested range contains its anchor range. | TBD at review | TODO |
+| IHC-084 | IHC:309,380-396 | `_installDblClickGesture` owns the complete double-click resolve/edit/update member; the session supplies a callback whose refresh delay is exactly `0`. | TBD at review | TODO |
+| IHC-085 | IHC:382-384 | Mouse-up detail other than exactly `2` returns before lookup. | TBD at review | TODO |
+| IHC-086 | IHC:385-388 | Missing label part returns before prevent-default and resolve. | TBD at review | TODO |
+| IHC-087 | IHC:391-395 | Nonempty text edits map to replace operations, execute with source `inlayHint.default`, then invoke the supplied refresh callback. | TBD at review | TODO |
+| IHC-088 | IHC:399-409 | `_installContextMenu` returns the editor context-menu subscription. | TBD at review | TODO |
+| IHC-089 | IHC:401-403 | A non-HTMLElement event target returns before label lookup. | TBD at review | TODO |
+| IHC-090 | IHC:404-407 | A present label part invokes the context menu; absence is a no-op. | TBD at review | TODO |
+| IHC-091 | IHC:411-420 | `_getInlayHintLabelPart` reads content-text injected options and otherwise returns `undefined`. | TBD at review | TODO |
+| IHC-092 | IHC:412-414 | Non-content-text target returns `undefined` immediately. | TBD at review | TODO |
+| IHC-093 | IHC:415-418 | Exact options and attached-data instance checks return the rendered part. | TBD at review | TODO |
+| IHC-094 | IHC:422-432 | `_invokeCommand` awaits the command and reports failures through notification. | TBD at review | TODO |
+| IHC-095 | IHC:424 | Missing command arguments fall back to an empty array before spreading. | TBD at review | TODO |
+| IHC-096 | IHC:425-430 | Command failure notifies Error severity with provider display name and the error message. | TBD at review | TODO |
+| IHC-097 | IHC:434-437 | `_cacheHintsForFastRestore` copies current anchors, then sets the model-keyed cache. | TBD at review | TODO |
+| IHC-098 | IHC:441-457 | `_copyInlayHintsWithCurrentAnchor` scans metadata, preserves first-seen item order, and returns copied anchors. | TBD at review | TODO |
+| IHC-099 | IHC:444-448 | A repeated item continues before another decoration-range read. | TBD at review | TODO |
+| IHC-100 | IHC:449-455 | A present decoration range creates same-direction anchor/copy; a missing range omits that item. | TBD at review | TODO |
+| IHC-101 | IHC:460-473 | `_getHintsRanges` reads current model/visible ranges, sorts by start, extends, validates, merges, and returns sorted output. | TBD at review | TODO |
+| IHC-102 | IHC:461,466 | Viewport extension magic value is exactly `30` lines above and below. | TBD at review | TODO |
+| IHC-103 | IHC:467-469 | Empty output or an extended range that neither intersects nor touches appends. | TBD at review | TODO |
+| IHC-104 | IHC:469-471 | The explicit else arm merges touching/intersecting range with the last result via `plusRange`. | TBD at review | TODO |
+| IHC-105 | IHC:476-728 | `_updateHintsDecorators` computes fixed lengths and complete injected-decoration data before collecting affected IDs; it then captures scroll, deltas once, pairs returned IDs by index, and restores scroll. | TBD at review | TODO |
+| IHC-106 | IHC:480-483 | Cursor stabilization runs only with live cursor info, an unexpired deadline, and a request range containing its position. | TBD at review | TODO |
+| IHC-107 | IHC:491 | Missing line decorations fall back to an empty array. | TBD at review | TODO |
+| IHC-108 | IHC:493-496 | Decoration starting after the cursor continues before option accounting. | TBD at review | TODO |
+| IHC-109 | IHC:497-501 | Existing directed options count only when attached data is not the whitespace sentinel. | TBD at review | TODO |
+| IHC-110 | IHC:499 | Missing prior item length falls back to `0` before accumulation. | TBD at review | TODO |
+| IHC-111 | IHC:506 | New fixed-length candidates require the cursor line and anchor end at/before cursor column. | TBD at review | TODO |
+| IHC-112 | IHC:515-517 | Missing both fixed length and target item breaks the matching loop. | TBD at review | TODO |
+| IHC-113 | IHC:519-522 | Present target item records its fixed length and becomes the last item. | TBD at review | TODO |
+| IHC-114 | IHC:520 | Missing matched fixed length falls back to `0`. | TBD at review | TODO |
+| IHC-115 | IHC:523-530 | Remaining positive lengths with a last item are summed, the pending array is cleared, then the loop breaks. | TBD at review | TODO |
+| IHC-116 | IHC:555 | Directed injected options exist only in `RenderMode.Normal`; invisible mode stores `undefined`. | TBD at review | TODO |
+| IHC-117 | IHC:561-575,653-668 | Layout magic values preserve `fontSize / 3` width, hair-space content, exact font-family custom property, `1px` padding, minimum horizontal padding `1`, and `fontSize / 4` radii. | TBD at review | TODO |
+| IHC-118 | IHC:566 | Injected whitespace stops right only when it is last; otherwise it has no cursor stop. | TBD at review | TODO |
+| IHC-119 | IHC:583-585 | A new source line resets line-total accounting before length checks. | TBD at review | TODO |
+| IHC-120 | IHC:587-589 | Truthy maximum with total already strictly greater than maximum continues before rendering the item. | TBD at review | TODO |
+| IHC-121 | IHC:592-594 | Left padding emits leading injected whitespace only when requested. | TBD at review | TODO |
+| IHC-122 | IHC:597-599 | String label becomes one synthetic part; structured label preserves its part array. | TBD at review | TODO |
+| IHC-123 | IHC:613 | Uniform layout uses `baseline`; nonuniform uses `middle`. | TBD at review | TODO |
+| IHC-124 | IHC:617-619 | Nonempty text edits set cursor style to `default`. | TBD at review | TODO |
+| IHC-125 | IHC:623-630 | Matching active command/location part underlines the label. | TBD at review | TODO |
+| IHC-126 | IHC:626-629 | Trigger modifier additionally selects active-link color and pointer cursor. | TBD at review | TODO |
+| IHC-127 | IHC:635 | Maximum length `0` forces overage `0`; nonzero uses total minus maximum. | TBD at review | TODO |
+| IHC-128 | IHC:636-639 | Positive overage truncates by exact overage and appends ellipsis. | TBD at review | TODO |
+| IHC-129 | IHC:643-651 | Defined fixed length enables fixed-length comparison and trimming. | TBD at review | TODO |
+| IHC-130 | IHC:645-650 | Nonnegative fixed-length overage trims by `1 + overage` and appends ellipsis. | TBD at review | TODO |
+| IHC-131 | IHC:653-669 | Padding-shape decisions run only when padding is enabled. | TBD at review | TODO |
+| IHC-132 | IHC:654-657 | First part that is also last or truncated gets symmetric padding and radius. | TBD at review | TODO |
+| IHC-133 | IHC:658-661 | Other first part gets left-only padding/radius. | TBD at review | TODO |
+| IHC-134 | IHC:662-665 | Last or truncated nonfirst part gets right-only padding/radius. | TBD at review | TODO |
+| IHC-135 | IHC:666-668 | Interior part gets vertical-only padding. | TBD at review | TODO |
+| IHC-136 | IHC:675 | Final label part without requested right padding stops right; every other part has no cursor stop. | TBD at review | TODO |
+| IHC-137 | IHC:679-681 | Truncation breaks the part loop immediately. | TBD at review | TODO |
+| IHC-138 | IHC:684-693 | Short fixed-length item emits the exact hair-space deficit with no cursor stops. | TBD at review | TODO |
+| IHC-139 | IHC:696-698 | Requested right padding emits trailing injected whitespace. | TBD at review | TODO |
+| IHC-140 | IHC:700-702 | Decoration count strictly greater than `1500` breaks the item loop. | TBD at review | TODO |
+| IHC-141 | IHC:709 | Missing current editor model or decoration range yields no affected old decoration. | TBD at review | TODO |
+| IHC-142 | IHC:710-714 | Only an existing range contained by a request range queues the old ID, disposes its class ref, and deletes metadata in that order. | TBD at review | TODO |
+| IHC-143 | IHC:730-741 | `_fillInColors` selects one background/foreground pair. | TBD at review | TODO |
+| IHC-144 | IHC:731-733 | Parameter kind selects parameter colors. | TBD at review | TODO |
+| IHC-145 | IHC:734-736 | Type kind selects type colors. | TBD at review | TODO |
+| IHC-146 | IHC:737-740 | Every other kind selects generic inlay colors. | TBD at review | TODO |
+| IHC-147 | IHC:743-762 | `_getLayoutInfo` reads options/editor font, resolves size/family, computes uniformity, and returns all four values. | TBD at review | TODO |
+| IHC-148 | IHC:750-753 | Falsy font size, size below exactly `5`, or size above editor size falls back to editor size. | TBD at review | TODO |
+| IHC-149 | IHC:755 | Falsy configured font family falls back to editor font family. | TBD at review | TODO |
+| IHC-150 | IHC:764-770 | `_removeAllDecorations` removes all IDs at once, disposes every class ref, then clears metadata. | TBD at review | TODO |
+| IHC-151 | IHC:775-789 | `getInlayHintsForLine` deduplicates hints in line-decoration order. | TBD at review | TODO |
+| IHC-152 | IHC:776-778 | Missing editor model returns an empty result. | TBD at review | TODO |
+| IHC-153 | IHC:782-786 | Present metadata with an unseen hint adds the hint and item; every other decoration is skipped. | TBD at review | TODO |
+| IHC-154 | IHC:793-797 | `fixSpace` globally replaces space/tab with nonbreaking whitespace. | TBD at review | TODO |
+| IHC-155 | IHC:799-815 | Execute-provider command validates URI/range, acquires a model reference, awaits fragments for lifted range with `CancellationToken.None`, maps hints, returns them, and always disposes the reference in `finally`. | TBD at review | TODO |
+| IHC-156 | IHC:810 | Fragment disposal is deferred with exact timeout `0` after result mapping. | TBD at review | TODO |
+| IHF-001 | IHF:17 | Anchor `range` parameter-property. | TBD at review | TODO |
+| IHF-002 | IHF:17 | Anchor `direction` parameter-property accepts exactly `before` or `after`. | TBD at review | TODO |
+| IHF-003 | IHF:16-18 | `InlayHintAnchor` constructor retains range and direction. | TBD at review | TODO |
+| IHF-004 | IHF:22 | Item resolved-state field starts `false`. | TBD at review | TODO |
+| IHF-005 | IHF:23 | Current resolve-promise field starts `undefined`. | TBD at review | TODO |
+| IHF-006 | IHF:25 | Item `hint` parameter-property. | TBD at review | TODO |
+| IHF-007 | IHF:25 | Item `anchor` parameter-property. | TBD at review | TODO |
+| IHF-008 | IHF:25 | Item `provider` parameter-property. | TBD at review | TODO |
+| IHF-009 | IHF:25 | `InlayHintItem` constructor retains hint, anchor, and provider. | TBD at review | TODO |
+| IHF-010 | IHF:27-32 | `with` creates same hint/provider with replacement anchor, copies both resolve fields, then returns. | TBD at review | TODO |
+| IHF-011 | IHF:34-52 | Explicit excluded sibling `resolve` serializes provider resolution; an active resolve is awaited before recursive retry, unresolved work installs one promise whose `finally` clears the field, and the final promise is awaited. | TBD at review | TODO |
+| IHF-012 | IHF:35-37 | Provider without `resolveInlayHint` returns immediately. | TBD at review | TODO |
+| IHF-013 | IHF:38-46 | Existing resolve promise is awaited before cancellation/retry decisions. | TBD at review | TODO |
+| IHF-014 | IHF:42-44 | Cancellation after waiting for an active resolve returns before recursive retry. | TBD at review | TODO |
+| IHF-015 | IHF:47-50 | Only unresolved items install a new `_doResolve` promise; resolved items skip it. | TBD at review | TODO |
+| IHF-016 | IHF:54-65 | Explicit excluded sibling `_doResolve` awaits the provider, applies tooltip/label/text-edit fallbacks in order, then marks resolved. | TBD at review | TODO |
+| IHF-017 | IHF:57 | Nullish resolved tooltip preserves the old tooltip. | TBD at review | TODO |
+| IHF-018 | IHF:58 | Nullish resolved label preserves the old label. | TBD at review | TODO |
+| IHF-019 | IHF:59 | Nullish resolved text edits preserve the old text edits. | TBD at review | TODO |
+| IHF-020 | IHF:61-64 | Resolve failure passes the error to `onUnexpectedExternalError`, then resets resolved state to `false`. | TBD at review | TODO |
+| IHF-021 | IHF:70 | Frozen empty list has empty hints and a no-op disposer. | TBD at review | TODO |
+| IHF-022 | IHF:72-94 | `create` launches `ordered(model).reverse()` provider/range calls with one captured model/token, awaits all, then constructs fragments; `data.push` occurs after each await, so retained-pair order is completion order rather than launch order. | TBD at review | TODO |
+| IHF-023 | IHF:79-81 | A result is retained only with nonempty hints or a provider change event; a non-null empty unretained list is neither retained nor disposed. | TBD at review | TODO |
+| IHF-024 | IHF:80 | Retained nullish result falls back to the frozen empty list. | TBD at review | TODO |
+| IHF-025 | IHF:82-84 | Each provider/range failure is independently passed to `onUnexpectedExternalError` and contained. | TBD at review | TODO |
+| IHF-026 | IHF:89-91 | After all calls settle, cancellation or disposed model throws `CancellationError`. | TBD at review | TODO |
+| IHF-027 | IHF:96 | `_disposables` owns every retained provider list. | TBD at review | TODO |
+| IHF-028 | IHF:98 | Readonly `items` result field. | TBD at review | TODO |
+| IHF-029 | IHF:99 | Readonly `ranges` result field. | TBD at review | TODO |
+| IHF-030 | IHF:100 | Readonly deduplicated `provider` result field. | TBD at review | TODO |
+| IHF-031 | IHF:102-130 | Constructor retains ranges, processes retained pairs in completion order, owns lists, deduplicates providers, validates positions, derives anchors, creates items, then sorts by hint position. | TBD at review | TODO |
+| IHF-032 | IHF:118-120 | Word start before hint builds start-to-hint anchor and changes direction to `after`. | TBD at review | TODO |
+| IHF-033 | IHF:121-124 | Otherwise hint-to-word-end anchor keeps direction `before`. | TBD at review | TODO |
+| IHF-034 | IHF:132-134 | `dispose` retires every retained provider list. | TBD at review | TODO |
+| IHF-035 | IHF:136-165 | `_getRangeAtPosition` reads word/token data; no-word flow tokenizes cheaply, fetches line tokens, converts column to zero-based offset, selects/adjusts token bounds, then returns one-based columns. | TBD at review | TODO |
+| IHF-036 | IHF:139-142 | Existing word range returns immediately before tokenization. | TBD at review | TODO |
+| IHF-037 | IHF:152-163 | Neighbor adjustment is considered only for token length exactly `1`. | TBD at review | TODO |
+| IHF-038 | IHF:154-157 | Leading adjustment requires start=offset and index strictly greater than `1`. | TBD at review | TODO |
+| IHF-039 | IHF:158-162 | Only after the leading condition fails, trailing adjustment requires end=offset and index below count minus `1`. | TBD at review | TODO |
+| IHF-040 | IHF:169-171 | Explicit excluded sibling `asCommandLink` creates the command URI with ID/arguments, then returns `toString()`. | TBD at review | TODO |
+| IHF-041 | IHF:170 | Nullish command arguments fall back to an empty array before spreading. | TBD at review | TODO |
 | CHC-001 | CHC:28-31 | Module `_sticky` constant is `false`. | TBD at review | TODO |
 | CHC-002 | CHC:33-34 | Hover settings `enabled` member. | TBD at review | TODO |
 | CHC-003 | CHC:35 | Hover settings `sticky` member. | TBD at review | TODO |
@@ -461,7 +517,39 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | CHC-117 | CHC:412 | Disposal unhooks listeners. | TBD at review | TODO |
 | CHC-118 | CHC:413 | Disposal retires listener store. | TBD at review | TODO |
 | CHC-119 | CHC:414 | Disposal retires optional content widget. | TBD at review | TODO |
-| CHC-120 | CHC:338-408 | Required excluded sibling: action, focus, scroll, content, accessibility, color-picker, and visibility forwarding cluster. | TBD at review | TODO |
+| CHC-120 | CHC:338-340 | Excluded sibling member `focusedHoverPartIndex` creates/gets the widget and forwards the query. | TBD at review | TODO |
+| CHC-121 | CHC:342-344 | Excluded sibling member `doesHoverAtIndexSupportVerbosityAction` creates/gets the widget and forwards index/action. | TBD at review | TODO |
+| CHC-122 | CHC:346-348 | Excluded sibling member `updateHoverVerbosityLevel` creates/gets the widget and forwards action/index/focus. | TBD at review | TODO |
+| CHC-123 | CHC:350 | Excluded sibling member `focus`. | TBD at review | TODO |
+| CHC-124 | CHC:351 | `focus` forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-125 | CHC:354 | Excluded sibling member `focusHoverPartWithIndex`. | TBD at review | TODO |
+| CHC-126 | CHC:355 | Indexed focus forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-127 | CHC:358 | Excluded sibling member `scrollUp`. | TBD at review | TODO |
+| CHC-128 | CHC:359 | Up-scroll forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-129 | CHC:362 | Excluded sibling member `scrollDown`. | TBD at review | TODO |
+| CHC-130 | CHC:363 | Down-scroll forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-131 | CHC:366 | Excluded sibling member `scrollLeft`. | TBD at review | TODO |
+| CHC-132 | CHC:367 | Left-scroll forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-133 | CHC:370 | Excluded sibling member `scrollRight`. | TBD at review | TODO |
+| CHC-134 | CHC:371 | Right-scroll forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-135 | CHC:374 | Excluded sibling member `pageUp`. | TBD at review | TODO |
+| CHC-136 | CHC:375 | Page-up forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-137 | CHC:378 | Excluded sibling member `pageDown`. | TBD at review | TODO |
+| CHC-138 | CHC:379 | Page-down forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-139 | CHC:382 | Excluded sibling member `goToTop`. | TBD at review | TODO |
+| CHC-140 | CHC:383 | Top navigation forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-141 | CHC:386 | Excluded sibling member `goToBottom`. | TBD at review | TODO |
+| CHC-142 | CHC:387 | Bottom navigation forwards only when the optional content widget exists; absence is a no-op. | TBD at review | TODO |
+| CHC-143 | CHC:390 | Excluded sibling member `getWidgetContent`. | TBD at review | TODO |
+| CHC-144 | CHC:391 | Widget-content query forwards for an existing widget and returns `undefined` when absent. | TBD at review | TODO |
+| CHC-145 | CHC:394 | Excluded sibling member `getAccessibleWidgetContent`. | TBD at review | TODO |
+| CHC-146 | CHC:395 | Accessible-content query forwards for an existing widget and returns `undefined` when absent. | TBD at review | TODO |
+| CHC-147 | CHC:398 | Excluded sibling member `getAccessibleWidgetContentAtIndex`. | TBD at review | TODO |
+| CHC-148 | CHC:399 | Indexed accessible-content query forwards for an existing widget and returns `undefined` when absent. | TBD at review | TODO |
+| CHC-149 | CHC:402 | Excluded sibling getter `isColorPickerVisible`. | TBD at review | TODO |
+| CHC-150 | CHC:403 | Color-picker visibility forwards for an existing widget and returns `undefined` when absent. | TBD at review | TODO |
+| CHC-151 | CHC:406 | Excluded sibling getter `isHoverVisible`. | TBD at review | TODO |
+| CHC-152 | CHC:407 | Hover visibility forwards for an existing widget and returns `undefined` when absent. | TBD at review | TODO |
 | CHW-001 | CHW:29 | Current reconciled hover result field starts null. | TBD at review | TODO |
 | CHW-002 | CHW:30 | Mutable rendered-hover disposable is wrapper-owned. | TBD at review | TODO |
 | CHW-003 | CHW:32 | Content-hover widget is wrapper-owned. | TBD at review | TODO |
@@ -479,98 +567,137 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | CHW-015 | CHW:48 | Participants initialize before operation. | TBD at review | TODO |
 | CHW-016 | CHW:49 | Operation/computer is created and registered. | TBD at review | TODO |
 | CHW-017 | CHW:50 | Listeners register after owned state exists. | TBD at review | TODO |
-| CHW-018 | CHW:27-51 | Inherited disposal retires registered widget/operation/emitter resources. | TBD at review | TODO |
-| CHW-019 | CHW:53 | Participant initialization member. | TBD at review | TODO |
-| CHW-020 | CHW:55 | Every registered participant constructor is visited. | TBD at review | TODO |
-| CHW-021 | CHW:56-58 | Each participant is instantiated for editor then pushed. | TBD at review | TODO |
-| CHW-022 | CHW:59 | Participants sort ascending by hover ordinal. | TBD at review | TODO |
-| CHW-023 | CHW:60-62 | Widget resize forwards to optional participant handlers. | TBD at review | TODO |
-| CHW-024 | CHW:63-65 | Widget scroll forwards to optional participant handlers. | TBD at review | TODO |
-| CHW-025 | CHW:66-68 | Widget content change forwards to optional handlers. | TBD at review | TODO |
-| CHW-026 | CHW:69 | Initialization returns ordered participants. | TBD at review | TODO |
-| CHW-027 | CHW:72 | Listener-registration member. | TBD at review | TODO |
-| CHW-028 | CHW:73-76 | Operation result subscription owns reconciliation entry. | TBD at review | TODO |
-| CHW-029 | CHW:74 | Loading flag chooses augmented messages vs raw values. | TBD at review | TODO |
-| CHW-030 | CHW:75 | Result wraps messages/completeness/options before reconciliation. | TBD at review | TODO |
-| CHW-031 | CHW:78-82 | Widget keydown DOM listener is disposable-owned. | TBD at review | TODO |
-| CHW-032 | CHW:79-81 | Escape hides. | TBD at review | TODO |
-| CHW-033 | CHW:83-85 | Widget mouseleave listener delegates. | TBD at review | TODO |
-| CHW-034 | CHW:86-90 | Tokenization registry listener is owned. | TBD at review | TODO |
-| CHW-035 | CHW:87-89 | Existing position and result rerender same result. | TBD at review | TODO |
-| CHW-036 | CHW:91-93 | Widget content event fires wrapper event. | TBD at review | TODO |
-| CHW-037 | CHW:99-105 | Start-or-update member consumes anchor/mode/source/focus/mouse. | TBD at review | TODO |
-| CHW-038 | CHW:106 | Visibility requires widget position and current result. | TBD at review | TODO |
-| CHW-039 | CHW:107-113 | Invisible branch starts only with anchor. | TBD at review | TODO |
-| CHW-040 | CHW:108-111 | Invisible with anchor starts operation and returns true. | TBD at review | TODO |
-| CHW-041 | CHW:112 | Invisible without anchor returns false. | TBD at review | TODO |
-| CHW-042 | CHW:114-116 | Sticky and mouse-getting-closer facts combine. | TBD at review | TODO |
-| CHW-043 | CHW:119-124 | Closer branch preserves visible result. | TBD at review | TODO |
-| CHW-044 | CHW:120-122 | Closer with anchor starts update with insist=true. | TBD at review | TODO |
-| CHW-045 | CHW:123 | Closer branch returns true even without anchor. | TBD at review | TODO |
-| CHW-046 | CHW:126-129 | No anchor clears result and returns false. | TBD at review | TODO |
-| CHW-047 | CHW:131-134 | Equal current anchor returns true without restart. | TBD at review | TODO |
-| CHW-048 | CHW:136 | Compatibility asks new anchor to adopt prior visible hover. | TBD at review | TODO |
-| CHW-049 | CHW:137-141 | Incompatible anchor clears result then starts fresh. | TBD at review | TODO |
-| CHW-050 | CHW:144-146 | Compatible anchor filters current result. | TBD at review | TODO |
-| CHW-051 | CHW:147-148 | Compatible path starts new operation and returns true. | TBD at review | TODO |
-| CHW-052 | CHW:151 | Operation-start-if-necessary member. | TBD at review | TODO |
-| CHW-053 | CHW:152-155 | Same operation anchor returns early. | TBD at review | TODO |
-| CHW-054 | CHW:156 | Different anchor cancels previous operation first. | TBD at review | TODO |
-| CHW-055 | CHW:157-162 | Options capture anchor/source/focus/insist. | TBD at review | TODO |
-| CHW-056 | CHW:163 | Operation starts with supplied mode/options. | TBD at review | TODO |
-| CHW-057 | CHW:166 | Current-result setter member. | TBD at review | TODO |
-| CHW-058 | CHW:168-171 | Identical result object returns early. | TBD at review | TODO |
-| CHW-059 | CHW:172-175 | Non-null empty result normalizes to null. | TBD at review | TODO |
-| CHW-060 | CHW:176 | Normalized result replaces current field. | TBD at review | TODO |
-| CHW-061 | CHW:177-181 | Non-null calls show boundary; null calls hide boundary. | TBD at review | TODO |
-| CHW-062 | CHW:184 | Loading-message augmentation member. | TBD at review | TODO |
-| CHW-063 | CHW:185 | Participants are checked in order. | TBD at review | TODO |
-| CHW-064 | CHW:186-188 | Missing loading-message factory continues. | TBD at review | TODO |
-| CHW-065 | CHW:189-192 | Null loading message continues. | TBD at review | TODO |
-| CHW-066 | CHW:193 | First message appends to copied result and returns. | TBD at review | TODO |
-| CHW-067 | CHW:195 | No participant message returns original value. | TBD at review | TODO |
-| CHW-068 | CHW:198 | Result reconciliation member. | TBD at review | TODO |
-| CHW-069 | CHW:199 | Previous visible complete result is detected. | TBD at review | TODO |
-| CHW-070 | CHW:200-202 | Without previous complete result, incoming result is applied. | TBD at review | TODO |
-| CHW-071 | CHW:204-208 | Incomplete replacement returns, preserving previous complete result. | TBD at review | TODO |
-| CHW-072 | CHW:209-215 | Empty complete result with insist flag preserves previous hover. | TBD at review | TODO |
-| CHW-073 | CHW:216 | All other complete results apply. | TBD at review | TODO |
-| CHW-074 | CHW:249 | `showsOrWillShow` member. | TBD at review | TODO |
-| CHW-075 | CHW:250-253 | Resizing returns true without recomputation. | TBD at review | TODO |
-| CHW-076 | CHW:254-256 | Code-action widget hit returns true. | TBD at review | TODO |
-| CHW-077 | CHW:257 | Anchor candidates are computed. | TBD at review | TODO |
-| CHW-078 | CHW:258-261 | No candidate delegates null delayed mouse update. | TBD at review | TODO |
-| CHW-079 | CHW:262-263 | First highest-priority candidate delegates delayed mouse update. | TBD at review | TODO |
-| CHW-080 | CHW:266 | Anchor-candidate finder member. | TBD at review | TODO |
-| CHW-081 | CHW:268-271 | Participant without suggester continues. | TBD at review | TODO |
-| CHW-082 | CHW:272-275 | Null participant suggestion continues. | TBD at review | TODO |
-| CHW-083 | CHW:276 | Valid participant suggestion is pushed. | TBD at review | TODO |
-| CHW-084 | CHW:280-283 | Content-text target adds priority `0` range anchor. | TBD at review | TODO |
-| CHW-085 | CHW:284-285 | Content-empty threshold is halfwidth character width divided by `2`. | TBD at review | TODO |
-| CHW-086 | CHW:287-289 | Empty target qualifies only within lines, numeric distance, distance below epsilon. | TBD at review | TODO |
-| CHW-087 | CHW:290-292 | Failed empty-target qualification breaks that switch arm. | TBD at review | TODO |
-| CHW-088 | CHW:293-294 | Qualified empty target adds priority `0` range anchor. | TBD at review | TODO |
-| CHW-089 | CHW:297 | Candidates sort descending by priority. | TBD at review | TODO |
-| CHW-090 | CHW:298 | Finder returns sorted candidates. | TBD at review | TODO |
-| CHW-091 | CHW:301 | Code-action hit-test member. | TBD at review | TODO |
-| CHW-092 | CHW:302-306 | Element with closest `.action-widget` returns true; otherwise false. | TBD at review | TODO |
-| CHW-093 | CHW:309 | Mouse-leave member. | TBD at review | TODO |
-| CHW-094 | CHW:310-314 | Missing editor DOM or outside position hides; a mouseleave point still inside the editor is a no-op. | TBD at review | TODO |
-| CHW-095 | CHW:317-319 | Range start builds priority `0` anchor with undefined mouse coordinates. | TBD at review | TODO |
-| CHW-096 | CHW:398 | Public hide member. | TBD at review | TODO |
-| CHW-097 | CHW:399-400 | Hide cancels operation before clearing result. | TBD at review | TODO |
-| CHW-098 | CHW:279-296 | Implicit switch default: every other mouse target type adds no built-in range anchor. | TBD at review | TODO |
-| CHW-099 | CHW:219-246 | Required excluded sibling: DOM render, hide-render, and hover-context construction cluster. | TBD at review | TODO |
-| CHW-100 | CHW:321-397 | Required excluded sibling: content, verbosity, accessibility, focus, and scroll forwarding cluster. | TBD at review | TODO |
-| CHW-101 | CHW:403-429 | Required excluded sibling: DOM and widget-state query/getter cluster. | TBD at review | TODO |
-| HOP-001 | HOP:18 | `IHoverComputer.computeAsync` receives token after half delay. | TBD at review | TODO |
-| HOP-002 | HOP:22 | `computeSync` runs after full delay. | TBD at review | TODO |
+| CHW-018 | CHW:53 | Participant initialization member. | TBD at review | TODO |
+| CHW-019 | CHW:55 | Every registered participant constructor is visited. | TBD at review | TODO |
+| CHW-020 | CHW:56-58 | Each participant is instantiated for editor then pushed. | TBD at review | TODO |
+| CHW-021 | CHW:59 | Participants sort ascending by exact comparator arithmetic `p1.hoverOrdinal - p2.hoverOrdinal`. | TBD at review | TODO |
+| CHW-022 | CHW:60-62 | Widget resize forwards to optional participant handlers. | TBD at review | TODO |
+| CHW-023 | CHW:63-65 | Widget scroll forwards to optional participant handlers. | TBD at review | TODO |
+| CHW-024 | CHW:66-68 | Widget content change forwards to optional handlers. | TBD at review | TODO |
+| CHW-025 | CHW:69 | Initialization returns ordered participants. | TBD at review | TODO |
+| CHW-026 | CHW:72 | Listener-registration member. | TBD at review | TODO |
+| CHW-027 | CHW:73-76 | Operation result subscription owns reconciliation entry. | TBD at review | TODO |
+| CHW-028 | CHW:74 | Loading flag chooses augmented messages vs raw values. | TBD at review | TODO |
+| CHW-029 | CHW:75 | Result wraps messages/completeness/options before reconciliation. | TBD at review | TODO |
+| CHW-030 | CHW:78-82 | Widget keydown DOM listener is disposable-owned. | TBD at review | TODO |
+| CHW-031 | CHW:79-81 | Escape hides. | TBD at review | TODO |
+| CHW-032 | CHW:83-85 | Widget mouseleave listener delegates. | TBD at review | TODO |
+| CHW-033 | CHW:86-90 | Tokenization registry listener is owned. | TBD at review | TODO |
+| CHW-034 | CHW:87-89 | Existing position and result rerender same result. | TBD at review | TODO |
+| CHW-035 | CHW:91-93 | Widget content event fires wrapper event. | TBD at review | TODO |
+| CHW-036 | CHW:99-105 | Start-or-update member consumes anchor/mode/source/focus/mouse. | TBD at review | TODO |
+| CHW-037 | CHW:106 | Visibility requires widget position and current result. | TBD at review | TODO |
+| CHW-038 | CHW:107-113 | Invisible hover enters the nested anchor/no-anchor decision; visible hover continues to sticky reconciliation. | TBD at review | TODO |
+| CHW-039 | CHW:108-111 | Invisible with anchor starts operation and returns true. | TBD at review | TODO |
+| CHW-040 | CHW:112 | Invisible without anchor returns false. | TBD at review | TODO |
+| CHW-041 | CHW:114-116 | Sticky and mouse-getting-closer facts combine. | TBD at review | TODO |
+| CHW-042 | CHW:119-124 | Closer branch preserves visible result. | TBD at review | TODO |
+| CHW-043 | CHW:120-122 | Closer with anchor starts update with insist=true. | TBD at review | TODO |
+| CHW-044 | CHW:123 | Closer branch returns true even without anchor. | TBD at review | TODO |
+| CHW-045 | CHW:126-129 | No anchor clears result and returns false. | TBD at review | TODO |
+| CHW-046 | CHW:131-134 | Equal current anchor returns true without restart. | TBD at review | TODO |
+| CHW-047 | CHW:136 | Compatibility asks new anchor to adopt prior visible hover. | TBD at review | TODO |
+| CHW-048 | CHW:137-141 | Incompatible anchor clears result then starts fresh. | TBD at review | TODO |
+| CHW-049 | CHW:144-146 | Compatible-anchor filtering applies only while `_currentResult` remains non-null; the null branch is a no-op. | TBD at review | TODO |
+| CHW-050 | CHW:147-148 | Compatible path starts new operation and returns true. | TBD at review | TODO |
+| CHW-051 | CHW:151 | Operation-start-if-necessary member. | TBD at review | TODO |
+| CHW-052 | CHW:152-155 | Same operation anchor returns early. | TBD at review | TODO |
+| CHW-053 | CHW:156 | Different anchor cancels previous operation first. | TBD at review | TODO |
+| CHW-054 | CHW:157-162 | Options capture anchor/source/focus/insist. | TBD at review | TODO |
+| CHW-055 | CHW:163 | Operation starts with supplied mode/options. | TBD at review | TODO |
+| CHW-056 | CHW:166 | Current-result setter member. | TBD at review | TODO |
+| CHW-057 | CHW:168-171 | Identical result object returns early. | TBD at review | TODO |
+| CHW-058 | CHW:172-175 | Non-null empty result normalizes to null. | TBD at review | TODO |
+| CHW-059 | CHW:176 | Normalized result replaces current field. | TBD at review | TODO |
+| CHW-060 | CHW:177-181 | Non-null calls show boundary; null calls hide boundary. | TBD at review | TODO |
+| CHW-061 | CHW:184 | Loading-message augmentation member. | TBD at review | TODO |
+| CHW-062 | CHW:185 | Participants are checked in order. | TBD at review | TODO |
+| CHW-063 | CHW:186-188 | Missing loading-message factory continues. | TBD at review | TODO |
+| CHW-064 | CHW:189-192 | Null loading message continues. | TBD at review | TODO |
+| CHW-065 | CHW:193 | First message appends to copied result and returns. | TBD at review | TODO |
+| CHW-066 | CHW:195 | No participant message returns original value. | TBD at review | TODO |
+| CHW-067 | CHW:198 | Result reconciliation member. | TBD at review | TODO |
+| CHW-068 | CHW:199 | Previous visible complete result is detected. | TBD at review | TODO |
+| CHW-069 | CHW:200-202 | Without a previous visible complete result, the incoming result is applied immediately and control still falls through. | TBD at review | TODO |
+| CHW-070 | CHW:204-208 | An incomplete result returns after that possible apply; it preserves an old complete hover only when one existed. | TBD at review | TODO |
+| CHW-071 | CHW:209-215 | Empty complete plus insist returns; it preserves an old hover only when the previous-visible-complete precondition held, otherwise the earlier apply already normalized the empty result to null. | TBD at review | TODO |
+| CHW-072 | CHW:216 | Every remaining complete result calls `_setCurrentResult`; after the earlier fall-through that call can be an identity no-op. | TBD at review | TODO |
+| CHW-073 | CHW:249 | `showsOrWillShow` member. | TBD at review | TODO |
+| CHW-074 | CHW:250-253 | Resizing returns true without recomputation. | TBD at review | TODO |
+| CHW-075 | CHW:254-256 | Code-action widget hit returns true. | TBD at review | TODO |
+| CHW-076 | CHW:257 | Anchor candidates are computed. | TBD at review | TODO |
+| CHW-077 | CHW:258-261 | No candidate delegates null delayed mouse update. | TBD at review | TODO |
+| CHW-078 | CHW:262-263 | First highest-priority candidate delegates delayed mouse update. | TBD at review | TODO |
+| CHW-079 | CHW:266 | Anchor-candidate finder member. | TBD at review | TODO |
+| CHW-080 | CHW:268-271 | Participant without suggester continues. | TBD at review | TODO |
+| CHW-081 | CHW:272-275 | Null participant suggestion continues. | TBD at review | TODO |
+| CHW-082 | CHW:276 | Valid participant suggestion is pushed. | TBD at review | TODO |
+| CHW-083 | CHW:280-283 | Content-text target adds priority `0` range anchor. | TBD at review | TODO |
+| CHW-084 | CHW:284-285 | Content-empty threshold is halfwidth character width divided by `2`. | TBD at review | TODO |
+| CHW-085 | CHW:287-289 | Empty target qualifies only within lines, numeric distance, distance below epsilon. | TBD at review | TODO |
+| CHW-086 | CHW:290-292 | Failed empty-target qualification breaks that switch arm. | TBD at review | TODO |
+| CHW-087 | CHW:293-294 | Qualified empty target adds priority `0` range anchor. | TBD at review | TODO |
+| CHW-088 | CHW:297 | Candidates sort descending by priority. | TBD at review | TODO |
+| CHW-089 | CHW:298 | Finder returns sorted candidates. | TBD at review | TODO |
+| CHW-090 | CHW:301 | Code-action hit-test member. | TBD at review | TODO |
+| CHW-091 | CHW:302-306 | Element with closest `.action-widget` returns true; otherwise false. | TBD at review | TODO |
+| CHW-092 | CHW:309 | Mouse-leave member. | TBD at review | TODO |
+| CHW-093 | CHW:310-314 | Missing editor DOM or outside position hides; a mouseleave point still inside the editor is a no-op. | TBD at review | TODO |
+| CHW-094 | CHW:317-319 | Range start builds priority `0` anchor with undefined mouse coordinates. | TBD at review | TODO |
+| CHW-095 | CHW:398 | Public hide member. | TBD at review | TODO |
+| CHW-096 | CHW:399-400 | Hide cancels operation before clearing result. | TBD at review | TODO |
+| CHW-097 | CHW:279-296 | Implicit switch default: every other mouse target type adds no built-in range anchor. | TBD at review | TODO |
+| CHW-098 | CHW:219-227 | Excluded sibling member `_showHover` creates context, replaces the rendered-hover disposable, then decides whether to show it. | TBD at review | TODO |
+| CHW-099 | CHW:222-226 | Rendered DOM with children is shown; an empty rendered DOM clears the rendered-hover disposable. | TBD at review | TODO |
+| CHW-100 | CHW:229-232 | Excluded sibling member `_hideHover` hides the widget before visiting participants in order. | TBD at review | TODO |
+| CHW-101 | CHW:231 | Each participant's optional `handleHide` is called when present and skipped when absent. | TBD at review | TODO |
+| CHW-102 | CHW:234-246 | Excluded sibling member `_getHoverContext` returns exact hide, contents-change, minimum-dimensions, and focus delegates. | TBD at review | TODO |
+| CHW-103 | CHW:321-327 | Excluded sibling member `getWidgetContent` reads the content-widget DOM node and returns its text on the surviving path. | TBD at review | TODO |
+| CHW-104 | CHW:323-325 | Falsy `textContent` returns `undefined` before the final text return. | TBD at review | TODO |
+| CHW-105 | CHW:329-331 | Excluded sibling async member `updateHoverVerbosityLevel`. | TBD at review | TODO |
+| CHW-106 | CHW:330 | Verbosity update forwards only when a rendered hover exists; absence is a no-op. | TBD at review | TODO |
+| CHW-107 | CHW:333-335 | Excluded sibling member `doesHoverAtIndexSupportVerbosityAction`. | TBD at review | TODO |
+| CHW-108 | CHW:334 | Optional rendered-hover support is forwarded; a nullish result falls back to `false`. | TBD at review | TODO |
+| CHW-109 | CHW:337-339 | Excluded sibling member `getAccessibleWidgetContent`. | TBD at review | TODO |
+| CHW-110 | CHW:338 | Accessible-content lookup forwards only when a rendered hover exists and otherwise returns `undefined`. | TBD at review | TODO |
+| CHW-111 | CHW:341-343 | Excluded sibling member `getAccessibleWidgetContentAtIndex`. | TBD at review | TODO |
+| CHW-112 | CHW:342 | Indexed accessible-content lookup forwards only when a rendered hover exists and otherwise returns `undefined`. | TBD at review | TODO |
+| CHW-113 | CHW:345-347 | Excluded sibling member `focusedHoverPartIndex`. | TBD at review | TODO |
+| CHW-114 | CHW:346 | Optional rendered-hover focused index is returned when present; a nullish result takes the fallback. | TBD at review | TODO |
+| CHW-115 | CHW:346 | Focused-index fallback magic value is `-1`. | TBD at review | TODO |
+| CHW-116 | CHW:349-351 | Excluded sibling member `containsNode`. | TBD at review | TODO |
+| CHW-117 | CHW:350 | A present node is tested against the widget DOM; a nullish node returns `false`. | TBD at review | TODO |
+| CHW-118 | CHW:353-360 | Excluded sibling member `focus`. | TBD at review | TODO |
+| CHW-119 | CHW:354 | Hover-part count is read only when a rendered hover exists; absence yields `undefined`. | TBD at review | TODO |
+| CHW-120 | CHW:355-359 | A singleton rendered hover focuses its part and returns early; every other count focuses the widget. | TBD at review | TODO |
+| CHW-121 | CHW:355 | Singleton hover-part count magic value is `1`. | TBD at review | TODO |
+| CHW-122 | CHW:356 | Singleton focus uses part-index magic value `0`. | TBD at review | TODO |
+| CHW-123 | CHW:362-364 | Excluded sibling member `focusHoverPartWithIndex`. | TBD at review | TODO |
+| CHW-124 | CHW:363 | Indexed part focus forwards only when a rendered hover exists; absence is a no-op. | TBD at review | TODO |
+| CHW-125 | CHW:366-368 | Excluded sibling member `scrollUp` forwards to the content widget. | TBD at review | TODO |
+| CHW-126 | CHW:370-372 | Excluded sibling member `scrollDown` forwards to the content widget. | TBD at review | TODO |
+| CHW-127 | CHW:374-376 | Excluded sibling member `scrollLeft` forwards to the content widget. | TBD at review | TODO |
+| CHW-128 | CHW:378-380 | Excluded sibling member `scrollRight` forwards to the content widget. | TBD at review | TODO |
+| CHW-129 | CHW:382-384 | Excluded sibling member `pageUp` forwards to the content widget. | TBD at review | TODO |
+| CHW-130 | CHW:386-388 | Excluded sibling member `pageDown` forwards to the content widget. | TBD at review | TODO |
+| CHW-131 | CHW:390-392 | Excluded sibling member `goToTop` forwards to the content widget. | TBD at review | TODO |
+| CHW-132 | CHW:394-396 | Excluded sibling member `goToBottom` forwards to the content widget. | TBD at review | TODO |
+| CHW-133 | CHW:403-405 | Excluded sibling member `getDomNode` forwards to the content widget. | TBD at review | TODO |
+| CHW-134 | CHW:407-409 | Excluded sibling getter `isColorPickerVisible`. | TBD at review | TODO |
+| CHW-135 | CHW:408 | Optional rendered-hover color-picker visibility is forwarded; a nullish result falls back to `false`. | TBD at review | TODO |
+| CHW-136 | CHW:411-413 | Excluded sibling getter `isVisibleFromKeyboard` forwards to the content widget. | TBD at review | TODO |
+| CHW-137 | CHW:415-417 | Excluded sibling getter `isVisible` forwards to the content widget. | TBD at review | TODO |
+| CHW-138 | CHW:419-421 | Excluded sibling getter `isFocused` forwards to the content widget. | TBD at review | TODO |
+| CHW-139 | CHW:423-425 | Excluded sibling getter `isResizing` forwards to the content widget. | TBD at review | TODO |
+| CHW-140 | CHW:427-429 | Excluded sibling getter `widget` returns the content widget. | TBD at review | TODO |
+| HOP-001 | HOP:18 | Optional `IHoverComputer.computeAsync(args, token)` receives the cancellation token when invoked after half delay. | TBD at review | TODO |
+| HOP-002 | HOP:22 | Optional `IHoverComputer.computeSync(args)` is invoked after the full delay. | TBD at review | TODO |
 | HOP-003 | HOP:25-26 | Operation state `Idle` has implicit value `0`. | TBD at review | TODO |
 | HOP-004 | HOP:27 | Operation state `FirstWait` has implicit value `1`. | TBD at review | TODO |
 | HOP-005 | HOP:28 | Operation state `SecondWait` has implicit value `2`. | TBD at review | TODO |
 | HOP-006 | HOP:29 | Operation state `WaitingForAsync = 3`. | TBD at review | TODO |
 | HOP-007 | HOP:30 | Operation state `WaitingForAsyncShowingLoading = 4`. | TBD at review | TODO |
-| HOP-008 | HOP:33-35 | Start mode `Delayed = 0`. | TBD at review | TODO |
+| HOP-008 | HOP:33-34 | Start mode `Delayed = 0`. | TBD at review | TODO |
 | HOP-009 | HOP:35 | Start mode `Immediate = 1`. | TBD at review | TODO |
 | HOP-010 | HOP:38-39 | Start source `Mouse = 0`. | TBD at review | TODO |
 | HOP-011 | HOP:40 | Start source `Click = 1`. | TBD at review | TODO |
@@ -600,10 +727,10 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | HOP-035 | HOP:98-100 | First wait is delay divided by `2`. | TBD at review | TODO |
 | HOP-036 | HOP:102-104 | Second wait is delay minus first wait. | TBD at review | TODO |
 | HOP-037 | HOP:106-108 | Loading time is `3 * hoverTime`. | TBD at review | TODO |
-| HOP-038 | HOP:110-114 | `_setState` stores options/state then fires. | TBD at review | TODO |
+| HOP-038 | HOP:110-114 | `_setState` assigns options first, state second, then fires the result. | TBD at review | TODO |
 | HOP-039 | HOP:116-119 | Async trigger enters `SecondWait` and schedules sync remainder. | TBD at review | TODO |
 | HOP-040 | HOP:120 | Async computer presence gates iterable creation. | TBD at review | TODO |
-| HOP-041 | HOP:121-123 | Fresh cancelable iterable propagates its token to computer. | TBD at review | TODO |
+| HOP-041 | HOP:121-123 | Present async computer resets `_asyncIterableDone=false`, then creates a fresh cancelable iterable that propagates its token to the computer. | TBD at review | TODO |
 | HOP-042 | HOP:124-141 | Detached async IIFE consumes the producer with `for await` through its catch boundary. | TBD at review | TODO |
 | HOP-043 | HOP:127-130 | Truthy item mutates shared result and fires; falsy item is ignored, with no token/options/operation-identity guard before mutation. | TBD at review | TODO |
 | HOP-044 | HOP:132 | Iteration completion sets async-done true with no token/options/operation-identity guard. | TBD at review | TODO |
@@ -619,16 +746,16 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | HOP-054 | HOP:162-165 | First/second wait returns without emission. | TBD at review | TODO |
 | HOP-055 | HOP:166 | Completeness means state `Idle`. | TBD at review | TODO |
 | HOP-056 | HOP:167 | Loading flag means loading-wait state. | TBD at review | TODO |
-| HOP-057 | HOP:168 | Emission copies accumulated result with `slice(0)`. | TBD at review | TODO |
+| HOP-057 | HOP:168 | Emission snapshots accumulated results with `slice(0)`, constructs `HoverResult` with completeness/loading/options, then fires `_onResult`. | TBD at review | TODO |
 | HOP-058 | HOP:171 | Public start member. | TBD at review | TODO |
 | HOP-059 | HOP:172 | Delayed mode branch. | TBD at review | TODO |
 | HOP-060 | HOP:173-177 | Delayed start acts only from `Idle`; other states no-op. | TBD at review | TODO |
 | HOP-061 | HOP:174-176 | Delayed start enters first wait and schedules async/loading timers. | TBD at review | TODO |
-| HOP-062 | HOP:178-184 | Immediate start `Idle` case. | TBD at review | TODO |
+| HOP-062 | HOP:178-184 | Bare non-`Delayed` branch with operation state `Idle`. | TBD at review | TODO |
 | HOP-063 | HOP:181-183 | Immediate order: trigger async, cancel sync timer, trigger sync. | TBD at review | TODO |
-| HOP-064 | HOP:185-188 | Immediate `SecondWait` case. | TBD at review | TODO |
+| HOP-064 | HOP:185-188 | Bare non-`Delayed` branch with operation state `SecondWait`. | TBD at review | TODO |
 | HOP-065 | HOP:186-187 | Second-wait immediate start cancels sync timer then triggers sync. | TBD at review | TODO |
-| HOP-066 | HOP:179-189 | All other immediate states have no switch arm and no-op. | TBD at review | TODO |
+| HOP-066 | HOP:179-189 | Every other state in the bare non-`Delayed` branch has no switch arm and no-ops; runtime values other than enum `Immediate` enter the same branch. | TBD at review | TODO |
 | HOP-067 | HOP:193 | Public cancel member. | TBD at review | TODO |
 | HOP-068 | HOP:194-196 | Cancel retires async, sync, and loading schedulers. | TBD at review | TODO |
 | HOP-069 | HOP:197-200 | Cancel retires/nulls an active iterable; absent iterable skips both operations. | TBD at review | TODO |
@@ -638,10 +765,9 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | HOP-073 | HOP:206-208 | Options getter returns current optional options. | TBD at review | TODO |
 | HOP-074 | HOP:213 | Debouncer owns one run-once scheduler. | TBD at review | TODO |
 | HOP-075 | HOP:215 | Debouncer retains latest options. | TBD at review | TODO |
-| HOP-076 | HOP:217-220 | Constructor registers scheduler closure and default delay. | TBD at review | TODO |
+| HOP-076 | HOP:217-220 | Constructor calls `super()` before registering a scheduler whose closure reads the latest mutable `_options` at execution, with the supplied default delay. | TBD at review | TODO |
 | HOP-077 | HOP:222-225 | Schedule stores options then schedules requested delay. | TBD at review | TODO |
 | HOP-078 | HOP:227-229 | Cancel delegates scheduler cancellation. | TBD at review | TODO |
-| HOP-079 | HOP:211-230 | Inherited disposal retires the registered scheduler. | TBD at review | TODO |
 | CHCMP-001 | CHCMP:15 | Options `shouldFocus` member. | TBD at review | TODO |
 | CHCMP-002 | CHCMP:16 | Options `anchor` member. | TBD at review | TODO |
 | CHCMP-003 | CHCMP:17 | Options `source` member. | TBD at review | TODO |
@@ -665,26 +791,26 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | CHCMP-021 | CHCMP:67 | Async computation member receives options/token. | TBD at review | TODO |
 | CHCMP-022 | CHCMP:70-72 | Missing editor model or anchor returns empty producer. | TBD at review | TODO |
 | CHCMP-023 | CHCMP:74 | Async path computes line decorations once. | TBD at review | TODO |
-| CHCMP-024 | CHCMP:76-83 | Participant producers merge. | TBD at review | TODO |
+| CHCMP-024 | CHCMP:76-77,82-83 | Participants are mapped in array order, then all producers merge concurrently and emitted items interleave by arrival. | TBD at review | TODO |
 | CHCMP-025 | CHCMP:78-80 | Participant without async member contributes empty producer. | TBD at review | TODO |
 | CHCMP-026 | CHCMP:81 | Participant async call receives anchor, decorations, source, token. | TBD at review | TODO |
 | CHCMP-027 | CHCMP:86 | Synchronous computation member. | TBD at review | TODO |
 | CHCMP-028 | CHCMP:87-89 | Missing editor model returns empty. | TBD at review | TODO |
 | CHCMP-029 | CHCMP:91-92 | Sync path captures anchor and decorations. | TBD at review | TODO |
-| CHCMP-030 | CHCMP:94-97 | Participant sync results concatenate in participant order. | TBD at review | TODO |
+| CHCMP-030 | CHCMP:94-97 | Sync accumulation starts at `[]` and concatenates participant results in participant order. | TBD at review | TODO |
 | CHCMP-031 | CHCMP:99 | Final sync result coalesces nullish entries. | TBD at review | TODO |
 | GHR-001 | GHR:18 | Provider-result `provider` member. | TBD at review | TODO |
 | GHR-002 | GHR:19 | Provider-result `hover` member. | TBD at review | TODO |
 | GHR-003 | GHR:20 | Provider-result `ordinal` member. | TBD at review | TODO |
 | GHR-004 | GHR:16-21 | Constructor retains provider, hover, ordinal. | TBD at review | TODO |
 | GHR-005 | GHR:27 | `executeProvider` member. | TBD at review | TODO |
-| GHR-006 | GHR:28-30 | Provider invocation receives model, position, token; no post-await cancellation check follows. | TBD at review | TODO |
+| GHR-006 | GHR:28-30 | Provider invocation receives model, position, token; neither a pre-invocation nor post-await cancellation check exists. | TBD at review | TODO |
 | GHR-007 | GHR:30 | Returned-promise rejection is contained as undefined; a synchronous provider throw rejects `executeProvider` itself. | TBD at review | TODO |
 | GHR-008 | GHR:31-33 | Missing or invalid result returns undefined. | TBD at review | TODO |
 | GHR-009 | GHR:34 | Valid result constructs provider result with ordinal. | TBD at review | TODO |
 | GHR-010 | GHR:37 | Async-iterable member defaults `recursive=false`. | TBD at review | TODO |
 | GHR-011 | GHR:38 | Registry providers are ordered for model/recursive flag. | TBD at review | TODO |
-| GHR-012 | GHR:39 | Provider index becomes stable ordinal. | TBD at review | TODO |
+| GHR-012 | GHR:39 | `map` eagerly invokes all ordered providers before iterable consumption, in registry order, and each provider index becomes its stable ordinal. | TBD at review | TODO |
 | GHR-013 | GHR:40 | Promise producer yields in resolution order. | TBD at review | TODO |
 | GHR-014 | GHR:40 | Undefined failures are coalesced out. | TBD at review | TODO |
 | GHR-015 | GHR:43 | `getHoversPromise` member defaults `recursive=false`. | TBD at review | TODO |
@@ -692,10 +818,10 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | GHR-017 | GHR:45 | Async iterable is consumed to completion. | TBD at review | TODO |
 | GHR-018 | GHR:46 | Each valid item contributes its hover. | TBD at review | TODO |
 | GHR-019 | GHR:48 | Collected hovers return in resolution order. | TBD at review | TODO |
-| GHR-020 | GHR:51-54 | Command `_executeHoverProvider` uses `CancellationToken.None`. | TBD at review | TODO |
-| GHR-021 | GHR:56-59 | Command `_executeHoverProvider_recursive` uses `None` and recursive `true`. | TBD at review | TODO |
+| GHR-020 | GHR:51-54 | Command `_executeHoverProvider` looks up the language-features service, then delegates registry/model/position with `CancellationToken.None`. | TBD at review | TODO |
+| GHR-021 | GHR:56-59 | Command `_executeHoverProvider_recursive` performs the same service lookup/delegation with `None` and recursive `true`. | TBD at review | TODO |
 | GHR-022 | GHR:61 | Hover validity member. | TBD at review | TODO |
-| GHR-023 | GHR:62 | Range must be defined. | TBD at review | TODO |
+| GHR-023 | GHR:62 | Only `undefined` range is rejected by this predicate; a runtime `null` range passes. | TBD at review | TODO |
 | GHR-024 | GHR:63 | Contents must be defined, truthy, and nonempty. | TBD at review | TODO |
 | GHR-025 | GHR:64 | Validity is range AND content predicates. | TBD at review | TODO |
 | HTY-001 | HTY:21 | Hover part retains owner participant. | TBD at review | TODO |
@@ -703,7 +829,7 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | HTY-003 | HTY:30 | Optional force-show-at-range member. | TBD at review | TODO |
 | HTY-004 | HTY:35 | Optional before-content ordering member. | TBD at review | TODO |
 | HTY-005 | HTY:39 | Part validity member consumes new anchor. | TBD at review | TODO |
-| HTY-006 | HTY:42-44 | Anchor type `Range = 1`. | TBD at review | TODO |
+| HTY-006 | HTY:42-43 | Anchor type `Range = 1`. | TBD at review | TODO |
 | HTY-007 | HTY:44 | Anchor type `ForeignElement = 2`. | TBD at review | TODO |
 | HTY-008 | HTY:48 | Range anchor constant type. | TBD at review | TODO |
 | HTY-009 | HTY:50 | Range anchor priority member. | TBD at review | TODO |
@@ -712,7 +838,7 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | HTY-012 | HTY:53 | Range anchor initial mouse Y member. | TBD at review | TODO |
 | HTY-013 | HTY:49-55 | Range anchor constructor retains fields. | TBD at review | TODO |
 | HTY-014 | HTY:56-58 | Range equality requires range type and equal range. | TBD at review | TODO |
-| HTY-015 | HTY:59-61 | Range adoption requires prior range and same start line. | TBD at review | TODO |
+| HTY-015 | HTY:59-61 | Range adoption requires a prior range anchor and compares `showAtPosition.lineNumber` with the new anchor's start line; it does not compare the two anchor ranges. | TBD at review | TODO |
 | HTY-016 | HTY:65 | Foreign anchor constant type. | TBD at review | TODO |
 | HTY-017 | HTY:67 | Foreign anchor priority member. | TBD at review | TODO |
 | HTY-018 | HTY:68 | Foreign anchor owner member. | TBD at review | TODO |
@@ -727,58 +853,113 @@ Abbreviations: `IHC` = `inlayHintsController.ts`; `IHF` = `inlayHints.ts`;
 | HTY-027 | HTY:162 | Participant hover ordinal member. | TBD at review | TODO |
 | HTY-028 | HTY:164 | Optional anchor-suggestion member. | TBD at review | TODO |
 | HTY-029 | HTY:165 | Synchronous computation member. | TBD at review | TODO |
-| HTY-030 | HTY:166 | Async computation receives cancellation token. | TBD at review | TODO |
+| HTY-030 | HTY:166 | Optional async computation receives anchor, line decorations, source, then cancellation token. | TBD at review | TODO |
 | HTY-031 | HTY:167 | Optional loading-message member. | TBD at review | TODO |
 | HTY-032 | HTY:176 | Participant constructor signature consumes editor. | TBD at review | TODO |
-| HTY-033 | HTY:180 | Registry owns participant constructor array. | TBD at review | TODO |
+| HTY-033 | HTY:180 | Registry owns a participant-constructor array initialized to empty. | TBD at review | TODO |
 | HTY-034 | HTY:182-184 | Register appends constructor. | TBD at review | TODO |
-| HTY-035 | HTY:186-188 | `getAll` returns registry array. | TBD at review | TODO |
+| HTY-035 | HTY:186-188 | `getAll` returns the mutable backing constructor array itself, not a copy. | TBD at review | TODO |
 | HTY-036 | HTY:198 | Widget `showsOrWillShow` member. | TBD at review | TODO |
 | HTY-037 | HTY:203 | Widget `hide` member. | TBD at review | TODO |
-| HTY-038 | HTY:85-159 | Explicit excluded sibling: status/action/color/context/rendered-hover types and implementation. | TBD at review | TODO |
-| HTY-039 | HTY:163,168-174 | Explicit excluded sibling: copy-button and render/accessibility/resize/hide/contents/scroll participant affordances. | TBD at review | TODO |
-| HTY-040 | HTY:178-190 | Exported `HoverParticipantRegistry` singleton constant constructs the anonymous registry class instance. | TBD at review | TODO |
-| TMV-001 | TMV:123 | Module model-identity counter starts `0`. | TBD at review | TODO |
-| TMV-002 | TMV:250,252 | Each model retains public `id` and private associated resource fields. | TBD at review | TODO |
-| TMV-003 | TMV:318-319 | Construction pre-increments `MODEL_ID`, then assigns `$model` plus the counter; the first ID is `$model1`. | TBD at review | TODO |
-| TMV-004 | TMV:309,321-325 | Null/undefined default creates exactly `inmemory://model/` plus `MODEL_ID`; otherwise supplied URI is retained exactly. | TBD at review | TODO |
-| TMV-005 | TMV:671-673 | Public URI getter returns associated resource without a disposed guard. | TBD at review | TODO |
-| TMV-006 | TMV:262-266 | `_versionId` and `_alternativeVersionId` are distinct; the alternative may decrease or repeat. | TBD at review | TODO |
-| TMV-007 | TMV:370-371 | Construction initializes both version fields to `1`. | TBD at review | TODO |
-| TMV-008 | TMV:737-738 | `getVersionId` first asserts model is not disposed. | TBD at review | TODO |
-| TMV-009 | TMV:739 | `getVersionId` returns internal version. | TBD at review | TODO |
-| TMV-010 | TMV:782-783 | Increase increments by exactly `1`. | TBD at review | TODO |
-| TMV-011 | TMV:784 | Same increase mirrors new value to alternative version. | TBD at review | TODO |
-| TMV-012 | TMV:521-545 | `setValue` has no equality no-op: buffer swaps before exactly one increment, which precedes reset/events. | TBD at review | TODO |
-| TMV-013 | TMV:547-552 | Equal EOL returns with no mutation, increment, or event. | TBD at review | TODO |
-| TMV-014 | TMV:560-575 | Changed EOL increments after mutation and before post-EOL/event work. | TBD at review | TODO |
-| TMV-015 | TMV:1506,1509,1512,1599-1601 | Empty content changes skip mutation/increment/event but still return reverse edits. | TBD at review | TODO |
-| TMV-016 | TMV:1513-1524 | Nonempty edit batch transforms decorations then increments exactly once. | TBD at review | TODO |
-| TMV-017 | TMV:1579-1595 | Only nonempty edit flow emits raw/public events carrying the post-increment version. | TBD at review | TODO |
-| TMV-018 | TMV:787-789 | `_overwriteVersionId` directly assigns supplied version and may decrease or reuse it. | TBD at review | TODO |
-| CTS-001 | CTS:9-15 | Token contract exposes readonly cancellation flag. | TBD at review | TODO |
-| CTS-002 | CTS:16-24 | Cancellation event contract covers listener, `thisArgs`, optional disposable bucket, once-only fire, and next-turn late listeners. | TBD at review | TODO |
-| CTS-003 | CTS:27-30 | Shortcut event schedules timeout `0`; disposal clears it. | TBD at review | TODO |
-| CTS-004 | CTS:49-52 | `None` is frozen, false, and uses `Event.None`. | TBD at review | TODO |
-| CTS-005 | CTS:54-57 | `Cancelled` is frozen, true, and uses shortcut event. | TBD at review | TODO |
-| CTS-006 | CTS:62 | Mutable canceled state starts false. | TBD at review | TODO |
-| CTS-007 | CTS:63 | Mutable emitter starts null and lazy. | TBD at review | TODO |
-| CTS-008 | CTS:65-67 | Already-canceled call is a no-op; first cancel flips the flag before notification. | TBD at review | TODO |
-| CTS-009 | CTS:68-71 | Missing emitter skips notification; existing emitter fires once then disposes. | TBD at review | TODO |
-| CTS-010 | CTS:75-77 | State getter returns flag. | TBD at review | TODO |
-| CTS-011 | CTS:79-82 | Event getter returns shortcut after cancellation. | TBD at review | TODO |
-| CTS-012 | CTS:83-86 | Before cancellation, event getter creates emitter only if absent, reuses it, and returns its event. | TBD at review | TODO |
-| CTS-013 | CTS:89-94 | Dispose with no emitter is a no-op; otherwise emitter disposes/resets null while cancellation flag is unchanged. | TBD at review | TODO |
-| CTS-014 | CTS:99 | Source token starts undefined. | TBD at review | TODO |
-| CTS-015 | CTS:100 | Parent listener starts undefined and is source-owned. | TBD at review | TODO |
-| CTS-016 | CTS:102-104 | Absent parent installs no listener; present parent subscribes `this.cancel` with source context. | TBD at review | TODO |
-| CTS-017 | CTS:106-113 | Token getter lazily creates a mutable token; existing mutable or shared singleton token is returned unchanged. | TBD at review | TODO |
-| CTS-018 | CTS:115-121 | Cancel-before-token assigns shared `Cancelled` without allocation. | TBD at review | TODO |
-| CTS-019 | CTS:122-125 | Existing `MutableToken` cancels; existing `None` or `Cancelled` singleton cases are no-ops. | TBD at review | TODO |
-| CTS-020 | CTS:128-131 | Default `false` skips cancel; `true` performs cancel first. | TBD at review | TODO |
-| CTS-021 | CTS:132 | Optional parent listener disposes, but field is not cleared, so repeated dispose repeats that call. | TBD at review | TODO |
-| CTS-022 | CTS:133-136 | `dispose(false)` before token read stores shared `None`; later cancel is a no-op. | TBD at review | TODO |
-| CTS-023 | CTS:137-140 | Mutable dispose retires listeners but keeps same token/flag; singleton cases are no-ops. | TBD at review | TODO |
+| HTY-038 | HTY:86 | Excluded `IEditorHoverStatusBar.addAction` member. | TBD at review | TODO |
+| HTY-039 | HTY:87 | Excluded `IEditorHoverStatusBar.append` member. | TBD at review | TODO |
+| HTY-040 | HTY:91 | Excluded `IEditorHoverAction.setEnabled` member. | TBD at review | TODO |
+| HTY-041 | HTY:95 | Excluded `IEditorHoverColorPickerWidget.layout` member. | TBD at review | TODO |
+| HTY-042 | HTY:102 | Excluded `IEditorHoverContext.onContentsChanged` member. | TBD at review | TODO |
+| HTY-043 | HTY:106 | Excluded `IEditorHoverContext.setMinimumDimensions` member. | TBD at review | TODO |
+| HTY-044 | HTY:110 | Excluded `IEditorHoverContext.hide` member. | TBD at review | TODO |
+| HTY-045 | HTY:114 | Excluded `IEditorHoverContext.focus` member. | TBD at review | TODO |
+| HTY-046 | HTY:121 | Excluded `IEditorHoverRenderContext.fragment` member. | TBD at review | TODO |
+| HTY-047 | HTY:125 | Excluded `IEditorHoverRenderContext.statusBar` member. | TBD at review | TODO |
+| HTY-048 | HTY:132 | Excluded `IRenderedHoverPart.hoverPart` member. | TBD at review | TODO |
+| HTY-049 | HTY:136 | Excluded `IRenderedHoverPart.hoverElement` member. | TBD at review | TODO |
+| HTY-050 | HTY:143 | Excluded `IRenderedHoverParts.renderedHoverParts` member. | TBD at review | TODO |
+| HTY-051 | HTY:151 | Excluded `RenderedHoverParts.renderedHoverParts` parameter-property. | TBD at review | TODO |
+| HTY-052 | HTY:151 | Excluded optional `RenderedHoverParts.disposables` parameter-property. | TBD at review | TODO |
+| HTY-053 | HTY:151 | Excluded `RenderedHoverParts` constructor retains both parameter-properties. | TBD at review | TODO |
+| HTY-054 | HTY:153-158 | Excluded `RenderedHoverParts.dispose` visits and disposes parts in array order before the aggregate-disposable check. | TBD at review | TODO |
+| HTY-055 | HTY:157 | Present aggregate disposable is retired after all parts; absence is a no-op. | TBD at review | TODO |
+| HTY-056 | HTY:163 | Excluded optional participant `hideCopyButton` member. | TBD at review | TODO |
+| HTY-057 | HTY:168 | Excluded participant `renderHoverParts` member. | TBD at review | TODO |
+| HTY-058 | HTY:169 | Excluded participant `getAccessibleContent` member. | TBD at review | TODO |
+| HTY-059 | HTY:170 | Excluded optional participant `handleResize` member. | TBD at review | TODO |
+| HTY-060 | HTY:171 | Excluded optional participant `handleHide` member. | TBD at review | TODO |
+| HTY-061 | HTY:172 | Excluded optional participant `handleContentsChanged` member. | TBD at review | TODO |
+| HTY-062 | HTY:173 | Excluded optional participant `handleScroll` member. | TBD at review | TODO |
+| HTY-063 | HTY:178-190 | Exported `HoverParticipantRegistry` singleton constant constructs the anonymous registry class instance. | TBD at review | TODO |
+| TMV-001 | TMV:123 | Module model-identity counter `MODEL_ID` starts `0`. | TBD at review | TODO |
+| TMV-002 | TMV:250 | Public `id` field retains physical model-instance ID text. | TBD at review | TODO |
+| TMV-003 | TMV:252 | Private `_associatedResource` field retains the model URI. | TBD at review | TODO |
+| TMV-004 | TMV:262 | Private monotonic `_versionId` field. | TBD at review | TODO |
+| TMV-005 | TMV:263-266 | Private `_alternativeVersionId` may decrease or repeat through undo/redo. | TBD at review | TODO |
+| TMV-006 | TMV:318-325,370-371 | Constructor identity slice executes `MODEL_ID++`, assigns `$model` plus the new counter (first ID `$model1`), chooses the resource, then later initializes both version fields to exactly `1`. | TBD at review | TODO |
+| TMV-007 | TMV:309,321-323 | Null or undefined resource creates exactly `inmemory://model/` plus current `MODEL_ID`. | TBD at review | TODO |
+| TMV-008 | TMV:323-325 | Supplied resource is retained exactly. | TBD at review | TODO |
+| TMV-009 | TMV:671-673 | Public `uri` getter returns the associated resource without a disposed guard. | TBD at review | TODO |
+| TMV-010 | TMV:737-740 | `getVersionId` asserts not disposed, then returns internal version. | TBD at review | TODO |
+| TMV-011 | TMV:782-785 | `_increaseVersionId` adds exactly `1`, then mirrors the new value to alternative version. | TBD at review | TODO |
+| TMV-012 | TMV:484-493 | Public `setValue` asserts live model, rejects null/undefined, creates a text buffer for every other input without an equality no-op, then delegates. | TBD at review | TODO |
+| TMV-013 | TMV:487-489 | Null or undefined `setValue` input throws before buffer creation or version mutation. | TBD at review | TODO |
+| TMV-014 | TMV:514-545 | `_setValueFromTextBuffer` captures old extent, swaps buffer/disposable, increments exactly once, clears decorations/history/settings, then calls the raw/public flush-emission path. | TBD at review | TODO |
+| TMV-015 | TMV:495-511 | `_createContentChanged2` observes current post-transition version through `getVersionId()` in the public event payload. | TBD at review | TODO |
+| TMV-016 | TMV:547-575 | `setEOL` asserts live model; changed flow runs before-EOL hook, mutates buffer, increments once, runs after-EOL hook, then emits raw/public events with post-increment version. | TBD at review | TODO |
+| TMV-017 | TMV:550-552 | Equal EOL returns before mutation, increment, hooks, or events. | TBD at review | TODO |
+| TMV-018 | TMV:1503-1601 | `_doApplyEdits` applies buffer edits and trim state first; its content-change branch controls decoration transforms, one version increment, raw/public events, and final reverse-edit return. | TBD at review | TODO |
+| TMV-019 | TMV:1512-1599 | Nonempty changes transform every decoration first, increment exactly once, build raw changes, then emit both events carrying post-increment version. | TBD at review | TODO |
+| TMV-020 | TMV:1506,1509-1512,1599-1601 | After buffer apply and trim-state assignment, empty `contentChanges` skips decoration transforms, version increment, and event emission, then returns `undefined` or `reverseEdits`. | TBD at review | TODO |
+| TMV-021 | TMV:787-789 | `_overwriteVersionId` directly assigns a supplied version that may decrease/repeat and leaves alternative version unchanged. | TBD at review | TODO |
+| TMV-022 | TMV:760-763 | Explicit excluded sibling `getAlternativeVersionId` asserts live model, then returns alternative version. | TBD at review | TODO |
+| TMV-023 | TMV:791-793 | Explicit excluded sibling `_overwriteAlternativeVersionId` directly assigns its supplied value. | TBD at review | TODO |
+| TMV-024 | TMV:284,377,2030 | Explicit excluded decoration member `_instanceId` is initialized from `singleLetterHash(MODEL_ID)` and prefixes generated decoration IDs. | TBD at review | TODO |
+| CTS-001 | CTS:14 | Token contract readonly `isCancellationRequested` property. | TBD at review | TODO |
+| CTS-002 | CTS:16-24 | Token contract readonly cancellation event property covers listener, context, optional disposable bucket, once-only fire, and next-turn late listeners. | TBD at review | TODO |
+| CTS-003 | CTS:27-30 | Frozen `shortcutEvent` schedules callback/context with exact timeout `0` and returns disposal that clears the handle. | TBD at review | TODO |
+| CTS-004 | CTS:49-52 | Frozen `None` token is false and uses `Event.None`. | TBD at review | TODO |
+| CTS-005 | CTS:54-57 | Frozen `Cancelled` token is true and uses `shortcutEvent`. | TBD at review | TODO |
+| CTS-006 | CTS:62 | Mutable canceled-state field starts `false`. | TBD at review | TODO |
+| CTS-007 | CTS:63 | Mutable emitter field starts `null`. | TBD at review | TODO |
+| CTS-008 | CTS:65-73 | `MutableToken.cancel` performs the one-way state/notification transition. | TBD at review | TODO |
+| CTS-009 | CTS:66-72 | Only the first cancel flips the flag before notification; repeated cancel is a no-op. | TBD at review | TODO |
+| CTS-010 | CTS:68-71 | Existing emitter fires once and is disposed/reset; missing emitter skips notification. | TBD at review | TODO |
+| CTS-011 | CTS:75-77 | `isCancellationRequested` getter returns the flag. | TBD at review | TODO |
+| CTS-012 | CTS:79-87 | `onCancellationRequested` getter returns shortcut or one lazy emitter event. | TBD at review | TODO |
+| CTS-013 | CTS:80-82 | Already-canceled getter returns `shortcutEvent` immediately. | TBD at review | TODO |
+| CTS-014 | CTS:83-85 | Before cancellation, missing emitter is allocated; existing emitter is reused. | TBD at review | TODO |
+| CTS-015 | CTS:89-94 | `MutableToken.dispose` retires only listener state and leaves cancellation flag unchanged. | TBD at review | TODO |
+| CTS-016 | CTS:90-93 | Existing emitter disposes and resets to `null`; missing emitter is a no-op. | TBD at review | TODO |
+| CTS-017 | CTS:99 | Source token field starts `undefined`. | TBD at review | TODO |
+| CTS-018 | CTS:100 | Parent-listener field starts `undefined` and is source-owned. | TBD at review | TODO |
+| CTS-019 | CTS:102-104 | Source constructor derives its optional parent listener. | TBD at review | TODO |
+| CTS-020 | CTS:103 | Present parent subscribes `this.cancel` with source context; absent parent installs nothing. | TBD at review | TODO |
+| CTS-021 | CTS:106-113 | `token` getter returns the current singleton/mutable token. | TBD at review | TODO |
+| CTS-022 | CTS:107-111 | Missing token lazily allocates one `MutableToken` before return. | TBD at review | TODO |
+| CTS-023 | CTS:115-126 | Source `cancel` chooses allocation-free canceled singleton, mutable cancellation, or singleton no-op. | TBD at review | TODO |
+| CTS-024 | CTS:116-121 | Cancel before token read stores shared `Cancelled` without allocation. | TBD at review | TODO |
+| CTS-025 | CTS:122-125 | Existing `MutableToken` delegates to its cancel transition. | TBD at review | TODO |
+| CTS-026 | CTS:122-126 | Existing `None` or `Cancelled` singleton takes the nonmutable no-op path. | TBD at review | TODO |
+| CTS-027 | CTS:128-141 | Source `dispose` optionally cancels, disposes parent listener, then chooses no-token initialization, mutable-listener disposal, or singleton no-op. | TBD at review | TODO |
+| CTS-028 | CTS:129-131 | `cancel=true` performs cancel first; default `false` skips it. | TBD at review | TODO |
+| CTS-029 | CTS:132 | Present parent listener disposes; absence is a no-op, and the field is not cleared so repeated dispose repeats the call. | TBD at review | TODO |
+| CTS-030 | CTS:133-136 | Dispose before token read stores shared `None`; later cancel is a no-op. | TBD at review | TODO |
+| CTS-031 | CTS:137-140 | Existing mutable token disposes listeners but retains the same token and flag. | TBD at review | TODO |
+| CTS-032 | CTS:137-141 | Existing singleton token takes the nonmutable no-op path. | TBD at review | TODO |
+| CTS-033 | CTS:34-46 | Explicit excluded `isCancellationToken` member accepts exact singleton/mutable identities, rejects nonobjects, and otherwise performs structural boolean/event checks. | TBD at review | TODO |
+| CTS-034 | CTS:35-37 | `None` or `Cancelled` identity returns `true` immediately. | TBD at review | TODO |
+| CTS-035 | CTS:38-40 | `MutableToken` instance returns `true` immediately. | TBD at review | TODO |
+| CTS-036 | CTS:41-43 | Falsy or nonobject input returns `false` before structural checks. | TBD at review | TODO |
+| CTS-037 | CTS:144-148 | Explicit excluded `cancelOnDispose` creates a source, adds one store-owned disposer that cancels it, then returns its token. | TBD at review | TODO |
+| CTS-038 | CTS:158 | Excluded pool `_source` field starts a fresh cancellation source. | TBD at review | TODO |
+| CTS-039 | CTS:159 | Excluded pool `_listeners` owns token subscriptions. | TBD at review | TODO |
+| CTS-040 | CTS:161 | Excluded pool `_total` starts `0`. | TBD at review | TODO |
+| CTS-041 | CTS:162 | Excluded pool `_cancelled` starts `0`. | TBD at review | TODO |
+| CTS-042 | CTS:163 | Excluded pool `_isDone` starts `false`. | TBD at review | TODO |
+| CTS-043 | CTS:165-167 | Excluded pool `token` getter returns source token. | TBD at review | TODO |
+| CTS-044 | CTS:173-192 | Excluded pool `add` increments total or retains one self-disposing cancellation listener that increments canceled count and rechecks. | TBD at review | TODO |
+| CTS-045 | CTS:174-176 | Adding after pool completion returns before counters/listeners. | TBD at review | TODO |
+| CTS-046 | CTS:180-184 | Already-canceled input increments canceled count, checks completion, and returns before subscription. | TBD at review | TODO |
+| CTS-047 | CTS:194-200 | Excluded pool `_check` evaluates completion and performs its ordered transition. | TBD at review | TODO |
+| CTS-048 | CTS:195-199 | Only not-done, positive-total, exact total=canceled state marks done, disposes listeners, then cancels pool source. | TBD at review | TODO |
+| CTS-049 | CTS:202-205 | Excluded pool `dispose` retires listeners before disposing source. | TBD at review | TODO |
 <!-- SOURCE_LEDGER_END -->
 
 Mechanical review gate: stop after this inventory/ledger documentation
@@ -786,7 +967,7 @@ milestone. No product or test code is authorized by this status.
 
 ### Separate local ownership audit
 
-The local audit has **87 rows** and is deliberately outside the 581-row
+The local audit has **87 rows** and is deliberately outside the 759-row
 pinned-source denominator. It records current implementation and test authority;
 it does not pre-approve any target mapping or deviation.
 
@@ -797,7 +978,7 @@ it does not pre-approve any target mapping or deviation.
 | LA-003 | Identity | `viewer/common/model/text_model.mbt:91` | Construction initializes internal version to exactly `1`. |
 | LA-004 | Identity | `viewer/common/model/text_model.mbt:449-455` | `get_version_id` returns internal version without a dispose assertion. |
 | LA-005 | Identity | `viewer/common/model/text_model.mbt:458-462` | `increase_version_id` adds exactly `1`; alternative-version mirroring is absent. |
-| LA-006 | Identity | `viewer/common/model/text_model.mbt:558-593` | Whole-value replacement orders snapshot swap, one version increment, decoration clear, then raw/public flush emission. |
+| LA-006 | Identity | `viewer/common/model/text_model.mbt:558-593,601-608` | Whole-value replacement orders snapshot swap, one version increment, and decoration clear, then calls the raw/public flush-emission path; delivery is suppressed while the model is disposing. |
 | LA-007 | Identity | `viewer/common/model/text_model.mbt:31,94; viewer/common/model/text_model_decorations.mbt:59-68` | `instance_id` is a non-globally-unique decoration prefix from a counter/hash, not physical identity or a safe freshness key. |
 | LA-008 | Identity | `viewer/common/model/text_model.mbt:155-163` | Distinct models with equal URI/host version pass; revision, internal version, instance ID, and physical equality are ignored. |
 | LA-009 | Identity | `viewer/viewer.mbt:341-346; viewer/registry.mbt:15; viewer/editor_events.mbt:500,515,578-582` | Marker refresh plus inlay and hover completions all delegate freshness to that helper. |
@@ -820,7 +1001,7 @@ it does not pre-approve any target mapping or deviation.
 | LA-026 | Inlay | `viewer/registry.mbt:6-29` | `request_model_features` launches one unretained `async_run` per call. |
 | LA-027 | Inlay | `viewer/registry.mbt:10-28` | No task handle, source, request generation, or disposable owner surrounds launch. |
 | LA-028 | Inlay | `viewer/common/languages/languages.mbt:176-189` | Callee creates an owner-inaccessible token and captures full-range length once, while passing the live model object to providers. |
-| LA-029 | Inlay | `viewer/common/languages/languages.mbt:182-195` | Every provider receives the same token and captured range sequentially in registry order. |
+| LA-029 | Inlay | `viewer/common/languages/languages.mbt:182-195` | Each active matching entry encountered by the live index loop receives the same token/captured range sequentially in then-current registry order; the entries array is not snapshotted. |
 | LA-030 | Inlay | `viewer/common/languages/languages.mbt:185-189` | Active/selector checks occur only before await; there is no post-await registration check. |
 | LA-031 | Inlay | `viewer/common/languages/languages.mbt:189-194` | Exact live model/captured range/token are passed; every error, including cancellation-shaped errors, is logged and becomes `[]`. |
 | LA-032 | Inlay | `viewer/common/languages/languages.mbt:195-197` | Post-await append has no token/disposed/version/generation/active recheck and retains no disposer or provider set. |
@@ -837,7 +1018,7 @@ it does not pre-approve any target mapping or deviation.
 | LA-043 | Inlay | `viewer/viewer.mbt:855-887; viewer/registry.mbt:10-28` | Viewer disposal likewise leaves provider work/logging alive until completion despite later guard failure. |
 | LA-044 | Inlay | `viewer/inlay_hints_host_wbtest.mbt:15-57` | Tests install resolved arrays directly; request races are untested. |
 | LA-045 | Inlay | `viewer/registry.mbt:10-24; viewer/inlay_hints_host.mbt:87-98` | With no version/identity/generation/token ordering, last finisher wins; an old empty result can clear newer decoration IDs. |
-| LA-046 | Inlay | `viewer/common/languages/languages.mbt:19-32,109-116,184-197` | Registry exposes no observed change event; disposing an in-flight provider removes it from registry but its post-await result is still accepted. |
+| LA-046 | Inlay | `viewer/common/languages/languages.mbt:19-32,109-116,184-197` | Registry exposes no observed change event; disposing an in-flight provider removes it from the live entries array but its post-await result is still accepted, and the index shift can skip a later provider. |
 | LA-047 | Hover | `viewer/contrib/hover/browser/content_hover_controller.mbt:8-45` | Controller owns operation state, react generation, target, notification token, decorations. |
 | LA-048 | Hover | `viewer/editor_events.mbt:60-80` | Sticky mouse grace uses raw `set_timeout` and discards handle. |
 | LA-049 | Hover | `viewer/editor_events.mbt:65-76` | Callback mutates only when pending and captured react token still match. |
@@ -850,13 +1031,13 @@ it does not pre-approve any target mapping or deviation.
 | LA-056 | Hover | `viewer/contrib/hover/hover_participants.mbt:352-387` | Public `compute_async` aggregates sequentially (test-used) and production `compute_async_each` streams sequentially; neither path is cancelable. |
 | LA-057 | Hover | `viewer/contrib/hover/hover_participants.mbt:218-240` | Markdown async participant accepts no token and calls `hover_at`. |
 | LA-058 | Hover | `viewer/common/languages/languages.mbt:120-128` | Hover provider path creates `CancellationToken::none()`. |
-| LA-059 | Hover | `viewer/common/languages/languages.mbt:128-144` | Providers run sequentially and return first nonempty result. |
+| LA-059 | Hover | `viewer/common/languages/languages.mbt:128-144` | Providers run sequentially and return the first `Some`, even when its `contents` is empty; that stops later providers before the markdown participant drops empty contents. |
 | LA-060 | Hover | `viewer/common/languages/languages.mbt:133-142` | Provider failures are contained/logged; scan continues on `None`. |
 | LA-061 | Hover | `viewer/editor_events.mbt:493-506` | Async item compares only current-model helper plus integer token; no anchor, physical identity, internal version, generation, or cancellation state. |
 | LA-062 | Hover | `viewer/editor_events.mbt:509-522` | Async done has the same helper/token-only guard before completion/notification. |
 | LA-063 | Hover | `viewer/common/model/text_model.mbt:155-163` | Physical same-URI/version replacement can pass both hover guards. |
 | LA-064 | Hover | `viewer/editor_events.mbt:410-419` | Sync timer rejects a mismatched token only; a reused equal token passes compute/apply. |
-| LA-065 | Hover | `viewer/editor_events.mbt:424-432` | Loading timer rejects a mismatched token only; a reused equal token passes state change. |
+| LA-065 | Hover | `viewer/editor_events.mbt:424-432` | Loading timer rejects a mismatched token only; a reused equal token passes the freshness guard, then changes state only if the current operation is `WaitingForAsync`. |
 | LA-066 | Hover | `viewer/editor_events.mbt:524-541` | Notification requires matching token, completion, and not-yet-notified token. |
 | LA-067 | Hover | `viewer/attach_model.mbt:58-69; viewer/hover_contribution.mbt:14-92` | Content event fires, but hover contribution has no content-cancel subscription. |
 | LA-068 | Hover | `viewer/viewer.mbt:660-691` | Detach empties hover, cancels react generation, resets inlay, disposes model bundle. |
@@ -865,7 +1046,7 @@ it does not pre-approve any target mapping or deviation.
 | LA-071 | Hover | `viewer/viewer.mbt:855-900` | Viewer disposal detaches, disposes contributions, then retires hover widget state. |
 | LA-072 | Hover | `viewer/viewer.mbt:140-167` | `ModelData.dispose` retires swap listeners/view/view model, not async features. |
 | LA-073 | Hover | `viewer/editor_events.mbt:60-80,367-405,475-490` | After cancel/detach, timers/tasks run; guards suppress some effects but do not cancel resources. |
-| LA-074 | Hover | `viewer/contrib/hover/hover_controller_wbtest.mbt:31-130; viewer/contrib/hover/hover_reconciliation_wbtest.mbt:1-175; viewer/contrib/hover/content_hover_computer_wbtest.mbt:18-64; viewer/common/languages/languages_registry_wbtest.mbt:18-37` | Existing authority is pure monotonic-controller transitions, within-model reconciliation, immediate computer results, and provider-failure logging; no deterministic deferred Viewer-path race covers set_value, replacement/reuse, detach/dispose, or cancellation. |
+| LA-074 | Hover | `viewer/contrib/hover/hover_controller_wbtest.mbt:31-130; viewer/contrib/hover/hover_reconciliation_wbtest.mbt:1-175; viewer/contrib/hover/content_hover_computer_wbtest.mbt:18-64; viewer/common/languages/languages_registry_wbtest.mbt:18-37; viewer/contrib/hover/browser/hover_events_wbtest.mbt:1-102; viewer/contrib/hover/hover_interaction_wbtest.mbt:1-114; viewer/contrib/hover/hover_anchor_wbtest.mbt:1-198; viewer/contrib/hover/hover_widget_geometry_wbtest.mbt:1-134; viewer/contrib/hover/browser/content_hover_widget_wbtest.mbt:1-72; viewer/contrib/hover/hover_render_wbtest.mbt:1-211; tests/browser/smoke/hover_stability.spec.js:1-71` | Existing authority also covers pure interaction predicates, anchor candidates/semantics, widget geometry/rendering, and browser hover stability; none is a deterministic deferred Viewer-path race across `set_value`, replacement/reuse, detach/dispose, or cancellation. |
 | LA-075 | Hover | `viewer/contrib/hover/hover_registry.mbt:7-64; viewer/contrib/hover/hover_participants.mbt:373-387` | Registry preserves factory order and async computation serializes it. |
 | LA-076 | Hover | `viewer/editor_events.mbt:477-485,568-574` | Launch snapshots inlay-hint array; later replacement is not tied to task lifetime. |
 | LA-077 | Hover | `viewer/editor_events.mbt:544-565` | Highlight apply has guards, range dedupe, and owner-scoped delta. |
@@ -876,9 +1057,48 @@ it does not pre-approve any target mapping or deviation.
 | LA-082 | Inlay | `viewer/viewer.mbt:585-626` | `set_value` no-ops when disposed/no model, otherwise mutates the same model; `set_model` no-ops for same physical object, while a distinct same-URI/version model detaches, attaches, and starts a request. |
 | LA-083 | Inlay | `viewer/registry.mbt:10-24; viewer/common/model/text_model.mbt:9,23-26,155-163,558-593; viewer/inlay_hints_host.mbt:87-98` | `set_value` changes only internal version, so both same-object completions pass; distinct same-URI/host-version completion also passes and applies to the new current model. |
 | LA-084 | Inlay | `viewer/common/model/set_value_wbtest.mbt:8-39,84-97; viewer/set_value_api_wbtest.mbt:10-31` | Tests cover version increments, same-instance retention, and stale decoration clearing, but never hold a provider request across `set_value`. |
-| LA-085 | Inlay | `viewer/common/languages/languages_registry_wbtest.mbt:18-72; language/cancellation.mbt:1-31` | Language tests cover hover failure/order only; there is no inlay aggregation or cancellation-token test. |
+| LA-085 | Inlay | `viewer/common/languages/languages_registry_wbtest.mbt:18-72; language/cancellation.mbt:1-31` | Async language-provider tests cover hover failure/order, and a separate test covers token-provider registration disposal; there is no inlay aggregation or cancellation-token test. |
 | LA-086 | Inlay | `tests/browser/moonbit/component/viewer_api_scenario.mbt:62-73,98-116; tests/browser/component/viewer_api.spec.js:56-71` | Browser authority is an immediate token-ignoring happy path only: no delay, cancel, dispose, failure, or multi-provider case. |
 | LA-087 | Inlay | `viewer/lifecycle_ownership_wbtest.mbt:69-108,168-188; tests/browser/moonbit/model_swap/model_swap_scenario.mbt:99-228` | Detach/dispose are tested without a pending inlay request, so they prove neither cancellation nor stale-result rejection. |
+
+## Proposed Gate B Target Contract
+
+These are review proposals, not implemented behavior or terminal ledger
+statuses.
+
+| Contract | Required implementation shape |
+|---|---|
+| Request stamp | Every inlay/hover operation captures the physical `TextModel`, its `get_version_id()`, a controller-lifetime monotonic generation, and a caller-owned cancellation token. URI, host `version`, `revision`, and decoration `instance_id` are not freshness keys. |
+| Freshness predicate | A continuation may mutate only while the Viewer/controller is live, the captured model is physically current, its internal version is unchanged, the generation is current, and the token is not canceled. |
+| Cancellation owner | The current inlay session or hover operation owns one source/store and cancels it before replacement, content/model invalidation, detach, model disposal, Viewer disposal, or operation disposal. Generations never reset on model swaps. |
+| Timers | Mouse-react and hover async/sync/loading timers have clearable owned handles. Cancellation clears the handle and invalidates its generation; callbacks retain guards for a dispatch race. |
+| Provider chain | The caller creates the token and forwards that same value through computer/participant/registry/provider boundaries. Ordinary failures remain contained/logged; cancellation never commits data. |
+| Apply boundary | Only the newest request may replace controller data, delta decorations, change hover state, schedule rendering, or fire hover resolution. A stale empty result cannot clear a newer nonempty result. |
+
+`same_identity_and_version` is not approved as async authority. Review must
+decide whether a non-async URI/host-version consumer still needs the helper or
+whether implementation removes it.
+
+### Inventory review checklist — stop gate
+
+- [ ] Reviewer confirms the strict denominator is 759 atomic source rows with
+  exact per-prefix counts and no derived/local row counted as source.
+- [ ] Reviewer confirms complete source methods are not split across scope
+  boundaries and every excluded sibling member has its own row.
+- [ ] Reviewer confirms the 87-row local audit and test-authority corrections
+  against the current checkout.
+- [ ] Reviewer approves or amends physical model/internal-version/generation/
+  token freshness and monotonic generations across swaps.
+- [ ] Reviewer approves controller-owned cancellation sources and clearable
+  timer handles, including detach/dispose ordering.
+- [ ] Reviewer assigns every row a MoonBit target and planned terminal
+  disposition while leaving its working status `TODO` until evidence lands.
+- [ ] Reviewer approves the branch/configuration matrix below.
+- [ ] Corrected inventory is committed separately; only then may product/test
+  implementation begin.
+
+**Review gate:** stopped. Commit and independently approve this corrected
+denominator before changing product or test code.
 
 
 ## Test-Authority Corrections
@@ -893,28 +1113,39 @@ it does not pre-approve any target mapping or deviation.
 
 ## Required Test Matrix (Phase 4)
 
-Package/white-box tests cover HoverOperation, cancellation tokens,
-InlayHintsFragments, and controller state machines with controlled deferred
-results.
+All deferred work uses controlled completion, never a sleep as the result
+oracle. A test-only inlay provider and hover provider expose `started`,
+per-call `release`, and consumer-side `settled` signals. Outcomes include
+nonempty, empty/`None`, ordinary error, and a result/error returned after the
+provider observes cancellation. White-box tests await the internal request
+body; production alone wraps it in `async_run`.
 
-Headless Viewer integration must control request completion order:
+| Group | Behavior variables and mandatory combinations | Harness / assertions |
+|---|---|---|
+| Cancellation lifecycle | Token read before/after cancel; listener count 0/1/3; early/late/disposed listener; cancel once/twice; dispose false/true before/after token read; parent absent/present; repeated dispose | Port pinned `cancellation.test.ts` labels `None`, `cancel before token`, `cancel happens only once`, `cancel calls all listeners`, `token stays the same`, both `dispose calls no listeners` cases, `dispose does not cancel`, and `parent cancels child`. Assert flag-before-notify, identity, exact-once, late-next-turn, and order on every target. Pool tests remain row-level DEFERRED evidence. |
+| Model/version stamp | Same/different physical model × same/different URI × same host version; internal version unchanged/changed; current/stale generation; live/canceled token; Viewer live/disposed | Model/root white-box tests. Include same object after equal and unequal `set_value`, distinct same-URI/same-host-version objects, detach, model dispose, Viewer dispose. Only the all-current combination applies. Port pinned `setValue eventing`; EOL and incremental-edit rows take their owning-plan/N-A dispositions. |
+| IHC session/update | Enabled off/on/onUnlessPressed/other mode; model/provider absent/present; cache miss/empty/nonempty; modifier unchanged/changed; provider event scheduled/idle; request success/canceled/error; scroll top changed/unchanged; content timeout replacement; option match/nonmatch | Controller/model tests or explicit DEFERRED/N-A row evidence. Assert cleanup-before-return, reset cancellation order, four zero-delay schedules, debounce floor 800, watched-provider ownership, and cancel-before-apply. |
+| IHC ranges/anchors/apply | View ranges empty/one/many, disjoint/touching/overlap, ±30 clamp; duplicate item, missing/current decoration range; affected/unaffected old decoration; missing current model; cap at 1500; cursor/fixed-length branches and padding shapes | DOM-free range/copy tests plus JS decoration integration where planned. Assert sorted merge, no duplicate copy, transaction pairing, class-ref disposal, scroll capture/restore, and exact render/style DEFERRED mapping for every excluded row. |
+| IHF provider/anchor | Providers 0/1/2 × ranges 0/1/2; completion orders A→B/B→A; empty/change-event/error; canceled/disposed after settle; word/no-word; one-character token; token indices 0/1/2/count−2/count−1; leading/trailing `else if` | Language/fragment tests. Assert same token/model/range, completion-order accumulation, independent error containment, post-settle guard, before/after anchor direction, exact +1 columns, sort/dedupe/disposal seams, and resolve/command rows' explicit deferred disposition. |
+| Hover timing/state | Delayed and every non-Delayed value × each operation state; delay 0/1/2/300/301; before/at half, full, 3×; async/sync computer absent/present; falsy/truthy item; error; async completes before sync, after sync, after loading; cancel/dispose iterable absent/present | Hover controller tests with a manual scheduler/clearable handles. Assert no pre-delay emission, exact state/order, result snapshot, latest options, loading only while waiting, scheduler replacement/cancel/dispose, and late callback rejection. |
+| Hover controller/wrapper | Enabled/sticky/hidingDelay; context-menu ignore; model versus content change; scroll neither/top/left/both; mouse down/up/leave/move retention; runner scheduled/idle; key modifier/chord/Tab/default; invisible anchor absent/present; null/equal/compatible/incompatible anchor; loading factory absent/null/present | Existing interaction/browser white-box suites plus focused cases. Assert cancel-before-hide, content cancels pending react, model change cancels+hides, and every input early return. |
+| Hover reconciliation | Previous visible complete × incoming complete × empty × insist; sticky-closer with/without anchor; participant suggester absent/null/present; action target element/non-element; mouseleave missing/outside/inside editor | Wrapper/controller tests. Pin the no-previous-complete fall-through: incomplete or empty+insist may already have applied before the later return. Assert cancel-before-clear and identity no-ops. |
+| Hover computer/provider | Range/foreign anchor × marker support; invalid/valid line; whole/cross-line decoration; ordinary/collapsed containment at ±1 and just outside; async participant absent/present; provider `Some` empty/nonempty/`None`/throw; cancellation before/after completion; eager invocation and resolution order | Hover/languages tests. Assert identical token propagation, source-exact selection/order, first-`Some` local policy, contained logs, and canceled data never reaching reconciliation. Provider scoring/recursive/command rows receive P2 DEFERRED/N-A evidence rather than implicit omission. |
+| Lifecycle races | Outstanding inlay/hover during `set_value`, same-URI/same-host-version replacement, new target, model dispose, detach, Viewer dispose; provider honors/ignores cancellation; newest request succeeds afterward | JS headless Viewer tests. Assert controller data, decoration IDs/ranges, hover view, resolution count/revision, render generation, token observation, and logs. Run both old-last and new-last completion permutations; stale nonempty is ignored and stale empty cannot clear new data. |
+| Browser-visible result | Pending old inlay/hover, then content change or same-URI replacement; release newest then oldest; detach/dispose pending | One direct-Viewer component scenario plus Playwright. Assert newest inlay/hover text appears once, stale text never appears, stale empty cannot remove it, teardown leaves no widget/decoration, and no stale resolution report fires. |
 
-- request A starts, set_value occurs, request B starts, then A completes last;
-- model A request starts, same-URI model B attaches, then A completes;
-- model A and B reuse the same host version and first operation token;
-- canceled provider returns Some, None, or throws after cancellation;
-- new hover target cancels the previous operation;
-- content change occurs before a delayed mouse-react callback;
-- detach to None and Viewer.dispose occur while work is outstanding;
-- a valid newest request still applies hints and decoration changes once.
+Meaningful boundaries also include missing distance, `isAfterLines`, epsilon
+`0`, `epsilon−δ`, and `epsilon`, range touching versus one-column gap, and
+generation immediately before/current/after. Existing hover interaction,
+anchor, widget, geometry, render, and browser-stability tests remain evidence
+only after their rows are reconciled; they do not substitute for a deferred
+Viewer-provider race.
 
-Assert both positive and negative effects: controller state, injected
-decorations, hover notification, render scheduling, and log containment.
-Prefer deterministic deferred promises/test providers over timing sleeps.
-
-Browser/component tests cover same-URI model replacement while hover/inlay work
-is pending and assert that no stale visible widget or decoration is committed.
-They do not use sleeps as the completion oracle.
+There are no pinned direct tests for `InlayHintsFragments`,
+`InlayHintsController`, `HoverOperation`, `ContentHoverComputer`, or
+`getHover`; new tests for those units are branch-derived ordinary MoonBit
+tests, not mislabeled reference ports. Pinned `contentHover.test.ts` cases are
+render-position tests outside this async implementation scope.
 
 ## Milestones
 
@@ -935,7 +1166,7 @@ None approved yet. Populate only after the inventory review.
 
 ## Exit Gate
 
-- [x] inventory rows equal ledger rows: 581/581; TODO 581, done/deferred/N-A 0/0/0
+- [x] inventory rows equal ledger rows: 759/759; TODO 759, done/deferred/N-A 0/0/0
 - [ ] all completion-order permutations are deterministic and tested
 - [ ] same-URI/same-host-version replacement cannot accept old results
 - [ ] set_value cannot accept an older inlay result
@@ -948,26 +1179,38 @@ None approved yet. Populate only after the inventory review.
 
 ## Execution Record
 
-### 2026-07-10 — Phase 1–2 inventory stop gate
+### 2026-07-10 — rejected first inventory milestone
+
+- Commit `5721b8e` recorded 581 mechanically contiguous rows, but fresh Gate B
+  review rejected it: several excluded-sibling rows bundled many declared
+  members/branches/CSS facts, two derived lifecycle notes were counted as
+  source, and the matrix covered P1 races rather than the full denominator.
+- No product or test file changed in that rejected documentation milestone.
+  History is preserved; the correction below supersedes its denominator.
+
+### 2026-07-10 — corrected Phase 1–2 inventory stop gate
 
 - Verified the read-only VS Code oracle at
   `b18492a288de038fbc7643aae6de8247029d11bd`.
-- Read every closed source unit/cluster and recorded exact exclusions and
-  runtime seams. Excluded-but-required sibling clusters remain first-class TODO
-  rows; no prose-only exclusion is being counted as parity.
-- Source inventory/ledger: **581/581** rows, all `TODO`:
-  `IHC 103, IHF 41, CHC 120, CHW 101, HOP 79, CHCMP 31, GHR 25, HTY 40,
-  TMV 18, CTS 23`.
+- Re-read every closed source unit/cluster under the strict declared-member,
+  behavior-branch/early-return, constant, and CSS-fact rule. Excluded siblings
+  remain atomic rows rather than prose-only or umbrella exclusions.
+- Corrected source inventory/ledger: **759/759** rows, all `TODO`:
+  `IHC 156, IHF 41, CHC 152, CHW 140, HOP 78, CHCMP 31, GHR 25, HTY 63,
+  TMV 24, CTS 49`.
 - Separate current-MoonBit ownership audit: **87** rows (`LA-001`–`LA-087`).
   It records two unretained `async_run` launches, four raw hover timer sites,
   model/content subscriptions, operation/react tokens, result guards,
   decoration applies, reset paths, and detach/dispose ordering.
-- Mechanical verification passed: per-prefix counts, 581 source IDs and 87
-  local IDs are contiguous, all 581 source rows end `TODO`, `git diff --check`
-  is clean, and the diff is confined to this plan.
+- Mechanical verification passed: per-prefix counts, 759 source IDs and 87
+  local IDs are contiguous, all 759 source rows end `TODO`, and
+  `git diff --check` is clean. This correction changes the child and parent
+  plan only.
 - No product or test file changed and no runtime tests were run for this
-  documentation-only stop gate. Commit/approval remains for the parent
-  milestone.
+  documentation-only correction. The corrected inventory commit and
+  independent approval remain.
 
-**STOP FOR REVIEW.** No implementation is authorized until every TODO row has
-a reviewed target/status and the inventory milestone is committed.
+**STOP FOR REVIEW.** No implementation is authorized until the corrected
+denominator is committed and approved, and every TODO row has a reviewed
+target/planned disposition. Working statuses remain `TODO` until implementation
+evidence supports a terminal status.

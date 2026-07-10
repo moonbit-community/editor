@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — lifecycle and async children implemented; cursor child next
+Status: active — cursor inventory ready; STOP FOR GATE B REVIEW
 
 Date: 2026-07-10
 
@@ -82,7 +82,7 @@ product contract and belongs in an ordinary local test.
 |---:|---|---|---|---|
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
-| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | proposed |
+| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | inventory ready — STOP FOR REVIEW |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | proposed |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
@@ -354,3 +354,9 @@ The independent closing task is:
   Final gates pass: check, JS 964/964, native 759/759, build, and browser 42/42;
   the focused async browser race also passed ten repeated runs. The portfolio
   proceeds to the cursor/input-events child.
+- 2026-07-10: the normalized cursor/input-events Phase 1–2 proposal is ready
+  with 799/799 TODO rows: 212 cursor state/event, 216 movement, and 371 command,
+  mouse, public-API, dispatcher, and ViewModel atoms. The proposed map is 361
+  TESTED, 81 PORTED, 176 DEFERRED, and 181 N-A. Frozen lifecycle ownership of
+  the CodeEditorWidget cursor relay is inherited instead of duplicated. No
+  product/test file changed; the portfolio stops for independent Gate B review.

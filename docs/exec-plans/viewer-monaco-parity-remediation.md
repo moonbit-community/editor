@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — cursor inventory amended twice; STOP FOR FINAL GATE B REVIEW
+Status: active — cursor child implementation authorized
 
 Date: 2026-07-10
 
@@ -82,7 +82,7 @@ product contract and belongs in an ordinary local test.
 |---:|---|---|---|---|
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
-| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | second inventory amendment — STOP FOR FINAL REVIEW |
+| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | Gate B approved — implementation active |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | proposed |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
@@ -377,3 +377,9 @@ The independent closing task is:
   DEFERRED, and 181 N-A; local model-side reprojection remains ordinary
   reduced-seam evidence. No product/test file changed; final Gate B review is
   still required.
+- 2026-07-10: cursor Gate B passed at inventory commit `fc9a28b`. The approved
+  fixed denominator is 802/802 TODO rows with 334 planned TESTED, 71 PORTED,
+  216 DEFERRED, and 181 N-A; the child-plan hash is `205db5d…bdd402`.
+  Independent reviews confirmed the cursor/movement and browser/event halves,
+  the outgoing FIFO topology, exact 59 + 10 test authority, and both distinct
+  dual-side validation call paths. Product/test implementation is authorized.

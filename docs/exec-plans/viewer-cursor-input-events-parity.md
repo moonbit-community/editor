@@ -1,6 +1,6 @@
 # Viewer Cursor Input and Events Parity
 
-Status: second inventory amendment ready — STOP FOR FINAL GATE B REVIEW
+Status: Gate B approved — implementation authorized
 
 Date: 2026-07-10
 
@@ -1495,35 +1495,36 @@ rg '^\| (CUR|COL|ONE|CCM|CEV|CMC|CMO|CORE|VC|CEW|VED|VMI)-[0-9]{3} \|' \
 
 ### Inventory review checklist — stop gate
 
-- [ ] Reviewer confirms the 802-row denominator and active per-prefix counts:
+- [x] Reviewer confirms the 802-row denominator and active per-prefix counts:
   CUR 68, COL 49, ONE 28, CCM 50, CEV 18, CMC 156, CMO 62, CORE 186,
   VC 70, CEW 23, VED 60, VMI 32; CORE draft IDs 126–134/167 are retired,
   outside the denominator, and never reused.
-- [ ] Reviewer confirms the normalized atom rule has neither umbrella rows nor
+- [x] Reviewer confirms the normalized atom rule has neither umbrella rows nor
   straight-line bookkeeping rows.
-- [ ] Reviewer confirms cursor configuration dependencies, inherited lifecycle
+- [x] Reviewer confirms cursor configuration dependencies, inherited lifecycle
   CEW authority, the outgoing-only VED/VMI owner, and render-invalidation
   collector deferrals are closed without duplicate source rows.
-- [ ] Reviewer approves the shared transition result, ViewModel outgoing
+- [x] Reviewer approves the shared transition result, ViewModel outgoing
   dispatcher, reentrancy-safe Viewer FIFO, nullable old selections,
   internal-version authority, and content-barrier drain ordering; no singular
   pending result remains.
-- [ ] Reviewer confirms API `NotSet` versus gesture `Explicit`, exact source
+- [x] Reviewer confirms API `NotSet` versus gesture `Explicit`, exact source
   defaults, position-before-selection delivery, view-before-outgoing ordering,
   and no-op/version gates.
-- [ ] Reviewer approves every planned DEFERRED/N-A seam, especially atomic tabs,
+- [x] Reviewer approves every planned DEFERRED/N-A seam, especially atomic tabs,
   visual RTL, generic/buffer commands, alternate bindings, token-aware word
   selection, the ONE-015/COL-009/CUR-012 dual-side validation dependency,
   generic view collection, and
   multi-cursor/column/block/edit paths.
-- [ ] Reviewer confirms the branch/configuration matrix covers all required
+- [x] Reviewer confirms the branch/configuration matrix covers all required
   keyboard, pointer, event, reentrancy, wrap, page-size (including exact zero),
   and browser-default axes and the exact-label set is 59 + 10 = 69.
-- [ ] Inventory is committed separately and independently approved; only then
+- [x] Inventory is committed separately and independently approved; only then
   may product/test work begin.
 
-**STOP FOR REVIEW.** This document is the fixed Phase 1–2 proposal. Gate B has
-not yet authorized implementation.
+**GATE B PASSED.** This document is the approved Phase 1–2 denominator and
+target topology. Product/test implementation may proceed without changing its
+source rows except through a separately reviewed correction.
 
 ## Test-Authority Corrections
 
@@ -1951,3 +1952,18 @@ remain row-local deferred/N-A boundaries.
 - No product/test file changed and no runtime test ran. Product implementation
   remains forbidden until this correction is committed and a final fresh Gate
   B review passes.
+
+### 2026-07-10 — Gate B approval
+
+- Final approved inventory commit:
+  `fc9a28b5b86cfdf848f5ed4f51adbb5cd981ab89`; committed child-plan SHA-256:
+  `205db5d342e172bcbfaf1be463f4b6f1d43a057989756fffcf705634f4bdd402`.
+- Independent source reviews approved the 431 cursor/movement rows and 371
+  browser/public/event rows after driving both validation corrections. The
+  focused final reviewer confirmed the exact independent paths
+  COL-009 → ONE-015 → ONE-028 and CUR-012 → `setStates` → ONE-016/021/028.
+- Gate B closes at **802/802 TODO rows** with **334 planned TESTED, 71 PORTED,
+  216 DEFERRED, and 181 N-A**. Active CORE IDs and 59 + 10 exact test labels
+  reconcile mechanically; all review-checklist items are approved.
+- The worktree was clean and no product/test file had changed at approval.
+  Product and test implementation is now authorized under this fixed ledger.

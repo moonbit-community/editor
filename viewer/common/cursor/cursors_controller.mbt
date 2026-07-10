@@ -6,7 +6,9 @@
 /// viewing path needs. Multi-cursor is a deliberate omission.
 pub struct CursorsController {
   mut context : CursorContext
-  cursor : Cursor
+  /// Mutable since the flush lane: `onModelContentChanged` disposes and
+  /// rebuilds the collection (`cursor.ts:255-256`).
+  mut cursor : Cursor
 }
 
 ///|
@@ -25,6 +27,33 @@ pub fn CursorsController::set_context(
 ) -> Unit {
   self.context = context
   self.cursor.reproject(context)
+}
+
+///|
+/// A model content change reached this cursor owner — Monaco's
+/// `CursorsController.onModelContentChanged` (`cursor.ts:226-273`), the
+/// `InternalModelContentChangeEvent` arm. The `ModelInjectedTextChangedEvent`
+/// arm (`:227-242`) is N-A here: the viewer's injected-text lane re-points
+/// through `set_context` (`ViewModel::on_did_change_content_or_injected_text`).
+/// Flush (`:253-258`): dispose the cursors and rebuild fresh from the
+/// context — the selection resets to the origin, exactly Monaco.
+/// `_validateAutoClosedActions` and the `ContentFlush` state-changed
+/// emission are N-A (no auto-close state; the viewer's cursor events fire
+/// from its interaction paths). The non-flush else-arm (`:259-269`,
+/// selection recovery from markers/resulting selections) is the tier-2
+/// edit lane, never reached today.
+pub fn CursorsController::on_model_content_changed(
+  self : CursorsController,
+  event : @model.InternalModelContentChangeEvent,
+) -> Unit {
+  // `this._knownModelVersionId = e.versionId` / `_isHandling` (`:245-248`):
+  // N-A — no edit-application reentrancy in the readonly viewer.
+  let had_flush_event = event.raw_content_changed_event.contains_event(Flush)
+  // `_prevEditOperationType = EditOperationType.Other` (`:251`): N-A.
+  if had_flush_event {
+    // a model.setValue() was called
+    self.cursor = Cursor::new()
+  }
 }
 
 ///|

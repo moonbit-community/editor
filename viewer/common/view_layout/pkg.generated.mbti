@@ -336,6 +336,8 @@ pub fn ViewLayout::line_at_vertical_offset(Self, Double) -> Int
 pub fn ViewLayout::line_count(Self) -> Int
 pub fn ViewLayout::line_height(Self) -> Int
 pub fn ViewLayout::new(line_height~ : Int, line_count? : Int) -> Self
+pub fn ViewLayout::on_flushed(Self, Int) -> Unit
+pub fn ViewLayout::on_height_maybe_changed(Self) -> ScrollChange?
 pub fn ViewLayout::position(Self) -> ScrollPosition
 pub fn ViewLayout::relative_vertical_offset_for_line(Self, LineWindow, Int) -> Int
 pub fn ViewLayout::scroll_by(Self, delta_left? : Double, delta_top? : Double) -> ScrollChange?

@@ -4,6 +4,7 @@ package "moonbit-community/editor/viewer/common/cursor"
 import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/core",
+  "moonbit-community/editor/viewer/common/model",
   "moonbitlang/core/debug",
 }
 
@@ -31,13 +32,14 @@ pub fn CursorContext::view_to_model(Self, @common.Position) -> @common.Position
 
 pub struct CursorsController {
   mut context : CursorContext
-  cursor : Cursor
+  mut cursor : Cursor
 }
 pub fn CursorsController::get_model_selection(Self) -> @core.Selection
 pub fn CursorsController::get_view_selection(Self) -> @core.Selection
 pub fn CursorsController::model_state(Self) -> SingleCursorState
 pub fn CursorsController::move_to(Self, @common.Position, Bool) -> Unit
 pub fn CursorsController::new(CursorContext) -> Self
+pub fn CursorsController::on_model_content_changed(Self, @model.InternalModelContentChangeEvent) -> Unit
 pub fn CursorsController::set_context(Self, CursorContext) -> Unit
 pub fn CursorsController::set_model_cursor_state(Self, SingleCursorState) -> Unit
 

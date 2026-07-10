@@ -357,14 +357,26 @@ pub fn ViewModelLinesFromProjectedModel::set_tab_size(
 }
 
 ///|
-/// Reprojects after the backing content or injected text changed —
-/// `onModelFlushed` (`viewModelLines.ts:325`). Monaco also applies per-line
-/// deltas (`onModelLineChanged` and friends); the readonly viewer's only
-/// in-place change is an injected-text delta, and its granularity is the
-/// whole-document reproject. Monaco's `onModelFlushed` resets hidden areas
-/// (a flush replaces the document); this producer is the injected-text delta
-/// — Monaco's per-line path, which keeps them — so folded regions survive.
+/// Reprojects after the document was replaced — `onModelFlushed`
+/// (`viewModelLines.ts:325`): `constructLines(resetHiddenAreas=true)`. A
+/// flush replaces the document, so hidden (folded) areas reset; the stale
+/// `hidden_areas_decoration_ids` left by the model-side decoration wipe
+/// delta-remove as a no-op (`delta_decorations` skips unknown ids), exactly
+/// the source's tolerance.
 pub fn ViewModelLinesFromProjectedModel::on_model_flushed(
+  self : ViewModelLinesFromProjectedModel,
+) -> Unit {
+  self.construct_lines(reset_hidden_areas=true)
+}
+
+///|
+/// Reprojects after an injected-text delta. Deviation: Monaco routes
+/// injected-text changes through per-line `onModelLineChanged` events
+/// (`viewModelLines.ts:352`), which keep hidden areas; the viewer's
+/// granularity is the whole-document reproject, so this is the per-line
+/// path's whole-document stand-in — hidden areas survive, unlike
+/// `on_model_flushed`.
+pub fn ViewModelLinesFromProjectedModel::on_injected_text_changed(
   self : ViewModelLinesFromProjectedModel,
 ) -> Unit {
   self.construct_lines(reset_hidden_areas=false)

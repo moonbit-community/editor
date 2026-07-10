@@ -30,6 +30,11 @@ pub struct ViewModel {
   /// The last merged hidden-area union, for `setHiddenAreas`'s no-change
   /// short-circuit — Monaco's `previousHiddenAreas` (`viewModelImpl.ts:71`).
   priv mut previous_hidden_areas : Array[@base_common.Range]
+  /// The trait-object box handed to `TextModel::register_view_model`
+  /// (`viewModelImpl.ts:169`), kept because MoonBit trait objects have no
+  /// cross-coercion identity — `unregister_view_model` (dispose) must
+  /// receive the same box (`@model.ViewModel`'s deviation note).
+  priv mut registered_view_model : &@model.ViewModel?
 }
 
 ///|
@@ -70,7 +75,7 @@ pub fn ViewModel::with_options(
     lines,
     coordinates_converter,
   )
-  {
+  let view_model : ViewModel = {
     model,
     options,
     lines,
@@ -80,7 +85,30 @@ pub fn ViewModel::with_options(
     coordinates_converter,
     hidden_areas_model: HiddenAreasModel::new(),
     previous_hidden_areas: [],
+    registered_view_model: None,
   }
+  // `this.model.registerViewModel(this)` — the constructor tail
+  // (`viewModelImpl.ts:169`); the box is kept for the dispose-side
+  // unregistration (field note).
+  let registered = view_model as &@model.ViewModel
+  view_model.registered_view_model = Some(registered)
+  model.register_view_model(registered)
+  view_model
+}
+
+///|
+/// Detaches this view model from its model — the live half of Monaco's
+/// `ViewModel.dispose` (`viewModelImpl.ts:172-181`):
+/// `this.model.unregisterViewModel(this)`. The decorations/lines/event
+/// dispatcher own no timers or subscriptions in the viewer, so
+/// unregistration is the only teardown. Called from the Viewer's
+/// `ModelData::dispose`.
+pub fn ViewModel::dispose(self : ViewModel) -> Unit {
+  match self.registered_view_model {
+    Some(registered) => self.model.unregister_view_model(registered)
+    None => ()
+  }
+  self.registered_view_model = None
 }
 
 ///|
@@ -133,22 +161,91 @@ pub fn ViewModel::on_configuration_changed(
 }
 
 ///|
-/// Injected-text decorations changed — the readonly viewer's form of
-/// Monaco's `onDidChangeContentOrInjectedText` (`viewModelImpl.ts:319`,
-/// called directly by the text model). Monaco re-runs the line-breaks
-/// computer per changed line; the viewer's granularity is the model flush
-/// (`_lines.onModelFlushed()` + `_decorations.reset()`).
+/// Content or injected text changed — Monaco's
+/// `onDidChangeContentOrInjectedText` (`viewModelImpl.ts:319-457`, called
+/// directly by the text model), reduced to the two forms the viewer
+/// produces. `e = None` is the `ModelInjectedTextChangedEvent` arm (the
+/// union member is not ported — `text_model_events.mbt` header): Monaco
+/// re-runs the line-breaks computer per changed line, the viewer reprojects
+/// whole. `e = Some(_)` is the `InternalModelContentChangeEvent` arm, whose
+/// only constructed change today is `Flush` (`:356-363`); the per-line
+/// branches (`:364-408`) are the tier-2 lane. The `eventsCollector` bracket
+/// is N-A — the viewer's document-wide repaint is the Viewer-layer
+/// `content_generation` bump, its `ViewFlushedEvent` scale.
 pub fn ViewModel::on_did_change_content_or_injected_text(
   self : ViewModel,
+  e? : @model.InternalModelContentChangeEvent,
 ) -> Unit {
-  self.lines.on_model_flushed()
-  self.decorations.reset()
-  // The reprojection changed the view-line mapping; re-point the cursor
-  // (Monaco's `onDidChangeContentOrInjectedText` handling routes the
-  // line-mapping change into `_cursor.onLineMappingChanged`).
-  self.cursor.set_context(
-    @cursor.CursorContext::new(self.coordinates_converter),
-  )
+  match e {
+    None => {
+      self.lines.on_injected_text_changed()
+      self.decorations.reset()
+      // The reprojection changed the view-line mapping; re-point the cursor
+      // (Monaco's injected-text arm updates cursor view positions through
+      // `_cursor.onModelContentChanged`'s `setStates` re-project).
+      self.cursor.set_context(
+        @cursor.CursorContext::new(self.coordinates_converter),
+      )
+    }
+    Some(e) => {
+      for change in e.raw_content_changed_event.changes {
+        match change {
+          ModelRawFlush => {
+            // The `Flush` branch (`viewModelImpl.ts:356-363`):
+            // `_lines.onModelFlushed()` → `ViewFlushedEvent` (the
+            // content_generation bump, above) → `_decorations.reset()` →
+            // `viewLayout.onFlushed(lineCount)`. The custom-line-heights
+            // argument is N-A (uniform line height).
+            self.lines.on_model_flushed()
+            self.decorations.reset()
+            self.view_layout.on_flushed(self.lines.get_view_line_count())
+          }
+          // LinesDeleted/LinesInserted/LineChanged (`:364-404`): tier-2
+          // (never constructed today). EOLChanged (`:405-408`): no-op in
+          // the source; the EOL lane is a recorded scope cut.
+          _ => ()
+        }
+      }
+      // `_lines.acceptVersionId` (`:412-414`): N-A — the wholesale-rebuild
+      // collection keeps no version assertion state.
+      // Custom line heights (`:417-426`): N-A (uniform line height).
+      // `viewLayout.onHeightMaybeChanged()` (`:428`).
+      self.view_layout.on_height_maybe_changed() |> ignore
+      // The `hadModelLineChangeThatChangedLineMapping` branch (`:430-435`)
+      // is tier-2-only: a flush sets `hadOtherModelChange` instead.
+      // `_viewportStart` invalidate + recovery (`:441-454`): scope cut 3 —
+      // the recovery is gated on >= 2 attached editors; the single-editor
+      // scroll clamps through the layout like Monaco's single-editor case.
+      // `_configuration.setModelLineCount`/`_updateConfigurationViewLineCountNow`
+      // (`:443-444`): the Viewer re-derives wrap facts in its content
+      // listener. `_handleVisibleLinesChanged` (`:456`): N-A (attached-view
+      // protocol not ported).
+    }
+  }
+}
+
+///|
+/// The text model's loop-one call — `IViewModel
+/// .onDidChangeContentOrInjectedText` dispatched from
+/// `_onDidChangeContentOrInjectedText` (`textModel.ts:1655`).
+pub impl @model.ViewModel for ViewModel with fn on_did_change_content_or_injected_text(
+  self,
+  e,
+) {
+  self.on_did_change_content_or_injected_text(e~)
+}
+
+///|
+/// The text model's loop-two call — `emitContentChangeEvent`
+/// (`viewModelImpl.ts:462-469`): the outgoing `ModelContentChangedEvent` is
+/// re-fired by the Viewer from the model's public emitter (the viewer's
+/// outgoing-event seam), so the live half here is
+/// `_cursor.onModelContentChanged`.
+pub impl @model.ViewModel for ViewModel with fn emit_content_change_event(
+  self,
+  e,
+) {
+  self.cursor.on_model_content_changed(e)
 }
 
 ///|

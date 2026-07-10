@@ -168,6 +168,7 @@ pub fn ViewModel::ViewModel(@model.TextModel) -> Self
 pub fn ViewModel::clamp_window(Self, @view_layout.LineWindow) -> @view_layout.LineWindow
 pub fn ViewModel::coordinates_converter(Self) -> &@core.CoordinatesConverter
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
+pub fn ViewModel::dispose(Self) -> Unit
 pub fn ViewModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModel::get_injected_text_at(Self, @common.Position) -> InjectedText?
 pub fn ViewModel::get_line_content(Self, Int) -> String
@@ -182,11 +183,12 @@ pub fn ViewModel::model_line_max_column(Self, Int) -> Int
 pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
 pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ViewModel::on_configuration_changed(Self, ViewModelOptions) -> Bool
-pub fn ViewModel::on_did_change_content_or_injected_text(Self) -> Unit
+pub fn ViewModel::on_did_change_content_or_injected_text(Self, e? : @model.InternalModelContentChangeEvent) -> Unit
 pub fn ViewModel::set_hidden_areas(Self, Array[@common.Range], source? : String, force_update? : Bool) -> Bool
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
 pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions) -> Self
+pub impl @model.ViewModel for ViewModel
 
 pub struct ViewModelDecorations {
   // private fields
@@ -224,6 +226,7 @@ pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, In
 pub fn ViewModelLinesFromProjectedModel::model_position_is_visible(Self, Int) -> Bool
 pub fn ViewModelLinesFromProjectedModel::new(@model.TextModel, font_info~ : @config.FontInfo, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : WrappingIndent) -> Self
 pub fn ViewModelLinesFromProjectedModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
+pub fn ViewModelLinesFromProjectedModel::on_injected_text_changed(Self) -> Unit
 pub fn ViewModelLinesFromProjectedModel::on_model_flushed(Self) -> Unit
 pub fn ViewModelLinesFromProjectedModel::set_hidden_areas(Self, Array[@common.Range]) -> Bool
 pub fn ViewModelLinesFromProjectedModel::set_tab_size(Self, Int) -> Bool

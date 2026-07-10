@@ -79,6 +79,25 @@ pub fn ViewLayout::set_line_count(
 }
 
 ///|
+/// The document was replaced — Monaco's `ViewLayout.onFlushed(lineCount)`:
+/// `this._linesLayout.onFlushed(lineCount)`. Whitespaces (view zones)
+/// survive a flush like the source's; their owner re-normalizes at the
+/// Viewer layer (`set_line_count`). The scroll dimensions re-derive in
+/// `on_height_maybe_changed`, exactly the source's split.
+pub fn ViewLayout::on_flushed(self : ViewLayout, line_count : Int) -> Unit {
+  self.line_count = line_count.max(0)
+  self.lines.on_flushed(self.line_count)
+}
+
+///|
+/// Re-derives the scroll dimensions after the content height may have
+/// changed — Monaco's `ViewLayout.onHeightMaybeChanged` (`_updateHeight`);
+/// a shrunken document clamps the scroll position here.
+pub fn ViewLayout::on_height_maybe_changed(self : ViewLayout) -> ScrollChange? {
+  self.sync_dimensions()
+}
+
+///|
 /// The uniform line height in pixels (`fontInfo.lineHeight`).
 pub fn ViewLayout::line_height(self : ViewLayout) -> Int {
   self.line_height

@@ -96,6 +96,8 @@ pub fn resolve(Array[String]) -> String
 
 pub fn resolve_path(Uri, String) -> Uri
 
+pub async fn run_async_tasks_sequentially(Array[async () -> Unit]) -> Unit
+
 pub let schemas_file : String
 
 pub let schemas_in_memory : String

@@ -11,6 +11,16 @@ priv struct LanguageFeatureEntry[T] {
 }
 
 ///|
+/// One request-start snapshot entry. `entry` is a value copy whose `active`
+/// reference remains shared with the live registration, so an async request
+/// never indexes the mutable registry after suspension while still being able
+/// to reject a result from a registration disposed during the await.
+priv struct LanguageFeatureSnapshot[T] {
+  entry : LanguageFeatureEntry[T]
+  provider_index : Int
+}
+
+///|
 fn[T] LanguageFeatureRegistry::new() -> LanguageFeatureRegistry[T] {
   { entries: [] }
 }
@@ -30,6 +40,23 @@ fn[T] LanguageFeatureRegistry::register(
     self.entries.clear()
     self.entries.append(retained)
   })
+}
+
+///|
+/// Captures the matching, currently active registrations in stable registry
+/// order. The returned array is independent of later registry compaction;
+/// each captured entry retains the registration's shared liveness reference.
+fn[T] LanguageFeatureRegistry::snapshot_matching(
+  self : LanguageFeatureRegistry[T],
+  model : @model.TextModel,
+) -> Array[LanguageFeatureSnapshot[T]] {
+  let result : Array[LanguageFeatureSnapshot[T]] = []
+  for provider_index, entry in self.entries {
+    if entry.active.val && entry.selector.matches(model) {
+      result.push({ entry, provider_index })
+    }
+  }
+  result
 }
 
 ///|
@@ -122,22 +149,41 @@ pub async fn Languages::hover_at(
   model : @model.TextModel,
   offset : Int,
   log_service : @log.LogService,
+  token? : @language.CancellationToken = @language.CancellationToken::none(),
 ) -> @language.Hover? noraise {
+  if token.is_cancellation_requested() {
+    return None
+  }
   let position = model.get_position_at(offset)
-  let token = @language.CancellationToken::none()
-  for index in 0..<self.hover_provider.entries.length() {
-    let entry = self.hover_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(model) {
+  let providers = self.hover_provider.snapshot_matching(model)
+  for captured in providers {
+    if token.is_cancellation_requested() {
+      return None
+    }
+    let entry = captured.entry
+    if !entry.active.val {
       continue
     }
     match
       (entry.provider.provide_hover(model, position, token) catch {
         _ => {
-          log_provider_failure(log_service, "language.hover", model, index)
+          if !token.is_cancellation_requested() {
+            log_provider_failure(
+              log_service,
+              "language.hover",
+              model,
+              captured.provider_index,
+            )
+          }
           None
         }
       }) {
-      Some(hover) => return Some(hover)
+      Some(hover) =>
+        if token.is_cancellation_requested() {
+          return None
+        } else if entry.active.val && hover.contents.length() > 0 {
+          return Some(hover)
+        }
       None => ()
     }
   }
@@ -177,24 +223,19 @@ pub async fn Languages::inlay_hints_for_model(
   self : Languages,
   model : @model.TextModel,
   log_service : @log.LogService,
+  token? : @language.CancellationToken = @language.CancellationToken::none(),
+  run_tasks? : async (Array[async () -> Unit]) -> Unit = @base_common.run_async_tasks_sequentially,
 ) -> Array[@language.InlayHint] noraise {
-  let hints : Array[@language.InlayHint] = []
-  let token = @language.CancellationToken::none()
-  let full_range = @base_common.OffsetRange(0, model.get_value_length())
-  for index in 0..<self.inlay_hints_provider.entries.length() {
-    let entry = self.inlay_hints_provider.entries[index]
-    if !entry.active.val || !entry.selector.matches(model) {
-      continue
-    }
-    let result = entry.provider.provide_inlay_hints(model, full_range, token) catch {
-      _ => {
-        log_provider_failure(log_service, "language.inlayHints", model, index)
-        []
-      }
-    }
-    hints.append(result)
+  let fragments = self.inlay_hints_for_ranges(
+    model,
+    [model.get_full_model_range()],
+    token,
+    log_service,
+    run_tasks~,
+  ) catch {
+    _ => return []
   }
-  hints
+  fragments.items.map(item => item.hint)
 }
 
 ///|

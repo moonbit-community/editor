@@ -9,6 +9,7 @@ import {
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/services",
   "moonbit-community/editor/viewer/common/tokens",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -33,6 +34,30 @@ pub(all) struct FoldingRules {
   markers : FoldingMarkers?
 }
 
+pub struct InlayHintAnchor {
+  range : @common.Range
+  direction : InlayHintAnchorDirection
+} derive(Eq, @debug.Debug)
+pub fn InlayHintAnchor::new(@common.Range, InlayHintAnchorDirection) -> Self
+
+pub(all) enum InlayHintAnchorDirection {
+  Before
+  After
+} derive(Eq, @debug.Debug)
+
+pub struct InlayHintItem {
+  hint : @language.InlayHint
+  anchor : InlayHintAnchor
+  provider : &@language.InlayHintsProvider
+}
+pub fn InlayHintItem::new(@language.InlayHint, InlayHintAnchor, &@language.InlayHintsProvider) -> Self
+
+pub struct InlayHintsFragments {
+  items : Array[InlayHintItem]
+  ranges : Array[@common.Range]
+  provider : Array[&@language.InlayHintsProvider]
+}
+
 pub(all) struct LanguageConfiguration {
   folding_rules : FoldingRules?
 }
@@ -44,8 +69,9 @@ pub struct Languages {
 }
 pub async fn Languages::document_symbols(Self, @model.TextModel, @log.LogService) -> Array[@language.DocumentSymbol] noraise
 pub fn Languages::get_language_configuration(Self, String) -> LanguageConfiguration
-pub async fn Languages::hover_at(Self, @model.TextModel, Int, @log.LogService) -> @language.Hover? noraise
-pub async fn Languages::inlay_hints_for_model(Self, @model.TextModel, @log.LogService) -> Array[@language.InlayHint] noraise
+pub async fn Languages::hover_at(Self, @model.TextModel, Int, @log.LogService, token? : @language.CancellationToken) -> @language.Hover? noraise
+pub async fn Languages::inlay_hints_for_model(Self, @model.TextModel, @log.LogService, token? : @language.CancellationToken, run_tasks? : async (Array[async () -> Unit]) -> Unit) -> Array[@language.InlayHint] noraise
+pub async fn Languages::inlay_hints_for_ranges(Self, @model.TextModel, Array[@common.Range], @language.CancellationToken, @log.LogService, run_tasks? : async (Array[async () -> Unit]) -> Unit) -> InlayHintsFragments
 pub fn Languages::new() -> Self
 pub fn Languages::register_document_symbol_provider(Self, @language.LanguageSelector, &@language.DocumentSymbolProvider) -> @common.Disposable
 pub fn Languages::register_hover_provider(Self, @language.LanguageSelector, &@language.HoverProvider) -> @common.Disposable

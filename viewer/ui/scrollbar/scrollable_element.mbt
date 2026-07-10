@@ -24,6 +24,8 @@ pub(all) struct ScrollableElementDom {
   mut mouse_is_over : Bool
   mut is_dragging : Bool
   mut hide_generation : Int
+  mut hide_timeout : Double?
+  mut disposed : Bool
 }
 
 ///|
@@ -33,14 +35,14 @@ pub(all) enum ScrollableElementOwner {
 }
 
 ///|
-/// An active scrollbar thumb drag. The owner tag lets document-level
-/// mousemove/up handling stay shared while still applying the resulting
-/// position to the correct scroll target.
+/// An active scrollbar thumb drag. The owner tag lets gesture-scoped pointer
+/// monitoring apply the resulting position to the correct scroll target.
 pub(all) struct ScrollbarDrag {
   owner : ScrollableElementOwner
   vertical : Bool
   start_coord : Double
-  start_slider : Double
+  start_orthogonal_coord : Double
+  initial_state : @view_layout.ScrollbarState
 }
 
 ///|
@@ -117,7 +119,35 @@ pub fn ScrollableElementDom::new(
     mouse_is_over: false,
     is_dragging: false,
     hide_generation: 0,
+    hide_timeout: None,
+    disposed: false,
   }
+}
+
+///|
+fn ScrollableElementDom::cancel_hide_timeout(
+  self : ScrollableElementDom,
+) -> Unit {
+  match self.hide_timeout {
+    Some(handle) => clear_timeout(handle)
+    None => ()
+  }
+  self.hide_timeout = None
+  self.hide_generation += 1
+}
+
+///|
+/// Cancels delayed visibility work. DOM removal remains the owner's
+/// responsibility because editor and hover scrollables have different hosts.
+pub fn ScrollableElementDom::dispose(self : ScrollableElementDom) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.disposed = true
+  self.cancel_hide_timeout()
+  self.is_dragging = false
+  self.set_slider_active(vertical=true, false)
+  self.set_slider_active(vertical=false, false)
 }
 
 ///|
@@ -331,7 +361,10 @@ fn ScrollableElementDom::write_bar_visibility_class(
 
 ///|
 fn ScrollableElementDom::reveal_scrollbars(self : ScrollableElementDom) -> Unit {
-  self.hide_generation += 1
+  if self.disposed {
+    return
+  }
+  self.cancel_hide_timeout()
   if self.vertical_state.is_needed() {
     self.set_bar_visibility(vertical=true, revealed=true, fade=false)
     self.write_bar_visibility_class(true)
@@ -346,7 +379,7 @@ fn ScrollableElementDom::reveal_scrollbars(self : ScrollableElementDom) -> Unit 
 fn ScrollableElementDom::hide_scrollbars_if_idle(
   self : ScrollableElementDom,
 ) -> Unit {
-  if self.mouse_is_over || self.is_dragging {
+  if self.disposed || self.mouse_is_over || self.is_dragging {
     return
   }
   self.set_bar_visibility(
@@ -367,33 +400,38 @@ fn ScrollableElementDom::hide_scrollbars_if_idle(
 fn ScrollableElementDom::schedule_hide_scrollbars(
   self : ScrollableElementDom,
 ) -> Unit {
-  if self.mouse_is_over || self.is_dragging {
+  if self.disposed || self.mouse_is_over || self.is_dragging {
     return
   }
-  self.hide_generation += 1
+  self.cancel_hide_timeout()
   let generation = self.hide_generation
-  set_timeout(
-    () => {
-      if self.hide_generation == generation {
-        self.hide_scrollbars_if_idle()
-      }
-    },
-    scrollbar_hide_timeout_ms,
+  self.hide_timeout = Some(
+    set_timeout(
+      () => {
+        if !self.disposed && self.hide_generation == generation {
+          self.hide_timeout = None
+          self.hide_scrollbars_if_idle()
+        }
+      },
+      scrollbar_hide_timeout_ms,
+    ),
   )
-  |> ignore
 }
 
 ///|
 pub fn ScrollableElementDom::reveal_for_scroll(
   self : ScrollableElementDom,
 ) -> Unit {
+  if self.disposed {
+    return
+  }
   self.reveal_scrollbars()
   self.schedule_hide_scrollbars()
 }
 
 ///|
 pub fn ScrollableElementDom::mouse_entered(self : ScrollableElementDom) -> Unit {
-  if self.mouse_is_over {
+  if self.disposed || self.mouse_is_over {
     return
   }
   self.mouse_is_over = true
@@ -402,18 +440,27 @@ pub fn ScrollableElementDom::mouse_entered(self : ScrollableElementDom) -> Unit 
 
 ///|
 pub fn ScrollableElementDom::mouse_left(self : ScrollableElementDom) -> Unit {
+  if self.disposed {
+    return
+  }
   self.mouse_is_over = false
   self.hide_scrollbars_if_idle()
 }
 
 ///|
 pub fn ScrollableElementDom::drag_started(self : ScrollableElementDom) -> Unit {
+  if self.disposed {
+    return
+  }
   self.is_dragging = true
   self.reveal_scrollbars()
 }
 
 ///|
 pub fn ScrollableElementDom::drag_ended(self : ScrollableElementDom) -> Unit {
+  if self.disposed {
+    return
+  }
   self.is_dragging = false
   self.hide_scrollbars_if_idle()
 }

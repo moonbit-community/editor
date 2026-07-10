@@ -16,11 +16,8 @@
 //     `get_current_selection` instead of tracking view events.
 //
 // Omissions:
-//   * pointer capture and the `pointerdown` capture-id dance
-//     (mouseHandler.ts:118-133) — no pointer-capture bindings; the global
-//     monitor listens on the window (see
-//     `base/browser/global_pointer_move_monitor.mbt`). The raw `pointerup`
-//     compensation listener is kept.
+//   * The raw `pointerup` compensation listener is kept alongside the
+//     pointer-capturing global monitor (`mouseHandler.ts:126-133`).
 //   * `_setupMouseWheelZoomListener` (mouseHandler.ts:140-199) — no
 //     mouse-wheel zoom; the viewer's wheel path stays on the overflow guard
 //     (scrollbar_input.mbt).
@@ -129,11 +126,13 @@ pub struct MouseHandler {
   priv view_helper : PointerHandlerHelper
   priv mouse_target_factory : MouseTargetFactory
   priv mouse_down_operation : MouseDownOperation
+  priv scrollbar_drag_monitor : @base_browser.GlobalPointerMoveMonitor
   priv mut last_mouse_leave_time : Double
   priv mut mouse_leave_monitor : @base_common.Disposable?
   priv listeners : Array[@base_common.Disposable]
   /// The active scrollbar-thumb drag (scrollbar_input.mbt).
   priv mut drag : @scrollbar.ScrollbarDrag?
+  priv mut disposed : Bool
 }
 
 ///|
@@ -145,10 +144,12 @@ pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
     mouse_down_operation: MouseDownOperation::new(
       view_helper, mouse_target_factory,
     ),
+    scrollbar_drag_monitor: @base_browser.GlobalPointerMoveMonitor::new(),
     last_mouse_leave_time: -1.0,
     mouse_leave_monitor: None,
     listeners: [],
     drag: None,
+    disposed: false,
   }
   let mouse_events = @editor_browser.EditorMouseEventFactory::new(
     view_helper.view_dom_node,
@@ -224,6 +225,12 @@ pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
 
 ///|
 pub fn MouseHandler::dispose(self : MouseHandler) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.disposed = true
+  self.end_scrollable_drag()
+  self.scrollbar_drag_monitor.dispose()
   for listener in self.listeners {
     listener.dispose()
   }
@@ -347,8 +354,8 @@ fn MouseHandler::on_mouse_up(
 
 ///|
 /// `_onMouseDown` (mouseHandler.ts:310-353). `selectOnLineNumbers` reads as
-/// the Monaco default `true`; the `pointerId` parameter is dropped with the
-/// pointer-capture omission.
+/// the Monaco default `true`; the pointer id travels with `EditorMouseEvent`
+/// into `MouseDownOperation.start`.
 fn MouseHandler::on_mouse_down(
   self : MouseHandler,
   e : @editor_browser.EditorMouseEvent,
@@ -459,7 +466,7 @@ fn MouseDownOperation::new(
 
 ///|
 fn MouseDownOperation::dispose(self : MouseDownOperation) -> Unit {
-  self.mouse_move_monitor.stop_monitoring()
+  self.mouse_move_monitor.dispose()
   self.top_bottom_drag_scrolling.dispose()
   self.left_right_drag_scrolling.dispose()
 }
@@ -522,6 +529,7 @@ fn MouseDownOperation::start(
     self.is_active_flag = true
     self.mouse_move_monitor.start_monitoring(
       self.view_helper.view_lines_dom_node,
+      e.pointer_id(),
       e.buttons,
       moved => self.on_mouse_down_then_move(moved),
       _browser_event => self.stop(),

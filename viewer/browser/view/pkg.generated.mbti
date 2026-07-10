@@ -96,7 +96,9 @@ pub(all) struct View {
   editor_scrollbar : @editor_scrollbar.EditorScrollbar
   // private fields
 }
+pub fn View::add_disposable(Self, @common.Disposable) -> Unit
 pub fn View::apply_squiggly_theme(Self) -> Unit
+pub fn View::dispose(Self) -> Unit
 pub fn View::is_line_rendered(Self, Int) -> Bool
 pub fn View::line_width(Self, Int, Int) -> Double
 pub fn View::measure_line_selection(Self, Int, Int, Int, keep_empty? : Bool) -> Array[(Double, Double)]

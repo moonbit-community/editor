@@ -13,9 +13,10 @@
 //     every `targetWindow`/`getWindow` parameter.
 //
 // Omissions:
-//   * `EditorPointerEventFactory` (touch/pen; pointerHandler.ts is not
-//     ported) and `EditorMouseEventFactory.onContextMenu`/`onPointerDown`
-//     (no context-menu consumer; no pointer capture).
+//   * `EditorPointerEventFactory`'s touch/pen dispatch and
+//     `EditorMouseEventFactory.onContextMenu` (no consumers). The existing
+//     mouse-down seam listens to `pointerdown` so selection can carry the
+//     source pointer id into the global move monitor.
 //   * `DynamicCssRules` and friends (editorDom.ts:288-429) — decoration CSS
 //     helpers unrelated to mouse handling.
 //   * The keydown monitor-cancel check reads `KeyboardEvent.key` instead of
@@ -224,6 +225,11 @@ pub fn EditorMouseEvent::stop_propagation(self : EditorMouseEvent) -> Unit {
 }
 
 ///|
+pub fn EditorMouseEvent::pointer_id(self : EditorMouseEvent) -> Int {
+  @base_browser.mouse_event_pointer_id(self.browser_event)
+}
+
+///|
 /// `EditorMouseEventFactory` (editorDom.ts:149-194): DOM-listener wrappers
 /// producing `EditorMouseEvent`s anchored to the editor's view DOM node.
 pub struct EditorMouseEventFactory {
@@ -272,7 +278,7 @@ pub fn EditorMouseEventFactory::on_mouse_down(
   target : @rdom.Element,
   callback : (EditorMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
-  self.listen(target, "mousedown", callback)
+  self.listen(target, "pointerdown", callback)
 }
 
 ///|
@@ -301,6 +307,7 @@ pub struct GlobalEditorPointerMoveMonitor {
   priv editor_view_dom_node : @rdom.Element
   priv global_pointer_move_monitor : @base_browser.GlobalPointerMoveMonitor
   priv mut keydown_listener : @base_common.Disposable?
+  priv mut disposed : Bool
 }
 
 ///|
@@ -311,20 +318,51 @@ pub fn GlobalEditorPointerMoveMonitor::new(
     editor_view_dom_node,
     global_pointer_move_monitor: @base_browser.GlobalPointerMoveMonitor::new(),
     keydown_listener: None,
+    disposed: false,
   }
 }
 
 ///|
-/// `startMonitoring` (editorDom.ts:244-275). The `pointerId` parameter is
-/// dropped with the pointer-capture omission (see
-/// `base/browser/global_pointer_move_monitor.mbt`).
+fn GlobalEditorPointerMoveMonitor::dispose_keydown_listener(
+  self : GlobalEditorPointerMoveMonitor,
+) -> Unit {
+  match self.keydown_listener {
+    Some(listener) => listener.dispose()
+    None => ()
+  }
+  self.keydown_listener = None
+}
+
+///|
+pub fn GlobalEditorPointerMoveMonitor::dispose(
+  self : GlobalEditorPointerMoveMonitor,
+) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.disposed = true
+  self.dispose_keydown_listener()
+  self.global_pointer_move_monitor.dispose()
+}
+
+///|
+/// `startMonitoring` (editorDom.ts:244-275), including the pointer id used by
+/// the base monitor's capture/fallback lifecycle.
 pub fn GlobalEditorPointerMoveMonitor::start_monitoring(
   self : GlobalEditorPointerMoveMonitor,
   initial_element : @rdom.Element,
+  pointer_id : Int,
   initial_buttons : Int,
   pointer_move_callback : (EditorMouseEvent) -> Unit,
   on_stop_callback : (@rdom.Event?) -> Unit,
 ) -> Unit {
+  if self.disposed {
+    return
+  }
+  // The base monitor restarts an active gesture with `stopMonitoring(false)`,
+  // so its prior stop callback cannot release the capture listener. Release
+  // it before installing the next gesture's listener.
+  self.dispose_keydown_listener()
   // Add a <<capture>> keydown event listener that will cancel the monitoring
   // if something other than a modifier key is pressed
   let keydown = (event : @rdom.Event) => {
@@ -341,6 +379,7 @@ pub fn GlobalEditorPointerMoveMonitor::start_monitoring(
   )
   self.global_pointer_move_monitor.start_monitoring(
     initial_element,
+    pointer_id,
     initial_buttons,
     e => {
       pointer_move_callback(
@@ -348,11 +387,7 @@ pub fn GlobalEditorPointerMoveMonitor::start_monitoring(
       )
     },
     e => {
-      match self.keydown_listener {
-        Some(listener) => listener.dispose()
-        None => ()
-      }
-      self.keydown_listener = None
+      self.dispose_keydown_listener()
       on_stop_callback(e)
     },
   )

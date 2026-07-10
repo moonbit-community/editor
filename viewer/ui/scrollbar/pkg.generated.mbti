@@ -74,8 +74,11 @@ pub(all) struct ScrollableElementDom {
   mut mouse_is_over : Bool
   mut is_dragging : Bool
   mut hide_generation : Int
+  mut hide_timeout : Double?
+  mut disposed : Bool
 }
 pub fn ScrollableElementDom::desired_position_from_track(Self, vertical~ : Bool, @dom.MouseEvent) -> Double
+pub fn ScrollableElementDom::dispose(Self) -> Unit
 pub fn ScrollableElementDom::drag_ended(Self) -> Unit
 pub fn ScrollableElementDom::drag_started(Self) -> Unit
 pub fn ScrollableElementDom::mouse_entered(Self) -> Unit
@@ -102,7 +105,8 @@ pub(all) struct ScrollbarDrag {
   owner : ScrollableElementOwner
   vertical : Bool
   start_coord : Double
-  start_slider : Double
+  start_orthogonal_coord : Double
+  initial_state : @view_layout.ScrollbarState
 }
 
 pub(all) struct StandardWheelEvent {

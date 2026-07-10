@@ -15,6 +15,11 @@ the editor and the hover widget; callers decide whether a new position updates
   `native_scroll_to`/`native_scroll_by` drive the latter.
 - `track`, `slider`, `state`, `desired_position_from_track`, and drag/reveal
   methods expose the geometry needed by `viewer/browser/controller`.
+- Thumb drags retain a field-for-field clone of the pointerdown
+  `ScrollbarState`, so gestures do not adopt geometry mutations mid-drag.
+- `dispose` is idempotent, cancels the current 500-ms hide handle, disables
+  future visibility scheduling, and clears active slider state. Replacing a
+  pending hide cancels its browser timer rather than retaining stale callbacks.
 - `StandardWheelEvent` and `mouse_wheel_scroll_deltas` normalize wheel input;
   `MouseWheelClassifier` retains Monaco's five-event device classifier so the
   controller can animate physical wheels while applying touchpad/magic-mouse

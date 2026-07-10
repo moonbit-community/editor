@@ -39,6 +39,19 @@ DOM container. The root `viewer` package directly reads selected `pub(all)`
 fields to implement `Viewer::` methods; MoonBit's foreign-method rule keeps
 that glue out of this package.
 
+`dispose` is idempotent. It tears down ViewLines, then every remaining
+ViewPart, then the View lifetime-disposable store. The local line, zone,
+overlay, widget, and cursor parts own only nodes/state below the root; the
+scrollbar additionally owns a cancellable hide timer. Mouse/input controllers
+and root listeners enter the lifetime store through `add_disposable`.
+
+External overflow hosting is deferred until the Viewer exposes an overflow
+host option and the corresponding aggregate-focus seam; today both overflowing
+widget nodes remain descendants of the ordinary View root. Edit-context
+teardown is deferred until an edit-context owner and accessibility seam exist;
+GPU teardown is deferred until the viewer has a GPU renderer and GPU-owned
+parts.
+
 The private `ViewPart` and `DynamicViewOverlay` implementations live here,
 including implementations for foreign view-part types. This satisfies
 MoonBit's orphan rule and keeps dependencies one-way:

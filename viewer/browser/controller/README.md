@@ -26,6 +26,15 @@ EditorMouseEventFactory
   active editor/hover scrollbar drags. It emits resolved `MouseTarget` events
   and `MouseDispatchData`; the root Viewer converts the public event boundary
   to model space and changes cursor state.
+- `MouseHandler::dispose` is idempotent and is registered in the per-model
+  View lifetime. It removes root/scrollbar/desperate-reveal listeners, closes
+  the selection and scrollbar global-pointer monitors, ends active slider
+  state, and cancels outside-editor drag animation frames.
+- Scrollbar thumb movement is gesture-scoped. Pointer capture is attempted on
+  the slider and falls back to its owning window; Windows resets to the
+  pointerdown scroll position only when orthogonal distance is strictly greater
+  than 140 px. The pointerdown `ScrollbarState` mapping remains fixed even if
+  geometry changes during the gesture.
 - `PointerHandlerLastRenderData` exposes the last cursor geometry needed by
   hit testing. Exact callable types are listed in `pkg.generated.mbti`.
 

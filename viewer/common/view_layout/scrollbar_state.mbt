@@ -48,6 +48,26 @@ pub fn ScrollbarState::new(
 }
 
 ///|
+/// Field-for-field geometry snapshot used by pointer gestures. Monaco's
+/// `AbstractScrollbar._sliderPointerDown` clones its state before monitoring
+/// so later layout mutations cannot change the drag mapping.
+pub fn ScrollbarState::clone(self : ScrollbarState) -> ScrollbarState {
+  {
+    arrow_size: self.arrow_size,
+    scrollbar_size: self.scrollbar_size,
+    opposite_scrollbar_size: self.opposite_scrollbar_size,
+    visible_size: self.visible_size,
+    scroll_size: self.scroll_size,
+    scroll_position: self.scroll_position,
+    computed_available_size: self.computed_available_size,
+    computed_is_needed: self.computed_is_needed,
+    computed_slider_size: self.computed_slider_size,
+    computed_slider_ratio: self.computed_slider_ratio,
+    computed_slider_position: self.computed_slider_position,
+  }
+}
+
+///|
 /// The viewport extent along this scrollbar's axis. Answers whether the
 /// geometry changed.
 pub fn ScrollbarState::set_visible_size(

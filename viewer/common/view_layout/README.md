@@ -7,7 +7,8 @@ DOM-free scrolling, line/whitespace layout, view zones, and view-line rendering.
 - `ScrollState` retains raw and validated positions; `Scrollable` owns current
   and future positions plus the cubic smooth-animation state machine.
   `EditorScrollable` normalizes editor content dimensions, while
-  `ScrollbarState` contains pure slider geometry. `ViewLayout` is the viewer's
+  `ScrollbarState` contains pure slider geometry and provides a field-for-field
+  clone for gesture snapshots. `ViewLayout` is the viewer's
   single scroll truth and computes visible/completely-visible windows and reveal
   positions. Animation scheduling and the clock are injected so this package
   remains DOM/FFI-free.

@@ -49,6 +49,7 @@ pub struct EditorMouseEvent {
 }
 pub fn EditorMouseEvent::editor_pos(Self) -> EditorPagePosition
 pub fn EditorMouseEvent::new(@dom.MouseEvent, Bool, @dom.Element) -> Self
+pub fn EditorMouseEvent::pointer_id(Self) -> Int
 pub fn EditorMouseEvent::prevent_default(Self) -> Unit
 pub fn EditorMouseEvent::relative_pos(Self) -> CoordinatesRelativeToEditor
 pub fn EditorMouseEvent::set_detail(Self, Int) -> Unit
@@ -73,8 +74,9 @@ pub(all) struct EditorPagePosition {
 pub struct GlobalEditorPointerMoveMonitor {
   // private fields
 }
+pub fn GlobalEditorPointerMoveMonitor::dispose(Self) -> Unit
 pub fn GlobalEditorPointerMoveMonitor::new(@dom.Element) -> Self
-pub fn GlobalEditorPointerMoveMonitor::start_monitoring(Self, @dom.Element, Int, (EditorMouseEvent) -> Unit, (@dom.Event?) -> Unit) -> Unit
+pub fn GlobalEditorPointerMoveMonitor::start_monitoring(Self, @dom.Element, Int, Int, (EditorMouseEvent) -> Unit, (@dom.Event?) -> Unit) -> Unit
 pub fn GlobalEditorPointerMoveMonitor::stop_monitoring(Self) -> Unit
 
 pub(all) enum MouseTarget {

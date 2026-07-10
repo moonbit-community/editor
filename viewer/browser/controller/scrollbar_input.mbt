@@ -6,6 +6,24 @@
 // active-drag slot.
 
 ///|
+fn MouseHandler::add_dom_listener(
+  self : MouseHandler,
+  target : @rdom.Element,
+  event_type : String,
+  callback : (@rdom.Event) -> Unit,
+) -> Unit {
+  if self.disposed {
+    return
+  }
+  target.add_event_listener(event_type, callback)
+  self.listeners.push(
+    @base_common.Disposable::from(() => {
+      target.remove_event_listener(event_type, callback)
+    }),
+  )
+}
+
+///|
 /// Wires one scrollable element's scrollbar interactions: reveal-on-hover and
 /// thumb/track drags. Shared by the editor scrollbar and the hover widget
 /// scrollbar (Monaco's `ScrollableElement` pointer handling).
@@ -14,42 +32,50 @@ pub fn MouseHandler::hook_scrollable_scrollbar_input(
   scrollable : @scrollbar.ScrollableElementDom,
   owner : @scrollbar.ScrollableElementOwner,
 ) -> Unit {
-  scrollable.wrapper.add_event_listener("mouseover", _ => {
+  self.add_dom_listener(scrollable.wrapper, "mouseover", _ => {
     scrollable.mouse_entered()
   })
-  scrollable.wrapper.add_event_listener("mousemove", _ => {
+  self.add_dom_listener(scrollable.wrapper, "mousemove", _ => {
     scrollable.mouse_entered()
   })
-  scrollable.wrapper.add_event_listener("mouseleave", _ => {
+  self.add_dom_listener(scrollable.wrapper, "mouseleave", _ => {
     scrollable.mouse_left()
   })
-  scrollable
-  .slider(true)
-  .add_event_listener("mousedown", event => {
+  let vertical_slider = scrollable.slider(true)
+  self.add_dom_listener(vertical_slider, "pointerdown", event => {
     match event.to_mouse_event() {
-      Some(mouse) => {
+      Some(mouse) if mouse.get_button() == 0 => {
         event.prevent_default()
         event.stop_propagation()
         self.start_scrollable_drag(scrollable, owner, vertical=true, mouse)
       }
-      None => ()
+      _ => ()
     }
   })
-  scrollable
-  .slider(false)
-  .add_event_listener("mousedown", event => {
+  self.add_dom_listener(vertical_slider, "click", event => {
     match event.to_mouse_event() {
-      Some(mouse) => {
+      Some(mouse) if mouse.get_button() == 0 => event.stop_propagation()
+      _ => ()
+    }
+  })
+  let horizontal_slider = scrollable.slider(false)
+  self.add_dom_listener(horizontal_slider, "pointerdown", event => {
+    match event.to_mouse_event() {
+      Some(mouse) if mouse.get_button() == 0 => {
         event.prevent_default()
         event.stop_propagation()
         self.start_scrollable_drag(scrollable, owner, vertical=false, mouse)
       }
-      None => ()
+      _ => ()
     }
   })
-  scrollable
-  .track(true)
-  .add_event_listener("mousedown", event => {
+  self.add_dom_listener(horizontal_slider, "click", event => {
+    match event.to_mouse_event() {
+      Some(mouse) if mouse.get_button() == 0 => event.stop_propagation()
+      _ => ()
+    }
+  })
+  self.add_dom_listener(scrollable.track(true), "pointerdown", event => {
     match event.to_mouse_event() {
       Some(mouse) => {
         event.prevent_default()
@@ -59,9 +85,7 @@ pub fn MouseHandler::hook_scrollable_scrollbar_input(
       None => ()
     }
   })
-  scrollable
-  .track(false)
-  .add_event_listener("mousedown", event => {
+  self.add_dom_listener(scrollable.track(false), "pointerdown", event => {
     match event.to_mouse_event() {
       Some(mouse) => {
         event.prevent_default()
@@ -151,19 +175,35 @@ fn MouseHandler::start_scrollable_drag(
   vertical~ : Bool,
   mouse : @rdom.MouseEvent,
 ) -> Unit {
-  scrollable.drag_started()
+  if self.disposed {
+    return
+  }
+  guard mouse.target().to_element() is Some(initial_element) else { return }
+  self.end_scrollable_drag()
+  let initial_state = scrollable.state(vertical).clone()
   self.drag = Some({
     owner,
     vertical,
     start_coord: @scrollbar.drag_coord(mouse, vertical),
-    start_slider: scrollable.state(vertical).slider_position(),
+    start_orthogonal_coord: scrollbar_drag_orthogonal_coord(mouse, vertical),
+    initial_state,
   })
   scrollable.set_slider_active(vertical~, true)
+  self.scrollbar_drag_monitor.start_monitoring(
+    initial_element,
+    @base_browser.mouse_event_pointer_id(mouse),
+    mouse.get_buttons(),
+    moved => self.handle_scrollable_drag_mouse(moved),
+    _ => self.end_scrollable_drag(),
+  )
+  scrollable.drag_started()
 }
 
 ///|
-/// Ends an in-progress thumb drag (document `mouseup`).
-pub fn MouseHandler::end_scrollable_drag(self : MouseHandler) -> Unit {
+/// Ends the current gesture from the global pointer monitor or handler
+/// disposal.
+fn MouseHandler::end_scrollable_drag(self : MouseHandler) -> Unit {
+  self.scrollbar_drag_monitor.stop_monitoring(false)
   match self.drag {
     Some(drag) =>
       match self.scrollable_for_drag(drag.owner) {
@@ -179,22 +219,29 @@ pub fn MouseHandler::end_scrollable_drag(self : MouseHandler) -> Unit {
 }
 
 ///|
-/// Applies an in-progress thumb drag (document `mousemove`).
-pub fn MouseHandler::handle_scrollable_drag_move(
+fn MouseHandler::handle_scrollable_drag_mouse(
   self : MouseHandler,
-  event : @rdom.Event,
+  mouse : @rdom.MouseEvent,
 ) -> Unit {
   guard self.drag is Some(drag) else { return }
-  guard event.to_mouse_event() is Some(mouse) else { return }
-  event.prevent_default()
-  let delta = @scrollbar.drag_coord(mouse, drag.vertical) - drag.start_coord
+  mouse.prevent_default()
   guard self.scrollable_for_drag(drag.owner) is Some(scrollable) else {
+    self.scrollbar_drag_monitor.stop_monitoring(false)
     self.drag = None
     return
   }
-  let desired = scrollable
-    .state(drag.vertical)
-    .desired_position_from_slider(drag.start_slider + delta)
+  let orthogonal_coord = scrollbar_drag_orthogonal_coord(mouse, drag.vertical)
+  if scrollbar_drag_should_reset(drag.start_orthogonal_coord, orthogonal_coord) {
+    self.apply_scrollable_position(
+      scrollable,
+      drag.owner,
+      vertical=drag.vertical,
+      drag.initial_state.scroll_position(),
+    )
+    return
+  }
+  let delta = @scrollbar.drag_coord(mouse, drag.vertical) - drag.start_coord
+  let desired = drag.initial_state.desired_position_from_delta(delta)
   self.apply_scrollable_position(
     scrollable,
     drag.owner,
@@ -204,7 +251,28 @@ pub fn MouseHandler::handle_scrollable_drag_move(
 }
 
 ///|
-/// A mousedown on the track (outside the thumb, which stops propagation)
+fn scrollbar_drag_orthogonal_coord(
+  mouse : @rdom.MouseEvent,
+  vertical : Bool,
+) -> Double {
+  if vertical {
+    mouse.get_client_x().to_double()
+  } else {
+    mouse.get_client_y().to_double()
+  }
+}
+
+///|
+fn scrollbar_drag_should_reset(
+  initial_orthogonal_coord : Double,
+  current_orthogonal_coord : Double,
+) -> Bool {
+  @base_common.platform_is_win32() &&
+  (current_orthogonal_coord - initial_orthogonal_coord).abs() > 140.0
+}
+
+///|
+/// A pointerdown on the track (outside the thumb, which stops propagation)
 /// uses Monaco's editor default `scrollByPage: false`: jump so the thumb
 /// centers on the pointer.
 fn MouseHandler::scrollable_track_jump(
@@ -263,28 +331,28 @@ fn MouseHandler::scrollable_for_drag(
 /// offset reset (Monaco's editor scrollbar bridge).
 pub fn MouseHandler::hook_browser_desperate_reveal(self : MouseHandler) -> Unit {
   let editor_scrollable = self.view_helper.editor_scrollable
-  self.view_helper.view_dom_node.add_event_listener("scroll", _ => {
+  self.add_dom_listener(self.view_helper.view_dom_node, "scroll", _ => {
     self.handle_browser_desperate_reveal(
       self.view_helper.view_dom_node,
       look_at_scroll_top=true,
       look_at_scroll_left=true,
     )
   })
-  self.view_helper.overflow_guard.add_event_listener("scroll", _ => {
+  self.add_dom_listener(self.view_helper.overflow_guard, "scroll", _ => {
     self.handle_browser_desperate_reveal(
       self.view_helper.overflow_guard,
       look_at_scroll_top=true,
       look_at_scroll_left=false,
     )
   })
-  editor_scrollable.content.add_event_listener("scroll", _ => {
+  self.add_dom_listener(editor_scrollable.content, "scroll", _ => {
     self.handle_browser_desperate_reveal(
       editor_scrollable.content,
       look_at_scroll_top=true,
       look_at_scroll_left=false,
     )
   })
-  editor_scrollable.wrapper.add_event_listener("scroll", _ => {
+  self.add_dom_listener(editor_scrollable.wrapper, "scroll", _ => {
     self.handle_browser_desperate_reveal(
       editor_scrollable.wrapper,
       look_at_scroll_top=true,

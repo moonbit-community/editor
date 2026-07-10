@@ -6,6 +6,7 @@ import {
 }
 
 // Values
+pub fn mouse_event_pointer_id(@dom.MouseEvent) -> Int
 
 // Errors
 
@@ -16,7 +17,7 @@ pub struct GlobalPointerMoveMonitor {
 pub fn GlobalPointerMoveMonitor::dispose(Self) -> Unit
 pub fn GlobalPointerMoveMonitor::is_monitoring(Self) -> Bool
 pub fn GlobalPointerMoveMonitor::new() -> Self
-pub fn GlobalPointerMoveMonitor::start_monitoring(Self, @dom.Element, Int, (@dom.MouseEvent) -> Unit, (@dom.Event?) -> Unit) -> Unit
+pub fn GlobalPointerMoveMonitor::start_monitoring(Self, @dom.Element, Int, Int, (@dom.MouseEvent) -> Unit, (@dom.Event?) -> Unit) -> Unit
 pub fn GlobalPointerMoveMonitor::stop_monitoring(Self, Bool, browser_event? : @dom.Event) -> Unit
 
 pub(all) struct StandardMouseEvent {

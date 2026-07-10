@@ -43,6 +43,24 @@ priv enum ViewPartHandle {
 }
 
 ///|
+/// View-owned teardown (`view.ts:503-519`). The seven DOM-only local parts
+/// retain no listeners, timers, animation frames, emitters, or external
+/// nodes; removing the View root releases their complete DOM state. The
+/// scrollbar is the sole active owner and cancels its hide timer here.
+fn ViewPartHandle::dispose(self : ViewPartHandle) -> Unit {
+  match self {
+    ViewLinesPart(_) => ()
+    ViewZonesPart(_) => ()
+    ContentViewOverlaysPart(_) => ()
+    MarginViewOverlaysPart(_) => ()
+    ContentWidgetsPart(_) => ()
+    ViewCursorsPart(_) => ()
+    OverlayWidgetsPart(_) => ()
+    EditorScrollbarPart(part) => part.scrollable().dispose()
+  }
+}
+
+///|
 fn default_view_parts(
   view_lines : @view_lines.ViewLines,
   view_zones : @view_zones.ViewZones,

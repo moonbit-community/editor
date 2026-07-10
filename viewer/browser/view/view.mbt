@@ -24,7 +24,9 @@ pub(all) struct View {
   overlay_widgets : @overlay_widgets.OverlayWidgets
   editor_scrollbar : @editor_scrollbar.EditorScrollbar
   priv view_parts : Array[ViewPartHandle]
+  priv lifetime_disposables : Array[@base_common.Disposable]
   priv mut last_snapshot : ViewRenderSnapshot?
+  priv mut disposed : Bool
 }
 
 ///|
@@ -119,9 +121,51 @@ pub fn View::new() -> View {
     overlay_widgets,
     editor_scrollbar,
     view_parts,
+    lifetime_disposables: [],
     last_snapshot: None,
+    disposed: false,
   }
   view
+}
+
+///|
+/// Retains a resource for this per-model View lifetime. Registration after
+/// disposal releases the resource immediately, matching `DisposableStore`.
+pub fn View::add_disposable(
+  self : View,
+  disposable : @base_common.Disposable,
+) -> Unit {
+  if self.disposed {
+    disposable.dispose()
+    return
+  }
+  self.lifetime_disposables.push(disposable)
+}
+
+///|
+/// Releases View-owned listeners, pointer controllers, and asynchronous
+/// scrollbar work exactly once. The root Viewer separately removes `root`
+/// from its host after this internal teardown.
+pub fn View::dispose(self : View) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.disposed = true
+  // Monaco disposes ViewLines separately, then the remaining `_viewParts`,
+  // before its inherited disposable store (`view.ts:503-519`). Keep that
+  // order even though the local resource-free parts need no active cleanup.
+  ViewPartHandle::dispose(ViewLinesPart(self.view_lines))
+  for part in self.view_parts {
+    match part {
+      ViewLinesPart(_) => continue
+      _ => part.dispose()
+    }
+  }
+  for disposable in self.lifetime_disposables {
+    disposable.dispose()
+  }
+  self.lifetime_disposables.clear()
+  self.last_snapshot = None
 }
 
 ///|
@@ -164,6 +208,9 @@ pub fn View::render(
   view_context : ViewContext,
   input : ViewRenderInput,
 ) -> Unit {
+  if self.disposed {
+    return
+  }
   self.root.set_attribute(
     "class",
     get_editor_class_name(

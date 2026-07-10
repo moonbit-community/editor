@@ -380,6 +380,7 @@ pub fn Scrollable::validate_scroll_position(Self, ScrollPositionUpdate) -> Scrol
 pub struct ScrollbarState {
   // private fields
 }
+pub fn ScrollbarState::clone(Self) -> Self
 pub fn ScrollbarState::desired_position_from_delta(Self, Double) -> Double
 pub fn ScrollbarState::desired_position_from_offset(Self, Double) -> Double
 pub fn ScrollbarState::desired_position_from_offset_paged(Self, Double) -> Double

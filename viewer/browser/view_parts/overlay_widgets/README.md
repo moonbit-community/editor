@@ -1,19 +1,16 @@
 # viewer/browser/view_parts/overlay_widgets
 
-The overlay-widget view part, ported from Monaco's
-`editor/browser/viewParts/overlayWidgets/overlayWidgets.ts`. The viewer has
-no overlay-widget content yet (no minimap, no find widget), so this package
-is just the DOM shell — its `ViewPart` render/`prepare_render` are no-ops.
+The null-position subset of Monaco's
+`viewParts/overlayWidgets/overlayWidgets.ts`. `OverlayWidgets` owns the fixed
+`.overlayWidgets` and `.overflowingOverlayWidgets` containers plus an id-to-DOM
+registry.
 
-## Responsibilities
+`add_widget(id, node)` mounts or replaces a self-positioning node;
+`remove_widget(id)` unmounts it. The public root
+`Viewer::{add,remove}_overlay_widget` API keeps registrations across model
+swaps and re-adds them to each new per-model View. Monaco's preference-based
+placement and `layoutOverlayWidget` machinery are not implemented, so the
+ViewPart prepare/render steps remain no-ops.
 
-- `OverlayWidgets`: the `.overlayWidgets` / `.overflowingOverlayWidgets`
-  container pair and their dirty flag.
-
-## Boundaries
-
-- The `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, the
-  trait-owning package — see its README for the orphan-rule/cycle reasoning.
-  That is also why the types here are `pub(all)`.
-- A browser-tier package (`supported_targets = "js"`); may import
-  `rabbita/dom`, nothing else.
+The `ViewPart` implementation lives in `viewer/browser/view`. This package is
+JS-only and does not import the root Viewer.

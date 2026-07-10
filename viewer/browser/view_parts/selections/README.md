@@ -1,29 +1,13 @@
 # viewer/browser/view_parts/selections
 
-Mirrors `vscode/src/vs/editor/browser/viewParts/selections`
-(`SelectionsOverlay`): the selection highlight as per-line HTML pieces with
-rounded/reverse corners, measured through the `measure` closure
-(`ViewContext.measure_line_selection`, off the live line DOM written by
-`viewer/browser/view/selection_measure.mbt`).
+The pure overlay computation for Monaco's `SelectionsOverlay`.
+`prepare_selections_render` converts the current view selection into per-line
+HTML rectangles, using a supplied closure that reads client rects from live
+ViewLines DOM. It merges the measured pieces and applies Monaco's rounded and
+reverse-corner classes.
 
-The overlay renders into `viewer/browser/view`'s `ContentViewOverlays` rows
-(`view_overlays.mbt`, Monaco's `viewOverlays.ts`) as the second registered
-dynamic overlay — after the current-line highlight, before decorations
-(`view.ts:218-221`).
-
-## Responsibilities
-
-- `SelectionsOverlay` (the `_renderResult` state) and
-  `prepare_selections_render`: the per-line range collection
-  (`linesVisibleRangesForRange`), the corner-style enrichment
-  (`_enrichVisibleRangesWithStyle`), and the two-bucket per-line HTML
-  (`_actualRenderOneSelection` — inner corners before selection rects).
-
-## Boundaries
-
-- The `DynamicViewOverlay` impl lives in `viewer/browser/view/view_part.mbt`,
-  the trait-owning package — see its README for the orphan-rule/cycle
-  reasoning. That is also why the types here are `pub(all)`.
-- Pure per-line HTML: no DOM writes (the rows belong to `browser/view`).
-- Also carries `view_overlays.css` (the `.view-overlays` container + shared
-  row rules) and `selections.css`.
+Selection is second in `browser/view`'s content-overlay order: current-line
+highlight, selection, decorations. This package writes no DOM; the overlay rows,
+measurement implementation, and `DynamicViewOverlay` implementation live in
+`viewer/browser/view`. CSS for the shared rows and selection pieces remains
+owner-adjacent here.

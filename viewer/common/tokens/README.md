@@ -1,31 +1,24 @@
 # viewer/common/tokens
 
-The binary token data structures. Mirrors Monaco's `editor/common/tokens/`.
+Immutable binary token shapes shared by model tokenization and view-line rendering.
 
-## Responsibilities
+- `LineTokens` mirrors Monaco's flat `Uint32Array`: each pair is an exclusive end
+  offset followed by a packed metadata word. It provides token lookup, text/class/
+  style reads, zero-copy slicing for wrapped lines, and `with_inserted` for injected
+  text. `IViewLineTokens` is the common view implemented by full and sliced tokens.
+- `encoded_token_attributes.mbt` defines the 32-bit language, standard-token-type,
+  balanced-bracket, font-style, foreground, and background layout plus
+  `TokenMetadata` decoders. Metadata is `UInt` because the background occupies the
+  high byte.
+- The package intentionally has no mutable contiguous/sparse token stores.
+  `viewer/common/model/tokens` owns the readonly per-model memo, and semantic-token
+  overlay is not implemented.
 
-- Own `LineTokens` / `SliceLineTokens` / the `IViewLineTokens` trait
-  (`tokens/lineTokens.ts`): a line's tokens as a flat `[endOffset, metadata]`
-  pair array over the line text, with slicing for wrapped view lines and
-  `with_inserted` for injected text.
-- Own the encoded token attributes (`encodedTokenAttributes.ts`): the
-  `MetadataConsts` bit layout, `FontStyle`/`ColorId`/`StandardTokenType`
-  constants, and the `TokenMetadata` decoders. Monaco keeps that file at the
-  `editor/common/` root; it lives here because the `viewer/common` root
-  package sits above this code in the import graph (see the file header).
+Upstream sources are `vs/editor/common/tokens/lineTokens.ts` and
+`vs/editor/common/encodedTokenAttributes.ts`. The reduced `IViewLineTokens` omits
+Monaco's concrete-type `equals`/codec accessor, and the unported `TokenArray` family
+keeps `getTokensInRange` out of scope.
 
-The mutable stores built on these shapes (`contiguousTokensStore.ts`,
-`sparseTokensStore.ts`) are N-A: the readonly viewer's per-model store is the
-immutable memo in `viewer/common/model/tokens`.
-
-## Boundaries
-
-- May depend only on `base/common` and `viewer/common/services` (the
-  `LanguageIdCodec` the token words reference).
-- Must not depend on the model, view model, syntax, DOM, or host packages.
-
-## Checks
-
-- `line_tokens_reference_wbtest.mbt`, the faithful port of Monaco's
-  `lineTokens.test.ts` suite.
-- Run `moon test --target all viewer/common/tokens` for this package.
+This package may depend only on `base/common` and `viewer/common/services`; it must
+not import model, view-model, syntax, DOM, or host packages. See
+`pkg.generated.mbti`; run `moon test --target js viewer/common/tokens`.

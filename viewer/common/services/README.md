@@ -1,23 +1,17 @@
 # viewer/common/services
 
-Editor-common services. Mirrors Monaco's `editor/common/services/` (the
-ported slice).
+The common-layer language-id codec used by binary token metadata.
 
-## Responsibilities
+`LanguageIdCodec` assigns stable integer ids and decodes them back to strings.
+Fresh codecs are seeded with `null`, `plaintext`, `moonbit`, `javascript`,
+`typescript`, and `json`; `encode_language_id` returns `0` for an unregistered
+language, while `register` allocates it. Invalid numeric ids decode as `null`.
 
-- Own `LanguageIdCodec` (`services/languagesRegistry.ts`): the string↔numeric
-  language-id registry whose numeric ids the token metadata word's low 8 bits
-  carry, seeded with the viewer's built-in languages.
-- Own the process-wide `language_id_codec` instance, the role of Monaco's
-  `LanguageService.languageIdCodec` threading one codec through every model.
-  Isolated codecs remain constructible for tests.
+`language_id_codec` is process-wide so every model interprets the low eight
+language-id bits of Monaco's token metadata consistently. Isolated codecs remain
+available for tests.
 
-## Boundaries
-
-- Leaf package: no imports beyond the core library.
-- Must not depend on tokens, model, syntax, DOM, or host packages.
-
-## Checks
-
-- Covered through the `viewer/common/tokens` and `viewer/common/model/tokens`
-  suites (every metadata round-trip decodes through the codec).
+This is the `ILanguageIdCodec` slice of
+`vs/editor/common/services/languagesRegistry.ts`. The package is a dependency leaf
+with no model, token, syntax, DOM, or host imports. See `pkg.generated.mbti`; its
+behavior is also covered by the token and model-token suites.

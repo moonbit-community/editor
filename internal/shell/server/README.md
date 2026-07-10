@@ -1,30 +1,33 @@
-# server
+# internal/shell/server
 
-Reference backend policy for remote readonly workspaces.
+Native-only policy and state for the reference remote workspace server. Native
+effects are supplied through `ServerHost`.
 
-## Responsibilities
+## Flow and API
 
-- Resolve `readonly-remote://workspace/...` URIs to normalized root-relative
-  paths.
-- Read and cache readonly source documents through `ServerHost`.
-- Manage file watches, close/dispose behavior, semantic language-feature
-  requests, and remote protocol dispatch.
-- Dispatch semantic feature requests through explicitly injected `language`
-  provider traits. Backends (such as the native `moon` command host) supply
-  the concrete providers.
+- `remote_document_uri`, `resolve_remote_document_uri`, and
+  `resolve_remote_directory_uri` enforce the
+  `readonly-remote://workspace[/...]` namespace and safe root-relative paths.
+- `RemoteServer::with_language_providers` receives explicit hover, definition,
+  references, document-symbol, and inlay-hint providers.
+- `handle_client_packet` resolves one tree level, opens/caches documents,
+  starts or replaces watches, closes documents, and routes feature requests.
+- Feature requests use the cached URI/revision (a non-empty requested revision
+  must match), adapt the snapshot to a `TextModel`, and never reread the active
+  file implicitly. Reference locations are enriched with line previews.
+- Open and watch updates notify the optional document-sync listener used by the
+  native diagnostics runner. Watch callbacks emit later packets; immediate
+  request results are returned from `handle_client_packet`.
+- `dispose_watches` is the connection-teardown boundary.
 
-## Boundaries
+Public supporting types are `ServerHost`, `ServerWatch`, host read/resolve
+results, URI parse results, and `RemoteServer` methods. This package belongs to
+the reference shell; embedders do not need it.
 
-- May depend on public domain packages plus internal shell `workspace` and
-  `remote_protocol`.
-- Must not import browser shell packages, the public `viewer` package, or
-  `internal/shell/web`.
-- Native effects stay behind the `ServerHost` trait; server code owns policy and
-  routing.
-- This package is part of the reference shell/backend stack, not a requirement
-  for embedding the viewer.
+## Boundary and validation
 
-## Checks
+Server owns URI policy, cache/watch lifecycle, protocol dispatch, and provider
+routing. It must not import browser/workbench/web packages; filesystem, process,
+timer, socket, and concrete tool behavior stay in a host adapter.
 
-- Package tests live in `server_test.mbt`.
-- Run `just check` for the repository-level type check.
+Run `moon test internal/shell/server --target native` and `just check`.

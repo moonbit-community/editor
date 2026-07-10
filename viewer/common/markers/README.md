@@ -1,28 +1,27 @@
 # viewer/common/markers
 
-Backend-neutral marker model for the readonly viewing path. A port of Monaco's
-marker stack (`platform/markers` + marker rendering support), reduced to what a
-readonly viewer needs: diagnostics stored as markers, mapped to squiggle
-decorations and to the marker-hover lookup.
+Backend-neutral diagnostic storage and marker-to-decoration projection.
 
-## Responsibilities
+## Data flow and API
 
-- `Marker`: a diagnostic stored by owner and resource, ready for
-  marker-specific metadata. `from_diagnostic` / `to_diagnostic` bridge the
-  shared `language.Diagnostic` shape.
-- `MarkerService`: an in-memory marker store keyed by owner/resource pairs.
-  Replaces, removes, and queries markers per resource.
-- `MarkerDecorationsService`: turns markers into squiggle decorations for one
-  resource and answers the marker-hover lookup (`markers_at`).
+- `Marker`/`MarkerData` carry Monaco-shaped severity, tags, owner, resource, and
+  range metadata. `from_diagnostic`/`to_diagnostic` bridge `language.Diagnostic`.
+- `MarkerService` indexes values in both `(resource, owner)` directions. It exposes
+  `change_one`/`change_all`, `set_diagnostics`, filtered `read`, removal, resource
+  filters, per-severity statistics, and merged change events. Its
+  `MicrotaskEmitter` flushes inline unless the caller supplies a scheduler.
+- `MarkerDecorationsService` registers live `TextModel`s, converts up to the first
+  500 markers per resource into model decorations, supports temporary range
+  suppression, and exposes `get_marker` plus `get_live_markers` for hover. It must
+  receive matching `on_model_added`/`on_model_removed` calls from the viewer.
+- `create_decoration_range`/`create_decoration_option` preserve Monaco's empty,
+  full-line, hint, severity, and tag branches. Squiggly/theme helpers produce the
+  data URI and CSS presentation inputs; the DOM itself lives in browser/view code.
 
-The browser-side presentation — the marker hover participant and the squiggle
-DOM — lives with the viewer packages; this package is the pure data those
-parts consume.
+The upstream split is `vs/platform/markers/common/{markers,markerService}.ts` and
+`vs/editor/common/services/markerDecorationsService.ts`, with the squiggle theme
+mapping from `codeEditorWidget.ts`.
 
-## Boundaries
-
-- Pure logic: no DOM, browser, or native FFI; builds on `js` and `native`.
-- Depends only on `base/common` (URI/range identity), `language`
-  (diagnostics), and `viewer/common/model` (decoration shapes).
-- Depends on neither the root `viewer` package nor any view part. The
-  dependency edge is one-directional: `viewer -> viewer/common/markers`.
+This package depends on `base/common`, `language`, and `viewer/common/model` only;
+it has no DOM/FFI/root-viewer dependency. See `pkg.generated.mbti`; run
+`moon test --target js viewer/common/markers`.

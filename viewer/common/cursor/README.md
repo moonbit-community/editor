@@ -1,36 +1,31 @@
 # viewer/common/cursor
 
-Backend-neutral cursor/selection state for the readonly viewing path. A
-faithful port of Monaco's cursor stack, reduced to what a selection-only
-viewer needs.
+Backend-neutral single-cursor state for the readonly viewer.
 
-## Responsibilities
+## Flow and API
 
-- `SingleCursorState` (`cursorCommon.ts`): the cursor state on one coordinate
-  space — an anchor range, a `SelectionStartKind`, and the active position —
-  plus the derived oriented `Selection` and the `move`/`moved` transition.
-- `CursorContext` (`cursorContext.ts`): the coordinates converter the cursor
-  uses to bridge model and view positions.
-- `Cursor` (`oneCursor.ts`): one cursor keeping a model-coordinate and a
-  view-coordinate `SingleCursorState` in sync; setting one side derives the
-  other (`set_view_state` / `set_model_state` / `reproject`).
-- `CursorsController` (`cursor.ts` / `cursorCollection.ts`): owns the single
-  cursor, exposes the model/view selections, and re-projects on reflow.
-- `CoreNavigationCommands` (`coreCommands.ts` selection subset): `move_to`
-  (collapse) and `move_to_select` (extend), the commands the pointer path drives.
+- `SingleCursorState` holds an anchor range, `SelectionStartKind`, and active
+  1-based UTF-16 position; `selection`, `has_selection`, and `moved` derive the
+  oriented `viewer/common/core.Selection`.
+- `CursorContext` wraps `core.CoordinatesConverter` for model/view conversion.
+- `Cursor` keeps model- and view-coordinate states synchronized. Its public
+  mutation is `set_model_state`; view-driven mutation stays behind the controller.
+- `CursorsController` owns one cursor, exposes model/view selections, accepts
+  view-coordinate `move_to`, and reprojects the existing model selection when
+  `set_context` installs a converter after wrapping/folding/injected-text changes.
+- Free `move_to` and `move_to_select` functions are the pointer-driven subset of
+  Monaco's `CoreNavigationCommands`.
 
-## Boundaries
+Upstream sources are `cursorCommon.ts`, `cursorContext.ts`, `oneCursor.ts`,
+`cursor.ts`/`cursorCollection.ts`, and the selection part of `coreCommands.ts`.
 
-- Pure logic: no DOM, browser, or native FFI; builds on `js` and `native`.
-- Depends only on `base/common` (positions) and `viewer/common/view_model`
-  (the coordinates converter and `Selection`).
+## Deliberate reductions
 
-## Deliberate deviations from Monaco
+There is one selection only. The immutable model needs no marker-tracked cursor
+ranges or edit validation. Sticky vertical movement (`leftoverVisibleColumns`) is
+absent; `Word` and `Line` anchor kinds are represented, but their drag-extension
+behavior is not implemented.
 
-- Single selection only (no multi-cursor).
-- The immutable readonly model means no marker-tracked ranges and no
-  model-validation pass in `_setState`; positions from the hit test and the
-  converter are already valid and the converter clamps.
-- `leftoverVisibleColumns` (sticky vertical movement) is omitted until keyboard
-  navigation lands; `Word`/`Line` selection kinds are modeled but the
-  drag-extend behavior for them is a follow-up.
+The package depends only on `base/common` and `viewer/common/core`; it has no
+view-model, DOM, or FFI dependency. See `pkg.generated.mbti` for the complete API
+and run `moon test --target js viewer/common/cursor`.

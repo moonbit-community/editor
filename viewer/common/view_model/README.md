@@ -1,66 +1,44 @@
 # viewer/common/view_model
 
-Pure common-layer view-model state, the MoonBit-owned package boundary for
-Monaco's readonly `ViewModel`, `ViewModelLines*`, `CoordinatesConverter`,
-`ViewModelDecorations`, and viewport-scoped render frames.
+Long-lived, DOM-free projection from a `TextModel` to renderable view lines.
 
-## Responsibilities
+## Pipeline and API
 
-- Own `FrameSource` (the backing `TextModel` plus pushed provider data —
-  tokens live on `model.tokenization`, Monaco's `TokenizationTextModelPart`
-  in `viewer/common/model/tokens`).
-- Own render-frame data: `FrameViewport`, `RenderLine`, and `RenderFrame`.
-  Render lines carry token streams and injected inline decorations; the browser
-  layer receives frame data rather than recomputing model state.
-- Own the readonly view models: `ViewModel`, `ViewModelLinesFromModelAsIs`,
-  `ViewModelLinesFromProjectedModel` (soft wrap: `ModelLineProjection`,
-  `ModelLineProjectionData`, `LineBreaksComputer`), and the coordinates
-  converters.
-- Own `ViewModelDecorations`: model decorations resolved into per-view-line
-  inline decorations through `viewer/common/inline_decorations`' computers,
-  with this package providing the concrete model/converter trait impls.
-- Own the hidden-area plumbing (`get_hidden_areas` over per-line hidden
-  flags) and readonly injected text (`InjectedText`, `ProjectedTextLine`).
-  Inlay hints are
-  projected before line breaking so hint width participates in wrapping, while
-  render-line source mappings keep hit testing and decorations
-  model-offset based.
-- Own readonly `Selection` model ranges and copy helpers. Plain copy slices the
-  selected `TextSnapshot` range directly, so browser-only injected text is
-  excluded by default; rich copy has a model-only escaped fallback while the
-  browser layer styles visible source tokens with their token classes.
-- Own the DOM-free conversion from `RenderLine` to the renderer inputs in
-  `viewer/common/view_layout`. The token store itself lives below this
-  package: `LineTokens`/metadata words in `viewer/common/tokens`, the
-  tag-to-metadata theme mapping in `viewer/common/model/tokens`.
+`ViewModel` owns the model, projected line collection, single cursor,
+`ViewLayout`, decoration resolver, coordinate converter, and per-source hidden-area
+sets. It is created once when a model attaches and updated in place.
 
-## Boundaries
+```text
+model line + grammar tokens + injected-text decorations
+  -> ProjectedTextLine
+  -> soft-wrap ModelLineProjection segments
+  -> hidden-area filtering
+  -> ViewLineData + model/view coordinate conversion
+  -> viewport_data_from_view_model -> view_layout.ViewportData
+```
 
-- May depend on `base/common`, `viewer/common/model`,
-  `viewer/common/inline_decorations`, `viewer/common/tokens`,
-  `viewer/common/view_layout` (the layout and view-line-renderer layer below
-  this one), `language`, and JSON support.
-- Must not depend on the parent `viewer/common`, the root `viewer`, browser,
-  server, transport, workspace, or host packages.
-- Must not declare FFI.
+- `ViewModelLinesFromProjectedModel` is always used. With wrapping disabled each
+  line has a cheap identity projection; there is no separate
+  `ViewModelLinesFromModelAsIs` implementation.
+- Injected text is projected before line breaking, so its width affects wrapping;
+  source mappings, tokens, and decorations remain anchored to model offsets.
+- Configuration or injected-text/content flushes reproject affected state at the
+  current whole-model granularity, invalidate decoration caches, and reproject the
+  cursor from model coordinates. Incremental edit events are not part of the
+  readonly contract.
+- `set_hidden_areas` merges ranges by source, updates line/layout/decorations/cursor,
+  and preserves the top visible model line when folding changes above the viewport.
+- `ViewModelDecorations` converts model ranges through
+  `viewer/common/inline_decorations` and resolves only the requested viewport.
 
-## Token Model
+There are no `FrameSource`, `FrameViewport`, `RenderLine`, or `RenderFrame` APIs;
+browser code consumes `ViewModel` plus `view_layout.ViewportData`. Selection/copy
+helpers belong to `viewer/common/core` and the root `viewer`, not this package.
 
-Render frames read `model.tokenization.get_line_tokens` — the memoized
-per-line `LineTokens` store owned by the model's tokenization part
-(`viewer/common/model/tokens`) — and pass those token streams to the
-view-line renderer.
-
-Projected and injected view lines derive from the same token model. Inlay-hint
-text is represented as inline decoration data, not as token color data.
-
-Incremental/background retokenization and embedded-language token codecs are not
-part of the current readonly viewer contract.
-
-## Checks
-
-- Local tests plus `*_reference_test.mbt` / `*_reference_wbtest.mbt`
-  conformance ports (line-breaks computer; the line-tokens and
-  text-model-tokens conformance ports live in `viewer/common/tokens` and
-  `viewer/common/model` since the three-way split).
-- Run `moon test --target all viewer/common/view_model` for this package.
+The upstream map is the pinned `src/vs/editor/common/viewModel/` files
+`viewModelImpl.ts`, `viewModelLines.ts`, `modelLineProjection.ts`,
+`monospaceLineBreaksComputer.ts`, and `viewModelDecorations.ts`, plus
+`viewLayout/viewLinesViewportData.ts`.
+This package must remain multi-target and FFI-free, with no root-viewer, browser,
+server, transport, workspace, or host dependency. See `pkg.generated.mbti`; run
+`moon test --target js viewer/common/view_model`.

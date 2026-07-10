@@ -1,32 +1,31 @@
-# workspace
+# internal/shell/workspace
 
-Readonly source and tree provider contracts for host packages.
+Backend-neutral readonly source, document, filesystem, and tree contracts for
+host packages.
 
-## Responsibilities
+## Contracts
 
-- Own `SourcePath`, `DocumentSnapshot`, `DocumentProvider`, language
-  inference, filesystem-provider conversion, and document change events.
-- Use `@base_common.Uri` for provider-minted document identity.
-- Normalize root-relative paths and reject invalid or unsafe source paths.
-- Define the backend-neutral `FileSystemProvider` trait, `DocumentContent`,
-  read results, watch events, and structured provider errors.
-- Define host-side composition contracts: `DocumentProvider`
-  (document-level read/watch/close in `DocumentSnapshot` terms) and
-  `WorkspaceTreeProvider` + `WorkspaceStat` (the `IFileStat`/
-  `IFileService.resolve` copy: stats carry provider-minted URIs and children
-  resolve lazily one level per request). Host packages adapt
-  `DocumentSnapshot` values into `viewer/common/model.TextModel` before calling the
-  viewer; the viewer core should not consume workspace payload types directly.
+- `SourcePath` normalizes root-relative paths and rejects absolute paths,
+  traversal, Windows drive paths, and NUL bytes. `infer_language_id` maps common
+  source extensions.
+- `FileSystemProvider` exposes scheme-owned text reads and watches;
+  `read_document`/`watch_file` adapt it to structured results and snapshots.
+- `DocumentProvider` exposes document-level `read`, `watch`, and `close`.
+  Watches may invalidate, update, delete, or fail a URI.
+- `DocumentSnapshot` is immutable provider/transport data: URI, metadata,
+  revision, text, UTF-16 offsets, LF/CRLF/lone-CR line splitting, and 1-based
+  `Position` conversion.
+- `WorkspaceTreeProvider` exposes a root URI and pull-based one-level `resolve`;
+  unresolved directory stats carry `children: None`.
 
-## Boundaries
+Exact public types, error codes, helpers, and trait signatures are in
+`pkg.generated.mbti`.
 
-- May depend on `base/common` and JSON support.
-- Must not contain browser, native, DOM, server routing, or process effects.
-- Host packages implement filesystem behavior through the provider contract.
-- Must not become the viewer model API. `DocumentSnapshot` is source-provider
-  data; editor model identity belongs in `viewer/common/model`.
+## Boundary and validation
 
-## Checks
+This package may depend only on `base/common` and JSON support. It owns no DOM,
+browser, native, server-routing, or process effects. `DocumentSnapshot` is host
+data: adapters create `viewer/common/model.TextModel`; viewer core must not
+import this package.
 
-- Package tests live in `source_test.mbt`.
-- Run `just check` for the repository-level type check.
+Run `moon test internal/shell/workspace --target js` and `just check`.

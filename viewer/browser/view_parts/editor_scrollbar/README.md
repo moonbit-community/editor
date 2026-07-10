@@ -1,21 +1,12 @@
 # viewer/browser/view_parts/editor_scrollbar
 
-The editor scrollbar view part, ported from Monaco's
-`editor/browser/viewParts/editorScrollbar/editorScrollbar.ts`. A thin
-view-part wrapper: the custom scrollbar geometry/DOM itself lives in
-`viewer/ui/scrollbar` (Monaco's `base/browser/ui/scrollbar/`).
+The thin editor-scrollbar ViewPart, ported from Monaco's
+`viewParts/editorScrollbar/editorScrollbar.ts`. `EditorScrollbar` owns one
+`viewer/ui/scrollbar.ScrollableElementDom` and exposes its root, content node,
+and scrollable object to `View` and the root input bridge.
 
-## Responsibilities
-
-- `EditorScrollbar`: owns one `ScrollableElementDom` (the lines-content
-  scrollable wrapper) and the dirty flag.
-- `wrapper` / `content` / `scrollable`: accessors the root `viewer` package's
-  input-hookup glue (`hook_view_input`) and `View::new` need.
-
-## Boundaries
-
-- The `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, the
-  trait-owning package — see its README for the orphan-rule/cycle reasoning.
-  That is also why the types here are `pub(all)`.
-- A browser-tier package (`supported_targets = "js"`); may import
-  `viewer/common/core`, `viewer/ui/scrollbar`, and `rabbita/dom`.
+Scrollbar DOM, slider arithmetic, reveal/fade, wheel normalization, and drag
+geometry remain in `viewer/ui/scrollbar`; model scroll state remains in
+`viewer/common/view_layout`. The `ViewPart` implementation lives in
+`viewer/browser/view` for MoonBit orphan-rule reasons. This package is JS-only
+and contains no `Viewer::` methods.

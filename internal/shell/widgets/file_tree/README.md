@@ -1,50 +1,27 @@
 # internal/shell/widgets/file_tree
 
-Explorer-style workspace tree widget for the internal reference shell: the
-`workbench/contrib/files` explorer role. It is not part of the public viewer
-API.
+Explorer-style Rabbita widget for the reference shell. It owns cached
+`WorkspaceStat` nodes and expansion/selection state, not document opening.
 
-## Behavior (the explorer contract)
+## Contract
 
-- Owns a tree of `@workspace.WorkspaceStat` nodes plus per-node expansion
-  state (the `ExplorerItem`/`AsyncDataTree` role).
-- Directories render collapsed by default. Expanding a directory with
-  unresolved children calls `provider.resolve(uri)` for exactly one level
-  and caches the result on the node; cached levels expand for free.
-- A failed resolve renders the folder as an empty-with-error row
-  (`resolve-failed`) and is retried on the next expand.
-- `set_active(uri)` is `autoReveal`: it resolves and expands the ancestor
-  chain of the URI (derived from its root-relative path segments) and
-  marks the node selected.
-- `refresh()` re-resolves from the provider's root, replacing every cached
-  node; the host calls it on (re)connect. The active file is re-revealed
-  in the fresh tree.
-- Opening files is an intent reported through `on_open`; the widget never
-  opens documents itself (`IEditorService.openEditor` stays with the
-  host).
+- Directories start collapsed. First expansion calls
+  `WorkspaceTreeProvider.resolve` for exactly one level; successful children are
+  cached and ordered directories-first. Collapse/re-expand reuses the cache.
+- A failed resolve leaves an empty `resolve-failed` row; the next
+  collapse/re-expand retries.
+- `set_active` selects a URI and resolves/expands its ancestor chain
+  (`autoReveal`). `refresh` replaces the tree from `provider.root` and reveals
+  the current selection again.
+- Clicking a file reports its URI through `on_open`; the host owns reads and
+  editor selection.
 
-## API
+Public API: `FileTree::FileTree(provider, on_open~)`, `view`, `refresh`, and
+`set_active` (see `pkg.generated.mbti`). Stable test selectors include
+`workspace-item`, `workspace-folder`/`workspace-file`, `is-selected`,
+`data-workspace-id`, `data-workspace-kind`, and the ARIA expansion/selection
+attributes.
 
-- `FileTree::FileTree(provider, on_open~)` with a
-  `&@workspace.WorkspaceTreeProvider`.
-- `view()` embeds the tree as a Rabbita child cell (keep it mounted).
-- `refresh()` / `set_active(uri)` return commands for the host's update.
-
-## DOM vocabulary
-
-Rows keep the explorer selectors: `workspace-item`,
-`workspace-folder`/`workspace-file`, `is-selected`, `data-workspace-id`
-(holding the full URI), `data-workspace-kind`, `aria-expanded`,
-`aria-selected`, `--depth` computed from tree depth, and indent guides.
-
-## Boundaries
-
-- May depend on internal shell `workspace` and Rabbita html/cmd/svg.
-- Must not import `remote_protocol` or `viewer` — enforced by
-  `scripts/check-architecture.mbtx`.
-
-## Checks
-
-- Expansion, reveal, and resolve-caching logic is unit-tested with an
-  in-memory `WorkspaceTreeProvider` in `tree_state_wbtest.mbt`.
-- Run `moon test internal/shell/widgets/file_tree --target js`.
+The widget may depend on `workspace` and Rabbita, never on `remote_protocol` or
+`viewer`. Run
+`moon test internal/shell/widgets/file_tree --target js` and `just check`.

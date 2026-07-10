@@ -1,101 +1,43 @@
 # viewer/common/model
 
-Readonly editor text model, immutable text snapshots, and model decorations.
-Mirrors Monaco's `editor/common/model`.
+Immutable text snapshots, readonly editor models, guides, and mutable model
+decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
 
-## Responsibilities
+## Text and identity
 
-- Own `TextSnapshot`, the immutable text buffer: the field pair mirrors the
-  piece tree's leaf (`StringBuffer { buffer, lineStarts }`) and the 1-based
-  methods mirror `IReadonlyTextBuffer`. Carries no document identity.
-- Own `TextModel`, the URI-bearing readonly editor model with display name,
-  language id, version, revision, and snapshot identity, plus the Monaco
-  `textModel.ts` read API (value/line reads, validation, word lookup)
-  delegating to the snapshot buffer, and the `tokenization` part
-  (`viewer/common/model/tokens`, Monaco's `TokenizationTextModelPart`)
-  wired in the constructor.
-- Own `text_model_tokens.mbt`, the `common/model/textModelTokens.ts` port
-  (`RangePriorityQueueImpl`, conformance-only — the readonly viewer runs no
-  background tokenizer).
-- Own model decorations: interval-tree storage (a port of Monaco's
-  `intervalTree.ts`) behind `TextModel::delta_decorations` and the
-  range-query accessors, with `ModelDeltaDecoration` / `ModelDecorationOptions` as
-  the public shapes.
-- Provide the current-document URI plus version comparison used by async
-  feature freshness guards.
+- `TextSnapshot` stores raw text plus line starts. It recognizes `\n`, lone `\r`,
+  and `\r\n` as line breaks; line reads exclude the terminator, while `get_value`
+  and `get_value_in_range` normalize returned line breaks to `\n`. Raw offset
+  helpers and `get_length` still use the original UTF-16 text.
+- `TextModel` adds URI, display name, language id, version, revision, lifecycle,
+  and a `TokenizationTextModelPart`. Reads, position/offset conversion, range
+  validation, and word lookup delegate to the snapshot.
+- `same_identity_and_version` compares serialized URI plus model version;
+  `revision` is host metadata, not part of that freshness guard.
+- Content is never edited in place: a host installs new text as a new model.
+  There is no edit/undo/redo, EOL option, IME, attachment, or content-change event.
+  Ranges are generally clamped where Monaco throws, and the immutable snapshot
+  remains readable after `TextModel::dispose`.
 
-## Monaco parity — TextModel & TextSnapshot
+## Mutable model-side state
 
-Placement rule (pinned `vscode/` submodule, commit 294fb350): a member lives
-where Monaco files it. `TextModel` ↔ `textModel.ts` (read section :737-1176,
-word cluster :2085-2124 via `tokenizationTextModelPart.ts`); `TextSnapshot` ↔
-`ITextBuffer`'s read surface (`model.ts` `IReadonlyTextBuffer` :1524) over the
-piece tree's leaf chunk (`pieceTreeBase.ts` `StringBuffer` :147). The snapshot
-is the degenerate never-edited piece tree — one chunk, its line-start table —
-so the tree machinery above the leaf is N-A by the readonly design (edits
-arrive as whole new models).
+- `delta_decorations`/`change_decorations` and the range-query APIs store regular,
+  overview-ruler, and injected-text decorations in augmented interval trees.
+  Decoration, token, and dispose events are part of the public model surface.
+- `GuidesTextModelPart` computes indentation guides over a snapshot.
+- `RangePriorityQueueImpl` is a conformance port from `textModelTokens.ts`; the
+  readonly viewer has no background tokenizer that consumes it.
 
-`TextModel` fields:
+## Monaco map and boundary
 
-| viewer | Monaco | status |
-| --- | --- | --- |
-| `uri` | `_associatedResource` / `get uri` (:671) | PORTED |
-| `version` | `_versionId` / `getVersionId()` (:737) | PORTED |
-| `snapshot` | `_buffer : ITextBuffer` | PORTED — public (Monaco: private) so headless paths (guides) can read the buffer without a model |
-| `tokenization` | `_tokenizationTextModelPart` / `get tokenization` (:301) | PORTED — readonly subset in `viewer/common/model/tokens` |
-| `language_id` | `TokenizationTextModelPart._languageId`, read via `getLanguageId()` (:2085) | PORTED — `get_language_id()` delegates to the part as Monaco does |
-| `instance_id`, `delta_decoration_call_cnt`, `last_decoration_id`, `decorations`, `decorations_tree`, `on_did_change_decorations` | `_instanceId` / `_deltaDecorationCallCnt` / `_lastDecorationId` / `_decorations` / `_decorationsTree` (:285-290), `_onDidChangeDecorations` (:225) | PORTED — API ledgered in `text_model_decorations.mbt` |
-| `display_name`, `revision` | — | EXTRA — host metadata the provider payloads carry (`languages.mbt`, editor events, shell workbench); Monaco hosts get these from workbench services the viewer doesn't have |
-| — | `id` (`'$model' + counter`) | N-A — model identity is uri+version by design (`same_identity_and_version`) |
-| `on_will_dispose`, `is_disposed` | `_onWillDispose` (:222), `_isDisposed` (:190), `dispose()` (:414), `isDisposed()` (:445) | PORTED — `dispose` fires `onWillDispose`, disposes the tokenization part (its registry subscription) and the emitters; the disposed-buffer swap is N-A (immutable snapshot, GC) |
-| — | edit/undo/attach/options/too-large fields | N-A — readonly |
+Use the pinned `vscode/src/vs/editor/common/model/textModel.ts`,
+`common/model.ts` (`IReadonlyTextBuffer`),
+`model/pieceTreeTextBuffer/pieceTreeBase.ts` (`StringBuffer`/line starts),
+`model/intervalTree.ts`, `model/guidesTextModelPart.ts`, and
+`model/textModelTokens.ts`. The piece tree above its immutable leaf and all edit
+machinery are deliberately N-A.
 
-`TextModel` methods: the read API is ported 1:1 as snake_case of the
-`textModel.ts` names (`get_value*`, `get_line_*`, `get_offset_at` /
-`get_position_at`, `get_full_model_range`, `validate_position` /
-`validate_range` / `validate_range_relaxed` / `modify_position`,
-`might_contain_rtl`, `get_word_at_position` / `get_word_until_position`,
-`get_language_id`), each doc comment citing its source line. The viewer clamps
-where Monaco throws `BugIndicatingError`, and `_assertNotDisposed` guards are
-not ported (the immutable snapshot stays readable after `dispose`). DEFERRED
-(no consumer yet): `findMatches`/`findNextMatch`/
-`findPreviousMatch`, `getCharacterCountInRange`, `createSnapshot`,
-`isValidRange`, `getLinesDecorations` beyond the ported decoration cluster.
-N-A (readonly / LF-only): `setValue`, edits, undo/redo, `pushEOL`,
-`getEOL`/`getEndOfLineSequence`, options/indentation
-(`detectIndentation`/`normalizeIndentation`), attach,
-`mightContainUnusualLineTerminators`/`NonBasicASCII`,
-`isDominatedByLongLines`, bracket delegates (guides is its own
-`GuidesTextModelPart`; tokenization is the ported `tokenization` part).
-
-`TextSnapshot` fields: `text`/`line_starts` ↔ `StringBuffer.buffer`/
-`.lineStarts` 1:1. The buffer carries no identity, matching Monaco —
-language id and version live on `TextModel`.
-
-`TextSnapshot` methods are two ledgered layers:
-
-- `IReadonlyTextBuffer` surface (1-based): `get_length`, `get_line_count`,
-  `get_line_content`, `get_line_length`, `get_line_max_column`,
-  `get_line_first/last_non_whitespace_column`, `get_offset_at(line, column)`
-  (buffer arity; the `Position`-taking form is `TextModel::get_offset_at`),
-  `get_position_at`, `get_value`, `get_value_in_range`,
-  `get_value_length_in_range`, `might_contain_rtl`.
-- pieceTreeBase-internal analog (0-based lines, offset-centric), used by
-  tokenizer/view-model loops: `line_text`, `line_start_offset`,
-  `line_end_offset`, `line_at_offset`, `slice`, `range_of`,
-  `offset_range_of`, `build_line_starts` (whose byte-identical twin in
-  `internal/shell/workspace/document.mbt` must change in lockstep).
-
-## Boundaries
-
-- May depend on `base/common` for `Uri`, `Position`, `Range`, and clamping,
-  plus `viewer/common/model/tokens` for the tokenization part.
-- Must not depend on workspace providers, language providers,
-  viewer, DOM, server routing, or host effects.
-- Does not expose edit, undo/redo, cursor, IME, or model event APIs.
-
-## Checks
-
-- Local tests plus `*_reference_test.mbt` / `*_reference_wbtest.mbt`
-  conformance ports of Monaco's model and interval-tree suites.
-- Run `moon test --target all viewer/common/model` for focused coverage.
+Production dependencies are only `base/common` and `viewer/common/model/tokens`;
+the package must not import language providers, view/view-model, DOM, workspace,
+server, or host effects. See `pkg.generated.mbti` for the exhaustive API and run
+`moon test --target js viewer/common/model`.

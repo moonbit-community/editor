@@ -1,46 +1,27 @@
 # viewer/browser/view_parts/content_widgets
 
-The content-widgets view part, ported from Monaco's
-`editor/browser/viewParts/contentWidgets/contentWidgets.ts` plus the hover
-content widget's DOM/geometry half from
-`editor/contrib/hover/browser/contentHoverWidget.ts` — the viewer's only
-content widget.
+The generic content-widget layer, ported from Monaco's
+`viewParts/contentWidgets/contentWidgets.ts` and the `IContentWidget`
+contracts in `editorBrowser.ts`. Hover's concrete widget lives in
+`viewer/contrib/hover/browser`, not in this package.
 
-## Responsibilities
+## Contract
 
-- `ContentWidgets`: the `.contentWidgets`/`.overflowingContentWidgets`
-  container pair, the hover widget's DOM (`HoverWidgetDom`), dirty flag, and
-  prepared render input.
-- `render_hover_widget` / `ensure_hover_widget`: positions, sizes, and
-  (once, read-after-write) measures the hover widget, mirroring Monaco's
-  `RenderedContentHover`/`ResizableContentWidget` placement logic.
+- `ContentWidget` exposes an id, DOM node, optional model-space primary and
+  secondary anchors, ordered `Above`/`Below`/`Exact` preferences, and whether
+  the node may overflow the editor.
+- `ContentWidgets::add_widget` mounts a node once in either `.contentWidgets`
+  or `.overflowingContentWidgets`; `remove_widget` is the only unmount path.
+  `set_widget_position` refreshes anchors and invalidates cached dimensions.
+- `prepare_render_widgets(ContentWidgetsRenderContext)` converts model anchors
+  to view coordinates, measures the box, and chooses a placement. The later
+  `render_widgets` call writes position and visibility. Hiding changes
+  `display`/`visibility` but does not unmount the node, keeping subtrees stable.
+- The current left anchor uses the measured monospace character width. Monaco
+  asks ViewLines for an exact visible range; this is the documented geometry
+  seam until that measurement is exposed here.
 
-## The `HoverWidgetHost`/`hover_view` inversions
-
-This is the one view part with real cross-cutting dependencies beyond the
-`ViewPart` trait, both resolved by the same host/callback pattern
-`controller_host.mbt`'s `PointerHandlerHelper` already uses:
-
-- `ContentWidgetsPrepared.hover_view : @hover.HoverWidgetView?`, not the full
-  `@hover.HoverController` — the controller stays with `Viewer` (the
-  foreign-method rule keeps every `Viewer::` method there), so
-  `view_part.mbt`'s `prepare_render` impl resolves
-  `HoverController::widget_view` before handing this package only the
-  already-derived view. The same-frame re-measure pass
-  (`render_hover_widget`'s recursive call) uses `HoverWidgetView::measured`
-  (defined alongside `HoverWidgetView` in `viewer/contrib/hover`) instead of
-  `HoverController::measured`.
-- `render_hover_widget`/`ensure_hover_widget` take a `HoverWidgetHost`, not
-  `ViewContext` — `ViewContext` lives in `browser/view/`, which needs
-  `ContentWidgets` back for `View`'s fields, so importing it here would
-  cycle. `view_part.mbt`'s `render` impl unpacks `ViewContext` fields into a
-  `HoverWidgetHost` at the call boundary.
-
-## Boundaries
-
-- The `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, the
-  trait-owning package — see its README for the orphan-rule/cycle reasoning.
-  That is also why the types here are `pub(all)`.
-- A browser-tier package (`supported_targets = "js"`); may import
-  `viewer/common/*`, `viewer/contrib/hover`, `viewer/ui/scrollbar`, and
-  `rabbita/dom`.
+`ContentWidgetsRenderContext` is a capability record because importing
+`browser/view` would create a cycle. The `ViewPart` implementation therefore
+lives in the trait-owning `viewer/browser/view` package. This package is
+JS-only and contains no `Viewer::` methods.

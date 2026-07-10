@@ -1,29 +1,30 @@
-# remote_protocol
+# internal/shell/remote_protocol
 
-MoonBit-owned client/server packet contract for remote readonly workspaces.
+MoonBit-owned JSON contract between the reference browser workbench and native
+server. Protocol version `4` is carried by every packet and must match exactly.
 
-## Responsibilities
+## Wire contract
 
-- Define client packets, server packets, payloads, protocol errors, and
-  version negotiation.
-- Encode and decode remote protocol JSON.
-- Carry semantic editor-domain document and language-feature packets, including
-  hover, definition, references (with server-enriched line, column, and
-  line-text previews), document symbols, and semantic tokens.
-- Carry server-initiated pushes: watched-document changes and diagnostics
-  (published from backend `moon check` runs; diagnostics packets have no
-  request id and are never answers to a client request).
-- Preserve structured provider errors without exposing backend tool output.
+- Client requests: `ResolveDirectory`, `OpenDocument`, `WatchDocument`,
+  `CloseDocument`, `Hover`, `Definition`, `References`, `DocumentSymbols`, and
+  `InlayHints`.
+- Server packets: directory/document results, watched `DocumentChanged` pushes,
+  pushed `Diagnostics`, semantic feature results, and `RemoteError`.
+- Position requests carry a document revision and UTF-16 offset; whole-document
+  feature requests carry a revision. Request IDs correlate replies. Diagnostics
+  deliberately have no request ID; watch pushes reuse the watch request ID.
+- Decoders return structured errors for invalid JSON, version, packet shape,
+  URI, or provider failure. `provider_code` preserves the lower-level category.
+- Reference results add line, column, and line-text preview fields. There is no
+  semantic-token packet.
 
-## Boundaries
+The public surface is the packet/payload types plus `protocol_version`,
+`negotiate_protocol_version`, `decode_client_packet`, and
+`decode_server_packet`; see `pkg.generated.mbti` for exact fields.
 
-- May depend on public domain packages, internal shell `workspace`, and JSON
-  support.
-- Must not depend on browser, native, DOM, viewer implementation, or server host
-  effects.
-- Protocol errors should preserve provider-error details for callers.
+## Boundary and validation
 
-## Checks
+This package may depend on domain types and `internal/shell/workspace`, but not
+on browser, viewer implementation, server routing, or native effects.
 
-- Package tests live in `protocol_test.mbt`.
-- Run `just check` for the repository-level type check.
+Run `moon test internal/shell/remote_protocol --target js` and `just check`.

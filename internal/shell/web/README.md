@@ -1,28 +1,13 @@
 # internal/shell/web
 
-Generated browser entrypoint for the reference workbench.
+JS main package for the reference workbench. `main` calls
+`workbench.start_app`; it exports no API and imports only the workbench package.
 
-## Responsibilities
+Application composition, browser FFI, URL/protocol selection, viewer mounting,
+and harness behavior stay in `internal/shell/workbench`. This package must remain
+an entrypoint rather than a shared domain layer.
 
-- Remain the generated MoonBit browser entrypoint.
-- Start the Rabbita-backed reference shell through `workbench`.
-- Keep application-shell ownership out of JavaScript; the native server serves
-  `web/dist/index.html`, `/style.css`, and `/editor.mjs`.
-- Treat `/style.css` as a generated asset assembled from owner-adjacent CSS
-  files by `scripts/build-web.mbtx`.
-
-## Boundaries
-
-- May depend on `internal/shell/workbench` only; composition of the viewer,
-  tree, and transport lives there.
-- Must remain the generated browser entrypoint and avoid becoming a shared
-  domain package.
-- Does not declare JavaScript FFI directly; browser host calls go through
-  `workbench` and the packages it composes, especially `viewer` and
-  Rabbita browser bindings.
-- Does not parse active document identity from browser URL parameters.
-
-## Checks
-
-- Browser harness behavior is documented in `../../../docs/harness.md`.
-- Run `just check` for the repository-level type check.
+`scripts/build-web.mbtx` bundles it as `web/dist/editor.mjs`, generates the HTML,
+and assembles owner-adjacent CSS into `web/dist/style.css`; the native server
+serves those assets. Run `just build-moon-web` (or `just build`). Browser harness
+contracts are documented in `../../../docs/harness.md`.

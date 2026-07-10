@@ -1,22 +1,16 @@
 # platform/log
 
-Host-neutral structured logging contracts.
+Host-neutral structured logging used by the viewer and reference shell.
 
-## Responsibilities
+- `LogEntry` carries a level, category, message, and string key/value details.
+- `LogService` applies a minimum `LogLevel`; `Off` disables emission and the
+  convenience methods (`trace` through `error`) forward to a `Logger` sink.
+- `NullLogger` drops output, `MemoryLogger` records entries and flushes for tests,
+  and `MultiplexLogger` fans out to each child sink. `Logger` methods are
+  `noraise`, so logging cannot fail the calling workflow.
 
-- Define `LogLevel`, `LogEntry`, `Logger`, and `LogService`.
-- Provide null, memory, and multiplex logger sinks.
-- Keep logging best-effort: logger methods are `noraise` so diagnostics do not
-  fail viewer or backend workflows.
-
-## Boundaries
-
-- Must not depend on viewer, browser, native, transport, or
-  `internal/shell` packages.
-- Hosts decide where log entries go. This package only defines the shared
-  structure and filtering facade.
-
-## Checks
-
-- Package tests live in `log_test.mbt`.
-- Run `just check` for the repository-level guardrail.
+This is the explicit, dependency-injected role of Monaco/VS Code's logging service,
+not a port of its global service container. The package has no product, viewer,
+browser, native, transport, or shell dependency; hosts choose the sink. See
+`pkg.generated.mbti` for the complete API and run
+`moon test --target js platform/log` for focused coverage.

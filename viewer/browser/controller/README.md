@@ -1,56 +1,41 @@
 # viewer/browser/controller
 
-The browser input controller — the local analog of Monaco's
-`editor/browser/controller/`. It owns the DOM listener wiring for pointer input
-and never reaches into the concrete view; it calls back through a narrow
-`PointerHandlerHelper`, the analog of Monaco's `IPointerHandlerHelper`.
+The JS-only pointer controller, mirroring Monaco's
+`editor/browser/controller/{mouseHandler,mouseTarget,dragScrolling}.ts` plus
+the viewer's scrollbar-input glue.
 
-## How this mirrors Monaco
+## Contract
 
-Monaco's `MouseHandler` takes `(ViewContext, ViewController, IPointerHandlerHelper)`
-and the `View` hands it the object literal `_createPointerHandlerHelper()` returns
-— DOM nodes as fields, view-dependent operations as closures. The faithful
-MoonBit translation keeps that shape:
+```text
+EditorMouseEventFactory
+  -> MouseHandler
+  -> MouseTargetFactory / HitTestContext
+  -> MouseDispatchData
+  -> Viewer dispatch callbacks
+```
 
-- `PointerHandlerHelper` is a **struct of nodes + closures** (not an interface
-  implemented by a class), built by the viewer in `hook_view_input` where the
-  view is in scope — the same idiom `viewer.ViewContext` already uses.
-- `MouseHandler` owns the active scrollbar-thumb drag (Monaco's
-  `MouseDownOperation`/drag state) and the listener wiring.
+- `PointerHandlerHelper` is the Monaco-shaped bundle of DOM nodes and closure
+  capabilities built by the root `viewer` package. It is the only route back
+  to the active ViewModel, layout, measurements, scrolling, event emission,
+  and cursor dispatch; this package never imports the root `viewer` package.
+- `MouseTargetFactory` classifies fingerprinted editor DOM, caret-API hits,
+  margins, widgets, zones, scrollbars, and outside-editor coordinates into the
+  `MouseTarget` values owned by `viewer/browser`.
+- `MouseHandler` owns browser listeners, click counting, selection drag,
+  outside-editor auto-scroll, wheel input, browser-driven reveal recovery, and
+  active editor/hover scrollbar drags. It emits resolved `MouseTarget` events
+  and `MouseDispatchData`; the root Viewer converts the public event boundary
+  to model space and changes cursor state.
+- `PointerHandlerLastRenderData` exposes the last cursor geometry needed by
+  hit testing. Exact callable types are listed in `pkg.generated.mbti`.
 
-The dispatch side (Monaco's `ViewController`, our `Viewer::dispatch_mouse`) stays
-in the viewer core — Monaco likewise keeps `viewController.ts` under `view/`, not
-`controller/`.
+Compared with Monaco, the viewer omits pointer-capture plumbing, mouse-wheel
+zoom, context-menu/wheel editor events, text drag-and-drop, multi-cursor and
+column-selection gestures, and textarea/GPU/minimap paths.
 
-## Scope
+## Boundary
 
-This package holds the browser pointer-input layer:
-
-- **Mouse selection + hit test** (Monaco `MouseDownOperation` + `mouseTarget.ts`):
-  `handle_mouse_move`/`handle_mouse_down`, multi-click gating, drag-select, and
-  drag-autoscroll. `MouseHandler` owns the `MouseDownState`-equivalent fields.
-- **Scroll / scrollbar interaction** (Monaco `ScrollableElement` pointer input):
-  scrollbar thumb/track drags, reveal-on-hover, editor wheel, and the
-  browser-driven reveal bridge.
-
-What stays in the viewer core: the *measurement* read-phase (`view_metrics`,
-`gutter_width`, glyph probe) — exposed to the controller through the helper —
-and the *dispatch* side (`Viewer::dispatch_mouse`, Monaco's `ViewController`),
-which the controller feeds via a `MouseDispatch` intent.
-
-## Boundaries
-
-- A browser-tier package (`supported_targets = "js"`, enforced by
-  `check_tier_targets` in `scripts/check-architecture.mbtx`): it owns browser
-  DOM, so it may import `rabbita/dom` and declare JS FFI, but not the shell,
-  the rabbita TEA/vdom/command layers, or the root `viewer` package. The edge
-  is one-directional: `viewer -> viewer/browser/controller`.
-- `hit_test`/`ViewMetrics`/`MouseTarget`/`MouseTargetType` — the DOM-free
-  hit-testing algorithm and value types Monaco's `mouseTarget.ts` also
-  defines — stay in `viewer/common` rather than moving here: they have no DOM
-  dependency, and `viewer/contrib/hover` (multi-target) depends on
-  `MouseTarget` directly, so moving them into this js-only package would
-  break hover's native build. See `viewer/common/mouse_target.mbt`'s header
-  comment.
-- May depend on `base/common`, `viewer/common`, `viewer/common/view_model`,
-  `viewer/ui/scrollbar`, and `viewer/common/view_layout`.
+This package may use browser DOM and the browser/view, common view-model/layout,
+and scrollbar types. It must not import `viewer`, `internal/shell/**`, or
+Rabbita TEA/vdom/command packages. Shared browser mouse event/target values live
+in `viewer/browser`; the DOM hit-test algorithm lives here.

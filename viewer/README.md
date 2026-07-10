@@ -1,84 +1,75 @@
 # viewer
 
-The reusable readonly viewer package and the public entry point. It plays
-Monaco's `editor/browser/widget/codeEditor` role: the `Viewer` facade, its
-options and services, and the `Viewer::`-facing glue around the browser view.
-`viewer/pkg.generated.mbti` is the reviewable public-API contract; this README
-covers ownership and rules, not the API list.
+The reusable readonly editor facade. It plays Monaco's
+`CodeEditorWidget`/`ICodeEditor` role over the packages below it; the reference
+workbench, transport, files, and reload policy live under `internal/shell/`.
+`pkg.generated.mbti` is the authoritative public API. This README records the
+ownership and lifecycle rules that are not obvious from signatures.
 
-The public `Viewer::` API is a strict readonly subset of Monaco's
-`IEditor`/`ICodeEditor`: every `pub fn Viewer::*` maps 1:1 to a member of
-those interfaces. Host-facing feature capabilities beyond that subset (the
-comment store, feature controllers, contribution internals) are reached by
-importing the owning feature package — `viewer/contrib/<feature>` or
-`viewer/common/<feature>` — the way VS Code's workbench imports
-`vs/editor/**`; the `Viewer::` surface never grows to carry them (consumer
-classes: `docs/architecture.md`, Viewer Three-Tier Mirror).
+## Construction and ownership
 
-It ships without explorer chrome, transport, persistence, file watching, or
-reload policy. Hosts provide readonly `viewer/common/model.TextModel` values
-and call the viewer API. The reference `internal/shell/workbench` is one host;
-it is not part of this package or the public import surface.
+- Browser embedders call `Viewer::create(host, services~, options~)`. The host
+  element must stay mounted and must not receive host-rendered children.
+  `Viewer::Viewer(...)` creates an unattached/headless instance; `attach` is a
+  private implementation seam, not a public two-step mounting API.
+- `set_model(TextModel?)` installs a caller-owned readonly model. The same
+  object is a no-op; replacing or clearing it disposes the old model-scoped
+  listeners and DOM `View`, then creates a new `ViewModel` and, when mounted,
+  a new `View`. Model swaps reset scroll and feature model state; use
+  `save_view_state`/`restore_view_state` when the host wants persistence.
+- Contributions are created once per `Viewer` and disposed with it. Their
+  Monaco instantiation modes are recorded, but all modes currently instantiate
+  eagerly. `dispose` removes viewer-owned listeners and DOM; it does not
+  dispose the caller's model, files, or watches.
+- Overlay-widget registrations belong to the Viewer and are re-added to each
+  per-model View. Content widgets are an internal view-part seam; hover owns
+  the current implementation.
 
-## Embedding
+## Public surface
 
-- Construct with `Viewer::Viewer(...)` (unattached) or `Viewer::create(host, ...)`;
-  `attach(host)` mounts into one stable host element the host never renders
-  children into afterwards; `set_model` installs caller-owned readonly model
-  state. `dispose()` releases viewer-owned subscriptions and DOM; it never owns
-  source lifecycle (files, watches).
-- Typed subscriptions report model changes, frame builds, render results,
-  diagnostics, hover resolution, scroll, and disposal.
-- Hosts register tokenizers and semantic providers with the
-  `viewer/common/languages` registry — the process-wide default, or an isolated
-  `Languages` value passed through `ViewerServices::new(languages~)`.
-  `ViewerServices` owns per-viewer service objects (markers, hover
-  participants, logging). Diagnostics have no provider seam: hosts push them
-  into `services.markers` (Monaco's `setModelMarkers`) and the marker-change
-  event drives the render.
+The API is a readonly subset of Monaco's editor API:
 
-## Responsibilities
+- lifecycle/model/options: `create`, `set_model`, `update_options`, `layout`,
+  `focus`, `dispose`;
+- position, selection, scroll, reveal, geometry, and read queries;
+- model decorations and `EditorDecorationsCollection`;
+- view zones and null-position overlay widgets;
+- model, cursor, scroll, mouse, and disposal events.
 
-- Own `Viewer` lifecycle, options, services, and every `Viewer::` method.
-  MoonBit cannot define methods on a foreign type, so the `Viewer`-facing glue
-  for input, hit-testing, reveal, view zones, folding controls, hover
-  dispatch, and decorations lives here even though the mechanisms live in
-  `viewer/browser/*`, `viewer/contrib/*`, and `viewer/common/*`.
-- Drive the render pipeline and keep async feature results fresh (current
-  model URI + version checks before applying provider answers):
+The viewer is single-cursor: secondary cursor/selection arrays are empty and
+`set_selections` uses the first selection. The `debug_on_did_*` subscriptions
+are harness observability, not ordinary editor events.
 
-  ```text
-  viewer/common/model.TextModel
-    -> viewer/common/view_model
-    -> viewer/common/view_layout
-    -> viewer/browser/view (DOM)
-  ```
+`ViewerServices` explicitly supplies the language registry, marker and marker-
+decoration services, agent-feedback store, quick-diff store, and logger. Hosts
+register tokenizers, hover, document-symbol, and inlay-hint providers through
+`viewer/common/languages`; diagnostics are pushed to `services.markers`.
+There is no current viewer UI for definition or references.
 
-- Keep viewer-owned styles next to the part that owns the corresponding DOM;
-  `scripts/build-web.mbtx` assembles them into the served `/style.css`.
-- Keep syntax and semantic features provider-based: the viewer consumes
-  registered providers and never imports concrete `syntax/lang_*` packages or
-  backend transports.
+## Runtime pipeline
 
-Current readonly behavior: rendering, syntax highlighting, diagnostics as
-markers, hover, folding, inlay hints, selection/copy, scrolling, decorations,
-and view zones. Go-to-definition and find-references are not current viewer
-behavior.
+```text
+TextModel (caller-owned)
+  -> TokenizationTextModelPart
+  -> ViewModel + ViewLayout (per model)
+  -> View + ViewParts (per model, browser only)
+  -> requestAnimationFrame read/measure then DOM write
+```
 
-## Boundaries
+The root package owns every `Viewer::` method and the cross-package glue for
+input, reveal, widgets, folding, hover, inlay hints, quick diff, feedback, and
+decorations. Feature mechanisms remain in their `viewer/common/**`,
+`viewer/browser/**`, or `viewer/contrib/**` owner packages. Async results are
+guarded against the current model/revision before application.
 
-- Exact imports live in `moon.pkg`. The stable rules: browser effects come only
-  from `rabbita/dom` / `rabbita/js` (never the Rabbita TEA/vdom/command
-  layers); no `internal/shell/*` packages, websocket transports, or concrete
-  `syntax/lang_*` packages.
-- js-only (`supported_targets = "js"`): this package owns DOM. DOM-free logic
-  belongs in `viewer/common/**` or `viewer/contrib/<feature>/`.
-- Must not pass render-frame JSON to JavaScript for DOM rendering.
+## Boundaries and checks
 
-## Checks
-
-- `test_viewer_wbtest.mbt` is the headless viewer harness (`with_test_viewer`)
-  for behavior expressible as positions, ranges, line strings, or frames — see
-  `docs/harness.md`. Feature logic is tested in its owning package; real
-  browser behavior in `tests/browser/`.
-- Run `just check` for the repository-level guardrail.
+- JS-only: DOM access is through `rabbita/dom`/`rabbita/js`; no Rabbita
+  TEA/vdom/command layer, `internal/shell/**`, backend transport, or concrete
+  `syntax/lang_*` import belongs here.
+- DOM-free logic belongs in `viewer/common/**` or a multi-target contribution.
+  The browser renders typed state directly; do not pass render-frame JSON to
+  JavaScript.
+- Owner-adjacent CSS is assembled by `scripts/build-web.mbtx`.
+- Use `just test` for headless/model behavior, `just test-browser` for real DOM
+  input and geometry, and `just check` for architecture boundaries.

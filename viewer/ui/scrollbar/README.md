@@ -1,35 +1,25 @@
 # viewer/ui/scrollbar
 
-The custom scrollbar widget: a browser-UI leaf, the local analog of Monaco's
-`base/browser/ui/scrollbar/`. It owns the Monaco-shaped scrollable-element DOM
-shell (wrapper, content, vertical/horizontal bars and sliders, shadows) and the
-custom scrollbar node geometry. Callers decide whether scroll positions are
-written back into `ViewLayout` or a native content element.
+The browser-UI leaf corresponding to Monaco's
+`base/browser/ui/scrollbar/`. It supplies the shared custom scrollbar used by
+the editor and the hover widget; callers decide whether a new position updates
+`ViewLayout` or a natively scrolling content element.
 
-## Responsibilities
+## Contract
 
-- `ScrollableElementDom`: the scrollable-element DOM shell plus reveal/fade and
-  drag-thumb geometry. `update_from_model` / `update_from_native_content` write
-  bar and slider styles; `native_scroll_to` / `native_scroll_by` drive a native
-  content element; `track` / `slider` / `desired_position_from_track` expose the
-  nodes and arithmetic the input controller needs for thumb drags.
-- `ScrollableElementOwner` / `ScrollbarDrag`: the owner tag and active-drag
-  record the shared document-level mousemove/up handling uses to apply a drag to
-  the correct scroll target.
-- `normalized_wheel_delta` / `drag_coord`: wheel and pointer helpers.
+- `ScrollableElementDom` owns the wrapper/content nodes, horizontal and
+  vertical tracks/sliders, shadows, reveal/fade state, and two
+  `ScrollbarState` values.
+- `update_from_model` paints editor scroll dimensions/position;
+  `update_from_native_content` reads a native scrolling element.
+  `native_scroll_to`/`native_scroll_by` drive the latter.
+- `track`, `slider`, `state`, `desired_position_from_track`, and drag/reveal
+  methods expose the geometry needed by `viewer/browser/controller`.
+- `StandardWheelEvent` and `mouse_wheel_scroll_deltas` normalize wheel input;
+  `ScrollableElementOwner` and `ScrollbarDrag` let the controller distinguish
+  editor and hover drags.
 
-The scroll-position arithmetic itself (`ScrollbarState`) lives in
-`viewer/common/view_layout`; this package is the DOM and event geometry around
-it.
-
-## Boundaries
-
-- A browser-UI subpackage: it owns browser DOM, so it may import `rabbita/dom`
-  and declare narrow JS FFI (the auto-hide timer). It must not import the
-  rabbita TEA/vdom/command layers, websocket transport, or any
-  `internal/shell/*` package.
-- May depend on `viewer/common/view_layout` (`ScrollbarState` /
-  `ScrollDimensions` / `ScrollPosition`).
-- Must not import the `viewer` browser core. The edge is one-directional:
-  `viewer -> viewer/ui/scrollbar`. `scripts/check-architecture.mbtx` enforces
-  this via `is_viewer_browser_subpackage`.
+Scroll-position arithmetic remains in `viewer/common/view_layout`; this package
+owns DOM and interaction geometry only. It is JS-only, may use narrow Rabbita
+DOM/JS bindings, and must not import root `viewer`, browser view/controller,
+Rabbita TEA/vdom/command, transport, or `internal/shell/**`.

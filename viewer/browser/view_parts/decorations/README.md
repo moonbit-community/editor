@@ -1,24 +1,15 @@
 # viewer/browser/view_parts/decorations
 
-Mirrors `vscode/src/vs/editor/browser/viewParts/decorations`
-(`DecorationsOverlay`): whole-line and inline decoration rectangles,
-including the marker squiggles, as per-line `div.cdr` HTML for
-`viewer/browser/view`'s `ContentViewOverlays` rows (`view_overlays.mbt`,
-Monaco's `viewOverlays.ts`) — the last registered content overlay
-(current-line → selection → decorations, `view.ts:218-221`).
+The pure HTML half of Monaco's `DecorationsOverlay`. It turns viewport model
+decorations into per-line `<div class="cdr ...">` pieces after the
+current-line and selection overlays.
 
-## Responsibilities
+`compute_decoration_overlay_pieces` filters/sorts decorations, emits whole-line
+pieces, merges touching same-class ranges, handles `showIfCollapsed`, and
+expands `shouldFillLineOnLineBreak`. Inline geometry comes from the supplied
+live-line measurement closure. `prepare_decorations_render` serializes those
+pieces into one string per visible line.
 
-- The pure piece computation (`compute_decoration_overlay_pieces`):
-  filter/sort, whole-line spans, same-class touching merge,
-  `showIfCollapsed` widening, `shouldFillLineOnLineBreak` expansion.
-- `DecorationsOverlay` (the `_renderResult` state) and
-  `prepare_decorations_render`, serializing the pieces into Monaco's exact
-  per-line strings.
-
-## Boundaries
-
-- The `DynamicViewOverlay` impl lives in `viewer/browser/view/view_part.mbt`,
-  the trait-owning package — see its README for the orphan-rule/cycle
-  reasoning. That is also why the types here are `pub(all)`.
-- Pure per-line HTML: no DOM writes (the rows belong to `browser/view`).
+This package writes no DOM. `browser/view` owns the overlay rows and the
+`DynamicViewOverlay` implementation; exact helper types are in
+`pkg.generated.mbti`.

@@ -1,34 +1,31 @@
-# server_host_native
+# internal/shell/server_host_native
 
-Native effect adapter for the reference backend shell.
+Native effect adapter and executable backend for the reference shell.
 
-## Responsibilities
+## Runtime
 
-- Provide the native implementation point for the `server.ServerHost` trait.
-- Keep filesystem reads, file watching, process spawning, timers, and sockets
-  outside server policy code.
-- Serve the browser client from `web/dist` and bridge `/protocol` WebSocket
-  traffic into `server.RemoteServer`, serializing outbound packets through a
-  per-connection writer task so concurrent watch pushes and responses never
-  interleave on the socket.
-- List workspace entries, validate root-relative paths, and poll watched files
-  under the configured workspace root.
-- Back semantic features with the `moon` command line: hover shells out to
-  `moon ide hover --output-json`, and diagnostics come from single-flight
-  `moon check --output-json` runs pushed to every connected session.
-- Return structured host errors for invalid paths, missing files, directories,
-  and unavailable native capabilities.
+- `NativeServerHost` implements `server.ServerHost`: root-contained text reads,
+  one-level directory reads, and polling watches (500 ms by default).
+- `run_native_editor_server` serves `web/dist` over HTTP and `/protocol` over
+  WebSocket. Each connection has one unbounded outbox and one socket writer, so
+  responses and concurrent watch/diagnostic pushes cannot interleave frames.
+- `MoonWorkspaceLanguageProvider` implements hover with
+  `moon ide hover --output-json --no-check`. Definition, references, document
+  symbols, and inlay hints currently return no result.
+- `MoonCheckDiagnostics` coalesces document syncs into single-flight
+  `moon check --output-json` runs, remembers the latest revision, pushes clears,
+  and broadcasts per-file diagnostics to every connected session.
+- URI/root validation, file watching, process execution, static serving, and
+  Moon CLI output parsing are owned here; protocol policy remains in `server`.
 
-## Boundaries
+Public entry points also include `native_server_host`, hover/check parsers, and
+the configurable constructors. The `main` package accepts `--root`, `--port`,
+`--asset-dir`, and `--moon-command`.
 
-- May depend on internal shell `server`, `remote_protocol`, `workspace`, and
-  native async runtime packages.
-- Must not own remote protocol routing, workspace policy, provider semantics, or
-  browser behavior.
-- Keep this package native-only through `supported_targets = "native"`.
-- This package is not part of the reusable viewer API.
+## Boundary and validation
 
-## Checks
+This package is native-only and is not part of the reusable viewer API. It owns
+concrete host/provider behavior, but not protocol packet routing or browser UI.
 
-- Package tests live in `native_host_test.mbt`.
-- Run `just check` for the repository-level type check.
+Run `moon test internal/shell/server_host_native --target native`, `just build`,
+or launch it with `just dev ROOT=. PORT=5173`.

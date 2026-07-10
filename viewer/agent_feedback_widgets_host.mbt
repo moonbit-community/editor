@@ -79,6 +79,10 @@ fn Viewer::hook_agent_feedback_widgets(
       }
     }),
     self.on_did_change_model(_ => self.rebuild_agent_feedback_widgets()),
+    // A `set_value` flush destroys the highlight decorations; rebuild the
+    // bubbles from the feedback service store against the new content
+    // (Track E — the anchors live in the store, not the decorations).
+    self.on_did_change_model_content(_ => self.rebuild_agent_feedback_widgets()),
     self.on_did_scroll_change(_ => self.relayout_agent_feedback_widgets()),
   ]
 }

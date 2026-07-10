@@ -19,6 +19,16 @@ fn register_folding_contribution(registry : EditorContributionRegistry) -> Unit 
       listeners.push(
         viewer.on_did_change_model(_ => viewer.folding_on_model_changed()),
       )
+      // `this.editor.onDidChangeModelContent(e => this.onDidChangeModelContent(e))`
+      // (`folding.ts`, the localToDispose set): recompute the regions against
+      // the new content; `FoldingModel.update`'s region matching preserves
+      // collapse state where ranges still match, and its decoration delta
+      // tolerates the ids the flush destroyed.
+      listeners.push(
+        viewer.on_did_change_model_content(_ => {
+          viewer.trigger_folding_model_changed()
+        }),
+      )
       // `this.editor.onDidChangeCursorPosition(...)` (model-scoped in the
       // source; the viewer's cursor events already gate on a model)
       listeners.push(

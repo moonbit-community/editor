@@ -101,6 +101,10 @@ fn Viewer::hook_agent_feedback(self : Viewer) -> Array[@base_common.Disposable] 
       }
     }),
     self.on_did_change_model(_ => self.on_agent_feedback_model_changed()),
+    // A `set_value` flush destroys the glyph/highlight decorations and may
+    // remove the input's anchor line; treat it like a model change — hide
+    // the input, clear the glyph, and re-evaluate the lane (Track E).
+    self.on_did_change_model_content(_ => self.on_agent_feedback_model_changed()),
     self.on_did_change_cursor_selection(_ => {
       self.on_agent_feedback_selection_changed()
     }),

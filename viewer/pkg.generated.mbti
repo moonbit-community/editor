@@ -173,6 +173,7 @@ pub fn Viewer::layout(Self) -> Unit
 pub fn Viewer::on_did_change_cursor_position(Self, (CursorPositionChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_change_cursor_selection(Self, (CursorSelectionChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_change_model(Self, (ModelChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_change_model_content(Self, (@model.ModelContentChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_scroll_change(Self, (ScrollEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_mouse_down(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
@@ -209,6 +210,7 @@ pub fn Viewer::set_scroll_position(Self, scroll_top? : Double, scroll_left? : Do
 pub fn Viewer::set_scroll_top(Self, Double) -> Unit
 pub fn Viewer::set_selection(Self, @core.Selection) -> Unit
 pub fn Viewer::set_selections(Self, Array[@core.Selection]) -> Unit
+pub fn Viewer::set_value(Self, String) -> Unit
 pub fn Viewer::update_options(Self, ViewerOptions) -> Unit
 
 pub(all) struct ViewerHoverResolvedEvent {

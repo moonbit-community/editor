@@ -14,6 +14,12 @@ pub struct Viewer {
   priv services : ViewerServices
   priv mut options : ViewerOptions
   priv did_change_model : @base_common.Emitter[ModelChangedEvent]
+  /// Monaco's `onDidChangeModelContent` (`cew:105`), re-fired from the
+  /// installed model's public content event by the `attach_model`
+  /// subscription.
+  priv did_change_model_content : @base_common.Emitter[
+    @model.ModelContentChangedEvent,
+  ]
   priv did_change_cursor_position : @base_common.Emitter[
     CursorPositionChangedEvent,
   ]
@@ -145,6 +151,9 @@ fn ModelData::dispose(self : ModelData) -> Unit {
   for listener in self.listeners_to_remove {
     listener.dispose()
   }
+  // `this.viewModel.dispose()` (`cew:2139`): unregisters the view model
+  // from the text model's content-dispatch set.
+  self.view_model.dispose()
 }
 
 ///|
@@ -266,6 +275,7 @@ pub fn Viewer::Viewer(
     services,
     options,
     did_change_model: @base_common.Emitter::new(),
+    did_change_model_content: @base_common.Emitter::new(),
     did_change_cursor_position: @base_common.Emitter::new(),
     did_change_cursor_selection: @base_common.Emitter::new(),
     did_build_view_model: @base_common.Emitter::new(),
@@ -359,6 +369,18 @@ pub fn Viewer::on_did_change_model(
   listener : (ModelChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_change_model.event(listener)
+}
+
+///|
+/// Fires when the installed model's content changed — Monaco's
+/// `onDidChangeModelContent` (`cew:105`), carrying the model's public
+/// `IModelContentChangedEvent` payload. Today's only producer is the
+/// `set_value` flush lane, so `is_flush` is always true.
+pub fn Viewer::on_did_change_model_content(
+  self : Viewer,
+  listener : (@model.ModelContentChangedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.did_change_model_content.event(listener)
 }
 
 ///|
@@ -489,6 +511,19 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   self.hook_document_input()
   self.measure_requested = true
   self.schedule_render()
+}
+
+///|
+/// Replaces the installed model's whole content in place — `setValue`
+/// (`cew:487-497`): delegate to `model.setValue`. Unlike `set_model`, the
+/// same `TextModel`, `ViewModel`, and `View` survive: scroll clamps instead
+/// of resetting, and feature contribs re-derive their state from the
+/// content-change event. No model → no-op, like the source's `_modelData`
+/// guard. The `_beginUpdate`/`_endUpdate` bracket is N-A — the viewer's
+/// repaint already coalesces on the scheduled render flush.
+pub fn Viewer::set_value(self : Viewer, value : String) -> Unit {
+  guard self.model_data is Some(model_data) else { return }
+  model_data.model.set_value(value)
 }
 
 ///|
@@ -771,6 +806,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.contributions = {}
   self.did_dispose.fire(())
   self.did_change_model.dispose()
+  self.did_change_model_content.dispose()
   self.did_change_cursor_position.dispose()
   self.did_change_cursor_selection.dispose()
   self.did_build_view_model.dispose()

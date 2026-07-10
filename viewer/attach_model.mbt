@@ -29,7 +29,9 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
           // Injected-text deltas re-run the line-breaks computer per line in
           // Monaco (`onDidChangeContentOrInjectedText`); the viewer's
           // granularity is the whole-document reproject
-          // (`_lines.onModelFlushed()`), applied to the live view model.
+          // (`_lines.on_injected_text_changed()`), applied to the live view
+          // model. Content flushes take the event-carrying form of the same
+          // member through the model's registered-view-model seam instead.
           if event.affects_injected_text {
             view_model.on_did_change_content_or_injected_text()
             self.on_line_mapping_changed(view_model, model)
@@ -38,6 +40,28 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
         None => ()
       }
       self.decorations_generation += 1
+      self.schedule_render()
+    }),
+  )
+  // The `set_value` flush lane (`model.onDidChangeContent`). By the time
+  // this fires, the registered view models already re-projected (the
+  // model's two-loop dispatch runs before its public emitter), so the
+  // viewer side re-flushes its layout facts, re-applies the service-owned
+  // decorations the flush destroyed (Track E), re-fires the public event
+  // for the contribs, and schedules the repaint.
+  listeners_to_remove.push(
+    model.on_did_change_content(event => {
+      match self.get_view_model() {
+        Some(view_model) => self.on_line_mapping_changed(view_model, model)
+        None => ()
+      }
+      // Markers: the flush destroyed the marker decorations; re-seed the
+      // per-model set from the marker store (`on_model_added` replaces it).
+      self.services.marker_decorations.on_model_added(model)
+      // Inlay hints: re-request from the providers and re-apply as
+      // injected-text decorations against the new content.
+      self.request_model_features(model)
+      self.did_change_model_content.fire(event)
       self.schedule_render()
     }),
   )

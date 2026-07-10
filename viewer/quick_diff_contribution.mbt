@@ -21,6 +21,15 @@ fn register_quick_diff_contribution(
     listeners.push(
       viewer.on_did_change_model(_ => viewer.quick_diff_update(collection)),
     )
+    // `QuickDiffModel`'s recompute on modified-side content changes
+    // (`onDidChangeContent` → `triggerDiff`): a `set_value` flush both
+    // changes the diff input and destroys the collection's decorations, so
+    // the decorator re-runs against the new snapshot.
+    listeners.push(
+      viewer.on_did_change_model_content(_ => {
+        viewer.quick_diff_update(collection)
+      }),
+    )
     // `QuickDiffModel`'s recompute on quick-diff (provider/original) changes,
     // scoped to this editor's resource.
     listeners.push(

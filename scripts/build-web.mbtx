@@ -83,6 +83,12 @@ async fn main {
   if quick_diff_status != 0 {
     fail("moon build failed with exit code \{quick_diff_status}")
   }
+  let set_value_status = @process.run("moon", [
+    "build", "--target", "js", "tests/browser/moonbit/set_value",
+  ])
+  if set_value_status != 0 {
+    fail("moon build failed with exit code \{set_value_status}")
+  }
 
   let source_dir = "_build/js/debug/build/internal/shell/web"
   let embed_source_dir = "_build/js/debug/build/internal/shell/examples/embedded_viewer"
@@ -97,6 +103,7 @@ async fn main {
   let folding_source_dir = "_build/js/debug/build/tests/browser/moonbit/folding"
   let folding_nested_source_dir = "_build/js/debug/build/tests/browser/moonbit/folding_nested"
   let quick_diff_source_dir = "_build/js/debug/build/tests/browser/moonbit/quick_diff"
+  let set_value_source_dir = "_build/js/debug/build/tests/browser/moonbit/set_value"
   let target_dir = "web/dist"
   let browser_tests_dir = "\{target_dir}/browser-tests"
   if !@fs.exists(target_dir) {
@@ -411,6 +418,29 @@ async fn main {
     browser_test_html(
       "MoonBit Viewer Quick Diff Test",
       "/browser-tests/quick_diff.mjs",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+
+  let set_value_js = @fs.read_file("\{set_value_source_dir}/set_value.js").text()
+  @fs.write_file(
+    "\{browser_tests_dir}/set_value.mjs",
+    set_value_js.replace(
+      old="//# sourceMappingURL=set_value.js.map",
+      new="//# sourceMappingURL=set_value.mjs.map",
+    ),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/set_value.mjs.map",
+    @fs.read_file("\{set_value_source_dir}/set_value.js.map"),
+    create_mode=@fs.CreateOrTruncate,
+  )
+  @fs.write_file(
+    "\{browser_tests_dir}/set_value.html",
+    browser_test_html(
+      "MoonBit Viewer Set Value Test",
+      "/browser-tests/set_value.mjs",
     ),
     create_mode=@fs.CreateOrTruncate,
   )

@@ -62,6 +62,7 @@ pub fn TokenizationTextModelPart::dispose(Self) -> Unit
 pub fn TokenizationTextModelPart::force_tokenization(Self) -> Unit
 pub fn TokenizationTextModelPart::get_language_id(Self) -> String
 pub fn TokenizationTextModelPart::get_line_tokens(Self, Int) -> @moonbit-community/editor/viewer/common/tokens.LineTokens
+pub fn TokenizationTextModelPart::handle_did_change_content(Self, Array[String], is_flush~ : Bool) -> Unit
 pub fn TokenizationTextModelPart::has_tokens(Self) -> Bool
 pub fn TokenizationTextModelPart::new(Array[String], String) -> Self
 pub fn TokenizationTextModelPart::on_did_change_tokens(Self, (ModelTokensChangedEvent) -> Unit) -> @common.Disposable

@@ -1,13 +1,15 @@
 ///| Faithful conformance port of vscode's `textModel.test.ts` (pinned `vscode/`
 /// submodule, commit 294fb350).
 ///
-/// Readonly-subset triage of the file's 40 cases. In scope and ported here (10):
+/// Readonly-subset triage of the file's 40 cases. In scope and ported here (12):
 ///   - `Editor Model - TextModel`: `validatePosition` (integer asserts),
 ///     `validatePosition around high-low surrogate pairs 1` and `2`,
 ///     `validateRange around high-low surrogate pairs 1` and `2`,
 ///     `modifyPosition`, `getLineFirstNonWhitespaceColumn`,
 ///     `getLineLastNonWhitespaceColumn`
-///   - `TextModel.mightContainRTL`: `nope`, `yes`
+///   - `TextModel.mightContainRTL`: `nope`, `yes`, `setValue resets 1`,
+///     `setValue resets 2` (the resets pair is in scope since the flush lane
+///     landed, plan `monaco-set-value-api-port.md`)
 /// Backed by new pure-read `TextSnapshot` methods (`validate_position` /
 /// `validate_range` with Monaco's surrogate-pair snapping, `modify_position`,
 /// `get_line_{first,last}_non_whitespace_column`, `might_contain_rtl`) and the
@@ -29,8 +31,8 @@
 ///     `normalizeIndentation 1/2`, `issue #168836`.
 ///   - streaming snapshot / BOM (4): `TextModel.createSnapshot` `empty file`,
 ///     `file with BOM`, `regular file`, `large file`.
-///   - mutation / DI (3): `setValue resets 1/2`, `TextModel does not use events
-///     internally`.
+///   - mutation / DI (1): `TextModel does not use events internally`
+///     (asserts private listener-count internals of the DI event plumbing).
 ///
 /// DEFERRED — EOL preference / buffer metadata (the viewer always joins lines
 /// with `\n`; it has no EOL guessing or `EndOfLinePreference`):
@@ -269,4 +271,22 @@ test "mightContainRTL nope" {
 test "mightContainRTL yes" {
   let m = wb_model("Hello,\nזוהי עובדה מבוססת שדעתו")
   assert_eq(m.might_contain_rtl(), true)
+}
+
+///|
+test "setValue resets 1" {
+  let m = wb_model("hello world!")
+  assert_eq(m.might_contain_rtl(), false)
+  m.set_value("Hello,\nזוהי עובדה מבוססת שדעתו")
+  assert_eq(m.might_contain_rtl(), true)
+}
+
+///|
+test "setValue resets 2" {
+  let m = wb_model(
+    "Hello,\nهناك حقيقة مثبتة منذ زمن طويل",
+  )
+  assert_eq(m.might_contain_rtl(), true)
+  m.set_value("hello world!")
+  assert_eq(m.might_contain_rtl(), false)
 }

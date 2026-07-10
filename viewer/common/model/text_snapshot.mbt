@@ -143,6 +143,16 @@ pub fn TextSnapshot::get_value_length_in_range(
 }
 
 ///|
+/// Whole-buffer equality — `PieceTreeTextBuffer.equals` behind
+/// `TextModel.equalsTextBuffer` (`textModel.ts:457-459`). The source
+/// compares BOM, then piece-tree content; the snapshot keeps the raw text
+/// (EOLs included), so string equality is the same comparison. Hosts use it
+/// for the refresh no-op early return (`modelService.ts:370-373`).
+pub fn TextSnapshot::equals(self : TextSnapshot, other : TextSnapshot) -> Bool {
+  self.text == other.text
+}
+
+///|
 /// Returns a clamped half-open slice of the snapshot text.
 pub fn TextSnapshot::slice(
   self : TextSnapshot,

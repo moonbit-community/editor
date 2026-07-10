@@ -38,7 +38,7 @@ pub struct ModelTokensChangedRange {
 /// The `model.tokenization` role: per-line grammar tokens for one document
 /// version, encoded in Monaco's binary `LineTokens` store.
 pub struct TokenizationTextModelPart {
-  priv lines : Array[String]
+  priv mut lines : Array[String]
   priv language_id : String
   priv mut line_tokens : Array[@common_tokens.LineTokens]?
   priv did_change_tokens : @base_common.Emitter[ModelTokensChangedEvent]
@@ -155,6 +155,27 @@ pub fn TokenizationTextModelPart::reset_tokenization(
     semantic_tokens_applied: false,
     ranges: [{ from_line_number: 1, to_line_number: self.lines.length() }],
   })
+}
+
+///|
+/// The part's share of a model content change — `handleDidChangeContent`
+/// (`tokenizationTextModelPart.ts`, `textModel.ts:472` callee): on a flush,
+/// drop everything and re-seed from the new content. Deviation (no-cycle
+/// seam): Monaco's callee reads `e.isFlush` off `IModelContentChangedEvent`,
+/// but that event type lives in `common/model` above this package, so the
+/// caller passes the extracted facts — the new frozen line array and the
+/// flush flag. The non-flush (incremental) arm is tier-2, N-A today.
+pub fn TokenizationTextModelPart::handle_did_change_content(
+  self : TokenizationTextModelPart,
+  lines : Array[String],
+  is_flush~ : Bool,
+) -> Unit {
+  if is_flush {
+    self.lines = lines
+    // `resetTokenization()`: clears the memo and fires `did_change_tokens`
+    // over the (new) whole document, feeding the repaint chain.
+    self.reset_tokenization()
+  }
 }
 
 ///|

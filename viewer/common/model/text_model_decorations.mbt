@@ -14,8 +14,10 @@
 //   and `_normalizeOptions` is an `instanceof` test that has no analogue
 //   with a single nominal options type).
 // - D6 (model swap): decoration state is per-`TextModel` instance; the viewer
-//   swaps whole models on version change, so owners re-attach on swap and
-//   `cached_version_id` only ever sees one version per tree lifetime.
+//   swaps whole models on version change, so owners re-attach on swap.
+//   `set_value` bumps `_versionId` in place, but it also replaces the trees
+//   wholesale ("Destroy all my decorations"), so each tree lifetime still
+//   sees exactly one version in `cached_version_id`.
 // - `changeDecorations`' `try/catch onUnexpectedError` around the callback is
 //   unreachable (MoonBit callbacks here are non-raising), so the `T | null`
 //   result is `T`.
@@ -500,13 +502,6 @@ pub fn TextModel::on_did_change_decorations(
   listener : (ModelDecorationsChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.on_did_change_decorations.actual.event(listener)
-}
-
-///|
-/// `getVersionId` — the id-based freshness guard the decoration trees cache
-/// against.
-pub fn TextModel::get_version_id(self : TextModel) -> Int {
-  self.version
 }
 
 ///|

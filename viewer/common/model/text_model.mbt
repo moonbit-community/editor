@@ -8,19 +8,33 @@ pub struct TextModel {
   language_id : String
   version : Int
   revision : String
-  snapshot : TextSnapshot
+  /// Mutable since the `set_value` flush lane: swapped whole
+  /// (`_setValueFromTextBuffer`'s `this._buffer = textBuffer`,
+  /// `textModel.ts:521`), never edited in place.
+  mut snapshot : TextSnapshot
   /// The `model.tokenization` part (Monaco's `TokenizationTextModelPart`,
   /// wired in the `TextModel` constructor exactly as `textModel.ts` does).
   tokenization : @tokens.TokenizationTextModelPart
-  // Lifecycle (`_onWillDispose` textModel.ts:222, `_isDisposed` :190)
+  // Lifecycle (`_onWillDispose` textModel.ts:222, `_isDisposed` :190,
+  // `__isDisposing` :260)
   on_will_dispose : @base_common.Emitter[Unit]
   priv mut is_disposed : Bool
+  priv mut is_disposing : Bool
+  /// `_versionId` (`textModel.ts:262`, init 1 at `:370`): bumped by the
+  /// content lane (`_increaseVersionId`). Distinct from the host-facing
+  /// `version` freshness guard, which is caller-owned metadata.
+  priv mut version_id : Int
+  // Content events (`_eventEmitter` textModel.ts:244; `_viewModels` :303)
+  priv event_emitter : DidChangeContentEmitter
+  priv view_models : Array[&ViewModel]
   // #region Decorations (textModel.ts:285-290; `_onDidChangeDecorations` :225)
   instance_id : String
   mut delta_decoration_call_cnt : Int
   mut last_decoration_id : Int
-  decorations : Map[String, IntervalNode]
-  decorations_tree : DecorationsTrees
+  /// Mutable since the `set_value` flush lane: replaced wholesale
+  /// ("Destroy all my decorations", `textModel.ts:526-528`).
+  mut decorations : Map[String, IntervalNode]
+  mut decorations_tree : DecorationsTrees
   on_did_change_decorations : DidChangeDecorationsEmitter
   // #endregion
 }
@@ -73,6 +87,10 @@ pub fn TextModel::TextModel(
     tokenization: @tokens.TokenizationTextModelPart::new(lines, language_id),
     on_will_dispose: @base_common.Emitter::new(),
     is_disposed: false,
+    is_disposing: false,
+    version_id: 1,
+    event_emitter: DidChangeContentEmitter::new(),
+    view_models: [],
     instance_id: next_model_instance_id(),
     delta_decoration_call_cnt: 0,
     last_decoration_id: 0,
@@ -89,11 +107,17 @@ pub fn TextModel::TextModel(
 /// Monaco's disposed-buffer swap is N-A: the snapshot is immutable and
 /// garbage-collected.
 pub fn TextModel::dispose(self : TextModel) -> Unit {
+  // `__isDisposing = true` before the will-dispose fire (`textModel.ts:415`);
+  // `_emitContentChangedEvent` early-returns while set so no listener is
+  // confused by an event after disposing (`:468-471`).
+  self.is_disposing = true
   self.on_will_dispose.fire(())
   self.tokenization.dispose()
   self.is_disposed = true
   self.on_will_dispose.dispose()
   self.on_did_change_decorations.actual.dispose()
+  self.event_emitter.emitter.dispose()
+  self.is_disposing = false
 }
 
 ///|
@@ -422,6 +446,22 @@ pub fn TextModel::validate_range(
 }
 
 ///|
+/// The current content version — `getVersionId` (`textModel.ts:737-740`);
+/// init 1 (`:370`), bumped by every content change. The decoration trees
+/// cache against it. `_assertNotDisposed`: N-A (readonly reads survive
+/// dispose, see the region header).
+pub fn TextModel::get_version_id(self : TextModel) -> Int {
+  self.version_id
+}
+
+///|
+/// `_increaseVersionId` (`textModel.ts:782-785`). The
+/// `_alternativeVersionId` mirror is N-A (undo/redo not ported).
+fn TextModel::increase_version_id(self : TextModel) -> Unit {
+  self.version_id = self.version_id + 1
+}
+
+///|
 /// Position `offset` UTF-16 code units away from `position`, clamped to the
 /// document. Mirrors `modifyPosition` (`textModel.ts:1162`): relaxed-validate,
 /// then offset round-trip.
@@ -439,6 +479,146 @@ pub fn TextModel::modify_position(
     offset
   let clamped = @base_common.clamp_int(candidate, 0, self.snapshot.get_length())
   self.snapshot.get_position_at(clamped)
+}
+
+// #endregion
+
+// #region setValue flush lane (textModel.ts:457-545) — plan
+// `monaco-set-value-api-port.md`. Scope cuts recorded there: no undo stack
+// (`_commandManager.clear`, `:531`), no `setEOL` lane (`:547+`), no
+// bracket-pair/font-token parts (`:473-474`), no incremental (tier-2) lane.
+
+///|
+/// Subscribes to content changes — `onDidChangeContent` (`textModel.ts:
+/// 245-247`), unwrapping the internal event to its public payload.
+pub fn TextModel::on_did_change_content(
+  self : TextModel,
+  listener : (ModelContentChangedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.event_emitter.event(e => listener(e.content_changed_event))
+}
+
+///|
+/// Whole-buffer equality against another snapshot — `equalsTextBuffer`
+/// (`textModel.ts:457-460`). The host-side no-op early return before a
+/// refresh belongs to the caller (`modelService.ts:370-373`).
+pub fn TextModel::equals_text_snapshot(
+  self : TextModel,
+  other : TextSnapshot,
+) -> Bool {
+  self.snapshot.equals(other)
+}
+
+///|
+/// Replaces the whole content in place — `setValue` (`textModel.ts:484-493`):
+/// build the new buffer, then flush. The same model (and its registered view
+/// models) survives; all decorations are destroyed and the version bumps.
+/// The `null | undefined` argument guard is N-A (non-nullable `String`);
+/// `EditSources.setValue()` reasons are not ported (event deviation).
+pub fn TextModel::set_value(self : TextModel, value : String) -> Unit {
+  // _assertNotDisposed: N-A (the immutable snapshot stays readable after
+  // dispose; see the Reading region header).
+  self.set_value_from_snapshot(TextSnapshot(value))
+}
+
+///|
+/// `_createContentChanged2` (`textModel.ts:495-512`). `rangeEndPosition` is
+/// accepted-and-unused in the source too; `detailedReasons` are not ported
+/// (`text_model_events.mbt` header).
+fn TextModel::create_content_changed_2(
+  self : TextModel,
+  range : @base_common.Range,
+  range_offset : Int,
+  range_length : Int,
+  _range_end_position : @base_common.Position,
+  text : String,
+  is_undoing : Bool,
+  is_redoing : Bool,
+  is_flush : Bool,
+  is_eol_change : Bool,
+) -> ModelContentChangedEvent {
+  {
+    changes: [{ range, range_offset, range_length, text }],
+    // `this._buffer.getEOL()`: the snapshot normalizes to LF (`get_value`).
+    eol: "\n",
+    is_eol_change,
+    version_id: self.get_version_id(),
+    is_undoing,
+    is_redoing,
+    is_flush,
+  }
+}
+
+///|
+/// `_setValueFromTextBuffer` (`textModel.ts:514-545`): capture the old full
+/// range/length, swap the buffer, bump the version, destroy all decorations,
+/// and emit `[ModelRawFlush]` plus the full-range public change
+/// (`isFlush: true`). `_bufferDisposable` is N-A (GC); the undo-stack and
+/// trim-whitespace clears (`:531-532`) are N-A (no edit stack).
+fn TextModel::set_value_from_snapshot(
+  self : TextModel,
+  snapshot : TextSnapshot,
+) -> Unit {
+  let old_full_model_range = self.get_full_model_range()
+  let old_model_value_length = self.get_value_length_in_range(
+    old_full_model_range,
+  )
+  let end_line_number = self.get_line_count()
+  let end_column = self.get_line_max_column(end_line_number)
+  self.snapshot = snapshot
+  self.increase_version_id()
+
+  // Destroy all my decorations
+  self.decorations = {}
+  self.decorations_tree = DecorationsTrees::new()
+  self.emit_content_changed_event(
+    {
+      changes: [ModelRawFlush],
+      version_id: self.version_id,
+      is_undoing: false,
+      is_redoing: false,
+    },
+    self.create_content_changed_2(
+      Range(1, 1, end_line_number, end_column),
+      0,
+      old_model_value_length,
+      Position(end_line_number, end_column),
+      self.get_value(),
+      false,
+      false,
+      true,
+      false,
+    ),
+  )
+}
+
+///|
+/// `_emitContentChangedEvent` (`textModel.ts:467-482`). Call order is the
+/// contract: tokenization part first, then the registered view models
+/// (two-loop dispatch), then the public emitter. The bracket-pair and
+/// font-token parts (`:473-474`) are N-A (not ported); `resultingSelection`
+/// (`:476-479`) drops with the unported field (`text_model_events.mbt`).
+fn TextModel::emit_content_changed_event(
+  self : TextModel,
+  raw_change : ModelRawContentChangedEvent,
+  change : ModelContentChangedEvent,
+) -> Unit {
+  if self.is_disposing {
+    // Do not confuse listeners by emitting any event after disposing
+    return
+  }
+  // `handleDidChangeContent` reads `e.isFlush` off the event; the part
+  // receives the extracted facts instead (no-cycle seam, see the part).
+  self.tokenization.handle_did_change_content(
+    self.get_lines_content(),
+    is_flush=change.is_flush,
+  )
+  let content_change_event : InternalModelContentChangeEvent = {
+    raw_content_changed_event: raw_change,
+    content_changed_event: change,
+  }
+  self.on_did_change_content_or_injected_text(content_change_event)
+  self.event_emitter.fire(content_change_event)
 }
 
 // #endregion

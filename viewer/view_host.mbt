@@ -64,7 +64,9 @@ fn Viewer::handle_hover_keydown(
 /// writes, delegates browser DOM work to `View`, then reports the paint
 /// facts that were waiting on this flush.
 fn Viewer::flush_render(self : Viewer) -> Unit {
-  self.render_pending = false
+  if self.disposed {
+    return
+  }
   guard self.model_data is Some(model_data) else {
     // No model → no view; the Viewer-owned placeholder is the whole paint.
     self.render_placeholder()
@@ -182,11 +184,17 @@ fn Viewer::render_placeholder(self : Viewer) -> Unit {
 fn Viewer::schedule_render(self : Viewer) -> Unit {
   // Headless (never attached) → no rAF loop; with a container the flush
   // paints either the per-model view or the no-model placeholder.
-  if self.render_pending || self.container is None {
+  if self.disposed || self.render_frame is Some(_) || self.container is None {
     return
   }
-  self.render_pending = true
-  @rdom.window().request_animation_frame(_ => self.flush_render()) |> ignore
+  self.render_frame = Some(
+    schedule_at_next_animation_frame(() => {
+      self.render_frame = None
+      if !self.disposed {
+        self.flush_render()
+      }
+    }),
+  )
 }
 
 ///|

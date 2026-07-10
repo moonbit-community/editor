@@ -52,10 +52,10 @@ test "set_value marks the rendered content stale and drops the window" {
 ///|
 test "set_value resets the cursor to the origin" {
   with_test_viewer("one\ntwo\nthree", viewer => {
-    viewer.test_cursor().move_to(@base_common.Position(3, 2), false)
-    assert_true(viewer.get_position().unwrap() == @base_common.Position(3, 2))
+    viewer.test_cursor().move_to(Position(3, 2), false)
+    assert_true(viewer.get_position().unwrap() == Position(3, 2))
     viewer.set_value("a\nb")
-    assert_true(viewer.get_position().unwrap() == @base_common.Position(1, 1))
+    assert_true(viewer.get_position().unwrap() == Position(1, 1))
   })
 }
 
@@ -80,10 +80,8 @@ test "marker decorations re-seed after a flush (Track E)" {
   let services = ViewerServices::new()
   let viewer = Viewer::Viewer(services~)
   let model = test_model("alpha\nbravo")
-  // markers land after attach (`attach_model` clears the resource first,
-  // the diagnostics push flow); the store updates synchronously and the
-  // deferred change event is stood in for by a direct re-seed
-  viewer.set_model(Some(model))
+  // Host diagnostics may predate attachment. Acquiring the model seeds them;
+  // ordinary detach and set_value never clear the host-owned store.
   services.markers.change_one("owner", model.uri, [
     @markers.MarkerData::new(
       severity=Error,
@@ -94,11 +92,11 @@ test "marker decorations re-seed after a flush (Track E)" {
       end_column=3,
     ),
   ])
-  services.marker_decorations.on_model_added(model)
+  viewer.set_model(Some(model))
   assert_eq(model.get_all_decorations().length(), 1)
   viewer.set_value("alpha\nCHANGED")
-  // the flush wiped the decoration; the content listener re-seeded it from
-  // the marker store
+  // The service's one per-identity content watch re-seeded the decoration;
+  // Viewer content delivery does not acquire another lease.
   assert_eq(model.get_all_decorations().length(), 1)
   viewer.dispose()
 }

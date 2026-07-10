@@ -21,7 +21,11 @@ pub(all) struct ViewerServices {
 }
 
 ///|
-/// Creates the default viewer services.
+/// Creates a service bundle. Passing the returned value explicitly to a
+/// Viewer keeps ownership with the caller, allowing multiple Viewers to share
+/// model registrations and host state. Omitting the Viewer constructor's
+/// `services` argument creates the same shape internally and transfers only
+/// that internal bundle's lifetime to the Viewer.
 pub fn ViewerServices::new(
   languages? : @languages.Languages = @languages.default_languages(),
   log_service? : @log.LogService = @log.LogService::new(),

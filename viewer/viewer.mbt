@@ -12,6 +12,14 @@
 /// into the element passed to `attach`.
 pub struct Viewer {
   priv services : ViewerServices
+  /// Services created by an omitted constructor argument belong to this
+  /// Viewer. An explicitly supplied bundle remains caller-owned and may be
+  /// shared by other Viewers.
+  priv owns_services : Bool
+  priv mut disposed : Bool
+  /// Viewer-lifetime subscriptions, distinct from ModelData's swap-scoped
+  /// listeners and View's browser-resource store.
+  priv lifetime_disposables : Array[@base_common.Disposable]
   priv mut options : ViewerOptions
   priv did_change_model : @base_common.Emitter[ModelChangedEvent]
   /// Monaco's `onDidChangeModelContent` (`cew:105`), re-fired from the
@@ -84,11 +92,9 @@ pub struct Viewer {
   /// Registered overlay widgets by id (Monaco's `_overlayWidgets`), re-added
   /// to every per-model view (`cew:1901-1905`).
   priv overlay_widgets : Map[String, @rdom.Element]
-  /// Whether the once-per-viewer document-level drag listeners are hooked
-  /// (they delegate to the current per-view `mouse_handler`; Monaco monitors
-  /// global pointer events per drag instead).
-  priv mut document_input_hooked : Bool
-  priv mut render_pending : Bool
+  /// The cancellable root render request. `None` is both the idle state and
+  /// the disposed state; callbacks clear the slot before flushing.
+  priv mut render_frame : @base_common.Disposable?
   priv mut measure_requested : Bool
   priv mut pending_rendered : PendingRendered?
   priv mut scroll_dirty : Bool
@@ -145,11 +151,15 @@ priv struct ModelData {
 ///|
 /// `ModelData.dispose` (`cew:2133-2141`): remove the swap-scoped listeners.
 /// The view's DOM subtree is removed by `detach_model`, where the container
-/// is in scope; neither the viewer's `View` nor `ViewModel` owns timers or
-/// subscriptions of its own.
+/// is in scope. The View drains browser listeners/controllers before the
+/// ViewModel unregisters from the model.
 fn ModelData::dispose(self : ModelData) -> Unit {
   for listener in self.listeners_to_remove {
     listener.dispose()
+  }
+  match self.view {
+    Some(view) => view.dispose()
+    None => ()
   }
   // `this.viewModel.dispose()` (`cew:2139`): unregisters the view model
   // from the text model's content-dispatch set.
@@ -262,17 +272,26 @@ pub(all) struct ViewerHoverResolvedEvent {
 } derive(Debug)
 
 ///|
-/// Creates a viewer instance. Call `attach` before setting documents so the
-/// first render has a DOM view to measure and patch.
+/// Creates a viewer instance. An omitted service bundle is created and owned
+/// internally; an explicit bundle is borrowed and may be shared. Call
+/// `attach` before setting documents so the first render has a DOM view to
+/// measure and patch.
 pub fn Viewer::Viewer(
-  services? : ViewerServices = ViewerServices::new(),
+  services? : ViewerServices,
   options? : ViewerOptions = ViewerOptions::default(),
 ) -> Viewer {
+  let (services, owns_services) = match services {
+    Some(services) => (services, false)
+    None => (ViewerServices::new(), true)
+  }
   let font_info = @config.FontInfo::estimated(
     options.bare_font_info(pixel_ratio=@browser_config.device_pixel_ratio()),
   )
   let viewer : Viewer = {
     services,
+    owns_services,
+    disposed: false,
+    lifetime_disposables: [],
     options,
     did_change_model: @base_common.Emitter::new(),
     did_change_model_content: @base_common.Emitter::new(),
@@ -302,8 +321,7 @@ pub fn Viewer::Viewer(
     placeholder_element: None,
     placeholder_text: None,
     overlay_widgets: {},
-    document_input_hooked: false,
-    render_pending: false,
+    render_frame: None,
     measure_requested: false,
     pending_rendered: None,
     scroll_dirty: false,
@@ -320,17 +338,51 @@ pub fn Viewer::Viewer(
   // this subscription only schedules the refresh without rebuilding the view model
   // (no `content_generation` bump — decoration plan Phase 3). Hosts observe
   // marker changes on `MarkerService::on_did_change_markers`.
-  viewer.services.marker_decorations.on_did_change_marker_decorations(model => {
-    if viewer.is_current_model(model) {
-      viewer.schedule_render()
-    }
-  })
-  |> ignore
+  viewer.add_lifetime_disposable(
+    viewer.services.marker_decorations.on_did_change_marker_decorations(model => {
+      if viewer.is_current_model(model) {
+        viewer.schedule_render()
+      }
+    }),
+  )
   // Editor contributions instantiate through the registry
   // (`codeEditorWidget.ts:344` `this._contributions.initialize(...)`);
   // they live until `dispose` — `set_model` does not re-create them.
   viewer.contributions = editor_registry().instantiate_all(viewer)
   viewer
+}
+
+///|
+/// Retains a Viewer-lifetime handle, disposing immediately when registration
+/// races with or follows Viewer disposal.
+fn Viewer::add_lifetime_disposable(
+  self : Viewer,
+  disposable : @base_common.Disposable,
+) -> Unit {
+  if self.disposed {
+    disposable.dispose()
+  } else {
+    self.lifetime_disposables.push(disposable)
+  }
+}
+
+///|
+fn Viewer::dispose_lifetime_disposables(self : Viewer) -> Unit {
+  for disposable in self.lifetime_disposables {
+    disposable.dispose()
+  }
+  self.lifetime_disposables.clear()
+}
+
+///|
+fn Viewer::cancel_render_frame(self : Viewer) -> Unit {
+  match self.render_frame {
+    Some(frame) => {
+      self.render_frame = None
+      frame.dispose()
+    }
+    None => ()
+  }
 }
 
 ///|
@@ -350,13 +402,13 @@ fn next_editor_id() -> Int {
 
 ///|
 /// Creates and attaches a viewer in one call — the `monaco.editor.create`
-/// entry point.
+/// entry point. Service ownership follows `Viewer::Viewer`.
 pub fn Viewer::create(
   host : @rdom.Element,
-  services? : ViewerServices = ViewerServices::new(),
+  services? : ViewerServices,
   options? : ViewerOptions = ViewerOptions::default(),
 ) -> Viewer {
-  let viewer = Viewer(services~, options~)
+  let viewer = Viewer(services?, options~)
   viewer.attach(host)
   viewer
 }
@@ -490,7 +542,7 @@ fn Viewer::apply_theme(self : Viewer) -> Unit {
 /// → `_createView` / `_detachModel`). The host element must stay mounted
 /// and must never receive host-rendered children.
 fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
-  if self.container is Some(_) {
+  if self.disposed || self.container is Some(_) {
     return
   }
   self.container = Some(host)
@@ -510,12 +562,14 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   // e.g. once a web font finished loading) — Monaco's
   // `_recomputeOptions` subscription in `editorConfiguration.ts`. Viewer-
   // level: it outlives any per-model view.
-  @browser_config.font_measurements().on_did_change(() => {
-    self.measure_requested = true
-    self.schedule_render()
-  })
-  |> ignore
-  self.hook_document_input()
+  self.add_lifetime_disposable(
+    @browser_config.font_measurements().on_did_change(() => {
+      if !self.disposed {
+        self.measure_requested = true
+        self.schedule_render()
+      }
+    }),
+  )
   self.measure_requested = true
   self.schedule_render()
 }
@@ -529,6 +583,9 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
 /// guard. The `_beginUpdate`/`_endUpdate` bracket is N-A — the viewer's
 /// repaint already coalesces on the scheduled render flush.
 pub fn Viewer::set_value(self : Viewer, value : String) -> Unit {
+  if self.disposed {
+    return
+  }
   guard self.model_data is Some(model_data) else { return }
   model_data.model.set_value(value)
 }
@@ -540,6 +597,9 @@ pub fn Viewer::set_value(self : Viewer, value : String) -> Unit {
 /// model resets the scroll position and controller state; hosts preserve or
 /// restore scroll through `save_view_state`/`restore_view_state`.
 pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
+  if self.disposed {
+    return
+  }
   // `setModel` (`cew:506-546`): same-model no-ops, then detach-then-attach,
   // carrying text focus across the swap.
   if self.model_data is None && model is None {
@@ -559,17 +619,6 @@ pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
   let new_model_url = match model {
     Some(model) => Some(model.uri)
     None => None
-  }
-  // Rotate the per-model marker decorations: drop the previous model's set
-  // when switching resources, so marker changes resolve against the new
-  // snapshot (Monaco's `_onModelRemoved`/`_onModelAdded`; the add half runs
-  // in `attach_model`).
-  match (self.model_data, model) {
-    (Some(model_data), Some(model)) =>
-      if model_data.model.uri.to_string() != model.uri.to_string() {
-        self.services.marker_decorations.on_model_removed(model_data.model)
-      }
-    _ => ()
   }
   let had_text_focus = self.has_text_focus()
   let detached_model = self.detach_model()
@@ -610,6 +659,7 @@ pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
 /// and hand back the outgoing model for the owner-id decoration sweep.
 fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
   guard self.model_data is Some(model_data) else { return None }
+  self.cancel_render_frame()
   let model = model_data.model
   // Feature state belongs to the outgoing model: the per-model resets Track
   // C moved onto the controllers, plus the widget teardown.
@@ -645,11 +695,17 @@ fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
       host.remove_attribute("data-mode-id")
       match model_data.view {
         Some(view) => {
-          host.remove_child(view.root.as_node())
-          // The no-model placeholder returns while no view is attached.
-          match self.placeholder_element {
-            Some(placeholder) => host.append_child(placeholder.as_node())
-            None => ()
+          remove_element_if_contained(host, view.root)
+          // The no-model placeholder returns on an ordinary detach. Viewer
+          // disposal removes it instead and never re-appends owned DOM.
+          if !self.disposed {
+            match self.placeholder_element {
+              Some(placeholder) =>
+                if !element_contains_node(host, placeholder) {
+                  host.append_child(placeholder.as_node())
+                }
+              None => ()
+            }
           }
         }
         None => ()
@@ -797,6 +853,11 @@ pub fn Viewer::restore_view_state(
 /// Disposes viewer-owned external resources. Like Monaco's dispose, the model
 /// detaches silently (no `onDidChangeModel`).
 pub fn Viewer::dispose(self : Viewer) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.disposed = true
+  self.cancel_render_frame()
   // The model detaches silently (no `onDidChangeModel`), but the owner-id
   // sweep still runs (`_postDetachModelCleanup`).
   match self.detach_model() {
@@ -810,6 +871,34 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
     (contribution.dispose)()
   }
   self.contributions = {}
+  self.dispose_lifetime_disposables()
+  // Viewer-owned attach DOM is removed; the caller's host stays mounted and
+  // is merely forgotten. `detach_model` deliberately did not re-append the
+  // placeholder because `disposed` was set before teardown began.
+  match (self.container, self.placeholder_element) {
+    (Some(host), Some(placeholder)) =>
+      remove_element_if_contained(host, placeholder)
+    _ => ()
+  }
+  self.container = None
+  self.placeholder_element = None
+  self.placeholder_text = None
+  self.mouse_handler = None
+  self.editor_has_focus = false
+  self.last_scroll_event = None
+  self.view_zones = []
+  self.overlay_widgets.clear()
+  match self.content_hover_widget {
+    Some(widget) => widget.scrollable.dispose()
+    None => ()
+  }
+  self.content_hover_widget = None
+  self.hover_widget_view = None
+  self.pending_rendered = None
+  self.rendered_window = None
+  self.horizontal_reveal_request = None
+  self.measure_requested = false
+  self.scroll_dirty = false
   self.did_dispose.fire(())
   self.did_change_model.dispose()
   self.did_change_model_content.dispose()
@@ -824,9 +913,11 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_mouse_up.dispose()
   self.did_mouse_move.dispose()
   self.did_mouse_leave.dispose()
-  self.services.marker_decorations.dispose()
-  self.services.markers.dispose()
-  self.services.agent_feedback.dispose()
+  if self.owns_services {
+    self.services.marker_decorations.dispose()
+    self.services.markers.dispose()
+    self.services.agent_feedback.dispose()
+  }
 }
 
 ///|

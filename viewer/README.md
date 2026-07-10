@@ -12,6 +12,10 @@ ownership and lifecycle rules that are not obvious from signatures.
   element must stay mounted and must not receive host-rendered children.
   `Viewer::Viewer(...)` creates an unattached/headless instance; `attach` is a
   private implementation seam, not a public two-step mounting API.
+- Omitting `services` makes the Viewer create and own an internal bundle.
+  Passing `services` explicitly always borrows that bundle, including a bundle
+  returned by `ViewerServices::new`; this is the form for sharing languages,
+  diagnostics, feedback, and quick-diff state between Viewers.
 - `set_model(TextModel?)` installs a caller-owned readonly model. The same
   object is a no-op; replacing or clearing it disposes the old model-scoped
   listeners and DOM `View`, then creates a new `ViewModel` and, when mounted,
@@ -19,8 +23,16 @@ ownership and lifecycle rules that are not obvious from signatures.
   `save_view_state`/`restore_view_state` when the host wants persistence.
 - Contributions are created once per `Viewer` and disposed with it. Their
   Monaco instantiation modes are recorded, but all modes currently instantiate
-  eagerly. `dispose` removes viewer-owned listeners and DOM; it does not
-  dispose the caller's model, files, or watches.
+  eagerly. `dispose` is idempotent: it cancels pending render work, removes
+  Viewer/View listeners and owned DOM, and never disposes the caller's model,
+  host, or explicitly supplied services. For an internally created bundle it
+  disposes marker decorations, markers, then agent feedback after Viewer
+  teardown.
+- Each attached model stores one marker-decoration acquisition lease in its
+  `ModelData`. Multiple Viewers sharing a service and model share the identity
+  owner until the final lease; `set_value` refreshes that owner without
+  acquiring again. Model-scoped listeners dispose before the View, and the View
+  disposes before the ViewModel.
 - Overlay-widget registrations belong to the Viewer and are re-added to each
   per-model View. Content widgets are an internal view-part seam; hover owns
   the current implementation.

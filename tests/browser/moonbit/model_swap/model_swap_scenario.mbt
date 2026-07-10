@@ -16,6 +16,23 @@ extern "js" fn active_element_matches(selector : String) -> Bool =
   #| }
 
 ///|
+/// Pauses the MoonBit-side scenario at a visible browser state so Playwright
+/// can create the persistent hover widget before the swap, then exercise its
+/// scrollbar after the new per-View MouseHandler is installed.
+extern "js" fn install_model_swap_continue(
+  phase : String,
+  callback : () -> Unit,
+) -> Unit =
+  #| (phase, callback) => {
+  #|   globalThis.__modelSwapPhase = phase;
+  #|   globalThis.__modelSwapContinue = () => {
+  #|     globalThis.__modelSwapPhase = "continuing";
+  #|     delete globalThis.__modelSwapContinue;
+  #|     callback();
+  #|   };
+  #| }
+
+///|
 fn swap_model(name : String, marker : String) -> @model.TextModel {
   let lines = StringBuilder()
   lines.write_string(marker)
@@ -38,6 +55,21 @@ fn swap_model(name : String, marker : String) -> @model.TextModel {
 }
 
 ///|
+fn seed_swap_diagnostic(
+  services : @viewer.ViewerServices,
+  model : @model.TextModel,
+) -> Unit {
+  services.markers.set_diagnostics("swap", model.uri, [
+    {
+      range: Range(1, 1, 1, 6),
+      severity: Error,
+      message: "persistent hover diagnostic",
+      tags: None,
+    },
+  ])
+}
+
+///|
 fn run_model_swap_test() -> Unit {
   let ctx = @support.BrowserTestContext::new("model_swap")
   let document = @rdom.document()
@@ -50,12 +82,25 @@ fn run_model_swap_test() -> Unit {
   host.set_attribute("class", "viewer-host")
   host.set_attribute("style", "height:200px;width:400px;")
   app.append_child(host.as_node())
+  let placeholder_host = document.create_element("div")
+  placeholder_host.set_attribute("class", "placeholder-host")
+  placeholder_host.set_attribute("style", "height:80px;width:300px;")
+  app.append_child(placeholder_host.as_node())
+  let placeholder_viewer = @viewer.Viewer::create(
+    placeholder_host,
+    options=ViewerOptions(placeholder="dispose-placeholder"),
+  )
+  let services = @viewer.ViewerServices::new()
   let viewer = @viewer.Viewer::create(
     host,
+    services~,
     options=ViewerOptions(placeholder="swap-placeholder"),
   )
   let model_a = swap_model("swap-a.txt", "alpha_document_marker")
   let model_b = swap_model("swap-b.txt", "beta_document_marker")
+  let model_c = swap_model("swap-c.txt", "gamma_document_marker")
+  seed_swap_diagnostic(services, model_a)
+  seed_swap_diagnostic(services, model_b)
   viewer.set_model(Some(model_a))
   viewer.focus()
   let zone = document.create_element("div")
@@ -82,54 +127,102 @@ fn run_model_swap_test() -> Unit {
       @support.query_count(".view-zone[data-view-zone-id=\"swap-zone\"]") == 1,
       "view zone missing on the first view",
     )
-    // Swap: the whole view is rebuilt (Monaco's detach-then-attach).
-    viewer.set_model(Some(model_b))
-    model_a.dispose()
-    wait_for_text(ctx, "beta_document_marker", 80, () => {
-      ctx.assert_true(
-        @support.query_count(".viewer-host > .monaco-editor") == 1,
-        "old view DOM survived the swap",
-      )
-      ctx.assert_true(
-        @support.query_attribute(".viewer-host > .monaco-editor", "data-uri") ==
-        model_b.uri.to_string(),
-        "data-uri not restamped for model B",
-      )
-      ctx.assert_true(
-        @support.query_count(".view-zone[data-view-zone-id=\"swap-zone\"]") == 1,
-        "view zone did not re-appear on the new view",
-      )
-      // Text focus carries across the swap (`cew:528-532`).
-      ctx.assert_true(
-        viewer.has_text_focus(),
-        "editor lost text focus across the swap",
-      )
-      ctx.assert_true(
-        active_element_matches(".viewer-host > .monaco-editor"),
-        "DOM focus is not on the new view root",
-      )
-      // Detach to no model: the Viewer-owned placeholder returns.
-      viewer.set_model(None)
-      model_b.dispose()
-      wait_for_text(ctx, "swap-placeholder", 80, () => {
+    install_model_swap_continue("model-a", () => {
+      // Swap: the whole view is rebuilt (Monaco's detach-then-attach).
+      viewer.set_model(Some(model_b))
+      model_a.dispose()
+      wait_for_text(ctx, "beta_document_marker", 80, () => {
         ctx.assert_true(
-          @support.query_count(".viewer-host > .monaco-editor.source-empty") ==
+          @support.query_count(".viewer-host > .monaco-editor") == 1,
+          "old view DOM survived the swap",
+        )
+        ctx.assert_true(
+          @support.query_attribute(".viewer-host > .monaco-editor", "data-uri") ==
+          model_b.uri.to_string(),
+          "data-uri not restamped for model B",
+        )
+        ctx.assert_true(
+          @support.query_count(".view-zone[data-view-zone-id=\"swap-zone\"]") ==
           1,
-          "placeholder did not return after detach",
+          "view zone did not re-appear on the new view",
+        )
+        // Text focus carries across the swap (`cew:528-532`).
+        ctx.assert_true(
+          viewer.has_text_focus(),
+          "editor lost text focus across the swap",
         )
         ctx.assert_true(
-          @support.query_count(".viewer-host [data-uri]") == 0,
-          "a per-model view survived the detach",
+          active_element_matches(".viewer-host > .monaco-editor"),
+          "DOM focus is not on the new view root",
         )
-        ctx.assert_true(
-          @support.query_attribute(".viewer-host", "data-mode-id") == "",
-          "data-mode-id survived the detach",
-        )
-        ctx.assert_true(
-          viewer.has_text_focus() == false,
-          "editor still reports text focus with no model",
-        )
-        ctx.finish()
+        install_model_swap_continue("model-b", () => {
+          // Detach to no model: the Viewer-owned placeholder returns.
+          viewer.set_model(None)
+          model_b.dispose()
+          wait_for_text(ctx, "swap-placeholder", 80, () => {
+            ctx.assert_true(
+              @support.query_count(".viewer-host > .monaco-editor.source-empty") ==
+              1,
+              "placeholder did not return after detach",
+            )
+            ctx.assert_true(
+              @support.query_count(".viewer-host [data-uri]") == 0,
+              "a per-model view survived the detach",
+            )
+            ctx.assert_true(
+              @support.query_attribute(".viewer-host", "data-mode-id") == "",
+              "data-mode-id survived the detach",
+            )
+            ctx.assert_true(
+              viewer.has_text_focus() == false,
+              "editor still reports text focus with no model",
+            )
+            // Reattach once so Viewer.dispose itself tears down a real View (the
+            // preceding None transition already covered ordinary placeholder
+            // restoration). Queue a root render and dispose before it can run.
+            viewer.set_model(Some(model_c))
+            wait_for_text(ctx, "gamma_document_marker", 80, () => {
+              install_model_swap_continue("model-c", () => {
+                // A second Viewer exercises the disposal path while its no-model
+                // placeholder is still mounted, with a pending placeholder frame.
+                placeholder_viewer.layout()
+                placeholder_viewer.dispose()
+                placeholder_viewer.dispose()
+                viewer.layout()
+                viewer.dispose()
+                viewer.dispose()
+                @support.set_timeout(
+                  () => {
+                    ctx.assert_true(
+                      @support.query_count(".viewer-host") == 1,
+                      "Viewer disposal removed the caller-owned host",
+                    )
+                    ctx.assert_true(
+                      @support.query_count(".viewer-host > .monaco-editor") == 0,
+                      "Viewer-owned DOM survived disposal or a cancelled frame",
+                    )
+                    ctx.assert_true(
+                      @support.query_count(".placeholder-host") == 1 &&
+                      @support.query_count(".placeholder-host > .monaco-editor") ==
+                      0,
+                      "placeholder DOM survived disposal or its host was removed",
+                    )
+                    ctx.assert_true(
+                      !model_c.is_disposed(),
+                      "Viewer disposal disposed the caller-owned model",
+                    )
+                    model_c.dispose()
+                    services.marker_decorations.dispose()
+                    services.markers.dispose()
+                    services.agent_feedback.dispose()
+                    ctx.finish()
+                  },
+                  600,
+                )
+              })
+            })
+          })
+        })
       })
     })
   })

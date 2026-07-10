@@ -10,23 +10,24 @@
 fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   let handler = @controller.MouseHandler::new(self.pointer_handler_helper(view))
   self.mouse_handler = Some(handler)
+  view.add_disposable(@base_common.Disposable::from(() => handler.dispose()))
   // Monaco tracks focus on the hidden textarea / edit context and fans it out
   // as `ViewFocusChangedEvent`; the viewer's focusable surface is the root
   // itself. `focus`/`blur` do not bubble, so these observe only the root's own
   // focus. The next scheduled render diffs the flag into `ViewFocusChanged`.
-  view.root.add_event_listener("focus", _ => {
+  add_view_event_listener(view, view.root, "focus", _ => {
     if !self.editor_has_focus {
       self.editor_has_focus = true
       self.schedule_render()
     }
   })
-  view.root.add_event_listener("blur", _ => {
+  add_view_event_listener(view, view.root, "blur", _ => {
     if self.editor_has_focus {
       self.editor_has_focus = false
       self.schedule_render()
     }
   })
-  view.root.add_event_listener("copy", event => {
+  add_view_event_listener(view, view.root, "copy", event => {
     if self.handle_copy_event(event) {
       event.prevent_default()
       event.stop_propagation()
@@ -35,7 +36,7 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   // The editor owns its keyboard input (Monaco routes keys through the hidden
   // textarea / edit context into editor commands); the focusable root receives
   // keys once the mousedown handler focuses it.
-  view.root.add_event_listener("keydown", event => {
+  add_view_event_listener(view, view.root, "keydown", event => {
     match event.to_keyboard_event() {
       Some(keyboard) =>
         if self.handle_editor_key_down(
@@ -50,7 +51,7 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
       None => ()
     }
   })
-  view.overflow_guard.add_event_listener("wheel", event => {
+  add_view_event_listener(view, view.overflow_guard, "wheel", event => {
     match event.to_wheel_event() {
       Some(wheel) =>
         if handler.handle_editor_wheel(event, wheel) {
@@ -68,31 +69,21 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
 }
 
 ///|
-/// The once-per-viewer document-level drag listeners for scrollbar-thumb
-/// drags (drag moves and drag ends land outside the editor box). They
-/// delegate to the *current* per-view `mouse_handler` — the per-view
-/// listeners die with the view's DOM subtree at detach, but document
-/// listeners cannot, so these hook once at `attach`. Selection drags no
-/// longer ride here: the `MouseDownOperation`'s
-/// `GlobalEditorPointerMoveMonitor` monitors them per gesture, like Monaco.
-fn Viewer::hook_document_input(self : Viewer) -> Unit {
-  if self.document_input_hooked {
-    return
-  }
-  self.document_input_hooked = true
-  let document = @rdom.document()
-  document.add_event_listener("mousemove", event => {
-    match self.mouse_handler {
-      Some(handler) => handler.handle_scrollable_drag_move(event)
-      None => ()
-    }
-  })
-  document.add_event_listener("mouseup", _ => {
-    match self.mouse_handler {
-      Some(handler) => handler.end_scrollable_drag()
-      None => ()
-    }
-  })
+/// Registers one DOM listener in the per-model View lifetime store. The same
+/// closure identity is used for removal, and a late registration is disposed
+/// immediately by `View::add_disposable`.
+fn add_view_event_listener(
+  view : @view.View,
+  element : @rdom.Element,
+  event_name : String,
+  listener : (@rdom.Event) -> Unit,
+) -> Unit {
+  element.add_event_listener(event_name, listener)
+  view.add_disposable(
+    @base_common.Disposable::from(() => {
+      element.remove_event_listener(event_name, listener)
+    }),
+  )
 }
 
 ///|
@@ -158,6 +149,27 @@ extern "js" fn focus_element(el : @rdom.Element) -> Unit =
 /// the vendored `@rdom`).
 extern "js" fn element_contains_active(el : @rdom.Element) -> Bool =
   #| (el) => el.contains(document.activeElement)
+
+///|
+/// Monaco's `container.contains(node)` branch, also used to avoid moving an
+/// already nested placeholder back to the host root.
+extern "js" fn element_contains_node(
+  container : @rdom.Element,
+  child : @rdom.Element,
+) -> Bool =
+  #| (container, child) => container.contains(child)
+
+///|
+/// Removes an owned descendant without assuming it is a direct child. This is
+/// the source `contains` guard plus `node.remove()`, avoiding `removeChild`
+/// exceptions when host DOM was rearranged.
+extern "js" fn remove_element_if_contained(
+  container : @rdom.Element,
+  child : @rdom.Element,
+) -> Unit =
+  #| (container, child) => {
+  #|   if (container.contains(child)) child.remove();
+  #| }
 
 ///|
 /// Re-derives the active `FontInfo` from the current options: through

@@ -15,7 +15,6 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
     Some(host) => host.set_attribute("data-mode-id", model.language_id)
     None => ()
   }
-  self.services.markers.clear_resource(model.uri)
   // The decoration-change subscription attaches before the marker service
   // seeds the model so the seeding delta is observed too.
   listeners_to_remove.push(
@@ -43,21 +42,25 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       self.schedule_render()
     }),
   )
+  // One service registration owns marker seeding plus the model-content and
+  // model-dispose watches. It is acquired before the Viewer content/will/token
+  // listeners so marker refresh and ModelDisposed handling run first; the
+  // returned idempotent lease is released with this ModelData.
+  listeners_to_remove.push(
+    self.services.marker_decorations.acquire_model(model),
+  )
   // The `set_value` flush lane (`model.onDidChangeContent`). By the time
   // this fires, the registered view models already re-projected (the
   // model's two-loop dispatch runs before its public emitter), so the
-  // viewer side re-flushes its layout facts, re-applies the service-owned
-  // decorations the flush destroyed (Track E), re-fires the public event
-  // for the contribs, and schedules the repaint.
+  // service registration already re-seeded marker decorations. The Viewer
+  // side re-flushes layout facts, re-fires the public event for contribs, and
+  // schedules the repaint without acquiring another marker lease.
   listeners_to_remove.push(
     model.on_did_change_content(event => {
       match self.get_view_model() {
         Some(view_model) => self.on_line_mapping_changed(view_model, model)
         None => ()
       }
-      // Markers: the flush destroyed the marker decorations; re-seed the
-      // per-model set from the marker store (`on_model_added` replaces it).
-      self.services.marker_decorations.on_model_added(model)
       // Inlay hints: re-request from the providers and re-apply as
       // injected-text decorations against the new content.
       self.request_model_features(model)
@@ -75,7 +78,6 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   listeners_to_remove.push(
     model.on_did_change_tokens(_ => self.retokenize_current_model(model)),
   )
-  self.services.marker_decorations.on_model_added(model)
   let tokenize_started = now_ms()
   model.tokenization.force_tokenization()
   let tokenize_finished = now_ms()
@@ -132,7 +134,21 @@ fn Viewer::create_view(self : Viewer, model : @model.TextModel) -> @view.View? {
   self.hook_view_input(view)
   // Re-add every registered widget to the new view (`cew:1893-1909`).
   match self.content_hover_widget {
-    Some(widget) => view.content_widgets.add_widget(widget)
+    Some(widget) => {
+      // The widget survives model swaps, but its scrollbar listeners belong
+      // to the per-View MouseHandler. The outgoing handler removed its hooks,
+      // so bind the persistent scrollable to the freshly created handler
+      // before remounting the widget.
+      match self.mouse_handler {
+        Some(handler) =>
+          handler.hook_scrollable_scrollbar_input(
+            widget.scrollable,
+            HoverScrollableElement,
+          )
+        None => ()
+      }
+      view.content_widgets.add_widget(widget)
+    }
     None => ()
   }
   for widget_id, node in self.overlay_widgets {
@@ -142,7 +158,7 @@ fn Viewer::create_view(self : Viewer, model : @model.TextModel) -> @view.View? {
   view.root.set_attribute("data-uri", model.uri.to_string())
   // The no-model placeholder yields to the per-model view.
   match self.placeholder_element {
-    Some(placeholder) => host.remove_child(placeholder.as_node())
+    Some(placeholder) => remove_element_if_contained(host, placeholder)
     None => ()
   }
   Some(view)

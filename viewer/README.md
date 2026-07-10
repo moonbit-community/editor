@@ -27,7 +27,9 @@ ownership and lifecycle rules that are not obvious from signatures.
   Viewer/View listeners and owned DOM, and never disposes the caller's model,
   host, or explicitly supplied services. For an internally created bundle it
   disposes marker decorations, markers, then agent feedback after Viewer
-  teardown.
+  teardown. `on_did_dispose` fires after model detach and owner-decoration
+  cleanup, but before contribution and Viewer-lifetime disposal, matching the
+  source base-store boundary.
 - Each attached model stores one marker-decoration acquisition lease in its
   `ModelData`. Multiple Viewers sharing a service and model share the identity
   owner until the final lease; `set_value` refreshes that owner without

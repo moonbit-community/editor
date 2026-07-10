@@ -15,7 +15,9 @@ Backend-neutral diagnostic storage and marker-to-decoration projection.
   one model-dispose watch, and one `MarkerDecorations`; reacquisition only
   increments a refcount. A content flush resets and re-seeds that existing owner
   without acquiring a lease. Final ordinary release removes both identity
-  indexes and decorations but never removes host-owned diagnostics.
+  indexes and decorations but never removes host-owned diagnostics. Owner
+  disposal runs before either identity index is deleted, with the inactive/
+  blocked registration preventing reentrant acquisition or updates.
 - Distinct live models may share a URI. A secondary acquisition-ordered
   `URI -> Array[instance_id]` index fans marker changes to every identity.
   `get_marker(uri, id)` scans that order (model decoration ids carry an identity
@@ -32,6 +34,8 @@ Backend-neutral diagnostic storage and marker-to-decoration projection.
   owners retain the disposable returned by `acquire_model`.
 - Each live owner converts up to the first 500 markers for its resource into
   model decorations and applies the URI's temporary range suppressions.
+  Structurally equal recreated markers are paired one occurrence at a time, so
+  duplicate diagnostics preserve their exact multiplicity across updates.
 - `create_decoration_range`/`create_decoration_option` preserve Monaco's empty,
   full-line, hint, severity, and tag branches. Squiggly/theme helpers produce the
   data URI and CSS presentation inputs; the DOM itself lives in browser/view code.

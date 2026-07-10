@@ -1,6 +1,6 @@
 # Viewer Model Lifecycle and Service Ownership Parity
 
-Status: approved for implementation
+Status: implemented
 
 Date: 2026-07-10
 
@@ -10,8 +10,8 @@ Parent: viewer-monaco-parity-remediation.md
 
 Findings: P1-04, P1-05
 
-No product code may be changed until the inventory and equal-size parity ledger
-in this plan are completed, committed, and reviewed.
+The inventory and equal-size parity ledger stop gate below was completed,
+committed, and independently approved before product work began.
 
 ## Goal
 
@@ -200,9 +200,9 @@ subscriptions (MDS-006–008, MDS-066) and the complete global transient trigger
 (MDS-017, MDS-041) are `DEFERRED (needs global ModelService)`. Identity-owner
 present/absent removal and exact-once finalization (MDS-015, MDS-040, MDS-069)
 remain implementable/testable through the reviewed reasoned-removal seam;
-MDS-063 is N-A because the local MarkerService is non-optional. Ledger statuses
-remain `TODO` at this inventory stop gate; approval is required before recording
-those dispositions.
+MDS-063 is N-A because the local MarkerService is non-optional. At the
+inventory stop gate, ledger statuses remained `TODO` until review approved
+recording those dispositions.
 
 ### ViewerServices ownership review proposal
 
@@ -241,302 +241,303 @@ CEW 158 + CEC 15 + VIEW 115 + MDC 6 + MDCON 3 + MDS 76
 + GPMM 20 + SB 14 + CFG 20 = 427 source rows
 ```
 
-All 427 source rows start `TODO`. No implementation status has been inferred
-from similar-looking local code; review must first decide identity and shared-
-service ownership seams.
+All 427 source rows started `TODO` in the approved inventory commit. The ledger
+below is the implementation closeout reconciliation: every source row now has
+one terminal status. `PASS` is unused because each nondeferred implementation
+row is classified more precisely as `TESTED` or `PORTED`.
 
 ### `codeEditorWidget.ts` source ledger — 158 rows
 
 | ID | Source member (pinned file:line) | Arithmetic / transition / ownership | MoonBit symbol or seam | Status |
 |---|---|---|---|---|
-| CEW-001 | `_deliveryQueue` (`codeEditorWidget.ts:78`) | Shared ordered delivery queue for editor events | no explicit queue; emitters are synchronous | TODO |
-| CEW-002 | `_contributions` (`codeEditorWidget.ts:79`) | Registered once in the widget disposable store | `Viewer.contributions` | TODO |
-| CEW-003 | `_onDidDispose` (`codeEditorWidget.ts:81`) | Registered emitter, disposed by `super.dispose()` | `Viewer.did_dispose` | TODO |
-| CEW-004 | `_onDidChangeModelContent` (`codeEditorWidget.ts:84`) | Registered delivery-queue emitter | `Viewer.did_change_model_content` | TODO |
-| CEW-005 | `_onDidChangeModelLanguage` (`codeEditorWidget.ts:87`) | Registered delivery-queue emitter | no local public event | TODO |
-| CEW-006 | `_onDidChangeModelLanguageConfiguration` (`codeEditorWidget.ts:90`) | Registered delivery-queue emitter | no local public event | TODO |
-| CEW-007 | `_onDidChangeModelOptions` (`codeEditorWidget.ts:93`) | Registered delivery-queue emitter | no local public event | TODO |
-| CEW-008 | `_onDidChangeModelDecorations` (`codeEditorWidget.ts:96`) | Registered delivery-queue emitter | model decoration listener/render generation | TODO |
-| CEW-009 | `_onDidChangeLineHeight` (`codeEditorWidget.ts:99`) | Registered delivery-queue emitter | no local public event | TODO |
-| CEW-010 | `_onDidChangeFont` (`codeEditorWidget.ts:102`) | Registered delivery-queue emitter | `FontMeasurements.did_change` is separate | TODO |
-| CEW-011 | `_onDidChangeModelTokens` (`codeEditorWidget.ts:105`) | Registered delivery-queue emitter | model token listener | TODO |
-| CEW-012 | `_onDidChangeConfiguration` (`codeEditorWidget.ts:108`) | Registered delivery-queue emitter | configuration routing is direct | TODO |
-| CEW-013 | `_onWillChangeModel` (`codeEditorWidget.ts:111`) | Fires before detach/attach | no local `onWillChangeModel` | TODO |
-| CEW-014 | `_onDidChangeModel` (`codeEditorWidget.ts:114`) | Fires before post-detach decoration cleanup | `Viewer.did_change_model` | TODO |
-| CEW-015 | `_onDidChangeCursorPosition` (`codeEditorWidget.ts:117`) | Registered delivery-queue emitter | `Viewer.did_change_cursor_position` | TODO |
-| CEW-016 | `_onDidChangeCursorSelection` (`codeEditorWidget.ts:120`) | Registered delivery-queue emitter | `Viewer.did_change_cursor_selection` | TODO |
-| CEW-017 | `_onDidAttemptReadOnlyEdit` (`codeEditorWidget.ts:123`) | Contribution-aware interaction emitter | no local event | TODO |
-| CEW-018 | `_onDidLayoutChange` (`codeEditorWidget.ts:126`) | Registered delivery-queue emitter | no local public event | TODO |
-| CEW-019 | `_editorTextFocus` (`codeEditorWidget.ts:129`) | Registered boolean emitter with true/false edges | `Viewer.editor_has_focus` | TODO |
-| CEW-020 | `_editorWidgetFocus` (`codeEditorWidget.ts:133`) | Registered boolean emitter with true/false edges | `Viewer.has_widget_focus` query only | TODO |
-| CEW-021 | `_onWillType` (`codeEditorWidget.ts:137`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | TODO |
-| CEW-022 | `_onDidType` (`codeEditorWidget.ts:140`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | TODO |
-| CEW-023 | `_onDidCompositionStart` (`codeEditorWidget.ts:143`) | Registered contribution-aware emitter | N-A candidate: no edit context | TODO |
-| CEW-024 | `_onDidCompositionEnd` (`codeEditorWidget.ts:146`) | Registered contribution-aware emitter | N-A candidate: no edit context | TODO |
-| CEW-025 | `_onDidPaste` (`codeEditorWidget.ts:149`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | TODO |
-| CEW-026 | `_onWillCopy` (`codeEditorWidget.ts:152`) | Registered contribution-aware emitter | root copy callback, not retained | TODO |
-| CEW-027 | `_onWillCut` (`codeEditorWidget.ts:155`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | TODO |
-| CEW-028 | `_onWillPaste` (`codeEditorWidget.ts:158`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | TODO |
-| CEW-029 | `_onMouseUp` (`codeEditorWidget.ts:161`) | Registered contribution-aware emitter | `Viewer.did_mouse_up` | TODO |
-| CEW-030 | `_onMouseDown` (`codeEditorWidget.ts:164`) | Registered contribution-aware emitter | `Viewer.did_mouse_down` | TODO |
-| CEW-031 | `_onMouseDrag` (`codeEditorWidget.ts:167`) | Registered contribution-aware emitter | controller dispatch seam | TODO |
-| CEW-032 | `_onMouseDrop` (`codeEditorWidget.ts:170`) | Registered contribution-aware emitter | N-A candidate: readonly DnD | TODO |
-| CEW-033 | `_onMouseDropCanceled` (`codeEditorWidget.ts:173`) | Registered contribution-aware emitter | N-A candidate: readonly DnD | TODO |
-| CEW-034 | `_onDropIntoEditor` (`codeEditorWidget.ts:176`) | Registered contribution-aware emitter | N-A candidate: readonly DnD | TODO |
-| CEW-035 | `_onContextMenu` (`codeEditorWidget.ts:179`) | Registered contribution-aware emitter | no local public event | TODO |
-| CEW-036 | `_onMouseMove` (`codeEditorWidget.ts:182`) | Registered contribution-aware emitter | `Viewer.did_mouse_move` | TODO |
-| CEW-037 | `_onMouseLeave` (`codeEditorWidget.ts:185`) | Registered contribution-aware emitter | `Viewer.did_mouse_leave` | TODO |
-| CEW-038 | `_onMouseWheel` (`codeEditorWidget.ts:188`) | Registered contribution-aware emitter | no local public event | TODO |
-| CEW-039 | `_onKeyUp` (`codeEditorWidget.ts:191`) | Registered contribution-aware emitter | no local public event | TODO |
-| CEW-040 | `_onKeyDown` (`codeEditorWidget.ts:194`) | Registered contribution-aware emitter | root keydown callback, not retained | TODO |
-| CEW-041 | `_onDidContentSizeChange` (`codeEditorWidget.ts:197`) | Registered delivery-queue emitter | no local public event | TODO |
-| CEW-042 | `_onDidScrollChange` (`codeEditorWidget.ts:200`) | Registered delivery-queue emitter | `Viewer.did_scroll` | TODO |
-| CEW-043 | `_onDidChangeViewZones` (`codeEditorWidget.ts:203`) | Registered delivery-queue emitter | no local public event | TODO |
-| CEW-044 | `_onDidChangeHiddenAreas` (`codeEditorWidget.ts:206`) | Registered delivery-queue emitter | no local public event | TODO |
-| CEW-045 | `_onWillTriggerEditorOperationEvent` (`codeEditorWidget.ts:211`) | Registered emitter | N-A candidate: readonly operations | TODO |
-| CEW-046 | `_onBeginUpdate` (`codeEditorWidget.ts:214`) | Registered update-bracket emitter | no local begin/end bracket | TODO |
-| CEW-047 | `_onEndUpdate` (`codeEditorWidget.ts:217`) | Registered update-bracket emitter | no local begin/end bracket | TODO |
-| CEW-048 | `_onBeforeExecuteEdit` (`codeEditorWidget.ts:220`) | Registered emitter | N-A candidate: readonly edit path | TODO |
-| CEW-049 | `_domElement` (`codeEditorWidget.ts:235`) | Host-owned container retained for widget lifetime | `Viewer.container` | TODO |
-| CEW-050 | `_overflowWidgetsDomNode` (`codeEditorWidget.ts:236`) | Optional external host for overflowing widgets; children remain View-owned | no external overflow host option | TODO |
-| CEW-051 | `_id` (`codeEditorWidget.ts:237,295`) | Pre-incremented editor id; decoration owner id | `Viewer.editor_id` / `next_editor_id` | TODO |
-| CEW-052 | `_configuration` (`codeEditorWidget.ts:238,300-315`) | Registered configuration plus owned change subscription | `Viewer.options` + measured/font state | TODO |
-| CEW-053 | `_contributionsDisposable` (`codeEditorWidget.ts:239,544,2013-2014`) | One attach-scoped idle handle; dispose/reset before any no-model return | no local equivalent | TODO |
-| CEW-054 | `_modelData` (`codeEditorWidget.ts:244`) | Nullable legal-state bundle | `Viewer.model_data` | TODO |
-| CEW-055 | `_instantiationService` (`codeEditorWidget.ts:246,330`) | Registered child service scope | no DI child scope | TODO |
-| CEW-056 | `_contextKeyService` (`codeEditorWidget.ts:247-248,317`) | Registered scoped context service | contribution registry context is local | TODO |
-| CEW-057 | `_actions` (`codeEditorWidget.ts:241,429`) | Widget-owned map cleared on dispose | registry actions are global; instances not stored here | TODO |
-| CEW-058 | `_contentWidgets` (`codeEditorWidget.ts:255,334,430`) | Widget registrations survive model swaps; map cleared on dispose | hover content widget field | TODO |
-| CEW-059 | `_overlayWidgets` (`codeEditorWidget.ts:256,335,431`) | Widget registrations survive model swaps; map cleared on dispose | `Viewer.overlay_widgets` | TODO |
-| CEW-060 | `_glyphMarginWidgets` (`codeEditorWidget.ts:257,336`) | Widget registrations survive model swaps | no glyph-margin widget API | TODO |
-| CEW-061 | `_decorationTypeKeysToIds` (`codeEditorWidget.ts:262,296`) | Per-editor decoration-type ownership cleared/swept | editor owner-id decorations | TODO |
-| CEW-062 | `_decorationTypeSubtypes` (`codeEditorWidget.ts:263,297`) | Per-editor subtype registry cleared/swept | no decoration-type registry | TODO |
-| CEW-063 | `_bannerDomNode` (`codeEditorWidget.ts:265,2028-2030`) | Optional widget-owned DOM removed at detach | no banner API | TODO |
-| CEW-064 | constructor (`codeEditorWidget.ts:271-408`) | Registers every widget-lifetime resource, initializes contributions, installs DnD observer, then registers editor service | `Viewer::Viewer` + `Viewer::attach` | TODO |
-| CEW-065 | configuration listener (`codeEditorWidget.ts:303-315`) | Fires configuration first; layout branch next; font custom property branch last | `update_options` / `refresh_font_info` | TODO |
-| CEW-066 | `EditorContextKeysManager` (`codeEditorWidget.ts:327`) | First context manager is independently registered in the widget store | no direct equivalent | TODO |
-| CEW-067 | contribution initialization (`codeEditorWidget.ts:338-344`) | Explicit contribution list or global registry, then initialize once | `editor_registry().instantiate_all` | TODO |
-| CEW-068 | `DragAndDropObserver` (`codeEditorWidget.ts:372-405`) | Registered DOM observer; every callback dies with widget store | no retained DnD observer | TODO |
-| CEW-069 | code-editor service registration (`codeEditorWidget.ts:287,407,427`) | will-create → add; dispose removes before other teardown | no global editor service | TODO |
-| CEW-070 | `--editor-font-size` (`codeEditorWidget.ts:303,313`) | Container custom property set initially and on font-size changes | root custom property in `apply_font_info_to_view` | TODO |
-| CEW-071 | `dispose` (`codeEditorWidget.ts:426-439`) | remove service → clear registries → detach/post-cleanup → fire dispose → `super.dispose` | `Viewer::dispose` | TODO |
-| CEW-072 | `setModel` (`codeEditorWidget.ts:506-548`) | begin/end update; no-op guards; will-change; detach/attach; focus; did-change; cleanup; attach contribution handle | `Viewer::set_model` | TODO |
-| CEW-073 | `_attachModel` (`codeEditorWidget.ts:1750-1921`) | Null arm or complete ModelData construction with swap-scoped listeners and View DOM | `Viewer::attach_model` | TODO |
-| CEW-074 | `_createView` (`codeEditorWidget.ts:1923-2006`) | Select command delegate; wire user-input relays; construct View | `Viewer::create_view` + controller helper | TODO |
-| CEW-075 | `_postDetachModelCleanup` (`codeEditorWidget.ts:2008-2010`) | Remove all decorations for this editor owner id | outgoing-model owner-id sweep | TODO |
-| CEW-076 | `_detachModel` (`codeEditorWidget.ts:2012-2032`) | Dispose attach contribution first; dispose bundle; clear DOM attributes/nodes; return model | `Viewer::detach_model` | TODO |
-| CEW-077 | container `data-mode-id` (`codeEditorWidget.ts:1758,1865,2024`) | Set on attach/language change; remove on detach | local host attribute | TODO |
-| CEW-078 | per-model root DOM (`codeEditorWidget.ts:1891,2019,2025-2027`) | Append after View creation; retain before disposal; remove only if still contained | local host append/remove | TODO |
-| CEW-079 | view-root `data-uri` (`codeEditorWidget.ts:1912`) | Stamp attached model URI after initial render | local View root attribute | TODO |
-| CEW-080 | View `onWillCopy` subscription (`codeEditorWidget.ts:1915`) | Independently pushed into ModelData listener array | local root copy callback is not retained | TODO |
-| CEW-081 | `ModelData.model` (`codeEditorWidget.ts:2125`) | Caller-owned model identity; not disposed | `ModelData.model` | TODO |
-| CEW-082 | `ModelData.viewModel` (`codeEditorWidget.ts:2126`) | Per-model owner; disposed last | `ModelData.view_model` | TODO |
-| CEW-083 | `ModelData.view` (`codeEditorWidget.ts:2127`) | Per-model View; disposal gated by `hasRealView` | `ModelData.view?` | TODO |
-| CEW-084 | `ModelData.hasRealView` (`codeEditorWidget.ts:2128`) | Controls View disposal and DOM capture | `view is Some` is implicit flag | TODO |
-| CEW-085 | `ModelData.listenersToRemove` (`codeEditorWidget.ts:2129`) | Every swap-scoped subscription disposed first | `ModelData.listeners_to_remove` | TODO |
-| CEW-086 | `ModelData.attachedView` (`codeEditorWidget.ts:2130`) | Token returned by model attach protocol and passed back on detach | no local attached-view protocol | TODO |
-| CEW-087 | `ModelData` constructor (`codeEditorWidget.ts:2124-2132`) | Bundles all six fields without side effects | local struct literal | TODO |
-| CEW-088 | `ModelData.dispose` (`codeEditorWidget.ts:2134-2141`) | listeners → model `onBeforeDetached` → real View → ViewModel | local `ModelData::dispose` | TODO |
+| CEW-001 | `_deliveryQueue` (`codeEditorWidget.ts:78`) | Shared ordered delivery queue for editor events | no explicit queue; emitters are synchronous | DEFERRED (no delivery-queue owner) |
+| CEW-002 | `_contributions` (`codeEditorWidget.ts:79`) | Registered once in the widget disposable store | `Viewer.contributions` | TESTED |
+| CEW-003 | `_onDidDispose` (`codeEditorWidget.ts:81`) | Registered emitter, disposed by `super.dispose()` | `Viewer.did_dispose` | TESTED |
+| CEW-004 | `_onDidChangeModelContent` (`codeEditorWidget.ts:84`) | Registered delivery-queue emitter | `Viewer.did_change_model_content` | TESTED |
+| CEW-005 | `_onDidChangeModelLanguage` (`codeEditorWidget.ts:87`) | Registered delivery-queue emitter | no local public event | DEFERRED (no model-language event surface) |
+| CEW-006 | `_onDidChangeModelLanguageConfiguration` (`codeEditorWidget.ts:90`) | Registered delivery-queue emitter | no local public event | DEFERRED (no language-configuration event surface) |
+| CEW-007 | `_onDidChangeModelOptions` (`codeEditorWidget.ts:93`) | Registered delivery-queue emitter | no local public event | DEFERRED (no model-options event surface) |
+| CEW-008 | `_onDidChangeModelDecorations` (`codeEditorWidget.ts:96`) | Registered delivery-queue emitter | model decoration listener/render generation | TESTED |
+| CEW-009 | `_onDidChangeLineHeight` (`codeEditorWidget.ts:99`) | Registered delivery-queue emitter | no local public event | DEFERRED (no line-height event surface) |
+| CEW-010 | `_onDidChangeFont` (`codeEditorWidget.ts:102`) | Registered delivery-queue emitter | `FontMeasurements.did_change` is separate | DEFERRED (no public font-change event surface) |
+| CEW-011 | `_onDidChangeModelTokens` (`codeEditorWidget.ts:105`) | Registered delivery-queue emitter | model token listener | PORTED |
+| CEW-012 | `_onDidChangeConfiguration` (`codeEditorWidget.ts:108`) | Registered delivery-queue emitter | configuration routing is direct | PORTED |
+| CEW-013 | `_onWillChangeModel` (`codeEditorWidget.ts:111`) | Fires before detach/attach | no local `onWillChangeModel` | DEFERRED (no will-change-model event surface) |
+| CEW-014 | `_onDidChangeModel` (`codeEditorWidget.ts:114`) | Fires before post-detach decoration cleanup | `Viewer.did_change_model` | TESTED |
+| CEW-015 | `_onDidChangeCursorPosition` (`codeEditorWidget.ts:117`) | Registered delivery-queue emitter | `Viewer.did_change_cursor_position` | TESTED |
+| CEW-016 | `_onDidChangeCursorSelection` (`codeEditorWidget.ts:120`) | Registered delivery-queue emitter | `Viewer.did_change_cursor_selection` | TESTED |
+| CEW-017 | `_onDidAttemptReadOnlyEdit` (`codeEditorWidget.ts:123`) | Contribution-aware interaction emitter | no local event | DEFERRED (no readonly-edit event surface) |
+| CEW-018 | `_onDidLayoutChange` (`codeEditorWidget.ts:126`) | Registered delivery-queue emitter | no local public event | DEFERRED (no public layout event surface) |
+| CEW-019 | `_editorTextFocus` (`codeEditorWidget.ts:129`) | Registered boolean emitter with true/false edges | `Viewer.editor_has_focus` | TESTED |
+| CEW-020 | `_editorWidgetFocus` (`codeEditorWidget.ts:133`) | Registered boolean emitter with true/false edges | `Viewer.has_widget_focus` query only | DEFERRED (no aggregate widget-focus event) |
+| CEW-021 | `_onWillType` (`codeEditorWidget.ts:137`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | N-A (readonly Viewer has no edit path) |
+| CEW-022 | `_onDidType` (`codeEditorWidget.ts:140`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | N-A (readonly Viewer has no edit path) |
+| CEW-023 | `_onDidCompositionStart` (`codeEditorWidget.ts:143`) | Registered contribution-aware emitter | N-A candidate: no edit context | N-A (readonly Viewer has no composition path) |
+| CEW-024 | `_onDidCompositionEnd` (`codeEditorWidget.ts:146`) | Registered contribution-aware emitter | N-A candidate: no edit context | N-A (readonly Viewer has no composition path) |
+| CEW-025 | `_onDidPaste` (`codeEditorWidget.ts:149`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | N-A (readonly Viewer has no edit path) |
+| CEW-026 | `_onWillCopy` (`codeEditorWidget.ts:152`) | Registered contribution-aware emitter | root copy listener is retained by the View; no public emitter | DEFERRED (no copy event surface) |
+| CEW-027 | `_onWillCut` (`codeEditorWidget.ts:155`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | N-A (readonly Viewer has no edit path) |
+| CEW-028 | `_onWillPaste` (`codeEditorWidget.ts:158`) | Registered contribution-aware emitter | N-A candidate: readonly edit path | N-A (readonly Viewer has no edit path) |
+| CEW-029 | `_onMouseUp` (`codeEditorWidget.ts:161`) | Registered contribution-aware emitter | `Viewer.did_mouse_up` | PORTED |
+| CEW-030 | `_onMouseDown` (`codeEditorWidget.ts:164`) | Registered contribution-aware emitter | `Viewer.did_mouse_down` | PORTED |
+| CEW-031 | `_onMouseDrag` (`codeEditorWidget.ts:167`) | Registered contribution-aware emitter | controller dispatch seam | PORTED |
+| CEW-032 | `_onMouseDrop` (`codeEditorWidget.ts:170`) | Registered contribution-aware emitter | N-A candidate: readonly DnD | N-A (readonly Viewer has no drop-edit path) |
+| CEW-033 | `_onMouseDropCanceled` (`codeEditorWidget.ts:173`) | Registered contribution-aware emitter | N-A candidate: readonly DnD | N-A (readonly Viewer has no drop-edit path) |
+| CEW-034 | `_onDropIntoEditor` (`codeEditorWidget.ts:176`) | Registered contribution-aware emitter | N-A candidate: readonly DnD | N-A (readonly Viewer has no drop-edit path) |
+| CEW-035 | `_onContextMenu` (`codeEditorWidget.ts:179`) | Registered contribution-aware emitter | no local public event | DEFERRED (no context-menu event surface) |
+| CEW-036 | `_onMouseMove` (`codeEditorWidget.ts:182`) | Registered contribution-aware emitter | `Viewer.did_mouse_move` | PORTED |
+| CEW-037 | `_onMouseLeave` (`codeEditorWidget.ts:185`) | Registered contribution-aware emitter | `Viewer.did_mouse_leave` | PORTED |
+| CEW-038 | `_onMouseWheel` (`codeEditorWidget.ts:188`) | Registered contribution-aware emitter | no local public event | DEFERRED (no wheel event surface) |
+| CEW-039 | `_onKeyUp` (`codeEditorWidget.ts:191`) | Registered contribution-aware emitter | no local public event | DEFERRED (no key-up event surface) |
+| CEW-040 | `_onKeyDown` (`codeEditorWidget.ts:194`) | Registered contribution-aware emitter | root keydown listener is retained by the View; no public emitter | DEFERRED (no key-down event surface) |
+| CEW-041 | `_onDidContentSizeChange` (`codeEditorWidget.ts:197`) | Registered delivery-queue emitter | no local public event | DEFERRED (no content-size event surface) |
+| CEW-042 | `_onDidScrollChange` (`codeEditorWidget.ts:200`) | Registered delivery-queue emitter | `Viewer.did_scroll` | PORTED |
+| CEW-043 | `_onDidChangeViewZones` (`codeEditorWidget.ts:203`) | Registered delivery-queue emitter | no local public event | DEFERRED (no view-zone event surface) |
+| CEW-044 | `_onDidChangeHiddenAreas` (`codeEditorWidget.ts:206`) | Registered delivery-queue emitter | no local public event | DEFERRED (no hidden-area event surface) |
+| CEW-045 | `_onWillTriggerEditorOperationEvent` (`codeEditorWidget.ts:211`) | Registered emitter | N-A candidate: readonly operations | N-A (readonly Viewer has no edit path) |
+| CEW-046 | `_onBeginUpdate` (`codeEditorWidget.ts:214`) | Registered update-bracket emitter | no local begin/end bracket | DEFERRED (no update-event bracket) |
+| CEW-047 | `_onEndUpdate` (`codeEditorWidget.ts:217`) | Registered update-bracket emitter | no local begin/end bracket | DEFERRED (no update-event bracket) |
+| CEW-048 | `_onBeforeExecuteEdit` (`codeEditorWidget.ts:220`) | Registered emitter | N-A candidate: readonly edit path | N-A (readonly Viewer has no edit path) |
+| CEW-049 | `_domElement` (`codeEditorWidget.ts:235`) | Host-owned container retained for widget lifetime | `Viewer.container` | TESTED |
+| CEW-050 | `_overflowWidgetsDomNode` (`codeEditorWidget.ts:236`) | Optional external host for overflowing widgets; children remain View-owned | no external overflow host option | DEFERRED (no external overflow host option) |
+| CEW-051 | `_id` (`codeEditorWidget.ts:237,295`) | Pre-incremented editor id; decoration owner id | `Viewer.editor_id` / `next_editor_id` | TESTED |
+| CEW-052 | `_configuration` (`codeEditorWidget.ts:238,300-315`) | Registered configuration plus owned change subscription | `Viewer.options` + measured/font state | PORTED |
+| CEW-053 | `_contributionsDisposable` (`codeEditorWidget.ts:239,544,2013-2014`) | One attach-scoped idle handle; dispose/reset before any no-model return | no local equivalent | DEFERRED (no attach-scoped contribution handle) |
+| CEW-054 | `_modelData` (`codeEditorWidget.ts:244`) | Nullable legal-state bundle | `Viewer.model_data` | TESTED |
+| CEW-055 | `_instantiationService` (`codeEditorWidget.ts:246,330`) | Registered child service scope | no DI child scope | N-A (direct construction has no DI child scope) |
+| CEW-056 | `_contextKeyService` (`codeEditorWidget.ts:247-248,317`) | Registered scoped context service | contribution registry context is local | DEFERRED (no context-key owner) |
+| CEW-057 | `_actions` (`codeEditorWidget.ts:241,429`) | Widget-owned map cleared on dispose | registry actions are global; instances not stored here | DEFERRED (actions are registry-owned) |
+| CEW-058 | `_contentWidgets` (`codeEditorWidget.ts:255,334,430`) | Widget registrations survive model swaps; map cleared on dispose | hover content widget field | PORTED |
+| CEW-059 | `_overlayWidgets` (`codeEditorWidget.ts:256,335,431`) | Widget registrations survive model swaps; map cleared on dispose | `Viewer.overlay_widgets` | PORTED |
+| CEW-060 | `_glyphMarginWidgets` (`codeEditorWidget.ts:257,336`) | Widget registrations survive model swaps | no glyph-margin widget API | DEFERRED (no glyph-margin widget owner) |
+| CEW-061 | `_decorationTypeKeysToIds` (`codeEditorWidget.ts:262,296`) | Per-editor decoration-type ownership cleared/swept | no decoration-type registry | DEFERRED (no decoration-type registry) |
+| CEW-062 | `_decorationTypeSubtypes` (`codeEditorWidget.ts:263,297`) | Per-editor subtype registry cleared/swept | no decoration-type registry | DEFERRED (no decoration-type registry) |
+| CEW-063 | `_bannerDomNode` (`codeEditorWidget.ts:265,2028-2030`) | Optional widget-owned DOM removed at detach | no banner API | DEFERRED (no banner owner) |
+| CEW-064 | constructor (`codeEditorWidget.ts:271-408`) | Registers every widget-lifetime resource, initializes contributions, installs DnD observer, then registers editor service | `Viewer::Viewer` + `Viewer::attach` | PORTED |
+| CEW-065 | configuration listener (`codeEditorWidget.ts:303-315`) | Fires configuration first; layout branch next; font custom property branch last | `update_options` / `refresh_font_info` | PORTED |
+| CEW-066 | `EditorContextKeysManager` (`codeEditorWidget.ts:327`) | First context manager is independently registered in the widget store | no direct equivalent | DEFERRED (no context-key owner) |
+| CEW-067 | contribution initialization (`codeEditorWidget.ts:338-344`) | Explicit contribution list or global registry, then initialize once | `editor_registry().instantiate_all` | TESTED |
+| CEW-068 | `DragAndDropObserver` (`codeEditorWidget.ts:372-405`) | Registered DOM observer; every callback dies with widget store | no retained DnD observer | N-A (readonly Viewer has no drop-edit path) |
+| CEW-069 | code-editor service registration (`codeEditorWidget.ts:287,407,427`) | will-create → add; dispose removes before other teardown | no global editor service | DEFERRED (no global editor service) |
+| CEW-070 | `--editor-font-size` (`codeEditorWidget.ts:303,313`) | Container custom property set initially and on font-size changes | root custom property in `apply_font_info_to_view` | PORTED |
+| CEW-071 | `dispose` (`codeEditorWidget.ts:426-439`) | remove service → clear registries → detach/post-cleanup → fire dispose → `super.dispose` | `Viewer::dispose` | TESTED |
+| CEW-072 | `setModel` (`codeEditorWidget.ts:506-548`) | begin/end update; no-op guards; will-change; detach/attach; focus; did-change; cleanup; attach contribution handle | `Viewer::set_model` | TESTED |
+| CEW-073 | `_attachModel` (`codeEditorWidget.ts:1750-1921`) | Null arm or complete ModelData construction with swap-scoped listeners and View DOM | `Viewer::attach_model` | TESTED |
+| CEW-074 | `_createView` (`codeEditorWidget.ts:1923-2006`) | Select command delegate; wire user-input relays; construct View | `Viewer::create_view` + controller helper | PORTED |
+| CEW-075 | `_postDetachModelCleanup` (`codeEditorWidget.ts:2008-2010`) | Remove all decorations for this editor owner id | outgoing-model owner-id sweep | PORTED |
+| CEW-076 | `_detachModel` (`codeEditorWidget.ts:2012-2032`) | Dispose attach contribution first; dispose bundle; clear DOM attributes/nodes; return model | `Viewer::detach_model` | TESTED |
+| CEW-077 | container `data-mode-id` (`codeEditorWidget.ts:1758,1865,2024`) | Set on attach/language change; remove on detach | local host attribute | TESTED |
+| CEW-078 | per-model root DOM (`codeEditorWidget.ts:1891,2019,2025-2027`) | Append after View creation; retain before disposal; remove only if still contained | local host append/remove | TESTED |
+| CEW-079 | view-root `data-uri` (`codeEditorWidget.ts:1912`) | Stamp attached model URI after initial render | local View root attribute | TESTED |
+| CEW-080 | View `onWillCopy` subscription (`codeEditorWidget.ts:1915`) | Independently pushed into ModelData listener array | local root copy listener is retained in the per-View store | PORTED |
+| CEW-081 | `ModelData.model` (`codeEditorWidget.ts:2125`) | Caller-owned model identity; not disposed | `ModelData.model` | TESTED |
+| CEW-082 | `ModelData.viewModel` (`codeEditorWidget.ts:2126`) | Per-model owner; disposed last | `ModelData.view_model` | PORTED |
+| CEW-083 | `ModelData.view` (`codeEditorWidget.ts:2127`) | Per-model View; disposal gated by `hasRealView` | `ModelData.view?` | TESTED |
+| CEW-084 | `ModelData.hasRealView` (`codeEditorWidget.ts:2128`) | Controls View disposal and DOM capture | `view is Some` is implicit flag | PORTED |
+| CEW-085 | `ModelData.listenersToRemove` (`codeEditorWidget.ts:2129`) | Every swap-scoped subscription disposed first | `ModelData.listeners_to_remove` | TESTED |
+| CEW-086 | `ModelData.attachedView` (`codeEditorWidget.ts:2130`) | Token returned by model attach protocol and passed back on detach | no local attached-view protocol | DEFERRED (no attached-view protocol) |
+| CEW-087 | `ModelData` constructor (`codeEditorWidget.ts:2124-2132`) | Bundles all six fields without side effects | local struct literal | PORTED |
+| CEW-088 | `ModelData.dispose` (`codeEditorWidget.ts:2134-2141`) | listeners → model `onBeforeDetached` → real View → ViewModel | local `ModelData::dispose` | PORTED |
 
 ### `codeEditorContributions.ts` source ledger — 15 rows
 
 | ID | Source member (pinned file:line) | Arithmetic / transition / ownership | MoonBit symbol or seam | Status |
 |---|---|---|---|---|
-| CEC-001 | `_editor` (`codeEditorContributions.ts:16`) | Nullable until one initialization | registry closures capture Viewer | TODO |
-| CEC-002 | `_instantiationService` (`codeEditorContributions.ts:17`) | Nullable until initialization; caller-owned service | no DI service | TODO |
-| CEC-003 | `_instances` (`codeEditorContributions.ts:22`) | Registered `DisposableMap`; owns every instantiated contribution | `Viewer.contributions` | TODO |
-| CEC-004 | `_pending` (`codeEditorContributions.ts:26`) | Descriptions not yet instantiated | no pending map; all eager | TODO |
-| CEC-005 | `_finishedInstantiation` (`codeEditorContributions.ts:30`) | Boolean slots for all four timing modes | modes recorded but all eager | TODO |
-| CEC-006 | constructor (`codeEditorContributions.ts:32-41`) | Initializes Eager/AfterFirstRender/BeforeFirstInteraction/Eventually to false | registry construction | TODO |
-| CEC-007 | `initialize` (`codeEditorContributions.ts:43-77`) | Store editor/service; reject duplicate ids; seed pending; eager instantiate; register three idle handles | `instantiate_all` | TODO |
-| CEC-008 | AfterFirstRender idle handle (`codeEditorContributions.ts:60-62`) | Independently registered in the base disposable store | no lazy handles | TODO |
-| CEC-009 | `onAfterModelAttached` (`codeEditorContributions.ts:114-118`) | Return caller-owned/cancelable 50-ms idle handle | no local attach contribution handle | TODO |
-| CEC-010 | attach delay constant (`codeEditorContributions.ts:117`) | `50` ms latest AfterFirstRender instantiation | no local timing | TODO |
-| CEC-011 | inherited `Disposable.dispose` (`codeEditorContributions.ts:14,22,60-76`) | Disposes instances and registered idle handles exactly once | explicit contribution loop only | TODO |
+| CEC-001 | `_editor` (`codeEditorContributions.ts:16`) | Nullable until one initialization | registry closures capture Viewer | PORTED |
+| CEC-002 | `_instantiationService` (`codeEditorContributions.ts:17`) | Nullable until initialization; caller-owned service | no DI service | N-A (direct construction has no DI service) |
+| CEC-003 | `_instances` (`codeEditorContributions.ts:22`) | Registered `DisposableMap`; owns every instantiated contribution | `Viewer.contributions` | TESTED |
+| CEC-004 | `_pending` (`codeEditorContributions.ts:26`) | Descriptions not yet instantiated | no pending map; all eager | DEFERRED (contributions instantiate eagerly) |
+| CEC-005 | `_finishedInstantiation` (`codeEditorContributions.ts:30`) | Boolean slots for all four timing modes | modes recorded but all eager | DEFERRED (contributions instantiate eagerly) |
+| CEC-006 | constructor (`codeEditorContributions.ts:32-41`) | Initializes Eager/AfterFirstRender/BeforeFirstInteraction/Eventually to false | registry construction | DEFERRED (contributions instantiate eagerly) |
+| CEC-007 | `initialize` (`codeEditorContributions.ts:43-77`) | Store editor/service; reject duplicate ids; seed pending; eager instantiate; register three idle handles | `instantiate_all` | PORTED |
+| CEC-008 | AfterFirstRender idle handle (`codeEditorContributions.ts:60-62`) | Independently registered in the base disposable store | no lazy handles | DEFERRED (contributions instantiate eagerly) |
+| CEC-009 | `onAfterModelAttached` (`codeEditorContributions.ts:114-118`) | Return caller-owned/cancelable 50-ms idle handle | no local attach contribution handle | DEFERRED (contributions instantiate eagerly) |
+| CEC-010 | attach delay constant (`codeEditorContributions.ts:117`) | `50` ms latest AfterFirstRender instantiation | no local timing | DEFERRED (contributions instantiate eagerly) |
+| CEC-011 | inherited `Disposable.dispose` (`codeEditorContributions.ts:14,22,60-76`) | Disposes instances and registered idle handles exactly once | explicit contribution loop only | TESTED |
 
 ### `view.ts` source ledger — 115 rows
 
 | ID | Source member (pinned file:line) | Arithmetic / transition / ownership | MoonBit symbol or seam | Status |
 |---|---|---|---|---|
-| VIEW-001 | `_widgetFocusTracker` (`view.ts:88,149-151`) | Registered focus-tracker field owned by View | anonymous root focus/blur callbacks | TODO |
-| VIEW-002 | `_scrollbar` (`view.ts:90,195-196`) | Per-View part retained and disposed through `_viewParts` | `View.editor_scrollbar` | TODO |
-| VIEW-003 | `_context` (`view.ts:91,166-169`) | Per-View context; View registers itself first as event handler | no `ViewContext` event registry | TODO |
-| VIEW-004 | `_viewGpuContext` (`view.ts:92,191-193`) | Optional GPU owner, disposed explicitly | N-A candidate: no GPU renderer | TODO |
-| VIEW-005 | `_selections` (`view.ts:93,156`) | Initial selection is `(1,1,1,1)` | selection lives in ViewModel | TODO |
-| VIEW-006 | `_viewLines` (`view.ts:96,199`) | Per-View special part, explicitly disposed outside `_viewParts` | `View.view_lines` | TODO |
-| VIEW-007 | `_viewLinesGpu` (`view.ts:97,200-202`) | Optional GPU lines, explicitly disposed | N-A candidate | TODO |
-| VIEW-008 | `_viewZones` (`view.ts:100,205-206`) | Per-View part retained and in `_viewParts` | `View.view_zones` | TODO |
-| VIEW-009 | `_contentWidgets` (`view.ts:101,245-246`) | Per-View part plus overflowing node | `View.content_widgets` | TODO |
-| VIEW-010 | `_overlayWidgets` (`view.ts:102,252-253`) | Per-View part plus overflowing node | `View.overlay_widgets` | TODO |
-| VIEW-011 | `_glyphMarginWidgets` (`view.ts:103,235-236`) | Per-View part retained and in `_viewParts` | no glyph-margin widgets | TODO |
-| VIEW-012 | `_viewCursors` (`view.ts:104,248-249`) | Per-View part retained and in `_viewParts` | `View.view_cursors` | TODO |
-| VIEW-013 | `_viewParts` (`view.ts:105,171`) | Ordered disposal owner for constructed parts | `View.view_parts` | TODO |
-| VIEW-014 | `_viewController` (`view.ts:106,163`) | Per-View controller, not a disposable | root controller closures | TODO |
-| VIEW-015 | `_editContextEnabled` (`view.ts:108,174`) | Captures ownership-switching option | N-A candidate: no edit context | TODO |
-| VIEW-016 | `_accessibilitySupport` (`view.ts:109,175`) | Participates in edit-context replacement equality guard | no edit context | TODO |
-| VIEW-017 | `_editContext` (`view.ts:110,176-179`) | Per-View part; can be disposed/replaced at runtime | no edit context | TODO |
-| VIEW-018 | `_editContextClipboardListeners` (`view.ts:111`) | Dedicated `DisposableStore`, cleared on reconnect and disposed on View disposal | no retained clipboard store | TODO |
-| VIEW-019 | `_pointerHandler` (`view.ts:112,303`) | Registered View-lifetime pointer handler | `Viewer.mouse_handler` is not View-owned | TODO |
-| VIEW-020 | `_onWillCopy` (`view.ts:115`) | Registered View-lifetime emitter | root copy callback | TODO |
-| VIEW-021 | `_onWillCut` (`view.ts:118`) | Registered View-lifetime emitter | N-A candidate: readonly | TODO |
-| VIEW-022 | `_onWillPaste` (`view.ts:121`) | Registered View-lifetime emitter | N-A candidate: readonly | TODO |
-| VIEW-023 | `_linesContent` (`view.ts:125,182-184`) | Sole 2^24-pixel scrolling rail shared with scrollbar and lines | `View.lines_content` | TODO |
-| VIEW-024 | `domNode` (`view.ts:126,186-189`) | Per-model root; parent widget removes it | `View.root` | TODO |
-| VIEW-025 | `_overflowGuardContainer` (`view.ts:127,159-161`) | Root-owned overflow guard | `View.overflow_guard` | TODO |
-| VIEW-026 | `_shouldRecomputeGlyphMarginLanes` (`view.ts:130`) | View mutable state only; no external lifetime | no glyph margin | TODO |
-| VIEW-027 | `_renderAnimationFrame` (`view.ts:131,157`) | Nullable scheduled frame disposed/reset first | Viewer render scheduler state | TODO |
-| VIEW-028 | `_ownerID` (`view.ts:132,147`) | Editor owner id passed to edit context | `Viewer.editor_id` | TODO |
-| VIEW-029 | constructor (`view.ts:134-304`) | Constructs all owned parts/DOM in source order, applies layout, then registers pointer handler | `View::new` + `hook_view_input` | TODO |
-| VIEW-030 | `_instantiateEditContext` (`view.ts:306-313`) | `effectiveEditContext` chooses Native vs TextArea owner | N-A candidate | TODO |
-| VIEW-031 | `_updateEditContext` (`view.ts:315-334`) | Equal options early return; preserve focus/index; dispose old; rebuild/listen; restore/replace conditionally | N-A candidate | TODO |
-| VIEW-032 | `_connectEditContextClipboardEvents` (`view.ts:336-344`) | Method clears the old listener store before reconnecting | root copy callback only | TODO |
-| VIEW-033 | `_applyLayout` (`view.ts:444-457`) | Root and overflow use layout width/height; rail is fixed at 2^24 each axis | fixed rail plus CSS sizing | TODO |
-| VIEW-034 | `_getEditorClassName` (`view.ts:459-462`) | configured editor class + theme selector + optional ` focused` | local `get_editor_class_name` | TODO |
-| VIEW-035 | `onConfigurationChanged` (`view.ts:469-474`) | Reclass, update edit-context owner, apply layout | local render/options path | TODO |
-| VIEW-036 | `onFocusChanged` (`view.ts:485-488`) | Recompute root class | local render snapshot focus | TODO |
-| VIEW-037 | `onThemeChanged` (`view.ts:489-493`) | Update context theme then recompute root class | `Viewer::apply_theme` | TODO |
-| VIEW-038 | `dispose` (`view.ts:497-521`) | Frame → clipboard store → external overflow nodes → context/GPU/lines → every ViewPart → base store | no local `View::dispose` | TODO |
-| VIEW-039 | `DecorationsOverviewRuler` (`view.ts:208-210`) | Constructor-local owned ViewPart in `_viewParts` | N-A candidate: no overview ruler | TODO |
-| VIEW-040 | `ScrollDecorationViewPart` (`view.ts:213-214`) | Constructor-local owned ViewPart in `_viewParts` | no scroll-decoration part | TODO |
-| VIEW-041 | `ContentViewOverlays` (`view.ts:216-217`) | Constructor-local owned ViewPart in `_viewParts` | `View.content_view_overlays` | TODO |
-| VIEW-042 | `CurrentLineHighlightOverlay` (`view.ts:218`) | Owned by content overlay in first position | local content overlay current line | TODO |
-| VIEW-043 | `SelectionsOverlay` (`view.ts:219`) | Owned by content overlay in second position | local selections overlay | TODO |
-| VIEW-044 | `IndentGuidesOverlay` (`view.ts:220`) | Owned by content overlay in third position | N-A candidate: no indent guides | TODO |
-| VIEW-045 | `DecorationsOverlay` (`view.ts:221`) | Owned by content overlay in fourth position | local decorations overlay | TODO |
-| VIEW-046 | `WhitespaceOverlay` (`view.ts:222`) | Owned by content overlay in fifth position | local whitespace rendering is in lines | TODO |
-| VIEW-047 | `MarginViewOverlays` (`view.ts:224-225`) | Constructor-local owned ViewPart in `_viewParts` | `View.margin_view_overlays` | TODO |
-| VIEW-048 | `CurrentLineMarginHighlightOverlay` (`view.ts:226`) | Owned by margin overlay first | local margin current line | TODO |
-| VIEW-049 | `MarginViewLineDecorationsOverlay` (`view.ts:227`) | Owned by margin overlay second | local line decorations | TODO |
-| VIEW-050 | `LinesDecorationsOverlay` (`view.ts:228`) | Owned by margin overlay third | local line decorations role | TODO |
-| VIEW-051 | `LineNumbersOverlay` (`view.ts:229`) | Owned by margin overlay fourth | local line numbers | TODO |
-| VIEW-052 | `GpuMarkOverlay` (`view.ts:230-232`) | Optional GPU-only dynamic overlay | N-A candidate | TODO |
-| VIEW-053 | `Margin` (`view.ts:238-242`) | Owns margin child-node order and is a ViewPart | local margin overlays have no separate wrapper owner | TODO |
-| VIEW-054 | `RulersGpu` / `Rulers` (`view.ts:255-258`) | GPU branch chooses exactly one owned ViewPart | N-A candidate: no rulers | TODO |
-| VIEW-055 | `BlockDecorations` (`view.ts:260-261`) | Constructor-local owned ViewPart | no block-outline part | TODO |
-| VIEW-056 | `Minimap` (`view.ts:263-264`) | Constructor-local owned ViewPart | N-A candidate: no minimap | TODO |
-| VIEW-057 | overflow-guard fingerprint/class (`view.ts:159-161`) | `div`, fingerprint OverflowGuard, class `overflow-guard` | local same class/fingerprint | TODO |
-| VIEW-058 | lines-content class/position (`view.ts:182-184`) | `lines-content monaco-editor-background`; absolute | local `lines-content moonbit-viewer-background`; absolute | TODO |
-| VIEW-059 | root class/role (`view.ts:186-189`) | computed editor class and `role=code` | local section class, aria-label, tabindex; no role | TODO |
-| VIEW-060 | margin DOM child order (`view.ts:238-241`) | zones margin → margin overlays → glyph widgets | local margin tree differs | TODO |
-| VIEW-061 | lines-content child order (`view.ts:273-280`) | content overlays → optional rulers → zones → lines → content widgets → cursors | local order omits rulers | TODO |
-| VIEW-062 | overflow-guard child order (`view.ts:281-289`) | margin → scrollbar → optional GPU canvas → scroll decoration → overlay widgets → minimap → block outline | local margin → scrollbar → overlay widgets | TODO |
-| VIEW-063 | root overflow-guard append (`view.ts:290`) | Root owns overflow guard | local root append | TODO |
-| VIEW-064 | overflowing-widget parent branch (`view.ts:292-298`) | External host when supplied; otherwise root; both nodes remain View-owned | local always root | TODO |
-| VIEW-065 | rail-size constant (`view.ts:454-456`) | width = height = `16777216` (`2^24`) | local exact constant | TODO |
-| VIEW-066 | pointer-handler registration (`view.ts:302-303`) | Created only after all DOM/layout and registered in base store | `MouseHandler::new` stored outside View | TODO |
-| VIEW-067 | focus tracker `_hasDomElementFocus` (`view.ts:935,949`) | Starts false; set by root focus/blur | `Viewer.editor_has_focus` | TODO |
-| VIEW-068 | focus tracker `_domFocusTracker` (`view.ts:936,950`) | Registered user-interaction focus tracker | anonymous root listeners | TODO |
-| VIEW-069 | focus tracker `_overflowWidgetsDomNode` (`view.ts:937,963-972`) | Optional registered external-node focus tracker and two subscriptions | no external overflow host | TODO |
-| VIEW-070 | focus tracker `_onChange` (`view.ts:939-940`) | Registered emitter | no retained focus emitter | TODO |
-| VIEW-071 | `_overflowWidgetsDomNodeHasFocus` (`view.ts:942,952`) | Starts false; updated by optional tracker | no equivalent | TODO |
-| VIEW-072 | `_hadFocus` (`view.ts:944`) | `undefined` sentinel makes first update observable | local bool starts false | TODO |
-| VIEW-073 | focus tracker constructor (`view.ts:946-974`) | Initializes focus state and conditionally creates the overflow tracker | root focus/blur callbacks | TODO |
-| VIEW-074 | focus tracker `_update` (`view.ts:976-982`) | OR both focus sources; emit only when aggregate changed | no aggregate tracker | TODO |
-| VIEW-075 | focus tracker `hasFocus` (`view.ts:984-986`) | Undefined falls back to false | `has_widget_focus` DOM containment | TODO |
-| VIEW-076 | focus tracker `refreshState` (`view.ts:988-991`) | Refresh root then optional overflow tracker | no equivalent | TODO |
-| VIEW-077 | overflowing content node removal (`view.ts:506`) | Remove even when parent is external | local removed only with entire root | TODO |
-| VIEW-078 | overflowing overlay node removal (`view.ts:507`) | Remove even when parent is external | local removed only with entire root | TODO |
-| VIEW-079 | root-node disposal boundary (`view.ts:497-521`; `codeEditorWidget.ts:2019-2027`) | `View.dispose` releases internals; parent widget separately removes root | local parent removes root without `View::dispose` | TODO |
+| VIEW-001 | `_widgetFocusTracker` (`view.ts:88,149-151`) | Registered focus-tracker field owned by View | retained root focus/blur callbacks; no aggregate tracker | DEFERRED (no aggregate focus-tracker owner) |
+| VIEW-002 | `_scrollbar` (`view.ts:90,195-196`) | Per-View part retained and disposed through `_viewParts` | `View.editor_scrollbar` | TESTED |
+| VIEW-003 | `_context` (`view.ts:91,166-169`) | Per-View context; View registers itself first as event handler | no `ViewContext` event registry | DEFERRED (no ViewContext event owner) |
+| VIEW-004 | `_viewGpuContext` (`view.ts:92,191-193`) | Optional GPU owner, disposed explicitly | N-A candidate: no GPU renderer | DEFERRED (no GPU render owner) |
+| VIEW-005 | `_selections` (`view.ts:93,156`) | Initial selection is `(1,1,1,1)` | selection lives in ViewModel | PORTED |
+| VIEW-006 | `_viewLines` (`view.ts:96,199`) | Per-View special part, explicitly disposed outside `_viewParts` | resource-free `ViewLinesPart` handle | PORTED |
+| VIEW-007 | `_viewLinesGpu` (`view.ts:97,200-202`) | Optional GPU lines, explicitly disposed | N-A candidate | DEFERRED (no GPU render owner) |
+| VIEW-008 | `_viewZones` (`view.ts:100,205-206`) | Per-View part retained and in `_viewParts` | `View.view_zones` | PORTED |
+| VIEW-009 | `_contentWidgets` (`view.ts:101,245-246`) | Per-View part plus overflowing node | `View.content_widgets` | PORTED |
+| VIEW-010 | `_overlayWidgets` (`view.ts:102,252-253`) | Per-View part plus overflowing node | `View.overlay_widgets` | PORTED |
+| VIEW-011 | `_glyphMarginWidgets` (`view.ts:103,235-236`) | Per-View part retained and in `_viewParts` | no glyph-margin widgets | DEFERRED (no glyph-margin owner) |
+| VIEW-012 | `_viewCursors` (`view.ts:104,248-249`) | Per-View part retained and in `_viewParts` | `View.view_cursors` | PORTED |
+| VIEW-013 | `_viewParts` (`view.ts:105,171`) | Ordered disposal owner for constructed parts | `View.view_parts` iteration | PORTED |
+| VIEW-014 | `_viewController` (`view.ts:106,163`) | Per-View controller, not a disposable | root controller closures | PORTED |
+| VIEW-015 | `_editContextEnabled` (`view.ts:108,174`) | Captures ownership-switching option | N-A candidate: no edit context | DEFERRED (no edit-context owner) |
+| VIEW-016 | `_accessibilitySupport` (`view.ts:109,175`) | Participates in edit-context replacement equality guard | no edit context | DEFERRED (no edit-context owner) |
+| VIEW-017 | `_editContext` (`view.ts:110,176-179`) | Per-View part; can be disposed/replaced at runtime | no edit context | DEFERRED (no edit-context owner) |
+| VIEW-018 | `_editContextClipboardListeners` (`view.ts:111`) | Dedicated `DisposableStore`, cleared on reconnect and disposed on View disposal | root copy listener uses the View store; no reconnecting edit-context store | DEFERRED (no edit-context owner) |
+| VIEW-019 | `_pointerHandler` (`view.ts:112,303`) | Registered View-lifetime pointer handler | `MouseHandler` is registered through `View::add_disposable` | PORTED |
+| VIEW-020 | `_onWillCopy` (`view.ts:115`) | Registered View-lifetime emitter | root copy callback | DEFERRED (no View copy-event surface) |
+| VIEW-021 | `_onWillCut` (`view.ts:118`) | Registered View-lifetime emitter | N-A candidate: readonly | N-A (readonly Viewer has no cut/paste path) |
+| VIEW-022 | `_onWillPaste` (`view.ts:121`) | Registered View-lifetime emitter | N-A candidate: readonly | N-A (readonly Viewer has no cut/paste path) |
+| VIEW-023 | `_linesContent` (`view.ts:125,182-184`) | Sole 2^24-pixel scrolling rail shared with scrollbar and lines | `View.lines_content` | PORTED |
+| VIEW-024 | `domNode` (`view.ts:126,186-189`) | Per-model root; parent widget removes it | `View.root` | TESTED |
+| VIEW-025 | `_overflowGuardContainer` (`view.ts:127,159-161`) | Root-owned overflow guard | `View.overflow_guard` | PORTED |
+| VIEW-026 | `_shouldRecomputeGlyphMarginLanes` (`view.ts:130`) | View mutable state only; no external lifetime | no glyph margin | DEFERRED (no glyph-margin owner) |
+| VIEW-027 | `_renderAnimationFrame` (`view.ts:131,157`) | Nullable scheduled frame disposed/reset first | Viewer render scheduler state | TESTED |
+| VIEW-028 | `_ownerID` (`view.ts:132,147`) | Editor owner id passed to edit context | `Viewer.editor_id` | PORTED |
+| VIEW-029 | constructor (`view.ts:134-304`) | Constructs all owned parts/DOM in source order, applies layout, then registers pointer handler | `View::new` + `hook_view_input` | PORTED |
+| VIEW-030 | `_instantiateEditContext` (`view.ts:306-313`) | `effectiveEditContext` chooses Native vs TextArea owner | N-A candidate | DEFERRED (no edit-context owner) |
+| VIEW-031 | `_updateEditContext` (`view.ts:315-334`) | Equal options early return; preserve focus/index; dispose old; rebuild/listen; restore/replace conditionally | N-A candidate | DEFERRED (no edit-context owner) |
+| VIEW-032 | `_connectEditContextClipboardEvents` (`view.ts:336-344`) | Method clears the old listener store before reconnecting | root copy callback only | DEFERRED (no edit-context owner) |
+| VIEW-033 | `_applyLayout` (`view.ts:444-457`) | Root and overflow use layout width/height; rail is fixed at 2^24 each axis | fixed rail plus CSS sizing | PORTED |
+| VIEW-034 | `_getEditorClassName` (`view.ts:459-462`) | configured editor class + theme selector + optional ` focused` | local `get_editor_class_name` | PORTED |
+| VIEW-035 | `onConfigurationChanged` (`view.ts:469-474`) | Reclass, update edit-context owner, apply layout | local render/options path | DEFERRED (no edit-context owner) |
+| VIEW-036 | `onFocusChanged` (`view.ts:485-488`) | Recompute root class | local render snapshot focus | TESTED |
+| VIEW-037 | `onThemeChanged` (`view.ts:489-493`) | Update context theme then recompute root class | `Viewer::apply_theme` | PORTED |
+| VIEW-038 | `dispose` (`view.ts:497-521`) | Frame → clipboard store → external overflow nodes → context/GPU/lines → every ViewPart → base store | `View::dispose`: ViewLines → remaining parts → lifetime store | TESTED |
+| VIEW-039 | `DecorationsOverviewRuler` (`view.ts:208-210`) | Constructor-local owned ViewPart in `_viewParts` | N-A candidate: no overview ruler | DEFERRED (no overview-ruler owner) |
+| VIEW-040 | `ScrollDecorationViewPart` (`view.ts:213-214`) | Constructor-local owned ViewPart in `_viewParts` | no scroll-decoration part | DEFERRED (no scroll-decoration part) |
+| VIEW-041 | `ContentViewOverlays` (`view.ts:216-217`) | Constructor-local owned ViewPart in `_viewParts` | `View.content_view_overlays` | PORTED |
+| VIEW-042 | `CurrentLineHighlightOverlay` (`view.ts:218`) | Owned by content overlay in first position | local content overlay current line | PORTED |
+| VIEW-043 | `SelectionsOverlay` (`view.ts:219`) | Owned by content overlay in second position | local selections overlay | PORTED |
+| VIEW-044 | `IndentGuidesOverlay` (`view.ts:220`) | Owned by content overlay in third position | N-A candidate: no indent guides | DEFERRED (no indent-guides part) |
+| VIEW-045 | `DecorationsOverlay` (`view.ts:221`) | Owned by content overlay in fourth position | local decorations overlay | PORTED |
+| VIEW-046 | `WhitespaceOverlay` (`view.ts:222`) | Owned by content overlay in fifth position | local whitespace rendering is in lines | DEFERRED (whitespace is owned by ViewLines) |
+| VIEW-047 | `MarginViewOverlays` (`view.ts:224-225`) | Constructor-local owned ViewPart in `_viewParts` | `View.margin_view_overlays` | PORTED |
+| VIEW-048 | `CurrentLineMarginHighlightOverlay` (`view.ts:226`) | Owned by margin overlay first | local margin current line | PORTED |
+| VIEW-049 | `MarginViewLineDecorationsOverlay` (`view.ts:227`) | Owned by margin overlay second | local line decorations | PORTED |
+| VIEW-050 | `LinesDecorationsOverlay` (`view.ts:228`) | Owned by margin overlay third | local line decorations role | PORTED |
+| VIEW-051 | `LineNumbersOverlay` (`view.ts:229`) | Owned by margin overlay fourth | local line numbers | PORTED |
+| VIEW-052 | `GpuMarkOverlay` (`view.ts:230-232`) | Optional GPU-only dynamic overlay | N-A candidate | DEFERRED (no GPU render owner) |
+| VIEW-053 | `Margin` (`view.ts:238-242`) | Owns margin child-node order and is a ViewPart | local margin overlays have no separate wrapper owner | DEFERRED (no separate Margin owner) |
+| VIEW-054 | `RulersGpu` / `Rulers` (`view.ts:255-258`) | GPU branch chooses exactly one owned ViewPart | N-A candidate: no rulers | DEFERRED (no ruler owner) |
+| VIEW-055 | `BlockDecorations` (`view.ts:260-261`) | Constructor-local owned ViewPart | no block-outline part | DEFERRED (no block-decoration part) |
+| VIEW-056 | `Minimap` (`view.ts:263-264`) | Constructor-local owned ViewPart | N-A candidate: no minimap | DEFERRED (no minimap owner) |
+| VIEW-057 | overflow-guard fingerprint/class (`view.ts:159-161`) | `div`, fingerprint OverflowGuard, class `overflow-guard` | local same class/fingerprint | PORTED |
+| VIEW-058 | lines-content class/position (`view.ts:182-184`) | `lines-content monaco-editor-background`; absolute | local `lines-content moonbit-viewer-background`; absolute | PORTED |
+| VIEW-059 | root class/role (`view.ts:186-189`) | computed editor class and `role=code` | local section class, aria-label, tabindex; no role | DEFERRED (root role differs) |
+| VIEW-060 | margin DOM child order (`view.ts:238-241`) | zones margin → margin overlays → glyph widgets | local margin tree differs | DEFERRED (reduced margin-part tree) |
+| VIEW-061 | lines-content child order (`view.ts:273-280`) | content overlays → optional rulers → zones → lines → content widgets → cursors | local order omits rulers | DEFERRED (no ruler part) |
+| VIEW-062 | overflow-guard child order (`view.ts:281-289`) | margin → scrollbar → optional GPU canvas → scroll decoration → overlay widgets → minimap → block outline | local margin → scrollbar → overlay widgets | DEFERRED (reduced overflow-part tree) |
+| VIEW-063 | root overflow-guard append (`view.ts:290`) | Root owns overflow guard | local root append | PORTED |
+| VIEW-064 | overflowing-widget parent branch (`view.ts:292-298`) | External host when supplied; otherwise root; both nodes remain View-owned | local always root | DEFERRED (no external overflow host option) |
+| VIEW-065 | rail-size constant (`view.ts:454-456`) | width = height = `16777216` (`2^24`) | local exact constant | PORTED |
+| VIEW-066 | pointer-handler registration (`view.ts:302-303`) | Created only after all DOM/layout and registered in base store | `MouseHandler::new` then `View::add_disposable` | PORTED |
+| VIEW-067 | focus tracker `_hasDomElementFocus` (`view.ts:935,949`) | Starts false; set by root focus/blur | `Viewer.editor_has_focus` | TESTED |
+| VIEW-068 | focus tracker `_domFocusTracker` (`view.ts:936,950`) | Registered user-interaction focus tracker | anonymous root listeners | PORTED |
+| VIEW-069 | focus tracker `_overflowWidgetsDomNode` (`view.ts:937,963-972`) | Optional registered external-node focus tracker and two subscriptions | no external overflow host | DEFERRED (no external overflow host option) |
+| VIEW-070 | focus tracker `_onChange` (`view.ts:939-940`) | Registered emitter | no retained focus emitter | DEFERRED (no aggregate focus-event owner) |
+| VIEW-071 | `_overflowWidgetsDomNodeHasFocus` (`view.ts:942,952`) | Starts false; updated by optional tracker | no equivalent | DEFERRED (no aggregate focus-event owner) |
+| VIEW-072 | `_hadFocus` (`view.ts:944`) | `undefined` sentinel makes first update observable | local bool starts false | DEFERRED (no aggregate focus-event owner) |
+| VIEW-073 | focus tracker constructor (`view.ts:946-974`) | Initializes focus state and conditionally creates the overflow tracker | root focus/blur callbacks | DEFERRED (no aggregate focus-event owner) |
+| VIEW-074 | focus tracker `_update` (`view.ts:976-982`) | OR both focus sources; emit only when aggregate changed | no aggregate tracker | DEFERRED (no aggregate focus-event owner) |
+| VIEW-075 | focus tracker `hasFocus` (`view.ts:984-986`) | Undefined falls back to false | `has_widget_focus` DOM containment | PORTED |
+| VIEW-076 | focus tracker `refreshState` (`view.ts:988-991`) | Refresh root then optional overflow tracker | no equivalent | DEFERRED (no aggregate focus-event owner) |
+| VIEW-077 | overflowing content node removal (`view.ts:506`) | Remove even when parent is external | internal descendant leaves with root; external hosting is absent | DEFERRED (no external overflow host option) |
+| VIEW-078 | overflowing overlay node removal (`view.ts:507`) | Remove even when parent is external | internal descendant leaves with root; external hosting is absent | DEFERRED (no external overflow host option) |
+| VIEW-079 | root-node disposal boundary (`view.ts:497-521`; `codeEditorWidget.ts:2019-2027`) | `View.dispose` releases internals; parent widget separately removes root | `ModelData::dispose` releases View before parent removes root | TESTED |
 
 ### Marker-decoration contract ledgers — 9 rows
 
 | ID | Source member (pinned file:line) | Arithmetic / transition / ownership | MoonBit symbol or seam | Status |
 |---|---|---|---|---|
-| MDC-001 | `IMarkerDecorationsService` decorator (`common/services/markerDecorations.ts:14`) | Singleton service identity | concrete `ViewerServices.marker_decorations` | TODO |
-| MDC-002 | `_serviceBrand` (`common/services/markerDecorations.ts:17`) | Type-only service brand | N-A candidate | TODO |
-| MDC-003 | `onDidChangeMarker` (`common/services/markerDecorations.ts:19`) | Changed-model event | `on_did_change_marker_decorations` | TODO |
-| MDC-004 | `getMarker` (`common/services/markerDecorations.ts:21`) | URI plus decoration identity → marker/null | `get_marker(uri, decoration_id)` | TODO |
-| MDC-005 | `getLiveMarkers` (`common/services/markerDecorations.ts:23`) | URI → live `(range, marker)` pairs | `get_live_markers` | TODO |
-| MDC-006 | `addMarkerSuppression` (`common/services/markerDecorations.ts:25`) | URI/range suppression returns removal disposable | `add_marker_suppression` | TODO |
-| MDCON-001 | `MarkerDecorationsContribution.ID` (`browser/services/markerDecorations.ts:12`) | Constant `editor.contrib.markerDecorations` | no dedicated contribution | TODO |
-| MDCON-002 | constructor (`browser/services/markerDecorations.ts:14-19`) | Instantiation dependency only; owns nothing | service currently constructed by `ViewerServices::new` | TODO |
-| MDCON-003 | `dispose` (`browser/services/markerDecorations.ts:21-22`) | Deliberate no-op | no dedicated contribution | TODO |
+| MDC-001 | `IMarkerDecorationsService` decorator (`common/services/markerDecorations.ts:14`) | Singleton service identity | concrete `ViewerServices.marker_decorations` | PORTED |
+| MDC-002 | `_serviceBrand` (`common/services/markerDecorations.ts:17`) | Type-only service brand | N-A candidate | N-A (type-only service brand) |
+| MDC-003 | `onDidChangeMarker` (`common/services/markerDecorations.ts:19`) | Changed-model event | `on_did_change_marker_decorations` | TESTED |
+| MDC-004 | `getMarker` (`common/services/markerDecorations.ts:21`) | URI plus decoration identity → marker/null | `get_marker(uri, decoration_id)` | TESTED |
+| MDC-005 | `getLiveMarkers` (`common/services/markerDecorations.ts:23`) | URI → live `(range, marker)` pairs | `get_live_markers` | TESTED |
+| MDC-006 | `addMarkerSuppression` (`common/services/markerDecorations.ts:25`) | URI/range suppression returns removal disposable | `add_marker_suppression` | TESTED |
+| MDCON-001 | `MarkerDecorationsContribution.ID` (`browser/services/markerDecorations.ts:12`) | Constant `editor.contrib.markerDecorations` | no dedicated contribution | N-A (no dedicated no-op contribution) |
+| MDCON-002 | constructor (`browser/services/markerDecorations.ts:14-19`) | Instantiation dependency only; owns nothing | service currently constructed by `ViewerServices::new` | PORTED |
+| MDCON-003 | `dispose` (`browser/services/markerDecorations.ts:21-22`) | Deliberate no-op | no dedicated contribution | N-A (no dedicated no-op contribution) |
 
 ### `markerDecorationsService.ts` source ledger — 76 rows
 
 | ID | Source member (pinned file:line) | Arithmetic / transition / ownership | MoonBit symbol or seam | Status |
 |---|---|---|---|---|
-| MDS-001 | `_serviceBrand` (`markerDecorationsService.ts:26`) | Type-only service brand | N-A candidate | TODO |
-| MDS-002 | `_onDidChangeMarker` (`markerDecorationsService.ts:28`) | Registered emitter owned by service base store | `did_change_marker_decorations` | TODO |
-| MDS-003 | `onDidChangeMarker` (`markerDecorationsService.ts:29`) | Public event alias | `on_did_change_marker_decorations` | TODO |
-| MDS-004 | `_suppressedRanges` (`markerDecorationsService.ts:31`) | URI-keyed suppression sets | local URI-string map of arrays | TODO |
-| MDS-005 | `_markerDecorations` (`markerDecorationsService.ts:33`) | URI-keyed per-model owners; lifetime fed by global `IModelService` | local URI-string map fed by Viewer calls | TODO |
-| MDS-006 | constructor (`markerDecorationsService.ts:35-44`) | Seed every existing ModelService model, then retain three subscriptions | `MarkerDecorationsService::new` only subscribes to markers | TODO |
-| MDS-007 | existing-model seed (`markerDecorationsService.ts:40`) | Call `_onModelAdded` for every already-live model before subscribing | no shared model registry | TODO |
-| MDS-008 | model-added subscription (`markerDecorationsService.ts:41`) | Independently registered in the service store | no shared model registry | TODO |
-| MDS-009 | `dispose` (`markerDecorationsService.ts:46-50`) | Base subscriptions/emitter first; dispose every per-model owner; clear map | local clears map without owner disposal | TODO |
-| MDS-010 | `getMarker` (`markerDecorationsService.ts:52-55`) | Missing URI owner → null; otherwise id lookup/null | local URI-only lookup | TODO |
-| MDS-011 | `getLiveMarkers` (`markerDecorationsService.ts:57-60`) | Missing URI owner → empty; otherwise live ranges | local URI-only lookup | TODO |
-| MDS-012 | `addMarkerSuppression` (`markerDecorationsService.ts:62-82`) | Create/find set, add+refresh; disposable removes, drops empty set, refreshes | local suppression disposable | TODO |
-| MDS-013 | `_handleMarkerChange` (`markerDecorationsService.ts:84-91`) | For each changed URI, update only when a registered owner exists | `handle_marker_change` | TODO |
-| MDS-014 | `_onModelAdded` (`markerDecorationsService.ts:93-97`) | Construct owner, URI-keyed `set`, then seed; source relies on ModelService URI uniqueness and does not dispose an overwritten entry | `on_model_added` needs identity-aware storage | TODO |
-| MDS-015 | `_onModelRemoved` (`markerDecorationsService.ts:99-112`) | If registered: dispose then delete; then transient-marker cleanup | `on_model_removed` | TODO |
-| MDS-016 | `_updateDecorations` (`markerDecorationsService.ts:114-129`) | Read, suppress-filter, update, and fire only on changed set | `update_decorations` | TODO |
-| MDS-017 | transient schemes (`markerDecorationsService.ts:107-110`) | `inMemory || internal || vscode`; remove every owner for removed model URI | local exact literal strings | TODO |
-| MDS-018 | marker cap (`markerDecorationsService.ts:115-116`) | Read only first `500` markers | local `take=500` | TODO |
-| MDS-019 | `MarkerDecorations._map` (`markerDecorationsService.ts:134`) | Bidirectional marker-identity ↔ decoration-id owner state | local entry array uses structural equality | TODO |
-| MDS-020 | `MarkerDecorations.model` (`markerDecorationsService.ts:136-138`) | Exact model identity owned by registration | local field | TODO |
-| MDS-021 | `MarkerDecorations` constructor (`markerDecorationsService.ts:136-144`) | Registers a dispose hook tied to model+map | local plain constructor, explicit dispose only | TODO |
-| MDS-022 | constructor dispose hook (`markerDecorationsService.ts:140-143`) | Delta every current id to empty, then clear map | `MarkerDecorations::dispose` | TODO |
-| MDS-023 | `MarkerDecorations.update` (`markerDecorationsService.ts:146-173`) | Identity diff; no-op false; delta removed/added; maintain map; true | local structural diff/update | TODO |
-| MDS-024 | `MarkerDecorations.getMarker` (`markerDecorationsService.ts:175-177`) | Reverse lookup by decoration id | local `get_marker` | TODO |
-| MDS-025 | `MarkerDecorations.getMarkers` (`markerDecorationsService.ts:179-188`) | Resolve each current decoration range; skip missing ranges | local `get_markers` | TODO |
-| MDS-026 | `_createDecorationRange` (`markerDecorationsService.ts:190-224`) | Hint truncation → validation → empty/full-line branches → final range | local `create_decoration_range`; arithmetic out of implementation scope | TODO |
-| MDS-027 | range constants (`markerDecorationsService.ts:194-220`) | Hint `+2`; empty-line sentinel `1`; full-line `Number.MAX_VALUE`; mutate start column | local `+2`, `1`, `max_value_column` | TODO |
-| MDS-028 | `_createDecorationOption` (`markerDecorationsService.ts:226-297`) | Severity matrix, tag overrides, and returned option record | local `create_decoration_option`; rendering style out of scope | TODO |
-| MDS-029 | severity z-indices (`markerDecorationsService.ts:243,248,257,267`) | Hint `0`, Info `10`, Warning `20`, Error/default `30` | local exact values | TODO |
-| MDS-030 | option constants (`markerDecorationsService.ts:249-296`) | minimap Inline; description `marker-decoration`; NeverGrows; collapsed true; overview Right | local exact carrier values | TODO |
-| MDS-031 | `_hasMarkerTag` (`markerDecorationsService.ts:299-304`) | Tags present → membership; absent → false | `Marker::has_tag` | TODO |
+| MDS-001 | `_serviceBrand` (`markerDecorationsService.ts:26`) | Type-only service brand | N-A candidate | N-A (type-only service brand) |
+| MDS-002 | `_onDidChangeMarker` (`markerDecorationsService.ts:28`) | Registered emitter owned by service base store | `did_change_marker_decorations` | TESTED |
+| MDS-003 | `onDidChangeMarker` (`markerDecorationsService.ts:29`) | Public event alias | `on_did_change_marker_decorations` | TESTED |
+| MDS-004 | `_suppressedRanges` (`markerDecorationsService.ts:31`) | URI-keyed suppression sets | local URI-string map of arrays | TESTED |
+| MDS-005 | `_markerDecorations` (`markerDecorationsService.ts:33`) | URI-keyed per-model owners; lifetime fed by global `IModelService` | identity owners plus acquisition-ordered URI index | TESTED |
+| MDS-006 | constructor (`markerDecorationsService.ts:35-44`) | Seed every existing ModelService model, then retain three subscriptions | `MarkerDecorationsService::new` only subscribes to markers | DEFERRED (needs global ModelService) |
+| MDS-007 | existing-model seed (`markerDecorationsService.ts:40`) | Call `_onModelAdded` for every already-live model before subscribing | no shared model registry | DEFERRED (needs global ModelService) |
+| MDS-008 | model-added subscription (`markerDecorationsService.ts:41`) | Independently registered in the service store | no shared model registry | DEFERRED (needs global ModelService) |
+| MDS-009 | `dispose` (`markerDecorationsService.ts:46-50`) | Base subscriptions/emitter first; dispose every per-model owner; clear map | block ingress, dispose every watch/owner, then clear both indexes | TESTED |
+| MDS-010 | `getMarker` (`markerDecorationsService.ts:52-55`) | Missing URI owner → null; otherwise id lookup/null | URI bucket scans instance-prefixed decoration ids | TESTED |
+| MDS-011 | `getLiveMarkers` (`markerDecorationsService.ts:57-60`) | Missing URI owner → empty; otherwise live ranges | acquisition-order URI-bucket union | TESTED |
+| MDS-012 | `addMarkerSuppression` (`markerDecorationsService.ts:62-82`) | Create/find set, add+refresh; disposable removes, drops empty set, refreshes | local suppression disposable | TESTED |
+| MDS-013 | `_handleMarkerChange` (`markerDecorationsService.ts:84-91`) | For each changed URI, update only when a registered owner exists | fan out to every active identity in the URI bucket | TESTED |
+| MDS-014 | `_onModelAdded` (`markerDecorationsService.ts:93-97`) | Construct owner, URI-keyed `set`, then seed; source relies on ModelService URI uniqueness and does not dispose an overwritten entry | first `acquire_model` constructs, indexes, watches, then seeds | TESTED |
+| MDS-015 | `_onModelRemoved` (`markerDecorationsService.ts:99-112`) | If registered: dispose then delete; then transient-marker cleanup | identity-keyed reasoned removal and exact-once finalization | TESTED |
+| MDS-016 | `_updateDecorations` (`markerDecorationsService.ts:114-129`) | Read, suppress-filter, update, and fire only on changed set | `update_decorations` | TESTED |
+| MDS-017 | transient schemes (`markerDecorationsService.ts:107-110`) | `inMemory \|\| internal \|\| vscode`; remove every owner for removed model URI | local exact literal strings | DEFERRED (needs global ModelService) |
+| MDS-018 | marker cap (`markerDecorationsService.ts:115-116`) | Read only first `500` markers | local `take=500` | TESTED |
+| MDS-019 | `MarkerDecorations._map` (`markerDecorationsService.ts:134`) | Bidirectional marker-identity ↔ decoration-id owner state | local entry array uses structural equality | TESTED |
+| MDS-020 | `MarkerDecorations.model` (`markerDecorationsService.ts:136-138`) | Exact model identity owned by registration | local field | TESTED |
+| MDS-021 | `MarkerDecorations` constructor (`markerDecorationsService.ts:136-144`) | Registers a dispose hook tied to model+map | local plain constructor, explicit dispose only | TESTED |
+| MDS-022 | constructor dispose hook (`markerDecorationsService.ts:140-143`) | Delta every current id to empty, then clear map | `MarkerDecorations::dispose` | TESTED |
+| MDS-023 | `MarkerDecorations.update` (`markerDecorationsService.ts:146-173`) | Identity diff; no-op false; delta removed/added; maintain map; true | local structural diff/update | TESTED |
+| MDS-024 | `MarkerDecorations.getMarker` (`markerDecorationsService.ts:175-177`) | Reverse lookup by decoration id | local `get_marker` | TESTED |
+| MDS-025 | `MarkerDecorations.getMarkers` (`markerDecorationsService.ts:179-188`) | Resolve each current decoration range; skip missing ranges | local `get_markers` | TESTED |
+| MDS-026 | `_createDecorationRange` (`markerDecorationsService.ts:190-224`) | Hint truncation → validation → empty/full-line branches → final range | local `create_decoration_range`; arithmetic out of implementation scope | TESTED |
+| MDS-027 | range constants (`markerDecorationsService.ts:194-220`) | Hint `+2`; empty-line sentinel `1`; full-line `Number.MAX_VALUE`; mutate start column | local `+2`, `1`, `max_value_column` | TESTED |
+| MDS-028 | `_createDecorationOption` (`markerDecorationsService.ts:226-297`) | Severity matrix, tag overrides, and returned option record | local `create_decoration_option`; rendering style out of scope | TESTED |
+| MDS-029 | severity z-indices (`markerDecorationsService.ts:243,248,257,267`) | Hint `0`, Info `10`, Warning `20`, Error/default `30` | local exact values | TESTED |
+| MDS-030 | option constants (`markerDecorationsService.ts:249-296`) | minimap Inline; description `marker-decoration`; NeverGrows; collapsed true; overview Right | local exact carrier values | TESTED |
+| MDS-031 | `_hasMarkerTag` (`markerDecorationsService.ts:299-304`) | Tags present → membership; absent → false | `Marker::has_tag` | TESTED |
 
 ### `globalPointerMoveMonitor.ts` source ledger — 20 rows
 
 | ID | Source member (pinned file:line) | Arithmetic / transition / ownership | MoonBit symbol or seam | Status |
 |---|---|---|---|---|
-| GPMM-001 | `IPointerMoveCallback` (`globalPointerMoveMonitor.ts:9-11`) | Pointer event callback contract | local MouseEvent callback (pointer FFI gap) | TODO |
-| GPMM-002 | `IOnStopCallback` (`globalPointerMoveMonitor.ts:13-15`) | Optional pointer/keyboard stop-event contract | local optional generic Event | TODO |
-| GPMM-003 | `_hooks` (`globalPointerMoveMonitor.ts:19`) | `DisposableStore` owns capture release and active listeners | local disposable array | TODO |
-| GPMM-004 | `_pointerMoveCallback` (`globalPointerMoveMonitor.ts:20`) | Null means not monitoring | local optional callback | TODO |
-| GPMM-005 | `_onStopCallback` (`globalPointerMoveMonitor.ts:21`) | Cleared before optional invocation | local optional callback | TODO |
-| GPMM-006 | `dispose` (`globalPointerMoveMonitor.ts:23-26`) | `stopMonitoring(false)` then permanently dispose hook store | local only stops; array remains reusable | TODO |
-| GPMM-007 | `stopMonitoring` (`globalPointerMoveMonitor.ts:28-43`) | Inactive early return; clear hooks/callbacks; optionally invoke captured callback | local `stop_monitoring` | TODO |
-| GPMM-008 | `isMonitoring` (`globalPointerMoveMonitor.ts:45-47`) | Boolean coercion of move callback | local option test | TODO |
-| GPMM-009 | `startMonitoring` (`globalPointerMoveMonitor.ts:49-111`) | Stop prior monitor without callback; set callbacks; capture/fallback; install move/up | local window-fallback implementation | TODO |
-| GPMM-010 | pointer-capture hook (`globalPointerMoveMonitor.ts:62-89`) | Try capture; retain release disposable; ignore release failure; capture failure switches source to window | FFI gap always selects window | TODO |
-| GPMM-011 | pointer-move listener (`globalPointerMoveMonitor.ts:91-104`) | Buttons mismatch calls `stopMonitoring(true)` without forwarding the pointer event, then returns; otherwise prevent default then callback | local retained removal disposable | TODO |
-| GPMM-012 | pointer-up listener (`globalPointerMoveMonitor.ts:106-110`) | Any pointerup calls `stopMonitoring(true)` without forwarding the pointer event; listener is in hook store | local retained removal disposable | TODO |
+| GPMM-001 | `IPointerMoveCallback` (`globalPointerMoveMonitor.ts:9-11`) | Pointer event callback contract | local MouseEvent callback (pointer FFI gap) | TESTED |
+| GPMM-002 | `IOnStopCallback` (`globalPointerMoveMonitor.ts:13-15`) | Optional pointer/keyboard stop-event contract | local optional generic Event | TESTED |
+| GPMM-003 | `_hooks` (`globalPointerMoveMonitor.ts:19`) | `DisposableStore` owns capture release and active listeners | local disposable array | TESTED |
+| GPMM-004 | `_pointerMoveCallback` (`globalPointerMoveMonitor.ts:20`) | Null means not monitoring | local optional callback | TESTED |
+| GPMM-005 | `_onStopCallback` (`globalPointerMoveMonitor.ts:21`) | Cleared before optional invocation | local optional callback | TESTED |
+| GPMM-006 | `dispose` (`globalPointerMoveMonitor.ts:23-26`) | `stopMonitoring(false)` then permanently dispose hook store | idempotent stop plus permanent disposed guard | TESTED |
+| GPMM-007 | `stopMonitoring` (`globalPointerMoveMonitor.ts:28-43`) | Inactive early return; clear hooks/callbacks; optionally invoke captured callback | local `stop_monitoring` | TESTED |
+| GPMM-008 | `isMonitoring` (`globalPointerMoveMonitor.ts:45-47`) | Boolean coercion of move callback | local option test | TESTED |
+| GPMM-009 | `startMonitoring` (`globalPointerMoveMonitor.ts:49-111`) | Stop prior monitor without callback; set callbacks; capture/fallback; install move/up | local window-fallback implementation | TESTED |
+| GPMM-010 | pointer-capture hook (`globalPointerMoveMonitor.ts:62-89`) | Try capture; retain release disposable; ignore release failure; capture failure switches source to window | narrow capture/release FFI with owning-window fallback | TESTED |
+| GPMM-011 | pointer-move listener (`globalPointerMoveMonitor.ts:91-104`) | Buttons mismatch calls `stopMonitoring(true)` without forwarding the pointer event, then returns; otherwise prevent default then callback | local retained removal disposable | TESTED |
+| GPMM-012 | pointer-up listener (`globalPointerMoveMonitor.ts:106-110`) | Any pointerup calls `stopMonitoring(true)` without forwarding the pointer event; listener is in hook store | local retained removal disposable | TESTED |
 
 ### `abstractScrollbar.ts` source ledger — 14 rows
 
 | ID | Source member (pinned file:line) | Arithmetic / transition / ownership | MoonBit symbol or seam | Status |
 |---|---|---|---|---|
-| SB-001 | `POINTER_DRAG_RESET_DISTANCE` (`abstractScrollbar.ts:17-20`) | Orthogonal Windows reset threshold = `140` px | local scrollbar drag has no reset | TODO |
-| SB-002 | `_pointerMoveMonitor` (`abstractScrollbar.ts:52`) | One monitor owned by scrollbar Widget | current scrollbar path has no monitor field | TODO |
-| SB-003 | constructor listener ownership (`abstractScrollbar.ts:68,77`) | Register the pointer monitor and the scrollbar-root pointerdown listener in the Widget store; trough behavior remains excluded | listeners split between per-view and document | TODO |
-| SB-004 | `_createSlider` (`abstractScrollbar.ts:94-127`) | Method constructs the slider and installs two independently owned listeners; geometry remains excluded | local slider constructed elsewhere | TODO |
-| SB-005 | slider `active` class (`abstractScrollbar.ts:247,268`) | True before monitor start; false only in stop callback | local `set_slider_active` | TODO |
-| SB-006 | `_sliderPointerDown` (`abstractScrollbar.ts:240-274`) | Invalid target early return; snapshot start positions/state; start monitor; notify drag start | `start_scrollable_drag` plus permanent document callbacks | TODO |
-| SB-007 | drag-move reset/delta (`abstractScrollbar.ts:253-266`) | `abs(orthogonal-start)`; Windows `>140` resets to initial and returns; else apply along-axis delta | local only along-axis delta | TODO |
-| SB-008 | inherited `Widget`/`DisposableStore` cleanup (`widget.ts:12-19`; `lifecycle.ts:416-440,542-555`) | `_register` routes monitor/listeners into an idempotent store; its first dispose clears each entry and later dispose returns | `MouseHandler::dispose` exists but is not called by View teardown | TODO |
+| SB-001 | `POINTER_DRAG_RESET_DISTANCE` (`abstractScrollbar.ts:17-20`) | Orthogonal Windows reset threshold = `140` px | `scrollbar_drag_should_reset`, strict `> 140` | TESTED |
+| SB-002 | `_pointerMoveMonitor` (`abstractScrollbar.ts:52`) | One monitor owned by scrollbar Widget | `MouseHandler.scrollbar_drag_monitor` | TESTED |
+| SB-003 | constructor listener ownership (`abstractScrollbar.ts:68,77`) | Register the pointer monitor and the scrollbar-root pointerdown listener in the Widget store; trough behavior remains excluded | listeners retained by `MouseHandler`, itself View-owned | TESTED |
+| SB-004 | `_createSlider` (`abstractScrollbar.ts:94-127`) | Method constructs the slider and installs two independently owned listeners; geometry remains excluded | local slider constructed elsewhere | TESTED |
+| SB-005 | slider `active` class (`abstractScrollbar.ts:247,268`) | True before monitor start; false only in stop callback | local `set_slider_active` | TESTED |
+| SB-006 | `_sliderPointerDown` (`abstractScrollbar.ts:240-274`) | Invalid target early return; snapshot start positions/state; start monitor; notify drag start | `start_scrollable_drag` owns a gesture-scoped monitor | TESTED |
+| SB-007 | drag-move reset/delta (`abstractScrollbar.ts:253-266`) | `abs(orthogonal-start)`; Windows `>140` resets to initial and returns; else apply along-axis delta | cloned initial state plus exact reset/delta branches | TESTED |
+| SB-008 | inherited `Widget`/`DisposableStore` cleanup (`widget.ts:12-19`; `lifecycle.ts:416-440,542-555`) | `_register` routes monitor/listeners into an idempotent store; its first dispose clears each entry and later dispose returns | View-owned idempotent `MouseHandler::dispose` drains all hooks | TESTED |
 
 ### `editorConfiguration.ts` source ledger — 20 rows
 
 | ID | Source member (pinned file:line) | Arithmetic / transition / ownership | MoonBit symbol or seam | Status |
 |---|---|---|---|---|
-| CFG-001 | `_onDidChange` (`editorConfiguration.ts:42-43`) | Registered ordinary configuration emitter | direct option routing | TODO |
-| CFG-002 | `_onDidChangeFast` (`editorConfiguration.ts:45-46`) | Registered fast configuration emitter | direct option routing | TODO |
-| CFG-003 | `_containerObserver` (`editorConfiguration.ts:50,83`) | Registered observer owns container measurement hooks | explicit `layout`/measure; no observer object | TODO |
-| CFG-004 | constructor (`editorConfiguration.ts:73-101`) | Build observer/options; optional observe; retain seven external subscriptions | `Viewer::attach` + `update_options` | TODO |
-| CFG-005 | automatic-layout branch (`editorConfiguration.ts:90-92`) | Start observer only when computed option is true | no automatic observer | TODO |
-| CFG-006 | EditorZoom subscription (`editorConfiguration.ts:94`) | Registered external callback → recompute | no zoom service | TODO |
-| CFG-007 | TabFocus subscription (`editorConfiguration.ts:95`) | Registered external callback → recompute | no tab-focus service | TODO |
-| CFG-008 | container-size subscription (`editorConfiguration.ts:96`) | Registered observer callback → recompute | explicit layout only | TODO |
-| CFG-009 | FontMeasurements subscription (`editorConfiguration.ts:97`) | Registered external callback → recompute | `Viewer::attach` subscribes but drops disposable | TODO |
-| CFG-010 | PixelRatio subscription (`editorConfiguration.ts:98`) | Registered per-window callback → recompute | device ratio read only | TODO |
-| CFG-011 | accessibility subscription (`editorConfiguration.ts:99`) | Registered service callback → recompute | no accessibility service | TODO |
-| CFG-012 | InputMode subscription (`editorConfiguration.ts:100`) | Registered global callback → recompute | no input-mode service | TODO |
-| CFG-013 | `_recomputeOptions` (`editorConfiguration.ts:103-114`) | Compute/check; null early return; assign; fire fast then ordinary | `on_configuration_changed` | TODO |
-| CFG-014 | `_readFontInfo` (`editorConfiguration.ts:157-159`) | Read singleton font cache for target window id | `font_measurements().read_font_info` | TODO |
-| CFG-015 | inherited `Disposable.dispose` (`editorConfiguration.ts:40,42-50,83-100`) | Disposes emitters, observer, and all seven subscriptions | no retained configuration owner | TODO |
+| CFG-001 | `_onDidChange` (`editorConfiguration.ts:42-43`) | Registered ordinary configuration emitter | direct option routing | DEFERRED (no configuration event owner) |
+| CFG-002 | `_onDidChangeFast` (`editorConfiguration.ts:45-46`) | Registered fast configuration emitter | direct option routing | DEFERRED (no configuration event owner) |
+| CFG-003 | `_containerObserver` (`editorConfiguration.ts:50,83`) | Registered observer owns container measurement hooks | explicit `layout`/measure; no observer object | DEFERRED (no automatic configuration owner) |
+| CFG-004 | constructor (`editorConfiguration.ts:73-101`) | Build observer/options; optional observe; retain seven external subscriptions | `Viewer::attach` + `update_options` | DEFERRED (no automatic configuration owner) |
+| CFG-005 | automatic-layout branch (`editorConfiguration.ts:90-92`) | Start observer only when computed option is true | no automatic observer | DEFERRED (no automatic configuration owner) |
+| CFG-006 | EditorZoom subscription (`editorConfiguration.ts:94`) | Registered external callback → recompute | no zoom service | DEFERRED (no EditorZoom source) |
+| CFG-007 | TabFocus subscription (`editorConfiguration.ts:95`) | Registered external callback → recompute | no tab-focus service | DEFERRED (no TabFocus source) |
+| CFG-008 | container-size subscription (`editorConfiguration.ts:96`) | Registered observer callback → recompute | explicit layout only | DEFERRED (no automatic configuration owner) |
+| CFG-009 | FontMeasurements subscription (`editorConfiguration.ts:97`) | Registered external callback → recompute | retained in `Viewer.lifetime_disposables` | PORTED |
+| CFG-010 | PixelRatio subscription (`editorConfiguration.ts:98`) | Registered per-window callback → recompute | device ratio read only | DEFERRED (no PixelRatio subscription) |
+| CFG-011 | accessibility subscription (`editorConfiguration.ts:99`) | Registered service callback → recompute | no accessibility service | DEFERRED (no accessibility service) |
+| CFG-012 | InputMode subscription (`editorConfiguration.ts:100`) | Registered global callback → recompute | no input-mode service | DEFERRED (no InputMode source) |
+| CFG-013 | `_recomputeOptions` (`editorConfiguration.ts:103-114`) | Compute/check; null early return; assign; fire fast then ordinary | `on_configuration_changed` | PORTED |
+| CFG-014 | `_readFontInfo` (`editorConfiguration.ts:157-159`) | Read singleton font cache for target window id | `font_measurements().read_font_info` | PORTED |
+| CFG-015 | inherited `Disposable.dispose` (`editorConfiguration.ts:40,42-50,83-100`) | Disposes emitters, observer, and all seven subscriptions | no retained configuration owner | DEFERRED (no automatic configuration owner) |
 
 ### Source-member and branch rows completing the denominator
 
@@ -546,180 +547,180 @@ unit sequences above.
 
 | ID | Source member/branch (pinned file:line) | Arithmetic / transition / ownership | MoonBit symbol or seam | Status |
 |---|---|---|---|---|
-| CEW-089 | `_updateCounter` (`codeEditorWidget.ts:209`) | Nesting counter for begin/end update events | no local update counter | TODO |
-| CEW-090 | `_beginUpdate` (`codeEditorWidget.ts:2072-2077`) | Increment, then fire begin only at depth 1 | no local bracket | TODO |
-| CEW-091 | `_endUpdate` (`codeEditorWidget.ts:2079-2084`) | Decrement, then fire end only at depth 0 | no local bracket | TODO |
-| CEW-092 | model will-dispose subscription (`codeEditorWidget.ts:1786-1787`) | Swap-scoped disposable calls `setModel(null)` | local ModelData listener | TODO |
-| CEW-093 | ViewModel event subscription (`codeEditorWidget.ts:1789-1887`) | One swap-scoped disposable owns the complete outgoing-event relay | no single local relay subscription | TODO |
-| CEW-094 | `ViewUserInputEvents` callback owner (`codeEditorWidget.ts:1979-1990`) | Eleven callbacks close over widget emitters and live exactly as long as View | controller helper/root callbacks | TODO |
-| CEW-095 | `_telemetryData` (`codeEditorWidget.ts:233,298`) | Borrowed immutable construction data; never disposed | no telemetry field | TODO |
-| CEW-096 | `_notificationService` (`codeEditorWidget.ts:249,323`) | Injected borrowed service; never disposed by widget | no notification service | TODO |
-| CEW-097 | `_codeEditorService` (`codeEditorWidget.ts:250,324`) | Injected borrowed registry; widget only add/removes itself | no editor registry service | TODO |
-| CEW-098 | `_commandService` (`codeEditorWidget.ts:251,325`) | Injected borrowed service; never disposed | registry command closures | TODO |
-| CEW-099 | `_themeService` (`codeEditorWidget.ts:252,326`) | Injected borrowed service; never disposed | theme is option/CSS data | TODO |
-| CEW-100 | `_userInteractionService` (`codeEditorWidget.ts:253,292`) | Injected borrowed service passed into View/focus owner; never disposed | no service object | TODO |
-| CEW-101 | `languageConfigurationService` (`codeEditorWidget.ts:282`) | Constructor parameter-property, borrowed and passed into ViewModel | languages registry is borrowed service | TODO |
-| CEW-102 | `accessibilityService` (`codeEditorWidget.ts:281,300-302`) | Borrowed constructor argument passed into registered configuration | no accessibility service | TODO |
-| CEW-103 | `languageFeaturesService` (`codeEditorWidget.ts:283,328`) | Borrowed constructor argument passed into registered context owner | `ViewerServices.languages` is borrowed | TODO |
-| CEW-104 | `_dropIntoEditorDecorations` (`codeEditorWidget.ts:267`) | Widget-owned decorations collection used by registered DnD observer | N-A candidate: readonly DnD | TODO |
-| CEW-105 | `EDITOR_ID` (`codeEditorWidget.ts:2087`) | Process counter, preincremented into `_id` | `editor_id_counter` | TODO |
-| CEW-106 | constructor overflow-node option branch (`codeEditorWidget.ts:291-295`) | Optional external node is retained and deleted from options before configuration | no external overflow host | TODO |
-| CEW-107 | constructor simple-widget default branch (`codeEditorWidget.ts:300-301`) | Missing/false `isSimpleWidget` resolves false | viewer is one readonly kind | TODO |
-| CEW-108 | explicit context-menu-id branch (`codeEditorWidget.ts:301`) | Explicit id wins over derived default | no context menu id | TODO |
-| CEW-109 | derived context-menu-id branch (`codeEditorWidget.ts:301`) | Missing id selects SimpleEditorContext vs EditorContext by widget kind | no context menu id | TODO |
-| CEW-110 | optional style branch (`codeEditorWidget.ts:303`) | Initial font custom property is skipped only when style is absent | local root always Element | TODO |
-| CEW-111 | configuration layout-info branch (`codeEditorWidget.ts:308-311`) | Fires layout event only when that option changed | direct layout path | TODO |
-| CEW-112 | configuration font-size branch (`codeEditorWidget.ts:312-314`) | Rewrites font custom property only when font size changed | `apply_font_info_to_view` | TODO |
-| CEW-113 | context-key-values branch (`codeEditorWidget.ts:318-322`) | Missing map is no-op; present map creates every key | no context key map | TODO |
-| CEW-114 | explicit contributions branch (`codeEditorWidget.ts:338-341`) | Array supplied by caller is authoritative | registry always global | TODO |
-| CEW-115 | registry contributions branch (`codeEditorWidget.ts:341-343`) | Non-array option loads global registry | `editor_registry` | TODO |
-| CEW-116 | `setModel` both-null early return (`codeEditorWidget.ts:510-513`) | No detach, events, cleanup, or contribution rearm | local same | TODO |
-| CEW-117 | `setModel` same-identity early return (`codeEditorWidget.ts:514-517`) | Physical model identity is the no-op key | local `physical_equal` | TODO |
-| CEW-118 | `setModel` attached-model branch (`codeEditorWidget.ts:528-532`) | New real model may restore text focus | local `has_model` arm | TODO |
-| CEW-119 | `setModel` retained-focus branch (`codeEditorWidget.ts:530-532`) | Focus only when pre-swap text focus was true | local same | TODO |
-| CEW-120 | `setModel` no-model branch (`codeEditorWidget.ts:533-538`) | Clears both text and widget focus emitters | local clears one bool | TODO |
-| CEW-121 | `setModel` finally branch (`codeEditorWidget.ts:545-547`) | `_endUpdate` runs for both early returns and failures | no local bracket | TODO |
-| CEW-122 | `_attachModel` null early return (`codeEditorWidget.ts:1751-1754`) | Set bundle null and return before listeners/DOM | local None arm lives in caller | TODO |
-| CEW-123 | ViewModel ContentSize arm (`codeEditorWidget.ts:1791-1793`) | Relay event | no local public event | TODO |
-| CEW-124 | ViewModel Focus arm (`codeEditorWidget.ts:1794-1796`) | Update text-focus emitter | local focus DOM flag | TODO |
-| CEW-125 | ViewModel WidgetFocus arm (`codeEditorWidget.ts:1797-1799`) | Update widget-focus emitter | DOM containment query | TODO |
-| CEW-126 | ViewModel Scroll arm (`codeEditorWidget.ts:1800-1802`) | Relay scroll event | local layout subscription | TODO |
-| CEW-127 | ViewModel ViewZones arm (`codeEditorWidget.ts:1803-1805`) | Fire zone-change event | no local public event | TODO |
-| CEW-128 | ViewModel HiddenAreas arm (`codeEditorWidget.ts:1806-1808`) | Fire hidden-area event | no local public event | TODO |
-| CEW-129 | ViewModel ReadOnlyEdit arm (`codeEditorWidget.ts:1809-1811`) | Fire readonly-attempt interaction | no local event | TODO |
-| CEW-130 | CursorState max-count branch (`codeEditorWidget.ts:1812-1833`) | Optional warning plus two command actions | N-A candidate: single cursor | TODO |
-| CEW-131 | CursorState relay arm (`codeEditorWidget.ts:1835-1860`) | Build positions, fire position, then selection | local cursor events | TODO |
-| CEW-132 | ModelDecorations arm (`codeEditorWidget.ts:1861-1863`) | Relay decoration event | local generation scheduling | TODO |
-| CEW-133 | ModelLanguage arm (`codeEditorWidget.ts:1864-1867`) | Restamp mode id before event | no language-change event | TODO |
-| CEW-134 | LanguageConfiguration arm (`codeEditorWidget.ts:1868-1870`) | Relay event | no local event | TODO |
-| CEW-135 | ModelContent arm (`codeEditorWidget.ts:1871-1873`) | Relay event | local model listener | TODO |
-| CEW-136 | ModelOptions arm (`codeEditorWidget.ts:1874-1876`) | Relay event | no local event | TODO |
-| CEW-137 | ModelTokens arm (`codeEditorWidget.ts:1877-1879`) | Relay event | local token listener | TODO |
-| CEW-138 | ModelLineHeight arm (`codeEditorWidget.ts:1880-1882`) | Relay event | no local event | TODO |
-| CEW-139 | ModelFont arm (`codeEditorWidget.ts:1883-1885`) | Relay event | font singleton callback | TODO |
-| CEW-140 | `_attachModel` real-view branch (`codeEditorWidget.ts:1889-1918`) | Append/re-add/render/stamp/subscribe only when real | local View Some branch | TODO |
-| CEW-141 | `_createView` simple-widget branch (`codeEditorWidget.ts:1925-1945`) | Delegates editing directly to widget methods | N-A candidate | TODO |
-| CEW-142 | `_createView` ordinary-widget branch (`codeEditorWidget.ts:1946-1977`) | Delegates through command service | N-A candidate | TODO |
-| CEW-143 | composition new-command branch (`codeEditorWidget.ts:1957-1962`) | `replaceNextCharCnt || positionDelta` selects CompositionType | N-A candidate | TODO |
-| CEW-144 | composition replace-previous branch (`codeEditorWidget.ts:1962-1965`) | Otherwise selects ReplacePreviousChar | N-A candidate | TODO |
-| CEW-145 | `_detachModel` no-model early return (`codeEditorWidget.ts:2015-2017`) | Contribution handle is already disposed/reset | local returns before any handler cleanup | TODO |
-| CEW-146 | root-contained branch (`codeEditorWidget.ts:2025-2027`) | Remove captured root only when still under container | local unconditional `remove_child` in Some arm | TODO |
-| CEW-147 | banner-contained branch (`codeEditorWidget.ts:2028-2030`) | Remove banner only when still under container | no banner | TODO |
-| CEW-148 | ModelData real-view branch (`codeEditorWidget.ts:2137-2139`) | View disposed only for real View | local option is implicit but no View dispose | TODO |
-| CEW-149 | `_beginUpdate` outermost branch (`codeEditorWidget.ts:2073-2076`) | Fire begin iff incremented depth equals 1 | no local bracket | TODO |
-| CEW-150 | `_endUpdate` outermost branch (`codeEditorWidget.ts:2080-2083`) | Fire end iff decremented depth equals 0 | no local bracket | TODO |
-| CEC-012 | duplicate contribution-id branch (`codeEditorContributions.ts:47-51`) | Report unexpected error and continue without replacing first pending description | local registry rejects duplicates at registration seam | TODO |
-| VIEW-080 | `_instantiationService` (`view.ts:143`) | Injected borrowed service used to create View-owned parts; View never disposes service itself | no DI service | TODO |
-| VIEW-081 | `_userInteractionService` (`view.ts:144`) | Injected borrowed service used to create registered focus trackers; never disposed itself | no service object | TODO |
-| VIEW-082 | native edit-context branch (`view.ts:307-310`) | Effective option true creates NativeEditContext | N-A candidate | TODO |
-| VIEW-083 | textarea edit-context branch (`view.ts:310-312`) | Effective option false creates TextAreaEditContext | N-A candidate | TODO |
-| VIEW-084 | edit-context equality early return (`view.ts:318-320`) | No disposal/replacement when both controlling values are unchanged | N-A candidate | TODO |
-| VIEW-085 | edit-context focus restore branch (`view.ts:328-330`) | Newly constructed context is focused only when old one was focused | N-A candidate | TODO |
-| VIEW-086 | edit-context index branch (`view.ts:331-333`) | Replace ViewPart slot only when old context was found | N-A candidate | TODO |
-| VIEW-087 | constructor GPU-context branch (`view.ts:191-193`) | Create GPU context only when acceleration option is exactly `on` | N-A candidate | TODO |
-| VIEW-088 | constructor GPU-lines branch (`view.ts:200-202`) | Create GPU lines only when GPU context exists | N-A candidate | TODO |
-| VIEW-089 | constructor GPU-mark branch (`view.ts:230-232`) | Add GpuMarkOverlay only when GPU context exists | N-A candidate | TODO |
-| VIEW-090 | constructor rulers alternative (`view.ts:255-258`) | GPU context chooses RulersGpu; absence chooses DOM Rulers | N-A candidate | TODO |
-| VIEW-091 | overview-ruler insertion branch (`view.ts:268-271`) | Truthy ruler inserts at scrollbar-provided position | N-A candidate | TODO |
-| VIEW-092 | rulers DOM-node branch (`view.ts:274-276`) | Append only the rulers variant exposing `domNode` | N-A candidate | TODO |
-| VIEW-093 | GPU-canvas append branch (`view.ts:283-285`) | Canvas is appended only when GPU context exists | N-A candidate | TODO |
-| VIEW-094 | external overflow-parent branch (`view.ts:292-295`) | Both overflowing nodes append into caller-supplied host | no external host option | TODO |
-| VIEW-095 | internal overflow-parent branch (`view.ts:295-298`) | Without external host both nodes append to View root | local fixed path | TODO |
-| VIEW-096 | focus-tracker overflow-host branch (`view.ts:963-973`) | Create tracker and two subscriptions only when external node exists | no external host option | TODO |
-| VIEW-097 | focus aggregate changed branch (`view.ts:977-981`) | Fire `_onChange` only when OR aggregate differs from prior/undefined | local separate callbacks | TODO |
-| VIEW-098 | dispose animation-frame branch (`view.ts:498-501`) | Non-null frame is disposed and field reset before any other teardown | Viewer render-pending path | TODO |
-| VIEW-099 | dispose GPU-context branch (`view.ts:510`) | Optional context disposed when present | N-A candidate | TODO |
-| VIEW-100 | dispose GPU-lines branch (`view.ts:513`) | Optional GPU lines disposed when present | N-A candidate | TODO |
-| VIEW-101 | focused-class branch (`view.ts:459-462`) | Edit-context focus appends exact ` focused`, absence appends empty string | local focused class | TODO |
-| MDS-032 | `_markerService` parameter-property (`markerDecorationsService.ts:37`) | Injected borrowed service; service subscribes/reads/removes but never disposes it | local `markers` field; may be shared | TODO |
-| MDS-033 | `getMarker` present-owner branch (`markerDecorationsService.ts:53-54`) | Delegate and normalize undefined to null | local Some delegate | TODO |
-| MDS-034 | `getMarker` missing-owner branch (`markerDecorationsService.ts:53-54`) | Return null | local None | TODO |
-| MDS-035 | `getLiveMarkers` present-owner branch (`markerDecorationsService.ts:58-59`) | Present owner delegates to its live ranges | local Some arm | TODO |
-| MDS-036 | suppression missing-set branch (`markerDecorationsService.ts:64-68`) | Allocate/store a new Set before adding range | local array creation | TODO |
-| MDS-037 | suppression disposal present-set branch (`markerDecorationsService.ts:73-80`) | Delete range and refresh only while set still exists | local Some arm | TODO |
-| MDS-038 | suppression empty-set branch (`markerDecorationsService.ts:76-78`) | Drop URI key when last range removed | local length zero | TODO |
-| MDS-039 | marker-change registered-owner branch (`markerDecorationsService.ts:86-89`) | Update only present URI owner | local Some arm | TODO |
-| MDS-040 | model-remove present-owner branch (`markerDecorationsService.ts:100-104`) | Dispose before deleting URI entry | local Some arm | TODO |
-| MDS-041 | transient-scheme branch (`markerDecorationsService.ts:107-111`) | Only three schemes trigger marker-owner removal | local exact strings | TODO |
-| MDS-042 | suppression-filter present-set branch (`markerDecorationsService.ts:119-124`) | Present set filters every marker whose range intersects or touches a candidate | local Some arm | TODO |
-| MDS-043 | changed-decoration branch (`markerDecorationsService.ts:126-128`) | Fire model event only when update returns true | local same | TODO |
-| MDS-044 | update no-change early return (`markerDecorationsService.ts:153-155`) | No delta/map mutation and false | local same | TODO |
-| MDS-045 | live-range present branch (`markerDecorationsService.ts:182-185`) | Push pair when decoration id still resolves | local Some branch | TODO |
-| MDS-046 | ordinary-Hint range branch (`markerDecorationsService.ts:194-198`) | Hint and neither tag forces one line/end=start+2 | local same | TODO |
-| MDS-047 | empty-range branch (`markerDecorationsService.ts:202-216`) | Run empty-range max-column/word logic | local same | TODO |
-| MDS-048 | empty-line/behind-EOL early return (`markerDecorationsService.ts:206-210`) | Return validated range before word lookup | local same | TODO |
-| MDS-049 | word-found branch (`markerDecorationsService.ts:212-215`) | Replace columns when word exists | local Some arm | TODO |
-| MDS-050 | full-line marker branch (`markerDecorationsService.ts:216-222`) | Non-empty MAX_VALUE/start-1/single-line enters whitespace snap | local same | TODO |
-| MDS-051 | full-line min-column branch (`markerDecorationsService.ts:218-221`) | Rewrite range and raw marker only when min < end | local same | TODO |
-| MDS-052 | Hint severity arm (`markerDecorationsService.ts:235-244`) | Runs tag submatrix and z=0 | local Hint arm | TODO |
-| MDS-053 | Hint Deprecated arm (`markerDecorationsService.ts:236-238`) | Class undefined | local empty class | TODO |
-| MDS-054 | Hint Unnecessary arm (`markerDecorationsService.ts:238-240`) | Unnecessary class | local same | TODO |
-| MDS-055 | Info severity arm (`markerDecorationsService.ts:245-253`) | Info class/color/z=10/minimap Inline | local same | TODO |
-| MDS-056 | Warning severity arm (`markerDecorationsService.ts:254-262`) | Warning class/color/z=20/minimap Inline | local same | TODO |
-| MDS-057 | Error/default severity arm (`markerDecorationsService.ts:263-273`) | Error class/color/z=30/minimap Inline | local Error enum has no default catch-all | TODO |
-| MDS-058 | tags-present branch (`markerDecorationsService.ts:275-282`) | Inline-class overrides run only when tags array exists | local Some arm | TODO |
-| MDS-059 | Unnecessary inline-tag branch (`markerDecorationsService.ts:276-278`) | Assign unnecessary inline class | local same | TODO |
-| MDS-060 | Deprecated inline-tag branch (`markerDecorationsService.ts:279-281`) | Assign deprecated after unnecessary, so it wins | local same | TODO |
-| MDS-061 | `_hasMarkerTag` tags branch (`markerDecorationsService.ts:300-304`) | Present array returns index>=0; absent returns false | local `has_tag` | TODO |
-| GPMM-013 | stop inactive early return (`globalPointerMoveMonitor.ts:29-32`) | Leaves hook store/callbacks untouched | local same | TODO |
-| GPMM-014 | stop callback branch (`globalPointerMoveMonitor.ts:40-42`) | Invoke only when flag true and captured callback non-null | local same | TODO |
-| GPMM-015 | start-already-monitoring branch (`globalPointerMoveMonitor.ts:56-58`) | Stop old monitor without stop callback before replacing callbacks | local same | TODO |
-| GPMM-016 | pointer-capture success branch (`globalPointerMoveMonitor.ts:64-78`) | Capture and retain release hook; event source stays element | local always window | TODO |
-| GPMM-017 | release-capture exception branch (`globalPointerMoveMonitor.ts:67-77`) | Deliberately ignore DOMException | FFI gap | TODO |
-| GPMM-018 | set-capture exception branch (`globalPointerMoveMonitor.ts:79-89`) | Fallback event source to owning window | local fixed path | TODO |
-| GPMM-019 | buttons-changed early return (`globalPointerMoveMonitor.ts:95-99`) | Stop(true) and return before prevent-default/callback | local same | TODO |
-| SB-009 | slider pointerdown left-button branch (`abstractScrollbar.ts:115-118`) | Prevent default and start only for button 0 | local converts any MouseEvent then starts | TODO |
-| SB-010 | slider click left-button branch (`abstractScrollbar.ts:122-125`) | Stop propagation only for normalized left button | local mousedown stops propagation | TODO |
-| SB-011 | drag invalid-target early return (`abstractScrollbar.ts:241-243`) | No active class/monitor/host callback | local target is not validated | TODO |
-| SB-012 | Windows orthogonal reset branch (`abstractScrollbar.ts:257-261`) | Strict `>140` resets initial scroll and returns | local missing | TODO |
-| CFG-016 | `_targetWindowId` (`editorConfiguration.ts:57,84,146,158`) | Pins later environment/font reads to the container window id; the PixelRatio subscription itself uses `getWindow(container)` directly at line 98 | local single global window | TODO |
-| CFG-017 | `_accessibilityService` (`editorConfiguration.ts:78`) | Injected borrowed service; subscription retained, service never disposed | no service | TODO |
-| CFG-018 | `_recomputeOptions` unchanged early return (`editorConfiguration.ts:106-109`) | Return before assignment and both events | local option equality guard | TODO |
-| CEW-151 | post-detach optional-model branch (`codeEditorWidget.ts:2008-2010`) | Owner-id sweep runs only for a non-null detached model | local explicit match | TODO |
-| CEW-152 | detach optional contribution-handle branch (`codeEditorWidget.ts:2012-2014`) | Dispose when present, then clear field unconditionally before model guard | no local handle | TODO |
-| CEW-153 | model-change old-URI branch (`codeEditorWidget.ts:519-522`) | Missing old ModelData produces null; present uses its model URI | local match | TODO |
-| CEW-154 | model-change new-URI branch (`codeEditorWidget.ts:519-522`) | Null new model produces null; present uses URI | local match | TODO |
-| CEC-013 | attach-idle editor optional branch (`codeEditorContributions.ts:114-117`) | Optional editor DOM lookup permits an uninitialized/null editor input to `getWindow` | local registry always initialized | TODO |
-| VIEW-102 | focus tracker initial fallback branch (`view.ts:984-986`) | Undefined `_hadFocus` returns false; defined value returns itself | local bool starts false | TODO |
-| VIEW-103 | focus tracker optional refresh branch (`view.ts:988-991`) | Always refresh root; refresh overflow tracker only when tracker/method exist | no external overflow tracker | TODO |
-| MDS-062 | suppression disposal missing-set branch (`markerDecorationsService.ts:73-81`) | Missing set performs no deletion and no marker refresh | local None arm | TODO |
-| MDS-063 | transient cleanup optional-service branch (`markerDecorationsService.ts:110`) | Optional-chain read skips cleanup if service were absent | local nonoptional field | TODO |
-| MDS-064 | ordinary Hint option branch (`markerDecorationsService.ts:240-242`) | Neither Deprecated nor Unnecessary selects hint class | local else arm | TODO |
-| MDS-065 | `_hasMarkerTag` absent-tags branch (`markerDecorationsService.ts:300-304`) | Return false when tags are absent | local None path | TODO |
-| GPMM-020 | pointer-move matching-buttons branch (`globalPointerMoveMonitor.ts:100-103`) | Prevent default then invoke current move callback | local else path | TODO |
-| CEW-155 | `_detachModel` real-view root selection (`codeEditorWidget.ts:2019`) | `hasRealView` captures the View root for later removal; false captures null | local `view is Some` match | TODO |
-| CEW-156 | `EditorModeContext` (`codeEditorWidget.ts:328`) | Second context manager is independently registered in the widget store | no direct equivalent | TODO |
-| CEW-157 | View `onWillCut` subscription (`codeEditorWidget.ts:1916`) | Independently pushed into ModelData listener array | N-A candidate: readonly cut | TODO |
-| CEW-158 | View `onWillPaste` subscription (`codeEditorWidget.ts:1917`) | Independently pushed into ModelData listener array | N-A candidate: readonly paste | TODO |
-| CEC-014 | BeforeFirstInteraction idle handle (`codeEditorContributions.ts:67-69`) | Independently registered in the base disposable store | no lazy handles | TODO |
-| CEC-015 | Eventually idle handle (`codeEditorContributions.ts:74-76`) | Independently registered in the base disposable store; lazy-instantiation timing remains an excluded sibling | no lazy handles | TODO |
-| VIEW-104 | widget-focus change subscription (`view.ts:152-154`) | Independently registered in View's base disposable store | anonymous focus callbacks | TODO |
-| VIEW-105 | edit-context `onWillCopy` subscription (`view.ts:341`) | Independently owned by clipboard listener store | local root copy callback | TODO |
-| VIEW-106 | edit-context `onWillCut` subscription (`view.ts:342`) | Independently owned by clipboard listener store | N-A candidate: readonly cut | TODO |
-| VIEW-107 | edit-context `onWillPaste` subscription (`view.ts:343`) | Independently owned by clipboard listener store | N-A candidate: readonly paste | TODO |
-| VIEW-108 | root focus subscription (`view.ts:954-957`) | Independently registered by focus tracker | local anonymous root focus listener | TODO |
-| VIEW-109 | root blur subscription (`view.ts:958-961`) | Independently registered by focus tracker | local anonymous root blur listener | TODO |
-| VIEW-110 | overflow-node focus subscription (`view.ts:965-968`) | Independently registered when external overflow host exists | no external overflow host | TODO |
-| VIEW-111 | overflow-node blur subscription (`view.ts:969-972`) | Independently registered when external overflow host exists | no external overflow host | TODO |
-| VIEW-112 | public `onWillCopy` alias (`view.ts:116`) | Public Event aliases the private owned emitter | no View event alias | TODO |
-| VIEW-113 | public `onWillCut` alias (`view.ts:119`) | Public Event aliases the private owned emitter | no local alias | TODO |
-| VIEW-114 | public `onWillPaste` alias (`view.ts:122`) | Public Event aliases the private owned emitter | no local alias | TODO |
-| VIEW-115 | focus tracker public `onChange` alias (`view.ts:940`) | Public Event aliases `_onChange` | no local alias | TODO |
-| MDS-066 | model-removed subscription (`markerDecorationsService.ts:42`) | Independently registered in the service store | no shared model registry | TODO |
-| MDS-067 | marker-changed subscription (`markerDecorationsService.ts:43`) | Independently registered in the service store | local retained marker subscription | TODO |
-| MDS-068 | `getLiveMarkers` missing-owner branch (`markerDecorationsService.ts:58-60`) | Missing URI owner returns an empty array | local None arm | TODO |
-| MDS-069 | model-remove missing-owner branch (`markerDecorationsService.ts:100-104`) | Missing URI owner skips decoration disposal/deletion | local None arm | TODO |
-| MDS-070 | word-missing branch (`markerDecorationsService.ts:212-215`) | Missing word leaves the validated empty range unchanged | local None arm | TODO |
-| MDS-071 | live-range missing branch (`markerDecorationsService.ts:182-186`) | Missing decoration range skips that marker/id pair | local None arm | TODO |
-| MDS-072 | last-non-whitespace outcome (`markerDecorationsService.ts:203-204`) | Nonzero last-non-whitespace column becomes `maxColumn` | local nonzero arm | TODO |
-| MDS-073 | line-max fallback outcome (`markerDecorationsService.ts:203-204`) | Zero last-non-whitespace falls back to line max column | local zero arm | TODO |
-| MDS-074 | unchanged service-update outcome (`markerDecorationsService.ts:126-129`) | `MarkerDecorations.update=false` fires no service event | local false arm | TODO |
-| MDS-075 | marker-change missing-owner branch (`markerDecorationsService.ts:86-90`) | Missing URI owner performs no update | local None arm | TODO |
-| SB-013 | slider pointerdown listener (`abstractScrollbar.ts:111-120`) | Independently registered in Widget's disposable store | anonymous local mousedown | TODO |
-| SB-014 | slider click listener (`abstractScrollbar.ts:122-126`; `widget.ts:14-15`) | `onclick` independently registers a disposable listener in Widget's store | no separate local click listener | TODO |
-| CFG-019 | public `onDidChange` alias (`editorConfiguration.ts:43`) | Public Event aliases `_onDidChange` | no local event alias | TODO |
-| CFG-020 | public `onDidChangeFast` alias (`editorConfiguration.ts:46`) | Public Event aliases `_onDidChangeFast` | no local event alias | TODO |
-| MDS-076 | suppression-filter absent-set branch (`markerDecorationsService.ts:119-124`) | Missing suppression set preserves the first-500 marker list unchanged | local None arm | TODO |
+| CEW-089 | `_updateCounter` (`codeEditorWidget.ts:209`) | Nesting counter for begin/end update events | no local update counter | DEFERRED (no update-event bracket) |
+| CEW-090 | `_beginUpdate` (`codeEditorWidget.ts:2072-2077`) | Increment, then fire begin only at depth 1 | no local bracket | DEFERRED (no update-event bracket) |
+| CEW-091 | `_endUpdate` (`codeEditorWidget.ts:2079-2084`) | Decrement, then fire end only at depth 0 | no local bracket | DEFERRED (no update-event bracket) |
+| CEW-092 | model will-dispose subscription (`codeEditorWidget.ts:1786-1787`) | Swap-scoped disposable calls `setModel(null)` | local ModelData listener | TESTED |
+| CEW-093 | ViewModel event subscription (`codeEditorWidget.ts:1789-1887`) | One swap-scoped disposable owns the complete outgoing-event relay | no single local relay subscription | DEFERRED (no unified ViewModel event relay) |
+| CEW-094 | `ViewUserInputEvents` callback owner (`codeEditorWidget.ts:1979-1990`) | Eleven callbacks close over widget emitters and live exactly as long as View | controller helper/root callbacks | PORTED |
+| CEW-095 | `_telemetryData` (`codeEditorWidget.ts:233,298`) | Borrowed immutable construction data; never disposed | no telemetry field | DEFERRED (no telemetry owner) |
+| CEW-096 | `_notificationService` (`codeEditorWidget.ts:249,323`) | Injected borrowed service; never disposed by widget | no notification service | DEFERRED (no notification service) |
+| CEW-097 | `_codeEditorService` (`codeEditorWidget.ts:250,324`) | Injected borrowed registry; widget only add/removes itself | no editor registry service | DEFERRED (no global editor service) |
+| CEW-098 | `_commandService` (`codeEditorWidget.ts:251,325`) | Injected borrowed service; never disposed | registry command closures | PORTED |
+| CEW-099 | `_themeService` (`codeEditorWidget.ts:252,326`) | Injected borrowed service; never disposed | theme is option/CSS data | PORTED |
+| CEW-100 | `_userInteractionService` (`codeEditorWidget.ts:253,292`) | Injected borrowed service passed into View/focus owner; never disposed | no service object | DEFERRED (no user-interaction service) |
+| CEW-101 | `languageConfigurationService` (`codeEditorWidget.ts:282`) | Constructor parameter-property, borrowed and passed into ViewModel | languages registry is borrowed service | PORTED |
+| CEW-102 | `accessibilityService` (`codeEditorWidget.ts:281,300-302`) | Borrowed constructor argument passed into registered configuration | no accessibility service | DEFERRED (no accessibility service) |
+| CEW-103 | `languageFeaturesService` (`codeEditorWidget.ts:283,328`) | Borrowed constructor argument passed into registered context owner | `ViewerServices.languages` is borrowed | PORTED |
+| CEW-104 | `_dropIntoEditorDecorations` (`codeEditorWidget.ts:267`) | Widget-owned decorations collection used by registered DnD observer | N-A candidate: readonly DnD | N-A (readonly Viewer has no drop-edit path) |
+| CEW-105 | `EDITOR_ID` (`codeEditorWidget.ts:2087`) | Process counter, preincremented into `_id` | `editor_id_counter` | TESTED |
+| CEW-106 | constructor overflow-node option branch (`codeEditorWidget.ts:291-295`) | Optional external node is retained and deleted from options before configuration | no external overflow host | DEFERRED (no external overflow host option) |
+| CEW-107 | constructor simple-widget default branch (`codeEditorWidget.ts:300-301`) | Missing/false `isSimpleWidget` resolves false | viewer is one readonly kind | N-A (single readonly widget kind) |
+| CEW-108 | explicit context-menu-id branch (`codeEditorWidget.ts:301`) | Explicit id wins over derived default | no context menu id | DEFERRED (no context-menu owner) |
+| CEW-109 | derived context-menu-id branch (`codeEditorWidget.ts:301`) | Missing id selects SimpleEditorContext vs EditorContext by widget kind | no context menu id | DEFERRED (no context-menu owner) |
+| CEW-110 | optional style branch (`codeEditorWidget.ts:303`) | Initial font custom property is skipped only when style is absent | local root always Element | PORTED |
+| CEW-111 | configuration layout-info branch (`codeEditorWidget.ts:308-311`) | Fires layout event only when that option changed | direct layout path | PORTED |
+| CEW-112 | configuration font-size branch (`codeEditorWidget.ts:312-314`) | Rewrites font custom property only when font size changed | `apply_font_info_to_view` | PORTED |
+| CEW-113 | context-key-values branch (`codeEditorWidget.ts:318-322`) | Missing map is no-op; present map creates every key | no context key map | DEFERRED (no context-key owner) |
+| CEW-114 | explicit contributions branch (`codeEditorWidget.ts:338-341`) | Array supplied by caller is authoritative | registry always global | DEFERRED (no caller-supplied contribution list) |
+| CEW-115 | registry contributions branch (`codeEditorWidget.ts:341-343`) | Non-array option loads global registry | `editor_registry` | TESTED |
+| CEW-116 | `setModel` both-null early return (`codeEditorWidget.ts:510-513`) | No detach, events, cleanup, or contribution rearm | local same | PORTED |
+| CEW-117 | `setModel` same-identity early return (`codeEditorWidget.ts:514-517`) | Physical model identity is the no-op key | local `physical_equal` | PORTED |
+| CEW-118 | `setModel` attached-model branch (`codeEditorWidget.ts:528-532`) | New real model may restore text focus | local `has_model` arm | TESTED |
+| CEW-119 | `setModel` retained-focus branch (`codeEditorWidget.ts:530-532`) | Focus only when pre-swap text focus was true | local same | TESTED |
+| CEW-120 | `setModel` no-model branch (`codeEditorWidget.ts:533-538`) | Clears both text and widget focus emitters | local clears one bool | TESTED |
+| CEW-121 | `setModel` finally branch (`codeEditorWidget.ts:545-547`) | `_endUpdate` runs for both early returns and failures | no local bracket | DEFERRED (no update-event bracket) |
+| CEW-122 | `_attachModel` null early return (`codeEditorWidget.ts:1751-1754`) | Set bundle null and return before listeners/DOM | local None arm lives in caller | TESTED |
+| CEW-123 | ViewModel ContentSize arm (`codeEditorWidget.ts:1791-1793`) | Relay event | no local public event | DEFERRED (no content-size event surface) |
+| CEW-124 | ViewModel Focus arm (`codeEditorWidget.ts:1794-1796`) | Update text-focus emitter | local focus DOM flag | TESTED |
+| CEW-125 | ViewModel WidgetFocus arm (`codeEditorWidget.ts:1797-1799`) | Update widget-focus emitter | DOM containment query | PORTED |
+| CEW-126 | ViewModel Scroll arm (`codeEditorWidget.ts:1800-1802`) | Relay scroll event | local layout subscription | PORTED |
+| CEW-127 | ViewModel ViewZones arm (`codeEditorWidget.ts:1803-1805`) | Fire zone-change event | no local public event | DEFERRED (no view-zone event surface) |
+| CEW-128 | ViewModel HiddenAreas arm (`codeEditorWidget.ts:1806-1808`) | Fire hidden-area event | no local public event | DEFERRED (no hidden-area event surface) |
+| CEW-129 | ViewModel ReadOnlyEdit arm (`codeEditorWidget.ts:1809-1811`) | Fire readonly-attempt interaction | no local event | DEFERRED (no readonly-edit event surface) |
+| CEW-130 | CursorState max-count branch (`codeEditorWidget.ts:1812-1833`) | Optional warning plus two command actions | N-A candidate: single cursor | N-A (single-cursor Viewer) |
+| CEW-131 | CursorState relay arm (`codeEditorWidget.ts:1835-1860`) | Build positions, fire position, then selection | local cursor events | TESTED |
+| CEW-132 | ModelDecorations arm (`codeEditorWidget.ts:1861-1863`) | Relay decoration event | local generation scheduling | TESTED |
+| CEW-133 | ModelLanguage arm (`codeEditorWidget.ts:1864-1867`) | Restamp mode id before event | no language-change event | DEFERRED (no model-language event surface) |
+| CEW-134 | LanguageConfiguration arm (`codeEditorWidget.ts:1868-1870`) | Relay event | no local event | DEFERRED (no language-configuration event surface) |
+| CEW-135 | ModelContent arm (`codeEditorWidget.ts:1871-1873`) | Relay event | local model listener | TESTED |
+| CEW-136 | ModelOptions arm (`codeEditorWidget.ts:1874-1876`) | Relay event | no local event | DEFERRED (no model-options event surface) |
+| CEW-137 | ModelTokens arm (`codeEditorWidget.ts:1877-1879`) | Relay event | local token listener | PORTED |
+| CEW-138 | ModelLineHeight arm (`codeEditorWidget.ts:1880-1882`) | Relay event | no local event | DEFERRED (no line-height event surface) |
+| CEW-139 | ModelFont arm (`codeEditorWidget.ts:1883-1885`) | Relay event | font singleton callback | PORTED |
+| CEW-140 | `_attachModel` real-view branch (`codeEditorWidget.ts:1889-1918`) | Append/re-add/render/stamp/subscribe only when real | local View Some branch | TESTED |
+| CEW-141 | `_createView` simple-widget branch (`codeEditorWidget.ts:1925-1945`) | Delegates editing directly to widget methods | no readonly edit-command delegate | N-A (readonly Viewer has no edit path) |
+| CEW-142 | `_createView` ordinary-widget branch (`codeEditorWidget.ts:1946-1977`) | Delegates through command service | no readonly edit-command delegate | N-A (readonly Viewer has no edit path) |
+| CEW-143 | composition new-command branch (`codeEditorWidget.ts:1957-1962`) | `replaceNextCharCnt \|\| positionDelta` selects CompositionType | N-A candidate | N-A (readonly Viewer has no composition path) |
+| CEW-144 | composition replace-previous branch (`codeEditorWidget.ts:1962-1965`) | Otherwise selects ReplacePreviousChar | N-A candidate | N-A (readonly Viewer has no composition path) |
+| CEW-145 | `_detachModel` no-model early return (`codeEditorWidget.ts:2015-2017`) | Contribution handle is already disposed/reset | local returns before any handler cleanup | PORTED |
+| CEW-146 | root-contained branch (`codeEditorWidget.ts:2025-2027`) | Remove captured root only when still under container | local containment-guarded removal | PORTED |
+| CEW-147 | banner-contained branch (`codeEditorWidget.ts:2028-2030`) | Remove banner only when still under container | no banner | DEFERRED (no banner owner) |
+| CEW-148 | ModelData real-view branch (`codeEditorWidget.ts:2137-2139`) | View disposed only for real View | local option is implicit; Some arm disposes View | TESTED |
+| CEW-149 | `_beginUpdate` outermost branch (`codeEditorWidget.ts:2073-2076`) | Fire begin iff incremented depth equals 1 | no local bracket | DEFERRED (no update-event bracket) |
+| CEW-150 | `_endUpdate` outermost branch (`codeEditorWidget.ts:2080-2083`) | Fire end iff decremented depth equals 0 | no local bracket | DEFERRED (no update-event bracket) |
+| CEC-012 | duplicate contribution-id branch (`codeEditorContributions.ts:47-51`) | Report unexpected error and continue without replacing first pending description | local registry rejects duplicates at registration seam | DEFERRED (no duplicate-id guard) |
+| VIEW-080 | `_instantiationService` (`view.ts:143`) | Injected borrowed service used to create View-owned parts; View never disposes service itself | no DI service | N-A (direct construction has no DI service) |
+| VIEW-081 | `_userInteractionService` (`view.ts:144`) | Injected borrowed service used to create registered focus trackers; never disposed itself | no service object | DEFERRED (no user-interaction service) |
+| VIEW-082 | native edit-context branch (`view.ts:307-310`) | Effective option true creates NativeEditContext | N-A candidate | DEFERRED (no edit-context owner) |
+| VIEW-083 | textarea edit-context branch (`view.ts:310-312`) | Effective option false creates TextAreaEditContext | N-A candidate | DEFERRED (no edit-context owner) |
+| VIEW-084 | edit-context equality early return (`view.ts:318-320`) | No disposal/replacement when both controlling values are unchanged | N-A candidate | DEFERRED (no edit-context owner) |
+| VIEW-085 | edit-context focus restore branch (`view.ts:328-330`) | Newly constructed context is focused only when old one was focused | N-A candidate | DEFERRED (no edit-context owner) |
+| VIEW-086 | edit-context index branch (`view.ts:331-333`) | Replace ViewPart slot only when old context was found | N-A candidate | DEFERRED (no edit-context owner) |
+| VIEW-087 | constructor GPU-context branch (`view.ts:191-193`) | Create GPU context only when acceleration option is exactly `on` | N-A candidate | DEFERRED (no GPU render owner) |
+| VIEW-088 | constructor GPU-lines branch (`view.ts:200-202`) | Create GPU lines only when GPU context exists | N-A candidate | DEFERRED (no GPU render owner) |
+| VIEW-089 | constructor GPU-mark branch (`view.ts:230-232`) | Add GpuMarkOverlay only when GPU context exists | N-A candidate | DEFERRED (no GPU render owner) |
+| VIEW-090 | constructor rulers alternative (`view.ts:255-258`) | GPU context chooses RulersGpu; absence chooses DOM Rulers | N-A candidate | DEFERRED (no ruler owner) |
+| VIEW-091 | overview-ruler insertion branch (`view.ts:268-271`) | Truthy ruler inserts at scrollbar-provided position | N-A candidate | DEFERRED (no overview-ruler owner) |
+| VIEW-092 | rulers DOM-node branch (`view.ts:274-276`) | Append only the rulers variant exposing `domNode` | N-A candidate | DEFERRED (no ruler owner) |
+| VIEW-093 | GPU-canvas append branch (`view.ts:283-285`) | Canvas is appended only when GPU context exists | N-A candidate | DEFERRED (no GPU render owner) |
+| VIEW-094 | external overflow-parent branch (`view.ts:292-295`) | Both overflowing nodes append into caller-supplied host | no external host option | DEFERRED (no external overflow host option) |
+| VIEW-095 | internal overflow-parent branch (`view.ts:295-298`) | Without external host both nodes append to View root | local fixed path | TESTED |
+| VIEW-096 | focus-tracker overflow-host branch (`view.ts:963-973`) | Create tracker and two subscriptions only when external node exists | no external host option | DEFERRED (no external overflow host option) |
+| VIEW-097 | focus aggregate changed branch (`view.ts:977-981`) | Fire `_onChange` only when OR aggregate differs from prior/undefined | local separate callbacks | DEFERRED (no aggregate focus-event owner) |
+| VIEW-098 | dispose animation-frame branch (`view.ts:498-501`) | Non-null frame is disposed and field reset before any other teardown | Viewer render-pending path | TESTED |
+| VIEW-099 | dispose GPU-context branch (`view.ts:510`) | Optional context disposed when present | N-A candidate | DEFERRED (no GPU render owner) |
+| VIEW-100 | dispose GPU-lines branch (`view.ts:513`) | Optional GPU lines disposed when present | N-A candidate | DEFERRED (no GPU render owner) |
+| VIEW-101 | focused-class branch (`view.ts:459-462`) | Edit-context focus appends exact ` focused`, absence appends empty string | local focused class | PORTED |
+| MDS-032 | `_markerService` parameter-property (`markerDecorationsService.ts:37`) | Injected borrowed service; service subscribes/reads/removes but never disposes it | local `markers` field; may be shared | TESTED |
+| MDS-033 | `getMarker` present-owner branch (`markerDecorationsService.ts:53-54`) | Delegate and normalize undefined to null | local Some delegate | TESTED |
+| MDS-034 | `getMarker` missing-owner branch (`markerDecorationsService.ts:53-54`) | Return null | local None | PORTED |
+| MDS-035 | `getLiveMarkers` present-owner branch (`markerDecorationsService.ts:58-59`) | Present owner delegates to its live ranges | local Some arm | TESTED |
+| MDS-036 | suppression missing-set branch (`markerDecorationsService.ts:64-68`) | Allocate/store a new Set before adding range | local array creation | TESTED |
+| MDS-037 | suppression disposal present-set branch (`markerDecorationsService.ts:73-80`) | Delete range and refresh only while set still exists | local Some arm | TESTED |
+| MDS-038 | suppression empty-set branch (`markerDecorationsService.ts:76-78`) | Drop URI key when last range removed | local length zero | TESTED |
+| MDS-039 | marker-change registered-owner branch (`markerDecorationsService.ts:86-89`) | Update only present URI owner | local Some arm | TESTED |
+| MDS-040 | model-remove present-owner branch (`markerDecorationsService.ts:100-104`) | Dispose before deleting URI entry | local Some arm | TESTED |
+| MDS-041 | transient-scheme branch (`markerDecorationsService.ts:107-111`) | Only three schemes trigger marker-owner removal | local exact strings | DEFERRED (needs global ModelService) |
+| MDS-042 | suppression-filter present-set branch (`markerDecorationsService.ts:119-124`) | Present set filters every marker whose range intersects or touches a candidate | local Some arm | TESTED |
+| MDS-043 | changed-decoration branch (`markerDecorationsService.ts:126-128`) | Fire model event only when update returns true | local same | TESTED |
+| MDS-044 | update no-change early return (`markerDecorationsService.ts:153-155`) | No delta/map mutation and false | local same | TESTED |
+| MDS-045 | live-range present branch (`markerDecorationsService.ts:182-185`) | Push pair when decoration id still resolves | local Some branch | TESTED |
+| MDS-046 | ordinary-Hint range branch (`markerDecorationsService.ts:194-198`) | Hint and neither tag forces one line/end=start+2 | local same | TESTED |
+| MDS-047 | empty-range branch (`markerDecorationsService.ts:202-216`) | Run empty-range max-column/word logic | local same | TESTED |
+| MDS-048 | empty-line/behind-EOL early return (`markerDecorationsService.ts:206-210`) | Return validated range before word lookup | local same | TESTED |
+| MDS-049 | word-found branch (`markerDecorationsService.ts:212-215`) | Replace columns when word exists | local Some arm | TESTED |
+| MDS-050 | full-line marker branch (`markerDecorationsService.ts:216-222`) | Non-empty MAX_VALUE/start-1/single-line enters whitespace snap | local same | TESTED |
+| MDS-051 | full-line min-column branch (`markerDecorationsService.ts:218-221`) | Rewrite range and raw marker only when min < end | local same | TESTED |
+| MDS-052 | Hint severity arm (`markerDecorationsService.ts:235-244`) | Runs tag submatrix and z=0 | local Hint arm | TESTED |
+| MDS-053 | Hint Deprecated arm (`markerDecorationsService.ts:236-238`) | Class undefined | local empty class | TESTED |
+| MDS-054 | Hint Unnecessary arm (`markerDecorationsService.ts:238-240`) | Unnecessary class | local same | TESTED |
+| MDS-055 | Info severity arm (`markerDecorationsService.ts:245-253`) | Info class/color/z=10/minimap Inline | local same | TESTED |
+| MDS-056 | Warning severity arm (`markerDecorationsService.ts:254-262`) | Warning class/color/z=20/minimap Inline | local same | TESTED |
+| MDS-057 | Error/default severity arm (`markerDecorationsService.ts:263-273`) | Error class/color/z=30/minimap Inline | local Error enum has no default catch-all | TESTED |
+| MDS-058 | tags-present branch (`markerDecorationsService.ts:275-282`) | Inline-class overrides run only when tags array exists | local Some arm | TESTED |
+| MDS-059 | Unnecessary inline-tag branch (`markerDecorationsService.ts:276-278`) | Assign unnecessary inline class | local same | TESTED |
+| MDS-060 | Deprecated inline-tag branch (`markerDecorationsService.ts:279-281`) | Assign deprecated after unnecessary, so it wins | local same | TESTED |
+| MDS-061 | `_hasMarkerTag` tags branch (`markerDecorationsService.ts:300-304`) | Present array returns index>=0; absent returns false | local `has_tag` | TESTED |
+| GPMM-013 | stop inactive early return (`globalPointerMoveMonitor.ts:29-32`) | Leaves hook store/callbacks untouched | local same | TESTED |
+| GPMM-014 | stop callback branch (`globalPointerMoveMonitor.ts:40-42`) | Invoke only when flag true and captured callback non-null | local same | TESTED |
+| GPMM-015 | start-already-monitoring branch (`globalPointerMoveMonitor.ts:56-58`) | Stop old monitor without stop callback before replacing callbacks | local same | TESTED |
+| GPMM-016 | pointer-capture success branch (`globalPointerMoveMonitor.ts:64-78`) | Capture and retain release hook; event source stays element | local capture FFI keeps the element event source | TESTED |
+| GPMM-017 | release-capture exception branch (`globalPointerMoveMonitor.ts:67-77`) | Deliberately ignore DOMException | local release FFI swallows the exception | TESTED |
+| GPMM-018 | set-capture exception branch (`globalPointerMoveMonitor.ts:79-89`) | Fallback event source to owning window | local capture FFI selects the owning window | TESTED |
+| GPMM-019 | buttons-changed early return (`globalPointerMoveMonitor.ts:95-99`) | Stop(true) and return before prevent-default/callback | local same | TESTED |
+| SB-009 | slider pointerdown left-button branch (`abstractScrollbar.ts:115-118`) | Prevent default and start only for button 0 | local pointerdown has the same left-button guard | TESTED |
+| SB-010 | slider click left-button branch (`abstractScrollbar.ts:122-125`) | Stop propagation only for normalized left button | local separate click listener has the same guard | TESTED |
+| SB-011 | drag invalid-target early return (`abstractScrollbar.ts:241-243`) | No active class/monitor/host callback | local Element-target guard precedes all state | TESTED |
+| SB-012 | Windows orthogonal reset branch (`abstractScrollbar.ts:257-261`) | Strict `>140` resets initial scroll and returns | local exact 139/140/141 branch | TESTED |
+| CFG-016 | `_targetWindowId` (`editorConfiguration.ts:57,84,146,158`) | Pins later environment/font reads to the container window id; the PixelRatio subscription itself uses `getWindow(container)` directly at line 98 | local single global window | DEFERRED (no multi-window configuration owner) |
+| CFG-017 | `_accessibilityService` (`editorConfiguration.ts:78`) | Injected borrowed service; subscription retained, service never disposed | no service | DEFERRED (no accessibility service) |
+| CFG-018 | `_recomputeOptions` unchanged early return (`editorConfiguration.ts:106-109`) | Return before assignment and both events | local option equality guard | PORTED |
+| CEW-151 | post-detach optional-model branch (`codeEditorWidget.ts:2008-2010`) | Owner-id sweep runs only for a non-null detached model | local explicit match | PORTED |
+| CEW-152 | detach optional contribution-handle branch (`codeEditorWidget.ts:2012-2014`) | Dispose when present, then clear field unconditionally before model guard | no local handle | DEFERRED (no attach-scoped contribution handle) |
+| CEW-153 | model-change old-URI branch (`codeEditorWidget.ts:519-522`) | Missing old ModelData produces null; present uses its model URI | local match | PORTED |
+| CEW-154 | model-change new-URI branch (`codeEditorWidget.ts:519-522`) | Null new model produces null; present uses URI | local match | PORTED |
+| CEC-013 | attach-idle editor optional branch (`codeEditorContributions.ts:114-117`) | Optional editor DOM lookup permits an uninitialized/null editor input to `getWindow` | local registry always initialized | N-A (registry initializes synchronously) |
+| VIEW-102 | focus tracker initial fallback branch (`view.ts:984-986`) | Undefined `_hadFocus` returns false; defined value returns itself | local bool starts false | DEFERRED (no aggregate focus-event owner) |
+| VIEW-103 | focus tracker optional refresh branch (`view.ts:988-991`) | Always refresh root; refresh overflow tracker only when tracker/method exist | no external overflow tracker | DEFERRED (no external overflow host option) |
+| MDS-062 | suppression disposal missing-set branch (`markerDecorationsService.ts:73-81`) | Missing set performs no deletion and no marker refresh | local None arm | PORTED |
+| MDS-063 | transient cleanup optional-service branch (`markerDecorationsService.ts:110`) | Optional-chain read skips cleanup if service were absent | local nonoptional field | N-A (MarkerService is non-optional) |
+| MDS-064 | ordinary Hint option branch (`markerDecorationsService.ts:240-242`) | Neither Deprecated nor Unnecessary selects hint class | local else arm | TESTED |
+| MDS-065 | `_hasMarkerTag` absent-tags branch (`markerDecorationsService.ts:300-304`) | Return false when tags are absent | local None path | TESTED |
+| GPMM-020 | pointer-move matching-buttons branch (`globalPointerMoveMonitor.ts:100-103`) | Prevent default then invoke current move callback | local else path | TESTED |
+| CEW-155 | `_detachModel` real-view root selection (`codeEditorWidget.ts:2019`) | `hasRealView` captures the View root for later removal; false captures null | local `view is Some` match | TESTED |
+| CEW-156 | `EditorModeContext` (`codeEditorWidget.ts:328`) | Second context manager is independently registered in the widget store | no direct equivalent | DEFERRED (no context-key owner) |
+| CEW-157 | View `onWillCut` subscription (`codeEditorWidget.ts:1916`) | Independently pushed into ModelData listener array | N-A candidate: readonly cut | N-A (readonly Viewer has no edit path) |
+| CEW-158 | View `onWillPaste` subscription (`codeEditorWidget.ts:1917`) | Independently pushed into ModelData listener array | N-A candidate: readonly paste | N-A (readonly Viewer has no edit path) |
+| CEC-014 | BeforeFirstInteraction idle handle (`codeEditorContributions.ts:67-69`) | Independently registered in the base disposable store | no lazy handles | DEFERRED (contributions instantiate eagerly) |
+| CEC-015 | Eventually idle handle (`codeEditorContributions.ts:74-76`) | Independently registered in the base disposable store; lazy-instantiation timing remains an excluded sibling | no lazy handles | DEFERRED (contributions instantiate eagerly) |
+| VIEW-104 | widget-focus change subscription (`view.ts:152-154`) | Independently registered in View's base disposable store | anonymous focus callbacks | DEFERRED (no aggregate focus-event owner) |
+| VIEW-105 | edit-context `onWillCopy` subscription (`view.ts:341`) | Independently owned by clipboard listener store | local root copy callback | PORTED |
+| VIEW-106 | edit-context `onWillCut` subscription (`view.ts:342`) | Independently owned by clipboard listener store | N-A candidate: readonly cut | N-A (readonly Viewer has no cut/paste path) |
+| VIEW-107 | edit-context `onWillPaste` subscription (`view.ts:343`) | Independently owned by clipboard listener store | N-A candidate: readonly paste | N-A (readonly Viewer has no cut/paste path) |
+| VIEW-108 | root focus subscription (`view.ts:954-957`) | Independently registered by focus tracker | local anonymous root focus listener | PORTED |
+| VIEW-109 | root blur subscription (`view.ts:958-961`) | Independently registered by focus tracker | local anonymous root blur listener | PORTED |
+| VIEW-110 | overflow-node focus subscription (`view.ts:965-968`) | Independently registered when external overflow host exists | no external overflow host | DEFERRED (no external overflow host option) |
+| VIEW-111 | overflow-node blur subscription (`view.ts:969-972`) | Independently registered when external overflow host exists | no external overflow host | DEFERRED (no external overflow host option) |
+| VIEW-112 | public `onWillCopy` alias (`view.ts:116`) | Public Event aliases the private owned emitter | no View event alias | DEFERRED (no View copy-event surface) |
+| VIEW-113 | public `onWillCut` alias (`view.ts:119`) | Public Event aliases the private owned emitter | no local alias | N-A (readonly Viewer has no cut/paste path) |
+| VIEW-114 | public `onWillPaste` alias (`view.ts:122`) | Public Event aliases the private owned emitter | no local alias | N-A (readonly Viewer has no cut/paste path) |
+| VIEW-115 | focus tracker public `onChange` alias (`view.ts:940`) | Public Event aliases `_onChange` | no local alias | DEFERRED (no aggregate focus-event owner) |
+| MDS-066 | model-removed subscription (`markerDecorationsService.ts:42`) | Independently registered in the service store | no shared model registry | DEFERRED (needs global ModelService) |
+| MDS-067 | marker-changed subscription (`markerDecorationsService.ts:43`) | Independently registered in the service store | local retained marker subscription | TESTED |
+| MDS-068 | `getLiveMarkers` missing-owner branch (`markerDecorationsService.ts:58-60`) | Missing URI owner returns an empty array | local None arm | TESTED |
+| MDS-069 | model-remove missing-owner branch (`markerDecorationsService.ts:100-104`) | Missing URI owner skips decoration disposal/deletion | local None arm | TESTED |
+| MDS-070 | word-missing branch (`markerDecorationsService.ts:212-215`) | Missing word leaves the validated empty range unchanged | local None arm | PORTED |
+| MDS-071 | live-range missing branch (`markerDecorationsService.ts:182-186`) | Missing decoration range skips that marker/id pair | local None arm | PORTED |
+| MDS-072 | last-non-whitespace outcome (`markerDecorationsService.ts:203-204`) | Nonzero last-non-whitespace column becomes `maxColumn` | local nonzero arm | TESTED |
+| MDS-073 | line-max fallback outcome (`markerDecorationsService.ts:203-204`) | Zero last-non-whitespace falls back to line max column | local zero arm | PORTED |
+| MDS-074 | unchanged service-update outcome (`markerDecorationsService.ts:126-129`) | `MarkerDecorations.update=false` fires no service event | local false arm | PORTED |
+| MDS-075 | marker-change missing-owner branch (`markerDecorationsService.ts:86-90`) | Missing URI owner performs no update | local None arm | PORTED |
+| SB-013 | slider pointerdown listener (`abstractScrollbar.ts:111-120`) | Independently registered in Widget's disposable store | anonymous local mousedown | TESTED |
+| SB-014 | slider click listener (`abstractScrollbar.ts:122-126`; `widget.ts:14-15`) | `onclick` independently registers a disposable listener in Widget's store | independently retained local click listeners | TESTED |
+| CFG-019 | public `onDidChange` alias (`editorConfiguration.ts:43`) | Public Event aliases `_onDidChange` | no local event alias | DEFERRED (no configuration event owner) |
+| CFG-020 | public `onDidChangeFast` alias (`editorConfiguration.ts:46`) | Public Event aliases `_onDidChangeFast` | no local event alias | DEFERRED (no configuration event owner) |
+| MDS-076 | suppression-filter absent-set branch (`markerDecorationsService.ts:119-124`) | Missing suppression set preserves the first-500 marker list unchanged | local None arm | TESTED |
 
 ### Behavior-changing branch and early-return inventory
 
@@ -849,8 +850,13 @@ the MDCON constructor and `dispose` are deliberately empty.
 
 ### Local ownership audit — 96 rows, outside the source denominator
 
-These rows describe current ownership facts and gaps. They are evidence for
-mapping the 427 source rows, not extra source-parity members.
+These rows preserve the approved pre-implementation audit snapshot. The
+landed resolutions and remaining seams are recorded in Deviations and the
+Execution Record rather than rewriting the historical findings in place.
+
+At inventory approval these rows described the then-current ownership facts
+and gaps. They are evidence for mapping the 427 source rows, not extra source-
+parity members.
 
 | ID | Local owner (file:line) | Current lifetime / finding | Source rows affected |
 |---|---|---|---|
@@ -980,12 +986,14 @@ mapping the 427 source rows, not extra source-parity members.
   # 96
   ```
 
-- Every source-ledger line ends in `TODO`; no source-ledger status cell makes a
-  pre-review `PORTED`/`TESTED`/`PASS`/`DEFERRED`/`N-A` transition. The proposed
-  post-review seam dispositions remain review inputs only. Local rows are a
-  separate audit and cannot satisfy a source row by their presence alone.
-- The repository was clean before this edit. Only this plan is an authorized
-  output; no product source or test was changed and no commit was created.
+- In the inventory commit every source-ledger line ended in `TODO`; no
+  pre-review implementation status was inferred. The current terminal
+  statuses were added only after the approved implementation and test diff
+  existed. Local rows remain a separate audit and cannot satisfy a source row
+  by their presence alone.
+- At the inventory milestone the repository was clean and only this plan was
+  changed; product and test changes belong to the later implementation
+  milestones recorded below.
 
 ### Inventory review checklist — stop gate
 
@@ -1023,14 +1031,15 @@ recorded below. Product/test implementation may now begin from this denominator.
 
 ## Test-Authority Corrections
 
-- viewer/set_value_api_wbtest.mbt currently explains that attach clears marker
-  data. That comment and any expectation derived from it are not authoritative.
-- Existing tests that inject markers only after set_model do not cover preload.
-- Existing dispose tests do not establish shared-service ownership or global
-  listener cleanup.
-
-Do not rewrite these expectations until the inventory review approves the
-source contract.
+- viewer/set_value_api_wbtest.mbt now records the approved rule that a flush
+  refreshes the existing marker owner without clearing host diagnostics or
+  acquiring another lease.
+- lifecycle_ownership_wbtest.mbt covers marker preload before attachment,
+  detach/reattach preservation, shared identities, same-URI distinct models,
+  explicit borrowed services, default-owned services, and post-dispose work.
+- marker_decorations_lifecycle_wbtest.mbt covers service-level refcounts,
+  ordered URI fanout, reasoned removal, transient cleanup, and reentrant
+  service disposal.
 
 ## Required Test Matrix (Phase 4)
 
@@ -1174,29 +1183,36 @@ Browser/component tests:
 
 ## Exit Gate
 
-- [ ] inventory rows equal ledger rows
-- [ ] marker preload and all detach paths are tested
-- [ ] shared-service disposal is tested
-- [ ] every Viewer-owned subscription is named and disposed
-- [ ] no caller-owned service is disposed by Viewer
-- [ ] DOM cleanup and callback-after-dispose are browser-tested
-- [ ] all deviations have reviewed seam-based reasons
-- [ ] just check, just test, just build, and just test-browser pass
-- [ ] independent closing reread finds no unaccounted scoped member
+- [x] inventory rows equal ledger rows
+- [x] marker preload and all detach paths are tested
+- [x] shared-service disposal is tested
+- [x] every Viewer-owned subscription is named and disposed
+- [x] no caller-owned service is disposed by Viewer
+- [x] DOM cleanup and callback-after-dispose are browser-tested
+- [x] all deviations have reviewed seam-based reasons
+- [x] just check, just test, just build, and just test-browser pass
+- [x] independent closing reread finds no unaccounted scoped member
 
 ## Deviations (Phase 3)
 
-No deviation is approved yet. The stop-gate recommendation is:
+The inventory review approved the marker identity and ownership seams. Every
+ledger status cell is the exhaustive deviation record for that member. The
+table below is a supplemental grouping of the highest-impact shared seams; it
+does not claim to repeat every row-specific reason. Two independent closing
+reviews approved both the exhaustive cells and this grouping.
 
-| Source rows | Proposed post-review status | Concrete seam and bounded substitute |
+| Source rows | Current status | Concrete seam and bounded substitute |
 |---|---|---|
-| MDS-006–008, MDS-066 | `DEFERRED (needs global ModelService)` | ViewerServices has no authoritative process-wide model inventory/add/remove stream. ModelData acquisitions cover only identities actively leased by Viewers; they do not pretend to seed or observe unleased host models. |
-| MDS-017, MDS-041 | `DEFERRED (needs global ModelService)` | Exact global transient-cleanup triggering cannot follow upstream model lifetime. The bounded substitute handles only a real `ModelDisposed` event from an active identity watch, cleans transient diagnostics only after that identity leaves its URI bucket empty, and never treats `LeaseReleased` or `ServiceDisposed` as model destruction. |
-| MDS-015, MDS-040, MDS-069 | `PORTED` / `TESTED` after implementation | Identity-keyed reasoned removal ports the present/absent owner disposal branches and exact-once finalization. Record the local identity/refcount seam under Deviations; these rows are not blocked by the absent global ModelService. |
-| MDS-063 (planned) | `N-A (local MarkerService is non-optional)` | The source optional-chain branch has no local state: every MarkerDecorationsService is constructed with a concrete MarkerService. |
-
-Review approved these seam-based planned dispositions. Source-ledger statuses
-remain `TODO` until implementation and the required tests supply row evidence.
+| MDS-006–008, MDS-017, MDS-041, MDS-066 | `DEFERRED (needs global ModelService)` | ViewerServices has no authoritative process-wide model inventory/add/remove stream. Active Viewer leases seed and watch only their exact model identities; only an active `ModelDisposed` may perform bounded transient cleanup after the last same-URI identity leaves. |
+| MDS-005, MDS-014–015, MDS-019, MDS-040, MDS-069 | `TESTED` | Identity/refcount owners and an acquisition-ordered URI index replace the source's URI-unique global registry. Finalization is reasoned (`LeaseReleased`, `ModelDisposed`, `ServiceDisposed`), exactly once, disposes before index deletion, and ordinary detach never deletes host diagnostics. Occurrence-stable structural Marker pairing replaces JavaScript identity while preserving duplicate multiplicity. |
+| MDS-021–022 | `TESTED` | An explicit idempotent `dispose`/reset boundary replaces the source base-store hook; generation plus queued-update ownership prevents a reentrant delta from resurrecting decoration ids. |
+| CEC-004–010, CEC-012, CEC-014–015, CEW-053, CEW-152 | `DEFERRED` | Contributions instantiate eagerly and the registry has no attach-scoped idle handles or duplicate-id guard. Existing instance ownership and exact-once Viewer disposal are tested. |
+| CEW event/context/service rows and CFG-001–008, CFG-010–012, CFG-015–017, CFG-019–020 | row-specific `DEFERRED` | The readonly Viewer routes implemented events/configuration directly and retains its font subscription, but has no shared delivery queue, complete CodeEditor event surface, context-key/global-editor owner, automatic configuration observer, accessibility owner, or multi-window configuration owner. Each ledger row names its missing seam. |
+| CEW-050, CEW-106; VIEW-064, VIEW-069, VIEW-077–078, VIEW-094, VIEW-096, VIEW-103, VIEW-110–111 | `DEFERRED (no external overflow host option)` | Both overflowing widget nodes are View-owned internal descendants today. External parenting and the corresponding aggregate-focus tracker require a public host option. |
+| VIEW-015–018, VIEW-030–032, VIEW-035, VIEW-082–086 | `DEFERRED (no edit-context owner)` | Root copy/focus/key listeners are retained in the View store, but there is no replaceable textarea/native edit-context owner or accessibility seam. |
+| VIEW-004, VIEW-007, VIEW-039–040, VIEW-044, VIEW-052–056, VIEW-087–093, VIEW-099–100 | row-specific `DEFERRED` | GPU, overview/rulers, scroll decoration, indent guides, block decoration, minimap, and other absent ViewParts remain applicable parity work and therefore are deferred, not classified N-A. |
+| CEW/VIEW readonly edit, cut/paste, composition, and drop-edit rows; CEW-055, CEW-107, CEW-130; CEC-002, CEC-013; VIEW-080; MDC-002; MDCON-001, MDCON-003; MDS-001, MDS-063 | row-specific `N-A` | These states are genuinely unavailable at the readonly, direct-construction, single-widget/single-cursor, type-brand, or nonoptional-service boundary. Missing generally applicable owners are not included in this group. |
+| VIEW-027, VIEW-098 | `TESTED` | The source View frame owner is represented by the Viewer root frame owner. Disposal clears the slot before cancellation, and the browser regression forces the cancelled callback path after disposal. |
 
 ## Execution Record
 
@@ -1220,5 +1236,92 @@ approved at SHA-256
   compatible lookup surface, reasoned removal, service disposal ordering,
   ViewerServices provenance, and the required test matrices.
 
-Append implementation commits, validation results, and final ledger totals
-below. Freeze after implementation.
+2026-07-10 implementation closeout:
+
+- `a296f8d` (`fix(markers): own decorations by model identity`) adds identity
+  acquisitions, ordered same-URI fanout, model-specific hover lookup,
+  reasoned removal, blocked reentrant ingress, and exact-once owner/watch
+  disposal. The focused marker and hover packages pass on JS and native
+  (44/44 and 39/39 respectively after closing-audit regressions).
+- `beb8075` (`fix(view): close browser resource lifecycles`) lands View,
+  pointer-monitor, scrollbar-drag, drag-frame, and hide-timeout ownership.
+  Global pointer monitoring passes its capture/fallback/restart/stop/dispose
+  matrix; all GPMM-001–020 are TESTED. Scrollbar input passes left-button,
+  invalid-target, cloned-state, normal-axis, Windows 139/140/141, listener,
+  and idempotent-disposal branches; all SB-001–014 are TESTED. The related JS
+  package runs pass; the combined controller/view-layout run reports 179/179.
+- `4c96719` (`fix(viewer): enforce model and service ownership`) retains
+  Viewer- and View-scoped resources, owns only omitted services, preserves
+  explicitly supplied services and the caller model/host, cancels root render
+  work, disposes View before ViewModel, and removes owned DOM with containment
+  guards. `lifecycle_ownership_wbtest.mbt` and `set_value_api_wbtest.mbt` pass
+  7/7 each.
+- `2408063` (`fix(input): preserve mouse click detail`) restores the pinned
+  pointer/mouse split: pointerdown retains only the capture id, while mousedown
+  remains the semantic double/triple-click event. The nine affected focused
+  Playwright scenarios and the final browser suite pass.
+- `2e5a1fc` (`fix(lifecycle): close parity audit gaps`) closes the independent
+  review findings: duplicate marker multiplicity, owner-dispose-before-index-
+  deletion ordering, did-dispose-before-base-store teardown, model-change-
+  before-decoration-cleanup ordering, consecutive editor ids, and both
+  internal overflow-parent branches.
+- View disposal ports the source registration order, including the resource-
+  free ViewLines handle and remaining ViewParts iteration. Tests directly cover
+  active scrollbar-before-lifetime-store order, exact-once disposal, late-
+  registration release, and scrollbar-timeout cancellation. The expanded
+  browser model-swap scenario
+  passes 1/1 and covers View replacement, focus carry, persistent-hover
+  scrollbar rebind after a model swap, hostile post-dispose hover-timeout
+  observation, ordinary detach placeholder restoration, disposal with both
+  `Model=Some` and `Model=None`, pending model/placeholder-frame cancellation,
+  owned-DOM removal, and caller host/model preservation.
+- Focused JS/native checks, `moon info`, `moon fmt`, and `git diff --check`
+  passed. The final repository gates on the frozen implementation diff pass:
+  `just check` (only the five known warning-73 diagnostics), `just test`
+  (JS 880/880, native 690/690, wasm/wasm-gc 0), `just build`, and
+  `just test-browser` (41/41). The recursive `deltaDecorations` console warning
+  is the intentional existing reentrancy regression.
+- Two independent closing rereads covered the pinned source, all 427 ledger
+  rows, the local ownership audit, implementation diff, and focused/full test
+  evidence. Their findings were remediated before the final rerun; the final
+  rereads found no product bug, overclaim, malformed row, or unreviewed
+  deviation.
+
+Direct `TESTED` evidence map:
+
+| Ledger rows | Focused regression evidence |
+|---|---|
+| CEW-002, CEW-067, CEW-115; CEC-003, CEC-011 | editor_extensions_wbtest.mbt: contribution construction, lookup, exact-once Viewer disposal, and registry branch |
+| CEW-003–004, CEW-008, CEW-014, CEW-054, CEW-071–073, CEW-076, CEW-081, CEW-083, CEW-085, CEW-092, CEW-122, CEW-132, CEW-135 | lifecycle_ownership_wbtest.mbt, set_value_api_wbtest.mbt, and test_viewer_wbtest.mbt: dispose ordering, content/marker/model attach-detach/listener branches, and did-change-model before outgoing-decoration cleanup |
+| CEW-015–016, CEW-131 | cursor_behavior_wbtest.mbt: position-before-selection delivery and unchanged-state suppression |
+| CEW-051, CEW-105 | test_viewer_wbtest.mbt: owner-id decoration filtering and consecutive-Viewer process-counter progression |
+| CEW-019, CEW-049, CEW-077–079, CEW-118–120, CEW-124, CEW-140, CEW-148, CEW-155; VIEW-024, VIEW-027, VIEW-036, VIEW-067, VIEW-079, VIEW-098 | model_swap browser scenario: focus, host/root/attributes, real-view replacement/disposal, Model Some/None teardown, persistent-hover rebind/timer disposal, and pending-frame teardown |
+| VIEW-002, VIEW-038, VIEW-095 | view_lifecycle_wbtest.mbt: internal View construction, both overflowing-node parent branches, active scrollbar-before-store order, and idempotency |
+| MDC-003–006; MDS-002–005, MDS-009–016, MDS-018–033, MDS-035–040, MDS-042–061, MDS-064–065, MDS-067–069, MDS-072, MDS-076 | marker_decorations_lifecycle_wbtest.mbt plus marker package tests: lease/order/URI/duplicate/suppression/range/style/change/dispose matrices |
+| GPMM-001–020 | global_pointer_move_monitor_wbtest.mbt: capture and owning-window fallback, restart, both stop modes, button mismatch, pointerup, exceptions, and permanent disposal |
+| SB-001–014 | scrollbar_input_wbtest.mbt plus view_lifecycle_wbtest.mbt: listener/monitor ownership, left-button/invalid-target branches, cloned drag state, strict Windows threshold, and View teardown |
+
+`PORTED` rows are source-and-diff reconciled members without a focused branch
+assertion strong enough for `TESTED`; every `DEFERRED` and `N-A` row carries
+its reason in the status cell and is grouped above where several rows share an
+owner seam.
+
+Closing ledger totals:
+
+| Prefix | TESTED | PORTED | DEFERRED | N-A | PASS | TODO | Total |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| CEW | 36 | 40 | 59 | 23 | 0 | 0 | 158 |
+| CEC | 2 | 2 | 9 | 2 | 0 | 0 | 15 |
+| VIEW | 9 | 36 | 63 | 7 | 0 | 0 | 115 |
+| MDC | 4 | 1 | 0 | 1 | 0 | 0 | 6 |
+| MDCON | 0 | 1 | 0 | 2 | 0 | 0 | 3 |
+| MDS | 61 | 7 | 6 | 2 | 0 | 0 | 76 |
+| GPMM | 20 | 0 | 0 | 0 | 0 | 0 | 20 |
+| SB | 14 | 0 | 0 | 0 | 0 | 0 | 14 |
+| CFG | 0 | 4 | 16 | 0 | 0 | 0 | 20 |
+| **Total** | **146** | **91** | **153** | **37** | **0** | **0** | **427** |
+
+`PASS` is zero because no row uses the generic status: implemented nondeferred
+rows are recorded as `TESTED` or `PORTED`. The final full gates and independent
+whole-source/ledger/diff/test audits are complete. This implemented plan is now
+frozen historical evidence.

@@ -80,7 +80,7 @@ product contract and belongs in an ordinary local test.
 
 | Order | Child plan | Primary ownership | Depends on | Status |
 |---:|---|---|---|---|
-| 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | proposed |
+| 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | proposed |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | proposed |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | proposed |
@@ -317,3 +317,9 @@ The independent closing task is:
   storage (EOL Option B), and deferred semantic overlay with source-shaped
   seams (tokenization Option B). The lifecycle inventory must resolve shared
   marker-service registration ownership before implementation.
+- 2026-07-10: the lifecycle child is implemented and frozen. Its 427-row
+  ledger closes as 146 TESTED, 91 PORTED, 153 DEFERRED, and 37 N-A, with zero
+  TODO/PASS. Two independent closing audits found and drove fixes for duplicate
+  marker multiplicity, finalization/dispose ordering, evidence precision, and
+  malformed rows. Final gates pass: check, JS 880/880, native 690/690, build,
+  and browser 41/41. The portfolio proceeds to the async-model-features child.

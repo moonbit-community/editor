@@ -365,7 +365,7 @@ pass-through at this pin because the called helper never reads it.
 | CUR-009 | `CursorsController` constructor (`:43-58`) | Captures dependencies, builds context then collection, and initializes scoped/excluded controller state. | controller construction | TESTED | TODO |
 | CUR-010 | `dispose` (`:60-64`) | Disposes collection, auto-close actions, then superclass. | no marker/auto-close cursor resources | N-A (readonly resource seam) | TODO |
 | CUR-011 | `updateConfiguration` (`:66-69`) | Rebuilds context then updates collection context. | preserve context/reprojection order | TESTED | TODO |
-| CUR-012 | `onLineMappingChanged` (`:71-84`) | Revalidates the current full model/view states with source `viewModel`, reason NotSet, consuming COL-009/ONE-015/ONE-028. | local mapping change re-derives view state from the validated model side only | DEFERRED (dual-side validation dependency absent) | TODO |
+| CUR-012 | `onLineMappingChanged` (`:71-84`) | Calls `setStates(..., getCursorStates())` with source `viewModel` and reason NotSet; the full model/view pair reaches ONE-016/ONE-021 and the ONE-028 cross-validation branch directly. It does not call COL-009/ONE-015. | local mapping change re-derives view state from the validated model side only | DEFERRED (dual-side validation dependency absent) | TODO |
 | CUR-013 | mapping-version early return (`:72-81`) | Known/live version mismatch returns until content event arrives. | view/content event ordering | TESTED | TODO |
 | CUR-014 | `setHasFocus` (`:86-88`) | Replaces focus fact. | Viewer focus callback | DEFERRED (editable incremental-content lane) | TODO |
 | CUR-015 | `getPrimaryCursorState` (`:106-108`) | Returns primary full state. | state getter | TESTED | TODO |
@@ -1432,9 +1432,10 @@ The normalization reread specifically split fields from constructors, named-clas
    normalized in the ViewModel package before entering `CursorsController`,
    because the cursor package cannot import its owner without a cycle. Live
    mutation callers supply exactly one coordinate side, and the constructor's
-   fixed origin pair is built directly. Source `ensureValidState` and
-   line-mapping revalidation supply both sides; ONE-015/028, COL-009, and
-   CUR-012 defer that absent cross-validation surface. Local mapping changes
+   fixed origin pair is built directly. Source `ensureValidState` supplies both
+   sides through COL-009 → ONE-015 → ONE-028; line-mapping revalidation does so
+   independently through CUR-012 → `setStates` → ONE-016/021/028. Those rows
+   defer the absent cross-validation surface. Local mapping changes
    continue their existing model-side reprojection as an ordinary reduced-seam
    test, not as source-parity evidence. Do not invent unledgered
    `validateViewRange`/`validateViewPosition` behavior.
@@ -1860,10 +1861,12 @@ implementation:
   cursor-delivery FIFO is the local content-barrier/reentrancy seam.
 - Live cursor transitions supply exactly one coordinate side. ViewModel
   normalizes view inputs and TextModel validates model inputs. The fixed origin
-  constructor is direct; ONE-015/028, COL-009, and CUR-012 defer the absent
-  source path that cross-validates simultaneously supplied model and view
-  states. Local mapping reflow remains model-side reprojection and is not
-  claimed as parity at ambiguous wrap/injected-text mappings.
+  constructor is direct. COL-009/ONE-015 reach ONE-028 through
+  `ensureValidState`; CUR-012 reaches it separately through `setStates` and
+  ONE-016/021. All defer the absent source path that cross-validates
+  simultaneously supplied model and view states. Local mapping reflow remains
+  model-side reprojection and is not claimed as parity at ambiguous
+  wrap/injected-text mappings.
 - CMC-033's token-aware `WordOperations` algorithm remains unscoped. Selected
   word cases are regression/routing evidence only, and the `//` punctuation
   case is an explicit exact-label skip.

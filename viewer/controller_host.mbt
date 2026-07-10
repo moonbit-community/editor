@@ -65,7 +65,6 @@ fn Viewer::pointer_handler_helper(
         None => None
       }
     },
-    apply_scroll: change => self.apply_scroll_change(change),
     schedule_render: () => self.schedule_render(),
   }
 }

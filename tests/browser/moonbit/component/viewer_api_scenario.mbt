@@ -119,9 +119,20 @@ fn run_viewer_api_test() -> Unit {
         services~,
         options=ViewerOptions(
           soft_wrap=true,
+          smooth_scrolling=true,
           placeholder="Loading component fixture...",
         ),
       )
+      let scroll_event_count = Ref(0)
+      viewer.on_did_scroll_change(event => {
+        scroll_event_count.val = scroll_event_count.val + 1
+        host.set_attribute(
+          "data-scroll-events",
+          scroll_event_count.val.to_string(),
+        )
+        host.set_attribute("data-scroll-top", event.scroll_top.to_string())
+      })
+      |> ignore
       @viewer.debug_on_did_render_model(viewer, event => {
         if event.fresh {
           rendered_count.val = rendered_count.val + 1

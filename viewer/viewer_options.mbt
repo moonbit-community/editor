@@ -44,6 +44,9 @@ pub(all) struct ViewerOptions {
   folding_maximum_regions : Int
   /// Monaco's `unfoldOnClickAfterEndOfLine` editor option (default `false`).
   unfold_on_click_after_end_of_line : Bool
+  /// Monaco's `smoothScrolling` option (`false` by default). Physical mouse
+  /// wheels animate for 125 ms when enabled; trackpads remain immediate.
+  smooth_scrolling : Bool
   /// Monaco's `showUnused` editor option (default `true`,
   /// `editorOptions.ts:6645-6647`): adds the `showUnused` root class that
   /// gates the `squiggly-unnecessary` / `squiggly-inline-unnecessary`
@@ -93,6 +96,7 @@ pub fn ViewerOptions::ViewerOptions(
   folding_highlight? : Bool = true,
   folding_maximum_regions? : Int = 5000,
   unfold_on_click_after_end_of_line? : Bool = false,
+  smooth_scrolling? : Bool = false,
   show_unused? : Bool = true,
   show_deprecated? : Bool = true,
   font_family? : String = @config.editor_font_defaults.font_family,
@@ -119,6 +123,7 @@ pub fn ViewerOptions::ViewerOptions(
     folding_highlight,
     folding_maximum_regions,
     unfold_on_click_after_end_of_line,
+    smooth_scrolling,
     show_unused,
     show_deprecated,
     font_family,
@@ -143,6 +148,7 @@ fn ViewerOptions::same_layout_options(
     placeholder: other.placeholder,
     show_unused: other.show_unused,
     show_deprecated: other.show_deprecated,
+    smooth_scrolling: other.smooth_scrolling,
   } ==
   other
 }

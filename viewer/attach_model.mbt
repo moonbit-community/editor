@@ -83,6 +83,14 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // model queries them lazily per viewport (no per-frame bake). The render
   // pass pulls its viewport data from the view model at flush time.
   let view_model = self.build_view_model(model)
+  // Monaco's `ViewLayout.onDidScroll` is the single scroll-to-render seam.
+  // Immediate calls and rAF animation ticks both arrive here, avoiding a
+  // separate browser-only animation path.
+  listeners_to_remove.push(
+    view_model.view_layout.on_did_scroll(change => {
+      self.apply_scroll_change(Some(change))
+    }),
+  )
   let view = self.create_view(model)
   self.model_data = Some({ model, view_model, view, listeners_to_remove })
   self.rendered_window = None
@@ -152,7 +160,13 @@ fn Viewer::build_view_model(
   )
   // Injected text (inlay hints) reaches the projection through the model's
   // decoration storage (Track F), not through construction arguments.
-  let view_model = @view_model.ViewModel::with_options(model, options)
+  let view_model = @view_model.ViewModel::with_options(
+    model,
+    options,
+    smooth_scrolling=self.options.smooth_scrolling,
+    schedule_at_next_animation_frame~,
+    now=date_now_ms,
+  )
   // Seed the fresh layout's viewport box from the widget's measured
   // dimensions — Monaco's `ViewLayout` reads `EditorOption.layoutInfo` from
   // the configuration at construction.

@@ -436,6 +436,13 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
   if previous.theme != options.theme {
     self.apply_theme()
   }
+  if previous.smooth_scrolling != options.smooth_scrolling {
+    match self.get_view_model() {
+      Some(view_model) =>
+        view_model.view_layout.set_smooth_scrolling(options.smooth_scrolling)
+      None => ()
+    }
+  }
   // The folding half of Monaco's `onDidChangeConfiguration` subscription
   // (`folding.ts:155-180`).
   self.folding_on_configuration_changed(previous)
@@ -777,12 +784,11 @@ pub fn Viewer::restore_view_state(
   guard self.get_view_model() is Some(view_model) else { return }
   match state {
     Some(state) =>
-      self.apply_scroll_change(
-        view_model.view_layout.scroll_to(
-          scroll_top=state.scroll_top,
-          scroll_left=state.scroll_left,
-        ),
+      view_model.view_layout.scroll_to(
+        scroll_top=state.scroll_top,
+        scroll_left=state.scroll_left,
       )
+      |> ignore
     None => ()
   }
 }
@@ -838,9 +844,7 @@ pub fn Viewer::layout(self : Viewer) -> Unit {
 /// through the view's own listeners.
 pub fn Viewer::set_scroll_top(self : Viewer, new_scroll_top : Double) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
-  self.apply_scroll_change(
-    view_model.view_layout.scroll_to(scroll_top=new_scroll_top),
-  )
+  view_model.view_layout.scroll_to(scroll_top=new_scroll_top) |> ignore
 }
 
 ///|
@@ -848,12 +852,11 @@ pub fn Viewer::set_scroll_top(self : Viewer, new_scroll_top : Double) -> Unit {
 /// (`cew:1003-1006`, no model → no-op).
 pub fn Viewer::set_scroll_left(self : Viewer, new_scroll_left : Double) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
-  self.apply_scroll_change(
-    view_model.view_layout.scroll_to(
-      scroll_top=view_model.view_layout.position().scroll_top,
-      scroll_left=new_scroll_left,
-    ),
+  view_model.view_layout.scroll_to(
+    scroll_top=view_model.view_layout.position().scroll_top,
+    scroll_left=new_scroll_left,
   )
+  |> ignore
 }
 
 ///|
@@ -875,9 +878,7 @@ pub fn Viewer::set_scroll_position(
     Some(value) => value
     None => position.scroll_left
   }
-  self.apply_scroll_change(
-    view_model.view_layout.scroll_to(scroll_top~, scroll_left~),
-  )
+  view_model.view_layout.scroll_to(scroll_top~, scroll_left~) |> ignore
 }
 
 ///|
@@ -885,29 +886,27 @@ pub fn Viewer::set_scroll_position(
 /// keyboard arrow-scroll step.
 fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
-  self.apply_scroll_change(
-    view_model.view_layout.scroll_by(
-      delta_top=(lines * self.font_info.line_height).to_double(),
-    ),
+  view_model.view_layout.scroll_by(
+    delta_top=(lines * self.font_info.line_height).to_double(),
   )
+  |> ignore
 }
 
 ///|
 /// Scrolls by a viewport-height page delta — the PageUp/PageDown step.
 fn Viewer::scroll_by_pages(self : Viewer, pages : Int) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
-  self.apply_scroll_change(
-    view_model.view_layout.scroll_by(
-      delta_top=pages.to_double() * view_model.view_layout.dimensions().height,
-    ),
+  view_model.view_layout.scroll_by(
+    delta_top=pages.to_double() * view_model.view_layout.dimensions().height,
   )
+  |> ignore
 }
 
 ///|
 /// Scrolls to the top of the document — the Home key.
 fn Viewer::scroll_home(self : Viewer) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
-  self.apply_scroll_change(view_model.view_layout.scroll_to(scroll_top=0.0))
+  view_model.view_layout.scroll_to(scroll_top=0.0) |> ignore
 }
 
 ///|
@@ -915,9 +914,8 @@ fn Viewer::scroll_home(self : Viewer) -> Unit {
 fn Viewer::scroll_end(self : Viewer) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
   let dimensions = view_model.view_layout.dimensions()
-  self.apply_scroll_change(
-    view_model.view_layout.scroll_to(scroll_top=dimensions.scroll_height),
-  )
+  view_model.view_layout.scroll_to(scroll_top=dimensions.scroll_height)
+  |> ignore
 }
 
 ///|

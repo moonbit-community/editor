@@ -75,24 +75,73 @@ pub fn MouseHandler::hook_scrollable_scrollbar_input(
 
 ///|
 /// The editor's `ScrollableElement._onMouseWheel`: normalize into wheel
-/// units, run the shared delta pipeline (Monaco's editor scrollbar options —
-/// sensitivity 1, predominant axis, alt fast-scroll), and apply as an
-/// immediate scroll (the trackpad `setScrollPositionNow` path; the
-/// physical-wheel smooth-scroll fork is unported).
+/// units, classify the device, run the shared delta pipeline, target the
+/// future position, and choose Monaco's physical-wheel smooth path or its
+/// trackpad immediate path. Returns whether the browser event is consumed.
 pub fn MouseHandler::handle_editor_wheel(
   self : MouseHandler,
+  event : @rdom.Event,
   wheel : @rdom.WheelEvent,
-) -> Unit {
-  guard (self.view_helper.view_layout)() is Some(view_layout) else { return }
+) -> Bool {
+  if wheel_event_default_prevented(event) {
+    return false
+  }
+  guard (self.view_helper.view_layout)() is Some(view_layout) else {
+    return false
+  }
+  let standard_event = @scrollbar.StandardWheelEvent::new(wheel)
+  let classifier = @scrollbar.global_mouse_wheel_classifier()
+  classifier.accept_standard_wheel_event(standard_event)
   let (delta_left, delta_top) = @scrollbar.mouse_wheel_scroll_deltas(
-    @scrollbar.StandardWheelEvent::new(wheel),
+    standard_event,
     alt_key=wheel.get_alt_key(),
     shift_key=wheel.get_shift_key(),
   )
-  (self.view_helper.apply_scroll)(
-    view_layout.scroll_by(delta_left~, delta_top~),
-  )
+  let future = view_layout.future_position()
+  let desired = if standard_event.delta_y != 0.0 ||
+    standard_event.delta_x != 0.0 {
+    view_layout.validate_scroll_position({
+      scroll_left: if delta_left != 0.0 {
+        Some(future.scroll_left + delta_left)
+      } else {
+        None
+      },
+      scroll_top: if delta_top != 0.0 {
+        Some(future.scroll_top + delta_top)
+      } else {
+        None
+      },
+    })
+  } else {
+    future
+  }
+  let did_scroll = desired != future
+  if did_scroll {
+    let scrollable = view_layout.get_scrollable()
+    let update : @view_layout.ScrollPositionUpdate = {
+      scroll_left: Some(desired.scroll_left),
+      scroll_top: Some(desired.scroll_top),
+    }
+    if classifier.is_physical_mouse_wheel() {
+      scrollable.set_position_smooth(update)
+    } else {
+      scrollable.set_position_now(update) |> ignore
+    }
+  }
+  // EditorOption.scrollbar.alwaysConsumeMouseWheel defaults to true; the
+  // `consumeMouseWheelIfScrollbarIsNeeded` branch is therefore unreachable
+  // under the viewer's fixed resolved editor-scrollbar options.
+  let mut consume_mouse_wheel = did_scroll
+  let always_consume_mouse_wheel = true
+  if !consume_mouse_wheel && always_consume_mouse_wheel {
+    consume_mouse_wheel = true
+  }
+  consume_mouse_wheel
 }
+
+///|
+extern "js" fn wheel_event_default_prevented(event : @rdom.Event) -> Bool =
+  #| (event) => event.defaultPrevented
 
 ///|
 fn MouseHandler::start_scrollable_drag(
@@ -182,17 +231,14 @@ fn MouseHandler::apply_scrollable_position(
       match (self.view_helper.view_layout)() {
         Some(view_layout) =>
           if vertical {
-            (self.view_helper.apply_scroll)(
-              view_layout.scroll_to(scroll_top=desired),
-            )
+            view_layout.scroll_to(scroll_top=desired) |> ignore
           } else {
             let position = view_layout.position()
-            (self.view_helper.apply_scroll)(
-              view_layout.scroll_to(
-                scroll_top=position.scroll_top,
-                scroll_left=desired,
-              ),
+            view_layout.scroll_to(
+              scroll_top=position.scroll_top,
+              scroll_left=desired,
             )
+            |> ignore
           }
         None => ()
       }
@@ -274,9 +320,7 @@ fn MouseHandler::handle_browser_desperate_reveal(
   if delta_top != 0.0 || delta_left != 0.0 {
     match (self.view_helper.view_layout)() {
       Some(view_layout) =>
-        (self.view_helper.apply_scroll)(
-          view_layout.scroll_by(delta_left~, delta_top~),
-        )
+        view_layout.scroll_by(delta_left~, delta_top~) |> ignore
       None => ()
     }
   }

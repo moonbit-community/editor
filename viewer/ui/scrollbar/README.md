@@ -16,8 +16,10 @@ the editor and the hover widget; callers decide whether a new position updates
 - `track`, `slider`, `state`, `desired_position_from_track`, and drag/reveal
   methods expose the geometry needed by `viewer/browser/controller`.
 - `StandardWheelEvent` and `mouse_wheel_scroll_deltas` normalize wheel input;
-  `ScrollableElementOwner` and `ScrollbarDrag` let the controller distinguish
-  editor and hover drags.
+  `MouseWheelClassifier` retains Monaco's five-event device classifier so the
+  controller can animate physical wheels while applying touchpad/magic-mouse
+  input immediately. `ScrollableElementOwner` and `ScrollbarDrag` let the
+  controller distinguish editor and hover drags.
 - `CachedDomNode` is the narrow scrolling subset of Monaco's `FastDomNode`;
   exact CSS-value caches suppress redundant rail and retained-row writes.
 

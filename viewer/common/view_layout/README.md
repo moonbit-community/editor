@@ -4,9 +4,13 @@ DOM-free scrolling, line/whitespace layout, view zones, and view-line rendering.
 
 ## Responsibilities
 
-- `Scrollable` owns scroll dimensions and position; `ScrollbarState` contains the
-  pure slider geometry. `ViewLayout` is the viewer's single scroll truth and
-  computes visible/completely-visible windows and reveal positions.
+- `ScrollState` retains raw and validated positions; `Scrollable` owns current
+  and future positions plus the cubic smooth-animation state machine.
+  `EditorScrollable` normalizes editor content dimensions, while
+  `ScrollbarState` contains pure slider geometry. `ViewLayout` is the viewer's
+  single scroll truth and computes visible/completely-visible windows and reveal
+  positions. Animation scheduling and the clock are injected so this package
+  remains DOM/FFI-free.
 - `LinesLayout`, prefix-sum computers, and whitespace accessors map line/view-zone
   heights to vertical offsets. The current viewer assumes one uniform view-line
   height; variable line heights are outside the readonly contract.

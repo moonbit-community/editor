@@ -50,6 +50,9 @@ pub fn ViewModel::ViewModel(model : @model.TextModel) -> ViewModel {
 pub fn ViewModel::with_options(
   model : @model.TextModel,
   options : ViewModelOptions,
+  smooth_scrolling? : Bool = false,
+  schedule_at_next_animation_frame? : (() -> Unit) -> @base_common.Disposable = view_model_no_animation_scheduler,
+  now? : () -> Double = view_model_zero_clock,
 ) -> ViewModel {
   let lines = ViewModelLinesFromProjectedModel::new(
     model,
@@ -67,6 +70,9 @@ pub fn ViewModel::with_options(
   let view_layout = @view_layout.ViewLayout::new(
     line_height=options.font_info.line_height,
     line_count=lines.get_view_line_count(),
+    smooth_scrolling~,
+    schedule_at_next_animation_frame~,
+    now~,
   )
   let decorations = ViewModelDecorations::new(
     options.editor_id,
@@ -109,6 +115,19 @@ pub fn ViewModel::dispose(self : ViewModel) -> Unit {
     None => ()
   }
   self.registered_view_model = None
+  self.view_layout.dispose()
+}
+
+///|
+fn view_model_no_animation_scheduler(
+  _callback : () -> Unit,
+) -> @base_common.Disposable {
+  @base_common.Disposable::from(() => ())
+}
+
+///|
+fn view_model_zero_clock() -> Double {
+  0.0
 }
 
 ///|

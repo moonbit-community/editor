@@ -187,7 +187,7 @@ pub fn ViewModel::on_did_change_content_or_injected_text(Self, e? : @model.Inter
 pub fn ViewModel::set_hidden_areas(Self, Array[@common.Range], source? : String, force_update? : Bool) -> Bool
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
-pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions) -> Self
+pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions, smooth_scrolling? : Bool, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
 pub impl @model.ViewModel for ViewModel
 
 pub struct ViewModelDecorations {

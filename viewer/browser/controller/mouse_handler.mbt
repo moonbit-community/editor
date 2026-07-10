@@ -119,7 +119,6 @@ pub(all) struct PointerHandlerHelper {
   editor_scrollable : @scrollbar.ScrollableElementDom
   hover_scrollable : () -> @scrollbar.ScrollableElementDom?
   view_layout : () -> @view_layout.ViewLayout?
-  apply_scroll : (@view_layout.ScrollChange?) -> Unit
   schedule_render : () -> Unit
 }
 

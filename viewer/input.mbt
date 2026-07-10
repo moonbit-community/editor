@@ -52,11 +52,11 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   })
   view.overflow_guard.add_event_listener("wheel", event => {
     match event.to_wheel_event() {
-      Some(wheel) => {
-        event.prevent_default()
-        event.stop_propagation()
-        handler.handle_editor_wheel(wheel)
-      }
+      Some(wheel) =>
+        if handler.handle_editor_wheel(event, wheel) {
+          event.prevent_default()
+          event.stop_propagation()
+        }
       None => ()
     }
   })

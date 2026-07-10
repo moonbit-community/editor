@@ -257,12 +257,11 @@ fn Viewer::send_reveal_range(
   // (3) Commit the vertical scroll. A multi-line range under horizontal reveal
   // also resets `scroll_left` to 0 so most of both lines show
   // (`viewLines.ts:282`–`:289`). Clamping is free via `Scrollable`.
-  let change = if reveal_horizontal && multi_line {
+  let _ = if reveal_horizontal && multi_line {
     view_model.view_layout.scroll_to(scroll_top~, scroll_left=0.0)
   } else {
     view_model.view_layout.scroll_to(scroll_top~)
   }
-  self.apply_scroll_change(change)
   // (4) Horizontal request bookkeeping, after the vertical scroll so the
   // reveal's own scroll change cannot cancel the request it registers. A
   // single-line horizontal reveal is deferred — the target line's client rects
@@ -313,9 +312,7 @@ fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
     Some(scroll_left) => {
       // Set only `scroll_left`; the vertical reveal already settled `scroll_top`.
       let scroll_top = view_model.view_layout.position().scroll_top
-      self.apply_scroll_change(
-        view_model.view_layout.scroll_to(scroll_top~, scroll_left~),
-      )
+      view_model.view_layout.scroll_to(scroll_top~, scroll_left~) |> ignore
     }
     None => ()
   }

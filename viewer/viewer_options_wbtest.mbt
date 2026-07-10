@@ -1,6 +1,7 @@
 ///|
 test "viewer options default to no soft wrap view model options" {
   let options = ViewerOptions::default()
+  assert_false(options.smooth_scrolling)
   assert_eq(options.soft_wrap_column_for_content_width(720.0, 7.2), 0)
   assert_false(
     options

@@ -567,8 +567,8 @@ let scroll_wheel_sensitivity : Double = 50.0
 /// scrolling still moves a whole pixel. Answers pixel deltas to add to the
 /// scroll position — the sign flip back out of wheel units is Monaco's
 /// `futureScrollPosition.scrollTop - deltaScrollTop`. Option defaults mirror
-/// `resolveOptions`; the smooth-scroll fork stays unported (every consumer
-/// takes the trackpad `setScrollPositionNow` path).
+/// `resolveOptions`. The editor controller uses these deltas for both the
+/// classified physical-wheel smooth path and the trackpad immediate path.
 pub fn mouse_wheel_scroll_deltas(
   event : StandardWheelEvent,
   alt_key? : Bool = false,

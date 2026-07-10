@@ -10,13 +10,31 @@
 /// `afterLineNumber` directly (`ViewZone.anchor_line`). The `LinesLayout` held
 /// here is exactly the type the conformance suite validates.
 pub struct ViewLayout {
-  scrollable : Scrollable
+  scrollable : EditorScrollable
   priv mut lines : LinesLayout
   priv mut line_height : Int
   priv mut line_count : Int
   priv mut view_zones_arr : Array[ViewZone]
   priv mut content_width : Double
 }
+
+///|
+pub(all) struct Viewport {
+  top : Double
+  left : Double
+  width : Double
+  height : Double
+} derive(Eq, Debug)
+
+///|
+pub(all) struct SavedScrollState {
+  scroll_top : Double
+  scroll_top_without_view_zones : Double
+  scroll_left : Double
+} derive(Eq, Debug)
+
+///|
+let smooth_scrolling_time : Double = 125.0
 
 ///|
 /// Builds a faithful `LinesLayout` from the view-zone array: each zone becomes
@@ -41,13 +59,27 @@ fn build_lines(
 
 ///|
 /// Creates a view layout with a fixed line height and optional line count.
-pub fn ViewLayout::new(line_height~ : Int, line_count? : Int = 0) -> ViewLayout {
+pub fn ViewLayout::new(
+  line_height~ : Int,
+  line_count? : Int = 0,
+  smooth_scrolling? : Bool = false,
+  schedule_at_next_animation_frame? : (() -> Unit) -> @base_common.Disposable = no_animation_scheduler,
+  now? : () -> Double = zero_clock,
+) -> ViewLayout {
   let line_count = line_count.max(0)
   let layout : ViewLayout = {
     // `forceIntegerValues: true` (viewLayout.ts): the editor's scroll truth is
     // whole pixels, so fractional trackpad deltas never render at a subpixel
     // transform offset.
-    scrollable: Scrollable::new(force_integer_values=true),
+    scrollable: EditorScrollable::new(
+      if smooth_scrolling {
+        smooth_scrolling_time
+      } else {
+        0.0
+      },
+      schedule_at_next_animation_frame,
+      now,
+    ),
     lines: build_lines(line_count, line_height, []),
     line_height,
     line_count,
@@ -126,9 +158,15 @@ pub fn ViewLayout::set_viewport_size(
   width~ : Double,
   height~ : Double,
 ) -> ScrollChange? {
-  let dimensions = self.scrollable.dimensions()
-  self.scrollable.set_dimensions({ ..dimensions, width, height }) |> ignore
-  self.sync_dimensions()
+  let dimensions = self.scrollable.editor_dimensions()
+  self.scrollable.set_editor_dimensions(
+    EditorScrollDimensions::new(
+      width,
+      dimensions.content_width,
+      height,
+      self.get_content_height(),
+    ),
+  )
 }
 
 ///|
@@ -179,7 +217,7 @@ pub fn ViewLayout::get_content_height(self : ViewLayout) -> Double {
 /// the viewport), Monaco's `ViewLayout.getContentWidth` / scroll-dimensions
 /// `contentWidth`. Read by `CodeEditorWidget.getContentWidth`.
 pub fn ViewLayout::get_content_width(self : ViewLayout) -> Double {
-  self.content_width
+  self.scrollable.editor_dimensions().content_width
 }
 
 ///|
@@ -397,7 +435,10 @@ pub fn ViewLayout::scroll_to(
     Some(value) => value
     None => position.scroll_left
   }
-  self.scrollable.set_position({ scroll_left, scroll_top })
+  self.scrollable.set_position_now({
+    scroll_left: Some(scroll_left),
+    scroll_top: Some(scroll_top),
+  })
 }
 
 ///|
@@ -420,6 +461,130 @@ pub fn ViewLayout::position(self : ViewLayout) -> ScrollPosition {
 /// Current viewport and content dimensions.
 pub fn ViewLayout::dimensions(self : ViewLayout) -> ScrollDimensions {
   self.scrollable.dimensions()
+}
+
+///|
+pub fn ViewLayout::get_scrollable(self : ViewLayout) -> Scrollable {
+  self.scrollable.get_scrollable()
+}
+
+///|
+pub fn ViewLayout::on_did_scroll(
+  self : ViewLayout,
+  listener : (ScrollChange) -> Unit,
+) -> @base_common.Disposable {
+  self.scrollable.on_did_scroll(listener)
+}
+
+///|
+pub fn ViewLayout::on_did_content_size_change(
+  self : ViewLayout,
+  listener : (ContentSizeChange) -> Unit,
+) -> @base_common.Disposable {
+  self.scrollable.on_did_content_size_change(listener)
+}
+
+///|
+pub fn ViewLayout::set_smooth_scrolling(
+  self : ViewLayout,
+  enabled : Bool,
+) -> Unit {
+  self.scrollable.set_smooth_scroll_duration(
+    if enabled {
+      smooth_scrolling_time
+    } else {
+      0.0
+    },
+  )
+}
+
+///|
+pub fn ViewLayout::validate_scroll_position(
+  self : ViewLayout,
+  position : ScrollPositionUpdate,
+) -> ScrollPosition {
+  self.scrollable.validate_scroll_position(position)
+}
+
+///|
+pub fn ViewLayout::future_position(self : ViewLayout) -> ScrollPosition {
+  self.scrollable.future_position()
+}
+
+///|
+pub fn ViewLayout::get_current_viewport(self : ViewLayout) -> Viewport {
+  let dimensions = self.scrollable.dimensions()
+  let position = self.scrollable.position()
+  {
+    top: truncate_double(position.scroll_top),
+    left: truncate_double(position.scroll_left),
+    width: truncate_double(dimensions.width),
+    height: truncate_double(dimensions.height),
+  }
+}
+
+///|
+pub fn ViewLayout::get_future_viewport(self : ViewLayout) -> Viewport {
+  let dimensions = self.scrollable.dimensions()
+  let position = self.scrollable.future_position()
+  {
+    top: truncate_double(position.scroll_top),
+    left: truncate_double(position.scroll_left),
+    width: truncate_double(dimensions.width),
+    height: truncate_double(dimensions.height),
+  }
+}
+
+///|
+pub fn ViewLayout::save_state(self : ViewLayout) -> SavedScrollState {
+  let position = self.scrollable.future_position()
+  let first_line = self.lines.get_line_number_at_or_after_vertical_offset(
+    position.scroll_top.to_int(),
+  )
+  let whitespace_above = self.lines
+    .get_whitespace_accumulated_height_before_line_number(first_line)
+    .to_double()
+  {
+    scroll_top: position.scroll_top,
+    scroll_top_without_view_zones: position.scroll_top - whitespace_above,
+    scroll_left: position.scroll_left,
+  }
+}
+
+///|
+pub fn ViewLayout::scroll_to_smooth(
+  self : ViewLayout,
+  scroll_top~ : Double,
+  scroll_left? : Double,
+) -> Unit {
+  self.scrollable.set_position_smooth({
+    scroll_left,
+    scroll_top: Some(scroll_top),
+  })
+}
+
+///|
+pub fn ViewLayout::has_pending_scroll_animation(self : ViewLayout) -> Bool {
+  self.scrollable.has_pending_scroll_animation()
+}
+
+///|
+pub fn ViewLayout::delta_scroll_now(
+  self : ViewLayout,
+  delta_scroll_left : Double,
+  delta_scroll_top : Double,
+) -> Unit {
+  let position = self.scrollable.position()
+  self.scrollable.set_position_now({
+    scroll_left: Some(position.scroll_left + delta_scroll_left),
+    scroll_top: Some(position.scroll_top + delta_scroll_top),
+  })
+  |> ignore
+}
+
+///|
+pub fn ViewLayout::dispose(self : ViewLayout) -> Unit {
+  self.scrollable.dispose()
 }
 
 ///|
@@ -447,12 +612,15 @@ pub fn ViewLayout::window_origin(
 
 ///|
 fn ViewLayout::sync_dimensions(self : ViewLayout) -> ScrollChange? {
-  let dimensions = self.scrollable.dimensions()
-  self.scrollable.set_dimensions({
-    ..dimensions,
-    scroll_width: max_double(self.content_width, dimensions.width),
-    scroll_height: max_double(self.get_content_height(), dimensions.height),
-  })
+  let dimensions = self.scrollable.editor_dimensions()
+  self.scrollable.set_editor_dimensions(
+    EditorScrollDimensions::new(
+      dimensions.width,
+      self.content_width,
+      dimensions.height,
+      self.get_content_height(),
+    ),
+  )
 }
 
 ///|

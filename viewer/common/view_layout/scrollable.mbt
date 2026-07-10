@@ -1,8 +1,8 @@
+// Ported from `vscode/src/vs/base/common/scrollable.ts` and
+// `vscode/src/vs/editor/common/viewLayout/viewLayout.ts` at
+// b18492a288de038fbc7643aae6de8247029d11bd.
+
 ///|
-/// Scroll geometry, the Monaco `Scrollable` role: viewport size plus
-/// content size, both backend-neutral pixels. `scroll_width` and
-/// `scroll_height` are the scrollable content extents and never report
-/// smaller than the viewport.
 pub(all) struct ScrollDimensions {
   width : Double
   scroll_width : Double
@@ -11,16 +11,36 @@ pub(all) struct ScrollDimensions {
 } derive(Eq, Debug)
 
 ///|
-/// Synthetic scroll position in backend-neutral CSS pixels.
+pub(all) struct ScrollDimensionsUpdate {
+  width : Double?
+  scroll_width : Double?
+  height : Double?
+  scroll_height : Double?
+} derive(Eq, Debug)
+
+///|
 pub(all) struct ScrollPosition {
   scroll_left : Double
   scroll_top : Double
 } derive(Eq, Debug)
 
 ///|
-/// A scroll state change, Monaco's `ScrollEvent` role as plain data: the
-/// settled position plus what moved, so a view can decide what to repaint
-/// without owning scroll state itself.
+pub(all) struct ScrollPositionUpdate {
+  scroll_left : Double?
+  scroll_top : Double?
+} derive(Eq, Debug)
+
+///|
+pub(all) struct SmoothScrollPosition {
+  scroll_left : Double
+  scroll_top : Double
+  width : Double
+  height : Double
+} derive(Eq, Debug)
+
+///|
+/// Monaco `ScrollEvent` plus the compatibility facts existing viewer callers
+/// consume. Old/new geometry and all six change flags are exact source data.
 pub(all) struct ScrollChange {
   position : ScrollPosition
   delta_left : Double
@@ -28,180 +48,896 @@ pub(all) struct ScrollChange {
   left_changed : Bool
   top_changed : Bool
   dimensions_changed : Bool
+  in_smooth_scrolling : Bool
+  old_width : Double
+  old_scroll_width : Double
+  old_scroll_left : Double
+  width : Double
+  scroll_width : Double
+  scroll_left : Double
+  old_height : Double
+  old_scroll_height : Double
+  old_scroll_top : Double
+  height : Double
+  scroll_height : Double
+  scroll_top : Double
+  width_changed : Bool
+  scroll_width_changed : Bool
+  scroll_left_changed : Bool
+  height_changed : Bool
+  scroll_height_changed : Bool
+  scroll_top_changed : Bool
 } derive(Eq, Debug)
 
 ///|
-/// The single owner of scroll truth (synthetic scrolling): dimensions and
-/// a position always clamped inside them. Mutations answer with a
-/// `ScrollChange` fact when anything moved, `None` when the request was a
-/// no-op after clamping.
-pub struct Scrollable {
-  priv force_integer_values : Bool
-  priv mut dimensions : ScrollDimensions
-  priv mut position : ScrollPosition
-}
+/// Complete Monaco `ScrollState` (`scrollable.ts:43-179`). Raw positions are
+/// retained before validation so a later dimension expansion can recover a
+/// position that was temporarily clamped.
+pub(all) struct ScrollState {
+  force_integer_values : Bool
+  raw_scroll_left : Double
+  raw_scroll_top : Double
+  width : Double
+  scroll_width : Double
+  scroll_left : Double
+  height : Double
+  scroll_height : Double
+  scroll_top : Double
+} derive(Eq, Debug)
 
 ///|
-/// Creates a scrollable model with zero viewport/content dimensions.
-/// `force_integer_values` is Monaco's `IScrollableOptions.forceIntegerValues`:
-/// every incoming dimension and position is truncated to a whole pixel
-/// (`ScrollState`'s `width | 0` block) before clamping, so fractional wheel
-/// deltas and measured rects never leave the content at a subpixel offset.
-pub fn Scrollable::new(force_integer_values~ : Bool) -> Scrollable {
+pub fn ScrollState::new(
+  force_integer_values~ : Bool,
+  width : Double,
+  scroll_width : Double,
+  scroll_left : Double,
+  height : Double,
+  scroll_height : Double,
+  scroll_top : Double,
+) -> ScrollState {
+  let mut width = width
+  let mut scroll_width = scroll_width
+  let mut scroll_left = scroll_left
+  let mut height = height
+  let mut scroll_height = scroll_height
+  let mut scroll_top = scroll_top
+  if force_integer_values {
+    width = truncate_double(width)
+    scroll_width = truncate_double(scroll_width)
+    scroll_left = truncate_double(scroll_left)
+    height = truncate_double(height)
+    scroll_height = truncate_double(scroll_height)
+    scroll_top = truncate_double(scroll_top)
+  }
+  let raw_scroll_left = scroll_left
+  let raw_scroll_top = scroll_top
+  if width < 0.0 {
+    width = 0.0
+  }
+  if scroll_left + width > scroll_width {
+    scroll_left = scroll_width - width
+  }
+  if scroll_left < 0.0 {
+    scroll_left = 0.0
+  }
+  if height < 0.0 {
+    height = 0.0
+  }
+  if scroll_top + height > scroll_height {
+    scroll_top = scroll_height - height
+  }
+  if scroll_top < 0.0 {
+    scroll_top = 0.0
+  }
   {
     force_integer_values,
-    dimensions: {
-      width: 0.0,
-      scroll_width: 0.0,
-      height: 0.0,
-      scroll_height: 0.0,
+    raw_scroll_left,
+    raw_scroll_top,
+    width,
+    scroll_width,
+    scroll_left,
+    height,
+    scroll_height,
+    scroll_top,
+  }
+}
+
+///|
+pub fn ScrollState::equals(self : ScrollState, other : ScrollState) -> Bool {
+  self.raw_scroll_left == other.raw_scroll_left &&
+  self.raw_scroll_top == other.raw_scroll_top &&
+  self.width == other.width &&
+  self.scroll_width == other.scroll_width &&
+  self.scroll_left == other.scroll_left &&
+  self.height == other.height &&
+  self.scroll_height == other.scroll_height &&
+  self.scroll_top == other.scroll_top
+}
+
+///|
+pub fn ScrollState::with_scroll_dimensions(
+  self : ScrollState,
+  update : ScrollDimensionsUpdate,
+  use_raw_scroll_positions : Bool,
+) -> ScrollState {
+  ScrollState::new(
+    force_integer_values=self.force_integer_values,
+    option_or(update.width, self.width),
+    option_or(update.scroll_width, self.scroll_width),
+    if use_raw_scroll_positions {
+      self.raw_scroll_left
+    } else {
+      self.scroll_left
     },
-    position: { scroll_left: 0.0, scroll_top: 0.0 },
-  }
-}
-
-///|
-/// Current viewport and scrollable content dimensions.
-pub fn Scrollable::dimensions(self : Scrollable) -> ScrollDimensions {
-  self.dimensions
-}
-
-///|
-/// Current clamped scroll position.
-pub fn Scrollable::position(self : Scrollable) -> ScrollPosition {
-  self.position
-}
-
-///|
-/// Replaces the dimensions and re-clamps the position into them.
-pub fn Scrollable::set_dimensions(
-  self : Scrollable,
-  dimensions : ScrollDimensions,
-) -> ScrollChange? {
-  let width = self.to_integer(dimensions.width)
-  let height = self.to_integer(dimensions.height)
-  let normalized : ScrollDimensions = {
-    width: max_double(width, 0.0),
-    scroll_width: max_double(
-      self.to_integer(dimensions.scroll_width),
-      max_double(width, 0.0),
-    ),
-    height: max_double(height, 0.0),
-    scroll_height: max_double(
-      self.to_integer(dimensions.scroll_height),
-      max_double(height, 0.0),
-    ),
-  }
-  let dimensions_changed = normalized != self.dimensions
-  if !dimensions_changed {
-    return None
-  }
-  self.dimensions = normalized
-  let clamped = clamp_position(normalized, self.position)
-  self.change_to(clamped, dimensions_changed=true)
-}
-
-///|
-/// Moves to the requested position, truncated (when `force_integer_values`)
-/// and clamped inside the dimensions.
-pub fn Scrollable::set_position(
-  self : Scrollable,
-  position : ScrollPosition,
-) -> ScrollChange? {
-  let requested : ScrollPosition = {
-    scroll_left: self.to_integer(position.scroll_left),
-    scroll_top: self.to_integer(position.scroll_top),
-  }
-  self.change_to(
-    clamp_position(self.dimensions, requested),
-    dimensions_changed=false,
+    option_or(update.height, self.height),
+    option_or(update.scroll_height, self.scroll_height),
+    if use_raw_scroll_positions {
+      self.raw_scroll_top
+    } else {
+      self.scroll_top
+    },
   )
 }
 
 ///|
-/// `ScrollState`'s `value | 0`: truncation toward zero, applied to raw
-/// dimensions and positions before validation when `force_integer_values`.
-fn Scrollable::to_integer(self : Scrollable, value : Double) -> Double {
-  if self.force_integer_values {
-    value.to_int().to_double()
-  } else {
-    value
+pub fn ScrollState::with_scroll_position(
+  self : ScrollState,
+  update : ScrollPositionUpdate,
+) -> ScrollState {
+  ScrollState::new(
+    force_integer_values=self.force_integer_values,
+    self.width,
+    self.scroll_width,
+    option_or(update.scroll_left, self.raw_scroll_left),
+    self.height,
+    self.scroll_height,
+    option_or(update.scroll_top, self.raw_scroll_top),
+  )
+}
+
+///|
+fn ScrollState::smooth_position(self : ScrollState) -> SmoothScrollPosition {
+  {
+    scroll_left: self.scroll_left,
+    scroll_top: self.scroll_top,
+    width: self.width,
+    height: self.height,
   }
 }
 
 ///|
-/// Applies a wheel-style relative scroll.
+pub fn ScrollState::create_scroll_event(
+  self : ScrollState,
+  previous : ScrollState,
+  in_smooth_scrolling : Bool,
+) -> ScrollChange {
+  let width_changed = self.width != previous.width
+  let scroll_width_changed = self.scroll_width != previous.scroll_width
+  let scroll_left_changed = self.scroll_left != previous.scroll_left
+  let height_changed = self.height != previous.height
+  let scroll_height_changed = self.scroll_height != previous.scroll_height
+  let scroll_top_changed = self.scroll_top != previous.scroll_top
+  {
+    position: { scroll_left: self.scroll_left, scroll_top: self.scroll_top },
+    delta_left: self.scroll_left - previous.scroll_left,
+    delta_top: self.scroll_top - previous.scroll_top,
+    left_changed: scroll_left_changed,
+    top_changed: scroll_top_changed,
+    dimensions_changed: width_changed ||
+    scroll_width_changed ||
+    height_changed ||
+    scroll_height_changed,
+    in_smooth_scrolling,
+    old_width: previous.width,
+    old_scroll_width: previous.scroll_width,
+    old_scroll_left: previous.scroll_left,
+    width: self.width,
+    scroll_width: self.scroll_width,
+    scroll_left: self.scroll_left,
+    old_height: previous.height,
+    old_scroll_height: previous.scroll_height,
+    old_scroll_top: previous.scroll_top,
+    height: self.height,
+    scroll_height: self.scroll_height,
+    scroll_top: self.scroll_top,
+    width_changed,
+    scroll_width_changed,
+    scroll_left_changed,
+    height_changed,
+    scroll_height_changed,
+    scroll_top_changed,
+  }
+}
+
+///|
+pub(all) struct SmoothScrollingUpdate {
+  scroll_left : Double
+  scroll_top : Double
+  is_done : Bool
+} derive(Eq, Debug)
+
+///|
+pub fn SmoothScrollingUpdate::new(
+  scroll_left : Double,
+  scroll_top : Double,
+  is_done : Bool,
+) -> SmoothScrollingUpdate {
+  { scroll_left, scroll_top, is_done }
+}
+
+///|
+/// Monaco `SmoothScrollingOperation` (`scrollable.ts:431-514`).
+pub struct SmoothScrollingOperation {
+  from : SmoothScrollPosition
+  mut to : SmoothScrollPosition
+  duration : Double
+  start_time : Double
+  mut animation_frame_disposable : @base_common.Disposable?
+  mut scroll_left_animation : (Double) -> Double
+  mut scroll_top_animation : (Double) -> Double
+}
+
+///|
+pub fn SmoothScrollingOperation::new(
+  from : SmoothScrollPosition,
+  to : SmoothScrollPosition,
+  start_time : Double,
+  duration : Double,
+) -> SmoothScrollingOperation {
+  let operation : SmoothScrollingOperation = {
+    from,
+    to,
+    duration,
+    start_time,
+    animation_frame_disposable: None,
+    scroll_left_animation: completion => completion,
+    scroll_top_animation: completion => completion,
+  }
+  operation.init_animations()
+  operation
+}
+
+///|
+fn SmoothScrollingOperation::init_animations(
+  self : SmoothScrollingOperation,
+) -> Unit {
+  self.scroll_left_animation = init_scroll_animation(
+    self.from.scroll_left,
+    self.to.scroll_left,
+    self.to.width,
+  )
+  self.scroll_top_animation = init_scroll_animation(
+    self.from.scroll_top,
+    self.to.scroll_top,
+    self.to.height,
+  )
+}
+
+///|
+/// `_initAnimation` (`scrollable.ts:458-473`), including the strict `> 2.5`
+/// boundary, 0.75 viewport stops, and 0.33 composed cut.
+fn init_scroll_animation(
+  from : Double,
+  to : Double,
+  viewport_size : Double,
+) -> (Double) -> Double {
+  let delta = (from - to).abs()
+  if delta > 2.5 * viewport_size {
+    let (stop1, stop2) = if from < to {
+      (from + 0.75 * viewport_size, to - 0.75 * viewport_size)
+    } else {
+      (from - 0.75 * viewport_size, to + 0.75 * viewport_size)
+    }
+    create_composed(
+      create_ease_out_cubic(from, stop1),
+      create_ease_out_cubic(stop2, to),
+      0.33,
+    )
+  } else {
+    create_ease_out_cubic(from, to)
+  }
+}
+
+///|
+pub fn SmoothScrollingOperation::dispose(
+  self : SmoothScrollingOperation,
+) -> Unit {
+  match self.animation_frame_disposable {
+    Some(disposable) => {
+      disposable.dispose()
+      self.animation_frame_disposable = None
+    }
+    None => ()
+  }
+}
+
+///|
+pub fn SmoothScrollingOperation::accept_scroll_dimensions(
+  self : SmoothScrollingOperation,
+  state : ScrollState,
+) -> Unit {
+  let target = state.with_scroll_position({
+    scroll_left: Some(self.to.scroll_left),
+    scroll_top: Some(self.to.scroll_top),
+  })
+  self.to = target.smooth_position()
+  self.init_animations()
+}
+
+///|
+pub fn SmoothScrollingOperation::tick_at(
+  self : SmoothScrollingOperation,
+  now : Double,
+) -> SmoothScrollingUpdate {
+  let completion = (now - self.start_time) / self.duration
+  if completion < 1.0 {
+    {
+      scroll_left: (self.scroll_left_animation)(completion),
+      scroll_top: (self.scroll_top_animation)(completion),
+      is_done: false,
+    }
+  } else {
+    {
+      scroll_left: self.to.scroll_left,
+      scroll_top: self.to.scroll_top,
+      is_done: true,
+    }
+  }
+}
+
+///|
+pub fn SmoothScrollingOperation::combine(
+  self : SmoothScrollingOperation,
+  from : SmoothScrollPosition,
+  to : SmoothScrollPosition,
+  duration : Double,
+  now : Double,
+) -> SmoothScrollingOperation {
+  let _ = self
+  SmoothScrollingOperation::start(from, to, duration, now)
+}
+
+///|
+pub fn SmoothScrollingOperation::start(
+  from : SmoothScrollPosition,
+  to : SmoothScrollPosition,
+  duration : Double,
+  now : Double,
+) -> SmoothScrollingOperation {
+  // Pretend the animation already started for a quicker response.
+  SmoothScrollingOperation::new(from, to, now - 10.0, duration + 10.0)
+}
+
+///|
+fn create_ease_out_cubic(from : Double, to : Double) -> (Double) -> Double {
+  let delta = to - from
+  completion => from + delta * ease_out_cubic(completion)
+}
+
+///|
+fn create_composed(
+  first : (Double) -> Double,
+  second : (Double) -> Double,
+  cut : Double,
+) -> (Double) -> Double {
+  completion => {
+    if completion < cut {
+      first(completion / cut)
+    } else {
+      second((completion - cut) / (1.0 - cut))
+    }
+  }
+}
+
+///|
+fn ease_in_cubic(value : Double) -> Double {
+  value * value * value
+}
+
+///|
+fn ease_out_cubic(value : Double) -> Double {
+  1.0 - ease_in_cubic(1.0 - value)
+}
+
+///|
+/// Complete Monaco `Scrollable` state machine (`scrollable.ts:225-395`). The
+/// scheduler and clock are injected so this package remains DOM/FFI-free.
+pub struct Scrollable {
+  priv mut smooth_scroll_duration : Double
+  priv schedule_at_next_animation_frame : (() -> Unit) -> @base_common.Disposable
+  priv now : () -> Double
+  priv mut state : ScrollState
+  priv mut smooth_scrolling : SmoothScrollingOperation?
+  priv mut operation_generation : Int
+  priv on_scroll_emitter : @base_common.Emitter[ScrollChange]
+}
+
+///|
+pub fn Scrollable::new(
+  force_integer_values~ : Bool,
+  smooth_scroll_duration? : Double = 0.0,
+  schedule_at_next_animation_frame? : (() -> Unit) -> @base_common.Disposable = no_animation_scheduler,
+  now? : () -> Double = zero_clock,
+) -> Scrollable {
+  {
+    smooth_scroll_duration,
+    schedule_at_next_animation_frame,
+    now,
+    state: ScrollState::new(force_integer_values~, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    smooth_scrolling: None,
+    operation_generation: 0,
+    on_scroll_emitter: @base_common.Emitter::new(),
+  }
+}
+
+///|
+pub fn Scrollable::on_scroll(
+  self : Scrollable,
+  listener : (ScrollChange) -> Unit,
+) -> @base_common.Disposable {
+  self.on_scroll_emitter.event(listener)
+}
+
+///|
+pub fn Scrollable::dispose(self : Scrollable) -> Unit {
+  self.cancel_smooth_scrolling()
+  self.on_scroll_emitter.dispose()
+}
+
+///|
+pub fn Scrollable::set_smooth_scroll_duration(
+  self : Scrollable,
+  duration : Double,
+) -> Unit {
+  self.smooth_scroll_duration = duration
+}
+
+///|
+pub fn Scrollable::validate_scroll_position(
+  self : Scrollable,
+  update : ScrollPositionUpdate,
+) -> ScrollPosition {
+  let state = self.state.with_scroll_position(update)
+  { scroll_left: state.scroll_left, scroll_top: state.scroll_top }
+}
+
+///|
+pub fn Scrollable::dimensions(self : Scrollable) -> ScrollDimensions {
+  {
+    width: self.state.width,
+    scroll_width: self.state.scroll_width,
+    height: self.state.height,
+    scroll_height: self.state.scroll_height,
+  }
+}
+
+///|
+pub fn Scrollable::set_scroll_dimensions(
+  self : Scrollable,
+  update : ScrollDimensionsUpdate,
+  use_raw_scroll_positions : Bool,
+) -> ScrollChange? {
+  let new_state = self.state.with_scroll_dimensions(
+    update, use_raw_scroll_positions,
+  )
+  let change = self.set_state(
+    new_state,
+    in_smooth_scrolling=self.smooth_scrolling is Some(_),
+  )
+  match self.smooth_scrolling {
+    Some(operation) => operation.accept_scroll_dimensions(self.state)
+    None => ()
+  }
+  change
+}
+
+///|
+pub fn Scrollable::set_dimensions(
+  self : Scrollable,
+  dimensions : ScrollDimensions,
+) -> ScrollChange? {
+  self.set_scroll_dimensions(
+    {
+      width: Some(dimensions.width),
+      scroll_width: Some(dimensions.scroll_width),
+      height: Some(dimensions.height),
+      scroll_height: Some(dimensions.scroll_height),
+    },
+    true,
+  )
+}
+
+///|
+pub fn Scrollable::future_position(self : Scrollable) -> ScrollPosition {
+  match self.smooth_scrolling {
+    Some(operation) =>
+      {
+        scroll_left: operation.to.scroll_left,
+        scroll_top: operation.to.scroll_top,
+      }
+    None => self.position()
+  }
+}
+
+///|
+pub fn Scrollable::position(self : Scrollable) -> ScrollPosition {
+  { scroll_left: self.state.scroll_left, scroll_top: self.state.scroll_top }
+}
+
+///|
+pub fn Scrollable::set_position_now(
+  self : Scrollable,
+  update : ScrollPositionUpdate,
+) -> ScrollChange? {
+  let new_state = self.state.with_scroll_position(update)
+  self.cancel_smooth_scrolling()
+  self.set_state(new_state, in_smooth_scrolling=false)
+}
+
+///|
+pub fn Scrollable::set_position(
+  self : Scrollable,
+  position : ScrollPosition,
+) -> ScrollChange? {
+  self.set_position_now({
+    scroll_left: Some(position.scroll_left),
+    scroll_top: Some(position.scroll_top),
+  })
+}
+
+///|
+pub fn Scrollable::set_position_smooth(
+  self : Scrollable,
+  update : ScrollPositionUpdate,
+  reuse_animation? : Bool = false,
+) -> Unit {
+  if self.smooth_scroll_duration == 0.0 {
+    self.set_position_now(update) |> ignore
+    return
+  }
+  match self.smooth_scrolling {
+    Some(operation) => {
+      let update : ScrollPositionUpdate = {
+        scroll_left: Some(
+          option_or(update.scroll_left, operation.to.scroll_left),
+        ),
+        scroll_top: Some(option_or(update.scroll_top, operation.to.scroll_top)),
+      }
+      let valid_target = self.state
+        .with_scroll_position(update)
+        .smooth_position()
+      if operation.to.scroll_left == valid_target.scroll_left &&
+        operation.to.scroll_top == valid_target.scroll_top {
+        return
+      }
+      let new_operation = if reuse_animation {
+        SmoothScrollingOperation::new(
+          operation.from,
+          valid_target,
+          operation.start_time,
+          operation.duration,
+        )
+      } else {
+        operation.combine(
+          self.state.smooth_position(),
+          valid_target,
+          self.smooth_scroll_duration,
+          (self.now)(),
+        )
+      }
+      operation.dispose()
+      self.operation_generation += 1
+      self.smooth_scrolling = Some(new_operation)
+    }
+    None => {
+      let valid_target = self.state
+        .with_scroll_position(update)
+        .smooth_position()
+      self.operation_generation += 1
+      self.smooth_scrolling = Some(
+        SmoothScrollingOperation::start(
+          self.state.smooth_position(),
+          valid_target,
+          self.smooth_scroll_duration,
+          (self.now)(),
+        ),
+      )
+    }
+  }
+  self.schedule_smooth_scrolling_frame()
+}
+
+///|
+pub fn Scrollable::has_pending_scroll_animation(self : Scrollable) -> Bool {
+  self.smooth_scrolling is Some(_)
+}
+
+///|
+fn Scrollable::schedule_smooth_scrolling_frame(self : Scrollable) -> Unit {
+  let generation = self.operation_generation
+  let disposable = (self.schedule_at_next_animation_frame)(() => {
+    guard self.operation_generation == generation else { return }
+    guard self.smooth_scrolling is Some(operation) else { return }
+    operation.animation_frame_disposable = None
+    self.perform_smooth_scrolling()
+  })
+  match self.smooth_scrolling {
+    Some(operation) if self.operation_generation == generation =>
+      operation.animation_frame_disposable = Some(disposable)
+    _ => disposable.dispose()
+  }
+}
+
+///|
+fn Scrollable::perform_smooth_scrolling(self : Scrollable) -> Unit {
+  guard self.smooth_scrolling is Some(operation) else { return }
+  let generation = self.operation_generation
+  let update = operation.tick_at((self.now)())
+  let new_state = self.state.with_scroll_position({
+    scroll_left: Some(update.scroll_left),
+    scroll_top: Some(update.scroll_top),
+  })
+  self.set_state(new_state, in_smooth_scrolling=true) |> ignore
+  guard self.operation_generation == generation &&
+    self.smooth_scrolling is Some(_) else {
+    return
+  }
+  if update.is_done {
+    operation.dispose()
+    self.smooth_scrolling = None
+    return
+  }
+  self.schedule_smooth_scrolling_frame()
+}
+
+///|
+fn Scrollable::set_state(
+  self : Scrollable,
+  new_state : ScrollState,
+  in_smooth_scrolling~ : Bool,
+) -> ScrollChange? {
+  let old_state = self.state
+  if old_state.equals(new_state) {
+    return None
+  }
+  self.state = new_state
+  let change = self.state.create_scroll_event(old_state, in_smooth_scrolling)
+  self.on_scroll_emitter.fire(change)
+  Some(change)
+}
+
+///|
+fn Scrollable::cancel_smooth_scrolling(self : Scrollable) -> Unit {
+  match self.smooth_scrolling {
+    Some(operation) => operation.dispose()
+    None => ()
+  }
+  self.operation_generation += 1
+  self.smooth_scrolling = None
+}
+
+///|
 pub fn Scrollable::scroll_by(
   self : Scrollable,
   delta_left? : Double = 0.0,
   delta_top? : Double = 0.0,
 ) -> ScrollChange? {
-  self.set_position({
-    scroll_left: self.position.scroll_left + delta_left,
-    scroll_top: self.position.scroll_top + delta_top,
+  let position = self.position()
+  self.set_position_now({
+    scroll_left: Some(position.scroll_left + delta_left),
+    scroll_top: Some(position.scroll_top + delta_top),
   })
 }
 
 ///|
-fn Scrollable::change_to(
-  self : Scrollable,
-  position : ScrollPosition,
-  dimensions_changed~ : Bool,
+/// Monaco `EditorScrollDimensions` (`viewLayout.ts:19-71`).
+pub(all) struct EditorScrollDimensions {
+  width : Double
+  content_width : Double
+  scroll_width : Double
+  height : Double
+  content_height : Double
+  scroll_height : Double
+} derive(Eq, Debug)
+
+///|
+pub fn EditorScrollDimensions::new(
+  width : Double,
+  content_width : Double,
+  height : Double,
+  content_height : Double,
+) -> EditorScrollDimensions {
+  let width = truncate_double(width).max(0.0)
+  let content_width = truncate_double(content_width).max(0.0)
+  let height = truncate_double(height).max(0.0)
+  let content_height = truncate_double(content_height).max(0.0)
+  {
+    width,
+    content_width,
+    scroll_width: width.max(content_width),
+    height,
+    content_height,
+    scroll_height: height.max(content_height),
+  }
+}
+
+///|
+pub(all) struct ContentSizeChange {
+  old_content_width : Double
+  old_content_height : Double
+  content_width : Double
+  content_height : Double
+} derive(Eq, Debug)
+
+///|
+/// Complete Monaco `EditorScrollable` (`viewLayout.ts:73-154`).
+pub struct EditorScrollable {
+  priv scrollable : Scrollable
+  priv mut editor_dimensions : EditorScrollDimensions
+  priv content_size_emitter : @base_common.Emitter[ContentSizeChange]
+}
+
+///|
+pub fn EditorScrollable::new(
+  smooth_scroll_duration : Double,
+  schedule_at_next_animation_frame : (() -> Unit) -> @base_common.Disposable,
+  now : () -> Double,
+) -> EditorScrollable {
+  {
+    scrollable: Scrollable::new(
+      force_integer_values=true,
+      smooth_scroll_duration~,
+      schedule_at_next_animation_frame~,
+      now~,
+    ),
+    editor_dimensions: EditorScrollDimensions::new(0.0, 0.0, 0.0, 0.0),
+    content_size_emitter: @base_common.Emitter::new(),
+  }
+}
+
+///|
+pub fn EditorScrollable::get_scrollable(self : EditorScrollable) -> Scrollable {
+  self.scrollable
+}
+
+///|
+pub fn EditorScrollable::on_did_scroll(
+  self : EditorScrollable,
+  listener : (ScrollChange) -> Unit,
+) -> @base_common.Disposable {
+  self.scrollable.on_scroll(listener)
+}
+
+///|
+pub fn EditorScrollable::on_did_content_size_change(
+  self : EditorScrollable,
+  listener : (ContentSizeChange) -> Unit,
+) -> @base_common.Disposable {
+  self.content_size_emitter.event(listener)
+}
+
+///|
+pub fn EditorScrollable::set_smooth_scroll_duration(
+  self : EditorScrollable,
+  duration : Double,
+) -> Unit {
+  self.scrollable.set_smooth_scroll_duration(duration)
+}
+
+///|
+pub fn EditorScrollable::validate_scroll_position(
+  self : EditorScrollable,
+  update : ScrollPositionUpdate,
+) -> ScrollPosition {
+  self.scrollable.validate_scroll_position(update)
+}
+
+///|
+pub fn EditorScrollable::editor_dimensions(
+  self : EditorScrollable,
+) -> EditorScrollDimensions {
+  self.editor_dimensions
+}
+
+///|
+pub fn EditorScrollable::dimensions(
+  self : EditorScrollable,
+) -> ScrollDimensions {
+  self.scrollable.dimensions()
+}
+
+///|
+pub fn EditorScrollable::set_editor_dimensions(
+  self : EditorScrollable,
+  dimensions : EditorScrollDimensions,
 ) -> ScrollChange? {
-  let previous = self.position
-  let left_changed = position.scroll_left != previous.scroll_left
-  let top_changed = position.scroll_top != previous.scroll_top
-  if !left_changed && !top_changed && !dimensions_changed {
+  if self.editor_dimensions == dimensions {
     return None
   }
-  self.position = position
-  Some({
-    position,
-    delta_left: position.scroll_left - previous.scroll_left,
-    delta_top: position.scroll_top - previous.scroll_top,
-    left_changed,
-    top_changed,
-    dimensions_changed,
-  })
+  let old_dimensions = self.editor_dimensions
+  self.editor_dimensions = dimensions
+  let change = self.scrollable.set_scroll_dimensions(
+    {
+      width: Some(dimensions.width),
+      scroll_width: Some(dimensions.scroll_width),
+      height: Some(dimensions.height),
+      scroll_height: Some(dimensions.scroll_height),
+    },
+    true,
+  )
+  if old_dimensions.content_width != dimensions.content_width ||
+    old_dimensions.content_height != dimensions.content_height {
+    self.content_size_emitter.fire({
+      old_content_width: old_dimensions.content_width,
+      old_content_height: old_dimensions.content_height,
+      content_width: dimensions.content_width,
+      content_height: dimensions.content_height,
+    })
+  }
+  change
 }
 
 ///|
-fn clamp_position(
-  dimensions : ScrollDimensions,
-  position : ScrollPosition,
+pub fn EditorScrollable::future_position(
+  self : EditorScrollable,
 ) -> ScrollPosition {
-  {
-    scroll_left: clamp_double(
-      position.scroll_left,
-      0.0,
-      dimensions.scroll_width - dimensions.width,
-    ),
-    scroll_top: clamp_double(
-      position.scroll_top,
-      0.0,
-      dimensions.scroll_height - dimensions.height,
-    ),
+  self.scrollable.future_position()
+}
+
+///|
+pub fn EditorScrollable::position(self : EditorScrollable) -> ScrollPosition {
+  self.scrollable.position()
+}
+
+///|
+pub fn EditorScrollable::set_position_now(
+  self : EditorScrollable,
+  update : ScrollPositionUpdate,
+) -> ScrollChange? {
+  self.scrollable.set_position_now(update)
+}
+
+///|
+pub fn EditorScrollable::set_position_smooth(
+  self : EditorScrollable,
+  update : ScrollPositionUpdate,
+) -> Unit {
+  self.scrollable.set_position_smooth(update)
+}
+
+///|
+pub fn EditorScrollable::has_pending_scroll_animation(
+  self : EditorScrollable,
+) -> Bool {
+  self.scrollable.has_pending_scroll_animation()
+}
+
+///|
+pub fn EditorScrollable::scroll_by(
+  self : EditorScrollable,
+  delta_left? : Double = 0.0,
+  delta_top? : Double = 0.0,
+) -> ScrollChange? {
+  self.scrollable.scroll_by(delta_left~, delta_top~)
+}
+
+///|
+pub fn EditorScrollable::dispose(self : EditorScrollable) -> Unit {
+  self.scrollable.dispose()
+  self.content_size_emitter.dispose()
+}
+
+///|
+fn option_or(value : Double?, fallback : Double) -> Double {
+  match value {
+    Some(value) => value
+    None => fallback
   }
 }
 
 ///|
-/// Clamps a scroll offset into `[low, high]`, tolerating an inverted range.
-///
-/// Deliberately retained instead of std `Double::clamp(min~, max~)`: the high
-/// bound here is `scroll_width - width` (or `scroll_height - height`), which
-/// goes negative when the content is smaller than the viewport, so `high < low`
-/// is a normal case and must clamp to `low` (0). Std `Double::clamp` would
-/// `guard min <= max` and panic. See std-dedup-and-divergence-review.md Step 2.
-fn clamp_double(value : Double, low : Double, high : Double) -> Double {
-  if high < low {
-    low
-  } else if value < low {
-    low
-  } else if value > high {
-    high
-  } else {
-    value
-  }
+fn truncate_double(value : Double) -> Double {
+  value.to_int().to_double()
 }
 
 ///|
@@ -211,4 +947,14 @@ fn max_double(left : Double, right : Double) -> Double {
   } else {
     right
   }
+}
+
+///|
+fn no_animation_scheduler(_callback : () -> Unit) -> @base_common.Disposable {
+  @base_common.Disposable::from(() => ())
+}
+
+///|
+fn zero_clock() -> Double {
+  0.0
 }

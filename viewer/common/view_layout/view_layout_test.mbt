@@ -1,9 +1,10 @@
 ///|
 test "scrollable clamps positions inside its dimensions" {
   let scrollable = @view_layout.Scrollable::new(force_integer_values=false)
-  // Without dimensions everything clamps to the origin.
+  // Without dimensions the validated position clamps to the origin, while
+  // Monaco retains the changed raw request and therefore emits an event.
   assert_true(
-    scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0 }) is None,
+    scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0 }) is Some(_),
   )
   scrollable.set_dimensions({
     width: 800.0,
@@ -12,21 +13,10 @@ test "scrollable clamps positions inside its dimensions" {
     scroll_height: 1800.0,
   })
   |> ignore
-  let change = scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0 })
-  debug_inspect(
-    change,
-    content=(
-      #|Some(
-      #|  {
-      #|    position: { scroll_left: 50, scroll_top: 100 },
-      #|    delta_left: 50,
-      #|    delta_top: 100,
-      #|    left_changed: true,
-      #|    top_changed: true,
-      #|    dimensions_changed: false,
-      #|  },
-      #|)
-    ),
+  // Expanding the dimensions recovers the retained raw request.
+  assert_true(scrollable.position() == { scroll_left: 50.0, scroll_top: 100.0 })
+  assert_true(
+    scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0 }) is None,
   )
   // Overshoot clamps to content minus viewport; undershoot clamps to zero.
   scrollable.set_position({ scroll_left: 9999.0, scroll_top: 99999.0 })
@@ -44,9 +34,10 @@ test "scrollable clamps positions inside its dimensions" {
       #|{ scroll_left: 0, scroll_top: 0 }
     ),
   )
-  // A clamped no-op answers None.
+  // A different raw request still changes ScrollState even when both values
+  // clamp to the same validated origin.
   assert_true(
-    scrollable.set_position({ scroll_left: -1.0, scroll_top: -1.0 }) is None,
+    scrollable.set_position({ scroll_left: -1.0, scroll_top: -1.0 }) is Some(_),
   )
 }
 
@@ -67,22 +58,12 @@ test "shrinking dimensions re-clamps the position as one change fact" {
     height: 100.0,
     scroll_height: 400.0,
   })
-  debug_inspect(
-    change,
-    content=(
-      #|Some(
-      #|  {
-      #|    position: { scroll_left: 0, scroll_top: 300 },
-      #|    delta_left: 0,
-      #|    delta_top: -600,
-      #|    left_changed: false,
-      #|    top_changed: true,
-      #|    dimensions_changed: true,
-      #|  },
-      #|)
-    ),
-  )
-  // Content extents never report smaller than the viewport.
+  guard change is Some(change) else { fail("expected a dimension change") }
+  assert_true(change.position == { scroll_left: 0.0, scroll_top: 300.0 })
+  assert_eq(change.delta_top, -600.0)
+  assert_true(change.top_changed && change.dimensions_changed)
+  // Base Scrollable preserves the supplied extents; EditorScrollDimensions
+  // is the source layer that maxes content extents against the viewport.
   scrollable.set_dimensions({
     width: 500.0,
     scroll_width: 10.0,
@@ -93,7 +74,7 @@ test "shrinking dimensions re-clamps the position as one change fact" {
   debug_inspect(
     scrollable.dimensions(),
     content=(
-      #|{ width: 500, scroll_width: 500, height: 600, scroll_height: 600 }
+      #|{ width: 500, scroll_width: 10, height: 600, scroll_height: 10 }
     ),
   )
 }
@@ -332,21 +313,10 @@ test "view layout derives scroll dimensions from document and viewport" {
   // Replacing the document re-clamps the scroll position.
   layout.scroll_to(scroll_top=179400.0) |> ignore
   let change = layout.set_line_count(100)
-  debug_inspect(
-    change,
-    content=(
-      #|Some(
-      #|  {
-      #|    position: { scroll_left: 0, scroll_top: 1200 },
-      #|    delta_left: 0,
-      #|    delta_top: -178200,
-      #|    left_changed: false,
-      #|    top_changed: true,
-      #|    dimensions_changed: true,
-      #|  },
-      #|)
-    ),
-  )
+  guard change is Some(change) else { fail("expected a dimension change") }
+  assert_true(change.position == { scroll_left: 0.0, scroll_top: 1200.0 })
+  assert_eq(change.delta_top, -178200.0)
+  assert_true(change.top_changed && change.dimensions_changed)
   // The window origin is the content-space top of the window start (the
   // 1-based start line's offset, `(start - 1) * line_height`).
   let window = layout.visible_window()

@@ -158,5 +158,5 @@ fn Viewer::sync_view_zones_with_layout(self : Viewer) -> Unit {
   for zone in self.view_zones {
     zones.push({ anchor_line: zone.anchor_line, height_px: zone.height_px })
   }
-  self.apply_scroll_change(view_model.view_layout.set_view_zones(zones))
+  view_model.view_layout.set_view_zones(zones) |> ignore
 }

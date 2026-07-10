@@ -57,6 +57,13 @@ pub fn ConstantTimePrefixSumComputer::new(Array[Int]) -> Self
 pub fn ConstantTimePrefixSumComputer::remove_values(Self, Int, Int) -> Unit
 pub fn ConstantTimePrefixSumComputer::set_value(Self, Int, Int) -> Unit
 
+pub(all) struct ContentSizeChange {
+  old_content_width : Double
+  old_content_height : Double
+  content_width : Double
+  content_height : Double
+} derive(Eq, @debug.Debug)
+
 pub(all) struct DecorationSegment {
   start_offset : Int
   end_offset : Int
@@ -68,6 +75,36 @@ pub(all) struct DomPosition {
   part_index : Int
   char_index : Int
 } derive(Eq, @debug.Debug)
+
+pub(all) struct EditorScrollDimensions {
+  width : Double
+  content_width : Double
+  scroll_width : Double
+  height : Double
+  content_height : Double
+  scroll_height : Double
+} derive(Eq, @debug.Debug)
+pub fn EditorScrollDimensions::new(Double, Double, Double, Double) -> Self
+
+pub struct EditorScrollable {
+  // private fields
+}
+pub fn EditorScrollable::dimensions(Self) -> ScrollDimensions
+pub fn EditorScrollable::dispose(Self) -> Unit
+pub fn EditorScrollable::editor_dimensions(Self) -> EditorScrollDimensions
+pub fn EditorScrollable::future_position(Self) -> ScrollPosition
+pub fn EditorScrollable::get_scrollable(Self) -> Scrollable
+pub fn EditorScrollable::has_pending_scroll_animation(Self) -> Bool
+pub fn EditorScrollable::new(Double, (() -> Unit) -> @common.Disposable, () -> Double) -> Self
+pub fn EditorScrollable::on_did_content_size_change(Self, (ContentSizeChange) -> Unit) -> @common.Disposable
+pub fn EditorScrollable::on_did_scroll(Self, (ScrollChange) -> Unit) -> @common.Disposable
+pub fn EditorScrollable::position(Self) -> ScrollPosition
+pub fn EditorScrollable::scroll_by(Self, delta_left? : Double, delta_top? : Double) -> ScrollChange?
+pub fn EditorScrollable::set_editor_dimensions(Self, EditorScrollDimensions) -> ScrollChange?
+pub fn EditorScrollable::set_position_now(Self, ScrollPositionUpdate) -> ScrollChange?
+pub fn EditorScrollable::set_position_smooth(Self, ScrollPositionUpdate) -> Unit
+pub fn EditorScrollable::set_smooth_scroll_duration(Self, Double) -> Unit
+pub fn EditorScrollable::validate_scroll_position(Self, ScrollPositionUpdate) -> ScrollPosition
 
 pub struct EditorWhitespace {
   id : String
@@ -246,6 +283,12 @@ pub(all) enum RenderWhitespace {
   All
 } derive(Eq, @debug.Debug)
 
+pub(all) struct SavedScrollState {
+  scroll_top : Double
+  scroll_top_without_view_zones : Double
+  scroll_left : Double
+} derive(Eq, @debug.Debug)
+
 pub(all) struct ScrollChange {
   position : ScrollPosition
   delta_left : Double
@@ -253,6 +296,25 @@ pub(all) struct ScrollChange {
   left_changed : Bool
   top_changed : Bool
   dimensions_changed : Bool
+  in_smooth_scrolling : Bool
+  old_width : Double
+  old_scroll_width : Double
+  old_scroll_left : Double
+  width : Double
+  scroll_width : Double
+  scroll_left : Double
+  old_height : Double
+  old_scroll_height : Double
+  old_scroll_top : Double
+  height : Double
+  scroll_height : Double
+  scroll_top : Double
+  width_changed : Bool
+  scroll_width_changed : Bool
+  scroll_left_changed : Bool
+  height_changed : Bool
+  scroll_height_changed : Bool
+  scroll_top_changed : Bool
 } derive(Eq, @debug.Debug)
 
 pub(all) struct ScrollDimensions {
@@ -262,20 +324,58 @@ pub(all) struct ScrollDimensions {
   scroll_height : Double
 } derive(Eq, @debug.Debug)
 
+pub(all) struct ScrollDimensionsUpdate {
+  width : Double?
+  scroll_width : Double?
+  height : Double?
+  scroll_height : Double?
+} derive(Eq, @debug.Debug)
+
 pub(all) struct ScrollPosition {
   scroll_left : Double
   scroll_top : Double
 } derive(Eq, @debug.Debug)
 
+pub(all) struct ScrollPositionUpdate {
+  scroll_left : Double?
+  scroll_top : Double?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ScrollState {
+  force_integer_values : Bool
+  raw_scroll_left : Double
+  raw_scroll_top : Double
+  width : Double
+  scroll_width : Double
+  scroll_left : Double
+  height : Double
+  scroll_height : Double
+  scroll_top : Double
+} derive(Eq, @debug.Debug)
+pub fn ScrollState::create_scroll_event(Self, Self, Bool) -> ScrollChange
+pub fn ScrollState::equals(Self, Self) -> Bool
+pub fn ScrollState::new(force_integer_values~ : Bool, Double, Double, Double, Double, Double, Double) -> Self
+pub fn ScrollState::with_scroll_dimensions(Self, ScrollDimensionsUpdate, Bool) -> Self
+pub fn ScrollState::with_scroll_position(Self, ScrollPositionUpdate) -> Self
+
 pub struct Scrollable {
   // private fields
 }
 pub fn Scrollable::dimensions(Self) -> ScrollDimensions
-pub fn Scrollable::new(force_integer_values~ : Bool) -> Self
+pub fn Scrollable::dispose(Self) -> Unit
+pub fn Scrollable::future_position(Self) -> ScrollPosition
+pub fn Scrollable::has_pending_scroll_animation(Self) -> Bool
+pub fn Scrollable::new(force_integer_values~ : Bool, smooth_scroll_duration? : Double, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
+pub fn Scrollable::on_scroll(Self, (ScrollChange) -> Unit) -> @common.Disposable
 pub fn Scrollable::position(Self) -> ScrollPosition
 pub fn Scrollable::scroll_by(Self, delta_left? : Double, delta_top? : Double) -> ScrollChange?
 pub fn Scrollable::set_dimensions(Self, ScrollDimensions) -> ScrollChange?
 pub fn Scrollable::set_position(Self, ScrollPosition) -> ScrollChange?
+pub fn Scrollable::set_position_now(Self, ScrollPositionUpdate) -> ScrollChange?
+pub fn Scrollable::set_position_smooth(Self, ScrollPositionUpdate, reuse_animation? : Bool) -> Unit
+pub fn Scrollable::set_scroll_dimensions(Self, ScrollDimensionsUpdate, Bool) -> ScrollChange?
+pub fn Scrollable::set_smooth_scroll_duration(Self, Double) -> Unit
+pub fn Scrollable::validate_scroll_position(Self, ScrollPositionUpdate) -> ScrollPosition
 
 pub struct ScrollbarState {
   // private fields
@@ -295,6 +395,36 @@ pub fn ScrollbarState::set_visible_size(Self, Double) -> Bool
 pub fn ScrollbarState::slider_position(Self) -> Double
 pub fn ScrollbarState::slider_size(Self) -> Double
 
+pub(all) struct SmoothScrollPosition {
+  scroll_left : Double
+  scroll_top : Double
+  width : Double
+  height : Double
+} derive(Eq, @debug.Debug)
+
+pub struct SmoothScrollingOperation {
+  from : SmoothScrollPosition
+  mut to : SmoothScrollPosition
+  duration : Double
+  start_time : Double
+  mut animation_frame_disposable : @common.Disposable?
+  mut scroll_left_animation : (Double) -> Double
+  mut scroll_top_animation : (Double) -> Double
+}
+pub fn SmoothScrollingOperation::accept_scroll_dimensions(Self, ScrollState) -> Unit
+pub fn SmoothScrollingOperation::combine(Self, SmoothScrollPosition, SmoothScrollPosition, Double, Double) -> Self
+pub fn SmoothScrollingOperation::dispose(Self) -> Unit
+pub fn SmoothScrollingOperation::new(SmoothScrollPosition, SmoothScrollPosition, Double, Double) -> Self
+pub fn SmoothScrollingOperation::start(SmoothScrollPosition, SmoothScrollPosition, Double, Double) -> Self
+pub fn SmoothScrollingOperation::tick_at(Self, Double) -> SmoothScrollingUpdate
+
+pub(all) struct SmoothScrollingUpdate {
+  scroll_left : Double
+  scroll_top : Double
+  is_done : Bool
+} derive(Eq, @debug.Debug)
+pub fn SmoothScrollingUpdate::new(Double, Double, Bool) -> Self
+
 pub(all) enum TextDirection {
   LTR
   RTL
@@ -311,43 +441,56 @@ pub(all) enum VerticalRevealType {
 } derive(Eq, @debug.Debug)
 
 pub struct ViewLayout {
-  scrollable : Scrollable
+  scrollable : EditorScrollable
   // private fields
 }
 pub fn ViewLayout::big_numbers_delta_for_window(Self, LineWindow) -> Int
 pub fn ViewLayout::completely_visible_line_range(Self) -> (Int, Int)
 pub fn ViewLayout::compute_scroll_left_to_reveal(Self, Array[(Double, Double)], vertical_scrollbar_width~ : Double) -> Double?
 pub fn ViewLayout::compute_scroll_top_to_reveal_range(Self, Int, Int, VerticalRevealType) -> Double
+pub fn ViewLayout::delta_scroll_now(Self, Double, Double) -> Unit
 pub fn ViewLayout::dimensions(Self) -> ScrollDimensions
+pub fn ViewLayout::dispose(Self) -> Unit
+pub fn ViewLayout::future_position(Self) -> ScrollPosition
 pub fn ViewLayout::get_content_height(Self) -> Double
 pub fn ViewLayout::get_content_width(Self) -> Double
 pub fn ViewLayout::get_current_scroll_left(Self) -> Double
 pub fn ViewLayout::get_current_scroll_top(Self) -> Double
+pub fn ViewLayout::get_current_viewport(Self) -> Viewport
+pub fn ViewLayout::get_future_viewport(Self) -> Viewport
 pub fn ViewLayout::get_line_height_for_line_number(Self, Int) -> Int
 pub fn ViewLayout::get_lines_viewport_data(Self) -> PartialViewLinesViewportData
 pub fn ViewLayout::get_scroll_height(Self) -> Double
 pub fn ViewLayout::get_scroll_width(Self) -> Double
+pub fn ViewLayout::get_scrollable(Self) -> Scrollable
 pub fn ViewLayout::get_vertical_offset_after_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn ViewLayout::get_vertical_offset_for_line_number(Self, Int, include_view_zones? : Bool) -> Double
 pub fn ViewLayout::get_whitespace_at_vertical_offset(Self, Double) -> ViewWhitespaceViewportData?
+pub fn ViewLayout::has_pending_scroll_animation(Self) -> Bool
 pub fn ViewLayout::is_after_lines(Self, Double) -> Bool
 pub fn ViewLayout::is_in_bottom_padding(Self, Double) -> Bool
 pub fn ViewLayout::is_in_top_padding(Self, Double) -> Bool
 pub fn ViewLayout::line_at_vertical_offset(Self, Double) -> Int
 pub fn ViewLayout::line_count(Self) -> Int
 pub fn ViewLayout::line_height(Self) -> Int
-pub fn ViewLayout::new(line_height~ : Int, line_count? : Int) -> Self
+pub fn ViewLayout::new(line_height~ : Int, line_count? : Int, smooth_scrolling? : Bool, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
+pub fn ViewLayout::on_did_content_size_change(Self, (ContentSizeChange) -> Unit) -> @common.Disposable
+pub fn ViewLayout::on_did_scroll(Self, (ScrollChange) -> Unit) -> @common.Disposable
 pub fn ViewLayout::on_flushed(Self, Int) -> Unit
 pub fn ViewLayout::on_height_maybe_changed(Self) -> ScrollChange?
 pub fn ViewLayout::position(Self) -> ScrollPosition
 pub fn ViewLayout::relative_vertical_offset_for_line(Self, LineWindow, Int) -> Int
+pub fn ViewLayout::save_state(Self) -> SavedScrollState
 pub fn ViewLayout::scroll_by(Self, delta_left? : Double, delta_top? : Double) -> ScrollChange?
 pub fn ViewLayout::scroll_to(Self, scroll_top~ : Double, scroll_left? : Double) -> ScrollChange?
+pub fn ViewLayout::scroll_to_smooth(Self, scroll_top~ : Double, scroll_left? : Double) -> Unit
 pub fn ViewLayout::set_content_width(Self, Double) -> ScrollChange?
 pub fn ViewLayout::set_line_count(Self, Int) -> ScrollChange?
 pub fn ViewLayout::set_line_height(Self, Int) -> ScrollChange?
+pub fn ViewLayout::set_smooth_scrolling(Self, Bool) -> Unit
 pub fn ViewLayout::set_view_zones(Self, Array[ViewZone]) -> ScrollChange?
 pub fn ViewLayout::set_viewport_size(Self, width~ : Double, height~ : Double) -> ScrollChange?
+pub fn ViewLayout::validate_scroll_position(Self, ScrollPositionUpdate) -> ScrollPosition
 pub fn ViewLayout::vertical_offset_for_line(Self, Int) -> Double
 pub fn ViewLayout::view_zone_vertical_offset(Self, Int) -> Double
 pub fn ViewLayout::view_zone_viewport_data(Self, LineWindow) -> Array[ViewZoneViewportData]
@@ -387,6 +530,13 @@ pub(all) struct ViewZoneViewportData {
   anchor_line : Int
   height_px : Int
   relative_vertical_offset : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Viewport {
+  top : Double
+  left : Double
+  width : Double
+  height : Double
 } derive(Eq, @debug.Debug)
 
 pub(all) struct ViewportData {

@@ -153,7 +153,7 @@ pub fn MouseHandler::cancel_selection(Self) -> Unit
 pub fn MouseHandler::dispose(Self) -> Unit
 pub fn MouseHandler::end_scrollable_drag(Self) -> Unit
 pub fn MouseHandler::get_target_at_client_point(Self, Double, Double) -> @browser.MouseTarget?
-pub fn MouseHandler::handle_editor_wheel(Self, @dom.WheelEvent) -> Unit
+pub fn MouseHandler::handle_editor_wheel(Self, @dom.Event, @dom.WheelEvent) -> Bool
 pub fn MouseHandler::handle_scrollable_drag_move(Self, @dom.Event) -> Unit
 pub fn MouseHandler::hook_browser_desperate_reveal(Self) -> Unit
 pub fn MouseHandler::hook_scrollable_scrollbar_input(Self, @scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
@@ -193,7 +193,6 @@ pub(all) struct PointerHandlerHelper {
   editor_scrollable : @scrollbar.ScrollableElementDom
   hover_scrollable : () -> @scrollbar.ScrollableElementDom?
   view_layout : () -> @view_layout.ViewLayout?
-  apply_scroll : (@view_layout.ScrollChange?) -> Unit
   schedule_render : () -> Unit
 }
 

@@ -247,9 +247,7 @@ fn DragScrollingOperation::execute(self : DragScrollingOperation) -> Unit {
       } else {
         scroll_in_pixels
       }
-      (self.view_helper.apply_scroll)(
-        view_model.view_layout.scroll_by(delta_top=scroll_value),
-      )
+      view_model.view_layout.scroll_by(delta_top=scroll_value) |> ignore
       (self.view_helper.render_now)()
       let window = view_model.view_layout.visible_window()
       let edge_line_number = if outside_position is Above {
@@ -303,9 +301,7 @@ fn DragScrollingOperation::execute(self : DragScrollingOperation) -> Unit {
       } else {
         scroll_in_pixels
       }
-      (self.view_helper.apply_scroll)(
-        view_model.view_layout.scroll_by(delta_left=scroll_value),
-      )
+      view_model.view_layout.scroll_by(delta_left=scroll_value) |> ignore
       (self.view_helper.render_now)()
       guard self.position.position() is Some(edge_position) else { return }
       let edge_line_number = edge_position.line_number

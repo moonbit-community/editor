@@ -10,6 +10,8 @@ import {
 // Values
 pub fn drag_coord(@dom.MouseEvent, Bool) -> Double
 
+pub fn global_mouse_wheel_classifier() -> MouseWheelClassifier
+
 pub fn mouse_wheel_scroll_deltas(StandardWheelEvent, alt_key? : Bool, shift_key? : Bool, mouse_wheel_scroll_sensitivity? : Double, fast_scroll_sensitivity? : Double, scroll_predominant_axis? : Bool) -> (Double, Double)
 
 pub fn number_as_pixels(CssLength) -> String
@@ -35,6 +37,21 @@ pub(all) enum CssLength {
   Pixels(Double)
   Raw(String)
 } derive(Eq, @debug.Debug)
+
+pub struct MouseWheelClassifier {
+  // private fields
+}
+pub fn MouseWheelClassifier::accept(Self, Double, Double, Double) -> Unit
+pub fn MouseWheelClassifier::accept_standard_wheel_event(Self, StandardWheelEvent) -> Unit
+pub fn MouseWheelClassifier::is_physical_mouse_wheel(Self) -> Bool
+pub fn MouseWheelClassifier::new() -> Self
+
+pub(all) struct MouseWheelClassifierItem {
+  timestamp : Double
+  delta_x : Double
+  delta_y : Double
+  mut score : Double
+} derive(@debug.Debug)
 
 pub(all) struct ScrollableElementDom {
   wrapper : @dom.Element

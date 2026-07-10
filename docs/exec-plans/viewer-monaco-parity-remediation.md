@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — cursor inventory ready; STOP FOR GATE B REVIEW
+Status: active — cursor inventory amended; STOP FOR GATE B RE-REVIEW
 
 Date: 2026-07-10
 
@@ -82,7 +82,7 @@ product contract and belongs in an ordinary local test.
 |---:|---|---|---|---|
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
-| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | inventory ready — STOP FOR REVIEW |
+| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | inventory amended — STOP FOR RE-REVIEW |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | proposed |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
@@ -360,3 +360,11 @@ The independent closing task is:
   TESTED, 81 PORTED, 176 DEFERRED, and 181 N-A. Frozen lifecycle ownership of
   the CodeEditorWidget cursor relay is inherited instead of duplicated. No
   product/test file changed; the portfolio stops for independent Gate B review.
+- 2026-07-10: three independent reviews rejected cursor Gate B at inventory
+  commit `7c0a3b3`. The docs-only amendment now has 802/802 TODO rows: 213
+  cursor state/event, 218 movement, and 371 browser/public/event atoms; its
+  proposed map is 337 TESTED, 71 PORTED, 213 DEFERRED, and 181 N-A. It splits
+  collapsed callbacks and mixed key registrations, retires scroll/reveal
+  umbrella rows, names an outgoing-only dispatcher plus reentrancy-safe FIFO,
+  and makes word/validation/generic-collector deferrals explicit. No product
+  or test file changed; the program stops for a fresh Gate B re-review.

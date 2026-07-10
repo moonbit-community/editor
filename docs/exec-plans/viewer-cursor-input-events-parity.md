@@ -1,6 +1,6 @@
 # Viewer Cursor Input and Events Parity
 
-Status: inventory ready — STOP FOR REVIEW
+Status: inventory amendment ready — STOP FOR RE-REVIEW
 
 Date: 2026-07-10
 
@@ -130,14 +130,15 @@ current-MoonBit audit facts are outside this child's source denominator.
 Exact source denominator:
 
 ```text
-CUR 68 + COL 49 + ONE 27 + CCM 50 + CEV 18
-+ CMC 154 + CMO 62
+CUR 68 + COL 49 + ONE 28 + CCM 50 + CEV 18
++ CMC 156 + CMO 62
 + CORE 186 + VC 70 + CEW 23 + VED 60 + VMI 32
-= 799 source rows
+= 802 source rows
 ```
 
-Proposed Gate-B map: **361 TESTED, 81 PORTED, 176 DEFERRED, 181 N-A =
-799**. These totals must be recomputed after any review amendment.
+Proposed Gate-B map after the failed-review amendment: **337 TESTED, 71
+PORTED, 213 DEFERRED, 181 N-A = 802**. These totals must be recomputed after
+any further review amendment.
 
 The review must approve one shared transition/emission contract so API, mouse,
 keyboard, and flush cannot drift into separate event semantics. No product or
@@ -179,16 +180,17 @@ Every ledger status is `TODO`; “Planned” is a proposed terminal disposition.
 Scope correction: movement consumes `tabSize`, `columnFromVisibleColumn`, and
 `pageSize`; the page-size field carries exact
 `max(1, floor(height / lineHeight) - 2)` arithmetic. The same source contract
-also declares `stickyTabStops`, `indentSize`, and `getLineIndentColumn`, but
-those feed `cursorAtomicMoveOperations.ts`, explicitly outside normalized
-movement D2, so their rows are deferred rather than claimed tested.
+also declares `stickyTabStops`, `indentSize`, and `getLineIndentColumn`.
+Sticky-tab movement and its line-indent query feed the unscoped
+`cursorAtomicMoveOperations.ts`; `indentSize` is only an inert signature
+pass-through at this pin because the called helper never reads it.
 
 ##### `cursorCommon.ts` ledger (`CCM`, 50 rows)
 
 | ID | Source atom | Description | Local target/seam | Proposed terminal | Status |
 |---|---|---|---|---|---|
 | CCM-001 | `tabSize` (`cursorCommon.ts:55,123`) | Field copies resolved model tab size. | cursor config from `ViewerOptions.tab_size` | TESTED | TODO |
-| CCM-002 | `indentSize` (`:56,124`) | Field copies resolved model indent size for atomic soft-tab movement. | cursorAtomicMoveOperations.ts is outside normalized movement D2 | DEFERRED (atomic-tab movement dependency is unscoped) | TODO |
+| CCM-002 | `indentSize` (`:56,124`) | Field copies `modelOptions.indentSize`, but at this pin it has no movement effect: `right` forwards it to `rightPositionAtomicSoftTabs`, whose parameter is unused; `AtomicTabMoveOperations` receives `tabSize` only. | inert atomic-tab signature pass-through; no local behavior dependency | DEFERRED (unscoped atomic-tab signature; not a behavior dependency at this pin) | TODO |
 | CCM-003 | `stickyTabStops` (`:58,126`) | Field selects atomic-soft-tab versus character movement. | cursorAtomicMoveOperations.ts is outside normalized movement D2 | DEFERRED (atomic-tab movement dependency is unscoped) | TODO |
 | CCM-004 | `pageSize` (`:59,129`) | Field is exactly `max(1,floor(layoutHeight/lineHeight)-2)`. | derive from live viewport and line height | TESTED | TODO |
 | CCM-005 | `lineHeight` (`:60,127`) | Field copies font line height used by page size. | existing layout/options | TESTED | TODO |
@@ -236,7 +238,7 @@ movement D2, so their rows are deferred rather than claimed tested.
 | CCM-047 | `move` (`:371-391`) | Returns a new state with supplied target/leftover. | extend existing `moved` | TESTED | TODO |
 | CCM-048 | `move` selection branch (`:372-390`) | Selection mode preserves anchor/kind/anchor leftover; other arm collapses Simple and uses supplied leftover for both fields. | `SingleCursorState::moved` | TESTED | TODO |
 | CCM-049 | `_computeSelection` (`:393-399`) | Produces oriented Selection from anchor range and active end. | existing selection derivation | TESTED | TODO |
-| CCM-050 | `_computeSelection` branch (`:394-398`) | Empty/forward anchor uses start; active before nonempty anchor uses end. | selection direction tests | TESTED | TODO |
+| CCM-050 | `_computeSelection` branch (`:394-398`) | An empty anchor uses its start. For a nonempty anchor, active strictly after the anchor start uses the start; active equal to or before the anchor start uses the end. | selection-direction tests covering before/equal/after | TESTED | TODO |
 
 ##### `cursorEvents.ts` ledger (`CEV`, 18 rows)
 
@@ -250,18 +252,18 @@ movement D2, so their rows are deferred rather than claimed tested.
 | CEV-006 | `Undo = 5` (`:36`) | Exact undo reason. | retained readonly-excluded contract | PORTED | TODO |
 | CEV-007 | `Redo = 6` (`:40`) | Exact redo reason. | retained readonly-excluded contract | PORTED | TODO |
 | CEV-008 | position event `position` (`:49`) | Primary model position property. | existing event field | TESTED | TODO |
-| CEV-009 | `secondaryPositions` (`:53`) | Ordered secondary positions property. | always empty locally | N-A (single-cursor payload tested empty) | TODO |
+| CEV-009 | `secondaryPositions` (`:53`) | Ordered secondary-position array property; under the approved single-cursor reduction every emitted payload carries exact `[]`. | public position payload field; assert empty for API/keyboard/mouse/flush | TESTED | TODO |
 | CEV-010 | position event `reason` (`:57`) | Transition reason property. | shared emitter | TESTED | TODO |
 | CEV-011 | position event `source` (`:61`) | Transition source property. | shared emitter | TESTED | TODO |
 | CEV-012 | selection event `selection` (`:70`) | Primary model selection property. | existing field | TESTED | TODO |
-| CEV-013 | `secondarySelections` (`:74`) | Ordered secondary selections property. | always empty locally | N-A (single-cursor payload tested empty) | TODO |
+| CEV-013 | `secondarySelections` (`:74`) | Ordered secondary-selection array property; under the approved single-cursor reduction every emitted payload carries exact `[]`. | public selection payload field; assert empty for API/keyboard/mouse/flush | TESTED | TODO |
 | CEV-014 | `modelVersionId` (`:78`) | New internal content version. | use `get_version_id()`, not host `version` | TESTED | TODO |
 | CEV-015 | `oldSelections` (`:82`) | Nullable old selection array. | change local field to Option | TESTED | TODO |
 | CEV-016 | `oldModelVersionId` (`:86`) | Old internal version; `0` when no old state. | shared snapshot | TESTED | TODO |
 | CEV-017 | selection event `source` (`:90`) | Same normalized transition source. | shared emitter | TESTED | TODO |
 | CEV-018 | selection event `reason` (`:94`) | Same transition reason. | shared emitter | TESTED | TODO |
 
-##### `oneCursor.ts` ledger (`ONE`, 27 rows)
+##### `oneCursor.ts` ledger (`ONE`, 28 rows)
 
 | ID | Source atom | Description | Local target/seam | Proposed terminal | Status |
 |---|---|---|---|---|---|
@@ -291,7 +293,8 @@ movement D2, so their rows are deferred rather than claimed tested.
 | ONE-024 | both-sides-null early return (`:120-122`) | Missing model and view returns without mutation. | Option-input no-op test | TESTED | TODO |
 | ONE-025 | anchor-leftover conditional (`:136`) | Preserve iff validated anchor unchanged, otherwise exact `0`. | add leftover field | TESTED | TODO |
 | ONE-026 | active-leftover conditional (`:141`) | Preserve iff validated active unchanged, otherwise exact `0`. | add leftover field | TESTED | TODO |
-| ONE-027 | missing-view branch (`:146-158`) | Missing view converts model endpoints; supplied view validates against model; both use model kind/leftovers. | converter/shared transition | TESTED | TODO |
+| ONE-027 | missing-view branch (`:146-155`) | Missing view converts both validated model anchor endpoints and the active position to view coordinates, preserving model kind and leftovers. | model-driven transition through the existing converter | TESTED | TODO |
+| ONE-028 | supplied-both validation branch (`:156-160`) | When both model and view states are supplied, source cross-validates the view range/position against the model range/position before rebuilding the view state. | no local dual-state caller and no `validateViewRange`/`validateViewPosition` converter surface | DEFERRED (dual-state validation seam absent; live callers supply exactly one coordinate side) | TODO |
 
 ##### `cursorCollection.ts` ledger (`COL`, 49 rows)
 
@@ -387,11 +390,11 @@ movement D2, so their rows are deferred rather than claimed tested.
 | CUR-034 | restored `selectionStartColumn` (`:216`) | Atomic ISelection object property. | no persistence API | N-A (persistence surface out of scope) | TODO |
 | CUR-035 | restored `positionLineNumber` (`:217`) | Atomic ISelection object property. | no persistence API | N-A (persistence surface out of scope) | TODO |
 | CUR-036 | restored `positionColumn` (`:218`) | Atomic ISelection object property. | no persistence API | N-A (persistence surface out of scope) | TODO |
-| CUR-037 | `onModelContentChanged` (`:226-271`) | Owns injected and raw content transitions, version capture, flush reset/emission, and recovery. | set-value plus injected/reflow spine | TESTED | TODO |
+| CUR-037 | `onModelContentChanged` (`:226-271`) | Owns injected and raw content transitions in source order: injected reprojection; raw version capture; raw edit-group reset to `EditOperationType.Other`; then flush reset/emission or result/marker recovery. The edit-group reset is explicitly excluded editable bookkeeping. | set-value plus injected/reflow spine; edit-group reset excluded at `:251` | TESTED | TODO |
 | CUR-038 | injected/raw branch (`:227-270`) | Injected events reproject current states under handling guard; raw events update version and take flush/recovery path. | source-shaped event seam | TESTED | TODO |
 | CUR-039 | injected handling early return (`:229-232`) | Nested injected event returns while an outer handling operation will update positions. | reentrancy test seam | TESTED | TODO |
 | CUR-040 | raw handling early return (`:246-248`) | Raw nested event returns after known version is updated. | flush/reentrancy ordering | TESTED | TODO |
-| CUR-041 | flush branch (`:253-269`) | Flush recreates cursor and emits source model/ContentFlush/null old state; other events recover selections. | set-value ordered cursor events | TESTED | TODO |
+| CUR-041 | flush branch (`:253-269`) | Flush disposes/recreates the cursor collection, validates auto-closed actions, then emits source `model`, reason `ContentFlush`, null old state, and reached-max false; nonflush raw events enter result/marker recovery. Auto-close validation is explicitly excluded editable bookkeeping. | set-value ordered cursor events; auto-close validation excluded at `:257` | TESTED | TODO |
 | CUR-042 | focused-result branch (`:260-268`) | Focus plus nonempty resulting selections uses them; otherwise marker selections recover. | no incremental editable producer | DEFERRED (editable marker-recovery lane) | TODO |
 | CUR-043 | undo reason branch (`:262`) | `isUndoing` selects Undo before any redo check. | no incremental editable producer | DEFERRED (editable incremental-content lane) | TODO |
 | CUR-044 | redo reason branch (`:262`) | When not undoing, `isRedoing` selects Redo; otherwise RecoverFromMarkers. | no incremental editable producer | DEFERRED (editable incremental-content lane) | TODO |
@@ -420,7 +423,7 @@ movement D2, so their rows are deferred rather than claimed tested.
 | CUR-067 | count-mismatch early return (`:662-664`) | Different cursor counts are unequal. | count invariant locally | N-A (single-cursor viewer) | TODO |
 | CUR-068 | per-state mismatch early return (`:665-668`) | First unequal full CursorState returns false. | state equality tests | TESTED | TODO |
 
-##### Explicit sibling registry (outside the 212-row denominator)
+##### Explicit sibling registry (outside the 213-row denominator)
 
 These closed siblings were found by the whole-file reread. Their internals are
 not counted unless Phase 0 expands scope.
@@ -436,6 +439,8 @@ not counted unless Phase 0 expands scope.
 | `137-139` | `setCursorColumnSelectData` | column selection |
 | `141-153` | `revealAll`, including one-vs-many branch and reveal event | reveal/scroll child ownership |
 | `155-159` | `revealPrimary` | reveal/scroll child ownership |
+| `251` | raw-content `_prevEditOperationType = EditOperationType.Other` reset inside included `onModelContentChanged` | edit grouping |
+| `257` | post-flush `_validateAutoClosedActions()` call inside included `onModelContentChanged` | auto-close editing |
 | `285-299` | `getCursorColumnSelectData`, stored/synthetic branch and `isReal:false` result | column selection |
 | `313-319` | get/set previous edit-operation type | edit grouping |
 | `321-348` | `_pushAutoClosedAction`, decoration callbacks/properties and exact DOM class descriptions | auto-close editing |
@@ -489,10 +494,10 @@ sibling units: multi-cursor and marker atoms are ledgered as N-A/DEFERRED.
 |---|---:|---:|---:|---:|---:|
 | `CUR` / `cursor.ts` | 68 | 41 | 0 | 6 | 21 |
 | `COL` / `cursorCollection.ts` | 49 | 23 | 0 | 5 | 21 |
-| `ONE` / `oneCursor.ts` | 27 | 17 | 0 | 10 | 0 |
+| `ONE` / `oneCursor.ts` | 28 | 17 | 0 | 11 | 0 |
 | `CCM` / `cursorCommon.ts` | 50 | 44 | 0 | 4 | 2 |
-| `CEV` / `cursorEvents.ts` | 18 | 12 | 4 | 0 | 2 |
-| **Total** | **212** | **137** | **4** | **25** | **46** |
+| `CEV` / `cursorEvents.ts` | 18 | 14 | 4 | 0 | 0 |
+| **Total** | **213** | **139** | **4** | **26** | **44** |
 
 ##### Required local seams exposed by the inventory
 
@@ -501,8 +506,9 @@ sibling units: multi-cursor and marker atoms are ledgered as N-A/DEFERRED.
 2. Snapshot `TextModel.get_version_id()`, not host-controlled `model.version`.
 3. Make `old_selections` nullable for the flush `oldState=null` contract.
 4. Add both leftover-visible-column fields and preserve/reset exact arithmetic.
-5. Centralize model/view validation and partial-side derivation; current API-only
-   clamping cannot establish path parity.
+5. Centralize model/view validation and partial-side derivation at the
+   ViewModel/cursor seam; live callers supply exactly one coordinate side and
+   ONE-028 explicitly defers the absent dual-side cross-validation branch.
 6. Notify/render view before public outgoing events, while suppressing outgoing
    events for view-only projection changes.
 7. Preserve source fallback: null/undefined/empty source becomes `keyboard`.
@@ -512,8 +518,9 @@ sibling units: multi-cursor and marker atoms are ledgered as N-A/DEFERRED.
 ##### Source-derived test axes
 
 - Page-size floor/minus-two/min-one boundaries and tab/indent option axes.
-- Model-only, view-only, both-present, and both-null cursor states; validation
-  fast paths and leftover-column clamp resets.
+- Model-only, view-only, and both-null cursor states; validation fast paths and
+  leftover-column clamp resets. Both-present cross-validation is the explicit
+  ONE-028 deferred negative control.
 - Full no-op, model change, view-only change, version-only change, and flush with
   null old state.
 - Mutation → view/render → outgoing order and changed-return semantics.
@@ -535,7 +542,8 @@ One row per declared method/field/constant/type member, behavior-changing branch
 - Explicit non-denominator boundary in `cursorMoveCommands.ts`: generic JSON `cursorMove` validation/schema/parser cluster, lines 695-920. The viewer exposes no such JSON command. Typed arguments/enums consumed by bound commands remain included.
 - DOM/CSS: N-A; neither file owns DOM or CSS.
 
-Normalized denominator: **216 rows = CMC 154 + CMO 62**.
+Normalized denominator after Gate-B callback splitting: **218 rows = CMC 156
++ CMO 62**.
 
 ##### Local target/seam codes
 
@@ -585,11 +593,11 @@ Reason codes: `N1` single-cursor cardinality; `N2` add/translate-cursor only; `N
 | CMC-030 | `line` (211-225) | Early-return branch: target after anchor moves to following view line, selection true, leftover 0. | `CMD` | TESTED | TODO |
 | CMC-031 | `line` (217-220) | Branch: following view line beyond EOF clamps to last view line/max column. | `CMD` | TESTED | TODO |
 | CMC-032 | `line` (226-231) | Final branch: target on anchor line returns to selection-start range end. | `CMD` | TESTED | TODO |
-| CMC-033 | `word` (236-239) | Member: validate position then return model-state `WordOperations.word`. | `MOUSE` | DEFERRED (D6 sibling implementation) | TODO |
+| CMC-033 | `word` (236-239) | Member: validate the model position, then delegate the complete word-boundary/state computation to `WordOperations.word`. | existing local `word_range` behavior is selected-case regression evidence only, not a 1:1 `WordOperations` owner | DEFERRED (D6 word algorithm unscoped; selected exact cases do not close this member) | TODO |
 | CMC-034 | `cancelSelection` (241-253) | Member: collapse at current view position as `Simple`, leftovers 0. | `CMD` | DEFERRED (D5 command unbound) | TODO |
 | CMC-035 | `cancelSelection` (242-244) | Early return: no selection preserves both model and view state. | `CMD` | DEFERRED (D5 command unbound) | TODO |
 | CMC-036 | `moveTo` (255-271) | Member: validate/convert position then move view state with selection mode, leftover 0. | `CMD`/`MOUSE` | TESTED | TODO |
-| CMC-037 | `moveTo` (257-259) | Early return: selection mode with `Word` anchor dispatches to `word`. | `MOUSE` | TESTED | TODO |
+| CMC-037 | `moveTo` (257-259) | Early return: selection mode with a `Word` anchor routes to the word-selection seam before ordinary move-to validation/conversion. This routing fact is scoped and tested; CMC-033 and the complete `WordOperations` algorithm remain D6. | `MOUSE` routing only | TESTED | TODO |
 | CMC-038 | `moveTo` (260-262) | Early return: selection mode with `Line` anchor dispatches to `line`. | `MOUSE` | TESTED | TODO |
 | CMC-039 | `moveTo` (265-269) | Branch: supplied view position validates; absent value converts model-to-view. | `CMD` | TESTED | TODO |
 | CMC-040 | `simpleMove` (273-355) | Member: closed switch over `SimpleMoveDirection`, forwarding selection/value/unit. | `CMD`/`INPUT` | TESTED | TODO |
@@ -704,9 +712,11 @@ Reason codes: `N1` single-cursor cardinality; `N2` add/translate-cursor only; `N
 | CMC-149 | `simpleMove` Up other-unit arm (300-302) | Independently deferred model-line movement. | `CMD` | DEFERRED (D1 generic model-line unit) | TODO |
 | CMC-150 | `simpleMove` Down FoldedLine arm (309-311) | Independently deferred folded-model movement. | `CMD` | DEFERRED (D1 generic folded-line) | TODO |
 | CMC-151 | `simpleMove` Down other-unit arm (312-314) | Independently deferred model-line movement. | `CMD` | DEFERRED (D1 generic model-line unit) | TODO |
-| CMC-152 | `simpleMove` PrevBlankLine (319/321) | Cardinality: direct callbacks map all cursors; locally only primary exists. | `CMD` | N-A (N1 single cursor) | TODO |
-| CMC-153 | `simpleMove` NextBlankLine (326/328) | Cardinality: direct callbacks map all cursors; locally only primary exists. | `CMD` | N-A (N1 single cursor) | TODO |
+| CMC-152 | `simpleMove` PrevBlankLine view callback (319) | Source-owned callback/cardinality: the WrappedLine arm maps every cursor through the view-state previous-blank-line operation; locally only the primary exists. | `CMD` | N-A (N1 single-cursor cardinality; branch behavior remains CMC-045/D1) | TODO |
+| CMC-153 | `simpleMove` NextBlankLine view callback (326) | Source-owned callback/cardinality: the WrappedLine arm maps every cursor through the view-state next-blank-line operation; locally only the primary exists. | `CMD` | N-A (N1 single-cursor cardinality; branch behavior remains CMC-046/D1) | TODO |
 | CMC-154 | `viewportMove` IfOutside (382-385) | Cardinality: branch loops all cursors; locally only primary exists. | `CMD` | N-A (N1 single cursor) | TODO |
+| CMC-155 | `simpleMove` PrevBlankLine model callback (321) | Source-owned callback/cardinality: the non-WrappedLine arm maps every cursor through the model-state previous-blank-line operation; locally only the primary exists. | `CMD` | N-A (N1 single-cursor cardinality; branch behavior remains CMC-045/D1) | TODO |
+| CMC-156 | `simpleMove` NextBlankLine model callback (328) | Source-owned callback/cardinality: the non-WrappedLine arm maps every cursor through the model-state next-blank-line operation; locally only the primary exists. | `CMD` | N-A (N1 single-cursor cardinality; branch behavior remains CMC-046/D1) | TODO |
 
 ##### CMO ledger — `cursorMoveOperations.ts`
 
@@ -735,11 +745,11 @@ Reason codes: `N1` single-cursor cardinality; `N2` add/translate-cursor only; `N
 | CMO-021 | `rightPosition` (110-118) | Member: advance next UTF-16 character, cross to next-line min, or remain at EOF. | `OPS` | TESTED | TODO |
 | CMO-022 | `rightPosition` (111-112) | Branch: before max add `nextCharLength(content,column-1)`. | `OPS` | TESTED | TODO |
 | CMO-023 | `rightPosition` (113-116) | Branch: at line max and before final line, increment line and reset to min. | `OPS` | TESTED | TODO |
-| CMO-024 | `rightPositionAtomicSoftTabs` (120-129) | Member: atomic indent movement with ordinary-right fallback. | `OPS` | DEFERRED (D2 option absent) | TODO |
+| CMO-024 | `rightPositionAtomicSoftTabs` (120-129) | Member: accepts inert `indentSize`, probes atomic movement using `tabSize` only, and otherwise falls back to ordinary right movement. | `OPS` | DEFERRED (D2 option absent) | TODO |
 | CMO-025 | `rightPositionAtomicSoftTabs` (121-127) | Branch: only probe atomic movement before indent column. | `OPS` | DEFERRED (D2 option absent) | TODO |
 | CMO-026 | `rightPositionAtomicSoftTabs` (124-126) | Early return for result not exact sentinel `-1`, target `new+1`. | `OPS` | DEFERRED (D2 option absent) | TODO |
 | CMO-027 | `right` (131-136) | Member: configured logical right and `CursorPosition(..., leftover=0)`. | `OPS` | TESTED | TODO |
-| CMO-028 | `right` (132-134) | Branch: stickyTabStops selects atomic helper; false selects ordinary right. | `OPS` | DEFERRED (D2 true arm; false on member row) | TODO |
+| CMO-028 | `right` (132-134) | Branch: `stickyTabStops` selects the atomic helper and forwards `tabSize` plus inert `indentSize`; false selects ordinary right. | `OPS` | DEFERRED (D2 true arm; false on member row) | TODO |
 | CMO-029 | `moveRight` (138-155) | Member: pre-offset by `noOfColumns-1`, clip/normalize(Right), one right step, leftover 0. | `OPS` | TESTED | TODO |
 | CMO-030 | `moveRight` (142-152) | Branch: non-extending selection collapses to selection end; otherwise computes movement. | `OPS` | TESTED | TODO |
 | CMO-031 | `vertical` (157-197) | Member: preserve desired visible column using tab size and leftover, then normalize and return. | `OPS`/`STATE` | TESTED | TODO |
@@ -799,8 +809,8 @@ Reason codes: `N1` single-cursor cardinality; `N2` add/translate-cursor only; `N
 
 - CMC whole file read: 980 lines; all 42 `CursorMoveCommands` methods and every in-scope typed field/constant are represented.
 - CMO whole file read: 356 lines; all 4 fields, constructor, and 24 methods are represented.
-- Prefix totals: **CMC 154**, **CMO 62**, total **216**.
-- Planned terminal totals: **TESTED 77**, **PORTED 12**, **DEFERRED 97**, **N-A 30**. Per prefix: CMC `41/8/78/27`; CMO `36/4/19/3` in `TESTED/PORTED/DEFERRED/N-A` order.
+- Prefix totals: **CMC 156**, **CMO 62**, total **218**.
+- Planned terminal totals: **TESTED 77**, **PORTED 12**, **DEFERRED 97**, **N-A 32**. Per prefix: CMC `41/8/78/29`; CMO `36/4/19/3` in `TESTED/PORTED/DEFERRED/N-A` order.
 
 #### Cursor browser/public/event inventory (read-only)
 
@@ -814,7 +824,16 @@ Assigned source units were read from line 1 through EOF:
 - `vscode/src/vs/editor/common/viewModelEventDispatcher.ts` (591 lines)
 - `vscode/src/vs/editor/common/viewModel/viewModelImpl.ts` (1472 lines)
 
-Counting rule: one row per declared scoped member/field, independently behavior-changing branch or early return, magic constant, nested callback, or command/keybinding registration. A command declaration's registration object is one property row and therefore carries its command ID, precondition, weight, context expression, primary/secondary/platform bindings, and static arguments together. Straight-line statements that only establish the named member's order stay in that member row. Excluded branches inside a complete scoped method remain rows. Whole sibling clusters outside the Phase-0 boundary are named below but are not silently added to the denominator.
+Counting rule: one row per declared scoped member/field, independently
+behavior-changing branch or early return, magic constant, nested callback, or
+command/keybinding registration. A registration with one disposition remains
+one row. When its required primary executable registration and its
+alternate-platform or command-metadata facts have different dispositions,
+each disposition-homogeneous part receives its own row. Straight-line
+statements that only establish the named member's order stay in that member
+row. Excluded branches inside a complete scoped method remain rows. Whole
+sibling clusters outside the Phase-0 boundary are named below but are not
+silently added to the denominator.
 
 All Gate-A statuses are `TODO`. `Proposed terminal` is a Gate-B recommendation, not an implementation claim.
 
@@ -822,7 +841,19 @@ All Gate-A statuses are `TODO`. `Proposed terminal` is a Gate-B recommendation, 
 
 ###### CORE — `coreCommands.ts`
 
-Included: `CORE_WEIGHT`; `CoreEditorCommand`; `NavigationCommandRevealType`; the complete mouse-consumed `MoveTo`/`MoveToSelect`, column-selection, create/last-cursor, word/line/select-all/set-selection clusters; the complete arrows/PageUp/PageDown/Home/End/line-start/line-end/top/bottom command implementations and registrations; generic `CursorMove`; cancel/remove-secondary siblings; column-mode override registrations; and one row per explicitly excluded distinct scroll-command registration. The full `EditorScroll_` parser/arithmetic, `RevealLine_`/`RevealLine`, `EditorOrNativeTextInputCommand`, `CoreEditingCommands`, and editor-handler registration tail are complete sibling clusters outside this child (scrolling, reveal-only, native-input, or editing ownership).
+Included: `CORE_WEIGHT`; `CoreEditorCommand`; `NavigationCommandRevealType`; the
+complete mouse-consumed `MoveTo`/`MoveToSelect`, column-selection,
+create/last-cursor, word/line/select-all/set-selection clusters; the complete
+arrows/PageUp/PageDown/Home/End/line-start/line-end/top/bottom command
+implementations and registrations; generic `CursorMove`;
+cancel/remove-secondary siblings; and column-mode override registrations. The
+complete `EditorScroll_` parser/arithmetic, `EditorScroll` plus all eight
+scroll command objects (`:1308-1629`), `RevealLine_` and complete `RevealLine`
+command (`:1830-1879`), `EditorOrNativeTextInputCommand`,
+`CoreEditingCommands`, and editor-handler registration tail are sibling
+clusters outside this child (scrolling, reveal-only, native-input, or editing
+ownership). Retired draft IDs CORE-126–134 and CORE-167 named those clusters
+with umbrella rows; they are no longer denominator rows and are never reused.
 
 ###### VC — `viewController.ts`
 
@@ -834,7 +865,14 @@ Included in this child's denominator: public get/set position/selection(s) metho
 
 ###### VED — `viewModelEventDispatcher.ts`
 
-Included: the complete generic dispatcher/collector fields and methods, the `CursorStateChangedEvent` union arm/kind, and complete `CursorStateChangedEvent`. Every non-cursor outgoing union arm/kind and its event class body is an excluded sibling owned by lifecycle, geometry, invalidation, zones, tokenization, or configuration children.
+Included in the inventory: the complete generic dispatcher/collector fields
+and methods, the `CursorStateChangedEvent` union arm/kind, and complete
+`CursorStateChangedEvent`. This child implements only the outgoing emitter,
+coalescing queue, and cursor event class. Generic view-handler, nested
+collector, and view-event-queue ownership is explicitly deferred to the
+render-invalidation child. Every non-cursor outgoing union arm/kind and event
+class body remains owned by lifecycle, geometry, invalidation, zones,
+tokenization, or configuration children.
 
 ###### VMI — `viewModelImpl.ts`
 
@@ -842,13 +880,24 @@ Included: event-dispatcher/cursor ownership construction; cursor-bearing content
 
 ##### Abbreviated local targets
 
-- `NAV`: `viewer/common/cursor/core_navigation_commands.mbt` plus movement additions in `viewer/common/cursor/**`.
+- `NAV`: source-shaped movement in `viewer/common/view_model/cursor_move_operations.mbt` and `cursor_move_commands.mbt`, plus the root command adapter.
 - `REG`: `viewer/editor_extensions.mbt` plus a new cursor registration unit and `viewer/input.mbt`.
 - `MOUSE`: `viewer/view_controller.mbt`.
 - `API`: `viewer/selection.mbt`, `viewer/public_read_api.mbt`, and `viewer/viewer.mbt`.
 - `SPINE`: shared transition/event collector work across `viewer/common/cursor/cursors_controller.mbt`, `viewer/common/view_model/view_model.mbt`, `viewer/selection.mbt`, `viewer/view_controller.mbt`, and `viewer/attach_model.mbt`.
 
 Proposed terminals mean: `TESTED` = required source behavior should land with branch evidence; `PORTED` = contract/plumbing with indirect tests is acceptable; `DEFERRED` = real absent surface outside this child's implementation boundary; `N-A` = impossible/unobservable under the approved single-cursor readonly product boundary.
+
+##### CORE excluded sibling registry (not denominator rows)
+
+| Source lines | Complete excluded sibling ownership |
+|---|---|
+| `coreCommands.ts:51-235,1308-1629` | `EditorScroll_`, `EditorScrollCommandOptions`, `EditorScrollImpl`, `EditorScroll`, and all eight `Scroll*` command objects; future scroll child. |
+| `coreCommands.ts:237-303,1830-1879` | `RevealLine_`, `RevealLineCommandOptions`, and the complete anonymous `RevealLine` command; reveal/API child. |
+
+Draft umbrella IDs CORE-126–134 and CORE-167 are retired and excluded from
+the denominator; they are never reused. Active CORE IDs are unique and occupy
+`CORE-001–125`, `CORE-135–166`, and `CORE-168–196`.
 
 ##### CORE ledger
 
@@ -914,22 +963,22 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 | CORE-058 | coreCommands.ts:643-645 | Unknown generic direction returns null. | NAV | DEFERRED (general command API) | TODO |
 | CORE-059 | coreCommands.ts:649 | `CursorMove` registers the `CursorMoveImpl` instance. | REG | DEFERRED (general command API) | TODO |
 | CORE-060 | coreCommands.ts:651-653 | Page-size marker is the exact magic value `-1`. | NAV | TESTED | TODO |
-| CORE-061 | coreCommands.ts:655-657 | Per-invocation cursor-move options optionally override `pageSize`. | NAV | TESTED | TODO |
+| CORE-061 | coreCommands.ts:655-657 | Per-invocation cursor-move options optionally supply `pageSize`; CORE-064 owns the source's truthy-or-fallback semantics. | NAV | TESTED | TODO |
 | CORE-062 | coreCommands.ts:661 | `_staticArgs` field retains one `SimpleMoveArguments` object. | NAV | PORTED | TODO |
 | CORE-063 | coreCommands.ts:663-666 | Constructor stores `opts.args`. | NAV | PORTED | TODO |
-| CORE-064 | coreCommands.ts:668-678 | Only static value `-1` is replaced; dynamic pageSize wins, otherwise `cursorConfig.pageSize`; direction/unit/select are copied unchanged. | NAV | TESTED | TODO |
+| CORE-064 | coreCommands.ts:668-678 | Only static value `-1` is replaced. A truthy `dynamicArgs.pageSize` wins; `undefined` and exact `0` fall back to `cursorConfig.pageSize`. Direction, unit, and select are copied unchanged. | NAV | TESTED | TODO |
 | CORE-065 | coreCommands.ts:680-685 | Key movement pushes a stack element, then sets all states with supplied source, `Explicit`, and `simpleMove`. | NAV + SPINE | TESTED | TODO |
 | CORE-066 | coreCommands.ts:686 | Key movement reveals all cursors with horizontal reveal true after setting. | NAV | TESTED | TODO |
-| CORE-067 | coreCommands.ts:690-705 | `cursorLeft`: Left/None/select=false/value=1; undefined precondition; core weight; text-input-focus; Left; mac secondary WinCtrl+B. | REG + NAV | TESTED | TODO |
+| CORE-067 | coreCommands.ts:690-702,704-705 | `cursorLeft`: Left/None/select=false/value=1; ID, undefined precondition, core weight, text-input-focus, and required primary Left. | REG + NAV | TESTED | TODO |
 | CORE-068 | coreCommands.ts:707-721 | `cursorLeftSelect`: Left/None/select=true/value=1; core weight/focus; Shift+Left. | REG + NAV | TESTED | TODO |
-| CORE-069 | coreCommands.ts:723-738 | `cursorRight`: Right/None/false/1; core weight/focus; Right; mac secondary WinCtrl+F. | REG + NAV | TESTED | TODO |
+| CORE-069 | coreCommands.ts:723-735,737-738 | `cursorRight`: Right/None/select=false/value=1; ID, undefined precondition, core weight, text-input-focus, and required primary Right. | REG + NAV | TESTED | TODO |
 | CORE-070 | coreCommands.ts:740-754 | `cursorRightSelect`: Right/None/true/1; core weight/focus; Shift+Right. | REG + NAV | TESTED | TODO |
-| CORE-071 | coreCommands.ts:756-771 | `cursorUp`: Up/WrappedLine/false/1; core weight/focus; Up; mac secondary WinCtrl+P. | REG + NAV | TESTED | TODO |
-| CORE-072 | coreCommands.ts:773-790 | `cursorUpSelect`: Up/WrappedLine/true/1; Shift+Up; generic secondary CtrlCmd+Shift+Up; mac/Linux override primary Shift+Up. | REG + NAV | TESTED | TODO |
+| CORE-071 | coreCommands.ts:756-768,770-771 | `cursorUp`: Up/WrappedLine/select=false/value=1; ID, core weight, text-input-focus, and required primary Up. | REG + NAV | TESTED | TODO |
+| CORE-072 | coreCommands.ts:773-784,789-790 | `cursorUpSelect`: Up/WrappedLine/select=true/value=1; ID, core weight, text-input-focus, and required primary Shift+Up. | REG + NAV | TESTED | TODO |
 | CORE-073 | coreCommands.ts:792-806 | `cursorPageUp`: Up/WrappedLine/false/`-1`; core weight/focus; PageUp. | REG + NAV | TESTED | TODO |
 | CORE-074 | coreCommands.ts:808-822 | `cursorPageUpSelect`: Up/WrappedLine/true/`-1`; core weight/focus; Shift+PageUp. | REG + NAV | TESTED | TODO |
-| CORE-075 | coreCommands.ts:824-839 | `cursorDown`: Down/WrappedLine/false/1; core weight/focus; Down; mac secondary WinCtrl+N. | REG + NAV | TESTED | TODO |
-| CORE-076 | coreCommands.ts:841-858 | `cursorDownSelect`: Down/WrappedLine/true/1; Shift+Down; generic secondary CtrlCmd+Shift+Down; mac/Linux override primary Shift+Down. | REG + NAV | TESTED | TODO |
+| CORE-075 | coreCommands.ts:824-836,838-839 | `cursorDown`: Down/WrappedLine/select=false/value=1; ID, core weight, text-input-focus, and required primary Down. | REG + NAV | TESTED | TODO |
+| CORE-076 | coreCommands.ts:841-852,857-858 | `cursorDownSelect`: Down/WrappedLine/select=true/value=1; ID, core weight, text-input-focus, and required primary Shift+Down. | REG + NAV | TESTED | TODO |
 | CORE-077 | coreCommands.ts:860-874 | `cursorPageDown`: Down/WrappedLine/false/`-1`; core weight/focus; PageDown. | REG + NAV | TESTED | TODO |
 | CORE-078 | coreCommands.ts:876-890 | `cursorPageDownSelect`: Down/WrappedLine/true/`-1`; core weight/focus; Shift+PageDown. | REG + NAV | TESTED | TODO |
 | CORE-079 | coreCommands.ts:892-894 | `CreateCursorCommandOptions.wholeLine` is optional. | — | N-A (multi-cursor) | TODO |
@@ -949,26 +998,26 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 | CORE-093 | coreCommands.ts:987 | `HomeCommand._inSelectionMode` field. | NAV | PORTED | TODO |
 | CORE-094 | coreCommands.ts:989-992 | Constructor retains `opts.inSelectionMode`. | NAV | PORTED | TODO |
 | CORE-095 | coreCommands.ts:994-1002 | Home pushes stack, calls `moveToBeginningOfLine` for every cursor with selection mode, then reveals all horizontally. | NAV + SPINE | TESTED | TODO |
-| CORE-096 | coreCommands.ts:1005-1015 | `cursorHome`: selection=false, undefined precondition, core weight/focus; Home; mac secondary CtrlCmd+Left. | REG + NAV | TESTED | TODO |
-| CORE-097 | coreCommands.ts:1017-1027 | `cursorHomeSelect`: selection=true; Shift+Home; mac secondary CtrlCmd+Shift+Left. | REG + NAV | TESTED | TODO |
+| CORE-096 | coreCommands.ts:1005-1012,1014-1015 | `cursorHome`: selection=false; ID, undefined precondition, core weight, text-input-focus, and required primary Home. | REG + NAV | TESTED | TODO |
+| CORE-097 | coreCommands.ts:1017-1024,1026-1027 | `cursorHomeSelect`: selection=true; ID, core weight, text-input-focus, and required primary Shift+Home. | REG + NAV | TESTED | TODO |
 | CORE-098 | coreCommands.ts:1031 | `LineStartCommand._inSelectionMode` field. | NAV | PORTED | TODO |
 | CORE-099 | coreCommands.ts:1033-1036 | Constructor retains `opts.inSelectionMode`. | NAV | PORTED | TODO |
 | CORE-100 | coreCommands.ts:1038-1046 | Line-start pushes stack, sets `Explicit` from `_exec`, then reveals all horizontally. | NAV + SPINE | TESTED | TODO |
 | CORE-101 | coreCommands.ts:1048-1056 | `_exec` preserves each cursor model line, moves to column `1`, and resets leftover visible columns to `0`. | NAV | TESTED | TODO |
-| CORE-102 | coreCommands.ts:1059-1069 | `cursorLineStart`: false; ID; core weight/focus; generic primary `0`; mac WinCtrl+A. | REG + NAV | TESTED | TODO |
-| CORE-103 | coreCommands.ts:1071-1081 | `cursorLineStartSelect`: true; generic primary `0`; mac WinCtrl+Shift+A. | REG + NAV | TESTED | TODO |
+| CORE-102 | coreCommands.ts:1059-1069 | `cursorLineStart`: false; ID; core weight/focus; generic primary `0`; mac WinCtrl+A. | REG + NAV | DEFERRED (mac-only line-start binding outside approved 16 primary bindings) | TODO |
+| CORE-103 | coreCommands.ts:1071-1081 | `cursorLineStartSelect`: true; generic primary `0`; mac WinCtrl+Shift+A. | REG + NAV | DEFERRED (mac-only line-start binding outside approved 16 primary bindings) | TODO |
 | CORE-104 | coreCommands.ts:1083-1085 | `EndCommandOptions.sticky` is optional. | NAV | PORTED | TODO |
 | CORE-105 | coreCommands.ts:1089 | `EndCommand._inSelectionMode` field. | NAV | PORTED | TODO |
 | CORE-106 | coreCommands.ts:1091-1094 | Constructor retains `opts.inSelectionMode`. | NAV | PORTED | TODO |
 | CORE-107 | coreCommands.ts:1096-1104 | End pushes stack, calls `moveToEndOfLine` with `args.sticky` logical-OR false, then reveals all horizontally. | NAV + SPINE | TESTED | TODO |
-| CORE-108 | coreCommands.ts:1107-1134 | `cursorEnd`: false; ID; static sticky false; core weight/focus; End; mac secondary CtrlCmd+Right; metadata schema boolean default false. | REG + NAV | TESTED | TODO |
-| CORE-109 | coreCommands.ts:1136-1163 | `cursorEndSelect`: true; static sticky false; Shift+End; mac secondary CtrlCmd+Shift+Right; schema default false. | REG + NAV | TESTED | TODO |
+| CORE-108 | coreCommands.ts:1107-1115,1117 | `cursorEnd`: selection=false; ID, static sticky=false, core weight, text-input-focus, and required primary End. | REG + NAV | TESTED | TODO |
+| CORE-109 | coreCommands.ts:1136-1144,1146 | `cursorEndSelect`: selection=true; ID, static sticky=false, core weight, text-input-focus, and required primary Shift+End. | REG + NAV | TESTED | TODO |
 | CORE-110 | coreCommands.ts:1167 | `LineEndCommand._inSelectionMode` field. | NAV | PORTED | TODO |
 | CORE-111 | coreCommands.ts:1169-1172 | Constructor retains `opts.inSelectionMode`. | NAV | PORTED | TODO |
 | CORE-112 | coreCommands.ts:1174-1182 | Line-end pushes stack, sets `Explicit` from `_exec`, then reveals all horizontally. | NAV + SPINE | TESTED | TODO |
 | CORE-113 | coreCommands.ts:1184-1193 | `_exec` reads each cursor model line's exact max column and moves there with leftover visible columns `0`. | NAV | TESTED | TODO |
-| CORE-114 | coreCommands.ts:1196-1206 | `cursorLineEnd`: false; ID; core weight/focus; generic primary `0`; mac WinCtrl+E. | REG + NAV | TESTED | TODO |
-| CORE-115 | coreCommands.ts:1208-1218 | `cursorLineEndSelect`: true; generic primary `0`; mac WinCtrl+Shift+E. | REG + NAV | TESTED | TODO |
+| CORE-114 | coreCommands.ts:1196-1206 | `cursorLineEnd`: false; ID; core weight/focus; generic primary `0`; mac WinCtrl+E. | REG + NAV | DEFERRED (mac-only line-end binding outside approved 16 primary bindings) | TODO |
+| CORE-115 | coreCommands.ts:1208-1218 | `cursorLineEndSelect`: true; generic primary `0`; mac WinCtrl+Shift+E. | REG + NAV | DEFERRED (mac-only line-end binding outside approved 16 primary bindings) | TODO |
 | CORE-116 | coreCommands.ts:1222 | `TopCommand._inSelectionMode` field. | NAV | DEFERRED (Ctrl/Cmd buffer command outside bound keys) | TODO |
 | CORE-117 | coreCommands.ts:1224-1227 | Constructor retains `opts.inSelectionMode`. | NAV | DEFERRED (Ctrl/Cmd buffer command outside bound keys) | TODO |
 | CORE-118 | coreCommands.ts:1229-1237 | Top pushes stack, calls `moveToBeginningOfBuffer`, then reveals all horizontally. | NAV + SPINE | DEFERRED (Ctrl/Cmd buffer command outside bound keys) | TODO |
@@ -979,15 +1028,6 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 | CORE-123 | coreCommands.ts:1273-1281 | Bottom pushes stack, calls `moveToEndOfBuffer`, then reveals all horizontally. | NAV + SPINE | DEFERRED (Ctrl/Cmd buffer command outside bound keys) | TODO |
 | CORE-124 | coreCommands.ts:1284-1294 | `cursorBottom`: false; core weight/focus; CtrlCmd+End; mac CtrlCmd+Down. | REG + NAV | DEFERRED (Ctrl/Cmd buffer command outside bound keys) | TODO |
 | CORE-125 | coreCommands.ts:1296-1306 | `cursorBottomSelect`: true; CtrlCmd+Shift+End; mac CtrlCmd+Shift+Down. | REG + NAV | DEFERRED (Ctrl/Cmd buffer command outside bound keys) | TODO |
-| CORE-126 | coreCommands.ts:1310-1317,1427 | `EditorScroll` registers the distinct `editorScroll` command ID; its parser/arithmetic class is outside this denominator. | — | DEFERRED (scroll child) | TODO |
-| CORE-127 | coreCommands.ts:1429-1453 | `scrollLineUp`: distinct ID; CtrlCmd+Up (mac WinCtrl+PageUp); delegates Up/WrappedLine/value1/reveal=false/select=false. | — | DEFERRED (scroll child) | TODO |
-| CORE-128 | coreCommands.ts:1455-1480 | `scrollPageUp`: distinct ID; CtrlCmd+PageUp (Win/Linux Alt+PageUp); delegates Up/Page/1/false/false. | — | DEFERRED (scroll child) | TODO |
-| CORE-129 | coreCommands.ts:1482-1504 | `scrollEditorTop`: distinct ID and no default key; delegates Up/Editor/1/false/false. | — | DEFERRED (scroll child) | TODO |
-| CORE-130 | coreCommands.ts:1506-1530 | `scrollLineDown`: distinct ID; CtrlCmd+Down (mac WinCtrl+PageDown); delegates Down/WrappedLine/1/false/false. | — | DEFERRED (scroll child) | TODO |
-| CORE-131 | coreCommands.ts:1532-1557 | `scrollPageDown`: distinct ID; CtrlCmd+PageDown (Win/Linux Alt+PageDown); delegates Down/Page/1/false/false. | — | DEFERRED (scroll child) | TODO |
-| CORE-132 | coreCommands.ts:1559-1581 | `scrollEditorBottom`: distinct ID/no default key; delegates Down/Editor/1/false/false. | — | DEFERRED (scroll child) | TODO |
-| CORE-133 | coreCommands.ts:1583-1605 | `scrollLeft`: distinct ID/no default key; delegates Left/Column/value exactly `2`/false/false. | — | DEFERRED (scroll child) | TODO |
-| CORE-134 | coreCommands.ts:1607-1629 | `scrollRight`: distinct ID/no default key; delegates Right/Column/value exactly `2`/false/false. | — | DEFERRED (scroll child) | TODO |
 | CORE-135 | coreCommands.ts:1633 | `WordCommand._inSelectionMode` field. | NAV | PORTED | TODO |
 | CORE-136 | coreCommands.ts:1635-1638 | Constructor retains `opts.inSelectionMode`. | NAV | PORTED | TODO |
 | CORE-137 | coreCommands.ts:1640-1643 | Word command returns when position is absent. | NAV | TESTED | TODO |
@@ -1020,7 +1060,6 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 | CORE-164 | coreCommands.ts:1802 | Exported `RemoveSecondaryCursors` constant registers the anonymous command. | — | N-A (single cursor) | TODO |
 | CORE-165 | coreCommands.ts:1803-1814 | Constructor sets multiple-selection precondition, weight `CORE_WEIGHT + 1`, focus, Escape and Shift+Escape. | — | N-A (single cursor) | TODO |
 | CORE-166 | coreCommands.ts:1816-1827 | It keeps only primary, reveals, then announces exact status `Removed secondary cursors`. | — | N-A (single cursor) | TODO |
-| CORE-167 | coreCommands.ts:1832 | Exported `RevealLine` registers the distinct reveal-only command; its constructor/run body is outside this denominator. | — | DEFERRED (reveal/API child) | TODO |
 | CORE-168 | coreCommands.ts:1881 | Exported `SelectAll` constant owns the anonymous editor/native command. | REG | PORTED | TODO |
 | CORE-169 | coreCommands.ts:1882-1884 | Constructor registers it through the editor-or-native SelectAll multi-command. | REG | PORTED | TODO |
 | CORE-170 | coreCommands.ts:1885-1892 | Native DOM SelectAll has a Firefox focus+select special case, then `execCommand('selectAll')`. | — | N-A (editor-root command path does not use DOM input selection) | TODO |
@@ -1040,6 +1079,16 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 | CORE-184 | coreCommands.ts:1957 | Shift+PageUp overrides to `CursorColumnSelectPageUp`. | — | N-A (column selection) | TODO |
 | CORE-185 | coreCommands.ts:1958 | Shift+Down overrides to `CursorColumnSelectDown`. | — | N-A (column selection) | TODO |
 | CORE-186 | coreCommands.ts:1959 | Shift+PageDown overrides to `CursorColumnSelectPageDown`. | — | N-A (column selection) | TODO |
+| CORE-187 | coreCommands.ts:703 | `cursorLeft` mac override repeats primary Left and adds secondary WinCtrl+B. | REG | DEFERRED (alternate-platform surface outside approved 16 primary bindings) | TODO |
+| CORE-188 | coreCommands.ts:736 | `cursorRight` mac override repeats primary Right and adds secondary WinCtrl+F. | REG | DEFERRED (alternate-platform surface outside approved 16 primary bindings) | TODO |
+| CORE-189 | coreCommands.ts:769 | `cursorUp` mac override repeats primary Up and adds secondary WinCtrl+P. | REG | DEFERRED (alternate-platform surface outside approved 16 primary bindings) | TODO |
+| CORE-190 | coreCommands.ts:785-788 | `cursorUpSelect` adds generic secondary CtrlCmd+Shift+Up and explicit mac/Linux primary Shift+Up overrides. | REG | DEFERRED (alternate-platform surface outside approved 16 primary bindings) | TODO |
+| CORE-191 | coreCommands.ts:837 | `cursorDown` mac override repeats primary Down and adds secondary WinCtrl+N. | REG | DEFERRED (alternate-platform surface outside approved 16 primary bindings) | TODO |
+| CORE-192 | coreCommands.ts:853-856 | `cursorDownSelect` adds generic secondary CtrlCmd+Shift+Down and explicit mac/Linux primary Shift+Down overrides. | REG | DEFERRED (alternate-platform surface outside approved 16 primary bindings) | TODO |
+| CORE-193 | coreCommands.ts:1013 | `cursorHome` mac override repeats primary Home and adds secondary CtrlCmd+Left. | REG | DEFERRED (alternate-platform surface outside approved 16 primary bindings) | TODO |
+| CORE-194 | coreCommands.ts:1025 | `cursorHomeSelect` mac override repeats primary Shift+Home and adds secondary CtrlCmd+Shift+Left. | REG | DEFERRED (alternate-platform surface outside approved 16 primary bindings) | TODO |
+| CORE-195 | coreCommands.ts:1116,1118-1133 | `cursorEnd` mac secondary CtrlCmd+Right plus `Go to End` command metadata and sticky boolean schema/default false. | REG | DEFERRED (alternate-platform/command-metadata surface outside approved 16 primary bindings) | TODO |
+| CORE-196 | coreCommands.ts:1145,1147-1162 | `cursorEndSelect` mac secondary CtrlCmd+Shift+Right plus `Select to End` metadata and sticky boolean schema/default false. | REG | DEFERRED (alternate-platform/command-metadata surface outside approved 16 primary bindings) | TODO |
 
 ##### VC ledger
 
@@ -1152,7 +1201,7 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 | CEW-020 | codeEditorWidget.ts:949-951 | `setSelections` returns without a model. | API | TESTED | TODO |
 | CEW-021 | codeEditorWidget.ts:952-954 | Null or empty ranges throw invalid arguments. | API | DEFERRED (typed non-null; empty currently no-op rather than throw) | TODO |
 | CEW-022 | codeEditorWidget.ts:955-959 | Every array element is validated as a selection; first invalid element throws. | API | N-A (typed array) | TODO |
-| CEW-023 | codeEditorWidget.ts:960 | Valid selections, source, and reason forward unchanged to the view model. | API + SPINE | TESTED | TODO |
+| CEW-023 | codeEditorWidget.ts:960 | Source forwards the complete validated `ranges` array, source, and reason unchanged. Under the approved single-cursor Viewer seam, `ranges[0]`, source, and reason forward unchanged while `ranges[1..]` are intentionally dropped; preservation of secondaries is the row-local single-cursor deviation. | API + SPINE | TESTED | TODO |
 
 ##### VED excluded sibling registry (not denominator rows)
 
@@ -1167,47 +1216,47 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 |---|---|---|---|---|---|
 | VED-001 | viewModelEventDispatcher.ts:17 | `_onEvent` is a registered emitter of the outgoing union. | SPINE | PORTED | TODO |
 | VED-002 | viewModelEventDispatcher.ts:18 | `onEvent` is the public alias of `_onEvent.event`. | SPINE | PORTED | TODO |
-| VED-003 | viewModelEventDispatcher.ts:20 | `_eventHandlers` owns ordered view-event handlers. | SPINE | PORTED | TODO |
-| VED-004 | viewModelEventDispatcher.ts:21 | `_viewEventQueue` is null or an ordered event array. | SPINE | PORTED | TODO |
-| VED-005 | viewModelEventDispatcher.ts:22 | `_isConsumingViewEventQueue` is the reentrancy gate. | SPINE | PORTED | TODO |
-| VED-006 | viewModelEventDispatcher.ts:23 | `_collector` is the current nested transaction collector or null. | SPINE | PORTED | TODO |
-| VED-007 | viewModelEventDispatcher.ts:24 | `_collectorCnt` tracks nested begin/end depth. | SPINE | PORTED | TODO |
+| VED-003 | viewModelEventDispatcher.ts:20 | `_eventHandlers` owns ordered view-event handlers. | SPINE | DEFERRED (generic view-event dispatcher owned by render-invalidation child) | TODO |
+| VED-004 | viewModelEventDispatcher.ts:21 | `_viewEventQueue` is null or an ordered event array. | SPINE | DEFERRED (generic view-event dispatcher owned by render-invalidation child) | TODO |
+| VED-005 | viewModelEventDispatcher.ts:22 | `_isConsumingViewEventQueue` is the reentrancy gate. | SPINE | DEFERRED (generic view-event dispatcher owned by render-invalidation child) | TODO |
+| VED-006 | viewModelEventDispatcher.ts:23 | `_collector` is the current nested transaction collector or null. | SPINE | DEFERRED (generic view-event dispatcher owned by render-invalidation child) | TODO |
+| VED-007 | viewModelEventDispatcher.ts:24 | `_collectorCnt` tracks nested begin/end depth. | SPINE | DEFERRED (generic view-event dispatcher owned by render-invalidation child) | TODO |
 | VED-008 | viewModelEventDispatcher.ts:25 | `_outgoingEvents` owns the pending/coalesced outgoing queue. | SPINE | PORTED | TODO |
-| VED-009 | viewModelEventDispatcher.ts:27-35 | Constructor initializes handlers/outgoing to empty, queue/collector null, consuming false, and depth zero. | SPINE | PORTED | TODO |
+| VED-009 | viewModelEventDispatcher.ts:27-35 | Constructor initializes handlers/outgoing to empty, queue/collector null, consuming false, and depth zero. | SPINE | DEFERRED (generic view-event dispatcher owned by render-invalidation child) | TODO |
 | VED-010 | viewModelEventDispatcher.ts:37-40 | `emitOutgoingEvent` adds/merges first, then attempts to drain. | SPINE | TESTED | TODO |
 | VED-011 | viewModelEventDispatcher.ts:42-45 | `_addOutgoingEvent` scans pending events in order and calls `attemptToMerge` only on the same kind. | SPINE | TESTED | TODO |
 | VED-012 | viewModelEventDispatcher.ts:45-48 | A truthy merge replaces that existing queue slot and returns immediately. | SPINE | TESTED | TODO |
 | VED-013 | viewModelEventDispatcher.ts:50-52 | No merge appends the event at queue tail. | SPINE | TESTED | TODO |
 | VED-014 | viewModelEventDispatcher.ts:54-55 | `_emitOutgoingEvents` drains while the queue is nonempty. | SPINE | TESTED | TODO |
-| VED-015 | viewModelEventDispatcher.ts:56-59 | Active collector or active view-event consumption postpones outgoing delivery without removing the head. | SPINE | TESTED | TODO |
+| VED-015 | viewModelEventDispatcher.ts:56-59 | Active collector or active view-event consumption postpones outgoing delivery without removing the head. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
 | VED-016 | viewModelEventDispatcher.ts:60 | Delivery shifts the oldest event (FIFO). | SPINE | TESTED | TODO |
 | VED-017 | viewModelEventDispatcher.ts:61-63 | `isNoOp()` events are discarded and draining continues. | SPINE | TESTED | TODO |
 | VED-018 | viewModelEventDispatcher.ts:64 | Non-no-op event fires through `_onEvent`. | SPINE | TESTED | TODO |
 | VED-019 | viewModelEventDispatcher.ts:68-73 | `addViewEventHandler` scans for identical handler and warns on duplicate without preventing registration. | SPINE | DEFERRED (no generic handler registry needed) | TODO |
 | VED-020 | viewModelEventDispatcher.ts:74 | Handler is appended after duplicate scan. | SPINE | DEFERRED (no generic handler registry needed) | TODO |
 | VED-021 | viewModelEventDispatcher.ts:77-84 | `removeViewEventHandler` removes the first identical handler and breaks; missing handler is a no-op. | SPINE | DEFERRED (no generic handler registry needed) | TODO |
-| VED-022 | viewModelEventDispatcher.ts:86-87 | `beginEmitViewEvents` increments depth first. | SPINE | TESTED | TODO |
-| VED-023 | viewModelEventDispatcher.ts:88-90 | Exactly depth `1` creates the shared collector. | SPINE | TESTED | TODO |
-| VED-024 | viewModelEventDispatcher.ts:91 | Every nested begin returns the same non-null collector. | SPINE | TESTED | TODO |
-| VED-025 | viewModelEventDispatcher.ts:94-96 | `endEmitViewEvents` decrements depth; only transition to zero flushes the collector. | SPINE | TESTED | TODO |
-| VED-026 | viewModelEventDispatcher.ts:97-99 | Outgoing and view arrays are captured, then `_collector` is nulled before any callback. | SPINE | TESTED | TODO |
-| VED-027 | viewModelEventDispatcher.ts:101-103 | Collected outgoing events are added/merged in collector order. | SPINE | TESTED | TODO |
-| VED-028 | viewModelEventDispatcher.ts:105-107 | Nonempty collected view events are emitted before the final outgoing drain. | SPINE | TESTED | TODO |
-| VED-029 | viewModelEventDispatcher.ts:109 | `_emitOutgoingEvents` runs after the outermost view-event emission (and after every nested end no-op). | SPINE | TESTED | TODO |
-| VED-030 | viewModelEventDispatcher.ts:112-119 | `emitSingleViewEvent` begins, queues one view event, and ends in `finally`. | SPINE | TESTED | TODO |
-| VED-031 | viewModelEventDispatcher.ts:121-126 | `_emitMany` concatenates onto an existing reentrant queue; otherwise installs the array directly. | SPINE | TESTED | TODO |
-| VED-032 | viewModelEventDispatcher.ts:128-130 | Queue consumption starts only when it is not already consuming. | SPINE | TESTED | TODO |
-| VED-033 | viewModelEventDispatcher.ts:133-140 | `_consumeViewEventQueue` sets consuming true, drains, and restores false in `finally`. | SPINE | TESTED | TODO |
-| VED-034 | viewModelEventDispatcher.ts:142-147 | `_doConsumeQueue` snapshots the current queue and clears the field before invoking handlers, allowing reentrant events to form a later batch. | SPINE | TESTED | TODO |
-| VED-035 | viewModelEventDispatcher.ts:148-149 | It clones the handler list before callbacks so handlers may remove themselves. | SPINE | TESTED | TODO |
-| VED-036 | viewModelEventDispatcher.ts:150-152 | Every cloned handler receives the entire batch in registration order. | SPINE | TESTED | TODO |
-| VED-037 | viewModelEventDispatcher.ts:159 | `ViewModelEventsCollector.viewEvents` field. | SPINE | PORTED | TODO |
-| VED-038 | viewModelEventDispatcher.ts:160 | `ViewModelEventsCollector.outgoingEvents` field. | SPINE | PORTED | TODO |
-| VED-039 | viewModelEventDispatcher.ts:162-165 | Collector constructor initializes both arrays empty. | SPINE | PORTED | TODO |
-| VED-040 | viewModelEventDispatcher.ts:167-169 | `emitViewEvent` appends one view event. | SPINE | TESTED | TODO |
-| VED-041 | viewModelEventDispatcher.ts:171-173 | `emitOutgoingEvent` appends one outgoing event. | SPINE | TESTED | TODO |
+| VED-022 | viewModelEventDispatcher.ts:86-87 | `beginEmitViewEvents` increments depth first. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-023 | viewModelEventDispatcher.ts:88-90 | Exactly depth `1` creates the shared collector. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-024 | viewModelEventDispatcher.ts:91 | Every nested begin returns the same non-null collector. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-025 | viewModelEventDispatcher.ts:94-96 | `endEmitViewEvents` decrements depth; only transition to zero flushes the collector. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-026 | viewModelEventDispatcher.ts:97-99 | Outgoing and view arrays are captured, then `_collector` is nulled before any callback. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-027 | viewModelEventDispatcher.ts:101-103 | Collected outgoing events are added/merged in collector order. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-028 | viewModelEventDispatcher.ts:105-107 | Nonempty collected view events are emitted before the final outgoing drain. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-029 | viewModelEventDispatcher.ts:109 | `_emitOutgoingEvents` runs after the outermost view-event emission (and after every nested end no-op). | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-030 | viewModelEventDispatcher.ts:112-119 | `emitSingleViewEvent` begins, queues one view event, and ends in `finally`. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-031 | viewModelEventDispatcher.ts:121-126 | `_emitMany` concatenates onto an existing reentrant queue; otherwise installs the array directly. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-032 | viewModelEventDispatcher.ts:128-130 | Queue consumption starts only when it is not already consuming. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-033 | viewModelEventDispatcher.ts:133-140 | `_consumeViewEventQueue` sets consuming true, drains, and restores false in `finally`. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-034 | viewModelEventDispatcher.ts:142-147 | `_doConsumeQueue` snapshots the current queue and clears the field before invoking handlers, allowing reentrant events to form a later batch. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-035 | viewModelEventDispatcher.ts:148-149 | It clones the handler list before callbacks so handlers may remove themselves. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-036 | viewModelEventDispatcher.ts:150-152 | Every cloned handler receives the entire batch in registration order. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-037 | viewModelEventDispatcher.ts:159 | `ViewModelEventsCollector.viewEvents` field. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-038 | viewModelEventDispatcher.ts:160 | `ViewModelEventsCollector.outgoingEvents` field. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-039 | viewModelEventDispatcher.ts:162-165 | Collector constructor initializes both arrays empty. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-040 | viewModelEventDispatcher.ts:167-169 | `emitViewEvent` appends one view event. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
+| VED-041 | viewModelEventDispatcher.ts:171-173 | `emitOutgoingEvent` appends one outgoing event. | SPINE | DEFERRED (generic view-event collector owned by render-invalidation child) | TODO |
 | VED-042 | viewModelEventDispatcher.ts:184 | `CursorStateChangedEvent` is the cursor arm of `OutgoingViewModelEvent`. | SPINE | PORTED | TODO |
-| VED-043 | viewModelEventDispatcher.ts:203 | Kind `CursorStateChanged`. | SPINE | TESTED | TODO |
+| VED-043 | viewModelEventDispatcher.ts:203 | `OutgoingViewModelEventKind.CursorStateChanged` is the eighth const-enum arm and therefore has exact numeric value `7`; the MoonBit semantic variant has no numeric ABI. | SPINE | TESTED | TODO |
 | VED-044 | viewModelEventDispatcher.ts:389 | `CursorStateChangedEvent.kind` is `CursorStateChanged`. | SPINE | PORTED | TODO |
 | VED-045 | viewModelEventDispatcher.ts:391 | `oldSelections` is nullable. | SPINE | PORTED | TODO |
 | VED-046 | viewModelEventDispatcher.ts:392 | `selections` is the new ordered selection array. | SPINE | PORTED | TODO |
@@ -1239,12 +1288,12 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 
 | ID | Source member (file:line) | Arithmetic / transition | Local target | Proposed terminal | Status |
 |---|---|---|---|---|---|
-| VMI-001 | viewModelImpl.ts:56 | `_eventDispatcher` owns generic view/outgoing event delivery. | SPINE | PORTED | TODO |
-| VMI-002 | viewModelImpl.ts:57 | `onEvent` exposes the dispatcher's outgoing event. | SPINE | PORTED | TODO |
+| VMI-001 | viewModelImpl.ts:56 | `_eventDispatcher` owns generic view/outgoing event delivery; the local cursor child ports its outgoing-only half while generic view delivery remains deferred. | outgoing-only cursor event dispatcher | PORTED | TODO |
+| VMI-002 | viewModelImpl.ts:57 | `onEvent` exposes the dispatcher's outgoing event; locally the ViewModel exposes the cursor-outgoing event alias. | outgoing-only cursor event alias | PORTED | TODO |
 | VMI-003 | viewModelImpl.ts:65 | `_cursor` owns the cursor controller. | SPINE | PORTED | TODO |
-| VMI-004 | viewModelImpl.ts:86-87 | Constructor creates dispatcher first, then aliases its event. | SPINE | PORTED | TODO |
+| VMI-004 | viewModelImpl.ts:86-87 | Constructor creates the outgoing dispatcher first, then aliases its event; generic view-event state is deferred with VED-003–007/009. | SPINE | PORTED | TODO |
 | VMI-005 | viewModelImpl.ts:122-124 | Coordinates converter is created before the cursor controller receives model/view/converter/config. | SPINE | PORTED | TODO |
-| VMI-006 | viewModelImpl.ts:462-469 | `emitContentChangeEvent` runs inside one `_emitViewEvent` collector transaction. | SPINE | TESTED | TODO |
+| VMI-006 | viewModelImpl.ts:462-469 | `emitContentChangeEvent` runs inside one `_emitViewEvent` collector transaction. The local cursor child preserves the observable content-before-cursor order through its FIFO seam but does not port this generic collector bracket. | render-invalidation collector owner | DEFERRED (generic collector owned by render-invalidation child) | TODO |
 | VMI-007 | viewModelImpl.ts:464-466 | Internal model-content events enqueue public `ModelContentChangedEvent` first; injected-text events skip this outgoing event. | SPINE | TESTED | TODO |
 | VMI-008 | viewModelImpl.ts:467 | The cursor receives both content and injected-text event forms after the public-content enqueue. | SPINE | TESTED | TODO |
 | VMI-009 | viewModelImpl.ts:1149-1151 | `getPrimaryCursorState` delegates to cursor primary state. | NAV + API | PORTED | TODO |
@@ -1259,7 +1308,7 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 | VMI-018 | viewModelImpl.ts:1176-1178 | `getSelection` delegates the primary model selection. | API | TESTED | TODO |
 | VMI-019 | viewModelImpl.ts:1179-1181 | `getSelections` delegates all model selections in order. | API | TESTED | TODO |
 | VMI-020 | viewModelImpl.ts:1182-1184 | `getPosition` returns primary cursor model-state position. | API | TESTED | TODO |
-| VMI-021 | viewModelImpl.ts:1185-1187 | `setSelections` defaults reason to `NotSet` and transactionally delegates source/selections/reason unchanged. | API + SPINE | TESTED | TODO |
+| VMI-021 | viewModelImpl.ts:1185-1187 | Source defaults reason to `NotSet` and transactionally delegates source, the complete selections array, and reason unchanged. The local seam delegates source, `selections[0]`, and reason unchanged; preservation of `selections[1..]` is the same approved single-cursor deviation as CEW-023. | API + SPINE | TESTED | TODO |
 | VMI-022 | viewModelImpl.ts:1188-1190 | `saveCursorState` delegates collection serialization. | — | DEFERRED (view-state sibling) | TODO |
 | VMI-023 | viewModelImpl.ts:1191-1193 | `restoreCursorState` delegates inside one view-event transaction. | — | DEFERRED (view-state sibling) | TODO |
 | VMI-024 | viewModelImpl.ts:1230-1232 | `revealAllCursors` defaults minimal=false and delegates `Simple`, requested horizontal flag, and `ScrollType.Smooth` inside a collector. | NAV | TESTED | TODO |
@@ -1267,20 +1316,20 @@ Proposed terminals mean: `TESTED` = required source behavior should land with br
 | VMI-026 | viewModelImpl.ts:1236-1240 | `revealTopMostCursor` builds a collapsed range at top-most view position and emits reveal request `(source,false,range,null,Simple,true,Smooth)`. | — | N-A (column/multi-cursor) | TODO |
 | VMI-027 | viewModelImpl.ts:1241-1245 | `revealBottomMostCursor` analogously uses bottom-most view position and the same fixed reveal arguments. | — | N-A (column/multi-cursor) | TODO |
 | VMI-028 | viewModelImpl.ts:1246-1248 | `revealRange` emits `(source,false,viewRange,null,verticalType,revealHorizontal,scrollType)` transactionally. | NAV | PORTED | TODO |
-| VMI-029 | viewModelImpl.ts:1262-1266 | `_withViewEventsCollector` first enters transactional target `batchChanges`, then delegates to `_emitViewEvent`. | SPINE | TESTED | TODO |
-| VMI-030 | viewModelImpl.ts:1268-1271 | `_emitViewEvent` begins one dispatcher collector before invoking the callback and returns callback result. | SPINE | TESTED | TODO |
-| VMI-031 | viewModelImpl.ts:1272-1274 | Dispatcher end runs in `finally`, including callback failure/early return. | SPINE | TESTED | TODO |
-| VMI-032 | viewModelImpl.ts:1277-1279 | `batchEvents` uses `_withViewEventsCollector` and ignores the callback's Unit result. | SPINE | PORTED | TODO |
+| VMI-029 | viewModelImpl.ts:1262-1266 | `_withViewEventsCollector` first enters transactional target `batchChanges`, then delegates to `_emitViewEvent`. | render-invalidation collector owner | DEFERRED (generic collector owned by render-invalidation child) | TODO |
+| VMI-030 | viewModelImpl.ts:1268-1271 | `_emitViewEvent` begins one dispatcher collector before invoking the callback and returns callback result. | render-invalidation collector owner | DEFERRED (generic collector owned by render-invalidation child) | TODO |
+| VMI-031 | viewModelImpl.ts:1272-1274 | Dispatcher end runs in `finally`, including callback failure/early return. | render-invalidation collector owner | DEFERRED (generic collector owned by render-invalidation child) | TODO |
+| VMI-032 | viewModelImpl.ts:1277-1279 | `batchEvents` uses `_withViewEventsCollector` and ignores the callback's Unit result. | render-invalidation collector owner | DEFERRED (generic collector owned by render-invalidation child) | TODO |
 
 ##### Normalized-count audit
 
 - `CORE`: 186 rows.
 - `VC`: 70 rows.
 - `CEW`: 23 rows (plus inherited lifecycle authority, not duplicated).
-- `VED`: 60 rows (only generic ordering plus cursor union/kind/class).
+- `VED`: 60 rows (outgoing queue plus cursor class scoped here; generic view collection deferred row-locally).
 - `VMI`: 32 rows (only cursor ownership/handoff/public cursor region/collector helpers).
 - Assigned-source subtotal: **371 rows**.
-- Proposed terminals: **147 TESTED + 65 PORTED + 54 DEFERRED + 105 N-A = 371**.
+- Proposed terminals: **121 TESTED + 55 PORTED + 90 DEFERRED + 105 N-A = 371**.
 - Every table row is still Gate-A `TODO`.
 
 The normalization reread specifically split fields from constructors, named-class constructors from methods, anonymous command constants from their constructors/callbacks, overload signatures, interface properties, behavior branches/early returns, magic `-1`/`0`/`1`/`2` values, nested collector callbacks, and each command/keybinding registration. Allocation/delegate/return bookkeeping remains on the owning method row. No known scoped atom remains collapsed. Explicitly excluded whole sibling methods/classes are listed in the boundary/exclusion registries rather than represented by synthetic aggregate rows.
@@ -1293,14 +1342,20 @@ The normalization reread specifically split fields from constructors, named-clas
 4. `viewer/selection.mbt` currently owns an API-only event implementation: hard-coded source `api`, reason `Explicit`, host metadata `model.version`, direct position-then-selection fire, and a model-state-only equality gate. Source public API defaults are source `api`, reason `NotSet`, and the model's internal content version; this must become a caller-parameterized shared transition, not per-path event code.
 5. `viewer/common/cursor/cursors_controller.mbt` resets the cursor on Flush but emits/returns no change facts. `viewer/common/view_model/view_model.mbt::emit_content_change_event` invokes it after projection processing, and `viewer/attach_model.mbt` later re-fires public model content. Preserve source ordering: view cursor update first; outgoing ModelContent before outgoing CursorState; CEW relay position before selection. Flush uses source `model`, reason `ContentFlush`, old selections exactly null/`None`, and old model version `0` because source deliberately passes `oldState=null`; the new version is the internal `get_version_id()`.
 6. The local public cursor payload already has position/selection/source/reason/version fields, but `old_selections` must change from `Array[Selection]` to `Array[Selection]?` for source parity: emit `None` on Flush and `Some([old_primary_selection])` on ordinary single-cursor transitions. Every secondary array remains `[]`, and `reachedMaxCursorCount` is N-A; do not substitute host version metadata.
-7. A minimum coherent target is: controller/view-model transition returns or enqueues one `CursorStateChanged` fact; rendering/view cursor delivery is queued first; the root Viewer converts that one outgoing fact to position then selection public events. API, keyboard, mouse, and flush must call this spine with their source-shaped source/reason. Do not add four independent event-fire sites.
+7. A minimum coherent target is: the controller transition returns one
+   `CursorStateChange` fact; the ViewModel's outgoing-only cursor dispatcher
+   coalesces/delivers it; and the root Viewer places it in one reentrancy-safe
+   FIFO before converting each fact atomically to position then selection.
+   Flush facts wait behind the model-content barrier, while ordinary API,
+   keyboard, and mouse facts drain immediately. Do not add four independent
+   event-fire sites or a singular pending-flush slot.
 
 ##### Required branch/configuration matrix derived from these rows
 
 ###### Commands and keybindings
 
 - Exact keys: Left, Right, Up, Down, PageUp, PageDown, Home, End crossed with Shift false/true (16 required cases).
-- `pageSize`: explicit positive override versus configuration fallback; exact marker `-1`; short and tall viewport page sizes.
+- `pageSize`: exact marker `-1`; omitted and exact-zero dynamic values fall back to configuration, while a positive value overrides; short and tall viewport page sizes.
 - Home/End: leading indentation, all-whitespace line, empty line, wrapped first/continuation line, already-at-target no-op, beginning/end document boundaries; End sticky false (sticky true remains an explicit test if retained).
 - Left/Right: within a line, cross line boundary, document boundaries, surrogate/grapheme-valid positions within the approved cursor capability.
 - Context: model present/absent; editor root focused; hover unfocused/focused so higher-weight hover bindings keep precedence; plain key versus Alt/CtrlCmd chords; platform primary/secondary overrides where implemented.
@@ -1325,14 +1380,23 @@ The normalization reread specifically split fields from constructors, named-clas
 - Position payload: primary position and empty secondaries. Selection payload: primary selection, empty secondaries, internal current version, `None` old selections on Flush or `Some([old primary])` otherwise, old version, source, reason.
 - Exact same state/version emits nothing. Flush emits because its source passes null old state even when old/new cursor are both origin. Multi-cursor reached-max is impossible.
 
-###### Dispatcher/collector
+###### Outgoing dispatcher and Viewer delivery FIFO
 
-- Nested depth 1 versus 2; outgoing events stay postponed until outermost end.
-- View handlers execute before outgoing delivery; callback-generated/reentrant view events form a later batch; cloned handler list tolerates self-removal.
-- Same-kind merge with adjacent and interleaved other kinds preserves the first queue slot; different kind does not merge; FIFO remains stable.
-- Cursor selection equality: both null, one null, length mismatch, first/middle/last mismatch, all equal; same/different model version.
-- Cursor merge: earliest old selection/version, latest new selection/version/source/reason, reached-max OR.
-- Callback success/failure verifies `finally` closes collector/consumption state.
+- Same-kind merge with adjacent and interleaved other kinds preserves the
+  first queue slot; different kind does not merge; FIFO remains stable.
+- Cursor selection equality: both null, one null, length mismatch,
+  first/middle/last mismatch, all equal; same/different model version.
+- Cursor merge: earliest old selection/version, latest new
+  selection/version/source/reason, reached-max OR.
+- Reentrant position/selection listeners append a later transition without
+  interleaving its pair; the outer drain continues until the FIFO is empty.
+- Reentrant `set_value` while a model-content listener runs cannot overwrite a
+  pending flush. Every content event precedes the queued cursor facts, and
+  every cursor fact retains FIFO order and one adjacent position/selection
+  pair.
+- Generic view-handler registration, nested collector depth, handler cloning,
+  and view-event reentrancy are not cursor-child tests; VED-003–007/009/015 and
+  VED-019–041 plus VMI-006/029–032 defer them to the render-invalidation child.
 
 ### Gate B target topology for review
 
@@ -1344,46 +1408,67 @@ The normalization reread specifically split fields from constructors, named-clas
    control flow and constants inside that seam.
 2. **One transition contract.** `CursorsController` validates/derives the
    model and view sides, snapshots the internal model version and old full
-   cursor state, applies the new state, and returns one changed result plus an
-   optional outgoing cursor fact. The root Viewer has one delivery helper that
-   queues render/view delivery first and then fires cursor-position followed by
-   cursor-selection. API, mouse, and keyboard all use this contract.
-3. **Flush ordering.** The model's ViewModel callback resets the cursor and
-   stores the flush result with source `model`, reason `ContentFlush`,
-   `old_selections=None`, and old version `0`. The later Viewer content
-   listener schedules the updated view, fires model-content, drains the cursor
-   result, and therefore exposes model-content → cursor-position →
-   cursor-selection after the view update, matching the source collector order.
-4. **Versions, sources, and reasons.** Payload versions come only from
+   cursor state, applies the new state, and returns one optional
+   `CursorStateChange`. The ViewModel adapts a changed result to one outgoing
+   cursor event. API, mouse, keyboard, and Flush all use this contract.
+3. **Outgoing dispatcher owner.** Add the DOM-free outgoing-only port in
+   `viewer/common/view_model/cursor_event_dispatcher.mbt`. It owns the emitter,
+   same-kind coalescing queue, FIFO/no-op drain, and complete cursor event class
+   represented by VED-001/002/008/010–014/016–018/042–060. ViewModel owns the
+   dispatcher and exposes its cursor-event alias. The generic view-handler,
+   nested collector, and view-event-queue half is deferred to the
+   render-invalidation child at its row-local VED/VMI statuses.
+4. **Reentrant delivery and Flush ordering.** The root Viewer subscribes to
+   the ViewModel's cursor event and owns one FIFO plus an `is_draining` gate.
+   Ordinary API/mouse/keyboard events enqueue and drain immediately. A Flush
+   event enqueues source `model`, reason `ContentFlush`,
+   `old_selections=None`, and old version `0` without draining. The later model
+   content listener schedules the updated view, fires model-content, then
+   drains. Reentrant cursor or `set_value` callbacks append to the same FIFO;
+   no event can overwrite another, and each item fires position then selection
+   as an adjacent pair after the view state was committed.
+5. **Validation seam.** Model-driven transitions validate with `TextModel` and
+   derive view state through the existing converter. View-driven movement is
+   normalized in the ViewModel package before entering `CursorsController`,
+   because the cursor package cannot import its owner without a cycle. Live
+   callers supply exactly one coordinate side. ONE-028 records the source's
+   absent dual-model-and-view cross-validation surface instead of inventing
+   unledgered `validateViewRange`/`validateViewPosition` behavior.
+6. **Versions, sources, and reasons.** Payload versions come only from
    `TextModel.get_version_id()`. API setters default source `api` and reason
    `NotSet`; keyboard defaults source `keyboard` and reason `Explicit`;
    pointer commands use source `mouse` and reason `Explicit`. A null,
    absent, or empty transition source falls back to exact `keyboard`.
    `old_selections` becomes `Array[Selection]?`; secondary arrays stay empty.
-5. **Bound key surface.** Register the 16 primary Left/Right/Up/Down,
+7. **Bound key surface.** Register the 16 primary Left/Right/Up/Down,
    PageUp/PageDown, Home/End × Shift false/true commands through the existing
    keybinding registry. A model is the command precondition. A winning command
    remains handled at document boundaries and reveals the resulting cursor;
    absent model and unmatched Alt/CtrlCmd chords fall through to the browser.
-   Existing higher-priority contribution bindings must retain precedence.
-6. **Approved deferral boundaries proposed to Gate B.** Atomic sticky-tab
+   Existing contribution-first registration order is the explicit local seam
+   for source weights/context expressions: hover bindings retain precedence,
+   and root keydown itself establishes text-input focus. CORE-187–196 and
+   mac-only CORE-102/103/114/115 record the unimplemented alternate bindings.
+8. **Approved deferral boundaries proposed to Gate B.** Atomic sticky-tab
    movement awaits an inventory of `cursorAtomicMoveOperations.ts`; visual RTL
    arrow swapping awaits a real ViewModel text-direction contract; generic JSON
    cursorMove, folded/blank-line/viewport commands, Ctrl/Cmd buffer Top/Bottom,
    multi-cursor, column selection, block double-click, editable operations, and
-   platform-only alternate chords remain row-local DEFERRED or N-A. Ordinary
-   LTR, sticky-false navigation and every required P1 event path are not
-   deferred.
-7. **Inherited relay authority.** The lifecycle child's CEW-001, CEW-015/016,
+   platform-only alternate chords, generic view-event collection, the
+   token-aware `WordOperations` algorithm, and dual-side view validation remain
+   row-local DEFERRED or N-A. Ordinary LTR, sticky-false navigation and every
+   required P1 event path are not deferred.
+9. **Inherited relay authority.** The lifecycle child's CEW-001, CEW-015/016,
    and CEW-123–139 rows remain frozen. This child strengthens their local
    behavioral evidence but does not create duplicate source rows.
 
 ### Combined mechanical audit
 
 - Pinned Oracle: `b18492a288de038fbc7643aae6de8247029d11bd`.
-- Source rows: **799**; every prefix is contiguous and every working status is
-  `TODO`.
-- Proposed map: **361 TESTED + 81 PORTED + 176 DEFERRED + 181 N-A = 799**.
+- Source rows: **802**; every active prefix ID is unique and every working
+  status is `TODO`. CUR/COL/ONE/CCM/CEV/CMC/CMO/VC/CEW/VED/VMI are contiguous;
+  CORE has the explicitly retired non-denominator IDs recorded above.
+- Proposed map: **337 TESTED + 71 PORTED + 213 DEFERRED + 181 N-A = 802**.
 - Current-MoonBit gaps and inherited lifecycle authority are recorded outside
   the denominator.
 - The three source reports were normalized independently, then reconciled under
@@ -1397,7 +1482,7 @@ Mechanical commands after assembly:
 ```sh
 rg -c '^\| (CUR|COL|ONE|CCM|CEV|CMC|CMO|CORE|VC|CEW|VED|VMI)-[0-9]{3} \|' \
   docs/exec-plans/viewer-cursor-input-events-parity.md
-# 799
+# 802
 rg '^\| (CUR|COL|ONE|CCM|CEV|CMC|CMO|CORE|VC|CEW|VED|VMI)-[0-9]{3} \|' \
   docs/exec-plans/viewer-cursor-input-events-parity.md | rg -vc '\| TODO \|$'
 # 0
@@ -1405,23 +1490,29 @@ rg '^\| (CUR|COL|ONE|CCM|CEV|CMC|CMO|CORE|VC|CEW|VED|VMI)-[0-9]{3} \|' \
 
 ### Inventory review checklist — stop gate
 
-- [ ] Reviewer confirms the 799-row denominator and contiguous per-prefix
-  counts: CUR 68, COL 49, ONE 27, CCM 50, CEV 18, CMC 154, CMO 62,
-  CORE 186, VC 70, CEW 23, VED 60, VMI 32.
+- [ ] Reviewer confirms the 802-row denominator and active per-prefix counts:
+  CUR 68, COL 49, ONE 28, CCM 50, CEV 18, CMC 156, CMO 62, CORE 186,
+  VC 70, CEW 23, VED 60, VMI 32; CORE draft IDs 126–134/167 are retired,
+  outside the denominator, and never reused.
 - [ ] Reviewer confirms the normalized atom rule has neither umbrella rows nor
   straight-line bookkeeping rows.
 - [ ] Reviewer confirms cursor configuration dependencies, inherited lifecycle
-  CEW authority, and VED/VMI sibling ownership are closed without duplicate
-  source rows.
-- [ ] Reviewer approves or amends the shared transition result, nullable old
-  selections, internal-version authority, and flush pending/drain ordering.
+  CEW authority, the outgoing-only VED/VMI owner, and render-invalidation
+  collector deferrals are closed without duplicate source rows.
+- [ ] Reviewer approves the shared transition result, ViewModel outgoing
+  dispatcher, reentrancy-safe Viewer FIFO, nullable old selections,
+  internal-version authority, and content-barrier drain ordering; no singular
+  pending result remains.
 - [ ] Reviewer confirms API `NotSet` versus gesture `Explicit`, exact source
   defaults, position-before-selection delivery, view-before-outgoing ordering,
   and no-op/version gates.
 - [ ] Reviewer approves every planned DEFERRED/N-A seam, especially atomic tabs,
-  visual RTL, generic/buffer commands, multi-cursor/column/block/edit paths.
+  visual RTL, generic/buffer commands, alternate bindings, token-aware word
+  selection, dual-side view validation, generic view collection, and
+  multi-cursor/column/block/edit paths.
 - [ ] Reviewer confirms the branch/configuration matrix covers all required
-  keyboard, pointer, event, wrap, page-size, and browser-default axes.
+  keyboard, pointer, event, reentrancy, wrap, page-size (including exact zero),
+  and browser-default axes and the exact-label set is 59 + 10 = 69.
 - [ ] Inventory is committed separately and independently approved; only then
   may product/test work begin.
 
@@ -1443,7 +1534,7 @@ Oracle: `vscode` at `b18492a288de038fbc7643aae6de8247029d11bd`.
 
 Authority rule: a test copied/adapted from either named VS Code file must retain its exact upstream label, source path, and pin in a `*_reference_test.mbt`/`*_reference_wbtest.mbt` file. Viewer event-spine, DOM-key, real-pointer, focus, and default-prevention tests are ordinary integration/browser tests because no exact case for those observable seams exists in the two named sources.
 
-Selected exact-label port set: **70 tests** — 60 from `cursor.test.ts` and 10 from `cursorMoveCommand.test.ts`. Deferred sibling clusters are listed explicitly rather than being silently omitted.
+Selected exact-label port set: **69 tests** — 59 from `cursor.test.ts` and 10 from `cursorMoveCommand.test.ts`. Deferred sibling clusters are listed explicitly rather than being silently omitted.
 
 #### Recommended test ownership
 
@@ -1539,6 +1630,12 @@ These are Home/End command semantics, unlike the raw `WrappedLineStart`/`Wrapped
 
 ##### Selection, eventing, source, flush, and pointer-command semantics — port verbatim
 
+The selected word cases below are conformance and event-routing evidence for
+the existing local word seam. They do not make CMC-033 `TESTED`, do not
+inventory `cursorWordOperations.ts`, and cannot support a whole-unit word
+parity claim. Full word parity requires a separate Phase 1 inventory of that
+868-line source unit.
+
 | Exact upstream label | Lines | Owner/expectation |
 |---|---:|---|
 | `select all` | 830-835 | Root/view-model reference test; whole document and trailing max column. |
@@ -1548,7 +1645,6 @@ These are Home/End command semantics, unlike the raw `WrappedLineStart`/`Wrapped
 | `setSelection / setPosition with source` | 1332-1363 | Root facade; exact caller source propagation. |
 | `issue #33788: Wrong cursor position when double click to select a word` | 2462-2476 | Word initial/drag selection. |
 | `issue #12887: Double-click highlighting separating white space` | 2478-2489 | Word boundary after whitespace. |
-| `Double-click on punctuation should select the character, not adjacent space` | 2491-2523 | Punctuation and `//` token boundaries. |
 | `issue #23983: Calling model.setValue() resets cursor position` | 2568-2586 | Exact upstream ContentFlush state reset. Metadata/order remain ordinary tests below. |
 | `issue #7100: Mouse word selection is strange when non-word character is at the end of line` | 6105-6130 | Collapsed punctuation then cross-line word drag. |
 | `issue #112039: shift-continuing a double/triple-click and drag selection does not remember its starting mode` | 6132-6150 | MoveToSelect dispatches by stored Word/Line kind. |
@@ -1558,6 +1654,7 @@ These are Home/End command semantics, unlike the raw `WrappedLineStart`/`Wrapped
 
 - `move to beginning of buffer*` and `move to end of buffer*`, lines 748-826: SKIPPED under current D5 command boundary (Ctrl/Cmd+Home/End not part of the bound Home/End child surface). Name every label in the reference file if this cluster is copied.
 - `grapheme breaking`, lines 939-976: SKIPPED with the current cursor capability reason. The required surrogate-pair cases above still port; this broader test includes combining/variation-selector/Tamil grapheme behavior beyond the present contract.
+- `Double-click on punctuation should select the character, not adjacent space`, lines 2491-2523: SKIPPED under CMC-033/D6. Its `//` token-boundary assertion requires the unscoped token-aware `cursorWordOperations.ts`; the current local seam intentionally selects one punctuation code unit.
 - Editing, undo, typing, paste, composition, multicursor, and column-selection suites are outside the readonly source cluster, not omitted reference cases.
 
 #### Exact upstream ports: `cursorMoveCommand.test.ts`
@@ -1600,6 +1697,7 @@ Ordinary Page matrix:
 |---|---|
 | Direction | PageUp / PageDown |
 | Selection | Shift false / true |
+| Dynamic page argument | omitted / exact `0` fallback / positive override |
 | Viewport | one-line/tiny, short, tall; page size recomputed from each configuration |
 | Cursor position | middle, within one page of BOF/EOF, exact BOF/EOF |
 | Content | normal lines, empty target, wrapped continuations |
@@ -1621,11 +1719,13 @@ Required facts:
 
 1. Construct a model whose host metadata `version` is deliberately different (for example 73) from `get_version_id()` (initially 1). Every cursor-selection event must use the internal ID, never host `model.version`.
 2. API/keyboard/mouse events retain the same internal old/new ID because content did not change; `old_selections` contains the prior primary selection.
-3. Flush increments internal version (normally 1 -> 2), reports `old_model_version_id=0` and empty/null-adapted old selections because upstream passes `oldState=null`, source `model`, reason `ContentFlush`, position/selection `(1,1)`.
+3. Flush increments internal version (normally 1 -> 2), reports `old_model_version_id=0` and `old_selections=None` because upstream passes `oldState=null`, source `model`, reason `ContentFlush`, position/selection `(1,1)`.
 4. Flush at an already-collapsed origin still emits the cursor event pair: model version/flush reason changed even though the visible selection did not.
 5. Exact-state API, key-at-hard-boundary, and repeated same-point click paths emit nothing. No-op must also avoid an extra render invalidation.
 6. Each changed transition emits position before selection exactly once. A drag can produce multiple changed transitions, but each update is a coherent adjacent pair; mouseup adds no duplicate pair.
 7. In each public callback, `get_position`, `get_selection`, model/view cursor state, and rendered-selection input already agree with the payload.
+8. A position listener that triggers another cursor transition cannot interleave the later pair: first-position, first-selection, second-position, second-selection.
+9. A model-content listener that calls `set_value` reentrantly retains both Flush cursor facts in FIFO order; no singular pending slot is overwritten.
 
 Suggested ordinary white-box labels:
 
@@ -1634,6 +1734,8 @@ Suggested ordinary white-box labels:
 - `exact cursor state is a render and public event no-op`
 - `ContentFlush emits content then position then selection with model source and internal version`
 - `ContentFlush at origin still emits because the model generation changed`
+- `cursor delivery FIFO keeps reentrant position and selection pairs adjacent`
+- `reentrant ContentFlush retains every queued cursor fact`
 
 #### Ordinary keyboard/browser matrix
 
@@ -1659,7 +1761,7 @@ Negative controls:
 |---|---|
 | Single click | collapses at hit-tested position; root receives/retains focus; paired public events have mouse/Explicit. |
 | Drag | anchor fixed, active follows pointer across same line, model line, and wrapped continuation; visible overlay and public selection agree. |
-| Double click | exact word/punctuation selection; stored kind Word; subsequent Shift-click/drag preserves word boundaries. |
+| Double click | selected-case word and one-code-unit punctuation selection; stored kind Word; subsequent Shift-click/drag preserves word boundaries. The `//` token-aware case remains the explicit CMC-033/D6 skip. |
 | Triple click | whole logical model line including trailing newline; stored kind Line; forward/backward/equal-anchor continuation. |
 | Gutter click / Shift-gutter drag | whole-line selection and `issue #158236` behavior. |
 | Four clicks / select-all | `(1,1)` through final max column, visible overlay and clipboard agree; preserve the source's hard-coded `keyboard`/`Explicit` metadata even for four-click dispatch. |
@@ -1707,6 +1809,11 @@ Headless Viewer integration:
   the same cursor transition spine;
 - click, drag, double-click, triple-click, gutter line select, and select-all;
 - set_value ContentFlush event ordering and model version IDs;
+- reentrant cursor listeners and reentrant `set_value` retain FIFO order and
+  adjacent position/selection pairs;
+- `set_selections([primary])` forwards primary/source/reason exactly;
+  `set_selections([primary, secondary])` intentionally retains only primary,
+  emits empty secondary arrays, and keeps API `api`/`NotSet` metadata;
 - model-to-view and view-to-model selection consistency.
 
 Browser tests:
@@ -1731,9 +1838,33 @@ Browser tests:
 
 ## Deviations (Phase 3)
 
-Expected candidates are editable commands, multi-cursor, column selection, and
-middle-button behavior. None is approved until every excluded source branch is
-inventoried and given a concrete readonly seam.
+Gate B must explicitly approve these seam-based deviations before
+implementation:
+
+- The single-cursor public `set_selections` API keeps `ranges[0]` and drops
+  `ranges[1..]`; CEW-023/VMI-021 and the ordinary matrix above make the
+  observable reduction explicit. Every emitted secondary array remains `[]`.
+- The local keybinding registry uses contribution-first registration order and
+  the focused root keydown boundary in place of numeric `CORE_WEIGHT` and a
+  stored `textInputFocus` expression. Required primary bindings are tested;
+  CORE-187–196 and CORE-102/103/114/115 defer alternate/platform-only and
+  command-metadata surfaces.
+- This child ports only the outgoing/cursor half of
+  `ViewModelEventDispatcher`; generic view handlers, nested collectors, and
+  view-event queues remain with the render-invalidation child. The root
+  cursor-delivery FIFO is the local content-barrier/reentrancy seam.
+- Live cursor transitions supply exactly one coordinate side. ViewModel
+  normalizes view inputs and TextModel validates model inputs; ONE-028 defers
+  the absent source branch that cross-validates simultaneously supplied model
+  and view states.
+- CMC-033's token-aware `WordOperations` algorithm remains unscoped. Selected
+  word cases are regression/routing evidence only, and the `//` punctuation
+  case is an explicit exact-label skip.
+- `CursorStateChanged` is a semantic MoonBit variant; source enum value `7` is
+  recorded and tested as source evidence but has no local numeric ABI.
+
+Editable commands, multi-cursor, column selection, and middle-button behavior
+remain row-local deferred/N-A boundaries.
 
 ## Exit Gate
 
@@ -1766,3 +1897,28 @@ inventoried and given a concrete readonly seam.
   test was run.
 - Stopped before implementation. The inventory commit and its file hash must
   be recorded by the later independent Gate B approval entry.
+
+### 2026-07-10 — first Gate B rejection and inventory amendment
+
+- The documentation-only inventory commit is
+  `7c0a3b340333c7dcc35c12140fb53ef23849b914`; its committed child-plan
+  SHA-256 is
+  `d41162d2a03d4e50086630e4bb83dba69e8c8775466eec5be4967694c1198df9`.
+- Three independent reviews rejected Gate B before product work. Confirmed
+  defects were two collapsed `simpleMove` callbacks, out-of-scope
+  scroll/reveal umbrella rows, mixed primary/alternate registration
+  dispositions, an unsafe singular Flush result, generic collector rows with
+  no owner, an omitted `pageSize=0` fallback, inaccurate selection/indent
+  facts, absent dual-side validation, and one unimplementable token-aware exact
+  word test.
+- The amendment has **802/802 TODO rows**: cursor state/event 213, movement
+  218, and browser/public/event 371. Its recomputed proposal is **337 TESTED,
+  71 PORTED, 213 DEFERRED, and 181 N-A**.
+- The target now names an outgoing-only ViewModel cursor dispatcher and a
+  reentrancy-safe Viewer delivery FIFO; generic view collection stays with the
+  render-invalidation child. Required bindings remain the 16 primary keys,
+  while every alternate/platform fact is row-local deferred. The exact-label
+  set is 59 + 10 = 69 with the token-aware `//` case explicitly skipped.
+- No product/test file changed and no runtime test ran. Implementation remains
+  forbidden until a fresh independent Gate B re-review approves this amended
+  document and the amendment itself is committed.

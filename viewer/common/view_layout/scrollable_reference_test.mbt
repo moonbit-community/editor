@@ -145,6 +145,13 @@ test "scrollable smooth state tracks future, combines, revalidates and cancels" 
     scrollable.future_position() == { scroll_left: 400.0, scroll_top: 900.0 },
   )
   assert_eq(frames.length(), 1)
+  // Same-target is an exact early return: it neither replaces nor schedules.
+  scrollable.set_position_smooth({
+    scroll_left: Some(400.0),
+    scroll_top: Some(900.0),
+  })
+  assert_eq(frames.length(), 1)
+  assert_true(frames[0].active)
   // A second axis-partial request combines with the outstanding target and
   // disposes the first scheduled frame.
   scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(700.0) })
@@ -180,6 +187,48 @@ test "scrollable smooth state tracks future, combines, revalidates and cancels" 
   run_test_animation_frame(scheduled_after_tick)
   assert_eq(scrollable.position().scroll_top, 20.0)
   listener.dispose()
+  scrollable.dispose()
+}
+
+///|
+test "reuse animation replaces the target on the original timeline" {
+  let clock = [0.0]
+  let frames : Array[TestAnimationFrame] = []
+  let scheduler = fn(callback) {
+    let frame : TestAnimationFrame = { callback, active: true }
+    frames.push(frame)
+    @base_common.Disposable::from(() => frame.active = false)
+  }
+  let scrollable = @view_layout.Scrollable::new(
+    force_integer_values=true,
+    smooth_scroll_duration=125.0,
+    schedule_at_next_animation_frame=scheduler,
+    now=() => clock[0],
+  )
+  scrollable.set_dimensions({
+    width: 100.0,
+    scroll_width: 100.0,
+    height: 1000.0,
+    scroll_height: 2000.0,
+  })
+  |> ignore
+  scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(500.0) })
+  clock[0] = 30.0
+  scrollable.set_position_smooth(
+    { scroll_left: None, scroll_top: Some(600.0) },
+    reuse_animation=true,
+  )
+  assert_false(frames[0].active)
+  assert_true(frames[1].active)
+  assert_eq(scrollable.future_position().scroll_top, 600.0)
+  clock[0] = 40.0
+  run_test_animation_frame(frames[1])
+  // Reuse keeps the original -10/135 timeline: completion is 50/135 here.
+  let inverse = 1.0 - 50.0 / 135.0
+  let expected = (600.0 * (1.0 - inverse * inverse * inverse))
+    .to_int()
+    .to_double()
+  assert_true((scrollable.position().scroll_top - expected).abs() < 0.000001)
   scrollable.dispose()
 }
 

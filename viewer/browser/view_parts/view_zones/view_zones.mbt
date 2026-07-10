@@ -30,6 +30,8 @@ pub(all) struct BrowserViewZone {
 /// `should_render` directly.
 pub(all) struct ViewZones {
   dom_node : @rdom.Element
+  mounted_nodes : Map[String, @rdom.Element]
+  styles : Map[String, String]
   mut should_render : Bool
 }
 
@@ -38,7 +40,7 @@ pub fn ViewZones::new(document : @rdom.Document) -> ViewZones {
   let dom_node = document.create_element("div")
   dom_node.set_attribute("class", "view-zones")
   dom_node.set_attribute("data-view-part", "view-zones")
-  { dom_node, should_render: true }
+  { dom_node, mounted_nodes: {}, styles: {}, should_render: true }
 }
 
 ///|
@@ -53,7 +55,32 @@ pub fn ViewZones::render_view_zones(
   viewport : @view_layout.ViewportData,
   translate_y : Double,
 ) -> Unit {
-  self.dom_node.set_inner_html("")
+  // Monaco retains every zone node and only updates cached geometry/display
+  // styles. Reconcile registrations without rebuilding the container.
+  let current_ids : Map[String, Bool] = {}
+  for zone in zones {
+    current_ids.set(zone.id, true)
+    match self.mounted_nodes.get(zone.id) {
+      Some(node) if !node.is_same_node(zone.node.as_node()) => {
+        self.dom_node.remove_child(node.as_node())
+        self.styles.remove(zone.id)
+        self.mount_zone(zone)
+      }
+      Some(_) => ()
+      None => self.mount_zone(zone)
+    }
+  }
+  let removed : Array[String] = []
+  for id, node in self.mounted_nodes {
+    if !current_ids.contains(id) {
+      self.dom_node.remove_child(node.as_node())
+      removed.push(id)
+    }
+  }
+  for id in removed {
+    self.mounted_nodes.remove(id)
+    self.styles.remove(id)
+  }
   let visible = Array::make(zones.length(), false)
   for data in viewport.view_zones {
     if data.zone_index < 0 || data.zone_index >= zones.length() {
@@ -61,13 +88,10 @@ pub fn ViewZones::render_view_zones(
     }
     visible[data.zone_index] = true
     let zone = zones[data.zone_index]
-    zone.node.set_attribute("class", "view-zone")
-    zone.node.set_attribute("data-view-zone-id", zone.id)
-    zone.node.set_attribute(
-      "style",
-      view_zone_style(data.relative_vertical_offset, data.height_px),
+    self.set_zone_style(
+      zone,
+      view_zone_style(data.relative_vertical_offset, data.height_px, true),
     )
-    self.dom_node.append_child(zone.node.as_node())
     // `_safeCallOnComputedHeight` / `_safeCallOnDomNodeTop`
     // (`viewZones.ts:336-352`, invoked from `render` :382-395). The
     // viewport-relative top is the window-relative offset plus the content
@@ -86,6 +110,7 @@ pub fn ViewZones::render_view_zones(
   // (`viewZones.ts:396` `getScrolledTopFromAbsoluteTop(-1000000)`).
   for index in 0..<zones.length() {
     if !visible[index] {
+      self.set_zone_style(zones[index], view_zone_style(0, 0, false))
       match zones[index].on_dom_node_top {
         Some(callback) => callback(offscreen_zone_top)
         None => ()
@@ -95,10 +120,35 @@ pub fn ViewZones::render_view_zones(
 }
 
 ///|
+fn ViewZones::mount_zone(self : ViewZones, zone : BrowserViewZone) -> Unit {
+  zone.node.set_attribute("class", "view-zone")
+  zone.node.set_attribute("data-view-zone-id", zone.id)
+  self.dom_node.append_child(zone.node.as_node())
+  self.mounted_nodes.set(zone.id, zone.node)
+}
+
+///|
+fn ViewZones::set_zone_style(
+  self : ViewZones,
+  zone : BrowserViewZone,
+  style : String,
+) -> Unit {
+  if self.styles.get(zone.id) != Some(style) {
+    zone.node.set_attribute("style", style)
+    self.styles.set(zone.id, style)
+  }
+}
+
+///|
 /// `viewZones.ts:396`: the parked top for zones outside the viewport.
 let offscreen_zone_top : Double = -1000000.0
 
 ///|
-fn view_zone_style(top : Int, height : Int) -> String {
-  "top:" + top.to_string() + "px;height:" + height.to_string() + "px"
+fn view_zone_style(top : Int, height : Int, visible : Bool) -> String {
+  "top:" +
+  top.to_string() +
+  "px;height:" +
+  height.to_string() +
+  "px;display:" +
+  (if visible { "block" } else { "none" })
 }

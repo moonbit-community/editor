@@ -563,6 +563,16 @@ fn static_route(path : String) -> (String, String)? {
       Some(
         ("browser-tests/component.mjs.map", "application/json; charset=utf-8"),
       )
+    "/browser-tests/monaco-oracle.html" =>
+      Some(("browser-tests/monaco-oracle.html", "text/html; charset=utf-8"))
+    "/browser-tests/monaco-oracle.mjs" =>
+      Some(
+        ("browser-tests/monaco-oracle.mjs", "text/javascript; charset=utf-8"),
+      )
+    "/browser-tests/monaco-oracle.css" =>
+      Some(("browser-tests/monaco-oracle.css", "text/css; charset=utf-8"))
+    "/browser-tests/codicon.ttf" =>
+      Some(("browser-tests/codicon.ttf", "font/ttf"))
     "/browser-tests/perf.html" =>
       Some(("browser-tests/perf.html", "text/html; charset=utf-8"))
     "/browser-tests/perf.mjs" =>

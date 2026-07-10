@@ -19,6 +19,12 @@ async fn main {
   let errors : Array[String] = []
   for dir in product_dirs {
     for file in source_files(dir) {
+      // Generated browser bundles are build outputs, not dependency-bearing
+      // product source. In particular, the test-only Monaco oracle preserves
+      // pinned source paths in its esbuild comments.
+      if file.has_prefix("web/dist/") {
+        continue
+      }
       let content = @fs.read_file(file).text()
       for target in forbidden {
         if references_forbidden_in_code(content, target) {

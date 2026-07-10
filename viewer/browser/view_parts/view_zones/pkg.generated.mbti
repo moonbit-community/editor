@@ -22,6 +22,8 @@ pub(all) struct BrowserViewZone {
 
 pub(all) struct ViewZones {
   dom_node : @dom.Element
+  mounted_nodes : Map[String, @dom.Element]
+  styles : Map[String, String]
   mut should_render : Bool
 }
 pub fn ViewZones::dom_node(Self) -> @dom.Element

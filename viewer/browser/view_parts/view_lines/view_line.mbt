@@ -24,6 +24,92 @@
 pub const VIEW_LINE_CLASS_NAME : String = "view-line"
 
 ///|
+/// Monaco `ViewLine`'s retained render state narrowed to the fields consumed
+/// by `ViewLayerRenderer`: cached DOM, last render input, and character map.
+pub struct ViewLine {
+  priv mut dom_node : @scrollbar.CachedDomNode?
+  priv mut render_input : @view_layout.RenderLineInput?
+  priv mut character_mapping : @view_layout.CharacterMapping?
+}
+
+///|
+pub fn ViewLine::new() -> ViewLine {
+  { dom_node: None, render_input: None, character_mapping: None }
+}
+
+///|
+pub fn ViewLine::get_dom_node(self : ViewLine) -> @rdom.Element? {
+  self.dom_node.map(node => node.element())
+}
+
+///|
+pub fn ViewLine::set_dom_node(
+  self : ViewLine,
+  dom_node : @rdom.Element,
+) -> Unit {
+  self.dom_node = Some(@scrollbar.CachedDomNode::new(dom_node))
+}
+
+///|
+pub fn ViewLine::mapping(self : ViewLine) -> @view_layout.CharacterMapping? {
+  self.character_mapping
+}
+
+///|
+/// `ViewLine.layoutLine` (`viewLine.ts:235-241`).
+pub fn ViewLine::layout_line(
+  self : ViewLine,
+  _line_number : Int,
+  delta_top : Int,
+  line_height : Int,
+) -> Unit {
+  match self.dom_node {
+    Some(node) => {
+      node.set_top(Pixels(delta_top.to_double()))
+      node.set_height(Pixels(line_height.to_double()))
+      node.set_line_height(Pixels(line_height.to_double()))
+    }
+    None => ()
+  }
+}
+
+///|
+/// The `ViewLine.renderLine` half consumed by `ViewLayerRenderer`. Equal
+/// `RenderLineInput` is the source's unchanged-line early return; changed
+/// lines append one complete row to the renderer's shared HTML batch.
+pub fn ViewLine::render_line(
+  self : ViewLine,
+  line_number : Int,
+  input : @view_layout.RenderLineInput,
+  delta_top : Int,
+  line_height : Int,
+  builder : StringBuilder,
+) -> Bool {
+  if self.render_input == Some(input) {
+    return false
+  }
+  let output = @view_layout.render_view_line2(input)
+  self.render_input = Some(input)
+  self.character_mapping = Some(output.character_mapping)
+  builder.write_string(
+    "<div class=\"" +
+    @viewer_common.render_line_class() +
+    "\" data-line=\"" +
+    line_number.to_string() +
+    "\" style=\"top:" +
+    delta_top.to_string() +
+    "px;height:" +
+    line_height.to_string() +
+    "px;line-height:" +
+    line_height.to_string() +
+    "px\">" +
+    output.html +
+    "</div>",
+  )
+  true
+}
+
+///|
 /// `getColumnOfNodeOffset` (viewLine.ts:724-733): resolves a browser caret
 /// answer (token span + character offset) to a one-based column through the
 /// line's `CharacterMapping`. The span index counts every previous sibling,

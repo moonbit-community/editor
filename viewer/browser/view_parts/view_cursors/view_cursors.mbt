@@ -135,10 +135,8 @@ pub fn ViewCursors::render_cursor(
   self : ViewCursors,
   has_selection~ : Bool,
   editor_has_focus~ : Bool,
-  content_transform : String,
 ) -> Unit {
   self.dom_node.set_attribute("class", cursors_layer_class(has_selection))
-  self.dom_node.set_attribute("style", content_transform)
   match self.render_data {
     None => self.cursor.set_attribute("style", "display:none")
     Some(data) =>

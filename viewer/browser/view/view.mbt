@@ -13,6 +13,7 @@
 pub(all) struct View {
   root : @rdom.Element
   overflow_guard : @rdom.Element
+  lines_content : @scrollbar.CachedDomNode
   squiggly_style : @rdom.Element
   view_lines : @view_lines.ViewLines
   view_zones : @view_zones.ViewZones
@@ -38,22 +39,37 @@ pub fn View::new() -> View {
   let overflow_guard = document.create_element("div")
   overflow_guard.set_attribute("class", "overflow-guard")
   overflow_guard.set_attribute("data-view-part", "overflow-guard")
+  // `View` constructs the sole scrolling rail before the scrollbar and view
+  // lines because both retain this exact node (`view.ts:181-200`).
+  let lines_content = @scrollbar.CachedDomNode::new(
+    document.create_element("div"),
+  )
+  lines_content
+  .element()
+  .set_attribute("class", "lines-content moonbit-viewer-background")
+  lines_content.element().set_attribute("data-view-part", "lines-content")
+  lines_content.set_position("absolute")
+  // Chrome does not paint content larger than 2^24 px (`view.ts:454-456`).
+  lines_content.set_width(Pixels(16777216.0))
+  lines_content.set_height(Pixels(16777216.0))
   let margin_view_overlays = MarginViewOverlays::new(document)
-  let editor_scrollbar = @editor_scrollbar.EditorScrollbar::new()
+  let editor_scrollbar = @editor_scrollbar.EditorScrollbar::new(lines_content)
   let content_view_overlays = ContentViewOverlays::new(document)
   let view_zones = @view_zones.ViewZones::new(document)
-  let view_lines = @view_lines.ViewLines::new(document)
+  let view_lines = @view_lines.ViewLines::new(document, lines_content)
   let content_widgets = @content_widgets.ContentWidgets::new(document, root)
   let view_cursors = @view_cursors.ViewCursors::new(document)
   let overlay_widgets = @overlay_widgets.OverlayWidgets::new(document)
-  let lines_content = editor_scrollbar.content()
-  lines_content.append_child(content_view_overlays.get_dom_node().as_node())
-  lines_content.append_child(view_zones.dom_node().as_node())
-  lines_content.append_child(view_lines.get_dom_node().as_node())
-  lines_content.append_child(content_widgets.dom_node().as_node())
+  let lines_content_element = lines_content.element()
+  lines_content_element.append_child(
+    content_view_overlays.get_dom_node().as_node(),
+  )
+  lines_content_element.append_child(view_zones.dom_node().as_node())
+  lines_content_element.append_child(view_lines.get_dom_node().as_node())
+  lines_content_element.append_child(content_widgets.dom_node().as_node())
   // Cursors render after (above) content widgets in lines content
   // (`view.ts:280`).
-  lines_content.append_child(view_cursors.get_dom_node().as_node())
+  lines_content_element.append_child(view_cursors.get_dom_node().as_node())
   overflow_guard.append_child(margin_view_overlays.get_dom_node().as_node())
   overflow_guard.append_child(editor_scrollbar.get_dom_node().as_node())
   // Overlay widgets are viewport-fixed: they live in the overflow guard, not
@@ -92,6 +108,7 @@ pub fn View::new() -> View {
   let view : View = {
     root,
     overflow_guard,
+    lines_content,
     squiggly_style,
     view_lines,
     view_zones,
@@ -175,17 +192,13 @@ pub fn View::render(
   if ViewPart::should_render(self.view_lines) {
     self.view_lines.render_text(
       rendering.viewport,
-      input.generation,
-      input.decorations_generation,
+      input.layout,
       input.space_width,
       input.can_use_halfwidth_rightwards_arrow,
       input.render_whitespace,
       input.render_control_characters,
       input.selection_view_range,
     )
-    self.view_lines
-    .get_dom_node()
-    .set_attribute("style", restricted.content_transform)
     ViewPart::on_did_render(self.view_lines)
   }
   for part in view_parts_to_render {

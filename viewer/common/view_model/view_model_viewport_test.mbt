@@ -27,7 +27,7 @@ test "view model produces viewport data from layout window" {
   debug_inspect(
     displaced.relative_vertical_offset,
     content=(
-      #|[0, 18]
+      #|[54, 72]
     ),
   )
   debug_inspect(
@@ -38,7 +38,7 @@ test "view model produces viewport data from layout window" {
       #|    zone_index: 0,
       #|    anchor_line: 1,
       #|    height_px: 36,
-      #|    relative_vertical_offset: -36,
+      #|    relative_vertical_offset: 18,
       #|  },
       #|]
     ),

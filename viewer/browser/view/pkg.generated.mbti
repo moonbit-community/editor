@@ -17,6 +17,7 @@ import {
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
   "moonbitlang/core/debug",
 }
@@ -83,6 +84,7 @@ pub fn PartFingerprints::write(@dom.Element, PartFingerprint) -> Unit
 pub(all) struct View {
   root : @dom.Element
   overflow_guard : @dom.Element
+  lines_content : @scrollbar.CachedDomNode
   squiggly_style : @dom.Element
   view_lines : @view_lines.ViewLines
   view_zones : @view_zones.ViewZones
@@ -111,7 +113,7 @@ pub(all) struct ViewContext {
 }
 
 pub struct ViewOverlays {
-  dom_node : @dom.Element
+  dom_node : @scrollbar.CachedDomNode
   // private fields
 }
 

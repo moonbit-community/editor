@@ -46,6 +46,10 @@ pub fn viewport_data_from_view_model(
     start: start_line,
     end: end_line,
   }
+  let big_numbers_delta = match layout {
+    Some(layout) => layout.big_numbers_delta_for_window(normalized_window)
+    None => 0
+  }
   for line_number in start_line..<end_line {
     let line_data = view_model_lines.get_view_line_data(line_number)
     let decorations = line_decorations_for_line(
@@ -86,7 +90,7 @@ pub fn viewport_data_from_view_model(
       end_line_number,
       end_column,
     },
-    big_numbers_delta: 0,
+    big_numbers_delta,
     lines,
     line_decorations,
     view_zones: match layout {

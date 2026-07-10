@@ -79,7 +79,6 @@ priv struct RestrictedRenderingContext {
   position : @view_layout.ScrollPosition
   dimensions : @view_layout.ScrollDimensions
   translate_y : Double
-  content_transform : String
   margin_transform : String
   line_height : Int
 }
@@ -99,7 +98,6 @@ fn RenderingContext::from_input(
   )
   let position = input.layout.position()
   let dimensions = input.layout.dimensions()
-  let origin = input.layout.window_origin(input.window)
   let snapshot = ViewRenderSnapshot::from_input(input, position, dimensions)
   {
     view_context,
@@ -109,7 +107,7 @@ fn RenderingContext::from_input(
     gutter_width: input.gutter_width,
     position,
     dimensions,
-    translate_y: origin - position.scroll_top,
+    translate_y: viewport.big_numbers_delta.to_double() - position.scroll_top,
   }
 }
 
@@ -125,19 +123,9 @@ fn RenderingContext::restricted(
     position: self.position,
     dimensions: self.dimensions,
     translate_y: self.translate_y,
-    content_transform: self.content_transform(),
     margin_transform: self.margin_transform(),
     line_height: self.viewport.line_height,
   }
-}
-
-///|
-fn RenderingContext::content_transform(self : RenderingContext) -> String {
-  "transform:translate(" +
-  (-self.position.scroll_left).to_string() +
-  "px," +
-  self.translate_y.to_string() +
-  "px)"
 }
 
 ///|

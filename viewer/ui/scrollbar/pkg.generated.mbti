@@ -4,6 +4,7 @@ package "moonbit-community/editor/viewer/ui/scrollbar"
 import {
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/rabbita/dom",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -11,9 +12,30 @@ pub fn drag_coord(@dom.MouseEvent, Bool) -> Double
 
 pub fn mouse_wheel_scroll_deltas(StandardWheelEvent, alt_key? : Bool, shift_key? : Bool, mouse_wheel_scroll_sensitivity? : Double, fast_scroll_sensitivity? : Double, scroll_predominant_axis? : Bool) -> (Double, Double)
 
+pub fn number_as_pixels(CssLength) -> String
+
 // Errors
 
 // Types and methods
+pub struct CachedDomNode {
+  // private fields
+}
+pub fn CachedDomNode::element(Self) -> @dom.Element
+pub fn CachedDomNode::new(@dom.Element) -> Self
+pub fn CachedDomNode::set_contain(Self, String) -> Unit
+pub fn CachedDomNode::set_height(Self, CssLength) -> Unit
+pub fn CachedDomNode::set_layer_hinting(Self, Bool) -> Unit
+pub fn CachedDomNode::set_left(Self, CssLength) -> Unit
+pub fn CachedDomNode::set_line_height(Self, CssLength) -> Unit
+pub fn CachedDomNode::set_position(Self, String) -> Unit
+pub fn CachedDomNode::set_top(Self, CssLength) -> Unit
+pub fn CachedDomNode::set_width(Self, CssLength) -> Unit
+
+pub(all) enum CssLength {
+  Pixels(Double)
+  Raw(String)
+} derive(Eq, @debug.Debug)
+
 pub(all) struct ScrollableElementDom {
   wrapper : @dom.Element
   content : @dom.Element
@@ -44,7 +66,7 @@ pub fn ScrollableElementDom::mouse_left(Self) -> Unit
 pub fn ScrollableElementDom::native_page_delta(Self) -> Double
 pub fn ScrollableElementDom::native_scroll_by(Self, delta_left? : Double, delta_top? : Double) -> Unit
 pub fn ScrollableElementDom::native_scroll_to(Self, vertical~ : Bool, Double) -> Unit
-pub fn ScrollableElementDom::new(String, vertical_size? : Double, horizontal_size? : Double) -> Self
+pub fn ScrollableElementDom::new(String, vertical_size? : Double, horizontal_size? : Double, content? : @dom.Element) -> Self
 pub fn ScrollableElementDom::reveal_for_scroll(Self) -> Unit
 pub fn ScrollableElementDom::set_slider_active(Self, vertical~ : Bool, Bool) -> Unit
 pub fn ScrollableElementDom::set_wrapper_class(Self, String) -> Unit

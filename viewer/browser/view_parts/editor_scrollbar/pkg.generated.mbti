@@ -13,11 +13,12 @@ import {
 // Types and methods
 pub(all) struct EditorScrollbar {
   editor_scrollable : @scrollbar.ScrollableElementDom
+  scrollbar_dom_node : @scrollbar.CachedDomNode
   mut should_render : Bool
 }
 pub fn EditorScrollbar::content(Self) -> @dom.Element
 pub fn EditorScrollbar::get_dom_node(Self) -> @dom.Element
-pub fn EditorScrollbar::new() -> Self
+pub fn EditorScrollbar::new(@scrollbar.CachedDomNode) -> Self
 pub fn EditorScrollbar::scrollable(Self) -> @scrollbar.ScrollableElementDom
 
 // Type aliases

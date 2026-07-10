@@ -1,10 +1,9 @@
-/* Lines content starts after the margin; text-like child layers carry
-   the synthetic scroll transform. */
+/* Monaco's sole synthetic-scroll rail. The editor-scrollable wrapper starts
+   after the margin; cached top/left writes move this 2^24px surface. */
 .lines-content {
   position: absolute;
   top: 0;
-  right: 0;
-  bottom: 0;
+  left: 0;
   z-index: 1;
 }
 
@@ -12,7 +11,6 @@
   position: absolute;
   top: 0;
   left: 0;
-  will-change: transform;
   z-index: 1;
   user-select: none;
 }

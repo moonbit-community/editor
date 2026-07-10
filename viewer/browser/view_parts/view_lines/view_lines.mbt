@@ -8,57 +8,46 @@
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` / `last_render_whitespace` directly.
 pub(all) struct ViewLines {
-  dom_node : @rdom.Element
+  dom_node : @scrollbar.CachedDomNode
+  lines_content : @scrollbar.CachedDomNode
   /// Monaco's `_textRangeRestingSpot` (viewLines.ts ctor): the detached node
   /// `DomReadingContext.endNode` parks DOM ranges on between reads.
   text_range_resting_spot : @rdom.Element
   mut window : @view_layout.LineWindow
-  mut generation : Int
-  mut decorations_generation : Int
-  line_nodes : Array[@rdom.Element]
-  render_inputs : Array[@view_layout.RenderLineInput]
-  line_mappings : Array[@view_layout.CharacterMapping]
+  mut lines : Array[ViewLine]
+  can_use_layer_hinting : Bool
   mut should_render : Bool
   // The selection and whitespace mode of the last render, the viewer analog of
   // Monaco `ViewLine`'s `_renderedViewLine.input`. They drive the selection-mode
   // re-render coupling (`onSelectionChanged`, `viewLine.ts:94-100`): a selection
   // change only invalidates the lines when whitespace is rendered under the
   // selection.
-  mut last_selection : @base_common.Range?
   mut last_render_whitespace : @view_layout.RenderWhitespace
-  // The font facts of the last render — a change re-enters the full-rewrite
-  // branch (Monaco `ViewLines.onConfigurationChanged` invalidating every
-  // line when `fontInfo` changed); the per-line `previous != input` diff
-  // then limits the actual HTML writes.
-  mut last_space_width : Double
-  mut last_can_use_halfwidth_rightwards_arrow : Bool
 }
 
 ///|
-pub fn ViewLines::new(document : @rdom.Document) -> ViewLines {
-  let dom_node = document.create_element("div")
-  dom_node.set_attribute("class", "view-lines")
-  dom_node.set_attribute("data-view-part", "view-lines")
+pub fn ViewLines::new(
+  document : @rdom.Document,
+  lines_content : @scrollbar.CachedDomNode,
+) -> ViewLines {
+  let dom_element = document.create_element("div")
+  dom_element.set_attribute("class", "view-lines")
+  dom_element.set_attribute("data-view-part", "view-lines")
   {
-    dom_node,
+    dom_node: @scrollbar.CachedDomNode::new(dom_element),
+    lines_content,
     text_range_resting_spot: document.create_element("div"),
     window: { start: 0, end: 0 },
-    generation: -1,
-    decorations_generation: -1,
-    line_nodes: [],
-    render_inputs: [],
-    line_mappings: [],
+    lines: [],
+    can_use_layer_hinting: true,
     should_render: true,
-    last_selection: None,
     last_render_whitespace: None,
-    last_space_width: 0.0,
-    last_can_use_halfwidth_rightwards_arrow: true,
   }
 }
 
 ///|
 pub fn ViewLines::get_dom_node(self : ViewLines) -> @rdom.Element {
-  self.dom_node
+  self.dom_node.element()
 }
 
 ///|
@@ -66,7 +55,7 @@ pub fn ViewLines::get_dom_node(self : ViewLines) -> @rdom.Element {
 /// window, or `-1` when the line is outside the window.
 fn ViewLines::window_index(self : ViewLines, view_line_number : Int) -> Int {
   let index = view_line_number - self.window.start
-  if index >= 0 && index < self.line_nodes.length() {
+  if index >= 0 && index < self.lines.length() {
     index
   } else {
     -1
@@ -84,7 +73,7 @@ pub fn ViewLines::mapping_at(
   if index < 0 {
     None
   } else {
-    Some(self.line_mappings[index])
+    self.lines[index].mapping()
   }
 }
 
@@ -99,22 +88,18 @@ pub fn ViewLines::line_node_at(
   if index < 0 {
     None
   } else {
-    Some(self.line_nodes[index])
+    self.lines[index].get_dom_node()
   }
 }
 
 ///|
-/// The `ViewLayer` recycler: tracks the rendered line range, splices
-/// entering/leaving text line nodes, and writes `innerHTML` only on entering
-/// lines. A changed content generation (new view model) or decorations
-/// generation (model decoration change) rewrites every rendered line instead
-/// — the per-line `previous != input` diff then limits the actual HTML
-/// writes to lines whose rendered input changed.
+/// Monaco `ViewLines.renderText` (`viewLines.ts:613-677`): reconcile the
+/// retained rows through the shared `ViewLayerRenderer`, size the row layer,
+/// then move the single lines-content rail for both axes.
 pub fn ViewLines::render_text(
   self : ViewLines,
   viewport : @view_layout.ViewportData,
-  generation : Int,
-  decorations_generation : Int,
+  layout : @view_layout.ViewLayout,
   space_width : Double,
   can_use_halfwidth_rightwards_arrow : Bool,
   render_whitespace : @view_layout.RenderWhitespace,
@@ -122,41 +107,17 @@ pub fn ViewLines::render_text(
   selection_view_range : @base_common.Range?,
 ) -> Unit {
   let target = viewport_window(viewport)
-  let document = @rdom.document()
-  // In `Selection` mode the per-line input depends on the selection, so a
-  // selection change must rewrite the affected lines even when the generation
-  // and window are unchanged (`viewLine.ts:94-100` `onSelectionChanged`). The
-  // `previous != input` diff inside the full-rewrite branch then limits the
-  // actual HTML writes to lines whose selected columns changed.
-  let selection_invalidated = render_whitespace == Selection &&
-    selection_view_range != self.last_selection
-  let font_invalidated = space_width != self.last_space_width ||
-    can_use_halfwidth_rightwards_arrow !=
-    self.last_can_use_halfwidth_rightwards_arrow
-  self.last_selection = selection_view_range
   self.last_render_whitespace = render_whitespace
-  self.last_space_width = space_width
-  self.last_can_use_halfwidth_rightwards_arrow = can_use_halfwidth_rightwards_arrow
-  if generation != self.generation ||
-    decorations_generation != self.decorations_generation ||
-    selection_invalidated ||
-    font_invalidated {
-    while self.line_nodes.length() > viewport.lines.length() {
-      match (self.line_nodes.pop(), self.render_inputs.pop()) {
-        (Some(node), _) => self.dom_node.remove_child(node.as_node())
-        _ => ()
-      }
-    }
-    while self.line_nodes.length() < viewport.lines.length() {
-      let node = document.create_element("div")
-      self.dom_node.append_child(node.as_node())
-      self.line_nodes.push(node)
-    }
-    let previous_inputs = self.render_inputs.copy()
-    let previous_mappings = self.line_mappings.copy()
-    self.render_inputs.clear()
-    self.line_mappings.clear()
-    for index in 0..<viewport.lines.length() {
+  let renderer = @view_layer.ViewLayerRenderer::new(
+    self.dom_node.element(),
+    () => ViewLine::new(),
+    line => line.get_dom_node(),
+    (line, node) => line.set_dom_node(node),
+    (line, line_number, delta_top, line_height) => {
+      line.layout_line(line_number, delta_top, line_height)
+    },
+    (line, line_number, delta_top, line_height, viewport, builder) => {
+      let index = line_number - viewport.start_line_number
       let input = render_line_input_for_viewport(
         viewport,
         index,
@@ -166,111 +127,33 @@ pub fn ViewLines::render_text(
         render_control_characters~,
         selection_view_range~,
       )
-      let rewrite_html = match previous_inputs.get(index) {
-        Some(previous) => previous != input
-        None => true
-      }
-      let mapping = write_line_node(
-        self.line_nodes[index],
-        viewport.start_line_number + index,
-        input,
-        viewport.relative_vertical_offset[index],
-        viewport.line_height,
-        rewrite_html~,
-      )
-      self.render_inputs.push(input)
-      // `None` only when `!rewrite_html`, which only happens when the line was
-      // present last render with the same input — so its mapping is unchanged.
-      self.line_mappings.push(
-        resolve_line_mapping(mapping, previous_mappings.get(index)),
-      )
-    }
-    self.generation = generation
-    self.decorations_generation = decorations_generation
-    self.window = target
-    return
-  }
-  if target == self.window {
-    return
-  }
-  let previous = self.window
-  let next_lines : Array[@rdom.Element] = []
-  let next_inputs : Array[@view_layout.RenderLineInput] = []
-  let next_mappings : Array[@view_layout.CharacterMapping] = []
-  for index in 0..<viewport.lines.length() {
-    let line_index = target.start + index
-    if line_index >= previous.start && line_index < previous.end {
-      let node = self.line_nodes[line_index - previous.start]
-      node.set_attribute(
-        "style",
-        line_node_style(
-          viewport.relative_vertical_offset[index],
-          viewport.line_height,
-        ),
-      )
-      next_lines.push(node)
-      next_inputs.push(self.render_inputs[line_index - previous.start])
-      next_mappings.push(self.line_mappings[line_index - previous.start])
-    } else {
-      let node = document.create_element("div")
-      let input = render_line_input_for_viewport(
-        viewport,
-        index,
-        space_width,
-        can_use_halfwidth_rightwards_arrow~,
-        render_whitespace~,
-        render_control_characters~,
-        selection_view_range~,
-      )
-      let mapping = write_line_node(
-        node,
-        viewport.start_line_number + index,
-        input,
-        viewport.relative_vertical_offset[index],
-        viewport.line_height,
-        rewrite_html=true,
-      )
-      self.dom_node.append_child(node.as_node())
-      next_lines.push(node)
-      next_inputs.push(input)
-      next_mappings.push(resolve_line_mapping(mapping, None))
-    }
-  }
-  for line_index in previous.start..<previous.end {
-    if line_index < target.start || line_index >= target.end {
-      self.dom_node.remove_child(
-        self.line_nodes[line_index - previous.start].as_node(),
-      )
-    }
-  }
-  self.line_nodes.clear()
-  for node in next_lines {
-    self.line_nodes.push(node)
-  }
-  self.render_inputs.clear()
-  for input in next_inputs {
-    self.render_inputs.push(input)
-  }
-  self.line_mappings.clear()
-  for mapping in next_mappings {
-    self.line_mappings.push(mapping)
-  }
+      line.render_line(line_number, input, delta_top, line_height, builder)
+    },
+    viewport,
+    _line_number => viewport.line_height,
+  )
+  let result = renderer.render(
+    {
+      rend_line_number_start: self.window.start,
+      lines: self.lines,
+      lines_length: self.lines.length(),
+    },
+    viewport.start_line_number,
+    viewport.end_line_number,
+    viewport.relative_vertical_offset,
+  )
+  self.lines = result.lines
   self.window = target
-}
-
-///|
-/// Resolves the mapping to store for a line: the freshly rendered one when the
-/// HTML was rewritten, otherwise the carried-over previous mapping. The empty
-/// fallback only occurs on a logic error (no fresh and no previous mapping).
-fn resolve_line_mapping(
-  fresh : @view_layout.CharacterMapping?,
-  previous : @view_layout.CharacterMapping?,
-) -> @view_layout.CharacterMapping {
-  match (fresh, previous) {
-    (Some(mapping), _) => mapping
-    (None, Some(mapping)) => mapping
-    (None, None) => @view_layout.CharacterMapping::new(0)
-  }
+  let dimensions = layout.dimensions()
+  self.dom_node.set_width(Pixels(dimensions.scroll_width))
+  self.dom_node.set_height(Pixels(dimensions.scroll_height.min(1000000.0)))
+  self.lines_content.set_layer_hinting(self.can_use_layer_hinting)
+  self.lines_content.set_contain("strict")
+  let position = layout.position()
+  let adjusted_scroll_top = position.scroll_top -
+    viewport.big_numbers_delta.to_double()
+  self.lines_content.set_top(Pixels(-adjusted_scroll_top))
+  self.lines_content.set_left(Pixels(-position.scroll_left))
 }
 
 ///|
@@ -358,37 +241,6 @@ fn selections_on_line_for(
 }
 
 ///|
-/// Writes a line node's attributes, and on `rewrite_html` its `innerHTML`.
-/// Returns the freshly produced `CharacterMapping` when the HTML is rewritten,
-/// or `None` when the existing DOM (and its previously stored mapping) is
-/// reused. The mapping is the DOM-truth bridge consumed by hit-testing and
-/// selection measurement.
-fn write_line_node(
-  node : @rdom.Element,
-  line_number : Int,
-  input : @view_layout.RenderLineInput,
-  top : Int,
-  line_height : Int,
-  rewrite_html~ : Bool,
-) -> @view_layout.CharacterMapping? {
-  node.set_attribute("class", @viewer_common.render_line_class())
-  node.set_attribute("data-line", line_number.to_string())
-  node.set_attribute("style", line_node_style(top, line_height))
-  if rewrite_html {
-    let output = @view_layout.render_view_line2(input)
-    node.set_inner_html(output.html)
-    Some(output.character_mapping)
-  } else {
-    None
-  }
-}
-
-///|
-fn line_node_style(top : Int, line_height : Int) -> String {
-  "top:" + top.to_string() + "px;height:" + line_height.to_string() + "px"
-}
-
-///|
 /// `getPositionFromDOMInfo` (viewLines.ts:337-372): resolves a browser caret
 /// answer (token span node + character offset) to a view `Position`, walking
 /// the span up to its `.view-line` node, scanning the rendered window for the
@@ -452,8 +304,9 @@ fn ViewLines::get_line_number_for(
   self : ViewLines,
   dom_node : @rdom.Element,
 ) -> Int {
-  for index, node in self.line_nodes {
-    if node.is_same_node(dom_node.as_node()) {
+  for index, line in self.lines {
+    if line.get_dom_node().map(node => node.is_same_node(dom_node.as_node())) ==
+      Some(true) {
       return self.window.start + index
     }
   }
@@ -475,10 +328,13 @@ pub fn ViewLines::get_line_width(self : ViewLines, line_number : Int) -> Double 
     return -1.0
   }
   let context = DomReadingContext::new(
-    self.dom_node,
+    self.dom_node.element(),
     self.text_range_resting_spot,
   )
-  rendered_view_line_width(self.line_nodes[index], Some(context))
+  rendered_view_line_width(
+    self.lines[index].get_dom_node().unwrap(),
+    Some(context),
+  )
 }
 
 ///|

@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/editor/viewer/browser/view_layer"
+
+import {
+  "moonbit-community/editor/viewer/common/view_layout",
+  "moonbit-community/rabbita/dom",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct RendererContext[T] {
+  mut rend_line_number_start : Int
+  mut lines : Array[T]
+  mut lines_length : Int
+}
+
+pub struct ViewLayerRenderer[T] {
+  // private fields
+}
+pub fn[T] ViewLayerRenderer::new(@dom.Element, () -> T, (T) -> @dom.Element?, (T, @dom.Element) -> Unit, (T, Int, Int, Int) -> Unit, (T, Int, Int, Int, @view_layout.ViewportData, StringBuilder) -> Bool, @view_layout.ViewportData, (Int) -> Int) -> Self[T]
+pub fn[T] ViewLayerRenderer::render(Self[T], RendererContext[T], Int, Int, Array[Int]) -> RendererContext[T]
+
+// Type aliases
+
+// Traits

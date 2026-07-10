@@ -2,7 +2,6 @@
   position: absolute;
   top: 0;
   left: 0;
-  will-change: transform;
   /* Selection paints behind the text (below .view-lines, z-index 1), matching
      Monaco: the glyphs render on top of an opaque selection background. */
   z-index: 0;

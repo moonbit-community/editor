@@ -18,6 +18,8 @@ the editor and the hover widget; callers decide whether a new position updates
 - `StandardWheelEvent` and `mouse_wheel_scroll_deltas` normalize wheel input;
   `ScrollableElementOwner` and `ScrollbarDrag` let the controller distinguish
   editor and hover drags.
+- `CachedDomNode` is the narrow scrolling subset of Monaco's `FastDomNode`;
+  exact CSS-value caches suppress redundant rail and retained-row writes.
 
 Scroll-position arithmetic remains in `viewer/common/view_layout`; this package
 owns DOM and interaction geometry only. It is JS-only, may use narrow Rabbita

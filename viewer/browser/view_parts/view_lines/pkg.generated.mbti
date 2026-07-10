@@ -5,6 +5,7 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
+  "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
 }
 
@@ -32,28 +33,33 @@ pub fn DomReadingContext::did_dom_layout(Self) -> Bool
 pub fn DomReadingContext::mark_did_dom_layout(Self) -> Unit
 pub fn DomReadingContext::new(@dom.Element, @dom.Element) -> Self
 
+pub struct ViewLine {
+  // private fields
+}
+pub fn ViewLine::get_dom_node(Self) -> @dom.Element?
+pub fn ViewLine::layout_line(Self, Int, Int, Int) -> Unit
+pub fn ViewLine::mapping(Self) -> @view_layout.CharacterMapping?
+pub fn ViewLine::new() -> Self
+pub fn ViewLine::render_line(Self, Int, @view_layout.RenderLineInput, Int, Int, StringBuilder) -> Bool
+pub fn ViewLine::set_dom_node(Self, @dom.Element) -> Unit
+
 pub(all) struct ViewLines {
-  dom_node : @dom.Element
+  dom_node : @scrollbar.CachedDomNode
+  lines_content : @scrollbar.CachedDomNode
   text_range_resting_spot : @dom.Element
   mut window : @view_layout.LineWindow
-  mut generation : Int
-  mut decorations_generation : Int
-  line_nodes : Array[@dom.Element]
-  render_inputs : Array[@view_layout.RenderLineInput]
-  line_mappings : Array[@view_layout.CharacterMapping]
+  mut lines : Array[ViewLine]
+  can_use_layer_hinting : Bool
   mut should_render : Bool
-  mut last_selection : @common.Range?
   mut last_render_whitespace : @view_layout.RenderWhitespace
-  mut last_space_width : Double
-  mut last_can_use_halfwidth_rightwards_arrow : Bool
 }
 pub fn ViewLines::get_dom_node(Self) -> @dom.Element
 pub fn ViewLines::get_line_width(Self, Int) -> Double
 pub fn ViewLines::get_position_from_dom_info(Self, @view_model.ViewModel, @dom.Element, Int) -> @common.Position?
 pub fn ViewLines::line_node_at(Self, Int) -> @dom.Element?
 pub fn ViewLines::mapping_at(Self, Int) -> @view_layout.CharacterMapping?
-pub fn ViewLines::new(@dom.Document) -> Self
-pub fn ViewLines::render_text(Self, @view_layout.ViewportData, Int, Int, Double, Bool, @view_layout.RenderWhitespace, Bool, @common.Range?) -> Unit
+pub fn ViewLines::new(@dom.Document, @scrollbar.CachedDomNode) -> Self
+pub fn ViewLines::render_text(Self, @view_layout.ViewportData, @view_layout.ViewLayout, Double, Bool, @view_layout.RenderWhitespace, Bool, @common.Range?) -> Unit
 
 // Type aliases
 

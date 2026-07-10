@@ -47,11 +47,100 @@ fn render_result_slice(
 /// positioned div per rendered view line, whose innerHTML is the registered
 /// overlays' output for that line concatenated in registration order.
 pub struct ViewOverlays {
-  dom_node : @rdom.Element
+  dom_node : @scrollbar.CachedDomNode
   priv dynamic_overlays : Array[&DynamicViewOverlay]
-  priv line_nodes : Array[@rdom.Element]
-  priv rendered_contents : Array[String]
+  priv mut lines : Array[ViewOverlayLine]
   priv mut window : @view_layout.LineWindow
+}
+
+///|
+/// Complete Monaco `ViewOverlayLine` retained row
+/// (`viewOverlays.ts:133-197`).
+priv struct ViewOverlayLine {
+  dynamic_overlays : Array[&DynamicViewOverlay]
+  mut dom_node : @scrollbar.CachedDomNode?
+  mut rendered_content : String?
+}
+
+///|
+fn ViewOverlayLine::new(
+  dynamic_overlays : Array[&DynamicViewOverlay],
+) -> ViewOverlayLine {
+  { dynamic_overlays, dom_node: None, rendered_content: None }
+}
+
+///|
+fn ViewOverlayLine::get_dom_node(self : ViewOverlayLine) -> @rdom.Element? {
+  self.dom_node.map(node => node.element())
+}
+
+///|
+fn ViewOverlayLine::set_dom_node(
+  self : ViewOverlayLine,
+  dom_node : @rdom.Element,
+) -> Unit {
+  self.dom_node = Some(@scrollbar.CachedDomNode::new(dom_node))
+}
+
+///|
+fn ViewOverlayLine::on_content_changed(_self : ViewOverlayLine) -> Unit {
+  // Nothing (`viewOverlays.ts:156-158`).
+}
+
+///|
+fn ViewOverlayLine::on_tokens_changed(_self : ViewOverlayLine) -> Unit {
+  // Nothing (`viewOverlays.ts:159-161`).
+}
+
+///|
+fn ViewOverlayLine::render_line(
+  self : ViewOverlayLine,
+  line_number : Int,
+  delta_top : Int,
+  line_height : Int,
+  viewport : @view_layout.ViewportData,
+  builder : StringBuilder,
+) -> Bool {
+  let content = StringBuilder()
+  for overlay in self.dynamic_overlays {
+    content.write_string(
+      overlay.render(viewport.start_line_number, line_number),
+    )
+  }
+  let content = content.to_string()
+  if self.rendered_content == Some(content) {
+    return false
+  }
+  self.rendered_content = Some(content)
+  builder.write_string(
+    "<div style=\"top:" +
+    delta_top.to_string() +
+    "px;height:" +
+    line_height.to_string() +
+    "px;line-height:" +
+    line_height.to_string() +
+    "px;\">" +
+    content +
+    "</div>",
+  )
+  true
+}
+
+///|
+fn ViewOverlayLine::layout_line(
+  self : ViewOverlayLine,
+  _line_number : Int,
+  delta_top : Int,
+  line_height : Int,
+) -> Unit {
+  match self.dom_node {
+    Some(node) => {
+      node.set_top(Pixels(delta_top.to_double()))
+      node.set_height(Pixels(line_height.to_double()))
+      node.set_line_height(Pixels(line_height.to_double()))
+    }
+    None => ()
+  }
 }
 
 ///|
@@ -59,14 +148,13 @@ fn ViewOverlays::new(
   document : @rdom.Document,
   class_name : String,
 ) -> ViewOverlays {
-  let dom_node = document.create_element("div")
-  dom_node.set_attribute("class", class_name)
-  dom_node.set_attribute("data-view-part", class_name)
+  let dom_element = document.create_element("div")
+  dom_element.set_attribute("class", class_name)
+  dom_element.set_attribute("data-view-part", class_name)
   {
-    dom_node,
+    dom_node: @scrollbar.CachedDomNode::new(dom_element),
     dynamic_overlays: [],
-    line_nodes: [],
-    rendered_contents: [],
+    lines: [],
     window: { start: 0, end: 0 },
   }
 }
@@ -95,83 +183,46 @@ fn ViewOverlays::prepare_overlays(
 }
 
 ///|
-/// The row style of `ViewOverlayLine.renderLine` (`viewOverlays.ts:178-185`):
-/// `top`/`height`/`line-height` inline; `position:absolute; width:100%` come
-/// from the shared row CSS (`editor.css`'s `.view-overlays > div` rule).
-fn overlay_row_style(top : Int, line_height : Int) -> String {
-  "top:" +
-  top.to_string() +
-  "px;height:" +
-  line_height.to_string() +
-  "px;line-height:" +
-  line_height.to_string() +
-  "px;"
+fn ViewOverlays::on_content_or_tokens_changed(self : ViewOverlays) -> Unit {
+  for line in self.lines {
+    line.on_content_changed()
+    line.on_tokens_changed()
+  }
 }
 
 ///|
-/// `VisibleLinesCollection.renderLines` + `ViewOverlayLine.renderLine`: the
-/// row recycler. Rows for lines leaving the window are dropped, entering
-/// lines get fresh row nodes, and a surviving row's innerHTML is rewritten
-/// only when its concatenated overlay HTML changed; every row's
-/// `top`/`height` is (re)laid out (`layoutLine`).
+/// `VisibleLinesCollection.renderLines` + `ViewOverlayLine`, through the same
+/// source-ordered renderer used by text rows.
 fn ViewOverlays::render_lines(
   self : ViewOverlays,
   viewport : @view_layout.ViewportData,
 ) -> Unit {
-  let target = @view_lines.viewport_window(viewport)
-  let document = @rdom.document()
-  let previous = self.window
-  let next_nodes : Array[@rdom.Element] = []
-  let next_contents : Array[String] = []
-  for index in 0..<viewport.lines.length() {
-    let line_number = viewport.start_line_number + index
-    let mut content = ""
-    for overlay in self.dynamic_overlays {
-      content = content +
-        overlay.render(viewport.start_line_number, line_number)
-    }
-    let reused = line_number >= previous.start && line_number < previous.end
-    let node = if reused {
-      self.line_nodes[line_number - previous.start]
-    } else {
-      let node = document.create_element("div")
-      self.dom_node.append_child(node.as_node())
-      node
-    }
-    let content_changed = if reused {
-      self.rendered_contents[line_number - previous.start] != content
-    } else {
-      true
-    }
-    if content_changed {
-      node.set_inner_html(content)
-    }
-    node.set_attribute(
-      "style",
-      overlay_row_style(
-        viewport.relative_vertical_offset[index],
-        viewport.line_height,
-      ),
-    )
-    next_nodes.push(node)
-    next_contents.push(content)
-  }
-  for line_number in previous.start..<previous.end {
-    if line_number < target.start || line_number >= target.end {
-      self.dom_node.remove_child(
-        self.line_nodes[line_number - previous.start].as_node(),
-      )
-    }
-  }
-  self.line_nodes.clear()
-  for node in next_nodes {
-    self.line_nodes.push(node)
-  }
-  self.rendered_contents.clear()
-  for content in next_contents {
-    self.rendered_contents.push(content)
-  }
-  self.window = target
+  let renderer = @view_layer.ViewLayerRenderer::new(
+    self.dom_node.element(),
+    () => ViewOverlayLine::new(self.dynamic_overlays),
+    line => line.get_dom_node(),
+    (line, node) => line.set_dom_node(node),
+    (line, line_number, delta_top, line_height) => {
+      line.layout_line(line_number, delta_top, line_height)
+    },
+    (line, line_number, delta_top, line_height, viewport, builder) => {
+      line.render_line(line_number, delta_top, line_height, viewport, builder)
+    },
+    viewport,
+    _line_number => viewport.line_height,
+  )
+  let result = renderer.render(
+    {
+      rend_line_number_start: self.window.start,
+      lines: self.lines,
+      lines_length: self.lines.length(),
+    },
+    viewport.start_line_number,
+    viewport.end_line_number,
+    viewport.relative_vertical_offset,
+  )
+  self.lines = result.lines
+  self.window = @view_lines.viewport_window(viewport)
 }
 
 ///|
@@ -207,7 +258,7 @@ pub fn ContentViewOverlays::new(
 pub fn ContentViewOverlays::get_dom_node(
   self : ContentViewOverlays,
 ) -> @rdom.Element {
-  self.overlays.dom_node
+  self.overlays.dom_node.element()
 }
 
 ///|
@@ -218,7 +269,9 @@ pub fn ContentViewOverlays::set_focused(
   self : ContentViewOverlays,
   focused : Bool,
 ) -> Unit {
-  self.overlays.dom_node.set_attribute(
+  self.overlays.dom_node
+  .element()
+  .set_attribute(
     "class",
     if focused {
       "view-overlays focused"
@@ -258,7 +311,7 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
   overlays.add_dynamic_overlay(current_line_margin)
   overlays.add_dynamic_overlay(lines_decorations)
   overlays.add_dynamic_overlay(line_numbers)
-  dom_node.append_child(overlays.dom_node.as_node())
+  dom_node.append_child(overlays.dom_node.element().as_node())
   {
     dom_node,
     overlays,

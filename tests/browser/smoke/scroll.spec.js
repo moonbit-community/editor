@@ -60,17 +60,85 @@ test('scrolls wheel input through the Monaco delta pipeline at integer positions
 
   // Fractional trackpad deltas round away from zero (2.37 x 1.25 = 2.9625
   // -> 3px) and the scroll truth stays whole pixels (`forceIntegerValues`),
-  // so the lines content never sits at a subpixel transform offset.
+  // so Monaco's shared lines-content rail never sits at a subpixel offset.
   await page.evaluate(() => {
     document.querySelector('.overflow-guard').dispatchEvent(
       new WheelEvent('wheel', { deltaY: 2.37, deltaMode: 0, bubbles: true, cancelable: true }),
     );
   });
   await expect.poll(() => lastScrollTop(events), { timeout: 3_000 }).toBe(93);
-  const transform = await page.evaluate(
-    () => document.querySelector('.view-lines').style.transform,
-  );
-  expect(transform).toMatch(/^translate\(-?\d+px, -?\d+px\)$/);
+  const rail = await page.evaluate(() => {
+    const linesContent = document.querySelector('.lines-content');
+    return {
+      top: linesContent.style.top,
+      left: linesContent.style.left,
+      viewLinesTransform: document.querySelector('.view-lines').style.transform,
+      zonesTransform: document.querySelector('.view-zones').style.transform,
+      widgetsTransform: document.querySelector('.contentWidgets').style.transform,
+      cursorsTransform: document.querySelector('.cursors-layer').style.transform,
+    };
+  });
+  expect(rail.top).toMatch(/^-?\d+px$/);
+  expect(rail.left).toMatch(/^-?\d+px$/);
+  expect(rail.viewLinesTransform).toBe('');
+  expect(rail.zonesTransform).toBe('');
+  expect(rail.widgetsTransform).toBe('');
+  expect(rail.cursorsTransform).toBe('');
+});
+
+test('moves only the shared rail during a steady retained-row scroll', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.__moonbitViewerScrollMetrics = {};
+  });
+  await page.goto('/');
+  await openWorkspaceFile(page, 'src/generated_scroll.mbt', { waitForActiveReveal: false });
+
+  // First same-window movement seeds the FastDomNode caches on rows that were
+  // initially bound from batched HTML.
+  await page.evaluate(() => {
+    document.querySelector('.overflow-guard').dispatchEvent(
+      new WheelEvent('wheel', { deltaY: 0.2, deltaMode: 0, bubbles: true, cancelable: true }),
+    );
+  });
+  await expect.poll(() => firstVisibleLine(page)).toBe(1);
+  await page.waitForTimeout(50);
+
+  await page.evaluate(() => {
+    globalThis.__moonbitViewerScrollMetrics = {};
+    globalThis.__moonbitViewerRetainedRows = Array.from(
+      document.querySelectorAll('.view-line'),
+    ).map((node) => ({
+      node,
+      style: node.getAttribute('style'),
+      html: node.innerHTML,
+    }));
+  });
+  await page.evaluate(() => {
+    document.querySelector('.overflow-guard').dispatchEvent(
+      new WheelEvent('wheel', { deltaY: 0.2, deltaMode: 0, bubbles: true, cancelable: true }),
+    );
+  });
+  await page.waitForTimeout(50);
+
+  const evidence = await page.evaluate(() => {
+    const before = globalThis.__moonbitViewerRetainedRows;
+    const after = Array.from(document.querySelectorAll('.view-line'));
+    return {
+      sameRows: before.every((entry, index) => entry.node === after[index]),
+      sameStyles: before.every(
+        (entry, index) => entry.style === after[index]?.getAttribute('style'),
+      ),
+      sameHtml: before.every((entry, index) => entry.html === after[index]?.innerHTML),
+      metrics: globalThis.__moonbitViewerScrollMetrics,
+    };
+  });
+  expect(evidence.sameRows).toBeTruthy();
+  expect(evidence.sameStyles).toBeTruthy();
+  expect(evidence.sameHtml).toBeTruthy();
+  expect(evidence.metrics.viewLayer ?? {}).toEqual({});
+  expect(evidence.metrics.styleWritesByKey).toEqual({
+    'lines-content:top': 1,
+  });
 });
 
 test('drags editor scrollbar thumb after auto reveal', async ({ page }) => {

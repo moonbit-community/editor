@@ -58,3 +58,9 @@ test "alt key applies fast scroll sensitivity" {
   )
   assert_eq(delta_top, 50.0)
 }
+
+///|
+test "numberAsPixels adds px to numbers and preserves strings" {
+  assert_eq(number_as_pixels(Pixels(12.5)), "12.5px")
+  assert_eq(number_as_pixels(Raw("calc(100% - 10px)")), "calc(100% - 10px)")
+}

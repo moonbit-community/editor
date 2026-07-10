@@ -11,6 +11,7 @@ import {
   "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
+  "moonbit-community/editor/viewer/browser/view_layer",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/view_layout",

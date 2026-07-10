@@ -45,7 +45,7 @@ pub(all) struct ViewCursors {
 pub fn ViewCursors::get_dom_node(Self) -> @dom.Element
 pub fn ViewCursors::get_last_render_data(Self) -> Array[ViewCursorRenderData]
 pub fn ViewCursors::new(@dom.Document) -> Self
-pub fn ViewCursors::render_cursor(Self, has_selection~ : Bool, editor_has_focus~ : Bool, String) -> Unit
+pub fn ViewCursors::render_cursor(Self, has_selection~ : Bool, editor_has_focus~ : Bool) -> Unit
 
 // Type aliases
 

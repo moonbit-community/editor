@@ -199,13 +199,13 @@ test "lines layout supports top and bottom view zones" {
       #|    zone_index: 0,
       #|    anchor_line: 0,
       #|    height_px: 10,
-      #|    relative_vertical_offset: -10,
+      #|    relative_vertical_offset: 0,
       #|  },
       #|  {
       #|    zone_index: 1,
       #|    anchor_line: 3,
       #|    height_px: 20,
-      #|    relative_vertical_offset: 54,
+      #|    relative_vertical_offset: 64,
       #|  },
       #|]
     ),
@@ -312,7 +312,7 @@ test "view layout windows and dimensions account for view zones" {
   )
   assert_eq(
     layout.relative_vertical_offset_for_line({ start: 2, end: 5 }, 3),
-    18,
+    72,
   )
 }
 

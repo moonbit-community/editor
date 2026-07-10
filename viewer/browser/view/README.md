@@ -15,6 +15,11 @@ attached, and a model swap destroys and replaces it.
 3. Run `prepare_render` for the remaining dirty parts (read/measure phase).
 4. Run their `render` methods (DOM-write phase), then retain the snapshot.
 
+`View` constructs one 2^24px `.lines-content` rail and passes the same cached
+node to `EditorScrollbar` and `ViewLines`. Vertical/horizontal scroll moves only
+that rail; text rows, zones, content overlays/widgets, and cursors remain in its
+coordinate space. The margin keeps its independent vertical rail.
+
 The eight handles are ViewLines, ViewZones, content overlays, margin overlays,
 ContentWidgets, ViewCursors, OverlayWidgets, and EditorScrollbar. Content
 overlays register current-line highlight, selection, then decorations; margin

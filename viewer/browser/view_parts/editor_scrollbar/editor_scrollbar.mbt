@@ -10,15 +10,19 @@
 /// `should_render` directly.
 pub(all) struct EditorScrollbar {
   editor_scrollable : @scrollbar.ScrollableElementDom
+  scrollbar_dom_node : @scrollbar.CachedDomNode
   mut should_render : Bool
 }
 
 ///|
-pub fn EditorScrollbar::new() -> EditorScrollbar {
+pub fn EditorScrollbar::new(
+  lines_content : @scrollbar.CachedDomNode,
+) -> EditorScrollbar {
   let editor_scrollable = @scrollbar.ScrollableElementDom::new(
     "lines-content moonbit-viewer-background",
     vertical_size=@core.editor_vertical_scrollbar_size,
     horizontal_size=@core.editor_horizontal_scrollbar_size,
+    content=lines_content.element(),
   )
   editor_scrollable.set_wrapper_class(
     "monaco-scrollable-element editor-scrollable",
@@ -29,7 +33,11 @@ pub fn EditorScrollbar::new() -> EditorScrollbar {
     { width: 0.0, scroll_width: 0.0, height: 0.0, scroll_height: 0.0 },
     { scroll_left: 0.0, scroll_top: 0.0 },
   )
-  { editor_scrollable, should_render: true }
+  let scrollbar_dom_node = @scrollbar.CachedDomNode::new(
+    editor_scrollable.wrapper,
+  )
+  scrollbar_dom_node.set_position("absolute")
+  { editor_scrollable, scrollbar_dom_node, should_render: true }
 }
 
 ///|

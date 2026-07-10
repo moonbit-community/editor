@@ -314,6 +314,7 @@ pub struct ViewLayout {
   scrollable : Scrollable
   // private fields
 }
+pub fn ViewLayout::big_numbers_delta_for_window(Self, LineWindow) -> Int
 pub fn ViewLayout::completely_visible_line_range(Self) -> (Int, Int)
 pub fn ViewLayout::compute_scroll_left_to_reveal(Self, Array[(Double, Double)], vertical_scrollbar_width~ : Double) -> Double?
 pub fn ViewLayout::compute_scroll_top_to_reveal_range(Self, Int, Int, VerticalRevealType) -> Double

@@ -54,12 +54,16 @@ pub fn ScrollableElementDom::new(
   content_class : String,
   vertical_size? : Double = default_scrollbar_size,
   horizontal_size? : Double = default_scrollbar_size,
+  content? : @rdom.Element,
 ) -> ScrollableElementDom {
   let document = @rdom.document()
   let wrapper = document.create_element("div")
   wrapper.set_attribute("class", "monaco-scrollable-element")
   wrapper.set_attribute("role", "presentation")
-  let content = document.create_element("div")
+  let content = match content {
+    Some(content) => content
+    None => document.create_element("div")
+  }
   content.set_attribute("class", content_class)
   let horizontal_bar = document.create_element("div")
   horizontal_bar.set_attribute("class", "scrollbar horizontal invisible")

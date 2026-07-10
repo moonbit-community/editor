@@ -336,6 +336,7 @@ pub fn ViewLayout::view_zone_viewport_data(
   let out : Array[ViewZoneViewportData] = []
   let window_top = self.vertical_offset_for_line(window.start)
   let window_bottom = self.vertical_offset_for_line(window.end)
+  let big_numbers_delta = self.big_numbers_delta_for_window(window).to_double()
   for index in 0..<self.view_zones_arr.length() {
     let zone = self.view_zones_arr[index]
     let zone_top = self.view_zone_vertical_offset(index)
@@ -345,7 +346,7 @@ pub fn ViewLayout::view_zone_viewport_data(
         zone_index: index,
         anchor_line: zone.anchor_line,
         height_px: zone.height_px,
-        relative_vertical_offset: (zone_top - window_top).to_int(),
+        relative_vertical_offset: (zone_top - big_numbers_delta).to_int(),
       })
     }
   }
@@ -353,14 +354,34 @@ pub fn ViewLayout::view_zone_viewport_data(
 }
 
 ///|
-/// Top offset of 1-based `line` relative to the rendered window start.
+/// Top offset of 1-based `line` relative to Monaco's `bigNumbersDelta` for the
+/// rendered window (`linesLayout.ts:738-750`). Below 500000px this is the
+/// absolute content offset; above it the large aligned delta is subtracted.
 pub fn ViewLayout::relative_vertical_offset_for_line(
   self : ViewLayout,
   window : LineWindow,
   line : Int,
 ) -> Int {
-  (self.vertical_offset_for_line(line) -
-  self.vertical_offset_for_line(window.start)).to_int()
+  self.vertical_offset_for_line(line).to_int() -
+  self.big_numbers_delta_for_window(window)
+}
+
+///|
+/// Monaco `LinesLayout.getLinesViewportData`'s large-number rail origin. The
+/// second alignment keeps the delta divisible by the default line height.
+pub fn ViewLayout::big_numbers_delta_for_window(
+  self : ViewLayout,
+  window : LineWindow,
+) -> Int {
+  let start_vertical_offset = self
+    .vertical_offset_for_line(window.start)
+    .to_int()
+  let step_size = 500000
+  if start_vertical_offset < step_size || self.line_height <= 0 {
+    return 0
+  }
+  let delta = start_vertical_offset / step_size * step_size
+  delta / self.line_height * self.line_height
 }
 
 ///|

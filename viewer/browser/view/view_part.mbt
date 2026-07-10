@@ -192,7 +192,6 @@ impl ViewPart for @view_zones.ViewZones with fn render(self, context) {
     context.viewport,
     context.translate_y,
   )
-  self.dom_node.set_attribute("style", context.content_transform)
 }
 
 ///|
@@ -265,7 +264,10 @@ impl ViewPart for MarginViewOverlays with fn should_render(self) {
 impl ViewPart for MarginViewOverlays with fn on_view_event(_self, event) {
   match event {
     ViewFlushed => true
-    ViewLinesChanged => true
+    ViewLinesChanged => {
+      _self.overlays.on_content_or_tokens_changed()
+      true
+    }
     // The line-decorations lane renders margin decorations
     // (`LinesDecorationsOverlay.onDecorationsChanged` → true); the
     // glyph-margin view part stays deferred.
@@ -302,7 +304,9 @@ impl ViewPart for MarginViewOverlays with fn render(self, context) {
     "style",
     "width:" + context.gutter_width.to_string() + "px",
   )
-  self.overlays.dom_node.set_attribute(
+  self.overlays.dom_node
+  .element()
+  .set_attribute(
     "style",
     context.margin_transform +
     ";width:" +
@@ -505,15 +509,13 @@ impl ViewPart for @editor_scrollbar.EditorScrollbar with fn render(
   self,
   context,
 ) {
-  self.editor_scrollable.content.set_attribute(
-    "style",
-    "left:" + context.gutter_width.to_string() + "px",
-  )
-  self.editor_scrollable.update_from_model(
-    context.dimensions,
-    context.position,
-    horizontal_left=context.gutter_width,
-  )
+  // `EditorScrollbar._setLayout` (`editorScrollbar.ts:109-123`): the scrollable
+  // shell starts at contentLeft; the shared lines-content rail itself is free
+  // to move left by the current synthetic scroll position.
+  self.scrollbar_dom_node.set_left(Pixels(context.gutter_width))
+  self.scrollbar_dom_node.set_width(Pixels(context.dimensions.width))
+  self.scrollbar_dom_node.set_height(Pixels(context.dimensions.height))
+  self.editor_scrollable.update_from_model(context.dimensions, context.position)
 }
 
 ///|
@@ -535,7 +537,10 @@ impl ViewPart for ContentViewOverlays with fn should_render(self) {
 impl ViewPart for ContentViewOverlays with fn on_view_event(_self, event) {
   match event {
     ViewFlushed => true
-    ViewLinesChanged => true
+    ViewLinesChanged => {
+      _self.overlays.on_content_or_tokens_changed()
+      true
+    }
     // `DecorationsOverlay.onDecorationsChanged` (`decorations.ts:44-46`).
     ViewDecorationsChanged => true
     // `DecorationsOverlay.onConfigurationChanged` (`decorations.ts:39-43`):
@@ -573,10 +578,7 @@ impl ViewPart for ContentViewOverlays with fn render(self, context) {
     context.dimensions.width
   }
   self.set_focused(context.input.editor_has_focus)
-  self.overlays.dom_node.set_attribute(
-    "style",
-    context.content_transform + ";width:" + width.to_string() + "px",
-  )
+  self.overlays.dom_node.set_width(Pixels(width))
 }
 
 ///|
@@ -752,7 +754,6 @@ impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
 /// Monaco `ViewContentWidgets.render`: write each widget's `top`/`left`/
 /// `visibility` onto its mounted DOM — never content, never a re-mount.
 impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) {
-  self.dom_node.set_attribute("style", context.content_transform)
   self.render_widgets(context.translate_y)
 }
 
@@ -856,7 +857,6 @@ impl ViewPart for @view_cursors.ViewCursors with fn render(self, context) {
   self.render_cursor(
     has_selection~,
     editor_has_focus=context.input.editor_has_focus,
-    context.content_transform,
   )
 }
 

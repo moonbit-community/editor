@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — Gate A approved; child inventories pending
+Status: active — lifecycle and async children implemented; cursor child next
 
 Date: 2026-07-10
 
@@ -81,7 +81,7 @@ product contract and belongs in an ordinary local test.
 | Order | Child plan | Primary ownership | Depends on | Status |
 |---:|---|---|---|---|
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
-| 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | approved for implementation |
+| 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | proposed |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | proposed |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
@@ -341,4 +341,16 @@ The independent closing task is:
   MoonBit ownership/test-authority audit and branch-derived matrix. Independent
   full and split cross-checks found zero missing/duplicate rows and approved the
   exhaustive target map: 373 planned TESTED, 7 PORTED, 345 DEFERRED, and 85
-  N-A. Gate B is passed and async product/test implementation may begin.
+  N-A. At that milestone Gate B passed and async product/test implementation
+  was authorized.
+- 2026-07-10: the async-model-features child is implemented and frozen. Product
+  commit `5c2bf13` owns cancellation sources, physical-model/internal-version/
+  generation request stamps, provider snapshot/liveness checks, clearable
+  hover timers, and guarded inlay/hover apply boundaries. Its 810-row ledger
+  closes as 331 TESTED, 7 PORTED, 371 DEFERRED, and 101 N-A, with zero
+  TODO/PASS. Independent closing audits drove fixes for equal-key sort
+  stability, disposal timing, concurrent partial emission, incomplete hover
+  invalidation, react-timer retirement, and strict evidence dispositions.
+  Final gates pass: check, JS 964/964, native 759/759, build, and browser 42/42;
+  the focused async browser race also passed ten repeated runs. The portfolio
+  proceeds to the cursor/input-events child.

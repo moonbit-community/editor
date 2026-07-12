@@ -188,10 +188,7 @@ pub fn RangePriorityQueueImpl::remove_min(
   if range.start + 1 == range.end_exclusive {
     self.ranges.remove(0) |> ignore
   } else {
-    self.ranges[0] = @base_common.OffsetRange(
-      range.start + 1,
-      range.end_exclusive,
-    )
+    self.ranges[0] = OffsetRange(range.start + 1, range.end_exclusive)
   }
   Some(range.start)
 }
@@ -217,19 +214,13 @@ pub fn RangePriorityQueueImpl::delete(
     if range.end_exclusive == value + 1 {
       self.ranges.remove(index) |> ignore
     } else {
-      self.ranges[index] = @base_common.OffsetRange(
-        value + 1,
-        range.end_exclusive,
-      )
+      self.ranges[index] = OffsetRange(value + 1, range.end_exclusive)
     }
   } else if range.end_exclusive == value + 1 {
-    self.ranges[index] = @base_common.OffsetRange(range.start, value)
+    self.ranges[index] = OffsetRange(range.start, value)
   } else {
-    self.ranges[index] = @base_common.OffsetRange(range.start, value)
-    self.ranges.insert(
-      index + 1,
-      @base_common.OffsetRange(value + 1, range.end_exclusive),
-    )
+    self.ranges[index] = OffsetRange(range.start, value)
+    self.ranges.insert(index + 1, OffsetRange(value + 1, range.end_exclusive))
   }
 }
 
@@ -345,7 +336,7 @@ pub fn TrackingTokenizationStateStore::new(
   line_count : Int,
 ) -> TrackingTokenizationStateStore {
   let invalid = RangePriorityQueueImpl::new()
-  invalid.add_range(@base_common.OffsetRange(1, line_count + 1))
+  invalid.add_range(OffsetRange(1, line_count + 1))
   {
     tokenization_state_store: TokenizationStateStore::new(),
     invalid_end_states_line_numbers: invalid,
@@ -373,7 +364,7 @@ pub fn TrackingTokenizationStateStore::set_end_state(
   let changed = self.tokenization_state_store.set_end_state(line_number, state)
   if changed && line_number < self.line_count {
     self.invalid_end_states_line_numbers.add_range(
-      @base_common.OffsetRange(line_number + 1, line_number + 2),
+      OffsetRange(line_number + 1, line_number + 2),
     )
   }
   changed
@@ -386,10 +377,7 @@ pub fn TrackingTokenizationStateStore::invalidate_end_state_range(
   range : @base_common.LineRange,
 ) -> Unit {
   self.invalid_end_states_line_numbers.add_range(
-    @base_common.OffsetRange(
-      range.start_line_number,
-      range.end_line_number_exclusive,
-    ),
+    OffsetRange(range.start_line_number, range.end_line_number_exclusive),
   )
 }
 
@@ -1017,6 +1005,6 @@ pub fn DefaultBackgroundTokenizer::request_tokens(
   end_line_number_exclusive : Int,
 ) -> Unit {
   self.tokenizer_with_state_store.base.store.invalidate_end_state_range(
-    @base_common.LineRange(start_line_number, end_line_number_exclusive),
+    LineRange(start_line_number, end_line_number_exclusive),
   )
 }

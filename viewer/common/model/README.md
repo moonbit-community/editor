@@ -16,7 +16,11 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   TextDefined/CRLF read preference, BOM-preservation switch, or cached builder
   metadata that can disagree with the text.
 - `TextModel` adds URI, display name, language id, caller-owned host version,
-  revision, lifecycle, and a `TokenizationTextModelPart`. Reads,
+  revision, lifecycle, and a `TokenizationTextModelPart`. The token part borrows
+  one live `TokenizationModelAccess` carrier, so content replacement, line
+  counts, disposal state, and attached-view priority never come from a copied
+  snapshot. Ordinary token reads are passive; explicit force, visible-range
+  refresh, and bounded background work are the only lexer drivers. Reads,
   position/offset conversion, range validation, and word lookup delegate to the
   current snapshot.
 - Model-scoped async freshness uses physical `TextModel` identity plus the
@@ -26,8 +30,11 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   increments the internal version once, destroys old decorations, and fires
   the content-flush event using the old normalized range/length and new
   normalized text/EOL. There is no incremental edit/undo/redo, EOL mutation or
-  preference, IME, or attachment surface. Ranges are generally clamped where
-  Monaco throws, and the snapshot remains readable after `TextModel::dispose`.
+  preference or IME. Internal `on_before_attached`/`on_before_detached` calls
+  maintain exact attached-view handles and select the first available scheduler
+  for an aggregate attached epoch; final detach cancels that epoch before the
+  scheduler is cleared. Ranges are generally clamped where Monaco throws, and
+  the snapshot remains readable after `TextModel::dispose`.
 
 ## Mutable model-side state
 
@@ -35,8 +42,14 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   overview-ruler, and injected-text decorations in augmented interval trees.
   Decoration, token, and dispose events are part of the public model surface.
 - `GuidesTextModelPart` computes indentation guides over a snapshot.
-- `RangePriorityQueueImpl` is a conformance port from `textModelTokens.ts`; the
-  readonly viewer has no background tokenizer that consumes it.
+- `RangePriorityQueueImpl` is the compatibility alias for the live queue owned
+  by `viewer/common/model/tokens`. The tokenizer backend tracks invalid end
+  states, prioritizes attached visible ranges, yields between bounded slices,
+  and makes stale scheduled generations inert after detach or disposal.
+- The constructor fixes the large-file tokenization decision at Monaco's
+  strict `> 20 Mi` UTF-16-unit or `> 300K` line thresholds. Large models keep
+  the projected view collection but return default tokens and schedule no
+  background lexer work.
 
 ## Monaco map and boundary
 
@@ -50,4 +63,5 @@ machinery are deliberately N-A.
 Production dependencies are only `base/common` and `viewer/common/model/tokens`;
 the package must not import language providers, view/view-model, DOM, workspace,
 server, or host effects. See `pkg.generated.mbti` for the exhaustive API and run
-`moon test --target js viewer/common/model`.
+`moon test --target js viewer/common/model` and
+`moon test --target native viewer/common/model`.

@@ -18,7 +18,10 @@ ownership and lifecycle rules that are not obvious from signatures.
   diagnostics, feedback, and quick-diff state between Viewers.
 - `set_model(TextModel?)` installs a caller-owned readonly model. The same
   object is a no-op; replacing or clearing it disposes the old model-scoped
-  listeners and DOM `View`, then creates a new `ViewModel` and, when mounted,
+  listeners, detaches the exact model-owned attached-view handle, and then
+  disposes the DOM `View` and `ViewModel`. Attachment acquires the handle before
+  ViewModel construction and, in a browser host, offers the shared idle/timer
+  scheduler to the model. It then creates a new `ViewModel` and, when mounted,
   a new `View`. Model swaps reset scroll and feature model state; use
   `save_view_state`/`restore_view_state` when the host wants persistence.
 - Contributions are created once per `Viewer` and disposed with it. Their
@@ -30,11 +33,12 @@ ownership and lifecycle rules that are not obvious from signatures.
   teardown. `on_did_dispose` fires after model detach and owner-decoration
   cleanup, but before contribution and Viewer-lifetime disposal, matching the
   source base-store boundary.
-- Each attached model stores one marker-decoration acquisition lease in its
-  `ModelData`. Multiple Viewers sharing a service and model share the identity
-  owner until the final lease; `set_value` refreshes that owner without
-  acquiring again. Model-scoped listeners dispose before the View, and the View
-  disposes before the ViewModel.
+- Each attached model stores one marker-decoration acquisition lease and one
+  exact attached-view handle in its `ModelData`. Multiple Viewers sharing a
+  service and model share the identity owner until the final lease and maintain
+  an aggregate attached count; `set_value` refreshes that owner without
+  acquiring again. Model-scoped listeners dispose before model detachment, the
+  View disposes next, and the ViewModel disposes last.
 - Overlay-widget registrations belong to the Viewer and are re-added to each
   per-model View. Content widgets are an internal view-part seam; hover owns
   the current implementation.
@@ -120,6 +124,16 @@ cancel before retiring the request; only a stamp that is still fully current
 may mutate decorations, hover state, rendering, or resolution events. Hover
 mouse/async/sync/loading delays are clearable owned handles with a generation
 guard retained for dispatch races.
+
+Grammar tokenization is demand-driven. Initial attach/build telemetry and token
+change telemetry read the passive store only. ViewModel scroll/content changes
+publish unstable visible ranges, while initial setup and
+`restore_view_state(Some(...))` publish one stabilized range after the restored
+scroll is committed. The browser scheduler selects one native-idle or 15 ms
+timeout fallback implementation, exposes cancellable idle/zero/delay handles,
+and lets the model backend bound and cancel background work. The root consumes
+the ViewModel's typed outgoing token event only after the browser ViewEvent has
+been delivered; it does not subscribe directly to TextModel token events.
 
 ## Boundaries and checks
 

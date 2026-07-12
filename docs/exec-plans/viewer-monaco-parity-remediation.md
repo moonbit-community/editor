@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — tokenization Gate B re-review next
+Status: active — tokenization implementation in progress
 
 Date: 2026-07-10
 
@@ -87,7 +87,7 @@ product contract and belongs in an ordinary local test.
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | implemented and frozen |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | implemented and frozen |
-| 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | corrected inventory ready |
+| 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | Gate B approved; implementation active |
 
 The order is intentional. Several plans touch viewer/viewer.mbt,
 viewer/attach_model.mbt, or viewer/browser/view/view_part.mbt. Do not execute
@@ -732,3 +732,9 @@ The independent closing task is:
   source + 97 tests, proposed as 466 TESTED, 206 PORTED, 206 DEFERRED, and 174
   N-A, with 21 uncounted LOC rows. No product/test file changed; Gate B still
   requires a fresh review.
+- 2026-07-13: the fourth formal tokenization Gate-B round independently PASSed
+  clean commit `d70d967` in source completeness, boundary/package/API, and test
+  evidence/matrix lanes. The approved denominator is 1052 TODO rows = 955
+  source + 97 exact tests, proposed as 466 TESTED, 206 PORTED, 206 DEFERRED,
+  and 174 N-A, plus 21 LOC rows. All 38 pins match and no product/test edit
+  predates approval. Tokenization implementation is now authorized.

@@ -1,6 +1,6 @@
 # Viewer Tokenization Parity
 
-Status: corrected inventory ready — STOP FOR RE-REVIEW
+Status: Gate B approved — implementation active
 
 Date: 2026-07-13
 
@@ -1830,7 +1830,7 @@ recounted.
 
 ## Exit Gate
 
-- [ ] independent Gate B approves every source/test row, count, hash, target,
+- [x] independent Gate B approves every source/test row, count, hash, target,
   terminal proposal, deviation, and handoff
 - [ ] no product/test edit predates Gate-B approval
 - [ ] passive reads never invoke lexer work
@@ -1880,3 +1880,11 @@ recounted.
   1052 TODO rows = 955 source atoms + 97 exact tests, proposed as 466 TESTED /
   206 PORTED / 206 DEFERRED / 174 N-A, plus 21 uncounted LOC rows. No product or
   test file changed; Gate B has not passed and requires another fresh review.
+- 2026-07-13: the fourth formal Gate-B round independently PASSed clean commit
+  `d70d967` in all three required lanes: complete source/test reread,
+  boundary/classification/package/API, and test evidence/matrices/mechanics.
+  The approved implementation denominator is 1052 TODO rows = 955 source
+  atoms + 97 exact tests, proposed as 466 TESTED / 206 PORTED / 206 DEFERRED /
+  174 N-A, plus 21 uncounted LOC rows. All 38 pinned hashes match; no product
+  or test file predates approval. Gate B is approved and implementation may
+  now begin without changing this denominator or its reviewed handoffs.

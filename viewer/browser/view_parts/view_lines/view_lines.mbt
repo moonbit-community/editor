@@ -55,6 +55,98 @@ pub fn ViewLinesConfiguration::new(
 }
 
 ///|
+priv struct LastRenderedData {
+  mut current_visible_range : @base_common.Range
+}
+
+///|
+fn LastRenderedData::new() -> LastRenderedData {
+  { current_visible_range: Range(1, 1, 1, 1) }
+}
+
+///|
+fn LastRenderedData::get_current_visible_range(
+  self : LastRenderedData,
+) -> @base_common.Range {
+  self.current_visible_range
+}
+
+///|
+fn LastRenderedData::set_current_visible_range(
+  self : LastRenderedData,
+  current_visible_range : @base_common.Range,
+) -> Unit {
+  self.current_visible_range = current_visible_range
+}
+
+///|
+priv struct RunOnceScheduler {
+  delay_ms : Int
+  mut handle : Double?
+  set_timeout : (() -> Unit, Int) -> Double
+  clear_timeout : (Double) -> Unit
+}
+
+///|
+fn RunOnceScheduler::new(delay_ms : Int) -> RunOnceScheduler {
+  RunOnceScheduler::new_with_timer(
+    delay_ms, view_lines_set_timeout, view_lines_clear_timeout,
+  )
+}
+
+///|
+/// A timer-capability constructor keeps the production scheduler identical to
+/// `RunOnceScheduler` while making its cancel/reschedule contract observable
+/// without sleeping in white-box tests.
+fn RunOnceScheduler::new_with_timer(
+  delay_ms : Int,
+  set_timeout : (() -> Unit, Int) -> Double,
+  clear_timeout : (Double) -> Unit,
+) -> RunOnceScheduler {
+  { delay_ms, handle: None, set_timeout, clear_timeout }
+}
+
+///|
+fn RunOnceScheduler::is_scheduled(self : RunOnceScheduler) -> Bool {
+  self.handle is Some(_)
+}
+
+///|
+fn RunOnceScheduler::schedule(
+  self : RunOnceScheduler,
+  callback : () -> Unit,
+) -> Unit {
+  // Source `RunOnceScheduler.schedule` always cancels the previous token and
+  // starts a fresh delay window.
+  self.cancel()
+  self.handle = Some(
+    (self.set_timeout)(
+      () => {
+        self.handle = None
+        callback()
+      },
+      self.delay_ms,
+    ),
+  )
+}
+
+///|
+fn RunOnceScheduler::cancel(self : RunOnceScheduler) -> Unit {
+  match self.handle {
+    Some(handle) => {
+      (self.clear_timeout)(handle)
+      self.handle = None
+    }
+    None => ()
+  }
+}
+
+///|
+fn RunOnceScheduler::dispose(self : RunOnceScheduler) -> Unit {
+  self.cancel()
+}
+
+///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
 /// `should_render` and delegates source events into the retained collection.
 pub(all) struct ViewLines {
@@ -72,7 +164,13 @@ pub(all) struct ViewLines {
   priv mut view_line_options : ViewLineOptions
   priv view_line_options_ref : Ref[ViewLineOptions]
   priv mut read_configuration : () -> ViewLinesConfiguration
+  priv mut view_line_to_model_line : (Int) -> Int
+  priv mut model_line_text_direction : (Int) -> @view_layout.TextDirection
   priv line_factory : () -> ViewLine
+  priv async_update_line_widths : RunOnceScheduler
+  priv last_rendered_data : LastRenderedData
+  priv mut max_line_width : Double
+  priv mut last_layout : @view_layout.ViewLayout?
   mut should_render : Bool
 }
 
@@ -106,9 +204,29 @@ pub fn ViewLines::new(
     view_line_options: initial_configuration.view_line_options,
     view_line_options_ref,
     read_configuration: () => initial_configuration,
+    view_line_to_model_line: line_number => line_number,
+    model_line_text_direction: _line_number => LTR,
     line_factory,
+    async_update_line_widths: RunOnceScheduler::new(200),
+    last_rendered_data: LastRenderedData::new(),
+    max_line_width: 0.0,
+    last_layout: None,
     should_render: true,
   }
+}
+
+///|
+/// Installs the two model capabilities used by Monaco's
+/// `linesVisibleRangesForRange`: view-position conversion at column 1 and
+/// model-line text direction. Keeping these readers on ViewLines preserves
+/// the source's converter progression without introducing a package cycle.
+pub fn ViewLines::install_geometry_readers(
+  self : ViewLines,
+  view_line_to_model_line : (Int) -> Int,
+  model_line_text_direction : (Int) -> @view_layout.TextDirection,
+) -> Unit {
+  self.view_line_to_model_line = view_line_to_model_line
+  self.model_line_text_direction = model_line_text_direction
 }
 
 ///|
@@ -134,19 +252,46 @@ fn ViewLines::seed_configuration(
   self.can_use_layer_hinting = configuration.can_use_layer_hinting
   self.view_line_options = configuration.view_line_options
   self.view_line_options_ref.val = configuration.view_line_options
+  match self.last_layout {
+    Some(layout) =>
+      ignore(layout.set_is_viewport_wrapping(self.is_viewport_wrapping))
+    None => ()
+  }
 }
 
 ///|
 /// `ViewLines.onConfigurationChanged`'s cache reread followed by
 /// `_onOptionsMaybeChanged`. The caller preserves the outer source order by
 /// invoking the nested visible-collection handler before this method.
-pub fn ViewLines::on_configuration_changed(self : ViewLines) -> Bool {
+pub fn ViewLines::on_configuration_changed(
+  self : ViewLines,
+  wrapping_info_changed : Bool,
+  layout_info_changed : Bool,
+) -> Bool {
+  if wrapping_info_changed {
+    self.max_line_width = 0.0
+  }
   let configuration = (self.read_configuration)()
+  let wrapping_value_changed = self.is_viewport_wrapping !=
+    configuration.is_viewport_wrapping
   self.line_height = configuration.line_height
   self.typical_halfwidth_character_width = configuration.typical_halfwidth_character_width
   self.is_viewport_wrapping = configuration.is_viewport_wrapping
   self.can_use_layer_hinting = configuration.can_use_layer_hinting
-  self.on_options_maybe_changed(configuration.view_line_options)
+  if wrapping_value_changed {
+    match self.last_layout {
+      Some(layout) =>
+        ignore(layout.set_is_viewport_wrapping(self.is_viewport_wrapping))
+      None => ()
+    }
+  }
+  self.on_options_maybe_changed(configuration.view_line_options) |> ignore
+  if layout_info_changed {
+    self.max_line_width = 0.0
+  }
+  // Source `ViewLines.onConfigurationChanged` always invalidates after the
+  // nested layout handler and ordered configuration rereads.
+  true
 }
 
 ///|
@@ -220,6 +365,7 @@ pub fn ViewLines::line_node_at(
 pub fn ViewLines::flush_retained_lines(self : ViewLines) -> Unit {
   self.lines = []
   self.window = { start: 1, end: 1 }
+  self.max_line_width = 0.0
 }
 
 ///|
@@ -248,7 +394,11 @@ pub fn ViewLines::on_visible_scroll_changed(
 
 ///|
 /// `VisibleLinesCollection.onZonesChanged` (`viewLayer.ts:339-341`).
-pub fn ViewLines::on_visible_zones_changed(_self : ViewLines) -> Bool {
+pub fn ViewLines::on_visible_zones_changed(self : ViewLines) -> Bool {
+  match self.last_layout {
+    Some(layout) => ignore(layout.set_max_line_width(self.max_line_width))
+    None => ()
+  }
   true
 }
 
@@ -484,6 +634,8 @@ pub fn ViewLines::render_text(
   layout : @view_layout.ViewLayout,
   selection_view_range : @base_common.Range?,
 ) -> Unit {
+  self.last_layout = Some(layout)
+  ignore(layout.set_is_viewport_wrapping(self.is_viewport_wrapping))
   let target = viewport_window(viewport)
   let renderer = @view_layer.ViewLayerRenderer::new(
     self.dom_node.element(),
@@ -518,9 +670,15 @@ pub fn ViewLines::render_text(
   )
   self.lines = result.lines
   self.window = target
+  self.last_rendered_data.set_current_visible_range(viewport.visible_range)
   let dimensions = layout.dimensions()
   self.dom_node.set_width(Pixels(dimensions.scroll_width))
   self.dom_node.set_height(Pixels(dimensions.scroll_height.min(1000000.0)))
+  if !self.update_line_widths_fast() {
+    self.async_update_line_widths.schedule(() => self.update_line_widths_slow())
+  } else {
+    self.async_update_line_widths.cancel()
+  }
   self.lines_content.set_layer_hinting(self.can_use_layer_hinting)
   self.lines_content.set_contain("strict")
   let position = layout.position()
@@ -695,11 +853,8 @@ fn ViewLines::get_line_number_for(
 ///|
 /// `getLineWidth` (viewLines.ts:400-413): the rendered width of a view line
 /// in pixels, `-1` when the line is outside the rendered window. The read
-/// includes CSS-generated content (`::after` ellipses etc.) because it is the
-/// reading target's `offsetWidth`. The source's
-/// `_updateLineWidthsSlowIfDomDidLayout` piggyback (its `scrollWidth`
-/// machinery) is not ported — this layout model computes scroll width from
-/// line content, not DOM sweeps.
+/// includes CSS-generated content because it is the reading target's
+/// `offsetWidth`.
 pub fn ViewLines::get_line_width(self : ViewLines, line_number : Int) -> Double {
   let index = self.window_index(line_number)
   if index < 0 {
@@ -710,10 +865,224 @@ pub fn ViewLines::get_line_width(self : ViewLines, line_number : Int) -> Double 
     self.dom_node.element(),
     self.text_range_resting_spot,
   )
-  rendered_view_line_width(
-    self.lines[index].get_dom_node().unwrap(),
-    Some(context),
+  let result = self.lines[index].get_width(Some(context))
+  self.update_line_widths_slow_if_dom_did_layout(context)
+  result
+}
+
+///|
+pub fn ViewLines::reset_line_width_caches(self : ViewLines) -> Unit {
+  for line in self.lines {
+    line.reset_cached_width()
+  }
+}
+
+///|
+/// Raw, unrounded visible ranges for one rendered view line.
+pub fn ViewLines::visible_ranges_for_line_range(
+  self : ViewLines,
+  line_number : Int,
+  start_column : Int,
+  end_column : Int,
+) -> (Bool, Array[(Double, Double)])? {
+  let index = self.window_index(line_number)
+  if index < 0 {
+    return None
+  }
+  let context = DomReadingContext::new(
+    self.dom_node.element(),
+    self.text_range_resting_spot,
   )
+  let result = self.lines[index].get_visible_ranges_for_range(
+    line_number, start_column, end_column, context,
+  )
+  self.update_line_widths_slow_if_dom_did_layout(context)
+  result
+}
+
+///|
+/// Source `linesVisibleRangesForRange` boundary using raw tuples to avoid a
+/// package cycle with `browser/view`'s RenderingContext carriers. Horizontal
+/// values are rounded independently only at this source boundary.
+pub fn ViewLines::raw_lines_visible_ranges_for_range(
+  self : ViewLines,
+  requested_range : @base_common.Range,
+  include_new_lines : Bool,
+) -> Array[(Bool, Int, Array[(Int, Int)], Bool)]? {
+  let original_end_line_number = requested_range.end_line_number
+  guard requested_range.intersect_ranges(
+      self.last_rendered_data.get_current_visible_range(),
+    )
+    is Some(visible_range) else {
+    return None
+  }
+  let result : Array[(Bool, Int, Array[(Int, Int)], Bool)] = []
+  let context = DomReadingContext::new(
+    self.dom_node.element(),
+    self.text_range_resting_spot,
+  )
+  let mut next_line_model_line_number = 0
+  if include_new_lines {
+    next_line_model_line_number = (self.view_line_to_model_line)(
+      visible_range.start_line_number,
+    )
+  }
+  for
+    line_number in visible_range.start_line_number..<=visible_range.end_line_number {
+    let index = self.window_index(line_number)
+    if index < 0 {
+      continue
+    }
+    let start_column = if line_number == visible_range.start_line_number {
+      visible_range.start_column
+    } else {
+      1
+    }
+    let continues_on_next_line = line_number != original_end_line_number
+    guard self.lines[index].render_input() is Some(render_input) else {
+      continue
+    }
+    let end_column = if continues_on_next_line {
+      render_input.line_content.length() + 1
+    } else {
+      visible_range.end_column
+    }
+    guard self.lines[index].get_visible_ranges_for_range(
+        line_number, start_column, end_column, context,
+      )
+      is Some((outside_rendered_line, float_ranges)) else {
+      continue
+    }
+    if include_new_lines && line_number < original_end_line_number {
+      let current_line_model_line_number = next_line_model_line_number
+      next_line_model_line_number = (self.view_line_to_model_line)(
+        line_number + 1,
+      )
+      if current_line_model_line_number != next_line_model_line_number {
+        let last_index = float_ranges.length() - 1
+        let (left, width) = float_ranges[last_index]
+        let width = width + self.typical_halfwidth_character_width
+        float_ranges[last_index] = if (self.model_line_text_direction)(
+            current_line_model_line_number,
+          ) ==
+          RTL {
+          (left - self.typical_halfwidth_character_width, width)
+        } else {
+          (left, width)
+        }
+      }
+    }
+    let rounded_ranges : Array[(Int, Int)] = []
+    for range in float_ranges {
+      rounded_ranges.push(
+        (
+          view_lines_js_math_round_to_int(range.0),
+          view_lines_js_math_round_to_int(range.1),
+        ),
+      )
+    }
+    result.push(
+      (
+        outside_rendered_line, line_number, rounded_ranges, continues_on_next_line,
+      ),
+    )
+  }
+  self.update_line_widths_slow_if_dom_did_layout(context)
+  if result.is_empty() {
+    return None
+  }
+  Some(result)
+}
+
+///|
+pub fn ViewLines::raw_visible_range_for_position(
+  self : ViewLines,
+  line_number : Int,
+  column : Int,
+) -> (Bool, Double)? {
+  guard self.visible_ranges_for_line_range(line_number, column, column)
+    is Some((outside_rendered_line, ranges)) &&
+    !ranges.is_empty() else {
+    return None
+  }
+  Some((outside_rendered_line, ranges[0].0))
+}
+
+///|
+pub fn ViewLines::update_line_widths(self : ViewLines) -> Unit {
+  ignore(self.update_line_widths_internal(false))
+}
+
+///|
+fn ViewLines::update_line_widths_fast(self : ViewLines) -> Bool {
+  self.update_line_widths_internal(true)
+}
+
+///|
+fn ViewLines::update_line_widths_slow(self : ViewLines) -> Unit {
+  ignore(self.update_line_widths_internal(false))
+}
+
+///|
+fn ViewLines::update_line_widths_slow_if_dom_did_layout(
+  self : ViewLines,
+  context : DomReadingContext,
+) -> Unit {
+  if !context.did_dom_layout() {
+    return
+  }
+  if !self.async_update_line_widths.is_scheduled() {
+    return
+  }
+  self.async_update_line_widths.cancel()
+  self.update_line_widths_slow()
+}
+
+///|
+fn ViewLines::update_line_widths_internal(
+  self : ViewLines,
+  fast : Bool,
+) -> Bool {
+  let mut local_max_line_width = 1.0
+  let mut all_widths_computed = true
+  for line in self.lines {
+    if fast && !line.get_width_is_fast() {
+      all_widths_computed = false
+      continue
+    }
+    local_max_line_width = local_max_line_width.max(line.get_width(None))
+  }
+  match self.last_layout {
+    Some(layout) =>
+      if all_widths_computed &&
+        self.window.start == 1 &&
+        self.window.end == layout.line_count() + 1 {
+        self.max_line_width = 0.0
+      }
+    None => ()
+  }
+  self.ensure_max_line_width(local_max_line_width)
+  all_widths_computed
+}
+
+///|
+fn ViewLines::ensure_max_line_width(
+  self : ViewLines,
+  line_width : Double,
+) -> Unit {
+  let integer_line_width = line_width.ceil()
+  if self.max_line_width < integer_line_width {
+    self.max_line_width = integer_line_width
+    match self.last_layout {
+      Some(layout) => ignore(layout.set_max_line_width(self.max_line_width))
+      None => ()
+    }
+  }
+}
+
+///|
+pub fn ViewLines::dispose(self : ViewLines) -> Unit {
+  self.async_update_line_widths.dispose()
 }
 
 ///|
@@ -739,4 +1108,21 @@ fn view_lines_parent_element(el : @rdom.Element) -> @rdom.Element? {
   } else {
     None
   }
+}
+
+///|
+extern "js" fn view_lines_set_timeout(
+  callback : () -> Unit,
+  delay_ms : Int,
+) -> Double = "(callback, delayMs) => globalThis.setTimeout(callback, delayMs)"
+
+///|
+extern "js" fn view_lines_clear_timeout(handle : Double) -> Unit = "(handle) => globalThis.clearTimeout(handle)"
+
+///|
+/// JavaScript `Math.round` for finite DOM geometry. In particular, negative
+/// half values round toward positive infinity (`Math.round(-7.5) === -7`),
+/// unlike the usual ties-away-from-zero rule on some MoonBit backends.
+fn view_lines_js_math_round_to_int(value : Double) -> Int {
+  (value + 0.5).floor().to_int()
 }

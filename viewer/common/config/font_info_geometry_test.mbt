@@ -1,4 +1,4 @@
-// Reference behaviors transcribed from
+// Source-derived behaviors transcribed from
 // `vscode/src/vs/editor/common/config/fontInfo.ts` at vscode submodule commit
 // b18492a288de038fbc7643aae6de8247029d11bd.
 

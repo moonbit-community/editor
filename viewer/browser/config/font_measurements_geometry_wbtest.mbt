@@ -1,4 +1,4 @@
-// White-box deterministic port of
+// White-box deterministic source-derived tests for
 // `vscode/src/vs/editor/browser/config/fontMeasurements.ts` at vscode
 // submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
 // Multi-window, persistence, and disposal cases are intentionally absent owner
@@ -44,6 +44,44 @@ fn trusted_font(family : String) -> @common_config.FontInfo {
   {
     ..@common_config.FontInfo::estimated(measurement_bare(family~)),
     is_trusted: true,
+  }
+}
+
+///|
+fn suspicious_axis_measurement(
+  axis : Int,
+  sample : Double,
+) -> @common_config.FontInfo {
+  measure_with((chr, _request_type) => {
+    let is_digit = chr.length() == 1 && chr >= "0" && chr <= "9"
+    let selected = match axis {
+      0 => chr == "n"
+      1 => chr == "\u{ff4d}"
+      2 => chr == " "
+      3 => chr == "·"
+      4 => chr == "\u{2e31}"
+      _ => is_digit
+    }
+    let trigger = if axis == 0 { chr == " " } else { chr == "n" }
+    if selected {
+      sample
+    } else if trigger {
+      2.0
+    } else {
+      10.0
+    }
+  })
+}
+
+///|
+fn suspicious_axis_value(info : @common_config.FontInfo, axis : Int) -> Double {
+  match axis {
+    0 => info.typical_halfwidth_character_width
+    1 => info.typical_fullwidth_character_width
+    2 => info.space_width
+    3 => info.middot_width
+    4 => info.wsmiddot_width
+    _ => info.max_digit_width
   }
 }
 
@@ -117,6 +155,59 @@ test "request corpus and style order match FontMeasurements" {
   // Halfwidth arrow is excluded from the mono corpus but has its own safety
   // equality gate against the reference width.
   assert_false(info.can_use_halfwidth_rightwards_arrow)
+}
+
+///|
+test "every expected request has exact monospace subset membership" {
+  let members : Array[(String, CharWidthRequestType)] = [
+    ("n", Regular),
+    (" ", Regular),
+    ("→", Regular),
+    ("·", Regular),
+  ]
+  for digit in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"] {
+    members.push((digit, Regular))
+  }
+  for chr in ["|", "/", "-", "_", "i", "l", "m", "%"] {
+    members.push((chr, Regular))
+    members.push((chr, Italic))
+    members.push((chr, Bold))
+  }
+  for request_key in members {
+    let info = measure_with((chr, request_type) => {
+      if chr == request_key.0 && request_type == request_key.1 {
+        10.01
+      } else {
+        10.0
+      }
+    })
+    assert_false(info.is_monospace)
+  }
+  for
+    excluded in [("\u{ff4d}", Regular), ("￫", Regular), ("\u{2e31}", Regular)] {
+    let info = measure_with((chr, request_type) => {
+      if chr == excluded.0 && request_type == excluded.1 {
+        10.01
+      } else {
+        10.0
+      }
+    })
+    assert_true(info.is_monospace)
+  }
+}
+
+///|
+test "max digit width considers each of the ten digit requests" {
+  for widest in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"] {
+    let info = measure_with((chr, _request_type) => {
+      if chr == widest {
+        17.0
+      } else {
+        10.0
+      }
+    })
+    assert_eq(info.max_digit_width, 17.0)
+  }
 }
 
 ///|
@@ -272,17 +363,13 @@ test "suspicious readings trigger at each owned boundary and floor all six width
   })
   assert_true(middot_only.is_trusted)
   assert_eq(middot_only.middot_width, 1.0)
-  for pair in [(4.0, 5.0), (5.0, 5.0), (6.0, 6.0)] {
-    let info = measure_with((chr, _request_type) => {
-      if chr == " " {
-        2.0
-      } else if chr == "·" {
-        pair.0
-      } else {
-        10.0
-      }
-    })
-    assert_eq(info.middot_width, pair.1)
+  // The independently reused floor constant is exact for all six output
+  // widths, at the below/equal/above boundary.
+  for axis in 0..<6 {
+    for pair in [(4.0, 5.0), (5.0, 5.0), (6.0, 6.0)] {
+      let info = suspicious_axis_measurement(axis, pair.0)
+      assert_eq(suspicious_axis_value(info, axis), pair.1)
+    }
   }
 }
 
@@ -343,6 +430,9 @@ test "folded cache preserves overwrite and remove-readd order" {
   assert_eq(measurements.cache_keys.length(), 0)
   assert_eq(measurements.cached_values().length(), 0)
   assert_eq(events.val, 1)
+  // Source clear is unconditional: an already-empty cache still publishes.
+  measurements.clear_all_font_infos()
+  assert_eq(events.val, 2)
   listener.dispose()
 }
 
@@ -397,13 +487,16 @@ test "cache hit, one pending retry, callback ordering, and conditional event" {
 
 ///|
 test "evicting an all-trusted cache is silent" {
+  let scheduled = Ref(0)
   let measurements = new_font_measurements_for_test(
     (_bare, _requests) => (),
     () => 1.0,
-    (_callback, _delay) => (),
+    (_callback, _delay) => scheduled.val += 1,
   )
   let trusted = trusted_font("Trusted")
   measurements.write_to_cache(trusted.get_id(), trusted)
+  // Trusted plus no pending retry is the missing false arm of the timer gate.
+  assert_eq(scheduled.val, 0)
   let events = Ref(0)
   let listener = measurements.on_did_change(() => events.val += 1)
   measurements.evict_untrusted_readings()

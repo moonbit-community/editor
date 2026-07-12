@@ -96,7 +96,6 @@ pub struct Viewer {
   priv mut layout_model_line_count : Int
   priv mut layout_line_count : Int
   priv mut soft_wrap_column : Int
-  priv mut max_line_length : Int
   /// The host element handed to `attach` — Monaco's `_containerDomElement`.
   priv mut container : @rdom.Element?
   /// The Viewer-owned no-model placeholder (deviation: Monaco has no
@@ -347,7 +346,6 @@ pub fn Viewer::Viewer(
     layout_model_line_count: 0,
     layout_line_count: 0,
     soft_wrap_column: 0,
-    max_line_length: 0,
     container: None,
     placeholder_element: None,
     placeholder_text: None,

@@ -3,7 +3,9 @@ package "moonbit-community/editor/viewer/browser/view_parts/content_widgets"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/common/model",
   "moonbit-community/rabbita/dom",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -11,10 +13,16 @@ import {
 // Errors
 
 // Types and methods
+pub(all) struct ContentWidgetDimension {
+  width : Double
+  height : Double
+} derive(Eq, @debug.Debug)
+
 pub(all) struct ContentWidgetPosition {
   position : @common.Position?
   secondary_position : @common.Position?
-  preference : Array[ContentWidgetPositionPreference]
+  preference : Array[ContentWidgetPositionPreference]?
+  position_affinity : @model.PositionAffinity?
 }
 
 pub(all) enum ContentWidgetPositionPreference {
@@ -22,6 +30,11 @@ pub(all) enum ContentWidgetPositionPreference {
   Below
   Exact
 } derive(Eq)
+
+pub(all) struct ContentWidgetRenderedCoordinate {
+  top : Double
+  left : Double
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ContentWidgets {
   dom_node : @dom.Element
@@ -33,21 +46,21 @@ pub(all) struct ContentWidgets {
 pub fn ContentWidgets::add_widget(Self, &ContentWidget) -> Unit
 pub fn ContentWidgets::dom_node(Self) -> @dom.Element
 pub fn ContentWidgets::install_live_view_context(Self, () -> (Double, Double), (@common.Position) -> @common.Position?) -> Unit
+pub fn ContentWidgets::install_live_view_context_with_affinity(Self, () -> (Double, Double), (@common.Position, @model.PositionAffinity?) -> @common.Position?) -> Unit
 pub fn ContentWidgets::new(@dom.Document, @dom.Element) -> Self
+pub fn ContentWidgets::on_before_render_widgets(Self, Int, Int) -> Unit
 pub fn ContentWidgets::on_configuration_changed(Self, Bool) -> Unit
 pub fn ContentWidgets::overflowing_content_widgets_dom_node(Self) -> @dom.Element
 pub fn ContentWidgets::prepare_render_widgets(Self, ContentWidgetsRenderContext) -> Unit
 pub fn ContentWidgets::remove_widget(Self, &ContentWidget) -> Unit
-pub fn ContentWidgets::render_widgets(Self, Double) -> Unit
+pub fn ContentWidgets::render_widgets(Self, Double, Double) -> Unit
 pub fn ContentWidgets::set_widget_position(Self, &ContentWidget) -> Unit
 pub fn ContentWidgets::update_anchors_view_positions(Self) -> Unit
 
 pub(all) struct ContentWidgetsRenderContext {
   vertical_offset_for_line : (Int) -> Double
-  window_start : Int
-  window_end : Int
-  line_height : Double
-  char_width : Double
+  line_height_for_line : (Int) -> Double
+  visible_range_for_position : (@common.Position) -> Double?
   typical_fullwidth_character_width : Double
   scroll_top : Double
   scroll_left : Double
@@ -63,5 +76,10 @@ pub(open) trait ContentWidget {
   fn get_dom_node(Self) -> @dom.Element
   fn get_position(Self) -> ContentWidgetPosition?
   fn allow_editor_overflow(Self) -> Bool
+  fn use_display_none(Self) -> Bool
+  fn has_before_render(Self) -> Bool
+  fn before_render(Self) -> ContentWidgetDimension? raise
+  fn has_after_render(Self) -> Bool
+  fn after_render(Self, ContentWidgetPositionPreference?, ContentWidgetRenderedCoordinate?) -> Unit raise
 }
 

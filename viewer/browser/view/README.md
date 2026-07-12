@@ -11,9 +11,13 @@ attached, and a model swap destroys and replaces it.
 
 1. Read the sticky dirty state accumulated by source-emitted typed
    `ViewEvent`s since the previous frame.
-2. Render dirty `ViewLines` first, because later parts measure live line DOM.
-3. Run `prepare_render` for the remaining dirty parts (read/measure phase).
-4. Run their `render` methods (DOM-write phase), then clear each successful
+2. Run every dirty part's `on_before_render` writes against one prepared
+   viewport before text changes.
+3. Render dirty `ViewLines`, because later parts measure the fresh line DOM.
+4. Recollect parts dirtied by synchronous width/scroll feedback and construct
+   the post-text RenderingContext from the same viewport.
+5. Run `prepare_render` for the remaining dirty parts (read/measure phase).
+6. Run their `render` methods (DOM-write phase), then clear each successful
    part write.
 
 The View owns a fixed ordered event-handler set and a source-shaped nested
@@ -54,8 +58,16 @@ and macOS additionally appends `mac`.
 supplies the active ViewModel, layout, viewport, configuration, selection,
 and zones. `RenderingContext` and
 `RestrictedRenderingContext` keep read- and write-phase data separate.
-Selection and decoration geometry is measured from the current line DOM in
-`selection_measure.mbt`.
+Production selection geometry consumes
+`RenderingContext.lines_visible_ranges_for_range`; `selection_measure.mbt`
+retains the public/compatibility single-line helpers over the same ViewLines
+producer. Cycle-free ViewLines tuples and a ContentWidgets capability record
+are converted here into Monaco-shaped rendering carriers.
+MoonBit keeps `HorizontalRange`, `FloatHorizontalRange`, and
+`HorizontalPosition` fields immutable after construction; the pinned source's
+mutable public fields have no mutating consumer in the scoped viewer. Optional
+GPU query fallback, concatenation, and sorting remain deferred with GPU
+ViewLines.
 
 ## Ownership and boundary
 

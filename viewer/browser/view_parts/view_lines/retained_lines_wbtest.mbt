@@ -4,6 +4,9 @@
 ///|
 fn retained_line_test_input(
   render_whitespace : @view_layout.RenderWhitespace,
+  space_width? : Double = 7.2,
+  middot_width? : Double = 7.2,
+  wsmiddot_width? : Double = 7.2,
 ) -> @view_layout.RenderLineInput {
   @view_layout.RenderLineInput::from_view_line(
     {
@@ -20,6 +23,9 @@ fn retained_line_test_input(
       text_direction: LTR,
       has_variable_fonts: false,
     },
+    space_width~,
+    middot_width~,
+    wsmiddot_width~,
     render_whitespace~,
   )
 }
@@ -76,6 +82,32 @@ test "retained ViewLine selection invalidates only last-rendered Selection white
   builder.reset()
   assert_false(line.render_line(1, selection_input, 0, 20, builder))
   assert_false(line.is_maybe_invalid)
+}
+
+///|
+test "retained ViewLine skips writes for distinct raw whitespace widths with equal normalized identity" {
+  let line = ViewLine::new()
+  let first = retained_line_test_input(
+    None,
+    space_width=7.2,
+    middot_width=6.0,
+    wsmiddot_width=9.0,
+  )
+  let same_normalized = retained_line_test_input(
+    None,
+    space_width=7.2,
+    middot_width=6.0,
+    wsmiddot_width=20.0,
+  )
+  assert_true(first == same_normalized)
+  assert_eq(first.render_space_width, 6.0)
+  assert_eq(first.render_space_char_code, 0xB7)
+  let builder = StringBuilder()
+  assert_true(line.render_line(1, first, 0, 20, builder))
+  builder.reset()
+  line.on_content_changed()
+  assert_false(line.render_line(1, same_normalized, 0, 20, builder))
+  assert_eq(builder.to_string(), "")
 }
 
 ///|

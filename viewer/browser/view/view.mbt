@@ -309,21 +309,36 @@ pub fn View::render(
       show_deprecated=input.show_deprecated,
     ),
   )
-  let rendering = RenderingContext::from_input(view_context, input)
-  let view_parts_to_render = self.get_view_parts_to_render()
-  let restricted = rendering.restricted()
+  let viewport = RenderingContext::viewport_from_input(input)
+  let view_parts_before_text = self.get_view_parts_to_render()
+  // Source phase boundary: every dirty part's `onBeforeRender` completes
+  // before ViewLines writes fresh text DOM and before any prepare-phase read.
+  for part in view_parts_before_text {
+    part.on_before_render(viewport)
+  }
   // `_actualRender`: the text lines render first, through `renderText`
   // directly (`ViewLines.prepareRender`/`render` throw "Not supported" in
   // the source), so the remaining parts' `prepare_render` can measure the
   // fresh line DOM.
   if ViewPart::should_render(self.view_lines) {
     self.view_lines.render_text(
-      rendering.viewport,
+      viewport,
       input.layout,
       input.selection_view_range,
     )
     ViewPart::on_did_render(self.view_lines)
   }
+  // Text rendering can synchronously update layout dimensions and emit scroll
+  // events. Recollect dirty parts, then snapshot the current layout around the
+  // same prepared viewport, matching the pinned coordinated-rendering phases.
+  let view_parts_to_render = self.get_view_parts_to_render()
+  let rendering = RenderingContext::from_viewport(
+    view_context,
+    input,
+    self.view_lines,
+    viewport,
+  )
+  let restricted = rendering.restricted()
   for part in view_parts_to_render {
     part.prepare_render(rendering)
   }

@@ -1,6 +1,6 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/selections/selections.ts`
 // (`SelectionsOverlay`), vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971. The `ContentViewOverlays` rows
+// b18492a288de038fbc7643aae6de8247029d11bd. The `ContentViewOverlays` rows
 // shell lives with `viewer/browser/view` (`view_overlays.mbt`), mirroring
 // Monaco's `viewOverlays.ts`; this package is the selection dynamic overlay
 // only. The `DynamicViewOverlay` impl lives in
@@ -77,17 +77,11 @@ pub fn prepare_selections_render(
   space_width : Double,
   measure : (Int, Int, Int) -> Array[(Double, Double)],
 ) -> Array[String] {
-  let inner_corners : Array[String] = []
-  let rest_of_selection : Array[String] = []
-  for _ in 0..<viewport.lines.length() {
-    inner_corners.push("")
-    rest_of_selection.push("")
-  }
   let range = match selection_view_range {
     Some(range) => range
     None =>
       // An empty selection renders nothing (`selection.isEmpty()` skip).
-      return rest_of_selection
+      return Array::make(viewport.lines.length(), "")
   }
   let lines : Array[LineSelectionRanges] = []
   for index in 0..<viewport.lines.length() {
@@ -104,6 +98,41 @@ pub fn prepare_selections_render(
       None => ()
     }
   }
+  render_selection_lines(viewport, lines, space_width)
+}
+
+///|
+/// Production entrypoint for the pinned `SelectionsOverlay` query shape:
+/// `RenderingContext.linesVisibleRangesForRange(selection, true)` has already
+/// aggregated, rounded, and newline-extended the measured DOM ranges. This
+/// package owns only styling and HTML, so the cross-package carrier is a tuple
+/// of line number plus ordered `(left,width)` pairs.
+pub fn prepare_selections_render_from_visible_ranges(
+  viewport : @view_layout.ViewportData,
+  visible_ranges : Array[(Int, Array[(Double, Double)])],
+  space_width : Double,
+) -> Array[String] {
+  let lines : Array[LineSelectionRanges] = []
+  for visible_line in visible_ranges {
+    let ranges : Array[StyledRange] = []
+    for range in visible_line.1 {
+      ranges.push(new_styled_range(range.0, range.1))
+    }
+    if !ranges.is_empty() {
+      lines.push({ line_number: visible_line.0, ranges })
+    }
+  }
+  render_selection_lines(viewport, lines, space_width)
+}
+
+///|
+fn render_selection_lines(
+  viewport : @view_layout.ViewportData,
+  lines : Array[LineSelectionRanges],
+  space_width : Double,
+) -> Array[String] {
+  let inner_corners = Array::make(viewport.lines.length(), "")
+  let rest_of_selection = Array::make(viewport.lines.length(), "")
   // Rounded selection is always on; enrich unless a line has multiple ranges.
   let styled = !visible_ranges_have_gaps(lines)
   if styled {

@@ -41,6 +41,7 @@ pub(all) struct ViewCursors {
   mut should_render : Bool
   mut render_data : CursorRenderData?
   mut last_position : @common.Position?
+  mut last_rendered_position : @common.Position?
   mut editor_has_focus : Bool
   mut selection_is_empty : Bool
 }

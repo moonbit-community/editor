@@ -120,6 +120,7 @@ pub(all) enum ForeignElementType {
   None
   Before
   After
+  BeforeAndAfter
 } derive(Eq, @debug.Debug)
 
 pub(all) struct InlineDecoration {

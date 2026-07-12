@@ -113,8 +113,47 @@ pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn allow_edi
 }
 
 ///|
-/// Monaco `ContentHoverWidget.getPosition` (`contentHoverWidget.ts:324-334`);
-/// `positionAffinity` (`shouldAppearBeforeContent`) is N-A.
+pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn use_display_none(
+  _self,
+) {
+  false
+}
+
+///|
+pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn has_before_render(
+  _self,
+) {
+  false
+}
+
+///|
+pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn before_render(
+  _self,
+) {
+  None
+}
+
+///|
+pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn has_after_render(
+  _self,
+) {
+  false
+}
+
+///|
+pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn after_render(
+  _self,
+  _position,
+  _coordinate,
+) {
+  ()
+}
+
+///|
+/// Monaco `ContentHoverWidget.getPosition` (`contentHoverWidget.ts:324-334`).
+/// The generic affinity handoff is ported, but the local hover-part pipeline
+/// does not yet retain `RenderedContentHover.shouldAppearBeforeContent`; that
+/// concrete producer remains an explicit deferred hover-part seam.
 pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn get_position(
   self,
 ) {
@@ -123,12 +162,13 @@ pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn get_posit
       Some({
         position: Some(rendered.show_at_position),
         secondary_position: Some(rendered.show_at_secondary_position),
-        preference: [
+        preference: Some([
           match self.position_preference {
             Some(preference) => preference
             None => Above
           },
-        ],
+        ]),
+        position_affinity: None,
       })
     None => None
   }

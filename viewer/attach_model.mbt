@@ -170,7 +170,7 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.model_data = Some({ model, view_model, view, listeners_to_remove })
   self.emit_view_event(ViewFlushed)
   self.rendered_window = None
-  self.apply_view_model_layout(view_model, model.snapshot)
+  self.apply_view_model_layout(view_model)
   let build_finished = now_ms()
   self.did_build_view_model.fire({
     model,
@@ -222,23 +222,34 @@ fn Viewer::create_view(
       vertical_scrollbar_size=@core.editor_vertical_scrollbar_size,
     )
   })
+  view.view_lines.install_geometry_readers(
+    view_line_number => {
+      view_model
+      .coordinates_converter()
+      .view_position_to_model_position(Position(view_line_number, 1)).line_number
+    },
+    // The local ViewModel currently emits only LTR ViewLineRenderingData; the
+    // reader remains explicit so model-direction ownership can replace this
+    // fixed product seam without changing ViewLines aggregation again.
+    _model_line_number => LTR,
+  )
   // ContentWidgets retains Monaco's ViewContext for source-time layout-cache
   // refreshes and anchor reprojection. Install the model-scoped live readers
   // before any persistent widget is re-added to this fresh View.
-  view.content_widgets.install_live_view_context(
+  view.content_widgets.install_live_view_context_with_affinity(
     () => {
       (
         self.gutter_width(model.snapshot.line_count()),
         self.measured_content_width,
       )
     },
-    position => {
+    (position, affinity) => {
       let valid_position = model.validate_position(position)
       if view_model.model_position_is_visible(valid_position) {
         Some(
           view_model
           .coordinates_converter()
-          .model_position_to_view_position(valid_position),
+          .model_position_to_view_position(valid_position, affinity?),
         )
       } else {
         None
@@ -456,7 +467,7 @@ fn Viewer::on_line_mapping_changed(
       None => ()
     }
   }
-  self.apply_view_model_layout(view_model, model.snapshot)
+  self.apply_view_model_layout(view_model)
   self.rendered_window = None
   let current_model_line_count = model.snapshot.line_count()
   let current_view_line_count = view_model.line_count()
@@ -489,46 +500,11 @@ fn Viewer::on_line_mapping_changed(
 fn Viewer::apply_view_model_layout(
   self : Viewer,
   view_model : @view_model.ViewModel,
-  snapshot : @model.TextSnapshot,
 ) -> Unit {
   view_model.view_layout.set_line_count(view_model.line_count()) |> ignore
   self.normalize_browser_view_zones()
   self.sync_view_zones_with_layout()
-  self.max_line_length = if self.options.soft_wrap && self.soft_wrap_column > 0 {
-    max_view_line_length(view_model.lines())
-  } else {
-    max_line_length(snapshot)
-  }
   self.sync_content_width()
-}
-
-///|
-/// The widest line in UTF-16 code units, the horizontal scroll extent
-/// driver (uniform-advance monospace metrics).
-fn max_line_length(snapshot : @model.TextSnapshot) -> Int {
-  let mut widest = 0
-  for line in 0..<snapshot.line_count() {
-    let length = snapshot.line_end_offset(line) -
-      snapshot.line_start_offset(line)
-    if length > widest {
-      widest = length
-    }
-  }
-  widest
-}
-
-///|
-fn max_view_line_length(
-  lines : @view_model.ViewModelLinesFromProjectedModel,
-) -> Int {
-  let mut widest = 0
-  for line_number in 1..<=lines.get_view_line_count() {
-    let length = lines.get_view_line_content(line_number).length()
-    if length > widest {
-      widest = length
-    }
-  }
-  widest
 }
 
 ///|

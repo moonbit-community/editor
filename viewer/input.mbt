@@ -275,18 +275,18 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
 ///|
 fn Viewer::sync_content_width(self : Viewer) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
-  let content_width = if self.options.soft_wrap && self.soft_wrap_column > 0 {
-    self.measured_content_width
-  } else {
-    self.max_line_length.to_double() * self.measured_char_width() +
-    @core.code_right_padding
-  }
-  view_model.view_layout.set_content_width(content_width) |> ignore
+  // Rendered ViewLines now owns the measured maximum and feeds it into
+  // ViewLayout. The Viewer only supplies the wrapping policy; logical UTF-16
+  // length must never stand in for browser geometry.
+  view_model.view_layout.set_is_viewport_wrapping(
+    self.options.soft_wrap && self.soft_wrap_column > 0,
+  )
+  |> ignore
 }
 
 ///|
-/// `fontInfo.typicalHalfwidthCharacterWidth`, the uniform monospace advance
-/// every width computation keys on.
+/// `fontInfo.typicalHalfwidthCharacterWidth`, retained for wrapping-column and
+/// pointer/drag calculations. Horizontal extent comes from rendered DOM width.
 fn Viewer::measured_char_width(self : Viewer) -> Double {
   self.font_info.typical_halfwidth_character_width
 }

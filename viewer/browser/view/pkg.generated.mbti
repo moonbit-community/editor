@@ -45,12 +45,38 @@ pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
 
+pub(all) struct FloatHorizontalRange {
+  left : Double
+  width : Double
+} derive(Eq, @debug.Debug)
+pub fn FloatHorizontalRange::compare(Self, Self) -> Double
+pub fn FloatHorizontalRange::new(Double, Double) -> Self
+pub fn FloatHorizontalRange::to_string(Self) -> String
+
 pub(all) struct HorizontalPosition {
   outside_rendered_line : Bool
   left : Int
   original_left : Double
 } derive(Eq, @debug.Debug)
 pub fn HorizontalPosition::new(Bool, Double) -> Self
+
+pub(all) struct HorizontalRange {
+  left : Int
+  width : Int
+} derive(Eq, @debug.Debug)
+pub fn HorizontalRange::from(Array[FloatHorizontalRange]) -> Array[Self]
+pub fn HorizontalRange::new(Double, Double) -> Self
+pub fn HorizontalRange::to_string(Self) -> String
+
+pub(all) struct LineVisibleRanges {
+  outside_rendered_line : Bool
+  line_number : Int
+  ranges : Array[HorizontalRange]
+  continues_on_next_line : Bool
+} derive(Eq, @debug.Debug)
+pub fn LineVisibleRanges::first_line(Array[Self]?) -> Self?
+pub fn LineVisibleRanges::last_line(Array[Self]?) -> Self?
+pub fn LineVisibleRanges::new(Bool, Int, Array[HorizontalRange], Bool) -> Self
 
 pub(all) struct MarginViewOverlays {
   dom_node : @dom.Element
@@ -267,6 +293,12 @@ pub(all) struct ViewTokensChangedEvent {
   ranges : Array[ViewTokenChangeRange]
 }
 pub fn ViewTokensChangedEvent::new(Array[ViewTokenChangeRange]) -> Self
+
+pub(all) struct VisibleRanges {
+  outside_rendered_line : Bool
+  ranges : Array[FloatHorizontalRange]
+} derive(Eq, @debug.Debug)
+pub fn VisibleRanges::new(Bool, Array[FloatHorizontalRange]) -> Self
 
 // Type aliases
 

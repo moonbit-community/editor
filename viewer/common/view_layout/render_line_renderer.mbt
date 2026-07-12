@@ -90,13 +90,11 @@ pub fn render_view_line(
           html.write_string(decoration.class_name)
           html.write_string("\"></span>")
           if decoration.decoration_type == Before {
-            if contains_foreign == None {
-              contains_foreign = Before
-            }
+            contains_foreign = add_foreign_element(contains_foreign, Before)
             before_count = before_count + 1
           }
           if decoration.decoration_type == After {
-            contains_foreign = After
+            contains_foreign = add_foreign_element(contains_foreign, After)
             after_count = after_count + 1
           }
         }
@@ -1024,14 +1022,28 @@ fn foreign_element_type(
   for decoration in line_decorations {
     match decoration.decoration_type {
       Before | RegularAffectingLetterSpacing =>
-        if found == None {
-          found = Before
-        }
-      After => found = After
+        found = add_foreign_element(found, Before)
+      After => found = add_foreign_element(found, After)
       Regular => ()
     }
   }
   found
+}
+
+///|
+/// Monaco's `ForeignElementType` is a two-bit flag. MoonBit models the closed
+/// four-state result explicitly so a line with both pseudo-element sides does
+/// not lose the first fact when the second is encountered.
+fn add_foreign_element(
+  current : ForeignElementType,
+  next : ForeignElementType,
+) -> ForeignElementType {
+  match (current, next) {
+    (None, value) => value
+    (Before, After) | (After, Before) => BeforeAndAfter
+    (BeforeAndAfter, _) => BeforeAndAfter
+    (value, _) => value
+  }
 }
 
 ///|

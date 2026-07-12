@@ -112,7 +112,7 @@ test "render view line supports pseudo decorations and large token splitting" {
   let output = @view_layout.render_view_line2(input)
   assert_true(output.html.contains("before-content"))
   assert_true(output.html.contains("after-content"))
-  assert_true(output.contains_foreign_elements == After)
+  assert_true(output.contains_foreign_elements == BeforeAndAfter)
   assert_true(count_occurrences(output.html, "tok-long") >= 3)
   assert_eq(output.character_mapping.length, long.length() + 1)
   let end_position = output.character_mapping.get_dom_position(

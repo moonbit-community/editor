@@ -17,6 +17,19 @@ DOM-free scrolling, line/whitespace layout, view zones, and view-line rendering.
   both accept the source/minimal contract and omit their ordinary padding for
   minimal cursor reveals. Animation scheduling and the clock are injected so
   this package remains DOM/FFI-free.
+- Geometry configuration is deliberately reduced to typed setters and fixed
+  readonly-product arms: line padding is zero, horizontal scrollbar visibility
+  is `Auto`, `scrollBeyondLastLine` and horizontal-scrollbar-height ignoring are
+  false, and there is no minimap or overlay-widget minimum-width owner.
+  `.view-line-content` measurement already contains the fixed 16px CSS right
+  padding, replacing the unavailable `scrollBeyondLastColumn * halfwidth`
+  option before `ViewLayout` adds the vertical-scrollbar and whitespace-minimum
+  candidates. Wrapped width is the measured maximum because the only source
+  threshold adjustment belongs to the absent right-side minimap.
+- `set_max_line_width` publishes the width transition before recomputing the
+  horizontal-scrollbar contribution to content height. Listeners observe those
+  two source-ordered events; the method's local `ScrollChange?` compatibility
+  return merges them into one complete old-to-new transition.
 - `LinesLayout`, prefix-sum computers, and whitespace accessors map line/view-zone
   heights to vertical offsets. The current viewer assumes one uniform view-line
   height; variable line heights are outside the readonly contract.
@@ -25,7 +38,9 @@ DOM-free scrolling, line/whitespace layout, view zones, and view-line rendering.
   hit testing and selections. The input retains Monaco's normalized
   render-space width/glyph identity rather than the raw middot candidates. This
   package also owns decoration normalization and current-line-highlight
-  decisions.
+  decisions. Renderer output retains Monaco's two foreign-element bits as the
+  closed `None`/`Before`/`After`/`BeforeAndAfter` states so lines decorated on
+  both sides preserve both geometry facts.
 - `ViewportData`, `ViewLineRenderingData`, and view-zone viewport shapes live here
   as dependency-bottom data. Their model-dependent factory is
   `view_model.viewport_data_from_view_model`, keeping the dependency one-way.

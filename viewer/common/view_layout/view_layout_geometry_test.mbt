@@ -1,4 +1,4 @@
-// Ported from `vscode/src/vs/editor/common/viewLayout/viewLayout.ts`
+// Source-derived tests for `vscode/src/vs/editor/common/viewLayout/viewLayout.ts`
 // (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd):
 // EditorScrollDimensions, EditorScrollable content-size delivery, and the
 // applicable fixed-option ViewLayout width/height feedback branches.
@@ -33,6 +33,15 @@ test "EditorScrollDimensions normalizes with JavaScript signed-32-bit coercion" 
   assert_eq(positive_wrap.height, 2147483647.0)
   // `-2147483649 | 0` wraps to positive 2147483647.
   assert_eq(positive_wrap.content_height, 2147483647.0)
+  let smaller = @view_layout.EditorScrollDimensions::new(10.0, 5.0, 20.0, 15.0)
+  assert_eq(smaller.scroll_width, 10.0)
+  assert_eq(smaller.scroll_height, 20.0)
+  let equal = @view_layout.EditorScrollDimensions::new(10.0, 10.0, 20.0, 20.0)
+  assert_eq(equal.scroll_width, 10.0)
+  assert_eq(equal.scroll_height, 20.0)
+  let larger = @view_layout.EditorScrollDimensions::new(10.0, 15.0, 20.0, 25.0)
+  assert_eq(larger.scroll_width, 15.0)
+  assert_eq(larger.scroll_height, 25.0)
 }
 
 ///|
@@ -40,6 +49,14 @@ test "EditorScrollable emits only exact content-size identity changes" {
   let scrollable = @view_layout.EditorScrollable::new(0.0, inert_scheduler, () => {
     0.0
   })
+  let initial = scrollable.editor_dimensions()
+  assert_true(
+    initial == @view_layout.EditorScrollDimensions::new(0.0, 0.0, 0.0, 0.0),
+  )
+  assert_true(
+    scrollable.dimensions() ==
+    { width: 0.0, scroll_width: 0.0, height: 0.0, scroll_height: 0.0 },
+  )
   let changes : Array[@view_layout.ContentSizeChange] = []
   let listener = scrollable.on_did_content_size_change(change => {
     changes.push(change)
@@ -105,6 +122,20 @@ test "EditorScrollable emits only exact content-size identity changes" {
   assert_eq(changes.length(), 3)
   listener.dispose()
   scrollable.dispose()
+}
+
+///|
+test "ViewLayout starts with zero measured width before its first line read" {
+  let layout = @view_layout.ViewLayout::new(line_height=10, line_count=5)
+  assert_eq(layout.get_content_width(), 0.0)
+  layout.set_viewport_size(width=100.0, height=50.0) |> ignore
+  assert_eq(layout.get_content_width(), 0.0)
+  // Changing into the wrapping arm forces a content-width recomputation. Its
+  // result remains zero, proving the retained max-line-width seed is zero.
+  layout.set_is_viewport_wrapping(true) |> ignore
+  assert_eq(layout.get_content_width(), 0.0)
+  assert_eq(layout.get_scroll_width(), 100.0)
+  layout.dispose()
 }
 
 ///|
@@ -184,7 +215,7 @@ test "ViewLayout measured width feeds fixed scrollbar bottom extent in source or
 }
 
 ///|
-test "ViewLayout wrapping and zero-size fixed scrollbars retain their boundaries" {
+test "ViewLayout wrapping returns the measured maximum and fixed scrollbar sizes" {
   let wrapped = @view_layout.ViewLayout::new(
     line_height=10,
     line_count=5,

@@ -48,6 +48,7 @@ pub(all) struct ViewRenderInput {
 priv struct RenderingContext {
   view_context : ViewContext
   input : ViewRenderInput
+  view_lines : @view_lines.ViewLines
   viewport : @view_layout.ViewportData
   gutter_width : Double
   position : @view_layout.ScrollPosition
@@ -74,23 +75,48 @@ priv struct RestrictedRenderingContext {
 }
 
 ///|
-fn RenderingContext::from_input(
-  view_context : ViewContext,
+/// Source `prepareRenderText` viewport construction. Keeping this separate
+/// lets `View::render` retain the exact viewport across text rendering while
+/// deferring scroll/dimension snapshots until after that write phase.
+fn RenderingContext::viewport_from_input(
   input : ViewRenderInput,
-) -> RenderingContext {
+) -> @view_layout.ViewportData {
   // Pulled from the view model per render pass — Monaco's `view.ts` building
   // a fresh `ViewportData` over `viewLayout.getLinesViewportData()`.
-  let viewport = @view_model.viewport_data_from_view_model(
+  @view_model.viewport_data_from_view_model(
     input.view_model,
     input.window,
     line_height=input.layout.line_height(),
     layout=input.layout,
   )
-  let position = input.layout.position()
-  let dimensions = input.layout.dimensions()
+}
+
+///|
+/// Source post-`renderText` RenderingContext construction: reuse the prepared
+/// viewport, but snapshot current layout position/dimensions only after line
+/// width feedback and any synchronous scroll events have completed.
+fn RenderingContext::from_viewport(
+  view_context : ViewContext,
+  input : ViewRenderInput,
+  view_lines : @view_lines.ViewLines,
+  viewport : @view_layout.ViewportData,
+) -> RenderingContext {
+  let current_viewport = input.layout.get_current_viewport()
+  let layout_dimensions = input.layout.dimensions()
+  let position : @view_layout.ScrollPosition = {
+    scroll_top: current_viewport.top,
+    scroll_left: current_viewport.left,
+  }
+  let dimensions : @view_layout.ScrollDimensions = {
+    width: current_viewport.width,
+    scroll_width: layout_dimensions.scroll_width,
+    height: current_viewport.height,
+    scroll_height: layout_dimensions.scroll_height,
+  }
   {
     view_context,
     input,
+    view_lines,
     viewport,
     gutter_width: input.gutter_width,
     position,
@@ -122,6 +148,105 @@ fn RenderingContext::margin_transform(self : RenderingContext) -> String {
 }
 
 ///|
+/// Scoped `RestrictedRenderingContext.getVerticalOffsetForLineNumber`.
+fn RenderingContext::vertical_offset_for_line(
+  self : RenderingContext,
+  line_number : Int,
+  include_view_zones? : Bool = false,
+) -> Double {
+  self.input.layout.get_vertical_offset_for_line_number(
+    line_number,
+    include_view_zones~,
+  )
+}
+
+///|
+/// Scoped `RestrictedRenderingContext.getLineHeightForLineNumber`.
+fn RenderingContext::line_height_for_line(
+  self : RenderingContext,
+  line_number : Int,
+) -> Double {
+  self.input.layout.get_line_height_for_line_number(line_number).to_double()
+}
+
+///|
+/// Monaco `RenderingContext.visibleRangeForPosition` with the currently
+/// available DOM ViewLines producer. A negative capability result is the
+/// source's `null`; GPU fallback remains explicitly deferred.
+fn RenderingContext::visible_range_for_position(
+  self : RenderingContext,
+  position : @base_common.Position,
+) -> HorizontalPosition? {
+  match
+    self.view_lines.raw_visible_range_for_position(
+      position.line_number,
+      position.column,
+    ) {
+    Some((outside_rendered_line, left)) =>
+      Some(HorizontalPosition::new(outside_rendered_line, left))
+    None => None
+  }
+}
+
+///|
+/// Monaco `RenderingContext.linesVisibleRangesForRange`, DOM-only at this
+/// approved phase. ViewLines owns DOM/range production; this facade converts
+/// its cycle-free tuples into the source rendering carriers. Optional GPU
+/// concatenation/sorting remains explicitly deferred.
+fn RenderingContext::lines_visible_ranges_for_range(
+  self : RenderingContext,
+  range : @base_common.Range,
+  include_new_lines : Bool,
+) -> Array[LineVisibleRanges]? {
+  match
+    self.view_lines.raw_lines_visible_ranges_for_range(range, include_new_lines) {
+    Some(raw_lines) => Some(line_visible_ranges_from_raw(raw_lines))
+    None => None
+  }
+}
+
+///|
+/// Cycle-free tuple-carrier conversion at the ViewLines/RenderingContext
+/// package boundary. Input and per-line range order are preserved exactly.
+fn line_visible_ranges_from_raw(
+  raw_lines : Array[(Bool, Int, Array[(Int, Int)], Bool)],
+) -> Array[LineVisibleRanges] {
+  let result : Array[LineVisibleRanges] = []
+  for raw in raw_lines {
+    let horizontal_ranges : Array[HorizontalRange] = []
+    for range in raw.2 {
+      horizontal_ranges.push({ left: range.0, width: range.1 })
+    }
+    result.push(LineVisibleRanges::new(raw.0, raw.1, horizontal_ranges, raw.3))
+  }
+  result
+}
+
+///|
+/// Cycle-free capability projection consumed by ContentWidgets. The measured
+/// `HorizontalPosition.left` is intentionally rounded before crossing the
+/// package boundary, matching the source anchor arithmetic.
+fn RenderingContext::content_widgets_render_context(
+  self : RenderingContext,
+) -> @content_widgets.ContentWidgetsRenderContext {
+  {
+    vertical_offset_for_line: line => self.vertical_offset_for_line(line),
+    line_height_for_line: line => self.line_height_for_line(line),
+    visible_range_for_position: position => {
+      match self.visible_range_for_position(position) {
+        Some(horizontal) => Some(horizontal.left.to_double())
+        None => None
+      }
+    },
+    typical_fullwidth_character_width: self.input.typical_fullwidth_character_width,
+    scroll_top: self.position.scroll_top,
+    scroll_left: self.position.scroll_left,
+    viewport_width: self.dimensions.width,
+    viewport_height: self.dimensions.height,
+  }
+}
+
+///|
 /// `HorizontalPosition` (`vscode/src/vs/editor/browser/view/renderingContext.ts:196-209`,
 /// vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): a
 /// measured caret x on a rendered line. `left` is `Math.round(original_left)`.
@@ -141,4 +266,142 @@ pub fn HorizontalPosition::new(
     original_left: left,
     left: (left + 0.5).floor().to_int(),
   }
+}
+
+///|
+/// Monaco `LineVisibleRanges`: the measured horizontal ranges owned by one
+/// view line plus continuation/outside-rendered facts.
+pub(all) struct LineVisibleRanges {
+  outside_rendered_line : Bool
+  line_number : Int
+  ranges : Array[HorizontalRange]
+  continues_on_next_line : Bool
+} derive(Eq, Debug)
+
+///|
+pub fn LineVisibleRanges::new(
+  outside_rendered_line : Bool,
+  line_number : Int,
+  ranges : Array[HorizontalRange],
+  continues_on_next_line : Bool,
+) -> LineVisibleRanges {
+  { outside_rendered_line, line_number, ranges, continues_on_next_line }
+}
+
+///|
+/// Smallest line number independent of input order. Ties retain the first
+/// carrier, and null/empty inputs return `None`.
+pub fn LineVisibleRanges::first_line(
+  ranges : Array[LineVisibleRanges]?,
+) -> LineVisibleRanges? {
+  guard ranges is Some(ranges) else { return None }
+  let mut result : LineVisibleRanges? = None
+  for range in ranges {
+    match result {
+      Some(current) =>
+        if range.line_number < current.line_number {
+          result = Some(range)
+        }
+      None => result = Some(range)
+    }
+  }
+  result
+}
+
+///|
+/// Largest line number independent of input order. Ties retain the first
+/// carrier, and null/empty inputs return `None`.
+pub fn LineVisibleRanges::last_line(
+  ranges : Array[LineVisibleRanges]?,
+) -> LineVisibleRanges? {
+  guard ranges is Some(ranges) else { return None }
+  let mut result : LineVisibleRanges? = None
+  for range in ranges {
+    match result {
+      Some(current) =>
+        if range.line_number > current.line_number {
+          result = Some(range)
+        }
+      None => result = Some(range)
+    }
+  }
+  result
+}
+
+///|
+/// Monaco `HorizontalRange`: integerized DOM geometry.
+pub(all) struct HorizontalRange {
+  left : Int
+  width : Int
+} derive(Eq, Debug)
+
+///|
+pub fn HorizontalRange::new(left : Double, width : Double) -> HorizontalRange {
+  { left: js_math_round_to_int(left), width: js_math_round_to_int(width) }
+}
+
+///|
+pub fn HorizontalRange::from(
+  ranges : Array[FloatHorizontalRange],
+) -> Array[HorizontalRange] {
+  let len = ranges.length()
+  let result = Array::make(len, HorizontalRange::new(0.0, 0.0))
+  for index in 0..<len {
+    let range = ranges[index]
+    result[index] = HorizontalRange::new(range.left, range.width)
+  }
+  result
+}
+
+///|
+pub fn HorizontalRange::to_string(self : HorizontalRange) -> String {
+  "[\{self.left},\{self.width}]"
+}
+
+///|
+/// Monaco `FloatHorizontalRange`: preserve fractional DOM geometry.
+pub(all) struct FloatHorizontalRange {
+  left : Double
+  width : Double
+} derive(Eq, Debug)
+
+///|
+pub fn FloatHorizontalRange::new(
+  left : Double,
+  width : Double,
+) -> FloatHorizontalRange {
+  { left, width }
+}
+
+///|
+pub fn FloatHorizontalRange::to_string(self : FloatHorizontalRange) -> String {
+  "[\{self.left},\{self.width}]"
+}
+
+///|
+pub fn FloatHorizontalRange::compare(
+  left : FloatHorizontalRange,
+  right : FloatHorizontalRange,
+) -> Double {
+  left.left - right.left
+}
+
+///|
+/// Monaco `VisibleRanges`: unrounded ranges plus their aggregate outside bit.
+pub(all) struct VisibleRanges {
+  outside_rendered_line : Bool
+  ranges : Array[FloatHorizontalRange]
+} derive(Eq, Debug)
+
+///|
+pub fn VisibleRanges::new(
+  outside_rendered_line : Bool,
+  ranges : Array[FloatHorizontalRange],
+) -> VisibleRanges {
+  { outside_rendered_line, ranges }
+}
+
+///|
+fn js_math_round_to_int(value : Double) -> Int {
+  (value + 0.5).floor().to_int()
 }

@@ -30,6 +30,7 @@ pub(all) enum ForeignElementType {
   None
   Before
   After
+  BeforeAndAfter
 } derive(Eq, Debug)
 
 ///|

@@ -1,22 +1,7 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/viewLines/viewLine.ts`
 // (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): the
-// pieces the mouse hit test reads — `ViewLine.CLASS_NAME`, the module-level
-// `getColumnOfNodeOffset`, and the rendered line's DOM width read.
-//
-// Omissions:
-//   * The `FastRenderedViewLine`/`RenderedViewLine`/`WebKitRenderedViewLine`
-//     class family — the readonly `ViewLine` retains the normalized input, DOM,
-//     and character map directly. `getWidth` therefore always takes the
-//     source's DOM-measured arm
-//     (`RenderedViewLine.getWidth`, viewLine.ts:522-531:
-//     `_getReadingTarget(...).offsetWidth`) — which is also the arm every
-//     line with foreign elements (e.g. a folded header's `inline-folded`
-//     `::after` ellipsis) takes in the source, since
-//     `FastRenderedViewLine`'s monospace shortcut is gated on
-//     `containsForeignElements === None`.
-//   * `_cachedWidth`: the width is re-read per call, so the source-shaped
-//     content/token/decoration/option invalidators have no width cache to
-//     reset; the only caller is the per-gesture hit test.
+// applicable slow-rendered-line strategy. Fast/zoom-policy and WebKit strategy
+// rows remain explicitly deferred by the approved geometry ledger.
 
 ///|
 /// `ViewLine.CLASS_NAME` (viewLine.ts:53) — the exact string the caret hit
@@ -27,7 +12,9 @@ pub const VIEW_LINE_CLASS_NAME : String = "view-line"
 /// The scoped local equivalent of Monaco `ViewLineOptions`. It retains every
 /// option that participates in the readonly viewer's normalized
 /// `RenderLineInput`; configuration events compare this snapshot rather than
-/// treating a changed option id as proof that a retained row changed.
+/// treating a changed option id as proof that a retained row changed. Typed
+/// theme identity remains CSS/root-owned (approved N-A); experimental
+/// whitespace rendering and GPU selection remain explicit deferred seams.
 pub(all) struct ViewLineOptions {
   line_height : Int
   space_width : Double
@@ -84,9 +71,7 @@ fn ViewLineOptions::equals(
 /// by `ViewLayerRenderer`: cached DOM, last render input, and character map.
 pub struct ViewLine {
   priv mut options : ViewLineOptions
-  priv mut dom_node : @scrollbar.CachedDomNode?
-  priv mut render_input : @view_layout.RenderLineInput?
-  priv mut character_mapping : @view_layout.CharacterMapping?
+  priv mut rendered_view_line : RenderedViewLine?
   // `ViewLine._isMaybeInvalid` (`viewLine.ts:56,61,81-96,109-114`).
   // Invalidators only latch this bit. The next render consumes it before the
   // normalized-input equality gate, so a notification can be proven harmless
@@ -98,13 +83,7 @@ pub struct ViewLine {
 pub fn ViewLine::new(
   options? : ViewLineOptions = ViewLineOptions::new(),
 ) -> ViewLine {
-  {
-    options,
-    dom_node: None,
-    render_input: None,
-    character_mapping: None,
-    is_maybe_invalid: true,
-  }
+  { options, rendered_view_line: None, is_maybe_invalid: true }
 }
 
 ///|
@@ -147,8 +126,8 @@ fn ViewLine::on_options_changed(
 /// documented absence of a typed high-contrast theme branch. Selection dirties
 /// a retained row iff its last rendered input used Selection whitespace.
 fn ViewLine::on_selection_changed(self : ViewLine) -> Bool {
-  match self.render_input {
-    Some(input) if input.render_whitespace == Selection => {
+  match self.rendered_view_line {
+    Some(rendered) if rendered.input.render_whitespace == Selection => {
       self.is_maybe_invalid = true
       true
     }
@@ -158,7 +137,10 @@ fn ViewLine::on_selection_changed(self : ViewLine) -> Bool {
 
 ///|
 pub fn ViewLine::get_dom_node(self : ViewLine) -> @rdom.Element? {
-  self.dom_node.map(node => node.element())
+  match self.rendered_view_line {
+    Some(rendered) => rendered.dom_node.map(node => node.element())
+    None => None
+  }
 }
 
 ///|
@@ -166,12 +148,16 @@ pub fn ViewLine::set_dom_node(
   self : ViewLine,
   dom_node : @rdom.Element,
 ) -> Unit {
-  self.dom_node = Some(@scrollbar.CachedDomNode::new(dom_node))
+  match self.rendered_view_line {
+    Some(rendered) =>
+      rendered.dom_node = Some(@scrollbar.CachedDomNode::new(dom_node))
+    None => abort("I have no rendered view line to set the dom node to...")
+  }
 }
 
 ///|
 pub fn ViewLine::mapping(self : ViewLine) -> @view_layout.CharacterMapping? {
-  self.character_mapping
+  self.rendered_view_line.map(rendered => rendered.character_mapping)
 }
 
 ///|
@@ -182,12 +168,16 @@ pub fn ViewLine::layout_line(
   delta_top : Int,
   line_height : Int,
 ) -> Unit {
-  match self.dom_node {
-    Some(node) => {
-      node.set_top(Pixels(delta_top.to_double()))
-      node.set_height(Pixels(line_height.to_double()))
-      node.set_line_height(Pixels(line_height.to_double()))
-    }
+  match self.rendered_view_line {
+    Some(rendered) =>
+      match rendered.dom_node {
+        Some(node) => {
+          node.set_top(Pixels(delta_top.to_double()))
+          node.set_height(Pixels(line_height.to_double()))
+          node.set_line_height(Pixels(line_height.to_double()))
+        }
+        None => ()
+      }
     None => ()
   }
 }
@@ -208,29 +198,418 @@ pub fn ViewLine::render_line(
     return false
   }
   self.is_maybe_invalid = false
-  if self.render_input == Some(input) {
+  if self.rendered_view_line.map(rendered => rendered.input) == Some(input) {
     return false
   }
   let output = @view_layout.render_view_line2(input)
-  self.render_input = Some(input)
-  self.character_mapping = Some(output.character_mapping)
-  builder.write_string(
-    "<div class=\"" +
-    @viewer_common.render_line_class() +
-    "\" data-line=\"" +
-    line_number.to_string() +
-    "\" style=\"top:" +
-    delta_top.to_string() +
-    "px;height:" +
-    line_height.to_string() +
-    "px;line-height:" +
-    line_height.to_string() +
-    "px\">" +
-    output.html +
-    "</div>",
+  builder.write_string("<div ")
+  if input.text_direction == RTL {
+    builder.write_string("dir=\"rtl\" ")
+  } else if input.contains_rtl {
+    builder.write_string("dir=\"ltr\" ")
+  }
+  builder.write_string("style=\"top:")
+  builder.write_string(delta_top.to_string())
+  builder.write_string("px;height:")
+  builder.write_string(line_height.to_string())
+  builder.write_string("px;line-height:")
+  builder.write_string(line_height.to_string())
+  if input.text_direction == RTL {
+    builder.write_string("px;padding-right:")
+    builder.write_string(input.vertical_scrollbar_size.to_string())
+  }
+  builder.write_string("px;\" class=\"")
+  builder.write_string(@viewer_common.render_line_class())
+  builder.write_string("\" data-line=\"")
+  builder.write_string(line_number.to_string())
+  builder.write_string("\">")
+  builder.write_string(output.html)
+  builder.write_string("</div>")
+  let prior_dom_node = match self.rendered_view_line {
+    Some(rendered) => rendered.dom_node
+    None => None
+  }
+  self.rendered_view_line = Some(
+    create_rendered_line(
+      prior_dom_node,
+      input,
+      output.character_mapping,
+      foreign_element_facts(output.contains_foreign_elements),
+    ),
   )
   true
 }
+
+///|
+pub fn ViewLine::get_width(
+  self : ViewLine,
+  context : DomReadingContext?,
+) -> Double {
+  match self.rendered_view_line {
+    Some(rendered) => rendered.get_width(context)
+    None => 0.0
+  }
+}
+
+///|
+pub fn ViewLine::get_width_is_fast(self : ViewLine) -> Bool {
+  match self.rendered_view_line {
+    Some(rendered) => rendered.get_width_is_fast()
+    None => true
+  }
+}
+
+///|
+pub fn ViewLine::reset_cached_width(self : ViewLine) -> Unit {
+  match self.rendered_view_line {
+    Some(rendered) => rendered.reset_cached_width()
+    None => ()
+  }
+}
+
+///|
+/// Source-shaped visible-range query. Doubles remain unrounded here; the
+/// multi-line ViewLines facade applies JavaScript `Math.round` only at the
+/// source `HorizontalRange` boundary.
+pub fn ViewLine::get_visible_ranges_for_range(
+  self : ViewLine,
+  line_number : Int,
+  start_column : Int,
+  end_column : Int,
+  context : DomReadingContext,
+) -> (Bool, Array[(Double, Double)])? {
+  guard self.rendered_view_line is Some(rendered) else { return None }
+  let max_column = rendered.input.line_content.length() + 1
+  let mut start_column = start_column.max(1).min(max_column)
+  let mut end_column = end_column.max(1).min(max_column)
+  let stop_rendering_line_after = rendered.input.stop_rendering_line_after
+  if stop_rendering_line_after != -1 &&
+    start_column > stop_rendering_line_after + 1 &&
+    end_column > stop_rendering_line_after + 1 {
+    return Some((true, [(rendered.get_width(Some(context)), 0.0)]))
+  }
+  if stop_rendering_line_after != -1 &&
+    start_column > stop_rendering_line_after + 1 {
+    start_column = stop_rendering_line_after + 1
+  }
+  if stop_rendering_line_after != -1 &&
+    end_column > stop_rendering_line_after + 1 {
+    end_column = stop_rendering_line_after + 1
+  }
+  guard rendered.get_visible_ranges_for_range(
+      line_number, start_column, end_column, context,
+    )
+    is Some(ranges) &&
+    !ranges.is_empty() else {
+    return None
+  }
+  Some((false, ranges))
+}
+
+///|
+fn ViewLine::render_input(self : ViewLine) -> @view_layout.RenderLineInput? {
+  self.rendered_view_line.map(rendered => rendered.input)
+}
+
+///|
+priv struct ForeignElementFacts {
+  before : Bool
+  after : Bool
+}
+
+///|
+priv struct RenderedViewLine {
+  mut dom_node : @scrollbar.CachedDomNode?
+  input : @view_layout.RenderLineInput
+  character_mapping : @view_layout.CharacterMapping
+  is_whitespace_only : Bool
+  foreign_elements : ForeignElementFacts
+  mut cached_width : Double
+  pixel_offset_cache : Array[Double]?
+}
+
+///|
+fn RenderedViewLine::new(
+  dom_node : @scrollbar.CachedDomNode?,
+  input : @view_layout.RenderLineInput,
+  character_mapping : @view_layout.CharacterMapping,
+  foreign_elements : ForeignElementFacts,
+) -> RenderedViewLine {
+  let pixel_offset_cache = if render_input_is_ltr(input) {
+    Some(Array::make((character_mapping.length + 1).max(2), -1.0))
+  } else {
+    None
+  }
+  {
+    dom_node,
+    input,
+    character_mapping,
+    is_whitespace_only: string_is_whitespace_only(input.line_content),
+    foreign_elements,
+    cached_width: -1.0,
+    pixel_offset_cache,
+  }
+}
+
+///|
+/// Monaco's function-valued `createRenderedLine` module constant. The fixed
+/// Chromium target selects the ordinary factory; the WebKit selector branch
+/// remains an explicit approved deferral.
+let create_rendered_line : (
+  @scrollbar.CachedDomNode?,
+  @view_layout.RenderLineInput,
+  @view_layout.CharacterMapping,
+  ForeignElementFacts,
+) -> RenderedViewLine = create_normal_rendered_line
+
+///|
+fn create_normal_rendered_line(
+  dom_node : @scrollbar.CachedDomNode?,
+  input : @view_layout.RenderLineInput,
+  character_mapping : @view_layout.CharacterMapping,
+  foreign_elements : ForeignElementFacts,
+) -> RenderedViewLine {
+  RenderedViewLine::new(dom_node, input, character_mapping, foreign_elements)
+}
+
+///|
+fn RenderedViewLine::get_width(
+  self : RenderedViewLine,
+  context : DomReadingContext?,
+) -> Double {
+  guard self.dom_node is Some(dom_node) else { return 0.0 }
+  if self.cached_width == -1.0 {
+    self.cached_width = reading_target_offset_width(dom_node.element())
+    match context {
+      Some(context) => context.mark_did_dom_layout()
+      None => ()
+    }
+  }
+  self.cached_width
+}
+
+///|
+fn RenderedViewLine::get_width_is_fast(self : RenderedViewLine) -> Bool {
+  if self.cached_width == -1.0 {
+    return false
+  }
+  true
+}
+
+///|
+fn RenderedViewLine::reset_cached_width(self : RenderedViewLine) -> Unit {
+  self.cached_width = -1.0
+  match self.pixel_offset_cache {
+    Some(cache) =>
+      for index in 0..<cache.length() {
+        cache[index] = -1.0
+      }
+    None => ()
+  }
+}
+
+///|
+fn RenderedViewLine::get_visible_ranges_for_range(
+  self : RenderedViewLine,
+  line_number : Int,
+  start_column : Int,
+  end_column : Int,
+  context : DomReadingContext,
+) -> Array[(Double, Double)]? {
+  guard self.dom_node is Some(dom_node) else { return None }
+  match self.pixel_offset_cache {
+    Some(_) => {
+      let start_offset = self.read_pixel_offset(
+        dom_node, line_number, start_column, context,
+      )
+      if start_offset == -1.0 {
+        return None
+      }
+      let end_offset = self.read_pixel_offset(
+        dom_node, line_number, end_column, context,
+      )
+      if end_offset == -1.0 {
+        return None
+      }
+      Some([(start_offset, end_offset - start_offset)])
+    }
+    None =>
+      self.read_visible_ranges_for_range(
+        dom_node, line_number, start_column, end_column, context,
+      )
+  }
+}
+
+///|
+fn RenderedViewLine::read_visible_ranges_for_range(
+  self : RenderedViewLine,
+  dom_node : @scrollbar.CachedDomNode,
+  line_number : Int,
+  start_column : Int,
+  end_column : Int,
+  context : DomReadingContext,
+) -> Array[(Double, Double)]? {
+  if start_column == end_column {
+    let pixel_offset = self.read_pixel_offset(
+      dom_node, line_number, start_column, context,
+    )
+    if pixel_offset == -1.0 {
+      return None
+    } else {
+      return Some([(pixel_offset, 0.0)])
+    }
+  } else {
+    return self.read_raw_visible_ranges_for_range(
+      dom_node, start_column, end_column, context,
+    )
+  }
+}
+
+///|
+fn RenderedViewLine::read_pixel_offset(
+  self : RenderedViewLine,
+  dom_node : @scrollbar.CachedDomNode,
+  line_number : Int,
+  column : Int,
+  context : DomReadingContext,
+) -> Double {
+  if render_input_is_ltr(self.input) && self.character_mapping.length == 0 {
+    if !self.foreign_elements.before {
+      return 0.0
+    }
+    if !self.foreign_elements.after {
+      return self.get_width(Some(context))
+    }
+    let reading_target = reading_target(dom_node.element())
+    if element_has_first_child(reading_target) {
+      context.mark_did_dom_layout()
+      return element_first_child_offset_width(reading_target)
+    } else {
+      return 0.0
+    }
+  }
+  match self.pixel_offset_cache {
+    Some(cache) => {
+      let cached_pixel_offset = cache[column]
+      if cached_pixel_offset != -1.0 {
+        return cached_pixel_offset
+      }
+      let result = self.actual_read_pixel_offset(
+        dom_node, line_number, column, context,
+      )
+      cache[column] = result
+      result
+    }
+    None =>
+      self.actual_read_pixel_offset(dom_node, line_number, column, context)
+  }
+}
+
+///|
+fn RenderedViewLine::actual_read_pixel_offset(
+  self : RenderedViewLine,
+  dom_node : @scrollbar.CachedDomNode,
+  _line_number : Int,
+  column : Int,
+  context : DomReadingContext,
+) -> Double {
+  let reading_target = reading_target(dom_node.element())
+  if self.character_mapping.length == 0 {
+    guard range_util_read_horizontal_ranges(reading_target, 0, 0, 0, 0, context)
+      is Some(ranges) &&
+      !ranges.is_empty() else {
+      return -1.0
+    }
+    return ranges[0].0
+  }
+  if render_input_is_ltr(self.input) &&
+    column == self.character_mapping.length &&
+    self.is_whitespace_only &&
+    !self.foreign_elements.before &&
+    !self.foreign_elements.after {
+    return self.get_width(Some(context))
+  }
+  let dom_position = self.character_mapping.get_dom_position(column)
+  guard range_util_read_horizontal_ranges(
+      reading_target,
+      dom_position.part_index,
+      dom_position.char_index,
+      dom_position.part_index,
+      dom_position.char_index,
+      context,
+    )
+    is Some(ranges) &&
+    !ranges.is_empty() else {
+    return -1.0
+  }
+  let result = ranges[0].0
+  if self.input.is_basic_ascii {
+    let horizontal_offset = self.character_mapping.get_horizontal_offset(column)
+    let expected_result = (self.input.space_width *
+    horizontal_offset.to_double()).round()
+    if (expected_result - result).abs() <= 1.0 {
+      return expected_result
+    }
+  }
+  result
+}
+
+///|
+fn RenderedViewLine::read_raw_visible_ranges_for_range(
+  self : RenderedViewLine,
+  dom_node : @scrollbar.CachedDomNode,
+  start_column : Int,
+  end_column : Int,
+  context : DomReadingContext,
+) -> Array[(Double, Double)]? {
+  if render_input_is_ltr(self.input) &&
+    start_column == 1 &&
+    end_column == self.character_mapping.length {
+    return Some([(0.0, self.get_width(Some(context)))])
+  }
+  let start_dom_position = self.character_mapping.get_dom_position(start_column)
+  let end_dom_position = self.character_mapping.get_dom_position(end_column)
+  range_util_read_horizontal_ranges(
+    reading_target(dom_node.element()),
+    start_dom_position.part_index,
+    start_dom_position.char_index,
+    end_dom_position.part_index,
+    end_dom_position.char_index,
+    context,
+  )
+}
+
+///|
+fn render_input_is_ltr(input : @view_layout.RenderLineInput) -> Bool {
+  !input.contains_rtl && input.text_direction != RTL
+}
+
+///|
+fn foreign_element_facts(
+  foreign_elements : @view_layout.ForeignElementType,
+) -> ForeignElementFacts {
+  match foreign_elements {
+    None => { before: false, after: false }
+    Before => { before: true, after: false }
+    After => { before: false, after: true }
+    BeforeAndAfter => { before: true, after: true }
+  }
+}
+
+///|
+extern "js" fn string_is_whitespace_only(value : String) -> Bool =
+  #| (value) => /^\s*$/.test(value)
+
+///|
+extern "js" fn reading_target(line_node : @rdom.Element) -> @rdom.Element = "(lineNode) => lineNode.firstChild"
+
+///|
+extern "js" fn element_has_first_child(element : @rdom.Element) -> Bool = "(element) => Boolean(element.firstChild)"
+
+///|
+extern "js" fn element_first_child_offset_width(
+  element : @rdom.Element,
+) -> Double = "(element) => element.firstChild.offsetWidth"
 
 ///|
 /// `getColumnOfNodeOffset` (viewLine.ts:724-733): resolves a browser caret

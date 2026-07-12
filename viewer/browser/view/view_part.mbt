@@ -58,13 +58,12 @@ priv enum ViewPartHandle {
 }
 
 ///|
-/// View-owned teardown (`view.ts:503-519`). The seven DOM-only local parts
-/// retain no listeners, timers, animation frames, emitters, or external
-/// nodes; removing the View root releases their complete DOM state. The
-/// scrollbar is the sole active owner and cancels its hide timer here.
+/// View-owned teardown (`view.ts:503-519`). ViewLines cancels its delayed
+/// width sweep first; the resource-free DOM parts need no active teardown,
+/// and the scrollbar cancels its hide timer here.
 fn ViewPartHandle::dispose(self : ViewPartHandle) -> Unit {
   match self {
-    ViewLinesPart(_) => ()
+    ViewLinesPart(part) => part.dispose()
     ViewZonesPart(_) => ()
     ContentViewOverlaysPart(_) => ()
     MarginViewOverlaysPart(_) => ()
@@ -72,6 +71,24 @@ fn ViewPartHandle::dispose(self : ViewPartHandle) -> Unit {
     ViewCursorsPart(_) => ()
     OverlayWidgetsPart(_) => ()
     EditorScrollbarPart(part) => part.scrollable().dispose()
+  }
+}
+
+///|
+/// Source `ViewPart.onBeforeRender` phase. Only ContentWidgets owns scoped
+/// behavior here; the other retained viewer parts have no applicable pre-text
+/// writes in this parity slice.
+fn ViewPartHandle::on_before_render(
+  self : ViewPartHandle,
+  viewport : @view_layout.ViewportData,
+) -> Unit {
+  match self {
+    ContentWidgetsPart(part) =>
+      part.on_before_render_widgets(
+        viewport.start_line_number,
+        viewport.end_line_number,
+      )
+    _ => ()
   }
 }
 
@@ -270,7 +287,11 @@ impl ViewPart for @view_lines.ViewLines with fn on_view_event(self, event) {
     }
     ViewConfigurationChanged(e) => {
       self.on_visible_configuration_changed(e.has_changed(LayoutInfo)) |> ignore
-      self.on_configuration_changed() |> ignore
+      self.on_configuration_changed(
+        e.has_changed(WrappingInfo),
+        e.has_changed(LayoutInfo),
+      )
+      |> ignore
       // Source `ViewLines.onConfigurationChanged` always returns true after
       // the nested layout-info and option-equality checks.
       true
@@ -748,12 +769,26 @@ impl DynamicViewOverlay for @selections.SelectionsOverlay with fn prepare_render
   self,
   context,
 ) {
-  self.render_result = @selections.prepare_selections_render(
+  let visible_ranges : Array[(Int, Array[(Double, Double)])] = []
+  match context.input.selection_view_range {
+    Some(selection) =>
+      match context.lines_visible_ranges_for_range(selection, true) {
+        Some(lines) =>
+          for line in lines {
+            let ranges : Array[(Double, Double)] = []
+            for range in line.ranges {
+              ranges.push((range.left.to_double(), range.width.to_double()))
+            }
+            visible_ranges.push((line.line_number, ranges))
+          }
+        None => ()
+      }
+    None => ()
+  }
+  self.render_result = @selections.prepare_selections_render_from_visible_ranges(
     context.viewport,
-    context.input.selection_view_range,
-    Some(context.input.view_model),
+    visible_ranges,
     context.input.space_width,
-    context.view_context.measure_line_selection,
   )
 }
 
@@ -854,27 +889,17 @@ impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
   self,
   context,
 ) {
-  self.prepare_render_widgets({
-    vertical_offset_for_line: line => {
-      context.input.layout.vertical_offset_for_line(line)
-    },
-    window_start: context.input.window.start,
-    window_end: context.input.window.end,
-    line_height: context.input.layout.line_height().to_double(),
-    char_width: context.input.space_width,
-    typical_fullwidth_character_width: context.input.typical_fullwidth_character_width,
-    scroll_top: context.position.scroll_top,
-    scroll_left: context.position.scroll_left,
-    viewport_width: context.dimensions.width,
-    viewport_height: context.dimensions.height,
-  })
+  self.prepare_render_widgets(context.content_widgets_render_context())
 }
 
 ///|
 /// Monaco `ViewContentWidgets.render`: write each widget's `top`/`left`/
 /// `visibility` onto its mounted DOM — never content, never a re-mount.
 impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) {
-  self.render_widgets(context.translate_y)
+  self.render_widgets(
+    context.position.scroll_top,
+    context.viewport.big_numbers_delta.to_double(),
+  )
 }
 
 ///|

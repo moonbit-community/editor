@@ -1007,7 +1007,8 @@ impl @content_widgets.ContentWidget for ViewEventContentWidget with fn get_posit
   Some({
     position: Some(Position(2, 3)),
     secondary_position: None,
-    preference: [Below],
+    preference: Some([Below]),
+    position_affinity: None,
   })
 }
 
@@ -1016,6 +1017,43 @@ impl @content_widgets.ContentWidget for ViewEventContentWidget with fn allow_edi
   _self,
 ) {
   false
+}
+
+///|
+impl @content_widgets.ContentWidget for ViewEventContentWidget with fn use_display_none(
+  _self,
+) {
+  false
+}
+
+///|
+impl @content_widgets.ContentWidget for ViewEventContentWidget with fn has_before_render(
+  _self,
+) {
+  false
+}
+
+///|
+impl @content_widgets.ContentWidget for ViewEventContentWidget with fn before_render(
+  _self,
+) {
+  None
+}
+
+///|
+impl @content_widgets.ContentWidget for ViewEventContentWidget with fn has_after_render(
+  _self,
+) {
+  false
+}
+
+///|
+impl @content_widgets.ContentWidget for ViewEventContentWidget with fn after_render(
+  _self,
+  _position,
+  _coordinate,
+) {
+  ()
 }
 
 ///|
@@ -1517,6 +1555,7 @@ test "current-line predicate ignores same-line column moves but tracks emptiness
 fn view_event_test_overlay_render_context(
   view_model : @view_model.ViewModel,
   layout : @view_layout.ViewLayout,
+  view_lines : @view_lines.ViewLines,
   cursor_column : Int,
 ) -> (RenderingContext, RestrictedRenderingContext) {
   let selection = @core.Selection::new(
@@ -1550,7 +1589,12 @@ fn view_event_test_overlay_render_context(
     offset_for_column: (_line, _column) => 0.0,
     model_position_to_view_position: position => position,
   }
-  let rendering = RenderingContext::from_input(view_context, input)
+  let rendering = RenderingContext::from_viewport(
+    view_context,
+    input,
+    view_lines,
+    RenderingContext::viewport_from_input(input),
+  )
   let restricted : RestrictedRenderingContext = {
     view_context: rendering.view_context,
     input: rendering.input,
@@ -1569,6 +1613,49 @@ fn view_event_test_overlay_render_context(
     line_height: rendering.viewport.line_height,
   }
   (rendering, restricted)
+}
+
+///|
+fn view_event_test_unsupported_view_lines_context() -> (
+  View,
+  RenderingContext,
+  RestrictedRenderingContext,
+) {
+  let model = @model.TextModel(
+    @base_common.Uri::file("/view-lines-unsupported-render-test.mbt"),
+    "view-lines-unsupported-render-test.mbt",
+    "moonbit",
+    1,
+    "rev-1",
+    "alpha",
+  )
+  let view_model = @view_model.ViewModel(model)
+  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=1)
+  layout.set_viewport_size(width=80.0, height=20.0) |> ignore
+  let view = View::new()
+  let (rendering, restricted) = view_event_test_overlay_render_context(
+    view_model,
+    layout,
+    view.view_lines,
+    1,
+  )
+  (view, rendering, restricted)
+}
+
+///|
+test "panic ViewLines prepareRender is unsupported" {
+  install_view_lifecycle_test_browser()
+  defer restore_view_lifecycle_test_browser()
+  let (view, rendering, _) = view_event_test_unsupported_view_lines_context()
+  ViewPart::prepare_render(view.view_lines, rendering)
+}
+
+///|
+test "panic ViewLines render is unsupported" {
+  install_view_lifecycle_test_browser()
+  defer restore_view_lifecycle_test_browser()
+  let (view, _, restricted) = view_event_test_unsupported_view_lines_context()
+  ViewPart::render(view.view_lines, restricted)
 }
 
 ///|
@@ -1647,7 +1734,10 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
   assert_false(margin.current_line_margin.state.focused)
 
   let (first_rendering, first_restricted) = view_event_test_overlay_render_context(
-    view_model, layout, 1,
+    view_model,
+    layout,
+    view.view_lines,
+    1,
   )
   ViewPart::prepare_render(content, first_rendering)
   ViewPart::prepare_render(margin, first_rendering)
@@ -1716,7 +1806,10 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
   assert_true(content.current_line.state.selection_is_empty)
   assert_true(margin.current_line_margin.state.selection_is_empty)
   let (second_rendering, second_restricted) = view_event_test_overlay_render_context(
-    view_model, layout, 2,
+    view_model,
+    layout,
+    view.view_lines,
+    2,
   )
   ViewPart::prepare_render(content, second_rendering)
   ViewPart::prepare_render(margin, second_rendering)

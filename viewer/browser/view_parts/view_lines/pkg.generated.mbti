@@ -38,10 +38,14 @@ pub struct ViewLine {
   // private fields
 }
 pub fn ViewLine::get_dom_node(Self) -> @dom.Element?
+pub fn ViewLine::get_visible_ranges_for_range(Self, Int, Int, Int, DomReadingContext) -> (Bool, Array[(Double, Double)])?
+pub fn ViewLine::get_width(Self, DomReadingContext?) -> Double
+pub fn ViewLine::get_width_is_fast(Self) -> Bool
 pub fn ViewLine::layout_line(Self, Int, Int, Int) -> Unit
 pub fn ViewLine::mapping(Self) -> @view_layout.CharacterMapping?
 pub fn ViewLine::new(options? : ViewLineOptions) -> Self
 pub fn ViewLine::render_line(Self, Int, @view_layout.RenderLineInput, Int, Int, StringBuilder) -> Bool
+pub fn ViewLine::reset_cached_width(Self) -> Unit
 pub fn ViewLine::set_dom_node(Self, @dom.Element) -> Unit
 
 pub(all) struct ViewLineOptions {
@@ -72,15 +76,17 @@ pub(all) struct ViewLines {
   mut should_render : Bool
   // private fields
 }
+pub fn ViewLines::dispose(Self) -> Unit
 pub fn ViewLines::flush_retained_lines(Self) -> Unit
 pub fn ViewLines::get_dom_node(Self) -> @dom.Element
 pub fn ViewLines::get_line_width(Self, Int) -> Double
 pub fn ViewLines::get_position_from_dom_info(Self, @view_model.ViewModel, @dom.Element, Int) -> @common.Position?
+pub fn ViewLines::install_geometry_readers(Self, (Int) -> Int, (Int) -> @view_layout.TextDirection) -> Unit
 pub fn ViewLines::install_live_configuration_reader(Self, () -> ViewLinesConfiguration) -> Unit
 pub fn ViewLines::line_node_at(Self, Int) -> @dom.Element?
 pub fn ViewLines::mapping_at(Self, Int) -> @view_layout.CharacterMapping?
 pub fn ViewLines::new(@dom.Document, @scrollbar.CachedDomNode) -> Self
-pub fn ViewLines::on_configuration_changed(Self) -> Bool
+pub fn ViewLines::on_configuration_changed(Self, Bool, Bool) -> Bool
 pub fn ViewLines::on_decorations_changed(Self) -> Unit
 pub fn ViewLines::on_lines_changed(Self, Int, Int) -> Bool
 pub fn ViewLines::on_lines_deleted(Self, Int, Int) -> Unit
@@ -90,7 +96,12 @@ pub fn ViewLines::on_token_ranges_changed(Self, Array[@common.LineRange]) -> Boo
 pub fn ViewLines::on_visible_configuration_changed(Self, Bool) -> Bool
 pub fn ViewLines::on_visible_scroll_changed(Self, Bool) -> Bool
 pub fn ViewLines::on_visible_zones_changed(Self) -> Bool
+pub fn ViewLines::raw_lines_visible_ranges_for_range(Self, @common.Range, Bool) -> Array[(Bool, Int, Array[(Int, Int)], Bool)]?
+pub fn ViewLines::raw_visible_range_for_position(Self, Int, Int) -> (Bool, Double)?
 pub fn ViewLines::render_text(Self, @view_layout.ViewportData, @view_layout.ViewLayout, @common.Range?) -> Unit
+pub fn ViewLines::reset_line_width_caches(Self) -> Unit
+pub fn ViewLines::update_line_widths(Self) -> Unit
+pub fn ViewLines::visible_ranges_for_line_range(Self, Int, Int, Int) -> (Bool, Array[(Double, Double)])?
 
 pub(all) struct ViewLinesConfiguration {
   line_height : Int

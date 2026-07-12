@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — render-invalidation child inventory active
+Status: active — render-invalidation child inventory ready; STOP FOR REVIEW
 
 Date: 2026-07-10
 
@@ -83,7 +83,7 @@ product contract and belongs in an ordinary local test.
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
-| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | inventory in progress |
+| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | inventory ready — STOP FOR REVIEW |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
@@ -102,20 +102,23 @@ method clusters:
 |---|---|
 | codeEditorWidget attach/detach/dispose and ModelData lifetime | model lifecycle |
 | codeEditorWidget cursor event forwarding and cursor API methods | cursor/input events |
-| codeEditorWidget updateOptions notification | render invalidation |
+| codeEditorWidget `updateOptions` entrypoint | render invalidation; lifecycle CEW/CFG rows retain configuration storage and notification authority |
 | codeEditorWidget changeViewZones/accessor transaction | ViewZones |
-| TextModel value/range/offset/EOL plus setValue buffer/event construction | text-buffer EOL |
+| TextModel value/range/offset/EOL plus setValue buffer/event construction, including the `ModelContentChangedEvent` wrapper | text-buffer EOL |
 | TextModel version/request freshness methods | async model features |
-| TextModel _emitContentChangedEvent token forwarding plus token-part construction/disposal | tokenization |
+| TextModel `_emitContentChangedEvent` token forwarding plus token-part construction/disposal and token-range production | tokenization; render invalidation owns ViewPart handler consumption only |
 | ViewLines event handlers | render invalidation |
+| ViewLines reveal request handler/state | historical reveal owner; inherited and excluded from the render denominator |
 | ViewLines width measurement and max-width feedback | browser geometry |
 | ContentWidgets event handlers and dirty-state transitions | render invalidation |
 | ContentWidgets validation, visible ranges, placement, and focus preservation | browser geometry |
 | ViewLayout general scroll/content dimensions | browser geometry |
+| StableViewport capture/restore, custom-height callbacks, and attached-view recovery helpers | browser geometry; render may count only branch/call order inside its scoped callers |
 | ViewZone-owned min-width/container-width writes | ViewZones, consuming geometry's extent contract |
 | LinesLayout/ViewLayout zone insertion, ordering, and zone viewport data | ViewZones |
 | ViewModelEventDispatcher cursor outgoing events | cursor/input events |
 | ViewModelEventDispatcher configuration/decorations events | render invalidation |
+| ViewModelEventDispatcher generic collector/queue rows (`VED`/`VMI`) | cursor/input events; inherited non-denominator authority for render invalidation |
 | ViewModelEventDispatcher ViewZonesChanged event | ViewZones |
 | Viewer/attach_model resource lifetime | model lifecycle |
 | Viewer/attach_model async request creation/cancellation | async model features |
@@ -398,3 +401,11 @@ The independent closing task is:
   858/858 (Wasm has no test entry), build, and browser 54/54; an initial blank-
   page folding startup failure passed both its focused rerun and the complete
   rerun. The portfolio proceeds to the render-invalidation inventory.
+- 2026-07-12: the normalized render-invalidation Phase 1–2 inventory is ready
+  with 509/509 TODO rows: 183 ViewPart, 174 event/propagation, and 152
+  configuration atoms. Its proposed map is 213 TESTED, 72 PORTED, 39
+  DEFERRED, and 185 N-A. The ownership ledger inherits frozen cursor VED/VMI
+  collector and lifecycle CEW/CFG configuration rows, assigns content-event,
+  token-range, geometry-helper, reveal, and theme seams without duplication,
+  and records the cross-part/current-state/test matrices. No product or test
+  file changed; the portfolio stops for independent Gate B review.

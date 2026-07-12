@@ -1,20 +1,23 @@
 ///|
-/// Immutable text plus cached line starts, the readonly analog of Monaco's
-/// text buffer: the field pair is the piece tree's leaf (`StringBuffer
-/// { buffer, lineStarts }`, `pieceTreeBase.ts:147`) and the 1-based methods
-/// are the `IReadonlyTextBuffer` read surface (`model.ts:1524`). Offsets and
-/// columns are UTF-16 code units so browser, Monaco, and LSP-facing code
-/// share one convention. Document identity (language id, version) lives on
-/// `TextModel`, not the buffer — same split as Monaco.
+/// Immutable LF-normalized text plus cached line starts, the readonly analog
+/// of Monaco's text buffer: the field pair is the piece tree's leaf
+/// (`StringBuffer { buffer, lineStarts }`, `pieceTreeBase.ts:147`) and the
+/// 1-based methods are the `IReadonlyTextBuffer` read surface
+/// (`model.ts:1524`). Offsets and columns are UTF-16 code units so browser,
+/// Monaco, and LSP-facing code share one convention. Document identity
+/// (language id, version) lives on `TextModel`, not the buffer — same split as
+/// Monaco.
 pub(all) struct TextSnapshot {
   text : String
   line_starts : Array[Int]
 } derive(Debug)
 
 ///|
-/// Builds a snapshot and derives the line-start table used by all position
-/// conversion helpers.
+/// Builds a snapshot by replacing every CRLF pair, lone CR, or LF with one LF
+/// before deriving line starts. U+FEFF, U+2028/U+2029, surrogate code units,
+/// and all other UTF-16 content are preserved verbatim.
 pub fn TextSnapshot::TextSnapshot(text : String) -> TextSnapshot {
+  let text = normalize_eol(text)
   let line_starts = build_line_starts(text)
   { text, line_starts }
 }
@@ -42,18 +45,13 @@ pub fn TextSnapshot::line_start_offset(self : TextSnapshot, line : Int) -> Int {
 
 ///|
 /// End offset for `line`, clamped into the snapshot's line range and excluding
-/// the line break. CRLF lines exclude both the `\r` and `\n`.
+/// the stored LF line break.
 pub fn TextSnapshot::line_end_offset(self : TextSnapshot, line : Int) -> Int {
   let line = @base_common.clamp_int(line, 0, self.line_count() - 1)
-  let raw_end = if line + 1 < self.line_count() {
+  if line + 1 < self.line_count() {
     self.line_starts[line + 1] - 1
   } else {
     self.get_length()
-  }
-  if raw_end > self.line_starts[line] && self.text[raw_end - 1].to_int() == 13 {
-    raw_end - 1
-  } else {
-    raw_end
   }
 }
 
@@ -79,18 +77,17 @@ pub fn TextSnapshot::get_line_content(
 }
 
 ///|
-/// Full document text with lines joined by `\n` (the viewer's normalized
-/// end-of-line). Mirrors Monaco's `getValue()` at its default LF EOL; the
-/// viewer has no EOL option, so it always emits `\n`.
+/// Full stored document text. Construction has already normalized every line
+/// ending to LF, so this is the direct fixed-LF `getValue()` result.
 pub fn TextSnapshot::get_value(self : TextSnapshot) -> String {
-  let sb = StringBuilder::new()
-  for line in 0..<self.line_count() {
-    if line > 0 {
-      sb.write_string("\n")
-    }
-    sb.write_string(self.line_text(line))
-  }
-  sb.to_string()
+  self.text
+}
+
+///|
+/// Stored model end-of-line sequence. Viewer snapshots have one fixed LF EOL
+/// and expose no TextDefined/CRLF preference.
+pub fn TextSnapshot::get_eol(_self : TextSnapshot) -> String {
+  "\n"
 }
 
 ///|
@@ -144,10 +141,10 @@ pub fn TextSnapshot::get_value_length_in_range(
 
 ///|
 /// Whole-buffer equality — `PieceTreeTextBuffer.equals` behind
-/// `TextModel.equalsTextBuffer` (`textModel.ts:457-459`). The source
-/// compares BOM, then piece-tree content; the snapshot keeps the raw text
-/// (EOLs included), so string equality is the same comparison. Hosts use it
-/// for the refresh no-op early return (`modelService.ts:370-373`).
+/// `TextModel.equalsTextBuffer` (`textModel.ts:457-459`). The source compares
+/// its selected-EOL representation; the Viewer compares its coherent
+/// LF-normalized representation, including U+FEFF as ordinary content. Hosts
+/// use it for the refresh no-op early return (`modelService.ts:370-373`).
 pub fn TextSnapshot::equals(self : TextSnapshot, other : TextSnapshot) -> Bool {
   self.text == other.text
 }
@@ -254,13 +251,19 @@ pub fn TextSnapshot::get_line_max_column(
 }
 
 ///|
-/// Code unit at 0-based `index` of `line`'s content. Mirrors `getLineCharCode`.
+/// Code unit at 0-based `index` of `line`. The content endpoint of a non-final
+/// line is its LF. A true-empty or non-empty final-line endpoint keeps the
+/// pinned source's terminal failure.
 fn TextSnapshot::get_line_char_code(
   self : TextSnapshot,
   line : Int,
   index : Int,
 ) -> Int {
-  self.line_text(line - 1)[index].to_int()
+  let content = self.line_text(line - 1)
+  if line >= 1 && line < self.line_count() && index == content.length() {
+    return 10
+  }
+  content[index].to_int()
 }
 
 ///|
@@ -302,33 +305,65 @@ pub fn TextSnapshot::might_contain_rtl(self : TextSnapshot) -> Bool {
 }
 
 ///|
-/// Offsets where each line begins (0-based). Mirrors Monaco's
-/// `createLineStartsFast` (`pieceTreeBase.ts:37`): `\n`, a lonely `\r`
-/// (classic-Mac CR EOL), and `\r\n` each end a line, with the `\r\n` pair
-/// counted as one line break. Byte-identical copy in
-/// `internal/shell/workspace/document.mbt`; the two straddle the product/shell
-/// boundary, so they are intentionally not unified but must change together.
-fn build_line_starts(text : String) -> Array[Int] {
-  let starts = [0]
+/// Whether normalized stored text contains a non-basic-ASCII code unit.
+/// Monaco treats Tab, CR/LF, and printable ASCII 32..126 as basic; CR is
+/// impossible after construction but remains classified consistently here.
+pub fn TextSnapshot::might_contain_non_basic_ascii(self : TextSnapshot) -> Bool {
+  for i in 0..<self.text.length() {
+    let code = self.text[i].to_int()
+    if code != 9 && code != 10 && code != 13 && (code < 32 || code > 126) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// Replaces every CRLF pair or lone CR with one LF. Existing LF and all other
+/// UTF-16 units are preserved. Writing complete non-EOL views avoids splitting
+/// surrogate pairs and also retains lone surrogate code units exactly once.
+fn normalize_eol(text : String) -> String {
   let len = text.length()
+  let sb = StringBuilder::new()
+  let mut segment_start = 0
   let mut i = 0
+  let mut changed = false
   while i < len {
-    let code = text[i].to_int()
-    if code == 13 {
+    if text[i].to_int() == 13 {
+      changed = true
+      if segment_start < i {
+        sb.write_stringview(text[segment_start:i])
+      }
+      sb.write_string("\n")
       if i + 1 < len && text[i + 1].to_int() == 10 {
-        // \r\n... case
-        starts.push(i + 2)
         i += 2
       } else {
-        // \r... case
-        starts.push(i + 1)
         i += 1
       }
+      segment_start = i
     } else {
-      if code == 10 {
-        starts.push(i + 1)
-      }
       i += 1
+    }
+  }
+  if !changed {
+    return text
+  }
+  if segment_start < len {
+    sb.write_stringview(text[segment_start:len])
+  }
+  sb.to_string()
+}
+
+///|
+/// Offsets where each line begins in the normalized stored text (0-based).
+/// Construction has already reduced every source EOL to LF, so only LF can
+/// create a start. The raw workspace `DocumentSnapshot` scanner intentionally
+/// remains separate on the provider side of this boundary.
+fn build_line_starts(text : String) -> Array[Int] {
+  let starts = [0]
+  for i in 0..<text.length() {
+    if text[i].to_int() == 10 {
+      starts.push(i + 1)
     }
   }
   starts

@@ -1,11 +1,14 @@
 ///| Faithful conformance port of vscode's `textModel.test.ts` (pinned `vscode/`
-/// submodule, commit 294fb350).
+/// submodule, commit b18492a288de038fbc7643aae6de8247029d11bd).
 ///
-/// Readonly-subset triage of the file's 40 cases. In scope and ported here (12):
+/// Readonly-subset triage of the file's 40 cases. In scope and ported here (18):
+///   - `TextModelData.fromString`: `one line text`, `multiline text`, `Non
+///     Basic ASCII 1`, `containsRTL 1`, `containsRTL 2`
 ///   - `Editor Model - TextModel`: `validatePosition` (integer asserts),
 ///     `validatePosition around high-low surrogate pairs 1` and `2`,
 ///     `validateRange around high-low surrogate pairs 1` and `2`,
-///     `modifyPosition`, `getLineFirstNonWhitespaceColumn`,
+///     `modifyPosition`, `getValueLengthInRange`,
+///     `getLineFirstNonWhitespaceColumn`,
 ///     `getLineLastNonWhitespaceColumn`
 ///   - `TextModel.mightContainRTL`: `nope`, `yes`, `setValue resets 1`,
 ///     `setValue resets 2` (the resets pair is in scope since the flush lane
@@ -34,13 +37,10 @@
 ///   - mutation / DI (1): `TextModel does not use events internally`
 ///     (asserts private listener-count internals of the DI event plumbing).
 ///
-/// DEFERRED — EOL preference / buffer metadata (the viewer always joins lines
-/// with `\n`; it has no EOL guessing or `EndOfLinePreference`):
-/// `getValueLengthInRange` (its CRLF model expects `\r\n`-counted lengths),
-/// `getValueLengthInRange different EOL` (`EndOfLinePreference`), and the whole
-/// `TextModelData.fromString` suite (`one line text`, `multiline text`, `Non
-/// Basic ASCII 1`, `containsRTL 1/2` — `createTextBuffer` EOL guessing +
-/// `getLinesContent` buffer shape).
+/// N-A — the viewer exposes no `EndOfLinePreference`, so
+/// `getValueLengthInRange different EOL` has no local call axis. The ordinary
+/// `getValueLengthInRange` and TextModelData cases are ported below with the
+/// approved fixed-LF expectation.
 
 ///|
 fn pos(line : Int, column : Int) -> @base_common.Position {
@@ -82,6 +82,114 @@ fn join_lines(lines : Array[String]) -> String {
     sb.write_string(l)
   }
   sb.to_string()
+}
+
+///|
+/// `TextModelData.fromString / one line text` (`textModel.test.ts:97-108`).
+test "one line text" {
+  let m = wb_model("Hello world!")
+  assert_eq(m.get_eol(), "\n")
+  assert_true(m.get_lines_content() == ["Hello world!"])
+  assert_eq(m.might_contain_rtl(), false)
+  assert_eq(m.might_contain_non_basic_ascii(), false)
+}
+
+///|
+/// `TextModelData.fromString / multiline text` (`:110-125`). Monaco chooses
+/// CRLF by majority; Gate A adapts only that expectation to fixed LF.
+test "multiline text" {
+  let m = wb_model("Hello,\r\ndear friend\nHow\rare\r\nyou?")
+  assert_eq(m.get_eol(), "\n")
+  assert_true(
+    m.get_lines_content() == ["Hello,", "dear friend", "How", "are", "you?"],
+  )
+  assert_eq(m.might_contain_rtl(), false)
+  assert_eq(m.might_contain_non_basic_ascii(), false)
+}
+
+///|
+/// `TextModelData.fromString / Non Basic ASCII 1` (`:127-139`).
+test "Non Basic ASCII 1" {
+  let m = wb_model("Hello,\nZürich")
+  assert_eq(m.get_eol(), "\n")
+  assert_true(m.get_lines_content() == ["Hello,", "Zürich"])
+  assert_eq(m.might_contain_rtl(), false)
+  assert_eq(m.might_contain_non_basic_ascii(), true)
+}
+
+///|
+/// `TextModelData.fromString / containsRTL 1` (`:141-153`).
+test "containsRTL 1" {
+  let m = wb_model("Hello,\nזוהי עובדה מבוססת שדעתו")
+  assert_eq(m.get_eol(), "\n")
+  assert_true(
+    m.get_lines_content() ==
+    ["Hello,", "זוהי עובדה מבוססת שדעתו"],
+  )
+  assert_eq(m.might_contain_rtl(), true)
+  assert_eq(m.might_contain_non_basic_ascii(), true)
+}
+
+///|
+/// `TextModelData.fromString / containsRTL 2` (`:155-167`).
+test "containsRTL 2" {
+  let m = wb_model(
+    "Hello,\nهناك حقيقة مثبتة منذ زمن طويل",
+  )
+  assert_eq(m.get_eol(), "\n")
+  assert_true(
+    m.get_lines_content() ==
+    ["Hello,", "هناك حقيقة مثبتة منذ زمن طويل"],
+  )
+  assert_eq(m.might_contain_rtl(), true)
+  assert_eq(m.might_contain_non_basic_ascii(), true)
+}
+
+///|
+/// `TextModel.getValueLengthInRange` (`textModel.test.ts:189-218`). Both raw
+/// EOL forms enter the same fixed-LF representation under Gate A.
+test "getValueLengthInRange" {
+  for
+    raw in [
+      "My First Line\r\nMy Second Line\r\nMy Third Line", "My First Line\nMy Second Line\nMy Third Line",
+    ] {
+    let m = wb_model(raw)
+    assert_eq(m.get_value_length_in_range(rng(1, 1, 1, 1)), "".length())
+    assert_eq(m.get_value_length_in_range(rng(1, 1, 1, 2)), "M".length())
+    assert_eq(m.get_value_length_in_range(rng(1, 2, 1, 3)), "y".length())
+    assert_eq(
+      m.get_value_length_in_range(rng(1, 1, 1, 14)),
+      "My First Line".length(),
+    )
+    assert_eq(
+      m.get_value_length_in_range(rng(1, 1, 2, 1)),
+      "My First Line\n".length(),
+    )
+    assert_eq(
+      m.get_value_length_in_range(rng(1, 2, 2, 1)),
+      "y First Line\n".length(),
+    )
+    assert_eq(
+      m.get_value_length_in_range(rng(1, 2, 2, 2)),
+      "y First Line\nM".length(),
+    )
+    assert_eq(
+      m.get_value_length_in_range(rng(1, 2, 2, 1000)),
+      "y First Line\nMy Second Line".length(),
+    )
+    assert_eq(
+      m.get_value_length_in_range(rng(1, 2, 3, 1)),
+      "y First Line\nMy Second Line\n".length(),
+    )
+    assert_eq(
+      m.get_value_length_in_range(rng(1, 2, 3, 1000)),
+      "y First Line\nMy Second Line\nMy Third Line".length(),
+    )
+    assert_eq(
+      m.get_value_length_in_range(rng(1, 1, 1000, 1000)),
+      "My First Line\nMy Second Line\nMy Third Line".length(),
+    )
+  }
 }
 
 ///|

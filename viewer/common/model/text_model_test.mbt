@@ -1,11 +1,12 @@
 ///|
-test "text snapshot handles lf and crlf" {
+test "text snapshot normalizes lf and crlf before deriving offsets" {
   let doc = @model.TextSnapshot("one\ntwo\r\nthree")
+  assert_eq(doc.text, "one\ntwo\nthree")
   assert_eq(doc.line_count(), 3)
   assert_eq(doc.line_text(0), "one")
   assert_eq(doc.line_text(1), "two")
   assert_eq(doc.line_text(2), "three")
-  assert_eq(doc.line_start_offset(2), 9)
+  assert_eq(doc.line_start_offset(2), 8)
 }
 
 ///|

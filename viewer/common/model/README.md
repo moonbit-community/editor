@@ -5,10 +5,16 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
 
 ## Text and identity
 
-- `TextSnapshot` stores raw text plus line starts. It recognizes `\n`, lone `\r`,
-  and `\r\n` as line breaks; line reads exclude the terminator, while `get_value`
-  and `get_value_in_range` normalize returned line breaks to `\n`. Raw offset
-  helpers and `get_length` still use the original UTF-16 text.
+- `TextSnapshot` normalizes every input `\r\n` pair, lone `\r`, or `\n` to one
+  `\n` before storage, then derives line starts from that normalized text.
+  U+FEFF is ordinary content, U+2028/U+2029 are not line breaks, and every
+  other UTF-16 unit (including lone surrogates) is retained exactly once.
+  `get_value`, lengths, ranges, offsets, positions, provider boundaries, and
+  content events therefore all use one coherent UTF-16 coordinate system.
+- Snapshots and models expose fixed `get_eol() == "\n"` and recompute
+  `might_contain_non_basic_ascii` from complete stored text. There is no
+  TextDefined/CRLF read preference, BOM-preservation switch, or cached builder
+  metadata that can disagree with the text.
 - `TextModel` adds URI, display name, language id, caller-owned host version,
   revision, lifecycle, and a `TokenizationTextModelPart`. Reads,
   position/offset conversion, range validation, and word lookup delegate to the
@@ -16,11 +22,12 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
 - Model-scoped async freshness uses physical `TextModel` identity plus the
   internal `get_version_id()` counter. URI, host version, revision, and
   decoration IDs are metadata and cannot substitute for that authority.
-- `set_value` replaces the complete snapshot in the same model, increments the
-  internal version once, destroys old decorations, and fires the content-flush
-  event. There is no incremental edit/undo/redo, EOL option, IME, or attachment
-  surface. Ranges are generally clamped where Monaco throws, and the snapshot
-  remains readable after `TextModel::dispose`.
+- `set_value` normalizes and replaces the complete snapshot in the same model,
+  increments the internal version once, destroys old decorations, and fires
+  the content-flush event using the old normalized range/length and new
+  normalized text/EOL. There is no incremental edit/undo/redo, EOL mutation or
+  preference, IME, or attachment surface. Ranges are generally clamped where
+  Monaco throws, and the snapshot remains readable after `TextModel::dispose`.
 
 ## Mutable model-side state
 

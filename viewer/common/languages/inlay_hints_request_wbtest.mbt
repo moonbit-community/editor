@@ -396,6 +396,54 @@ async test "inlay request fans out captured ranges and keeps caller token" {
 }
 
 ///|
+/// PR-EOL-002/004: both Range endpoints are converted in the model's
+/// normalized LF coordinate space, and the provider receives that exact
+/// OffsetRange for every supported raw EOL form.
+async test "inlay request forwards exact normalized ranges for every EOL form" {
+  let cases : Array[(String, String)] = [
+    ("a\r\nb", "a\nb"),
+    ("a\rb", "a\nb"),
+    ("a\r\nb\rc\nd", "a\nb\nc\nd"),
+    ("tail\r\n", "tail\n"),
+    ("🙂\r\nβ\r中\n", "🙂\nβ\n中\n"),
+    ("\u{FEFF}head\r\ntail", "\u{FEFF}head\ntail"),
+  ]
+  for sample in cases {
+    let raw = sample.0
+    let normalized = sample.1
+    let languages = Languages::new()
+    let model = inlay_request_model(raw)
+    let observed_ranges : Array[@base_common.OffsetRange] = []
+    let provider = StaticInlayProvider::{
+      hints: [],
+      observed_ranges,
+      observed_tokens: [],
+      fail: false,
+    }
+    let registration = languages.register_inlay_hints_provider(
+      LanguageId("moonbit"),
+      provider,
+    )
+    let full_range = model.get_full_model_range()
+    let fragments = languages.inlay_hints_for_ranges(
+      model,
+      [full_range],
+      @language.CancellationToken::new(),
+      @log.LogService::new(),
+    )
+    assert_eq(model.get_value(), normalized)
+    assert_eq(model.get_value_length(), normalized.length())
+    assert_eq(observed_ranges.length(), 1)
+    assert_true(observed_ranges == [OffsetRange(0, normalized.length())])
+    assert_eq(observed_ranges[0].start, 0)
+    assert_eq(observed_ranges[0].end_exclusive, normalized.length())
+    assert_true(fragments.ranges == [full_range])
+    registration.dispose()
+    model.dispose()
+  }
+}
+
+///|
 async test "inlay snapshot excludes inactive and nonmatching registrations" {
   let languages = Languages::new()
   let model = inlay_request_model("foo\n")

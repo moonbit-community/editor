@@ -174,6 +174,14 @@ pub fn TextModel::might_contain_rtl(self : TextModel) -> Bool {
 }
 
 ///|
+/// Whether the normalized stored text contains any non-basic-ASCII code unit.
+/// Mirrors `mightContainNonBasicASCII` (`textModel.ts:756`) while recomputing
+/// from the immutable snapshot instead of trusting builder cache metadata.
+pub fn TextModel::might_contain_non_basic_ascii(self : TextModel) -> Bool {
+  self.snapshot.might_contain_non_basic_ascii()
+}
+
+///|
 /// Clamped document offset of `position`. Mirrors `getOffsetAt`
 /// (`textModel.ts:770`): relaxed-validate, then the buffer's line/column
 /// arity.
@@ -201,10 +209,11 @@ pub fn TextModel::get_position_at(
 }
 
 ///|
-/// Full document text, lines joined by `\n`. Mirrors `getValue`
-/// (`textModel.ts:799`) at its default LF EOL, no BOM preservation.
+/// Full normalized document text. Mirrors `getValue` (`textModel.ts:799`):
+/// derive the full model range, then read that range. U+FEFF is ordinary
+/// Viewer content and there is no EOL or preserve-BOM selector.
 pub fn TextModel::get_value(self : TextModel) -> String {
-  self.snapshot.get_value()
+  self.get_value_in_range(self.get_full_model_range())
 }
 
 ///|
@@ -266,6 +275,13 @@ pub fn TextModel::get_lines_content(self : TextModel) -> Array[String] {
     lines.push(self.snapshot.line_text(line))
   }
   lines
+}
+
+///|
+/// Stored model end-of-line sequence. Mirrors `getEOL` (`textModel.ts:879`)
+/// with the Viewer's approved fixed-LF representation.
+pub fn TextModel::get_eol(self : TextModel) -> String {
+  self.snapshot.get_eol()
 }
 
 ///|
@@ -529,8 +545,8 @@ fn TextModel::create_content_changed_2(
 ) -> ModelContentChangedEvent {
   {
     changes: [{ range, range_offset, range_length, text }],
-    // `this._buffer.getEOL()`: the snapshot normalizes to LF (`get_value`).
-    eol: "\n",
+    // `this._buffer.getEOL()`: read from the newly installed snapshot.
+    eol: self.get_eol(),
     is_eol_change,
     version_id: self.get_version_id(),
     is_undoing,

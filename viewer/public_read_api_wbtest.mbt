@@ -90,9 +90,19 @@ test "read API: set_model twice starts the new model at the origin" {
 ///|
 /// `get_value` emits the normalized LF document text.
 test "read API: get_value returns the normalized document text" {
-  with_test_viewer("alpha\nbeta\ngamma", viewer => {
-    assert_eq(viewer.get_value(), "alpha\nbeta\ngamma")
-  })
+  let cases : Array[(String, String)] = [
+    ("alpha\r\nbeta", "alpha\nbeta"),
+    ("alpha\rbeta", "alpha\nbeta"),
+    ("a\r\nb\rc\nd", "a\nb\nc\nd"),
+    ("tail\r\n", "tail\n"),
+    ("🙂\r\nβ\r中\n", "🙂\nβ\n中\n"),
+    ("\u{FEFF}head\r\ntail", "\u{FEFF}head\ntail"),
+  ]
+  for sample in cases {
+    let raw = sample.0
+    let normalized = sample.1
+    with_test_viewer(raw, viewer => assert_eq(viewer.get_value(), normalized))
+  }
 }
 
 ///|

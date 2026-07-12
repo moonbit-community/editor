@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — ViewZones implemented and frozen; text-buffer EOL inventory next
+Status: active — text-buffer EOL inventory ready; STOP FOR REVIEW
 
 Date: 2026-07-10
 
@@ -86,7 +86,7 @@ product contract and belongs in an ordinary local test.
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | implemented and frozen |
-| 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
+| 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | inventory ready — STOP FOR REVIEW |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
 
 The order is intentional. Several plans touch viewer/viewer.mbt,
@@ -556,3 +556,11 @@ The independent closing task is:
   8 DEFERRED, and 10 N-A with zero TODO/PASS. Final gates pass: check, JS
   1296/1296, native 903/903 (Wasm/Wasm-GC have no test entry), build, and
   Chromium 82/82. The portfolio proceeds to the text-buffer EOL inventory.
+- 2026-07-12: the text-buffer EOL Phase 1–2 inventory is ready with 393/393
+  TODO rows: 382 source atoms plus 11 named upstream test dispositions. Its
+  proposed map is 169 TESTED, 27 PORTED, 28 DEFERRED, and 169 N-A. The fixed
+  denominator covers builder/buffer, PieceTreeBase/interfaces, TextModel and
+  event payloads, the real inlay Range→OffsetRange handoff, and the public/
+  workbench consumers. It records the approved coherent LF-only algebra,
+  existing BOM-as-content contract, and `getLineCharCode` EOL/EOF gap. No
+  product or test file changed; the portfolio stops for independent Gate B.

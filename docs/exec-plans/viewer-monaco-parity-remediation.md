@@ -656,3 +656,13 @@ The independent closing task is:
   584 source + 11 REF + one ORACLE and proposed 212 TESTED / 34 PORTED / zero
   DEFERRED / 350 N-A. The held-unit oracle now cites and maps its complete
   EBB/EFB/ETB source chain. No product/test file changed; stop for fresh Gate B.
+- 2026-07-12: model/matrix Gate B passed EOL inventory commit `6be96e2`
+  (child SHA-256
+  `2f9b511101bdbc27e871c5f4f238868ac57e558481c53cac4c275b1517c87211`),
+  while private-closure and combined reviews rejected only incomplete
+  ORACLE-001 producer citations. No behavior, count, or ownership issue
+  remained; no product/test file changed.
+- 2026-07-12: the next corrected EOL candidate remains 596/596 TODO rows and
+  212/34/0/350. The ORACLE now cites its complete builder/factory, PB
+  LineStarts/StringBuffer, and ETB cache/getter chain and maps the existing PB
+  rows without duplication. No product/test file changed; stop for fresh Gate B.

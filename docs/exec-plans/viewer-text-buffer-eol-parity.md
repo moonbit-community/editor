@@ -1003,12 +1003,12 @@ Proposed REF totals: 6 PORTED / 5 N-A = 11.
 ### Pinned source-oracle disposition — ORACLE
 
 This is a counted test disposition, not a source-member row. It freezes a
-behavior-variable combination spanning already-owned EBB/EFB/ETB atoms without
-double-counting those source lines.
+behavior-variable combination spanning already-owned EBB/EFB/PB/ETB atoms
+without double-counting those source lines.
 
 | ID | Pinned source-oracle case | Required disposition | Status | Proposed terminal |
 |---|---|---|---|---|
-| ORACLE-001 | held-unit combinations across `pieceTreeTextBufferBuilder.ts:13-24,42-58,68-96,103-115,123-133,136-152,171-185` and `pieceTreeTextBuffer.ts:39,44-50,75-77`: after source BOM stripping, singleton CR becomes two CRLFs and singleton D800/DBFF is stored twice; basic prefix + trailing D800/DBFF stores one unit but leaves `mightContainNonBasicASCII=false` | Run pinned cases for bare and U+FEFF-prefixed CR/D800/DBFF plus `a+D800/DBFF`; locally retain U+FEFF as ordinary content, retain/normalize one held unit, and compute non-basic metadata from the complete stored text (`true` for BOM or surrogate). Accepted-prefix multi-unit trailing cases must not duplicate. | TODO | TESTED |
+| ORACLE-001 | held-unit combinations across `pieceTreeTextBufferBuilder.ts:13-24,27-58,68-96,98-115,123-133,136-168,171-185`, `pieceTreeBase.ts:27-34,37-98,143-150`, and `pieceTreeTextBuffer.ts:39,44-50,75-77`: after source BOM stripping, singleton CR becomes two CRLFs and singleton D800/DBFF is stored twice; basic prefix + trailing D800/DBFF stores one unit but leaves `mightContainNonBasicASCII=false` | Run pinned cases for bare and U+FEFF-prefixed CR/D800/DBFF plus `a+D800/DBFF`; locally retain U+FEFF as ordinary content, retain/normalize one held unit, and compute non-basic metadata from the complete stored text (`true` for BOM or surrogate). Accepted-prefix multi-unit trailing cases must not duplicate. | TODO | TESTED |
 
 Proposed ORACLE totals: 1 TESTED = 1.
 
@@ -1139,6 +1139,10 @@ not preference policy:
   ETB-005/008/017 preserve one surrogate but never refresh the cached
   basic-ASCII fact; the local computed getter truthfully reports non-basic
   content.
+
+Across both combinations, PB-004–029/038–040 own the LineStarts counters/
+ASCII producers, fast/full scanners, and StringBuffer text/start carriers;
+ORACLE-001 consumes those rows without re-denominating them.
 
 ORACLE-001 freezes both source results and local adaptations. The exceptions
 do not cover accepted-prefix duplication or any other non-preference behavior.
@@ -1320,6 +1324,18 @@ update this ledger and stop for classification review.
   PieceTreeTextBuffer field/constructor/getter, and Deviations names every
   affected EBB/EFB/ETB carrier. No product/test file changed; commit and stop
   for fresh Gate B review.
+- 2026-07-12: model/matrix Gate B passed documentation-only commit `6be96e2`
+  (child SHA-256
+  `2f9b511101bdbc27e871c5f4f238868ac57e558481c53cac4c275b1517c87211`);
+  private-closure and combined reviews rejected only ORACLE-001's still-
+  incomplete producer citations. Factory `_getEOL`, builder finish/guard, and
+  PB LineStarts/StringBuffer ranges were absent despite correct behavior and
+  counts. No product/test file changed.
+- 2026-07-12: the next corrected candidate remains 596/596 TODO rows and
+  212/34/0/350. ORACLE-001 now cites the complete builder/factory, PB
+  LineStarts/full+fast scan/StringBuffer, and ETB cache/getter chain; the
+  deviations map PB-004–029/038–040 without creating source duplicates. No
+  product/test file changed; commit and stop for fresh Gate B review.
 
 Append the dated inventory approval, implementation commits, validation
 results, and final ledger totals here. Freeze after implementation.

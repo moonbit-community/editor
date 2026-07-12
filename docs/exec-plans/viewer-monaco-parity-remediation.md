@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — render-invalidation child inventory ready; STOP FOR REVIEW
+Status: active — render-invalidation amended inventory ready; STOP FOR FRESH REVIEW
 
 Date: 2026-07-10
 
@@ -83,7 +83,7 @@ product contract and belongs in an ordinary local test.
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
-| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | inventory ready — STOP FOR REVIEW |
+| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | amended inventory ready — STOP FOR FRESH REVIEW |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
@@ -102,13 +102,14 @@ method clusters:
 |---|---|
 | codeEditorWidget attach/detach/dispose and ModelData lifetime | model lifecycle |
 | codeEditorWidget cursor event forwarding and cursor API methods | cursor/input events |
-| codeEditorWidget `updateOptions` entrypoint | render invalidation; lifecycle CEW/CFG rows retain configuration storage and notification authority |
+| codeEditorWidget `updateOptions` entrypoint | render invalidation; lifecycle CEW/CFG rows retain configuration storage and notification authority; the complete-snapshot-vs-partial-update API deviation requires `viewer/README.md` contract evidence |
 | codeEditorWidget changeViewZones/accessor transaction | ViewZones |
 | TextModel value/range/offset/EOL plus setValue buffer/event construction, including the `ModelContentChangedEvent` wrapper | text-buffer EOL |
 | TextModel version/request freshness methods | async model features |
 | TextModel `_emitContentChangedEvent` token forwarding plus token-part construction/disposal and token-range production | tokenization; render invalidation owns ViewPart handler consumption only |
 | ViewLines event handlers | render invalidation |
-| ViewLines reveal request handler/state | historical reveal owner; inherited and excluded from the render denominator |
+| ViewLines reveal producer, `onRevealRangeRequest`, and reveal computation | historical reveal owner; excluded from the render denominator |
+| ViewLines `onScrollChanged` cancellation/retention of the inherited reveal-request fact | render invalidation; counted as VL-012 and VL-030–032 |
 | ViewLines width measurement and max-width feedback | browser geometry |
 | ContentWidgets event handlers and dirty-state transitions | render invalidation |
 | ContentWidgets validation, visible ranges, placement, and focus preservation | browser geometry |
@@ -118,7 +119,7 @@ method clusters:
 | LinesLayout/ViewLayout zone insertion, ordering, and zone viewport data | ViewZones |
 | ViewModelEventDispatcher cursor outgoing events | cursor/input events |
 | ViewModelEventDispatcher configuration/decorations events | render invalidation |
-| ViewModelEventDispatcher generic collector/queue rows (`VED`/`VMI`) | cursor/input events; inherited non-denominator authority for render invalidation |
+| ViewModelEventDispatcher generic collector/queue rows historically deferred as cursor `VED`/`VMI` | render invalidation through counted `RVC` handoff rows; the implemented cursor plan remains frozen |
 | ViewModelEventDispatcher ViewZonesChanged event | ViewZones |
 | Viewer/attach_model resource lifetime | model lifecycle |
 | Viewer/attach_model async request creation/cancellation | async model features |
@@ -409,3 +410,16 @@ The independent closing task is:
   token-range, geometry-helper, reveal, and theme seams without duplication,
   and records the cross-part/current-state/test matrices. No product or test
   file changed; the portfolio stops for independent Gate B review.
+- 2026-07-12: Gate B rejected docs-only inventory commit `23b7200`. Its 509
+  rows omitted the frozen cursor plan's 35-row generic queue/collector handoff,
+  `EditorConfiguration` setters/helpers, and readonly/generic option atoms;
+  it also retained geometry-owned RVMI rows and insufficient boundary/status
+  evidence. The commit remains historical and authorized no product/test work.
+- 2026-07-12: the amended render-invalidation inventory is ready with 559/559
+  TODO rows: 183 ViewPart, 207 event/propagation, and 169 configuration atoms.
+  Its proposed map is 245 TESTED, 93 PORTED, 59 DEFERRED, and 162 N-A. The
+  amendment counts the RVC handoff, removes geometry-owned RVMI helpers while
+  retaining named caller deferrals, adds ECS/readOnly/generic-option coverage,
+  and registers the complete-snapshot `update_options` API deviation with a
+  `viewer/README.md` requirement. No product or test file changed; the
+  portfolio stops for fresh independent Gate B review.

@@ -620,3 +620,15 @@ The independent closing task is:
   distinct terminal failures, and in-piece/piece-end line-char oracles are
   explicit; only the exact unobservable SearchCache helper body remains an
   excluded sibling. No product/test file changed; stop for fresh Gate B.
+- 2026-07-12: two independent Gate B reviews rejected EOL inventory commit
+  `2bd49e9` (child SHA-256
+  `b1f27e21fb7e5c35d245ba487c0101ee537bc191d84dbfe81326aca376d39774`).
+  They found one duplicate combination row, incomplete SearchCache call-site
+  wording, and the unmapped pinned singleton held-unit duplication. No
+  product/test file changed.
+- 2026-07-12: the next corrected EOL candidate remains 596/596 TODO rows:
+  584 source atoms plus 11 REF and one ORACLE disposition, with 212 proposed
+  TESTED, 34 PORTED, zero DEFERRED, and 350 N-A. PB-117 owns terminal-sentinel
+  behavior once, all cache call sites are exact, and ORACLE-001 records the
+  pinned singleton duplication versus the approved `N(s)` single-unit result.
+  No product/test file changed; stop for fresh Gate B review.

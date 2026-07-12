@@ -151,6 +151,7 @@ It may not retain raw CRLF indices.
 | provider full range can stop before the final content | REQUIRED PARITY |
 | content-change range_length/eol disagree with stored buffer | REQUIRED coherent invariant |
 | exact TextDefined/default-EOL semantics | INTENTIONAL DEVIATION: Gate A approved LF-only storage |
+| singleton held CR/high-surrogate is appended twice by pinned builder | INTENTIONAL ADAPTATION: Gate-A `N(s)` retains/normalizes one input unit; ORACLE-001 |
 | invalid positions clamp instead of throwing | sibling inventory row; do not expand without an explicit decision |
 
 This register is not the parity ledger and does not count toward the
@@ -167,7 +168,7 @@ target and is not implementation evidence.
 ```text
 Builder/factory (EFB + EBB)                     64
 PieceTreeTextBuffer readonly unit (ETB)         76
-PieceTreeBase dependency closure (PB)          241
+PieceTreeBase dependency closure (PB)          240
 red-black successor dependency (RB)             19
 model.ts enums/interfaces (MI)                  59
 default-EOL carrier chain (DEOL)                 8
@@ -177,8 +178,9 @@ consumed TextModel read closure (TMR)           38
 content event facts (EV)                        20
 provider endpoint/offset handoff (PR)            2
                                                 ---
-Source atoms                                    585
+Source atoms                                    584
 Named upstream test dispositions (REF)          11
+Pinned source-oracle dispositions (ORACLE)       1
                                                 ---
 Total ledger rows                               596
 
@@ -313,9 +315,9 @@ stop for fresh independent Gate B re-review before any product or test edit.
 | EBB-032 | `finish(normalizeEOL=true)` default (`:156`) | Mandatory fixed-LF normalization. | TODO | TESTED |
 | EBB-033 | `_finish` before factory capture (`:157`) | Normalize and derive starts before publishing snapshot facts. | TODO | TESTED |
 | EBB-034 | factory captures complete builder facts (`:158-168`) | Flat snapshot retains text/starts; omitted facts have row-local outcomes. | TODO | PORTED |
-| EBB-035 | no chunks creates one empty buffer (`:171-174`) | Empty snapshot has starts `[0]`. | TODO | TESTED |
+| EBB-035 | no chunks calls `_acceptChunk1('',true)` (`:171-174`) | Empty input creates one empty snapshot; a singleton held unit enters the source duplication path recorded by ORACLE-001. | TODO | TESTED |
 | EBB-036 | pending-char gate and clear flag (`:176-177`) | No streaming state. | TODO | N-A (streaming absent) |
-| EBB-037 | append pending unit to the prior last chunk (`:180`) | Test trailing CR/high-surrogate observable outcome on final normalized text. | TODO | TESTED |
+| EBB-037 | append pending unit to the prior last chunk (`:180`) | Test ordinary trailing units once; singleton held units intentionally remain once locally rather than source duplication (ORACLE-001). | TODO | TESTED |
 | EBB-038 | pending CR increments counter (`:183-185`) | No EOL selection count; trailing CR line outcome is tested elsewhere. | TODO | N-A (Option B fixed LF) |
 | EBB-039 | prior last-chunk invariant (`:179`) | No chunk array invariant. | TODO | N-A (whole-string seam) |
 | EBB-040 | recompute last chunk starts, not incremental patch (`:181-182`) | Derive all starts from final normalized text. | TODO | TESTED |
@@ -534,7 +536,7 @@ this closure are excluded.
 | PB-114 | private `_getCharCode` member (`:631`) | Flat snapshot helper is the structural seam. | TODO | PORTED |
 | PB-115 | piece-end remainder branch (`:632-634`) | Local boundary helper must distinguish content end. | TODO | TESTED |
 | PB-116 | falsy next-node branch returns 0 (`:635-637`) | `TreeNode.next` returns truthy `SENTINEL` at exhaustion, so this source branch is unreachable. | TODO | N-A (unreachable sentinel branch) |
-| PB-117 | next-node head character (`:639-641`) | Nonfinal EOL line-char result must be LF. | TODO | TESTED |
+| PB-117 | next-node buffer/head lookup (`:639-641`) | A valid successor returns its first character/LF; a nonempty terminal truthy sentinel falls through and fails on its null piece. | TODO | TESTED |
 | PB-118 | in-piece character lookup (`:642-648`) | Ordinary content code unit. | TODO | TESTED |
 | PB-119 | `equal(other)` member (`:369`) | Flat normalized equality is the representation seam. | TODO | PORTED |
 | PB-120 | length mismatch early false (`:370-372`) | Normalized unequal-length values remain unequal. | TODO | TESTED |
@@ -617,7 +619,6 @@ this closure are excluded.
 | PB-197 | advance forward (`:1319`) | No nodes. | TODO | N-A (single-buffer seam) |
 | PB-198 | final raw-line return (`:1322`) | Observable line-content result is tested through the wrapper. | TODO | TESTED |
 | PB-199 | public `getLineCharCode(lineNumber,index)`, `nodeAt2(lineNumber,index+1)`, and private-helper delegate (`:651-654`) | Preserve exact content/nonfinal-EOL lookup arithmetic through the flat snapshot helper. | TODO | TESTED |
-| PB-200 | nonempty terminal piece-end lookup receives truthy `SENTINEL`, falls through the falsy guard, then dereferences its null piece (`:632-641`; `rbTreeBase.ts:44-45,85-89`) | Preserve the source failure for a nonempty final line and trailing-empty final line; this private invalid lookup has no product caller. | TODO | TESTED |
 | PB-201 | private `nodeAt(offset)` member, root seed, and cache lookup (`:1495-1497`) | Per-piece equality lookup is absent. | TODO | N-A (tree/cache seam) |
 | PB-202 | cache-hit NodePosition early return (`:1498-1504`) | Cache optimization and piece-relative carrier are absent. | TODO | N-A (tree/cache seam) |
 | PB-203 | cache-miss offset seed and sentinel loop (`:1506-1508`) | No tree traversal. | TODO | N-A (tree topology seam) |
@@ -660,19 +661,24 @@ this closure are excluded.
 | PB-240 | `getNodeContent` member and sentinel empty return (`:1788-1791`) | No sentinel/node content helper. | TODO | N-A (tree topology seam) |
 | PB-241 | buffer/piece bounds, substring, and return (`:1792-1797`) | Whole normalized string comparison replaces piece extraction. | TODO | N-A (single-buffer seam) |
 
-Proposed PB totals: 72 TESTED / 17 PORTED / 152 N-A = 241.
+Proposed PB totals: 71 TESTED / 17 PORTED / 152 N-A = 240.
+
+`PB-200` is intentionally retired rather than reused: rejected commit
+`2bd49e9` assigned it to a duplicate combination path with no independent
+source atom. The ID gap is audit history, not an absent inventory member.
 
 `CacheEntry`/`PieceTreeSearchCache` (`:201-266`) is the complete excluded
-unobservable topology-cache implementation represented by PB-108; PB-201/202/
-205 own its exact scoped get/hit/set call sites. Base setEOL (`:359-363`) and
-streaming createSnapshot/BOM wrapping (`:365-367`), normalizeEOL, edits,
-remaining search, and CRLF mutation helpers remain excluded complete siblings.
+unobservable topology-cache implementation. PB-108 owns initialization and
+validation; PB-181/182–185/189 own raw-line get2/hit/set; PB-201/202/205 own
+equality get/hit/set. Base setEOL (`:359-363`) and streaming createSnapshot/BOM
+wrapping (`:365-367`), normalizeEOL, edits, remaining search, and CRLF mutation
+helpers remain excluded complete siblings.
 
 ### Red-black successor reachability dependency — RB
 
 Only the TreeNode field/constructor/next, Black/SENTINEL, and leftmost helper
 closure is in scope. It supplies scoped value/range/raw-line successor walks
-as well as PB-116/PB-200 reachability; all other red-black tree members and
+as well as PB-116/PB-117 reachability; all other red-black tree members and
 mutations are excluded complete topology siblings.
 
 | ID | Source atom | Local target / current gap | Status | Proposed terminal |
@@ -680,8 +686,8 @@ mutations are excluded complete topology siblings.
 | RB-001 | `TreeNode.next()` member (`rbTreeBase.ts:29`) | Flat snapshot has no tree successor method. | TODO | N-A (tree topology seam) |
 | RB-002 | right child returns the leftmost node (`:30-32`) | No right subtree or leftmost traversal. | TODO | N-A (tree topology seam) |
 | RB-003 | seed current node, climb parents, and break when current is a left child (`:34-42`) | No parent links or sentinel traversal. | TODO | N-A (tree topology seam) |
-| RB-004 | exhausted climb returns `SENTINEL`; otherwise return the ancestor (`:44-48`) | The truthy exhausted result is consumed only by PB-116/PB-200's source behavior. | TODO | N-A (tree topology seam) |
-| RB-005 | truthy `SENTINEL` construction passes null/Black, self-links parent/children, and restores Black (`:85-89`) | No sentinel representation; RB-013/014 explain the null-piece assignment and PB-200 tests the resulting terminal failure. | TODO | N-A (tree topology seam) |
+| RB-004 | exhausted climb returns `SENTINEL`; otherwise return the ancestor (`:44-48`) | The truthy exhausted result drives PB-116/PB-117 terminal behavior. | TODO | N-A (tree topology seam) |
+| RB-005 | truthy `SENTINEL` construction passes null/Black, self-links parent/children, and restores Black (`:85-89`) | No sentinel representation; RB-013/014 explain the null-piece assignment and PB-117 tests the resulting terminal failure. | TODO | N-A (tree topology seam) |
 | RB-006 | `TreeNode.parent` (`:9`) | No parent topology. | TODO | N-A (tree topology seam) |
 | RB-007 | `TreeNode.left` (`:10`) | No left-child topology. | TODO | N-A (tree topology seam) |
 | RB-008 | `TreeNode.right` (`:11`) | No right-child topology. | TODO | N-A (tree topology seam) |
@@ -971,6 +977,18 @@ ported with the row's stated Option-B adaptation; it is not current evidence.
 
 Proposed REF totals: 6 PORTED / 5 N-A = 11.
 
+### Pinned source-oracle disposition — ORACLE
+
+This is a counted test disposition, not a source-member row. It freezes a
+behavior-variable combination spanning already-owned EBB atoms without
+double-counting those source lines.
+
+| ID | Pinned source-oracle case | Required disposition | Status | Proposed terminal |
+|---|---|---|---|---|
+| ORACLE-001 | singleton held-unit path across builder `:110-115,123-131,171-185`: input `"\r"` is appended twice then normalized to two CRLFs; lone D800/DBFF is stored twice | Run the pinned builder/factory oracle, then prove the Gate-A algebraic adaptation locally: one CR becomes one LF and each lone high-surrogate code unit is retained exactly once; ordinary multi-unit trailing CR/D800/DBFF is also retained/normalized once. | TODO | TESTED |
+
+Proposed ORACLE totals: 1 TESTED = 1.
+
 Existing `model_reference_wbtest.mbt` already owns `model getValue`,
 `getValueInRange`, `getValueLengthInRange`, line-separator/lonely-CR cases, and
 `setValue eventing`; they provide evidence for member rows without duplicating
@@ -1009,6 +1027,10 @@ Port upstream cases and add local invariants for:
 - every source majority/default/tie and normalizeEOL true/false lane receives
   its explicit Option-B row disposition even though the local result is always
   LF;
+- ORACLE-001 runs singleton raw `CR`, D800, and DBFF through the pinned
+  builder/factory: source results are two CRLFs or two equal surrogate code
+  units, while the approved local algebra yields one LF or one preserved code
+  unit. Multi-unit trailing variants prove there is no broader duplication;
 - ASCII+Tab basic metadata; control, non-ASCII BMP, Hebrew/Arabic RTL,
   surrogate pairs, combining text, unpaired trailing D800/DBFF endpoints, and
   positions beside EOL in UTF-16 units;
@@ -1080,6 +1102,13 @@ PB-075 and EV-EOL-011 are deliberately absent from this mapping: subtracting
 the chosen representation's EOL length and reporting setValue as not-setEOL
 are source-faithful mechanics, not policy deviations.
 
+Gate A's `stored=N(s)` algebra also fixes one pinned whole-string builder bug,
+not a preference policy: when the entire input is one CR or one high-surrogate
+code unit, EBB-021/022/035–037 cause the held unit to be inserted and appended
+twice. ORACLE-001 freezes the source duplication and the approved local
+single-unit result. This exception does not cover ordinary multi-unit trailing
+input or any other non-preference behavior.
+
 Additional pre-existing reductions are explicit rather than folded into
 Option B:
 
@@ -1090,7 +1119,7 @@ Option B:
   character count, edit/search/setEOL, telemetry, disposal guards, and
   large-file flags have row-local N-A reasons;
 - PB-116, PB-201–241, and RB-001–019 classify unreachable/cache/tree/piece
-  mechanics at exact rows; PB-200/PB-227 separately preserve and test the two
+  mechanics at exact rows; PB-117/PB-227 separately preserve and test the two
   pinned terminal-EOF failures at the flat local seam, so this is not a
   bug-fix deviation;
 - the already-reviewed clamped readonly position/range contract is consumed,
@@ -1102,7 +1131,7 @@ update this ledger and stop for classification review.
 
 ### Inventory stop gate
 
-- [x] 585 source atoms and 11 named test atoms have 596 unique ledger rows.
+- [x] 584 source atoms and 12 named test/oracle atoms have 596 unique rows.
 - [x] Every row is TODO with one proposed terminal; there are zero PASS rows.
 - [x] Proposed totals are 212 TESTED / 34 PORTED / 0 DEFERRED / 350 N-A.
 - [x] Option B and BOM/clamp/streaming reductions map to exact rows.
@@ -1205,6 +1234,22 @@ update this ledger and stop for classification review.
   body exclusion with exact get/hit/set call-site rows; and the matrix splits
   empty, nonempty-final, trailing-empty, in-piece-LF, and piece-end-successor
   oracles. No product/test file changed; commit and stop for fresh Gate B.
+- 2026-07-12: two independent Gate B reviews rejected documentation-only
+  commit `2bd49e9` (child SHA-256
+  `b1f27e21fb7e5c35d245ba487c0101ee537bc191d84dbfe81326aca376d39774`).
+  PB-200 duplicated PB-115–117/RB-004–005 rather than owning a source atom;
+  the SearchCache exclusion omitted scoped raw-line call-site owners; and the
+  singleton held-CR/D800/DBFF builder duplication conflicted with `N(s)`
+  without an exact oracle/deviation mapping. All other 596-row boundaries,
+  hashes, matrices, and classifications passed; no product/test file changed.
+- 2026-07-12: the next corrected candidate remains 596/596 TODO rows but now
+  consists of 584 source atoms, 11 named REF dispositions, and one independent
+  ORACLE disposition, with 212 proposed TESTED, 34 PORTED, zero DEFERRED, and
+  350 N-A. PB-117 owns valid-successor and terminal-sentinel behavior without
+  a duplicate combination row; every SearchCache call site is enumerated; and
+  ORACLE-001 freezes the pinned singleton duplication plus Gate-A single-unit
+  algebraic adaptation. No product/test file changed; commit and stop for
+  fresh Gate B review.
 
 Append the dated inventory approval, implementation commits, validation
 results, and final ledger totals here. Freeze after implementation.

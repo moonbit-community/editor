@@ -106,7 +106,8 @@ method clusters:
 | `EditorConfiguration.getExtraEditorClassName` and Viewer platform root classes | render invalidation; ECX owns the pure Safari/WebKit/macOS helper and root-class integration |
 | codeEditorWidget changeViewZones/accessor transaction plus the ViewZones emitter/public alias/outgoing arm | ViewZones; this is the corrective implementation handoff for lifecycle's historical DEFERRED CEW-043/127 rows; lifecycle CEW-001's shared cross-event delivery queue remains DEFERRED and is not transferred |
 | `View` constructor zone attachment and relative margin/content order | ViewZones receives the zone-specific subsegments of lifecycle VIEW-029/053/060-062; rulers, glyphs, widgets, scrollbar, and other sibling order remain frozen lifecycle/geometry ownership; local keeps the reviewed merged-`MarginViewOverlays` owner seam |
-| TextModel value/range/offset/EOL plus setValue buffer/event construction, including the `ModelContentChangedEvent` wrapper | text-buffer EOL |
+| TextModel value/range/offset/getEOL plus setValue buffer/event construction, including the `ModelContentChangedEvent` wrapper | text-buffer EOL; Gate-A fixed LF intentionally exposes no setEOL mutation API |
+| Frozen async TMV-016–018 `TextModel.setEOL` handoff | superseded by the text-buffer EOL child's explicit N-A coordination dispositions; the implemented async ledger stays historical and no source rows are duplicated |
 | TextModel version/request freshness methods | async model features |
 | TextModel `_emitContentChangedEvent` token forwarding plus token-part construction/disposal and token-range production | tokenization; render invalidation owns ViewPart handler consumption only |
 | ViewLines event handlers | render invalidation |
@@ -632,3 +633,17 @@ The independent closing task is:
   behavior once, all cache call sites are exact, and ORACLE-001 records the
   pinned singleton duplication versus the approved `N(s)` single-unit result.
   No product/test file changed; stop for fresh Gate B review.
+- 2026-07-12: private-closure Gate B passed EOL inventory commit `48eaff8`
+  (child SHA-256
+  `3ee78d59c266d6ccb6617669f8766c6b9e6c7ea514b5fa6fa7af39ae6635704d`),
+  while model/matrix and combined reviews rejected it. ORACLE-001 omitted BOM-
+  prefixed singleton duplication and trailing-high-surrogate metadata
+  staleness, and frozen async TMV-016–018 still had no final setEOL owner.
+  No product/test file changed.
+- 2026-07-12: the next corrected EOL candidate remains 596/596 TODO rows:
+  584 source atoms plus 11 REF and one ORACLE, with 212 proposed TESTED,
+  34 PORTED, zero DEFERRED, and 350 N-A. ORACLE-001 now freezes both held-unit
+  source bugs across bare/BOM/basic-prefix inputs. The parent supersedes the
+  frozen TMV-016–018 handoff with explicit EOL-child N-A dispositions because
+  Gate A exposes no setEOL mutation surface. No product/test file changed;
+  stop for fresh Gate B review.

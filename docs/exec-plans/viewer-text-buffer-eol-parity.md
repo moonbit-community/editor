@@ -107,8 +107,9 @@ range derived from model length.
 
 ### Explicitly out of scope
 
-- incremental edit operations, undo/redo, indentation guessing, and EOL mutation
-  commands;
+- incremental edit operations, undo/redo, indentation guessing, and EOL
+  mutation commands; frozen async TMV-016–018 are resolved by the coordination
+  table below rather than silently excluded;
 - streaming input unless a source member is required to explain string-input
   behavior; streaming rows may be N-A with a precise reason;
 - BOM preservation in public Viewer APIs unless inventory shows the existing
@@ -118,13 +119,31 @@ range derived from model length.
 - TextModel _emitContentChangedEvent tokenization forwarding; the tokenization
   plan owns that complete member while consuming the EOL event contract.
 
+### Frozen async handoff resolution
+
+The implemented async child is historical and is not edited. Its three frozen
+rows deferred the complete `TextModel.setEOL` cluster to this child; Gate A's
+fixed-LF/no-mutation decision now supersedes that handoff:
+
+| Frozen async row | Historical disposition | Current program disposition |
+|---|---|---|
+| TMV-016 — `setEOL` mutation/hooks/version/event flow (`textModel.ts:547-575`) | DEFERRED (EOL child ownership) | N-A (Option B has no EOL mutation surface) |
+| TMV-017 — sequence maps CRLF versus LF (`:549`) | DEFERRED (EOL child ownership) | N-A (Option B has no EOL selection input) |
+| TMV-018 — equal-EOL early return (`:550-552`) | DEFERRED (EOL child ownership) | N-A (absent mutation member) |
+
+This coordination table closes transferred ownership but does not add source
+rows: the complete mutation cluster remains an explicit sibling outside this
+readonly/string-construction denominator. Any future setEOL command must use a
+new plan that reopens Gate A and the parent ownership table.
+
 ## Approved Policy Decision
 
 Program Gate A approved **Option B — Coherent LF-only product seam** on
 2026-07-10. The inventory must still account for every Option-A source member,
 record the affected rows as reviewed intentional deviations, and prove that
-all non-preference coordinate behavior remains source-faithful. Reopening the
-choice requires updating the parent coordination plan and stopping for review.
+all non-preference coordinate behavior except exact ORACLE-001 source-bug
+adaptations remains source-faithful. Reopening the choice requires updating
+the parent coordination plan and stopping for review.
 
 ### Rejected Option A — Monaco model EOL
 
@@ -139,8 +158,9 @@ preference. Every value, length, offset, position, range, and event uses the
 normalized representation.
 
 Option B is an INTENTIONAL DEVIATION and requires a source-member ledger row,
-README contract, and reference tests showing that only EOL preference differs.
-It may not retain raw CRLF indices.
+README contract, and reference tests showing that only EOL preference plus the
+exact ORACLE-001 held-unit source-bug adaptations differ. It may not retain raw
+CRLF indices.
 
 ## Initial Decision Register
 
@@ -151,7 +171,8 @@ It may not retain raw CRLF indices.
 | provider full range can stop before the final content | REQUIRED PARITY |
 | content-change range_length/eol disagree with stored buffer | REQUIRED coherent invariant |
 | exact TextDefined/default-EOL semantics | INTENTIONAL DEVIATION: Gate A approved LF-only storage |
-| singleton held CR/high-surrogate is appended twice by pinned builder | INTENTIONAL ADAPTATION: Gate-A `N(s)` retains/normalizes one input unit; ORACLE-001 |
+| post-source-BOM-stripping singleton held CR/high-surrogate is appended twice | INTENTIONAL ADAPTATION: Gate-A `N(s)` retains U+FEFF as content and retains/normalizes one held unit; ORACLE-001 |
+| basic-ASCII accepted prefix plus trailing D800/DBFF leaves pinned metadata falsely basic | INTENTIONAL ADAPTATION: computed getter reports the complete stored text; ORACLE-001 |
 | invalid positions clamp instead of throwing | sibling inventory row; do not expand without an explicit decision |
 
 This register is not the parity ledger and does not count toward the
@@ -239,7 +260,8 @@ For every construction and `set_value(s)`:
 - Complete `_emitContentChangedEvent` control flow, internal wrapper delivery,
   and token-part notification remain tokenization-owned. This child owns only
   the payload facts passed into that member.
-- Incremental edits, setEOL, undo/redo, search, mutable piece-tree operations,
+- Incremental edits, setEOL implementation (with TMV-016–018 resolved N-A
+  above), undo/redo, search, mutable piece-tree operations,
   unusual-terminator removal, and piece-tree caches are excluded complete
   sibling clusters.
 - `validatePosition`/`validateRange` and their established clamped readonly
@@ -774,7 +796,8 @@ Proposed MI totals: 39 TESTED / 3 PORTED / 17 N-A = 59.
 Explicit non-row siblings are unusual-terminator reset, options/version,
 buffer escape hatches, dominated-long-lines, injected text, validation/modify,
 disposal/large-file/search/word/edit/decorations/tokenization, and
-`ITextBuffer.setEOL/applyEdits`.
+`ITextBuffer.setEOL/applyEdits`; the frozen TextModel setEOL handoff is closed
+by the non-ledger TMV-016–018 table above.
 
 ### TextModel default and implementation — TMD, TM, and TML
 
@@ -985,7 +1008,7 @@ double-counting those source lines.
 
 | ID | Pinned source-oracle case | Required disposition | Status | Proposed terminal |
 |---|---|---|---|---|
-| ORACLE-001 | singleton held-unit path across builder `:110-115,123-131,171-185`: input `"\r"` is appended twice then normalized to two CRLFs; lone D800/DBFF is stored twice | Run the pinned builder/factory oracle, then prove the Gate-A algebraic adaptation locally: one CR becomes one LF and each lone high-surrogate code unit is retained exactly once; ordinary multi-unit trailing CR/D800/DBFF is also retained/normalized once. | TODO | TESTED |
+| ORACLE-001 | held-unit combinations across builder `:103-115,123-131,136-152,171-185` and factory `:27-58`: after source BOM stripping, singleton CR becomes two CRLFs and singleton D800/DBFF is stored twice; basic prefix + trailing D800/DBFF stores one unit but leaves `mightContainNonBasicASCII=false` | Run pinned cases for bare and U+FEFF-prefixed CR/D800/DBFF plus `a+D800/DBFF`; locally retain U+FEFF as ordinary content, retain/normalize one held unit, and compute non-basic metadata from the complete stored text (`true` for BOM or surrogate). Accepted-prefix multi-unit trailing cases must not duplicate. | TODO | TESTED |
 
 Proposed ORACLE totals: 1 TESTED = 1.
 
@@ -1027,10 +1050,12 @@ Port upstream cases and add local invariants for:
 - every source majority/default/tie and normalizeEOL true/false lane receives
   its explicit Option-B row disposition even though the local result is always
   LF;
-- ORACLE-001 runs singleton raw `CR`, D800, and DBFF through the pinned
-  builder/factory: source results are two CRLFs or two equal surrogate code
-  units, while the approved local algebra yields one LF or one preserved code
-  unit. Multi-unit trailing variants prove there is no broader duplication;
+- ORACLE-001 runs bare and U+FEFF-prefixed `CR`, D800, and DBFF through the
+  pinned builder/factory. Source strips BOM metadata first, then produces two
+  CRLFs or two equal surrogate code units; local storage keeps ordinary U+FEFF
+  plus one LF/one surrogate. It also runs `a+D800/DBFF`: source text keeps one
+  surrogate but stale metadata says basic, while the local computed getter is
+  true. Accepted-prefix multi-unit trailing cases prove no broader duplication;
 - ASCII+Tab basic metadata; control, non-ASCII BMP, Hebrew/Arabic RTL,
   surrogate pairs, combining text, unpaired trailing D800/DBFF endpoints, and
   positions beside EOL in UTF-16 units;
@@ -1102,12 +1127,22 @@ PB-075 and EV-EOL-011 are deliberately absent from this mapping: subtracting
 the chosen representation's EOL length and reporting setValue as not-setEOL
 are source-faithful mechanics, not policy deviations.
 
-Gate A's `stored=N(s)` algebra also fixes one pinned whole-string builder bug,
-not a preference policy: when the entire input is one CR or one high-surrogate
-code unit, EBB-021/022/035–037 cause the held unit to be inserted and appended
-twice. ORACLE-001 freezes the source duplication and the approved local
-single-unit result. This exception does not cover ordinary multi-unit trailing
-input or any other non-preference behavior.
+Gate A's `stored=N(s)` algebra also fixes two pinned held-unit builder bugs,
+not preference policy:
+
+- after source-only first-chunk BOM stripping, an accepted chunk containing
+  exactly CR/D800/DBFF makes EBB-021/022/035–037 insert and append the held unit
+  twice; local storage instead retains ordinary U+FEFF (when present) plus one
+  normalized/preserved unit;
+- with an accepted basic-ASCII prefix plus trailing D800/DBFF, EBB-028/029/
+  034/037/040, EFB-022, and ETB-008/017 preserve one surrogate but never
+  refresh the cached basic-ASCII fact; the local computed getter truthfully
+  reports non-basic content.
+
+ORACLE-001 freezes both source results and local adaptations. The exceptions
+do not cover accepted-prefix duplication or any other non-preference behavior.
+The frozen TMV-016–018 handoff is likewise closed only by the explicit
+no-setEOL Option-B dispositions above.
 
 Additional pre-existing reductions are explicit rather than folded into
 Option B:
@@ -1250,6 +1285,27 @@ update this ledger and stop for classification review.
   ORACLE-001 freezes the pinned singleton duplication plus Gate-A single-unit
   algebraic adaptation. No product/test file changed; commit and stop for
   fresh Gate B review.
+- 2026-07-12: private-closure Gate B passed documentation-only commit
+  `48eaff8` (child SHA-256
+  `3ee78d59c266d6ccb6617669f8766c6b9e6c7ea514b5fa6fa7af39ae6635704d`),
+  while model/matrix and combined reviews rejected it. BOM stripping also
+  exposes singleton duplication for U+FEFF-prefixed held units; a basic prefix
+  plus trailing high surrogate preserves text but leaves pinned non-basic
+  metadata stale; and frozen async TMV-016–018 still lacked a final setEOL
+  disposition. All other boundaries passed; no product/test file changed.
+- 2026-07-12: the next corrected candidate remains 596/596 TODO rows with 584
+  source atoms, 11 REF, one ORACLE, and proposed 212 TESTED / 34 PORTED /
+  zero DEFERRED / 350 N-A. ORACLE-001 now covers bare and BOM-prefixed held
+  duplication plus basic-prefix metadata staleness; deviations map every
+  affected EBB/EFB/ETB row; and a non-ledger coordination table closes frozen
+  TMV-016–018 as Option-B N-A without reopening async history. No product/test
+  file changed; commit and stop for fresh Gate B review.
+- 2026-07-12: a read-only bundled oracle executed the pinned builder/factory.
+  Bare CR produced EOL CRLF, UTF-16 length 4, and three empty lines; bare and
+  BOM-prefixed D800/DBFF produced two equal surrogate units; BOM+CR reproduced
+  the same length-4 content behind separate BOM metadata; `a+D800/DBFF` kept
+  one surrogate but reported non-basic false; and piece-end successor probes
+  returned LF code 10 and ordinary `'1'` code 49. No repository file changed.
 
 Append the dated inventory approval, implementation commits, validation
 results, and final ledger totals here. Freeze after implementation.

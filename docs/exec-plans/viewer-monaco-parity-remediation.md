@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — browser geometry implemented; ViewZones inventory next
+Status: active — ViewZones inventory ready; STOP FOR REVIEW
 
 Date: 2026-07-10
 
@@ -85,7 +85,7 @@ product contract and belongs in an ordinary local test.
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
-| 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
+| 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | inventory ready — STOP FOR REVIEW |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
 
@@ -499,3 +499,12 @@ The independent closing task is:
   no remaining code/test blocker. Final gates pass: check, JS 1247/1247,
   native 873/873 (Wasm/Wasm-GC have no test entry), build, and Chromium 74/74.
   The portfolio proceeds to the ViewZones inventory.
+- 2026-07-12: the corrected ViewZones Phase 1–2 inventory is ready with
+  351/351 TODO rows: 163 browser/API, 174 layout/model, and 14 outgoing-event
+  atoms. Its proposed map is 293 TESTED, 43 PORTED, 5 DEFERRED, and 10 N-A.
+  Inventory work added omitted complete consumed clusters for `View.change`
+  scheduling, content/margin attachment, mouse suppression, ViewLayout
+  whitespace access, whitespace/viewport contracts, and projected visibility;
+  it keeps frozen geometry, cursor, lifecycle, and generic-dispatch ownership
+  explicit. No product or test file changed; the portfolio stops for
+  independent Gate B review.

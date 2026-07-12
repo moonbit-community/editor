@@ -42,22 +42,30 @@ model line + grammar tokens + injected-text decorations
   blank/wrapped-position and viewport directions, vertical model/folded units,
   and Left/Right HalfLine return without mutation at their explicit deferred
   branches.
-- `CursorEventDispatcher` is the outgoing cursor-only half of Monaco's
-  `ViewModelEventDispatcher`: it filters selection/version no-ops, coalesces a
+- `CursorEventDispatcher` is the outgoing-only half of Monaco's
+  `ViewModelEventDispatcher`: its heterogeneous queue carries cursor-state and
+  ViewZones-changed facts, filters cursor selection/version no-ops, coalesces a
   queued same-kind event, recursively drains reentrant outgoing facts, and
   uses separate source-shaped listener-delivery state so a nested fire first
   finishes the remaining listeners for the current value. The nested value is
   then delivered before the initiating callback resumes. The root Viewer FIFO
   separately keeps public event pairs adjacent. It exposes
-  `on_cursor_state_changed`; `ViewModel::dispose` disposes its emitter and
-  clears pending outgoing facts and listener-delivery state. Generic view
-  handlers, collectors, and non-cursor outgoing events remain with their
-  owning parity work.
+  `on_cursor_state_changed` and `on_view_zones_changed`; `ViewModel::dispose`
+  disposes both emitters and clears pending outgoing facts and listener-
+  delivery state. Generic browser View handlers, mixed view/outgoing
+  collectors, and the editor-wide cross-event delivery queue remain outside
+  this reduced common owner.
 - Left/Right movement is surrogate-pair safe and otherwise advances one
   Unicode code point at a time. Full grapheme-cluster movement and the matching
   grapheme-segmented visible-column arithmetic remain deferred.
-- `set_hidden_areas` merges ranges by source, updates line/layout/decorations/cursor,
-  and preserves the top visible model line when folding changes above the viewport.
+- `set_hidden_areas` merges ranges by source, updates line/layout/decorations/
+  cursor, and preserves the top visible model line when folding changes above
+  the viewport. Two optional owner continuations bridge the browser-package
+  cycle without moving ViewEvents into this common package: the unchanged gate
+  runs before `with_event_batch`; on a changed mapping,
+  `on_line_mapping_changed` wraps the cursor continuation so the root appends
+  Flushed/Mapping/Decorations, cursor, layout, and recovery-scroll facts in
+  source order. Headless callers omit both continuations.
 - `ViewModelDecorations` converts model ranges through
   `viewer/common/inline_decorations` and resolves only the requested viewport.
 

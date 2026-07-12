@@ -31,8 +31,19 @@ DOM-free scrolling, line/whitespace layout, view zones, and view-line rendering.
   two source-ordered events; the method's local `ScrollChange?` compatibility
   return merges them into one complete old-to-new transition.
 - `LinesLayout`, prefix-sum computers, and whitespace accessors map line/view-zone
-  heights to vertical offsets. The current viewer assumes one uniform view-line
-  height; variable line heights are outside the readonly contract.
+  heights to vertical offsets. Whitespace height and minimum-width inputs stay
+  `Double` until the accessor applies exact JavaScript `ToInt32`, including
+  signed zero, non-finite values, and 32-bit wrap. Retained leaf heights remain
+  `Int`, while prefix sums, total heights, line-height products, and public
+  vertical offsets use `Double` like JavaScript Number; multiple valid Int32
+  heights therefore never re-enter 32-bit arithmetic. Source-owned downstream
+  `|0` coercion points in searches and viewport entry remain explicit. Pending
+  operations commit in cleanup even when a raising callback exits the
+  transaction. `ViewLayout`
+  exposes that incremental transaction plus ID-bearing whitespace hit,
+  viewport, all-data, explicit-scroll-top, and saved-scroll facades. The current
+  viewer assumes one uniform view-line height; variable line heights are outside
+  the readonly contract.
 - `render_view_line*` converts `RenderLineInput` into escaped HTML plus
   `CharacterMapping`/`DomPosition`, preserving the source-to-DOM mapping used by
   hit testing and selections. The input retains Monaco's normalized
@@ -41,11 +52,13 @@ DOM-free scrolling, line/whitespace layout, view zones, and view-line rendering.
   decisions. Renderer output retains Monaco's two foreign-element bits as the
   closed `None`/`Before`/`After`/`BeforeAndAfter` states so lines decorated on
   both sides preserve both geometry facts.
-- `ViewportData`, `ViewLineRenderingData`, and view-zone viewport shapes live here
-  as dependency-bottom data. Their model-dependent factory is
+- `ViewportData`, `ViewLineRenderingData`, and ID-based
+  `ViewWhitespaceViewportData` live here as dependency-bottom data. Their
+  model-dependent factory is
   `view_model.viewport_data_from_view_model`, keeping the dependency one-way.
-- `ViewZone` is layout state only; browser DOM mounting and the public change
-  accessor live above this package.
+- ViewZones use only the incremental whitespace transaction and generated-ID
+  APIs; the former reduced whole-array adapter and zone indexes are gone.
+  Browser DOM mounting and the public mutable delegate live above this package.
 
 The Monaco map is the pinned `src/vs/editor/common/viewLayout/{viewLayout,
 linesLayout,viewLinesViewportData,viewLineRenderer}.ts`,

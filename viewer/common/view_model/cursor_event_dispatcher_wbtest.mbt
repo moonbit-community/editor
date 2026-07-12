@@ -84,7 +84,24 @@ test "cursor outgoing merge keeps earliest old state and latest new state" {
   assert_true(merged.reason == Redo)
   assert_true(merged.kind == CursorStateChanged)
   assert_false(merged.reached_max_cursor_count)
-  assert_true(first.attempt_to_merge(DeferredSiblingEvent) is None)
+  assert_true(
+    first.attempt_to_merge(ViewZonesEvent(ViewZonesChangedEvent::new())) is None,
+  )
+}
+
+///|
+test "ViewZones outgoing is live and merges only its own kind" {
+  let zones = ViewZonesChangedEvent::new()
+  assert_true(zones.kind == ViewZonesChanged)
+  assert_false(zones.is_no_op())
+  guard zones.attempt_to_merge(ViewZonesEvent(ViewZonesChangedEvent::new()))
+    is Some(merged) else {
+    fail("same-kind ViewZones events must merge")
+  }
+  assert_true(physical_equal(merged, zones))
+  assert_true(
+    zones.attempt_to_merge(CursorEvent(dispatcher_event(None, 1, 0, 1))) is None,
+  )
 }
 
 ///|
@@ -117,7 +134,7 @@ test "cursor outgoing queue merges into first same-kind slot and drops no-ops" {
   dispatcher.add_outgoing_event(
     CursorEvent(dispatcher_event(Some([one]), 1, 1, 1)),
   )
-  dispatcher.add_outgoing_event(DeferredSiblingEvent)
+  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent::new()))
   dispatcher.add_outgoing_event(
     CursorEvent(dispatcher_event(Some([one]), 3, 1, 2, source="latest")),
   )
@@ -129,11 +146,11 @@ test "cursor outgoing queue merges into first same-kind slot and drops no-ops" {
 test "cursor outgoing different-kind slots retain FIFO position around merge" {
   let dispatcher = CursorEventDispatcher::new()
   let one = dispatcher_selection(1)
-  dispatcher.add_outgoing_event(DeferredSiblingEvent)
+  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent::new()))
   dispatcher.add_outgoing_event(
     CursorEvent(dispatcher_event(Some([one]), 2, 1, 2, source="first")),
   )
-  dispatcher.add_outgoing_event(DeferredSiblingEvent)
+  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent::new()))
   dispatcher.add_outgoing_event(
     CursorEvent(
       dispatcher_event(
@@ -146,8 +163,8 @@ test "cursor outgoing different-kind slots retain FIFO position around merge" {
       ),
     ),
   )
-  assert_eq(dispatcher.outgoing_events.length(), 3)
-  assert_true(dispatcher.outgoing_events[0] is DeferredSiblingEvent)
+  assert_eq(dispatcher.outgoing_events.length(), 2)
+  assert_true(dispatcher.outgoing_events[0] is ViewZonesEvent(_))
   guard dispatcher.outgoing_events[1] is CursorEvent(merged) else {
     fail("the cursor event must retain its first same-kind FIFO slot")
   }
@@ -155,7 +172,36 @@ test "cursor outgoing different-kind slots retain FIFO position around merge" {
   assert_eq(merged.model_version_id, 3)
   assert_eq(merged.source, "latest")
   assert_true(merged.reason == Undo)
-  assert_true(dispatcher.outgoing_events[2] is DeferredSiblingEvent)
+}
+
+///|
+test "heterogeneous queue delivers cursor and ViewZones facts in FIFO order" {
+  let dispatcher = CursorEventDispatcher::new()
+  let delivered : Array[String] = []
+  dispatcher.on_event(event => {
+    delivered.push("cursor:\{event.selections[0].get_position().column}")
+  })
+  |> ignore
+  dispatcher.on_view_zones_changed(_ => delivered.push("zones")) |> ignore
+  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent::new()))
+  dispatcher.add_outgoing_event(CursorEvent(dispatcher_event(None, 3, 0, 1)))
+  dispatcher.emit_outgoing_events()
+  assert_true(delivered == ["zones", "cursor:3"])
+}
+
+///|
+test "reentrant cross-kind fire uses the shared outgoing listener delivery" {
+  let dispatcher = CursorEventDispatcher::new()
+  let delivered : Array[String] = []
+  dispatcher.on_event(_event => {
+    delivered.push("cursor:before")
+    dispatcher.emit_view_zones_changed(ViewZonesChangedEvent::new())
+    delivered.push("cursor:after")
+  })
+  |> ignore
+  dispatcher.on_view_zones_changed(_ => delivered.push("zones")) |> ignore
+  dispatcher.emit_outgoing_event(dispatcher_event(None, 2, 0, 1))
+  assert_true(delivered == ["cursor:before", "zones", "cursor:after"])
 }
 
 ///|
@@ -336,4 +382,22 @@ test "disposing a view model retires cursor outgoing subscriptions" {
   view_model.dispose()
   view_model.move_cursor_to(Position(1, 2), false) |> ignore
   assert_eq(delivered, 0)
+}
+
+///|
+test "ViewModel exposes and retires ViewZones outgoing subscriptions" {
+  let view_model = cursor_reference_view_model()
+  let mut delivered = 0
+  let kind_was_view_zones = Ref(false)
+  view_model.on_view_zones_changed(event => {
+    kind_was_view_zones.val = event.kind == ViewZonesChanged
+    delivered += 1
+  })
+  |> ignore
+  view_model.emit_view_zones_changed()
+  assert_eq(delivered, 1)
+  assert_true(kind_was_view_zones.val)
+  view_model.dispose()
+  view_model.emit_view_zones_changed()
+  assert_eq(delivered, 1)
 }

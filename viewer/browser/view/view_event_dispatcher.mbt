@@ -36,6 +36,7 @@ pub fn ViewEventCollector::emit_many(
 priv struct ViewEventDispatcher {
   deliver : (Array[ViewEvent]) -> Unit
   mut pending_view_events : Array[ViewEvent]?
+  mut after_view_events : Array[() -> Unit]
   mut consuming : Bool
   mut collector : ViewEventCollector?
   mut collector_depth : Int
@@ -48,6 +49,7 @@ fn ViewEventDispatcher::new(
   {
     deliver,
     pending_view_events: None,
+    after_view_events: [],
     consuming: false,
     collector: None,
     collector_depth: 0,
@@ -82,6 +84,23 @@ fn ViewEventDispatcher::end(self : ViewEventDispatcher) -> Unit {
   }
   self.collector = None
   self.enqueue(events)
+}
+
+///|
+/// Enqueues one internal event and runs `after` only after that event and all
+/// earlier/reentrant ViewEvent batches have completed. This is the narrow
+/// cross-package seam used for ViewZones' internal-before-outgoing contract;
+/// it does not mix outgoing event values into this dispatcher.
+fn ViewEventDispatcher::emit_view_event_then(
+  self : ViewEventDispatcher,
+  event : ViewEvent,
+  after : () -> Unit,
+) -> Unit {
+  self.after_view_events.push(after)
+  match self.collector {
+    Some(collector) => collector.emit(event)
+    None => self.enqueue([event])
+  }
 }
 
 ///|
@@ -146,12 +165,22 @@ fn ViewEventDispatcher::consume(self : ViewEventDispatcher) -> Unit {
   // every possible return.  A reentrant emit installs a fresh pending array;
   // clearing before delivery prevents callbacks from interleaving batches.
   while true {
-    let events = match self.pending_view_events {
-      Some(events) => events
-      None => break
+    match self.pending_view_events {
+      Some(events) => {
+        self.pending_view_events = None
+        (self.deliver)(events)
+        continue
+      }
+      None => ()
     }
-    self.pending_view_events = None
-    (self.deliver)(events)
+    if self.after_view_events.length() == 0 {
+      break
+    }
+    let callbacks = self.after_view_events
+    self.after_view_events = []
+    for callback in callbacks {
+      callback()
+    }
   }
 }
 
@@ -163,6 +192,7 @@ fn ViewEventDispatcher::finish_consuming(self : ViewEventDispatcher) -> Unit {
 ///|
 fn ViewEventDispatcher::dispose(self : ViewEventDispatcher) -> Unit {
   self.pending_view_events = None
+  self.after_view_events = []
   self.collector = None
   self.collector_depth = 0
   self.consuming = false

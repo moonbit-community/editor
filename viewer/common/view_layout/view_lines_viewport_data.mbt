@@ -4,13 +4,13 @@
 pub(all) struct ViewportData {
   start_line_number : Int
   end_line_number : Int
-  relative_vertical_offset : Array[Int]
+  relative_vertical_offset : Array[Double]
   line_height : Int
   visible_range : @base_common.Range
   big_numbers_delta : Int
   lines : Array[ViewLineRenderingData]
   line_decorations : Array[Array[LineDecoration]]
-  view_zones : Array[ViewZoneViewportData]
+  view_zones : Array[ViewWhitespaceViewportData]
 } derive(Eq, Debug)
 
 ///|

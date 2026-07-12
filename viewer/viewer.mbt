@@ -50,6 +50,11 @@ pub struct Viewer {
   priv did_render_model : @base_common.Emitter[ViewerModelRenderedEvent]
   priv did_resolve_hover : @base_common.Emitter[ViewerHoverResolvedEvent]
   priv did_scroll : @base_common.Emitter[ScrollEvent]
+  /// Public `onDidChangeViewZones`. The source emitter participates in a
+  /// widget-wide delivery queue; that cross-event queue remains the explicit
+  /// CEW-001 deferral, while this dedicated emitter preserves the event's own
+  /// listener semantics.
+  priv did_change_view_zones : @base_common.Emitter[Unit]
   priv did_dispose : @base_common.Emitter[Unit]
   /// Public mouse events (`onMouseDown`/`onMouseUp`/`onMouseMove`/
   /// `onMouseLeave`, see `mouse_events.mbt`), fired from the controller's
@@ -70,7 +75,6 @@ pub struct Viewer {
   /// lines intersecting the viewport at the last flush, resynced from the
   /// layout every flush.
   priv mut rendered_window : @view_layout.LineWindow?
-  priv mut view_zones : Array[@view_zones.BrowserViewZone]
   /// The persistent content-hover widget (Monaco `ContentHoverWidget`),
   /// created lazily and mounted once through the content-widgets part.
   priv mut content_hover_widget : @hover_browser.ContentHoverWidget?
@@ -329,6 +333,7 @@ pub fn Viewer::Viewer(
     did_render_model: @base_common.Emitter::new(),
     did_resolve_hover: @base_common.Emitter::new(),
     did_scroll: @base_common.Emitter::new(),
+    did_change_view_zones: @base_common.Emitter::new(),
     did_dispose: @base_common.Emitter::new(),
     did_mouse_down: @base_common.Emitter::new(),
     did_mouse_up: @base_common.Emitter::new(),
@@ -337,7 +342,6 @@ pub fn Viewer::Viewer(
     last_scroll_event: None,
     model_data: None,
     rendered_window: None,
-    view_zones: [],
     content_hover_widget: None,
     hover_widget_view: None,
     font_info,
@@ -513,6 +517,17 @@ pub fn Viewer::on_did_scroll_change(
   listener : (ScrollEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_scroll.event(listener)
+}
+
+///|
+/// Fires after a successful ViewZones whitespace transaction. Internal View
+/// delivery has completed before the ViewModel outgoing arm reaches this
+/// emitter.
+pub fn Viewer::on_did_change_view_zones(
+  self : Viewer,
+  listener : () -> Unit,
+) -> @base_common.Disposable {
+  self.did_change_view_zones.event(_ => listener())
 }
 
 ///|
@@ -704,13 +719,10 @@ pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
   match model {
     Some(model) => self.attach_model(model)
     // `_attachModel(null)` just nulls `_modelData` (`cew:1751-1754`); the
-    // scheduled flush repaints the placeholder. Browser view zones ride
-    // model *swaps* (they re-push into each new view) but clear with the
-    // content on a plain detach.
-    None => {
-      self.view_zones = []
-      self.schedule_render()
-    }
+    // scheduled flush repaints the placeholder. View zones are owned by the
+    // outgoing per-model View, so detach and every model replacement lose
+    // them structurally.
+    None => self.schedule_render()
   }
   if self.has_model() {
     // "we have a new model (with a new view)!" (`cew:528-532`).
@@ -953,7 +965,6 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
       detached.remove_all_decorations_with_owner_id(self.editor_id)
     None => ()
   }
-  self.view_zones = []
   // Viewer-owned attach DOM is removed before the dispose event; the caller's
   // host remains mounted and is merely forgotten after observers return.
   match (self.container, self.placeholder_element) {
@@ -995,6 +1006,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_render_model.dispose()
   self.did_resolve_hover.dispose()
   self.did_scroll.dispose()
+  self.did_change_view_zones.dispose()
   self.did_dispose.dispose()
   self.did_mouse_down.dispose()
   self.did_mouse_up.dispose()

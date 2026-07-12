@@ -154,6 +154,13 @@ fn run_render_invalidation_test() -> Unit {
   let zone_generation = Ref(0)
   let first_zone_top_count = Ref(0)
   let second_zone_top_count = Ref(0)
+  let zone_node = document.create_element("div")
+  zone_node.set_attribute("data-zone-generation", "1")
+  zone_node.set_inner_html("zone-1")
+  let zone_delegate = @viewer.view_zone(2, zone_node, height_in_px=18.0, on_dom_node_top=_ => {
+    first_zone_top_count.val += 1
+  })
+  let zone_id = Ref("")
   guard viewer.get_dom_node() is Some(root) else {
     ctx.fail("viewer did not expose its root DOM node")
     ctx.finish()
@@ -322,18 +329,18 @@ fn run_render_invalidation_test() -> Unit {
     () => {
       zone_generation.val += 1
       let generation = zone_generation.val
-      let node = document.create_element("div")
-      node.set_attribute("data-zone-generation", generation.to_string())
-      node.set_inner_html("zone-" + generation.to_string())
-      viewer.change_view_zones(accessor => {
-        accessor.update_zone("render-invalidation-zone", 2, 18, node, on_dom_node_top=_ => {
-          if generation == 1 {
-            first_zone_top_count.val += 1
-          } else {
-            second_zone_top_count.val += 1
-          }
+      if generation == 1 {
+        viewer.change_view_zones(accessor => {
+          zone_id.val = accessor.add_zone(zone_delegate)
         })
-      })
+      } else {
+        // `layout_zone` rereads mutable geometry and callbacks but retains the
+        // insertion-time DOM node, ordinal, and minimum width.
+        zone_delegate.on_dom_node_top = Some(_ => second_zone_top_count.val += 1)
+        zone_delegate.after_line_number = 2
+        zone_delegate.height_in_px = Some(18.0)
+        viewer.change_view_zones(accessor => accessor.layout_zone(zone_id.val))
+      }
     },
     () => {
       "{\"first\":\{first_zone_top_count.val},\"second\":\{second_zone_top_count.val}}"

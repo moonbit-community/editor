@@ -23,7 +23,9 @@ fn Viewer::pointer_handler_helper(
       last_view_cursors_render_data: view.view_cursors.get_last_render_data(),
     },
     render_now: () => self.flush_render(),
-    should_suppress_mouse_down_on_view_zone: _ => false,
+    should_suppress_mouse_down_on_view_zone: id => {
+      view.should_suppress_mouse_down_on_view_zone(id)
+    },
     should_suppress_mouse_down_on_widget: _ => false,
     get_position_from_dom_info: (span_node, offset) => {
       match self.get_view_model() {

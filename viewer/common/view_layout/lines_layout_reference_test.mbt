@@ -2,18 +2,18 @@
 /// Faithful 1:1 conformance port of Monaco's `LinesLayout` unit suite,
 /// `vscode/src/vs/editor/test/common/viewLayout/linesLayout.test.ts`
 /// (`suite('Editor ViewLayout - LinesLayout')`) at submodule commit
-/// 294fb350837dbaee37b949533fead4df4e0e8971. Test names are preserved verbatim.
+/// b18492a288de038fbc7643aae6de8247029d11bd. Test names are preserved verbatim.
 ///
 /// Every case constructs the layout with uniform line heights (Monaco's
 /// `customLineHeightData` argument is always `[]`), matching this port's
 /// uniform-height deviation recorded in `lines_layout.mbt`.
 
 ///|
-/// Element-wise `Array[Int]` equality — avoids the deprecated `Show`-based
+/// Element-wise `Array[Double]` equality — avoids the deprecated `Show`-based
 /// `assert_eq` on arrays while keeping the per-element failure detail.
 fn assert_int_array_eq(
-  actual : Array[Int],
-  expected : Array[Int],
+  actual : Array[Double],
+  expected : Array[Double],
 ) -> Unit raise {
   assert_eq(actual.length(), expected.length())
   for i in 0..<expected.length() {
@@ -32,7 +32,10 @@ fn insert_whitespace(
   let id = Ref("")
   lines_layout.change_whitespace(fn(accessor) {
     id.val = accessor.insert_whitespace(
-      after_line_number, ordinal, height_in_px, min_width,
+      after_line_number,
+      ordinal,
+      height_in_px.to_double(),
+      min_width.to_double(),
     )
   })
   |> ignore
@@ -47,7 +50,11 @@ fn change_one_whitespace(
   new_height : Int,
 ) -> Unit {
   lines_layout.change_whitespace(fn(accessor) {
-    accessor.change_one_whitespace(id, new_after_line_number, new_height)
+    accessor.change_one_whitespace(
+      id,
+      new_after_line_number,
+      new_height.to_double(),
+    )
   })
   |> ignore
 }

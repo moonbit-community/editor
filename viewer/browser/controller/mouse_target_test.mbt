@@ -99,7 +99,9 @@ fn zone_test_view_model() -> @view_model.ViewModel {
     "line one\nline two\nline three",
   )
   let view_model = @view_model.ViewModel(model)
-  view_model.view_layout.set_view_zones([{ anchor_line: 1, height_px: 36 }])
+  view_model.view_layout.change_whitespace(accessor => {
+    accessor.insert_whitespace(1, 0, 36.0, 0.0) |> ignore
+  })
   |> ignore
   view_model
 }
@@ -116,38 +118,27 @@ test "get zone at coord resolves the zone band with the midpoint rule" {
     view_model,
     line_height + 1.0,
   )
-  debug_inspect(
-    above_middle,
-    content=(
-      #|Some(
-      #|  {
-      #|    view_zone_id: "c1",
-      #|    position_before: Some({ line_number: 1, column: 9 }),
-      #|    position_after: Some({ line_number: 2, column: 1 }),
-      #|    position: { line_number: 1, column: 9 },
-      #|    after_line_number: 1,
-      #|  },
-      #|)
-    ),
-  )
+  guard above_middle is Some(above) else {
+    fail("expected the upper half of the whitespace to resolve a zone")
+  }
+  let generated_id = view_model.view_layout.get_whitespaces()[0].id
+  assert_eq(above.view_zone_id, generated_id)
+  assert_true(above.position_before == Some(Position(1, 9)))
+  assert_true(above.position_after == Some(Position(2, 1)))
+  assert_true(above.position == Position(1, 9))
+  assert_eq(above.after_line_number, 1)
   let below_middle = @controller.hit_test_get_zone_at_coord(
     view_model,
     line_height + 35.0,
   )
-  debug_inspect(
-    below_middle,
-    content=(
-      #|Some(
-      #|  {
-      #|    view_zone_id: "c1",
-      #|    position_before: Some({ line_number: 1, column: 9 }),
-      #|    position_after: Some({ line_number: 2, column: 1 }),
-      #|    position: { line_number: 2, column: 1 },
-      #|    after_line_number: 1,
-      #|  },
-      #|)
-    ),
-  )
+  guard below_middle is Some(below) else {
+    fail("expected the lower half of the whitespace to resolve a zone")
+  }
+  assert_eq(below.view_zone_id, generated_id)
+  assert_true(below.position_before == Some(Position(1, 9)))
+  assert_true(below.position_after == Some(Position(2, 1)))
+  assert_true(below.position == Position(2, 1))
+  assert_eq(below.after_line_number, 1)
   // Inside line 1's own band there is no zone.
   assert_true(@controller.hit_test_get_zone_at_coord(view_model, 0.0) is None)
 }

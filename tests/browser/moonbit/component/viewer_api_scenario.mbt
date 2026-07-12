@@ -144,13 +144,18 @@ fn run_viewer_api_test() -> Unit {
       viewer.set_model(Some(model))
       set_component_diagnostics(services, model)
       let zone = @rdom.document().create_element("div")
+      zone.set_attribute("class", "component-zone host-zone-class")
+      zone.set_attribute("style", "color: rgb(1, 2, 3);")
       zone.set_inner_html("component view zone")
       viewer.change_view_zones(accessor => {
-        // After view line 3: model line 2 wraps as `pub fn` /
-        // `component_answe` / `r : T() -> Int {` in the 180px host, so the
-        // zone sits between wrap rows, directly above the `{` segment the
-        // spec measures against.
-        accessor.add_zone("component-zone", 3, 36, zone)
+        // Monaco's public delegate anchors in model space. Column 23 is the
+        // wrap boundary after `component_answe`, so it converts to view line
+        // 3 and keeps the zone directly above the `r : T() -> Int {` segment
+        // the spec measures against.
+        accessor.add_zone(
+          @viewer.view_zone(2, zone, after_column=23, height_in_px=36.0),
+        )
+        |> ignore
       })
       @support.set_timeout(
         () => {

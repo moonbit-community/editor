@@ -115,6 +115,34 @@ test "dispatcher gives every handler a whole batch before reentrant FIFO batch" 
 }
 
 ///|
+test "ViewZones outgoing continuation waits for reentrant internal delivery" {
+  let deliveries : Array[String] = []
+  let holder : Ref[ViewEventDispatcher?] = { val: None }
+  let dispatcher = ViewEventDispatcher::new(events => {
+    let batch = view_event_test_batch_name(events)
+    deliveries.push("h1:" + batch)
+    if batch == "line-mapping" {
+      match holder.val {
+        Some(dispatcher) =>
+          dispatcher.emit_view_event_then(ViewZonesChanged, () => {
+            deliveries.push("outgoing")
+          })
+        None => abort("dispatcher test holder missing")
+      }
+    }
+    deliveries.push("h2:" + batch)
+  })
+  holder.val = Some(dispatcher)
+  dispatcher.emit_view_event(ViewLineMappingChanged)
+  assert_true(
+    deliveries ==
+    ["h1:line-mapping", "h2:line-mapping", "h1:zones", "h2:zones", "outgoing"],
+  )
+  assert_eq(dispatcher.after_view_events.length(), 0)
+  assert_false(dispatcher.consuming)
+}
+
+///|
 test "nested begin shares one collector and only outer end flushes" {
   let deliveries : Array[String] = []
   let dispatcher = ViewEventDispatcher::new(events => {
@@ -132,6 +160,30 @@ test "nested begin shares one collector and only outer end flushes" {
   assert_eq(deliveries[0], "composition-start|composition-end|zones")
   assert_eq(dispatcher.collector_depth, 0)
   assert_true(dispatcher.collector is None)
+}
+
+///|
+test "hidden-area batch delivers mapping events before recovery scroll" {
+  let deliveries : Array[String] = []
+  let dispatcher = ViewEventDispatcher::new(events => {
+    deliveries.push(view_event_test_batch_name(events))
+  })
+  let collector = dispatcher.begin()
+  collector.emit(ViewFlushed)
+  collector.emit(ViewLineMappingChanged)
+  collector.emit(ViewDecorationsChanged(ViewDecorationsChangedEvent::all()))
+  // The layout's synchronous recovery listener enters through the ordinary
+  // dispatcher API while the ViewModel-owned outer collector is still open.
+  dispatcher.emit_view_event(
+    ViewScrollChanged(
+      ViewScrollChangedEvent::new(
+        400.0, 0.0, 1000.0, 25.0, false, false, false, true,
+      ),
+    ),
+  )
+  assert_eq(deliveries.length(), 0)
+  dispatcher.end()
+  assert_true(deliveries == ["flushed|line-mapping|decorations|scroll"])
 }
 
 ///|
@@ -1172,7 +1224,10 @@ test "ContentWidgets and ViewZones source handler matrices" {
 
   let zones = view.view_zones
   assert_true(ViewPart::on_view_event(zones, view_event_test_configuration()))
-  assert_true(ViewPart::on_view_event(zones, ViewLineMappingChanged))
+  // `viewZones.ts:122-124` returns the exact
+  // `_recomputeWhitespacesProps()` result. With an empty zone registry there
+  // is no changed whitespace, so the source handler is not dirty.
+  assert_false(ViewPart::on_view_event(zones, ViewLineMappingChanged))
   assert_true(
     ViewPart::on_view_event(
       zones,
@@ -1566,7 +1621,6 @@ fn view_event_test_overlay_render_context(
     window: { start: 1, end: 2 },
     view_model,
     layout,
-    browser_view_zones: [],
     selection_view_range: None,
     view_selection: Some(selection),
     // Deliberately disagree with the retained layout caches. Render must use

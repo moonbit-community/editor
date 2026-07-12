@@ -11,6 +11,45 @@ fn hidden_test_model() -> @view_model.ViewModel {
 }
 
 ///|
+test "hidden-area mapping phase precedes layout flush and recovery scroll" {
+  let view_model = hidden_test_model()
+  let layout = view_model.view_layout
+  layout.set_viewport_size(width=400.0, height=18.0) |> ignore
+  let old_top = layout.get_vertical_offset_for_line_number(4) + 7.0
+  layout.scroll_to(scroll_top=old_top) |> ignore
+
+  let order : Array[String] = []
+  let scroll_listener = layout.on_did_scroll(_change => order.push("scroll"))
+  defer scroll_listener.dispose()
+  assert_true(
+    view_model.set_hidden_areas([Range(2, 1, 3, 1)], on_line_mapping_changed=reproject_cursor => {
+      order.push("mapping")
+      reproject_cursor()
+      order.push("cursor")
+    }),
+  )
+  // `onFlushed` first clamps the old scroll position to the shorter layout;
+  // stable-viewport recovery then restores the same model line/delta. Both
+  // Scroll changes must follow the mapping/cursor phase in the collector.
+  assert_true(order == ["mapping", "cursor", "scroll", "scroll"])
+  assert_eq(
+    layout.get_current_scroll_top(),
+    layout.get_vertical_offset_for_line_number(2) + 7.0,
+  )
+
+  // The unchanged contribution returns before the owner is asked to open an
+  // event batch, matching the source's VI-008 → VI-010 control flow.
+  let batch_calls = Ref(0)
+  assert_false(
+    view_model.set_hidden_areas([Range(2, 1, 3, 1)], with_event_batch=mutation => {
+      batch_calls.val += 1
+      mutation()
+    }),
+  )
+  assert_eq(batch_calls.val, 0)
+}
+
+///|
 test "set_hidden_areas removes lines from the view axis" {
   let view_model = hidden_test_model()
   assert_eq(view_model.line_count(), 8)
@@ -122,6 +161,30 @@ test "sources merge independently and clear independently" {
 }
 
 ///|
+test "same String hidden source replaces its prior contribution" {
+  let view_model = hidden_test_model()
+  assert_true(
+    view_model.set_hidden_areas([Range(2, 1, 3, 1)], source="folding"),
+  )
+  assert_true(
+    view_model.set_hidden_areas([Range(6, 1, 6, 1)], source="folding"),
+  )
+  assert_true(view_model.get_hidden_areas() == [Range(6, 1, 6, 1)])
+  assert_eq(view_model.line_count(), 7)
+  // The source contribution and merged-array caches both short-circuit.
+  assert_false(
+    view_model.set_hidden_areas([Range(6, 1, 6, 1)], source="folding"),
+  )
+  assert_false(
+    view_model.set_hidden_areas(
+      [Range(6, 1, 6, 1)],
+      source="folding",
+      force_update=true,
+    ),
+  )
+}
+
+///|
 test "hiding every line reveals everything" {
   let view_model = hidden_test_model()
   assert_true(view_model.set_hidden_areas([Range(1, 1, 8, 1)]))
@@ -168,6 +231,78 @@ test "model positions inside a hidden area convert to the nearest visible view l
   assert_false(lines.model_position_is_visible(4))
   assert_true(lines.model_position_is_visible(6))
   assert_false(view_model.model_position_is_visible(Position(4, 1)))
+  let converter = view_model.coordinates_converter()
+  assert_false(converter.model_position_is_visible(Position(0, 1)))
+  assert_false(converter.model_position_is_visible(Position(4, 999)))
+  assert_true(converter.model_position_is_visible(Position(6, 999)))
+  assert_false(converter.model_position_is_visible(Position(9, 1)))
+}
+
+///|
+test "model position conversion validates bounds and forwards allow-zero" {
+  let view_model = hidden_test_model()
+  assert_true(
+    view_model.validate_model_position(Position(-5, 999)) == Position(1, 1),
+  )
+  assert_true(
+    view_model.validate_model_position(Position(99, 999)) == Position(8, 6),
+  )
+  assert_true(
+    view_model.model_position_to_view_position(Position(99, 999)) ==
+    Position(8, 6),
+  )
+
+  assert_true(view_model.set_hidden_areas([Range(1, 1, 2, 1)]))
+  assert_true(
+    view_model.model_position_to_view_position(
+      Position(1, 999),
+      allow_zero_line_number=true,
+    ) ==
+    Position(0, 1),
+  )
+  assert_true(
+    view_model.model_position_to_view_position(Position(1, 999)) ==
+    Position(1, 1),
+  )
+}
+
+///|
+test "stable viewport preserves the first model line and intra-line delta" {
+  let view_model = hidden_test_model()
+  let layout = view_model.view_layout
+  layout.set_viewport_size(width=400.0, height=18.0) |> ignore
+  let line_height = layout.line_height().to_double()
+  let old_top = layout.get_vertical_offset_for_line_number(4) + 7.0
+  layout.scroll_to(scroll_top=old_top) |> ignore
+
+  assert_true(view_model.set_hidden_areas([Range(2, 1, 3, 1)]))
+  let expected = layout.get_vertical_offset_for_line_number(2) + 7.0
+  assert_eq(layout.get_current_scroll_top(), expected)
+  let top_view_line = layout.line_at_vertical_offset(
+    layout.get_current_scroll_top(),
+  )
+  assert_eq(
+    view_model.lines().convert_view_position_to_model_position(top_view_line, 1).line_number,
+    4,
+  )
+  assert_true(line_height > 0.0)
+}
+
+///|
+test "stable viewport skips recovery at top or when its first line is hidden" {
+  let at_top = hidden_test_model()
+  at_top.view_layout.set_viewport_size(width=400.0, height=18.0) |> ignore
+  assert_eq(at_top.view_layout.get_current_scroll_top(), 0.0)
+  assert_true(at_top.set_hidden_areas([Range(2, 1, 2, 1)]))
+  assert_eq(at_top.view_layout.get_current_scroll_top(), 0.0)
+
+  let first_hidden = hidden_test_model()
+  let layout = first_hidden.view_layout
+  layout.set_viewport_size(width=400.0, height=18.0) |> ignore
+  let old_top = layout.get_vertical_offset_for_line_number(4) + 7.0
+  layout.scroll_to(scroll_top=old_top) |> ignore
+  assert_true(first_hidden.set_hidden_areas([Range(4, 1, 4, 1)]))
+  assert_eq(layout.get_current_scroll_top(), old_top)
 }
 
 ///|

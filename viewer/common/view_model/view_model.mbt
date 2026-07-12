@@ -11,7 +11,9 @@ pub struct ViewModel {
   model : @model.TextModel
   mut options : ViewModelOptions
   lines : ViewModelLinesFromProjectedModel
-  /// Outgoing-only cursor half of Monaco's `ViewModelEventDispatcher`.
+  /// Outgoing-only cursor/ViewZones half of Monaco's
+  /// `ViewModelEventDispatcher`. The mixed browser-view collector remains in
+  /// the browser tier.
   cursor_event_dispatcher : CursorEventDispatcher
   /// The cursor state, owned per view model like Monaco's `_cursor`
   /// (`viewModelImpl.ts:65,124`): a new model starts with a fresh cursor at
@@ -115,6 +117,7 @@ pub fn ViewModel::with_options(
 /// Called from the Viewer's `ModelData::dispose`.
 pub fn ViewModel::dispose(self : ViewModel) -> Unit {
   self.cursor_event_dispatcher.dispose()
+  self.lines.dispose()
   self.view_layout.dispose()
   match self.registered_view_model {
     Some(registered) => self.model.unregister_view_model(registered)

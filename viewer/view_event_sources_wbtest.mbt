@@ -363,13 +363,17 @@ test "validation option rotates the headless decoration provider" {
 }
 
 ///|
-test "view-zone empty and missing-remove batches are no-ops" {
+test "view-zone callback is skipped without a real model view" {
   let viewer = Viewer::Viewer()
-  viewer.change_view_zones(_ => ())
+  let called = Ref(false)
+  viewer.change_view_zones(_ => called.val = true)
   assert_false(viewer.measure_requested)
-  assert_eq(viewer.view_zones.length(), 0)
-  viewer.change_view_zones(accessor => accessor.remove_zone("missing"))
-  assert_false(viewer.measure_requested)
-  assert_eq(viewer.view_zones.length(), 0)
+  assert_false(called.val)
   viewer.dispose()
+  with_test_viewer("alpha", headless => {
+    let measure_requested_before = headless.measure_requested
+    headless.change_view_zones(_ => called.val = true)
+    assert_false(called.val)
+    assert_eq(headless.measure_requested, measure_requested_before)
+  })
 }

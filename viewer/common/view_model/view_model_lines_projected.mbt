@@ -59,6 +59,19 @@ pub fn ViewModelLinesFromProjectedModel::new(
 }
 
 ///|
+/// Releases the owner-0 tracking decorations used for hidden areas —
+/// `ViewModelLinesFromProjectedModel.dispose` (`viewModelLines.ts:114-116`).
+/// Assigning the returned empty id array makes repeated disposal harmless.
+pub fn ViewModelLinesFromProjectedModel::dispose(
+  self : ViewModelLinesFromProjectedModel,
+) -> Unit {
+  self.hidden_areas_decoration_ids = self.model.delta_decorations(
+    self.hidden_areas_decoration_ids,
+    [],
+  )
+}
+
+///|
 /// Creates the coordinate converter over this collection —
 /// `createCoordinatesConverter` (`viewModelLines.ts:118`).
 pub fn ViewModelLinesFromProjectedModel::create_coordinates_converter(
@@ -554,7 +567,7 @@ pub fn ViewModelLinesFromProjectedModel::convert_view_position_to_model_position
     info.model_line_wrapped_line_idx,
     view_column,
   )
-  Position(info.model_line_number, input_column)
+  self.model.validate_position(Position(info.model_line_number, input_column))
 }
 
 ///|
@@ -590,11 +603,21 @@ pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position
   allow_zero_line_number? : Bool = false,
   below_hidden_ranges? : Bool = false,
 ) -> @base_common.Position {
+  let valid_position = self.model.validate_position(
+    Position(model_line_number, model_column),
+  )
+  // `TextModel::set_value` swaps its snapshot before it flushes registered
+  // view models. Monaco suppresses the matching token-change notification
+  // until `_lines.onModelFlushed()` has rebuilt this array, but the viewer's
+  // current whole-document tokenizer can synchronously expose that narrow
+  // window. Keep the source validation above, and address only projections
+  // that are committed so an early observer cannot index past the old array.
   let input_line_number = @base_common.clamp_int(
-    model_line_number,
+    valid_position.line_number,
     1,
     self.model_line_projections.length(),
   )
+  let input_column = valid_position.column
   let mut line_index = input_line_number - 1
   let mut line_index_changed = false
   if below_hidden_ranges {
@@ -632,7 +655,7 @@ pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position
   } else {
     self.model_line_projections[input_line_number - 1].get_view_position_of_model_position(
       delta_line_number,
-      model_column,
+      input_column,
       affinity?,
     )
   }
@@ -803,6 +826,15 @@ pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn mo
   affinity? : @model.PositionAffinity,
 ) {
   self.lines.convert_model_range_to_view_range(range, affinity?)
+}
+
+///|
+/// Reports projected model-position visibility through the line collection.
+pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_is_visible(
+  self,
+  position,
+) {
+  self.lines.model_position_is_visible(position.line_number)
 }
 
 ///|

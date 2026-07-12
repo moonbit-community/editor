@@ -88,7 +88,6 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
     window,
     view_model,
     layout: view_model.view_layout,
-    browser_view_zones: self.view_zones,
     selection_view_range: self.selection_view_range(),
     view_selection: self.view_selection(),
     gutter_width: self.gutter_width(model_data.model.snapshot.line_count()),

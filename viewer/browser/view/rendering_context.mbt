@@ -10,7 +10,6 @@ pub(all) struct ViewRenderInput {
   window : @view_layout.LineWindow
   view_model : @view_model.ViewModel
   layout : @view_layout.ViewLayout
-  browser_view_zones : Array[@view_zones.BrowserViewZone]
   selection_view_range : @base_common.Range?
   /// The full view-space selection (anchor + active position), Monaco's
   /// `ViewCursorStateChangedEvent.selections[0]`. Unlike
@@ -83,11 +82,13 @@ fn RenderingContext::viewport_from_input(
 ) -> @view_layout.ViewportData {
   // Pulled from the view model per render pass — Monaco's `view.ts` building
   // a fresh `ViewportData` over `viewLayout.getLinesViewportData()`.
+  let partial_viewport = input.layout.get_lines_viewport_data()
   @view_model.viewport_data_from_view_model(
     input.view_model,
     input.window,
     line_height=input.layout.line_height(),
     layout=input.layout,
+    partial_viewport~,
   )
 }
 

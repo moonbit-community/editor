@@ -30,7 +30,11 @@ pub(all) struct View {
 }
 
 ///|
-pub fn View::new() -> View {
+pub fn View::new(
+  view_zones_configuration_reader? : () -> (Int, Double, Double) = () => {
+    (0, 0.0, 0.0)
+  },
+) -> View {
   let document = @rdom.document()
   let root = document.create_element("section")
   root.set_attribute("class", get_editor_class_name("source-empty"))
@@ -57,7 +61,11 @@ pub fn View::new() -> View {
   let margin_view_overlays = MarginViewOverlays::new(document)
   let editor_scrollbar = @editor_scrollbar.EditorScrollbar::new(lines_content)
   let content_view_overlays = ContentViewOverlays::new(document)
-  let view_zones = @view_zones.ViewZones::new(document)
+  let view_zones = @view_zones.ViewZones::new(
+    document,
+    read_initial_configuration=view_zones_configuration_reader,
+  )
+  margin_view_overlays.attach_view_zones_margin(view_zones.margin_dom_node())
   let view_lines = @view_lines.ViewLines::new(document, lines_content)
   let content_widgets = @content_widgets.ContentWidgets::new(document, root)
   let view_cursors = @view_cursors.ViewCursors::new(document)
@@ -134,6 +142,43 @@ pub fn View::new() -> View {
 }
 
 ///|
+/// Installs the model/configuration subset consumed by the model-scoped
+/// ViewZones part. `read_configuration` is live and is re-read on each later
+/// configuration event; `View::new` already performed the source constructor
+/// snapshot before ViewZones created its DOM.
+pub fn View::install_view_zones_context(
+  self : View,
+  view_model : @view_model.ViewModel,
+  log_service : @log.LogService,
+  read_configuration : () -> (Int, Double, Double),
+  emit_view_zones_changed : () -> Unit,
+) -> Unit {
+  self.view_zones.install_context(
+    view_model, log_service, read_configuration, emit_view_zones_changed,
+  )
+}
+
+///|
+/// Monaco `View.change`: delegate the complete zone transaction. The injected
+/// model-scoped seam completes changed-only internal/outgoing delivery inside
+/// that transaction; the root editor adds the unconditional render schedule.
+pub fn View::change_view_zones(
+  self : View,
+  update : (@view_zones.ViewZoneChangeAccessor) -> Unit raise,
+) -> Unit {
+  self.view_zones.change_view_zones(update) |> ignore
+}
+
+///|
+/// Live mouse-suppression delegation used by `PointerHandlerHelper`.
+pub fn View::should_suppress_mouse_down_on_view_zone(
+  self : View,
+  id : String,
+) -> Bool {
+  self.view_zones.should_suppress_mouse_down_on_view_zone(id)
+}
+
+///|
 /// Retains a resource for this per-model View lifetime. Registration after
 /// disposal releases the resource immediately, matching `DisposableStore`.
 pub fn View::add_disposable(
@@ -206,6 +251,20 @@ pub fn View::emit_view_event(self : View, event : ViewEvent) -> Unit {
     return
   }
   self.event_dispatcher.emit_view_event(event)
+}
+
+///|
+/// Completes the internal ViewZones event across every ViewPart before
+/// entering the common outgoing-only queue. Reentrant view delivery is
+/// postponed by the dispatcher without claiming a general mixed-event queue.
+pub fn View::emit_view_zones_changed_then(
+  self : View,
+  emit_outgoing : () -> Unit,
+) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.event_dispatcher.emit_view_event_then(ViewZonesChanged, emit_outgoing)
 }
 
 ///|

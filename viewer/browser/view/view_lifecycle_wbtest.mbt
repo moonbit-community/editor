@@ -26,6 +26,7 @@ extern "js" fn install_view_lifecycle_test_browser() -> Unit =
   #|     getAttribute(name) { return this.attributes.get(name) ?? ""; }
   #|     removeAttribute(name) { this.attributes.delete(name); }
   #|     appendChild(child) {
+  #|       if (child.parentNode) child.parentNode.removeChild(child);
   #|       this.childNodes.push(child);
   #|       child.parentNode = this;
   #|       return child;
@@ -81,6 +82,53 @@ extern "js" fn view_lifecycle_test_has_parent(
   parent : @rdom.Element,
 ) -> Bool =
   #| (child, parent) => child.parentNode === parent
+
+///|
+extern "js" fn view_lifecycle_test_child_index(
+  parent : @rdom.Element,
+  child : @rdom.Element,
+) -> Int =
+  #| (parent, child) => parent.childNodes.indexOf(child)
+
+///|
+test "View mounts both ViewZones containers at the source relative positions" {
+  install_view_lifecycle_test_browser()
+  let view = View::new()
+  let margin = view.margin_view_overlays.get_dom_node()
+  assert_eq(
+    view_lifecycle_test_child_index(margin, view.view_zones.margin_dom_node()),
+    0,
+  )
+  assert_eq(
+    view_lifecycle_test_child_index(
+      margin,
+      view.margin_view_overlays.overlays.dom_node.element(),
+    ),
+    1,
+  )
+  let lines_content = view.lines_content.element()
+  assert_true(
+    view_lifecycle_test_child_index(
+      lines_content,
+      view.content_view_overlays.get_dom_node(),
+    ) <
+    view_lifecycle_test_child_index(lines_content, view.view_zones.dom_node()),
+  )
+  assert_true(
+    view_lifecycle_test_child_index(lines_content, view.view_zones.dom_node()) <
+    view_lifecycle_test_child_index(
+      lines_content,
+      view.view_lines.get_dom_node(),
+    ),
+  )
+  assert_eq(view.view_zones.dom_node().get_attribute("role"), "presentation")
+  assert_eq(view.view_zones.dom_node().get_attribute("aria-hidden"), "true")
+  assert_eq(
+    view.view_zones.margin_dom_node().get_attribute("class"),
+    "margin-view-zones",
+  )
+  restore_view_lifecycle_test_browser()
+}
 
 ///|
 test "View disposes ViewParts before its lifetime store exactly once" {

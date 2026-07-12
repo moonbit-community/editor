@@ -165,14 +165,14 @@ pub fn ViewLine::mapping(self : ViewLine) -> @view_layout.CharacterMapping? {
 pub fn ViewLine::layout_line(
   self : ViewLine,
   _line_number : Int,
-  delta_top : Int,
+  delta_top : Double,
   line_height : Int,
 ) -> Unit {
   match self.rendered_view_line {
     Some(rendered) =>
       match rendered.dom_node {
         Some(node) => {
-          node.set_top(Pixels(delta_top.to_double()))
+          node.set_top(Pixels(delta_top))
           node.set_height(Pixels(line_height.to_double()))
           node.set_line_height(Pixels(line_height.to_double()))
         }
@@ -190,7 +190,7 @@ pub fn ViewLine::render_line(
   self : ViewLine,
   line_number : Int,
   input : @view_layout.RenderLineInput,
-  delta_top : Int,
+  delta_top : Double,
   line_height : Int,
   builder : StringBuilder,
 ) -> Bool {

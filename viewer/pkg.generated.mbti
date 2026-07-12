@@ -4,6 +4,7 @@ package "moonbit-community/editor/viewer"
 import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
+  "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/languages",
@@ -22,6 +23,8 @@ pub fn debug_on_did_build_view_model(Viewer, (ViewerViewModelBuiltEvent) -> Unit
 pub fn debug_on_did_render_model(Viewer, (ViewerModelRenderedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 
 pub fn debug_on_did_resolve_hover(Viewer, (ViewerHoverResolvedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+
+pub fn view_zone(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> @view_zones.ViewZone
 
 // Errors
 
@@ -108,19 +111,12 @@ pub(all) struct ScrolledVisiblePosition {
   height : Double
 } derive(Eq, @debug.Debug)
 
-pub struct ViewZoneChangeAccessor {
-  // private fields
-}
-pub fn ViewZoneChangeAccessor::add_zone(Self, String, Int, Int, @dom.Element, on_dom_node_top? : (Double) -> Unit, on_computed_height? : (Int) -> Unit) -> Unit
-pub fn ViewZoneChangeAccessor::remove_zone(Self, String) -> Unit
-pub fn ViewZoneChangeAccessor::update_zone(Self, String, Int, Int, @dom.Element, on_dom_node_top? : (Double) -> Unit, on_computed_height? : (Int) -> Unit) -> Unit
-
 pub struct Viewer {
   // private fields
 }
 pub fn Viewer::Viewer(services? : ViewerServices, options? : ViewerOptions) -> Self
 pub fn Viewer::add_overlay_widget(Self, String, @dom.Element) -> Unit
-pub fn Viewer::change_view_zones(Self, (ViewZoneChangeAccessor) -> Unit) -> Unit
+pub fn Viewer::change_view_zones(Self, (@view_zones.ViewZoneChangeAccessor) -> Unit raise) -> Unit
 pub fn Viewer::create(@dom.Element, services? : ViewerServices, options? : ViewerOptions) -> Self
 pub fn Viewer::create_decorations_collection(Self, decorations? : Array[@model.ModelDeltaDecoration]) -> EditorDecorationsCollection
 pub fn Viewer::delta_decorations(Self, Array[String], Array[@model.ModelDeltaDecoration]) -> Array[String]
@@ -165,6 +161,7 @@ pub fn Viewer::on_did_change_cursor_position(Self, (CursorPositionChangedEvent) 
 pub fn Viewer::on_did_change_cursor_selection(Self, (CursorSelectionChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_change_model(Self, (ModelChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_change_model_content(Self, (@model.ModelContentChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_change_view_zones(Self, () -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_scroll_change(Self, (ScrollEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_mouse_down(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
@@ -275,6 +272,9 @@ pub(all) struct ViewerViewState {
 } derive(@debug.Debug)
 
 // Type aliases
+pub using @view_zones {type ViewZone}
+
+pub using @view_zones {type ViewZoneChangeAccessor}
 
 // Traits
 

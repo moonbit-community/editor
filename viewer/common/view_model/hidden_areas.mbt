@@ -174,6 +174,8 @@ pub fn ViewModel::set_hidden_areas(
   ranges : Array[@base_common.Range],
   source? : String = "",
   force_update? : Bool = false,
+  with_event_batch? : (() -> Bool) -> Bool,
+  on_line_mapping_changed? : (() -> Unit) -> Unit,
 ) -> Bool {
   self.hidden_areas_model.set_hidden_areas(source, ranges)
   let merged_ranges = self.hidden_areas_model.get_merged_ranges()
@@ -182,27 +184,47 @@ pub fn ViewModel::set_hidden_areas(
   }
   self.previous_hidden_areas = merged_ranges.copy()
   let stable_viewport = self.capture_stable_viewport()
-  let line_mapping_changed = self.lines.set_hidden_areas(merged_ranges)
-  if line_mapping_changed {
-    self.cursor.set_context(
-      @cursor.CursorContext::new(self.coordinates_converter),
-    )
-    self.decorations.on_line_mapping_changed()
-    self.view_layout.set_line_count(self.line_count()) |> ignore
+  let apply_hidden_areas = () => {
+    let line_mapping_changed = self.lines.set_hidden_areas(merged_ranges)
+    if line_mapping_changed {
+      // Browser ViewEvents live above this common package. Hand the owner one
+      // exact source phase around cursor reprojection: Flushed/Mapping/
+      // Decorations are appended before `reproject_cursor`, and the cursor
+      // event immediately after it. Headless callers take the default direct
+      // continuation. Layout flush and stable-viewport recovery intentionally
+      // remain below the phase so their synchronous Scroll event is appended
+      // later in the same outer collector.
+      let reproject_cursor = () => {
+        self.cursor.set_context(
+          @cursor.CursorContext::new(self.coordinates_converter),
+        )
+      }
+      match on_line_mapping_changed {
+        Some(callback) => callback(reproject_cursor)
+        None => reproject_cursor()
+      }
+      self.decorations.on_line_mapping_changed()
+      self.view_layout.on_flushed(self.line_count())
+      self.view_layout.on_height_maybe_changed() |> ignore
+    }
+    let first_model_line_is_hidden = match
+      stable_viewport.viewport_start_model_position {
+      Some(position) =>
+        merged_ranges
+        .iter()
+        .any(range => {
+          range.start_line_number <= position.line_number &&
+          position.line_number <= range.end_line_number
+        })
+      None => false
+    }
+    if !first_model_line_is_hidden {
+      stable_viewport.recover_viewport_start(self.lines, self.view_layout)
+    }
+    line_mapping_changed
   }
-  let first_model_line_is_hidden = match
-    stable_viewport.viewport_start_model_position {
-    Some(position) =>
-      merged_ranges
-      .iter()
-      .any(range => {
-        range.start_line_number <= position.line_number &&
-        position.line_number <= range.end_line_number
-      })
-    None => false
+  match with_event_batch {
+    Some(run) => run(apply_hidden_areas)
+    None => apply_hidden_areas()
   }
-  if !first_model_line_is_hidden {
-    stable_viewport.recover_viewport_start(self.lines, self.view_layout)
-  }
-  line_mapping_changed
 }

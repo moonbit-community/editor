@@ -23,7 +23,35 @@ pub fn ViewModel::model_position_is_visible(
   self : ViewModel,
   position : @base_common.Position,
 ) -> Bool {
-  self.lines.model_position_is_visible(position.line_number)
+  self.coordinates_converter.model_position_is_visible(position)
+}
+
+///|
+/// Validates a model position before ViewZones derives its before/after
+/// position — `TextModel.validatePosition` at `viewZones.ts:159-173`.
+pub fn ViewModel::validate_model_position(
+  self : ViewModel,
+  position : @base_common.Position,
+) -> @base_common.Position {
+  self.model.validate_position(position)
+}
+
+///|
+/// Converts one validated-or-untrusted model position to view coordinates,
+/// forwarding the ViewZones affinity and `allowZeroLineNumber` seam exactly.
+/// The projected collection performs source-shaped model validation first.
+pub fn ViewModel::model_position_to_view_position(
+  self : ViewModel,
+  position : @base_common.Position,
+  affinity? : @model.PositionAffinity,
+  allow_zero_line_number? : Bool = false,
+) -> @base_common.Position {
+  self.lines.convert_model_position_to_view_position(
+    position.line_number,
+    position.column,
+    affinity?,
+    allow_zero_line_number~,
+  )
 }
 
 ///|

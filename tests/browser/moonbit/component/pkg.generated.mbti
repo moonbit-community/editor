@@ -4,6 +4,7 @@ package "moonbit-community/editor/tests/browser/moonbit/component"
 // Values
 
 // Errors
+type ViewZonesFixtureError
 
 // Types and methods
 

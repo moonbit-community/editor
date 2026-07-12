@@ -362,7 +362,7 @@ pub fn hit_test_get_zone_at_coord(
     is Some(view_zone_whitespace) else {
     return None
   }
-  let view_zone_middle = view_zone_whitespace.vertical_offset.to_double() +
+  let view_zone_middle = view_zone_whitespace.vertical_offset +
     view_zone_whitespace.height.to_double() / 2.0
   let line_count = view_model.line_count()
   let mut position_before : @base_common.Position? = None

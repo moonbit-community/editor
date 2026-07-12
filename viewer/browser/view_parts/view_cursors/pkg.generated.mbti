@@ -14,13 +14,13 @@ pub fn cursors_layer_class(Bool) -> String
 
 pub fn device_pixel_ratio() -> Double
 
-pub fn prepare_cursor_render_data(Double, Int, Int, Double) -> CursorRenderData
+pub fn prepare_cursor_render_data(Double, Double, Int, Double) -> CursorRenderData
 
 // Errors
 
 // Types and methods
 pub(all) struct CursorRenderData {
-  top : Int
+  top : Double
   left : Double
   padding_left : Double
   width : Double

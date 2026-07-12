@@ -38,6 +38,14 @@ impl @core.CoordinatesConverter for CursorTestConverter with fn model_range_to_v
 }
 
 ///|
+impl @core.CoordinatesConverter for CursorTestConverter with fn model_position_is_visible(
+  _self,
+  _position,
+) {
+  true
+}
+
+///|
 impl @core.CoordinatesConverter for CursorTestConverter with fn view_range_to_model_range(
   self,
   range,

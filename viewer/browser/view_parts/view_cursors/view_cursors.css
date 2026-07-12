@@ -13,9 +13,10 @@
   top: 0;
   /* Deviations from Monaco (which stacks by DOM order and hit-tests through
      its own target classification): the port's layers carry explicit
-     z-indices (view-overlays 0 < view-lines 1 < view-zones 3 < caret 4 <
-     contentWidgets 50), and the caret must not intercept the DOM caret
-     hit-testing (caretPositionFromPoint) the port's selection uses. */
+     z-indices (view-overlays 0 < view-lines 1 < caret 4 < contentWidgets 50),
+     while ViewZones deliberately keeps the source's DOM-order stacking. The
+     caret must not intercept the DOM caret hit-testing
+     (caretPositionFromPoint) the port's selection uses. */
   z-index: 4;
   pointer-events: none;
 }

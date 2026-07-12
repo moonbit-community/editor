@@ -44,6 +44,40 @@ test "public content listeners observe already-updated view models (two-loop ord
 }
 
 ///|
+test "flush token notification cannot address beyond stale projections" {
+  let model = plain_text_model("old")
+  let view_model = @view_model.ViewModel(model)
+  let observed_projection_counts : Array[Int] = []
+  let observed_positions : Array[@base_common.Position] = []
+  let _sub = model.on_did_change_tokens(event => {
+    let end_line_number = event.ranges[0].to_line_number
+    observed_projection_counts.push(view_model.line_count())
+    observed_positions.push(
+      view_model
+      .coordinates_converter()
+      .model_position_to_view_position(
+        Position(end_line_number, model.get_line_max_column(end_line_number)),
+      ),
+    )
+  })
+
+  model.set_value("a\nb\nc\nd")
+
+  // The token producer fires after the snapshot swap but before the model's
+  // first-loop ViewModel flush, so only the old projection is addressable.
+  assert_true(observed_projection_counts == [1])
+  assert_true(observed_positions == [Position(1, 2)])
+  // Once the flush returns, the exact source conversion uses the rebuilt
+  // projections and reaches the new last line normally.
+  assert_true(
+    view_model
+    .coordinates_converter()
+    .model_position_to_view_position(Position(4, 2)) ==
+    Position(4, 2),
+  )
+}
+
+///|
 test "flush resets the cursor to the origin (cursor.ts ContentFlush branch)" {
   let model = plain_text_model("one\ntwo\nthree")
   let view_model = @view_model.ViewModel(model)

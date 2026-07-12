@@ -20,8 +20,8 @@ pub(all) struct RendererContext[T] {
 pub struct ViewLayerRenderer[T] {
   // private fields
 }
-pub fn[T] ViewLayerRenderer::new(@dom.Element, () -> T, (T) -> @dom.Element?, (T, @dom.Element) -> Unit, (T, Int, Int, Int) -> Unit, (T, Int, Int, Int, @view_layout.ViewportData, StringBuilder) -> Bool, @view_layout.ViewportData, (Int) -> Int) -> Self[T]
-pub fn[T] ViewLayerRenderer::render(Self[T], RendererContext[T], Int, Int, Array[Int]) -> RendererContext[T]
+pub fn[T] ViewLayerRenderer::new(@dom.Element, () -> T, (T) -> @dom.Element?, (T, @dom.Element) -> Unit, (T, Int, Double, Int) -> Unit, (T, Int, Double, Int, @view_layout.ViewportData, StringBuilder) -> Bool, @view_layout.ViewportData, (Int) -> Int) -> Self[T]
+pub fn[T] ViewLayerRenderer::render(Self[T], RendererContext[T], Int, Int, Array[Double]) -> RendererContext[T]
 
 // Type aliases
 

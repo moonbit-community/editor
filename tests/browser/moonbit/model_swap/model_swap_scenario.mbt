@@ -2,7 +2,7 @@
 // `setModel` → `_detachModel` → `_attachModel`, `codeEditorWidget.ts:506`):
 // the old view's DOM subtree leaves the container, exactly one editor root
 // exists per attached model, `data-uri` / `data-mode-id` are stamped,
-// registered view zones re-appear on the new view, text focus carries
+// model-scoped view zones are lost with the old view, text focus carries
 // across the swap (`cew:528-532`), and detaching to no model restores the
 // Viewer-owned placeholder.
 
@@ -104,9 +104,10 @@ fn run_model_swap_test() -> Unit {
   viewer.set_model(Some(model_a))
   viewer.focus()
   let zone = document.create_element("div")
+  zone.set_attribute("class", "swap-zone")
   zone.set_inner_html("swap view zone")
   viewer.change_view_zones(accessor => {
-    accessor.add_zone("swap-zone", 1, 24, zone)
+    accessor.add_zone(@viewer.view_zone(1, zone, height_in_px=24.0)) |> ignore
   })
   wait_for_text(ctx, "alpha_document_marker", 80, () => {
     // One editor root per attached model; the placeholder left the container.
@@ -124,7 +125,7 @@ fn run_model_swap_test() -> Unit {
       "data-mode-id not stamped on the container",
     )
     ctx.assert_true(
-      @support.query_count(".view-zone[data-view-zone-id=\"swap-zone\"]") == 1,
+      @support.query_count(".swap-zone[monaco-view-zone]") == 1,
       "view zone missing on the first view",
     )
     install_model_swap_continue("model-a", () => {
@@ -142,9 +143,8 @@ fn run_model_swap_test() -> Unit {
           "data-uri not restamped for model B",
         )
         ctx.assert_true(
-          @support.query_count(".view-zone[data-view-zone-id=\"swap-zone\"]") ==
-          1,
-          "view zone did not re-appear on the new view",
+          @support.query_count(".swap-zone[monaco-view-zone]") == 0,
+          "model-scoped view zone survived onto the new view",
         )
         // Text focus carries across the swap (`cew:528-532`).
         ctx.assert_true(

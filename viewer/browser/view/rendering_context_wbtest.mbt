@@ -126,7 +126,10 @@ test "RenderingContext snapshots current viewport and forwards includeViewZones"
   let layout = @view_layout.ViewLayout::new(line_height=20, line_count=10)
   layout.set_viewport_size(width=80.0, height=40.0) |> ignore
   layout.set_max_line_width(300.0) |> ignore
-  layout.set_view_zones([{ anchor_line: 2, height_px: 30 }]) |> ignore
+  layout.change_whitespace(accessor => {
+    accessor.insert_whitespace(2, 0, 30.0, 0.0) |> ignore
+  })
+  |> ignore
   layout.scroll_to(scroll_top=37.0, scroll_left=23.0) |> ignore
   let before = layout.get_current_viewport()
   assert_eq(before.top, 37.0)

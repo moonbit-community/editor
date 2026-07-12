@@ -23,5 +23,6 @@ pub(open) trait CoordinatesConverter {
     @base_common.Range,
     affinity? : @model.PositionAffinity,
   ) -> @base_common.Range
+  fn model_position_is_visible(Self, @base_common.Position) -> Bool
   fn view_range_to_model_range(Self, @base_common.Range) -> @base_common.Range
 }

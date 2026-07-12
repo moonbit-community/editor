@@ -19,7 +19,7 @@
 /// Monaco's `ViewCursorRenderData` (`viewCursor.ts:26-36`), minus the
 /// block-cursor `textContent`/`textContentClassName` (N-A for the Line style).
 pub(all) struct CursorRenderData {
-  top : Int
+  top : Double
   left : Double
   padding_left : Double
   width : Double
@@ -125,7 +125,7 @@ pub extern "js" fn device_pixel_ratio() -> Double =
 /// centering adjustment is zero).
 pub fn prepare_cursor_render_data(
   measured_left : Double,
-  top : Int,
+  top : Double,
   line_height : Int,
   device_pixel_ratio : Double,
 ) -> CursorRenderData {

@@ -41,10 +41,10 @@ pub fn ViewLine::get_dom_node(Self) -> @dom.Element?
 pub fn ViewLine::get_visible_ranges_for_range(Self, Int, Int, Int, DomReadingContext) -> (Bool, Array[(Double, Double)])?
 pub fn ViewLine::get_width(Self, DomReadingContext?) -> Double
 pub fn ViewLine::get_width_is_fast(Self) -> Bool
-pub fn ViewLine::layout_line(Self, Int, Int, Int) -> Unit
+pub fn ViewLine::layout_line(Self, Int, Double, Int) -> Unit
 pub fn ViewLine::mapping(Self) -> @view_layout.CharacterMapping?
 pub fn ViewLine::new(options? : ViewLineOptions) -> Self
-pub fn ViewLine::render_line(Self, Int, @view_layout.RenderLineInput, Int, Int, StringBuilder) -> Bool
+pub fn ViewLine::render_line(Self, Int, @view_layout.RenderLineInput, Double, Int, StringBuilder) -> Bool
 pub fn ViewLine::reset_cached_width(Self) -> Unit
 pub fn ViewLine::set_dom_node(Self, @dom.Element) -> Unit
 

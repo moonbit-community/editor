@@ -1,170 +1,67 @@
-// The viewer core's side of the `viewer/browser/view_parts/view_zones`
-// seam: the public `ViewZoneChangeAccessor` mutation API and the `Viewer::`
-// glue that keeps `Viewer.view_zones` normalized and synced with the layout
-// model. Kept out of `view_zones.mbt` because it holds a `Viewer` reference
-// (the foreign-method rule keeps every `Viewer::` method in `Viewer`'s own
-// package), which `ViewZones`/`BrowserViewZone` — a browser-tier view-part
-// type — cannot depend on without creating a
-// `browser/view_parts/view_zones ↔ browser/widget/code_editor` cycle.
+// The Viewer-owned public/ordering seam for the per-model browser ViewZones
+// part. Registration, DOM, and whitespace mutation live on `View.view_zones`;
+// this root method owns the CodeEditorWidget guard, internal-before-outgoing
+// delivery, and unconditional render schedule.
 
 ///|
-/// Mutation accessor passed to `Viewer::change_view_zones`; callers describe
-/// the complete set of changes inside one layout invalidation.
-pub struct ViewZoneChangeAccessor {
-  priv viewer : Viewer
-  priv changed : Ref[Bool]
+/// Public MoonBit-owned name for Monaco's mutable `IViewZone` delegate.
+pub type ViewZone = @view_zones.ViewZone
+
+///|
+/// Public MoonBit-owned name for `IViewZoneChangeAccessor`.
+pub type ViewZoneChangeAccessor = @view_zones.ViewZoneChangeAccessor
+
+///|
+/// Constructs the complete mutable ViewZone delegate through the public root
+/// package. Browser scenarios therefore need only `@viewer.view_zone(...)`;
+/// the internal browser ViewPart package stays an implementation detail.
+pub fn view_zone(
+  after_line_number : Int,
+  dom_node : @rdom.Element,
+  after_column? : Int,
+  after_column_affinity? : @model.PositionAffinity,
+  show_in_hidden_areas? : Bool,
+  ordinal? : Int,
+  suppress_mouse_down? : Bool,
+  height_in_lines? : Double,
+  height_in_px? : Double,
+  min_width_in_px? : Double,
+  margin_dom_node? : @rdom.Element,
+  on_dom_node_top? : (Double) -> Unit raise,
+  on_computed_height? : (Double) -> Unit raise,
+) -> ViewZone {
+  @view_zones.ViewZone::new(
+    after_line_number,
+    dom_node,
+    after_column?,
+    after_column_affinity?,
+    show_in_hidden_areas?,
+    ordinal?,
+    suppress_mouse_down?,
+    height_in_lines?,
+    height_in_px?,
+    min_width_in_px?,
+    margin_dom_node?,
+    on_dom_node_top?,
+    on_computed_height?,
+  )
 }
 
 ///|
-/// Applies a batch of browser view-zone mutations and reflows the viewer.
+/// Applies one source-shaped ViewZones transaction. With no model or no real
+/// browser View the callback is not invoked. A live callback is safely
+/// contained by the ViewZones part; afterward this method always schedules one
+/// render, while actual whitespace changes first finish the internal ViewEvent
+/// and then enter the ViewModel outgoing queue/public event.
 pub fn Viewer::change_view_zones(
   self : Viewer,
-  update : (ViewZoneChangeAccessor) -> Unit,
+  update : (ViewZoneChangeAccessor) -> Unit raise,
 ) -> Unit {
-  let changed = Ref(false)
-  update({ viewer: self, changed })
-  if !changed.val {
+  if self.disposed {
     return
   }
-  self.normalize_browser_view_zones()
-  self.sync_view_zones_with_layout()
-  self.emit_view_event(ViewZonesChanged)
-  self.measure_requested = true
+  guard self.model_data is Some(model_data) else { return }
+  guard model_data.view is Some(view) else { return }
+  view.change_view_zones(update)
   self.schedule_render()
-}
-
-///|
-/// Adds or replaces a view zone by id. `on_dom_node_top`/`on_computed_height`
-/// are `IViewZone.onDomNodeTop`/`onComputedHeight`: fired on every render
-/// with the zone's viewport-relative top / computed height, so widgets riding
-/// the zone (zone widgets) can position themselves.
-pub fn ViewZoneChangeAccessor::add_zone(
-  self : ViewZoneChangeAccessor,
-  id : String,
-  anchor_line : Int,
-  height_px : Int,
-  node : @rdom.Element,
-  on_dom_node_top? : (Double) -> Unit,
-  on_computed_height? : (Int) -> Unit,
-) -> Unit {
-  self.changed.val = true
-  self.viewer.upsert_view_zone(
-    id, anchor_line, height_px, node, on_dom_node_top, on_computed_height,
-  )
-}
-
-///|
-/// Updates a view zone by id; currently equivalent to `add_zone`.
-pub fn ViewZoneChangeAccessor::update_zone(
-  self : ViewZoneChangeAccessor,
-  id : String,
-  anchor_line : Int,
-  height_px : Int,
-  node : @rdom.Element,
-  on_dom_node_top? : (Double) -> Unit,
-  on_computed_height? : (Int) -> Unit,
-) -> Unit {
-  self.changed.val = true
-  self.viewer.upsert_view_zone(
-    id, anchor_line, height_px, node, on_dom_node_top, on_computed_height,
-  )
-}
-
-///|
-/// Removes a view zone by id.
-pub fn ViewZoneChangeAccessor::remove_zone(
-  self : ViewZoneChangeAccessor,
-  id : String,
-) -> Unit {
-  for index in 0..<self.viewer.view_zones.length() {
-    if self.viewer.view_zones[index].id == id {
-      self.viewer.view_zones.remove(index) |> ignore
-      self.changed.val = true
-      return
-    }
-  }
-}
-
-///|
-fn Viewer::upsert_view_zone(
-  self : Viewer,
-  id : String,
-  anchor_line : Int,
-  height_px : Int,
-  node : @rdom.Element,
-  on_dom_node_top : ((Double) -> Unit)?,
-  on_computed_height : ((Int) -> Unit)?,
-) -> Unit {
-  let zone : @view_zones.BrowserViewZone = {
-    id,
-    anchor_line,
-    height_px,
-    node,
-    on_dom_node_top,
-    on_computed_height,
-  }
-  for index in 0..<self.view_zones.length() {
-    if self.view_zones[index].id == id {
-      self.view_zones[index] = zone
-      return
-    }
-  }
-  self.view_zones.push(zone)
-}
-
-///|
-fn Viewer::normalize_browser_view_zones(self : Viewer) -> Unit {
-  let normalized : Array[@view_zones.BrowserViewZone] = []
-  let line_count = match self.get_view_model() {
-    Some(view_model) => view_model.view_layout.line_count()
-    None => 0
-  }
-  for zone in self.view_zones {
-    let max_anchor = if line_count > 0 {
-      line_count
-    } else {
-      zone.anchor_line.max(0)
-    }
-    normalized.push({
-      ..zone,
-      anchor_line: @base_common.clamp_int(zone.anchor_line, 0, max_anchor),
-      height_px: zone.height_px.max(0),
-    })
-  }
-  normalized.sort_by(compare_browser_view_zones)
-  self.view_zones = normalized
-}
-
-///|
-fn compare_browser_view_zones(
-  left : @view_zones.BrowserViewZone,
-  right : @view_zones.BrowserViewZone,
-) -> Int {
-  let anchor = left.anchor_line - right.anchor_line
-  if anchor != 0 {
-    return anchor
-  }
-  let height = left.height_px - right.height_px
-  if height != 0 {
-    return height
-  }
-  if left.id < right.id {
-    -1
-  } else if left.id > right.id {
-    1
-  } else {
-    0
-  }
-}
-
-///|
-fn Viewer::sync_view_zones_with_layout(self : Viewer) -> Unit {
-  // No model → no live layout; the zones re-sync at the next attach via
-  // `apply_view_model_layout`.
-  guard self.get_view_model() is Some(view_model) else { return }
-  let zones : Array[@view_layout.ViewZone] = []
-  for zone in self.view_zones {
-    zones.push({ anchor_line: zone.anchor_line, height_px: zone.height_px })
-  }
-  view_model.view_layout.set_view_zones(zones) |> ignore
 }

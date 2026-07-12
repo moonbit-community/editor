@@ -99,7 +99,7 @@ fn ViewOverlayLine::on_tokens_changed(_self : ViewOverlayLine) -> Unit {
 fn ViewOverlayLine::render_line(
   self : ViewOverlayLine,
   line_number : Int,
-  delta_top : Int,
+  delta_top : Double,
   line_height : Int,
   viewport : @view_layout.ViewportData,
   builder : StringBuilder,
@@ -133,12 +133,12 @@ fn ViewOverlayLine::render_line(
 fn ViewOverlayLine::layout_line(
   self : ViewOverlayLine,
   _line_number : Int,
-  delta_top : Int,
+  delta_top : Double,
   line_height : Int,
 ) -> Unit {
   match self.dom_node {
     Some(node) => {
-      node.set_top(Pixels(delta_top.to_double()))
+      node.set_top(Pixels(delta_top))
       node.set_height(Pixels(line_height.to_double()))
       node.set_line_height(Pixels(line_height.to_double()))
     }
@@ -388,6 +388,19 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
     content_left: 0.0,
     read_content_left: () => 0.0,
   }
+}
+
+///|
+/// Attaches ViewZones' margin container before every margin overlay child.
+/// The merged local `MarginViewOverlays` remains the sole `.margin` ViewPart;
+/// re-appending its retained overlay node performs the DOM move without
+/// recreating or mutating that node.
+fn MarginViewOverlays::attach_view_zones_margin(
+  self : MarginViewOverlays,
+  margin_view_zones : @rdom.Element,
+) -> Unit {
+  self.dom_node.append_child(margin_view_zones.as_node())
+  self.dom_node.append_child(self.overlays.dom_node.element().as_node())
 }
 
 ///|

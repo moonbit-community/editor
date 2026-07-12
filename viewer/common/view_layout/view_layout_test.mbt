@@ -141,11 +141,12 @@ test "lines layout answers offsets and lines for uniform heights" {
 ///|
 test "lines layout accounts for view zone displacement" {
   let lines = @view_layout.ViewLayout::new(line_height=18, line_count=5)
-  lines.set_view_zones([
-    { anchor_line: 1, height_px: 36 },
-    { anchor_line: 3, height_px: 18 },
-    { anchor_line: 2, height_px: 0 },
-  ])
+  let ids : Array[String] = []
+  lines.change_whitespace(accessor => {
+    ids.push(accessor.insert_whitespace(1, 0, 36.0, 0.0))
+    ids.push(accessor.insert_whitespace(3, 1, 18.0, 0.0))
+    ids.push(accessor.insert_whitespace(2, 2, 0.0, 0.0))
+  })
   |> ignore
   assert_eq(lines.vertical_offset_for_line(1), 0.0)
   assert_eq(lines.vertical_offset_for_line(2), 54.0)
@@ -156,7 +157,12 @@ test "lines layout accounts for view zone displacement" {
   assert_eq(lines.line_at_vertical_offset(53.0), 2)
   assert_eq(lines.line_at_vertical_offset(54.0), 2)
   assert_eq(lines.line_at_vertical_offset(90.0), 4)
-  lines.set_view_zones([]) |> ignore
+  lines.change_whitespace(accessor => {
+    for id in ids {
+      accessor.remove_whitespace(id)
+    }
+  })
+  |> ignore
   assert_eq(lines.vertical_offset_for_line(6), 90.0)
   assert_eq(lines.get_content_height(), 90.0)
 }
@@ -164,40 +170,31 @@ test "lines layout accounts for view zone displacement" {
 ///|
 test "lines layout supports top and bottom view zones" {
   let lines = @view_layout.ViewLayout::new(line_height=18, line_count=3)
-  lines.set_view_zones([
-    { anchor_line: 0, height_px: 10 },
-    { anchor_line: 3, height_px: 20 },
-  ])
+  lines.set_viewport_size(width=100.0, height=84.0) |> ignore
+  lines.change_whitespace(accessor => {
+    accessor.insert_whitespace(0, 0, 10.0, 0.0) |> ignore
+    accessor.insert_whitespace(3, 1, 20.0, 0.0) |> ignore
+  })
   |> ignore
   assert_eq(lines.vertical_offset_for_line(1), 10.0)
   assert_eq(lines.vertical_offset_for_line(4), 84.0)
   assert_eq(lines.get_content_height(), 84.0)
-  debug_inspect(
-    lines.view_zone_viewport_data({ start: 1, end: 4 }),
-    content=(
-      #|[
-      #|  {
-      #|    zone_index: 0,
-      #|    anchor_line: 0,
-      #|    height_px: 10,
-      #|    relative_vertical_offset: 0,
-      #|  },
-      #|  {
-      #|    zone_index: 1,
-      #|    anchor_line: 3,
-      #|    height_px: 20,
-      #|    relative_vertical_offset: 64,
-      #|  },
-      #|]
-    ),
-  )
+  let whitespace = lines.get_whitespace_viewport_data()
+  assert_eq(whitespace.length(), 2)
+  assert_true(whitespace[0].id != whitespace[1].id)
+  assert_eq(whitespace[0].after_line_number, 0)
+  assert_eq(whitespace[0].height, 10)
+  assert_eq(whitespace[0].vertical_offset, 0)
+  assert_eq(whitespace[1].after_line_number, 3)
+  assert_eq(whitespace[1].height, 20)
+  assert_eq(whitespace[1].vertical_offset, 64)
   lines.set_line_count(2) |> ignore
-  debug_inspect(
-    lines.view_zones(),
-    content=(
-      #|[{ anchor_line: 0, height_px: 10 }, { anchor_line: 2, height_px: 20 }]
-    ),
-  )
+  let retained = lines.get_whitespaces()
+  assert_eq(retained.length(), 2)
+  assert_eq(retained[0].after_line_number, 0)
+  assert_eq(retained[0].height, 10)
+  assert_eq(retained[1].after_line_number, 3)
+  assert_eq(retained[1].height, 20)
 }
 
 ///|
@@ -274,7 +271,10 @@ test "view layout window tracks every scroll" {
 test "view layout windows and dimensions account for view zones" {
   let layout = @view_layout.ViewLayout::new(line_height=18, line_count=20)
   layout.set_viewport_size(width=200.0, height=54.0) |> ignore
-  layout.set_view_zones([{ anchor_line: 1, height_px: 36 }]) |> ignore
+  layout.change_whitespace(accessor => {
+    accessor.insert_whitespace(1, 0, 36.0, 0.0) |> ignore
+  })
+  |> ignore
   assert_eq(layout.dimensions().scroll_height, 396.0)
   // Line 1 (18px) plus the 36px zone fill the 54px viewport exactly; line 2
   // starts at the bottom edge and is not rendered.

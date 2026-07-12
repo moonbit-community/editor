@@ -6,15 +6,14 @@
 ///
 /// Like Monaco, the entire view layer is 1-based, so `ViewLayout` and the
 /// `LinesLayout` it holds share one coordinate space — line-number arguments
-/// pass straight through with no translation. View zones carry Monaco's
-/// `afterLineNumber` directly (`ViewZone.anchor_line`). The `LinesLayout` held
-/// here is exactly the type the conformance suite validates.
+/// pass straight through with no translation. View-zone whitespace carries
+/// Monaco's `afterLineNumber` directly. The `LinesLayout` held here is exactly
+/// the type the conformance suite validates.
 pub struct ViewLayout {
   scrollable : EditorScrollable
-  priv mut lines : LinesLayout
+  priv lines : LinesLayout
   priv mut line_height : Int
   priv mut line_count : Int
-  priv mut view_zones_arr : Array[ViewZone]
   priv mut max_line_width : Double
   priv mut is_viewport_wrapping : Bool
   priv vertical_scrollbar_width : Double
@@ -38,27 +37,6 @@ pub(all) struct SavedScrollState {
 
 ///|
 let smooth_scrolling_time : Double = 125.0
-
-///|
-/// Builds a faithful `LinesLayout` from the view-zone array: each zone becomes
-/// a whitespace with `afterLineNumber = anchor_line` (Monaco's
-/// `IViewZone.afterLineNumber`, passed straight through), inserted in the
-/// array's (already normalized) order via `ordinal`.
-fn build_lines(
-  line_count : Int,
-  line_height : Int,
-  zones : Array[ViewZone],
-) -> LinesLayout {
-  let lines = LinesLayout::new(line_count, line_height, 0, 0)
-  lines.change_whitespace(fn(accessor) {
-    for i, zone in zones {
-      accessor.insert_whitespace(zone.anchor_line, i, zone.height_px, 0)
-      |> ignore
-    }
-  })
-  |> ignore
-  lines
-}
 
 ///|
 /// Creates a view layout with a fixed line height and optional line count.
@@ -86,10 +64,9 @@ pub fn ViewLayout::new(
       schedule_at_next_animation_frame,
       now,
     ),
-    lines: build_lines(line_count, line_height, []),
+    lines: LinesLayout::new(line_count, line_height, 0, 0),
     line_height,
     line_count,
-    view_zones_arr: [],
     max_line_width: 0.0,
     is_viewport_wrapping,
     vertical_scrollbar_width,
@@ -107,24 +84,18 @@ pub fn ViewLayout::set_line_count(
   line_count : Int,
 ) -> ScrollChange? {
   self.line_count = line_count.max(0)
-  self.view_zones_arr = normalized_view_zones(
-    self.view_zones_arr,
-    self.line_count,
-  )
-  self.lines = build_lines(
-    self.line_count,
-    self.line_height,
-    self.view_zones_arr,
-  )
+  // `LinesLayout.onFlushed` retains source-owned whitespaces. Model-scoped
+  // ViewZones are cleared by their browser owner on an actual model swap.
+  self.lines.on_flushed(self.line_count)
   self.update_height()
 }
 
 ///|
 /// The document was replaced — Monaco's `ViewLayout.onFlushed(lineCount)`:
 /// `this._linesLayout.onFlushed(lineCount)`. Whitespaces (view zones)
-/// survive a flush like the source's; their owner re-normalizes at the
-/// Viewer layer (`set_line_count`). The scroll dimensions re-derive in
-/// `on_height_maybe_changed`, exactly the source's split.
+/// survive a flush like the source's; the browser ViewZones owner recomputes
+/// mutable mapping facts on its corresponding view-model event. The scroll
+/// dimensions re-derive in `on_height_maybe_changed`, exactly the source split.
 pub fn ViewLayout::on_flushed(self : ViewLayout, line_count : Int) -> Unit {
   self.line_count = line_count.max(0)
   self.lines.on_flushed(self.line_count)
@@ -136,6 +107,22 @@ pub fn ViewLayout::on_flushed(self : ViewLayout, line_count : Int) -> Unit {
 /// a shrunken document clamps the scroll position here.
 pub fn ViewLayout::on_height_maybe_changed(self : ViewLayout) -> ScrollChange? {
   self.update_height()
+}
+
+///|
+/// Runs one source-shaped incremental whitespace transaction. A changed batch
+/// updates the vertical extent before returning; empty batches return `false`.
+/// The callback effect is polymorphic, so ordinary callers remain non-raising
+/// while a raised callback still receives LinesLayout's `finally` commit.
+pub fn ViewLayout::change_whitespace(
+  self : ViewLayout,
+  callback : (WhitespaceChangeAccessor) -> Unit raise?,
+) -> Bool raise? {
+  let had_a_change = self.lines.change_whitespace(callback)
+  if had_a_change {
+    self.on_height_maybe_changed() |> ignore
+  }
+  had_a_change
 }
 
 ///|
@@ -217,27 +204,6 @@ pub fn ViewLayout::set_content_width(
 }
 
 ///|
-/// Replaces view zones and re-derives scroll dimensions.
-pub fn ViewLayout::set_view_zones(
-  self : ViewLayout,
-  view_zones : Array[ViewZone],
-) -> ScrollChange? {
-  self.view_zones_arr = normalized_view_zones(view_zones, self.line_count)
-  self.lines = build_lines(
-    self.line_count,
-    self.line_height,
-    self.view_zones_arr,
-  )
-  self.update_height()
-}
-
-///|
-/// Current view-zone slots.
-pub fn ViewLayout::view_zones(self : ViewLayout) -> Array[ViewZone] {
-  self.view_zones_arr
-}
-
-///|
 /// Current number of lines.
 pub fn ViewLayout::line_count(self : ViewLayout) -> Int {
   self.line_count
@@ -294,9 +260,10 @@ pub fn ViewLayout::get_vertical_offset_for_line_number(
   line_number : Int,
   include_view_zones? : Bool = false,
 ) -> Double {
-  self.lines
-  .get_vertical_offset_for_line_number(line_number, include_view_zones~)
-  .to_double()
+  self.lines.get_vertical_offset_for_line_number(
+    line_number,
+    include_view_zones~,
+  )
 }
 
 ///|
@@ -307,9 +274,10 @@ pub fn ViewLayout::get_vertical_offset_after_line_number(
   line_number : Int,
   include_view_zones? : Bool = false,
 ) -> Double {
-  self.lines
-  .get_vertical_offset_after_line_number(line_number, include_view_zones~)
-  .to_double()
+  self.lines.get_vertical_offset_after_line_number(
+    line_number,
+    include_view_zones~,
+  )
 }
 
 ///|
@@ -329,12 +297,30 @@ pub fn ViewLayout::get_line_height_for_line_number(
 pub fn ViewLayout::get_lines_viewport_data(
   self : ViewLayout,
 ) -> PartialViewLinesViewportData {
-  let scroll_top = self.scrollable.position().scroll_top
-  let viewport_height = self.scrollable.dimensions().height
+  let visible_box = self.get_current_viewport()
   self.lines.get_lines_viewport_data(
-    scroll_top.to_int(),
-    (scroll_top + viewport_height).to_int(),
+    visible_box.top,
+    visible_box.top + visible_box.height,
   )
+}
+
+///|
+/// Monaco `getLinesViewportDataAtScrollTop`: minimally clamps an explicit
+/// scroll top against the current scroll dimensions, then derives the same
+/// line viewport without mutating scroll state.
+pub fn ViewLayout::get_lines_viewport_data_at_scroll_top(
+  self : ViewLayout,
+  scroll_top : Double,
+) -> PartialViewLinesViewportData {
+  let dimensions = self.scrollable.dimensions()
+  let mut scroll_top = scroll_top
+  if scroll_top + dimensions.height > dimensions.scroll_height {
+    scroll_top = dimensions.scroll_height - dimensions.height
+  }
+  if scroll_top < 0.0 {
+    scroll_top = 0.0
+  }
+  self.lines.get_lines_viewport_data(scroll_top, scroll_top + dimensions.height)
 }
 
 ///|
@@ -364,7 +350,7 @@ pub fn ViewLayout::vertical_offset_for_line(
   line : Int,
 ) -> Double {
   let line = @base_common.clamp_int(line, 1, self.line_count + 1)
-  self.lines.get_vertical_offset_for_line_number(line).to_double()
+  self.lines.get_vertical_offset_for_line_number(line)
 }
 
 ///|
@@ -377,7 +363,7 @@ pub fn ViewLayout::line_at_vertical_offset(
   if self.line_count <= 0 {
     return 1
   }
-  self.lines.get_line_number_at_or_after_vertical_offset(offset.to_int())
+  self.lines.get_line_number_at_or_after_vertical_offset(offset)
 }
 
 ///|
@@ -388,45 +374,29 @@ pub fn ViewLayout::get_whitespace_at_vertical_offset(
   self : ViewLayout,
   vertical_offset : Double,
 ) -> ViewWhitespaceViewportData? {
-  self.lines.get_whitespace_at_vertical_offset(vertical_offset.to_int())
+  self.lines.get_whitespace_at_vertical_offset(vertical_offset)
 }
 
 ///|
-/// Content-space top offset of a view zone by index.
-pub fn ViewLayout::view_zone_vertical_offset(
+/// All ID-bearing whitespaces in the current viewport. The result uses
+/// content-space vertical offsets and the source half-open viewport end.
+pub fn ViewLayout::get_whitespace_viewport_data(
   self : ViewLayout,
-  index : Int,
-) -> Double {
-  if index < 0 || index >= self.view_zones_arr.length() {
-    return 0.0
-  }
-  self.lines.get_vertical_offset_for_whitespace_index(index).to_double()
+) -> Array[ViewWhitespaceViewportData] {
+  let visible_box = self.get_current_viewport()
+  self.lines.get_whitespace_viewport_data(
+    visible_box.top,
+    visible_box.top + visible_box.height,
+  )
 }
 
 ///|
-/// View-zone geometry relative to a rendered line window.
-pub fn ViewLayout::view_zone_viewport_data(
+/// A shallow array snapshot of every whitespace. The returned array is
+/// independent while its `EditorWhitespace` elements retain source identity.
+pub fn ViewLayout::get_whitespaces(
   self : ViewLayout,
-  window : LineWindow,
-) -> Array[ViewZoneViewportData] {
-  let out : Array[ViewZoneViewportData] = []
-  let window_top = self.vertical_offset_for_line(window.start)
-  let window_bottom = self.vertical_offset_for_line(window.end)
-  let big_numbers_delta = self.big_numbers_delta_for_window(window).to_double()
-  for index in 0..<self.view_zones_arr.length() {
-    let zone = self.view_zones_arr[index]
-    let zone_top = self.view_zone_vertical_offset(index)
-    let zone_bottom = zone_top + zone.height_px.to_double()
-    if zone_bottom >= window_top && zone_top <= window_bottom {
-      out.push({
-        zone_index: index,
-        anchor_line: zone.anchor_line,
-        height_px: zone.height_px,
-        relative_vertical_offset: (zone_top - big_numbers_delta).to_int(),
-      })
-    }
-  }
-  out
+) -> Array[EditorWhitespace] {
+  self.lines.get_whitespaces()
 }
 
 ///|
@@ -437,9 +407,11 @@ pub fn ViewLayout::relative_vertical_offset_for_line(
   self : ViewLayout,
   window : LineWindow,
   line : Int,
-) -> Int {
-  self.vertical_offset_for_line(line).to_int() -
-  self.big_numbers_delta_for_window(window)
+) -> Double {
+  let start_top = self.vertical_offset_for_line(window.start)
+  javascript_to_int32(start_top).to_double() +
+  (self.vertical_offset_for_line(line) - start_top) -
+  self.big_numbers_delta_for_window(window).to_double()
 }
 
 ///|
@@ -449,9 +421,9 @@ pub fn ViewLayout::big_numbers_delta_for_window(
   self : ViewLayout,
   window : LineWindow,
 ) -> Int {
-  let start_vertical_offset = self
-    .vertical_offset_for_line(window.start)
-    .to_int()
+  let start_vertical_offset = javascript_to_int32(
+    self.vertical_offset_for_line(window.start),
+  )
   let step_size = 500000
   if start_vertical_offset < step_size || self.line_height <= 0 {
     return 0
@@ -577,11 +549,11 @@ pub fn ViewLayout::get_future_viewport(self : ViewLayout) -> Viewport {
 pub fn ViewLayout::save_state(self : ViewLayout) -> SavedScrollState {
   let position = self.scrollable.future_position()
   let first_line = self.lines.get_line_number_at_or_after_vertical_offset(
-    position.scroll_top.to_int(),
+    position.scroll_top,
   )
-  let whitespace_above = self.lines
-    .get_whitespace_accumulated_height_before_line_number(first_line)
-    .to_double()
+  let whitespace_above = self.lines.get_whitespace_accumulated_height_before_line_number(
+    first_line,
+  )
   {
     scroll_top: position.scroll_top,
     scroll_top_without_view_zones: position.scroll_top - whitespace_above,
@@ -672,7 +644,7 @@ fn ViewLayout::compute_content_height(
 ) -> Double {
   // Product-fixed `scrollBeyondLastLine=false` and
   // `ignoreHorizontalScrollbarInContentHeight=false` select this source arm.
-  self.lines.get_lines_total_height().to_double() +
+  self.lines.get_lines_total_height() +
   self.horizontal_scrollbar_height(width, content_width)
 }
 
@@ -780,39 +752,6 @@ fn merge_scroll_changes(
 }
 
 ///|
-/// Clamps view-zone anchors into `[0, line_count]` (Monaco's `afterLineNumber`
-/// range), floors heights at zero, and sorts by `(anchor_line, height_px)`
-/// before the zones become faithful whitespaces.
-fn normalized_view_zones(
-  view_zones : Array[ViewZone],
-  line_count : Int,
-) -> Array[ViewZone] {
-  let normalized : Array[ViewZone] = []
-  for zone in view_zones {
-    normalized.push({
-      anchor_line: @base_common.clamp_int(
-        zone.anchor_line,
-        0,
-        line_count.max(0),
-      ),
-      height_px: zone.height_px.max(0),
-    })
-  }
-  normalized.sort_by(compare_view_zones)
-  normalized
-}
-
-///|
-fn compare_view_zones(left : ViewZone, right : ViewZone) -> Int {
-  let anchor = left.anchor_line - right.anchor_line
-  if anchor != 0 {
-    anchor
-  } else {
-    left.height_px - right.height_px
-  }
-}
-
-///|
 /// Monaco `IViewLayout.isAfterLines`: whether a content-space vertical offset
 /// sits below every line (and every trailing view zone), forwarded to
 /// `LinesLayout`.
@@ -820,7 +759,7 @@ pub fn ViewLayout::is_after_lines(
   self : ViewLayout,
   vertical_offset : Double,
 ) -> Bool {
-  self.lines.is_after_lines(vertical_offset.to_int())
+  self.lines.is_after_lines(vertical_offset)
 }
 
 ///|
@@ -830,7 +769,7 @@ pub fn ViewLayout::is_in_top_padding(
   self : ViewLayout,
   vertical_offset : Double,
 ) -> Bool {
-  self.lines.is_in_top_padding(vertical_offset.to_int())
+  self.lines.is_in_top_padding(vertical_offset)
 }
 
 ///|
@@ -839,5 +778,5 @@ pub fn ViewLayout::is_in_bottom_padding(
   self : ViewLayout,
   vertical_offset : Double,
 ) -> Bool {
-  self.lines.is_in_bottom_padding(vertical_offset.to_int())
+  self.lines.is_in_bottom_padding(vertical_offset)
 }

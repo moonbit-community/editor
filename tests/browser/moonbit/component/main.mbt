@@ -1,6 +1,8 @@
 ///|
 fn main {
-  if browser_geometry_requested() {
+  if view_zones_requested() {
+    run_view_zones_test()
+  } else if browser_geometry_requested() {
     run_browser_geometry_test()
   } else if cursor_input_events_requested() {
     run_cursor_input_events_test()
@@ -14,6 +16,10 @@ fn main {
     run_viewer_api_test()
   }
 }
+
+///|
+extern "js" fn view_zones_requested() -> Bool =
+  #| () => new URLSearchParams(location.search).has('viewZones')
 
 ///|
 extern "js" fn browser_geometry_requested() -> Bool =

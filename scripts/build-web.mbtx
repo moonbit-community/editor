@@ -493,7 +493,6 @@ fn css_sources() -> Array[String] {
     "viewer/ui/scrollbar/scrollable_element.css",
     "viewer/browser/view_parts/view_lines/view_lines.css",
     "viewer/browser/view_parts/selections/view_overlays.css",
-    "viewer/browser/view_parts/view_zones/view_zones.css",
     "viewer/browser/view_parts/content_widgets/content_widgets.css",
     "viewer/browser/view_parts/overlay_widgets/overlay_widgets.css",
     "viewer/browser/view_parts/selections/selections.css",

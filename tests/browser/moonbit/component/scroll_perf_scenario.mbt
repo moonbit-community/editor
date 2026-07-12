@@ -51,10 +51,10 @@ fn run_scroll_perf_test() -> Unit {
   |> ignore
   let zone = @rdom.document().create_element("div")
   zone.set_inner_html("scroll performance view zone")
-  viewer.change_view_zones(accessor => {
-    accessor.add_zone("scroll-perf-zone", 5, 18, zone)
-  })
   viewer.set_model(Some(model))
+  viewer.change_view_zones(accessor => {
+    accessor.add_zone(@viewer.view_zone(5, zone, height_in_px=18.0)) |> ignore
+  })
   install_scroll_perf_controls(
     scroll_top => viewer.set_scroll_top(scroll_top),
     () => viewer.get_scroll_top(),

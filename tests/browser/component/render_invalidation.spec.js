@@ -519,7 +519,7 @@ test('setValue across a decimal line-count band updates scrollbar contentLeft', 
   expect(afterBox.x).toBeGreaterThan(beforeBox.x);
 });
 
-test('same-geometry ViewZone replacement swaps node and callback in one frame', async ({
+test('same-geometry layout_zone retains node and rereads callback in one frame', async ({
   page,
 }) => {
   await mountFixture(page);
@@ -529,6 +529,10 @@ test('same-geometry ViewZone replacement swaps node and callback in one frame', 
       '.render-invalidation-host [data-zone-generation="1"]',
     ),
   ).toHaveCount(1);
+  const retainedNode = await page
+    .locator('.render-invalidation-host [data-zone-generation="1"]')
+    .elementHandle();
+  expect(retainedNode).not.toBeNull();
   const before = await page.evaluate(() =>
     globalThis.__renderInvalidationControls.zone_counts(),
   );
@@ -545,12 +549,21 @@ test('same-geometry ViewZone replacement swaps node and callback in one frame', 
     page.locator(
       '.render-invalidation-host [data-zone-generation="1"]',
     ),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
   await expect(
     page.locator(
       '.render-invalidation-host [data-zone-generation="2"]',
     ),
-  ).toHaveCount(1);
+  ).toHaveCount(0);
+  expect(
+    await retainedNode.evaluate(
+      (node) =>
+        node ===
+        document.querySelector(
+          '.render-invalidation-host [data-zone-generation="1"]',
+        ),
+    ),
+  ).toBe(true);
   expect(after.first).toBe(before.first);
   expect(after.second).toBeGreaterThan(0);
 });

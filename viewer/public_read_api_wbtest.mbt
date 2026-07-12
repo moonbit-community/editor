@@ -8,15 +8,22 @@
 // `get_scrolled_visible_position`) is asserted in the browser suite.
 
 ///|
-/// Injects layout-only view zones (no DOM node), the headless analog of
+/// Injects layout-only whitespace (no DOM node), the headless analog of
 /// `change_view_zones`, so the `include_view_zones` branch of the vertical-offset
 /// getters can be exercised without a rendered view.
 fn Viewer::test_set_layout_view_zones(
   self : Viewer,
-  zones : Array[@view_layout.ViewZone],
+  zones : Array[(Int, Int)],
 ) -> Unit {
   match self.get_view_model() {
-    Some(view_model) => view_model.view_layout.set_view_zones(zones) |> ignore
+    Some(view_model) =>
+      view_model.view_layout.change_whitespace(accessor => {
+        for ordinal, zone in zones {
+          accessor.insert_whitespace(zone.0, ordinal, zone.1.to_double(), 0.0)
+          |> ignore
+        }
+      })
+      |> ignore
     None => ()
   }
 }
@@ -109,7 +116,7 @@ test "read API: vertical offsets at uniform line height" {
 /// `getVerticalOffsetForLineNumber(n, includeViewZones)` whitespace-before delta.
 test "read API: include_view_zones shifts the vertical offset past a zone" {
   with_test_viewer("a\nb\nc\nd\ne", viewer => {
-    viewer.test_set_layout_view_zones([{ anchor_line: 2, height_px: 30 }])
+    viewer.test_set_layout_view_zones([(2, 30)])
     assert_eq(viewer.get_top_for_line_number(3, include_view_zones=false), 66.0)
     assert_eq(viewer.get_top_for_line_number(3, include_view_zones=true), 36.0)
     // The bottom of line 5 includes the zone height regardless.

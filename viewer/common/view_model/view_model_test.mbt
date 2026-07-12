@@ -6,8 +6,9 @@ test "no-wrap converter preserves model and view positions through identity proj
   assert_true(converter.model_position_to_view_position(position) == position)
   assert_true(converter.view_position_to_model_position(position) == position)
   let range = @base_common.Range::Range(2, 3, 4, 9)
-  assert_true(converter.model_range_to_view_range(range) == range)
-  assert_true(converter.view_range_to_model_range(range) == range)
+  let valid_range = @base_common.Range::Range(2, 3, 4, 2)
+  assert_true(converter.model_range_to_view_range(range) == valid_range)
+  assert_true(converter.view_range_to_model_range(range) == valid_range)
 }
 
 ///|

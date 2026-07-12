@@ -14,20 +14,33 @@ pub fn viewport_data_from_view_model(
   window : @view_layout.LineWindow,
   line_height~ : Int,
   layout? : @view_layout.ViewLayout,
+  partial_viewport? : @view_layout.PartialViewLinesViewportData,
 ) -> @view_layout.ViewportData {
+  let source_window : @view_layout.LineWindow = match partial_viewport {
+    Some(partial) =>
+      { start: partial.start_line_number, end: partial.end_line_number + 1 }
+    None => window
+  }
+  let source_line_height = match partial_viewport {
+    Some(partial) => partial.line_height
+    None => line_height
+  }
   let start_line = @base_common.clamp_int(
-    window.start,
+    source_window.start,
     1,
     view_model.line_count(),
   )
   let end_line = @base_common.clamp_int(
-    window.end,
+    source_window.end,
     start_line + 1,
     view_model.line_count() + 1,
   )
   let lines : Array[@view_layout.ViewLineRenderingData] = []
   let line_decorations : Array[Array[@view_layout.LineDecoration]] = []
-  let relative_vertical_offset : Array[Int] = []
+  let relative_vertical_offset = match partial_viewport {
+    Some(partial) => partial.relative_vertical_offset.copy()
+    None => []
+  }
   let view_model_lines = view_model.lines()
   // The Monaco flow (`viewModelImpl.getViewportViewLineRenderingData`):
   // resolve the decorations for the whole viewport range lazily through
@@ -46,9 +59,13 @@ pub fn viewport_data_from_view_model(
     start: start_line,
     end: end_line,
   }
-  let big_numbers_delta = match layout {
-    Some(layout) => layout.big_numbers_delta_for_window(normalized_window)
-    None => 0
+  let big_numbers_delta = match partial_viewport {
+    Some(partial) => partial.big_numbers_delta
+    None =>
+      match layout {
+        Some(layout) => layout.big_numbers_delta_for_window(normalized_window)
+        None => 0
+      }
   }
   for line_number in start_line..<end_line {
     let line_data = view_model_lines.get_view_line_data(line_number)
@@ -63,15 +80,20 @@ pub fn viewport_data_from_view_model(
       ),
     )
     line_decorations.push(decorations)
-    relative_vertical_offset.push(
-      match layout {
-        Some(layout) =>
-          layout.relative_vertical_offset_for_line(
-            normalized_window, line_number,
-          )
-        None => (line_number - start_line) * line_height
-      },
-    )
+    if partial_viewport is None {
+      relative_vertical_offset.push(
+        match layout {
+          Some(layout) =>
+            layout.relative_vertical_offset_for_line(
+              normalized_window, line_number,
+            )
+          None => ((line_number - start_line) * source_line_height).to_double()
+        },
+      )
+    }
+  }
+  if relative_vertical_offset.length() != lines.length() {
+    abort("Partial viewport line offsets do not match its line range")
   }
   let start_line_number = start_line
   let end_line_number = end_line - 1
@@ -83,7 +105,7 @@ pub fn viewport_data_from_view_model(
     start_line_number,
     end_line_number,
     relative_vertical_offset,
-    line_height,
+    line_height: source_line_height,
     visible_range: {
       start_line_number,
       start_column: 1,
@@ -94,7 +116,7 @@ pub fn viewport_data_from_view_model(
     lines,
     line_decorations,
     view_zones: match layout {
-      Some(layout) => layout.view_zone_viewport_data(normalized_window)
+      Some(layout) => layout.get_whitespace_viewport_data()
       None => []
     },
   }

@@ -56,8 +56,11 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     const inlayHint = page.locator('.view-line .inlay-hint', { hasText: ': T' });
     await expect(inlayHint).toHaveCount(1, { timeout: 10_000 });
     await expect(inlayHint).toHaveClass(/inlay-hint-type/);
-    const componentZone = page.locator('.view-zone[data-view-zone-id="component-zone"]');
+    const componentZone = page.locator(
+      '.component-zone.host-zone-class[monaco-view-zone]',
+    );
     await expect(componentZone).toContainText('component view zone');
+    await expect(componentZone).toHaveCSS('color', 'rgb(1, 2, 3)');
     const braceLine = page.locator('.view-line').filter({ hasText: '{' });
     await expect(braceLine).toHaveCount(1);
     const zoneBox = await componentZone.boundingBox();

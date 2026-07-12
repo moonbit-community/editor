@@ -1,7 +1,9 @@
 ///|
-/// Semantic kind of the scoped outgoing event. Monaco's const-enum value is
-/// `7`; MoonBit deliberately exposes no numeric ABI for the variant.
+/// Semantic kind of the scoped outgoing events. Monaco's const-enum values are
+/// `4` for ViewZones and `7` for cursor state; MoonBit deliberately exposes no
+/// numeric ABI for these variants.
 pub(all) enum OutgoingViewModelEventKind {
+  ViewZonesChanged
   CursorStateChanged
 } derive(Eq, Debug)
 
@@ -71,12 +73,30 @@ pub fn CursorStateChangedEvent::is_no_op(
 }
 
 ///|
-/// Private heterogeneous queue arm retained only so the cursor event's
-/// different-kind merge rejection remains represented while non-cursor event
-/// classes stay with their owning plans.
+/// Payload-free outgoing ViewZones change event. Its kind is semantic rather
+/// than Monaco's numeric const-enum ordinal `4`.
+pub(all) struct ViewZonesChangedEvent {
+  kind : OutgoingViewModelEventKind
+} derive(Debug)
+
+///|
+/// Creates one source-shaped ViewZones change event.
+pub fn ViewZonesChangedEvent::new() -> ViewZonesChangedEvent {
+  { kind: ViewZonesChanged }
+}
+
+///|
+/// ViewZones changes are always observable.
+pub fn ViewZonesChangedEvent::is_no_op(_self : ViewZonesChangedEvent) -> Bool {
+  false
+}
+
+///|
+/// Private heterogeneous outgoing-only queue. The generic mixed browser-view
+/// collector/postponement layer remains intentionally absent.
 priv enum PendingOutgoingEvent {
   CursorEvent(CursorStateChangedEvent)
-  DeferredSiblingEvent
+  ViewZonesEvent(ViewZonesChangedEvent)
 }
 
 ///|
@@ -87,7 +107,7 @@ fn CursorStateChangedEvent::attempt_to_merge(
   other : PendingOutgoingEvent,
 ) -> CursorStateChangedEvent? {
   match other {
-    DeferredSiblingEvent => None
+    ViewZonesEvent(_) => None
     CursorEvent(other) =>
       Some({
         kind: CursorStateChanged,
@@ -104,17 +124,53 @@ fn CursorStateChangedEvent::attempt_to_merge(
 }
 
 ///|
+/// Merges only another ViewZones event and retains the first queued instance.
+fn ViewZonesChangedEvent::attempt_to_merge(
+  self : ViewZonesChangedEvent,
+  other : PendingOutgoingEvent,
+) -> ViewZonesChangedEvent? {
+  match other {
+    CursorEvent(_) => None
+    ViewZonesEvent(_) => Some(self)
+  }
+}
+
+///|
+/// Whether one queued outgoing fact can be dropped before delivery.
+fn PendingOutgoingEvent::is_no_op(self : PendingOutgoingEvent) -> Bool {
+  match self {
+    CursorEvent(event) => event.is_no_op()
+    ViewZonesEvent(event) => event.is_no_op()
+  }
+}
+
+///|
+/// Attempts a same-kind merge and preserves the existing queue slot.
+fn PendingOutgoingEvent::attempt_to_merge(
+  self : PendingOutgoingEvent,
+  other : PendingOutgoingEvent,
+) -> PendingOutgoingEvent? {
+  match self {
+    CursorEvent(event) =>
+      event.attempt_to_merge(other).map(merged => CursorEvent(merged))
+    ViewZonesEvent(event) =>
+      event.attempt_to_merge(other).map(merged => ViewZonesEvent(merged))
+  }
+}
+
+///|
 /// DOM-free outgoing-only half of Monaco's `ViewModelEventDispatcher`.
-/// Pending cursor events coalesce into their first same-kind slot; delivery is
-/// FIFO, discards no-ops, and remains safe when listeners emit reentrantly.
+/// Pending cursor/ViewZones events coalesce into their first same-kind slot;
+/// delivery is FIFO, discards no-ops, and remains safe when listeners emit
+/// reentrantly.
 struct CursorEventDispatcher {
-  event_listeners : Array[CursorEventListenerCell]
+  event_listeners : Array[OutgoingEventListenerCell]
   outgoing_events : Array[PendingOutgoingEvent]
   mut listener_count : Int
   mut listeners_are_array : Bool
   mut delivery_index : Int
   mut delivery_end : Int
-  mut delivery_value : CursorStateChangedEvent?
+  mut delivery_value : PendingOutgoingEvent?
   mut delivery_active : Bool
   mut disposed : Bool
 }
@@ -122,18 +178,14 @@ struct CursorEventDispatcher {
 ///|
 /// Stable listener slot. Disposals mark slots inactive instead of changing the
 /// array while a source-shaped delivery walk is in progress.
-priv struct CursorEventListenerCell {
-  listener : (CursorStateChangedEvent) -> Unit
+priv struct OutgoingEventListenerCell {
+  listener : (PendingOutgoingEvent) -> Unit
   active : Ref[Bool]
 }
 
 ///|
 /// Creates an empty dispatcher.
 fn CursorEventDispatcher::new() -> CursorEventDispatcher {
-  // Construction witness for the different-kind merge arm. Non-cursor event
-  // classes themselves remain deferred to their owning child plans.
-  let different_kind_witness = DeferredSiblingEvent
-  ignore(different_kind_witness)
   {
     event_listeners: [],
     outgoing_events: [],
@@ -166,10 +218,10 @@ fn CursorEventDispatcher::dispose(self : CursorEventDispatcher) -> Unit {
 }
 
 ///|
-/// Exposes the dispatcher's cursor event.
-fn CursorEventDispatcher::on_event(
+/// Registers one listener on the shared heterogeneous outgoing emitter.
+fn CursorEventDispatcher::on_outgoing_event(
   self : CursorEventDispatcher,
-  listener : (CursorStateChangedEvent) -> Unit,
+  listener : (PendingOutgoingEvent) -> Unit,
 ) -> @base_common.Disposable {
   if self.disposed {
     return @base_common.Disposable::from(() => ())
@@ -195,6 +247,34 @@ fn CursorEventDispatcher::on_event(
 }
 
 ///|
+/// Exposes the dispatcher's cursor event through a typed listener alias.
+fn CursorEventDispatcher::on_event(
+  self : CursorEventDispatcher,
+  listener : (CursorStateChangedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.on_outgoing_event(event => {
+    match event {
+      CursorEvent(event) => listener(event)
+      ViewZonesEvent(_) => ()
+    }
+  })
+}
+
+///|
+/// Exposes the dispatcher's ViewZones event through a typed listener alias.
+fn CursorEventDispatcher::on_view_zones_changed(
+  self : CursorEventDispatcher,
+  listener : (ViewZonesChangedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.on_outgoing_event(event => {
+    match event {
+      CursorEvent(_) => ()
+      ViewZonesEvent(event) => listener(event)
+    }
+  })
+}
+
+///|
 /// Adds or merges first, then attempts an immediate drain.
 fn CursorEventDispatcher::emit_outgoing_event(
   self : CursorEventDispatcher,
@@ -204,6 +284,19 @@ fn CursorEventDispatcher::emit_outgoing_event(
     return
   }
   self.add_outgoing_event(CursorEvent(event))
+  self.emit_outgoing_events()
+}
+
+///|
+/// Adds a ViewZones fact to the same heterogeneous queue and drains it.
+fn CursorEventDispatcher::emit_view_zones_changed(
+  self : CursorEventDispatcher,
+  event : ViewZonesChangedEvent,
+) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.add_outgoing_event(ViewZonesEvent(event))
   self.emit_outgoing_events()
 }
 
@@ -218,16 +311,12 @@ fn CursorEventDispatcher::add_outgoing_event(
     return
   }
   for index, pending in self.outgoing_events {
-    match pending {
-      CursorEvent(existing) =>
-        match existing.attempt_to_merge(event) {
-          Some(merged) => {
-            self.outgoing_events[index] = CursorEvent(merged)
-            return
-          }
-          None => ()
-        }
-      DeferredSiblingEvent => ()
+    match pending.attempt_to_merge(event) {
+      Some(merged) => {
+        self.outgoing_events[index] = merged
+        return
+      }
+      None => ()
     }
   }
   self.outgoing_events.push(event)
@@ -246,9 +335,9 @@ fn CursorEventDispatcher::emit_outgoing_events(
     return
   }
   while self.outgoing_events.length() > 0 {
-    match self.outgoing_events.remove(0) {
-      CursorEvent(event) => if !event.is_no_op() { self.deliver_event(event) }
-      DeferredSiblingEvent => ()
+    let event = self.outgoing_events.remove(0)
+    if !event.is_no_op() {
+      self.deliver_event(event)
     }
   }
 }
@@ -302,7 +391,7 @@ fn CursorEventDispatcher::finish_event_delivery(
 /// current value and delivers the nested value before returning to the caller.
 fn CursorEventDispatcher::deliver_event(
   self : CursorEventDispatcher,
-  event : CursorStateChangedEvent,
+  event : PendingOutgoingEvent,
 ) -> Unit {
   if self.disposed {
     return

@@ -19,11 +19,11 @@ pub struct ViewLayerRenderer[T] {
   priv create_line : () -> T
   priv get_dom_node : (T) -> @rdom.Element?
   priv set_dom_node : (T, @rdom.Element) -> Unit
-  priv layout_line : (T, Int, Int, Int) -> Unit
+  priv layout_line : (T, Int, Double, Int) -> Unit
   priv render_line : (
     T,
     Int,
-    Int,
+    Double,
     Int,
     @view_layout.ViewportData,
     StringBuilder,
@@ -38,8 +38,8 @@ pub fn[T] ViewLayerRenderer::new(
   create_line : () -> T,
   get_dom_node : (T) -> @rdom.Element?,
   set_dom_node : (T, @rdom.Element) -> Unit,
-  layout_line : (T, Int, Int, Int) -> Unit,
-  render_line : (T, Int, Int, Int, @view_layout.ViewportData, StringBuilder) -> Bool,
+  layout_line : (T, Int, Double, Int) -> Unit,
+  render_line : (T, Int, Double, Int, @view_layout.ViewportData, StringBuilder) -> Bool,
   viewport_data : @view_layout.ViewportData,
   line_height_for_line_number : (Int) -> Int,
 ) -> ViewLayerRenderer[T] {
@@ -63,7 +63,7 @@ pub fn[T] ViewLayerRenderer::render(
   in_context : RendererContext[T],
   start_line_number : Int,
   stop_line_number : Int,
-  delta_top : Array[Int],
+  delta_top : Array[Double],
 ) -> RendererContext[T] {
   let ctx : RendererContext[T] = {
     rend_line_number_start: in_context.rend_line_number_start,
@@ -133,7 +133,7 @@ fn[T] ViewLayerRenderer::render_untouched_lines(
   ctx : RendererContext[T],
   start_index : Int,
   end_index : Int,
-  delta_top : Array[Int],
+  delta_top : Array[Double],
   delta_line_number : Int,
 ) -> Unit {
   for index in start_index..<=end_index {
@@ -278,7 +278,7 @@ fn[T] ViewLayerRenderer::finish_rendering(
   self : ViewLayerRenderer[T],
   ctx : RendererContext[T],
   dom_node_is_empty : Bool,
-  delta_top : Array[Int],
+  delta_top : Array[Double],
 ) -> Unit {
   let builder = view_layer_string_builder
   let was_new = Array::make(ctx.lines_length, false)

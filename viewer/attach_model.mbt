@@ -158,6 +158,20 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       }
     }),
   )
+  // The ViewZones outgoing arm is model-scoped. The root transaction emits
+  // the internal ViewEvent first, then asks the ViewModel dispatcher to reach
+  // this public alias.
+  listeners_to_remove.push(
+    view_model.on_view_zones_changed(_event => {
+      match self.get_view_model() {
+        Some(active) =>
+          if physical_equal(active, view_model) {
+            self.did_change_view_zones.fire(())
+          }
+        None => ()
+      }
+    }),
+  )
   // Monaco's `ViewLayout.onDidScroll` is the single scroll-to-render seam.
   // Immediate calls and rAF animation ticks both arrive here, avoiding a
   // separate browser-only animation path.
@@ -199,7 +213,29 @@ fn Viewer::create_view(
   view_model : @view_model.ViewModel,
 ) -> @view.View? {
   guard self.container is Some(host) else { return None }
-  let view = @view.View::new()
+  let read_view_zones_configuration = () => {
+    (
+      self.font_info.line_height,
+      self.measured_content_width,
+      self.gutter_width(model.snapshot.line_count()),
+    )
+  }
+  let view = @view.View::new(
+    view_zones_configuration_reader=read_view_zones_configuration,
+  )
+  view.install_view_zones_context(
+    view_model,
+    self.services.log_service,
+    read_view_zones_configuration,
+    () => {
+      // Common ViewModel cannot import browser ViewEvent. Complete the source
+      // `changeWhitespace` order at this model-scoped seam for both public API
+      // transactions and configuration/line-mapping recomputations.
+      view.emit_view_zones_changed_then(() => {
+        view_model.emit_view_zones_changed()
+      })
+    },
+  )
   // ViewLines rereads the same live configuration snapshot in its
   // `onConfigurationChanged` handler, and its one retained-line factory
   // dynamically captures the equality-gated `ViewLineOptions` identity.
@@ -445,6 +481,7 @@ fn Viewer::on_line_mapping_changed(
   model : @model.TextModel,
   notify_view? : Bool = true,
   notify_configuration? : Bool = true,
+  layout_already_applied? : Bool = false,
   previous_view_selection? : @core.Selection,
 ) -> Unit {
   let previous_layout_identity = self.layout_identity(
@@ -467,7 +504,11 @@ fn Viewer::on_line_mapping_changed(
       None => ()
     }
   }
-  self.apply_view_model_layout(view_model)
+  if layout_already_applied {
+    self.sync_content_width()
+  } else {
+    self.apply_view_model_layout(view_model)
+  }
   self.rendered_window = None
   let current_model_line_count = model.snapshot.line_count()
   let current_view_line_count = view_model.line_count()
@@ -502,8 +543,6 @@ fn Viewer::apply_view_model_layout(
   view_model : @view_model.ViewModel,
 ) -> Unit {
   view_model.view_layout.set_line_count(view_model.line_count()) |> ignore
-  self.normalize_browser_view_zones()
-  self.sync_view_zones_with_layout()
   self.sync_content_width()
 }
 

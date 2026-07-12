@@ -64,7 +64,7 @@ priv enum ViewPartHandle {
 fn ViewPartHandle::dispose(self : ViewPartHandle) -> Unit {
   match self {
     ViewLinesPart(part) => part.dispose()
-    ViewZonesPart(_) => ()
+    ViewZonesPart(part) => part.dispose()
     ContentViewOverlaysPart(_) => ()
     MarginViewOverlaysPart(_) => ()
     ContentWidgetsPart(_) => ()
@@ -210,24 +210,27 @@ impl ViewPart for ViewPartHandle with fn on_did_render(self) {
 
 ///|
 impl ViewPart for @view_zones.ViewZones with fn should_render(self) {
-  self.should_render
+  @view_zones.ViewZones::should_render(self)
 }
 
 ///|
-impl ViewPart for @view_zones.ViewZones with fn on_view_event(_self, event) {
+impl ViewPart for @view_zones.ViewZones with fn on_view_event(self, event) {
   match event {
-    ViewConfigurationChanged(_) => true
-    ViewLineMappingChanged => true
-    ViewLinesDeleted(_) | ViewLinesInserted(_) => true
-    ViewScrollChanged(e) => e.scroll_top_changed || e.scroll_width_changed
-    ViewZonesChanged => true
+    ViewConfigurationChanged(e) =>
+      self.on_configuration_changed(e.has_changed(LineHeight))
+    ViewLineMappingChanged => self.on_line_mapping_changed()
+    ViewLinesDeleted(_) => self.on_lines_deleted()
+    ViewLinesInserted(_) => self.on_lines_inserted()
+    ViewScrollChanged(e) =>
+      self.on_scroll_changed(e.scroll_top_changed, e.scroll_width_changed)
+    ViewZonesChanged => self.on_zones_changed()
     _ => false
   }
 }
 
 ///|
 impl ViewPart for @view_zones.ViewZones with fn force_should_render(self) {
-  self.should_render = true
+  self.force_should_render()
 }
 
 ///|
@@ -237,16 +240,17 @@ impl ViewPart for @view_zones.ViewZones with fn prepare_render(_self, _context) 
 
 ///|
 impl ViewPart for @view_zones.ViewZones with fn render(self, context) {
-  self.render_view_zones(
-    context.input.browser_view_zones,
-    context.viewport,
-    context.translate_y,
+  self.render(
+    context.viewport.view_zones,
+    context.viewport.big_numbers_delta,
+    context.position.scroll_top,
+    context.dimensions.scroll_width,
   )
 }
 
 ///|
 impl ViewPart for @view_zones.ViewZones with fn on_did_render(self) {
-  self.should_render = false
+  self.did_render()
 }
 
 // `ViewPart` impl for `@view_lines.ViewLines` (`browser/view_parts/view_lines`).

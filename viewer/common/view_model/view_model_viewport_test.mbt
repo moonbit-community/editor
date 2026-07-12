@@ -17,7 +17,11 @@ test "view model produces viewport data from layout window" {
     ),
   )
   let layout = @view_layout.ViewLayout::new(line_height=18, line_count=3)
-  layout.set_view_zones([{ anchor_line: 1, height_px: 36 }]) |> ignore
+  layout.set_viewport_size(width=400.0, height=100.0) |> ignore
+  layout.change_whitespace(accessor => {
+    accessor.insert_whitespace(1, 0, 36.0, 0.0) |> ignore
+  })
+  |> ignore
   let displaced = @view_model.viewport_data_from_view_model(
     view_model,
     { start: 2, end: 4 },
@@ -30,19 +34,11 @@ test "view model produces viewport data from layout window" {
       #|[54, 72]
     ),
   )
-  debug_inspect(
-    displaced.view_zones,
-    content=(
-      #|[
-      #|  {
-      #|    zone_index: 0,
-      #|    anchor_line: 1,
-      #|    height_px: 36,
-      #|    relative_vertical_offset: 18,
-      #|  },
-      #|]
-    ),
-  )
+  assert_eq(displaced.view_zones.length(), 1)
+  assert_true(displaced.view_zones[0].id.length() > 0)
+  assert_eq(displaced.view_zones[0].after_line_number, 1)
+  assert_eq(displaced.view_zones[0].height, 36)
+  assert_eq(displaced.view_zones[0].vertical_offset, 18)
 }
 
 ///|

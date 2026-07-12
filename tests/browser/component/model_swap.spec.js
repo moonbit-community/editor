@@ -7,7 +7,7 @@ import {
 // Pins Monaco's per-model View lifecycle (setModel = detach-then-attach,
 // codeEditorWidget.ts:506): across a model swap the old view's DOM leaves
 // the container and a fresh view appears with data-uri/data-mode-id stamps,
-// registered view zones re-mount, text focus carries over, detaching to no
+// model-scoped view zones are lost, text focus carries over, detaching to no
 // model restores the placeholder, and idempotent disposal cancels a pending
 // frame while removing owned DOM but retaining the host. The assertions run
 // MoonBit-side in tests/browser/moonbit/model_swap.

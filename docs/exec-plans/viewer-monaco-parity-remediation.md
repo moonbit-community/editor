@@ -111,7 +111,7 @@ method clusters:
 | TextModel version/request freshness methods | async model features |
 | TextModel `_emitContentChangedEvent` token forwarding plus token-part construction/disposal and token-range production | tokenization; render invalidation owns ViewPart handler consumption only |
 | Frozen lifecycle CEW-086 `ModelData.attachedView` and CEW-088's `model.onBeforeDetached(attachedView)` substep | tokenization completes the exact-handle attached-view protocol without rewriting the implemented lifecycle ledger; ModelData alone owns attach/detach, ViewModel borrows the handle |
-| Attached visible-range stable/unstable production | tokenization owns the ViewModel-construction scroll listener and content-mapping `false` producers plus the one-time post-initialization `true` producer; source `View.restoreState` true producer is local N-A because Viewer has no restore-state API |
+| Attached visible-range stable/unstable production | tokenization owns the ViewModel-construction scroll listener and content-mapping `false` producers, the one-time post-initialization `true` producer, and the existing `Viewer::restore_view_state` immediate-scroll-then-true substep; broader view-state shape remains P2 |
 | ViewLines event handlers | render invalidation |
 | ViewLines reveal producer, `onRevealRangeRequest`, and reveal computation | historical reveal owner; excluded from the render denominator |
 | ViewLines `onScrollChanged` cancellation/retention of the inherited reveal-request fact | render invalidation; counted as VL-012 and VL-030–032 |
@@ -294,8 +294,8 @@ parity.
 ## P2 Backlog Boundary
 
 This program does not authorize a general P2 cleanup. Provider scoring and
-aggregation, full ViewZone API shape, quick diff scheduling, reveal/view-state
-parity, syntax folding, agent-feedback storage, scrollbar platform tails,
+aggregation, full ViewZone API shape, quick diff scheduling, broader
+reveal/view-state parity, syntax folding, agent-feedback storage, scrollbar platform tails,
 shadow/iframe support, semantic-token overlay, and visual/theme tails remain in
 the audit backlog unless a complete source unit in a P1 child requires an
 explicit PORTED/DEFERRED/N-A decision.
@@ -705,3 +705,11 @@ The independent closing task is:
   lifecycle CEW-086 and CEW-088's detach substep transfer to this child as
   coordination handoffs only. No product or test file changed, and this entry
   does not claim Gate B passed; stop for independent Gate-B review.
+- 2026-07-13: the first formal tokenization Gate-B round REJECTED that
+  candidate. The corrected documentation-only inventory now has 1043/1043
+  TODO rows: 946 source atoms plus 97 exact tests, proposed as 465 TESTED, 201
+  PORTED, 206 DEFERRED, and 171 N-A. Corrections add the missing type/NullState
+  declarations, non-encoded carrier closure, exact 72-test ranges and SKIPPED
+  authorities, reset-state preservation, the existing restore-state stable
+  producer, and cycle-safe font payload ownership. No product or test file
+  changed; Gate B still has not passed and requires a fresh review.

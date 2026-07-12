@@ -61,7 +61,8 @@ Complete units:
 
 Selected consumed closures:
 
-- `common/languages.ts`: IFontToken, EncodedTokenizationResult,
+- `common/languages.ts`: Token/TokenizationResult, IFontToken,
+  EncodedTokenizationResult,
   ITokenizationSupport/IState, background contracts, registry interfaces and
   singleton; non-encoded compatibility, Tree-sitter/custom worker, and lazy
   factory arms remain explicit rows
@@ -78,13 +79,15 @@ Selected consumed closures:
 - `common/viewModel/modelLineProjection.ts` and
   `common/viewModel/viewModelLines.ts`: complete token-demand clusters
 - `common/textModelEvents.ts:157-183` and
-  `common/model/tokens/annotations.ts:237-263`: syntactic font payload
+  `common/model/tokens/annotations.ts:237-240,249-263`: syntactic font payload
 - `common/core/ranges/lineRange.ts:51-61`: consumed `LineRange.joinMany`
 - `common/model/fixedArray.ts:12-31`: consumed live get/set closure
-- `common/languages/nullTokenize.ts:22-33`: `nullTokenizeEncoded`
+- `common/languages/nullTokenize.ts:9-16,22-33`: `NullState` and
+  `nullTokenizeEncoded`
 - `common/tokens/contiguousTokensEditing.ts:8,138-143`: token-array
   sentinel/representation seam
-- `base/common/async.ts:1537-1578`: consumed browser idle adapter, cancellation, and 15 ms fallback
+- `base/common/async.ts:1536-1579`: complete consumed browser idle IIFE,
+  cancellation, and 15 ms fallback
 - `common/tokens/contiguousMultilineTokensBuilder.ts:9,21-41` and
   `common/tokens/contiguousMultilineTokens.ts:17,35-80`, including
   `getLineRange`
@@ -99,9 +102,12 @@ Exact sibling exclusions: editable incremental edit APIs beyond normalized
 `set_value`; undo/paste/insertion prediction; semantic provider acquisition
 and sparse application; Tree-sitter and custom verification worker
 construction; lazy Promise factories; non-token projection/geometry; visual
-`FontTokenDecorationsProvider`; and restore-state API implementation absent
-from Viewer. Each consumed boundary that can affect scoped behavior still has
-a row or named coordination entry.
+`FontTokenDecorationsProvider`; broader Monaco view-state shape beyond the
+existing scroll-only Viewer API; non-encoded `nullTokenize` at
+`nullTokenize.ts:18-20`; annotation `DefinedValue`/`ISerializedAnnotation` at
+`annotations.ts:242-247`; and the annotation rebase/serialization cluster
+beginning at line 265. Each consumed boundary that can affect scoped behavior
+still has a row or named coordination entry.
 
 ## Pinned Evidence
 
@@ -145,10 +151,9 @@ a row or named coordination entry.
 
 Product ownership after Gate B approval:
 
-- `viewer/common/model/text_model.mbt`,
-  `viewer/common/model/text_model_events.mbt`, and
+- `viewer/common/model/text_model.mbt` and
   `viewer/common/model/text_model_tokens.mbt`
-- `viewer/common/model/tokens/{tokenization_text_model_part,abstract_syntax_token_backend,tokenizer_syntax_token_backend,text_model_tokens}.mbt`
+- `viewer/common/model/tokens/{annotations,tokenization_text_model_part,abstract_syntax_token_backend,tokenizer_syntax_token_backend,text_model_tokens}.mbt`
 - `viewer/common/tokens/{line_tokens,contiguous_tokens_store,contiguous_multiline_tokens,contiguous_multiline_tokens_builder}.mbt`
 - `base/common/line_range.mbt`
 - `syntax/tokenizer.mbt`
@@ -165,12 +170,15 @@ Required evidence destinations after approval:
 - `viewer/common/tokens/contiguous_multiline_tokens_wbtest.mbt`
 - `viewer/common/model/tokens/tokenizer_syntax_token_backend_wbtest.mbt`
 - `viewer/common/model/tokens/abstract_syntax_token_backend_wbtest.mbt`
+- `viewer/common/model/tokens/annotations_wbtest.mbt`
 - `viewer/common/model/text_model_tokens_reference_test.mbt`
+- `viewer/common/model/model_reference_wbtest.mbt`
 - `viewer/common/tokens/tokens_store_reference_wbtest.mbt`
 - `viewer/common/view_model/model_line_projection_reference_wbtest.mbt`
 - `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt`
 - `viewer/common/view_model/set_value_flush_test.mbt`
 - `viewer/cursor_tokenization_reference_wbtest.mbt`
+- `viewer/restore_view_state_tokenization_wbtest.mbt`
 - `viewer/browser_host_wbtest.mbt`,
   `viewer/common/view_model/viewport_data_test.mbt`, and
   `viewer/common/view_model/view_model_viewport_test.mbt`
@@ -229,18 +237,29 @@ a top-level language id plus a line-length read closure; the backend supplies
 those live facts through `TokenizationModelAccess`. `common/tokens` never
 imports `model/tokens`, so this placement cannot create a reverse package edge.
 
+Syntactic font payloads live below TextModel in
+`viewer/common/model/tokens/annotations.mbt`, where backend producers and the
+token part use one nominal type. The token part's
+`on_did_change_font_tokens` exposes that exact child event to the parent-owned
+visual consumer. `AN::FontTokensUpdate` is the source-shaped non-nominal
+typealias for `AnnotationsUpdate[FontTokenOption?]`; TextModel adds no parent
+alias, mirror, or conversion. Thus `model/tokens` never imports its parent and
+the backend -> token part -> parent-consumer path preserves one payload
+identity.
+
 Backend aliases used below are exact: `A` =
 `viewer/common/model/tokens/abstract_syntax_token_backend.mbt`, `B` =
 `viewer/common/model/tokens/tokenizer_syntax_token_backend.mbt`, `MT` =
 `viewer/common/model/tokens/text_model_tokens.mbt`, `P` =
 `viewer/common/model/tokens/tokenization_text_model_part.mbt`, `M` =
-`viewer/common/model/text_model_tokens.mbt`, `S` = `syntax/tokenizer.mbt`, and
-`CT` = `viewer/common/tokens/{contiguous_tokens_store,contiguous_multiline_tokens,contiguous_multiline_tokens_builder}.mbt`.
+`viewer/common/model/text_model_tokens.mbt`, `S` = `syntax/tokenizer.mbt`, `AN`
+= `viewer/common/model/tokens/annotations.mbt`, and `CT` =
+`viewer/common/tokens/{contiguous_tokens_store,contiguous_multiline_tokens,contiguous_multiline_tokens_builder}.mbt`.
 
 ## Inventory and Parity Ledger
 
 
-## TPM — complete TokenizationTextModelPart implementation (81 rows)
+## TPM — complete TokenizationTextModelPart implementation (82 rows)
 
 | ID | Source atom | Transition / exact fact | Local target or seam | Status | Proposed terminal |
 |---|---|---|---|---|---|
@@ -325,8 +344,9 @@ Backend aliases used below are exact: `A` =
 | TPM-079 | same-language early return (`:371`) | Return before any mutation/request/event | `viewer/common/model/tokens/tokenization_text_model_part.mbt` — dynamic language seam | TODO | DEFERRED (dynamic model-language ownership outside this child) |
 | TPM-080 | semantic half of `getLineTokens` (`tokenizationTextModelPart.ts:163`) | Merge sparse semantic tokens over the passively read syntactic line | `viewer/common/model/tokens/tokenization_text_model_part.mbt` retained semantic merge seam | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md owns sparse store and merge) |
 | TPM-081 | bracket half of `_emitModelTokensChangedEvent` (`:168`) | Notify bracket-pair token consumer before the public token event | `viewer/common/model/tokens/tokenization_text_model_part.mbt` retained bracket notification seam | TODO | DEFERRED (no bracket-pair token consumer contract) |
+| TPM-082 | `TokenizationTextModelPart` class declaration (`tokenizationTextModelPart.ts:31`) | Concrete `TextModelPart` implementation of `ITokenizationTextModelPart` | `viewer/common/model/tokens/tokenization_text_model_part.mbt::TokenizationTextModelPart` | TODO | PORTED |
 
-## ITM — complete public tokenization-model-part interface (19 rows)
+## ITM — complete public tokenization-model-part interface (21 rows)
 
 | ID | Source atom | Contract | Local target or seam | Status | Proposed terminal |
 |---|---|---|---|---|---|
@@ -349,8 +369,10 @@ Backend aliases used below are exact: `A` =
 | ITM-017 | `backgroundTokenizationState` (`:96`) | Expose progress/completion state | `viewer/common/model/tokens/tokenization_text_model_part.mbt` — model part/backend | TODO | TESTED |
 | ITM-018 | `BackgroundTokenizationState.InProgress=1` (`:100`) | Exact enum value 1 | `viewer/common/model/tokens/tokenization_text_model_part.mbt` — MoonBit enum/state | TODO | TESTED |
 | ITM-019 | `BackgroundTokenizationState.Completed=2` (`:101`) | Exact enum value 2 | `viewer/common/model/tokens/tokenization_text_model_part.mbt` — MoonBit enum/state | TODO | TESTED |
+| ITM-020 | `ITokenizationTextModelPart` interface declaration (`tokenizationTextModelPart.ts:14-97`) | Declares the complete public tokenization-model-part contract | `viewer/common/model/tokens/tokenization_text_model_part.mbt` public model-part surface | TODO | PORTED |
+| ITM-021 | `BackgroundTokenizationState` enum declaration (`:99-102`) | Declares the exact two-state background lifecycle type | `viewer/common/model/tokens/tokenization_text_model_part.mbt::BackgroundTokenizationState` | TODO | PORTED |
 
-## LAN — languages.ts selected contracts/exposure (37 rows)
+## LAN — languages.ts selected contracts/exposure (58 rows)
 
 | ID | Source atom | Contract | Local target or seam | Status | Proposed terminal |
 |---|---|---|---|---|---|
@@ -367,7 +389,7 @@ Backend aliases used below are exact: `A` =
 | LAN-011 | `IFontToken.fontFamily` (`:74`) | Nullable family override | `syntax/tokenizer.mbt` / internal model-tokens adapter — syntactic encoded-result font contract | TODO | PORTED |
 | LAN-012 | `IFontToken.fontSizeMultiplier` (`:75`) | Nullable size multiplier | `syntax/tokenizer.mbt` / internal model-tokens adapter — syntactic encoded-result font contract | TODO | PORTED |
 | LAN-013 | `IFontToken.lineHeightMultiplier` (`:76`) | Nullable height multiplier | `syntax/tokenizer.mbt` / internal model-tokens adapter — syntactic encoded-result font contract | TODO | PORTED |
-| LAN-014 | `EncodedTokenizationResult._tokenizationResultBrand` (`:83`) | TypeScript nominal brand initialized `undefined` | `syntax/tokenizer.mbt` / internal model-tokens adapter — no MoonBit nominal-brand field | TODO | N-A (type-system-only brand) |
+| LAN-014 | `EncodedTokenizationResult._encodedTokenizationResultBrand` (`:83`) | TypeScript nominal brand initialized `undefined` | `syntax/tokenizer.mbt` / internal model-tokens adapter — no MoonBit nominal-brand field | TODO | N-A (type-system-only brand) |
 | LAN-015 | `EncodedTokenizationResult.tokens` (`:92`) | Binary two-word token array | `syntax/tokenizer.mbt` / internal model-tokens adapter — encoded line-token result/adapter | TODO | TESTED |
 | LAN-016 | `EncodedTokenizationResult.fontInfo` (`:93`) | Per-token syntactic font facts | `syntax/tokenizer.mbt` / internal model-tokens adapter — encoded-result/backend store contract | TODO | TESTED |
 | LAN-017 | `EncodedTokenizationResult.endState` (`:94`) | State passed to following line | `syntax/tokenizer.mbt` / internal model-tokens adapter — `TokenizerState` result | TODO | TESTED |
@@ -391,8 +413,29 @@ Backend aliases used below are exact: `A` =
 | LAN-035 | `ITokenizationRegistry.setColorMap` (`:2590`) | Replace encoded token color map and emit `changedColorMap=true` | `syntax/tokenizer.mbt` / internal model-tokens adapter — registry/color-map owner shared with complete registry inventory | TODO | TESTED |
 | LAN-036 | `ITokenizationRegistry.getColorMap` (`:2592`) | Current map or null | `syntax/tokenizer.mbt` / internal model-tokens adapter — registry/color-map owner shared with complete registry inventory | TODO | TESTED |
 | LAN-037 | `ITokenizationRegistry.getDefaultBackground` (`:2594`) | Background from the current map/theme contract or null | `syntax/tokenizer.mbt` / internal model-tokens adapter — registry/color-map owner shared with complete registry inventory | TODO | TESTED |
+| LAN-038 | `Token` class declaration (`languages.ts:40-53`) | Declares the non-encoded compatibility token carrier | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded compatibility carrier | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-039 | `Token._tokenBrand` (`:41`) | TypeScript-only nominal brand initialized `undefined` | No MoonBit runtime or nominal-brand field | TODO | N-A (type-system-only brand) |
+| LAN-040 | `Token.offset` constructor property (`:44`) | Zero-based token start offset | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded token field | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-041 | `Token.type` constructor property (`:45`) | Token scope/type string | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded token field | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-042 | `Token.language` constructor property (`:46`) | Token language-id string | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded token field | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-043 | `Token` constructor (`:43-48`) | Retains offset, type, and language without transformation | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded token construction | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-044 | `Token.toString` (`:50-52`) | Returns `(<offset>, <type>)`; language is intentionally omitted | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded diagnostic representation | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-045 | `TokenizationResult` class declaration (`:58-66`) | Declares the non-encoded tokens/end-state result carrier | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded compatibility result | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-046 | `TokenizationResult._tokenizationResultBrand` (`:59`) | TypeScript-only nominal brand initialized `undefined` | No MoonBit runtime or nominal-brand field | TODO | N-A (type-system-only brand) |
+| LAN-047 | `TokenizationResult.tokens` constructor property (`:62`) | Ordered non-encoded `Token[]` result | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded result field | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-048 | `TokenizationResult.endState` constructor property (`:63`) | State carried to the following line | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded result field | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-049 | `TokenizationResult` constructor (`:61-65`) | Retains tokens and end state without transformation | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded result construction | TODO | DEFERRED (non-encoded compatibility result absent) |
+| LAN-050 | `IFontToken` interface declaration (`:71-77`) | Declares the encoded-result syntactic font annotation carrier | `viewer/common/model/tokens/text_model_tokens.mbt` internal font-token carrier | TODO | PORTED |
+| LAN-051 | `EncodedTokenizationResult` class declaration (`:82-97`) | Declares encoded words, font information, and end-state result | `viewer/common/model/tokens/text_model_tokens.mbt` internal encoded-result carrier | TODO | PORTED |
+| LAN-052 | `ITokenizationSupport` interface declaration (`:116-133`) | Declares initial-state, encoded/non-encoded tokenization, and optional background support | `viewer/common/model/tokens/text_model_tokens.mbt::InternalTokenizationSupportAdapter`; individual unsupported members remain separately deferred | TODO | PORTED |
+| LAN-053 | `IBackgroundTokenizer` interface declaration (`:138-148`) | Declares request, optional mismatch reporting, and disposal contract | `viewer/common/model/tokens/text_model_tokens.mbt` background-tokenizer protocol/default worker | TODO | PORTED |
+| LAN-054 | `IBackgroundTokenizationStore` interface declaration (`:153-165`) | Declares token/font/state application and completion callbacks | `viewer/common/model/tokens/tokenizer_syntax_token_backend.mbt::BackgroundTokenizationStore` | TODO | PORTED |
+| LAN-055 | `IState` interface declaration (`:172-175`) | Declares clone/equality state-carriage contract | `syntax/tokenizer.mbt::TokenizerState` plus internal adapter | TODO | PORTED |
+| LAN-056 | `ITokenizationSupportChangedEvent` interface declaration (`:2503-2506`) | Declares changed-language and changed-color-map event payload | `syntax/tokenizer.mbt::TokenizationChangedEvent` | TODO | PORTED |
+| LAN-057 | `ILazyTokenizationSupport` interface declaration (`:2511-2513`) | Declares Promise-valued lazy support | `syntax/tokenizer.mbt` has no public lazy-provider API | TODO | N-A (registry exposes only synchronous support registration) |
+| LAN-058 | `ITokenizationRegistry` interface declaration (`:2545-2595`) | Declares registry/event/color-map surface; individual lazy members retain their N-A rows | `syntax/tokenizer.mbt::TokenizationRegistry` source-shaped synchronous adaptation | TODO | PORTED |
 
-## TMT — TextModel construction/content/attach/disposal closure (56 rows)
+## TMT — TextModel construction/content/attach/disposal closure (58 rows)
 
 | ID | Source atom | Transition / exact fact | Local target or seam | Status | Proposed terminal |
 |---|---|---|---|---|---|
@@ -417,7 +460,7 @@ Backend aliases used below are exact: `A` =
 | TMT-019 | `largeFileOptimizations` false arm (`:345-346`) | Force tokenization flag false regardless of size | `viewer/common/model/text_model.mbt` — no local opt-out option; document fixed-enabled seam | TODO | N-A (Viewer exposes no large-file-optimization opt-out) |
 | TMT-020 | constructor language selection (`:352`) | String directly or selection.languageId | `viewer/common/model/text_model.mbt` — construction language id | TODO | PORTED |
 | TMT-021 | language-selection callback (`:353-355`) | Non-string selection subscribes and calls `_setLanguage` | `viewer/common/model/text_model.mbt` — no live selection object | TODO | DEFERRED (dynamic model-language ownership outside this child) |
-| TMT-022 | token-part construction (`:360-365`) | Create after bracket/guides/decoration dependencies; pass model, bracket part, language id, attached views | `viewer/common/model/text_model.mbt` — `TextModel::TextModel` + new live backend | TODO | TESTED |
+| TMT-022 | token-part assignment/construction (`textModel.ts:360-361,363-365`) | Construct and own the token part with live model access, construction language id, and borrowed AttachedViews | `viewer/common/model/text_model.mbt` — `TextModel::TextModel` constructs the live backend/part using `TokenizationModelAccess`, language id, and its owned AttachedViews | TODO | TESTED |
 | TMT-023 | font-token provider construction (`:366`) | Register provider immediately after token part | `viewer/common/model/text_model.mbt` — no local visual provider | TODO | DEFERRED (no visual FontTokenDecorationsProvider contract) |
 | TMT-024 | line-height callback (`:393-398`) | Deferred decoration emit around font-token line-height notification | `viewer/common/model/text_model.mbt` — no local visual provider | TODO | DEFERRED (no visual FontTokenDecorationsProvider contract) |
 | TMT-025 | font callback (`:399-404`) | Deferred decoration emit around font-token font notification | `viewer/common/model/text_model.mbt` — no local visual provider | TODO | DEFERRED (no visual FontTokenDecorationsProvider contract) |
@@ -452,6 +495,8 @@ Backend aliases used below are exact: `A` =
 | TMT-054 | `IAttachedView.setVisibleLines.stabilized` (`model.ts:1452`) | True means immediate refresh; false means 50 ms debounce | `viewer/common/model/tokens/abstract_syntax_token_backend.mbt::AttachedViewState.stabilized` | TODO | TESTED |
 | TMT-055 | `_bracketPairs.handleDidChangeContent(change)` (`textModel.ts:473`) | Bracket-pair content consumer runs after tokenization and before font/content event wrapping | `viewer/common/model/text_model.mbt` retained ordering seam | TODO | DEFERRED (no bracket-pair content consumer contract) |
 | TMT-056 | `_fontTokenDecorationsProvider.handleDidChangeContent(change)` (`textModel.ts:474`) | Visual font-decoration consumer runs after bracket pairs and before content event wrapping | `viewer/common/model/text_model.mbt` retained ordering seam | TODO | DEFERRED (no visual FontTokenDecorationsProvider contract) |
+| TMT-057 | bracket-specific prerequisite/order and constructor argument (`textModel.ts:357-362`) | Source constructs the bracket part before tokenization and passes that exact part as the second token-part argument | `viewer/common/model/text_model.mbt` retained bracket-argument/order seam; no local bracket-pair token consumer exists | TODO | DEFERRED (no bracket-pair token consumer contract) |
+| TMT-058 | `IAttachedView` interface declaration (`model.ts:1446-1453`) | Declares the exact visible-range/stabilization handle contract returned by model attachment | `viewer/common/model/tokens/abstract_syntax_token_backend.mbt` attached-view handle/protocol | TODO | PORTED |
 
 ## VMI — visible-range priority and token-event conversion closure (24 rows)
 
@@ -488,9 +533,9 @@ Backend aliases used below are exact: `A` =
 |---|---|---|---|---|---|
 | STB-001 | `CodeEditorWidget.handleInitialized` (`codeEditorWidget.ts:1074-1076`) | Initialization hook owns the ordinary one-time stabilized-true call | `viewer/viewer.mbt` one-time post-initial View/layout setup | TODO | TESTED |
 | STB-002 | optional `_getViewModel()?.visibleLinesStabilized()` (`:1075`) | Present ViewModel receives true once; absent model is no-op | `viewer/viewer.mbt` initialized/absent-model branch test | TODO | TESTED |
-| STB-003 | `View.restoreState` (`view.ts:673-679`) | Restore scroll state then publish stabilized true | `viewer/view_host.mbt` has no restore-state API | TODO | N-A (local Viewer exposes no restore-state API) |
-| STB-004 | restore `setScrollPosition(..., ScrollType.Immediate)` (`:674-677`) | Restore uses immediate scroll before stabilization | `viewer/view_host.mbt` has no restore-state API | TODO | N-A (local Viewer exposes no restore-state API) |
-| STB-005 | restore `visibleLinesStabilized()` call (`:678`) | Second allowed stabilized-true producer after restore | `viewer/view_host.mbt` has no restore-state API | TODO | N-A (local Viewer exposes no restore-state API) |
+| STB-003 | `View.restoreState` (`view.ts:673-679`) | Restore both scroll axes immediately, then publish stabilized true | `viewer/viewer.mbt::Viewer::restore_view_state`; `viewer/restore_view_state_tokenization_wbtest.mbt` records scroll delivery before the stabilized-true visible-range update | TODO | TESTED |
+| STB-004 | restore `setScrollPosition(..., ScrollType.Immediate)` (`:674-677`) | Both axes commit synchronously before stabilization | Existing `Viewer::restore_view_state` -> `ViewLayout::scroll_to` -> `Scrollable::set_position_now`; assert the scroll position/event is already current when the true update runs | TODO | TESTED |
+| STB-005 | restore `visibleLinesStabilized()` call (`:678`) | The restore path is the second allowed stabilized-true producer | Add `view_model.visible_lines_stabilized()` after the successful `Some(state)` scroll; prove exactly one true update with ranges computed from the restored viewport | TODO | TESTED |
 
 ## UTM — scoped upstream-test dispositions (23 counted rows)
 
@@ -531,7 +576,7 @@ row or parity authority.
 | UTM-018 | `issue #44805: No visible lines via undoing` (`:132-150`) | `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt` — Hidden areas after editable undo | TODO | N-A (readonly Viewer has no undo API) |
 | UTM-019 | `view models react first to model changes` (`viewModelImpl.test.ts:92-117`) | Two attached editors receive model-first content delivery before hostile public listener mutation; adapt with nested `set_value` and exact range validity. Exact local target: `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt` | TODO | TESTED |
 | UTM-020 | `issue #46314: ViewModel is out of sync with Model!` (`cursor.test.ts:2822-2851`) | Two Viewers share one model; cursor callback invokes `tokenize_if_cheap(1)` during `set_value` without stale projection or eager sweep. Exact local target: `viewer/cursor_tokenization_reference_wbtest.mbt` | TODO | TESTED |
-| UTM-021 | `Get word at position` (`model.test.ts:439-455`) | Retain exact basic word boundaries through existing model word owner. Exact local target: `viewer/common/model/model_reference_wbtest.mbt` | TODO | TESTED |
+| UTM-021 | `Get word at position` (`model.test.ts:439-455`) | Move the exact named case from ordinary `word_helper_wbtest.mbt` into quality-compliant `viewer/common/model/model_reference_wbtest.mbt`, which cites the full source path and oracle commit; keep only non-reference helper coverage in the former file. | TODO | TESTED |
 | UTM-022 | `getWordAtPosition at embedded language boundaries` (`model.test.ts:457-474`) | Embedded token-language boundary word selection. Exact local target: `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` | TODO | DEFERRED (embedded-language token/config integration absent) |
 | UTM-023 | `issue #61296: VS code freezes when editing CSS file with emoji` (`model.test.ts:476-500`) | Emoji/word-pattern progress under dynamic language configuration. Exact local target: `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` | TODO | DEFERRED (dynamic language configuration and embedded word integration absent) |
 
@@ -560,21 +605,21 @@ ordinary local branch-derived tests rather than invented `*_reference_*` names.
 
 | ID | Source atom | Exact behavior | Local target or seam | Status | Proposed terminal |
 |---|---|---|---|---|---|
-| FNT-001 | `IFontTokenOption` (`textModelEvents.ts:157-170`) | Optional syntactic font option carrier | `viewer/common/model/text_model_events.mbt` — `viewer/common/model/text_model_events.mbt::FontTokenOption` | TODO | PORTED |
-| FNT-002 | `fontFamily?` (`:161`) | Optional family override | `viewer/common/model/text_model_events.mbt` — `FontTokenOption.font_family` | TODO | PORTED |
-| FNT-003 | `fontSizeMultiplier?` (`:165`) | Optional size multiplier | `viewer/common/model/text_model_events.mbt` — `FontTokenOption.font_size_multiplier` | TODO | PORTED |
-| FNT-004 | `lineHeightMultiplier?` (`:169`) | Optional line-height multiplier | `viewer/common/model/text_model_events.mbt` — `FontTokenOption.line_height_multiplier` | TODO | PORTED |
-| FNT-005 | `IModelFontTokensChangedEvent` (`:176-178`) | Model font-token event carrier | `viewer/common/model/text_model_events.mbt` — `viewer/common/model/text_model_events.mbt::ModelFontTokensChangedEvent` | TODO | PORTED |
-| FNT-006 | event `changes` (`:177`) | Preserve exact annotations update | `viewer/common/model/text_model_events.mbt` — `ModelFontTokensChangedEvent.changes` and backend event test | TODO | TESTED |
-| FNT-007 | `FontTokensUpdate` alias (`:183`) | `AnnotationsUpdate<FontTokenOption?>` value contract | `viewer/common/model/text_model_events.mbt` — `viewer/common/model/text_model_events.mbt::FontTokensUpdate` | TODO | PORTED |
-| FNT-008 | `IAnnotationUpdate<T>` (`annotations.ts:237-240`) | Range plus optional annotation item | `viewer/common/model/text_model_events.mbt` — `viewer/common/model/text_model_events.mbt::AnnotationUpdate` | TODO | PORTED |
-| FNT-009 | annotation `range` (`:238`) | Exact half-open offset range | `viewer/common/model/text_model_events.mbt` — `AnnotationUpdate.range` | TODO | TESTED |
-| FNT-010 | annotation `annotation` (`:239`) | Present sets; absent clears | `viewer/common/model/text_model_events.mbt` — `AnnotationUpdate.annotation` | TODO | TESTED |
-| FNT-011 | `AnnotationsUpdate<T>` class (`:249`) | Ordered update collection | `viewer/common/model/text_model_events.mbt` — `viewer/common/model/text_model_events.mbt::AnnotationsUpdate` | TODO | PORTED |
-| FNT-012 | static `create` (`:251-253`) | Wrap caller order without transformation | `viewer/common/model/text_model_events.mbt` — `AnnotationsUpdate::create` | TODO | TESTED |
-| FNT-013 | private `_annotations` (`:255`) | Store exact update array | `viewer/common/model/text_model_events.mbt` — `AnnotationsUpdate.annotations` private storage | TODO | PORTED |
-| FNT-014 | private constructor (`:257-259`) | Retain caller array | `viewer/common/model/text_model_events.mbt` — `AnnotationsUpdate::new` | TODO | TESTED |
-| FNT-015 | `annotations` getter (`:261-263`) | Return stored updates | `viewer/common/model/text_model_events.mbt` — `AnnotationsUpdate::annotations` | TODO | TESTED |
+| FNT-001 | `IFontTokenOption` (`textModelEvents.ts:157-170`) | Optional syntactic font option carrier | `AN::FontTokenOption`; token-part/backend events use this exact child type | TODO | PORTED |
+| FNT-002 | `fontFamily?` (`:161`) | Optional family override | `AN::FontTokenOption.font_family` | TODO | PORTED |
+| FNT-003 | `fontSizeMultiplier?` (`:165`) | Optional size multiplier | `AN::FontTokenOption.font_size_multiplier` | TODO | PORTED |
+| FNT-004 | `lineHeightMultiplier?` (`:169`) | Optional line-height multiplier | `AN::FontTokenOption.line_height_multiplier` | TODO | PORTED |
+| FNT-005 | `IModelFontTokensChangedEvent` (`:176-178`) | Model font-token event carrier | `AN::ModelFontTokensChangedEvent`; `TokenizationTextModelPart::on_did_change_font_tokens` exposes this exact child event to the parent-owned consumer | TODO | PORTED |
+| FNT-006 | event `changes` (`:177`) | Preserve exact annotations update | `AN::ModelFontTokensChangedEvent.changes`; backend event test | TODO | TESTED |
+| FNT-007 | `FontTokensUpdate` alias (`:183`) | `AnnotationsUpdate<FontTokenOption?>` value contract | `AN::FontTokensUpdate` is an exact non-nominal typealias for `AN::AnnotationsUpdate[AN::FontTokenOption?]`; backend and token part preserve the same value | TODO | PORTED |
+| FNT-008 | `IAnnotationUpdate<T>` (`annotations.ts:237-240`) | Range plus optional annotation item | `AN::AnnotationUpdate` | TODO | PORTED |
+| FNT-009 | annotation `range` (`:238`) | Exact half-open offset range | `AN::AnnotationUpdate.range` | TODO | TESTED |
+| FNT-010 | annotation `annotation` (`:239`) | Present sets; absent clears | `AN::AnnotationUpdate.annotation` | TODO | TESTED |
+| FNT-011 | `AnnotationsUpdate<T>` class (`:249`) | Ordered update collection | `AN::AnnotationsUpdate` | TODO | PORTED |
+| FNT-012 | static `create` (`:251-253`) | Wrap caller order without transformation | `AN::AnnotationsUpdate::create` | TODO | TESTED |
+| FNT-013 | private `_annotations` (`:255`) | Store exact update array | `AN::AnnotationsUpdate.annotations` private storage | TODO | PORTED |
+| FNT-014 | private constructor (`:257-259`) | Retain caller array | `AN::AnnotationsUpdate::new` | TODO | TESTED |
+| FNT-015 | `annotations` getter (`:261-263`) | Return stored updates | `AN::AnnotationsUpdate::annotations` | TODO | TESTED |
 
 ## LRG — consumed LineRange.joinMany closure
 
@@ -614,6 +659,10 @@ ordinary local branch-derived tests rather than invented `*_reference_*` names.
 | NUL-008 | default background component (`:30`) | Exact default background | `viewer/common/model/tokens/line_tokens_encoder.mbt` — encoded attributes/theme seam | TODO | TESTED |
 | NUL-009 | unsigned `>>>0` composition (`:31`) | Preserve 32-bit metadata bits | `viewer/common/model/tokens/line_tokens_encoder.mbt` — MoonBit UInt metadata | TODO | TESTED |
 | NUL-010 | null-state ternary/result (`:33`) | Null uses NullState; present preserves state; font info is empty | `viewer/common/model/tokens/line_tokens_encoder.mbt` — internal adapter result matrix | TODO | TESTED |
+| NUL-011 | exported `NullState` anonymous `IState` singleton declaration (`nullTokenize.ts:9-16`) | One canonical stateless tokenizer state | `viewer/common/model/tokens/line_tokens_encoder.mbt` internal canonical null-state value | TODO | PORTED |
+| NUL-012 | `NullState.clone` member declaration (`:10-12`) | Exposes the stateless clone contract | Internal null-state adapter clone member | TODO | PORTED |
+| NUL-013 | `NullState.equals` member declaration (`:13-15`) | Exposes the null-state equality contract | Internal null-state adapter equality member | TODO | PORTED |
+| NUL-014 | singleton identity semantics (`:11,14`) | Clone returns the canonical state; equality succeeds only for the canonical source state, adapted to the canonical immutable MoonBit value | `viewer/common/model/tokens/text_model_tokens_wbtest.mbt` same/different-state and clone-identity matrix | TODO | TESTED |
 
 ## CTE — consumed ContiguousTokensEditing representation seam
 
@@ -838,6 +887,7 @@ ordinary local branch-derived tests rather than invented `*_reference_*` names.
 | TSB-097 | `tokenizeLinesAt` member (312-318) | Force start line then tokenize supplied hypothetical lines. | `viewer/common/model/tokens/tokenizer_syntax_token_backend.mbt` source-shaped seam for `tokenizeLinesAt` member (312-318) | TODO | N-A (editable/paste support absent) |
 | TSB-098 | missing-tokenizer line-array early return (313-315) | Returns null. | `viewer/common/model/tokens/tokenizer_syntax_token_backend.mbt` source-shaped seam for missing-tokenizer line-array early return (313-315) | TODO | N-A (same editable-only boundary) |
 | TSB-099 | `hasTokens` getter (320-322) | Delegate contiguous store's `hasTokens`. | existing `P::has_tokens`; `B_wbtest` | TODO | TESTED |
+| TSB-100 | completed-state preservation across `todo_resetTokenization` (`tokenizerSyntaxTokenBackend.ts:75-183`; state assignment exists only at `:134-136`) | Reset does not restore `InProgress`: once completed, a reset remains completed and a later worker-finished callback takes the already-completed early return without another event | `B::reset_tokenization`; `B_wbtest` completed -> reset -> finished state/event matrix | TODO | TESTED |
 
 ## TMS ledger — `textModelTokens.ts`
 
@@ -1036,7 +1086,7 @@ The builder and multiline-token rows below are counted because `textModelTokens.
 | TMS-REF-002 | `textModelTokens.test.ts:63-98` — `RangePriorityQueueImpl / addRangeAndResize` | Existing `viewer/common/model/text_model_tokens_reference_test.mbt` test label **`addRangeAndResize`**, with the same four resize/assertion stages. | TODO | TESTED |
 
 
-## CTS — `contiguousTokensStore.ts` complete unit (73)
+## CTS — `contiguousTokensStore.ts` complete unit (74)
 
 | ID | Source atom | Local target / current gap | Status | Proposed terminal |
 |---|---|---|---|---|
@@ -1113,8 +1163,9 @@ The builder and multiline-token rows below are counted because `textModelTokens.
 | CTS-071 | background is `DefaultBackground` (`:253`) | `viewer/common/tokens/contiguous_tokens_store.mbt` — Existing default matches. | TODO | TESTED |
 | CTS-072 | missing grammar sets `BALANCED_BRACKETS_MASK` (`:254-255`) | `viewer/common/tokens/contiguous_tokens_store.mbt` — Current `gap_metadata` omits this source bit. | TODO | TESTED |
 | CTS-073 | final metadata coerces to unsigned 32-bit (`:256`) | `viewer/common/tokens/contiguous_tokens_store.mbt` — `UInt` representation supplies unsigned semantics; assert exact word. | TODO | TESTED |
+| CTS-074 | `ContiguousTokensStore` class declaration (`contiguousTokensStore.ts:19`) | `viewer/common/tokens/contiguous_tokens_store.mbt::ContiguousTokensStore` — Declare the model-wide contiguous syntactic token store. | TODO | PORTED |
 
-## STS — `sparseTokensStore.ts` complete unit (75)
+## STS — `sparseTokensStore.ts` complete unit (76)
 
 Every row below names the missing future dependency explicitly. None is N-A.
 
@@ -1195,8 +1246,9 @@ Every row below names the missing future dependency explicitly. None is N-A.
 | STS-073 | iterate mutable pieces (`:249-258`) | `viewer-semantic-token-acquisition-application-parity.md` — No semantic store. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md: sparse edit traversal) |
 | STS-074 | forward exact edit facts to each piece (`:251`) | `viewer-semantic-token-acquisition-application-parity.md` — No SparseMultilineTokens edit API. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md: sparse edit transformation) |
 | STS-075 | remove emptied piece and decrement index (`:253-257`) | `viewer-semantic-token-acquisition-application-parity.md` — No semantic store compaction. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md: post-edit sparse compaction) |
+| STS-076 | `SparseTokensStore` class declaration (`sparseTokensStore.ts:17`) | `viewer-semantic-token-acquisition-application-parity.md` — Future model-wide `SparseTokensStore` carrier. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md: SparseTokensStore integration) |
 
-## TRG — `tokenizationRegistry.ts` complete unit (55)
+## TRG — `tokenizationRegistry.ts` complete unit (57)
 
 The lazy-factory family is explicitly accounted as N-A because the Viewer
 exports only synchronous `Languages::set_tokens_provider`; it has no
@@ -1260,6 +1312,8 @@ surface. The ordinary registry/change/color-map contract remains required.
 | TRG-053 | set resolved before checking value/disposal (`:147`) | `syntax/tokenizer.mbt` — No lazy factory state. | TODO | N-A (no lazy-provider API seam) |
 | TRG-054 | only truthy value on non-disposed carrier registers (`:148`) | `syntax/tokenizer.mbt` — No lazy factory cancellation/lifetime. | TODO | N-A (no lazy-provider API seam) |
 | TRG-055 | own the ordinary registration disposable (`:149`) | `syntax/tokenizer.mbt` — No lazy factory lifetime. | TODO | N-A (no lazy-provider API seam) |
+| TRG-056 | `TokenizationRegistry<TSupport>` class declaration (`tokenizationRegistry.ts:12-113`) | `syntax/tokenizer.mbt::TokenizationRegistry` — Concrete generic registry implementing `ITokenizationRegistry<TSupport>`. | TODO | PORTED |
+| TRG-057 | `TokenizationSupportFactoryData<TSupport>` class declaration (`:115-152`) | `syntax/tokenizer.mbt` has no lazy-provider resolution/lifetime carrier. | TODO | N-A (no lazy-provider API seam) |
 
 ## MLP — `modelLineProjection.ts` token-demand clusters (34)
 
@@ -1339,31 +1393,31 @@ lines still exercise the required `IdentityModelLineProjection` rows above.
 
 | ID | Upstream test (`line`) | Required disposition | Status | Proposed terminal |
 |---|---|---|---|---|
-| REF-001 | `issue #86303 - color shifting between different tokens` (`:118`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-002 | `deleting a newline` (`:134`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-003 | `inserting a newline` (`:149`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-004 | `deleting a newline 2` (`:164`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-005 | `issue #179268: a complex edit` (`:179`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-006 | `issue #91936: Semantic token color highlighting fails on line with selected text` (`:211`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Full syntactic/semantic merge-mask matrix. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-007 | `issue #147944: Language id "vs.editor.nullLanguage" is not configured nor known` (`:254`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Sparse zero-length/unknown-language handling. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-008 | `partial tokens 1` (`:271`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Partial-update ordering. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-009 | `partial tokens 2` (`:314`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Partial-update ordering. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-010 | `partial tokens 3` (`:356`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Partial-update split. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-011 | `issue #94133: Semantic colors stick around when using (only) range provider` (`:384`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Empty partial replacement. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-012 | `bug` large partial-update reproduction (`:402`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Overlapping partial ranges. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-013 | `issue #95949: Identifiers are colored in bold when targetting keywords` (`:452`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Per-field semantic masks. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-014 | `BUG: setPartial with startLineNumber > 1 and token removal creates invalid state` (`:499`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Empty-piece compaction. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-015 | `BUG: setPartial with split that creates empty first piece with invalid line numbers` (`:527`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Empty split boundary. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-016 | `addSparseTokens skips overlapping semantic tokens that produce backward endOffsets` (`:550`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Monotone merged end offsets. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-017 | `piece with startLineNumber 0 and endLineNumber -1 after encompassing deletion` (`:598`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Encompassing deletion/compaction. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-001 | `issue #86303 - color shifting between different tokens` (`:118-132`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-002 | `deleting a newline` (`:134-147`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-003 | `inserting a newline` (`:149-162`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-004 | `deleting a newline 2` (`:164-177`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-005 | `issue #179268: a complex edit` (`:179-209`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-006 | `issue #91936: Semantic token color highlighting fails on line with selected text` (`:211-252`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Full syntactic/semantic merge-mask matrix. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-007 | `issue #147944: Language id "vs.editor.nullLanguage" is not configured nor known` (`:254-269`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Sparse zero-length/unknown-language handling. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-008 | `partial tokens 1` (`:271-312`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Partial-update ordering. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-009 | `partial tokens 2` (`:314-354`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Partial-update ordering. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-010 | `partial tokens 3` (`:356-382`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Partial-update split. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-011 | `issue #94133: Semantic colors stick around when using (only) range provider` (`:384-400`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Empty partial replacement. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-012 | `bug` (`:402-449`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Large partial-update reproduction with overlapping partial ranges. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-013 | `issue #95949: Identifiers are colored in bold when targetting keywords` (`:452-496`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Per-field semantic masks. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-014 | `BUG: setPartial with startLineNumber > 1 and token removal creates invalid state` (`:499-525`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Empty-piece compaction. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-015 | `BUG: setPartial with split that creates empty first piece with invalid line numbers` (`:527-548`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Empty split boundary. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-016 | `addSparseTokens skips overlapping semantic tokens that produce backward endOffsets` (`:550-596`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Monotone merged end offsets. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-017 | `piece with startLineNumber 0 and endLineNumber -1 after encompassing deletion` (`:598-634`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Encompassing deletion/compaction. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
 
 ### `modelLineProjection.test.ts` exact named cases (counted REF rows)
 
 | ID | Upstream test (`line`) | Required disposition | Status | Proposed terminal |
 |---|---|---|---|---|
-| REF-018 | `getViewLinesData - no wrapping` (`:436`) | `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` — Port including hidden-area rerun and exact per-line demand counts. | TODO | TESTED |
-| REF-019 | `getViewLinesData - with wrapping` (`:570`) | `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` — Port asserting one passive read per projected model line, not per wrapped output. | TODO | TESTED |
-| REF-020 | `getViewLinesData - with wrapping and injected text` (`:743`) | `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` — Port injected-token merge/slice results and one shared passive read. | TODO | TESTED |
+| REF-018 | `getViewLinesData - no wrapping` (`:436-568`) | `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` — Port including hidden-area rerun and exact per-line demand counts. | TODO | TESTED |
+| REF-019 | `getViewLinesData - with wrapping` (`:570-741`) | `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` — Port asserting one passive read per projected model line, not per wrapped output. | TODO | TESTED |
+| REF-020 | `getViewLinesData - with wrapping and injected text` (`:743-940`) | `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` — Port injected-token merge/slice results and one shared passive read. | TODO | TESTED |
 
 ### `model.line.test.ts` exact token-edit cases (counted REF rows)
 
@@ -1373,58 +1427,58 @@ in the `ModelLinesTokens` suite is counted below; each freezes incremental
 
 | ID | Upstream test (`line`) | Required disposition | Status | Proposed terminal |
 |---|---|---|---|---|
-| REF-021 | `single delete 1` (`:201`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-022 | `single delete 2` (`:215`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-023 | `single delete 3` (`:229`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-024 | `single delete 4` (`:243`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-025 | `single delete 5` (`:257`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-026 | `multi delete 6` (`:271`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS multiline delete behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-027 | `multi delete 7` (`:291`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS multiline delete behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-028 | `multi delete 8` (`:311`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS multiline delete behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-029 | `multi delete 9` (`:331`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS multiline delete behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-030 | `single insert 1` (`:351`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-031 | `single insert 2` (`:365`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-032 | `single insert 3` (`:379`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-033 | `single insert 4` (`:393`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-034 | `single insert 5` (`:407`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-035 | `multi insert 6` (`:421`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS multiline insert behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-036 | `multi insert 7` (`:438`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS multiline insert behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-037 | `multi insert 8` (`:455`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS multiline insert behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-038 | `multi insert 9` (`:472`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental CTS multiline insert behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-039 | `insertion on empty line` (`:512`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental empty-line store edit behavior. | TODO | N-A (readonly full-flush edit seam) |
-| REF-040 | `updates tokens on insertion 1` (`:540`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-041 | `updates tokens on insertion 2` (`:562`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-042 | `updates tokens on insertion 3` (`:584`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-043 | `updates tokens on insertion 4` (`:606`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-044 | `updates tokens on insertion 5` (`:628`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-045 | `updates tokens on insertion 6` (`:650`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-046 | `updates tokens on insertion 7` (`:672`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-047 | `updates tokens on insertion 8` (`:694`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-048 | `updates tokens on insertion 9` (`:716`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-049 | `updates tokens on insertion 10` (`:738`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
-| REF-050 | `delete second token 2` (`:754`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token deletion. | TODO | N-A (readonly full-flush edit seam) |
-| REF-051 | `insert right before second token` (`:775`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental boundary insertion. | TODO | N-A (readonly full-flush edit seam) |
-| REF-052 | `delete first char` (`:797`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token deletion. | TODO | N-A (readonly full-flush edit seam) |
-| REF-053 | `delete 2nd and 3rd chars` (`:819`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental token deletion. | TODO | N-A (readonly full-flush edit seam) |
-| REF-054 | `delete first token` (`:841`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental whole-token deletion. | TODO | N-A (readonly full-flush edit seam) |
-| REF-055 | `delete second token` (`:862`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental whole-token deletion. | TODO | N-A (readonly full-flush edit seam) |
-| REF-056 | `delete second token + a bit of the third one` (`:883`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental cross-token deletion. | TODO | N-A (readonly full-flush edit seam) |
-| REF-057 | `delete second and third token` (`:904`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental multi-token deletion. | TODO | N-A (readonly full-flush edit seam) |
-| REF-058 | `delete everything` (`:924`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental full-line deletion. | TODO | N-A (readonly full-flush edit seam) |
-| REF-059 | `noop` (`:944`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental no-op edit. | TODO | N-A (readonly full-flush edit seam) |
-| REF-060 | `equivalent to deleting first two chars` (`:966`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental replacement/deletion equivalence. | TODO | N-A (readonly full-flush edit seam) |
-| REF-061 | `equivalent to deleting from 5 to the end` (`:988`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental replacement/deletion equivalence. | TODO | N-A (readonly full-flush edit seam) |
-| REF-062 | `updates tokens on replace 1` (`:1008`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental multi-edit replacement. | TODO | N-A (readonly full-flush edit seam) |
-| REF-063 | `updates tokens on replace 2` (`:1033`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental multi-edit replacement. | TODO | N-A (readonly full-flush edit seam) |
-| REF-064 | `split at the beginning` (`:1082`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental newline split. | TODO | N-A (readonly full-flush edit seam) |
-| REF-065 | `split at the end` (`:1099`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental newline split. | TODO | N-A (readonly full-flush edit seam) |
-| REF-066 | `split inthe middle 1` (`:1118`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental newline split. | TODO | N-A (readonly full-flush edit seam) |
-| REF-067 | `split inthe middle 2` (`:1135`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental newline split. | TODO | N-A (readonly full-flush edit seam) |
-| REF-068 | `append empty 1` (`:1173`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
-| REF-069 | `append empty 2` (`:1192`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
-| REF-070 | `append 1` (`:1211`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
-| REF-071 | `append 2` (`:1237`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
-| REF-072 | `append 3` (`:1257`) | `viewer/common/model/text_model.mbt` normalized full-flush seam (no incremental test destination) — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
+| REF-021 | `single delete 1` (`:201-213`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-022 | `single delete 2` (`:215-227`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-023 | `single delete 3` (`:229-241`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-024 | `single delete 4` (`:243-255`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-025 | `single delete 5` (`:257-269`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS delete behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-026 | `multi delete 6` (`:271-289`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS multiline delete behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-027 | `multi delete 7` (`:291-309`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS multiline delete behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-028 | `multi delete 8` (`:311-329`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS multiline delete behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-029 | `multi delete 9` (`:331-349`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS multiline delete behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-030 | `single insert 1` (`:351-363`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-031 | `single insert 2` (`:365-377`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-032 | `single insert 3` (`:379-391`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-033 | `single insert 4` (`:393-405`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-034 | `single insert 5` (`:407-419`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS single-line insert behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-035 | `multi insert 6` (`:421-436`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS multiline insert behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-036 | `multi insert 7` (`:438-453`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS multiline insert behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-037 | `multi insert 8` (`:455-470`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS multiline insert behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-038 | `multi insert 9` (`:472-493`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental CTS multiline insert behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-039 | `insertion on empty line` (`:512-538`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental empty-line store edit behavior. | TODO | N-A (readonly full-flush edit seam) |
+| REF-040 | `updates tokens on insertion 1` (`:540-560`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-041 | `updates tokens on insertion 2` (`:562-582`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-042 | `updates tokens on insertion 3` (`:584-604`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-043 | `updates tokens on insertion 4` (`:606-626`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-044 | `updates tokens on insertion 5` (`:628-648`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-045 | `updates tokens on insertion 6` (`:650-670`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-046 | `updates tokens on insertion 7` (`:672-692`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-047 | `updates tokens on insertion 8` (`:694-714`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-048 | `updates tokens on insertion 9` (`:716-736`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-049 | `updates tokens on insertion 10` (`:738-752`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token-offset adjustment. | TODO | N-A (readonly full-flush edit seam) |
+| REF-050 | `delete second token 2` (`:754-773`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token deletion. | TODO | N-A (readonly full-flush edit seam) |
+| REF-051 | `insert right before second token` (`:775-795`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental boundary insertion. | TODO | N-A (readonly full-flush edit seam) |
+| REF-052 | `delete first char` (`:797-817`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token deletion. | TODO | N-A (readonly full-flush edit seam) |
+| REF-053 | `delete 2nd and 3rd chars` (`:819-839`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental token deletion. | TODO | N-A (readonly full-flush edit seam) |
+| REF-054 | `delete first token` (`:841-860`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental whole-token deletion. | TODO | N-A (readonly full-flush edit seam) |
+| REF-055 | `delete second token` (`:862-881`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental whole-token deletion. | TODO | N-A (readonly full-flush edit seam) |
+| REF-056 | `delete second token + a bit of the third one` (`:883-902`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental cross-token deletion. | TODO | N-A (readonly full-flush edit seam) |
+| REF-057 | `delete second and third token` (`:904-922`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental multi-token deletion. | TODO | N-A (readonly full-flush edit seam) |
+| REF-058 | `delete everything` (`:924-942`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental full-line deletion. | TODO | N-A (readonly full-flush edit seam) |
+| REF-059 | `noop` (`:944-964`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental no-op edit. | TODO | N-A (readonly full-flush edit seam) |
+| REF-060 | `equivalent to deleting first two chars` (`:966-986`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental replacement/deletion equivalence. | TODO | N-A (readonly full-flush edit seam) |
+| REF-061 | `equivalent to deleting from 5 to the end` (`:988-1006`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental replacement/deletion equivalence. | TODO | N-A (readonly full-flush edit seam) |
+| REF-062 | `updates tokens on replace 1` (`:1008-1031`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental multi-edit replacement. | TODO | N-A (readonly full-flush edit seam) |
+| REF-063 | `updates tokens on replace 2` (`:1033-1060`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental multi-edit replacement. | TODO | N-A (readonly full-flush edit seam) |
+| REF-064 | `split at the beginning` (`:1082-1097`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental newline split. | TODO | N-A (readonly full-flush edit seam) |
+| REF-065 | `split at the end` (`:1099-1116`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental newline split. | TODO | N-A (readonly full-flush edit seam) |
+| REF-066 | `split inthe middle 1` (`:1118-1133`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental newline split. | TODO | N-A (readonly full-flush edit seam) |
+| REF-067 | `split inthe middle 2` (`:1135-1151`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental newline split. | TODO | N-A (readonly full-flush edit seam) |
+| REF-068 | `append empty 1` (`:1173-1190`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
+| REF-069 | `append empty 2` (`:1192-1209`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
+| REF-070 | `append 1` (`:1211-1235`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
+| REF-071 | `append 2` (`:1237-1255`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
+| REF-072 | `append 3` (`:1257-1275`) | `viewer/common/model/model_line_reference_wbtest.mbt` explicit `SKIPPED` evidence — Incremental newline deletion/append. | TODO | N-A (readonly full-flush edit seam) |
 
 Preserve the source test setup's explicit
 `forceTokenization(model.getLineCount())` (`:355-356`): it is a caller-owned
@@ -1446,17 +1500,17 @@ data structure, not live scheduling.
 
 | Class | Rows |
 |---|---:|
-| Source atoms | 911 |
+| Source atoms | 946 |
 | Exact upstream tests | 97 |
-| **Total counted ledger** | **1008** |
+| **Total counted ledger** | **1043** |
 
 | Proposed terminal | Rows |
 |---|---:|
-| TESTED | 460 |
-| PORTED | 184 |
-| DEFERRED | 194 |
-| N-A | 170 |
-| **Total** | **1008** |
+| TESTED | 465 |
+| PORTED | 201 |
+| DEFERRED | 206 |
+| N-A | 171 |
+| **Total** | **1043** |
 
 Prefix audit:
 
@@ -1465,30 +1519,30 @@ Prefix audit:
 | ASB | 78 |
 | BIA | 23 |
 | CTE | 4 |
-| CTS | 73 |
+| CTS | 74 |
 | FAX | 8 |
 | FNT | 15 |
-| ITM | 19 |
-| LAN | 37 |
+| ITM | 21 |
+| LAN | 58 |
 | LRG | 6 |
 | MLP | 34 |
-| NUL | 10 |
+| NUL | 14 |
 | REF | 72 |
 | STB | 5 |
-| STS | 75 |
+| STS | 76 |
 | TMP | 8 |
 | TMS | 158 |
 | TMS-DEP | 19 |
 | TMS-REF | 2 |
-| TMT | 56 |
-| TPM | 81 |
-| TRG | 55 |
-| TSB | 99 |
+| TMT | 58 |
+| TPM | 82 |
+| TRG | 57 |
+| TSB | 100 |
 | UTM | 23 |
 | VMI | 24 |
 | VML | 24 |
 
-All 1008 counted rows are TODO. There are zero PASS rows and no duplicate IDs. Local LOC rows are excluded.
+All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. Local LOC rows are excluded.
 
 ## Local Coordination Rows (not counted)
 
@@ -1501,8 +1555,8 @@ All 1008 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 | LOC-005 | Raw UTF-16 token content/slice operations preserve the same matrix. | `viewer/common/tokens/line_tokens.mbt` | TODO |
 | LOC-006 | Correct guide header: tokenization is passive on read and explicit/visible/background work owns lexer calls. | `viewer/common/model/tokens/README.md` | TODO |
 | LOC-007 | Correct compatibility header and ownership after moving live queue/state implementation to model/tokens. | `viewer/common/model/text_model_tokens.mbt` | TODO |
-| LOC-008 | Correct model-line reference header/destination for exact upstream projection tests. | `viewer/common/model/model_line_reference_wbtest.mbt`; `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` | TODO |
-| LOC-009 | Preserve one syntactic font event seam; visual FontTokenDecorationsProvider stays deferred. | `viewer/common/model/text_model_events.mbt`; token part/backend tests | TODO |
+| LOC-008 | Correct the model-line reference header to cite full path `vscode/src/vs/editor/test/common/model/model.line.test.ts` and oracle commit `b18492a288de038fbc7643aae6de8247029d11bd`; explicitly `SKIPPED`-name all 52 incremental cases because readonly Viewer has no incremental `applyEdits` seam and manually injected `ManualTokenizationSupport` remains deferred, rather than claiming background tokenization is absent. Keep the projection reference as a separate destination. | `viewer/common/model/model_line_reference_wbtest.mbt`; `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` | TODO |
+| LOC-009 | Place the syntactic font carrier in model/tokens, preserve the source `FontTokensUpdate` typealias there, and expose the exact same option/update/event values through the token-part event consumed by the parent; no duplicate parent carrier, alias, or conversion. Visual FontTokenDecorationsProvider stays deferred. | `viewer/common/model/tokens/annotations.mbt`; backend/token-part/annotation tests | TODO |
 | LOC-010 | Keep large models on projected collection while disabling tokenization; document P2 deviation. | `viewer/common/view_model/README.md`; `viewer-large-file-view-collection-parity.md` | TODO |
 | LOC-011 | Scheduler replacement seam: idle/zero handles plus generation cancel old queues, reset `_isScheduled`, and prevent stale callbacks from clearing fresh state. | `viewer/common/model/tokens/text_model_tokens.mbt`; `viewer/browser_host.mbt` | TODO |
 | LOC-012 | Common-tokens batch/store placement takes top-level language id plus line-length closure; common/tokens never imports model/tokens. | `viewer/common/tokens/{contiguous_tokens_store,contiguous_multiline_tokens,contiguous_multiline_tokens_builder}.mbt` | TODO |
@@ -1511,6 +1565,7 @@ All 1008 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 | LOC-015 | `scheduler=None` enqueues no idle/zero/delayed work while explicit force and stabilized-true refresh remain synchronous; reattach with a scheduler starts a fresh generation. | `viewer/common/model/tokens/text_model_tokens.mbt` | TODO |
 | LOC-016 | Correct the queue reference header to cite oracle commit `b18492a288de038fbc7643aae6de8247029d11bd` and full source path `vscode/src/vs/editor/test/common/model/textModelTokens.test.ts`. | `viewer/common/model/text_model_tokens_reference_test.mbt` | TODO |
 | LOC-017 | Correct the guide reference header: only #133 and #11856 are bracket suites; #122 is tokenization and #63822 is embedded-language behavior. | `viewer/common/model/guides_text_model_part_reference_test.mbt` | TODO |
+| LOC-018 | Move the exact `Get word at position` conformance case into `model_reference_wbtest.mbt`, citing `vscode/src/vs/editor/test/common/model/model.test.ts` at `b18492a288de038fbc7643aae6de8247029d11bd`; reclassify `word_helper_wbtest.mbt` as ordinary local coverage and remove the duplicate conformance claim. | `viewer/common/model/model_reference_wbtest.mbt`; `viewer/common/model/word_helper_wbtest.mbt` | TODO |
 
 ## Deviations Approved for Gate-B Review
 
@@ -1519,6 +1574,12 @@ All 1008 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 - **Literal common-tokens placement:** store, multiline batch, and builder stay
   in `viewer/common/tokens`; the backend passes language/line-length access,
   and common/tokens never imports model/tokens.
+- **Font carrier placement:** backend-owned annotation/event types live in
+  `model/tokens`; the token part exposes the same nominal child event directly
+  to the parent-owned consumer. The source-shaped `FontTokensUpdate` typealias
+  stays inside the child package. This avoids a reverse package edge,
+  cross-package aliasing, and payload conversion. Only the visual decoration
+  consumer remains deferred.
 - **Scheduler replacement safety:** unlike the source's process-global
   scheduler, Viewer may attach/detach scheduler-bearing hosts. Cancel handles,
   generation guards, and explicit `scheduler=None` prevent old queues from
@@ -1530,6 +1591,10 @@ All 1008 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 - **Large-file collection:** tokenization disables at exact source thresholds,
   but the projected view collection remains until
   `viewer-large-file-view-collection-parity.md`.
+- **Restore adaptation:** Viewer already has an optional, scroll-only
+  `ViewerViewState`. This child ports only the source `View.restoreState`
+  immediate-scroll-then-stabilized substep for `Some`; broader Monaco
+  view-state capture/restore remains outside scope.
 - **Semantic overlay:** every sparse/merge row remains deferred to
   `viewer-semantic-token-acquisition-application-parity.md`.
 - **Representation:** `Missing | Empty | Words(Array[UInt])` preserves the
@@ -1559,12 +1624,16 @@ All 1008 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
   cancellation. Test attached-count and AttachedViews aggregate invalidation
   independently on attach, visible-state change, and detach.
 - Stabilization: ViewModel-owned scroll and content-mapping changes publish
-  false; a generic render by itself publishes neither state. True occurs only
-  at one-time post-first-render initialization matching
-  `codeEditorWidget.handleInitialized`; source restoreState is explicit N-A
-  because Viewer has no restore API. Repeated renders never send true.
+  false; a generic render by itself publishes neither state. True occurs at
+  one-time post-first-render initialization and after
+  `Viewer::restore_view_state(Some(state))`. Restore commits both axes
+  synchronously, its scroll-driven false/update completes first, then exactly
+  one true update uses the restored viewport. `None` and absent-model restores
+  remain no-ops and emit neither false nor true. Repeated renders never send
+  true.
 - Demand/state: line 0/1/middle/final/count+1; invalid/accurate; cheap boundary
-  2047/2048; in-progress/completed/reset; same/different carried states;
+  2047/2048; in-progress/completed/reset; completed -> reset remains completed
+  and a repeated finish is silent; same/different carried states;
   double initial-state acquisition; missing/failing support; hasEOL true/false;
   direct setEndState interface-shape evidence; raw start offsets converted once;
   error reporting; and no widening of public LineTokenizer.
@@ -1614,7 +1683,9 @@ This child completes frozen lifecycle CEW-086
 `model.onBeforeDetached(attachedView)` substep of CEW-088
 (`:2134-2141`) without rewriting that historical ledger. It owns the borrowed
 stable/unstable producer and exact-handle wiring. The parent coordination table
-records the transfer.
+records the transfer. It also owns the existing scroll-only
+`Viewer::restore_view_state` immediate-scroll-then-stabilized substep; broader
+view-state shape stays in the P2 backlog.
 
 ## Milestones
 
@@ -1650,3 +1721,13 @@ records the transfer.
   dependency, stabilization, projection, UTF-16, scheduler, and exact upstream
   test closure. The mechanically fixed denominator is 1008 rows = 911 source atoms + 97 exact upstream tests; proposed terminals are 460 TESTED / 184 PORTED / 194 DEFERRED / 170 N-A. Every counted row remains TODO. No product or test file
   changed. Status is inventory ready — STOP FOR REVIEW; Gate B has not passed.
+- 2026-07-13: the first formal Gate-B round REJECTED the candidate for missing
+  declared-type atoms, incomplete exact test ranges/SKIPPED destinations,
+  false restore-state N-A classification, a font-carrier reverse package edge,
+  bracket-construction ambiguity, incomplete NullState/non-encoded closure,
+  and reset-state wording. The corrected candidate now has 1043 TODO rows =
+  946 source atoms + 97 exact upstream tests, with proposed terminals 465
+  TESTED / 201 PORTED / 206 DEFERRED / 171 N-A. All 72 REF rows name complete
+  source ranges, and model-line N-A cases have explicit SKIPPED authorities.
+  No product or test file changed; Gate B has not passed and requires a fresh
+  independent review.

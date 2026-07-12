@@ -125,22 +125,23 @@ review target, not implementation evidence. The normalized, deduplicated
 denominator is:
 
 ```text
-Line geometry: GVL 52 + GVLI 133 + GDRC 16 + GRU 25 + GVLO 16 = 242
-Widget/query:  GCW 120 + GRC 54                                  = 174
+Line geometry: GVL 55 + GVLI 134 + GDRC 16 + GRU 25 + GVLO 16 = 246
+Widget/query:  GCW 122 + GRC 54                                  = 176
 Layout/font:   GVLay 53 + GVR 41 + GFI 51 + GFM 72               = 217
                                                                     ---
-Total                                                               633
+Total                                                               639
 
-Proposed: 421 TESTED + 93 PORTED + 73 DEFERRED + 46 N-A = 633
-Working:  633 TODO; 0 PASS
+Proposed: 425 TESTED + 96 PORTED + 80 DEFERRED + 38 N-A = 639
+Working:  639 TODO; 0 PASS
 ```
 
-The three normalized fragments below supersede rejected raw drafts of
-279/225/273 rows. Their independent pre-reviews removed statement-level
-inflation, restored omitted declared members and callbacks, removed frozen
-cross-plan duplicates, and changed absent GPU/experimental/fixed-option seams
-from N-A to explicit DEFERRED where the source behavior remains applicable.
-No product or test file changed while this denominator was built.
+The three amended fragments below supersede rejected raw drafts of 279/225/273
+rows and the rejected 633-row documentation-only inventory commit `fa145e3`.
+Pre-review removed statement-level inflation and frozen cross-plan duplicates;
+formal Gate B then restored four omitted Group A declared members and two
+Group B owner-window fallbacks, corrected terminal classifications, and
+expanded the branch-derived matrices. No product or test file changed while
+this denominator was built.
 
 ### Group A — ViewLines, ViewLine, RangeUtil, and options
 
@@ -150,10 +151,10 @@ One row represents one declared member, field/property, behavior-changing branch
 
 #### Cross-plan ownership and excluded siblings
 
-- Frozen render VL-011 owns `_maxLineWidth`; VL-027/VL-028 own wrapping/layout resets; VL-019 owns flush; VL-002 owns `domNode`, including the scroll-width write at `viewLines.ts:318`. Geometry closes those handoffs outside this source denominator.
+- Frozen render VL-001 owns `_visibleLines`; VL-002 owns `domNode`, including the scroll-width write at `viewLines.ts:318`; VL-004 owns `_typicalHalfwidthCharacterWidth`; VL-009 owns `_canUseLayerHinting`; VL-010 owns `_viewLineOptions`; VL-011 owns `_maxLineWidth`; VL-019 owns flush; VL-025 owns the zones reapply; VL-027/VL-028 own wrapping/layout resets; and VL-033 owns the visible-line factory callback. Geometry consumes those exact rows without recounting them.
 - Frozen VLI-001–013 own `_options`, `_isMaybeInvalid`, `_renderedViewLine`, getDomNode, and the event/selection invalidation cluster. Group A consumes those exact rows without recounting them.
 - `viewLine.ts:109–149,175–178` are explicitly excluded non-geometry render/invalidation/selection siblings; they are not falsely claimed as frozen VLI ledger rows. Geometry owns only the scoped renderer-font/option wiring, DOM/CSS layout, strategy, width, and visible-range clusters below.
-- ViewLines reveal requests/arithmetic, DOM-to-position hit testing, standalone GPU rendering, browser-zoom check scheduler, and ViewLine node-to-column helpers remain named excluded siblings. Scoped shared methods are labelled geometry slices and do not claim excluded statements.
+- ViewLines reveal requests/arithmetic, DOM-to-position hit testing, standalone GPU rendering, and the browser-zoom check scheduler remain named excluded siblings. `ViewLine.isRenderedRTL` (`viewLine.ts:245-250`) is a reveal-only helper and remains excluded with that cluster. ViewLine node-to-column helpers remain excluded siblings. Scoped shared methods are labelled geometry slices and do not claim excluded statements.
 - `domReadingContext.ts`, `rangeUtil.ts`, and `viewLineOptions.ts` are complete units. Passing GRC-owned `FloatHorizontalRange.compare` to RangeUtil sort is a callsite, not a second callback atom.
 - GPU atoms that occur inside closed scoped members remain DEFERRED under the Phase-0 GPU exclusion; absence is not N-A.
 
@@ -256,53 +257,56 @@ GVLO denominator: **16**.
 | GVL-005 | `_linesContent` field (`:103,147,672-676`) | Existing `ViewLines.lines_content`; retain the layer node. Scoped layer CSS writes have their own rows. | TODO | PORTED |
 | GVL-006 | `_textRangeRestingSpot` field (`:104,148,408,432,487`) | Existing detached `text_range_resting_spot`. | TODO | TESTED |
 | GVL-007 | `_asyncUpdateLineWidths` field (`:120,160-162,538-543,652-657`) | Missing 200ms slow-width scheduler. | TODO | TESTED |
-| GVL-008 | constructor geometry cluster (`:130-174`) | Scoped constructor slice owns geometry-only construction/order for resting spot, width scheduler, and last-rendered state; frozen/excluded fields remain external handoffs. | TODO | TESTED |
-| GVL-009 | slow-width scheduler callback (`:160-162`) | Source-owned callback invokes only `_updateLineWidthsSlow`. | TODO | TESTED |
-| GVL-010 | slow-width scheduler delay `200` ms (`:162`) | Missing exact delay constant. | TODO | TESTED |
-| GVL-011 | `dispose` geometry slice (`:176-180`) | Dispose the width scheduler before inherited `super.dispose`; local ViewLines currently has no disposable width work. | TODO | TESTED |
-| GVL-012 | public `getLineWidth` (`:400-413`) | Existing method has the range guard and context/delegate read; add the post-read slow-width piggyback. | TODO | TESTED |
-| GVL-013 | unrendered-line early return `-1` (`:403-406`) | Existing exact range guard. | TODO | TESTED |
-| GVL-014 | public `resetLineWidthCaches` (`:415-421`) | Missing member; it owns the inclusive visible-window loop and each retained line's cache reset. | TODO | TESTED |
-| GVL-015 | public `linesVisibleRangesForRange` (`:423-480`) | Missing multi-line query; the member owns original-end capture, rendered-range intersection, shared context/converter progression, result construction, and slow-width piggyback around the counted branches. | TODO | TESTED |
-| GVL-016 | null-intersection early return (`:426-428`) | Missing. | TODO | TESTED |
-| GVL-017 | `includeNewLines` initialization branch (`:434-437`) | Missing. | TODO | TESTED |
-| GVL-018 | rendered-window miss `continue` (`:443-445`) | Preserve per-line skip after visible-range clipping. | TODO | TESTED |
-| GVL-019 | start-column first-line branch (`:447`) | First line uses clipped start; later lines start at column 1. | TODO | TESTED |
-| GVL-020 | end-column/continuation branch (`:448-449`) | Non-original-end lines use line max column and set continuation. | TODO | TESTED |
-| GVL-021 | null per-line ranges `continue` (`:453-455`) | Missing. | TODO | TESTED |
-| GVL-022 | newline-width gate (`includeNewLines && line < originalEnd`) (`:457`) | Missing. | TODO | TESTED |
-| GVL-023 | actual model-newline branch (`:461-467`) | Add width only when adjacent view lines map to distinct model lines. | TODO | TESTED |
-| GVL-024 | RTL newline branch (`:464-466`) | Subtract the same width from `left` for RTL model lines. | TODO | TESTED |
-| GVL-025 | zero-result early return (`:475-477`) | Return `null`, not an empty list. | TODO | TESTED |
-| GVL-026 | private `_visibleRangesForLineRange` (`:482-492`) | Missing helper; it owns one context, retained-line delegation, and post-read slow-width piggyback. | TODO | TESTED |
-| GVL-027 | helper unrendered-line early return (`:483-485`) | Existing local measurements return empty/None through a different seam. | TODO | TESTED |
-| GVL-028 | public `visibleRangeForPosition` (`:502-508`) | Local View query bypasses retained ViewLine semantics; source returns HorizontalPosition from the first range. | TODO | TESTED |
-| GVL-029 | missing visible-ranges early return (`:504-506`) | Existing local `left < 0` reduction; reconcile source nullable outcome. | TODO | TESTED |
-| GVL-030 | public `updateLineWidths` (`:512-514`) | Missing synchronous slow sweep entrypoint. | TODO | TESTED |
-| GVL-031 | `_updateLineWidthsFast` wrapper (`:521-523`) | Missing exact `fast=true` wrapper. | TODO | TESTED |
-| GVL-032 | `_updateLineWidthsSlow` wrapper (`:525-527`) | Missing exact `fast=false` wrapper. | TODO | TESTED |
-| GVL-033 | `_updateLineWidthsSlowIfDomDidLayout` (`:533-544`) | Missing piggyback method; after both early-return guards it cancels the pending scheduler before the slow sweep. | TODO | TESTED |
-| GVL-034 | no-DOM-layout early return (`:534-537`) | Do no sweep when the triggering query did not force layout. | TODO | TESTED |
-| GVL-035 | not-scheduled early return (`:538-541`) | Widths are already current when no slow sweep is pending. | TODO | TESTED |
-| GVL-036 | `_updateLineWidths(fast)` (`:546-572`) | Missing visible-width sweep; the member owns per-line maximum accumulation, final ensure call, and completeness result. | TODO | TESTED |
-| GVL-037 | local maximum initial constant `1` (`:550`) | Preserve minimum feedback width. | TODO | TESTED |
-| GVL-038 | fast-and-not-fast-readable branch (`:555-559`) | Set incomplete and continue without forcing layout. | TODO | TESTED |
-| GVL-039 | all-widths/full-document branch (`:564-567`) | Only a complete rendered document proves the global maximum current; clear the prior maximum before ensuring the sweep result. | TODO | TESTED |
-| GVL-040 | `renderText` geometry cluster (`:613-677`) | Existing method renders rows first; add last-rendered-range update and width feedback before rail layout. | TODO | TESTED |
-| GVL-041 | `domNode.setWidth(scrollWidth)` DOM/CSS write (`:617`) | Existing exact write from `layout.dimensions()`. | TODO | TESTED |
-| GVL-042 | `domNode.setHeight(min(scrollHeight,1000000))` DOM/CSS write (`:618`) | Existing cap/write. | TODO | TESTED |
-| GVL-043 | height cap `1_000_000` (`:618`) | Preserve exact independent constant. | TODO | TESTED |
-| GVL-044 | fast-sweep schedule-vs-cancel branch (`:652–657`) | One `if/else`: incomplete fast sweep schedules delayed work; complete sweep cancels it. | TODO | TESTED |
-| GVL-045 | `_linesContent.setLayerHinting` DOM/CSS write (`:672`) | Existing `set_layer_hinting` using frozen configuration field. | TODO | TESTED |
-| GVL-046 | `_linesContent.setContain('strict')` CSS property (`:673`) | Existing exact value. | TODO | TESTED |
-| GVL-047 | `_linesContent.setTop(-adjustedScrollTop)` CSS property (`:674-675`) | Existing exact `-(scrollTop - bigNumbersDelta)` translation. | TODO | TESTED |
-| GVL-048 | `_linesContent.setLeft(-scrollLeft)` CSS property (`:676`) | Existing exact negative translation. | TODO | TESTED |
-| GVL-049 | `_ensureMaxLineWidth` (`:681-691`) | Missing member; it owns ceiling integerization and monotonic layout feedback. | TODO | TESTED |
-| GVL-050 | GPU early return (`:682-685`) | No local GPU ViewLines owner. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
-| GVL-051 | strictly-growing maximum branch (`:687-690`) | Equal/smaller widths do not write; a growth assigns the cache then calls ViewLayout exactly once. | TODO | TESTED |
-| GVL-052 | `_lastRenderedData` field (`:124,167,425,616`) | Missing ViewLines-owned rendered-range cache; compose `LastRenderedData` at construction and update it only after rows render. | TODO | TESTED |
+| GVL-008 | `_lastRenderedData` field (`:124,167,425,616`) | Missing ViewLines-owned rendered-range cache; compose `LastRenderedData` at construction and update it only after rows render. | TODO | TESTED |
+| GVL-009 | constructor geometry cluster (`:130-174`) | Scoped constructor slice owns geometry-only construction/order for resting spot, width scheduler, and last-rendered state; frozen/excluded fields remain external handoffs. | TODO | TESTED |
+| GVL-010 | slow-width scheduler callback (`:160-162`) | Source-owned callback invokes only `_updateLineWidthsSlow`. | TODO | TESTED |
+| GVL-011 | slow-width scheduler delay `200` ms (`:162`) | Missing exact delay constant. | TODO | TESTED |
+| GVL-012 | `dispose` geometry slice (`:176-180`) | Dispose the width scheduler before inherited `super.dispose`; local ViewLines currently has no disposable width work. | TODO | TESTED |
+| GVL-013 | public `getDomNode` (`:182-184`) | Existing `ViewLines::get_dom_node` returns the exact retained collection DOM node. | TODO | TESTED |
+| GVL-014 | public `getLineWidth` (`:400-413`) | Existing method has the range guard and context/delegate read; add the post-read slow-width piggyback. | TODO | TESTED |
+| GVL-015 | unrendered-line early return `-1` (`:403-406`) | Existing exact range guard. | TODO | TESTED |
+| GVL-016 | public `resetLineWidthCaches` (`:415-421`) | Missing member; it owns the inclusive visible-window loop and each retained line's cache reset. | TODO | TESTED |
+| GVL-017 | public `linesVisibleRangesForRange` (`:423-480`) | Missing multi-line query; the member owns original-end capture, rendered-range intersection, shared context/converter progression, result construction, and slow-width piggyback around the counted branches. | TODO | TESTED |
+| GVL-018 | null-intersection early return (`:426-428`) | Missing. | TODO | TESTED |
+| GVL-019 | `includeNewLines` initialization branch (`:434-437`) | Missing. | TODO | TESTED |
+| GVL-020 | rendered-window miss `continue` (`:443-445`) | Preserve per-line skip after visible-range clipping. | TODO | TESTED |
+| GVL-021 | start-column first-line branch (`:447`) | First line uses clipped start; later lines start at column 1. | TODO | TESTED |
+| GVL-022 | end-column/continuation branch (`:448-449`) | Non-original-end lines use line max column and set continuation. | TODO | TESTED |
+| GVL-023 | null per-line ranges `continue` (`:453-455`) | Missing. | TODO | TESTED |
+| GVL-024 | newline-width gate (`includeNewLines && line < originalEnd`) (`:457`) | Missing. | TODO | TESTED |
+| GVL-025 | actual model-newline branch (`:461-467`) | Add width only when adjacent view lines map to distinct model lines. | TODO | TESTED |
+| GVL-026 | RTL newline branch (`:464-466`) | Subtract the same width from `left` for RTL model lines. | TODO | TESTED |
+| GVL-027 | zero-result early return (`:475-477`) | Return `null`, not an empty list. | TODO | TESTED |
+| GVL-028 | private `_visibleRangesForLineRange` (`:482-492`) | Missing helper; it owns one context, retained-line delegation, and post-read slow-width piggyback. | TODO | TESTED |
+| GVL-029 | helper unrendered-line early return (`:483-485`) | Existing local measurements return empty/None through a different seam. | TODO | TESTED |
+| GVL-030 | public `visibleRangeForPosition` (`:502-508`) | Local View query bypasses retained ViewLine semantics; source returns HorizontalPosition from the first range. | TODO | TESTED |
+| GVL-031 | missing visible-ranges early return (`:504-506`) | Existing local `left < 0` reduction; reconcile source nullable outcome. | TODO | TESTED |
+| GVL-032 | public `updateLineWidths` (`:512-514`) | Missing synchronous slow sweep entrypoint. | TODO | TESTED |
+| GVL-033 | `_updateLineWidthsFast` wrapper (`:521-523`) | Missing exact `fast=true` wrapper. | TODO | TESTED |
+| GVL-034 | `_updateLineWidthsSlow` wrapper (`:525-527`) | Missing exact `fast=false` wrapper. | TODO | TESTED |
+| GVL-035 | `_updateLineWidthsSlowIfDomDidLayout` (`:533-544`) | Missing piggyback method; after both early-return guards it cancels the pending scheduler before the slow sweep. | TODO | TESTED |
+| GVL-036 | no-DOM-layout early return (`:534-537`) | Do no sweep when the triggering query did not force layout. | TODO | TESTED |
+| GVL-037 | not-scheduled early return (`:538-541`) | Widths are already current when no slow sweep is pending. | TODO | TESTED |
+| GVL-038 | `_updateLineWidths(fast)` (`:546-572`) | Missing visible-width sweep; the member owns per-line maximum accumulation, final ensure call, and completeness result. | TODO | TESTED |
+| GVL-039 | local maximum initial constant `1` (`:550`) | Preserve minimum feedback width. | TODO | TESTED |
+| GVL-040 | fast-and-not-fast-readable branch (`:555-559`) | Set incomplete and continue without forcing layout. | TODO | TESTED |
+| GVL-041 | all-widths/full-document branch (`:564-567`) | Only a complete rendered document proves the global maximum current; clear the prior maximum before ensuring the sweep result. | TODO | TESTED |
+| GVL-042 | public `prepareRender` unsupported entrypoint (`:605-607`) | Existing `ViewPart::prepare_render` for ViewLines aborts with exact `Not supported`; add a direct regression check. | TODO | TESTED |
+| GVL-043 | public `render` unsupported entrypoint (`:609-611`) | Existing `ViewPart::render` for ViewLines aborts with exact `Not supported`; `renderText` remains the only text-render route. | TODO | TESTED |
+| GVL-044 | `renderText` geometry cluster (`:613-677`) | Existing method renders rows first; add last-rendered-range update and width feedback before rail layout. | TODO | TESTED |
+| GVL-045 | `domNode.setWidth(scrollWidth)` DOM/CSS write (`:617`) | Existing exact write from `layout.dimensions()`. | TODO | TESTED |
+| GVL-046 | `domNode.setHeight(min(scrollHeight,1000000))` DOM/CSS write (`:618`) | Existing cap/write. | TODO | TESTED |
+| GVL-047 | height cap `1_000_000` (`:618`) | Preserve exact independent constant. | TODO | TESTED |
+| GVL-048 | fast-sweep schedule-vs-cancel branch (`:652–657`) | One `if/else`: incomplete fast sweep schedules delayed work; complete sweep cancels it. | TODO | TESTED |
+| GVL-049 | `_linesContent.setLayerHinting` DOM/CSS write (`:672`) | Existing `set_layer_hinting` using frozen configuration field. | TODO | TESTED |
+| GVL-050 | `_linesContent.setContain('strict')` CSS property (`:673`) | Existing exact value. | TODO | TESTED |
+| GVL-051 | `_linesContent.setTop(-adjustedScrollTop)` CSS property (`:674-675`) | Existing exact `-(scrollTop - bigNumbersDelta)` translation. | TODO | TESTED |
+| GVL-052 | `_linesContent.setLeft(-scrollLeft)` CSS property (`:676`) | Existing exact negative translation. | TODO | TESTED |
+| GVL-053 | `_ensureMaxLineWidth` (`:681-691`) | Missing member; it owns ceiling integerization and monotonic layout feedback. | TODO | TESTED |
+| GVL-054 | GPU early return (`:682-685`) | No local GPU ViewLines owner. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
+| GVL-055 | strictly-growing maximum branch (`:687-690`) | Equal/smaller widths do not write; a growth assigns the cache then calls ViewLayout exactly once. | TODO | TESTED |
 
-GVL denominator: **52**.
+GVL denominator: **55**.
 
 #### `viewLine.ts` width, visible-range, and layout clusters — GVLI
 
@@ -310,162 +314,163 @@ GVL denominator: **52**.
 |---|---|---|---|---|
 | GVLI-001 | module `canUseFastRenderedViewLine` constant (`:25–47`) | Retain the selected fast-render policy result; the source-owned selector IIFE and its branches are separate. | TODO | DEFERRED (browser zoom and fast-renderer policy seam) |
 | GVLI-002 | `canUseFastRenderedViewLine` selector IIFE callback (`:25–47`) | Source-owned callback owns native/platform branch order and ordinary final true fallback. | TODO | DEFERRED (browser zoom and fast-renderer policy seam) |
-| GVLI-003 | native-platform early true (`:26-29`) | Root Viewer is js-only. | TODO | N-A (native platform cannot construct browser View) |
+| GVLI-003 | native-platform early true (`:26-29`) | Source `platform.isNative` is a JS native/Node/Electron host fact, not the MoonBit native backend; no local native-host zoom-invalidation owner exists. | TODO | DEFERRED (native-host/browser-zoom policy seam) |
 | GVLI-004 | Linux, Firefox, or Safari false branch (`:31-44`) | No source-shaped fast-path platform gate; fixed geometry fixture is Chromium. | TODO | DEFERRED (non-fixture platform and browser zoom seam) |
 | GVLI-005 | mutable `monospaceAssumptionsAreValid = true` (`:49`) | No global browser-zoom invalidation state. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-006 | constructor `_viewGpuContext` parameter property (`:59`) | No GPU ViewLine context. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
-| GVLI-007 | `ViewLine` constructor (`:59–63`) | Declared member owns construction/order; frozen field rows own retained invalidation assignments and the GPU parameter property remains separately deferred. | TODO | TESTED |
-| GVLI-008 | `setDomNode` (`:73-79`) | Existing `ViewLine::set_dom_node`, but local state cannot represent the source's absent-rendered-line error. | TODO | TESTED |
-| GVLI-009 | rendered-line-present-vs-throw branch (`:74–78`) | One `if/else`: attach a cached DOM wrapper only when rendered state exists; otherwise throw the exact invariant failure. | TODO | TESTED |
-| GVLI-010 | `renderLine` scoped geometry integration (`:102-232`) | Scoped renderLine geometry member owns measured option/font argument flow, ordinary ligature predicate, DOM/layout construction, and rendered strategy around counted branches; frozen/excluded siblings are not recounted. | TODO | TESTED |
-| GVLI-011 | GPU `canRender` branch (`:103-107`) | When GPU can render, remove prior DOM, clear retained strategy, and return false; local GPU path is absent. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
-| GVLI-012 | RTL `dir="rtl"` DOM attribute (`:180-182`) | Local row HTML omits direction attributes. | TODO | TESTED |
-| GVLI-013 | contains-RTL `dir="ltr"` DOM attribute (`:183-185`) | Local row HTML omits direction attributes. | TODO | TESTED |
-| GVLI-014 | row `top` CSS property (`:186-188`) | Existing exact integer-pixel write. | TODO | TESTED |
-| GVLI-015 | row `height` CSS property (`:188-190`) | Existing exact integer-pixel write. | TODO | TESTED |
-| GVLI-016 | row `line-height` CSS property (`:190-192`) | Existing exact integer-pixel write. | TODO | TESTED |
-| GVLI-017 | RTL `padding-right` CSS property (`:192-195`) | Missing; source uses vertical scrollbar size. | TODO | TESTED |
-| GVLI-018 | row class attribute (`:196-198`) | Existing `view-line` plus local renderer class; reconcile source-owned class contract. | TODO | TESTED |
-| GVLI-019 | seven-factor fast-render candidate branch (`:204-213`) | Local has no FastRenderedViewLine; preserve slow behavior and record optimization deferral. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-020 | no-fast-result fallback branch (`:221-228`) | Local always constructs equivalent slow retained state. | TODO | TESTED |
-| GVLI-021 | `layoutLine` (`:235-241`) | Existing `ViewLine::layout_line`. | TODO | TESTED |
-| GVLI-022 | rendered-line plus DOM guard (`:236-240`) | Existing optional DOM branch. | TODO | TESTED |
-| GVLI-023 | `domNode.setTop` CSS write (`:237`) | Existing exact write. | TODO | TESTED |
-| GVLI-024 | `domNode.setHeight` CSS write (`:238`) | Existing exact write. | TODO | TESTED |
-| GVLI-025 | `domNode.setLineHeight` CSS write (`:239`) | Existing exact write. | TODO | TESTED |
-| GVLI-026 | `getWidth` ViewLine delegator (`:252-257`) | Local direct helper is not a retained ViewLine method and has no cache variants. | TODO | TESTED |
-| GVLI-027 | no-rendered-line width `0` (`:253-255`) | Existing FFI fallback is first-child absent `0`, but not the source state guard. | TODO | TESTED |
-| GVLI-028 | `getWidthIsFast` ViewLine delegator (`:259-264`) | Missing. | TODO | TESTED |
-| GVLI-029 | no-rendered-line fast result `true` (`:260-262`) | Missing exact branch. | TODO | TESTED |
-| GVLI-030 | `needsMonospaceFontCheck` (`:266-271`) | Missing browser-zoom diagnostic member; after its no-line guard it returns the fast-strategy instance predicate. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-031 | no-rendered-line false return (`:267-269`) | Same deferred diagnostic cluster. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-032 | `monospaceAssumptionsAreValid` ViewLine member (`:273-281`) | Missing global/strategy dispatch. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-033 | no-rendered-line global fallback (`:274-276`) | Missing. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-034 | fast-instance delegation branch (`:277-279`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-035 | `onMonospaceAssumptionsInvalidated` (`:283-287`) | Missing fast-to-slow replacement. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-036 | fast-instance conversion branch (`:284-286`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-037 | `getVisibleRangesForRange` ViewLine member (`:289-318`) | Missing; the member owns input-length clamping, stop-rendering normalization, retained-strategy delegation, and final nullable result around counted branches. | TODO | TESTED |
-| GVLI-038 | no-rendered-line null early return (`:290-292`) | Missing source state guard. | TODO | TESTED |
-| GVLI-039 | both columns beyond truncation early return (`:299-302`) | Missing outside-rendered-line result at measured width and zero range width. | TODO | TESTED |
-| GVLI-040 | start-column truncation clamp branch (`:304-306`) | Missing. | TODO | TESTED |
-| GVLI-041 | end-column truncation clamp branch (`:308-310`) | Missing. | TODO | TESTED |
-| GVLI-042 | nonempty delegated ranges branch (`:312-315`) | Missing `VisibleRanges(false, ranges)` wrapper. | TODO | TESTED |
-| GVLI-043 | `resetCachedWidth` ViewLine member (`:327-329`) | Missing; local rereads every call. | TODO | TESTED |
-| GVLI-044 | `IRenderedViewLine.domNode` field (`:333`) | Local ViewLine owns optional cached DOM directly. | TODO | PORTED |
-| GVLI-045 | `IRenderedViewLine.input` field (`:334`) | Existing optional `render_input`. | TODO | PORTED |
-| GVLI-046 | `IRenderedViewLine.getWidth` contract (`:335`) | Local free function covers only slow uncached width. | TODO | TESTED |
-| GVLI-047 | `IRenderedViewLine.getWidthIsFast` contract (`:336`) | Missing. | TODO | TESTED |
-| GVLI-048 | `IRenderedViewLine.resetCachedWidth` contract (`:337`) | Missing. | TODO | TESTED |
-| GVLI-049 | `IRenderedViewLine.getVisibleRangesForRange` contract (`:338`) | Missing source-shaped abstraction. | TODO | TESTED |
-| GVLI-050 | `Constants.MaxMonospaceDistance = 300` (`:342-351`) | Missing exact threshold. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-051 | FastRenderedViewLine `domNode` field (`:358`) | Missing fast class. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-052 | FastRenderedViewLine `input` field (`:359`) | Missing fast class. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-053 | FastRenderedViewLine `_characterMapping` (`:361`) | Missing fast class. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-054 | FastRenderedViewLine `_charWidth` (`:362,380`) | Source takes `RenderLineInput.spaceWidth`. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-055 | FastRenderedViewLine `_keyColumnPixelOffsetCache` (`:363,369-377`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-056 | FastRenderedViewLine `_cachedWidth = -1` (`:364`) | Missing sentinel cache. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-057 | FastRenderedViewLine constructor (`:366-381`) | Missing; member owns key-count arithmetic, sentinel fill loop, mapping retention, and spaceWidth character width. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-058 | key-column-cache allocation-vs-null branch (`:369–377`) | One `if/else`: positive key count allocates/fills the cache; zero retains null. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-059 | FastRenderedViewLine `getWidth` (`:383-393`) | Missing hybrid member; owns rounded mapped estimate, firstChild offsetWidth read, cache fill, and layout mark around counted branches. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-060 | no-DOM or shorter-than-300 branch (`:384-387`) | Estimate rounded mapped width without layout. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-061 | cached-width-miss branch (`:388-391`) | Read DOM once and mark context. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-062 | FastRenderedViewLine `getWidthIsFast` (`:395-397`) | Short line or populated cache. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-063 | FastRenderedViewLine `resetCachedWidth` (`:399-401`) | Restore `-1`. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-064 | FastRenderedViewLine `monospaceAssumptionsAreValid` (`:403-417`) | Missing zoom/measurement member; owns validation firstChild offsetWidth read and final global result around counted branches. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-065 | no-DOM global-fallback branch (`:404-406`) | Missing. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-066 | shorter-than-300 validation branch (`:407-415`) | Compare estimate to first-child width only for short lines. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-067 | absolute error at least `2` branch (`:410-414`) | Warn and permanently clear global assumption. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
-| GVLI-068 | `toSlowRenderedLine` (`:419-421`) | Missing strategy conversion. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-069 | FastRenderedViewLine `getVisibleRangesForRange` (`:423-427`) | Missing mapped-offset range. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-070 | `_getColumnPixelOffset` (`:429-455`) | Missing fast hybrid; member owns key ordinal/column arithmetic and actual-key plus mapped-delta result. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-071 | column at or below 300 branch (`:430-433`) | Use pure mapped horizontal offset. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-072 | key-column cache present branch (`:438-444`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-073 | key-column cache miss read/store branch (`:440-443`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-074 | unresolved key-column fallback (`:446-450`) | Return pure mapped estimate when DOM read is unavailable. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-075 | FastRenderedViewLine `_getReadingTarget` (`:457-459`) | First-child reading-target member; the DOM property read stays on this method row. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-076 | FastRenderedViewLine `_actualReadPixelOffset` (`:461-471`) | Missing member; maps the column to one collapsed RangeUtil query and returns its first left. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-077 | fast no-DOM early return `-1` (`:462-464`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-078 | fast null-or-empty range early return (`:467-469`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
-| GVLI-079 | RenderedViewLine `domNode` field (`:483`) | Local ViewLine owns cached DOM directly. | TODO | PORTED |
-| GVLI-080 | RenderedViewLine `input` field (`:484`) | Existing `render_input`. | TODO | PORTED |
-| GVLI-081 | RenderedViewLine `_characterMapping` (`:486`) | Existing `character_mapping`. | TODO | PORTED |
-| GVLI-082 | RenderedViewLine `_isWhitespaceOnly` (`:487,500`) | Missing cached regex fact. | TODO | TESTED |
-| GVLI-083 | RenderedViewLine `_containsForeignElements` (`:488,501`) | Local renderer output does not retain this fact. | TODO | TESTED |
-| GVLI-084 | RenderedViewLine `_cachedWidth` (`:489,502,526-530`) | Missing; local rereads on every call. | TODO | TESTED |
-| GVLI-085 | RenderedViewLine `_pixelOffsetCache` (`:494,504-510`) | Missing LTR per-column cache. | TODO | TESTED |
-| GVLI-086 | RenderedViewLine constructor (`:496-511`) | Local flattened state lacks caches; member owns whitespace/foreign facts, `-1` width, null default, LTR cache size minimum 2, and sentinel fill. | TODO | TESTED |
-| GVLI-087 | LTR pixel-cache allocation branch (`:505-510`) | Allocate only for LTR; RTL retains null. | TODO | TESTED |
-| GVLI-088 | RenderedViewLine `_getReadingTarget` (`:515-517`) | Expose the slow first-child reading-target member; ordinary DOM property read stays here. | TODO | TESTED |
-| GVLI-089 | RenderedViewLine `getWidth` (`:522-531`) | Existing direct width helper; add no-DOM/cache semantics and own the offsetWidth read/layout mark around counted branches. | TODO | TESTED |
-| GVLI-090 | slow no-DOM early return `0` (`:523-525`) | Local FFI returns zero for no first child, not no rendered DOM state. | TODO | TESTED |
-| GVLI-091 | slow cached-width-miss branch (`:526-529`) | Read once and mark DOM layout. | TODO | TESTED |
-| GVLI-092 | RenderedViewLine `getWidthIsFast` (`:533-538`) | Missing; false until cached. | TODO | TESTED |
-| GVLI-093 | uncached false branch (`:534-536`) | Missing. | TODO | TESTED |
-| GVLI-094 | RenderedViewLine `resetCachedWidth` (`:540-547`) | Missing width and pixel-cache reset. | TODO | TESTED |
-| GVLI-095 | nonnull pixel-cache clear branch (`:542-546`) | Fill every entry with `-1`. | TODO | TESTED |
-| GVLI-096 | RenderedViewLine `getVisibleRangesForRange` (`:552-572`) | Missing strategy member; local FFI bypasses caches and source endpoint repairs. | TODO | TESTED |
-| GVLI-097 | slow no-DOM null early return (`:553-555`) | Missing. | TODO | TESTED |
-| GVLI-098 | LTR pixel-cache branch (`:556-569`) | One cache branch: LTR cache reads start/end and returns one range; null cache falls through to raw-range reading. | TODO | TESTED |
-| GVLI-099 | start-offset `-1` early return (`:558-561`) | Missing. | TODO | TESTED |
-| GVLI-100 | end-offset `-1` early return (`:563-566`) | Missing. | TODO | TESTED |
-| GVLI-101 | `_readVisibleRangesForRange` (`:574-585`) | Missing collapsed-versus-range dispatch. | TODO | TESTED |
-| GVLI-102 | collapsed-vs-noncollapsed range branch (`:575–584`) | One `if/else`: collapsed reads one pixel/zero width; noncollapsed delegates raw range. Failed collapsed pixel remains separate. | TODO | TESTED |
-| GVLI-103 | collapsed pixel `-1` early return (`:577-579`) | Missing. | TODO | TESTED |
-| GVLI-104 | `_readPixelOffset` (`:587-626`) | Missing foreign-element and LTR cache control flow. | TODO | TESTED |
-| GVLI-105 | empty LTR mapping branch (`:588-610`) | Distinguish four foreign-element cases. | TODO | TESTED |
-| GVLI-106 | empty line with no foreign element (`:590-593`) | Return zero. | TODO | TESTED |
-| GVLI-107 | empty line with only after foreign element (`:594-597`) | Return zero. | TODO | TESTED |
-| GVLI-108 | empty line with only before foreign element (`:598-601`) | Return measured full width. | TODO | TESTED |
-| GVLI-109 | before-and-after `firstChild` presence branch (`:602-609`) | Before-and-after empty foreign-content branch reads/marks first-child width when present; otherwise returns zero. | TODO | TESTED |
-| GVLI-110 | LTR pixel-cache branch (`:612-623`) | One LTR cache branch owns hit reuse and miss read/store; absence falls through to actual reading. | TODO | TESTED |
-| GVLI-111 | cached pixel hit early return (`:615-618`) | Missing. | TODO | TESTED |
-| GVLI-112 | RenderedViewLine `_actualReadPixelOffset` (`:628-658`) | Missing helper; it owns mapped collapsed RangeUtil reads and returns actual left unless the counted stabilization branch applies. | TODO | TESTED |
-| GVLI-113 | empty mapping RangeUtil branch (`:629-636`) | Query collapsed zero endpoint instead of assuming zero. | TODO | TESTED |
-| GVLI-114 | empty-mapping null/empty range early return (`:632-634`) | Missing. | TODO | TESTED |
-| GVLI-115 | whitespace-only LTR final-column branch (`:638-641`) | Return measured width for CSS-sized whitespace lines. | TODO | TESTED |
-| GVLI-116 | mapped null/empty range early return (`:646-648`) | Missing source nullable behavior. | TODO | TESTED |
-| GVLI-117 | basic-ASCII stabilization branch (`:650-656`) | Prefer rounded expected monospace x only within one CSS pixel. | TODO | TESTED |
-| GVLI-118 | expected-versus-actual tolerance `<= 1` (`:651-655`) | Preserve exact inclusive tolerance and rounding. | TODO | TESTED |
-| GVLI-119 | `_readRawVisibleRangesForRange` (`:660-672`) | Missing member; owns mapped start/end DomPositions and common RangeUtil delegation around the whole-line branch. | TODO | TESTED |
-| GVLI-120 | full LTR whole-line branch (`:662-666`) | Return `(0,getWidth)` without a DOM Range. | TODO | TESTED |
-| GVLI-121 | WebKitRenderedViewLine override (`:682-706`) | Missing browser-specific correction. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
-| GVLI-122 | compound no-correction early return (`:686-688`) | Null/empty/collapsed/full-line ranges return unchanged. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
-| GVLI-123 | LTR-only correction branch (`:692-703`) | Missing. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
-| GVLI-124 | valid end-pixel branch (`:695-702`) | Missing. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
-| GVLI-125 | last-range-left-before-end trim branch (`:697-701`) | Set final width to end x minus left. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
-| GVLI-126 | module `createRenderedLine` function-valued constant (`:709–714`) | Retain the selected normal/WebKit factory; selector IIFE and platform branch are separate. | TODO | TESTED |
-| GVLI-127 | `createRenderedLine` selector IIFE callback (`:709–714`) | Source-owned callback selects WebKit on its branch and otherwise returns the normal factory. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
-| GVLI-128 | WebKit factory-selection branch (`:710-712`) | Missing. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
-| GVLI-129 | `createWebKitRenderedLine` callback (`:716-718`) | Missing. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
-| GVLI-130 | `createNormalRenderedLine` callback (`:720-722`) | Missing explicit factory; target may remain a MoonBit-owned representation if behavior is exact. | TODO | TESTED |
-| GVLI-131 | fast-constructor prior-DOM reuse ternary (`:215`) | Reuse the prior DOM wrapper for the fast constructor when present; otherwise pass null. | TODO | TESTED |
-| GVLI-132 | slow-constructor prior-DOM reuse ternary (`:223`) | Reuse the prior DOM wrapper for the slow constructor when present; otherwise pass null. | TODO | TESTED |
-| GVLI-133 | experimental whitespace selection branch (`:119`) | Source uses configured whitespace only when experimental rendering is `off`; absent local option constant-folds this branch. | TODO | DEFERRED (experimental whitespace option absent) |
+| GVLI-006 | static `ViewLine.CLASS_NAME = 'view-line'` (`:53`) | Existing public `VIEW_LINE_CLASS_NAME`; keep the rendered-row and DOM hit-test class contract exact. | TODO | TESTED |
+| GVLI-007 | constructor `_viewGpuContext` parameter property (`:59`) | No GPU ViewLine context. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
+| GVLI-008 | `ViewLine` constructor (`:59–63`) | Declared member owns construction/order; frozen field rows own retained invalidation assignments and the GPU parameter property remains separately deferred. | TODO | TESTED |
+| GVLI-009 | `setDomNode` (`:73-79`) | Existing `ViewLine::set_dom_node`, but local state cannot represent the source's absent-rendered-line error. | TODO | TESTED |
+| GVLI-010 | rendered-line-present-vs-throw branch (`:74–78`) | One `if/else`: attach a cached DOM wrapper only when rendered state exists; otherwise throw the exact invariant failure. | TODO | TESTED |
+| GVLI-011 | `renderLine` scoped geometry integration (`:102-232`) | Scoped renderLine geometry member owns measured option/font argument flow, ordinary ligature predicate, DOM/layout construction, and rendered strategy around counted branches; frozen/excluded siblings are not recounted. | TODO | TESTED |
+| GVLI-012 | GPU `canRender` branch (`:103-107`) | When GPU can render, remove prior DOM, clear retained strategy, and return false; local GPU path is absent. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
+| GVLI-013 | experimental whitespace selection branch (`:119`) | Source uses configured whitespace only when experimental rendering is `off`; absent local option constant-folds this branch. | TODO | DEFERRED (experimental whitespace option absent) |
+| GVLI-014 | RTL `dir="rtl"` DOM attribute (`:180-182`) | Local row HTML omits direction attributes. | TODO | TESTED |
+| GVLI-015 | contains-RTL `dir="ltr"` DOM attribute (`:183-185`) | Local row HTML omits direction attributes. | TODO | TESTED |
+| GVLI-016 | row `top` CSS property (`:186-188`) | Existing exact integer-pixel write. | TODO | TESTED |
+| GVLI-017 | row `height` CSS property (`:188-190`) | Existing exact integer-pixel write. | TODO | TESTED |
+| GVLI-018 | row `line-height` CSS property (`:190-192`) | Existing exact integer-pixel write. | TODO | TESTED |
+| GVLI-019 | RTL `padding-right` CSS property (`:192-195`) | Missing; source uses vertical scrollbar size. | TODO | TESTED |
+| GVLI-020 | row class attribute (`:196-198`) | Existing `view-line` plus local renderer class; reconcile source-owned class contract. | TODO | TESTED |
+| GVLI-021 | seven-factor fast-render candidate branch (`:204-213`) | Local has no FastRenderedViewLine; preserve slow behavior and record optimization deferral. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-022 | fast-constructor prior-DOM reuse ternary (`:215`) | The fast constructor remains absent with the deferred fast rendered-line class, so this branch is not locally reachable. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-023 | no-fast-result fallback branch (`:221-228`) | Local always constructs equivalent slow retained state. | TODO | TESTED |
+| GVLI-024 | slow-constructor prior-DOM reuse ternary (`:223`) | Reuse the prior DOM wrapper for the slow constructor when present; otherwise pass null. | TODO | TESTED |
+| GVLI-025 | `layoutLine` (`:235-241`) | Existing `ViewLine::layout_line`. | TODO | TESTED |
+| GVLI-026 | rendered-line plus DOM guard (`:236-240`) | Existing optional DOM branch. | TODO | TESTED |
+| GVLI-027 | `domNode.setTop` CSS write (`:237`) | Existing exact write. | TODO | TESTED |
+| GVLI-028 | `domNode.setHeight` CSS write (`:238`) | Existing exact write. | TODO | TESTED |
+| GVLI-029 | `domNode.setLineHeight` CSS write (`:239`) | Existing exact write. | TODO | TESTED |
+| GVLI-030 | `getWidth` ViewLine delegator (`:252-257`) | Local direct helper is not a retained ViewLine method and has no cache variants. | TODO | TESTED |
+| GVLI-031 | no-rendered-line width `0` (`:253-255`) | Existing FFI fallback is first-child absent `0`, but not the source state guard. | TODO | TESTED |
+| GVLI-032 | `getWidthIsFast` ViewLine delegator (`:259-264`) | Missing. | TODO | TESTED |
+| GVLI-033 | no-rendered-line fast result `true` (`:260-262`) | Missing exact branch. | TODO | TESTED |
+| GVLI-034 | `needsMonospaceFontCheck` (`:266-271`) | Missing browser-zoom diagnostic member; after its no-line guard it returns the fast-strategy instance predicate. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
+| GVLI-035 | no-rendered-line false return (`:267-269`) | Same deferred diagnostic cluster. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
+| GVLI-036 | `monospaceAssumptionsAreValid` ViewLine member (`:273-281`) | Missing global/strategy dispatch. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
+| GVLI-037 | no-rendered-line global fallback (`:274-276`) | Missing. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
+| GVLI-038 | fast-instance delegation branch (`:277-279`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-039 | `onMonospaceAssumptionsInvalidated` (`:283-287`) | Missing fast-to-slow replacement. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
+| GVLI-040 | fast-instance conversion branch (`:284-286`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-041 | `getVisibleRangesForRange` ViewLine member (`:289-318`) | Missing; the member owns input-length clamping, stop-rendering normalization, retained-strategy delegation, and final nullable result around counted branches. | TODO | TESTED |
+| GVLI-042 | no-rendered-line null early return (`:290-292`) | Missing source state guard. | TODO | TESTED |
+| GVLI-043 | both columns beyond truncation early return (`:299-302`) | Missing outside-rendered-line result at measured width and zero range width. | TODO | TESTED |
+| GVLI-044 | start-column truncation clamp branch (`:304-306`) | Missing. | TODO | TESTED |
+| GVLI-045 | end-column truncation clamp branch (`:308-310`) | Missing. | TODO | TESTED |
+| GVLI-046 | nonempty delegated ranges branch (`:312-315`) | Missing `VisibleRanges(false, ranges)` wrapper. | TODO | TESTED |
+| GVLI-047 | `resetCachedWidth` ViewLine member (`:327-329`) | Missing; local rereads every call. | TODO | TESTED |
+| GVLI-048 | `IRenderedViewLine.domNode` field (`:333`) | Local ViewLine owns optional cached DOM directly. | TODO | PORTED |
+| GVLI-049 | `IRenderedViewLine.input` field (`:334`) | Existing optional `render_input`. | TODO | PORTED |
+| GVLI-050 | `IRenderedViewLine.getWidth` contract (`:335`) | Local free function covers only slow uncached width. | TODO | TESTED |
+| GVLI-051 | `IRenderedViewLine.getWidthIsFast` contract (`:336`) | Missing. | TODO | TESTED |
+| GVLI-052 | `IRenderedViewLine.resetCachedWidth` contract (`:337`) | Missing. | TODO | TESTED |
+| GVLI-053 | `IRenderedViewLine.getVisibleRangesForRange` contract (`:338`) | Missing source-shaped abstraction. | TODO | TESTED |
+| GVLI-054 | `Constants.MaxMonospaceDistance = 300` (`:342-351`) | Missing exact threshold. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-055 | FastRenderedViewLine `domNode` field (`:358`) | Missing fast class. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-056 | FastRenderedViewLine `input` field (`:359`) | Missing fast class. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-057 | FastRenderedViewLine `_characterMapping` (`:361`) | Missing fast class. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-058 | FastRenderedViewLine `_charWidth` (`:362,380`) | Source takes `RenderLineInput.spaceWidth`. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-059 | FastRenderedViewLine `_keyColumnPixelOffsetCache` (`:363,369-377`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-060 | FastRenderedViewLine `_cachedWidth = -1` (`:364`) | Missing sentinel cache. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-061 | FastRenderedViewLine constructor (`:366-381`) | Missing; member owns key-count arithmetic, sentinel fill loop, mapping retention, and spaceWidth character width. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-062 | key-column-cache allocation-vs-null branch (`:369–377`) | One `if/else`: positive key count allocates/fills the cache; zero retains null. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-063 | FastRenderedViewLine `getWidth` (`:383-393`) | Missing hybrid member; owns rounded mapped estimate, firstChild offsetWidth read, cache fill, and layout mark around counted branches. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-064 | no-DOM or shorter-than-300 branch (`:384-387`) | Estimate rounded mapped width without layout. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-065 | cached-width-miss branch (`:388-391`) | Read DOM once and mark context. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-066 | FastRenderedViewLine `getWidthIsFast` (`:395-397`) | Short line or populated cache. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-067 | FastRenderedViewLine `resetCachedWidth` (`:399-401`) | Restore `-1`. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-068 | FastRenderedViewLine `monospaceAssumptionsAreValid` (`:403-417`) | Missing zoom/measurement member; owns validation firstChild offsetWidth read and final global result around counted branches. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
+| GVLI-069 | no-DOM global-fallback branch (`:404-406`) | Missing. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
+| GVLI-070 | shorter-than-300 validation branch (`:407-415`) | Compare estimate to first-child width only for short lines. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
+| GVLI-071 | absolute error at least `2` branch (`:410-414`) | Warn and permanently clear global assumption. | TODO | DEFERRED (browser zoom policy excluded by Phase 0) |
+| GVLI-072 | `toSlowRenderedLine` (`:419-421`) | Missing strategy conversion. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-073 | FastRenderedViewLine `getVisibleRangesForRange` (`:423-427`) | Missing mapped-offset range. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-074 | `_getColumnPixelOffset` (`:429-455`) | Missing fast hybrid; member owns key ordinal/column arithmetic and actual-key plus mapped-delta result. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-075 | column at or below 300 branch (`:430-433`) | Use pure mapped horizontal offset. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-076 | key-column cache present branch (`:438-444`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-077 | key-column cache miss read/store branch (`:440-443`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-078 | unresolved key-column fallback (`:446-450`) | Return pure mapped estimate when DOM read is unavailable. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-079 | FastRenderedViewLine `_getReadingTarget` (`:457-459`) | First-child reading-target member; the DOM property read stays on this method row. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-080 | FastRenderedViewLine `_actualReadPixelOffset` (`:461-471`) | Missing member; maps the column to one collapsed RangeUtil query and returns its first left. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-081 | fast no-DOM early return `-1` (`:462-464`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-082 | fast null-or-empty range early return (`:467-469`) | Missing. | TODO | DEFERRED (fast rendered-line class absent) |
+| GVLI-083 | RenderedViewLine `domNode` field (`:483`) | Local ViewLine owns cached DOM directly. | TODO | PORTED |
+| GVLI-084 | RenderedViewLine `input` field (`:484`) | Existing `render_input`. | TODO | PORTED |
+| GVLI-085 | RenderedViewLine `_characterMapping` (`:486`) | Existing `character_mapping`. | TODO | PORTED |
+| GVLI-086 | RenderedViewLine `_isWhitespaceOnly` (`:487,500`) | Missing cached regex fact. | TODO | TESTED |
+| GVLI-087 | RenderedViewLine `_containsForeignElements` (`:488,501`) | Local renderer output does not retain this fact. | TODO | TESTED |
+| GVLI-088 | RenderedViewLine `_cachedWidth` (`:489,502,526-530`) | Missing; local rereads on every call. | TODO | TESTED |
+| GVLI-089 | RenderedViewLine `_pixelOffsetCache` (`:494,504-510`) | Missing LTR per-column cache. | TODO | TESTED |
+| GVLI-090 | RenderedViewLine constructor (`:496-511`) | Local flattened state lacks caches; member owns whitespace/foreign facts, `-1` width, null default, LTR cache size minimum 2, and sentinel fill. | TODO | TESTED |
+| GVLI-091 | LTR pixel-cache allocation branch (`:505-510`) | Allocate only for LTR; RTL retains null. | TODO | TESTED |
+| GVLI-092 | RenderedViewLine `_getReadingTarget` (`:515-517`) | Expose the slow first-child reading-target member; ordinary DOM property read stays here. | TODO | TESTED |
+| GVLI-093 | RenderedViewLine `getWidth` (`:522-531`) | Existing direct width helper; add no-DOM/cache semantics and own the offsetWidth read/layout mark around counted branches. | TODO | TESTED |
+| GVLI-094 | slow no-DOM early return `0` (`:523-525`) | Local FFI returns zero for no first child, not no rendered DOM state. | TODO | TESTED |
+| GVLI-095 | slow cached-width-miss branch (`:526-529`) | Read once and mark DOM layout. | TODO | TESTED |
+| GVLI-096 | RenderedViewLine `getWidthIsFast` (`:533-538`) | Missing; false until cached. | TODO | TESTED |
+| GVLI-097 | uncached false branch (`:534-536`) | Missing. | TODO | TESTED |
+| GVLI-098 | RenderedViewLine `resetCachedWidth` (`:540-547`) | Missing width and pixel-cache reset. | TODO | TESTED |
+| GVLI-099 | nonnull pixel-cache clear branch (`:542-546`) | Fill every entry with `-1`. | TODO | TESTED |
+| GVLI-100 | RenderedViewLine `getVisibleRangesForRange` (`:552-572`) | Missing strategy member; local FFI bypasses caches and source endpoint repairs. | TODO | TESTED |
+| GVLI-101 | slow no-DOM null early return (`:553-555`) | Missing. | TODO | TESTED |
+| GVLI-102 | LTR pixel-cache branch (`:556-569`) | One cache branch: LTR cache reads start/end and returns one range; null cache falls through to raw-range reading. | TODO | TESTED |
+| GVLI-103 | start-offset `-1` early return (`:558-561`) | Missing. | TODO | TESTED |
+| GVLI-104 | end-offset `-1` early return (`:563-566`) | Missing. | TODO | TESTED |
+| GVLI-105 | `_readVisibleRangesForRange` (`:574-585`) | Missing collapsed-versus-range dispatch. | TODO | TESTED |
+| GVLI-106 | collapsed-vs-noncollapsed range branch (`:575–584`) | One `if/else`: collapsed reads one pixel/zero width; noncollapsed delegates raw range. Failed collapsed pixel remains separate. | TODO | TESTED |
+| GVLI-107 | collapsed pixel `-1` early return (`:577-579`) | Missing. | TODO | TESTED |
+| GVLI-108 | `_readPixelOffset` (`:587-626`) | Missing foreign-element and LTR cache control flow. | TODO | TESTED |
+| GVLI-109 | empty LTR mapping branch (`:588-610`) | Distinguish four foreign-element cases. | TODO | TESTED |
+| GVLI-110 | empty line with no foreign element (`:590-593`) | Return zero. | TODO | TESTED |
+| GVLI-111 | empty line with only after foreign element (`:594-597`) | Return zero. | TODO | TESTED |
+| GVLI-112 | empty line with only before foreign element (`:598-601`) | Return measured full width. | TODO | TESTED |
+| GVLI-113 | before-and-after `firstChild` presence branch (`:602-609`) | Before-and-after empty foreign-content branch reads/marks first-child width when present; otherwise returns zero. | TODO | TESTED |
+| GVLI-114 | LTR pixel-cache branch (`:612-623`) | One LTR cache branch owns hit reuse and miss read/store; absence falls through to actual reading. | TODO | TESTED |
+| GVLI-115 | cached pixel hit early return (`:615-618`) | Missing. | TODO | TESTED |
+| GVLI-116 | RenderedViewLine `_actualReadPixelOffset` (`:628-658`) | Missing helper; it owns mapped collapsed RangeUtil reads and returns actual left unless the counted stabilization branch applies. | TODO | TESTED |
+| GVLI-117 | empty mapping RangeUtil branch (`:629-636`) | Query collapsed zero endpoint instead of assuming zero. | TODO | TESTED |
+| GVLI-118 | empty-mapping null/empty range early return (`:632-634`) | Missing. | TODO | TESTED |
+| GVLI-119 | whitespace-only LTR final-column branch (`:638-641`) | Return measured width for CSS-sized whitespace lines. | TODO | TESTED |
+| GVLI-120 | mapped null/empty range early return (`:646-648`) | Missing source nullable behavior. | TODO | TESTED |
+| GVLI-121 | basic-ASCII stabilization branch (`:650-656`) | Prefer rounded expected monospace x only within one CSS pixel. | TODO | TESTED |
+| GVLI-122 | expected-versus-actual tolerance `<= 1` (`:651-655`) | Preserve exact inclusive tolerance and rounding. | TODO | TESTED |
+| GVLI-123 | `_readRawVisibleRangesForRange` (`:660-672`) | Missing member; owns mapped start/end DomPositions and common RangeUtil delegation around the whole-line branch. | TODO | TESTED |
+| GVLI-124 | full LTR whole-line branch (`:662-666`) | Return `(0,getWidth)` without a DOM Range. | TODO | TESTED |
+| GVLI-125 | WebKitRenderedViewLine override (`:682-706`) | Missing browser-specific correction. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
+| GVLI-126 | compound no-correction early return (`:686-688`) | Null/empty/collapsed/full-line ranges return unchanged. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
+| GVLI-127 | LTR-only correction branch (`:692-703`) | Missing. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
+| GVLI-128 | valid end-pixel branch (`:695-702`) | Missing. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
+| GVLI-129 | last-range-left-before-end trim branch (`:697-701`) | Set final width to end x minus left. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
+| GVLI-130 | module `createRenderedLine` function-valued constant (`:709–714`) | Retain the selected normal/WebKit factory; selector IIFE and platform branch are separate. | TODO | TESTED |
+| GVLI-131 | `createRenderedLine` selector IIFE callback (`:709–714`) | Source-owned callback selects WebKit on its branch and otherwise returns the normal factory. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
+| GVLI-132 | WebKit factory-selection branch (`:710-712`) | Missing. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
+| GVLI-133 | `createWebKitRenderedLine` callback (`:716-718`) | Missing. | TODO | DEFERRED (WebKit branch outside fixed Chromium fixture) |
+| GVLI-134 | `createNormalRenderedLine` callback (`:720-722`) | Missing explicit factory; target may remain a MoonBit-owned representation if behavior is exact. | TODO | TESTED |
 
-GVLI denominator: **133**.
+GVLI denominator: **134**.
 
 #### Denominator and proposed disposition
 
 ```text
-GVL    52 = 50 TESTED + 1 PORTED + 1 DEFERRED
-GVLI  133 = 75 TESTED + 5 PORTED + 52 DEFERRED + 1 N-A
+GVL    55 = 53 TESTED + 1 PORTED + 1 DEFERRED
+GVLI  134 = 75 TESTED + 5 PORTED + 54 DEFERRED
 GDRC   16 = 15 TESTED + 1 PORTED
 GRU    25 = 25 TESTED
 GVLO   16 = 13 TESTED + 2 DEFERRED + 1 N-A
        ---
-Total 242 = 178 TESTED + 7 PORTED + 55 DEFERRED + 2 N-A
-Working status: 242 TODO
+Total 246 = 181 TESTED + 7 PORTED + 57 DEFERRED + 1 N-A
+Working status: 246 TODO
 ```
 
-N-A is limited to the JS-only product's native-platform impossibility and the reviewed CSS/root-owned theme seam. Experimental whitespace, GPU, fast-renderer, zoom-policy, and WebKit gaps remain DEFERRED.
+N-A is limited to the reviewed CSS/root-owned theme seam. Native-host, experimental-whitespace, GPU, fast-renderer, zoom-policy, and WebKit gaps remain DEFERRED.
 
 #### Normalization record
 
 - GDRC removed draft `008–011`; `readClientRect` owns its straight-line DOM reads. Result: `20 - 4 = 16`.
 - GRU removed draft `004,006,008,009,010,015,018,021,022,028,029,037,038`; merged the two adjacency arms and removed the GRC-owned comparator callsite. Result: `38 - 13 = 25`.
 - GVLO removed draft `016/017`; field rows own their arithmetic. Experimental/GPU fields changed N-A→DEFERRED. Result: `18 - 2 = 16`.
-- GVL removed draft `007,010,014,015,016,017,018,052`; frozen handoffs stay outside the denominator and schedule/cancel is one branch. Result: `60 - 8 = 52`.
-- GVLI removed draft `004,009,012,060,064,070,093,097,107,111,118,121,138,143`; added the two selector IIFE callbacks, the omitted ViewLine constructor, and split the two prior-DOM ternaries. GPU/experimental rows changed N-A→DEFERRED. Result: `143 - 14 + 4 = 133`.
+- GVL removed draft `007,010,014,015,016,017,018,052`; frozen handoffs stay outside the denominator and schedule/cancel is one branch. Independent Gate B restored omitted `getDomNode`, `prepareRender`, and `render` members and source-ordered `_lastRenderedData`. Result: `60 - 8 + 3 = 55`.
+- GVLI removed draft `004,009,012,060,064,070,093,097,107,111,118,121,138,143`; added the two selector IIFE callbacks, the omitted ViewLine constructor, and split the two prior-DOM ternaries. Independent Gate B restored `ViewLine.CLASS_NAME`, source-ordered the appended experimental/prior-DOM atoms, changed the native-host and fast-constructor rows to DEFERRED, and retained GPU/experimental DEFERRED outcomes. Result: `143 - 14 + 5 = 134`.
 
 #### Current local mapping and exact gaps
 
@@ -490,17 +495,21 @@ N-A is limited to the JS-only product's native-platform impossibility and the re
 | max width | initial zero; minimum local width one; grows; equal; shrinks while partial; full-document reset; wrapping/layout/flush reset; zones reapply | ViewLines plus ViewLayout integration |
 | scheduling | fast sweep complete/incomplete; scheduler idle/scheduled; unrelated DOM query did/did not force layout; cancel-before-slow; exact 200ms delay | deterministic scheduler white-box |
 | render geometry | scroll width/height; height at and around 1,000,000; positive/zero scroll offsets; bigNumbersDelta; layer hinting; strict containment | browser component |
-| renderer strategy | no DOM; slow class; fast class deferred; content length 299/300/301; cache hit/miss; both prior-DOM reuse ternaries; variable-font flag; foreign elements | ViewLine white-box and browser |
+| rendered attachment | rendered strategy absent/present for `setDomNode`: exact invariant failure versus cached-wrapper attachment | ViewLine white-box |
+| row direction and CSS | RTL gives `dir="rtl"` plus scrollbar-sized right padding; LTR with `containsRTL` gives `dir="ltr"`; plain LTR has no direction attribute; class/top/height/line-height remain exact | HTML unit plus browser component |
+| layout-line DOM guard | no rendered strategy; rendered strategy with null DOM; rendered strategy with DOM; only the last case writes top/height/line-height | ViewLine white-box with DOM-write spy |
+| renderer strategy | no DOM; slow class; width/pixel cache hit/miss; slow-constructor prior-DOM reuse; foreign elements; fast class, 299/300/301 threshold, variable-font gate, and fast prior-DOM ternary remain ledger-DEFERRED with no TESTED claim | ViewLine white-box and browser |
+| unsupported ViewLines entrypoints | `prepareRender` and `render` each fail with exact `Not supported`; `renderText` remains the only text-render route | ViewPart white-box panic checks |
 | visible ranges | collapsed/noncollapsed; LTR/RTL; empty mapping; whitespace-only; basic ASCII tolerance at 1 and above 1; truncation before/at/after stop column | ViewLine and RangeUtil browser suite |
 | foreign content | None, Before, After, and BeforeAndAfter on an empty line; first child present/absent; generated fold ellipsis | deterministic browser fixture |
 | options/font facts | each applicable ViewLineOptions field independently changed; equality no-op; monospace disabled; halfwidth arrow; ligatures; vertical scrollbar; theme N-A plus experimental/GPU DEFERRED options | option-flow white-box plus fixed fonts |
-| platform | Chromium gating; js-native N-A; GPU, WebKit, and browser-zoom rows remain explicit deferred outcomes | ledger review; no unsupported PASS |
+| platform | Chromium gating; native-host/browser-zoom, GPU, and WebKit rows remain explicit DEFERRED outcomes; only the CSS/root-owned theme seam is N-A | ledger review; no unsupported PASS |
 
 #### Inventory review stop gate
 
 - [x] Source hashes and line counts match the pinned oracle.
-- [x] Prefix IDs are contiguous/unique and five-column row counts are 52/133/16/25/16.
-- [x] All 242 working statuses are TODO and proposed totals are 178/7/55/2.
+- [x] Prefix IDs are contiguous/unique, source-ordered, and five-column row counts are 55/134/16/25/16.
+- [x] All 246 working statuses are TODO and proposed totals are 181/7/57/1.
 - [x] Frozen handoffs and excluded sibling clusters are stated without duplicate ownership.
 - [ ] Independent Gate B approves the normalized denominator and boundary decisions.
 
@@ -512,7 +521,7 @@ STOP FOR REVIEW. Do not implement until this inventory is integrated documentati
 
 One row represents one declared member, field/property, behavior-changing branch or early return, independently material source-owned callback or control-flow magic constant, or owned DOM/CSS fact. A field owns its literal/arithmetic. Ordinary allocation, straight-line statements, intermediate arithmetic, loop mechanics, and final returns remain on their owning member row.
 
-Every working status is `TODO`. Proposed terminals are review targets only. The fixed normalized denominator is 174 rows: GCW 120 + GRC 54.
+Every working status is `TODO`. Proposed terminals are review targets only. The corrected normalized denominator is 176 rows: GCW 122 + GRC 54.
 
 #### Ownership and exclusions
 
@@ -568,7 +577,7 @@ Both files were read completely at the pinned commit. GCW closes the geometry-ow
 | GCW-030 | `Widget._actual` (`:193,219`) | Retain the public widget for callbacks, flags, and DOM. | TODO | PORTED |
 | GCW-031 | `Widget.domNode` (`:195,225`) | Cache the exact owner-provided node. | TODO | TESTED |
 | GCW-032 | `Widget.id` (`:196,226,246`) | Cache exact `getId()` and use it for `widgetId`. | TODO | TESTED |
-| GCW-033 | `Widget.allowEditorOverflow` (`:197,227,243,287,481,516,579`) | Cache the optional widget flag with false default, then gate it by `allowOverflow`; the effective flag controls mount, coordinates, max width, placement, and writes. | TODO | TESTED |
+| GCW-033 | `Widget.allowEditorOverflow` (`:197,227,243,287,481,516,579`) | Cache the optional widget flag with false default; GCW-042 alone owns the subsequent editor `allowOverflow` conjunction. Downstream mount, coordinate, max-width, placement, and write branches consume the resulting effective boolean. | TODO | TESTED |
 | GCW-034 | `Widget._fixedOverflowWidgets` (`:200,231,243,385`) | Source option changes fixed positioning and absolute page coordinates; local Viewer has no option. | TODO | DEFERRED (fixedOverflowWidgets option seam not exposed) |
 | GCW-035 | `Widget._preference` (`:207,236,295,448,489`) | Retain nullable ordered preferences, initialized to `[]`; local currently collapses null into a non-null array. | TODO | TESTED |
 | GCW-036 | `_cachedDomNodeOffsetWidth` (`:208,237,305,461,468,478`) | Initialize/reset the width cache to exact sentinel `-1`; it participates independently in the OR cache-miss gate. | TODO | TESTED |
@@ -577,7 +586,7 @@ Both files were read completely at the pinned commit. GCW closes the geometry-ow
 | GCW-039 | `_renderData` (`:213,241,553,557–595`) | Retain one nullable prepared result, initialized null, for the write phase. | TODO | TESTED |
 | GCW-040 | `useDisplayNone` (`:214,229,296`) | Cache the optional owner flag with false default; it controls display writes and outer scheduling. | TODO | TESTED |
 | GCW-041 | `Widget` constructor (`:216–248`) | Preserve option reads, field initialization, then DOM writes in source order. | TODO | TESTED |
-| GCW-042 | editor `allowOverflow` gate (`:223,227`) | Effective overflow also requires the editor option; local constant-folds this gate true. | TODO | DEFERRED (allowOverflow option seam not exposed) |
+| GCW-042 | editor `allowOverflow` gate (`:223,227`) | Solely own the `&& allowOverflow` conjunction: an owner widget request becomes effective only when the editor option permits overflow. Local Viewer exposes no such option. | TODO | DEFERRED (allowOverflow option seam not exposed) |
 | GCW-043 | fixed-vs-absolute position branch (`:243`) | `fixed` only for fixed+overflow; otherwise `absolute`. | TODO | DEFERRED (fixedOverflowWidgets option seam not exposed) |
 | GCW-044 | initial `display:none` (`:244`) | Keep an unpositioned widget out of layout. | TODO | TESTED |
 | GCW-045 | initial `visibility:hidden` (`:245`) | Keep initial content invisible while mounted. | TODO | TESTED |
@@ -599,65 +608,67 @@ Both files were read completely at the pinned commit. GCW closes the geometry-ow
 | GCW-061 | `RIGHT_PADDING = 15` (`:340`) | Exact right page clearance. | TODO | TESTED |
 | GCW-062 | `MIN_LIMIT` (`:343`) | `max(15, editorLeft-width)`. | TODO | TESTED |
 | GCW-063 | `MAX_LIMIT` (`:344`) | `min(editorLeft+editorWidth+width, windowWidth-15)`. | TODO | TESTED |
-| GCW-064 | right-overflow delta branch (`:350–354`) | Shift both absolute and relative left by the same exact delta. | TODO | TESTED |
-| GCW-065 | left-underflow delta branch (`:356–360`) | Apply the second exact delta to both coordinates. | TODO | TESTED |
-| GCW-066 | `_layoutBoxInPage` (`:365–396`) | Compute page candidates from the owner node/window/client area, call the horizontal helper, derive fit facts, then return fixed or relative coordinates. | TODO | TESTED |
-| GCW-067 | `TOP_PADDING = 22` (`:379`) | Exact top page clearance. | TODO | TESTED |
-| GCW-068 | `BOTTOM_PADDING = 22` (`:380`) | Exact bottom page clearance. | TODO | TESTED |
-| GCW-069 | fixed-overflow return (`:385–393`) | Use absolute left/below, clamp above to top padding, and preserve fit bits. | TODO | DEFERRED (fixedOverflowWidgets option seam not exposed) |
-| GCW-070 | `_prepareRenderWidgetAtExactPositionOverflowing` (`:398–400`) | Shift exact overflow x by `_contentLeft`, leaving top unchanged. | TODO | TESTED |
-| GCW-071 | `_getAnchorsCoordinates` (`:407–429`) | Compute primary first and only a same-line secondary through one method-local coordinate helper; ordinary visible-range/top/line-height queries stay on this member row. | TODO | TESTED |
-| GCW-072 | same-line secondary gate (`:409–410`) | Discard a secondary on another line before querying DOM geometry. | TODO | TESTED |
-| GCW-073 | coordinate null-position early return (`:413–416`) | No position yields no anchor without querying visible ranges. | TODO | TESTED |
-| GCW-074 | missing visible-range early return (`:418–421`) | An unrendered/unmeasurable line yields no anchor. Local currently substitutes rendered-window plus uniform-column arithmetic. | TODO | TESTED |
-| GCW-075 | left-of-injected-text column-one rule (`:423–424`) | Force left zero exactly for column 1 plus `LeftOfInjectedText`; otherwise use measured `HorizontalPosition.left`. | TODO | TESTED |
-| GCW-076 | `_reduceAnchorCoordinates` (`:431–445`) | Declared member owns the fullwidth read, straight-line left arithmetic, and final anchor construction; early return and side branch remain separate. | TODO | TESTED |
-| GCW-077 | `_reduceAnchorCoordinates` no-secondary branch (`:431–434`) | Return the primary object unchanged when secondary is absent. | TODO | TESTED |
-| GCW-078 | secondary side-of-primary branch (`:438–443`) | Single side-of-primary branch: left uses `max(secondary, primary-width+fullwidth)`; right/equal uses `min(secondary, primary+width-fullwidth)`. | TODO | TESTED |
-| GCW-079 | `_prepareRenderWidget` (`:447–534`) | Own anchor query order, rounded size acquisition, reduction, page/viewport placement, two-pass preference traversal, and ordinary final null; behavior branches remain separate. | TODO | TESTED |
-| GCW-080 | absent/empty preference early return (`:448–450`) | Null or empty preference produces null render data before anchor work. | TODO | TESTED |
-| GCW-081 | missing-primary off-viewport result (`:453–459`) | Return `offViewport` and probe whether the widget contains the owner document's active element. | TODO | TESTED |
-| GCW-082 | size-cache OR gate (`:461`) | Measure when either width or height equals `-1`; one valid cache cannot mask the other invalid cache. | TODO | TESTED |
-| GCW-083 | optional `beforeRender` callback branch (`:463–466`) | Call only when it is a function, with the widget as `this`, through `safeInvoke`; local trait omits it. | TODO | TESTED |
-| GCW-084 | preferred-dimensions/DOM-fallback branch (`:467–475`) | One branch: non-null preferred dimensions supply width/height; otherwise measure the live rect and `Math.round` width/height independently. | TODO | TESTED |
-| GCW-085 | page-versus-viewport placement (`:480–485`) | Overflow uses page layout; normal uses viewport layout. | TODO | TESTED |
-| GCW-086 | ABOVE discriminator (`:491`) | Handle ABOVE before BELOW/EXACT. | TODO | TESTED |
-| GCW-087 | ABOVE null-placement early return (`:492–495`) | Return null if page placement is null. Both scoped layout helpers are non-null at this pin. | TODO | N-A (source-unreachable with pinned layout helpers) |
-| GCW-088 | ABOVE fit/pass branch (`:496–502`) | Return above on first pass only when fitting, or unconditionally on pass two. | TODO | TESTED |
-| GCW-089 | BELOW discriminator (`:503`) | Handle BELOW after ABOVE. | TODO | TESTED |
-| GCW-090 | BELOW null-placement early return (`:504–507`) | Return null if page placement is null. Both scoped layout helpers are non-null at this pin. | TODO | N-A (source-unreachable with pinned layout helpers) |
-| GCW-091 | BELOW fit/pass branch (`:508–514`) | Return below on first pass only when fitting, or unconditionally on pass two. | TODO | TESTED |
-| GCW-092 | EXACT overflow-vs-normal branch (`:515–528`) | One exact-position branch: overflow shifts x by `_contentLeft`; normal returns anchor top/left unchanged. | TODO | TESTED |
-| GCW-093 | `Widget.onBeforeRender` (`:539–550`) | Apply cached max width only for a positionable widget whose anchor line is inside the inclusive rendered viewport; final write stays on this member row. | TODO | TESTED |
-| GCW-094 | missing anchor/preference early return (`:540–542`) | Return before any DOM write. | TODO | TESTED |
-| GCW-095 | inclusive viewport-line guard (`:544–547`) | Return when line is `< start` or `> end`; both endpoints are included. | TODO | TESTED |
-| GCW-096 | `Widget.prepareRender` (`:552–554`) | Replace `_renderData` once with the complete prepare result. | TODO | TESTED |
-| GCW-097 | `Widget.render` (`:556–596`) | Declared write-phase member owns hidden/visible ordering and callback timing; branches, early return, magic constant, and transitions remain separate. | TODO | TESTED |
-| GCW-098 | `Widget.render` hidden discriminator (`:556–576`) | Null and offViewport share the invisible branch. | TODO | TESTED |
-| GCW-099 | visible-to-hidden transition (`:559–562`) | Only a previously visible widget removes the marker and flips `_isVisible`. | TODO | TESTED |
-| GCW-100 | preserve-focus-vs-hide branch (`:563–569`) | One focus branch: focused off-viewport widgets park at the magic top; all other hidden transitions write visibility hidden. | TODO | TESTED |
-| GCW-101 | focus-preserving `top=-1000` (`:564–566`) | Exact parking constant; source deliberately leaves visibility inherited. Local `apply_style` incorrectly writes hidden. | TODO | TESTED |
-| GCW-102 | hidden `afterRender` callback (`:572–574`) | If present, safely invoke with `(null,null)` even when already invisible. | TODO | TESTED |
-| GCW-103 | hidden early return (`:575`) | Stop before visible coordinate writes. | TODO | TESTED |
-| GCW-104 | visible overflow-vs-normal coordinate branch (`:579–585`) | One visible-coordinate branch: overflow writes prepared top/left; normal writes `top + scrollTop - bigNumbersDelta` and the same left. | TODO | TESTED |
-| GCW-105 | hidden-to-visible transition (`:587–591`) | Only on transition set visibility inherit, marker=`true`, then `_isVisible=true`. | TODO | TESTED |
-| GCW-106 | visible `afterRender` callback (`:593–595`) | Safely pass selected preference and exact rendered coordinate. | TODO | TESTED |
-| GCW-107 | `PositionPair.modelPosition` (`:599–603`) | Immutable nullable original model anchor. | TODO | PORTED |
-| GCW-108 | `PositionPair.viewPosition` (`:599–603`) | Immutable nullable projected view anchor. | TODO | PORTED |
-| GCW-109 | `Coordinate._coordinateBrand` (`:606–607`) | TypeScript nominal brand only. | TODO | N-A (MoonBit nominal struct type) |
-| GCW-110 | `Coordinate.top` (`:609–612`) | Immutable rendered top. | TODO | PORTED |
-| GCW-111 | `Coordinate.left` (`:609–612`) | Immutable rendered left. | TODO | PORTED |
-| GCW-112 | `AnchorCoordinate._anchorCoordinateBrand` (`:615–616`) | TypeScript nominal brand only. | TODO | N-A (MoonBit nominal struct type) |
-| GCW-113 | `AnchorCoordinate.top` (`:618–622`) | Immutable viewport-relative top. | TODO | PORTED |
-| GCW-114 | `AnchorCoordinate.left` (`:618–622`) | Immutable content-space left. | TODO | PORTED |
-| GCW-115 | `AnchorCoordinate.height` (`:618–622`) | Immutable per-line height. | TODO | PORTED |
-| GCW-116 | `safeInvoke` (`:625–632`) | Generic callback wrapper invokes with exact `thisArg`/arguments and returns the result; its catch branch returns null. | TODO | TESTED |
-| GCW-117 | callback exception branch (`:629–631`) | Swallow any callback exception and return null. | TODO | TESTED |
-| GCW-118 | `PositionPair` constructor (`:599–603`) | Assign model and view positions without conversion; field rows GCW-107/108 own the values. | TODO | PORTED |
-| GCW-119 | `Coordinate` constructor (`:609–612`) | Assign top/left without rounding or coordinate-space conversion. | TODO | PORTED |
-| GCW-120 | `AnchorCoordinate` constructor (`:618–622`) | Assign top/left/height without transformation. | TODO | PORTED |
+| GCW-064 | owner-window `scrollX ?? 0` fallback (`:346–348`) | Read `_viewDomNode.ownerDocument.defaultView`; when it is absent, subtract exact zero rather than consulting the global window. | TODO | TESTED |
+| GCW-065 | right-overflow delta branch (`:350–354`) | Shift both absolute and relative left by the same exact delta. | TODO | TESTED |
+| GCW-066 | left-underflow delta branch (`:356–360`) | Apply the second exact delta to both coordinates. | TODO | TESTED |
+| GCW-067 | `_layoutBoxInPage` (`:365–396`) | Compute page candidates from the owner node/window/client area, call the horizontal helper, derive fit facts, then return fixed or relative coordinates. | TODO | TESTED |
+| GCW-068 | owner-window `scrollY ?? 0` fallback (`:370–373`) | Apply the same owner-document `defaultView` choice and exact-zero fallback to both absolute-above and absolute-below calculations; never read global scroll state. | TODO | TESTED |
+| GCW-069 | `TOP_PADDING = 22` (`:379`) | Exact top page clearance. | TODO | TESTED |
+| GCW-070 | `BOTTOM_PADDING = 22` (`:380`) | Exact bottom page clearance. | TODO | TESTED |
+| GCW-071 | fixed-overflow return (`:385–393`) | Use absolute left/below, clamp above to top padding, and preserve fit bits. | TODO | DEFERRED (fixedOverflowWidgets option seam not exposed) |
+| GCW-072 | `_prepareRenderWidgetAtExactPositionOverflowing` (`:398–400`) | Shift exact overflow x by `_contentLeft`, leaving top unchanged. | TODO | TESTED |
+| GCW-073 | `_getAnchorsCoordinates` (`:407–429`) | Compute primary first and only a same-line secondary through one method-local coordinate helper; ordinary visible-range/top/line-height queries stay on this member row. | TODO | TESTED |
+| GCW-074 | same-line secondary gate (`:409–410`) | Discard a secondary on another line before querying DOM geometry. | TODO | TESTED |
+| GCW-075 | coordinate null-position early return (`:413–416`) | No position yields no anchor without querying visible ranges. | TODO | TESTED |
+| GCW-076 | missing visible-range early return (`:418–421`) | An unrendered/unmeasurable line yields no anchor. Local currently substitutes rendered-window plus uniform-column arithmetic. | TODO | TESTED |
+| GCW-077 | left-of-injected-text column-one rule (`:423–424`) | Force left zero exactly for column 1 plus `LeftOfInjectedText`; otherwise use measured `HorizontalPosition.left`. | TODO | TESTED |
+| GCW-078 | `_reduceAnchorCoordinates` (`:431–445`) | Declared member owns the fullwidth read, straight-line left arithmetic, and final anchor construction; early return and side branch remain separate. | TODO | TESTED |
+| GCW-079 | `_reduceAnchorCoordinates` no-secondary branch (`:431–434`) | Return the primary object unchanged when secondary is absent. | TODO | TESTED |
+| GCW-080 | secondary side-of-primary branch (`:438–443`) | Single side-of-primary branch: left uses `max(secondary, primary-width+fullwidth)`; right/equal uses `min(secondary, primary+width-fullwidth)`. | TODO | TESTED |
+| GCW-081 | `_prepareRenderWidget` (`:447–534`) | Own anchor query order, rounded size acquisition, reduction, page/viewport placement, two-pass preference traversal, and ordinary final null; behavior branches remain separate. | TODO | TESTED |
+| GCW-082 | absent/empty preference early return (`:448–450`) | Null or empty preference produces null render data before anchor work. | TODO | TESTED |
+| GCW-083 | missing-primary off-viewport result (`:453–459`) | Return `offViewport` and probe whether the widget contains the owner document's active element. | TODO | TESTED |
+| GCW-084 | size-cache OR gate (`:461`) | Measure when either width or height equals `-1`; one valid cache cannot mask the other invalid cache. | TODO | TESTED |
+| GCW-085 | optional `beforeRender` callback branch (`:463–466`) | Call only when it is a function, with the widget as `this`, through `safeInvoke`; local trait omits it. | TODO | TESTED |
+| GCW-086 | preferred-dimensions/DOM-fallback branch (`:467–475`) | One branch: non-null preferred dimensions supply width/height; otherwise measure the live rect and `Math.round` width/height independently. | TODO | TESTED |
+| GCW-087 | page-versus-viewport placement (`:480–485`) | Overflow uses page layout; normal uses viewport layout. | TODO | TESTED |
+| GCW-088 | ABOVE discriminator (`:491`) | Handle ABOVE before BELOW/EXACT. | TODO | TESTED |
+| GCW-089 | ABOVE null-placement early return (`:492–495`) | Return null if page placement is null. Both scoped layout helpers are non-null at this pin. | TODO | N-A (source-unreachable with pinned layout helpers) |
+| GCW-090 | ABOVE fit/pass branch (`:496–502`) | Return above on first pass only when fitting, or unconditionally on pass two. | TODO | TESTED |
+| GCW-091 | BELOW discriminator (`:503`) | Handle BELOW after ABOVE. | TODO | TESTED |
+| GCW-092 | BELOW null-placement early return (`:504–507`) | Return null if page placement is null. Both scoped layout helpers are non-null at this pin. | TODO | N-A (source-unreachable with pinned layout helpers) |
+| GCW-093 | BELOW fit/pass branch (`:508–514`) | Return below on first pass only when fitting, or unconditionally on pass two. | TODO | TESTED |
+| GCW-094 | EXACT overflow-vs-normal branch (`:515–528`) | One exact-position branch: overflow shifts x by `_contentLeft`; normal returns anchor top/left unchanged. | TODO | TESTED |
+| GCW-095 | `Widget.onBeforeRender` (`:539–550`) | Apply cached max width only for a positionable widget whose anchor line is inside the inclusive rendered viewport; final write stays on this member row. | TODO | TESTED |
+| GCW-096 | missing anchor/preference early return (`:540–542`) | Return before any DOM write. | TODO | TESTED |
+| GCW-097 | inclusive viewport-line guard (`:544–547`) | Return when line is `< start` or `> end`; both endpoints are included. | TODO | TESTED |
+| GCW-098 | `Widget.prepareRender` (`:552–554`) | Replace `_renderData` once with the complete prepare result. | TODO | TESTED |
+| GCW-099 | `Widget.render` (`:556–596`) | Declared write-phase member owns hidden/visible ordering and callback timing; branches, early return, magic constant, and transitions remain separate. | TODO | TESTED |
+| GCW-100 | `Widget.render` hidden discriminator (`:556–576`) | Null and offViewport share the invisible branch. | TODO | TESTED |
+| GCW-101 | visible-to-hidden transition (`:559–562`) | Only a previously visible widget removes the marker and flips `_isVisible`. | TODO | TESTED |
+| GCW-102 | preserve-focus-vs-hide branch (`:563–569`) | One focus branch: focused off-viewport widgets park at the magic top; all other hidden transitions write visibility hidden. | TODO | TESTED |
+| GCW-103 | focus-preserving `top=-1000` (`:564–566`) | Exact parking constant; source deliberately leaves visibility inherited. Local `apply_style` incorrectly writes hidden. | TODO | TESTED |
+| GCW-104 | hidden `afterRender` callback (`:572–574`) | If present, safely invoke with `(null,null)` even when already invisible. | TODO | TESTED |
+| GCW-105 | hidden early return (`:575`) | Stop before visible coordinate writes. | TODO | TESTED |
+| GCW-106 | visible overflow-vs-normal coordinate branch (`:579–585`) | One visible-coordinate branch: overflow writes prepared top/left; normal writes `top + scrollTop - bigNumbersDelta` and the same left. | TODO | TESTED |
+| GCW-107 | hidden-to-visible transition (`:587–591`) | Only on transition set visibility inherit, marker=`true`, then `_isVisible=true`. | TODO | TESTED |
+| GCW-108 | visible `afterRender` callback (`:593–595`) | Safely pass selected preference and exact rendered coordinate. | TODO | TESTED |
+| GCW-109 | `PositionPair.modelPosition` (`:599–603`) | Immutable nullable original model anchor. | TODO | PORTED |
+| GCW-110 | `PositionPair.viewPosition` (`:599–603`) | Immutable nullable projected view anchor. | TODO | PORTED |
+| GCW-111 | `Coordinate._coordinateBrand` (`:606–607`) | TypeScript nominal brand only. | TODO | N-A (MoonBit nominal struct type) |
+| GCW-112 | `Coordinate.top` (`:609–612`) | Immutable rendered top. | TODO | PORTED |
+| GCW-113 | `Coordinate.left` (`:609–612`) | Immutable rendered left. | TODO | PORTED |
+| GCW-114 | `AnchorCoordinate._anchorCoordinateBrand` (`:615–616`) | TypeScript nominal brand only. | TODO | N-A (MoonBit nominal struct type) |
+| GCW-115 | `AnchorCoordinate.top` (`:618–622`) | Immutable viewport-relative top. | TODO | PORTED |
+| GCW-116 | `AnchorCoordinate.left` (`:618–622`) | Immutable content-space left. | TODO | PORTED |
+| GCW-117 | `AnchorCoordinate.height` (`:618–622`) | Immutable per-line height. | TODO | PORTED |
+| GCW-118 | `safeInvoke` (`:625–632`) | Generic callback wrapper invokes with exact `thisArg`/arguments and returns the result; its catch branch returns null. | TODO | TESTED |
+| GCW-119 | callback exception branch (`:629–631`) | Swallow any callback exception and return null. | TODO | TESTED |
+| GCW-120 | `PositionPair` constructor (`:599–603`) | Assign model and view positions without conversion; field rows GCW-109/110 own the values. | TODO | PORTED |
+| GCW-121 | `Coordinate` constructor (`:609–612`) | Assign top/left without rounding or coordinate-space conversion. | TODO | PORTED |
+| GCW-122 | `AnchorCoordinate` constructor (`:618–622`) | Assign top/left/height without transformation. | TODO | PORTED |
 
-GCW denominator: **120** rows.
+GCW denominator: **122** rows.
 
 #### GRC ledger — `renderingContext.ts`
 
@@ -679,7 +690,7 @@ GCW denominator: **120** rows.
 | GRC-014 | `RenderingContext._viewLines` (`:78,83`) | Retain the DOM view-lines query target. | TODO | PORTED |
 | GRC-015 | optional `_viewLinesGpu` (`:79,84,89–103`) | Optional GPU query target; local renderer has no GPU ViewLines. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
 | GRC-016 | `RenderingContext` constructor (`:81–85`) | Call base first, then retain DOM and optional GPU targets. | TODO | PORTED |
-| GRC-017 | `linesVisibleRangesForRange` (`:87–100`) | Own DOM-first query order, optional GPU query, DOM-before-GPU concat, and sorted final return; branch/callback atoms remain separate. | TODO | TESTED |
+| GRC-017 | `linesVisibleRangesForRange` GPU-bearing remainder (`:87–100`) | The declared member queries DOM first; after GRC-018's no-GPU early return, this row owns the optional GPU query and the both-present DOM-before-GPU concat/sort path. Those behaviors remain absent while GPU ViewLines is excluded. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
 | GRC-018 | no-GPU early return (`:89–91`) | Return DOM result, including null, without another query. | TODO | TESTED |
 | GRC-019 | DOM-null GPU return (`:93–95`) | GPU-only result wins when DOM has no ranges. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
 | GRC-020 | GPU-null DOM return (`:96–98`) | DOM-only result wins when GPU has no ranges. | TODO | DEFERRED (GPU ViewLines excluded by Phase 0) |
@@ -723,10 +734,10 @@ GRC denominator: **54** rows.
 #### Mechanical denominator and proposed disposition
 
 ```text
-GCW 120 = 92 TESTED + 20 PORTED + 4 DEFERRED + 4 N-A
-GRC  54 = 33 TESTED + 12 PORTED + 5 DEFERRED + 4 N-A
-Total 174 = 125 TESTED + 32 PORTED + 9 DEFERRED + 8 N-A
-Working status at Gate A: 174 TODO
+GCW 122 = 94 TESTED + 20 PORTED + 4 DEFERRED + 4 N-A
+GRC  54 = 32 TESTED + 12 PORTED + 6 DEFERRED + 4 N-A
+Total 176 = 126 TESTED + 32 PORTED + 10 DEFERRED + 8 N-A
+Working status at corrected Gate B: 176 TODO
 ```
 
 N-A is limited to pinned-source-unreachable early returns and TypeScript nominal brand fields. Missing fixed/allowOverflow and GPU ViewLines features remain applicable deferred parity work.
@@ -742,6 +753,8 @@ The rejected 225-row draft was normalized before product work:
 - Added missing declared-member rows for `_reduceAnchorCoordinates` and `Widget.render`, yielding `159 - 41 + 2 = 120`.
 - Removed draft GRC IDs `011,019,021,024,028,031,035,046,047,049,050,062`; constructor/query/loop/rounding/final-return facts were absorbed by owning members/fields, yielding `66 - 12 = 54`.
 - Reclassified draft fixed/allowOverflow IDs `036,045,047,090` and GPU IDs `016,022,023,027,066` from N-A to DEFERRED. Source-unreachable and nominal-brand N-A rows remain.
+- Gate B correction narrowed GCW-033 to the owner widget flag/default and left the editor conjunction solely to GCW-042; it also restored the omitted owner-window `scrollX ?? 0` and `scrollY ?? 0` atoms in source order. GCW is therefore `120 + 2 = 122`.
+- Gate B correction narrowed GRC-017 to the GPU-bearing method remainder and changed its proposal from TESTED to DEFERRED. The GRC denominator remains 54.
 
 #### Behavior-variable matrix
 
@@ -756,7 +769,8 @@ The rejected 225-row draft was normalized before product work:
 | owner callbacks | beforeRender absent/value/null/throws; afterRender absent/hidden/ABOVE/BELOW/EXACT/throws; correct `this` and argument order | callback white-box/browser |
 | preference traversal | null, empty, each single preference; mixed orders; above/below both fit, one fit, neither fit; first-pass perfect fit then pass-two first-option fallback | pure placement white-box |
 | viewport clamp | left inside, right overflow, left underflow, widget wider than viewport, equality at both edges; scrollLeft zero/nonzero | pure placement white-box |
-| page clamp | editor near each page edge, scrolled page, widget wider than editor, 15px exact side boundaries, 22px exact top/bottom boundaries | fixed-size Chromium fixture |
+| page clamp | editor near each page edge, scrolled page, widget wider than editor, 15px exact side boundaries, 22px exact top/bottom boundaries; assert both returned relative/absolute left coordinates and identical right/left clamp deltas | pure geometry white-box + fixed-size Chromium fixture |
+| owner document/window | widget DOM and view root owned by the global document vs a distinct iframe/detached document; owner/global `scrollX`/`scrollY` deliberately differ; `defaultView` present/absent exercises exact zero fallbacks; max width covers `innerWidth` truthy/zero → `documentElement.offsetWidth` → `body.offsetWidth`; owner `activeElement` inside/outside the widget | deterministic JS white-box + iframe browser |
 | overflow modes | widget overflow false/true; source editor allowOverflow true/false; fixedOverflowWidgets false/true | false/true widget browser; unsupported editor/fixed axes stay explicit DEFERRED |
 | visibility/focus | initially hidden; visible→null; visible→offViewport focused/unfocused; already hidden; re-entry to visible | browser focus/attribute/style assertions |
 | display ownership | useDisplayNone false/true × positionable/unpositionable × dirty scheduling | widget integration test |
@@ -774,8 +788,8 @@ The rejected 225-row draft was normalized before product work:
 5. DOM fallback caches fractional width/height; source independently applies `Math.round`.
 6. Focus parking is defective: local sets `is_visible=false` and `apply_style` rewrites `visibility:hidden` after `top=-1000`, while source leaves visibility inherited.
 7. Local render rewrites position/display/visibility/top/left on every frame. Source gates hidden and visible visibility/marker writes on `_isVisible`; no-op DOM-write behavior is absent separately from the focus bug.
-8. Overflow max width uses global `window.innerWidth` and lacks owner-document documentElement/body fallbacks.
-9. Page placement is not owner-window scoped: local page-position and clamp helpers read global `@rdom.window()` scroll values; source uses `_viewDomNode.ownerDocument.defaultView`.
+8. Overflow max width uses global `window.innerWidth`; it ignores the widget DOM's `ownerDocument.defaultView` and omits the exact `innerWidth` → `documentElement.offsetWidth` → `body.offsetWidth` fallback chain.
+9. Page placement is not owner-window scoped: local page-position and clamp helpers read global `@rdom.window()` scroll values, omit the exact `defaultView ?? zero` fallbacks, and drop `_layoutHorizontalSegmentInPage`'s absolute-left return while retaining only relative left.
 10. `fixedOverflowWidgets` and editor `allowOverflow` are absent. Their source fields/branches are DEFERRED, not N-A.
 11. Local render data drops the selected preference and concrete coordinate, so it cannot satisfy `afterRender(position, coordinate)`.
 12. Local `rendering_context.mbt` has only `HorizontalPosition`; it lacks `IViewLines`, the DOM-first facade, `LineVisibleRanges`, rounded/float range carriers, first/last helpers, and `VisibleRanges`.
@@ -783,17 +797,19 @@ The rejected 225-row draft was normalized before product work:
 14. Local preference is a non-null array, collapsing source `null` and `[]`; `allow_editor_overflow` is required instead of optional-default-false.
 15. Local `prepare_render_widgets` folds source onBefore max-width writes into prepare/read work; tests must observe source onBefore → prepare → render ordering.
 16. Fingerprints and normal-container `position:absolute; top:0` behavior exist locally via the View constructor/CSS rather than constructor writes. Record that as a reviewed ownership/runtime seam, not a missing behavior or duplicate row.
+17. Existing main-document tests make global and owner window dimensions, scroll offsets, and active element coincide, masking the current implementation. The corrected matrix requires distinct iframe/detached-document ownership and deliberately divergent owner/global values.
 
 #### Review stop gate
 
-- [x] 120 GCW + 54 GRC active IDs are contiguous and unique.
-- [x] All 174 working statuses remain TODO and proposed terminals sum to 174.
+- [x] 122 GCW + 54 GRC active IDs are contiguous and unique.
+- [x] All 176 working statuses remain TODO and proposed terminals sum to 176.
 - [x] Ownership exclusions and current local gaps are preserved in the owning plan.
-- [ ] Independent Gate B approves the normalized denominator and proposed seams.
+- [ ] Independent Gate B approves the corrected denominator and proposed seams.
 
 No product or test edit is authorized before that approval.
 
 ### Group C — ViewLayout, renderer, and font measurement
+
 
 #### Cross-plan overlap and ownership boundary
 
@@ -920,7 +936,7 @@ target, not implementation evidence.
 | GVLay-033 | layoutInfo branch (`:218-229`) | Use new viewport width/height, reuse the retained content width unchanged, and recompute content height against the new box. Local: `set_viewport_size` reuses content width but still lacks the source content-height formula. | TODO | TESTED |
 | GVLay-034 | no-layoutInfo branch (`:230-232`) | `_updateHeight()` after any non-layout configuration change. Local: Local setters call `sync_dimensions`; no generic branch. | TODO | TESTED |
 | GVLay-035 | `_getHorizontalScrollbarHeight` (`:249-261`) | After the Hidden and no-overflow early returns, return configured `horizontalScrollbarSize`. Local: the complete method/formula is absent. | TODO | TESTED |
-| GVLay-036 | horizontal hidden branch (`:252-255`) | Explicit `Hidden` returns `0`, regardless of overflow. Local: Missing option and branch. | TODO | N-A (no horizontal-scrollbar visibility option axis) |
+| GVLay-036 | horizontal hidden branch (`:252-255`) | Explicit `Hidden` returns `0`, regardless of overflow. Local: Missing option and branch. | TODO | DEFERRED (horizontal-scrollbar visibility option axis is absent) |
 | GVLay-037 | no-overflow branch (`:256-259`) | `width >= scrollWidth` returns `0`; equality is non-visible. Local: Missing branch. | TODO | TESTED |
 | GVLay-038 | `_getContentHeight` (`:263-274`) | Initialize from `LinesLayout.getLinesTotalHeight()` and add exactly one bottom extension selected by the following branches. Local: only the base LinesLayout total is currently returned. | TODO | TESTED |
 | GVLay-039 | scroll-beyond-last-line branch (`:267-269`) | When enabled, add `max(0, height - lineHeight - padding.bottom)`. Local: the option and nonnegative remainder formula are absent. | TODO | DEFERRED (scrollBeyondLastLine option and bottom-extent formula are absent) |
@@ -1062,15 +1078,15 @@ target, not implementation evidence.
 | GFM-015 | serialized middot width (`:32`) | Persist measured width. Local: Serialization absent. | TODO | N-A (font-info persistence channel is absent) |
 | GFM-016 | serialized word-separator-middot width (`:33`) | Persist measured width. Local: Serialization absent. | TODO | N-A (font-info persistence channel is absent) |
 | GFM-017 | serialized max digit width (`:34`) | Persist measured width. Local: Serialization absent. | TODO | N-A (font-info persistence channel is absent) |
-| GFM-018 | `FontMeasurementsImpl._cache` (`:39`) | Per-window cache keyed by `getWindowId`. Local: Local reduces to one cache; multi-window candidate N-A/deferred must be reviewed. | TODO | N-A (single-window Viewer has no per-window cache map) |
+| GFM-018 | `FontMeasurementsImpl._cache` (`:39`) | Per-window cache keyed by `getWindowId`. Local: Local retains one global cache; the per-window owner remains deferred consistently with frozen CFG-016. | TODO | DEFERRED (frozen CFG-016 leaves the multi-window configuration/cache owner absent) |
 | GFM-019 | `_evictUntrustedReadingsTimeout` (`:41,47-50,76-81`) | `-1` sentinel means no pending retry. Local: Local Bool pending flag; equivalent single-window state. | TODO | PORTED |
 | GFM-020 | `_onDidChange` (`:43`) | Registered emitter lifetime. Local: Local emitter exists but FontMeasurementsImpl has no dispose. | TODO | PORTED |
 | GFM-021 | `onDidChange` (`:44`) | Public event alias. Local: Local listener API matches. | TODO | PORTED |
 | GFM-022 | `dispose` (`:46-52`) | Cancel pending timeout, reset sentinel, dispose registered resources. Local: Missing local disposal/cancellation handle. | TODO | N-A (process-lifetime singleton has no disposal owner) |
 | GFM-023 | dispose timeout branch (`:47-50`) | Only clear/reset when sentinel is not `-1`. Local: Missing; local `set_timeout` result is discarded. | TODO | N-A (process-lifetime singleton has no disposal owner) |
 | GFM-024 | `clearAllFontInfos` (`:57-60`) | Clear every window cache then fire change. Local: Local clears single cache and fires. | TODO | TESTED |
-| GFM-025 | `_ensureCache` (`:62-70`) | Resolve `windowId`; return existing or create/store a new cache. Local: Local single-window reduction has no method/branch. | TODO | N-A (single-window Viewer has no per-window cache lookup) |
-| GFM-026 | missing-window cache branch (`:65-68`) | Allocate exactly once per window. Local: Single-window N-A/deferred candidate. | TODO | N-A (single-window Viewer has no per-window cache lookup) |
+| GFM-025 | `_ensureCache` (`:62-70`) | Resolve `windowId`; return existing or create/store a new cache. Local: Local single-window reduction has no method/branch. | TODO | DEFERRED (frozen CFG-016 leaves the multi-window configuration/cache owner absent) |
+| GFM-026 | missing-window cache branch (`:65-68`) | Allocate exactly once per window. Local: Missing; the multi-window allocation branch remains deferred consistently with frozen CFG-016. | TODO | DEFERRED (frozen CFG-016 leaves the multi-window configuration/cache owner absent) |
 | GFM-027 | `_writeToCache` (`:72-83`) | Put measured identity, then maybe schedule one untrusted retry. Local: Local `write_to_cache`; matches single-window behavior. | TODO | TESTED |
 | GFM-028 | untrusted/no-timer gate (`:76`) | Schedule iff `!isTrusted && timeout === -1`. Local: Local `!is_trusted && !pending`; matches. | TODO | TESTED |
 | GFM-029 | untrusted-reading retry delay (`:81`) | Independently reused timing constant `5000ms`. Local: exact delay is passed to the global timer. | TODO | TESTED |
@@ -1107,9 +1123,9 @@ target, not implementation evidence.
 | GFM-060 | oversized halfwidth-arrow gate (`:222-225`) | If halfwidth arrow is wider than regular arrow, disable regardless of monospace. Local: Local exact. | TODO | TESTED |
 | GFM-061 | output `FontInfo` construction (`:227-244`) | Copy Bare family/weight/size/features/variations/lineHeight/letterSpacing; write derived isMonospace, typical half/full widths, arrow capability, space, middot, wsmiddot and max digit; use the distinct target PixelRatio fact and construct trusted=true. Local record mapping contains every field in the same order. | TODO | TESTED |
 | GFM-062 | output PixelRatio (`:228`) | Use target-window live PixelRatio, not Bare input ratio. Local: Local global device ratio; multi-window gap. | TODO | TESTED |
-| GFM-063 | `FontMeasurementsCache._keys` (`:250,254`) | Null-prototype id-to-Bare map for enumeration. Local: Local ordered `cache_keys` array; single-window cache reduction. | TODO | N-A (local cache is folded into FontMeasurementsImpl) |
-| GFM-064 | `_values` (`:251,255`) | Null-prototype id-to-FontInfo map. Local: Local `Map[String, FontInfo]`. | TODO | N-A (local cache is folded into FontMeasurementsImpl) |
-| GFM-065 | cache constructor (`:253-256`) | Create both null-prototype maps. Local: Local singleton literal initializes array/map. | TODO | N-A (local cache is folded into FontMeasurementsImpl) |
+| GFM-063 | `FontMeasurementsCache._keys` (`:250,254`) | Null-prototype id-to-Bare map for enumeration. Local: Local ordered `cache_keys` array; single-window cache reduction. | TODO | PORTED |
+| GFM-064 | `_values` (`:251,255`) | Null-prototype id-to-FontInfo map. Local: Local `Map[String, FontInfo]`. | TODO | PORTED |
+| GFM-065 | cache constructor (`:253-256`) | Create both null-prototype maps. Local: Local singleton literal initializes array/map. | TODO | PORTED |
 | GFM-066 | cache `has` (`:258-261`) | Boolean value lookup by `item.getId()`. Local: Local `Map.contains` within write and direct `get` in read. | TODO | TESTED |
 | GFM-067 | cache `get` (`:263-266`) | Return value by Bare id. Local: Local `Map.get`. | TODO | TESTED |
 | GFM-068 | cache `put` (`:268-272`) | Store both original Bare key and FontInfo value. Local: Local stores id/value and separately tracks id, not Bare object. Sufficient for eviction; persistence enumeration differs. | TODO | TESTED |
@@ -1118,13 +1134,17 @@ target, not implementation evidence.
 | GFM-071 | source-owned `getValues` map callback (`:281`) | `id => this._values[id]` converts enumerated cache keys to FontInfo values in key order. Local: iteration over cache_keys performs the same mapping; require ordering evidence. | TODO | TESTED |
 | GFM-072 | `FontMeasurements` singleton (`:285`) | Export one process-wide `FontMeasurementsImpl`. Local: Local module singleton plus `font_measurements()` accessor. | TODO | PORTED |
 
+#### Gate B correction record
+
+The formal read-only Gate B audit confirmed the 217-atom denominator but rejected the proposed terminal map and test authority. This amendment changes only `GVLay-036`, `GFM-018`, `GFM-025`, `GFM-026`, and `GFM-063`–`GFM-065`, and expands the matrix below. No row was added, removed, merged, or renumbered; all actual statuses remain `TODO`.
+
 #### Mechanical denominator
 
 Corrected prefix and proposed-terminal counts from the accepted denominator review:
 
 ```text
 Prefix:   GVLay 53 + GVR 41 + GFI 51 + GFM 72 = 217
-Terminal: 118 TESTED + 54 PORTED + 9 DEFERRED + 36 N-A = 217
+Terminal: 118 TESTED + 57 PORTED + 13 DEFERRED + 29 N-A = 217
 Raw reconciliation: 273 - 65 merged/removed + 9 added = 217
 ```
 
@@ -1138,23 +1158,29 @@ The matrix below is keyed by source cluster rather than raw IDs; after the accep
 |---|---|---|---|
 | dimension normalization | width, contentWidth, height, contentHeight | negative, zero, positive fractional, positive integer, signed-32-bit overflow boundary; content smaller/equal/larger than viewport | pure package test |
 | content-size event | old/new content axes; viewport-only axes | neither, width-only, height-only, both; viewport-only must not fire | EditorScrollable white-box |
-| horizontal scrollbar height | visibility, width vs contentWidth, configured size | Hidden; Auto/Visible with `width >`, `==`, `< contentWidth`; size zero/nonzero | ViewLayout package test |
+| horizontal scrollbar height | effective visibility, width vs contentWidth, configured size | Auto/Visible with `width >`, `==`, `< contentWidth`; size zero/nonzero; Hidden is explicitly mapped to SKIPPED below | ViewLayout package test + ledger mapping |
 | content height | scrollBeyondLastLine, ignoreHorizontalScrollbarInContentHeight, padding, lineHeight, overflow | beyond-last on/off; ignore on/off; remainder negative/zero/positive; horizontal scrollbar visible/absent | package + browser bottom-reach test |
 | wrapped content width | wrapping, max width threshold, minimap enabled/side | no wrap; wrap at `<`, `==`, `>` `contentWidth + typicalHalfwidth`; minimap off/left/right | pure package test; minimap unsupported row explicit |
 | unwrapped content width | maxLineWidth, scrollBeyondLastColumn, typical halfwidth, vertical scrollbar, whitespace min, overlay min | each candidate independently wins; ties; zero; max width shrinks/grows | pure package test |
 | width-to-height feedback | content-width transition | no hscroll→hscroll and reverse; content-height event/scroll clamp follows | integration + browser |
 | render-space choice | space, middot, wsmiddot widths | wsmiddot closer; middot closer; exact tie (middot); chosen width equal/different from space | renderer package test |
+| normalized render-input identity | five scoped fields plus raw middot/wsmiddot candidates | identical inputs; each scoped field changes independently; raw candidates differ while derived width/glyph stay equal; derived width differs; derived glyph differs; tie remains U+00B7 | renderer equality + retained-render no-write test |
 | whitespace width | mono fact, foreign elements, token class, tab stop | mono/proportional; foreign yes/no; `mtkw`/other; one-column and multi-column tabs | renderer HTML/reference test |
 | arrow glyph | measured capability, tab width | unsafe/safe × width 1/>1; only safe+1 uses U+FFEB | renderer HTML test |
 | column arithmetic | faux indent, start column, tab size, fullwidth | before/at/after faux indent; every tab residue; BMP fullwidth and ordinary; mapping end column | renderer mapping test |
-| line-height normalization | raw height and platform | zero; `(0,8)` em; exactly 8; rounded below/above; mac/non-mac; zoom ignored/on | fontInfo package test |
+| line-height normalization | raw height and platform | zero; `(0,8)` em; exactly 8; rounded below/above; mac/non-mac; editor-zoom cases are explicitly mapped to SKIPPED below | fontInfo package test + ledger mapping |
 | variation translation | setting and weight | off/non-translate; translate+normal; translate+bold; numeric weights including canonical validation boundary | fontInfo package test |
 | family massage | punctuation and fallback identity | comma/double/single quote; plus; space; plain; same/different fallback | fontInfo package test |
-| measurement cache | window/cache/trust | hit/miss; single vs multiple window; trusted/untrusted; clear; retry pending/not pending; dispose pending timer | browser/config white-box |
+| bare-font cache identity | all eight `BareFontInfo.getId` axes | same object/value; change pixelRatio, family, weight, size, feature settings, variation settings, line height, and letter spacing independently; verify fixed join order | fontInfo package test |
+| measured-font equality | every included and intentionally omitted `FontInfo.equals` axis | each included axis differs independently and returns false; pixelRatio, isTrusted, and isMonospace differ independently and remain equal | fontInfo package test |
+| platform font defaults | macOS, Windows, Linux/other | exact three family stacks; macOS size 12 versus other size 14; weight normal, line height 0, letter spacing 0 | pure platform-selection helper/reference test |
+| measurement cache | cache/trust/timer | hit/miss; trusted/untrusted; clear; retry pending/not pending; single-window event behavior; multi-window and dispose axes are explicitly mapped to SKIPPED below | browser/config white-box + ledger mapping |
+| folded cache ordering | insertion, overwrite, removal, re-addition | insert A then B; overwrite A without reordering; remove A; re-add A at the tail; `getValues` maps ids to values in key order; clear resets both stores | browser/config white-box |
+| explicit SKIPPED seams | unavailable option/window/lifecycle axes | Hidden scrollbar visibility -> SKIPPED (`GVLay-036` DEFERRED); multiple windows -> SKIPPED (`GFM-018/025/026` DEFERRED); dispose with pending timer -> SKIPPED (`GFM-022/023` N-A); editor zoom ignored/on -> SKIPPED (`GFI-008` N-A) | ledger review; no PASS may cite a skipped axis |
 | suspicious measurements | half/full/space/digit widths | each trigger alone at `<2`, `==2`, `>2`; middot-only low is not trigger but is floored after another trigger; floor below/equal/above 5 | deterministic measurement seam test |
 | monospace detection | ligatures and request widths | ligatures on/off; every request equal; diff exactly ±0.001; just outside both boundaries; early failure | deterministic request test |
 | arrow measurement | mono and three widths | mono/nonmono; halfwidth equal/not reference; halfwidth `>`, `==`, `<` regular | deterministic request test |
-| request corpus | char/type/subset | exact n/fullwidth/space/digits/arrows/dots; exact `|/-_ilm%` × Regular/Italic/Bold; all vs monospace membership | spy measurement seam test |
+| request corpus | char/type/subset | exact n/fullwidth/space/digits/arrows/dots; exact `\|/-_ilm%` × Regular/Italic/Bold; all vs monospace membership | spy measurement seam test |
 | live browser font | font readiness/platform | committed mono and proportional font; `document.fonts.ready`; deviceScaleFactor 1; 100% zoom; PixelRatio recorded | Playwright Chromium fixture |
 
 #### Current local-state gaps
@@ -1189,7 +1215,9 @@ The matrix below is keyed by source cluster rather than raw IDs; after the accep
    gates, safety floors, untrusted retry, and output mapping. It reduces
    per-window caches/PixelRatio/timers to one global browser window, drops
    serialize/restore and disposal, and cannot cancel its pending timeout.
-   These are explicit rows, not implicit exclusions.
+   The corrected map keeps the per-window owner rows `GFM-018/025/026`
+   DEFERRED, recognizes the folded cache storage `GFM-063/064/065` as PORTED,
+   and leaves persistence/disposal decisions explicit rather than implicit.
 8. Existing renderer/font tests are not sufficient Gate D evidence at this
    oracle: the geometry plan already notes stale-pin renderer references and
    incomplete fontInfo path/pin headers. Reconcile or replace them with
@@ -1203,11 +1231,14 @@ The matrix below is keyed by source cluster rather than raw IDs; after the accep
 - [x] Cache/platform/persistence exclusions have explicit GFM rows.
 - [x] Behavior variables and local gaps recorded.
 - [x] Independent denominator review corrections are applied: 217 unique, contiguous, five-column rows.
-- [x] Integrated into the geometry child as documentation only for the inventory
-  commit; product/test work remains stopped for Gate B.
+- [x] Gate B terminal corrections are applied: 118 TESTED / 57 PORTED / 13 DEFERRED / 29 N-A.
+- [x] The expanded matrix covers normalized renderer identity, font identities/equality, platform defaults, folded-cache ordering, and explicit SKIPPED mappings.
+- [x] Integrated this corrected fragment into the geometry child as a
+  documentation-only amendment; product/test work remains stopped for fresh
+  Gate B re-review.
 
-Review gate: this documentation-only inventory must be committed and then
-independently approved before any product or test edit.
+Review gate: this corrected documentation-only amendment must be integrated,
+committed, and independently re-reviewed before any product or test edit.
 
 ## Test-Authority Corrections
 
@@ -1314,8 +1345,20 @@ Uniform-width invention is not an acceptable seam.
   inflation and frozen cross-plan duplicates were removed, omitted declared
   members/callbacks were restored, and applicable absent GPU/experimental seams
   were made explicit DEFERRED proposals instead of N-A.
-- 2026-07-12: the fixed proposed denominator is 633/633 TODO rows: 242 line
+- 2026-07-12: the initial normalized proposed denominator was 633/633 TODO rows: 242 line
   geometry, 174 widget/query, and 217 layout/renderer/font atoms. The proposed
   terminal map is 421 TESTED, 93 PORTED, 73 DEFERRED, and 46 N-A. No product or
-  test file changed. Commit this inventory and STOP for independent Gate B;
-  implementation remains unauthorized until that review passes.
+  test file changed. It was committed as `fa145e3` and stopped for Gate B.
+- 2026-07-12: three independent Gate B reviews rejected `fa145e3`. Group A
+  omitted `ViewLines.getDomNode`, its two unsupported generic render methods,
+  and `ViewLine.CLASS_NAME`; Group B omitted owner-window `scrollX ?? 0` and
+  `scrollY ?? 0` fallbacks and duplicated/misclassified overflow/GPU ownership;
+  Group C had seven incorrect N-A/PORTED/DEFERRED proposals. The reviews also
+  required strategy, iframe/window, renderer identity, font identity/default,
+  cache-order, and explicit SKIPPED matrix axes. The rejected commit remains
+  historical and authorized no product/test work.
+- 2026-07-12: the amended inventory is ready with 639/639 TODO rows: 246 line
+  geometry, 176 widget/query, and 217 layout/renderer/font atoms. Its proposed
+  map is 425 TESTED, 96 PORTED, 80 DEFERRED, and 38 N-A. All review corrections
+  are integrated, all source hashes remain pinned, and no product or test file
+  changed. Commit this amendment and STOP for fresh independent Gate B review.

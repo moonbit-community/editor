@@ -466,3 +466,14 @@ The independent closing task is:
   cross-plan duplicates, restoring omitted declared members/callbacks, and
   making applicable GPU/experimental seams explicit. No product or test file
   changed; the portfolio stops for independent Gate B review.
+- 2026-07-12: three independent Gate B reviews rejected browser-geometry
+  inventory commit `fa145e3`. The 633-row proposal omitted four declared Group
+  A members and two owner-window fallback branches, duplicated one overflow
+  gate, misclassified GPU/fixed-option/multi-window/folded-cache terminals, and
+  lacked strategy, iframe/window, renderer/font identity, cache-order, and
+  explicit SKIPPED matrix axes. No product or test file changed.
+- 2026-07-12: the amended browser-geometry inventory is ready with 639/639 TODO
+  rows: 246 line-geometry, 176 widget/query, and 217 layout/renderer/font atoms.
+  Its proposed map is 425 TESTED, 96 PORTED, 80 DEFERRED, and 38 N-A. All three
+  Gate B correction sets are integrated without product/test edits; the
+  portfolio stops for fresh independent Gate B review.

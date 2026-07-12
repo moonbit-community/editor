@@ -1,6 +1,6 @@
 # Viewer Text Buffer EOL Parity
 
-Status: corrected inventory ready — STOP FOR RE-REVIEW; EOL Option B approved
+Status: inventory approved — implementation authorized; EOL Option B approved
 
 Date: 2026-07-10
 
@@ -272,8 +272,9 @@ For every construction and `set_value(s)`:
   claimed as parity: their rows are N-A because the fixed public
   Viewer/workbench contract retains U+FEFF as ordinary content.
 
-Review gate: commit this corrected 596-row documentation-only inventory and
-stop for fresh independent Gate B re-review before any product or test edit.
+Review gate: Gate B approved documentation-only commit `a518b08` and child
+SHA-256 `9da062a8102eda78dc1c40a27123e3ed28b469fb214af05909cb17fb96c5f682`;
+product/test implementation is authorized against this fixed denominator.
 
 ### Builder/factory — EFB and EBB
 
@@ -1178,7 +1179,7 @@ update this ledger and stop for classification review.
 - [x] Algebraic invariants and source-branch behavior matrix are explicit.
 - [x] Shared-file ownership and excluded sibling clusters are explicit.
 - [x] No product or test file changed while building the inventory.
-- [ ] Fresh independent Gate B approves completeness, boundaries,
+- [x] Fresh independent Gate B approves completeness, boundaries,
   classifications, matrices, hashes, and combined mechanics.
 
 ## Exit Gate
@@ -1347,6 +1348,13 @@ update this ledger and stop for classification review.
   PB-004–029/038–040, completing every existing producer/carrier row without
   adding or reclassifying one. No product/test file changed; commit and stop
   for fresh Gate B review.
+- 2026-07-12: Gate B passed at documentation-only commit `a518b08` (child
+  SHA-256 `9da062a8102eda78dc1c40a27123e3ed28b469fb214af05909cb17fb96c5f682`).
+  Three independent reviews approved all 596 unique TODO rows (584 source,
+  11 REF, one ORACLE), proposed 212 TESTED / 34 PORTED / 350 N-A terminals,
+  nine pinned hashes, private PB/RB/SearchCache closure, ORACLE producer and
+  behavior maps, Option-B/BOM/TMV/PR/tokenization ownership, and every required
+  matrix. No product/test edit preceded approval; implementation is authorized.
 
 Append the dated inventory approval, implementation commits, validation
 results, and final ledger totals here. Freeze after implementation.

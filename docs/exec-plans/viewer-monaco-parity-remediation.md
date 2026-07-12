@@ -86,7 +86,7 @@ product contract and belongs in an ordinary local test.
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | implemented and frozen |
-| 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | corrected inventory ready — STOP FOR RE-REVIEW |
+| 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | inventory approved — implementation authorized |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
 
 The order is intentional. Several plans touch viewer/viewer.mbt,
@@ -674,3 +674,10 @@ The independent closing task is:
 - 2026-07-12: the next corrected EOL candidate remains 596/596 TODO rows and
   212/34/0/350; ORACLE-001 now maps PB-106 as well as its previously complete
   producer chain. No product/test file changed; stop for fresh Gate B review.
+- 2026-07-12: text-buffer EOL Gate B passed at documentation-only commit
+  `a518b08`; the approved child SHA-256 is
+  `9da062a8102eda78dc1c40a27123e3ed28b469fb214af05909cb17fb96c5f682`.
+  Three independent reviews approved the fixed 596-row denominator (584
+  source + 11 REF + one ORACLE), 212 TESTED / 34 PORTED / 350 N-A target map,
+  all hashes, closures, deviations, ownership handoffs, and matrices. No
+  product/test edit preceded approval; EOL implementation is authorized.

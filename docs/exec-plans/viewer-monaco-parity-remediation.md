@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — ViewZones approved for implementation
+Status: active — ViewZones implemented and frozen; text-buffer EOL inventory next
 
 Date: 2026-07-10
 
@@ -85,7 +85,7 @@ product contract and belongs in an ordinary local test.
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
-| 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | approved for implementation |
+| 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | implemented and frozen |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
 
@@ -547,3 +547,12 @@ The independent closing task is:
   historical boundaries, proposed terminals, matrices, and combined mechanics.
   No product/test edit preceded approval; ViewZones implementation is now
   authorized.
+- 2026-07-12: the ViewZones child is implemented and frozen. Product commit
+  `2cbec2a` lands the complete mutable zone/accessor API, generated IDs,
+  model-scoped lifetime, source-ordered whitespace/layout transactions,
+  projected visibility, outgoing event, browser DOM/margin ownership, safe
+  callbacks, width/visibility/render cadence, and mouse suppression. The
+  independently reviewed 346-row ledger closes as 284 TESTED, 44 PORTED,
+  8 DEFERRED, and 10 N-A with zero TODO/PASS. Final gates pass: check, JS
+  1296/1296, native 903/903 (Wasm/Wasm-GC have no test entry), build, and
+  Chromium 82/82. The portfolio proceeds to the text-buffer EOL inventory.

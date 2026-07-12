@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — text-buffer EOL inventory ready; STOP FOR REVIEW
+Status: active — corrected text-buffer EOL inventory ready; STOP FOR RE-REVIEW
 
 Date: 2026-07-10
 
@@ -86,7 +86,7 @@ product contract and belongs in an ordinary local test.
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | implemented and frozen |
-| 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | inventory ready — STOP FOR REVIEW |
+| 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | corrected inventory ready — STOP FOR RE-REVIEW |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
 
 The order is intentional. Several plans touch viewer/viewer.mbt,
@@ -125,6 +125,7 @@ method clusters:
 | `ViewThemeChangedEvent.theme` source `IColorTheme` versus local `String` identity | render invalidation; declaration/dispatch-only reviewed type-reduction deviation |
 | ViewModelEventDispatcher generic collector/queue rows historically deferred as cursor `VED`/`VMI` | render invalidation through counted `RVC` handoff rows; the implemented cursor plan remains frozen |
 | ViewModelEventDispatcher ViewZonesChanged event | ViewZones owns only the new union/kind/class/listener/producer arm and its heterogeneous widening of the cursor-owned outgoing-only pending queue; inherited queue mechanics stay frozen cursor ownership, while the RVC mixed view/outgoing collector and postponement rows remain excluded |
+| `Languages.inlay_hints_for_ranges` Range→OffsetRange conversion | async-model-features retains provider snapshot/liveness/task/result ownership; text-buffer EOL receives only the endpoint-to-offset coordinate facts and non-LF regression rows PR-EOL-002/004 |
 | Viewer/attach_model resource lifetime | model lifecycle |
 | Viewer/attach_model async request creation/cancellation | async model features |
 
@@ -564,3 +565,19 @@ The independent closing task is:
   workbench consumers. It records the approved coherent LF-only algebra,
   existing BOM-as-content contract, and `getLineCharCode` EOL/EOF gap. No
   product or test file changed; the portfolio stops for independent Gate B.
+- 2026-07-12: three independent Gate B reviews rejected EOL inventory commit
+  `672a64f` (child SHA-256
+  `cfb826ef6790c3892dadccfd7a95411b822b6736d619179bf6407a6af3324269`).
+  The candidate had a malformed regex row, incomplete PieceTreeBase delegated
+  read closure, collapsed line-char branches, missing TextModel line/EOL,
+  default-option and reason chains, inconsistent permanent reductions, and
+  incomplete remote/clipboard consumer boundaries. No product/test file
+  changed.
+- 2026-07-12: the corrected EOL candidate has 532/532 TODO rows: 521 source
+  atoms plus 11 named test dispositions, with 208 proposed TESTED, 34 PORTED,
+  zero DEFERRED, and 290 N-A. The parent now transfers only the async plan's
+  inlay endpoint-to-offset subfacts; the expanded ledger closes all delegated
+  PieceTreeBase and consumed TextModel branches and makes Option B, BOM,
+  streaming, clamp, topology, telemetry, remote, workbench, and clipboard
+  boundaries explicit. No product/test file changed; stop for fresh Gate B
+  re-review.

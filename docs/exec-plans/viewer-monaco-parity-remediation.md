@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — corrected text-buffer EOL inventory ready; STOP FOR RE-REVIEW
+Status: active — text-buffer EOL implemented and frozen; tokenization inventory next
 
 Date: 2026-07-10
 
@@ -86,7 +86,7 @@ product contract and belongs in an ordinary local test.
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | implemented and frozen |
-| 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | inventory approved — implementation authorized |
+| 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | implemented and frozen |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
 
 The order is intentional. Several plans touch viewer/viewer.mbt,
@@ -681,3 +681,15 @@ The independent closing task is:
   source + 11 REF + one ORACLE), 212 TESTED / 34 PORTED / 350 N-A target map,
   all hashes, closures, deviations, ownership handoffs, and matrices. No
   product/test edit preceded approval; EOL implementation is authorized.
+- 2026-07-12: the text-buffer EOL child is implemented and frozen. Product
+  commit `ad4c2a9` lands coherent LF-only storage/reads/events and the complete
+  cross-boundary matrix; Gate D then found a lone-low-surrogate StringView
+  panic plus four test/contract evidence gaps. Corrective commit `a4ff33a`
+  switches the scoped line/value/range/normalizer slices to raw UTF-16 code-
+  unit semantics, adds D800/DBFF/DC00/DFFF and remote-client regressions, and
+  corrects raw DocumentSnapshot versus normalized TextSnapshot contracts.
+  Three fresh independent reviews pass the final source/ledger, test-matrix,
+  and boundary audits. The 596-row ledger closes as 212 TESTED, 34 PORTED,
+  and 350 N-A with zero TODO/PASS. Final gates pass: check, JS 1322/1322,
+  native 927/927, build, and Chromium 82/82. The portfolio proceeds to the
+  tokenization inventory.

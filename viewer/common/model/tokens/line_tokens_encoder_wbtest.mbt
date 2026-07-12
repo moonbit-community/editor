@@ -48,3 +48,38 @@ test "tokens past the line end clamp to the line" {
   assert_eq(lt.get_count(), 1)
   assert_eq(lt.get_end_offset(0), 2)
 }
+
+///|
+fn assert_same_code_units(actual : String, expected : String) -> Unit raise {
+  assert_eq(actual.length(), expected.length())
+  for i in 0..<expected.length() {
+    assert_eq(actual[i].to_int(), expected[i].to_int())
+  }
+}
+
+///|
+test "raw UTF16 encoder preserves lone surrogates pair halves FEFF and BMP boundaries" {
+  let d800 = Int::unsafe_to_char(0xD800).to_string()
+  let dbff = Int::unsafe_to_char(0xDBFF).to_string()
+  let dc00 = Int::unsafe_to_char(0xDC00).to_string()
+  let dfff = Int::unsafe_to_char(0xDFFF).to_string()
+  let high = Int::unsafe_to_char(0xD83D).to_string()
+  let low = Int::unsafe_to_char(0xDE0A).to_string()
+  for held in [d800, dbff, dc00, dfff, high, low, "\u{FEFF}", "A"] {
+    let line = held + "x"
+    let words = encode_raw_start_offsets(
+      [{ start: 0, end: 1, tag: Keyword }],
+      line.length(),
+    )
+    assert_eq(words[0], 0)
+    assert_eq(words[2], 1)
+    start_offsets_to_end_offsets(words, line.length())
+    let tokens = @common_tokens.LineTokens::new(
+      words,
+      line,
+      @services.LanguageIdCodec::new(),
+    )
+    assert_same_code_units(tokens.get_token_text(0), held)
+    assert_same_code_units(tokens.get_token_text(1), "x")
+  }
+}

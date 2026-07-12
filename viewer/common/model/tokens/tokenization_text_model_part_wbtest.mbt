@@ -87,7 +87,46 @@ fn toy_part(text : String, language_id : String) -> TokenizationTextModelPart {
     }
   }
   lines.push(text[start:text.length()].to_owned())
-  TokenizationTextModelPart::new(lines, language_id)
+  part_from_lines(lines, language_id)
+}
+
+///|
+fn test_access(
+  lines : Array[String],
+  language_id : String,
+) -> TokenizationModelAccess {
+  TokenizationModelAccess::new(
+    line_count=() => lines.length(),
+    line_content=line_number => lines[line_number - 1],
+    line_length=line_number => lines[line_number - 1].length(),
+    first_non_whitespace_column=line_number => {
+      let index = @base_common.first_non_whitespace_index(
+        lines[line_number - 1],
+      )
+      if index < 0 {
+        0
+      } else {
+        index + 1
+      }
+    },
+    language_id=() => language_id,
+    attached_count=() => 0,
+    too_large=() => false,
+    disposing=() => false,
+    scheduler=() => None,
+    unexpected_error=_ => (),
+  )
+}
+
+///|
+fn part_from_lines(
+  lines : Array[String],
+  language_id : String,
+) -> TokenizationTextModelPart {
+  TokenizationTextModelPart::new(
+    test_access(lines, language_id),
+    AttachedViews::new(),
+  )
 }
 
 ///|
@@ -101,6 +140,7 @@ test "the sweep threads state across lines and encodes every line" {
     ),
     "part-toy",
   )
+  part.force_tokenization(4)
 
   // Every line's stored `LineTokens` reproduces the line text.
   assert_eq(part.get_line_tokens(1).get_line_content(), "let a = 1")
@@ -124,11 +164,6 @@ test "the sweep threads state across lines and encodes every line" {
     @common_tokens.STANDARD_TOKEN_TYPE_COMMENT,
   )
   assert_eq(part.get_line_tokens(3).get_class_name(0), "mtk7")
-
-  // Out-of-range lines clamp into the document (the viewer clamps where
-  // Monaco throws).
-  assert_eq(part.get_line_tokens(99).get_line_content(), "let b = 2")
-  assert_eq(part.get_line_tokens(0).get_line_content(), "let a = 1")
 }
 
 ///|
@@ -139,7 +174,7 @@ test "the sweep threads state across lines and encodes every line" {
 test "language id round-trips through the process-wide codec" {
   // A blank middle line exercises the empty-line token path; no tokenizer is
   // registered for this language, exercising the null-tokenization path too.
-  let part = TokenizationTextModelPart::new(
+  let part = part_from_lines(
     ["let a = 1", "", "let b = 2"],
     "part-null-language",
   )
@@ -164,13 +199,10 @@ test "language id round-trips through the process-wide codec" {
 /// touching the part's language resets the memo and fires
 /// `on_did_change_tokens`; `dispose` unsubscribes.
 test "registry changes reset the part and fire on_did_change_tokens" {
-  let part = TokenizationTextModelPart::new(
-    ["let a = 1", "let b = 2"],
-    "part-registry-sub",
-  )
+  let part = part_from_lines(["let a = 1", "let b = 2"], "part-registry-sub")
   let events : Array[ModelTokensChangedEvent] = []
   part.on_did_change_tokens(event => events.push(event)) |> ignore
-  // Registry miss warms the memo with one default token per line.
+  // Registry miss reads one passive default token without warming state.
   assert_eq(part.get_line_tokens(1).get_count(), 1)
   let registration = @syntax.tokenization_registry.register(
     "part-registry-sub",
@@ -184,7 +216,9 @@ test "registry changes reset the part and fire on_did_change_tokens" {
   assert_eq(events[0].ranges.length(), 1)
   assert_eq(events[0].ranges[0].from_line_number, 1)
   assert_eq(events[0].ranges[0].to_line_number, 2)
-  // The re-read resolves the just-registered tokenizer.
+  // Re-read remains passive; explicit force resolves the support.
+  assert_eq(part.get_line_tokens(1).get_count(), 1)
+  part.force_tokenization(1)
   assert_eq(part.get_line_tokens(1).get_count(), 2)
   // Other languages' registrations do not touch the part.
   let other = @syntax.tokenization_registry.register(
@@ -192,29 +226,59 @@ test "registry changes reset the part and fire on_did_change_tokens" {
     BlockCommentToy::{  },
   )
   assert_true(part.has_tokens())
-  assert_eq(events.length(), 1)
+  assert_eq(events.length(), 2)
   other.dispose()
   // dispose unsubscribes: the deregistration no longer reaches the part.
   part.dispose()
   registration.dispose()
   assert_true(part.has_tokens())
-  assert_eq(events.length(), 1)
+  assert_eq(events.length(), 2)
 }
 
 ///|
 test "reset_tokenization drops the memo and re-reads the registry" {
-  let part = TokenizationTextModelPart::new(["let a = 1"], "part-reset")
+  let part = part_from_lines(["let a = 1"], "part-reset")
   assert_false(part.has_tokens())
-  // Registry miss: the whole line is one default token.
+  // Registry miss: passive default reads never create stored state.
   assert_eq(part.get_line_tokens(1).get_count(), 1)
-  assert_true(part.has_tokens())
+  assert_false(part.has_tokens())
   // Register the toy, reset, and the keyword segmentation appears.
   let registration = @syntax.tokenization_registry.register("part-reset", BlockCommentToy::{
 
   })
   part.reset_tokenization()
   assert_false(part.has_tokens())
+  part.force_tokenization(1)
   assert_eq(part.get_line_tokens(1).get_count(), 2)
   assert_eq(part.get_line_tokens(1).get_class_name(0), "mtk3")
   registration.dispose()
+}
+
+///|
+test "panic get_line_tokens rejects line zero" {
+  let part = part_from_lines(["one"], "invalid-line-zero")
+  ignore(part.get_line_tokens(0))
+}
+
+///|
+test "panic force_tokenization rejects line count plus one" {
+  let part = part_from_lines(["one"], "invalid-line-high")
+  part.force_tokenization(2)
+}
+
+///|
+test "token_count is a passive stored/default read" {
+  let lines = ["one", "two", "three"]
+  let calls : Array[String] = []
+  let part = TokenizationTextModelPart::new_with_support_resolver(
+    test_access(lines, "passive-count"),
+    AttachedViews::new(),
+    _ => Some(logging_support(calls, Ref(0))),
+  )
+  assert_eq(part.token_count(), 3)
+  assert_true(calls.is_empty())
+  part.force_tokenization(2)
+  let before = calls.length()
+  assert_eq(part.token_count(), 3)
+  assert_eq(calls.length(), before)
 }

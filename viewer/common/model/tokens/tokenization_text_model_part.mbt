@@ -1,71 +1,98 @@
-///| Faithful port of the readonly subset of vscode's tokenization model part:
-/// `TokenizationTextModelPart` (`common/model/tokens/tokenizationTextModelPart.ts`)
-/// merged with its grammar backend `TokenizerSyntaxTokenBackend`
-/// (`common/model/tokens/tokenizerSyntaxTokenBackend.ts`) and the
-/// state-threading sweep of `TokenizerWithStateStore`
-/// (`common/model/textModelTokens.ts`).
+///| Readonly-applicable `TokenizationTextModelPart` over a live stateful backend.
 ///
-/// Deviations, all consequences of the viewer's readonly `TextModel`:
-///   - Constructed from the model's frozen line array instead of holding the
-///     live `TextModel`: Monaco's backend reads the mutable model lazily, but
-///     MoonBit's package-per-directory + no-cycle rules forbid `model/tokens`
-///     importing `common/model` while `TextModel` owns the part.
-///   - Tokenization is one lazy whole-document sweep memoized per part
-///     (`force_tokenization` warms it, `reset_tokenization` clears it); with
-///     no edits there is no role for the background tokenizer, its
-///     `RangePriorityQueueImpl` scheduling (ported for conformance in
-///     `common/model/text_model_tokens.mbt`), or per-line `forceTokenization`.
-///   - No semantic-token overlay (`SparseTokensStore` is not ported).
+/// Source: `vscode/src/vs/editor/common/model/tokens/tokenizationTextModelPart.ts`
+/// and `vscode/src/vs/editor/common/tokenizationTextModelPart.ts` at
+/// `b18492a288de038fbc7643aae6de8247029d11bd`. Semantic, dynamic-language,
+/// embedded-language, bracket, and editable prediction arms remain the
+/// explicitly deferred/N-A ledger rows; the syntactic lifecycle below keeps
+/// source event order and per-line validation/demand.
 
 ///|
-/// `IModelTokensChangedEvent` (`common/textModelEvents.ts`): grammar tokens
-/// changed for the listed line ranges. The part's only producer is the
-/// whole-document reset, so `ranges` always spans the document.
-pub struct ModelTokensChangedEvent {
+/// Exact syntactic/semantic token-change event payload.
+pub(all) struct ModelTokensChangedEvent {
   semantic_tokens_applied : Bool
   ranges : Array[ModelTokensChangedRange]
 }
 
 ///|
-/// One contiguous run of changed lines, an `IModelTokensChangedEvent.ranges`
-/// element.
-pub struct ModelTokensChangedRange {
+/// One inclusive changed line range.
+pub(all) struct ModelTokensChangedRange {
   from_line_number : Int
   to_line_number : Int
 }
 
 ///|
-/// The `model.tokenization` role: per-line grammar tokens for one document
-/// version, encoded in Monaco's binary `LineTokens` store.
+/// Public model tokenization part. Reads are passive; explicit/visible/background demand drives lexing.
 pub struct TokenizationTextModelPart {
-  priv mut lines : Array[String]
-  priv language_id : String
-  priv mut line_tokens : Array[@common_tokens.LineTokens]?
+  priv access : TokenizationModelAccess
+  priv backend : TokenizerSyntaxTokenBackend
   priv did_change_tokens : @base_common.Emitter[ModelTokensChangedEvent]
-  priv mut registry_subscription : @base_common.Disposable?
+  priv first_font_emitter : @base_common.Emitter[ModelFontTokensChangedEvent]
+  priv public_font_emitter : @base_common.Emitter[ModelFontTokensChangedEvent]
+  priv mut backend_token_subscription : @base_common.Disposable?
+  priv mut backend_font_subscription : @base_common.Disposable?
+  priv mut disposed : Bool
 }
 
 ///|
-/// Builds the part for a document's lines (EOL excluded, one entry per
-/// logical line) and language id. Tokenization runs lazily on first read.
-/// Like `TokenizerSyntaxTokenBackend`'s constructor, the part subscribes to
-/// `tokenization_registry.on_did_change` — a (re)registration touching this
-/// language resets the memo — and the subscription lives until `dispose`.
+/// Constructs the registry-backed live backend and event forwarding in source order.
 pub fn TokenizationTextModelPart::new(
-  lines : Array[String],
-  language_id : String,
+  access : TokenizationModelAccess,
+  attached_views : AttachedViews,
 ) -> TokenizationTextModelPart {
+  TokenizationTextModelPart::new_with_support_resolver(
+    access,
+    attached_views,
+    language_id => {
+      match @syntax.tokenization_registry.get(language_id) {
+        Some(tokenizer) =>
+          Some(
+            public_tokenizer_adapter(
+              tokenizer, @services.language_id_codec, language_id,
+            ),
+          )
+        None => None
+      }
+    },
+    subscribe_registry=true,
+  )
+}
+
+///|
+/// Internal-support test seam preserving failing and `has_eol`-aware adapters.
+pub fn TokenizationTextModelPart::new_with_support_resolver(
+  access : TokenizationModelAccess,
+  attached_views : AttachedViews,
+  resolve_support : (String) -> InternalTokenizationSupportAdapter?,
+  subscribe_registry? : Bool = false,
+) -> TokenizationTextModelPart {
+  let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
+    access,
+    attached_views,
+    resolve_support,
+    subscribe_registry~,
+  )
   let part : TokenizationTextModelPart = {
-    lines,
-    language_id,
-    line_tokens: None,
+    access,
+    backend,
     did_change_tokens: @base_common.Emitter::new(),
-    registry_subscription: None,
+    first_font_emitter: @base_common.Emitter::new(),
+    public_font_emitter: @base_common.Emitter::new(),
+    backend_token_subscription: None,
+    backend_font_subscription: None,
+    disposed: false,
   }
-  part.registry_subscription = Some(
-    @syntax.tokenization_registry.on_did_change(event => {
-      if event.changed_languages.contains(part.language_id) {
-        part.reset_tokenization()
+  part.backend_token_subscription = Some(
+    backend.on_did_change_tokens(event => {
+      if !part.access.is_disposing() {
+        part.did_change_tokens.fire(event)
+      }
+    }),
+  )
+  part.backend_font_subscription = Some(
+    backend.on_did_change_font_tokens(event => {
+      if !part.access.is_disposing() {
+        part.public_font_emitter.fire(event)
       }
     }),
   )
@@ -73,8 +100,7 @@ pub fn TokenizationTextModelPart::new(
 }
 
 ///|
-/// Subscribes to grammar-token changes — the backend's `onDidChangeTokens`
-/// (`abstractSyntaxTokenBackend.ts`).
+/// Subscribes to exact changed token ranges.
 pub fn TokenizationTextModelPart::on_did_change_tokens(
   self : TokenizationTextModelPart,
   listener : (ModelTokensChangedEvent) -> Unit,
@@ -83,168 +109,185 @@ pub fn TokenizationTextModelPart::on_did_change_tokens(
 }
 
 ///|
-/// Drops the registry subscription and the token-change listeners — the
-/// part's share of `TextModel::dispose` (`_register`ed cleanup in the
-/// backend).
-pub fn TokenizationTextModelPart::dispose(
+/// Subscribes to exact child-owned font payloads. The source allocates two
+/// registered emitters and exposes the second; both are disposed below.
+pub fn TokenizationTextModelPart::on_did_change_font_tokens(
   self : TokenizationTextModelPart,
-) -> Unit {
-  match self.registry_subscription {
-    Some(subscription) => subscription.dispose()
-    None => ()
-  }
-  self.registry_subscription = None
-  self.did_change_tokens.dispose()
+  listener : (ModelFontTokensChangedEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.public_font_emitter.event(listener)
 }
 
 ///|
-/// The part's language id. Mirrors `getLanguageId` (`TextModel.getLanguageId`
-/// delegates here in Monaco too).
+/// Internal completion-state event, deliberately not forwarded by `TextModel`.
+pub fn TokenizationTextModelPart::on_did_change_background_tokenization_state(
+  self : TokenizationTextModelPart,
+  listener : (Unit) -> Unit,
+) -> @base_common.Disposable {
+  self.backend.on_did_change_background_tokenization_state(listener)
+}
+
+///|
+/// Construction-fixed language id read through the live carrier.
 pub fn TokenizationTextModelPart::get_language_id(
   self : TokenizationTextModelPart,
 ) -> String {
-  self.language_id
+  self.access.language_id()
 }
 
 ///|
-/// Grammar tokens for the one-based `line_number`, clamped into the document
-/// (the viewer clamps where Monaco throws `Illegal value for lineNumber`).
-/// Mirrors `TokenizationTextModelPart.getLineTokens` minus the semantic-token
-/// overlay. Forces the whole-document sweep on first call.
+/// Validates the inclusive one-based model-line domain.
+fn TokenizationTextModelPart::validate_line_number(
+  self : TokenizationTextModelPart,
+  line_number : Int,
+) -> Unit {
+  if line_number < 1 || line_number > self.access.line_count() {
+    abort("Illegal value for lineNumber")
+  }
+}
+
+///|
+/// Passive stored/default syntactic tokens; never invokes the lexer.
 pub fn TokenizationTextModelPart::get_line_tokens(
   self : TokenizationTextModelPart,
   line_number : Int,
 ) -> @common_tokens.LineTokens {
-  let line_tokens = self.tokenized()
-  let index = @base_common.clamp_int(
-    line_number - 1,
-    0,
-    line_tokens.length() - 1,
-  )
-  line_tokens[index]
+  self.validate_line_number(line_number)
+  self.backend.get_line_tokens(line_number)
 }
 
 ///|
-/// Ensures the document is tokenized. Mirrors `forceTokenization`; the
-/// viewer's sweep is whole-document, so there is no line argument.
+/// Makes state accurate through one validated line.
 pub fn TokenizationTextModelPart::force_tokenization(
   self : TokenizationTextModelPart,
+  line_number : Int,
 ) -> Unit {
-  self.tokenized() |> ignore
+  self.validate_line_number(line_number)
+  self.backend.force_tokenization(line_number)
 }
 
 ///|
-/// Whether the memoized sweep has run. Mirrors `hasTokens`.
+/// Forces only when the exact cheapness predicate succeeds.
+pub fn TokenizationTextModelPart::tokenize_if_cheap(
+  self : TokenizationTextModelPart,
+  line_number : Int,
+) -> Unit {
+  self.validate_line_number(line_number)
+  self.backend.tokenize_if_cheap(line_number)
+}
+
+///|
+/// Whether the line's carried state is accurate.
+pub fn TokenizationTextModelPart::has_accurate_tokens_for_line(
+  self : TokenizationTextModelPart,
+  line_number : Int,
+) -> Bool {
+  self.validate_line_number(line_number)
+  self.backend.has_accurate_tokens_for_line(line_number)
+}
+
+///|
+/// Whether explicit demand for the line is cheap.
+pub fn TokenizationTextModelPart::is_cheap_to_tokenize(
+  self : TokenizationTextModelPart,
+  line_number : Int,
+) -> Bool {
+  self.validate_line_number(line_number)
+  self.backend.is_cheap_to_tokenize(line_number)
+}
+
+///|
+/// Whether the contiguous syntactic store contains any explicit tokens.
 pub fn TokenizationTextModelPart::has_tokens(
   self : TokenizationTextModelPart,
 ) -> Bool {
-  self.line_tokens is Some(_)
+  self.backend.has_tokens()
 }
 
 ///|
-/// Drops the memoized tokens so the next read re-resolves the language
-/// through `tokenization_registry` and re-tokenizes, then announces the
-/// whole document as changed. Mirrors `todo_resetTokenization` — flush, then
-/// fire `IModelTokensChangedEvent` over every line (the
-/// `fireTokenChangeEvent=false` arm serves the background tokenizer, N-A).
+/// Current background lifecycle state.
+pub fn TokenizationTextModelPart::background_tokenization_state(
+  self : TokenizationTextModelPart,
+) -> BackgroundTokenizationState {
+  self.backend.background_tokenization_state()
+}
+
+///|
+/// Public reset announces one full range by default.
 pub fn TokenizationTextModelPart::reset_tokenization(
   self : TokenizationTextModelPart,
+  fire_token_change_event? : Bool = true,
 ) -> Unit {
-  self.line_tokens = None
-  self.did_change_tokens.fire({
-    semantic_tokens_applied: false,
-    ranges: [{ from_line_number: 1, to_line_number: self.lines.length() }],
-  })
+  self.backend.reset_tokenization(fire_token_change_event~)
 }
 
 ///|
-/// The part's share of a model content change — `handleDidChangeContent`
-/// (`tokenizationTextModelPart.ts`, `textModel.ts:472` callee): on a flush,
-/// drop everything and re-seed from the new content. Deviation (no-cycle
-/// seam): Monaco's callee reads `e.isFlush` off `IModelContentChangedEvent`,
-/// but that event type lives in `common/model` above this package, so the
-/// caller passes the extracted facts — the new frozen line array and the
-/// flush flag. The non-flush (incremental) arm is tier-2, N-A today.
+/// Flush content handling; live lines were replaced before this call.
 pub fn TokenizationTextModelPart::handle_did_change_content(
   self : TokenizationTextModelPart,
-  lines : Array[String],
   is_flush~ : Bool,
 ) -> Unit {
-  if is_flush {
-    self.lines = lines
-    // `resetTokenization()`: clears the memo and fires `did_change_tokens`
-    // over the (new) whole document, feeding the repaint chain.
-    self.reset_tokenization()
-  }
+  self.backend.handle_did_change_content(is_flush~)
 }
 
 ///|
-/// Total binary token count across the document, the viewer's debug
-/// telemetry for `ViewerViewModelBuiltEvent.token_count` (no Monaco analog).
-/// Counts every stored token, including the plain fill segments.
+/// Re-evaluates scheduling after aggregate attach/scheduler transitions.
+pub fn TokenizationTextModelPart::handle_did_change_attached(
+  self : TokenizationTextModelPart,
+) -> Unit {
+  self.backend.handle_did_change_attached()
+}
+
+///|
+/// Refreshes all currently requested attached-view ranges synchronously.
+pub fn TokenizationTextModelPart::refresh_all_visible_line_tokens(
+  self : TokenizationTextModelPart,
+) -> Unit {
+  self.backend.refresh_all_visible_line_tokens()
+}
+
+///|
+/// Passive telemetry count. One stored/default read per model line and zero
+/// lexer calls, including initial attach and token-change notification paths.
 pub fn TokenizationTextModelPart::token_count(
   self : TokenizationTextModelPart,
 ) -> Int {
   let mut count = 0
-  for line_tokens in self.tokenized() {
-    count += line_tokens.get_count()
+  for line_number in 1..<=self.access.line_count() {
+    count += self.backend.get_line_tokens(line_number).get_count()
   }
   count
 }
 
 ///|
-fn TokenizationTextModelPart::tokenized(
+/// Token listeners participate in model listener ownership; font is intentionally excluded.
+pub fn TokenizationTextModelPart::has_listeners(
   self : TokenizationTextModelPart,
-) -> Array[@common_tokens.LineTokens] {
-  match self.line_tokens {
-    Some(line_tokens) => line_tokens
-    None => {
-      let line_tokens = self.tokenize_document()
-      self.line_tokens = Some(line_tokens)
-      line_tokens
-    }
-  }
+) -> Bool {
+  self.did_change_tokens.has_listeners()
 }
 
 ///|
-/// The whole-document sweep: resolves the tokenizer through the global
-/// `tokenization_registry` (Monaco's `TokenizationRegistry.get`), threads
-/// `TokenizerState` line to line (`TokenizerWithStateStore`), and encodes
-/// each line's lexer tokens into the binary store. A registry miss produces
-/// one language-tagged default token per line (Monaco's null tokenization).
-fn TokenizationTextModelPart::tokenize_document(
+/// Source-order teardown of forwarding subscriptions, backend, and both font emitters.
+pub fn TokenizationTextModelPart::dispose(
   self : TokenizationTextModelPart,
-) -> Array[@common_tokens.LineTokens] {
-  let codec = @services.language_id_codec
-  let encoded_language_id = codec.register(self.language_id)
-  let line_tokens : Array[@common_tokens.LineTokens] = []
-  match @syntax.tokenization_registry.get(self.language_id) {
-    Some(tokenizer) => {
-      let mut state = tokenizer.initial_state()
-      for line in self.lines {
-        let (lexer_tokens, next_state) = tokenizer.tokenize_line(line, state)
-        line_tokens.push(
-          line_tokens_from_lexer_tokens(
-            line,
-            lexer_tokens,
-            codec,
-            language_id=encoded_language_id,
-          ),
-        )
-        state = next_state
-      }
-    }
-    None =>
-      for line in self.lines {
-        line_tokens.push(
-          line_tokens_from_lexer_tokens(
-            line,
-            [],
-            codec,
-            language_id=encoded_language_id,
-          ),
-        )
-      }
+) -> Unit {
+  if self.disposed {
+    return
   }
-  line_tokens
+  self.disposed = true
+  match self.backend_token_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  match self.backend_font_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  self.backend_token_subscription = None
+  self.backend_font_subscription = None
+  self.backend.dispose()
+  self.did_change_tokens.dispose()
+  self.first_font_emitter.dispose()
+  self.public_font_emitter.dispose()
 }

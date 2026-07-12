@@ -5,9 +5,14 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/syntax",
   "moonbit-community/editor/viewer/common/services",
+  "moonbitlang/core/debug",
 }
 
 // Values
+pub const ATTACHED_VIEW_REFRESH_DELAY_MS : Int = 50
+
+pub const CHEAP_TOKENIZATION_LENGTH_LIMIT : Int = 2048
+
 pub const COLOR_ID_COMMENT : Int = 7
 
 pub const COLOR_ID_FUNCTION : Int = 10
@@ -32,7 +37,15 @@ pub const COLOR_ID_VARIABLE : Int = 4
 
 pub fn default_token_color_map() -> Array[String]
 
+pub fn encode_raw_start_offsets(Array[@syntax.LineToken], Int, language_id? : Int) -> Array[UInt]
+
+pub fn find_likely_relevant_lines(TokenizationModelAccess, Int, TokenizerWithStateStore?) -> LikelyRelevantLines
+
 pub fn line_tokens_from_lexer_tokens(String, Array[@syntax.LineToken], @services.LanguageIdCodec, language_id? : Int) -> @moonbit-community/editor/viewer/common/tokens.LineTokens
+
+pub fn safe_tokenize(@services.LanguageIdCodec, String, InternalTokenizationSupportAdapter?, String, Bool, @syntax.TokenizerState, TokenizationModelAccess) -> EncodedTokenizationResult
+
+pub fn start_offsets_to_end_offsets(Array[UInt], Int) -> Unit
 
 pub fn tag_foreground_color_id(@syntax.HighlightTag) -> Int
 
@@ -45,31 +58,297 @@ pub fn token_theme_style_block(Array[String]) -> String
 // Errors
 
 // Types and methods
-pub struct ModelTokensChangedEvent {
+pub struct AbstractSyntaxTokenBackend {
+  // private fields
+}
+pub fn AbstractSyntaxTokenBackend::dispose(Self) -> Unit
+pub fn AbstractSyntaxTokenBackend::model_access(Self) -> TokenizationModelAccess
+pub fn AbstractSyntaxTokenBackend::new(TokenizationModelAccess) -> Self
+pub fn AbstractSyntaxTokenBackend::on_did_change_background_tokenization_state(Self, (Unit) -> Unit) -> @common.Disposable
+pub fn AbstractSyntaxTokenBackend::on_did_change_font_tokens(Self, (ModelFontTokensChangedEvent) -> Unit) -> @common.Disposable
+pub fn AbstractSyntaxTokenBackend::on_did_change_tokens(Self, (ModelTokensChangedEvent) -> Unit) -> @common.Disposable
+
+pub(all) struct AnnotationUpdate[T] {
+  range : @common.OffsetRange
+  annotation : T?
+} derive(Eq, @debug.Debug)
+
+pub struct AnnotationsUpdate[T] {
+  // private fields
+}
+pub fn[T] AnnotationsUpdate::annotations(Self[T]) -> Array[AnnotationUpdate[T]]
+pub fn[T] AnnotationsUpdate::create(Array[AnnotationUpdate[T]]) -> Self[T]
+
+pub struct AttachedViewHandler {
+  // private fields
+}
+pub fn AttachedViewHandler::dispose(Self) -> Unit
+pub fn AttachedViewHandler::handle_state_change(Self, AttachedViewState) -> Unit
+pub fn AttachedViewHandler::line_ranges(Self) -> Array[@common.LineRange]
+pub fn AttachedViewHandler::new(() -> Unit, () -> TokenizationScheduler?) -> Self
+pub fn AttachedViewHandler::update(Self) -> Unit
+
+pub struct AttachedViewImpl {
+  // private fields
+}
+pub fn AttachedViewImpl::same(Self, Self) -> Bool
+pub fn AttachedViewImpl::set_visible_lines(Self, Array[VisibleLineRange], Bool) -> Unit
+pub fn AttachedViewImpl::state(Self) -> AttachedViewState?
+
+pub(all) struct AttachedViewState {
+  visible_line_ranges : Array[@common.LineRange]
+  stabilized : Bool
+} derive(@debug.Debug)
+pub fn AttachedViewState::equals(Self, Self) -> Bool
+pub fn AttachedViewState::new(Array[@common.LineRange], Bool) -> Self
+
+pub(all) struct AttachedViewStateChange {
+  view : AttachedViewImpl
+  state : AttachedViewState?
+}
+
+pub struct AttachedViews {
+  // private fields
+}
+pub fn AttachedViews::attach_view(Self) -> AttachedViewImpl
+pub fn AttachedViews::detach_view(Self, AttachedViewImpl) -> Unit
+pub fn AttachedViews::dispose(Self) -> Unit
+pub fn AttachedViews::new() -> Self
+pub fn AttachedViews::on_did_change_visible_ranges(Self, (AttachedViewStateChange) -> Unit) -> @common.Disposable
+pub fn AttachedViews::visible_line_ranges(Self) -> Array[@common.LineRange]
+
+pub(all) enum BackgroundTokenizationState {
+  InProgress
+  Completed
+} derive(Eq, @debug.Debug)
+
+pub struct BackgroundTokenizationStore {
+  // private fields
+}
+pub fn BackgroundTokenizationStore::background_tokenization_finished(Self) -> Unit
+pub fn BackgroundTokenizationStore::new(set_tokens~ : (Array[@moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokens]) -> Unit, set_font_info~ : (AnnotationsUpdate[FontTokenOption?]) -> Unit, background_tokenization_finished~ : () -> Unit, set_end_state~ : (Int, @syntax.TokenizerState) -> Unit) -> Self
+pub fn BackgroundTokenizationStore::set_end_state(Self, Int, @syntax.TokenizerState) -> Unit
+pub fn BackgroundTokenizationStore::set_font_info(Self, AnnotationsUpdate[FontTokenOption?]) -> Unit
+pub fn BackgroundTokenizationStore::set_tokens(Self, Array[@moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokens]) -> Unit
+
+pub struct DefaultBackgroundTokenizer {
+  // private fields
+}
+pub fn DefaultBackgroundTokenizer::check_finished(Self) -> Unit
+pub fn DefaultBackgroundTokenizer::dispose(Self) -> Unit
+pub fn DefaultBackgroundTokenizer::handle_changes(Self) -> Unit
+pub fn DefaultBackgroundTokenizer::has_lines_to_tokenize(Self) -> Bool
+pub fn DefaultBackgroundTokenizer::new(TokenizerWithStateStoreAndTextModel, BackgroundTokenizationStore) -> Self
+pub fn DefaultBackgroundTokenizer::request_tokens(Self, Int, Int) -> Unit
+pub fn DefaultBackgroundTokenizer::tokenize_one_invalid_line(Self, @moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokensBuilder) -> Int
+
+pub(all) struct EncodedTokenizationResult {
+  tokens : Array[UInt]
+  font_info : Array[FontToken]?
+  end_state : @syntax.TokenizerState
+}
+
+pub(all) struct FirstInvalidLine {
+  line_number : Int
+  start_state : @syntax.TokenizerState
+}
+
+pub(all) struct FontToken {
+  start_index : Int
+  end_index : Int
+  font_family : String?
+  font_size_multiplier : Double?
+  line_height_multiplier : Double?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct FontTokenOption {
+  font_family : String?
+  font_size_multiplier : Double?
+  line_height_multiplier : Double?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct HeuristicTokenizationResult {
+  heuristic_tokens : Bool
+}
+
+pub struct InternalTokenizationSupportAdapter {
+  // private fields
+}
+pub fn InternalTokenizationSupportAdapter::initial_state(Self) -> @syntax.TokenizerState raise
+pub fn InternalTokenizationSupportAdapter::new(initial_state~ : () -> @syntax.TokenizerState raise, tokenize_encoded~ : (String, Bool, @syntax.TokenizerState) -> EncodedTokenizationResult raise) -> Self
+pub fn InternalTokenizationSupportAdapter::tokenize(Self, String, Bool, @syntax.TokenizerState) -> EncodedTokenizationResult raise
+
+pub(all) struct LikelyRelevantLines {
+  likely_relevant_lines : Array[String]
+  initial_state : @syntax.TokenizerState?
+}
+
+pub(all) struct ModelFontTokensChangedEvent {
+  changes : AnnotationsUpdate[FontTokenOption?]
+}
+
+pub(all) struct ModelTokensChangedEvent {
   semantic_tokens_applied : Bool
   ranges : Array[ModelTokensChangedRange]
 }
 
-pub struct ModelTokensChangedRange {
+pub(all) struct ModelTokensChangedRange {
   from_line_number : Int
   to_line_number : Int
 }
 
+pub struct RangePriorityQueueImpl {
+  // private fields
+}
+pub fn RangePriorityQueueImpl::add_range(Self, @common.OffsetRange) -> Unit
+pub fn RangePriorityQueueImpl::add_range_and_resize(Self, @common.OffsetRange, Int) -> Unit
+pub fn RangePriorityQueueImpl::delete(Self, Int) -> Unit
+pub fn RangePriorityQueueImpl::get_ranges(Self) -> Array[@common.OffsetRange]
+pub fn RangePriorityQueueImpl::min(Self) -> Int?
+pub fn RangePriorityQueueImpl::new() -> Self
+pub fn RangePriorityQueueImpl::remove_min(Self) -> Int?
+pub fn RangePriorityQueueImpl::to_string(Self) -> String
+pub impl RangePriorityQueue for RangePriorityQueueImpl
+
+pub(all) struct TokenStoreChange {
+  changes : Array[ModelTokensChangedRange]
+}
+
+pub struct TokenizationIdleDeadline {
+  // private fields
+}
+pub fn TokenizationIdleDeadline::new(() -> Double) -> Self
+pub fn TokenizationIdleDeadline::time_remaining(Self) -> Double
+
+pub struct TokenizationModelAccess {
+  // private fields
+}
+pub fn TokenizationModelAccess::attached_count(Self) -> Int
+pub fn TokenizationModelAccess::first_non_whitespace_column(Self, Int) -> Int
+pub fn TokenizationModelAccess::is_disposing(Self) -> Bool
+pub fn TokenizationModelAccess::is_too_large(Self) -> Bool
+pub fn TokenizationModelAccess::language_id(Self) -> String
+pub fn TokenizationModelAccess::line_content(Self, Int) -> String
+pub fn TokenizationModelAccess::line_count(Self) -> Int
+pub fn TokenizationModelAccess::line_length(Self, Int) -> Int
+pub fn TokenizationModelAccess::new(line_count~ : () -> Int, line_content~ : (Int) -> String, line_length~ : (Int) -> Int, first_non_whitespace_column~ : (Int) -> Int, language_id~ : () -> String, attached_count~ : () -> Int, too_large~ : () -> Bool, disposing~ : () -> Bool, scheduler~ : () -> TokenizationScheduler?, unexpected_error~ : (String) -> Unit) -> Self
+pub fn TokenizationModelAccess::report_unexpected_error(Self, String) -> Unit
+pub fn TokenizationModelAccess::scheduler(Self) -> TokenizationScheduler?
+
+pub struct TokenizationScheduler {
+  // private fields
+}
+pub fn TokenizationScheduler::delay(Self, Int, () -> Unit) -> @common.Disposable
+pub fn TokenizationScheduler::idle(Self, (TokenizationIdleDeadline) -> Unit) -> @common.Disposable
+pub fn TokenizationScheduler::new(idle~ : ((TokenizationIdleDeadline) -> Unit) -> @common.Disposable, zero_timeout~ : (() -> Unit) -> @common.Disposable, delay~ : (Int, () -> Unit) -> @common.Disposable, now~ : () -> Double) -> Self
+pub fn TokenizationScheduler::now(Self) -> Double
+pub fn TokenizationScheduler::zero_timeout(Self, () -> Unit) -> @common.Disposable
+
+pub struct TokenizationStateStore {
+  // private fields
+}
+pub fn TokenizationStateStore::get_end_state(Self, Int) -> @syntax.TokenizerState?
+pub fn TokenizationStateStore::new() -> Self
+pub fn TokenizationStateStore::set_end_state(Self, Int, @syntax.TokenizerState) -> Bool
+
 pub struct TokenizationTextModelPart {
   // private fields
 }
+pub fn TokenizationTextModelPart::background_tokenization_state(Self) -> BackgroundTokenizationState
 pub fn TokenizationTextModelPart::dispose(Self) -> Unit
-pub fn TokenizationTextModelPart::force_tokenization(Self) -> Unit
+pub fn TokenizationTextModelPart::force_tokenization(Self, Int) -> Unit
 pub fn TokenizationTextModelPart::get_language_id(Self) -> String
 pub fn TokenizationTextModelPart::get_line_tokens(Self, Int) -> @moonbit-community/editor/viewer/common/tokens.LineTokens
-pub fn TokenizationTextModelPart::handle_did_change_content(Self, Array[String], is_flush~ : Bool) -> Unit
+pub fn TokenizationTextModelPart::handle_did_change_attached(Self) -> Unit
+pub fn TokenizationTextModelPart::handle_did_change_content(Self, is_flush~ : Bool) -> Unit
+pub fn TokenizationTextModelPart::has_accurate_tokens_for_line(Self, Int) -> Bool
+pub fn TokenizationTextModelPart::has_listeners(Self) -> Bool
 pub fn TokenizationTextModelPart::has_tokens(Self) -> Bool
-pub fn TokenizationTextModelPart::new(Array[String], String) -> Self
+pub fn TokenizationTextModelPart::is_cheap_to_tokenize(Self, Int) -> Bool
+pub fn TokenizationTextModelPart::new(TokenizationModelAccess, AttachedViews) -> Self
+pub fn TokenizationTextModelPart::new_with_support_resolver(TokenizationModelAccess, AttachedViews, (String) -> InternalTokenizationSupportAdapter?, subscribe_registry? : Bool) -> Self
+pub fn TokenizationTextModelPart::on_did_change_background_tokenization_state(Self, (Unit) -> Unit) -> @common.Disposable
+pub fn TokenizationTextModelPart::on_did_change_font_tokens(Self, (ModelFontTokensChangedEvent) -> Unit) -> @common.Disposable
 pub fn TokenizationTextModelPart::on_did_change_tokens(Self, (ModelTokensChangedEvent) -> Unit) -> @common.Disposable
-pub fn TokenizationTextModelPart::reset_tokenization(Self) -> Unit
+pub fn TokenizationTextModelPart::refresh_all_visible_line_tokens(Self) -> Unit
+pub fn TokenizationTextModelPart::reset_tokenization(Self, fire_token_change_event? : Bool) -> Unit
 pub fn TokenizationTextModelPart::token_count(Self) -> Int
+pub fn TokenizationTextModelPart::tokenize_if_cheap(Self, Int) -> Unit
+
+pub struct TokenizerSyntaxTokenBackend {
+  // private fields
+}
+pub fn TokenizerSyntaxTokenBackend::background_tokenization_state(Self) -> BackgroundTokenizationState
+pub fn TokenizerSyntaxTokenBackend::dispose(Self) -> Unit
+pub fn TokenizerSyntaxTokenBackend::force_tokenization(Self, Int) -> Unit
+pub fn TokenizerSyntaxTokenBackend::get_line_tokens(Self, Int) -> @moonbit-community/editor/viewer/common/tokens.LineTokens
+pub fn TokenizerSyntaxTokenBackend::handle_did_change_attached(Self) -> Unit
+pub fn TokenizerSyntaxTokenBackend::handle_did_change_content(Self, is_flush~ : Bool) -> Unit
+pub fn TokenizerSyntaxTokenBackend::has_accurate_tokens_for_line(Self, Int) -> Bool
+pub fn TokenizerSyntaxTokenBackend::has_tokens(Self) -> Bool
+pub fn TokenizerSyntaxTokenBackend::is_cheap_to_tokenize(Self, Int) -> Bool
+pub fn TokenizerSyntaxTokenBackend::new(TokenizationModelAccess, AttachedViews) -> Self
+pub fn TokenizerSyntaxTokenBackend::new_with_support_resolver(TokenizationModelAccess, AttachedViews, (String) -> InternalTokenizationSupportAdapter?, subscribe_registry? : Bool) -> Self
+pub fn TokenizerSyntaxTokenBackend::on_did_change_background_tokenization_state(Self, (Unit) -> Unit) -> @common.Disposable
+pub fn TokenizerSyntaxTokenBackend::on_did_change_font_tokens(Self, (ModelFontTokensChangedEvent) -> Unit) -> @common.Disposable
+pub fn TokenizerSyntaxTokenBackend::on_did_change_tokens(Self, (ModelTokensChangedEvent) -> Unit) -> @common.Disposable
+pub fn TokenizerSyntaxTokenBackend::refresh_all_visible_line_tokens(Self) -> Unit
+pub fn TokenizerSyntaxTokenBackend::refresh_range(Self, Int, Int) -> Unit
+pub fn TokenizerSyntaxTokenBackend::refresh_ranges(Self, Array[@common.LineRange]) -> Unit
+pub fn TokenizerSyntaxTokenBackend::reset_tokenization(Self, fire_token_change_event? : Bool) -> Unit
+pub fn TokenizerSyntaxTokenBackend::set_font_info(Self, AnnotationsUpdate[FontTokenOption?]) -> Unit
+pub fn TokenizerSyntaxTokenBackend::set_tokens(Self, Array[@moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokens]) -> TokenStoreChange
+pub fn TokenizerSyntaxTokenBackend::tokenize_if_cheap(Self, Int) -> Unit
+
+pub struct TokenizerWithStateStore {
+  tokenization_support : InternalTokenizationSupportAdapter
+  store : TrackingTokenizationStateStore
+  // private fields
+}
+pub fn TokenizerWithStateStore::get_first_invalid_line(Self) -> FirstInvalidLine?
+pub fn TokenizerWithStateStore::get_start_state(Self, Int) -> @syntax.TokenizerState?
+pub fn TokenizerWithStateStore::new(Int, InternalTokenizationSupportAdapter) -> Self raise
+
+pub struct TokenizerWithStateStoreAndTextModel {
+  base : TokenizerWithStateStore
+  access : TokenizationModelAccess
+  language_id_codec : @services.LanguageIdCodec
+}
+pub fn TokenizerWithStateStoreAndTextModel::get_first_invalid_line(Self) -> FirstInvalidLine?
+pub fn TokenizerWithStateStoreAndTextModel::guess_start_state(Self, Int) -> @syntax.TokenizerState
+pub fn TokenizerWithStateStoreAndTextModel::has_accurate_tokens_for_line(Self, Int) -> Bool
+pub fn TokenizerWithStateStoreAndTextModel::is_cheap_to_tokenize(Self, Int) -> Bool
+pub fn TokenizerWithStateStoreAndTextModel::new(Int, InternalTokenizationSupportAdapter, TokenizationModelAccess, @services.LanguageIdCodec) -> Self raise
+pub fn TokenizerWithStateStoreAndTextModel::state_store(Self) -> TrackingTokenizationStateStore
+pub fn TokenizerWithStateStoreAndTextModel::tokenize_heuristically(Self, @moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokensBuilder, Int, Int) -> HeuristicTokenizationResult
+pub fn TokenizerWithStateStoreAndTextModel::update_tokens_until_line(Self, @moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokensBuilder, Int) -> Unit
+
+pub struct TrackingTokenizationStateStore {
+  // private fields
+}
+pub fn TrackingTokenizationStateStore::all_states_valid(Self) -> Bool
+pub fn TrackingTokenizationStateStore::get_end_state(Self, Int) -> @syntax.TokenizerState?
+pub fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number(Self) -> Int?
+pub fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number_or_max(Self) -> Int
+pub fn TrackingTokenizationStateStore::get_first_invalid_line(Self, @syntax.TokenizerState) -> FirstInvalidLine?
+pub fn TrackingTokenizationStateStore::get_start_state(Self, Int, @syntax.TokenizerState) -> @syntax.TokenizerState?
+pub fn TrackingTokenizationStateStore::invalidate_end_state_range(Self, @common.LineRange) -> Unit
+pub fn TrackingTokenizationStateStore::new(Int) -> Self
+pub fn TrackingTokenizationStateStore::set_end_state(Self, Int, @syntax.TokenizerState) -> Bool
+
+pub(all) struct VisibleLineRange {
+  start_line_number : Int
+  end_line_number : Int
+} derive(Eq, @debug.Debug)
 
 // Type aliases
+pub type FontTokensUpdate = AnnotationsUpdate[FontTokenOption?]
 
 // Traits
+pub(open) trait RangePriorityQueue {
+  fn min(Self) -> Int?
+  fn remove_min(Self) -> Int?
+  fn add_range(Self, @common.OffsetRange) -> Unit
+  fn add_range_and_resize(Self, @common.OffsetRange, Int) -> Unit
+}
 

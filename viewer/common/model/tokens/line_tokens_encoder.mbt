@@ -20,39 +20,63 @@ pub fn line_tokens_from_lexer_tokens(
   decoder : @services.LanguageIdCodec,
   language_id? : Int = 0,
 ) -> @common_tokens.LineTokens {
-  let line_length = line_text.length()
-  let data : Array[(String, UInt)] = []
+  let words = encode_raw_start_offsets(tokens, line_text.length(), language_id~)
+  start_offsets_to_end_offsets(words, line_text.length())
+  @common_tokens.LineTokens::new(words, line_text, decoder)
+}
+
+///|
+/// Encodes lexer spans as Monaco's raw start-offset word pairs. Gaps, trailing
+/// text, and blank lines receive the language-tagged plain metadata. This is
+/// the production registry adapter path; it deliberately does not construct
+/// an end-offset `LineTokens` value before `safe_tokenize` performs the single
+/// conversion.
+pub fn encode_raw_start_offsets(
+  tokens : Array[@syntax.LineToken],
+  line_length : Int,
+  language_id? : Int = 0,
+) -> Array[UInt] {
+  let words : Array[UInt] = []
   let mut cursor = 0
   for token in tokens {
-    let start = token.start.max(cursor)
-    let end = token.end.min(line_length)
+    let start = token.start.max(cursor).min(line_length)
+    let end = token.end.max(start).min(line_length)
     if cursor < start {
-      data.push((substr(line_text, cursor, start), gap_metadata(language_id)))
+      words.push(cursor.reinterpret_as_uint())
+      words.push(gap_metadata(language_id))
     }
     if start < end {
-      data.push(
-        (
-          substr(line_text, start, end),
-          tag_to_metadata(token.tag, language_id~),
-        ),
-      )
+      words.push(start.reinterpret_as_uint())
+      words.push(tag_to_metadata(token.tag, language_id~))
       cursor = end
     }
   }
-  if cursor < line_length {
-    data.push(
-      (substr(line_text, cursor, line_length), gap_metadata(language_id)),
-    )
+  if cursor < line_length || words.is_empty() {
+    words.push(cursor.reinterpret_as_uint())
+    words.push(gap_metadata(language_id))
   }
-  if data.is_empty() {
-    // An empty line still needs one token covering its (zero-length) content.
-    // Monaco's `LineTokens.createEmpty` packs the language-neutral default
-    // metadata, but a real tokenizer tags even a blank line with the model's
-    // language, so the gap word (which equals the default at `language_id = 0`)
-    // is used here to keep `get_language_id` consistent across every line.
-    data.push((line_text, gap_metadata(language_id)))
+  words
+}
+
+///|
+/// Converts even slots from token starts to exclusive token ends exactly once.
+/// The final token ends at the raw UTF-16 line length.
+pub fn start_offsets_to_end_offsets(
+  words : Array[UInt],
+  line_length : Int,
+) -> Unit {
+  if words.length() < 2 {
+    return
   }
-  @common_tokens.LineTokens::create_from_text_and_metadata(data, decoder)
+  let count = words.length() >> 1
+  for i in 0..<count {
+    let end_offset = if i + 1 < count {
+      words[(i + 1) << 1]
+    } else {
+      line_length.reinterpret_as_uint()
+    }
+    words[i << 1] = end_offset
+  }
 }
 
 ///|
@@ -62,11 +86,4 @@ pub fn line_tokens_from_lexer_tokens(
 /// `language_id = 0`, in the language field too.
 fn gap_metadata(language_id : Int) -> UInt {
   tag_to_metadata(Plain, language_id~)
-}
-
-///|
-/// Code-unit substring `[start, end)`. ASCII/BMP-safe; raises on a surrogate
-/// boundary, matching the rest of the renderer's slicing.
-fn substr(s : String, start : Int, end : Int) -> String {
-  s.view(start_offset=start, end_offset=end).to_owned()
 }

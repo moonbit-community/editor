@@ -157,13 +157,14 @@ fn Viewer::reveal_mouse_cursor(
   self : Viewer,
   reveal_type : @controller.NavigationCommandRevealType,
   horizontal~ : Bool,
+  source~ : String,
 ) -> Unit {
   if reveal_type is None {
     return
   }
   self.reveal_view_cursor(
     horizontal~,
-    source="mouse",
+    source~,
     minimal_reveal=true,
     scroll_type=Smooth,
   )

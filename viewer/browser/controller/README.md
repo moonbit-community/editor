@@ -38,9 +38,9 @@ EditorMouseEventFactory
 - `PointerHandlerLastRenderData` exposes the last cursor geometry needed by
   hit testing. Exact callable types are listed in `pkg.generated.mbti`.
 
-Compared with Monaco, the viewer omits pointer-capture plumbing, mouse-wheel
-zoom, context-menu/wheel editor events, text drag-and-drop, multi-cursor and
-column-selection gestures, and textarea/GPU/minimap paths.
+Compared with Monaco, the viewer omits mouse-wheel zoom, context-menu/wheel
+editor events, text drag-and-drop, multi-cursor and column-selection gestures,
+and textarea/GPU/minimap paths.
 
 ## Boundary
 

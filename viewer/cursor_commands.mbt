@@ -180,7 +180,11 @@ fn BaseMoveToCommand::run(
     reason=Explicit,
   )
   if changed && args.reveal_type != None {
-    viewer.reveal_mouse_cursor(args.reveal_type, horizontal=true)
+    viewer.reveal_mouse_cursor(
+      args.reveal_type,
+      horizontal=true,
+      source=args.source,
+    )
   }
   changed
 }
@@ -276,6 +280,63 @@ fn HomeCommand::as_core_editor_command(self : HomeCommand) -> CoreEditorCommand 
 }
 
 ///|
+/// Unbound model-line-start command retained for the source's macOS-only
+/// `cursorLineStart` registrations. The keybindings remain explicitly
+/// deferred, but the command object and body are live and source-addressable.
+priv struct LineStartCommand {
+  id : String
+  in_selection_mode : Bool
+}
+
+///|
+fn LineStartCommand::new(
+  id : String,
+  in_selection_mode~ : Bool,
+) -> LineStartCommand {
+  { id, in_selection_mode }
+}
+
+///|
+fn LineStartCommand::exec(
+  self : LineStartCommand,
+  state : @cursor.SingleCursorState,
+) -> @cursor.SingleCursorState {
+  state.moved(
+    self.in_selection_mode,
+    Position(state.position.line_number, 1),
+    leftover_visible_columns=0,
+  )
+}
+
+///|
+fn LineStartCommand::as_core_editor_command(
+  self : LineStartCommand,
+) -> CoreEditorCommand {
+  {
+    id: self.id,
+    precondition: None,
+    default_args: BaseCommandArguments(CursorBaseCommandOptions::new()),
+    run_core_editor_command: (viewer, view_model, args) => {
+      let options = match args {
+        BaseCommandArguments(options) => options
+        _ => CursorBaseCommandOptions::new()
+      }
+      let changed = view_model.set_cursor_state(
+        Some(
+          @cursor.CursorState::from_model_state(
+            self.exec(view_model.cursor.model_state()),
+          ),
+        ),
+        options.source,
+        Explicit,
+      )
+      viewer.reveal_cursor_after_navigation(options.source)
+      changed
+    },
+  }
+}
+
+///|
 priv struct EndCommand {
   id : String
   in_selection_mode : Bool
@@ -291,7 +352,7 @@ fn EndCommand::as_core_editor_command(self : EndCommand) -> CoreEditorCommand {
   {
     id: self.id,
     precondition: None,
-    default_args: EndCommandArguments(EndCommandOptions::new()),
+    default_args: EndCommandArguments(EndCommandOptions::new(sticky=false)),
     run_core_editor_command: (viewer, view_model, args) => {
       let options = match args {
         EndCommandArguments(options) => options
@@ -307,6 +368,63 @@ fn EndCommand::as_core_editor_command(self : EndCommand) -> CoreEditorCommand {
         sticky~,
         source=options.source,
       )
+    },
+  }
+}
+
+///|
+/// Unbound model-line-end counterpart of `LineStartCommand`.
+priv struct LineEndCommand {
+  id : String
+  in_selection_mode : Bool
+}
+
+///|
+fn LineEndCommand::new(
+  id : String,
+  in_selection_mode~ : Bool,
+) -> LineEndCommand {
+  { id, in_selection_mode }
+}
+
+///|
+fn LineEndCommand::exec(
+  self : LineEndCommand,
+  view_model : @view_model.ViewModel,
+  state : @cursor.SingleCursorState,
+) -> @cursor.SingleCursorState {
+  let line_number = state.position.line_number
+  state.moved(
+    self.in_selection_mode,
+    Position(line_number, view_model.model_line_max_column(line_number)),
+    leftover_visible_columns=0,
+  )
+}
+
+///|
+fn LineEndCommand::as_core_editor_command(
+  self : LineEndCommand,
+) -> CoreEditorCommand {
+  {
+    id: self.id,
+    precondition: None,
+    default_args: BaseCommandArguments(CursorBaseCommandOptions::new()),
+    run_core_editor_command: (viewer, view_model, args) => {
+      let options = match args {
+        BaseCommandArguments(options) => options
+        _ => CursorBaseCommandOptions::new()
+      }
+      let changed = view_model.set_cursor_state(
+        Some(
+          @cursor.CursorState::from_model_state(
+            self.exec(view_model, view_model.cursor.model_state()),
+          ),
+        ),
+        options.source,
+        Explicit,
+      )
+      viewer.reveal_cursor_after_navigation(options.source)
+      changed
     },
   }
 }
@@ -341,7 +459,11 @@ fn WordCommand::as_core_editor_command(self : WordCommand) -> CoreEditorCommand 
         reason=Explicit,
       )
       if args.reveal_type != None {
-        viewer.reveal_mouse_cursor(args.reveal_type, horizontal=true)
+        viewer.reveal_mouse_cursor(
+          args.reveal_type,
+          horizontal=true,
+          source=args.source,
+        )
       }
       changed
     },
@@ -379,7 +501,11 @@ fn LineCommand::as_core_editor_command(self : LineCommand) -> CoreEditorCommand 
         reason=Explicit,
       )
       if args.reveal_type != None {
-        viewer.reveal_mouse_cursor(args.reveal_type, horizontal=false)
+        viewer.reveal_mouse_cursor(
+          args.reveal_type,
+          horizontal=false,
+          source=args.source,
+        )
       }
       changed
     },
@@ -616,6 +742,22 @@ fn register_cursor_navigation_commands(
     registry,
     SetSelectionCommand::new().as_core_editor_command(),
   )
+  register_unbound_cursor_core_command(
+    registry,
+    LineStartCommand::new("cursorLineStart", in_selection_mode=false).as_core_editor_command(),
+  )
+  register_unbound_cursor_core_command(
+    registry,
+    LineStartCommand::new("cursorLineStartSelect", in_selection_mode=true).as_core_editor_command(),
+  )
+  register_unbound_cursor_core_command(
+    registry,
+    LineEndCommand::new("cursorLineEnd", in_selection_mode=false).as_core_editor_command(),
+  )
+  register_unbound_cursor_core_command(
+    registry,
+    LineEndCommand::new("cursorLineEndSelect", in_selection_mode=true).as_core_editor_command(),
+  )
   register_cursor_key_command(
     registry,
     CursorMoveBasedCommand::new(
@@ -799,7 +941,7 @@ fn Viewer::run_cursor_move(
     source~,
     reason=Explicit,
   )
-  self.reveal_cursor_after_navigation()
+  self.reveal_cursor_after_navigation(source)
   changed
 }
 
@@ -822,7 +964,7 @@ fn Viewer::run_cursor_page(
     source~,
     reason=Explicit,
   )
-  self.reveal_cursor_after_navigation()
+  self.reveal_cursor_after_navigation(source)
   changed
 }
 
@@ -838,7 +980,7 @@ fn Viewer::run_cursor_home(
     source~,
     reason=Explicit,
   )
-  self.reveal_cursor_after_navigation()
+  self.reveal_cursor_after_navigation(source)
   changed
 }
 
@@ -856,15 +998,18 @@ fn Viewer::run_cursor_end(
     source~,
     reason=Explicit,
   )
-  self.reveal_cursor_after_navigation()
+  self.reveal_cursor_after_navigation(source)
   changed
 }
 
 ///|
-fn Viewer::reveal_cursor_after_navigation(self : Viewer) -> Unit {
+fn Viewer::reveal_cursor_after_navigation(
+  self : Viewer,
+  source : String,
+) -> Unit {
   self.reveal_view_cursor(
     horizontal=true,
-    source="keyboard",
+    source~,
     minimal_reveal=false,
     scroll_type=Smooth,
   )

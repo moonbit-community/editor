@@ -311,6 +311,40 @@ test "nested content completion releases only its matching Flush version" {
 }
 
 ///|
+test "old-model content completion cannot release a same-version new-model Flush" {
+  let viewer = Viewer::Viewer()
+  let first = test_model("first")
+  let second = test_model("second")
+  viewer.set_model(Some(first))
+  let order : Array[String] = []
+  let mut swapped = false
+  viewer.on_did_change_model_content(event => {
+    order.push("content:\{event.version_id}")
+    if !swapped {
+      swapped = true
+      viewer.set_model(Some(second))
+    }
+  })
+  |> ignore
+  viewer.on_did_change_cursor_selection(event => {
+    order.push("selection:\{event.model_version_id}")
+  })
+  |> ignore
+
+  viewer.set_value("first replacement")
+  assert_true(order == ["content:2"])
+  assert_eq(viewer.cursor_completed_content_versions.length(), 0)
+
+  order.clear()
+  viewer.set_value("second replacement")
+  assert_true(order == ["content:2", "selection:2"])
+  assert_eq(viewer.cursor_completed_content_versions.length(), 0)
+  viewer.dispose()
+  first.dispose()
+  second.dispose()
+}
+
+///|
 test "two cursor mutations in one listener retain both outgoing facts" {
   with_test_viewer("abcdef", viewer => {
     let order : Array[String] = []

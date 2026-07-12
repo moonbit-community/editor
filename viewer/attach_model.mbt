@@ -89,7 +89,7 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       self.request_model_features(model)
       self.schedule_render()
       self.did_change_model_content.fire(event)
-      self.complete_model_content_delivery(event.version_id)
+      self.complete_model_content_delivery(model, event.version_id)
     }),
   )
   // A disposed model detaches itself

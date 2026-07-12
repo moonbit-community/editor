@@ -213,6 +213,27 @@ test "central partial transition covers null model view and full shapes" {
 }
 
 ///|
+test "single-cursor normalize returns without changing primary state" {
+  let model = cursor_controller_test_model()
+  let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
+  let controller = CursorsController::new(model, CursorContext::new(identity))
+  controller.set_model_cursor_state(
+    SingleCursorState::new(
+      Position(1, 1),
+      Position(1, 3),
+      Simple,
+      Position(1, 2),
+      selection_start_leftover_visible_columns=5,
+      leftover_visible_columns=7,
+    ),
+  )
+  |> ignore
+  let before = controller.get_primary_cursor_state()
+  controller.normalize()
+  assert_true(controller.get_primary_cursor_state() == before)
+}
+
+///|
 test "view-only state converts its complete anchor range as one unit" {
   let model = cursor_controller_test_model()
   let converter = CursorTestConverter::{ column_delta: 1, range_delta: 2 }

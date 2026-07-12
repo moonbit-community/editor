@@ -37,8 +37,12 @@ There is one selection only. Editable marker recovery, edit-operation tracking,
 multi-cursor limits, and simultaneous supplied model+view cross-validation are
 deferred. Mapping changes reproject from the model side; live view-driven moves
 are normalized by `viewer/common/view_model` before this package validates the
-derived model side. Atomic soft-tab movement and visual RTL arrow swapping are
-outside this package's current cursor contract.
+derived model side. The one-cursor `normalize` member therefore takes the
+source's primary-only early return before allocating or sorting. Atomic
+soft-tab movement, full grapheme-cluster stepping/visible-column arithmetic,
+and visual RTL arrow swapping are outside this package's current cursor
+contract; current horizontal stepping is surrogate-pair safe and otherwise
+code-point based.
 
 The package depends on `base/common`, `viewer/common/core`, and
 `viewer/common/model`; it has no view-model, DOM, or FFI dependency. See

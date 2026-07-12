@@ -206,13 +206,13 @@ test "cursor outgoing FIFO continues through reentrant delivery" {
 }
 
 ///|
-test "reentrant cursor event finishes current listener snapshot first" {
+test "single cursor listener receives a reentrant event recursively" {
   let dispatcher = CursorEventDispatcher::new()
   let delivered : Array[String] = []
   let mut reentered = false
   dispatcher.on_event(event => {
     let column = event.selections[0].get_position().column
-    delivered.push("first:\{column}")
+    delivered.push("enter:\{column}")
     if !reentered {
       reentered = true
       dispatcher.emit_outgoing_event(
@@ -225,6 +225,36 @@ test "reentrant cursor event finishes current listener snapshot first" {
         ),
       )
     }
+    delivered.push("exit:\{column}")
+  })
+  |> ignore
+  dispatcher.emit_outgoing_event(
+    dispatcher_event(Some([dispatcher_selection(1)]), 2, 1, 1),
+  )
+  assert_true(delivered == ["enter:2", "enter:4", "exit:4", "exit:2"])
+}
+
+///|
+test "reentrant cursor event drains current listeners then nests before return" {
+  let dispatcher = CursorEventDispatcher::new()
+  let delivered : Array[String] = []
+  let mut reentered = false
+  dispatcher.on_event(event => {
+    let column = event.selections[0].get_position().column
+    delivered.push("first:\{column}:before")
+    if !reentered {
+      reentered = true
+      dispatcher.emit_outgoing_event(
+        dispatcher_event(
+          Some([dispatcher_selection(column)]),
+          4,
+          1,
+          1,
+          source="reentrant",
+        ),
+      )
+    }
+    delivered.push("first:\{column}:after")
   })
   |> ignore
   dispatcher.on_event(event => {
@@ -234,7 +264,50 @@ test "reentrant cursor event finishes current listener snapshot first" {
   dispatcher.emit_outgoing_event(
     dispatcher_event(Some([dispatcher_selection(1)]), 2, 1, 1),
   )
-  assert_true(delivered == ["first:2", "second:2", "first:4", "second:4"])
+  assert_true(
+    delivered ==
+    [
+      "first:2:before", "second:2", "first:4:before", "first:4:after", "second:4",
+      "first:2:after",
+    ],
+  )
+}
+
+///|
+test "reentrant cursor delivery retains array semantics after sibling disposal" {
+  let dispatcher = CursorEventDispatcher::new()
+  let delivered : Array[String] = []
+  let mut reentered = false
+  let sibling = Ref(@base_common.Disposable::from(() => ()))
+  dispatcher.on_event(event => {
+    let column = event.selections[0].get_position().column
+    delivered.push("first:\{column}:before")
+    if !reentered {
+      reentered = true
+      sibling.val.dispose()
+      dispatcher.emit_outgoing_event(
+        dispatcher_event(
+          Some([dispatcher_selection(column)]),
+          4,
+          1,
+          1,
+          source="reentrant",
+        ),
+      )
+    }
+    delivered.push("first:\{column}:after")
+  })
+  |> ignore
+  sibling.val = dispatcher.on_event(event => {
+    delivered.push("second:\{event.selections[0].get_position().column}")
+  })
+  dispatcher.emit_outgoing_event(
+    dispatcher_event(Some([dispatcher_selection(1)]), 2, 1, 1),
+  )
+  assert_true(
+    delivered ==
+    ["first:2:before", "first:4:before", "first:4:after", "first:2:after"],
+  )
 }
 
 ///|

@@ -131,6 +131,16 @@ fn CursorsController::validate_model_state(
 }
 
 ///|
+/// `CursorCollection.normalize`'s exact primary-only branch. This controller's
+/// representation contains one `cursor` rather than a cursor array, so the
+/// source condition `cursors.length === 1` is a structural invariant and the
+/// method returns before allocating or sorting any normalization workspace.
+fn CursorsController::normalize(self : CursorsController) -> Unit {
+  ignore(self)
+  return
+}
+
+///|
 /// Applies one source-shaped partial state and returns a change fact only when
 /// the full paired state or internal version changed. `None` is the source's
 /// both-sides-null early return. A full state follows the model-authoritative
@@ -153,11 +163,13 @@ pub fn CursorsController::set_cursor_state(
     Some(model_state) => Some(self.validate_model_state(model_state))
     None => None
   }
-  if !self.cursor.set_state(
-      self.context,
-      validated_model_state,
-      supplied_view_state,
-    ) {
+  let state_changed = self.cursor.set_state(
+    self.context,
+    validated_model_state,
+    supplied_view_state,
+  )
+  self.normalize()
+  if !state_changed {
     return None
   }
   if supplied_model_state is None {

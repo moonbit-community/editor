@@ -54,11 +54,11 @@ The viewer is single-cursor: secondary cursor/selection arrays are empty and
 `set_selections` uses the first selection. The primary Left/Right/Up/Down,
 PageUp/PageDown, Home, and End bindings (with Shift variants) move the cursor;
 a winning binding remains handled at a document boundary. Pointer click/drag,
-word, line, gutter, and select-all gestures use source-shaped command adapters
-and the same transition path. Their runtime-partial argument shapes return
-before mutation when required position/selection data is absent; the readonly
-model has no undo stack, so Monaco's cursor-command `pushStackElement` calls
-have no local state to update.
+word, line, gutter, and select-all gestures use source-shaped command objects
+registered under their source IDs and the same transition path. Their
+runtime-partial argument shapes return before mutation when required
+position/selection data is absent; the readonly model has no undo stack, so
+Monaco's cursor-command `pushStackElement` calls have no local state to update.
 Alternate platform bindings, editable commands, multi-cursor, and column
 selection are outside the readonly surface. The `debug_on_did_*` subscriptions
 are harness observability, not ordinary editor events.

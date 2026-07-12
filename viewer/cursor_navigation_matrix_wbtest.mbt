@@ -135,3 +135,34 @@ test "set_selections keeps only primary with default and override metadata" {
     assert_true(selections[1].reason == Paste)
   })
 }
+
+///|
+test "one-element set_selections forwards exact source and reason" {
+  with_test_viewer("one\ntwo", viewer => {
+    let outgoing : Array[@view_model.CursorStateChangedEvent] = []
+    let positions : Array[CursorPositionChangedEvent] = []
+    let selections : Array[CursorSelectionChangedEvent] = []
+    viewer
+    .test_view_model()
+    .on_cursor_state_changed(event => outgoing.push(event))
+    |> ignore
+    viewer.on_did_change_cursor_position(event => positions.push(event))
+    |> ignore
+    viewer.on_did_change_cursor_selection(event => selections.push(event))
+    |> ignore
+    let expected = @core.Selection::new(Position(2, 1), Position(2, 3))
+    viewer.set_selections([expected], source="one-element", reason=Redo)
+    assert_true(viewer.get_selections().unwrap() == [expected])
+    assert_eq(outgoing.length(), 1)
+    assert_true(outgoing[0].selections == [expected])
+    assert_eq(outgoing[0].source, "one-element")
+    assert_true(outgoing[0].reason == Redo)
+    assert_eq(positions.length(), 1)
+    assert_eq(positions[0].source, "one-element")
+    assert_true(positions[0].reason == Redo)
+    assert_eq(selections.length(), 1)
+    assert_selection_eq(selections[0].selection, expected)
+    assert_eq(selections[0].source, "one-element")
+    assert_true(selections[0].reason == Redo)
+  })
+}

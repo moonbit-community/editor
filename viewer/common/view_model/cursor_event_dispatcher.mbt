@@ -108,11 +108,23 @@ fn CursorStateChangedEvent::attempt_to_merge(
 /// Pending cursor events coalesce into their first same-kind slot; delivery is
 /// FIFO, discards no-ops, and remains safe when listeners emit reentrantly.
 struct CursorEventDispatcher {
-  on_event_emitter : @base_common.Emitter[CursorStateChangedEvent]
+  event_listeners : Array[CursorEventListenerCell]
   outgoing_events : Array[PendingOutgoingEvent]
-  event_delivery_queue : Array[CursorStateChangedEvent]
-  mut event_delivery_is_draining : Bool
+  mut listener_count : Int
+  mut listeners_are_array : Bool
+  mut delivery_index : Int
+  mut delivery_end : Int
+  mut delivery_value : CursorStateChangedEvent?
+  mut delivery_active : Bool
   mut disposed : Bool
+}
+
+///|
+/// Stable listener slot. Disposals mark slots inactive instead of changing the
+/// array while a source-shaped delivery walk is in progress.
+priv struct CursorEventListenerCell {
+  listener : (CursorStateChangedEvent) -> Unit
+  active : Ref[Bool]
 }
 
 ///|
@@ -123,10 +135,14 @@ fn CursorEventDispatcher::new() -> CursorEventDispatcher {
   let different_kind_witness = DeferredSiblingEvent
   ignore(different_kind_witness)
   {
-    on_event_emitter: @base_common.Emitter::new(),
+    event_listeners: [],
     outgoing_events: [],
-    event_delivery_queue: [],
-    event_delivery_is_draining: false,
+    listener_count: 0,
+    listeners_are_array: false,
+    delivery_index: -1,
+    delivery_end: 0,
+    delivery_value: None,
+    delivery_active: false,
     disposed: false,
   }
 }
@@ -141,8 +157,12 @@ fn CursorEventDispatcher::dispose(self : CursorEventDispatcher) -> Unit {
   }
   self.disposed = true
   self.outgoing_events.clear()
-  self.event_delivery_queue.clear()
-  self.on_event_emitter.dispose()
+  for cell in self.event_listeners {
+    cell.active.val = false
+  }
+  self.event_listeners.clear()
+  self.listener_count = 0
+  self.reset_event_delivery()
 }
 
 ///|
@@ -151,7 +171,27 @@ fn CursorEventDispatcher::on_event(
   self : CursorEventDispatcher,
   listener : (CursorStateChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
-  self.on_event_emitter.event(listener)
+  if self.disposed {
+    return @base_common.Disposable::from(() => ())
+  }
+  if self.listener_count == 1 && !self.listeners_are_array {
+    // Monaco upgrades from its optimized single-listener representation to a
+    // sparse array when the second listener is registered. It deliberately
+    // does not downgrade that array while one listener remains.
+    self.listeners_are_array = true
+  }
+  let active = Ref(true)
+  self.event_listeners.push({ listener, active })
+  self.listener_count += 1
+  @base_common.Disposable::from(() => {
+    if active.val {
+      active.val = false
+      self.listener_count -= 1
+      if self.listener_count == 0 {
+        self.listeners_are_array = false
+      }
+    }
+  })
 }
 
 ///|
@@ -214,10 +254,52 @@ fn CursorEventDispatcher::emit_outgoing_events(
 }
 
 ///|
-/// Mirrors the source emitter's `EventDeliveryQueue`: a listener may enqueue
-/// a reentrant event, but every remaining listener first observes the current
-/// event. The outgoing-event drain itself remains recursively source-shaped;
-/// this separate queue belongs to `_onEvent.fire`, not to event coalescing.
+/// Resets the listener-level delivery cursor. Incrementing the cursor before a
+/// callback and finishing an active walk at the start of a nested `fire` are
+/// the two ordering rules owned by Monaco's `Emitter._deliverQueue`/`fire`.
+fn CursorEventDispatcher::reset_event_delivery(
+  self : CursorEventDispatcher,
+) -> Unit {
+  self.delivery_index = self.delivery_end
+  self.delivery_end = 0
+  self.delivery_value = None
+  self.delivery_active = false
+}
+
+///|
+/// Finishes the currently enqueued listener walk. A nested fire calls this
+/// before enqueuing its own value, so the remaining listeners observe A, then
+/// all listeners observe B, before the first A callback resumes.
+fn CursorEventDispatcher::finish_event_delivery(
+  self : CursorEventDispatcher,
+) -> Unit {
+  while self.delivery_active &&
+        self.delivery_index < self.delivery_end &&
+        !self.disposed {
+    let index = self.delivery_index
+    // Source increments before invoking the listener because the callback can
+    // recursively finish this same delivery state.
+    self.delivery_index += 1
+    let cell = self.event_listeners[index]
+    if cell.active.val {
+      guard self.delivery_value is Some(value) else {
+        self.reset_event_delivery()
+        return
+      }
+      (cell.listener)(value)
+    }
+  }
+  if self.delivery_active &&
+    (self.delivery_index >= self.delivery_end || self.disposed) {
+    self.reset_event_delivery()
+  }
+}
+
+///|
+/// Mirrors the source emitter's direct single-listener representation and its
+/// listener-level `EventDeliveryQueue`. This cannot be an outer event FIFO:
+/// on a nested fire, the source first drains the remaining listeners for the
+/// current value and delivers the nested value before returning to the caller.
 fn CursorEventDispatcher::deliver_event(
   self : CursorEventDispatcher,
   event : CursorStateChangedEvent,
@@ -225,14 +307,24 @@ fn CursorEventDispatcher::deliver_event(
   if self.disposed {
     return
   }
-  self.event_delivery_queue.push(event)
-  if self.event_delivery_is_draining {
+  if self.delivery_active {
+    self.finish_event_delivery()
+  }
+  if self.disposed || self.listener_count == 0 {
     return
   }
-  self.event_delivery_is_draining = true
-  while self.event_delivery_queue.length() > 0 && !self.disposed {
-    let next = self.event_delivery_queue.remove(0)
-    self.on_event_emitter.fire(next)
+  if !self.listeners_are_array {
+    for cell in self.event_listeners {
+      if cell.active.val {
+        (cell.listener)(event)
+        return
+      }
+    }
+    return
   }
-  self.event_delivery_is_draining = false
+  self.delivery_index = 0
+  self.delivery_end = self.event_listeners.length()
+  self.delivery_value = Some(event)
+  self.delivery_active = true
+  self.finish_event_delivery()
 }

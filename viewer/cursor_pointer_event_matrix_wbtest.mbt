@@ -113,6 +113,88 @@ test "live pointer branches retain exact old selections after committed state" {
 }
 
 ///|
+test "ctrl and meta pointer modifiers retain ordinary and non-multi behavior" {
+  with_test_viewer("alpha beta\nsecond line", viewer => {
+    let events : Array[@view_model.CursorStateChangedEvent] = []
+    viewer
+    .test_view_model()
+    .on_cursor_state_changed(event => events.push(event))
+    |> ignore
+
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(Position(1, 3), ctrl_key=true, reveal_type=None),
+    )
+    assert_cursor(viewer, @core.Selection::new(Position(1, 3), Position(1, 3)))
+    assert_last_cursor_transition(events, "mouse")
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(Position(2, 4), meta_key=true, reveal_type=None),
+    )
+    assert_cursor(viewer, @core.Selection::new(Position(2, 4), Position(2, 4)))
+    assert_last_cursor_transition(events, "mouse")
+
+    let before = viewer.test_cursor().get_primary_cursor_state()
+    let event_count = events.length()
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(
+        Position(1, 6),
+        alt_key=true,
+        ctrl_key=true,
+        reveal_type=None,
+      ),
+    )
+    assert_true(viewer.test_cursor().get_primary_cursor_state() == before)
+    assert_eq(events.length(), event_count)
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(
+        Position(1, 8),
+        alt_key=true,
+        meta_key=true,
+        reveal_type=None,
+      ),
+    )
+    assert_true(viewer.test_cursor().get_primary_cursor_state() == before)
+    assert_eq(events.length(), event_count)
+  })
+}
+
+///|
+test "pointer converts a wrapped injected position across a hidden model line" {
+  let options = ViewerOptions(soft_wrap=true)
+  with_test_viewer(
+    "abcdefghij\nhidden line wraps too\nabcdefghijklmnop\ntail",
+    viewer => {
+      viewer.test_set_soft_wrap_column(6)
+      let view_model = viewer.test_view_model()
+      let converter = view_model.coordinates_converter()
+      let target = @base_common.Position::Position(3, 12)
+      let unprojected = converter.model_position_to_view_position(target)
+
+      assert_true(view_model.set_hidden_areas([Range(2, 1, 2, 1)]))
+      let folded = converter.model_position_to_view_position(target)
+      assert_true(folded.line_number < unprojected.line_number)
+
+      viewer.inlay_hints_controller().unwrap().inlay_hints = [
+        InlayHint(Position(3, 4), "very-long-hint", kind=TypeHint),
+      ]
+      viewer.sync_inlay_hint_decorations()
+      assert_true(view_model.get_hidden_areas() == [Range(2, 1, 2, 1)])
+      let projected = converter.model_position_to_view_position(target)
+      assert_true(projected != folded)
+      assert_true(
+        converter.view_position_to_model_position(projected) == target,
+      )
+
+      viewer.dispatch_mouse(
+        mouse_dispatch_data(projected, ctrl_key=true, reveal_type=None),
+      )
+      assert_cursor(viewer, @core.Selection::new(target, target))
+      assert_position(viewer.test_cursor().view_state().position, projected)
+    },
+    options~,
+  )
+}
+
+///|
 test "selection-listener reentrancy preserves adjacent cursor event pairs" {
   with_test_viewer("abcdef", viewer => {
     let order : Array[String] = []

@@ -69,8 +69,13 @@ fn Viewer::enqueue_cursor_state_change(
 /// flush fact can overwrite another or drain before its content event.
 fn Viewer::complete_model_content_delivery(
   self : Viewer,
+  model : @model.TextModel,
   version_id : Int,
 ) -> Unit {
+  guard self.get_model() is Some(active_model) &&
+    physical_equal(active_model, model) else {
+    return
+  }
   if !self.has_completed_cursor_content_version(version_id) {
     self.cursor_completed_content_versions.push(version_id)
   }

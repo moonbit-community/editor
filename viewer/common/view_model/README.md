@@ -36,18 +36,26 @@ model line + grammar tokens + injected-text decorations
   already-known view position: absent converts model-to-view; supplied is kept
   only when its normalized view-to-model result matches the validated model
   position.
-- `CursorMoveDirection` retains the exact 11-member source
-  `SimpleMoveDirection` union and `CursorMoveUnit` the exact six-member `Unit`
-  contract. Unscoped blank/wrapped-position directions, vertical model/folded
-  units, and Left/Right HalfLine return without mutation at their explicit
-  deferred branches.
+- `CursorMoveDirection` retains the source's full 15-member `Direction` enum;
+  `SimpleMoveDirection` is its exact 11-member simple-move union, and
+  `CursorMoveUnit` is the exact six-member `Unit` contract. Unscoped
+  blank/wrapped-position and viewport directions, vertical model/folded units,
+  and Left/Right HalfLine return without mutation at their explicit deferred
+  branches.
 - `CursorEventDispatcher` is the outgoing cursor-only half of Monaco's
   `ViewModelEventDispatcher`: it filters selection/version no-ops, coalesces a
-  queued same-kind event, and recursively drains reentrant outgoing facts like
-  the source (the root Viewer FIFO separately keeps public event pairs
-  adjacent). It exposes `on_cursor_state_changed`; `ViewModel::dispose` disposes its emitter and
-  clears pending facts. Generic view handlers, collectors, and non-cursor
-  outgoing events remain with their owning parity work.
+  queued same-kind event, recursively drains reentrant outgoing facts, and
+  uses separate source-shaped listener-delivery state so a nested fire first
+  finishes the remaining listeners for the current value. The nested value is
+  then delivered before the initiating callback resumes. The root Viewer FIFO
+  separately keeps public event pairs adjacent. It exposes
+  `on_cursor_state_changed`; `ViewModel::dispose` disposes its emitter and
+  clears pending outgoing facts and listener-delivery state. Generic view
+  handlers, collectors, and non-cursor outgoing events remain with their
+  owning parity work.
+- Left/Right movement is surrogate-pair safe and otherwise advances one
+  Unicode code point at a time. Full grapheme-cluster movement and the matching
+  grapheme-segmented visible-column arithmetic remain deferred.
 - `set_hidden_areas` merges ranges by source, updates line/layout/decorations/cursor,
   and preserves the top visible model line when folding changes above the viewport.
 - `ViewModelDecorations` converts model ranges through

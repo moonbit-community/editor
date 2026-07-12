@@ -49,3 +49,33 @@ test "cursor navigation reveal keeps the authoritative injected-text view positi
   viewer.dispose()
   model.dispose()
 }
+
+///|
+test "navigation reveal forwards the command source" {
+  with_test_viewer(long_document(40), viewer => {
+    viewer.test_set_viewport(width=800.0, height=180.0)
+    viewer.set_position(Position(31, 1))
+    let layout = viewer.test_view_model().view_layout
+    layout.scroll_to(scroll_top=540.0) |> ignore
+    let expected = layout.compute_scroll_top_to_reveal_range(
+      30,
+      30,
+      Simple,
+      source="mouse",
+      minimal_reveal=false,
+    )
+    let hard_coded_keyboard = layout.compute_scroll_top_to_reveal_range(
+      30,
+      30,
+      Simple,
+      source="keyboard",
+      minimal_reveal=false,
+    )
+    assert_true(expected != hard_coded_keyboard)
+    assert_true(
+      viewer.run_cursor_move(Up, false, unit=WrappedLine, source="mouse"),
+    )
+    assert_position(viewer.get_position().unwrap(), Position(30, 1))
+    assert_eq(layout.position().scroll_top, expected)
+  })
+}

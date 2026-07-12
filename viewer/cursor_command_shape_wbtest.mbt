@@ -141,3 +141,91 @@ test "selectAll returns without a view and hard-codes keyboard source" {
     assert_true(sources == ["keyboard"])
   })
 }
+
+///|
+test "registered model line start and end commands preserve selection mode" {
+  with_test_viewer("one\nabcdef", viewer => {
+    let view_model = viewer.test_view_model()
+    let sources : Array[String] = []
+    viewer.on_did_change_cursor_selection(event => sources.push(event.source))
+    |> ignore
+    let run = fn(id, source) {
+      editor_registry().run_core_editor_command(
+        viewer,
+        view_model,
+        id,
+        args=BaseCommandArguments(CursorBaseCommandOptions::new(source~)),
+      )
+    }
+    let install = fn(column, residue) {
+      let position = @base_common.Position::Position(2, column)
+      view_model.set_model_cursor_state(
+        @cursor.SingleCursorState::new(
+          position,
+          position,
+          Simple,
+          position,
+          selection_start_leftover_visible_columns=residue,
+          leftover_visible_columns=residue,
+        ),
+        "setup",
+        NotSet,
+      )
+      |> ignore
+    }
+
+    install(4, 9)
+    assert_true(run("cursorLineStart", "line-start"))
+    let start = view_model.cursor.model_state()
+    assert_position(start.position, Position(2, 1))
+    assert_eq(start.selection_start_leftover_visible_columns, 0)
+    assert_eq(start.leftover_visible_columns, 0)
+
+    install(4, 7)
+    assert_true(run("cursorLineStartSelect", "line-start-select"))
+    let start_select = view_model.cursor.model_state()
+    assert_selection_eq(
+      start_select.selection(),
+      @core.Selection::new(Position(2, 4), Position(2, 1)),
+    )
+    assert_eq(start_select.selection_start_leftover_visible_columns, 7)
+    assert_eq(start_select.leftover_visible_columns, 0)
+
+    install(3, 5)
+    assert_true(run("cursorLineEnd", "line-end"))
+    let end = view_model.cursor.model_state()
+    assert_position(end.position, Position(2, 7))
+    assert_eq(end.selection_start_leftover_visible_columns, 0)
+    assert_eq(end.leftover_visible_columns, 0)
+
+    install(3, 3)
+    assert_true(run("cursorLineEndSelect", "line-end-select"))
+    let end_select = view_model.cursor.model_state()
+    assert_selection_eq(
+      end_select.selection(),
+      @core.Selection::new(Position(2, 3), Position(2, 7)),
+    )
+    assert_eq(end_select.selection_start_leftover_visible_columns, 3)
+    assert_eq(end_select.leftover_visible_columns, 0)
+    assert_true(
+      sources.contains("line-start") &&
+      sources.contains("line-start-select") &&
+      sources.contains("line-end") &&
+      sources.contains("line-end-select"),
+    )
+  })
+}
+
+///|
+test "End command objects retain exact static sticky false arguments" {
+  let registry = editor_registry()
+  for id in ["cursorEnd", "cursorEndSelect"] {
+    guard registry.commands.get(id) is Some(RegisteredCore(command)) else {
+      fail("expected registered End core command")
+    }
+    guard command.default_args is EndCommandArguments(options) else {
+      fail("expected End command arguments")
+    }
+    assert_true(options.sticky == Some(false))
+  }
+}

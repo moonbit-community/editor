@@ -10,10 +10,11 @@ DOM-free scrolling, line/whitespace layout, view zones, and view-line rendering.
   `ScrollbarState` contains pure slider geometry and provides a field-for-field
   clone for gesture snapshots. `ViewLayout` is the viewer's
   single scroll truth and computes visible/completely-visible windows and reveal
-  positions. Reveal math composes against the future viewport, accepts the
-  source/minimal flag, and omits vertical/horizontal padding for minimal cursor
-  reveals. Animation scheduling and the clock are injected so this package
-  remains DOM/FFI-free.
+  positions. Vertical reveal math composes against the future viewport, while
+  measured horizontal reveal uses the current viewport like `ViewLines`;
+  both accept the source/minimal contract and omit their ordinary padding for
+  minimal cursor reveals. Animation scheduling and the clock are injected so
+  this package remains DOM/FFI-free.
 - `LinesLayout`, prefix-sum computers, and whitespace accessors map line/view-zone
   heights to vertical offsets. The current viewer assumes one uniform view-line
   height; variable line heights are outside the readonly contract.

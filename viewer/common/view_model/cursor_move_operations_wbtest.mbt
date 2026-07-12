@@ -37,6 +37,36 @@ test "cursor page positive override and selection use wrapped-line movement" {
 }
 
 ///|
+test "cursor page preserves desired column across an empty target line" {
+  let view_model = ViewModel::with_options(
+    cursor_reference_model("abc\n\nxyz"),
+    ViewModelOptions(tab_size=4),
+  )
+  cursor_reference_set_position(view_model, 1, 3)
+  view_model.move_cursor_page(Down, false, page_size=1) |> ignore
+  cursor_reference_assert_position(view_model, 2, 1)
+  assert_eq(view_model.cursor.view_state().leftover_visible_columns, 2)
+  view_model.move_cursor_page(Down, false, page_size=1) |> ignore
+  cursor_reference_assert_position(view_model, 3, 3)
+  assert_eq(view_model.cursor.view_state().leftover_visible_columns, 0)
+}
+
+///|
+test "cursor page lands on wrapped continuation view lines" {
+  let view_model = ViewModel::with_options(
+    cursor_reference_model("abcdefghij"),
+    ViewModelOptions::soft_wrap(4, tab_size=4, wrapping_indent=None),
+  )
+  cursor_reference_set_position(view_model, 1, 2)
+  view_model.move_cursor_page(Down, false, page_size=1) |> ignore
+  cursor_reference_assert_view_position(view_model, 2, 2)
+  assert_true(view_model.cursor.model_state().position == Position(1, 6))
+  view_model.move_cursor_page(Down, false, page_size=1) |> ignore
+  cursor_reference_assert_view_position(view_model, 3, 2)
+  assert_true(view_model.cursor.model_state().position == Position(1, 10))
+}
+
+///|
 test "cursor page tiny viewport clamps computed size to one" {
   let view_model = cursor_reference_view_model()
   view_model.view_layout.set_viewport_size(width=400.0, height=0.0) |> ignore

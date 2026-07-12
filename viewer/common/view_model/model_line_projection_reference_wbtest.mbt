@@ -5,9 +5,9 @@
 ///
 /// The upstream helper only executes its first (all-needed) bit mask. These
 /// ports additionally run all-needed, none-needed, and sparse masks so the
-/// local nullable result contract is explicit. The token store has no public
-/// read counter. The ports therefore prove the strongest available
-/// passive-read fact: every batch shape leaves the model's token store cold.
+/// local nullable result contract is explicit. Package-private counters cover
+/// the real viewport batch separately; these ports prove that every mask shape
+/// leaves the model's lexer/store state cold.
 
 ///|
 let projection_reference_text : Array[String] = [
@@ -121,6 +121,12 @@ fn projection_assert_masks(
   projection_assert_batch(lines, expected, 1, line_count, all_needed)
   let none_needed = [ for _ in 0..<line_count => false ]
   projection_assert_batch(lines, expected, 1, line_count, none_needed)
+  let first_needed = [ for i in 0..<line_count => i == 0 ]
+  projection_assert_batch(lines, expected, 1, line_count, first_needed)
+  let last_needed = [ for i in 0..<line_count => i == line_count - 1 ]
+  projection_assert_batch(lines, expected, 1, line_count, last_needed)
+  let alternating = [ for i in 0..<line_count => i % 2 == 0 ]
+  projection_assert_batch(lines, expected, 1, line_count, alternating)
   let sparse = [ for i in 0..<line_count => i % 3 == 0 || i == line_count - 1 ]
   projection_assert_batch(lines, expected, 1, line_count, sparse)
   if line_count > 3 {

@@ -19,9 +19,15 @@ model line + grammar tokens + injected-text decorations
 
 - `ViewModelLinesFromProjectedModel` is always used. With wrapping disabled each
   line has a cheap identity projection; there is no separate
-  `ViewModelLinesFromModelAsIs` implementation.
+  `ViewModelLinesFromModelAsIs` implementation. Models above the tokenization
+  safety thresholds remain on this projected collection and render default
+  tokens; collection fallback belongs to the separate large-file plan.
 - Injected text is projected before line breaking, so its width affects wrapping;
   source mappings, tokens, and decorations remain anchored to model offsets.
+- Viewport construction uses one `get_view_lines_data` batch and a parallel
+  needed mask. Each needed projected model line performs one passive token-store
+  read; unneeded lines and content/length-only queries perform none, and no view
+  read invokes the lexer.
 - Configuration or injected-text/content flushes reproject affected state at the
   current whole-model granularity, invalidate decoration caches, and reproject the
   cursor from model coordinates. Incremental edit events are not part of the
@@ -43,15 +49,18 @@ model line + grammar tokens + injected-text decorations
   and Left/Right HalfLine return without mutation at their explicit deferred
   branches.
 - `CursorEventDispatcher` is the outgoing-only half of Monaco's
-  `ViewModelEventDispatcher`: its heterogeneous queue carries cursor-state and
-  ViewZones-changed facts, filters cursor selection/version no-ops, coalesces a
-  queued same-kind event, recursively drains reentrant outgoing facts, and
+  `ViewModelEventDispatcher`: its heterogeneous queue carries cursor-state,
+  ViewZones-changed, and model-token facts. Cursor selection/version no-ops are
+  filtered and queued cursor events can coalesce; model-token wrappers retain
+  the identical source event, are never no-ops, and never merge. The dispatcher
+  recursively drains reentrant outgoing facts and
   uses separate source-shaped listener-delivery state so a nested fire first
   finishes the remaining listeners for the current value. The nested value is
   then delivered before the initiating callback resumes. The root Viewer FIFO
   separately keeps public event pairs adjacent. It exposes
-  `on_cursor_state_changed` and `on_view_zones_changed`; `ViewModel::dispose`
-  disposes both emitters and clears pending outgoing facts and listener-
+  `on_cursor_state_changed`, `on_view_zones_changed`, and
+  `on_model_tokens_changed`; `ViewModel::dispose` disposes all emitters and
+  clears pending outgoing facts and listener-
   delivery state. Generic browser View handlers, mixed view/outgoing
   collectors, and the editor-wide cross-event delivery queue remain outside
   this reduced common owner.
@@ -66,6 +75,13 @@ model line + grammar tokens + injected-text decorations
   `on_line_mapping_changed` wraps the cursor continuation so the root appends
   Flushed/Mapping/Decorations, cursor, layout, and recovery-scroll facts in
   source order. Headless callers omit both continuations.
+- A ViewModel may borrow the exact attached-view handle owned by its root
+  `ModelData`. Vertical scroll and content remapping publish current model
+  visible ranges as unstable; initial setup and explicit view-state restore
+  publish the stabilized state. Hidden model ranges are removed in order.
+  Model token events are converted through the current projection, delivered
+  synchronously to the browser ViewEvent callback, and only then enqueued as
+  the original outgoing model event. The listener never forces tokenization.
 - `ViewModelDecorations` converts model ranges through
   `viewer/common/inline_decorations` and resolves only the requested viewport.
 
@@ -79,4 +95,5 @@ The upstream map is the pinned `src/vs/editor/common/viewModel/` files
 `viewLayout/viewLinesViewportData.ts`.
 This package must remain multi-target and FFI-free, with no root-viewer, browser,
 server, transport, workspace, or host dependency. See `pkg.generated.mbti`; run
-`moon test --target js viewer/common/view_model`.
+`moon test --target js viewer/common/view_model` and
+`moon test --target native viewer/common/view_model`.

@@ -22,6 +22,10 @@ pub struct ViewModelLinesFromProjectedModel {
   /// Monaco's `hiddenAreasDecorationIds`: the hidden (folded) model ranges
   /// live as empty-options model decorations so edits keep them anchored.
   mut hidden_areas_decoration_ids : Array[String]
+  // Package-private conformance counters. They make the source batch/read
+  // ownership observable to white-box tests without widening the public API.
+  mut batch_call_count : Int
+  mut passive_token_read_count : Int
 }
 
 ///|
@@ -53,6 +57,8 @@ pub fn ViewModelLinesFromProjectedModel::new(
     model_line_projections: [],
     projected_model_line_line_counts: [0],
     hidden_areas_decoration_ids: [],
+    batch_call_count: 0,
+    passive_token_read_count: 0,
   }
   lines.construct_lines(reset_hidden_areas=true)
   lines
@@ -516,6 +522,7 @@ pub fn ViewModelLinesFromProjectedModel::get_view_lines_data(
   view_end_line_number : Int,
   needed : Array[Bool],
 ) -> Array[ViewLineData?] {
+  self.batch_call_count += 1
   let view_start_line_number = self.to_valid_view_line_number(
     view_start_line_number,
   )
@@ -548,7 +555,7 @@ pub fn ViewModelLinesFromProjectedModel::get_view_lines_data(
       last_line = true
       remaining_view_line_count = view_end_line_number - view_line_number + 1
     }
-    projection.get_view_lines_data(
+    let read_tokens = projection.get_view_lines_data(
       self.model,
       model_line_index + 1,
       from_view_line_index,
@@ -557,6 +564,9 @@ pub fn ViewModelLinesFromProjectedModel::get_view_lines_data(
       needed,
       result,
     )
+    if read_tokens {
+      self.passive_token_read_count += 1
+    }
     view_line_number += remaining_view_line_count
     if last_line {
       break

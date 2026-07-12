@@ -311,6 +311,8 @@ pub struct ViewModelLinesFromProjectedModel {
   mut model_line_projections : Array[ModelLineProjection]
   mut projected_model_line_line_counts : Array[Int]
   mut hidden_areas_decoration_ids : Array[String]
+  mut batch_call_count : Int
+  mut passive_token_read_count : Int
 }
 pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position(Self, Int, Int, affinity? : @model.PositionAffinity, allow_zero_line_number? : Bool, below_hidden_ranges? : Bool) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::convert_model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range

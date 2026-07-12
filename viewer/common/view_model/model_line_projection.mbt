@@ -192,16 +192,17 @@ fn ModelLineProjection::get_view_lines_data(
   global_start_index : Int,
   needed : Array[Bool],
   result : Array[ViewLineData?],
-) -> Unit {
+) -> Bool {
   match self {
     Identity => {
       if !needed[global_start_index] {
         result[global_start_index] = None
-        return
+        return false
       }
       result[global_start_index] = Some(
         self.get_view_line_data(model, model_line_number, 0),
       )
+      true
     }
     Hidden => abort("Not supported")
     Projected(data, is_visible~) => {
@@ -219,7 +220,7 @@ fn ModelLineProjection::get_view_lines_data(
         for local_index in 0..<line_count {
           result[global_start_index + local_index] = None
         }
-        return
+        return false
       }
       let base_tokens = model.tokenization.get_line_tokens(model_line_number)
       let with_injections = base_tokens.with_inserted(
@@ -239,6 +240,7 @@ fn ModelLineProjection::get_view_lines_data(
           ),
         )
       }
+      true
     }
   }
 }

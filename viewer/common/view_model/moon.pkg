@@ -15,3 +15,7 @@ import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/syntax",
 } for "test"
+
+import {
+  "moonbit-community/editor/syntax",
+} for "wbtest"

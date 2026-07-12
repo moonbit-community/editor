@@ -136,10 +136,10 @@ pub fn ViewModel::with_options(
       let view_ranges : Array[ViewTokensChangedRange] = []
       for model_range in event.ranges {
         let view_start = view_model.model_position_to_view_position(
-          @base_common.Position(model_range.from_line_number, 1),
+          Position(model_range.from_line_number, 1),
         )
         let view_end = view_model.model_position_to_view_position(
-          @base_common.Position(
+          Position(
             model_range.to_line_number,
             model.get_line_max_column(model_range.to_line_number),
           ),

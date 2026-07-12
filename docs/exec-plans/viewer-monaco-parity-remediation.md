@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — browser-geometry Gate B approved; implementation next
+Status: active — browser geometry implemented; ViewZones inventory next
 
 Date: 2026-07-10
 
@@ -84,7 +84,7 @@ product contract and belongs in an ordinary local test.
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
-| 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | approved for implementation |
+| 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
@@ -485,3 +485,17 @@ The independent closing task is:
   Cross-assigned Group A/B/C reviews confirmed source completeness, ownership,
   proposed terminals, matrices, and combined mechanics. No product or test
   edit preceded approval; implementation is authorized.
+- 2026-07-12: the browser-geometry child is implemented and frozen. Product
+  commits `226f071`, `abd8ce8`, and `b74e512` land source-shaped RangeUtil and
+  rendered-line measurement, retained width scheduling and max-width feedback,
+  ContentWidget placement/focus/owner-window behavior, RenderingContext range
+  tuples, ViewLayout content dimensions, renderer font facts, and browser font
+  measurement. Test commit `b99e946` closes the deterministic source-branch
+  matrices, including real normal/overflow iframe evidence and root
+  current-frame render rescheduling. Closing review reclassifies `GVLay-044`
+  from TESTED to N-A because that threshold only selects an absent right-side
+  minimap adjustment. The 639-row ledger closes as 424 TESTED, 96 PORTED, 80
+  DEFERRED, and 39 N-A with zero TODO/PASS. Independent Group A/B/C audits find
+  no remaining code/test blocker. Final gates pass: check, JS 1247/1247,
+  native 873/873 (Wasm/Wasm-GC have no test entry), build, and Chromium 74/74.
+  The portfolio proceeds to the ViewZones inventory.

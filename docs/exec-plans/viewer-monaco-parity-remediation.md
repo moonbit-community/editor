@@ -104,7 +104,8 @@ method clusters:
 | codeEditorWidget cursor event forwarding and cursor API methods | cursor/input events |
 | codeEditorWidget `updateOptions` entrypoint | render invalidation; lifecycle CEW/CFG rows retain configuration storage and notification authority; the complete-snapshot-vs-partial-update API deviation requires `viewer/README.md` contract evidence |
 | `EditorConfiguration.getExtraEditorClassName` and Viewer platform root classes | render invalidation; ECX owns the pure Safari/WebKit/macOS helper and root-class integration |
-| codeEditorWidget changeViewZones/accessor transaction plus the ViewZones emitter/public alias/outgoing arm | ViewZones; this is the corrective implementation handoff for lifecycle's historical DEFERRED CEW-043/127 rows |
+| codeEditorWidget changeViewZones/accessor transaction plus the ViewZones emitter/public alias/outgoing arm | ViewZones; this is the corrective implementation handoff for lifecycle's historical DEFERRED CEW-043/127 rows; lifecycle CEW-001's shared cross-event delivery queue remains DEFERRED and is not transferred |
+| `View` constructor zone attachment and relative margin/content order | ViewZones receives the zone-specific subsegments of lifecycle VIEW-029/053/060-062; rulers, glyphs, widgets, scrollbar, and other sibling order remain frozen lifecycle/geometry ownership; local keeps the reviewed merged-`MarginViewOverlays` owner seam |
 | TextModel value/range/offset/EOL plus setValue buffer/event construction, including the `ModelContentChangedEvent` wrapper | text-buffer EOL |
 | TextModel version/request freshness methods | async model features |
 | TextModel `_emitContentChangedEvent` token forwarding plus token-part construction/disposal and token-range production | tokenization; render invalidation owns ViewPart handler consumption only |
@@ -119,11 +120,11 @@ method clusters:
 | LinesLayout custom-height hooks inside the zone insertion/removal/flush cluster | ViewZones as explicit DEFERRED siblings; ViewModel custom-height recovery outside that cluster retains its historical render/geometry deferral |
 | ViewZone-owned min-width/container-width writes | ViewZones, consuming geometry's extent contract |
 | LinesLayout/ViewLayout zone insertion, ordering, and zone viewport data | ViewZones |
-| ViewModelEventDispatcher cursor outgoing events | cursor/input events |
+| ViewModelEventDispatcher cursor outgoing events and existing outgoing-only queue mechanics | cursor/input events remain the historical owner; ViewZones may structurally widen `PendingOutgoingEvent`, listener aliases, and ViewModel wiring under frozen VMI-001/002/004 and VED-001/002/008/010-018 without recounting those rows, and must run the full cursor-dispatcher regression suite |
 | ViewModelEventDispatcher configuration/decorations events | render invalidation |
 | `ViewThemeChangedEvent.theme` source `IColorTheme` versus local `String` identity | render invalidation; declaration/dispatch-only reviewed type-reduction deviation |
 | ViewModelEventDispatcher generic collector/queue rows historically deferred as cursor `VED`/`VMI` | render invalidation through counted `RVC` handoff rows; the implemented cursor plan remains frozen |
-| ViewModelEventDispatcher ViewZonesChanged event | ViewZones, including a heterogeneous widening of the existing cursor-owned outgoing-only pending queue; the frozen RVC mixed view/outgoing collector and postponement rows remain excluded |
+| ViewModelEventDispatcher ViewZonesChanged event | ViewZones owns only the new union/kind/class/listener/producer arm and its heterogeneous widening of the cursor-owned outgoing-only pending queue; inherited queue mechanics stay frozen cursor ownership, while the RVC mixed view/outgoing collector and postponement rows remain excluded |
 | Viewer/attach_model resource lifetime | model lifecycle |
 | Viewer/attach_model async request creation/cancellation | async model features |
 
@@ -524,3 +525,17 @@ The independent closing task is:
   render-snapshot reentrancy, line-edit/layout-state, and stable-viewport test
   matrices are explicit. No product/test file changed; stop for fresh Gate B
   review.
+- 2026-07-12: fresh reviews also rejected documentation-only correction
+  `be2a127` (child SHA-256
+  `5d8864ecc77f889b246bad1c6b3cf8a95d9d2bf9450acdb3f0c212b3422f2449`).
+  The owner-id audit proved projected hidden decorations require their own
+  disposal atom; the editor-owner lifecycle sweep is not equivalent. The next
+  correction adds projected and identity disposal rows, transfers only the
+  zone-specific portions of lifecycle VIEW-029/053/060-062, records the
+  merged-Margin seam, and makes the cursor-queue structural handoff explicit.
+  Shared editor delivery ordering, numeric enum ABI, and arbitrary
+  identity-key hidden sources now have row-local DEFERRED/N-A outcomes; raw
+  `-0` and exact frozen-key/live-map callback semantics join the matrix. The
+  revised candidate is 346/346 TODO rows: 156 browser/API, 176 layout/model,
+  and 14 outgoing, with 287 proposed TESTED, 41 PORTED, 8 DEFERRED, and 10
+  N-A. No product/test file changed; stop for another fresh Gate B review.

@@ -73,6 +73,8 @@ Selected consumed closures:
 - `common/viewModel/viewModelImpl.ts`: visible-range producer and
   `onDidChangeTokens` conversion/dispatch clusters
 - `common/viewModel.ts:48`: stabilization declaration
+- `common/viewModelEventDispatcher.ts:180-210,545-559`: complete consumed
+  `ModelTokensChangedEvent` outgoing union/kind/wrapper/no-op/no-merge closure
 - `browser/widget/codeEditor/codeEditorWidget.ts:1074-1076`:
   one-time `handleInitialized` stabilization oracle
 - `browser/view.ts:673-679`: restore-state stabilization oracle
@@ -107,7 +109,15 @@ existing scroll-only Viewer API; non-encoded `nullTokenize` at
 `nullTokenize.ts:18-20`; annotation `DefinedValue`/`ISerializedAnnotation` at
 `annotations.ts:242-247`; and the annotation rebase/serialization cluster
 beginning at line 265. Each consumed boundary that can affect scoped behavior
-still has a row or named coordination entry.
+still has a row or named coordination entry. In
+`viewModelEventDispatcher.ts`, every non-model-token outgoing sibling and all
+generic view collection/postponement mechanics remain frozen cursor,
+ViewZones, or render-invalidation ownership; this child consumes only the
+exact OTM closure named above.
+
+Owned DOM/CSS inventory: none. None of the scoped tokenization units owns a DOM
+attribute, class, CSS property, or custom property; browser ViewPart consumers
+remain frozen render-invalidation ownership.
 
 ## Pinned Evidence
 
@@ -126,6 +136,7 @@ still has a row or named coordination entry.
 | `common/model.ts` | `b4311925776bcf86418b284beb5c07968de12aa1ef3b6b60ebf506d28e82751a` |
 | `common/viewModel/viewModelImpl.ts` | `b8b9f80ed51fa64c7baa4589aa99c2e2bab4eb365b025586e78d9b0db8f8e28a` |
 | `common/viewModel.ts` | `5d7d8cbb89d5ee636263367ed944d2f2754559f7b556f3603c5e974fae329be5` |
+| `common/viewModelEventDispatcher.ts` | `64c5aee53d0bd580e8bb13d6f6ca563fcd02b8f78cf764ed0be87747f7d58448` |
 | `common/viewModel/modelLineProjection.ts` | `84b084fce4509507ce7bb95f39e95b64f955b3a945249399db124bb2b4bef1f0` |
 | `common/viewModel/viewModelLines.ts` | `788d3145d0cea65c1d0ebfe1b2041dbc1e4f4eb4ddb495608c0f5a54748a3262` |
 | `common/textModelEvents.ts` | `fcbcce16a492a431abe1c72f64ed819528095b7e740f49515d10283670943b59` |
@@ -160,6 +171,8 @@ Product ownership after Gate B approval:
 - `viewer/viewer.mbt`, `viewer/attach_model.mbt`,
   `viewer/view_host.mbt`, `viewer/browser_host.mbt`
 - `viewer/common/view_model/{view_model,model_line_projection,view_model_lines_projected,visible_ranges,viewport_data}.mbt`
+- `viewer/common/view_model/{cursor_event_dispatcher,model_tokens_outgoing}.mbt`
+- `viewer/common/view_model/moon.pkg`
 - `viewer/common/view_layout/view_lines_viewport_data.mbt`
 - owning package READMEs and generated interfaces only after implementation
 
@@ -178,12 +191,14 @@ Required evidence destinations after approval:
 - `viewer/common/tokens/tokens_store_reference_wbtest.mbt`
 - `viewer/common/view_model/model_line_projection_reference_wbtest.mbt`
 - `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt`
+- `viewer/common/view_model/cursor_event_dispatcher_wbtest.mbt`
 - `viewer/common/view_model/set_value_flush_test.mbt`
 - `viewer/cursor_tokenization_reference_wbtest.mbt`
 - `viewer/restore_view_state_tokenization_wbtest.mbt`
 - `viewer/browser_host_wbtest.mbt`,
   `viewer/common/view_model/viewport_data_test.mbt`, and
   `viewer/common/view_model/view_model_viewport_test.mbt`
+- `syntax/tokenizer_test.mbt` and `viewer/test_viewer_wbtest.mbt`
 
 ## Reviewed Package-Cycle and Adapter Decisions
 
@@ -251,6 +266,34 @@ typealias for `AnnotationsUpdate[FontTokenOption?]`; TextModel adds no parent
 alias, mirror, or conversion. Thus `model/tokens` never imports its parent and
 the backend -> token part -> parent-consumer path preserves one payload
 identity.
+
+`viewer/common/view_model` may add a direct dependency on
+`viewer/common/model/tokens` for the nominal event payload; this follows the
+existing `view_model -> model -> model/tokens` direction and introduces no
+reverse edge. The local wrapper is
+`pub(all) struct ModelTokensChangedOutgoingEvent` with `kind` and the exact
+`@model_tokens.ModelTokensChangedEvent`. The typed surface is
+`ViewModel::on_model_tokens_changed`, accepting a
+`(ModelTokensChangedOutgoingEvent) -> Unit` listener and returning
+`Disposable`. A constructor-owned model subscription and the typed root
+subscription are both disposed with their existing ViewModel/ModelData owners.
+The private queue receives one new arm only; inherited cursor/ViewZones
+delivery mechanics are unchanged.
+
+The browser adapter has one exact constructor surface. The
+`pub(all) ViewTokensChangedRange` struct carries `from_line_number : Int` and
+`to_line_number : Int`. `ViewModel::with_options` adds the final optional named
+parameter `emit_view_tokens_changed?`; its type is
+`(Array[ViewTokensChangedRange]) -> Unit` and its default is
+`view_model_no_token_event_sink`. The private default sink ignores its array,
+so existing headless callers and `ViewModel::ViewModel(model)` retain their
+current behavior and source compatibility. Viewer passes a closure that
+converts only the carrier type to the already-frozen browser
+`ViewTokensChangedEvent` and completes `emit_view_event` synchronously. The
+ViewModel stores the constructor-owned model-listener disposable in
+`model_tokens_subscription : Disposable?`; `dispose` releases it before the
+outgoing dispatcher. Generated API evidence plus default/explicit callback
+tests fix the signature and no-op behavior.
 
 `TokenizationRegistry` intentionally adapts source `Color[] | null` and
 `Color | null` to local `Array[String]?` and `String?`. Entries are CSS color
@@ -532,14 +575,33 @@ Backend aliases used below are exact: `A` =
 | VMI-014 | visible-gap branch (`:680-685`) | If current start precedes hidden start, append through `hiddenStart-1` at model max column | `viewer/common/view_model/view_model.mbt` — hidden-area gap matrix | TODO | TESTED |
 | VMI-015 | trailing-visible branch (`:690-695`) | Append tail when start line precedes end, or same line with start column `<` end column | `viewer/common/view_model/view_model.mbt` — empty/equal/boundary tail matrix | TODO | TESTED |
 | VMI-016 | `IViewModel.visibleLinesStabilized` (`viewModel.ts:48`) | Interface declaration | `viewer/common/view_model/view_model.mbt` — local ViewModel method/public internal seam | TODO | PORTED |
-| VMI-017 | model `onDidChangeTokens` registered callback (`viewModelImpl.ts:510-523`) | Convert exact model token ranges and dispatch view event before outgoing event; never force or re-warm tokenization from the listener | `viewer/common/view_model/view_model.mbt` constructor token subscription; remove the current `viewer/viewer.mbt::retokenize_current_model` listener path | TODO | TESTED |
+| VMI-017 | model `onDidChangeTokens` registered callback (`viewModelImpl.ts:510-523`) | Convert exact model token ranges and complete the injected browser-tier view-event callback before enqueueing the outgoing wrapper; never force or re-warm tokenization from the listener | `viewer/common/view_model/view_model.mbt` constructor subscription stored as `model_tokens_subscription : Disposable?`; remove the current direct model listener and `viewer/attach_model.mbt::retokenize_current_model` path | TODO | TESTED |
 | VMI-018 | token-range loop (`:512-520`) | Preserve source range order and one output slot per input range | `viewer/common/view_model/view_model.mbt` token-range conversion loop | TODO | TESTED |
 | VMI-019 | start-position conversion (`:514`) | Convert `(fromLineNumber,1)` through the currently valid projection | `viewer/common/view_model/view_model.mbt` converter; old/new projection-domain test | TODO | TESTED |
 | VMI-020 | end-position conversion (`:515`) | Convert `(toLineNumber,getLineMaxColumn(toLineNumber))` through the current projection | `viewer/common/view_model/view_model.mbt` converter; old/new projection-domain test | TODO | TESTED |
 | VMI-021 | view-range `fromLineNumber` payload (`:516-518`) | Store the converted start line exactly | `viewer/common/view_model/view_model.mbt::ViewTokensChangedRange.from_line_number` | TODO | PORTED |
 | VMI-022 | view-range `toLineNumber` payload (`:516-519`) | Store the converted end line exactly | `viewer/common/view_model/view_model.mbt::ViewTokensChangedRange.to_line_number` | TODO | PORTED |
-| VMI-023 | single-view token event dispatch (`:521`) | Emit converted ranges to render consumers first | `viewer/common/view_model/view_model.mbt` view-event dispatcher | TODO | TESTED |
-| VMI-024 | outgoing model-token event dispatch (`:522`) | Emit original model event after the view event | `viewer/common/view_model/view_model.mbt` outgoing dispatcher | TODO | TESTED |
+| VMI-023 | single-view token event dispatch (`:521`) | Invoke `with_options`'s optional `emit_view_tokens_changed : (Array[ViewTokensChangedRange]) -> Unit` callback with converted ranges and return only after its typed `ViewTokensChanged` delivery completes; the private default sink is a headless no-op | `viewer/common/view_model/view_model.mbt`; `viewer/attach_model.mbt` callback adapter to the frozen browser ViewEvent dispatcher | TODO | TESTED |
+| VMI-024 | outgoing model-token event dispatch (`:522`) | Enqueue the wrapper retaining the original model event only after VMI-023 returns; root consumes the ViewModel's typed listener instead of subscribing to TextModel directly | `viewer/common/view_model/model_tokens_outgoing.mbt`; `viewer/common/view_model/cursor_event_dispatcher.mbt`; `viewer/attach_model.mbt` | TODO | TESTED |
+
+## OTM — model-token outgoing dispatcher closure (9 rows)
+
+This is the exact `ModelTokensChangedEvent` sibling required by VMI-024. The
+tokenization child owns only this new heterogeneous arm; frozen cursor/ViewZones
+queue, emitter, delivery, merge-scan, and disposal mechanics are reused without
+recounting and their complete regression suite remains mandatory.
+
+| ID | Source atom | Transition / exact fact | Local target or seam | Status | Proposed terminal |
+|---|---|---|---|---|---|
+| OTM-001 | `OutgoingViewModelEvent` union arm (`viewModelEventDispatcher.ts:190`) | Model-token wrappers participate in the existing heterogeneous outgoing-only queue | `viewer/common/view_model/cursor_event_dispatcher.mbt::PendingOutgoingEvent` model-token arm | TODO | PORTED |
+| OTM-002 | `OutgoingViewModelEventKind.ModelTokensChanged` (`:209`) | Source const-enum ordinal 13 distinguishes this event; local semantic kind exposes no numeric ABI | `viewer/common/view_model/cursor_event_dispatcher.mbt::OutgoingViewModelEventKind::ModelTokensChanged` | TODO | N-A (MoonBit semantic enum exposes no numeric ABI) |
+| OTM-003 | exported `ModelTokensChangedEvent` class declaration (`:545`) | Declares the distinct outgoing wrapper type | `viewer/common/view_model/cursor_event_dispatcher.mbt::ModelTokensChangedOutgoingEvent` | TODO | PORTED |
+| OTM-004 | wrapper `kind` field (`:546`) | Every wrapper carries the semantic model-token kind | `ModelTokensChangedOutgoingEvent.kind` | TODO | PORTED |
+| OTM-005 | constructor declaration (`:548-550`) | Construct one wrapper from exactly one model-token event | `ModelTokensChangedOutgoingEvent::new` | TODO | PORTED |
+| OTM-006 | public readonly `event` constructor-property (`:549`) | Retain the exact original `IModelTokensChangedEvent` object without copying or range conversion | `ModelTokensChangedOutgoingEvent.event : @model_tokens.ModelTokensChangedEvent` | TODO | PORTED |
+| OTM-007 | `isNoOp` member returns false (`:552-554`) | Empty and nonempty range arrays are both observable outgoing events | `ModelTokensChangedOutgoingEvent::is_no_op`; white-box and typed-listener tests | TODO | TESTED |
+| OTM-008 | `attemptToMerge` member (`:556`) | Participate in the cursor-owned merge scan through the new private queue arm | `ModelTokensChangedOutgoingEvent::attempt_to_merge`; cursor dispatcher white-box tests | TODO | TESTED |
+| OTM-009 | `attemptToMerge` returns null (`:557-559`) | Same-kind and different-kind neighbors never merge; every original event retains FIFO identity/order | `ModelTokensChangedOutgoingEvent::attempt_to_merge`; same/sibling-kind matrix | TODO | TESTED |
 
 ## STB — stabilized-true producer/oracle closure
 
@@ -591,8 +653,8 @@ row or parity authority.
 | UTM-019 | `view models react first to model changes` (`viewModelImpl.test.ts:92-117`) | Two attached editors receive model-first content delivery before hostile public listener mutation; adapt with nested `set_value` and exact range validity. Exact local target: `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt` | TODO | TESTED |
 | UTM-020 | `issue #46314: ViewModel is out of sync with Model!` (`cursor.test.ts:2822-2851`) | Two Viewers share one model; cursor callback invokes `tokenize_if_cheap(1)` during `set_value` without stale projection or eager sweep. Exact local target: `viewer/cursor_tokenization_reference_wbtest.mbt` | TODO | TESTED |
 | UTM-021 | `Get word at position` (`model.test.ts:439-455`) | Move the exact named case from ordinary `word_helper_wbtest.mbt` into quality-compliant `viewer/common/model/model_reference_wbtest.mbt`, which cites the full source path and oracle commit; keep only non-reference helper coverage in the former file. | TODO | TESTED |
-| UTM-022 | `getWordAtPosition at embedded language boundaries` (`model.test.ts:457-474`) | `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` — Explicit named `SKIPPED: getWordAtPosition at embedded language boundaries` evidence; embedded token-language boundary word selection | TODO | DEFERRED (embedded-language token/config integration absent) |
-| UTM-023 | `issue #61296: VS code freezes when editing CSS file with emoji` (`model.test.ts:476-500`) | `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #61296: VS code freezes when editing CSS file with emoji` evidence; emoji/word-pattern progress under dynamic language configuration | TODO | DEFERRED (dynamic language configuration and embedded word integration absent) |
+| UTM-022 | `getWordAtPosition at embedded language boundaries` (`model.test.ts:457-474`) | `viewer/common/model/model_reference_wbtest.mbt` — Explicit named `SKIPPED: getWordAtPosition at embedded language boundaries` evidence beside UTM-021 under the same exact upstream path/pin; embedded token-language boundary word selection | TODO | DEFERRED (embedded-language token/config integration absent) |
+| UTM-023 | `issue #61296: VS code freezes when editing CSS file with emoji` (`model.test.ts:476-500`) | `viewer/common/model/model_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #61296: VS code freezes when editing CSS file with emoji` evidence beside UTM-021 under the same exact upstream path/pin; emoji/word-pattern progress under dynamic language configuration | TODO | DEFERRED (dynamic language configuration and embedded word integration absent) |
 
 Coordination-only upstream tests, excluded from this group's denominator:
 `tokensStore.test.ts` belongs to the semantic/store group;
@@ -1514,17 +1576,17 @@ data structure, not live scheduling.
 
 | Class | Rows |
 |---|---:|
-| Source atoms | 946 |
+| Source atoms | 955 |
 | Exact upstream tests | 97 |
-| **Total counted ledger** | **1043** |
+| **Total counted ledger** | **1052** |
 
 | Proposed terminal | Rows |
 |---|---:|
-| TESTED | 463 |
-| PORTED | 201 |
+| TESTED | 466 |
+| PORTED | 206 |
 | DEFERRED | 206 |
-| N-A | 173 |
-| **Total** | **1043** |
+| N-A | 174 |
+| **Total** | **1052** |
 
 Prefix audit:
 
@@ -1541,6 +1603,7 @@ Prefix audit:
 | LRG | 6 |
 | MLP | 34 |
 | NUL | 14 |
+| OTM | 9 |
 | REF | 72 |
 | STB | 5 |
 | STS | 76 |
@@ -1556,7 +1619,7 @@ Prefix audit:
 | VMI | 24 |
 | VML | 24 |
 
-All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. Local LOC rows are excluded.
+All 1052 counted rows are TODO. There are zero PASS rows and no duplicate IDs. Local LOC rows are excluded.
 
 ## Local Coordination Rows (not counted)
 
@@ -1570,7 +1633,7 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 | LOC-006 | Correct guide header: tokenization is passive on read and explicit/visible/background work owns lexer calls. | `viewer/common/model/tokens/README.md` | TODO |
 | LOC-007 | Correct compatibility header and ownership after moving live queue/state implementation to model/tokens. | `viewer/common/model/text_model_tokens.mbt` | TODO |
 | LOC-008 | Correct the model-line reference header to cite full path `vscode/src/vs/editor/test/common/model/model.line.test.ts` and oracle commit `b18492a288de038fbc7643aae6de8247029d11bd`; explicitly `SKIPPED`-name all 52 incremental cases because readonly Viewer has no incremental `applyEdits` seam and manually injected `ManualTokenizationSupport` remains deferred, rather than claiming background tokenization is absent. Keep the projection reference as a separate destination. | `viewer/common/model/model_line_reference_wbtest.mbt`; `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` | TODO |
-| LOC-009 | Place the syntactic font carrier in model/tokens, preserve the source `FontTokensUpdate` typealias there, and expose the exact same option/update/event values through the token-part event consumed by the parent; no duplicate parent carrier, alias, or conversion. Visual FontTokenDecorationsProvider stays deferred. | `viewer/common/model/tokens/annotations.mbt`; backend/token-part/annotation tests | TODO |
+| LOC-009 | Place the syntactic font carrier in model/tokens, preserve the source `FontTokensUpdate` typealias there, and expose the exact same option/update/event values through the token-part event consumed by the parent; no duplicate parent carrier, alias, or conversion. Visual FontTokenDecorationsProvider stays deferred. | `viewer/common/model/tokens/annotations.mbt`; `viewer/common/model/tokens/annotations_wbtest.mbt`; `viewer/common/model/tokens/abstract_syntax_token_backend_wbtest.mbt`; `viewer/common/model/tokens/tokenization_text_model_part_wbtest.mbt` | TODO |
 | LOC-010 | Keep large models on projected collection while disabling tokenization; document P2 deviation. | `viewer/common/view_model/README.md`; `viewer-large-file-view-collection-parity.md` | TODO |
 | LOC-011 | Scheduler epoch seam: retain the first non-`None` scheduler through all nonfinal detaches; idle/zero handles plus generation cancellation reset `_isScheduled` on final detach and prevent callbacks from an older epoch clearing fresh state. | `viewer/common/model/tokens/text_model_tokens.mbt`; `viewer/browser_host.mbt` | TODO |
 | LOC-012 | Common-tokens batch/store placement takes top-level language id plus line-length closure; common/tokens never imports model/tokens. | `viewer/common/tokens/{contiguous_tokens_store,contiguous_multiline_tokens,contiguous_multiline_tokens_builder}.mbt` | TODO |
@@ -1581,7 +1644,8 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 | LOC-017 | Correct the guide reference header: only #133 and #11856 are bracket suites; #122 is tokenization and #63822 is embedded-language behavior. | `viewer/common/model/guides_text_model_part_reference_test.mbt` | TODO |
 | LOC-018 | Move the exact `Get word at position` conformance case into `model_reference_wbtest.mbt`, citing `vscode/src/vs/editor/test/common/model/model.test.ts` at `b18492a288de038fbc7643aae6de8247029d11bd`; reclassify `word_helper_wbtest.mbt` as ordinary local coverage and remove the duplicate conformance claim. | `viewer/common/model/model_reference_wbtest.mbt`; `viewer/common/model/word_helper_wbtest.mbt` | TODO |
 | LOC-019 | Make the real `viewport_data_from_view_model` path build the viewport needed mask and call `get_view_lines_data` exactly once; its test records the single batch call, one passive token-store read per needed projected model line, and zero lexer invocations. | `viewer/common/view_model/viewport_data.mbt`; `viewer/common/view_model/viewport_data_test.mbt` | TODO |
-| LOC-020 | Record the registry's `Color[]`/`Color` to CSS `Array[String]`/`String` reduction and exact nullable method signatures; preserve `changed_color_map : Bool`. | `syntax/README.md`; `syntax/pkg.generated.mbti`; registry tests | TODO |
+| LOC-020 | Record the registry's `Color[]`/`Color` to CSS `Array[String]`/`String` reduction and exact nullable method signatures; preserve `changed_color_map : Bool`. | `syntax/README.md`; `syntax/pkg.generated.mbti`; `syntax/tokenizer_test.mbt` | TODO |
+| LOC-021 | Structurally widen the frozen cursor-owned outgoing-only dispatcher with the model-token kind/wrapper/private arm and typed ViewModel listener; preserve no-op=false/no-merge/FIFO identity, run all cursor/ViewZones regressions, and replace the root direct TextModel listener with the ViewModel listener after synchronous browser ViewEvent delivery. Keep `ViewModel::ViewModel(model)` source-compatible; add only the exact optional `with_options` callback and headless default sink described above. | `viewer/common/view_model/view_model.mbt`; `viewer/common/view_model/cursor_event_dispatcher.mbt`; `viewer/common/view_model/model_tokens_outgoing.mbt`; `viewer/common/view_model/moon.pkg`; `viewer/common/view_model/README.md`; `viewer/common/view_model/pkg.generated.mbti`; `viewer/common/view_model/view_model_test.mbt`; `viewer/common/view_model/cursor_event_dispatcher_wbtest.mbt`; `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt`; `viewer/attach_model.mbt`; `viewer/test_viewer_wbtest.mbt` | TODO |
 
 ## Deviations Approved for Gate-B Review
 
@@ -1630,6 +1694,13 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
   N-A. Raw UTF-16 slicing follows the frozen EOL child.
 - **Font emitter:** allocate/register both literal source emitters, expose the
   second, and dispose both. The visual decoration provider remains deferred.
+- **Browser ViewEvent adapter:** common ViewModel cannot import the browser
+  `ViewTokensChanged` type. Its model-token listener computes one neutral
+  `ViewTokensChangedRange` array and synchronously invokes a constructor-
+  injected browser-tier callback; only after that callback returns does it
+  enqueue `ModelTokensChangedOutgoingEvent` in the cursor-owned outgoing-only
+  dispatcher. This preserves source view-first/outgoing-second order without
+  moving the frozen browser dispatcher or duplicating its event declaration.
 
 ## Required Behavior Matrix
 
@@ -1694,6 +1765,13 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
   synchronous fixed-true isResolved, CSS color map `None`/length 0/2/3,
   retained array value/order, changed-color-map boolean, literal background index
   2, and attached aggregate invalidation.
+- Outgoing model tokens: empty/nonempty ranges; wrapper retains the identical
+  model event; semantic kind is distinct; `is_no_op` is always false; same-kind,
+  cursor, and ViewZones neighbors never merge; FIFO identity/order survives
+  reentrant listeners; the browser `ViewTokensChanged` callback completes
+  before the typed ViewModel outgoing listener; the root has no direct
+  TextModel token subscription. Run the entire existing cursor/ViewZones
+  dispatcher suite in addition to the token-specific assertions.
 - Projection: Identity/Projected/Injected/Hidden, single/batch, all-true,
   all-false, first/last/alternating/sparse needed masks; five injection-context
   callbacks; decoration selection; wrapped indent/start/slice branches; one
@@ -1732,7 +1810,12 @@ records the transfer. It also owns the existing scroll-only
 view-state shape stays in the P2 backlog. This child also receives the
 parent-authorized ViewModel model-token callback at `viewModelImpl.ts:510-523`
 through VMI-017–024; frozen render invalidation remains the owner of typed
-event declarations and handler consumption only.
+event declarations and handler consumption only. OTM-001–009 and LOC-021 are
+the parent-authorized structural widening of the frozen cursor-owned
+outgoing-only dispatcher: tokenization owns only the model-token kind, wrapper,
+private arm, typed listener/producer, and root subscription; all inherited
+queue/emitter/delivery mechanics stay frozen cursor ownership and are not
+recounted.
 
 ## Milestones
 
@@ -1788,3 +1871,12 @@ event declarations and handler consumption only.
   source atoms + 97 exact tests, now proposed as 463 TESTED / 201 PORTED / 206
   DEFERRED / 173 N-A. No product or test file changed; Gate B has not passed
   and requires another fresh review.
+- 2026-07-13: the third formal Gate-B round REJECTED `e8c7e63` on one explicit
+  DOM/CSS-none declaration, two `model.test.ts` reference destinations, two
+  placeholder LOC destinations, and the unowned model-token outgoing event.
+  The correction pins and inventories the complete nine-row
+  `ModelTokensChangedEvent` outgoing closure and authorizes only its structural
+  arm in the frozen cursor-owned dispatcher. The docs-only candidate is now
+  1052 TODO rows = 955 source atoms + 97 exact tests, proposed as 466 TESTED /
+  206 PORTED / 206 DEFERRED / 174 N-A, plus 21 uncounted LOC rows. No product or
+  test file changed; Gate B has not passed and requires another fresh review.

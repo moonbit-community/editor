@@ -110,7 +110,7 @@ method clusters:
 | Frozen async TMV-016–018 `TextModel.setEOL` handoff | superseded by the text-buffer EOL child's explicit N-A coordination dispositions; the implemented async ledger stays historical and no source rows are duplicated |
 | TextModel version/request freshness methods | async model features |
 | TextModel `_emitContentChangedEvent` token forwarding plus token-part construction/disposal and token-range production | tokenization; render invalidation owns ViewPart handler consumption only |
-| ViewModel model-token subscription, exact model-to-view token-range conversion, and view-event-before-outgoing-model-event dispatch (`viewModelImpl.ts:510-523`) | tokenization through VMI-017–024; frozen render invalidation retains only typed `ViewTokensChanged` declaration/dispatcher mechanics and ViewPart handler consumption, and its historical ledger is not rewritten or recounted |
+| ViewModel model-token subscription, exact model-to-view token-range conversion, and view-event-before-outgoing-model-event dispatch (`viewModelImpl.ts:510-523`) | tokenization through VMI-017–024 and OTM-001–009; a browser-tier callback completes the frozen render-owned typed `ViewTokensChanged` delivery first, then tokenization structurally widens the cursor-owned outgoing-only dispatcher with the model-token kind/wrapper/listener arm and replaces the root's direct model listener; neither frozen historical ledger is rewritten or recounted |
 | Frozen lifecycle CEW-086 `ModelData.attachedView` and CEW-088's `model.onBeforeDetached(attachedView)` substep | tokenization completes the exact-handle attached-view protocol without rewriting the implemented lifecycle ledger; ModelData alone owns attach/detach, ViewModel borrows the handle |
 | Attached visible-range stable/unstable production | tokenization owns the ViewModel-construction scroll listener and content-mapping `false` producers, the one-time post-initialization `true` producer, and the existing `Viewer::restore_view_state` immediate-scroll-then-true substep; broader view-state shape remains P2 |
 | ViewLines event handlers | render invalidation |
@@ -125,6 +125,7 @@ method clusters:
 | ViewZone-owned min-width/container-width writes | ViewZones, consuming geometry's extent contract |
 | LinesLayout/ViewLayout zone insertion, ordering, and zone viewport data | ViewZones |
 | ViewModelEventDispatcher cursor outgoing events and existing outgoing-only queue mechanics | cursor/input events remain the historical owner; ViewZones may structurally widen `PendingOutgoingEvent`, listener aliases, and ViewModel wiring under frozen VMI-001/002/004 and VED-001/002/008/010-018 without recounting those rows, and must run the full cursor-dispatcher regression suite |
+| ViewModelEventDispatcher ModelTokensChanged outgoing event | tokenization owns only the new semantic kind, wrapper retaining the original model event, private pending-queue arm, typed ViewModel listener/producer, and root subscription through OTM-001–009 plus VMI-017/023/024; cursor/input retains all queue/emitter mechanics without ledger recount, and the full cursor/ViewZones dispatcher regression suite is mandatory |
 | ViewModelEventDispatcher configuration/decorations events | render invalidation |
 | `ViewThemeChangedEvent.theme` source `IColorTheme` versus local `String` identity | render invalidation; declaration/dispatch-only reviewed type-reduction deviation |
 | ViewModelEventDispatcher generic collector/queue rows historically deferred as cursor `VED`/`VMI` | render invalidation through counted `RVC` handoff rows; the implemented cursor plan remains frozen |
@@ -722,3 +723,12 @@ The independent closing task is:
   1043/1043 TODO rows = 946 source + 97 tests; dispositions are now 463 TESTED,
   201 PORTED, 206 DEFERRED, and 173 N-A. No product/test file changed; Gate B
   has not passed and requires another fresh review.
+- 2026-07-13: the third formal tokenization Gate-B round REJECTED `e8c7e63` on
+  the missing DOM/CSS-none declaration, three exact evidence destinations, and
+  an unowned `ModelTokensChangedEvent` outgoing seam. The correction explicitly
+  transfers only that nine-row kind/wrapper/private-arm/listener widening to
+  tokenization while frozen cursor queue mechanics and frozen render delivery
+  remain unchanged. The docs-only candidate is now 1052/1052 TODO rows = 955
+  source + 97 tests, proposed as 466 TESTED, 206 PORTED, 206 DEFERRED, and 174
+  N-A, with 21 uncounted LOC rows. No product/test file changed; Gate B still
+  requires a fresh review.

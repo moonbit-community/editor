@@ -247,25 +247,6 @@ test "token source preserves inclusive ranges in producer order" {
 }
 
 ///|
-test "token source converts model ranges across wrapped view lines" {
-  with_test_viewer(
-    "abcdefghij\nx",
-    viewer => {
-      viewer.test_set_soft_wrap_column(4)
-      let view_model = viewer.test_view_model()
-      let model = viewer.get_model().unwrap()
-      assert_eq(view_model.line_count(), 4)
-      let ranges = view_token_ranges_from_model(view_model, model, [
-        (1, 1),
-        (2, 2),
-      ])
-      assert_true(ranges == [(1, 3), (4, 4)])
-    },
-    options=ViewerOptions(soft_wrap=true, font_size=12, line_height=18),
-  )
-}
-
-///|
 test "scroll source copies four values and independent flags" {
   let previous = @view_layout.ScrollState::new(
     force_integer_values=false,

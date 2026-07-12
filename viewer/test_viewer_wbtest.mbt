@@ -358,6 +358,42 @@ impl @syntax.LineTokenizer for FirstCharKeywordToy with fn tokenize_line(
 }
 
 ///|
+/// Both `ViewerViewModelBuiltEvent.token_count` producer paths are passive:
+/// the headless initial-build telemetry reads the default store without
+/// lexing, then a stabilized visible refresh lexes once and its token-change
+/// telemetry observes that stored result without another lexer call.
+test "initial-build and token-change telemetry read token counts passively" {
+  let calls = Ref(0)
+  let registration = @syntax.tokenization_registry.register(
+    "telemetry-passive-toy",
+    FirstCharKeywordToy::{ calls, },
+  )
+  defer registration.dispose()
+  let viewer = Viewer::Viewer()
+  defer viewer.dispose()
+  let model = test_model(
+    "alpha beta\ngamma delta",
+    language_id="telemetry-passive-toy",
+  )
+  defer model.dispose()
+  let lexer_calls_at_event : Array[Int] = []
+  let token_counts : Array[Int] = []
+  let subscription = debug_on_did_build_view_model(viewer, event => {
+    lexer_calls_at_event.push(calls.val)
+    token_counts.push(event.token_count)
+  })
+  defer subscription.dispose()
+
+  viewer.set_model(Some(model))
+  viewer.test_set_viewport(width=800.0, height=180.0)
+  viewer.test_view_model().visible_lines_stabilized()
+
+  assert_true(lexer_calls_at_event == [0, 2])
+  assert_true(token_counts == [2, 4])
+  assert_eq(calls.val, 2)
+}
+
+///|
 /// Tokenizer (re)registration reaches the ViewModel event spine without
 /// re-warming. Passive telemetry reads defaults; explicit demand owns lexing.
 test "tokenizer registration stays passive until explicit demand" {

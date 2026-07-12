@@ -120,31 +120,6 @@ fn view_tokens_changed_event(
 }
 
 ///|
-/// Converts inclusive model-line token ranges to the inclusive view-line
-/// ranges consumed by ViewLines and ViewCursors. The end position uses the
-/// model line's maximum column so wrapped continuations and injected text at
-/// the end of the line are included, matching `ViewModel.onDidChangeTokens`.
-fn view_token_ranges_from_model(
-  view_model : @view_model.ViewModel,
-  model : @model.TextModel,
-  model_ranges : Array[(Int, Int)],
-) -> Array[(Int, Int)] {
-  let converter = view_model.coordinates_converter()
-  let view_ranges : Array[(Int, Int)] = []
-  for range in model_ranges {
-    let (from_line_number, to_line_number) = range
-    let view_start = converter.model_position_to_view_position(
-      Position(from_line_number, 1),
-    )
-    let view_end = converter.model_position_to_view_position(
-      Position(to_line_number, model.get_line_max_column(to_line_number)),
-    )
-    view_ranges.push((view_start.line_number, view_end.line_number))
-  }
-  view_ranges
-}
-
-///|
 /// Emits the committed single-cursor state in both coordinate systems. View
 /// delivery precedes the public outgoing cursor pair, as in Monaco.
 fn Viewer::emit_view_cursor_state_changed(

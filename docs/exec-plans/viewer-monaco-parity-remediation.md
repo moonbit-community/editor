@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — render-invalidation child approved for implementation
+Status: active — render-invalidation child implemented; browser geometry next
 
 Date: 2026-07-10
 
@@ -83,7 +83,7 @@ product contract and belongs in an ordinary local test.
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
-| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | approved for implementation |
+| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
@@ -446,3 +446,15 @@ The independent closing task is:
   the source hashes, boundaries, matrices, mechanics, and deviations without
   another inventory gap. No product or test edit preceded approval;
   implementation is authorized.
+- 2026-07-12: the render-invalidation child is implemented and frozen. Product
+  commit `14ed3c1` lands source-time typed ViewEvents, a nested/reentrant FIFO
+  dispatcher, retained ViewLine/ViewLines invalidation, exact configuration,
+  decoration, focus, scroll, token, mapping, and zone propagation, retained
+  ContentWidget/current-line caches, and platform root classes. Repeated
+  independent Gate D reviews drove fixes for retained option identity/factory
+  capture, cursor render-pair staleness, model→view token ranges, model/view
+  line-count separation, ContentWidget width/anchor wiring, all-eight-part
+  batch delivery, and harmless grouped-overlay overwork. The 563-row ledger
+  closes as 244 TESTED, 90 PORTED, 68 DEFERRED, and 161 N-A with zero
+  TODO/PASS. Final gates pass: check, JS 1169/1169, native 858/858, build, and
+  browser 68/68. The portfolio proceeds to browser geometry.

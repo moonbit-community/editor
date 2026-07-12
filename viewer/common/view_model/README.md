@@ -26,6 +26,28 @@ model line + grammar tokens + injected-text decorations
   current whole-model granularity, invalidate decoration caches, and reproject the
   cursor from model coordinates. Incremental edit events are not part of the
   readonly contract.
+- Cursor mutation has one source/reason-aware transition path. Model-side states
+  validate through `TextModel`; view-side states clamp/normalize in this package
+  and retain their authoritative projected position. Left/Right move by UTF-16
+  scalar boundaries, Up/Down/Page move across wrapped view lines with visible-
+  column residues, and Home/End choose the source model/view branch. Word/Line
+  pointer continuation dispatches from the stored anchor kind. Source-shaped
+  MoveTo and Line entries accept a required model position plus an optional
+  already-known view position: absent converts model-to-view; supplied is kept
+  only when its normalized view-to-model result matches the validated model
+  position.
+- `CursorMoveDirection` retains the exact 11-member source
+  `SimpleMoveDirection` union and `CursorMoveUnit` the exact six-member `Unit`
+  contract. Unscoped blank/wrapped-position directions, vertical model/folded
+  units, and Left/Right HalfLine return without mutation at their explicit
+  deferred branches.
+- `CursorEventDispatcher` is the outgoing cursor-only half of Monaco's
+  `ViewModelEventDispatcher`: it filters selection/version no-ops, coalesces a
+  queued same-kind event, and recursively drains reentrant outgoing facts like
+  the source (the root Viewer FIFO separately keeps public event pairs
+  adjacent). It exposes `on_cursor_state_changed`; `ViewModel::dispose` disposes its emitter and
+  clears pending facts. Generic view handlers, collectors, and non-cursor
+  outgoing events remain with their owning parity work.
 - `set_hidden_areas` merges ranges by source, updates line/layout/decorations/cursor,
   and preserves the top visible model line when folding changes above the viewport.
 - `ViewModelDecorations` converts model ranges through

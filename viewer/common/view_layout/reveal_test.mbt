@@ -24,6 +24,51 @@ test "reveal Simple scrolls a line just into view" {
 }
 
 ///|
+test "minimal reveal omits cursor bottom padding at viewport edge" {
+  let layout = reveal_layout()
+  // View line 30 ends exactly at the viewport bottom. The ordinary keyboard
+  // reveal keeps one more line clear; a pointer-command minimal reveal does
+  // not move it at all.
+  assert_eq(layout.compute_scroll_top_to_reveal_range(30, 30, Simple), 378.0)
+  assert_eq(
+    layout.compute_scroll_top_to_reveal_range(
+      30,
+      30,
+      Simple,
+      source="mouse",
+      minimal_reveal=true,
+    ),
+    360.0,
+  )
+  // Outside the viewport the same omission is exactly one line (18px).
+  assert_eq(
+    layout.compute_scroll_top_to_reveal_range(
+      50,
+      50,
+      Simple,
+      source="mouse",
+      minimal_reveal=true,
+    ),
+    720.0,
+  )
+}
+
+///|
+test "non-minimal mouse reveal adds one line above" {
+  let layout = reveal_layout()
+  assert_eq(
+    layout.compute_scroll_top_to_reveal_range(
+      20,
+      20,
+      Simple,
+      source="mouse",
+      minimal_reveal=false,
+    ),
+    324.0,
+  )
+}
+
+///|
 test "reveal Center and CenterIfOutsideViewport" {
   let layout = reveal_layout()
   // Center: box middle 891, minus half the viewport (90) = 801.
@@ -108,6 +153,27 @@ test "compute_scroll_left_to_reveal scrolls a box right of the viewport" {
       vertical_scrollbar_width=14.0,
     ),
     content="Some(279)",
+  )
+}
+
+///|
+test "minimal horizontal reveal omits left and right padding" {
+  let layout = horizontal_layout()
+  debug_inspect(
+    layout.compute_scroll_left_to_reveal(
+      [(1000.0, 50.0)],
+      vertical_scrollbar_width=14.0,
+      minimal_reveal=true,
+    ),
+    content="Some(264)",
+  )
+  debug_inspect(
+    layout.compute_scroll_left_to_reveal(
+      [(1000.0, 0.0)],
+      vertical_scrollbar_width=14.0,
+      minimal_reveal=true,
+    ),
+    content="Some(214)",
   )
 }
 

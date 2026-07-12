@@ -87,8 +87,9 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       // Inlay hints: re-request from the providers and re-apply as
       // injected-text decorations against the new content.
       self.request_model_features(model)
-      self.did_change_model_content.fire(event)
       self.schedule_render()
+      self.did_change_model_content.fire(event)
+      self.complete_model_content_delivery(event.version_id)
     }),
   )
   // A disposed model detaches itself
@@ -108,6 +109,20 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // model queries them lazily per viewport (no per-frame bake). The render
   // pass pulls its viewport data from the view model at flush time.
   let view_model = self.build_view_model(model)
+  // The cursor outgoing alias is model-scoped. The ViewModel has already
+  // committed both cursor coordinate states before this fires; the Viewer
+  // adds the public content barrier and position-before-selection relay.
+  listeners_to_remove.push(
+    view_model.on_cursor_state_changed(event => {
+      match self.get_view_model() {
+        Some(active) =>
+          if physical_equal(active, view_model) {
+            self.enqueue_cursor_state_change(event)
+          }
+        None => ()
+      }
+    }),
+  )
   // Monaco's `ViewLayout.onDidScroll` is the single scroll-to-render seam.
   // Immediate calls and rAF animation ticks both arrive here, avoiding a
   // separate browser-only animation path.

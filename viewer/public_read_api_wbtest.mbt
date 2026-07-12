@@ -230,7 +230,7 @@ test "read API: selection and position report model coordinates under wrap" {
     "abcdefghij",
     viewer => {
       viewer.test_set_soft_wrap_column(6)
-      viewer.test_cursor().move_to(Position(2, 1), false)
+      viewer.test_cursor().move_to(Position(2, 1), false) |> ignore
       let position = viewer.get_position().unwrap()
       assert_eq(position.line_number, 1)
       assert_eq(position.column, 7)

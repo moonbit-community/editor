@@ -52,7 +52,7 @@ test "set_value marks the rendered content stale and drops the window" {
 ///|
 test "set_value resets the cursor to the origin" {
   with_test_viewer("one\ntwo\nthree", viewer => {
-    viewer.test_cursor().move_to(Position(3, 2), false)
+    viewer.test_cursor().move_to(Position(3, 2), false) |> ignore
     assert_true(viewer.get_position().unwrap() == Position(3, 2))
     viewer.set_value("a\nb")
     assert_true(viewer.get_position().unwrap() == Position(1, 1))

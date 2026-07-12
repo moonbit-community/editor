@@ -14,7 +14,7 @@ pub fn move_to(
   controller : CursorsController,
   view_position : @base_common.Position,
 ) -> Unit {
-  controller.move_to(view_position, false)
+  controller.move_to(view_position, false) |> ignore
 }
 
 ///|
@@ -23,5 +23,5 @@ pub fn move_to_select(
   controller : CursorsController,
   view_position : @base_common.Position,
 ) -> Unit {
-  controller.move_to(view_position, true)
+  controller.move_to(view_position, true) |> ignore
 }

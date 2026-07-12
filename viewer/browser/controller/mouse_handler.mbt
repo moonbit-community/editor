@@ -35,16 +35,26 @@
 //     (single window).
 
 ///|
-/// `IMouseDispatchData` (`vscode/src/vs/editor/browser/view/viewController.ts:21-40`):
-/// the resolved pointer intent the handler hands to the viewer's
-/// `ViewController.dispatchMouse` analog. `position` is a 1-based **view**
-/// position (the view→model conversion happens per cursor command, exactly
-/// like the source). `revealType` is omitted — the viewer's cursor commands
-/// take no reveal types (ledger).
+/// `NavigationCommandRevealType` (`coreCommands.ts:353-367`).
+pub(all) enum NavigationCommandRevealType {
+  /// Do regular revealing.
+  Regular
+  /// Do only minimal revealing.
+  Minimal
+  /// Do not reveal the position.
+  None
+} derive(Eq, Debug)
+
+///|
+/// `IMouseDispatchData` (`viewController.ts:21-40`): the resolved pointer
+/// intent the handler hands to the viewer's `ViewController.dispatchMouse`
+/// analog. `position` is a 1-based **view** position (the view→model conversion
+/// happens per cursor command, exactly like the source).
 pub(all) struct MouseDispatchData {
   position : @base_common.Position
   /// Desired visual viewport column (`IMouseTarget.mouseColumn`).
   mouse_column : Int
+  reveal_type : NavigationCommandRevealType
   started_on_line_numbers : Bool
   in_selection_mode : Bool
   mouse_down_count : Int
@@ -450,13 +460,13 @@ fn MouseDownOperation::new(
       TopBottom,
       view_helper,
       mouse_target_factory,
-      (_position, _in_selection_mode) => (),
+      (_position, _in_selection_mode, _reveal_type) => (),
     ),
     left_right_drag_scrolling: DragScrolling::new(
       LeftRight,
       view_helper,
       mouse_target_factory,
-      (_position, _in_selection_mode) => (),
+      (_position, _in_selection_mode, _reveal_type) => (),
     ),
     mouse_state: MouseDownState::new(),
     is_active_flag: false,
@@ -465,12 +475,16 @@ fn MouseDownOperation::new(
   // them now that it exists (the source passes
   // `(position, inSelectionMode, revealType) => this._dispatchMouse(...)`
   // into the constructors directly).
-  operation.top_bottom_drag_scrolling.set_dispatch((position, in_selection_mode) => {
-    operation.dispatch_mouse_target(position, in_selection_mode)
-  })
-  operation.left_right_drag_scrolling.set_dispatch((position, in_selection_mode) => {
-    operation.dispatch_mouse_target(position, in_selection_mode)
-  })
+  operation.top_bottom_drag_scrolling.set_dispatch((
+    position,
+    in_selection_mode,
+    reveal_type,
+  ) => operation.dispatch_mouse_target(position, in_selection_mode, reveal_type))
+  operation.left_right_drag_scrolling.set_dispatch((
+    position,
+    in_selection_mode,
+    reveal_type,
+  ) => operation.dispatch_mouse_target(position, in_selection_mode, reveal_type))
   operation
 }
 
@@ -509,7 +523,7 @@ fn MouseDownOperation::on_mouse_down_then_move(
   } else {
     self.top_bottom_drag_scrolling.stop()
     self.left_right_drag_scrolling.stop()
-    self.dispatch_mouse_target(position, true)
+    self.dispatch_mouse_target(position, true, Minimal)
   }
 }
 
@@ -535,7 +549,7 @@ fn MouseDownOperation::start(
   // Overwrite the detail of the MouseEvent, as it will be sent out in an
   // event and contributions might rely on it.
   e.set_detail(self.mouse_state.count())
-  self.dispatch_mouse_target(position, e.shift_key)
+  self.dispatch_mouse_target(position, e.shift_key, Minimal)
   if !self.is_active_flag {
     self.is_active_flag = true
     self.mouse_move_monitor.start_monitoring(
@@ -740,6 +754,7 @@ fn MouseDownOperation::dispatch_mouse_target(
   self : MouseDownOperation,
   position : @editor_browser.MouseTarget,
   in_selection_mode : Bool,
+  reveal_type : NavigationCommandRevealType,
 ) -> Unit {
   guard position.position() is Some(target_position) else { return }
   let on_injected_text = match position {
@@ -749,6 +764,7 @@ fn MouseDownOperation::dispatch_mouse_target(
   (self.view_helper.dispatch_mouse)({
     position: target_position,
     mouse_column: position.mouse_column(),
+    reveal_type,
     started_on_line_numbers: self.mouse_state.started_on_line_numbers(),
     in_selection_mode,
     mouse_down_count: self.mouse_state.count(),

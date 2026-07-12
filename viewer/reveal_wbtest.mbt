@@ -85,19 +85,68 @@ test "reveal_range over a single line defers the horizontal scroll" {
 }
 
 ///|
-/// A multi-line `reveal_range` clears any outstanding deferred horizontal
-/// request (it resets `scroll_left` to 0 instead).
-test "multi-line reveal_range clears a pending horizontal reveal" {
+test "source-shaped revealRange forwards source minimal and scroll type" {
   with_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=180.0)
     viewer.test_view_model().view_layout.set_content_width(2000.0) |> ignore
-    let single = @base_common.Range::Range(50, 3, 50, 8)
+    viewer.send_reveal_range(
+      Range(50, 3, 50, 8),
+      Simple,
+      reveal_horizontal=true,
+      source="mouse",
+      minimal_reveal=true,
+      scroll_type=Immediate,
+    )
+    // Minimal omits the ordinary Simple bottom line: 900 - 180 = 720.
+    assert_eq(viewer.test_view_model().view_layout.position().scroll_top, 720.0)
+    guard viewer.horizontal_reveal_request is Some(request) else {
+      fail("expected a deferred horizontal reveal")
+    }
+    assert_true(request.minimal_reveal)
+    assert_true(request.scroll_type == Immediate)
+  })
+}
+
+///|
+/// A horizontal multi-line reveal does not explicitly clear an outstanding
+/// request. Its scroll-to-base change normally cancels the request; when both
+/// axes already equal the target, the source leaves the request intact.
+test "stationary multi-line reveal retains a pending horizontal request" {
+  with_test_viewer(long_document(200), viewer => {
+    viewer.test_set_viewport(width=800.0, height=180.0)
+    viewer.test_view_model().view_layout.set_content_width(2000.0) |> ignore
+    let single = @base_common.Range::Range(5, 3, 5, 8)
     viewer.reveal_range(single)
     assert_true(viewer.horizontal_reveal_request is Some(_))
-    let multi = @base_common.Range::Range(60, 1, 62, 1)
+    let multi = @base_common.Range::Range(5, 1, 6, 1)
     viewer.reveal_range(multi)
-    assert_true(viewer.horizontal_reveal_request is None)
+    assert_true(viewer.horizontal_reveal_request is Some(_))
   })
+}
+
+///|
+test "vertical reveal resets an in-flight horizontal animation target" {
+  let layout = @view_layout.ViewLayout::new(
+    line_height=18,
+    line_count=200,
+    smooth_scrolling=true,
+    schedule_at_next_animation_frame=_ => {
+      @base_common.Disposable::from(() => ())
+    },
+    now=() => 0.0,
+  )
+  layout.set_viewport_size(width=800.0, height=180.0) |> ignore
+  layout.set_content_width(2000.0) |> ignore
+  layout.scroll_to_smooth(scroll_top=0.0, scroll_left=500.0)
+  assert_eq(layout.position().scroll_left, 0.0)
+  assert_eq(layout.future_position().scroll_left, 500.0)
+  let target = layout.validate_scroll_position({
+    scroll_left: None,
+    scroll_top: Some(738.0),
+  })
+  apply_cursor_reveal_scroll_position(layout, target, true)
+  assert_eq(layout.future_position().scroll_left, 0.0)
+  layout.dispose()
 }
 
 ///|

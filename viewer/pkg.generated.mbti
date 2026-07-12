@@ -47,7 +47,7 @@ pub(all) struct CursorSelectionChangedEvent {
   selection : @core.Selection
   secondary_selections : Array[@core.Selection]
   model_version_id : Int
-  old_selections : Array[@core.Selection]
+  old_selections : Array[@core.Selection]?
   old_model_version_id : Int
   source : String
   reason : CursorChangeReason
@@ -195,12 +195,12 @@ pub fn Viewer::reveal_range_near_top_if_outside_viewport(Self, @moonbit-communit
 pub fn Viewer::save_view_state(Self) -> ViewerViewState?
 pub fn Viewer::set_hidden_areas(Self, Array[@moonbit-community/editor/base/common.Range], source? : String, force_update? : Bool) -> Unit
 pub fn Viewer::set_model(Self, @model.TextModel?) -> Unit
-pub fn Viewer::set_position(Self, @moonbit-community/editor/base/common.Position) -> Unit
+pub fn Viewer::set_position(Self, @moonbit-community/editor/base/common.Position, source? : String) -> Unit
 pub fn Viewer::set_scroll_left(Self, Double) -> Unit
 pub fn Viewer::set_scroll_position(Self, scroll_top? : Double, scroll_left? : Double) -> Unit
 pub fn Viewer::set_scroll_top(Self, Double) -> Unit
-pub fn Viewer::set_selection(Self, @core.Selection) -> Unit
-pub fn Viewer::set_selections(Self, Array[@core.Selection]) -> Unit
+pub fn Viewer::set_selection(Self, @core.Selection, source? : String) -> Unit
+pub fn Viewer::set_selections(Self, Array[@core.Selection], source? : String, reason? : CursorChangeReason) -> Unit
 pub fn Viewer::set_value(Self, String) -> Unit
 pub fn Viewer::update_options(Self, ViewerOptions) -> Unit
 

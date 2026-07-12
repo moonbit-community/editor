@@ -16,14 +16,20 @@
 ///   * `doubleClickSelectsBlock` (viewController.ts:267-278) — option not
 ///     modeled, no bracket-pair/tokenization query surface;
 ///   * `columnSelection` / alt-drag column select (viewController.ts:297-302)
-///     — no column selection;
-///   * `revealType` — the viewer's cursor commands take none.
+///     — no column selection.
 fn Viewer::dispatch_mouse(
   self : Viewer,
   data : @controller.MouseDispatchData,
 ) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
-  let controller = view_model.cursor
+  let old_cursor_state = view_model.cursor.get_primary_cursor_state()
+  let position = validate_mouse_view_position(view_model, data.position)
+  let command_args = CursorMoveCommandArgs::new(
+    source="mouse",
+    position=self.view_to_model(position),
+    view_position=position,
+    reveal_type=data.reveal_type,
+  )
   if data.middle_button {
     // `middleButton && !selectionClipboardIsOn` → middle-click scroll /
     // column select, both unported: a middle-button gesture must not fall
@@ -36,20 +42,22 @@ fn Viewer::dispatch_mouse(
       // `_lastCursorLineSelect` / `_createCursor` (multi-cursor) — unported.
       ()
     } else if data.in_selection_mode {
-      self.line_select_drag(controller, data.position)
+      self.run_line_core_command(view_model, Some(command_args), true) |> ignore
     } else {
-      self.line_select(controller, data.position)
+      self.run_line_core_command(view_model, Some(command_args), false)
+      |> ignore
     }
   } else if data.mouse_down_count >= 4 {
-    self.select_all(controller)
+    self.run_select_all_core_command(nominal_source="mouse") |> ignore
   } else if data.mouse_down_count == 3 {
     if has_multicursor_modifier(data) {
       // `_lastCursorLineSelect(Drag)` — unported.
       ()
     } else if data.in_selection_mode {
-      self.line_select_drag(controller, data.position)
+      self.run_line_core_command(view_model, Some(command_args), true) |> ignore
     } else {
-      self.line_select(controller, data.position)
+      self.run_line_core_command(view_model, Some(command_args), false)
+      |> ignore
     }
   } else if data.mouse_down_count == 2 {
     // A double-click on injected text (an inlay hint) selects nothing
@@ -59,10 +67,12 @@ fn Viewer::dispatch_mouse(
         // `_lastCursorWordSelect` — unported.
         ()
       } else if data.in_selection_mode {
-        self.word_select_drag(controller, data.position)
+        self.run_word_core_command(view_model, Some(command_args), true)
+        |> ignore
       } else {
         // `doubleClickSelectsBlock` bracket/string block select — unported.
-        self.word_select(controller, data.position)
+        self.run_word_core_command(view_model, Some(command_args), false)
+        |> ignore
       }
     }
   } else if has_multicursor_modifier(data) {
@@ -75,12 +85,38 @@ fn Viewer::dispatch_mouse(
       ()
     } else {
       // `columnSelection` reads as the Monaco default `false`.
-      @cursor.move_to_select(controller, data.position)
+      self.run_move_to_core_command(view_model, Some(command_args), true)
+      |> ignore
     }
   } else {
-    @cursor.move_to(controller, data.position)
+    self.run_move_to_core_command(view_model, Some(command_args), false)
+    |> ignore
   }
-  self.schedule_render()
+  // Ordinary model-side changes schedule through the outgoing cursor relay.
+  // A normalized view-side move can keep the same model selection under
+  // injected text while changing the authoritative view position, so it has
+  // no public event to trigger that relay. Compare the full paired state here
+  // and schedule exactly that otherwise-silent repaint; deferred/no-op mouse
+  // branches remain render no-ops.
+  if view_model.cursor.get_primary_cursor_state() != old_cursor_state {
+    self.schedule_render()
+  }
+}
+
+///|
+/// `_validateViewColumn` (`viewController.ts:101-107`): pointer targets below
+/// the current view line's minimum column clamp up; every other target is
+/// retained byte-for-byte. Hit testing already supplies a valid view line.
+fn validate_mouse_view_position(
+  view_model : @view_model.ViewModel,
+  position : @base_common.Position,
+) -> @base_common.Position {
+  let min_column = view_model.get_line_min_column(position.line_number)
+  if position.column < min_column {
+    Position(position.line_number, min_column)
+  } else {
+    position
+  }
 }
 
 ///|
@@ -91,129 +127,46 @@ fn has_multicursor_modifier(data : @controller.MouseDispatchData) -> Bool {
 }
 
 ///|
-/// `CoreNavigationCommands.SelectAll`: select the whole document.
-fn Viewer::select_all(
+/// `CoreNavigationCommands.SelectAll`: no view is an early return; otherwise
+/// select the whole document with the source's hard-coded `keyboard` source.
+/// The readonly TextModel has no undo stack, so `pushStackElement()` is the
+/// documented command-boundary N-A seam.
+fn Viewer::run_select_all_core_command(
   self : Viewer,
-  controller : @cursor.CursorsController,
-) -> Unit {
-  guard self.get_model() is Some(model) else { return }
-  let snapshot = model.snapshot
-  let last_line = snapshot.line_count() - 1
-  let end = @base_common.Position::Position(
-    last_line + 1,
-    snapshot.line_text(last_line).length() + 1,
-  )
-  let origin = @base_common.Position::Position(1, 1)
-  controller.set_model_cursor_state(
-    @cursor.SingleCursorState::new(origin, end, Simple, end),
-  )
-}
-
-///|
-/// `CursorMoveCommands.line` (not in selection mode): select from the clicked
-/// model line's start to the next line's start, anchoring `Line`.
-fn Viewer::line_select(
-  self : Viewer,
-  controller : @cursor.CursorsController,
-  view_position : @base_common.Position,
-) -> Unit {
-  guard self.get_model() is Some(model) else { return }
-  let snapshot = model.snapshot
-  let position = self.view_to_model(view_position)
-  let (to_line, to_column) = line_select_end(snapshot, position.line_number - 1)
-  let start = @base_common.Position::Position(position.line_number, 1)
-  let active = @base_common.Position::Position(to_line + 1, to_column + 1)
-  controller.set_model_cursor_state(
-    @cursor.SingleCursorState::new(start, active, Line, active),
+  nominal_source? : String = "",
+) -> Bool {
+  // ViewController `_selectAll` supplies `{source:'mouse'}` but the core body
+  // intentionally ignores it and hard-codes `keyboard`.
+  guard self.get_view_model() is Some(view_model) else { return false }
+  editor_registry().run_core_editor_command(
+    self,
+    view_model,
+    "editor.action.selectAll",
+    args=BaseCommandArguments(
+      CursorBaseCommandOptions::new(source=nominal_source),
+    ),
   )
 }
 
 ///|
-/// `CursorMoveCommands.line` (in selection mode): extend the whole-line
-/// selection. Transcribed in model space — backward extends to the target
-/// line start, forward to the line after the target, and re-entering the
-/// anchor line resets to the anchor's far edge.
-fn Viewer::line_select_drag(
+/// Applies `NavigationCommandRevealType` at the root browser seam. Regular and
+/// Minimal are both only the source command's `None` gate: MoveTo/Word/Line all
+/// call `revealAllCursors(..., minimalReveal=true, ScrollType.Smooth)` after
+/// passing it. Word/MoveTo reveal horizontally; Line is vertical-only.
+fn Viewer::reveal_mouse_cursor(
   self : Viewer,
-  controller : @cursor.CursorsController,
-  view_position : @base_common.Position,
+  reveal_type : @controller.NavigationCommandRevealType,
+  horizontal~ : Bool,
 ) -> Unit {
-  guard self.get_model() is Some(model) else { return }
-  let snapshot = model.snapshot
-  let position = self.view_to_model(view_position)
-  let state = controller.model_state()
-  let entering_line = state.selection_start_start.line_number
-  let next = if position.line_number < entering_line {
-    state.moved(true, Position(position.line_number, 1))
-  } else if position.line_number > entering_line {
-    let (to_line, to_column) = line_select_end(
-      snapshot,
-      position.line_number - 1,
-    )
-    state.moved(true, Position(to_line + 1, to_column + 1))
-  } else {
-    state.moved(true, state.selection_start_end)
+  if reveal_type is None {
+    return
   }
-  controller.set_model_cursor_state(next)
-}
-
-///|
-/// `CursorMoveCommands.word` (not in selection mode): select the word at the
-/// click, anchoring `Word`.
-fn Viewer::word_select(
-  self : Viewer,
-  controller : @cursor.CursorsController,
-  view_position : @base_common.Position,
-) -> Unit {
-  guard self.get_model() is Some(model) else { return }
-  let snapshot = model.snapshot
-  let position = self.view_to_model(view_position)
-  let (start_column, end_column) = word_range(
-    snapshot.line_text(position.line_number - 1),
-    position.column - 1,
+  self.reveal_view_cursor(
+    horizontal~,
+    source="mouse",
+    minimal_reveal=true,
+    scroll_type=Smooth,
   )
-  let start = @base_common.Position::Position(
-    position.line_number,
-    start_column + 1,
-  )
-  let active = @base_common.Position::Position(
-    position.line_number,
-    end_column + 1,
-  )
-  controller.set_model_cursor_state(
-    @cursor.SingleCursorState::new(start, active, Word, active),
-  )
-}
-
-///|
-/// `CursorMoveCommands.word` (in selection mode): extend the selection to the
-/// word boundary at the pointer — the word start when dragging before the
-/// anchor, the word end when dragging at or after it.
-fn Viewer::word_select_drag(
-  self : Viewer,
-  controller : @cursor.CursorsController,
-  view_position : @base_common.Position,
-) -> Unit {
-  guard self.get_model() is Some(model) else { return }
-  let snapshot = model.snapshot
-  let position = self.view_to_model(view_position)
-  let state = controller.model_state()
-  let (start_column, end_column) = word_range(
-    snapshot.line_text(position.line_number - 1),
-    position.column - 1,
-  )
-  let anchor = state.selection_start_start
-  let active : @base_common.Position = if position.line_number <
-    anchor.line_number ||
-    (
-      position.line_number == anchor.line_number &&
-      position.column < anchor.column
-    ) {
-    Position(position.line_number, start_column + 1)
-  } else {
-    Position(position.line_number, end_column + 1)
-  }
-  controller.set_model_cursor_state(state.moved(true, active))
 }
 
 ///|
@@ -229,57 +182,4 @@ fn Viewer::view_to_model(
       .view_position_to_model_position(view_position)
     None => view_position
   }
-}
-
-///|
-/// The end position of a one-click line selection: the start of the next model
-/// line, or the end of the last line when the clicked line is the last. Pure
-/// 0-based helper (0-based `line` in, 0-based `(line, column)` out); callers
-/// convert to/from 1-based `Position`.
-fn line_select_end(snapshot : @model.TextSnapshot, line : Int) -> (Int, Int) {
-  if line + 1 < snapshot.line_count() {
-    (line + 1, 0)
-  } else {
-    (line, snapshot.line_text(line).length())
-  }
-}
-
-///|
-/// The half-open zero-based column range of the word touching `column` in
-/// `line_text`. Mirrors Monaco's default word selection: a run of word
-/// characters (alphanumerics plus `_$` and non-ASCII letters) bounds the word;
-/// clicking off any word selects the single character under the pointer.
-fn word_range(line_text : String, column : Int) -> (Int, Int) {
-  let length = line_text.length()
-  let column = @base_common.clamp_int(column, 0, length)
-  let in_word = column < length && is_word_char(line_text[column].to_int())
-  let at_word_end = column > 0 && is_word_char(line_text[column - 1].to_int())
-  if !in_word && !at_word_end {
-    // Off any word: select the single character under the pointer, if any.
-    if column < length {
-      return (column, column + 1)
-    }
-    return (column, column)
-  }
-  let mut start = column
-  while start > 0 && is_word_char(line_text[start - 1].to_int()) {
-    start = start - 1
-  }
-  let mut end = column
-  while end < length && is_word_char(line_text[end].to_int()) {
-    end = end + 1
-  }
-  (start, end)
-}
-
-///|
-/// Whether a UTF-16 code unit is a word character (alphanumerics, `_`, `$`, and
-/// non-ASCII), Monaco's default word-separator complement.
-fn is_word_char(code : Int) -> Bool {
-  (code >= 'a'.to_int() && code <= 'z'.to_int()) ||
-  (code >= 'A'.to_int() && code <= 'Z'.to_int()) ||
-  (code >= '0'.to_int() && code <= '9'.to_int()) ||
-  code == '_'.to_int() ||
-  code == '$'.to_int() ||
-  code > 127
 }

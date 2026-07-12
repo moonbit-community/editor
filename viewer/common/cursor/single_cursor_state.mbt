@@ -17,14 +17,17 @@ pub(all) enum SelectionStartKind {
 /// orientation. Positions are one-based (`line_number`, UTF-16 `column`),
 /// matching Monaco's `Position`.
 ///
-/// `leftover_visible_column` (Monaco's `leftoverVisibleColumns` for sticky
-/// vertical movement) has no readonly mouse-selection role and is omitted until
-/// keyboard navigation lands.
+/// The two leftover-visible-column fields retain the desired visual column
+/// while vertical movement crosses lines of different widths. The anchor-side
+/// value is preserved while extending a selection; collapsing a selection
+/// replaces both values with the active movement residue.
 pub(all) struct SingleCursorState {
   selection_start_start : @base_common.Position
   selection_start_end : @base_common.Position
   selection_start_kind : SelectionStartKind
+  selection_start_leftover_visible_columns : Int
   position : @base_common.Position
+  leftover_visible_columns : Int
 } derive(Eq, Debug)
 
 ///|
@@ -34,8 +37,17 @@ pub fn SingleCursorState::new(
   selection_start_end : @base_common.Position,
   selection_start_kind : SelectionStartKind,
   position : @base_common.Position,
+  selection_start_leftover_visible_columns? : Int = 0,
+  leftover_visible_columns? : Int = 0,
 ) -> SingleCursorState {
-  { selection_start_start, selection_start_end, selection_start_kind, position }
+  {
+    selection_start_start,
+    selection_start_end,
+    selection_start_kind,
+    selection_start_leftover_visible_columns,
+    position,
+    leftover_visible_columns,
+  }
 }
 
 ///|
@@ -86,11 +98,19 @@ pub fn SingleCursorState::moved(
   self : SingleCursorState,
   in_selection_mode : Bool,
   position : @base_common.Position,
+  leftover_visible_columns? : Int = 0,
 ) -> SingleCursorState {
   if in_selection_mode {
-    { ..self, position, }
+    { ..self, position, leftover_visible_columns }
   } else {
-    SingleCursorState::new(position, position, Simple, position)
+    SingleCursorState::new(
+      position,
+      position,
+      Simple,
+      position,
+      selection_start_leftover_visible_columns=leftover_visible_columns,
+      leftover_visible_columns~,
+    )
   }
 }
 

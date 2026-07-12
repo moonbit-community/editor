@@ -45,8 +45,8 @@ pub struct DragScrolling {
   // private fields
 }
 pub fn DragScrolling::dispose(Self) -> Unit
-pub fn DragScrolling::new(DragScrollingDirection, PointerHandlerHelper, MouseTargetFactory, (@browser.MouseTarget, Bool) -> Unit) -> Self
-pub fn DragScrolling::set_dispatch(Self, (@browser.MouseTarget, Bool) -> Unit) -> Unit
+pub fn DragScrolling::new(DragScrollingDirection, PointerHandlerHelper, MouseTargetFactory, (@browser.MouseTarget, Bool, NavigationCommandRevealType) -> Unit) -> Self
+pub fn DragScrolling::set_dispatch(Self, (@browser.MouseTarget, Bool, NavigationCommandRevealType) -> Unit) -> Unit
 pub fn DragScrolling::start(Self, @browser.MouseTarget, @browser.EditorMouseEvent) -> Unit
 pub fn DragScrolling::stop(Self) -> Unit
 
@@ -120,6 +120,7 @@ pub fn HitTestRequest::would_benefit_from_hit_test_target_switch(Self) -> Bool
 pub(all) struct MouseDispatchData {
   position : @common.Position
   mouse_column : Int
+  reveal_type : NavigationCommandRevealType
   started_on_line_numbers : Bool
   in_selection_mode : Bool
   mouse_down_count : Int
@@ -164,6 +165,12 @@ pub fn MouseTargetFactory::create_mouse_target(Self, PointerHandlerLastRenderDat
 pub fn MouseTargetFactory::get_mouse_column(Self, @browser.CoordinatesRelativeToEditor) -> Int
 pub fn MouseTargetFactory::mouse_target_is_widget(Self, @browser.EditorMouseEvent) -> Bool
 pub fn MouseTargetFactory::new(PointerHandlerHelper) -> Self
+
+pub(all) enum NavigationCommandRevealType {
+  Regular
+  Minimal
+  None
+} derive(Eq, @debug.Debug)
 
 pub(all) struct PointerHandlerHelper {
   view_dom_node : @dom.Element

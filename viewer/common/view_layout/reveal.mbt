@@ -1,8 +1,6 @@
 ///|
 /// Monaco's `VerticalRevealType` (`vs/editor/common/viewEvents.ts`): how a
-/// reveal aligns the target range inside the viewport. The `Mouse`-only variant
-/// is omitted — the viewer has no mouse-driven reveal source, so the
-/// scroll-off / `minimalReveal` padding it controls does not apply here.
+/// reveal aligns the target range inside the viewport.
 pub(all) enum VerticalRevealType {
   Simple
   Center
@@ -28,13 +26,14 @@ pub(all) enum VerticalRevealType {
 /// - No `cursorSurroundingLines` / sticky-scroll scroll-off padding, so
 ///   `paddingTop = paddingBottom = 0` (`viewLines.ts:720`–`:736`). Only the
 ///   behavioral `+1 line` bottom pad for `Simple` / `Bottom` survives
-///   (`:737`–`:742`), so the last line clears the horizontal scrollbar.
-/// - No `minimalReveal`, no multi-selection. The box is always a single range,
-///   so an oversized box reveals its top (Monaco's single-range branch,
-///   `:754`) instead of returning the `-1` abort sentinel — that sentinel is
-///   reserved for the oversized multi-cursor case the viewer never exposes.
-///   This port therefore does not produce `-1.0`; `Viewer::send_reveal_range`
-///   still guards on it defensively.
+///   (`:737`–`:742`) only when `minimal_reveal=false`. Mouse-source regular
+///   reveals add the source's one-line top pad; minimal cursor reveals add no
+///   top/bottom padding.
+/// - No multi-selection. The box is always a single range, so an oversized box
+///   reveals its top (Monaco's single-range branch, `:754`) instead of returning
+///   the `-1` abort sentinel — that sentinel is reserved for the oversized
+///   multi-cursor case the viewer never exposes. This port therefore does not
+///   produce `-1.0`; `Viewer::send_reveal_range` still guards on it defensively.
 ///
 /// The returned value is unclamped (it may be negative, e.g. a `NearTop` reveal
 /// near the document top); `Scrollable::set_position` clamps it into the valid
@@ -44,16 +43,27 @@ pub fn ViewLayout::compute_scroll_top_to_reveal_range(
   start_line : Int,
   end_line : Int,
   vertical_type : VerticalRevealType,
+  source? : String = "",
+  minimal_reveal? : Bool = false,
 ) -> Double {
-  let viewport_start_y = self.position().scroll_top
+  // The source uses the future viewport so consecutive animated reveal
+  // requests compose against their already-requested destination.
+  let viewport_start_y = self.future_position().scroll_top
   let viewport_height = self.dimensions().height
   let viewport_end_y = viewport_start_y + viewport_height
   let line_height = self.line_height.to_double()
-  let box_start_y = self.vertical_offset_for_line(start_line)
+  let mut box_start_y = self.vertical_offset_for_line(start_line)
   let mut box_end_y = self.vertical_offset_for_line(end_line) + line_height
-  match vertical_type {
-    Simple | Bottom => box_end_y += line_height
-    _ => ()
+  let should_ignore_scroll_off = source == "mouse" || minimal_reveal
+  if should_ignore_scroll_off && !minimal_reveal {
+    // Reveal one more line above for a non-minimal mouse drag.
+    box_start_y -= line_height
+  }
+  if !minimal_reveal {
+    match vertical_type {
+      Simple | Bottom => box_end_y += line_height
+      _ => ()
+    }
   }
   if box_end_y - box_start_y > viewport_height {
     // The box is larger than the viewport: a single range, so reveal its top.
@@ -137,6 +147,7 @@ pub fn ViewLayout::compute_scroll_left_to_reveal(
   self : ViewLayout,
   ranges : Array[(Double, Double)],
   vertical_scrollbar_width~ : Double,
+  minimal_reveal? : Bool = false,
 ) -> Double? {
   guard ranges.length() > 0 else { return None }
   let mut box_start_x = ranges[0].0.round()
@@ -146,10 +157,12 @@ pub fn ViewLayout::compute_scroll_left_to_reveal(
     box_start_x = min_double(box_start_x, left.round())
     box_end_x = max_double(box_end_x, (left + width).round())
   }
-  // No `minimalReveal` in the viewer, so the left/right reveal padding always
-  // applies (`viewLines.ts:821`–`:823`).
-  box_start_x = max_double(0.0, box_start_x - horizontal_extra_px)
-  box_end_x += reveal_horizontal_right_padding
+  if !minimal_reveal {
+    box_start_x = max_double(0.0, box_start_x - horizontal_extra_px)
+    box_end_x += reveal_horizontal_right_padding
+  }
+  // Horizontal measurement uses the current viewport; only the vertical
+  // reveal composition above consults the future animated destination.
   let viewport_start_x = self.position().scroll_left
   let viewport_end_x = viewport_start_x +
     self.dimensions().width -

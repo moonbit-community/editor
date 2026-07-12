@@ -464,7 +464,9 @@ test "DragScrolling disposal cancels and disables its pending animation frame" {
     TopBottom,
     helper,
     factory,
-    (_position, _in_selection_mode) => abort("disposed rAF dispatched"),
+    (_position, _in_selection_mode, _reveal_type) => {
+      abort("disposed rAF dispatched")
+    },
     create_outside_editor(1, Position(1, 1), Below, 20.0),
     editor_event,
   )

@@ -60,6 +60,29 @@ priv struct EditorCommand {
 }
 
 ///|
+/// `CoreEditorCommand<T>` (`coreCommands.ts:38-49`) with its abstract member
+/// represented by a stored closure. `precondition=None` is the source's
+/// `undefined`; keybinding `kbExpr` remains a separate rule predicate.
+priv struct CoreEditorCommand {
+  id : String
+  precondition : ((Viewer) -> Bool)?
+  default_args : CursorCoreCommandArgs
+  run_core_editor_command : (
+    Viewer,
+    @view_model.ViewModel,
+    CursorCoreCommandArgs,
+  ) -> Bool
+}
+
+///|
+/// The heterogeneous command table stores ordinary contribution commands and
+/// typed cursor core commands under their real IDs.
+priv enum RegisteredEditorCommand {
+  RegisteredEditor(EditorCommand)
+  RegisteredCore(CoreEditorCommand)
+}
+
+///|
 /// One keybinding rule (`KeybindingsRegistry.registerKeybindingRule` row):
 /// a `KeyboardEvent.key` value plus the three modifier axes the viewer's
 /// bindings use (`KeyMod.Alt`, `KeyMod.CtrlCmd`, `KeyMod.Shift`). The
@@ -76,6 +99,7 @@ priv struct KeybindingRule {
   ctrl_cmd : Bool
   shift : Bool
   command_id : String
+  when : (Viewer) -> Bool
 }
 
 ///|
@@ -83,7 +107,7 @@ priv struct KeybindingRule {
 /// (`EditorContributionRegistry.INSTANCE`).
 priv struct EditorContributionRegistry {
   contributions : Array[EditorContributionDescription]
-  commands : Map[String, EditorCommand]
+  commands : Map[String, RegisteredEditorCommand]
   keybindings : Array[KeybindingRule]
 }
 
@@ -110,14 +134,141 @@ fn EditorContributionRegistry::register_editor_command(
   shift_keybindings? : Array[(String, Bool, Bool)] = [],
 ) -> Unit {
   let command : EditorCommand = { id, precondition, run }
-  self.commands.set(command.id, command)
+  self.commands.set(command.id, RegisteredEditor(command))
   for binding in keybindings {
     let (key, alt, ctrl_cmd) = binding
-    self.keybindings.push({ key, alt, ctrl_cmd, shift: false, command_id: id })
+    self.keybindings.push({
+      key,
+      alt,
+      ctrl_cmd,
+      shift: false,
+      command_id: id,
+      when: precondition,
+    })
   }
   for binding in shift_keybindings {
     let (key, alt, ctrl_cmd) = binding
-    self.keybindings.push({ key, alt, ctrl_cmd, shift: true, command_id: id })
+    self.keybindings.push({
+      key,
+      alt,
+      ctrl_cmd,
+      shift: true,
+      command_id: id,
+      when: precondition,
+    })
+  }
+}
+
+///|
+/// `registerEditorCommand` for one source-shaped cursor core command. Command
+/// preconditions and keybinding context are intentionally independent: the
+/// scoped commands have undefined preconditions while their 16 primary keys
+/// retain the viewer's live text-input/model gate.
+fn EditorContributionRegistry::register_core_editor_command(
+  self : EditorContributionRegistry,
+  command : CoreEditorCommand,
+  keybinding_when : (Viewer) -> Bool,
+  keybindings : Array[(String, Bool, Bool)],
+  shift_keybindings? : Array[(String, Bool, Bool)] = [],
+) -> Unit {
+  self.commands.set(command.id, RegisteredCore(command))
+  for binding in keybindings {
+    let (key, alt, ctrl_cmd) = binding
+    self.keybindings.push({
+      key,
+      alt,
+      ctrl_cmd,
+      shift: false,
+      command_id: command.id,
+      when: keybinding_when,
+    })
+  }
+  for binding in shift_keybindings {
+    let (key, alt, ctrl_cmd) = binding
+    self.keybindings.push({
+      key,
+      alt,
+      ctrl_cmd,
+      shift: true,
+      command_id: command.id,
+      when: keybinding_when,
+    })
+  }
+}
+
+///|
+/// `CoreEditorCommand.runEditorCommand`: resolve the active view model, return
+/// without one, and pass the logical empty-object fallback to the abstract
+/// core member.
+fn CoreEditorCommand::run_editor_command(
+  self : CoreEditorCommand,
+  viewer : Viewer,
+  args? : CursorCoreCommandArgs,
+) -> Bool {
+  match self.precondition {
+    Some(precondition) if !precondition(viewer) => return false
+    _ => ()
+  }
+  guard viewer.get_view_model() is Some(view_model) else { return false }
+  (self.run_core_editor_command)(
+    viewer,
+    view_model,
+    match args {
+      Some(args) => args
+      None => self.default_args
+    },
+  )
+}
+
+///|
+/// Direct `runCoreEditorCommand` routing used by `ViewController`, which
+/// already owns the active view model. The command is still resolved from the
+/// process-wide registration table by its source ID.
+fn EditorContributionRegistry::run_core_editor_command(
+  self : EditorContributionRegistry,
+  viewer : Viewer,
+  view_model : @view_model.ViewModel,
+  id : String,
+  args? : CursorCoreCommandArgs,
+) -> Bool {
+  match self.commands.get(id) {
+    Some(RegisteredCore(command)) => {
+      match command.precondition {
+        Some(precondition) if !precondition(viewer) => return false
+        _ => ()
+      }
+      (command.run_core_editor_command)(
+        viewer,
+        view_model,
+        match args {
+          Some(args) => args
+          None => command.default_args
+        },
+      )
+    }
+    _ => false
+  }
+}
+
+///|
+/// Full editor-command routing for callers that do not already hold the view
+/// model (for example the registered keyboard resolver).
+fn EditorContributionRegistry::run_editor_command(
+  self : EditorContributionRegistry,
+  viewer : Viewer,
+  id : String,
+  args? : CursorCoreCommandArgs,
+) -> Bool {
+  match self.commands.get(id) {
+    Some(RegisteredEditor(command)) =>
+      if (command.precondition)(viewer) {
+        (command.run)(viewer)
+        true
+      } else {
+        false
+      }
+    Some(RegisteredCore(command)) => command.run_editor_command(viewer, args?)
+    None => false
   }
 }
 
@@ -159,13 +310,11 @@ fn EditorContributionRegistry::dispatch_keybinding(
       rule.alt == alt &&
       rule.ctrl_cmd == ctrl_cmd &&
       rule.shift == shift {
-      match self.commands.get(rule.command_id) {
-        Some(command) =>
-          if (command.precondition)(viewer) {
-            (command.run)(viewer)
-            return true
-          }
-        None => ()
+      if (rule.when)(viewer) && self.commands.contains(rule.command_id) {
+        // A winning keybinding is handled even when its core movement reaches
+        // a hard document boundary and reports no state change.
+        self.run_editor_command(viewer, rule.command_id) |> ignore
+        return true
       }
     }
   }
@@ -188,7 +337,10 @@ let editor_registry_holder : EditorRegistryHolder = { registry: None }
 /// The singleton (`EditorContributionRegistry.INSTANCE`), populated once.
 /// Registration order preserves the construction order the hand-wiring had
 /// (comments was the only constructor-time wiring; the hover
-/// registration follows its Monaco contribution file).
+/// registration follows its Monaco contribution file). Cursor navigation
+/// commands register last: this is the approved local substitute for Monaco's
+/// keybinding weights/context expressions, so a focused hover's matching
+/// EditorContrib rule resolves before the EditorCore cursor rule.
 fn editor_registry() -> EditorContributionRegistry {
   match editor_registry_holder.registry {
     Some(registry) => registry
@@ -203,6 +355,7 @@ fn editor_registry() -> EditorContributionRegistry {
       register_hover_contribution(registry)
       register_inlay_hints_contribution(registry)
       register_quick_diff_contribution(registry)
+      register_cursor_navigation_commands(registry)
       editor_registry_holder.registry = Some(registry)
       registry
     }

@@ -51,8 +51,37 @@ The API is a readonly subset of Monaco's editor API:
 - model, cursor, scroll, mouse, and disposal events.
 
 The viewer is single-cursor: secondary cursor/selection arrays are empty and
-`set_selections` uses the first selection. The `debug_on_did_*` subscriptions
+`set_selections` uses the first selection. The primary Left/Right/Up/Down,
+PageUp/PageDown, Home, and End bindings (with Shift variants) move the cursor;
+a winning binding remains handled at a document boundary. Pointer click/drag,
+word, line, gutter, and select-all gestures use source-shaped command adapters
+and the same transition path. Their runtime-partial argument shapes return
+before mutation when required position/selection data is absent; the readonly
+model has no undo stack, so Monaco's cursor-command `pushStackElement` calls
+have no local state to update.
+Alternate platform bindings, editable commands, multi-cursor, and column
+selection are outside the readonly surface. The `debug_on_did_*` subscriptions
 are harness observability, not ordinary editor events.
+
+Cursor payload versions are `TextModel.get_version_id()`, never the caller's
+host metadata version. `set_position`/`set_selection` accept an optional
+source, while `set_selections` accepts optional source and reason; their
+defaults are `api`/`NotSet`. Keyboard and ordinary pointer gestures emit
+`keyboard` or `mouse` with `Explicit`;
+four-click SelectAll deliberately keeps source `keyboard`. `set_value` resets
+the cursor to `(1,1)` and emits source `model`/reason `ContentFlush`, old version
+`0`, and `old_selections=None`, even when the visible cursor was already at the
+origin. State is committed and rendering is scheduled before public cursor
+callbacks. Delivery is FIFO and reentrancy-safe: ordinary transitions fire
+position then selection as an adjacent pair, while flush delivery is model
+content, position, then selection.
+
+Cursor-command reveals keep the committed view coordinate. Keyboard commands
+request non-minimal Smooth reveal; pointer MoveTo/Word/Line commands use the
+same Smooth request with `minimalReveal=true` after their `None` gate, so a
+target already at the viewport edge gains no extra vertical or horizontal
+padding. Smooth requests of at most one line downgrade to immediate, and the
+`smooth_scrolling=false` default also commits them immediately.
 
 `ViewerServices` explicitly supplies the language registry, marker and marker-
 decoration services, agent-feedback store, quick-diff store, and logger. Hosts
@@ -65,7 +94,7 @@ There is no current viewer UI for definition or references.
 ```text
 TextModel (caller-owned)
   -> TokenizationTextModelPart
-  -> ViewModel + ViewLayout (per model)
+  -> ViewModel + ViewLayout + cursor outgoing dispatcher (per model)
   -> View + ViewParts (per model, browser only)
   -> requestAnimationFrame read/measure then DOM write
 ```

@@ -4,10 +4,9 @@
 /// sync through the `CursorContext`'s coordinates converter. Setting one side
 /// derives the other (`set_state`), exactly as Monaco's `_setState` does.
 ///
-/// The readonly viewer's model is immutable, so the marker-tracked-range and
-/// model-validation machinery of Monaco's `_setState` is dropped: positions
-/// produced by the hit test and the converter are already valid, and the
-/// converter clamps. That is the only deviation.
+/// Model validation and internal-version snapshots belong to
+/// `CursorsController`; this lower owner only derives the missing coordinate
+/// side. Editable marker-tracked ranges remain outside the readonly contract.
 pub struct Cursor {
   mut model_state : SingleCursorState
   mut view_state : SingleCursorState
@@ -24,6 +23,37 @@ pub fn Cursor::new() -> Cursor {
 }
 
 ///|
+/// Captures the model and view sides together.
+fn Cursor::as_cursor_state(self : Cursor) -> CursorState {
+  CursorState::new(self.model_state, self.view_state)
+}
+
+///|
+/// Source-shaped nullable state entry. Exactly one side is normally supplied;
+/// when both are present the model side remains authoritative and is
+/// reprojected through the live converter. The source's simultaneous
+/// model/view cross-validation surface is intentionally owned by the
+/// controller's documented reduced seam. A double-null input is a no-op.
+fn Cursor::set_state(
+  self : Cursor,
+  context : CursorContext,
+  model_state : SingleCursorState?,
+  view_state : SingleCursorState?,
+) -> Bool {
+  match (model_state, view_state) {
+    (None, None) => false
+    (Some(model_state), _) => {
+      self.set_model_state(context, model_state)
+      true
+    }
+    (None, Some(view_state)) => {
+      self.set_view_state(context, view_state)
+      true
+    }
+  }
+}
+
+///|
 /// Sets the cursor from a view-coordinate state, deriving the model state by
 /// converting every endpoint through the coordinates converter. Mirrors the
 /// "we only have the view state => compute the model state" branch of
@@ -34,11 +64,27 @@ fn Cursor::set_view_state(
   view_state : SingleCursorState,
 ) -> Unit {
   self.view_state = view_state
+  let model_selection_start = context.view_range_to_model(
+    Range(
+      view_state.selection_start_start.line_number,
+      view_state.selection_start_start.column,
+      view_state.selection_start_end.line_number,
+      view_state.selection_start_end.column,
+    ),
+  )
   self.model_state = SingleCursorState::new(
-    context.view_to_model(view_state.selection_start_start),
-    context.view_to_model(view_state.selection_start_end),
+    Position(
+      model_selection_start.start_line_number,
+      model_selection_start.start_column,
+    ),
+    Position(
+      model_selection_start.end_line_number,
+      model_selection_start.end_column,
+    ),
     view_state.selection_start_kind,
     context.view_to_model(view_state.position),
+    selection_start_leftover_visible_columns=view_state.selection_start_leftover_visible_columns,
+    leftover_visible_columns=view_state.leftover_visible_columns,
   )
 }
 
@@ -59,6 +105,8 @@ pub fn Cursor::set_model_state(
     context.model_to_view(model_state.selection_start_end),
     model_state.selection_start_kind,
     context.model_to_view(model_state.position),
+    selection_start_leftover_visible_columns=model_state.selection_start_leftover_visible_columns,
+    leftover_visible_columns=model_state.leftover_visible_columns,
   )
 }
 

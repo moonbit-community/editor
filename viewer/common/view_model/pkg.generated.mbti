@@ -37,6 +37,48 @@ pub fn viewport_data_from_view_model(ViewModel, @view_layout.LineWindow, line_he
 // Errors
 
 // Types and methods
+type CursorEventDispatcher
+
+pub(all) enum CursorMoveDirection {
+  Left
+  Right
+  Up
+  Down
+  PrevBlankLine
+  NextBlankLine
+  WrappedLineStart
+  WrappedLineFirstNonWhitespaceCharacter
+  WrappedLineColumnCenter
+  WrappedLineEnd
+  WrappedLineLastNonWhitespaceCharacter
+  ViewPortTop
+  ViewPortCenter
+  ViewPortBottom
+  ViewPortIfOutside
+} derive(Eq, @debug.Debug)
+pub fn CursorMoveDirection::as_simple(Self) -> SimpleMoveDirection?
+
+pub(all) enum CursorMoveUnit {
+  None
+  Line
+  WrappedLine
+  Character
+  HalfLine
+  FoldedLine
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CursorStateChangedEvent {
+  kind : OutgoingViewModelEventKind
+  old_selections : Array[@core.Selection]?
+  selections : Array[@core.Selection]
+  old_model_version_id : Int
+  model_version_id : Int
+  source : String
+  reason : @cursor.CursorChangeReason
+  reached_max_cursor_count : Bool
+} derive(@debug.Debug)
+pub fn CursorStateChangedEvent::is_no_op(Self) -> Bool
+
 pub(all) struct DecorationToRender {
   start_line_number : Int
   end_line_number : Int
@@ -105,6 +147,10 @@ pub fn MonospaceLineBreaksComputerFactory::create() -> Self
 pub fn MonospaceLineBreaksComputerFactory::create_line_breaks_computer(Self, font_info~ : @config.FontInfo, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : WrappingIndent, word_break? : WordBreak) -> LineBreaksComputer
 pub fn MonospaceLineBreaksComputerFactory::new(String, String) -> Self
 
+pub(all) enum OutgoingViewModelEventKind {
+  CursorStateChanged
+} derive(Eq, @debug.Debug)
+
 pub struct ProjectedCoordinatesConverter {
   lines : ViewModelLinesFromProjectedModel
 }
@@ -144,6 +190,28 @@ pub(all) enum RenderValidationDecorations {
   Off
 } derive(Eq, @debug.Debug)
 
+pub(all) struct SimpleMoveArguments {
+  direction : SimpleMoveDirection
+  unit : CursorMoveUnit
+  select : Bool
+  value : Int
+} derive(Eq, @debug.Debug)
+pub fn SimpleMoveArguments::new(SimpleMoveDirection, CursorMoveUnit, Bool, Int) -> Self
+
+pub(all) enum SimpleMoveDirection {
+  Left
+  Right
+  Up
+  Down
+  PrevBlankLine
+  NextBlankLine
+  WrappedLineStart
+  WrappedLineFirstNonWhitespaceCharacter
+  WrappedLineColumnCenter
+  WrappedLineEnd
+  WrappedLineLastNonWhitespaceCharacter
+} derive(Eq, @debug.Debug)
+
 pub(all) struct ViewLineData {
   content : String
   continues_with_wrapped_line : Bool
@@ -158,6 +226,7 @@ pub struct ViewModel {
   model : @model.TextModel
   mut options : ViewModelOptions
   lines : ViewModelLinesFromProjectedModel
+  cursor_event_dispatcher : CursorEventDispatcher
   cursor : @cursor.CursorsController
   view_layout : @view_layout.ViewLayout
   mut decorations : ViewModelDecorations
@@ -167,11 +236,13 @@ pub struct ViewModel {
 pub fn ViewModel::ViewModel(@model.TextModel) -> Self
 pub fn ViewModel::clamp_window(Self, @view_layout.LineWindow) -> @view_layout.LineWindow
 pub fn ViewModel::coordinates_converter(Self) -> &@core.CoordinatesConverter
+pub fn ViewModel::cursor_page_size(Self) -> Int
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
 pub fn ViewModel::dispose(Self) -> Unit
 pub fn ViewModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModel::get_injected_text_at(Self, @common.Position) -> InjectedText?
 pub fn ViewModel::get_line_content(Self, Int) -> String
+pub fn ViewModel::get_line_last_non_whitespace_column(Self, Int) -> Int
 pub fn ViewModel::get_line_length(Self, Int) -> Int
 pub fn ViewModel::get_line_max_column(Self, Int) -> Int
 pub fn ViewModel::get_line_min_column(Self, Int) -> Int
@@ -181,10 +252,25 @@ pub fn ViewModel::line_count(Self) -> Int
 pub fn ViewModel::lines(Self) -> ViewModelLinesFromProjectedModel
 pub fn ViewModel::model_line_max_column(Self, Int) -> Int
 pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
+pub fn ViewModel::move_cursor(Self, SimpleMoveDirection, Bool, value? : Int, unit? : CursorMoveUnit, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_direction(Self, CursorMoveDirection, Bool, value? : Int, unit? : CursorMoveUnit, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_line(Self, @common.Position, Bool, view_position? : @common.Position, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_line_select_to(Self, @common.Position, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_page(Self, SimpleMoveDirection, Bool, page_size? : Int, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_to(Self, @common.Position, Bool, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_to_line_end(Self, Bool, sticky? : Bool, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_to_line_start(Self, Bool, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_to_model_position(Self, @common.Position, Bool, view_position? : @common.Position, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_with_arguments(Self, SimpleMoveArguments, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_word(Self, @common.Position, Bool, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
 pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ViewModel::on_configuration_changed(Self, ViewModelOptions) -> Bool
+pub fn ViewModel::on_cursor_state_changed(Self, (CursorStateChangedEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::on_did_change_content_or_injected_text(Self, e? : @model.InternalModelContentChangeEvent) -> Unit
+pub fn ViewModel::set_cursor_state(Self, @cursor.PartialCursorState?, String, @cursor.CursorChangeReason) -> Bool
 pub fn ViewModel::set_hidden_areas(Self, Array[@common.Range], source? : String, force_update? : Bool) -> Bool
+pub fn ViewModel::set_model_cursor_state(Self, @cursor.SingleCursorState, String, @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::set_view_cursor_state(Self, @cursor.SingleCursorState, String, @cursor.CursorChangeReason) -> Bool
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::version(Self) -> Int
 pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions, smooth_scrolling? : Bool, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self

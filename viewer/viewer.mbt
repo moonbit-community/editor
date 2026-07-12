@@ -34,6 +34,18 @@ pub struct Viewer {
   priv did_change_cursor_selection : @base_common.Emitter[
     CursorSelectionChangedEvent,
   ]
+  /// ViewModel cursor facts wait here until each item can be delivered as one
+  /// adjacent position/selection pair. The drain gate prevents reentrant
+  /// listeners from interleaving a later pair; content barriers hold Flush
+  /// facts until the corresponding public model-content callback completes.
+  priv cursor_delivery_queue : Array[@view_model.CursorStateChangedEvent]
+  priv mut cursor_delivery_is_draining : Bool
+  priv mut cursor_content_barrier_depth : Int
+  /// Exact model-content versions whose public listeners have completed but
+  /// whose matching Flush cursor fact has not yet been consumed. A nested
+  /// higher version can complete before its outer version, so a scalar high-
+  /// water mark would release the wrong barrier.
+  priv cursor_completed_content_versions : Array[Int]
   priv did_build_view_model : @base_common.Emitter[ViewerViewModelBuiltEvent]
   priv did_render_model : @base_common.Emitter[ViewerModelRenderedEvent]
   priv did_resolve_hover : @base_common.Emitter[ViewerHoverResolvedEvent]
@@ -178,12 +190,20 @@ fn ModelData::dispose(self : ModelData) -> Unit {
 /// the 1-based view line/columns to measure once rendered, plus the scroll-top
 /// band (`[start_scroll_top, stop_scroll_top]`) outside which an intervening
 /// vertical scroll cancels the request.
+priv enum CursorRevealScrollType {
+  Smooth
+  Immediate
+} derive(Eq)
+
+///|
 priv struct HorizontalRevealRangeRequest {
+  minimal_reveal : Bool
   view_line_number : Int
   start_column : Int
   end_column : Int
   start_scroll_top : Double
   stop_scroll_top : Double
+  scroll_type : CursorRevealScrollType
 }
 
 ///|
@@ -202,8 +222,9 @@ pub(all) struct ModelChangedEvent {
 
 ///|
 /// Monaco's `CursorChangeReason` (`cursorEvents.ts`). The readonly viewer's
-/// cursor only moves explicitly (API or mouse), so today only `NotSet` and
-/// `Explicit` are fired; the editing reasons exist for shape parity.
+/// live readonly producers fire `NotSet` for API defaults, `Explicit` for
+/// keyboard/pointer gestures, and `ContentFlush` for `set_value`; the editing
+/// reasons remain available for caller-supplied `set_selections` metadata.
 pub(all) enum CursorChangeReason {
   NotSet
   ContentFlush
@@ -226,13 +247,13 @@ pub(all) struct CursorPositionChangedEvent {
 
 ///|
 /// Monaco's `ICursorSelectionChangedEvent`, single-cursor: the secondary
-/// arrays are always empty, and `old_selections` is at most one element
-/// (empty before the first cursor exists).
+/// arrays are always empty, and `old_selections` is `None` for ContentFlush or
+/// `Some([old_primary])` for ordinary transitions.
 pub(all) struct CursorSelectionChangedEvent {
   selection : @core.Selection
   secondary_selections : Array[@core.Selection]
   model_version_id : Int
-  old_selections : Array[@core.Selection]
+  old_selections : Array[@core.Selection]?
   old_model_version_id : Int
   source : String
   reason : CursorChangeReason
@@ -304,6 +325,10 @@ pub fn Viewer::Viewer(
     did_change_model_content: @base_common.Emitter::new(),
     did_change_cursor_position: @base_common.Emitter::new(),
     did_change_cursor_selection: @base_common.Emitter::new(),
+    cursor_delivery_queue: [],
+    cursor_delivery_is_draining: false,
+    cursor_content_barrier_depth: 0,
+    cursor_completed_content_versions: [],
     did_build_view_model: @base_common.Emitter::new(),
     did_render_model: @base_common.Emitter::new(),
     did_resolve_hover: @base_common.Emitter::new(),
@@ -688,6 +713,7 @@ pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
 fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
   guard self.model_data is Some(model_data) else { return None }
   self.cancel_render_frame()
+  self.reset_cursor_delivery()
   let model = model_data.model
   // Feature state belongs to the outgoing model: the per-model resets Track
   // C moved onto the controllers, plus the widget teardown.
@@ -1003,43 +1029,6 @@ pub fn Viewer::set_scroll_position(
     None => position.scroll_left
   }
   view_model.view_layout.scroll_to(scroll_top~, scroll_left~) |> ignore
-}
-
-///|
-/// Scrolls by a line-count delta using the configured line height — the
-/// keyboard arrow-scroll step.
-fn Viewer::scroll_by_lines(self : Viewer, lines : Int) -> Unit {
-  guard self.get_view_model() is Some(view_model) else { return }
-  view_model.view_layout.scroll_by(
-    delta_top=(lines * self.font_info.line_height).to_double(),
-  )
-  |> ignore
-}
-
-///|
-/// Scrolls by a viewport-height page delta — the PageUp/PageDown step.
-fn Viewer::scroll_by_pages(self : Viewer, pages : Int) -> Unit {
-  guard self.get_view_model() is Some(view_model) else { return }
-  view_model.view_layout.scroll_by(
-    delta_top=pages.to_double() * view_model.view_layout.dimensions().height,
-  )
-  |> ignore
-}
-
-///|
-/// Scrolls to the top of the document — the Home key.
-fn Viewer::scroll_home(self : Viewer) -> Unit {
-  guard self.get_view_model() is Some(view_model) else { return }
-  view_model.view_layout.scroll_to(scroll_top=0.0) |> ignore
-}
-
-///|
-/// Scrolls to the bottom of the document — the End key.
-fn Viewer::scroll_end(self : Viewer) -> Unit {
-  guard self.get_view_model() is Some(view_model) else { return }
-  let dimensions = view_model.view_layout.dimensions()
-  view_model.view_layout.scroll_to(scroll_top=dimensions.scroll_height)
-  |> ignore
 }
 
 ///|

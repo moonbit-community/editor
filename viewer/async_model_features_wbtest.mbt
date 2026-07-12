@@ -468,6 +468,65 @@ fn shown_hover_controller() -> @hover.HoverController {
 }
 
 ///|
+test "invisible hover dismissal cancels work without changing render inputs" {
+  let services = ViewerServices::new(languages=@languages.Languages::new())
+  let viewer = Viewer(services~)
+  viewer.set_model(
+    Some(async_test_model("/hover-invisible-dismiss.mbt", "hover")),
+  )
+  let hc = viewer.content_hover_controller().unwrap()
+  let (_, pending) = hc.hover.start_showing_or_update_hover(
+    async_hover_anchor(),
+    false,
+  )
+  hc.hover = pending
+  let request = new_feature_cancellation_source()
+  hc.begin_request(request, pending.operation.token)
+  let token_before = pending.operation.token
+  let generation_before = viewer.content_generation
+
+  viewer.hide_content_hover()
+
+  assert_true(request.token().is_cancellation_requested())
+  assert_true(hc.hover.operation.token > token_before)
+  assert_true(hc.hover.operation.state is HoverOpIdle)
+  assert_true(hc.hover.view is None)
+  assert_eq(viewer.content_generation, generation_before)
+
+  // Cancellation remains unconditional even when the controller is already
+  // invisible; only its absence of render/DOM input is idempotent.
+  let first_clear_token = hc.hover.operation.token
+  viewer.hide_content_hover()
+  assert_true(hc.hover.operation.token > first_clear_token)
+  assert_eq(viewer.content_generation, generation_before)
+
+  viewer.dispose()
+  dispose_explicit_services(services)
+}
+
+///|
+test "visible hover dismissal clears the view and invalidates rendered content" {
+  let services = ViewerServices::new(languages=@languages.Languages::new())
+  let viewer = Viewer(services~)
+  viewer.set_model(
+    Some(async_test_model("/hover-visible-dismiss.mbt", "hover")),
+  )
+  let hc = viewer.content_hover_controller().unwrap()
+  hc.hover = shown_hover_controller()
+  let token_before = hc.hover.operation.token
+  let generation_before = viewer.content_generation
+
+  viewer.hide_content_hover()
+
+  assert_true(hc.hover.operation.token > token_before)
+  assert_true(hc.hover.view is None)
+  assert_eq(viewer.content_generation, generation_before + 1)
+
+  viewer.dispose()
+  dispose_explicit_services(services)
+}
+
+///|
 test "content invalidation cancels hover request but preserves shown view" {
   let services = ViewerServices::new(languages=@languages.Languages::new())
   let viewer = Viewer(services~)

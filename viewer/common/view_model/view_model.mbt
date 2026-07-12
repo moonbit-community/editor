@@ -11,6 +11,8 @@ pub struct ViewModel {
   model : @model.TextModel
   mut options : ViewModelOptions
   lines : ViewModelLinesFromProjectedModel
+  /// Outgoing-only cursor half of Monaco's `ViewModelEventDispatcher`.
+  cursor_event_dispatcher : CursorEventDispatcher
   /// The cursor state, owned per view model like Monaco's `_cursor`
   /// (`viewModelImpl.ts:65,124`): a new model starts with a fresh cursor at
   /// the origin, and reflows re-point it internally
@@ -64,7 +66,9 @@ pub fn ViewModel::with_options(
   let coordinates_converter = lines.create_coordinates_converter()
   // Monaco's member order: `_lines` → `coordinatesConverter` → `_cursor` →
   // `viewLayout` (`viewModelImpl.ts:122-126`) → `_decorations` (`:146`).
+  let cursor_event_dispatcher = CursorEventDispatcher::new()
   let cursor = @cursor.CursorsController::new(
+    model,
     @cursor.CursorContext::new(coordinates_converter),
   )
   let view_layout = @view_layout.ViewLayout::new(
@@ -85,6 +89,7 @@ pub fn ViewModel::with_options(
     model,
     options,
     lines,
+    cursor_event_dispatcher,
     cursor,
     view_layout,
     decorations,
@@ -105,17 +110,17 @@ pub fn ViewModel::with_options(
 ///|
 /// Detaches this view model from its model — the live half of Monaco's
 /// `ViewModel.dispose` (`viewModelImpl.ts:172-181`):
-/// `this.model.unregisterViewModel(this)`. The decorations/lines/event
-/// dispatcher own no timers or subscriptions in the viewer, so
-/// unregistration is the only teardown. Called from the Viewer's
-/// `ModelData::dispose`.
+/// `this.model.unregisterViewModel(this)`. The outgoing dispatcher owns its
+/// registered cursor listeners and is retired here before layout teardown.
+/// Called from the Viewer's `ModelData::dispose`.
 pub fn ViewModel::dispose(self : ViewModel) -> Unit {
+  self.cursor_event_dispatcher.dispose()
+  self.view_layout.dispose()
   match self.registered_view_model {
     Some(registered) => self.model.unregister_view_model(registered)
     None => ()
   }
   self.registered_view_model = None
-  self.view_layout.dispose()
 }
 
 ///|
@@ -264,7 +269,8 @@ pub impl @model.ViewModel for ViewModel with fn emit_content_change_event(
   self,
   e,
 ) {
-  self.cursor.on_model_content_changed(e)
+  self.emit_cursor_state_change(self.cursor.on_model_content_changed(e))
+  |> ignore
 }
 
 ///|

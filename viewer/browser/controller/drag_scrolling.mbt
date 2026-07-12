@@ -17,9 +17,6 @@
 //     (1-based half-open, so `end - 1` is the inclusive edge line).
 //
 // Omissions:
-//   * `NavigationCommandRevealType` — the dispatch seam carries no reveal
-//     types (see `MouseDispatchData`); `_dispatchMouse` is
-//     `(target, in_selection_mode)`.
 //   * The `LeftRight` operation's `!this._position.position` null-check —
 //     this port's `MouseTargetOutsideEditor` always carries a position.
 
@@ -35,7 +32,11 @@ pub struct DragScrolling {
   priv direction : DragScrollingDirection
   priv view_helper : PointerHandlerHelper
   priv mouse_target_factory : MouseTargetFactory
-  priv mut dispatch_mouse : (@editor_browser.MouseTarget, Bool) -> Unit
+  priv mut dispatch_mouse : (
+    @editor_browser.MouseTarget,
+    Bool,
+    NavigationCommandRevealType,
+  ) -> Unit
   priv mut operation : DragScrollingOperation?
 }
 
@@ -47,7 +48,11 @@ pub struct DragScrolling {
 /// immediately afterwards (mouse_handler.mbt).
 pub fn DragScrolling::set_dispatch(
   self : DragScrolling,
-  dispatch_mouse : (@editor_browser.MouseTarget, Bool) -> Unit,
+  dispatch_mouse : (
+    @editor_browser.MouseTarget,
+    Bool,
+    NavigationCommandRevealType,
+  ) -> Unit,
 ) -> Unit {
   self.dispatch_mouse = dispatch_mouse
 }
@@ -57,7 +62,11 @@ pub fn DragScrolling::new(
   direction : DragScrollingDirection,
   view_helper : PointerHandlerHelper,
   mouse_target_factory : MouseTargetFactory,
-  dispatch_mouse : (@editor_browser.MouseTarget, Bool) -> Unit,
+  dispatch_mouse : (
+    @editor_browser.MouseTarget,
+    Bool,
+    NavigationCommandRevealType,
+  ) -> Unit,
 ) -> DragScrolling {
   {
     direction,
@@ -115,7 +124,11 @@ priv struct DragScrollingOperation {
   direction : DragScrollingDirection
   view_helper : PointerHandlerHelper
   mouse_target_factory : MouseTargetFactory
-  dispatch_mouse : (@editor_browser.MouseTarget, Bool) -> Unit
+  dispatch_mouse : (
+    @editor_browser.MouseTarget,
+    Bool,
+    NavigationCommandRevealType,
+  ) -> Unit
   mut position : @editor_browser.MouseTarget
   mut mouse_event : @editor_browser.EditorMouseEvent
   mut last_time : Double
@@ -128,7 +141,11 @@ fn DragScrollingOperation::new(
   direction : DragScrollingDirection,
   view_helper : PointerHandlerHelper,
   mouse_target_factory : MouseTargetFactory,
-  dispatch_mouse : (@editor_browser.MouseTarget, Bool) -> Unit,
+  dispatch_mouse : (
+    @editor_browser.MouseTarget,
+    Bool,
+    NavigationCommandRevealType,
+  ) -> Unit,
   position : @editor_browser.MouseTarget,
   mouse_event : @editor_browser.EditorMouseEvent,
 ) -> DragScrollingOperation {
@@ -287,7 +304,7 @@ fn DragScrollingOperation::execute(self : DragScrollingOperation) -> Unit {
           )
         }
       }
-      (self.dispatch_mouse)(mouse_target, true)
+      (self.dispatch_mouse)(mouse_target, true, None)
       self.schedule()
     }
     LeftRight => {
@@ -323,7 +340,7 @@ fn DragScrollingOperation::execute(self : DragScrollingOperation) -> Unit {
           outside_distance,
         )
       }
-      (self.dispatch_mouse)(mouse_target, true)
+      (self.dispatch_mouse)(mouse_target, true, None)
       self.schedule()
     }
   }

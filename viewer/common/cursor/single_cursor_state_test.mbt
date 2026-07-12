@@ -42,3 +42,29 @@ test "dragging backward across a word anchor keeps the far edge" {
   // The kind is preserved while extending.
   assert_true(backward.selection_start_kind == Word)
 }
+
+///|
+test "selection movement preserves anchor residue and replaces active residue" {
+  let state = SingleCursorState::new(
+    pos(1, 3),
+    pos(1, 3),
+    Simple,
+    pos(1, 5),
+    selection_start_leftover_visible_columns=4,
+    leftover_visible_columns=7,
+  )
+  let moved = state.moved(true, pos(2, 2), leftover_visible_columns=9)
+  assert_eq(moved.selection_start_leftover_visible_columns, 4)
+  assert_eq(moved.leftover_visible_columns, 9)
+}
+
+///|
+test "collapsing movement applies one residue to both cursor ends" {
+  let state = SingleCursorState::collapsed(pos(1, 3)).moved(
+    false,
+    pos(2, 2),
+    leftover_visible_columns=6,
+  )
+  assert_eq(state.selection_start_leftover_visible_columns, 6)
+  assert_eq(state.leftover_visible_columns, 6)
+}

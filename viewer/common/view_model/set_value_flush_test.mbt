@@ -47,15 +47,14 @@ test "public content listeners observe already-updated view models (two-loop ord
 test "flush resets the cursor to the origin (cursor.ts ContentFlush branch)" {
   let model = plain_text_model("one\ntwo\nthree")
   let view_model = @view_model.ViewModel(model)
-  view_model.cursor.move_to(@base_common.Position(3, 4), false)
+  view_model.cursor.move_to(Position(3, 4), false) |> ignore
   assert_true(
-    view_model.cursor.get_view_selection().get_position() ==
-    @base_common.Position(3, 4),
+    view_model.cursor.get_view_selection().get_position() == Position(3, 4),
   )
   model.set_value("a\nb")
   let selection = view_model.cursor.get_view_selection()
   assert_true(selection.is_empty())
-  assert_true(selection.get_position() == @base_common.Position(1, 1))
+  assert_true(selection.get_position() == Position(1, 1))
 }
 
 ///|
@@ -86,7 +85,7 @@ test "flush resets hidden areas; the injected-text reproject keeps them" {
   let model = plain_text_model("a\nb\nc\nd\ne")
   let view_model = @view_model.ViewModel(model)
   let lines = view_model.lines()
-  assert_true(lines.set_hidden_areas([@base_common.Range::Range(2, 1, 3, 1)]))
+  assert_true(lines.set_hidden_areas([Range(2, 1, 3, 1)]))
   assert_eq(view_model.line_count(), 3)
   // the injected-text form (whole reproject) keeps folded regions
   view_model.on_did_change_content_or_injected_text()

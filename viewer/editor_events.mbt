@@ -206,7 +206,13 @@ fn Viewer::hide_content_hover(self : Viewer) -> Unit {
   guard self.content_hover_controller() is Some(hc) else { return }
   let before = hc.hover
   self.dismiss_hover()
-  self.after_hover_transition(before)
+  // `dismiss_hover` must always rotate the operation token and cancel pending
+  // work, but an invisible-to-invisible cancellation has no render input or
+  // DOM change. In particular, ordinary cursor mouse-down must not request a
+  // frame solely because `HoverOperation.cancel()` advanced its generation.
+  if before.view is Some(_) {
+    self.after_hover_transition(before)
+  }
 }
 
 ///|

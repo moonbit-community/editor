@@ -1,10 +1,11 @@
 ///|
 /// The conversion context a cursor needs, the readonly-viewer reduction of
 /// Monaco's `cursorContext.ts` `CursorContext`. Monaco's holds the model, view
-/// model, coordinates converter, and cursor config; the immutable readonly
-/// viewer needs only the coordinates converter to bridge model and view
-/// positions (no validation against a mutating model, no edit config). The
-/// converter is held through the `ICoordinatesConverter` interface
+/// model, coordinates converter, and cursor config. The local context needs
+/// only the converter to bridge model and view positions; the owning
+/// `CursorsController` separately holds the mutable `TextModel` for validation
+/// and content-version tracking. The converter is held through the
+/// `ICoordinatesConverter` interface
 /// (`viewer/common/core`), like Monaco's
 /// `coordinatesConverter: ICoordinatesConverter` member.
 pub struct CursorContext {
@@ -26,6 +27,18 @@ pub fn CursorContext::view_to_model(
   position : @base_common.Position,
 ) -> @base_common.Position {
   self.coordinates_converter.view_position_to_model_position(position)
+}
+
+///|
+/// Converts the complete view anchor range to model coordinates. The source's
+/// missing-model cursor branch uses the converter's range member as one unit,
+/// which can preserve boundary affinity differently from two unrelated point
+/// conversions.
+fn CursorContext::view_range_to_model(
+  self : CursorContext,
+  range : @base_common.Range,
+) -> @base_common.Range {
+  self.coordinates_converter.view_range_to_model_range(range)
 }
 
 ///|

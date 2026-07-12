@@ -37,8 +37,9 @@ fn Viewer::view_selection(self : Viewer) -> @core.Selection? {
 pub fn Viewer::set_position(
   self : Viewer,
   position : @base_common.Position,
+  source? : String = "api",
 ) -> Unit {
-  self.set_selection(@core.Selection::new(position, position))
+  self.apply_selection(@core.Selection::new(position, position), source, NotSet)
 }
 
 ///|
@@ -54,59 +55,29 @@ pub fn Viewer::set_position(
 pub fn Viewer::set_selection(
   self : Viewer,
   selection : @core.Selection,
+  source? : String = "api",
 ) -> Unit {
-  guard self.get_model() is Some(model) else { return }
+  self.apply_selection(selection, source, NotSet)
+}
+
+///|
+/// Shared public-API transition adapter. Validation, equality, internal
+/// version snapshots, view-state commit, and outgoing delivery all belong to
+/// the ViewModel/controller spine; API setters contribute only source `api`
+/// and neutral reason `NotSet`.
+fn Viewer::apply_selection(
+  self : Viewer,
+  selection : @core.Selection,
+  source : String,
+  reason : @cursor.CursorChangeReason,
+) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
-  let controller = view_model.cursor
-  // The outgoing-event facts Monaco captures before mutating
-  // (`cursor.ts` `_emitStateChangedIfNecessary`): the previous selection set
-  // and model version.
-  let old_selections = [controller.get_model_selection()]
-  let old_model_version_id = model.version
-  // `CursorState.fromModelSelection` (cursorCommon.ts:283-289): the anchor
-  // becomes a collapsed `Simple` range at `selectionStart`, the active end is
-  // `position`. Then `_setState`'s model branch (oneCursor.ts:133-141):
-  // `validateRange` on the anchor, `validatePosition` on the active end.
-  // `set_model_cursor_state` trusts its input (its hit-test/converter callers
-  // are pre-validated), so the clamp must happen here at the boundary.
-  let anchor = selection.get_selection_start()
-  let anchor_range = model.validate_range(
-    Range(anchor.line_number, anchor.column, anchor.line_number, anchor.column),
+  view_model.set_cursor_state(
+    Some(@cursor.CursorState::from_model_selection(selection)),
+    source,
+    reason,
   )
-  let new_state = @cursor.SingleCursorState::new(
-    Position(anchor_range.start_line_number, anchor_range.start_column),
-    Position(anchor_range.end_line_number, anchor_range.end_column),
-    Simple,
-    model.validate_position(selection.get_position()),
-  )
-  // `_emitStateChangedIfNecessary`'s equality gate (cursor.ts:404-406):
-  // setting the exact current state fires nothing. The view state is derived
-  // deterministically from the model state, so comparing the model
-  // `SingleCursorState` (`derive(Eq)`, anchor kind included — matching
-  // Monaco's `SingleCursorState.equals`) covers both of Monaco's gates.
-  if new_state == controller.model_state() {
-    return
-  }
-  controller.set_model_cursor_state(new_state)
-  // "Let the view get the event first" (cursor.ts:410-414): the selection
-  // overlay repaints before the outgoing events fire, the same order the
-  // mouse-driven path uses (`view_controller.mbt`).
-  self.schedule_render()
-  self.did_change_cursor_position.fire({
-    position: new_state.position,
-    secondary_positions: [],
-    reason: Explicit,
-    source: "api",
-  })
-  self.did_change_cursor_selection.fire({
-    selection: controller.get_model_selection(),
-    secondary_selections: [],
-    model_version_id: model.version,
-    old_selections,
-    old_model_version_id,
-    source: "api",
-    reason: Explicit,
-  })
+  |> ignore
 }
 
 ///|
@@ -119,9 +90,37 @@ pub fn Viewer::set_selection(
 pub fn Viewer::set_selections(
   self : Viewer,
   selections : Array[@core.Selection],
+  source? : String = "api",
+  reason? : CursorChangeReason = NotSet,
 ) -> Unit {
   guard selections.length() > 0 else { return }
-  self.set_selection(selections[0])
+  guard self.get_view_model() is Some(view_model) else { return }
+  let states = @cursor.CursorState::from_model_selections(selections)
+  // The source converts every selection in order before `setStates`; this
+  // readonly viewer then applies the first and drops secondaries at its
+  // documented single-cursor boundary.
+  view_model.set_cursor_state(
+    Some(states[0]),
+    source,
+    internal_cursor_change_reason(reason),
+  )
+  |> ignore
+}
+
+///|
+/// Adapts the stable public reason enum to the DOM-free cursor owner.
+fn internal_cursor_change_reason(
+  reason : CursorChangeReason,
+) -> @cursor.CursorChangeReason {
+  match reason {
+    NotSet => NotSet
+    ContentFlush => ContentFlush
+    RecoverFromMarkers => RecoverFromMarkers
+    Explicit => Explicit
+    Paste => Paste
+    Undo => Undo
+    Redo => Redo
+  }
 }
 
 ///|

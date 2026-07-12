@@ -88,12 +88,12 @@ fn add_view_event_listener(
 
 ///|
 /// The readonly viewer's keyboard entry: the registered commands resolve
-/// first (`editor.action.hideHover` on Escape, gated on `hoverVisible`),
-/// then the built-in scroll cluster (the
-/// synthetic-scroll analog of Monaco's `EditorScroll` command family).
+/// in registration order (`editor.action.hideHover` on Escape, the focused
+/// hover navigation cluster, then the 16 primary cursor navigation bindings).
 /// Returns whether the key was handled (and the browser default
-/// suppressed). Unmodified keys only for the built-ins; chords fall through
-/// to the browser like Monaco's unbound chords.
+/// suppressed). Exact chord matching leaves unregistered Alt/CtrlCmd variants
+/// to the browser. A cursor command whose model-bound precondition wins stays
+/// handled even when it reaches a document boundary and changes no state.
 fn Viewer::handle_editor_key_down(
   self : Viewer,
   key : String,
@@ -101,39 +101,7 @@ fn Viewer::handle_editor_key_down(
   ctrl_cmd~ : Bool,
   shift? : Bool = false,
 ) -> Bool {
-  if editor_registry().dispatch_keybinding(self, key, alt~, ctrl_cmd~, shift~) {
-    return true
-  }
-  if alt || ctrl_cmd {
-    return false
-  }
-  match key {
-    "PageUp" => {
-      self.scroll_by_pages(-1)
-      true
-    }
-    "PageDown" => {
-      self.scroll_by_pages(1)
-      true
-    }
-    "Home" => {
-      self.scroll_home()
-      true
-    }
-    "End" => {
-      self.scroll_end()
-      true
-    }
-    "ArrowUp" => {
-      self.scroll_by_lines(-1)
-      true
-    }
-    "ArrowDown" => {
-      self.scroll_by_lines(1)
-      true
-    }
-    _ => false
-  }
+  editor_registry().dispatch_keybinding(self, key, alt~, ctrl_cmd~, shift~)
 }
 
 ///|

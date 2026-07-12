@@ -447,8 +447,8 @@ pub struct ViewLayout {
 }
 pub fn ViewLayout::big_numbers_delta_for_window(Self, LineWindow) -> Int
 pub fn ViewLayout::completely_visible_line_range(Self) -> (Int, Int)
-pub fn ViewLayout::compute_scroll_left_to_reveal(Self, Array[(Double, Double)], vertical_scrollbar_width~ : Double) -> Double?
-pub fn ViewLayout::compute_scroll_top_to_reveal_range(Self, Int, Int, VerticalRevealType) -> Double
+pub fn ViewLayout::compute_scroll_left_to_reveal(Self, Array[(Double, Double)], vertical_scrollbar_width~ : Double, minimal_reveal? : Bool) -> Double?
+pub fn ViewLayout::compute_scroll_top_to_reveal_range(Self, Int, Int, VerticalRevealType, source? : String, minimal_reveal? : Bool) -> Double
 pub fn ViewLayout::delta_scroll_now(Self, Double, Double) -> Unit
 pub fn ViewLayout::dimensions(Self) -> ScrollDimensions
 pub fn ViewLayout::dispose(Self) -> Unit

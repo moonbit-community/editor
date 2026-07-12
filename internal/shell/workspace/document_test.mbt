@@ -1,8 +1,8 @@
 ///|
-/// Line-table behavior of `DocumentSnapshot`, matching the byte-identical
-/// `build_line_starts` copy in `viewer/common/model/text_snapshot.mbt` (see
-/// that function's pairing note): `\n`, a lonely `\r`, and `\r\n` each end a
-/// line, with the `\r\n` pair counted as one line break.
+/// Raw-provider line-table behavior of `DocumentSnapshot`: `\n`, a lonely
+/// `\r`, and `\r\n` each end a line, with the pair counted once. Viewer
+/// `TextSnapshot` deliberately starts a separate normalized-LF coordinate
+/// space when this raw document is converted into a model.
 test "document snapshot splits on lf, lonely cr, and crlf" {
   let doc = @workspace.DocumentSnapshot(
     try! @base_common.Uri::from(

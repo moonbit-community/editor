@@ -72,7 +72,9 @@ pub fn DocumentError::to_file_system_error(
 }
 
 ///|
-/// Builds a normalized immutable document snapshot.
+/// Builds an immutable raw provider snapshot. EOL bytes/code units are kept
+/// exactly as supplied; normalization begins only when a Viewer `TextModel`
+/// constructs its `TextSnapshot`.
 pub fn DocumentSnapshot::DocumentSnapshot(
   uri : @base_common.Uri,
   display_name : String,
@@ -281,12 +283,11 @@ pub fn DocumentError::status(self : DocumentError) -> Int {
 }
 
 ///|
-/// Offsets where each line begins (0-based). Mirrors Monaco's
-/// `createLineStartsFast` (`pieceTreeBase.ts:37`): `\n`, a lonely `\r`
-/// (classic-Mac CR EOL), and `\r\n` each end a line, with the `\r\n` pair
-/// counted as one line break. Byte-identical copy in
-/// `viewer/common/model/text_snapshot.mbt`; the two straddle the product/shell
-/// boundary, so they are intentionally not unified but must change together.
+/// Offsets where each line begins in the raw provider text (0-based). Mirrors
+/// Monaco's raw `createLineStartsFast` scan (`pieceTreeBase.ts:37`): `\n`, a
+/// lonely `\r`, and `\r\n` each end a line, with the pair counted once. This
+/// scanner intentionally differs from Viewer `TextSnapshot`, which first
+/// normalizes CRLF/CR to LF and then derives its own coordinate table.
 fn build_line_starts(text : String) -> Array[Int] {
   let starts = [0]
   let len = text.length()

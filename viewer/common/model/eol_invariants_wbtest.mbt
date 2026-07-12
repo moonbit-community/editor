@@ -27,6 +27,35 @@ fn eol_assert_model_offset_round_trips(model : TextModel) -> Unit raise {
 }
 
 ///|
+/// The approved readonly seam clamps invalid integer positions/ranges instead
+/// of throwing. Exercise both extremes for every construction-corpus member,
+/// after its raw EOL form has entered the normalized coordinate space.
+fn eol_assert_invalid_clamps(
+  snapshot : TextSnapshot,
+  model : TextModel,
+) -> Unit raise {
+  let length = snapshot.get_length()
+  let end_position = snapshot.get_position_at(length)
+  let low_position = snapshot.get_position_at(-100)
+  assert_eq(low_position.line_number, 1)
+  assert_eq(low_position.column, 1)
+  let high_position = snapshot.get_position_at(length + 100)
+  assert_true(high_position == end_position)
+  assert_eq(snapshot.get_offset_at(-100, -100), 0)
+  assert_eq(snapshot.get_offset_at(100, 100), length)
+  assert_eq(model.get_offset_at(Position(-100, -100)), 0)
+  assert_eq(model.get_offset_at(Position(100, 100)), length)
+  let oversized : @base_common.Range = Range(-100, -100, 100, 100)
+  assert_true(model.validate_range(oversized) == model.get_full_model_range())
+  assert_eq(snapshot.get_value_in_range(oversized), snapshot.get_value())
+  assert_eq(model.get_value_in_range(oversized), model.get_value())
+  assert_eq(
+    model.get_value_length_in_range(oversized),
+    model.get_value_length(),
+  )
+}
+
+///|
 fn eol_assert_lines(
   snapshot : TextSnapshot,
   expected : Array[String],
@@ -54,6 +83,14 @@ fn eol_assert_lines(
 }
 
 ///|
+fn eol_assert_same_code_units(actual : String, expected : String) -> Unit raise {
+  assert_eq(actual.length(), expected.length())
+  for i in 0..<expected.length() {
+    assert_eq(actual[i].to_int(), expected[i].to_int())
+  }
+}
+
+///|
 test "fixed-LF construction corpus keeps one coherent coordinate system" {
   let corpus : Array[(String, String, Array[String])] = [
     ("", "", [""]),
@@ -72,6 +109,7 @@ test "fixed-LF construction corpus keeps one coherent coordinate system" {
     ("\n\r", "\n\n", ["", "", ""]),
     ("a\u{2028}b\u{2029}c", "a\u{2028}b\u{2029}c", ["a\u{2028}b\u{2029}c"]),
     ("\u{FEFF}a\r\nb", "\u{FEFF}a\nb", ["\u{FEFF}a", "b"]),
+    ("a\u{FEFF}b\r\nc", "a\u{FEFF}b\nc", ["a\u{FEFF}b", "c"]),
   ]
   for item in corpus {
     let (raw, normalized, lines) = item
@@ -89,7 +127,46 @@ test "fixed-LF construction corpus keeps one coherent coordinate system" {
     assert_eq(model.get_eol(), "\n")
     assert_true(model.get_lines_content() == lines)
     eol_assert_model_offset_round_trips(model)
+    eol_assert_invalid_clamps(snapshot, model)
   }
+}
+
+///|
+/// Gate-D regression: raw UTF-16 slicing must not require Unicode-scalar
+/// boundaries. This covers both lone high and lone low surrogates before and
+/// after normalized EOLs, line-start/range boundaries, and either half of a
+/// valid pair through the snapshot's offset slice.
+test "lone surrogate code units survive EOL and range boundaries" {
+  let d800 = Int::unsafe_to_char(0xD800).to_string()
+  let dbff = Int::unsafe_to_char(0xDBFF).to_string()
+  let dc00 = Int::unsafe_to_char(0xDC00).to_string()
+  let dfff = Int::unsafe_to_char(0xDFFF).to_string()
+  for held in [d800, dbff, dc00, dfff] {
+    let leading = TextSnapshot("\r" + held)
+    eol_assert_same_code_units(leading.get_value(), "\n" + held)
+    eol_assert_same_code_units(leading.get_line_content(2), held)
+    eol_assert_same_code_units(leading.slice(OffsetRange(1, 2)), held)
+    eol_assert_same_code_units(
+      leading.get_value_in_range(Range(2, 1, 2, 2)),
+      held,
+    )
+    let trailing = TextSnapshot(held + "\r\n")
+    eol_assert_same_code_units(trailing.get_value(), held + "\n")
+    eol_assert_same_code_units(trailing.get_line_content(1), held)
+    eol_assert_same_code_units(trailing.slice(OffsetRange(0, 1)), held)
+    let model = wb_model("a\r\n" + held)
+    eol_assert_same_code_units(model.get_value(), "a\n" + held)
+    eol_assert_same_code_units(
+      model.get_value_in_range(Range(2, 1, 2, 2)),
+      held,
+    )
+  }
+  let pair = "\u{1F60A}"
+  let high = Int::unsafe_to_char(0xD83D).to_string()
+  let low = Int::unsafe_to_char(0xDE0A).to_string()
+  let pair_snapshot = TextSnapshot(pair)
+  eol_assert_same_code_units(pair_snapshot.slice(OffsetRange(0, 1)), high)
+  eol_assert_same_code_units(pair_snapshot.slice(OffsetRange(1, 2)), low)
 }
 
 ///|
@@ -183,8 +260,18 @@ test "held-unit ORACLE local adaptation preserves one unit and fresh metadata" {
     assert_eq(accepted_prefix.might_contain_non_basic_ascii(), true)
     let model = wb_model("a" + held)
     assert_eq(model.get_value_length(), 2)
+    assert_eq(model.get_value().length(), 2)
     assert_eq(model.snapshot.text[1].to_int(), held[0].to_int())
+    assert_eq(model.get_value()[1].to_int(), held[0].to_int())
     assert_eq(model.might_contain_non_basic_ascii(), true)
+    let before_cr = TextSnapshot(held + "\r")
+    assert_eq(before_cr.get_length(), 2)
+    assert_eq(before_cr.text[0].to_int(), held[0].to_int())
+    assert_eq(before_cr.text[1].to_int(), 10)
+    let after_cr = TextSnapshot("\r" + held)
+    assert_eq(after_cr.get_length(), 2)
+    assert_eq(after_cr.text[0].to_int(), 10)
+    assert_eq(after_cr.text[1].to_int(), held[0].to_int())
   }
   let trailing_cr = TextSnapshot("a\r")
   assert_eq(trailing_cr.text, "a\n")

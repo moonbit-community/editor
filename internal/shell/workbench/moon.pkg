@@ -22,4 +22,9 @@ import {
   "moonbit-community/rabbita/websocket",
 }
 
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+} for "wbtest"
+
 supported_targets = "js"

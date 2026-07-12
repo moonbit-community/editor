@@ -32,7 +32,8 @@ pub fn Viewer::get_contribution(
 ///|
 /// Full document text, Monaco's `CodeEditorWidget.getValue` (`cew:472`). No
 /// model → `''`. The `{preserveBOM, lineEnding}` option is dropped: the snapshot
-/// stores normalized LF text with no BOM/EOL concept (`TextSnapshot::get_value`).
+/// stores fixed-LF text, retains U+FEFF as ordinary content, and exposes no
+/// separate BOM metadata or EOL preference/preservation switch.
 pub fn Viewer::get_value(self : Viewer) -> String {
   match self.get_model() {
     None => ""

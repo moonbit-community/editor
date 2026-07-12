@@ -62,7 +62,7 @@ pub fn TextSnapshot::line_end_offset(self : TextSnapshot, line : Int) -> Int {
 pub fn TextSnapshot::line_text(self : TextSnapshot, line : Int) -> String {
   let start = self.line_start_offset(line)
   let end = self.line_end_offset(line)
-  self.text[start:end].to_owned()
+  code_unit_slice(self.text, start, end)
 }
 
 ///|
@@ -112,12 +112,12 @@ pub fn TextSnapshot::get_value_in_range(
     let line = self.line_text(start_line)
     let a = @base_common.clamp_int(range.start_column - 1, 0, line.length())
     let b = @base_common.clamp_int(range.end_column - 1, a, line.length())
-    return line[a:b].to_owned()
+    return code_unit_slice(line, a, b)
   }
   let sb = StringBuilder::new()
   let first = self.line_text(start_line)
   let a = @base_common.clamp_int(range.start_column - 1, 0, first.length())
-  sb.write_string(first[a:first.length()].to_owned())
+  sb.write_string(code_unit_slice(first, a, first.length()))
   for line = start_line + 1; line < end_line; line = line + 1 {
     sb.write_string("\n")
     sb.write_string(self.line_text(line))
@@ -125,7 +125,7 @@ pub fn TextSnapshot::get_value_in_range(
   let last = self.line_text(end_line)
   let b = @base_common.clamp_int(range.end_column - 1, 0, last.length())
   sb.write_string("\n")
-  sb.write_string(last[0:b].to_owned())
+  sb.write_string(code_unit_slice(last, 0, b))
   sb.to_string()
 }
 
@@ -161,7 +161,7 @@ pub fn TextSnapshot::slice(
     start,
     self.get_length(),
   )
-  self.text[start:end].to_owned()
+  code_unit_slice(self.text, start, end)
 }
 
 ///|
@@ -320,8 +320,9 @@ pub fn TextSnapshot::might_contain_non_basic_ascii(self : TextSnapshot) -> Bool 
 
 ///|
 /// Replaces every CRLF pair or lone CR with one LF. Existing LF and all other
-/// UTF-16 units are preserved. Writing complete non-EOL views avoids splitting
-/// surrogate pairs and also retains lone surrogate code units exactly once.
+/// UTF-16 units are preserved. Raw code-unit substrings deliberately avoid the
+/// Unicode-scalar boundary checks of `StringView`, so lone low/high surrogates
+/// beside an EOL are retained exactly once on both JS and native targets.
 fn normalize_eol(text : String) -> String {
   let len = text.length()
   let sb = StringBuilder::new()
@@ -332,7 +333,7 @@ fn normalize_eol(text : String) -> String {
     if text[i].to_int() == 13 {
       changed = true
       if segment_start < i {
-        sb.write_stringview(text[segment_start:i])
+        sb.write_string(code_unit_slice(text, segment_start, i))
       }
       sb.write_string("\n")
       if i + 1 < len && text[i + 1].to_int() == 10 {
@@ -349,9 +350,18 @@ fn normalize_eol(text : String) -> String {
     return text
   }
   if segment_start < len {
-    sb.write_stringview(text[segment_start:len])
+    sb.write_string(code_unit_slice(text, segment_start, len))
   }
   sb.to_string()
+}
+
+///|
+/// Copies the half-open UTF-16 code-unit interval without requiring Unicode
+/// scalar boundaries. Bounds are validated/clamped by each caller. Monaco's
+/// JavaScript `substring` likewise permits ranges that begin/end at either
+/// half of a surrogate pair and returns the corresponding lone code unit.
+fn code_unit_slice(text : String, start : Int, end : Int) -> String {
+  text.unsafe_substring(start~, end~)
 }
 
 ///|

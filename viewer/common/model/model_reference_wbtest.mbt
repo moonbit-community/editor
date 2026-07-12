@@ -1,5 +1,6 @@
-///| Faithful conformance port of vscode's `model.test.ts` (pinned `vscode/`
-/// submodule, commit 294fb350).
+///| Faithful conformance port of
+/// `vscode/src/vs/editor/test/common/model/model.test.ts`, pinned at submodule
+/// commit b18492a288de038fbc7643aae6de8247029d11bd.
 ///
 /// Readonly-subset triage of the file's 32 cases. In scope: 7 readonly reads
 /// plus `setValue eventing` (in scope since the flush lane landed, plan

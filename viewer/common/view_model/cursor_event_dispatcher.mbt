@@ -5,6 +5,7 @@
 pub(all) enum OutgoingViewModelEventKind {
   ViewZonesChanged
   CursorStateChanged
+  ModelTokensChanged
 } derive(Eq, Debug)
 
 ///|
@@ -92,11 +93,39 @@ pub fn ViewZonesChangedEvent::is_no_op(_self : ViewZonesChangedEvent) -> Bool {
 }
 
 ///|
+/// Source-shaped outgoing wrapper for one original model-token event
+/// (`viewModelEventDispatcher.ts:545-551`). The wrapper deliberately retains
+/// the exact event object; view-coordinate conversion belongs to the earlier
+/// browser ViewEvent delivery.
+pub(all) struct ModelTokensChangedOutgoingEvent {
+  kind : OutgoingViewModelEventKind
+  event : @model_tokens.ModelTokensChangedEvent
+}
+
+///|
+/// Builds the distinct outgoing model-token wrapper.
+pub fn ModelTokensChangedOutgoingEvent::new(
+  event : @model_tokens.ModelTokensChangedEvent,
+) -> ModelTokensChangedOutgoingEvent {
+  { kind: ModelTokensChanged, event }
+}
+
+///|
+/// Model-token outgoing events are always observable, including an empty
+/// range array (`viewModelEventDispatcher.ts:552-554`).
+pub fn ModelTokensChangedOutgoingEvent::is_no_op(
+  _self : ModelTokensChangedOutgoingEvent,
+) -> Bool {
+  false
+}
+
+///|
 /// Private heterogeneous outgoing-only queue. The generic mixed browser-view
 /// collector/postponement layer remains intentionally absent.
 priv enum PendingOutgoingEvent {
   CursorEvent(CursorStateChangedEvent)
   ViewZonesEvent(ViewZonesChangedEvent)
+  ModelTokensEvent(ModelTokensChangedOutgoingEvent)
 }
 
 ///|
@@ -108,6 +137,7 @@ fn CursorStateChangedEvent::attempt_to_merge(
 ) -> CursorStateChangedEvent? {
   match other {
     ViewZonesEvent(_) => None
+    ModelTokensEvent(_) => None
     CursorEvent(other) =>
       Some({
         kind: CursorStateChanged,
@@ -131,8 +161,20 @@ fn ViewZonesChangedEvent::attempt_to_merge(
 ) -> ViewZonesChangedEvent? {
   match other {
     CursorEvent(_) => None
+    ModelTokensEvent(_) => None
     ViewZonesEvent(_) => Some(self)
   }
+}
+
+///|
+/// Unlike cursor and ViewZones siblings, the source model-token wrapper never
+/// merges, even with another model-token event
+/// (`viewModelEventDispatcher.ts:556-559`).
+fn ModelTokensChangedOutgoingEvent::attempt_to_merge(
+  _self : ModelTokensChangedOutgoingEvent,
+  _other : PendingOutgoingEvent,
+) -> ModelTokensChangedOutgoingEvent? {
+  None
 }
 
 ///|
@@ -141,6 +183,7 @@ fn PendingOutgoingEvent::is_no_op(self : PendingOutgoingEvent) -> Bool {
   match self {
     CursorEvent(event) => event.is_no_op()
     ViewZonesEvent(event) => event.is_no_op()
+    ModelTokensEvent(event) => event.is_no_op()
   }
 }
 
@@ -155,6 +198,8 @@ fn PendingOutgoingEvent::attempt_to_merge(
       event.attempt_to_merge(other).map(merged => CursorEvent(merged))
     ViewZonesEvent(event) =>
       event.attempt_to_merge(other).map(merged => ViewZonesEvent(merged))
+    ModelTokensEvent(event) =>
+      event.attempt_to_merge(other).map(merged => ModelTokensEvent(merged))
   }
 }
 
@@ -256,6 +301,7 @@ fn CursorEventDispatcher::on_event(
     match event {
       CursorEvent(event) => listener(event)
       ViewZonesEvent(_) => ()
+      ModelTokensEvent(_) => ()
     }
   })
 }
@@ -270,6 +316,21 @@ fn CursorEventDispatcher::on_view_zones_changed(
     match event {
       CursorEvent(_) => ()
       ViewZonesEvent(event) => listener(event)
+      ModelTokensEvent(_) => ()
+    }
+  })
+}
+
+///|
+/// Exposes the model-token outgoing arm through a typed ViewModel listener.
+fn CursorEventDispatcher::on_model_tokens_changed(
+  self : CursorEventDispatcher,
+  listener : (ModelTokensChangedOutgoingEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.on_outgoing_event(event => {
+    match event {
+      CursorEvent(_) | ViewZonesEvent(_) => ()
+      ModelTokensEvent(event) => listener(event)
     }
   })
 }
@@ -297,6 +358,19 @@ fn CursorEventDispatcher::emit_view_zones_changed(
     return
   }
   self.add_outgoing_event(ViewZonesEvent(event))
+  self.emit_outgoing_events()
+}
+
+///|
+/// Adds one nonmergeable model-token fact to the shared outgoing queue.
+fn CursorEventDispatcher::emit_model_tokens_changed(
+  self : CursorEventDispatcher,
+  event : ModelTokensChangedOutgoingEvent,
+) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.add_outgoing_event(ModelTokensEvent(event))
   self.emit_outgoing_events()
 }
 

@@ -180,6 +180,70 @@ pub fn ModelLineProjection::get_view_line_data(
 }
 
 ///|
+/// Batch form of `get_view_line_data` (`modelLineProjection.ts:160-184,
+/// 312-320`). A projected model line performs at most one passive token-store
+/// read, and performs none when every requested output is unneeded.
+fn ModelLineProjection::get_view_lines_data(
+  self : ModelLineProjection,
+  model : @model.TextModel,
+  model_line_number : Int,
+  output_line_index : Int,
+  line_count : Int,
+  global_start_index : Int,
+  needed : Array[Bool],
+  result : Array[ViewLineData?],
+) -> Unit {
+  match self {
+    Identity => {
+      if !needed[global_start_index] {
+        result[global_start_index] = None
+        return
+      }
+      result[global_start_index] = Some(
+        self.get_view_line_data(model, model_line_number, 0),
+      )
+    }
+    Hidden => abort("Not supported")
+    Projected(data, is_visible~) => {
+      if !is_visible {
+        abort("Not supported")
+      }
+      let mut any_needed = false
+      for local_index in 0..<line_count {
+        if needed[global_start_index + local_index] {
+          any_needed = true
+          break
+        }
+      }
+      if !any_needed {
+        for local_index in 0..<line_count {
+          result[global_start_index + local_index] = None
+        }
+        return
+      }
+      let base_tokens = model.tokenization.get_line_tokens(model_line_number)
+      let with_injections = base_tokens.with_inserted(
+        injected_tokens_for_projected_line(data.projected_line),
+      )
+      for local_index in 0..<line_count {
+        let global_index = global_start_index + local_index
+        if !needed[global_index] {
+          result[global_index] = None
+          continue
+        }
+        result[global_index] = Some(
+          view_line_data_for_segment_with_injections(
+            with_injections,
+            data.projected_line,
+            data.segment_at_view_line_index(output_line_index + local_index),
+          ),
+        )
+      }
+    }
+  }
+}
+
+///|
 /// Model column for a view position on one view line —
 /// `getModelColumnOfViewPosition` (`translateToInputOffset`, which undoes the
 /// continuation indent and clamps into the segment).
@@ -372,14 +436,27 @@ fn view_line_data_for_segment(
   projected_line : ProjectedTextLine,
   segment : ModelLineProjectionSegment,
 ) -> ViewLineData {
+  let with_injections = base_tokens.with_inserted(
+    injected_tokens_for_projected_line(projected_line),
+  )
+  view_line_data_for_segment_with_injections(
+    with_injections, projected_line, segment,
+  )
+}
+
+///|
+/// Builds one segment after the batch caller has shared the model line's
+/// passive token read and injection splice.
+fn view_line_data_for_segment_with_injections(
+  with_injections : @tokens.LineTokens,
+  projected_line : ProjectedTextLine,
+  segment : ModelLineProjectionSegment,
+) -> ViewLineData {
   let indent = segment.wrapped_text_indent_length
   let start_offset = segment.start_offset
   let end_offset = segment.end_offset
   let content = projected_line.text[start_offset:end_offset].to_owned()
   let content = if indent > 0 { spaces(indent) + content } else { content }
-  let with_injections = base_tokens.with_inserted(
-    injected_tokens_for_projected_line(projected_line),
-  )
   {
     content,
     continues_with_wrapped_line: segment.continues_with_wrapped_line,

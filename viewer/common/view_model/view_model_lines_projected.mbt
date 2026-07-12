@@ -507,6 +507,65 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_data(
 }
 
 ///|
+/// Batch view-line data (`viewModelLines.ts:763-795`). The needed mask is
+/// indexed from `view_start_line_number`; hidden model lines are skipped and
+/// each participating projected model line shares one passive token read.
+pub fn ViewModelLinesFromProjectedModel::get_view_lines_data(
+  self : ViewModelLinesFromProjectedModel,
+  view_start_line_number : Int,
+  view_end_line_number : Int,
+  needed : Array[Bool],
+) -> Array[ViewLineData?] {
+  let view_start_line_number = self.to_valid_view_line_number(
+    view_start_line_number,
+  )
+  let view_end_line_number = self.to_valid_view_line_number(
+    view_end_line_number,
+  )
+  let count = view_end_line_number - view_start_line_number + 1
+  if needed.length() != count {
+    abort("get_view_lines_data needed mask length mismatch")
+  }
+  let result : Array[ViewLineData?] = [ for _ in 0..<count => None ]
+  let start = self.get_view_line_info(view_start_line_number)
+  let start_model_line_index = start.model_line_number - 1
+  let mut view_line_number = view_start_line_number
+  for
+    model_line_index in start_model_line_index..<self.model_line_projections.length() {
+    let projection = self.model_line_projections[model_line_index]
+    if !projection.is_visible() {
+      continue
+    }
+    let from_view_line_index = if model_line_index == start_model_line_index {
+      start.model_line_wrapped_line_idx
+    } else {
+      0
+    }
+    let mut remaining_view_line_count = projection.get_view_line_count() -
+      from_view_line_index
+    let mut last_line = false
+    if view_line_number + remaining_view_line_count > view_end_line_number {
+      last_line = true
+      remaining_view_line_count = view_end_line_number - view_line_number + 1
+    }
+    projection.get_view_lines_data(
+      self.model,
+      model_line_index + 1,
+      from_view_line_index,
+      remaining_view_line_count,
+      view_line_number - view_start_line_number,
+      needed,
+      result,
+    )
+    view_line_number += remaining_view_line_count
+    if last_line {
+      break
+    }
+  }
+  result
+}
+
+///|
 /// Builds line-renderer input data for a one-based view line — the viewer's
 /// bridge to `ViewLineRenderingData` (Monaco builds it in
 /// `ViewModel.getViewLineRenderingData`).

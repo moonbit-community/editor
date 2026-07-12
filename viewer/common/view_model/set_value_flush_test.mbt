@@ -44,31 +44,18 @@ test "public content listeners observe already-updated view models (two-loop ord
 }
 
 ///|
-test "flush token notification cannot address beyond stale projections" {
+test "headless flush suppresses full-reset token notification" {
   let model = plain_text_model("old")
   let view_model = @view_model.ViewModel(model)
-  let observed_projection_counts : Array[Int] = []
-  let observed_positions : Array[@base_common.Position] = []
-  let _sub = model.on_did_change_tokens(event => {
-    let end_line_number = event.ranges[0].to_line_number
-    observed_projection_counts.push(view_model.line_count())
-    observed_positions.push(
-      view_model
-      .coordinates_converter()
-      .model_position_to_view_position(
-        Position(end_line_number, model.get_line_max_column(end_line_number)),
-      ),
-    )
-  })
+  let mut token_events = 0
+  let _sub = model.on_did_change_tokens(_event => token_events += 1)
 
   model.set_value("a\nb\nc\nd")
 
-  // The token producer fires after the snapshot swap but before the model's
-  // first-loop ViewModel flush, so only the old projection is addressable.
-  assert_true(observed_projection_counts == [1])
-  assert_true(observed_positions == [Position(1, 2)])
-  // Once the flush returns, the exact source conversion uses the rebuilt
-  // projections and reaches the new last line normally.
+  // `reset_tokenization(false)` suppresses the full reset event. With no
+  // attached visible ranges there is no bounded refresh event either.
+  assert_eq(token_events, 0)
+  // The normal content first-loop still rebuilds the projection.
   assert_true(
     view_model
     .coordinates_converter()

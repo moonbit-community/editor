@@ -67,8 +67,19 @@ pub fn viewport_data_from_view_model(
         None => 0
       }
   }
+  // Use the source batch path once for the complete viewport. Every rendered
+  // viewport line is needed; minimap-style sparse masks are covered directly
+  // by `get_view_lines_data` tests.
+  let needed : Array[Bool] = [ for _ in start_line..<end_line => true ]
+  let line_data_batch = view_model_lines.get_view_lines_data(
+    start_line,
+    end_line - 1,
+    needed,
+  )
   for line_number in start_line..<end_line {
-    let line_data = view_model_lines.get_view_line_data(line_number)
+    guard line_data_batch[line_number - start_line] is Some(line_data) else {
+      abort("viewport batch omitted a required view line")
+    }
     let decorations = line_decorations_for_line(
       collection, start_line, line_number, line_data,
     )

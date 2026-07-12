@@ -15,6 +15,16 @@ pub struct ViewModel {
   /// `ViewModelEventDispatcher`. The mixed browser-view collector remains in
   /// the browser tier.
   cursor_event_dispatcher : CursorEventDispatcher
+  /// Borrowed exact handle returned by TextModel attachment. ModelData alone
+  /// owns its detach lifetime; ViewModel only publishes visible ranges.
+  priv attached_view : @model_tokens.AttachedViewImpl?
+  /// ViewModel's earlier scroll listener publishes unstable visible ranges
+  /// before the root's later scroll/render listener.
+  priv mut visible_lines_subscription : @base_common.Disposable?
+  /// Constructor-owned model token listener (`viewModelImpl.ts:510-523`).
+  /// Dispose it before the outgoing dispatcher so no late callback can
+  /// enqueue into a retired ViewModel.
+  priv mut model_tokens_subscription : @base_common.Disposable?
   /// The cursor state, owned per view model like Monaco's `_cursor`
   /// (`viewModelImpl.ts:65,124`): a new model starts with a fresh cursor at
   /// the origin, and reflows re-point it internally
@@ -57,6 +67,8 @@ pub fn ViewModel::with_options(
   smooth_scrolling? : Bool = false,
   schedule_at_next_animation_frame? : (() -> Unit) -> @base_common.Disposable = view_model_no_animation_scheduler,
   now? : () -> Double = view_model_zero_clock,
+  attached_view? : @model_tokens.AttachedViewImpl,
+  emit_view_tokens_changed? : (Array[ViewTokensChangedRange]) -> Unit = view_model_no_token_event_sink,
 ) -> ViewModel {
   let lines = ViewModelLinesFromProjectedModel::new(
     model,
@@ -92,6 +104,9 @@ pub fn ViewModel::with_options(
     options,
     lines,
     cursor_event_dispatcher,
+    attached_view,
+    visible_lines_subscription: None,
+    model_tokens_subscription: None,
     cursor,
     view_layout,
     decorations,
@@ -106,6 +121,38 @@ pub fn ViewModel::with_options(
   let registered = view_model as &@model.ViewModel
   view_model.registered_view_model = Some(registered)
   model.register_view_model(registered)
+  view_model.visible_lines_subscription = Some(
+    view_layout.on_did_scroll(change => {
+      if change.scroll_top_changed {
+        view_model.handle_visible_lines_changed()
+      }
+    }),
+  )
+  // Preserve `viewModelImpl.ts:510-523`: convert every inclusive model range
+  // through the live projection, finish browser ViewEvent delivery, then
+  // enqueue the original model event through the outgoing-only dispatcher.
+  view_model.model_tokens_subscription = Some(
+    model.on_did_change_tokens(event => {
+      let view_ranges : Array[ViewTokensChangedRange] = []
+      for model_range in event.ranges {
+        let view_start = view_model.model_position_to_view_position(
+          @base_common.Position(model_range.from_line_number, 1),
+        )
+        let view_end = view_model.model_position_to_view_position(
+          @base_common.Position(
+            model_range.to_line_number,
+            model.get_line_max_column(model_range.to_line_number),
+          ),
+        )
+        view_ranges.push({
+          from_line_number: view_start.line_number,
+          to_line_number: view_end.line_number,
+        })
+      }
+      emit_view_tokens_changed(view_ranges)
+      view_model.emit_model_tokens_changed(event)
+    }),
+  )
   view_model
 }
 
@@ -116,6 +163,16 @@ pub fn ViewModel::with_options(
 /// registered cursor listeners and is retired here before layout teardown.
 /// Called from the Viewer's `ModelData::dispose`.
 pub fn ViewModel::dispose(self : ViewModel) -> Unit {
+  match self.visible_lines_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  self.visible_lines_subscription = None
+  match self.model_tokens_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  self.model_tokens_subscription = None
   self.cursor_event_dispatcher.dispose()
   self.lines.dispose()
   self.view_layout.dispose()
@@ -245,10 +302,12 @@ pub fn ViewModel::on_did_change_content_or_injected_text(
       // scroll clamps through the layout like Monaco's single-editor case.
       // `_configuration.setModelLineCount`/`_updateConfigurationViewLineCountNow`
       // (`:443-444`): the Viewer re-derives wrap facts in its content
-      // listener. `_handleVisibleLinesChanged` (`:456`): N-A (attached-view
-      // protocol not ported).
+      // listener.
     }
   }
+  // `_handleVisibleLinesChanged` (`viewModelImpl.ts:456`) runs after the
+  // projection/layout update so background priority observes current ranges.
+  self.handle_visible_lines_changed()
 }
 
 ///|
@@ -359,13 +418,16 @@ pub fn ViewModel::get_line_content(
   self : ViewModel,
   line_number : Int,
 ) -> String {
-  self.lines.get_view_line_data(line_number).content
+  // Text-only callers must not enter `getViewLineData`, whose token field is
+  // a passive store read. Monaco's `getViewLineContent` delegates directly to
+  // the projection (`viewModelImpl.ts` / `viewModelLines.ts`).
+  self.lines.get_view_line_content(line_number)
 }
 
 ///|
 /// Monaco `ViewModel.getLineLength`: the text length of a view line.
 pub fn ViewModel::get_line_length(self : ViewModel, line_number : Int) -> Int {
-  self.lines.get_view_line_data(line_number).content.length()
+  self.lines.get_view_line_content(line_number).length()
 }
 
 ///|

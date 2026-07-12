@@ -117,7 +117,7 @@ fn find_marker(
 }
 
 ///|
-test "grammar tokens land per line and multi-line tokens cover every line" {
+test "explicit force threads grammar state through the demanded final line" {
   @syntax.tokenization_registry.register("frame-toy", FrameToy::{  }) |> ignore
   let model = @model.TextModel(
     try! @base_common.Uri::from(
@@ -136,10 +136,13 @@ test "grammar tokens land per line and multi-line tokens cover every line" {
       #|let b = 2
     ),
   )
-  // Render the view lines and read the encoded `mtk<colorId>` classes: line 1
-  // opens with the keyword color, and the block comment colors every line it
-  // covers.
+  // Passive reads return default tokens and do not invoke the lexer.
   let lines = @view_model.ViewModel(model).lines()
+  assert_false(model.tokenization.has_tokens())
+  assert_eq(lines.get_view_line_data(1).tokens.get_class_name(0), "mtk1")
+  assert_false(model.tokenization.has_tokens())
+  // Explicit force through the final line threads the block-comment state.
+  model.tokenization.force_tokenization(4)
   assert_eq(lines.get_view_line_data(1).tokens.get_class_name(0), "mtk3") // Keyword
   assert_true(line_has_token_class(lines.get_view_line_data(2), "mtk7")) // Comment
   assert_true(line_has_token_class(lines.get_view_line_data(3), "mtk7")) // Comment
@@ -150,7 +153,7 @@ test "grammar tokens land per line and multi-line tokens cover every line" {
 }
 
 ///|
-test "windowed view lines read the memoized whole-document sweep" {
+test "windowed view-line reads stay passive while covering stored defaults" {
   let chunks = []
   for i in 0..<200 {
     chunks.push("pub fn generated_value_" + i.to_string() + "() -> Int {")
@@ -159,6 +162,7 @@ test "windowed view lines read the memoized whole-document sweep" {
   }
   let model = plain_text_model(chunks.join("\n"))
   let lines = @view_model.ViewModel(model).lines()
+  assert_false(model.tokenization.has_tokens())
   for line_number in 301..<361 {
     let line = lines.get_view_line_data(line_number)
     let mut joined = ""
@@ -168,4 +172,5 @@ test "windowed view lines read the memoized whole-document sweep" {
     }
     assert_eq(joined, line.content)
   }
+  assert_false(model.tokenization.has_tokens())
 }

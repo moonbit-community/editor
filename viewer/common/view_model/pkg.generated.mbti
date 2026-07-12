@@ -8,7 +8,6 @@ import {
   "moonbit-community/editor/viewer/common/cursor",
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
-  "moonbit-community/editor/viewer/common/tokens",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbitlang/core/debug",
 }
@@ -140,6 +139,13 @@ pub(all) struct ModelLineProjectionSegment {
   wrapped_text_indent_length : Int
 } derive(Eq, @debug.Debug)
 
+pub(all) struct ModelTokensChangedOutgoingEvent {
+  kind : OutgoingViewModelEventKind
+  event : @moonbit-community/editor/viewer/common/model/tokens.ModelTokensChangedEvent
+}
+pub fn ModelTokensChangedOutgoingEvent::is_no_op(Self) -> Bool
+pub fn ModelTokensChangedOutgoingEvent::new(@moonbit-community/editor/viewer/common/model/tokens.ModelTokensChangedEvent) -> Self
+
 pub struct MonospaceLineBreaksComputerFactory {
   // private fields
 }
@@ -150,6 +156,7 @@ pub fn MonospaceLineBreaksComputerFactory::new(String, String) -> Self
 pub(all) enum OutgoingViewModelEventKind {
   ViewZonesChanged
   CursorStateChanged
+  ModelTokensChanged
 } derive(Eq, @debug.Debug)
 
 pub struct ProjectedCoordinatesConverter {
@@ -219,7 +226,7 @@ pub(all) struct ViewLineData {
   min_column : Int
   max_column : Int
   start_visible_column : Int
-  tokens : &@tokens.IViewLineTokens
+  tokens : &@moonbit-community/editor/viewer/common/tokens.IViewLineTokens
   inline_decorations : Array[@view_layout.InlineDecoration]
 }
 
@@ -272,6 +279,7 @@ pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffi
 pub fn ViewModel::on_configuration_changed(Self, ViewModelOptions) -> Bool
 pub fn ViewModel::on_cursor_state_changed(Self, (CursorStateChangedEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::on_did_change_content_or_injected_text(Self, e? : @model.InternalModelContentChangeEvent) -> Unit
+pub fn ViewModel::on_model_tokens_changed(Self, (ModelTokensChangedOutgoingEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::on_view_zones_changed(Self, (ViewZonesChangedEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::set_cursor_state(Self, @cursor.PartialCursorState?, String, @cursor.CursorChangeReason) -> Bool
 pub fn ViewModel::set_hidden_areas(Self, Array[@common.Range], source? : String, force_update? : Bool, with_event_batch? : (() -> Bool) -> Bool, on_line_mapping_changed? : (() -> Unit) -> Unit) -> Bool
@@ -280,7 +288,8 @@ pub fn ViewModel::set_view_cursor_state(Self, @cursor.SingleCursorState, String,
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::validate_model_position(Self, @common.Position) -> @common.Position
 pub fn ViewModel::version(Self) -> Int
-pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions, smooth_scrolling? : Bool, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
+pub fn ViewModel::visible_lines_stabilized(Self) -> Unit
+pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions, smooth_scrolling? : Bool, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double, attached_view? : @moonbit-community/editor/viewer/common/model/tokens.AttachedViewImpl, emit_view_tokens_changed? : (Array[ViewTokensChangedRange]) -> Unit) -> Self
 pub impl @model.ViewModel for ViewModel
 
 pub struct ViewModelDecorations {
@@ -315,6 +324,7 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_count(Self) -> Int
 pub fn ViewModelLinesFromProjectedModel::get_view_line_data(Self, Int) -> ViewLineData
 pub fn ViewModelLinesFromProjectedModel::get_view_line_max_column(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::get_view_line_min_column(Self, Int) -> Int
+pub fn ViewModelLinesFromProjectedModel::get_view_lines_data(Self, Int, Int, Array[Bool]) -> Array[ViewLineData?]
 pub fn ViewModelLinesFromProjectedModel::injected_text_index_at(Self, Int, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::model_position_is_visible(Self, Int) -> Bool
@@ -339,6 +349,11 @@ pub fn ViewModelOptions::ViewModelOptions(font_info? : @config.FontInfo, soft_wr
 pub fn ViewModelOptions::is_soft_wrap_enabled(Self) -> Bool
 pub fn ViewModelOptions::no_wrap() -> Self
 pub fn ViewModelOptions::soft_wrap(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
+
+pub(all) struct ViewTokensChangedRange {
+  from_line_number : Int
+  to_line_number : Int
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ViewZonesChangedEvent {
   kind : OutgoingViewModelEventKind

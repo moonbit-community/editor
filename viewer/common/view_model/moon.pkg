@@ -4,6 +4,7 @@ import {
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/cursor",
   "moonbit-community/editor/viewer/common/model",
+  "moonbit-community/editor/viewer/common/model/tokens" @model_tokens,
   "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/tokens",
   "moonbit-community/editor/viewer/common/view_layout",

@@ -26,6 +26,17 @@ fn dispatcher_event(
 }
 
 ///|
+fn dispatcher_model_tokens_event(
+  from_line_number : Int,
+  to_line_number : Int,
+) -> @model_tokens.ModelTokensChangedEvent {
+  {
+    semantic_tokens_applied: false,
+    ranges: [{ from_line_number, to_line_number }],
+  }
+}
+
+///|
 test "cursor outgoing nullable selection equality covers null length and index mismatches" {
   let one = dispatcher_selection(1)
   let two = dispatcher_selection(2)
@@ -102,6 +113,92 @@ test "ViewZones outgoing is live and merges only its own kind" {
   assert_true(
     zones.attempt_to_merge(CursorEvent(dispatcher_event(None, 1, 0, 1))) is None,
   )
+}
+
+///|
+test "model-token outgoing retains identity and never no-ops or merges" {
+  let model_event = dispatcher_model_tokens_event(2, 4)
+  let outgoing = ModelTokensChangedOutgoingEvent::new(model_event)
+  assert_true(outgoing.kind == ModelTokensChanged)
+  assert_true(physical_equal(outgoing.event, model_event))
+  assert_false(outgoing.is_no_op())
+  assert_true(outgoing.attempt_to_merge(ModelTokensEvent(outgoing)) is None)
+  assert_true(
+    outgoing.attempt_to_merge(CursorEvent(dispatcher_event(None, 1, 0, 1)))
+    is None,
+  )
+  assert_true(
+    outgoing.attempt_to_merge(ViewZonesEvent(ViewZonesChangedEvent::new()))
+    is None,
+  )
+}
+
+///|
+test "model-token outgoing typed listener receives every event in FIFO order" {
+  let dispatcher = CursorEventDispatcher::new()
+  let delivered : Array[Int] = []
+  dispatcher.on_model_tokens_changed(event => {
+    delivered.push(event.event.ranges[0].from_line_number)
+  })
+  |> ignore
+  dispatcher.add_outgoing_event(
+    ModelTokensEvent(
+      ModelTokensChangedOutgoingEvent::new(dispatcher_model_tokens_event(1, 1)),
+    ),
+  )
+  dispatcher.add_outgoing_event(
+    ModelTokensEvent(
+      ModelTokensChangedOutgoingEvent::new(dispatcher_model_tokens_event(2, 2)),
+    ),
+  )
+  assert_eq(dispatcher.outgoing_events.length(), 2)
+  dispatcher.emit_outgoing_events()
+  assert_true(delivered == [1, 2])
+}
+
+///|
+test "empty model-token outgoing event remains observable" {
+  let dispatcher = CursorEventDispatcher::new()
+  let mut delivered = 0
+  let observed_range_count = Ref(-1)
+  dispatcher.on_model_tokens_changed(event => {
+    observed_range_count.val = event.event.ranges.length()
+    delivered += 1
+  })
+  |> ignore
+  dispatcher.emit_model_tokens_changed(
+    ModelTokensChangedOutgoingEvent::new({
+      semantic_tokens_applied: false,
+      ranges: [],
+    }),
+  )
+  assert_eq(delivered, 1)
+  assert_eq(observed_range_count.val, 0)
+}
+
+///|
+test "model-token outgoing reentrant delivery preserves event identity order" {
+  let dispatcher = CursorEventDispatcher::new()
+  let delivered : Array[String] = []
+  let mut reentered = false
+  dispatcher.on_model_tokens_changed(event => {
+    let line = event.event.ranges[0].from_line_number
+    delivered.push("enter:\{line}")
+    if !reentered {
+      reentered = true
+      dispatcher.emit_model_tokens_changed(
+        ModelTokensChangedOutgoingEvent::new(
+          dispatcher_model_tokens_event(2, 2),
+        ),
+      )
+    }
+    delivered.push("exit:\{line}")
+  })
+  |> ignore
+  dispatcher.emit_model_tokens_changed(
+    ModelTokensChangedOutgoingEvent::new(dispatcher_model_tokens_event(1, 1)),
+  )
+  assert_true(delivered == ["enter:1", "enter:2", "exit:2", "exit:1"])
 }
 
 ///|

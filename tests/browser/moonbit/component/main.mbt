@@ -1,6 +1,8 @@
 ///|
 fn main {
-  if cursor_input_events_requested() {
+  if browser_geometry_requested() {
+    run_browser_geometry_test()
+  } else if cursor_input_events_requested() {
     run_cursor_input_events_test()
   } else if async_features_requested() {
     run_async_model_features_test()
@@ -12,6 +14,10 @@ fn main {
     run_viewer_api_test()
   }
 }
+
+///|
+extern "js" fn browser_geometry_requested() -> Bool =
+  #| () => new URLSearchParams(location.search).has('browserGeometry')
 
 ///|
 extern "js" fn cursor_input_events_requested() -> Bool =

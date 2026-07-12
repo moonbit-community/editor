@@ -21,6 +21,14 @@ moonbit/    js-target MoonBit scenario packages
 - Component pages construct the public Viewer directly and report compact JSON
   through `__readonlyEditorBrowserTestReport`. Playwright validates the report,
   browser/page/request errors, and visible state and owns final pass/fail.
+- `component.html?browserGeometry=1` is the fixed geometry oracle: it embeds
+  tiny self-owned monospace and proportional TTF data URLs, awaits
+  `document.fonts.ready`, and runs at deviceScaleFactor 1. Its Playwright suite
+  compares public Viewer dimensions/positions with DOM Ranges and rendered
+  line/widget boxes within the plan's 1 CSS px tolerance. The same scenario
+  also mounts test-only normal and overflowing `ContentWidgets` in a real
+  same-origin iframe whose scroll and viewport deliberately differ from the
+  top window, covering owner-window width/scroll and exact 15px/22px edges.
 - Perf tests attach structured evidence but do not fail on a timing budget
   unless one is explicitly documented.
 - Monaco parity belongs in ported MoonBit unit/reference tests, not browser DOM

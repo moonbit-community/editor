@@ -224,17 +224,6 @@ pub(all) enum PositionAffinity {
   RightOfInjectedText
 } derive(Eq, @debug.Debug)
 
-pub struct RangePriorityQueueImpl {
-  ranges : Array[@common.OffsetRange]
-}
-pub fn RangePriorityQueueImpl::add_range(Self, @common.OffsetRange) -> Unit
-pub fn RangePriorityQueueImpl::add_range_and_resize(Self, @common.OffsetRange, Int) -> Unit
-pub fn RangePriorityQueueImpl::delete(Self, Int) -> Unit
-pub fn RangePriorityQueueImpl::get_ranges(Self) -> Array[@common.OffsetRange]
-pub fn RangePriorityQueueImpl::min(Self) -> Int?
-pub fn RangePriorityQueueImpl::new() -> Self
-pub fn RangePriorityQueueImpl::remove_min(Self) -> Int?
-
 pub(all) enum RawContentChangedType {
   Flush
   LineChanged
@@ -267,6 +256,7 @@ pub fn TextModel::dispose(Self) -> Unit
 pub fn TextModel::equals_text_snapshot(Self, TextSnapshot) -> Bool
 pub fn TextModel::get_all_decorations(Self, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool) -> Array[ModelDecoration]
 pub fn TextModel::get_all_margin_decorations(Self, owner_id? : Int) -> Array[ModelDecoration]
+pub fn TextModel::get_attached_editor_count(Self) -> Int
 pub fn TextModel::get_decoration_options(Self, String) -> ModelDecorationOptions?
 pub fn TextModel::get_decoration_range(Self, String) -> @common.Range?
 pub fn TextModel::get_decorations_in_range(Self, @common.Range, owner_id? : Int, filter_out_validation? : Bool, filter_font_decorations? : Bool, only_margin_decorations? : Bool) -> Array[ModelDecoration]
@@ -296,10 +286,14 @@ pub fn TextModel::get_value_length_in_range(Self, @common.Range) -> Int
 pub fn TextModel::get_version_id(Self) -> Int
 pub fn TextModel::get_word_at_position(Self, @common.Position) -> WordAtPosition?
 pub fn TextModel::get_word_until_position(Self, @common.Position) -> WordAtPosition
+pub fn TextModel::is_attached_to_editor(Self) -> Bool
 pub fn TextModel::is_disposed(Self) -> Bool
+pub fn TextModel::is_too_large_for_tokenization(Self) -> Bool
 pub fn TextModel::might_contain_non_basic_ascii(Self) -> Bool
 pub fn TextModel::might_contain_rtl(Self) -> Bool
 pub fn TextModel::modify_position(Self, @common.Position, Int) -> @common.Position
+pub fn TextModel::on_before_attached(Self, scheduler? : @tokens.TokenizationScheduler) -> @tokens.AttachedViewImpl
+pub fn TextModel::on_before_detached(Self, @tokens.AttachedViewImpl) -> Unit
 pub fn TextModel::on_did_change_content(Self, (ModelContentChangedEvent) -> Unit) -> @common.Disposable
 pub fn TextModel::on_did_change_decorations(Self, (ModelDecorationsChangedEvent) -> Unit) -> @common.Disposable
 pub fn TextModel::on_did_change_tokens(Self, (@tokens.ModelTokensChangedEvent) -> Unit) -> @common.Disposable
@@ -359,6 +353,7 @@ pub(all) struct WordAtPosition {
 } derive(Eq, @debug.Debug)
 
 // Type aliases
+pub using @tokens {type RangePriorityQueueImpl}
 
 // Traits
 pub(open) trait ViewModel {

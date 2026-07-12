@@ -2,6 +2,12 @@
 /// Readonly editor model identity plus immutable text snapshot, plus the
 /// Monaco decoration fields (the one mutable part; the decoration API lives
 /// in `text_model_decorations.mbt`).
+const LARGE_FILE_SIZE_THRESHOLD : Int = 20 * 1024 * 1024
+
+///|
+const LARGE_FILE_LINE_COUNT_THRESHOLD : Int = 300 * 1000
+
+///|
 pub struct TextModel {
   uri : @base_common.Uri
   display_name : String
@@ -15,11 +21,20 @@ pub struct TextModel {
   /// The `model.tokenization` part (Monaco's `TokenizationTextModelPart`,
   /// wired in the `TextModel` constructor exactly as `textModel.ts` does).
   tokenization : @tokens.TokenizationTextModelPart
+  /// TextModel owns the attached-view aggregate; tokenization only borrows it.
+  priv attached_views : @tokens.AttachedViews
+  priv attached_count : Ref[Int]
+  /// First non-None scheduler selected for the current attached epoch.
+  priv tokenization_scheduler : Ref[@tokens.TokenizationScheduler?]
+  /// Live normalized snapshot read by the package-cycle access carrier.
+  priv tokenization_snapshot : Ref[TextSnapshot]
+  /// Constructor-fixed large-file policy (`textModel.ts:339-342`).
+  priv is_too_large_for_tokenization_ : Bool
   // Lifecycle (`_onWillDispose` textModel.ts:222, `_isDisposed` :190,
   // `__isDisposing` :260)
   on_will_dispose : @base_common.Emitter[Unit]
   priv mut is_disposed : Bool
-  priv mut is_disposing : Bool
+  priv is_disposing : Ref[Bool]
   /// `_versionId` (`textModel.ts:262`, init 1 at `:370`): bumped by the
   /// content lane (`_increaseVersionId`). Together with physical model
   /// identity this is async freshness authority; the host-facing `version` is
@@ -70,13 +85,36 @@ pub fn TextModel::TextModel(
   let language_id = if language_id == "" { "moonbit" } else { language_id }
   let version = if version < 1 { 1 } else { version }
   let snapshot = TextSnapshot(text)
-  // The part is constructed from the frozen line array (see the deviation
-  // note in `tokens/tokenization_text_model_part.mbt`); tokenization itself
-  // runs lazily on first read.
-  let lines : Array[String] = []
-  for line in 0..<snapshot.line_count() {
-    lines.push(snapshot.line_text(line))
-  }
+  // Permanently respect the construction-time large-file decision. Equality
+  // stays enabled; only strict greater-than disables tokenization.
+  let is_too_large_for_tokenization = snapshot.get_length() >
+    LARGE_FILE_SIZE_THRESHOLD ||
+    snapshot.line_count() > LARGE_FILE_LINE_COUNT_THRESHOLD
+  let tokenization_snapshot = Ref(snapshot)
+  let attached_count = Ref(0)
+  let tokenization_scheduler : Ref[@tokens.TokenizationScheduler?] = Ref(None)
+  let is_disposing = Ref(false)
+  let access = @tokens.TokenizationModelAccess::new(
+    line_count=() => tokenization_snapshot.val.line_count(),
+    line_content=line_number => {
+      tokenization_snapshot.val.line_text(line_number - 1)
+    },
+    line_length=line_number => {
+      tokenization_snapshot.val.get_line_length(line_number)
+    },
+    first_non_whitespace_column=line_number => {
+      tokenization_snapshot.val.get_line_first_non_whitespace_column(
+        line_number,
+      )
+    },
+    language_id=() => language_id,
+    attached_count=() => attached_count.val,
+    too_large=() => is_too_large_for_tokenization,
+    disposing=() => is_disposing.val,
+    scheduler=() => tokenization_scheduler.val,
+    unexpected_error=_message => (),
+  )
+  let attached_views = @tokens.AttachedViews::new()
   {
     uri,
     display_name,
@@ -84,10 +122,15 @@ pub fn TextModel::TextModel(
     version,
     revision,
     snapshot,
-    tokenization: @tokens.TokenizationTextModelPart::new(lines, language_id),
+    tokenization: @tokens.TokenizationTextModelPart::new(access, attached_views),
+    attached_views,
+    attached_count,
+    tokenization_scheduler,
+    tokenization_snapshot,
+    is_too_large_for_tokenization_: is_too_large_for_tokenization,
     on_will_dispose: @base_common.Emitter::new(),
     is_disposed: false,
-    is_disposing: false,
+    is_disposing,
     version_id: 1,
     event_emitter: DidChangeContentEmitter::new(),
     view_models: [],
@@ -110,20 +153,87 @@ pub fn TextModel::dispose(self : TextModel) -> Unit {
   // `__isDisposing = true` before the will-dispose fire (`textModel.ts:415`);
   // `_emitContentChangedEvent` early-returns while set so no listener is
   // confused by an event after disposing (`:468-471`).
-  self.is_disposing = true
+  self.is_disposing.val = true
   self.on_will_dispose.fire(())
   self.tokenization.dispose()
+  self.attached_views.dispose()
+  self.tokenization_scheduler.val = None
   self.is_disposed = true
   self.on_will_dispose.dispose()
   self.on_did_change_decorations.actual.dispose()
   self.event_emitter.emitter.dispose()
-  self.is_disposing = false
+  self.is_disposing.val = false
 }
 
 ///|
 /// Whether `dispose` has run — `isDisposed` (`textModel.ts:445`).
 pub fn TextModel::is_disposed(self : TextModel) -> Bool {
   self.is_disposed
+}
+
+///|
+/// Constructor-fixed large-file tokenization policy. A later `set_value`
+/// never changes this fact (`textModel.ts:334-346,637-639`).
+pub fn TextModel::is_too_large_for_tokenization(self : TextModel) -> Bool {
+  self.is_too_large_for_tokenization_
+}
+
+///|
+/// Number of currently attached Viewer instances.
+pub fn TextModel::get_attached_editor_count(self : TextModel) -> Int {
+  self.attached_count.val
+}
+
+///|
+/// Whether at least one Viewer is attached.
+pub fn TextModel::is_attached_to_editor(self : TextModel) -> Bool {
+  self.attached_count.val > 0
+}
+
+///|
+/// Begins one Viewer attachment (`textModel.ts:607-614`). The first non-None
+/// scheduler of an attached epoch wins. A late first scheduler wakes existing
+/// background work once without synthesizing another 0->1 notification.
+pub fn TextModel::on_before_attached(
+  self : TextModel,
+  scheduler? : @tokens.TokenizationScheduler,
+) -> @tokens.AttachedViewImpl {
+  let mut installed_late_scheduler = false
+  if self.tokenization_scheduler.val is None {
+    match scheduler {
+      Some(scheduler) => {
+        self.tokenization_scheduler.val = Some(scheduler)
+        installed_late_scheduler = self.attached_count.val > 0
+      }
+      None => ()
+    }
+  }
+  if installed_late_scheduler {
+    self.tokenization.handle_did_change_attached()
+  }
+  self.attached_count.val += 1
+  if self.attached_count.val == 1 {
+    self.tokenization.handle_did_change_attached()
+  }
+  self.attached_views.attach_view()
+}
+
+///|
+/// Finishes one Viewer attachment (`textModel.ts:616-623`). The final
+/// transition notifies/cancels backend work first, detaches the exact handle
+/// second, and clears the epoch scheduler last.
+pub fn TextModel::on_before_detached(
+  self : TextModel,
+  attached_view : @tokens.AttachedViewImpl,
+) -> Unit {
+  self.attached_count.val -= 1
+  if self.attached_count.val == 0 {
+    self.tokenization.handle_did_change_attached()
+  }
+  self.attached_views.detach_view(attached_view)
+  if self.attached_count.val == 0 {
+    self.tokenization_scheduler.val = None
+  }
 }
 
 ///|
@@ -572,6 +682,8 @@ fn TextModel::set_value_from_snapshot(
   let end_line_number = self.get_line_count()
   let end_column = self.get_line_max_column(end_line_number)
   self.snapshot = snapshot
+  // Synchronize the live package-cycle carrier before token content handling.
+  self.tokenization_snapshot.val = snapshot
   self.increase_version_id()
 
   // Destroy all my decorations
@@ -609,16 +721,13 @@ fn TextModel::emit_content_changed_event(
   raw_change : ModelRawContentChangedEvent,
   change : ModelContentChangedEvent,
 ) -> Unit {
-  if self.is_disposing {
+  if self.is_disposing.val {
     // Do not confuse listeners by emitting any event after disposing
     return
   }
-  // `handleDidChangeContent` reads `e.isFlush` off the event; the part
-  // receives the extracted facts instead (no-cycle seam, see the part).
-  self.tokenization.handle_did_change_content(
-    self.get_lines_content(),
-    is_flush=change.is_flush,
-  )
+  // The access carrier already sees the replacement snapshot. The part only
+  // needs the flush fact (`tokenizationTextModelPart.ts:136-165`).
+  self.tokenization.handle_did_change_content(is_flush=change.is_flush)
   let content_change_event : InternalModelContentChangeEvent = {
     raw_content_changed_event: raw_change,
     content_changed_event: change,

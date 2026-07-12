@@ -195,21 +195,26 @@ test "set_value emits one full-range public change with isFlush" {
 }
 
 ///|
-test "set_value re-seeds tokenization before view models and listeners" {
+test "set_value re-seeds live token access and suppresses full reset event" {
+  let registration = @syntax.tokenization_registry.register(
+    "moonbit",
+    @syntax.PlainTokenizer::new(),
+  )
   let model = wb_model("alpha\nbravo")
-  model.tokenization.force_tokenization()
+  model.tokenization.force_tokenization(model.get_line_count())
   assert_eq(model.tokenization.has_tokens(), true)
   let to_lines : Array[Int] = []
   let _sub = model.on_did_change_tokens(e => {
     to_lines.push(e.ranges[0].to_line_number)
   })
   model.set_value("one\ntwo\nthree")
-  // reset_tokenization fired over the NEW line count: the part's frozen
-  // lines were replaced before the reset announced the change
-  assert_true(to_lines == [3])
+  // The access carrier sees the NEW line count before flush handling, while
+  // `reset_tokenization(false)` suppresses the whole-document reset event.
+  assert_true(to_lines == [])
   assert_eq(model.tokenization.has_tokens(), false)
-  model.tokenization.force_tokenization()
+  model.tokenization.force_tokenization(model.get_line_count())
   assert_eq(model.tokenization.has_tokens(), true)
+  registration.dispose()
 }
 
 ///|

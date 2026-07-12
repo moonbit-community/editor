@@ -333,7 +333,9 @@ test "model change fires before outgoing owner decorations are swept" {
 /// Single-state toy tokenizer tagging the first character as a keyword — the
 /// encoder's gap fill makes every non-empty line exactly two tokens, so the
 /// token count discriminates a registry hit (2) from the null fallback (1).
-priv struct FirstCharKeywordToy {}
+priv struct FirstCharKeywordToy {
+  calls : Ref[Int]
+}
 
 ///|
 let first_char_toy_state : @syntax.TokenizerState = TokenizerState("s")
@@ -345,35 +347,45 @@ impl @syntax.LineTokenizer for FirstCharKeywordToy with fn initial_state(_self) 
 
 ///|
 impl @syntax.LineTokenizer for FirstCharKeywordToy with fn tokenize_line(
-  _self,
+  self,
   line_text,
   state,
 ) {
+  self.calls.val += 1
   ignore(line_text)
   let tokens : Array[@syntax.LineToken] = [{ start: 0, end: 1, tag: Keyword }]
   (tokens, state)
 }
 
 ///|
-/// Tokenizer (re)registration reaches the viewer through the model's own
-/// registry subscription: part reset → `model.onDidChangeTokens` →
-/// `retokenize_current_model` — the Monaco fan-out (no viewer-level relay).
-test "tokenizer registration recolors the current model" {
+/// Tokenizer (re)registration reaches the ViewModel event spine without
+/// re-warming. Passive telemetry reads defaults; explicit demand owns lexing.
+test "tokenizer registration stays passive until explicit demand" {
   let viewer = Viewer::Viewer()
   viewer.set_model(Some(test_model("alpha beta", language_id="recolor-toy")))
   let model = viewer.get_model().unwrap()
-  // Warmed by attach; registry miss → one default token on the line.
+  // Attach and telemetry are passive; registry miss yields one default token.
+  assert_false(model.tokenization.has_tokens())
   assert_eq(model.tokenization.token_count(), 1)
+  let calls = Ref(0)
   let registration = @syntax.tokenization_registry.register("recolor-toy", FirstCharKeywordToy::{
-
+    calls,
   })
-  // The viewer re-warmed the reset memo synchronously.
+  // Registry change emits view/outgoing events, but neither they nor the
+  // `ViewerViewModelBuiltEvent.token_count` telemetry invoke the lexer.
+  assert_false(model.tokenization.has_tokens())
+  assert_eq(calls.val, 0)
+  assert_eq(model.tokenization.token_count(), 1)
+  assert_eq(calls.val, 0)
+  model.tokenization.force_tokenization(1)
   assert_true(model.tokenization.has_tokens())
   assert_eq(model.tokenization.token_count(), 2)
-  // Deregistration walks the same path back to the null fallback.
+  assert_eq(calls.val, 1)
+  // Deregistration resets back to passive fallback without a lexer call.
   registration.dispose()
-  assert_true(model.tokenization.has_tokens())
+  assert_false(model.tokenization.has_tokens())
   assert_eq(model.tokenization.token_count(), 1)
+  assert_eq(calls.val, 1)
   viewer.dispose()
   model.dispose()
 }

@@ -1,13 +1,12 @@
 ///|
 /// Monaco's `_attachModel` (`codeEditorWidget.ts:1745-1913`): hook the
-/// swap-scoped listeners, warm the model's memoized tokenization part,
-/// build the per-model `ViewModel`, create the per-model `View` inside the
+/// swap-scoped listeners, build the per-model `ViewModel`, create the per-model `View` inside the
 /// container, and bundle everything into `ModelData`. Later option and
 /// decoration changes update the view model in place
 /// (`ViewModel::on_configuration_changed`,
-/// `on_did_change_content_or_injected_text`) and tokenizer changes only
-/// re-warm the token memo (`retokenize_current_model`). Synchronous CPU
-/// work; the paint happens in the next render flush.
+/// `on_did_change_content_or_injected_text`). Token reads are passive;
+/// explicit/visible/background demand owns lexer work. The paint happens in
+/// the next render flush.
 fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   let listeners_to_remove : Array[@base_common.Disposable] = []
   // `data-mode-id` on the container (`cew:1758`), removed at detach.
@@ -116,22 +115,16 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // A disposed model detaches itself
   // (`codeEditorWidget.ts:1787` `model.onWillDispose(() => this.setModel(null))`).
   listeners_to_remove.push(model.on_will_dispose(() => self.set_model(None)))
-  // Token changes (the part's registry subscription fires them on tokenizer
-  // (re)registration) re-warm the memo and repaint — Monaco's
-  // `ModelTokensChangedEvent` handling. Preserve the producer's inclusive
-  // ranges so token-only invalidation reaches only token consumers.
-  listeners_to_remove.push(
-    model.on_did_change_tokens(event => {
-      self.retokenize_current_model(model, event)
-    }),
-  )
-  let tokenize_started = now_ms()
-  model.tokenization.force_tokenization()
-  let tokenize_finished = now_ms()
   // Decorations live in the model's interval-tree storage; the view
   // model queries them lazily per viewport (no per-frame bake). The render
   // pass pulls its viewport data from the view model at flush time.
-  let view_model = self.build_view_model(model)
+  let attached_view = match self.container {
+    Some(_) =>
+      model.on_before_attached(scheduler=browser_tokenization_scheduler)
+    None => model.on_before_attached()
+  }
+  let build_started = now_ms()
+  let view_model = self.build_view_model(model, attached_view)
   self.layout_model_line_count = model.snapshot.line_count()
   self.layout_line_count = view_model.line_count()
   // The cursor outgoing alias is model-scoped. The ViewModel has already
@@ -172,6 +165,20 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       }
     }),
   )
+  // `viewModelImpl.ts:522` reaches the root only after the ViewModel's
+  // browser callback has synchronously delivered `ViewTokensChanged`. This
+  // replaces the old direct TextModel listener and never invokes the lexer.
+  listeners_to_remove.push(
+    view_model.on_model_tokens_changed(event => {
+      match self.get_view_model() {
+        Some(active) =>
+          if physical_equal(active, view_model) {
+            self.handle_model_tokens_changed(model, event.event)
+          }
+        None => ()
+      }
+    }),
+  )
   // Monaco's `ViewLayout.onDidScroll` is the single scroll-to-render seam.
   // Immediate calls and rAF animation ticks both arrive here, avoiding a
   // separate browser-only animation path.
@@ -181,10 +188,19 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
     }),
   )
   let view = self.create_view(model, view_model)
-  self.model_data = Some({ model, view_model, view, listeners_to_remove })
+  self.model_data = Some({
+    model,
+    view_model,
+    view,
+    attached_view,
+    listeners_to_remove,
+  })
   self.emit_view_event(ViewFlushed)
   self.rendered_window = None
   self.apply_view_model_layout(view_model)
+  // `CodeEditorWidget.handleInitialized` owns the ordinary one-time stable
+  // visible-range publication; generic renders never repeat it.
+  view_model.visible_lines_stabilized()
   let build_finished = now_ms()
   self.did_build_view_model.fire({
     model,
@@ -193,8 +209,8 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
     diagnostic_count: self.services.markers
     .diagnostics_for_resource(model.uri)
     .length(),
-    tokenize_ms: tokenize_finished - tokenize_started,
-    build_ms: build_finished - tokenize_finished,
+    tokenize_ms: 0.0,
+    build_ms: build_finished - build_started,
   })
   self.pending_rendered = Some({ model, fresh: true })
   self.measure_requested = true
@@ -346,6 +362,7 @@ fn Viewer::create_view(
 fn Viewer::build_view_model(
   self : Viewer,
   model : @model.TextModel,
+  attached_view : @model_tokens.AttachedViewImpl,
 ) -> @view_model.ViewModel {
   let options = self.options.view_model_options(
     self.soft_wrap_column,
@@ -360,6 +377,16 @@ fn Viewer::build_view_model(
     smooth_scrolling=self.options.smooth_scrolling,
     schedule_at_next_animation_frame~,
     now=date_now_ms,
+    attached_view~,
+    emit_view_tokens_changed=ranges => {
+      let changed_ranges : Array[(Int, Int)] = []
+      for range in ranges {
+        changed_ranges.push((range.from_line_number, range.to_line_number))
+      }
+      self.emit_view_event(
+        ViewTokensChanged(view_tokens_changed_event(changed_ranges)),
+      )
+    },
   )
   // Seed the fresh layout's viewport box from the widget's measured
   // dimensions — Monaco's `ViewLayout` reads `EditorOption.layoutInfo` from
@@ -373,33 +400,15 @@ fn Viewer::build_view_model(
 }
 
 ///|
-/// The viewer's `model.onDidChangeTokens` handler: re-warms the reset token
-/// memo and schedules a repaint — Monaco's `ModelTokensChangedEvent` →
-/// `ViewTokensChangedEvent` round trip. The long-lived view model survives;
-/// only the token memo and the paint are redone.
-fn Viewer::retokenize_current_model(
+/// The root half of the ViewModel's outgoing model-token event. The internal
+/// browser ViewEvent has already completed; telemetry reads stored counts
+/// passively and the next frame repaints without re-warming the lexer.
+fn Viewer::handle_model_tokens_changed(
   self : Viewer,
   model : @model.TextModel,
-  event : @model_tokens.ModelTokensChangedEvent,
+  _event : @model_tokens.ModelTokensChangedEvent,
 ) -> Unit {
-  let tokenize_started = now_ms()
-  model.tokenization.force_tokenization()
-  let tokenize_finished = now_ms()
   guard self.get_view_model() is Some(view_model) else { return }
-  // Convert the model event's exact inclusive ranges into view coordinates so
-  // wrapped continuations, hidden areas, and injected text reach the same
-  // token-sensitive ViewParts as Monaco.
-  let model_ranges : Array[(Int, Int)] = []
-  for range in event.ranges {
-    model_ranges.push((range.from_line_number, range.to_line_number))
-  }
-  self.emit_view_event(
-    ViewTokensChanged(
-      view_tokens_changed_event(
-        view_token_ranges_from_model(view_model, model, model_ranges),
-      ),
-    ),
-  )
   self.did_build_view_model.fire({
     model,
     line_count: view_model.line_count(),
@@ -407,7 +416,7 @@ fn Viewer::retokenize_current_model(
     diagnostic_count: self.services.markers
     .diagnostics_for_resource(model.uri)
     .length(),
-    tokenize_ms: tokenize_finished - tokenize_started,
+    tokenize_ms: 0.0,
     build_ms: 0.0,
   })
   let fresh = match self.pending_rendered {

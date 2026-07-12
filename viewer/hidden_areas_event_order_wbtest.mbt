@@ -95,6 +95,7 @@ test "hidden areas collect recovery scroll before mapping delivery" {
     model: headless.model,
     view_model: headless.view_model,
     view: Some(view),
+    attached_view: headless.attached_view,
     listeners_to_remove: headless.listeners_to_remove,
   })
 

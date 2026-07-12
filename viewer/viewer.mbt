@@ -158,12 +158,14 @@ priv struct PendingRendered {
 ///|
 /// Monaco's `ModelData` (`codeEditorWidget.ts:2123-2143`): everything whose
 /// lifetime is one model attach. `view` is `None` while unattached (the
-/// headless harness — the `hasRealView=false` analog); `attached_view` is
-/// N-A (no attached-view protocol).
+/// headless harness — the `hasRealView=false` analog). `attached_view` is the
+/// exact handle returned by `TextModel::on_before_attached` and detached only
+/// by this bundle.
 priv struct ModelData {
   model : @model.TextModel
   view_model : @view_model.ViewModel
   view : @view.View?
+  attached_view : @model_tokens.AttachedViewImpl
   listeners_to_remove : Array[@base_common.Disposable]
 }
 
@@ -176,6 +178,9 @@ fn ModelData::dispose(self : ModelData) -> Unit {
   for listener in self.listeners_to_remove {
     listener.dispose()
   }
+  // `model.onBeforeDetached(attachedView)` precedes both View and ViewModel
+  // disposal (`codeEditorWidget.ts:2134-2141`).
+  self.model.on_before_detached(self.attached_view)
   match self.view {
     Some(view) => view.dispose()
     None => ()
@@ -935,12 +940,16 @@ pub fn Viewer::restore_view_state(
 ) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
   match state {
-    Some(state) =>
+    Some(state) => {
       view_model.view_layout.scroll_to(
         scroll_top=state.scroll_top,
         scroll_left=state.scroll_left,
       )
       |> ignore
+      // `View.restoreState` publishes stable priority only after both scroll
+      // axes have synchronously delivered their ordinary unstable update.
+      view_model.visible_lines_stabilized()
+    }
     None => ()
   }
 }

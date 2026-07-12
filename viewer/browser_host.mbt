@@ -26,6 +26,57 @@ fn schedule_at_next_animation_frame(
 }
 
 ///|
+/// Browser idle adapter selected from the current global realm. When either
+/// native idle function is absent it preserves Monaco's timeout-backed
+/// `Date.now() + 15` deadline and makes disposal inert rather than relying on
+/// timer cancellation (`base/common/async.ts:1536-1579`).
+extern "js" fn schedule_tokenization_idle_js(
+  callback : (() -> Double) -> Unit,
+) -> () -> Unit =
+  #| (callback) => {
+  #|   const g = globalThis;
+  #|   let disposed = false;
+  #|   if (typeof g.requestIdleCallback !== "function" ||
+  #|       typeof g.cancelIdleCallback !== "function") {
+  #|     g.setTimeout(() => {
+  #|       if (disposed) return;
+  #|       const end = Date.now() + 15;
+  #|       callback(() => Math.max(0, end - Date.now()));
+  #|     }, 0);
+  #|     return () => {
+  #|       if (disposed) return;
+  #|       disposed = true;
+  #|     };
+  #|   }
+  #|   const handle = g.requestIdleCallback((deadline) => {
+  #|     if (!disposed) callback(() => deadline.timeRemaining());
+  #|   });
+  #|   return () => {
+  #|     if (disposed) return;
+  #|     disposed = true;
+  #|     g.cancelIdleCallback(handle);
+  #|   };
+  #| }
+
+///|
+fn schedule_tokenization_idle(
+  callback : (@model_tokens.TokenizationIdleDeadline) -> Unit,
+) -> @base_common.Disposable {
+  let cancel = schedule_tokenization_idle_js(read_time_remaining => {
+    callback(@model_tokens.TokenizationIdleDeadline::new(read_time_remaining))
+  })
+  @base_common.Disposable::from(cancel)
+}
+
+///|
+let browser_tokenization_scheduler : @model_tokens.TokenizationScheduler = @model_tokens.TokenizationScheduler::new(
+  idle=schedule_tokenization_idle,
+  zero_timeout=callback => schedule_timeout(callback, 0),
+  delay=(milliseconds, callback) => schedule_timeout(callback, milliseconds),
+  now=now_ms,
+)
+
+///|
 /// Monaco `dom.runAtThisOrScheduleAtNextAnimationFrame` for the single-window
 /// Viewer root. A render requested while the native frame queue is already
 /// draining joins the current queue; otherwise one native rAF owns the next

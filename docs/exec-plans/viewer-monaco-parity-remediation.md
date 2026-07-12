@@ -581,3 +581,16 @@ The independent closing task is:
   streaming, clamp, topology, telemetry, remote, workbench, and clipboard
   boundaries explicit. No product/test file changed; stop for fresh Gate B
   re-review.
+- 2026-07-12: three independent Gate B reviews rejected EOL inventory commit
+  `2b99a7e` (child SHA-256
+  `4a0246801929fcd58b752167925a85e970dc0338b224bbc6a14db4b6367b2cae`).
+  They found duplicate builder ownership, five missing source atoms, an
+  overbroad PieceTreeBase scope, two async-owned provider rows, two
+  absent-method misclassifications, inconsistent BOM wording, and an
+  under-specified equality matrix. No product/test file changed.
+- 2026-07-12: the next corrected EOL candidate has 535/535 TODO rows: 524
+  source atoms plus 11 named tests, with 208 proposed TESTED, 34 PORTED, zero
+  DEFERRED, and 293 N-A. Exact EBB/PB ownership, the complete consumed
+  ITextModel declaration closure, permanent Option-B/BOM classifications,
+  four equality exits, and the parent-authorized PR-EOL-002/004 boundary are
+  explicit. No product/test file changed; stop for fresh Gate B review.

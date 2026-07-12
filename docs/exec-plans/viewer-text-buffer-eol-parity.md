@@ -66,11 +66,9 @@ while returning LF values is not an allowed deviation.
 - viewer/common/model/model_reference_wbtest.mbt
 - viewer/common/model/text_model_test.mbt
 - viewer/common/model/set_value_wbtest.mbt
-- viewer/common/languages/languages.mbt
 - viewer/common/languages/inlay_hints_request.mbt
 - viewer/common/languages/inlay_hints_request_wbtest.mbt
 - viewer/common/model/README.md
-- language/inlay_hints.mbt
 - viewer/public_read_api.mbt
 - viewer/public_read_api_wbtest.mbt
 - viewer/selection_clipboard_wbtest.mbt
@@ -78,6 +76,9 @@ while returning LF values is not an allowed deviation.
 
 Review-only consumers, not additional source-member owners:
 
+- viewer/common/languages/languages.mbt owns the model-wide inlay scheduling
+  entrypoint, and language/inlay_hints.mbt owns the provider trait/API; both
+  remain frozen async-plan context rather than EOL ledger rows;
 - internal/shell/workbench/app.mbt constructs a model from the raw provider
   `DocumentSnapshot` and serializes `model.snapshot.text`;
 - internal/shell/server/model_adapter.mbt constructs the remote-server model
@@ -162,22 +163,22 @@ target and is not implementation evidence.
 ```text
 Builder/factory (EFB + EBB)                     64
 PieceTreeTextBuffer readonly unit (ETB)         76
-PieceTreeBase dependency closure (PB)          198
-model.ts enums/interfaces (MI)                  55
+PieceTreeBase dependency closure (PB)          199
+model.ts enums/interfaces (MI)                  59
 default-EOL carrier chain (DEOL)                 8
 named TextModel cluster (TMD/TM/TML)            55
 setValue reason path (RSN)                       3
 consumed TextModel read closure (TMR)           38
 content event facts (EV)                        20
-provider full-range handoff (PR)                 4
+provider endpoint/offset handoff (PR)            2
                                                 ---
-Source atoms                                    521
+Source atoms                                    524
 Named upstream test dispositions (REF)          11
                                                 ---
-Total ledger rows                               532
+Total ledger rows                               535
 
-Working:  532 TODO; 0 PASS
-Proposed: 208 TESTED + 34 PORTED + 0 DEFERRED + 290 N-A = 532
+Working:  535 TODO; 0 PASS
+Proposed: 208 TESTED + 34 PORTED + 0 DEFERRED + 293 N-A = 535
 ```
 
 The source files are byte-pinned at the oracle commit:
@@ -241,7 +242,7 @@ For every construction and `set_value(s)`:
   claimed as parity: their rows are N-A because the fixed public
   Viewer/workbench contract retains U+FEFF as ordinary content.
 
-Review gate: commit this corrected 532-row documentation-only inventory and
+Review gate: commit this corrected 535-row documentation-only inventory and
 stop for fresh independent Gate B re-review before any product or test edit.
 
 ### Builder/factory — EFB and EBB
@@ -307,8 +308,8 @@ stop for fresh independent Gate B re-review before any product or test edit.
 | EBB-033 | `_finish` before factory capture (`:157`) | Normalize and derive starts before publishing snapshot facts. | TODO | TESTED |
 | EBB-034 | factory captures complete builder facts (`:158-168`) | Flat snapshot retains text/starts; omitted facts have row-local outcomes. | TODO | PORTED |
 | EBB-035 | no chunks creates one empty buffer (`:171-174`) | Empty snapshot has starts `[0]`. | TODO | TESTED |
-| EBB-036 | pending-char branch clears flag (`:176-177`) | No streaming state. | TODO | N-A (streaming absent) |
-| EBB-037 | clear pending state and append pending unit (`:176-180`) | Test trailing CR/high-surrogate observable outcome on final normalized text. | TODO | TESTED |
+| EBB-036 | pending-char gate and clear flag (`:176-177`) | No streaming state. | TODO | N-A (streaming absent) |
+| EBB-037 | append pending unit to the prior last chunk (`:180`) | Test trailing CR/high-surrogate observable outcome on final normalized text. | TODO | TESTED |
 | EBB-038 | pending CR increments counter (`:183-185`) | No EOL selection count; trailing CR line outcome is tested elsewhere. | TODO | N-A (Option B fixed LF) |
 | EBB-039 | prior last-chunk invariant (`:179`) | No chunk array invariant. | TODO | N-A (whole-string seam) |
 | EBB-040 | recompute last chunk starts, not incremental patch (`:181-182`) | Derive all starts from final normalized text. | TODO | TESTED |
@@ -405,7 +406,7 @@ escape hatch (`:527-530`).
 
 ### PieceTreeBase dependency closure — PB
 
-Scoped lines are `16-151,268-318,355-393,395-603,605-662,1073-1156,
+Scoped lines are `16-151,268-318,355-357,369-393,395-603,605-662,1073-1156,
 1253-1372`. Tree/search/edit siblings outside this closure are excluded.
 
 | ID | Source atom | Local target / current gap | Status | Proposed terminal |
@@ -608,12 +609,14 @@ Scoped lines are `16-151,268-318,355-393,395-603,605-662,1073-1156,
 | PB-196 | no-LF node append (`:1314-1317`) | No node boundary. | TODO | N-A (single-buffer seam) |
 | PB-197 | advance forward (`:1319`) | No nodes. | TODO | N-A (single-buffer seam) |
 | PB-198 | final raw-line return (`:1322`) | Observable line-content result is tested through the wrapper. | TODO | TESTED |
+| PB-199 | public `getLineCharCode(lineNumber,index)`, `nodeAt2(lineNumber,index+1)`, and private-helper delegate (`:651-654`) | Preserve exact content/EOL/EOF lookup arithmetic through the flat snapshot helper. | TODO | TESTED |
 
-Proposed PB totals: 67 TESTED / 17 PORTED / 114 N-A = 198.
+Proposed PB totals: 68 TESTED / 17 PORTED / 114 N-A = 199.
 
 `PieceTreeSearchCache` (`:199-266`) is the complete excluded topology-cache
-cluster represented by PB-108. normalizeEOL/setEOL, edits, nodeAt/search, and
-CRLF mutation helpers remain excluded siblings.
+cluster represented by PB-108. Base setEOL (`:359-363`) and streaming
+createSnapshot/BOM wrapping (`:365-367`), normalizeEOL, edits, nodeAt/search,
+and CRLF mutation helpers remain excluded complete siblings.
 
 ### model.ts enums and interfaces — MI
 
@@ -674,8 +677,12 @@ CRLF mutation helpers remain excluded siblings.
 | MI-053 | model `getOffsetAt` (`:943`) | Validated normalized offset. | TODO | TESTED |
 | MI-054 | model `getPositionAt` (`:951`) | Normalized position with clamps. | TODO | TESTED |
 | MI-055 | model `getFullModelRange` (`:956`) | Must cover the full normalized value. | TODO | TESTED |
+| MI-056 | `ITextModel.mightContainUnusualLineTerminators` (`:743`) | Metadata/removal service remains absent. | TODO | N-A (reduced metadata API) |
+| MI-057 | `ITextModel.equalsTextBuffer` (`:811`) | Compare normalized representation through the consumed implementation. | TODO | TESTED |
+| MI-058 | `ITextModel.getLineFirstNonWhitespaceColumn` (`:900`) | Existing source-derived path. | TODO | TESTED |
+| MI-059 | `ITextModel.getLineLastNonWhitespaceColumn` (`:906`) | Existing source-derived path. | TODO | TESTED |
 
-Proposed MI totals: 36 TESTED / 3 PORTED / 16 N-A = 55.
+Proposed MI totals: 39 TESTED / 3 PORTED / 17 N-A = 59.
 
 Explicit non-row siblings are unusual-terminator reset, options/version,
 buffer escape hatches, dominated-long-lines, injected text, validation/modify,
@@ -791,8 +798,8 @@ Proposed RSN totals: 3 N-A = 3.
 | TMR-014 | `getEOL` disposed guard (`:879`) | Readonly reads survive disposal. | TODO | N-A (existing lifecycle seam) |
 | TMR-015 | `getEOL` buffer delegate (`:880`) | Add public `get_eol() -> String`, fixed LF. | TODO | TESTED |
 | TMR-016 | `getEndOfLineSequence` disposed guard (`:884`) | Readonly reads survive disposal. | TODO | N-A (existing lifecycle seam) |
-| TMR-017 | exact `buffer.getEOL()=="\n"` predicate (`:885-887`) | Fixed-LF fact is observable through `get_eol`. | TODO | TESTED |
-| TMR-018 | LF enum result (`:887`) | Fixed-LF result is proven without exporting a redundant enum. | TODO | TESTED |
+| TMR-017 | exact `buffer.getEOL()=="\n"` predicate (`:885-887`) | The complete `getEndOfLineSequence` member is absent; `get_eol` proves TMR-015 only. | TODO | N-A (Option B intentional deviation) |
+| TMR-018 | LF enum result (`:887`) | The redundant enum-return API is not exported. | TODO | N-A (Option B intentional deviation) |
 | TMR-019 | CRLF enum result (`:888`) | Impossible in fixed-LF Viewer storage. | TODO | N-A (Option B intentional deviation) |
 | TMR-020 | `getLineMinColumn` disposed guard (`:893`) | Readonly reads survive disposal. | TODO | N-A (existing lifecycle seam) |
 | TMR-021 | exact minimum column 1 (`:894`) | Existing method. | TODO | TESTED |
@@ -802,7 +809,7 @@ Proposed RSN totals: 3 N-A = 3.
 | TMR-025 | `getCharacterCountInRange` member/default EOL (`:841`) | Unicode-scalar count API is absent; UTF-16 length is authoritative. | TODO | N-A (reduced read API) |
 | TMR-026 | character-count disposed guard (`:842`) | Method is absent with its API. | TODO | N-A (reduced read API) |
 | TMR-027 | validate then buffer character-count delegate (`:843`) | Method is absent with its API. | TODO | N-A (reduced read API) |
-| TMR-028 | `createSnapshot(preserveBOM=false)` member/default (`:815`) | Streaming/preserveBOM API is absent; U+FEFF remains content. | TODO | N-A (streaming snapshot API absent) |
+| TMR-028 | `createSnapshot(preserveBOM=false)` member/default (`:815`) | The preserve-BOM switch is absent and U+FEFF remains content. | TODO | N-A (BOM retained as content) |
 | TMR-029 | construct wrapper from buffer snapshot (`:816`) | Streaming snapshot implementation is absent. | TODO | N-A (streaming snapshot API absent) |
 | TMR-030 | unusual-line-terminator metadata delegate (`:746-748`) | Metadata/removal API is absent; U+2028/U+2029 remain content. | TODO | N-A (reduced metadata API) |
 | TMR-031 | first-non-whitespace disposed guard (`:906`) | Readonly reads survive disposal. | TODO | N-A (existing lifecycle seam) |
@@ -814,7 +821,7 @@ Proposed RSN totals: 3 N-A = 3.
 | TMR-037 | `equalsTextBuffer` disposed guard (`:457-458`) | Readonly equality survives disposal. | TODO | N-A (existing lifecycle seam) |
 | TMR-038 | `equalsTextBuffer` buffer delegate (`:459`) | Local normalized snapshot equality. | TODO | TESTED |
 
-Proposed TMR totals: 14 TESTED / 24 N-A = 38.
+Proposed TMR totals: 12 TESTED / 26 N-A = 38.
 
 `removeUnusualLineTerminators` (`:750-754`) and `getTextBuffer` (`:462-465`)
 remain complete excluded mutation/escape-hatch siblings.
@@ -848,16 +855,16 @@ Proposed EV totals: 16 TESTED / 4 N-A = 20. Complete
 `InternalModelContentChangeEvent` and `_emitContentChangedEvent` mechanics do
 not enter this denominator and remain tokenization-owned.
 
-### Provider full-range handoff — PR
+### Provider endpoint/offset handoff — PR
 
 | ID | Source/consumer atom | Local target / current gap | Status | Proposed terminal |
 |---|---|---|---|---|
-| PR-EOL-001 | model-wide inlay passes `[model.get_full_model_range()]` (`languages.mbt:222-239`, fact `:231`) | Require real non-LF-input provider evidence. | TODO | TESTED |
 | PR-EOL-002 | each Range endpoint converts to offset (`inlay_hints_request.mbt:143-156`, facts `:152-155`) | CRLF currently produces raw end 4 for LF value length 3. | TODO | TESTED |
-| PR-EOL-003 | provider trait receives an OffsetRange (`language/inlay_hints.mbt:35-41`) | Existing public trait shape. | TODO | TESTED |
 | PR-EOL-004 | request call forwards the captured exact range (`inlay_hints_request.mbt:162-165`) | Existing test covers only LF. | TODO | TESTED |
 
-Proposed PR totals: 4 TESTED = 4.
+Proposed PR totals: 2 TESTED = 2. `Languages.inlay_hints_for_model` scheduling
+and the provider trait/API remain frozen async-plan context; this child owns
+only the parent-transferred endpoint conversion and exact forwarding facts.
 
 ### Named upstream reference-test dispositions — REF
 
@@ -928,6 +935,10 @@ Port upstream cases and add local invariants for:
 - empty/same-line/cross-line/full/trailing ranges across getValue,
   getValueLength, getValueInRange, getValueLengthInRange, getPositionAt,
   getOffsetAt, getFullModelRange, getEOL/sequence, equality, and public reads;
+- equality fixtures separately exercise length mismatch, equal normalized
+  length with line-count mismatch, equal length/count with content mismatch,
+  and exact normalized equality, including raw CRLF versus LF inputs that
+  normalize equal;
 - `getLineCharCode` content index, nonfinal `index==lineLength` returning LF,
   and final `index==lineLength` returning 0;
 - direct line-array/line-content extraction across first, interior, final, and
@@ -967,7 +978,7 @@ TextDefined/CRLF read preference. The exact mapping criterion is:
   source EOL selector/default/raw-EOL branch; and
 - the fixed-value/adapted rows EFB-014/016/018/020/021, EBB-032/033,
   ETB-019/029/073, PB-045–047/054, MI-002/004/006/013/017/019/037/040/
-  042/043/049, TMD-001, TM-EOL-042, TMR-015/017/018, EV-EOL-006, and
+  042/043/049, TMD-001, TM-EOL-042, TMR-015, EV-EOL-006, and
   REF-002/006 prove the chosen LF value or adapt an upstream expected result.
 
 PB-075 and EV-EOL-011 are deliberately absent from this mapping: subtracting
@@ -992,9 +1003,9 @@ update this ledger and stop for classification review.
 
 ### Inventory stop gate
 
-- [x] 521 source atoms and 11 named test atoms have 532 unique ledger rows.
+- [x] 524 source atoms and 11 named test atoms have 535 unique ledger rows.
 - [x] Every row is TODO with one proposed terminal; there are zero PASS rows.
-- [x] Proposed totals are 208 TESTED / 34 PORTED / 0 DEFERRED / 290 N-A.
+- [x] Proposed totals are 208 TESTED / 34 PORTED / 0 DEFERRED / 293 N-A.
 - [x] Option B and BOM/clamp/streaming reductions map to exact rows.
 - [x] Algebraic invariants and source-branch behavior matrix are explicit.
 - [x] Shared-file ownership and excluded sibling clusters are explicit.
@@ -1045,6 +1056,23 @@ update this ledger and stop for classification review.
   endpoint-to-offset subfacts, and the matrix includes remote, workbench,
   clipboard, unpaired-surrogate, EOL/EOF line-char, and line-extraction axes.
   No product/test file changed; commit and stop for fresh Gate B re-review.
+- 2026-07-12: three fresh Gate B reviews rejected documentation-only commit
+  `2b99a7e` (child SHA-256
+  `4a0246801929fcd58b752167925a85e970dc0338b224bbc6a14db4b6367b2cae`).
+  Reviews found duplicate builder ownership, the missing public PieceTreeBase
+  line-char wrapper and four missing ITextModel declarations, an overbroad PB
+  scope citation, two async-owned provider rows in the EOL denominator,
+  absent-method TMR classifications, inconsistent BOM wording, and a generic
+  rather than four-exit equality matrix. All source hashes, REF ranges, and
+  the remaining 532-row mechanics passed; no product/test file changed.
+- 2026-07-12: the next corrected candidate has 535/535 TODO rows: 524 source
+  atoms plus 11 named tests, with 208 proposed TESTED, 34 PORTED, zero
+  DEFERRED, and 293 N-A. EBB ownership is disjoint; PB includes the public
+  `getLineCharCode` wrapper and excludes base setEOL/snapshot siblings by exact
+  range; MI includes all consumed declarations; TMR classifies the absent EOL
+  sequence method and preserve-BOM switch consistently; only PR-EOL-002/004
+  remain transferred from async; and equality fixtures name all four source
+  exits. No product/test file changed; commit and stop for fresh Gate B review.
 
 Append the dated inventory approval, implementation commits, validation
 results, and final ledger totals here. Freeze after implementation.

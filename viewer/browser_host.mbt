@@ -26,45 +26,103 @@ fn schedule_at_next_animation_frame(
 }
 
 ///|
-/// Browser idle adapter selected from the current global realm. When either
-/// native idle function is absent it preserves Monaco's timeout-backed
-/// `Date.now() + 15` deadline and makes disposal inert rather than relying on
-/// timer cancellation (`base/common/async.ts:1536-1579`).
-extern "js" fn schedule_tokenization_idle_js(
-  callback : (() -> Double) -> Unit,
-) -> () -> Unit =
-  #| (callback) => {
-  #|   const g = globalThis;
-  #|   let disposed = false;
-  #|   if (typeof g.requestIdleCallback !== "function" ||
-  #|       typeof g.cancelIdleCallback !== "function") {
-  #|     g.setTimeout(() => {
-  #|       if (disposed) return;
-  #|       const end = Date.now() + 15;
-  #|       callback(() => Math.max(0, end - Date.now()));
-  #|     }, 0);
-  #|     return () => {
-  #|       if (disposed) return;
-  #|       disposed = true;
+#external
+priv type TokenizationIdleTarget
+
+///|
+#external
+priv type BrowserIdleDeadline
+
+///|
+#external
+priv type TokenizationIdleAdapter
+
+///|
+extern "js" fn global_tokenization_idle_target_js() -> TokenizationIdleTarget = "() => globalThis"
+
+///|
+/// Selects Monaco's browser-idle implementation once for one realm. The
+/// injected target is the exact local test seam; production constructs one
+/// process-global adapter from `globalThis` below.
+extern "js" fn create_tokenization_idle_adapter_js(
+  target : TokenizationIdleTarget,
+) -> TokenizationIdleAdapter =
+  #| (target) => {
+  #|   let runWhenIdle;
+  #|   if (typeof target.requestIdleCallback !== "function" ||
+  #|       typeof target.cancelIdleCallback !== "function") {
+  #|     runWhenIdle = (_targetWindow, runner, _timeout) => {
+  #|       target.setTimeout(() => {
+  #|         if (disposed) return;
+  #|         const end = target.Date.now() + 15;
+  #|         const deadline = {
+  #|           didTimeout: true,
+  #|           timeRemaining() {
+  #|             return Math.max(0, end - target.Date.now());
+  #|           },
+  #|         };
+  #|         runner(Object.freeze(deadline));
+  #|       }, 0);
+  #|       let disposed = false;
+  #|       return () => {
+  #|         if (disposed) return;
+  #|         disposed = true;
+  #|       };
+  #|     };
+  #|   } else {
+  #|     runWhenIdle = (targetWindow, runner, timeout) => {
+  #|       const handle = targetWindow.requestIdleCallback(
+  #|         runner,
+  #|         typeof timeout === "number" ? { timeout } : undefined,
+  #|       );
+  #|       let disposed = false;
+  #|       return () => {
+  #|         if (disposed) return;
+  #|         disposed = true;
+  #|         targetWindow.cancelIdleCallback(handle);
+  #|       };
   #|     };
   #|   }
-  #|   const handle = g.requestIdleCallback((deadline) => {
-  #|     if (!disposed) callback(() => deadline.timeRemaining());
-  #|   });
-  #|   return () => {
-  #|     if (disposed) return;
-  #|     disposed = true;
-  #|     g.cancelIdleCallback(handle);
-  #|   };
+  #|   return (runner, hasTimeout, timeout) =>
+  #|     runWhenIdle(target, runner, hasTimeout ? timeout : undefined);
   #| }
+
+///|
+extern "js" fn run_tokenization_idle_adapter_js(
+  adapter : TokenizationIdleAdapter,
+  callback : (BrowserIdleDeadline) -> Unit,
+  has_timeout : Bool,
+  timeout : Double,
+) -> () -> Unit = "(adapter, callback, hasTimeout, timeout) => adapter(callback, hasTimeout, timeout)"
+
+///|
+extern "js" fn browser_idle_deadline_time_remaining_js(
+  deadline : BrowserIdleDeadline,
+) -> Double = "(deadline) => deadline.timeRemaining()"
+
+///|
+/// Monaco's `runWhenGlobalIdle`: bind the once-selected adapter to the same
+/// `globalThis` realm used for feature detection (`async.ts:1536-1579`).
+let browser_tokenization_idle_adapter : TokenizationIdleAdapter = create_tokenization_idle_adapter_js(
+  global_tokenization_idle_target_js(),
+)
 
 ///|
 fn schedule_tokenization_idle(
   callback : (@model_tokens.TokenizationIdleDeadline) -> Unit,
 ) -> @base_common.Disposable {
-  let cancel = schedule_tokenization_idle_js(read_time_remaining => {
-    callback(@model_tokens.TokenizationIdleDeadline::new(read_time_remaining))
-  })
+  let cancel = run_tokenization_idle_adapter_js(
+    browser_tokenization_idle_adapter,
+    deadline => {
+      callback(
+        @model_tokens.TokenizationIdleDeadline::new(() => {
+          browser_idle_deadline_time_remaining_js(deadline)
+        }),
+      )
+    },
+    false,
+    0.0,
+  )
   @base_common.Disposable::from(cancel)
 }
 

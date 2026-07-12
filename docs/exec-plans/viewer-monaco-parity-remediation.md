@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — cursor child implementation authorized
+Status: active — render-invalidation child inventory active
 
 Date: 2026-07-10
 
@@ -82,8 +82,8 @@ product contract and belongs in an ordinary local test.
 |---:|---|---|---|---|
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
-| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | Gate B approved — implementation active |
-| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | proposed |
+| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
+| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | inventory in progress |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
@@ -383,3 +383,18 @@ The independent closing task is:
   Independent reviews confirmed the cursor/movement and browser/event halves,
   the outgoing FIFO topology, exact 59 + 10 test authority, and both distinct
   dual-side validation call paths. Product/test implementation is authorized.
+- 2026-07-12: the cursor/input-events child is implemented and frozen. Product
+  commit `1525ed932acb4e2c3300a401ab2a329d1b5fdbaf`, independent-audit remediation
+  commit `07d2e8a9664e068c7cf43c6a9a841274ed756630`, and contract correction commit
+  `3c8b25277b3508b31eb8c146bc8f5578631bd688` close the cursor state/event
+  spine, source-shaped command objects,
+  readonly key and pointer gestures, exact reveal/source propagation, physical-
+  model content barriers, and listener-level reentrant delivery. The 802-row
+  ledger closes as 326 TESTED, 69 PORTED, 226 DEFERRED, and 181 N-A with zero
+  TODO/PASS. Ten approved-map rows were downgraded during closing review: eight
+  direct grapheme-dependent atoms, the absent numeric command-weight ABI, and
+  fixed readonly pointer-option reads. Independent Gate D reviews found no
+  remaining runtime blocker. Final gates pass: check, JS 1127/1127, native
+  858/858 (Wasm has no test entry), build, and browser 54/54; an initial blank-
+  page folding startup failure passed both its focused rerun and the complete
+  rerun. The portfolio proceeds to the render-invalidation inventory.

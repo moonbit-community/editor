@@ -1003,12 +1003,12 @@ Proposed REF totals: 6 PORTED / 5 N-A = 11.
 ### Pinned source-oracle disposition — ORACLE
 
 This is a counted test disposition, not a source-member row. It freezes a
-behavior-variable combination spanning already-owned EBB atoms without
+behavior-variable combination spanning already-owned EBB/EFB/ETB atoms without
 double-counting those source lines.
 
 | ID | Pinned source-oracle case | Required disposition | Status | Proposed terminal |
 |---|---|---|---|---|
-| ORACLE-001 | held-unit combinations across builder `:103-115,123-131,136-152,171-185` and factory `:27-58`: after source BOM stripping, singleton CR becomes two CRLFs and singleton D800/DBFF is stored twice; basic prefix + trailing D800/DBFF stores one unit but leaves `mightContainNonBasicASCII=false` | Run pinned cases for bare and U+FEFF-prefixed CR/D800/DBFF plus `a+D800/DBFF`; locally retain U+FEFF as ordinary content, retain/normalize one held unit, and compute non-basic metadata from the complete stored text (`true` for BOM or surrogate). Accepted-prefix multi-unit trailing cases must not duplicate. | TODO | TESTED |
+| ORACLE-001 | held-unit combinations across `pieceTreeTextBufferBuilder.ts:13-24,42-58,68-96,103-115,123-133,136-152,171-185` and `pieceTreeTextBuffer.ts:39,44-50,75-77`: after source BOM stripping, singleton CR becomes two CRLFs and singleton D800/DBFF is stored twice; basic prefix + trailing D800/DBFF stores one unit but leaves `mightContainNonBasicASCII=false` | Run pinned cases for bare and U+FEFF-prefixed CR/D800/DBFF plus `a+D800/DBFF`; locally retain U+FEFF as ordinary content, retain/normalize one held unit, and compute non-basic metadata from the complete stored text (`true` for BOM or surrogate). Accepted-prefix multi-unit trailing cases must not duplicate. | TODO | TESTED |
 
 Proposed ORACLE totals: 1 TESTED = 1.
 
@@ -1134,10 +1134,11 @@ not preference policy:
   exactly CR/D800/DBFF makes EBB-021/022/035–037 insert and append the held unit
   twice; local storage instead retains ordinary U+FEFF (when present) plus one
   normalized/preserved unit;
-- with an accepted basic-ASCII prefix plus trailing D800/DBFF, EBB-028/029/
-  034/037/040, EFB-022, and ETB-008/017 preserve one surrogate but never
-  refresh the cached basic-ASCII fact; the local computed getter truthfully
-  reports non-basic content.
+- with an accepted basic-ASCII prefix plus trailing D800/DBFF,
+  EBB-011/016/018/019/023/024/028/029/034/037/040, EFB-008/022, and
+  ETB-005/008/017 preserve one surrogate but never refresh the cached
+  basic-ASCII fact; the local computed getter truthfully reports non-basic
+  content.
 
 ORACLE-001 freezes both source results and local adaptations. The exceptions
 do not cover accepted-prefix duplication or any other non-preference behavior.
@@ -1306,6 +1307,19 @@ update this ledger and stop for classification review.
   the same length-4 content behind separate BOM metadata; `a+D800/DBFF` kept
   one surrogate but reported non-basic false; and piece-end successor probes
   returned LF code 10 and ordinary `'1'` code 49. No repository file changed.
+- 2026-07-12: combined Gate B passed documentation-only commit `a652cd7`
+  (child SHA-256
+  `440d5bf01338fb30ae71bab9574fc8d626bd5523e0f1bfedbcacef252c93c071`),
+  while model/matrix and private-closure reviews rejected only ORACLE-001's
+  citation map. Its stale-metadata chain omitted EBB-011/023, EFB-008,
+  ETB-005 and the complete constructor/getter ranges despite correct behavior,
+  counts, and ownership. No product/test file changed.
+- 2026-07-12: the next corrected candidate remains 596/596 TODO rows with the
+  same 584 source + 11 REF + one ORACLE and 212/34/0/350 terminals. ORACLE-001
+  now cites the complete builder factory/cache path through `:123-133` and the
+  PieceTreeTextBuffer field/constructor/getter, and Deviations names every
+  affected EBB/EFB/ETB carrier. No product/test file changed; commit and stop
+  for fresh Gate B review.
 
 Append the dated inventory approval, implementation commits, validation
 results, and final ledger totals here. Freeze after implementation.

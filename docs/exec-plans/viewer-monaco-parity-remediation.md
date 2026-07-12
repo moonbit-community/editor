@@ -647,3 +647,12 @@ The independent closing task is:
   frozen TMV-016–018 handoff with explicit EOL-child N-A dispositions because
   Gate A exposes no setEOL mutation surface. No product/test file changed;
   stop for fresh Gate B review.
+- 2026-07-12: combined Gate B passed EOL inventory commit `a652cd7` (child
+  SHA-256 `440d5bf01338fb30ae71bab9574fc8d626bd5523e0f1bfedbcacef252c93c071`),
+  while model/matrix and private-closure reviews rejected only incomplete
+  ORACLE-001 cache-carrier citations. Behavior, denominator, and ownership all
+  otherwise passed; no product/test file changed.
+- 2026-07-12: the next corrected EOL candidate remains 596/596 TODO rows with
+  584 source + 11 REF + one ORACLE and proposed 212 TESTED / 34 PORTED / zero
+  DEFERRED / 350 N-A. The held-unit oracle now cites and maps its complete
+  EBB/EFB/ETB source chain. No product/test file changed; stop for fresh Gate B.

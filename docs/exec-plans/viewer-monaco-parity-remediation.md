@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — browser-geometry inventory ready; STOP FOR REVIEW
+Status: active — browser-geometry Gate B approved; implementation next
 
 Date: 2026-07-10
 
@@ -84,7 +84,7 @@ product contract and belongs in an ordinary local test.
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
-| 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | inventory ready |
+| 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | approved for implementation |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
@@ -477,3 +477,11 @@ The independent closing task is:
   Its proposed map is 425 TESTED, 96 PORTED, 80 DEFERRED, and 38 N-A. All three
   Gate B correction sets are integrated without product/test edits; the
   portfolio stops for fresh independent Gate B review.
+- 2026-07-12: browser-geometry Gate B passed at documentation-only amendment
+  commit `b4dfeb9`. The approved fixed denominator is 639/639 TODO rows with
+  425 planned TESTED, 96 PORTED, 80 DEFERRED, and 38 N-A; the child-plan
+  SHA-256 is
+  `16a5e943fef417443f4cdbd3078c4491a1a0f3e64caa2f1adddb21609230258f`.
+  Cross-assigned Group A/B/C reviews confirmed source completeness, ownership,
+  proposed terminals, matrices, and combined mechanics. No product or test
+  edit preceded approval; implementation is authorized.

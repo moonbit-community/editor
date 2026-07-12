@@ -1,6 +1,6 @@
 # Viewer Browser Geometry Parity
 
-Status: inventory ready — STOP FOR REVIEW
+Status: approved for implementation
 
 Date: 2026-07-10
 
@@ -511,7 +511,7 @@ N-A is limited to the reviewed CSS/root-owned theme seam. Native-host, experimen
 - [x] Prefix IDs are contiguous/unique, source-ordered, and five-column row counts are 55/134/16/25/16.
 - [x] All 246 working statuses are TODO and proposed totals are 181/7/57/1.
 - [x] Frozen handoffs and excluded sibling clusters are stated without duplicate ownership.
-- [ ] Independent Gate B approves the normalized denominator and boundary decisions.
+- [x] Independent Gate B approves the normalized denominator and boundary decisions.
 
 STOP FOR REVIEW. Do not implement until this inventory is integrated documentation-only and independently approved.
 
@@ -804,7 +804,7 @@ The rejected 225-row draft was normalized before product work:
 - [x] 122 GCW + 54 GRC active IDs are contiguous and unique.
 - [x] All 176 working statuses remain TODO and proposed terminals sum to 176.
 - [x] Ownership exclusions and current local gaps are preserved in the owning plan.
-- [ ] Independent Gate B approves the corrected denominator and proposed seams.
+- [x] Independent Gate B approves the corrected denominator and proposed seams.
 
 No product or test edit is authorized before that approval.
 
@@ -1236,6 +1236,8 @@ The matrix below is keyed by source cluster rather than raw IDs; after the accep
 - [x] Integrated this corrected fragment into the geometry child as a
   documentation-only amendment; product/test work remains stopped for fresh
   Gate B re-review.
+- [x] Fresh independent Gate B re-review approves the Group C denominator,
+  terminals, and expanded matrix.
 
 Review gate: this corrected documentation-only amendment must be integrated,
 committed, and independently re-reviewed before any product or test edit.
@@ -1362,3 +1364,12 @@ Uniform-width invention is not an acceptable seam.
   map is 425 TESTED, 96 PORTED, 80 DEFERRED, and 38 N-A. All review corrections
   are integrated, all source hashes remain pinned, and no product or test file
   changed. Commit this amendment and STOP for fresh independent Gate B review.
+- 2026-07-12: browser-geometry Gate B passed at documentation-only amendment
+  commit `b4dfeb9690f0cc068056f20d3d433f34bcd92147`. The approved fixed
+  denominator is 639/639 TODO rows with 425 planned TESTED, 96 PORTED, 80
+  DEFERRED, and 38 N-A; the child-plan SHA-256 is
+  `16a5e943fef417443f4cdbd3078c4491a1a0f3e64caa2f1adddb21609230258f`.
+  Cross-assigned reviewers independently approved Group A, Group B, and Group
+  C against the pinned sources, local ownership, proposed terminals, matrices,
+  combined mechanics, and docs-only diff. No product or test edit preceded
+  approval; implementation is authorized.

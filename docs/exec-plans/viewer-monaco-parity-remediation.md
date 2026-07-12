@@ -607,3 +607,16 @@ The independent closing task is:
   closure, source-faithful terminal failure, 16×2 set_value matrix,
   sequence-N-A boundary, and Flush-only event scope are explicit. No
   product/test file changed; stop for fresh Gate B review.
+- 2026-07-12: builder/base and combined Gate B reviews rejected EOL inventory
+  commit `6634aaf` (child SHA-256
+  `6772a3101ab170d2a2e1ce65237a48de33823b53146ef2d532f66f236d788cc8`);
+  model/events passed. The candidate omitted the complete node lookup/
+  traversal/content private closure and TreeNode constructor/leftmost facts,
+  conflated empty and nonempty terminal failures, and lacked a piece-end
+  successor oracle. No product/test file changed.
+- 2026-07-12: the next corrected EOL candidate has 596/596 TODO rows: 585
+  source atoms plus 11 named tests, with 212 proposed TESTED, 34 PORTED, zero
+  DEFERRED, and 350 N-A. All scoped private read dependencies, TreeNode facts,
+  distinct terminal failures, and in-piece/piece-end line-char oracles are
+  explicit; only the exact unobservable SearchCache helper body remains an
+  excluded sibling. No product/test file changed; stop for fresh Gate B.

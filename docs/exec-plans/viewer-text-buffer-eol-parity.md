@@ -37,11 +37,12 @@ while returning LF values is not an allowed deviation.
 - vscode/src/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeTextBuffer.ts
   - complete read-only value/range-length/EOL/position/offset clusters.
 - vscode/src/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeBase.ts
-  - complete line-start, line-length, getPositionAt, and getOffsetAt clusters
-    consumed by the read-only buffer.
+  - complete line-start, line-length, position/offset, equality/value/line
+    traversal, nodeAt/nodeAt2, and node-offset clusters consumed by the
+    read-only buffer.
 - vscode/src/vs/editor/common/model/pieceTreeTextBuffer/rbTreeBase.ts
-  - the complete `TreeNode.next` plus `SENTINEL` construction dependency that
-    determines terminal `PieceTreeBase.getLineCharCode` behavior.
+  - the TreeNode fields/constructor/next, `NodeColor.Black`, `SENTINEL`, and
+    leftmost-successor dependency closure used by scoped PieceTreeBase reads.
 - vscode/src/vs/editor/common/model/textModel.ts
   - createTextBuffer for string input; constructor buffer facts;
     getValue, getValueLength, getValueInRange, getValueLengthInRange,
@@ -166,8 +167,8 @@ target and is not implementation evidence.
 ```text
 Builder/factory (EFB + EBB)                     64
 PieceTreeTextBuffer readonly unit (ETB)         76
-PieceTreeBase dependency closure (PB)          200
-red-black successor dependency (RB)              5
+PieceTreeBase dependency closure (PB)          241
+red-black successor dependency (RB)             19
 model.ts enums/interfaces (MI)                  59
 default-EOL carrier chain (DEOL)                 8
 named TextModel cluster (TMD/TM/TML)            55
@@ -176,13 +177,13 @@ consumed TextModel read closure (TMR)           38
 content event facts (EV)                        20
 provider endpoint/offset handoff (PR)            2
                                                 ---
-Source atoms                                    530
+Source atoms                                    585
 Named upstream test dispositions (REF)          11
                                                 ---
-Total ledger rows                               541
+Total ledger rows                               596
 
-Working:  541 TODO; 0 PASS
-Proposed: 208 TESTED + 34 PORTED + 0 DEFERRED + 299 N-A = 541
+Working:  596 TODO; 0 PASS
+Proposed: 212 TESTED + 34 PORTED + 0 DEFERRED + 350 N-A = 596
 ```
 
 The source files are byte-pinned at the oracle commit:
@@ -192,7 +193,7 @@ The source files are byte-pinned at the oracle commit:
 | `pieceTreeTextBufferBuilder.ts` | 13–188 | `311c7c5f89cfd7a24d801370321a2bd30afedd185fba9f49e1bebbffd1c904cf` |
 | `pieceTreeTextBuffer.ts` | 34–237 | `cd2a3d450443dd9fbcd073213095dd8a0895976ab7097076c4474e8da7f21c8d` |
 | `pieceTreeBase.ts` | listed PB clusters below | `0bd0b699eb456f90c6c45cf61bebdc6e69181806036c537189d7ef83a874b46d` |
-| `rbTreeBase.ts` | 29–48, 85–89 | `e96beaed12f472afda399d7662052eddf2e25951c168d6673fabde3c6fa262aa` |
+| `rbTreeBase.ts` | 8–27, 29–48, 80–81, 85–95 | `e96beaed12f472afda399d7662052eddf2e25951c168d6673fabde3c6fa262aa` |
 | `model.ts` | listed MI/DEOL clusters below | `b4311925776bcf86418b284beb5c07968de12aa1ef3b6b60ebf506d28e82751a` |
 | `textModel.ts` | listed DEOL/TMD/TM/TML/RSN/TMR clusters below | `3ccef30b2902046ff93d99b5d9cd03ae2748785e099d123cf519aa5527d0b622` |
 | `textModelEvents.ts` | 42–84, 221–222, 233–235, 457–480 | `fcbcce16a492a431abe1c72f64ed819528095b7e740f49515d10283670943b59` |
@@ -247,7 +248,7 @@ For every construction and `set_value(s)`:
   claimed as parity: their rows are N-A because the fixed public
   Viewer/workbench contract retains U+FEFF as ordinary content.
 
-Review gate: commit this corrected 541-row documentation-only inventory and
+Review gate: commit this corrected 596-row documentation-only inventory and
 stop for fresh independent Gate B re-review before any product or test edit.
 
 ### Builder/factory — EFB and EBB
@@ -412,7 +413,8 @@ escape hatch (`:527-530`).
 ### PieceTreeBase dependency closure — PB
 
 Scoped lines are `16-151,268-318,355-357,369-393,395-603,605-662,1073-1156,
-1253-1372`. Tree/search/edit siblings outside this closure are excluded.
+1253-1372,1495-1595,1606-1620,1775-1797`. Tree/edit/search siblings outside
+this closure are excluded.
 
 | ID | Source atom | Local target / current gap | Status | Proposed terminal |
 |---|---|---|---|---|
@@ -517,10 +519,10 @@ Scoped lines are `16-151,268-318,355-357,369-393,395-603,605-662,1073-1156,
 | PB-099 | exact node-end triggers real-LF check (`:1348-1351`) | No node boundary. | TODO | N-A (single-buffer seam) |
 | PB-100 | CRLF mismatch returns index/remainder zero (`:1351-1354`) | Raw CRLF/node interior absent. | TODO | N-A (Option B fixed LF) |
 | PB-101 | default returns line count/column remainder (`:1357`) | Observable mapping covered by PB-067/068. | TODO | PORTED |
-| PB-102 | `getAccumulatedValue` member (`:1360-1372`) | Global starts substitute. | TODO | N-A (single-buffer seam) |
+| PB-102 | `getAccumulatedValue` member (`:1360`) | Global starts substitute. | TODO | N-A (single-buffer seam) |
 | PB-103 | negative index returns 0 (`:1361-1363`) | Piece convention absent. | TODO | N-A (single-buffer seam) |
-| PB-104 | start past piece end returns remaining length (`:1364-1369`) | No piece end. | TODO | N-A (single-buffer seam) |
-| PB-105 | in-piece relative next-line start (`:1370`) | Global start difference preserves observable arithmetic. | TODO | PORTED |
+| PB-104 | start past piece end returns remaining length (`:1364-1368`) | No piece end. | TODO | N-A (single-buffer seam) |
+| PB-105 | in-piece relative next-line start (`:1369-1370`) | Global start difference preserves observable arithmetic. | TODO | PORTED |
 | PB-106 | LineStarts constructor retains five fields (`:27-34`) | Normalized construction retains starts/ASCII behavior, not EOL counters. | TODO | PORTED |
 | PB-107 | `_lastChangeBufferPos` field/init (`:276,288`) | Edit-only cursor. | TODO | N-A (excluded edit lane) |
 | PB-108 | `_searchCache` field/init/validation (`:277,315,1339`) | Tree search cache absent. | TODO | N-A (single-buffer seam) |
@@ -615,20 +617,63 @@ Scoped lines are `16-151,268-318,355-357,369-393,395-603,605-662,1073-1156,
 | PB-197 | advance forward (`:1319`) | No nodes. | TODO | N-A (single-buffer seam) |
 | PB-198 | final raw-line return (`:1322`) | Observable line-content result is tested through the wrapper. | TODO | TESTED |
 | PB-199 | public `getLineCharCode(lineNumber,index)`, `nodeAt2(lineNumber,index+1)`, and private-helper delegate (`:651-654`) | Preserve exact content/nonfinal-EOL lookup arithmetic through the flat snapshot helper. | TODO | TESTED |
-| PB-200 | terminal piece-end lookup receives truthy `SENTINEL`, falls through the falsy guard, then dereferences its null piece (`:632-641`; `rbTreeBase.ts:44-45,85-89`) | Preserve the source failure for final `index==lineLength`; this private invalid lookup has no product caller. | TODO | TESTED |
+| PB-200 | nonempty terminal piece-end lookup receives truthy `SENTINEL`, falls through the falsy guard, then dereferences its null piece (`:632-641`; `rbTreeBase.ts:44-45,85-89`) | Preserve the source failure for a nonempty final line and trailing-empty final line; this private invalid lookup has no product caller. | TODO | TESTED |
+| PB-201 | private `nodeAt(offset)` member, root seed, and cache lookup (`:1495-1497`) | Per-piece equality lookup is absent. | TODO | N-A (tree/cache seam) |
+| PB-202 | cache-hit NodePosition early return (`:1498-1504`) | Cache optimization and piece-relative carrier are absent. | TODO | N-A (tree/cache seam) |
+| PB-203 | cache-miss offset seed and sentinel loop (`:1506-1508`) | No tree traversal. | TODO | N-A (tree topology seam) |
+| PB-204 | left traversal (`:1509-1510`) | No left subtree. | TODO | N-A (tree topology seam) |
+| PB-205 | containing-node NodePosition return and cache set (`:1511-1519`) | Whole-string equality has no node/cache return. | TODO | N-A (tree/cache seam) |
+| PB-206 | right traversal and relative-offset adjustment (`:1520-1524`) | No right subtree or piece-relative offset. | TODO | N-A (tree topology seam) |
+| PB-207 | exhausted node lookup returns null (`:1527`) | Valid scoped equality windows do not use an invalid lookup. | TODO | N-A (invalid-search seam) |
+| PB-208 | private `nodeAt2(lineNumber,column)` member (`:1530`) | Flat line/index mapping replaces the node-position member. | TODO | N-A (single-buffer seam) |
+| PB-209 | root and `nodeStartOffset` seeds (`:1531-1532`) | No root/node offset carrier. | TODO | N-A (tree topology seam) |
+| PB-210 | sentinel-bounded main descent loop (`:1534`) | No tree traversal. | TODO | N-A (tree topology seam) |
+| PB-211 | left-line-subtree descent (`:1535-1536`) | No left subtree/line-feed metadata. | TODO | N-A (tree topology seam) |
+| PB-212 | current piece contains target-line predicate (`:1537`) | No piece-local line count. | TODO | N-A (single-buffer seam) |
+| PB-213 | previous/current accumulated line-boundary calls with exact indices (`:1538-1539`) | Global line starts replace piece-relative calls. | TODO | N-A (single-buffer seam) |
+| PB-214 | add left-subtree size to node offset (`:1540`) | Returned node offset is unconsumed by scoped local callers. | TODO | N-A (tree topology seam) |
+| PB-215 | ordinary column remainder and returned NodePosition (`:1542-1546`) | All valid content/range positions prove the equivalent flat result. | TODO | TESTED |
+| PB-216 | `Math.min(...,accumulatedValue)` high-column cap (`:1544`) | Public validation clamps before this reduced private seam. | TODO | N-A (validated caller seam) |
+| PB-217 | line-at-current-piece-tail predicate and prior boundary (`:1547-1548`) | EOL/EOF fixtures exercise the equivalent flat boundary. | TODO | TESTED |
+| PB-218 | within-piece `<= piece.length` guard and exact piece-end return (`:1549-1554`) | Content, nonfinal EOL, nonempty EOF, and trailing-empty fixtures cover the outcomes. | TODO | TESTED |
+| PB-219 | cross-piece column subtraction and break (`:1555-1558`) | Flat storage has no piece boundary. | TODO | N-A (single-buffer seam) |
+| PB-220 | right-subtree line/offset adjustment and descent (`:1559-1563`) | No right subtree or piece metadata. | TODO | N-A (tree topology seam) |
+| PB-221 | post-break successor seed and sentinel loop (`:1566-1568`) | No successor traversal. | TODO | N-A (tree topology seam) |
+| PB-222 | LF-bearing successor boundary plus `offsetOfNode` call (`:1570-1572`) | Flat storage has no successor/node offset. | TODO | N-A (single-buffer seam) |
+| PB-223 | LF-bearing successor clamped return (`:1573-1577`) | No piece successor; observable range result is owned elsewhere. | TODO | N-A (single-buffer seam) |
+| PB-224 | zero-LF successor fit and return (`:1578-1585`) | No piece successor. | TODO | N-A (single-buffer seam) |
+| PB-225 | insufficient zero-LF successor subtracts its length (`:1586-1588`) | No piece successor. | TODO | N-A (single-buffer seam) |
+| PB-226 | advance to next successor (`:1591`) | No successor traversal. | TODO | N-A (tree topology seam) |
+| PB-227 | exhausted successor search returns null (`:1594`) | Preserve the distinct true-empty-document line-char failure before `_getCharCode` reaches its remainder branch. | TODO | TESTED |
+| PB-228 | private `offsetOfNode` member (`:1606`) | Scoped callers do not consume returned nodeStartOffset locally. | TODO | N-A (tree topology seam) |
+| PB-229 | falsy-node early zero (`:1607-1609`) | Typed tree caller never supplies a falsy node. | TODO | N-A (unreachable topology branch) |
+| PB-230 | seed from `node.size_left` (`:1610`) | No subtree-size carrier. | TODO | N-A (tree topology seam) |
+| PB-231 | climb until root (`:1611`) | No parent topology. | TODO | N-A (tree topology seam) |
+| PB-232 | right child adds parent-left size and parent-piece length (`:1612-1614`) | No parent/piece topology. | TODO | N-A (tree topology seam) |
+| PB-233 | advance to parent (`:1616`) | No parent topology. | TODO | N-A (tree topology seam) |
+| PB-234 | return accumulated node offset (`:1619`) | Returned nodeStartOffset is unconsumed at the flat seam. | TODO | N-A (tree topology seam) |
+| PB-235 | `iterate(node,callback)` member (`:1775`) | Whole-string/line-array reads have no tree iterator. | TODO | N-A (tree topology seam) |
+| PB-236 | sentinel callback early return (`:1776-1777`) | No sentinel callback. | TODO | N-A (tree topology seam) |
+| PB-237 | left recursion (`:1780`) | No left subtree. | TODO | N-A (tree topology seam) |
+| PB-238 | false callback short-circuit (`:1781-1783`) | Observable equality mismatch is tested without a tree callback. | TODO | N-A (tree topology seam) |
+| PB-239 | node callback and right recursion (`:1785`) | No node callback/right subtree. | TODO | N-A (tree topology seam) |
+| PB-240 | `getNodeContent` member and sentinel empty return (`:1788-1791`) | No sentinel/node content helper. | TODO | N-A (tree topology seam) |
+| PB-241 | buffer/piece bounds, substring, and return (`:1792-1797`) | Whole normalized string comparison replaces piece extraction. | TODO | N-A (single-buffer seam) |
 
-Proposed PB totals: 68 TESTED / 17 PORTED / 115 N-A = 200.
+Proposed PB totals: 72 TESTED / 17 PORTED / 152 N-A = 241.
 
-`PieceTreeSearchCache` (`:199-266`) is the complete excluded topology-cache
-cluster represented by PB-108. Base setEOL (`:359-363`) and streaming
-createSnapshot/BOM wrapping (`:365-367`), normalizeEOL, edits, nodeAt/search,
-and CRLF mutation helpers remain excluded complete siblings.
+`CacheEntry`/`PieceTreeSearchCache` (`:201-266`) is the complete excluded
+unobservable topology-cache implementation represented by PB-108; PB-201/202/
+205 own its exact scoped get/hit/set call sites. Base setEOL (`:359-363`) and
+streaming createSnapshot/BOM wrapping (`:365-367`), normalizeEOL, edits,
+remaining search, and CRLF mutation helpers remain excluded complete siblings.
 
 ### Red-black successor reachability dependency — RB
 
-Only the complete `TreeNode.next` member and `SENTINEL` construction are in
-scope. They determine PB-116/PB-200 reachability; all other red-black tree
-members and mutations are excluded complete topology siblings.
+Only the TreeNode field/constructor/next, Black/SENTINEL, and leftmost helper
+closure is in scope. It supplies scoped value/range/raw-line successor walks
+as well as PB-116/PB-200 reachability; all other red-black tree members and
+mutations are excluded complete topology siblings.
 
 | ID | Source atom | Local target / current gap | Status | Proposed terminal |
 |---|---|---|---|---|
@@ -636,9 +681,23 @@ members and mutations are excluded complete topology siblings.
 | RB-002 | right child returns the leftmost node (`:30-32`) | No right subtree or leftmost traversal. | TODO | N-A (tree topology seam) |
 | RB-003 | seed current node, climb parents, and break when current is a left child (`:34-42`) | No parent links or sentinel traversal. | TODO | N-A (tree topology seam) |
 | RB-004 | exhausted climb returns `SENTINEL`; otherwise return the ancestor (`:44-48`) | The truthy exhausted result is consumed only by PB-116/PB-200's source behavior. | TODO | N-A (tree topology seam) |
-| RB-005 | truthy `SENTINEL` TreeNode has null piece and self-linked parent/children (`:85-89`) | No sentinel representation; PB-200 tests the resulting terminal failure. | TODO | N-A (tree topology seam) |
+| RB-005 | truthy `SENTINEL` construction passes null/Black, self-links parent/children, and restores Black (`:85-89`) | No sentinel representation; RB-013/014 explain the null-piece assignment and PB-200 tests the resulting terminal failure. | TODO | N-A (tree topology seam) |
+| RB-006 | `TreeNode.parent` (`:9`) | No parent topology. | TODO | N-A (tree topology seam) |
+| RB-007 | `TreeNode.left` (`:10`) | No left-child topology. | TODO | N-A (tree topology seam) |
+| RB-008 | `TreeNode.right` (`:11`) | No right-child topology. | TODO | N-A (tree topology seam) |
+| RB-009 | `TreeNode.color` (`:12`) | No balancing/color state. | TODO | N-A (tree topology seam) |
+| RB-010 | `TreeNode.piece` (`:15`) | Flat snapshot has no piece carrier. | TODO | N-A (tree topology seam) |
+| RB-011 | `TreeNode.size_left` (`:16`) | No left-subtree size. | TODO | N-A (tree topology seam) |
+| RB-012 | `TreeNode.lf_left` (`:17`) | No left-subtree line-feed count. | TODO | N-A (tree topology seam) |
+| RB-013 | `TreeNode` constructor member (`:19`) | No local tree-node constructor. | TODO | N-A (tree topology seam) |
+| RB-014 | retain piece/color and zero size/line-feed metadata (`:20-23`) | This assigns sentinel `piece=null`; local storage has no node metadata. | TODO | N-A (tree topology seam) |
+| RB-015 | self-link parent/left/right (`:24-26`) | No fresh-node self-link topology. | TODO | N-A (tree topology seam) |
+| RB-016 | `NodeColor.Black=0` dependency (`:80-81`) | Local code has no numeric balancing ABI. | TODO | N-A (semantic enum) |
+| RB-017 | `leftest(node)` member (`:91`) | No leftmost-node helper. | TODO | N-A (tree topology seam) |
+| RB-018 | descend through left children until sentinel (`:92-94`) | No left subtree. | TODO | N-A (tree topology seam) |
+| RB-019 | return selected leftmost node (`:95`) | No node result. | TODO | N-A (tree topology seam) |
 
-Proposed RB totals: 5 N-A = 5.
+Proposed RB totals: 19 N-A = 19.
 
 ### model.ts enums and interfaces — MI
 
@@ -966,9 +1025,14 @@ Port upstream cases and add local invariants for:
   and exact normalized equality, including raw CRLF versus LF inputs that
   normalize equal;
 - `getLineCharCode` content index, nonfinal `index==lineLength` returning LF,
-  and final `index==lineLength` preserving the pinned source failure caused by
-  the truthy null-piece sentinel; the pinned issue #45735/#47733 cases
-  (`pieceTreeTextBuffer.test.ts:1786-1818`) do not assert terminal EOF;
+  nonempty final/trailing-empty `index==lineLength` preserving the truthy
+  null-piece-sentinel failure, and true-empty `(1,0)` preserving the distinct
+  `nodeAt2 -> null`/null-NodePosition failure. The pinned issue #45735/#47733
+  cases (`pieceTreeTextBuffer.test.ts:1786-1818`) cover content and an in-piece
+  LF but not piece-end successor or terminal EOF; required pinned-source oracle
+  fixtures additionally assert `['LINE1','\nline2'] -> getLineCharCode(1,5)
+  == LF` and `['LINE','1\nline2'] -> getLineCharCode(1,4) == '1'` before the
+  local flat-seam branch test;
 - direct line-array/line-content extraction across first, interior, final, and
   trailing-empty lines, exercising normalized and all classified raw-only
   PieceTreeBase branches;
@@ -1025,10 +1089,10 @@ Option B:
 - typed arrays, chunk/piece topology, streaming snapshots, Unicode-scalar
   character count, edit/search/setEOL, telemetry, disposal guards, and
   large-file flags have row-local N-A reasons;
-- PB-116 and RB-001–005 classify the unreachable falsy-successor branch and
-  absent tree topology; PB-200 separately preserves and tests the pinned
-  terminal-EOF failure at the flat local seam, so this is not a bug-fix
-  deviation;
+- PB-116, PB-201–241, and RB-001–019 classify unreachable/cache/tree/piece
+  mechanics at exact rows; PB-200/PB-227 separately preserve and test the two
+  pinned terminal-EOF failures at the flat local seam, so this is not a
+  bug-fix deviation;
 - the already-reviewed clamped readonly position/range contract is consumed,
   not reopened. TMR-006/009/023/032/035 own its invalid-line source throws;
   JS float/NaN input behavior is N-A due Int types.
@@ -1038,9 +1102,9 @@ update this ledger and stop for classification review.
 
 ### Inventory stop gate
 
-- [x] 530 source atoms and 11 named test atoms have 541 unique ledger rows.
+- [x] 585 source atoms and 11 named test atoms have 596 unique ledger rows.
 - [x] Every row is TODO with one proposed terminal; there are zero PASS rows.
-- [x] Proposed totals are 208 TESTED / 34 PORTED / 0 DEFERRED / 299 N-A.
+- [x] Proposed totals are 212 TESTED / 34 PORTED / 0 DEFERRED / 350 N-A.
 - [x] Option B and BOM/clamp/streaming reductions map to exact rows.
 - [x] Algebraic invariants and source-branch behavior matrix are explicit.
 - [x] Shared-file ownership and excluded sibling clusters are explicit.
@@ -1125,6 +1189,22 @@ update this ledger and stop for classification review.
   matrix is the complete 16 ordered EOL-form pairs × two content lanes, and
   the event scope contains only Flush/ModelRawFlush atoms. No product/test
   file changed; commit and stop for fresh Gate B review.
+- 2026-07-12: the builder/base and combined Gate B reviews rejected
+  documentation-only commit `6634aaf` (child SHA-256
+  `6772a3101ab170d2a2e1ce65237a48de33823b53146ef2d532f66f236d788cc8`);
+  the model/events review passed. The rejected denominator omitted complete
+  nodeAt/nodeAt2/offsetOfNode/iterate/getNodeContent bodies and TreeNode
+  field/constructor/Black/leftest dependencies, conflated the true-empty null
+  NodePosition failure with the nonempty truthy-sentinel failure, and lacked
+  a piece-end successor oracle. No product/test file changed.
+- 2026-07-12: the next corrected candidate has 596/596 TODO rows: 585 source
+  atoms plus 11 named tests, with 212 proposed TESTED, 34 PORTED, zero
+  DEFERRED, and 350 N-A. PB now inventories all five private dependency
+  methods line by line; RB owns every field/constructor/constant/leftmost fact
+  used by the closure; SearchCache is the sole explicit unobservable helper
+  body exclusion with exact get/hit/set call-site rows; and the matrix splits
+  empty, nonempty-final, trailing-empty, in-piece-LF, and piece-end-successor
+  oracles. No product/test file changed; commit and stop for fresh Gate B.
 
 Append the dated inventory approval, implementation commits, validation
 results, and final ledger totals here. Freeze after implementation.

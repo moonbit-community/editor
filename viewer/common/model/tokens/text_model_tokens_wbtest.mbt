@@ -48,14 +48,14 @@ fn logging_support(
   InternalTokenizationSupportAdapter::new(
     initial_state=() => {
       initial_calls.val += 1
-      @syntax.TokenizerState("initial")
+      TokenizerState("initial")
     },
     tokenize_encoded=(text, has_eol, state) => {
       calls.push("\{text}:\{has_eol}:\{to_repr(state)}")
       {
         tokens: [0, tag_to_metadata(Plain)],
         font_info: None,
-        end_state: @syntax.TokenizerState(text),
+        end_state: TokenizerState(text),
       }
     },
   )
@@ -87,7 +87,7 @@ test "TrackingTokenizationStateStore advances, converges, and preserves final co
   assert_false(store.set_end_state(3, a))
   assert_true(store.all_states_valid())
   // Changed middle state invalidates exactly its successor.
-  assert_true(store.set_end_state(2, @syntax.TokenizerState("b")))
+  assert_true(store.set_end_state(2, TokenizerState("b")))
   assert_true(store.get_first_invalid_end_state_line_number() == Some(3))
 }
 
@@ -148,7 +148,7 @@ test "findLikelyRelevantLines ignores whitespace and replays ancestors without E
     @services.language_id_codec,
   )
   let state = tokenizer.guess_start_state(5)
-  assert_true(state == @syntax.TokenizerState("    grandchild"))
+  assert_true(state == TokenizerState("    grandchild"))
   assert_eq(calls.length(), 3)
   for call in calls {
     assert_true(call.contains(":false:"))

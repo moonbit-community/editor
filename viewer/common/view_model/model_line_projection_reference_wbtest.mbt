@@ -38,7 +38,7 @@ fn projection_expected_line(
 
 ///|
 fn projection_reference_model(language_id : String) -> @model.TextModel {
-  @model.TextModel(
+  TextModel(
     try! @base_common.Uri::from(
       scheme="inmemory",
       authority="model-line-projection-reference",
@@ -225,7 +225,7 @@ test "getViewLinesData - no wrapping" {
     assert_true(lines.model_position_is_visible(line_number))
   }
   projection_assert_masks(lines, expected, model)
-  assert_true(lines.set_hidden_areas([@base_common.Range(2, 1, 4, 1)]))
+  assert_true(lines.set_hidden_areas([Range(2, 1, 4, 1)]))
   assert_eq(lines.get_view_line_count(), 5)
   for line_number in 1..<=8 {
     assert_eq(
@@ -253,7 +253,7 @@ test "getViewLinesData - with wrapping" {
   let expected = projection_wrap_expected()
   assert_eq(lines.get_view_line_count(), 12)
   projection_assert_masks(lines, expected, model)
-  assert_true(lines.set_hidden_areas([@base_common.Range(2, 1, 4, 1)]))
+  assert_true(lines.set_hidden_areas([Range(2, 1, 4, 1)]))
   assert_eq(lines.get_view_line_count(), 8)
   projection_assert_masks(
     lines,
@@ -276,12 +276,12 @@ test "getViewLinesData - with wrapping and injected text" {
   let model = projection_reference_model("projection-reference-injected")
   model.delta_decorations([], [
     {
-      range: @base_common.Range(1, 9, 1, 9),
-      options: @model.ModelDecorationOptions(
+      range: Range(1, 9, 1, 9),
+      options: ModelDecorationOptions(
         "",
         description="example",
         show_if_collapsed=true,
-        after=@model.InjectedTextOptions(
+        after=InjectedTextOptions(
           "very very long injected text that causes a line break",
           inline_class_name="myClassName",
         ),

@@ -39,15 +39,9 @@ fn run_scheduled(task : ScheduledCallback) -> Unit {
 test "AttachedViewState equality checks ranges before stabilization" {
   let ranges = [@base_common.LineRange(1, 3)]
   let a = AttachedViewState::new(ranges, false)
-  let same = AttachedViewState::new([@base_common.LineRange(1, 3)], false)
-  let different_ranges = AttachedViewState::new(
-    [@base_common.LineRange(1, 4)],
-    false,
-  )
-  let different_stability = AttachedViewState::new(
-    [@base_common.LineRange(1, 3)],
-    true,
-  )
+  let same = AttachedViewState::new([LineRange(1, 3)], false)
+  let different_ranges = AttachedViewState::new([LineRange(1, 4)], false)
+  let different_stability = AttachedViewState::new([LineRange(1, 3)], true)
   assert_true(a.equals(a))
   assert_true(a.equals(same))
   assert_false(a.equals(different_ranges))
@@ -90,32 +84,22 @@ test "AttachedViewHandler debounces unstable state and stable state cancels then
   let handler = AttachedViewHandler::new(() => refresh_count.val += 1, () => {
     Some(scheduler)
   })
-  handler.handle_state_change(
-    AttachedViewState::new([@base_common.LineRange(1, 3)], false),
-  )
+  handler.handle_state_change(AttachedViewState::new([LineRange(1, 3)], false))
   assert_eq(delayed.length(), 1)
   assert_eq(refresh_count.val, 0)
-  handler.handle_state_change(
-    AttachedViewState::new([@base_common.LineRange(2, 4)], false),
-  )
+  handler.handle_state_change(AttachedViewState::new([LineRange(2, 4)], false))
   assert_eq(delayed.length(), 2)
   run_scheduled(delayed[0])
   assert_eq(refresh_count.val, 0)
   run_scheduled(delayed[1])
   assert_eq(refresh_count.val, 1)
-  handler.handle_state_change(
-    AttachedViewState::new([@base_common.LineRange(5, 7)], false),
-  )
+  handler.handle_state_change(AttachedViewState::new([LineRange(5, 7)], false))
   assert_eq(delayed.length(), 3)
-  handler.handle_state_change(
-    AttachedViewState::new([@base_common.LineRange(5, 7)], true),
-  )
+  handler.handle_state_change(AttachedViewState::new([LineRange(5, 7)], true))
   assert_eq(refresh_count.val, 2)
   run_scheduled(delayed[2])
   assert_eq(refresh_count.val, 2)
   // Equal requested/computed ranges suppress a repeated stable refresh.
-  handler.handle_state_change(
-    AttachedViewState::new([@base_common.LineRange(5, 7)], true),
-  )
+  handler.handle_state_change(AttachedViewState::new([LineRange(5, 7)], true))
   assert_eq(refresh_count.val, 2)
 }

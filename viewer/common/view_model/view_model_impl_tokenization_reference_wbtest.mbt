@@ -8,7 +8,7 @@ fn view_model_impl_reference_model(
   text : String,
   path : String,
 ) -> @model.TextModel {
-  @model.TextModel(
+  TextModel(
     try! @base_common.Uri::from(
       scheme="inmemory",
       authority="view-model-impl-reference",
@@ -84,15 +84,15 @@ test "issue #44805: No visible lines via API call" {
   )
   let view_model = ViewModel(model)
   assert_eq(view_model.line_count(), 3)
-  assert_true(view_model.set_hidden_areas([@base_common.Range(1, 1, 3, 1)]))
+  assert_true(view_model.set_hidden_areas([Range(1, 1, 3, 1)]))
   // The readonly hidden-area contract reveals everything when a caller asks
   // to hide the whole model. The non-null MoonBit array below is the local
   // counterpart of upstream `getVisibleRanges() !== null`.
   assert_eq(view_model.line_count(), 3)
   assert_eq(view_model.get_hidden_areas().length(), 0)
-  assert_true(view_model.model_position_is_visible(@base_common.Position(1, 1)))
+  assert_true(view_model.model_position_is_visible(Position(1, 1)))
   let visible = view_model.to_model_visible_ranges(
-    @base_common.Range(1, 1, 3, view_model.get_line_max_column(3)),
+    Range(1, 1, 3, view_model.get_line_max_column(3)),
   )
   assert_eq(visible.length(), 1)
   for range in visible {
@@ -124,7 +124,7 @@ test "model-token callback converts wrapped and hidden ranges before outgoing de
       converted.push(ranges)
     },
   )
-  assert_true(view_model.set_hidden_areas([@base_common.Range(2, 1, 2, 1)]))
+  assert_true(view_model.set_hidden_areas([Range(2, 1, 2, 1)]))
   let outgoing_events : Array[@model_tokens.ModelTokensChangedEvent] = []
   let outgoing_identity = Ref(false)
   let _outgoing_subscription = view_model.on_model_tokens_changed(outgoing => {

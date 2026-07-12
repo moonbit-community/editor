@@ -8,8 +8,8 @@ test "AnnotationsUpdate.create retains ordered set/remove updates" {
     line_height_multiplier: Some(1.5),
   }
   let updates : Array[AnnotationUpdate[FontTokenOption?]] = [
-    { range: @base_common.OffsetRange(1, 4), annotation: Some(Some(option)) },
-    { range: @base_common.OffsetRange(7, 9), annotation: None },
+    { range: OffsetRange(1, 4), annotation: Some(Some(option)) },
+    { range: OffsetRange(7, 9), annotation: None },
   ]
   let wrapped : FontTokensUpdate = AnnotationsUpdate::create(updates)
   let actual = wrapped.annotations()

@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — tokenization Gate B review next
+Status: active — tokenization Gate B re-review next
 
 Date: 2026-07-10
 
@@ -87,7 +87,7 @@ product contract and belongs in an ordinary local test.
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | implemented and frozen |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | implemented and frozen |
-| 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | inventory ready |
+| 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | corrected inventory ready |
 
 The order is intentional. Several plans touch viewer/viewer.mbt,
 viewer/attach_model.mbt, or viewer/browser/view/view_part.mbt. Do not execute
@@ -110,6 +110,7 @@ method clusters:
 | Frozen async TMV-016–018 `TextModel.setEOL` handoff | superseded by the text-buffer EOL child's explicit N-A coordination dispositions; the implemented async ledger stays historical and no source rows are duplicated |
 | TextModel version/request freshness methods | async model features |
 | TextModel `_emitContentChangedEvent` token forwarding plus token-part construction/disposal and token-range production | tokenization; render invalidation owns ViewPart handler consumption only |
+| ViewModel model-token subscription, exact model-to-view token-range conversion, and view-event-before-outgoing-model-event dispatch (`viewModelImpl.ts:510-523`) | tokenization through VMI-017–024; frozen render invalidation retains only typed `ViewTokensChanged` declaration/dispatcher mechanics and ViewPart handler consumption, and its historical ledger is not rewritten or recounted |
 | Frozen lifecycle CEW-086 `ModelData.attachedView` and CEW-088's `model.onBeforeDetached(attachedView)` substep | tokenization completes the exact-handle attached-view protocol without rewriting the implemented lifecycle ledger; ModelData alone owns attach/detach, ViewModel borrows the handle |
 | Attached visible-range stable/unstable production | tokenization owns the ViewModel-construction scroll listener and content-mapping `false` producers, the one-time post-initialization `true` producer, and the existing `Viewer::restore_view_state` immediate-scroll-then-true substep; broader view-state shape remains P2 |
 | ViewLines event handlers | render invalidation |
@@ -713,3 +714,11 @@ The independent closing task is:
   authorities, reset-state preservation, the existing restore-state stable
   producer, and cycle-safe font payload ownership. No product or test file
   changed; Gate B still has not passed and requires a fresh review.
+- 2026-07-13: the second formal tokenization Gate-B round kept source
+  completeness PASS but REJECTED `af952ac` on incomplete SKIPPED/owner and
+  viewport/telemetry evidence plus five boundary seams: ViewModel callback
+  ownership, semantic-enum numeric ABI, optional scheduler epochs, Color/CSS
+  payloads, and the maximum-line sentinel. The docs-only candidate still has
+  1043/1043 TODO rows = 946 source + 97 tests; dispositions are now 463 TESTED,
+  201 PORTED, 206 DEFERRED, and 173 N-A. No product/test file changed; Gate B
+  has not passed and requires another fresh review.

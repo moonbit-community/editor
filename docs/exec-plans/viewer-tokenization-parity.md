@@ -1,6 +1,6 @@
 # Viewer Tokenization Parity
 
-Status: inventory ready — STOP FOR REVIEW
+Status: corrected inventory ready — STOP FOR RE-REVIEW
 
 Date: 2026-07-13
 
@@ -166,6 +166,7 @@ Product ownership after Gate B approval:
 Required evidence destinations after approval:
 
 - `viewer/common/model/tokens/model_modes_reference_wbtest.mbt`
+- `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt`
 - `viewer/common/model/tokens/text_model_tokens_wbtest.mbt`
 - `viewer/common/tokens/contiguous_multiline_tokens_wbtest.mbt`
 - `viewer/common/model/tokens/tokenizer_syntax_token_backend_wbtest.mbt`
@@ -173,6 +174,7 @@ Required evidence destinations after approval:
 - `viewer/common/model/tokens/annotations_wbtest.mbt`
 - `viewer/common/model/text_model_tokens_reference_test.mbt`
 - `viewer/common/model/model_reference_wbtest.mbt`
+- `viewer/common/model/model_line_reference_wbtest.mbt`
 - `viewer/common/tokens/tokens_store_reference_wbtest.mbt`
 - `viewer/common/view_model/model_line_projection_reference_wbtest.mbt`
 - `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt`
@@ -209,17 +211,20 @@ maps to the access carrier's error reporter. The set-end-state interface shape
 is tested directly; accepting custom-worker end states remains deferred.
 
 The FFI-free scheduler contract in model/tokens exposes idle(deadline),
-zero-timeout, 50 ms delay, cancellation handles, and now. Viewer supplies the browser
-singleton through `onBeforeAttached` before the attached-count transition.
-The first scheduler remains selected while multiple viewers in the same JS
-realm are attached. Idle/zero calls return cancel handles; the default worker
-stores the pending handle plus a generation. On final detach, source-order
-`handleDidChangeAttached` notification runs first; that zero-attached handler
-then makes the old generation inert, cancels it, and resets `_isScheduled`.
-TextModel next detaches the exact view handle, and only afterward does the
-caller clear the carrier scheduler. Reattach uses a fresh generation, so an
-old callback cannot clear the new scheduling flag. Model disposal cancels
-workers/timers.
+zero-timeout, 50 ms delay, cancellation handles, and now. Viewer passes an
+optional scheduler through `onBeforeAttached` before the attached-count
+transition. `None` never replaces state. During one aggregate attached epoch,
+the first `Some` is selected and later `Some`/`None` candidates are ignored. If
+the first `Some` arrives while `attached_count > 0` because a headless `None`
+attached first, TextModel stores it and wakes the existing default worker
+exactly once through `handle_changes`, without synthesizing another `0 -> 1`
+notification. The selected scheduler remains across every nonfinal detach,
+including detaching the Viewer that supplied it. On final detach, source-order
+`handleDidChangeAttached` notification first makes the old generation inert,
+cancels it, and resets `_isScheduled`; TextModel next detaches the exact view
+handle and only afterward clears the scheduler. A later attached epoch may
+select a fresh `Some`, and an old callback cannot clear its scheduling flag.
+Model disposal cancels workers/timers.
 `scheduler=None` is an explicit enqueue guard: headless models schedule no
 idle, zero-timeout, or delayed work. Explicit force and a stabilized-true
 visible refresh remain synchronous. Browser tests cover `requestIdleCallback`
@@ -246,6 +251,15 @@ typealias for `AnnotationsUpdate[FontTokenOption?]`; TextModel adds no parent
 alias, mirror, or conversion. Thus `model/tokens` never imports its parent and
 the backend -> token part -> parent-consumer path preserves one payload
 identity.
+
+`TokenizationRegistry` intentionally adapts source `Color[] | null` and
+`Color | null` to local `Array[String]?` and `String?`. Entries are CSS color
+expressions consumed by existing render/copy paths. The registry starts
+`None`; `set_color_map` retains the supplied array and emits all active
+language ids with `changed_color_map=true`; `get_color_map` returns the same
+option; `get_default_background` returns index 2 only when length is greater
+than 2. No `Color` parsing, object methods, or object-identity contract is
+claimed.
 
 Backend aliases used below are exact: `A` =
 `viewer/common/model/tokens/abstract_syntax_token_backend.mbt`, `B` =
@@ -367,8 +381,8 @@ Backend aliases used below are exact: `A` =
 | ITM-015 | `getLanguageIdAtPosition` (`:92`) | Embedded token language id | `viewer/common/model/tokens/tokenization_text_model_part.mbt` — line-token metadata | TODO | DEFERRED (local tokenizer result cannot encode embedded language ids) |
 | ITM-016 | `setLanguageId` (`:94`) | Dynamic model language | `viewer/common/model/tokens/tokenization_text_model_part.mbt` — no current model mutation surface | TODO | DEFERRED (dynamic model-language ownership outside this child) |
 | ITM-017 | `backgroundTokenizationState` (`:96`) | Expose progress/completion state | `viewer/common/model/tokens/tokenization_text_model_part.mbt` — model part/backend | TODO | TESTED |
-| ITM-018 | `BackgroundTokenizationState.InProgress=1` (`:100`) | Exact enum value 1 | `viewer/common/model/tokens/tokenization_text_model_part.mbt` — MoonBit enum/state | TODO | TESTED |
-| ITM-019 | `BackgroundTokenizationState.Completed=2` (`:101`) | Exact enum value 2 | `viewer/common/model/tokens/tokenization_text_model_part.mbt` — MoonBit enum/state | TODO | TESTED |
+| ITM-018 | `BackgroundTokenizationState.InProgress=1` (`:100`) | Source const-enum ordinal 1; local state identity is semantic and exposes no numeric ABI | No numeric local target; semantic transition coverage remains ITM-017/021 and TSB | TODO | N-A (MoonBit semantic enum exposes no numeric ABI) |
+| ITM-019 | `BackgroundTokenizationState.Completed=2` (`:101`) | Source const-enum ordinal 2; local state identity is semantic and exposes no numeric ABI | No numeric local target; semantic transition coverage remains ITM-017/021 and TSB | TODO | N-A (MoonBit semantic enum exposes no numeric ABI) |
 | ITM-020 | `ITokenizationTextModelPart` interface declaration (`tokenizationTextModelPart.ts:14-97`) | Declares the complete public tokenization-model-part contract | `viewer/common/model/tokens/tokenization_text_model_part.mbt` public model-part surface | TODO | PORTED |
 | ITM-021 | `BackgroundTokenizationState` enum declaration (`:99-102`) | Declares the exact two-state background lifecycle type | `viewer/common/model/tokens/tokenization_text_model_part.mbt::BackgroundTokenizationState` | TODO | PORTED |
 
@@ -400,8 +414,8 @@ Backend aliases used below are exact: `A` =
 | LAN-022 | `IBackgroundTokenizationStore.setFontInfo` (`:156`) | Apply syntactic font-token changes | `syntax/tokenizer.mbt` / internal model-tokens adapter — backend store/event contract | TODO | TESTED |
 | LAN-023 | `IBackgroundTokenizationStore.setEndState` (`:158`) | Commit one line end state | `syntax/tokenizer.mbt` / internal model-tokens adapter — state store/backend | TODO | TESTED |
 | LAN-024 | `IBackgroundTokenizationStore.backgroundTokenizationFinished` (`:164`) | Publish completion for now | `syntax/tokenizer.mbt` / internal model-tokens adapter — background state transition/event | TODO | TESTED |
-| LAN-025 | `ITokenizationSupportChangedEvent.changedLanguages` (`:2504`) | Exact affected language-id array | `syntax/tokenizer.mbt` / internal model-tokens adapter — existing local registry event | TODO | TESTED |
-| LAN-026 | `ITokenizationSupportChangedEvent.changedColorMap` (`:2505`) | Whether binary token color map changed | `syntax/tokenizer.mbt` / internal model-tokens adapter — registry change-event/color-map seam | TODO | TESTED |
+| LAN-025 | `ITokenizationSupportChangedEvent.changedLanguages` (`:2504`) | Exact affected language-id array | `syntax/tokenizer.mbt::TokenizationChangedEvent.changed_languages : Array[String]` | TODO | TESTED |
+| LAN-026 | `ITokenizationSupportChangedEvent.changedColorMap` (`:2505`) | Whether binary token color map changed | `syntax/tokenizer.mbt::TokenizationChangedEvent.changed_color_map : Bool` | TODO | TESTED |
 | LAN-027 | `ILazyTokenizationSupport.tokenizationSupport` (`:2512`) | Promise of support or null | `syntax/tokenizer.mbt` / internal model-tokens adapter — no public lazy-factory/Promise support API | TODO | N-A (registry exposes only synchronous support registration) |
 | LAN-028 | `ITokenizationRegistry.onDidChange` (`:2552`) | Event for registration/removal/change or color map | `syntax/tokenizer.mbt` / internal model-tokens adapter — `TokenizationRegistry.on_did_change` | TODO | TESTED |
 | LAN-029 | `ITokenizationRegistry.handleChange` (`:2558`) | Fire change for explicit embedded-language ids | `syntax/tokenizer.mbt` / internal model-tokens adapter — add exact registry method or source-shaped adapter | TODO | TESTED |
@@ -410,9 +424,9 @@ Backend aliases used below are exact: `A` =
 | LAN-032 | `ITokenizationRegistry.getOrCreate` (`:2574`) | Resolve support/factory or null | `syntax/tokenizer.mbt` / internal model-tokens adapter — no public lazy-factory/Promise support API | TODO | N-A (registry exposes only synchronous support registration) |
 | LAN-033 | `ITokenizationRegistry.get` (`:2580`) | Synchronous support or null | `syntax/tokenizer.mbt` / internal model-tokens adapter — existing local registry | TODO | TESTED |
 | LAN-034 | `ITokenizationRegistry.isResolved` (`:2585`) | False only while a factory is pending | `syntax/tokenizer.mbt` / internal model-tokens adapter — fixed true in registry with no factories | TODO | PORTED |
-| LAN-035 | `ITokenizationRegistry.setColorMap` (`:2590`) | Replace encoded token color map and emit `changedColorMap=true` | `syntax/tokenizer.mbt` / internal model-tokens adapter — registry/color-map owner shared with complete registry inventory | TODO | TESTED |
-| LAN-036 | `ITokenizationRegistry.getColorMap` (`:2592`) | Current map or null | `syntax/tokenizer.mbt` / internal model-tokens adapter — registry/color-map owner shared with complete registry inventory | TODO | TESTED |
-| LAN-037 | `ITokenizationRegistry.getDefaultBackground` (`:2594`) | Background from the current map/theme contract or null | `syntax/tokenizer.mbt` / internal model-tokens adapter — registry/color-map owner shared with complete registry inventory | TODO | TESTED |
+| LAN-035 | `ITokenizationRegistry.setColorMap` (`:2590`) | Replace encoded token color map and emit `changedColorMap=true` | `syntax/tokenizer.mbt::TokenizationRegistry::set_color_map(Array[String])`; event uses `changed_color_map : Bool` | TODO | TESTED |
+| LAN-036 | `ITokenizationRegistry.getColorMap` (`:2592`) | Current map or null | `syntax/tokenizer.mbt::TokenizationRegistry::get_color_map() -> Array[String]?` | TODO | TESTED |
+| LAN-037 | `ITokenizationRegistry.getDefaultBackground` (`:2594`) | Background from the current map/theme contract or null | `syntax/tokenizer.mbt::TokenizationRegistry::get_default_background() -> String?` | TODO | TESTED |
 | LAN-038 | `Token` class declaration (`languages.ts:40-53`) | Declares the non-encoded compatibility token carrier | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded compatibility carrier | TODO | DEFERRED (non-encoded compatibility result absent) |
 | LAN-039 | `Token._tokenBrand` (`:41`) | TypeScript-only nominal brand initialized `undefined` | No MoonBit runtime or nominal-brand field | TODO | N-A (type-system-only brand) |
 | LAN-040 | `Token.offset` constructor property (`:44`) | Zero-based token start offset | `syntax/tokenizer.mbt` / internal model-tokens adapter — non-encoded token field | TODO | DEFERRED (non-encoded compatibility result absent) |
@@ -472,9 +486,9 @@ Backend aliases used below are exact: `A` =
 | TMT-031 | disposing branch (`:468-471`) | When disposing, emit nothing | `viewer/common/model/text_model.mbt` — existing `is_disposing` guard | TODO | TESTED |
 | TMT-032 | disposing early return (`:470`) | Return before every part/view/public callback | `viewer/common/model/text_model.mbt` — existing early return | TODO | TESTED |
 | TMT-033 | `resultingSelection` branch (`:477-479`) | Non-null edit result is installed before view-model loop | `viewer/common/model/text_model.mbt` — no editable operation supplies a result selection; flush cursor is handled by frozen cursor spine | TODO | N-A (readonly set-value caller always uses default null) |
-| TMT-034 | `onBeforeAttached` (`:607-614`) | Viewer installs/selects scheduler first; TextModel increments count, emits first-attach backend/model notification, then attaches and returns one manager handle | `viewer/common/model/text_model.mbt` — `viewer/common/model/text_model.mbt::on_before_attached` called by `viewer/attach_model.mbt` before ViewModel construction | TODO | TESTED |
+| TMT-034 | `onBeforeAttached` (`:607-614`) | Ignore candidate `None`; select only the first `Some` of the attached epoch before increment. If selected while count > 0, wake background work once without a duplicate attach notification; then increment and preserve first-attach order | `viewer/common/model/text_model.mbt` — `viewer/common/model/text_model.mbt::on_before_attached` called by `viewer/attach_model.mbt` before ViewModel construction | TODO | TESTED |
 | TMT-035 | first-attach branch (`:609-612`) | Fire only on transition `0 -> 1` | `viewer/common/model/text_model.mbt` — attach count transition matrix | TODO | TESTED |
-| TMT-036 | `onBeforeDetached` (`:616-623`) | Decrement; on final transition notify backend/model first, whose zero-attached handler invalidates/cancels the worker generation; then detach the exact manager handle; caller clears the carrier scheduler afterward | `viewer/common/model/text_model.mbt` — `viewer/common/model/text_model.mbt::on_before_detached`; `ModelData::dispose` invokes it after listeners and before View/ViewModel disposal | TODO | TESTED |
+| TMT-036 | `onBeforeDetached` (`:616-623`) | Nonfinal detach retains the selected scheduler. Final `1 -> 0` notifies backend/cancels generation first, detaches the exact manager handle second, and clears the scheduler last | `viewer/common/model/text_model.mbt` — `viewer/common/model/text_model.mbt::on_before_detached`; `ModelData::dispose` invokes it after listeners and before View/ViewModel disposal | TODO | TESTED |
 | TMT-037 | last-detach branch (`:618-621`) | Fire only on transition `1 -> 0` | `viewer/common/model/text_model.mbt` — attach count transition matrix | TODO | TESTED |
 | TMT-038 | `isAttachedToEditor` (`:625-627`) | `count > 0` | `viewer/common/model/text_model.mbt` — background scheduling guard | TODO | TESTED |
 | TMT-039 | `getAttachedEditorCount` (`:629-631`) | Return exact count | `viewer/common/model/text_model.mbt` — multiple-view recovery/priority fact | TODO | TESTED |
@@ -559,26 +573,26 @@ row or parity authority.
 | UTM-001 | `model calls syntax highlighter 1` (`model.modes.test.ts:62-65`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Force line 1 tokenizes exactly line 1; port exact label/path/pin | TODO | TESTED |
 | UTM-002 | `model calls syntax highlighter 2` (`:67-73`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Force line 2 propagates through 1-2; repeat does no work; port exact label/path/pin | TODO | TESTED |
 | UTM-003 | `model caches states` (`:75-93`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Sequential per-line demand and stable-state cache; port exact label/path/pin | TODO | TESTED |
-| UTM-004 | `model invalidates states for one line insert` (`:95-105`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable single-line insert | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-005 | `model invalidates states for many lines insert` (`:107-118`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable multiline insert | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-006 | `model invalidates states for one new line` (`:120-128`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable newline plus follow-up insert | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-007 | `model invalidates states for one line delete` (`:130-144`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable same-line delete convergence | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-008 | `model invalidates states for many lines delete` (`:146-156`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable multiline delete convergence | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-009 | `getTokensForInvalidLines one text insert` (`model.modes.test.ts:217-223`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable invalid suffix from one insert | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-010 | `getTokensForInvalidLines two text insert` (`:225-235`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable two-range insert | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-011 | `getTokensForInvalidLines one multi-line text insert, one small text insert` (`:237-244`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable multi-edit invalid queue | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-012 | `getTokensForInvalidLines one delete text` (`:246-252`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable same-line deletion | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-013 | `getTokensForInvalidLines one line delete text` (`:254-260`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable line-boundary deletion | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-014 | `getTokensForInvalidLines multiple lines delete text` (`:262-268`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Editable multiline deletion | TODO | N-A (readonly Viewer has no incremental edit API) |
-| UTM-015 | `microsoft/monaco-editor#122: Unhandled Exception: TypeError: Unable to get property 'replace' of undefined or null reference` (`textModelWithTokens.test.ts:548-620`) | `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` — Dynamic language changes reset state and expose temporary default tokens | TODO | DEFERRED (dynamic model-language dependency; TPM-077-079) |
-| UTM-016 | `issue #63822: Wrong embedded language detected for empty lines` (`:674-709`) | `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` — `getLanguageIdAtPosition` reads encoded embedded language | TODO | DEFERRED (local tokenizer result cannot encode embedded language ids) |
+| UTM-004 | `model invalidates states for one line insert` (`:95-105`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: model invalidates states for one line insert` evidence; editable single-line insert | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-005 | `model invalidates states for many lines insert` (`:107-118`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: model invalidates states for many lines insert` evidence; editable multiline insert | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-006 | `model invalidates states for one new line` (`:120-128`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: model invalidates states for one new line` evidence; editable newline plus follow-up insert | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-007 | `model invalidates states for one line delete` (`:130-144`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: model invalidates states for one line delete` evidence; editable same-line delete convergence | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-008 | `model invalidates states for many lines delete` (`:146-156`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: model invalidates states for many lines delete` evidence; editable multiline delete convergence | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-009 | `getTokensForInvalidLines one text insert` (`model.modes.test.ts:217-223`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: getTokensForInvalidLines one text insert` evidence; editable invalid suffix from one insert | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-010 | `getTokensForInvalidLines two text insert` (`:225-235`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: getTokensForInvalidLines two text insert` evidence; editable two-range insert | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-011 | `getTokensForInvalidLines one multi-line text insert, one small text insert` (`:237-244`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: getTokensForInvalidLines one multi-line text insert, one small text insert` evidence; editable multi-edit invalid queue | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-012 | `getTokensForInvalidLines one delete text` (`:246-252`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: getTokensForInvalidLines one delete text` evidence; editable same-line deletion | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-013 | `getTokensForInvalidLines one line delete text` (`:254-260`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: getTokensForInvalidLines one line delete text` evidence; editable line-boundary deletion | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-014 | `getTokensForInvalidLines multiple lines delete text` (`:262-268`) | `viewer/common/model/tokens/model_modes_reference_wbtest.mbt` — Explicit named `SKIPPED: getTokensForInvalidLines multiple lines delete text` evidence; editable multiline deletion | TODO | N-A (readonly Viewer has no incremental edit API) |
+| UTM-015 | `microsoft/monaco-editor#122: Unhandled Exception: TypeError: Unable to get property 'replace' of undefined or null reference` (`textModelWithTokens.test.ts:548-620`) | `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` — Explicit named `SKIPPED: microsoft/monaco-editor#122: Unhandled Exception: TypeError: Unable to get property 'replace' of undefined or null reference` evidence; dynamic language changes reset state and expose temporary default tokens | TODO | DEFERRED (dynamic model-language dependency; TPM-077-079) |
+| UTM-016 | `issue #63822: Wrong embedded language detected for empty lines` (`:674-709`) | `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #63822: Wrong embedded language detected for empty lines` evidence; `getLanguageIdAtPosition` reads encoded embedded language | TODO | DEFERRED (local tokenizer result cannot encode embedded language ids) |
 | UTM-017 | `issue #44805: No visible lines via API call` (`viewModelImpl.test.ts:119-130`) | `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt` — Hidden-area conversion yields a valid visible result; port exact label/path/pin | TODO | TESTED |
-| UTM-018 | `issue #44805: No visible lines via undoing` (`:132-150`) | `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt` — Hidden areas after editable undo | TODO | N-A (readonly Viewer has no undo API) |
+| UTM-018 | `issue #44805: No visible lines via undoing` (`:132-150`) | `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #44805: No visible lines via undoing` evidence; hidden areas after editable undo | TODO | N-A (readonly Viewer has no undo API) |
 | UTM-019 | `view models react first to model changes` (`viewModelImpl.test.ts:92-117`) | Two attached editors receive model-first content delivery before hostile public listener mutation; adapt with nested `set_value` and exact range validity. Exact local target: `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt` | TODO | TESTED |
 | UTM-020 | `issue #46314: ViewModel is out of sync with Model!` (`cursor.test.ts:2822-2851`) | Two Viewers share one model; cursor callback invokes `tokenize_if_cheap(1)` during `set_value` without stale projection or eager sweep. Exact local target: `viewer/cursor_tokenization_reference_wbtest.mbt` | TODO | TESTED |
 | UTM-021 | `Get word at position` (`model.test.ts:439-455`) | Move the exact named case from ordinary `word_helper_wbtest.mbt` into quality-compliant `viewer/common/model/model_reference_wbtest.mbt`, which cites the full source path and oracle commit; keep only non-reference helper coverage in the former file. | TODO | TESTED |
-| UTM-022 | `getWordAtPosition at embedded language boundaries` (`model.test.ts:457-474`) | Embedded token-language boundary word selection. Exact local target: `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` | TODO | DEFERRED (embedded-language token/config integration absent) |
-| UTM-023 | `issue #61296: VS code freezes when editing CSS file with emoji` (`model.test.ts:476-500`) | Emoji/word-pattern progress under dynamic language configuration. Exact local target: `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` | TODO | DEFERRED (dynamic language configuration and embedded word integration absent) |
+| UTM-022 | `getWordAtPosition at embedded language boundaries` (`model.test.ts:457-474`) | `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` — Explicit named `SKIPPED: getWordAtPosition at embedded language boundaries` evidence; embedded token-language boundary word selection | TODO | DEFERRED (embedded-language token/config integration absent) |
+| UTM-023 | `issue #61296: VS code freezes when editing CSS file with emoji` (`model.test.ts:476-500`) | `viewer/common/model/tokens/text_model_with_tokens_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #61296: VS code freezes when editing CSS file with emoji` evidence; emoji/word-pattern progress under dynamic language configuration | TODO | DEFERRED (dynamic language configuration and embedded word integration absent) |
 
 Coordination-only upstream tests, excluded from this group's denominator:
 `tokensStore.test.ts` belongs to the semantic/store group;
@@ -956,7 +970,7 @@ ordinary local branch-derived tests rather than invented `*_reference_*` names.
 | TMS-061 | `invalidateEndStateRange` member (259-261) | Add exact line range to invalid queue. | `MT::TrackingTokenizationStateStore::invalidate_end_state_range`; `MT_wbtest` | TODO | TESTED |
 | TMS-062 | `getFirstInvalidEndStateLineNumber` member (263) | Queue minimum or null. | `MT::TrackingTokenizationStateStore::get_first_invalid_end_state_line_number`; `MT_wbtest` | TODO | TESTED |
 | TMS-063 | `getFirstInvalidEndStateLineNumberOrMax` member (265-267) | Return first invalid or numeric maximum sentinel. | `MT::TrackingTokenizationStateStore::get_first_invalid_end_state_line_number_or_max`; `MT_wbtest` | TODO | TESTED |
-| TMS-064 | `MAX_SAFE_INTEGER` fallback decision/constant (266) | Empty queue falls back to `Number.MAX_SAFE_INTEGER`; queued one-based minima are never zero. | `Int::max_value()`/explicit local sentinel in `MT`; `MT_wbtest` | TODO | TESTED |
+| TMS-064 | `MAX_SAFE_INTEGER` fallback decision/constant (266) | Source empty queue returns `Number.MAX_SAFE_INTEGER`; local observable contract is a maximum Int sentinel after every realizable one-based line minimum | `MT` private `MAX_LINE_NUMBER_SENTINEL : Int = 0x7FFFFFFF`; test empty -> sentinel and queued minima win | TODO | TESTED |
 | TMS-065 | `allStatesValid` member (269) | True iff invalid queue minimum is null. | `MT::TrackingTokenizationStateStore::all_states_valid`; `MT_wbtest` | TODO | TESTED |
 | TMS-066 | `getStartState` member (271-274) | Initial state for line 1; previous line end state otherwise. | `MT::TrackingTokenizationStateStore::get_start_state`; `MT_wbtest` | TODO | TESTED |
 | TMS-067 | first-line early return (272) | `lineNumber === 1` returns initial state. | `MT::get_start_state`; `MT_wbtest` | TODO | TESTED |
@@ -998,7 +1012,7 @@ ordinary local branch-derived tests rather than invented `*_reference_*` names.
 | TMS-103 | singleton-at-start decision (368-372) | One-element range splices out; longer range advances start. | `M::delete`; singleton/long matrix | TODO | TESTED |
 | TMS-104 | delete-at-end decision (374-378) | Interior value at last element trims end; otherwise splits into two ranges. | `M::delete`; end/middle matrix | TODO | TESTED |
 | TMS-105 | delete split constant (368-377) | Right remainder starts at `value + 1`; half-open boundaries otherwise preserve `value`. | `M::delete`; expanded queue reference test | TODO | TESTED |
-| TMS-106 | `addRange` member (383-385) | Delegate normalized union to `OffsetRange.addRange`. | existing `M::RangePriorityQueueImpl::add_range`; exact upstream `addRange` test | TODO | TESTED |
+| TMS-106 | `addRange` member (383-385) | Delegate normalized union to `OffsetRange.addRange`. | existing `M::RangePriorityQueueImpl::add_range`; direct wrapper matrix covers empty/disjoint/adjacent/overlap/contained/enclosing ranges, with queue setup from TMS-REF-002 only | TODO | TESTED |
 | TMS-107 | `addRangeAndResize` member (387-418) | Locate intersecting block, shift suffix by delta, insert/merge/delete replacement. | existing `M::RangePriorityQueueImpl::add_range_and_resize`; exact upstream test plus boundaries | TODO | TESTED |
 | TMS-108 | first scan loop (389-391) | Advance while current range lies wholly before/touches edit according to source predicate. | `M::add_range_and_resize`; queue reference test | TODO | TESTED |
 | TMS-109 | first-scan boundary predicate (389) | Stop when exhausted or `range.start <= current.endExclusive`; touching counts as possibly intersecting. | `M::add_range_and_resize`; touching boundaries | TODO | TESTED |
@@ -1025,9 +1039,9 @@ ordinary local branch-derived tests rather than invented `*_reference_*` names.
 | TMS-130 | `_tokenizerWithStateStore` constructor property (449) | Non-null live tokenizer/state owner. | `MT::DefaultBackgroundTokenizer.tokenizer_with_state_store` | TODO | PORTED |
 | TMS-131 | `_backgroundTokenStore` constructor property (450) | Token batch/completion callback contract. | `MT::DefaultBackgroundTokenizer.background_token_store` | TODO | PORTED |
 | TMS-132 | `dispose` member (454-456) | Set disposed, cancel/invalidate pending idle/zero handles, reset gate; every stale callback is inert | `MT::DefaultBackgroundTokenizer::dispose`; deterministic scheduler cancellation test | TODO | TESTED |
-| TMS-133 | `handleChanges` member (458-460) | Begin/restart background scheduling. | `MT::DefaultBackgroundTokenizer::handle_changes`; `MT_wbtest` | TODO | TESTED |
+| TMS-133 | `handleChanges` member (458-460) | Begin/restart background scheduling, including the late first-`None` -> `Some` scheduler-installation wake. | `MT::DefaultBackgroundTokenizer::handle_changes`; `MT_wbtest` | TODO | TESTED |
 | TMS-134 | `_isScheduled` field (462) | Coalescing flag, initially false. | `MT::DefaultBackgroundTokenizer.is_scheduled` | TODO | PORTED |
-| TMS-135 | `_beginBackgroundTokenization` member (`textModelTokens.ts:463-474`) | `scheduler=None`, already-scheduled, detached, or finished returns; otherwise retain idle cancel handle/generation and only matching callback clears it | `MT::DefaultBackgroundTokenizer::begin_background_tokenization`; manual/no-scheduler and replacement tests | TODO | TESTED |
+| TMS-135 | `_beginBackgroundTokenization` member (`textModelTokens.ts:463-474`) | `scheduler=None` is an enqueue guard; a late first `Some` becomes schedulable only through the TMS-133 wake. Already-scheduled, detached, or finished also returns; otherwise retain idle cancel handle/generation and only the matching callback clears it | `MT::DefaultBackgroundTokenizer::begin_background_tokenization`; no-scheduler/late-installation/epoch replacement tests | TODO | TESTED |
 | TMS-136 | begin compound early-return decision (464-466) | Return if already scheduled OR TextModel attached count is zero OR no invalid lines; each operand independent | `MT::begin_background_tokenization`; 2x2x2 deterministic matrix | TODO | TESTED |
 | TMS-137 | idle callback (469-473) | Only the matching live generation clears `_isScheduled`; stale old-scheduler callbacks cannot clear a fresh generation | `MT::TokenizationScheduler.idle` callback/generation guard | TODO | TESTED |
 | TMS-138 | `_backgroundTokenizeWithDeadline` member (479-502) | Capture end time, run cancellable work slices, yield or request next idle turn. | `MT::DefaultBackgroundTokenizer::background_tokenize_with_deadline`; `MT_wbtest` | TODO | TESTED |
@@ -1261,10 +1275,10 @@ surface. The ordinary registry/change/color-map contract remains required.
 | TRG-002 | `_factories` language→lazy-factory map (`:15`) | `syntax/tokenizer.mbt` — No public lazy tokens-provider factory surface. | TODO | N-A (no lazy-provider API seam) |
 | TRG-003 | private change emitter (`:17`) | `syntax/tokenizer.mbt` — Local `did_change` emitter exists. | TODO | PORTED |
 | TRG-004 | public `onDidChange` event property (`:18`) | `syntax/tokenizer.mbt` — Local subscription method exists; preserve event identity. | TODO | PORTED |
-| TRG-005 | nullable `_colorMap` (`:20`) | `syntax/tokenizer.mbt` — Local color map is a static function/CSS, not registry state. | TODO | PORTED |
-| TRG-006 | constructor initializes color map null (`:22-24`) | `syntax/tokenizer.mbt` — Registry constructor currently initializes only supports/emitter. | TODO | PORTED |
+| TRG-005 | nullable `_colorMap` (`:20`) | `syntax/tokenizer.mbt` — Add `color_map : Array[String]?`; CSS strings are the reviewed source `Color` reduction. | TODO | PORTED |
+| TRG-006 | constructor initializes color map null (`:22-24`) | `syntax/tokenizer.mbt` — Initialize `color_map=None` alongside supports/emitter. | TODO | PORTED |
 | TRG-007 | `handleChange(languageIds)` member (`:26-31`) | `syntax/tokenizer.mbt` — No direct change-announcement method. | TODO | PORTED |
-| TRG-008 | change event carries exact languages and `changedColorMap=false` (`:27-30`) | `syntax/tokenizer.mbt` — Local event omits the color-map fact. | TODO | TESTED |
+| TRG-008 | change event carries exact languages and `changedColorMap=false` (`:27-30`) | `syntax/tokenizer.mbt` — Add/preserve `changed_color_map=false` on `handle_change` and therefore register/remove language events; assert the flag directly. | TODO | TESTED |
 | TRG-009 | `register` member (`:33-43`) | `syntax/tokenizer.mbt` — Local synchronous registration exists. | TODO | PORTED |
 | TRG-010 | set active support before firing language change (`:34-35`) | `syntax/tokenizer.mbt` — Local ordering matches. | TODO | TESTED |
 | TRG-011 | returned disposable owns conditional removal callback (`:36-42`) | `syntax/tokenizer.mbt` — Local id-based equivalent exists. | TODO | PORTED |
@@ -1286,14 +1300,14 @@ surface. The ordinary registry/change/color-map contract remains required.
 | TRG-027 | active support returns true (`:82-85`) | `syntax/tokenizer.mbt::is_resolved` — Fixed synchronous adaptation returns true for active support; add a direct true-arm test. | TODO | TESTED |
 | TRG-028 | missing or already-resolved factory returns true (`:87-90`) | `syntax/tokenizer.mbt::is_resolved` — With no lazy factory API, missing support is synchronously resolved and true; add the missing-support true test. | TODO | TESTED |
 | TRG-029 | unresolved factory returns false (`:92`) | `syntax/tokenizer.mbt` has no unresolved-factory state; false requires the absent lazy-factory pending state. | TODO | N-A (lazy factory API is absent) |
-| TRG-030 | `setColorMap` member (`:95-101`) | `syntax/tokenizer.mbt` — Move/bridge the fixed theme map into registry state without changing theme design. | TODO | PORTED |
-| TRG-031 | store supplied color map (`:96`) | `syntax/tokenizer.mbt` — Missing registry color state. | TODO | TESTED |
-| TRG-032 | fire all registered languages with `changedColorMap=true` (`:97-100`) | `syntax/tokenizer.mbt` — Local event lacks color-map changes and all-language fanout. | TODO | TESTED |
-| TRG-033 | `getColorMap` returns current map/null (`:103-105`) | `syntax/tokenizer.mbt` — Missing registry getter. | TODO | TESTED |
-| TRG-034 | `getDefaultBackground` member (`:107-112`) | `syntax/tokenizer.mbt` — Missing; local theme uses CSS strings rather than VS Code `Color`. | TODO | PORTED |
-| TRG-035 | color map exists and length exceeds `DefaultBackground` branch (`:108`) | `syntax/tokenizer.mbt` — Missing bounds branch. | TODO | TESTED |
-| TRG-036 | valid map returns default-background entry (`:109`) | `syntax/tokenizer.mbt` — Port with the local color value representation. | TODO | TESTED |
-| TRG-037 | absent/short map returns null (`:111`) | `syntax/tokenizer.mbt` — Missing. | TODO | TESTED |
+| TRG-030 | `setColorMap` member (`:95-101`) | `syntax/tokenizer.mbt::TokenizationRegistry::set_color_map(Array[String])` — Store CSS expressions without parsing. | TODO | PORTED |
+| TRG-031 | store supplied color map (`:96`) | `syntax/tokenizer.mbt` — Retain the supplied `Array[String]` unchanged. | TODO | TESTED |
+| TRG-032 | fire all registered languages with `changedColorMap=true` (`:97-100`) | `syntax/tokenizer.mbt` — Fire all active language ids with `TokenizationChangedEvent.changed_color_map=true`. | TODO | TESTED |
+| TRG-033 | `getColorMap` returns current map/null (`:103-105`) | `syntax/tokenizer.mbt::TokenizationRegistry::get_color_map() -> Array[String]?` returns the retained option. | TODO | TESTED |
+| TRG-034 | `getDefaultBackground` member (`:107-112`) | `syntax/tokenizer.mbt::TokenizationRegistry::get_default_background() -> String?`; source `Color` is reduced to a CSS string. | TODO | PORTED |
+| TRG-035 | color map exists and length exceeds `DefaultBackground` branch (`:108`) | `syntax/tokenizer.mbt` — Test `None` and lengths 0, 2, and 3 against literal index 2. | TODO | TESTED |
+| TRG-036 | valid map returns default-background entry (`:109`) | `syntax/tokenizer.mbt` — Return the CSS string at source `ColorId.DefaultBackground = 2`. | TODO | TESTED |
+| TRG-037 | absent/short map returns null (`:111`) | `syntax/tokenizer.mbt` — `None`, length 0, and length 2 return `None`. | TODO | TESTED |
 | TRG-038 | factory data `_isDisposed=false` (`:117`) | `syntax/tokenizer.mbt` — No lazy factory carrier. | TODO | N-A (no lazy-provider API seam) |
 | TRG-039 | factory data `_resolvePromise=null` (`:118`) | `syntax/tokenizer.mbt` — No lazy factory carrier. | TODO | N-A (no lazy-provider API seam) |
 | TRG-040 | factory data `_isResolved=false` (`:119`) | `syntax/tokenizer.mbt` — No lazy factory carrier. | TODO | N-A (no lazy-provider API seam) |
@@ -1393,23 +1407,23 @@ lines still exercise the required `IdentityModelLineProjection` rows above.
 
 | ID | Upstream test (`line`) | Required disposition | Status | Proposed terminal |
 |---|---|---|---|---|
-| REF-001 | `issue #86303 - color shifting between different tokens` (`:118-132`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-002 | `deleting a newline` (`:134-147`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-003 | `inserting a newline` (`:149-162`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-004 | `deleting a newline 2` (`:164-177`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-005 | `issue #179268: a complex edit` (`:179-209`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-006 | `issue #91936: Semantic token color highlighting fails on line with selected text` (`:211-252`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Full syntactic/semantic merge-mask matrix. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-007 | `issue #147944: Language id "vs.editor.nullLanguage" is not configured nor known` (`:254-269`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Sparse zero-length/unknown-language handling. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-008 | `partial tokens 1` (`:271-312`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Partial-update ordering. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-009 | `partial tokens 2` (`:314-354`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Partial-update ordering. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-010 | `partial tokens 3` (`:356-382`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Partial-update split. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-011 | `issue #94133: Semantic colors stick around when using (only) range provider` (`:384-400`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Empty partial replacement. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-012 | `bug` (`:402-449`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Large partial-update reproduction with overlapping partial ranges. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-013 | `issue #95949: Identifiers are colored in bold when targetting keywords` (`:452-496`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Per-field semantic masks. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-014 | `BUG: setPartial with startLineNumber > 1 and token removal creates invalid state` (`:499-525`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Empty-piece compaction. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-015 | `BUG: setPartial with split that creates empty first piece with invalid line numbers` (`:527-548`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Empty split boundary. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-016 | `addSparseTokens skips overlapping semantic tokens that produce backward endOffsets` (`:550-596`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Monotone merged end offsets. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
-| REF-017 | `piece with startLineNumber 0 and endLineNumber -1 after encompassing deletion` (`:598-634`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Encompassing deletion/compaction. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-001 | `issue #86303 - color shifting between different tokens` (`:118-132`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #86303 - color shifting between different tokens` evidence; future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-002 | `deleting a newline` (`:134-147`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: deleting a newline` evidence; future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-003 | `inserting a newline` (`:149-162`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: inserting a newline` evidence; future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-004 | `deleting a newline 2` (`:164-177`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: deleting a newline 2` evidence; future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-005 | `issue #179268: a complex edit` (`:179-209`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #179268: a complex edit` evidence; future semantic edit adjustment; CTS incremental edit lane is independently N-A. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-006 | `issue #91936: Semantic token color highlighting fails on line with selected text` (`:211-252`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #91936: Semantic token color highlighting fails on line with selected text` evidence; full syntactic/semantic merge-mask matrix. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-007 | `issue #147944: Language id "vs.editor.nullLanguage" is not configured nor known` (`:254-269`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #147944: Language id "vs.editor.nullLanguage" is not configured nor known` evidence; sparse zero-length/unknown-language handling. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-008 | `partial tokens 1` (`:271-312`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: partial tokens 1` evidence; partial-update ordering. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-009 | `partial tokens 2` (`:314-354`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: partial tokens 2` evidence; partial-update ordering. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-010 | `partial tokens 3` (`:356-382`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: partial tokens 3` evidence; partial-update split. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-011 | `issue #94133: Semantic colors stick around when using (only) range provider` (`:384-400`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #94133: Semantic colors stick around when using (only) range provider` evidence; empty partial replacement. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-012 | `bug` (`:402-449`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: bug` evidence; large partial-update reproduction with overlapping partial ranges. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-013 | `issue #95949: Identifiers are colored in bold when targetting keywords` (`:452-496`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #95949: Identifiers are colored in bold when targetting keywords` evidence; per-field semantic masks. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-014 | `BUG: setPartial with startLineNumber > 1 and token removal creates invalid state` (`:499-525`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: BUG: setPartial with startLineNumber > 1 and token removal creates invalid state` evidence; empty-piece compaction. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-015 | `BUG: setPartial with split that creates empty first piece with invalid line numbers` (`:527-548`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: BUG: setPartial with split that creates empty first piece with invalid line numbers` evidence; empty split boundary. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-016 | `addSparseTokens skips overlapping semantic tokens that produce backward endOffsets` (`:550-596`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: addSparseTokens skips overlapping semantic tokens that produce backward endOffsets` evidence; monotone merged end offsets. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
+| REF-017 | `piece with startLineNumber 0 and endLineNumber -1 after encompassing deletion` (`:598-634`) | `viewer/common/tokens/tokens_store_reference_wbtest.mbt` — Explicit named `SKIPPED: piece with startLineNumber 0 and endLineNumber -1 after encompassing deletion` evidence; encompassing deletion/compaction. | TODO | DEFERRED (viewer-semantic-token-acquisition-application-parity.md) |
 
 ### `modelLineProjection.test.ts` exact named cases (counted REF rows)
 
@@ -1506,10 +1520,10 @@ data structure, not live scheduling.
 
 | Proposed terminal | Rows |
 |---|---:|
-| TESTED | 465 |
+| TESTED | 463 |
 | PORTED | 201 |
 | DEFERRED | 206 |
-| N-A | 171 |
+| N-A | 173 |
 | **Total** | **1043** |
 
 Prefix audit:
@@ -1548,7 +1562,7 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 
 | ID | Required post-approval correction | Exact destination | Status |
 |---|---|---|---|
-| LOC-001 | Remove attach-time whole-document force and make token_count count stored tokens without demand. | `viewer/attach_model.mbt`; `viewer/common/model/tokens/tokenization_text_model_part.mbt` | TODO |
+| LOC-001 | Remove attach-time whole-document force and make token_count count stored tokens without demand. Exercise both `ViewerViewModelBuiltEvent.token_count` producer paths in `attach_model.mbt` end to end—the initial attach/build path and the token-change notification path—and assert each reads stored counts with zero lexer invocations. | `viewer/attach_model.mbt`; `viewer/common/model/tokens/tokenization_text_model_part.mbt`; `viewer/test_viewer_wbtest.mbt` | TODO |
 | LOC-002 | Replace whole-document memo tests with passive-read, explicit-force, visible/background call counters. | `viewer/common/model/tokens/tokenization_text_model_part_wbtest.mbt`; `viewer/common/view_model/view_model_tokens_test.mbt` | TODO |
 | LOC-003 | Remove stale-projection clamp only after exact early visible-range conversion is proved in both projection domains. | `viewer/common/view_model/view_model_lines_projected.mbt`; `viewer/common/view_model/set_value_flush_test.mbt` | TODO |
 | LOC-004 | Raw UTF-16 code-unit slicing for encoder input preserves frozen EOL seam at D800/DBFF/DC00/DFFF, valid-pair halves, FEFF, and BMP boundaries. | `viewer/common/model/tokens/line_tokens_encoder.mbt` | TODO |
@@ -1558,14 +1572,16 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 | LOC-008 | Correct the model-line reference header to cite full path `vscode/src/vs/editor/test/common/model/model.line.test.ts` and oracle commit `b18492a288de038fbc7643aae6de8247029d11bd`; explicitly `SKIPPED`-name all 52 incremental cases because readonly Viewer has no incremental `applyEdits` seam and manually injected `ManualTokenizationSupport` remains deferred, rather than claiming background tokenization is absent. Keep the projection reference as a separate destination. | `viewer/common/model/model_line_reference_wbtest.mbt`; `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` | TODO |
 | LOC-009 | Place the syntactic font carrier in model/tokens, preserve the source `FontTokensUpdate` typealias there, and expose the exact same option/update/event values through the token-part event consumed by the parent; no duplicate parent carrier, alias, or conversion. Visual FontTokenDecorationsProvider stays deferred. | `viewer/common/model/tokens/annotations.mbt`; backend/token-part/annotation tests | TODO |
 | LOC-010 | Keep large models on projected collection while disabling tokenization; document P2 deviation. | `viewer/common/view_model/README.md`; `viewer-large-file-view-collection-parity.md` | TODO |
-| LOC-011 | Scheduler replacement seam: idle/zero handles plus generation cancel old queues, reset `_isScheduled`, and prevent stale callbacks from clearing fresh state. | `viewer/common/model/tokens/text_model_tokens.mbt`; `viewer/browser_host.mbt` | TODO |
+| LOC-011 | Scheduler epoch seam: retain the first non-`None` scheduler through all nonfinal detaches; idle/zero handles plus generation cancellation reset `_isScheduled` on final detach and prevent callbacks from an older epoch clearing fresh state. | `viewer/common/model/tokens/text_model_tokens.mbt`; `viewer/browser_host.mbt` | TODO |
 | LOC-012 | Common-tokens batch/store placement takes top-level language id plus line-length closure; common/tokens never imports model/tokens. | `viewer/common/tokens/{contiguous_tokens_store,contiguous_multiline_tokens,contiguous_multiline_tokens_builder}.mbt` | TODO |
 | LOC-013 | Reroute `ViewModel::get_line_content/get_line_length` away from token-reading `get_view_line_data` to non-token content/length paths; assert both token-store reads and lexer calls stay zero. | `viewer/common/view_model/view_model.mbt`; `viewer/common/view_model/view_model_tokens_test.mbt` | TODO |
 | LOC-014 | Add raw start-offset word encoder; public registry wrapper does not construct end-offset LineTokens before TMS-126. | `viewer/common/model/tokens/line_tokens_encoder.mbt` | TODO |
-| LOC-015 | `scheduler=None` enqueues no idle/zero/delayed work while explicit force and stabilized-true refresh remain synchronous; reattach with a scheduler starts a fresh generation. | `viewer/common/model/tokens/text_model_tokens.mbt` | TODO |
+| LOC-015 | `scheduler=None` enqueues no idle/zero/delayed work while explicit force and stabilized-true refresh remain synchronous. A first late `Some` while already attached stores the scheduler and wakes once without a duplicate attach event; later candidates are ignored until final clear. | `viewer/common/model/text_model_tokens.mbt`; `viewer/common/model/text_model.mbt` | TODO |
 | LOC-016 | Correct the queue reference header to cite oracle commit `b18492a288de038fbc7643aae6de8247029d11bd` and full source path `vscode/src/vs/editor/test/common/model/textModelTokens.test.ts`. | `viewer/common/model/text_model_tokens_reference_test.mbt` | TODO |
 | LOC-017 | Correct the guide reference header: only #133 and #11856 are bracket suites; #122 is tokenization and #63822 is embedded-language behavior. | `viewer/common/model/guides_text_model_part_reference_test.mbt` | TODO |
 | LOC-018 | Move the exact `Get word at position` conformance case into `model_reference_wbtest.mbt`, citing `vscode/src/vs/editor/test/common/model/model.test.ts` at `b18492a288de038fbc7643aae6de8247029d11bd`; reclassify `word_helper_wbtest.mbt` as ordinary local coverage and remove the duplicate conformance claim. | `viewer/common/model/model_reference_wbtest.mbt`; `viewer/common/model/word_helper_wbtest.mbt` | TODO |
+| LOC-019 | Make the real `viewport_data_from_view_model` path build the viewport needed mask and call `get_view_lines_data` exactly once; its test records the single batch call, one passive token-store read per needed projected model line, and zero lexer invocations. | `viewer/common/view_model/viewport_data.mbt`; `viewer/common/view_model/viewport_data_test.mbt` | TODO |
+| LOC-020 | Record the registry's `Color[]`/`Color` to CSS `Array[String]`/`String` reduction and exact nullable method signatures; preserve `changed_color_map : Bool`. | `syntax/README.md`; `syntax/pkg.generated.mbti`; registry tests | TODO |
 
 ## Deviations Approved for Gate-B Review
 
@@ -1580,14 +1596,26 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
   stays inside the child package. This avoids a reverse package edge,
   cross-package aliasing, and payload conversion. Only the visual decoration
   consumer remains deferred.
-- **Scheduler replacement safety:** unlike the source's process-global
-  scheduler, Viewer may attach/detach scheduler-bearing hosts. Cancel handles,
-  generation guards, and explicit `scheduler=None` prevent old queues from
-  pinning or clearing new scheduling state while preserving source work order.
+- **Optional scheduler epoch:** unlike the source's process-global scheduler,
+  Viewer may attach headless or scheduler-bearing hosts. Each aggregate
+  attached epoch selects the first non-`None` scheduler, wakes once if it
+  arrives after a headless attach, retains it through nonfinal detaches, and
+  clears it only after final detach. Cancel handles and generation guards keep
+  callbacks from an older epoch from pinning or clearing new scheduling state.
 - **Reduced tokenizer API:** public `syntax.LineTokenizer` remains nonraising
   and has no has-EOL parameter. Only the internal adapter is source-shaped; the
   production wrapper ignores has-EOL at the public seam and emits raw
   start-offset words for one conversion.
+- **Semantic background enum:** source ordinals 1/2 remain evidence only.
+  Local `BackgroundTokenizationState` is constructor-identified and exposes no
+  numeric ABI; state transitions remain tested.
+- **Registry color payload:** source `Color[]`/`Color` becomes CSS
+  `Array[String]`/`String`, with exact optional signatures and index/event
+  behavior but no Color-object parsing, methods, or identity.
+- **Maximum-line sentinel:** JavaScript `Number.MAX_SAFE_INTEGER`
+  (9007199254740991) is not representable as MoonBit `Int`. Private literal
+  `0x7FFFFFFF` preserves the required ordering after every realizable
+  one-based line minimum and is not a public numeric ABI.
 - **Large-file collection:** tokenization disables at exact source thresholds,
   but the projected view collection remains until
   `viewer-large-file-view-collection-parity.md`.
@@ -1612,6 +1640,9 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
   are the only lexer drivers. The pinned
   modelLineProjection setup may explicitly force through the final line before
   counters are cleared; the read assertions then prove zero new lexer calls.
+  End-to-end event tests cover both `ViewerViewModelBuiltEvent.token_count`
+  producer paths in `attach_model.mbt` (initial attach/build and token-change
+  notification) and prove each count read performs zero lexer invocations.
 - Flush: `reset_tokenization(false)` suppresses only the full-reset event.
   A bounded `refreshAllVisibleLineTokens` may emit exact visible ranges before
   ViewModel content delivery. On growth, those events stay inside old visible
@@ -1619,10 +1650,16 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
   clamp to the new line count and are valid in both domains. Prove those facts
   before removing the local projection clamp.
 - Lifecycle: `0->1->2->1->0`, two disjoint/overlapping viewers, exact handle,
-  scheduler install before first transition, first-scheduler retention,
-  final-detach inert callback, scheduler clear after detach, and model-dispose
-  cancellation. Test attached-count and AttachedViews aggregate invalidation
-  independently on attach, visible-state change, and detach.
+  first-non-`None` scheduler retention, final-detach inert callback, scheduler
+  clear after detach, and model-dispose cancellation. Test attached-count and
+  AttachedViews aggregate invalidation independently on attach, visible-state
+  change, and detach. In the `None -> Some` order, first attach queues nothing;
+  the second at count 1 installs `Some` and wakes once without a second attach
+  event; detaching its Viewer retains the scheduler while the headless Viewer
+  remains; final detach cancels then clears. In the `Some -> None` order, the
+  second attach neither replaces nor wakes; detaching the supplying Viewer
+  retains scheduler/work while the headless Viewer remains; final detach
+  cancels then clears.
 - Stabilization: ViewModel-owned scroll and content-mapping changes publish
   false; a generic render by itself publishes neither state. True occurs at
   one-time post-first-render initialization and after
@@ -1643,8 +1680,9 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 - Large file: size and line-count threshold-1/equal/+1 with OR combinations;
   flag remains constructor-fixed across smaller/equal/larger `set_value`;
   disabled models stay projected, produce defaults, and start no scheduler;
-  `scheduler=None` enqueues nothing across attach/detach/reattach while
-  explicit force and stabilized-true visible refresh remain synchronous.
+  an epoch with only `scheduler=None` enqueues nothing while explicit force
+  and stabilized-true visible refresh remain synchronous; a later first
+  `Some` follows the lifecycle wake contract above.
 - Visible scheduling: ViewModel-owned scroll callback publishes false before root apply-scroll/render; 50 ms unstable debounce versus immediate stable update;
   forward/backward, joined/overlap/disjoint ranges; idle deadline, strict
   timeRemaining/now branches, 1 ms slice, zero-timeout yield, 15 ms idle
@@ -1653,12 +1691,17 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
 - Store/registry: `Missing | Empty | Words(Array[UInt])`; first Missing->Empty changes, repeated Empty->Empty is equal; missing/default metadata,
   setMultiline changed-range aggregation, completed/reset, ordinary
   register/replace/remove/stale disposer, matching/nonmatching languages,
-  synchronous fixed-true isResolved, color map/default background, and attached
-  aggregate invalidation.
+  synchronous fixed-true isResolved, CSS color map `None`/length 0/2/3,
+  retained array value/order, changed-color-map boolean, literal background index
+  2, and attached aggregate invalidation.
 - Projection: Identity/Projected/Injected/Hidden, single/batch, all-true,
   all-false, first/last/alternating/sparse needed masks; five injection-context
   callbacks; decoration selection; wrapped indent/start/slice branches; one
-  passive read per projected model line and zero lexer work.
+  passive read per projected model line and zero lexer work. The real
+  `viewport_data_from_view_model` path must construct the viewport needed mask,
+  call `get_view_lines_data` exactly once, and prove the single batch call has
+  one passive token-store read per needed projected model line and zero lexer
+  invocations.
 - Font: absent/empty/nonempty fontInfo, annotation create/store/getter,
   one/many/removal updates with exact half-open offsets,
   family/size/line-height fields, backend setFontInfo, exact model event,
@@ -1670,8 +1713,9 @@ All 1043 counted rows are TODO. There are zero PASS rows and no duplicate IDs. L
   old-generation callback after final detach and after reattach, callback after
   model dispose, repeated finish, reset/replacement while queued, and exact
   no-event/no-work assertions. `scheduler=None` enqueues nothing but does not
-  disable synchronous explicit/stable work. A stale callback cannot clear a
-  new generation's `_isScheduled` flag.
+  disable synchronous explicit/stable work; first late `Some`, ignored later
+  candidates, nonfinal retention, and final `Some -> None` clear are explicit
+  axes. A stale callback cannot clear a new generation's `_isScheduled` flag.
 - Semantic rows require retained contract-shape evidence only; the future plan
   owns provider/merge behavior tests rather than impossible tests in this
   child.
@@ -1685,7 +1729,10 @@ This child completes frozen lifecycle CEW-086
 stable/unstable producer and exact-handle wiring. The parent coordination table
 records the transfer. It also owns the existing scroll-only
 `Viewer::restore_view_state` immediate-scroll-then-stabilized substep; broader
-view-state shape stays in the P2 backlog.
+view-state shape stays in the P2 backlog. This child also receives the
+parent-authorized ViewModel model-token callback at `viewModelImpl.ts:510-523`
+through VMI-017–024; frozen render invalidation remains the owner of typed
+event declarations and handler consumption only.
 
 ## Milestones
 
@@ -1731,3 +1778,13 @@ view-state shape stays in the P2 backlog.
   source ranges, and model-line N-A cases have explicit SKIPPED authorities.
   No product or test file changed; Gate B has not passed and requires a fresh
   independent review.
+- 2026-07-13: the second formal Gate-B round kept source completeness PASS but
+  REJECTED `af952ac` on test evidence and five boundary seams: 33 missing named
+  SKIPPED requirements, omitted reference destinations, wrong queue authority,
+  absent real viewport/telemetry zero-lexer evidence, missing ViewModel token
+  callback ownership, numeric enum ABI overclaims, an incomplete optional
+  scheduler epoch, and unregistered Color/CSS plus MAX_SAFE_INTEGER/Int
+  reductions. The corrected docs-only candidate remains 1043 TODO rows = 946
+  source atoms + 97 exact tests, now proposed as 463 TESTED / 201 PORTED / 206
+  DEFERRED / 173 N-A. No product or test file changed; Gate B has not passed
+  and requires another fresh review.

@@ -973,6 +973,10 @@ async test "inlay token anchor converts one-based column with exact minus and pl
   )
   let languages = Languages::new()
   let model = inlay_request_model_for_language("!!@@##", language_id)
+  // Anchor lookup is a passive token read. This token-boundary oracle owns
+  // explicit demand; provider execution below must not invoke the lexer again.
+  model.tokenization.force_tokenization(1)
+  assert_eq(calls.val, 1)
   let provider_registration = languages.register_inlay_hints_provider(
     LanguageId(language_id),
     StaticInlayProvider::{

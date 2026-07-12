@@ -28,5 +28,8 @@ fn view_model_for(doc : @model.TextSnapshot) -> @view_model.ViewModel {
     "",
     doc.get_value(),
   )
+  // View reads are deliberately passive. Rendering fixtures that assert
+  // grammar classes own their demand explicitly before constructing lines.
+  model.tokenization.force_tokenization(model.get_line_count())
   ViewModel(model)
 }

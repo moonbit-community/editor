@@ -1,6 +1,6 @@
 # Viewer Render Invalidation Parity
 
-Status: amended inventory ready — STOP FOR FRESH REVIEW
+Status: second amended inventory ready — STOP FOR FRESH REVIEW
 
 Date: 2026-07-10
 
@@ -52,16 +52,17 @@ coordinate algorithms belong to viewer-browser-geometry-parity.md.
     model lifecycle and cursor event forwarding are excluded.
 - vscode/src/vs/editor/browser/config/editorConfiguration.ts
   - complete updateOptions, recompute, environmental setter/digit-count,
-    changed-option dependency, and emitted configuration-change clusters.
+    platform extra-class helper, changed-option dependency, and emitted
+    configuration-change clusters.
 - vscode/src/vs/editor/browser/config/migrateOptions.ts
   - complete generic migration machinery plus the renderWhitespace and
     renderLineHighlight registrations; unrelated option registrations are
     excluded siblings.
 - vscode/src/vs/editor/browser/viewParts/viewLines/viewLines.ts
-  - complete onConfigurationChanged, onDecorationsChanged,
-    onCursorStateChanged, onLinesChanged, and onScrollChanged handlers plus
-    their dirty-state transitions. Width reads and render integration belong to
-    viewer-browser-geometry-parity.md.
+  - complete scoped handlers for Configuration, Cursor, Decorations, Flushed,
+    LinesChanged/Deleted/Inserted, Scroll, Tokens, Zones, and Theme, plus their
+    dirty-state transitions and the source-owned visible-line factory callback.
+    Width reads and render integration belong to viewer-browser-geometry-parity.md.
 - vscode/src/vs/editor/browser/viewParts/viewLines/viewLine.ts
   - complete retained-line invalidation inputs and option/selection branches.
 - vscode/src/vs/editor/browser/view/viewLayer.ts
@@ -74,7 +75,8 @@ coordinate algorithms belong to viewer-browser-geometry-parity.md.
     handlers and their dirty-state transitions only. setWidgetPosition,
     placement, and render belong to viewer-browser-geometry-parity.md.
 - vscode/src/vs/editor/browser/viewParts/currentLineHighlight/currentLineHighlight.ts
-  - complete configuration/cursor/focus/line/scroll invalidation cluster.
+  - complete Theme, Configuration, Cursor, Flushed, Deleted/Inserted, Scroll,
+    Zones, and Focus invalidation cluster.
 - vscode/src/vs/editor/common/config/editorOptions.ts
   - option registrations and change dependencies for fixed `readOnly`, renderWhitespace,
     renderControlCharacters, renderLineHighlight, and
@@ -85,6 +87,7 @@ coordinate algorithms belong to viewer-browser-geometry-parity.md.
 - viewer/viewer_options.mbt
 - viewer/view_host.mbt
 - viewer/browser/view/view.mbt
+- viewer/browser/view/editor_class_name_wbtest.mbt
 - viewer/browser/view/rendering_context.mbt
 - viewer/browser/view/view_events.mbt
 - viewer/browser/view/view_part.mbt
@@ -135,6 +138,8 @@ transition, force-render path, and last-rendered-value cache.
 | an unrelated scroll/content/cursor event is needed to reveal the change | REQUIRED PARITY: forbidden |
 | local snapshot-diff event sourcing | INTENTIONAL DEVIATION candidate; must prove the same observable event matrix |
 | `update_options` replaces one complete typed snapshot instead of accepting Monaco's partial object | INTENTIONAL DEVIATION candidate; preserve exact no-op/change behavior and document the API seam in `viewer/README.md` |
+| `ViewThemeChangedEvent.theme` source `IColorTheme` becomes the existing local `String` theme identity | INTENTIONAL DEVIATION candidate; declaration/dispatch only, with no typed producer or concrete handler |
+| Safari/WebKit/macOS platform classes are absent from the root class helper | REQUIRED PARITY; add a pure platform-class helper and root-class integration |
 
 This register is not the parity ledger and does not count toward the
 source-member denominator.
@@ -156,14 +161,14 @@ Every `Status` is deliberately `TODO` at this gate. `Proposed terminal` is a
 review target, not implementation evidence. The deduplicated denominator is:
 
 ```text
-ViewParts: VL 32 + VLI 13 + VLCI 4 + VLC 16 + RLC 30
-         + VC 40 + CW 21 + CLH 27                         = 183
+ViewParts: VL 33 + VLI 13 + VLCI 4 + VLC 16 + RLC 30
+         + VC 40 + CW 21 + CLH 27                         = 184
 Events:    VE 75 + VEH 45 + RVC 35 + RVD 14 + RVMI 36
          + CEWU 2                                           = 207
-Config:    ECF 33 + ECS 13 + ECU 27 + EOP 25 + EOB 37
-         + MIG 34                                           = 169
+Config:    ECF 33 + ECS 13 + ECX 3 + ECU 27 + EOP 25
+         + EOB 37 + MIG 34                                  = 172
                                                                ---
-Total                                                          559
+Total                                                          563
 ```
 
 ### Source evidence and closed boundaries
@@ -206,13 +211,13 @@ geometry-owned. Theme event declarations close the source union, while the
 concrete local product applies theme through CSS/root attributes and has no
 typed theme-handler contract.
 
-### ViewPart ledger — 183 rows
+### ViewPart ledger — 184 rows
 
-#### `viewLines.ts` (`VL`, 32 rows)
+#### `viewLines.ts` (`VL`, 33 rows)
 
 | ID | Source atom | Behavior / local target | Status | Proposed terminal |
 |---|---|---|---|---|
-| VL-001 | `_visibleLines` (`:105,149–152,189,227–251,261,319`) | Constructor creates the retained collection; source events delegate and return its dirtiness. | TODO | TESTED |
+| VL-001 | `_visibleLines` (`:105,149–152,189,227–251,261,319`) | Constructor assigns the retained ViewLayer field; scoped events delegate and return its dirtiness. | TODO | TESTED |
 | VL-002 | `domNode` (`:106,152,210,318`) | Constructor obtains the collection DOM; configuration font and scroll-width writes affect it. | TODO | TESTED |
 | VL-003 | `_lineHeight` (`:109,138,198`) | Constructor and configuration read the exact line height. | TODO | TESTED |
 | VL-004 | `_typicalHalfwidthCharacterWidth` (`:110,139,199`) | Constructor and configuration read the halfwidth metric. | TODO | TESTED |
@@ -220,7 +225,7 @@ typed theme-handler contract.
 | VL-006 | `_revealHorizontalRightPadding` (`:112,141,201`) | Constructor/configuration retain a historical reveal-owned value. | TODO | N-A (historical reveal-owned field) |
 | VL-007 | `_cursorSurroundingLines` (`:113,142,202`) | Constructor/configuration retain a historical reveal-owned value. | TODO | N-A (historical reveal-owned field) |
 | VL-008 | `_cursorSurroundingLinesStyle` (`:114,143,203`) | Constructor/configuration retain a historical reveal-owned value. | TODO | N-A (historical reveal-owned field) |
-| VL-009 | `_canUseLayerHinting` (`:115,144,204`) | Read as `!disableLayerHinting`; local renderer deliberately fixes the equivalent fact true. | TODO | TESTED |
+| VL-009 | `_canUseLayerHinting` (`:115,144,204,672`) | Read as `!disableLayerHinting` and consumed by `renderText`; local renderer deliberately fixes the equivalent fact true. | TODO | TESTED |
 | VL-010 | `_viewLineOptions` (`:116,145,223–231`) | Constructor and updates retain the option snapshot driving line invalidation. | TODO | TESTED |
 | VL-011 | `_maxLineWidth` (`:119,159,190–192,214–216,257,326`) | Constructor/flush/config/zones maintain geometry-owned maximum width. | TODO | DEFERRED (browser geometry dependency) |
 | VL-012 | `_horizontalRevealRequest` (`:123,169,305–316`) | Constructor clears it; scroll invalidation cancels/retains the historical reveal request. | TODO | TESTED |
@@ -244,6 +249,7 @@ typed theme-handler contract.
 | VL-030 | horizontal reveal cancellation (`:306–309`) | Horizontal change clears the pending horizontal reveal. | TODO | TESTED |
 | VL-031 | vertical pending-and-top gate (`:310–317`) | Check a pending reveal only when scrollTop changed. | TODO | TESTED |
 | VL-032 | normalized-band strictness (`:311–316`) | Cancel only strictly outside the normalized band; endpoints remain valid. | TODO | TESTED |
+| VL-033 | visible-line factory callback (`:149–151`) | Source-owned `createLine` callback constructs `new ViewLine(viewGpuContext, this._viewLineOptions)` with current captured dependencies. | TODO | TESTED |
 
 #### `viewLine.ts` retained-line inputs (`VLI`, 13 rows)
 
@@ -259,7 +265,7 @@ typed theme-handler contract.
 | VLI-008 | `onOptionsChanged` (`:90–93`) | Retain options and mark maybe-invalid. | TODO | TESTED |
 | VLI-009 | `onSelectionChanged` (`:94–100`) | Re-render only when selection-sensitive output changed. | TODO | TESTED |
 | VLI-010 | DOM-presence branch (`:68–71`) | Null before a rendered line exists; otherwise return its node. | TODO | TESTED |
-| VLI-011 | selection-outcome branch (`:95–99`) | Compare renderer selection output before invalidating. | TODO | TESTED |
+| VLI-011 | selection-outcome branch (`:95–99`) | Mark maybe-invalid and return true iff high contrast is active or the prior renderer input used `renderWhitespace=Selection`; otherwise return false. | TODO | TESTED |
 | VLI-012 | high-contrast selection predicate (`:95`) | Local product has no typed high-contrast theme branch. | TODO | N-A (no local high-contrast event contract) |
 | VLI-013 | last-rendered Selection-whitespace predicate (`:95`) | Selection changes matter when the prior render used Selection whitespace. | TODO | TESTED |
 
@@ -332,7 +338,7 @@ typed theme-handler contract.
 
 | ID | Source atom | Behavior / local target | Status | Proposed terminal |
 |---|---|---|---|---|
-| VC-001 | `_readOnly` (`:34,60,115`) | Source caches the option; the readonly Viewer constant-folds it to true and tests that rendering branch. | TODO | TESTED |
+| VC-001 | `_readOnly` (`:34,60,115,236–239`) | Source caches and consumes the option in blinking selection; readonly Viewer constant-folds it true and tests that branch. | TODO | TESTED |
 | VC-002 | `_cursorBlinking` (`:35,61,116`) | Cursor blinking style is absent locally. | TODO | N-A (no blinking-style option) |
 | VC-003 | `_cursorStyle` (`:36,62,117`) | Source exposes cursor-style configuration; local rendering is fixed to Line. | TODO | DEFERRED (missing cursor-style option seam) |
 | VC-004 | `_cursorSmoothCaretAnimation` (`:37,63,118`) | Source exposes smooth-caret configuration and reason-sensitive behavior. | TODO | DEFERRED (missing smooth-caret option seam) |
@@ -359,10 +365,10 @@ typed theme-handler contract.
 | VC-025 | `onZonesChanged` (`:219–221`) | Always dirty. | TODO | TESTED |
 | VC-026 | token-range callback (`:201–208`) | Inclusive range scan for one cursor position. | TODO | TESTED |
 | VC-027 | secondary configuration loop (`:125–127`) | Local Viewer has no secondary cursors. | TODO | N-A (single-cursor product boundary) |
-| VC-028 | cursor-count mismatch pause (`:131–134`) | Only multi-cursor cardinality changes trigger it. | TODO | N-A (single-cursor product boundary) |
-| VC-029 | smooth-explicit reason pause (`:133`) | Smooth-caret animation is absent locally. | TODO | N-A (no smooth-caret animation) |
+| VC-028 | cursor-count mismatch predicate (`:132`) | Secondary-cursor cardinality mismatch contributes to `pauseAnimation`. | TODO | N-A (single-cursor product boundary) |
+| VC-029 | smooth-explicit reason predicate (`:133`) | Smooth-caret `explicit` plus a non-Explicit reason contributes to `pauseAnimation`. | TODO | DEFERRED (missing smooth-caret option seam) |
 | VC-030 | plurality selection (`:135`) | MultiPrimary versus Single is absent locally. | TODO | N-A (single-cursor product boundary) |
-| VC-031 | secondary cardinality triage (`:139–154`) | Local Viewer has no secondary cursor list. | TODO | N-A (single-cursor product boundary) |
+| VC-031 | reused `pauseAnimation` constant (`:131–134,136,157`) | One computed constant is consumed by primary and every secondary cursor update. | TODO | DEFERRED (missing smooth-caret option/cardinality seam) |
 | VC-032 | secondary creation (`:139–146`) | No local secondary cursor DOM. | TODO | N-A (single-cursor product boundary) |
 | VC-033 | secondary removal (`:147–154`) | No local secondary cursor DOM. | TODO | N-A (single-cursor product boundary) |
 | VC-034 | secondary position loop (`:156–158`) | No local secondary cursor positions. | TODO | N-A (single-cursor product boundary) |
@@ -431,8 +437,8 @@ typed theme-handler contract.
 | CLH-026 | emptiness equality branch (`:75–78`) | Update only when empty/nonempty changes. | TODO | TESTED |
 | CLH-027 | focus-only early return (`:117–119`) | Ignore focus changes when option is disabled. | TODO | TESTED |
 
-The ViewPart proposal is mechanically **147 TESTED, 6 DEFERRED, and 30
-N-A = 183**. There are no proposed PORTED rows in this slice: source-shaped
+The ViewPart proposal is mechanically **148 TESTED, 8 DEFERRED, and 28
+N-A = 184**. There are no proposed PORTED rows in this slice: source-shaped
 local seams already exist, but their event inputs/handlers and evidence are
 owned by the event/config slices below.
 
@@ -546,8 +552,8 @@ on that owning method row; the helper declarations themselves are excluded.
 | VE-071 | `ViewEvent` alias (`:306–325`) | Closed typed union over 15 scoped classes, including declaration-only Composition/Theme; excludes only LanguageConfiguration, RevealRange/VerticalRevealType, and TokensColors. | TODO | PORTED |
 | VE-072 | `ViewThemeChanged` enum (`:30`, numeric 14) | Add a typed theme declaration/dispatch variant; concrete local theme handling remains CSS-owned. | TODO | PORTED |
 | VE-073 | theme `type` (`:261`) | Constant `ViewThemeChanged` discriminant. | TODO | PORTED |
-| VE-074 | `theme` field (`:264`) | Carry the complete theme payload through the typed event seam. | TODO | PORTED |
-| VE-075 | theme constructor (`:263–265`) | Retain the source theme. | TODO | PORTED |
+| VE-074 | `theme` field (`:264`) | Source carries `IColorTheme`; reviewed local declaration carries the existing `String` theme identity, with no typed producer/handler. | TODO | PORTED |
+| VE-075 | theme constructor (`:263–265`) | Retain the reviewed `IColorTheme`→`String` identity reduction in a declaration-only event with no typed producer or concrete handler. | TODO | PORTED |
 
 #### `viewEventHandler.ts` (`VEH`, 45 rows)
 
@@ -578,8 +584,8 @@ on that owning method row; the helper declarations themselves are excluded.
 | VEH-023 | token-colors default false (`:84–86`) | Token-color/theme event is an excluded sibling. | TODO | N-A (token-colors event excluded from this child) |
 | VEH-024 | zones default false (`:87–89`) | Existing | TODO | TESTED |
 | VEH-025 | `handleEvents` (`:93–219`) | Ordered loop, local accumulator false | TODO | PORTED |
-| VEH-026 | composition-start dispatch (`:102–106`) | Dispatch the declaration-only variant; concrete default handler remains false/N-A. | TODO | PORTED |
-| VEH-027 | composition-end dispatch (`:108–112`) | Dispatch the declaration-only variant; concrete default handler remains false/N-A. | TODO | PORTED |
+| VEH-026 | composition-start dispatch (`:102–106`) | Dispatch the declaration-only variant; base default-false behavior is TESTED, while concrete ViewCursors composition override remains N-A. | TODO | PORTED |
+| VEH-027 | composition-end dispatch (`:108–112`) | Dispatch the declaration-only variant; base default-false behavior is TESTED, while concrete ViewCursors composition override remains N-A. | TODO | PORTED |
 | VEH-028 | configuration dispatch (`:114–118`) | Complete event/payload to every part | TODO | PORTED |
 | VEH-029 | cursor dispatch (`:120–124`) | Enrich payload; preserve order | TODO | PORTED |
 | VEH-030 | decorations dispatch (`:126–130`) | Existing dispatch; missing consumers | TODO | PORTED |
@@ -620,7 +626,7 @@ this denominator. The frozen VED/VMI IDs remain immutable references.
 | RVC-012 | VED-023; `:88–90` depth exactly 1 creates collector | Exact outermost-creation gate. | TODO | TESTED |
 | RVC-013 | VED-024; `:91` nested begin returns same collector | Collector identity under nesting. | TODO | TESTED |
 | RVC-014 | VED-025; `:94–96` end decrements; only zero flushes | Exact nested/outermost behavior. | TODO | TESTED |
-| RVC-015 | VED-026; `:97–99` capture arrays then null collector | Preserve reset-before-delivery; outgoing array remains structurally present while coupling is deferred. | TODO | TESTED |
+| RVC-015 | VED-026; `:97–99` capture arrays then null collector | Captures both view and outgoing arrays before nulling; the outgoing half remains unavailable locally. | TODO | DEFERRED (mixed capture requires unified outgoing collector seam) |
 | RVC-016 | VED-027; `:101–103` collected outgoing events enter merge queue in order | Separate outgoing FIFO is not fed from the view collector. | TODO | DEFERRED (unified view/outgoing delivery seam) |
 | RVC-017 | VED-028; `:105–107` nonempty view events precede final outgoing drain | Cross-channel order is unprovable while model/decor events use direct subscriptions. | TODO | DEFERRED (unified view/outgoing delivery seam plus RVD direct-subscription seam) |
 | RVC-018 | VED-029; `:109` final outgoing drain after every end | Same absent coupling. | TODO | DEFERRED (unified view/outgoing delivery seam) |
@@ -680,8 +686,8 @@ explicitly deferred.
 | RVMI-006 | add handler (`:191–193`) | Runtime registration is impossible with fixed local View membership. | TODO | N-A (fixed ViewPart membership) |
 | RVMI-007 | remove handler (`:195–197`) | Runtime removal is impossible with fixed local View membership. | TODO | N-A (fixed ViewPart membership) |
 | RVMI-008 | update view-line count (`:218–220`) | Copy the current ViewModel line count into configuration. | TODO | DEFERRED (editor-configuration view-line-count synchronization seam) |
-| RVMI-009 | `_onConfigurationChanged` (`:274–314`) | Preserve complete source ordering around wrapping, decoration, layout, and cursor effects. | TODO | PORTED |
-| RVMI-010 | wrapping branch (`:283–292`) | Flush→mapping→decor event→cursor→decor cache→layout→schedule. | TODO | PORTED |
+| RVMI-009 | `_onConfigurationChanged` (`:274–314`) | Preserve event/cache ordering; stable-viewport geometry and line-count scheduler calls remain explicitly deferred in their owning rows. | TODO | PORTED |
+| RVMI-010 | wrapping branch (`:283–292`) | Flush→mapping→decor event→cursor→decor cache→layout→schedule; exact tail depends on the deferred line-count scheduler. | TODO | DEFERRED (line-count configuration scheduler seam) |
 | RVMI-011 | readonly branch (`:294–298`) | A changed readonly option resets decorations then emits Decorations. | TODO | N-A (readonly Viewer cannot change its fixed readonly state) |
 | RVMI-012 | validation branch (`:300–303`) | Reset decorations then emit Decorations. | TODO | PORTED |
 | RVMI-013 | cursor recreation (`:310–313`) | Recreate configuration and update inherited cursor owner. | TODO | TESTED |
@@ -706,7 +712,7 @@ explicitly deferred.
 | RVMI-032 | multi-editor recovery gate (`:447–454`) | Exact `!focus && attached>=2 && prior valid` caller gate. | TODO | DEFERRED (browser geometry attached-view recovery dependency) |
 | RVMI-033 | tracked-range-present branch (`:449–453`) | Convert range and set immediate scrollTop plus retained delta. | TODO | DEFERRED (browser geometry attached-view recovery dependency) |
 | RVMI-034 | model-options callback (`:538–559`) | Tab work, cursor config, then outgoing options event last. | TODO | DEFERRED (direct-model-subscription/outgoing-event seam) |
-| RVMI-035 | tab-size changed branch (`:540–553`) | Flush→mapping→decor→cursor/cache→layout→schedule. | TODO | TESTED |
+| RVMI-035 | tab-size changed branch (`:540–553`) | Flush→mapping→decor→cursor/cache→layout→schedule; exact tail depends on the deferred line-count scheduler. | TODO | DEFERRED (line-count configuration scheduler seam) |
 | RVMI-036 | decorations callback (`:561–565`) | Cache first→view event second→outgoing decoration event third. | TODO | DEFERRED (direct-model-subscription/outgoing-event seam) |
 
 #### `codeEditorWidget.updateOptions` (`CEWU`, 2 rows)
@@ -716,12 +722,12 @@ explicitly deferred.
 | CEWU-001 | `updateOptions` (`:445–447`) | Delegate once; Viewer update must complete notification/invalidation | TODO | PORTED |
 | CEWU-002 | default-empty `newOptions` branch (`:446`) | Source uses `newOptions` or an empty object; MoonBit argument is concrete/nonoptional. | TODO | N-A (no optional options argument) |
 
-The event proposal is mechanically **55 TESTED, 93 PORTED, 46 DEFERRED,
+The event proposal is mechanically **53 TESTED, 92 PORTED, 49 DEFERRED,
 and 13 N-A = 207**. Composition/Theme declarations and dispatch arms are
 planned while concrete readonly/CSS handlers remain explicit seams; `VE-071`
 closes fifteen included event classes.
 
-### Configuration and local-option ledger — 169 rows
+### Configuration and local-option ledger — 172 rows
 
 | File | Lines | SHA-256 |
 |---|---:|---|
@@ -738,6 +744,11 @@ subscriptions, `_recomputeOptions` and its unchanged return, target-window
 binding, accessibility-service field, `_readFontInfo`, and disposal. Those
 atoms are inherited references and are not duplicated here. Retained field
 citations omit constructor/recompute lines already owned by CFG.
+
+ECX owns the complete `getExtraEditorClassName` helper and its independent
+browser/macOS branches. Its local target is a pure platform-class function
+consumed by the existing Viewer root-class builder; browser geometry owns no
+part of this string-only behavior.
 
 ECU covers the complete validated/computed storage and equality/update
 machinery needed to classify the typed local seam. EOP/EOB include the generic
@@ -808,6 +819,14 @@ owns assignment/call order; its equality early return is independent.
 | ECS-011 | `digitCount` (`:223–230`) | Return the number of base-10 digits with a minimum of one. | TODO | TESTED |
 | ECS-012 | decimal reduction loop (`:225–228`) | Repeatedly floor-divide by 10 and increment the count. | TODO | TESTED |
 | ECS-013 | zero fallback (`:229`) | Return one when the loop counted zero digits. | TODO | TESTED |
+
+#### platform root-class helper (`ECX`, 3 rows)
+
+| ID | Source atom | Behavior / local target | Status | Proposed terminal |
+|---|---|---|---|---|
+| ECX-001 | `getExtraEditorClassName` and return (`editorConfiguration.ts:232–246`) | Build and return the platform class suffix; local target is a pure helper feeding `get_editor_class_name`. | TODO | TESTED |
+| ECX-002 | Safari/WebKitWebView versus other branch (`:234–241`) | Safari/native WebView add `no-minimap-shadow enable-user-select`; all other browsers add `no-user-select`. | TODO | TESTED |
+| ECX-003 | independent macOS branch (`:242–244`) | Append `mac` independently of the browser branch. | TODO | TESTED |
 
 #### option storage and `EditorOptionsUtil` (`ECU`, 27 rows)
 
@@ -952,16 +971,16 @@ owns assignment/call order; its equality early return is independent.
 | MIG-033 | legacy line-highlight `true` maps to `'line'` | `migrateOptions.ts:85` | TODO | N-A (Bool cannot enter enum field) |
 | MIG-034 | legacy line-highlight `false` maps to `'none'` | `migrateOptions.ts:85` | TODO | N-A (Bool cannot enter enum field) |
 
-The configuration proposal is mechanically **43 TESTED, 0 PORTED,
-7 DEFERRED, and 119 N-A = 169**. Across all three slices, the proposed map is
-**245 TESTED, 93 PORTED, 59 DEFERRED, and 162 N-A = 559**. These are review
-targets only; all 559 actual statuses remain TODO.
+The configuration proposal is mechanically **46 TESTED, 0 PORTED,
+7 DEFERRED, and 119 N-A = 172**. Across all three slices, the proposed map is
+**247 TESTED, 92 PORTED, 64 DEFERRED, and 160 N-A = 563**. These are review
+targets only; all 563 actual statuses remain TODO.
 
 
 ### Cross-part source matrix
 
 `C` means the source handler is conditional. This matrix explains cross-part
-effects; the 559-row ledger, not this matrix, is the denominator.
+effects; the 563-row ledger, not this matrix, is the denominator.
 
 | Event | ViewLines | ViewCursors | ContentWidgets | CurrentLineHighlight |
 |---|---|---|---|---|
@@ -1115,11 +1134,15 @@ dynamic invalidation or exact handler dirtiness.
    per-option merge. Gate B must approve this API-shape deviation, retain exact
    no-op/change and changed-field behavior, and require `viewer/README.md` to
    state the complete-snapshot contract.
+8. `ViewThemeChangedEvent.theme` reduces source `IColorTheme` to the existing
+   local `String` theme identity. It is declaration/dispatch-only: no typed
+   producer or concrete handler is claimed. Gate B must approve that type
+   reduction explicitly.
 
 ### Gate B inventory stop
 
-- [ ] Exactly 559 unique rows exist with prefix counts
-  `VL32,VLI13,VLCI4,VLC16,RLC30,VC40,CW21,CLH27,VE75,VEH45,RVC35,RVD14,RVMI36,CEWU2,ECF33,ECS13,ECU27,EOP25,EOB37,MIG34`.
+- [ ] Exactly 563 unique rows exist with prefix counts
+  `VL33,VLI13,VLCI4,VLC16,RLC30,VC40,CW21,CLH27,VE75,VEH45,RVC35,RVD14,RVMI36,CEWU2,ECF33,ECS13,ECX3,ECU27,EOP25,EOB37,MIG34`.
 - [ ] Every source row has actual `Status = TODO`; proposed terminal status is
   a separate review target.
 - [ ] The source hashes and inclusive/excluded boundaries are independently
@@ -1129,6 +1152,8 @@ dynamic invalidation or exact handler dirtiness.
 - [ ] Proposed DEFERRED/N-A seams and deviation candidates are approved.
 - [ ] `viewer/README.md` records the approved complete-snapshot
   `update_options` API deviation before implementation closes.
+- [ ] ECX's pure Safari/WebKit/macOS class helper is integrated into the root
+  class builder and source-derived branch tests cover all platform axes.
 - [ ] Documentation-only inventory is committed separately and reviewed.
 
 **STOP FOR FRESH REVIEW. No product or test edit is authorized until every item
@@ -1192,8 +1217,9 @@ Browser/component:
 
 ## Deviations (Phase 3)
 
-The expected architectural deviations are the snapshot-diff seam and the
-complete-snapshot `update_options` API. Snapshot diff may remain only if every
+The expected architectural deviations are the snapshot-diff seam, the
+complete-snapshot `update_options` API, and the declaration-only theme payload
+reduction from `IColorTheme` to local `String` identity. Snapshot diff may remain only if every
 scoped Monaco event and branch has an equivalent observable transition and
 tests. The API shape may remain only with exact no-op/changed-field behavior
 and an owning `viewer/README.md` contract. No missing payload field may be
@@ -1209,6 +1235,8 @@ excused merely because a later render can read global state.
 - [ ] no render loop or permanent dirty state is introduced
 - [ ] all deviations have reviewed reasons
 - [ ] `viewer/README.md` records the complete-snapshot `update_options` contract
+- [ ] theme payload reduction is documented without claiming a producer/handler
+- [ ] ECX platform classes are integrated into the Viewer root class
 - [ ] all repository quality gates pass
 - [ ] independent closing reread finds no unaccounted scoped member
 
@@ -1250,3 +1278,25 @@ records its split/renumber mapping; configuration includes setters, readonly,
 and the explicit complete-snapshot API deviation. All fourteen pinned source
 hashes were recomputed successfully; no product or test file changed. This
 amendment is at **STOP FOR FRESH REVIEW** and Gate B has not passed.
+
+### 2026-07-12 — Gate B rejected amendment commit `69f33f3`
+
+Fresh review rejected the 559-row amendment. It omitted the source-owned
+ViewLines `createLine` callback and `getExtraEditorClassName` helper, retained a
+duplicate cursor-cardinality umbrella instead of the reused `pauseAnimation`
+constant, and overclaimed collector/scheduler branches. Theme payload typing
+also lacked an explicit `IColorTheme`→`String` identity deviation. Commit
+`69f33f3` remains the historical docs-only rejected amendment; it authorized
+no product or test work.
+
+### 2026-07-12 — second Gate B amendment ready
+
+The second amended inventory has **563/563 TODO rows**: 184 ViewPart, 207
+event/propagation, and 172 configuration atoms. Exact prefix counts are
+`VL33,VLI13,VLCI4,VLC16,RLC30,VC40,CW21,CLH27,VE75,VEH45,RVC35,RVD14,RVMI36,CEWU2,ECF33,ECS13,ECX3,ECU27,EOP25,EOB37,MIG34`.
+The revised proposal is **247 TESTED, 92 PORTED, 64 DEFERRED, and 160 N-A**.
+It adds the source factory callback and ECX platform helper, replaces the
+cursor umbrella, narrows mixed collector/scheduler claims, and records the
+declaration-only theme identity reduction. All fourteen pinned source hashes
+were recomputed successfully; no product or test file changed. This amendment
+is at **STOP FOR FRESH REVIEW** and Gate B has not passed.

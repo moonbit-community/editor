@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — render-invalidation amended inventory ready; STOP FOR FRESH REVIEW
+Status: active — render-invalidation second amended inventory ready; STOP FOR FRESH REVIEW
 
 Date: 2026-07-10
 
@@ -83,7 +83,7 @@ product contract and belongs in an ordinary local test.
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
-| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | amended inventory ready — STOP FOR FRESH REVIEW |
+| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | second amended inventory ready — STOP FOR FRESH REVIEW |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
@@ -103,6 +103,7 @@ method clusters:
 | codeEditorWidget attach/detach/dispose and ModelData lifetime | model lifecycle |
 | codeEditorWidget cursor event forwarding and cursor API methods | cursor/input events |
 | codeEditorWidget `updateOptions` entrypoint | render invalidation; lifecycle CEW/CFG rows retain configuration storage and notification authority; the complete-snapshot-vs-partial-update API deviation requires `viewer/README.md` contract evidence |
+| `EditorConfiguration.getExtraEditorClassName` and Viewer platform root classes | render invalidation; ECX owns the pure Safari/WebKit/macOS helper and root-class integration |
 | codeEditorWidget changeViewZones/accessor transaction | ViewZones |
 | TextModel value/range/offset/EOL plus setValue buffer/event construction, including the `ModelContentChangedEvent` wrapper | text-buffer EOL |
 | TextModel version/request freshness methods | async model features |
@@ -119,6 +120,7 @@ method clusters:
 | LinesLayout/ViewLayout zone insertion, ordering, and zone viewport data | ViewZones |
 | ViewModelEventDispatcher cursor outgoing events | cursor/input events |
 | ViewModelEventDispatcher configuration/decorations events | render invalidation |
+| `ViewThemeChangedEvent.theme` source `IColorTheme` versus local `String` identity | render invalidation; declaration/dispatch-only reviewed type-reduction deviation |
 | ViewModelEventDispatcher generic collector/queue rows historically deferred as cursor `VED`/`VMI` | render invalidation through counted `RVC` handoff rows; the implemented cursor plan remains frozen |
 | ViewModelEventDispatcher ViewZonesChanged event | ViewZones |
 | Viewer/attach_model resource lifetime | model lifecycle |
@@ -422,4 +424,16 @@ The independent closing task is:
   retaining named caller deferrals, adds ECS/readOnly/generic-option coverage,
   and registers the complete-snapshot `update_options` API deviation with a
   `viewer/README.md` requirement. No product or test file changed; the
+  portfolio stops for fresh independent Gate B review.
+- 2026-07-12: Gate B rejected docs-only amendment commit `69f33f3`. Its 559
+  rows omitted the ViewLines factory callback and platform extra-class helper,
+  retained a duplicate cursor umbrella, overclaimed collector/scheduler
+  branches, and did not register the theme payload type reduction. The commit
+  remains historical and authorized no product/test work.
+- 2026-07-12: the second amended render-invalidation inventory is ready with
+  563/563 TODO rows: 184 ViewPart, 207 event/propagation, and 172 configuration
+  atoms. Its proposed map is 247 TESTED, 92 PORTED, 64 DEFERRED, and 160 N-A.
+  It adds VL-033/ECX, corrects cursor and scheduler/collector accounting, and
+  registers source `IColorTheme` to local `String` identity as a
+  declaration/dispatch-only deviation. No product or test file changed; the
   portfolio stops for fresh independent Gate B review.

@@ -26,6 +26,55 @@ fn schedule_at_next_animation_frame(
 }
 
 ///|
+/// Monaco `dom.runAtThisOrScheduleAtNextAnimationFrame` for the single-window
+/// Viewer root. A render requested while the native frame queue is already
+/// draining joins the current queue; otherwise one native rAF owns the next
+/// queue. Smooth scrolling deliberately continues to use the stricter
+/// `schedule_at_next_animation_frame` helper above.
+extern "js" fn run_at_this_or_schedule_at_next_animation_frame_cancel(
+  callback : () -> Unit,
+) -> () -> Unit =
+  #| (() => {
+  #|   let nextQueue = [];
+  #|   let currentQueue = [];
+  #|   let frameRequested = false;
+  #|   let inFrameRunner = false;
+  #|   const drain = () => {
+  #|     frameRequested = false;
+  #|     currentQueue = nextQueue;
+  #|     nextQueue = [];
+  #|     inFrameRunner = true;
+  #|     while (currentQueue.length > 0) {
+  #|       const item = currentQueue.shift();
+  #|       if (item.canceled) continue;
+  #|       item.callback();
+  #|     }
+  #|     inFrameRunner = false;
+  #|   };
+  #|   return (callback) => {
+  #|     const item = { callback, canceled: false };
+  #|     if (inFrameRunner) {
+  #|       currentQueue.push(item);
+  #|     } else {
+  #|       nextQueue.push(item);
+  #|       if (!frameRequested) {
+  #|         frameRequested = true;
+  #|         globalThis.requestAnimationFrame(drain);
+  #|       }
+  #|     }
+  #|     return () => { item.canceled = true; };
+  #|   };
+  #| })()
+
+///|
+fn run_at_this_or_schedule_at_next_animation_frame(
+  callback : () -> Unit,
+) -> @base_common.Disposable {
+  let cancel = run_at_this_or_schedule_at_next_animation_frame_cancel(callback)
+  @base_common.Disposable::from(cancel)
+}
+
+///|
 /// One-shot timer. The viewer's hover and scrollbar delays run through this
 /// instead of framework commands.
 extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Double =

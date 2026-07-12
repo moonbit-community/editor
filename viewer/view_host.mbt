@@ -183,7 +183,7 @@ fn Viewer::schedule_render(self : Viewer) -> Unit {
     return
   }
   self.render_frame = Some(
-    schedule_at_next_animation_frame(() => {
+    run_at_this_or_schedule_at_next_animation_frame(() => {
       self.render_frame = None
       if !self.disposed {
         self.flush_render()

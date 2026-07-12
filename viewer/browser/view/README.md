@@ -39,8 +39,11 @@ Content and margin overlays remain one dirty handle each. Their current-line
 state follows the source predicates, while a sibling selection, decoration,
 or retained-row consumer can still make the aggregate render when the nested
 current-line predicate is false. This is harmless bounded overwork: row HTML
-writes remain equality-deduplicated, no handler schedules another frame, and
-white-box/browser tests cover every event axis and convergence.
+writes remain equality-deduplicated, no handler schedules another native
+animation frame, and white-box/browser tests cover every event axis and
+convergence. ViewLines width feedback can request a logical follow-up while
+the current animation-frame queue is draining; the source-shaped root
+scheduler drains it in that same native frame.
 
 The root class builder appends Monaco's platform suffix independently from the
 viewer-owned classes: Safari and native WebKit views use

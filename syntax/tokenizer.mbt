@@ -86,10 +86,11 @@ pub(open) trait LineTokenizer {
 
 ///|
 /// Registration change notification, the ported subset of Monaco's
-/// `ITokenizationSupportChangedEvent` (`changedColorMap` has no viewer
-/// analog — the token color map is static).
+/// `ITokenizationSupportChangedEvent`
+/// (`vscode/src/vs/editor/common/languages.ts:2503-2506`).
 pub(all) struct TokenizationChangedEvent {
   changed_languages : Array[String]
+  changed_color_map : Bool
 }
 
 ///|
@@ -101,27 +102,56 @@ priv struct TokenizationSupportEntry {
 ///|
 /// Tokenization support keyed by language id, Monaco's
 /// `TokenizationRegistry` (`common/languages.ts` /
-/// `languages/tokenizationRegistry.ts`). The process-wide instance is
-/// `tokenization_registry` below; isolated instances remain constructible
-/// for tests.
+/// `common/tokenizationRegistry.ts:12-113`). The process-wide instance is
+/// `tokenization_registry` below; isolated instances remain constructible for
+/// tests.
+///
+/// Deviation: Monaco stores `Color[] | null`; the viewer's existing styling
+/// boundary consumes CSS expressions, so this package stores
+/// `Array[String]?` without parsing, copying, or adding `Color` object
+/// behavior. Lazy tokenization factories are not part of the synchronous
+/// `LineTokenizer` API and are intentionally absent.
 pub struct TokenizationRegistry {
   priv tokenizers : Map[String, TokenizationSupportEntry]
   priv next_id : Ref[Int]
   priv did_change : @base_common.Emitter[TokenizationChangedEvent]
+  priv mut color_map : Array[String]?
 }
 
 ///|
-/// Creates an empty tokenization registry.
+/// Creates an empty tokenization registry with no color map, matching
+/// `vscode/src/vs/editor/common/tokenizationRegistry.ts:20-24`.
 pub fn TokenizationRegistry::new() -> TokenizationRegistry {
-  { tokenizers: {}, next_id: Ref(0), did_change: @base_common.Emitter::new() }
+  {
+    tokenizers: {},
+    next_id: Ref(0),
+    did_change: @base_common.Emitter::new(),
+    color_map: None,
+  }
+}
+
+///|
+/// Announces tokenization changes for the exact supplied language ids.
+/// Mirrors `TokenizationRegistry.handleChange`
+/// (`vscode/src/vs/editor/common/tokenizationRegistry.ts:26-31`): a language
+/// change never claims that the encoded-token color map changed.
+pub fn TokenizationRegistry::handle_change(
+  self : TokenizationRegistry,
+  language_ids : Array[String],
+) -> Unit {
+  self.did_change.fire({
+    changed_languages: language_ids,
+    changed_color_map: false,
+  })
 }
 
 ///|
 /// Registers or replaces the tokenization support for a language id and
-/// fires `on_did_change`. Mirrors `TokenizationRegistry.register`; disposing
-/// the returned handle removes the support only if it is still the active
-/// registration (Monaco's `=== support` identity check, kept as a
-/// registration id so trait objects need no identity comparison).
+/// fires `on_did_change`. Mirrors `TokenizationRegistry.register`
+/// (`vscode/src/vs/editor/common/tokenizationRegistry.ts:33-43`); disposing the
+/// returned handle removes the support only if it is still the active
+/// registration (Monaco's `=== support` identity check, kept as a registration
+/// id so trait objects need no identity comparison).
 pub fn TokenizationRegistry::register(
   self : TokenizationRegistry,
   language_id : String,
@@ -130,13 +160,15 @@ pub fn TokenizationRegistry::register(
   let id = self.next_id.val
   self.next_id.val = id + 1
   self.tokenizers[language_id] = { id, tokenizer }
-  self.did_change.fire({ changed_languages: [language_id] })
+  // The pinned source installs before notification; the disposer returns
+  // immediately when a newer registration owns the key.
+  self.handle_change([language_id])
   @base_common.Disposable::from(() => {
     match self.tokenizers.get(language_id) {
       Some(entry) =>
         if entry.id == id {
           self.tokenizers.remove(language_id)
-          self.did_change.fire({ changed_languages: [language_id] })
+          self.handle_change([language_id])
         }
       None => ()
     }
@@ -146,7 +178,8 @@ pub fn TokenizationRegistry::register(
 ///|
 /// The tokenization support for `language_id`, or `None` when unregistered
 /// (Monaco's null tokenization fallback is the caller's choice). Mirrors
-/// `TokenizationRegistry.get`.
+/// `TokenizationRegistry.get`
+/// (`vscode/src/vs/editor/common/tokenizationRegistry.ts:45-47`).
 pub fn TokenizationRegistry::get(
   self : TokenizationRegistry,
   language_id : String,
@@ -158,8 +191,66 @@ pub fn TokenizationRegistry::get(
 }
 
 ///|
+/// Whether synchronous tokenization lookup for `language_id` is resolved.
+/// Mirrors the two reachable branches of
+/// `TokenizationRegistry.isResolved`
+/// (`vscode/src/vs/editor/common/tokenizationRegistry.ts:81-93`). With no
+/// lazy-factory API there is no pending state, so both registered and missing
+/// languages are resolved.
+pub fn TokenizationRegistry::is_resolved(
+  self : TokenizationRegistry,
+  language_id : String,
+) -> Bool {
+  match self.get(language_id) {
+    Some(_) => true
+    None => true
+  }
+}
+
+///|
+/// Replaces the CSS color-expression map and announces the change for every
+/// currently registered language in registry insertion order. This is the
+/// reviewed `Color[]` to `Array[String]` reduction of
+/// `TokenizationRegistry.setColorMap`
+/// (`vscode/src/vs/editor/common/tokenizationRegistry.ts:95-101`).
+pub fn TokenizationRegistry::set_color_map(
+  self : TokenizationRegistry,
+  color_map : Array[String],
+) -> Unit {
+  self.color_map = Some(color_map)
+  let changed_languages = [
+    for language_id in self.tokenizers.keys() => language_id
+  ]
+  self.did_change.fire({ changed_languages, changed_color_map: true })
+}
+
+///|
+/// Returns the retained CSS color-expression map, or `None` before one is set.
+/// Mirrors `TokenizationRegistry.getColorMap`
+/// (`vscode/src/vs/editor/common/tokenizationRegistry.ts:103-105`).
+pub fn TokenizationRegistry::get_color_map(
+  self : TokenizationRegistry,
+) -> Array[String]? {
+  self.color_map
+}
+
+///|
+/// Returns the CSS expression at Monaco's literal
+/// `ColorId.DefaultBackground = 2`, but only when the map length exceeds that
+/// index (`vscode/src/vs/editor/common/tokenizationRegistry.ts:107-112`).
+pub fn TokenizationRegistry::get_default_background(
+  self : TokenizationRegistry,
+) -> String? {
+  match self.color_map {
+    Some(color_map) if color_map.length() > 2 => Some(color_map[2])
+    _ => None
+  }
+}
+
+///|
 /// Subscribes to registration changes. Mirrors
-/// `TokenizationRegistry.onDidChange`.
+/// `TokenizationRegistry.onDidChange`
+/// (`vscode/src/vs/editor/common/tokenizationRegistry.ts:17-18`).
 pub fn TokenizationRegistry::on_did_change(
   self : TokenizationRegistry,
   listener : (TokenizationChangedEvent) -> Unit,

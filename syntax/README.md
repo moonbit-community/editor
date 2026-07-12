@@ -8,18 +8,31 @@ architecture but replaces runtime Monarch grammars with MoonBit `lexmatch` code.
 - `LineTokenizer::tokenize_line` receives one line plus `TokenizerState` and
   returns `LineToken[]` plus the state for the next line. Token offsets are UTF-16
   code units; gaps are rendered as plain text.
-- `TokenizationRegistry` registers tokenizers by language id and emits changed
-  language ids. Disposing a registration removes it only while it is still the
-  active registration for that language.
+- `TokenizationRegistry` registers tokenizers by language id and emits
+  `TokenizationChangedEvent { changed_languages, changed_color_map }`.
+  Registration, replacement, explicit `handle_change`, and active removal emit
+  exact language-id arrays with `changed_color_map=false`; disposing a stale
+  registration is inert. `get` returns the current synchronous support and
+  `is_resolved` is always true because this package has no lazy factory state.
+- Monaco's registry `Color[] | null` / `Color | null` surface is deliberately
+  reduced to `Array[String]?` / `String?`. Entries are retained, unparsed CSS
+  color expressions. `set_color_map(Array[String])` emits every active language
+  with `changed_color_map=true`; `get_color_map()` returns the retained option;
+  `get_default_background()` returns literal index 2 only when the array length
+  is greater than 2. No `Color` object behavior or identity is exposed.
 - `tokenization_registry` is process-wide. `Languages::set_tokens_provider`
   forwards into it; `viewer/common/model/tokens` performs the state-threaded
-  whole-document sweep and binary encoding.
+  per-line encoding, passive storage reads, and explicit/visible/background
+  demand scheduling.
 - `PlainTokenizer` is an explicit stateless tokenizer, not an automatic fallback.
   A registry miss is encoded by the model tokenization part as one default token
   per line.
 
 This maps to `ITokenizationSupport`, `IState`, and `TokenizationRegistry` in
-`vs/editor/common/languages.ts` and `languages/tokenizationRegistry.ts`.
+`vs/editor/common/languages.ts` and `common/tokenizationRegistry.ts`.
+The registry port is intentionally synchronous: Monaco's
+`registerFactory`/`getOrCreate` Promise surface and lazy-factory carrier are not
+part of the public `LineTokenizer` API and are not emulated here.
 
 ## Concrete lexers
 

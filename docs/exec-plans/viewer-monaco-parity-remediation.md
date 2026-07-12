@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — render-invalidation second amended inventory ready; STOP FOR FRESH REVIEW
+Status: active — render-invalidation child approved for implementation
 
 Date: 2026-07-10
 
@@ -83,7 +83,7 @@ product contract and belongs in an ordinary local test.
 | 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
-| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | second amended inventory ready — STOP FOR FRESH REVIEW |
+| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | approved for implementation |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
@@ -437,3 +437,12 @@ The independent closing task is:
   registers source `IColorTheme` to local `String` identity as a
   declaration/dispatch-only deviation. No product or test file changed; the
   portfolio stops for fresh independent Gate B review.
+- 2026-07-12: render-invalidation Gate B passed at documentation-only inventory
+  commit `bff07db`. The approved fixed denominator is 563/563 TODO rows with
+  247 planned TESTED, 92 PORTED, 64 DEFERRED, and 160 N-A; the child-plan
+  SHA-256 is
+  `95d326a81000c368ac9cf9ac6d783f5cd9d2fcf21daf6cbf9a8fb7ec477c0d5a`.
+  Independent ViewPart, event/propagation, and configuration reviews confirmed
+  the source hashes, boundaries, matrices, mechanics, and deviations without
+  another inventory gap. No product or test edit preceded approval;
+  implementation is authorized.

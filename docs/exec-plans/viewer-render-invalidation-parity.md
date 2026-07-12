@@ -1,6 +1,6 @@
 # Viewer Render Invalidation Parity
 
-Status: second amended inventory ready — STOP FOR FRESH REVIEW
+Status: approved for implementation
 
 Date: 2026-07-10
 
@@ -1139,25 +1139,26 @@ dynamic invalidation or exact handler dirtiness.
    producer or concrete handler is claimed. Gate B must approve that type
    reduction explicitly.
 
-### Gate B inventory stop
+### Gate B inventory approval
 
-- [ ] Exactly 563 unique rows exist with prefix counts
+- [x] Exactly 563 unique rows exist with prefix counts
   `VL33,VLI13,VLCI4,VLC16,RLC30,VC40,CW21,CLH27,VE75,VEH45,RVC35,RVD14,RVMI36,CEWU2,ECF33,ECS13,ECX3,ECU27,EOP25,EOB37,MIG34`.
-- [ ] Every source row has actual `Status = TODO`; proposed terminal status is
+- [x] Every source row has actual `Status = TODO`; proposed terminal status is
   a separate review target.
-- [ ] The source hashes and inclusive/excluded boundaries are independently
+- [x] The source hashes and inclusive/excluded boundaries are independently
   reread, including the four theme atoms and 15-class `ViewEvent` union.
-- [ ] Cross-child inheritance and helper ownership have no duplicate rows.
-- [ ] Cross-part and behavior-variable matrices explain every conditional cell.
-- [ ] Proposed DEFERRED/N-A seams and deviation candidates are approved.
+- [x] Cross-child inheritance and helper ownership have no duplicate rows.
+- [x] Cross-part and behavior-variable matrices explain every conditional cell.
+- [x] Proposed DEFERRED/N-A seams and deviation candidates are approved.
 - [ ] `viewer/README.md` records the approved complete-snapshot
   `update_options` API deviation before implementation closes.
 - [ ] ECX's pure Safari/WebKit/macOS class helper is integrated into the root
   class builder and source-derived branch tests cover all platform axes.
-- [ ] Documentation-only inventory is committed separately and reviewed.
+- [x] Documentation-only inventory is committed separately and reviewed.
 
-**STOP FOR FRESH REVIEW. No product or test edit is authorized until every item
-above is checked and Gate B approval is recorded.**
+**Gate B is approved. Product and test implementation is authorized; the two
+unchecked implementation-close obligations remain open until the child is
+frozen.**
 
 
 ## Test-Authority Corrections
@@ -1300,3 +1301,15 @@ cursor umbrella, narrows mixed collector/scheduler claims, and records the
 declaration-only theme identity reduction. All fourteen pinned source hashes
 were recomputed successfully; no product or test file changed. This amendment
 is at **STOP FOR FRESH REVIEW** and Gate B has not passed.
+
+### 2026-07-12 — Gate B approved
+
+Independent ViewPart, event/propagation, and configuration reviews approved
+documentation-only inventory commit `bff07db`. The fixed denominator is
+**563/563 TODO rows** with **247 proposed TESTED, 92 PORTED, 64 DEFERRED, and
+160 N-A**; the child-plan SHA-256 is
+`95d326a81000c368ac9cf9ac6d783f5cd9d2fcf21daf6cbf9a8fb7ec477c0d5a`.
+All three reviews confirmed the pinned hashes, ownership boundaries, matrices,
+row mechanics, and registered deviations without finding another inventory
+gap. No product or test edit preceded approval. Gate B is recorded and
+implementation is authorized.

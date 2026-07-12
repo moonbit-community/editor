@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — render-invalidation child implemented; browser geometry next
+Status: active — browser-geometry inventory ready; STOP FOR REVIEW
 
 Date: 2026-07-10
 
@@ -84,7 +84,7 @@ product contract and belongs in an ordinary local test.
 | 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
-| 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | proposed |
+| 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | inventory ready |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | proposed |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
@@ -458,3 +458,11 @@ The independent closing task is:
   closes as 244 TESTED, 90 PORTED, 68 DEFERRED, and 161 N-A with zero
   TODO/PASS. Final gates pass: check, JS 1169/1169, native 858/858, build, and
   browser 68/68. The portfolio proceeds to browser geometry.
+- 2026-07-12: the normalized browser-geometry Phase 1–2 inventory is ready with
+  633/633 TODO rows: 242 line-geometry, 174 widget/query, and 217
+  layout/renderer/font atoms. Its proposed map is 421 TESTED, 93 PORTED, 73
+  DEFERRED, and 46 N-A. Independent pre-review rejected and normalized the raw
+  Group A/B/C drafts by removing statement-level inflation and frozen
+  cross-plan duplicates, restoring omitted declared members/callbacks, and
+  making applicable GPU/experimental seams explicit. No product or test file
+  changed; the portfolio stops for independent Gate B review.

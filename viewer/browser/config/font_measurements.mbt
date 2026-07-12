@@ -1,4 +1,5 @@
-// Ported from `vscode/src/vs/editor/browser/config/fontMeasurements.ts`.
+// Ported from `vscode/src/vs/editor/browser/config/fontMeasurements.ts` at
+// b18492a288de038fbc7643aae6de8247029d11bd.
 // Single-window: Monaco's per-window cache map (keyed by `getWindowId`)
 // collapses to one cache. The `serializeFontInfo`/`restoreFontInfo`
 // persistence channel is not ported.
@@ -9,6 +10,9 @@ pub struct FontMeasurementsImpl {
   priv cache : Map[String, @common_config.FontInfo]
   priv mut evict_untrusted_readings_pending : Bool
   priv did_change : @base_common.Emitter[Unit]
+  priv read_widths : (@common_config.BareFontInfo, Array[CharWidthRequest]) -> Unit
+  priv read_pixel_ratio : () -> Double
+  priv schedule_timeout : (() -> Unit, Int) -> Unit
 }
 
 ///|
@@ -18,6 +22,26 @@ let instance : FontMeasurementsImpl = {
   cache: {},
   evict_untrusted_readings_pending: false,
   did_change: @base_common.Emitter::new(),
+  read_widths: read_char_widths,
+  read_pixel_ratio: device_pixel_ratio,
+  schedule_timeout,
+}
+
+///|
+fn new_font_measurements_for_test(
+  read_widths : (@common_config.BareFontInfo, Array[CharWidthRequest]) -> Unit,
+  read_pixel_ratio : () -> Double,
+  schedule_timeout : (() -> Unit, Int) -> Unit,
+) -> FontMeasurementsImpl {
+  {
+    cache_keys: [],
+    cache: {},
+    evict_untrusted_readings_pending: false,
+    did_change: @base_common.Emitter::new(),
+    read_widths,
+    read_pixel_ratio,
+    schedule_timeout,
+  }
 }
 
 ///|
@@ -59,37 +83,65 @@ fn FontMeasurementsImpl::write_to_cache(
   if !value.is_trusted && !self.evict_untrusted_readings_pending {
     // Try reading again after some time.
     self.evict_untrusted_readings_pending = true
-    set_timeout(
+    (self.schedule_timeout)(
       () => {
         self.evict_untrusted_readings_pending = false
         self.evict_untrusted_readings()
       },
       5000,
     )
-    |> ignore
   }
 }
+
+///|
+fn FontMeasurementsImpl::remove_from_cache(
+  self : FontMeasurementsImpl,
+  id : String,
+) -> Unit {
+  self.cache.remove(id)
+  let retained : Array[String] = []
+  for key in self.cache_keys {
+    if key != id {
+      retained.push(key)
+    }
+  }
+  self.cache_keys.clear()
+  self.cache_keys.append(retained)
+}
+
+///|
+fn FontMeasurementsImpl::cached_values(
+  self : FontMeasurementsImpl,
+) -> Array[@common_config.FontInfo] {
+  let result : Array[@common_config.FontInfo] = []
+  for id in self.cache_keys {
+    match self.cache.get(id) {
+      Some(value) => result.push(value)
+      None => ()
+    }
+  }
+  result
+}
+
+///|
+/// This injected constructor is consumed by the owning white-box conformance
+/// suite. Keep it live in non-test checks as well.
+let _font_measurements_test_seam_anchor : Unit = ignore(
+  new_font_measurements_for_test,
+)
 
 ///|
 fn FontMeasurementsImpl::evict_untrusted_readings(
   self : FontMeasurementsImpl,
 ) -> Unit {
+  let values = self.cached_values()
   let mut something_removed = false
-  let retained : Array[String] = []
-  for id in self.cache_keys {
-    match self.cache.get(id) {
-      Some(font_info) =>
-        if font_info.is_trusted {
-          retained.push(id)
-        } else {
-          something_removed = true
-          self.cache.remove(id)
-        }
-      None => ()
+  for font_info in values {
+    if !font_info.is_trusted {
+      something_removed = true
+      self.remove_from_cache(font_info.get_id())
     }
   }
-  self.cache_keys.clear()
-  self.cache_keys.append(retained)
   if something_removed {
     self.did_change.fire(())
   }
@@ -128,6 +180,7 @@ pub fn FontMeasurementsImpl::read_font_info(
           middot_width: max_double(read_config.middot_width, 5.0),
           wsmiddot_width: max_double(read_config.wsmiddot_width, 5.0),
           max_digit_width: max_double(read_config.max_digit_width, 5.0),
+          pixel_ratio: (self.read_pixel_ratio)(),
           is_trusted: false,
         }
       }
@@ -158,7 +211,6 @@ fn FontMeasurementsImpl::actual_read_font_info(
   self : FontMeasurementsImpl,
   bare_font_info : @common_config.BareFontInfo,
 ) -> @common_config.FontInfo {
-  ignore(self)
   let all : Array[CharWidthRequest] = []
   let monospace : Array[CharWidthRequest] = []
   let typical_halfwidth_character = create_request(
@@ -201,7 +253,7 @@ fn FontMeasurementsImpl::actual_read_font_info(
     create_request(chr, Italic, all, Some(monospace)) |> ignore
     create_request(chr, Bold, all, Some(monospace)) |> ignore
   }
-  read_char_widths(bare_font_info, all)
+  (self.read_widths)(bare_font_info, all)
   let mut max_digit_width = 0.0
   for digit in digits {
     max_digit_width = max_double(max_digit_width, digit.width)
@@ -229,7 +281,7 @@ fn FontMeasurementsImpl::actual_read_font_info(
     can_use_halfwidth_rightwards_arrow = false
   }
   {
-    pixel_ratio: device_pixel_ratio(),
+    pixel_ratio: (self.read_pixel_ratio)(),
     font_family: bare_font_info.font_family,
     font_weight: bare_font_info.font_weight,
     font_size: bare_font_info.font_size,
@@ -261,6 +313,11 @@ fn max_double(left : Double, right : Double) -> Double {
 ///|
 extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Double =
   #| (cb, ms) => setTimeout(cb, ms)
+
+///|
+fn schedule_timeout(callback : () -> Unit, ms : Int) -> Unit {
+  set_timeout(callback, ms) |> ignore
+}
 
 ///|
 /// Monaco `PixelRatio.getInstance(window).value`; `1` outside a browser.

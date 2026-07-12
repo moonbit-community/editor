@@ -3,7 +3,7 @@
 // Ports:
 //   vscode/src/vs/editor/common/viewLayout/lineDecorations.test.ts (5 cases)
 //   vscode/src/vs/editor/common/viewLayout/viewLineRenderer.test.ts (72 cases)
-// From vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971.
+// From vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
 //
 // `viewer/view_line_renderer` is a faithful 1:1 port of Monaco's
 // `viewLineRenderer.ts`, so every case asserts Monaco's exact output: the inner
@@ -1719,6 +1719,88 @@ test "issue-91936" {
       #|[[0,0,0][1,0,1][2,0,2][3,0,3][4,0,4][5,0,5][6,0,6][7,0,7][8,0,8][9,0,9][10,0,10][11,0,11][12,0,12][13,0,13][14,0,14][15,0,15][16,0,16][17,0,17][18,0,18][19,0,19][20,0,20][20,1,21][20,2,22][20,3,23][21,0,24][22,0,25][22,1,26][23,0,27][24,0,28][25,0,29][25,1,30][26,0,31][27,0,32][28,0,33][29,0,34][29,1,35][30,0,36][31,0,37][32,0,38][32,1,39][32,2,40][32,3,41][33,0,42][34,0,43][34,1,44][34,2,45][34,3,46][34,4,47]]
     ),
   )
+}
+
+///|
+test "RenderLineInput normalizes render-space identity" {
+  let base = monaco_input(
+    " ",
+    [p(1, 1)],
+    render_whitespace=All,
+    space_width=10.0,
+    middot_width=9.0,
+    wsmiddot_width=14.0,
+  )
+  assert_eq(base.render_space_width, 9.0)
+  assert_eq(base.render_space_char_code, 0xB7)
+  // Raw candidates are not identity axes once they select the same normalized
+  // width and glyph.
+  let same_normalized = monaco_input(
+    " ",
+    [p(1, 1)],
+    render_whitespace=All,
+    space_width=10.0,
+    middot_width=9.0,
+    wsmiddot_width=30.0,
+  )
+  assert_true(base == same_normalized)
+  let different_width = monaco_input(
+    " ",
+    [p(1, 1)],
+    render_whitespace=All,
+    space_width=10.0,
+    middot_width=8.0,
+    wsmiddot_width=30.0,
+  )
+  assert_false(base == different_width)
+  let different_glyph = monaco_input(
+    " ",
+    [p(1, 1)],
+    render_whitespace=All,
+    space_width=10.0,
+    middot_width=30.0,
+    wsmiddot_width=9.0,
+  )
+  assert_eq(different_glyph.render_space_width, base.render_space_width)
+  assert_eq(different_glyph.render_space_char_code, 0x2E31)
+  assert_false(base == different_glyph)
+  for
+    changed in [
+      { ..base, use_monospace_optimizations: !base.use_monospace_optimizations },
+      {
+        ..base,
+        can_use_halfwidth_rightwards_arrow: !base.can_use_halfwidth_rightwards_arrow,
+      },
+      { ..base, space_width: base.space_width + 1.0 },
+    ] {
+    assert_false(base == changed)
+  }
+}
+
+///|
+test "RenderLineInput render-space choice uses strict-less and middot tie" {
+  let word_separator = monaco_input(
+    " ",
+    [p(1, 1)],
+    render_whitespace=All,
+    space_width=10.0,
+    middot_width=12.0,
+    wsmiddot_width=9.0,
+  )
+  assert_eq(word_separator.render_space_width, 9.0)
+  assert_eq(word_separator.render_space_char_code, 0x2E31)
+  assert_true(render_view_line2(word_separator).html.contains("\u{2e31}"))
+  let tie = monaco_input(
+    " ",
+    [p(1, 1)],
+    render_whitespace=All,
+    space_width=10.0,
+    middot_width=11.0,
+    wsmiddot_width=9.0,
+  )
+  assert_eq(tie.render_space_width, 11.0)
+  assert_eq(tie.render_space_char_code, 0xB7)
+  assert_true(render_view_line2(tie).html.contains("·"))
 }
 
 ///|

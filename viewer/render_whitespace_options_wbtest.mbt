@@ -131,8 +131,8 @@ test "retained options carry same-space font axes into render input" {
       selection_view_range=None,
     )
     assert_eq(input.space_width, base.space_width)
-    assert_eq(input.middot_width, base.space_width + 1.0)
-    assert_eq(input.wsmiddot_width, base.space_width + 2.0)
+    assert_eq(input.render_space_width, base.space_width + 1.0)
+    assert_eq(input.render_space_char_code, 0x00B7)
     assert_false(input.use_monospace_optimizations)
     assert_eq(input.stop_rendering_line_after, 17)
     assert_true(input.render_whitespace == All)

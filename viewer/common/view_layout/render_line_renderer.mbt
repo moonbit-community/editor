@@ -1,5 +1,5 @@
 // Faithful port of vscode/src/vs/editor/common/viewLayout/viewLineRenderer.ts
-// (commit 294fb350837dbaee37b949533fead4df4e0e8971): `renderViewLine`,
+// (commit b18492a288de038fbc7643aae6de8247029d11bd): `renderViewLine`,
 // `renderViewLine2`, `resolveRenderLineInput`, and `_renderLine`, plus the
 // helpers they call. The only intentional deviation is the line wrapper:
 // Monaco emits `<span>…</span>`; this viewer emits
@@ -209,8 +209,6 @@ fn resolve_render_line_input(
   } else {
     tokens = split_leading_whitespace_from_rtl(line_content, tokens)
   }
-  let (render_space_width, render_space_char_code) = derive_render_space(input)
-  ignore(render_space_width)
   {
     font_is_monospace: input.use_monospace_optimizations,
     can_use_halfwidth_rightwards_arrow: input.can_use_halfwidth_rightwards_arrow,
@@ -224,21 +222,9 @@ fn resolve_render_line_input(
     tab_size: input.tab_size,
     start_visible_column: input.start_visible_column,
     space_width: input.space_width,
-    render_space_char_code,
+    render_space_char_code: input.render_space_char_code,
     render_whitespace: input.render_whitespace,
     render_control_characters: input.render_control_characters,
-  }
-}
-
-///|
-/// Monaco's `RenderLineInput` constructor derivation of the render-space glyph.
-fn derive_render_space(input : RenderLineInput) -> (Double, Int) {
-  let wsmiddot_diff = (input.wsmiddot_width - input.space_width).abs()
-  let middot_diff = (input.middot_width - input.space_width).abs()
-  if wsmiddot_diff < middot_diff {
-    (input.wsmiddot_width, ch_word_separator_middot)
-  } else {
-    (input.middot_width, ch_middot)
   }
 }
 
@@ -247,8 +233,7 @@ fn derive_render_space(input : RenderLineInput) -> (Double, Int) {
 /// whitespace needs its own width-bearing part (Monaco's
 /// `generateLinePartForEachWhitespace`).
 fn generate_line_part_for_each_whitespace(input : RenderLineInput) -> Bool {
-  let (render_space_width, _) = derive_render_space(input)
-  render_space_width != input.space_width
+  input.render_space_width != input.space_width
 }
 
 ///|

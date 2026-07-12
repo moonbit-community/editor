@@ -309,13 +309,15 @@ test "view layout derives scroll dimensions from document and viewport" {
   )
   // The widest measured line drives horizontal scrolling.
   layout.set_content_width(2000.0) |> ignore
-  assert_eq(layout.dimensions().scroll_width, 2000.0)
+  // The compatibility setter now feeds ViewLayout's max-line-width owner;
+  // non-wrapping content also reserves the fixed 14px vertical scrollbar.
+  assert_eq(layout.dimensions().scroll_width, 2014.0)
   // Replacing the document re-clamps the scroll position.
   layout.scroll_to(scroll_top=179400.0) |> ignore
   let change = layout.set_line_count(100)
   guard change is Some(change) else { fail("expected a dimension change") }
-  assert_true(change.position == { scroll_left: 0.0, scroll_top: 1200.0 })
-  assert_eq(change.delta_top, -178200.0)
+  assert_true(change.position == { scroll_left: 0.0, scroll_top: 1212.0 })
+  assert_eq(change.delta_top, -178188.0)
   assert_true(change.top_changed && change.dimensions_changed)
   // The window origin is the content-space top of the window start (the
   // 1-based start line's offset, `(start - 1) * line_height`).

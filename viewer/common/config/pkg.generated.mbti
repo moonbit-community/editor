@@ -6,6 +6,12 @@ import {
 }
 
 // Values
+pub let default_linux_font_family : String
+
+pub let default_mac_font_family : String
+
+pub let default_windows_font_family : String
+
 pub let editor_font_defaults : EditorFontDefaults
 
 pub let editor_font_ligatures_off : String

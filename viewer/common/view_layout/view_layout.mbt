@@ -15,7 +15,10 @@ pub struct ViewLayout {
   priv mut line_height : Int
   priv mut line_count : Int
   priv mut view_zones_arr : Array[ViewZone]
-  priv mut content_width : Double
+  priv mut max_line_width : Double
+  priv mut is_viewport_wrapping : Bool
+  priv vertical_scrollbar_width : Double
+  priv horizontal_scrollbar_height : Double
 }
 
 ///|
@@ -63,6 +66,9 @@ pub fn ViewLayout::new(
   line_height~ : Int,
   line_count? : Int = 0,
   smooth_scrolling? : Bool = false,
+  is_viewport_wrapping? : Bool = false,
+  vertical_scrollbar_width? : Double = 14.0,
+  horizontal_scrollbar_height? : Double = 12.0,
   schedule_at_next_animation_frame? : (() -> Unit) -> @base_common.Disposable = no_animation_scheduler,
   now? : () -> Double = zero_clock,
 ) -> ViewLayout {
@@ -84,9 +90,12 @@ pub fn ViewLayout::new(
     line_height,
     line_count,
     view_zones_arr: [],
-    content_width: 0.0,
+    max_line_width: 0.0,
+    is_viewport_wrapping,
+    vertical_scrollbar_width,
+    horizontal_scrollbar_height,
   }
-  layout.sync_dimensions() |> ignore
+  layout.update_height() |> ignore
   layout
 }
 
@@ -107,7 +116,7 @@ pub fn ViewLayout::set_line_count(
     self.line_height,
     self.view_zones_arr,
   )
-  self.sync_dimensions()
+  self.update_height()
 }
 
 ///|
@@ -126,7 +135,7 @@ pub fn ViewLayout::on_flushed(self : ViewLayout, line_count : Int) -> Unit {
 /// changed — Monaco's `ViewLayout.onHeightMaybeChanged` (`_updateHeight`);
 /// a shrunken document clamps the scroll position here.
 pub fn ViewLayout::on_height_maybe_changed(self : ViewLayout) -> ScrollChange? {
-  self.sync_dimensions()
+  self.update_height()
 }
 
 ///|
@@ -148,7 +157,7 @@ pub fn ViewLayout::set_line_height(
   }
   self.line_height = line_height
   self.lines.set_default_line_height(line_height)
-  self.sync_dimensions()
+  self.update_height()
 }
 
 ///|
@@ -164,19 +173,47 @@ pub fn ViewLayout::set_viewport_size(
       width,
       dimensions.content_width,
       height,
-      self.get_content_height(),
+      self.compute_content_height(width, height, dimensions.content_width),
     ),
   )
 }
 
 ///|
-/// Sets the widest measured content width (horizontal scrolling extent).
+/// Updates the retained viewport-wrapping fact consumed by content-width
+/// computation. The local configuration path is split across typed setters;
+/// Monaco reads the same fact from `EditorOption.wrappingInfo`.
+pub fn ViewLayout::set_is_viewport_wrapping(
+  self : ViewLayout,
+  is_viewport_wrapping : Bool,
+) -> ScrollChange? {
+  if self.is_viewport_wrapping == is_viewport_wrapping {
+    return None
+  }
+  self.is_viewport_wrapping = is_viewport_wrapping
+  self.update_content_width()
+}
+
+///|
+/// Monaco `ViewLayout.setMaxLineWidth`: retain the measured widest rendered
+/// line without clamping, update content width, then recompute height because
+/// horizontal-scrollbar visibility contributes to the bottom extent.
+pub fn ViewLayout::set_max_line_width(
+  self : ViewLayout,
+  max_line_width : Double,
+) -> ScrollChange? {
+  self.max_line_width = max_line_width
+  self.update_content_width()
+}
+
+///|
+/// Compatibility spelling for callers that predate ViewLayout's ownership of
+/// the measured maximum. The value is a max-line-width input, not a final
+/// content width; new ViewLines wiring should call `set_max_line_width`.
 pub fn ViewLayout::set_content_width(
   self : ViewLayout,
-  content_width : Double,
+  max_line_width : Double,
 ) -> ScrollChange? {
-  self.content_width = max_double(content_width, 0.0)
-  self.sync_dimensions()
+  self.set_max_line_width(max_line_width)
 }
 
 ///|
@@ -191,7 +228,7 @@ pub fn ViewLayout::set_view_zones(
     self.line_height,
     self.view_zones_arr,
   )
-  self.sync_dimensions()
+  self.update_height()
 }
 
 ///|
@@ -207,15 +244,16 @@ pub fn ViewLayout::line_count(self : ViewLayout) -> Int {
 }
 
 ///|
-/// Total scrollable content height, including view zones.
+/// Total retained content height, including view zones and the fixed product
+/// horizontal scrollbar when horizontal overflow is present.
 pub fn ViewLayout::get_content_height(self : ViewLayout) -> Double {
-  self.lines.get_lines_total_height().to_double()
+  self.scrollable.editor_dimensions().content_height
 }
 
 ///|
-/// The widest measured content (the horizontal scroll extent before clamping to
-/// the viewport), Monaco's `ViewLayout.getContentWidth` / scroll-dimensions
-/// `contentWidth`. Read by `CodeEditorWidget.getContentWidth`.
+/// The derived horizontal content extent (measured maximum plus the applicable
+/// fixed layout additions), Monaco's `ViewLayout.getContentWidth` /
+/// scroll-dimensions `contentWidth`. Read by `CodeEditorWidget.getContentWidth`.
 pub fn ViewLayout::get_content_width(self : ViewLayout) -> Double {
   self.scrollable.editor_dimensions().content_width
 }
@@ -611,16 +649,134 @@ pub fn ViewLayout::window_origin(
 }
 
 ///|
-fn ViewLayout::sync_dimensions(self : ViewLayout) -> ScrollChange? {
+fn ViewLayout::horizontal_scrollbar_height(
+  self : ViewLayout,
+  width : Double,
+  content_width : Double,
+) -> Double {
+  // Product-fixed ScrollbarVisibility.Auto: the approved Hidden option axis
+  // remains deferred and equality stays on the no-overflow path.
+  if width >= content_width {
+    0.0
+  } else {
+    self.horizontal_scrollbar_height
+  }
+}
+
+///|
+fn ViewLayout::compute_content_height(
+  self : ViewLayout,
+  width : Double,
+  _height : Double,
+  content_width : Double,
+) -> Double {
+  // Product-fixed `scrollBeyondLastLine=false` and
+  // `ignoreHorizontalScrollbarInContentHeight=false` select this source arm.
+  self.lines.get_lines_total_height().to_double() +
+  self.horizontal_scrollbar_height(width, content_width)
+}
+
+///|
+fn ViewLayout::update_height(self : ViewLayout) -> ScrollChange? {
   let dimensions = self.scrollable.editor_dimensions()
   self.scrollable.set_editor_dimensions(
     EditorScrollDimensions::new(
       dimensions.width,
-      self.content_width,
+      dimensions.content_width,
       dimensions.height,
-      self.get_content_height(),
+      self.compute_content_height(
+        dimensions.width,
+        dimensions.height,
+        dimensions.content_width,
+      ),
     ),
   )
+}
+
+///|
+fn ViewLayout::compute_content_width(self : ViewLayout) -> Double {
+  if self.is_viewport_wrapping {
+    // The source's overflow threshold only selects a right-side minimap
+    // adjustment. Viewer has no minimap axis, so both applicable outcomes are
+    // the measured maximum itself.
+    return self.max_line_width
+  }
+  // `.view-line-content` measurement already includes the product-fixed 16px
+  // right padding. Do not invent a scrollBeyondLastColumn option or add that
+  // padding twice. The vertical scrollbar and whitespace minimum remain the
+  // two source-owned extent candidates available in this product.
+  max_double(
+    self.max_line_width + self.vertical_scrollbar_width,
+    self.lines.get_whitespace_min_width().to_double(),
+  )
+}
+
+///|
+fn ViewLayout::update_content_width(self : ViewLayout) -> ScrollChange? {
+  let dimensions = self.scrollable.editor_dimensions()
+  let width_change = self.scrollable.set_editor_dimensions(
+    EditorScrollDimensions::new(
+      dimensions.width,
+      self.compute_content_width(),
+      dimensions.height,
+      dimensions.content_height,
+    ),
+  )
+  // Preserve source ordering: publish the width first, then recompute height.
+  let height_change = self.update_height()
+  match (width_change, height_change) {
+    (Some(width_change), Some(height_change)) =>
+      Some(merge_scroll_changes(width_change, height_change))
+    (Some(change), None) | (None, Some(change)) => Some(change)
+    (None, None) => None
+  }
+}
+
+///|
+/// `update_content_width` intentionally performs two source-ordered dimension
+/// writes so content-size listeners observe width before scrollbar-dependent
+/// height. Its compatibility return value still describes the complete
+/// transition, rather than dropping the flags from the first emitted event.
+fn merge_scroll_changes(
+  first : ScrollChange,
+  second : ScrollChange,
+) -> ScrollChange {
+  let width_changed = first.old_width != second.width
+  let scroll_width_changed = first.old_scroll_width != second.scroll_width
+  let scroll_left_changed = first.old_scroll_left != second.scroll_left
+  let height_changed = first.old_height != second.height
+  let scroll_height_changed = first.old_scroll_height != second.scroll_height
+  let scroll_top_changed = first.old_scroll_top != second.scroll_top
+  {
+    position: second.position,
+    delta_left: second.scroll_left - first.old_scroll_left,
+    delta_top: second.scroll_top - first.old_scroll_top,
+    left_changed: scroll_left_changed,
+    top_changed: scroll_top_changed,
+    dimensions_changed: width_changed ||
+    scroll_width_changed ||
+    height_changed ||
+    scroll_height_changed,
+    in_smooth_scrolling: first.in_smooth_scrolling || second.in_smooth_scrolling,
+    old_width: first.old_width,
+    old_scroll_width: first.old_scroll_width,
+    old_scroll_left: first.old_scroll_left,
+    width: second.width,
+    scroll_width: second.scroll_width,
+    scroll_left: second.scroll_left,
+    old_height: first.old_height,
+    old_scroll_height: first.old_scroll_height,
+    old_scroll_top: first.old_scroll_top,
+    height: second.height,
+    scroll_height: second.scroll_height,
+    scroll_top: second.scroll_top,
+    width_changed,
+    scroll_width_changed,
+    scroll_left_changed,
+    height_changed,
+    scroll_height_changed,
+    scroll_top_changed,
+  }
 }
 
 ///|

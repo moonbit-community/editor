@@ -937,7 +937,25 @@ fn option_or(value : Double?, fallback : Double) -> Double {
 
 ///|
 fn truncate_double(value : Double) -> Double {
-  value.to_int().to_double()
+  // JavaScript's `value | 0` performs ToInt32, not a saturating Double->Int
+  // conversion. Keep the modulo/wrap explicit so the common package has the
+  // same result on every MoonBit target, including the signed-32-bit edges.
+  let modulus = 4294967296.0
+  let signed_boundary = 2147483648.0
+  let mut wrapped = value.trunc() % modulus
+  // NaN and both infinities become zero under ToInt32. Normalize negative zero
+  // too, so the retained dimensions have one canonical zero representation.
+  if wrapped.is_nan() || wrapped == 0.0 {
+    return 0.0
+  }
+  if wrapped < 0.0 {
+    wrapped = wrapped + modulus
+  }
+  if wrapped >= signed_boundary {
+    wrapped - modulus
+  } else {
+    wrapped
+  }
 }
 
 ///|

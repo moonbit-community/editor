@@ -251,8 +251,8 @@ pub(all) struct RenderLineInput {
   tab_size : Int
   start_visible_column : Int
   space_width : Double
-  middot_width : Double
-  wsmiddot_width : Double
+  render_space_width : Double
+  render_space_char_code : Int
   stop_rendering_line_after : Int
   render_whitespace : RenderWhitespace
   render_control_characters : Bool
@@ -474,7 +474,7 @@ pub fn ViewLayout::is_in_top_padding(Self, Double) -> Bool
 pub fn ViewLayout::line_at_vertical_offset(Self, Double) -> Int
 pub fn ViewLayout::line_count(Self) -> Int
 pub fn ViewLayout::line_height(Self) -> Int
-pub fn ViewLayout::new(line_height~ : Int, line_count? : Int, smooth_scrolling? : Bool, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
+pub fn ViewLayout::new(line_height~ : Int, line_count? : Int, smooth_scrolling? : Bool, is_viewport_wrapping? : Bool, vertical_scrollbar_width? : Double, horizontal_scrollbar_height? : Double, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
 pub fn ViewLayout::on_did_content_size_change(Self, (ContentSizeChange) -> Unit) -> @common.Disposable
 pub fn ViewLayout::on_did_scroll(Self, (ScrollChange) -> Unit) -> @common.Disposable
 pub fn ViewLayout::on_flushed(Self, Int) -> Unit
@@ -486,8 +486,10 @@ pub fn ViewLayout::scroll_by(Self, delta_left? : Double, delta_top? : Double) ->
 pub fn ViewLayout::scroll_to(Self, scroll_top~ : Double, scroll_left? : Double) -> ScrollChange?
 pub fn ViewLayout::scroll_to_smooth(Self, scroll_top~ : Double, scroll_left? : Double) -> Unit
 pub fn ViewLayout::set_content_width(Self, Double) -> ScrollChange?
+pub fn ViewLayout::set_is_viewport_wrapping(Self, Bool) -> ScrollChange?
 pub fn ViewLayout::set_line_count(Self, Int) -> ScrollChange?
 pub fn ViewLayout::set_line_height(Self, Int) -> ScrollChange?
+pub fn ViewLayout::set_max_line_width(Self, Double) -> ScrollChange?
 pub fn ViewLayout::set_smooth_scrolling(Self, Bool) -> Unit
 pub fn ViewLayout::set_view_zones(Self, Array[ViewZone]) -> ScrollChange?
 pub fn ViewLayout::set_viewport_size(Self, width~ : Double, height~ : Double) -> ScrollChange?

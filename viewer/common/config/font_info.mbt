@@ -1,4 +1,5 @@
-// Ported from `vscode/src/vs/editor/common/config/fontInfo.ts`. Monaco's
+// Ported from `vscode/src/vs/editor/common/config/fontInfo.ts` at
+// b18492a288de038fbc7643aae6de8247029d11bd. Monaco's
 // `FontInfo extends BareFontInfo` inheritance flattens into two structs (a
 // `FontInfo` repeats the bare fields and exposes `bare()` for consumers of
 // the base shape). The `EditorZoom` multiplier is not ported — the readonly
@@ -7,11 +8,9 @@
 
 ///|
 /// Monaco `GOLDEN_LINE_HEIGHT_RATIO`: determined from empirical observations.
-pub let golden_line_height_ratio : Double = if @base_common.is_macintosh {
-  1.5
-} else {
-  1.35
-}
+pub let golden_line_height_ratio : Double = golden_line_height_ratio_for_platform(
+  current_font_platform(),
+)
 
 ///|
 /// Monaco `MINIMUM_LINE_HEIGHT`.
@@ -32,6 +31,44 @@ pub let font_variation_off = "normal"
 pub let font_variation_translate = "translate"
 
 ///|
+/// Monaco `DEFAULT_WINDOWS_FONT_FAMILY`.
+pub let default_windows_font_family = "Consolas, 'Courier New', monospace"
+
+///|
+/// Monaco `DEFAULT_MAC_FONT_FAMILY`.
+pub let default_mac_font_family = "Menlo, Monaco, 'Courier New', monospace"
+
+///|
+/// Monaco `DEFAULT_LINUX_FONT_FAMILY` (also used by other web platforms).
+pub let default_linux_font_family = "'Droid Sans Mono', monospace"
+
+///|
+priv enum FontPlatform {
+  MacOS
+  Windows
+  Other
+}
+
+///|
+fn current_font_platform() -> FontPlatform {
+  if @base_common.is_macintosh {
+    MacOS
+  } else if @base_common.is_windows {
+    Windows
+  } else {
+    Other
+  }
+}
+
+///|
+fn golden_line_height_ratio_for_platform(platform : FontPlatform) -> Double {
+  match platform {
+    MacOS => 1.5
+    Windows | Other => 1.35
+  }
+}
+
+///|
 /// Monaco `EDITOR_FONT_DEFAULTS` (with `DEFAULT_MAC_FONT_FAMILY` /
 /// `DEFAULT_WINDOWS_FONT_FAMILY` / `DEFAULT_LINUX_FONT_FAMILY`).
 pub(all) struct EditorFontDefaults {
@@ -43,22 +80,28 @@ pub(all) struct EditorFontDefaults {
 } derive(Eq, Debug)
 
 ///|
-pub let editor_font_defaults : EditorFontDefaults = {
-  font_family: if @base_common.is_macintosh {
-    "Menlo, Monaco, 'Courier New', monospace"
-  } else if @base_common.is_windows {
-    "Consolas, 'Courier New', monospace"
-  } else {
-    "'Droid Sans Mono', monospace"
-  },
-  font_weight: "normal",
-  font_size: if @base_common.is_macintosh {
-    12.0
-  } else {
-    14.0
-  },
-  line_height: 0.0,
-  letter_spacing: 0.0,
+pub let editor_font_defaults : EditorFontDefaults = editor_font_defaults_for_platform(
+  current_font_platform(),
+)
+
+///|
+fn editor_font_defaults_for_platform(
+  platform : FontPlatform,
+) -> EditorFontDefaults {
+  {
+    font_family: match platform {
+      MacOS => default_mac_font_family
+      Windows => default_windows_font_family
+      Other => default_linux_font_family
+    },
+    font_weight: "normal",
+    font_size: match platform {
+      MacOS => 12.0
+      Windows | Other => 14.0
+    },
+    line_height: 0.0,
+    letter_spacing: 0.0,
+  }
 }
 
 ///|
@@ -110,7 +153,7 @@ pub fn BareFontInfo::create(
     if font_weight == "normal" || font_weight == "bold" {
       font_variation_settings = font_variation_off
     } else {
-      font_variation_settings = "'wght' " + font_weight
+      font_variation_settings = "'wght' " + parse_decimal_prefix(font_weight)
       font_weight = "normal"
     }
   }
@@ -137,12 +180,19 @@ pub fn BareFontInfo::get_id(self : BareFontInfo) -> String {
 /// the platform default appended as a fallback, quoting families that use
 /// `+` or spaces.
 pub fn BareFontInfo::get_massaged_font_family(self : BareFontInfo) -> String {
-  let fallback_font_family = editor_font_defaults.font_family
-  let font_family = wrap_in_quotes(self.font_family)
-  if self.font_family != fallback_font_family {
-    "\{font_family}, \{fallback_font_family}"
+  massage_font_family(self.font_family, editor_font_defaults.font_family)
+}
+
+///|
+fn massage_font_family(
+  font_family : String,
+  fallback_font_family : String,
+) -> String {
+  let massaged = wrap_in_quotes(font_family)
+  if fallback_font_family != "" && font_family != fallback_font_family {
+    "\{massaged}, \{fallback_font_family}"
   } else {
-    font_family
+    massaged
   }
 }
 
@@ -159,6 +209,66 @@ fn wrap_in_quotes(font_family : String) -> String {
     return "\"\{font_family}\""
   }
   font_family
+}
+
+///|
+/// The decimal-prefix behavior of JavaScript `parseInt(value, 10)` used by
+/// BareFontInfo's variation translation. Editor validation supplies canonical
+/// weights, but retaining prefix/sign handling prevents raw strings such as
+/// `0500` or `500suffix` from leaking into CSS variation syntax.
+fn parse_decimal_prefix(value : String) -> String {
+  let view = value.view()
+  let mut index = 0
+  while index < value.length() {
+    let code = view.unsafe_get(index).to_int()
+    if is_ecmascript_whitespace(code) {
+      index = index + 1
+    } else {
+      break
+    }
+  }
+  let mut sign = 1
+  if index < value.length() {
+    let code = view.unsafe_get(index).to_int()
+    if code == 0x2D {
+      sign = -1
+      index = index + 1
+    } else if code == 0x2B {
+      index = index + 1
+    }
+  }
+  let digit_start = index
+  let mut result = 0.0
+  while index < value.length() {
+    let code = view.unsafe_get(index).to_int()
+    if code < 0x30 || code > 0x39 {
+      break
+    }
+    result = result * 10.0 + (code - 0x30).to_double()
+    index = index + 1
+  }
+  if index == digit_start {
+    "NaN"
+  } else {
+    (sign.to_double() * result).to_string()
+  }
+}
+
+///|
+/// Leading whitespace accepted by ECMAScript `StringNumericLiteral`, which is
+/// what `parseInt` trims before reading its optional sign and decimal prefix.
+fn is_ecmascript_whitespace(code : Int) -> Bool {
+  (code >= 0x0009 && code <= 0x000D) ||
+  code == 0x0020 ||
+  code == 0x00A0 ||
+  code == 0x1680 ||
+  (code >= 0x2000 && code <= 0x200A) ||
+  code == 0x2028 ||
+  code == 0x2029 ||
+  code == 0x202F ||
+  code == 0x205F ||
+  code == 0x3000 ||
+  code == 0xFEFF
 }
 
 ///|

@@ -13,8 +13,8 @@ pub(all) struct RenderLineInput {
   tab_size : Int
   start_visible_column : Int
   space_width : Double
-  middot_width : Double
-  wsmiddot_width : Double
+  render_space_width : Double
+  render_space_char_code : Int
   stop_rendering_line_after : Int
   render_whitespace : RenderWhitespace
   render_control_characters : Bool
@@ -50,6 +50,15 @@ pub fn RenderLineInput::from_view_line(
   // Monaco's RenderLineInput constructor sorts selections by start offset.
   let sorted_selections = selections_on_line.copy()
   sorted_selections.sort_by((a, b) => a.start - b.start)
+  let wsmiddot_diff = (wsmiddot_width - space_width).abs()
+  let middot_diff = (middot_width - space_width).abs()
+  let (render_space_width, render_space_char_code) = if wsmiddot_diff <
+    middot_diff {
+    (wsmiddot_width, ch_word_separator_middot)
+  } else {
+    // Strict-less above preserves Monaco's U+00B7 tie outcome.
+    (middot_width, ch_middot)
+  }
   {
     use_monospace_optimizations,
     can_use_halfwidth_rightwards_arrow,
@@ -63,8 +72,8 @@ pub fn RenderLineInput::from_view_line(
     tab_size: data.tab_size,
     start_visible_column: data.start_visible_column,
     space_width,
-    middot_width,
-    wsmiddot_width,
+    render_space_width,
+    render_space_char_code,
     stop_rendering_line_after,
     render_whitespace,
     render_control_characters,

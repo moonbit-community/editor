@@ -1,8 +1,7 @@
 ///|
 /// How a selection was anchored, mirroring Monaco's `SelectionStartKind`. A
-/// plain click anchors `Simple`; double/triple-click would anchor `Word`/`Line`
-/// (the word/line drag-extend behavior is a follow-up, but the kind is tracked
-/// so `move` can preserve it).
+/// plain click anchors `Simple`; double/triple-click anchors `Word`/`Line`, and
+/// continuation gestures preserve and extend the corresponding anchor range.
 pub(all) enum SelectionStartKind {
   Simple
   Word
@@ -68,10 +67,10 @@ fn SingleCursorState::selection_start_is_empty(
 
 ///|
 /// The derived selection (anchor, active) carrying orientation. Transcribes
-/// Monaco's `SingleCursorState._computeSelection`: when the active end is at or
-/// after the anchor's start, the anchor is the start; when it has moved before
-/// the anchor's start (selecting backward over a word/line), the anchor is the
-/// end.
+/// Monaco's `SingleCursorState._computeSelection`: an active end strictly after
+/// the anchor's start uses that start as the selection anchor; equality or a
+/// position before the start (selecting backward over a word/line) uses the
+/// anchor range's end.
 pub fn SingleCursorState::selection(
   self : SingleCursorState,
 ) -> @core.Selection {

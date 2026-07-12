@@ -19,6 +19,9 @@
 ///   - `with_inserted` guards the middle-insert metadata read against a
 ///     past-end token index (Monaco reads `undefined`); the read is unreachable
 ///     for valid in-bounds insert offsets.
+///   - MoonBit's scalar-validating `StringView` cannot represent Monaco's raw
+///     UTF-16 slices at lone-surrogate or pair-interior boundaries, so every
+///     token-content slice uses `String::unsafe_substring`.
 
 ///|
 /// A line's tokens, viewed as a sequence with per-token end offset and
@@ -593,8 +596,8 @@ impl IViewLineTokens for SliceLineTokens with fn for_each(self, callback) {
 }
 
 ///|
-/// Code-unit substring `[start, end)`. ASCII/BMP-safe; raises on a surrogate
-/// boundary, matching the rest of the renderer's slicing.
+/// Raw UTF-16 code-unit substring `[start, end)`. Unlike `StringView`, this
+/// preserves lone surrogates and either half of a valid pair.
 fn substr(s : String, start : Int, end : Int) -> String {
-  s.view(start_offset=start, end_offset=end).to_owned()
+  s.unsafe_substring(start~, end~)
 }

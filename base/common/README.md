@@ -15,6 +15,8 @@ Host-neutral primitives at the bottom of the editor dependency graph.
   `OffsetRange` is a 0-based half-open UTF-16 span. `TextSnapshot` in
   `viewer/common/model` owns conversion between those spaces. Unlike Monaco,
   `OffsetRange` normalizes inverted constructor input instead of throwing.
+  `LineRange::join_many` unions arrays of sorted ranges into a copied, normalized
+  result without mutating caller arrays.
 - `Disposable` is idempotent. `Emitter` delivers listeners in registration order
   from a snapshot. `MicrotaskEmitter` merges queued events; its default scheduler
   flushes inline, so browser hosts must inject a real microtask scheduler when that

@@ -3,7 +3,7 @@
 // Source: vscode/src/vs/editor/common/core/ranges/lineRange.ts
 //   with the monotonic binary-search helpers from
 //   vscode/src/vs/base/common/arraysFind.ts
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971).
+// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd).
 //
 // Adaptation: upstream's constructor throws on `startLineNumber >
 // endLineNumberExclusive`; this port stores the values without validating
@@ -69,6 +69,25 @@ pub fn LineRange::join(self : LineRange, other : LineRange) -> LineRange {
     self.start_line_number.min(other.start_line_number),
     self.end_line_number_exclusive.max(other.end_line_number_exclusive),
   )
+}
+
+///|
+/// Joins arrays of already sorted line ranges into one normalized array.
+/// Mirrors Monaco's `LineRange.joinMany` (`lineRange.ts:51-60`), including the
+/// empty-input early return and caller-array copies.
+pub fn LineRange::join_many(
+  line_ranges : Array[Array[LineRange]],
+) -> Array[LineRange] {
+  if line_ranges.length() == 0 {
+    return []
+  }
+  let mut result = LineRangeSet::new(normalized_ranges=line_ranges[0].copy())
+  for index in 1..<line_ranges.length() {
+    result = result.get_union(
+      LineRangeSet::new(normalized_ranges=line_ranges[index].copy()),
+    )
+  }
+  result.ranges()
 }
 
 ///|

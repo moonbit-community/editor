@@ -198,6 +198,7 @@ pub fn LineRange::intersects_or_touches(Self, Self) -> Bool
 pub fn LineRange::intersects_strict(Self, Self) -> Bool
 pub fn LineRange::is_empty(Self) -> Bool
 pub fn LineRange::join(Self, Self) -> Self
+pub fn LineRange::join_many(Array[Array[Self]]) -> Array[Self]
 pub fn LineRange::length(Self) -> Int
 pub fn LineRange::of_length(Int, Int) -> Self
 pub fn LineRange::to_string(Self) -> String

@@ -666,3 +666,11 @@ The independent closing task is:
   212/34/0/350. The ORACLE now cites its complete builder/factory, PB
   LineStarts/StringBuffer, and ETB cache/getter chain and maps the existing PB
   rows without duplication. No product/test file changed; stop for fresh Gate B.
+- 2026-07-12: private-closure and model/matrix Gate B passed EOL inventory
+  commit `5b0a631` (child SHA-256
+  `c522536d5c053131dd76f1e502a4d0356a8d916fce8da0df2d111649fa0c1d94`);
+  combined review rejected only one missing citation to existing LineStarts
+  constructor row PB-106. No behavior/count/ownership issue remained.
+- 2026-07-12: the next corrected EOL candidate remains 596/596 TODO rows and
+  212/34/0/350; ORACLE-001 now maps PB-106 as well as its previously complete
+  producer chain. No product/test file changed; stop for fresh Gate B review.

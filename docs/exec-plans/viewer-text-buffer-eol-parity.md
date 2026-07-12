@@ -1140,7 +1140,7 @@ not preference policy:
   basic-ASCII fact; the local computed getter truthfully reports non-basic
   content.
 
-Across both combinations, PB-004–029/038–040 own the LineStarts counters/
+Across both combinations, PB-004–029/038–040/106 own the LineStarts counters/
 ASCII producers, fast/full scanners, and StringBuffer text/start carriers;
 ORACLE-001 consumes those rows without re-denominating them.
 
@@ -1336,6 +1336,17 @@ update this ledger and stop for classification review.
   LineStarts/full+fast scan/StringBuffer, and ETB cache/getter chain; the
   deviations map PB-004–029/038–040 without creating source duplicates. No
   product/test file changed; commit and stop for fresh Gate B review.
+- 2026-07-12: private-closure and model/matrix Gate B passed documentation-only
+  commit `5b0a631` (child SHA-256
+  `c522536d5c053131dd76f1e502a4d0356a8d916fce8da0df2d111649fa0c1d94`);
+  combined review rejected only the omission of PB-106, the independent
+  LineStarts constructor carrier already inside ORACLE-001's cited range. All
+  behavior, counts, hashes, and ownership passed; no product/test file changed.
+- 2026-07-12: the next corrected candidate remains 596/596 TODO rows and
+  212/34/0/350. The ORACLE deviation map now includes PB-106 alongside
+  PB-004–029/038–040, completing every existing producer/carrier row without
+  adding or reclassifying one. No product/test file changed; commit and stop
+  for fresh Gate B review.
 
 Append the dated inventory approval, implementation commits, validation
 results, and final ledger totals here. Freeze after implementation.

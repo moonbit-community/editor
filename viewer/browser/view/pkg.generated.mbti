@@ -15,6 +15,7 @@ import {
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common/core",
+  "moonbit-community/editor/viewer/common/cursor",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/ui/scrollbar",
@@ -27,6 +28,8 @@ pub fn convert_view_to_model_mouse_target(@browser.MouseTarget, &@core.Coordinat
 
 pub fn empty_editor_class_name(show_unused? : Bool, show_deprecated? : Bool) -> String
 
+pub fn extra_editor_class_name(Bool, Bool, Bool) -> String
+
 // Errors
 
 // Types and methods
@@ -36,6 +39,7 @@ pub(all) struct ContentViewOverlays {
   selections : @selections.SelectionsOverlay
   decorations : @decorations.DecorationsOverlay
   mut should_render : Bool
+  // private fields
 }
 pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
@@ -55,6 +59,7 @@ pub(all) struct MarginViewOverlays {
   lines_decorations : @margin.LinesDecorationsOverlay
   line_numbers : @margin.LineNumbersOverlay
   mut should_render : Bool
+  // private fields
 }
 pub fn MarginViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn MarginViewOverlays::new(@dom.Document) -> Self
@@ -98,7 +103,12 @@ pub(all) struct View {
 }
 pub fn View::add_disposable(Self, @common.Disposable) -> Unit
 pub fn View::apply_squiggly_theme(Self) -> Unit
+pub fn View::begin_view_event_batch(Self) -> ViewEventCollector
 pub fn View::dispose(Self) -> Unit
+pub fn View::emit_view_event(Self, ViewEvent) -> Unit
+pub fn View::emit_view_events(Self, Array[ViewEvent]) -> Unit
+pub fn View::end_view_event_batch(Self) -> Unit
+pub fn View::install_current_line_configuration_reader(Self, () -> (@view_layout.RenderLineHighlight, Bool, Bool, Double, Double)) -> Unit
 pub fn View::is_line_rendered(Self, Int) -> Bool
 pub fn View::line_width(Self, Int, Int) -> Double
 pub fn View::measure_line_selection(Self, Int, Int, Int, keep_empty? : Bool) -> Array[(Double, Double)]
@@ -106,6 +116,35 @@ pub fn View::new() -> Self
 pub fn View::offset_for_column(Self, Int, Int) -> Double
 pub fn View::render(Self, ViewContext, ViewRenderInput) -> Unit
 pub fn View::visible_range_for_position(Self, Int, Int) -> HorizontalPosition?
+pub fn[T] View::with_view_event_batch(Self, (ViewEventCollector) -> T raise) -> T raise
+
+pub(all) struct ViewConfigurationChangedEvent {
+  changed_options : Array[ViewConfigurationOption]
+}
+pub fn ViewConfigurationChangedEvent::from_changed_options(Array[ViewConfigurationOption]) -> Self
+pub fn ViewConfigurationChangedEvent::has_changed(Self, ViewConfigurationOption) -> Bool
+
+pub(all) enum ViewConfigurationOption {
+  LayoutInfo
+  FontInfo
+  LineHeight
+  WrappingInfo
+  RevealHorizontalRightPadding
+  CursorSurroundingLines
+  CursorSurroundingLinesStyle
+  DisableLayerHinting
+  StickyScroll
+  RenderWhitespace
+  RenderControlCharacters
+  RenderLineHighlight
+  RenderLineHighlightOnlyWhenFocus
+  RenderValidationDecorations
+  ReadOnly
+  CursorBlinking
+  EffectiveCursorStyle
+  CursorSmoothCaretAnimation
+  EffectiveEditContext
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ViewContext {
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
@@ -113,6 +152,69 @@ pub(all) struct ViewContext {
   offset_for_column : (Int, Int) -> Double
   model_position_to_view_position : (@common.Position) -> @common.Position
 }
+
+pub(all) struct ViewCursorStateChangedEvent {
+  selections : Array[@core.Selection]
+  model_selections : Array[@core.Selection]
+  reason : @cursor.CursorChangeReason
+}
+pub fn ViewCursorStateChangedEvent::new(Array[@core.Selection], Array[@core.Selection], @cursor.CursorChangeReason) -> Self
+
+pub(all) struct ViewDecorationsChangedEvent {
+  affects_minimap : Bool
+  affects_overview_ruler : Bool
+  affects_glyph_margin : Bool
+  affects_line_number : Bool
+}
+pub fn ViewDecorationsChangedEvent::all() -> Self
+pub fn ViewDecorationsChangedEvent::new(Bool, Bool, Bool, Bool) -> Self
+
+pub(all) enum ViewEvent {
+  ViewCompositionStart
+  ViewCompositionEnd
+  ViewConfigurationChanged(ViewConfigurationChangedEvent)
+  ViewCursorStateChanged(ViewCursorStateChangedEvent)
+  ViewDecorationsChanged(ViewDecorationsChangedEvent)
+  ViewFlushed
+  ViewFocusChanged(ViewFocusChangedEvent)
+  ViewLineMappingChanged
+  ViewLinesChanged(ViewLinesChangedEvent)
+  ViewLinesDeleted(ViewLinesDeletedEvent)
+  ViewLinesInserted(ViewLinesInsertedEvent)
+  ViewScrollChanged(ViewScrollChangedEvent)
+  ViewThemeChanged(ViewThemeChangedEvent)
+  ViewTokensChanged(ViewTokensChangedEvent)
+  ViewZonesChanged
+}
+
+pub(all) struct ViewEventCollector {
+  // private fields
+}
+pub fn ViewEventCollector::emit(Self, ViewEvent) -> Unit
+pub fn ViewEventCollector::emit_many(Self, Array[ViewEvent]) -> Unit
+
+pub(all) struct ViewFocusChangedEvent {
+  is_focused : Bool
+}
+pub fn ViewFocusChangedEvent::new(Bool) -> Self
+
+pub(all) struct ViewLinesChangedEvent {
+  from_line_number : Int
+  count : Int
+}
+pub fn ViewLinesChangedEvent::new(Int, Int) -> Self
+
+pub(all) struct ViewLinesDeletedEvent {
+  from_line_number : Int
+  to_line_number : Int
+}
+pub fn ViewLinesDeletedEvent::new(Int, Int) -> Self
+
+pub(all) struct ViewLinesInsertedEvent {
+  from_line_number : Int
+  to_line_number : Int
+}
+pub fn ViewLinesInsertedEvent::new(Int, Int) -> Self
 
 pub struct ViewOverlays {
   dom_node : @scrollbar.CachedDomNode
@@ -126,15 +228,10 @@ pub(all) struct ViewRenderInput {
   browser_view_zones : Array[@view_zones.BrowserViewZone]
   selection_view_range : @common.Range?
   view_selection : @core.Selection?
-  generation : Int
-  decorations_generation : Int
   gutter_width : Double
   line_decorations_width : Double
   space_width : Double
   typical_fullwidth_character_width : Double
-  can_use_halfwidth_rightwards_arrow : Bool
-  render_whitespace : @view_layout.RenderWhitespace
-  render_control_characters : Bool
   editor_has_focus : Bool
   word_wrap : Bool
   render_line_highlight : @view_layout.RenderLineHighlight
@@ -142,6 +239,34 @@ pub(all) struct ViewRenderInput {
   show_unused : Bool
   show_deprecated : Bool
 }
+
+pub(all) struct ViewScrollChangedEvent {
+  scroll_width : Double
+  scroll_left : Double
+  scroll_height : Double
+  scroll_top : Double
+  scroll_width_changed : Bool
+  scroll_left_changed : Bool
+  scroll_height_changed : Bool
+  scroll_top_changed : Bool
+}
+pub fn ViewScrollChangedEvent::new(Double, Double, Double, Double, Bool, Bool, Bool, Bool) -> Self
+
+pub(all) struct ViewThemeChangedEvent {
+  theme : String
+}
+pub fn ViewThemeChangedEvent::new(String) -> Self
+
+pub(all) struct ViewTokenChangeRange {
+  from_line_number : Int
+  to_line_number : Int
+}
+pub fn ViewTokenChangeRange::new(Int, Int) -> Self
+
+pub(all) struct ViewTokensChangedEvent {
+  ranges : Array[ViewTokenChangeRange]
+}
+pub fn ViewTokensChangedEvent::new(Array[ViewTokenChangeRange]) -> Self
 
 // Type aliases
 

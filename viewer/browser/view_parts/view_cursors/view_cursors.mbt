@@ -39,8 +39,19 @@ pub(all) struct ViewCursors {
   /// "Outside viewport → null" arms (`viewCursor.ts:177-180`).
   mut render_data : CursorRenderData?
   /// The caret's view position captured alongside `render_data` — Monaco's
-  /// `ViewCursor._position`, which `getLastRenderData` reports.
+  /// current `ViewCursor._position`. This advances immediately on a cursor
+  /// event and is used by the next prepare pass.
   mut last_position : @base_common.Position?
+  /// The position paired with the currently painted `render_data`. Monaco's
+  /// `ViewCursors.getLastRenderData` returns the array produced by the last
+  /// `render`, so an incoming cursor event must not combine its new logical
+  /// position with the previous frame's rectangle.
+  mut last_rendered_position : @base_common.Position?
+  /// `ViewCursors._editorHasFocus`, updated directly by the focus event
+  /// handler even when no render is scheduled.
+  mut editor_has_focus : Bool
+  /// The last cursor-state selection shape used by `_getClassName`.
+  mut selection_is_empty : Bool
 }
 
 ///|
@@ -64,6 +75,9 @@ pub fn ViewCursors::new(document : @rdom.Document) -> ViewCursors {
     should_render: true,
     render_data: None,
     last_position: None,
+    last_rendered_position: None,
+    editor_has_focus: false,
+    selection_is_empty: true,
   }
 }
 
@@ -136,6 +150,8 @@ pub fn ViewCursors::render_cursor(
   has_selection~ : Bool,
   editor_has_focus~ : Bool,
 ) -> Unit {
+  self.editor_has_focus = editor_has_focus
+  self.selection_is_empty = !has_selection
   self.dom_node.set_attribute("class", cursors_layer_class(has_selection))
   match self.render_data {
     None => self.cursor.set_attribute("style", "display:none")
@@ -144,6 +160,27 @@ pub fn ViewCursors::render_cursor(
         "style",
         cursor_style(data, visible=editor_has_focus),
       )
+  }
+}
+
+///|
+/// `ViewCursors.onFocusChanged` + `_updateBlinking` for the readonly
+/// `Solid`/`Hidden` state machine.  This is deliberately an immediate DOM
+/// side effect: the source handler returns `false`, so no render follows from
+/// focus alone.
+pub fn ViewCursors::on_focus_changed(
+  self : ViewCursors,
+  is_focused : Bool,
+) -> Unit {
+  self.editor_has_focus = is_focused
+  self.dom_node.set_attribute(
+    "class",
+    cursors_layer_class(!self.selection_is_empty),
+  )
+  match self.render_data {
+    None => self.cursor.set_attribute("style", "display:none")
+    Some(data) =>
+      self.cursor.set_attribute("style", cursor_style(data, visible=is_focused))
   }
 }
 
@@ -178,7 +215,7 @@ pub(all) struct ViewCursorRenderData {
 pub fn ViewCursors::get_last_render_data(
   self : ViewCursors,
 ) -> Array[ViewCursorRenderData] {
-  match (self.render_data, self.last_position) {
+  match (self.render_data, self.last_rendered_position) {
     (Some(data), Some(position)) =>
       [
         {

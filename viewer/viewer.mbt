@@ -90,6 +90,11 @@ pub struct Viewer {
   /// each per-model `ViewLayout` at construction.
   priv mut measured_content_width : Double
   priv mut measured_height : Double
+  /// Last model/view line counts incorporated into the computed layout
+  /// identity. Model-line digits size the line-number lane; view-line count is
+  /// an independent `layoutInfo` fact.
+  priv mut layout_model_line_count : Int
+  priv mut layout_line_count : Int
   priv mut soft_wrap_column : Int
   priv mut max_line_length : Int
   /// The host element handed to `attach` — Monaco's `_containerDomElement`.
@@ -117,26 +122,18 @@ pub struct Viewer {
   priv mut measure_requested : Bool
   priv mut pending_rendered : PendingRendered?
   priv mut scroll_dirty : Bool
-  /// Bumped whenever the inputs of line HTML change (new view model or
-  /// changed controller decorations); the recycler rewrites every
-  /// rendered line when it differs, and only entering lines otherwise.
-  priv mut content_generation : Int
   /// This editor's decoration `ownerId` (Monaco's per-widget editor id): the
   /// filter handed to `ViewModelDecorations` and the ownerId of the public
   /// `delta_decorations` API.
   priv editor_id : Int
-  /// Bumped per `TextModel.onDidChangeDecorations` event; the render snapshot
-  /// carries it, and a change dispatches `ViewDecorationsChanged` to the view
-  /// parts (plan Deviation 3 — the render-snapshot event seam).
-  priv mut decorations_generation : Int
   priv mut mouse_handler : @controller.MouseHandler?
   /// The last `mousemove`'s `MouseEvent.buttons` bitmask, recorded by the
   /// root listener so `on_mouse_move` events can carry `event.leftButton`
   /// Whether the editor root currently has DOM focus — the viewer's stand-in
   /// for Monaco's edit-context focus (`view.ts` `_getEditorClassName` /
   /// `ViewFocusChangedEvent`). Sourced by `focus`/`blur` listeners on the root
-  /// (`input.mbt`); read into every render snapshot, where a change dispatches
-  /// `ViewFocusChanged` to the view parts.
+  /// (`input.mbt`), which dispatch the exact Bool payload before scheduling
+  /// the next render.
   priv mut editor_has_focus : Bool
   /// Monaco's `ViewLines._horizontalRevealRequest`: a single-line reveal whose
   /// horizontal scroll is deferred until the target view line renders (its
@@ -347,6 +344,8 @@ pub fn Viewer::Viewer(
     font_info,
     measured_content_width: 0.0,
     measured_height: 0.0,
+    layout_model_line_count: 0,
+    layout_line_count: 0,
     soft_wrap_column: 0,
     max_line_length: 0,
     container: None,
@@ -359,9 +358,7 @@ pub fn Viewer::Viewer(
     measure_requested: false,
     pending_rendered: None,
     scroll_dirty: false,
-    content_generation: 0,
     editor_id: next_editor_id(),
-    decorations_generation: 0,
     mouse_handler: None,
     editor_has_focus: false,
     horizontal_reveal_request: None,
@@ -370,8 +367,8 @@ pub fn Viewer::Viewer(
   // Marker decoration changes reach the render through the model's
   // decoration storage (`onDidChangeDecorations` → `ViewDecorationsChanged`);
   // this subscription only schedules the refresh without rebuilding the view model
-  // (no `content_generation` bump — decoration plan Phase 3). Hosts observe
-  // marker changes on `MarkerService::on_did_change_markers`.
+  // because the model subscription already delivered the exact typed event.
+  // Hosts observe marker changes on `MarkerService::on_did_change_markers`.
   viewer.add_lifetime_disposable(
     viewer.services.marker_decorations.on_did_change_marker_decorations(model => {
       if viewer.is_current_model(model) {
@@ -537,6 +534,13 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
     return
   }
   let previous = self.options
+  let previous_font_info = self.font_info
+  let previous_soft_wrap_column = self.soft_wrap_column
+  let previous_layout_identity = self.layout_identity(
+    self.layout_model_line_count,
+    self.layout_line_count,
+  )
+  let event_batch = self.begin_view_event_batch()
   self.options = options
   if previous.theme != options.theme {
     self.apply_theme()
@@ -551,20 +555,44 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
   // The folding half of Monaco's `onDidChangeConfiguration` subscription
   // (`folding.ts:155-180`).
   self.folding_on_configuration_changed(previous)
-  if previous.same_layout_options(options) {
-    self.schedule_render()
-    return
+  if !previous.same_layout_options(options) {
+    // A changed font option resolves through `FontMeasurements` immediately
+    // (Monaco's synchronous `_recomputeOptions`), so the wrap column below
+    // already uses the new advance width.
+    self.refresh_font_info()
+    self.soft_wrap_column = self.options.soft_wrap_column_for_content_width(
+      self.measured_content_width,
+      self.measured_char_width(),
+    )
+    self.on_configuration_changed(previous_options=previous)
+    self.measure_requested = true
   }
-  // A changed font option resolves through `FontMeasurements` immediately
-  // (Monaco's synchronous `_recomputeOptions`), so the wrap column below
-  // already uses the new advance width.
-  self.refresh_font_info()
-  self.soft_wrap_column = self.options.soft_wrap_column_for_content_width(
-    self.measured_content_width,
-    self.measured_char_width(),
-  )
-  self.on_configuration_changed()
-  self.measure_requested = true
+  let current_model_line_count = match self.get_model() {
+    Some(model) => model.snapshot.line_count()
+    None => 0
+  }
+  let current_view_line_count = match self.get_view_model() {
+    Some(view_model) => view_model.line_count()
+    None => 0
+  }
+  self.layout_model_line_count = current_model_line_count
+  self.layout_line_count = current_view_line_count
+  let layout_info_changed = previous_layout_identity !=
+    self.layout_identity(current_model_line_count, current_view_line_count)
+  match
+    view_configuration_changed_event(
+      previous,
+      options,
+      previous_font_info,
+      self.font_info,
+      previous_soft_wrap_column,
+      self.soft_wrap_column,
+      layout_info_changed~,
+    ) {
+    Some(event) => self.emit_view_event(ViewConfigurationChanged(event))
+    None => ()
+  }
+  end_view_event_batch(event_batch)
   self.schedule_render()
 }
 
@@ -746,6 +774,8 @@ fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
   }
   model_data.dispose()
   self.model_data = None
+  self.layout_model_line_count = 0
+  self.layout_line_count = 0
   match self.container {
     Some(host) => {
       host.remove_attribute("data-mode-id")
@@ -1038,6 +1068,7 @@ fn Viewer::apply_scroll_change(
 ) -> Unit {
   match change {
     Some(scroll_change) => {
+      self.emit_view_scroll_changed(scroll_change)
       self.cancel_horizontal_reveal_on_scroll(scroll_change)
       self.on_editor_scroll_changed(scroll_change)
       match self.get_view() {

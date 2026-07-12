@@ -12,9 +12,14 @@ contracts in `editorBrowser.ts`. Hover's concrete widget lives in
   the node may overflow the editor.
 - `ContentWidgets::add_widget` mounts a node once in either `.contentWidgets`
   or `.overflowingContentWidgets`; `remove_widget` is the only unmount path.
-  `set_widget_position` refreshes anchors and invalidates cached dimensions.
-- `prepare_render_widgets(ContentWidgetsRenderContext)` converts model anchors
-  to view coordinates, measures the box, and chooses a placement. The later
+  `set_widget_position` retains model anchors, projects their current view
+  positions through the installed live context, and invalidates cached
+  dimensions. Line-mapping/changed/inserted/deleted events immediately
+  reproject those retained model anchors before the part is marked dirty.
+- A `LayoutInfo` configuration event refreshes each retained widget's cached
+  `contentLeft`, `contentWidth`, and `maxWidth`; unrelated configuration events
+  leave those caches untouched. `prepare_render_widgets` consumes the retained
+  view positions, measures the box, and chooses a placement. The later
   `render_widgets` call writes position and visibility. Hiding changes
   `display`/`visibility` but does not unmount the node, keeping subtrees stable.
 - The current left anchor uses the measured monospace character width. Monaco

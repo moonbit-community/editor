@@ -51,6 +51,9 @@ pub struct ViewOverlays {
   priv dynamic_overlays : Array[&DynamicViewOverlay]
   priv mut lines : Array[ViewOverlayLine]
   priv mut window : @view_layout.LineWindow
+  // `ViewOverlays._isFocused` (`viewOverlays.ts:24,76-79,128`): focus is
+  // retained when the event is handled and consumed later by `render`.
+  priv mut is_focused : Bool
 }
 
 ///|
@@ -156,6 +159,7 @@ fn ViewOverlays::new(
     dynamic_overlays: [],
     lines: [],
     window: { start: 0, end: 0 },
+    is_focused: false,
   }
 }
 
@@ -187,6 +191,34 @@ fn ViewOverlays::on_content_or_tokens_changed(self : ViewOverlays) -> Unit {
   for line in self.lines {
     line.on_content_changed()
     line.on_tokens_changed()
+  }
+}
+
+///|
+/// `ViewOverlays.onFocusChanged` (`viewOverlays.ts:76-79`).
+fn ViewOverlays::on_focus_changed(
+  self : ViewOverlays,
+  is_focused : Bool,
+) -> Unit {
+  self.is_focused = is_focused
+}
+
+///|
+/// `ViewOverlays.render`'s equality-gated focused-class write. The source uses
+/// `FastDomNode.toggleClassName`; the retained Bool, not frame-final input,
+/// decides the class.
+fn ViewOverlays::render_focused_class(
+  self : ViewOverlays,
+  base_class_name : String,
+) -> Unit {
+  let element = self.dom_node.element()
+  let class_name = if self.is_focused {
+    base_class_name + " focused"
+  } else {
+    base_class_name
+  }
+  if element.get_attribute("class") != class_name {
+    element.set_attribute("class", class_name)
   }
 }
 
@@ -238,6 +270,9 @@ pub(all) struct ContentViewOverlays {
   selections : @selections.SelectionsOverlay
   decorations : @decorations.DecorationsOverlay
   mut should_render : Bool
+  // `ContentViewOverlays._contentWidth` (`viewOverlays.ts:204,210-213,226`).
+  priv mut content_width : Double
+  priv mut read_content_width : () -> Double
 }
 
 ///|
@@ -251,7 +286,34 @@ pub fn ContentViewOverlays::new(
   overlays.add_dynamic_overlay(current_line)
   overlays.add_dynamic_overlay(selections)
   overlays.add_dynamic_overlay(decorations)
-  { overlays, current_line, selections, decorations, should_render: true }
+  {
+    overlays,
+    current_line,
+    selections,
+    decorations,
+    should_render: true,
+    content_width: 0.0,
+    read_content_width: () => 0.0,
+  }
+}
+
+///|
+/// Installs the local `ViewContext.configuration.options.layoutInfo` seam and
+/// performs the constructor-time `_contentWidth` read.
+fn ContentViewOverlays::install_content_width_reader(
+  self : ContentViewOverlays,
+  read_content_width : () -> Double,
+) -> Unit {
+  self.read_content_width = read_content_width
+  self.on_configuration_changed()
+}
+
+///|
+/// `ContentViewOverlays.onConfigurationChanged`'s retained layout read.
+fn ContentViewOverlays::on_configuration_changed(
+  self : ContentViewOverlays,
+) -> Unit {
+  self.content_width = (self.read_content_width)()
 }
 
 ///|
@@ -269,16 +331,17 @@ pub fn ContentViewOverlays::set_focused(
   self : ContentViewOverlays,
   focused : Bool,
 ) -> Unit {
-  self.overlays.dom_node
-  .element()
-  .set_attribute(
-    "class",
-    if focused {
-      "view-overlays focused"
-    } else {
-      "view-overlays"
-    },
-  )
+  // Retain the public helper's existing signature; production render passes
+  // only `overlays.is_focused`, the source event cache.
+  let element = self.overlays.dom_node.element()
+  let class_name = if focused {
+    "view-overlays focused"
+  } else {
+    "view-overlays"
+  }
+  if element.get_attribute("class") != class_name {
+    element.set_attribute("class", class_name)
+  }
 }
 
 ///|
@@ -296,6 +359,9 @@ pub(all) struct MarginViewOverlays {
   lines_decorations : @margin.LinesDecorationsOverlay
   line_numbers : @margin.LineNumbersOverlay
   mut should_render : Bool
+  // `MarginViewOverlays._contentLeft` (`viewOverlays.ts:238,244-248,265`).
+  priv mut content_left : Double
+  priv mut read_content_left : () -> Double
 }
 
 ///|
@@ -319,7 +385,35 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
     lines_decorations,
     line_numbers,
     should_render: true,
+    content_left: 0.0,
+    read_content_left: () => 0.0,
   }
+}
+
+///|
+/// Installs the local `ViewContext.configuration.options.layoutInfo` seam and
+/// performs the constructor-time `_contentLeft` read.
+fn MarginViewOverlays::install_content_left_reader(
+  self : MarginViewOverlays,
+  read_content_left : () -> Double,
+) -> Unit {
+  self.read_content_left = read_content_left
+  self.on_configuration_changed()
+}
+
+///|
+/// `MarginViewOverlays.onConfigurationChanged`'s retained layout read.
+fn MarginViewOverlays::on_configuration_changed(
+  self : MarginViewOverlays,
+) -> Unit {
+  self.content_left = (self.read_content_left)()
+}
+
+///|
+/// Applies the base `ViewOverlays.render` focus-class write to the margin
+/// overlay container from its retained focus cache.
+fn MarginViewOverlays::render_focused(self : MarginViewOverlays) -> Unit {
+  self.overlays.render_focused_class("margin-view-overlays")
 }
 
 ///|
@@ -327,4 +421,34 @@ pub fn MarginViewOverlays::get_dom_node(
   self : MarginViewOverlays,
 ) -> @rdom.Element {
   self.dom_node
+}
+
+///|
+/// Installs the model-scoped live configuration reader used by both concrete
+/// current-line overlays. Each state reads it immediately and again in its
+/// source-time `ViewConfigurationChanged` handler.
+pub fn View::install_current_line_configuration_reader(
+  self : View,
+  read_configuration : () -> (
+    @view_layout.RenderLineHighlight,
+    Bool,
+    Bool,
+    Double,
+    Double,
+  ),
+) -> Unit {
+  self.content_view_overlays.install_content_width_reader(() => {
+    let (_, _, _, _, content_width) = read_configuration()
+    content_width
+  })
+  self.margin_view_overlays.install_content_left_reader(() => {
+    let (_, _, _, content_left, _) = read_configuration()
+    content_left
+  })
+  self.content_view_overlays.current_line.state.install_configuration_reader(
+    read_configuration,
+  )
+  self.margin_view_overlays.current_line_margin.state.install_configuration_reader(
+    read_configuration,
+  )
 }

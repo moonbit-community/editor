@@ -17,10 +17,6 @@ pub(all) struct ViewRenderInput {
   /// `selection_view_range` (which is `None` when collapsed), this carries the
   /// caret position of an empty selection — the cursor part renders from it.
   view_selection : @core.Selection?
-  generation : Int
-  /// Bumped by the `Viewer` per model `onDidChangeDecorations` event; a
-  /// change dispatches `ViewDecorationsChanged` (plan Deviation 3).
-  decorations_generation : Int
   gutter_width : Double
   /// Width of the line-decorations lane inside the gutter,
   /// `layoutInfo.decorationsWidth` (the margin part renders the lane at
@@ -30,11 +26,6 @@ pub(all) struct ViewRenderInput {
   /// `fontInfo.typicalFullwidthCharacterWidth`: the content-widget layer's
   /// `_reduceAnchorCoordinates` clamp unit.
   typical_fullwidth_character_width : Double
-  /// `fontInfo.canUseHalfwidthRightwardsArrow`: whether the whitespace
-  /// renderer may paint tabs as U+FFEB without breaking monospace.
-  can_use_halfwidth_rightwards_arrow : Bool
-  render_whitespace : @view_layout.RenderWhitespace
-  render_control_characters : Bool
   /// Whether the editor root has DOM focus (Monaco `ViewFocusChangedEvent`
   /// state; see `Viewer.editor_has_focus`).
   editor_has_focus : Bool
@@ -57,7 +48,6 @@ pub(all) struct ViewRenderInput {
 priv struct RenderingContext {
   view_context : ViewContext
   input : ViewRenderInput
-  snapshot : ViewRenderSnapshot
   viewport : @view_layout.ViewportData
   gutter_width : Double
   position : @view_layout.ScrollPosition
@@ -98,11 +88,9 @@ fn RenderingContext::from_input(
   )
   let position = input.layout.position()
   let dimensions = input.layout.dimensions()
-  let snapshot = ViewRenderSnapshot::from_input(input, position, dimensions)
   {
     view_context,
     input,
-    snapshot,
     viewport,
     gutter_width: input.gutter_width,
     position,
@@ -131,60 +119,6 @@ fn RenderingContext::restricted(
 ///|
 fn RenderingContext::margin_transform(self : RenderingContext) -> String {
   "transform:translateY(" + self.translate_y.to_string() + "px)"
-}
-
-///|
-priv struct ViewRenderSnapshot {
-  window : @view_layout.LineWindow
-  generation : Int
-  decorations_generation : Int
-  position : @view_layout.ScrollPosition
-  dimensions : @view_layout.ScrollDimensions
-  gutter_width : Double
-  space_width : Double
-  view_selection : @core.Selection?
-  browser_view_zones : Array[@view_zones.BrowserViewZone]
-  editor_has_focus : Bool
-}
-
-///|
-fn ViewRenderSnapshot::from_input(
-  input : ViewRenderInput,
-  position : @view_layout.ScrollPosition,
-  dimensions : @view_layout.ScrollDimensions,
-) -> ViewRenderSnapshot {
-  {
-    window: input.window,
-    generation: input.generation,
-    decorations_generation: input.decorations_generation,
-    position,
-    dimensions,
-    gutter_width: input.gutter_width,
-    space_width: input.space_width,
-    view_selection: input.view_selection,
-    browser_view_zones: input.browser_view_zones.copy(),
-    editor_has_focus: input.editor_has_focus,
-  }
-}
-
-///|
-fn same_browser_view_zones(
-  left : Array[@view_zones.BrowserViewZone],
-  right : Array[@view_zones.BrowserViewZone],
-) -> Bool {
-  if left.length() != right.length() {
-    return false
-  }
-  for index in 0..<left.length() {
-    let left_zone = left[index]
-    let right_zone = right[index]
-    if left_zone.id != right_zone.id ||
-      left_zone.anchor_line != right_zone.anchor_line ||
-      left_zone.height_px != right_zone.height_px {
-      return false
-    }
-  }
-  true
 }
 
 ///|

@@ -12,16 +12,160 @@
 // twin lives with the margin part.
 
 ///|
-/// The content current-line dynamic overlay's state: the prepared per-line
-/// HTML (`_renderData`). `pub(all)`: the `DynamicViewOverlay` impl in
-/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+/// Retained state from Monaco's `AbstractLineHighlightOverlay`. Both concrete
+/// overlays own one instance, just as the source's content and margin
+/// subclasses each inherit an independent copy of these fields.
+///
+/// `read_configuration` is the local `ViewContext.configuration.options`
+/// seam. It is read synchronously by `onConfigurationChanged`; render-time
+/// input is deliberately not used to rewrite these caches because doing so
+/// would collapse source event order into a frame-final snapshot.
+pub(all) struct CurrentLineHighlightState {
+  mut render_line_highlight : @view_layout.RenderLineHighlight
+  mut word_wrap : Bool
+  mut content_left : Double
+  mut content_width : Double
+  mut selection_is_empty : Bool
+  mut render_line_highlight_only_when_focus : Bool
+  mut focused : Bool
+  mut cursor_line_numbers : Array[Int]
+  mut selections : Array[@core.Selection]
+  mut read_configuration : () -> (
+    @view_layout.RenderLineHighlight,
+    Bool,
+    Bool,
+    Double,
+    Double,
+  )
+}
+
+///|
+/// `AbstractLineHighlightOverlay` constructor defaults before a live
+/// configuration reader is installed by the owning browser `View`.
+pub fn CurrentLineHighlightState::new() -> CurrentLineHighlightState {
+  let selection = @core.Selection::new(Position(1, 1), Position(1, 1))
+  {
+    render_line_highlight: Line,
+    word_wrap: false,
+    content_left: 0.0,
+    content_width: 0.0,
+    selection_is_empty: true,
+    render_line_highlight_only_when_focus: false,
+    focused: false,
+    cursor_line_numbers: [1],
+    selections: [selection],
+    read_configuration: () => (Line, false, false, 0.0, 0.0),
+  }
+}
+
+///|
+/// Installs the local live-configuration seam and performs the constructor's
+/// initial read. The tuple order is mode, focus-only, viewport wrapping,
+/// content left, and content width.
+pub fn CurrentLineHighlightState::install_configuration_reader(
+  self : CurrentLineHighlightState,
+  read_configuration : () -> (
+    @view_layout.RenderLineHighlight,
+    Bool,
+    Bool,
+    Double,
+    Double,
+  ),
+) -> Unit {
+  self.read_configuration = read_configuration
+  self.on_configuration_changed()
+}
+
+///|
+/// `AbstractLineHighlightOverlay.onConfigurationChanged` (`:87-96`): read
+/// every retained option in source order and always let the caller dirty the
+/// concrete overlay.
+pub fn CurrentLineHighlightState::on_configuration_changed(
+  self : CurrentLineHighlightState,
+) -> Unit {
+  let (
+    render_line_highlight,
+    render_line_highlight_only_when_focus,
+    word_wrap,
+    content_left,
+    content_width,
+  ) = (self.read_configuration)()
+  self.render_line_highlight = render_line_highlight
+  self.render_line_highlight_only_when_focus = render_line_highlight_only_when_focus
+  self.word_wrap = word_wrap
+  self.content_left = content_left
+  self.content_width = content_width
+}
+
+///|
+/// `onCursorStateChanged` plus `_readFromSelections` (`:60-81,:97-100`).
+/// The complete selection array is retained even when the derived line-set
+/// and empty/nonempty predicates do not change.
+pub fn CurrentLineHighlightState::on_cursor_state_changed(
+  self : CurrentLineHighlightState,
+  selections : Array[@core.Selection],
+) -> Bool {
+  self.selections = selections.copy()
+  self.read_from_selections()
+}
+
+///|
+/// Recomputes the unique sorted cursor-line set and all-selections-empty bit,
+/// updating each cache only when its equality branch detects a change.
+pub fn CurrentLineHighlightState::read_from_selections(
+  self : CurrentLineHighlightState,
+) -> Bool {
+  let line_numbers : Array[Int] = []
+  let mut selection_is_empty = true
+  for selection in self.selections {
+    let line_number = selection.get_position().line_number
+    if !line_numbers.contains(line_number) {
+      line_numbers.push(line_number)
+    }
+    if !selection.is_empty() {
+      selection_is_empty = false
+    }
+  }
+  line_numbers.sort()
+  let mut has_changed = false
+  if self.cursor_line_numbers != line_numbers {
+    self.cursor_line_numbers = line_numbers
+    has_changed = true
+  }
+  if self.selection_is_empty != selection_is_empty {
+    self.selection_is_empty = selection_is_empty
+    has_changed = true
+  }
+  has_changed
+}
+
+///|
+/// `onFocusChanged` (`:116-123`): the disabled focus-only option is an early
+/// return. When enabled, the source stores the event and returns true even if
+/// the boolean equals the previous value.
+pub fn CurrentLineHighlightState::on_focus_changed(
+  self : CurrentLineHighlightState,
+  is_focused : Bool,
+) -> Bool {
+  if !self.render_line_highlight_only_when_focus {
+    return false
+  }
+  self.focused = is_focused
+  true
+}
+
+///|
+/// The content current-line dynamic overlay's state: source event caches plus
+/// the prepared per-line HTML (`_renderData`). `pub(all)`: the
+/// `DynamicViewOverlay` impl in `browser/view/view_part.mbt` consumes both.
 pub(all) struct CurrentLineHighlightOverlay {
+  state : CurrentLineHighlightState
   mut render_result : Array[String]
 }
 
 ///|
 pub fn CurrentLineHighlightOverlay::new() -> CurrentLineHighlightOverlay {
-  { render_result: [] }
+  { state: CurrentLineHighlightState::new(), render_result: [] }
 }
 
 ///|

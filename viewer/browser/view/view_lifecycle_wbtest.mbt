@@ -18,7 +18,11 @@ extern "js" fn install_view_lifecycle_test_browser() -> Unit =
   #|       this.scrollWidth = 1000;
   #|       this.scrollHeight = 1000;
   #|     }
-  #|     setAttribute(name, value) { this.attributes.set(name, String(value)); }
+  #|     setAttribute(name, value) {
+  #|       this.attributes.set(name, String(value));
+  #|       this.attributeWriteCount ??= new Map();
+  #|       this.attributeWriteCount.set(name, (this.attributeWriteCount.get(name) ?? 0) + 1);
+  #|     }
   #|     getAttribute(name) { return this.attributes.get(name) ?? ""; }
   #|     removeAttribute(name) { this.attributes.delete(name); }
   #|     appendChild(child) {

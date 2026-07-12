@@ -32,7 +32,6 @@ test "preloaded markers survive detach and seed again on reattach" {
   seed_lifecycle_marker(services, model)
   viewer.set_model(Some(model))
   assert_eq(model.get_all_decorations().length(), 1)
-  assert_true(viewer.decorations_generation > 0)
   viewer.set_model(None)
   assert_eq(model.get_all_decorations().length(), 0)
   assert_eq(services.markers.diagnostics_for_resource(model.uri).length(), 1)

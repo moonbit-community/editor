@@ -1,13 +1,14 @@
 ///|
 test "viewer options default to no soft wrap view model options" {
-  let options = ViewerOptions::default()
+  let options = ViewerOptions(tab_size=7)
   assert_false(options.smooth_scrolling)
   assert_eq(options.soft_wrap_column_for_content_width(720.0, 7.2), 0)
-  assert_false(
-    options
-    .view_model_options(100, font_info=@config.FontInfo::default())
-    .is_soft_wrap_enabled(),
+  let view_model_options = options.view_model_options(
+    100,
+    font_info=@config.FontInfo::default(),
   )
+  assert_false(view_model_options.is_soft_wrap_enabled())
+  assert_eq(view_model_options.tab_size, 7)
 }
 
 ///|

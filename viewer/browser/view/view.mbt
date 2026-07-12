@@ -24,8 +24,8 @@ pub(all) struct View {
   overlay_widgets : @overlay_widgets.OverlayWidgets
   editor_scrollbar : @editor_scrollbar.EditorScrollbar
   priv view_parts : Array[ViewPartHandle]
+  priv event_dispatcher : ViewEventDispatcher
   priv lifetime_disposables : Array[@base_common.Disposable]
-  priv mut last_snapshot : ViewRenderSnapshot?
   priv mut disposed : Bool
 }
 
@@ -107,6 +107,11 @@ pub fn View::new() -> View {
     view_lines, view_zones, content_view_overlays, margin_view_overlays, content_widgets,
     view_cursors, overlay_widgets, editor_scrollbar,
   )
+  let event_dispatcher = ViewEventDispatcher::new(events => {
+    for part in view_parts {
+      part.handle_view_events(events)
+    }
+  })
   let view : View = {
     root,
     overflow_guard,
@@ -121,8 +126,8 @@ pub fn View::new() -> View {
     overlay_widgets,
     editor_scrollbar,
     view_parts,
+    event_dispatcher,
     lifetime_disposables: [],
-    last_snapshot: None,
     disposed: false,
   }
   view
@@ -165,7 +170,52 @@ pub fn View::dispose(self : View) -> Unit {
     disposable.dispose()
   }
   self.lifetime_disposables.clear()
-  self.last_snapshot = None
+  self.event_dispatcher.dispose()
+}
+
+///|
+/// Starts a possibly nested view-event collection scope.  Every nested call
+/// returns the same collector; only the outermost matching `end` delivers its
+/// events.
+pub fn View::begin_view_event_batch(self : View) -> ViewEventCollector {
+  self.event_dispatcher.begin()
+}
+
+///|
+pub fn View::end_view_event_batch(self : View) -> Unit {
+  self.event_dispatcher.end()
+}
+
+///|
+/// Generic cleanup-safe batch helper.  The callback result is returned
+/// unchanged; `end` runs on normal return and on a raised error.
+pub fn[T] View::with_view_event_batch(
+  self : View,
+  body : (ViewEventCollector) -> T raise,
+) -> T raise {
+  let collector = self.event_dispatcher.begin()
+  defer self.event_dispatcher.end()
+  body(collector)
+}
+
+///|
+/// Emits one source event synchronously.  Reentrant emissions are queued as a
+/// later FIFO batch and never interleave the current handler pass.
+pub fn View::emit_view_event(self : View, event : ViewEvent) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.event_dispatcher.emit_view_event(event)
+}
+
+///|
+/// Emits one ordered source batch.  When a collector scope is open these are
+/// appended to that collector instead of being delivered early.
+pub fn View::emit_view_events(self : View, events : Array[ViewEvent]) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.event_dispatcher.emit_view_events(events)
 }
 
 ///|
@@ -180,14 +230,53 @@ fn get_editor_class_name(
   focused? : Bool = false,
   show_unused? : Bool = true,
   show_deprecated? : Bool = true,
+  is_safari? : Bool = editor_browser_kind() == 1,
+  is_webkit_webview? : Bool = editor_browser_kind() == 2,
+  is_macos? : Bool = @base_common.is_macintosh,
 ) -> String {
   "monaco-editor moonbit-viewer readonly-editor" +
+  " " +
+  extra_editor_class_name(is_safari, is_webkit_webview, is_macos) +
   (if show_unused { " showUnused" } else { "" }) +
   (if show_deprecated { " showDeprecated" } else { "" }) +
   " " +
   source_state +
   (if focused { " focused" } else { "" })
 }
+
+///|
+/// Pure port of `editorConfiguration.ts:getExtraEditorClassName`.  Safari and
+/// native WebKit WebViews disable the minimap shadow and enable text
+/// selection; every other browser gets `no-user-select`.  macOS is an
+/// independent class axis.
+pub fn extra_editor_class_name(
+  is_safari : Bool,
+  is_webkit_webview : Bool,
+  is_macos : Bool,
+) -> String {
+  (if is_safari || is_webkit_webview {
+    "no-minimap-shadow enable-user-select"
+  } else {
+    "no-user-select"
+  }) +
+  (if is_macos { " mac" } else { "" })
+}
+
+///|
+/// Runtime browser facts use the same UA predicates as VS Code's
+/// `base/browser/browser.ts`.  `0` is the non-Safari/non-WebKit-WebView arm,
+/// `1` Safari, and `2` native WebKit WebView.
+extern "js" fn editor_browser_kind() -> Int =
+  #| () => {
+  #|   if (typeof navigator === "undefined") return 0;
+  #|   const userAgent = navigator.userAgent || "";
+  #|   const isWebKit = userAgent.indexOf("AppleWebKit") >= 0;
+  #|   const isChrome = userAgent.indexOf("Chrome") >= 0;
+  #|   const isSafari = !isChrome && userAgent.indexOf("Safari") >= 0;
+  #|   if (isSafari) return 1;
+  #|   if (!isChrome && isWebKit) return 2;
+  #|   return 0;
+  #| }
 
 ///|
 /// The empty-state root classes for the Viewer-owned no-model placeholder
@@ -221,15 +310,6 @@ pub fn View::render(
     ),
   )
   let rendering = RenderingContext::from_input(view_context, input)
-  // Dispatch this frame's typed view events to every part, accumulating each
-  // part's dirty flag (Monaco's `ViewEventHandler.handleEvents`).
-  let events = view_events_from_snapshots(
-    self.last_snapshot,
-    rendering.snapshot,
-  )
-  for part in self.view_parts {
-    part.handle_view_events(events)
-  }
   let view_parts_to_render = self.get_view_parts_to_render()
   let restricted = rendering.restricted()
   // `_actualRender`: the text lines render first, through `renderText`
@@ -240,10 +320,6 @@ pub fn View::render(
     self.view_lines.render_text(
       rendering.viewport,
       input.layout,
-      input.space_width,
-      input.can_use_halfwidth_rightwards_arrow,
-      input.render_whitespace,
-      input.render_control_characters,
       input.selection_view_range,
     )
     ViewPart::on_did_render(self.view_lines)
@@ -255,7 +331,6 @@ pub fn View::render(
     part.render(restricted)
     part.on_did_render()
   }
-  self.last_snapshot = Some(rendering.snapshot)
 }
 
 ///|

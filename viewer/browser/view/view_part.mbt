@@ -23,10 +23,25 @@ fn ViewPartHandle::handle_view_events(
   self : ViewPartHandle,
   events : Array[ViewEvent],
 ) -> Unit {
+  handle_view_part_events(self, events)
+}
+
+///|
+/// Generic form kept separate so whitebox parity tests can prove the exact
+/// accumulate-once contract without adding test-only members to the fixed
+/// production `ViewPartHandle` union.
+fn[T : ViewPart] handle_view_part_events(
+  part : T,
+  events : Array[ViewEvent],
+) -> Unit {
+  let mut should_render = false
   for event in events {
-    if self.on_view_event(event) {
-      self.force_should_render()
+    if ViewPart::on_view_event(part, event) {
+      should_render = true
     }
+  }
+  if should_render {
+    ViewPart::force_should_render(part)
   }
 }
 
@@ -184,10 +199,10 @@ impl ViewPart for @view_zones.ViewZones with fn should_render(self) {
 ///|
 impl ViewPart for @view_zones.ViewZones with fn on_view_event(_self, event) {
   match event {
-    ViewFlushed => true
-    ViewLinesChanged => true
-    ViewScrollChanged(e) =>
-      e.window_changed || e.position_changed || e.dimensions_changed
+    ViewConfigurationChanged(_) => true
+    ViewLineMappingChanged => true
+    ViewLinesDeleted(_) | ViewLinesInserted(_) => true
+    ViewScrollChanged(e) => e.scroll_top_changed || e.scroll_width_changed
     ViewZonesChanged => true
     _ => false
   }
@@ -228,21 +243,54 @@ impl ViewPart for @view_lines.ViewLines with fn should_render(self) {
 ///|
 impl ViewPart for @view_lines.ViewLines with fn on_view_event(self, event) {
   match event {
-    ViewFlushed => true
-    ViewLinesChanged => true
-    // Inline decorations render inside the line HTML (`onDecorationsChanged`
-    // → true, `viewLines.ts`).
-    ViewDecorationsChanged => true
-    ViewScrollChanged(e) =>
-      e.window_changed || e.position_changed || e.dimensions_changed
-    ViewConfigurationChanged(e) => e.gutter_width_changed || e.font_changed
-    // `viewLine.ts:94-100` `onSelectionChanged`: a selection change only
-    // dirties the lines when whitespace renders under the selection. Keyed off
-    // the *last rendered* whitespace mode, mirroring Monaco's check of
-    // `_renderedViewLine.input.renderWhitespace`.
-    ViewCursorStateChanged => self.last_render_whitespace == Selection
+    ViewFlushed => {
+      self.flush_retained_lines()
+      true
+    }
+    ViewLinesChanged(e) => self.on_lines_changed(e.from_line_number, e.count)
+    ViewLinesDeleted(e) => {
+      self.on_lines_deleted(e.from_line_number, e.to_line_number)
+      true
+    }
+    ViewLinesInserted(e) => {
+      self.on_lines_inserted(e.from_line_number, e.to_line_number)
+      true
+    }
+    ViewDecorationsChanged(_) => {
+      self.on_decorations_changed()
+      true
+    }
+    ViewScrollChanged(e) => {
+      // `ViewLines.onScrollChanged` writes the new scroll width even when it
+      // does not invalidate text rows; only top/left require a render pass.
+      self.dom_node.set_width(Pixels(e.scroll_width))
+      self.on_visible_scroll_changed(e.scroll_top_changed) ||
+      e.scroll_top_changed ||
+      e.scroll_left_changed
+    }
+    ViewConfigurationChanged(e) => {
+      self.on_visible_configuration_changed(e.has_changed(LayoutInfo)) |> ignore
+      self.on_configuration_changed() |> ignore
+      // Source `ViewLines.onConfigurationChanged` always returns true after
+      // the nested layout-info and option-equality checks.
+      true
+    }
+    ViewCursorStateChanged(_) => self.on_selection_changed()
+    ViewTokensChanged(e) => {
+      let ranges : Array[@base_common.LineRange] = []
+      for range in e.ranges {
+        ranges.push(LineRange(range.from_line_number, range.to_line_number + 1))
+      }
+      self.on_token_ranges_changed(ranges)
+    }
+    ViewZonesChanged => self.on_visible_zones_changed()
     _ => false
   }
+}
+
+///|
+fn current_line_scroll_changed(event : ViewScrollChangedEvent) -> Bool {
+  event.scroll_width_changed || event.scroll_top_changed
 }
 
 ///|
@@ -282,21 +330,49 @@ impl ViewPart for MarginViewOverlays with fn should_render(self) {
 impl ViewPart for MarginViewOverlays with fn on_view_event(_self, event) {
   match event {
     ViewFlushed => true
-    ViewLinesChanged => {
+    ViewLinesChanged(_)
+    | ViewLinesDeleted(_)
+    | ViewLinesInserted(_)
+    | ViewTokensChanged(_) => {
       _self.overlays.on_content_or_tokens_changed()
       true
     }
     // The line-decorations lane renders margin decorations
     // (`LinesDecorationsOverlay.onDecorationsChanged` → true); the
     // glyph-margin view part stays deferred.
-    ViewDecorationsChanged => true
-    ViewScrollChanged(e) => e.window_changed || e.position_changed
-    ViewConfigurationChanged(e) => e.gutter_width_changed
+    ViewDecorationsChanged(_) => true
+    ViewScrollChanged(e) => {
+      let nested_current_line_dirty = current_line_scroll_changed(e)
+      // The retained ViewOverlays collection itself always invalidates on a
+      // scroll event; keep the nested predicate evaluated and explicit.
+      nested_current_line_dirty || true
+    }
+    ViewConfigurationChanged(_) => {
+      _self.on_configuration_changed()
+      _self.current_line_margin.state.on_configuration_changed()
+      true
+    }
+    ViewLineMappingChanged => true
     ViewZonesChanged => true
     // The margin current-line highlight follows the cursor and the focus
     // state (`currentLineHighlight.ts:97-100,:116-123`).
-    ViewCursorStateChanged => true
-    ViewFocusChanged(_) => true
+    ViewCursorStateChanged(e) => {
+      let nested_current_line_dirty = _self.current_line_margin.state.on_cursor_state_changed(
+        e.selections,
+      )
+      // Pinned `LineNumbersOverlay.onCursorStateChanged` is also false for an
+      // absolute-line-number, same-model-line column move. The fixed grouped
+      // local handle deliberately over-renders that branch; the focused
+      // white-box test proves retained rows/classes/styles perform zero DOM
+      // writes when every nested result is unchanged.
+      nested_current_line_dirty || true
+    }
+    ViewFocusChanged(e) => {
+      _self.overlays.on_focus_changed(e.is_focused)
+      _self.current_line_margin.state.on_focus_changed(e.is_focused) |> ignore
+      true
+    }
+    _ => false
   }
 }
 
@@ -318,19 +394,26 @@ impl ViewPart for MarginViewOverlays with fn render(self, context) {
   // clip is viewport-fixed; the rows container carries the vertical rail
   // translation (the viewer's `margin_transform`).
   self.overlays.render_lines(context.viewport)
-  self.dom_node.set_attribute(
-    "style",
-    "width:" + context.gutter_width.to_string() + "px",
-  )
-  self.overlays.dom_node
-  .element()
-  .set_attribute(
-    "style",
-    context.margin_transform +
+  let margin_style = "width:" + self.content_left.to_string() + "px"
+  if self.dom_node.get_attribute("style") != margin_style {
+    self.dom_node.set_attribute("style", margin_style)
+  }
+  self.render_focused()
+  let overlays = self.overlays.dom_node.element()
+  let height = if context.dimensions.scroll_height < 1000000.0 {
+    context.dimensions.scroll_height
+  } else {
+    1000000.0
+  }
+  let overlays_style = context.margin_transform +
     ";width:" +
-    context.gutter_width.to_string() +
-    "px",
-  )
+    self.content_left.to_string() +
+    "px;height:" +
+    height.to_string() +
+    "px"
+  if overlays.get_attribute("style") != overlays_style {
+    overlays.set_attribute("style", overlays_style)
+  }
 }
 
 ///|
@@ -343,25 +426,19 @@ impl DynamicViewOverlay for @margin.CurrentLineMarginHighlightOverlay with fn pr
   self,
   context,
 ) {
-  let cursor_view_line = match context.input.view_selection {
-    Some(selection) => Some(selection.get_position().line_number)
-    None => None
-  }
-  let selection_is_empty = match context.input.view_selection {
-    Some(selection) => selection.is_empty()
-    None => true
-  }
+  let state = self.state
+  let cursor_view_line = state.cursor_line_numbers.get(0)
   self.render_result = @margin.prepare_current_line_margin_render(
     context.viewport,
     Some(context.input.view_model),
     cursor_view_line,
-    selection_is_empty,
-    context.input.editor_has_focus,
-    context.input.word_wrap,
-    context.input.render_line_highlight,
-    context.input.render_line_highlight_only_when_focus,
+    state.selection_is_empty,
+    state.focused,
+    state.word_wrap,
+    state.render_line_highlight,
+    state.render_line_highlight_only_when_focus,
     // `_contentLeft`, the margin width (cLH:227).
-    context.gutter_width,
+    state.content_left,
   )
 }
 
@@ -451,8 +528,8 @@ impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_view_event(
   event,
 ) {
   match event {
-    ViewFlushed => true
-    ViewScrollChanged(e) => e.dimensions_changed
+    ViewScrollChanged(e) => e.scroll_width_changed || e.scroll_height_changed
+    ViewConfigurationChanged(_) => true
     _ => false
   }
 }
@@ -500,9 +577,8 @@ impl ViewPart for @editor_scrollbar.EditorScrollbar with fn on_view_event(
   event,
 ) {
   match event {
-    ViewFlushed => true
-    ViewScrollChanged(e) => e.position_changed || e.dimensions_changed
-    ViewConfigurationChanged(e) => e.gutter_width_changed
+    ViewScrollChanged(_) => true
+    ViewConfigurationChanged(_) => true
     _ => false
   }
 }
@@ -555,20 +631,43 @@ impl ViewPart for ContentViewOverlays with fn should_render(self) {
 impl ViewPart for ContentViewOverlays with fn on_view_event(_self, event) {
   match event {
     ViewFlushed => true
-    ViewLinesChanged => {
+    ViewLinesChanged(_)
+    | ViewLinesDeleted(_)
+    | ViewLinesInserted(_)
+    | ViewTokensChanged(_) => {
       _self.overlays.on_content_or_tokens_changed()
       true
     }
     // `DecorationsOverlay.onDecorationsChanged` (`decorations.ts:44-46`).
-    ViewDecorationsChanged => true
-    // `DecorationsOverlay.onConfigurationChanged` (`decorations.ts:39-43`):
-    // re-reads typicalHalfwidthCharacterWidth.
-    ViewConfigurationChanged(_) => true
-    ViewScrollChanged(e) => e.window_changed || e.position_changed
-    ViewCursorStateChanged => true
+    ViewDecorationsChanged(_) => true
+    // `DecorationsOverlay.onConfigurationChanged` (`decorations.ts:39-43`)
+    // and `AbstractLineHighlightOverlay.onConfigurationChanged` (`:87-96`)
+    // both re-read their live configuration before returning true.
+    ViewConfigurationChanged(_) => {
+      _self.on_configuration_changed()
+      _self.current_line.state.on_configuration_changed()
+      true
+    }
+    ViewScrollChanged(e) => {
+      let nested_current_line_dirty = current_line_scroll_changed(e)
+      nested_current_line_dirty || true
+    }
+    ViewCursorStateChanged(e) => {
+      let nested_current_line_dirty = _self.current_line.state.on_cursor_state_changed(
+        e.selections,
+      )
+      // The selections overlay consumes every cursor event.
+      nested_current_line_dirty || true
+    }
+    ViewLineMappingChanged => true
     ViewZonesChanged => true
     // `ViewOverlays.onFocusChanged` (`viewOverlays.ts:76-79`).
-    ViewFocusChanged(_) => true
+    ViewFocusChanged(e) => {
+      _self.overlays.on_focus_changed(e.is_focused)
+      _self.current_line.state.on_focus_changed(e.is_focused) |> ignore
+      true
+    }
+    _ => false
   }
 }
 
@@ -590,12 +689,12 @@ impl ViewPart for ContentViewOverlays with fn render(self, context) {
   // render the rows, then size the container to
   // `max(ctx.scrollWidth, contentWidth)`.
   self.overlays.render_lines(context.viewport)
-  let width = if context.dimensions.scroll_width > context.dimensions.width {
+  let width = if context.dimensions.scroll_width > self.content_width {
     context.dimensions.scroll_width
   } else {
-    context.dimensions.width
+    self.content_width
   }
-  self.set_focused(context.input.editor_has_focus)
+  self.set_focused(self.overlays.is_focused)
   self.overlays.dom_node.set_width(Pixels(width))
 }
 
@@ -615,28 +714,22 @@ impl DynamicViewOverlay for @current_line_highlight.CurrentLineHighlightOverlay 
   self,
   context,
 ) {
-  let cursor_view_line = match context.input.view_selection {
-    Some(selection) => Some(selection.get_position().line_number)
-    None => None
-  }
-  let selection_is_empty = match context.input.view_selection {
-    Some(selection) => selection.is_empty()
-    None => true
-  }
+  let state = self.state
+  let cursor_view_line = state.cursor_line_numbers.get(0)
   self.render_result = @current_line_highlight.prepare_current_line_render(
     context.viewport,
     Some(context.input.view_model),
     cursor_view_line,
-    selection_is_empty,
-    context.input.editor_has_focus,
-    context.input.word_wrap,
-    context.input.render_line_highlight,
-    context.input.render_line_highlight_only_when_focus,
+    state.selection_is_empty,
+    state.focused,
+    state.word_wrap,
+    state.render_line_highlight,
+    state.render_line_highlight_only_when_focus,
     // `max(ctx.scrollWidth, this._contentWidth)` (cLH:211).
-    if context.dimensions.scroll_width > context.dimensions.width {
+    if context.dimensions.scroll_width > state.content_width {
       context.dimensions.scroll_width
     } else {
-      context.dimensions.width
+      state.content_width
     },
   )
 }
@@ -719,18 +812,29 @@ impl ViewPart for @content_widgets.ContentWidgets with fn should_render(self) {
 
 ///|
 // Widget position changes invalidate this part directly through
-// `set_widget_position` (Monaco `setWidgetPosition`'s `setShouldRender`),
-// so the events here are only the view-geometry ones (`contentWidgets.ts`
-// `onFlushed`/`onLinesChanged`/`onScrollChanged`/`onZonesChanged`).
+// `set_widget_position` (Monaco `setWidgetPosition`'s `setShouldRender`). The
+// mapping family also reprojects retained model anchors synchronously before
+// returning `true`; configuration delegates its exact `layoutInfo` bit to all
+// retained widgets before dirtying.
 impl ViewPart for @content_widgets.ContentWidgets with fn on_view_event(
-  _self,
+  self,
   event,
 ) {
   match event {
     ViewFlushed => true
-    ViewLinesChanged => true
-    ViewScrollChanged(e) =>
-      e.window_changed || e.position_changed || e.dimensions_changed
+    ViewConfigurationChanged(e) => {
+      self.on_configuration_changed(e.has_changed(LayoutInfo))
+      true
+    }
+    ViewDecorationsChanged(_) => true
+    ViewLineMappingChanged
+    | ViewLinesChanged(_)
+    | ViewLinesDeleted(_)
+    | ViewLinesInserted(_) => {
+      self.update_anchors_view_positions()
+      true
+    }
+    ViewScrollChanged(_) => true
     ViewZonesChanged => true
     _ => false
   }
@@ -751,7 +855,6 @@ impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
   context,
 ) {
   self.prepare_render_widgets({
-    model_position_to_view_position: context.view_context.model_position_to_view_position,
     vertical_offset_for_line: line => {
       context.input.layout.vertical_offset_for_line(line)
     },
@@ -760,7 +863,6 @@ impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
     line_height: context.input.layout.line_height().to_double(),
     char_width: context.input.space_width,
     typical_fullwidth_character_width: context.input.typical_fullwidth_character_width,
-    content_left: context.gutter_width,
     scroll_top: context.position.scroll_top,
     scroll_left: context.position.scroll_left,
     viewport_width: context.dimensions.width,
@@ -797,19 +899,58 @@ impl ViewPart for @view_cursors.ViewCursors with fn should_render(self) {
 // (:197, unconditionally true), `onCursorStateChanged` (:161),
 // `onConfigurationChanged` (:112), `onZonesChanged` (:219), `onFocusChanged`
 // (:183 — Monaco flips visibility inline and returns false; the readonly port
-// has no blink timers, so the flip happens in `render_cursor` instead and the
-// event marks the part dirty). No `onLineMappingChanged` handler in Monaco —
+// performs the same immediate `on_focus_changed` side effect without dirtying
+// the part). No `onLineMappingChanged` handler in Monaco —
 // a remap that moves the cursor arrives as `ViewCursorStateChanged` via the
 // reprojected view selection.
-impl ViewPart for @view_cursors.ViewCursors with fn on_view_event(_self, event) {
+impl ViewPart for @view_cursors.ViewCursors with fn on_view_event(self, event) {
   match event {
     ViewFlushed => true
-    ViewLinesChanged => true
+    ViewLinesChanged(_) | ViewLinesDeleted(_) | ViewLinesInserted(_) => true
     ViewScrollChanged(_) => true
-    ViewCursorStateChanged => true
+    ViewCursorStateChanged(e) => {
+      self.last_position = if e.selections.length() == 0 {
+        None
+      } else {
+        Some(e.selections[0].get_position())
+      }
+      let selection_is_empty = e.selections.length() == 0 ||
+        e.selections[0].is_empty()
+      // `ViewCursors.onCursorStateChanged` updates the layer class
+      // synchronously, but only when the selection shape crosses the
+      // empty/nonempty boundary. Keep the last rendered cursor rectangle
+      // paired with its old position until the next render completes.
+      if self.selection_is_empty != selection_is_empty {
+        self.selection_is_empty = selection_is_empty
+        self.dom_node.set_attribute(
+          "class",
+          @view_cursors.cursors_layer_class(!self.selection_is_empty),
+        )
+      }
+      true
+    }
+    ViewDecorationsChanged(_) => true
     ViewConfigurationChanged(_) => true
+    ViewTokensChanged(e) =>
+      match self.last_position {
+        None => false
+        Some(position) => {
+          for range in e.ranges {
+            if position.line_number >= range.from_line_number &&
+              position.line_number <= range.to_line_number {
+              return true
+            }
+          }
+          false
+        }
+      }
     ViewZonesChanged => true
-    ViewFocusChanged(_) => true
+    ViewFocusChanged(e) => {
+      // Source `onFocusChanged`: update cursor visibility immediately, but do
+      // not dirty the part.
+      self.on_focus_changed(e.is_focused)
+      false
+    }
     _ => false
   }
 }
@@ -858,12 +999,11 @@ impl ViewPart for @view_cursors.ViewCursors with fn prepare_render(
       }
     }
   }
-  // Monaco's `ViewCursor._position`, kept for `getLastRenderData`.
-  self.last_position = match self.render_data {
-    Some(_) =>
-      context.input.view_selection.map(selection => selection.get_position())
-    None => None
-  }
+  // Monaco's `ViewCursor._position`, kept even while outside the viewport so
+  // token-range invalidation can test the primary cursor line exactly.
+  self.last_position = context.input.view_selection.map(selection => {
+    selection.get_position()
+  })
 }
 
 ///|
@@ -876,6 +1016,10 @@ impl ViewPart for @view_cursors.ViewCursors with fn render(self, context) {
     has_selection~,
     editor_has_focus=context.input.editor_has_focus,
   )
+  // Source `ViewCursors._renderData` is an array built only by this render
+  // pass. Pair the freshly painted rectangle with the position prepared for
+  // this same pass; later cursor events leave this pair intact for hit tests.
+  self.last_rendered_position = self.last_position
 }
 
 ///|

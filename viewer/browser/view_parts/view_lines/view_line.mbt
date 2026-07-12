@@ -5,18 +5,18 @@
 //
 // Omissions:
 //   * The `FastRenderedViewLine`/`RenderedViewLine`/`WebKitRenderedViewLine`
-//     class family — this recycler keeps parallel arrays per rendered window
-//     (view_lines.mbt), not per-line rendered objects. `getWidth` therefore
-//     always takes the source's DOM-measured arm
+//     class family — the readonly `ViewLine` retains the normalized input, DOM,
+//     and character map directly. `getWidth` therefore always takes the
+//     source's DOM-measured arm
 //     (`RenderedViewLine.getWidth`, viewLine.ts:522-531:
 //     `_getReadingTarget(...).offsetWidth`) — which is also the arm every
 //     line with foreign elements (e.g. a folded header's `inline-folded`
 //     `::after` ellipsis) takes in the source, since
 //     `FastRenderedViewLine`'s monospace shortcut is gated on
 //     `containsForeignElements === None`.
-//   * `_cachedWidth`: the width is re-read per call; the recycler has no
-//     per-line invalidation hooks to reset a cache through
-//     (`resetCachedWidth`), and the only caller is the per-gesture hit test.
+//   * `_cachedWidth`: the width is re-read per call, so the source-shaped
+//     content/token/decoration/option invalidators have no width cache to
+//     reset; the only caller is the per-gesture hit test.
 
 ///|
 /// `ViewLine.CLASS_NAME` (viewLine.ts:53) — the exact string the caret hit
@@ -24,17 +24,136 @@
 pub const VIEW_LINE_CLASS_NAME : String = "view-line"
 
 ///|
-/// Monaco `ViewLine`'s retained render state narrowed to the fields consumed
-/// by `ViewLayerRenderer`: cached DOM, last render input, and character map.
-pub struct ViewLine {
-  priv mut dom_node : @scrollbar.CachedDomNode?
-  priv mut render_input : @view_layout.RenderLineInput?
-  priv mut character_mapping : @view_layout.CharacterMapping?
+/// The scoped local equivalent of Monaco `ViewLineOptions`. It retains every
+/// option that participates in the readonly viewer's normalized
+/// `RenderLineInput`; configuration events compare this snapshot rather than
+/// treating a changed option id as proof that a retained row changed.
+pub(all) struct ViewLineOptions {
+  line_height : Int
+  space_width : Double
+  middot_width : Double
+  wsmiddot_width : Double
+  use_monospace_optimizations : Bool
+  can_use_halfwidth_rightwards_arrow : Bool
+  stop_rendering_line_after : Int
+  render_whitespace : @view_layout.RenderWhitespace
+  render_control_characters : Bool
+  font_ligatures : Bool
+  vertical_scrollbar_size : Double
+} derive(Eq, Debug)
+
+///|
+pub fn ViewLineOptions::new(
+  line_height? : Int = 20,
+  space_width? : Double = 7.2,
+  middot_width? : Double = 7.2,
+  wsmiddot_width? : Double = 7.2,
+  use_monospace_optimizations? : Bool = true,
+  can_use_halfwidth_rightwards_arrow? : Bool = true,
+  stop_rendering_line_after? : Int = -1,
+  render_whitespace? : @view_layout.RenderWhitespace = None,
+  render_control_characters? : Bool = false,
+  font_ligatures? : Bool = false,
+  vertical_scrollbar_size? : Double = @core.editor_vertical_scrollbar_size,
+) -> ViewLineOptions {
+  {
+    line_height,
+    space_width,
+    middot_width,
+    wsmiddot_width,
+    use_monospace_optimizations,
+    can_use_halfwidth_rightwards_arrow,
+    stop_rendering_line_after,
+    render_whitespace,
+    render_control_characters,
+    font_ligatures,
+    vertical_scrollbar_size,
+  }
 }
 
 ///|
-pub fn ViewLine::new() -> ViewLine {
-  { dom_node: None, render_input: None, character_mapping: None }
+fn ViewLineOptions::equals(
+  self : ViewLineOptions,
+  other : ViewLineOptions,
+) -> Bool {
+  self == other
+}
+
+///|
+/// Monaco `ViewLine`'s retained render state narrowed to the fields consumed
+/// by `ViewLayerRenderer`: cached DOM, last render input, and character map.
+pub struct ViewLine {
+  priv mut options : ViewLineOptions
+  priv mut dom_node : @scrollbar.CachedDomNode?
+  priv mut render_input : @view_layout.RenderLineInput?
+  priv mut character_mapping : @view_layout.CharacterMapping?
+  // `ViewLine._isMaybeInvalid` (`viewLine.ts:56,61,81-96,109-114`).
+  // Invalidators only latch this bit. The next render consumes it before the
+  // normalized-input equality gate, so a notification can be proven harmless
+  // without replacing the retained DOM node.
+  priv mut is_maybe_invalid : Bool
+}
+
+///|
+pub fn ViewLine::new(
+  options? : ViewLineOptions = ViewLineOptions::new(),
+) -> ViewLine {
+  {
+    options,
+    dom_node: None,
+    render_input: None,
+    character_mapping: None,
+    is_maybe_invalid: true,
+  }
+}
+
+///|
+fn ViewLine::option_snapshot(self : ViewLine) -> ViewLineOptions {
+  self.options
+}
+
+///|
+/// `ViewLine.onContentChanged` (`viewLine.ts:81-83`).
+fn ViewLine::on_content_changed(self : ViewLine) -> Unit {
+  self.is_maybe_invalid = true
+}
+
+///|
+/// `ViewLine.onTokensChanged` (`viewLine.ts:84-86`).
+fn ViewLine::on_tokens_changed(self : ViewLine) -> Unit {
+  self.is_maybe_invalid = true
+}
+
+///|
+/// `ViewLine.onDecorationsChanged` (`viewLine.ts:87-89`).
+fn ViewLine::on_decorations_changed(self : ViewLine) -> Unit {
+  self.is_maybe_invalid = true
+}
+
+///|
+/// `ViewLine.onOptionsChanged` (`viewLine.ts:90-93`). The readonly port
+/// retains the new option snapshot after setting the source invalidation latch;
+/// the next render derives `RenderLineInput` from this exact snapshot.
+fn ViewLine::on_options_changed(
+  self : ViewLine,
+  new_options : ViewLineOptions,
+) -> Unit {
+  self.is_maybe_invalid = true
+  self.options = new_options
+}
+
+///|
+/// `ViewLine.onSelectionChanged` (`viewLine.ts:94-100`), reduced only by the
+/// documented absence of a typed high-contrast theme branch. Selection dirties
+/// a retained row iff its last rendered input used Selection whitespace.
+fn ViewLine::on_selection_changed(self : ViewLine) -> Bool {
+  match self.render_input {
+    Some(input) if input.render_whitespace == Selection => {
+      self.is_maybe_invalid = true
+      true
+    }
+    _ => false
+  }
 }
 
 ///|
@@ -85,6 +204,10 @@ pub fn ViewLine::render_line(
   line_height : Int,
   builder : StringBuilder,
 ) -> Bool {
+  if !self.is_maybe_invalid {
+    return false
+  }
+  self.is_maybe_invalid = false
   if self.render_input == Some(input) {
     return false
   }

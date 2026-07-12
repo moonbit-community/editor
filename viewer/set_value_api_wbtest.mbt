@@ -42,9 +42,8 @@ test "set_value without a model is a no-op (cew:490-492)" {
 ///|
 test "set_value marks the rendered content stale and drops the window" {
   with_test_viewer("one\ntwo", viewer => {
-    let generation_before = viewer.content_generation
+    viewer.rendered_window = Some({ start: 1, end: 2 })
     viewer.set_value("a")
-    assert_true(viewer.content_generation > generation_before)
     assert_true(viewer.rendered_window is None)
   })
 }

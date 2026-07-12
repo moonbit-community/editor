@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer/browser/view_parts/margin"
 
 import {
+  "moonbit-community/editor/viewer/browser/view_parts/current_line_highlight",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
 }
@@ -17,6 +18,7 @@ pub fn prepare_lines_decorations_render(Array[Array[String]], decorations_left~ 
 
 // Types and methods
 pub(all) struct CurrentLineMarginHighlightOverlay {
+  state : @current_line_highlight.CurrentLineHighlightState
   mut render_result : Array[String]
 }
 pub fn CurrentLineMarginHighlightOverlay::new() -> Self

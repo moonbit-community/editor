@@ -5,8 +5,58 @@
 // backlog and `viewer/browser/view_parts/view_zones`'s README for why.
 
 ///|
+/// Live configuration values read by `ViewLines.onConfigurationChanged` in the
+/// same order as Monaco's retained caches. `view_line_options` is the exact
+/// equality-gated subset owned by each retained `ViewLine`.
+pub(all) struct ViewLinesConfiguration {
+  line_height : Int
+  typical_halfwidth_character_width : Double
+  is_viewport_wrapping : Bool
+  can_use_layer_hinting : Bool
+  view_line_options : ViewLineOptions
+} derive(Eq, Debug)
+
+///|
+pub fn ViewLinesConfiguration::new(
+  line_height? : Int = 20,
+  typical_halfwidth_character_width? : Double = 7.2,
+  is_viewport_wrapping? : Bool = false,
+  can_use_layer_hinting? : Bool = true,
+  space_width? : Double = 7.2,
+  middot_width? : Double = 7.2,
+  wsmiddot_width? : Double = 7.2,
+  use_monospace_optimizations? : Bool = true,
+  can_use_halfwidth_rightwards_arrow? : Bool = true,
+  stop_rendering_line_after? : Int = -1,
+  render_whitespace? : @view_layout.RenderWhitespace = None,
+  render_control_characters? : Bool = false,
+  font_ligatures? : Bool = false,
+  vertical_scrollbar_size? : Double = @core.editor_vertical_scrollbar_size,
+) -> ViewLinesConfiguration {
+  {
+    line_height,
+    typical_halfwidth_character_width,
+    is_viewport_wrapping,
+    can_use_layer_hinting,
+    view_line_options: ViewLineOptions::new(
+      line_height~,
+      space_width~,
+      middot_width~,
+      wsmiddot_width~,
+      use_monospace_optimizations~,
+      can_use_halfwidth_rightwards_arrow~,
+      stop_rendering_line_after~,
+      render_whitespace~,
+      render_control_characters~,
+      font_ligatures~,
+      vertical_scrollbar_size~,
+    ),
+  }
+}
+
+///|
 /// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
-/// `should_render` / `last_render_whitespace` directly.
+/// `should_render` and delegates source events into the retained collection.
 pub(all) struct ViewLines {
   dom_node : @scrollbar.CachedDomNode
   lines_content : @scrollbar.CachedDomNode
@@ -15,14 +65,20 @@ pub(all) struct ViewLines {
   text_range_resting_spot : @rdom.Element
   mut window : @view_layout.LineWindow
   mut lines : Array[ViewLine]
-  can_use_layer_hinting : Bool
+  mut line_height : Int
+  mut typical_halfwidth_character_width : Double
+  mut is_viewport_wrapping : Bool
+  mut can_use_layer_hinting : Bool
+  priv mut view_line_options : ViewLineOptions
+  priv view_line_options_ref : Ref[ViewLineOptions]
+  priv mut read_configuration : () -> ViewLinesConfiguration
+  priv line_factory : () -> ViewLine
   mut should_render : Bool
-  // The selection and whitespace mode of the last render, the viewer analog of
-  // Monaco `ViewLine`'s `_renderedViewLine.input`. They drive the selection-mode
-  // re-render coupling (`onSelectionChanged`, `viewLine.ts:94-100`): a selection
-  // change only invalidates the lines when whitespace is rendered under the
-  // selection.
-  mut last_render_whitespace : @view_layout.RenderWhitespace
+}
+
+///|
+fn retained_view_line_factory(options : Ref[ViewLineOptions]) -> () -> ViewLine {
+  () => ViewLine::new(options=options.val)
 }
 
 ///|
@@ -33,16 +89,80 @@ pub fn ViewLines::new(
   let dom_element = document.create_element("div")
   dom_element.set_attribute("class", "view-lines")
   dom_element.set_attribute("data-view-part", "view-lines")
+  let initial_configuration = ViewLinesConfiguration::new()
+  let view_line_options_ref = Ref(initial_configuration.view_line_options)
+  let line_factory = retained_view_line_factory(view_line_options_ref)
   {
     dom_node: @scrollbar.CachedDomNode::new(dom_element),
     lines_content,
     text_range_resting_spot: document.create_element("div"),
-    window: { start: 0, end: 0 },
+    // `RenderedLinesCollection` constructs through `_set(1, [])`.
+    window: { start: 1, end: 1 },
     lines: [],
-    can_use_layer_hinting: true,
+    line_height: initial_configuration.line_height,
+    typical_halfwidth_character_width: initial_configuration.typical_halfwidth_character_width,
+    is_viewport_wrapping: initial_configuration.is_viewport_wrapping,
+    can_use_layer_hinting: initial_configuration.can_use_layer_hinting,
+    view_line_options: initial_configuration.view_line_options,
+    view_line_options_ref,
+    read_configuration: () => initial_configuration,
+    line_factory,
     should_render: true,
-    last_render_whitespace: None,
   }
+}
+
+///|
+/// Installs the model-scoped live `ViewContext.configuration` reader. A fresh
+/// View calls this before adding or rendering rows, so the constructor snapshot
+/// and the source-owned line factory both begin with current values.
+pub fn ViewLines::install_live_configuration_reader(
+  self : ViewLines,
+  read_configuration : () -> ViewLinesConfiguration,
+) -> Unit {
+  self.read_configuration = read_configuration
+  self.seed_configuration((self.read_configuration)())
+}
+
+///|
+fn ViewLines::seed_configuration(
+  self : ViewLines,
+  configuration : ViewLinesConfiguration,
+) -> Unit {
+  self.line_height = configuration.line_height
+  self.typical_halfwidth_character_width = configuration.typical_halfwidth_character_width
+  self.is_viewport_wrapping = configuration.is_viewport_wrapping
+  self.can_use_layer_hinting = configuration.can_use_layer_hinting
+  self.view_line_options = configuration.view_line_options
+  self.view_line_options_ref.val = configuration.view_line_options
+}
+
+///|
+/// `ViewLines.onConfigurationChanged`'s cache reread followed by
+/// `_onOptionsMaybeChanged`. The caller preserves the outer source order by
+/// invoking the nested visible-collection handler before this method.
+pub fn ViewLines::on_configuration_changed(self : ViewLines) -> Bool {
+  let configuration = (self.read_configuration)()
+  self.line_height = configuration.line_height
+  self.typical_halfwidth_character_width = configuration.typical_halfwidth_character_width
+  self.is_viewport_wrapping = configuration.is_viewport_wrapping
+  self.can_use_layer_hinting = configuration.can_use_layer_hinting
+  self.on_options_maybe_changed(configuration.view_line_options)
+}
+
+///|
+fn ViewLines::on_options_maybe_changed(
+  self : ViewLines,
+  new_options : ViewLineOptions,
+) -> Bool {
+  if self.view_line_options.equals(new_options) {
+    return false
+  }
+  self.view_line_options = new_options
+  self.view_line_options_ref.val = new_options
+  for line in self.lines {
+    line.on_options_changed(new_options)
+  }
+  true
 }
 
 ///|
@@ -93,6 +213,268 @@ pub fn ViewLines::line_node_at(
 }
 
 ///|
+/// `RenderedLinesCollection.flush` (`viewLayer.ts:53-55`): the empty
+/// collection retains the source's one-based start. Ordinary CPU rendering
+/// deliberately leaves old DOM in place until the next no-overlap batch
+/// replaces `innerHTML`; only the source's excluded GPU arm removes on flush.
+pub fn ViewLines::flush_retained_lines(self : ViewLines) -> Unit {
+  self.lines = []
+  self.window = { start: 1, end: 1 }
+}
+
+///|
+/// `VisibleLinesCollection.onConfigurationChanged` (`viewLayer.ts:277-282`).
+/// Layout-info changes dirty visible layout but never flush retained rows.
+pub fn ViewLines::on_visible_configuration_changed(
+  _self : ViewLines,
+  layout_info_changed : Bool,
+) -> Bool {
+  if layout_info_changed {
+    return true
+  }
+  false
+}
+
+///|
+/// `VisibleLinesCollection.onScrollChanged` (`viewLayer.ts:331-333`). The
+/// nested collection reacts to vertical position only; outer ViewLines adds
+/// its independent horizontal branch.
+pub fn ViewLines::on_visible_scroll_changed(
+  _self : ViewLines,
+  scroll_top_changed : Bool,
+) -> Bool {
+  scroll_top_changed
+}
+
+///|
+/// `VisibleLinesCollection.onZonesChanged` (`viewLayer.ts:339-341`).
+pub fn ViewLines::on_visible_zones_changed(_self : ViewLines) -> Bool {
+  true
+}
+
+///|
+/// `RenderedLinesCollection.onLinesChanged` (`viewLayer.ts:156-177`). Notify
+/// every retained line in the inclusive changed interval, and report whether
+/// at least one line was notified.
+pub fn ViewLines::on_lines_changed(
+  self : ViewLines,
+  change_from_line_number : Int,
+  change_count : Int,
+) -> Bool {
+  let change_to_line_number = change_from_line_number + change_count - 1
+  if self.lines.length() == 0 {
+    return false
+  }
+  let start_line_number = self.window.start
+  let end_line_number = self.window.start + self.lines.length() - 1
+  let mut someone_notified = false
+  for changed_line_number in change_from_line_number..<=change_to_line_number {
+    if changed_line_number >= start_line_number &&
+      changed_line_number <= end_line_number {
+      self.lines[changed_line_number - self.window.start].on_content_changed()
+      someone_notified = true
+    }
+  }
+  someone_notified
+}
+
+///|
+/// `RenderedLinesCollection.onLinesDeleted` (`viewLayer.ts:98-154`) plus
+/// `VisibleLinesCollection.onLinesDeleted`'s ordered optional-DOM removal
+/// (`:305-316`). Control flow and inclusive bounds match the pinned source.
+pub fn ViewLines::on_lines_deleted(
+  self : ViewLines,
+  delete_from_line_number : Int,
+  delete_to_line_number : Int,
+) -> Unit {
+  if self.lines.length() == 0 {
+    return
+  }
+  let start_line_number = self.window.start
+  let end_line_number = self.window.start + self.lines.length() - 1
+  if delete_to_line_number < start_line_number {
+    let delete_count = delete_to_line_number - delete_from_line_number + 1
+    self.set_retained_start(start_line_number - delete_count)
+    return
+  }
+  if delete_from_line_number > end_line_number {
+    return
+  }
+  let mut delete_start_index = 0
+  let mut delete_count = 0
+  for line_number in start_line_number..<=end_line_number {
+    let line_index = line_number - self.window.start
+    if delete_from_line_number <= line_number &&
+      line_number <= delete_to_line_number {
+      if delete_count == 0 {
+        delete_start_index = line_index
+        delete_count = 1
+      } else {
+        delete_count += 1
+      }
+    }
+  }
+  if delete_from_line_number < start_line_number {
+    let delete_above_count = if delete_to_line_number < start_line_number {
+      // Source-unreachable after the disjoint-above early return, retained to
+      // keep the pinned branch shape literal.
+      delete_to_line_number - delete_from_line_number + 1
+    } else {
+      start_line_number - delete_from_line_number
+    }
+    self.set_retained_start(self.window.start - delete_above_count)
+  }
+  let deleted = self.remove_retained_slice(delete_start_index, delete_count)
+  remove_retained_line_dom_nodes(deleted)
+  self.sync_retained_end()
+}
+
+///|
+/// `RenderedLinesCollection.onLinesInserted` (`viewLayer.ts:179-219`) plus
+/// `VisibleLinesCollection.onLinesInserted`'s ordered removal of displaced
+/// tail DOM (`:318-329`).
+pub fn ViewLines::on_lines_inserted(
+  self : ViewLines,
+  insert_from_line_number : Int,
+  insert_to_line_number : Int,
+) -> Unit {
+  if self.lines.length() == 0 {
+    return
+  }
+  let insert_count = insert_to_line_number - insert_from_line_number + 1
+  let start_line_number = self.window.start
+  let end_line_number = self.window.start + self.lines.length() - 1
+  if insert_from_line_number <= start_line_number {
+    self.set_retained_start(start_line_number + insert_count)
+    return
+  }
+  if insert_from_line_number > end_line_number {
+    return
+  }
+  if insert_count + insert_from_line_number > end_line_number {
+    let deleted = self.remove_retained_slice(
+      insert_from_line_number - self.window.start,
+      end_line_number - insert_from_line_number + 1,
+    )
+    remove_retained_line_dom_nodes(deleted)
+    self.sync_retained_end()
+    return
+  }
+  let insert_index = insert_from_line_number - self.window.start
+  let original_length = self.lines.length()
+  let new_lines : Array[ViewLine] = []
+  for index in 0..<insert_index {
+    new_lines.push(self.lines[index])
+  }
+  for _ in 0..<insert_count {
+    new_lines.push((self.line_factory)())
+  }
+  for index in insert_index..<(original_length - insert_count) {
+    new_lines.push(self.lines[index])
+  }
+  let deleted_lines : Array[ViewLine] = []
+  for index in (original_length - insert_count)..<original_length {
+    deleted_lines.push(self.lines[index])
+  }
+  self.lines = new_lines
+  remove_retained_line_dom_nodes(deleted_lines)
+  self.sync_retained_end()
+}
+
+///|
+/// `RenderedLinesCollection.onTokensChanged` (`viewLayer.ts:221-250`). Local
+/// callers convert the source's inclusive token payloads to one-based
+/// half-open `LineRange`s, then this method clips and notifies line by line.
+pub fn ViewLines::on_token_ranges_changed(
+  self : ViewLines,
+  ranges : Array[@base_common.LineRange],
+) -> Bool {
+  if self.lines.length() == 0 {
+    return false
+  }
+  let start_line_number = self.window.start
+  let end_line_number = self.window.start + self.lines.length() - 1
+  let mut notified_someone = false
+  for range in ranges {
+    let range_to_line_number = range.end_line_number_exclusive - 1
+    if range_to_line_number < start_line_number ||
+      range.start_line_number > end_line_number {
+      continue
+    }
+    let from_line_number = start_line_number.max(range.start_line_number)
+    let to_line_number = end_line_number.min(range_to_line_number)
+    for line_number in from_line_number..<=to_line_number {
+      self.lines[line_number - self.window.start].on_tokens_changed()
+      notified_someone = true
+    }
+  }
+  notified_someone
+}
+
+///|
+/// `ViewLines.onCursorStateChanged` (`viewLines.ts:238-246`). Preserve the
+/// source's right-to-left sticky OR: every retained line is visited even after
+/// one returns true.
+pub fn ViewLines::on_selection_changed(self : ViewLines) -> Bool {
+  let mut should_render = false
+  for line in self.lines {
+    should_render = line.on_selection_changed() || should_render
+  }
+  should_render
+}
+
+///|
+/// `ViewLines.onDecorationsChanged` (`viewLines.ts:247-254`).
+pub fn ViewLines::on_decorations_changed(self : ViewLines) -> Unit {
+  for line in self.lines {
+    line.on_decorations_changed()
+  }
+}
+
+///|
+fn ViewLines::set_retained_start(self : ViewLines, start : Int) -> Unit {
+  self.window = { start, end: start + self.lines.length() }
+}
+
+///|
+fn ViewLines::sync_retained_end(self : ViewLines) -> Unit {
+  self.window = {
+    start: self.window.start,
+    end: self.window.start + self.lines.length(),
+  }
+}
+
+///|
+fn ViewLines::remove_retained_slice(
+  self : ViewLines,
+  start : Int,
+  count : Int,
+) -> Array[ViewLine] {
+  let removed : Array[ViewLine] = []
+  for _ in 0..<count {
+    removed.push(self.lines.remove(start))
+  }
+  removed
+}
+
+///|
+fn remove_retained_line_dom_nodes(lines : Array[ViewLine]) -> Unit {
+  for line in lines {
+    match line.get_dom_node() {
+      Some(node) => remove_retained_line_dom_node(node)
+      None => ()
+    }
+  }
+}
+
+///|
+extern "js" fn remove_retained_line_dom_node(node : @rdom.Element) -> Unit =
+  #| (node) => {
+  #|   if (typeof node.remove === "function") node.remove();
+  #|   else if (node.parentNode) node.parentNode.removeChild(node);
+  #| }
+
+///|
 /// Monaco `ViewLines.renderText` (`viewLines.ts:613-677`): reconcile the
 /// retained rows through the shared `ViewLayerRenderer`, size the row layer,
 /// then move the single lines-content rail for both axes.
@@ -100,17 +482,12 @@ pub fn ViewLines::render_text(
   self : ViewLines,
   viewport : @view_layout.ViewportData,
   layout : @view_layout.ViewLayout,
-  space_width : Double,
-  can_use_halfwidth_rightwards_arrow : Bool,
-  render_whitespace : @view_layout.RenderWhitespace,
-  render_control_characters : Bool,
   selection_view_range : @base_common.Range?,
 ) -> Unit {
   let target = viewport_window(viewport)
-  self.last_render_whitespace = render_whitespace
   let renderer = @view_layer.ViewLayerRenderer::new(
     self.dom_node.element(),
-    () => ViewLine::new(),
+    self.line_factory,
     line => line.get_dom_node(),
     (line, node) => line.set_dom_node(node),
     (line, line_number, delta_top, line_height) => {
@@ -121,10 +498,7 @@ pub fn ViewLines::render_text(
       let input = render_line_input_for_viewport(
         viewport,
         index,
-        space_width,
-        can_use_halfwidth_rightwards_arrow~,
-        render_whitespace~,
-        render_control_characters~,
+        line.option_snapshot(),
         selection_view_range~,
       )
       line.render_line(line_number, input, delta_top, line_height, builder)
@@ -175,10 +549,7 @@ pub fn viewport_window(
 pub fn render_line_input_for_viewport(
   viewport : @view_layout.ViewportData,
   index : Int,
-  space_width : Double,
-  can_use_halfwidth_rightwards_arrow? : Bool = true,
-  render_whitespace~ : @view_layout.RenderWhitespace,
-  render_control_characters~ : Bool,
+  options : ViewLineOptions,
   selection_view_range~ : @base_common.Range?,
 ) -> @view_layout.RenderLineInput {
   let line_number = viewport.start_line_number + index
@@ -186,14 +557,22 @@ pub fn render_line_input_for_viewport(
   @view_layout.RenderLineInput::from_view_line(
     line_data,
     line_decorations=viewport.decorations_for_line(line_number),
-    space_width~,
-    can_use_halfwidth_rightwards_arrow~,
-    render_whitespace~,
-    render_control_characters~,
+    use_monospace_optimizations=options.use_monospace_optimizations,
+    can_use_halfwidth_rightwards_arrow=options.can_use_halfwidth_rightwards_arrow,
+    space_width=options.space_width,
+    middot_width=options.middot_width,
+    wsmiddot_width=options.wsmiddot_width,
+    stop_rendering_line_after=options.stop_rendering_line_after,
+    render_whitespace=options.render_whitespace,
+    render_control_characters=options.render_control_characters,
+    font_ligatures=options.font_ligatures,
     selections_on_line=selections_on_line_for(
-      line_number, line_data, render_whitespace, selection_view_range,
+      line_number,
+      line_data,
+      options.render_whitespace,
+      selection_view_range,
     ),
-    vertical_scrollbar_size=@core.editor_vertical_scrollbar_size,
+    vertical_scrollbar_size=options.vertical_scrollbar_size,
   )
 }
 

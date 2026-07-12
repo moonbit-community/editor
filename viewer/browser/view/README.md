@@ -9,11 +9,22 @@ attached, and a model swap destroys and replaces it.
 
 `View::render(ViewContext, ViewRenderInput)` performs one Monaco-shaped frame:
 
-1. Diff the current render snapshot from the previous one into typed
-   `ViewEvent`s and offer them to every part.
+1. Read the sticky dirty state accumulated by source-emitted typed
+   `ViewEvent`s since the previous frame.
 2. Render dirty `ViewLines` first, because later parts measure live line DOM.
 3. Run `prepare_render` for the remaining dirty parts (read/measure phase).
-4. Run their `render` methods (DOM-write phase), then retain the snapshot.
+4. Run their `render` methods (DOM-write phase), then clear each successful
+   part write.
+
+The View owns a fixed ordered event-handler set and a source-shaped nested
+collector. Whole event batches are delivered FIFO; an event emitted
+reentrantly becomes a later batch and cannot interleave the current one.
+Transient changes are emitted at their source, so an A→B→A sequence before a
+frame is not collapsed into a final-state snapshot. The closed local event
+union includes the fifteen scoped Monaco classes. Composition has no readonly
+producer. Theme carries the existing `String` theme identity only to preserve
+the declaration and dispatch shape; concrete theme application remains direct
+CSS/root state and has no typed theme producer or ViewPart handler.
 
 `View` constructs one 2^24px `.lines-content` rail and passes the same cached
 node to `EditorScrollbar` and `ViewLines`. Vertical/horizontal scroll moves only
@@ -24,10 +35,21 @@ The eight handles are ViewLines, ViewZones, content overlays, margin overlays,
 ContentWidgets, ViewCursors, OverlayWidgets, and EditorScrollbar. Content
 overlays register current-line highlight, selection, then decorations; margin
 overlays register current-line margin, line decorations, then line numbers.
+Content and margin overlays remain one dirty handle each. Their current-line
+state follows the source predicates, while a sibling selection, decoration,
+or retained-row consumer can still make the aggregate render when the nested
+current-line predicate is false. This is harmless bounded overwork: row HTML
+writes remain equality-deduplicated, no handler schedules another frame, and
+white-box/browser tests cover every event axis and convergence.
+
+The root class builder appends Monaco's platform suffix independently from the
+viewer-owned classes: Safari and native WebKit views use
+`no-minimap-shadow enable-user-select`, other browsers use `no-user-select`,
+and macOS additionally appends `mac`.
 
 `ViewContext` supplies the measurement/conversion closures; `ViewRenderInput`
 supplies the active ViewModel, layout, viewport, configuration, selection,
-zones, and generations. `RenderingContext` and
+and zones. `RenderingContext` and
 `RestrictedRenderingContext` keep read- and write-phase data separate.
 Selection and decoration geometry is measured from the current line DOM in
 `selection_measure.mbt`.

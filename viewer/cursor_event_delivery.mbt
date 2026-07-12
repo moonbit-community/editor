@@ -112,6 +112,17 @@ fn Viewer::drain_cursor_delivery_queue(self : Viewer) -> Unit {
     }
     guard event.selections.length() > 0 else { continue }
     let selection = event.selections[0]
+    if is_model_flush_cursor_event(event) {
+      match self.get_view_model() {
+        Some(view_model) =>
+          self.emit_view_cursor_state_changed(
+            view_model,
+            event.selections,
+            event.reason,
+          )
+        None => ()
+      }
+    }
     let reason = public_cursor_change_reason(event.reason)
     self.did_change_cursor_position.fire({
       position: selection.get_position(),

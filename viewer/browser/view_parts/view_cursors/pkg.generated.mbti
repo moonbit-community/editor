@@ -41,10 +41,13 @@ pub(all) struct ViewCursors {
   mut should_render : Bool
   mut render_data : CursorRenderData?
   mut last_position : @common.Position?
+  mut editor_has_focus : Bool
+  mut selection_is_empty : Bool
 }
 pub fn ViewCursors::get_dom_node(Self) -> @dom.Element
 pub fn ViewCursors::get_last_render_data(Self) -> Array[ViewCursorRenderData]
 pub fn ViewCursors::new(@dom.Document) -> Self
+pub fn ViewCursors::on_focus_changed(Self, Bool) -> Unit
 pub fn ViewCursors::render_cursor(Self, has_selection~ : Bool, editor_has_focus~ : Bool) -> Unit
 
 // Type aliases

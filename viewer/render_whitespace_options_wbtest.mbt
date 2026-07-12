@@ -3,7 +3,7 @@
 // monaco-render-whitespace-control-options-port.md). Proves the private
 // `render_line_input_for_viewport` seam carries the values sourced from
 // `ViewerOptions` into the per-line `RenderLineInput`, the same wiring
-// `flush_render` performs (`render_whitespace: self.options.render_whitespace`).
+// the ViewLines live configuration reader performs.
 
 ///|
 /// Builds the viewport a headless viewer projects for its first render, the
@@ -13,6 +13,24 @@ fn viewport_of(viewer : Viewer) -> @view_layout.ViewportData {
     viewer.test_view_model(),
     viewer.test_window(),
     line_height=viewer.font_info.line_height,
+  )
+}
+
+///|
+fn retained_line_options_of(viewer : Viewer) -> @view_lines.ViewLineOptions {
+  @view_lines.ViewLineOptions::new(
+    line_height=viewer.font_info.line_height,
+    space_width=viewer.font_info.space_width,
+    middot_width=viewer.font_info.middot_width,
+    wsmiddot_width=viewer.font_info.wsmiddot_width,
+    use_monospace_optimizations=viewer.font_info.is_monospace,
+    can_use_halfwidth_rightwards_arrow=viewer.font_info.can_use_halfwidth_rightwards_arrow,
+    stop_rendering_line_after=-1,
+    render_whitespace=viewer.options.render_whitespace,
+    render_control_characters=viewer.options.render_control_characters,
+    font_ligatures=viewer.font_info.font_feature_settings !=
+      @config.editor_font_ligatures_off,
+    vertical_scrollbar_size=@core.editor_vertical_scrollbar_size,
   )
 }
 
@@ -39,9 +57,7 @@ test "viewport line input carries each content-only whitespace mode from options
         let input = @view_lines.render_line_input_for_viewport(
           viewport_of(viewer),
           0,
-          viewer.measured_char_width(),
-          render_whitespace=viewer.options.render_whitespace,
-          render_control_characters=viewer.options.render_control_characters,
+          retained_line_options_of(viewer),
           selection_view_range=None,
         )
         assert_true(input.render_whitespace == mode)
@@ -60,9 +76,7 @@ test "viewport line input carries render_control_characters on a non-ascii line"
       let input = @view_lines.render_line_input_for_viewport(
         viewport_of(viewer),
         0,
-        viewer.measured_char_width(),
-        render_whitespace=viewer.options.render_whitespace,
-        render_control_characters=viewer.options.render_control_characters,
+        retained_line_options_of(viewer),
         selection_view_range=None,
       )
       assert_true(input.render_control_characters)
@@ -81,9 +95,7 @@ test "viewport line input leaves Selection mode inert without a threaded selecti
       let input = @view_lines.render_line_input_for_viewport(
         viewport_of(viewer),
         0,
-        viewer.measured_char_width(),
-        render_whitespace=viewer.options.render_whitespace,
-        render_control_characters=viewer.options.render_control_characters,
+        retained_line_options_of(viewer),
         selection_view_range=None,
       )
       assert_true(input.render_whitespace == Selection)
@@ -93,4 +105,39 @@ test "viewport line input leaves Selection mode inert without a threaded selecti
     },
     options~,
   )
+}
+
+///|
+test "retained options carry same-space font axes into render input" {
+  with_test_viewer(" a ", viewer => {
+    let base = retained_line_options_of(viewer)
+    let options = @view_lines.ViewLineOptions::new(
+      line_height=base.line_height,
+      space_width=base.space_width,
+      middot_width=base.space_width + 1.0,
+      wsmiddot_width=base.space_width + 2.0,
+      use_monospace_optimizations=false,
+      can_use_halfwidth_rightwards_arrow=base.can_use_halfwidth_rightwards_arrow,
+      stop_rendering_line_after=17,
+      render_whitespace=All,
+      render_control_characters=true,
+      font_ligatures=true,
+      vertical_scrollbar_size=19.0,
+    )
+    let input = @view_lines.render_line_input_for_viewport(
+      viewport_of(viewer),
+      0,
+      options,
+      selection_view_range=None,
+    )
+    assert_eq(input.space_width, base.space_width)
+    assert_eq(input.middot_width, base.space_width + 1.0)
+    assert_eq(input.wsmiddot_width, base.space_width + 2.0)
+    assert_false(input.use_monospace_optimizations)
+    assert_eq(input.stop_rendering_line_after, 17)
+    assert_true(input.render_whitespace == All)
+    assert_true(input.render_control_characters)
+    assert_true(input.font_ligatures)
+    assert_eq(input.vertical_scrollbar_size, 19.0)
+  })
 }

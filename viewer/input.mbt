@@ -14,16 +14,22 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   // Monaco tracks focus on the hidden textarea / edit context and fans it out
   // as `ViewFocusChangedEvent`; the viewer's focusable surface is the root
   // itself. `focus`/`blur` do not bubble, so these observe only the root's own
-  // focus. The next scheduled render diffs the flag into `ViewFocusChanged`.
+  // focus and emit only on the actual Bool transition.
   add_view_event_listener(view, view.root, "focus", _ => {
     if !self.editor_has_focus {
       self.editor_has_focus = true
+      self.emit_view_event(
+        ViewFocusChanged(@view.ViewFocusChangedEvent::new(true)),
+      )
       self.schedule_render()
     }
   })
   add_view_event_listener(view, view.root, "blur", _ => {
     if self.editor_has_focus {
       self.editor_has_focus = false
+      self.emit_view_event(
+        ViewFocusChanged(@view.ViewFocusChangedEvent::new(false)),
+      )
       self.schedule_render()
     }
   })
@@ -199,11 +205,19 @@ fn Viewer::apply_font_info_to_view(self : Viewer, view : @view.View) -> Unit {
 /// `ViewLayout` owns the editor scroll truth.
 fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
   let rect = view.root.get_bounding_client_rect()
-  self.refresh_font_info()
-  let gutter_width = match self.get_view_model() {
-    Some(view_model) => self.gutter_width(view_model.line_count())
-    None => 0.0
+  let previous_font_info = self.font_info
+  let previous_soft_wrap_column = self.soft_wrap_column
+  let previous_layout_identity = self.layout_identity(
+    self.layout_model_line_count,
+    self.layout_line_count,
+  )
+  let model_line_count = match self.get_model() {
+    Some(model) => model.snapshot.line_count()
+    None => 0
   }
+  let event_batch = self.begin_view_event_batch()
+  self.refresh_font_info()
+  let gutter_width = self.gutter_width(model_line_count)
   let content_width = rect.get_width() - gutter_width
   self.measured_content_width = if content_width > 0.0 {
     content_width
@@ -230,6 +244,32 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
   } else {
     self.sync_content_width()
   }
+  let current_view_line_count = match self.get_view_model() {
+    Some(view_model) => view_model.line_count()
+    None => 0
+  }
+  let current_model_line_count = match self.get_model() {
+    Some(model) => model.snapshot.line_count()
+    None => 0
+  }
+  self.layout_model_line_count = current_model_line_count
+  self.layout_line_count = current_view_line_count
+  let layout_info_changed = previous_layout_identity !=
+    self.layout_identity(current_model_line_count, current_view_line_count)
+  match
+    view_configuration_changed_event(
+      self.options,
+      self.options,
+      previous_font_info,
+      self.font_info,
+      previous_soft_wrap_column,
+      self.soft_wrap_column,
+      layout_info_changed~,
+    ) {
+    Some(event) => self.emit_view_event(ViewConfigurationChanged(event))
+    None => ()
+  }
+  end_view_event_batch(event_batch)
 }
 
 ///|
@@ -255,10 +295,24 @@ fn Viewer::measured_char_width(self : Viewer) -> Double {
 /// The line-number band width — Monaco's `layoutInfo.lineNumbersWidth`,
 /// `Math.round(digitCount * maxDigitWidth)` with the digit count at least
 /// `line_numbers_min_chars` (`editorOptions.ts:2914-2917`).
-fn Viewer::line_numbers_width(self : Viewer, line_count : Int) -> Double {
-  let digits = line_count.to_string().length()
+fn Viewer::line_numbers_width(self : Viewer, model_line_count : Int) -> Double {
+  let digits = digit_count(model_line_count)
   let slots = digits.max(self.options.line_numbers_min_chars)
   (slots.to_double() * self.font_info.max_digit_width).round()
+}
+
+///|
+/// `EditorConfiguration._digitCount`: base-10 digits with a minimum of one.
+/// Line counts are nonnegative, but keeping the loop numeric (instead of
+/// stringifying) preserves the source's decimal-band boundary behavior.
+fn digit_count(value : Int) -> Int {
+  let mut value = value
+  let mut result = 0
+  while value > 0 {
+    value = value / 10
+    result += 1
+  }
+  result.max(1)
 }
 
 ///|
@@ -280,6 +334,37 @@ fn Viewer::layout_decorations_width(self : Viewer) -> Double {
 /// The full margin width: the line-number band plus the line-decorations
 /// lane — Monaco's `layoutInfo.contentLeft` (the viewer has no glyph margin,
 /// so `contentLeft = lineNumbersWidth + decorationsWidth`).
-fn Viewer::gutter_width(self : Viewer, line_count : Int) -> Double {
-  self.line_numbers_width(line_count) + self.layout_decorations_width()
+fn Viewer::gutter_width(self : Viewer, model_line_count : Int) -> Double {
+  self.line_numbers_width(model_line_count) + self.layout_decorations_width()
+}
+
+///|
+/// Independent computed `EditorLayoutInfo` identity. Comparing only
+/// `contentLeft` (the sum of the first two fields) loses compensated changes
+/// where the line-number band shrinks as the decorations lane grows.
+priv struct ViewerLayoutIdentity {
+  line_numbers_width : Double
+  decorations_width : Double
+  content_left : Double
+  content_width : Double
+  height : Double
+  view_line_count : Int
+} derive(Eq)
+
+///|
+fn Viewer::layout_identity(
+  self : Viewer,
+  model_line_count : Int,
+  view_line_count : Int,
+) -> ViewerLayoutIdentity {
+  let line_numbers_width = self.line_numbers_width(model_line_count)
+  let decorations_width = self.layout_decorations_width()
+  {
+    line_numbers_width,
+    decorations_width,
+    content_left: line_numbers_width + decorations_width,
+    content_width: self.measured_content_width,
+    height: self.measured_height,
+    view_line_count,
+  }
 }

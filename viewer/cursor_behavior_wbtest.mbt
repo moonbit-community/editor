@@ -213,8 +213,8 @@ test "wrap-width change re-projects the selection inside the view model" {
         viewer.test_cursor().get_view_selection().get_position(),
         Position(2, 3),
       )
-      // Reflow to a narrower column straight through the view model — the
-      // Viewer-side path (`on_configuration_changed`) adds nothing on top.
+      // Reflow to a narrower column through the Viewer/ViewModel path; the
+      // headless harness observes the same committed cursor reprojection.
       viewer.test_set_soft_wrap_column(4)
       assert_selection_eq(
         viewer.get_selection().unwrap(),

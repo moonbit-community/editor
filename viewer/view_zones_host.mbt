@@ -12,6 +12,7 @@
 /// the complete set of changes inside one layout invalidation.
 pub struct ViewZoneChangeAccessor {
   priv viewer : Viewer
+  priv changed : Ref[Bool]
 }
 
 ///|
@@ -20,10 +21,14 @@ pub fn Viewer::change_view_zones(
   self : Viewer,
   update : (ViewZoneChangeAccessor) -> Unit,
 ) -> Unit {
-  update({ viewer: self })
+  let changed = Ref(false)
+  update({ viewer: self, changed })
+  if !changed.val {
+    return
+  }
   self.normalize_browser_view_zones()
   self.sync_view_zones_with_layout()
-  self.content_generation += 1
+  self.emit_view_event(ViewZonesChanged)
   self.measure_requested = true
   self.schedule_render()
 }
@@ -42,6 +47,7 @@ pub fn ViewZoneChangeAccessor::add_zone(
   on_dom_node_top? : (Double) -> Unit,
   on_computed_height? : (Int) -> Unit,
 ) -> Unit {
+  self.changed.val = true
   self.viewer.upsert_view_zone(
     id, anchor_line, height_px, node, on_dom_node_top, on_computed_height,
   )
@@ -58,6 +64,7 @@ pub fn ViewZoneChangeAccessor::update_zone(
   on_dom_node_top? : (Double) -> Unit,
   on_computed_height? : (Int) -> Unit,
 ) -> Unit {
+  self.changed.val = true
   self.viewer.upsert_view_zone(
     id, anchor_line, height_px, node, on_dom_node_top, on_computed_height,
   )
@@ -72,6 +79,7 @@ pub fn ViewZoneChangeAccessor::remove_zone(
   for index in 0..<self.viewer.view_zones.length() {
     if self.viewer.view_zones[index].id == id {
       self.viewer.view_zones.remove(index) |> ignore
+      self.changed.val = true
       return
     }
   }

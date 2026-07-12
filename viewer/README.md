@@ -50,6 +50,16 @@ The API is a readonly subset of Monaco's editor API:
 - view zones and null-position overlay widgets;
 - model, cursor, scroll, mouse, and disposal events.
 
+`update_options` accepts and replaces one complete typed `ViewerOptions`
+snapshot. It is intentionally not Monaco's JavaScript partial-object merge:
+callers changing one field should pass a record update such as
+`{ ..viewer.get_options(), render_whitespace: All }`. An equal complete
+snapshot is a strict no-op. A changed snapshot computes option-specific facts
+once and delivers the resulting mapping, decoration, and configuration view
+events as one ordered batch before scheduling the frame. The readonly product
+keeps its approved `render_validation_decorations=On` default; `Editable`
+still filters validation decorations because readonly is a fixed product fact.
+
 The viewer is single-cursor: secondary cursor/selection arrays are empty and
 `set_selections` uses the first selection. The primary Left/Right/Up/Down,
 PageUp/PageDown, Home, and End bindings (with Shift variants) move the cursor;
@@ -95,7 +105,7 @@ There is no current viewer UI for definition or references.
 TextModel (caller-owned)
   -> TokenizationTextModelPart
   -> ViewModel + ViewLayout + cursor outgoing dispatcher (per model)
-  -> View + ViewParts (per model, browser only)
+  -> typed ViewEvent FIFO -> View + ViewParts (per model, browser only)
   -> requestAnimationFrame read/measure then DOM write
 ```
 

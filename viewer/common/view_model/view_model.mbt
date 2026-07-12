@@ -193,9 +193,9 @@ pub fn ViewModel::on_configuration_changed(
 /// re-runs the line-breaks computer per changed line, the viewer reprojects
 /// whole. `e = Some(_)` is the `InternalModelContentChangeEvent` arm, whose
 /// only constructed change today is `Flush` (`:356-363`); the per-line
-/// branches (`:364-408`) are the tier-2 lane. The `eventsCollector` bracket
-/// is N-A — the viewer's document-wide repaint is the Viewer-layer
-/// `content_generation` bump, its `ViewFlushedEvent` scale.
+/// branches (`:364-408`) are the tier-2 lane. The root Viewer brackets the
+/// reduced whole-document projection and emits the corresponding typed
+/// `ViewFlushed`/mapping/decoration events through its View collector.
 pub fn ViewModel::on_did_change_content_or_injected_text(
   self : ViewModel,
   e? : @model.InternalModelContentChangeEvent,
@@ -216,8 +216,8 @@ pub fn ViewModel::on_did_change_content_or_injected_text(
         match change {
           ModelRawFlush => {
             // The `Flush` branch (`viewModelImpl.ts:356-363`):
-            // `_lines.onModelFlushed()` → `ViewFlushedEvent` (the
-            // content_generation bump, above) → `_decorations.reset()` →
+            // `_lines.onModelFlushed()` → `ViewFlushedEvent` (emitted by the
+            // root source collector) → `_decorations.reset()` →
             // `viewLayout.onFlushed(lineCount)`. The custom-line-heights
             // argument is N-A (uniform line height).
             self.lines.on_model_flushed()

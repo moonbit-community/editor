@@ -384,7 +384,6 @@ fn Viewer::after_hover_transition(
     return
   }
   if before.view != hc.hover.view {
-    self.content_generation += 1
     // A new hover view is a fresh `RenderedContentHover`: reset the
     // mouse-getting-closer reference so the next move re-seeds it.
     hc.hover_mouse_closer.reset()

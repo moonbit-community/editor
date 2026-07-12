@@ -1,118 +1,276 @@
 ///|
-/// Typed view events, the readonly-viewer subset of Monaco's `viewEvents.ts`.
-/// View parts are `ViewEventHandler`s (see `view_part.mbt`): each event is
-/// dispatched to every part, which returns whether the event dirties it. This
-/// replaces the previous `ViewRenderChange` snapshot-diff struct that parts
-/// inspected directly.
-///
-/// Deliberate deviations from Monaco recorded here: events are *sourced* by
-/// diffing one frame snapshot against the previous (`view_events_from_snapshots`)
-/// rather than emitted incrementally by an event-emitting view model — the
-/// readonly view model is frame-based. This includes `ViewCursorStateChanged`,
-/// which is derived from the `selection_view_range` snapshot diff rather than
-/// emitted directly by the cursor stack (`view_events_from_snapshots:81-83`).
-/// The event set is the subset this viewer observes; composition/theme/
-/// language and the fine-grained line insert/delete events have no readonly
-/// counterpart yet.
-priv enum ViewEvent {
-  /// Everything must re-render (Monaco `ViewFlushedEvent`). Emitted on the
-  /// first frame.
-  ViewFlushed
-  /// Line content/tokens were regenerated
-  /// (Monaco `ViewLinesChangedEvent` / `ViewTokensChangedEvent`).
-  ViewLinesChanged
-  /// The model's decorations changed (Monaco `ViewDecorationsChangedEvent`),
-  /// sourced from the snapshot's `decorations_generation` counter (plan
-  /// Deviation 3).
-  ViewDecorationsChanged
-  /// Scroll position, scrollable dimensions, or the rendered line window
-  /// changed (Monaco `ViewScrollChangedEvent`).
-  ViewScrollChanged(ViewScrollChangedEvent)
-  /// The selection changed (Monaco `ViewCursorStateChangedEvent`).
-  ViewCursorStateChanged
-  /// A layout/font configuration input changed (Monaco
-  /// `ViewConfigurationChangedEvent`).
-  ViewConfigurationChanged(ViewConfigurationChangedEvent)
-  /// View zones changed (Monaco `ViewZonesChangedEvent`).
-  ViewZonesChanged
-  /// The editor root gained or lost DOM focus (Monaco
-  /// `ViewFocusChangedEvent.isFocused`).
-  ViewFocusChanged(Bool)
+/// The Monaco-shaped option identifiers that view parts query from
+/// `ViewConfigurationChangedEvent.hasChanged`.  The root `Viewer` maps its
+/// concrete option diffs to this semantic set; view parts never need to know
+/// about the root option record.
+pub(all) enum ViewConfigurationOption {
+  LayoutInfo
+  FontInfo
+  LineHeight
+  WrappingInfo
+  RevealHorizontalRightPadding
+  CursorSurroundingLines
+  CursorSurroundingLinesStyle
+  DisableLayerHinting
+  StickyScroll
+  RenderWhitespace
+  RenderControlCharacters
+  RenderLineHighlight
+  RenderLineHighlightOnlyWhenFocus
+  RenderValidationDecorations
+  ReadOnly
+  CursorBlinking
+  EffectiveCursorStyle
+  CursorSmoothCaretAnimation
+  EffectiveEditContext
+} derive(Eq, Debug)
+
+///|
+/// Source-shaped configuration payload.  `changed_options` is a typed bitset
+/// represented as a deduplicated array because the readonly viewer has a
+/// deliberately small option surface.
+pub(all) struct ViewConfigurationChangedEvent {
+  changed_options : Array[ViewConfigurationOption]
 }
 
 ///|
-/// Payload for `ViewScrollChanged`. Mirrors Monaco's `ViewScrollChangedEvent`
-/// change flags; `window_changed` is the local rendered-line-window shift
-/// (a viewer-side windowing concern with no separate Monaco field).
-priv struct ViewScrollChangedEvent {
-  position_changed : Bool
-  dimensions_changed : Bool
-  window_changed : Bool
-}
-
-///|
-/// Payload for `ViewConfigurationChanged`. Mirrors the `hasChanged(option)`
-/// queries Monaco view parts make against `ViewConfigurationChangedEvent`,
-/// reduced to the inputs this viewer's parts consult.
-priv struct ViewConfigurationChangedEvent {
-  gutter_width_changed : Bool
-  font_changed : Bool
-}
-
-///|
-/// Derives the typed view events for one frame by comparing the new render
-/// snapshot against the previous one. This is the frame-based event *source*;
-/// the dispatch contract the parts see (typed events, accumulate `should_render`)
-/// is faithful to Monaco. Hover is intentionally not a view event — the hover
-/// content widget is invalidated directly, mirroring Monaco's contrib hover.
-fn view_events_from_snapshots(
-  previous : ViewRenderSnapshot?,
-  current : ViewRenderSnapshot,
-) -> Array[ViewEvent] {
-  match previous {
-    None => [ViewFlushed]
-    Some(previous) => {
-      let events : Array[ViewEvent] = []
-      if previous.generation != current.generation {
-        events.push(ViewLinesChanged)
-      }
-      if previous.decorations_generation != current.decorations_generation {
-        events.push(ViewDecorationsChanged)
-      }
-      let position_changed = previous.position != current.position
-      let dimensions_changed = previous.dimensions != current.dimensions
-      let window_changed = previous.window != current.window
-      if position_changed || dimensions_changed || window_changed {
-        events.push(
-          ViewScrollChanged({
-            position_changed,
-            dimensions_changed,
-            window_changed,
-          }),
-        )
-      }
-      // The full view selection (not the collapsed-to-None overlay range), so
-      // a caret-only move still dispatches `ViewCursorStateChanged`.
-      if previous.view_selection != current.view_selection {
-        events.push(ViewCursorStateChanged)
-      }
-      let gutter_width_changed = previous.gutter_width != current.gutter_width
-      let font_changed = previous.space_width != current.space_width
-      if gutter_width_changed || font_changed {
-        events.push(
-          ViewConfigurationChanged({ gutter_width_changed, font_changed }),
-        )
-      }
-      if !same_browser_view_zones(
-          previous.browser_view_zones,
-          current.browser_view_zones,
-        ) {
-        events.push(ViewZonesChanged)
-      }
-      if previous.editor_has_focus != current.editor_has_focus {
-        events.push(ViewFocusChanged(current.editor_has_focus))
-      }
-      events
+pub fn ViewConfigurationChangedEvent::from_changed_options(
+  changed_options : Array[ViewConfigurationOption],
+) -> ViewConfigurationChangedEvent {
+  let result : Array[ViewConfigurationOption] = []
+  for option in changed_options {
+    if !view_configuration_options_contain(result, option) {
+      result.push(option)
     }
   }
+  { changed_options: result }
+}
+
+///|
+pub fn ViewConfigurationChangedEvent::has_changed(
+  self : ViewConfigurationChangedEvent,
+  option : ViewConfigurationOption,
+) -> Bool {
+  view_configuration_options_contain(self.changed_options, option)
+}
+
+///|
+fn view_configuration_options_contain(
+  options : Array[ViewConfigurationOption],
+  expected : ViewConfigurationOption,
+) -> Bool {
+  for option in options {
+    if option == expected {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// `ViewCursorStateChangedEvent`: view-space selections, model-space
+/// selections, and the originating cursor reason are kept separate exactly as
+/// in the source event.
+pub(all) struct ViewCursorStateChangedEvent {
+  selections : Array[@core.Selection]
+  model_selections : Array[@core.Selection]
+  reason : @cursor.CursorChangeReason
+}
+
+///|
+pub fn ViewCursorStateChangedEvent::new(
+  selections : Array[@core.Selection],
+  model_selections : Array[@core.Selection],
+  reason : @cursor.CursorChangeReason,
+) -> ViewCursorStateChangedEvent {
+  { selections, model_selections, reason }
+}
+
+///|
+/// `ViewDecorationsChangedEvent`.  A producer without source detail must use
+/// `all`, matching Monaco's null-source constructor which conservatively sets
+/// every flag.
+pub(all) struct ViewDecorationsChangedEvent {
+  affects_minimap : Bool
+  affects_overview_ruler : Bool
+  affects_glyph_margin : Bool
+  affects_line_number : Bool
+}
+
+///|
+pub fn ViewDecorationsChangedEvent::new(
+  affects_minimap : Bool,
+  affects_overview_ruler : Bool,
+  affects_glyph_margin : Bool,
+  affects_line_number : Bool,
+) -> ViewDecorationsChangedEvent {
+  {
+    affects_minimap,
+    affects_overview_ruler,
+    affects_glyph_margin,
+    affects_line_number,
+  }
+}
+
+///|
+pub fn ViewDecorationsChangedEvent::all() -> ViewDecorationsChangedEvent {
+  {
+    affects_minimap: true,
+    affects_overview_ruler: true,
+    affects_glyph_margin: true,
+    affects_line_number: true,
+  }
+}
+
+///|
+pub(all) struct ViewFocusChangedEvent {
+  is_focused : Bool
+}
+
+///|
+pub fn ViewFocusChangedEvent::new(is_focused : Bool) -> ViewFocusChangedEvent {
+  { is_focused, }
+}
+
+///|
+/// The changed view-line interval is `[from_line_number,
+/// from_line_number + count - 1]` (inclusive), matching Monaco.
+pub(all) struct ViewLinesChangedEvent {
+  from_line_number : Int
+  count : Int
+}
+
+///|
+pub fn ViewLinesChangedEvent::new(
+  from_line_number : Int,
+  count : Int,
+) -> ViewLinesChangedEvent {
+  { from_line_number, count }
+}
+
+///|
+pub(all) struct ViewLinesDeletedEvent {
+  from_line_number : Int
+  to_line_number : Int
+}
+
+///|
+pub fn ViewLinesDeletedEvent::new(
+  from_line_number : Int,
+  to_line_number : Int,
+) -> ViewLinesDeletedEvent {
+  { from_line_number, to_line_number }
+}
+
+///|
+pub(all) struct ViewLinesInsertedEvent {
+  from_line_number : Int
+  to_line_number : Int
+}
+
+///|
+pub fn ViewLinesInsertedEvent::new(
+  from_line_number : Int,
+  to_line_number : Int,
+) -> ViewLinesInsertedEvent {
+  { from_line_number, to_line_number }
+}
+
+///|
+/// Exact `ViewScrollChangedEvent` payload.  Values are always the new scroll
+/// state; each axis/dimension carries its own changed flag so handlers cannot
+/// accidentally conflate independent source branches.
+pub(all) struct ViewScrollChangedEvent {
+  scroll_width : Double
+  scroll_left : Double
+  scroll_height : Double
+  scroll_top : Double
+  scroll_width_changed : Bool
+  scroll_left_changed : Bool
+  scroll_height_changed : Bool
+  scroll_top_changed : Bool
+}
+
+///|
+pub fn ViewScrollChangedEvent::new(
+  scroll_width : Double,
+  scroll_left : Double,
+  scroll_height : Double,
+  scroll_top : Double,
+  scroll_width_changed : Bool,
+  scroll_left_changed : Bool,
+  scroll_height_changed : Bool,
+  scroll_top_changed : Bool,
+) -> ViewScrollChangedEvent {
+  {
+    scroll_width,
+    scroll_left,
+    scroll_height,
+    scroll_top,
+    scroll_width_changed,
+    scroll_left_changed,
+    scroll_height_changed,
+    scroll_top_changed,
+  }
+}
+
+///|
+pub(all) struct ViewThemeChangedEvent {
+  theme : String
+}
+
+///|
+pub fn ViewThemeChangedEvent::new(theme : String) -> ViewThemeChangedEvent {
+  { theme, }
+}
+
+///|
+/// Inclusive line range carried by `ViewTokensChangedEvent`.
+pub(all) struct ViewTokenChangeRange {
+  from_line_number : Int
+  to_line_number : Int
+}
+
+///|
+pub fn ViewTokenChangeRange::new(
+  from_line_number : Int,
+  to_line_number : Int,
+) -> ViewTokenChangeRange {
+  { from_line_number, to_line_number }
+}
+
+///|
+pub(all) struct ViewTokensChangedEvent {
+  ranges : Array[ViewTokenChangeRange]
+}
+
+///|
+pub fn ViewTokensChangedEvent::new(
+  ranges : Array[ViewTokenChangeRange],
+) -> ViewTokensChangedEvent {
+  { ranges, }
+}
+
+///|
+/// Closed, source-shaped readonly-view event union.  Composition and theme
+/// events are intentionally declaration/dispatch-only in this package: their
+/// concrete producers belong to later input/theme seams.  Language
+/// configuration, reveal-range, and token-color events remain outside the
+/// approved readonly slice.
+pub(all) enum ViewEvent {
+  ViewCompositionStart
+  ViewCompositionEnd
+  ViewConfigurationChanged(ViewConfigurationChangedEvent)
+  ViewCursorStateChanged(ViewCursorStateChangedEvent)
+  ViewDecorationsChanged(ViewDecorationsChangedEvent)
+  ViewFlushed
+  ViewFocusChanged(ViewFocusChangedEvent)
+  ViewLineMappingChanged
+  ViewLinesChanged(ViewLinesChangedEvent)
+  ViewLinesDeleted(ViewLinesDeletedEvent)
+  ViewLinesInserted(ViewLinesInsertedEvent)
+  ViewScrollChanged(ViewScrollChangedEvent)
+  ViewThemeChanged(ViewThemeChangedEvent)
+  ViewTokensChanged(ViewTokensChangedEvent)
+  ViewZonesChanged
 }

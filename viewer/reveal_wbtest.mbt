@@ -5,6 +5,40 @@
 // coverage lives in the browser suite (Phase 3).
 
 ///|
+fn reveal_test_scroll_change(
+  scroll_top : Double,
+  top_changed : Bool,
+) -> @view_layout.ScrollChange {
+  {
+    position: { scroll_left: 0.0, scroll_top },
+    delta_left: 0.0,
+    delta_top: 0.0,
+    left_changed: false,
+    top_changed,
+    dimensions_changed: false,
+    in_smooth_scrolling: false,
+    old_width: 0.0,
+    old_scroll_width: 0.0,
+    old_scroll_left: 0.0,
+    width: 0.0,
+    scroll_width: 0.0,
+    scroll_left: 0.0,
+    old_height: 0.0,
+    old_scroll_height: 0.0,
+    old_scroll_top: scroll_top,
+    height: 0.0,
+    scroll_height: 0.0,
+    scroll_top,
+    width_changed: false,
+    scroll_width_changed: false,
+    scroll_left_changed: false,
+    height_changed: false,
+    scroll_height_changed: false,
+    scroll_top_changed: top_changed,
+  }
+}
+
+///|
 /// `reveal_line` scrolls a line below the viewport into view, keeping the +1
 /// bottom pad clear of the horizontal scrollbar (Monaco's `Simple`).
 test "reveal_line brings a line below the viewport into view" {
@@ -165,6 +199,37 @@ test "vertical scroll inside the band keeps, outside cancels, the deferral" {
     viewer.set_scroll_top(2000.0)
     assert_true(viewer.horizontal_reveal_request is None)
   })
+}
+
+///|
+test "horizontal reveal cancellation gates top changes and keeps reversed-band endpoints" {
+  let viewer = Viewer::Viewer()
+  viewer.horizontal_reveal_request = Some({
+    minimal_reveal: false,
+    view_line_number: 1,
+    start_column: 1,
+    end_column: 1,
+    start_scroll_top: 100.0,
+    stop_scroll_top: 0.0,
+    scroll_type: Immediate,
+  })
+  viewer.cancel_horizontal_reveal_on_scroll(
+    reveal_test_scroll_change(-1.0, false),
+  )
+  assert_true(viewer.horizontal_reveal_request is Some(_))
+  viewer.cancel_horizontal_reveal_on_scroll(
+    reveal_test_scroll_change(100.0, true),
+  )
+  assert_true(viewer.horizontal_reveal_request is Some(_))
+  viewer.cancel_horizontal_reveal_on_scroll(
+    reveal_test_scroll_change(0.0, true),
+  )
+  assert_true(viewer.horizontal_reveal_request is Some(_))
+  viewer.cancel_horizontal_reveal_on_scroll(
+    reveal_test_scroll_change(-1.0, true),
+  )
+  assert_true(viewer.horizontal_reveal_request is None)
+  viewer.dispose()
 }
 
 ///|

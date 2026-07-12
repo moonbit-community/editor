@@ -32,22 +32,23 @@ pub(all) struct ContentWidgets {
 }
 pub fn ContentWidgets::add_widget(Self, &ContentWidget) -> Unit
 pub fn ContentWidgets::dom_node(Self) -> @dom.Element
+pub fn ContentWidgets::install_live_view_context(Self, () -> (Double, Double), (@common.Position) -> @common.Position?) -> Unit
 pub fn ContentWidgets::new(@dom.Document, @dom.Element) -> Self
+pub fn ContentWidgets::on_configuration_changed(Self, Bool) -> Unit
 pub fn ContentWidgets::overflowing_content_widgets_dom_node(Self) -> @dom.Element
 pub fn ContentWidgets::prepare_render_widgets(Self, ContentWidgetsRenderContext) -> Unit
 pub fn ContentWidgets::remove_widget(Self, &ContentWidget) -> Unit
 pub fn ContentWidgets::render_widgets(Self, Double) -> Unit
 pub fn ContentWidgets::set_widget_position(Self, &ContentWidget) -> Unit
+pub fn ContentWidgets::update_anchors_view_positions(Self) -> Unit
 
 pub(all) struct ContentWidgetsRenderContext {
-  model_position_to_view_position : (@common.Position) -> @common.Position
   vertical_offset_for_line : (Int) -> Double
   window_start : Int
   window_end : Int
   line_height : Double
   char_width : Double
   typical_fullwidth_character_width : Double
-  content_left : Double
   scroll_top : Double
   scroll_left : Double
   viewport_width : Double

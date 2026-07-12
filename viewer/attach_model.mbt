@@ -19,12 +19,18 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // seeds the model so the seeding delta is observed too.
   listeners_to_remove.push(
     model.on_did_change_decorations(event => {
+      let event_batch = self.begin_view_event_batch()
       // Monaco: `onDidChangeDecorations` → `viewModel.decorations
       // .onModelDecorationsChanged()` (`viewModelImpl.ts`) — drop the
       // computer + viewport caches before the re-render reads them.
       match self.get_view_model() {
         Some(view_model) => {
           view_model.decorations().on_model_decorations_changed()
+          // Cache first, typed View event second. The direct model
+          // subscription remains the approved outgoing-event seam.
+          self.emit_view_event(
+            ViewDecorationsChanged(view_decorations_changed_event(event)),
+          )
           // Injected-text deltas re-run the line-breaks computer per line in
           // Monaco (`onDidChangeContentOrInjectedText`); the viewer's
           // granularity is the whole-document reproject
@@ -32,13 +38,22 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
           // model. Content flushes take the event-carrying form of the same
           // member through the model's registered-view-model seam instead.
           if event.affects_injected_text {
+            // The registered local reduction folds the injected structural
+            // pass into this callback. The outer collector preserves: exact
+            // Decorations → Flushed → LineMapping → all-Decorations →
+            // optional Cursor reprojection.
+            let previous_view_selection = view_model.cursor.get_view_selection()
             view_model.on_did_change_content_or_injected_text()
-            self.on_line_mapping_changed(view_model, model)
+            self.on_line_mapping_changed(
+              view_model,
+              model,
+              previous_view_selection~,
+            )
           }
         }
         None => ()
       }
-      self.decorations_generation += 1
+      end_view_event_batch(event_batch)
       self.schedule_render()
     }),
   )
@@ -57,10 +72,16 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // schedules the repaint without acquiring another marker lease.
   listeners_to_remove.push(
     model.on_did_change_content(event => {
+      let event_batch = self.begin_view_event_batch()
+      if event.is_flush {
+        self.emit_view_event(ViewFlushed)
+      }
       match self.get_view_model() {
-        Some(view_model) => self.on_line_mapping_changed(view_model, model)
+        Some(view_model) =>
+          self.on_line_mapping_changed(view_model, model, notify_view=false)
         None => ()
       }
+      end_view_event_batch(event_batch)
       // Monaco cancels the pending mouse reaction on content change. The
       // Viewer also retires provider/timer ownership and rotates the operation
       // generation while preserving only an already settled hover until a new
@@ -97,10 +118,12 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   listeners_to_remove.push(model.on_will_dispose(() => self.set_model(None)))
   // Token changes (the part's registry subscription fires them on tokenizer
   // (re)registration) re-warm the memo and repaint — Monaco's
-  // `ModelTokensChangedEvent` handling. The viewer's granularity is the whole
-  // document, so the event's ranges are not consulted.
+  // `ModelTokensChangedEvent` handling. Preserve the producer's inclusive
+  // ranges so token-only invalidation reaches only token consumers.
   listeners_to_remove.push(
-    model.on_did_change_tokens(_ => self.retokenize_current_model(model)),
+    model.on_did_change_tokens(event => {
+      self.retokenize_current_model(model, event)
+    }),
   )
   let tokenize_started = now_ms()
   model.tokenization.force_tokenization()
@@ -109,6 +132,8 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // model queries them lazily per viewport (no per-frame bake). The render
   // pass pulls its viewport data from the view model at flush time.
   let view_model = self.build_view_model(model)
+  self.layout_model_line_count = model.snapshot.line_count()
+  self.layout_line_count = view_model.line_count()
   // The cursor outgoing alias is model-scoped. The ViewModel has already
   // committed both cursor coordinate states before this fires; the Viewer
   // adds the public content barrier and position-before-selection relay.
@@ -117,6 +142,16 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       match self.get_view_model() {
         Some(active) =>
           if physical_equal(active, view_model) {
+            // A real content flush waits behind the public content barrier so
+            // `ViewFlushed` remains before the cursor event. Ordinary cursor
+            // transitions notify ViewParts before the public outgoing pair.
+            if !is_model_flush_cursor_event(event) {
+              self.emit_view_cursor_state_changed(
+                view_model,
+                event.selections,
+                event.reason,
+              )
+            }
             self.enqueue_cursor_state_change(event)
           }
         None => ()
@@ -131,12 +166,12 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       self.apply_scroll_change(Some(change))
     }),
   )
-  let view = self.create_view(model)
+  let view = self.create_view(model, view_model)
   self.model_data = Some({ model, view_model, view, listeners_to_remove })
+  self.emit_view_event(ViewFlushed)
   self.rendered_window = None
   self.apply_view_model_layout(view_model, model.snapshot)
   let build_finished = now_ms()
-  self.content_generation += 1
   self.did_build_view_model.fire({
     model,
     line_count: view_model.line_count(),
@@ -158,9 +193,67 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
 /// the browser `View` inside the container, hook its per-view input, re-add
 /// every registered content/overlay widget, and stamp `data-uri`. `None`
 /// while unattached (the headless harness).
-fn Viewer::create_view(self : Viewer, model : @model.TextModel) -> @view.View? {
+fn Viewer::create_view(
+  self : Viewer,
+  model : @model.TextModel,
+  view_model : @view_model.ViewModel,
+) -> @view.View? {
   guard self.container is Some(host) else { return None }
   let view = @view.View::new()
+  // ViewLines rereads the same live configuration snapshot in its
+  // `onConfigurationChanged` handler, and its one retained-line factory
+  // dynamically captures the equality-gated `ViewLineOptions` identity.
+  view.view_lines.install_live_configuration_reader(() => {
+    @view_lines.ViewLinesConfiguration::new(
+      line_height=self.font_info.line_height,
+      typical_halfwidth_character_width=self.font_info.typical_halfwidth_character_width,
+      is_viewport_wrapping=self.options.soft_wrap && self.soft_wrap_column > 0,
+      can_use_layer_hinting=true,
+      space_width=self.font_info.space_width,
+      middot_width=self.font_info.middot_width,
+      wsmiddot_width=self.font_info.wsmiddot_width,
+      use_monospace_optimizations=self.font_info.is_monospace,
+      can_use_halfwidth_rightwards_arrow=self.font_info.can_use_halfwidth_rightwards_arrow,
+      stop_rendering_line_after=-1,
+      render_whitespace=self.options.render_whitespace,
+      render_control_characters=self.options.render_control_characters,
+      font_ligatures=self.font_info.font_feature_settings !=
+        @config.editor_font_ligatures_off,
+      vertical_scrollbar_size=@core.editor_vertical_scrollbar_size,
+    )
+  })
+  // ContentWidgets retains Monaco's ViewContext for source-time layout-cache
+  // refreshes and anchor reprojection. Install the model-scoped live readers
+  // before any persistent widget is re-added to this fresh View.
+  view.content_widgets.install_live_view_context(
+    () => {
+      (
+        self.gutter_width(model.snapshot.line_count()),
+        self.measured_content_width,
+      )
+    },
+    position => {
+      let valid_position = model.validate_position(position)
+      if view_model.model_position_is_visible(valid_position) {
+        Some(
+          view_model
+          .coordinates_converter()
+          .model_position_to_view_position(valid_position),
+        )
+      } else {
+        None
+      }
+    },
+  )
+  view.install_current_line_configuration_reader(() => {
+    (
+      self.options.render_line_highlight,
+      self.options.render_line_highlight_only_when_focus,
+      self.options.soft_wrap && self.soft_wrap_column > 0,
+      self.gutter_width(model.snapshot.line_count()),
+      self.measured_content_width,
+    )
+  })
   view.root.set_attribute("data-theme", self.options.theme)
   host.append_child(view.root.as_node())
   view.apply_squiggly_theme()
@@ -240,12 +333,26 @@ fn Viewer::build_view_model(
 fn Viewer::retokenize_current_model(
   self : Viewer,
   model : @model.TextModel,
+  event : @model_tokens.ModelTokensChangedEvent,
 ) -> Unit {
   let tokenize_started = now_ms()
   model.tokenization.force_tokenization()
   let tokenize_finished = now_ms()
   guard self.get_view_model() is Some(view_model) else { return }
-  self.content_generation += 1
+  // Convert the model event's exact inclusive ranges into view coordinates so
+  // wrapped continuations, hidden areas, and injected text reach the same
+  // token-sensitive ViewParts as Monaco.
+  let model_ranges : Array[(Int, Int)] = []
+  for range in event.ranges {
+    model_ranges.push((range.from_line_number, range.to_line_number))
+  }
+  self.emit_view_event(
+    ViewTokensChanged(
+      view_tokens_changed_event(
+        view_token_ranges_from_model(view_model, model, model_ranges),
+      ),
+    ),
+  )
   self.did_build_view_model.fire({
     model,
     line_count: view_model.line_count(),
@@ -269,22 +376,50 @@ fn Viewer::retokenize_current_model(
 /// Monaco's `_configuration.onDidChangeFast` → `_onConfigurationChanged`
 /// subscription. A changed view-line mapping re-flushes the layout; anything
 /// else only re-syncs the content width.
-fn Viewer::on_configuration_changed(self : Viewer) -> Unit {
+fn Viewer::on_configuration_changed(
+  self : Viewer,
+  previous_options? : ViewerOptions = self.options,
+) -> Unit {
+  let event_batch = self.begin_view_event_batch()
   match (self.get_view_model(), self.get_model()) {
     (Some(view_model), Some(model)) => {
+      let previous_view_selection = view_model.cursor.get_view_selection()
       let options = self.options.view_model_options(
         self.soft_wrap_column,
         font_info=self.font_info,
         editor_id=self.editor_id,
       )
       if view_model.on_configuration_changed(options) {
-        self.on_line_mapping_changed(view_model, model)
+        // Source order: Flushed → LineMapping → Decorations(null) →
+        // cursor reprojection, followed by the layout flush.
+        self.emit_view_event(ViewFlushed)
+        self.emit_view_event(ViewLineMappingChanged)
+        self.emit_view_event(
+          ViewDecorationsChanged(@view.ViewDecorationsChangedEvent::all()),
+        )
+        self.emit_view_cursor_reprojection(view_model, previous_view_selection)
+        self.on_line_mapping_changed(
+          view_model,
+          model,
+          notify_view=false,
+          notify_configuration=false,
+        )
       } else {
         self.sync_content_width()
+      }
+      if previous_options.render_validation_decorations !=
+        self.options.render_validation_decorations {
+        // `ViewModel::on_configuration_changed` has already rotated the
+        // filtered decoration provider; invalidate every decorations
+        // consumer before the final Configuration event.
+        self.emit_view_event(
+          ViewDecorationsChanged(@view.ViewDecorationsChangedEvent::all()),
+        )
       }
     }
     _ => self.sync_content_width()
   }
+  end_view_event_batch(event_batch)
 }
 
 ///|
@@ -297,10 +432,52 @@ fn Viewer::on_line_mapping_changed(
   self : Viewer,
   view_model : @view_model.ViewModel,
   model : @model.TextModel,
+  notify_view? : Bool = true,
+  notify_configuration? : Bool = true,
+  previous_view_selection? : @core.Selection,
 ) -> Unit {
+  let previous_layout_identity = self.layout_identity(
+    self.layout_model_line_count,
+    self.layout_line_count,
+  )
+  let event_batch = if notify_view || notify_configuration {
+    self.begin_view_event_batch()
+  } else {
+    None
+  }
+  if notify_view {
+    self.emit_view_event(ViewFlushed)
+    self.emit_view_event(ViewLineMappingChanged)
+    self.emit_view_event(
+      ViewDecorationsChanged(@view.ViewDecorationsChangedEvent::all()),
+    )
+    match previous_view_selection {
+      Some(previous) => self.emit_view_cursor_reprojection(view_model, previous)
+      None => ()
+    }
+  }
   self.apply_view_model_layout(view_model, model.snapshot)
   self.rendered_window = None
-  self.content_generation += 1
+  let current_model_line_count = model.snapshot.line_count()
+  let current_view_line_count = view_model.line_count()
+  self.sync_content_box_for_model_line_count(
+    view_model,
+    self.layout_model_line_count,
+    current_model_line_count,
+  )
+  |> ignore
+  self.layout_model_line_count = current_model_line_count
+  self.layout_line_count = current_view_line_count
+  if notify_configuration &&
+    previous_layout_identity !=
+    self.layout_identity(current_model_line_count, current_view_line_count) {
+    self.emit_view_event(
+      ViewConfigurationChanged(
+        @view.ViewConfigurationChangedEvent::from_changed_options([LayoutInfo]),
+      ),
+    )
+  }
+  end_view_event_batch(event_batch)
   let fresh = match self.pending_rendered {
     Some(pending) => pending.fresh
     None => false

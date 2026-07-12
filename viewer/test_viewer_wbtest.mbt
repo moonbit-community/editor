@@ -263,8 +263,6 @@ test "host delta_decorations flows through query API and render inputs" {
   assert_false(
     viewport.line_decorations[0].any(d => d.class_name == "myHighlight"),
   )
-  // The decorations-changed signal reached the view event source.
-  assert_true(viewer.decorations_generation > 0)
   // removeDecorations drops them everywhere.
   viewer.remove_decorations(ids)
   assert_eq(viewer.get_line_decorations(1).length(), 0)

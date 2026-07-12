@@ -217,6 +217,7 @@ pub fn ViewerOptions::view_model_options(
   } else {
     ViewModelOptions(
       font_info~,
+      tab_size=self.tab_size,
       editor_id~,
       render_validation_decorations=self.render_validation_decorations,
     )

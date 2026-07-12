@@ -9,16 +9,19 @@
 // twin lives with `view_parts/current_line_highlight`.
 
 ///|
-/// The margin current-line dynamic overlay's state: the prepared per-line
-/// HTML (`_renderData`). `pub(all)`: the `DynamicViewOverlay` impl in
-/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+/// The margin current-line dynamic overlay's independent inherited state plus
+/// prepared per-line HTML (`_renderData`).
 pub(all) struct CurrentLineMarginHighlightOverlay {
+  state : @current_line_highlight.CurrentLineHighlightState
   mut render_result : Array[String]
 }
 
 ///|
 pub fn CurrentLineMarginHighlightOverlay::new() -> CurrentLineMarginHighlightOverlay {
-  { render_result: [] }
+  {
+    state: @current_line_highlight.CurrentLineHighlightState::new(),
+    render_result: [],
+  }
 }
 
 ///|

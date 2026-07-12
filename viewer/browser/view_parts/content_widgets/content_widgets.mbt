@@ -22,9 +22,9 @@ pub(all) enum ContentWidgetPositionPreference {
 
 ///|
 /// Monaco `IContentWidgetPosition` (`editorBrowser.ts`): the model-space
-/// anchors and the placement preference order. `position_affinity` is
-/// unported — the only source consumer is `shouldAppearBeforeContent`
-/// (inline-suggest), N-A here.
+/// anchors and the placement preference order. `position_affinity` remains a
+/// geometry-owned deferred seam: Monaco retains it with each widget and feeds
+/// it back into model-to-view conversion whenever mappings change.
 pub(all) struct ContentWidgetPosition {
   position : @base_common.Position?
   secondary_position : @base_common.Position?
@@ -53,27 +53,35 @@ priv enum WidgetRenderData {
 }
 
 ///|
+/// Monaco `PositionPair` (`contentWidgets.ts:625-630`): retain the widget's
+/// model anchor and the view position projected at source-event time. Mapping
+/// events replace only `view_position`, so the original model anchor remains
+/// the input to every later reprojection.
+priv struct PositionPair {
+  model_position : @base_common.Position?
+  view_position : @base_common.Position?
+}
+
+///|
 /// Monaco's inner `Widget` (`contentWidgets.ts:190`): per-widget position
-/// state, the cached DOM box, and this frame's render data. Anchors are held
-/// model-space and resolved through the coordinates converter at
-/// `prepare_render` (the source caches the view position and re-resolves on
-/// line-mapping events; resolving per prepared frame is observably the same
-/// and needs no `_updateAnchorsViewPositions` plumbing).
+/// state, the cached DOM box, and this frame's render data.
 priv struct Widget {
   dom_node : @rdom.Element
   id : String
   /// Monaco `Widget.allowEditorOverflow` (the `EditorOption.allowOverflow`
   /// gate is N-A: the viewer has no such option and it defaults `true`).
   allow_editor_overflow : Bool
-  mut position : @base_common.Position?
-  mut secondary_position : @base_common.Position?
+  mut content_width : Double
+  mut content_left : Double
+  mut primary_anchor : PositionPair
+  mut secondary_anchor : PositionPair
   mut preference : Array[ContentWidgetPositionPreference]
   /// Monaco `_cachedDomNodeOffsetWidth/Height`, invalidated by `set_position`.
   mut cached_dom_node_offset_width : Double
   mut cached_dom_node_offset_height : Double
-  /// Monaco `Widget._maxWidth` (`_getMaxWidth`), refreshed per prepared frame
-  /// (the source refreshes in the constructor, `onConfigurationChanged`, and
-  /// `onBeforeRender`). `-1` until the first prepare pass measures it.
+  /// Monaco `Widget._maxWidth` (`_getMaxWidth`), initialized with the widget
+  /// and refreshed only by layoutInfo configuration changes. `onBeforeRender`
+  /// reapplies this cached value without recomputing it.
   mut max_width : Double
   mut is_visible : Bool
   /// Whether `setPosition` switched the node to `display:block` so
@@ -96,6 +104,11 @@ pub(all) struct ContentWidgets {
   /// page-space reference box for `_layoutBoxInPage`.
   view_dom_node : @rdom.Element
   priv widgets : Map[String, Widget]
+  /// Live stand-ins for Monaco's retained `ViewContext`: configuration reads
+  /// and model-to-view conversion happen when their source events arrive, not
+  /// from a later render snapshot.
+  priv mut read_layout_info : () -> (Double, Double)
+  priv mut model_position_to_valid_view_position : (@base_common.Position) -> @base_common.Position?
   mut should_render : Bool
 }
 
@@ -119,8 +132,23 @@ pub fn ContentWidgets::new(
     overflowing_content_widgets_dom_node,
     view_dom_node,
     widgets: {},
+    read_layout_info: () => (0.0, 0.0),
+    model_position_to_valid_view_position: position => Some(position),
     should_render: true,
   }
+}
+
+///|
+/// Installs the live configuration/converter capabilities owned by the active
+/// ViewModel. The root calls this before re-adding retained widgets; the
+/// closures then remain stable for the View's model-scoped lifetime.
+pub fn ContentWidgets::install_live_view_context(
+  self : ContentWidgets,
+  read_layout_info : () -> (Double, Double),
+  model_position_to_valid_view_position : (@base_common.Position) -> @base_common.Position?,
+) -> Unit {
+  self.read_layout_info = read_layout_info
+  self.model_position_to_valid_view_position = model_position_to_valid_view_position
 }
 
 ///|
@@ -144,16 +172,20 @@ pub fn ContentWidgets::add_widget(
   actual : &ContentWidget,
 ) -> Unit {
   let dom_node = actual.get_dom_node()
+  let (content_left, content_width) = (self.read_layout_info)()
+  let allow_editor_overflow = actual.allow_editor_overflow()
   let widget : Widget = {
     dom_node,
     id: actual.get_id(),
-    allow_editor_overflow: actual.allow_editor_overflow(),
-    position: None,
-    secondary_position: None,
+    allow_editor_overflow,
+    content_width,
+    content_left,
+    primary_anchor: { model_position: None, view_position: None },
+    secondary_anchor: { model_position: None, view_position: None },
     preference: [],
     cached_dom_node_offset_width: -1.0,
     cached_dom_node_offset_height: -1.0,
-    max_width: -1.0,
+    max_width: content_widget_max_width(allow_editor_overflow, content_width),
     is_visible: false,
     display_block: false,
     top: 0.0,
@@ -166,6 +198,7 @@ pub fn ContentWidgets::add_widget(
   // `HitTestContext.findAttribute` (contentWidgets.ts:246).
   dom_node.set_attribute("widgetId", widget.id)
   widget.apply_style()
+  widget.apply_max_width()
   if widget.allow_editor_overflow {
     self.overflowing_content_widgets_dom_node.append_child(dom_node.as_node())
   } else {
@@ -187,22 +220,55 @@ pub fn ContentWidgets::set_widget_position(
   guard self.widgets.get(actual.get_id()) is Some(widget) else { return }
   match actual.get_position() {
     Some(position) => {
-      widget.position = position.position
-      widget.secondary_position = position.secondary_position
+      widget.set_anchor_positions(
+        position.position,
+        position.secondary_position,
+        self.model_position_to_valid_view_position,
+      )
       widget.preference = position.preference
     }
     None => {
-      widget.position = None
-      widget.secondary_position = None
+      widget.set_anchor_positions(
+        None,
+        None,
+        self.model_position_to_valid_view_position,
+      )
       widget.preference = []
     }
   }
-  widget.display_block = widget.position is Some(_) &&
+  widget.display_block = widget.primary_anchor.view_position is Some(_) &&
     widget.preference.length() > 0
   widget.apply_style()
   widget.cached_dom_node_offset_width = -1.0
   widget.cached_dom_node_offset_height = -1.0
   self.should_render = true
+}
+
+///|
+/// Monaco `ViewContentWidgets.onConfigurationChanged` (`:56-62`) delegates
+/// to every retained widget. Each inner handler rereads layout caches only for
+/// the `layoutInfo` option identity (`Widget.onConfigurationChanged`, :250-258).
+pub fn ContentWidgets::on_configuration_changed(
+  self : ContentWidgets,
+  layout_info_changed : Bool,
+) -> Unit {
+  for _, widget in self.widgets {
+    widget.on_configuration_changed(layout_info_changed, self.read_layout_info)
+  }
+}
+
+///|
+/// Monaco `_updateAnchorsViewPositions` (`:95-100`): Map iteration preserves
+/// insertion/key order, matching `Object.keys(_widgets)`, and every retained
+/// model anchor is reprojected before the part is marked dirty.
+pub fn ContentWidgets::update_anchors_view_positions(
+  self : ContentWidgets,
+) -> Unit {
+  for _, widget in self.widgets {
+    widget.update_anchor_view_position(
+      self.model_position_to_valid_view_position,
+    )
+  }
 }
 
 ///|
@@ -224,14 +290,11 @@ pub fn ContentWidgets::remove_widget(
 }
 
 ///|
-/// The geometry/converter capabilities the prepare pass needs from the render
-/// context — Monaco's `RenderingContext` surface as data plus closures, the
+/// The geometry capabilities the prepare pass needs from the render context —
+/// Monaco's `RenderingContext` surface as data plus closures, the
 /// same host pattern `PointerHandlerHelper` uses (this package cannot import
 /// `browser/view`'s context types without a cycle).
 pub(all) struct ContentWidgetsRenderContext {
-  /// Model position → view position through the active coordinates converter
-  /// (Monaco `getValidPositionPair`'s `convertModelPositionToViewPosition`).
-  model_position_to_view_position : (@base_common.Position) -> @base_common.Position
   /// Content-space vertical offset of a view line
   /// (`ctx.getVerticalOffsetForLineNumber`).
   vertical_offset_for_line : (Int) -> Double
@@ -248,9 +311,6 @@ pub(all) struct ContentWidgetsRenderContext {
   /// `fontInfo.typicalFullwidthCharacterWidth`, the `_reduceAnchorCoordinates`
   /// clamp unit.
   typical_fullwidth_character_width : Double
-  /// `layoutInfo.contentLeft` (the gutter width): converts a content-space
-  /// `left` into editor-root space for the overflowing `_layoutBoxInPage` arm.
-  content_left : Double
   scroll_top : Double
   scroll_left : Double
   viewport_width : Double
@@ -259,15 +319,14 @@ pub(all) struct ContentWidgetsRenderContext {
 
 ///|
 /// Monaco `ViewContentWidgets.prepareRender` (`contentWidgets.ts:152-157`):
-/// compute each widget's render data for this frame. The max-width refresh
-/// folds in Monaco's `Widget.onBeforeRender` (`setMaxWidth(this._maxWidth)`,
-/// run before the box is measured) and `_getMaxWidth`'s recompute.
+/// compute each widget's render data for this frame. Monaco's preceding
+/// `onBeforeRender` reapplies the cached `_maxWidth` without rereading layout.
 pub fn ContentWidgets::prepare_render_widgets(
   self : ContentWidgets,
   ctx : ContentWidgetsRenderContext,
 ) -> Unit {
   for _, widget in self.widgets {
-    widget.update_max_width(ctx)
+    widget.apply_max_width()
     widget.render_data = widget.prepare_render_widget(ctx, self.view_dom_node)
   }
 }
@@ -306,22 +365,84 @@ priv struct BoxLayoutResult {
 }
 
 ///|
-/// Monaco `Widget._getMaxWidth` (`contentWidgets.ts:284-293`) applied through
-/// the FastDomNode-style per-property write: an overflowing widget may grow to
-/// the window width; a clipped one to the content area width.
-fn Widget::update_max_width(
-  self : Widget,
-  ctx : ContentWidgetsRenderContext,
-) -> Unit {
-  self.max_width = if self.allow_editor_overflow {
+/// Monaco `Widget._getMaxWidth` (`contentWidgets.ts:283-291`).
+fn content_widget_max_width(
+  allow_editor_overflow : Bool,
+  content_width : Double,
+) -> Double {
+  if allow_editor_overflow {
     @rdom.window().inner_width().to_double()
   } else {
-    ctx.viewport_width
+    content_width
   }
+}
+
+///|
+/// Monaco `onBeforeRender`'s `setMaxWidth(this._maxWidth)` write.
+fn Widget::apply_max_width(self : Widget) -> Unit {
   set_style_property(
     self.dom_node,
     "max-width",
     self.max_width.to_string() + "px",
+  )
+}
+
+///|
+fn Widget::on_configuration_changed(
+  self : Widget,
+  layout_info_changed : Bool,
+  read_layout_info : () -> (Double, Double),
+) -> Unit {
+  if layout_info_changed {
+    let (content_left, content_width) = read_layout_info()
+    self.content_left = content_left
+    self.content_width = content_width
+    self.max_width = content_widget_max_width(
+      self.allow_editor_overflow,
+      self.content_width,
+    )
+  }
+}
+
+///|
+fn position_pair(
+  model_position : @base_common.Position?,
+  model_position_to_valid_view_position : (@base_common.Position) -> @base_common.Position?,
+) -> PositionPair {
+  match model_position {
+    Some(position) =>
+      {
+        model_position: Some(position),
+        view_position: model_position_to_valid_view_position(position),
+      }
+    None => { model_position: None, view_position: None }
+  }
+}
+
+///|
+fn Widget::set_anchor_positions(
+  self : Widget,
+  primary_anchor : @base_common.Position?,
+  secondary_anchor : @base_common.Position?,
+  model_position_to_valid_view_position : (@base_common.Position) -> @base_common.Position?,
+) -> Unit {
+  self.primary_anchor = position_pair(
+    primary_anchor, model_position_to_valid_view_position,
+  )
+  self.secondary_anchor = position_pair(
+    secondary_anchor, model_position_to_valid_view_position,
+  )
+}
+
+///|
+fn Widget::update_anchor_view_position(
+  self : Widget,
+  model_position_to_valid_view_position : (@base_common.Position) -> @base_common.Position?,
+) -> Unit {
+  self.set_anchor_positions(
+    self.primary_anchor.model_position,
+    self.secondary_anchor.model_position,
+    model_position_to_valid_view_position,
   )
 }
 
@@ -365,6 +486,7 @@ fn Widget::prepare_render_widget(
       self.cached_dom_node_offset_height,
       ctx,
       view_dom_node,
+      self.content_left,
     )
   } else {
     layout_box_in_viewport(
@@ -396,7 +518,7 @@ fn Widget::prepare_render_widget(
           // `left` shifts right by `contentLeft`.
           if self.allow_editor_overflow {
             return Some(
-              InViewport(top=anchor.top, left=anchor.left + ctx.content_left),
+              InViewport(top=anchor.top, left=anchor.left + self.content_left),
             )
           } else {
             return Some(InViewport(top=anchor.top, left=anchor.left))
@@ -415,19 +537,15 @@ fn Widget::anchors_coordinates(
   self : Widget,
   ctx : ContentWidgetsRenderContext,
 ) -> (AnchorCoordinate?, AnchorCoordinate?) {
-  let primary_view = match self.position {
-    Some(position) => Some((ctx.model_position_to_view_position)(position))
-    None => None
-  }
-  let secondary_view = match (self.secondary_position, primary_view) {
-    (Some(position), Some(primary)) => {
-      let secondary = (ctx.model_position_to_view_position)(position)
+  let primary_view = self.primary_anchor.view_position
+  let secondary_view = match
+    (self.secondary_anchor.view_position, primary_view) {
+    (Some(secondary), Some(primary)) =>
       if secondary.line_number == primary.line_number {
         Some(secondary)
       } else {
         None
       }
-    }
     _ => None
   }
   let coordinate = fn(position : @base_common.Position) -> AnchorCoordinate? {
@@ -587,6 +705,7 @@ fn layout_box_in_page(
   height : Double,
   ctx : ContentWidgetsRenderContext,
   view_dom_node : @rdom.Element,
+  content_left : Double,
 ) -> BoxLayoutResult {
   let above_top = anchor.top - height
   let below_top = anchor.top + anchor.height
@@ -599,7 +718,7 @@ fn layout_box_in_page(
   let left = layout_horizontal_segment_in_page(
     window_width,
     dom_node_position,
-    anchor.left - ctx.scroll_left + ctx.content_left,
+    anchor.left - ctx.scroll_left + content_left,
     width,
   )
 

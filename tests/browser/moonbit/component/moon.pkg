@@ -6,6 +6,7 @@ import {
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/syntax/lang_moonbit",
+  "moonbit-community/editor/syntax",
   "moonbit-community/editor/tests/browser/moonbit/support",
   "moonbit-community/rabbita/dom" @rdom,
   "moonbit-community/rabbita/js",

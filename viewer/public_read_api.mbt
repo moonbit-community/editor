@@ -475,8 +475,8 @@ pub fn Viewer::get_scrolled_visible_position(
 /// decorationsWidth`), the offset DOM-measured line x's are relative to. Backed
 /// by the view model's measured `gutter_width`; `0` with no model.
 fn Viewer::read_api_content_left(self : Viewer) -> Double {
-  match self.get_view_model() {
-    Some(view_model) => self.gutter_width(view_model.line_count())
+  match self.get_model() {
+    Some(model) => self.gutter_width(model.snapshot.line_count())
     None => 0.0
   }
 }

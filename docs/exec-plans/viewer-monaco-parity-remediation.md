@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — corrected ViewZones inventory ready; STOP FOR RE-REVIEW
+Status: active — ViewZones approved for implementation
 
 Date: 2026-07-10
 
@@ -85,7 +85,7 @@ product contract and belongs in an ordinary local test.
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
-| 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | corrected inventory ready — STOP FOR RE-REVIEW |
+| 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | approved for implementation |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
 
@@ -539,3 +539,11 @@ The independent closing task is:
   revised candidate is 346/346 TODO rows: 156 browser/API, 176 layout/model,
   and 14 outgoing, with 287 proposed TESTED, 41 PORTED, 8 DEFERRED, and 10
   N-A. No product/test file changed; stop for another fresh Gate B review.
+- 2026-07-12: ViewZones Gate B passed at documentation-only inventory commit
+  `1c83995`. The approved fixed denominator is 346/346 TODO rows with 287
+  planned TESTED, 41 PORTED, 8 DEFERRED, and 10 N-A; the child-plan SHA-256 is
+  `a556095eee067bee7d32ffb31406c1e9de5407b2f66a7aa1dff45bcbe97b1790`.
+  Three independent reviews approved source completeness, the transferred
+  historical boundaries, proposed terminals, matrices, and combined mechanics.
+  No product/test edit preceded approval; ViewZones implementation is now
+  authorized.

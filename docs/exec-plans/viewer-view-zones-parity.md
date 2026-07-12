@@ -1,6 +1,6 @@
 # Viewer ViewZones Parity
 
-Status: corrected inventory ready — STOP FOR RE-REVIEW
+Status: approved for implementation
 
 Date: 2026-07-10
 
@@ -706,7 +706,7 @@ header therefore needs a metadata correction, not a behavioral rebase.
 - [x] Proposed totals are 287 TESTED / 41 PORTED / 8 DEFERRED / 10 N-A.
 - [x] Shared-file ownership and frozen sibling clusters are explicit.
 - [x] No product or test file changed while building the inventory.
-- [ ] Independent Gate B approves source completeness, boundaries, matrices,
+- [x] Independent Gate B approves source completeness, boundaries, matrices,
   and proposed terminals.
 
 Review gate: commit this corrected 346-row inventory and stop for fresh
@@ -866,3 +866,11 @@ update the ledger and stop for classification review.
   String-key seams are explicit. The matrix now covers `-0`, owner-0 cleanup,
   and exact frozen-key/live-map callback mutation. No product/test file changed;
   commit and stop for another fresh Gate B review.
+- 2026-07-12: Gate B passed at documentation-only inventory commit `1c83995`.
+  The approved fixed denominator is 346/346 TODO rows with 287 proposed TESTED,
+  41 PORTED, 8 DEFERRED, and 10 N-A; this file's SHA-256 is
+  `a556095eee067bee7d32ffb31406c1e9de5407b2f66a7aa1dff45bcbe97b1790`.
+  Three fresh independent reviews approved the 156 browser/API, 176
+  layout/model, and 14 outgoing atoms, including ownership transfers, reduced
+  seams, exact matrices, hashes, and combined mechanics. No product/test edit
+  preceded approval; implementation is authorized.

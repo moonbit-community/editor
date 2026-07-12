@@ -39,6 +39,9 @@ while returning LF values is not an allowed deviation.
 - vscode/src/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeBase.ts
   - complete line-start, line-length, getPositionAt, and getOffsetAt clusters
     consumed by the read-only buffer.
+- vscode/src/vs/editor/common/model/pieceTreeTextBuffer/rbTreeBase.ts
+  - the complete `TreeNode.next` plus `SENTINEL` construction dependency that
+    determines terminal `PieceTreeBase.getLineCharCode` behavior.
 - vscode/src/vs/editor/common/model/textModel.ts
   - createTextBuffer for string input; constructor buffer facts;
     getValue, getValueLength, getValueInRange, getValueLengthInRange,
@@ -163,7 +166,8 @@ target and is not implementation evidence.
 ```text
 Builder/factory (EFB + EBB)                     64
 PieceTreeTextBuffer readonly unit (ETB)         76
-PieceTreeBase dependency closure (PB)          199
+PieceTreeBase dependency closure (PB)          200
+red-black successor dependency (RB)              5
 model.ts enums/interfaces (MI)                  59
 default-EOL carrier chain (DEOL)                 8
 named TextModel cluster (TMD/TM/TML)            55
@@ -172,13 +176,13 @@ consumed TextModel read closure (TMR)           38
 content event facts (EV)                        20
 provider endpoint/offset handoff (PR)            2
                                                 ---
-Source atoms                                    524
+Source atoms                                    530
 Named upstream test dispositions (REF)          11
                                                 ---
-Total ledger rows                               535
+Total ledger rows                               541
 
-Working:  535 TODO; 0 PASS
-Proposed: 208 TESTED + 34 PORTED + 0 DEFERRED + 293 N-A = 535
+Working:  541 TODO; 0 PASS
+Proposed: 208 TESTED + 34 PORTED + 0 DEFERRED + 299 N-A = 541
 ```
 
 The source files are byte-pinned at the oracle commit:
@@ -188,9 +192,10 @@ The source files are byte-pinned at the oracle commit:
 | `pieceTreeTextBufferBuilder.ts` | 13–188 | `311c7c5f89cfd7a24d801370321a2bd30afedd185fba9f49e1bebbffd1c904cf` |
 | `pieceTreeTextBuffer.ts` | 34–237 | `cd2a3d450443dd9fbcd073213095dd8a0895976ab7097076c4474e8da7f21c8d` |
 | `pieceTreeBase.ts` | listed PB clusters below | `0bd0b699eb456f90c6c45cf61bebdc6e69181806036c537189d7ef83a874b46d` |
+| `rbTreeBase.ts` | 29–48, 85–89 | `e96beaed12f472afda399d7662052eddf2e25951c168d6673fabde3c6fa262aa` |
 | `model.ts` | listed MI/DEOL clusters below | `b4311925776bcf86418b284beb5c07968de12aa1ef3b6b60ebf506d28e82751a` |
 | `textModel.ts` | listed DEOL/TMD/TM/TML/RSN/TMR clusters below | `3ccef30b2902046ff93d99b5d9cd03ae2748785e099d123cf519aa5527d0b622` |
-| `textModelEvents.ts` | 42–84, 221–235, 457–480 | `fcbcce16a492a431abe1c72f64ed819528095b7e740f49515d10283670943b59` |
+| `textModelEvents.ts` | 42–84, 221–222, 233–235, 457–480 | `fcbcce16a492a431abe1c72f64ed819528095b7e740f49515d10283670943b59` |
 | `mirrorTextModel.ts` | 12–29 | `a311bb48313769775d92891b133e845be1fbff9b1ac15663b187fad6bd5bd219` |
 | `textModel.test.ts` | named REF cases below | `7ecadd74f5469bc973e1d40b9f4d1b9c7199eaecdd777c9d11bce1a331a55f98` |
 
@@ -242,7 +247,7 @@ For every construction and `set_value(s)`:
   claimed as parity: their rows are N-A because the fixed public
   Viewer/workbench contract retains U+FEFF as ordinary content.
 
-Review gate: commit this corrected 535-row documentation-only inventory and
+Review gate: commit this corrected 541-row documentation-only inventory and
 stop for fresh independent Gate B re-review before any product or test edit.
 
 ### Builder/factory — EFB and EBB
@@ -380,7 +385,7 @@ Proposed EFB/EBB totals: 15 TESTED / 4 PORTED / 45 N-A = 64.
 | ETB-058 | `getLineCount` (`:178-180`) | Existing normalized-start count. | TODO | TESTED |
 | ETB-059 | `getLinesContent` (`:182-184`) | Existing array read over normalized storage. | TODO | TESTED |
 | ETB-060 | `getLineContent` (`:186-188`) | Existing EOL-excluding read. | TODO | TESTED |
-| ETB-061 | public `getLineCharCode` lookup/delegate (`:190-192`) | Current helper panics at nonfinal EOL index and final EOF; the private source branches are PB-owned below. | TODO | TESTED |
+| ETB-061 | public `getLineCharCode` lookup/delegate (`:190-192`) | Fix the current nonfinal-EOL panic; terminal EOF failure is retained from the PB/RB source path below. | TODO | TESTED |
 | ETB-062 | `getCharCode(offset)` (`:194-196`) | No public local consumer. | TODO | N-A (reduced read API) |
 | ETB-063 | `getLineLength` (`:198-200`) | Existing read must use normalized coordinates. | TODO | TESTED |
 | ETB-064 | `getLineMinColumn` exact 1 (`:202-204`) | Existing model seam. | TODO | TESTED |
@@ -526,7 +531,7 @@ Scoped lines are `16-151,268-318,355-357,369-393,395-603,605-662,1073-1156,
 | PB-113 | `NodePosition.nodeStartOffset` (`:110-114`) | No tree-node start offset. | TODO | N-A (single-buffer seam) |
 | PB-114 | private `_getCharCode` member (`:631`) | Flat snapshot helper is the structural seam. | TODO | PORTED |
 | PB-115 | piece-end remainder branch (`:632-634`) | Local boundary helper must distinguish content end. | TODO | TESTED |
-| PB-116 | no next node returns 0 (`:635-637`) | Final EOF line-char result must be 0. | TODO | TESTED |
+| PB-116 | falsy next-node branch returns 0 (`:635-637`) | `TreeNode.next` returns truthy `SENTINEL` at exhaustion, so this source branch is unreachable. | TODO | N-A (unreachable sentinel branch) |
 | PB-117 | next-node head character (`:639-641`) | Nonfinal EOL line-char result must be LF. | TODO | TESTED |
 | PB-118 | in-piece character lookup (`:642-648`) | Ordinary content code unit. | TODO | TESTED |
 | PB-119 | `equal(other)` member (`:369`) | Flat normalized equality is the representation seam. | TODO | PORTED |
@@ -609,14 +614,31 @@ Scoped lines are `16-151,268-318,355-357,369-393,395-603,605-662,1073-1156,
 | PB-196 | no-LF node append (`:1314-1317`) | No node boundary. | TODO | N-A (single-buffer seam) |
 | PB-197 | advance forward (`:1319`) | No nodes. | TODO | N-A (single-buffer seam) |
 | PB-198 | final raw-line return (`:1322`) | Observable line-content result is tested through the wrapper. | TODO | TESTED |
-| PB-199 | public `getLineCharCode(lineNumber,index)`, `nodeAt2(lineNumber,index+1)`, and private-helper delegate (`:651-654`) | Preserve exact content/EOL/EOF lookup arithmetic through the flat snapshot helper. | TODO | TESTED |
+| PB-199 | public `getLineCharCode(lineNumber,index)`, `nodeAt2(lineNumber,index+1)`, and private-helper delegate (`:651-654`) | Preserve exact content/nonfinal-EOL lookup arithmetic through the flat snapshot helper. | TODO | TESTED |
+| PB-200 | terminal piece-end lookup receives truthy `SENTINEL`, falls through the falsy guard, then dereferences its null piece (`:632-641`; `rbTreeBase.ts:44-45,85-89`) | Preserve the source failure for final `index==lineLength`; this private invalid lookup has no product caller. | TODO | TESTED |
 
-Proposed PB totals: 68 TESTED / 17 PORTED / 114 N-A = 199.
+Proposed PB totals: 68 TESTED / 17 PORTED / 115 N-A = 200.
 
 `PieceTreeSearchCache` (`:199-266`) is the complete excluded topology-cache
 cluster represented by PB-108. Base setEOL (`:359-363`) and streaming
 createSnapshot/BOM wrapping (`:365-367`), normalizeEOL, edits, nodeAt/search,
 and CRLF mutation helpers remain excluded complete siblings.
+
+### Red-black successor reachability dependency — RB
+
+Only the complete `TreeNode.next` member and `SENTINEL` construction are in
+scope. They determine PB-116/PB-200 reachability; all other red-black tree
+members and mutations are excluded complete topology siblings.
+
+| ID | Source atom | Local target / current gap | Status | Proposed terminal |
+|---|---|---|---|---|
+| RB-001 | `TreeNode.next()` member (`rbTreeBase.ts:29`) | Flat snapshot has no tree successor method. | TODO | N-A (tree topology seam) |
+| RB-002 | right child returns the leftmost node (`:30-32`) | No right subtree or leftmost traversal. | TODO | N-A (tree topology seam) |
+| RB-003 | seed current node, climb parents, and break when current is a left child (`:34-42`) | No parent links or sentinel traversal. | TODO | N-A (tree topology seam) |
+| RB-004 | exhausted climb returns `SENTINEL`; otherwise return the ancestor (`:44-48`) | The truthy exhausted result is consumed only by PB-116/PB-200's source behavior. | TODO | N-A (tree topology seam) |
+| RB-005 | truthy `SENTINEL` TreeNode has null piece and self-linked parent/children (`:85-89`) | No sentinel representation; PB-200 tests the resulting terminal failure. | TODO | N-A (tree topology seam) |
+
+Proposed RB totals: 5 N-A = 5.
 
 ### model.ts enums and interfaces — MI
 
@@ -646,7 +668,7 @@ and CRLF mutation helpers remain excluded complete siblings.
 | MI-022 | `getLineCount` (`:1543`) | Normalized starts count. | TODO | TESTED |
 | MI-023 | `getLinesContent` (`:1544`) | Existing line-array read. | TODO | TESTED |
 | MI-024 | `getLineContent` (`:1545`) | Existing EOL-excluding read. | TODO | TESTED |
-| MI-025 | `getLineCharCode` (`:1546`) | Private local helper must gain source EOL/EOF semantics. | TODO | TESTED |
+| MI-025 | `getLineCharCode` (`:1546`) | Private local helper gains content/nonfinal-EOL semantics and retains the source terminal-EOF failure. | TODO | TESTED |
 | MI-026 | `getCharCode(offset)` (`:1547`) | No offset-level public consumer. | TODO | N-A (reduced read API) |
 | MI-027 | `getLineLength` (`:1548`) | Normalized EOL-excluding length. | TODO | TESTED |
 | MI-028 | `getLineMinColumn` (`:1549`) | Existing exact 1. | TODO | TESTED |
@@ -750,7 +772,7 @@ Proposed DEOL totals: 8 N-A = 8.
 | TM-EOL-036 | build replacement buffer (`:491`) | Normalize at the same construction point. | TODO | TESTED |
 | TM-EOL-037 | ITextSnapshot input (`:484,491`) | Streaming/snapshot input absent. | TODO | N-A (String-only API) |
 | TM-EOL-038 | use current defaultEOL (`:491`) | Fixed LF. | TODO | N-A (Option B intentional deviation) |
-| TM-EOL-039 | build-before-delegate order (`:491-492`) | Preserve and test EOL transition matrix. | TODO | TESTED |
+| TM-EOL-039 | build-before-delegate order (`:491-492`) | Preserve and test the explicit 4×4 old/new EOL-form matrix below. | TODO | TESTED |
 | TM-EOL-040 | `_createContentChanged2` accepts unused end position (`:495`) | Local accepted/unused parameter matches. | TODO | PORTED |
 | TM-EOL-041 | singleton range/offset/length/text (`:496-502`) | Old range/length currently mix raw and LF bases. | TODO | TESTED |
 | TM-EOL-042 | event EOL from new buffer (`:503`) | Fixed LF is correct under Option B. | TODO | TESTED |
@@ -764,7 +786,7 @@ Proposed DEOL totals: 8 N-A = 8.
 | TM-EOL-050 | destroy decorations (`:526-528`) | Existing evidence. | TODO | TESTED |
 | TM-EOL-051 | clear edit history/trim state (`:530-532`) | Edit stack absent. | TODO | N-A (edit subsystem absent) |
 | TM-EOL-052 | construct raw Flush/version flags (`:534-542`) | Existing contract, emitter body excluded. | TODO | TESTED |
-| TM-EOL-053 | payload old range/length + new value/flags (`:543-544`) | Add full EOL-form transition matrix. | TODO | TESTED |
+| TM-EOL-053 | payload old range/length + new value/flags (`:543-544`) | Run normalized-equal and changed-content lanes for every 4×4 transition below. | TODO | TESTED |
 
 Proposed TMD/TM/TML totals: 25 TESTED / 1 PORTED / 29 N-A = 55.
 
@@ -843,7 +865,7 @@ remain complete excluded mutation/escape-hatch siblings.
 | EV-EOL-011 | public event `isEolChange` (`:69-72`) | Input normalization is setValue, not setEOL; false. | TODO | TESTED |
 | EV-EOL-012 | `detailedReasons` (`:74-78`) | Editing telemetry omitted. | TODO | N-A (telemetry absent) |
 | EV-EOL-013 | `detailedReasonsChangeLengths` (`:80-84`) | Editing telemetry omitted. | TODO | N-A (telemetry absent) |
-| EV-EOL-014 | numeric `RawContentChangedType.Flush=1` (`:221-227`) | Local enum has no numeric ABI. | TODO | N-A (semantic enum) |
+| EV-EOL-014 | numeric `RawContentChangedType.Flush=1` (`:221-222`) | Local enum has no numeric ABI. | TODO | N-A (semantic enum) |
 | EV-EOL-015 | `ModelRawFlush.changeType` (`:233-235`) | Constructor identity exists. | TODO | TESTED |
 | EV-EOL-016 | raw event `changes` ctor fact (`:457-459,:475-476`) | `[Flush]`. | TODO | TESTED |
 | EV-EOL-017 | raw event `versionId` (`:460-463,:477`) | New version. | TODO | TESTED |
@@ -853,7 +875,9 @@ remain complete excluded mutation/escape-hatch siblings.
 
 Proposed EV totals: 16 TESTED / 4 N-A = 20. Complete
 `InternalModelContentChangeEvent` and `_emitContentChangedEvent` mechanics do
-not enter this denominator and remain tokenization-owned.
+not enter this denominator and remain tokenization-owned. The sibling enum
+values `LineChanged=2`, `LinesDeleted=3`, `LinesInserted=4`, and `EOLChanged=5`
+(`:223-227`) belong to excluded incremental-edit/setEOL lanes.
 
 ### Provider endpoint/offset handoff — PR
 
@@ -934,19 +958,26 @@ Port upstream cases and add local invariants for:
   low/high clamps. Float/NaN behavior remains typed-input N-A;
 - empty/same-line/cross-line/full/trailing ranges across getValue,
   getValueLength, getValueInRange, getValueLengthInRange, getPositionAt,
-  getOffsetAt, getFullModelRange, getEOL/sequence, equality, and public reads;
+  getOffsetAt, getFullModelRange, getEOL, equality, and public reads;
+  `getEndOfLineSequence` has no local API or test axis and is disposed only by
+  MI-050 and TMR-016–019's exact N-A rows;
 - equality fixtures separately exercise length mismatch, equal normalized
   length with line-count mismatch, equal length/count with content mismatch,
   and exact normalized equality, including raw CRLF versus LF inputs that
   normalize equal;
 - `getLineCharCode` content index, nonfinal `index==lineLength` returning LF,
-  and final `index==lineLength` returning 0;
+  and final `index==lineLength` preserving the pinned source failure caused by
+  the truthy null-piece sentinel; the pinned issue #45735/#47733 cases
+  (`pieceTreeTextBuffer.test.ts:1786-1818`) do not assert terminal EOF;
 - direct line-array/line-content extraction across first, interior, final, and
   trailing-empty lines, exercising normalized and all classified raw-only
   PieceTreeBase branches;
-- LF/CRLF/CR/mixed set_value transitions, including pairs with the same
-  normalized value and pairs with changed content; verify old range/length,
-  new text, event EOL/flags, full range, and coordinates;
+- the complete ordered `oldForm × newForm` set_value matrix over
+  `{LF, CRLF, CR, mixed}` (16 pairs). Every pair runs once with identical
+  logical lines/content (normalized-equal despite raw separator differences)
+  and once with changed logical content: 32 cases total. Each case verifies
+  the old normalized range/length, new normalized text, event EOL/flags,
+  version/flush despite normalized equality, full range, and coordinates;
 - leading/interior/U+FEFF-only/BOM+CRLF and set_value add/remove-BOM cases,
   freezing U+FEFF as ordinary content without claiming getBOM/preserveBOM;
 - local and remote model-wide inlay, public/workbench read, workbench remote
@@ -994,6 +1025,10 @@ Option B:
 - typed arrays, chunk/piece topology, streaming snapshots, Unicode-scalar
   character count, edit/search/setEOL, telemetry, disposal guards, and
   large-file flags have row-local N-A reasons;
+- PB-116 and RB-001–005 classify the unreachable falsy-successor branch and
+  absent tree topology; PB-200 separately preserves and tests the pinned
+  terminal-EOF failure at the flat local seam, so this is not a bug-fix
+  deviation;
 - the already-reviewed clamped readonly position/range contract is consumed,
   not reopened. TMR-006/009/023/032/035 own its invalid-line source throws;
   JS float/NaN input behavior is N-A due Int types.
@@ -1003,9 +1038,9 @@ update this ledger and stop for classification review.
 
 ### Inventory stop gate
 
-- [x] 524 source atoms and 11 named test atoms have 535 unique ledger rows.
+- [x] 530 source atoms and 11 named test atoms have 541 unique ledger rows.
 - [x] Every row is TODO with one proposed terminal; there are zero PASS rows.
-- [x] Proposed totals are 208 TESTED / 34 PORTED / 0 DEFERRED / 293 N-A.
+- [x] Proposed totals are 208 TESTED / 34 PORTED / 0 DEFERRED / 299 N-A.
 - [x] Option B and BOM/clamp/streaming reductions map to exact rows.
 - [x] Algebraic invariants and source-branch behavior matrix are explicit.
 - [x] Shared-file ownership and excluded sibling clusters are explicit.
@@ -1073,6 +1108,23 @@ update this ledger and stop for classification review.
   sequence method and preserve-BOM switch consistently; only PR-EOL-002/004
   remain transferred from async; and equality fixtures name all four source
   exits. No product/test file changed; commit and stop for fresh Gate B review.
+- 2026-07-12: three independent Gate B reviews rejected documentation-only
+  commit `5834c6f` (child SHA-256
+  `fe6e9e55295d6d16728660b0d9ccd4ce1b477bb92942c97701a66899d6184bfd`).
+  They established that final `getLineCharCode(line,lineLength)` reaches a
+  truthy null-piece sentinel and fails rather than returning 0; found an
+  impossible `getEndOfLineSequence` test axis and an underspecified EOL
+  transition matrix; and found four sibling raw-change enum values inside an
+  overbroad event scope. The remaining 535-row mechanics passed; no
+  product/test file changed.
+- 2026-07-12: the next corrected candidate has 541/541 TODO rows: 530 source
+  atoms plus 11 named tests, with 208 proposed TESTED, 34 PORTED, zero
+  DEFERRED, and 299 N-A. A five-row `TreeNode.next`/`SENTINEL` closure plus
+  PB-200 now preserves the source terminal-EOF failure while the nonfinal EOL
+  path remains the product fix. The sequence axis is exact N-A, the set_value
+  matrix is the complete 16 ordered EOL-form pairs × two content lanes, and
+  the event scope contains only Flush/ModelRawFlush atoms. No product/test
+  file changed; commit and stop for fresh Gate B review.
 
 Append the dated inventory approval, implementation commits, validation
 results, and final ledger totals here. Freeze after implementation.

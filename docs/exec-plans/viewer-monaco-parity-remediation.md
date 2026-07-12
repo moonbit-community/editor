@@ -594,3 +594,16 @@ The independent closing task is:
   ITextModel declaration closure, permanent Option-B/BOM classifications,
   four equality exits, and the parent-authorized PR-EOL-002/004 boundary are
   explicit. No product/test file changed; stop for fresh Gate B review.
+- 2026-07-12: three independent Gate B reviews rejected EOL inventory commit
+  `5834c6f` (child SHA-256
+  `fe6e9e55295d6d16728660b0d9ccd4ce1b477bb92942c97701a66899d6184bfd`).
+  They corrected the terminal line-char source behavior from an apparent but
+  unreachable zero return to the real truthy-sentinel failure, found an
+  impossible sequence test axis and incomplete transition matrix, and found
+  an overbroad raw-change enum scope. No product/test file changed.
+- 2026-07-12: the next corrected EOL candidate has 541/541 TODO rows: 530
+  source atoms plus 11 named tests, with 208 proposed TESTED, 34 PORTED, zero
+  DEFERRED, and 299 N-A. The exact `TreeNode.next`/`SENTINEL` reachability
+  closure, source-faithful terminal failure, 16×2 set_value matrix,
+  sequence-N-A boundary, and Flush-only event scope are explicit. No
+  product/test file changed; stop for fresh Gate B review.

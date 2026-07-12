@@ -208,7 +208,11 @@ fn poll_rendered(
     return
   }
   let text = @support.query_text(".monaco-editor.readonly-editor")
-  if text.contains("component_answer") {
+  // Grammar tokenization may complete on the bounded background scheduler
+  // after the first default-token paint. Wait for the token-driven repaint,
+  // rather than treating the intentionally passive first read as final.
+  let has_keyword_tokens = @support.query_count(".mtk3") > 0
+  if text.contains("component_answer") && has_keyword_tokens {
     ctx.assert_true(
       rendered_count.val > 0,
       "viewer did not emit a rendered notification",
@@ -221,10 +225,6 @@ fn poll_rendered(
     ctx.assert_true(
       @support.query_count(".monaco-editor.readonly-editor .view-line") > 0,
       "viewer did not create rendered line DOM",
-    )
-    ctx.assert_true(
-      @support.query_count(".mtk3") > 0,
-      "MoonBit tokenizer did not classify keywords",
     )
     ctx.assert_true(
       @support.query_attribute(".monaco-editor.readonly-editor", "data-theme") ==

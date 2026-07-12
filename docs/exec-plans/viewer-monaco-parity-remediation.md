@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — ViewZones inventory ready; STOP FOR REVIEW
+Status: active — corrected ViewZones inventory ready; STOP FOR RE-REVIEW
 
 Date: 2026-07-10
 
@@ -85,7 +85,7 @@ product contract and belongs in an ordinary local test.
 | 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
 | 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
 | 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
-| 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | inventory ready — STOP FOR REVIEW |
+| 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | corrected inventory ready — STOP FOR RE-REVIEW |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | proposed |
 | 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | proposed |
 
@@ -104,7 +104,7 @@ method clusters:
 | codeEditorWidget cursor event forwarding and cursor API methods | cursor/input events |
 | codeEditorWidget `updateOptions` entrypoint | render invalidation; lifecycle CEW/CFG rows retain configuration storage and notification authority; the complete-snapshot-vs-partial-update API deviation requires `viewer/README.md` contract evidence |
 | `EditorConfiguration.getExtraEditorClassName` and Viewer platform root classes | render invalidation; ECX owns the pure Safari/WebKit/macOS helper and root-class integration |
-| codeEditorWidget changeViewZones/accessor transaction | ViewZones |
+| codeEditorWidget changeViewZones/accessor transaction plus the ViewZones emitter/public alias/outgoing arm | ViewZones; this is the corrective implementation handoff for lifecycle's historical DEFERRED CEW-043/127 rows |
 | TextModel value/range/offset/EOL plus setValue buffer/event construction, including the `ModelContentChangedEvent` wrapper | text-buffer EOL |
 | TextModel version/request freshness methods | async model features |
 | TextModel `_emitContentChangedEvent` token forwarding plus token-part construction/disposal and token-range production | tokenization; render invalidation owns ViewPart handler consumption only |
@@ -115,14 +115,15 @@ method clusters:
 | ContentWidgets event handlers and dirty-state transitions | render invalidation |
 | ContentWidgets validation, visible ranges, placement, and focus preservation | browser geometry |
 | ViewLayout general scroll/content dimensions | browser geometry |
-| StableViewport capture/restore, custom-height callbacks, and attached-view recovery helpers | browser geometry; render may count only branch/call order inside its scoped callers |
+| StableViewport capture/restore and attached-view recovery helper bodies used by hidden-area remapping | ViewZones; browser geometry retains only its already-frozen geometry caller/formula handoffs |
+| LinesLayout custom-height hooks inside the zone insertion/removal/flush cluster | ViewZones as explicit DEFERRED siblings; ViewModel custom-height recovery outside that cluster retains its historical render/geometry deferral |
 | ViewZone-owned min-width/container-width writes | ViewZones, consuming geometry's extent contract |
 | LinesLayout/ViewLayout zone insertion, ordering, and zone viewport data | ViewZones |
 | ViewModelEventDispatcher cursor outgoing events | cursor/input events |
 | ViewModelEventDispatcher configuration/decorations events | render invalidation |
 | `ViewThemeChangedEvent.theme` source `IColorTheme` versus local `String` identity | render invalidation; declaration/dispatch-only reviewed type-reduction deviation |
 | ViewModelEventDispatcher generic collector/queue rows historically deferred as cursor `VED`/`VMI` | render invalidation through counted `RVC` handoff rows; the implemented cursor plan remains frozen |
-| ViewModelEventDispatcher ViewZonesChanged event | ViewZones |
+| ViewModelEventDispatcher ViewZonesChanged event | ViewZones, including a heterogeneous widening of the existing cursor-owned outgoing-only pending queue; the frozen RVC mixed view/outgoing collector and postponement rows remain excluded |
 | Viewer/attach_model resource lifetime | model lifecycle |
 | Viewer/attach_model async request creation/cancellation | async model features |
 
@@ -136,6 +137,7 @@ Child plans use these states:
 
 - proposed — Phase 0 drafted; inventory pending
 - inventory ready — STOP FOR REVIEW
+- corrected inventory ready — STOP FOR RE-REVIEW
 - approved for implementation
 - in progress
 - implemented
@@ -508,3 +510,17 @@ The independent closing task is:
   it keeps frozen geometry, cursor, lifecycle, and generic-dispatch ownership
   explicit. No product or test file changed; the portfolio stops for
   independent Gate B review.
+- 2026-07-12: three independent reviews rejected ViewZones inventory commit
+  `50d3905` (child SHA-256
+  `3f93dcb568ece6a8857c4dbd28f22c2fd0c0e85c3a5ff7e844cf334706563991`).
+  The correction removes seven frozen sibling-mount atoms, transfers
+  lifecycle's historical CEW-043/127 and the StableViewport/LinesLayout
+  custom-height ownership explicitly, narrows shared-file source ranges, and
+  records the outgoing-only queue boundary. Raw `Double` zone numbers now
+  remain distinct from LinesLayout's JavaScript-ToInt32 storage; HiddenAreas
+  outgoing is a concrete DEFERRED handoff. The revised fixed candidate is
+  344/344 TODO rows: 156 browser/API, 174 layout/model, and 14 outgoing, with
+  287 proposed TESTED, 43 PORTED, 6 DEFERRED, and 8 N-A. Callback phase,
+  render-snapshot reentrancy, line-edit/layout-state, and stable-viewport test
+  matrices are explicit. No product/test file changed; stop for fresh Gate B
+  review.

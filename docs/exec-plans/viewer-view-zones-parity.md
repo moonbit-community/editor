@@ -1,6 +1,6 @@
 # Viewer ViewZones Parity
 
-Status: inventory ready — STOP FOR REVIEW
+Status: corrected inventory ready — STOP FOR RE-REVIEW
 
 Date: 2026-07-10
 
@@ -79,6 +79,10 @@ be silently left outside a symptom-only fix.
 - vscode/src/vs/editor/common/viewModelEventDispatcher.ts
   - complete ViewZonesChanged outgoing-event contract and dispatch cluster;
     cursor/configuration/decorations sibling events are excluded.
+  - the local implementation may widen the existing cursor-owned
+    outgoing-only pending queue with the ViewZones arm. The frozen mixed
+    view/outgoing collector, consumption-postponement, and cross-queue
+    reentrancy rows remain RVC-owned and are not claimed here.
 
 ### Local ownership
 
@@ -145,14 +149,21 @@ Gate A resolves the inventory-required decisions as follows:
   registry; zones are not persistent editor widgets;
 - `after_column`, affinity, hidden-area visibility, ordinal, both height
   forms, minimum width, margin DOM, and mouse suppression are REQUIRED PARITY;
+- `height_in_px`, `height_in_lines`, and `min_width_in_px` use `Double`, as do
+  the computed-height callback values. The callback observes the raw source
+  number; LinesLayout independently applies portable JavaScript `ToInt32`
+  before retaining height/minimum width. This includes fractional, non-finite,
+  and signed-32-bit wrap boundaries rather than reducing the public API to
+  `Int`;
 - callback failures are swallowed and reported through the Viewer log-service
   seam; swallowing without a report is not sufficient;
 - custom per-line heights remain DEFERRED because this readonly product has no
   custom-line-height producer. The ordinary current line-height and
   `height_in_lines` recomputation paths are REQUIRED PARITY;
 - the projected line collection is the only product line collection, so
-  identity-line-only source branches are N-A; typed MoonBit `Int` parameters
-  make TypeScript `|0` coercion rows N-A at that boundary;
+  identity-line-only source branches are N-A. Line/column/ordinal inputs remain
+  typed MoonBit `Int`; height/minimum-width `|0` coercions remain live because
+  those inputs are `Double`;
 - `View.change` schedules one render after every completed zone callback,
   including an empty transaction, a missing ID, or a contained callback
   failure. Internal `ViewZonesChanged` delivery precedes the outgoing public
@@ -168,14 +179,14 @@ approval and implementation evidence; `Proposed terminal` is a review target,
 not current proof.
 
 ```text
-Browser/API:  VZ 126 + VZA 18 + VAT 14 + VMH 5                  = 163
+Browser/API:  VZ 126 + VZA 18 + VAT 7 + VMH 5                   = 156
 Layout/model: VC 28 + LL 72 + VL 11 + CC 2 + VML 27 + VI 34    = 174
 Outgoing:     CEW 6 + VED 8                                     =  14
                                                                   ---
-Total                                                             351
+Total                                                             344
 
-Working:  351 TODO; 0 PASS
-Proposed: 293 TESTED + 43 PORTED + 5 DEFERRED + 10 N-A = 351
+Working:  344 TODO; 0 PASS
+Proposed: 287 TESTED + 43 PORTED + 6 DEFERRED + 8 N-A = 344
 ```
 
 ### Source evidence
@@ -187,7 +198,7 @@ All hashes are from oracle commit
 |---|---|---:|---:|---|
 | VZ | `browser/viewParts/viewZones/viewZones.ts` | complete `1-423` | 423 | `9cb62bb235e89f9432515ff1739987a776f2bbcf4f7819087f01373a7f0e2c77` |
 | VZA | `browser/editorBrowser.ts` | `36-121`, `856`, `1215-1218` | 1538 | `27375b22639d3db492cf0dacc3e34a061601171de9692d64e554d3fbfd902429` |
-| VAT | `browser/view.ts` | `238-241`, `273-281`, `401-403`, `720-723` | 992 | `22edb04795705b7fc8675ba40d89c448a62141201f1a16b1f20d8b26e82771e2` |
+| VAT | `browser/view.ts` | `238-242`, `273-281`, `401-403`, `720-723` | 992 | `22edb04795705b7fc8675ba40d89c448a62141201f1a16b1f20d8b26e82771e2` |
 | VMH | `browser/controller/mouseHandler.ts` | `47`, `317`, `337-343` | 749 | `3a07ac0185272ffd9f6b557d18fec24e2b441e2da23ff15c958607fdb809386a` |
 | VC | `common/viewModel.ts` | scoped contracts | 447 | `5d7d8cbb89d5ee636263367ed944d2f2754559f7b556f3603c5e974fae329be5` |
 | LL | `common/viewLayout/linesLayout.ts` | complete zone/layout clusters | 912 | `2265a18001e0158ec5b0dca17da6385e6101a46f47cbc2830f6a8028a7fdcd71` |
@@ -216,13 +227,13 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | VZA-004 | optional `showInHiddenAreas`, default false (`:53-55`) | Missing field. | TODO | PORTED |
 | VZA-005 | optional `ordinal`, default `afterColumn ?? 10000` (`:57-60`) | Missing field; layout already supports whitespace ordinal. | TODO | PORTED |
 | VZA-006 | optional `suppressMouseDown`, default false (`:62-66`) | Missing public field; controller helper is hard-coded false. | TODO | PORTED |
-| VZA-007 | optional `heightInLines`, default 1 when both heights are absent (`:68-72`) | Missing; local accepts only pixels. | TODO | PORTED |
-| VZA-008 | optional `heightInPx`, preferred over `heightInLines` (`:74-78`) | Positional `height_px` cannot express absence/precedence. | TODO | PORTED |
-| VZA-009 | optional `minWidthInPx` (`:80-83`) | Missing; LinesLayout already retains whitespace minimum width. | TODO | PORTED |
+| VZA-007 | optional `Double heightInLines`, default 1 when both heights are absent (`:68-72`) | Missing; local accepts only integer pixels. | TODO | PORTED |
+| VZA-008 | optional `Double heightInPx`, preferred over `heightInLines` (`:74-78`) | Positional integer `height_px` cannot express absence/precedence/raw number semantics. | TODO | PORTED |
+| VZA-009 | optional `Double minWidthInPx` (`:80-83`) | Missing; LinesLayout retains only the post-ToInt32 minimum width. | TODO | PORTED |
 | VZA-010 | required caller-owned `domNode` (`:85-87`) | Node exists, but mount overwrites caller class/style. | TODO | PORTED |
 | VZA-011 | optional/null `marginDomNode` (`:89-91`) | Missing from local record and View DOM. | TODO | PORTED |
 | VZA-012 | optional `onDomNodeTop(top)` callback (`:93-95`) | Callback exists but is not safely invoked. | TODO | PORTED |
-| VZA-013 | optional `onComputedHeight(height)` callback (`:97-99`) | Callback exists but fires at the wrong render-time cadence. | TODO | PORTED |
+| VZA-013 | optional `onComputedHeight(Double rawHeight)` callback (`:97-99`) | Callback is integer-typed and fires at the wrong render-time cadence. | TODO | PORTED |
 | VZA-014 | `IViewZoneChangeAccessor.addZone(zone): string` (`:104-110`) | Local requires caller ID and returns Unit. | TODO | PORTED |
 | VZA-015 | `removeZone(id)` (`:112-115`) | Local method exists. | TODO | PORTED |
 | VZA-016 | `layoutZone(id)` rereads mutable fields (`:117-120`) | Local exposes whole-record `update_zone`. | TODO | PORTED |
@@ -233,20 +244,13 @@ header therefore needs a metadata correction, not a behavioral rebase.
 
 | ID | Source atom | Local target / current gap | Status | Proposed terminal |
 |---|---|---|---|---|
-| VAT-001 | construct the Margin owner (`view.ts:238`) | Local has margin overlays but no owner capable of containing margin zones. | TODO | TESTED |
-| VAT-002 | append `viewZones.marginDomNode` first (`:239`) | Missing margin-zone container/attachment. | TODO | TESTED |
-| VAT-003 | append margin overlays second (`:240`) | Preserve attachment order; sibling construction stays frozen. | TODO | TESTED |
-| VAT-004 | append glyph-margin widgets third (`:241`) | Preserve attachment order; sibling construction stays frozen. | TODO | TESTED |
-| VAT-005 | append content overlays first in `_linesContent` (`:273`) | Existing local order matches. | TODO | TESTED |
-| VAT-006 | optional rulers-DOM branch/order slot (`:274-276`) | Frozen rulers seam; zones remain after its slot. | TODO | TESTED |
-| VAT-007 | append `viewZones.domNode` after overlays/rulers (`:277`) | Existing content-zone relative order matches. | TODO | TESTED |
-| VAT-008 | append ViewLines after zones (`:278`) | Existing local order matches. | TODO | TESTED |
-| VAT-009 | append ContentWidgets after ViewLines (`:279`) | Existing local order matches. | TODO | TESTED |
-| VAT-010 | append ViewCursors after widgets (`:280`) | Existing local order matches. | TODO | TESTED |
-| VAT-011 | append Margin owner to overflow guard (`:281`) | Local appends margin overlays directly. | TODO | TESTED |
-| VAT-012 | helper delegates `shouldSuppressMouseDownOnViewZone(id)` (`:401-403`) | Local root helper always returns false. | TODO | TESTED |
-| VAT-013 | `View.change(callback)` delegates transaction (`:720-721`) | Local root has an extra changed gate and retainable accessor. | TODO | TESTED |
-| VAT-014 | unconditional `_scheduleRender()` after callback (`:722`) | Local skips empty/missing-id batches. | TODO | TESTED |
+| VAT-001 | construct the Margin owner and register it in `_viewParts` (`view.ts:238,242`) | Local has margin overlays but no owner capable of containing margin zones. | TODO | TESTED |
+| VAT-002 | append `viewZones.marginDomNode` before margin overlays/glyph widgets (`:239-241`) | Missing margin-zone container/attachment; sibling construction remains frozen. | TODO | TESTED |
+| VAT-003 | append `viewZones.domNode` after overlays/rulers and before ViewLines/widgets/cursors (`:273-280`) | Existing content-zone relative order matches; sibling mounts remain frozen. | TODO | TESTED |
+| VAT-004 | append Margin owner to overflow guard (`:281`) | Local appends margin overlays directly. | TODO | TESTED |
+| VAT-005 | helper delegates `shouldSuppressMouseDownOnViewZone(id)` (`:401-403`) | Local root helper always returns false. | TODO | TESTED |
+| VAT-006 | `View.change(callback)` delegates transaction (`:720-721`) | Local root has an extra changed gate and retainable accessor. | TODO | TESTED |
+| VAT-007 | unconditional `_scheduleRender()` after callback (`:722`) | Local skips empty/missing-id batches. | TODO | TESTED |
 
 #### `mouseHandler.ts` view-zone suppression cluster — VMH
 
@@ -270,8 +274,8 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | VZ-006 | nullable retained `marginDomNode` (`:23`) | Missing. | TODO | PORTED |
 | VZ-007 | computed `isInHiddenArea` (`:26-27`) | Missing carrier field. | TODO | PORTED |
 | VZ-008 | computed `afterViewLineNumber` (`:28`) | Caller anchor is incorrectly treated as normalized view line. | TODO | PORTED |
-| VZ-009 | computed `heightInPx` (`:29`) | Reduced pixel field exists, complete carrier does not. | TODO | PORTED |
-| VZ-010 | computed `minWidthInPx` (`:30`) | Missing bridge. | TODO | PORTED |
+| VZ-009 | computed raw-`Double` `heightInPx` (`:29`) | Reduced integer pixel field exists, complete carrier does not. | TODO | PORTED |
+| VZ-010 | computed raw-`Double` `minWidthInPx` (`:30`) | Missing bridge. | TODO | PORTED |
 | VZ-011 | reusable `invalidFunc` throws `Invalid change accessor` (`:33`) | Accessor remains usable after callback. | TODO | TESTED |
 | VZ-012 | private `_zones` id map (`:42`) | Local splits registration array and DOM/style maps. | TODO | PORTED |
 | VZ-013 | private `_lineHeight` (`:43,56,111,324,326`) | Not retained by local part. | TODO | PORTED |
@@ -291,7 +295,7 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | VZ-027 | dispose superclass-first then clear zones (`:75-78`) | No explicit part dispose/registry clear. | TODO | TESTED |
 | VZ-028 | `_recomputeWhitespacesProps` member (`:82-105`) | Missing. | TODO | TESTED |
 | VZ-029 | recompute transaction with key snapshot (`:89-103`) | Missing. | TODO | TESTED |
-| VZ-030 | existing whitespace and line-or-height changed gate (`:97-101`) | Missing exact callback gate. | TODO | TESTED |
+| VZ-030 | existing whitespace and line-or-height changed gate; `changeOneWhitespace` → computed-height callback → `hadAChange` (`:97-101`) | Missing exact callback gate/order. | TODO | TESTED |
 | VZ-031 | configuration option refresh and always-true result (`:107-120`) | Handler only marks dirty. | TODO | TESTED |
 | VZ-032 | line-height-changed recomputation (`:115-117`) | Missing. | TODO | TESTED |
 | VZ-033 | line-mapping handler delegates recomputation (`:122-124`) | Local returns true without recomputing. | TODO | TESTED |
@@ -327,15 +331,15 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | VZ-063 | insert whitespace with ordinal/height/minWidth and generated ID (`:235-236`) | LinesLayout supports it; host rebuild bypasses it. | TODO | TESTED |
 | VZ-064 | retained record, `isVisible=false`, exact node wrappers (`:238-245`) | Local omits delegate/hidden/margin/visibility. | TODO | TESTED |
 | VZ-065 | nullable margin wrapper ternary (`:244`) | Missing. | TODO | TESTED |
-| VZ-066 | add-time safe computed-height callback (`:247`) | Local fires during each visible render. | TODO | TESTED |
+| VZ-066 | add-time safe computed-height callback before host style/attributes, mount, zone-map insertion, and dirtying (`:247,249-266`) | Local fires during each visible render. | TODO | TESTED |
 | VZ-067 | main host `position:absolute` (`:249`) | CSS class supplies position but overwrites caller class. | TODO | TESTED |
-| VZ-068 | main host owns only `style.width=100%` (`:250`) | Local rewrites entire style and omits width. | TODO | TESTED |
+| VZ-068 | raw main-host `style.width=100%` property write preserves every unrelated inline style (`:250`) | Local rewrites the entire style attribute and omits width. | TODO | TESTED |
 | VZ-069 | main display lifecycle none/block (`:251,380-400`) | Local rewrites full style. | TODO | TESTED |
 | VZ-070 | main `monaco-view-zone=<id>` lifecycle (`:252,278`) | Local invents `data-view-zone-id`. | TODO | TESTED |
 | VZ-071 | main node mount/remove lifecycle (`:253,279`) | Preserve identity/order/attributes. | TODO | TESTED |
 | VZ-072 | margin-present setup branch (`:255-261`) | Missing. | TODO | TESTED |
 | VZ-073 | margin host `position:absolute` (`:256`) | Missing. | TODO | TESTED |
-| VZ-074 | margin host owns only `style.width=100%` (`:257`) | Missing. | TODO | TESTED |
+| VZ-074 | raw margin-host `style.width=100%` property write preserves every unrelated inline style (`:257`) | Missing. | TODO | TESTED |
 | VZ-075 | margin display lifecycle (`:258,405`) | Missing. | TODO | TESTED |
 | VZ-076 | margin `monaco-view-zone=<id>` lifecycle (`:259,283`) | Missing. | TODO | TESTED |
 | VZ-077 | margin mount/remove lifecycle (`:260,284`) | Missing. | TODO | TESTED |
@@ -349,7 +353,7 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | VZ-085 | `_layoutZone` complete member (`:294-309`) | Whole-record update is not source layout semantics. | TODO | TESTED |
 | VZ-086 | owned ID true; missing ID false (`:295-308`) | Missing exact result contract. | TODO | TESTED |
 | VZ-087 | recompute hidden/line/height; retain ordinal/minWidth (`:297-301`) | Local replaces record and re-sorts. | TODO | TESTED |
-| VZ-088 | layout computed-height fires even if unchanged (`:303`) | Missing cadence/containment. | TODO | TESTED |
+| VZ-088 | layout does `changeOneWhitespace` → computed-height callback → `setShouldRender`, even if unchanged (`:300,303-304`) | Missing cadence/containment/order. | TODO | TESTED |
 | VZ-089 | successful layout marks dirty (`:304`) | Missing source-local transition. | TODO | TESTED |
 | VZ-090 | suppression lookup member (`:311-317`) | Part has no method. | TODO | TESTED |
 | VZ-091 | owned ID reads live boolean; missing/absent false (`:312-316`) | Missing. | TODO | TESTED |
@@ -369,15 +373,15 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | VZ-105 | `prepareRender` declared no-op (`:356-358`) | Local matches. | TODO | TESTED |
 | VZ-106 | `render` complete member (`:360-413`) | Hidden/margin/width/transition/safe callbacks missing. | TODO | TESTED |
 | VZ-107 | hidden-area visible-whitespace continue (`:365-368`) | Missing. | TODO | TESTED |
-| VZ-108 | per-zone top/height/display defaults (`:373-380`) | Values match but local overwrites full style. | TODO | TESTED |
+| VZ-108 | callback-before-render frozen key snapshot plus per-zone top/height/display defaults (`:373-380`) | Local iterates a mutable array/index identity and overwrites full style. | TODO | TESTED |
 | VZ-109 | visible-zone branch (`:381-390`) | Index path lacks source identity/hidden state. | TODO | TESTED |
 | VZ-110 | visible height and `display=block` (`:382-384`) | Values match through synthesized style. | TODO | TESTED |
 | VZ-111 | visible DOM top = verticalOffset - bigNumbersDelta (`:382`) | Verify local relative-offset equivalence. | TODO | TESTED |
 | VZ-112 | false→true visible attribute then state (`:386-389`) | Missing. | TODO | TESTED |
-| VZ-113 | visible scrolled-top callback every render (`:390`) | Safe wrapper/context semantics missing. | TODO | TESTED |
+| VZ-113 | after visible-attribute/state transition, scrolled-top callback runs before main/margin top/height/display writes (`:386-390,398-405`) | Safe wrapper/context semantics and phase order missing. | TODO | TESTED |
 | VZ-114 | absent-visible-data/offscreen branch (`:391-397`) | Reduced branch exists. | TODO | TESTED |
 | VZ-115 | true→false remove attribute then state (`:392-395`) | Missing. | TODO | TESTED |
-| VZ-116 | converted offscreen sentinel `-1000000` (`:396`) | Local passes raw sentinel without scroll conversion. | TODO | TESTED |
+| VZ-116 | after hidden visible-attribute/state transition, converted offscreen sentinel `-1000000` callback runs before main/margin writes (`:392-405`) | Local passes a raw sentinel and lacks phase order. | TODO | TESTED |
 | VZ-117 | main top property write (`:398`) | Full-style rewrite must become property-owned. | TODO | TESTED |
 | VZ-118 | main height property write (`:399`) | Same gap. | TODO | TESTED |
 | VZ-119 | margin-present render branch (`:402-406`) | Missing. | TODO | TESTED |
@@ -408,7 +412,7 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | VC-011 | whitespace `id` (`:158-159`) | Existing EditorWhitespace. | TODO | TESTED |
 | VC-012 | whitespace `afterLineNumber` (`:160`) | Existing field. | TODO | TESTED |
 | VC-013 | whitespace `height` (`:161`) | Existing field. | TODO | TESTED |
-| VC-014 | insert signature/ordinal/minWidth/id (`:164-168`) | Existing accessor. | TODO | TESTED |
+| VC-014 | insert signature with raw-`Double` height/minWidth, ordinal, and returned id (`:164-168`) | Existing accessor is integer-only. | TODO | TESTED |
 | VC-015 | change signature (`:169`) | Existing accessor. | TODO | TESTED |
 | VC-016 | remove signature (`:170`) | Existing accessor. | TODO | TESTED |
 | VC-017 | `bigNumbersDelta` field (`:178-182`) | Existing branch needs boundary evidence. | TODO | TESTED |
@@ -434,27 +438,27 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | LL-004 | enqueue methods set pending before push (`:26-39`) | Existing. | TODO | TESTED |
 | LL-005 | no-pending commit early return (`:41-44`) | Existing, untested. | TODO | TESTED |
 | LL-006 | snapshot, clear, delegate order (`:46-55`) | Existing; reentrancy untested. | TODO | TESTED |
-| LL-007 | whitespace id/anchor/ordinal/height fields (`:59-74`) | Existing. | TODO | TESTED |
-| LL-008 | `minWidth` field (`:64,72`) | Existing retained field. | TODO | PORTED |
+| LL-007 | whitespace id/anchor/ordinal/height fields and constructor assignments (`:59-63,67-71`) | Existing. | TODO | TESTED |
+| LL-008 | post-ToInt32 `minWidth` field (`:64,72`) | Existing retained integer field. | TODO | PORTED |
 | LL-009 | prefix sum starts at zero (`:65,73`) | Reference suite. | TODO | TESTED |
-| LL-010 | instance counter/hash-generated id (`:85,99`) | Exact ID shape unasserted. | TODO | TESTED |
-| LL-011 | layout state and sentinel defaults (`:87-108`) | Existing retained shape. | TODO | PORTED |
+| LL-010 | instance counter/hash-generated id (`:85,87,99`) | Exact ID shape unasserted. | TODO | TESTED |
+| LL-011 | layout state and sentinel defaults (`:88-95,100-107`) | Existing retained shape. | TODO | PORTED |
 | LL-012 | `LineHeightsManager` ownership (`:96,108`) | No custom-line-height producer. | TODO | DEFERRED (custom per-line heights absent) |
 | LL-013 | anchor/ordinal binary insertion (`:111-136`) | Exact reference test. | TODO | TESTED |
 | LL-014 | default line-height setter (`:138-143`) | Existing, needs focused test. | TODO | TESTED |
 | LL-015 | padding setter (`:145-151`) | Existing, setter untested. | TODO | TESTED |
-| LL-016 | flush replaces line count (`:153-161`) | Existing flush paths. | TODO | TESTED |
+| LL-016 | flush replaces line count (`:158-159`) | Existing flush paths. | TODO | TESTED |
 | LL-017 | flush rebuilds custom line heights (`:160`) | No custom-line-height producer. | TODO | DEFERRED (custom per-line heights absent) |
 | LL-018 | custom line-height transaction (`:163-177`) | No custom-line-height producer. | TODO | DEFERRED (custom per-line heights absent) |
 | LL-019 | whitespace had-change result (`:179-180,208`) | Existing; empty callback untested. | TODO | TESTED |
 | LL-020 | insert/id/queue/return (`:183-184,189-192`) | Reference suite. | TODO | TESTED |
-| LL-021 | insert `\|0` coercions (`:185-188`) | MoonBit inputs are statically `Int`. | TODO | N-A (typed Int boundary) |
-| LL-022 | change/queue behavior (`:193-198`) | Reference suite. | TODO | TESTED |
-| LL-023 | change `\|0` coercions (`:195-196`) | MoonBit inputs are statically `Int`. | TODO | N-A (typed Int boundary) |
+| LL-021 | insert `\|0` coercions (`:185-188`) | Line/ordinal are typed `Int`; `Double` height/min-width require exact portable JavaScript `ToInt32`. | TODO | TESTED |
+| LL-022 | change/queue behavior (`:193-194,197-198`) | Reference suite. | TODO | TESTED |
+| LL-023 | change `\|0` coercions (`:195-196`) | Line is typed `Int`; `Double` height requires exact portable JavaScript `ToInt32`. | TODO | TESTED |
 | LL-024 | remove queue (`:199-202`) | Reference suite. | TODO | TESTED |
-| LL-025 | callback commits in `finally` (`:181-207`) | Local commits only after normal return. | TODO | TESTED |
+| LL-025 | callback commits in `finally` (`:181,204-207`) | Local commits only after normal return. | TODO | TESTED |
 | LL-026 | min-width cache invalidation (`:211-214`) | Existing, untested. | TODO | TESTED |
-| LL-027 | delicate single-operation ordering (`:216-231`) | Reference suite. | TODO | TESTED |
+| LL-027 | delicate single-operation ordering (`:216-224,229-231`) | Reference suite. | TODO | TESTED |
 | LL-028 | missing remove ID continues (`:225-228`) | Existing branch lacks direct test. | TODO | TESTED |
 | LL-029 | bulk remove/change conflict rules (`:234-260`) | Existing; mixed transaction untested. | TODO | TESTED |
 | LL-030 | old array before inserts concatenation (`:262`) | Existing, untested. | TODO | TESTED |
@@ -466,10 +470,10 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | LL-036 | height mutation/prefix invalidation (`:295-298`) | Reference suite. | TODO | TESTED |
 | LL-037 | anchor move removes and reinserts (`:299-312`) | Reference suite. | TODO | TESTED |
 | LL-038 | remove/prefix invalidation (`:315-318`) | Reference suite. | TODO | TESTED |
-| LL-039 | line deletion reanchors zones (`:326-343`) | Reference suite. | TODO | TESTED |
+| LL-039 | line deletion reanchors zones (`:326,330-343`) | Reference suite. | TODO | TESTED |
 | LL-040 | deletion `\|0` coercions (`:327-328`) | MoonBit inputs are statically `Int`. | TODO | N-A (typed Int boundary) |
 | LL-041 | deletion custom-height hook (`:344`) | No custom-line-height producer. | TODO | DEFERRED (custom per-line heights absent) |
-| LL-042 | line insertion shifts anchors (`:353-364`) | Reference suite. | TODO | TESTED |
+| LL-042 | line insertion shifts anchors (`:353,357-364`) | Reference suite. | TODO | TESTED |
 | LL-043 | insertion `\|0` coercions (`:354-355`) | MoonBit inputs are statically `Int`. | TODO | N-A (typed Int boundary) |
 | LL-044 | insertion custom-height hook (`:365`) | No custom-line-height producer. | TODO | DEFERRED (custom per-line heights absent) |
 | LL-045 | total whitespace height (`:371-376`) | Reference suite. | TODO | TESTED |
@@ -491,7 +495,7 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | LL-061 | line/zone accumulation and stop (`:658-696`) | Exact reference tests. | TODO | TESTED |
 | LL-062 | centered fallback (`:698-700`) | Exact reference tests. | TODO | TESTED |
 | LL-063 | complete-visible edge corrections (`:702-717`) | Exact reference tests. | TODO | TESTED |
-| LL-064 | viewport result fields (`:719-728`) | Exact reference tests. | TODO | TESTED |
+| LL-064 | viewport result fields (`:719,721-726,728`) | Exact reference tests. | TODO | TESTED |
 | LL-065 | returned big delta/default line height (`:720,727`) | Needs direct field evidence. | TODO | TESTED |
 | LL-066 | whitespace vertical offset (`:731-750`) | Top/middle zones covered. | TODO | TESTED |
 | LL-067 | whitespace-index binary search (`:752-787`) | Exact reference tests. | TODO | TESTED |
@@ -521,7 +525,7 @@ header therefore needs a metadata correction, not a behavioral rebase.
 
 | ID | Source atom | Local target / current gap | Status | Proposed terminal |
 |---|---|---|---|---|
-| CC-001 | coordinates-converter visibility contract (`coordinatesConverter.ts:10-30`) | Local converter trait omits the method. | TODO | TESTED |
+| CC-001 | coordinates-converter visibility contract (`coordinatesConverter.ts:27`) | Local converter trait omits the method. | TODO | TESTED |
 | CC-002 | identity visibility bounds (`:76-83`) | Viewer never constructs identity lines. | TODO | N-A (projected line collection is universal) |
 | VML-001 | create-converter contract (`viewModelLines.ts:22-24`) | Existing projected converter. | TODO | TESTED |
 | VML-002 | hidden-area contracts (`:27-28`) | Existing. | TODO | TESTED |
@@ -529,7 +533,7 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | VML-004 | projected converter construction (`:118-120`) | Existing. | TODO | TESTED |
 | VML-005 | reset projections/hidden decorations (`:122-127`) | Existing wrapping-survival evidence. | TODO | TESTED |
 | VML-006 | hidden-range sentinel traversal (`:140-155`) | Hidden-area tests. | TODO | TESTED |
-| VML-007 | projection visibility/counts/ensure (`:156-165`) | Hidden-area tests. | TODO | TESTED |
+| VML-007 | projection visibility/counts/ensure (`:156-160,163-165`) | Hidden-area tests; version-state sibling `:161` remains excluded. | TODO | TESTED |
 | VML-008 | resolve hidden decorations (`:168-172`) | Existing. | TODO | TESTED |
 | VML-009 | validate/normalize hidden ranges (`:174-176`) | Existing. | TODO | TESTED |
 | VML-010 | unchanged-range return (`:180-193`) | Idempotence test. | TODO | TESTED |
@@ -555,10 +559,10 @@ header therefore needs a metadata correction, not a behavioral rebase.
 
 | ID | Source atom | Local target / current gap | Status | Proposed terminal |
 |---|---|---|---|---|
-| VI-001 | lines/converter/layout ownership (`viewModelImpl.ts:53-68`) | Existing ViewModel member order. | TODO | TESTED |
-| VI-002 | identity-lines constructor branch (`:94-97`) | Viewer always uses projected lines. | TODO | N-A (projected line collection is universal) |
+| VI-001 | lines/converter/layout ownership (`viewModelImpl.ts:62-64`) | Existing ViewModel member order. | TODO | TESTED |
+| VI-002 | `USE_IDENTITY_LINES_COLLECTION=true` and identity-lines constructor branch (`:49,94-97`) | Viewer always uses projected lines. | TODO | N-A (projected line collection is universal) |
 | VI-003 | projected-lines constructor branch (`:98-120`) | Existing `with_options`. | TODO | TESTED |
-| VI-004 | converter→cursor→layout order (`:122-126`) | Existing. | TODO | TESTED |
+| VI-004 | converter then layout wiring (`:122,126`) | Existing; cursor-owned `:124` remains excluded. | TODO | TESTED |
 | VI-005 | stable viewport capture (`:263-272`) | Existing; needs focused scroll test. | TODO | TESTED |
 | VI-006 | hidden model/cache fields (`:568-569`) | Existing. | TODO | TESTED |
 | VI-007 | source contribution + merged ranges (`:592-594`) | Existing. | TODO | TESTED |
@@ -571,7 +575,7 @@ header therefore needs a metadata correction, not a behavioral rebase.
 | VI-014 | viewport-line-hidden recovery gate (`:617-621`) | Existing, no focused test. | TODO | TESTED |
 | VI-015 | end transaction in `finally` (`:622-624`) | Owner/order currently differs. | TODO | TESTED |
 | VI-016 | async view-line-count refresh (`:625`) | Viewer derives count immediately; no async config cache. | TODO | N-A (immediate line-count ownership) |
-| VI-017 | outgoing HiddenAreasChanged (`:627-629`) | Missing public event bridge. | TODO | TESTED |
+| VI-017 | outgoing HiddenAreasChanged (`:627-629`) | The complete HiddenAreas outgoing class/emitter/dispatch surface remains lifecycle CEW-044/128 and generic-outgoing dependent. | TODO | DEFERRED (no complete public HiddenAreas event surface) |
 | VI-018 | hidden-area getter delegate (`:651-653`) | Existing. | TODO | TESTED |
 | VI-019 | ViewModel whitespace delegate/result (`:1253-1255`) | Missing; host rebuilds ViewLayout. | TODO | TESTED |
 | VI-020 | changed internal event before outgoing (`:1255-1257`) | Only internal event exists. | TODO | TESTED |
@@ -620,18 +624,28 @@ header therefore needs a metadata correction, not a behavioral rebase.
 
 - The frozen render-invalidation plan owns the internal
   `ViewEvent::ViewZonesChanged` declaration and generic nested/reentrant View
-  event queue. This child owns only the source producer/order and the distinct
-  outgoing ViewZones event class/public bridge; it does not duplicate the
-  generic dispatcher rows.
+  event queue. This child owns the source producer/order, the distinct outgoing
+  ViewZones event class/public bridge, and a heterogeneous widening of the
+  existing cursor-owned outgoing-only pending queue. The direct whitespace
+  path must finish internal ViewEvent delivery before enqueueing the public
+  outgoing event. `VED-006–008` are proven by event-class/private-pending-queue
+  white-box tests; ordinary direct calls drain immediately and do not claim
+  end-to-end same-kind coalescing. The frozen RVC mixed collector,
+  view-consumption postponement, and cross-queue reentrancy rows remain
+  DEFERRED and are not duplicated.
 - Browser geometry owns ViewLayout's general content/scroll formulas. This
-  child owns the nonzero whitespace-minimum producer and consumes that frozen
-  formula at VL-001.
+  child owns the nonzero whitespace-minimum producers at `VZA-009`,
+  `VZ-010/063/087/096–098`, and `LL-008/026/056`; frozen geometry consumes them
+  at `GVLay-023` and `GVLay-046`.
 - Cursor/input owns PositionAffinity, all non-visibility converter methods,
   mouse-target production, and pointer paths outside VMH. The scoped rows count
   only ViewZones' arguments, visibility handoff, and suppression consumer.
 - Lifecycle owns general attach/detach/dispose mechanics. This child owns the
   observable rule that the per-model zone registry is lost on every model
   replacement/detach and verifies it without recounting lifecycle members.
+  Parent ownership also transfers lifecycle's historical DEFERRED CEW-043/127
+  ViewZones emitter/dispatch rows to this child; the lifecycle ledger remains
+  immutable history.
 - `linesLayout.ts:542-560` padding/after-lines hit helpers and ViewLayout's
   general padding/scroll siblings remain geometry-owned. Custom-line-height
   hooks are the five explicit DEFERRED LL rows; identity-line paths are the
@@ -639,27 +653,32 @@ header therefore needs a metadata correction, not a behavioral rebase.
 - `viewModelImpl.ts:632-720` visible-range splitting, cursor/edit/copy/render
   siblings, generic collectors at `:1262-1279`, and overview-ruler aggregation
   are excluded. `viewModelLines.ts` wrapping/text/decorations/general-converter
-  siblings are excluded.
+  siblings are excluded. Its hidden-decoration disposal at `:114-116` remains
+  lifecycle-owned through landed CEW-075's editor-owner decoration sweep rather
+  than becoming a second ViewZones disposal row.
 - Local-only drift adds no source rows but must disappear or be justified in
   Phase 3: caller IDs, whole-record `update_zone`, `(anchor,height,id)` sorting,
   retained post-callback accessors, the no-op scheduling gate, raw offscreen
   top, render-time computed-height calls, `data-view-zone-id`, class/style
-  replacement, `.view-zone { overflow:hidden }`, and the absent margin
-  container. The container's invented `data-view-part`, `top/left/z-index`
-  stylesheet facts also need removal or a source-backed deviation.
+  replacement, `.view-zone { overflow:hidden }`, the invented `.view-zone`
+  class, and the absent margin container. Some(A)→Some(B) persistence, eager
+  anchor/height clamping, `measure_requested`, whole-list DOM reconciliation
+  and `zone_index` identity also need removal. The container's invented
+  `data-view-part`, `top/left/z-index`, and host `left/right/box-sizing`
+  stylesheet facts require removal or a source-backed deviation.
 
 ### Historical inventory stop gate
 
-- [x] 351 source atoms have 351 unique, contiguous ledger IDs.
+- [x] 344 source atoms have 344 unique, contiguous ledger IDs.
 - [x] Every row is TODO and has a proposed terminal; there are zero PASS rows.
-- [x] Proposed totals are 293 TESTED / 43 PORTED / 5 DEFERRED / 10 N-A.
+- [x] Proposed totals are 287 TESTED / 43 PORTED / 6 DEFERRED / 8 N-A.
 - [x] Shared-file ownership and frozen sibling clusters are explicit.
 - [x] No product or test file changed while building the inventory.
 - [ ] Independent Gate B approves source completeness, boundaries, matrices,
   and proposed terminals.
 
-Review gate: commit this 351-row inventory and stop for independent Gate B
-review before any product or test edit.
+Review gate: commit this corrected 344-row inventory and stop for fresh
+independent Gate B review before any product or test edit.
 
 ## Test-Authority Corrections
 
@@ -686,24 +705,30 @@ paths, and current pin. Source-derived cases use ordinary local filenames.
 | Cluster | Required axes and boundaries | Lowest useful evidence |
 |---|---|---|
 | transaction | callback normal/throw; 0/1/many operations; add/remove/layout mixtures; empty/missing IDs; retained accessor after normal return/throw; exact invalid error for all three methods | root/ViewZones white-box + reporter |
-| scheduling/events | change/no-change/callback throw; unconditional one render schedule; internal event before outgoing only on change; no-op/same-kind outgoing merge; reentrant listener order | root/view scheduler + outgoing-event white-box |
+| root guard | no model; model with no real View; live model/View: first two do not invoke callback and produce no mutation, event, or schedule; live path invokes once | root white-box |
+| scheduling/events | change/no-change/callback throw; unconditional one render schedule after every invoked transaction; internal ViewEvent completes before public outgoing enqueue only on change | root/view scheduler ordered spy |
+| outgoing-only queue | ViewZones event is never no-op; same-kind merge keeps first instance; different kind keeps two queue slots and FIFO order; reentrant listener order means only the outgoing Emitter's own delivery; direct calls drain immediately; mixed view/outgoing collector postponement and cross-queue reentrancy are not claimed | event-class/private-pending-queue white-box + full cursor-dispatcher regression |
 | identity/lifetime | repeated adds; remove then add; generated IDs unique and used by layout/DOM; Some(A)→Some(B), detach, model dispose, Viewer dispose all lose registry | LinesLayout + root/headless + browser |
 | bulk layout | 0/1/>1 queued operations; insert/change/remove conflicts; same ID repeated; missing IDs; delicate versus rebuild path | LinesLayout white-box/reference |
+| line edits / flush | delete interval before/containing/after anchor; insert before/equal/after anchor; preserve same-anchor ordinal; same-model flush shrinks/grows and retains zones | LinesLayout + ViewModel integration |
+| layout state / accessors | IDs across two LinesLayout instances and per-instance counters; padding top/bottom 0/nonzero; `hasWhitespace` false/true; `getWhitespaces` returns an independent array with aliased whitespace objects; `saveState` uses future scroll with 0/1/many zones above and zones below the first visible line | LinesLayout/ViewLayout white-box |
 | anchor/column | line 0, first/middle/last/out-of-range; afterColumn absent/1/middle/max/beyond; EOL uses next-line column 1, otherwise same-line column+1 | ViewModel/ViewZones white-box |
 | affinity | omitted/None/Left/Right/LeftOfInjectedText/RightOfInjectedText at wrapped and injected multi-view-column boundaries | projected ViewModel white-box |
 | hidden | showInHiddenAreas omitted/false/true × before-position visible/hidden; hidden↔visible mapping changes; line-zero never hidden; hidden height exactly 0 | hidden-area + ViewZones integration |
+| hidden producer / stable viewport | unchanged/force-update; multi-source disjoint/touch/overlap/all-hidden; invalid visibility positions 0 and lineCount+1; scrollTop 0/nonzero; no captured position; viewport first model line hidden skips recovery; hidden ranges only above it preserve model line+delta and restore immediately; begin/order/finally and changed-only internal events; public HiddenAreas outgoing stays excluded by VI-017 | ViewModel/ViewLayout ordered white-box |
 | ordinal | explicit 0/negative/equal; fallback afterColumn; neither→10000; lower/equal/higher anchor; equal-key stable insertion | LinesLayout/ViewZones white-box |
 | mutable delegate | mutate anchor/column/height/minWidth/ordinal/node/callback then layout; reread only source fields and retain inserted ordinal/minWidth/node | transaction white-box |
-| height | px present with/without lines; lines only; neither; 0/positive/fractional/negative; line-height change; changed/unchanged recompute | pure normalization + config integration |
-| computed height | absent/normal/throw; add once; layout existing even unchanged; recompute only on line/height change; hidden 0; never on static render/scroll | callback spies + error reporter |
+| height / ToInt32 | px present with/without lines; lines only; neither; raw 0/positive/fractional/negative/NaN/±Infinity and signed-32-bit/2^32 overflow; line-height change; callback observes raw Double while LinesLayout retains JavaScript-ToInt32 height/minWidth; changed/unchanged recompute compares retained integer to raw computed value | pure normalization + LinesLayout/config integration |
+| computed height | absent/normal/throw; add once before any host DOM mutation/mount/map insertion/dirtying; layout existing even unchanged after whitespace change but before dirtying; recompute `changeOneWhitespace`→callback→changed; hidden raw 0; never on static render/scroll; throw is reported and all later phases still complete | callback/DOM/dirty ordered spies + error reporter |
 | min width | absent/0/nonzero; cache hit; insert/remove invalidation; multiple-zone maximum; below/equal/above content/scroll width; layout retains original minimum | LinesLayout/ViewLayout + Chromium reach |
 | viewport | no/one/many/same-anchor zones; top/middle/bottom; starts in line/zone/gap; half-open end; explicit scrollTop negative/bottom overflow | layout reference/white-box |
+| ViewPart handlers | configuration changed fields independently and lineHeight recompute only on its bit; mapping recomputes; delete/zones/insert always true; scroll top/width truth table across neither/each/both | ViewZones white-box |
 | large geometry | 499999/500000/500001; line-height alignment; visible DOM top with zero/nonzero bigNumbersDelta | layout + rendering-context white-box |
 | host DOM | caller class, unrelated styles, content, listener, descendant identity/state survive; only position/width/display/top/height and Monaco attributes change | real Chromium DOM assertions |
 | margin/attachment | absent/null/present margin node; both mount/remove; mirrored top/height/display; exact container attrs; margin/content child order and owner placement | browser component |
-| visibility/top | visible/offscreen/hidden; mixed zones; repeated frame; transitions; visible attribute only on transitions; scrolled visible top and converted `-1000000` | ViewZones white-box + browser scroll |
-| callback containment | each callback absent/normal/throw; throwing first/middle/last; later zone, later ViewPart, public event and frame reporter still commit | browser ordered spies + memory logger |
-| width gate | no visible zone; one/many; scrollWidth <,=,> contentWidth; contentLeft 0/nonzero; some→none retains prior widths | browser geometry |
+| visibility/top | visible/offscreen/hidden; mixed zones; repeated frame; transitions; visible attribute/state changes before callback; callback before main/margin top/height/display; scrolled visible top and converted `-1000000` | ViewZones ordered white-box + browser scroll |
+| callback containment / render snapshot | each callback absent/normal/throw; throwing first/middle/last; later zone, later ViewPart, public event and frame reporter still commit; render freezes zone keys before callbacks; an onDomNodeTop callback add/remove/layout of current/future zones affects only the next snapshot as source permits | browser ordered spies + memory logger |
+| width gate | no visible zone; one/many; scrollWidth <,=,> contentWidth; contentLeft 0/nonzero; all zone callbacks/style writes finish before width writes; some→none retains prior widths | browser geometry |
 | mouse suppression | existing omitted/false/true/missing × content/gutter zone × shouldHandle false/true; true-arm focus/start/prevent order; normal public mouse event still emits | controller white-box + pointer fixture |
 
 DOM insertion order remains source add order; ordinal controls layout position,
@@ -723,9 +748,23 @@ not node reordering. The browser matrix asserts both facts independently.
 
 ## Deviations (Phase 3)
 
-No product reduction is pre-approved. Editable-editor dependencies may receive
-DEFERRED/N-A rows only after the complete source member is inventoried and the
-readonly seam is concrete.
+The reviewed implementation seams are:
+
+- the common ViewModel package cannot import browser `ViewEvent`. The root
+  transaction therefore completes the internal browser ViewEvent delivery and
+  then submits `ViewZonesChangedEvent` to the common heterogeneous
+  outgoing-only queue. Ordered evidence is required; this does not claim the
+  frozen RVC mixed-collector postponement semantics;
+- `Double` zone heights/minimum widths preserve source raw-number callbacks,
+  while LinesLayout stores portable JavaScript-ToInt32 values;
+- the complete public HiddenAreas event class/emitter/dispatch chain remains
+  outside the ViewZones consumer and is the explicit VI-017 DEFERRED handoff;
+- custom per-line-height producers remain absent and are the five explicit LL
+  DEFERRED rows. The projected-only/typed-line/immediate-count reductions are
+  the eight explicit N-A rows.
+
+No other product reduction is pre-approved. Any new DEFERRED/N-A outcome must
+update the ledger and stop for classification review.
 
 ## Exit Gate
 
@@ -753,3 +792,20 @@ readonly seam is concrete.
   passes produced the source-ordered fragments and challenged stale local
   tests and missing source owners. No product or test file changed. Commit this
   documentation-only gate and stop for independent Gate B review.
+- 2026-07-12: Gate B rejected documentation-only inventory commit `50d3905`
+  (this file's inventory SHA-256
+  `3f93dcb568ece6a8857c4dbd28f22c2fd0c0e85c3a5ff7e844cf334706563991`).
+  The reviews found seven frozen sibling mount rows, conflicting historical
+  ownership, integer-versus-raw-number ambiguity, one partial HiddenAreas
+  outgoing claim, imprecise shared-file ranges, and missing callback/reentrant,
+  line-edit/layout-state, and stable-viewport matrices.
+- 2026-07-12: the corrected candidate has 344/344 TODO rows: 156 browser/API,
+  174 layout/model, and 14 outgoing-event atoms. The proposed map is 287
+  TESTED, 43 PORTED, 6 DEFERRED, and 8 N-A. Public height/minimum-width carriers
+  are raw `Double` values while LinesLayout owns exact JavaScript-ToInt32
+  retention; VI-017 is the concrete HiddenAreas public-event deferral. Parent
+  ownership now transfers lifecycle's historical ViewZones emitter/dispatch
+  rows, StableViewport helpers, LinesLayout custom-height siblings, and the
+  cursor outgoing-only queue widening without reopening the mixed RVC
+  collector. No product/test file changed. Commit this documentation-only
+  correction and stop for fresh independent Gate B review.

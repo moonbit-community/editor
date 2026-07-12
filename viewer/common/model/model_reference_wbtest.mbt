@@ -4,9 +4,9 @@
 ///
 /// Readonly-subset triage of the file's 32 cases. In scope: 7 readonly reads
 /// plus `setValue eventing` (in scope since the flush lane landed, plan
-/// `monaco-set-value-api-port.md`). 6 reads are ported here against
-/// `TextSnapshot` (the 7th, `Get word at position`, is ported in
-/// `word_helper_wbtest.mbt`); `setValue eventing` runs against `TextModel`:
+/// `monaco-set-value-api-port.md`). All 7 reads are ported here (`Get word at
+/// position` runs against `TextModel`; the other 6 run against `TextSnapshot`);
+/// `setValue eventing` runs against `TextModel`:
 ///   - `Editor Model - Model`: `model getValue`, `getValueInRange`,
 ///     `getValueLengthInRange`, `setValue eventing`
 ///   - `Editor Model - Model Line Separators`: `model getValue`, `model lines`,
@@ -19,9 +19,11 @@
 ///     many lines / everything), every `* eventing` variant of those, and
 ///     `issue #46342` — all call `model.applyEdits` (model mutation) or assert
 ///     the per-line `ModelRawContentChangedEvent`s of the tier-2 edit lane.
-///   - `Editor Model - Words`: `getWordAtPosition at embedded language
-///     boundaries` and `issue #61296` — need DI language services, per-language
-///     word patterns, and tokenization (out of scope).
+///   - `Editor Model - Words`:
+///     - SKIPPED: getWordAtPosition at embedded language boundaries — needs DI
+///       language services and embedded-language token boundaries.
+///     - SKIPPED: issue #61296: VS code freezes when editing CSS file with emoji
+///       — needs dynamic per-language word patterns.
 ///
 
 ///|
@@ -34,6 +36,11 @@ fn this_model() -> TextSnapshot {
 ///|
 fn rng(sl : Int, sc : Int, el : Int, ec : Int) -> @base_common.Range {
   Range(sl, sc, el, ec)
+}
+
+///|
+fn word_at(model : TextModel, column : Int) -> WordAtPosition? {
+  model.get_word_at_position(Position(1, column))
 }
 
 ///|
@@ -102,6 +109,48 @@ test "getValueLengthInRange" {
     m.get_value_length_in_range(rng(1, 1, 4, 1)),
     "My First Line\n\t\tMy Second Line\n    Third Line\n".length(),
   )
+}
+
+///|
+/// Exact port of `Get word at position` (`model.test.ts:439-455`) using the
+/// upstream default word definition.
+test "Get word at position" {
+  let snapshot = wb_model("This text has some  words. ")
+  assert_true(
+    word_at(snapshot, 1) ==
+    Some({ word: "This", start_column: 1, end_column: 5 }),
+  )
+  assert_true(
+    word_at(snapshot, 2) ==
+    Some({ word: "This", start_column: 1, end_column: 5 }),
+  )
+  assert_true(
+    word_at(snapshot, 4) ==
+    Some({ word: "This", start_column: 1, end_column: 5 }),
+  )
+  assert_true(
+    word_at(snapshot, 5) ==
+    Some({ word: "This", start_column: 1, end_column: 5 }),
+  )
+  assert_true(
+    word_at(snapshot, 6) ==
+    Some({ word: "text", start_column: 6, end_column: 10 }),
+  )
+  assert_true(
+    word_at(snapshot, 19) ==
+    Some({ word: "some", start_column: 15, end_column: 19 }),
+  )
+  assert_true(word_at(snapshot, 20) is None)
+  assert_true(
+    word_at(snapshot, 21) ==
+    Some({ word: "words", start_column: 21, end_column: 26 }),
+  )
+  assert_true(
+    word_at(snapshot, 26) ==
+    Some({ word: "words", start_column: 21, end_column: 26 }),
+  )
+  assert_true(word_at(snapshot, 27) is None)
+  assert_true(word_at(snapshot, 28) is None)
 }
 
 ///|

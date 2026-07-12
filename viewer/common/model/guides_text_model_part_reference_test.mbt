@@ -1,18 +1,21 @@
-///| Faithful conformance port of vscode's `TextModel.getLineIndentGuide` suite.
+///| Faithful conformance port of the `TextModel.getLineIndentGuide` suite in
+/// `vscode/src/vs/editor/test/common/model/textModelWithTokens.test.ts`, pinned
+/// at submodule commit b18492a288de038fbc7643aae6de8247029d11bd. Ports the
+/// indent-guide subset of that file (18 cases, including the `tweaks` and
+/// `issue #...` cases) against the `GuidesTextModelPart` port.
 ///
-/// Source: `src/vs/editor/test/common/model/textModelWithTokens.test.ts` (pinned
-/// `vscode/` submodule). Ports the indent-guide subset of that file — the
-/// `TextModel.getLineIndentGuide` suite (18 cases, including the `tweaks` and
-/// `issue #...` cases) — against the `GuidesTextModelPart` port.
-///
-/// SKIPPED (out of scope, not silently dropped): the four bracket-matching
-/// suites of the same file — `TextModelWithTokens` (`brackets1`),
-/// `TextModelWithTokens - bracket matching` (2), `TextModelWithTokens 2` (4),
-/// and `TextModelWithTokens regression tests` (4) — exercise
-/// `model.bracketPairs.{matchBracket,findPrevBracket,findNextBracket}`, which
-/// need the bracket-pair + language-configuration + tokenization
-/// infrastructure the readonly viewer does not implement (the bracket-pair
-/// colorizer is explicitly out of scope for this port).
+/// SKIPPED (out of scope, not silently dropped): the preceding bracket suites
+/// (`TextModelWithTokens`, `TextModelWithTokens - bracket matching`, and
+/// `TextModelWithTokens 2`) require bracket-pair and language-configuration
+/// infrastructure. In `TextModelWithTokens regression tests`, only
+/// `microsoft/monaco-editor#133: Error: Cannot read property 'modeId' of
+/// undefined` and `issue #11856: Bracket matching does not work as expected if
+/// the opening brace symbol is contained in the closing brace symbol` are
+/// bracket cases. `microsoft/monaco-editor#122: Unhandled Exception: TypeError:
+/// Unable to get property 'replace' of undefined or null reference` is a
+/// tokenization case, while `issue #63822: Wrong embedded language detected for
+/// empty lines` is embedded-language behavior; both require tokenization and
+/// language support that remain outside this readonly guide port.
 ///
 /// `tab_size` is Monaco's default (4); `indent_size` is the suite's per-case
 /// argument; `off_side` is `false` (the test languages register no folding

@@ -1,6 +1,6 @@
 # Viewer–Monaco Parity Remediation Program
 
-Status: active — tokenization implementation in progress
+Status: implemented and frozen — all eight P1 children closed
 
 Date: 2026-07-10
 
@@ -80,14 +80,14 @@ product contract and belongs in an ordinary local test.
 
 | Order | Child plan | Primary ownership | Depends on | Status |
 |---:|---|---|---|---|
-| 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented |
-| 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented |
-| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented |
-| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented |
-| 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented |
+| 1 | viewer-model-lifecycle-ownership-parity.md | Viewer, ModelData, MarkerDecorationsService, external subscriptions | none | implemented and frozen |
+| 2 | viewer-async-model-features-parity.md | inlay/hover request lifecycle and model freshness | lifecycle plan | implemented and frozen |
+| 3 | viewer-cursor-input-events-parity.md | cursor state/event spine and readonly keyboard commands | lifecycle plan | implemented and frozen |
+| 4 | viewer-render-invalidation-parity.md | View events and ViewPart dirtiness | lifecycle and async plans | implemented and frozen |
+| 5 | viewer-browser-geometry-parity.md | ViewLines width, ContentWidgets coordinates, renderer font facts, layout extent | invalidation plan | implemented and frozen |
 | 6 | viewer-view-zones-parity.md | ViewZone API/layout/DOM/callback/model lifecycle | lifecycle, invalidation, and geometry plans | implemented and frozen |
 | 7 | viewer-text-buffer-eol-parity.md | TextSnapshot and TextModel read/coordinate boundary | none; land before later provider-surface work | implemented and frozen |
-| 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | Gate B approved; implementation active |
+| 8 | viewer-tokenization-parity.md | syntactic-token scheduling/store integration and attach behavior | lifecycle and EOL plans | implemented and frozen |
 
 The order is intentional. Several plans touch viewer/viewer.mbt,
 viewer/attach_model.mbt, or viewer/browser/view/view_part.mbt. Do not execute
@@ -743,3 +743,32 @@ The independent closing task is:
   source + 97 exact tests, proposed as 466 TESTED, 206 PORTED, 206 DEFERRED,
   and 174 N-A, plus 21 LOC rows. All 38 pins match and no product/test edit
   predates approval. Tokenization implementation is now authorized.
+- 2026-07-13: the tokenization child is implemented and frozen. Implementation
+  and closing-evidence commits land the registry/store/backend, live TextModel
+  ownership, bounded idle/zero-timeout scheduler, exact attached-view epoch,
+  passive ViewModel demand and outgoing token event, projected/injected token
+  flow, font payload, browser idle adapter, and raw UTF-16 boundaries. Two
+  Gate-D rejection rounds drove fixes for Projected all-false/context order,
+  attached events/listener ownership, worker deadlines, large-file and
+  scheduler matrices, single-layer font annotations, private API boundaries,
+  production error reporting, resource/identity ordering, and final TextModel
+  disposal order. Three closing lanes then PASSed source/ledger, boundary/API,
+  and test/matrix review. The immutable ledger closes as **1052 = 466 TESTED +
+  206 PORTED + 206 DEFERRED + 174 N-A**, plus 21 LOC = 16 TESTED + 5 PORTED,
+  with zero TODO/PASS and all 38 pins matching.
+- 2026-07-13: final code-head gates pass: `just check` with only the pre-existing
+  diff-package +73 diagnostic; `just test` **1415/1415 JS** and **1010/1010
+  native** with no Wasm/Wasm-GC entries; `just build`; and Chromium
+  `just test-browser` **82/82**. The source-relative scroll oracle preserved
+  its 12 cells, three repetitions, and 1 ms threshold and passed without
+  consuming its one fresh-worker host-jitter retry.
+- 2026-07-13: the required post-P1 audit PASSed against current Viewer HEAD
+  `ca3bd296472533fe23f6748e35ff69b8208b34f6` and pinned oracle
+  `b18492a288de038fbc7643aae6de8247029d11bd` in three isolated lanes:
+  P1-01..05 lifecycle/async/cursor ownership and later dispatcher widenings;
+  P1-06..10 invalidation/DOM geometry/ViewZones and later token projection;
+  P1-11..12 bounded tokenization plus coherent LF-only/raw-UTF-16 coordinates.
+  All eight child plans are implemented and frozen, every child ledger has
+  zero TODO/PASS, cross-plan ownership remains non-duplicated, and no reserved
+  P2 artifact was created. The P1 portfolio is complete and this coordination
+  plan is now frozen history; future P2 work requires its own approved plan.

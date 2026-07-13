@@ -1,6 +1,6 @@
 # Viewer Tokenization Parity
 
-Status: Gate D rejected — TMT-028 remediation active
+Status: Gate D candidate — TMT-028 closed, remaining reviews pending
 
 Date: 2026-07-13
 
@@ -1968,3 +1968,18 @@ recounted.
   branches passed this lane. The child returns to implementation for the one
   ordered transition and executable order evidence; the candidate remains
   unapproved.
+- 2026-07-13: commit `0146cf7` closes TMT-028 with one private, production-used
+  source-order sequence: `isDisposing=true` -> will-dispose -> token-part
+  dispose -> `isDisposed=true` -> registered resources ->
+  `isDisposing=false`. Its white-box trace proves every intermediate flag and
+  ownership boundary. The rejecting source/ledger auditor re-read the exact
+  diff and PASSed the remediation; no generated API changed and all previous
+  source/ledger conclusions remain valid. Model tests are now **141/141** on
+  JS and native.
+- 2026-07-13: the remediated candidate passes final-head `just check` with only
+  the pre-existing diff-package +73 diagnostic, `just test` (**1415/1415 JS**,
+  **1010/1010 native**; Wasm/Wasm-GC have no test entry), `just build`, and
+  Chromium `just test-browser` **82/82** without consuming the performance
+  retry. The fixed ledger denominator/totals remain unchanged and the child
+  stops for the remaining independent boundary/API and test/matrix Gate-D
+  lanes.

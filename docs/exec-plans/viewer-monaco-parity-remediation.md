@@ -297,10 +297,15 @@ parity.
 
 This program does not authorize a general P2 cleanup. Provider scoring and
 aggregation, full ViewZone API shape, quick diff scheduling, broader
-reveal/view-state parity, syntax folding, agent-feedback storage, scrollbar platform tails,
-shadow/iframe support, semantic-token overlay, and visual/theme tails remain in
-the audit backlog unless a complete source unit in a P1 child requires an
-explicit PORTED/DEFERRED/N-A decision.
+reveal/view-state parity, syntax folding, agent-feedback storage, scrollbar
+platform tails, shadow/iframe support, semantic-token overlay, the large-file
+as-is view collection, dynamic model-language changes, dynamic language-
+configuration changes, and visual/theme tails remain in the audit backlog
+unless a complete source unit in a P1 child requires an explicit
+PORTED/DEFERRED/N-A decision. The tokenization child reserves the future
+artifact names `viewer-semantic-token-acquisition-application-parity.md` and
+`viewer-large-file-view-collection-parity.md`; those files do not exist yet and
+must not be created until the post-P1 audit authorizes P2 planning.
 
 After all P1 children close, perform a fresh audit against the then-current
 Viewer HEAD and the same pinned oracle before creating P2 execution plans.

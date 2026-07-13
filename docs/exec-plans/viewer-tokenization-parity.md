@@ -1,6 +1,6 @@
 # Viewer Tokenization Parity
 
-Status: implementation complete — Gate D candidate (STOP FOR REVIEW)
+Status: Gate D rejected — remediation active
 
 Date: 2026-07-13
 
@@ -27,10 +27,11 @@ registry updates, exact token/font events, attached-view priority, browser
 scheduling, large-file disabling, and disposal/cancellation.
 
 Gate A approved Option B: syntactic scheduling lands in this child, while the
-semantic overlay remains `DEFERRED` to
+semantic overlay remains `DEFERRED` under the parent P2 backlog; the reserved
+future artifact name is
 `viewer-semantic-token-acquisition-application-parity.md`. Semantic rows are
 not N-A merely because Viewer is readonly. The large-file as-is collection is
-separately deferred to
+separately deferred under that backlog, with reserved future artifact name
 `viewer-large-file-view-collection-parity.md`; this child keeps projected
 collections for large models as a documented P2 performance deviation while
 disabling tokenization at the source thresholds.
@@ -1642,7 +1643,7 @@ and no duplicate IDs. Local LOC rows are excluded.
 | LOC-007 | Correct compatibility header and ownership after moving live queue/state implementation to model/tokens. | `viewer/common/model/text_model_tokens.mbt` | PORTED |
 | LOC-008 | Correct the model-line reference header to cite full path `vscode/src/vs/editor/test/common/model/model.line.test.ts` and oracle commit `b18492a288de038fbc7643aae6de8247029d11bd`; explicitly `SKIPPED`-name all 52 incremental cases because readonly Viewer has no incremental `applyEdits` seam and manually injected `ManualTokenizationSupport` remains deferred, rather than claiming background tokenization is absent. Keep the projection reference as a separate destination. | `viewer/common/model/model_line_reference_wbtest.mbt`; `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` | PORTED |
 | LOC-009 | Place the syntactic font carrier in model/tokens, preserve the source `FontTokensUpdate` typealias there, and expose the exact same option/update/event values through the token-part event consumed by the parent; no duplicate parent carrier, alias, or conversion. Visual FontTokenDecorationsProvider stays deferred. | `viewer/common/model/tokens/annotations.mbt`; `viewer/common/model/tokens/annotations_wbtest.mbt`; `viewer/common/model/tokens/abstract_syntax_token_backend_wbtest.mbt`; `viewer/common/model/tokens/tokenization_text_model_part_wbtest.mbt` | TESTED |
-| LOC-010 | Keep large models on projected collection while disabling tokenization; document P2 deviation. | `viewer/common/view_model/README.md`; `viewer-large-file-view-collection-parity.md` | TESTED |
+| LOC-010 | Keep large models on projected collection while disabling tokenization; document P2 deviation. | `viewer/common/view_model/README.md`; parent P2 backlog reservation for future `viewer-large-file-view-collection-parity.md` | TESTED |
 | LOC-011 | Scheduler epoch seam: retain the first non-`None` scheduler through all nonfinal detaches; idle/zero handles plus generation cancellation reset `_isScheduled` on final detach and prevent callbacks from an older epoch clearing fresh state. | `viewer/common/model/tokens/text_model_tokens.mbt`; `viewer/browser_host.mbt` | TESTED |
 | LOC-012 | Common-tokens batch/store placement takes top-level language id plus line-length closure; common/tokens never imports model/tokens. | `viewer/common/tokens/{contiguous_tokens_store,contiguous_multiline_tokens,contiguous_multiline_tokens_builder}.mbt` | TESTED |
 | LOC-013 | Reroute `ViewModel::get_line_content/get_line_length` away from token-reading `get_view_line_data` to non-token content/length paths; assert both token-store reads and lexer calls stay zero. | `viewer/common/view_model/view_model.mbt`; `viewer/common/view_model/view_model_tokens_test.mbt` | TESTED |
@@ -1923,3 +1924,14 @@ recounted.
   Gate D candidate — STOP FOR REVIEW; no further product/test edit is
   authorized until independent source/ledger, boundary/API, and test/matrix
   rereads report their findings.
+- 2026-07-13: all three independent Gate-D lanes REJECTED `86128ee` despite
+  correct pins, denominator, totals, exact-test dispositions, and green gates.
+  Confirmed remediation covers Projected all-false/context order; model
+  attached events and `_hasListeners`; TextModelPart dispose/assert ordering;
+  AttachedViewState identity; the background deadline/strict-1ms matrix;
+  complete large-file and Some-first epochs; font alias/routing matrices;
+  private-only viewport counters; a real production error reporter; and
+  durable parent P2 ownership for semantic, large-file collection, and dynamic
+  language/configuration work. The child returns to implementation; the
+  collapsed statuses are an unapproved candidate until a fresh three-lane
+  Gate D passes.

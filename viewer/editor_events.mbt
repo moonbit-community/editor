@@ -749,7 +749,7 @@ fn Viewer::sync_hover_decorations(self : Viewer) -> Unit {
 ///|
 fn Viewer::is_current_model(self : Viewer, model : @model.TextModel) -> Bool {
   match self.get_model() {
-    Some(current) => physical_equal(current, model)
+    Some(current) => current.same(model)
     None => false
   }
 }

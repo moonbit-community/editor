@@ -39,15 +39,18 @@ pub struct TextModel {
   priv mut is_disposed : Bool
   priv is_disposing : Ref[Bool]
   /// `_versionId` (`textModel.ts:262`, init 1 at `:370`): bumped by the
-  /// content lane (`_increaseVersionId`). Together with physical model
-  /// identity this is async freshness authority; the host-facing `version` is
-  /// caller-owned metadata.
+  /// content lane (`_increaseVersionId`). Together with the stable model
+  /// identity this is async freshness authority; the host-facing `version`
+  /// is caller-owned metadata.
   priv mut version_id : Int
   // Content events (`_eventEmitter` textModel.ts:244; `_viewModels` :303)
   priv event_emitter : DidChangeContentEmitter
   priv view_models : Array[ViewModelCallbacks]
   // #region Decorations (textModel.ts:285-290; `_onDidChangeDecorations` :225)
-  instance_id : String
+  /// Full process-local identity used for exact model-instance comparisons.
+  priv identity : Int
+  /// Stable decoration-id namespace prefix derived from `identity`.
+  priv decoration_id_namespace : String
   mut delta_decoration_call_cnt : Int
   mut last_decoration_id : Int
   /// Mutable since the `set_value` flush lane: replaced wholesale
@@ -66,10 +69,26 @@ pub impl Debug for TextModel with fn to_repr(self) {
 }
 
 ///|
+/// Whether two handles name the same stable text-model instance.
+pub fn TextModel::same(self : TextModel, other : TextModel) -> Bool {
+  self.identity == other.identity
+}
+
+///|
+/// Stable process-local key for identity-indexed package services.
+///
+/// Most callers should prefer `same`; this numeric form exists for maps that
+/// cannot key directly by `TextModel` without falling back to reference
+/// equality.
+pub fn TextModel::identity(self : TextModel) -> Int {
+  self.identity
+}
+
+///|
 /// Builds a readonly text model.
 ///
 /// `version` and `revision` are caller-owned metadata, not async freshness
-/// keys. Request owners use physical model identity plus `get_version_id()`.
+/// keys. Request owners use stable model identity plus `get_version_id()`.
 /// Empty display name and language id are normalized; non-positive versions
 /// become version 1.
 pub fn TextModel::TextModel(
@@ -161,6 +180,7 @@ fn new_text_model(
       )
     None => @tokens.TokenizationTextModelPart::new(access, attached_views)
   }
+  let (identity, decoration_id_namespace) = next_model_identity()
   {
     uri,
     display_name,
@@ -181,7 +201,8 @@ fn new_text_model(
     version_id: 1,
     event_emitter: DidChangeContentEmitter::new(),
     view_models: [],
-    instance_id: next_model_instance_id(),
+    identity,
+    decoration_id_namespace,
     delta_decoration_call_cnt: 0,
     last_decoration_id: 0,
     decorations: Map([]),

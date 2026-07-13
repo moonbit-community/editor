@@ -243,7 +243,6 @@ pub struct TextModel {
   mut snapshot : TextSnapshot
   tokenization : @tokens.TokenizationTextModelPart
   on_will_dispose : @common.Emitter[Unit]
-  instance_id : String
   mut delta_decoration_call_cnt : Int
   mut last_decoration_id : Int
   mut decorations : Map[String, IntervalNode]
@@ -288,6 +287,7 @@ pub fn TextModel::get_value_length_in_range(Self, @common.Range) -> Int
 pub fn TextModel::get_version_id(Self) -> Int
 pub fn TextModel::get_word_at_position(Self, @common.Position) -> WordAtPosition?
 pub fn TextModel::get_word_until_position(Self, @common.Position) -> WordAtPosition
+pub fn TextModel::identity(Self) -> Int
 pub fn TextModel::is_attached_to_editor(Self) -> Bool
 pub fn TextModel::is_disposed(Self) -> Bool
 pub fn TextModel::is_too_large_for_tokenization(Self) -> Bool
@@ -303,6 +303,7 @@ pub fn TextModel::on_did_change_tokens(Self, (@tokens.ModelTokensChangedEvent) -
 pub fn TextModel::on_will_dispose(Self, () -> Unit) -> @common.Disposable
 pub fn TextModel::register_view_model(Self, (InternalModelContentChangeEvent) -> Unit, (InternalModelContentChangeEvent) -> Unit) -> @common.Disposable
 pub fn TextModel::remove_all_decorations_with_owner_id(Self, Int) -> Unit
+pub fn TextModel::same(Self, Self) -> Bool
 pub fn TextModel::set_value(Self, String) -> Unit
 pub fn TextModel::snapshot(Self) -> TextSnapshot
 pub fn TextModel::validate_position(Self, @common.Position) -> @common.Position

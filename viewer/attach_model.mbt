@@ -8,6 +8,8 @@
 /// explicit/visible/background demand owns lexer work. The paint happens in
 /// the next render flush.
 fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
+  self.model_data_generation += 1
+  let model_data_generation = self.model_data_generation
   let listeners_to_remove : Array[@base_common.Disposable] = []
   // `data-mode-id` on the container (`cew:1758`), removed at detach.
   match self.container {
@@ -129,22 +131,18 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // adds the public content barrier and position-before-selection relay.
   listeners_to_remove.push(
     view_model.on_cursor_state_changed(event => {
-      match self.get_view_model() {
-        Some(active) =>
-          if physical_equal(active, view_model) {
-            // A real content flush waits behind the public content barrier so
-            // `ViewFlushed` remains before the cursor event. Ordinary cursor
-            // transitions notify ViewParts before the public outgoing pair.
-            if !is_model_flush_cursor_event(event) {
-              self.emit_view_cursor_state_changed(
-                view_model,
-                event.selections,
-                event.reason,
-              )
-            }
-            self.enqueue_cursor_state_change(event)
-          }
-        None => ()
+      if self.is_current_model_data_generation(model_data_generation) {
+        // A real content flush waits behind the public content barrier so
+        // `ViewFlushed` remains before the cursor event. Ordinary cursor
+        // transitions notify ViewParts before the public outgoing pair.
+        if !is_model_flush_cursor_event(event) {
+          self.emit_view_cursor_state_changed(
+            view_model,
+            event.selections,
+            event.reason,
+          )
+        }
+        self.enqueue_cursor_state_change(event)
       }
     }),
   )
@@ -153,12 +151,8 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // this public alias.
   listeners_to_remove.push(
     view_model.on_view_zones_changed(_event => {
-      match self.get_view_model() {
-        Some(active) =>
-          if physical_equal(active, view_model) {
-            self.did_change_view_zones.fire(())
-          }
-        None => ()
+      if self.is_current_model_data_generation(model_data_generation) {
+        self.did_change_view_zones.fire(())
       }
     }),
   )
@@ -167,12 +161,8 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // replaces the old direct TextModel listener and never invokes the lexer.
   listeners_to_remove.push(
     view_model.on_model_tokens_changed(event => {
-      match self.get_view_model() {
-        Some(active) =>
-          if physical_equal(active, view_model) {
-            self.handle_model_tokens_changed(model, event.event)
-          }
-        None => ()
+      if self.is_current_model_data_generation(model_data_generation) {
+        self.handle_model_tokens_changed(model, event.event)
       }
     }),
   )
@@ -212,6 +202,15 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.pending_rendered = Some({ model, fresh: true })
   self.measure_requested = true
   self.schedule_render()
+}
+
+///|
+/// Whether a swap-scoped callback still belongs to the installed ModelData.
+fn Viewer::is_current_model_data_generation(
+  self : Viewer,
+  generation : Int,
+) -> Bool {
+  self.model_data is Some(_) && self.model_data_generation == generation
 }
 
 ///|

@@ -56,15 +56,20 @@
 let _test_only_member_anchor : Unit = ignore(DidChangeDecorationsEmitter::fire)
 
 ///|
-/// `MODEL_ID` (`textModel.ts:123`): process-wide model counter; each model's
-/// `_instanceId = strings.singleLetterHash(MODEL_ID)` (`:318,:377`) prefixes
-/// its decoration ids.
-let model_id : Ref[Int] = Ref(0)
+/// `MODEL_ID` (`textModel.ts:123`): process-wide model counter. The full value
+/// is both the stable MoonBit model identity and the decoration-id namespace.
+/// This intentionally differs from Monaco's wrapped single-letter hash because
+/// marker lookup exposes decoration ids across multiple same-URI models.
+let model_identity_counter : Ref[Int] = Ref(0)
 
 ///|
-fn next_model_instance_id() -> String {
-  model_id.val += 1
-  @base_common.single_letter_hash(model_id.val)
+fn next_model_identity() -> (Int, String) {
+  model_identity_counter.val += 1
+  let identity = model_identity_counter.val
+  // Monaco's single-letter hash is only a compact decoration namespace; it
+  // wraps every 52 models. This port also exposes decoration ids through a
+  // same-URI marker lookup, so the namespace itself must stay unambiguous.
+  (identity, identity.to_string())
 }
 
 // #region DidChangeDecorationsEmitter (textModel.ts:2586-2666)
@@ -910,7 +915,7 @@ fn TextModel::delta_decorations_impl(
         Some(found) => found
         None => {
           self.last_decoration_id += 1
-          let decoration_id = "\{self.instance_id};\{self.last_decoration_id}"
+          let decoration_id = "\{self.decoration_id_namespace};\{self.last_decoration_id}"
           let created = IntervalNode::new(decoration_id, 0, 0)
           self.decorations[decoration_id] = created
           created

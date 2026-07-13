@@ -12,7 +12,7 @@ timing, and rendering can be tested on JS and native targets.
   pointer move without conflating rebuilt participants or separate Viewers.
 - `HoverOperation` and `HoverController` are the pure delayed-operation state
   machine. Typed start modes/sources preserve the source branches;
-  `HoverRequestStamp` combines physical model identity, internal content
+  `HoverRequestStamp` combines stable model identity, internal content
   version, monotonic generation, and caller token. Sync and streamed async
   parts are merged into `HoverView`/`HoverWidgetView`; content invalidation can
   cancel pending work while preserving an already shown view. The browser/root

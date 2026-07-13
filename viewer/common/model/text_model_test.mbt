@@ -56,6 +56,16 @@ test "text model owns uri and version identity" {
   assert_eq(model.version, 3)
   assert_eq(model.revision, "rev-3")
   assert_eq(model.snapshot().text, "pub fn main {}\n")
+  assert_true(model.same(model))
+  let same_document = @model.TextModel(
+    model.uri,
+    model.display_name,
+    model.language_id,
+    model.version,
+    model.revision,
+    model.get_value(),
+  )
+  assert_false(model.same(same_document))
 }
 
 ///|

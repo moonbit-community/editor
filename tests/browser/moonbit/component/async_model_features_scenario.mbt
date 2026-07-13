@@ -95,7 +95,7 @@ fn AsyncFeatureHarness::model_id(
   model : @model.TextModel,
 ) -> Int {
   for index, known in self.models {
-    if physical_equal(known, model) {
+    if known.same(model) {
       return index + 1
     }
   }

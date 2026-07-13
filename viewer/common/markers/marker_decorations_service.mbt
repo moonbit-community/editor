@@ -34,10 +34,10 @@ priv struct ModelMarkerRegistration {
 /// distinct live models to share one URI.
 pub struct MarkerDecorationsService {
   priv markers : MarkerService
-  priv model_registrations : Map[String, ModelMarkerRegistration]
-  priv model_ids_by_uri : Map[String, Array[String]]
-  priv blocked_model_ids : Map[String, Unit]
-  priv legacy_leases : Map[String, @base_common.Disposable]
+  priv model_registrations : Map[Int, ModelMarkerRegistration]
+  priv model_ids_by_uri : Map[String, Array[Int]]
+  priv blocked_model_ids : Map[Int, Unit]
+  priv legacy_leases : Map[Int, @base_common.Disposable]
   priv suppressed_ranges : Map[String, Array[@base_common.Range]]
   priv did_change_marker_decorations : @base_common.Emitter[@model.TextModel]
   priv mut subscription : @base_common.Disposable?
@@ -119,7 +119,7 @@ pub fn MarkerDecorationsService::dispose(
 }
 
 ///|
-/// Acquires one independently idempotent lease for `model.instance_id`.
+/// Acquires one independently idempotent lease for the model's stable identity.
 /// The first lease installs exactly one content watch and one model-dispose
 /// watch, appends the identity to its URI bucket, and seeds decorations.
 /// Reacquisition only increments the refcount and preserves URI order.
@@ -127,7 +127,7 @@ pub fn MarkerDecorationsService::acquire_model(
   self : MarkerDecorationsService,
   model : @model.TextModel,
 ) -> @base_common.Disposable {
-  let model_id = model.instance_id
+  let model_id = model.identity()
   if self.disposed ||
     model.is_disposed() ||
     self.blocked_model_ids.contains(model_id) {
@@ -152,7 +152,7 @@ pub fn MarkerDecorationsService::acquire_model(
       let model_ids = match self.model_ids_by_uri.get(uri_key) {
         Some(ids) => ids
         None => {
-          let ids : Array[String] = []
+          let ids : Array[Int] = []
           self.model_ids_by_uri.set(uri_key, ids)
           ids
         }
@@ -188,7 +188,7 @@ pub fn MarkerDecorationsService::on_model_added(
   if self.disposed {
     return
   }
-  let model_id = model.instance_id
+  let model_id = model.identity()
   match self.model_registrations.get(model_id) {
     Some(_) => self.refresh_model_registration(model_id)
     None => {
@@ -207,7 +207,7 @@ pub fn MarkerDecorationsService::on_model_removed(
   self : MarkerDecorationsService,
   model : @model.TextModel,
 ) -> Unit {
-  let model_id = model.instance_id
+  let model_id = model.identity()
   match self.legacy_leases.get(model_id) {
     Some(lease) => {
       self.legacy_leases.remove(model_id)
@@ -220,7 +220,7 @@ pub fn MarkerDecorationsService::on_model_removed(
 ///|
 fn MarkerDecorationsService::remove_model_registration(
   self : MarkerDecorationsService,
-  model_id : String,
+  model_id : Int,
   reason : ModelRegistrationRemovalReason,
 ) -> Unit {
   if self.disposed && !(reason is ServiceDisposed) {
@@ -290,7 +290,7 @@ fn MarkerDecorationsService::finalize_registration(
 fn MarkerDecorationsService::remove_model_from_uri_index(
   self : MarkerDecorationsService,
   uri : @base_common.Uri,
-  model_id : String,
+  model_id : Int,
 ) -> Unit {
   let uri_key = uri.to_string()
   match self.model_ids_by_uri.get(uri_key) {
@@ -357,7 +357,7 @@ fn MarkerDecorationsService::handle_marker_change(
 ///|
 fn MarkerDecorationsService::refresh_model_registration(
   self : MarkerDecorationsService,
-  model_id : String,
+  model_id : Int,
 ) -> Unit {
   if self.disposed {
     return
@@ -504,7 +504,7 @@ pub fn MarkerDecorationsService::get_live_markers_for_model(
   self : MarkerDecorationsService,
   model : @model.TextModel,
 ) -> Array[(@base_common.Range, Marker)] {
-  match self.model_registrations.get(model.instance_id) {
+  match self.model_registrations.get(model.identity()) {
     Some(registration) => registration.marker_decorations.get_markers()
     None => []
   }

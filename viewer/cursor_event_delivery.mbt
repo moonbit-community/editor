@@ -72,8 +72,7 @@ fn Viewer::complete_model_content_delivery(
   model : @model.TextModel,
   version_id : Int,
 ) -> Unit {
-  guard self.get_model() is Some(active_model) &&
-    physical_equal(active_model, model) else {
+  guard self.get_model() is Some(active_model) && active_model.same(model) else {
     return
   }
   if !self.has_completed_cursor_content_version(version_id) {

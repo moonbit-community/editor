@@ -405,7 +405,7 @@ fn request_test_model(path : String, text : String) -> @model.TextModel {
 }
 
 ///|
-test "request stamp requires physical model, internal version, generation, and live token" {
+test "request stamp requires stable model identity, internal version, generation, and live token" {
   let current = request_test_model("/stamp.mbt", "one")
   let same_uri_version = request_test_model("/stamp.mbt", "one")
   let token = @language.CancellationToken::new()

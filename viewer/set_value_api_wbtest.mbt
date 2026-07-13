@@ -10,10 +10,10 @@
 test "set_value keeps the model and view model instances" {
   with_test_viewer("one\ntwo", viewer => {
     let model_before = viewer.get_model().unwrap()
-    let view_model_before = viewer.test_view_model()
+    let model_data_generation_before = viewer.model_data_generation
     viewer.set_value("a\nb\nc")
-    assert_true(physical_equal(viewer.get_model().unwrap(), model_before))
-    assert_true(physical_equal(viewer.test_view_model(), view_model_before))
+    assert_true(viewer.get_model().unwrap().same(model_before))
+    assert_eq(viewer.model_data_generation, model_data_generation_before)
     assert_eq(viewer.get_value(), "a\nb\nc")
     assert_eq(viewer.test_view_model().line_count(), 3)
   })

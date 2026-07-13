@@ -11,7 +11,7 @@ Backend-neutral diagnostic storage and marker-to-decoration projection.
   filters, per-severity statistics, and merged change events. Its
   `MicrotaskEmitter` flushes inline unless the caller supplies a scheduler.
 - `MarkerDecorationsService::acquire_model` returns an independently idempotent
-  lease keyed by `TextModel.instance_id`. The first lease owns one content watch,
+  lease keyed by `TextModel.identity()`. The first lease owns one content watch,
   one model-dispose watch, and one `MarkerDecorations`; reacquisition only
   increments a refcount. A content flush resets and re-seeds that existing owner
   without acquiring a lease. Final ordinary release removes both identity
@@ -19,7 +19,7 @@ Backend-neutral diagnostic storage and marker-to-decoration projection.
   disposal runs before either identity index is deleted, with the inactive/
   blocked registration preventing reentrant acquisition or updates.
 - Distinct live models may share a URI. A secondary acquisition-ordered
-  `URI -> Array[instance_id]` index fans marker changes to every identity.
+  `URI -> Array[identity]` index fans marker changes to every identity.
   `get_marker(uri, id)` scans that order (model decoration ids carry an identity
   prefix), while `get_live_markers(uri)` returns the ordered union.
   `get_live_markers_for_model(model)` is the model-specific hover boundary.

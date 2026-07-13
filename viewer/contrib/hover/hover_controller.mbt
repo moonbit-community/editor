@@ -125,7 +125,7 @@ pub fn HoverOperationOptions::new(
 ///|
 /// Immutable request facts captured before an asynchronous hover launch. The
 /// owner supplies the monotonic controller generation and cancellation token;
-/// the stamp snapshots physical model identity and the internal content
+/// the stamp snapshots stable model identity and the internal content
 /// version at construction.
 pub struct HoverRequestStamp {
   priv model : @model.TextModel
@@ -151,7 +151,7 @@ fn HoverRequestStamp::new(
 }
 
 ///|
-/// Returns the exact physical model captured by this request authority.
+/// Returns the exact model captured by this request authority.
 pub fn HoverRequestStamp::model(self : HoverRequestStamp) -> @model.TextModel {
   self.model
 }
@@ -187,7 +187,7 @@ pub fn HoverRequestStamp::is_current(
   match current_model {
     Some(model) =>
       !model.is_disposed() &&
-      physical_equal(model, self.model) &&
+      model.same(self.model) &&
       model.get_version_id() == self.model_version_id
     None => false
   }

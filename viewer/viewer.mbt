@@ -71,6 +71,9 @@ pub struct Viewer {
   /// model + view model + view + swap-scoped listeners behind one nullable
   /// field, so the states are legal by construction.
   priv mut model_data : ModelData?
+  /// Monotonic attach/detach generation captured by swap-scoped callbacks.
+  /// This replaces JavaScript object-identity checks on the active ViewModel.
+  priv mut model_data_generation : Int
   /// The last rendered view-line window (clamped, half-open): exactly the
   /// lines intersecting the viewport at the last flush, resynced from the
   /// layout every flush.
@@ -346,6 +349,7 @@ pub fn Viewer::Viewer(
     did_mouse_leave: @base_common.Emitter::new(),
     last_scroll_event: None,
     model_data: None,
+    model_data_generation: 0,
     rendered_window: None,
     content_hover_widget: None,
     hover_widget_view: None,
@@ -706,7 +710,7 @@ pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
   }
   match (self.model_data, model) {
     (Some(model_data), Some(model)) =>
-      if physical_equal(model_data.model, model) {
+      if model_data.model.same(model) {
         return
       }
     _ => ()
@@ -755,6 +759,7 @@ pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
 /// and hand back the outgoing model for the owner-id decoration sweep.
 fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
   guard self.model_data is Some(model_data) else { return None }
+  self.model_data_generation += 1
   self.cancel_render_frame()
   self.reset_cursor_delivery()
   let model = model_data.model

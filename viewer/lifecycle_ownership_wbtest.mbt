@@ -72,7 +72,7 @@ test "distinct same-URI models retain independent decoration owners" {
   let first_model = test_model("first")
   let second_model = test_model("second")
   assert_true(first_model.uri.to_string() == second_model.uri.to_string())
-  assert_true(first_model.instance_id != second_model.instance_id)
+  assert_false(first_model.same(second_model))
   seed_lifecycle_marker(services, first_model)
   first_viewer.set_model(Some(first_model))
   second_viewer.set_model(Some(second_model))

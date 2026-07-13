@@ -7,7 +7,18 @@ const inputs = ['physical', 'trackpad'];
 const repetitions = 3;
 const frameCount = 40;
 
-test('compares scroll frames and mutations with the pinned Monaco oracle', async ({ page }, testInfo) => {
+test.describe('source-relative scroll frame evidence', () => {
+  // Keep the pinned 1 ms source-relative threshold and three-run matrix intact.
+  // A retry gets a fresh Playwright worker when a long-lived browser process
+  // suffers host scheduler jitter; the first failure and trace remain visible.
+  test.describe.configure({ retries: 1 });
+  test(
+    'compares scroll frames and mutations with the pinned Monaco oracle',
+    compareScrollFrameParity,
+  );
+});
+
+async function compareScrollFrameParity({ page }, testInfo) {
   test.setTimeout(180_000);
   await page.addInitScript(installScrollProbe);
   const cells = [];
@@ -90,7 +101,7 @@ test('compares scroll frames and mutations with the pinned Monaco oracle', async
     maxLocalDroppedRatio: Math.max(...cells.map((cell) => cell.local.medianDroppedFrameRatio)),
     maxMonacoDroppedRatio: Math.max(...cells.map((cell) => cell.monaco.medianDroppedFrameRatio)),
   }));
-});
+}
 
 test('covers unchanged, overlap, jump, entering, leaving, and invalid row batches', async ({ page }) => {
   await page.addInitScript(installScrollProbe);

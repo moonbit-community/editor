@@ -1,4 +1,4 @@
-///| TextModel-owned tokenization access, size policy, and scheduler epochs.
+///| TextModel-owned tokenization state, size policy, and scheduler epochs.
 
 ///|
 priv struct ModelTokenizationCountingTokenizer {
@@ -203,21 +203,24 @@ test "large-file tokenization policy stays constructor-fixed across set_value" {
 }
 
 ///|
-test "set_value updates the live token carrier and token_count stays passive" {
+test "set_value updates shared token state and token_count stays passive" {
   let calls = Ref(0)
-  let language_id = "text-model-live-token-carrier"
+  let language_id = "text-model-live-token-state"
   let registration = @syntax.tokenization_registry.register(language_id, ModelTokenizationCountingTokenizer::{
     calls,
   })
   let model = tokenization_model("old\nvalue", language_id)
-  assert_eq(model.tokenization_snapshot.val.get_value(), "old\nvalue")
+  assert_eq(model.tokenization_state.snapshot.val.get_value(), "old\nvalue")
   assert_false(model.tokenization.has_tokens())
   assert_eq(model.tokenization.token_count(), 2)
   assert_eq(calls.val, 0)
 
   model.set_value("new\nvalue\nnow")
-  assert_eq(model.tokenization_snapshot.val.get_value(), "new\nvalue\nnow")
-  assert_eq(model.tokenization_snapshot.val.line_count(), 3)
+  assert_eq(
+    model.tokenization_state.snapshot.val.get_value(),
+    "new\nvalue\nnow",
+  )
+  assert_eq(model.tokenization_state.snapshot.val.line_count(), 3)
   assert_eq(model.tokenization.get_line_tokens(3).get_line_content(), "now")
   assert_false(model.tokenization.has_tokens())
   assert_eq(model.tokenization.token_count(), 3)
@@ -247,14 +250,14 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
   let headless = model.on_before_attached()
   assert_eq(model.get_attached_editor_count(), 1)
   assert_true(model.is_attached_to_editor())
-  assert_true(model.tokenization_scheduler.val is None)
+  assert_true(model.tokenization_state.scheduler.val is None)
   assert_true(first_scheduler.idle.is_empty())
 
   // The first late Some wakes the existing worker exactly once. Incrementing
   // 1 -> 2 must not synthesize another first-attach wake.
   let supplying = model.on_before_attached(scheduler=first_scheduler.scheduler)
   assert_eq(model.get_attached_editor_count(), 2)
-  assert_true(model.tokenization_scheduler.val is Some(_))
+  assert_true(model.tokenization_state.scheduler.val is Some(_))
   assert_eq(first_scheduler.idle.length(), 1)
   assert_true(first_scheduler.zero.is_empty())
 
@@ -280,7 +283,7 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
   model.on_before_detached(supplying)
   assert_eq(model.get_attached_editor_count(), 3)
   assert_true(first_scheduler.idle[0].active.val)
-  assert_true(model.tokenization_scheduler.val is Some(_))
+  assert_true(model.tokenization_state.scheduler.val is Some(_))
   headless.set_visible_lines(
     [{ start_line_number: 1, end_line_number: 1 }],
     false,
@@ -303,7 +306,7 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
   model.on_before_detached(headless)
   assert_eq(model.get_attached_editor_count(), 0)
   assert_false(model.is_attached_to_editor())
-  assert_true(model.tokenization_scheduler.val is None)
+  assert_true(model.tokenization_state.scheduler.val is None)
   assert_false(first_scheduler.idle[0].active.val)
   for task in first_scheduler.delayed {
     assert_false(task.active.val)
@@ -321,7 +324,7 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
   assert_true(later_scheduler.idle[0].active.val)
   model.on_before_detached(fresh)
   assert_false(later_scheduler.idle[0].active.val)
-  assert_true(model.tokenization_scheduler.val is None)
+  assert_true(model.tokenization_state.scheduler.val is None)
 
   // A subsequent fresh epoch can select again; model disposal owns worker
   // cancellation and clears the selected scheduler even with a live handle.
@@ -333,7 +336,7 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
   assert_true(later_scheduler.idle[1].active.val)
   model.dispose()
   assert_false(later_scheduler.idle[1].active.val)
-  assert_true(model.tokenization_scheduler.val is None)
+  assert_true(model.tokenization_state.scheduler.val is None)
   registration.dispose()
 }
 
@@ -473,7 +476,7 @@ test "Some then None scheduler epoch retains supplier until final detach" {
   model.on_before_detached(supplier)
   assert_eq(model.get_attached_editor_count(), 1)
   assert_true(scheduler.idle[0].active.val)
-  assert_true(model.tokenization_scheduler.val is Some(_))
+  assert_true(model.tokenization_state.scheduler.val is Some(_))
   sibling.set_visible_lines(
     [{ start_line_number: 2, end_line_number: 2 }],
     false,
@@ -485,7 +488,7 @@ test "Some then None scheduler epoch retains supplier until final detach" {
   assert_eq(model.get_attached_editor_count(), 0)
   assert_false(scheduler.idle[0].active.val)
   assert_false(scheduler.delayed[0].active.val)
-  assert_true(model.tokenization_scheduler.val is None)
+  assert_true(model.tokenization_state.scheduler.val is None)
   assert_eq(calls.val, 0)
   model.dispose()
   registration.dispose()

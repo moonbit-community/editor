@@ -111,17 +111,14 @@ fn default_worker_harness(
     Some(scheduling.scheduler),
   )
   let lexer_calls : Array[String] = []
-  let access = TokenizationModelAccess::new(
-    line_count=() => lines.length(),
-    line_content=line_number => lines[line_number - 1],
-    line_length=line_number => lines[line_number - 1].length(),
-    first_non_whitespace_column=_line_number => 1,
-    language_id=() => "default-worker-test",
-    attached_count=() => attached.val,
-    too_large=() => false,
-    disposing=() => false,
-    scheduler=() => scheduler_value.val,
-    unexpected_error=_message => (),
+  let model_state = test_tokenization_model_state(
+    lines,
+    "default-worker-test",
+    attached,
+    false,
+    Ref(false),
+    scheduler_value,
+    _message => (),
   )
   let support = InternalTokenizationSupportAdapter::new(
     initial_state=() => TokenizerState("initial"),
@@ -136,7 +133,7 @@ fn default_worker_harness(
     },
   )
   let tokenizer = TokenizerWithStateStoreAndTextModel::new(
-    line_count, support, access, @services.language_id_codec,
+    line_count, support, model_state, @services.language_id_codec,
   )
   let token_batches = Ref(0)
   let finish_calls = Ref(0)
@@ -163,7 +160,7 @@ fn default_worker_harness(
 
 ///|
 fn mark_worker_valid(worker : DefaultBackgroundTokenizer) -> Unit {
-  let line_count = worker.tokenizer_with_state_store.access.line_count()
+  let line_count = worker.tokenizer_with_state_store.model_state.snapshot.val.line_count()
   for line_number in 1..<=line_count {
     worker.tokenizer_with_state_store.base.store.set_end_state(
       line_number,

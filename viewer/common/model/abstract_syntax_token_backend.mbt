@@ -309,7 +309,6 @@ pub(all) enum BackgroundTokenizationState {
 ///|
 /// Shared state/events held by the concrete syntactic backend.
 pub struct AbstractSyntaxTokenBackend {
-  priv access : TokenizationModelAccess
   priv did_change_tokens : @base_common.Emitter[ModelTokensChangedEvent]
   priv did_change_font_tokens : @base_common.Emitter[
     ModelFontTokensChangedEvent,
@@ -319,23 +318,12 @@ pub struct AbstractSyntaxTokenBackend {
 
 ///|
 /// Creates the shared backend contract.
-pub fn AbstractSyntaxTokenBackend::new(
-  access : TokenizationModelAccess,
-) -> AbstractSyntaxTokenBackend {
+fn AbstractSyntaxTokenBackend::new() -> AbstractSyntaxTokenBackend {
   {
-    access,
     did_change_tokens: @base_common.Emitter::new(),
     did_change_font_tokens: @base_common.Emitter::new(),
     did_change_background_state: @base_common.Emitter::new(),
   }
-}
-
-///|
-/// Borrowed live model access retained by the shared backend contract.
-pub fn AbstractSyntaxTokenBackend::model_access(
-  self : AbstractSyntaxTokenBackend,
-) -> TokenizationModelAccess {
-  self.access
 }
 
 ///|

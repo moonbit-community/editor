@@ -195,7 +195,7 @@ test "set_value emits one full-range public change with isFlush" {
 }
 
 ///|
-test "set_value re-seeds live token access and suppresses full reset event" {
+test "set_value re-seeds live token model state and suppresses full reset event" {
   let registration = @syntax.tokenization_registry.register(
     "moonbit",
     @syntax.PlainTokenizer::new(),
@@ -208,7 +208,7 @@ test "set_value re-seeds live token access and suppresses full reset event" {
     to_lines.push(e.ranges[0].to_line_number)
   })
   model.set_value("one\ntwo\nthree")
-  // The access carrier sees the NEW line count before flush handling, while
+  // The shared model state sees the NEW line count before flush handling, while
   // `reset_tokenization(false)` suppresses the whole-document reset event.
   assert_true(to_lines == [])
   assert_eq(model.tokenization.has_tokens(), false)

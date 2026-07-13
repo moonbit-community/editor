@@ -5,20 +5,17 @@
 ///|
 fn model_modes_part(calls : Array[String]) -> TokenizationTextModelPart {
   let lines = ["1", "2", "3", "4", "5"]
-  let access = TokenizationModelAccess::new(
-    line_count=() => lines.length(),
-    line_content=line_number => lines[line_number - 1],
-    line_length=line_number => lines[line_number - 1].length(),
-    first_non_whitespace_column=_ => 1,
-    language_id=() => "modelModeTest1",
-    attached_count=() => 0,
-    too_large=() => false,
-    disposing=() => false,
-    scheduler=() => None,
-    unexpected_error=_ => (),
+  let model_state = test_tokenization_model_state(
+    lines,
+    "modelModeTest1",
+    Ref(0),
+    false,
+    Ref(false),
+    Ref(None),
+    _ => (),
   )
   TokenizationTextModelPart::new_with_support_resolver(
-    access,
+    model_state,
     AttachedViews::new(),
     _ => Some(logging_support(calls, Ref(0))),
   )

@@ -24,7 +24,7 @@ pub(all) struct ModelTokensChangedRange {
 ///|
 /// Public model tokenization part. Reads are passive; explicit/visible/background demand drives lexing.
 pub struct TokenizationTextModelPart {
-  priv access : TokenizationModelAccess
+  priv model_state : TokenizationModelState
   priv backend : TokenizerSyntaxTokenBackend
   priv did_change_tokens : @base_common.Emitter[ModelTokensChangedEvent]
   priv first_font_emitter : @base_common.Emitter[ModelFontTokensChangedEvent]
@@ -36,12 +36,12 @@ pub struct TokenizationTextModelPart {
 
 ///|
 /// Constructs the registry-backed live backend and event forwarding in source order.
-pub fn TokenizationTextModelPart::new(
-  access : TokenizationModelAccess,
+fn TokenizationTextModelPart::new(
+  model_state : TokenizationModelState,
   attached_views : AttachedViews,
 ) -> TokenizationTextModelPart {
   TokenizationTextModelPart::new_with_support_resolver(
-    access,
+    model_state,
     attached_views,
     language_id => {
       match @syntax.tokenization_registry.get(language_id) {
@@ -60,20 +60,20 @@ pub fn TokenizationTextModelPart::new(
 
 ///|
 /// Internal-support test seam preserving failing and `has_eol`-aware adapters.
-pub fn TokenizationTextModelPart::new_with_support_resolver(
-  access : TokenizationModelAccess,
+fn TokenizationTextModelPart::new_with_support_resolver(
+  model_state : TokenizationModelState,
   attached_views : AttachedViews,
   resolve_support : (String) -> InternalTokenizationSupportAdapter?,
   subscribe_registry? : Bool = false,
 ) -> TokenizationTextModelPart {
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    access,
+    model_state,
     attached_views,
     resolve_support,
     subscribe_registry~,
   )
   let part : TokenizationTextModelPart = {
-    access,
+    model_state,
     backend,
     did_change_tokens: @base_common.Emitter::new(),
     first_font_emitter: @base_common.Emitter::new(),
@@ -84,14 +84,14 @@ pub fn TokenizationTextModelPart::new_with_support_resolver(
   }
   part.backend_token_subscription = Some(
     backend.on_did_change_tokens(event => {
-      if !part.access.is_disposing() {
+      if !part.model_state.disposing.val {
         part.did_change_tokens.fire(event)
       }
     }),
   )
   part.backend_font_subscription = Some(
     backend.on_did_change_font_tokens(event => {
-      if !part.access.is_disposing() {
+      if !part.model_state.disposing.val {
         part.public_font_emitter.fire(event)
       }
     }),
@@ -128,11 +128,11 @@ pub fn TokenizationTextModelPart::on_did_change_background_tokenization_state(
 }
 
 ///|
-/// Construction-fixed language id read through the live carrier.
+/// Construction-fixed language id read from the shared model state.
 pub fn TokenizationTextModelPart::get_language_id(
   self : TokenizationTextModelPart,
 ) -> String {
-  self.access.language_id()
+  self.model_state.language_id
 }
 
 ///|
@@ -152,7 +152,7 @@ fn TokenizationTextModelPart::validate_line_number(
   self : TokenizationTextModelPart,
   line_number : Int,
 ) -> Unit {
-  if line_number < 1 || line_number > self.access.line_count() {
+  if line_number < 1 || line_number > self.model_state.snapshot.val.line_count() {
     abort("Illegal value for lineNumber")
   }
 }
@@ -265,7 +265,7 @@ pub fn TokenizationTextModelPart::token_count(
 ) -> Int {
   self.assert_not_disposed()
   let mut count = 0
-  for line_number in 1..<=self.access.line_count() {
+  for line_number in 1..<=self.model_state.snapshot.val.line_count() {
     count += self.backend.get_line_tokens(line_number).get_count()
   }
   count

@@ -3,7 +3,7 @@
 /// Source: `vscode/src/vs/editor/common/model/textModelTokens.ts` at
 /// `b18492a288de038fbc7643aae6de8247029d11bd`, lines 23-558. Incremental-edit
 /// members are intentionally absent for readonly Viewer; immutable
-/// `TokenizerState`, raw arrays, live access closures, `0x7FFFFFFF`, and the
+/// `TokenizerState`, raw arrays, direct live model-state fields, `0x7FFFFFFF`, and the
 /// cancellable injected scheduler are the Gate-B-approved adaptations.
 
 ///|
@@ -439,24 +439,24 @@ pub fn TokenizerWithStateStore::get_first_invalid_line(
 }
 
 ///|
-/// Stateful tokenizer with live model and language-codec access.
+/// Stateful tokenizer with live model state and a language-id codec.
 pub struct TokenizerWithStateStoreAndTextModel {
   base : TokenizerWithStateStore
-  access : TokenizationModelAccess
+  priv model_state : TokenizationModelState
   language_id_codec : @services.LanguageIdCodec
 }
 
 ///|
-/// Preserves base initialization before retaining live access facts.
-pub fn TokenizerWithStateStoreAndTextModel::new(
+/// Preserves base initialization before retaining live model-state facts.
+fn TokenizerWithStateStoreAndTextModel::new(
   line_count : Int,
   tokenization_support : InternalTokenizationSupportAdapter,
-  access : TokenizationModelAccess,
+  model_state : TokenizationModelState,
   language_id_codec : @services.LanguageIdCodec,
 ) -> TokenizerWithStateStoreAndTextModel raise {
   {
     base: TokenizerWithStateStore::new(line_count, tokenization_support),
-    access,
+    model_state,
     language_id_codec,
   }
 }
@@ -489,15 +489,17 @@ pub fn TokenizerWithStateStoreAndTextModel::update_tokens_until_line(
       line_to_tokenize.line_number <= line_number else {
       break
     }
-    let text = self.access.line_content(line_to_tokenize.line_number)
+    let text = self.model_state.snapshot.val.line_text(
+      line_to_tokenize.line_number - 1,
+    )
     let result = safe_tokenize(
       self.language_id_codec,
-      self.access.language_id(),
+      self.model_state.language_id,
       Some(self.base.tokenization_support),
       text,
       true,
       line_to_tokenize.start_state,
-      self.access,
+      self.model_state,
     )
     builder.add(line_to_tokenize.line_number, result.tokens)
     self.base.store.set_end_state(
@@ -528,7 +530,8 @@ pub fn TokenizerWithStateStoreAndTextModel::is_cheap_to_tokenize(
     return true
   }
   if line_number == first_invalid &&
-    self.access.line_length(line_number) < CHEAP_TOKENIZATION_LENGTH_LIMIT {
+    self.model_state.snapshot.val.get_line_length(line_number) <
+    CHEAP_TOKENIZATION_LENGTH_LIMIT {
     return true
   }
   false
@@ -558,15 +561,15 @@ pub fn TokenizerWithStateStoreAndTextModel::tokenize_heuristically(
   }
   let mut state = self.guess_start_state(start_line_number)
   for line_number in start_line_number..<=end_line_number {
-    let text = self.access.line_content(line_number)
+    let text = self.model_state.snapshot.val.line_text(line_number - 1)
     let result = safe_tokenize(
       self.language_id_codec,
-      self.access.language_id(),
+      self.model_state.language_id,
       Some(self.base.tokenization_support),
       text,
       true,
       state,
-      self.access,
+      self.model_state,
     )
     builder.add(line_number, result.tokens)
     state = result.end_state
@@ -581,7 +584,7 @@ pub fn TokenizerWithStateStoreAndTextModel::guess_start_state(
   line_number : Int,
 ) -> @syntax.TokenizerState {
   let relevant = find_likely_relevant_lines(
-    self.access,
+    self.model_state,
     line_number,
     Some(self.base),
   )
@@ -590,7 +593,7 @@ pub fn TokenizerWithStateStoreAndTextModel::guess_start_state(
     None =>
       self.base.tokenization_support.initial_state() catch {
         error => {
-          self.access.report_unexpected_error("\{to_repr(error)}")
+          (self.model_state.report_unexpected_error)("\{to_repr(error)}")
           self.base.initial_state_value
         }
       }
@@ -598,12 +601,12 @@ pub fn TokenizerWithStateStoreAndTextModel::guess_start_state(
   for line in relevant.likely_relevant_lines {
     let result = safe_tokenize(
       self.language_id_codec,
-      self.access.language_id(),
+      self.model_state.language_id,
       Some(self.base.tokenization_support),
       line,
       false,
       state,
-      self.access,
+      self.model_state,
     )
     state = result.end_state
   }
@@ -620,22 +623,24 @@ pub(all) struct LikelyRelevantLines {
 ///|
 /// Walks backward across strictly smaller non-whitespace indentation and
 /// returns ancestors in forward order plus the first cached start state.
-pub fn find_likely_relevant_lines(
-  access : TokenizationModelAccess,
+fn find_likely_relevant_lines(
+  model_state : TokenizationModelState,
   line_number : Int,
   store : TokenizerWithStateStore?,
 ) -> LikelyRelevantLines {
-  let mut non_whitespace_column = access.first_non_whitespace_column(
+  let mut non_whitespace_column = model_state.snapshot.val.get_line_first_non_whitespace_column(
     line_number,
   )
   let likely_relevant_lines : Array[String] = []
   let mut initial_state : @syntax.TokenizerState? = None
   let mut i = line_number - 1
   while non_whitespace_column > 1 && i >= 1 {
-    let new_non_whitespace_column = access.first_non_whitespace_column(i)
+    let new_non_whitespace_column = model_state.snapshot.val.get_line_first_non_whitespace_column(
+      i,
+    )
     if new_non_whitespace_column != 0 &&
       new_non_whitespace_column < non_whitespace_column {
-      likely_relevant_lines.push(access.line_content(i))
+      likely_relevant_lines.push(model_state.snapshot.val.line_text(i - 1))
       non_whitespace_column = new_non_whitespace_column
       match store {
         Some(state_store) => {
@@ -657,20 +662,20 @@ pub fn find_likely_relevant_lines(
 /// Calls support with an immutable state value, reports failures, applies the
 /// language-tagged null fallback, then converts start offsets to end offsets
 /// exactly once using the raw UTF-16 line length.
-pub fn safe_tokenize(
+fn safe_tokenize(
   language_id_codec : @services.LanguageIdCodec,
   language_id : String,
   support : InternalTokenizationSupportAdapter?,
   text : String,
   has_eol : Bool,
   state : @syntax.TokenizerState,
-  access : TokenizationModelAccess,
+  model_state : TokenizationModelState,
 ) -> EncodedTokenizationResult {
   let mut result : EncodedTokenizationResult? = None
   match support {
     Some(tokenization_support) =>
       try tokenization_support.tokenize(text, has_eol, state) catch {
-        error => access.report_unexpected_error("\{to_repr(error)}")
+        error => (model_state.report_unexpected_error)("\{to_repr(error)}")
       } noraise {
         value => result = Some(value)
       }
@@ -816,7 +821,7 @@ pub fn DefaultBackgroundTokenizer::dispose(
 pub fn DefaultBackgroundTokenizer::handle_changes(
   self : DefaultBackgroundTokenizer,
 ) -> Unit {
-  if self.tokenizer_with_state_store.access.attached_count() == 0 {
+  if self.tokenizer_with_state_store.model_state.attached_count.val == 0 {
     self.cancel_pending()
     return
   }
@@ -830,11 +835,12 @@ fn DefaultBackgroundTokenizer::begin_background_tokenization(
 ) -> Unit {
   if self.is_disposed ||
     self.is_scheduled ||
-    self.tokenizer_with_state_store.access.attached_count() == 0 ||
+    self.tokenizer_with_state_store.model_state.attached_count.val == 0 ||
     !self.has_lines_to_tokenize() {
     return
   }
-  guard self.tokenizer_with_state_store.access.scheduler() is Some(scheduler) else {
+  guard self.tokenizer_with_state_store.model_state.scheduler.val
+    is Some(scheduler) else {
     return
   }
   self.is_scheduled = true
@@ -860,7 +866,8 @@ fn DefaultBackgroundTokenizer::background_tokenize_with_deadline(
   generation : Int,
 ) -> Unit {
   let remaining = deadline.time_remaining()
-  guard self.tokenizer_with_state_store.access.scheduler() is Some(scheduler) else {
+  guard self.tokenizer_with_state_store.model_state.scheduler.val
+    is Some(scheduler) else {
     return
   }
   let end_time = scheduler.now() + remaining
@@ -876,12 +883,13 @@ fn DefaultBackgroundTokenizer::execute_slice_until_deadline(
 ) -> Unit {
   if self.is_disposed ||
     generation != self.generation.val ||
-    self.tokenizer_with_state_store.access.attached_count() == 0 ||
+    self.tokenizer_with_state_store.model_state.attached_count.val == 0 ||
     !self.has_lines_to_tokenize() {
     return
   }
   self.background_tokenize_for_at_least_1ms()
-  guard self.tokenizer_with_state_store.access.scheduler() is Some(scheduler) else {
+  guard self.tokenizer_with_state_store.model_state.scheduler.val
+    is Some(scheduler) else {
     return
   }
   if scheduler.now() < end_time {
@@ -899,14 +907,16 @@ fn DefaultBackgroundTokenizer::execute_slice_until_deadline(
 fn DefaultBackgroundTokenizer::background_tokenize_for_at_least_1ms(
   self : DefaultBackgroundTokenizer,
 ) -> Unit {
-  let line_count = self.tokenizer_with_state_store.access.line_count()
+  let line_count = self.tokenizer_with_state_store.model_state.snapshot.val.line_count()
   let builder = @common_tokens.ContiguousMultilineTokensBuilder::new()
-  let started = match self.tokenizer_with_state_store.access.scheduler() {
+  let started = match
+    self.tokenizer_with_state_store.model_state.scheduler.val {
     Some(scheduler) => scheduler.now()
     None => 0.0
   }
   for ;; {
-    let elapsed = match self.tokenizer_with_state_store.access.scheduler() {
+    let elapsed = match
+      self.tokenizer_with_state_store.model_state.scheduler.val {
       Some(scheduler) => scheduler.now() - started
       None => 2.0
     }
@@ -938,7 +948,8 @@ pub fn DefaultBackgroundTokenizer::tokenize_one_invalid_line(
 ) -> Int {
   guard self.tokenizer_with_state_store.get_first_invalid_line()
     is Some(first_invalid) else {
-    return self.tokenizer_with_state_store.access.line_count() + 1
+    return self.tokenizer_with_state_store.model_state.snapshot.val.line_count() +
+      1
   }
   self.tokenizer_with_state_store.update_tokens_until_line(
     builder,

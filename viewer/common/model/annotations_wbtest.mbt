@@ -1,4 +1,4 @@
-///| Branch evidence for the child-owned syntactic font carrier.
+///| Branch evidence for the model-owned syntactic font carrier.
 
 ///|
 test "AnnotationsUpdate.create retains absent empty and nonempty font updates" {

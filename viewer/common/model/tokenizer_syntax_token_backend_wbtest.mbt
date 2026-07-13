@@ -2,43 +2,32 @@
 
 ///|
 priv struct BackendHarness {
-  access : TokenizationModelAccess
+  model_state : TokenizationModelState
   attached : Ref[Int]
   scheduler : Ref[TokenizationScheduler?]
-  too_large : Ref[Bool]
   disposing : Ref[Bool]
   errors : Array[String]
 }
 
 ///|
-fn backend_harness(lines : Array[String]) -> BackendHarness {
+fn backend_harness(
+  lines : Array[String],
+  too_large? : Bool = false,
+) -> BackendHarness {
   let attached = Ref(0)
   let scheduler : Ref[TokenizationScheduler?] = Ref(None)
-  let too_large = Ref(false)
   let disposing = Ref(false)
   let errors : Array[String] = []
-  let access = TokenizationModelAccess::new(
-    line_count=() => lines.length(),
-    line_content=line_number => lines[line_number - 1],
-    line_length=line_number => lines[line_number - 1].length(),
-    first_non_whitespace_column=line_number => {
-      let index = @base_common.first_non_whitespace_index(
-        lines[line_number - 1],
-      )
-      if index < 0 {
-        0
-      } else {
-        index + 1
-      }
-    },
-    language_id=() => "backend-test",
-    attached_count=() => attached.val,
-    too_large=() => too_large.val,
-    disposing=() => disposing.val,
-    scheduler=() => scheduler.val,
-    unexpected_error=message => errors.push(message),
+  let model_state = test_tokenization_model_state(
+    lines,
+    "backend-test",
+    attached,
+    too_large,
+    disposing,
+    scheduler,
+    message => errors.push(message),
   )
-  { access, attached, scheduler, too_large, disposing, errors }
+  { model_state, attached, scheduler, disposing, errors }
 }
 
 ///|
@@ -84,7 +73,7 @@ test "passive reads never invoke support; explicit force stores exact ranges" {
   let calls : Array[String] = []
   let initial_calls = Ref(0)
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.access,
+    harness.model_state,
     attached_views,
     _ => Some(logging_support(calls, initial_calls)),
   )
@@ -104,11 +93,10 @@ test "passive reads never invoke support; explicit force stores exact ranges" {
 
 ///|
 test "too-large and missing support stay passive defaults and schedule nothing" {
-  let harness = backend_harness(["one"])
-  harness.too_large.val = true
+  let harness = backend_harness(["one"], too_large=true)
   let resolves = Ref(0)
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.access,
+    harness.model_state,
     AttachedViews::new(),
     _ => {
       resolves.val += 1
@@ -129,7 +117,7 @@ test "stable attached ranges refresh synchronously without a scheduler" {
   let attached_views = AttachedViews::new()
   let calls : Array[String] = []
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.access,
+    harness.model_state,
     attached_views,
     _ => Some(logging_support(calls, Ref(0))),
   )
@@ -144,7 +132,7 @@ test "stable attached ranges refresh synchronously without a scheduler" {
 test "background completion remains completed across reset and repeated finish is silent" {
   let harness = backend_harness(["one"])
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.access,
+    harness.model_state,
     AttachedViews::new(),
     _ => Some(logging_support([], Ref(0))),
   )
@@ -165,7 +153,7 @@ test "scheduler None enqueues nothing; late scheduler wakes once and stale gener
   let harness = backend_harness(["one", "two"])
   let calls : Array[String] = []
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.access,
+    harness.model_state,
     AttachedViews::new(),
     _ => Some(logging_support(calls, Ref(0))),
   )
@@ -195,7 +183,7 @@ test "scheduler None enqueues nothing; late scheduler wakes once and stale gener
 test "disposing guard drops token and font events" {
   let harness = backend_harness(["one"])
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.access,
+    harness.model_state,
     AttachedViews::new(),
     _ => Some(logging_support([], Ref(0))),
   )
@@ -215,7 +203,7 @@ test "disposing guard drops token and font events" {
 test "set_font_info forwards the exact live payload and one absent removal" {
   let harness = backend_harness(["one"])
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.access,
+    harness.model_state,
     AttachedViews::new(),
     _ => Some(logging_support([], Ref(0))),
   )
@@ -265,7 +253,7 @@ test "failing initial state reports and disables support for the reset" {
     },
   )
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.access,
+    harness.model_state,
     AttachedViews::new(),
     _ => Some(failing),
   )
@@ -279,7 +267,7 @@ test "refreshRange preserves asymmetric clamp and reversed no-work branches" {
   let harness = backend_harness(["one", "two", "three"])
   let calls : Array[String] = []
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.access,
+    harness.model_state,
     AttachedViews::new(),
     _ => Some(logging_support(calls, Ref(0))),
   )

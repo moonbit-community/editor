@@ -7,7 +7,7 @@ priv suberror TokenTestError {
 
 ///|
 priv struct TokenTestHarness {
-  access : TokenizationModelAccess
+  model_state : TokenizationModelState
   errors : Array[String]
 }
 
@@ -16,28 +16,16 @@ fn token_test_harness(lines : Array[String]) -> TokenTestHarness {
   let attached = Ref(0)
   let scheduler : Ref[TokenizationScheduler?] = Ref(None)
   let errors : Array[String] = []
-  let access = TokenizationModelAccess::new(
-    line_count=() => lines.length(),
-    line_content=line_number => lines[line_number - 1],
-    line_length=line_number => lines[line_number - 1].length(),
-    first_non_whitespace_column=line_number => {
-      let index = @base_common.first_non_whitespace_index(
-        lines[line_number - 1],
-      )
-      if index < 0 {
-        0
-      } else {
-        index + 1
-      }
-    },
-    language_id=() => "token-test",
-    attached_count=() => attached.val,
-    too_large=() => false,
-    disposing=() => false,
-    scheduler=() => scheduler.val,
-    unexpected_error=message => errors.push(message),
+  let model_state = test_tokenization_model_state(
+    lines,
+    "token-test",
+    attached,
+    false,
+    Ref(false),
+    scheduler,
+    message => errors.push(message),
   )
-  { access, errors }
+  { model_state, errors }
 }
 
 ///|
@@ -99,7 +87,7 @@ test "TokenizerWithStateStore demands through line and records hasEOL true" {
   let tokenizer = TokenizerWithStateStoreAndTextModel::new(
     3,
     logging_support(calls, initial_calls),
-    harness.access,
+    harness.model_state,
     @services.language_id_codec,
   )
   let builder = @common_tokens.ContiguousMultilineTokensBuilder::new()
@@ -122,7 +110,7 @@ test "cheapness is strict at 2048 and only the first invalid line is cheap" {
   let tokenizer = TokenizerWithStateStoreAndTextModel::new(
     3,
     logging_support([], Ref(0)),
-    harness.access,
+    harness.model_state,
     @services.language_id_codec,
   )
   assert_true(tokenizer.is_cheap_to_tokenize(1))
@@ -144,7 +132,7 @@ test "findLikelyRelevantLines ignores whitespace and replays ancestors without E
   let tokenizer = TokenizerWithStateStoreAndTextModel::new(
     5,
     support,
-    harness.access,
+    harness.model_state,
     @services.language_id_codec,
   )
   let state = tokenizer.guess_start_state(5)
@@ -166,7 +154,7 @@ test "safe_tokenize missing and failing support reports then returns language fa
     "abc",
     true,
     state,
-    harness.access,
+    harness.model_state,
   )
   assert_eq(missing.tokens.length(), 2)
   assert_eq(missing.tokens[0], 3)
@@ -184,7 +172,7 @@ test "safe_tokenize missing and failing support reports then returns language fa
     "abc",
     false,
     state,
-    harness.access,
+    harness.model_state,
   )
   assert_eq(fallback.tokens[0], 3)
   assert_eq(harness.errors.length(), 1)
@@ -201,7 +189,7 @@ test "encoded tokenization preserves absent empty and nonempty font info" {
     "abc",
     true,
     state,
-    harness.access,
+    harness.model_state,
   )
   assert_true(absent.font_info is None)
 
@@ -221,7 +209,7 @@ test "encoded tokenization preserves absent empty and nonempty font info" {
     "abc",
     true,
     state,
-    harness.access,
+    harness.model_state,
   )
   guard empty.font_info is Some(actual_empty) else {
     fail("expected present empty font info")
@@ -253,7 +241,7 @@ test "encoded tokenization preserves absent empty and nonempty font info" {
     "abc",
     true,
     state,
-    harness.access,
+    harness.model_state,
   )
   guard nonempty.font_info is Some(actual_fonts) else {
     fail("expected nonempty font info")

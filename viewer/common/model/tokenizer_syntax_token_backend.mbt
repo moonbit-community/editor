@@ -1,8 +1,8 @@
-///| Concrete stateful grammar backend over live model access.
+///| Concrete stateful grammar backend over shared live model state.
 ///
 /// Source: `vscode/src/vs/editor/common/model/tokens/tokenizerSyntaxTokenBackend.ts`
 /// at `b18492a288de038fbc7643aae6de8247029d11bd`, lines 26-322. The live
-/// `TokenizationModelAccess`, absent custom/verifier worker arms, and optional
+/// `TokenizationModelState`, absent custom/verifier worker arms, and optional
 /// epoch scheduler are the reviewed deviations; reset/event/store/refresh
 /// ordering and branch constants follow the source.
 
@@ -23,7 +23,7 @@ priv struct AttachedViewHandlerEntry {
 /// Concrete TextMate-style syntactic backend.
 pub struct TokenizerSyntaxTokenBackend {
   priv shared : AbstractSyntaxTokenBackend
-  priv access : TokenizationModelAccess
+  priv model_state : TokenizationModelState
   priv resolve_support : (String) -> InternalTokenizationSupportAdapter?
   priv mut tokenizer : TokenizerWithStateStoreAndTextModel?
   priv mut background_tokenization_state_value : BackgroundTokenizationState
@@ -36,41 +36,17 @@ pub struct TokenizerSyntaxTokenBackend {
 }
 
 ///|
-/// Constructs the production backend over the synchronous syntax registry.
-pub fn TokenizerSyntaxTokenBackend::new(
-  access : TokenizationModelAccess,
-  attached_views : AttachedViews,
-) -> TokenizerSyntaxTokenBackend {
-  TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    access,
-    attached_views,
-    language_id => {
-      match @syntax.tokenization_registry.get(language_id) {
-        Some(tokenizer) =>
-          Some(
-            public_tokenizer_adapter(
-              tokenizer, @services.language_id_codec, language_id,
-            ),
-          )
-        None => None
-      }
-    },
-    subscribe_registry=true,
-  )
-}
-
-///|
-/// Test seam for failing and `has_eol`-aware internal support. Production uses
-/// `new`, which is the only registry-backed constructor.
-pub fn TokenizerSyntaxTokenBackend::new_with_support_resolver(
-  access : TokenizationModelAccess,
+/// Constructs the backend from the registry-backed production resolver or a
+/// failing/`has_eol`-aware white-box resolver.
+fn TokenizerSyntaxTokenBackend::new_with_support_resolver(
+  model_state : TokenizationModelState,
   attached_views : AttachedViews,
   resolve_support : (String) -> InternalTokenizationSupportAdapter?,
   subscribe_registry? : Bool = false,
 ) -> TokenizerSyntaxTokenBackend {
   let backend : TokenizerSyntaxTokenBackend = {
-    shared: AbstractSyntaxTokenBackend::new(access),
-    access,
+    shared: AbstractSyntaxTokenBackend::new(),
+    model_state,
     resolve_support,
     tokenizer: None,
     background_tokenization_state_value: InProgress,
@@ -86,7 +62,7 @@ pub fn TokenizerSyntaxTokenBackend::new_with_support_resolver(
   if subscribe_registry {
     backend.registry_subscription = Some(
       @syntax.tokenization_registry.on_did_change(event => {
-        let language_id = backend.access.language_id()
+        let language_id = backend.model_state.language_id
         if event.changed_languages.contains(language_id) {
           backend.reset_tokenization()
         }
@@ -128,7 +104,7 @@ fn TokenizerSyntaxTokenBackend::handle_attached_view_state_change(
               None => ()
             }
           },
-          () => self.access.scheduler(),
+          () => self.model_state.scheduler.val,
         )
         holder.val = Some(handler)
         self.attached_view_states.push({ view: change.view, handler })
@@ -159,20 +135,24 @@ pub fn TokenizerSyntaxTokenBackend::reset_tokenization(
   fire_token_change_event? : Bool = true,
 ) -> Unit {
   self.tokens.flush()
-  if fire_token_change_event && !self.access.is_disposing() {
+  if fire_token_change_event && !self.model_state.disposing.val {
     self.shared.did_change_tokens.fire({
       semantic_tokens_applied: false,
       ranges: [
-        { from_line_number: 1, to_line_number: self.access.line_count() },
+        {
+          from_line_number: 1,
+          to_line_number: self.model_state.snapshot.val.line_count(),
+        },
       ],
     })
   }
   let mut support : InternalTokenizationSupportAdapter? = None
-  if !self.access.is_too_large() {
-    match (self.resolve_support)(self.access.language_id()) {
+  if !self.model_state.too_large {
+    match (self.resolve_support)(self.model_state.language_id) {
       Some(candidate) =>
         try candidate.initial_state() catch {
-          error => self.access.report_unexpected_error("\{to_repr(error)}")
+          error =>
+            (self.model_state.report_unexpected_error)("\{to_repr(error)}")
         } noraise {
           _ => support = Some(candidate)
         }
@@ -183,14 +163,14 @@ pub fn TokenizerSyntaxTokenBackend::reset_tokenization(
     Some(candidate) =>
       try
         TokenizerWithStateStoreAndTextModel::new(
-          self.access.line_count(),
+          self.model_state.snapshot.val.line_count(),
           candidate,
-          self.access,
+          self.model_state,
           @services.language_id_codec,
         )
       catch {
         error => {
-          self.access.report_unexpected_error("\{to_repr(error)}")
+          (self.model_state.report_unexpected_error)("\{to_repr(error)}")
           None
         }
       } noraise {
@@ -270,14 +250,14 @@ pub fn TokenizerSyntaxTokenBackend::set_tokens(
 ) -> TokenStoreChange {
   let update = self.tokens.set_multiline_tokens(
     batches,
-    self.access.language_id(),
-    line_number => self.access.line_length(line_number),
+    self.model_state.language_id,
+    line_number => self.model_state.snapshot.val.get_line_length(line_number),
   )
   let changes = update.changes.map(change => ModelTokensChangedRange::{
     from_line_number: change.from_line_number,
     to_line_number: change.to_line_number,
   })
-  if !changes.is_empty() && !self.access.is_disposing() {
+  if !changes.is_empty() && !self.model_state.disposing.val {
     self.shared.did_change_tokens.fire({
       semantic_tokens_applied: false,
       ranges: changes,
@@ -292,7 +272,7 @@ pub fn TokenizerSyntaxTokenBackend::set_font_info(
   self : TokenizerSyntaxTokenBackend,
   changes : FontTokensUpdate,
 ) -> Unit {
-  if !self.access.is_disposing() {
+  if !self.model_state.disposing.val {
     self.shared.did_change_font_tokens.fire({ changes, })
   }
 }
@@ -331,7 +311,7 @@ pub fn TokenizerSyntaxTokenBackend::refresh_range(
   end_line_number : Int,
 ) -> Unit {
   guard self.tokenizer is Some(tokenizer) else { return }
-  let line_count = self.access.line_count()
+  let line_count = self.model_state.snapshot.val.line_count()
   let clamped_start = start_line_number.max(1).min(line_count)
   let clamped_end = end_line_number.min(line_count)
   let builder = @common_tokens.ContiguousMultilineTokensBuilder::new()
@@ -417,9 +397,9 @@ pub fn TokenizerSyntaxTokenBackend::get_line_tokens(
   line_number : Int,
 ) -> @common_tokens.LineTokens {
   self.tokens.get_tokens(
-    self.access.language_id(),
+    self.model_state.language_id,
     line_number - 1,
-    self.access.line_content(line_number),
+    self.model_state.snapshot.val.line_text(line_number - 1),
   )
 }
 

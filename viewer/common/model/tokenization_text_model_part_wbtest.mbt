@@ -91,39 +91,27 @@ fn toy_part(text : String, language_id : String) -> TokenizationTextModelPart {
 }
 
 ///|
-fn test_access(
+fn test_model_state(
   lines : Array[String],
   language_id : String,
-) -> TokenizationModelAccess {
-  test_access_with_disposing(lines, language_id, Ref(false))
+) -> TokenizationModelState {
+  test_model_state_with_disposing(lines, language_id, Ref(false))
 }
 
 ///|
-fn test_access_with_disposing(
+fn test_model_state_with_disposing(
   lines : Array[String],
   language_id : String,
   disposing : Ref[Bool],
-) -> TokenizationModelAccess {
-  TokenizationModelAccess::new(
-    line_count=() => lines.length(),
-    line_content=line_number => lines[line_number - 1],
-    line_length=line_number => lines[line_number - 1].length(),
-    first_non_whitespace_column=line_number => {
-      let index = @base_common.first_non_whitespace_index(
-        lines[line_number - 1],
-      )
-      if index < 0 {
-        0
-      } else {
-        index + 1
-      }
-    },
-    language_id=() => language_id,
-    attached_count=() => 0,
-    too_large=() => false,
-    disposing=() => disposing.val,
-    scheduler=() => None,
-    unexpected_error=_ => (),
+) -> TokenizationModelState {
+  test_tokenization_model_state(
+    lines,
+    language_id,
+    Ref(0),
+    false,
+    disposing,
+    Ref(None),
+    _ => (),
   )
 }
 
@@ -133,7 +121,7 @@ fn part_from_lines(
   language_id : String,
 ) -> TokenizationTextModelPart {
   TokenizationTextModelPart::new(
-    test_access(lines, language_id),
+    test_model_state(lines, language_id),
     AttachedViews::new(),
   )
 }
@@ -280,7 +268,7 @@ test "token_count is a passive stored/default read" {
   let lines = ["one", "two", "three"]
   let calls : Array[String] = []
   let part = TokenizationTextModelPart::new_with_support_resolver(
-    test_access(lines, "passive-count"),
+    test_model_state(lines, "passive-count"),
     AttachedViews::new(),
     _ => Some(logging_support(calls, Ref(0))),
   )
@@ -297,7 +285,7 @@ test "font payload forwards unchanged only through the exposed second emitter" {
   let lines = ["one"]
   let disposing = Ref(false)
   let part = TokenizationTextModelPart::new_with_support_resolver(
-    test_access_with_disposing(lines, "part-font-forward", disposing),
+    test_model_state_with_disposing(lines, "part-font-forward", disposing),
     AttachedViews::new(),
     _ => Some(logging_support([], Ref(0))),
   )

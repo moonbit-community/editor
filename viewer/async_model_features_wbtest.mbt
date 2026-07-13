@@ -15,124 +15,6 @@ fn async_test_model(path : String, text : String) -> @model.TextModel {
 }
 
 ///|
-test "inlay request authority is physical model internal version generation and token" {
-  let controller = InlayHintsController::attach("async-stamp-authority")
-  let first = async_test_model("/same.mbt", "first")
-  let replacement = async_test_model("/same.mbt", "replacement")
-
-  let initial = controller.begin_request(first)
-  assert_true(controller.accepts_request(initial, Some(first)))
-  // Same URI, host version, and revision cannot substitute for physical
-  // identity.
-  assert_false(controller.accepts_request(initial, Some(replacement)))
-
-  first.set_value("changed")
-  assert_false(controller.accepts_request(initial, Some(first)))
-
-  let disposed = async_test_model("/disposed.mbt", "disposed")
-  let disposed_stamp = controller.begin_request(disposed)
-  disposed.dispose()
-  assert_false(controller.accepts_request(disposed_stamp, Some(disposed)))
-
-  let current = controller.begin_request(first)
-  assert_true(initial.token.is_cancellation_requested())
-  assert_true(current.generation > initial.generation)
-  assert_true(controller.accepts_request(current, Some(first)))
-  assert_false(controller.accepts_request(current, None))
-
-  controller.cancel_request()
-  assert_true(current.token.is_cancellation_requested())
-  assert_false(controller.accepts_request(current, Some(first)))
-  InlayHintsController::detach("async-stamp-authority")
-}
-
-///|
-test "inlay generations never reset across model-state reset" {
-  let controller = InlayHintsController::attach("async-stamp-generation")
-  let first = async_test_model("/first.mbt", "first")
-  let second = async_test_model("/second.mbt", "second")
-  let first_stamp = controller.begin_request(first)
-  controller.reset_model_state()
-  let second_stamp = controller.begin_request(second)
-  assert_true(first_stamp.token.is_cancellation_requested())
-  assert_true(second_stamp.generation > first_stamp.generation)
-  assert_true(controller.accepts_request(second_stamp, Some(second)))
-  controller.finish_request(second_stamp.generation)
-  assert_false(second_stamp.token.is_cancellation_requested())
-  InlayHintsController::detach("async-stamp-generation")
-}
-
-///|
-fn deferred_hint(label : String) -> @language.InlayHint {
-  InlayHint(Position(1, 1), label)
-}
-
-///|
-test "newest inlay completion wins and stale empty cannot clear" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
-  let model = async_test_model("/set-value.mbt", "old")
-  viewer.set_model(Some(model))
-  let controller = viewer.inlay_hints_controller().unwrap()
-  let old = controller.begin_request(model)
-  let newest = controller.begin_request(model)
-  assert_true(old.token.is_cancellation_requested())
-  viewer.commit_model_features(newest, [deferred_hint("newest")])
-  assert_eq(viewer.current_inlay_hints()[0].label, "newest")
-  viewer.commit_model_features(old, [])
-  assert_eq(viewer.current_inlay_hints()[0].label, "newest")
-
-  viewer.dispose()
-  dispose_explicit_services(services)
-}
-
-///|
-test "stale inlay can finish first before newest completion applies" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
-  let model = async_test_model("/old-first.mbt", "old")
-  viewer.set_model(Some(model))
-  let controller = viewer.inlay_hints_controller().unwrap()
-  let old = controller.begin_request(model)
-  let newest = controller.begin_request(model)
-  viewer.commit_model_features(old, [deferred_hint("old-first")])
-  assert_true(viewer.current_inlay_hints().is_empty())
-  viewer.commit_model_features(newest, [deferred_hint("newest-last")])
-  assert_eq(viewer.current_inlay_hints()[0].label, "newest-last")
-  viewer.dispose()
-  dispose_explicit_services(services)
-}
-
-///|
-test "same URI replacement and detach reject old inlay completions" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
-  let first = async_test_model("/replacement.mbt", "first")
-  let replacement = async_test_model("/replacement.mbt", "replacement")
-  viewer.set_model(Some(first))
-  let controller = viewer.inlay_hints_controller().unwrap()
-  let old = controller.begin_request(first)
-  viewer.set_model(Some(replacement))
-  assert_true(old.token.is_cancellation_requested())
-  let current = controller.begin_request(replacement)
-  viewer.commit_model_features(current, [deferred_hint("replacement")])
-  viewer.commit_model_features(old, [deferred_hint("stale")])
-  assert_eq(viewer.current_inlay_hints()[0].label, "replacement")
-
-  let pending_detach = controller.begin_request(replacement)
-  viewer.set_model(None)
-  assert_true(pending_detach.token.is_cancellation_requested())
-  viewer.commit_model_features(pending_detach, [deferred_hint("detached-stale")])
-  match viewer.inlay_hints_controller() {
-    Some(controller) => assert_true(controller.inlay_hints.is_empty())
-    None => fail("controller should live until Viewer disposal")
-  }
-
-  viewer.dispose()
-  dispose_explicit_services(services)
-}
-
-///|
 fn async_hover_anchor() -> @hover.HoverAnchor {
   HoverRangeAnchor(
     priority=0,
@@ -480,7 +362,7 @@ test "invisible hover dismissal cancels work idempotently" {
     false,
   )
   hc.hover = pending
-  let request = new_feature_cancellation_source()
+  let request = new_hover_cancellation_source()
   hc.begin_request(request, pending.operation.token)
   let token_before = pending.operation.token
   viewer.hide_content_hover()
@@ -528,7 +410,7 @@ test "content invalidation cancels hover request but preserves shown view" {
   let hc = viewer.content_hover_controller().unwrap()
   hc.hover = shown_hover_controller()
   let before = hc.hover
-  let source = new_feature_cancellation_source()
+  let source = new_hover_cancellation_source()
   hc.begin_request(source, before.operation.token)
 
   viewer.set_value("changed")
@@ -591,18 +473,4 @@ test "hover request stamp rejects version identity generation and token drift" {
   let fresh = hover.request_stamp(first, source.token())
   source.cancel()
   assert_false(fresh.is_current(Some(first), hover.operation.token))
-}
-
-///|
-test "inlay hover owner is stable per Viewer and distinct across Viewers" {
-  let first = @hover_browser.ContentHoverController::attach(
-    "async-hover-owner-first",
-  )
-  let second = @hover_browser.ContentHoverController::attach(
-    "async-hover-owner-second",
-  )
-  assert_true(first.inlay_hover_owner == first.inlay_hover_owner)
-  assert_false(first.inlay_hover_owner == second.inlay_hover_owner)
-  @hover_browser.ContentHoverController::detach("async-hover-owner-first")
-  @hover_browser.ContentHoverController::detach("async-hover-owner-second")
 }

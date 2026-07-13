@@ -20,8 +20,8 @@ timing, and rendering can be tested on JS and native targets.
 - `HoverParticipant` has anchor suggestion plus sync/async computation.
   `HoverParticipantRegistry` builds participants from
   `HoverParticipantServices`; the process-wide registry currently installs
-  marker, inlay-hint, and language-Markdown participants.
-- `ContentHoverComputer` runs those participants. Marker and inlay tooltips are
+  marker and language-Markdown participants.
+- `ContentHoverComputer` runs those participants. Marker tooltips are
   synchronous; registered language hover providers are asynchronous. The
   caller token/freshness predicate guard both sides of each await, and an
   injected task runner lets the browser merge participant results in completion

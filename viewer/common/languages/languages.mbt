@@ -69,9 +69,6 @@ pub struct Languages {
   priv document_symbol_provider : LanguageFeatureRegistry[
     &@language.DocumentSymbolProvider,
   ]
-  priv inlay_hints_provider : LanguageFeatureRegistry[
-    &@language.InlayHintsProvider,
-  ]
   /// Per-language configuration (folding rules) — the viewer's stand-in for
   /// Monaco's `ILanguageConfigurationService` registrations.
   priv language_configurations : Map[String, LanguageConfiguration]
@@ -83,7 +80,6 @@ pub fn Languages::new() -> Languages {
   {
     hover_provider: LanguageFeatureRegistry::new(),
     document_symbol_provider: LanguageFeatureRegistry::new(),
-    inlay_hints_provider: LanguageFeatureRegistry::new(),
     language_configurations: Map([]),
   }
 }
@@ -130,16 +126,6 @@ pub fn Languages::register_document_symbol_provider(
   provider : &@language.DocumentSymbolProvider,
 ) -> @base_common.Disposable {
   self.document_symbol_provider.register(selector, provider)
-}
-
-///|
-/// Registers an ordered inlay-hints provider.
-pub fn Languages::register_inlay_hints_provider(
-  self : Languages,
-  selector : @language.LanguageSelector,
-  provider : &@language.InlayHintsProvider,
-) -> @base_common.Disposable {
-  self.inlay_hints_provider.register(selector, provider)
 }
 
 ///|
@@ -215,27 +201,6 @@ pub async fn Languages::document_symbols(
     symbols.append(result)
   }
   symbols
-}
-
-///|
-/// Concatenates inlay-hint results from every provider.
-pub async fn Languages::inlay_hints_for_model(
-  self : Languages,
-  model : @model.TextModel,
-  log_service : @log.LogService,
-  token? : @language.CancellationToken = @language.CancellationToken::none(),
-  run_tasks? : async (Array[async () -> Unit]) -> Unit = @base_common.run_async_tasks_sequentially,
-) -> Array[@language.InlayHint] noraise {
-  let fragments = self.inlay_hints_for_ranges(
-    model,
-    [model.get_full_model_range()],
-    token,
-    log_service,
-    run_tasks~,
-  ) catch {
-    _ => return []
-  }
-  fragments.items.map(item => item.hint)
 }
 
 ///|

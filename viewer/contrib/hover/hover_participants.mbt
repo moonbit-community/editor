@@ -21,14 +21,12 @@ pub(all) struct ComputedHover {
 /// Inputs shared by synchronous and asynchronous hover participants. Mirrors
 /// Monaco's `(anchor, lineDecorations, source)` compute arguments: it carries
 /// only the hovered state, never a services bag — participants capture the
-/// services they need at construction instead. (`inlay_hints` backs the
-/// foreign anchor's payload lookup; Monaco's anchor carries the rendered
-/// hint object itself.) `line_decorations` is selected once by the computer and
-/// `source` is forwarded unchanged to every sync/async participant.
+/// services they need at construction instead. `line_decorations` is selected
+/// once by the computer and `source` is forwarded unchanged to every
+/// sync/async participant.
 pub(all) struct HoverComputeContext {
   model : @model.TextModel
   anchor : HoverAnchor
-  inlay_hints : Array[@language.InlayHint]
   source : HoverStartSource
   line_decorations : Array[@model.ModelDecoration]
 }
@@ -113,7 +111,6 @@ pub(all) struct HoverParticipantServices {
   languages : @languages.Languages
   marker_decorations : @markers.MarkerDecorationsService
   log_service : @log.LogService
-  inlay_hover_owner : HoverParticipantOwner
 }
 
 ///|
@@ -243,7 +240,7 @@ pub fn MarkdownHoverParticipant::new(
 }
 
 ///|
-/// Markdown hovers render after marker and inlay-hint hovers.
+/// Markdown hovers render after marker hovers.
 pub impl HoverParticipant for MarkdownHoverParticipant with fn ordinal(_self) {
   100
 }
@@ -324,114 +321,6 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn create_loading_me
 }
 
 ///|
-/// Hover participant for inlay-hint tooltips.
-pub(all) struct InlayHintsHover {
-  owner : HoverParticipantOwner
-}
-
-///|
-/// Creates the inlay-hint hover participant.
-pub fn InlayHintsHover::new() -> InlayHintsHover {
-  InlayHintsHover::with_owner(HoverParticipantOwner::new())
-}
-
-///|
-/// Rebuilds the stateless participant with one editor-scoped logical owner.
-/// The wrapper retains that owner across its input and compute factory passes.
-pub fn InlayHintsHover::with_owner(
-  owner : HoverParticipantOwner,
-) -> InlayHintsHover {
-  { owner, }
-}
-
-///|
-/// Inlay-hint hovers render after markers and before language markdown hovers.
-pub impl HoverParticipant for InlayHintsHover with fn ordinal(_self) {
-  50
-}
-
-///|
-/// `InlayHintsHover.suggestHoverAnchor` (`inlayHintsHover.ts:59-72`): a
-/// content hit inside injected inlay-hint text anchors a foreign element
-/// with the hint as payload — `InlayHintsHoverAnchor`: priority 10,
-/// `supportsMarkerHover` true.
-pub impl HoverParticipant for InlayHintsHover with fn suggest_hover_anchor(
-  self,
-  injected_text,
-  target_range,
-  initial_mouse_pos_x,
-  initial_mouse_pos_y,
-) {
-  guard injected_text is Some(injected) else { return None }
-  Some(
-    HoverForeignElementAnchor(
-      priority=10,
-      owner=self.owner,
-      injected_text_index=injected.source_index,
-      range=target_range,
-      initial_mouse_pos_x~,
-      initial_mouse_pos_y~,
-      supports_marker_hover=true,
-    ),
-  )
-}
-
-///|
-/// Computes tooltip hovers for injected inlay-hint text — gated on this
-/// participant's own foreign anchor, Monaco's `anchor instanceof
-/// InlayHintsHoverAnchor` (`inlayHintsHover.ts:79`; the tooltip itself is
-/// local viewer state, so the compute stays synchronous — recorded
-/// deviation).
-pub impl HoverParticipant for InlayHintsHover with fn compute_sync(self, ctx) {
-  guard ctx.anchor
-    is HoverForeignElementAnchor(
-      owner~,
-      injected_text_index~,
-      range=anchor_range,
-      ..
-    ) else {
-    return []
-  }
-  if owner != self.owner {
-    return []
-  }
-  match ctx.inlay_hints.get(injected_text_index) {
-    Some(hint) =>
-      if hint.tooltip.length() == 0 {
-        []
-      } else {
-        [
-          MarkdownHover(
-            range=anchor_range,
-            contents=hint.tooltip,
-            ordinal=self.ordinal(),
-          ),
-        ]
-      }
-    None => []
-  }
-}
-
-///|
-/// Inlay-hint hover data is fully synchronous.
-pub impl HoverParticipant for InlayHintsHover with fn compute_async(
-  _self,
-  _ctx,
-  _token,
-) {
-  []
-}
-
-///|
-/// Inlay-hint tooltip data is synchronous and has no loading contribution.
-pub impl HoverParticipant for InlayHintsHover with fn create_loading_message(
-  _self,
-  _anchor,
-) {
-  None
-}
-
-///|
 /// Coordinates hover participants for one viewer service set.
 pub(all) struct ContentHoverComputer {
   participants : Array[&HoverParticipant]
@@ -470,13 +359,11 @@ pub fn ContentHoverComputer::compute_sync(
   self : ContentHoverComputer,
   model : @model.TextModel,
   anchor : HoverAnchor,
-  inlay_hints? : Array[@language.InlayHint] = [],
   source? : HoverStartSource = HoverStartMouse,
 ) -> ComputedHover? {
   let ctx : HoverComputeContext = {
     model,
     anchor,
-    inlay_hints,
     source,
     line_decorations: hover_line_decorations(model, anchor),
   }
@@ -493,7 +380,6 @@ pub async fn ContentHoverComputer::compute_async(
   self : ContentHoverComputer,
   model : @model.TextModel,
   anchor : HoverAnchor,
-  inlay_hints? : Array[@language.InlayHint] = [],
   source? : HoverStartSource = HoverStartMouse,
   token? : @language.CancellationToken = @language.CancellationToken::none(),
   is_current? : () -> Bool = () => true,
@@ -504,7 +390,6 @@ pub async fn ContentHoverComputer::compute_async(
   let ctx : HoverComputeContext = {
     model,
     anchor,
-    inlay_hints,
     source,
     line_decorations: hover_line_decorations(model, anchor),
   }
@@ -531,7 +416,6 @@ pub async fn ContentHoverComputer::compute_async_each(
   self : ContentHoverComputer,
   model : @model.TextModel,
   anchor : HoverAnchor,
-  inlay_hints? : Array[@language.InlayHint] = [],
   source? : HoverStartSource = HoverStartMouse,
   token? : @language.CancellationToken = @language.CancellationToken::none(),
   is_current? : () -> Bool = () => true,
@@ -544,7 +428,6 @@ pub async fn ContentHoverComputer::compute_async_each(
   let ctx : HoverComputeContext = {
     model,
     anchor,
-    inlay_hints,
     source,
     line_decorations: hover_line_decorations(model, anchor),
   }
@@ -644,7 +527,7 @@ fn hover_part_ordinal(part : HoverPart) -> Int {
     MarkdownHover(ordinal~, ..) => ordinal
     MarkerHover(_) => 0
     // `MarkdownHoverParticipant.createLoadingMessage` uses ordinal 2000 so
-    // the placeholder follows resolved marker/inlay/markdown content.
+    // the placeholder follows resolved marker/markdown content.
     LoadingHover(_) => 2000
   }
 }

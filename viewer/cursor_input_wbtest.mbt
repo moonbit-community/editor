@@ -471,10 +471,7 @@ test "line drag keeps wrapped injected-text view position authoritative" {
     "a\nabcdef\nlast",
     viewer => {
       viewer.test_set_soft_wrap_column(5)
-      viewer.inlay_hints_controller().unwrap().inlay_hints = [
-        InlayHint(Position(2, 4), "X", kind=TypeHint),
-      ]
-      viewer.sync_inlay_hint_decorations()
+      install_cursor_test_injected_text(viewer, Position(2, 4), "X")
       let view_model = viewer.test_view_model()
       let converter = view_model.coordinates_converter()
       let target_view = converter.model_position_to_view_position(
@@ -595,10 +592,11 @@ test "mouse reveal uses wrapped injected-text view cursor without round trip" {
     "a\nabcdefghijklmnop\nlast",
     viewer => {
       viewer.test_set_soft_wrap_column(6)
-      viewer.inlay_hints_controller().unwrap().inlay_hints = [
-        InlayHint(Position(2, 3), "very-long-hint", kind=TypeHint),
-      ]
-      viewer.sync_inlay_hint_decorations()
+      install_cursor_test_injected_text(
+        viewer,
+        Position(2, 3),
+        "very-long-injected-text",
+      )
       let view_model = viewer.test_view_model()
       let converter = view_model.coordinates_converter()
       let mut candidate : (@base_common.Position, @base_common.Position)? = None
@@ -632,4 +630,25 @@ test "mouse reveal uses wrapped injected-text view cursor without round trip" {
     },
     options~,
   )
+}
+
+///|
+fn install_cursor_test_injected_text(
+  viewer : Viewer,
+  position : @base_common.Position,
+  content : String,
+) -> Unit {
+  let model = viewer.get_model().unwrap()
+  model.delta_decorations([], [
+    {
+      range: @base_common.Range::from_positions(position, position),
+      options: ModelDecorationOptions(
+        "",
+        description="cursor injected-text fixture",
+        show_if_collapsed=true,
+        after=InjectedTextOptions(content),
+      ),
+    },
+  ])
+  |> ignore
 }

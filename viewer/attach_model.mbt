@@ -82,7 +82,7 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       }
       end_view_event_batch(event_batch)
       // Monaco cancels the pending mouse reaction on content change. The
-      // Viewer also retires provider/timer ownership and rotates the operation
+      // Viewer also retires hover provider/timer ownership and rotates the operation
       // generation while preserving only an already settled hover until a new
       // pointer request replaces it. Incomplete/loading state is retired.
       match self.content_hover_controller() {
@@ -104,9 +104,6 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
         }
         None => ()
       }
-      // Inlay hints: re-request from the providers and re-apply as
-      // injected-text decorations against the new content.
-      self.request_model_features(model)
       self.schedule_render()
       self.did_change_model_content.fire(event)
       self.complete_model_content_delivery(model, event.version_id)
@@ -215,7 +212,6 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   self.pending_rendered = Some({ model, fresh: true })
   self.measure_requested = true
   self.schedule_render()
-  self.request_model_features(model)
 }
 
 ///|
@@ -369,8 +365,8 @@ fn Viewer::build_view_model(
     font_info=self.font_info,
     editor_id=self.editor_id,
   )
-  // Injected text (inlay hints) reaches the projection through the model's
-  // decoration storage (Track F), not through construction arguments.
+  // Injected text reaches the projection through the model's decoration
+  // storage, not through construction arguments.
   let view_model = @view_model.ViewModel::with_options(
     model,
     options,

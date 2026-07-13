@@ -182,31 +182,6 @@ extern "js" fn async_feature_consumer_barrier(callback : () -> Unit) -> Unit =
   #| (callback) => setTimeout(callback, 0)
 
 ///|
-impl @language.InlayHintsProvider for DeferredAsyncFeatureProvider with fn provide_inlay_hints(
-  self,
-  model,
-  _range,
-  token,
-) {
-  let call = self.harness.begin_call("inlay", model, token)
-  let outcome = call.gate.wait()
-  call.settle_after_consumer_turn()
-  if outcome == "error" {
-    raise DeferredAsyncFeatureProviderError
-  }
-  if outcome == "empty" ||
-    (outcome == "cancelled-empty" && token.is_cancellation_requested()) {
-    []
-  } else {
-    [
-      InlayHint(Position(2, 4), outcome, kind=TypeHint, tooltip=[
-        PlainText(outcome + " tooltip"),
-      ]),
-    ]
-  }
-}
-
-///|
 impl @language.HoverProvider for DeferredAsyncFeatureProvider with fn provide_hover(
   self,
   model,
@@ -315,8 +290,6 @@ fn run_async_model_features_test() -> Unit {
   let harness = AsyncFeatureHarness::new()
   let provider = DeferredAsyncFeatureProvider::{ harness, }
   let languages = @languages.Languages::new()
-  languages.register_inlay_hints_provider(LanguageId("moonbit"), provider)
-  |> ignore
   languages.register_hover_provider(LanguageId("moonbit"), provider) |> ignore
   let services = @viewer.ViewerServices::new(languages~)
   let viewer = @viewer.Viewer::create(

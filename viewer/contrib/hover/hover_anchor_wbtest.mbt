@@ -198,7 +198,6 @@ test "marker participant filters by anchor-line columns with the showIfCollapsed
     participant.compute_sync({
       model,
       anchor,
-      inlay_hints: [],
       source: HoverStartMouse,
       line_decorations: [],
     })
@@ -281,7 +280,6 @@ test "marker participant isolates distinct live models sharing one URI" {
     participant.compute_sync({
       model,
       anchor: range_anchor(1, column, column),
-      inlay_hints: [],
       source: HoverStartMouse,
       line_decorations: [],
     })
@@ -293,51 +291,4 @@ test "marker participant isolates distinct live models sharing one URI" {
   lease_b.dispose()
   lease_a.dispose()
   marker_decorations.dispose()
-}
-
-///|
-test "inlay participant keeps a stable explicit owner across factory calls" {
-  let logical_owner = HoverParticipantOwner::new()
-  let owner = InlayHintsHover::with_owner(logical_owner)
-  let rebuilt = InlayHintsHover::with_owner(logical_owner)
-  assert_true(owner.owner == rebuilt.owner)
-  let anchor : HoverAnchor = HoverForeignElementAnchor(
-    priority=10,
-    owner=owner.owner,
-    injected_text_index=0,
-    range=Range(2, 3, 2, 3),
-    initial_mouse_pos_x=Some(12.0),
-    initial_mouse_pos_y=Some(18.0),
-    supports_marker_hover=true,
-  )
-  assert_true(anchor.anchor_type() is ForeignElement)
-  assert_eq(anchor.priority(), 10)
-  assert_true(anchor.range() == Range(2, 3, 2, 3))
-  assert_true(anchor.supports_marker_hover())
-  let context : HoverComputeContext = {
-    model: anchor_test_model(),
-    anchor,
-    source: HoverStartMouse,
-    line_decorations: [],
-    inlay_hints: [
-      InlayHint(Position(2, 3), ": Int", tooltip=[PlainText("inlay tooltip")]),
-    ],
-  }
-  assert_eq(owner.compute_sync(context).length(), 1)
-  assert_eq(rebuilt.compute_sync(context).length(), 1)
-  let foreign_owner = HoverParticipantOwner::new()
-  let foreign_anchor : HoverAnchor = HoverForeignElementAnchor(
-    priority=10,
-    owner=foreign_owner,
-    injected_text_index=0,
-    range=Range(2, 3, 2, 3),
-    initial_mouse_pos_x=Some(12.0),
-    initial_mouse_pos_y=Some(18.0),
-    supports_marker_hover=true,
-  )
-  assert_eq(
-    owner.compute_sync({ ..context, anchor: foreign_anchor }).length(),
-    0,
-  )
-  assert_false(hover_anchor_equals(anchor, foreign_anchor))
 }

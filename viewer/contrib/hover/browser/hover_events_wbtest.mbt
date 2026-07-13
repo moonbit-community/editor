@@ -79,35 +79,6 @@ test "equal-priority anchor candidates retain insertion order" {
 }
 
 ///|
-test "find_anchor_candidates: the inlay participant's foreign anchor outranks the range anchor" {
-  let participants : Array[&@hover.HoverParticipant] = [
-    @hover.InlayHintsHover::new(),
-  ]
-  let injected : @view_model.InjectedText = InjectedText(
-    Position(0, 4),
-    ": Int",
-    "inlay-hint",
-    source_index=2,
-  )
-  let candidates = find_anchor_candidates(
-    participants,
-    text_target(1, 5, injected_text=injected),
-    10.0,
-  )
-  // Both the foreign (priority 10) and the range (priority 0) anchors are
-  // suggested; the sort puts the foreign anchor first.
-  assert_eq(candidates.length(), 2)
-  match candidates[0] {
-    HoverForeignElementAnchor(injected_text_index~, supports_marker_hover~, ..) => {
-      assert_eq(injected_text_index, 2)
-      assert_true(supports_marker_hover)
-    }
-    _ => fail("expected the foreign anchor to sort first")
-  }
-  assert_true(candidates[1] is HoverRangeAnchor(..))
-}
-
-///|
 test "find_anchor_candidates: content-empty anchors only within the epsilon past the line end" {
   // typicalHalfwidthCharacterWidth 10 -> epsilon 5. Distance 4.0 anchors.
   let close = find_anchor_candidates([], empty_target(1, 10, Some(4.0)), 10.0)

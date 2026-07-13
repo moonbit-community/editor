@@ -219,7 +219,7 @@ async test "answers hover and definition from cached provider state" {
 }
 
 ///|
-async test "answers symbols and inlay hints from cached provider state" {
+async test "answers symbols from cached provider state" {
   let host = FakeServerHost::new()
   host.files.set("main.mbt", "pub fn main { // TODO }\n")
   let server = test_remote_server("/workspace", host)
@@ -232,63 +232,6 @@ async test "answers symbols and inlay hints from cached provider state" {
       assert_eq(payload.symbols[0].name, "configured")
     }
     _ => fail("expected document symbols result")
-  }
-
-  match server.inlay_hints({ id: "hints-1", uri, document_revision: "" }) {
-    InlayHintsResult(payload) => {
-      assert_eq(payload.inlay_hints.length(), 1)
-      assert_eq(payload.inlay_hints[0].label, ": Int")
-    }
-    _ => fail("expected inlay hints result")
-  }
-}
-
-///|
-/// The remote protocol keeps provider text byte-for-byte in DocumentSnapshot,
-/// while the language-provider model and its whole-document range use the
-/// normalized LF coordinate space.
-async test "remote inlay provider observes normalized model-wide ranges" {
-  let cases : Array[(String, String)] = [
-    ("a\r\nb", "a\nb"),
-    ("a\rb", "a\nb"),
-    ("a\r\nb\rc\nd", "a\nb\nc\nd"),
-    ("tail\r\n", "tail\n"),
-    ("🙂\r\nβ\r中\n", "🙂\nβ\n中\n"),
-    ("\u{FEFF}head\r\ntail", "\u{FEFF}head\ntail"),
-  ]
-  let host = FakeServerHost::new()
-  let observed_ranges : Array[@base_common.OffsetRange] = []
-  let observed_values : Array[String] = []
-  let inlay_provider = RecordingInlayProvider::{
-    observed_ranges,
-    observed_values,
-  }
-  let server = test_remote_server_with_inlay("/workspace", host, inlay_provider)
-  for index, sample in cases {
-    let raw = sample.0
-    let normalized = sample.1
-    let path = "eol-" + index.to_string() + ".mbt"
-    host.files.set(path, raw)
-    let uri = expect_remote_uri(path)
-    match server.open_document({ id: "open-" + index.to_string(), uri }) {
-      DocumentLoaded(payload) => assert_eq(payload.document.text, raw)
-      _ => fail("expected raw document load")
-    }
-    match
-      server.inlay_hints({
-        id: "hints-" + index.to_string(),
-        uri,
-        document_revision: "",
-      }) {
-      InlayHintsResult(payload) => assert_true(payload.inlay_hints.is_empty())
-      _ => fail("expected inlay hints result")
-    }
-    assert_eq(observed_ranges.length(), index + 1)
-    assert_eq(observed_values.length(), index + 1)
-    assert_eq(observed_values[index], normalized)
-    assert_true(observed_ranges[index] == OffsetRange(0, normalized.length()))
-    assert_eq(observed_ranges[index].start, 0)
-    assert_eq(observed_ranges[index].end_exclusive, normalized.length())
   }
 }
 
@@ -325,12 +268,6 @@ async test "dispatches language requests through configured providers" {
       assert_eq(payload.symbols[0].name, "configured")
     _ => fail("expected document symbols result")
   }
-
-  match server.inlay_hints({ id: "hints-1", uri, document_revision: "" }) {
-    InlayHintsResult(payload) =>
-      assert_eq(payload.inlay_hints[0].label, ": Int")
-    _ => fail("expected inlay hints result")
-  }
 }
 
 ///|
@@ -353,19 +290,7 @@ fn test_remote_server(
 ) -> @server.RemoteServer {
   let provider = FakeLanguageProvider::{  }
   @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider,
-  )
-}
-
-///|
-fn test_remote_server_with_inlay(
-  root : String,
-  host : &@server.ServerHost,
-  inlay_provider : &@language.InlayHintsProvider,
-) -> @server.RemoteServer {
-  let provider = FakeLanguageProvider::{  }
-  @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, inlay_provider,
+    root, host, provider, provider, provider, provider,
   )
 }
 
@@ -457,24 +382,6 @@ fn noop_watch_spawner(_task : async () -> Unit) -> Unit {
 struct FakeLanguageProvider {}
 
 ///|
-struct RecordingInlayProvider {
-  observed_ranges : Array[@base_common.OffsetRange]
-  observed_values : Array[String]
-}
-
-///|
-impl @language.InlayHintsProvider for RecordingInlayProvider with fn provide_inlay_hints(
-  self,
-  model,
-  range,
-  _token,
-) {
-  self.observed_ranges.push(range)
-  self.observed_values.push(model.get_value())
-  []
-}
-
-///|
 impl @language.HoverProvider for FakeLanguageProvider with fn provide_hover(
   _self,
   model,
@@ -545,14 +452,4 @@ impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_d
   _token,
 ) {
   [{ name: "configured", kind: "function", range: Range(1, 8, 1, 18) }]
-}
-
-///|
-impl @language.InlayHintsProvider for FakeLanguageProvider with fn provide_inlay_hints(
-  _self,
-  _model,
-  _range,
-  _token,
-) {
-  [InlayHint(Position(0, 11), ": Int", kind=TypeHint, padding_left=true)]
 }

@@ -16,8 +16,8 @@ pub(all) struct ViewLineData {
   start_visible_column : Int
   /// The tokens at this view line.
   tokens : &@tokens.IViewLineTokens
-  /// Additional inline decorations for this line (the injected-text /
-  /// inlay-hint classes, Monaco's `SingleLineInlineDecoration[]`).
+  /// Additional inline decorations for this line (the injected-text classes,
+  /// Monaco's `SingleLineInlineDecoration[]`).
   inline_decorations : Array[@view_layout.InlineDecoration]
 }
 
@@ -57,7 +57,7 @@ pub fn view_line_rendering_data_from_view_line_data(
 
 ///|
 /// Builds full line-renderer input from view-line data and its per-line
-/// decorations. The line's own injected-text (inlay hint) inline decorations
+/// decorations. The line's own injected-text inline decorations
 /// are always merged in — callers pass only the model-decoration spans (the
 /// viewport path in `line_decorations_for_line` produces both).
 pub fn render_line_input_from_view_line_data(
@@ -191,7 +191,7 @@ fn to_view_layout_decoration_type(
 ///|
 /// Per-line decorations for `line_number` from the viewport decorations
 /// collection: the faithful inline chain (`line_decorations_filter` over the
-/// per-line grouped inline decorations) plus the injected-text (inlay hint)
+/// per-line grouped inline decorations) plus the injected-text
 /// decorations the line carries. `className` decorations render through the
 /// `DecorationsOverlay` (decoration plan Phase 4), not as line spans.
 pub fn line_decorations_for_line(
@@ -207,7 +207,7 @@ pub fn line_decorations_for_line(
       line_decorations_filter(inline_decorations, line_number, 1, max_column)
     None => []
   }
-  // Injected-text inline decorations (inlay-hint classes) render through the
+  // Injected-text inline decorations render through the
   // same renderer merge as model inline decorations; project each onto a
   // one-based `LineDecoration` over the injected run's view columns.
   for injected in line.inline_decorations {

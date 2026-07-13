@@ -363,7 +363,7 @@ fn moon_backed_remote_server(
 ) -> @server.RemoteServer {
   let provider = MoonWorkspaceLanguageProvider(root, moon_command~)
   let remote_server = @server.RemoteServer::with_language_providers(
-    root, host, provider, provider, provider, provider, provider,
+    root, host, provider, provider, provider, provider,
   )
   let diagnostics = MoonCheckDiagnostics(
     root,

@@ -43,47 +43,41 @@ fn test_view_model(
 }
 
 ///|
-/// Builds a view model whose inlay hints are written as `after`
-/// injected-text decorations on a backing `TextModel` (Track F: the
-/// projection reads injected text from the decoration storage).
-fn test_inlay_view_model(
+/// Builds a view model with `after` injected-text decorations on a backing
+/// `TextModel`. The projection reads injected text from decoration storage.
+fn test_injected_text_view_model(
   text : String,
   options : @view_model.ViewModelOptions,
-  hints : Array[@language.InlayHint],
+  injections : Array[(@base_common.Position, String, String)],
 ) -> @view_model.ViewModel {
   let model = @model.TextModel(
     try! @base_common.Uri::from(
       scheme="inmemory",
       authority="model",
-      path="/inlay-test.mbt",
+      path="/injected-text-test.mbt",
     ),
-    "inlay-test.mbt",
+    "injected-text-test.mbt",
     "moonbit",
     1,
     "rev-1",
     text,
   )
   let decorations : Array[@model.ModelDeltaDecoration] = []
-  for index in 0..<hints.length() {
-    let hint = hints[index]
-    let class_name = match hint.kind {
-      Some(TypeHint) => "inlay-hint inlay-hint-type"
-      Some(ParameterHint) => "inlay-hint inlay-hint-parameter"
-      None => "inlay-hint"
-    }
+  for index in 0..<injections.length() {
+    let (position, content, class_name) = injections[index]
     decorations.push({
       range: Range(
-        hint.position.line_number,
-        hint.position.column,
-        hint.position.line_number,
-        hint.position.column,
+        position.line_number,
+        position.column,
+        position.line_number,
+        position.column,
       ),
       options: ModelDecorationOptions(
         "",
-        description="inlay-hint",
+        description="injected-text fixture",
         show_if_collapsed=true,
         after=InjectedTextOptions(
-          hint.label,
+          content,
           inline_class_name=class_name,
           attached_index=index,
         ),
@@ -263,11 +257,11 @@ test "projected long moonbit lines retain source text across segments" {
 }
 
 ///|
-test "inlay hints render as injected text without changing model offsets" {
-  let view_model = test_inlay_view_model(
+test "injected text renders without changing model offsets" {
+  let view_model = test_injected_text_view_model(
     "let x = 1",
     @view_model.ViewModelOptions::no_wrap(),
-    [InlayHint(Position(1, 6), ": Int", kind=TypeHint)],
+    [(Position(1, 6), ": Int", "injected-text injected-text-type")],
   )
   assert_eq(view_model.line_count(), 1)
   let line = view_model.lines().get_view_line_data(1)
@@ -287,34 +281,36 @@ test "inlay hints render as injected text without changing model offsets" {
     ).column,
     10,
   )
-  // The injected span carries the hint's source index for hover lookup.
+  // The injected span carries its source index for hit-testing lookup.
   assert_eq(view_model.injected_text_index_at(Position(1, 6)), 0)
   assert_eq(view_model.injected_text_index_at(Position(1, 11)), -1)
   let data = view_model.lines().view_line_rendering_data(1)
   assert_eq(data.content, "let x: Int = 1")
-  // The inlay-hint color is now an inline decoration (Monaco's
+  // The injected-text class is an inline decoration (Monaco's
   // `InjectedTextInlineDecorationsComputer`), not a token class; the spliced
   // injected token carries only default syntactic metadata (`mtk1`).
-  assert_false(data.tokens.any(part => part.class_name.contains("inlay-hint")))
+  assert_false(
+    data.tokens.any(part => part.class_name.contains("injected-text")),
+  )
   assert_true(
     line.inline_decorations.any(decoration => {
-      decoration.class_name.contains("inlay-hint")
+      decoration.class_name.contains("injected-text")
     }),
   )
   // The decoration still merges onto the injected token in the rendered DOM, so
-  // the inlay text is styled `mtk1 inlay-hint inlay-hint-type`.
+  // the injected text is styled with both token and injected-text classes.
   let html = @view_layout.render_view_line2(
       @view_model.render_line_input_from_view_line_data(line),
     ).html
-  assert_true(html.contains("mtk1 inlay-hint inlay-hint-type"))
+  assert_true(html.contains("mtk1 injected-text injected-text-type"))
 }
 
 ///|
 test "injected text participates in wrapping and coordinate conversion" {
-  let view_model = test_inlay_view_model(
+  let view_model = test_injected_text_view_model(
     "abcdef",
     @view_model.ViewModelOptions::soft_wrap(5),
-    [InlayHint(Position(1, 4), "XYZ", kind=ParameterHint)],
+    [(Position(1, 4), "XYZ", "injected-text")],
   )
   assert_eq(view_model.line_count(), 2)
   assert_eq(view_model.lines().get_view_line_content(1), "abcXY")
@@ -325,9 +321,11 @@ test "injected text participates in wrapping and coordinate conversion" {
   )
   assert_eq(source_position.line_number, 1)
   assert_eq(source_position.column, 4)
-  let hint_position = converter.view_position_to_model_position(Position(1, 5))
-  assert_eq(hint_position.line_number, 1)
-  assert_eq(hint_position.column, 4)
+  let injected_position = converter.view_position_to_model_position(
+    Position(1, 5),
+  )
+  assert_eq(injected_position.line_number, 1)
+  assert_eq(injected_position.column, 4)
   let wrapped_source = converter.view_position_to_model_position(Position(2, 2))
   assert_eq(wrapped_source.line_number, 1)
   assert_eq(wrapped_source.column, 4)
@@ -335,12 +333,12 @@ test "injected text participates in wrapping and coordinate conversion" {
 
 ///|
 test "injected text can sit at line boundaries" {
-  let view_model = test_inlay_view_model(
+  let view_model = test_injected_text_view_model(
     "ab",
     @view_model.ViewModelOptions::no_wrap(),
     [
-      InlayHint(Position(1, 1), "[", kind=ParameterHint),
-      InlayHint(Position(1, 3), "]", kind=TypeHint),
+      (Position(1, 1), "[", "injected-text-open"),
+      (Position(1, 3), "]", "injected-text-close"),
     ],
   )
   let line = view_model.lines().get_view_line_data(1)

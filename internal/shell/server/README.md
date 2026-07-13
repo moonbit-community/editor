@@ -9,7 +9,7 @@ effects are supplied through `ServerHost`.
   `resolve_remote_directory_uri` enforce the
   `readonly-remote://workspace[/...]` namespace and safe root-relative paths.
 - `RemoteServer::with_language_providers` receives explicit hover, definition,
-  references, document-symbol, and inlay-hint providers.
+  references, and document-symbol providers.
 - `handle_client_packet` resolves one tree level, opens/caches documents,
   starts or replaces watches, closes documents, and routes feature requests.
 - Feature requests use the cached URI/revision (a non-empty requested revision

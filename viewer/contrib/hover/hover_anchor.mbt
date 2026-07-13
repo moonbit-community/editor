@@ -36,12 +36,11 @@ pub fn HoverParticipantOwner::new() -> HoverParticipantOwner {
 /// Monaco `HoverRangeAnchor` / `HoverForeignElementAnchor`
 /// (`hoverTypes.ts:47-82`). `range` is model-space. The foreign variant's
 /// `owner` is the explicitly minted identity of the suggesting participant;
-/// `injected_text_index` is the anchor's payload, the viewer's
-/// stand-in for `InlayHintsHoverAnchor.part` (the rendered hint the hover
-/// describes), and takes no part in `equals` (the source inherits the
-/// owner-only comparison). `initial_mouse_pos_*` are carried per the source
-/// shape; the mouse-getting-closer seam reads the live recorded pointer
-/// instead (`MouseCloserState`, Phase 4 increment 2).
+/// `injected_text_index` is the local payload for injected text and takes no
+/// part in `equals` (the source inherits the owner-only comparison).
+/// `initial_mouse_pos_*` are carried per the source shape; the
+/// mouse-getting-closer seam reads the live recorded pointer instead
+/// (`MouseCloserState`, Phase 4 increment 2).
 pub(all) enum HoverAnchor {
   HoverRangeAnchor(
     priority~ : Int,

@@ -151,18 +151,17 @@ test('extends the highlight past a line whose continuation is selected', async (
 // Exact selection-rect oracle (the Exhibit A regression guard). The painted
 // highlight must cover *exactly* the selected source characters — no more, no
 // fewer. This pins the invariant the offset-centric round-trip violated: on a
-// projected line (this fixture injects inlay hints), `view_column_at_source_offset`
+// projected soft-wrapped line, `view_column_at_source_offset`
 // resolved a wider column span than the stored selection, painting ~3 columns
 // too wide. The fix keeps hit-test, selection state, and paint all in view
 // `Position`s through the `CoordinatesConverter`, so the painted right edge
-// equals the DOM-measured right edge of the selected source text, independent
-// of any injected inlay-hint glyphs on the line.
+// equals the DOM-measured right edge of the selected source text.
 test('paints exactly the selected source columns on a projected line', async ({ page }) => {
   await mountComponentViewer(page);
 
   // Exhibit A's exact repro: drag within the `component_answer` identifier (the
-  // bug painted its 7-char prefix "compone" ~3 columns too wide). The fixture
-  // injects inlay hints, so this renders on the projected path.
+  // bug painted its 7-char prefix "compone" ~3 columns too wide). Soft wrap
+  // keeps this on the projected path.
   const line = page.locator('.view-line').filter({ hasText: 'component_answe' });
   await expect(line).toHaveCount(1);
   const box = await line.boundingBox();
@@ -183,11 +182,10 @@ test('paints exactly the selected source columns on a projected line', async ({ 
   const copiedText = await page.evaluate(() => globalThis.__readonlyEditorCopiedText || '');
   expect(copiedText.length).toBeGreaterThan(3);
   expect(copiedText).not.toContain('\n'); // single-line selection
-  expect(copiedText).not.toContain(': T'); // inlay hint is not part of the source
 
   // Independently measure the right edge of exactly `copiedText.length` source
-  // characters from the line start, skipping injected inlay-hint spans, and the
-  // painted selection's right edge. They must coincide within sub-pixel rounding.
+  // characters from the line start and the painted selection's right edge.
+  // They must coincide within sub-pixel rounding.
   const geometry = await page.evaluate((sourceLen) => {
     const lineEl = Array.from(document.querySelectorAll('.view-line')).find((el) =>
       el.textContent.includes('component_answe'),
@@ -196,16 +194,13 @@ test('paints exactly the selected source columns on a projected line', async ({ 
     const contentLeft = content.getBoundingClientRect().left;
 
     // Build a DOM Range over exactly `sourceLen` source characters, walking the
-    // token spans in order and skipping injected inlay-hint text.
+    // token spans in order.
     const range = document.createRange();
     range.setStart(content, 0);
     let remaining = sourceLen;
     let endNode = null;
     let endOffset = 0;
     for (const span of content.children) {
-      if (span.classList.contains('inlay-hint')) {
-        continue;
-      }
       const textNode = span.firstChild;
       if (!textNode || textNode.nodeType !== 3) {
         continue;

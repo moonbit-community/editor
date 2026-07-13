@@ -11,7 +11,7 @@ Native effect adapter and executable backend for the reference shell.
   responses and concurrent watch/diagnostic pushes cannot interleave frames.
 - `MoonWorkspaceLanguageProvider` implements hover with
   `moon ide hover --output-json --no-check`. Definition, references, document
-  symbols, and inlay hints currently return no result.
+  symbols currently return no result.
 - `MoonCheckDiagnostics` coalesces document syncs into single-flight
   `moon check --output-json` runs, remembers the latest revision, pushes clears,
   and broadcasts per-file diagnostics to every connected session.

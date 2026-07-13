@@ -502,7 +502,6 @@ fn css_sources() -> Array[String] {
     "viewer/browser/view_parts/margin/margin.css",
     "viewer/browser/view_parts/margin/lines_decorations.css",
     "viewer/browser/view_parts/view_lines/tokens.css",
-    "viewer/browser/view_parts/view_lines/inlay_hints.css",
     "viewer/browser/view_parts/view_lines/markers.css",
     "viewer/contrib/folding/browser/folding.css",
     "viewer/contrib/hover/hover.css",

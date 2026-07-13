@@ -8,10 +8,6 @@
 pub(all) struct ContentHoverController {
   /// The shown-hover state machine (anchor, operation, derived view).
   mut hover : @hover.HoverController
-  /// Stable editor-scoped owner reused by every rebuilt inlay-hint hover
-  /// participant. Separate Viewers must never adopt each other's foreign
-  /// anchors.
-  inlay_hover_owner : @hover.HoverParticipantOwner
   /// Mouse-move grace state (Monaco's `_reactToEditorMouseMoveRunner`):
   /// while a hover widget is on screen, a move off the anchor is deferred by
   /// `hiding_delay` instead of reacting immediately, so the pointer can
@@ -85,7 +81,6 @@ pub fn ContentHoverController::attach(
 ) -> ContentHoverController {
   let controller : ContentHoverController = {
     hover: @hover.HoverController::empty(),
-    inlay_hover_owner: @hover.HoverParticipantOwner::new(),
     hover_react_pending: false,
     hover_react_token: 0,
     hover_pending_target: None,

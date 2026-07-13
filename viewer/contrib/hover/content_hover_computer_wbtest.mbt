@@ -37,7 +37,6 @@ async test "content hover computer separates sync markers from async markdown" {
     languages,
     marker_decorations,
     log_service: @log.LogService::new(),
-    inlay_hover_owner: HoverParticipantOwner::new(),
   }
   let computer = ContentHoverComputer::new(services)
   let anchor : HoverAnchor = HoverRangeAnchor(
@@ -112,7 +111,6 @@ fn computer_services_with_languages(
     languages,
     marker_decorations: @markers.MarkerDecorationsService::new(markers),
     log_service: @log.LogService::new(),
-    inlay_hover_owner: HoverParticipantOwner::new(),
   }
 }
 
@@ -699,17 +697,11 @@ test "participant loading-message contract is explicit" {
   assert_true(markdown.create_loading_message(anchor) is Some(LoadingHover(_)))
   let marker = MarkerHoverParticipant::new(services.marker_decorations)
   assert_true(marker.create_loading_message(anchor) is None)
-  assert_true(InlayHintsHover::new().create_loading_message(anchor) is None)
 
   let absent : ContentHoverComputer = { participants: [] }
   assert_true(absent.create_loading_message(anchor) is None)
-  let null_only : ContentHoverComputer = {
-    participants: [InlayHintsHover::new()],
-  }
-  assert_true(null_only.create_loading_message(anchor) is None)
   let first_present : ContentHoverComputer = {
     participants: [
-      InlayHintsHover::new(),
       controlled_participant(10, "first"),
       controlled_participant(20, "second"),
     ],

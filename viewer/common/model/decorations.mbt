@@ -127,7 +127,6 @@ pub(all) struct ModelDecorationOptions {
   /// Injected text rendered before/after the decoration range —
   /// `ModelDecorationOptions.before`/`after` (`InjectedTextOptions`,
   /// `model.ts`), stored in the interval tree's injected-text slot.
-  /// Inlay hints are the producer.
   before : InjectedTextOptions?
   after : InjectedTextOptions?
 } derive(Debug)
@@ -135,15 +134,15 @@ pub(all) struct ModelDecorationOptions {
 ///|
 /// `InjectedTextOptions` at the model tier (`model.ts`): the rendered
 /// content, its inline class, and the producer's attachment
-/// (`attachedData`, reduced to the inlay-hint source index the hover
-/// pipeline reads). `cursorStops` is unported — the readonly viewer treats
+/// (`attachedData`, reduced to a source index for injected-text consumers).
+/// `cursorStops` is unported — the readonly viewer treats
 /// every injection as `InjectedTextCursorStops.Both` (the default), see
 /// `normalize_projected_column_around_injections`.
 pub(all) struct InjectedTextOptions {
   content : String
   inline_class_name : String?
-  /// `attachedData` reduced: the producing inlay hint's index (`-1` = none),
-  /// carried through the projection into hit-testing/hover lookup.
+  /// `attachedData` reduced to a producer-defined index (`-1` = none), carried
+  /// through the projection into hit-testing lookup.
   attached_index : Int
 } derive(Debug, Eq)
 

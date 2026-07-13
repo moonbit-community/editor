@@ -60,7 +60,7 @@ fn Viewer::dispatch_mouse(
       |> ignore
     }
   } else if data.mouse_down_count == 2 {
-    // A double-click on injected text (an inlay hint) selects nothing
+    // A double-click on injected text selects nothing
     // (viewController.ts:260).
     if !data.on_injected_text {
       if has_multicursor_modifier(data) {

@@ -74,7 +74,7 @@ fn make_default_hover_participant_registry() -> HoverParticipantRegistry {
 }
 
 ///|
-/// Registers the built-in marker, inlay-hint, and markdown hover participants
+/// Registers the built-in marker and markdown hover participants
 /// into `registry`, mirroring `hoverContribution.ts`. Registration lives here,
 /// in the hover feature, never in the viewer services constructor.
 pub fn register_default_hover_participants(
@@ -82,9 +82,6 @@ pub fn register_default_hover_participants(
 ) -> Unit {
   registry.register(services => {
     MarkerHoverParticipant::new(services.marker_decorations)
-  })
-  registry.register(services => {
-    InlayHintsHover::with_owner(services.inlay_hover_owner)
   })
   registry.register(services => {
     MarkdownHoverParticipant::new(services.languages, services.log_service)

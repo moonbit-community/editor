@@ -35,7 +35,6 @@ pub let hover_prefer_above_default : Bool
 // Types and methods
 pub(all) struct ContentHoverController {
   mut hover : @hover.HoverController
-  inlay_hover_owner : @hover.HoverParticipantOwner
   mut hover_react_pending : Bool
   mut hover_react_token : Int
   mut hover_pending_target : @moonbit-community/editor/viewer/browser.MouseTarget?

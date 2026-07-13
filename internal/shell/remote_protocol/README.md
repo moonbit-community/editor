@@ -6,8 +6,7 @@ server. Protocol version `4` is carried by every packet and must match exactly.
 ## Wire contract
 
 - Client requests: `ResolveDirectory`, `OpenDocument`, `WatchDocument`,
-  `CloseDocument`, `Hover`, `Definition`, `References`, `DocumentSymbols`, and
-  `InlayHints`.
+  `CloseDocument`, `Hover`, `Definition`, `References`, and `DocumentSymbols`.
 - Server packets: directory/document results, watched `DocumentChanged` pushes,
   pushed `Diagnostics`, semantic feature results, and `RemoteError`.
 - Position requests carry a document revision and UTF-16 offset; whole-document

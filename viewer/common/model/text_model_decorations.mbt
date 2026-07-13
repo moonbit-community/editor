@@ -217,7 +217,7 @@ fn options_in_overview_ruler(options : ModelDecorationOptions) -> Bool {
 ///|
 /// `isNodeInjectedText` (`textModel.ts:2188-2190`) over
 /// `isOptionsInjectedText`: the node carries `before`/`after` injected-text
-/// options (inlay hints are the producer).
+/// options.
 fn is_node_injected_text(node : IntervalNode) -> Bool {
   node.options is Some(options) && options_is_injected_text(options)
 }

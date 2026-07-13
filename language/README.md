@@ -4,11 +4,11 @@ Backend-neutral contracts for readonly language features.
 
 ## Surface and behavior
 
-- Result DTOs: `Hover`/`HoverContent`, `Diagnostic`, `Location`,
-  `DocumentSymbol`, and `InlayHint`. Their `Position` and `Range` values use the
+- Result DTOs: `Hover`/`HoverContent`, `Diagnostic`, `Location`, and
+  `DocumentSymbol`. Their `Position` and `Range` values use the
   repository's 1-based UTF-16 convention.
 - Async provider traits: `HoverProvider`, `DefinitionProvider`,
-  `ReferencesProvider`, `DocumentSymbolProvider`, and `InlayHintsProvider`.
+  `ReferencesProvider`, and `DocumentSymbolProvider`.
   Providers receive a readonly `TextModel` and a cooperative
   `CancellationToken`.
 - `CancellationTokenSource` owns cancellation. Repeated token reads are

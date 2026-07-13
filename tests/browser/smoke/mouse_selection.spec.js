@@ -63,8 +63,6 @@ test('triple-click selects the whole model line', async ({ page }) => {
   // view lines, plus the trailing newline that line selection includes.
   expect(copied).toContain('pub fn component_answer() -> Int {');
   expect(copied.endsWith('\n')).toBe(true);
-  // The injected inlay hint is not part of the copied source.
-  expect(copied).not.toContain(': T');
 });
 
 test('clicking the line-number gutter selects that line', async ({ page }) => {

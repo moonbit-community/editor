@@ -42,8 +42,8 @@ widgets, language-feature presentation, and editor events.
 
 - `base/common`: URI/path, positions/ranges, events, and disposables.
 - `base/browser`: browser mouse and global pointer-move primitives.
-- `language`: backend-neutral diagnostic, hover, location, symbol, and inlay
-  provider contracts.
+- `language`: backend-neutral diagnostic, hover, location, and symbol provider
+  contracts.
 - `syntax` and `syntax/lang_*`: stateful line-tokenization contracts and
   concrete compile-time lexers.
 - `platform/log`: host-neutral logging.
@@ -102,8 +102,6 @@ depends on them.
   `quick_diff/browser` produces gutter decorations.
 - `viewer/contrib/folding/browser` currently owns the complete js-only folding
   implementation, including ranges, hidden areas, decorations, and controller.
-- inlay-hint host glue currently lives in the root `viewer` package and
-  projects hints as injected-text decorations.
 
 The root editor registry constructs contributions once per `Viewer` and routes
 their commands/keybindings. Declared instantiation modes are retained for

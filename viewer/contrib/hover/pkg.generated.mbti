@@ -78,9 +78,9 @@ pub(all) struct ComputedHover {
 pub(all) struct ContentHoverComputer {
   participants : Array[&HoverParticipant]
 }
-pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint], source? : HoverStartSource, token? : @language.CancellationToken, is_current? : () -> Bool) -> ComputedHover? noraise
-pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint], source? : HoverStartSource, token? : @language.CancellationToken, is_current? : () -> Bool, run_tasks? : async (Array[async () -> Unit]) -> Unit, emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
-pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, HoverAnchor, inlay_hints? : Array[@language.InlayHint], source? : HoverStartSource) -> ComputedHover?
+pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, HoverAnchor, source? : HoverStartSource, token? : @language.CancellationToken, is_current? : () -> Bool) -> ComputedHover? noraise
+pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, HoverAnchor, source? : HoverStartSource, token? : @language.CancellationToken, is_current? : () -> Bool, run_tasks? : async (Array[async () -> Unit]) -> Unit, emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
+pub fn ContentHoverComputer::compute_sync(Self, @model.TextModel, HoverAnchor, source? : HoverStartSource) -> ComputedHover?
 pub fn ContentHoverComputer::create_loading_message(Self, HoverAnchor) -> HoverPart?
 pub fn ContentHoverComputer::new(HoverParticipantServices) -> Self
 
@@ -108,7 +108,6 @@ pub(all) enum HoverAnchorType {
 pub(all) struct HoverComputeContext {
   model : @model.TextModel
   anchor : HoverAnchor
-  inlay_hints : Array[@language.InlayHint]
   source : HoverStartSource
   line_decorations : Array[@model.ModelDecoration]
 }
@@ -226,7 +225,6 @@ pub(all) struct HoverParticipantServices {
   languages : @languages.Languages
   marker_decorations : @markers.MarkerDecorationsService
   log_service : @log.LogService
-  inlay_hover_owner : HoverParticipantOwner
 }
 
 pub(all) struct HoverPositionPart {
@@ -284,13 +282,6 @@ pub(all) struct HoverWidgetView {
   anchor_range : @common.Range
   parts : Array[HoverPart]
 } derive(Eq)
-
-pub(all) struct InlayHintsHover {
-  owner : HoverParticipantOwner
-}
-pub fn InlayHintsHover::new() -> Self
-pub fn InlayHintsHover::with_owner(HoverParticipantOwner) -> Self
-pub impl HoverParticipant for InlayHintsHover
 
 pub(all) struct MarkdownHoverParticipant {
   languages : @languages.Languages

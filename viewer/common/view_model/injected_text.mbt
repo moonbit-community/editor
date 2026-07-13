@@ -1,6 +1,5 @@
 ///|
-/// Text inserted into a rendered line without existing in the source document,
-/// currently used for inlay hints.
+/// Text inserted into a rendered line without existing in the source document.
 pub(all) struct InjectedText {
   position : @base_common.Position
   text : String
@@ -257,8 +256,8 @@ pub fn ProjectedTextLine::projected_column_to_model_column(
 }
 
 ///|
-/// Returns the inlay-hint source index at a projected display column, or `-1`
-/// for source text.
+/// Returns the injected-text source index at a projected display column, or
+/// `-1` for source text.
 pub fn ProjectedTextLine::injected_text_index_at_projected_column(
   self : ProjectedTextLine,
   projected_column : Int,

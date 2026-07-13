@@ -53,9 +53,6 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     // unaffected by the vertical scroll below.
     const flushLeftGlyph = await firstGlyphLeft(page.locator('.view-line[data-line="1"]'));
     expect(flushLeftGlyph).not.toBeNull();
-    const inlayHint = page.locator('.view-line .inlay-hint', { hasText: ': T' });
-    await expect(inlayHint).toHaveCount(1, { timeout: 10_000 });
-    await expect(inlayHint).toHaveClass(/inlay-hint-type/);
     const componentZone = page.locator(
       '.component-zone.host-zone-class[monaco-view-zone]',
     );
@@ -68,11 +65,6 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     expect(zoneBox).not.toBeNull();
     expect(braceBox).not.toBeNull();
     expect(Math.abs(Math.round(braceBox.y - (zoneBox.y + zoneBox.height)))).toBeLessThanOrEqual(1);
-    await inlayHint.hover();
-    await expect(page.locator('[data-content-widget="editor.contrib.resizableContentHoverWidget"] .monaco-hover')).toContainText(
-      'component inlay hint',
-      { timeout: 3_000 },
-    );
     const signatureStart = page.locator('.view-line').filter({ hasText: 'component_answe' });
     // A view segment near the top of the wrapped body line is a stable drag
     // endpoint (the deeper continuations scroll out of reach). The identifier
@@ -98,17 +90,12 @@ test('runs MoonBit viewer API component checks in the browser', async ({ page },
     const copiedText = await page.evaluate(() => globalThis.__readonlyEditorCopiedText || '');
     expect(copiedText).toContain('component_answer() -> Int');
     expect(copiedText).toContain('let really_l');
-    expect(copiedText).not.toContain(': T');
     const copiedHtml = await page.evaluate(() => globalThis.__readonlyEditorCopiedHtml || '');
     // Monaco's getRichTextToCopy shape: a styled wrapper div with per-token
     // inline color styles from the token color map (viewModelImpl.ts:1051).
     expect(copiedHtml).toContain('white-space: pre;');
     expect(copiedHtml).toContain('var(--vscode-token-variable)');
-    expect(copiedHtml).not.toContain('inlay-hint');
-    // Collapse the drag selection before the later checks: with the default
-    // renderWhitespace=selection, a selection spanning the inlay hint renders
-    // whitespace glyphs inside the injected text (as Monaco does), which
-    // fragments the hint span the later assertions look for.
+    // Collapse the drag selection before the later checks.
     await page.locator('.view-line[data-line="1"]').click();
     await expect.poll(() => page.locator('.selected-text').count(), { timeout: 2_000 }).toBe(0);
     // Scroll the wrapped continuation into the viewport (4 line heights).

@@ -353,7 +353,6 @@ fn editor_registry() -> EditorContributionRegistry {
       register_agent_feedback_contribution(registry)
       register_folding_contribution(registry)
       register_hover_contribution(registry)
-      register_inlay_hints_contribution(registry)
       register_quick_diff_contribution(registry)
       register_cursor_navigation_commands(registry)
       editor_registry_holder.registry = Some(registry)

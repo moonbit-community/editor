@@ -45,11 +45,9 @@ pub struct Languages {
 pub async fn Languages::document_symbols(Self, @model.TextModel, @log.LogService) -> Array[@language.DocumentSymbol] noraise
 pub fn Languages::get_language_configuration(Self, String) -> LanguageConfiguration
 pub async fn Languages::hover_at(Self, @model.TextModel, Int, @log.LogService, token? : @language.CancellationToken) -> @language.Hover? noraise
-pub async fn Languages::inlay_hints_for_model(Self, @model.TextModel, @log.LogService, token? : @language.CancellationToken, run_tasks? : async (Array[async () -> Unit]) -> Unit) -> Array[@language.InlayHint] noraise
 pub fn Languages::new() -> Self
 pub fn Languages::register_document_symbol_provider(Self, @language.LanguageSelector, &@language.DocumentSymbolProvider) -> @common.Disposable
 pub fn Languages::register_hover_provider(Self, @language.LanguageSelector, &@language.HoverProvider) -> @common.Disposable
-pub fn Languages::register_inlay_hints_provider(Self, @language.LanguageSelector, &@language.InlayHintsProvider) -> @common.Disposable
 pub fn Languages::set_language_configuration(Self, String, LanguageConfiguration) -> Unit
 pub fn Languages::set_tokens_provider(Self, String, &@syntax.LineTokenizer) -> @common.Disposable
 

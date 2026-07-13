@@ -783,10 +783,6 @@ fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
     None => ()
   }
   self.clear_agent_feedback_widgets() |> ignore
-  match self.inlay_hints_controller() {
-    Some(controller) => controller.reset_model_state()
-    None => ()
-  }
   model_data.dispose()
   self.model_data = None
   self.layout_model_line_count = 0

@@ -77,7 +77,6 @@ pub(all) enum ClientPacket {
   Definition(DocumentPositionRequest)
   References(DocumentPositionRequest)
   DocumentSymbols(DocumentRevisionRequest)
-  InlayHints(DocumentRevisionRequest)
 } derive(Debug)
 
 ///|
@@ -154,15 +153,6 @@ pub(all) struct DocumentSymbolsResultPayload {
 } derive(Debug)
 
 ///|
-/// Inlay hints response for a specific URI and document revision.
-pub(all) struct InlayHintsResultPayload {
-  id : String
-  uri : @base_common.Uri
-  revision : String
-  inlay_hints : Array[@language.InlayHint]
-} derive(Debug)
-
-///|
 /// Server-to-browser response, event, and error packet variants.
 pub(all) enum ServerPacket {
   DirectoryResolved(DirectoryResolvedPayload)
@@ -173,7 +163,6 @@ pub(all) enum ServerPacket {
   DefinitionResult(DefinitionResultPayload)
   ReferencesResult(ReferencesResultPayload)
   DocumentSymbolsResult(DocumentSymbolsResultPayload)
-  InlayHintsResult(InlayHintsResultPayload)
   RemoteError(ProtocolError)
 } derive(Debug)
 
@@ -282,7 +271,6 @@ pub impl ToJson for ClientPacket with fn to_json(self) {
     References(request) => position_request_json("References", request)
     DocumentSymbols(request) =>
       revision_request_json("DocumentSymbols", request)
-    InlayHints(request) => revision_request_json("InlayHints", request)
   }
 }
 
@@ -299,7 +287,6 @@ pub impl ToJson for ServerPacket with fn to_json(self) {
     DefinitionResult(payload) => definition_result_json(payload)
     ReferencesResult(payload) => references_result_json(payload)
     DocumentSymbolsResult(payload) => document_symbols_result_json(payload)
-    InlayHintsResult(payload) => inlay_hints_result_json(payload)
     RemoteError(error) => error_packet_json(error)
   }
 }
@@ -345,10 +332,6 @@ pub fn decode_client_packet(raw : String) -> ClientPacketDecodeResult {
             Some("DocumentSymbols") =>
               decode_version_client(packet, request_id(packet), request => {
                 DocumentSymbols(request)
-              })
-            Some("InlayHints") =>
-              decode_version_client(packet, request_id(packet), request => {
-                InlayHints(request)
               })
             Some(kind) =>
               ClientPacketDecodeError(
@@ -404,8 +387,6 @@ pub fn decode_server_packet(raw : String) -> ServerPacketDecodeResult {
               decode_references_result_payload(packet, request_id(packet))
             Some("DocumentSymbolsResult") =>
               decode_document_symbols_result_payload(packet, request_id(packet))
-            Some("InlayHintsResult") =>
-              decode_inlay_hints_result_payload(packet, request_id(packet))
             Some("Error") => decode_error_payload(packet, request_id(packet))
             Some(kind) =>
               ServerPacketDecodeError(
@@ -670,37 +651,6 @@ fn decode_document_symbols_result_payload(
           uri,
           revision: json_string_field(packet, "documentRevision").unwrap_or(""),
           symbols,
-        }),
-      )
-    }
-    ProtocolUriError(error) => ServerPacketDecodeError(error)
-  }
-}
-
-///|
-fn decode_inlay_hints_result_payload(
-  packet : Json,
-  id : String,
-) -> ServerPacketDecodeResult {
-  match parse_uri_field(packet, "uri", id) {
-    ParsedProtocolUri(uri) => {
-      let inlay_hints = []
-      match json_field(packet, "inlayHints") {
-        Some(Array(items)) =>
-          for item in items {
-            match parse_inlay_hint(item) {
-              Some(hint) => inlay_hints.push(hint)
-              None => ()
-            }
-          }
-        _ => ()
-      }
-      DecodedServerPacket(
-        InlayHintsResult({
-          id,
-          uri,
-          revision: json_string_field(packet, "documentRevision").unwrap_or(""),
-          inlay_hints,
         }),
       )
     }
@@ -1021,15 +971,6 @@ fn document_symbols_result_json(payload : DocumentSymbolsResultPayload) -> Json 
 }
 
 ///|
-fn inlay_hints_result_json(payload : InlayHintsResultPayload) -> Json {
-  let fields = packet_fields("InlayHintsResult", payload.id)
-  fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentRevision"] = payload.revision.to_json()
-  fields["inlayHints"] = Json::array(payload.inlay_hints.map(inlay_hint_json))
-  Json::object(fields)
-}
-
-///|
 fn error_packet_json(error : ProtocolError) -> Json {
   let fields = packet_fields("Error", error.request_id)
   fields["error"] = error.to_json()
@@ -1083,42 +1024,6 @@ fn document_symbol_json(symbol : @language.DocumentSymbol) -> Json {
     "name": symbol.name.to_json(),
     "kind": symbol.kind.to_json(),
     "range": range_json(symbol.range),
-  }
-}
-
-///|
-fn inlay_hint_json(hint : @language.InlayHint) -> Json {
-  let fields : Map[String, Json] = {
-    "position": position_json(hint.position),
-    "label": hint.label.to_json(),
-    "paddingLeft": Json::boolean(hint.padding_left),
-    "paddingRight": Json::boolean(hint.padding_right),
-  }
-  match hint.kind {
-    Some(kind) => fields["kind"] = inlay_hint_kind_json(kind)
-    None => ()
-  }
-  if hint.tooltip.length() > 0 {
-    fields["tooltip"] = Json::array(hint.tooltip.map(hover_content_json))
-  }
-  Json::object(fields)
-}
-
-///|
-fn inlay_hint_kind_json(kind : @language.InlayHintKind) -> Json {
-  match kind {
-    TypeHint => Json::string("type")
-    ParameterHint => Json::string("parameter")
-  }
-}
-
-///|
-fn position_json(position : @base_common.Position) -> Json {
-  // Internal round-trip with `parse_position`; both ends are 1-based, so the
-  // wire keys carry the `Position` values verbatim.
-  {
-    "line": position.line_number.to_json(),
-    "column": position.column.to_json(),
   }
 }
 
@@ -1217,68 +1122,6 @@ fn parse_diagnostic_tags(value : Json) -> Array[@language.DiagnosticTag]? {
         Some(tags)
       }
     }
-    _ => None
-  }
-}
-
-///|
-fn parse_inlay_hint(value : Json) -> @language.InlayHint? {
-  match value {
-    Object(_) =>
-      match (json_field(value, "position"), json_string_field(value, "label")) {
-        (Some(position_json), Some(label)) =>
-          match parse_position(position_json) {
-            Some(position) => {
-              let tooltip = match json_field(value, "tooltip") {
-                Some(tooltip_json) => parse_hover_contents(tooltip_json)
-                None => []
-              }
-              match
-                inlay_hint_kind(json_string_field(value, "kind").unwrap_or("")) {
-                Some(kind) =>
-                  Some(
-                    InlayHint(
-                      position,
-                      label,
-                      kind~,
-                      padding_left=json_bool_field(value, "paddingLeft").unwrap_or(
-                        false,
-                      ),
-                      padding_right=json_bool_field(value, "paddingRight").unwrap_or(
-                        false,
-                      ),
-                      tooltip~,
-                    ),
-                  )
-                None =>
-                  Some(
-                    InlayHint(
-                      position,
-                      label,
-                      padding_left=json_bool_field(value, "paddingLeft").unwrap_or(
-                        false,
-                      ),
-                      padding_right=json_bool_field(value, "paddingRight").unwrap_or(
-                        false,
-                      ),
-                      tooltip~,
-                    ),
-                  )
-              }
-            }
-            None => None
-          }
-        _ => None
-      }
-    _ => None
-  }
-}
-
-///|
-fn inlay_hint_kind(raw : String) -> @language.InlayHintKind? {
-  match raw {
-    "type" => Some(TypeHint)
-    "parameter" => Some(ParameterHint)
     _ => None
   }
 }
@@ -1425,18 +1268,6 @@ fn parse_document_symbol(value : Json) -> @language.DocumentSymbol? {
 }
 
 ///|
-fn parse_position(value : Json) -> @base_common.Position? {
-  match value {
-    Object(_) =>
-      match (json_int_field(value, "line"), json_int_field(value, "column")) {
-        (Some(line), Some(column)) => Some(Position(line, column))
-        _ => None
-      }
-    _ => None
-  }
-}
-
-///|
 fn diagnostic_severity(label : String) -> @language.DiagnosticSeverity {
   match label {
     "Error" => Error
@@ -1473,15 +1304,6 @@ fn json_string_field(value : Json, key : String) -> String? {
 fn json_int_field(value : Json, key : String) -> Int? {
   match json_field(value, key) {
     Some(Number(number, repr=_)) => Some(number.to_int())
-    _ => None
-  }
-}
-
-///|
-fn json_bool_field(value : Json, key : String) -> Bool? {
-  match json_field(value, key) {
-    Some(True) => Some(true)
-    Some(False) => Some(false)
     _ => None
   }
 }

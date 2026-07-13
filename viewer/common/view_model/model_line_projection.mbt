@@ -434,7 +434,7 @@ pub fn ModelLineProjection::normalize_position(
 }
 
 ///|
-/// The injected-text (inlay hint) source index at a 0-based view column of
+/// The injected-text source index at a 0-based view column of
 /// one view line, or `-1` for source text (including the synthetic
 /// continuation indent) — the index-valued form of Monaco's
 /// `getInjectedTextAt`.

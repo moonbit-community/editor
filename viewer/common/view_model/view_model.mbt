@@ -366,7 +366,7 @@ pub fn ViewModel::line_count(self : ViewModel) -> Int {
 }
 
 ///|
-/// The injected-text (inlay hint) source index at a view position, or `-1`
+/// The injected-text source index at a view position, or `-1`
 /// for source text — the viewer's index-valued form of Monaco's
 /// `ViewModel.getInjectedTextAt` (`viewModelImpl.ts`, delegating to the line
 /// projection).

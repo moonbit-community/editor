@@ -52,7 +52,6 @@ pub struct RemoteServer {
   priv definition_provider : &@language.DefinitionProvider
   priv references_provider : &@language.ReferencesProvider
   priv document_symbol_provider : &@language.DocumentSymbolProvider
-  priv inlay_hints_provider : &@language.InlayHintsProvider
   priv documents : Map[String, @workspace.DocumentSnapshot]
   priv watches : Map[String, ServerWatch]
   priv document_sync_listener : Ref[((@workspace.DocumentSnapshot) -> Unit)?]
@@ -79,7 +78,6 @@ pub fn RemoteServer::with_language_providers(
   definition_provider : &@language.DefinitionProvider,
   references_provider : &@language.ReferencesProvider,
   document_symbol_provider : &@language.DocumentSymbolProvider,
-  inlay_hints_provider : &@language.InlayHintsProvider,
 ) -> RemoteServer {
   {
     workspace_root: normalize_workspace_root(workspace_root),
@@ -88,7 +86,6 @@ pub fn RemoteServer::with_language_providers(
     definition_provider,
     references_provider,
     document_symbol_provider,
-    inlay_hints_provider,
     documents: Map::default(),
     watches: Map::default(),
     document_sync_listener: Ref(None),
@@ -225,7 +222,6 @@ pub async fn RemoteServer::handle_client_packet(
     Definition(request) => [self.definition(request)]
     References(request) => [self.references(request)]
     DocumentSymbols(request) => [self.document_symbols(request)]
-    InlayHints(request) => [self.inlay_hints(request)]
   }
 }
 
@@ -505,31 +501,6 @@ pub async fn RemoteServer::document_symbols(
         revision: document.revision,
         symbols: self.document_symbol_provider.provide_document_symbols(
           model,
-          @language.CancellationToken::none(),
-        ),
-      })
-    }
-    None => self.missing_cached_document_error(request.id)
-  }
-}
-
-///|
-/// Routes an inlay-hints request for the cached document revision.
-pub async fn RemoteServer::inlay_hints(
-  self : RemoteServer,
-  request : @remote_protocol.DocumentRevisionRequest,
-) -> @remote_protocol.ServerPacket {
-  match
-    self.cached_document(request.uri, request.document_revision, request.id) {
-    Some(document) => {
-      let model = text_model_from_document(document)
-      InlayHintsResult({
-        id: request.id,
-        uri: request.uri,
-        revision: document.revision,
-        inlay_hints: self.inlay_hints_provider.provide_inlay_hints(
-          model,
-          OffsetRange(0, model.get_value_length()),
           @language.CancellationToken::none(),
         ),
       })

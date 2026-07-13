@@ -90,17 +90,6 @@ pub impl @language.DocumentSymbolProvider for MoonWorkspaceLanguageProvider with
 }
 
 ///|
-/// `moon` has no inlay-hints query; the feature is unavailable.
-pub impl @language.InlayHintsProvider for MoonWorkspaceLanguageProvider with fn provide_inlay_hints(
-  _self,
-  _document,
-  _range,
-  _token,
-) {
-  []
-}
-
-///|
 /// Parses `moon ide hover --output-json` output: a 1-based
 /// `line:col-line:col` range plus markdown content strings. A malformed or
 /// empty payload yields no hover; a missing or malformed range degrades to a

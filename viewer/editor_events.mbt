@@ -393,6 +393,13 @@ fn Viewer::after_hover_transition(
 }
 
 ///|
+fn new_hover_cancellation_source() -> @language.CancellationTokenSource {
+  @language.CancellationTokenSource::new(schedule=callback => {
+    schedule_timeout(callback, 0)
+  })
+}
+
+///|
 /// Interprets a hover transition. Monaco's `@hover.HoverOperation.start(Delayed)`
 /// schedules only the async trigger and the loading message up front; the sync
 /// trigger is scheduled by the async trigger (see `hover_trigger_async`).
@@ -406,7 +413,7 @@ fn Viewer::apply_hover_effect(
       guard self.content_hover_controller() is Some(hc) else { return }
       guard self.get_model() is Some(model) else { return }
       guard hc.hover.operation.options is Some(options) else { return }
-      let source = new_feature_cancellation_source()
+      let source = new_hover_cancellation_source()
       hc.begin_request(source, token)
       let request = hc.hover.request_stamp(model, source.token())
       let (async_generation, async_debouncer) = hc.hover_async_debouncer.schedule(
@@ -451,7 +458,7 @@ fn Viewer::apply_hover_effect(
     HoverRunAsyncAndSync(token) => {
       guard self.content_hover_controller() is Some(hc) else { return }
       guard self.get_model() is Some(model) else { return }
-      let source = new_feature_cancellation_source()
+      let source = new_hover_cancellation_source()
       hc.begin_request(source, token)
       let request = hc.hover.request_stamp(model, source.token())
       self.kick_hover_async(request)
@@ -575,15 +582,10 @@ fn Viewer::hover_trigger_loading(
 /// Builds a content-hover computer over the current viewer services (Monaco
 /// `ContentHoverWidgetWrapper._initializeHoverParticipants`).
 fn Viewer::make_hover_computer(self : Viewer) -> @hover.ContentHoverComputer {
-  let inlay_hover_owner = match self.content_hover_controller() {
-    Some(hc) => hc.inlay_hover_owner
-    None => @hover.HoverParticipantOwner::new()
-  }
   let services : @hover.HoverParticipantServices = {
     languages: self.services.languages,
     marker_decorations: self.services.marker_decorations,
     log_service: self.services.log_service,
-    inlay_hover_owner,
   }
   @hover.ContentHoverComputer::new(services)
 }
@@ -604,15 +606,7 @@ fn Viewer::compute_hover_sync(
           Some(options) => options.source
           None => HoverStartMouse
         }
-        match
-          self
-          .make_hover_computer()
-          .compute_sync(
-            model,
-            anchor,
-            inlay_hints=self.current_inlay_hints(),
-            source~,
-          ) {
+        match self.make_hover_computer().compute_sync(model, anchor, source~) {
           Some(hover) => hover.parts
           None => []
         }
@@ -634,7 +628,6 @@ fn Viewer::kick_hover_async(
   match hc.hover.anchor {
     Some(anchor) => {
       let computer = self.make_hover_computer()
-      let inlay_hints = self.current_inlay_hints()
       let source = match hc.hover.operation.options {
         Some(options) => options.source
         None => HoverStartMouse
@@ -643,7 +636,6 @@ fn Viewer::kick_hover_async(
         computer.compute_async_each(
           request.model(),
           anchor,
-          inlay_hints~,
           token=request.cancellation_token(),
           source~,
           is_current=() => self.is_current_hover_request(request),
@@ -752,16 +744,6 @@ fn Viewer::sync_hover_decorations(self : Viewer) -> Unit {
     decorations,
     owner_id=self.editor_id,
   )
-}
-
-///|
-/// The current provider hints, read off the inlay-hints controller (empty
-/// while the contribution is disposed).
-fn Viewer::current_inlay_hints(self : Viewer) -> Array[@language.InlayHint] {
-  match self.inlay_hints_controller() {
-    Some(controller) => controller.inlay_hints
-    None => []
-  }
 }
 
 ///|

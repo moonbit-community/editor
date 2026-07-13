@@ -173,10 +173,11 @@ test "pointer converts a wrapped injected position across a hidden model line" {
       let folded = converter.model_position_to_view_position(target)
       assert_true(folded.line_number < unprojected.line_number)
 
-      viewer.inlay_hints_controller().unwrap().inlay_hints = [
-        InlayHint(Position(3, 4), "very-long-hint", kind=TypeHint),
-      ]
-      viewer.sync_inlay_hint_decorations()
+      install_cursor_test_injected_text(
+        viewer,
+        Position(3, 4),
+        "very-long-injected-text",
+      )
       assert_true(view_model.get_hidden_areas() == [Range(2, 1, 2, 1)])
       let projected = converter.model_position_to_view_position(target)
       assert_true(projected != folded)

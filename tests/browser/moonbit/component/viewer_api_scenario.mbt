@@ -59,20 +59,6 @@ fn set_component_diagnostics(
 }
 
 ///|
-impl @language.InlayHintsProvider for ComponentHoverProvider with fn provide_inlay_hints(
-  _self,
-  _model,
-  _range,
-  _token,
-) {
-  [
-    InlayHint(Position(2, 24), " : T", kind=TypeHint, tooltip=[
-      PlainText("component inlay hint"),
-    ]),
-  ]
-}
-
-///|
 fn run_viewer_api_test() -> Unit {
   let ctx = @support.BrowserTestContext::new("viewer_api")
   let rendered_count = Ref(0)
@@ -105,11 +91,6 @@ fn run_viewer_api_test() -> Unit {
       |> ignore
       let provider = ComponentHoverProvider::new()
       services.languages.register_hover_provider(
-        LanguageId("moonbit"),
-        provider,
-      )
-      |> ignore
-      services.languages.register_inlay_hints_provider(
         LanguageId("moonbit"),
         provider,
       )

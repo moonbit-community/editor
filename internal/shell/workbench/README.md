@@ -7,7 +7,7 @@ reusable `viewer`, file tree, remote transport, and browser-test observability.
 
 - `start_app` creates explicit `ViewerServices`, installs the workbench logger,
   MoonBit/JSON/JavaScript tokenizers (TypeScript reuses JavaScript), remote
-  hover/document-symbol/inlay-hint providers, and agent-feedback persistence;
+  hover/document-symbol providers and agent-feedback persistence;
   then it calls `mount_app`.
 - Rabbita owns topbar/sidebar/status/diagnostics/theme state and renders one
   stable, childless `.viewer-host`. After the first paint `Viewer::create`

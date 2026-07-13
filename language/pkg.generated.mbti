@@ -68,21 +68,6 @@ pub(all) enum HoverContent {
   Markdown(String)
 } derive(Eq, @debug.Debug)
 
-pub(all) struct InlayHint {
-  position : @common.Position
-  label : String
-  kind : InlayHintKind?
-  padding_left : Bool
-  padding_right : Bool
-  tooltip : Array[HoverContent]
-} derive(Eq, @debug.Debug)
-pub fn InlayHint::InlayHint(@common.Position, String, kind? : InlayHintKind, padding_left? : Bool, padding_right? : Bool, tooltip? : Array[HoverContent]) -> Self
-
-pub(all) enum InlayHintKind {
-  TypeHint
-  ParameterHint
-} derive(Eq, @debug.Debug)
-
 pub(all) struct LanguageFilter {
   language : String?
   scheme : String?
@@ -116,10 +101,6 @@ pub(open) trait DocumentSymbolProvider {
 
 pub(open) trait HoverProvider {
   async fn provide_hover(Self, @model.TextModel, @common.Position, CancellationToken) -> Hover?
-}
-
-pub(open) trait InlayHintsProvider {
-  async fn provide_inlay_hints(Self, @model.TextModel, @common.OffsetRange, CancellationToken) -> Array[InlayHint]
 }
 
 pub(open) trait ReferencesProvider {

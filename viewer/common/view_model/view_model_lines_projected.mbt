@@ -613,7 +613,7 @@ pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(
 }
 
 ///|
-/// The injected-text (inlay hint) source index at a 0-based view column of a
+/// The injected-text source index at a 0-based view column of a
 /// view line, or `-1` for source text — the index-valued form of Monaco's
 /// `getInjectedTextAt` (`viewModelLines.ts:991`).
 pub fn ViewModelLinesFromProjectedModel::injected_text_index_at(

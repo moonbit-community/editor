@@ -99,7 +99,7 @@ padding. Smooth requests of at most one line downgrade to immediate, and the
 
 `ViewerServices` explicitly supplies the language registry, marker and marker-
 decoration services, agent-feedback store, quick-diff store, and logger. Hosts
-register tokenizers, hover, document-symbol, and inlay-hint providers through
+register tokenizers, hover, and document-symbol providers through
 `viewer/common/languages`; diagnostics are pushed to `services.markers`.
 There is no current viewer UI for definition or references.
 
@@ -114,10 +114,10 @@ TextModel (caller-owned)
 ```
 
 The root package owns every `Viewer::` method and the cross-package glue for
-input, reveal, widgets, folding, hover, inlay hints, quick diff, feedback, and
+input, reveal, widgets, folding, hover, quick diff, feedback, and
 decorations. Feature mechanisms remain in their `viewer/common/**`,
-`viewer/browser/**`, or `viewer/contrib/**` owner packages. Each inlay/hover
-request captures the physical `TextModel`, its internal content version, a
+`viewer/browser/**`, or `viewer/contrib/**` owner packages. Each hover request
+captures the physical `TextModel`, its internal content version, a
 Viewer-lifetime monotonic generation, and a caller-owned cancellation token.
 Replacement, content invalidation, detach, model disposal, and Viewer disposal
 cancel before retiring the request; only a stamp that is still fully current

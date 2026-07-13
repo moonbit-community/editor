@@ -5,12 +5,11 @@
 // injected-text anchors and soft-wrap breaks.
 
 ///|
-/// Hints are written as `after` injected-text decorations on a backing
-/// model (Track F: injected text lives in decoration storage);
-/// `(column, content)` pairs are 1-based hint columns.
+/// Injections are written as `after` decorations on a backing model;
+/// `(column, content)` pairs use 1-based model columns.
 fn affinity_view_model(
   text : String,
-  hints : Array[(Int, String)],
+  injections : Array[(Int, String)],
   soft_wrap_column~ : Int,
 ) -> @view_model.ViewModel {
   let model = @model.TextModel(
@@ -26,17 +25,17 @@ fn affinity_view_model(
     text,
   )
   let decorations : Array[@model.ModelDeltaDecoration] = []
-  for index in 0..<hints.length() {
-    let (column, content) = hints[index]
+  for index in 0..<injections.length() {
+    let (column, content) = injections[index]
     decorations.push({
       range: Range(1, column, 1, column),
       options: ModelDecorationOptions(
         "",
-        description="inlay-hint",
+        description="position-affinity injection",
         show_if_collapsed=true,
         after=InjectedTextOptions(
           content,
-          inline_class_name="inlay-hint inlay-hint-type",
+          inline_class_name="position-affinity-injection",
           attached_index=index,
         ),
       ),
@@ -77,17 +76,17 @@ fn normalized(
 }
 
 ///|
-/// Two hints share the anchor at offset 2 of `abcdef` (hint positions are
+/// Two injections share the anchor at offset 2 of `abcdef` (positions are
 /// 1-based; `bucket_injected_text` converts), projecting to `abXXYYcdef` —
 /// the `Right` walks must cross both touching injections.
-fn hinted_view_model() -> @view_model.ViewModel {
+fn injected_view_model() -> @view_model.ViewModel {
   affinity_view_model("abcdef", [(3, "XX"), (3, "YY")], soft_wrap_column=0)
 }
 
 ///|
-test "translate at an inlay-hint anchor: only Right crosses the injections" {
-  let vm = hinted_view_model()
-  // Model column 3 (offset 2) is the anchor of both hints.
+test "translate at an injected-text anchor: only Right crosses the injections" {
+  let vm = injected_view_model()
+  // Model column 3 (offset 2) is the anchor of both injections.
   inspect(view_of(vm, 1, 3), content="1:3")
   inspect(view_of(vm, 1, 3, affinity=Left), content="1:3")
   inspect(view_of(vm, 1, 3, affinity=LeftOfInjectedText), content="1:3")
@@ -97,7 +96,7 @@ test "translate at an inlay-hint anchor: only Right crosses the injections" {
 
 ///|
 test "translate mid-token ignores affinity" {
-  let vm = hinted_view_model()
+  let vm = injected_view_model()
   inspect(view_of(vm, 1, 2), content="1:2")
   inspect(view_of(vm, 1, 2, affinity=Left), content="1:2")
   inspect(view_of(vm, 1, 2, affinity=Right), content="1:2")
@@ -107,14 +106,14 @@ test "translate mid-token ignores affinity" {
 
 ///|
 test "normalize snaps positions inside injected text per affinity" {
-  let vm = hinted_view_model()
-  // View column 4 sits strictly inside the first hint (`abXX…`).
+  let vm = injected_view_model()
+  // View column 4 sits strictly inside the first injection (`abXX…`).
   inspect(normalized(vm, 1, 4, None), content="1:3")
   inspect(normalized(vm, 1, 4, Left), content="1:3")
   inspect(normalized(vm, 1, 4, LeftOfInjectedText), content="1:3")
   inspect(normalized(vm, 1, 4, Right), content="1:7")
   inspect(normalized(vm, 1, 4, RightOfInjectedText), content="1:7")
-  // View column 5 is the boundary between the two touching hints: a cursor
+  // View column 5 is the boundary between the two touching injections: a cursor
   // stop for `None` (`InjectedTextCursorStops.Both`), still crossed by
   // Left/Right.
   inspect(normalized(vm, 1, 5, None), content="1:5")
@@ -150,9 +149,9 @@ test "normalize snaps wrap boundaries per affinity" {
 
 ///|
 test "range conversion: non-empty ranges exclude injected text at the edges" {
-  let vm = hinted_view_model()
+  let vm = injected_view_model()
   let converter = vm.coordinates_converter()
-  // Start at the hint anchor converts with `Right` (past both hints), end
+  // Start at the injection anchor converts with `Right` (past both), end
   // mid-source with `Left` (`viewModelLines.ts:897-899`).
   let view_range = converter.model_range_to_view_range(Range(1, 3, 1, 7))
   inspect(

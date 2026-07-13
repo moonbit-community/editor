@@ -83,20 +83,6 @@ test "encodes and decodes semantic client packets" {
     DecodedClientPacket(_) => fail("unexpected document symbols packet")
     ClientPacketDecodeError(error) => fail(error.message)
   }
-
-  let hints = @remote_protocol.InlayHints({
-    id: "hints-1",
-    uri,
-    document_revision: "rev-8",
-  })
-  match @remote_protocol.decode_client_packet(hints.to_json().stringify()) {
-    DecodedClientPacket(InlayHints(request)) => {
-      assert_eq(request.id, "hints-1")
-      assert_eq(request.document_revision, "rev-8")
-    }
-    DecodedClientPacket(_) => fail("unexpected inlay hints packet")
-    ClientPacketDecodeError(error) => fail(error.message)
-  }
 }
 
 ///|
@@ -336,29 +322,6 @@ test "encodes and decodes server document and language packets" {
       assert_eq(payload.symbols[0].name, "main")
     }
     DecodedServerPacket(_) => fail("unexpected document symbols result packet")
-    ServerPacketDecodeError(error) => fail(error.message)
-  }
-
-  let inlay_hints = @remote_protocol.InlayHintsResult({
-    id: "hints-1",
-    uri,
-    revision: "rev-2",
-    inlay_hints: [
-      InlayHint(Position(0, 11), ": Int", kind=TypeHint, padding_left=true, tooltip=[
-        PlainText("inferred type"),
-      ]),
-    ],
-  })
-  match
-    @remote_protocol.decode_server_packet(inlay_hints.to_json().stringify()) {
-    DecodedServerPacket(InlayHintsResult(payload)) => {
-      assert_eq(payload.inlay_hints.length(), 1)
-      assert_eq(payload.inlay_hints[0].label, ": Int")
-      assert_true(payload.inlay_hints[0].kind == Some(TypeHint))
-      assert_true(payload.inlay_hints[0].padding_left)
-      assert_eq(payload.inlay_hints[0].tooltip.length(), 1)
-    }
-    DecodedServerPacket(_) => fail("unexpected inlay hints result packet")
     ServerPacketDecodeError(error) => fail(error.message)
   }
 }

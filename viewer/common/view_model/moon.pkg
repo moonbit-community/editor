@@ -12,7 +12,6 @@ import {
 }
 
 import {
-  "moonbit-community/editor/language",
   "moonbit-community/editor/syntax",
 } for "test"
 

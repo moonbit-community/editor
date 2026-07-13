@@ -93,7 +93,7 @@ fn Cursor::set_view_state(
 /// converting every endpoint through the coordinates converter. Mirrors the
 /// "we only have the model state => compute the view state" branch of
 /// Monaco's `_setState`; used to re-project an existing selection after the
-/// view model reflows (wrapping, inlay hints).
+/// view model reflows (wrapping and injected text).
 pub fn Cursor::set_model_state(
   self : Cursor,
   context : CursorContext,

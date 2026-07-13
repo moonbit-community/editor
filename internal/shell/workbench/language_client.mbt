@@ -18,7 +18,6 @@ fn register_remote_language_providers(
   services.languages.register_hover_provider(selector, client) |> ignore
   services.languages.register_document_symbol_provider(selector, client)
   |> ignore
-  services.languages.register_inlay_hints_provider(selector, client) |> ignore
 }
 
 ///|
@@ -96,25 +95,6 @@ impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn provide_d
     DocumentSymbolsResult(payload) => payload.symbols
     packet => {
       self.emit_remote_error("documentSymbols", model, packet)
-      []
-    }
-  }
-}
-
-///|
-impl @language.InlayHintsProvider for RemoteLanguageClient with fn provide_inlay_hints(
-  self,
-  model,
-  _range,
-  _token,
-) {
-  let response = protocol_request("inlay-hints", id => {
-    InlayHints({ id, uri: model.uri, document_revision: model.revision })
-  })
-  match response {
-    InlayHintsResult(payload) => payload.inlay_hints
-    packet => {
-      self.emit_remote_error("inlayHints", model, packet)
       []
     }
   }

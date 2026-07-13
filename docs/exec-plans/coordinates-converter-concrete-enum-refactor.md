@@ -1,7 +1,7 @@
 # Coordinates Converter Concrete-Enum Refactor
 
-Status: proposed — Phase 0–2 inventory complete; implementation blocked on the
-review gate below
+Status: implemented — concrete enum migration, branch-matrix tests, generated
+interfaces, and all repository gates complete
 
 Date: 2026-07-13
 
@@ -147,13 +147,13 @@ Review gate: **stop here before editing product code.**
 
 | ID | Source member | Arithmetic/transition | Proposed MoonBit disposition | Status |
 |---|---|---|---|---|
-| ICC-001 | interface `convertViewPositionToModelPosition` (`coordinatesConverter.ts:12`) | View position to model position | `CoordinatesConverter::view_position_to_model_position` enum match | TODO |
-| ICC-002 | interface `convertViewRangeToModelRange` (`:13`) | View range to model range | `CoordinatesConverter::view_range_to_model_range` enum match | TODO |
+| ICC-001 | interface `convertViewPositionToModelPosition` (`coordinatesConverter.ts:12`) | View position to model position | `CoordinatesConverter::view_position_to_model_position` enum match | TESTED |
+| ICC-002 | interface `convertViewRangeToModelRange` (`:13`) | View range to model range | `CoordinatesConverter::view_range_to_model_range` enum match | TESTED |
 | ICC-003 | interface `validateViewPosition` (`:14`) | Validate supplied view/model pair | No current local surface | DEFERRED (cursor dual-side validation seam remains absent) |
 | ICC-004 | interface `validateViewRange` (`:15`) | Validate supplied view/model ranges | No current local surface | DEFERRED (cursor dual-side validation seam remains absent) |
 | ICC-005 | interface `convertModelPositionToViewPosition` (`:22`) | Affinity plus zero/below-hidden switches | Preserve current affinity-only enum method; lower collection keeps the other switches | DEFERRED (full converter signature is outside this representation refactor) |
-| ICC-006 | interface `convertModelRangeToViewRange` (`:26`) | Range conversion; affinity affects empty ranges | `CoordinatesConverter::model_range_to_view_range` enum match | TODO |
-| ICC-007 | interface `modelPositionIsVisible` (`:27`) | Bounds/projection visibility | `CoordinatesConverter::model_position_is_visible` enum match | TODO |
+| ICC-006 | interface `convertModelRangeToViewRange` (`:26`) | Range conversion; affinity affects empty ranges | `CoordinatesConverter::model_range_to_view_range` enum match | TESTED |
+| ICC-007 | interface `modelPositionIsVisible` (`:27`) | Bounds/projection visibility | `CoordinatesConverter::model_position_is_visible` enum match | TESTED |
 | ICC-008 | interface `getModelLineViewLineCount` (`:28`) | Model-line projection count | No current converter surface | DEFERRED (complete converter surface not in this refactor) |
 | ICC-009 | interface `getViewLineNumberOfModelPosition` (`:29`) | Model position to containing view line | No current converter surface | DEFERRED (complete converter surface not in this refactor) |
 | IDC-001 | identity constructor (`:36-38`) | Retain model | Future `Identity(TextModel)` variant | DEFERRED (large-file as-is collection parity) |
@@ -169,21 +169,21 @@ Review gate: **stop here before editing product code.**
 | IDC-011 | identity `modelRangeIsVisible` (`:85-96`) | Reject invalid start, then invalid end | Future identity helper if consumed | DEFERRED (large-file as-is collection parity) |
 | IDC-012 | identity `getModelLineViewLineCount` (`:98-100`) | Constant 1 | Future identity arm | DEFERRED (large-file as-is collection parity) |
 | IDC-013 | identity `getViewLineNumberOfModelPosition` (`:102-104`) | Return model line | Future identity arm | DEFERRED (large-file as-is collection parity) |
-| PCC-001 | projected constructor (`viewModelLines.ts:1076-1078`) | Retain projected lines | `Projected(lines)` enum construction | TODO |
-| PCC-002 | projected `convertViewPositionToModelPosition` (`:1082-1084`) | Delegate line/column | Projected arm of view-position method | TODO |
-| PCC-003 | projected `convertViewRangeToModelRange` (`:1086-1088`) | Delegate range | Projected arm of view-range method | TODO |
+| PCC-001 | projected constructor (`viewModelLines.ts:1076-1078`) | Retain projected lines | `Projected(lines)` enum construction | TESTED |
+| PCC-002 | projected `convertViewPositionToModelPosition` (`:1082-1084`) | Delegate line/column | Projected arm of view-position method | TESTED |
+| PCC-003 | projected `convertViewRangeToModelRange` (`:1086-1088`) | Delegate range | Projected arm of view-range method | TESTED |
 | PCC-004 | projected `validateViewPosition` (`:1090-1092`) | Delegate view line/column plus expected model position | No current local surface | DEFERRED (cursor dual-side validation seam remains absent) |
 | PCC-005 | projected `validateViewRange` (`:1094-1096`) | Delegate view and expected model ranges | No current local surface | DEFERRED (cursor dual-side validation seam remains absent) |
 | PCC-006 | projected `convertModelPositionToViewPosition` (`:1100-1102`) | Delegate position and three switches | Preserve current affinity-only enum arm | DEFERRED (full converter signature is outside this representation refactor) |
-| PCC-007 | projected `convertModelRangeToViewRange` (`:1104-1106`) | Delegate range and affinity | Projected arm of model-range method | TODO |
-| PCC-008 | projected `modelPositionIsVisible` (`:1108-1110`) | Delegate line/column visibility | Projected arm of visibility method | TODO |
+| PCC-007 | projected `convertModelRangeToViewRange` (`:1104-1106`) | Delegate range and affinity | Projected arm of model-range method | TESTED |
+| PCC-008 | projected `modelPositionIsVisible` (`:1108-1110`) | Delegate line/column visibility | Projected arm of visibility method | TESTED |
 | PCC-009 | projected `getModelLineViewLineCount` (`:1112-1114`) | Delegate model-line count | No current converter surface | DEFERRED (complete converter surface not in this refactor) |
 | PCC-010 | projected `getViewLineNumberOfModelPosition` (`:1116-1118`) | Delegate model line/column | No current converter surface | DEFERRED (complete converter surface not in this refactor) |
 
-Ledger total: **32 rows = 32 inventoried members**. Before implementation:
-`TODO / DEFERRED / N-A = 9 / 23 / 0`.
+Ledger total: **32 rows = 32 inventoried members**. Final status:
+`TESTED / DEFERRED / N-A = 9 / 23 / 0`.
 
-## Proposed Implementation After Review
+## Implementation
 
 1. Add a focused `viewer/common/view_model/coordinates_converter.mbt` owning the
    public closed enum and its five inherent methods.
@@ -200,7 +200,10 @@ Ledger total: **32 rows = 32 inventoried members**. Before implementation:
 7. Update current package documentation and generated interfaces; do not edit
    historical implemented plans.
 
-## Deviations (Phase 3 Preview)
+Implementation milestone: `4340d29` (`refactor(view-model): close coordinates
+converter representation`).
+
+## Deviations (Phase 3)
 
 - Monaco uses an open TypeScript interface because normal and large-file line
   collections provide different implementations. The current MoonBit product
@@ -212,7 +215,7 @@ Ledger total: **32 rows = 32 inventoried members**. Before implementation:
 - All source members marked `DEFERRED` above remain existing parity gaps; the
   representation refactor must not silently claim them.
 
-## Test Matrix (Phase 4 Preview)
+## Test Matrix (Phase 4)
 
 - No-wrap `ModelLineProjection::Identity`: existing model/view position and
   range round trips.
@@ -225,6 +228,22 @@ Ledger total: **32 rows = 32 inventoried members**. Before implementation:
 - Browser input boundary: every mouse-target arm, including view-zone detail.
 - Decoration adapter: model-position and model-range conversion through the
   unchanged inline-decorations trait.
+
+Evidence:
+
+- `viewer/common/view_model/view_model_test.mbt` proves the closed `Projected`
+  construction and no-wrap/wrapped position and range conversions.
+- `viewer/common/view_model/position_affinity_test.mbt` covers injected-text
+  and wrap-boundary affinity, including empty-range behavior.
+- `viewer/common/view_model/hidden_areas_test.mbt` covers visibility and the
+  existing lower-level zero-line/below-hidden switches.
+- Existing cursor movement/flush tests exercise the typed-closure bridge after
+  wrapping, hidden-area changes, and model flushes.
+- `viewer/browser/view/view_user_input_events_wbtest.mbt` drives all nine
+  mouse-target variants, optional unknown coordinates, and both optional
+  view-zone positions through a wrapped converter.
+- Existing view-model decoration tests exercise the unchanged generic
+  inline-decorations adapter with the concrete enum.
 
 Required validation after implementation:
 
@@ -240,15 +259,40 @@ just build
 just test-browser
 ```
 
+Validation evidence on 2026-07-13:
+
+- `moon check --target all --warn-list +73` passed with the three pre-existing
+  unused-field warnings in `viewer/browser/view/rendering_context.mbt` and no
+  new warnings.
+- The plan's package-specific `moon test --target all
+  viewer/common/view_model` spelling is not supported because this package
+  declares only the `js` and `native` targets. The equivalent supported matrix
+  passed as `169/169` on each target.
+- `moon test --target js viewer` passed `186/186`.
+- `moon fmt` and `moon info` completed; the generated APIs contain the concrete
+  enum and no core converter trait or projected wrapper.
+- `just check`, `just test` (`1387/1387` JS, `989/989` native), `just build`,
+  and `just test-browser` (`82/82`) all passed.
+
 ## Exit Gate (Phase 5)
 
 - [x] inventory count equals ledger-row count: 32 == 32
-- [ ] all 9 representation TODO rows and all five current enum methods are
+- [x] all 9 representation TODO rows and all five current enum methods are
       implemented and tested
-- [ ] generated API contains concrete `view_model.CoordinatesConverter` and no
+- [x] generated API contains concrete `view_model.CoordinatesConverter` and no
       core converter trait or projected wrapper
-- [ ] every ported method is reread side by side with the pinned source
-- [ ] behavior matrix is green across common, root viewer, and browser layers
-- [ ] all representation deviations remain explicit
-- [ ] closing reread of both complete upstream source units finds no
+- [x] every ported method is reread side by side with the pinned source
+- [x] behavior matrix is green across common, root viewer, and browser layers
+- [x] all representation deviations remain explicit
+- [x] closing reread of both complete upstream source units finds no
       unaccounted member
+
+Closing reconciliation: the complete
+`editor/common/coordinatesConverter.ts` file and projected
+`viewModelLines.ts:1073-1119` class were reread at oracle commit
+`b18492a288de038fbc7643aae6de8247029d11bd`. All 32 inventoried members remain
+represented by exactly one ledger row; the nine representation rows are
+tested, and the other 23 retain their explicit large-file or absent-surface
+deferral reasons. The five shipped enum methods preserve the projected
+delegation order and existing affinity/visibility surface without additional
+branches or arithmetic.

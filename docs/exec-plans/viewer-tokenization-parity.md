@@ -1,6 +1,6 @@
 # Viewer Tokenization Parity
 
-Status: Gate D candidate — TMT-028 closed, remaining reviews pending
+Status: implemented and frozen
 
 Date: 2026-07-13
 
@@ -1848,8 +1848,8 @@ recounted.
 - [x] attach/dispose ordering and multi-view ownership match the reviewed seam
 - [x] flush event ranges are valid in old and new projection domains
 - [x] semantic and large-file-collection dependencies remain explicit
-- [ ] all quality gates and independent closing audits pass
-- [ ] final ledger has zero TODO/PASS and is frozen
+- [x] all quality gates and independent closing audits pass
+- [x] final ledger has zero TODO/PASS and is frozen
 
 ## Execution Record
 
@@ -1983,3 +1983,16 @@ recounted.
   retry. The fixed ledger denominator/totals remain unchanged and the child
   stops for the remaining independent boundary/API and test/matrix Gate-D
   lanes.
+- 2026-07-13: the final Gate-D round PASSed all three lanes. The source/ledger
+  auditor verified 38/38 pins, every previous rejection fix, all 1073 unique
+  IDs, and then independently PASSed the sole TMT-028 remediation. The
+  boundary/API auditor found no generated-helper leak, reverse dependency,
+  double-optional font payload, fake reporter, premature P2 artifact, or
+  pre-Gate-B product/test edit. The test/matrix auditor re-ran all rejected
+  matrices, reconciled 97 exact tests = 23 UTM + 2 TMS-REF + 72 REF and
+  SKIPPED counts 11/2/1/2/17/52, and obtained fresh targeted JS/native plus
+  Chromium **82/82** with no retry consumed. The immutable final ledger is
+  **1052 = 466 TESTED + 206 PORTED + 206 DEFERRED + 174 N-A**, plus 21 LOC =
+  16 TESTED + 5 PORTED, with zero TODO/PASS. This child is implemented and
+  frozen; future semantic, large-file collection, and dynamic language/config
+  work remains reserved by the parent P2 backlog.

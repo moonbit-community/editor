@@ -1,9 +1,14 @@
 # Inline Decorations and View Model Package Merge
 
-Status: proposed; no implementation has started
+Status: inventory ready — STOP FOR REVIEW; no implementation has started
 Date: 2026-07-13
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
+
+Gate A review artifact:
+`inline-decorations-view-model-package-merge-gate-a.md`. Product code,
+manifests, tests, generated interfaces, and package READMEs remain unchanged
+pending review approval.
 
 ## Goal
 

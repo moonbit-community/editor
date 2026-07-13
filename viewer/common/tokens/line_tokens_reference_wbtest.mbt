@@ -51,7 +51,7 @@ fn render_line_tokens(tokens : LineTokens) -> String {
 ///|
 /// Mirrors `assertViewLineTokens`: compares `(endIndex, foreground)` per token.
 fn assert_view_line_tokens(
-  actual : &IViewLineTokens,
+  actual : ViewLineTokens,
   expected : Array[(Int, Int)],
 ) -> Unit raise {
   // Assert scalar fields per element (avoids the deprecated `Show`-based

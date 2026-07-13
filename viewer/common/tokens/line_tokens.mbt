@@ -9,9 +9,8 @@
 /// `lineTokens.ts` takes.
 ///
 /// Deviations from the source, none of which the conformance suite exercises:
-///   - The `IViewLineTokens` trait omits `equals` (needs concrete-type
-///     discrimination), the `languageIdCodec` field accessor, and `getInlineStyle`
-///     stays via `color_map : Array[String]`.
+///   - `ViewLineTokens` omits `equals`, the `languageIdCodec` field accessor,
+///     and `getInlineStyle` stays via `color_map : Array[String]`.
 ///   - `LineTokens` omits `getTokensInRange` / `toString` (these pull in the
 ///     unported `TokenArray` family).
 ///   - The constructor skips Monaco's soft token-length/text-length mismatch
@@ -24,22 +23,12 @@
 ///     token-content slice uses `String::unsafe_substring`.
 
 ///|
-/// A line's tokens, viewed as a sequence with per-token end offset and
-/// metadata. Both `LineTokens` and `SliceLineTokens` implement it.
-pub trait IViewLineTokens {
-  fn get_count(Self) -> Int
-  fn get_standard_token_type(Self, Int) -> Int
-  fn get_foreground(Self, Int) -> Int
-  fn get_end_offset(Self, Int) -> Int
-  fn get_class_name(Self, Int) -> String
-  fn get_inline_style(Self, Int, Array[String]) -> String
-  fn get_presentation(Self, Int) -> TokenPresentation
-  fn find_token_index_at_offset(Self, Int) -> Int
-  fn get_line_content(Self) -> String
-  fn get_metadata(Self, Int) -> UInt
-  fn get_language_id(Self, Int) -> String
-  fn get_token_text(Self, Int) -> String
-  fn for_each(Self, (Int) -> Unit) -> Unit
+/// A line's tokens, represented by the complete set of views this package
+/// constructs. The closed enum preserves Monaco's concrete full/slice
+/// distinction without erasing it behind a trait object.
+pub(all) enum ViewLineTokens {
+  Full(LineTokens)
+  Slice(SliceLineTokens)
 }
 
 ///|
@@ -163,8 +152,8 @@ pub fn LineTokens::get_start_offset(
 
 ///|
 /// `inflate()` returns the tokens unchanged — already a view.
-pub fn LineTokens::inflate(self : LineTokens) -> &IViewLineTokens {
-  self
+pub fn LineTokens::inflate(self : LineTokens) -> ViewLineTokens {
+  Full(self)
 }
 
 ///|
@@ -173,15 +162,15 @@ pub fn LineTokens::slice_and_inflate(
   start_offset : Int,
   end_offset : Int,
   delta_offset : Int,
-) -> &IViewLineTokens {
-  SliceLineTokens::new(self, start_offset, end_offset, delta_offset)
+) -> ViewLineTokens {
+  Slice(SliceLineTokens::new(self, start_offset, end_offset, delta_offset))
 }
 
 ///|
 pub fn LineTokens::slice_zero_copy(
   self : LineTokens,
   range : @base_common.OffsetRange,
-) -> &IViewLineTokens {
+) -> ViewLineTokens {
   self.slice_and_inflate(range.start, range.end_exclusive, 0)
 }
 
@@ -271,18 +260,8 @@ pub fn LineTokens::get_count(self : LineTokens) -> Int {
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_count(self) {
-  LineTokens::get_count(self)
-}
-
-///|
 pub fn LineTokens::get_line_content(self : LineTokens) -> String {
   self.text
-}
-
-///|
-impl IViewLineTokens for LineTokens with fn get_line_content(self) {
-  LineTokens::get_line_content(self)
 }
 
 ///|
@@ -291,18 +270,8 @@ pub fn LineTokens::get_end_offset(self : LineTokens, token_index : Int) -> Int {
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_end_offset(self, token_index) {
-  LineTokens::get_end_offset(self, token_index)
-}
-
-///|
 pub fn LineTokens::get_metadata(self : LineTokens, token_index : Int) -> UInt {
   self.tokens[(token_index << 1) + 1]
-}
-
-///|
-impl IViewLineTokens for LineTokens with fn get_metadata(self, token_index) {
-  LineTokens::get_metadata(self, token_index)
 }
 
 ///|
@@ -317,11 +286,6 @@ pub fn LineTokens::get_language_id(
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_language_id(self, token_index) {
-  LineTokens::get_language_id(self, token_index)
-}
-
-///|
 pub fn LineTokens::get_standard_token_type(
   self : LineTokens,
   token_index : Int,
@@ -330,21 +294,8 @@ pub fn LineTokens::get_standard_token_type(
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_standard_token_type(
-  self,
-  token_index,
-) {
-  LineTokens::get_standard_token_type(self, token_index)
-}
-
-///|
 pub fn LineTokens::get_foreground(self : LineTokens, token_index : Int) -> Int {
   TokenMetadata::get_foreground(self.tokens[(token_index << 1) + 1])
-}
-
-///|
-impl IViewLineTokens for LineTokens with fn get_foreground(self, token_index) {
-  LineTokens::get_foreground(self, token_index)
 }
 
 ///|
@@ -355,11 +306,6 @@ pub fn LineTokens::get_class_name(
   TokenMetadata::get_class_name_from_metadata(
     self.tokens[(token_index << 1) + 1],
   )
-}
-
-///|
-impl IViewLineTokens for LineTokens with fn get_class_name(self, token_index) {
-  LineTokens::get_class_name(self, token_index)
 }
 
 ///|
@@ -375,15 +321,6 @@ pub fn LineTokens::get_inline_style(
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_inline_style(
-  self,
-  token_index,
-  color_map,
-) {
-  LineTokens::get_inline_style(self, token_index, color_map)
-}
-
-///|
 pub fn LineTokens::get_presentation(
   self : LineTokens,
   token_index : Int,
@@ -394,24 +331,11 @@ pub fn LineTokens::get_presentation(
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_presentation(self, token_index) {
-  LineTokens::get_presentation(self, token_index)
-}
-
-///|
 pub fn LineTokens::find_token_index_at_offset(
   self : LineTokens,
   offset : Int,
 ) -> Int {
   LineTokens::find_index_in_tokens_array(self.tokens, offset)
-}
-
-///|
-impl IViewLineTokens for LineTokens with fn find_token_index_at_offset(
-  self,
-  offset,
-) {
-  LineTokens::find_token_index_at_offset(self, offset)
 }
 
 ///|
@@ -427,11 +351,6 @@ pub fn LineTokens::get_token_text(
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn get_token_text(self, token_index) {
-  LineTokens::get_token_text(self, token_index)
-}
-
-///|
 pub fn LineTokens::for_each(
   self : LineTokens,
   callback : (Int) -> Unit,
@@ -442,20 +361,15 @@ pub fn LineTokens::for_each(
 }
 
 ///|
-impl IViewLineTokens for LineTokens with fn for_each(self, callback) {
-  LineTokens::for_each(self, callback)
-}
-
-///|
 /// A read-only window onto a `LineTokens`, offset by `delta_offset`. Mirrors
 /// Monaco's `SliceLineTokens`.
-priv struct SliceLineTokens {
-  source : LineTokens
-  start_offset : Int
-  end_offset : Int
-  delta_offset : Int
-  first_token_index : Int
-  tokens_count : Int
+pub struct SliceLineTokens {
+  priv source : LineTokens
+  priv start_offset : Int
+  priv end_offset : Int
+  priv delta_offset : Int
+  priv first_token_index : Int
+  priv tokens_count : Int
 }
 
 ///|
@@ -485,49 +399,52 @@ fn SliceLineTokens::new(
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_count(self) {
+fn SliceLineTokens::get_count(self : SliceLineTokens) -> Int {
   self.tokens_count
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_line_content(self) {
+fn SliceLineTokens::get_line_content(self : SliceLineTokens) -> String {
   substr(self.source.get_line_content(), self.start_offset, self.end_offset)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_metadata(self, token_index) {
+fn SliceLineTokens::get_metadata(
+  self : SliceLineTokens,
+  token_index : Int,
+) -> UInt {
   self.source.get_metadata(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_language_id(
-  self,
-  token_index,
-) {
+fn SliceLineTokens::get_language_id(
+  self : SliceLineTokens,
+  token_index : Int,
+) -> String {
   self.source.get_language_id(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_standard_token_type(
-  self,
-  token_index,
-) {
+fn SliceLineTokens::get_standard_token_type(
+  self : SliceLineTokens,
+  token_index : Int,
+) -> Int {
   self.source.get_standard_token_type(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_foreground(
-  self,
-  token_index,
-) {
+fn SliceLineTokens::get_foreground(
+  self : SliceLineTokens,
+  token_index : Int,
+) -> Int {
   self.source.get_foreground(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_end_offset(
-  self,
-  token_index,
-) {
+fn SliceLineTokens::get_end_offset(
+  self : SliceLineTokens,
+  token_index : Int,
+) -> Int {
   let token_end_offset = self.source.get_end_offset(
     self.first_token_index + token_index,
   )
@@ -535,35 +452,35 @@ impl IViewLineTokens for SliceLineTokens with fn get_end_offset(
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_class_name(
-  self,
-  token_index,
-) {
+fn SliceLineTokens::get_class_name(
+  self : SliceLineTokens,
+  token_index : Int,
+) -> String {
   self.source.get_class_name(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_inline_style(
-  self,
-  token_index,
-  color_map,
-) {
+fn SliceLineTokens::get_inline_style(
+  self : SliceLineTokens,
+  token_index : Int,
+  color_map : Array[String],
+) -> String {
   self.source.get_inline_style(self.first_token_index + token_index, color_map)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_presentation(
-  self,
-  token_index,
-) {
+fn SliceLineTokens::get_presentation(
+  self : SliceLineTokens,
+  token_index : Int,
+) -> TokenPresentation {
   self.source.get_presentation(self.first_token_index + token_index)
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn find_token_index_at_offset(
-  self,
-  offset,
-) {
+fn SliceLineTokens::find_token_index_at_offset(
+  self : SliceLineTokens,
+  offset : Int,
+) -> Int {
   self.source.find_token_index_at_offset(
     offset + self.start_offset - self.delta_offset,
   ) -
@@ -571,10 +488,10 @@ impl IViewLineTokens for SliceLineTokens with fn find_token_index_at_offset(
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn get_token_text(
-  self,
-  token_index,
-) {
+fn SliceLineTokens::get_token_text(
+  self : SliceLineTokens,
+  token_index : Int,
+) -> String {
   let adjusted_token_index = self.first_token_index + token_index
   let token_start_offset = self.source.get_start_offset(adjusted_token_index)
   let token_end_offset = self.source.get_end_offset(adjusted_token_index)
@@ -589,9 +506,150 @@ impl IViewLineTokens for SliceLineTokens with fn get_token_text(
 }
 
 ///|
-impl IViewLineTokens for SliceLineTokens with fn for_each(self, callback) {
+fn SliceLineTokens::for_each(
+  self : SliceLineTokens,
+  callback : (Int) -> Unit,
+) -> Unit {
   for token_index in 0..<self.get_count() {
     callback(token_index)
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_count(self : ViewLineTokens) -> Int {
+  match self {
+    Full(tokens) => tokens.get_count()
+    Slice(tokens) => tokens.get_count()
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_line_content(self : ViewLineTokens) -> String {
+  match self {
+    Full(tokens) => tokens.get_line_content()
+    Slice(tokens) => tokens.get_line_content()
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_metadata(
+  self : ViewLineTokens,
+  token_index : Int,
+) -> UInt {
+  match self {
+    Full(tokens) => tokens.get_metadata(token_index)
+    Slice(tokens) => tokens.get_metadata(token_index)
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_language_id(
+  self : ViewLineTokens,
+  token_index : Int,
+) -> String {
+  match self {
+    Full(tokens) => tokens.get_language_id(token_index)
+    Slice(tokens) => tokens.get_language_id(token_index)
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_standard_token_type(
+  self : ViewLineTokens,
+  token_index : Int,
+) -> Int {
+  match self {
+    Full(tokens) => tokens.get_standard_token_type(token_index)
+    Slice(tokens) => tokens.get_standard_token_type(token_index)
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_foreground(
+  self : ViewLineTokens,
+  token_index : Int,
+) -> Int {
+  match self {
+    Full(tokens) => tokens.get_foreground(token_index)
+    Slice(tokens) => tokens.get_foreground(token_index)
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_end_offset(
+  self : ViewLineTokens,
+  token_index : Int,
+) -> Int {
+  match self {
+    Full(tokens) => tokens.get_end_offset(token_index)
+    Slice(tokens) => tokens.get_end_offset(token_index)
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_class_name(
+  self : ViewLineTokens,
+  token_index : Int,
+) -> String {
+  match self {
+    Full(tokens) => tokens.get_class_name(token_index)
+    Slice(tokens) => tokens.get_class_name(token_index)
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_inline_style(
+  self : ViewLineTokens,
+  token_index : Int,
+  color_map : Array[String],
+) -> String {
+  match self {
+    Full(tokens) => tokens.get_inline_style(token_index, color_map)
+    Slice(tokens) => tokens.get_inline_style(token_index, color_map)
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_presentation(
+  self : ViewLineTokens,
+  token_index : Int,
+) -> TokenPresentation {
+  match self {
+    Full(tokens) => tokens.get_presentation(token_index)
+    Slice(tokens) => tokens.get_presentation(token_index)
+  }
+}
+
+///|
+pub fn ViewLineTokens::find_token_index_at_offset(
+  self : ViewLineTokens,
+  offset : Int,
+) -> Int {
+  match self {
+    Full(tokens) => tokens.find_token_index_at_offset(offset)
+    Slice(tokens) => tokens.find_token_index_at_offset(offset)
+  }
+}
+
+///|
+pub fn ViewLineTokens::get_token_text(
+  self : ViewLineTokens,
+  token_index : Int,
+) -> String {
+  match self {
+    Full(tokens) => tokens.get_token_text(token_index)
+    Slice(tokens) => tokens.get_token_text(token_index)
+  }
+}
+
+///|
+pub fn ViewLineTokens::for_each(
+  self : ViewLineTokens,
+  callback : (Int) -> Unit,
+) -> Unit {
+  match self {
+    Full(tokens) => tokens.for_each(callback)
+    Slice(tokens) => tokens.for_each(callback)
   }
 }
 

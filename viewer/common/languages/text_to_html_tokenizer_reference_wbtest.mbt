@@ -17,9 +17,9 @@ fn make_meta(foreground : Int, font_style : Int) -> UInt {
 }
 
 ///|
-/// Inflated `IViewLineTokens` over `text` with explicit end-offset/metadata
+/// Inflated `ViewLineTokens` over `text` with explicit end-offset/metadata
 /// tokens (mirrors the suite's `TestLineTokens`).
-fn view_tokens(text : String, tokens : Array[UInt]) -> &@tokens.IViewLineTokens {
+fn view_tokens(text : String, tokens : Array[UInt]) -> @tokens.ViewLineTokens {
   @tokens.LineTokens::new(tokens, text, @services.LanguageIdCodec::new()).inflate()
 }
 

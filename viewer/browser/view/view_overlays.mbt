@@ -28,6 +28,58 @@ priv trait DynamicViewOverlay {
 }
 
 ///|
+/// The complete set of overlays owned by `View`. Monaco's class-based array
+/// is closed at this construction boundary, so retain the concrete variant
+/// instead of erasing every overlay into a trait object.
+priv enum DynamicViewOverlayHandle {
+  CurrentLine(@current_line_highlight.CurrentLineHighlightOverlay)
+  Selections(@selections.SelectionsOverlay)
+  Decorations(@decorations.DecorationsOverlay)
+  CurrentLineMargin(@margin.CurrentLineMarginHighlightOverlay)
+  LinesDecorations(@margin.LinesDecorationsOverlay)
+  LineNumbers(@margin.LineNumbersOverlay)
+}
+
+///|
+impl DynamicViewOverlay for DynamicViewOverlayHandle with fn prepare_render(
+  self,
+  context,
+) {
+  match self {
+    CurrentLine(overlay) => DynamicViewOverlay::prepare_render(overlay, context)
+    Selections(overlay) => DynamicViewOverlay::prepare_render(overlay, context)
+    Decorations(overlay) => DynamicViewOverlay::prepare_render(overlay, context)
+    CurrentLineMargin(overlay) =>
+      DynamicViewOverlay::prepare_render(overlay, context)
+    LinesDecorations(overlay) =>
+      DynamicViewOverlay::prepare_render(overlay, context)
+    LineNumbers(overlay) => DynamicViewOverlay::prepare_render(overlay, context)
+  }
+}
+
+///|
+impl DynamicViewOverlay for DynamicViewOverlayHandle with fn render(
+  self,
+  start_line_number,
+  line_number,
+) {
+  match self {
+    CurrentLine(overlay) =>
+      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+    Selections(overlay) =>
+      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+    Decorations(overlay) =>
+      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+    CurrentLineMargin(overlay) =>
+      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+    LinesDecorations(overlay) =>
+      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+    LineNumbers(overlay) =>
+      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+  }
+}
+
+///|
 /// The shared `render(startLineNumber, lineNumber)` slice every Monaco
 /// overlay implements over its `_renderResult`.
 fn render_result_slice(
@@ -48,7 +100,7 @@ fn render_result_slice(
 /// overlays' output for that line concatenated in registration order.
 pub struct ViewOverlays {
   dom_node : @scrollbar.CachedDomNode
-  priv dynamic_overlays : Array[&DynamicViewOverlay]
+  priv dynamic_overlays : Array[DynamicViewOverlayHandle]
   priv mut lines : Array[ViewOverlayLine]
   priv mut window : @view_layout.LineWindow
   // `ViewOverlays._isFocused` (`viewOverlays.ts:24,76-79,128`): focus is
@@ -60,14 +112,14 @@ pub struct ViewOverlays {
 /// Complete Monaco `ViewOverlayLine` retained row
 /// (`viewOverlays.ts:133-197`).
 priv struct ViewOverlayLine {
-  dynamic_overlays : Array[&DynamicViewOverlay]
+  dynamic_overlays : Array[DynamicViewOverlayHandle]
   mut dom_node : @scrollbar.CachedDomNode?
   mut rendered_content : String?
 }
 
 ///|
 fn ViewOverlayLine::new(
-  dynamic_overlays : Array[&DynamicViewOverlay],
+  dynamic_overlays : Array[DynamicViewOverlayHandle],
 ) -> ViewOverlayLine {
   { dynamic_overlays, dom_node: None, rendered_content: None }
 }
@@ -168,7 +220,7 @@ fn ViewOverlays::new(
 /// concatenation order (Monaco's `view.ts:218-231` z-order).
 fn ViewOverlays::add_dynamic_overlay(
   self : ViewOverlays,
-  overlay : &DynamicViewOverlay,
+  overlay : DynamicViewOverlayHandle,
 ) -> Unit {
   self.dynamic_overlays.push(overlay)
 }
@@ -283,9 +335,9 @@ pub fn ContentViewOverlays::new(
   let current_line = @current_line_highlight.CurrentLineHighlightOverlay::new()
   let selections = @selections.SelectionsOverlay::new()
   let decorations = @decorations.DecorationsOverlay::new()
-  overlays.add_dynamic_overlay(current_line)
-  overlays.add_dynamic_overlay(selections)
-  overlays.add_dynamic_overlay(decorations)
+  overlays.add_dynamic_overlay(CurrentLine(current_line))
+  overlays.add_dynamic_overlay(Selections(selections))
+  overlays.add_dynamic_overlay(Decorations(decorations))
   {
     overlays,
     current_line,
@@ -374,9 +426,9 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
   let current_line_margin = @margin.CurrentLineMarginHighlightOverlay::new()
   let lines_decorations = @margin.LinesDecorationsOverlay::new()
   let line_numbers = @margin.LineNumbersOverlay::new()
-  overlays.add_dynamic_overlay(current_line_margin)
-  overlays.add_dynamic_overlay(lines_decorations)
-  overlays.add_dynamic_overlay(line_numbers)
+  overlays.add_dynamic_overlay(CurrentLineMargin(current_line_margin))
+  overlays.add_dynamic_overlay(LinesDecorations(lines_decorations))
+  overlays.add_dynamic_overlay(LineNumbers(line_numbers))
   dom_node.append_child(overlays.dom_node.element().as_node())
   {
     dom_node,

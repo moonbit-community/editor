@@ -226,7 +226,7 @@ pub(all) struct ViewLineData {
   min_column : Int
   max_column : Int
   start_visible_column : Int
-  tokens : &@moonbit-community/editor/viewer/common/tokens.IViewLineTokens
+  tokens : @moonbit-community/editor/viewer/common/tokens.ViewLineTokens
   inline_decorations : Array[@view_layout.InlineDecoration]
 }
 

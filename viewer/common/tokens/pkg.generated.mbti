@@ -120,11 +120,15 @@ pub fn LineTokens::get_standard_token_type(Self, Int) -> Int
 pub fn LineTokens::get_start_offset(Self, Int) -> Int
 pub fn LineTokens::get_text_length(Self) -> Int
 pub fn LineTokens::get_token_text(Self, Int) -> String
-pub fn LineTokens::inflate(Self) -> &IViewLineTokens
+pub fn LineTokens::inflate(Self) -> ViewLineTokens
 pub fn LineTokens::new(Array[UInt], String, @services.LanguageIdCodec) -> Self
-pub fn LineTokens::slice_and_inflate(Self, Int, Int, Int) -> &IViewLineTokens
-pub fn LineTokens::slice_zero_copy(Self, @common.OffsetRange) -> &IViewLineTokens
+pub fn LineTokens::slice_and_inflate(Self, Int, Int, Int) -> ViewLineTokens
+pub fn LineTokens::slice_zero_copy(Self, @common.OffsetRange) -> ViewLineTokens
 pub fn LineTokens::with_inserted(Self, Array[InsertedToken]) -> Self
+
+pub struct SliceLineTokens {
+  // private fields
+}
 
 type SyntacticLineTokens
 
@@ -147,22 +151,25 @@ pub struct TokenPresentation {
   strikethrough : Bool
 }
 
+pub(all) enum ViewLineTokens {
+  Full(LineTokens)
+  Slice(SliceLineTokens)
+}
+pub fn ViewLineTokens::find_token_index_at_offset(Self, Int) -> Int
+pub fn ViewLineTokens::for_each(Self, (Int) -> Unit) -> Unit
+pub fn ViewLineTokens::get_class_name(Self, Int) -> String
+pub fn ViewLineTokens::get_count(Self) -> Int
+pub fn ViewLineTokens::get_end_offset(Self, Int) -> Int
+pub fn ViewLineTokens::get_foreground(Self, Int) -> Int
+pub fn ViewLineTokens::get_inline_style(Self, Int, Array[String]) -> String
+pub fn ViewLineTokens::get_language_id(Self, Int) -> String
+pub fn ViewLineTokens::get_line_content(Self) -> String
+pub fn ViewLineTokens::get_metadata(Self, Int) -> UInt
+pub fn ViewLineTokens::get_presentation(Self, Int) -> TokenPresentation
+pub fn ViewLineTokens::get_standard_token_type(Self, Int) -> Int
+pub fn ViewLineTokens::get_token_text(Self, Int) -> String
+
 // Type aliases
 
 // Traits
-pub trait IViewLineTokens {
-  fn get_count(Self) -> Int
-  fn get_standard_token_type(Self, Int) -> Int
-  fn get_foreground(Self, Int) -> Int
-  fn get_end_offset(Self, Int) -> Int
-  fn get_class_name(Self, Int) -> String
-  fn get_inline_style(Self, Int, Array[String]) -> String
-  fn get_presentation(Self, Int) -> TokenPresentation
-  fn find_token_index_at_offset(Self, Int) -> Int
-  fn get_line_content(Self) -> String
-  fn get_metadata(Self, Int) -> UInt
-  fn get_language_id(Self, Int) -> String
-  fn get_token_text(Self, Int) -> String
-  fn for_each(Self, (Int) -> Unit) -> Unit
-}
 

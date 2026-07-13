@@ -16,7 +16,7 @@ pub fn default_languages() -> Languages
 
 pub let languages : Languages
 
-pub fn tokenize_line_to_html(String, &@tokens.IViewLineTokens, Array[String], Int, Int, Int, Bool) -> String
+pub fn tokenize_line_to_html(String, @tokens.ViewLineTokens, Array[String], Int, Int, Int, Bool) -> String
 
 pub fn tokenize_to_string(String, @services.LanguageIdCodec, (String) -> Array[UInt]) -> String
 

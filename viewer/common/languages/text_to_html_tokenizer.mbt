@@ -1,7 +1,7 @@
 ///| Faithful port of vscode's `common/languages/textToHtmlTokenizer.ts` (pinned
 /// `vscode/` submodule, commit 294fb350): the two pure HTML emitters
 /// `tokenizeLineToHTML` and `_tokenizeToString`, consuming the ported
-/// `@tokens.LineTokens`/`IViewLineTokens` (as in Monaco, where this file
+/// `@tokens.LineTokens`/`ViewLineTokens` (as in Monaco, where this file
 /// imports `tokens/lineTokens`).
 ///
 /// `_tokenizeToString`'s `IReducedTokenizationSupport` is adapted to the viewer
@@ -43,7 +43,7 @@ fn split_lines(text : String) -> Array[String] {
 /// `tokenizeLineToHTML`.
 pub fn tokenize_line_to_html(
   text : String,
-  view_line_tokens : &@tokens.IViewLineTokens,
+  view_line_tokens : @tokens.ViewLineTokens,
   color_map : Array[String],
   start_offset : Int,
   end_offset : Int,

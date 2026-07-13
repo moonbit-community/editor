@@ -15,7 +15,7 @@ pub(all) struct ViewLineData {
   /// The visible column at the start of the line (after the fauxIndent).
   start_visible_column : Int
   /// The tokens at this view line.
-  tokens : &@tokens.IViewLineTokens
+  tokens : @tokens.ViewLineTokens
   /// Additional inline decorations for this line (the injected-text classes,
   /// Monaco's `SingleLineInlineDecoration[]`).
   inline_decorations : Array[@view_layout.InlineDecoration]

@@ -89,9 +89,9 @@ pub fn AgentFeedbackService::new() -> AgentFeedbackService {
     did_add_feedback: @base_common.Emitter::new(),
     did_add_reply: @base_common.Emitter::new(),
     did_submit_feedback: @base_common.Emitter::new(),
-    items_by_resource: {},
-    navigation_anchor_by_resource: {},
-    enabled_resources: {},
+    items_by_resource: Map([]),
+    navigation_anchor_by_resource: Map([]),
+    enabled_resources: Map([]),
     next_feedback_handle: 1,
   }
 }

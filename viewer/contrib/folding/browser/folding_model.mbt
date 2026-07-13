@@ -89,7 +89,7 @@ pub fn FoldingModel::toggle_collapse_state(
   }
   let toggled_regions = toggled_regions.copy()
   toggled_regions.sort_by((r1, r2) => r1.region_index() - r2.region_index())
-  let processed : Map[String, Bool] = {}
+  let processed : Map[String, Bool] = Map([])
   self.decoration_provider.change_decorations(accessor => {
     // index from [0 ... this.regions.length]
     let k : Ref[Int] = { val: 0 }

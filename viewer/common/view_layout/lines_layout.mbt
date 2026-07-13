@@ -347,11 +347,11 @@ fn LinesLayout::commit_pending_changes(
   }
 
   // simply rebuild the entire datastructure
-  let to_remove : Map[String, Bool] = {}
+  let to_remove : Map[String, Bool] = Map([])
   for remove in removes {
     to_remove[remove.id] = true
   }
-  let to_change : Map[String, PendingChange] = {}
+  let to_change : Map[String, PendingChange] = Map([])
   for change in changes {
     to_change[change.id] = change
   }
@@ -381,7 +381,7 @@ fn LinesLayout::commit_pending_changes(
   // ECMAScript Array.prototype.sort is stable. Preserve the source array's
   // old-before-inserts sequence explicitly because MoonBit's backend sort is
   // not required to keep equal-key elements in their original order.
-  let original_sequence : Map[String, Int] = {}
+  let original_sequence : Map[String, Int] = Map([])
   for index, whitespace in result {
     original_sequence[whitespace.id] = index
   }

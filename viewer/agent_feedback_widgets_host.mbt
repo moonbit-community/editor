@@ -342,7 +342,7 @@ fn Viewer::prune_agent_feedback_reply_drafts(self : Viewer) -> Unit {
   if wc.reply_drafts.is_empty() {
     return
   }
-  let known : Map[String, Bool] = {}
+  let known : Map[String, Bool] = Map([])
   for widget in wc.widgets {
     for comment_id in widget.comment_ids() {
       known.set(comment_id, true)

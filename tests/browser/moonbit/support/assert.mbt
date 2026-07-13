@@ -9,7 +9,7 @@ pub(all) struct BrowserTestContext {
 ///|
 /// Creates a browser test context for one suite.
 pub fn BrowserTestContext::new(suite : String) -> BrowserTestContext {
-  { suite, failures: [], metrics: {} }
+  { suite, failures: [], metrics: Map([]) }
 }
 
 ///|

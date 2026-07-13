@@ -54,7 +54,7 @@ fn persist_feedback_items(
 
 ///|
 fn feedback_item_to_json(item : @agent_feedback.AgentFeedback) -> Json {
-  let fields : Map[String, Json] = {}
+  let fields : Map[String, Json] = Map([])
   fields["text"] = item.text.to_json()
   fields["range"] = Json::array([
     item.range.start_line_number.to_json(),

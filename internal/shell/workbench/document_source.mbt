@@ -14,12 +14,12 @@ let document_provider : &@workspace.DocumentProvider = RemoteDocumentProvider::{
 ///|
 /// Active document watches keyed by URI string; the push branch of the
 /// protocol message handler routes document packets here.
-let watch_listeners : Map[String, (@workspace.DocumentChange) -> Unit] = {}
+let watch_listeners : Map[String, (@workspace.DocumentChange) -> Unit] = Map([])
 
 ///|
 /// Watch request ids back to their URI, so `RemoteError` pushes (which
 /// carry only a request id) can reach the watched document's listener.
-let watch_request_uris : Map[String, String] = {}
+let watch_request_uris : Map[String, String] = Map([])
 
 ///|
 /// The active source lifecycle belongs to the workbench, not the viewer.

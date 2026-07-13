@@ -52,11 +52,11 @@ pub fn MarkerDecorationsService::new(
 ) -> MarkerDecorationsService {
   let service : MarkerDecorationsService = {
     markers,
-    model_registrations: {},
-    model_ids_by_uri: {},
-    blocked_model_ids: {},
-    legacy_leases: {},
-    suppressed_ranges: {},
+    model_registrations: Map([]),
+    model_ids_by_uri: Map([]),
+    blocked_model_ids: Map([]),
+    legacy_leases: Map([]),
+    suppressed_ranges: Map([]),
     did_change_marker_decorations: @base_common.Emitter::new(),
     subscription: None,
     disposed: false,
@@ -314,7 +314,7 @@ fn MarkerDecorationsService::remove_transient_markers(
 ) -> Unit {
   let scheme = model.uri.scheme
   if scheme == "inmemory" || scheme == "internal" || scheme == "vscode" {
-    let owners : Map[String, Unit] = {}
+    let owners : Map[String, Unit] = Map([])
     for marker in self.markers.read(MarkerReadOptions::new(resource=model.uri)) {
       owners.set(marker.owner, ())
     }

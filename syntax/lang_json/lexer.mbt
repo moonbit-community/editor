@@ -65,18 +65,19 @@ priv enum StepOp {
 
 ///|
 fn normal_step(view : StringView) -> (StepOp, StringView) {
-  lexmatch view with longest {
-    ("[ \t]+", rest) => (Blank, rest)
-    ("//.*", rest) => (Emit(Comment), rest)
-    ("/\*", rest) => (EnterComment, rest)
+  lexscan view with longest {
+    (re"^[ \t]+", after=rest) => (Blank, rest)
+    (re"^//.*", after=rest) => (Emit(Comment), rest)
+    (re"^/\*", after=rest) => (EnterComment, rest)
     // A terminated string is a property name when the next significant
     // character is a colon — the Monarch lookahead idiom done by peeking
     // the rest of the line instead.
-    ("\"(?:\\.|[^\"\\])*\"", rest) =>
+    (re"^\"(?:\\.|[^\"\\])*\"", after=rest) =>
       (Emit(if colon_follows(rest) { Attribute } else { String }), rest)
-    ("\"(?:\\.|[^\"\\])*", rest) => (Emit(String), rest)
-    ("-?[0-9]+(?:\.[0-9]+)?(?:[eE][+\-]?[0-9]+)?", rest) => (Emit(Number), rest)
-    ("[a-zA-Z_][a-zA-Z0-9_]*" as word, rest) =>
+    (re"^\"(?:\\.|[^\"\\])*", after=rest) => (Emit(String), rest)
+    (re"^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+\-]?[0-9]+)?", after=rest) =>
+      (Emit(Number), rest)
+    (re"^[a-zA-Z_][a-zA-Z0-9_]*" as word, after=rest) =>
       (
         Emit(
           match word {
@@ -86,8 +87,8 @@ fn normal_step(view : StringView) -> (StepOp, StringView) {
         ),
         rest,
       )
-    ("[{}\[\],:]", rest) => (Emit(Delimiter), rest)
-    (".", rest) => (Emit(Punctuation), rest)
+    (re"^[{}\[\],:]", after=rest) => (Emit(Delimiter), rest)
+    (re"^.", after=rest) => (Emit(Punctuation), rest)
     // Unreachable while `.` covers the full charset (it includes lone
     // surrogates); consumes the rest defensively so the driver loop can
     // never stall on zero progress.
@@ -97,10 +98,10 @@ fn normal_step(view : StringView) -> (StepOp, StringView) {
 
 ///|
 fn comment_step(view : StringView) -> (StepOp, StringView) {
-  lexmatch view with longest {
-    ("\*/", rest) => (LeaveComment, rest)
-    ("[^*]+", rest) => (Emit(Comment), rest)
-    ("\*", rest) => (Emit(Comment), rest)
+  lexscan view with longest {
+    (re"^\*/", after=rest) => (LeaveComment, rest)
+    (re"^[^*]+", after=rest) => (Emit(Comment), rest)
+    (re"^\*", after=rest) => (Emit(Comment), rest)
     _ => (Blank, ""[:])
   }
 }

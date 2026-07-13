@@ -19,7 +19,7 @@ pub struct FontMeasurementsImpl {
 /// Monaco's `FontMeasurements` singleton.
 let instance : FontMeasurementsImpl = {
   cache_keys: [],
-  cache: {},
+  cache: Map([]),
   evict_untrusted_readings_pending: false,
   did_change: @base_common.Emitter::new(),
   read_widths: read_char_widths,
@@ -35,7 +35,7 @@ fn new_font_measurements_for_test(
 ) -> FontMeasurementsImpl {
   {
     cache_keys: [],
-    cache: {},
+    cache: Map([]),
     evict_untrusted_readings_pending: false,
     did_change: @base_common.Emitter::new(),
     read_widths,

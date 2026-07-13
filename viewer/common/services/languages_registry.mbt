@@ -28,7 +28,7 @@ pub struct LanguageIdCodec {
 pub fn LanguageIdCodec::new() -> LanguageIdCodec {
   let codec = {
     language_id_to_language: [],
-    language_to_language_id: {},
+    language_to_language_id: Map([]),
     next_language_id: 0,
   }
   for language in builtin_language_ids {

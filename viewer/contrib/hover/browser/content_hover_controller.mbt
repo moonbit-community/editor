@@ -74,7 +74,7 @@ pub(all) struct ContentHoverController {
 /// WeakMap/`getContribution` analog from `docs/architecture.md`
 /// ("Controller access"). Populated by the hover contribution's ctor,
 /// cleared by its dispose.
-let instances : Map[String, ContentHoverController] = {}
+let instances : Map[String, ContentHoverController] = Map([])
 
 ///|
 /// Constructs the controller for an editor and registers it in the instance

@@ -219,7 +219,7 @@ pub fn[O] InlineModelDecorationsComputer::new(
   model : &InlineDecorationsModel,
   coordinates_converter : &CoordinatesConverter,
 ) -> InlineModelDecorationsComputer[O] {
-  { context, model, coordinates_converter, decorations_cache: {} }
+  { context, model, coordinates_converter, decorations_cache: Map([]) }
 }
 
 ///|
@@ -354,7 +354,7 @@ pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_decorati
 pub fn[O] InlineModelDecorationsComputer::reset(
   self : InlineModelDecorationsComputer[O],
 ) -> Unit {
-  self.decorations_cache = {}
+  self.decorations_cache = Map([])
 }
 
 ///|

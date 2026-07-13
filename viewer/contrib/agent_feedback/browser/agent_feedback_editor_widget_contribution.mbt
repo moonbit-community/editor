@@ -20,7 +20,8 @@ pub(all) struct AgentFeedbackEditorWidgetContribution {
 
 ///|
 /// Per-editor instances keyed by `viewer.get_id()`.
-let widget_instances : Map[String, AgentFeedbackEditorWidgetContribution] = {}
+let widget_instances : Map[String, AgentFeedbackEditorWidgetContribution] = Map([],
+)
 
 ///|
 pub fn AgentFeedbackEditorWidgetContribution::attach(
@@ -28,7 +29,7 @@ pub fn AgentFeedbackEditorWidgetContribution::attach(
 ) -> AgentFeedbackEditorWidgetContribution {
   let controller : AgentFeedbackEditorWidgetContribution = {
     widgets: [],
-    reply_drafts: {},
+    reply_drafts: Map([]),
     widget_id_pool: 1,
     highlight_decoration_ids: [],
   }

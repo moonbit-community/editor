@@ -62,7 +62,7 @@ pub struct QuickDiffService {
 
 ///|
 pub fn QuickDiffService::new() -> QuickDiffService {
-  { originals: {}, did_change_original: @base_common.Emitter::new() }
+  { originals: Map([]), did_change_original: @base_common.Emitter::new() }
 }
 
 ///|

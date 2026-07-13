@@ -187,7 +187,7 @@ impl @workspace.WorkspaceTreeProvider for MemoryTreeProvider with fn resolve(
 
 ///|
 async test "in-memory provider resolves one level per request" {
-  let directories : Map[String, Array[@workspace.WorkspaceStat]] = {}
+  let directories : Map[String, Array[@workspace.WorkspaceStat]] = Map([])
   directories[root_raw] = [
     file_stat(root_raw + "/moon.mod", "moon.mod"),
     dir_stat(root_raw + "/src", "src"),
@@ -198,7 +198,7 @@ async test "in-memory provider resolves one level per request" {
   let provider : MemoryTreeProvider = {
     root_uri: uri(root_raw),
     directories,
-    resolve_counts: {},
+    resolve_counts: Map([]),
   }
   match provider.resolve(provider.root()) {
     WorkspaceResolved(stat) => {

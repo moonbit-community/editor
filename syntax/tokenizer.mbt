@@ -123,7 +123,7 @@ pub struct TokenizationRegistry {
 /// `vscode/src/vs/editor/common/tokenizationRegistry.ts:20-24`.
 pub fn TokenizationRegistry::new() -> TokenizationRegistry {
   {
-    tokenizers: {},
+    tokenizers: Map([]),
     next_id: Ref(0),
     did_change: @base_common.Emitter::new(),
     color_map: None,

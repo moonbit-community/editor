@@ -19,7 +19,7 @@ priv struct HiddenAreasModel {
 
 ///|
 fn HiddenAreasModel::new() -> HiddenAreasModel {
-  { hidden_areas: {}, should_recompute: false, ranges: [] }
+  { hidden_areas: Map([]), should_recompute: false, ranges: [] }
 }
 
 ///|

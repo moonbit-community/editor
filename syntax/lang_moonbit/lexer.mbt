@@ -114,38 +114,38 @@ priv enum StepOp {
 /// arms need the current mode because `}` closes an interpolation in 'i'
 /// but is a plain delimiter elsewhere.
 fn normal_step(view : StringView, top : Char) -> (StepOp, StringView) {
-  lexmatch view with longest {
-    ("[ \t]+", rest) => (Blank, rest)
-    ("///.*", rest) => (Emit(CommentDoc), rest)
-    ("//.*", rest) => (Emit(Comment), rest)
-    ("#\|.*", rest) => (Emit(String), rest)
-    ("\$\|", rest) => (Push(String, 'm'), rest)
-    ("#[a-zA-Z_][a-zA-Z0-9_.]*", rest) => (Emit(Attribute), rest)
-    ("b?\"", rest) => (Push(String, 's'), rest)
-    ("b?'(?:\\.|[^'\\])+'", rest) => (Emit(String), rest)
-    ("0[xX][0-9a-fA-F_]+[UL]*", rest) => (Emit(Number), rest)
-    ("0[oO][0-7_]+[UL]*", rest) => (Emit(Number), rest)
-    ("0[bB][01_]+[UL]*", rest) => (Emit(Number), rest)
-    ("[0-9][0-9_]*(?:\.[0-9_]+)?(?:[eE][+\-]?[0-9]+)?[ULN]*", rest) =>
+  lexscan view with longest {
+    (re"^[ \t]+", after=rest) => (Blank, rest)
+    (re"^///.*", after=rest) => (Emit(CommentDoc), rest)
+    (re"^//.*", after=rest) => (Emit(Comment), rest)
+    (re"^#\|.*", after=rest) => (Emit(String), rest)
+    (re"^\$\|", after=rest) => (Push(String, 'm'), rest)
+    (re"^#[a-zA-Z_][a-zA-Z0-9_.]*", after=rest) => (Emit(Attribute), rest)
+    (re"^b?\"", after=rest) => (Push(String, 's'), rest)
+    (re"^b?'(?:\\.|[^'\\])+'", after=rest) => (Emit(String), rest)
+    (re"^0[xX][0-9a-fA-F_]+[UL]*", after=rest) => (Emit(Number), rest)
+    (re"^0[oO][0-7_]+[UL]*", after=rest) => (Emit(Number), rest)
+    (re"^0[bB][01_]+[UL]*", after=rest) => (Emit(Number), rest)
+    (re"^[0-9][0-9_]*(?:\.[0-9_]+)?(?:[eE][+\-]?[0-9]+)?[ULN]*", after=rest) =>
       (Emit(Number), rest)
-    ("@[a-zA-Z_][a-zA-Z0-9_/]*", rest) => (Emit(Type), rest)
-    ("[a-zA-Z_][a-zA-Z0-9_]*" as word, rest) =>
+    (re"^@[a-zA-Z_][a-zA-Z0-9_/]*", after=rest) => (Emit(Type), rest)
+    (re"^[a-zA-Z_][a-zA-Z0-9_]*" as word, after=rest) =>
       (Emit(classify_word(word)), rest)
-    ("[+\-*/%=<>!&^~?\|]+", rest) => (Emit(Operator), rest)
-    ("[()\[\],;:.]", rest) => (Emit(Delimiter), rest)
-    ("[{]", rest) =>
+    (re"^[+\-*/%=<>!&^~?\|]+", after=rest) => (Emit(Operator), rest)
+    (re"^[()\[\],;:.]", after=rest) => (Emit(Delimiter), rest)
+    (re"^[{]", after=rest) =>
       if top == 'i' || top == 'b' {
         (Push(Delimiter, 'b'), rest)
       } else {
         (Emit(Delimiter), rest)
       }
-    ("[}]", rest) =>
+    (re"^[}]", after=rest) =>
       match top {
         'i' => (Pop(StringEscape), rest)
         'b' => (Pop(Delimiter), rest)
         _ => (Emit(Delimiter), rest)
       }
-    (".", rest) => (Emit(Punctuation), rest)
+    (re"^.", after=rest) => (Emit(Punctuation), rest)
     // Unreachable while `.` covers the full charset (it includes lone
     // surrogates); consumes the rest defensively so the driver loop can
     // never stall on zero progress.
@@ -158,13 +158,13 @@ fn normal_step(view : StringView, top : Char) -> (StepOp, StringView) {
 /// and the closing quote. An unterminated string falls to the `.` arm
 /// one character at a time and the line-end reset recovers the mode.
 fn string_step(view : StringView) -> (StepOp, StringView) {
-  lexmatch view with longest {
-    ("\\u[{][0-9a-fA-F]+[}]", rest) => (Emit(StringEscape), rest)
-    ("\\[{]", rest) => (Push(StringEscape, 'i'), rest)
-    ("\\.", rest) => (Emit(StringEscape), rest)
-    ("\"", rest) => (Pop(String), rest)
-    ("[^\"\\]+", rest) => (Emit(String), rest)
-    (".", rest) => (Emit(String), rest)
+  lexscan view with longest {
+    (re"^\\u[{][0-9a-fA-F]+[}]", after=rest) => (Emit(StringEscape), rest)
+    (re"^\\[{]", after=rest) => (Push(StringEscape, 'i'), rest)
+    (re"^\\.", after=rest) => (Emit(StringEscape), rest)
+    (re"^\"", after=rest) => (Pop(String), rest)
+    (re"^[^\"\\]+", after=rest) => (Emit(String), rest)
+    (re"^.", after=rest) => (Emit(String), rest)
     _ => (Blank, ""[:])
   }
 }
@@ -174,11 +174,11 @@ fn string_step(view : StringView) -> (StepOp, StringView) {
 /// escape and interpolation forms as `"` strings, terminated only by the
 /// line end.
 fn dollar_step(view : StringView) -> (StepOp, StringView) {
-  lexmatch view with longest {
-    ("\\[{]", rest) => (Push(StringEscape, 'i'), rest)
-    ("\\.", rest) => (Emit(StringEscape), rest)
-    ("[^\\]+", rest) => (Emit(String), rest)
-    (".", rest) => (Emit(String), rest)
+  lexscan view with longest {
+    (re"^\\[{]", after=rest) => (Push(StringEscape, 'i'), rest)
+    (re"^\\.", after=rest) => (Emit(StringEscape), rest)
+    (re"^[^\\]+", after=rest) => (Emit(String), rest)
+    (re"^.", after=rest) => (Emit(String), rest)
     _ => (Blank, ""[:])
   }
 }

@@ -37,7 +37,7 @@ priv struct InlayRequestStamp {
 
 ///|
 /// Per-editor instances keyed by `viewer.get_id()`.
-let inlay_hints_instances : Map[String, InlayHintsController] = {}
+let inlay_hints_instances : Map[String, InlayHintsController] = Map([])
 
 ///|
 fn InlayHintsController::attach(editor_id : String) -> InlayHintsController {

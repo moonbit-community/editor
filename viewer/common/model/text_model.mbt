@@ -184,7 +184,7 @@ fn new_text_model(
     instance_id: next_model_instance_id(),
     delta_decoration_call_cnt: 0,
     last_decoration_id: 0,
-    decorations: {},
+    decorations: Map([]),
     decorations_tree: DecorationsTrees::new(),
     on_did_change_decorations: DidChangeDecorationsEmitter::new(),
   }
@@ -790,7 +790,7 @@ fn TextModel::set_value_from_snapshot(
   self.increase_version_id()
 
   // Destroy all my decorations
-  self.decorations = {}
+  self.decorations = Map([])
   self.decorations_tree = DecorationsTrees::new()
   self.emit_content_changed_event(
     {

@@ -1,7 +1,8 @@
 ///|
 /// In-flight protocol requests awaiting their response packet, keyed by
 /// request id. A module-level registry, like `browser_dispatch`.
-let pending_requests : Map[String, (@remote_protocol.ServerPacket) -> Unit] = {}
+let pending_requests : Map[String, (@remote_protocol.ServerPacket) -> Unit] = Map([],
+)
 
 ///|
 let request_counter : Ref[Int] = Ref(0)

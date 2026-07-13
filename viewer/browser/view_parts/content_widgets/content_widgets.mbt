@@ -162,7 +162,7 @@ pub fn ContentWidgets::new(
     dom_node,
     overflowing_content_widgets_dom_node,
     view_dom_node,
-    widgets: {},
+    widgets: Map([]),
     read_layout_info: () => (0.0, 0.0),
     model_position_to_valid_view_position: (position, _affinity) => {
       Some(position)

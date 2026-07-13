@@ -22,7 +22,7 @@ struct DoubleResourceMap {
 
 ///|
 fn DoubleResourceMap::new() -> DoubleResourceMap {
-  { by_resource: {}, by_owner: {} }
+  { by_resource: Map([]), by_owner: Map([]) }
 }
 
 ///|
@@ -37,7 +37,7 @@ fn DoubleResourceMap::set(
   let owner_map = match self.by_resource.get(key) {
     Some(m) => m
     None => {
-      let m : Map[String, Array[Marker]] = {}
+      let m : Map[String, Array[Marker]] = Map([])
       self.by_resource.set(key, m)
       m
     }
@@ -46,7 +46,7 @@ fn DoubleResourceMap::set(
   let resource_map = match self.by_owner.get(owner) {
     Some(m) => m
     None => {
-      let m : Map[String, Array[Marker]] = {}
+      let m : Map[String, Array[Marker]] = Map([])
       self.by_owner.set(owner, m)
       m
     }
@@ -167,7 +167,7 @@ fn MarkerStats::new(service : MarkerService) -> MarkerStats {
     warnings: 0,
     infos: 0,
     unknowns: 0,
-    data: {},
+    data: Map([]),
     service,
   }
   service.did_change_markers.event(resources => stats.update(resources))
@@ -244,7 +244,7 @@ fn MarkerStats::add(self : MarkerStats, op : MarkerStatistics) -> Unit {
 fn merge_changed_uris(
   all : Array[Array[@base_common.Uri]],
 ) -> Array[@base_common.Uri] {
-  let set : Map[String, @base_common.Uri] = {}
+  let set : Map[String, @base_common.Uri] = Map([])
   for array in all {
     for item in array {
       set.set(item.to_string(), item)
@@ -277,7 +277,7 @@ pub fn MarkerService::new(schedule? : (() -> Unit) -> Unit) -> MarkerService {
   let service : MarkerService = {
     did_change_markers,
     data: DoubleResourceMap::new(),
-    filtered_resources: {},
+    filtered_resources: Map([]),
     stats: None,
   }
   service.stats = Some(MarkerStats::new(service))
@@ -542,7 +542,7 @@ pub fn MarkerService::change_all(
   // add new markers
   if !data.is_empty() {
     // group by resource
-    let groups : Map[String, Array[Marker]] = {}
+    let groups : Map[String, Array[Marker]] = Map([])
     for rm in data {
       match rm.marker.to_marker(owner, rm.resource) {
         None =>

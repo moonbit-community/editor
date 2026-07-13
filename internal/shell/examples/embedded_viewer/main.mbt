@@ -60,7 +60,7 @@ fn memory_dir(path : String, name : String) -> @workspace.WorkspaceStat {
 
 ///|
 fn memory_workspace() -> MemoryWorkspace {
-  let directories : Map[String, Array[@workspace.WorkspaceStat]] = {}
+  let directories : Map[String, Array[@workspace.WorkspaceStat]] = Map([])
   directories[memory_root] = [
     memory_dir("src", "src"),
     memory_file("moon.mod", "moon.mod"),
@@ -72,7 +72,7 @@ fn memory_workspace() -> MemoryWorkspace {
   directories[memory_root + "/src/lib"] = [
     memory_file("src/lib/util.mbt", "util.mbt"),
   ]
-  let documents : Map[String, String] = {}
+  let documents : Map[String, String] = Map([])
   documents[memory_root + "/moon.mod"] = "name = \"embedded-example\"\n"
   documents[memory_root + "/src/main.mbt"] = (
     #|///|

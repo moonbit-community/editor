@@ -35,9 +35,9 @@
 pub(all) struct DefaultLinesDiffComputer {} derive(Eq, Debug)
 
 ///|
+#warnings("-unnecessary_annotation")
 pub fn DefaultLinesDiffComputer::new() -> DefaultLinesDiffComputer {
-  // The qualifier is load-bearing despite the unnecessary-annotation lint:
-  // a bare `{}` parses as an empty `Map` literal, not this struct.
+  // The qualifier is required because a bare `{}` is parsed as a `Map`.
   DefaultLinesDiffComputer::{  }
 }
 

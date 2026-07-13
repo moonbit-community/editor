@@ -279,7 +279,7 @@ pub fn ViewZones::new(
     margin_dom_node,
     dom_node_cache,
     margin_dom_node_cache,
-    zones: {},
+    zones: Map([]),
     line_height,
     content_width,
     content_left,
@@ -432,7 +432,7 @@ pub fn ViewZones::change_view_zones(
 /// looked up live, matching `Object.keys` plus indexed access.
 fn ViewZones::recompute_whitespace_props(self : ViewZones) -> Bool {
   guard self.context is Some(context) else { return false }
-  let old_whitespaces : Map[String, @view_layout.EditorWhitespace] = {}
+  let old_whitespaces : Map[String, @view_layout.EditorWhitespace] = Map([])
   for whitespace in context.view_model.get_whitespaces() {
     old_whitespaces.set(whitespace.id, whitespace)
   }
@@ -736,7 +736,8 @@ pub fn ViewZones::render(
   scroll_top : Double,
   scroll_width : Double,
 ) -> Unit {
-  let visible_zones : Map[String, @view_layout.ViewWhitespaceViewportData] = {}
+  let visible_zones : Map[String, @view_layout.ViewWhitespaceViewportData] = Map([],
+  )
   let mut has_visible_zone = false
   for visible_whitespace in visible_whitespaces {
     let zone = self.zones[visible_whitespace.id]

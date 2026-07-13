@@ -358,7 +358,7 @@ pub fn Viewer::Viewer(
     container: None,
     placeholder_element: None,
     placeholder_text: None,
-    overlay_widgets: {},
+    overlay_widgets: Map([]),
     render_frame: None,
     hover_schedule_timeout: schedule_timeout,
     hover_launch_async_task: launch_async_task,
@@ -369,7 +369,7 @@ pub fn Viewer::Viewer(
     mouse_handler: None,
     editor_has_focus: false,
     horizontal_reveal_request: None,
-    contributions: {},
+    contributions: Map([]),
   }
   // Marker decoration changes reach the render through the model's
   // decoration storage (`onDidChangeDecorations` → `ViewDecorationsChanged`);
@@ -987,7 +987,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   for _, contribution in self.contributions {
     (contribution.dispose)()
   }
-  self.contributions = {}
+  self.contributions = Map([])
   self.dispose_lifetime_disposables()
   self.container = None
   self.placeholder_element = None

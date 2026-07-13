@@ -32,7 +32,7 @@ pub fn OverlayWidgets::new(document : @rdom.Document) -> OverlayWidgets {
   {
     dom_node,
     overflowing_overlay_widgets_dom_node,
-    widgets: {},
+    widgets: Map([]),
     should_render: true,
   }
 }

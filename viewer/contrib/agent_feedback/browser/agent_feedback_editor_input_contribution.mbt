@@ -37,7 +37,7 @@ pub(all) struct AgentFeedbackEditorInputContribution {
 /// Per-editor instances keyed by `viewer.get_id()` — the WeakMap/
 /// `getContribution` analog. Populated by the contribution's ctor, cleared
 /// by its dispose.
-let input_instances : Map[String, AgentFeedbackEditorInputContribution] = {}
+let input_instances : Map[String, AgentFeedbackEditorInputContribution] = Map([])
 
 ///|
 pub fn AgentFeedbackEditorInputContribution::attach(

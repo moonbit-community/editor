@@ -283,7 +283,7 @@ fn EditorContributionRegistry::instantiate_all(
   self : EditorContributionRegistry,
   viewer : Viewer,
 ) -> Map[String, EditorContribution] {
-  let instances : Map[String, EditorContribution] = {}
+  let instances : Map[String, EditorContribution] = Map([])
   for description in self.contributions {
     // Every mode instantiates eagerly (no idle/interaction schedulers
     // exist); the declared mode is carried for source fidelity only.
@@ -347,7 +347,7 @@ fn editor_registry() -> EditorContributionRegistry {
     None => {
       let registry : EditorContributionRegistry = {
         contributions: [],
-        commands: {},
+        commands: Map([]),
         keybindings: [],
       }
       register_agent_feedback_contribution(registry)

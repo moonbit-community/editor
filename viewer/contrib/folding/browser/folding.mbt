@@ -91,7 +91,7 @@ pub(all) struct FoldingController {
 ///|
 /// Per-editor controller instances keyed by the viewer's id — the instance
 /// half of `registerEditorContribution` (the hover contrib's pattern).
-let folding_instances : Map[String, FoldingController] = {}
+let folding_instances : Map[String, FoldingController] = Map([])
 
 ///|
 /// Creates and registers this editor's controller.

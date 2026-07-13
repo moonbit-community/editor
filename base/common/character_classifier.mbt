@@ -29,7 +29,7 @@ pub struct CharacterClassifier {
 ///|
 pub fn CharacterClassifier::new(default_value : Int) -> CharacterClassifier {
   let dv = to_uint8(default_value)
-  { ascii_map: Array::make(256, dv), map: {}, default_value: dv }
+  { ascii_map: Array::make(256, dv), map: Map([]), default_value: dv }
 }
 
 ///|

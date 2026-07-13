@@ -10,7 +10,7 @@ test "Eq/Hash ignore the lazy caches (D5)" {
   ignore(a.to_string())
   ignore(a.fs_path())
   assert_true(a == b)
-  let table : Map[Uri, Int] = {}
+  let table : Map[Uri, Int] = Map([])
   table[a] = 1
   assert_true(table.get(b) == Some(1))
 }

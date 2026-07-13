@@ -84,7 +84,7 @@ pub fn Languages::new() -> Languages {
     hover_provider: LanguageFeatureRegistry::new(),
     document_symbol_provider: LanguageFeatureRegistry::new(),
     inlay_hints_provider: LanguageFeatureRegistry::new(),
-    language_configurations: {},
+    language_configurations: Map([]),
   }
 }
 

@@ -1,6 +1,6 @@
 # Viewer Tokenization Parity
 
-Status: Gate D candidate — remediation complete, fresh review pending
+Status: Gate D rejected — TMT-028 remediation active
 
 Date: 2026-07-13
 
@@ -1958,3 +1958,13 @@ recounted.
   fresh Gate D candidate — STOP FOR REVIEW; no further product/test edit is
   authorized until independent source/ledger, boundary/API, and test/matrix
   rereads report their findings.
+- 2026-07-13: the fresh source/ledger Gate-D lane REJECTED `860c7e6` on one
+  newly exposed ordering gap. TMT-028 requires token-part disposal, then
+  `isDisposed=true`, then superclass/registered-resource disposal. Local
+  `TextModel::dispose` still released `AttachedViews` and cleared the scheduler
+  before setting the flag, while its test proved only final state. All 38 pins,
+  counts/totals, previous rejection fixes, projection context/order, attached
+  event/listener ownership, token-part disposal/guard, and physical-identity
+  branches passed this lane. The child returns to implementation for the one
+  ordered transition and executable order evidence; the candidate remains
+  unapproved.

@@ -1,6 +1,6 @@
 # Viewer Tokenization Parity
 
-Status: Gate D rejected — remediation active
+Status: Gate D candidate — remediation complete, fresh review pending
 
 Date: 2026-07-13
 
@@ -265,7 +265,8 @@ Syntactic font payloads live below TextModel in
 token part use one nominal type. The token part's
 `on_did_change_font_tokens` exposes that exact child event to the parent-owned
 visual consumer. `AN::FontTokensUpdate` is the source-shaped non-nominal
-typealias for `AnnotationsUpdate[FontTokenOption?]`; TextModel adds no parent
+typealias for `AnnotationsUpdate[FontTokenOption]`; the update item's
+`annotation` field supplies the single optional layer. TextModel adds no parent
 alias, mirror, or conversion. Thus `model/tokens` never imports its parent and
 the backend -> token part -> parent-consumer path preserves one payload
 identity.
@@ -695,7 +696,7 @@ ordinary local branch-derived tests rather than invented `*_reference_*` names.
 | FNT-004 | `lineHeightMultiplier?` (`:169`) | Optional line-height multiplier | `AN::FontTokenOption.line_height_multiplier` | PORTED |
 | FNT-005 | `IModelFontTokensChangedEvent` (`:176-178`) | Model font-token event carrier | `AN::ModelFontTokensChangedEvent`; `TokenizationTextModelPart::on_did_change_font_tokens` exposes this exact child event to the parent-owned consumer | PORTED |
 | FNT-006 | event `changes` (`:177`) | Preserve exact annotations update | `AN::ModelFontTokensChangedEvent.changes`; backend event test | TESTED |
-| FNT-007 | `FontTokensUpdate` alias (`:183`) | `AnnotationsUpdate<FontTokenOption?>` value contract | `AN::FontTokensUpdate` is an exact non-nominal typealias for `AN::AnnotationsUpdate[AN::FontTokenOption?]`; backend and token part preserve the same value | PORTED |
+| FNT-007 | `FontTokensUpdate` alias (`:183`) | `AnnotationsUpdate<FontTokenOption>` value contract; `IAnnotationUpdate.annotation` owns the optional layer | `AN::FontTokensUpdate` is an exact non-nominal typealias for `AN::AnnotationsUpdate[AN::FontTokenOption]`; backend and token part preserve the same value | PORTED |
 | FNT-008 | `IAnnotationUpdate<T>` (`annotations.ts:237-240`) | Range plus optional annotation item | `AN::AnnotationUpdate` | PORTED |
 | FNT-009 | annotation `range` (`:238`) | Exact half-open offset range | `AN::AnnotationUpdate.range` | TESTED |
 | FNT-010 | annotation `annotation` (`:239`) | Present sets; absent clears | `AN::AnnotationUpdate.annotation` | TESTED |
@@ -1652,7 +1653,7 @@ and no duplicate IDs. Local LOC rows are excluded.
 | LOC-016 | Correct the queue reference header to cite oracle commit `b18492a288de038fbc7643aae6de8247029d11bd` and full source path `vscode/src/vs/editor/test/common/model/textModelTokens.test.ts`. | `viewer/common/model/text_model_tokens_reference_test.mbt` | PORTED |
 | LOC-017 | Correct the guide reference header: only #133 and #11856 are bracket suites; #122 is tokenization and #63822 is embedded-language behavior. | `viewer/common/model/guides_text_model_part_reference_test.mbt` | PORTED |
 | LOC-018 | Move the exact `Get word at position` conformance case into `model_reference_wbtest.mbt`, citing `vscode/src/vs/editor/test/common/model/model.test.ts` at `b18492a288de038fbc7643aae6de8247029d11bd`; reclassify `word_helper_wbtest.mbt` as ordinary local coverage and remove the duplicate conformance claim. | `viewer/common/model/model_reference_wbtest.mbt`; `viewer/common/model/word_helper_wbtest.mbt` | TESTED |
-| LOC-019 | Make the real `viewport_data_from_view_model` path build the viewport needed mask and call `get_view_lines_data` exactly once; its test records the single batch call, one passive token-store read per needed projected model line, and zero lexer invocations. | `viewer/common/view_model/viewport_data.mbt`; `viewer/common/view_model/viewport_data_test.mbt` | TESTED |
+| LOC-019 | Make the real `viewport_data_from_view_model` path build the viewport needed mask and call `get_view_lines_data` exactly once; its test records the single batch call, one passive token-store read per participating projected model line, and zero lexer invocations. | `viewer/common/view_model/viewport_data.mbt`; `viewer/common/view_model/viewport_data_batch_wbtest.mbt` | TESTED |
 | LOC-020 | Record the registry's `Color[]`/`Color` to CSS `Array[String]`/`String` reduction and exact nullable method signatures; preserve `changed_color_map : Bool`. | `syntax/README.md`; `syntax/pkg.generated.mbti`; `syntax/tokenizer_test.mbt` | TESTED |
 | LOC-021 | Structurally widen the frozen cursor-owned outgoing-only dispatcher with the model-token kind/wrapper/private arm and typed ViewModel listener; preserve no-op=false/no-merge/FIFO identity, run all cursor/ViewZones regressions, and replace the root direct TextModel listener with the ViewModel listener after synchronous browser ViewEvent delivery. Keep `ViewModel::ViewModel(model)` source-compatible; add only the exact optional `with_options` callback and headless default sink described above. | `viewer/common/view_model/view_model.mbt`; `viewer/common/view_model/cursor_event_dispatcher.mbt`; `viewer/common/view_model/model_tokens_outgoing.mbt`; `viewer/common/view_model/moon.pkg`; `viewer/common/view_model/README.md`; `viewer/common/view_model/pkg.generated.mbti`; `viewer/common/view_model/view_model_test.mbt`; `viewer/common/view_model/cursor_event_dispatcher_wbtest.mbt`; `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt`; `viewer/attach_model.mbt`; `viewer/test_viewer_wbtest.mbt` | TESTED |
 
@@ -1787,8 +1788,8 @@ and no duplicate IDs. Local LOC rows are excluded.
   passive read per projected model line and zero lexer work. The real
   `viewport_data_from_view_model` path must construct the viewport needed mask,
   call `get_view_lines_data` exactly once, and prove the single batch call has
-  one passive token-store read per needed projected model line and zero lexer
-  invocations.
+  one passive token-store read per participating projected model line and zero
+  lexer invocations. `Identity` retains its separate no-demand early return.
 - Font: absent/empty/nonempty fontInfo, annotation create/store/getter,
   one/many/removal updates with exact half-open offsets,
   family/size/line-height fields, backend setFontInfo, exact model event,
@@ -1935,3 +1936,25 @@ recounted.
   language/configuration work. The child returns to implementation; the
   collapsed statuses are an unapproved candidate until a fresh three-lane
   Gate D passes.
+- 2026-07-13: remediation commits `c2de305`, `f46c396`, `c2b7604`, and
+  `4fe6517` close every rejected TextModel lifecycle, projection/context,
+  worker/deadline, font-carrier, disposal/guard, identity, private-API, and
+  error-reporting finding. Exact package suites pass on JS and native:
+  model/tokens **54/54**, model **140/140**, and ViewModel **168/168**.
+  `pkg.generated.mbti` exposes the attached event and source-literal projection
+  signature but no conformance counters, helper context, or double-optional
+  font payload.
+- 2026-07-13: the full candidate passes `just check` with only the pre-existing
+  diff-package +73 diagnostic, `just test` (**1414/1414 JS**, **1009/1009
+  native**; Wasm/Wasm-GC have no test entry), `just build`, and Chromium
+  `just test-browser` **82/82**. Commit `ced7d4c` gives only the long-lived
+  scroll performance oracle one fresh-worker retry after three observed
+  0.1--0.3 ms host-jitter failures; it preserves all 12 cells, three
+  repetitions, the 1 ms source-relative threshold, and the first-failure
+  trace. The successful full run did not consume that retry.
+- 2026-07-13: the fixed denominator and collapsed totals remain unchanged:
+  **1052 = 466 TESTED + 206 PORTED + 206 DEFERRED + 174 N-A**, plus 21
+  uncounted LOC rows = 16 TESTED + 5 PORTED, with zero TODO/PASS. Status is a
+  fresh Gate D candidate — STOP FOR REVIEW; no further product/test edit is
+  authorized until independent source/ledger, boundary/API, and test/matrix
+  rereads report their findings.

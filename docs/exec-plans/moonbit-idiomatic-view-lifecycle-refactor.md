@@ -381,19 +381,19 @@ is committed. Absence is a bug.
 
 | ID | Current member or branch | Target | Required evidence | Status |
 | --- | --- | --- | --- | --- |
-| VP-01 | `ViewPart::on_view_event` | event-handle exhaustive dispatch | branch-derived event tests for all eight variants | INVENTORIED |
-| VP-02 | `ViewPart::should_render` | render-handle query plus direct lines query | dirty selection tests | INVENTORIED |
-| VP-03 | `ViewPart::force_should_render` | event-handle private operation | accumulate-once batch test | INVENTORIED |
-| VP-04 | `ViewPart::prepare_render` | seven-variant render dispatch | prepare-before-write trace | INVENTORIED |
-| VP-05 | `ViewPart::render` | seven-variant render dispatch | ordered write trace and browser checks | INVENTORIED |
-| VP-06 | `ViewPart::on_did_render` | seven-variant completion plus direct lines completion | dirty convergence test | INVENTORIED |
-| VP-07 | `ViewLines` unsupported ordinary prepare/render branches | remove from type surface | compile-time absence plus lifecycle test | INVENTORIED |
-| VP-08 | `OverlayWidgets` empty prepare/render branches | retain only where lifecycle membership is required | dirty completion test or explicit source disposition | INVENTORIED |
-| VP-09 | `ViewPartHandle` eight-way forwarding impls | split event and render enum inherent methods | exhaustive matches and membership-order tests | INVENTORIED |
-| VP-10 | generic `T : ViewPart` batch helper | direct enum path or minimal callbacks | whitebox batch-contract tests | INVENTORIED |
-| DVO-01 | `DynamicViewOverlay::prepare_render` | handle inherent dispatch | all six variants inventoried at construction sites | INVENTORIED |
-| DVO-02 | `DynamicViewOverlay::render` | handle inherent dispatch | concatenation-order and slice tests | INVENTORIED |
-| DVO-03 | content/margin subset registration order | unchanged construction-site arrays | branch-derived overlay-order tests | INVENTORIED |
+| VP-01 | `ViewPart::on_view_event` (`viewEventHandler.ts:89-219`) | event-handle exhaustive dispatch | eight-handler order plus existing branch matrices in `view_events_wbtest.mbt` | TESTED |
+| VP-02 | `ViewPart::should_render` (`view.ts:626-638`) | render-handle query plus direct lines query | exact dirty ordinary-part selection and convergence tests | TESTED |
+| VP-03 | `ViewPart::force_should_render` (`viewEventHandler.ts:91-218`) | event-handle private operation | full-batch, sticky-OR, force-once test | TESTED |
+| VP-04 | `ViewPart::prepare_render` (`view.ts:662-674`) | seven-variant render dispatch | text-complete/all-prepares-before-write lifecycle test | TESTED |
+| VP-05 | `ViewPart::render` (`view.ts:675-680`) | seven-variant render dispatch | lifecycle-order test plus final browser checks | TESTED |
+| VP-06 | `ViewPart::on_did_render` (`viewEventHandler.ts:31-33`; `view.ts:677-679`) | seven-variant completion plus direct lines completion | dirty convergence in membership and lifecycle tests | TESTED |
+| VP-07 | `ViewLines` unsupported ordinary prepare/render branches (`view.ts:641-649`) | absent from ordinary type surface | exact 8/7 membership test and direct text completion | TESTED |
+| VP-08 | `OverlayWidgets` empty prepare/render branches (`view.ts:252`) | retained for lifecycle completion | seven-part membership and dirty convergence tests | TESTED |
+| VP-09 | `ViewPartHandle` eight-way forwarding impls (`view.ts:195-253`) | split event and render enum inherent methods | exhaustive matches and exact order tests | TESTED |
+| VP-10 | generic `T : ViewPart` batch helper (`viewEventHandler.ts:89-219`) | minimal callback helper | callback-only batch-contract test | TESTED |
+| DVO-01 | `DynamicViewOverlay::prepare_render` (`viewOverlays.ts:113-121`) | handle inherent dispatch | six-variant construction inventory | DEFERRED (Phase 2 milestone) |
+| DVO-02 | `DynamicViewOverlay::render` (`viewOverlays.ts:165-169`) | handle inherent dispatch | concatenation-order and slice tests | DEFERRED (Phase 2 milestone) |
+| DVO-03 | content/margin subset registration order (`view.ts:218-231`) | unchanged construction-site arrays | branch-derived overlay-order tests | DEFERRED (Phase 2 milestone) |
 
 `INVENTORIED` is not an exit status. The implementation phase must replace it
 with one of the playbook statuses and cite the relevant source and test.

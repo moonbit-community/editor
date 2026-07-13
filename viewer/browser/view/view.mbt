@@ -23,6 +23,7 @@ pub(all) struct View {
   view_cursors : @view_cursors.ViewCursors
   overlay_widgets : @overlay_widgets.OverlayWidgets
   editor_scrollbar : @editor_scrollbar.EditorScrollbar
+  priv view_event_handlers : Array[ViewEventHandlerHandle]
   priv view_parts : Array[ViewPartHandle]
   priv event_dispatcher : ViewEventDispatcher
   priv lifetime_disposables : Array[@base_common.Disposable]
@@ -111,13 +112,17 @@ pub fn View::new(
     overlay_widgets.overflowing_overlay_widgets_dom_node(),
     OverflowingOverlayWidgets,
   )
-  let view_parts = default_view_parts(
+  let view_event_handlers = default_view_event_handlers(
     view_lines, view_zones, content_view_overlays, margin_view_overlays, content_widgets,
     view_cursors, overlay_widgets, editor_scrollbar,
   )
+  let view_parts = default_view_parts(
+    view_zones, content_view_overlays, margin_view_overlays, content_widgets, view_cursors,
+    overlay_widgets, editor_scrollbar,
+  )
   let event_dispatcher = ViewEventDispatcher::new(events => {
-    for part in view_parts {
-      part.handle_view_events(events)
+    for handler in view_event_handlers {
+      handler.handle_view_events(events)
     }
   })
   let view : View = {
@@ -133,6 +138,7 @@ pub fn View::new(
     view_cursors,
     overlay_widgets,
     editor_scrollbar,
+    view_event_handlers,
     view_parts,
     event_dispatcher,
     lifetime_disposables: [],
@@ -204,18 +210,16 @@ pub fn View::dispose(self : View) -> Unit {
   // Monaco disposes ViewLines separately, then the remaining `_viewParts`,
   // before its inherited disposable store (`view.ts:503-519`). Keep that
   // order even though the local resource-free parts need no active cleanup.
-  ViewPartHandle::dispose(ViewLinesPart(self.view_lines))
+  self.view_lines.dispose()
   for part in self.view_parts {
-    match part {
-      ViewLinesPart(_) => continue
-      _ => part.dispose()
-    }
+    part.dispose()
   }
   for disposable in self.lifetime_disposables {
     disposable.dispose()
   }
   self.lifetime_disposables.clear()
   self.event_dispatcher.dispose()
+  self.view_event_handlers.clear()
 }
 
 ///|
@@ -379,13 +383,13 @@ pub fn View::render(
   // directly (`ViewLines.prepareRender`/`render` throw "Not supported" in
   // the source), so the remaining parts' `prepare_render` can measure the
   // fresh line DOM.
-  if ViewPart::should_render(self.view_lines) {
+  if self.view_lines.should_render {
     self.view_lines.render_text(
       viewport,
       input.layout,
       input.selection_view_range,
     )
-    ViewPart::on_did_render(self.view_lines)
+    self.view_lines.should_render = false
   }
   // Text rendering can synchronously update layout dimensions and emit scroll
   // events. Recollect dirty parts, then snapshot the current layout around the
@@ -411,13 +415,6 @@ pub fn View::render(
 fn View::get_view_parts_to_render(self : View) -> Array[ViewPartHandle] {
   let parts : Array[ViewPartHandle] = []
   for part in self.view_parts {
-    // `_getViewPartsToRender` walks Monaco's `_viewParts`, which does not
-    // contain the special-cased `ViewLines` — `View::render` drives its
-    // `renderText` directly.
-    match part {
-      ViewLinesPart(_) => continue
-      _ => ()
-    }
     if part.should_render() {
       parts.push(part)
     }

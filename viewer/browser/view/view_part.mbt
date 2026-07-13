@@ -1,53 +1,23 @@
 ///|
-/// Private Monaco-shaped render lifecycle for browser view concerns. The
-/// event-handling half (`on_view_event` / `should_render` / `force_should_render`
-/// / `on_did_render`) mirrors Monaco's `ViewEventHandler`: a typed view event is
-/// offered to every part, and a part that returns `true` is marked dirty for the
-/// next render. `should_render` returns that accumulated flag (no longer a
-/// snapshot diff). The render half (`prepare_render` / `render`) mirrors
-/// Monaco's `ViewPart`/`DynamicViewOverlay`: `prepare_render` computes and
-/// stores any state that needs the read phase, `render` writes the DOM.
-priv trait ViewPart {
-  fn on_view_event(Self, ViewEvent) -> Bool
-  fn should_render(Self) -> Bool
-  fn force_should_render(Self) -> Unit
-  fn prepare_render(Self, RenderingContext) -> Unit
-  fn render(Self, RestrictedRenderingContext) -> Unit
-  fn on_did_render(Self) -> Unit
+/// Closed event-receipt capability index. The order of the array built by
+/// `default_view_event_handlers` mirrors the source `ViewContext` registration
+/// order; each variant holds the same stateful value used by the ordinary
+/// render-part index where that capability applies.
+priv enum ViewEventHandlerHandle {
+  ViewLinesHandler(@view_lines.ViewLines)
+  ViewZonesHandler(@view_zones.ViewZones)
+  ContentViewOverlaysHandler(ContentViewOverlays)
+  MarginViewOverlaysHandler(MarginViewOverlays)
+  ContentWidgetsHandler(@content_widgets.ContentWidgets)
+  ViewCursorsHandler(@view_cursors.ViewCursors)
+  OverlayWidgetsHandler(@overlay_widgets.OverlayWidgets)
+  EditorScrollbarHandler(@editor_scrollbar.EditorScrollbar)
 }
 
 ///|
-/// Dispatches a frame's view events to one part, accumulating its dirty flag.
-/// Mirrors `ViewEventHandler.handleEvents`.
-fn ViewPartHandle::handle_view_events(
-  self : ViewPartHandle,
-  events : Array[ViewEvent],
-) -> Unit {
-  handle_view_part_events(self, events)
-}
-
-///|
-/// Generic form kept separate so whitebox parity tests can prove the exact
-/// accumulate-once contract without adding test-only members to the fixed
-/// production `ViewPartHandle` union.
-fn[T : ViewPart] handle_view_part_events(
-  part : T,
-  events : Array[ViewEvent],
-) -> Unit {
-  let mut should_render = false
-  for event in events {
-    if ViewPart::on_view_event(part, event) {
-      should_render = true
-    }
-  }
-  if should_render {
-    ViewPart::force_should_render(part)
-  }
-}
-
-///|
+/// Closed ordinary render-part capability index. `ViewLines` is deliberately
+/// absent because its source lifecycle is the dedicated `renderText` path.
 priv enum ViewPartHandle {
-  ViewLinesPart(@view_lines.ViewLines)
   ViewZonesPart(@view_zones.ViewZones)
   ContentViewOverlaysPart(ContentViewOverlays)
   MarginViewOverlaysPart(MarginViewOverlays)
@@ -58,12 +28,75 @@ priv enum ViewPartHandle {
 }
 
 ///|
+/// Capability-minimal form of `ViewEventHandler.handleEvents`: visit the full
+/// batch in FIFO order, OR invalidation decisions, then force dirtiness once.
+fn handle_view_event_batch(
+  events : Array[ViewEvent],
+  on_event : (ViewEvent) -> Bool,
+  force_dirty : () -> Unit,
+) -> Unit {
+  let mut should_render = false
+  for event in events {
+    if on_event(event) {
+      should_render = true
+    }
+  }
+  if should_render {
+    force_dirty()
+  }
+}
+
+///|
+fn ViewEventHandlerHandle::handle_view_events(
+  self : ViewEventHandlerHandle,
+  events : Array[ViewEvent],
+) -> Unit {
+  handle_view_event_batch(events, event => self.on_view_event(event), () => {
+    self.force_should_render()
+  })
+}
+
+///|
+fn ViewEventHandlerHandle::on_view_event(
+  self : ViewEventHandlerHandle,
+  event : ViewEvent,
+) -> Bool {
+  match self {
+    ViewLinesHandler(part) => view_lines_on_view_event(part, event)
+    ViewZonesHandler(part) => view_zones_on_view_event(part, event)
+    ContentViewOverlaysHandler(part) =>
+      content_view_overlays_on_view_event(part, event)
+    MarginViewOverlaysHandler(part) =>
+      margin_view_overlays_on_view_event(part, event)
+    ContentWidgetsHandler(part) => content_widgets_on_view_event(part, event)
+    ViewCursorsHandler(part) => view_cursors_on_view_event(part, event)
+    OverlayWidgetsHandler(part) => overlay_widgets_on_view_event(part, event)
+    EditorScrollbarHandler(part) => editor_scrollbar_on_view_event(part, event)
+  }
+}
+
+///|
+fn ViewEventHandlerHandle::force_should_render(
+  self : ViewEventHandlerHandle,
+) -> Unit {
+  match self {
+    ViewLinesHandler(part) => part.should_render = true
+    ViewZonesHandler(part) => part.force_should_render()
+    ContentViewOverlaysHandler(part) => part.should_render = true
+    MarginViewOverlaysHandler(part) => part.should_render = true
+    ContentWidgetsHandler(part) => part.should_render = true
+    ViewCursorsHandler(part) => part.should_render = true
+    OverlayWidgetsHandler(part) => part.should_render = true
+    EditorScrollbarHandler(part) => part.should_render = true
+  }
+}
+
+///|
 /// View-owned teardown (`view.ts:503-519`). ViewLines cancels its delayed
 /// width sweep first; the resource-free DOM parts need no active teardown,
 /// and the scrollbar cancels its hide timer here.
 fn ViewPartHandle::dispose(self : ViewPartHandle) -> Unit {
   match self {
-    ViewLinesPart(part) => part.dispose()
     ViewZonesPart(part) => part.dispose()
     ContentViewOverlaysPart(_) => ()
     MarginViewOverlaysPart(_) => ()
@@ -94,7 +127,6 @@ fn ViewPartHandle::on_before_render(
 
 ///|
 fn default_view_parts(
-  view_lines : @view_lines.ViewLines,
   view_zones : @view_zones.ViewZones,
   content_view_overlays : ContentViewOverlays,
   margin_view_overlays : MarginViewOverlays,
@@ -104,7 +136,6 @@ fn default_view_parts(
   editor_scrollbar : @editor_scrollbar.EditorScrollbar,
 ) -> Array[ViewPartHandle] {
   [
-    ViewLinesPart(view_lines),
     ViewZonesPart(view_zones),
     ContentViewOverlaysPart(content_view_overlays),
     MarginViewOverlaysPart(margin_view_overlays),
@@ -118,103 +149,100 @@ fn default_view_parts(
 }
 
 ///|
-impl ViewPart for ViewPartHandle with fn on_view_event(self, event) {
+fn default_view_event_handlers(
+  view_lines : @view_lines.ViewLines,
+  view_zones : @view_zones.ViewZones,
+  content_view_overlays : ContentViewOverlays,
+  margin_view_overlays : MarginViewOverlays,
+  content_widgets : @content_widgets.ContentWidgets,
+  view_cursors : @view_cursors.ViewCursors,
+  overlay_widgets : @overlay_widgets.OverlayWidgets,
+  editor_scrollbar : @editor_scrollbar.EditorScrollbar,
+) -> Array[ViewEventHandlerHandle] {
+  [
+    ViewLinesHandler(view_lines),
+    ViewZonesHandler(view_zones),
+    ContentViewOverlaysHandler(content_view_overlays),
+    MarginViewOverlaysHandler(margin_view_overlays),
+    ContentWidgetsHandler(content_widgets),
+    // Monaco registers `viewCursors` after content widgets and before overlay
+    // widgets (`view.ts:246-252`).
+    ViewCursorsHandler(view_cursors),
+    OverlayWidgetsHandler(overlay_widgets),
+    EditorScrollbarHandler(editor_scrollbar),
+  ]
+}
+
+///|
+fn ViewPartHandle::should_render(self : ViewPartHandle) -> Bool {
   match self {
-    ViewLinesPart(part) => ViewPart::on_view_event(part, event)
-    ViewZonesPart(part) => ViewPart::on_view_event(part, event)
-    ContentViewOverlaysPart(part) => ViewPart::on_view_event(part, event)
-    MarginViewOverlaysPart(part) => ViewPart::on_view_event(part, event)
-    ContentWidgetsPart(part) => ViewPart::on_view_event(part, event)
-    ViewCursorsPart(part) => ViewPart::on_view_event(part, event)
-    OverlayWidgetsPart(part) => ViewPart::on_view_event(part, event)
-    EditorScrollbarPart(part) => ViewPart::on_view_event(part, event)
+    ViewZonesPart(part) => part.should_render()
+    ContentViewOverlaysPart(part) => part.should_render
+    MarginViewOverlaysPart(part) => part.should_render
+    ContentWidgetsPart(part) => part.should_render
+    ViewCursorsPart(part) => part.should_render
+    OverlayWidgetsPart(part) => part.should_render
+    EditorScrollbarPart(part) => part.should_render
   }
 }
 
 ///|
-impl ViewPart for ViewPartHandle with fn should_render(self) {
+fn ViewPartHandle::prepare_render(
+  self : ViewPartHandle,
+  context : RenderingContext,
+) -> Unit {
   match self {
-    ViewLinesPart(part) => ViewPart::should_render(part)
-    ViewZonesPart(part) => ViewPart::should_render(part)
-    ContentViewOverlaysPart(part) => ViewPart::should_render(part)
-    MarginViewOverlaysPart(part) => ViewPart::should_render(part)
-    ContentWidgetsPart(part) => ViewPart::should_render(part)
-    ViewCursorsPart(part) => ViewPart::should_render(part)
-    OverlayWidgetsPart(part) => ViewPart::should_render(part)
-    EditorScrollbarPart(part) => ViewPart::should_render(part)
+    ViewZonesPart(part) => view_zones_prepare_render(part, context)
+    ContentViewOverlaysPart(part) =>
+      content_view_overlays_prepare_render(part, context)
+    MarginViewOverlaysPart(part) =>
+      margin_view_overlays_prepare_render(part, context)
+    ContentWidgetsPart(part) => content_widgets_prepare_render(part, context)
+    ViewCursorsPart(part) => view_cursors_prepare_render(part, context)
+    OverlayWidgetsPart(part) => overlay_widgets_prepare_render(part, context)
+    EditorScrollbarPart(part) => editor_scrollbar_prepare_render(part, context)
   }
 }
 
 ///|
-impl ViewPart for ViewPartHandle with fn force_should_render(self) {
+fn ViewPartHandle::render(
+  self : ViewPartHandle,
+  context : RestrictedRenderingContext,
+) -> Unit {
   match self {
-    ViewLinesPart(part) => ViewPart::force_should_render(part)
-    ViewZonesPart(part) => ViewPart::force_should_render(part)
-    ContentViewOverlaysPart(part) => ViewPart::force_should_render(part)
-    MarginViewOverlaysPart(part) => ViewPart::force_should_render(part)
-    ContentWidgetsPart(part) => ViewPart::force_should_render(part)
-    ViewCursorsPart(part) => ViewPart::force_should_render(part)
-    OverlayWidgetsPart(part) => ViewPart::force_should_render(part)
-    EditorScrollbarPart(part) => ViewPart::force_should_render(part)
+    ViewZonesPart(part) => view_zones_render(part, context)
+    ContentViewOverlaysPart(part) => content_view_overlays_render(part, context)
+    MarginViewOverlaysPart(part) => margin_view_overlays_render(part, context)
+    ContentWidgetsPart(part) => content_widgets_render(part, context)
+    ViewCursorsPart(part) => view_cursors_render(part, context)
+    OverlayWidgetsPart(part) => overlay_widgets_render(part, context)
+    EditorScrollbarPart(part) => editor_scrollbar_render(part, context)
   }
 }
 
 ///|
-impl ViewPart for ViewPartHandle with fn prepare_render(self, context) {
+fn ViewPartHandle::on_did_render(self : ViewPartHandle) -> Unit {
   match self {
-    ViewLinesPart(part) => ViewPart::prepare_render(part, context)
-    ViewZonesPart(part) => ViewPart::prepare_render(part, context)
-    ContentViewOverlaysPart(part) => ViewPart::prepare_render(part, context)
-    MarginViewOverlaysPart(part) => ViewPart::prepare_render(part, context)
-    ContentWidgetsPart(part) => ViewPart::prepare_render(part, context)
-    ViewCursorsPart(part) => ViewPart::prepare_render(part, context)
-    OverlayWidgetsPart(part) => ViewPart::prepare_render(part, context)
-    EditorScrollbarPart(part) => ViewPart::prepare_render(part, context)
+    ViewZonesPart(part) => part.did_render()
+    ContentViewOverlaysPart(part) => part.should_render = false
+    MarginViewOverlaysPart(part) => part.should_render = false
+    ContentWidgetsPart(part) => part.should_render = false
+    ViewCursorsPart(part) => part.should_render = false
+    OverlayWidgetsPart(part) => part.should_render = false
+    EditorScrollbarPart(part) => part.should_render = false
   }
 }
 
-///|
-impl ViewPart for ViewPartHandle with fn render(self, context) {
-  match self {
-    ViewLinesPart(part) => ViewPart::render(part, context)
-    ViewZonesPart(part) => ViewPart::render(part, context)
-    ContentViewOverlaysPart(part) => ViewPart::render(part, context)
-    MarginViewOverlaysPart(part) => ViewPart::render(part, context)
-    ContentWidgetsPart(part) => ViewPart::render(part, context)
-    ViewCursorsPart(part) => ViewPart::render(part, context)
-    OverlayWidgetsPart(part) => ViewPart::render(part, context)
-    EditorScrollbarPart(part) => ViewPart::render(part, context)
-  }
-}
+// Event and render adapters stay in `browser/view` because the private event
+// and rendering-context types belong here; moving them to concrete part
+// packages would reverse the dependency graph.
 
 ///|
-impl ViewPart for ViewPartHandle with fn on_did_render(self) {
-  match self {
-    ViewLinesPart(part) => ViewPart::on_did_render(part)
-    ViewZonesPart(part) => ViewPart::on_did_render(part)
-    ContentViewOverlaysPart(part) => ViewPart::on_did_render(part)
-    MarginViewOverlaysPart(part) => ViewPart::on_did_render(part)
-    ContentWidgetsPart(part) => ViewPart::on_did_render(part)
-    ViewCursorsPart(part) => ViewPart::on_did_render(part)
-    OverlayWidgetsPart(part) => ViewPart::on_did_render(part)
-    EditorScrollbarPart(part) => ViewPart::on_did_render(part)
-  }
-}
-
-// `ViewPart` impl for `@view_zones.ViewZones` (`browser/view_parts/view_zones`).
-// Kept here, not in that package, per the cycle-backlog fix: MoonBit's orphan
-// rule lets the trait-owning package implement a trait for a foreign type,
-// and `view_part.mbt` needs `ViewZones` as a concrete type anyway (the
-// `ViewPartHandle` enum above), so this keeps `browser/view_parts/view_zones`
-// from needing an import back into `browser/view/`.
-
-///|
-impl ViewPart for @view_zones.ViewZones with fn should_render(self) {
-  @view_zones.ViewZones::should_render(self)
-}
-
-///|
-impl ViewPart for @view_zones.ViewZones with fn on_view_event(self, event) {
+fn view_zones_on_view_event(
+  part : @view_zones.ViewZones,
+  event : ViewEvent,
+) -> Bool {
+  let self = part
   match event {
     ViewConfigurationChanged(e) =>
       self.on_configuration_changed(e.has_changed(LineHeight))
@@ -229,17 +257,19 @@ impl ViewPart for @view_zones.ViewZones with fn on_view_event(self, event) {
 }
 
 ///|
-impl ViewPart for @view_zones.ViewZones with fn force_should_render(self) {
-  self.force_should_render()
-}
-
-///|
-impl ViewPart for @view_zones.ViewZones with fn prepare_render(_self, _context) {
+fn view_zones_prepare_render(
+  _part : @view_zones.ViewZones,
+  _context : RenderingContext,
+) -> Unit {
   // Monaco `ViewZones.prepareRender`: nothing to read.
 }
 
 ///|
-impl ViewPart for @view_zones.ViewZones with fn render(self, context) {
+fn view_zones_render(
+  part : @view_zones.ViewZones,
+  context : RestrictedRenderingContext,
+) -> Unit {
+  let self = part
   self.render(
     context.viewport.view_zones,
     context.viewport.big_numbers_delta,
@@ -248,21 +278,14 @@ impl ViewPart for @view_zones.ViewZones with fn render(self, context) {
   )
 }
 
-///|
-impl ViewPart for @view_zones.ViewZones with fn on_did_render(self) {
-  self.did_render()
-}
-
-// `ViewPart` impl for `@view_lines.ViewLines` (`browser/view_parts/view_lines`).
-// Kept here for the same reason as `@view_zones.ViewZones` above.
+// `ViewLines` is an event handler but not an ordinary render part.
 
 ///|
-impl ViewPart for @view_lines.ViewLines with fn should_render(self) {
-  self.should_render
-}
-
-///|
-impl ViewPart for @view_lines.ViewLines with fn on_view_event(self, event) {
+fn view_lines_on_view_event(
+  part : @view_lines.ViewLines,
+  event : ViewEvent,
+) -> Bool {
+  let self = part
   match event {
     ViewFlushed => {
       self.flush_retained_lines()
@@ -318,41 +341,14 @@ fn current_line_scroll_changed(event : ViewScrollChangedEvent) -> Bool {
   event.scroll_width_changed || event.scroll_top_changed
 }
 
-///|
-impl ViewPart for @view_lines.ViewLines with fn force_should_render(self) {
-  self.should_render = true
-}
+// Margin aggregate event and render adapters.
 
 ///|
-impl ViewPart for @view_lines.ViewLines with fn prepare_render(_self, _context) {
-  // Monaco `ViewLines.prepareRender` throws "Not supported": the lines
-  // render through `renderText`, which `View::render` drives directly ahead
-  // of the part loops (like `View._actualRender`).
-  abort("Not supported")
-}
-
-///|
-impl ViewPart for @view_lines.ViewLines with fn render(_self, _context) {
-  // Monaco `ViewLines.render` throws "Not supported" — see `prepare_render`.
-  abort("Not supported")
-}
-
-///|
-impl ViewPart for @view_lines.ViewLines with fn on_did_render(self) {
-  self.should_render = false
-}
-
-// `ViewPart` impl for `MarginViewOverlays` (`view_overlays.mbt`, this
-// package — Monaco's `viewOverlays.ts`), plus the `DynamicViewOverlay`
-// impls for the margin overlays (`view_parts/margin`).
-
-///|
-impl ViewPart for MarginViewOverlays with fn should_render(self) {
-  self.should_render
-}
-
-///|
-impl ViewPart for MarginViewOverlays with fn on_view_event(_self, event) {
+fn margin_view_overlays_on_view_event(
+  part : MarginViewOverlays,
+  event : ViewEvent,
+) -> Bool {
+  let _self = part
   match event {
     ViewFlushed => true
     ViewLinesChanged(_)
@@ -402,18 +398,21 @@ impl ViewPart for MarginViewOverlays with fn on_view_event(_self, event) {
 }
 
 ///|
-impl ViewPart for MarginViewOverlays with fn force_should_render(self) {
-  self.should_render = true
-}
-
-///|
-impl ViewPart for MarginViewOverlays with fn prepare_render(self, context) {
+fn margin_view_overlays_prepare_render(
+  part : MarginViewOverlays,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   // `ViewOverlays.prepareRender` (`viewOverlays.ts:113-121`).
   self.overlays.prepare_overlays(context)
 }
 
 ///|
-impl ViewPart for MarginViewOverlays with fn render(self, context) {
+fn margin_view_overlays_render(
+  part : MarginViewOverlays,
+  context : RestrictedRenderingContext,
+) -> Unit {
+  let self = part
   // `MarginViewOverlays._viewOverlaysRender` (`viewOverlays.ts:262-266`):
   // render the rows, size the container to `_contentLeft`. The `.margin`
   // clip is viewport-fixed; the rows container carries the vertical rail
@@ -439,11 +438,6 @@ impl ViewPart for MarginViewOverlays with fn render(self, context) {
   if overlays.get_attribute("style") != overlays_style {
     overlays.set_attribute("style", overlays_style)
   }
-}
-
-///|
-impl ViewPart for MarginViewOverlays with fn on_did_render(self) {
-  self.should_render = false
 }
 
 ///|
@@ -538,20 +532,14 @@ impl DynamicViewOverlay for @margin.LineNumbersOverlay with fn render(
   render_result_slice(self.render_result, start_line_number, line_number)
 }
 
-// `ViewPart` impl for `@overlay_widgets.OverlayWidgets`
-// (`browser/view_parts/overlay_widgets`). Kept here for the same reason as
-// the impls above.
+// OverlayWidgets retains ordinary lifecycle membership so a dirty event can
+// converge even though its current prepare/write phases are empty.
 
 ///|
-impl ViewPart for @overlay_widgets.OverlayWidgets with fn should_render(self) {
-  self.should_render
-}
-
-///|
-impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_view_event(
-  _self,
-  event,
-) {
+fn overlay_widgets_on_view_event(
+  _part : @overlay_widgets.OverlayWidgets,
+  event : ViewEvent,
+) -> Bool {
   match event {
     ViewScrollChanged(e) => e.scroll_width_changed || e.scroll_height_changed
     ViewConfigurationChanged(_) => true
@@ -560,47 +548,28 @@ impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_view_event(
 }
 
 ///|
-impl ViewPart for @overlay_widgets.OverlayWidgets with fn force_should_render(
-  self,
-) {
-  self.should_render = true
-}
-
-///|
-impl ViewPart for @overlay_widgets.OverlayWidgets with fn prepare_render(
-  _self,
-  _context,
-) {
+fn overlay_widgets_prepare_render(
+  _part : @overlay_widgets.OverlayWidgets,
+  _context : RenderingContext,
+) -> Unit {
   ()
 }
 
 ///|
-impl ViewPart for @overlay_widgets.OverlayWidgets with fn render(
-  _self,
-  _context,
-) {
+fn overlay_widgets_render(
+  _part : @overlay_widgets.OverlayWidgets,
+  _context : RestrictedRenderingContext,
+) -> Unit {
   ()
 }
 
-///|
-impl ViewPart for @overlay_widgets.OverlayWidgets with fn on_did_render(self) {
-  self.should_render = false
-}
-
-// `ViewPart` impl for `@editor_scrollbar.EditorScrollbar`
-// (`browser/view_parts/editor_scrollbar`). Kept here for the same reason as
-// the impls above.
+// EditorScrollbar event and render adapters.
 
 ///|
-impl ViewPart for @editor_scrollbar.EditorScrollbar with fn should_render(self) {
-  self.should_render
-}
-
-///|
-impl ViewPart for @editor_scrollbar.EditorScrollbar with fn on_view_event(
-  _self,
-  event,
-) {
+fn editor_scrollbar_on_view_event(
+  _part : @editor_scrollbar.EditorScrollbar,
+  event : ViewEvent,
+) -> Bool {
   match event {
     ViewScrollChanged(_) => true
     ViewConfigurationChanged(_) => true
@@ -609,25 +578,19 @@ impl ViewPart for @editor_scrollbar.EditorScrollbar with fn on_view_event(
 }
 
 ///|
-impl ViewPart for @editor_scrollbar.EditorScrollbar with fn force_should_render(
-  self,
-) {
-  self.should_render = true
-}
-
-///|
-impl ViewPart for @editor_scrollbar.EditorScrollbar with fn prepare_render(
-  _self,
-  _context,
-) {
+fn editor_scrollbar_prepare_render(
+  _part : @editor_scrollbar.EditorScrollbar,
+  _context : RenderingContext,
+) -> Unit {
   ()
 }
 
 ///|
-impl ViewPart for @editor_scrollbar.EditorScrollbar with fn render(
-  self,
-  context,
-) {
+fn editor_scrollbar_render(
+  part : @editor_scrollbar.EditorScrollbar,
+  context : RestrictedRenderingContext,
+) -> Unit {
+  let self = part
   // `EditorScrollbar._setLayout` (`editorScrollbar.ts:109-123`): the scrollable
   // shell starts at contentLeft; the shared lines-content rail itself is free
   // to move left by the current synthetic scroll position.
@@ -637,23 +600,17 @@ impl ViewPart for @editor_scrollbar.EditorScrollbar with fn render(
   self.editor_scrollable.update_from_model(context.dimensions, context.position)
 }
 
-///|
-impl ViewPart for @editor_scrollbar.EditorScrollbar with fn on_did_render(self) {
-  self.should_render = false
-}
-
-// `ViewPart` impl for `ContentViewOverlays` (`view_overlays.mbt`, this
+// Event and render adapters for `ContentViewOverlays` (`view_overlays.mbt`, this
 // package — Monaco's `viewOverlays.ts`). The dynamic overlays prepare in the
 // read phase (measuring off the freshly written line DOM) and the rows write
 // in `render`, Monaco's split.
 
 ///|
-impl ViewPart for ContentViewOverlays with fn should_render(self) {
-  self.should_render
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn on_view_event(_self, event) {
+fn content_view_overlays_on_view_event(
+  part : ContentViewOverlays,
+  event : ViewEvent,
+) -> Bool {
+  let _self = part
   match event {
     ViewFlushed => true
     ViewLinesChanged(_)
@@ -697,19 +654,22 @@ impl ViewPart for ContentViewOverlays with fn on_view_event(_self, event) {
 }
 
 ///|
-impl ViewPart for ContentViewOverlays with fn force_should_render(self) {
-  self.should_render = true
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn prepare_render(self, context) {
+fn content_view_overlays_prepare_render(
+  part : ContentViewOverlays,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   // `ViewOverlays.prepareRender` (`viewOverlays.ts:113-121`): each dynamic
   // overlay builds its per-line `_renderResult` off the read context.
   self.overlays.prepare_overlays(context)
 }
 
 ///|
-impl ViewPart for ContentViewOverlays with fn render(self, context) {
+fn content_view_overlays_render(
+  part : ContentViewOverlays,
+  context : RestrictedRenderingContext,
+) -> Unit {
+  let self = part
   // `ContentViewOverlays._viewOverlaysRender` (`viewOverlays.ts:225-229`):
   // render the rows, then size the container to
   // `max(ctx.scrollWidth, contentWidth)`.
@@ -721,11 +681,6 @@ impl ViewPart for ContentViewOverlays with fn render(self, context) {
   }
   self.set_focused(self.overlays.is_focused)
   self.overlays.dom_node.set_width(Pixels(width))
-}
-
-///|
-impl ViewPart for ContentViewOverlays with fn on_did_render(self) {
-  self.should_render = false
 }
 
 // `DynamicViewOverlay` impls for the content overlays
@@ -837,17 +792,10 @@ impl DynamicViewOverlay for @decorations.DecorationsOverlay with fn render(
   render_result_slice(self.render_result, start_line_number, line_number)
 }
 
-// `ViewPart` impl for `@content_widgets.ContentWidgets`
-// (`browser/view_parts/content_widgets`). Kept here for the same reason as
-// the impls above. It unpacks the render context into the package's
+// `ContentWidgets` adapters unpack the render context into the package's
 // `ContentWidgetsRenderContext` capability struct, since that package cannot
 // import `ViewContext`/`RenderingContext` (owned by `browser/view/`, which
 // needs `ContentWidgets` back for `View`'s fields).
-
-///|
-impl ViewPart for @content_widgets.ContentWidgets with fn should_render(self) {
-  self.should_render
-}
 
 ///|
 // Widget position changes invalidate this part directly through
@@ -855,10 +803,11 @@ impl ViewPart for @content_widgets.ContentWidgets with fn should_render(self) {
 // mapping family also reprojects retained model anchors synchronously before
 // returning `true`; configuration delegates its exact `layoutInfo` bit to all
 // retained widgets before dirtying.
-impl ViewPart for @content_widgets.ContentWidgets with fn on_view_event(
-  self,
-  event,
-) {
+fn content_widgets_on_view_event(
+  part : @content_widgets.ContentWidgets,
+  event : ViewEvent,
+) -> Bool {
+  let self = part
   match event {
     ViewFlushed => true
     ViewConfigurationChanged(e) => {
@@ -880,46 +829,32 @@ impl ViewPart for @content_widgets.ContentWidgets with fn on_view_event(
 }
 
 ///|
-impl ViewPart for @content_widgets.ContentWidgets with fn force_should_render(
-  self,
-) {
-  self.should_render = true
-}
-
-///|
 /// Monaco `ViewContentWidgets.prepareRender`: compute each widget's box
 /// layout for this frame from its recorded anchors.
-impl ViewPart for @content_widgets.ContentWidgets with fn prepare_render(
-  self,
-  context,
-) {
+fn content_widgets_prepare_render(
+  part : @content_widgets.ContentWidgets,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   self.prepare_render_widgets(context.content_widgets_render_context())
 }
 
 ///|
 /// Monaco `ViewContentWidgets.render`: write each widget's `top`/`left`/
 /// `visibility` onto its mounted DOM — never content, never a re-mount.
-impl ViewPart for @content_widgets.ContentWidgets with fn render(self, context) {
+fn content_widgets_render(
+  part : @content_widgets.ContentWidgets,
+  context : RestrictedRenderingContext,
+) -> Unit {
+  let self = part
   self.render_widgets(
     context.position.scroll_top,
     context.viewport.big_numbers_delta.to_double(),
   )
 }
 
-///|
-impl ViewPart for @content_widgets.ContentWidgets with fn on_did_render(self) {
-  self.should_render = false
-}
-
-// `ViewPart` impl for `@view_cursors.ViewCursors`
-// (`browser/view_parts/view_cursors`). Kept here for the same reason as the
-// impls above. The viewport math and DOM measurement live here (not in the
+// `ViewCursors` adapters keep viewport math and DOM measurement here (not in the
 // part package) because they need `RenderingContext` / `ViewContext`.
-
-///|
-impl ViewPart for @view_cursors.ViewCursors with fn should_render(self) {
-  self.should_render
-}
 
 ///|
 // Event map from `viewCursors.ts`: `onFlushed` (:180), `onLinesChanged`
@@ -932,7 +867,11 @@ impl ViewPart for @view_cursors.ViewCursors with fn should_render(self) {
 // the part). No `onLineMappingChanged` handler in Monaco —
 // a remap that moves the cursor arrives as `ViewCursorStateChanged` via the
 // reprojected view selection.
-impl ViewPart for @view_cursors.ViewCursors with fn on_view_event(self, event) {
+fn view_cursors_on_view_event(
+  part : @view_cursors.ViewCursors,
+  event : ViewEvent,
+) -> Bool {
+  let self = part
   match event {
     ViewFlushed => true
     ViewLinesChanged(_) | ViewLinesDeleted(_) | ViewLinesInserted(_) => true
@@ -985,11 +924,6 @@ impl ViewPart for @view_cursors.ViewCursors with fn on_view_event(self, event) {
 }
 
 ///|
-impl ViewPart for @view_cursors.ViewCursors with fn force_should_render(self) {
-  self.should_render = true
-}
-
-///|
 // `ViewCursor._prepareRender` (`viewCursor.ts:163-203`), Line-style arm: the
 // caret x is `ctx.visibleRangeForPosition(position)` — the port measures it
 // off the rendered line DOM (`View::offset_for_column` via the
@@ -997,10 +931,11 @@ impl ViewPart for @view_cursors.ViewCursors with fn force_should_render(self) {
 // "Outside viewport → null"). The caret top is the line's viewport-relative
 // vertical offset, like every flat overlay piece. The result is stored as
 // the part's `render_data` (Monaco's `this._renderData`).
-impl ViewPart for @view_cursors.ViewCursors with fn prepare_render(
-  self,
-  context,
-) {
+fn view_cursors_prepare_render(
+  part : @view_cursors.ViewCursors,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   self.render_data = match context.input.view_selection {
     None => None
     Some(selection) => {
@@ -1036,7 +971,11 @@ impl ViewPart for @view_cursors.ViewCursors with fn prepare_render(
 }
 
 ///|
-impl ViewPart for @view_cursors.ViewCursors with fn render(self, context) {
+fn view_cursors_render(
+  part : @view_cursors.ViewCursors,
+  context : RestrictedRenderingContext,
+) -> Unit {
+  let self = part
   let has_selection = match context.input.view_selection {
     Some(selection) => !selection.is_empty()
     None => false
@@ -1049,11 +988,6 @@ impl ViewPart for @view_cursors.ViewCursors with fn render(self, context) {
   // pass. Pair the freshly painted rectangle with the position prepared for
   // this same pass; later cursor events leave this pair intact for hit tests.
   self.last_rendered_position = self.last_position
-}
-
-///|
-impl ViewPart for @view_cursors.ViewCursors with fn on_did_render(self) {
-  self.should_render = false
 }
 
 ///|

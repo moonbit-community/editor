@@ -187,9 +187,36 @@ test "hidden-area batch delivers mapping events before recovery scroll" {
 }
 
 ///|
+fn view_event_handler_test_name(handler : ViewEventHandlerHandle) -> String {
+  match handler {
+    ViewLinesHandler(_) => "view-lines"
+    ViewZonesHandler(_) => "view-zones"
+    ContentViewOverlaysHandler(_) => "content-overlays"
+    MarginViewOverlaysHandler(_) => "margin-overlays"
+    ContentWidgetsHandler(_) => "content-widgets"
+    ViewCursorsHandler(_) => "view-cursors"
+    OverlayWidgetsHandler(_) => "overlay-widgets"
+    EditorScrollbarHandler(_) => "editor-scrollbar"
+  }
+}
+
+///|
+fn view_event_handler_test_dirty(handler : ViewEventHandlerHandle) -> Bool {
+  match handler {
+    ViewLinesHandler(part) => part.should_render
+    ViewZonesHandler(part) => part.should_render()
+    ContentViewOverlaysHandler(part) => part.should_render
+    MarginViewOverlaysHandler(part) => part.should_render
+    ContentWidgetsHandler(part) => part.should_render
+    ViewCursorsHandler(part) => part.should_render
+    OverlayWidgetsHandler(part) => part.should_render
+    EditorScrollbarHandler(part) => part.should_render
+  }
+}
+
+///|
 fn view_part_handle_test_name(part : ViewPartHandle) -> String {
   match part {
-    ViewLinesPart(_) => "view-lines"
     ViewZonesPart(_) => "view-zones"
     ContentViewOverlaysPart(_) => "content-overlays"
     MarginViewOverlaysPart(_) => "margin-overlays"
@@ -204,14 +231,22 @@ fn view_part_handle_test_name(part : ViewPartHandle) -> String {
 test "View dispatcher retains eight handlers in source order and gives each the full batch" {
   install_view_lifecycle_test_browser()
   let view = View::new()
-  let names = view.view_parts.map(view_part_handle_test_name)
+  let handler_names = view.view_event_handlers.map(view_event_handler_test_name)
   assert_true(
-    names ==
+    handler_names ==
     [
       "view-lines", "view-zones", "content-overlays", "margin-overlays", "content-widgets",
       "view-cursors", "overlay-widgets", "editor-scrollbar",
     ],
   )
+  assert_true(
+    view.view_parts.map(view_part_handle_test_name) ==
+    [
+      "view-zones", "content-overlays", "margin-overlays", "content-widgets", "view-cursors",
+      "overlay-widgets", "editor-scrollbar",
+    ],
+  )
+  view.view_lines.should_render = false
   for part in view.view_parts {
     part.on_did_render()
     assert_false(part.should_render())
@@ -222,8 +257,8 @@ test "View dispatcher retains eight handlers in source order and gives each the 
       ViewConfigurationChangedEvent::from_changed_options([]),
     ),
   ])
-  for part in view.view_parts {
-    assert_true(part.should_render())
+  for handler in view.view_event_handlers {
+    assert_true(view_event_handler_test_dirty(handler))
   }
   // The first event is not lost after a later event dirties every handler.
   assert_true(view.view_cursors.editor_has_focus)
@@ -232,14 +267,17 @@ test "View dispatcher retains eight handlers in source order and gives each the 
 }
 
 ///|
-priv struct CountingViewPart {
+priv struct CountingViewEventHandler {
   mut dirty : Bool
   mut force_count : Int
   seen : Array[String]
 }
 
 ///|
-impl ViewPart for CountingViewPart with fn on_view_event(self, event) {
+fn CountingViewEventHandler::on_view_event(
+  self : CountingViewEventHandler,
+  event : ViewEvent,
+) -> Bool {
   self.seen.push(view_event_test_name(event))
   match event {
     ViewFlushed | ViewZonesChanged => true
@@ -248,49 +286,36 @@ impl ViewPart for CountingViewPart with fn on_view_event(self, event) {
 }
 
 ///|
-impl ViewPart for CountingViewPart with fn should_render(self) {
-  self.dirty
-}
-
-///|
-impl ViewPart for CountingViewPart with fn force_should_render(self) {
+fn CountingViewEventHandler::force_should_render(
+  self : CountingViewEventHandler,
+) -> Unit {
   self.dirty = true
   self.force_count = self.force_count + 1
 }
 
 ///|
-impl ViewPart for CountingViewPart with fn prepare_render(_self, _context) {
-
-}
-
-///|
-impl ViewPart for CountingViewPart with fn render(_self, _context) {
-
-}
-
-///|
-impl ViewPart for CountingViewPart with fn on_did_render(self) {
-  self.dirty = false
-}
-
-///|
-test "ViewPart visits the full batch and accumulates sticky dirty once" {
-  let part : CountingViewPart = { dirty: true, force_count: 0, seen: [] }
-  assert_true(ViewPart::should_render(part))
-  ViewPart::on_did_render(part)
-  assert_false(ViewPart::should_render(part))
-  handle_view_part_events(part, [
-    ViewCompositionStart,
-    ViewFlushed,
-    ViewZonesChanged,
-  ])
-  assert_eq(part.seen.length(), 3)
-  assert_true(ViewPart::should_render(part))
-  assert_eq(part.force_count, 1)
-  ViewPart::on_did_render(part)
-  handle_view_part_events(part, [ViewCompositionStart, ViewCompositionEnd])
-  assert_false(ViewPart::should_render(part))
-  assert_eq(part.force_count, 1)
+test "view-event batch visits every event and accumulates sticky dirty once" {
+  let handler : CountingViewEventHandler = {
+    dirty: false,
+    force_count: 0,
+    seen: [],
+  }
+  handle_view_event_batch(
+    [ViewCompositionStart, ViewFlushed, ViewZonesChanged],
+    event => handler.on_view_event(event),
+    () => handler.force_should_render(),
+  )
+  assert_eq(handler.seen.length(), 3)
+  assert_true(handler.dirty)
+  assert_eq(handler.force_count, 1)
+  handler.dirty = false
+  handle_view_event_batch(
+    [ViewCompositionStart, ViewCompositionEnd],
+    event => handler.on_view_event(event),
+    () => handler.force_should_render(),
+  )
+  assert_false(handler.dirty)
+  assert_eq(handler.force_count, 1)
 }
 
 ///|
@@ -342,6 +367,10 @@ extern "js" fn view_event_test_attribute_write_count(
 ///|
 extern "js" fn view_event_test_style_width(element : @rdom.Element) -> String =
   #| (element) => String(element.style.width || "")
+
+///|
+extern "js" fn view_event_test_style_top(element : @rdom.Element) -> String =
+  #| (element) => String(element.style.top || "")
 
 ///|
 extern "js" fn view_event_test_has_parent(
@@ -453,13 +482,13 @@ test "ViewLines propagates changed token decoration option and selection invalid
   // Changed lines notify each intersecting retained row, not just the outer
   // part. An unnotified row ignores even a different candidate input.
   assert_false(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesChanged(ViewLinesChangedEvent::new(13, 1)),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesChanged(ViewLinesChangedEvent::new(11, 1)),
     ),
@@ -478,7 +507,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
 
   // Token ranges clip inclusively and invalidate only retained endpoints.
   assert_false(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewTokensChanged(
         ViewTokensChangedEvent::new([ViewTokenChangeRange::new(1, 9)]),
@@ -486,7 +515,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewTokensChanged(
         ViewTokensChangedEvent::new([ViewTokenChangeRange::new(9, 10)]),
@@ -508,7 +537,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
   // Decorations visit every retained row. Consume the sticky bits with the
   // unchanged normalized inputs, proving DOM replacement is still gated.
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewDecorationsChanged(ViewDecorationsChangedEvent::all()),
     ),
@@ -520,7 +549,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
   // Unrelated configuration still dirties the outer ViewPart, but exact
   // reduced ViewLineOptions equality does not latch retained rows.
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewConfigurationChanged(
         ViewConfigurationChangedEvent::from_changed_options([ReadOnly]),
@@ -533,7 +562,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
     render_whitespace=All,
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewConfigurationChanged(
         ViewConfigurationChangedEvent::from_changed_options([RenderWhitespace]),
@@ -553,7 +582,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
     render_whitespace=All,
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewConfigurationChanged(
         ViewConfigurationChangedEvent::from_changed_options([
@@ -586,7 +615,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
     render_whitespace=All,
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewConfigurationChanged(
         ViewConfigurationChangedEvent::from_changed_options([LineHeight]),
@@ -601,7 +630,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
 
   // Selection walks all rows but returns true only from a row whose own last
   // rendered input used Selection whitespace.
-  assert_true(ViewPart::on_view_event(lines, view_event_test_cursor([])))
+  assert_true(view_lines_on_view_event(lines, view_event_test_cursor([])))
   assert_false(
     line_a.render_line(
       10,
@@ -624,7 +653,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
   let width_only = ViewScrollChangedEvent::new(
     420.0, 0.0, 800.0, 0.0, true, false, false, false,
   )
-  assert_false(ViewPart::on_view_event(lines, ViewScrollChanged(width_only)))
+  assert_false(view_lines_on_view_event(lines, ViewScrollChanged(width_only)))
   assert_eq(view_event_test_style_width(parent), "420px")
   view.dispose()
   restore_view_lifecycle_test_browser()
@@ -643,7 +672,7 @@ test "ViewLines changed range notifies every retained row through the inclusive 
   lines.window = { start: 10, end: 13 }
   lines.lines = [line_a, line_b, line_c]
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesChanged(ViewLinesChangedEvent::new(10, 3)),
     ),
@@ -700,7 +729,7 @@ test "ViewLines option equality catches same-space font render axes" {
     use_monospace_optimizations=false,
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewConfigurationChanged(
         ViewConfigurationChangedEvent::from_changed_options([FontInfo]),
@@ -744,7 +773,7 @@ test "ViewLines deletion reconciles start rows and removes only evicted DOM node
   // Inside deletion records the first index and increments the covered count;
   // unaffected row objects keep identity while both deleted rows detach.
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesDeleted(ViewLinesDeletedEvent::new(11, 12)),
     ),
@@ -765,7 +794,7 @@ test "ViewLines deletion reconciles start rows and removes only evicted DOM node
 
   // Disjoint-above shifts only the one-based start; disjoint-below is a no-op.
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesDeleted(ViewLinesDeletedEvent::new(1, 2)),
     ),
@@ -773,7 +802,7 @@ test "ViewLines deletion reconciles start rows and removes only evicted DOM node
   assert_eq(lines.window.start, 8)
   assert_eq(lines.window.end, 10)
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesDeleted(ViewLinesDeletedEvent::new(20, 21)),
     ),
@@ -784,7 +813,7 @@ test "ViewLines deletion reconciles start rows and removes only evicted DOM node
   // A deletion beginning above and ending inside adjusts start and splices the
   // first retained row in one source-ordered reconciliation.
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesDeleted(ViewLinesDeletedEvent::new(7, 8)),
     ),
@@ -813,7 +842,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
 
   // Equality belongs to the source's `insertFrom <= start` branch.
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesInserted(ViewLinesInsertedEvent::new(20, 20)),
     ),
@@ -823,7 +852,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
   lines.window = { start: 20, end: 23 }
 
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesInserted(ViewLinesInsertedEvent::new(18, 19)),
     ),
@@ -831,7 +860,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
   assert_eq(lines.window.start, 22)
   assert_eq(lines.window.end, 25)
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesInserted(ViewLinesInsertedEvent::new(30, 30)),
     ),
@@ -843,7 +872,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
   // A stays, a fresh row occupies the insertion slot, B stays, C is evicted.
   lines.window = { start: 20, end: 23 }
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesInserted(ViewLinesInsertedEvent::new(21, 21)),
     ),
@@ -864,7 +893,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
 
   // A larger inside insertion pushes all remaining rows outside the window.
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesInserted(ViewLinesInsertedEvent::new(21, 24)),
     ),
@@ -892,31 +921,31 @@ test "ViewLines empty flush resets to one and defers ordinary DOM replacement" {
   lines.window = { start: 50, end: 51 }
   lines.lines = [stale_line]
 
-  assert_true(ViewPart::on_view_event(lines, ViewFlushed))
+  assert_true(view_lines_on_view_event(lines, ViewFlushed))
   assert_eq(lines.lines.length(), 0)
   assert_eq(lines.window.start, 1)
   assert_eq(lines.window.end, 1)
   assert_true(view_event_test_has_parent(stale_node, parent))
   assert_false(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesChanged(ViewLinesChangedEvent::new(1, 1)),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesDeleted(ViewLinesDeletedEvent::new(1, 1)),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewLinesInserted(ViewLinesInsertedEvent::new(1, 1)),
     ),
   )
   assert_false(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewTokensChanged(
         ViewTokensChangedEvent::new([ViewTokenChangeRange::new(1, 1)]),
@@ -940,7 +969,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
   cursors.last_rendered_position = Some(Position(1, 1))
   let selection = @core.Selection::new(Position(1, 1), Position(1, 2))
   assert_true(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       ViewCursorStateChanged(
         ViewCursorStateChangedEvent::new([selection], [selection], NotSet),
@@ -962,7 +991,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
   )
   let moved_selection = @core.Selection::new(Position(2, 1), Position(2, 2))
   assert_true(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       ViewCursorStateChanged(
         ViewCursorStateChangedEvent::new(
@@ -978,7 +1007,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
     class_writes,
   )
   assert_false(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       ViewFocusChanged(ViewFocusChangedEvent::new(true)),
     ),
@@ -993,7 +1022,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
     ),
   )
   cursors.should_render = false
-  ViewPartHandle::handle_view_events(ViewCursorsPart(cursors), [
+  ViewEventHandlerHandle::handle_view_events(ViewCursorsHandler(cursors), [
     ViewFocusChanged(ViewFocusChangedEvent::new(false)),
   ])
   assert_false(cursors.should_render)
@@ -1080,7 +1109,7 @@ test "ContentWidgets handlers refresh layout and reproject every mapping event" 
   // Outer Configuration always invalidates. Only its exact LayoutInfo bit is
   // forwarded to the retained widgets' cache-refresh branch.
   assert_true(
-    ViewPart::on_view_event(
+    content_widgets_on_view_event(
       widgets,
       ViewConfigurationChanged(
         ViewConfigurationChangedEvent::from_changed_options([FontInfo]),
@@ -1089,7 +1118,7 @@ test "ContentWidgets handlers refresh layout and reproject every mapping event" 
   )
   assert_eq(layout_reads.val, 1)
   assert_true(
-    ViewPart::on_view_event(
+    content_widgets_on_view_event(
       widgets,
       ViewConfigurationChanged(
         ViewConfigurationChangedEvent::from_changed_options([LayoutInfo]),
@@ -1106,7 +1135,7 @@ test "ContentWidgets handlers refresh layout and reproject every mapping event" 
       ViewLinesDeleted(ViewLinesDeletedEvent::new(2, 2)),
       ViewLinesInserted(ViewLinesInsertedEvent::new(2, 2)),
     ] {
-    assert_true(ViewPart::on_view_event(widgets, event))
+    assert_true(content_widgets_on_view_event(widgets, event))
   }
   assert_eq(projections.val, 4)
   view.dispose()
@@ -1118,100 +1147,104 @@ test "ContentWidgets and ViewZones source handler matrices" {
   install_view_lifecycle_test_browser()
   let view = View::new()
   let widgets = view.content_widgets
-  assert_true(ViewPart::on_view_event(widgets, ViewFlushed))
-  assert_true(ViewPart::on_view_event(widgets, view_event_test_configuration()))
+  assert_true(content_widgets_on_view_event(widgets, ViewFlushed))
   assert_true(
-    ViewPart::on_view_event(
+    content_widgets_on_view_event(widgets, view_event_test_configuration()),
+  )
+  assert_true(
+    content_widgets_on_view_event(
       widgets,
       ViewDecorationsChanged(ViewDecorationsChangedEvent::all()),
     ),
   )
-  assert_true(ViewPart::on_view_event(widgets, ViewLineMappingChanged))
+  assert_true(content_widgets_on_view_event(widgets, ViewLineMappingChanged))
   assert_true(
-    ViewPart::on_view_event(
+    content_widgets_on_view_event(
       widgets,
       ViewLinesChanged(ViewLinesChangedEvent::new(1, 1)),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    content_widgets_on_view_event(
       widgets,
       ViewLinesDeleted(ViewLinesDeletedEvent::new(1, 2)),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    content_widgets_on_view_event(
       widgets,
       ViewLinesInserted(ViewLinesInsertedEvent::new(1, 2)),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    content_widgets_on_view_event(
       widgets,
       view_event_test_scroll(false, false, false, false),
     ),
   )
-  assert_true(ViewPart::on_view_event(widgets, ViewZonesChanged))
-  assert_false(ViewPart::on_view_event(widgets, view_event_test_cursor([])))
+  assert_true(content_widgets_on_view_event(widgets, ViewZonesChanged))
   assert_false(
-    ViewPart::on_view_event(
+    content_widgets_on_view_event(widgets, view_event_test_cursor([])),
+  )
+  assert_false(
+    content_widgets_on_view_event(
       widgets,
       ViewTokensChanged(ViewTokensChangedEvent::new([])),
     ),
   )
   assert_false(
-    ViewPart::on_view_event(
+    content_widgets_on_view_event(
       widgets,
       ViewFocusChanged(ViewFocusChangedEvent::new(true)),
     ),
   )
 
   let zones = view.view_zones
-  assert_true(ViewPart::on_view_event(zones, view_event_test_configuration()))
+  assert_true(view_zones_on_view_event(zones, view_event_test_configuration()))
   // `viewZones.ts:122-124` returns the exact
   // `_recomputeWhitespacesProps()` result. With an empty zone registry there
   // is no changed whitespace, so the source handler is not dirty.
-  assert_false(ViewPart::on_view_event(zones, ViewLineMappingChanged))
+  assert_false(view_zones_on_view_event(zones, ViewLineMappingChanged))
   assert_true(
-    ViewPart::on_view_event(
+    view_zones_on_view_event(
       zones,
       ViewLinesDeleted(ViewLinesDeletedEvent::new(1, 1)),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_zones_on_view_event(
       zones,
       ViewLinesInserted(ViewLinesInsertedEvent::new(1, 1)),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_zones_on_view_event(
       zones,
       view_event_test_scroll(true, false, false, false),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_zones_on_view_event(
       zones,
       view_event_test_scroll(false, false, false, true),
     ),
   )
   assert_false(
-    ViewPart::on_view_event(
+    view_zones_on_view_event(
       zones,
       view_event_test_scroll(false, true, false, false),
     ),
   )
   assert_false(
-    ViewPart::on_view_event(
+    view_zones_on_view_event(
       zones,
       view_event_test_scroll(false, false, true, false),
     ),
   )
-  assert_true(ViewPart::on_view_event(zones, ViewZonesChanged))
-  assert_false(ViewPart::on_view_event(zones, ViewFlushed))
+  assert_true(view_zones_on_view_event(zones, ViewZonesChanged))
+  assert_false(view_zones_on_view_event(zones, ViewFlushed))
   assert_false(
-    ViewPart::on_view_event(
+    view_zones_on_view_event(
       zones,
       ViewLinesChanged(ViewLinesChangedEvent::new(1, 1)),
     ),
@@ -1228,77 +1261,89 @@ test "overlay aggregates, OverlayWidgets, and EditorScrollbar handler matrix" {
   let margin = view.margin_view_overlays
   for
     overlays in [
-      ContentViewOverlaysPart(content),
-      MarginViewOverlaysPart(margin),
+      ContentViewOverlaysHandler(content),
+      MarginViewOverlaysHandler(margin),
     ] {
-    assert_true(ViewPart::on_view_event(overlays, ViewFlushed))
+    assert_true(ViewEventHandlerHandle::on_view_event(overlays, ViewFlushed))
     assert_true(
-      ViewPart::on_view_event(overlays, view_event_test_configuration()),
+      ViewEventHandlerHandle::on_view_event(
+        overlays,
+        view_event_test_configuration(),
+      ),
     )
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         ViewDecorationsChanged(ViewDecorationsChangedEvent::all()),
       ),
     )
-    assert_true(ViewPart::on_view_event(overlays, ViewLineMappingChanged))
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(overlays, ViewLineMappingChanged),
+    )
+    assert_true(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         ViewLinesChanged(ViewLinesChangedEvent::new(1, 1)),
       ),
     )
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         ViewLinesDeleted(ViewLinesDeletedEvent::new(1, 1)),
       ),
     )
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         ViewLinesInserted(ViewLinesInsertedEvent::new(1, 1)),
       ),
     )
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         ViewTokensChanged(
           ViewTokensChangedEvent::new([ViewTokenChangeRange::new(1, 1)]),
         ),
       ),
     )
-    assert_true(ViewPart::on_view_event(overlays, view_event_test_cursor([])))
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(
+        overlays,
+        view_event_test_cursor([]),
+      ),
+    )
+    assert_true(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         ViewFocusChanged(ViewFocusChangedEvent::new(true)),
       ),
     )
-    assert_true(ViewPart::on_view_event(overlays, ViewZonesChanged))
+    assert_true(
+      ViewEventHandlerHandle::on_view_event(overlays, ViewZonesChanged),
+    )
     // Base `ViewOverlays.onScrollChanged` always invalidates the retained
     // visible rows.  Each independent flag therefore reaches both grouped
     // aggregates without being conflated.
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         view_event_test_scroll(true, false, false, false),
       ),
     )
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         view_event_test_scroll(false, true, false, false),
       ),
     )
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         view_event_test_scroll(false, false, true, false),
       ),
     )
     assert_true(
-      ViewPart::on_view_event(
+      ViewEventHandlerHandle::on_view_event(
         overlays,
         view_event_test_scroll(false, false, false, true),
       ),
@@ -1307,45 +1352,48 @@ test "overlay aggregates, OverlayWidgets, and EditorScrollbar handler matrix" {
 
   let overlay_widgets = view.overlay_widgets
   assert_true(
-    ViewPart::on_view_event(overlay_widgets, view_event_test_configuration()),
+    overlay_widgets_on_view_event(
+      overlay_widgets,
+      view_event_test_configuration(),
+    ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    overlay_widgets_on_view_event(
       overlay_widgets,
       view_event_test_scroll(true, false, false, false),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    overlay_widgets_on_view_event(
       overlay_widgets,
       view_event_test_scroll(false, false, true, false),
     ),
   )
   assert_false(
-    ViewPart::on_view_event(
+    overlay_widgets_on_view_event(
       overlay_widgets,
       view_event_test_scroll(false, true, false, false),
     ),
   )
   assert_false(
-    ViewPart::on_view_event(
+    overlay_widgets_on_view_event(
       overlay_widgets,
       view_event_test_scroll(false, false, false, true),
     ),
   )
-  assert_false(ViewPart::on_view_event(overlay_widgets, ViewFlushed))
+  assert_false(overlay_widgets_on_view_event(overlay_widgets, ViewFlushed))
 
   let scrollbar = view.editor_scrollbar
   assert_true(
-    ViewPart::on_view_event(scrollbar, view_event_test_configuration()),
+    editor_scrollbar_on_view_event(scrollbar, view_event_test_configuration()),
   )
   assert_true(
-    ViewPart::on_view_event(
+    editor_scrollbar_on_view_event(
       scrollbar,
       view_event_test_scroll(false, false, false, false),
     ),
   )
-  assert_false(ViewPart::on_view_event(scrollbar, ViewFlushed))
+  assert_false(editor_scrollbar_on_view_event(scrollbar, ViewFlushed))
   view.dispose()
   restore_view_lifecycle_test_browser()
 }
@@ -1362,31 +1410,31 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     @view_lines.ViewLine::new(),
   ]
   assert_false(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       view_event_test_scroll(true, false, false, false),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       view_event_test_scroll(false, true, false, false),
     ),
   )
   assert_false(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       view_event_test_scroll(false, false, true, false),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       view_event_test_scroll(false, false, false, true),
     ),
   )
   assert_false(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewTokensChanged(
         ViewTokensChangedEvent::new([
@@ -1397,7 +1445,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewTokensChanged(
         ViewTokensChangedEvent::new([
@@ -1408,7 +1456,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_lines_on_view_event(
       lines,
       ViewTokensChanged(
         ViewTokensChangedEvent::new([ViewTokenChangeRange::new(10, 10)]),
@@ -1419,7 +1467,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
   let cursors = view.view_cursors
   cursors.last_position = Some(Position(5, 2))
   assert_false(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       ViewTokensChanged(
         ViewTokensChangedEvent::new([
@@ -1430,7 +1478,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       ViewTokensChanged(
         ViewTokensChangedEvent::new([
@@ -1441,7 +1489,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       ViewTokensChanged(
         ViewTokensChangedEvent::new([ViewTokenChangeRange::new(5, 8)]),
@@ -1449,25 +1497,25 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       view_event_test_scroll(true, false, false, false),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       view_event_test_scroll(false, true, false, false),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       view_event_test_scroll(false, false, true, false),
     ),
   )
   assert_true(
-    ViewPart::on_view_event(
+    view_cursors_on_view_event(
       cursors,
       view_event_test_scroll(false, false, false, true),
     ),
@@ -1614,14 +1662,11 @@ fn view_event_test_overlay_render_context(
 }
 
 ///|
-fn view_event_test_unsupported_view_lines_context() -> (
-  View,
-  RenderingContext,
-  RestrictedRenderingContext,
-) {
+test "View renders text before prepare and completes all prepares before writes" {
+  install_view_lifecycle_test_browser()
   let model = @model.TextModel(
-    @base_common.Uri::file("/view-lines-unsupported-render-test.mbt"),
-    "view-lines-unsupported-render-test.mbt",
+    @base_common.Uri::file("/view-lifecycle-order-test.mbt"),
+    "view-lifecycle-order-test.mbt",
     "moonbit",
     1,
     "rev-1",
@@ -1630,30 +1675,74 @@ fn view_event_test_unsupported_view_lines_context() -> (
   let view_model = @view_model.ViewModel(model)
   let layout = @view_layout.ViewLayout::new(line_height=20, line_count=1)
   layout.set_viewport_size(width=80.0, height=20.0) |> ignore
+  layout.set_content_width(80.0) |> ignore
   let view = View::new()
-  let (rendering, restricted) = view_event_test_overlay_render_context(
+  let (retained_line, _) = view_event_test_retained_line(
+    view.view_lines.get_dom_node(),
+    view_event_test_line_input("alpha", None),
+  )
+  view.view_lines.window = { start: 1, end: 2 }
+  view.view_lines.lines = [retained_line]
+  for part in view.view_parts {
+    part.on_did_render()
+  }
+  view.view_lines.should_render = true
+  view.view_zones.force_should_render()
+  view.view_cursors.should_render = true
+  let cursor_prepare_seen = Ref(false)
+  let text_was_complete = Ref(false)
+  let ordinary_write_was_pending = Ref(false)
+  let view_context : ViewContext = {
+    measure_line_selection: (_line, _start, _end) => [],
+    measure_line_decorations: (_line, _start, _end) => [],
+    offset_for_column: (_line, _column) => {
+      // Cursor prepare follows ViewZones prepare in the ordinary-part
+      // order. Text completion is already visible, but no ordinary render
+      // may have written its DOM yet.
+      text_was_complete.val = !view.view_lines.should_render
+      ordinary_write_was_pending.val = view_event_test_style_top(
+          view.view_zones.margin_dom_node(),
+        ) ==
+        ""
+      cursor_prepare_seen.val = true
+      0.0
+    },
+    model_position_to_view_position: position => position,
+  }
+  let selection = @core.Selection::new(Position(1, 1), Position(1, 1))
+  let input : ViewRenderInput = {
+    window: { start: 1, end: 2 },
     view_model,
     layout,
-    view.view_lines,
-    1,
+    selection_view_range: None,
+    view_selection: Some(selection),
+    gutter_width: 0.0,
+    line_decorations_width: 0.0,
+    space_width: 8.0,
+    typical_fullwidth_character_width: 16.0,
+    editor_has_focus: true,
+    word_wrap: false,
+    render_line_highlight: Line,
+    render_line_highlight_only_when_focus: false,
+    show_unused: true,
+    show_deprecated: true,
+  }
+  view.render(view_context, input)
+  assert_true(cursor_prepare_seen.val)
+  assert_true(text_was_complete.val)
+  assert_true(ordinary_write_was_pending.val)
+  assert_true(
+    view_event_test_style_top(view.view_zones.margin_dom_node()) != "",
   )
-  (view, rendering, restricted)
-}
-
-///|
-test "panic ViewLines prepareRender is unsupported" {
-  install_view_lifecycle_test_browser()
-  defer restore_view_lifecycle_test_browser()
-  let (view, rendering, _) = view_event_test_unsupported_view_lines_context()
-  ViewPart::prepare_render(view.view_lines, rendering)
-}
-
-///|
-test "panic ViewLines render is unsupported" {
-  install_view_lifecycle_test_browser()
-  defer restore_view_lifecycle_test_browser()
-  let (view, _, restricted) = view_event_test_unsupported_view_lines_context()
-  ViewPart::render(view.view_lines, restricted)
+  assert_false(view.view_lines.should_render)
+  for part in view.view_parts {
+    assert_false(part.should_render())
+  }
+  view.dispose()
+  layout.dispose()
+  view_model.dispose()
+  model.dispose()
+  restore_view_lifecycle_test_browser()
 }
 
 ///|
@@ -1705,27 +1794,40 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
   view.install_current_line_configuration_reader(() => configuration.val)
   let content = view.content_view_overlays
   let margin = view.margin_view_overlays
+  let content_part = ContentViewOverlaysPart(content)
+  let margin_part = MarginViewOverlaysPart(margin)
+  let content_handler = ContentViewOverlaysHandler(content)
+  let margin_handler = MarginViewOverlaysHandler(margin)
   assert_true(content.content_width == 120.0)
   assert_true(margin.content_left == 40.0)
 
   // Configuration updates every aggregate cache at event time, independently
   // from the nested current-line states.
   configuration.val = (All, true, true, 41.0, 121.0)
-  assert_true(ViewPart::on_view_event(content, view_event_test_configuration()))
-  assert_true(ViewPart::on_view_event(margin, view_event_test_configuration()))
+  assert_true(
+    content_view_overlays_on_view_event(
+      content,
+      view_event_test_configuration(),
+    ),
+  )
+  assert_true(
+    margin_view_overlays_on_view_event(margin, view_event_test_configuration()),
+  )
   assert_true(content.content_width == 121.0)
   assert_true(margin.content_left == 41.0)
   assert_true(content.current_line.state.content_width == 121.0)
   assert_true(margin.current_line_margin.state.content_left == 41.0)
   configuration.val = (Line, false, false, 40.0, 120.0)
-  ViewPart::on_view_event(content, view_event_test_configuration()) |> ignore
-  ViewPart::on_view_event(margin, view_event_test_configuration()) |> ignore
+  content_view_overlays_on_view_event(content, view_event_test_configuration())
+  |> ignore
+  margin_view_overlays_on_view_event(margin, view_event_test_configuration())
+  |> ignore
 
   // Base ViewOverlays retains focus even though CurrentLineHighlight's
   // focus-only early return deliberately leaves its own `_focused` unchanged.
   let focus_event = ViewFocusChanged(ViewFocusChangedEvent::new(true))
-  assert_true(ViewPart::on_view_event(content, focus_event))
-  assert_true(ViewPart::on_view_event(margin, focus_event))
+  assert_true(content_view_overlays_on_view_event(content, focus_event))
+  assert_true(margin_view_overlays_on_view_event(margin, focus_event))
   assert_true(content.overlays.is_focused)
   assert_true(margin.overlays.is_focused)
   assert_false(content.current_line.state.focused)
@@ -1737,8 +1839,8 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
     view.view_lines,
     1,
   )
-  ViewPart::prepare_render(content, first_rendering)
-  ViewPart::prepare_render(margin, first_rendering)
+  content_part.prepare_render(first_rendering)
+  margin_part.prepare_render(first_rendering)
   let content_row = view_event_test_seed_overlay_row(
     content.overlays,
     first_rendering.viewport,
@@ -1748,10 +1850,10 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
     first_rendering.viewport,
   )
   // Prime every retained DOM/style cache through the real ViewPart render.
-  ViewPart::render(content, first_restricted)
-  ViewPart::render(margin, first_restricted)
-  ViewPart::on_did_render(content)
-  ViewPart::on_did_render(margin)
+  content_part.render(first_restricted)
+  margin_part.render(first_restricted)
+  content_part.on_did_render()
+  margin_part.on_did_render()
   assert_eq(
     view_event_test_attribute(content.overlays.dom_node.element(), "class"),
     "view-overlays focused",
@@ -1795,10 +1897,10 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
   // overwork cannot replace a row or write any retained style/class.
   let column_only = @core.Selection::new(Position(1, 2), Position(1, 2))
   let cursor_event = view_event_test_cursor([column_only])
-  handle_view_part_events(content, [cursor_event])
-  handle_view_part_events(margin, [cursor_event])
-  assert_true(ViewPart::should_render(content))
-  assert_true(ViewPart::should_render(margin))
+  content_handler.handle_view_events([cursor_event])
+  margin_handler.handle_view_events([cursor_event])
+  assert_true(content_part.should_render())
+  assert_true(margin_part.should_render())
   assert_true(content.current_line.state.cursor_line_numbers == [1])
   assert_true(margin.current_line_margin.state.cursor_line_numbers == [1])
   assert_true(content.current_line.state.selection_is_empty)
@@ -1809,12 +1911,12 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
     view.view_lines,
     2,
   )
-  ViewPart::prepare_render(content, second_rendering)
-  ViewPart::prepare_render(margin, second_rendering)
-  ViewPart::render(content, second_restricted)
-  ViewPart::render(margin, second_restricted)
-  ViewPart::on_did_render(content)
-  ViewPart::on_did_render(margin)
+  content_part.prepare_render(second_rendering)
+  margin_part.prepare_render(second_rendering)
+  content_part.render(second_restricted)
+  margin_part.render(second_restricted)
+  content_part.on_did_render()
+  margin_part.on_did_render()
 
   assert_eq(view_event_test_style_write_count(), 0)
   assert_eq(view_event_test_view_layer_mutation_count(), 0)

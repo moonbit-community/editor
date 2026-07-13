@@ -29,6 +29,20 @@ pub struct ViewModelLinesFromProjectedModel {
 }
 
 ///|
+/// Keeps the private conformance counters observable to package white-box
+/// tests without leaking either field through `pkg.generated.mbti`.
+fn ViewModelLinesFromProjectedModel::token_demand_counters(
+  self : ViewModelLinesFromProjectedModel,
+) -> (Int, Int) {
+  (self.batch_call_count, self.passive_token_read_count)
+}
+
+///|
+let _test_only_token_demand_counters_anchor : Unit = ignore(
+  ViewModelLinesFromProjectedModel::token_demand_counters,
+)
+
+///|
 /// A view line as (model line, wrapped-line index) — Monaco's `ViewLineInfo`
 /// (`viewModelLines.ts:1054`).
 priv struct ViewLineInfo {

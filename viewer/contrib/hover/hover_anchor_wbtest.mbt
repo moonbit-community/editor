@@ -193,9 +193,9 @@ test "marker participant filters by anchor-line columns with the showIfCollapsed
       tags: None,
     },
   ])
-  let participant = MarkerHoverParticipant::new(marker_decorations)
+  let participant = MarkerHoverParticipant::new(marker_decorations).hover_participant_handle()
   let compute = (anchor : HoverAnchor) => {
-    participant.compute_sync({
+    (participant.compute_sync)({
       model,
       anchor,
       source: HoverStartMouse,
@@ -274,10 +274,10 @@ test "marker participant isolates distinct live models sharing one URI" {
   let marker_decorations = @markers.MarkerDecorationsService::new(markers)
   let lease_a = marker_decorations.acquire_model(model_a)
   let lease_b = marker_decorations.acquire_model(model_b)
-  let participant = MarkerHoverParticipant::new(marker_decorations)
+  let participant = MarkerHoverParticipant::new(marker_decorations).hover_participant_handle()
 
   let compute = (model : @model.TextModel, column : Int) => {
-    participant.compute_sync({
+    (participant.compute_sync)({
       model,
       anchor: range_anchor(1, column, column),
       source: HoverStartMouse,

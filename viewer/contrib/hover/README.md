@@ -17,7 +17,9 @@ timing, and rendering can be tested on JS and native targets.
   parts are merged into `HoverView`/`HoverWidgetView`; content invalidation can
   cancel pending work while preserving an already shown view. The browser/root
   host owns clearable timers and executes the requested computations.
-- `HoverParticipant` has anchor suggestion plus sync/async computation.
+- `HoverParticipantHandle` is a value-level adapter with required ordinal and
+  synchronous computation plus independently optional anchor suggestion,
+  asynchronous computation, and loading-message callbacks.
   `HoverParticipantRegistry` builds participants from
   `HoverParticipantServices`; the process-wide registry currently installs
   marker and language-Markdown participants.
@@ -34,8 +36,8 @@ timing, and rendering can be tested on JS and native targets.
 `viewer/contrib/hover/browser` owns everything whose contract carries DOM or a
 browser `MouseTarget`: candidate discovery, editor-event reduction, the
 per-editor `ContentHoverController`, geometry, and the persistent
-`ContentHoverWidget`. The widget implements the generic content-widget trait
-and mounts in the overflowing layer. The root `viewer` package registers the
+`ContentHoverWidget`. The widget exposes a generic `ContentWidgetHandle` and
+mounts in the overflowing layer. The root `viewer` package registers the
 contribution, routes events/timers/provider work, owns hover decorations, and
 mounts/synchronizes the widget.
 

@@ -14,8 +14,8 @@ pub(all) enum HoverAnchorType {
 ///|
 /// Stable identity of the participant that owns a foreign-element anchor.
 /// Monaco compares participant objects by identity; the multi-target MoonBit
-/// port mints an explicit identity so trait-object boxing cannot change anchor
-/// equality or adoption.
+/// port mints an explicit identity so copying or rebuilding a participant
+/// handle cannot change anchor equality or adoption.
 pub struct HoverParticipantOwner {
   priv id : Int
 } derive(Eq, Debug)
@@ -24,9 +24,8 @@ pub struct HoverParticipantOwner {
 let next_hover_participant_owner_id : Ref[Int] = Ref(0)
 
 ///|
-/// Mints one logical participant identity. A factory that rebuilds a
-/// participant for separate input/compute passes must retain and reuse this
-/// value across those instances.
+/// Mints one logical participant identity. A factory that rebuilds handles for
+/// separate input/compute passes must retain and reuse this value across them.
 pub fn HoverParticipantOwner::new() -> HoverParticipantOwner {
   next_hover_participant_owner_id.val += 1
   { id: next_hover_participant_owner_id.val }

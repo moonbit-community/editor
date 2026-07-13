@@ -53,6 +53,46 @@ test "find_anchor_candidates: a content-text hit yields the priority-0 range anc
 }
 
 ///|
+test "find_anchor_candidates only calls present participant suggestions" {
+  let owner = @hover.HoverParticipantOwner::new()
+  let without_suggestion = @hover.HoverParticipantHandle(10, _ctx => [])
+  let with_suggestion = @hover.HoverParticipantHandle(20, _ctx => [], suggest_hover_anchor=(
+    _injected_text,
+    range,
+    mouse_x,
+    mouse_y,
+  ) => {
+    Some(
+      HoverForeignElementAnchor(
+        priority=20,
+        owner~,
+        injected_text_index=0,
+        range~,
+        initial_mouse_pos_x=mouse_x,
+        initial_mouse_pos_y=mouse_y,
+        supports_marker_hover=false,
+      ),
+    )
+  })
+  let candidates = find_anchor_candidates(
+    [without_suggestion, with_suggestion],
+    text_target(2, 4),
+    10.0,
+    initial_mouse_pos_x=12.0,
+    initial_mouse_pos_y=24.0,
+  )
+  assert_eq(candidates.length(), 2)
+  match candidates[0] {
+    HoverForeignElementAnchor(priority~, owner=actual_owner, ..) => {
+      assert_eq(priority, 20)
+      assert_true(actual_owner == owner)
+    }
+    _ => fail("expected participant-suggested foreign anchor first")
+  }
+  assert_true(candidates[1] is HoverRangeAnchor(priority=0, ..))
+}
+
+///|
 test "equal-priority anchor candidates retain insertion order" {
   let first = @hover.HoverRangeAnchor(
     priority=10,

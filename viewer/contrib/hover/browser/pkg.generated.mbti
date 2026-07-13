@@ -14,7 +14,7 @@ import {
 // Values
 pub let content_hover_widget_id : String
 
-pub fn find_anchor_candidates(Array[&@hover.HoverParticipant], @moonbit-community/editor/viewer/browser.MouseTarget, Double, initial_mouse_pos_x? : Double, initial_mouse_pos_y? : Double) -> Array[@hover.HoverAnchor]
+pub fn find_anchor_candidates(Array[@hover.HoverParticipantHandle], @moonbit-community/editor/viewer/browser.MouseTarget, Double, initial_mouse_pos_x? : Double, initial_mouse_pos_y? : Double) -> Array[@hover.HoverAnchor]
 
 pub fn hover_available_space_above(Double, Double) -> Double
 
@@ -108,7 +108,7 @@ pub(all) struct ContentHoverWidgetHost {
 
 pub(all) struct EditorContext {
   view_model : @view_model.ViewModel?
-  participants : Array[&@hover.HoverParticipant]
+  participants : Array[@hover.HoverParticipantHandle]
   typical_halfwidth_character_width : Double
   mouse_posx : Double?
   mouse_posy : Double?

@@ -5,7 +5,7 @@
 /// own. Each factory builds a participant from the editor-scoped services, like
 /// Monaco's `instantiationService.createInstance(ctor, editor)`.
 pub(all) struct HoverParticipantRegistry {
-  entries : Array[(HoverParticipantServices) -> &HoverParticipant]
+  entries : Array[(HoverParticipantServices) -> HoverParticipantHandle]
 }
 
 ///|
@@ -18,7 +18,7 @@ pub fn HoverParticipantRegistry::new() -> HoverParticipantRegistry {
 /// Adds a hover participant factory to the registry.
 pub fn HoverParticipantRegistry::register(
   self : HoverParticipantRegistry,
-  factory : (HoverParticipantServices) -> &HoverParticipant,
+  factory : (HoverParticipantServices) -> HoverParticipantHandle,
 ) -> Unit {
   self.entries.push(factory)
 }
@@ -29,17 +29,17 @@ pub fn HoverParticipantRegistry::register(
 pub fn HoverParticipantRegistry::build_all(
   self : HoverParticipantRegistry,
   services : HoverParticipantServices,
-) -> Array[&HoverParticipant] {
+) -> Array[HoverParticipantHandle] {
   let participants = self.entries.map(factory => factory(services))
   // MoonBit's Array::sort_by is unstable, while JavaScript's source sort is
   // stable. Carry the registration index as an explicit tie-break so equal
   // ordinals retain registration order on every backend.
-  let indexed : Array[(Int, &HoverParticipant)] = []
+  let indexed : Array[(Int, HoverParticipantHandle)] = []
   for index, participant in participants {
     indexed.push((index, participant))
   }
   indexed.sort_by((left, right) => {
-    let by_ordinal = left.1.ordinal() - right.1.ordinal()
+    let by_ordinal = left.1.ordinal - right.1.ordinal
     if by_ordinal != 0 {
       by_ordinal
     } else {
@@ -55,7 +55,7 @@ pub fn HoverParticipantRegistry::build_all(
 /// boundary.
 pub fn HoverParticipantRegistry::get_all(
   self : HoverParticipantRegistry,
-) -> Array[(HoverParticipantServices) -> &HoverParticipant] {
+) -> Array[(HoverParticipantServices) -> HoverParticipantHandle] {
   self.entries
 }
 
@@ -81,9 +81,9 @@ pub fn register_default_hover_participants(
   registry : HoverParticipantRegistry,
 ) -> Unit {
   registry.register(services => {
-    MarkerHoverParticipant::new(services.marker_decorations)
+    MarkerHoverParticipant::new(services.marker_decorations).hover_participant_handle()
   })
   registry.register(services => {
-    MarkdownHoverParticipant::new(services.languages, services.log_service)
+    MarkdownHoverParticipant::new(services.languages, services.log_service).hover_participant_handle()
   })
 }

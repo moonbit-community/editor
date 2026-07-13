@@ -76,7 +76,7 @@ pub(all) struct ComputedHover {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct ContentHoverComputer {
-  participants : Array[&HoverParticipant]
+  participants : Array[HoverParticipantHandle]
 }
 pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, HoverAnchor, source? : HoverStartSource, token? : @language.CancellationToken, is_current? : () -> Bool) -> ComputedHover? noraise
 pub async fn ContentHoverComputer::compute_async_each(Self, @model.TextModel, HoverAnchor, source? : HoverStartSource, token? : @language.CancellationToken, is_current? : () -> Bool, run_tasks? : async (Array[async () -> Unit]) -> Unit, emit~ : (Array[HoverPart]) -> Unit) -> Unit noraise
@@ -208,18 +208,27 @@ pub(all) enum HoverPart {
   LoadingHover(range~ : @common.Range, message~ : String)
 } derive(Eq, @debug.Debug)
 
+pub(all) struct HoverParticipantHandle {
+  ordinal : Int
+  suggest_hover_anchor : ((@view_model.InjectedText?, @common.Range, Double?, Double?) -> HoverAnchor?)?
+  compute_sync : (HoverComputeContext) -> Array[HoverPart]
+  compute_async : (async (HoverComputeContext, @language.CancellationToken) -> Array[HoverPart] noraise)?
+  create_loading_message : ((HoverAnchor) -> HoverPart?)?
+}
+pub fn HoverParticipantHandle::HoverParticipantHandle(Int, (HoverComputeContext) -> Array[HoverPart], suggest_hover_anchor? : (@view_model.InjectedText?, @common.Range, Double?, Double?) -> HoverAnchor?, compute_async? : async (HoverComputeContext, @language.CancellationToken) -> Array[HoverPart] noraise, create_loading_message? : (HoverAnchor) -> HoverPart?) -> Self
+
 pub struct HoverParticipantOwner {
   // private fields
 } derive(Eq, @debug.Debug)
 pub fn HoverParticipantOwner::new() -> Self
 
 pub(all) struct HoverParticipantRegistry {
-  entries : Array[(HoverParticipantServices) -> &HoverParticipant]
+  entries : Array[(HoverParticipantServices) -> HoverParticipantHandle]
 }
-pub fn HoverParticipantRegistry::build_all(Self, HoverParticipantServices) -> Array[&HoverParticipant]
-pub fn HoverParticipantRegistry::get_all(Self) -> Array[(HoverParticipantServices) -> &HoverParticipant]
+pub fn HoverParticipantRegistry::build_all(Self, HoverParticipantServices) -> Array[HoverParticipantHandle]
+pub fn HoverParticipantRegistry::get_all(Self) -> Array[(HoverParticipantServices) -> HoverParticipantHandle]
 pub fn HoverParticipantRegistry::new() -> Self
-pub fn HoverParticipantRegistry::register(Self, (HoverParticipantServices) -> &HoverParticipant) -> Unit
+pub fn HoverParticipantRegistry::register(Self, (HoverParticipantServices) -> HoverParticipantHandle) -> Unit
 
 pub(all) struct HoverParticipantServices {
   languages : @languages.Languages
@@ -283,18 +292,17 @@ pub(all) struct HoverWidgetView {
   parts : Array[HoverPart]
 } derive(Eq)
 
-pub(all) struct MarkdownHoverParticipant {
-  languages : @languages.Languages
-  log_service : @log.LogService
+pub struct MarkdownHoverParticipant {
+  // private fields
 }
+pub fn MarkdownHoverParticipant::hover_participant_handle(Self) -> HoverParticipantHandle
 pub fn MarkdownHoverParticipant::new(@languages.Languages, @log.LogService) -> Self
-pub impl HoverParticipant for MarkdownHoverParticipant
 
-pub(all) struct MarkerHoverParticipant {
-  marker_decorations : @markers.MarkerDecorationsService
+pub struct MarkerHoverParticipant {
+  // private fields
 }
+pub fn MarkerHoverParticipant::hover_participant_handle(Self) -> HoverParticipantHandle
 pub fn MarkerHoverParticipant::new(@markers.MarkerDecorationsService) -> Self
-pub impl HoverParticipant for MarkerHoverParticipant
 
 pub(all) struct MouseCloserState {
   mut initial_pos_x : Double?
@@ -315,11 +323,4 @@ pub fn MultiCursorModifier::from_config(String, mac~ : Bool) -> Self
 // Type aliases
 
 // Traits
-pub(open) trait HoverParticipant {
-  fn ordinal(Self) -> Int
-  fn suggest_hover_anchor(Self, @view_model.InjectedText?, @common.Range, Double?, Double?) -> HoverAnchor?
-  fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart]
-  async fn compute_async(Self, HoverComputeContext, @language.CancellationToken) -> Array[HoverPart] noraise
-  fn create_loading_message(Self, HoverAnchor) -> HoverPart?
-}
 

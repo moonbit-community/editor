@@ -29,7 +29,7 @@ pub(all) enum EditorEvent {
 /// `EditorEvent`.
 pub(all) struct EditorContext {
   view_model : @view_model.ViewModel?
-  participants : Array[&@hover.HoverParticipant]
+  participants : Array[@hover.HoverParticipantHandle]
   typical_halfwidth_character_width : Double
   mouse_posx : Double?
   mouse_posy : Double?
@@ -103,7 +103,7 @@ pub fn hover_on_event(
 /// with no lower bound: the distance is `>= 0` by construction). Candidates
 /// sort by descending priority. `target.range` is already model-space.
 pub fn find_anchor_candidates(
-  participants : Array[&@hover.HoverParticipant],
+  participants : Array[@hover.HoverParticipantHandle],
   target : @editor_browser.MouseTarget,
   typical_halfwidth_character_width : Double,
   initial_mouse_pos_x? : Double,
@@ -116,16 +116,16 @@ pub fn find_anchor_candidates(
   }
   let target_range = target.range()
   for participant in participants {
-    match target_range {
-      Some(range) =>
+    match (target_range, participant.suggest_hover_anchor) {
+      (Some(range), Some(suggest_hover_anchor)) =>
         match
-          participant.suggest_hover_anchor(
+          suggest_hover_anchor(
             injected_text, range, initial_mouse_pos_x, initial_mouse_pos_y,
           ) {
           Some(anchor) => anchor_candidates.push(anchor)
           None => ()
         }
-      None => ()
+      _ => ()
     }
   }
   match target {

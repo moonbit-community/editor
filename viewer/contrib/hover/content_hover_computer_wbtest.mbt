@@ -270,59 +270,36 @@ priv struct ControlledHoverParticipant {
 }
 
 ///|
-impl HoverParticipant for ControlledHoverParticipant with fn ordinal(self) {
-  self.ordinal_value
-}
-
-///|
-impl HoverParticipant for ControlledHoverParticipant with fn suggest_hover_anchor(
-  _self,
-  _injected_text,
-  _target_range,
-  _initial_mouse_pos_x,
-  _initial_mouse_pos_y,
-) {
-  None
-}
-
-///|
-impl HoverParticipant for ControlledHoverParticipant with fn compute_sync(
-  self,
-  ctx,
-) {
-  self.probe.sync_sources.push(ctx.source)
-  [
-    MarkdownHover(
-      range=ctx.anchor.range(),
-      contents=[PlainText(self.text)],
-      ordinal=self.ordinal_value,
-    ),
-  ]
-}
-
-///|
-impl HoverParticipant for ControlledHoverParticipant with fn compute_async(
-  self,
-  ctx,
-  _token,
-) {
-  self.probe.async_calls.val += 1
-  self.probe.async_sources.push(ctx.source)
-  [
-    MarkdownHover(
-      range=ctx.anchor.range(),
-      contents=[PlainText(self.text)],
-      ordinal=self.ordinal_value,
-    ),
-  ]
-}
-
-///|
-impl HoverParticipant for ControlledHoverParticipant with fn create_loading_message(
-  self,
-  anchor,
-) {
-  Some(LoadingHover(range=anchor.range(), message=self.text))
+fn ControlledHoverParticipant::hover_participant_handle(
+  self : ControlledHoverParticipant,
+) -> HoverParticipantHandle {
+  HoverParticipantHandle(
+    self.ordinal_value,
+    ctx => {
+      self.probe.sync_sources.push(ctx.source)
+      [
+        MarkdownHover(
+          range=ctx.anchor.range(),
+          contents=[PlainText(self.text)],
+          ordinal=self.ordinal_value,
+        ),
+      ]
+    },
+    compute_async=(ctx, _token) => {
+      self.probe.async_calls.val += 1
+      self.probe.async_sources.push(ctx.source)
+      [
+        MarkdownHover(
+          range=ctx.anchor.range(),
+          contents=[PlainText(self.text)],
+          ordinal=self.ordinal_value,
+        ),
+      ]
+    },
+    create_loading_message=anchor => {
+      Some(LoadingHover(range=anchor.range(), message=self.text))
+    },
+  )
 }
 
 ///|
@@ -330,15 +307,15 @@ fn controlled_participant_with_probe(
   ordinal_value : Int,
   text : String,
   probe : ParticipantProbe,
-) -> &HoverParticipant {
-  ControlledHoverParticipant::{ ordinal_value, text, probe }
+) -> HoverParticipantHandle {
+  ControlledHoverParticipant::{ ordinal_value, text, probe }.hover_participant_handle()
 }
 
 ///|
 fn controlled_participant(
   ordinal_value : Int,
   text : String,
-) -> &HoverParticipant {
+) -> HoverParticipantHandle {
   controlled_participant_with_probe(
     ordinal_value,
     text,
@@ -398,55 +375,26 @@ priv struct SuspendedHoverParticipant {
 }
 
 ///|
-impl HoverParticipant for SuspendedHoverParticipant with fn ordinal(self) {
-  self.ordinal_value
-}
-
-///|
-impl HoverParticipant for SuspendedHoverParticipant with fn suggest_hover_anchor(
-  _self,
-  _injected_text,
-  _target_range,
-  _initial_mouse_pos_x,
-  _initial_mouse_pos_y,
-) {
-  None
-}
-
-///|
-impl HoverParticipant for SuspendedHoverParticipant with fn compute_sync(
-  _self,
-  _ctx,
-) {
-  []
-}
-
-///|
-impl HoverParticipant for SuspendedHoverParticipant with fn compute_async(
-  self,
-  ctx,
-  _token,
-) {
-  self.started.release()
-  self.release_gate.acquire() catch {
-    _ => return []
-  }
-  self.finished.val = true
-  [
-    MarkdownHover(
-      range=ctx.anchor.range(),
-      contents=[PlainText(self.text)],
-      ordinal=self.ordinal_value,
-    ),
-  ]
-}
-
-///|
-impl HoverParticipant for SuspendedHoverParticipant with fn create_loading_message(
-  _self,
-  _anchor,
-) {
-  None
+fn SuspendedHoverParticipant::hover_participant_handle(
+  self : SuspendedHoverParticipant,
+) -> HoverParticipantHandle {
+  HoverParticipantHandle(self.ordinal_value, _ctx => [], compute_async=(
+    ctx,
+    _token,
+  ) => {
+    self.started.release()
+    self.release_gate.acquire() catch {
+      _ => return []
+    }
+    self.finished.val = true
+    [
+      MarkdownHover(
+        range=ctx.anchor.range(),
+        contents=[PlainText(self.text)],
+        ordinal=self.ordinal_value,
+      ),
+    ]
+  })
 }
 
 ///|
@@ -480,8 +428,10 @@ async test "async-each eagerly builds tasks and preserves A then B completion" {
 }
 
 ///|
-async test "async-each with zero participants builds and runs an empty task set" {
-  let computer : ContentHoverComputer = { participants: [] }
+async test "async-each skips participants without an async callback" {
+  let computer : ContentHoverComputer = {
+    participants: [HoverParticipantHandle(10, _ctx => [])],
+  }
   let runner_called = Ref(false)
   let emitted = Ref(0)
   computer.compute_async_each(
@@ -531,14 +481,14 @@ async test "async-each emits B while A remains suspended then preserves B-to-A a
         started,
         release_gate: release_a,
         finished: finished_a,
-      },
+      }.hover_participant_handle(),
       SuspendedHoverParticipant::{
         ordinal_value: 20,
         text: "b",
         started,
         release_gate: release_b,
         finished: finished_b,
-      },
+      }.hover_participant_handle(),
     ],
   }
   let emitted : Array[String] = []
@@ -673,14 +623,20 @@ test "registry get_all aliases backing factories and build_all sorts ordinals" {
     computer_services_with_languages(@languages.Languages::new()),
   )
   assert_eq(built.length(), 3)
-  assert_eq(built[0].ordinal(), 10)
-  assert_eq(built[1].ordinal(), 10)
-  assert_eq(built[2].ordinal(), 30)
-  match built[0].create_loading_message(async_test_anchor()) {
+  assert_eq(built[0].ordinal, 10)
+  assert_eq(built[1].ordinal, 10)
+  assert_eq(built[2].ordinal, 30)
+  guard built[0].create_loading_message is Some(first_loading_message) else {
+    fail("expected first loading-message callback")
+  }
+  match first_loading_message(async_test_anchor()) {
     Some(LoadingHover(message~, ..)) => assert_eq(message, "ten-a")
     _ => fail("expected first equal-ordinal participant")
   }
-  match built[1].create_loading_message(async_test_anchor()) {
+  guard built[1].create_loading_message is Some(second_loading_message) else {
+    fail("expected second loading-message callback")
+  }
+  match second_loading_message(async_test_anchor()) {
     Some(LoadingHover(message~, ..)) => assert_eq(message, "ten-b")
     _ => fail("expected second equal-ordinal participant")
   }
@@ -693,10 +649,13 @@ test "participant loading-message contract is explicit" {
   let markdown = MarkdownHoverParticipant::new(
     services.languages,
     services.log_service,
-  )
-  assert_true(markdown.create_loading_message(anchor) is Some(LoadingHover(_)))
-  let marker = MarkerHoverParticipant::new(services.marker_decorations)
-  assert_true(marker.create_loading_message(anchor) is None)
+  ).hover_participant_handle()
+  guard markdown.create_loading_message is Some(markdown_loading_message) else {
+    fail("expected markdown loading-message callback")
+  }
+  assert_true(markdown_loading_message(anchor) is Some(LoadingHover(_)))
+  let marker = MarkerHoverParticipant::new(services.marker_decorations).hover_participant_handle()
+  assert_true(marker.create_loading_message is None)
 
   let absent : ContentHoverComputer = { participants: [] }
   assert_true(absent.create_loading_message(anchor) is None)

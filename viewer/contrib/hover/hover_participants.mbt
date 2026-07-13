@@ -75,30 +75,58 @@ fn hover_line_decorations(
 }
 
 ///|
-/// Pluggable content-hover participant. Synchronous participants provide data
-/// already in viewer state; asynchronous participants may call language
-/// providers. `suggest_hover_anchor` is Monaco's optional
-/// `IEditorHoverParticipant.suggestHoverAnchor(mouseEvent)` — participants
-/// without one answer `None`. Deviation: Monaco's signature receives the
-/// whole `IEditorMouseEvent`; that type is js-only here, so this multi-target
-/// trait receives the extracted facts the ported participants read — the
-/// content-text hit's injected text (if any), the hit's model range, and the
-/// recorded pointer position (`viewer/contrib/hover/browser/hover_events.mbt`
-/// extracts them).
-pub(open) trait HoverParticipant {
-  fn ordinal(Self) -> Int noraise
-  fn suggest_hover_anchor(
-    Self,
+/// Value-level adapter for Monaco's `IEditorHoverParticipant`. The ordinal and
+/// required synchronous computation remain required values; the source's
+/// optional anchor suggestion, asynchronous computation, and loading-message
+/// members remain independently optional closures instead of mandatory trait
+/// methods with empty implementations.
+///
+/// Deviation: Monaco's anchor suggestion receives the whole
+/// `IEditorMouseEvent`; that type is js-only here, so this multi-target handle
+/// receives the extracted facts the ported participants read — the content-text
+/// hit's injected text (if any), the hit's model range, and the recorded
+/// pointer position (`viewer/contrib/hover/browser/hover_events.mbt` extracts
+/// them).
+pub(all) struct HoverParticipantHandle {
+  ordinal : Int
+  suggest_hover_anchor : ((
     @view_model.InjectedText?,
     @base_common.Range,
     Double?,
     Double?,
-  ) -> HoverAnchor? noraise
-  fn compute_sync(Self, HoverComputeContext) -> Array[HoverPart] noraise
-  async fn compute_async(Self, HoverComputeContext, @language.CancellationToken) -> Array[
+  ) -> HoverAnchor?)?
+  compute_sync : (HoverComputeContext) -> Array[HoverPart]
+  compute_async : (async (HoverComputeContext, @language.CancellationToken) -> Array[
     HoverPart,
-  ] noraise
-  fn create_loading_message(Self, HoverAnchor) -> HoverPart? noraise
+  ] noraise)?
+  create_loading_message : ((HoverAnchor) -> HoverPart?)?
+}
+
+///|
+/// Creates an open hover-participant adapter. Optional callbacks preserve
+/// Monaco's absent-member branches; closures capture any concrete participant
+/// state they need at this construction boundary.
+pub fn HoverParticipantHandle::HoverParticipantHandle(
+  ordinal : Int,
+  compute_sync : (HoverComputeContext) -> Array[HoverPart],
+  suggest_hover_anchor? : (
+    @view_model.InjectedText?,
+    @base_common.Range,
+    Double?,
+    Double?,
+  ) -> HoverAnchor?,
+  compute_async? : async (HoverComputeContext, @language.CancellationToken) -> Array[
+    HoverPart,
+  ] noraise,
+  create_loading_message? : (HoverAnchor) -> HoverPart?,
+) -> HoverParticipantHandle {
+  {
+    ordinal,
+    suggest_hover_anchor,
+    compute_sync,
+    compute_async,
+    create_loading_message,
+  }
 }
 
 ///|
@@ -115,8 +143,8 @@ pub(all) struct HoverParticipantServices {
 
 ///|
 /// Hover participant that exposes diagnostics/markers at the anchor range.
-pub(all) struct MarkerHoverParticipant {
-  marker_decorations : @markers.MarkerDecorationsService
+pub struct MarkerHoverParticipant {
+  priv marker_decorations : @markers.MarkerDecorationsService
 }
 
 ///|
@@ -128,24 +156,6 @@ pub fn MarkerHoverParticipant::new(
 }
 
 ///|
-/// Marker hovers render first.
-pub impl HoverParticipant for MarkerHoverParticipant with fn ordinal(_self) {
-  0
-}
-
-///|
-/// The marker participant suggests no anchor of its own.
-pub impl HoverParticipant for MarkerHoverParticipant with fn suggest_hover_anchor(
-  _self,
-  _injected_text,
-  _target_range,
-  _initial_mouse_pos_x,
-  _initial_mouse_pos_y,
-) {
-  None
-}
-
-///|
 /// Computes marker hover parts from the current marker decorations —
 /// `computeSync` (`markerHoverParticipant.ts:74-101`) with
 /// `ContentHoverComputer._getLineDecorations`'s anchor-line column filter
@@ -154,10 +164,10 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn suggest_hover_ancho
 /// decorations, so the containment check — with the `showIfCollapsed` ±1
 /// relaxation; marker decorations always set `showIfCollapsed` — applies
 /// here. Part ranges clamp to the anchor's start line, per the source.
-pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
-  self,
-  ctx,
-) {
+fn MarkerHoverParticipant::compute_sync(
+  self : MarkerHoverParticipant,
+  ctx : HoverComputeContext,
+) -> Array[HoverPart] {
   let anchor = ctx.anchor
   if !(anchor is HoverRangeAnchor(..)) && !anchor.supports_marker_hover() {
     return []
@@ -205,29 +215,19 @@ pub impl HoverParticipant for MarkerHoverParticipant with fn compute_sync(
 }
 
 ///|
-/// Marker hover data is fully synchronous.
-pub impl HoverParticipant for MarkerHoverParticipant with fn compute_async(
-  _self,
-  _ctx,
-  _token,
-) {
-  []
-}
-
-///|
-/// Marker hovers have no asynchronous loading contribution.
-pub impl HoverParticipant for MarkerHoverParticipant with fn create_loading_message(
-  _self,
-  _anchor,
-) {
-  None
+/// Adapts the marker participant to the generic hover pipeline. Marker hover is
+/// fully synchronous, so the three optional source members remain absent.
+pub fn MarkerHoverParticipant::hover_participant_handle(
+  self : MarkerHoverParticipant,
+) -> HoverParticipantHandle {
+  HoverParticipantHandle(0, ctx => self.compute_sync(ctx))
 }
 
 ///|
 /// Hover participant that queries registered markdown/plaintext hover providers.
-pub(all) struct MarkdownHoverParticipant {
-  languages : @languages.Languages
-  log_service : @log.LogService
+pub struct MarkdownHoverParticipant {
+  priv languages : @languages.Languages
+  priv log_service : @log.LogService
 }
 
 ///|
@@ -240,43 +240,16 @@ pub fn MarkdownHoverParticipant::new(
 }
 
 ///|
-/// Markdown hovers render after marker hovers.
-pub impl HoverParticipant for MarkdownHoverParticipant with fn ordinal(_self) {
-  100
-}
-
-///|
-/// The markdown participant suggests no anchor of its own.
-pub impl HoverParticipant for MarkdownHoverParticipant with fn suggest_hover_anchor(
-  _self,
-  _target,
-  _target_range,
-  _initial_mouse_pos_x,
-  _initial_mouse_pos_y,
-) {
-  None
-}
-
-///|
-/// Markdown provider hovers are asynchronous only.
-pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_sync(
-  _self,
-  _ctx,
-) {
-  []
-}
-
-///|
 /// Queries language hover providers at the anchor position — `computeAsync`
 /// (`markdownHoverParticipant.ts:168-171`): range anchors only, queried at
 /// `anchor.range.getStartPosition()` (the mouse position). The languages
 /// registry is offset-addressed, so the conversion happens at this query
 /// boundary only.
-pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
-  self,
-  ctx,
-  token,
-) {
+async fn MarkdownHoverParticipant::compute_async(
+  self : MarkdownHoverParticipant,
+  ctx : HoverComputeContext,
+  token : @language.CancellationToken,
+) -> Array[HoverPart] noraise {
   if token.is_cancellation_requested() {
     return []
   }
@@ -298,32 +271,41 @@ pub impl HoverParticipant for MarkdownHoverParticipant with fn compute_async(
       if hover.contents.length() == 0 {
         []
       } else {
-        [
-          MarkdownHover(
-            range=hover.range,
-            contents=hover.contents,
-            ordinal=self.ordinal(),
-          ),
-        ]
+        [MarkdownHover(range=hover.range, contents=hover.contents, ordinal=100)]
       }
     None => []
   }
 }
 
 ///|
-/// Markdown is the asynchronous hover participant, so it contributes the
-/// source-shaped loading placeholder while its provider request is pending.
-pub impl HoverParticipant for MarkdownHoverParticipant with fn create_loading_message(
-  _self,
-  anchor,
-) {
+/// Markdown's source-shaped loading placeholder while its provider request is
+/// pending.
+fn MarkdownHoverParticipant::create_loading_message(
+  _self : MarkdownHoverParticipant,
+  anchor : HoverAnchor,
+) -> HoverPart? {
   Some(LoadingHover(range=anchor.range(), message="Loading..."))
+}
+
+///|
+/// Adapts the Markdown participant to the generic hover pipeline. The required
+/// synchronous callback returns no parts, as in Monaco; anchor suggestion is
+/// absent, while async computation and loading-message production are present.
+pub fn MarkdownHoverParticipant::hover_participant_handle(
+  self : MarkdownHoverParticipant,
+) -> HoverParticipantHandle {
+  HoverParticipantHandle(
+    100,
+    _ctx => [],
+    compute_async=(ctx, token) => self.compute_async(ctx, token),
+    create_loading_message=anchor => self.create_loading_message(anchor),
+  )
 }
 
 ///|
 /// Coordinates hover participants for one viewer service set.
 pub(all) struct ContentHoverComputer {
-  participants : Array[&HoverParticipant]
+  participants : Array[HoverParticipantHandle]
 }
 
 ///|
@@ -345,8 +327,12 @@ pub fn ContentHoverComputer::create_loading_message(
   anchor : HoverAnchor,
 ) -> HoverPart? {
   for participant in self.participants {
-    match participant.create_loading_message(anchor) {
-      Some(message) => return Some(message)
+    match participant.create_loading_message {
+      Some(create_loading_message) =>
+        match create_loading_message(anchor) {
+          Some(message) => return Some(message)
+          None => ()
+        }
       None => ()
     }
   }
@@ -369,7 +355,7 @@ pub fn ContentHoverComputer::compute_sync(
   }
   let parts : Array[HoverPart] = []
   for participant in self.participants {
-    parts.append(participant.compute_sync(ctx))
+    parts.append((participant.compute_sync)(ctx))
   }
   computed_hover_from_parts(anchor.range(), parts)
 }
@@ -395,14 +381,19 @@ pub async fn ContentHoverComputer::compute_async(
   }
   let parts : Array[HoverPart] = []
   for participant in self.participants {
-    if token.is_cancellation_requested() || !is_current() {
-      return None
+    match participant.compute_async {
+      Some(compute_async) => {
+        if token.is_cancellation_requested() || !is_current() {
+          return None
+        }
+        let participant_parts = compute_async(ctx, token)
+        if token.is_cancellation_requested() || !is_current() {
+          return None
+        }
+        parts.append(participant_parts)
+      }
+      None => ()
     }
-    let participant_parts = participant.compute_async(ctx, token)
-    if token.is_cancellation_requested() || !is_current() {
-      return None
-    }
-    parts.append(participant_parts)
   }
   computed_hover_from_parts(anchor.range(), parts)
 }
@@ -437,18 +428,22 @@ pub async fn ContentHoverComputer::compute_async_each(
   // runtimes. Emits therefore follow completion order under the host runner.
   let tasks : Array[async () -> Unit] = []
   for participant in self.participants {
-    tasks.push(() => {
-      if token.is_cancellation_requested() || !is_current() {
-        return
-      }
-      let parts = participant.compute_async(ctx, token)
-      if token.is_cancellation_requested() || !is_current() {
-        return
-      }
-      if parts.length() > 0 {
-        emit(parts)
-      }
-    })
+    match participant.compute_async {
+      Some(compute_async) =>
+        tasks.push(() => {
+          if token.is_cancellation_requested() || !is_current() {
+            return
+          }
+          let parts = compute_async(ctx, token)
+          if token.is_cancellation_requested() || !is_current() {
+            return
+          }
+          if parts.length() > 0 {
+            emit(parts)
+          }
+        })
+      None => ()
+    }
   }
   run_tasks(tasks) catch {
     _ => ()

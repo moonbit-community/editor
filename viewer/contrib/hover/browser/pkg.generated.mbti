@@ -78,6 +78,7 @@ pub(all) struct ContentHoverWidget {
   mut rendered_hover : RenderedContentHover?
   mut position_preference : @content_widgets.ContentWidgetPositionPreference?
 }
+pub fn ContentHoverWidget::content_widget_handle(Self) -> @content_widgets.ContentWidgetHandle
 pub fn ContentHoverWidget::go_to_bottom(Self) -> Unit
 pub fn ContentHoverWidget::go_to_top(Self) -> Unit
 pub fn ContentHoverWidget::handle_contents_changed(Self) -> Unit
@@ -91,7 +92,6 @@ pub fn ContentHoverWidget::scroll_left(Self) -> Unit
 pub fn ContentHoverWidget::scroll_right(Self) -> Unit
 pub fn ContentHoverWidget::scroll_up(Self) -> Unit
 pub fn ContentHoverWidget::show(Self, RenderedContentHover) -> Unit
-pub impl @content_widgets.ContentWidget for ContentHoverWidget
 
 pub(all) struct ContentHoverWidgetHost {
   root : @dom.Element

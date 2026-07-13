@@ -158,7 +158,7 @@ fn Viewer::ensure_content_hover_widget(
         },
       })
       self.content_hover_widget = Some(widget)
-      view.content_widgets.add_widget(widget)
+      view.content_widgets.add_widget(widget.content_widget_handle())
       Some(widget)
     }
   }
@@ -170,7 +170,7 @@ fn Viewer::ensure_content_hover_widget(
 fn Viewer::layout_content_hover_widget(self : Viewer) -> Unit {
   guard self.get_view() is Some(view) else { return }
   guard self.content_hover_widget is Some(widget) else { return }
-  view.content_widgets.set_widget_position(widget)
+  view.content_widgets.set_widget_position(widget.content_widget_handle())
   self.schedule_render()
 }
 

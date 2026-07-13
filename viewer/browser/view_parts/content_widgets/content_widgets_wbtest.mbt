@@ -216,6 +216,7 @@ priv struct TestContentWidget {
   mut position : ContentWidgetPosition?
   allow_overflow : Bool
   use_display_none : Bool
+  suppress_mouse_down : Bool
   before_enabled : Bool
   mut before_dimension : ContentWidgetDimension?
   mut throw_before : Bool
@@ -231,56 +232,20 @@ priv struct GetterOrderWidget {
 }
 
 ///|
-impl ContentWidget for GetterOrderWidget with fn get_id(_self) {
-  content_widgets_test_log_event("getter:id")
-  "getter-order"
-}
-
-///|
-impl ContentWidget for GetterOrderWidget with fn get_dom_node(self) {
-  content_widgets_test_log_event("getter:dom")
-  self.dom_node
-}
-
-///|
-impl ContentWidget for GetterOrderWidget with fn get_position(_self) {
-  None
-}
-
-///|
-impl ContentWidget for GetterOrderWidget with fn allow_editor_overflow(_self) {
-  content_widgets_test_log_event("getter:allow-overflow")
-  false
-}
-
-///|
-impl ContentWidget for GetterOrderWidget with fn use_display_none(_self) {
-  content_widgets_test_log_event("getter:use-display-none")
-  false
-}
-
-///|
-impl ContentWidget for GetterOrderWidget with fn has_before_render(_self) {
-  false
-}
-
-///|
-impl ContentWidget for GetterOrderWidget with fn before_render(_self) {
-  None
-}
-
-///|
-impl ContentWidget for GetterOrderWidget with fn has_after_render(_self) {
-  false
-}
-
-///|
-impl ContentWidget for GetterOrderWidget with fn after_render(
-  _self,
-  _position,
-  _coordinate,
-) {
-  ()
+fn GetterOrderWidget::content_widget_handle(
+  self : GetterOrderWidget,
+) -> ContentWidgetHandle {
+  ContentWidgetHandle(
+    () => {
+      content_widgets_test_log_event("getter:id")
+      "getter-order"
+    },
+    () => {
+      content_widgets_test_log_event("getter:dom")
+      self.dom_node
+    },
+    () => None,
+  )
 }
 
 ///|
@@ -289,37 +254,9 @@ priv suberror TestWidgetCallbackError {
 }
 
 ///|
-impl ContentWidget for TestContentWidget with fn get_id(self) {
-  self.id
-}
-
-///|
-impl ContentWidget for TestContentWidget with fn get_dom_node(self) {
-  self.dom_node
-}
-
-///|
-impl ContentWidget for TestContentWidget with fn get_position(self) {
-  self.position
-}
-
-///|
-impl ContentWidget for TestContentWidget with fn allow_editor_overflow(_self) {
-  _self.allow_overflow
-}
-
-///|
-impl ContentWidget for TestContentWidget with fn use_display_none(_self) {
-  _self.use_display_none
-}
-
-///|
-impl ContentWidget for TestContentWidget with fn has_before_render(_self) {
-  _self.before_enabled
-}
-
-///|
-impl ContentWidget for TestContentWidget with fn before_render(self) {
+fn TestContentWidget::before_render(
+  self : TestContentWidget,
+) -> ContentWidgetDimension? raise {
   content_widgets_test_log_event("before:" + self.id)
   match self.before_action {
     Some(action) => action()
@@ -332,16 +269,11 @@ impl ContentWidget for TestContentWidget with fn before_render(self) {
 }
 
 ///|
-impl ContentWidget for TestContentWidget with fn has_after_render(_self) {
-  _self.after_enabled
-}
-
-///|
-impl ContentWidget for TestContentWidget with fn after_render(
-  self,
-  position,
-  coordinate,
-) {
+fn TestContentWidget::after_render(
+  self : TestContentWidget,
+  position : ContentWidgetPositionPreference?,
+  coordinate : ContentWidgetRenderedCoordinate?,
+) -> Unit raise {
   content_widgets_test_log_event(
     "after:" +
     self.id +
@@ -373,6 +305,32 @@ fn callback_position_name(
 }
 
 ///|
+fn TestContentWidget::content_widget_handle(
+  self : TestContentWidget,
+) -> ContentWidgetHandle {
+  let before_render = if self.before_enabled {
+    Some(() => self.before_render())
+  } else {
+    None
+  }
+  let after_render = if self.after_enabled {
+    Some((position, coordinate) => self.after_render(position, coordinate))
+  } else {
+    None
+  }
+  ContentWidgetHandle(
+    () => self.id,
+    () => self.dom_node,
+    () => self.position,
+    allow_editor_overflow=self.allow_overflow,
+    use_display_none=self.use_display_none,
+    suppress_mouse_down=self.suppress_mouse_down,
+    before_render?,
+    after_render?,
+  )
+}
+
+///|
 fn callback_coordinate_name(
   coordinate : ContentWidgetRenderedCoordinate?,
 ) -> String {
@@ -391,6 +349,7 @@ fn new_test_content_widget(
   secondary : @base_common.Position?,
   allow_overflow? : Bool = false,
   use_display_none? : Bool = false,
+  suppress_mouse_down? : Bool = false,
   before_enabled? : Bool = false,
   after_enabled? : Bool = false,
   throw_after? : Bool = false,
@@ -406,6 +365,7 @@ fn new_test_content_widget(
     }),
     allow_overflow,
     use_display_none,
+    suppress_mouse_down,
     before_enabled,
     before_dimension: None,
     throw_before: false,
@@ -451,9 +411,10 @@ test "constructor and add preserve container styles and overflow mount choice" {
     None,
     None,
     allow_overflow=true,
+    suppress_mouse_down=true,
   )
-  widgets.add_widget(normal)
-  widgets.add_widget(overflow)
+  widgets.add_widget(normal.content_widget_handle())
+  widgets.add_widget(overflow.content_widget_handle())
   assert_true(content_widgets_test_parent_is(normal.dom_node, widgets.dom_node))
   assert_true(
     content_widgets_test_parent_is(
@@ -477,10 +438,13 @@ test "constructor and add preserve container styles and overflow mount choice" {
     content_widgets_test_attribute(normal.dom_node, "widgetId"),
     "normal",
   )
+  assert_false(widgets.should_suppress_mouse_down_on_widget("normal"))
+  assert_true(widgets.should_suppress_mouse_down_on_widget("overflow"))
+  assert_false(widgets.should_suppress_mouse_down_on_widget("missing"))
 }
 
 ///|
-test "addWidget reads layout before owner getters in source constructor order" {
+test "addWidget reads layout before handle getters in source constructor order" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
   let widgets = ContentWidgets::new(
@@ -496,14 +460,12 @@ test "addWidget reads layout before owner getters in source constructor order" {
   )
   let widget : GetterOrderWidget = { dom_node: document.create_element("div") }
   content_widgets_test_clear_events()
-  widgets.add_widget(widget)
+  widgets.add_widget(widget.content_widget_handle())
   let events = content_widgets_test_events()
-  assert_true(events.length() >= 5)
+  assert_true(events.length() >= 3)
   assert_eq(events[0], "getter:layout")
   assert_eq(events[1], "getter:dom")
   assert_eq(events[2], "getter:id")
-  assert_eq(events[3], "getter:allow-overflow")
-  assert_eq(events[4], "getter:use-display-none")
 }
 
 ///|
@@ -520,7 +482,7 @@ test "panic setWidgetPosition rejects an unknown widget id" {
     Some(Position(1, 1)),
     None,
   )
-  widgets.set_widget_position(unknown)
+  widgets.set_widget_position(unknown.content_widget_handle())
 }
 
 ///|
@@ -553,10 +515,10 @@ test "configuration visits every retained widget and gates layout cache reads" {
     Some(Position(1, 2)),
     None,
   )
-  widgets.add_widget(first)
-  widgets.set_widget_position(first)
-  widgets.add_widget(second)
-  widgets.set_widget_position(second)
+  widgets.add_widget(first.content_widget_handle())
+  widgets.set_widget_position(first.content_widget_handle())
+  widgets.add_widget(second.content_widget_handle())
+  widgets.set_widget_position(second.content_widget_handle())
   assert_eq(layout_reads.val, 2)
   let first_state = widgets.widgets["first"]
   let second_state = widgets.widgets["second"]
@@ -708,8 +670,8 @@ test "onBefore distinguishes null and empty preference and includes viewport end
       missing_anchor, null_preference, empty_preference, before_start, at_start,
       at_end, after_end,
     ] {
-    widgets.add_widget(widget)
-    widgets.set_widget_position(widget)
+    widgets.add_widget(widget.content_widget_handle())
+    widgets.set_widget_position(widget.content_widget_handle())
   }
   content_widgets_test_clear_events()
   widgets.on_before_render_widgets(3, 5)
@@ -755,10 +717,10 @@ test "mapping reprojection retains model anchors and visits widgets in key order
     Some(Position(3, 1)),
     None,
   )
-  widgets.add_widget(first)
-  widgets.set_widget_position(first)
-  widgets.add_widget(second)
-  widgets.set_widget_position(second)
+  widgets.add_widget(first.content_widget_handle())
+  widgets.set_widget_position(first.content_widget_handle())
+  widgets.add_widget(second.content_widget_handle())
+  widgets.set_widget_position(second.content_widget_handle())
   projected_model_positions.clear()
   projection_delta.val = 20
 
@@ -822,10 +784,10 @@ test "projection keeps original anchors while exposing clamped and hidden result
     Some(Position(77, 1)),
     None,
   )
-  widgets.add_widget(clamped)
-  widgets.set_widget_position(clamped)
-  widgets.add_widget(hidden)
-  widgets.set_widget_position(hidden)
+  widgets.add_widget(clamped.content_widget_handle())
+  widgets.set_widget_position(clamped.content_widget_handle())
+  widgets.add_widget(hidden.content_widget_handle())
+  widgets.set_widget_position(hidden.content_widget_handle())
   assert_true(
     projected == [Position(99, 999), Position(77, 5), Position(77, 1)],
   )
@@ -899,8 +861,8 @@ test "measured anchors preserve affinity, nullable preference, and per-line geom
     seen_affinities.push(affinity)
     Some(position)
   })
-  widgets.add_widget(widget)
-  widgets.set_widget_position(widget)
+  widgets.add_widget(widget.content_widget_handle())
+  widgets.set_widget_position(widget.content_widget_handle())
   widgets.prepare_render_widgets({
     vertical_offset_for_line: line => line.to_double() * 30.0,
     line_height_for_line: line => {
@@ -948,7 +910,7 @@ test "measured anchors preserve affinity, nullable preference, and per-line geom
     preference: None,
     position_affinity: None,
   })
-  widgets.set_widget_position(widget)
+  widgets.set_widget_position(widget.content_widget_handle())
   measured_positions.clear()
   widgets.prepare_render_widgets({
     vertical_offset_for_line: _ => 0.0,
@@ -999,7 +961,7 @@ test "all position affinity values forward distinctly and only LeftOfInjectedTex
     seen.push(affinity)
     Some(position)
   })
-  widgets.add_widget(widget)
+  widgets.add_widget(widget.content_widget_handle())
   for affinity in affinities {
     widget.position = Some({
       position: Some(Position(2, 1)),
@@ -1007,7 +969,7 @@ test "all position affinity values forward distinctly and only LeftOfInjectedTex
       preference: Some([Exact]),
       position_affinity: affinity,
     })
-    widgets.set_widget_position(widget)
+    widgets.set_widget_position(widget.content_widget_handle())
     widgets.prepare_render_widgets({
       vertical_offset_for_line: _ => 40.0,
       line_height_for_line: _ => 20.0,
@@ -1068,10 +1030,10 @@ test "anchor queries keep same-line secondary and use measured x at later affini
     position,
     _affinity,
   ) => Some(position))
-  widgets.add_widget(same_line)
-  widgets.set_widget_position(same_line)
-  widgets.add_widget(different_line)
-  widgets.set_widget_position(different_line)
+  widgets.add_widget(same_line.content_widget_handle())
+  widgets.set_widget_position(same_line.content_widget_handle())
+  widgets.add_widget(different_line.content_widget_handle())
+  widgets.set_widget_position(different_line.content_widget_handle())
   let measured : Array[@base_common.Position] = []
   widgets.prepare_render_widgets({
     vertical_offset_for_line: line => line.to_double() * 20.0,
@@ -1141,10 +1103,10 @@ test "display ownership and read phase preserve source ordering and caches" {
     after_enabled=true,
   )
   second.before_dimension = Some({ width: 50.0, height: 19.0 })
-  widgets.add_widget(first)
-  widgets.set_widget_position(first)
-  widgets.add_widget(second)
-  widgets.set_widget_position(second)
+  widgets.add_widget(first.content_widget_handle())
+  widgets.set_widget_position(first.content_widget_handle())
+  widgets.add_widget(second.content_widget_handle())
+  widgets.set_widget_position(second.content_widget_handle())
   content_widgets_test_clear_events()
   widgets.on_before_render_widgets(1, 1)
   widgets.prepare_render_widgets({
@@ -1236,7 +1198,7 @@ test "display ownership and read phase preserve source ordering and caches" {
   // dimensions.
   first.before_dimension = None
   content_widgets_test_set_rect(first.dom_node, 0.0, 0.0, 10.4, 20.5)
-  widgets.set_widget_position(first)
+  widgets.set_widget_position(first.content_widget_handle())
   widgets.prepare_render_widgets({
     vertical_offset_for_line: _ => 40.0,
     line_height_for_line: _ => 20.0,
@@ -1254,7 +1216,7 @@ test "display ownership and read phase preserve source ordering and caches" {
   // next widget's callback still runs.
   first.throw_before = true
   content_widgets_test_set_rect(first.dom_node, 0.0, 0.0, 12.6, 22.4)
-  widgets.set_widget_position(first)
+  widgets.set_widget_position(first.content_widget_handle())
   let second_state = widgets.widgets["second"]
   second_state.cached_dom_node_offset_width = -1.0
   second_state.cached_dom_node_offset_height = -1.0
@@ -1282,10 +1244,10 @@ test "display ownership and read phase preserve source ordering and caches" {
     None,
     use_display_none=true,
   )
-  widgets.add_widget(owned_display)
+  widgets.add_widget(owned_display.content_widget_handle())
   set_style_property(owned_display.dom_node, "display", "grid")
   widgets.should_render = false
-  widgets.set_widget_position(owned_display)
+  widgets.set_widget_position(owned_display.content_widget_handle())
   assert_false(widgets.should_render)
   assert_eq(
     content_widgets_test_style_property(owned_display.dom_node, "display"),
@@ -1334,11 +1296,11 @@ test "useDisplayNone and positionability preserve the full display scheduling ma
     widget in [
       source_positionable, source_unpositionable, owner_positionable, owner_unpositionable,
     ] {
-    widgets.add_widget(widget)
+    widgets.add_widget(widget.content_widget_handle())
   }
 
   widgets.should_render = false
-  widgets.set_widget_position(source_positionable)
+  widgets.set_widget_position(source_positionable.content_widget_handle())
   assert_true(widgets.should_render)
   assert_eq(
     content_widgets_test_style_property(source_positionable.dom_node, "display"),
@@ -1346,7 +1308,7 @@ test "useDisplayNone and positionability preserve the full display scheduling ma
   )
 
   widgets.should_render = false
-  widgets.set_widget_position(source_unpositionable)
+  widgets.set_widget_position(source_unpositionable.content_widget_handle())
   assert_true(widgets.should_render)
   assert_eq(
     content_widgets_test_style_property(
@@ -1357,7 +1319,7 @@ test "useDisplayNone and positionability preserve the full display scheduling ma
   )
 
   widgets.should_render = false
-  widgets.set_widget_position(owner_positionable)
+  widgets.set_widget_position(owner_positionable.content_widget_handle())
   assert_false(widgets.should_render)
   assert_eq(
     content_widgets_test_style_property(owner_positionable.dom_node, "display"),
@@ -1365,7 +1327,7 @@ test "useDisplayNone and positionability preserve the full display scheduling ma
   )
 
   widgets.should_render = false
-  widgets.set_widget_position(owner_unpositionable)
+  widgets.set_widget_position(owner_unpositionable.content_widget_handle())
   assert_false(widgets.should_render)
   assert_eq(
     content_widgets_test_style_property(
@@ -1423,11 +1385,13 @@ test "prepare snapshot continues after beforeRender removes its current widget" 
     None,
     None,
   )
-  first.before_action = Some(() => widgets.remove_widget(first_handle))
-  widgets.add_widget(first)
-  widgets.set_widget_position(first)
-  widgets.add_widget(second)
-  widgets.set_widget_position(second)
+  first.before_action = Some(() => {
+    widgets.remove_widget(first_handle.content_widget_handle())
+  })
+  widgets.add_widget(first.content_widget_handle())
+  widgets.set_widget_position(first.content_widget_handle())
+  widgets.add_widget(second.content_widget_handle())
+  widgets.set_widget_position(second.content_widget_handle())
   content_widgets_test_clear_events()
   widgets.prepare_render_widgets(reentrant_content_widgets_context())
   assert_true(
@@ -1469,11 +1433,13 @@ test "render snapshot continues after afterRender removes its current widget" {
     None,
     None,
   )
-  first.after_action = Some(() => widgets.remove_widget(first_handle))
-  widgets.add_widget(first)
-  widgets.set_widget_position(first)
-  widgets.add_widget(second)
-  widgets.set_widget_position(second)
+  first.after_action = Some(() => {
+    widgets.remove_widget(first_handle.content_widget_handle())
+  })
+  widgets.add_widget(first.content_widget_handle())
+  widgets.set_widget_position(first.content_widget_handle())
+  widgets.add_widget(second.content_widget_handle())
+  widgets.set_widget_position(second.content_widget_handle())
   widgets.prepare_render_widgets(reentrant_content_widgets_context())
   content_widgets_test_clear_events()
   widgets.render_widgets(0.0, 0.0)
@@ -1514,11 +1480,13 @@ test "panic prepare snapshot directly looks up a reentrantly removed future widg
     Some(Position(1, 1)),
     None,
   )
-  first.before_action = Some(() => widgets.remove_widget(future))
-  widgets.add_widget(first)
-  widgets.set_widget_position(first)
-  widgets.add_widget(future)
-  widgets.set_widget_position(future)
+  first.before_action = Some(() => {
+    widgets.remove_widget(future.content_widget_handle())
+  })
+  widgets.add_widget(first.content_widget_handle())
+  widgets.set_widget_position(first.content_widget_handle())
+  widgets.add_widget(future.content_widget_handle())
+  widgets.set_widget_position(future.content_widget_handle())
   widgets.prepare_render_widgets(reentrant_content_widgets_context())
 }
 
@@ -1546,11 +1514,13 @@ test "panic render snapshot directly looks up a reentrantly removed future widge
     Some(Position(1, 1)),
     None,
   )
-  first.after_action = Some(() => widgets.remove_widget(future))
-  widgets.add_widget(first)
-  widgets.set_widget_position(first)
-  widgets.add_widget(future)
-  widgets.set_widget_position(future)
+  first.after_action = Some(() => {
+    widgets.remove_widget(future.content_widget_handle())
+  })
+  widgets.add_widget(first.content_widget_handle())
+  widgets.set_widget_position(first.content_widget_handle())
+  widgets.add_widget(future.content_widget_handle())
+  widgets.set_widget_position(future.content_widget_handle())
   widgets.prepare_render_widgets(reentrant_content_widgets_context())
   widgets.render_widgets(0.0, 0.0)
 }
@@ -1575,8 +1545,8 @@ test "focused off-viewport widgets park without hiding and hidden writes are gat
   widgets.install_live_view_context(() => (0.0, 300.0), position => {
     Some(position)
   })
-  widgets.add_widget(widget)
-  widgets.set_widget_position(widget)
+  widgets.add_widget(widget.content_widget_handle())
+  widgets.set_widget_position(widget.content_widget_handle())
   let measurable = Ref(true)
   let ctx : ContentWidgetsRenderContext = {
     vertical_offset_for_line: _ => 50.0,
@@ -1662,8 +1632,8 @@ test "preference traversal uses first-pass fit then second-pass first option" {
   widgets.install_live_view_context(() => (0.0, 300.0), position => {
     Some(position)
   })
-  widgets.add_widget(widget)
-  widgets.set_widget_position(widget)
+  widgets.add_widget(widget.content_widget_handle())
+  widgets.set_widget_position(widget.content_widget_handle())
   let state = widgets.widgets["preference"]
 
   // Neither vertical candidate fits, so pass two picks the first preference.
@@ -1687,7 +1657,7 @@ test "preference traversal uses first-pass fit then second-pass first option" {
 
   // Below does not fit, but Above does: pass one continues to the second
   // preference and returns it instead of using pass-two fallback.
-  widgets.set_widget_position(widget)
+  widgets.set_widget_position(widget.content_widget_handle())
   widgets.prepare_render_widgets({
     vertical_offset_for_line: _ => 55.0,
     line_height_for_line: _ => 20.0,
@@ -1706,7 +1676,7 @@ test "preference traversal uses first-pass fit then second-pass first option" {
   assert_eq(coordinate2.top, 5.0)
 
   // With both fitting, the first ordered preference wins immediately.
-  widgets.set_widget_position(widget)
+  widgets.set_widget_position(widget.content_widget_handle())
   widgets.prepare_render_widgets({
     vertical_offset_for_line: _ => 80.0,
     line_height_for_line: _ => 20.0,
@@ -1742,7 +1712,7 @@ test "empty single and mixed preferences preserve source order" {
   widgets.install_live_view_context(() => (0.0, 300.0), position => {
     Some(position)
   })
-  widgets.add_widget(widget)
+  widgets.add_widget(widget.content_widget_handle())
   let query_count = Ref(0)
   let ctx : ContentWidgetsRenderContext = {
     vertical_offset_for_line: _ => 50.0,
@@ -1764,7 +1734,7 @@ test "empty single and mixed preferences preserve source order" {
     preference: Some([]),
     position_affinity: None,
   })
-  widgets.set_widget_position(widget)
+  widgets.set_widget_position(widget.content_widget_handle())
   widgets.prepare_render_widgets(ctx)
   assert_true(widgets.widgets["preference-matrix"].render_data is None)
   assert_eq(query_count.val, 0)
@@ -1775,7 +1745,7 @@ test "empty single and mixed preferences preserve source order" {
     preference: Some([Above]),
     position_affinity: None,
   })
-  widgets.set_widget_position(widget)
+  widgets.set_widget_position(widget.content_widget_handle())
   widgets.prepare_render_widgets(ctx)
   guard widgets.widgets["preference-matrix"].render_data
     is Some(InViewport(coordinate=above_coordinate, position=Above)) else {
@@ -1789,7 +1759,7 @@ test "empty single and mixed preferences preserve source order" {
     preference: Some([Below]),
     position_affinity: None,
   })
-  widgets.set_widget_position(widget)
+  widgets.set_widget_position(widget.content_widget_handle())
   widgets.prepare_render_widgets(ctx)
   guard widgets.widgets["preference-matrix"].render_data
     is Some(InViewport(coordinate=below_coordinate, position=Below)) else {
@@ -1803,7 +1773,7 @@ test "empty single and mixed preferences preserve source order" {
     preference: Some([Exact]),
     position_affinity: None,
   })
-  widgets.set_widget_position(widget)
+  widgets.set_widget_position(widget.content_widget_handle())
   widgets.prepare_render_widgets(ctx)
   guard widgets.widgets["preference-matrix"].render_data
     is Some(InViewport(coordinate=exact_coordinate, position=Exact)) else {
@@ -1818,7 +1788,7 @@ test "empty single and mixed preferences preserve source order" {
     preference: Some([Above, Below]),
     position_affinity: None,
   })
-  widgets.set_widget_position(widget)
+  widgets.set_widget_position(widget.content_widget_handle())
   widgets.prepare_render_widgets(ctx)
   guard widgets.widgets["preference-matrix"].render_data
     is Some(InViewport(coordinate=_, position=mixed_above)) else {
@@ -1832,7 +1802,7 @@ test "empty single and mixed preferences preserve source order" {
     preference: Some([Below, Above]),
     position_affinity: None,
   })
-  widgets.set_widget_position(widget)
+  widgets.set_widget_position(widget.content_widget_handle())
   widgets.prepare_render_widgets(ctx)
   guard widgets.widgets["preference-matrix"].render_data
     is Some(InViewport(coordinate=_, position=mixed_below)) else {
@@ -1882,10 +1852,10 @@ test "ABOVE and BELOW write visible coordinates before afterRender callbacks" {
   widgets.install_live_view_context(() => (0.0, 300.0), position => {
     Some(position)
   })
-  widgets.add_widget(above)
-  widgets.set_widget_position(above)
-  widgets.add_widget(below)
-  widgets.set_widget_position(below)
+  widgets.add_widget(above.content_widget_handle())
+  widgets.set_widget_position(above.content_widget_handle())
+  widgets.add_widget(below.content_widget_handle())
+  widgets.set_widget_position(below.content_widget_handle())
   widgets.prepare_render_widgets({
     vertical_offset_for_line: _ => 50.0,
     line_height_for_line: _ => 20.0,

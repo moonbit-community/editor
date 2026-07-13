@@ -56,88 +56,41 @@ priv struct BrowserIframeContentWidget {
 }
 
 ///|
-impl @content_widgets.ContentWidget for BrowserIframeContentWidget with fn get_id(
-  self,
-) {
-  self.id
-}
-
-///|
-impl @content_widgets.ContentWidget for BrowserIframeContentWidget with fn get_dom_node(
-  self,
-) {
-  self.node
-}
-
-///|
-impl @content_widgets.ContentWidget for BrowserIframeContentWidget with fn get_position(
-  self,
-) {
-  Some({
-    position: Some(Position(1, 1)),
-    secondary_position: None,
-    preference: Some(self.preference),
-    position_affinity: None,
-  })
-}
-
-///|
-impl @content_widgets.ContentWidget for BrowserIframeContentWidget with fn allow_editor_overflow(
-  self,
-) {
-  self.allow_overflow
-}
-
-///|
-impl @content_widgets.ContentWidget for BrowserIframeContentWidget with fn use_display_none(
-  _self,
-) {
-  false
-}
-
-///|
-impl @content_widgets.ContentWidget for BrowserIframeContentWidget with fn has_before_render(
-  _self,
-) {
-  true
-}
-
-///|
-impl @content_widgets.ContentWidget for BrowserIframeContentWidget with fn before_render(
-  _self,
-) {
-  Some({ width: 80.0, height: 30.0 })
-}
-
-///|
-impl @content_widgets.ContentWidget for BrowserIframeContentWidget with fn has_after_render(
-  _self,
-) {
-  true
-}
-
-///|
-impl @content_widgets.ContentWidget for BrowserIframeContentWidget with fn after_render(
-  self,
-  position,
-  coordinate,
-) {
-  self.after_position = match position {
-    Some(Above) => "above"
-    Some(Below) => "below"
-    Some(Exact) => "exact"
-    None => "null"
-  }
-  match coordinate {
-    Some(coordinate) => {
-      self.after_top = coordinate.top
-      self.after_left = coordinate.left
-    }
-    None => {
-      self.after_top = -9999.0
-      self.after_left = -9999.0
-    }
-  }
+fn BrowserIframeContentWidget::content_widget_handle(
+  self : BrowserIframeContentWidget,
+) -> @content_widgets.ContentWidgetHandle {
+  ContentWidgetHandle(
+    () => self.id,
+    () => self.node,
+    () => {
+      Some({
+        position: Some(Position(1, 1)),
+        secondary_position: None,
+        preference: Some(self.preference),
+        position_affinity: None,
+      })
+    },
+    allow_editor_overflow=self.allow_overflow,
+    before_render=() => Some({ width: 80.0, height: 30.0 }),
+    after_render=(position, coordinate) => {
+      self.after_position = match position {
+        Some(Above) => "above"
+        Some(Below) => "below"
+        Some(Exact) => "exact"
+        None => "null"
+      }
+      match coordinate {
+        Some(coordinate) => {
+          self.after_top = coordinate.top
+          self.after_left = coordinate.left
+        }
+        None => {
+          self.after_top = -9999.0
+          self.after_left = -9999.0
+        }
+      }
+    },
+  )
 }
 
 ///|
@@ -205,10 +158,10 @@ fn BrowserIframeGeometryFixture::new() -> BrowserIframeGeometryFixture {
   })
   let normal = BrowserIframeContentWidget::new(document, "normal", false)
   let overflow = BrowserIframeContentWidget::new(document, "overflow", true)
-  widgets.add_widget(normal)
-  widgets.set_widget_position(normal)
-  widgets.add_widget(overflow)
-  widgets.set_widget_position(overflow)
+  widgets.add_widget(normal.content_widget_handle())
+  widgets.set_widget_position(normal.content_widget_handle())
+  widgets.add_widget(overflow.content_widget_handle())
+  widgets.set_widget_position(overflow.content_widget_handle())
   { widgets, normal, overflow, anchor_left, anchor_top }
 }
 
@@ -256,7 +209,7 @@ fn BrowserIframeGeometryFixture::run_case(
   self.anchor_left.val = left
   self.anchor_top.val = top
   widget.preference = preference
-  self.widgets.set_widget_position(widget)
+  self.widgets.set_widget_position(widget.content_widget_handle())
   self.widgets.prepare_render_widgets(self.context())
   self.widgets.render_widgets(0.0, 0.0)
   self.capture(widget)

@@ -50,23 +50,51 @@ pub(all) struct ContentWidgetRenderedCoordinate {
 } derive(Eq, Debug)
 
 ///|
-/// Monaco `IContentWidget` (`editorBrowser.ts`), the I-prefix dropped per the
-/// repo's naming rule. `allow_editor_overflow` is a method rather than the
-/// source's readonly field (MoonBit traits carry no data).
-pub(open) trait ContentWidget {
-  fn get_id(Self) -> String
-  fn get_dom_node(Self) -> @rdom.Element
-  fn get_position(Self) -> ContentWidgetPosition?
-  fn allow_editor_overflow(Self) -> Bool
-  fn use_display_none(Self) -> Bool
-  fn has_before_render(Self) -> Bool
-  fn before_render(Self) -> ContentWidgetDimension? raise
-  fn has_after_render(Self) -> Bool
-  fn after_render(
-    Self,
+/// Value-level adapter for Monaco's `IContentWidget` (`editorBrowser.ts`).
+/// Required source methods remain getter closures so their values stay live;
+/// optional source fields and callbacks remain independently optional instead
+/// of being expanded into mandatory trait methods plus `has_*` sentinels.
+pub struct ContentWidgetHandle {
+  priv get_id : () -> String
+  priv get_dom_node : () -> @rdom.Element
+  priv get_position : () -> ContentWidgetPosition?
+  priv allow_editor_overflow : Bool
+  priv use_display_none : Bool
+  priv suppress_mouse_down : Bool
+  priv before_render : (() -> ContentWidgetDimension? raise)?
+  priv after_render : ((
     ContentWidgetPositionPreference?,
     ContentWidgetRenderedCoordinate?,
-  ) -> Unit raise
+  ) -> Unit raise)?
+}
+
+///|
+/// Creates a content-widget adapter. The optional values preserve Monaco's
+/// absent-member defaults; callbacks capture any concrete widget state they
+/// need at the construction boundary.
+pub fn ContentWidgetHandle::ContentWidgetHandle(
+  get_id : () -> String,
+  get_dom_node : () -> @rdom.Element,
+  get_position : () -> ContentWidgetPosition?,
+  allow_editor_overflow? : Bool = false,
+  use_display_none? : Bool = false,
+  suppress_mouse_down? : Bool = false,
+  before_render? : () -> ContentWidgetDimension? raise,
+  after_render? : (
+    ContentWidgetPositionPreference?,
+    ContentWidgetRenderedCoordinate?,
+  ) -> Unit raise,
+) -> ContentWidgetHandle {
+  {
+    get_id,
+    get_dom_node,
+    get_position,
+    allow_editor_overflow,
+    use_display_none,
+    suppress_mouse_down,
+    before_render,
+    after_render,
+  }
 }
 
 ///|
@@ -96,7 +124,7 @@ priv struct PositionPair {
 /// Monaco's inner `Widget` (`contentWidgets.ts:190`): per-widget position
 /// state, the cached DOM box, and this frame's render data.
 priv struct Widget {
-  actual : &ContentWidget
+  actual : ContentWidgetHandle
   dom_node : @rdom.Element
   id : String
   /// Monaco `Widget.allowEditorOverflow`. The editor-level `allowOverflow`
@@ -117,6 +145,7 @@ priv struct Widget {
   mut max_width : Double
   mut is_visible : Bool
   use_display_none : Bool
+  suppress_mouse_down : Bool
   mut render_data : WidgetRenderData?
 }
 
@@ -220,13 +249,14 @@ pub fn ContentWidgets::overflowing_content_widgets_dom_node(
 /// `display:none; visibility:hidden` mirrors the source `Widget` constructor.
 pub fn ContentWidgets::add_widget(
   self : ContentWidgets,
-  actual : &ContentWidget,
+  actual : ContentWidgetHandle,
 ) -> Unit {
   let (content_left, content_width) = (self.read_layout_info)()
-  let dom_node = actual.get_dom_node()
-  let id = actual.get_id()
-  let allow_editor_overflow = actual.allow_editor_overflow()
-  let use_display_none = actual.use_display_none()
+  let dom_node = (actual.get_dom_node)()
+  let id = (actual.get_id)()
+  let allow_editor_overflow = actual.allow_editor_overflow
+  let use_display_none = actual.use_display_none
+  let suppress_mouse_down = actual.suppress_mouse_down
   let widget : Widget = {
     actual,
     dom_node,
@@ -245,6 +275,7 @@ pub fn ContentWidgets::add_widget(
     ),
     is_visible: false,
     use_display_none,
+    suppress_mouse_down,
     render_data: None,
   }
   set_style_property(widget.dom_node, "position", "absolute")
@@ -274,10 +305,10 @@ pub fn ContentWidgets::add_widget(
 /// invalidate the cached box (`Widget.setPosition`, `:293-307`).
 pub fn ContentWidgets::set_widget_position(
   self : ContentWidgets,
-  actual : &ContentWidget,
+  actual : ContentWidgetHandle,
 ) -> Unit {
-  let widget = self.widgets[actual.get_id()]
-  match actual.get_position() {
+  let widget = self.widgets[(actual.get_id)()]
+  match (actual.get_position)() {
     Some(position) => {
       widget.affinity = position.position_affinity
       widget.set_anchor_positions(
@@ -365,18 +396,32 @@ fn ContentWidgets::widget_ids_snapshot(self : ContentWidgets) -> Array[String] {
 /// Monaco `ViewContentWidgets.removeWidget` (`contentWidgets.ts:124-136`).
 pub fn ContentWidgets::remove_widget(
   self : ContentWidgets,
-  actual : &ContentWidget,
+  actual : ContentWidgetHandle,
 ) -> Unit {
-  let id = actual.get_id()
+  let id = (actual.get_id)()
   guard self.widgets.get(id) is Some(widget) else { return }
   self.widgets.remove(id)
-  let parent = if actual.allow_editor_overflow() {
+  let parent = if actual.allow_editor_overflow {
     self.overflowing_content_widgets_dom_node
   } else {
     self.dom_node
   }
   parent.remove_child(widget.dom_node.as_node())
   self.should_render = true
+}
+
+///|
+/// Monaco `ViewContentWidgets.shouldSuppressMouseDownOnWidget`
+/// (`contentWidgets.ts:138-143`). The controller wiring remains a separate
+/// input-boundary seam; this method owns the registered widget lookup/default.
+pub fn ContentWidgets::should_suppress_mouse_down_on_widget(
+  self : ContentWidgets,
+  widget_id : String,
+) -> Bool {
+  match self.widgets.get(widget_id) {
+    Some(widget) => widget.suppress_mouse_down
+    None => false
+  }
 }
 
 ///|
@@ -602,10 +647,9 @@ fn Widget::prepare_render_widget(
   }
   if self.cached_dom_node_offset_width == -1.0 ||
     self.cached_dom_node_offset_height == -1.0 {
-    let preferred_dimensions = if self.actual.has_before_render() {
-      safe_invoke_before_render(self.actual)
-    } else {
-      None
+    let preferred_dimensions = match self.actual.before_render {
+      Some(before_render) => safe_invoke_before_render(before_render)
+      None => None
     }
     match preferred_dimensions {
       Some(dimensions) => {
@@ -929,8 +973,14 @@ fn Widget::render(
         self.dom_node.set_attribute("monaco-visible-content-widget", "true")
         self.is_visible = true
       }
-      if self.actual.has_after_render() {
-        safe_invoke_after_render(self.actual, Some(position), Some(coordinate))
+      match self.actual.after_render {
+        Some(after_render) =>
+          safe_invoke_after_render(
+            after_render,
+            Some(position),
+            Some(coordinate),
+          )
+        None => ()
       }
     }
     Some(OffViewport(preserve_focus~)) => {
@@ -943,8 +993,9 @@ fn Widget::render(
           set_style_property(self.dom_node, "visibility", "hidden")
         }
       }
-      if self.actual.has_after_render() {
-        safe_invoke_after_render(self.actual, None, None)
+      match self.actual.after_render {
+        Some(after_render) => safe_invoke_after_render(after_render, None, None)
+        None => ()
       }
     }
     None => {
@@ -953,8 +1004,9 @@ fn Widget::render(
         self.is_visible = false
         set_style_property(self.dom_node, "visibility", "hidden")
       }
-      if self.actual.has_after_render() {
-        safe_invoke_after_render(self.actual, None, None)
+      match self.actual.after_render {
+        Some(after_render) => safe_invoke_after_render(after_render, None, None)
+        None => ()
       }
     }
   }
@@ -989,9 +1041,9 @@ fn js_math_round(value : Double) -> Double {
 /// Monaco `safeInvoke(actual.beforeRender, actual)`: callback failures become
 /// a null preferred-dimension result and therefore fall back to DOM measure.
 fn safe_invoke_before_render(
-  actual : &ContentWidget,
+  before_render : () -> ContentWidgetDimension? raise,
 ) -> ContentWidgetDimension? {
-  actual.before_render() catch {
+  before_render() catch {
     _ => None
   }
 }
@@ -1000,11 +1052,14 @@ fn safe_invoke_before_render(
 /// Monaco `safeInvoke(actual.afterRender, actual, position, coordinate)`:
 /// callback failures must not abort the frame.
 fn safe_invoke_after_render(
-  actual : &ContentWidget,
+  after_render : (
+    ContentWidgetPositionPreference?,
+    ContentWidgetRenderedCoordinate?,
+  ) -> Unit raise,
   position : ContentWidgetPositionPreference?,
   coordinate : ContentWidgetRenderedCoordinate?,
 ) -> Unit {
-  actual.after_render(position, coordinate) catch {
+  after_render(position, coordinate) catch {
     _ => ()
   }
 }

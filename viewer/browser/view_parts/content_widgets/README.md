@@ -7,14 +7,15 @@ contracts in `editorBrowser.ts`. Hover's concrete widget lives in
 
 ## Contract
 
-- `ContentWidget` exposes an id, DOM node, optional model-space primary and
-  secondary anchors, nullable ordered `Above`/`Below`/`Exact` preferences,
-  position affinity, the `useDisplayNone` scheduling/display gate, optional
-  safe `before_render` / `after_render` callbacks, and whether the node may
-  overflow the editor. Because MoonBit traits cannot test whether a method is
-  present, `has_before_render` / `has_after_render` are the explicit optional
-  capability bits; two narrow safe-invoke helpers preserve the source's
-  exception-to-fallback behavior and callback argument order.
+- `ContentWidgetHandle` exposes live id, DOM-node, and position getter
+  closures; the `allowEditorOverflow`, `useDisplayNone`, and
+  `suppressMouseDown` values; and independently optional `before_render` /
+  `after_render` callbacks. The record preserves the source's value-level
+  optional members without mandatory `has_*` methods. Two narrow safe-invoke
+  helpers preserve the source's exception-to-fallback behavior and callback
+  argument order. The content-widget layer owns the `suppressMouseDown`
+  lookup/default; forwarding that query through the controller remains an
+  input-boundary seam.
 - `ContentWidgets::add_widget` mounts a node once in either `.contentWidgets`
   or `.overflowingContentWidgets`; `remove_widget` is the only unmount path.
   `set_widget_position` retains model anchors, projects their current view

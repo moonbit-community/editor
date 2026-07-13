@@ -337,7 +337,7 @@ fn Viewer::create_view(
           )
         None => ()
       }
-      view.content_widgets.add_widget(widget)
+      view.content_widgets.add_widget(widget.content_widget_handle())
     }
     None => ()
   }

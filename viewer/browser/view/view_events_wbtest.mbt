@@ -1039,73 +1039,17 @@ priv struct ViewEventContentWidget {
 }
 
 ///|
-impl @content_widgets.ContentWidget for ViewEventContentWidget with fn get_id(
-  _self,
-) {
-  "event-widget"
-}
-
-///|
-impl @content_widgets.ContentWidget for ViewEventContentWidget with fn get_dom_node(
-  self,
-) {
-  self.dom_node
-}
-
-///|
-impl @content_widgets.ContentWidget for ViewEventContentWidget with fn get_position(
-  _self,
-) {
-  Some({
-    position: Some(Position(2, 3)),
-    secondary_position: None,
-    preference: Some([Below]),
-    position_affinity: None,
+fn ViewEventContentWidget::content_widget_handle(
+  self : ViewEventContentWidget,
+) -> @content_widgets.ContentWidgetHandle {
+  ContentWidgetHandle(() => "event-widget", () => self.dom_node, () => {
+    Some({
+      position: Some(Position(2, 3)),
+      secondary_position: None,
+      preference: Some([Below]),
+      position_affinity: None,
+    })
   })
-}
-
-///|
-impl @content_widgets.ContentWidget for ViewEventContentWidget with fn allow_editor_overflow(
-  _self,
-) {
-  false
-}
-
-///|
-impl @content_widgets.ContentWidget for ViewEventContentWidget with fn use_display_none(
-  _self,
-) {
-  false
-}
-
-///|
-impl @content_widgets.ContentWidget for ViewEventContentWidget with fn has_before_render(
-  _self,
-) {
-  false
-}
-
-///|
-impl @content_widgets.ContentWidget for ViewEventContentWidget with fn before_render(
-  _self,
-) {
-  None
-}
-
-///|
-impl @content_widgets.ContentWidget for ViewEventContentWidget with fn has_after_render(
-  _self,
-) {
-  false
-}
-
-///|
-impl @content_widgets.ContentWidget for ViewEventContentWidget with fn after_render(
-  _self,
-  _position,
-  _coordinate,
-) {
-  ()
 }
 
 ///|
@@ -1128,8 +1072,8 @@ test "ContentWidgets handlers refresh layout and reproject every mapping event" 
   let widget : ViewEventContentWidget = {
     dom_node: @rdom.document().create_element("div"),
   }
-  widgets.add_widget(widget)
-  widgets.set_widget_position(widget)
+  widgets.add_widget(widget.content_widget_handle())
+  widgets.set_widget_position(widget.content_widget_handle())
   assert_eq(layout_reads.val, 1)
   assert_eq(projections.val, 1)
 

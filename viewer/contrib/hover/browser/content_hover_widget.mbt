@@ -88,75 +88,13 @@ pub(all) struct ContentHoverWidget {
 pub let content_hover_widget_id : String = "editor.contrib.resizableContentHoverWidget"
 
 ///|
-pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn get_id(
-  _self,
-) {
-  content_hover_widget_id
-}
-
-///|
-pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn get_dom_node(
-  self,
-) {
-  self.wrapper
-}
-
-///|
-/// Monaco `ResizableContentWidget.allowEditorOverflow = true`: the hover
-/// renders in the `.overflowingContentWidgets` layer, outside
-/// `.overflow-guard`, and is placed/fitted against the page
-/// (`_layoutBoxInPage`), so a narrow editor does not shrink it.
-pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn allow_editor_overflow(
-  _self,
-) {
-  true
-}
-
-///|
-pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn use_display_none(
-  _self,
-) {
-  false
-}
-
-///|
-pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn has_before_render(
-  _self,
-) {
-  false
-}
-
-///|
-pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn before_render(
-  _self,
-) {
-  None
-}
-
-///|
-pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn has_after_render(
-  _self,
-) {
-  false
-}
-
-///|
-pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn after_render(
-  _self,
-  _position,
-  _coordinate,
-) {
-  ()
-}
-
-///|
 /// Monaco `ContentHoverWidget.getPosition` (`contentHoverWidget.ts:324-334`).
 /// The generic affinity handoff is ported, but the local hover-part pipeline
 /// does not yet retain `RenderedContentHover.shouldAppearBeforeContent`; that
 /// concrete producer remains an explicit deferred hover-part seam.
-pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn get_position(
-  self,
-) {
+fn ContentHoverWidget::content_widget_position(
+  self : ContentHoverWidget,
+) -> @content_widgets.ContentWidgetPosition? {
   match self.rendered_hover {
     Some(rendered) =>
       Some({
@@ -172,6 +110,21 @@ pub impl @content_widgets.ContentWidget for ContentHoverWidget with fn get_posit
       })
     None => None
   }
+}
+
+///|
+/// Adapts the concrete hover to Monaco's content-widget contract. Overflow is
+/// the hover's sole optional field; absent render callbacks stay absent rather
+/// than becoming four constant trait methods.
+pub fn ContentHoverWidget::content_widget_handle(
+  self : ContentHoverWidget,
+) -> @content_widgets.ContentWidgetHandle {
+  ContentWidgetHandle(
+    () => content_hover_widget_id,
+    () => self.wrapper,
+    () => self.content_widget_position(),
+    allow_editor_overflow=true,
+  )
 }
 
 ///|

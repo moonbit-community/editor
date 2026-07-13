@@ -123,6 +123,18 @@ const MIN_SAFE_DELTA : Int = -(1 << 30)
 const MAX_SAFE_DELTA : Int = 1 << 30
 
 ///|
+/// Stable identities for interval nodes. TypeScript's object `===` is part of
+/// the tree algorithm; MoonBit's `physical_equal` is only an optimization hint
+/// and cannot carry that semantic contract across targets.
+let interval_node_identity_counter : Ref[Int] = Ref(0)
+
+///|
+fn next_interval_node_identity() -> Int {
+  interval_node_identity_counter.val += 1
+  interval_node_identity_counter.val
+}
+
+///|
 /// `getNodeColor` (`intervalTree.ts:81-83`).
 pub fn get_node_color(node : IntervalNode) -> NodeColor {
   if (node.metadata & COLOR_MASK) >> COLOR_OFFSET == 1 {
@@ -216,6 +228,7 @@ fn set_collapse_on_replace_edit(node : IntervalNode, value : Bool) -> Unit {
 /// affectsFont. Link fields are `IntervalNode?` behind unwrap accessors (see
 /// header deviation note); everything else matches the source field list.
 pub(all) struct IntervalNode {
+  priv identity : Int
   mut metadata : Int
   mut parent_ : IntervalNode?
   mut left_ : IntervalNode?
@@ -267,6 +280,7 @@ fn IntervalNode::set_right(self : IntervalNode, v : IntervalNode) -> Unit {
 /// `IntervalNode` constructor (`intervalTree.ts:166-195`).
 pub fn IntervalNode::new(id : String, start : Int, end : Int) -> IntervalNode {
   let node : IntervalNode = {
+    identity: next_interval_node_identity(),
     metadata: 0,
     parent_: None,
     left_: None,
@@ -298,6 +312,17 @@ pub fn IntervalNode::new(id : String, start : Int, end : Int) -> IntervalNode {
   set_node_affects_font(node, false)
   set_node_is_visited(node, false)
   node
+}
+
+///|
+/// Whether two handles name the same stable interval-tree node.
+pub fn IntervalNode::same(self : IntervalNode, other : IntervalNode) -> Bool {
+  self.identity == other.identity
+}
+
+///|
+fn same_interval_node(left : IntervalNode, right : IntervalNode) -> Bool {
+  left.same(right)
 }
 
 ///|
@@ -401,7 +426,7 @@ pub fn IntervalTree::interval_search(
   cached_version_id : Int,
   only_margin_decorations : Bool,
 ) -> Array[IntervalNode] {
-  if physical_equal(self.root, sentinel) {
+  if same_interval_node(self.root, sentinel) {
     return []
   }
   interval_search(
@@ -420,7 +445,7 @@ pub fn IntervalTree::search(
   cached_version_id : Int,
   only_margin_decorations : Bool,
 ) -> Array[IntervalNode] {
-  if physical_equal(self.root, sentinel) {
+  if same_interval_node(self.root, sentinel) {
     return []
   }
   search(
@@ -473,8 +498,8 @@ pub fn IntervalTree::resolve_node(
   let initial_node = node
   let mut node = node
   let mut delta = 0
-  while !physical_equal(node, self.root) {
-    if physical_equal(node, node.parent().right()) {
+  while !same_interval_node(node, self.root) {
+    if same_interval_node(node, node.parent().right()) {
       delta += node.parent().delta
     }
     node = node.parent()
@@ -510,14 +535,14 @@ fn IntervalTree::normalize_delta_if_necessary(self : IntervalTree) -> Unit {
 fn normalize_delta(t : IntervalTree) -> Unit {
   let mut node = t.root
   let mut delta = 0
-  while !physical_equal(node, sentinel) {
-    if !physical_equal(node.left(), sentinel) &&
+  while !same_interval_node(node, sentinel) {
+    if !same_interval_node(node.left(), sentinel) &&
       !get_node_is_visited(node.left()) {
       // go left
       node = node.left()
       continue
     }
-    if !physical_equal(node.right(), sentinel) &&
+    if !same_interval_node(node.right(), sentinel) &&
       !get_node_is_visited(node.right()) {
       // go right
       delta += node.delta
@@ -535,7 +560,7 @@ fn normalize_delta(t : IntervalTree) -> Unit {
     // going up from this node
     set_node_is_visited(node.left(), false)
     set_node_is_visited(node.right(), false)
-    if physical_equal(node, node.parent().right()) {
+    if same_interval_node(node, node.parent().right()) {
       delta -= node.parent().delta
     }
     node = node.parent()
@@ -555,7 +580,7 @@ fn collect_nodes_from_owner(
 ) -> Array[IntervalNode] {
   let mut node = t.root
   let result : Array[IntervalNode] = []
-  while !physical_equal(node, sentinel) {
+  while !same_interval_node(node, sentinel) {
     if get_node_is_visited(node) {
       // going up from this node
       set_node_is_visited(node.left(), false)
@@ -563,7 +588,7 @@ fn collect_nodes_from_owner(
       node = node.parent()
       continue
     }
-    if !physical_equal(node.left(), sentinel) &&
+    if !same_interval_node(node.left(), sentinel) &&
       !get_node_is_visited(node.left()) {
       // go left
       node = node.left()
@@ -575,7 +600,7 @@ fn collect_nodes_from_owner(
       result.push(node)
     }
     set_node_is_visited(node, true)
-    if !physical_equal(node.right(), sentinel) &&
+    if !same_interval_node(node.right(), sentinel) &&
       !get_node_is_visited(node.right()) {
       // go right
       node = node.right()
@@ -591,7 +616,7 @@ fn collect_nodes_from_owner(
 fn collect_nodes_post_order(t : IntervalTree) -> Array[IntervalNode] {
   let mut node = t.root
   let result : Array[IntervalNode] = []
-  while !physical_equal(node, sentinel) {
+  while !same_interval_node(node, sentinel) {
     if get_node_is_visited(node) {
       // going up from this node
       set_node_is_visited(node.left(), false)
@@ -599,13 +624,13 @@ fn collect_nodes_post_order(t : IntervalTree) -> Array[IntervalNode] {
       node = node.parent()
       continue
     }
-    if !physical_equal(node.left(), sentinel) &&
+    if !same_interval_node(node.left(), sentinel) &&
       !get_node_is_visited(node.left()) {
       // go left
       node = node.left()
       continue
     }
-    if !physical_equal(node.right(), sentinel) &&
+    if !same_interval_node(node.right(), sentinel) &&
       !get_node_is_visited(node.right()) {
       // go right
       node = node.right()
@@ -636,18 +661,18 @@ fn search(
   let mut node_start = 0
   let mut node_end = 0
   let result : Array[IntervalNode] = []
-  while !physical_equal(node, sentinel) {
+  while !same_interval_node(node, sentinel) {
     if get_node_is_visited(node) {
       // going up from this node
       set_node_is_visited(node.left(), false)
       set_node_is_visited(node.right(), false)
-      if physical_equal(node, node.parent().right()) {
+      if same_interval_node(node, node.parent().right()) {
         delta -= node.parent().delta
       }
       node = node.parent()
       continue
     }
-    if !physical_equal(node.left(), sentinel) &&
+    if !same_interval_node(node.left(), sentinel) &&
       !get_node_is_visited(node.left()) {
       // go left
       node = node.left()
@@ -677,7 +702,7 @@ fn search(
       result.push(node)
     }
     set_node_is_visited(node, true)
-    if !physical_equal(node.right(), sentinel) &&
+    if !same_interval_node(node.right(), sentinel) &&
       !get_node_is_visited(node.right()) {
       // go right
       delta += node.delta
@@ -715,12 +740,12 @@ fn interval_search(
   let mut node_start = 0
   let mut node_end = 0
   let result : Array[IntervalNode] = []
-  while !physical_equal(node, sentinel) {
+  while !same_interval_node(node, sentinel) {
     if get_node_is_visited(node) {
       // going up from this node
       set_node_is_visited(node.left(), false)
       set_node_is_visited(node.right(), false)
-      if physical_equal(node, node.parent().right()) {
+      if same_interval_node(node, node.parent().right()) {
         delta -= node.parent().delta
       }
       node = node.parent()
@@ -735,7 +760,7 @@ fn interval_search(
         set_node_is_visited(node, true)
         continue
       }
-      if !physical_equal(node.left(), sentinel) {
+      if !same_interval_node(node.left(), sentinel) {
         // go left
         node = node.left()
         continue
@@ -774,7 +799,7 @@ fn interval_search(
       }
     }
     set_node_is_visited(node, true)
-    if !physical_equal(node.right(), sentinel) &&
+    if !same_interval_node(node.right(), sentinel) &&
       !get_node_is_visited(node.right()) {
       // go right
       delta += node.delta
@@ -794,7 +819,7 @@ fn interval_search(
 /// `rbTreeInsert` (`intervalTree.ts:871-928`): CLRS insert plus repair;
 /// rotations carry the delta transfer.
 fn rb_tree_insert(t : IntervalTree, new_node : IntervalNode) -> IntervalNode {
-  if physical_equal(t.root, sentinel) {
+  if same_interval_node(t.root, sentinel) {
     new_node.set_parent(sentinel)
     new_node.set_left(sentinel)
     new_node.set_right(sentinel)
@@ -807,8 +832,8 @@ fn rb_tree_insert(t : IntervalTree, new_node : IntervalNode) -> IntervalNode {
 
   // repair tree
   let mut x = new_node
-  while !physical_equal(x, t.root) && get_node_color(x.parent()) == Red {
-    if physical_equal(x.parent(), x.parent().parent().left()) {
+  while !same_interval_node(x, t.root) && get_node_color(x.parent()) == Red {
+    if same_interval_node(x.parent(), x.parent().parent().left()) {
       let y = x.parent().parent().right()
       if get_node_color(y) == Red {
         set_node_color(x.parent(), Black)
@@ -816,7 +841,7 @@ fn rb_tree_insert(t : IntervalTree, new_node : IntervalNode) -> IntervalNode {
         set_node_color(x.parent().parent(), Red)
         x = x.parent().parent()
       } else {
-        if physical_equal(x, x.parent().right()) {
+        if same_interval_node(x, x.parent().right()) {
           x = x.parent()
           left_rotate(t, x)
         }
@@ -832,7 +857,7 @@ fn rb_tree_insert(t : IntervalTree, new_node : IntervalNode) -> IntervalNode {
         set_node_color(x.parent().parent(), Red)
         x = x.parent().parent()
       } else {
-        if physical_equal(x, x.parent().left()) {
+        if same_interval_node(x, x.parent().left()) {
           x = x.parent()
           right_rotate(t, x)
         }
@@ -864,7 +889,7 @@ fn tree_insert(t : IntervalTree, z : IntervalNode) -> Unit {
     if cmp < 0 {
       // this node should be inserted to the left
       // => it is not affected by the node's delta
-      if physical_equal(x.left(), sentinel) {
+      if same_interval_node(x.left(), sentinel) {
         z.start -= delta
         z.end -= delta
         z.max_end -= delta
@@ -875,7 +900,7 @@ fn tree_insert(t : IntervalTree, z : IntervalNode) -> Unit {
       }
       // this node should be inserted to the right
       // => it is not affected by the node's delta
-    } else if physical_equal(x.right(), sentinel) {
+    } else if same_interval_node(x.right(), sentinel) {
       z.start -= delta + x.delta
       z.end -= delta + x.delta
       z.max_end -= delta + x.delta
@@ -903,7 +928,7 @@ fn tree_insert(t : IntervalTree, z : IntervalNode) -> Unit {
 fn rb_tree_delete(t : IntervalTree, z : IntervalNode) -> Unit {
   // RB-DELETE except we don't swap z and y in case c)
   // i.e. we always delete what's pointed at by z.
-  let (x, y) = if physical_equal(z.left(), sentinel) {
+  let (x, y) = if same_interval_node(z.left(), sentinel) {
     let x = z.right()
     let y = z
 
@@ -915,7 +940,7 @@ fn rb_tree_delete(t : IntervalTree, z : IntervalNode) -> Unit {
     x.start += z.delta
     x.end += z.delta
     (x, y)
-  } else if physical_equal(z.right(), sentinel) {
+  } else if same_interval_node(z.right(), sentinel) {
     (z.left(), z)
   } else {
     let y = leftest(z.right())
@@ -938,7 +963,7 @@ fn rb_tree_delete(t : IntervalTree, z : IntervalNode) -> Unit {
     }
     (x, y)
   }
-  if physical_equal(y, t.root) {
+  if same_interval_node(y, t.root) {
     t.root = x
     set_node_color(x, Black)
     z.detach()
@@ -948,15 +973,15 @@ fn rb_tree_delete(t : IntervalTree, z : IntervalNode) -> Unit {
     return
   }
   let y_was_red = get_node_color(y) == Red
-  if physical_equal(y, y.parent().left()) {
+  if same_interval_node(y, y.parent().left()) {
     y.parent().set_left(x)
   } else {
     y.parent().set_right(x)
   }
-  if physical_equal(y, z) {
+  if same_interval_node(y, z) {
     x.set_parent(y.parent())
   } else {
-    if physical_equal(y.parent(), z) {
+    if same_interval_node(y.parent(), z) {
       x.set_parent(y)
     } else {
       x.set_parent(y.parent())
@@ -965,24 +990,24 @@ fn rb_tree_delete(t : IntervalTree, z : IntervalNode) -> Unit {
     y.set_right(z.right())
     y.set_parent(z.parent())
     set_node_color(y, get_node_color(z))
-    if physical_equal(z, t.root) {
+    if same_interval_node(z, t.root) {
       t.root = y
-    } else if physical_equal(z, z.parent().left()) {
+    } else if same_interval_node(z, z.parent().left()) {
       z.parent().set_left(y)
     } else {
       z.parent().set_right(y)
     }
-    if !physical_equal(y.left(), sentinel) {
+    if !same_interval_node(y.left(), sentinel) {
       y.left().set_parent(y)
     }
-    if !physical_equal(y.right(), sentinel) {
+    if !same_interval_node(y.right(), sentinel) {
       y.right().set_parent(y)
     }
   }
   z.detach()
   if y_was_red {
     recompute_max_end_walk_to_root(x.parent())
-    if !physical_equal(y, z) {
+    if !same_interval_node(y, z) {
       recompute_max_end_walk_to_root(y)
       recompute_max_end_walk_to_root(y.parent())
     }
@@ -991,15 +1016,15 @@ fn rb_tree_delete(t : IntervalTree, z : IntervalNode) -> Unit {
   }
   recompute_max_end_walk_to_root(x)
   recompute_max_end_walk_to_root(x.parent())
-  if !physical_equal(y, z) {
+  if !same_interval_node(y, z) {
     recompute_max_end_walk_to_root(y)
     recompute_max_end_walk_to_root(y.parent())
   }
 
   // RB-DELETE-FIXUP
   let mut x = x
-  while !physical_equal(x, t.root) && get_node_color(x) == Black {
-    if physical_equal(x, x.parent().left()) {
+  while !same_interval_node(x, t.root) && get_node_color(x) == Black {
+    if same_interval_node(x, x.parent().left()) {
       let mut w = x.parent().right()
       if get_node_color(w) == Red {
         set_node_color(w, Black)
@@ -1057,7 +1082,7 @@ fn rb_tree_delete(t : IntervalTree, z : IntervalNode) -> Unit {
 /// `leftest` (`intervalTree.ts:1157-1162`).
 fn leftest(node : IntervalNode) -> IntervalNode {
   let mut node = node
-  while !physical_equal(node.left(), sentinel) {
+  while !same_interval_node(node.left(), sentinel) {
     node = node.left()
   }
   node
@@ -1087,13 +1112,13 @@ fn left_rotate(t : IntervalTree, x : IntervalNode) -> Unit {
   y.start += x.delta
   y.end += x.delta
   x.set_right(y.left()) // turn y's left subtree into x's right subtree.
-  if !physical_equal(y.left(), sentinel) {
+  if !same_interval_node(y.left(), sentinel) {
     y.left().set_parent(x)
   }
   y.set_parent(x.parent()) // link x's parent to y.
-  if physical_equal(x.parent(), sentinel) {
+  if same_interval_node(x.parent(), sentinel) {
     t.root = y
-  } else if physical_equal(x, x.parent().left()) {
+  } else if same_interval_node(x, x.parent().left()) {
     x.parent().set_left(y)
   } else {
     x.parent().set_right(y)
@@ -1115,13 +1140,13 @@ fn right_rotate(t : IntervalTree, y : IntervalNode) -> Unit {
   y.start -= x.delta
   y.end -= x.delta
   y.set_left(x.right())
-  if !physical_equal(x.right(), sentinel) {
+  if !same_interval_node(x.right(), sentinel) {
     x.right().set_parent(y)
   }
   x.set_parent(y.parent())
-  if physical_equal(y.parent(), sentinel) {
+  if same_interval_node(y.parent(), sentinel) {
     t.root = x
-  } else if physical_equal(y, y.parent().right()) {
+  } else if same_interval_node(y, y.parent().right()) {
     y.parent().set_right(x)
   } else {
     y.parent().set_left(x)
@@ -1140,13 +1165,13 @@ fn right_rotate(t : IntervalTree, y : IntervalNode) -> Unit {
 /// `computeMaxEnd` (`intervalTree.ts:1236-1251`).
 fn compute_max_end(node : IntervalNode) -> Int {
   let mut max_end = node.end
-  if !physical_equal(node.left(), sentinel) {
+  if !same_interval_node(node.left(), sentinel) {
     let left_max_end = node.left().max_end
     if left_max_end > max_end {
       max_end = left_max_end
     }
   }
-  if !physical_equal(node.right(), sentinel) {
+  if !same_interval_node(node.right(), sentinel) {
     let right_max_end = node.right().max_end + node.delta
     if right_max_end > max_end {
       max_end = right_max_end
@@ -1165,7 +1190,7 @@ pub fn recompute_max_end(node : IntervalNode) -> Unit {
 /// `recomputeMaxEndWalkToRoot` (`intervalTree.ts:1257-1270`).
 fn recompute_max_end_walk_to_root(node : IntervalNode) -> Unit {
   let mut node = node
-  while !physical_equal(node, sentinel) {
+  while !same_interval_node(node, sentinel) {
     let max_end = compute_max_end(node)
     if node.max_end == max_end {
       // no need to go further

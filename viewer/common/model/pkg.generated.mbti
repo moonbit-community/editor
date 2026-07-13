@@ -78,6 +78,7 @@ pub(all) struct IntervalNode {
   mut cached_absolute_start : Int
   mut cached_absolute_end : Int
   mut range : @common.Range?
+  // private fields
 }
 pub fn IntervalNode::detach(Self) -> Unit
 pub fn IntervalNode::left(Self) -> Self
@@ -85,6 +86,7 @@ pub fn IntervalNode::new(String, Int, Int) -> Self
 pub fn IntervalNode::parent(Self) -> Self
 pub fn IntervalNode::reset(Self, Int, Int, Int, @common.Range?) -> Unit
 pub fn IntervalNode::right(Self) -> Self
+pub fn IntervalNode::same(Self, Self) -> Bool
 pub fn IntervalNode::set_cached_offsets(Self, Int, Int, Int) -> Unit
 pub fn IntervalNode::set_options(Self, ModelDecorationOptions) -> Unit
 

@@ -28,6 +28,7 @@
 
 ///|
 priv struct Interval {
+  id : Int
   mut start : Int
   mut end : Int
 }
@@ -59,7 +60,7 @@ fn Oracle::insert(self : Oracle, interval : Interval) -> Interval {
 ///|
 fn Oracle::delete(self : Oracle, interval : Interval) -> Unit {
   for i, existing in self.intervals {
-    if physical_equal(existing, interval) {
+    if existing.id == interval.id {
       let _ = self.intervals.remove(i)
       return
     }
@@ -119,7 +120,15 @@ fn TestState::accept_op(self : TestState, op : Op) -> Unit raise {
       }
       self.tree_nodes.push(Some(node))
       self.tree.insert(node)
-      self.oracle_nodes.push(Some(self.oracle.insert({ start: begin, end })))
+      self.oracle_nodes.push(
+        Some(
+          self.oracle.insert({
+            id: self.oracle_nodes.length(),
+            start: begin,
+            end,
+          }),
+        ),
+      )
     }
     Delete(id) => {
       self.tree.delete(self.tree_nodes[id].unwrap())
@@ -267,21 +276,29 @@ fn assert_pairs_eq(
 // #region Assertion (intervalTree.test.ts:856-912)
 
 ///|
+fn same_interval_node(
+  left : @model.IntervalNode,
+  right : @model.IntervalNode,
+) -> Bool {
+  left.same(right)
+}
+
+///|
 fn assert_tree_invariants(t : @model.IntervalTree) -> Unit raise {
   assert_true(@model.get_node_color(@model.sentinel) is Black)
-  assert_true(physical_equal(@model.sentinel.parent(), @model.sentinel))
-  assert_true(physical_equal(@model.sentinel.left(), @model.sentinel))
-  assert_true(physical_equal(@model.sentinel.right(), @model.sentinel))
+  assert_true(same_interval_node(@model.sentinel.parent(), @model.sentinel))
+  assert_true(same_interval_node(@model.sentinel.left(), @model.sentinel))
+  assert_true(same_interval_node(@model.sentinel.right(), @model.sentinel))
   assert_eq(@model.sentinel.start, 0)
   assert_eq(@model.sentinel.end, 0)
   assert_eq(@model.sentinel.delta, 0)
-  assert_true(physical_equal(t.root.parent(), @model.sentinel))
+  assert_true(same_interval_node(t.root.parent(), @model.sentinel))
   assert_valid_tree(t)
 }
 
 ///|
 fn depth(n : @model.IntervalNode) -> Int raise {
-  if physical_equal(n, @model.sentinel) {
+  if same_interval_node(n, @model.sentinel) {
     // The leafs are black
     return 1
   }
@@ -291,7 +308,7 @@ fn depth(n : @model.IntervalNode) -> Int raise {
 
 ///|
 fn assert_valid_node(n : @model.IntervalNode, delta : Int) -> Unit raise {
-  if physical_equal(n, @model.sentinel) {
+  if same_interval_node(n, @model.sentinel) {
     return
   }
   let l = n.left()
@@ -301,7 +318,7 @@ fn assert_valid_node(n : @model.IntervalNode, delta : Int) -> Unit raise {
     assert_true(@model.get_node_color(r) is Black)
   }
   let mut expected_max_end = n.end
-  if !physical_equal(l, @model.sentinel) {
+  if !same_interval_node(l, @model.sentinel) {
     assert_true(
       @model.interval_compare(
         l.start + delta,
@@ -315,7 +332,7 @@ fn assert_valid_node(n : @model.IntervalNode, delta : Int) -> Unit raise {
       expected_max_end = l.max_end
     }
   }
-  if !physical_equal(r, @model.sentinel) {
+  if !same_interval_node(r, @model.sentinel) {
     assert_true(
       @model.interval_compare(
         n.start + delta,
@@ -336,7 +353,7 @@ fn assert_valid_node(n : @model.IntervalNode, delta : Int) -> Unit raise {
 
 ///|
 fn assert_valid_tree(t : @model.IntervalTree) -> Unit raise {
-  if physical_equal(t.root, @model.sentinel) {
+  if same_interval_node(t.root, @model.sentinel) {
     return
   }
   assert_true(@model.get_node_color(t.root) is Black)

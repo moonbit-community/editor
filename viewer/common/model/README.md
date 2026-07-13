@@ -51,7 +51,10 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   and makes stale scheduled generations inert after detach or disposal.
 - Model listener ownership includes the token part's external token listeners
   alongside the model's will-dispose, decoration, attached, and content
-  emitters; options/line-height/font emitters remain N-A. Unexpected tokenizer
+  emitters. View models register the two ordered content callbacks and own the
+  returned disposable handle; the model runs every structural callback before
+  any outgoing callback without storing trait objects. Options/line-height/font
+  emitters remain N-A. Unexpected tokenizer
   failures are reported immediately through the package's host-neutral
   `println` seam, disable that support for the current reset, and leave the
   model live for a later reset.

@@ -271,46 +271,39 @@ fn DidChangeContentEmitter::fire(
 // #region Registered view models (textModel.ts:303,449-455,1652-1667)
 
 ///|
-/// The two methods the text model calls on each registered view model —
-/// Monaco's `IViewModel` surface used by `_onDidChangeContentOrInjectedText`
-/// (`textModel.ts:1655,1662`; `viewModelImpl.ts:319,462`). Declared in the
-/// model package because MoonBit's no-cycle rule forbids the model importing
-/// `view_model` (same precedent as `CoordinatesConverter` in
-/// `viewer/common/core`); `ViewModel` implements it in
-/// `viewer/common/view_model`. Monaco's parameter union also admits
-/// `ModelInjectedTextChangedEvent` — not ported (file header), so the
-/// parameter is the content event alone.
-pub(open) trait ViewModel {
-  fn on_did_change_content_or_injected_text(
-    Self,
-    InternalModelContentChangeEvent,
-  ) -> Unit
-  fn emit_content_change_event(Self, InternalModelContentChangeEvent) -> Unit
+/// The two callbacks the text model invokes for one registered view model.
+/// Keeping this record private preserves the package direction
+/// `view_model -> model` without turning Monaco's erased `IViewModel` type
+/// edge into a MoonBit trait object. `active` is shared with the returned
+/// registration handle so disposal can remove exactly this entry without
+/// object-identity comparison.
+priv struct ViewModelCallbacks {
+  active : Ref[Bool]
+  on_did_change_content_or_injected_text : (InternalModelContentChangeEvent) -> Unit
+  emit_content_change_event : (InternalModelContentChangeEvent) -> Unit
 }
 
 ///|
-/// `registerViewModel` (`textModel.ts:449-451`). Monaco's `Set.add` is an
-/// append here; each view model registers exactly once (its constructor).
+/// `registerViewModel` (`textModel.ts:449-451`) as a callback registration.
+/// The returned idempotent handle owns the matching `unregisterViewModel`
+/// lifetime (`:453-455`); callers never compare or retain trait-object boxes.
 pub fn TextModel::register_view_model(
   self : TextModel,
-  view_model : &ViewModel,
-) -> Unit {
-  self.view_models.push(view_model)
-}
-
-///|
-/// `unregisterViewModel` (`textModel.ts:453-455`). Deviation: MoonBit trait
-/// objects have no cross-coercion identity (`Dog as &Trait` boxes anew per
-/// coercion), so the caller must pass the same trait-object value it
-/// registered — `ViewModel` keeps that handle (`view_model.mbt`).
-pub fn TextModel::unregister_view_model(
-  self : TextModel,
-  view_model : &ViewModel,
-) -> Unit {
-  match self.view_models.search_by(v => physical_equal(v, view_model)) {
-    Some(index) => self.view_models.remove(index) |> ignore
-    None => ()
-  }
+  on_did_change_content_or_injected_text : (InternalModelContentChangeEvent) -> Unit,
+  emit_content_change_event : (InternalModelContentChangeEvent) -> Unit,
+) -> @base_common.Disposable {
+  let active = Ref(true)
+  self.view_models.push({
+    active,
+    on_did_change_content_or_injected_text,
+    emit_content_change_event,
+  })
+  @base_common.Disposable::from(() => {
+    active.val = false
+    let retained = self.view_models.filter(callbacks => callbacks.active.val)
+    self.view_models.clear()
+    self.view_models.append(retained)
+  })
 }
 
 ///|
@@ -324,11 +317,11 @@ fn TextModel::on_did_change_content_or_injected_text(
   self : TextModel,
   e : InternalModelContentChangeEvent,
 ) -> Unit {
-  for view_model in self.view_models {
-    view_model.on_did_change_content_or_injected_text(e)
+  for callbacks in self.view_models {
+    (callbacks.on_did_change_content_or_injected_text)(e)
   }
-  for view_model in self.view_models {
-    view_model.emit_content_change_event(e)
+  for callbacks in self.view_models {
+    (callbacks.emit_content_change_event)(e)
   }
 }
 

@@ -44,11 +44,10 @@ pub struct ViewModel {
   /// The last merged hidden-area union, for `setHiddenAreas`'s no-change
   /// short-circuit — Monaco's `previousHiddenAreas` (`viewModelImpl.ts:71`).
   priv mut previous_hidden_areas : Array[@base_common.Range]
-  /// The trait-object box handed to `TextModel::register_view_model`
-  /// (`viewModelImpl.ts:169`), kept because MoonBit trait objects have no
-  /// cross-coercion identity — `unregister_view_model` (dispose) must
-  /// receive the same box (`@model.ViewModel`'s deviation note).
-  priv mut registered_view_model : &@model.ViewModel?
+  /// Registration returned by `TextModel::register_view_model`
+  /// (`viewModelImpl.ts:169`). Disposing it performs the source's
+  /// `unregisterViewModel(this)` without relying on object identity.
+  priv mut model_registration : @base_common.Disposable?
 }
 
 ///|
@@ -113,14 +112,17 @@ pub fn ViewModel::with_options(
     coordinates_converter,
     hidden_areas_model: HiddenAreasModel::new(),
     previous_hidden_areas: [],
-    registered_view_model: None,
+    model_registration: None,
   }
   // `this.model.registerViewModel(this)` — the constructor tail
-  // (`viewModelImpl.ts:169`); the box is kept for the dispose-side
-  // unregistration (field note).
-  let registered = view_model as &@model.ViewModel
-  view_model.registered_view_model = Some(registered)
-  model.register_view_model(registered)
+  // (`viewModelImpl.ts:169`). The callback registration keeps the model
+  // package independent of this concrete type.
+  view_model.model_registration = Some(
+    model.register_view_model(
+      e => view_model.on_did_change_content_or_injected_text(e~),
+      e => view_model.emit_content_change_event(e),
+    ),
+  )
   view_model.visible_lines_subscription = Some(
     view_layout.on_did_scroll(change => {
       if change.scroll_top_changed {
@@ -176,11 +178,11 @@ pub fn ViewModel::dispose(self : ViewModel) -> Unit {
   self.cursor_event_dispatcher.dispose()
   self.lines.dispose()
   self.view_layout.dispose()
-  match self.registered_view_model {
-    Some(registered) => self.model.unregister_view_model(registered)
+  match self.model_registration {
+    Some(registration) => registration.dispose()
     None => ()
   }
-  self.registered_view_model = None
+  self.model_registration = None
 }
 
 ///|
@@ -311,26 +313,15 @@ pub fn ViewModel::on_did_change_content_or_injected_text(
 }
 
 ///|
-/// The text model's loop-one call — `IViewModel
-/// .onDidChangeContentOrInjectedText` dispatched from
-/// `_onDidChangeContentOrInjectedText` (`textModel.ts:1655`).
-pub impl @model.ViewModel for ViewModel with fn on_did_change_content_or_injected_text(
-  self,
-  e,
-) {
-  self.on_did_change_content_or_injected_text(e~)
-}
-
-///|
-/// The text model's loop-two call — `emitContentChangeEvent`
-/// (`viewModelImpl.ts:462-469`): the outgoing `ModelContentChangedEvent` is
+/// The text model's loop-two callback — `emitContentChangeEvent`
+/// (`viewModelImpl.ts:462-469`). The outgoing `ModelContentChangedEvent` is
 /// re-fired by the Viewer from the model's public emitter (the viewer's
 /// outgoing-event seam), so the live half here is
 /// `_cursor.onModelContentChanged`.
-pub impl @model.ViewModel for ViewModel with fn emit_content_change_event(
-  self,
-  e,
-) {
+fn ViewModel::emit_content_change_event(
+  self : ViewModel,
+  e : @model.InternalModelContentChangeEvent,
+) -> Unit {
   self.emit_cursor_state_change(self.cursor.on_model_content_changed(e))
   |> ignore
 }

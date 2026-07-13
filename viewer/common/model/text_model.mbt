@@ -45,7 +45,7 @@ pub struct TextModel {
   priv mut version_id : Int
   // Content events (`_eventEmitter` textModel.ts:244; `_viewModels` :303)
   priv event_emitter : DidChangeContentEmitter
-  priv view_models : Array[&ViewModel]
+  priv view_models : Array[ViewModelCallbacks]
   // #region Decorations (textModel.ts:285-290; `_onDidChangeDecorations` :225)
   instance_id : String
   mut delta_decoration_call_cnt : Int

@@ -265,48 +265,30 @@ test "DidChangeContentEmitter merges flushes inside a deferred bracket" {
 }
 
 ///|
-/// A recording stub of the registered-view-model seam for the two-loop
-/// order test (`textModel.ts:1652-1667`).
-priv struct RecordingViewModel {
-  name : String
-  log : Array[String]
-}
-
-///|
-impl ViewModel for RecordingViewModel with fn on_did_change_content_or_injected_text(
-  self,
-  _e,
-) {
-  self.log.push(self.name + ":structure")
-}
-
-///|
-impl ViewModel for RecordingViewModel with fn emit_content_change_event(
-  self,
-  _e,
-) {
-  self.log.push(self.name + ":emit")
-}
-
-///|
 test "two-loop dispatch: every structural update precedes every emit" {
   let log : Array[String] = []
   let model = wb_model("x")
-  let boxed_a = ({ name: "a", log } : RecordingViewModel) as &ViewModel
-  let boxed_b = ({ name: "b", log } : RecordingViewModel) as &ViewModel
-  model.register_view_model(boxed_a)
-  model.register_view_model(boxed_b)
+  let registration_a = model.register_view_model(
+    _e => log.push("a:structure"),
+    _e => log.push("a:emit"),
+  )
+  let registration_b = model.register_view_model(
+    _e => log.push("b:structure"),
+    _e => log.push("b:emit"),
+  )
   // the public emitter fires only after both loops (`textModel.ts:480-481`)
   let _sub = model.on_did_change_content(_ => log.push("public"))
   model.set_value("y")
   assert_true(
     log == ["a:structure", "b:structure", "a:emit", "b:emit", "public"],
   )
-  // unregistering removes exactly the passed box
-  model.unregister_view_model(boxed_a)
+  // the registration handle removes exactly its callbacks and is idempotent
+  registration_a.dispose()
+  registration_a.dispose()
   log.clear()
   model.set_value("z")
   assert_true(log == ["b:structure", "b:emit", "public"])
+  registration_b.dispose()
 }
 
 ///|

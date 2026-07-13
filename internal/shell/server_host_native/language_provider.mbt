@@ -101,10 +101,10 @@ pub impl @language.InlayHintsProvider for MoonWorkspaceLanguageProvider with fn 
 }
 
 ///|
-/// Parses `moon ide hover --output-json` output: a 1-based line/character
-/// range plus markdown content strings. A malformed or empty payload yields
-/// no hover; a missing range degrades to a one-column range at the requested
-/// position.
+/// Parses `moon ide hover --output-json` output: a 1-based
+/// `line:col-line:col` range plus markdown content strings. A malformed or
+/// empty payload yields no hover; a missing or malformed range degrades to a
+/// one-column range at the requested position.
 pub fn parse_moon_hover_output(
   raw : String,
   position : @base_common.Position,
@@ -123,36 +123,19 @@ pub fn parse_moon_hover_output(
   if contents.is_empty() {
     return None
   }
-  let range = if json
-    is {
-      "range": {
-        "start": {
-          "line": Number(start_line, ..),
-          "character": Number(start_column, ..),
-          ..
-        },
-        "end": {
-          "line": Number(end_line, ..),
-          "character": Number(end_column, ..),
-          ..
-        },
-        ..
-      },
-      ..
-    } {
-    @base_common.Range(
-      start_line.to_int(),
-      start_column.to_int(),
-      end_line.to_int(),
-      end_column.to_int(),
-    )
-  } else {
-    Range(
-      position.line_number,
-      position.column,
-      position.line_number,
-      position.column + 1,
-    )
+  let parsed_range = match json {
+    { "range": String(loc), .. } => parse_moon_loc(loc)
+    _ => None
+  }
+  let range = match parsed_range {
+    Some(range) => range
+    None =>
+      Range(
+        position.line_number,
+        position.column,
+        position.line_number,
+        position.column + 1,
+      )
   }
   Some({ range, contents })
 }

@@ -151,7 +151,7 @@ pub fn parse_moon_check_diagnostics(
           continue
         }
         let relative = normalized[prefix.length():].to_owned()
-        match (parse_check_loc(loc), @server.remote_document_uri(relative)) {
+        match (parse_moon_loc(loc), @server.remote_document_uri(relative)) {
           (Some(range), Some(uri)) => {
             let diagnostic : @language.Diagnostic = {
               range,
@@ -185,7 +185,7 @@ fn check_level_severity(level : String) -> @language.DiagnosticSeverity {
 ///|
 /// Parses a `moon check` location: `line:col-line:col`, or a bare `line:col`
 /// which degrades to an empty range at that position.
-fn parse_check_loc(loc : String) -> @base_common.Range? {
+fn parse_moon_loc(loc : String) -> @base_common.Range? {
   match loc.find("-") {
     Some(dash) =>
       match

@@ -172,7 +172,7 @@ async fn wait_for_events(
 ///|
 test "parses moon ide hover json output" {
   let raw =
-    #|{"range":{"start":{"line":20,"character":15},"end":{"line":20,"character":33}},"contents":["```moonbit\nenum DiagnosticSeverity {}\n```","\n Doc text."]}
+    #|{"range":"20:15-20:33","contents":["```moonbit\nenum DiagnosticSeverity {}\n```","\n Doc text."]}
   match @server_host_native.parse_moon_hover_output(raw, Position(3, 7)) {
     Some(hover) => {
       assert_true(hover.range == Range(20, 15, 20, 33))

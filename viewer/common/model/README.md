@@ -16,13 +16,15 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   TextDefined/CRLF read preference, BOM-preservation switch, or cached builder
   metadata that can disagree with the text.
 - `TextModel` adds URI, display name, language id, caller-owned host version,
-  revision, lifecycle, and a `TokenizationTextModelPart`. The token part borrows
-  one live `TokenizationModelAccess` carrier, so content replacement, line
-  counts, disposal state, and attached-view priority never come from a copied
-  snapshot. Ordinary token reads are passive; explicit force, visible-range
-  refresh, and bounded background work are the only lexer drivers. Reads,
-  position/offset conversion, range validation, and word lookup delegate to the
-  current snapshot.
+  revision, lifecycle, and a directly owned `TokenizationTextModelPart`. The
+  model and part share one package-private `TokenizationModelState`: a live
+  snapshot reference, construction-fixed language/large-file facts, attachment
+  count, disposal guard, selected scheduler, and error reporter. No copied line
+  array, closure carrier, or back-reference mediates those reads. `TextModel`
+  also owns the attached-view aggregate passed to the part. Ordinary token reads
+  are passive; explicit force, visible-range refresh, and bounded background
+  work are the only lexer drivers. Reads, position/offset conversion, range
+  validation, and word lookup delegate to the current snapshot.
 - Model-scoped async freshness uses physical `TextModel` identity plus the
   internal `get_version_id()` counter. URI, host version, revision, and
   decoration IDs are metadata and cannot substitute for that authority.
@@ -45,10 +47,13 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   overview-ruler, and injected-text decorations in augmented interval trees.
   Decoration, token, and dispose events are part of the public model surface.
 - `GuidesTextModelPart` computes indentation guides over a snapshot.
-- `RangePriorityQueueImpl` is the compatibility alias for the live queue owned
-  by `viewer/common/model/tokens`. The tokenizer backend tracks invalid end
-  states, prioritizes attached visible ranges, yields between bounded slices,
-  and makes stale scheduled generations inert after detach or disposal.
+- Token stores, state queues, backends, attached-view aggregation, and
+  scheduling are package-private implementations in this package.
+  `RangePriorityQueueImpl` has one canonical definition here. The tokenizer
+  backend tracks invalid end states, prioritizes attached visible ranges,
+  yields between bounded slices, and makes stale scheduled generations inert
+  after detach or disposal. Token lengths/offsets remain raw UTF-16 code-unit
+  values, and theme encoding maps syntax tags directly to packed metadata.
 - Model listener ownership includes the token part's external token listeners
   alongside the model's will-dispose, decoration, attached, and content
   emitters. View models register the two ordered content callbacks and own the
@@ -66,14 +71,28 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
 ## Monaco map and boundary
 
 Use the pinned `vscode/src/vs/editor/common/model/textModel.ts`,
+`common/model/textModelTokens.ts`, `common/model/tokens/{tokenizationTextModelPart,
+abstractSyntaxTokenBackend,tokenizerSyntaxTokenBackend,annotations}.ts`,
 `common/model.ts` (`IReadonlyTextBuffer`),
 `model/pieceTreeTextBuffer/pieceTreeBase.ts` (`StringBuffer`/line starts),
-`model/intervalTree.ts`, `model/guidesTextModelPart.ts`, and
-`model/textModelTokens.ts`. The piece tree above its immutable leaf and all edit
-machinery are deliberately N-A.
+`model/intervalTree.ts`, and `model/guidesTextModelPart.ts`. The piece tree above
+its immutable leaf and all edit machinery are deliberately N-A. See
+`docs/references/monaco.md` for the current source-to-file map and the completed
+execution plan for the frozen parity ledger.
 
-Production dependencies are only `base/common` and `viewer/common/model/tokens`;
-the package must not import language providers, view/view-model, DOM, workspace,
-server, or host effects. See `pkg.generated.mbti` for the exhaustive API and run
-`moon test --target js viewer/common/model` and
-`moon test --target native viewer/common/model`.
+The tokenization-specific public slice is deliberately small: default color and
+lexer-token encoding helpers, visible-line/attached-view demand, model token
+events, scheduler construction, passive line-token reads, and passive token
+counts. Stores, queues, backends, lifecycle helpers, and model-state access stay
+private; `pkg.generated.mbti` is the exhaustive package API.
+
+Production dependencies are `base/common`, `syntax`, `viewer/common/services`,
+and `viewer/common/tokens`. The package must not import language providers,
+view/view-model, DOM, workspace, server, or host effects. Run:
+
+```sh
+moon test --target js viewer/common/model
+moon test --target native viewer/common/model
+moon test --target js viewer/common/view_model
+moon test --target native viewer/common/view_model
+```

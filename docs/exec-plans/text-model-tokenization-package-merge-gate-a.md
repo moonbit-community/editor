@@ -1,6 +1,6 @@
 # Text Model and Tokenization Package Merge — Gate A
 
-Status: inventory ready — STOP FOR REVIEW
+Status: approved historical inventory — implementation completed 2026-07-13
 
 Date: 2026-07-13
 
@@ -8,9 +8,11 @@ Parent plan: `text-model-tokenization-package-merge.md`
 
 Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
 
-No product code, package manifest, generated interface, test, or README has
-changed. This artifact closes the parent's inventory deliverables and records
-the representation proposed for review.
+At this Gate A snapshot, no product code, package manifest, generated interface,
+test, or README had changed. The user's explicit implementation request approved
+this inventory and the shared-state representation. All present-tense ownership
+and the final review request below describe that frozen pre-implementation
+snapshot; current ownership lives in the parent closeout and living docs.
 
 ## Counting Rule and Reused Denominator
 

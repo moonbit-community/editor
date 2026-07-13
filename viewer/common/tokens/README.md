@@ -17,8 +17,8 @@ tokenization and view-line rendering.
   states. Reads are passive: a missing/empty line returns one default token and
   never invokes a lexer.
 - Store batches accept only a top-level language id and a live line-length closure.
-  This package never imports `viewer/common/model/tokens`; scheduling, carried
-  tokenizer state, and acquisition remain with that higher package. Sparse semantic
+  This package never imports `viewer/common/model`; scheduling, carried tokenizer
+  state, and acquisition remain with that higher package. Sparse semantic
   provider/application behavior is not implemented here.
 - All token offsets and content slices are raw UTF-16 code-unit offsets. Slices may
   retain lone surrogates or either half of a valid pair, matching Monaco strings.

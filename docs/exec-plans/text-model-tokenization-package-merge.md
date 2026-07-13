@@ -1,13 +1,14 @@
 # Text Model and Tokenization Package Merge
 
-Status: inventory ready — STOP FOR REVIEW; no implementation has started
+Status: implemented and frozen — 2026-07-13
 Date: 2026-07-13
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
 
 Gate A review artifact:
-`text-model-tokenization-package-merge-gate-a.md`. Product code and package
-manifests remain unchanged pending review approval.
+`text-model-tokenization-package-merge-gate-a.md`. The user's explicit request
+to implement this plan approved that inventory and its package-private shared
+model-state representation before product changes began.
 
 ## Goal
 
@@ -103,7 +104,7 @@ All moved source units become focused files directly under
 - `tokenization_text_model_part.mbt`
 - `abstract_syntax_token_backend.mbt`
 - `tokenizer_syntax_token_backend.mbt`
-- `tokenization_annotations.mbt`
+- `annotations.mbt`
 - token store/queue/helper files already owned by the tokenization cluster
 - the existing model/snapshot/decorations files remain separate
 
@@ -195,18 +196,57 @@ Required validation:
 
 ## Exit Criteria
 
-- [ ] inventory rows equal scoped source members; final totals are recorded
-- [ ] `viewer/common/model/tokens` no longer exists as a package or import
-- [ ] `TokenizationModelAccess` and its closure fields are gone
-- [ ] `RangePriorityQueueImpl` has one canonical definition/name
-- [ ] `TextModel` owns and drives tokenization directly through the reviewed
+- [x] inventory rows equal scoped source members; final totals are recorded
+- [x] `viewer/common/model/tokens` no longer exists as a package or import
+- [x] `TokenizationModelAccess` and its closure fields are gone
+- [x] `RangePriorityQueueImpl` has one canonical definition/name
+- [x] `TextModel` owns and drives tokenization directly through the reviewed
       MoonBit representation
-- [ ] event, scheduling, freshness, attach/detach, and disposal order match the
+- [x] event, scheduling, freshness, attach/detach, and disposal order match the
       source ledger
-- [ ] no public API exists solely because of the former package boundary
-- [ ] all deviations are recorded and seam-based
-- [ ] closing complete-source reread finds no unaccounted member
-- [ ] required validation is green
+- [x] no public API exists solely because of the former package boundary
+- [x] all deviations are recorded and seam-based
+- [x] closing complete-source reread finds no unaccounted member
+- [x] required validation is green
+
+## Execution Record
+
+The implementation was split into independently validated milestones:
+
+- `9e23f66` — complete Gate A inventory and reviewed representation;
+- `4338df7` — behavior-neutral package and test merge;
+- `7ec1b53` — direct ownership through private `TokenizationModelState`;
+- `30a4ed2` — public API and constructor cleanup;
+- the plan-freezing commit — documentation and final validation.
+
+The final ledger is exactly **558 rows: 261 TESTED, 96 PORTED, 81 DEFERRED,
+and 120 N-A**, with zero bare `PASS`, `TODO`, or unclassified rows. All nine
+pinned source/test hashes still match the oracle. The closing complete-source
+reread found no missing member and no change to a branch, early return, loop
+bound, constant, event/scheduling order, or token-array operation. Closure reads
+were replaced one-for-one by the approved live shared-state fields; this is the
+reviewed representation seam, not a new behavioral deviation.
+
+Milestone D reduced the merged generated interface from 666 lines at
+`7ec1b53` to 403 lines. The former token cluster retains exactly 14 public
+declarations: the two theme/encoding helpers, visible-line range and attached
+handle update, token event/range payloads, deadline and scheduler construction,
+and passive line-token/count reads. Stores, queues, backends, lifecycle helpers,
+and shared state are private. The target-layout draft's
+`tokenization_annotations.mbt` name was corrected to the source-aligned landed
+name, `annotations.mbt`; this is a naming correction only.
+
+Final validation on 2026-07-13:
+
+| Gate | Result |
+|---|---|
+| Focused model suites | JS 195/195; native 195/195 |
+| Focused view-model suites | JS 169/169; native 169/169 |
+| Focused downstream suites | root viewer JS 186/186; common JS/native 11/11 |
+| `moon check --target all` / `just check` | PASS; architecture check PASS; three pre-existing `rendering_context.mbt` unused-field warnings |
+| `just test` | PASS; JS 1,387/1,387; native 989/989 |
+| `just build` | PASS; web bundles and native server host built |
+| `just test-browser` | PASS; Playwright 82/82 |
 
 ## Cross-Plan Coordination
 

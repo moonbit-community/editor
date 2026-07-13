@@ -21,7 +21,7 @@ architecture but replaces runtime Monarch grammars with MoonBit `lexmatch` code.
   `get_default_background()` returns literal index 2 only when the array length
   is greater than 2. No `Color` object behavior or identity is exposed.
 - `tokenization_registry` is process-wide. `Languages::set_tokens_provider`
-  forwards into it; `viewer/common/model/tokens` performs the state-threaded
+  forwards into it; `viewer/common/model` performs the state-threaded
   per-line encoding, passive storage reads, and explicit/visible/background
   demand scheduling.
 - `PlainTokenizer` is an explicit stateless tokenizer, not an automatic fallback.

@@ -52,8 +52,10 @@ widgets, language-feature presentation, and editor events.
 
 `viewer/common/**` is DOM-free and multi-target:
 
-- `model` and `model/tokens`: immutable text snapshots, model identity,
-  decorations, and tokenization state.
+- `model`: immutable text snapshots, model identity, decorations, and the
+  complete model-owned tokenization cluster. Its shared live model state,
+  stores, queues, backends, attached-view aggregation, and scheduling machinery
+  are package-private.
 - `services` and `tokens`: language-id encoding and compact line tokens.
 - `languages` and `markers`: runtime provider registration and
   diagnostics-to-decoration flow.

@@ -11,3 +11,11 @@ The VS Code submodule contains Monaco's editor implementation under
 Use these as design references only. Do not import from them in product code.
 When Monaco and current local docs disagree, treat current local docs as the
 product boundary and Monaco as the source to research before changing it.
+
+## Text model and tokenization
+
+The upstream `common/model` tree, including its `model/tokens` subdirectory,
+maps to the single multi-target local `viewer/common/model` package. Member-level
+parity evidence remains in frozen execution plans and source citations. The
+tokenization merge used oracle commit
+`b18492a288de038fbc7643aae6de8247029d11bd`.

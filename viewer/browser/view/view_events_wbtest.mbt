@@ -319,6 +319,60 @@ test "view-event batch visits every event and accumulates sticky dirty once" {
 }
 
 ///|
+fn dynamic_overlay_handle_test_name(
+  overlay : DynamicViewOverlayHandle,
+) -> String {
+  match overlay {
+    CurrentLine(_) => "current-line"
+    Selections(_) => "selections"
+    Decorations(_) => "decorations"
+    CurrentLineMargin(_) => "current-line-margin"
+    LinesDecorations(_) => "lines-decorations"
+    LineNumbers(_) => "line-numbers"
+  }
+}
+
+///|
+test "dynamic overlay subsets preserve registration order and line slicing" {
+  install_view_lifecycle_test_browser()
+  let view = View::new()
+  let content = view.content_view_overlays
+  let margin = view.margin_view_overlays
+  assert_true(
+    content.overlays.dynamic_overlays.map(dynamic_overlay_handle_test_name) ==
+    ["current-line", "selections", "decorations"],
+  )
+  assert_true(
+    margin.overlays.dynamic_overlays.map(dynamic_overlay_handle_test_name) ==
+    ["current-line-margin", "lines-decorations", "line-numbers"],
+  )
+  content.current_line.render_result = ["c10", "c11"]
+  content.selections.render_result = ["s10", "s11"]
+  content.decorations.render_result = ["d10", "d11"]
+  margin.current_line_margin.render_result = ["m10", "m11"]
+  margin.lines_decorations.render_result = ["g10", "g11"]
+  margin.line_numbers.render_result = ["n10", "n11"]
+  assert_eq(
+    [
+      for overlay in content.overlays.dynamic_overlays => overlay.render(10, 11)
+    ].join("|"),
+    "c11|s11|d11",
+  )
+  assert_eq(
+    [
+      for overlay in margin.overlays.dynamic_overlays => overlay.render(10, 10)
+    ].join("|"),
+    "m10|g10|n10",
+  )
+  for overlay in content.overlays.dynamic_overlays {
+    assert_eq(overlay.render(10, 9), "")
+    assert_eq(overlay.render(10, 12), "")
+  }
+  view.dispose()
+  restore_view_lifecycle_test_browser()
+}
+
+///|
 suberror ViewEventBatchTestError {
   ViewEventBatchTestError(String)
 }

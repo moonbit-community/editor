@@ -441,10 +441,11 @@ fn margin_view_overlays_render(
 }
 
 ///|
-impl DynamicViewOverlay for @margin.CurrentLineMarginHighlightOverlay with fn prepare_render(
-  self,
-  context,
-) {
+fn prepare_current_line_margin_overlay(
+  part : @margin.CurrentLineMarginHighlightOverlay,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   let state = self.state
   let cursor_view_line = state.cursor_line_numbers.get(0)
   self.render_result = @margin.prepare_current_line_margin_render(
@@ -462,19 +463,11 @@ impl DynamicViewOverlay for @margin.CurrentLineMarginHighlightOverlay with fn pr
 }
 
 ///|
-impl DynamicViewOverlay for @margin.CurrentLineMarginHighlightOverlay with fn render(
-  self,
-  start_line_number,
-  line_number,
-) {
-  render_result_slice(self.render_result, start_line_number, line_number)
-}
-
-///|
-impl DynamicViewOverlay for @margin.LinesDecorationsOverlay with fn prepare_render(
-  self,
-  context,
-) {
+fn prepare_lines_decorations_overlay(
+  part : @margin.LinesDecorationsOverlay,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   // `ctx.getDecorationsInViewport()` (`linesDecorations.ts:73`): the same
   // cached viewport decoration collection the content overlays read.
   let decorations = context.input.view_model
@@ -498,19 +491,11 @@ impl DynamicViewOverlay for @margin.LinesDecorationsOverlay with fn prepare_rend
 }
 
 ///|
-impl DynamicViewOverlay for @margin.LinesDecorationsOverlay with fn render(
-  self,
-  start_line_number,
-  line_number,
-) {
-  render_result_slice(self.render_result, start_line_number, line_number)
-}
-
-///|
-impl DynamicViewOverlay for @margin.LineNumbersOverlay with fn prepare_render(
-  self,
-  context,
-) {
+fn prepare_line_numbers_overlay(
+  part : @margin.LineNumbersOverlay,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   // `layoutInfo.lineNumbersLeft`/`lineNumbersWidth`: the band left of the
   // line-decorations lane.
   let line_numbers_width = context.gutter_width -
@@ -521,15 +506,6 @@ impl DynamicViewOverlay for @margin.LineNumbersOverlay with fn prepare_render(
     left=0.0,
     width=line_numbers_width,
   )
-}
-
-///|
-impl DynamicViewOverlay for @margin.LineNumbersOverlay with fn render(
-  self,
-  start_line_number,
-  line_number,
-) {
-  render_result_slice(self.render_result, start_line_number, line_number)
 }
 
 // OverlayWidgets retains ordinary lifecycle membership so a dirty event can
@@ -683,17 +659,15 @@ fn content_view_overlays_render(
   self.overlays.dom_node.set_width(Pixels(width))
 }
 
-// `DynamicViewOverlay` impls for the content overlays
-// (`view_parts/{current_line_highlight,selections,decorations}`), kept in the
-// trait-owning package like the `ViewPart` impls above: `RenderingContext`
-// is package-private, so the part packages export pure per-line HTML
-// builders and these impls feed them the context.
+// Content-overlay adapters stay here because `RenderingContext` is private to
+// this package; concrete part packages continue to export pure HTML builders.
 
 ///|
-impl DynamicViewOverlay for @current_line_highlight.CurrentLineHighlightOverlay with fn prepare_render(
-  self,
-  context,
-) {
+fn prepare_current_line_overlay(
+  part : @current_line_highlight.CurrentLineHighlightOverlay,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   let state = self.state
   let cursor_view_line = state.cursor_line_numbers.get(0)
   self.render_result = @current_line_highlight.prepare_current_line_render(
@@ -715,19 +689,11 @@ impl DynamicViewOverlay for @current_line_highlight.CurrentLineHighlightOverlay 
 }
 
 ///|
-impl DynamicViewOverlay for @current_line_highlight.CurrentLineHighlightOverlay with fn render(
-  self,
-  start_line_number,
-  line_number,
-) {
-  render_result_slice(self.render_result, start_line_number, line_number)
-}
-
-///|
-impl DynamicViewOverlay for @selections.SelectionsOverlay with fn prepare_render(
-  self,
-  context,
-) {
+fn prepare_selections_overlay(
+  part : @selections.SelectionsOverlay,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   let visible_ranges : Array[(Int, Array[(Double, Double)])] = []
   match context.input.selection_view_range {
     Some(selection) =>
@@ -752,19 +718,11 @@ impl DynamicViewOverlay for @selections.SelectionsOverlay with fn prepare_render
 }
 
 ///|
-impl DynamicViewOverlay for @selections.SelectionsOverlay with fn render(
-  self,
-  start_line_number,
-  line_number,
-) {
-  render_result_slice(self.render_result, start_line_number, line_number)
-}
-
-///|
-impl DynamicViewOverlay for @decorations.DecorationsOverlay with fn prepare_render(
-  self,
-  context,
-) {
+fn prepare_decorations_overlay(
+  part : @decorations.DecorationsOverlay,
+  context : RenderingContext,
+) -> Unit {
+  let self = part
   // `ctx.getDecorationsInViewport()` (`decorations.ts:68`): the viewport's
   // decoration collection (a cache hit — the viewport data resolved the same
   // range).
@@ -781,15 +739,6 @@ impl DynamicViewOverlay for @decorations.DecorationsOverlay with fn prepare_rend
     context.view_context.measure_line_decorations,
     context.input.space_width,
   )
-}
-
-///|
-impl DynamicViewOverlay for @decorations.DecorationsOverlay with fn render(
-  self,
-  start_line_number,
-  line_number,
-) {
-  render_result_slice(self.render_result, start_line_number, line_number)
 }
 
 // `ContentWidgets` adapters unpack the render context into the package's

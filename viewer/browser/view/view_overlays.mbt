@@ -1,7 +1,7 @@
 // Ported from `vscode/src/vs/editor/browser/view/viewOverlays.ts`
 // (`ViewOverlays`, `ViewOverlayLine`, `ContentViewOverlays`) and
 // `dynamicViewOverlay.ts` (`DynamicViewOverlay`), vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971. Replaces the flat-overlay
+// b18492a288de038fbc7643aae6de8247029d11bd. Replaces the flat-overlay
 // deviation: overlays now render per-line HTML strings composed into one
 // absolutely positioned row div per rendered view line, exactly Monaco's
 // shape (rows recycled the way `ViewLines` recycles text lines —
@@ -13,19 +13,8 @@
 //   `ViewEventHandler` dirtiness is folded into the owning part's frame
 //   events: the frame-based model re-prepares every registered overlay when
 //   the part renders (the row-content dedupe keeps DOM writes minimal).
-// - The trait and its impls live in this package (the `ViewPart`
-//   orphan-rule pattern): `RenderingContext` is package-private, so the
-//   view-part packages export pure per-line string builders and this
-//   package's impls feed them the context.
-
-///|
-/// Monaco `DynamicViewOverlay` (`dynamicViewOverlay.ts`): `prepare_render`
-/// builds the per-line render result off the read context; `render(start,
-/// line)` returns the line's HTML slice.
-priv trait DynamicViewOverlay {
-  fn prepare_render(Self, RenderingContext) -> Unit
-  fn render(Self, Int, Int) -> String
-}
+// - `RenderingContext` is package-private, so narrow adapters in this package
+//   feed the concrete overlays' pure per-line builders.
 
 ///|
 /// The complete set of overlays owned by `View`. Monaco's class-based array
@@ -41,41 +30,41 @@ priv enum DynamicViewOverlayHandle {
 }
 
 ///|
-impl DynamicViewOverlay for DynamicViewOverlayHandle with fn prepare_render(
-  self,
-  context,
-) {
+fn DynamicViewOverlayHandle::prepare_render(
+  self : DynamicViewOverlayHandle,
+  context : RenderingContext,
+) -> Unit {
   match self {
-    CurrentLine(overlay) => DynamicViewOverlay::prepare_render(overlay, context)
-    Selections(overlay) => DynamicViewOverlay::prepare_render(overlay, context)
-    Decorations(overlay) => DynamicViewOverlay::prepare_render(overlay, context)
+    CurrentLine(overlay) => prepare_current_line_overlay(overlay, context)
+    Selections(overlay) => prepare_selections_overlay(overlay, context)
+    Decorations(overlay) => prepare_decorations_overlay(overlay, context)
     CurrentLineMargin(overlay) =>
-      DynamicViewOverlay::prepare_render(overlay, context)
+      prepare_current_line_margin_overlay(overlay, context)
     LinesDecorations(overlay) =>
-      DynamicViewOverlay::prepare_render(overlay, context)
-    LineNumbers(overlay) => DynamicViewOverlay::prepare_render(overlay, context)
+      prepare_lines_decorations_overlay(overlay, context)
+    LineNumbers(overlay) => prepare_line_numbers_overlay(overlay, context)
   }
 }
 
 ///|
-impl DynamicViewOverlay for DynamicViewOverlayHandle with fn render(
-  self,
-  start_line_number,
-  line_number,
-) {
+fn DynamicViewOverlayHandle::render(
+  self : DynamicViewOverlayHandle,
+  start_line_number : Int,
+  line_number : Int,
+) -> String {
   match self {
     CurrentLine(overlay) =>
-      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+      render_result_slice(overlay.render_result, start_line_number, line_number)
     Selections(overlay) =>
-      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+      render_result_slice(overlay.render_result, start_line_number, line_number)
     Decorations(overlay) =>
-      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+      render_result_slice(overlay.render_result, start_line_number, line_number)
     CurrentLineMargin(overlay) =>
-      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+      render_result_slice(overlay.render_result, start_line_number, line_number)
     LinesDecorations(overlay) =>
-      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+      render_result_slice(overlay.render_result, start_line_number, line_number)
     LineNumbers(overlay) =>
-      DynamicViewOverlay::render(overlay, start_line_number, line_number)
+      render_result_slice(overlay.render_result, start_line_number, line_number)
   }
 }
 

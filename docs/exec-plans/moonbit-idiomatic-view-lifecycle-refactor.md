@@ -391,9 +391,9 @@ is committed. Absence is a bug.
 | VP-08 | `OverlayWidgets` empty prepare/render branches (`view.ts:252`) | retained for lifecycle completion | seven-part membership and dirty convergence tests | TESTED |
 | VP-09 | `ViewPartHandle` eight-way forwarding impls (`view.ts:195-253`) | split event and render enum inherent methods | exhaustive matches and exact order tests | TESTED |
 | VP-10 | generic `T : ViewPart` batch helper (`viewEventHandler.ts:89-219`) | minimal callback helper | callback-only batch-contract test | TESTED |
-| DVO-01 | `DynamicViewOverlay::prepare_render` (`viewOverlays.ts:113-121`) | handle inherent dispatch | six-variant construction inventory | DEFERRED (Phase 2 milestone) |
-| DVO-02 | `DynamicViewOverlay::render` (`viewOverlays.ts:165-169`) | handle inherent dispatch | concatenation-order and slice tests | DEFERRED (Phase 2 milestone) |
-| DVO-03 | content/margin subset registration order (`view.ts:218-231`) | unchanged construction-site arrays | branch-derived overlay-order tests | DEFERRED (Phase 2 milestone) |
+| DVO-01 | `DynamicViewOverlay::prepare_render` (`viewOverlays.ts:113-121`) | handle inherent dispatch | exhaustive six-variant match and construction inventory | TESTED |
+| DVO-02 | `DynamicViewOverlay::render` (`viewOverlays.ts:165-169`) | handle inherent dispatch | per-line concatenation, both bounds, and retained-row dedupe tests | TESTED |
+| DVO-03 | content/margin subset registration order (`view.ts:218-231`) | unchanged construction-site arrays | exact content/margin subset order test | TESTED |
 
 `INVENTORIED` is not an exit status. The implementation phase must replace it
 with one of the playbook statuses and cite the relevant source and test.

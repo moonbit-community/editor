@@ -79,14 +79,18 @@ pub fn FoldingController::clear_local(Self) -> Unit
 pub fn FoldingController::detach(String) -> Unit
 pub fn FoldingController::get(String) -> Self?
 
+pub struct FoldingDecorationAccess {
+  // private fields
+}
+
 pub struct FoldingDecorationProvider {
   mut show_folding_controls : ShowFoldingControls
   mut show_folding_highlights : Bool
   // private fields
 }
+pub fn FoldingDecorationProvider::access(Self) -> FoldingDecorationAccess
 pub fn FoldingDecorationProvider::new(@model.TextModel, owner_id? : Int) -> Self
 pub fn FoldingDecorationProvider::update_options(Self, show_folding_controls~ : ShowFoldingControls, show_folding_highlights~ : Bool) -> Unit
-pub impl DecorationProvider for FoldingDecorationProvider
 
 pub(all) struct FoldingLimitReporter {
   limit : () -> Int
@@ -100,7 +104,7 @@ pub fn FoldingModel::dispose(Self) -> Unit
 pub fn FoldingModel::get_all_regions_at_line(Self, Int, filter? : (FoldingRegion, Int) -> Bool) -> Array[FoldingRegion]
 pub fn FoldingModel::get_region_at_line(Self, Int) -> FoldingRegion?
 pub fn FoldingModel::get_regions_inside(Self, FoldingRegion?, filter? : RegionFilter) -> Array[FoldingRegion]
-pub fn FoldingModel::new(@model.TextModel, &DecorationProvider) -> Self
+pub fn FoldingModel::new(@model.TextModel, FoldingDecorationAccess) -> Self
 pub fn FoldingModel::on_did_change(Self, (FoldingModelChangeEvent) -> Unit) -> @common.Disposable
 pub fn FoldingModel::regions(Self) -> FoldingRegions
 pub fn FoldingModel::remove_manual_ranges(Self, Array[LineRange]) -> Unit
@@ -203,9 +207,4 @@ pub(all) enum ShowFoldingControls {
 // Type aliases
 
 // Traits
-pub(open) trait DecorationProvider {
-  fn get_decoration_option(Self, Bool, Bool, Bool) -> @model.ModelDecorationOptions
-  fn change_decorations(Self, (@model.ModelDecorationsChangeAccessor) -> Unit) -> Unit
-  fn remove_decorations(Self, Array[String]) -> Unit
-}
 

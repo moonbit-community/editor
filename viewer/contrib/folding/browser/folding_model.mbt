@@ -7,14 +7,53 @@
 // persistence has no consumer in the readonly viewer).
 
 ///|
-/// The decoration seam `FoldingModel` writes through — Monaco's
-/// `IDecorationProvider` (`foldingModel.ts:13`). `change_decorations`
-/// loses the source's `<T>` result (MoonBit traits have no generic
-/// methods); callers capture results by closing over a local.
-pub(open) trait DecorationProvider {
-  fn get_decoration_option(Self, Bool, Bool, Bool) -> @model.ModelDecorationOptions
-  fn change_decorations(Self, (@model.ModelDecorationsChangeAccessor) -> Unit) -> Unit
-  fn remove_decorations(Self, Array[String]) -> Unit
+/// The exact decoration capabilities `FoldingModel` writes through — Monaco's
+/// structural `IDecorationProvider` (`foldingModel.ts:13`). This is a closed
+/// function record instead of a MoonBit trait object: the source boundary is
+/// three callbacks, not a runtime-subtyped object hierarchy.
+pub struct FoldingDecorationAccess {
+  priv get_decoration_option_ : (Bool, Bool, Bool) -> @model.ModelDecorationOptions
+  priv change_decorations_ : ((@model.ModelDecorationsChangeAccessor) -> Unit) -> Unit
+  priv remove_decorations_ : (Array[String]) -> Unit
+}
+
+///|
+fn FoldingDecorationAccess::new(
+  get_decoration_option : (Bool, Bool, Bool) -> @model.ModelDecorationOptions,
+  change_decorations : ((@model.ModelDecorationsChangeAccessor) -> Unit) -> Unit,
+  remove_decorations : (Array[String]) -> Unit,
+) -> FoldingDecorationAccess {
+  {
+    get_decoration_option_: get_decoration_option,
+    change_decorations_: change_decorations,
+    remove_decorations_: remove_decorations,
+  }
+}
+
+///|
+fn FoldingDecorationAccess::get_decoration_option(
+  self : FoldingDecorationAccess,
+  is_collapsed : Bool,
+  is_hidden : Bool,
+  is_manual : Bool,
+) -> @model.ModelDecorationOptions {
+  (self.get_decoration_option_)(is_collapsed, is_hidden, is_manual)
+}
+
+///|
+fn FoldingDecorationAccess::change_decorations(
+  self : FoldingDecorationAccess,
+  callback : (@model.ModelDecorationsChangeAccessor) -> Unit,
+) -> Unit {
+  (self.change_decorations_)(callback)
+}
+
+///|
+fn FoldingDecorationAccess::remove_decorations(
+  self : FoldingDecorationAccess,
+  decoration_ids : Array[String],
+) -> Unit {
+  (self.remove_decorations_)(decoration_ids)
 }
 
 ///|
@@ -31,7 +70,7 @@ pub(all) struct FoldingModelChangeEvent {
 /// highlight, `⋯`) and anchor the regions across edits.
 pub struct FoldingModel {
   priv text_model : @model.TextModel
-  priv decoration_provider : &DecorationProvider
+  priv decoration_access : FoldingDecorationAccess
   priv mut regions : FoldingRegions
   priv mut editor_decoration_ids : Array[String]
   priv update_event_emitter : @base_common.Emitter[FoldingModelChangeEvent]
@@ -40,11 +79,11 @@ pub struct FoldingModel {
 ///|
 pub fn FoldingModel::new(
   text_model : @model.TextModel,
-  decoration_provider : &DecorationProvider,
+  decoration_access : FoldingDecorationAccess,
 ) -> FoldingModel {
   {
     text_model,
-    decoration_provider,
+    decoration_access,
     regions: FoldingRegions::new(
       FixedArray::make(0, 0U),
       FixedArray::make(0, 0U),
@@ -90,7 +129,7 @@ pub fn FoldingModel::toggle_collapse_state(
   let toggled_regions = toggled_regions.copy()
   toggled_regions.sort_by((r1, r2) => r1.region_index() - r2.region_index())
   let processed : Map[String, Bool] = Map([])
-  self.decoration_provider.change_decorations(accessor => {
+  self.decoration_access.change_decorations(accessor => {
     // index from [0 ... this.regions.length]
     let k : Ref[Int] = { val: 0 }
     // end of the range where decorations need to be updated
@@ -105,7 +144,7 @@ pub fn FoldingModel::toggle_collapse_state(
           let is_manual = self.regions.get_source(k.val) != Provider
           (accessor.change_decoration_options)(
             self.editor_decoration_ids[k.val],
-            self.decoration_provider.get_decoration_option(
+            self.decoration_access.get_decoration_option(
               is_collapsed,
               end_line_number <= last_hidden_line.val,
               is_manual,
@@ -210,7 +249,7 @@ pub fn FoldingModel::update_post(
     )
     new_editor_decorations.push({
       range: decoration_range,
-      options: self.decoration_provider.get_decoration_option(
+      options: self.decoration_access.get_decoration_option(
         is_collapsed,
         end_line_number <= last_hidden_line,
         is_manual,
@@ -220,7 +259,7 @@ pub fn FoldingModel::update_post(
       last_hidden_line = end_line_number
     }
   }
-  self.decoration_provider.change_decorations(accessor => {
+  self.decoration_access.change_decorations(accessor => {
     self.editor_decoration_ids = (accessor.delta_decorations)(
       self.editor_decoration_ids,
       new_editor_decorations,
@@ -273,7 +312,7 @@ fn FoldingModel::current_folded_or_manual_ranges(
 ///|
 /// `dispose` (`foldingModel.ts:231`).
 pub fn FoldingModel::dispose(self : FoldingModel) -> Unit {
-  self.decoration_provider.remove_decorations(self.editor_decoration_ids)
+  self.decoration_access.remove_decorations(self.editor_decoration_ids)
 }
 
 ///|

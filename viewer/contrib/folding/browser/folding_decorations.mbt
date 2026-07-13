@@ -201,12 +201,12 @@ pub fn FoldingDecorationProvider::update_options(
 
 ///|
 /// `getDecorationOption` (`foldingDecorations.ts:141`).
-pub impl DecorationProvider for FoldingDecorationProvider with fn get_decoration_option(
-  self,
-  is_collapsed,
-  is_hidden,
-  is_manual,
-) {
+fn FoldingDecorationProvider::get_decoration_option(
+  self : FoldingDecorationProvider,
+  is_collapsed : Bool,
+  is_hidden : Bool,
+  is_manual : Bool,
+) -> @model.ModelDecorationOptions {
   if is_hidden {
     // is inside another collapsed region
     return hidden_range_decoration
@@ -249,21 +249,36 @@ pub impl DecorationProvider for FoldingDecorationProvider with fn get_decoration
 ///|
 /// `changeDecorations` (`foldingDecorations.ts:162`), through the editor's
 /// (model, owner id).
-pub impl DecorationProvider for FoldingDecorationProvider with fn change_decorations(
-  self,
-  callback,
-) {
+fn FoldingDecorationProvider::change_decorations(
+  self : FoldingDecorationProvider,
+  callback : (@model.ModelDecorationsChangeAccessor) -> Unit,
+) -> Unit {
   self.model.change_decorations(callback, owner_id=self.owner_id)
 }
 
 ///|
 /// `removeDecorations` (`foldingDecorations.ts:166`).
-pub impl DecorationProvider for FoldingDecorationProvider with fn remove_decorations(
-  self,
-  decoration_ids,
-) {
+fn FoldingDecorationProvider::remove_decorations(
+  self : FoldingDecorationProvider,
+  decoration_ids : Array[String],
+) -> Unit {
   self.model.change_decorations(
     accessor => ignore((accessor.delta_decorations)(decoration_ids, [])),
     owner_id=self.owner_id,
+  )
+}
+
+///|
+/// Binds the source provider to the three operations consumed by
+/// `FoldingModel`, without introducing a runtime trait object.
+pub fn FoldingDecorationProvider::access(
+  self : FoldingDecorationProvider,
+) -> FoldingDecorationAccess {
+  FoldingDecorationAccess::new(
+    (is_collapsed, is_hidden, is_manual) => {
+      self.get_decoration_option(is_collapsed, is_hidden, is_manual)
+    },
+    callback => self.change_decorations(callback),
+    decoration_ids => self.remove_decorations(decoration_ids),
   )
 }

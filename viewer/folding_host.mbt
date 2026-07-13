@@ -35,7 +35,8 @@ fn Viewer::folding_on_model_changed(self : Viewer) -> Unit {
   )
   controller.folding_decoration_provider = Some(decoration_provider)
   let folding_model = @folding_browser.FoldingModel::new(
-    model, decoration_provider,
+    model,
+    decoration_provider.access(),
   )
   controller.folding_model = Some(folding_model)
   let hidden_range_model = @folding_browser.HiddenRangeModel::new(folding_model)

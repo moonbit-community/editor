@@ -39,12 +39,12 @@ priv struct TestDecorationProvider {
 }
 
 ///|
-impl DecorationProvider for TestDecorationProvider with fn get_decoration_option(
-  _self,
-  is_collapsed,
-  is_hidden,
-  _is_manual,
-) {
+fn TestDecorationProvider::get_decoration_option(
+  _self : TestDecorationProvider,
+  is_collapsed : Bool,
+  is_hidden : Bool,
+  _is_manual : Bool,
+) -> @model.ModelDecorationOptions {
   if is_hidden {
     test_hidden_decoration
   } else if is_collapsed {
@@ -55,21 +55,34 @@ impl DecorationProvider for TestDecorationProvider with fn get_decoration_option
 }
 
 ///|
-impl DecorationProvider for TestDecorationProvider with fn change_decorations(
-  self,
-  callback,
-) {
+fn TestDecorationProvider::change_decorations(
+  self : TestDecorationProvider,
+  callback : (@model.ModelDecorationsChangeAccessor) -> Unit,
+) -> Unit {
   self.model.change_decorations(callback)
 }
 
 ///|
-impl DecorationProvider for TestDecorationProvider with fn remove_decorations(
-  self,
-  decoration_ids,
-) {
+fn TestDecorationProvider::remove_decorations(
+  self : TestDecorationProvider,
+  decoration_ids : Array[String],
+) -> Unit {
   self.model.change_decorations(accessor => {
     ignore((accessor.delta_decorations)(decoration_ids, []))
   })
+}
+
+///|
+fn TestDecorationProvider::access(
+  self : TestDecorationProvider,
+) -> FoldingDecorationAccess {
+  FoldingDecorationAccess::new(
+    (is_collapsed, is_hidden, is_manual) => {
+      self.get_decoration_option(is_collapsed, is_hidden, is_manual)
+    },
+    callback => self.change_decorations(callback),
+    decoration_ids => self.remove_decorations(decoration_ids),
+  )
 }
 
 ///|
@@ -208,9 +221,10 @@ fn test_folding_model(
   markers? : @languages.FoldingMarkers,
 ) -> FoldingModel {
   let text_model = folding_test_model(lines)
-  let folding_model = FoldingModel::new(text_model, TestDecorationProvider::{
-    model: text_model,
-  })
+  let folding_model = FoldingModel::new(
+    text_model,
+    TestDecorationProvider::{ model: text_model }.access(),
+  )
   let ranges = compute_ranges(text_model, false, markers?)
   folding_model.update(ranges)
   folding_model
@@ -242,9 +256,10 @@ test "collapse" {
     "/**", " * Comment", " */", "class A {", "  void foo() {", "    // comment {",
     "  }", "}",
   ])
-  let folding_model = FoldingModel::new(text_model, TestDecorationProvider::{
-    model: text_model,
-  })
+  let folding_model = FoldingModel::new(
+    text_model,
+    TestDecorationProvider::{ model: text_model }.access(),
+  )
   let ranges = compute_ranges(text_model, false)
   folding_model.update(ranges)
   let r1 = (1, 3, false)
@@ -651,7 +666,7 @@ test "folding decoration" {
     "}",
   ])
   let provider = TestDecorationProvider::{ model: text_model }
-  let folding_model = FoldingModel::new(text_model, provider)
+  let folding_model = FoldingModel::new(text_model, provider.access())
   let ranges = compute_ranges(text_model, false)
   folding_model.update(ranges)
   let r1 = (1, 6, false)

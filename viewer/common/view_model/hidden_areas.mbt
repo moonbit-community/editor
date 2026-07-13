@@ -195,9 +195,7 @@ pub fn ViewModel::set_hidden_areas(
       // remain below the phase so their synchronous Scroll event is appended
       // later in the same outer collector.
       let reproject_cursor = () => {
-        self.cursor.set_context(
-          @cursor.CursorContext::new(self.coordinates_converter),
-        )
+        self.cursor.set_context(self.coordinates_converter.cursor_context())
       }
       match on_line_mapping_changed {
         Some(callback) => callback(reproject_cursor)

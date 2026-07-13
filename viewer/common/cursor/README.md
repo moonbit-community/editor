@@ -8,7 +8,8 @@ Backend-neutral single-cursor state for the readonly viewer.
   1-based UTF-16 position plus anchor/active leftover-visible-column residues;
   `selection`, `has_selection`, and `moved` derive the oriented
   `viewer/common/core.Selection` without losing Word/Line anchor shape.
-- `CursorContext` wraps `core.CoordinatesConverter` for model/view conversion.
+- `CursorContext` stores only the three typed model/view conversion closures the
+  cursor consumes; it does not retain a runtime converter trait object.
 - `CursorState` retains a full model/view pair. `PartialCursorState` has exact
   full, model-only, and view-only shapes; the two partial constructors retain
   `None` on the absent side, and selection constructors build a collapsed

@@ -5,56 +5,40 @@ priv struct CursorTestConverter {
 }
 
 ///|
-impl @core.CoordinatesConverter for CursorTestConverter with fn model_position_to_view_position(
-  self,
-  position,
-  affinity?,
-) {
-  ignore(affinity)
+fn CursorTestConverter::model_position_to_view_position(
+  self : CursorTestConverter,
+  position : @base_common.Position,
+) -> @base_common.Position {
   Position(position.line_number, position.column + self.column_delta)
 }
 
 ///|
-impl @core.CoordinatesConverter for CursorTestConverter with fn view_position_to_model_position(
-  self,
-  position,
-) {
+fn CursorTestConverter::view_position_to_model_position(
+  self : CursorTestConverter,
+  position : @base_common.Position,
+) -> @base_common.Position {
   Position(position.line_number, position.column - self.column_delta)
 }
 
 ///|
-impl @core.CoordinatesConverter for CursorTestConverter with fn model_range_to_view_range(
-  self,
-  range,
-  affinity?,
-) {
-  ignore(affinity)
-  Range(
-    range.start_line_number,
-    range.start_column + self.range_delta,
-    range.end_line_number,
-    range.end_column + self.range_delta,
-  )
-}
-
-///|
-impl @core.CoordinatesConverter for CursorTestConverter with fn model_position_is_visible(
-  _self,
-  _position,
-) {
-  true
-}
-
-///|
-impl @core.CoordinatesConverter for CursorTestConverter with fn view_range_to_model_range(
-  self,
-  range,
-) {
+fn CursorTestConverter::view_range_to_model_range(
+  self : CursorTestConverter,
+  range : @base_common.Range,
+) -> @base_common.Range {
   Range(
     range.start_line_number,
     range.start_column - self.range_delta,
     range.end_line_number,
     range.end_column - self.range_delta,
+  )
+}
+
+///|
+fn CursorTestConverter::context(self : CursorTestConverter) -> CursorContext {
+  CursorContext::new(
+    view_to_model=position => self.view_position_to_model_position(position),
+    view_range_to_model=range => self.view_range_to_model_range(range),
+    model_to_view=position => self.model_position_to_view_position(position),
   )
 }
 
@@ -78,7 +62,7 @@ fn cursor_controller_test_model(text? : String = "abc") -> @model.TextModel {
 test "model validation resets only residues whose endpoints changed" {
   let model = cursor_controller_test_model(text="a\u{1F4DA}b")
   let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
-  let controller = CursorsController::new(model, CursorContext::new(identity))
+  let controller = CursorsController::new(model, identity.context())
 
   controller.set_model_cursor_state(
     SingleCursorState::new(
@@ -173,9 +157,9 @@ test "central partial transition covers null model view and full shapes" {
   let converter = CursorTestConverter::{ column_delta: 1, range_delta: 1 }
   let raw_cursor = Cursor::new()
   let raw_before = raw_cursor.as_cursor_state()
-  assert_false(raw_cursor.set_state(CursorContext::new(converter), None, None))
+  assert_false(raw_cursor.set_state(converter.context(), None, None))
   assert_true(raw_cursor.as_cursor_state() == raw_before)
-  let controller = CursorsController::new(model, CursorContext::new(converter))
+  let controller = CursorsController::new(model, converter.context())
 
   assert_true(controller.set_cursor_state(None) is None)
   assert_true(controller.model_state().position == Position(1, 1))
@@ -224,7 +208,7 @@ test "central partial transition covers null model view and full shapes" {
 test "single-cursor normalize returns without changing primary state" {
   let model = cursor_controller_test_model()
   let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
-  let controller = CursorsController::new(model, CursorContext::new(identity))
+  let controller = CursorsController::new(model, identity.context())
   controller.set_model_cursor_state(
     SingleCursorState::new(
       Position(1, 1),
@@ -245,7 +229,7 @@ test "single-cursor normalize returns without changing primary state" {
 test "view-only state converts its complete anchor range as one unit" {
   let model = cursor_controller_test_model()
   let converter = CursorTestConverter::{ column_delta: 1, range_delta: 2 }
-  let controller = CursorsController::new(model, CursorContext::new(converter))
+  let controller = CursorsController::new(model, converter.context())
   let view_state = SingleCursorState::new(
     Position(1, 4),
     Position(1, 5),
@@ -265,18 +249,18 @@ test "mapping reprojection observes handling and pending model-version guards" {
   let model = cursor_controller_test_model()
   let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
   let shifted = CursorTestConverter::{ column_delta: 1, range_delta: 1 }
-  let controller = CursorsController::new(model, CursorContext::new(identity))
+  let controller = CursorsController::new(model, identity.context())
   controller.set_model_cursor_state(
     SingleCursorState::collapsed(Position(1, 2)),
   )
   |> ignore
 
   controller.is_handling = true
-  controller.set_context(CursorContext::new(shifted))
+  controller.set_context(shifted.context())
   assert_true(controller.view_state().position == Position(1, 2))
 
   controller.is_handling = false
-  controller.set_context(CursorContext::new(shifted))
+  controller.set_context(shifted.context())
   assert_true(controller.view_state().position == Position(1, 3))
 
   // The model is now one internal generation ahead of the controller. A
@@ -284,6 +268,6 @@ test "mapping reprojection observes handling and pending model-version guards" {
   // reprojecting against torn model/view generations.
   model.set_value("abcd")
   let further_shifted = CursorTestConverter::{ column_delta: 2, range_delta: 2 }
-  controller.set_context(CursorContext::new(further_shifted))
+  controller.set_context(further_shifted.context())
   assert_true(controller.view_state().position == Position(1, 3))
 }

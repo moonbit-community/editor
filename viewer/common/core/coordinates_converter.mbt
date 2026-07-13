@@ -10,7 +10,9 @@
 /// `editor/common/coordinatesConverter.ts`, but the directory-mirror's
 /// residual `viewer/common` package sits *above* `view_model` (it imports
 /// it), so the nearest package below both `view_model` (the implementor)
-/// and `cursor` (the consumer) is this `core/` mirror package.
+/// and `browser/view` (the statically generic consumer) is this `core/`
+/// mirror package. Cursor deliberately narrows its dependency to typed
+/// closures and does not retain this trait as an object.
 pub(open) trait CoordinatesConverter {
   fn model_position_to_view_position(
     Self,

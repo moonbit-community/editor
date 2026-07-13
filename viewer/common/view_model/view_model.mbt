@@ -82,7 +82,7 @@ pub fn ViewModel::with_options(
   let cursor_event_dispatcher = CursorEventDispatcher::new()
   let cursor = @cursor.CursorsController::new(
     model,
-    @cursor.CursorContext::new(coordinates_converter),
+    coordinates_converter.cursor_context(),
   )
   let view_layout = @view_layout.ViewLayout::new(
     line_height=options.font_info.line_height,
@@ -228,9 +228,7 @@ pub fn ViewModel::on_configuration_changed(
     // `this._cursor.onLineMappingChanged(...)` (`viewModelImpl.ts:287`): the
     // view model re-points its own cursor, re-projecting the selection from
     // its model positions.
-    self.cursor.set_context(
-      @cursor.CursorContext::new(self.coordinates_converter),
-    )
+    self.cursor.set_context(self.coordinates_converter.cursor_context())
   }
   if previous.editor_id != options.editor_id ||
     previous.render_validation_decorations !=
@@ -269,9 +267,7 @@ pub fn ViewModel::on_did_change_content_or_injected_text(
       // The reprojection changed the view-line mapping; re-point the cursor
       // (Monaco's injected-text arm updates cursor view positions through
       // `_cursor.onModelContentChanged`'s `setStates` re-project).
-      self.cursor.set_context(
-        @cursor.CursorContext::new(self.coordinates_converter),
-      )
+      self.cursor.set_context(self.coordinates_converter.cursor_context())
     }
     Some(e) => {
       for change in e.raw_content_changed_event.changes {

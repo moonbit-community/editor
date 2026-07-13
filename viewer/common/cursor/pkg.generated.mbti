@@ -34,10 +34,10 @@ pub(all) enum CursorChangeReason {
 } derive(Eq, @debug.Debug)
 
 pub struct CursorContext {
-  coordinates_converter : &@core.CoordinatesConverter
+  // private fields
 }
 pub fn CursorContext::model_to_view(Self, @common.Position) -> @common.Position
-pub fn CursorContext::new(&@core.CoordinatesConverter) -> Self
+pub fn CursorContext::new(view_to_model~ : (@common.Position) -> @common.Position, view_range_to_model~ : (@common.Range) -> @common.Range, model_to_view~ : (@common.Position) -> @common.Position) -> Self
 pub fn CursorContext::view_to_model(Self, @common.Position) -> @common.Position
 
 type CursorModelState derive(Eq)

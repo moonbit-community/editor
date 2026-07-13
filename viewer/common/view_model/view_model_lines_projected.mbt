@@ -883,6 +883,20 @@ pub fn ProjectedCoordinatesConverter::new(
 }
 
 ///|
+/// Narrows the full coordinates converter to the three operations consumed by
+/// cursor state. The remaining converter members stay statically dispatched at
+/// their existing view-model/browser call sites.
+fn ProjectedCoordinatesConverter::cursor_context(
+  self : ProjectedCoordinatesConverter,
+) -> @cursor.CursorContext {
+  @cursor.CursorContext::new(
+    view_to_model=position => self.view_position_to_model_position(position),
+    view_range_to_model=range => self.view_range_to_model_range(range),
+    model_to_view=position => self.model_position_to_view_position(position),
+  )
+}
+
+///|
 /// Converts model positions through the line collection.
 pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_to_view_position(
   self,

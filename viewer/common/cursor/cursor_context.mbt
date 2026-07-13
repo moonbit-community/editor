@@ -4,20 +4,27 @@
 /// model, coordinates converter, and cursor config. The local context needs
 /// only the converter to bridge model and view positions; the owning
 /// `CursorsController` separately holds the mutable `TextModel` for validation
-/// and content-version tracking. The converter is held through the
-/// `ICoordinatesConverter` interface
-/// (`viewer/common/core`), like Monaco's
-/// `coordinatesConverter: ICoordinatesConverter` member.
+/// and content-version tracking. The port stores the three exact conversion
+/// functions it consumes instead of turning Monaco's structural interface into
+/// a runtime MoonBit trait object.
 pub struct CursorContext {
-  coordinates_converter : &@core.CoordinatesConverter
+  priv view_to_model_ : (@base_common.Position) -> @base_common.Position
+  priv view_range_to_model_ : (@base_common.Range) -> @base_common.Range
+  priv model_to_view_ : (@base_common.Position) -> @base_common.Position
 }
 
 ///|
-/// Builds a cursor context from the active view model's coordinates converter.
+/// Builds a cursor context from the active view model's required conversions.
 pub fn CursorContext::new(
-  coordinates_converter : &@core.CoordinatesConverter,
+  view_to_model~ : (@base_common.Position) -> @base_common.Position,
+  view_range_to_model~ : (@base_common.Range) -> @base_common.Range,
+  model_to_view~ : (@base_common.Position) -> @base_common.Position,
 ) -> CursorContext {
-  { coordinates_converter, }
+  {
+    view_to_model_: view_to_model,
+    view_range_to_model_: view_range_to_model,
+    model_to_view_: model_to_view,
+  }
 }
 
 ///|
@@ -26,7 +33,7 @@ pub fn CursorContext::view_to_model(
   self : CursorContext,
   position : @base_common.Position,
 ) -> @base_common.Position {
-  self.coordinates_converter.view_position_to_model_position(position)
+  (self.view_to_model_)(position)
 }
 
 ///|
@@ -38,7 +45,7 @@ fn CursorContext::view_range_to_model(
   self : CursorContext,
   range : @base_common.Range,
 ) -> @base_common.Range {
-  self.coordinates_converter.view_range_to_model_range(range)
+  (self.view_range_to_model_)(range)
 }
 
 ///|
@@ -47,5 +54,5 @@ pub fn CursorContext::model_to_view(
   self : CursorContext,
   position : @base_common.Position,
 ) -> @base_common.Position {
-  self.coordinates_converter.model_position_to_view_position(position)
+  (self.model_to_view_)(position)
 }

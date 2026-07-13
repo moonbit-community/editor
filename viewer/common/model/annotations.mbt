@@ -6,7 +6,8 @@
 
 ///|
 /// Optional presentation overrides for one syntactic token range.
-pub(all) struct FontTokenOption {
+#warnings("-struct_never_constructed-unused_value")
+priv struct FontTokenOption {
   font_family : String?
   font_size_multiplier : Double?
   line_height_multiplier : Double?
@@ -14,20 +15,22 @@ pub(all) struct FontTokenOption {
 
 ///|
 /// One half-open annotation update. `None` removes an existing annotation.
-pub(all) struct AnnotationUpdate[T] {
+#warnings("-struct_never_constructed-unused_value")
+priv struct AnnotationUpdate[T] {
   range : @base_common.OffsetRange
   annotation : T?
 } derive(Eq, Debug)
 
 ///|
 /// Ordered annotation updates retained without normalization.
-pub struct AnnotationsUpdate[T] {
-  priv annotations_value : Array[AnnotationUpdate[T]]
+priv struct AnnotationsUpdate[T] {
+  annotations_value : Array[AnnotationUpdate[T]]
 }
 
 ///|
 /// Wraps updates in caller order without copying or normalization.
-pub fn[T] AnnotationsUpdate::create(
+#warnings("-unused_value")
+fn[T] AnnotationsUpdate::create(
   annotations : Array[AnnotationUpdate[T]],
 ) -> AnnotationsUpdate[T] {
   { annotations_value: annotations }
@@ -35,7 +38,8 @@ pub fn[T] AnnotationsUpdate::create(
 
 ///|
 /// Returns the ordered updates supplied at construction.
-pub fn[T] AnnotationsUpdate::annotations(
+#warnings("-unused_value")
+fn[T] AnnotationsUpdate::annotations(
   self : AnnotationsUpdate[T],
 ) -> Array[AnnotationUpdate[T]] {
   self.annotations_value
@@ -45,10 +49,11 @@ pub fn[T] AnnotationsUpdate::annotations(
 /// Source-shaped alias for syntactic font updates. `AnnotationUpdate` already
 /// makes its annotation optional, so the payload type itself stays non-optional
 /// and the resulting carrier has exactly one absent/remove layer.
-pub type FontTokensUpdate = AnnotationsUpdate[FontTokenOption]
+type FontTokensUpdate = AnnotationsUpdate[FontTokenOption]
 
 ///|
 /// Model-part event preserving the backend's exact annotation update value.
-pub(all) struct ModelFontTokensChangedEvent {
+#warnings("-unused_field")
+priv struct ModelFontTokensChangedEvent {
   changes : FontTokensUpdate
 }

@@ -398,30 +398,34 @@ test "initial-build and token-change telemetry read token counts passively" {
 /// re-warming. Passive telemetry reads defaults; explicit demand owns lexing.
 test "tokenizer registration stays passive until explicit demand" {
   let viewer = Viewer::Viewer()
-  viewer.set_model(Some(test_model("alpha beta", language_id="recolor-toy")))
+  viewer.set_model(
+    Some(test_model("alpha beta\ngamma delta", language_id="recolor-toy")),
+  )
   let model = viewer.get_model().unwrap()
-  // Attach and telemetry are passive; registry miss yields one default token.
-  assert_false(model.tokenization.has_tokens())
-  assert_eq(model.tokenization.token_count(), 1)
+  // Attach and telemetry are passive; registry miss yields one default token
+  // per line.
+  assert_eq(model.tokenization.token_count(), 2)
   let calls = Ref(0)
   let registration = @syntax.tokenization_registry.register("recolor-toy", FirstCharKeywordToy::{
     calls,
   })
   // Registry change emits view/outgoing events, but neither they nor the
   // `ViewerViewModelBuiltEvent.token_count` telemetry invoke the lexer.
-  assert_false(model.tokenization.has_tokens())
   assert_eq(calls.val, 0)
-  assert_eq(model.tokenization.token_count(), 1)
-  assert_eq(calls.val, 0)
-  model.tokenization.force_tokenization(1)
-  assert_true(model.tokenization.has_tokens())
   assert_eq(model.tokenization.token_count(), 2)
-  assert_eq(calls.val, 1)
+  assert_eq(calls.val, 0)
+  let demand_view = model.on_before_attached()
+  demand_view.set_visible_lines(
+    [{ start_line_number: 1, end_line_number: 2 }],
+    true,
+  )
+  model.on_before_detached(demand_view)
+  assert_eq(model.tokenization.token_count(), 4)
+  assert_eq(calls.val, 2)
   // Deregistration resets back to passive fallback without a lexer call.
   registration.dispose()
-  assert_false(model.tokenization.has_tokens())
-  assert_eq(model.tokenization.token_count(), 1)
-  assert_eq(calls.val, 1)
+  assert_eq(model.tokenization.token_count(), 2)
+  assert_eq(calls.val, 2)
   viewer.dispose()
   model.dispose()
 }

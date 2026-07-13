@@ -47,7 +47,9 @@ fn line_has_token_class(
 ///|
 /// Toy lexer for the multi-line coverage test: a leading `let` is a keyword,
 /// `/* ... */` block comments carry across lines through the tokenizer state.
-priv struct FrameToy {}
+priv struct FrameToy {
+  calls : Ref[Int]
+}
 
 ///|
 let frame_toy_code : @syntax.TokenizerState = TokenizerState("code")
@@ -62,10 +64,11 @@ impl @syntax.LineTokenizer for FrameToy with fn initial_state(_self) {
 
 ///|
 impl @syntax.LineTokenizer for FrameToy with fn tokenize_line(
-  _self,
+  self,
   line_text,
   state,
 ) {
+  self.calls.val += 1
   let tokens : Array[@syntax.LineToken] = []
   let mut at = 0
   let mut in_comment = state == frame_toy_comment
@@ -117,8 +120,12 @@ fn find_marker(
 }
 
 ///|
-test "explicit force threads grammar state through the demanded final line" {
-  @syntax.tokenization_registry.register("frame-toy", FrameToy::{  }) |> ignore
+test "stabilized demand threads grammar state through the demanded final line" {
+  let calls = Ref(0)
+  let registration = @syntax.tokenization_registry.register("frame-toy", FrameToy::{
+    calls,
+  })
+  defer registration.dispose()
   let model = @model.TextModel(
     try! @base_common.Uri::from(
       scheme="inmemory",
@@ -138,11 +145,18 @@ test "explicit force threads grammar state through the demanded final line" {
   )
   // Passive reads return default tokens and do not invoke the lexer.
   let lines = @view_model.ViewModel(model).lines()
-  assert_false(model.tokenization.has_tokens())
+  assert_eq(calls.val, 0)
   assert_eq(lines.get_view_line_data(1).tokens.get_class_name(0), "mtk1")
-  assert_false(model.tokenization.has_tokens())
-  // Explicit force through the final line threads the block-comment state.
-  model.tokenization.force_tokenization(4)
+  assert_eq(calls.val, 0)
+  // A stabilized visible-range demand through the final line threads the
+  // block-comment state without exposing the token backend's force helper.
+  let attached_view = model.on_before_attached()
+  attached_view.set_visible_lines(
+    [{ start_line_number: 1, end_line_number: 4 }],
+    true,
+  )
+  model.on_before_detached(attached_view)
+  assert_eq(calls.val, 4)
   assert_eq(lines.get_view_line_data(1).tokens.get_class_name(0), "mtk3") // Keyword
   assert_true(line_has_token_class(lines.get_view_line_data(2), "mtk7")) // Comment
   assert_true(line_has_token_class(lines.get_view_line_data(3), "mtk7")) // Comment
@@ -162,7 +176,7 @@ test "windowed view-line reads stay passive while covering stored defaults" {
   }
   let model = plain_text_model(chunks.join("\n"))
   let lines = @view_model.ViewModel(model).lines()
-  assert_false(model.tokenization.has_tokens())
+  assert_eq(model.tokenization.token_count(), model.get_line_count())
   for line_number in 301..<361 {
     let line = lines.get_view_line_data(line_number)
     let mut joined = ""
@@ -172,5 +186,5 @@ test "windowed view-line reads stay passive while covering stored defaults" {
     }
     assert_eq(joined, line.content)
   }
-  assert_false(model.tokenization.has_tokens())
+  assert_eq(model.tokenization.token_count(), model.get_line_count())
 }

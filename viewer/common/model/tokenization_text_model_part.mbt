@@ -36,7 +36,7 @@ pub struct TokenizationTextModelPart {
 
 ///|
 /// Constructs the registry-backed live backend and event forwarding in source order.
-fn TokenizationTextModelPart::new(
+fn TokenizationTextModelPart::TokenizationTextModelPart(
   model_state : TokenizationModelState,
   attached_views : AttachedViews,
 ) -> TokenizationTextModelPart {
@@ -101,7 +101,7 @@ fn TokenizationTextModelPart::new_with_support_resolver(
 
 ///|
 /// Subscribes to exact changed token ranges.
-pub fn TokenizationTextModelPart::on_did_change_tokens(
+fn TokenizationTextModelPart::on_did_change_tokens(
   self : TokenizationTextModelPart,
   listener : (ModelTokensChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
@@ -111,7 +111,8 @@ pub fn TokenizationTextModelPart::on_did_change_tokens(
 ///|
 /// Subscribes to exact child-owned font payloads. The source allocates two
 /// registered emitters and exposes the second; both are disposed below.
-pub fn TokenizationTextModelPart::on_did_change_font_tokens(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::on_did_change_font_tokens(
   self : TokenizationTextModelPart,
   listener : (ModelFontTokensChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
@@ -120,7 +121,8 @@ pub fn TokenizationTextModelPart::on_did_change_font_tokens(
 
 ///|
 /// Internal completion-state event, deliberately not forwarded by `TextModel`.
-pub fn TokenizationTextModelPart::on_did_change_background_tokenization_state(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::on_did_change_background_tokenization_state(
   self : TokenizationTextModelPart,
   listener : (Unit) -> Unit,
 ) -> @base_common.Disposable {
@@ -129,7 +131,7 @@ pub fn TokenizationTextModelPart::on_did_change_background_tokenization_state(
 
 ///|
 /// Construction-fixed language id read from the shared model state.
-pub fn TokenizationTextModelPart::get_language_id(
+fn TokenizationTextModelPart::get_language_id(
   self : TokenizationTextModelPart,
 ) -> String {
   self.model_state.language_id
@@ -169,7 +171,8 @@ pub fn TokenizationTextModelPart::get_line_tokens(
 
 ///|
 /// Makes state accurate through one validated line.
-pub fn TokenizationTextModelPart::force_tokenization(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::force_tokenization(
   self : TokenizationTextModelPart,
   line_number : Int,
 ) -> Unit {
@@ -179,7 +182,8 @@ pub fn TokenizationTextModelPart::force_tokenization(
 
 ///|
 /// Forces only when the exact cheapness predicate succeeds.
-pub fn TokenizationTextModelPart::tokenize_if_cheap(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::tokenize_if_cheap(
   self : TokenizationTextModelPart,
   line_number : Int,
 ) -> Unit {
@@ -189,7 +193,8 @@ pub fn TokenizationTextModelPart::tokenize_if_cheap(
 
 ///|
 /// Whether the line's carried state is accurate.
-pub fn TokenizationTextModelPart::has_accurate_tokens_for_line(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::has_accurate_tokens_for_line(
   self : TokenizationTextModelPart,
   line_number : Int,
 ) -> Bool {
@@ -199,7 +204,8 @@ pub fn TokenizationTextModelPart::has_accurate_tokens_for_line(
 
 ///|
 /// Whether explicit demand for the line is cheap.
-pub fn TokenizationTextModelPart::is_cheap_to_tokenize(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::is_cheap_to_tokenize(
   self : TokenizationTextModelPart,
   line_number : Int,
 ) -> Bool {
@@ -209,7 +215,8 @@ pub fn TokenizationTextModelPart::is_cheap_to_tokenize(
 
 ///|
 /// Whether the contiguous syntactic store contains any explicit tokens.
-pub fn TokenizationTextModelPart::has_tokens(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::has_tokens(
   self : TokenizationTextModelPart,
 ) -> Bool {
   self.backend.has_tokens()
@@ -217,7 +224,8 @@ pub fn TokenizationTextModelPart::has_tokens(
 
 ///|
 /// Current background lifecycle state.
-pub fn TokenizationTextModelPart::background_tokenization_state(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::background_tokenization_state(
   self : TokenizationTextModelPart,
 ) -> BackgroundTokenizationState {
   self.backend.background_tokenization_state()
@@ -225,7 +233,8 @@ pub fn TokenizationTextModelPart::background_tokenization_state(
 
 ///|
 /// Public reset announces one full range by default.
-pub fn TokenizationTextModelPart::reset_tokenization(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::reset_tokenization(
   self : TokenizationTextModelPart,
   fire_token_change_event? : Bool = true,
 ) -> Unit {
@@ -234,7 +243,7 @@ pub fn TokenizationTextModelPart::reset_tokenization(
 
 ///|
 /// Flush content handling; live lines were replaced before this call.
-pub fn TokenizationTextModelPart::handle_did_change_content(
+fn TokenizationTextModelPart::handle_did_change_content(
   self : TokenizationTextModelPart,
   is_flush~ : Bool,
 ) -> Unit {
@@ -243,7 +252,7 @@ pub fn TokenizationTextModelPart::handle_did_change_content(
 
 ///|
 /// Re-evaluates scheduling after aggregate attach/scheduler transitions.
-pub fn TokenizationTextModelPart::handle_did_change_attached(
+fn TokenizationTextModelPart::handle_did_change_attached(
   self : TokenizationTextModelPart,
 ) -> Unit {
   self.backend.handle_did_change_attached()
@@ -251,7 +260,8 @@ pub fn TokenizationTextModelPart::handle_did_change_attached(
 
 ///|
 /// Refreshes all currently requested attached-view ranges synchronously.
-pub fn TokenizationTextModelPart::refresh_all_visible_line_tokens(
+#warnings("-unused_value")
+fn TokenizationTextModelPart::refresh_all_visible_line_tokens(
   self : TokenizationTextModelPart,
 ) -> Unit {
   self.backend.refresh_all_visible_line_tokens()
@@ -273,7 +283,7 @@ pub fn TokenizationTextModelPart::token_count(
 
 ///|
 /// Token listeners participate in model listener ownership; font is intentionally excluded.
-pub fn TokenizationTextModelPart::has_listeners(
+fn TokenizationTextModelPart::has_listeners(
   self : TokenizationTextModelPart,
 ) -> Bool {
   self.did_change_tokens.has_listeners()
@@ -303,9 +313,7 @@ fn TokenizationTextModelPart::dispose_owned_resources(
 
 ///|
 /// Source-order teardown: registered resources first, terminal flag second.
-pub fn TokenizationTextModelPart::dispose(
-  self : TokenizationTextModelPart,
-) -> Unit {
+fn TokenizationTextModelPart::dispose(self : TokenizationTextModelPart) -> Unit {
   if self.disposed {
     return
   }

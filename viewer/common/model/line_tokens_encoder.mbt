@@ -31,7 +31,7 @@ pub fn line_tokens_from_lexer_tokens(
 /// the production registry adapter path; it deliberately does not construct
 /// an end-offset `LineTokens` value before `safe_tokenize` performs the single
 /// conversion.
-pub fn encode_raw_start_offsets(
+fn encode_raw_start_offsets(
   tokens : Array[@syntax.LineToken],
   line_length : Int,
   language_id? : Int = 0,
@@ -61,10 +61,7 @@ pub fn encode_raw_start_offsets(
 ///|
 /// Converts even slots from token starts to exclusive token ends exactly once.
 /// The final token ends at the raw UTF-16 line length.
-pub fn start_offsets_to_end_offsets(
-  words : Array[UInt],
-  line_length : Int,
-) -> Unit {
+fn start_offsets_to_end_offsets(words : Array[UInt], line_length : Int) -> Unit {
   if words.length() < 2 {
     return
   }

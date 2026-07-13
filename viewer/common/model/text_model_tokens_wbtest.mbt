@@ -33,7 +33,7 @@ fn logging_support(
   calls : Array[String],
   initial_calls : Ref[Int],
 ) -> InternalTokenizationSupportAdapter {
-  InternalTokenizationSupportAdapter::new(
+  InternalTokenizationSupportAdapter(
     initial_state=() => {
       initial_calls.val += 1
       TokenizerState("initial")
@@ -52,7 +52,7 @@ fn logging_support(
 ///|
 test "TrackingTokenizationStateStore advances, converges, and preserves final completion" {
   let initial = @syntax.TokenizerState("initial")
-  let store = TrackingTokenizationStateStore::new(3)
+  let store = TrackingTokenizationStateStore(3)
   assert_true(store.get_first_invalid_end_state_line_number() == Some(1))
   guard store.get_first_invalid_line(initial) is Some(first) else {
     fail("expected first invalid line")
@@ -84,7 +84,7 @@ test "TokenizerWithStateStore demands through line and records hasEOL true" {
   let harness = token_test_harness(["one", "two", "three"])
   let calls : Array[String] = []
   let initial_calls = Ref(0)
-  let tokenizer = TokenizerWithStateStoreAndTextModel::new(
+  let tokenizer = TokenizerWithStateStoreAndTextModel(
     3,
     logging_support(calls, initial_calls),
     harness.model_state,
@@ -107,7 +107,7 @@ test "cheapness is strict at 2048 and only the first invalid line is cheap" {
   let short = "x".repeat(2047)
   let boundary = "x".repeat(2048)
   let harness = token_test_harness([short, boundary, "x"])
-  let tokenizer = TokenizerWithStateStoreAndTextModel::new(
+  let tokenizer = TokenizerWithStateStoreAndTextModel(
     3,
     logging_support([], Ref(0)),
     harness.model_state,
@@ -129,7 +129,7 @@ test "findLikelyRelevantLines ignores whitespace and replays ancestors without E
   ])
   let calls : Array[String] = []
   let support = logging_support(calls, Ref(0))
-  let tokenizer = TokenizerWithStateStoreAndTextModel::new(
+  let tokenizer = TokenizerWithStateStoreAndTextModel(
     5,
     support,
     harness.model_state,
@@ -159,12 +159,11 @@ test "safe_tokenize missing and failing support reports then returns language fa
   assert_eq(missing.tokens.length(), 2)
   assert_eq(missing.tokens[0], 3)
   assert_true(missing.end_state == state)
-  let failing = InternalTokenizationSupportAdapter::new(
-    initial_state=() => state,
-    tokenize_encoded=(_text, _has_eol, _state) => {
-      raise TokenTestError::TokenFailure
-    },
-  )
+  let failing = InternalTokenizationSupportAdapter(initial_state=() => state, tokenize_encoded=(
+    _text,
+    _has_eol,
+    _state,
+  ) => raise TokenTestError::TokenFailure)
   let fallback = safe_tokenize(
     @services.language_id_codec,
     "token-test",
@@ -194,7 +193,7 @@ test "encoded tokenization preserves absent empty and nonempty font info" {
   assert_true(absent.font_info is None)
 
   let empty_fonts : Array[FontToken] = []
-  let empty_support = InternalTokenizationSupportAdapter::new(
+  let empty_support = InternalTokenizationSupportAdapter(
     initial_state=() => state,
     tokenize_encoded=(_text, _has_eol, _state) => {
       tokens: [0, tag_to_metadata(Plain)],
@@ -226,7 +225,7 @@ test "encoded tokenization preserves absent empty and nonempty font info" {
       line_height_multiplier: Some(1.5),
     },
   ]
-  let nonempty_support = InternalTokenizationSupportAdapter::new(
+  let nonempty_support = InternalTokenizationSupportAdapter(
     initial_state=() => state,
     tokenize_encoded=(_text, _has_eol, _state) => {
       tokens: [0, tag_to_metadata(Plain)],
@@ -258,7 +257,7 @@ test "encoded tokenization preserves absent empty and nonempty font info" {
 ///|
 test "background store forwards one exact font update value" {
   let observed : Array[FontTokensUpdate] = []
-  let store = BackgroundTokenizationStore::new(
+  let store = BackgroundTokenizationStore(
     set_tokens=_batches => (),
     set_font_info=changes => observed.push(changes),
     background_tokenization_finished=() => (),

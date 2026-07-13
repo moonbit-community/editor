@@ -31,7 +31,7 @@ fn worker_scheduler_harness() -> WorkerSchedulerHarness {
   let fallback_now = Ref(0.0)
   let before_next_now : Ref[(() -> Unit)?] = Ref(None)
   let trace : Array[String] = []
-  let scheduler = TokenizationScheduler::new(
+  let scheduler = TokenizationScheduler(
     idle=callback => {
       let active = Ref(true)
       trace.push("idle-scheduled")
@@ -76,7 +76,7 @@ fn worker_scheduler_harness() -> WorkerSchedulerHarness {
 ///|
 fn run_worker_idle(task : WorkerIdleTask, remaining : Double) -> Unit {
   if task.active.val {
-    (task.callback)(TokenizationIdleDeadline::new(() => remaining))
+    (task.callback)(TokenizationIdleDeadline(() => remaining))
   }
 }
 
@@ -120,7 +120,7 @@ fn default_worker_harness(
     scheduler_value,
     _message => (),
   )
-  let support = InternalTokenizationSupportAdapter::new(
+  let support = InternalTokenizationSupportAdapter(
     initial_state=() => TokenizerState("initial"),
     tokenize_encoded=(text, _has_eol, _state) => {
       lexer_calls.push(text)
@@ -132,12 +132,12 @@ fn default_worker_harness(
       }
     },
   )
-  let tokenizer = TokenizerWithStateStoreAndTextModel::new(
+  let tokenizer = TokenizerWithStateStoreAndTextModel(
     line_count, support, model_state, @services.language_id_codec,
   )
   let token_batches = Ref(0)
   let finish_calls = Ref(0)
-  let output = BackgroundTokenizationStore::new(
+  let output = BackgroundTokenizationStore(
     set_tokens=_batches => {
       token_batches.val += 1
       scheduling.trace.push("tokens")
@@ -150,7 +150,7 @@ fn default_worker_harness(
     set_end_state=(_line_number, _state) => (),
   )
   {
-    worker: DefaultBackgroundTokenizer::new(tokenizer, output),
+    worker: DefaultBackgroundTokenizer(tokenizer, output),
     attached,
     lexer_calls,
     token_batches,
@@ -207,7 +207,7 @@ test "deadline is read immediately and end time is now plus remaining" {
     let deadline_live = Ref(true)
     let deadline_reads = Ref(0)
     scheduling.before_next_now.val = Some(() => deadline_live.val = false)
-    let deadline = TokenizationIdleDeadline::new(() => {
+    let deadline = TokenizationIdleDeadline(() => {
       if !deadline_live.val {
         abort("deadline read after leaving its live interval")
       }
@@ -325,7 +325,7 @@ test "dispose cancels idle and makes a hostile late callback inert" {
   let old_idle = scheduling.idle[0]
   harness.worker.dispose()
   assert_false(old_idle.active.val)
-  (old_idle.callback)(TokenizationIdleDeadline::new(() => 100.0))
+  (old_idle.callback)(TokenizationIdleDeadline(() => 100.0))
   assert_eq(harness.lexer_calls.length(), 0)
   assert_false(harness.worker.is_scheduled)
 }

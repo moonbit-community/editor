@@ -10,9 +10,9 @@ priv struct ScheduledCallback {
 fn deterministic_scheduler(
   delayed : Array[ScheduledCallback],
 ) -> TokenizationScheduler {
-  TokenizationScheduler::new(
+  TokenizationScheduler(
     idle=callback => {
-      callback(TokenizationIdleDeadline::new(() => 0.0))
+      callback(TokenizationIdleDeadline(() => 0.0))
       @base_common.Disposable::from(() => ())
     },
     zero_timeout=callback => {
@@ -38,10 +38,10 @@ fn run_scheduled(task : ScheduledCallback) -> Unit {
 ///|
 test "AttachedViewState equality checks ranges before stabilization" {
   let ranges = [@base_common.LineRange(1, 3)]
-  let a = AttachedViewState::new(ranges, false)
-  let same = AttachedViewState::new([LineRange(1, 3)], false)
-  let different_ranges = AttachedViewState::new([LineRange(1, 4)], false)
-  let different_stability = AttachedViewState::new([LineRange(1, 3)], true)
+  let a = AttachedViewState(ranges, false)
+  let same = AttachedViewState([LineRange(1, 3)], false)
+  let different_ranges = AttachedViewState([LineRange(1, 4)], false)
+  let different_stability = AttachedViewState([LineRange(1, 3)], true)
   assert_true(a.equals(a))
   assert_true(a.equals(same))
   assert_false(a.equals(different_ranges))
@@ -50,7 +50,7 @@ test "AttachedViewState equality checks ranges before stabilization" {
 
 ///|
 test "AttachedViewState identity returns before walking ranges" {
-  let state = AttachedViewState::new([LineRange(1, 3)], false)
+  let state = AttachedViewState([LineRange(1, 3)], false)
   let comparisons = Ref(0)
   assert_true(
     state.equals_with(state, (_left, _right) => {
@@ -59,7 +59,7 @@ test "AttachedViewState identity returns before walking ranges" {
     }),
   )
   assert_eq(comparisons.val, 0)
-  let copy = AttachedViewState::new([LineRange(1, 3)], false)
+  let copy = AttachedViewState([LineRange(1, 3)], false)
   assert_true(
     state.equals_with(copy, (_left, _right) => {
       comparisons.val += 1
@@ -71,12 +71,17 @@ test "AttachedViewState identity returns before walking ranges" {
 
 ///|
 test "AttachedViews preserves identity, joins ranges, and emits absent detach state" {
-  let manager = AttachedViews::new()
+  let manager = AttachedViews()
   let events : Array[AttachedViewStateChange] = []
   manager.on_did_change_visible_ranges(event => events.push(event)) |> ignore
   let first = manager.attach_view()
   let second = manager.attach_view()
   first.set_visible_lines([{ start_line_number: 3, end_line_number: 5 }], false)
+  let first_state = first.state().unwrap()
+  assert_false(first_state.stabilized)
+  assert_eq(first_state.visible_line_ranges.length(), 1)
+  assert_eq(first_state.visible_line_ranges[0].start_line_number, 3)
+  assert_eq(first_state.visible_line_ranges[0].end_line_number_exclusive, 6)
   second.set_visible_lines(
     [
       { start_line_number: 1, end_line_number: 2 },
@@ -93,6 +98,7 @@ test "AttachedViews preserves identity, joins ranges, and emits absent detach st
   manager.detach_view(first)
   assert_true(events[2].view.same(first))
   assert_true(events[2].state is None)
+  assert_true(first.state().unwrap().equals(first_state))
   let remaining = manager.visible_line_ranges()
   assert_eq(remaining.length(), 2)
 }
@@ -102,25 +108,25 @@ test "AttachedViewHandler debounces unstable state and stable state cancels then
   let delayed : Array[ScheduledCallback] = []
   let scheduler = deterministic_scheduler(delayed)
   let refresh_count = Ref(0)
-  let handler = AttachedViewHandler::new(() => refresh_count.val += 1, () => {
+  let handler = AttachedViewHandler(() => refresh_count.val += 1, () => {
     Some(scheduler)
   })
-  handler.handle_state_change(AttachedViewState::new([LineRange(1, 3)], false))
+  handler.handle_state_change(AttachedViewState([LineRange(1, 3)], false))
   assert_eq(delayed.length(), 1)
   assert_eq(refresh_count.val, 0)
-  handler.handle_state_change(AttachedViewState::new([LineRange(2, 4)], false))
+  handler.handle_state_change(AttachedViewState([LineRange(2, 4)], false))
   assert_eq(delayed.length(), 2)
   run_scheduled(delayed[0])
   assert_eq(refresh_count.val, 0)
   run_scheduled(delayed[1])
   assert_eq(refresh_count.val, 1)
-  handler.handle_state_change(AttachedViewState::new([LineRange(5, 7)], false))
+  handler.handle_state_change(AttachedViewState([LineRange(5, 7)], false))
   assert_eq(delayed.length(), 3)
-  handler.handle_state_change(AttachedViewState::new([LineRange(5, 7)], true))
+  handler.handle_state_change(AttachedViewState([LineRange(5, 7)], true))
   assert_eq(refresh_count.val, 2)
   run_scheduled(delayed[2])
   assert_eq(refresh_count.val, 2)
   // Equal requested/computed ranges suppress a repeated stable refresh.
-  handler.handle_state_change(AttachedViewState::new([LineRange(5, 7)], true))
+  handler.handle_state_change(AttachedViewState([LineRange(5, 7)], true))
   assert_eq(refresh_count.val, 2)
 }

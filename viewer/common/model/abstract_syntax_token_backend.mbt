@@ -15,14 +15,15 @@ pub(all) struct VisibleLineRange {
 
 ///|
 /// Immutable normalized visible ranges plus stabilization state.
-pub(all) struct AttachedViewState {
+#warnings("-unused_value")
+priv struct AttachedViewState {
   visible_line_ranges : Array[@base_common.LineRange]
   stabilized : Bool
 } derive(Debug)
 
 ///|
 /// Retains caller-provided facts without normalization.
-pub fn AttachedViewState::new(
+fn AttachedViewState::AttachedViewState(
   visible_line_ranges : Array[@base_common.LineRange],
   stabilized : Bool,
 ) -> AttachedViewState {
@@ -31,7 +32,7 @@ pub fn AttachedViewState::new(
 
 ///|
 /// Source-order equality: physical identity, then ranges, then stabilization.
-pub fn AttachedViewState::equals(
+fn AttachedViewState::equals(
   self : AttachedViewState,
   other : AttachedViewState,
 ) -> Bool {
@@ -64,7 +65,7 @@ fn AttachedViewState::equals_with(
 
 ///|
 /// Event payload preserving the exact attached-view identity and optional state.
-pub(all) struct AttachedViewStateChange {
+priv struct AttachedViewStateChange {
   view : AttachedViewImpl
   state : AttachedViewState?
 }
@@ -79,7 +80,7 @@ pub struct AttachedViewImpl {
 
 ///|
 /// Current optional state of this handle.
-pub fn AttachedViewImpl::state(self : AttachedViewImpl) -> AttachedViewState? {
+fn AttachedViewImpl::state(self : AttachedViewImpl) -> AttachedViewState? {
   self.state_value
 }
 
@@ -95,7 +96,7 @@ pub fn AttachedViewImpl::set_visible_lines(
   let ranges = visible_lines.map(line => {
     @base_common.LineRange(line.start_line_number, line.end_line_number + 1)
   })
-  let state = AttachedViewState::new(ranges, stabilized)
+  let state = AttachedViewState(ranges, stabilized)
   match self.state_value {
     Some(old) => if !old.equals(state) { self.state_value = Some(state) }
     None => self.state_value = Some(state)
@@ -105,7 +106,7 @@ pub fn AttachedViewImpl::set_visible_lines(
 
 ///|
 /// Identity comparison used by the owning manager.
-pub fn AttachedViewImpl::same(
+fn AttachedViewImpl::same(
   self : AttachedViewImpl,
   other : AttachedViewImpl,
 ) -> Bool {
@@ -114,15 +115,15 @@ pub fn AttachedViewImpl::same(
 
 ///|
 /// Owner of all live attached-view identities and aggregate ranges.
-pub struct AttachedViews {
-  priv views : Array[AttachedViewImpl]
-  priv next_id : Ref[Int]
-  priv did_change_visible_ranges : @base_common.Emitter[AttachedViewStateChange]
+priv struct AttachedViews {
+  views : Array[AttachedViewImpl]
+  next_id : Ref[Int]
+  did_change_visible_ranges : @base_common.Emitter[AttachedViewStateChange]
 }
 
 ///|
 /// Creates an empty attached-view manager.
-pub fn AttachedViews::new() -> AttachedViews {
+fn AttachedViews::AttachedViews() -> AttachedViews {
   {
     views: [],
     next_id: Ref(0),
@@ -132,7 +133,7 @@ pub fn AttachedViews::new() -> AttachedViews {
 
 ///|
 /// Subscribes to state commits and explicit detach notifications.
-pub fn AttachedViews::on_did_change_visible_ranges(
+fn AttachedViews::on_did_change_visible_ranges(
   self : AttachedViews,
   listener : (AttachedViewStateChange) -> Unit,
 ) -> @base_common.Disposable {
@@ -141,7 +142,8 @@ pub fn AttachedViews::on_did_change_visible_ranges(
 
 ///|
 /// Joins and sorts every defined per-view range.
-pub fn AttachedViews::visible_line_ranges(
+#warnings("-unused_value")
+fn AttachedViews::visible_line_ranges(
   self : AttachedViews,
 ) -> Array[@base_common.LineRange] {
   let all : Array[@base_common.LineRange] = []
@@ -156,7 +158,7 @@ pub fn AttachedViews::visible_line_ranges(
 
 ///|
 /// Adds and returns one exact externally-owned handle.
-pub fn AttachedViews::attach_view(self : AttachedViews) -> AttachedViewImpl {
+fn AttachedViews::attach_view(self : AttachedViews) -> AttachedViewImpl {
   let id = self.next_id.val
   self.next_id.val = id + 1
   let view : AttachedViewImpl = {
@@ -172,7 +174,7 @@ pub fn AttachedViews::attach_view(self : AttachedViews) -> AttachedViewImpl {
 
 ///|
 /// Deletes exact identity, emits the explicit absent-state signal, then invalidates aggregate state.
-pub fn AttachedViews::detach_view(
+fn AttachedViews::detach_view(
   self : AttachedViews,
   view : AttachedViewImpl,
 ) -> Unit {
@@ -191,29 +193,29 @@ pub fn AttachedViews::detach_view(
 
 ///|
 /// Disposes only the manager event; handles remain externally owned values.
-pub fn AttachedViews::dispose(self : AttachedViews) -> Unit {
+fn AttachedViews::dispose(self : AttachedViews) -> Unit {
   self.did_change_visible_ranges.dispose()
 }
 
 ///|
 /// Exact visible-range debounce delay from `AttachedViewHandler`.
-pub const ATTACHED_VIEW_REFRESH_DELAY_MS : Int = 50
+const ATTACHED_VIEW_REFRESH_DELAY_MS : Int = 50
 
 ///|
 /// Per-view stabilized/debounced visible refresh owner.
-pub struct AttachedViewHandler {
-  priv refresh_tokens : () -> Unit
-  priv scheduler : () -> TokenizationScheduler?
-  priv mut computed_line_ranges : Array[@base_common.LineRange]
-  priv mut requested_line_ranges : Array[@base_common.LineRange]
-  priv mut pending : @base_common.Disposable?
-  priv generation : Ref[Int]
-  priv mut disposed : Bool
+priv struct AttachedViewHandler {
+  refresh_tokens : () -> Unit
+  scheduler : () -> TokenizationScheduler?
+  mut computed_line_ranges : Array[@base_common.LineRange]
+  mut requested_line_ranges : Array[@base_common.LineRange]
+  mut pending : @base_common.Disposable?
+  generation : Ref[Int]
+  mut disposed : Bool
 }
 
 ///|
 /// Creates a handler using the model's current scheduler at schedule time.
-pub fn AttachedViewHandler::new(
+fn AttachedViewHandler::AttachedViewHandler(
   refresh_tokens : () -> Unit,
   scheduler : () -> TokenizationScheduler?,
 ) -> AttachedViewHandler {
@@ -230,7 +232,7 @@ pub fn AttachedViewHandler::new(
 
 ///|
 /// Latest requested ranges.
-pub fn AttachedViewHandler::line_ranges(
+fn AttachedViewHandler::line_ranges(
   self : AttachedViewHandler,
 ) -> Array[@base_common.LineRange] {
   self.requested_line_ranges
@@ -238,7 +240,7 @@ pub fn AttachedViewHandler::line_ranges(
 
 ///|
 /// Equality guard, commit, then one refresh.
-pub fn AttachedViewHandler::update(self : AttachedViewHandler) -> Unit {
+fn AttachedViewHandler::update(self : AttachedViewHandler) -> Unit {
   if self.disposed ||
     line_range_arrays_equal(
       self.computed_line_ranges,
@@ -252,7 +254,7 @@ pub fn AttachedViewHandler::update(self : AttachedViewHandler) -> Unit {
 
 ///|
 /// Replaces requested ranges and chooses immediate or 50 ms debounced refresh.
-pub fn AttachedViewHandler::handle_state_change(
+fn AttachedViewHandler::handle_state_change(
   self : AttachedViewHandler,
   state : AttachedViewState,
 ) -> Unit {
@@ -292,7 +294,7 @@ fn AttachedViewHandler::cancel_pending(self : AttachedViewHandler) -> Unit {
 
 ///|
 /// Releases the one-shot owner.
-pub fn AttachedViewHandler::dispose(self : AttachedViewHandler) -> Unit {
+fn AttachedViewHandler::dispose(self : AttachedViewHandler) -> Unit {
   if !self.disposed {
     self.disposed = true
     self.cancel_pending()
@@ -301,24 +303,23 @@ pub fn AttachedViewHandler::dispose(self : AttachedViewHandler) -> Unit {
 
 ///|
 /// Background lifecycle exposed by the tokenization model part.
-pub(all) enum BackgroundTokenizationState {
+#warnings("-unused_value")
+priv enum BackgroundTokenizationState {
   InProgress
   Completed
 } derive(Eq, Debug)
 
 ///|
 /// Shared state/events held by the concrete syntactic backend.
-pub struct AbstractSyntaxTokenBackend {
-  priv did_change_tokens : @base_common.Emitter[ModelTokensChangedEvent]
-  priv did_change_font_tokens : @base_common.Emitter[
-    ModelFontTokensChangedEvent,
-  ]
-  priv did_change_background_state : @base_common.Emitter[Unit]
+priv struct AbstractSyntaxTokenBackend {
+  did_change_tokens : @base_common.Emitter[ModelTokensChangedEvent]
+  did_change_font_tokens : @base_common.Emitter[ModelFontTokensChangedEvent]
+  did_change_background_state : @base_common.Emitter[Unit]
 }
 
 ///|
 /// Creates the shared backend contract.
-fn AbstractSyntaxTokenBackend::new() -> AbstractSyntaxTokenBackend {
+fn AbstractSyntaxTokenBackend::AbstractSyntaxTokenBackend() -> AbstractSyntaxTokenBackend {
   {
     did_change_tokens: @base_common.Emitter::new(),
     did_change_font_tokens: @base_common.Emitter::new(),
@@ -328,7 +329,7 @@ fn AbstractSyntaxTokenBackend::new() -> AbstractSyntaxTokenBackend {
 
 ///|
 /// Subscribes to exact changed line ranges.
-pub fn AbstractSyntaxTokenBackend::on_did_change_tokens(
+fn AbstractSyntaxTokenBackend::on_did_change_tokens(
   self : AbstractSyntaxTokenBackend,
   listener : (ModelTokensChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
@@ -337,7 +338,7 @@ pub fn AbstractSyntaxTokenBackend::on_did_change_tokens(
 
 ///|
 /// Subscribes to exact syntactic font updates.
-pub fn AbstractSyntaxTokenBackend::on_did_change_font_tokens(
+fn AbstractSyntaxTokenBackend::on_did_change_font_tokens(
   self : AbstractSyntaxTokenBackend,
   listener : (ModelFontTokensChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
@@ -346,7 +347,7 @@ pub fn AbstractSyntaxTokenBackend::on_did_change_font_tokens(
 
 ///|
 /// Subscribes to completion-state transitions.
-pub fn AbstractSyntaxTokenBackend::on_did_change_background_tokenization_state(
+fn AbstractSyntaxTokenBackend::on_did_change_background_tokenization_state(
   self : AbstractSyntaxTokenBackend,
   listener : (Unit) -> Unit,
 ) -> @base_common.Disposable {
@@ -355,7 +356,7 @@ pub fn AbstractSyntaxTokenBackend::on_did_change_background_tokenization_state(
 
 ///|
 /// Releases shared emitters.
-pub fn AbstractSyntaxTokenBackend::dispose(
+fn AbstractSyntaxTokenBackend::dispose(
   self : AbstractSyntaxTokenBackend,
 ) -> Unit {
   self.did_change_tokens.dispose()

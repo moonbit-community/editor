@@ -1,4 +1,4 @@
-///| Faithful conformance port of vscode's `RangePriorityQueueImpl` suite.
+///| Faithful white-box conformance port of vscode's `RangePriorityQueueImpl` suite.
 ///
 /// Source: `vscode/src/vs/editor/test/common/model/textModelTokens.test.ts` at
 /// `b18492a288de038fbc7643aae6de8247029d11bd`. Both `test(...)` cases preserve
@@ -44,7 +44,7 @@ test "addRange" {
 
 ///|
 test "addRangeAndResize" {
-  let queue = RangePriorityQueueImpl::new()
+  let queue = RangePriorityQueueImpl()
   queue.add_range(OffsetRange(0, 20))
   queue.add_range(OffsetRange(100, 120))
   queue.add_range(OffsetRange(200, 220))
@@ -66,7 +66,7 @@ test "addRangeAndResize" {
 
 ///|
 test "RangePriorityQueueImpl min removeMin delete and toString" {
-  let queue = RangePriorityQueueImpl::new()
+  let queue = RangePriorityQueueImpl()
   assert_true(queue.min() is None)
   assert_true(queue.remove_min() is None)
   queue.add_range(OffsetRange(1, 2))
@@ -89,7 +89,7 @@ test "RangePriorityQueueImpl min removeMin delete and toString" {
 
 ///|
 test "RangePriorityQueueImpl delete splits interior and addRange covers boundaries" {
-  let queue = RangePriorityQueueImpl::new()
+  let queue = RangePriorityQueueImpl()
   queue.add_range(OffsetRange(10, 20))
   queue.delete(15)
   assert_eq(queue.to_string(), "[10, 15) + [16, 20)")

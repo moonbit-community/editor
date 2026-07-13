@@ -147,7 +147,7 @@ fn projection_assert_masks(
     let middle_sparse = [ for i in 0..<(line_count - 2) => i % 2 == 1 ]
     projection_assert_batch(lines, expected, 2, line_count - 1, middle_sparse)
   }
-  assert_false(model.tokenization.has_tokens())
+  assert_eq(model.tokenization.token_count(), model.get_line_count())
 }
 
 ///|
@@ -391,5 +391,5 @@ test "getViewLinesData - with wrapping and injected text" {
     }
     assert_true(data.inline_decorations[0].class_name == "myClassName")
   }
-  assert_false(model.tokenization.has_tokens())
+  assert_eq(model.tokenization.token_count(), model.get_line_count())
 }

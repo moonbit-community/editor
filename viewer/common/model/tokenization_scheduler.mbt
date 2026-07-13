@@ -8,7 +8,7 @@ pub struct TokenizationIdleDeadline {
 
 ///|
 /// Creates a deadline backed by a host-provided remaining-time reader.
-pub fn TokenizationIdleDeadline::new(
+pub fn TokenizationIdleDeadline::TokenizationIdleDeadline(
   read_time_remaining : () -> Double,
 ) -> TokenizationIdleDeadline {
   { read_time_remaining, }
@@ -16,7 +16,7 @@ pub fn TokenizationIdleDeadline::new(
 
 ///|
 /// Remaining idle budget in milliseconds.
-pub fn TokenizationIdleDeadline::time_remaining(
+fn TokenizationIdleDeadline::time_remaining(
   self : TokenizationIdleDeadline,
 ) -> Double {
   (self.read_time_remaining)()
@@ -34,7 +34,7 @@ pub struct TokenizationScheduler {
 ///|
 /// Creates a scheduler from cancellable idle, zero-timeout, delayed, and clock
 /// operations. All durations and clock values use milliseconds.
-pub fn TokenizationScheduler::new(
+pub fn TokenizationScheduler::TokenizationScheduler(
   idle~ : ((TokenizationIdleDeadline) -> Unit) -> @base_common.Disposable,
   zero_timeout~ : (() -> Unit) -> @base_common.Disposable,
   delay~ : (Int, () -> Unit) -> @base_common.Disposable,
@@ -50,7 +50,7 @@ pub fn TokenizationScheduler::new(
 
 ///|
 /// Schedules cancellable idle work.
-pub fn TokenizationScheduler::idle(
+fn TokenizationScheduler::idle(
   self : TokenizationScheduler,
   callback : (TokenizationIdleDeadline) -> Unit,
 ) -> @base_common.Disposable {
@@ -59,7 +59,7 @@ pub fn TokenizationScheduler::idle(
 
 ///|
 /// Schedules a cancellable zero-timeout continuation.
-pub fn TokenizationScheduler::zero_timeout(
+fn TokenizationScheduler::zero_timeout(
   self : TokenizationScheduler,
   callback : () -> Unit,
 ) -> @base_common.Disposable {
@@ -68,7 +68,7 @@ pub fn TokenizationScheduler::zero_timeout(
 
 ///|
 /// Schedules a cancellable delayed continuation.
-pub fn TokenizationScheduler::delay(
+fn TokenizationScheduler::delay(
   self : TokenizationScheduler,
   milliseconds : Int,
   callback : () -> Unit,
@@ -78,6 +78,6 @@ pub fn TokenizationScheduler::delay(
 
 ///|
 /// Reads the scheduler's monotonic millisecond clock.
-pub fn TokenizationScheduler::now(self : TokenizationScheduler) -> Double {
+fn TokenizationScheduler::now(self : TokenizationScheduler) -> Double {
   (self.read_now)()
 }

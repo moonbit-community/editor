@@ -16,6 +16,14 @@ fn register_plain_moonbit() -> Unit {
 /// (`register_plain_moonbit`, shared with the mouse-target tests).
 fn view_model_for(doc : @model.TextSnapshot) -> @view_model.ViewModel {
   register_plain_moonbit()
+  // The retained stabilized-range demand advances through an invalid frontier
+  // only when the requested end lies beyond it. Give one-line render fixtures
+  // an inert trailing line so line 1 follows the same production path.
+  let model_text = if doc.line_count() == 1 {
+    doc.get_value() + "\n"
+  } else {
+    doc.get_value()
+  }
   let model = @model.TextModel(
     try! @base_common.Uri::from(
       scheme="inmemory",
@@ -26,10 +34,16 @@ fn view_model_for(doc : @model.TextSnapshot) -> @view_model.ViewModel {
     "moonbit",
     1,
     "",
-    doc.get_value(),
+    model_text,
   )
   // View reads are deliberately passive. Rendering fixtures that assert
-  // grammar classes own their demand explicitly before constructing lines.
-  model.tokenization.force_tokenization(model.get_line_count())
+  // grammar classes own one source-shaped stabilized visible-range demand
+  // before constructing lines, then release the temporary attachment.
+  let attached_view = model.on_before_attached()
+  attached_view.set_visible_lines(
+    [{ start_line_number: 1, end_line_number: model.get_line_count() }],
+    true,
+  )
+  model.on_before_detached(attached_view)
   ViewModel(model)
 }

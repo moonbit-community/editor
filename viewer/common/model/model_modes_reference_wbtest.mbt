@@ -16,7 +16,7 @@ fn model_modes_part(calls : Array[String]) -> TokenizationTextModelPart {
   )
   TokenizationTextModelPart::new_with_support_resolver(
     model_state,
-    AttachedViews::new(),
+    AttachedViews(),
     _ => Some(logging_support(calls, Ref(0))),
   )
 }

@@ -151,13 +151,13 @@ fn new_text_model(
       }
     },
   )
-  let attached_views = AttachedViews::new()
+  let attached_views = AttachedViews()
   let tokenization = match support_resolver {
     Some(resolve_support) =>
       TokenizationTextModelPart::new_with_support_resolver(
         model_state, attached_views, resolve_support,
       )
-    None => TokenizationTextModelPart::new(model_state, attached_views)
+    None => TokenizationTextModelPart(model_state, attached_views)
   }
   let (identity, decoration_id_namespace) = next_model_identity()
   {

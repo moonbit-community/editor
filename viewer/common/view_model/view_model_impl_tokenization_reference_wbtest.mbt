@@ -136,7 +136,10 @@ test "model-token callback converts wrapped and hidden ranges before outgoing de
     }
     outgoing_events.push(outgoing.event)
   })
-  model.tokenization.reset_tokenization()
+  let registration = @syntax.tokenization_registry.register(
+    "view-model-impl-reference",
+    @syntax.PlainTokenizer::new(),
+  )
   assert_true(delivery_order == ["view", "outgoing"])
   assert_eq(converted.length(), 1)
   assert_eq(converted[0].length(), 1)
@@ -148,6 +151,7 @@ test "model-token callback converts wrapped and hidden ranges before outgoing de
   assert_true(outgoing_identity.val)
   assert_true(physical_equal(outgoing_events[0], original.val.unwrap()))
   view_model.dispose()
+  registration.dispose()
   model.dispose()
 }
 
@@ -161,10 +165,13 @@ test "headless token callback defaults to no-op and disposal removes delivery" {
   let _subscription = view_model.on_model_tokens_changed(_ => delivered.val += 1)
   // No browser callback was supplied: the private default sink completes as a
   // no-op, then the typed outgoing listener still observes the source event.
-  model.tokenization.reset_tokenization()
+  let registration = @syntax.tokenization_registry.register(
+    "view-model-impl-reference",
+    @syntax.PlainTokenizer::new(),
+  )
   assert_eq(delivered.val, 1)
   view_model.dispose()
-  model.tokenization.reset_tokenization()
+  registration.dispose()
   assert_eq(delivered.val, 1)
   model.dispose()
 }

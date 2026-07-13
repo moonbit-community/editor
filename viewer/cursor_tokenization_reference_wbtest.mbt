@@ -49,7 +49,15 @@ test "issue #46314: ViewModel is out of sync with Model!" {
   let projections_were_current = Ref(true)
   let subscription = first.on_did_change_cursor_position(_ => {
     cursor_events += 1
-    model.tokenization.tokenize_if_cheap(1)
+    // The callback itself owns a fresh two-line visible demand. A temporary
+    // attached-view identity avoids reusing the ViewModel's already-computed
+    // range, while preserving the synchronous reentrant tokenization seam.
+    let demand_view = model.on_before_attached()
+    demand_view.set_visible_lines(
+      [{ start_line_number: 1, end_line_number: 2 }],
+      true,
+    )
+    model.on_before_detached(demand_view)
     projections_were_current.val = projections_were_current.val &&
       first.test_view_model().line_count() == model.get_line_count() &&
       second.test_view_model().line_count() == model.get_line_count() &&
@@ -65,9 +73,9 @@ test "issue #46314: ViewModel is out of sync with Model!" {
   assert_eq(second.test_view_model().line_count(), 3)
   assert_eq(first.test_view_model().get_line_content(3), "third")
   assert_eq(second.test_view_model().get_line_content(3), "third")
-  // Only the callback's cheap demand may lex. Attaching two Viewers, content
+  // Only the callback's visible demand may lex. Attaching two Viewers, content
   // delivery, projection reads, and telemetry must remain passive.
-  assert_eq(calls.val, 1)
+  assert_eq(calls.val, 2)
 
   subscription.dispose()
   first.dispose()

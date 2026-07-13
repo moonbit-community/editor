@@ -8,7 +8,7 @@
 
 ///|
 /// Store delta returned by a syntactic batch write.
-pub(all) struct TokenStoreChange {
+priv struct TokenStoreChange {
   changes : Array[ModelTokensChangedRange]
 }
 
@@ -21,18 +21,18 @@ priv struct AttachedViewHandlerEntry {
 
 ///|
 /// Concrete TextMate-style syntactic backend.
-pub struct TokenizerSyntaxTokenBackend {
-  priv shared : AbstractSyntaxTokenBackend
-  priv model_state : TokenizationModelState
-  priv resolve_support : (String) -> InternalTokenizationSupportAdapter?
-  priv mut tokenizer : TokenizerWithStateStoreAndTextModel?
-  priv mut background_tokenization_state_value : BackgroundTokenizationState
-  priv mut default_background_tokenizer : DefaultBackgroundTokenizer?
-  priv tokens : @common_tokens.ContiguousTokensStore
-  priv attached_view_states : Array[AttachedViewHandlerEntry]
-  priv mut registry_subscription : @base_common.Disposable?
-  priv mut attached_subscription : @base_common.Disposable?
-  priv mut disposed : Bool
+priv struct TokenizerSyntaxTokenBackend {
+  shared : AbstractSyntaxTokenBackend
+  model_state : TokenizationModelState
+  resolve_support : (String) -> InternalTokenizationSupportAdapter?
+  mut tokenizer : TokenizerWithStateStoreAndTextModel?
+  mut background_tokenization_state_value : BackgroundTokenizationState
+  mut default_background_tokenizer : DefaultBackgroundTokenizer?
+  tokens : @common_tokens.ContiguousTokensStore
+  attached_view_states : Array[AttachedViewHandlerEntry]
+  mut registry_subscription : @base_common.Disposable?
+  mut attached_subscription : @base_common.Disposable?
+  mut disposed : Bool
 }
 
 ///|
@@ -45,7 +45,7 @@ fn TokenizerSyntaxTokenBackend::new_with_support_resolver(
   subscribe_registry? : Bool = false,
 ) -> TokenizerSyntaxTokenBackend {
   let backend : TokenizerSyntaxTokenBackend = {
-    shared: AbstractSyntaxTokenBackend::new(),
+    shared: AbstractSyntaxTokenBackend(),
     model_state,
     resolve_support,
     tokenizer: None,
@@ -97,7 +97,7 @@ fn TokenizerSyntaxTokenBackend::handle_attached_view_state_change(
         self.attached_view_states[index].handler
       } else {
         let holder : Ref[AttachedViewHandler?] = Ref(None)
-        let handler = AttachedViewHandler::new(
+        let handler = AttachedViewHandler(
           () => {
             match holder.val {
               Some(current) => self.refresh_ranges(current.line_ranges())
@@ -130,7 +130,7 @@ fn TokenizerSyntaxTokenBackend::handle_attached_view_state_change(
 
 ///|
 /// Resets stores/support/workers and refreshes current visible ranges.
-pub fn TokenizerSyntaxTokenBackend::reset_tokenization(
+fn TokenizerSyntaxTokenBackend::reset_tokenization(
   self : TokenizerSyntaxTokenBackend,
   fire_token_change_event? : Bool = true,
 ) -> Unit {
@@ -162,7 +162,7 @@ pub fn TokenizerSyntaxTokenBackend::reset_tokenization(
   self.tokenizer = match support {
     Some(candidate) =>
       try
-        TokenizerWithStateStoreAndTextModel::new(
+        TokenizerWithStateStoreAndTextModel(
           self.model_state.snapshot.val.line_count(),
           candidate,
           self.model_state,
@@ -185,7 +185,7 @@ pub fn TokenizerSyntaxTokenBackend::reset_tokenization(
   self.default_background_tokenizer = None
   match self.tokenizer {
     Some(tokenizer) => {
-      let output = BackgroundTokenizationStore::new(
+      let output = BackgroundTokenizationStore(
         set_tokens=batches => self.set_tokens(batches) |> ignore,
         set_font_info=changes => self.set_font_info(changes),
         background_tokenization_finished=() => {
@@ -211,7 +211,7 @@ pub fn TokenizerSyntaxTokenBackend::reset_tokenization(
           }
         },
       )
-      let worker = DefaultBackgroundTokenizer::new(tokenizer, output)
+      let worker = DefaultBackgroundTokenizer(tokenizer, output)
       self.default_background_tokenizer = Some(worker)
       worker.handle_changes()
     }
@@ -222,7 +222,7 @@ pub fn TokenizerSyntaxTokenBackend::reset_tokenization(
 
 ///|
 /// Re-evaluates default work after an attached-count or scheduler transition.
-pub fn TokenizerSyntaxTokenBackend::handle_did_change_attached(
+fn TokenizerSyntaxTokenBackend::handle_did_change_attached(
   self : TokenizerSyntaxTokenBackend,
 ) -> Unit {
   match self.default_background_tokenizer {
@@ -233,7 +233,7 @@ pub fn TokenizerSyntaxTokenBackend::handle_did_change_attached(
 
 ///|
 /// Flush-only readonly content invalidation.
-pub fn TokenizerSyntaxTokenBackend::handle_did_change_content(
+fn TokenizerSyntaxTokenBackend::handle_did_change_content(
   self : TokenizerSyntaxTokenBackend,
   is_flush~ : Bool,
 ) -> Unit {
@@ -244,7 +244,7 @@ pub fn TokenizerSyntaxTokenBackend::handle_did_change_content(
 
 ///|
 /// Writes batches, emits only nonempty exact changes, and returns the same set.
-pub fn TokenizerSyntaxTokenBackend::set_tokens(
+fn TokenizerSyntaxTokenBackend::set_tokens(
   self : TokenizerSyntaxTokenBackend,
   batches : Array[@common_tokens.ContiguousMultilineTokens],
 ) -> TokenStoreChange {
@@ -268,7 +268,7 @@ pub fn TokenizerSyntaxTokenBackend::set_tokens(
 
 ///|
 /// Fires exact syntactic font changes while live.
-pub fn TokenizerSyntaxTokenBackend::set_font_info(
+fn TokenizerSyntaxTokenBackend::set_font_info(
   self : TokenizerSyntaxTokenBackend,
   changes : FontTokensUpdate,
 ) -> Unit {
@@ -279,7 +279,7 @@ pub fn TokenizerSyntaxTokenBackend::set_font_info(
 
 ///|
 /// Joins every per-view latest range and refreshes it.
-pub fn TokenizerSyntaxTokenBackend::refresh_all_visible_line_tokens(
+fn TokenizerSyntaxTokenBackend::refresh_all_visible_line_tokens(
   self : TokenizerSyntaxTokenBackend,
 ) -> Unit {
   let ranges : Array[@base_common.LineRange] = []
@@ -291,7 +291,7 @@ pub fn TokenizerSyntaxTokenBackend::refresh_all_visible_line_tokens(
 
 ///|
 /// Refreshes normalized ranges in order, converting exclusive end to inclusive.
-pub fn TokenizerSyntaxTokenBackend::refresh_ranges(
+fn TokenizerSyntaxTokenBackend::refresh_ranges(
   self : TokenizerSyntaxTokenBackend,
   ranges : Array[@base_common.LineRange],
 ) -> Unit {
@@ -305,7 +305,7 @@ pub fn TokenizerSyntaxTokenBackend::refresh_ranges(
 
 ///|
 /// Clamps source-asymmetrically, stores heuristic tokens, and requests accuracy.
-pub fn TokenizerSyntaxTokenBackend::refresh_range(
+fn TokenizerSyntaxTokenBackend::refresh_range(
   self : TokenizerSyntaxTokenBackend,
   start_line_number : Int,
   end_line_number : Int,
@@ -339,7 +339,7 @@ pub fn TokenizerSyntaxTokenBackend::refresh_range(
 
 ///|
 /// Builds accurate state through the requested line and stores the batch.
-pub fn TokenizerSyntaxTokenBackend::force_tokenization(
+fn TokenizerSyntaxTokenBackend::force_tokenization(
   self : TokenizerSyntaxTokenBackend,
   line_number : Int,
 ) -> Unit {
@@ -357,7 +357,7 @@ pub fn TokenizerSyntaxTokenBackend::force_tokenization(
 
 ///|
 /// Missing support is accurate; live support delegates the invalid frontier.
-pub fn TokenizerSyntaxTokenBackend::has_accurate_tokens_for_line(
+fn TokenizerSyntaxTokenBackend::has_accurate_tokens_for_line(
   self : TokenizerSyntaxTokenBackend,
   line_number : Int,
 ) -> Bool {
@@ -369,7 +369,7 @@ pub fn TokenizerSyntaxTokenBackend::has_accurate_tokens_for_line(
 
 ///|
 /// Missing support is cheap; live support applies the 2048-unit rule.
-pub fn TokenizerSyntaxTokenBackend::is_cheap_to_tokenize(
+fn TokenizerSyntaxTokenBackend::is_cheap_to_tokenize(
   self : TokenizerSyntaxTokenBackend,
   line_number : Int,
 ) -> Bool {
@@ -381,7 +381,7 @@ pub fn TokenizerSyntaxTokenBackend::is_cheap_to_tokenize(
 
 ///|
 /// Conditionally forces one line only when cheap.
-pub fn TokenizerSyntaxTokenBackend::tokenize_if_cheap(
+fn TokenizerSyntaxTokenBackend::tokenize_if_cheap(
   self : TokenizerSyntaxTokenBackend,
   line_number : Int,
 ) -> Unit {
@@ -392,7 +392,7 @@ pub fn TokenizerSyntaxTokenBackend::tokenize_if_cheap(
 
 ///|
 /// Passive stored/default token read; never invokes the lexer.
-pub fn TokenizerSyntaxTokenBackend::get_line_tokens(
+fn TokenizerSyntaxTokenBackend::get_line_tokens(
   self : TokenizerSyntaxTokenBackend,
   line_number : Int,
 ) -> @common_tokens.LineTokens {
@@ -405,7 +405,7 @@ pub fn TokenizerSyntaxTokenBackend::get_line_tokens(
 
 ///|
 /// Whether any contiguous syntactic token state is stored.
-pub fn TokenizerSyntaxTokenBackend::has_tokens(
+fn TokenizerSyntaxTokenBackend::has_tokens(
   self : TokenizerSyntaxTokenBackend,
 ) -> Bool {
   self.tokens.has_tokens()
@@ -413,7 +413,7 @@ pub fn TokenizerSyntaxTokenBackend::has_tokens(
 
 ///|
 /// Current background lifecycle state.
-pub fn TokenizerSyntaxTokenBackend::background_tokenization_state(
+fn TokenizerSyntaxTokenBackend::background_tokenization_state(
   self : TokenizerSyntaxTokenBackend,
 ) -> BackgroundTokenizationState {
   self.background_tokenization_state_value
@@ -421,7 +421,7 @@ pub fn TokenizerSyntaxTokenBackend::background_tokenization_state(
 
 ///|
 /// Event subscriptions forwarded by the model part.
-pub fn TokenizerSyntaxTokenBackend::on_did_change_tokens(
+fn TokenizerSyntaxTokenBackend::on_did_change_tokens(
   self : TokenizerSyntaxTokenBackend,
   listener : (ModelTokensChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
@@ -430,7 +430,7 @@ pub fn TokenizerSyntaxTokenBackend::on_did_change_tokens(
 
 ///|
 /// Subscribes to exact child-owned syntactic font payloads.
-pub fn TokenizerSyntaxTokenBackend::on_did_change_font_tokens(
+fn TokenizerSyntaxTokenBackend::on_did_change_font_tokens(
   self : TokenizerSyntaxTokenBackend,
   listener : (ModelFontTokensChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
@@ -439,7 +439,7 @@ pub fn TokenizerSyntaxTokenBackend::on_did_change_font_tokens(
 
 ///|
 /// Subscribes to background completion transitions.
-pub fn TokenizerSyntaxTokenBackend::on_did_change_background_tokenization_state(
+fn TokenizerSyntaxTokenBackend::on_did_change_background_tokenization_state(
   self : TokenizerSyntaxTokenBackend,
   listener : (Unit) -> Unit,
 ) -> @base_common.Disposable {
@@ -448,7 +448,7 @@ pub fn TokenizerSyntaxTokenBackend::on_did_change_background_tokenization_state(
 
 ///|
 /// Releases registry/view subscriptions, handlers, worker, and shared emitters.
-pub fn TokenizerSyntaxTokenBackend::dispose(
+fn TokenizerSyntaxTokenBackend::dispose(
   self : TokenizerSyntaxTokenBackend,
 ) -> Unit {
   if self.disposed {

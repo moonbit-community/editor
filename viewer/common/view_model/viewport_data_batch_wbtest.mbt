@@ -70,5 +70,4 @@ test "real viewport uses one batch, one passive read per projected model line, a
   assert_eq(lines.batch_call_count, 1)
   assert_eq(lines.passive_token_read_count, 3)
   assert_eq(calls.val, 0)
-  assert_false(model.tokenization.has_tokens())
 }

@@ -17,44 +17,44 @@
 /// Theme foreground `ColorId`s. `1`/`2` are Monaco's reserved default
 /// foreground/background (`encoded_token_attributes.mbt`); token colors start at
 /// `3`. Indices are the positions into `default_token_color_map`.
-pub const COLOR_ID_KEYWORD : Int = 3
+const COLOR_ID_KEYWORD : Int = 3
 
 ///|
-pub const COLOR_ID_VARIABLE : Int = 4
+const COLOR_ID_VARIABLE : Int = 4
 
 ///|
-pub const COLOR_ID_STRING : Int = 5
+const COLOR_ID_STRING : Int = 5
 
 ///|
-pub const COLOR_ID_NUMBER : Int = 6
+const COLOR_ID_NUMBER : Int = 6
 
 ///|
-pub const COLOR_ID_COMMENT : Int = 7
+const COLOR_ID_COMMENT : Int = 7
 
 ///|
-pub const COLOR_ID_PUNCTUATION : Int = 8
+const COLOR_ID_PUNCTUATION : Int = 8
 
 ///|
-pub const COLOR_ID_TYPE : Int = 9
+const COLOR_ID_TYPE : Int = 9
 
 ///|
-pub const COLOR_ID_FUNCTION : Int = 10
+const COLOR_ID_FUNCTION : Int = 10
 
 ///|
-pub const COLOR_ID_STRING_ESCAPE : Int = 11
+const COLOR_ID_STRING_ESCAPE : Int = 11
 
 ///|
-pub const COLOR_ID_REGEXP : Int = 12
+const COLOR_ID_REGEXP : Int = 12
 
 ///|
-pub const COLOR_ID_INVALID : Int = 13
+const COLOR_ID_INVALID : Int = 13
 
 ///|
 /// The foreground `ColorId` assigned to a tag. Groupings mirror the legacy
 /// `tokens.css` palette (e.g. punctuation/operator/delimiter share one color,
 /// constant/tag track the keyword color) so the post-flip output is the same
 /// colors under different class names.
-pub fn tag_foreground_color_id(tag : @syntax.HighlightTag) -> Int {
+fn tag_foreground_color_id(tag : @syntax.HighlightTag) -> Int {
   match tag {
     Keyword => COLOR_ID_KEYWORD
     Identifier => COLOR_ID_VARIABLE
@@ -82,7 +82,7 @@ pub fn tag_foreground_color_id(tag : @syntax.HighlightTag) -> Int {
 /// The 2-bit `StandardTokenType` for a tag. Only comments, strings and regexps
 /// carry a non-`Other` type (Monaco uses these for bracket matching, electric
 /// characters, autoclosing, …); every other tag's identity is in its color.
-pub fn tag_standard_token_type(tag : @syntax.HighlightTag) -> Int {
+fn tag_standard_token_type(tag : @syntax.HighlightTag) -> Int {
   match tag {
     Comment | CommentDoc => @common_tokens.STANDARD_TOKEN_TYPE_COMMENT
     String | StringEscape => @common_tokens.STANDARD_TOKEN_TYPE_STRING
@@ -96,7 +96,7 @@ pub fn tag_standard_token_type(tag : @syntax.HighlightTag) -> Int {
 /// + font style + standard token type + language id, via the `MetadataConsts`
 /// offsets. The background field is set to the default so the word matches
 /// `LineTokens::default_token_metadata` for fields the renderer ignores.
-pub fn tag_to_metadata(
+fn tag_to_metadata(
   tag : @syntax.HighlightTag,
   font_style? : Int = @common_tokens.FONT_STYLE_NONE,
   language_id? : Int = 0,
@@ -141,7 +141,8 @@ pub fn default_token_color_map() -> Array[String] {
 /// Index `0` (`ColorId.None`) is skipped. Production styling currently ships
 /// these rules statically in `tokens.css`; this generator is the faithful
 /// artifact and the basis for future dynamic theme injection.
-pub fn token_theme_style_block(color_map : Array[String]) -> String {
+#warnings("-unused_value")
+fn token_theme_style_block(color_map : Array[String]) -> String {
   let sb = StringBuilder::new()
   for i in 1..<color_map.length() {
     let color = color_map[i]

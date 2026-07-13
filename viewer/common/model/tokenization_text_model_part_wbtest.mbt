@@ -120,9 +120,9 @@ fn part_from_lines(
   lines : Array[String],
   language_id : String,
 ) -> TokenizationTextModelPart {
-  TokenizationTextModelPart::new(
+  TokenizationTextModelPart(
     test_model_state(lines, language_id),
-    AttachedViews::new(),
+    AttachedViews(),
   )
 }
 
@@ -269,7 +269,7 @@ test "token_count is a passive stored/default read" {
   let calls : Array[String] = []
   let part = TokenizationTextModelPart::new_with_support_resolver(
     test_model_state(lines, "passive-count"),
-    AttachedViews::new(),
+    AttachedViews(),
     _ => Some(logging_support(calls, Ref(0))),
   )
   assert_eq(part.token_count(), 3)
@@ -286,7 +286,7 @@ test "font payload forwards unchanged only through the exposed second emitter" {
   let disposing = Ref(false)
   let part = TokenizationTextModelPart::new_with_support_resolver(
     test_model_state_with_disposing(lines, "part-font-forward", disposing),
-    AttachedViews::new(),
+    AttachedViews(),
     _ => Some(logging_support([], Ref(0))),
   )
   let first_emitter_events = Ref(0)

@@ -46,7 +46,7 @@ priv struct BackendSchedulerHarness {
 fn backend_scheduler_harness() -> BackendSchedulerHarness {
   let idle : Array[IdleTask] = []
   let now = Ref(0.0)
-  let scheduler = TokenizationScheduler::new(
+  let scheduler = TokenizationScheduler(
     idle=callback => {
       let active = Ref(true)
       idle.push({ callback, active })
@@ -62,14 +62,14 @@ fn backend_scheduler_harness() -> BackendSchedulerHarness {
 ///|
 fn run_idle(task : IdleTask, remaining? : Double = 0.0) -> Unit {
   if task.active.val {
-    (task.callback)(TokenizationIdleDeadline::new(() => remaining))
+    (task.callback)(TokenizationIdleDeadline(() => remaining))
   }
 }
 
 ///|
 test "passive reads never invoke support; explicit force stores exact ranges" {
   let harness = backend_harness(["one", "two"])
-  let attached_views = AttachedViews::new()
+  let attached_views = AttachedViews()
   let calls : Array[String] = []
   let initial_calls = Ref(0)
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
@@ -97,7 +97,7 @@ test "too-large and missing support stay passive defaults and schedule nothing" 
   let resolves = Ref(0)
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
-    AttachedViews::new(),
+    AttachedViews(),
     _ => {
       resolves.val += 1
       Some(logging_support([], Ref(0)))
@@ -114,7 +114,7 @@ test "too-large and missing support stay passive defaults and schedule nothing" 
 ///|
 test "stable attached ranges refresh synchronously without a scheduler" {
   let harness = backend_harness(["one", "two", "three"])
-  let attached_views = AttachedViews::new()
+  let attached_views = AttachedViews()
   let calls : Array[String] = []
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
@@ -133,7 +133,7 @@ test "background completion remains completed across reset and repeated finish i
   let harness = backend_harness(["one"])
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
-    AttachedViews::new(),
+    AttachedViews(),
     _ => Some(logging_support([], Ref(0))),
   )
   let state_events = Ref(0)
@@ -154,7 +154,7 @@ test "scheduler None enqueues nothing; late scheduler wakes once and stale gener
   let calls : Array[String] = []
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
-    AttachedViews::new(),
+    AttachedViews(),
     _ => Some(logging_support(calls, Ref(0))),
   )
   harness.attached.val = 1
@@ -172,7 +172,7 @@ test "scheduler None enqueues nothing; late scheduler wakes once and stale gener
   backend.handle_did_change_attached()
   assert_eq(scheduler.idle.length(), 2)
   // Simulate a hostile host invoking an already-cancelled old callback.
-  (old_idle.callback)(TokenizationIdleDeadline::new(() => 0.0))
+  (old_idle.callback)(TokenizationIdleDeadline(() => 0.0))
   assert_eq(calls.length(), 0)
   run_idle(scheduler.idle[1])
   assert_eq(calls.length(), 2)
@@ -184,7 +184,7 @@ test "disposing guard drops token and font events" {
   let harness = backend_harness(["one"])
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
-    AttachedViews::new(),
+    AttachedViews(),
     _ => Some(logging_support([], Ref(0))),
   )
   let token_events = Ref(0)
@@ -204,7 +204,7 @@ test "set_font_info forwards the exact live payload and one absent removal" {
   let harness = backend_harness(["one"])
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
-    AttachedViews::new(),
+    AttachedViews(),
     _ => Some(logging_support([], Ref(0))),
   )
   let events : Array[ModelFontTokensChangedEvent] = []
@@ -244,7 +244,7 @@ priv suberror BackendInitialStateError {
 ///|
 test "failing initial state reports and disables support for the reset" {
   let harness = backend_harness(["one"])
-  let failing = InternalTokenizationSupportAdapter::new(
+  let failing = InternalTokenizationSupportAdapter(
     initial_state=() => raise BackendInitialStateError::InitialStateFailure,
     tokenize_encoded=(_text, _has_eol, state) => {
       tokens: [0, tag_to_metadata(Plain)],
@@ -254,7 +254,7 @@ test "failing initial state reports and disables support for the reset" {
   )
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
-    AttachedViews::new(),
+    AttachedViews(),
     _ => Some(failing),
   )
   assert_eq(harness.errors.length(), 1)
@@ -268,7 +268,7 @@ test "refreshRange preserves asymmetric clamp and reversed no-work branches" {
   let calls : Array[String] = []
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
-    AttachedViews::new(),
+    AttachedViews(),
     _ => Some(logging_support(calls, Ref(0))),
   )
   backend.refresh_range(-10, 99)

@@ -115,7 +115,7 @@ fn schedule_tokenization_idle(
     browser_tokenization_idle_adapter,
     deadline => {
       callback(
-        @model.TokenizationIdleDeadline::new(() => {
+        TokenizationIdleDeadline(() => {
           browser_idle_deadline_time_remaining_js(deadline)
         }),
       )
@@ -127,7 +127,7 @@ fn schedule_tokenization_idle(
 }
 
 ///|
-let browser_tokenization_scheduler : @model.TokenizationScheduler = @model.TokenizationScheduler::new(
+let browser_tokenization_scheduler : @model.TokenizationScheduler = TokenizationScheduler(
   idle=schedule_tokenization_idle,
   zero_timeout=callback => schedule_timeout(callback, 0),
   delay=(milliseconds, callback) => schedule_timeout(callback, milliseconds),

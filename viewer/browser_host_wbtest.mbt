@@ -164,7 +164,7 @@ test "BIA adapter selects once and the global wrapper is asynchronous cancellabl
   idle_target_run_timeout(target, 0)
 
   let global_called = Ref(false)
-  let global_handle = browser_tokenization_scheduler.idle(_deadline => {
+  let global_handle = schedule_tokenization_idle(_deadline => {
     global_called.val = true
   })
   assert_false(global_called.val)

@@ -88,7 +88,7 @@ fn model_tokenization_scheduler_harness() -> ModelTokenizationSchedulerHarness {
   let zero : Array[ModelScheduledTask] = []
   let delayed : Array[ModelScheduledTask] = []
   let delay_milliseconds : Array[Int] = []
-  let scheduler = TokenizationScheduler::new(
+  let scheduler = TokenizationScheduler(
     idle=callback => {
       let active = Ref(true)
       idle.push({ callback, active })
@@ -314,12 +314,12 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
 
   // A hostile host invoking an old epoch callback cannot tokenize or disturb
   // the fresh epoch's coalescing state.
-  (first_scheduler.idle[0].callback)(TokenizationIdleDeadline::new(() => 0.0))
+  (first_scheduler.idle[0].callback)(TokenizationIdleDeadline(() => 0.0))
   assert_eq(calls.val, 0)
   let fresh = model.on_before_attached(scheduler=later_scheduler.scheduler)
   assert_eq(later_scheduler.idle.length(), 1)
   assert_true(later_scheduler.idle[0].active.val)
-  (first_scheduler.idle[0].callback)(TokenizationIdleDeadline::new(() => 0.0))
+  (first_scheduler.idle[0].callback)(TokenizationIdleDeadline(() => 0.0))
   assert_eq(calls.val, 0)
   assert_true(later_scheduler.idle[0].active.val)
   model.on_before_detached(fresh)
@@ -508,7 +508,7 @@ test "TextModel reports a failing tokenizer and remains live for later reset" {
     "text-model-production-error-reporter",
     _ => {
       Some(
-        InternalTokenizationSupportAdapter::new(
+        InternalTokenizationSupportAdapter(
           initial_state=() => {
             attempts.val += 1
             if attempts.val == 1 {

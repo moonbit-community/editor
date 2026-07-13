@@ -8,7 +8,7 @@
 
 ///|
 /// Strict UTF-16 line-length bound for cheap demand tokenization.
-pub const CHEAP_TOKENIZATION_LENGTH_LIMIT : Int = 2048
+const CHEAP_TOKENIZATION_LENGTH_LIMIT : Int = 2048
 
 ///|
 /// Private maximum-line sentinel used only when no invalid frontier exists.
@@ -16,7 +16,8 @@ const MAX_LINE_NUMBER_SENTINEL : Int = 0x7FFFFFFF
 
 ///|
 /// One source-shaped syntactic font token returned beside encoded words.
-pub(all) struct FontToken {
+#warnings("-struct_never_constructed-unused_value")
+priv struct FontToken {
   start_index : Int
   end_index : Int
   font_family : String?
@@ -26,7 +27,8 @@ pub(all) struct FontToken {
 
 ///|
 /// Raw start-offset token words, optional font information, and carried state.
-pub(all) struct EncodedTokenizationResult {
+#warnings("-unused_field")
+priv struct EncodedTokenizationResult {
   tokens : Array[UInt]
   font_info : Array[FontToken]?
   end_state : @syntax.TokenizerState
@@ -36,14 +38,14 @@ pub(all) struct EncodedTokenizationResult {
 /// Internal source-shaped tokenization adapter. Unlike public
 /// `syntax.LineTokenizer`, callbacks can fail and receive `has_eol`; tests may
 /// inject those behaviors without widening the public syntax API.
-pub struct InternalTokenizationSupportAdapter {
-  priv get_initial_state : () -> @syntax.TokenizerState raise
-  priv tokenize_encoded : (String, Bool, @syntax.TokenizerState) -> EncodedTokenizationResult raise
+priv struct InternalTokenizationSupportAdapter {
+  get_initial_state : () -> @syntax.TokenizerState raise
+  tokenize_encoded : (String, Bool, @syntax.TokenizerState) -> EncodedTokenizationResult raise
 }
 
 ///|
 /// Creates an internal adapter from source-shaped callbacks.
-pub fn InternalTokenizationSupportAdapter::new(
+fn InternalTokenizationSupportAdapter::InternalTokenizationSupportAdapter(
   initial_state~ : () -> @syntax.TokenizerState raise,
   tokenize_encoded~ : (String, Bool, @syntax.TokenizerState) -> EncodedTokenizationResult raise,
 ) -> InternalTokenizationSupportAdapter {
@@ -52,7 +54,7 @@ pub fn InternalTokenizationSupportAdapter::new(
 
 ///|
 /// Acquires the initial carried state.
-pub fn InternalTokenizationSupportAdapter::initial_state(
+fn InternalTokenizationSupportAdapter::initial_state(
   self : InternalTokenizationSupportAdapter,
 ) -> @syntax.TokenizerState raise {
   (self.get_initial_state)()
@@ -60,7 +62,7 @@ pub fn InternalTokenizationSupportAdapter::initial_state(
 
 ///|
 /// Tokenizes raw start-offset words while retaining the exact `has_eol` fact.
-pub fn InternalTokenizationSupportAdapter::tokenize(
+fn InternalTokenizationSupportAdapter::tokenize(
   self : InternalTokenizationSupportAdapter,
   text : String,
   has_eol : Bool,
@@ -76,7 +78,7 @@ fn public_tokenizer_adapter(
   codec : @services.LanguageIdCodec,
   language_id : String,
 ) -> InternalTokenizationSupportAdapter {
-  InternalTokenizationSupportAdapter::new(
+  InternalTokenizationSupportAdapter(
     initial_state=() => tokenizer.initial_state(),
     tokenize_encoded=(text, _has_eol, state) => {
       let (tokens, end_state) = tokenizer.tokenize_line(text, state)
@@ -96,19 +98,19 @@ fn public_tokenizer_adapter(
 
 ///|
 /// Dense one-based line-end-state storage.
-pub struct TokenizationStateStore {
-  priv line_end_states : Array[@syntax.TokenizerState?]
+priv struct TokenizationStateStore {
+  line_end_states : Array[@syntax.TokenizerState?]
 }
 
 ///|
 /// Creates an empty state store.
-pub fn TokenizationStateStore::new() -> TokenizationStateStore {
+fn TokenizationStateStore::TokenizationStateStore() -> TokenizationStateStore {
   { line_end_states: [] }
 }
 
 ///|
 /// Returns one exact one-based end state.
-pub fn TokenizationStateStore::get_end_state(
+fn TokenizationStateStore::get_end_state(
   self : TokenizationStateStore,
   line_number : Int,
 ) -> @syntax.TokenizerState? {
@@ -121,7 +123,7 @@ pub fn TokenizationStateStore::get_end_state(
 
 ///|
 /// Stores a changed state; equal values preserve the prior cell and return false.
-pub fn TokenizationStateStore::set_end_state(
+fn TokenizationStateStore::set_end_state(
   self : TokenizationStateStore,
   line_number : Int,
   state : @syntax.TokenizerState,
@@ -139,19 +141,20 @@ pub fn TokenizationStateStore::set_end_state(
 
 ///|
 /// Sorted disjoint invalid-line priority queue.
-pub struct RangePriorityQueueImpl {
-  priv ranges : Array[@base_common.OffsetRange]
+priv struct RangePriorityQueueImpl {
+  ranges : Array[@base_common.OffsetRange]
 }
 
 ///|
 /// Creates an empty queue.
-pub fn RangePriorityQueueImpl::new() -> RangePriorityQueueImpl {
+fn RangePriorityQueueImpl::RangePriorityQueueImpl() -> RangePriorityQueueImpl {
   { ranges: [] }
 }
 
 ///|
 /// Returns the backing ranges in queue order.
-pub fn RangePriorityQueueImpl::get_ranges(
+#warnings("-unused_value")
+fn RangePriorityQueueImpl::get_ranges(
   self : RangePriorityQueueImpl,
 ) -> Array[@base_common.OffsetRange] {
   self.ranges
@@ -159,7 +162,7 @@ pub fn RangePriorityQueueImpl::get_ranges(
 
 ///|
 /// Smallest queued line, or `None`.
-pub fn RangePriorityQueueImpl::min(self : RangePriorityQueueImpl) -> Int? {
+fn RangePriorityQueueImpl::min(self : RangePriorityQueueImpl) -> Int? {
   if self.ranges.is_empty() {
     None
   } else {
@@ -169,9 +172,8 @@ pub fn RangePriorityQueueImpl::min(self : RangePriorityQueueImpl) -> Int? {
 
 ///|
 /// Removes and returns the smallest line, advancing or deleting its range.
-pub fn RangePriorityQueueImpl::remove_min(
-  self : RangePriorityQueueImpl,
-) -> Int? {
+#warnings("-unused_value")
+fn RangePriorityQueueImpl::remove_min(self : RangePriorityQueueImpl) -> Int? {
   if self.ranges.is_empty() {
     return None
   }
@@ -186,7 +188,7 @@ pub fn RangePriorityQueueImpl::remove_min(
 
 ///|
 /// Deletes one queued line, trimming/removing/splitting its containing range.
-pub fn RangePriorityQueueImpl::delete(
+fn RangePriorityQueueImpl::delete(
   self : RangePriorityQueueImpl,
   value : Int,
 ) -> Unit {
@@ -217,7 +219,7 @@ pub fn RangePriorityQueueImpl::delete(
 
 ///|
 /// Unions one half-open range into the queue.
-pub fn RangePriorityQueueImpl::add_range(
+fn RangePriorityQueueImpl::add_range(
   self : RangePriorityQueueImpl,
   range : @base_common.OffsetRange,
 ) -> Unit {
@@ -226,7 +228,8 @@ pub fn RangePriorityQueueImpl::add_range(
 
 ///|
 /// Replaces/resizes an edit range and shifts every later queued range.
-pub fn RangePriorityQueueImpl::add_range_and_resize(
+#warnings("-unused_value")
+fn RangePriorityQueueImpl::add_range_and_resize(
   self : RangePriorityQueueImpl,
   range : @base_common.OffsetRange,
   new_length : Int,
@@ -272,36 +275,35 @@ pub fn RangePriorityQueueImpl::add_range_and_resize(
 
 ///|
 /// Joins each range representation with the literal source separator.
-pub fn RangePriorityQueueImpl::to_string(
-  self : RangePriorityQueueImpl,
-) -> String {
+#warnings("-unused_value")
+fn RangePriorityQueueImpl::to_string(self : RangePriorityQueueImpl) -> String {
   self.ranges.map(range => range.to_string()).join(" + ")
 }
 
 ///|
 /// Invalid-line record with its required carried start state.
-pub(all) struct FirstInvalidLine {
+priv struct FirstInvalidLine {
   line_number : Int
   start_state : @syntax.TokenizerState
 }
 
 ///|
 /// End-state storage plus invalid-line queue invariant.
-pub struct TrackingTokenizationStateStore {
-  priv tokenization_state_store : TokenizationStateStore
-  priv invalid_end_states_line_numbers : RangePriorityQueueImpl
-  priv line_count : Int
+priv struct TrackingTokenizationStateStore {
+  tokenization_state_store : TokenizationStateStore
+  invalid_end_states_line_numbers : RangePriorityQueueImpl
+  line_count : Int
 }
 
 ///|
 /// Seeds every one-based line invalid as `[1,line_count+1)`.
-pub fn TrackingTokenizationStateStore::new(
+fn TrackingTokenizationStateStore::TrackingTokenizationStateStore(
   line_count : Int,
 ) -> TrackingTokenizationStateStore {
-  let invalid = RangePriorityQueueImpl::new()
+  let invalid = RangePriorityQueueImpl()
   invalid.add_range(OffsetRange(1, line_count + 1))
   {
-    tokenization_state_store: TokenizationStateStore::new(),
+    tokenization_state_store: TokenizationStateStore(),
     invalid_end_states_line_numbers: invalid,
     line_count,
   }
@@ -309,7 +311,7 @@ pub fn TrackingTokenizationStateStore::new(
 
 ///|
 /// Returns one exact line end state.
-pub fn TrackingTokenizationStateStore::get_end_state(
+fn TrackingTokenizationStateStore::get_end_state(
   self : TrackingTokenizationStateStore,
   line_number : Int,
 ) -> @syntax.TokenizerState? {
@@ -318,7 +320,7 @@ pub fn TrackingTokenizationStateStore::get_end_state(
 
 ///|
 /// Commits a state and invalidates only its successor when changed and nonfinal.
-pub fn TrackingTokenizationStateStore::set_end_state(
+fn TrackingTokenizationStateStore::set_end_state(
   self : TrackingTokenizationStateStore,
   line_number : Int,
   state : @syntax.TokenizerState,
@@ -335,7 +337,7 @@ pub fn TrackingTokenizationStateStore::set_end_state(
 
 ///|
 /// Adds an exact invalid half-open line range.
-pub fn TrackingTokenizationStateStore::invalidate_end_state_range(
+fn TrackingTokenizationStateStore::invalidate_end_state_range(
   self : TrackingTokenizationStateStore,
   range : @base_common.LineRange,
 ) -> Unit {
@@ -346,7 +348,7 @@ pub fn TrackingTokenizationStateStore::invalidate_end_state_range(
 
 ///|
 /// Smallest invalid line or `None`.
-pub fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number(
+fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number(
   self : TrackingTokenizationStateStore,
 ) -> Int? {
   self.invalid_end_states_line_numbers.min()
@@ -354,7 +356,7 @@ pub fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number(
 
 ///|
 /// Smallest invalid line or the private maximum-line sentinel.
-pub fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number_or_max(
+fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number_or_max(
   self : TrackingTokenizationStateStore,
 ) -> Int {
   match self.get_first_invalid_end_state_line_number() {
@@ -365,7 +367,7 @@ pub fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number_o
 
 ///|
 /// Whether every line end state is valid.
-pub fn TrackingTokenizationStateStore::all_states_valid(
+fn TrackingTokenizationStateStore::all_states_valid(
   self : TrackingTokenizationStateStore,
 ) -> Bool {
   self.invalid_end_states_line_numbers.min() is None
@@ -373,7 +375,7 @@ pub fn TrackingTokenizationStateStore::all_states_valid(
 
 ///|
 /// Initial state for line one, predecessor end state otherwise.
-pub fn TrackingTokenizationStateStore::get_start_state(
+fn TrackingTokenizationStateStore::get_start_state(
   self : TrackingTokenizationStateStore,
   line_number : Int,
   initial_state : @syntax.TokenizerState,
@@ -387,7 +389,7 @@ pub fn TrackingTokenizationStateStore::get_start_state(
 
 ///|
 /// Resolves the first invalid line and asserts its predecessor-state invariant.
-pub fn TrackingTokenizationStateStore::get_first_invalid_line(
+fn TrackingTokenizationStateStore::get_first_invalid_line(
   self : TrackingTokenizationStateStore,
   initial_state : @syntax.TokenizerState,
 ) -> FirstInvalidLine? {
@@ -402,28 +404,28 @@ pub fn TrackingTokenizationStateStore::get_first_invalid_line(
 
 ///|
 /// Tokenization support plus the initial/end-state tracker.
-pub struct TokenizerWithStateStore {
-  priv initial_state_value : @syntax.TokenizerState
+priv struct TokenizerWithStateStore {
+  initial_state_value : @syntax.TokenizerState
   tokenization_support : InternalTokenizationSupportAdapter
   store : TrackingTokenizationStateStore
 }
 
 ///|
 /// Calls support initial-state acquisition and seeds the exact line count.
-pub fn TokenizerWithStateStore::new(
+fn TokenizerWithStateStore::TokenizerWithStateStore(
   line_count : Int,
   tokenization_support : InternalTokenizationSupportAdapter,
 ) -> TokenizerWithStateStore raise {
   {
     initial_state_value: tokenization_support.initial_state(),
     tokenization_support,
-    store: TrackingTokenizationStateStore::new(line_count),
+    store: TrackingTokenizationStateStore(line_count),
   }
 }
 
 ///|
 /// Start state for an exact one-based line.
-pub fn TokenizerWithStateStore::get_start_state(
+fn TokenizerWithStateStore::get_start_state(
   self : TokenizerWithStateStore,
   line_number : Int,
 ) -> @syntax.TokenizerState? {
@@ -432,7 +434,7 @@ pub fn TokenizerWithStateStore::get_start_state(
 
 ///|
 /// First invalid line plus its start state.
-pub fn TokenizerWithStateStore::get_first_invalid_line(
+fn TokenizerWithStateStore::get_first_invalid_line(
   self : TokenizerWithStateStore,
 ) -> FirstInvalidLine? {
   self.store.get_first_invalid_line(self.initial_state_value)
@@ -440,22 +442,22 @@ pub fn TokenizerWithStateStore::get_first_invalid_line(
 
 ///|
 /// Stateful tokenizer with live model state and a language-id codec.
-pub struct TokenizerWithStateStoreAndTextModel {
+priv struct TokenizerWithStateStoreAndTextModel {
   base : TokenizerWithStateStore
-  priv model_state : TokenizationModelState
+  model_state : TokenizationModelState
   language_id_codec : @services.LanguageIdCodec
 }
 
 ///|
 /// Preserves base initialization before retaining live model-state facts.
-fn TokenizerWithStateStoreAndTextModel::new(
+fn TokenizerWithStateStoreAndTextModel::TokenizerWithStateStoreAndTextModel(
   line_count : Int,
   tokenization_support : InternalTokenizationSupportAdapter,
   model_state : TokenizationModelState,
   language_id_codec : @services.LanguageIdCodec,
 ) -> TokenizerWithStateStoreAndTextModel raise {
   {
-    base: TokenizerWithStateStore::new(line_count, tokenization_support),
+    base: TokenizerWithStateStore(line_count, tokenization_support),
     model_state,
     language_id_codec,
   }
@@ -463,7 +465,7 @@ fn TokenizerWithStateStoreAndTextModel::new(
 
 ///|
 /// Exposes the live tracking store to backend scheduling.
-pub fn TokenizerWithStateStoreAndTextModel::state_store(
+fn TokenizerWithStateStoreAndTextModel::state_store(
   self : TokenizerWithStateStoreAndTextModel,
 ) -> TrackingTokenizationStateStore {
   self.base.store
@@ -471,7 +473,7 @@ pub fn TokenizerWithStateStoreAndTextModel::state_store(
 
 ///|
 /// First invalid line plus carried state.
-pub fn TokenizerWithStateStoreAndTextModel::get_first_invalid_line(
+fn TokenizerWithStateStoreAndTextModel::get_first_invalid_line(
   self : TokenizerWithStateStoreAndTextModel,
 ) -> FirstInvalidLine? {
   self.base.get_first_invalid_line()
@@ -479,7 +481,7 @@ pub fn TokenizerWithStateStoreAndTextModel::get_first_invalid_line(
 
 ///|
 /// Tokenizes invalid lines in order through the inclusive target.
-pub fn TokenizerWithStateStoreAndTextModel::update_tokens_until_line(
+fn TokenizerWithStateStoreAndTextModel::update_tokens_until_line(
   self : TokenizerWithStateStoreAndTextModel,
   builder : @common_tokens.ContiguousMultilineTokensBuilder,
   line_number : Int,
@@ -512,7 +514,7 @@ pub fn TokenizerWithStateStoreAndTextModel::update_tokens_until_line(
 
 ///|
 /// Accurate iff the line lies strictly before the first invalid end state.
-pub fn TokenizerWithStateStoreAndTextModel::has_accurate_tokens_for_line(
+fn TokenizerWithStateStoreAndTextModel::has_accurate_tokens_for_line(
   self : TokenizerWithStateStoreAndTextModel,
   line_number : Int,
 ) -> Bool {
@@ -521,7 +523,7 @@ pub fn TokenizerWithStateStoreAndTextModel::has_accurate_tokens_for_line(
 
 ///|
 /// Accurate lines are cheap; only a short first-invalid line is otherwise cheap.
-pub fn TokenizerWithStateStoreAndTextModel::is_cheap_to_tokenize(
+fn TokenizerWithStateStoreAndTextModel::is_cheap_to_tokenize(
   self : TokenizerWithStateStoreAndTextModel,
   line_number : Int,
 ) -> Bool {
@@ -539,13 +541,13 @@ pub fn TokenizerWithStateStoreAndTextModel::is_cheap_to_tokenize(
 
 ///|
 /// Result flag distinguishing guessed-state viewport tokens from accurate demand.
-pub(all) struct HeuristicTokenizationResult {
+priv struct HeuristicTokenizationResult {
   heuristic_tokens : Bool
 }
 
 ///|
 /// Chooses no-op, accurate-forward, or guessed-state viewport tokenization.
-pub fn TokenizerWithStateStoreAndTextModel::tokenize_heuristically(
+fn TokenizerWithStateStoreAndTextModel::tokenize_heuristically(
   self : TokenizerWithStateStoreAndTextModel,
   builder : @common_tokens.ContiguousMultilineTokensBuilder,
   start_line_number : Int,
@@ -579,7 +581,7 @@ pub fn TokenizerWithStateStoreAndTextModel::tokenize_heuristically(
 
 ///|
 /// Finds likely indentation ancestors and replays them without EOL.
-pub fn TokenizerWithStateStoreAndTextModel::guess_start_state(
+fn TokenizerWithStateStoreAndTextModel::guess_start_state(
   self : TokenizerWithStateStoreAndTextModel,
   line_number : Int,
 ) -> @syntax.TokenizerState {
@@ -615,7 +617,7 @@ pub fn TokenizerWithStateStoreAndTextModel::guess_start_state(
 
 ///|
 /// Indentation-ancestor search result.
-pub(all) struct LikelyRelevantLines {
+priv struct LikelyRelevantLines {
   likely_relevant_lines : Array[String]
   initial_state : @syntax.TokenizerState?
 }
@@ -698,16 +700,16 @@ fn safe_tokenize(
 
 ///|
 /// Callback contract consumed by default/custom background tokenizers.
-pub struct BackgroundTokenizationStore {
-  priv apply_tokens : (Array[@common_tokens.ContiguousMultilineTokens]) -> Unit
-  priv apply_font_info : (FontTokensUpdate) -> Unit
-  priv finish : () -> Unit
-  priv apply_end_state : (Int, @syntax.TokenizerState) -> Unit
+priv struct BackgroundTokenizationStore {
+  apply_tokens : (Array[@common_tokens.ContiguousMultilineTokens]) -> Unit
+  apply_font_info : (FontTokensUpdate) -> Unit
+  finish : () -> Unit
+  apply_end_state : (Int, @syntax.TokenizerState) -> Unit
 }
 
 ///|
 /// Creates a background output store from source-shaped callbacks.
-pub fn BackgroundTokenizationStore::new(
+fn BackgroundTokenizationStore::BackgroundTokenizationStore(
   set_tokens~ : (Array[@common_tokens.ContiguousMultilineTokens]) -> Unit,
   set_font_info~ : (FontTokensUpdate) -> Unit,
   background_tokenization_finished~ : () -> Unit,
@@ -723,7 +725,7 @@ pub fn BackgroundTokenizationStore::new(
 
 ///|
 /// Applies a contiguous batch array.
-pub fn BackgroundTokenizationStore::set_tokens(
+fn BackgroundTokenizationStore::set_tokens(
   self : BackgroundTokenizationStore,
   tokens : Array[@common_tokens.ContiguousMultilineTokens],
 ) -> Unit {
@@ -732,7 +734,8 @@ pub fn BackgroundTokenizationStore::set_tokens(
 
 ///|
 /// Applies syntactic font updates.
-pub fn BackgroundTokenizationStore::set_font_info(
+#warnings("-unused_value")
+fn BackgroundTokenizationStore::set_font_info(
   self : BackgroundTokenizationStore,
   changes : FontTokensUpdate,
 ) -> Unit {
@@ -741,7 +744,7 @@ pub fn BackgroundTokenizationStore::set_font_info(
 
 ///|
 /// Publishes background completion.
-pub fn BackgroundTokenizationStore::background_tokenization_finished(
+fn BackgroundTokenizationStore::background_tokenization_finished(
   self : BackgroundTokenizationStore,
 ) -> Unit {
   (self.finish)()
@@ -749,7 +752,8 @@ pub fn BackgroundTokenizationStore::background_tokenization_finished(
 
 ///|
 /// Applies one custom-worker end state.
-pub fn BackgroundTokenizationStore::set_end_state(
+#warnings("-unused_value")
+fn BackgroundTokenizationStore::set_end_state(
   self : BackgroundTokenizationStore,
   line_number : Int,
   state : @syntax.TokenizerState,
@@ -759,19 +763,19 @@ pub fn BackgroundTokenizationStore::set_end_state(
 
 ///|
 /// Default cancellable idle/deadline grammar worker.
-pub struct DefaultBackgroundTokenizer {
-  priv tokenizer_with_state_store : TokenizerWithStateStoreAndTextModel
-  priv background_token_store : BackgroundTokenizationStore
-  priv mut is_disposed : Bool
-  priv mut is_scheduled : Bool
-  priv generation : Ref[Int]
-  priv mut idle_handle : @base_common.Disposable?
-  priv mut zero_handles : Array[@base_common.Disposable]
+priv struct DefaultBackgroundTokenizer {
+  tokenizer_with_state_store : TokenizerWithStateStoreAndTextModel
+  background_token_store : BackgroundTokenizationStore
+  mut is_disposed : Bool
+  mut is_scheduled : Bool
+  generation : Ref[Int]
+  mut idle_handle : @base_common.Disposable?
+  mut zero_handles : Array[@base_common.Disposable]
 }
 
 ///|
 /// Creates an unscheduled live worker.
-pub fn DefaultBackgroundTokenizer::new(
+fn DefaultBackgroundTokenizer::DefaultBackgroundTokenizer(
   tokenizer_with_state_store : TokenizerWithStateStoreAndTextModel,
   background_token_store : BackgroundTokenizationStore,
 ) -> DefaultBackgroundTokenizer {
@@ -806,7 +810,7 @@ fn DefaultBackgroundTokenizer::cancel_pending(
 
 ///|
 /// Terminal disposal makes every old-generation callback inert.
-pub fn DefaultBackgroundTokenizer::dispose(
+fn DefaultBackgroundTokenizer::dispose(
   self : DefaultBackgroundTokenizer,
 ) -> Unit {
   if !self.is_disposed {
@@ -818,7 +822,7 @@ pub fn DefaultBackgroundTokenizer::dispose(
 ///|
 /// Begins/restarts work. A final detach cancels the generation; a late first
 /// scheduler installation while attached enters the ordinary begin path once.
-pub fn DefaultBackgroundTokenizer::handle_changes(
+fn DefaultBackgroundTokenizer::handle_changes(
   self : DefaultBackgroundTokenizer,
 ) -> Unit {
   if self.tokenizer_with_state_store.model_state.attached_count.val == 0 {
@@ -934,7 +938,7 @@ fn DefaultBackgroundTokenizer::background_tokenize_for_at_least_1ms(
 
 ///|
 /// Whether invalid state remains.
-pub fn DefaultBackgroundTokenizer::has_lines_to_tokenize(
+fn DefaultBackgroundTokenizer::has_lines_to_tokenize(
   self : DefaultBackgroundTokenizer,
 ) -> Bool {
   !self.tokenizer_with_state_store.base.store.all_states_valid()
@@ -942,7 +946,7 @@ pub fn DefaultBackgroundTokenizer::has_lines_to_tokenize(
 
 ///|
 /// Tokenizes exactly the first invalid line, or returns `line_count + 1`.
-pub fn DefaultBackgroundTokenizer::tokenize_one_invalid_line(
+fn DefaultBackgroundTokenizer::tokenize_one_invalid_line(
   self : DefaultBackgroundTokenizer,
   builder : @common_tokens.ContiguousMultilineTokensBuilder,
 ) -> Int {
@@ -960,7 +964,7 @@ pub fn DefaultBackgroundTokenizer::tokenize_one_invalid_line(
 
 ///|
 /// Publishes completion whenever live and all states are valid.
-pub fn DefaultBackgroundTokenizer::check_finished(
+fn DefaultBackgroundTokenizer::check_finished(
   self : DefaultBackgroundTokenizer,
 ) -> Unit {
   if self.is_disposed {
@@ -973,7 +977,7 @@ pub fn DefaultBackgroundTokenizer::check_finished(
 
 ///|
 /// Marks the exact requested half-open range invalid; callers own scheduling.
-pub fn DefaultBackgroundTokenizer::request_tokens(
+fn DefaultBackgroundTokenizer::request_tokens(
   self : DefaultBackgroundTokenizer,
   start_line_number : Int,
   end_line_number_exclusive : Int,

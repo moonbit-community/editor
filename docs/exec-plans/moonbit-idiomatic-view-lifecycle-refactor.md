@@ -1,7 +1,6 @@
 # MoonBit-Idiomatic View Lifecycle Refactor
 
-Status: proposed; source and local inventory complete; **STOP FOR REVIEW** before
-implementation.
+Status: implemented on 2026-07-13; all milestones and required checks complete.
 Date: 2026-07-13
 Monaco oracle: checked-in `vscode` commit
 `b18492a288de038fbc7643aae6de8247029d11bd`.
@@ -580,31 +579,67 @@ amend, or rewrite history without approval.
 
 ## Acceptance Criteria
 
-- [ ] Review explicitly approves the two-capability-index design.
-- [ ] The pinned Monaco source has been rechecked at implementation start.
-- [ ] Every structural parity-ledger row has a permitted terminal status and
+- [x] Review explicitly approves the two-capability-index design.
+- [x] The pinned Monaco source has been rechecked at implementation start.
+- [x] Every structural parity-ledger row has a permitted terminal status and
       evidence.
-- [ ] No private `ViewPart` trait or `impl ViewPart` remains.
-- [ ] `ViewLines` cannot be passed through the ordinary render-part lifecycle.
-- [ ] The event-handler array contains exactly the eight inventoried consumers
+- [x] No private `ViewPart` trait or `impl ViewPart` remains.
+- [x] `ViewLines` cannot be passed through the ordinary render-part lifecycle.
+- [x] The event-handler array contains exactly the eight inventoried consumers
       in the approved order.
-- [ ] The ordinary render-part array contains exactly the seven inventoried
+- [x] The ordinary render-part array contains exactly the seven inventoried
       parts in the approved order.
-- [ ] No generic production helper is retained solely for a whitebox fake.
-- [ ] No private `DynamicViewOverlay` trait or implementation remains unless a
+- [x] No generic production helper is retained solely for a whitebox fake.
+- [x] No private `DynamicViewOverlay` trait or implementation remains unless a
       newly documented and reviewed open extension boundary proves it necessary.
-- [ ] Event batching, reentrancy, dirtiness, render-phase order, overlay order,
+- [x] Event batching, reentrancy, dirtiness, render-phase order, overlay order,
       DOM identity, and teardown tests pass.
-- [ ] `pkg.generated.mbti` contains no unintended public contract change.
-- [ ] Current README/architecture prose describes the final ownership model.
-- [ ] `just check`, `just test`, `just build`, and `just test-browser` pass.
-- [ ] The final diff contains no unintended DOM, CSS, selector, visual, or
+- [x] `pkg.generated.mbti` contains no unintended public contract change.
+- [x] Current README/architecture prose describes the final ownership model.
+- [x] `just check`, `just test`, `just build`, and `just test-browser` pass.
+- [x] The final diff contains no unintended DOM, CSS, selector, visual, or
       geometry changes.
-- [ ] Coherent milestones are committed without rewriting history.
+- [x] Coherent milestones are committed without rewriting history.
 
-## Review Decision Requested
+## Implementation Closeout
 
-Approve or revise these decisions before implementation:
+The user explicitly approved execution by requesting implementation of this
+plan on 2026-07-13. The implementation landed as three coherent code
+milestones:
+
+1. `fb60552` (`refactor(view): separate event and render capabilities`)
+   introduced the eight-member event index, narrowed the ordinary lifecycle to
+   seven members, and added source-order/batch/render-phase tests.
+2. `de2d713` (`refactor(view): close dynamic overlay dispatch`) removed the
+   redundant overlay trait and tested both ordered construction subsets and
+   per-line bounds.
+3. `ebc88c1` (`refactor(view): clarify lifecycle ownership`) split the mixed
+   adapter unit by responsibility and updated current ownership contracts.
+
+The closing oracle check still resolves `vscode` to
+`b18492a288de038fbc7643aae6de8247029d11bd`; all five inventoried line counts
+and SHA-256 hashes match the Source Inventory table. The structural ledger
+closes with 13 `TESTED` rows, zero deferrals, and zero N-A rows.
+
+Validation completed on 2026-07-13:
+
+- focused `viewer/browser/view` checks pass, including 47/47 package tests;
+- `just test-browser-component` passes 57/57 tests;
+- `just check` and `just build` pass;
+- `just test` passes 1,385/1,385 JS and 988/988 native tests;
+- `just test-browser` passes 82/82 tests, including component, performance,
+  and smoke coverage;
+- the generated `viewer/browser/view/pkg.generated.mbti` is unchanged;
+- the final production-trait search is empty, and `git diff --check` passes.
+
+There are no behavioral deviations. The closed enum/adaptor representation and
+file split are the planned MoonBit type-system seam; event order, render order,
+overlay subsets, DOM/CSS/selectors, geometry, scheduling, and public APIs remain
+unchanged.
+
+## Review Decision
+
+The explicit implementation request approved these decisions:
 
 1. keep `ViewPart` as a domain concept and closed enum name, but remove it as a
    trait;
@@ -617,5 +652,4 @@ Approve or revise these decisions before implementation:
 6. allow package/file restructuring where it clarifies ownership without
    widening APIs or reversing dependencies.
 
-**STOP FOR REVIEW. Do not begin Phase 1 until the user explicitly asks to
-implement this plan.**
+All four implementation phases are complete.

@@ -339,12 +339,12 @@ pub fn ViewModel::decorations(self : ViewModel) -> ViewModelDecorations {
 }
 
 ///|
-/// Coordinate converter for this view model, typed as the interface like
-/// Monaco's `public readonly coordinatesConverter: ICoordinatesConverter`
-/// (`viewModelImpl.ts:62,122`).
+/// Concrete coordinate converter owned by this view model. Callers erase it
+/// only at lower-tier boundaries that genuinely retain heterogeneous
+/// converters, such as `CursorContext`.
 pub fn ViewModel::coordinates_converter(
   self : ViewModel,
-) -> &@core.CoordinatesConverter {
+) -> ProjectedCoordinatesConverter {
   self.coordinates_converter
 }
 

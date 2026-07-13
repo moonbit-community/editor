@@ -6,7 +6,8 @@
 // DEVIATION (by decision, 2026-07-09): the computation is delegated to the
 // `moonbit-community/piediff` library (a GNU-diffutils-style bidirectional
 // Myers) instead of porting Monaco's Myers + refinement pipeline. Only the
-// interface, the result types, and the two trivial-input branches are 1:1;
+// source method contract, the result types, and the two trivial-input branches
+// are 1:1;
 // everything the source computes beyond a minimal line-level edit script is
 // not produced:
 // - char-level inner changes (`refineDiff`, `optimizeSequenceDiffs`,
@@ -42,12 +43,13 @@ pub fn DefaultLinesDiffComputer::new() -> DefaultLinesDiffComputer {
 }
 
 ///|
-pub impl LinesDiffComputer for DefaultLinesDiffComputer with fn compute_diff(
-  _self : DefaultLinesDiffComputer,
+pub fn DefaultLinesDiffComputer::compute_diff(
+  self : DefaultLinesDiffComputer,
   original_lines : Array[String],
   modified_lines : Array[String],
   options : LinesDiffComputerOptions,
 ) -> LinesDiff {
+  ignore(self)
   // `defaultLinesDiffComputer.ts:28`: a trivially-equal (empty or one-line)
   // input diffs to nothing.
   if original_lines.length() <= 1 && original_lines == modified_lines {

@@ -10,8 +10,9 @@ DOM-free port of Monaco's `vs/editor/common/viewModel/inlineDecorations.ts`.
 - `InjectedTextInlineDecorationsComputer` projects injected-text spans across
   wrapped lines.
 - `InlineDecorationsModel`, `CoordinatesConverter`, and
-  `InlineDecorationOptions` keep the computer generic. This package supplies the
-  `TextModel` and `ModelDecorationOptions` implementations.
+  `InlineDecorationOptions` keep the computer statically generic without trait
+  objects. This package supplies the `TextModel` and `ModelDecorationOptions`
+  implementations.
 - The public shapes are `InlineDecoration`, `InlineDecorationType`,
   `ViewModelDecoration`, and `ViewDecorationsCollection`; `view_model` exposes
   specialized aliases for its decoration option type.

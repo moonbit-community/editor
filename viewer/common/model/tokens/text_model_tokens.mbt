@@ -144,15 +144,6 @@ pub struct RangePriorityQueueImpl {
 }
 
 ///|
-/// Minimal invalid-offset queue contract consumed by the tracking store.
-pub(open) trait RangePriorityQueue {
-  fn min(Self) -> Int?
-  fn remove_min(Self) -> Int?
-  fn add_range(Self, @base_common.OffsetRange) -> Unit
-  fn add_range_and_resize(Self, @base_common.OffsetRange, Int) -> Unit
-}
-
-///|
 /// Creates an empty queue.
 pub fn RangePriorityQueueImpl::new() -> RangePriorityQueueImpl {
   { ranges: [] }
@@ -285,34 +276,6 @@ pub fn RangePriorityQueueImpl::to_string(
   self : RangePriorityQueueImpl,
 ) -> String {
   self.ranges.map(range => range.to_string()).join(" + ")
-}
-
-///|
-/// Source-shaped queue-interface implementation.
-pub impl RangePriorityQueue for RangePriorityQueueImpl with fn min(self) {
-  self.min()
-}
-
-///|
-pub impl RangePriorityQueue for RangePriorityQueueImpl with fn remove_min(self) {
-  self.remove_min()
-}
-
-///|
-pub impl RangePriorityQueue for RangePriorityQueueImpl with fn add_range(
-  self,
-  range,
-) {
-  self.add_range(range)
-}
-
-///|
-pub impl RangePriorityQueue for RangePriorityQueueImpl with fn add_range_and_resize(
-  self,
-  range,
-  new_length,
-) {
-  self.add_range_and_resize(range, new_length)
 }
 
 ///|

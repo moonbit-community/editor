@@ -208,7 +208,6 @@ pub fn RangePriorityQueueImpl::min(Self) -> Int?
 pub fn RangePriorityQueueImpl::new() -> Self
 pub fn RangePriorityQueueImpl::remove_min(Self) -> Int?
 pub fn RangePriorityQueueImpl::to_string(Self) -> String
-pub impl RangePriorityQueue for RangePriorityQueueImpl
 
 pub(all) struct TokenStoreChange {
   changes : Array[ModelTokensChangedRange]
@@ -345,10 +344,4 @@ pub(all) struct VisibleLineRange {
 pub type FontTokensUpdate = AnnotationsUpdate[FontTokenOption]
 
 // Traits
-pub(open) trait RangePriorityQueue {
-  fn min(Self) -> Int?
-  fn remove_min(Self) -> Int?
-  fn add_range(Self, @common.OffsetRange) -> Unit
-  fn add_range_and_resize(Self, @common.OffsetRange, Int) -> Unit
-}
 

@@ -9,6 +9,6 @@
 
 ///|
 /// `linesDiffComputers.getDefault()` (`linesDiffComputers.ts:11`).
-pub fn get_default() -> &LinesDiffComputer {
+pub fn get_default() -> DefaultLinesDiffComputer {
   DefaultLinesDiffComputer::new()
 }

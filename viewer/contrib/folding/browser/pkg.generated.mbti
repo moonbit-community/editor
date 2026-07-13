@@ -168,8 +168,10 @@ pub fn HiddenRangeModel::on_did_change(Self, (Array[@common.Range]) -> Unit) -> 
 pub struct IndentRangeProvider {
   // private fields
 }
+pub fn IndentRangeProvider::compute(Self) -> FoldingRegions
+pub fn IndentRangeProvider::dispose(Self) -> Unit
+pub fn IndentRangeProvider::id(Self) -> String
 pub fn IndentRangeProvider::new(@model.TextModel, @languages.Languages, FoldingLimitReporter, tab_size? : Int) -> Self
-pub impl RangeProvider for IndentRangeProvider
 
 pub(all) struct LineRange {
   start_line_number : Int
@@ -205,11 +207,5 @@ pub(open) trait DecorationProvider {
   fn get_decoration_option(Self, Bool, Bool, Bool) -> @model.ModelDecorationOptions
   fn change_decorations(Self, (@model.ModelDecorationsChangeAccessor) -> Unit) -> Unit
   fn remove_decorations(Self, Array[String]) -> Unit
-}
-
-pub(open) trait RangeProvider {
-  fn id(Self) -> String
-  fn compute(Self) -> FoldingRegions
-  fn dispose(Self) -> Unit
 }
 

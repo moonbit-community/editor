@@ -8,7 +8,7 @@ import {
 }
 
 // Values
-pub fn[O] is_model_decoration_visible(&InlineDecorationsModel, ModelDecoration[O]) -> Bool
+pub fn[O, M] is_model_decoration_visible(M, ModelDecoration[O]) -> Bool
 
 // Errors
 
@@ -52,15 +52,15 @@ pub(all) struct InlineModelContext[O] {
   get_model_decorations : (@common.Range, Bool, Bool) -> Array[ModelDecoration[O]]
 }
 
-pub struct InlineModelDecorationsComputer[O] {
+pub struct InlineModelDecorationsComputer[O, M, C] {
   // private fields
 }
-pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_decorations(Self[O], @common.Range, Bool, Bool) -> ViewDecorationsCollection[O]
-pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_inline_decorations(Self[O], Int) -> Array[Array[InlineDecoration]]
-pub fn[O] InlineModelDecorationsComputer::new(InlineModelContext[O], &InlineDecorationsModel, &CoordinatesConverter) -> Self[O]
-pub fn[O] InlineModelDecorationsComputer::on_line_mapping_changed(Self[O]) -> Unit
-pub fn[O] InlineModelDecorationsComputer::on_model_decorations_changed(Self[O]) -> Unit
-pub fn[O] InlineModelDecorationsComputer::reset(Self[O]) -> Unit
+pub fn[O : InlineDecorationOptions, M : InlineDecorationsModel, C : CoordinatesConverter] InlineModelDecorationsComputer::get_decorations(Self[O, M, C], @common.Range, Bool, Bool) -> ViewDecorationsCollection[O]
+pub fn[O : InlineDecorationOptions, M : InlineDecorationsModel, C : CoordinatesConverter] InlineModelDecorationsComputer::get_inline_decorations(Self[O, M, C], Int) -> Array[Array[InlineDecoration]]
+pub fn[O, M, C] InlineModelDecorationsComputer::new(InlineModelContext[O], M, C) -> Self[O, M, C]
+pub fn[O, M, C] InlineModelDecorationsComputer::on_line_mapping_changed(Self[O, M, C]) -> Unit
+pub fn[O, M, C] InlineModelDecorationsComputer::on_model_decorations_changed(Self[O, M, C]) -> Unit
+pub fn[O, M, C] InlineModelDecorationsComputer::reset(Self[O, M, C]) -> Unit
 
 pub(all) struct ModelDecoration[O] {
   id : String

@@ -9,7 +9,7 @@
 /// over three seams so the real model tier plugs in while its conformance
 /// suite keeps Monaco's test doubles (Monaco's own test setup does the same):
 ///   * `InlineDecorationsModel` — the line-geometry queries the computer makes
-///     (`&`-dispatched); implemented for the real `@model.TextModel` here and
+///     (statically dispatched); implemented for the real `@model.TextModel` here and
 ///     by the suite's mini text model double (kept inside the reference test).
 ///   * `CoordinatesConverter` — `ICoordinatesConverter`'s two used members;
 ///     implemented by the view model's converter (in `view_model`, the type's
@@ -175,8 +175,8 @@ pub fn[O] ViewModelDecoration::new(
 /// Whether a model decoration is visible. See the file deviation: the
 /// comment/string-token hiding paths are not ported (no tokenization seam, and
 /// unused by the suite), so this is always `true`.
-pub fn[O] is_model_decoration_visible(
-  _model : &InlineDecorationsModel,
+pub fn[O, M] is_model_decoration_visible(
+  _model : M,
   _decoration : ModelDecoration[O],
 ) -> Bool {
   true
@@ -205,27 +205,31 @@ pub(all) struct InlineModelContext[O] {
 /// Computes inline decorations from a model's decorations, mapped into view
 /// coordinates and grouped per view line (Monaco
 /// `InlineModelDecorationsComputer`).
-pub struct InlineModelDecorationsComputer[O] {
+pub struct InlineModelDecorationsComputer[O, M, C] {
   priv context : InlineModelContext[O]
-  priv model : &InlineDecorationsModel
-  priv coordinates_converter : &CoordinatesConverter
+  priv model : M
+  priv coordinates_converter : C
   priv mut decorations_cache : Map[String, ViewModelDecoration[O]]
 }
 
 ///|
 /// Builds an inline-model-decorations computer.
-pub fn[O] InlineModelDecorationsComputer::new(
+pub fn[O, M, C] InlineModelDecorationsComputer::new(
   context : InlineModelContext[O],
-  model : &InlineDecorationsModel,
-  coordinates_converter : &CoordinatesConverter,
-) -> InlineModelDecorationsComputer[O] {
+  model : M,
+  coordinates_converter : C,
+) -> InlineModelDecorationsComputer[O, M, C] {
   { context, model, coordinates_converter, decorations_cache: Map([]) }
 }
 
 ///|
 /// Inline decorations for one model line, split by view line.
-pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_inline_decorations(
-  self : InlineModelDecorationsComputer[O],
+pub fn[
+  O : InlineDecorationOptions,
+  M : InlineDecorationsModel,
+  C : CoordinatesConverter,
+] InlineModelDecorationsComputer::get_inline_decorations(
+  self : InlineModelDecorationsComputer[O, M, C],
   model_line_number : Int,
 ) -> Array[Array[InlineDecoration]] {
   let model_range = @base_common.Range::Range(
@@ -242,8 +246,12 @@ pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_inline_d
 
 ///|
 /// Resolve the decorations intersecting a view range.
-pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_decorations(
-  self : InlineModelDecorationsComputer[O],
+pub fn[
+  O : InlineDecorationOptions,
+  M : InlineDecorationsModel,
+  C : CoordinatesConverter,
+] InlineModelDecorationsComputer::get_decorations(
+  self : InlineModelDecorationsComputer[O, M, C],
   view_range : @base_common.Range,
   only_minimap_decorations : Bool,
   only_margin_decorations : Bool,
@@ -351,32 +359,36 @@ pub fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_decorati
 
 ///|
 /// Drop the per-decoration view-model cache.
-pub fn[O] InlineModelDecorationsComputer::reset(
-  self : InlineModelDecorationsComputer[O],
+pub fn[O, M, C] InlineModelDecorationsComputer::reset(
+  self : InlineModelDecorationsComputer[O, M, C],
 ) -> Unit {
   self.decorations_cache = Map([])
 }
 
 ///|
 /// `onModelDecorationsChanged` (`inlineDecorations.ts:155-157`).
-pub fn[O] InlineModelDecorationsComputer::on_model_decorations_changed(
-  self : InlineModelDecorationsComputer[O],
+pub fn[O, M, C] InlineModelDecorationsComputer::on_model_decorations_changed(
+  self : InlineModelDecorationsComputer[O, M, C],
 ) -> Unit {
   self.reset()
 }
 
 ///|
 /// `onLineMappingChanged` (`inlineDecorations.ts:159-161`).
-pub fn[O] InlineModelDecorationsComputer::on_line_mapping_changed(
-  self : InlineModelDecorationsComputer[O],
+pub fn[O, M, C] InlineModelDecorationsComputer::on_line_mapping_changed(
+  self : InlineModelDecorationsComputer[O, M, C],
 ) -> Unit {
   self.reset()
 }
 
 ///|
 /// Re-resolve, or reuse the cached, view-model decoration for a model decoration.
-fn[O : InlineDecorationOptions] InlineModelDecorationsComputer::get_or_create_view_model_decoration(
-  self : InlineModelDecorationsComputer[O],
+fn[
+  O : InlineDecorationOptions,
+  M : InlineDecorationsModel,
+  C : CoordinatesConverter,
+] InlineModelDecorationsComputer::get_or_create_view_model_decoration(
+  self : InlineModelDecorationsComputer[O, M, C],
   model_decoration : ModelDecoration[O],
 ) -> ViewModelDecoration[O] {
   let id = model_decoration.id

@@ -42,19 +42,22 @@ pub fn IndentRangeProvider::new(
 }
 
 ///|
-pub impl RangeProvider for IndentRangeProvider with fn id(_self) {
+pub fn IndentRangeProvider::id(self : IndentRangeProvider) -> String {
+  ignore(self)
   ID_INDENT_PROVIDER
 }
 
 ///|
-pub impl RangeProvider for IndentRangeProvider with fn dispose(_self) {
-
+pub fn IndentRangeProvider::dispose(self : IndentRangeProvider) -> Unit {
+  ignore(self)
 }
 
 ///|
 /// `compute` (`indentRangeProvider.ts:29`): resolves the language's folding
 /// rules and runs `computeRanges`.
-pub impl RangeProvider for IndentRangeProvider with fn compute(self) {
+pub fn IndentRangeProvider::compute(
+  self : IndentRangeProvider,
+) -> FoldingRegions {
   let folding_rules = self.language_configuration_service.get_language_configuration(
       self.editor_model.language_id,
     ).folding_rules

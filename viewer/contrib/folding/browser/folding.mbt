@@ -1,6 +1,6 @@
 // Port of `vscode/src/vs/editor/contrib/folding/browser/folding.ts` (vscode
 // submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the contracts
-// other folding files consume — `RangeProvider`, `FoldingLimitReporter`,
+// other folding files consume — `FoldingLimitReporter`,
 // `SelectedLines`, `toSelectedLines` — and the `FoldingController`'s state.
 //
 // Structural deviation (the foreign-method rule, like the hover contrib):
@@ -14,16 +14,6 @@
 // range providers in the language registry yet), view-state save/restore
 // (`FoldingStateMemento`), `foldingImportsByDefault` (needs provider kinds),
 // and the update `Delayer`/debounce (the viewer computes synchronously).
-
-///|
-/// A source of folding regions — Monaco's `RangeProvider` (`folding.ts`).
-/// The viewer computes synchronously, so `compute` takes no cancellation
-/// token and returns no promise.
-pub(open) trait RangeProvider {
-  fn id(Self) -> String
-  fn compute(Self) -> FoldingRegions
-  fn dispose(Self) -> Unit
-}
 
 ///|
 /// Receives how many ranges a provider computed and whether the limit

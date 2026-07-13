@@ -244,7 +244,7 @@ pub struct ViewModel {
 pub fn ViewModel::ViewModel(@model.TextModel) -> Self
 pub fn ViewModel::change_whitespace(Self, (@view_layout.WhitespaceChangeAccessor) -> Unit) -> Bool
 pub fn ViewModel::clamp_window(Self, @view_layout.LineWindow) -> @view_layout.LineWindow
-pub fn ViewModel::coordinates_converter(Self) -> &@core.CoordinatesConverter
+pub fn ViewModel::coordinates_converter(Self) -> ProjectedCoordinatesConverter
 pub fn ViewModel::cursor_page_size(Self) -> Int
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
 pub fn ViewModel::dispose(Self) -> Unit

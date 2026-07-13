@@ -1,26 +1,17 @@
 // Port of `vscode/src/vs/editor/common/diff/linesDiffComputer.ts` (vscode
 // submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the computer
-// interface, its options, and the result shape.
+// options and result shape. The sole local engine is exposed concretely from
+// `default_lines_diff_computer.mbt` instead of retaining the source interface
+// as an unused runtime abstraction.
 //
 // Parity ledger (source members):
-// - `ILinesDiffComputer.computeDiff` — PORTED (trait `LinesDiffComputer`;
-//   the I-prefix is dropped tree-wide).
+// - `ILinesDiffComputer.computeDiff` — PORTED as
+//   `DefaultLinesDiffComputer::compute_diff`.
 // - `ILinesDiffComputerOptions` — PORTED; `extendToSubwords?` — DEFERRED
 //   (consumed only by the char-level refinement, which is not ported).
 // - `LinesDiff` changes/moves/hitTimeout — PORTED.
 // - `MovedText` lineRangeMapping/changes/flip — PORTED (the viewer's
 //   computer never emits moves yet, see `default_lines_diff_computer.mbt`).
-
-///|
-/// `ILinesDiffComputer` (`linesDiffComputer.ts:8`).
-pub(open) trait LinesDiffComputer {
-  fn compute_diff(
-    Self,
-    original_lines : Array[String],
-    modified_lines : Array[String],
-    options : LinesDiffComputerOptions,
-  ) -> LinesDiff
-}
 
 ///|
 /// `ILinesDiffComputerOptions` (`linesDiffComputer.ts:12`).

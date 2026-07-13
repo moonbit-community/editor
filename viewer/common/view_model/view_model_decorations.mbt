@@ -81,6 +81,8 @@ pub impl @inline_decorations.CoordinatesConverter for ProjectedCoordinatesConver
 pub struct ViewModelDecorations {
   priv computer : @inline_decorations.InlineModelDecorationsComputer[
     @model.ModelDecorationOptions,
+    @model.TextModel,
+    ProjectedCoordinatesConverter,
   ]
   priv mut cached_model_decorations_resolver : ViewDecorationsCollection?
   priv mut cached_model_decorations_resolver_view_range : @base_common.Range?

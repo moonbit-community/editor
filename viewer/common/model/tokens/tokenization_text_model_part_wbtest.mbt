@@ -95,6 +95,15 @@ fn test_access(
   lines : Array[String],
   language_id : String,
 ) -> TokenizationModelAccess {
+  test_access_with_disposing(lines, language_id, Ref(false))
+}
+
+///|
+fn test_access_with_disposing(
+  lines : Array[String],
+  language_id : String,
+  disposing : Ref[Bool],
+) -> TokenizationModelAccess {
   TokenizationModelAccess::new(
     line_count=() => lines.length(),
     line_content=line_number => lines[line_number - 1],
@@ -112,7 +121,7 @@ fn test_access(
     language_id=() => language_id,
     attached_count=() => 0,
     too_large=() => false,
-    disposing=() => false,
+    disposing=() => disposing.val,
     scheduler=() => None,
     unexpected_error=_ => (),
   )
@@ -281,4 +290,118 @@ test "token_count is a passive stored/default read" {
   let before = calls.length()
   assert_eq(part.token_count(), 3)
   assert_eq(calls.length(), before)
+}
+
+///|
+test "font payload forwards unchanged only through the exposed second emitter" {
+  let lines = ["one"]
+  let disposing = Ref(false)
+  let part = TokenizationTextModelPart::new_with_support_resolver(
+    test_access_with_disposing(lines, "part-font-forward", disposing),
+    AttachedViews::new(),
+    _ => Some(logging_support([], Ref(0))),
+  )
+  let first_emitter_events = Ref(0)
+  let public_events : Array[ModelFontTokensChangedEvent] = []
+  part.first_font_emitter.event(_ => first_emitter_events.val += 1) |> ignore
+  part.on_did_change_font_tokens(event => public_events.push(event)) |> ignore
+  let option : FontTokenOption = {
+    font_family: Some("Mono"),
+    font_size_multiplier: Some(1.25),
+    line_height_multiplier: Some(1.5),
+  }
+  let changes : FontTokensUpdate = AnnotationsUpdate::create([
+    { range: OffsetRange(2, 5), annotation: Some(option) },
+    { range: OffsetRange(8, 9), annotation: None },
+  ])
+  part.backend.set_font_info(changes)
+  assert_eq(first_emitter_events.val, 0)
+  assert_eq(public_events.length(), 1)
+  assert_false(
+    physical_equal(part.first_font_emitter, part.public_font_emitter),
+  )
+  assert_true(physical_equal(public_events[0].changes, changes))
+  let actual = public_events[0].changes.annotations()
+  assert_eq(actual.length(), 2)
+  assert_eq(actual[0].range.start, 2)
+  assert_eq(actual[0].range.end_exclusive, 5)
+  assert_true(actual[0].annotation is Some(_))
+  assert_true(actual[1].annotation is None)
+
+  // Both the backend and part forwarding callback have live-disposal guards.
+  disposing.val = true
+  part.backend.set_font_info(AnnotationsUpdate::create([]))
+  assert_eq(public_events.length(), 1)
+  disposing.val = false
+  part.dispose()
+  part.backend.set_font_info(changes)
+  assert_eq(public_events.length(), 1)
+}
+
+///|
+test "dispose releases subscriptions emitters and backend before marking disposed" {
+  let part = part_from_lines(["one"], "part-dispose-order")
+  let subscription_order : Array[String] = []
+  match part.backend_token_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  match part.backend_font_subscription {
+    Some(subscription) => subscription.dispose()
+    None => ()
+  }
+  part.backend_token_subscription = Some(
+    @base_common.Disposable::from(() => {
+      if part.disposed {
+        abort("token subscription disposed after terminal flag")
+      }
+      subscription_order.push("tokens")
+    }),
+  )
+  part.backend_font_subscription = Some(
+    @base_common.Disposable::from(() => {
+      if part.disposed {
+        abort("font subscription disposed after terminal flag")
+      }
+      subscription_order.push("font")
+    }),
+  )
+  part.did_change_tokens.event(_ => ()) |> ignore
+  part.first_font_emitter.event(_ => ()) |> ignore
+  part.public_font_emitter.event(_ => ()) |> ignore
+
+  part.dispose()
+  assert_true(part.disposed)
+  assert_eq(subscription_order.length(), 2)
+  assert_eq(subscription_order[0], "tokens")
+  assert_eq(subscription_order[1], "font")
+  assert_true(part.backend_token_subscription is None)
+  assert_true(part.backend_font_subscription is None)
+  assert_false(part.did_change_tokens.has_listeners())
+  assert_false(part.first_font_emitter.has_listeners())
+  assert_false(part.public_font_emitter.has_listeners())
+  assert_true(part.backend.disposed)
+
+  part.dispose()
+  assert_eq(subscription_order.length(), 2)
+}
+
+///|
+test "assert_not_disposed continues on the live branch" {
+  let part = part_from_lines(["one"], "part-live-guard")
+  part.assert_not_disposed()
+}
+
+///|
+test "panic assert_not_disposed rejects a disposed part" {
+  let part = part_from_lines(["one"], "part-disposed-guard")
+  part.dispose()
+  part.assert_not_disposed()
+}
+
+///|
+test "panic token_count rejects guarded work after disposal" {
+  let part = part_from_lines(["one"], "part-disposed-token-count")
+  part.dispose()
+  ignore(part.token_count())
 }

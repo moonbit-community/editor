@@ -42,8 +42,10 @@ pub fn[T] AnnotationsUpdate::annotations(
 }
 
 ///|
-/// Source-shaped alias for optional syntactic font updates.
-pub type FontTokensUpdate = AnnotationsUpdate[FontTokenOption?]
+/// Source-shaped alias for syntactic font updates. `AnnotationUpdate` already
+/// makes its annotation optional, so the payload type itself stays non-optional
+/// and the resulting carrier has exactly one absent/remove layer.
+pub type FontTokensUpdate = AnnotationsUpdate[FontTokenOption]
 
 ///|
 /// Model-part event preserving the backend's exact annotation update value.

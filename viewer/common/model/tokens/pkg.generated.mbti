@@ -126,9 +126,9 @@ pub struct BackgroundTokenizationStore {
   // private fields
 }
 pub fn BackgroundTokenizationStore::background_tokenization_finished(Self) -> Unit
-pub fn BackgroundTokenizationStore::new(set_tokens~ : (Array[@moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokens]) -> Unit, set_font_info~ : (AnnotationsUpdate[FontTokenOption?]) -> Unit, background_tokenization_finished~ : () -> Unit, set_end_state~ : (Int, @syntax.TokenizerState) -> Unit) -> Self
+pub fn BackgroundTokenizationStore::new(set_tokens~ : (Array[@moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokens]) -> Unit, set_font_info~ : (AnnotationsUpdate[FontTokenOption]) -> Unit, background_tokenization_finished~ : () -> Unit, set_end_state~ : (Int, @syntax.TokenizerState) -> Unit) -> Self
 pub fn BackgroundTokenizationStore::set_end_state(Self, Int, @syntax.TokenizerState) -> Unit
-pub fn BackgroundTokenizationStore::set_font_info(Self, AnnotationsUpdate[FontTokenOption?]) -> Unit
+pub fn BackgroundTokenizationStore::set_font_info(Self, AnnotationsUpdate[FontTokenOption]) -> Unit
 pub fn BackgroundTokenizationStore::set_tokens(Self, Array[@moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokens]) -> Unit
 
 pub struct DefaultBackgroundTokenizer {
@@ -184,7 +184,7 @@ pub(all) struct LikelyRelevantLines {
 }
 
 pub(all) struct ModelFontTokensChangedEvent {
-  changes : AnnotationsUpdate[FontTokenOption?]
+  changes : AnnotationsUpdate[FontTokenOption]
 }
 
 pub(all) struct ModelTokensChangedEvent {
@@ -296,7 +296,7 @@ pub fn TokenizerSyntaxTokenBackend::refresh_all_visible_line_tokens(Self) -> Uni
 pub fn TokenizerSyntaxTokenBackend::refresh_range(Self, Int, Int) -> Unit
 pub fn TokenizerSyntaxTokenBackend::refresh_ranges(Self, Array[@common.LineRange]) -> Unit
 pub fn TokenizerSyntaxTokenBackend::reset_tokenization(Self, fire_token_change_event? : Bool) -> Unit
-pub fn TokenizerSyntaxTokenBackend::set_font_info(Self, AnnotationsUpdate[FontTokenOption?]) -> Unit
+pub fn TokenizerSyntaxTokenBackend::set_font_info(Self, AnnotationsUpdate[FontTokenOption]) -> Unit
 pub fn TokenizerSyntaxTokenBackend::set_tokens(Self, Array[@moonbit-community/editor/viewer/common/tokens.ContiguousMultilineTokens]) -> TokenStoreChange
 pub fn TokenizerSyntaxTokenBackend::tokenize_if_cheap(Self, Int) -> Unit
 
@@ -342,7 +342,7 @@ pub(all) struct VisibleLineRange {
 } derive(Eq, @debug.Debug)
 
 // Type aliases
-pub type FontTokensUpdate = AnnotationsUpdate[FontTokenOption?]
+pub type FontTokensUpdate = AnnotationsUpdate[FontTokenOption]
 
 // Traits
 pub(open) trait RangePriorityQueue {

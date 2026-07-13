@@ -136,6 +136,17 @@ pub fn TokenizationTextModelPart::get_language_id(
 }
 
 ///|
+/// Inherited `TextModelPart` liveness guard. Guarded work continues while live
+/// and enters the exact failure arm after terminal disposal.
+fn TokenizationTextModelPart::assert_not_disposed(
+  self : TokenizationTextModelPart,
+) -> Unit {
+  if self.disposed {
+    abort("TextModelPart is disposed!")
+  }
+}
+
+///|
 /// Validates the inclusive one-based model-line domain.
 fn TokenizationTextModelPart::validate_line_number(
   self : TokenizationTextModelPart,
@@ -252,6 +263,7 @@ pub fn TokenizationTextModelPart::refresh_all_visible_line_tokens(
 pub fn TokenizationTextModelPart::token_count(
   self : TokenizationTextModelPart,
 ) -> Int {
+  self.assert_not_disposed()
   let mut count = 0
   for line_number in 1..<=self.access.line_count() {
     count += self.backend.get_line_tokens(line_number).get_count()
@@ -268,14 +280,11 @@ pub fn TokenizationTextModelPart::has_listeners(
 }
 
 ///|
-/// Source-order teardown of forwarding subscriptions, backend, and both font emitters.
-pub fn TokenizationTextModelPart::dispose(
+/// Releases every registered resource while the inherited disposed flag is
+/// still false: forwarding subscriptions, registered emitters, then backend.
+fn TokenizationTextModelPart::dispose_owned_resources(
   self : TokenizationTextModelPart,
 ) -> Unit {
-  if self.disposed {
-    return
-  }
-  self.disposed = true
   match self.backend_token_subscription {
     Some(subscription) => subscription.dispose()
     None => ()
@@ -286,8 +295,20 @@ pub fn TokenizationTextModelPart::dispose(
   }
   self.backend_token_subscription = None
   self.backend_font_subscription = None
-  self.backend.dispose()
   self.did_change_tokens.dispose()
   self.first_font_emitter.dispose()
   self.public_font_emitter.dispose()
+  self.backend.dispose()
+}
+
+///|
+/// Source-order teardown: registered resources first, terminal flag second.
+pub fn TokenizationTextModelPart::dispose(
+  self : TokenizationTextModelPart,
+) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.dispose_owned_resources()
+  self.disposed = true
 }

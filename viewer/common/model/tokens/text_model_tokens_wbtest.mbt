@@ -191,6 +191,107 @@ test "safe_tokenize missing and failing support reports then returns language fa
 }
 
 ///|
+test "encoded tokenization preserves absent empty and nonempty font info" {
+  let harness = token_test_harness(["abc"])
+  let state = @syntax.TokenizerState("state")
+  let absent = safe_tokenize(
+    @services.language_id_codec,
+    "token-test",
+    Some(logging_support([], Ref(0))),
+    "abc",
+    true,
+    state,
+    harness.access,
+  )
+  assert_true(absent.font_info is None)
+
+  let empty_fonts : Array[FontToken] = []
+  let empty_support = InternalTokenizationSupportAdapter::new(
+    initial_state=() => state,
+    tokenize_encoded=(_text, _has_eol, _state) => {
+      tokens: [0, tag_to_metadata(Plain)],
+      font_info: Some(empty_fonts),
+      end_state: state,
+    },
+  )
+  let empty = safe_tokenize(
+    @services.language_id_codec,
+    "token-test",
+    Some(empty_support),
+    "abc",
+    true,
+    state,
+    harness.access,
+  )
+  guard empty.font_info is Some(actual_empty) else {
+    fail("expected present empty font info")
+  }
+  assert_true(physical_equal(actual_empty, empty_fonts))
+  assert_true(actual_empty.is_empty())
+
+  let fonts : Array[FontToken] = [
+    {
+      start_index: 1,
+      end_index: 3,
+      font_family: Some("Mono"),
+      font_size_multiplier: Some(1.25),
+      line_height_multiplier: Some(1.5),
+    },
+  ]
+  let nonempty_support = InternalTokenizationSupportAdapter::new(
+    initial_state=() => state,
+    tokenize_encoded=(_text, _has_eol, _state) => {
+      tokens: [0, tag_to_metadata(Plain)],
+      font_info: Some(fonts),
+      end_state: state,
+    },
+  )
+  let nonempty = safe_tokenize(
+    @services.language_id_codec,
+    "token-test",
+    Some(nonempty_support),
+    "abc",
+    true,
+    state,
+    harness.access,
+  )
+  guard nonempty.font_info is Some(actual_fonts) else {
+    fail("expected nonempty font info")
+  }
+  assert_true(physical_equal(actual_fonts, fonts))
+  assert_eq(actual_fonts.length(), 1)
+  assert_eq(actual_fonts[0].start_index, 1)
+  assert_eq(actual_fonts[0].end_index, 3)
+  assert_true(actual_fonts[0].font_family == Some("Mono"))
+  assert_true(actual_fonts[0].font_size_multiplier == Some(1.25))
+  assert_true(actual_fonts[0].line_height_multiplier == Some(1.5))
+}
+
+///|
+test "background store forwards one exact font update value" {
+  let observed : Array[FontTokensUpdate] = []
+  let store = BackgroundTokenizationStore::new(
+    set_tokens=_batches => (),
+    set_font_info=changes => observed.push(changes),
+    background_tokenization_finished=() => (),
+    set_end_state=(_line_number, _state) => (),
+  )
+  let changes : FontTokensUpdate = AnnotationsUpdate::create([
+    {
+      range: OffsetRange(4, 8),
+      annotation: Some({
+        font_family: None,
+        font_size_multiplier: Some(0.75),
+        line_height_multiplier: None,
+      }),
+    },
+  ])
+  store.set_font_info(changes)
+  assert_eq(observed.length(), 1)
+  assert_true(physical_equal(observed[0], changes))
+}
+
+///|
 test "start offset conversion uses next start and final raw UTF16 length" {
   let words : Array[UInt] = [0, 11, 2, 22, 5, 33]
   start_offsets_to_end_offsets(words, 9)

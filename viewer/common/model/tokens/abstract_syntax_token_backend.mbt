@@ -30,14 +30,29 @@ pub fn AttachedViewState::new(
 }
 
 ///|
-/// Source-order equality: identity is unobservable locally, then ranges, then stabilization.
+/// Source-order equality: physical identity, then ranges, then stabilization.
 pub fn AttachedViewState::equals(
   self : AttachedViewState,
   other : AttachedViewState,
 ) -> Bool {
-  if !line_range_arrays_equal(
+  self.equals_with(other, (left, right) => left.equals(right))
+}
+
+///|
+/// White-box seam for observing that the identity arm returns before invoking
+/// the source range comparator.
+fn AttachedViewState::equals_with(
+  self : AttachedViewState,
+  other : AttachedViewState,
+  range_equals : (@base_common.LineRange, @base_common.LineRange) -> Bool,
+) -> Bool {
+  if physical_equal(self, other) {
+    return true
+  }
+  if !line_range_arrays_equal_with(
       self.visible_line_ranges,
       other.visible_line_ranges,
+      range_equals,
     ) {
     return false
   }
@@ -378,11 +393,20 @@ fn line_range_arrays_equal(
   left : Array[@base_common.LineRange],
   right : Array[@base_common.LineRange],
 ) -> Bool {
+  line_range_arrays_equal_with(left, right, (a, b) => a.equals(b))
+}
+
+///|
+fn line_range_arrays_equal_with(
+  left : Array[@base_common.LineRange],
+  right : Array[@base_common.LineRange],
+  equals : (@base_common.LineRange, @base_common.LineRange) -> Bool,
+) -> Bool {
   if left.length() != right.length() {
     return false
   }
   for i in 0..<left.length() {
-    if !left[i].equals(right[i]) {
+    if !equals(left[i], right[i]) {
       return false
     }
   }

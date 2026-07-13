@@ -21,8 +21,11 @@ syntax-theme mapping.
   stay caller-owned. Stabilized updates refresh synchronously, while unstable
   updates use the exact 50 ms debounce.
 - `annotations.mbt` owns the single syntactic font carrier forwarded unchanged
-  through backend and model-part events. The semantic sparse overlay and visual
-  font-decoration provider remain outside this package.
+  through backend and model-part events. `FontTokensUpdate` is
+  `AnnotationsUpdate[FontTokenOption]`; `AnnotationUpdate.annotation` is the
+  single optional layer whose absence removes a font annotation. The semantic
+  sparse overlay and visual font-decoration provider remain outside this
+  package.
 - `line_tokens_encoder.mbt` produces raw start-offset token words and converts
   them to end offsets exactly once. Raw UTF-16 lengths and offsets permit lone
   surrogate halves. `token_theme.mbt` maps `HighlightTag` to packed metadata and

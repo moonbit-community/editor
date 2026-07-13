@@ -49,6 +49,27 @@ test "AttachedViewState equality checks ranges before stabilization" {
 }
 
 ///|
+test "AttachedViewState identity returns before walking ranges" {
+  let state = AttachedViewState::new([LineRange(1, 3)], false)
+  let comparisons = Ref(0)
+  assert_true(
+    state.equals_with(state, (_left, _right) => {
+      comparisons.val += 1
+      false
+    }),
+  )
+  assert_eq(comparisons.val, 0)
+  let copy = AttachedViewState::new([LineRange(1, 3)], false)
+  assert_true(
+    state.equals_with(copy, (_left, _right) => {
+      comparisons.val += 1
+      true
+    }),
+  )
+  assert_eq(comparisons.val, 1)
+}
+
+///|
 test "AttachedViews preserves identity, joins ranges, and emits absent detach state" {
   let manager = AttachedViews::new()
   let events : Array[AttachedViewStateChange] = []

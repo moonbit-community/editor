@@ -212,6 +212,43 @@ test "disposing guard drops token and font events" {
 }
 
 ///|
+test "set_font_info forwards the exact live payload and one absent removal" {
+  let harness = backend_harness(["one"])
+  let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
+    harness.access,
+    AttachedViews::new(),
+    _ => Some(logging_support([], Ref(0))),
+  )
+  let events : Array[ModelFontTokensChangedEvent] = []
+  backend.on_did_change_font_tokens(event => events.push(event)) |> ignore
+  let changes : FontTokensUpdate = AnnotationsUpdate::create([
+    {
+      range: OffsetRange(1, 4),
+      annotation: Some({
+        font_family: Some("Mono"),
+        font_size_multiplier: Some(1.25),
+        line_height_multiplier: Some(1.5),
+      }),
+    },
+    { range: OffsetRange(7, 9), annotation: None },
+  ])
+  backend.set_font_info(changes)
+  assert_eq(events.length(), 1)
+  assert_true(physical_equal(events[0].changes, changes))
+  let annotations = events[0].changes.annotations()
+  assert_eq(annotations.length(), 2)
+  assert_true(annotations[0].annotation is Some(_))
+  assert_true(annotations[1].annotation is None)
+  harness.disposing.val = true
+  backend.set_font_info(AnnotationsUpdate::create([]))
+  assert_eq(events.length(), 1)
+  backend.dispose()
+  harness.disposing.val = false
+  backend.set_font_info(changes)
+  assert_eq(events.length(), 1)
+}
+
+///|
 priv suberror BackendInitialStateError {
   InitialStateFailure
 }

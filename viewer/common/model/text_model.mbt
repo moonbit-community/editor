@@ -197,20 +197,42 @@ fn new_text_model(
 /// Monaco's disposed-buffer swap is N-A: the snapshot is immutable and
 /// garbage-collected.
 pub fn TextModel::dispose(self : TextModel) -> Unit {
+  run_text_model_dispose_sequence(
+    set_disposing=value => self.is_disposing.val = value,
+    fire_will_dispose=() => self.on_will_dispose.fire(()),
+    dispose_tokenization=() => self.tokenization.dispose(),
+    set_disposed=() => self.is_disposed = true,
+    dispose_registered_resources=() => {
+      self.attached_views.dispose()
+      self.tokenization_scheduler.val = None
+      self.attached_change_emitter.dispose()
+      self.on_will_dispose.dispose()
+      self.on_did_change_decorations.actual.dispose()
+      self.event_emitter.emitter.dispose()
+    },
+  )
+}
+
+///|
+/// `TextModel.dispose` (`textModel.ts:414-421`) retained as one directly
+/// testable source-order sequence. In particular, the terminal flag is set
+/// after the token part is released but before superclass/registered resources.
+fn run_text_model_dispose_sequence(
+  set_disposing~ : (Bool) -> Unit,
+  fire_will_dispose~ : () -> Unit,
+  dispose_tokenization~ : () -> Unit,
+  set_disposed~ : () -> Unit,
+  dispose_registered_resources~ : () -> Unit,
+) -> Unit {
   // `__isDisposing = true` before the will-dispose fire (`textModel.ts:415`);
   // `_emitContentChangedEvent` early-returns while set so no listener is
   // confused by an event after disposing (`:468-471`).
-  self.is_disposing.val = true
-  self.on_will_dispose.fire(())
-  self.tokenization.dispose()
-  self.attached_views.dispose()
-  self.tokenization_scheduler.val = None
-  self.is_disposed = true
-  self.attached_change_emitter.dispose()
-  self.on_will_dispose.dispose()
-  self.on_did_change_decorations.actual.dispose()
-  self.event_emitter.emitter.dispose()
-  self.is_disposing.val = false
+  set_disposing(true)
+  fire_will_dispose()
+  dispose_tokenization()
+  set_disposed()
+  dispose_registered_resources()
+  set_disposing(false)
 }
 
 ///|

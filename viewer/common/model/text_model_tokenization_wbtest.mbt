@@ -403,6 +403,58 @@ test "model listener ownership includes token-part listeners through disposal" {
 }
 
 ///|
+test "TextModel disposal marks disposed between token part and registered resources" {
+  let trace : Array[String] = []
+  let is_disposing = Ref(false)
+  let tokenization_disposed = Ref(false)
+  let is_disposed = Ref(false)
+
+  run_text_model_dispose_sequence(
+    set_disposing=value => {
+      trace.push(
+        "disposing=\{value}:\{is_disposing.val}:" +
+        "\{tokenization_disposed.val}:\{is_disposed.val}",
+      )
+      is_disposing.val = value
+    },
+    fire_will_dispose=() => {
+      trace.push(
+        "willDispose:\{is_disposing.val}:" +
+        "\{tokenization_disposed.val}:\{is_disposed.val}",
+      )
+    },
+    dispose_tokenization=() => {
+      trace.push(
+        "tokenization.dispose:\{is_disposing.val}:" +
+        "\{tokenization_disposed.val}:\{is_disposed.val}",
+      )
+      tokenization_disposed.val = true
+    },
+    set_disposed=() => {
+      trace.push(
+        "isDisposed=true:\{is_disposing.val}:" +
+        "\{tokenization_disposed.val}:\{is_disposed.val}",
+      )
+      is_disposed.val = true
+    },
+    dispose_registered_resources=() => {
+      trace.push(
+        "super.dispose:\{is_disposing.val}:" +
+        "\{tokenization_disposed.val}:\{is_disposed.val}",
+      )
+    },
+  )
+
+  assert_eq(
+    trace.join(","),
+    "disposing=true:false:false:false,willDispose:true:false:false," +
+    "tokenization.dispose:true:false:false,isDisposed=true:true:true:false," +
+    "super.dispose:true:true:true,disposing=false:true:true:true",
+  )
+  assert_false(is_disposing.val)
+}
+
+///|
 test "Some then None scheduler epoch retains supplier until final detach" {
   let calls = Ref(0)
   let language_id = "text-model-scheduler-some-none"

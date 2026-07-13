@@ -58,7 +58,7 @@ pub fn filter_validation_decorations(
 ///|
 /// The `ICoordinatesConverter` seam of the promoted inline-decorations
 /// computer, implemented by the view model's converter.
-pub impl @inline_decorations.CoordinatesConverter for ProjectedCoordinatesConverter with fn convert_model_position_to_view_position(
+pub impl @inline_decorations.CoordinatesConverter for CoordinatesConverter with fn convert_model_position_to_view_position(
   self,
   model_position,
   affinity? : @model.PositionAffinity,
@@ -67,7 +67,7 @@ pub impl @inline_decorations.CoordinatesConverter for ProjectedCoordinatesConver
 }
 
 ///|
-pub impl @inline_decorations.CoordinatesConverter for ProjectedCoordinatesConverter with fn convert_model_range_to_view_range(
+pub impl @inline_decorations.CoordinatesConverter for CoordinatesConverter with fn convert_model_range_to_view_range(
   self,
   model_range,
   affinity? : @model.PositionAffinity,
@@ -82,7 +82,7 @@ pub struct ViewModelDecorations {
   priv computer : @inline_decorations.InlineModelDecorationsComputer[
     @model.ModelDecorationOptions,
     @model.TextModel,
-    ProjectedCoordinatesConverter,
+    CoordinatesConverter,
   ]
   priv mut cached_model_decorations_resolver : ViewDecorationsCollection?
   priv mut cached_model_decorations_resolver_view_range : @base_common.Range?
@@ -96,7 +96,7 @@ pub fn ViewModelDecorations::new(
   model : @model.TextModel,
   filter_validation : Bool,
   lines : ViewModelLinesFromProjectedModel,
-  coordinates_converter : ProjectedCoordinatesConverter,
+  coordinates_converter : CoordinatesConverter,
 ) -> ViewModelDecorations {
   let context : @inline_decorations.InlineModelContext[
     @model.ModelDecorationOptions,
@@ -211,7 +211,7 @@ fn ViewModelDecorations::compute_decorations(
 fn view_model_lines_get_decorations_in_range(
   lines : ViewModelLinesFromProjectedModel,
   model : @model.TextModel,
-  converter : ProjectedCoordinatesConverter,
+  converter : CoordinatesConverter,
   range : @base_common.Range,
   owner_id : Int,
   filter_out_validation : Bool,

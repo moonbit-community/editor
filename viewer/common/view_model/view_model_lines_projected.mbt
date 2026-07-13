@@ -96,8 +96,8 @@ pub fn ViewModelLinesFromProjectedModel::dispose(
 /// `createCoordinatesConverter` (`viewModelLines.ts:118`).
 pub fn ViewModelLinesFromProjectedModel::create_coordinates_converter(
   self : ViewModelLinesFromProjectedModel,
-) -> ProjectedCoordinatesConverter {
-  ProjectedCoordinatesConverter::new(self)
+) -> CoordinatesConverter {
+  Projected(self)
 }
 
 ///|
@@ -863,91 +863,6 @@ fn line_injected_text_from_decorations(
     )
   }
   buckets
-}
-
-///|
-/// Coordinate converter over the projected line collection — the
-/// `CoordinatesConverter` class of `viewModelLines.ts:1073`. (That plain name
-/// is taken by the `ICoordinatesConverter` trait in `viewer/common/core`, so
-/// the class keeps the `Projected` prefix.)
-pub struct ProjectedCoordinatesConverter {
-  lines : ViewModelLinesFromProjectedModel
-}
-
-///|
-/// Creates a coordinate converter from the projected line collection.
-pub fn ProjectedCoordinatesConverter::new(
-  lines : ViewModelLinesFromProjectedModel,
-) -> ProjectedCoordinatesConverter {
-  { lines, }
-}
-
-///|
-/// Narrows the full coordinates converter to the three operations consumed by
-/// cursor state. The remaining converter members stay statically dispatched at
-/// their existing view-model/browser call sites.
-fn ProjectedCoordinatesConverter::cursor_context(
-  self : ProjectedCoordinatesConverter,
-) -> @cursor.CursorContext {
-  @cursor.CursorContext::new(
-    view_to_model=position => self.view_position_to_model_position(position),
-    view_range_to_model=range => self.view_range_to_model_range(range),
-    model_to_view=position => self.model_position_to_view_position(position),
-  )
-}
-
-///|
-/// Converts model positions through the line collection.
-pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_to_view_position(
-  self,
-  position,
-  affinity? : @model.PositionAffinity,
-) {
-  self.lines.convert_model_position_to_view_position(
-    position.line_number,
-    position.column,
-    affinity?,
-  )
-}
-
-///|
-/// Converts view positions through the line collection.
-pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn view_position_to_model_position(
-  self,
-  position,
-) {
-  self.lines.convert_view_position_to_model_position(
-    position.line_number,
-    position.column,
-  )
-}
-
-///|
-/// Converts model ranges through the line collection.
-pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn model_range_to_view_range(
-  self,
-  range,
-  affinity? : @model.PositionAffinity,
-) {
-  self.lines.convert_model_range_to_view_range(range, affinity?)
-}
-
-///|
-/// Reports projected model-position visibility through the line collection.
-pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn model_position_is_visible(
-  self,
-  position,
-) {
-  self.lines.model_position_is_visible(position.line_number)
-}
-
-///|
-/// Converts view ranges through the line collection.
-pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter with fn view_range_to_model_range(
-  self,
-  range,
-) {
-  self.lines.convert_view_range_to_model_range(range)
 }
 
 ///|

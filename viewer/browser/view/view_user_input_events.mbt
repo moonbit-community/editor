@@ -13,9 +13,9 @@
 ///|
 /// `ViewUserInputEvents.convertViewToModelMouseTarget`
 /// (viewUserInputEvents.ts:96-108).
-pub fn[C : @core.CoordinatesConverter] convert_view_to_model_mouse_target(
+pub fn convert_view_to_model_mouse_target(
   target : @editor_browser.MouseTarget,
-  converter : C,
+  converter : @view_model.CoordinatesConverter,
 ) -> @editor_browser.MouseTarget {
   let convert_position = (position : @base_common.Position) => {
     converter.view_position_to_model_position(position)
@@ -108,9 +108,9 @@ pub fn[C : @core.CoordinatesConverter] convert_view_to_model_mouse_target(
 ///|
 /// `ViewUserInputEvents.convertViewToModelViewZoneData`
 /// (viewUserInputEvents.ts:110-118).
-fn[C : @core.CoordinatesConverter] convert_view_to_model_view_zone_data(
+fn convert_view_to_model_view_zone_data(
   data : @editor_browser.MouseTargetViewZoneData,
-  converter : C,
+  converter : @view_model.CoordinatesConverter,
 ) -> @editor_browser.MouseTargetViewZoneData {
   {
     view_zone_id: data.view_zone_id,

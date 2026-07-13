@@ -37,7 +37,7 @@ pub struct ViewModel {
   /// `ViewLayout` reads `EditorOption.layoutInfo` from the configuration).
   view_layout : @view_layout.ViewLayout
   mut decorations : ViewModelDecorations
-  coordinates_converter : ProjectedCoordinatesConverter
+  coordinates_converter : CoordinatesConverter
   /// Per-source hidden-area sets, merged before they reach the line
   /// collection — Monaco's `hiddenAreasModel` (`viewModelImpl.ts:70`).
   priv hidden_areas_model : HiddenAreasModel
@@ -340,7 +340,7 @@ pub fn ViewModel::decorations(self : ViewModel) -> ViewModelDecorations {
 /// converters, such as `CursorContext`.
 pub fn ViewModel::coordinates_converter(
   self : ViewModel,
-) -> ProjectedCoordinatesConverter {
+) -> CoordinatesConverter {
   self.coordinates_converter
 }
 

@@ -36,6 +36,16 @@ pub fn viewport_data_from_view_model(ViewModel, @view_layout.LineWindow, line_he
 // Errors
 
 // Types and methods
+pub enum CoordinatesConverter {
+  Projected(ViewModelLinesFromProjectedModel)
+}
+pub fn CoordinatesConverter::model_position_is_visible(Self, @common.Position) -> Bool
+pub fn CoordinatesConverter::model_position_to_view_position(Self, @common.Position, affinity? : @model.PositionAffinity) -> @common.Position
+pub fn CoordinatesConverter::model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
+pub fn CoordinatesConverter::view_position_to_model_position(Self, @common.Position) -> @common.Position
+pub fn CoordinatesConverter::view_range_to_model_range(Self, @common.Range) -> @common.Range
+pub impl @inline_decorations.CoordinatesConverter for CoordinatesConverter
+
 type CursorEventDispatcher
 
 pub(all) enum CursorMoveDirection {
@@ -159,13 +169,6 @@ pub(all) enum OutgoingViewModelEventKind {
   ModelTokensChanged
 } derive(Eq, @debug.Debug)
 
-pub struct ProjectedCoordinatesConverter {
-  lines : ViewModelLinesFromProjectedModel
-}
-pub fn ProjectedCoordinatesConverter::new(ViewModelLinesFromProjectedModel) -> Self
-pub impl @core.CoordinatesConverter for ProjectedCoordinatesConverter
-pub impl @inline_decorations.CoordinatesConverter for ProjectedCoordinatesConverter
-
 pub(all) struct ProjectedLinePart {
   start : Int
   end : Int
@@ -238,13 +241,13 @@ pub struct ViewModel {
   cursor : @cursor.CursorsController
   view_layout : @view_layout.ViewLayout
   mut decorations : ViewModelDecorations
-  coordinates_converter : ProjectedCoordinatesConverter
+  coordinates_converter : CoordinatesConverter
   // private fields
 }
 pub fn ViewModel::ViewModel(@model.TextModel) -> Self
 pub fn ViewModel::change_whitespace(Self, (@view_layout.WhitespaceChangeAccessor) -> Unit) -> Bool
 pub fn ViewModel::clamp_window(Self, @view_layout.LineWindow) -> @view_layout.LineWindow
-pub fn ViewModel::coordinates_converter(Self) -> ProjectedCoordinatesConverter
+pub fn ViewModel::coordinates_converter(Self) -> CoordinatesConverter
 pub fn ViewModel::cursor_page_size(Self) -> Int
 pub fn ViewModel::decorations(Self) -> ViewModelDecorations
 pub fn ViewModel::dispose(Self) -> Unit
@@ -296,7 +299,7 @@ pub struct ViewModelDecorations {
 }
 pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLinesFromProjectedModel, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
 pub fn ViewModelDecorations::get_decorations_viewport_data(Self, @common.Range) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
-pub fn ViewModelDecorations::new(Int, @model.TextModel, Bool, ViewModelLinesFromProjectedModel, ProjectedCoordinatesConverter) -> Self
+pub fn ViewModelDecorations::new(Int, @model.TextModel, Bool, ViewModelLinesFromProjectedModel, CoordinatesConverter) -> Self
 pub fn ViewModelDecorations::on_line_mapping_changed(Self) -> Unit
 pub fn ViewModelDecorations::on_model_decorations_changed(Self) -> Unit
 pub fn ViewModelDecorations::reset(Self) -> Unit
@@ -316,7 +319,7 @@ pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position
 pub fn ViewModelLinesFromProjectedModel::convert_model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
 pub fn ViewModelLinesFromProjectedModel::convert_view_position_to_model_position(Self, Int, Int) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::convert_view_range_to_model_range(Self, @common.Range) -> @common.Range
-pub fn ViewModelLinesFromProjectedModel::create_coordinates_converter(Self) -> ProjectedCoordinatesConverter
+pub fn ViewModelLinesFromProjectedModel::create_coordinates_converter(Self) -> CoordinatesConverter
 pub fn ViewModelLinesFromProjectedModel::dispose(Self) -> Unit
 pub fn ViewModelLinesFromProjectedModel::get_hidden_areas(Self) -> Array[@common.Range]
 pub fn ViewModelLinesFromProjectedModel::get_view_line_content(Self, Int) -> String

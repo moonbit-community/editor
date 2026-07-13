@@ -12,6 +12,18 @@ test "no-wrap converter preserves model and view positions through identity proj
 }
 
 ///|
+test "view model constructs the closed projected coordinates converter" {
+  let model = plain_text_model("alpha\nbeta")
+  let view_model = @view_model.ViewModel(model)
+  match view_model.coordinates_converter() {
+    Projected(lines) => {
+      assert_eq(lines.get_view_line_count(), 2)
+      assert_eq(lines.get_view_line_content(2), "beta")
+    }
+  }
+}
+
+///|
 test "no-wrap view lines match view line rendering data" {
   let model = plain_text_model("fn main {\n  let x = 1\n}")
   let view_model = @view_model.ViewModel(model)

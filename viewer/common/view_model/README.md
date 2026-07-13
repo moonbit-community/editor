@@ -22,6 +22,10 @@ model line + grammar tokens + injected-text decorations
   `ViewModelLinesFromModelAsIs` implementation. Models above the tokenization
   safety thresholds remain on this projected collection and render default
   tokens; collection fallback belongs to the separate large-file plan.
+- `CoordinatesConverter` is the closed concrete converter consumed by
+  `ViewModel`, cursor closure construction, decorations, and browser input. Its
+  current `Projected` arm retains `ViewModelLinesFromProjectedModel`; a future
+  large-file as-is collection adds an identity arm without changing consumers.
 - Injected text is projected before line breaking, so its width affects wrapping;
   source mappings, tokens, and decorations remain anchored to model offsets.
 - Viewport construction uses one `get_view_lines_data` batch and a parallel

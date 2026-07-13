@@ -24,6 +24,9 @@ pub struct TextModel {
   /// TextModel owns the attached-view aggregate; tokenization only borrows it.
   priv attached_views : @tokens.AttachedViews
   priv attached_count : Ref[Int]
+  /// `_onDidChangeAttached` (`textModel.ts:235`), owned and released by the
+  /// model rather than by the borrowed attached-view aggregate.
+  priv attached_change_emitter : @base_common.Emitter[Unit]
   /// First non-None scheduler selected for the current attached epoch.
   priv tokenization_scheduler : Ref[@tokens.TokenizationScheduler?]
   /// Live normalized snapshot read by the package-cycle access carrier.
@@ -77,6 +80,33 @@ pub fn TextModel::TextModel(
   revision : String,
   text : String,
 ) -> TextModel {
+  new_text_model(
+    uri,
+    display_name,
+    language_id,
+    version,
+    revision,
+    text,
+    None,
+    None,
+  )
+}
+
+///|
+/// Shared production/test constructor. Production passes no resolver and
+/// therefore uses the registry-backed token part; the package test seam can
+/// inject a failing source-shaped adapter while retaining the exact TextModel
+/// ownership, reporting, and lifecycle path.
+fn new_text_model(
+  uri : @base_common.Uri,
+  display_name : String,
+  language_id : String,
+  version : Int,
+  revision : String,
+  text : String,
+  support_resolver : ((String) -> @tokens.InternalTokenizationSupportAdapter?)?,
+  unexpected_error_observer : ((String) -> Unit)?,
+) -> TextModel {
   let display_name = if display_name == "" {
     uri.to_string()
   } else {
@@ -112,9 +142,25 @@ pub fn TextModel::TextModel(
     too_large=() => is_too_large_for_tokenization,
     disposing=() => is_disposing.val,
     scheduler=() => tokenization_scheduler.val,
-    unexpected_error=_message => (),
+    unexpected_error=message => {
+      // This package is deliberately host-neutral. `println` reaches the JS
+      // console and native stderr/stdout plumbing without importing browser or
+      // shell effects, matching the established decoration warning seam.
+      println("[viewer/tokenization] unexpected tokenizer error: \{message}")
+      match unexpected_error_observer {
+        Some(observer) => observer(message)
+        None => ()
+      }
+    },
   )
   let attached_views = @tokens.AttachedViews::new()
+  let tokenization = match support_resolver {
+    Some(resolve_support) =>
+      @tokens.TokenizationTextModelPart::new_with_support_resolver(
+        access, attached_views, resolve_support,
+      )
+    None => @tokens.TokenizationTextModelPart::new(access, attached_views)
+  }
   {
     uri,
     display_name,
@@ -122,9 +168,10 @@ pub fn TextModel::TextModel(
     version,
     revision,
     snapshot,
-    tokenization: @tokens.TokenizationTextModelPart::new(access, attached_views),
+    tokenization,
     attached_views,
     attached_count,
+    attached_change_emitter: @base_common.Emitter::new(),
     tokenization_scheduler,
     tokenization_snapshot,
     is_too_large_for_tokenization_: is_too_large_for_tokenization,
@@ -159,6 +206,7 @@ pub fn TextModel::dispose(self : TextModel) -> Unit {
   self.attached_views.dispose()
   self.tokenization_scheduler.val = None
   self.is_disposed = true
+  self.attached_change_emitter.dispose()
   self.on_will_dispose.dispose()
   self.on_did_change_decorations.actual.dispose()
   self.event_emitter.emitter.dispose()
@@ -191,6 +239,17 @@ pub fn TextModel::is_attached_to_editor(self : TextModel) -> Bool {
 }
 
 ///|
+/// Subscribes to the aggregate attachment boundary. The event fires after the
+/// tokenization part has observed exactly `0 -> 1` or `1 -> 0`, matching
+/// `onDidChangeAttached` (`textModel.ts:235-236,607-623`; `model.ts:1365`).
+pub fn TextModel::on_did_change_attached(
+  self : TextModel,
+  listener : () -> Unit,
+) -> @base_common.Disposable {
+  self.attached_change_emitter.event(_ => listener())
+}
+
+///|
 /// Begins one Viewer attachment (`textModel.ts:607-614`). The first non-None
 /// scheduler of an attached epoch wins. A late first scheduler wakes existing
 /// background work once without synthesizing another 0->1 notification.
@@ -214,6 +273,7 @@ pub fn TextModel::on_before_attached(
   self.attached_count.val += 1
   if self.attached_count.val == 1 {
     self.tokenization.handle_did_change_attached()
+    self.attached_change_emitter.fire(())
   }
   self.attached_views.attach_view()
 }
@@ -229,12 +289,33 @@ pub fn TextModel::on_before_detached(
   self.attached_count.val -= 1
   if self.attached_count.val == 0 {
     self.tokenization.handle_did_change_attached()
+    self.attached_change_emitter.fire(())
   }
   self.attached_views.detach_view(attached_view)
   if self.attached_count.val == 0 {
     self.tokenization_scheduler.val = None
   }
 }
+
+///|
+/// Model listener ownership query (`textModel.ts:430-440`). The readonly
+/// model carries will-dispose, decoration, token, attached, and content
+/// emitters; unported options/line-height/font emitters are N-A. In
+/// particular, the token-part substep must not be omitted.
+fn TextModel::has_listeners(self : TextModel) -> Bool {
+  self.on_will_dispose.has_listeners() ||
+  self.on_did_change_decorations.actual.has_listeners() ||
+  self.tokenization.has_listeners() ||
+  self.attached_change_emitter.has_listeners() ||
+  self.event_emitter.emitter.has_listeners()
+}
+
+///|
+/// Keeps the package-internal source member in the non-test build; wbtests
+/// exercise the token-listener ownership branch directly.
+let _test_only_text_model_has_listeners_anchor : Unit = ignore(
+  TextModel::has_listeners,
+)
 
 ///|
 /// Subscribes to the start of `dispose` — `onWillDispose` (`textModel.ts:223`).

@@ -33,8 +33,11 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   preference or IME. Internal `on_before_attached`/`on_before_detached` calls
   maintain exact attached-view handles and select the first available scheduler
   for an aggregate attached epoch; final detach cancels that epoch before the
-  scheduler is cleared. Ranges are generally clamped where Monaco throws, and
-  the snapshot remains readable after `TextModel::dispose`.
+  scheduler is cleared. The model-owned `on_did_change_attached` event fires
+  after tokenization observes only the aggregate `0 -> 1` and `1 -> 0`
+  transitions and is released with the model. Ranges are generally clamped
+  where Monaco throws, and the snapshot remains readable after
+  `TextModel::dispose`.
 
 ## Mutable model-side state
 
@@ -46,6 +49,12 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   by `viewer/common/model/tokens`. The tokenizer backend tracks invalid end
   states, prioritizes attached visible ranges, yields between bounded slices,
   and makes stale scheduled generations inert after detach or disposal.
+- Model listener ownership includes the token part's external token listeners
+  alongside the model's will-dispose, decoration, attached, and content
+  emitters; options/line-height/font emitters remain N-A. Unexpected tokenizer
+  failures are reported immediately through the package's host-neutral
+  `println` seam, disable that support for the current reset, and leave the
+  model live for a later reset.
 - The constructor fixes the large-file tokenization decision at Monaco's
   strict `> 20 Mi` UTF-16-unit or `> 300K` line thresholds. Large models keep
   the projected view collection but return default tokens and schedule no

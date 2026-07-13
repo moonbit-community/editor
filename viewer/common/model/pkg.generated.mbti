@@ -294,6 +294,7 @@ pub fn TextModel::might_contain_rtl(Self) -> Bool
 pub fn TextModel::modify_position(Self, @common.Position, Int) -> @common.Position
 pub fn TextModel::on_before_attached(Self, scheduler? : @tokens.TokenizationScheduler) -> @tokens.AttachedViewImpl
 pub fn TextModel::on_before_detached(Self, @tokens.AttachedViewImpl) -> Unit
+pub fn TextModel::on_did_change_attached(Self, () -> Unit) -> @common.Disposable
 pub fn TextModel::on_did_change_content(Self, (ModelContentChangedEvent) -> Unit) -> @common.Disposable
 pub fn TextModel::on_did_change_decorations(Self, (ModelDecorationsChangedEvent) -> Unit) -> @common.Disposable
 pub fn TextModel::on_did_change_tokens(Self, (@tokens.ModelTokensChangedEvent) -> Unit) -> @common.Disposable

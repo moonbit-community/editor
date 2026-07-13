@@ -39,6 +39,30 @@ fn tokenization_model(text : String, language_id : String) -> TextModel {
 }
 
 ///|
+fn tokenization_model_with_resolver(
+  text : String,
+  language_id : String,
+  resolve_support : (String) -> @tokens.InternalTokenizationSupportAdapter?,
+) -> (TextModel, Array[String]) {
+  let reported : Array[String] = []
+  let model = new_text_model(
+    try! @base_common.Uri::from(
+      scheme="inmemory",
+      authority="tokenization-model",
+      path="/model.mbt",
+    ),
+    "model.mbt",
+    language_id,
+    1,
+    "",
+    text,
+    Some(resolve_support),
+    Some(message => reported.push(message)),
+  )
+  (model, reported)
+}
+
+///|
 priv struct ModelIdleTask {
   callback : (@tokens.TokenizationIdleDeadline) -> Unit
   active : Ref[Bool]
@@ -87,44 +111,95 @@ fn model_tokenization_scheduler_harness() -> ModelTokenizationSchedulerHarness {
 }
 
 ///|
-test "large-file tokenization thresholds are strict and constructor-fixed" {
+fn assert_constructor_large_policy(
+  text : String,
+  language_id : String,
+  expected : Bool,
+) -> Unit raise {
+  let model = tokenization_model(text, language_id)
+  assert_eq(model.is_too_large_for_tokenization(), expected)
+  model.dispose()
+}
+
+///|
+test "large-file tokenization size and line thresholds are strict OR branches" {
   assert_eq(LARGE_FILE_SIZE_THRESHOLD, 20 * 1024 * 1024)
   assert_eq(LARGE_FILE_LINE_COUNT_THRESHOLD, 300 * 1000)
 
-  let at_size = tokenization_model(
-    "x".repeat(LARGE_FILE_SIZE_THRESHOLD),
-    "token-size-boundary",
+  assert_constructor_large_policy(
+    "x".repeat(LARGE_FILE_SIZE_THRESHOLD - 1),
+    "token-size-below",
+    false,
   )
-  assert_eq(at_size.get_value_length(), LARGE_FILE_SIZE_THRESHOLD)
-  assert_false(at_size.is_too_large_for_tokenization())
-  at_size.set_value("small")
-  assert_false(at_size.is_too_large_for_tokenization())
-  at_size.dispose()
-
-  let over_size = tokenization_model(
+  assert_constructor_large_policy(
+    "x".repeat(LARGE_FILE_SIZE_THRESHOLD),
+    "token-size-equal",
+    false,
+  )
+  assert_constructor_large_policy(
     "x".repeat(LARGE_FILE_SIZE_THRESHOLD + 1),
     "token-size-over",
+    true,
   )
-  assert_true(over_size.is_too_large_for_tokenization())
-  over_size.set_value("small")
-  assert_true(over_size.is_too_large_for_tokenization())
-  over_size.dispose()
 
-  let at_lines = tokenization_model(
+  assert_constructor_large_policy(
+    "\n".repeat(LARGE_FILE_LINE_COUNT_THRESHOLD - 2),
+    "token-lines-below",
+    false,
+  )
+  assert_constructor_large_policy(
     "\n".repeat(LARGE_FILE_LINE_COUNT_THRESHOLD - 1),
-    "token-lines-boundary",
+    "token-lines-equal",
+    false,
   )
-  assert_eq(at_lines.get_line_count(), LARGE_FILE_LINE_COUNT_THRESHOLD)
-  assert_false(at_lines.is_too_large_for_tokenization())
-  at_lines.dispose()
-
-  let over_lines = tokenization_model(
+  assert_constructor_large_policy(
     "\n".repeat(LARGE_FILE_LINE_COUNT_THRESHOLD),
     "token-lines-over",
+    true,
   )
-  assert_eq(over_lines.get_line_count(), LARGE_FILE_LINE_COUNT_THRESHOLD + 1)
-  assert_true(over_lines.is_too_large_for_tokenization())
-  over_lines.dispose()
+
+  // The predicate is an OR: each one-sided overage above is sufficient, and
+  // crossing both boundaries keeps the predicate true (tokenization stays
+  // disabled).
+  assert_constructor_large_policy(
+    "x".repeat(LARGE_FILE_SIZE_THRESHOLD + 1) +
+    "\n".repeat(LARGE_FILE_LINE_COUNT_THRESHOLD),
+    "token-size-and-lines-over",
+    true,
+  )
+}
+
+///|
+test "large-file tokenization policy stays constructor-fixed across set_value" {
+  let initially_smaller = tokenization_model(
+    "x".repeat(LARGE_FILE_SIZE_THRESHOLD - 1),
+    "token-fixed-smaller",
+  )
+  initially_smaller.set_value("x".repeat(LARGE_FILE_SIZE_THRESHOLD))
+  assert_false(initially_smaller.is_too_large_for_tokenization())
+  initially_smaller.set_value("x".repeat(LARGE_FILE_SIZE_THRESHOLD + 1))
+  assert_false(initially_smaller.is_too_large_for_tokenization())
+  initially_smaller.dispose()
+
+  let initially_equal = tokenization_model(
+    "x".repeat(LARGE_FILE_SIZE_THRESHOLD),
+    "token-fixed-equal",
+  )
+  initially_equal.set_value("x".repeat(LARGE_FILE_SIZE_THRESHOLD - 1))
+  assert_false(initially_equal.is_too_large_for_tokenization())
+  initially_equal.set_value("x".repeat(LARGE_FILE_SIZE_THRESHOLD + 1))
+  assert_false(initially_equal.is_too_large_for_tokenization())
+  initially_equal.dispose()
+
+  let initially_larger = tokenization_model(
+    "x".repeat(LARGE_FILE_SIZE_THRESHOLD + 1),
+    "token-fixed-larger",
+  )
+  initially_larger.set_value("x".repeat(LARGE_FILE_SIZE_THRESHOLD))
+  assert_true(initially_larger.is_too_large_for_tokenization())
+  initially_larger.set_value("x".repeat(LARGE_FILE_SIZE_THRESHOLD - 1))
+  assert_true(initially_larger.is_too_large_for_tokenization())
+  initially_larger.dispose()
 }
 
 ///|
@@ -264,4 +339,159 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
   assert_false(later_scheduler.idle[1].active.val)
   assert_true(model.tokenization_scheduler.val is None)
   registration.dispose()
+}
+
+///|
+test "attached event fires after tokenization only on zero-one and one-zero" {
+  let calls = Ref(0)
+  let language_id = "text-model-attached-event-boundaries"
+  let registration = @syntax.tokenization_registry.register(language_id, ModelTokenizationCountingTokenizer::{
+    calls,
+  })
+  let scheduler = model_tokenization_scheduler_harness()
+  let model = tokenization_model("one\ntwo", language_id)
+  let observed : Array[String] = []
+  let subscription = model.on_did_change_attached(() => {
+    let idle_state = if scheduler.idle.is_empty() {
+      "none"
+    } else if scheduler.idle[0].active.val {
+      "active"
+    } else {
+      "cancelled"
+    }
+    observed.push("\{model.get_attached_editor_count()}:\{idle_state}")
+  })
+  assert_true(model.has_listeners())
+
+  let first = model.on_before_attached(scheduler=scheduler.scheduler)
+  assert_eq(observed.join(","), "1:active")
+  let second = model.on_before_attached()
+  assert_eq(observed.join(","), "1:active")
+  model.on_before_detached(first)
+  assert_eq(observed.join(","), "1:active")
+  assert_true(scheduler.idle[0].active.val)
+  model.on_before_detached(second)
+  assert_eq(observed.join(","), "1:active,0:cancelled")
+
+  // Model disposal owns and releases the event emitter. Disposing the old
+  // subscription afterwards is harmless and the ownership query stays false.
+  model.dispose()
+  assert_false(model.attached_change_emitter.has_listeners())
+  subscription.dispose()
+  assert_false(model.has_listeners())
+  registration.dispose()
+}
+
+///|
+test "model listener ownership includes token-part listeners through disposal" {
+  let model = tokenization_model("one", "text-model-token-listeners")
+  assert_false(model.has_listeners())
+  let first = model.on_did_change_tokens(_ => ())
+  assert_true(model.has_listeners())
+  first.dispose()
+  assert_false(model.has_listeners())
+
+  let live_at_disposal = model.on_did_change_tokens(_ => ())
+  assert_true(model.has_listeners())
+  model.dispose()
+  assert_false(model.has_listeners())
+  live_at_disposal.dispose()
+  let after_disposal = model.on_did_change_tokens(_ => ())
+  assert_false(model.has_listeners())
+  after_disposal.dispose()
+  assert_false(model.has_listeners())
+}
+
+///|
+test "Some then None scheduler epoch retains supplier until final detach" {
+  let calls = Ref(0)
+  let language_id = "text-model-scheduler-some-none"
+  let registration = @syntax.tokenization_registry.register(language_id, ModelTokenizationCountingTokenizer::{
+    calls,
+  })
+  let scheduler = model_tokenization_scheduler_harness()
+  let model = tokenization_model("one\ntwo\nthree", language_id)
+
+  // First Some selects before the 0 -> 1 tokenization notification. The
+  // following None increments to two without another wake.
+  let supplier = model.on_before_attached(scheduler=scheduler.scheduler)
+  assert_eq(scheduler.idle.length(), 1)
+  let sibling = model.on_before_attached()
+  assert_eq(scheduler.idle.length(), 1)
+  assert_eq(model.get_attached_editor_count(), 2)
+
+  // Removing the supplier is nonfinal: the selected scheduler and worker stay
+  // alive and the remaining view continues to schedule through that epoch.
+  model.on_before_detached(supplier)
+  assert_eq(model.get_attached_editor_count(), 1)
+  assert_true(scheduler.idle[0].active.val)
+  assert_true(model.tokenization_scheduler.val is Some(_))
+  sibling.set_visible_lines(
+    [{ start_line_number: 2, end_line_number: 2 }],
+    false,
+  )
+  assert_eq(scheduler.delayed.length(), 1)
+
+  // Final detach notifies/cancels before clearing the epoch scheduler.
+  model.on_before_detached(sibling)
+  assert_eq(model.get_attached_editor_count(), 0)
+  assert_false(scheduler.idle[0].active.val)
+  assert_false(scheduler.delayed[0].active.val)
+  assert_true(model.tokenization_scheduler.val is None)
+  assert_eq(calls.val, 0)
+  model.dispose()
+  registration.dispose()
+}
+
+///|
+priv suberror ModelProductionTokenizationError {
+  InitialStateFailure
+}
+
+///|
+test "TextModel reports a failing tokenizer and remains live for later reset" {
+  let attempts = Ref(0)
+  let tokenizer_calls = Ref(0)
+  let (model, reported) = tokenization_model_with_resolver(
+    "one\ntwo",
+    "text-model-production-error-reporter",
+    _ => {
+      Some(
+        @tokens.InternalTokenizationSupportAdapter::new(
+          initial_state=() => {
+            attempts.val += 1
+            if attempts.val == 1 {
+              raise ModelProductionTokenizationError::InitialStateFailure
+            }
+            TokenizerState("healthy")
+          },
+          tokenize_encoded=(text, _has_eol, _state) => {
+            tokenizer_calls.val += 1
+            {
+              tokens: [0, @tokens.tag_to_metadata(Plain)],
+              font_info: None,
+              end_state: TokenizerState(text),
+            }
+          },
+        ),
+      )
+    },
+  )
+  assert_eq(reported.length(), 1)
+  assert_true(reported[0].contains("InitialStateFailure"))
+  assert_eq(model.get_value(), "one\ntwo")
+  model.tokenization.force_tokenization(2)
+  assert_eq(tokenizer_calls.val, 0)
+
+  // A later reset reacquires support after the reported failure; the same
+  // model can tokenize and then complete ordinary content/lifecycle work.
+  model.tokenization.reset_tokenization(fire_token_change_event=false)
+  model.tokenization.force_tokenization(2)
+  // One successful reset probes support and then seeds the state store, so
+  // the initial-state callback runs twice after the first reported failure.
+  assert_eq(attempts.val, 3)
+  assert_eq(tokenizer_calls.val, 2)
+  model.set_value("still\nlive")
+  assert_eq(model.get_value(), "still\nlive")
+  model.dispose()
 }

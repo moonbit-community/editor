@@ -25,9 +25,14 @@ model line + grammar tokens + injected-text decorations
 - Injected text is projected before line breaking, so its width affects wrapping;
   source mappings, tokens, and decorations remain anchored to model offsets.
 - Viewport construction uses one `get_view_lines_data` batch and a parallel
-  needed mask. Each needed projected model line performs one passive token-store
-  read; unneeded lines and content/length-only queries perform none, and no view
-  read invokes the lexer.
+  needed mask. Each participating `Projected` model line constructs Monaco's
+  five-callback injected-decoration context, computes absolute-view-line inline
+  decorations, and performs one passive token-store read before examining the
+  mask; therefore even an all-false mask reads once per projected model line.
+  `Identity` retains Monaco's distinct early return and reads only when needed.
+  The selected source-shaped decoration `Range` is adapted to the renderer's
+  line-local offsets after `baseViewLineNumber` has been observed. No view read
+  invokes the lexer.
 - Configuration or injected-text/content flushes reproject affected state at the
   current whole-model granularity, invalidate decoration caches, and reproject the
   cursor from model coordinates. Incremental edit events are not part of the

@@ -155,40 +155,54 @@ pub fn ModelLineProjection::get_view_line_data(
   model : @model.TextModel,
   model_line_number : Int,
   output_line_index : Int,
+  base_view_line_number : Int,
 ) -> ViewLineData {
   match self {
     Identity => {
-      let content = model.snapshot.line_text(model_line_number - 1)
+      let line_tokens = model.tokenization.get_line_tokens(model_line_number)
+      let content = line_tokens.get_line_content()
       {
         content,
         continues_with_wrapped_line: false,
         min_column: 1,
         max_column: content.length() + 1,
         start_visible_column: 0,
-        tokens: model.tokenization.get_line_tokens(model_line_number).inflate(),
+        tokens: line_tokens.inflate(),
         inline_decorations: [],
       }
     }
     Hidden => abort("Not supported")
-    Projected(data, ..) =>
-      view_line_data_for_segment(
-        model.tokenization.get_line_tokens(model_line_number),
-        data.projected_line,
-        data.segment_at_view_line_index(output_line_index),
+    Projected(_, ..) => {
+      let result : Array[ViewLineData?] = [None]
+      ignore(
+        self.get_view_lines_data(
+          model,
+          model_line_number,
+          output_line_index,
+          1,
+          base_view_line_number,
+          0,
+          [true],
+          result,
+        ),
       )
+      result[0].unwrap()
+    }
   }
 }
 
 ///|
 /// Batch form of `get_view_line_data` (`modelLineProjection.ts:160-184,
-/// 312-320`). A projected model line performs at most one passive token-store
-/// read, and performs none when every requested output is unneeded.
+/// 312-320`). A projected model line performs exactly one passive token-store
+/// read after computing its injected-text decorations, including when every
+/// requested output is unneeded. Identity retains its distinct early return.
 fn ModelLineProjection::get_view_lines_data(
   self : ModelLineProjection,
   model : @model.TextModel,
   model_line_number : Int,
   output_line_index : Int,
   line_count : Int,
+  base_view_line_number : Int,
   global_start_index : Int,
   needed : Array[Bool],
   result : Array[ViewLineData?],
@@ -200,7 +214,9 @@ fn ModelLineProjection::get_view_lines_data(
         return false
       }
       result[global_start_index] = Some(
-        self.get_view_line_data(model, model_line_number, 0),
+        self.get_view_line_data(
+          model, model_line_number, 0, base_view_line_number,
+        ),
       )
       true
     }
@@ -209,34 +225,56 @@ fn ModelLineProjection::get_view_lines_data(
       if !is_visible {
         abort("Not supported")
       }
-      let mut any_needed = false
-      for local_index in 0..<line_count {
-        if needed[global_start_index + local_index] {
-          any_needed = true
-          break
-        }
-      }
-      if !any_needed {
-        for local_index in 0..<line_count {
-          result[global_start_index + local_index] = None
-        }
-        return false
-      }
-      let base_tokens = model.tokenization.get_line_tokens(model_line_number)
-      let with_injections = base_tokens.with_inserted(
-        injected_tokens_for_projected_line(data.projected_line),
+
+      // `modelLineProjection.ts:163-176`: materialize the five-callback
+      // injected-decoration context and compute the per-output decorations
+      // before the passive token-store read below. This ordering is observable
+      // even for an all-false `needed` mask.
+      let injection_offsets = injection_offsets_for_projected_line(
+        data.projected_line,
       )
+      let injection_options = injection_options_for_projected_line(
+        data.projected_line,
+      )
+      let break_offsets = data.segments.map(segment => segment.end_offset)
+      let wrapped_text_indent_length = if data.segments.length() > 1 {
+        data.segments[1].wrapped_text_indent_length
+      } else {
+        0
+      }
+      let context : InjectedTextInlineDecorationsComputerContext = {
+        get_injection_options: _ => injection_options,
+        get_injection_offsets: _ => injection_offsets,
+        get_break_offsets: _ => break_offsets,
+        get_wrapped_text_indent_length: _ => wrapped_text_indent_length,
+        get_base_view_line_number: _ => base_view_line_number,
+      }
+      let prepared = prepare_projected_line_demand(
+        context,
+        model_line_number,
+        injection_options,
+        injection_offsets,
+        () => model.tokenization.get_line_tokens(model_line_number),
+      )
+      let line_inline_decorations = prepared.line_inline_decorations
+      let with_injections = prepared.line_with_injections
       for local_index in 0..<line_count {
         let global_index = global_start_index + local_index
         if !needed[global_index] {
           result[global_index] = None
           continue
         }
+        let requested_output_line_index = output_line_index + local_index
+        let inline_decorations = if line_inline_decorations.length() > 0 {
+          Some(line_inline_decorations[requested_output_line_index])
+        } else {
+          None
+        }
         result[global_index] = Some(
           view_line_data_for_segment_with_injections(
             with_injections,
-            data.projected_line,
-            data.segment_at_view_line_index(output_line_index + local_index),
+            data.segment_at_view_line_index(requested_output_line_index),
+            inline_decorations,
           ),
         )
       }
@@ -424,41 +462,36 @@ pub fn ModelLineProjection::injected_text_index_at(
 }
 
 ///|
-/// Builds one view line the Monaco `_getViewLineData` way: splice the injected
-/// text into the model line's tokens with `with_inserted`
-/// (`getLineTokensWithInjections`), then slice the output line's segment with
-/// `slice_and_inflate`. Injected-text classes become inline decorations
-/// (`InjectedTextInlineDecorationsComputer`), never token colors — the
-/// spliced injected tokens carry only default syntactic metadata.
-/// Continuation lines render `wrapped_text_indent_length` leading spaces and
-/// shift their token offsets by the same amount (`spaces(...) + lineContent`
-/// and `sliceAndInflate(..., deltaStartIndex)`).
-fn view_line_data_for_segment(
-  base_tokens : @tokens.LineTokens,
-  projected_line : ProjectedTextLine,
-  segment : ModelLineProjectionSegment,
-) -> ViewLineData {
-  let with_injections = base_tokens.with_inserted(
-    injected_tokens_for_projected_line(projected_line),
-  )
-  view_line_data_for_segment_with_injections(
-    with_injections, projected_line, segment,
-  )
-}
-
-///|
 /// Builds one segment after the batch caller has shared the model line's
-/// passive token read and injection splice.
+/// passive token read, injection splice, and source-shaped decoration
+/// computation. The source decoration ranges carry absolute view-line numbers;
+/// this local renderer adapter converts the selected line to zero-based offsets.
 fn view_line_data_for_segment_with_injections(
   with_injections : @tokens.LineTokens,
-  projected_line : ProjectedTextLine,
   segment : ModelLineProjectionSegment,
+  inline_decorations : Array[@inline_decorations.InlineDecoration]?,
 ) -> ViewLineData {
   let indent = segment.wrapped_text_indent_length
   let start_offset = segment.start_offset
   let end_offset = segment.end_offset
-  let content = projected_line.text[start_offset:end_offset].to_owned()
+  let tokens = with_injections.slice_and_inflate(
+    start_offset, end_offset, indent,
+  )
+  let content = tokens.get_line_content()
   let content = if indent > 0 { spaces(indent) + content } else { content }
+  let inline_decorations = match inline_decorations {
+    Some(decorations) =>
+      decorations.map(decoration => {
+        @view_layout.InlineDecoration(
+          OffsetRange(
+            decoration.range.start_column - 1,
+            decoration.range.end_column - 1,
+          ),
+          decoration.inline_class_name,
+        )
+      })
+    None => []
+  }
   {
     content,
     continues_with_wrapped_line: segment.continues_with_wrapped_line,
@@ -471,10 +504,8 @@ fn view_line_data_for_segment_with_injections(
     // formulas. Truncation only diverges when `columnsForFullWidthChar` is
     // fractional, and only for whitespace glyph tab stops.
     start_visible_column: segment.start_visible_column.to_int(),
-    tokens: with_injections.slice_and_inflate(start_offset, end_offset, indent),
-    inline_decorations: projected_injected_inline_decorations(
-      projected_line, start_offset, end_offset, indent,
-    ),
+    tokens,
+    inline_decorations,
   }
 }
 
@@ -490,63 +521,209 @@ fn spaces(n : Int) -> String {
 }
 
 ///|
-/// The injected text of a projected line as `with_inserted` splice tokens —
-/// Monaco's `getLineTokensWithInjections`. Each run inserts at its 0-based model
-/// column with default token metadata (no per-token color); the inlay color is
-/// applied as an inline decoration instead. Offsets are ascending, satisfying
-/// `with_inserted`'s precondition.
-fn injected_tokens_for_projected_line(
+/// Source-shaped injection options captured by the batch context.
+fn injection_options_for_projected_line(
   projected_line : ProjectedTextLine,
-) -> Array[@tokens.InsertedToken] {
-  let inserts : Array[@tokens.InsertedToken] = []
+) -> Array[@model.InjectedTextOptions] {
+  let options : Array[@model.InjectedTextOptions] = []
   for part in projected_line.parts {
     match part.kind {
-      InjectedSegment(model_column~, ..) =>
-        inserts.push(
-          @tokens.InsertedToken::new(
-            model_column,
-            projected_line.text[part.start:part.end].to_owned(),
-            @tokens.LineTokens::default_token_metadata(),
-          ),
-        )
+      InjectedSegment(class_name~, ..) =>
+        options.push({
+          content: projected_line.text[part.start:part.end].to_owned(),
+          inline_class_name: if class_name == "" {
+            None
+          } else {
+            Some(class_name)
+          },
+          attached_index: -1,
+        })
       SourceSegment(_) => ()
     }
   }
-  inserts
+  options
 }
 
 ///|
-/// Inline decorations for the injected text of a projected line, clipped to the
-/// output (view-local) segment `[start_offset, end_offset)` — Monaco's
-/// `InjectedTextInlineDecorationsComputer.getInlineDecorations`. Each injected
-/// run with a class emits one decoration over its projected columns.
-fn projected_injected_inline_decorations(
+/// Source-shaped injection offsets captured by the batch context.
+fn injection_offsets_for_projected_line(
   projected_line : ProjectedTextLine,
-  start_offset : Int,
-  end_offset : Int,
-  indent : Int,
-) -> Array[@view_layout.InlineDecoration] {
-  let decorations : Array[@view_layout.InlineDecoration] = []
+) -> Array[Int] {
+  let offsets : Array[Int] = []
   for part in projected_line.parts {
     match part.kind {
-      InjectedSegment(class_name~, ..) => {
-        let start = part.start.max(start_offset)
-        let end = part.end.min(end_offset)
-        if start < end {
-          // View-local columns shift right by the continuation indent.
-          decorations.push(
-            InlineDecoration(
-              OffsetRange(
-                start - start_offset + indent,
-                end - start_offset + indent,
-              ),
-              class_name,
-            ),
-          )
-        }
-      }
+      InjectedSegment(model_column~, ..) => offsets.push(model_column)
       SourceSegment(_) => ()
     }
   }
-  decorations
+  offsets
+}
+
+///|
+/// Monaco's five-callback `IInjectedTextInlineDecorationsComputerContext`.
+/// Keeping this literal callback shape makes ordering and the
+/// `baseViewLineNumber` value directly executable in white-box tests.
+priv struct InjectedTextInlineDecorationsComputerContext {
+  get_injection_options : (Int) -> Array[@model.InjectedTextOptions]
+  get_injection_offsets : (Int) -> Array[Int]
+  get_break_offsets : (Int) -> Array[Int]
+  get_wrapped_text_indent_length : (Int) -> Int
+  get_base_view_line_number : (Int) -> Int
+}
+
+///|
+/// Monaco's `InjectedTextInlineDecorationsComputer` retained at the exact
+/// projection seam rather than precomputing decorations while constructing the
+/// projected line.
+priv struct InjectedTextInlineDecorationsComputer {
+  context : InjectedTextInlineDecorationsComputerContext
+}
+
+///|
+fn InjectedTextInlineDecorationsComputer::new(
+  context : InjectedTextInlineDecorationsComputerContext,
+) -> InjectedTextInlineDecorationsComputer {
+  { context, }
+}
+
+///|
+/// `inlineDecorations.ts:213-267`, including callback order, wrapped clipping,
+/// continuation indent, and absolute view-line ranges.
+fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
+  self : InjectedTextInlineDecorationsComputer,
+  model_line_number : Int,
+) -> Array[Array[@inline_decorations.InlineDecoration]] {
+  let injection_offsets = (self.context.get_injection_offsets)(
+    model_line_number,
+  )
+  if injection_offsets.length() == 0 {
+    return []
+  }
+  let line_inline_decorations : Array[
+    Array[@inline_decorations.InlineDecoration],
+  ] = []
+  let mut total_injected_text_length_before = 0
+  let mut current_injected_offset = 0
+  let injection_options = (self.context.get_injection_options)(
+    model_line_number,
+  )
+  let break_offsets = (self.context.get_break_offsets)(model_line_number)
+  for output_line_index in 0..<break_offsets.length() {
+    let inline_decorations : Array[@inline_decorations.InlineDecoration] = []
+    line_inline_decorations.push(inline_decorations)
+    let line_start_offset_in_input_with_injections = if output_line_index > 0 {
+      break_offsets[output_line_index - 1]
+    } else {
+      0
+    }
+    let line_end_offset_in_input_with_injections = break_offsets[output_line_index]
+    while current_injected_offset < injection_offsets.length() {
+      let options = injection_options[current_injected_offset]
+      let length = options.content.length()
+      let injected_text_start_offset_in_input_with_injections = injection_offsets[current_injected_offset] +
+        total_injected_text_length_before
+      let injected_text_end_offset_in_input_with_injections = injected_text_start_offset_in_input_with_injections +
+        length
+      if injected_text_start_offset_in_input_with_injections >
+        line_end_offset_in_input_with_injections {
+        break
+      }
+      if line_start_offset_in_input_with_injections <
+        injected_text_end_offset_in_input_with_injections {
+        match options.inline_class_name {
+          Some(inline_class_name) => {
+            let wrapped_text_indent_length = (self.context.get_wrapped_text_indent_length)(
+              model_line_number,
+            )
+            let offset = if output_line_index > 0 {
+              wrapped_text_indent_length
+            } else {
+              0
+            }
+            let start = offset +
+              (injected_text_start_offset_in_input_with_injections -
+              line_start_offset_in_input_with_injections).max(0)
+            let end = offset +
+              (injected_text_end_offset_in_input_with_injections -
+              line_start_offset_in_input_with_injections).min(
+                line_end_offset_in_input_with_injections -
+                line_start_offset_in_input_with_injections,
+              )
+            if start != end {
+              let view_line_number = (self.context.get_base_view_line_number)(
+                  model_line_number,
+                ) +
+                output_line_index
+              inline_decorations.push(
+                @inline_decorations.InlineDecoration::new(
+                  Range(view_line_number, start + 1, view_line_number, end + 1),
+                  inline_class_name,
+                  Regular,
+                ),
+              )
+            }
+          }
+          None => ()
+        }
+      }
+      if injected_text_end_offset_in_input_with_injections <=
+        line_end_offset_in_input_with_injections {
+        total_injected_text_length_before += length
+        current_injected_offset += 1
+      } else {
+        break
+      }
+    }
+  }
+  line_inline_decorations
+}
+
+///|
+/// The exact ordered source seam at `modelLineProjection.ts:175-178`:
+/// construct/use the decoration computer, then passively read the model-line
+/// tokens, then splice injections into that one shared value. Keeping the token
+/// read as the `ISimpleModel.tokenization` dependency closure gives white-box
+/// tests executable ordering evidence without widening the package API.
+priv struct PreparedProjectedLineDemand {
+  line_inline_decorations : Array[Array[@inline_decorations.InlineDecoration]]
+  line_with_injections : @tokens.LineTokens
+}
+
+///|
+fn prepare_projected_line_demand(
+  context : InjectedTextInlineDecorationsComputerContext,
+  model_line_number : Int,
+  injection_options : Array[@model.InjectedTextOptions],
+  injection_offsets : Array[Int],
+  read_line_tokens : () -> @tokens.LineTokens,
+) -> PreparedProjectedLineDemand {
+  let computer = InjectedTextInlineDecorationsComputer::new(context)
+  let line_inline_decorations = computer.get_inline_decorations(
+    model_line_number,
+  )
+  let line_tokens = read_line_tokens()
+  let line_with_injections = line_tokens.with_inserted(
+    inserted_tokens_from_injection_data(injection_options, injection_offsets),
+  )
+  { line_inline_decorations, line_with_injections }
+}
+
+///|
+/// Monaco's `getLineTokensWithInjections` adapter over the same options and
+/// offsets read by the decoration context.
+fn inserted_tokens_from_injection_data(
+  injection_options : Array[@model.InjectedTextOptions],
+  injection_offsets : Array[Int],
+) -> Array[@tokens.InsertedToken] {
+  let inserts : Array[@tokens.InsertedToken] = []
+  for index, options in injection_options {
+    inserts.push(
+      @tokens.InsertedToken::new(
+        injection_offsets[index],
+        options.content,
+        @tokens.LineTokens::default_token_metadata(),
+      ),
+    )
+  }
+  inserts
 }

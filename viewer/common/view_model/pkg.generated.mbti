@@ -107,7 +107,7 @@ pub(all) enum ModelLineProjection {
 pub fn ModelLineProjection::get_model_column_of_view_position(Self, Int, Int) -> Int
 pub fn ModelLineProjection::get_view_line_content(Self, @model.TextModel, Int, Int) -> String
 pub fn ModelLineProjection::get_view_line_count(Self) -> Int
-pub fn ModelLineProjection::get_view_line_data(Self, @model.TextModel, Int, Int) -> ViewLineData
+pub fn ModelLineProjection::get_view_line_data(Self, @model.TextModel, Int, Int, Int) -> ViewLineData
 pub fn ModelLineProjection::get_view_line_max_column(Self, @model.TextModel, Int, Int) -> Int
 pub fn ModelLineProjection::get_view_line_min_column(Self, Int) -> Int
 pub fn ModelLineProjection::get_view_position_of_model_position(Self, Int, Int, affinity? : @model.PositionAffinity) -> @common.Position
@@ -311,8 +311,7 @@ pub struct ViewModelLinesFromProjectedModel {
   mut model_line_projections : Array[ModelLineProjection]
   mut projected_model_line_line_counts : Array[Int]
   mut hidden_areas_decoration_ids : Array[String]
-  mut batch_call_count : Int
-  mut passive_token_read_count : Int
+  // private fields
 }
 pub fn ViewModelLinesFromProjectedModel::convert_model_position_to_view_position(Self, Int, Int, affinity? : @model.PositionAffinity, allow_zero_line_number? : Bool, below_hidden_ranges? : Bool) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::convert_model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range

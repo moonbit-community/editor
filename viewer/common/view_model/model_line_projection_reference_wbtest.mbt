@@ -120,7 +120,21 @@ fn projection_assert_masks(
   let all_needed = [ for _ in 0..<line_count => true ]
   projection_assert_batch(lines, expected, 1, line_count, all_needed)
   let none_needed = [ for _ in 0..<line_count => false ]
+  let mut visible_projected_line_count = 0
+  for projection in lines.model_line_projections {
+    if projection is Projected(_, is_visible=true) {
+      visible_projected_line_count += 1
+    }
+  }
+  let reads_before_none_needed = lines.passive_token_read_count
   projection_assert_batch(lines, expected, 1, line_count, none_needed)
+  // `modelLineProjection.ts:163-185`: Projected constructs the injection
+  // context/decorations and passively reads the shared model-line tokens before
+  // examining `needed`. Identity has the distinct early return at :313-316.
+  assert_eq(
+    lines.passive_token_read_count - reads_before_none_needed,
+    visible_projected_line_count,
+  )
   let first_needed = [ for i in 0..<line_count => i == 0 ]
   projection_assert_batch(lines, expected, 1, line_count, first_needed)
   let last_needed = [ for i in 0..<line_count => i == line_count - 1 ]
@@ -134,6 +148,73 @@ fn projection_assert_masks(
     projection_assert_batch(lines, expected, 2, line_count - 1, middle_sparse)
   }
   assert_false(model.tokenization.has_tokens())
+}
+
+///|
+test "projected injection decorations complete before token read with exact callback values" {
+  let callback_order : Array[String] = []
+  let callback_model_lines : Array[Int] = []
+  let injection_options = [
+    @model.InjectedTextOptions("ABCDE", inline_class_name="ctx-class"),
+  ]
+  let injection_offsets = [2]
+  let context : InjectedTextInlineDecorationsComputerContext = {
+    get_injection_options: model_line_number => {
+      callback_order.push("options")
+      callback_model_lines.push(model_line_number)
+      injection_options
+    },
+    get_injection_offsets: model_line_number => {
+      callback_order.push("offsets")
+      callback_model_lines.push(model_line_number)
+      injection_offsets
+    },
+    get_break_offsets: model_line_number => {
+      callback_order.push("breaks")
+      callback_model_lines.push(model_line_number)
+      [4, 7]
+    },
+    get_wrapped_text_indent_length: model_line_number => {
+      callback_order.push("indent")
+      callback_model_lines.push(model_line_number)
+      3
+    },
+    get_base_view_line_number: model_line_number => {
+      callback_order.push("base")
+      callback_model_lines.push(model_line_number)
+      11
+    },
+  }
+  let model = projection_reference_model("projection-context-order")
+  let prepared = prepare_projected_line_demand(
+    context,
+    7,
+    injection_options,
+    injection_offsets,
+    () => {
+      callback_order.push("tokens")
+      model.tokenization.get_line_tokens(1)
+    },
+  )
+  let actual = prepared.line_inline_decorations
+  assert_true(
+    callback_order ==
+    [
+      "offsets", "options", "breaks", "indent", "base", "indent", "base", "tokens",
+    ],
+  )
+  assert_true(callback_model_lines == [7, 7, 7, 7, 7, 7, 7])
+  assert_eq(actual.length(), 2)
+  assert_eq(actual[0].length(), 1)
+  assert_true(actual[0][0].range == Range(11, 3, 11, 5))
+  assert_eq(actual[0][0].inline_class_name, "ctx-class")
+  assert_true(actual[0][0].type_ == Regular)
+  assert_eq(actual[1].length(), 1)
+  assert_true(actual[1][0].range == Range(12, 4, 12, 7))
+  assert_eq(
+    prepared.line_with_injections.get_line_content(),
+    "clABCDEass Nice {",
+  )
 }
 
 ///|

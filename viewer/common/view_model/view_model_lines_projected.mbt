@@ -24,8 +24,8 @@ pub struct ViewModelLinesFromProjectedModel {
   mut hidden_areas_decoration_ids : Array[String]
   // Package-private conformance counters. They make the source batch/read
   // ownership observable to white-box tests without widening the public API.
-  mut batch_call_count : Int
-  mut passive_token_read_count : Int
+  priv mut batch_call_count : Int
+  priv mut passive_token_read_count : Int
 }
 
 ///|
@@ -505,10 +505,14 @@ pub fn ViewModelLinesFromProjectedModel::get_view_line_data(
   view_line_number : Int,
 ) -> ViewLineData {
   let info = self.get_view_line_info(view_line_number)
+  let base_view_line_number = self.projected_model_line_line_counts[info.model_line_number -
+    1] +
+    1
   self.model_line_projections[info.model_line_number - 1].get_view_line_data(
     self.model,
     info.model_line_number,
     info.model_line_wrapped_line_idx,
+    base_view_line_number,
   )
 }
 
@@ -555,11 +559,14 @@ pub fn ViewModelLinesFromProjectedModel::get_view_lines_data(
       last_line = true
       remaining_view_line_count = view_end_line_number - view_line_number + 1
     }
+    let base_view_line_number = self.projected_model_line_line_counts[model_line_index] +
+      1
     let read_tokens = projection.get_view_lines_data(
       self.model,
       model_line_index + 1,
       from_view_line_index,
       remaining_view_line_count,
+      base_view_line_number,
       view_line_number - view_start_line_number,
       needed,
       result,

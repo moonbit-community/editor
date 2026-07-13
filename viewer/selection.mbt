@@ -236,7 +236,7 @@ fn get_rich_text_to_copy(
   model_range : @base_common.Range,
   font_info : @config.FontInfo,
 ) -> String {
-  let color_map = @model_tokens.default_token_color_map()
+  let color_map = @model.default_token_color_map()
   "<div style=\"" +
   "color: " +
   color_map[1] +

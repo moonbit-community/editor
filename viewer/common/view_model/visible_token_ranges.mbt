@@ -4,7 +4,7 @@
 /// removed by the already source-shaped `to_model_visible_ranges` split.
 fn ViewModel::model_visible_ranges_for_tokenization(
   self : ViewModel,
-) -> Array[@model_tokens.VisibleLineRange] {
+) -> Array[@model.VisibleLineRange] {
   let viewport = self.view_layout.get_lines_viewport_data()
   let visible_view_range = @base_common.Range(
     viewport.start_line_number,
@@ -12,7 +12,7 @@ fn ViewModel::model_visible_ranges_for_tokenization(
     viewport.end_line_number,
     self.get_line_max_column(viewport.end_line_number),
   )
-  let ranges : Array[@model_tokens.VisibleLineRange] = []
+  let ranges : Array[@model.VisibleLineRange] = []
   for model_range in self.to_model_visible_ranges(visible_view_range) {
     ranges.push({
       start_line_number: model_range.start_line_number,

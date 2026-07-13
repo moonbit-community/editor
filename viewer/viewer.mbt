@@ -168,7 +168,7 @@ priv struct ModelData {
   model : @model.TextModel
   view_model : @view_model.ViewModel
   view : @view.View?
-  attached_view : @model_tokens.AttachedViewImpl
+  attached_view : @model.AttachedViewImpl
   listeners_to_remove : Array[@base_common.Disposable]
 }
 

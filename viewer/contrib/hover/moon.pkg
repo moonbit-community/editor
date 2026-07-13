@@ -5,7 +5,6 @@ import {
   "moonbit-community/editor/syntax",
   "moonbit-community/editor/viewer/common" @viewer_common,
   "moonbit-community/editor/viewer/common/model",
-  "moonbit-community/editor/viewer/common/model/tokens" @model_tokens,
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/services",

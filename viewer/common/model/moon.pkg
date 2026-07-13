@@ -1,8 +1,6 @@
 import {
   "moonbit-community/editor/base/common" @base_common,
-  "moonbit-community/editor/viewer/common/model/tokens",
-}
-
-import {
   "moonbit-community/editor/syntax",
-} for "wbtest"
+  "moonbit-community/editor/viewer/common/services",
+  "moonbit-community/editor/viewer/common/tokens" @common_tokens,
+}

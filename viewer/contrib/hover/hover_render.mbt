@@ -147,7 +147,7 @@ fn render_hover_code_block(
       }
       _ => []
     }
-    let line_tokens = @model_tokens.line_tokens_from_lexer_tokens(
+    let line_tokens = @model.line_tokens_from_lexer_tokens(
       line,
       lexer_tokens,
       codec,

@@ -30,7 +30,7 @@ pub fn ViewModel::on_model_tokens_changed(
 /// has returned (`viewModelImpl.ts:521-522`).
 fn ViewModel::emit_model_tokens_changed(
   self : ViewModel,
-  event : @model_tokens.ModelTokensChangedEvent,
+  event : @model.ModelTokensChangedEvent,
 ) -> Unit {
   self.cursor_event_dispatcher.emit_model_tokens_changed(
     ModelTokensChangedOutgoingEvent::new(event),

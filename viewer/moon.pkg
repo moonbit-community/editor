@@ -14,7 +14,6 @@ import {
   "moonbit-community/editor/viewer/common/cursor",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/model",
-  "moonbit-community/editor/viewer/common/model/tokens" @model_tokens,
   "moonbit-community/editor/viewer/contrib/agent_feedback",
   "moonbit-community/editor/viewer/contrib/agent_feedback/browser" @agent_feedback_browser,
   "moonbit-community/editor/viewer/contrib/folding/browser" @folding_browser,

@@ -31,7 +31,7 @@ impl @syntax.LineTokenizer for RestoreStateCountingTokenizer with fn tokenize_li
 ///|
 fn Viewer::attached_tokenization_state_for_restore_test(
   self : Viewer,
-) -> @model_tokens.AttachedViewState raise {
+) -> @model.AttachedViewState raise {
   guard self.model_data is Some(model_data) else {
     fail("expected attached model data")
   }
@@ -73,7 +73,7 @@ test "restore view state commits scroll before stabilized visible lines" {
   calls.val = 0
 
   let scroll_positions : Array[(Double, Double)] = []
-  let scroll_states : Array[@model_tokens.AttachedViewState] = []
+  let scroll_states : Array[@model.AttachedViewState] = []
   let lexer_calls_during_scroll : Array[Int] = []
   let listener = layout.on_did_scroll(_change => {
     let position = layout.position()

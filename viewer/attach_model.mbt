@@ -357,7 +357,7 @@ fn Viewer::create_view(
 fn Viewer::build_view_model(
   self : Viewer,
   model : @model.TextModel,
-  attached_view : @model_tokens.AttachedViewImpl,
+  attached_view : @model.AttachedViewImpl,
 ) -> @view_model.ViewModel {
   let options = self.options.view_model_options(
     self.soft_wrap_column,
@@ -401,7 +401,7 @@ fn Viewer::build_view_model(
 fn Viewer::handle_model_tokens_changed(
   self : Viewer,
   model : @model.TextModel,
-  _event : @model_tokens.ModelTokensChangedEvent,
+  _event : @model.ModelTokensChangedEvent,
 ) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
   self.did_build_view_model.fire({

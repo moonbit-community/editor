@@ -17,7 +17,7 @@ pub struct ViewModel {
   cursor_event_dispatcher : CursorEventDispatcher
   /// Borrowed exact handle returned by TextModel attachment. ModelData alone
   /// owns its detach lifetime; ViewModel only publishes visible ranges.
-  priv attached_view : @model_tokens.AttachedViewImpl?
+  priv attached_view : @model.AttachedViewImpl?
   /// ViewModel's earlier scroll listener publishes unstable visible ranges
   /// before the root's later scroll/render listener.
   priv mut visible_lines_subscription : @base_common.Disposable?
@@ -66,7 +66,7 @@ pub fn ViewModel::with_options(
   smooth_scrolling? : Bool = false,
   schedule_at_next_animation_frame? : (() -> Unit) -> @base_common.Disposable = view_model_no_animation_scheduler,
   now? : () -> Double = view_model_zero_clock,
-  attached_view? : @model_tokens.AttachedViewImpl,
+  attached_view? : @model.AttachedViewImpl,
   emit_view_tokens_changed? : (Array[ViewTokensChangedRange]) -> Unit = view_model_no_token_event_sink,
 ) -> ViewModel {
   let lines = ViewModelLinesFromProjectedModel::new(

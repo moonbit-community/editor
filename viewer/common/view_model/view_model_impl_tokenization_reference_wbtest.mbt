@@ -110,7 +110,7 @@ test "model-token callback converts wrapped and hidden ranges before outgoing de
   let model = view_model_impl_reference_model(
     "abcdefghij\nhidden\nuvwxyz", "/model-token-order.mbt",
   )
-  let original : Ref[@model_tokens.ModelTokensChangedEvent?] = Ref(None)
+  let original : Ref[@model.ModelTokensChangedEvent?] = Ref(None)
   let _model_subscription = model.on_did_change_tokens(event => {
     original.val = Some(event)
   })
@@ -125,7 +125,7 @@ test "model-token callback converts wrapped and hidden ranges before outgoing de
     },
   )
   assert_true(view_model.set_hidden_areas([Range(2, 1, 2, 1)]))
-  let outgoing_events : Array[@model_tokens.ModelTokensChangedEvent] = []
+  let outgoing_events : Array[@model.ModelTokensChangedEvent] = []
   let outgoing_identity = Ref(false)
   let _outgoing_subscription = view_model.on_model_tokens_changed(outgoing => {
     delivery_order.push("outgoing")

@@ -99,13 +99,13 @@ pub fn ViewZonesChangedEvent::is_no_op(_self : ViewZonesChangedEvent) -> Bool {
 /// browser ViewEvent delivery.
 pub(all) struct ModelTokensChangedOutgoingEvent {
   kind : OutgoingViewModelEventKind
-  event : @model_tokens.ModelTokensChangedEvent
+  event : @model.ModelTokensChangedEvent
 }
 
 ///|
 /// Builds the distinct outgoing model-token wrapper.
 pub fn ModelTokensChangedOutgoingEvent::new(
-  event : @model_tokens.ModelTokensChangedEvent,
+  event : @model.ModelTokensChangedEvent,
 ) -> ModelTokensChangedOutgoingEvent {
   { kind: ModelTokensChanged, event }
 }

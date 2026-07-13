@@ -109,13 +109,13 @@ let browser_tokenization_idle_adapter : TokenizationIdleAdapter = create_tokeniz
 
 ///|
 fn schedule_tokenization_idle(
-  callback : (@model_tokens.TokenizationIdleDeadline) -> Unit,
+  callback : (@model.TokenizationIdleDeadline) -> Unit,
 ) -> @base_common.Disposable {
   let cancel = run_tokenization_idle_adapter_js(
     browser_tokenization_idle_adapter,
     deadline => {
       callback(
-        @model_tokens.TokenizationIdleDeadline::new(() => {
+        @model.TokenizationIdleDeadline::new(() => {
           browser_idle_deadline_time_remaining_js(deadline)
         }),
       )
@@ -127,7 +127,7 @@ fn schedule_tokenization_idle(
 }
 
 ///|
-let browser_tokenization_scheduler : @model_tokens.TokenizationScheduler = @model_tokens.TokenizationScheduler::new(
+let browser_tokenization_scheduler : @model.TokenizationScheduler = @model.TokenizationScheduler::new(
   idle=schedule_tokenization_idle,
   zero_timeout=callback => schedule_timeout(callback, 0),
   delay=(milliseconds, callback) => schedule_timeout(callback, milliseconds),

@@ -20,15 +20,15 @@ pub struct TextModel {
   mut snapshot : TextSnapshot
   /// The `model.tokenization` part (Monaco's `TokenizationTextModelPart`,
   /// wired in the `TextModel` constructor exactly as `textModel.ts` does).
-  tokenization : @tokens.TokenizationTextModelPart
+  tokenization : TokenizationTextModelPart
   /// TextModel owns the attached-view aggregate; tokenization only borrows it.
-  priv attached_views : @tokens.AttachedViews
+  priv attached_views : AttachedViews
   priv attached_count : Ref[Int]
   /// `_onDidChangeAttached` (`textModel.ts:235`), owned and released by the
   /// model rather than by the borrowed attached-view aggregate.
   priv attached_change_emitter : @base_common.Emitter[Unit]
   /// First non-None scheduler selected for the current attached epoch.
-  priv tokenization_scheduler : Ref[@tokens.TokenizationScheduler?]
+  priv tokenization_scheduler : Ref[TokenizationScheduler?]
   /// Live normalized snapshot read by the package-cycle access carrier.
   priv tokenization_snapshot : Ref[TextSnapshot]
   /// Constructor-fixed large-file policy (`textModel.ts:339-342`).
@@ -123,7 +123,7 @@ fn new_text_model(
   version : Int,
   revision : String,
   text : String,
-  support_resolver : ((String) -> @tokens.InternalTokenizationSupportAdapter?)?,
+  support_resolver : ((String) -> InternalTokenizationSupportAdapter?)?,
   unexpected_error_observer : ((String) -> Unit)?,
 ) -> TextModel {
   let display_name = if display_name == "" {
@@ -141,9 +141,9 @@ fn new_text_model(
     snapshot.line_count() > LARGE_FILE_LINE_COUNT_THRESHOLD
   let tokenization_snapshot = Ref(snapshot)
   let attached_count = Ref(0)
-  let tokenization_scheduler : Ref[@tokens.TokenizationScheduler?] = Ref(None)
+  let tokenization_scheduler : Ref[TokenizationScheduler?] = Ref(None)
   let is_disposing = Ref(false)
-  let access = @tokens.TokenizationModelAccess::new(
+  let access = TokenizationModelAccess::new(
     line_count=() => tokenization_snapshot.val.line_count(),
     line_content=line_number => {
       tokenization_snapshot.val.line_text(line_number - 1)
@@ -172,13 +172,13 @@ fn new_text_model(
       }
     },
   )
-  let attached_views = @tokens.AttachedViews::new()
+  let attached_views = AttachedViews::new()
   let tokenization = match support_resolver {
     Some(resolve_support) =>
-      @tokens.TokenizationTextModelPart::new_with_support_resolver(
+      TokenizationTextModelPart::new_with_support_resolver(
         access, attached_views, resolve_support,
       )
-    None => @tokens.TokenizationTextModelPart::new(access, attached_views)
+    None => TokenizationTextModelPart::new(access, attached_views)
   }
   let (identity, decoration_id_namespace) = next_model_identity()
   {
@@ -298,8 +298,8 @@ pub fn TextModel::on_did_change_attached(
 /// background work once without synthesizing another 0->1 notification.
 pub fn TextModel::on_before_attached(
   self : TextModel,
-  scheduler? : @tokens.TokenizationScheduler,
-) -> @tokens.AttachedViewImpl {
+  scheduler? : TokenizationScheduler,
+) -> AttachedViewImpl {
   let mut installed_late_scheduler = false
   if self.tokenization_scheduler.val is None {
     match scheduler {
@@ -327,7 +327,7 @@ pub fn TextModel::on_before_attached(
 /// second, and clears the epoch scheduler last.
 pub fn TextModel::on_before_detached(
   self : TextModel,
-  attached_view : @tokens.AttachedViewImpl,
+  attached_view : AttachedViewImpl,
 ) -> Unit {
   self.attached_count.val -= 1
   if self.attached_count.val == 0 {
@@ -374,7 +374,7 @@ pub fn TextModel::on_will_dispose(
 /// the tokenization part as the source's forwarded emitter does.
 pub fn TextModel::on_did_change_tokens(
   self : TextModel,
-  listener : (@tokens.ModelTokensChangedEvent) -> Unit,
+  listener : (ModelTokensChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.tokenization.on_did_change_tokens(listener)
 }

@@ -48,11 +48,11 @@ Two structural reductions are explicit. `View::new` stamps the ContentWidgets
 fingerprints after construction because importing the fingerprint owner here
 would create a package cycle; the nodes are stamped before mounting or hit
 testing. Supplied widget nodes remain raw Rabbita elements, so style writes do
-not gain Monaco `FastDomNode`'s per-property cache. ViewPart dirty/equality
+not gain Monaco `FastDomNode`'s per-property cache. Lifecycle dirty/equality
 gates still preserve source write order and values, but setter-level duplicate
 write suppression is not claimed.
 
 `ContentWidgetsRenderContext` is a capability record because importing
-`browser/view` would create a cycle. The `ViewPart` implementation therefore
-lives in the trait-owning `viewer/browser/view` package. This package is
-JS-only and contains no `Viewer::` methods.
+`browser/view` would create a cycle. The narrow lifecycle adapter therefore
+lives at the private rendering-context boundary in `viewer/browser/view`.
+This package is JS-only and contains no `Viewer::` methods.

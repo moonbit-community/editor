@@ -240,7 +240,7 @@ pub fn create_outside_editor(
 ///|
 /// `ElementPath` (mouseTarget.ts:157-235): predicates over the root-first
 /// fingerprint path bytes `PartFingerprints::collect` produces. The numeric
-/// byte values are `PartFingerprint::to_int` (view_part.mbt).
+/// byte values are `PartFingerprint::to_int` (`part_fingerprints.mbt`).
 pub(all) struct ElementPath {}
 
 ///|

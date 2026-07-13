@@ -8,7 +8,7 @@ reverse-corner styling. `prepare_selections_render` remains the pure
 measurement-driven compatibility oracle used by focused overlay tests.
 
 Selection is second in `browser/view`'s content-overlay order: current-line
-highlight, selection, decorations. This package writes no DOM; the overlay rows,
-measurement implementation, and `DynamicViewOverlay` implementation live in
+highlight, selection, decorations. This package writes no DOM; the overlay
+rows, measurement implementation, and closed overlay dispatch live in
 `viewer/browser/view`. CSS for the shared rows and selection pieces remains
 owner-adjacent here.

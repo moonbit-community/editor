@@ -98,7 +98,7 @@ pub fn View::new(
   // (`viewLines.ts:154`, `editorScrollbar.ts:69`, `contentWidgets.ts:39/45`,
   // `overlayWidgets.ts:62/66`, `view.ts:160`); the part packages here cannot
   // import `@view`, so the stamping is hoisted to this constructor
-  // (view_part.mbt header).
+  // (`part_fingerprints.mbt`).
   PartFingerprints::write(overflow_guard, OverflowGuard)
   PartFingerprints::write(view_lines.get_dom_node(), ViewLines)
   PartFingerprints::write(editor_scrollbar.get_dom_node(), ScrollableElement)

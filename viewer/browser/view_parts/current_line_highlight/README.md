@@ -9,6 +9,6 @@ model line to its view-line span.
 The overlay is first in `browser/view`'s content-overlay order, below selection
 and decoration pieces. Shared predicates/classes live in
 `viewer/common/view_layout`; the margin half lives in
-`browser/view_parts/margin`. This package writes no DOM. Its
-`DynamicViewOverlay` implementation lives in the trait-owning
-`viewer/browser/view` package.
+`browser/view_parts/margin`. This package writes no DOM. Preparation is adapted
+at the private rendering-context boundary in `viewer/browser/view`, whose
+closed overlay handle owns dispatch.

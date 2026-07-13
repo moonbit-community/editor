@@ -4,10 +4,9 @@
 // `browser/view`'s `ContentViewOverlays` rows, registered after the
 // current-line and selection overlays — Monaco's registration order
 // (`view.ts:218-221`: CurrentLine, Selections, [IndentGuides — unported],
-// Decorations). The `DynamicViewOverlay` impl lives in
-// `viewer/browser/view/view_part.mbt` (the trait-owning package); this
-// package is the pure per-line piece/HTML computation, unit-testable
-// headlessly.
+// Decorations). Preparation is adapted at the private rendering-context
+// boundary in `browser/view`; this package is the pure per-line piece/HTML
+// computation, unit-testable headlessly.
 //
 // Deviations:
 // - `linesVisibleRangesForRange` reuses the DOM caret-measurement seam
@@ -314,8 +313,8 @@ fn render_normal_decoration(
 
 ///|
 /// The decorations dynamic overlay's state: the prepared per-line HTML
-/// (`_renderResult`). `pub(all)`: the `DynamicViewOverlay` impl in
-/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+/// (`_renderResult`). `pub(all)`: the closed overlay handle in `browser/view`
+/// reads/writes `render_result` directly.
 pub(all) struct DecorationsOverlay {
   mut render_result : Array[String]
 }

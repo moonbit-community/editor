@@ -2,9 +2,9 @@
 // (`viewParts/currentLineHighlight/currentLineHighlight.ts:224-235` over the
 // abstract `prepareRender`, `:126-171`), as a pure per-line HTML builder for
 // `browser/view`'s `MarginViewOverlays` rows — the first registered margin
-// dynamic overlay, before the line-number overlay (`view.ts:225-229`). The
-// `DynamicViewOverlay` impl lives in `viewer/browser/view/view_part.mbt`
-// (the trait-owning package); the DOM-free predicates and class strings live
+// dynamic overlay, before the line-number overlay (`view.ts:225-229`). Its
+// preparation adapter lives at the private rendering-context boundary in
+// `browser/view`; the DOM-free predicates and class strings live
 // in `viewer/common/view_layout` (`current_line_highlight.mbt`); the content
 // twin lives with `view_parts/current_line_highlight`.
 

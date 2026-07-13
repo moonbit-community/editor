@@ -85,9 +85,11 @@ The root `viewer`, `viewer/browser/**`, and `viewer/ui/scrollbar` are js-only:
 - `viewer/ui/scrollbar` owns custom scrollbar DOM and pointer behavior; its
   arithmetic lives in `viewer/common/view_layout`.
 
-MoonBit's orphan rule keeps `impl ViewPart for <foreign part>` blocks in the
-trait-owning `viewer/browser/view` package. Root `viewer/*.mbt` contains
-`Viewer::` glue because foreign methods must live with `Viewer`.
+`viewer/browser/view` owns closed event/render handle enums and narrow
+lifecycle adapters for foreign parts because its private `ViewEvent` and
+rendering-context types cannot move down the dependency graph. Root
+`viewer/*.mbt` contains `Viewer::` glue because foreign methods must live with
+`Viewer`.
 
 ### Contributions
 

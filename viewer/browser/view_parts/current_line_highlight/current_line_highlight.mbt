@@ -5,9 +5,9 @@
 // as a pure per-line HTML builder. The overlay renders into
 // `browser/view`'s `ContentViewOverlays` rows as the first registered
 // dynamic overlay — before `SelectionsOverlay` (`view.ts:218-219`), which
-// keeps the highlight painting under the selection. The `DynamicViewOverlay`
-// impl lives in `viewer/browser/view/view_part.mbt` (the trait-owning
-// package); the DOM-free predicates and class strings live in
+// keeps the highlight painting under the selection. Its preparation adapter
+// lives at the private rendering-context boundary in `browser/view`; the
+// DOM-free predicates and class strings live in
 // `viewer/common/view_layout` (`current_line_highlight.mbt`); the margin
 // twin lives with the margin part.
 
@@ -156,8 +156,8 @@ pub fn CurrentLineHighlightState::on_focus_changed(
 
 ///|
 /// The content current-line dynamic overlay's state: source event caches plus
-/// the prepared per-line HTML (`_renderData`). `pub(all)`: the
-/// `DynamicViewOverlay` impl in `browser/view/view_part.mbt` consumes both.
+/// the prepared per-line HTML (`_renderData`). `pub(all)`: the closed overlay
+/// handle in `browser/view` consumes both.
 pub(all) struct CurrentLineHighlightOverlay {
   state : CurrentLineHighlightState
   mut render_result : Array[String]

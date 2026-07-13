@@ -11,9 +11,8 @@
 //   and `cursorHeight` 0 (→ full line height); the Block/Underline arms and
 //   the block-cursor `textContent`/token-class plumbing are not ported.
 //
-// The `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, not
-// here — see the exec-plan's cycle backlog and
-// `viewer/browser/view_parts/view_zones`'s README for why.
+// Its narrow lifecycle adapter lives in
+// `viewer/browser/view/view_widgets_cursors_lifecycle.mbt`.
 
 ///|
 /// Monaco's `ViewCursorRenderData` (`viewCursor.ts:26-36`), minus the
@@ -27,7 +26,7 @@ pub(all) struct CursorRenderData {
 } derive(Eq, Debug)
 
 ///|
-/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
 /// `should_render` / `render_data` directly.
 pub(all) struct ViewCursors {
   dom_node : @rdom.Element

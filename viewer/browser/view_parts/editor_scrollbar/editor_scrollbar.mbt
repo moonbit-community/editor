@@ -1,12 +1,11 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/editorScrollbar/editorScrollbar.ts`.
 // The custom scrollbar geometry/DOM itself lives in `viewer/ui/scrollbar`
 // (Monaco's `base/browser/ui/scrollbar/`); this package is the thin
-// view-part wrapper around it. The `ViewPart` trait impl lives in
-// `viewer/browser/view/view_part.mbt`, not here — see the exec-plan's cycle
-// backlog and `viewer/browser/view_parts/view_zones`'s README for why.
+// view-part wrapper around it. Its narrow lifecycle adapter lives in
+// `viewer/browser/view/view_overlays_lifecycle.mbt`.
 
 ///|
-/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
 /// `should_render` directly.
 pub(all) struct EditorScrollbar {
   editor_scrollable : @scrollbar.ScrollableElementDom

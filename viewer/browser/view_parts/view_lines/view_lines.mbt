@@ -1,8 +1,7 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/viewLines/viewLines.ts`
 // (`ViewLines`, the recycler) and `viewLine.ts` (the per-line render input +
-// DOM write). The `ViewPart` trait impl for `ViewLines` lives in
-// `viewer/browser/view/view_part.mbt`, not here — see the exec-plan's cycle
-// backlog and `viewer/browser/view_parts/view_zones`'s README for why.
+// DOM write). Its event adapter lives at the owning private-event boundary in
+// `viewer/browser/view/view_lines_zones_lifecycle.mbt`.
 
 ///|
 /// Live configuration values read by `ViewLines.onConfigurationChanged` in the
@@ -147,7 +146,7 @@ fn RunOnceScheduler::dispose(self : RunOnceScheduler) -> Unit {
 }
 
 ///|
-/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
 /// `should_render` and delegates source events into the retained collection.
 pub(all) struct ViewLines {
   dom_node : @scrollbar.CachedDomNode

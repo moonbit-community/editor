@@ -12,4 +12,4 @@ this order by `viewer/browser/view`:
 
 The glyph-margin overlay and relative/interval/custom line-number modes are not
 implemented. This package writes no DOM; `browser/view` owns margin rows and
-the `DynamicViewOverlay` implementations.
+the closed overlay dispatch.

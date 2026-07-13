@@ -10,6 +10,6 @@ expands `shouldFillLineOnLineBreak`. Inline geometry comes from the supplied
 live-line measurement closure. `prepare_decorations_render` serializes those
 pieces into one string per visible line.
 
-This package writes no DOM. `browser/view` owns the overlay rows and the
-`DynamicViewOverlay` implementation; exact helper types are in
+This package writes no DOM. `browser/view` owns the overlay rows, closed overlay
+dispatch, and rendering-context adapter; exact helper types are in
 `pkg.generated.mbti`.

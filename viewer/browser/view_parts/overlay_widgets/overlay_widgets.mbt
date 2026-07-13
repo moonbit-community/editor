@@ -3,12 +3,11 @@
 // (`addWidget`/`removeWidget` for widgets whose `getPosition()` is `null` —
 // they position themselves, so `render`/`prepare_render` stay no-ops; the
 // preference-position placement Monaco layers on top has no consumer yet).
-// The `ViewPart` trait impl lives in `viewer/browser/view/view_part.mbt`, not
-// here — see the exec-plan's cycle backlog and
-// `viewer/browser/view_parts/view_zones`'s README for why.
+// The narrow lifecycle adapter lives in
+// `viewer/browser/view/view_overlays_lifecycle.mbt`.
 
 ///|
-/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
 /// `should_render` directly.
 pub(all) struct OverlayWidgets {
   dom_node : @rdom.Element

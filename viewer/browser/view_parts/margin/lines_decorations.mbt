@@ -2,14 +2,13 @@
 // linesDecorations.ts` (`LinesDecorationsOverlay.prepareRender`/`render`), as
 // a pure per-line HTML builder for `browser/view`'s `MarginViewOverlays`
 // rows. The DOM-free half (decoration filtering + `DedupOverlay` expansion)
-// lives in `viewer/common/view_model/margin_decorations.mbt`; the
-// `DynamicViewOverlay` impl lives in `viewer/browser/view/view_part.mbt`
-// (the trait-owning package).
+// lives in `viewer/common/view_model/margin_decorations.mbt`; preparation is
+// adapted at the private rendering-context boundary in `browser/view`.
 
 ///|
 /// The lines-decorations dynamic overlay's state: the prepared per-line HTML
-/// (`_renderResult`). `pub(all)`: the `DynamicViewOverlay` impl in
-/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+/// (`_renderResult`). `pub(all)`: the closed overlay handle in `browser/view`
+/// reads/writes `render_result` directly.
 pub(all) struct LinesDecorationsOverlay {
   mut render_result : Array[String]
 }

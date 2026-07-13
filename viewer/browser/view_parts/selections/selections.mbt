@@ -3,13 +3,13 @@
 // b18492a288de038fbc7643aae6de8247029d11bd. The `ContentViewOverlays` rows
 // shell lives with `viewer/browser/view` (`view_overlays.mbt`), mirroring
 // Monaco's `viewOverlays.ts`; this package is the selection dynamic overlay
-// only. The `DynamicViewOverlay` impl lives in
-// `viewer/browser/view/view_part.mbt` (the trait-owning package).
+// only. Preparation is adapted at the private rendering-context boundary in
+// `browser/view`.
 
 ///|
 /// The selection dynamic overlay's state: the prepared per-line HTML
-/// (`_renderResult`). `pub(all)`: the `DynamicViewOverlay` impl in
-/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+/// (`_renderResult`). `pub(all)`: the closed overlay handle in `browser/view`
+/// reads/writes `render_result` directly.
 pub(all) struct SelectionsOverlay {
   mut render_result : Array[String]
 }

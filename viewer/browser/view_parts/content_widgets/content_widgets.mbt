@@ -1,9 +1,8 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/contentWidgets/contentWidgets.ts`
 // (`ViewContentWidgets` + its inner `Widget`), with the `IContentWidget` /
-// `IContentWidgetPosition` contracts of `editorBrowser.ts`. The `ViewPart`
-// trait impl for `ContentWidgets` lives in `viewer/browser/view/view_part.mbt`,
-// not here — see the exec-plan's cycle backlog and
-// `viewer/browser/view_parts/view_zones`'s README for why.
+// `IContentWidgetPosition` contracts of `editorBrowser.ts`. Its narrow
+// lifecycle adapter lives at the private rendering-context boundary in
+// `viewer/browser/view`.
 //
 // The widget lifecycle is the source's: a widget's DOM is appended once by
 // `add_widget` and stays mounted until `remove_widget`; `set_widget_position`
@@ -150,7 +149,7 @@ priv struct Widget {
 }
 
 ///|
-/// `pub(all)`: the `ViewPart` impl in `view_part.mbt` reads/writes
+/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
 /// `should_render` / `dom_node` directly.
 pub(all) struct ContentWidgets {
   dom_node : @rdom.Element

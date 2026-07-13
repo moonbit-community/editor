@@ -1,7 +1,7 @@
 # viewer/browser/view
 
 The per-model browser `View`, ported from Monaco's `editor/browser/view/`.
-It owns the editor DOM subtree and coordinates the eight stateful ViewParts.
+It owns the editor DOM subtree and coordinates eight stateful visual concerns.
 The root `Viewer` owns the View's lifetime: no View exists while no model is
 attached, and a model swap destroys and replaces it.
 
@@ -20,23 +20,27 @@ attached, and a model swap destroys and replaces it.
 6. Run their `render` methods (DOM-write phase), then clear each successful
    part write.
 
-The View owns a fixed ordered event-handler set and a source-shaped nested
-collector. Whole event batches are delivered FIFO; an event emitted
+The View owns two fixed ordered capability indexes over the same concrete
+state: `view_event_handlers` contains all eight source-ordered event consumers,
+while `view_parts` contains the seven ordinary prepare/render consumers and
+excludes the specially ordered ViewLines renderer. Whole event batches are
+delivered FIFO by a source-shaped nested collector; an event emitted
 reentrantly becomes a later batch and cannot interleave the current one.
 Transient changes are emitted at their source, so an A→B→A sequence before a
 frame is not collapsed into a final-state snapshot. The closed local event
 union includes the fifteen scoped Monaco classes. Composition has no readonly
 producer. Theme carries the existing `String` theme identity only to preserve
 the declaration and dispatch shape; concrete theme application remains direct
-CSS/root state and has no typed theme producer or ViewPart handler.
+CSS/root state and has no typed theme producer or lifecycle handler.
 
 `View` constructs one 2^24px `.lines-content` rail and passes the same cached
 node to `EditorScrollbar` and `ViewLines`. Vertical/horizontal scroll moves only
 that rail; text rows, zones, content overlays/widgets, and cursors remain in its
 coordinate space. The margin keeps its independent vertical rail.
 
-The eight handles are ViewLines, ViewZones, content overlays, margin overlays,
-ContentWidgets, ViewCursors, OverlayWidgets, and EditorScrollbar. Content
+The eight event handles are ViewLines, ViewZones, content overlays, margin
+overlays, ContentWidgets, ViewCursors, OverlayWidgets, and EditorScrollbar.
+The ordinary render index contains the latter seven in that order. Content
 overlays register current-line highlight, selection, then decorations; margin
 overlays register current-line margin, line decorations, then line numbers.
 Content and margin overlays remain one dirty handle each. Their current-line
@@ -76,8 +80,8 @@ DOM container. The root `viewer` package directly reads selected `pub(all)`
 fields to implement `Viewer::` methods; MoonBit's foreign-method rule keeps
 that glue out of this package.
 
-`dispose` is idempotent. It tears down ViewLines, then every remaining
-ViewPart, then the View lifetime-disposable store. The local line, zone,
+`dispose` is idempotent. It tears down ViewLines, then the seven ordinary
+parts, then the View lifetime-disposable store. The local line, zone,
 overlay, widget, and cursor parts own only nodes/state below the root; the
 scrollbar additionally owns a cancellable hide timer. Mouse/input controllers
 and root listeners enter the lifetime store through `add_disposable`.
@@ -89,8 +93,8 @@ teardown is deferred until an edit-context owner and accessibility seam exist;
 GPU teardown is deferred until the viewer has a GPU renderer and GPU-owned
 parts.
 
-The private `ViewPart` and `DynamicViewOverlay` implementations live here,
-including implementations for foreign view-part types. This satisfies
-MoonBit's orphan rule and keeps dependencies one-way:
-`browser/view -> browser/view_parts/**`. This is a JS-only package; exact API
-and imports are in `pkg.generated.mbti` and `moon.pkg`.
+Closed private enums and narrow lifecycle adapters live here, including
+adapters for foreign view-part types. Keeping the private `ViewEvent` and
+rendering-context capabilities at this boundary preserves the one-way
+dependency `browser/view -> browser/view_parts/**`. This is a JS-only package;
+exact API and imports are in `pkg.generated.mbti` and `moon.pkg`.

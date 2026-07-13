@@ -1,7 +1,7 @@
 // Faithful browser-side port of
 // `vscode/src/vs/editor/browser/viewParts/viewZones/viewZones.ts` at the
-// repository's pinned Monaco source. The `ViewPart` implementation remains in
-// `viewer/browser/view/view_part.mbt`, where MoonBit's orphan rule permits it.
+// repository's pinned Monaco source. Its narrow lifecycle adapter remains at
+// the private rendering-context boundary in `viewer/browser/view`.
 
 ///|
 /// MoonBit-owned spelling of Monaco's mutable `IViewZone` delegate. The

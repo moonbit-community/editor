@@ -6,14 +6,13 @@
 // continuation renders nothing (`modelPosition.column !== 1` → no output,
 // the source's `:168-176` + empty-output skip `:181-184`). The
 // relative/interval custom renderers, the active-line class (no blinking
-// cursor here), and the final-newline dimming are out of scope. The
-// `DynamicViewOverlay` impl lives in `viewer/browser/view/view_part.mbt`
-// (the trait-owning package).
+// cursor here), and the final-newline dimming are out of scope. Preparation is
+// adapted at the private rendering-context boundary in `browser/view`.
 
 ///|
 /// The line-numbers dynamic overlay's state: the prepared per-line HTML
-/// (`_renderResult`). `pub(all)`: the `DynamicViewOverlay` impl in
-/// `browser/view/view_part.mbt` reads/writes `render_result` directly.
+/// (`_renderResult`). `pub(all)`: the closed overlay handle in `browser/view`
+/// reads/writes `render_result` directly.
 pub(all) struct LineNumbersOverlay {
   mut render_result : Array[String]
 }

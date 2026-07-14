@@ -41,13 +41,7 @@ fn register_agent_feedback_contribution(
   registry.register_editor_contribution(
     "agentFeedback.editorInputContribution",
     Eventually,
-    viewer => {
-      AgentFeedbackInput(
-        @agent_feedback_browser.AgentFeedbackEditorInputContribution::attach(
-          viewer.get_id(),
-        ),
-      )
-    },
+    _viewer => AgentFeedbackInput(AgentFeedbackEditorInputContribution()),
     viewer => viewer.hook_agent_feedback(),
   )
   // The editor-level Escape arm of `_registerWidgetListeners` ("Don't

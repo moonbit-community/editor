@@ -1,14 +1,13 @@
 ///|
 /// The per-editor state of `AgentFeedbackEditorInputContribution`
-/// (`agentFeedbackEditorInputContribution.ts`), reached through the instance
-/// table below — the `getContribution(id)` analog documented in
-/// `docs/architecture.md` ("Controller access"). The `Viewer::` glue in
-/// `agent_feedback_host.mbt` keeps the wiring role (the foreign-method rule
-/// pins it to the root package) and reads/writes state here. Field names
-/// follow the source members; deviations kept from the glue: the reserved
-/// gutter lane stores the host's base width (`lane_base_width`, the source's
-/// boolean `_reservedGutterSpace` plus the restore value), the hover line
-/// uses a `-1` sentinel, and the hover decoration collection is an id array.
+/// (`agentFeedbackEditorInputContribution.ts`), owned by the Viewer's central
+/// contribution entry. The `Viewer::` glue in `agent_feedback_host.mbt` keeps
+/// the wiring role (the foreign-method rule pins it to the root package) and
+/// reads/writes state here through a typed central accessor. Field names follow
+/// the source members; deviations kept from the glue: the reserved gutter lane
+/// stores the host's base width (`lane_base_width`, the source's boolean
+/// `_reservedGutterSpace` plus the restore value), the hover line uses a `-1`
+/// sentinel, and the hover decoration collection is an id array.
 pub(all) struct AgentFeedbackEditorInputContribution {
   /// `_widget`: the lazily-created inline input widget.
   mut widget : AgentFeedbackInputWidget?
@@ -34,16 +33,9 @@ pub(all) struct AgentFeedbackEditorInputContribution {
 }
 
 ///|
-/// Per-editor instances keyed by `viewer.get_id()` — the WeakMap/
-/// `getContribution` analog. Populated by the contribution's ctor, cleared
-/// by its dispose.
-let input_instances : Map[String, AgentFeedbackEditorInputContribution] = Map([])
-
-///|
-pub fn AgentFeedbackEditorInputContribution::attach(
-  editor_id : String,
-) -> AgentFeedbackEditorInputContribution {
-  let controller : AgentFeedbackEditorInputContribution = {
+/// Constructs the bare state stored by one central contribution entry.
+pub fn AgentFeedbackEditorInputContribution::AgentFeedbackEditorInputContribution() -> AgentFeedbackEditorInputContribution {
+  {
     widget: None,
     visible: false,
     pinned_range: None,
@@ -55,20 +47,6 @@ pub fn AgentFeedbackEditorInputContribution::attach(
     mouse_down: false,
     suppress_selection_change_once: false,
   }
-  input_instances[editor_id] = controller
-  controller
-}
-
-///|
-pub fn AgentFeedbackEditorInputContribution::get(
-  editor_id : String,
-) -> AgentFeedbackEditorInputContribution? {
-  input_instances.get(editor_id)
-}
-
-///|
-pub fn AgentFeedbackEditorInputContribution::detach(editor_id : String) -> Unit {
-  input_instances.remove(editor_id)
 }
 
 ///|

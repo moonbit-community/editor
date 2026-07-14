@@ -25,9 +25,7 @@ pub(all) struct AgentFeedbackEditorInputContribution {
   mut mouse_down : Bool
   mut suppress_selection_change_once : Bool
 }
-pub fn AgentFeedbackEditorInputContribution::attach(String) -> Self
-pub fn AgentFeedbackEditorInputContribution::detach(String) -> Unit
-pub fn AgentFeedbackEditorInputContribution::get(String) -> Self?
+pub fn AgentFeedbackEditorInputContribution::AgentFeedbackEditorInputContribution() -> Self
 pub fn AgentFeedbackEditorInputContribution::reset_model_state(Self) -> Unit
 
 pub struct AgentFeedbackEditorWidget {

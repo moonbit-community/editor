@@ -129,9 +129,6 @@ fn EditorContributionEntry::dispose(
         listener.dispose()
       }
       self.listeners.clear()
-      @agent_feedback_browser.AgentFeedbackEditorInputContribution::detach(
-        viewer.get_id(),
-      )
     }
     AgentFeedbackWidget(controller) => {
       viewer.clear_agent_feedback_widgets_from(controller) |> ignore

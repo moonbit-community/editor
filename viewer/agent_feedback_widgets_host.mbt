@@ -24,13 +24,7 @@ fn register_agent_feedback_widgets_contribution(
   registry.register_editor_contribution(
     "agentFeedback.editorWidgetContribution",
     Eventually,
-    viewer => {
-      AgentFeedbackWidget(
-        @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::attach(
-          viewer.get_id(),
-        ),
-      )
-    },
+    _viewer => AgentFeedbackWidget(AgentFeedbackEditorWidgetContribution()),
     viewer => viewer.hook_agent_feedback_widgets(),
   )
 }

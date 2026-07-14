@@ -1,10 +1,10 @@
 ///|
 /// The per-editor state of `AgentFeedbackEditorWidgetContribution`
-/// (`agentFeedbackEditorWidgetContribution.ts:1034-1311`), reached through
-/// the instance table below (`docs/architecture.md`, "Controller access").
-/// The `Viewer::` glue in `agent_feedback_widgets_host.mbt` keeps the
-/// rebuild/layout role and reads/writes state here. Field names follow the
-/// source; the widget id pool and the highlight id array are glue-side
+/// (`agentFeedbackEditorWidgetContribution.ts:1034-1311`), owned by the
+/// Viewer's central contribution entry. The `Viewer::` glue in
+/// `agent_feedback_widgets_host.mbt` keeps the rebuild/layout role and
+/// reads/writes state here through a typed central accessor. Field names follow
+/// the source; the widget id pool and the highlight id array are glue-side
 /// bookkeeping kept from the port.
 pub(all) struct AgentFeedbackEditorWidgetContribution {
   /// `_widgets`: the mounted bubbles.
@@ -19,36 +19,14 @@ pub(all) struct AgentFeedbackEditorWidgetContribution {
 }
 
 ///|
-/// Per-editor instances keyed by `viewer.get_id()`.
-let widget_instances : Map[String, AgentFeedbackEditorWidgetContribution] = Map([],
-)
-
-///|
-pub fn AgentFeedbackEditorWidgetContribution::attach(
-  editor_id : String,
-) -> AgentFeedbackEditorWidgetContribution {
-  let controller : AgentFeedbackEditorWidgetContribution = {
+/// Constructs the bare state stored by one central contribution entry.
+pub fn AgentFeedbackEditorWidgetContribution::AgentFeedbackEditorWidgetContribution() -> AgentFeedbackEditorWidgetContribution {
+  {
     widgets: [],
     reply_drafts: Map([]),
     widget_id_pool: 1,
     highlight_decoration_ids: [],
   }
-  widget_instances[editor_id] = controller
-  controller
-}
-
-///|
-pub fn AgentFeedbackEditorWidgetContribution::get(
-  editor_id : String,
-) -> AgentFeedbackEditorWidgetContribution? {
-  widget_instances.get(editor_id)
-}
-
-///|
-pub fn AgentFeedbackEditorWidgetContribution::detach(
-  editor_id : String,
-) -> Unit {
-  widget_instances.remove(editor_id)
 }
 
 ///|

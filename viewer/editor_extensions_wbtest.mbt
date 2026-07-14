@@ -241,24 +241,6 @@ test "two viewers retain distinct concrete contribution instances" {
 }
 
 ///|
-test "central lookup ignores reused-id overwrite in the widget alias map" {
-  let viewer = Viewer::Viewer()
-  let original_widgets = viewer.agent_feedback_widget_contribution().unwrap()
-  let reused_id = viewer.get_id()
-  let alias_widgets = @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::attach(
-    reused_id,
-  )
-  assert_false(physical_equal(original_widgets, alias_widgets))
-  assert_true(
-    physical_equal(
-      original_widgets,
-      viewer.agent_feedback_widget_contribution().unwrap(),
-    ),
-  )
-  viewer.dispose()
-}
-
-///|
 test "model removal and reattach preserve central contribution identities" {
   let viewer = Viewer::Viewer()
   let input = viewer.agent_feedback_input_contribution().unwrap()

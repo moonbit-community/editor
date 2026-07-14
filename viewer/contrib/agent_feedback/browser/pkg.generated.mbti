@@ -69,9 +69,7 @@ pub(all) struct AgentFeedbackEditorWidgetContribution {
   mut widget_id_pool : Int
   mut highlight_decoration_ids : Array[String]
 }
-pub fn AgentFeedbackEditorWidgetContribution::attach(String) -> Self
-pub fn AgentFeedbackEditorWidgetContribution::detach(String) -> Unit
-pub fn AgentFeedbackEditorWidgetContribution::get(String) -> Self?
+pub fn AgentFeedbackEditorWidgetContribution::AgentFeedbackEditorWidgetContribution() -> Self
 pub fn AgentFeedbackEditorWidgetContribution::reset_model_state(Self) -> Unit
 
 pub(all) struct AgentFeedbackEditorWidgetHost {

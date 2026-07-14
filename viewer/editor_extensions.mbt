@@ -136,9 +136,6 @@ fn EditorContributionEntry::dispose(
         listener.dispose()
       }
       self.listeners.clear()
-      @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::detach(
-        viewer.get_id(),
-      )
     }
     Folding(controller) => {
       controller.clear_local()

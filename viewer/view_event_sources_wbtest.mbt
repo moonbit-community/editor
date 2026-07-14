@@ -81,7 +81,7 @@ extern "js" fn test_view_cursor_model_selections(
 ///|
 extern "js" fn test_view_cursor_reason(
   event : @view.ViewCursorStateChangedEvent,
-) -> @cursor.CursorChangeReason = "(event) => event.reason"
+) -> @editor_api.CursorChangeReason = "(event) => event.reason"
 
 ///|
 test "view configuration source preserves independent paint axes and no-op" {

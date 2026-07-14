@@ -21,7 +21,7 @@ pub struct Viewer {
   /// listeners and View's browser-resource store.
   priv lifetime_disposables : Array[@base_common.Disposable]
   priv mut options : ViewerOptions
-  priv did_change_model : @base_common.Emitter[ModelChangedEvent]
+  priv did_change_model : @base_common.Emitter[@editor_api.ModelChangedEvent]
   /// Monaco's `onDidChangeModelContent` (`cew:105`), re-fired from the
   /// installed model's public content event by the `attach_model`
   /// subscription.
@@ -29,10 +29,10 @@ pub struct Viewer {
     @model.ModelContentChangedEvent,
   ]
   priv did_change_cursor_position : @base_common.Emitter[
-    CursorPositionChangedEvent,
+    @editor_api.CursorPositionChangedEvent,
   ]
   priv did_change_cursor_selection : @base_common.Emitter[
-    CursorSelectionChangedEvent,
+    @editor_api.CursorSelectionChangedEvent,
   ]
   /// ViewModel cursor facts wait here until each item can be delivered as one
   /// adjacent position/selection pair. The drain gate prevents reentrant
@@ -49,7 +49,7 @@ pub struct Viewer {
   priv did_build_view_model : @base_common.Emitter[ViewerViewModelBuiltEvent]
   priv did_render_model : @base_common.Emitter[ViewerModelRenderedEvent]
   priv did_resolve_hover : @base_common.Emitter[ViewerHoverResolvedEvent]
-  priv did_scroll : @base_common.Emitter[ScrollEvent]
+  priv did_scroll : @base_common.Emitter[@editor_api.ScrollEvent]
   /// Public `onDidChangeViewZones`. The source emitter participates in a
   /// widget-wide delivery queue; that cross-event queue remains the explicit
   /// CEW-001 deferral, while this dedicated emitter preserves the event's own
@@ -66,7 +66,7 @@ pub struct Viewer {
   priv did_mouse_leave : @base_common.Emitter[PartialEditorMouseEvent]
   /// The last fired scroll event's facts, the diff base for the next event's
   /// `*_changed` flags (Monaco's `ScrollEvent` carries per-axis change bits).
-  priv mut last_scroll_event : ScrollEvent?
+  priv mut last_scroll_event : @editor_api.ScrollEvent?
   /// The per-model bundle (Monaco's `_modelData`, `codeEditorWidget.ts:2123`):
   /// model + view model + view + swap-scoped listeners behind one nullable
   /// field, so the states are legal by construction.
@@ -218,67 +218,6 @@ priv struct HorizontalRevealRangeRequest {
 pub(all) struct ViewerViewState {
   scroll_top : Double
   scroll_left : Double
-} derive(Debug)
-
-///|
-/// Monaco's `IModelChangedEvent` (`editorCommon.ts`): the model swap fact,
-/// carried as resource URIs (`None` for the detached side).
-pub(all) struct ModelChangedEvent {
-  old_model_url : @base_common.Uri?
-  new_model_url : @base_common.Uri?
-} derive(Debug)
-
-///|
-/// Monaco's `CursorChangeReason` (`cursorEvents.ts`). The readonly viewer's
-/// live readonly producers fire `NotSet` for API defaults, `Explicit` for
-/// keyboard/pointer gestures, and `ContentFlush` for `set_value`; the editing
-/// reasons remain available for caller-supplied `set_selections` metadata.
-pub(all) enum CursorChangeReason {
-  NotSet
-  ContentFlush
-  RecoverFromMarkers
-  Explicit
-  Paste
-  Undo
-  Redo
-} derive(Eq, Debug)
-
-///|
-/// Monaco's `ICursorPositionChangedEvent`. The viewer is single-cursor, so
-/// `secondary_positions` is always empty (see `get_selections`).
-pub(all) struct CursorPositionChangedEvent {
-  position : @base_common.Position
-  secondary_positions : Array[@base_common.Position]
-  reason : CursorChangeReason
-  source : String
-} derive(Debug)
-
-///|
-/// Monaco's `ICursorSelectionChangedEvent`, single-cursor: the secondary
-/// arrays are always empty, and `old_selections` is `None` for ContentFlush or
-/// `Some([old_primary])` for ordinary transitions.
-pub(all) struct CursorSelectionChangedEvent {
-  selection : @core.Selection
-  secondary_selections : Array[@core.Selection]
-  model_version_id : Int
-  old_selections : Array[@core.Selection]?
-  old_model_version_id : Int
-  source : String
-  reason : CursorChangeReason
-} derive(Debug)
-
-///|
-/// Monaco's `ScrollEvent` (`scrollable.ts`) trimmed to the position and extent
-/// facts plus their per-axis change flags.
-pub(all) struct ScrollEvent {
-  scroll_top : Double
-  scroll_left : Double
-  scroll_width : Double
-  scroll_height : Double
-  scroll_top_changed : Bool
-  scroll_left_changed : Bool
-  scroll_width_changed : Bool
-  scroll_height_changed : Bool
 } derive(Debug)
 
 ///|
@@ -479,7 +418,7 @@ pub fn Viewer::create(
 /// carrying `IModelChangedEvent` (the old/new resource URIs).
 pub fn Viewer::on_did_change_model(
   self : Viewer,
-  listener : (ModelChangedEvent) -> Unit,
+  listener : (@editor_api.ModelChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_change_model.event(listener)
 }
@@ -502,7 +441,7 @@ pub fn Viewer::on_did_change_model_content(
 /// Single-cursor: `secondary_positions` is always empty.
 pub fn Viewer::on_did_change_cursor_position(
   self : Viewer,
-  listener : (CursorPositionChangedEvent) -> Unit,
+  listener : (@editor_api.CursorPositionChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_change_cursor_position.event(listener)
 }
@@ -513,7 +452,7 @@ pub fn Viewer::on_did_change_cursor_position(
 /// Single-cursor: the secondary arrays are always empty.
 pub fn Viewer::on_did_change_cursor_selection(
   self : Viewer,
-  listener : (CursorSelectionChangedEvent) -> Unit,
+  listener : (@editor_api.CursorSelectionChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_change_cursor_selection.event(listener)
 }
@@ -523,7 +462,7 @@ pub fn Viewer::on_did_change_cursor_selection(
 /// `onDidScrollChange`, coalesced onto the render flush.
 pub fn Viewer::on_did_scroll_change(
   self : Viewer,
-  listener : (ScrollEvent) -> Unit,
+  listener : (@editor_api.ScrollEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_scroll.event(listener)
 }

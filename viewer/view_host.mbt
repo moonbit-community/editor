@@ -124,7 +124,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   if self.scroll_dirty {
     self.scroll_dirty = false
     let position = view_model.view_layout.position()
-    let event : ScrollEvent = {
+    let event : @editor_api.ScrollEvent = {
       scroll_top: position.scroll_top,
       scroll_left: position.scroll_left,
       scroll_width: view_model.view_layout.get_scroll_width(),

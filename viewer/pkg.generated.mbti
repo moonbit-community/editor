@@ -7,6 +7,7 @@ import {
   "moonbit-community/editor/viewer/browser/view",
   "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/core",
+  "moonbit-community/editor/viewer/common/editor_api",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/model",
@@ -29,33 +30,6 @@ pub fn view_zone(Int, @dom.Element, after_column? : Int, after_column_affinity? 
 // Errors
 
 // Types and methods
-pub(all) enum CursorChangeReason {
-  NotSet
-  ContentFlush
-  RecoverFromMarkers
-  Explicit
-  Paste
-  Undo
-  Redo
-} derive(Eq, @debug.Debug)
-
-pub(all) struct CursorPositionChangedEvent {
-  position : @moonbit-community/editor/base/common.Position
-  secondary_positions : Array[@moonbit-community/editor/base/common.Position]
-  reason : CursorChangeReason
-  source : String
-} derive(@debug.Debug)
-
-pub(all) struct CursorSelectionChangedEvent {
-  selection : @core.Selection
-  secondary_selections : Array[@core.Selection]
-  model_version_id : Int
-  old_selections : Array[@core.Selection]?
-  old_model_version_id : Int
-  source : String
-  reason : CursorChangeReason
-} derive(@debug.Debug)
-
 pub(all) struct EditorContribution {
   id : String
   dispose : () -> Unit
@@ -84,32 +58,10 @@ pub(all) struct EditorMouseEvent {
   target : @moonbit-community/editor/viewer/browser.MouseTarget
 }
 
-pub(all) struct ModelChangedEvent {
-  old_model_url : @moonbit-community/editor/base/common.Uri?
-  new_model_url : @moonbit-community/editor/base/common.Uri?
-} derive(@debug.Debug)
-
 pub(all) struct PartialEditorMouseEvent {
   event : @moonbit-community/editor/viewer/browser.EditorMouseEvent
   target : @moonbit-community/editor/viewer/browser.MouseTarget?
 }
-
-pub(all) struct ScrollEvent {
-  scroll_top : Double
-  scroll_left : Double
-  scroll_width : Double
-  scroll_height : Double
-  scroll_top_changed : Bool
-  scroll_left_changed : Bool
-  scroll_width_changed : Bool
-  scroll_height_changed : Bool
-} derive(@debug.Debug)
-
-pub(all) struct ScrolledVisiblePosition {
-  top : Double
-  left : Double
-  height : Double
-} derive(Eq, @debug.Debug)
 
 pub struct Viewer {
   // private fields
@@ -142,7 +94,7 @@ pub fn Viewer::get_scroll_height(Self) -> Double
 pub fn Viewer::get_scroll_left(Self) -> Double
 pub fn Viewer::get_scroll_top(Self) -> Double
 pub fn Viewer::get_scroll_width(Self) -> Double
-pub fn Viewer::get_scrolled_visible_position(Self, @moonbit-community/editor/base/common.Position) -> ScrolledVisiblePosition?
+pub fn Viewer::get_scrolled_visible_position(Self, @moonbit-community/editor/base/common.Position) -> @editor_api.ScrolledVisiblePosition?
 pub fn Viewer::get_selection(Self) -> @core.Selection?
 pub fn Viewer::get_selections(Self) -> Array[@core.Selection]?
 pub fn Viewer::get_statusbar_column(Self, @moonbit-community/editor/base/common.Position) -> Int
@@ -157,13 +109,13 @@ pub fn Viewer::has_model(Self) -> Bool
 pub fn Viewer::has_text_focus(Self) -> Bool
 pub fn Viewer::has_widget_focus(Self) -> Bool
 pub fn Viewer::layout(Self) -> Unit
-pub fn Viewer::on_did_change_cursor_position(Self, (CursorPositionChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_did_change_cursor_selection(Self, (CursorSelectionChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_did_change_model(Self, (ModelChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_change_cursor_position(Self, (@editor_api.CursorPositionChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_change_cursor_selection(Self, (@editor_api.CursorSelectionChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_change_model(Self, (@editor_api.ModelChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_change_model_content(Self, (@model.ModelContentChangedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_change_view_zones(Self, () -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_did_scroll_change(Self, (ScrollEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_did_scroll_change(Self, (@editor_api.ScrollEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_mouse_down(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_mouse_leave(Self, (PartialEditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_mouse_move(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
@@ -197,7 +149,7 @@ pub fn Viewer::set_scroll_left(Self, Double) -> Unit
 pub fn Viewer::set_scroll_position(Self, scroll_top? : Double, scroll_left? : Double) -> Unit
 pub fn Viewer::set_scroll_top(Self, Double) -> Unit
 pub fn Viewer::set_selection(Self, @core.Selection, source? : String) -> Unit
-pub fn Viewer::set_selections(Self, Array[@core.Selection], source? : String, reason? : CursorChangeReason) -> Unit
+pub fn Viewer::set_selections(Self, Array[@core.Selection], source? : String, reason? : @editor_api.CursorChangeReason) -> Unit
 pub fn Viewer::set_value(Self, String) -> Unit
 pub fn Viewer::update_options(Self, ViewerOptions) -> Unit
 

@@ -53,7 +53,7 @@ priv enum WorkbenchViewerEvent {
   DidBuildViewModel(@viewer.ViewerViewModelBuiltEvent)
   DidRenderModel(@viewer.ViewerModelRenderedEvent)
   DidResolveHover(@viewer.ViewerHoverResolvedEvent)
-  DidScroll(@viewer.ScrollEvent)
+  DidScroll(@editor_api.ScrollEvent)
   DidDispose
 }
 

@@ -108,8 +108,8 @@ test "wrapped vertical navigation converts across folded model lines" {
 ///|
 test "set_selections keeps only primary with default and override metadata" {
   with_test_viewer("one\ntwo", viewer => {
-    let positions : Array[CursorPositionChangedEvent] = []
-    let selections : Array[CursorSelectionChangedEvent] = []
+    let positions : Array[@editor_api.CursorPositionChangedEvent] = []
+    let selections : Array[@editor_api.CursorSelectionChangedEvent] = []
     viewer.on_did_change_cursor_position(event => positions.push(event))
     |> ignore
     viewer.on_did_change_cursor_selection(event => selections.push(event))
@@ -140,8 +140,8 @@ test "set_selections keeps only primary with default and override metadata" {
 test "one-element set_selections forwards exact source and reason" {
   with_test_viewer("one\ntwo", viewer => {
     let outgoing : Array[@view_model.CursorStateChangedEvent] = []
-    let positions : Array[CursorPositionChangedEvent] = []
-    let selections : Array[CursorSelectionChangedEvent] = []
+    let positions : Array[@editor_api.CursorPositionChangedEvent] = []
+    let selections : Array[@editor_api.CursorSelectionChangedEvent] = []
     viewer
     .test_view_model()
     .on_cursor_state_changed(event => outgoing.push(event))

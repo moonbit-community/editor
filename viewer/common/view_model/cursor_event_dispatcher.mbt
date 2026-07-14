@@ -18,7 +18,7 @@ pub(all) struct CursorStateChangedEvent {
   old_model_version_id : Int
   model_version_id : Int
   source : String
-  reason : @cursor.CursorChangeReason
+  reason : @editor_api.CursorChangeReason
   reached_max_cursor_count : Bool
 } derive(Debug)
 

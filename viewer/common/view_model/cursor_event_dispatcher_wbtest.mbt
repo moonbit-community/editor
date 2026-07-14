@@ -10,7 +10,7 @@ fn dispatcher_event(
   old_version : Int,
   new_version : Int,
   source? : String = "first",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
   reached_max_cursor_count? : Bool = false,
 ) -> CursorStateChangedEvent {
   {

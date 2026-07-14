@@ -8,6 +8,7 @@ import {
   "moonbit-community/editor/viewer/browser/controller",
   "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/cursor",
+  "moonbit-community/editor/viewer/common/editor_api",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/contrib/agent_feedback",

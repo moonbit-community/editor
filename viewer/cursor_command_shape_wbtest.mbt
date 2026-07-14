@@ -101,7 +101,7 @@ test "omitted move command reveal type follows undefined non-None gate" {
 test "view controller selection adapters preserve exact keyboard and mouse sources" {
   with_test_viewer("alpha\nbeta", viewer => {
     let sources : Array[String] = []
-    let reasons : Array[CursorChangeReason] = []
+    let reasons : Array[@editor_api.CursorChangeReason] = []
     viewer.on_did_change_cursor_selection(event => {
       sources.push(event.source)
       reasons.push(event.reason)

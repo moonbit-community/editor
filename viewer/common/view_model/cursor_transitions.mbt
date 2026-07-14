@@ -72,7 +72,7 @@ pub fn ViewModel::set_cursor_state(
   self : ViewModel,
   state : @cursor.PartialCursorState?,
   source : String,
-  reason : @cursor.CursorChangeReason,
+  reason : @editor_api.CursorChangeReason,
 ) -> Bool {
   self.emit_cursor_state_change(
     self.cursor.set_cursor_state(state, source~, reason~),
@@ -85,7 +85,7 @@ pub fn ViewModel::set_model_cursor_state(
   self : ViewModel,
   state : @cursor.SingleCursorState,
   source : String,
-  reason : @cursor.CursorChangeReason,
+  reason : @editor_api.CursorChangeReason,
 ) -> Bool {
   self.set_cursor_state(
     Some(@cursor.CursorState::from_model_state(state)),
@@ -101,7 +101,7 @@ pub fn ViewModel::set_view_cursor_state(
   self : ViewModel,
   state : @cursor.SingleCursorState,
   source : String,
-  reason : @cursor.CursorChangeReason,
+  reason : @editor_api.CursorChangeReason,
 ) -> Bool {
   let state = self.validate_view_cursor_state(state)
   self.set_cursor_state(

@@ -74,14 +74,14 @@ fn view_configuration_options_contain(
 pub struct ViewCursorStateChangedEvent {
   priv selections : Array[@core.Selection]
   priv model_selections : Array[@core.Selection]
-  priv reason : @cursor.CursorChangeReason
+  priv reason : @editor_api.CursorChangeReason
 }
 
 ///|
 pub fn ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
   selections : Array[@core.Selection],
   model_selections : Array[@core.Selection],
-  reason : @cursor.CursorChangeReason,
+  reason : @editor_api.CursorChangeReason,
 ) -> ViewCursorStateChangedEvent {
   { selections, model_selections, reason }
 }

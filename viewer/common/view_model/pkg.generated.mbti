@@ -6,6 +6,7 @@ import {
   "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/cursor",
+  "moonbit-community/editor/viewer/common/editor_api",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/tokens",
   "moonbit-community/editor/viewer/common/view_layout",
@@ -78,7 +79,7 @@ pub(all) struct CursorStateChangedEvent {
   old_model_version_id : Int
   model_version_id : Int
   source : String
-  reason : @cursor.CursorChangeReason
+  reason : @editor_api.CursorChangeReason
   reached_max_cursor_count : Bool
 } derive(@debug.Debug)
 pub fn CursorStateChangedEvent::is_no_op(Self) -> Bool
@@ -267,27 +268,27 @@ pub fn ViewModel::lines(Self) -> ViewModelLinesFromProjectedModel
 pub fn ViewModel::model_line_max_column(Self, Int) -> Int
 pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
 pub fn ViewModel::model_position_to_view_position(Self, @common.Position, affinity? : @model.PositionAffinity, allow_zero_line_number? : Bool) -> @common.Position
-pub fn ViewModel::move_cursor(Self, SimpleMoveDirection, Bool, value? : Int, unit? : CursorMoveUnit, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_direction(Self, CursorMoveDirection, Bool, value? : Int, unit? : CursorMoveUnit, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_line(Self, @common.Position, Bool, view_position? : @common.Position, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_line_select_to(Self, @common.Position, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_page(Self, SimpleMoveDirection, Bool, page_size? : Int, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_to(Self, @common.Position, Bool, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_to_line_end(Self, Bool, sticky? : Bool, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_to_line_start(Self, Bool, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_to_model_position(Self, @common.Position, Bool, view_position? : @common.Position, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_with_arguments(Self, SimpleMoveArguments, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::move_cursor_word(Self, @common.Position, Bool, source? : String, reason? : @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor(Self, SimpleMoveDirection, Bool, value? : Int, unit? : CursorMoveUnit, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_direction(Self, CursorMoveDirection, Bool, value? : Int, unit? : CursorMoveUnit, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_line(Self, @common.Position, Bool, view_position? : @common.Position, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_line_select_to(Self, @common.Position, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_page(Self, SimpleMoveDirection, Bool, page_size? : Int, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_to(Self, @common.Position, Bool, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_to_line_end(Self, Bool, sticky? : Bool, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_to_line_start(Self, Bool, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_to_model_position(Self, @common.Position, Bool, view_position? : @common.Position, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_with_arguments(Self, SimpleMoveArguments, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::move_cursor_word(Self, @common.Position, Bool, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool
 pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ViewModel::on_configuration_changed(Self, ViewModelOptions) -> Bool
 pub fn ViewModel::on_cursor_state_changed(Self, (CursorStateChangedEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::on_did_change_content_or_injected_text(Self, e? : @model.InternalModelContentChangeEvent) -> Unit
 pub fn ViewModel::on_model_tokens_changed(Self, (ModelTokensChangedOutgoingEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::on_view_zones_changed(Self, (ViewZonesChangedEvent) -> Unit) -> @common.Disposable
-pub fn ViewModel::set_cursor_state(Self, @cursor.PartialCursorState?, String, @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::set_cursor_state(Self, @cursor.PartialCursorState?, String, @editor_api.CursorChangeReason) -> Bool
 pub fn ViewModel::set_hidden_areas(Self, Array[@common.Range], source? : String, force_update? : Bool, with_event_batch? : (() -> Bool) -> Bool, on_line_mapping_changed? : (() -> Unit) -> Unit) -> Bool
-pub fn ViewModel::set_model_cursor_state(Self, @cursor.SingleCursorState, String, @cursor.CursorChangeReason) -> Bool
-pub fn ViewModel::set_view_cursor_state(Self, @cursor.SingleCursorState, String, @cursor.CursorChangeReason) -> Bool
+pub fn ViewModel::set_model_cursor_state(Self, @cursor.SingleCursorState, String, @editor_api.CursorChangeReason) -> Bool
+pub fn ViewModel::set_view_cursor_state(Self, @cursor.SingleCursorState, String, @editor_api.CursorChangeReason) -> Bool
 pub fn ViewModel::to_model_visible_ranges(Self, @common.Range) -> Array[@common.Range]
 pub fn ViewModel::validate_model_position(Self, @common.Position) -> @common.Position
 pub fn ViewModel::version(Self) -> Int

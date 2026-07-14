@@ -117,7 +117,7 @@ fn ViewModel::commit_cursor_move(
   self : ViewModel,
   result : CursorMoveResult,
   source : String,
-  reason : @cursor.CursorChangeReason,
+  reason : @editor_api.CursorChangeReason,
 ) -> Bool {
   match result {
     ByModel(state) => self.set_model_cursor_state(state, source, reason)
@@ -195,7 +195,7 @@ pub fn ViewModel::move_cursor(
   value? : Int = 1,
   unit? : CursorMoveUnit = None,
   source? : String = "keyboard",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   self.move_cursor_with_arguments(
     SimpleMoveArguments::new(direction, unit, in_selection_mode, value),
@@ -215,7 +215,7 @@ pub fn ViewModel::move_cursor_direction(
   value? : Int = 1,
   unit? : CursorMoveUnit = None,
   source? : String = "keyboard",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   guard direction.as_simple() is Some(simple_direction) else { return false }
   self.move_cursor(
@@ -235,7 +235,7 @@ pub fn ViewModel::move_cursor_with_arguments(
   self : ViewModel,
   args : SimpleMoveArguments,
   source? : String = "keyboard",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   let direction = args.direction
   let unit = args.unit
@@ -316,7 +316,7 @@ pub fn ViewModel::move_cursor_page(
   in_selection_mode : Bool,
   page_size? : Int = 0,
   source? : String = "keyboard",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   guard direction == Up || direction == Down else { return false }
   let value = if page_size == -1 || page_size == 0 {
@@ -344,7 +344,7 @@ pub fn ViewModel::move_cursor_to_line_start(
   self : ViewModel,
   in_selection_mode : Bool,
   source? : String = "keyboard",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   let cursor = self.cursor.get_primary_cursor_state()
   let current_view_column = cursor.view_state.position.column
@@ -387,7 +387,7 @@ pub fn ViewModel::move_cursor_to_line_end(
   in_selection_mode : Bool,
   sticky? : Bool = false,
   source? : String = "keyboard",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   guard !sticky else { return false }
   let cursor = self.cursor.get_primary_cursor_state()
@@ -478,7 +478,7 @@ pub fn ViewModel::move_cursor_word(
   model_position : @base_common.Position,
   in_selection_mode : Bool,
   source? : String = "mouse",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   let model_position = self.model.validate_position(model_position)
   let cursor = self.cursor.get_primary_cursor_state()
@@ -548,7 +548,7 @@ pub fn ViewModel::move_cursor_line(
   in_selection_mode : Bool,
   view_position? : @base_common.Position,
   source? : String = "mouse",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   let (model_position, view_position) = self.resolve_cursor_move_position(
     model_position, view_position,
@@ -584,7 +584,7 @@ pub fn ViewModel::move_cursor_line_select_to(
   self : ViewModel,
   view_position : @base_common.Position,
   source? : String = "mouse",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   let view_position = self.validate_cursor_move_view_position(view_position)
   let model_position = self.model.validate_position(
@@ -603,7 +603,7 @@ pub fn ViewModel::move_cursor_to_model_position(
   in_selection_mode : Bool,
   view_position? : @base_common.Position,
   source? : String = "keyboard",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   let cursor = self.cursor.get_primary_cursor_state()
   if in_selection_mode {
@@ -645,7 +645,7 @@ pub fn ViewModel::move_cursor_to(
   view_position : @base_common.Position,
   in_selection_mode : Bool,
   source? : String = "keyboard",
-  reason? : @cursor.CursorChangeReason = Explicit,
+  reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   let view_position = self.validate_cursor_move_view_position(view_position)
   let model_position = self.model.validate_position(

@@ -1,7 +1,6 @@
 # Viewer Public Editor API Boundary
 
-Status: Gate A inventory ready — STOP FOR REVIEW; no public API implementation
-has started
+Status: implementation in progress — Gate A approved 2026-07-14
 Date: 2026-07-14
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`

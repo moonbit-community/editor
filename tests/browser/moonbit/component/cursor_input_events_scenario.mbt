@@ -43,7 +43,7 @@ fn cursor_input_source() -> String {
 }
 
 ///|
-fn cursor_reason_name(reason : @viewer.CursorChangeReason) -> String {
+fn cursor_reason_name(reason : @editor_api.CursorChangeReason) -> String {
   match reason {
     NotSet => "NotSet"
     ContentFlush => "ContentFlush"

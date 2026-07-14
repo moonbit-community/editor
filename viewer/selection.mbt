@@ -69,7 +69,7 @@ fn Viewer::apply_selection(
   self : Viewer,
   selection : @core.Selection,
   source : String,
-  reason : @cursor.CursorChangeReason,
+  reason : @editor_api.CursorChangeReason,
 ) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
   view_model.set_cursor_state(
@@ -91,7 +91,7 @@ pub fn Viewer::set_selections(
   self : Viewer,
   selections : Array[@core.Selection],
   source? : String = "api",
-  reason? : CursorChangeReason = NotSet,
+  reason? : @editor_api.CursorChangeReason = NotSet,
 ) -> Unit {
   guard selections.length() > 0 else { return }
   guard self.get_view_model() is Some(view_model) else { return }
@@ -99,28 +99,7 @@ pub fn Viewer::set_selections(
   // The source converts every selection in order before `setStates`; this
   // readonly viewer then applies the first and drops secondaries at its
   // documented single-cursor boundary.
-  view_model.set_cursor_state(
-    Some(states[0]),
-    source,
-    internal_cursor_change_reason(reason),
-  )
-  |> ignore
-}
-
-///|
-/// Adapts the stable public reason enum to the DOM-free cursor owner.
-fn internal_cursor_change_reason(
-  reason : CursorChangeReason,
-) -> @cursor.CursorChangeReason {
-  match reason {
-    NotSet => NotSet
-    ContentFlush => ContentFlush
-    RecoverFromMarkers => RecoverFromMarkers
-    Explicit => Explicit
-    Paste => Paste
-    Undo => Undo
-    Redo => Redo
-  }
+  view_model.set_cursor_state(Some(states[0]), source, reason) |> ignore
 }
 
 ///|

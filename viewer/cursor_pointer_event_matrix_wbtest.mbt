@@ -5,7 +5,7 @@
 ///|
 fn assert_pointer_transition(
   viewer : Viewer,
-  events : Array[CursorSelectionChangedEvent],
+  events : Array[@editor_api.CursorSelectionChangedEvent],
   previous_length : Int,
   old_selection : @core.Selection,
   source : String,
@@ -25,7 +25,7 @@ fn assert_pointer_transition(
 ///|
 test "live pointer branches retain exact old selections after committed state" {
   with_test_viewer("alpha beta\nsecond line\nthird\nfourth", viewer => {
-    let events : Array[CursorSelectionChangedEvent] = []
+    let events : Array[@editor_api.CursorSelectionChangedEvent] = []
     let mut position_callbacks_committed = true
     let mut selection_callbacks_committed = true
     viewer.on_did_change_cursor_position(event => {

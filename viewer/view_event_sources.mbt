@@ -128,7 +128,7 @@ fn Viewer::emit_view_cursor_state_changed(
   self : Viewer,
   view_model : @view_model.ViewModel,
   model_selections : Array[@core.Selection],
-  reason : @cursor.CursorChangeReason,
+  reason : @editor_api.CursorChangeReason,
 ) -> Unit {
   self.emit_view_event(
     ViewCursorStateChanged(
@@ -141,7 +141,7 @@ fn Viewer::emit_view_cursor_state_changed(
 fn view_cursor_state_changed_event(
   view_model : @view_model.ViewModel,
   model_selections : Array[@core.Selection],
-  reason : @cursor.CursorChangeReason,
+  reason : @editor_api.CursorChangeReason,
 ) -> @view.ViewCursorStateChangedEvent {
   @view.ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
     [view_model.cursor.get_view_selection()],

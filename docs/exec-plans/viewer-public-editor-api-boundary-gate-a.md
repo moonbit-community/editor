@@ -1,7 +1,6 @@
 # Viewer Public Editor API Boundary — Gate A Review
 
-Status: inventory ready — STOP FOR REVIEW; no public API implementation has
-started
+Status: approved historical inventory — implementation started 2026-07-14
 
 Date: 2026-07-14
 
@@ -12,9 +11,11 @@ Local baseline: `e5beb1c8cd5c9d5b2fbfbfca55025438b17e1ca3`
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
 
-This is the review entrypoint for the parent plan's mandatory Gate A. It
-freezes inventories and migration decisions only. It changes no MoonBit
-source, package manifest, generated interface, test, or browser artifact.
+This is the review entrypoint for the parent plan's mandatory Gate A. At this
+snapshot it froze inventories and migration decisions only; no MoonBit source,
+package manifest, generated interface, test, or browser artifact had changed.
+The user explicitly approved this Gate A on 2026-07-14. Present-tense inventory
+and stop language below describe the frozen pre-implementation baseline.
 
 ## Artifact Set
 
@@ -355,8 +356,7 @@ the parent plan.
 - [x] affected interfaces and target-package absences are frozen
 - [x] current and target dependency paths are cycle/target checked
 - [x] implementation has not changed a public/generated interface
-- [ ] explicit approval for this Viewer public API Gate A
+- [x] explicit approval for this Viewer public API Gate A
 
-**STOP FOR REVIEW. Do not create any target package, move any type, change any
-public signature, edit any generated interface, or migrate any caller until
-the user explicitly approves this Gate A.**
+**Historical stop condition: satisfied by explicit user approval on
+2026-07-14.**

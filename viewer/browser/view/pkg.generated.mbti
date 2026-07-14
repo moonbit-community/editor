@@ -6,7 +6,7 @@ import {
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/browser",
   "moonbit-community/editor/viewer/common/core",
-  "moonbit-community/editor/viewer/common/cursor",
+  "moonbit-community/editor/viewer/common/editor_api",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
@@ -196,7 +196,7 @@ pub(all) struct ViewCursorRenderData {
 pub struct ViewCursorStateChangedEvent {
   // private fields
 }
-pub fn ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(Array[@core.Selection], Array[@core.Selection], @cursor.CursorChangeReason) -> Self
+pub fn ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(Array[@core.Selection], Array[@core.Selection], @editor_api.CursorChangeReason) -> Self
 
 pub struct ViewCursors {
   // private fields

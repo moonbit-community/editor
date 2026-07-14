@@ -49,7 +49,7 @@ test "cursor transition metadata uses internal model version for api keyboard an
   let viewer = Viewer::Viewer()
   let model = cursor_transition_model("alpha\nbeta")
   viewer.set_model(Some(model))
-  let selections : Array[CursorSelectionChangedEvent] = []
+  let selections : Array[@editor_api.CursorSelectionChangedEvent] = []
   viewer.on_did_change_cursor_selection(event => selections.push(event))
   |> ignore
 
@@ -143,7 +143,7 @@ test "ContentFlush emits content then position then selection with model source 
   viewer.set_model(Some(model))
   viewer.set_position(Position(2, 2))
   let order : Array[String] = []
-  let selections : Array[CursorSelectionChangedEvent] = []
+  let selections : Array[@editor_api.CursorSelectionChangedEvent] = []
   let mut content_saw_origin = false
   let mut position_was_origin = false
   viewer.on_did_change_model_content(event => {
@@ -408,8 +408,8 @@ test "reentrant ContentFlush retains every queued cursor fact" {
 ///|
 test "set_selections keeps primary and forwards public source reason with empty secondaries" {
   with_test_viewer("one\ntwo", viewer => {
-    let positions : Array[CursorPositionChangedEvent] = []
-    let selections : Array[CursorSelectionChangedEvent] = []
+    let positions : Array[@editor_api.CursorPositionChangedEvent] = []
+    let selections : Array[@editor_api.CursorSelectionChangedEvent] = []
     viewer.on_did_change_cursor_position(event => positions.push(event))
     |> ignore
     viewer.on_did_change_cursor_selection(event => selections.push(event))

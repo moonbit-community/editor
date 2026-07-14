@@ -23,8 +23,9 @@ Backend-neutral single-cursor state for the readonly viewer.
   state/version no-op returns `None`. A content flush always resets to `(1,1)`
   with source `model`, reason `ContentFlush`, old version `0`, and no old
   selections.
-- `CursorChangeReason`, paired `CursorState`, and `CursorStateChange` are the
-  DOM-free event contract consumed by `viewer/common/view_model`. Free
+- `viewer/common/editor_api.CursorChangeReason` is the canonical public reason;
+  paired `CursorState` and `CursorStateChange` retain cursor-owned transition
+  state consumed by `viewer/common/view_model`. Free
   `move_to`/`move_to_select` remain the low-level pointer command subset;
   source-shaped Left/Right/Up/Down/Page/Home/End and Word/Line continuation live
   in the view-model package where projected-line facts are available.
@@ -45,7 +46,8 @@ and visual RTL arrow swapping are outside this package's current cursor
 contract; current horizontal stepping is surrogate-pair safe and otherwise
 code-point based.
 
-The package depends on `base/common`, `viewer/common/core`, and
-`viewer/common/model`; it has no view-model, DOM, or FFI dependency. See
+The package depends on `base/common`, `viewer/common/editor_api`,
+`viewer/common/core`, and `viewer/common/model`; it has no view-model, DOM, or
+FFI dependency. See
 `pkg.generated.mbti` for the complete API and run
 `moon test --target all viewer/common/cursor`.

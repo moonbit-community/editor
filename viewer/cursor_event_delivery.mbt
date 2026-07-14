@@ -1,20 +1,4 @@
 ///|
-/// Adapts the DOM-free cursor reason to the stable public Viewer enum.
-fn public_cursor_change_reason(
-  reason : @cursor.CursorChangeReason,
-) -> CursorChangeReason {
-  match reason {
-    NotSet => NotSet
-    ContentFlush => ContentFlush
-    RecoverFromMarkers => RecoverFromMarkers
-    Explicit => Explicit
-    Paste => Paste
-    Undo => Undo
-    Redo => Redo
-  }
-}
-
-///|
 fn is_model_flush_cursor_event(
   event : @view_model.CursorStateChangedEvent,
 ) -> Bool {
@@ -122,11 +106,10 @@ fn Viewer::drain_cursor_delivery_queue(self : Viewer) -> Unit {
         None => ()
       }
     }
-    let reason = public_cursor_change_reason(event.reason)
     self.did_change_cursor_position.fire({
       position: selection.get_position(),
       secondary_positions: [],
-      reason,
+      reason: event.reason,
       source: event.source,
     })
     self.did_change_cursor_selection.fire({
@@ -136,7 +119,7 @@ fn Viewer::drain_cursor_delivery_queue(self : Viewer) -> Unit {
       old_selections: event.old_selections,
       old_model_version_id: event.old_model_version_id,
       source: event.source,
-      reason,
+      reason: event.reason,
     })
   }
   self.cursor_delivery_is_draining = false

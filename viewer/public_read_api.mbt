@@ -349,15 +349,6 @@ fn Viewer::get_vertical_offset_after_position(
 // analog of Monaco's `_flushAccumulatedAndRenderNow`.
 
 ///|
-/// A model position projected to scrolled viewport pixels, Monaco's
-/// `getScrolledVisiblePosition` return shape `{ top, left, height }`.
-pub(all) struct ScrolledVisiblePosition {
-  top : Double
-  left : Double
-  height : Double
-} derive(Eq, Debug)
-
-///|
 /// Reduced editor layout info, Monaco's `CodeEditorWidget.getLayoutInfo`
 /// (`cew:1472`); the shape lives in `viewer/common/config/editor_options.mbt`.
 /// Backed by the viewer's measured gutter width and content box;
@@ -446,7 +437,7 @@ pub fn Viewer::get_width_of_line(self : Viewer, line_number : Int) -> Double {
 pub fn Viewer::get_scrolled_visible_position(
   self : Viewer,
   position : @base_common.Position,
-) -> ScrolledVisiblePosition? {
+) -> @editor_api.ScrolledVisiblePosition? {
   guard (self.get_model(), self.get_view_model(), self.get_view())
     is (Some(model), Some(view_model), Some(view)) else {
     return None

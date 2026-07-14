@@ -1,17 +1,4 @@
 ///|
-/// Why a cursor transition occurred. This is the DOM-free owner of Monaco's
-/// `CursorChangeReason`; the root Viewer adapts it to its stable public enum.
-pub(all) enum CursorChangeReason {
-  NotSet
-  ContentFlush
-  RecoverFromMarkers
-  Explicit
-  Paste
-  Undo
-  Redo
-} derive(Eq, Debug)
-
-///|
 /// The paired model/view cursor state. Both sides are committed atomically;
 /// live callers provide one side and the cursor derives the other.
 pub(all) struct CursorState {
@@ -137,7 +124,7 @@ pub(all) struct CursorStateChange {
   old_model_version_id : Int
   model_version_id : Int
   source : String
-  reason : CursorChangeReason
+  reason : @editor_api.CursorChangeReason
   reached_max_cursor_count : Bool
   has_outgoing_event : Bool
 } derive(Debug)

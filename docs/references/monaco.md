@@ -19,3 +19,14 @@ maps to the single multi-target local `viewer/common/model` package. Member-leve
 parity evidence remains in frozen execution plans and source citations. The
 tokenization merge used oracle commit
 `b18492a288de038fbc7643aae6de8247029d11bd`.
+
+## View model and inline decorations
+
+The upstream `common/viewModel/inlineDecorations.ts`,
+`viewModelDecoration.ts`, and `viewModelDecorations.ts` units map to focused
+files in the single multi-target local `viewer/common/view_model` package.
+The upstream `test/common/viewModel/inlineDecorations.test.ts` suite maps to
+`inline_decorations_reference_wbtest.mbt` in that package. The ownership
+merge and its 23-case conformance denominator use oracle commit
+`b18492a288de038fbc7643aae6de8247029d11bd`; member-level dispositions and
+terminal product-reach deferrals live in the frozen execution-plan ledger.

@@ -1,7 +1,7 @@
 # Inline Decorations and View Model Package Merge
 
-Status: implementation in progress — Gate A approved; Milestones B–C complete
-2026-07-14; deviation/API/docs closeout pending
+Status: implementation in progress — Gate A approved; Milestones B–E complete
+2026-07-14; closeout record pending
 Date: 2026-07-13
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`

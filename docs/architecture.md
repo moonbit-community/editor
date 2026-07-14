@@ -61,9 +61,9 @@ widgets, language-feature presentation, and editor events.
   diagnostics-to-decoration flow.
 - `core`, `cursor`, `config`: coordinates, selection/cursor state, and editor
   configuration values.
-- `inline_decorations`, `view_model`, `view_layout`: injected text,
-  wrapping/folding projection, model/view conversion, scrolling, viewport,
-  zones, and view-line rendering data.
+- `view_model`: injected text, wrapping/folding projection, model/view
+  conversion, and concrete inline/model decoration resolution.
+- `view_layout`: scrolling, viewport, zones, and view-line rendering data.
 - `diff`: line diff contracts used by quick diff.
 - the root `viewer/common` package is a small compatibility surface for line
   HTML helpers.

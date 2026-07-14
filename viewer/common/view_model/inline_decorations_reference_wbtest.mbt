@@ -45,7 +45,7 @@ priv struct ModelDecorationOptions {
 ///|
 /// Builds decoration options, defaulting every optional field the way an absent
 /// JavaScript property would.
-fn ModelDecorationOptions::new(
+fn ModelDecorationOptions::ModelDecorationOptions(
   description? : String = "",
   class_name? : String,
   inline_class_name? : String,
@@ -281,7 +281,7 @@ test "inline class name decoration on a single line" {
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 6),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             inline_class_name="test-class",
           ),
@@ -309,7 +309,7 @@ test "inlineClassName with affectsLetterSpacing" {
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 6),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             inline_class_name="test-class",
             inline_class_name_affects_letter_spacing=true,
@@ -342,7 +342,7 @@ test "beforeContentClassName decoration" {
         create_model_decoration(
           "dec1",
           Range(1, 3, 1, 8),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             before_content_class_name="before-class",
           ),
@@ -368,7 +368,7 @@ test "afterContentClassName decoration" {
         create_model_decoration(
           "dec1",
           Range(1, 3, 1, 8),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             after_content_class_name="after-class",
           ),
@@ -394,7 +394,7 @@ test "all decoration types combined" {
         create_model_decoration(
           "dec1",
           Range(1, 2, 1, 6),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             inline_class_name="inline-class",
             before_content_class_name="before-class",
@@ -426,7 +426,7 @@ test "decoration spanning multiple lines" {
         create_model_decoration(
           "dec1",
           Range(1, 3, 3, 5),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             inline_class_name="multi-line",
           ),
@@ -455,7 +455,7 @@ test "decoration with affectsFont sets hasVariableFonts" {
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 6),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             inline_class_name="font-class",
             affects_font=true,
@@ -480,7 +480,7 @@ test "multiple decorations on different lines" {
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 5),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             inline_class_name="class-a",
           ),
@@ -488,7 +488,7 @@ test "multiple decorations on different lines" {
         create_model_decoration(
           "dec2",
           Range(2, 1, 2, 5),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             inline_class_name="class-b",
           ),
@@ -512,10 +512,7 @@ test "decoration cache is used for same decoration id" {
   let dec = create_model_decoration(
     "dec1",
     Range(1, 1, 1, 6),
-    ModelDecorationOptions::new(
-      description="test",
-      inline_class_name="test-class",
-    ),
+    ModelDecorationOptions(description="test", inline_class_name="test-class"),
   )
   let context : ReferenceInlineModelContext = {
     get_model_decorations: fn(_view_range, _a, _b) { [dec] },
@@ -534,10 +531,7 @@ test "reset clears decoration cache" {
   let dec = create_model_decoration(
     "dec1",
     Range(1, 1, 1, 6),
-    ModelDecorationOptions::new(
-      description="test",
-      inline_class_name="test-class",
-    ),
+    ModelDecorationOptions(description="test", inline_class_name="test-class"),
   )
   let context : ReferenceInlineModelContext = {
     get_model_decorations: fn(_view_range, _a, _b) { [dec] },
@@ -560,7 +554,7 @@ test "getInlineDecorations returns inline decorations for a model line" {
         create_model_decoration(
           "dec1",
           Range(1, 1, 1, 6),
-          ModelDecorationOptions::new(
+          ModelDecorationOptions(
             description="test",
             inline_class_name="test-class",
           ),

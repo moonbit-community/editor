@@ -91,8 +91,61 @@ model line + grammar tokens + injected-text decorations
   Model token events are converted through the current projection, delivered
   synchronously to the browser ViewEvent callback, and only then enqueued as
   the original outgoing model event. The listener never forces tokenization.
-- `ViewModelDecorations` converts model ranges through
-  `viewer/common/inline_decorations` and resolves only the requested viewport.
+- `ViewModelDecorations` owns the concrete, package-private inline-decoration
+  computer. It queries canonical model decorations, converts ranges through
+  the local `CoordinatesConverter`, caches resolved view decorations by
+  decoration id, and resolves only the requested viewport. Model-decoration
+  and line-mapping notifications clear that cache at the corresponding source
+  invalidation boundaries.
+
+## Inline-decoration ownership
+
+The merged package keeps the Monaco source units distinct:
+
+- `inline_decorations.mbt` maps
+  `common/viewModel/inlineDecorations.ts`;
+- `view_model_decoration.mbt` maps
+  `common/viewModel/viewModelDecoration.ts`;
+- `view_model_decorations.mbt` maps
+  `common/viewModel/viewModelDecorations.ts` plus its called
+  `viewModelLines.ts` range-query slice;
+- `inline_decorations_reference_wbtest.mbt` maps
+  `test/common/viewModel/inlineDecorations.test.ts` and retains all 23 source
+  test names.
+
+All four are pinned to vscode commit
+`b18492a288de038fbc7643aae6de8247029d11bd`. Production uses concrete
+`TextModel`, `ModelDecoration`, `ModelDecorationOptions`, and
+`CoordinatesConverter` values. Only concrete `ViewModelDecoration` and
+`ViewDecorationsCollection` cross the package boundary; computers, contexts,
+resolved inputs, and renderer-facing inline values stay private. Injected-text
+decoration computation has one owner beside `ModelLineProjection`, including
+the source callback order, wrapped clipping, continuation indent, and absolute
+base-view-line calculation.
+
+The following source behavior remains explicitly deferred:
+
+- comment/string token visibility, because canonical decoration options have
+  no `hideInCommentTokens` or `hideInStringTokens` fields;
+- the whole-line `allowZero=false` and `belowHiddenRanges=true` converter
+  switches, because the canonical converter exposes affinity only;
+- production `beforeContentClassName` reach, because the canonical model
+  options lack that field;
+- production `affectsFont` reach, because the canonical model options lack
+  font-decoration inputs;
+- production injected-text letter-spacing reach, because canonical injected
+  options lack `inlineClassNameAffectsLetterSpacing`.
+
+The white-box suite uses private resolved-input adapters for the last three
+branches. Those cases prove the source algorithms, not product reachability;
+the five entries remain `DEFERRED` in the execution-plan ledger.
+
+Run the exact conformance suite with:
+
+```sh
+moon test --target js viewer/common/view_model/inline_decorations_reference_wbtest.mbt
+moon test --target native viewer/common/view_model/inline_decorations_reference_wbtest.mbt
+```
 
 There are no `FrameSource`, `FrameViewport`, `RenderLine`, or `RenderFrame` APIs;
 browser code consumes `ViewModel` plus `view_layout.ViewportData`. Selection/copy
@@ -100,7 +153,8 @@ helpers belong to `viewer/common/core` and the root `viewer`, not this package.
 
 The upstream map is the pinned `src/vs/editor/common/viewModel/` files
 `viewModelImpl.ts`, `viewModelLines.ts`, `modelLineProjection.ts`,
-`monospaceLineBreaksComputer.ts`, and `viewModelDecorations.ts`, plus
+`monospaceLineBreaksComputer.ts`, `inlineDecorations.ts`,
+`viewModelDecoration.ts`, and `viewModelDecorations.ts`, plus
 `viewLayout/viewLinesViewportData.ts`.
 This package must remain multi-target and FFI-free, with no root-viewer, browser,
 server, transport, workspace, or host dependency. See `pkg.generated.mbti`; run

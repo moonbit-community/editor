@@ -194,7 +194,7 @@ fn to_view_layout_decoration_type(
 /// per-line grouped inline decorations) plus the injected-text
 /// decorations the line carries. `className` decorations render through the
 /// `DecorationsOverlay` (decoration plan Phase 4), not as line spans.
-pub fn line_decorations_for_line(
+fn line_decorations_for_line(
   collection : ViewDecorationsCollection,
   viewport_start_line_number : Int,
   line_number : Int,

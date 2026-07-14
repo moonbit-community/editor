@@ -55,7 +55,7 @@ pub struct ViewModelDecorations {
 ///|
 /// Constructor (`viewModelDecorations.ts:27-37`): the context closure hands
 /// the computer model decorations for a view range via the lines collection.
-pub fn ViewModelDecorations::new(
+fn ViewModelDecorations::ViewModelDecorations(
   editor_id : Int,
   model : @model.TextModel,
   filter_validation : Bool,
@@ -94,7 +94,7 @@ fn ViewModelDecorations::clear_cached_model_decorations_resolver(
 
 ///|
 /// `reset` (`viewModelDecorations.ts:49-52`; `dispose` has the same body).
-pub fn ViewModelDecorations::reset(self : ViewModelDecorations) -> Unit {
+fn ViewModelDecorations::reset(self : ViewModelDecorations) -> Unit {
   self.computer.reset()
   self.clear_cached_model_decorations_resolver()
 }
@@ -110,7 +110,7 @@ pub fn ViewModelDecorations::on_model_decorations_changed(
 
 ///|
 /// `onLineMappingChanged` (`viewModelDecorations.ts:59-63`).
-pub fn ViewModelDecorations::on_line_mapping_changed(
+fn ViewModelDecorations::on_line_mapping_changed(
   self : ViewModelDecorations,
 ) -> Unit {
   self.computer.on_line_mapping_changed()
@@ -138,7 +138,8 @@ pub fn ViewModelDecorations::get_decorations_viewport_data(
 
 ///|
 /// `getDecorationsOnLine` (`viewModelDecorations.ts:79-82`).
-pub fn ViewModelDecorations::get_decorations_on_line(
+#warnings("-unused_value")
+fn ViewModelDecorations::get_decorations_on_line(
   self : ViewModelDecorations,
   lines : ViewModelLinesFromProjectedModel,
   line_number : Int,

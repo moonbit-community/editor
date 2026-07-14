@@ -19,8 +19,6 @@ pub fn dedup_margin_decorations(Int, Int, Array[DecorationToRender]) -> Array[Ar
 
 pub fn filter_validation_decorations(RenderValidationDecorations) -> Bool
 
-pub fn line_decorations_for_line(ViewDecorationsCollection, Int, Int, ViewLineData) -> Array[@view_layout.LineDecoration]
-
 pub fn lines_decorations_to_render(Array[ViewModelDecoration]) -> Array[DecorationToRender]
 
 pub let monospace_line_breaks_computer_factory : MonospaceLineBreaksComputerFactory
@@ -304,12 +302,8 @@ pub(all) struct ViewModelDecoration {
 pub struct ViewModelDecorations {
   // private fields
 }
-pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLinesFromProjectedModel, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> ViewDecorationsCollection
 pub fn ViewModelDecorations::get_decorations_viewport_data(Self, @common.Range) -> ViewDecorationsCollection
-pub fn ViewModelDecorations::new(Int, @model.TextModel, Bool, ViewModelLinesFromProjectedModel, CoordinatesConverter) -> Self
-pub fn ViewModelDecorations::on_line_mapping_changed(Self) -> Unit
 pub fn ViewModelDecorations::on_model_decorations_changed(Self) -> Unit
-pub fn ViewModelDecorations::reset(Self) -> Unit
 
 pub struct ViewModelLinesFromProjectedModel {
   model : @model.TextModel

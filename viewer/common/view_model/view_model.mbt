@@ -91,7 +91,7 @@ pub fn ViewModel::with_options(
     schedule_at_next_animation_frame~,
     now~,
   )
-  let decorations = ViewModelDecorations::new(
+  let decorations = ViewModelDecorations(
     options.editor_id,
     model,
     filter_validation_decorations(options.render_validation_decorations),
@@ -233,7 +233,7 @@ pub fn ViewModel::on_configuration_changed(
   if previous.editor_id != options.editor_id ||
     previous.render_validation_decorations !=
     options.render_validation_decorations {
-    self.decorations = ViewModelDecorations::new(
+    self.decorations = ViewModelDecorations(
       options.editor_id,
       self.model,
       filter_validation_decorations(options.render_validation_decorations),

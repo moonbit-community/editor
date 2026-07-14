@@ -352,7 +352,7 @@ fn prepare_current_line_overlay(
 
 ///|
 fn prepare_selections_overlay(
-  part : @selections.SelectionsOverlay,
+  part : SelectionsOverlay,
   context : RenderingContext,
 ) -> Unit {
   let self = part
@@ -372,7 +372,7 @@ fn prepare_selections_overlay(
       }
     None => ()
   }
-  self.render_result = @selections.prepare_selections_render_from_visible_ranges(
+  self.render_result = prepare_selections_render_from_visible_ranges(
     context.viewport,
     visible_ranges,
     context.input.space_width,
@@ -381,7 +381,7 @@ fn prepare_selections_overlay(
 
 ///|
 fn prepare_decorations_overlay(
-  part : @decorations.DecorationsOverlay,
+  part : DecorationsOverlay,
   context : RenderingContext,
 ) -> Unit {
   let self = part
@@ -391,7 +391,7 @@ fn prepare_decorations_overlay(
   let decorations = context.input.view_model
     .decorations()
     .get_decorations_viewport_data(context.viewport.visible_range).decorations
-  self.render_result = @decorations.prepare_decorations_render(
+  self.render_result = prepare_decorations_render(
     decorations,
     context.viewport.start_line_number,
     context.viewport.end_line_number,

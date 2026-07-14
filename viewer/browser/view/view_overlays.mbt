@@ -22,8 +22,8 @@
 /// instead of erasing every overlay into a trait object.
 priv enum DynamicViewOverlayHandle {
   CurrentLine(@current_line_highlight.CurrentLineHighlightOverlay)
-  Selections(@selections.SelectionsOverlay)
-  Decorations(@decorations.DecorationsOverlay)
+  Selections(SelectionsOverlay)
+  Decorations(DecorationsOverlay)
   CurrentLineMargin(@margin.CurrentLineMarginHighlightOverlay)
   LinesDecorations(@margin.LinesDecorationsOverlay)
   LineNumbers(@margin.LineNumbersOverlay)
@@ -308,8 +308,8 @@ fn ViewOverlays::render_lines(
 pub(all) struct ContentViewOverlays {
   overlays : ViewOverlays
   current_line : @current_line_highlight.CurrentLineHighlightOverlay
-  selections : @selections.SelectionsOverlay
-  decorations : @decorations.DecorationsOverlay
+  selections : SelectionsOverlay
+  decorations : DecorationsOverlay
   mut should_render : Bool
   // `ContentViewOverlays._contentWidth` (`viewOverlays.ts:204,210-213,226`).
   priv mut content_width : Double
@@ -322,8 +322,8 @@ pub fn ContentViewOverlays::new(
 ) -> ContentViewOverlays {
   let overlays = ViewOverlays::new(document, "view-overlays")
   let current_line = @current_line_highlight.CurrentLineHighlightOverlay::new()
-  let selections = @selections.SelectionsOverlay::new()
-  let decorations = @decorations.DecorationsOverlay::new()
+  let selections = SelectionsOverlay::new()
+  let decorations = DecorationsOverlay::new()
   overlays.add_dynamic_overlay(CurrentLine(current_line))
   overlays.add_dynamic_overlay(Selections(selections))
   overlays.add_dynamic_overlay(Decorations(decorations))

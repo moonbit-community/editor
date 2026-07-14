@@ -7,11 +7,9 @@ import {
   "moonbit-community/editor/viewer/browser",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/current_line_highlight",
-  "moonbit-community/editor/viewer/browser/view_parts/decorations",
   "moonbit-community/editor/viewer/browser/view_parts/editor_scrollbar",
   "moonbit-community/editor/viewer/browser/view_parts/margin",
   "moonbit-community/editor/viewer/browser/view_parts/overlay_widgets",
-  "moonbit-community/editor/viewer/browser/view_parts/selections",
   "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
@@ -25,11 +23,19 @@ import {
 }
 
 // Values
+pub fn compute_decoration_overlay_pieces(Array[@view_model.ViewModelDecoration], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[DecorationOverlayPiece]
+
 pub fn convert_view_to_model_mouse_target(@browser.MouseTarget, @view_model.CoordinatesConverter) -> @browser.MouseTarget
 
 pub fn empty_editor_class_name(show_unused? : Bool, show_deprecated? : Bool) -> String
 
 pub fn extra_editor_class_name(Bool, Bool, Bool) -> String
+
+pub fn prepare_decorations_render(Array[@view_model.ViewModelDecoration], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[String]
+
+pub fn prepare_selections_render(@view_layout.ViewportData, @common.Range?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Array[String]
+
+pub fn prepare_selections_render_from_visible_ranges(@view_layout.ViewportData, Array[(Int, Array[(Double, Double)])], Double) -> Array[String]
 
 // Errors
 
@@ -37,14 +43,27 @@ pub fn extra_editor_class_name(Bool, Bool, Bool) -> String
 pub(all) struct ContentViewOverlays {
   overlays : ViewOverlays
   current_line : @current_line_highlight.CurrentLineHighlightOverlay
-  selections : @selections.SelectionsOverlay
-  decorations : @decorations.DecorationsOverlay
+  selections : SelectionsOverlay
+  decorations : DecorationsOverlay
   mut should_render : Bool
   // private fields
 }
 pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
+
+pub(all) struct DecorationOverlayPiece {
+  line_index : Int
+  class_name : String
+  left : Double
+  width : Double?
+  whole_line : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) struct DecorationsOverlay {
+  mut render_result : Array[String]
+}
+pub fn DecorationsOverlay::new() -> Self
 
 pub(all) struct FloatHorizontalRange {
   left : Double
@@ -112,6 +131,11 @@ pub(all) struct PartFingerprints {
 pub fn PartFingerprints::collect(@dom.Element?, @dom.Element) -> Bytes
 pub fn PartFingerprints::read(@dom.Element) -> PartFingerprint
 pub fn PartFingerprints::write(@dom.Element, PartFingerprint) -> Unit
+
+pub(all) struct SelectionsOverlay {
+  mut render_result : Array[String]
+}
+pub fn SelectionsOverlay::new() -> Self
 
 pub(all) struct View {
   root : @dom.Element

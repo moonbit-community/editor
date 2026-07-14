@@ -121,13 +121,8 @@ pub fn ContentHoverController::get(
 ///|
 /// Removes the instance — the contribution's dispose.
 pub fn ContentHoverController::detach(editor_id : String) -> Unit {
-  match instances.get(editor_id) {
-    Some(controller) => {
-      controller.cancel_all_timers()
-      controller.cancel_request()
-    }
-    None => ()
-  }
+  // The root central entry directly disposes the concrete controller before
+  // removing this transitional alias. Milestone C deletes the alias entirely.
   instances.remove(editor_id)
 }
 

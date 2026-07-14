@@ -41,12 +41,152 @@ pub(all) struct EditorContribution {
 }
 
 ///|
+/// The concrete live contribution state stored in the per-Viewer registry.
+/// The product registry is closed and statically populated, so adding a sixth
+/// contribution deliberately requires exhaustive construction, typed-access,
+/// and disposal updates here.
+priv enum EditorContributionInstance {
+  ContentHover(@hover_browser.ContentHoverController)
+  Folding(@folding_browser.FoldingController)
+  AgentFeedbackInput(
+    @agent_feedback_browser.AgentFeedbackEditorInputContribution
+  )
+  AgentFeedbackWidget(
+    @agent_feedback_browser.AgentFeedbackEditorWidgetContribution
+  )
+  QuickDiff(QuickDiffContributionState)
+}
+
+///|
+/// The quick-diff decorator's per-editor state. Its collection and all three
+/// subscriptions are retained by the same central contribution entry rather
+/// than captured by a lifecycle-only facade closure.
+priv struct QuickDiffContributionState {
+  collection : EditorDecorationsCollection
+  listeners : Array[@base_common.Disposable]
+}
+
+///|
+fn QuickDiffContributionState::QuickDiffContributionState(
+  collection : EditorDecorationsCollection,
+) -> QuickDiffContributionState {
+  { collection, listeners: [] }
+}
+
+///|
+/// Entry lifecycle keeps the temporary public `dispose` facade idempotent and
+/// makes typed lookup unavailable after teardown. `ContributionDisposing`
+/// remains readable so synchronous feature cleanup can use central accessors
+/// while the complete map is still installed.
+priv enum EditorContributionLifecycle {
+  ContributionLive
+  ContributionDisposing
+  ContributionDisposed
+} derive(Eq)
+
+///|
+/// One live row in Monaco `CodeEditorContributions._instances`. `listeners`
+/// owns the root-package subscriptions for folding and agent feedback; hover
+/// owns its cancellable work directly and quick diff owns its subscriptions in
+/// `QuickDiffContributionState`.
+priv struct EditorContributionEntry {
+  id : String
+  instance : EditorContributionInstance
+  listeners : Array[@base_common.Disposable]
+  mut lifecycle : EditorContributionLifecycle
+}
+
+///|
+fn EditorContributionEntry::EditorContributionEntry(
+  id : String,
+  instance : EditorContributionInstance,
+) -> EditorContributionEntry {
+  { id, instance, listeners: [], lifecycle: ContributionLive }
+}
+
+///|
+fn EditorContributionEntry::typed_lookup_available(
+  self : EditorContributionEntry,
+) -> Bool {
+  self.lifecycle != ContributionDisposed
+}
+
+///|
+/// Direct typed lifecycle dispatch. The complete Viewer map remains installed
+/// while every row tears down, so feature cleanup can still use typed central
+/// accessors. The explicit lifecycle state rejects recursive/repeated teardown
+/// and makes later typed lookup return `None` without removing the row before
+/// the full ordered disposal pass finishes.
+fn EditorContributionEntry::dispose(
+  self : EditorContributionEntry,
+  viewer : Viewer,
+) -> Unit {
+  guard self.lifecycle == ContributionLive else { return }
+  self.lifecycle = ContributionDisposing
+  match self.instance {
+    AgentFeedbackInput(_) => {
+      for listener in self.listeners {
+        listener.dispose()
+      }
+      self.listeners.clear()
+      @agent_feedback_browser.AgentFeedbackEditorInputContribution::detach(
+        viewer.get_id(),
+      )
+    }
+    AgentFeedbackWidget(controller) => {
+      viewer.clear_agent_feedback_widgets_from(controller) |> ignore
+      for listener in self.listeners {
+        listener.dispose()
+      }
+      self.listeners.clear()
+      @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::detach(
+        viewer.get_id(),
+      )
+    }
+    Folding(controller) => {
+      controller.clear_local()
+      for listener in self.listeners {
+        listener.dispose()
+      }
+      self.listeners.clear()
+      @folding_browser.FoldingController::detach(viewer.get_id())
+    }
+    ContentHover(controller) => {
+      controller.cancel_all_timers()
+      controller.cancel_request()
+      @hover_browser.ContentHoverController::detach(viewer.get_id())
+    }
+    QuickDiff(state) => {
+      state.collection.clear()
+      for listener in state.listeners {
+        listener.dispose()
+      }
+      state.listeners.clear()
+    }
+  }
+  self.lifecycle = ContributionDisposed
+}
+
+///|
 /// `IEditorContributionDescription` (`editorExtensions.ts:68-72`): id + ctor
-/// closure, instantiated once per `Viewer`.
+/// closure, instantiated once per `Viewer`. Construction and initialization
+/// are split so the concrete entry can be installed before any synchronous
+/// typed lookup made by the initializer.
 priv struct EditorContributionDescription {
   id : String
   instantiation : EditorContributionInstantiation
-  ctor : (Viewer) -> EditorContribution
+  ctor : (Viewer) -> EditorContributionInstance
+  initialize : (Viewer) -> Array[@base_common.Disposable]
+}
+
+///|
+fn EditorContributionDescription::EditorContributionDescription(
+  id : String,
+  instantiation : EditorContributionInstantiation,
+  ctor : (Viewer) -> EditorContributionInstance,
+  initialize : (Viewer) -> Array[@base_common.Disposable],
+) -> EditorContributionDescription {
+  { id, instantiation, ctor, initialize }
 }
 
 ///|
@@ -117,9 +257,19 @@ fn EditorContributionRegistry::register_editor_contribution(
   self : EditorContributionRegistry,
   id : String,
   instantiation : EditorContributionInstantiation,
-  ctor : (Viewer) -> EditorContribution,
+  ctor : (Viewer) -> EditorContributionInstance,
+  initialize : (Viewer) -> Array[@base_common.Disposable],
 ) -> Unit {
-  self.contributions.push({ id, instantiation, ctor })
+  // Monaco's description registry is first-wins. Reject the later row before
+  // its constructor, initializer, listener, or dispose path can exist.
+  for description in self.contributions {
+    if description.id == id {
+      return
+    }
+  }
+  self.contributions.push(
+    EditorContributionDescription(id, instantiation, ctor, initialize),
+  )
 }
 
 ///|
@@ -282,15 +432,27 @@ fn EditorContributionRegistry::run_editor_command(
 fn EditorContributionRegistry::instantiate_all(
   self : EditorContributionRegistry,
   viewer : Viewer,
-) -> Map[String, EditorContribution] {
-  let instances : Map[String, EditorContribution] = Map([])
+) -> Unit {
   for description in self.contributions {
+    // Also guard the actual per-Viewer map: callers may initialize a Viewer
+    // from more than one registry, and a later description must never replace
+    // a live row or run construction side effects.
+    if viewer.contributions.contains(description.id) {
+      continue
+    }
     // Every mode instantiates eagerly (no idle/interaction schedulers
     // exist); the declared mode is carried for source fidelity only.
     ignore(description.instantiation)
-    instances.set(description.id, (description.ctor)(viewer))
+    let instance = (description.ctor)(viewer)
+    let entry = EditorContributionEntry(description.id, instance)
+    // This insertion must precede initialization: feedback input/widgets and
+    // folding synchronously resolve their typed contribution in their first
+    // initialization step.
+    viewer.contributions.set(description.id, entry)
+    for listener in (description.initialize)(viewer) {
+      entry.listeners.push(listener)
+    }
   }
-  instances
 }
 
 ///|

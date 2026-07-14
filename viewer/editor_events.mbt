@@ -32,7 +32,14 @@ fn Viewer::editor_context(self : Viewer) -> @hover_browser.EditorContext {
 fn Viewer::content_hover_controller(
   self : Viewer,
 ) -> @hover_browser.ContentHoverController? {
-  @hover_browser.ContentHoverController::get(self.get_id())
+  match self.contributions.get("editor.contrib.contentHover") {
+    Some(entry) if entry.typed_lookup_available() =>
+      match entry.instance {
+        ContentHover(controller) => Some(controller)
+        _ => None
+      }
+    _ => None
+  }
 }
 
 ///|

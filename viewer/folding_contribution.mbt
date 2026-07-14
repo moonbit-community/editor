@@ -13,7 +13,9 @@ fn register_folding_contribution(registry : EditorContributionRegistry) -> Unit 
     @folding_browser.FOLDING_CONTROLLER_ID,
     Eager,
     viewer => {
-      @folding_browser.FoldingController::attach(viewer.get_id()) |> ignore
+      Folding(@folding_browser.FoldingController::attach(viewer.get_id()))
+    },
+    viewer => {
       let listeners : Array[@base_common.Disposable] = []
       // `this.editor.onDidChangeModel(() => this.onModelChanged())`
       listeners.push(
@@ -45,19 +47,7 @@ fn register_folding_contribution(registry : EditorContributionRegistry) -> Unit 
       )
       // the constructor's trailing `this.onModelChanged()`
       viewer.folding_on_model_changed()
-      {
-        id: @folding_browser.FOLDING_CONTROLLER_ID,
-        dispose: () => {
-          match viewer.folding_controller() {
-            Some(controller) => controller.clear_local()
-            None => ()
-          }
-          for listener in listeners {
-            listener.dispose()
-          }
-          @folding_browser.FoldingController::detach(viewer.get_id())
-        },
-      }
+      listeners
     },
   )
   // `editor.fold` (`folding.ts:718`): Ctrl/Cmd+Shift+BracketLeft. The

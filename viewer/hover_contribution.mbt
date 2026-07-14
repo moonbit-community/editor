@@ -16,14 +16,11 @@ fn register_hover_contribution(registry : EditorContributionRegistry) -> Unit {
     "editor.contrib.contentHover",
     BeforeFirstInteraction,
     viewer => {
-      @hover_browser.ContentHoverController::attach(viewer.get_id()) |> ignore
-      {
-        id: "editor.contrib.contentHover",
-        dispose: () => {
-          @hover_browser.ContentHoverController::detach(viewer.get_id())
-        },
-      }
+      ContentHover(
+        @hover_browser.ContentHoverController::attach(viewer.get_id()),
+      )
     },
+    _viewer => [],
   )
   // `HideContentHoverAction` (`hoverActions.ts`): Escape, gated on
   // `hoverVisible`.

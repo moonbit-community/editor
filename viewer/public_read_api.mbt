@@ -26,7 +26,10 @@ pub fn Viewer::get_contribution(
   self : Viewer,
   id : String,
 ) -> EditorContribution? {
-  self.contributions.get(id)
+  match self.contributions.get(id) {
+    Some(entry) => Some({ id: entry.id, dispose: () => entry.dispose(self) })
+    None => None
+  }
 }
 
 ///|

@@ -149,7 +149,7 @@ pub struct Viewer {
   /// The per-editor contribution instances the registry constructed
   /// (`codeEditorContributions.ts`'s `_instances`, keyed by contribution
   /// id); disposed with the viewer.
-  priv mut contributions : Map[String, EditorContribution]
+  priv mut contributions : Map[String, EditorContributionEntry]
 }
 
 ///|
@@ -390,7 +390,7 @@ pub fn Viewer::Viewer(
   // Editor contributions instantiate through the registry
   // (`codeEditorWidget.ts:344` `this._contributions.initialize(...)`);
   // they live until `dispose` — `set_model` does not re-create them.
-  viewer.contributions = editor_registry().instantiate_all(viewer)
+  editor_registry().instantiate_all(viewer)
   viewer
 }
 
@@ -986,7 +986,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   // Contributions dispose with the editor (`codeEditorWidget.dispose` →
   // `_onDidDispose.fire()` → `super.dispose()` → contributions/base store).
   for _, contribution in self.contributions {
-    (contribution.dispose)()
+    contribution.dispose(self)
   }
   self.contributions = Map([])
   self.dispose_lifetime_disposables()

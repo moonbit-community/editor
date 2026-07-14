@@ -42,23 +42,13 @@ fn register_agent_feedback_contribution(
     "agentFeedback.editorInputContribution",
     Eventually,
     viewer => {
-      @agent_feedback_browser.AgentFeedbackEditorInputContribution::attach(
-        viewer.get_id(),
+      AgentFeedbackInput(
+        @agent_feedback_browser.AgentFeedbackEditorInputContribution::attach(
+          viewer.get_id(),
+        ),
       )
-      |> ignore
-      let subscriptions = viewer.hook_agent_feedback()
-      {
-        id: "agentFeedback.editorInputContribution",
-        dispose: () => {
-          for subscription in subscriptions {
-            subscription.dispose()
-          }
-          @agent_feedback_browser.AgentFeedbackEditorInputContribution::detach(
-            viewer.get_id(),
-          )
-        },
-      }
     },
+    viewer => viewer.hook_agent_feedback(),
   )
   // The editor-level Escape arm of `_registerWidgetListeners` ("Don't
   // capture Escape … this._hide()"): close the input while the editor has
@@ -141,9 +131,14 @@ fn Viewer::is_current_resource(
 fn Viewer::agent_feedback_input_contribution(
   self : Viewer,
 ) -> @agent_feedback_browser.AgentFeedbackEditorInputContribution? {
-  @agent_feedback_browser.AgentFeedbackEditorInputContribution::get(
-    self.get_id(),
-  )
+  match self.contributions.get("agentFeedback.editorInputContribution") {
+    Some(entry) if entry.typed_lookup_available() =>
+      match entry.instance {
+        AgentFeedbackInput(controller) => Some(controller)
+        _ => None
+      }
+    _ => None
+  }
 }
 
 ///|

@@ -99,3 +99,79 @@ test "quick diff: identical original decorates nothing" {
   assert_eq(quick_diff_gutter_decorations(viewer).length(), 0)
   viewer.dispose()
 }
+
+///|
+test "quick diff: one central state follows model swap, removal, and reattach" {
+  let services = ViewerServices::new()
+  let viewer = Viewer::Viewer(services~)
+  let state = viewer.quick_diff_contribution().unwrap()
+  let resource = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/test-model",
+  )
+  let first = test_model("a\nfirst\ntail")
+  let second = test_model("a\nsecond\ntail")
+  services.quick_diff.set_original_content(resource, Some("a\nold\ntail"))
+  viewer.set_model(Some(first))
+  assert_true(state.collection.length() > 0)
+  assert_true(first.get_all_decorations().length() > 0)
+  viewer.set_model(Some(second))
+  assert_true(physical_equal(state, viewer.quick_diff_contribution().unwrap()))
+  assert_eq(first.get_all_decorations().length(), 0)
+  assert_true(second.get_all_decorations().length() > 0)
+  viewer.set_model(None)
+  assert_eq(state.collection.length(), 0)
+  assert_eq(second.get_all_decorations().length(), 0)
+  viewer.set_model(Some(first))
+  assert_true(physical_equal(state, viewer.quick_diff_contribution().unwrap()))
+  assert_true(first.get_all_decorations().length() > 0)
+  viewer.dispose()
+  first.dispose()
+  second.dispose()
+}
+
+///|
+test "quick diff: disposal window is live and later service events are silent" {
+  let services = ViewerServices::new()
+  let viewer = Viewer::Viewer(services~)
+  let state = viewer.quick_diff_contribution().unwrap()
+  let resource = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/test-model",
+  )
+  let model = test_model("a\nnew\ntail")
+  services.quick_diff.set_original_content(resource, Some("a\nold\ntail"))
+  viewer.set_model(Some(model))
+  assert_true(state.collection.length() > 0)
+  let original_change_deliveries = Ref(0)
+  state.listeners.push(
+    services.quick_diff.on_did_change_original(_ => {
+      original_change_deliveries.val += 1
+    }),
+  )
+  let callback_seen = Ref(false)
+  let contribution_live_in_callback = Ref(false)
+  viewer.on_did_dispose(() => {
+    callback_seen.val = true
+    contribution_live_in_callback.val = viewer.get_contribution(
+        "quickDiff.decorator",
+      )
+      is Some(_)
+    // Contribution listeners are intentionally live during `onDidDispose`;
+    // with the model already detached this synchronous service emission is a
+    // guarded no-op.
+    services.quick_diff.set_original_content(resource, Some("replacement"))
+  })
+  |> ignore
+  viewer.dispose()
+  assert_true(callback_seen.val)
+  assert_true(contribution_live_in_callback.val)
+  assert_eq(original_change_deliveries.val, 1)
+  assert_eq(state.collection.length(), 0)
+  services.quick_diff.set_original_content(resource, Some("after dispose"))
+  assert_eq(original_change_deliveries.val, 1)
+  assert_eq(state.collection.length(), 0)
+  model.dispose()
+}

@@ -25,24 +25,13 @@ fn register_agent_feedback_widgets_contribution(
     "agentFeedback.editorWidgetContribution",
     Eventually,
     viewer => {
-      @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::attach(
-        viewer.get_id(),
+      AgentFeedbackWidget(
+        @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::attach(
+          viewer.get_id(),
+        ),
       )
-      |> ignore
-      let subscriptions = viewer.hook_agent_feedback_widgets()
-      {
-        id: "agentFeedback.editorWidgetContribution",
-        dispose: () => {
-          viewer.clear_agent_feedback_widgets() |> ignore
-          for subscription in subscriptions {
-            subscription.dispose()
-          }
-          @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::detach(
-            viewer.get_id(),
-          )
-        },
-      }
     },
+    viewer => viewer.hook_agent_feedback_widgets(),
   )
 }
 
@@ -53,9 +42,14 @@ fn register_agent_feedback_widgets_contribution(
 fn Viewer::agent_feedback_widget_contribution(
   self : Viewer,
 ) -> @agent_feedback_browser.AgentFeedbackEditorWidgetContribution? {
-  @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::get(
-    self.get_id(),
-  )
+  match self.contributions.get("agentFeedback.editorWidgetContribution") {
+    Some(entry) if entry.typed_lookup_available() =>
+      match entry.instance {
+        AgentFeedbackWidget(controller) => Some(controller)
+        _ => None
+      }
+    _ => None
+  }
 }
 
 ///|
@@ -95,6 +89,18 @@ fn Viewer::clear_agent_feedback_widgets(self : Viewer) -> String? {
   guard self.agent_feedback_widget_contribution() is Some(wc) else {
     return None
   }
+  self.clear_agent_feedback_widgets_from(wc)
+}
+
+///|
+/// Direct-instance form used by central contribution disposal. Keeping the
+/// payload explicit prevents lifecycle teardown from recovering state by id;
+/// ordinary rebuild/model paths continue through the typed central accessor
+/// above.
+fn Viewer::clear_agent_feedback_widgets_from(
+  self : Viewer,
+  wc : @agent_feedback_browser.AgentFeedbackEditorWidgetContribution,
+) -> String? {
   let mut focused_reply : String? = None
   for widget in wc.widgets {
     if focused_reply is None {

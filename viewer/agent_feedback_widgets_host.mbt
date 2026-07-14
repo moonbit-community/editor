@@ -110,7 +110,7 @@ fn Viewer::clear_agent_feedback_widgets_from(
     self.remove_overlay_widget(widget.widget_id())
   }
   wc.widgets.clear()
-  self.clear_agent_feedback_highlight()
+  self.clear_agent_feedback_highlight_from(wc)
   focused_reply
 }
 
@@ -327,6 +327,17 @@ fn Viewer::highlight_agent_feedback_range(
 ///|
 fn Viewer::clear_agent_feedback_highlight(self : Viewer) -> Unit {
   guard self.agent_feedback_widget_contribution() is Some(wc) else { return }
+  self.clear_agent_feedback_highlight_from(wc)
+}
+
+///|
+/// Direct-instance form used while the central contribution entry is
+/// disposing. No id-based lookup is needed once the concrete payload is in
+/// hand.
+fn Viewer::clear_agent_feedback_highlight_from(
+  self : Viewer,
+  wc : @agent_feedback_browser.AgentFeedbackEditorWidgetContribution,
+) -> Unit {
   if wc.highlight_decoration_ids.is_empty() {
     return
   }

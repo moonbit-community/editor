@@ -8,7 +8,7 @@ priv enum ViewEventHandlerHandle {
   ViewZonesHandler(@view_zones.ViewZones)
   ContentViewOverlaysHandler(ContentViewOverlays)
   MarginViewOverlaysHandler(MarginViewOverlays)
-  ContentWidgetsHandler(@content_widgets.ContentWidgets)
+  ContentWidgetsHandler(ContentWidgets)
   ViewCursorsHandler(@view_cursors.ViewCursors)
   OverlayWidgetsHandler(OverlayWidgets)
   EditorScrollbarHandler(EditorScrollbar)
@@ -21,7 +21,7 @@ priv enum ViewPartHandle {
   ViewZonesPart(@view_zones.ViewZones)
   ContentViewOverlaysPart(ContentViewOverlays)
   MarginViewOverlaysPart(MarginViewOverlays)
-  ContentWidgetsPart(@content_widgets.ContentWidgets)
+  ContentWidgetsPart(ContentWidgets)
   ViewCursorsPart(@view_cursors.ViewCursors)
   OverlayWidgetsPart(OverlayWidgets)
   EditorScrollbarPart(EditorScrollbar)
@@ -130,7 +130,7 @@ fn default_view_parts(
   view_zones : @view_zones.ViewZones,
   content_view_overlays : ContentViewOverlays,
   margin_view_overlays : MarginViewOverlays,
-  content_widgets : @content_widgets.ContentWidgets,
+  content_widgets : ContentWidgets,
   view_cursors : @view_cursors.ViewCursors,
   overlay_widgets : OverlayWidgets,
   editor_scrollbar : EditorScrollbar,
@@ -154,7 +154,7 @@ fn default_view_event_handlers(
   view_zones : @view_zones.ViewZones,
   content_view_overlays : ContentViewOverlays,
   margin_view_overlays : MarginViewOverlays,
-  content_widgets : @content_widgets.ContentWidgets,
+  content_widgets : ContentWidgets,
   view_cursors : @view_cursors.ViewCursors,
   overlay_widgets : OverlayWidgets,
   editor_scrollbar : EditorScrollbar,

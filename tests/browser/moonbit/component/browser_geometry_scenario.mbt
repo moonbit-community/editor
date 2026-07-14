@@ -49,7 +49,7 @@ priv struct BrowserIframeContentWidget {
   id : String
   node : @rdom.Element
   allow_overflow : Bool
-  mut preference : Array[@content_widgets.ContentWidgetPositionPreference]
+  mut preference : Array[@view.ContentWidgetPositionPreference]
   mut after_position : String
   mut after_top : Double
   mut after_left : Double
@@ -58,7 +58,7 @@ priv struct BrowserIframeContentWidget {
 ///|
 fn BrowserIframeContentWidget::content_widget_handle(
   self : BrowserIframeContentWidget,
-) -> @content_widgets.ContentWidgetHandle {
+) -> @view.ContentWidgetHandle {
   ContentWidgetHandle(
     () => self.id,
     () => self.node,
@@ -126,7 +126,7 @@ fn BrowserIframeContentWidget::new(
 
 ///|
 priv struct BrowserIframeGeometryFixture {
-  widgets : @content_widgets.ContentWidgets
+  widgets : @view.ContentWidgets
   normal : BrowserIframeContentWidget
   overflow : BrowserIframeContentWidget
   anchor_left : Ref[Double]
@@ -140,7 +140,7 @@ fn BrowserIframeGeometryFixture::new() -> BrowserIframeGeometryFixture {
     is Some(root) else {
     abort("browser geometry owner iframe root is missing")
   }
-  let widgets = @content_widgets.ContentWidgets::new(document, root)
+  let widgets = @view.ContentWidgets::new(document, root)
   let normal_container = widgets.dom_node()
   normal_container.set_attribute(
     "style", "position:absolute;top:0;left:0;width:430px;height:300px",
@@ -168,7 +168,7 @@ fn BrowserIframeGeometryFixture::new() -> BrowserIframeGeometryFixture {
 ///|
 fn BrowserIframeGeometryFixture::context(
   self : BrowserIframeGeometryFixture,
-) -> @content_widgets.ContentWidgetsRenderContext {
+) -> @view.ContentWidgetsRenderContext {
   {
     vertical_offset_for_line: _ => self.anchor_top.val,
     line_height_for_line: _ => 20.0,
@@ -204,7 +204,7 @@ fn BrowserIframeGeometryFixture::run_case(
   widget : BrowserIframeContentWidget,
   left : Double,
   top : Double,
-  preference : Array[@content_widgets.ContentWidgetPositionPreference],
+  preference : Array[@view.ContentWidgetPositionPreference],
 ) -> Json {
   self.anchor_left.val = left
   self.anchor_top.val = top

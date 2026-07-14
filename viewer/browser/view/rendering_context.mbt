@@ -229,7 +229,7 @@ fn line_visible_ranges_from_raw(
 /// package boundary, matching the source anchor arithmetic.
 fn RenderingContext::content_widgets_render_context(
   self : RenderingContext,
-) -> @content_widgets.ContentWidgetsRenderContext {
+) -> ContentWidgetsRenderContext {
   {
     vertical_offset_for_line: line => self.vertical_offset_for_line(line),
     line_height_for_line: line => self.line_height_for_line(line),

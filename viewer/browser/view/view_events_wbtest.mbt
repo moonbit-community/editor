@@ -1124,7 +1124,7 @@ priv struct ViewEventContentWidget {
 ///|
 fn ViewEventContentWidget::content_widget_handle(
   self : ViewEventContentWidget,
-) -> @content_widgets.ContentWidgetHandle {
+) -> ContentWidgetHandle {
   ContentWidgetHandle(() => "event-widget", () => self.dom_node, () => {
     Some({
       position: Some(Position(2, 3)),

@@ -5,12 +5,12 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/browser",
-  "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/cursor",
+  "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/ui/scrollbar",
@@ -57,6 +57,67 @@ pub(all) struct ContentViewOverlays {
 pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
+
+pub(all) struct ContentWidgetDimension {
+  width : Double
+  height : Double
+} derive(Eq, @debug.Debug)
+
+pub struct ContentWidgetHandle {
+  // private fields
+}
+pub fn ContentWidgetHandle::ContentWidgetHandle(() -> String, () -> @dom.Element, () -> ContentWidgetPosition?, allow_editor_overflow? : Bool, use_display_none? : Bool, suppress_mouse_down? : Bool, before_render? : () -> ContentWidgetDimension? raise, after_render? : (ContentWidgetPositionPreference?, ContentWidgetRenderedCoordinate?) -> Unit raise) -> Self
+
+pub(all) struct ContentWidgetPosition {
+  position : @common.Position?
+  secondary_position : @common.Position?
+  preference : Array[ContentWidgetPositionPreference]?
+  position_affinity : @model.PositionAffinity?
+}
+
+pub(all) enum ContentWidgetPositionPreference {
+  Above
+  Below
+  Exact
+} derive(Eq)
+
+pub(all) struct ContentWidgetRenderedCoordinate {
+  top : Double
+  left : Double
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ContentWidgets {
+  dom_node : @dom.Element
+  overflowing_content_widgets_dom_node : @dom.Element
+  view_dom_node : @dom.Element
+  mut should_render : Bool
+  // private fields
+}
+pub fn ContentWidgets::add_widget(Self, ContentWidgetHandle) -> Unit
+pub fn ContentWidgets::dom_node(Self) -> @dom.Element
+pub fn ContentWidgets::install_live_view_context(Self, () -> (Double, Double), (@common.Position) -> @common.Position?) -> Unit
+pub fn ContentWidgets::install_live_view_context_with_affinity(Self, () -> (Double, Double), (@common.Position, @model.PositionAffinity?) -> @common.Position?) -> Unit
+pub fn ContentWidgets::new(@dom.Document, @dom.Element) -> Self
+pub fn ContentWidgets::on_before_render_widgets(Self, Int, Int) -> Unit
+pub fn ContentWidgets::on_configuration_changed(Self, Bool) -> Unit
+pub fn ContentWidgets::overflowing_content_widgets_dom_node(Self) -> @dom.Element
+pub fn ContentWidgets::prepare_render_widgets(Self, ContentWidgetsRenderContext) -> Unit
+pub fn ContentWidgets::remove_widget(Self, ContentWidgetHandle) -> Unit
+pub fn ContentWidgets::render_widgets(Self, Double, Double) -> Unit
+pub fn ContentWidgets::set_widget_position(Self, ContentWidgetHandle) -> Unit
+pub fn ContentWidgets::should_suppress_mouse_down_on_widget(Self, String) -> Bool
+pub fn ContentWidgets::update_anchors_view_positions(Self) -> Unit
+
+pub(all) struct ContentWidgetsRenderContext {
+  vertical_offset_for_line : (Int) -> Double
+  line_height_for_line : (Int) -> Double
+  visible_range_for_position : (@common.Position) -> Double?
+  typical_fullwidth_character_width : Double
+  scroll_top : Double
+  scroll_left : Double
+  viewport_width : Double
+  viewport_height : Double
+}
 
 pub(all) struct CurrentLineHighlightOverlay {
   state : CurrentLineHighlightState
@@ -215,7 +276,7 @@ pub(all) struct View {
   view_zones : @view_zones.ViewZones
   content_view_overlays : ContentViewOverlays
   margin_view_overlays : MarginViewOverlays
-  content_widgets : @content_widgets.ContentWidgets
+  content_widgets : ContentWidgets
   view_cursors : @view_cursors.ViewCursors
   overlay_widgets : OverlayWidgets
   editor_scrollbar : EditorScrollbar

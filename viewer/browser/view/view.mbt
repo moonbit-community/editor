@@ -19,7 +19,7 @@ pub(all) struct View {
   view_zones : @view_zones.ViewZones
   content_view_overlays : ContentViewOverlays
   margin_view_overlays : MarginViewOverlays
-  content_widgets : @content_widgets.ContentWidgets
+  content_widgets : ContentWidgets
   view_cursors : @view_cursors.ViewCursors
   overlay_widgets : OverlayWidgets
   editor_scrollbar : EditorScrollbar
@@ -68,7 +68,7 @@ pub fn View::new(
   )
   margin_view_overlays.attach_view_zones_margin(view_zones.margin_dom_node())
   let view_lines = @view_lines.ViewLines::new(document, lines_content)
-  let content_widgets = @content_widgets.ContentWidgets::new(document, root)
+  let content_widgets = ContentWidgets::new(document, root)
   let view_cursors = @view_cursors.ViewCursors::new(document)
   let overlay_widgets = OverlayWidgets::new(document)
   let lines_content_element = lines_content.element()

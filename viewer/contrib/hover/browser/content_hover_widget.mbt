@@ -80,7 +80,7 @@ pub(all) struct ContentHoverWidget {
   scrollable : @scrollbar.ScrollableElementDom
   host : ContentHoverWidgetHost
   mut rendered_hover : RenderedContentHover?
-  mut position_preference : @content_widgets.ContentWidgetPositionPreference?
+  mut position_preference : @view.ContentWidgetPositionPreference?
 }
 
 ///|
@@ -94,7 +94,7 @@ pub let content_hover_widget_id : String = "editor.contrib.resizableContentHover
 /// concrete producer remains an explicit deferred hover-part seam.
 fn ContentHoverWidget::content_widget_position(
   self : ContentHoverWidget,
-) -> @content_widgets.ContentWidgetPosition? {
+) -> @view.ContentWidgetPosition? {
   match self.rendered_hover {
     Some(rendered) =>
       Some({
@@ -118,7 +118,7 @@ fn ContentHoverWidget::content_widget_position(
 /// than becoming four constant trait methods.
 pub fn ContentHoverWidget::content_widget_handle(
   self : ContentHoverWidget,
-) -> @content_widgets.ContentWidgetHandle {
+) -> @view.ContentWidgetHandle {
   ContentWidgetHandle(
     () => content_hover_widget_id,
     () => self.wrapper,
@@ -616,7 +616,7 @@ fn ContentHoverWidget::find_position_preference(
   self : ContentHoverWidget,
   widget_height : Double,
   show_at_position : @base_common.Position,
-) -> @content_widgets.ContentWidgetPositionPreference {
+) -> @view.ContentWidgetPositionPreference {
   let space_above = self.available_vertical_space_above(show_at_position)
   let space_below = self.available_vertical_space_below(show_at_position)
   if hover_prefer_above(

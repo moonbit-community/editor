@@ -2,7 +2,7 @@ import {
   "moonbit-community/editor/base/common" @base_common,
   "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/browser" @editor_browser,
-  "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
+  "moonbit-community/editor/viewer/browser/view",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/contrib/hover",
   "moonbit-community/editor/viewer/ui/scrollbar",

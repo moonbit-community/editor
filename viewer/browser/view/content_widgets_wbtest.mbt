@@ -1245,7 +1245,7 @@ test "display ownership and read phase preserve source ordering and caches" {
     use_display_none=true,
   )
   widgets.add_widget(owned_display.content_widget_handle())
-  set_style_property(owned_display.dom_node, "display", "grid")
+  set_content_widget_style_property(owned_display.dom_node, "display", "grid")
   widgets.should_render = false
   widgets.set_widget_position(owned_display.content_widget_handle())
   assert_false(widgets.should_render)

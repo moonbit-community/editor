@@ -4,7 +4,7 @@ package "moonbit-community/editor/viewer/contrib/hover/browser"
 import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
-  "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
+  "moonbit-community/editor/viewer/browser/view",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/editor/viewer/contrib/hover",
   "moonbit-community/editor/viewer/ui/scrollbar",
@@ -76,9 +76,9 @@ pub(all) struct ContentHoverWidget {
   scrollable : @scrollbar.ScrollableElementDom
   host : ContentHoverWidgetHost
   mut rendered_hover : RenderedContentHover?
-  mut position_preference : @content_widgets.ContentWidgetPositionPreference?
+  mut position_preference : @view.ContentWidgetPositionPreference?
 }
-pub fn ContentHoverWidget::content_widget_handle(Self) -> @content_widgets.ContentWidgetHandle
+pub fn ContentHoverWidget::content_widget_handle(Self) -> @view.ContentWidgetHandle
 pub fn ContentHoverWidget::go_to_bottom(Self) -> Unit
 pub fn ContentHoverWidget::go_to_top(Self) -> Unit
 pub fn ContentHoverWidget::handle_contents_changed(Self) -> Unit

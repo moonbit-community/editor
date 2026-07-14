@@ -10,7 +10,7 @@
 // returning `true`; configuration delegates its exact `layoutInfo` bit to all
 // retained widgets before dirtying.
 fn content_widgets_on_view_event(
-  part : @content_widgets.ContentWidgets,
+  part : ContentWidgets,
   event : ViewEvent,
 ) -> Bool {
   let self = part
@@ -38,7 +38,7 @@ fn content_widgets_on_view_event(
 /// Monaco `ViewContentWidgets.prepareRender`: compute each widget's box
 /// layout for this frame from its recorded anchors.
 fn content_widgets_prepare_render(
-  part : @content_widgets.ContentWidgets,
+  part : ContentWidgets,
   context : RenderingContext,
 ) -> Unit {
   let self = part
@@ -49,7 +49,7 @@ fn content_widgets_prepare_render(
 /// Monaco `ViewContentWidgets.render`: write each widget's `top`/`left`/
 /// `visibility` onto its mounted DOM — never content, never a re-mount.
 fn content_widgets_render(
-  part : @content_widgets.ContentWidgets,
+  part : ContentWidgets,
   context : RestrictedRenderingContext,
 ) -> Unit {
   let self = part

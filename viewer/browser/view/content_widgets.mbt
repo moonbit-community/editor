@@ -177,8 +177,8 @@ pub fn ContentWidgets::new(
   let dom_node = document.create_element("div")
   dom_node.set_attribute("class", "contentWidgets")
   dom_node.set_attribute("data-view-part", "contentWidgets")
-  set_style_property(dom_node, "position", "absolute")
-  set_style_property(dom_node, "top", "0px")
+  set_content_widget_style_property(dom_node, "position", "absolute")
+  set_content_widget_style_property(dom_node, "top", "0px")
   let overflowing_content_widgets_dom_node = document.create_element("div")
   overflowing_content_widgets_dom_node.set_attribute(
     "class", "overflowingContentWidgets",
@@ -277,9 +277,9 @@ pub fn ContentWidgets::add_widget(
     suppress_mouse_down,
     render_data: None,
   }
-  set_style_property(widget.dom_node, "position", "absolute")
-  set_style_property(widget.dom_node, "display", "none")
-  set_style_property(widget.dom_node, "visibility", "hidden")
+  set_content_widget_style_property(widget.dom_node, "position", "absolute")
+  set_content_widget_style_property(widget.dom_node, "display", "none")
+  set_content_widget_style_property(widget.dom_node, "visibility", "hidden")
   // `widgetId` is the attribute Monaco's hit test resolves through
   // `HitTestContext.findAttribute` (contentWidgets.ts:246).
   dom_node.set_attribute("widgetId", widget.id)
@@ -338,7 +338,7 @@ pub fn ContentWidgets::set_widget_position(
       }
     None => "none"
   }
-  set_style_property(widget.dom_node, "display", display)
+  set_content_widget_style_property(widget.dom_node, "display", display)
   widget.cached_dom_node_offset_width = -1.0
   widget.cached_dom_node_offset_height = -1.0
   if !widget.use_display_none {
@@ -525,7 +525,7 @@ fn content_widget_max_width(
 ///|
 /// Monaco `onBeforeRender`'s `setMaxWidth(this._maxWidth)` write.
 fn Widget::apply_max_width(self : Widget) -> Unit {
-  set_style_property(
+  set_content_widget_style_property(
     self.dom_node,
     "max-width",
     self.max_width.to_string() + "px",
@@ -794,7 +794,7 @@ fn reduce_anchor_coordinates(
   guard secondary is Some(secondary) else { return primary }
   let mut left = secondary.left
   if left < primary.left {
-    left = double_max(
+    left = content_widget_double_max(
       left,
       primary.left - width + typical_fullwidth_character_width,
     )
@@ -886,7 +886,10 @@ fn layout_horizontal_segment_in_page(
   let right_padding = 15.0
 
   // Initially, the limits are defined as the dom node limits
-  let min_limit = double_max(left_padding, dom_node_position.left - width)
+  let min_limit = content_widget_double_max(
+    left_padding,
+    dom_node_position.left - width,
+  )
   let max_limit = double_min(
     dom_node_position.left + dom_node_position.width + width,
     window_width - right_padding,
@@ -961,14 +964,22 @@ fn Widget::render(
       } else {
         coordinate.top + scroll_top - big_numbers_delta
       }
-      set_style_property(self.dom_node, "top", top.to_string() + "px")
-      set_style_property(
+      set_content_widget_style_property(
+        self.dom_node,
+        "top",
+        top.to_string() + "px",
+      )
+      set_content_widget_style_property(
         self.dom_node,
         "left",
         coordinate.left.to_string() + "px",
       )
       if !self.is_visible {
-        set_style_property(self.dom_node, "visibility", "inherit")
+        set_content_widget_style_property(
+          self.dom_node,
+          "visibility",
+          "inherit",
+        )
         self.dom_node.set_attribute("monaco-visible-content-widget", "true")
         self.is_visible = true
       }
@@ -987,9 +998,13 @@ fn Widget::render(
         self.dom_node.remove_attribute("monaco-visible-content-widget")
         self.is_visible = false
         if preserve_focus {
-          set_style_property(self.dom_node, "top", "-1000px")
+          set_content_widget_style_property(self.dom_node, "top", "-1000px")
         } else {
-          set_style_property(self.dom_node, "visibility", "hidden")
+          set_content_widget_style_property(
+            self.dom_node,
+            "visibility",
+            "hidden",
+          )
         }
       }
       match self.actual.after_render {
@@ -1001,7 +1016,7 @@ fn Widget::render(
       if self.is_visible {
         self.dom_node.remove_attribute("monaco-visible-content-widget")
         self.is_visible = false
-        set_style_property(self.dom_node, "visibility", "hidden")
+        set_content_widget_style_property(self.dom_node, "visibility", "hidden")
       }
       match self.actual.after_render {
         Some(after_render) => safe_invoke_after_render(after_render, None, None)
@@ -1012,7 +1027,7 @@ fn Widget::render(
 }
 
 ///|
-fn double_max(left : Double, right : Double) -> Double {
+fn content_widget_double_max(left : Double, right : Double) -> Double {
   if left > right {
     left
   } else {
@@ -1108,7 +1123,7 @@ extern "js" fn dom_helper_window_scroll_y(element : @rdom.Element) -> Double =
 
 ///|
 /// `element.style.setProperty` — the `FastDomNode` per-property style write.
-extern "js" fn set_style_property(
+extern "js" fn set_content_widget_style_property(
   element : @rdom.Element,
   name : String,
   value : String,

@@ -3,7 +3,7 @@ import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer",
-  "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
+  "moonbit-community/editor/viewer/browser/view",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/core",
@@ -16,6 +16,4 @@ import {
 
 supported_targets = "js"
 
-options(
-  "is-main": true,
-)
+pkgtype(kind: "executable")

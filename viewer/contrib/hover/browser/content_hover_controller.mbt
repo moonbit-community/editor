@@ -1,10 +1,9 @@
 ///|
 /// Monaco `ContentHoverController` (`contentHoverController.ts`): the
-/// per-editor hover feature state, reached through the instance table below —
-/// the `ContentHoverController.get(editor)` / `getContribution(id)` analog
-/// documented in `docs/architecture.md` ("Controller access"). The `Viewer::`
-/// glue in `editor_events.mbt` keeps the dispatch role (the foreign-method
-/// rule pins it to the root package) and reads/writes state here.
+/// per-editor hover feature state, stored by the owning Viewer's central
+/// contribution registry. The `Viewer::` glue in `editor_events.mbt` keeps the
+/// dispatch role (the foreign-method rule pins it to the root package) and
+/// reads/writes state here through the root package's typed central accessor.
 pub(all) struct ContentHoverController {
   /// The shown-hover state machine (anchor, operation, derived view).
   mut hover : @hover.HoverController
@@ -66,20 +65,11 @@ pub(all) struct ContentHoverController {
 }
 
 ///|
-/// Per-editor controller instances keyed by `viewer.get_id()` — the
-/// WeakMap/`getContribution` analog from `docs/architecture.md`
-/// ("Controller access"). Populated by the hover contribution's ctor,
-/// cleared by its dispose.
-let instances : Map[String, ContentHoverController] = Map([])
-
-///|
-/// Constructs the controller for an editor and registers it in the instance
-/// table — the contribution-ctor half of Monaco's
+/// Constructs the bare controller for one editor — the contribution-ctor half
+/// of Monaco's
 /// `registerEditorContribution(ContentHoverController.ID, …)`.
-pub fn ContentHoverController::attach(
-  editor_id : String,
-) -> ContentHoverController {
-  let controller : ContentHoverController = {
+pub fn ContentHoverController::ContentHoverController() -> ContentHoverController {
+  {
     hover: @hover.HoverController::empty(),
     hover_react_pending: false,
     hover_react_token: 0,
@@ -105,25 +95,6 @@ pub fn ContentHoverController::attach(
     hover_decoration_ids: [],
     hover_decoration_range: None,
   }
-  instances[editor_id] = controller
-  controller
-}
-
-///|
-/// The live controller instance for an editor — Monaco's
-/// `ContentHoverController.get(editor)`. `None` after dispose.
-pub fn ContentHoverController::get(
-  editor_id : String,
-) -> ContentHoverController? {
-  instances.get(editor_id)
-}
-
-///|
-/// Removes the instance — the contribution's dispose.
-pub fn ContentHoverController::detach(editor_id : String) -> Unit {
-  // The root central entry directly disposes the concrete controller before
-  // removing this transitional alias. Milestone C deletes the alias entirely.
-  instances.remove(editor_id)
 }
 
 ///|

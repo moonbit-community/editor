@@ -1,11 +1,9 @@
 // The hover feature's registrations — the viewer's
 // `vscode/src/vs/editor/contrib/hover/browser/hoverContribution.ts` +
 // `hoverActions.ts` (scroll cluster) + `hoverActionIds.ts`. The controller
-// state lives in `@hover_browser.ContentHoverController`'s per-editor
-// instance table; the ctor below populates it and dispose clears it, and
-// the registry also inverts command/keyboard dispatch: the hover widget's
-// keydown resolves through the keybinding table instead of an inline key
-// map.
+// state lives in the Viewer's central contribution entry, and the registry
+// also inverts command/keyboard dispatch: the hover widget's keydown resolves
+// through the keybinding table instead of an inline key map.
 
 ///|
 /// `registerEditorContribution(ContentHoverController.ID, …,
@@ -15,11 +13,7 @@ fn register_hover_contribution(registry : EditorContributionRegistry) -> Unit {
   registry.register_editor_contribution(
     "editor.contrib.contentHover",
     BeforeFirstInteraction,
-    viewer => {
-      ContentHover(
-        @hover_browser.ContentHoverController::attach(viewer.get_id()),
-      )
-    },
+    _viewer => ContentHover(@hover_browser.ContentHoverController()),
     _viewer => [],
   )
   // `HideContentHoverAction` (`hoverActions.ts`): Escape, gated on
@@ -85,7 +79,8 @@ fn register_hover_contribution(registry : EditorContributionRegistry) -> Unit {
 
 ///|
 /// Runs `f` on the persistent content-hover widget, the run-body plumbing of
-/// `ContentHoverController.get(editor)?.scrollUp()`.
+/// `ContentHoverController.get(editor)?.scrollUp()`, with the source lookup
+/// represented locally by the typed central contribution accessor.
 fn Viewer::with_hover_widget(
   self : Viewer,
   f : (@hover_browser.ContentHoverWidget) -> Unit,

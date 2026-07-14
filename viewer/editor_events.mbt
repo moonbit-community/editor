@@ -26,9 +26,9 @@ fn Viewer::editor_context(self : Viewer) -> @hover_browser.EditorContext {
 }
 
 ///|
-/// The live hover controller instance for this editor — Monaco's
-/// `ContentHoverController.get(editor)` (`contentHoverController.ts`).
-/// `None` after the contribution disposed.
+/// The live hover controller instance for this editor — the central-registry
+/// equivalent of Monaco's `ContentHoverController.get(editor)`
+/// (`contentHoverController.ts`). `None` after the contribution disposed.
 fn Viewer::content_hover_controller(
   self : Viewer,
 ) -> @hover_browser.ContentHoverController? {

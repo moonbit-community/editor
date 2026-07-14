@@ -154,7 +154,6 @@ fn EditorContributionEntry::dispose(
     ContentHover(controller) => {
       controller.cancel_all_timers()
       controller.cancel_request()
-      @hover_browser.ContentHoverController::detach(viewer.get_id())
     }
     QuickDiff(state) => {
       state.collection.clear()

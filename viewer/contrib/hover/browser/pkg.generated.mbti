@@ -54,15 +54,13 @@ pub(all) struct ContentHoverController {
   mut hover_decoration_range : @common.Range?
   // private fields
 }
-pub fn ContentHoverController::attach(String) -> Self
+pub fn ContentHoverController::ContentHoverController() -> Self
 pub fn ContentHoverController::begin_request(Self, @language.CancellationTokenSource, Int) -> Unit
 pub fn ContentHoverController::cancel_all_timers(Self) -> Unit
 pub fn ContentHoverController::cancel_operation_timers(Self) -> Unit
 pub fn ContentHoverController::cancel_react(Self) -> Unit
 pub fn ContentHoverController::cancel_request(Self) -> Unit
-pub fn ContentHoverController::detach(String) -> Unit
 pub fn ContentHoverController::finish_request(Self, Int) -> Unit
-pub fn ContentHoverController::get(String) -> Self?
 pub fn ContentHoverController::install_async_timer(Self, @common.Disposable) -> Unit
 pub fn ContentHoverController::install_loading_timer(Self, @common.Disposable) -> Unit
 pub fn ContentHoverController::install_react_timer(Self, @common.Disposable) -> Unit

@@ -380,7 +380,7 @@ fn new_test_content_widget(
 test "constructor and add preserve container styles and overflow mount choice" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -447,7 +447,7 @@ test "constructor and add preserve container styles and overflow mount choice" {
 test "addWidget reads layout before handle getters in source constructor order" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -472,7 +472,7 @@ test "addWidget reads layout before handle getters in source constructor order" 
 test "panic setWidgetPosition rejects an unknown widget id" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -492,7 +492,7 @@ test "configuration visits every retained widget and gates layout cache reads" {
   let content_left = Ref(12.0)
   let content_width = Ref(240.0)
   let layout_reads = Ref(0)
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -604,7 +604,7 @@ test "configuration visits every retained widget and gates layout cache reads" {
 test "onBefore distinguishes null and empty preference and includes viewport endpoints" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -692,7 +692,7 @@ test "mapping reprojection retains model anchors and visits widgets in key order
   let document = @rdom.document()
   let projection_delta = Ref(10)
   let projected_model_positions : Array[@base_common.Position] = []
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -754,7 +754,7 @@ test "projection keeps original anchors while exposing clamped and hidden result
   install_content_widgets_test_browser()
   let document = @rdom.document()
   let projected : Array[@base_common.Position] = []
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -850,7 +850,7 @@ test "measured anchors preserve affinity, nullable preference, and per-line geom
     preference: Some([Exact]),
     position_affinity: Some(LeftOfInjectedText),
   })
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -950,7 +950,7 @@ test "all position affinity values forward distinctly and only LeftOfInjectedTex
     before_enabled=true,
   )
   widget.before_dimension = Some({ width: 10.0, height: 10.0 })
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1022,7 +1022,7 @@ test "anchor queries keep same-line secondary and use measured x at later affini
     before_enabled=true,
   )
   different_line.before_dimension = Some({ width: 40.0, height: 10.0 })
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1077,7 +1077,7 @@ test "anchor queries keep same-line secondary and use measured x at later affini
 test "display ownership and read phase preserve source ordering and caches" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1259,7 +1259,7 @@ test "display ownership and read phase preserve source ordering and caches" {
 test "useDisplayNone and positionability preserve the full display scheduling matrix" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1356,7 +1356,7 @@ fn reentrant_content_widgets_context() -> ContentWidgetsRenderContext {
 test "prepare snapshot continues after beforeRender removes its current widget" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1406,7 +1406,7 @@ test "prepare snapshot continues after beforeRender removes its current widget" 
 test "render snapshot continues after afterRender removes its current widget" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1459,7 +1459,7 @@ test "render snapshot continues after afterRender removes its current widget" {
 test "panic prepare snapshot directly looks up a reentrantly removed future widget" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1494,7 +1494,7 @@ test "panic prepare snapshot directly looks up a reentrantly removed future widg
 test "panic render snapshot directly looks up a reentrantly removed future widget" {
   install_content_widgets_test_browser()
   let document = @rdom.document()
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1538,7 +1538,7 @@ test "focused off-viewport widgets park without hiding and hidden writes are gat
   )
   let focus_child = document.create_element("button")
   widget.dom_node.append_child(focus_child.as_node())
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1625,7 +1625,7 @@ test "preference traversal uses first-pass fit then second-pass first option" {
     preference: Some([Below, Above]),
     position_affinity: None,
   })
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1705,7 +1705,7 @@ test "empty single and mixed preferences preserve source order" {
     before_enabled=true,
   )
   widget.before_dimension = Some({ width: 10.0, height: 10.0 })
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )
@@ -1845,7 +1845,7 @@ test "ABOVE and BELOW write visible coordinates before afterRender callbacks" {
     preference: Some([Below]),
     position_affinity: None,
   })
-  let widgets = ContentWidgets::new(
+  let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
   )

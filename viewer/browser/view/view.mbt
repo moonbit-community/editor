@@ -31,7 +31,7 @@ pub(all) struct View {
 }
 
 ///|
-pub fn View::new(
+pub fn View::View(
   view_zones_configuration_reader? : () -> (Int, Double, Double) = () => {
     (0, 0.0, 0.0)
   },
@@ -59,18 +59,18 @@ pub fn View::new(
   // Chrome does not paint content larger than 2^24 px (`view.ts:454-456`).
   lines_content.set_width(Pixels(16777216.0))
   lines_content.set_height(Pixels(16777216.0))
-  let margin_view_overlays = MarginViewOverlays::new(document)
-  let editor_scrollbar = EditorScrollbar::new(lines_content)
-  let content_view_overlays = ContentViewOverlays::new(document)
-  let view_zones = ViewZones::new(
+  let margin_view_overlays = MarginViewOverlays::MarginViewOverlays(document)
+  let editor_scrollbar = EditorScrollbar::EditorScrollbar(lines_content)
+  let content_view_overlays = ContentViewOverlays::ContentViewOverlays(document)
+  let view_zones = ViewZones::ViewZones(
     document,
     read_initial_configuration=view_zones_configuration_reader,
   )
   margin_view_overlays.attach_view_zones_margin(view_zones.margin_dom_node())
-  let view_lines = ViewLines::new(document, lines_content)
-  let content_widgets = ContentWidgets::new(document, root)
-  let view_cursors = ViewCursors::new(document)
-  let overlay_widgets = OverlayWidgets::new(document)
+  let view_lines = ViewLines::ViewLines(document, lines_content)
+  let content_widgets = ContentWidgets::ContentWidgets(document, root)
+  let view_cursors = ViewCursors::ViewCursors(document)
+  let overlay_widgets = OverlayWidgets::OverlayWidgets(document)
   let lines_content_element = lines_content.element()
   lines_content_element.append_child(
     content_view_overlays.get_dom_node().as_node(),
@@ -120,7 +120,7 @@ pub fn View::new(
     view_zones, content_view_overlays, margin_view_overlays, content_widgets, view_cursors,
     overlay_widgets, editor_scrollbar,
   )
-  let event_dispatcher = ViewEventDispatcher::new(events => {
+  let event_dispatcher = ViewEventDispatcher::ViewEventDispatcher(events => {
     for handler in view_event_handlers {
       handler.handle_view_events(events)
     }

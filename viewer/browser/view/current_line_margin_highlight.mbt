@@ -17,8 +17,11 @@ pub(all) struct CurrentLineMarginHighlightOverlay {
 }
 
 ///|
-pub fn CurrentLineMarginHighlightOverlay::new() -> CurrentLineMarginHighlightOverlay {
-  { state: CurrentLineHighlightState::new(), render_result: [] }
+pub fn CurrentLineMarginHighlightOverlay::CurrentLineMarginHighlightOverlay() -> CurrentLineMarginHighlightOverlay {
+  {
+    state: CurrentLineHighlightState::CurrentLineHighlightState(),
+    render_result: [],
+  }
 }
 
 ///|

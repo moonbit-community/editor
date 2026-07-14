@@ -23,15 +23,17 @@ pub(all) struct MarginViewOverlays {
 }
 
 ///|
-pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays {
+pub fn MarginViewOverlays::MarginViewOverlays(
+  document : @rdom.Document,
+) -> MarginViewOverlays {
   let dom_node = document.create_element("div")
   dom_node.set_attribute("class", "margin")
   dom_node.set_attribute("data-view-part", "margin")
   dom_node.set_attribute("aria-hidden", "true")
-  let overlays = ViewOverlays::new(document, "margin-view-overlays")
-  let current_line_margin = CurrentLineMarginHighlightOverlay::new()
-  let lines_decorations = LinesDecorationsOverlay::new()
-  let line_numbers = LineNumbersOverlay::new()
+  let overlays = ViewOverlays::ViewOverlays(document, "margin-view-overlays")
+  let current_line_margin = CurrentLineMarginHighlightOverlay::CurrentLineMarginHighlightOverlay()
+  let lines_decorations = LinesDecorationsOverlay::LinesDecorationsOverlay()
+  let line_numbers = LineNumbersOverlay::LineNumbersOverlay()
   overlays.add_dynamic_overlay(CurrentLineMargin(current_line_margin))
   overlays.add_dynamic_overlay(LinesDecorations(lines_decorations))
   overlays.add_dynamic_overlay(LineNumbers(line_numbers))

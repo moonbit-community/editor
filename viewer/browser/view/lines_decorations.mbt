@@ -14,7 +14,7 @@ pub(all) struct LinesDecorationsOverlay {
 }
 
 ///|
-pub fn LinesDecorationsOverlay::new() -> LinesDecorationsOverlay {
+pub fn LinesDecorationsOverlay::LinesDecorationsOverlay() -> LinesDecorationsOverlay {
   { render_result: [] }
 }
 

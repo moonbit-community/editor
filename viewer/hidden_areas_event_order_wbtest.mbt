@@ -80,7 +80,9 @@ test "hidden areas collect recovery scroll before mapping delivery" {
     fail("headless model data missing")
   }
   let read_configuration = () => (18, 400.0, 0.0)
-  let view = @view.View::new(view_zones_configuration_reader=read_configuration)
+  let view = @view.View::View(
+    view_zones_configuration_reader=read_configuration,
+  )
   view.install_view_zones_context(
     headless.view_model,
     viewer.services.log_service,

@@ -18,7 +18,7 @@ pub(all) struct LineNumbersOverlay {
 }
 
 ///|
-pub fn LineNumbersOverlay::new() -> LineNumbersOverlay {
+pub fn LineNumbersOverlay::LineNumbersOverlay() -> LineNumbersOverlay {
   { render_result: [] }
 }
 

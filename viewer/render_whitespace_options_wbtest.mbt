@@ -18,7 +18,7 @@ fn viewport_of(viewer : Viewer) -> @view_layout.ViewportData {
 
 ///|
 fn retained_line_options_of(viewer : Viewer) -> @view.ViewLineOptions {
-  @view.ViewLineOptions::new(
+  @view.ViewLineOptions::ViewLineOptions(
     line_height=viewer.font_info.line_height,
     space_width=viewer.font_info.space_width,
     middot_width=viewer.font_info.middot_width,
@@ -111,7 +111,7 @@ test "viewport line input leaves Selection mode inert without a threaded selecti
 test "retained options carry same-space font axes into render input" {
   with_test_viewer(" a ", viewer => {
     let base = retained_line_options_of(viewer)
-    let options = @view.ViewLineOptions::new(
+    let options = @view.ViewLineOptions::ViewLineOptions(
       line_height=base.line_height,
       space_width=base.space_width,
       middot_width=base.space_width + 1.0,

@@ -42,7 +42,7 @@ pub(all) struct CurrentLineHighlightState {
 ///|
 /// `AbstractLineHighlightOverlay` constructor defaults before a live
 /// configuration reader is installed by the owning browser `View`.
-pub fn CurrentLineHighlightState::new() -> CurrentLineHighlightState {
+pub fn CurrentLineHighlightState::CurrentLineHighlightState() -> CurrentLineHighlightState {
   let selection = @core.Selection::new(Position(1, 1), Position(1, 1))
   {
     render_line_highlight: Line,
@@ -164,8 +164,11 @@ pub(all) struct CurrentLineHighlightOverlay {
 }
 
 ///|
-pub fn CurrentLineHighlightOverlay::new() -> CurrentLineHighlightOverlay {
-  { state: CurrentLineHighlightState::new(), render_result: [] }
+pub fn CurrentLineHighlightOverlay::CurrentLineHighlightOverlay() -> CurrentLineHighlightOverlay {
+  {
+    state: CurrentLineHighlightState::CurrentLineHighlightState(),
+    render_result: [],
+  }
 }
 
 ///|

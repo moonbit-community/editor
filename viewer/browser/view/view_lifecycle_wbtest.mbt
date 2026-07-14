@@ -93,7 +93,7 @@ extern "js" fn view_lifecycle_test_child_index(
 ///|
 test "View mounts both ViewZones containers at the source relative positions" {
   install_view_lifecycle_test_browser()
-  let view = View::new()
+  let view = View::View()
   let margin = view.margin_view_overlays.get_dom_node()
   assert_eq(
     view_lifecycle_test_child_index(margin, view.view_zones.margin_dom_node()),
@@ -133,7 +133,7 @@ test "View mounts both ViewZones containers at the source relative positions" {
 ///|
 test "View disposes ViewParts before its lifetime store exactly once" {
   install_view_lifecycle_test_browser()
-  let view = View::new()
+  let view = View::View()
   assert_true(
     view_lifecycle_test_has_parent(
       view.content_widgets.overflowing_content_widgets_dom_node(),

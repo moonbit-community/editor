@@ -16,7 +16,7 @@ pub struct DomReadingContext {
 }
 
 ///|
-pub fn DomReadingContext::new(
+pub fn DomReadingContext::DomReadingContext(
   dom_node : @rdom.Element,
   end_node : @rdom.Element,
 ) -> DomReadingContext {

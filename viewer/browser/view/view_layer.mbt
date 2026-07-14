@@ -33,7 +33,7 @@ pub struct ViewLayerRenderer[T] {
 }
 
 ///|
-pub fn[T] ViewLayerRenderer::new(
+pub fn[T] ViewLayerRenderer::ViewLayerRenderer(
   dom_node : @rdom.Element,
   create_line : () -> T,
   get_dom_node : (T) -> @rdom.Element?,

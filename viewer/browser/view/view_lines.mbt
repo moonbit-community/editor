@@ -16,7 +16,7 @@ pub(all) struct ViewLinesConfiguration {
 } derive(Eq, Debug)
 
 ///|
-pub fn ViewLinesConfiguration::new(
+pub fn ViewLinesConfiguration::ViewLinesConfiguration(
   line_height? : Int = 20,
   typical_halfwidth_character_width? : Double = 7.2,
   is_viewport_wrapping? : Bool = false,
@@ -37,7 +37,7 @@ pub fn ViewLinesConfiguration::new(
     typical_halfwidth_character_width,
     is_viewport_wrapping,
     can_use_layer_hinting,
-    view_line_options: ViewLineOptions::new(
+    view_line_options: ViewLineOptions::ViewLineOptions(
       line_height~,
       space_width~,
       middot_width~,
@@ -59,7 +59,7 @@ priv struct LastRenderedData {
 }
 
 ///|
-fn LastRenderedData::new() -> LastRenderedData {
+fn LastRenderedData::LastRenderedData() -> LastRenderedData {
   { current_visible_range: Range(1, 1, 1, 1) }
 }
 
@@ -87,7 +87,7 @@ priv struct RunOnceScheduler {
 }
 
 ///|
-fn RunOnceScheduler::new(delay_ms : Int) -> RunOnceScheduler {
+fn RunOnceScheduler::RunOnceScheduler(delay_ms : Int) -> RunOnceScheduler {
   RunOnceScheduler::new_with_timer(
     delay_ms, view_lines_set_timeout, view_lines_clear_timeout,
   )
@@ -175,18 +175,18 @@ pub(all) struct ViewLines {
 
 ///|
 fn retained_view_line_factory(options : Ref[ViewLineOptions]) -> () -> ViewLine {
-  () => ViewLine::new(options=options.val)
+  () => ViewLine::ViewLine(options=options.val)
 }
 
 ///|
-pub fn ViewLines::new(
+pub fn ViewLines::ViewLines(
   document : @rdom.Document,
   lines_content : @scrollbar.CachedDomNode,
 ) -> ViewLines {
   let dom_element = document.create_element("div")
   dom_element.set_attribute("class", "view-lines")
   dom_element.set_attribute("data-view-part", "view-lines")
-  let initial_configuration = ViewLinesConfiguration::new()
+  let initial_configuration = ViewLinesConfiguration::ViewLinesConfiguration()
   let view_line_options_ref = Ref(initial_configuration.view_line_options)
   let line_factory = retained_view_line_factory(view_line_options_ref)
   {
@@ -206,8 +206,8 @@ pub fn ViewLines::new(
     view_line_to_model_line: line_number => line_number,
     model_line_text_direction: _line_number => LTR,
     line_factory,
-    async_update_line_widths: RunOnceScheduler::new(200),
-    last_rendered_data: LastRenderedData::new(),
+    async_update_line_widths: RunOnceScheduler::RunOnceScheduler(200),
+    last_rendered_data: LastRenderedData::LastRenderedData(),
     max_line_width: 0.0,
     last_layout: None,
     should_render: true,
@@ -636,7 +636,7 @@ pub fn ViewLines::render_text(
   self.last_layout = Some(layout)
   ignore(layout.set_is_viewport_wrapping(self.is_viewport_wrapping))
   let target = viewport_window(viewport)
-  let renderer = ViewLayerRenderer::new(
+  let renderer = ViewLayerRenderer::ViewLayerRenderer(
     self.dom_node.element(),
     self.line_factory,
     line => line.get_dom_node(),
@@ -860,7 +860,7 @@ pub fn ViewLines::get_line_width(self : ViewLines, line_number : Int) -> Double 
     // Couldn't find line
     return -1.0
   }
-  let context = DomReadingContext::new(
+  let context = DomReadingContext::DomReadingContext(
     self.dom_node.element(),
     self.text_range_resting_spot,
   )
@@ -888,7 +888,7 @@ pub fn ViewLines::visible_ranges_for_line_range(
   if index < 0 {
     return None
   }
-  let context = DomReadingContext::new(
+  let context = DomReadingContext::DomReadingContext(
     self.dom_node.element(),
     self.text_range_resting_spot,
   )
@@ -916,7 +916,7 @@ pub fn ViewLines::raw_lines_visible_ranges_for_range(
     return None
   }
   let result : Array[(Bool, Int, Array[(Int, Int)], Bool)] = []
-  let context = DomReadingContext::new(
+  let context = DomReadingContext::DomReadingContext(
     self.dom_node.element(),
     self.text_range_resting_spot,
   )

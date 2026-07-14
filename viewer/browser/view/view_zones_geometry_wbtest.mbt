@@ -86,7 +86,7 @@ fn view_zones_geometry_fixture(
 ) {
   install_view_zones_geometry_test_dom()
   let document = @rdom.document()
-  let part = ViewZones::new(document, read_initial_configuration=() => {
+  let part = ViewZones::ViewZones(document, read_initial_configuration=() => {
     (20, content_width, content_left)
   })
   part.dom_node.set_attribute("data-test-id", "content-container")
@@ -95,7 +95,7 @@ fn view_zones_geometry_fixture(
   content_zone.set_attribute("data-test-id", "content-zone")
   let margin_zone = document.create_element("div")
   margin_zone.set_attribute("data-test-id", "margin-zone")
-  let delegate = ViewZone::new(
+  let delegate = ViewZone::ViewZone(
     1,
     content_zone,
     height_in_px=17.0,
@@ -113,8 +113,8 @@ fn view_zones_geometry_fixture(
     delegate,
     is_in_hidden_area: false,
     is_visible: false,
-    dom_node: FastViewZoneDomNode::new(content_zone),
-    margin_dom_node: Some(FastViewZoneDomNode::new(margin_zone)),
+    dom_node: FastViewZoneDomNode::FastViewZoneDomNode(content_zone),
+    margin_dom_node: Some(FastViewZoneDomNode::FastViewZoneDomNode(margin_zone)),
   }
   part.zones.set(whitespace_id.val, registered)
   let visible = layout.get_whitespace_viewport_data(0.0, 100.0)

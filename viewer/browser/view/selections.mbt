@@ -15,7 +15,7 @@ pub(all) struct SelectionsOverlay {
 }
 
 ///|
-pub fn SelectionsOverlay::new() -> SelectionsOverlay {
+pub fn SelectionsOverlay::SelectionsOverlay() -> SelectionsOverlay {
   { render_result: [] }
 }
 

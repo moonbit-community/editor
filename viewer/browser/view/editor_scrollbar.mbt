@@ -14,7 +14,7 @@ pub(all) struct EditorScrollbar {
 }
 
 ///|
-pub fn EditorScrollbar::new(
+pub fn EditorScrollbar::EditorScrollbar(
   lines_content : @scrollbar.CachedDomNode,
 ) -> EditorScrollbar {
   let editor_scrollable = @scrollbar.ScrollableElementDom::new(

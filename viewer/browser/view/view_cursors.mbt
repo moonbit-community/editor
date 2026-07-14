@@ -58,7 +58,7 @@ pub(all) struct ViewCursors {
 /// `ViewCursors` constructor (`viewCursors.ts:74-79`) + `ViewCursor`
 /// constructor (`viewCursor.ts:74-80`; `monaco-mouse-cursor-text` is Monaco's
 /// `MOUSE_CURSOR_TEXT_CSS_CLASS_NAME`).
-pub fn ViewCursors::new(document : @rdom.Document) -> ViewCursors {
+pub fn ViewCursors::ViewCursors(document : @rdom.Document) -> ViewCursors {
   let dom_node = document.create_element("div")
   dom_node.set_attribute("class", cursors_layer_class(false))
   dom_node.set_attribute("role", "presentation")

@@ -19,7 +19,9 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
     if !self.editor_has_focus {
       self.editor_has_focus = true
       self.emit_view_event(
-        ViewFocusChanged(@view.ViewFocusChangedEvent::new(true)),
+        ViewFocusChanged(
+          @view.ViewFocusChangedEvent::ViewFocusChangedEvent(true),
+        ),
       )
       self.schedule_render()
     }
@@ -28,7 +30,9 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
     if self.editor_has_focus {
       self.editor_has_focus = false
       self.emit_view_event(
-        ViewFocusChanged(@view.ViewFocusChangedEvent::new(false)),
+        ViewFocusChanged(
+          @view.ViewFocusChangedEvent::ViewFocusChangedEvent(false),
+        ),
       )
       self.schedule_render()
     }

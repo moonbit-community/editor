@@ -93,7 +93,7 @@ fn view_configuration_changed_event(
 fn view_decorations_changed_event(
   event : @model.ModelDecorationsChangedEvent,
 ) -> @view.ViewDecorationsChangedEvent {
-  @view.ViewDecorationsChangedEvent::new(
+  @view.ViewDecorationsChangedEvent::ViewDecorationsChangedEvent(
     event.affects_minimap,
     event.affects_overview_ruler,
     event.affects_glyph_margin,
@@ -113,10 +113,12 @@ fn view_tokens_changed_event(
   for range in changed_ranges {
     let (from_line_number, to_line_number) = range
     ranges.push(
-      @view.ViewTokenChangeRange::new(from_line_number, to_line_number),
+      @view.ViewTokenChangeRange::ViewTokenChangeRange(
+        from_line_number, to_line_number,
+      ),
     )
   }
-  @view.ViewTokensChangedEvent::new(ranges)
+  @view.ViewTokensChangedEvent::ViewTokensChangedEvent(ranges)
 }
 
 ///|
@@ -141,7 +143,7 @@ fn view_cursor_state_changed_event(
   model_selections : Array[@core.Selection],
   reason : @cursor.CursorChangeReason,
 ) -> @view.ViewCursorStateChangedEvent {
-  @view.ViewCursorStateChangedEvent::new(
+  @view.ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
     [view_model.cursor.get_view_selection()],
     model_selections,
     reason,
@@ -163,7 +165,7 @@ fn Viewer::emit_view_cursor_reprojection(
   }
   self.emit_view_event(
     ViewCursorStateChanged(
-      @view.ViewCursorStateChangedEvent::new(
+      @view.ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
         [current_view_selection],
         [view_model.cursor.get_model_selection()],
         NotSet,
@@ -186,7 +188,7 @@ fn Viewer::emit_view_scroll_changed(
 fn view_scroll_changed_event(
   change : @view_layout.ScrollChange,
 ) -> @view.ViewScrollChangedEvent {
-  @view.ViewScrollChangedEvent::new(
+  @view.ViewScrollChangedEvent::ViewScrollChangedEvent(
     change.scroll_width,
     change.scroll_left,
     change.scroll_height,

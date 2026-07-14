@@ -1,9 +1,9 @@
 ///|
 test "rendering geometry carriers preserve source rounding and order" {
   let floats = [
-    FloatHorizontalRange::new(1.49, 2.5),
-    FloatHorizontalRange::new(-1.5, -1.6),
-    FloatHorizontalRange::new(8.51, 0.49),
+    FloatHorizontalRange::FloatHorizontalRange(1.49, 2.5),
+    FloatHorizontalRange::FloatHorizontalRange(-1.5, -1.6),
+    FloatHorizontalRange::FloatHorizontalRange(8.51, 0.49),
   ]
   let rounded = HorizontalRange::from(floats)
   assert_eq(rounded.length(), 3)
@@ -14,20 +14,20 @@ test "rendering geometry carriers preserve source rounding and order" {
   assert_eq(floats[0].to_string(), "[1.49,2.5]")
   assert_eq(FloatHorizontalRange::compare(floats[0], floats[2]), -7.02)
 
-  let position = HorizontalPosition::new(true, -1.5)
+  let position = HorizontalPosition::HorizontalPosition(true, -1.5)
   assert_true(position.outside_rendered_line)
   assert_eq(position.original_left, -1.5)
   assert_eq(position.left, -1)
-  assert_eq(HorizontalPosition::new(false, 2.5).left, 3)
+  assert_eq(HorizontalPosition::HorizontalPosition(false, 2.5).left, 3)
 
-  let visible = VisibleRanges::new(true, floats)
+  let visible = VisibleRanges::VisibleRanges(true, floats)
   assert_true(visible.outside_rendered_line)
   assert_eq(visible.ranges.length(), 3)
 
   let boundaries = HorizontalRange::from([
-    FloatHorizontalRange::new(4.0, -4.0),
-    FloatHorizontalRange::new(1.5, -2.5),
-    FloatHorizontalRange::new(-2.5, 3.49),
+    FloatHorizontalRange::FloatHorizontalRange(4.0, -4.0),
+    FloatHorizontalRange::FloatHorizontalRange(1.5, -2.5),
+    FloatHorizontalRange::FloatHorizontalRange(-2.5, 3.49),
   ])
   assert_true(boundaries[0] == { left: 4, width: -4 })
   assert_true(boundaries[1] == { left: 2, width: -2 })
@@ -53,20 +53,20 @@ test "rendering geometry carriers preserve source rounding and order" {
 
 ///|
 test "LineVisibleRanges first and last are order independent with strict ties" {
-  let first_tie = LineVisibleRanges::new(
+  let first_tie = LineVisibleRanges::LineVisibleRanges(
     false,
     2,
-    [HorizontalRange::new(10.0, 1.0)],
+    [HorizontalRange::HorizontalRange(10.0, 1.0)],
     false,
   )
-  let second_tie = LineVisibleRanges::new(
+  let second_tie = LineVisibleRanges::LineVisibleRanges(
     true,
     2,
-    [HorizontalRange::new(20.0, 2.0)],
+    [HorizontalRange::HorizontalRange(20.0, 2.0)],
     true,
   )
-  let low = LineVisibleRanges::new(false, 1, [], true)
-  let high = LineVisibleRanges::new(false, 9, [], false)
+  let low = LineVisibleRanges::LineVisibleRanges(false, 1, [], true)
+  let high = LineVisibleRanges::LineVisibleRanges(false, 9, [], false)
   let unsorted = Some([first_tie, high, low, second_tie])
   assert_true(LineVisibleRanges::first_line(None) is None)
   assert_true(LineVisibleRanges::last_line(None) is None)
@@ -98,7 +98,7 @@ test "RenderingContext DOM facade returns null without rendered ViewLines" {
   let view_model = @view_model.ViewModel(model)
   let layout = @view_layout.ViewLayout::new(line_height=20, line_count=1)
   layout.set_viewport_size(width=80.0, height=20.0) |> ignore
-  let view = View::new()
+  let view = View::View()
   let (context, _restricted) = view_event_test_overlay_render_context(
     view_model,
     layout,
@@ -136,7 +136,7 @@ test "RenderingContext snapshots current viewport and forwards includeViewZones"
   assert_eq(before.left, 23.0)
   assert_eq(before.width, 80.0)
   assert_eq(before.height, 40.0)
-  let view = View::new()
+  let view = View::View()
   let (context, _restricted) = view_event_test_overlay_render_context(
     view_model,
     layout,

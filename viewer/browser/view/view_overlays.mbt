@@ -107,7 +107,7 @@ priv struct ViewOverlayLine {
 }
 
 ///|
-fn ViewOverlayLine::new(
+fn ViewOverlayLine::ViewOverlayLine(
   dynamic_overlays : Array[DynamicViewOverlayHandle],
 ) -> ViewOverlayLine {
   { dynamic_overlays, dom_node: None, rendered_content: None }
@@ -188,7 +188,7 @@ fn ViewOverlayLine::layout_line(
 }
 
 ///|
-fn ViewOverlays::new(
+fn ViewOverlays::ViewOverlays(
   document : @rdom.Document,
   class_name : String,
 ) -> ViewOverlays {
@@ -270,9 +270,9 @@ fn ViewOverlays::render_lines(
   self : ViewOverlays,
   viewport : @view_layout.ViewportData,
 ) -> Unit {
-  let renderer = ViewLayerRenderer::new(
+  let renderer = ViewLayerRenderer::ViewLayerRenderer(
     self.dom_node.element(),
-    () => ViewOverlayLine::new(self.dynamic_overlays),
+    () => ViewOverlayLine::ViewOverlayLine(self.dynamic_overlays),
     line => line.get_dom_node(),
     (line, node) => line.set_dom_node(node),
     (line, line_number, delta_top, line_height) => {
@@ -317,13 +317,13 @@ pub(all) struct ContentViewOverlays {
 }
 
 ///|
-pub fn ContentViewOverlays::new(
+pub fn ContentViewOverlays::ContentViewOverlays(
   document : @rdom.Document,
 ) -> ContentViewOverlays {
-  let overlays = ViewOverlays::new(document, "view-overlays")
-  let current_line = CurrentLineHighlightOverlay::new()
-  let selections = SelectionsOverlay::new()
-  let decorations = DecorationsOverlay::new()
+  let overlays = ViewOverlays::ViewOverlays(document, "view-overlays")
+  let current_line = CurrentLineHighlightOverlay::CurrentLineHighlightOverlay()
+  let selections = SelectionsOverlay::SelectionsOverlay()
+  let decorations = DecorationsOverlay::DecorationsOverlay()
   overlays.add_dynamic_overlay(CurrentLine(current_line))
   overlays.add_dynamic_overlay(Selections(selections))
   overlays.add_dynamic_overlay(Decorations(decorations))

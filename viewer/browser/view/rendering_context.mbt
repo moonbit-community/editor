@@ -184,7 +184,7 @@ fn RenderingContext::visible_range_for_position(
       position.column,
     ) {
     Some((outside_rendered_line, left)) =>
-      Some(HorizontalPosition::new(outside_rendered_line, left))
+      Some(HorizontalPosition::HorizontalPosition(outside_rendered_line, left))
     None => None
   }
 }
@@ -218,7 +218,14 @@ fn line_visible_ranges_from_raw(
     for range in raw.2 {
       horizontal_ranges.push({ left: range.0, width: range.1 })
     }
-    result.push(LineVisibleRanges::new(raw.0, raw.1, horizontal_ranges, raw.3))
+    result.push(
+      LineVisibleRanges::LineVisibleRanges(
+        raw.0,
+        raw.1,
+        horizontal_ranges,
+        raw.3,
+      ),
+    )
   }
   result
 }
@@ -258,7 +265,7 @@ pub(all) struct HorizontalPosition {
 } derive(Eq, Debug)
 
 ///|
-pub fn HorizontalPosition::new(
+pub fn HorizontalPosition::HorizontalPosition(
   outside_rendered_line : Bool,
   left : Double,
 ) -> HorizontalPosition {
@@ -280,7 +287,7 @@ pub(all) struct LineVisibleRanges {
 } derive(Eq, Debug)
 
 ///|
-pub fn LineVisibleRanges::new(
+pub fn LineVisibleRanges::LineVisibleRanges(
   outside_rendered_line : Bool,
   line_number : Int,
   ranges : Array[HorizontalRange],
@@ -337,7 +344,10 @@ pub(all) struct HorizontalRange {
 } derive(Eq, Debug)
 
 ///|
-pub fn HorizontalRange::new(left : Double, width : Double) -> HorizontalRange {
+pub fn HorizontalRange::HorizontalRange(
+  left : Double,
+  width : Double,
+) -> HorizontalRange {
   { left: js_math_round_to_int(left), width: js_math_round_to_int(width) }
 }
 
@@ -346,10 +356,10 @@ pub fn HorizontalRange::from(
   ranges : Array[FloatHorizontalRange],
 ) -> Array[HorizontalRange] {
   let len = ranges.length()
-  let result = Array::make(len, HorizontalRange::new(0.0, 0.0))
+  let result = Array::make(len, HorizontalRange::HorizontalRange(0.0, 0.0))
   for index in 0..<len {
     let range = ranges[index]
-    result[index] = HorizontalRange::new(range.left, range.width)
+    result[index] = HorizontalRange::HorizontalRange(range.left, range.width)
   }
   result
 }
@@ -367,7 +377,7 @@ pub(all) struct FloatHorizontalRange {
 } derive(Eq, Debug)
 
 ///|
-pub fn FloatHorizontalRange::new(
+pub fn FloatHorizontalRange::FloatHorizontalRange(
   left : Double,
   width : Double,
 ) -> FloatHorizontalRange {
@@ -395,7 +405,7 @@ pub(all) struct VisibleRanges {
 } derive(Eq, Debug)
 
 ///|
-pub fn VisibleRanges::new(
+pub fn VisibleRanges::VisibleRanges(
   outside_rendered_line : Bool,
   ranges : Array[FloatHorizontalRange],
 ) -> VisibleRanges {

@@ -69,8 +69,8 @@ pub(all) struct ContentViewOverlays {
   mut should_render : Bool
   // private fields
 }
+pub fn ContentViewOverlays::ContentViewOverlays(@dom.Document) -> Self
 pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
-pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
 
 pub(all) struct ContentWidgetDimension {
@@ -108,11 +108,11 @@ pub(all) struct ContentWidgets {
   mut should_render : Bool
   // private fields
 }
+pub fn ContentWidgets::ContentWidgets(@dom.Document, @dom.Element) -> Self
 pub fn ContentWidgets::add_widget(Self, ContentWidgetHandle) -> Unit
 pub fn ContentWidgets::dom_node(Self) -> @dom.Element
 pub fn ContentWidgets::install_live_view_context(Self, () -> (Double, Double), (@common.Position) -> @common.Position?) -> Unit
 pub fn ContentWidgets::install_live_view_context_with_affinity(Self, () -> (Double, Double), (@common.Position, @model.PositionAffinity?) -> @common.Position?) -> Unit
-pub fn ContentWidgets::new(@dom.Document, @dom.Element) -> Self
 pub fn ContentWidgets::on_before_render_widgets(Self, Int, Int) -> Unit
 pub fn ContentWidgets::on_configuration_changed(Self, Bool) -> Unit
 pub fn ContentWidgets::overflowing_content_widgets_dom_node(Self) -> @dom.Element
@@ -138,7 +138,7 @@ pub(all) struct CurrentLineHighlightOverlay {
   state : CurrentLineHighlightState
   mut render_result : Array[String]
 }
-pub fn CurrentLineHighlightOverlay::new() -> Self
+pub fn CurrentLineHighlightOverlay::CurrentLineHighlightOverlay() -> Self
 
 pub(all) struct CurrentLineHighlightState {
   mut render_line_highlight : @view_layout.RenderLineHighlight
@@ -152,8 +152,8 @@ pub(all) struct CurrentLineHighlightState {
   mut selections : Array[@core.Selection]
   mut read_configuration : () -> (@view_layout.RenderLineHighlight, Bool, Bool, Double, Double)
 }
+pub fn CurrentLineHighlightState::CurrentLineHighlightState() -> Self
 pub fn CurrentLineHighlightState::install_configuration_reader(Self, () -> (@view_layout.RenderLineHighlight, Bool, Bool, Double, Double)) -> Unit
-pub fn CurrentLineHighlightState::new() -> Self
 pub fn CurrentLineHighlightState::on_configuration_changed(Self) -> Unit
 pub fn CurrentLineHighlightState::on_cursor_state_changed(Self, Array[@core.Selection]) -> Bool
 pub fn CurrentLineHighlightState::on_focus_changed(Self, Bool) -> Bool
@@ -163,7 +163,7 @@ pub(all) struct CurrentLineMarginHighlightOverlay {
   state : CurrentLineHighlightState
   mut render_result : Array[String]
 }
-pub fn CurrentLineMarginHighlightOverlay::new() -> Self
+pub fn CurrentLineMarginHighlightOverlay::CurrentLineMarginHighlightOverlay() -> Self
 
 pub(all) struct CursorRenderData {
   top : Double
@@ -184,34 +184,34 @@ pub(all) struct DecorationOverlayPiece {
 pub(all) struct DecorationsOverlay {
   mut render_result : Array[String]
 }
-pub fn DecorationsOverlay::new() -> Self
+pub fn DecorationsOverlay::DecorationsOverlay() -> Self
 
 pub struct DomReadingContext {
   end_node : @dom.Element
   // private fields
 }
+pub fn DomReadingContext::DomReadingContext(@dom.Element, @dom.Element) -> Self
 pub fn DomReadingContext::client_rect_delta_left(Self) -> Double
 pub fn DomReadingContext::client_rect_scale(Self) -> Double
 pub fn DomReadingContext::did_dom_layout(Self) -> Bool
 pub fn DomReadingContext::mark_did_dom_layout(Self) -> Unit
-pub fn DomReadingContext::new(@dom.Element, @dom.Element) -> Self
 
 pub(all) struct EditorScrollbar {
   editor_scrollable : @scrollbar.ScrollableElementDom
   scrollbar_dom_node : @scrollbar.CachedDomNode
   mut should_render : Bool
 }
+pub fn EditorScrollbar::EditorScrollbar(@scrollbar.CachedDomNode) -> Self
 pub fn EditorScrollbar::content(Self) -> @dom.Element
 pub fn EditorScrollbar::get_dom_node(Self) -> @dom.Element
-pub fn EditorScrollbar::new(@scrollbar.CachedDomNode) -> Self
 pub fn EditorScrollbar::scrollable(Self) -> @scrollbar.ScrollableElementDom
 
 pub(all) struct FloatHorizontalRange {
   left : Double
   width : Double
 } derive(Eq, @debug.Debug)
+pub fn FloatHorizontalRange::FloatHorizontalRange(Double, Double) -> Self
 pub fn FloatHorizontalRange::compare(Self, Self) -> Double
-pub fn FloatHorizontalRange::new(Double, Double) -> Self
 pub fn FloatHorizontalRange::to_string(Self) -> String
 
 pub(all) struct HorizontalPosition {
@@ -219,20 +219,20 @@ pub(all) struct HorizontalPosition {
   left : Int
   original_left : Double
 } derive(Eq, @debug.Debug)
-pub fn HorizontalPosition::new(Bool, Double) -> Self
+pub fn HorizontalPosition::HorizontalPosition(Bool, Double) -> Self
 
 pub(all) struct HorizontalRange {
   left : Int
   width : Int
 } derive(Eq, @debug.Debug)
+pub fn HorizontalRange::HorizontalRange(Double, Double) -> Self
 pub fn HorizontalRange::from(Array[FloatHorizontalRange]) -> Array[Self]
-pub fn HorizontalRange::new(Double, Double) -> Self
 pub fn HorizontalRange::to_string(Self) -> String
 
 pub(all) struct LineNumbersOverlay {
   mut render_result : Array[String]
 }
-pub fn LineNumbersOverlay::new() -> Self
+pub fn LineNumbersOverlay::LineNumbersOverlay() -> Self
 
 pub(all) struct LineVisibleRanges {
   outside_rendered_line : Bool
@@ -240,14 +240,14 @@ pub(all) struct LineVisibleRanges {
   ranges : Array[HorizontalRange]
   continues_on_next_line : Bool
 } derive(Eq, @debug.Debug)
+pub fn LineVisibleRanges::LineVisibleRanges(Bool, Int, Array[HorizontalRange], Bool) -> Self
 pub fn LineVisibleRanges::first_line(Array[Self]?) -> Self?
 pub fn LineVisibleRanges::last_line(Array[Self]?) -> Self?
-pub fn LineVisibleRanges::new(Bool, Int, Array[HorizontalRange], Bool) -> Self
 
 pub(all) struct LinesDecorationsOverlay {
   mut render_result : Array[String]
 }
-pub fn LinesDecorationsOverlay::new() -> Self
+pub fn LinesDecorationsOverlay::LinesDecorationsOverlay() -> Self
 
 pub(all) struct MarginViewOverlays {
   dom_node : @dom.Element
@@ -258,8 +258,8 @@ pub(all) struct MarginViewOverlays {
   mut should_render : Bool
   // private fields
 }
+pub fn MarginViewOverlays::MarginViewOverlays(@dom.Document) -> Self
 pub fn MarginViewOverlays::get_dom_node(Self) -> @dom.Element
-pub fn MarginViewOverlays::new(@dom.Document) -> Self
 
 pub(all) struct OverlayWidgets {
   dom_node : @dom.Element
@@ -267,9 +267,9 @@ pub(all) struct OverlayWidgets {
   widgets : Map[String, @dom.Element]
   mut should_render : Bool
 }
+pub fn OverlayWidgets::OverlayWidgets(@dom.Document) -> Self
 pub fn OverlayWidgets::add_widget(Self, String, @dom.Element) -> Unit
 pub fn OverlayWidgets::get_dom_node(Self) -> @dom.Element
-pub fn OverlayWidgets::new(@dom.Document) -> Self
 pub fn OverlayWidgets::overflowing_overlay_widgets_dom_node(Self) -> @dom.Element
 pub fn OverlayWidgets::remove_widget(Self, String) -> Unit
 
@@ -304,7 +304,7 @@ pub(all) struct RendererContext[T] {
 pub(all) struct SelectionsOverlay {
   mut render_result : Array[String]
 }
-pub fn SelectionsOverlay::new() -> Self
+pub fn SelectionsOverlay::SelectionsOverlay() -> Self
 
 pub(all) struct View {
   root : @dom.Element
@@ -321,6 +321,7 @@ pub(all) struct View {
   editor_scrollbar : EditorScrollbar
   // private fields
 }
+pub fn View::View(view_zones_configuration_reader? : () -> (Int, Double, Double)) -> Self
 pub fn View::add_disposable(Self, @common.Disposable) -> Unit
 pub fn View::apply_squiggly_theme(Self) -> Unit
 pub fn View::begin_view_event_batch(Self) -> ViewEventCollector
@@ -335,7 +336,6 @@ pub fn View::install_view_zones_context(Self, @view_model.ViewModel, @log.LogSer
 pub fn View::is_line_rendered(Self, Int) -> Bool
 pub fn View::line_width(Self, Int, Int) -> Double
 pub fn View::measure_line_selection(Self, Int, Int, Int, keep_empty? : Bool) -> Array[(Double, Double)]
-pub fn View::new(view_zones_configuration_reader? : () -> (Int, Double, Double)) -> Self
 pub fn View::offset_for_column(Self, Int, Int) -> Double
 pub fn View::render(Self, ViewContext, ViewRenderInput) -> Unit
 pub fn View::should_suppress_mouse_down_on_view_zone(Self, String) -> Bool
@@ -390,7 +390,7 @@ pub(all) struct ViewCursorStateChangedEvent {
   model_selections : Array[@core.Selection]
   reason : @cursor.CursorChangeReason
 }
-pub fn ViewCursorStateChangedEvent::new(Array[@core.Selection], Array[@core.Selection], @cursor.CursorChangeReason) -> Self
+pub fn ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(Array[@core.Selection], Array[@core.Selection], @cursor.CursorChangeReason) -> Self
 
 pub(all) struct ViewCursors {
   dom_node : @dom.Element
@@ -402,9 +402,9 @@ pub(all) struct ViewCursors {
   mut editor_has_focus : Bool
   mut selection_is_empty : Bool
 }
+pub fn ViewCursors::ViewCursors(@dom.Document) -> Self
 pub fn ViewCursors::get_dom_node(Self) -> @dom.Element
 pub fn ViewCursors::get_last_render_data(Self) -> Array[ViewCursorRenderData]
-pub fn ViewCursors::new(@dom.Document) -> Self
 pub fn ViewCursors::on_focus_changed(Self, Bool) -> Unit
 pub fn ViewCursors::render_cursor(Self, has_selection~ : Bool, editor_has_focus~ : Bool) -> Unit
 
@@ -414,8 +414,8 @@ pub(all) struct ViewDecorationsChangedEvent {
   affects_glyph_margin : Bool
   affects_line_number : Bool
 }
+pub fn ViewDecorationsChangedEvent::ViewDecorationsChangedEvent(Bool, Bool, Bool, Bool) -> Self
 pub fn ViewDecorationsChangedEvent::all() -> Self
-pub fn ViewDecorationsChangedEvent::new(Bool, Bool, Bool, Bool) -> Self
 
 pub(all) enum ViewEvent {
   ViewCompositionStart
@@ -444,24 +444,24 @@ pub fn ViewEventCollector::emit_many(Self, Array[ViewEvent]) -> Unit
 pub(all) struct ViewFocusChangedEvent {
   is_focused : Bool
 }
-pub fn ViewFocusChangedEvent::new(Bool) -> Self
+pub fn ViewFocusChangedEvent::ViewFocusChangedEvent(Bool) -> Self
 
 pub struct ViewLayerRenderer[T] {
   // private fields
 }
-pub fn[T] ViewLayerRenderer::new(@dom.Element, () -> T, (T) -> @dom.Element?, (T, @dom.Element) -> Unit, (T, Int, Double, Int) -> Unit, (T, Int, Double, Int, @view_layout.ViewportData, StringBuilder) -> Bool, @view_layout.ViewportData, (Int) -> Int) -> Self[T]
+pub fn[T] ViewLayerRenderer::ViewLayerRenderer(@dom.Element, () -> T, (T) -> @dom.Element?, (T, @dom.Element) -> Unit, (T, Int, Double, Int) -> Unit, (T, Int, Double, Int, @view_layout.ViewportData, StringBuilder) -> Bool, @view_layout.ViewportData, (Int) -> Int) -> Self[T]
 pub fn[T] ViewLayerRenderer::render(Self[T], RendererContext[T], Int, Int, Array[Double]) -> RendererContext[T]
 
 pub struct ViewLine {
   // private fields
 }
+pub fn ViewLine::ViewLine(options? : ViewLineOptions) -> Self
 pub fn ViewLine::get_dom_node(Self) -> @dom.Element?
 pub fn ViewLine::get_visible_ranges_for_range(Self, Int, Int, Int, DomReadingContext) -> (Bool, Array[(Double, Double)])?
 pub fn ViewLine::get_width(Self, DomReadingContext?) -> Double
 pub fn ViewLine::get_width_is_fast(Self) -> Bool
 pub fn ViewLine::layout_line(Self, Int, Double, Int) -> Unit
 pub fn ViewLine::mapping(Self) -> @view_layout.CharacterMapping?
-pub fn ViewLine::new(options? : ViewLineOptions) -> Self
 pub fn ViewLine::render_line(Self, Int, @view_layout.RenderLineInput, Double, Int, StringBuilder) -> Bool
 pub fn ViewLine::reset_cached_width(Self) -> Unit
 pub fn ViewLine::set_dom_node(Self, @dom.Element) -> Unit
@@ -479,7 +479,7 @@ pub(all) struct ViewLineOptions {
   font_ligatures : Bool
   vertical_scrollbar_size : Double
 } derive(Eq, @debug.Debug)
-pub fn ViewLineOptions::new(line_height? : Int, space_width? : Double, middot_width? : Double, wsmiddot_width? : Double, use_monospace_optimizations? : Bool, can_use_halfwidth_rightwards_arrow? : Bool, stop_rendering_line_after? : Int, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, font_ligatures? : Bool, vertical_scrollbar_size? : Double) -> Self
+pub fn ViewLineOptions::ViewLineOptions(line_height? : Int, space_width? : Double, middot_width? : Double, wsmiddot_width? : Double, use_monospace_optimizations? : Bool, can_use_halfwidth_rightwards_arrow? : Bool, stop_rendering_line_after? : Int, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, font_ligatures? : Bool, vertical_scrollbar_size? : Double) -> Self
 
 pub(all) struct ViewLines {
   dom_node : @scrollbar.CachedDomNode
@@ -494,6 +494,7 @@ pub(all) struct ViewLines {
   mut should_render : Bool
   // private fields
 }
+pub fn ViewLines::ViewLines(@dom.Document, @scrollbar.CachedDomNode) -> Self
 pub fn ViewLines::dispose(Self) -> Unit
 pub fn ViewLines::flush_retained_lines(Self) -> Unit
 pub fn ViewLines::get_dom_node(Self) -> @dom.Element
@@ -503,7 +504,6 @@ pub fn ViewLines::install_geometry_readers(Self, (Int) -> Int, (Int) -> @view_la
 pub fn ViewLines::install_live_configuration_reader(Self, () -> ViewLinesConfiguration) -> Unit
 pub fn ViewLines::line_node_at(Self, Int) -> @dom.Element?
 pub fn ViewLines::mapping_at(Self, Int) -> @view_layout.CharacterMapping?
-pub fn ViewLines::new(@dom.Document, @scrollbar.CachedDomNode) -> Self
 pub fn ViewLines::on_configuration_changed(Self, Bool, Bool) -> Bool
 pub fn ViewLines::on_decorations_changed(Self) -> Unit
 pub fn ViewLines::on_lines_changed(Self, Int, Int) -> Bool
@@ -525,7 +525,7 @@ pub(all) struct ViewLinesChangedEvent {
   from_line_number : Int
   count : Int
 }
-pub fn ViewLinesChangedEvent::new(Int, Int) -> Self
+pub fn ViewLinesChangedEvent::ViewLinesChangedEvent(Int, Int) -> Self
 
 pub(all) struct ViewLinesConfiguration {
   line_height : Int
@@ -534,19 +534,19 @@ pub(all) struct ViewLinesConfiguration {
   can_use_layer_hinting : Bool
   view_line_options : ViewLineOptions
 } derive(Eq, @debug.Debug)
-pub fn ViewLinesConfiguration::new(line_height? : Int, typical_halfwidth_character_width? : Double, is_viewport_wrapping? : Bool, can_use_layer_hinting? : Bool, space_width? : Double, middot_width? : Double, wsmiddot_width? : Double, use_monospace_optimizations? : Bool, can_use_halfwidth_rightwards_arrow? : Bool, stop_rendering_line_after? : Int, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, font_ligatures? : Bool, vertical_scrollbar_size? : Double) -> Self
+pub fn ViewLinesConfiguration::ViewLinesConfiguration(line_height? : Int, typical_halfwidth_character_width? : Double, is_viewport_wrapping? : Bool, can_use_layer_hinting? : Bool, space_width? : Double, middot_width? : Double, wsmiddot_width? : Double, use_monospace_optimizations? : Bool, can_use_halfwidth_rightwards_arrow? : Bool, stop_rendering_line_after? : Int, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, font_ligatures? : Bool, vertical_scrollbar_size? : Double) -> Self
 
 pub(all) struct ViewLinesDeletedEvent {
   from_line_number : Int
   to_line_number : Int
 }
-pub fn ViewLinesDeletedEvent::new(Int, Int) -> Self
+pub fn ViewLinesDeletedEvent::ViewLinesDeletedEvent(Int, Int) -> Self
 
 pub(all) struct ViewLinesInsertedEvent {
   from_line_number : Int
   to_line_number : Int
 }
-pub fn ViewLinesInsertedEvent::new(Int, Int) -> Self
+pub fn ViewLinesInsertedEvent::ViewLinesInsertedEvent(Int, Int) -> Self
 
 pub struct ViewOverlays {
   dom_node : @scrollbar.CachedDomNode
@@ -581,23 +581,23 @@ pub(all) struct ViewScrollChangedEvent {
   scroll_height_changed : Bool
   scroll_top_changed : Bool
 }
-pub fn ViewScrollChangedEvent::new(Double, Double, Double, Double, Bool, Bool, Bool, Bool) -> Self
+pub fn ViewScrollChangedEvent::ViewScrollChangedEvent(Double, Double, Double, Double, Bool, Bool, Bool, Bool) -> Self
 
 pub(all) struct ViewThemeChangedEvent {
   theme : String
 }
-pub fn ViewThemeChangedEvent::new(String) -> Self
+pub fn ViewThemeChangedEvent::ViewThemeChangedEvent(String) -> Self
 
 pub(all) struct ViewTokenChangeRange {
   from_line_number : Int
   to_line_number : Int
 }
-pub fn ViewTokenChangeRange::new(Int, Int) -> Self
+pub fn ViewTokenChangeRange::ViewTokenChangeRange(Int, Int) -> Self
 
 pub(all) struct ViewTokensChangedEvent {
   ranges : Array[ViewTokenChangeRange]
 }
-pub fn ViewTokensChangedEvent::new(Array[ViewTokenChangeRange]) -> Self
+pub fn ViewTokensChangedEvent::ViewTokensChangedEvent(Array[ViewTokenChangeRange]) -> Self
 
 pub(all) struct ViewZone {
   mut after_line_number : Int
@@ -614,7 +614,7 @@ pub(all) struct ViewZone {
   mut on_dom_node_top : ((Double) -> Unit raise)?
   mut on_computed_height : ((Double) -> Unit raise)?
 }
-pub fn ViewZone::new(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> Self
+pub fn ViewZone::ViewZone(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> Self
 
 pub struct ViewZoneChangeAccessor {
   // private fields
@@ -628,6 +628,7 @@ pub(all) struct ViewZones {
   margin_dom_node : @dom.Element
   // private fields
 }
+pub fn ViewZones::ViewZones(@dom.Document, read_initial_configuration? : () -> (Int, Double, Double)) -> Self
 pub fn ViewZones::change_view_zones(Self, (ViewZoneChangeAccessor) -> Unit raise) -> Bool
 pub fn ViewZones::did_render(Self) -> Unit
 pub fn ViewZones::dispose(Self) -> Unit
@@ -635,7 +636,6 @@ pub fn ViewZones::dom_node(Self) -> @dom.Element
 pub fn ViewZones::force_should_render(Self) -> Unit
 pub fn ViewZones::install_context(Self, @view_model.ViewModel, @log.LogService, () -> (Int, Double, Double), () -> Unit) -> Unit
 pub fn ViewZones::margin_dom_node(Self) -> @dom.Element
-pub fn ViewZones::new(@dom.Document, read_initial_configuration? : () -> (Int, Double, Double)) -> Self
 pub fn ViewZones::on_configuration_changed(Self, Bool) -> Bool
 pub fn ViewZones::on_line_mapping_changed(Self) -> Bool
 pub fn ViewZones::on_lines_deleted(Self) -> Bool
@@ -650,7 +650,7 @@ pub(all) struct VisibleRanges {
   outside_rendered_line : Bool
   ranges : Array[FloatHorizontalRange]
 } derive(Eq, @debug.Debug)
-pub fn VisibleRanges::new(Bool, Array[FloatHorizontalRange]) -> Self
+pub fn VisibleRanges::VisibleRanges(Bool, Array[FloatHorizontalRange]) -> Self
 
 // Type aliases
 

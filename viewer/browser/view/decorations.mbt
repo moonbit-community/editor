@@ -320,7 +320,7 @@ pub(all) struct DecorationsOverlay {
 }
 
 ///|
-pub fn DecorationsOverlay::new() -> DecorationsOverlay {
+pub fn DecorationsOverlay::DecorationsOverlay() -> DecorationsOverlay {
   { render_result: [] }
 }
 

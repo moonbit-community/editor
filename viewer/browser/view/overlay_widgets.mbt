@@ -17,7 +17,9 @@ pub(all) struct OverlayWidgets {
 }
 
 ///|
-pub fn OverlayWidgets::new(document : @rdom.Document) -> OverlayWidgets {
+pub fn OverlayWidgets::OverlayWidgets(
+  document : @rdom.Document,
+) -> OverlayWidgets {
   let dom_node = document.create_element("div")
   dom_node.set_attribute("class", "overlayWidgets")
   dom_node.set_attribute("data-view-part", "overlayWidgets")

@@ -8,11 +8,11 @@ fn geometry_view_lines(
   visible_range : @base_common.Range,
   layout : @view_layout.ViewLayout,
   fixture : ViewLineFixture,
-  scheduler? : RunOnceScheduler = RunOnceScheduler::new(200),
+  scheduler? : RunOnceScheduler = RunOnceScheduler::RunOnceScheduler(200),
 ) -> ViewLines {
-  let configuration = ViewLinesConfiguration::new()
+  let configuration = ViewLinesConfiguration::ViewLinesConfiguration()
   let options_ref = Ref(configuration.view_line_options)
-  let last_rendered_data = LastRenderedData::new()
+  let last_rendered_data = LastRenderedData::LastRenderedData()
   last_rendered_data.set_current_visible_range(visible_range)
   {
     dom_node: @scrollbar.CachedDomNode::new(view_line_fixture_context(fixture)),
@@ -31,7 +31,7 @@ fn geometry_view_lines(
     read_configuration: () => configuration,
     view_line_to_model_line: line_number => line_number,
     model_line_text_direction: _line_number => LTR,
-    line_factory: () => ViewLine::new(options=options_ref.val),
+    line_factory: () => ViewLine::ViewLine(options=options_ref.val),
     async_update_line_widths: scheduler,
     last_rendered_data,
     max_line_width: 0.0,
@@ -97,7 +97,7 @@ fn GeometryTimerSpy::fire_active(self : GeometryTimerSpy) -> Unit {
 
 ///|
 test "LastRenderedData initializes and replaces the exact visible Range" {
-  let data = LastRenderedData::new()
+  let data = LastRenderedData::LastRenderedData()
   assert_true(data.get_current_visible_range() == Range(1, 1, 1, 1))
   data.set_current_visible_range(Range(3, 2, 5, 7))
   assert_true(data.get_current_visible_range() == Range(3, 2, 5, 7))
@@ -423,7 +423,7 @@ test "ViewLines 200ms scheduler guards and cancel-before-slow ordering" {
   inspect(view_lines.async_update_line_widths.delay_ms, content="200")
   view_lines.async_update_line_widths.schedule(() => ())
   assert_true(view_lines.async_update_line_widths.is_scheduled())
-  let untouched = DomReadingContext::new(
+  let untouched = DomReadingContext::DomReadingContext(
     view_line_fixture_context(fixture),
     view_line_fixture_end_node(fixture),
   )

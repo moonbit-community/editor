@@ -7,7 +7,7 @@ pub(all) struct ViewEventCollector {
 }
 
 ///|
-fn ViewEventCollector::new() -> ViewEventCollector {
+fn ViewEventCollector::ViewEventCollector() -> ViewEventCollector {
   { view_events: [] }
 }
 
@@ -43,7 +43,7 @@ priv struct ViewEventDispatcher {
 }
 
 ///|
-fn ViewEventDispatcher::new(
+fn ViewEventDispatcher::ViewEventDispatcher(
   deliver : (Array[ViewEvent]) -> Unit,
 ) -> ViewEventDispatcher {
   {
@@ -62,7 +62,7 @@ fn ViewEventDispatcher::begin(self : ViewEventDispatcher) -> ViewEventCollector 
   match self.collector {
     Some(collector) => collector
     None => {
-      let collector = ViewEventCollector::new()
+      let collector = ViewEventCollector::ViewEventCollector()
       self.collector = Some(collector)
       collector
     }

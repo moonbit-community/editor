@@ -170,7 +170,7 @@ pub(all) struct ContentWidgets {
 }
 
 ///|
-pub fn ContentWidgets::new(
+pub fn ContentWidgets::ContentWidgets(
   document : @rdom.Document,
   view_dom_node : @rdom.Element,
 ) -> ContentWidgets {

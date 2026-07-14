@@ -32,7 +32,7 @@ fn retained_line_test_input(
 
 ///|
 test "retained ViewLine consumes sticky content token decoration and option invalidators" {
-  let line = ViewLine::new()
+  let line = ViewLine::ViewLine()
   let input = retained_line_test_input(None)
   let builder = StringBuilder()
   assert_true(line.is_maybe_invalid)
@@ -57,7 +57,9 @@ test "retained ViewLine consumes sticky content token decoration and option inva
   assert_false(line.render_line(1, input, 0, 20, builder))
   assert_false(line.is_maybe_invalid)
 
-  line.on_options_changed(ViewLineOptions::new(render_whitespace=All))
+  line.on_options_changed(
+    ViewLineOptions::ViewLineOptions(render_whitespace=All),
+  )
   assert_true(line.is_maybe_invalid)
   assert_false(line.render_line(1, input, 0, 20, builder))
   assert_false(line.is_maybe_invalid)
@@ -65,7 +67,7 @@ test "retained ViewLine consumes sticky content token decoration and option inva
 
 ///|
 test "retained ViewLine selection invalidates only last-rendered Selection whitespace" {
-  let line = ViewLine::new()
+  let line = ViewLine::ViewLine()
   let none_input = retained_line_test_input(None)
   let selection_input = retained_line_test_input(Selection)
   let builder = StringBuilder()
@@ -73,7 +75,9 @@ test "retained ViewLine selection invalidates only last-rendered Selection white
   assert_false(line.on_selection_changed())
   assert_false(line.is_maybe_invalid)
 
-  line.on_options_changed(ViewLineOptions::new(render_whitespace=Selection))
+  line.on_options_changed(
+    ViewLineOptions::ViewLineOptions(render_whitespace=Selection),
+  )
   builder.reset()
   assert_true(line.render_line(1, selection_input, 0, 20, builder))
   assert_false(line.is_maybe_invalid)
@@ -86,7 +90,7 @@ test "retained ViewLine selection invalidates only last-rendered Selection white
 
 ///|
 test "retained ViewLine skips writes for distinct raw whitespace widths with equal normalized identity" {
-  let line = ViewLine::new()
+  let line = ViewLine::ViewLine()
   let first = retained_line_test_input(
     None,
     space_width=7.2,
@@ -112,11 +116,11 @@ test "retained ViewLine skips writes for distinct raw whitespace widths with equ
 
 ///|
 test "retained line factory reads the current option snapshot on every creation" {
-  let options = Ref(ViewLineOptions::new(render_whitespace=None))
+  let options = Ref(ViewLineOptions::ViewLineOptions(render_whitespace=None))
   let factory = retained_view_line_factory(options)
   let first = factory()
   assert_true(first.option_snapshot().render_whitespace == None)
-  options.val = ViewLineOptions::new(render_whitespace=All)
+  options.val = ViewLineOptions::ViewLineOptions(render_whitespace=All)
   let second = factory()
   assert_true(second.option_snapshot().render_whitespace == All)
   assert_true(first.option_snapshot().render_whitespace == None)
@@ -124,7 +128,7 @@ test "retained line factory reads the current option snapshot on every creation"
 
 ///|
 test "ViewLineOptions equality covers every applicable source render axis" {
-  let base = ViewLineOptions::new()
+  let base = ViewLineOptions::ViewLineOptions()
   let variants : Array[ViewLineOptions] = [
     { ..base, line_height: base.line_height + 1 },
     { ..base, space_width: base.space_width + 1.0 },

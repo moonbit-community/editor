@@ -78,7 +78,7 @@ pub(all) struct ViewCursorStateChangedEvent {
 }
 
 ///|
-pub fn ViewCursorStateChangedEvent::new(
+pub fn ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
   selections : Array[@core.Selection],
   model_selections : Array[@core.Selection],
   reason : @cursor.CursorChangeReason,
@@ -98,7 +98,7 @@ pub(all) struct ViewDecorationsChangedEvent {
 }
 
 ///|
-pub fn ViewDecorationsChangedEvent::new(
+pub fn ViewDecorationsChangedEvent::ViewDecorationsChangedEvent(
   affects_minimap : Bool,
   affects_overview_ruler : Bool,
   affects_glyph_margin : Bool,
@@ -128,7 +128,9 @@ pub(all) struct ViewFocusChangedEvent {
 }
 
 ///|
-pub fn ViewFocusChangedEvent::new(is_focused : Bool) -> ViewFocusChangedEvent {
+pub fn ViewFocusChangedEvent::ViewFocusChangedEvent(
+  is_focused : Bool,
+) -> ViewFocusChangedEvent {
   { is_focused, }
 }
 
@@ -141,7 +143,7 @@ pub(all) struct ViewLinesChangedEvent {
 }
 
 ///|
-pub fn ViewLinesChangedEvent::new(
+pub fn ViewLinesChangedEvent::ViewLinesChangedEvent(
   from_line_number : Int,
   count : Int,
 ) -> ViewLinesChangedEvent {
@@ -155,7 +157,7 @@ pub(all) struct ViewLinesDeletedEvent {
 }
 
 ///|
-pub fn ViewLinesDeletedEvent::new(
+pub fn ViewLinesDeletedEvent::ViewLinesDeletedEvent(
   from_line_number : Int,
   to_line_number : Int,
 ) -> ViewLinesDeletedEvent {
@@ -169,7 +171,7 @@ pub(all) struct ViewLinesInsertedEvent {
 }
 
 ///|
-pub fn ViewLinesInsertedEvent::new(
+pub fn ViewLinesInsertedEvent::ViewLinesInsertedEvent(
   from_line_number : Int,
   to_line_number : Int,
 ) -> ViewLinesInsertedEvent {
@@ -192,7 +194,7 @@ pub(all) struct ViewScrollChangedEvent {
 }
 
 ///|
-pub fn ViewScrollChangedEvent::new(
+pub fn ViewScrollChangedEvent::ViewScrollChangedEvent(
   scroll_width : Double,
   scroll_left : Double,
   scroll_height : Double,
@@ -220,7 +222,9 @@ pub(all) struct ViewThemeChangedEvent {
 }
 
 ///|
-pub fn ViewThemeChangedEvent::new(theme : String) -> ViewThemeChangedEvent {
+pub fn ViewThemeChangedEvent::ViewThemeChangedEvent(
+  theme : String,
+) -> ViewThemeChangedEvent {
   { theme, }
 }
 
@@ -232,7 +236,7 @@ pub(all) struct ViewTokenChangeRange {
 }
 
 ///|
-pub fn ViewTokenChangeRange::new(
+pub fn ViewTokenChangeRange::ViewTokenChangeRange(
   from_line_number : Int,
   to_line_number : Int,
 ) -> ViewTokenChangeRange {
@@ -245,7 +249,7 @@ pub(all) struct ViewTokensChangedEvent {
 }
 
 ///|
-pub fn ViewTokensChangedEvent::new(
+pub fn ViewTokensChangedEvent::ViewTokensChangedEvent(
   ranges : Array[ViewTokenChangeRange],
 ) -> ViewTokensChangedEvent {
   { ranges, }

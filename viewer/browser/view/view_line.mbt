@@ -30,7 +30,7 @@ pub(all) struct ViewLineOptions {
 } derive(Eq, Debug)
 
 ///|
-pub fn ViewLineOptions::new(
+pub fn ViewLineOptions::ViewLineOptions(
   line_height? : Int = 20,
   space_width? : Double = 7.2,
   middot_width? : Double = 7.2,
@@ -80,8 +80,8 @@ pub struct ViewLine {
 }
 
 ///|
-pub fn ViewLine::new(
-  options? : ViewLineOptions = ViewLineOptions::new(),
+pub fn ViewLine::ViewLine(
+  options? : ViewLineOptions = ViewLineOptions::ViewLineOptions(),
 ) -> ViewLine {
   { options, rendered_view_line: None, is_maybe_invalid: true }
 }
@@ -329,7 +329,7 @@ priv struct RenderedViewLine {
 }
 
 ///|
-fn RenderedViewLine::new(
+fn RenderedViewLine::RenderedViewLine(
   dom_node : @scrollbar.CachedDomNode?,
   input : @view_layout.RenderLineInput,
   character_mapping : @view_layout.CharacterMapping,
@@ -369,7 +369,9 @@ fn create_normal_rendered_line(
   character_mapping : @view_layout.CharacterMapping,
   foreign_elements : ForeignElementFacts,
 ) -> RenderedViewLine {
-  RenderedViewLine::new(dom_node, input, character_mapping, foreign_elements)
+  RenderedViewLine::RenderedViewLine(
+    dom_node, input, character_mapping, foreign_elements,
+  )
 }
 
 ///|

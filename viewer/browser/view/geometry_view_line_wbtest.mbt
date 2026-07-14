@@ -44,7 +44,7 @@ fn render_fixture_line(
   input : @view_layout.RenderLineInput,
   fixture : ViewLineFixture,
 ) -> ViewLine raise {
-  let line = ViewLine::new()
+  let line = ViewLine::ViewLine()
   let builder = StringBuilder()
   assert_true(line.render_line(1, input, 0, 20, builder))
   line.set_dom_node(view_line_fixture_line_node(fixture))
@@ -61,10 +61,10 @@ fn mapped_fixture_line(
   for column in 1..<=mapping_length {
     mapping.set_column_info(column, 0, column - 1, column - 1)
   }
-  let line = ViewLine::new()
+  let line = ViewLine::ViewLine()
   let output = @view_layout.render_view_line2(input)
   line.rendered_view_line = Some(
-    RenderedViewLine::new(
+    RenderedViewLine::RenderedViewLine(
       None,
       input,
       mapping,
@@ -80,7 +80,7 @@ test "ViewLine slow width cache reads once resets and marks layout" {
   let fixture = new_view_line_fixture(42.0, 10.0)
   let line = render_fixture_line(geometry_line_input("alpha"), fixture)
   assert_false(line.get_width_is_fast())
-  let context = DomReadingContext::new(
+  let context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(fixture),
     view_line_fixture_end_node(fixture),
   )
@@ -96,11 +96,11 @@ test "ViewLine slow width cache reads once resets and marks layout" {
 
 ///|
 test "ViewLine absent strategy guards width ranges and layout writes" {
-  let absent = ViewLine::new()
+  let absent = ViewLine::ViewLine()
   inspect(absent.get_width(None), content="0")
   assert_true(absent.get_width_is_fast())
   let fixture = new_view_line_fixture(10.0, 10.0)
-  let context = DomReadingContext::new(
+  let context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(fixture),
     view_line_fixture_end_node(fixture),
   )
@@ -108,7 +108,7 @@ test "ViewLine absent strategy guards width ranges and layout writes" {
   absent.layout_line(1, 7, 23)
 
   let input = geometry_line_input("a")
-  let rendered_without_dom = ViewLine::new()
+  let rendered_without_dom = ViewLine::ViewLine()
   assert_true(
     rendered_without_dom.render_line(1, input, 0, 20, StringBuilder()),
   )
@@ -136,7 +136,7 @@ test "ViewLine visible ranges preserve collapsed raw and truncation branches" {
     fixture,
     input.line_content.length() + 1,
   )
-  let context = DomReadingContext::new(
+  let context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(fixture),
     view_line_fixture_end_node(fixture),
   )
@@ -174,7 +174,7 @@ test "ViewLine visible ranges preserve collapsed raw and truncation branches" {
     is_basic_ascii=false,
   )
   let rtl = mapped_fixture_line(rtl_input, rtl_fixture, 4)
-  let rtl_context = DomReadingContext::new(
+  let rtl_context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(rtl_fixture),
     view_line_fixture_end_node(rtl_fixture),
   )
@@ -195,7 +195,7 @@ test "ViewLine basic ASCII stabilization uses exact inclusive one-pixel toleranc
     within_fixture,
     within_input.line_content.length() + 1,
   )
-  let within_context = DomReadingContext::new(
+  let within_context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(within_fixture),
     view_line_fixture_end_node(within_fixture),
   )
@@ -212,7 +212,7 @@ test "ViewLine basic ASCII stabilization uses exact inclusive one-pixel toleranc
     exact_fixture,
     exact_input.line_content.length() + 1,
   )
-  let exact_context = DomReadingContext::new(
+  let exact_context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(exact_fixture),
     view_line_fixture_end_node(exact_fixture),
   )
@@ -229,7 +229,7 @@ test "ViewLine basic ASCII stabilization uses exact inclusive one-pixel toleranc
     beyond_fixture,
     beyond_input.line_content.length() + 1,
   )
-  let beyond_context = DomReadingContext::new(
+  let beyond_context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(beyond_fixture),
     view_line_fixture_end_node(beyond_fixture),
   )
@@ -272,7 +272,7 @@ test "ViewLine empty foreign-content branches distinguish none after before and 
     let expected = case.1
     let input = geometry_line_input("", line_decorations=decorations)
     let line = mapped_fixture_line(input, fixture, 0)
-    let context = DomReadingContext::new(
+    let context = DomReadingContext::DomReadingContext(
       view_line_fixture_context(fixture),
       view_line_fixture_end_node(fixture),
     )
@@ -290,7 +290,7 @@ test "ViewLine empty foreign-content branches distinguish none after before and 
     LineDecoration(1, 1, "after", decoration_type=After),
   ])
   let both = mapped_fixture_line(both_input, missing_first_child_fixture, 0)
-  let both_context = DomReadingContext::new(
+  let both_context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(missing_first_child_fixture),
     view_line_fixture_end_node(missing_first_child_fixture),
   )
@@ -307,7 +307,7 @@ test "ViewLine pixel cache whitespace endpoint and prior DOM reuse" {
   let cache_fixture = new_view_line_fixture(40.0, 10.3)
   let cache_input = geometry_line_input("abc", is_basic_ascii=false)
   let cached = mapped_fixture_line(cache_input, cache_fixture, 4)
-  let cache_context = DomReadingContext::new(
+  let cache_context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(cache_fixture),
     view_line_fixture_end_node(cache_fixture),
   )
@@ -335,7 +335,7 @@ test "ViewLine pixel cache whitespace endpoint and prior DOM reuse" {
   assert_false(whitespace_rendered.foreign_elements.before)
   assert_false(whitespace_rendered.foreign_elements.after)
   inspect(whitespace_rendered.character_mapping.length, content="4")
-  let whitespace_context = DomReadingContext::new(
+  let whitespace_context = DomReadingContext::DomReadingContext(
     view_line_fixture_context(whitespace_fixture),
     view_line_fixture_end_node(whitespace_fixture),
   )
@@ -363,7 +363,7 @@ test "ViewLine pixel cache whitespace endpoint and prior DOM reuse" {
 
 ///|
 test "ViewLine row HTML preserves direction padding class and geometry CSS" {
-  let rtl = ViewLine::new()
+  let rtl = ViewLine::ViewLine()
   let rtl_builder = StringBuilder()
   assert_true(
     rtl.render_line(
@@ -380,7 +380,7 @@ test "ViewLine row HTML preserves direction padding class and geometry CSS" {
   assert_true(rtl_html.contains("top:30px;height:21px;line-height:21px"))
   assert_true(rtl_html.contains("class=\"view-line\""))
 
-  let mixed = ViewLine::new()
+  let mixed = ViewLine::ViewLine()
   let mixed_builder = StringBuilder()
   assert_true(
     mixed.render_line(
@@ -394,7 +394,7 @@ test "ViewLine row HTML preserves direction padding class and geometry CSS" {
   assert_true(mixed_builder.to_string().contains("dir=\"ltr\""))
   assert_false(mixed_builder.to_string().contains("padding-right"))
 
-  let plain = ViewLine::new()
+  let plain = ViewLine::ViewLine()
   let plain_builder = StringBuilder()
   assert_true(
     plain.render_line(1, geometry_line_input("abc"), 0, 20, plain_builder),
@@ -404,7 +404,7 @@ test "ViewLine row HTML preserves direction padding class and geometry CSS" {
 
 ///|
 test "panic ViewLine setDomNode rejects absent rendered strategy" {
-  ViewLine::new().set_dom_node(
+  ViewLine::ViewLine().set_dom_node(
     new_view_line_fixture(1.0, 1.0) |> view_line_fixture_line_node,
   )
 }

@@ -28,7 +28,7 @@ pub(all) struct ViewZone {
 /// Convenience constructor for the complete public delegate. Only the source
 /// required fields are positional; every optional source member stays
 /// independently expressible.
-pub fn ViewZone::new(
+pub fn ViewZone::ViewZone(
   after_line_number : Int,
   dom_node : @rdom.Element,
   after_column? : Int,
@@ -75,7 +75,9 @@ priv struct FastViewZoneDomNode {
 }
 
 ///|
-fn FastViewZoneDomNode::new(element : @rdom.Element) -> FastViewZoneDomNode {
+fn FastViewZoneDomNode::FastViewZoneDomNode(
+  element : @rdom.Element,
+) -> FastViewZoneDomNode {
   { element, position: "", top: "", height: "", display: "", width: "" }
 }
 
@@ -251,7 +253,7 @@ pub(all) struct ViewZones {
 }
 
 ///|
-pub fn ViewZones::new(
+pub fn ViewZones::ViewZones(
   document : @rdom.Document,
   read_initial_configuration? : () -> (Int, Double, Double) = () => {
     (0, 0.0, 0.0)
@@ -261,14 +263,16 @@ pub fn ViewZones::new(
   // either owned DOM container.
   let (line_height, content_width, content_left) = read_initial_configuration()
   let dom_node = document.create_element("div")
-  let dom_node_cache = FastViewZoneDomNode::new(dom_node)
+  let dom_node_cache = FastViewZoneDomNode::FastViewZoneDomNode(dom_node)
   dom_node.set_attribute("class", "view-zones")
   dom_node_cache.set_position("absolute")
   dom_node.set_attribute("role", "presentation")
   dom_node.set_attribute("aria-hidden", "true")
 
   let margin_dom_node = document.create_element("div")
-  let margin_dom_node_cache = FastViewZoneDomNode::new(margin_dom_node)
+  let margin_dom_node_cache = FastViewZoneDomNode::FastViewZoneDomNode(
+    margin_dom_node,
+  )
   margin_dom_node.set_attribute("class", "margin-view-zones")
   margin_dom_node_cache.set_position("absolute")
   margin_dom_node.set_attribute("role", "presentation")
@@ -572,9 +576,9 @@ fn ViewZones::add_zone(
     delegate: zone,
     is_in_hidden_area: props.is_in_hidden_area,
     is_visible: false,
-    dom_node: FastViewZoneDomNode::new(zone.dom_node),
+    dom_node: FastViewZoneDomNode::FastViewZoneDomNode(zone.dom_node),
     margin_dom_node: match zone.margin_dom_node {
-      Some(node) => Some(FastViewZoneDomNode::new(node))
+      Some(node) => Some(FastViewZoneDomNode::FastViewZoneDomNode(node))
       None => None
     },
   }

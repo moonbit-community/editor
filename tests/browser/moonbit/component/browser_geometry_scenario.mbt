@@ -140,7 +140,7 @@ fn BrowserIframeGeometryFixture::new() -> BrowserIframeGeometryFixture {
     is Some(root) else {
     abort("browser geometry owner iframe root is missing")
   }
-  let widgets = @view.ContentWidgets::new(document, root)
+  let widgets = @view.ContentWidgets::ContentWidgets(document, root)
   let normal_container = widgets.dom_node()
   normal_container.set_attribute(
     "style", "position:absolute;top:0;left:0;width:430px;height:300px",

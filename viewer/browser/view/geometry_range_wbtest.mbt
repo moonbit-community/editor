@@ -14,7 +14,7 @@ extern "js" fn handy_range_detach_count(state : HandyRangeState) -> Int = "(stat
 ///|
 test "DomReadingContext reads delta and scale once with zero-width fallback" {
   let fixture = new_range_fixture("normal")
-  let context = DomReadingContext::new(
+  let context = DomReadingContext::DomReadingContext(
     range_fixture_context(fixture),
     range_fixture_end_node(fixture),
   )
@@ -27,7 +27,7 @@ test "DomReadingContext reads delta and scale once with zero-width fallback" {
   inspect(range_fixture_context_read_count(fixture), content="1")
 
   let zero_fixture = new_range_fixture("zero-offset-width")
-  let zero_context = DomReadingContext::new(
+  let zero_context = DomReadingContext::DomReadingContext(
     range_fixture_context(zero_fixture),
     range_fixture_end_node(zero_fixture),
   )
@@ -35,7 +35,7 @@ test "DomReadingContext reads delta and scale once with zero-width fallback" {
   inspect(range_fixture_context_read_count(zero_fixture), content="1")
 
   let below_fixture = new_range_fixture("scale-below")
-  let below_context = DomReadingContext::new(
+  let below_context = DomReadingContext::DomReadingContext(
     range_fixture_context(below_fixture),
     range_fixture_end_node(below_fixture),
   )
@@ -158,7 +158,7 @@ test "RangeUtil normalization clamps scales sorts and merges at exact 0.9" {
 test "RangeUtil endpoint branches preserve empty span and prior-span repairs" {
   let empty = new_range_fixture("empty")
   let empty_state = new_handy_range_state()
-  let empty_context = DomReadingContext::new(
+  let empty_context = DomReadingContext::DomReadingContext(
     range_fixture_context(empty),
     range_fixture_end_node(empty),
   )
@@ -181,7 +181,7 @@ test "RangeUtil endpoint branches preserve empty span and prior-span repairs" {
 
   let crossing = new_range_fixture("normal")
   let crossing_state = new_handy_range_state()
-  let crossing_context = DomReadingContext::new(
+  let crossing_context = DomReadingContext::DomReadingContext(
     range_fixture_context(crossing),
     range_fixture_end_node(crossing),
   )
@@ -204,7 +204,7 @@ test "RangeUtil endpoint branches preserve empty span and prior-span repairs" {
 
   let missing = new_range_fixture("missing-middle")
   let missing_state = new_handy_range_state()
-  let missing_context = DomReadingContext::new(
+  let missing_context = DomReadingContext::DomReadingContext(
     range_fixture_context(missing),
     range_fixture_end_node(missing),
   )
@@ -226,7 +226,7 @@ test "RangeUtil endpoint branches preserve empty span and prior-span repairs" {
   inspect(missing_ranges[0].1, content="15")
 
   let missing_end = new_range_fixture("missing-middle")
-  let missing_end_context = DomReadingContext::new(
+  let missing_end_context = DomReadingContext::DomReadingContext(
     range_fixture_context(missing_end),
     range_fixture_end_node(missing_end),
   )
@@ -269,7 +269,7 @@ test "RangeUtil endpoint branches preserve empty span and prior-span repairs" {
       0,
       0,
       0,
-      DomReadingContext::new(
+      DomReadingContext::DomReadingContext(
         range_fixture_context(no_children),
         range_fixture_end_node(no_children),
       ),

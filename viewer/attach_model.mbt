@@ -231,7 +231,7 @@ fn Viewer::create_view(
       self.gutter_width(model.snapshot.line_count()),
     )
   }
-  let view = @view.View::new(
+  let view = @view.View::View(
     view_zones_configuration_reader=read_view_zones_configuration,
   )
   view.install_view_zones_context(
@@ -251,7 +251,7 @@ fn Viewer::create_view(
   // `onConfigurationChanged` handler, and its one retained-line factory
   // dynamically captures the equality-gated `ViewLineOptions` identity.
   view.view_lines.install_live_configuration_reader(() => {
-    @view.ViewLinesConfiguration::new(
+    @view.ViewLinesConfiguration::ViewLinesConfiguration(
       line_height=self.font_info.line_height,
       typical_halfwidth_character_width=self.font_info.typical_halfwidth_character_width,
       is_viewport_wrapping=self.options.soft_wrap && self.soft_wrap_column > 0,

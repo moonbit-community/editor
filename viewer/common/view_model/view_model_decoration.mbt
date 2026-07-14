@@ -5,17 +5,17 @@
 ///
 /// A model decoration resolved into view coordinates (Monaco
 /// `ViewModelDecoration`).
-pub(all) struct RelocatedViewModelDecoration[O] {
+pub(all) struct ViewModelDecoration {
   range : @base_common.Range
-  options : O
+  options : @model.ModelDecorationOptions
 }
 
 ///|
 /// Builds a view-model decoration.
-pub fn[O] RelocatedViewModelDecoration::new(
+fn ViewModelDecoration::ViewModelDecoration(
   range : @base_common.Range,
-  options : O,
-) -> RelocatedViewModelDecoration[O] {
+  options : @model.ModelDecorationOptions,
+) -> ViewModelDecoration {
   { range, options }
 }
 
@@ -23,9 +23,9 @@ pub fn[O] RelocatedViewModelDecoration::new(
 /// Whether a model decoration is visible. See the inline-decoration file
 /// deviation: the comment/string-token hiding paths are not ported (no
 /// tokenization seam, and unused by the suite), so this is always `true`.
-pub fn[O, M] is_model_decoration_visible(
-  _model : M,
-  _decoration : ModelDecoration[O],
+fn is_model_decoration_visible(
+  _model : @model.TextModel,
+  _decoration : @model.ModelDecoration,
 ) -> Bool {
   true
 }

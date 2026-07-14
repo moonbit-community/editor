@@ -154,20 +154,26 @@ fn projection_assert_masks(
 test "projected injection decorations complete before token read with exact callback values" {
   let callback_order : Array[String] = []
   let callback_model_lines : Array[Int] = []
-  let injection_options = [
+  let model_injection_options = [
     @model.InjectedTextOptions("ABCDE", inline_class_name="ctx-class"),
+  ]
+  let injection_options = [
+    ResolvedInjectedTextOptions::ResolvedInjectedTextOptions(
+      content="ABCDE",
+      inline_class_name="ctx-class",
+    ),
   ]
   let injection_offsets = [2]
   let context : InjectedTextInlineDecorationsComputerContext = {
     get_injection_options: model_line_number => {
       callback_order.push("options")
       callback_model_lines.push(model_line_number)
-      injection_options
+      Some(injection_options)
     },
     get_injection_offsets: model_line_number => {
       callback_order.push("offsets")
       callback_model_lines.push(model_line_number)
-      injection_offsets
+      Some(injection_offsets)
     },
     get_break_offsets: model_line_number => {
       callback_order.push("breaks")
@@ -189,7 +195,7 @@ test "projected injection decorations complete before token read with exact call
   let prepared = prepare_projected_line_demand(
     context,
     7,
-    injection_options,
+    model_injection_options,
     injection_offsets,
     () => {
       callback_order.push("tokens")

@@ -1,7 +1,7 @@
 // 1:1 port of Monaco's `viewModel/viewModelDecorations.ts` (whole file) plus
 // the `viewModelLines.ts:923` `getDecorationsInRange` slice its context
 // closure delegates to, from vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971 (decoration plan Phase 3 — this
+// b18492a288de038fbc7643aae6de8247029d11bd (decoration plan Phase 3 — this
 // replaces the previous simplified eager-conversion `ViewModelDecorations`).
 //
 // Deviations:
@@ -17,18 +17,6 @@
 //   in the source).
 // - `dispose` is folded into `reset` (no dispose lifecycle in the readonly
 //   view model; both bodies are identical in the source).
-
-///|
-/// The production instantiation of the faithful inline-decorations middle
-/// layer: options are the real `@model.ModelDecorationOptions`.
-pub type ViewModelDecoration = RelocatedViewModelDecoration[
-  @model.ModelDecorationOptions,
-]
-
-///|
-pub type ViewDecorationsCollection = RelocatedViewDecorationsCollection[
-  @model.ModelDecorationOptions,
-]
 
 ///|
 /// `renderValidationDecorations` (`editorOptions.ts`): whether validation
@@ -56,34 +44,10 @@ pub fn filter_validation_decorations(
 }
 
 ///|
-/// The `ICoordinatesConverter` seam of the promoted inline-decorations
-/// computer, implemented by the view model's converter.
-pub impl InlineCoordinatesConverter for CoordinatesConverter with fn convert_model_position_to_view_position(
-  self,
-  model_position,
-  affinity? : @model.PositionAffinity,
-) {
-  self.model_position_to_view_position(model_position, affinity?)
-}
-
-///|
-pub impl InlineCoordinatesConverter for CoordinatesConverter with fn convert_model_range_to_view_range(
-  self,
-  model_range,
-  affinity? : @model.PositionAffinity,
-) {
-  self.model_range_to_view_range(model_range, affinity?)
-}
-
-///|
 /// `ViewModelDecorations` (`viewModelDecorations.ts:16`): the lazy,
 /// viewport-cached decoration provider for one view model.
 pub struct ViewModelDecorations {
-  priv computer : InlineModelDecorationsComputer[
-    @model.ModelDecorationOptions,
-    @model.TextModel,
-    CoordinatesConverter,
-  ]
+  priv computer : InlineModelDecorationsComputer
   priv mut cached_model_decorations_resolver : ViewDecorationsCollection?
   priv mut cached_model_decorations_resolver_view_range : @base_common.Range?
 }
@@ -98,7 +62,7 @@ pub fn ViewModelDecorations::new(
   lines : ViewModelLinesFromProjectedModel,
   coordinates_converter : CoordinatesConverter,
 ) -> ViewModelDecorations {
-  let context : InlineModelContext[@model.ModelDecorationOptions] = {
+  let context : InlineModelContext = {
     get_model_decorations: (
       view_range,
       only_minimap_decorations,
@@ -111,7 +75,7 @@ pub fn ViewModelDecorations::new(
     },
   }
   {
-    computer: InlineModelDecorationsComputer::new(
+    computer: InlineModelDecorationsComputer(
       context, model, coordinates_converter,
     ),
     cached_model_decorations_resolver: None,
@@ -215,7 +179,7 @@ fn view_model_lines_get_decorations_in_range(
   filter_out_validation : Bool,
   only_minimap_decorations : Bool,
   only_margin_decorations : Bool,
-) -> Array[ModelDecoration[@model.ModelDecorationOptions]] {
+) -> Array[@model.ModelDecoration] {
   // onlyMinimapDecorations only forwards to the out-of-scope bracket
   // provider in the source's model.getDecorationsInRange.
   ignore(only_minimap_decorations)
@@ -230,18 +194,11 @@ fn view_model_lines_get_decorations_in_range(
     // most likely there are no hidden lines => fast path
     // fetch decorations from column 1 to cover the case of wrapped lines that
     // have whole line decorations at column 1
-    return to_inline_model_decorations(
-      model.get_decorations_in_range(
-        Range(
-          model_start.line_number,
-          1,
-          model_end.line_number,
-          model_end.column,
-        ),
-        owner_id~,
-        filter_out_validation~,
-        only_margin_decorations~,
-      ),
+    return model.get_decorations_in_range(
+      Range(model_start.line_number, 1, model_end.line_number, model_end.column),
+      owner_id~,
+      filter_out_validation~,
+      only_margin_decorations~,
     )
   }
   let result : Array[@model.ModelDecoration] = []
@@ -310,7 +267,7 @@ fn view_model_lines_get_decorations_in_range(
 
   // Eliminate duplicate decorations that might have intersected our visible
   // ranges multiple times
-  let final_result : Array[ModelDecoration[@model.ModelDecorationOptions]] = []
+  let final_result : Array[@model.ModelDecoration] = []
   let mut last_dec_id = ""
   for dec in result {
     let dec_id = dec.id
@@ -318,12 +275,7 @@ fn view_model_lines_get_decorations_in_range(
       continue
     }
     last_dec_id = dec_id
-    final_result.push({
-      id: dec.id,
-      owner_id: dec.owner_id,
-      range: dec.range,
-      options: dec.options,
-    })
+    final_result.push(dec)
   }
   final_result
 }
@@ -343,16 +295,4 @@ fn lexicographic_id_compare(left : String, right : String) -> Int {
     }
   }
   left.length() - right.length()
-}
-
-///|
-fn to_inline_model_decorations(
-  decorations : Array[@model.ModelDecoration],
-) -> Array[ModelDecoration[@model.ModelDecorationOptions]] {
-  decorations.map(dec => {
-    id: dec.id,
-    owner_id: dec.owner_id,
-    range: dec.range,
-    options: dec.options,
-  })
 }

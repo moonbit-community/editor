@@ -236,6 +236,9 @@ fn ModelLineProjection::get_view_lines_data(
       let injection_options = injection_options_for_projected_line(
         data.projected_line,
       )
+      let resolved_injection_options = resolve_injection_options(
+        injection_options,
+      )
       let break_offsets = data.segments.map(segment => segment.end_offset)
       let wrapped_text_indent_length = if data.segments.length() > 1 {
         data.segments[1].wrapped_text_indent_length
@@ -243,8 +246,20 @@ fn ModelLineProjection::get_view_lines_data(
         0
       }
       let context : InjectedTextInlineDecorationsComputerContext = {
-        get_injection_options: _ => injection_options,
-        get_injection_offsets: _ => injection_offsets,
+        get_injection_options: _ => {
+          if resolved_injection_options.length() == 0 {
+            None
+          } else {
+            Some(resolved_injection_options)
+          }
+        },
+        get_injection_offsets: _ => {
+          if injection_offsets.length() == 0 {
+            None
+          } else {
+            Some(injection_offsets)
+          }
+        },
         get_break_offsets: _ => break_offsets,
         get_wrapped_text_indent_length: _ => wrapped_text_indent_length,
         get_base_view_line_number: _ => base_view_line_number,
@@ -545,6 +560,23 @@ fn injection_options_for_projected_line(
 }
 
 ///|
+/// Resolves the canonical model injection options consumed by the projection
+/// into the complete source fields used by the decoration computer.
+fn resolve_injection_options(
+  options : Array[@model.InjectedTextOptions],
+) -> Array[ResolvedInjectedTextOptions] {
+  options.map(option => {
+    ResolvedInjectedTextOptions(
+      content=option.content,
+      inline_class_name?=option.inline_class_name,
+      // DEFERRED: the canonical model option has no
+      // inlineClassNameAffectsLetterSpacing field.
+      inline_class_name_affects_letter_spacing=false,
+    )
+  })
+}
+
+///|
 /// Source-shaped injection offsets captured by the batch context.
 fn injection_offsets_for_projected_line(
   projected_line : ProjectedTextLine,
@@ -563,9 +595,25 @@ fn injection_offsets_for_projected_line(
 /// Monaco's five-callback `IInjectedTextInlineDecorationsComputerContext`.
 /// Keeping this literal callback shape makes ordering and the
 /// `baseViewLineNumber` value directly executable in white-box tests.
+priv struct ResolvedInjectedTextOptions {
+  content : String
+  inline_class_name : String?
+  inline_class_name_affects_letter_spacing : Bool
+}
+
+///|
+fn ResolvedInjectedTextOptions::ResolvedInjectedTextOptions(
+  content~ : String,
+  inline_class_name? : String,
+  inline_class_name_affects_letter_spacing? : Bool = false,
+) -> ResolvedInjectedTextOptions {
+  { content, inline_class_name, inline_class_name_affects_letter_spacing }
+}
+
+///|
 priv struct InjectedTextInlineDecorationsComputerContext {
-  get_injection_options : (Int) -> Array[@model.InjectedTextOptions]
-  get_injection_offsets : (Int) -> Array[Int]
+  get_injection_options : (Int) -> Array[ResolvedInjectedTextOptions]?
+  get_injection_offsets : (Int) -> Array[Int]?
   get_break_offsets : (Int) -> Array[Int]
   get_wrapped_text_indent_length : (Int) -> Int
   get_base_view_line_number : (Int) -> Int
@@ -580,7 +628,7 @@ priv struct InjectedTextInlineDecorationsComputer {
 }
 
 ///|
-fn InjectedTextInlineDecorationsComputer::new(
+fn InjectedTextInlineDecorationsComputer::InjectedTextInlineDecorationsComputer(
   context : InjectedTextInlineDecorationsComputerContext,
 ) -> InjectedTextInlineDecorationsComputer {
   { context, }
@@ -596,9 +644,7 @@ fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
   let injection_offsets = (self.context.get_injection_offsets)(
     model_line_number,
   )
-  if injection_offsets.length() == 0 {
-    return []
-  }
+  guard injection_offsets is Some(injection_offsets) else { [] }
   let line_inline_decorations : Array[Array[InlineDecoration]] = []
   let mut total_injected_text_length_before = 0
   let mut current_injected_offset = 0
@@ -616,7 +662,7 @@ fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
     }
     let line_end_offset_in_input_with_injections = break_offsets[output_line_index]
     while current_injected_offset < injection_offsets.length() {
-      let options = injection_options[current_injected_offset]
+      let options = injection_options.unwrap()[current_injected_offset]
       let length = options.content.length()
       let injected_text_start_offset_in_input_with_injections = injection_offsets[current_injected_offset] +
         total_injected_text_length_before
@@ -653,10 +699,14 @@ fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
                 ) +
                 output_line_index
               inline_decorations.push(
-                InlineDecoration::new(
+                InlineDecoration(
                   Range(view_line_number, start + 1, view_line_number, end + 1),
                   inline_class_name,
-                  Regular,
+                  if options.inline_class_name_affects_letter_spacing {
+                    RegularAffectingLetterSpacing
+                  } else {
+                    Regular
+                  },
                 ),
               )
             }
@@ -695,7 +745,9 @@ fn prepare_projected_line_demand(
   injection_offsets : Array[Int],
   read_line_tokens : () -> @tokens.LineTokens,
 ) -> PreparedProjectedLineDemand {
-  let computer = InjectedTextInlineDecorationsComputer::new(context)
+  let computer = InjectedTextInlineDecorationsComputer::InjectedTextInlineDecorationsComputer(
+    context,
+  )
   let line_inline_decorations = computer.get_inline_decorations(
     model_line_number,
   )

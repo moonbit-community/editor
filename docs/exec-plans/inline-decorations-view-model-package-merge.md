@@ -1,7 +1,7 @@
 # Inline Decorations and View Model Package Merge
 
-Status: implementation in progress — Gate A approved; Milestone B complete
-2026-07-14
+Status: implementation in progress — Gate A approved; Milestones B–C complete
+2026-07-14; deviation/API/docs closeout pending
 Date: 2026-07-13
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
@@ -9,7 +9,9 @@ Oracle commit: `vscode` submodule at
 Gate A review artifact:
 `inline-decorations-view-model-package-merge-gate-a.md`. The user explicitly
 approved Gate A on 2026-07-14. Milestone B then relocated the implementation
-and its 23-case reference suite without changing behavior.
+and its 23-case reference suite without changing behavior. Milestone C removed
+the cross-package traits/generics and consolidated injected-text decoration
+computation on the projection-owned implementation.
 
 ## Goal
 

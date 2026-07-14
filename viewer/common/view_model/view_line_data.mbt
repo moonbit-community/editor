@@ -132,7 +132,7 @@ fn line_parts_from_view_line_data(
 /// `LineDecoration.filter` (`viewLayout/lineDecorations.ts:63-90`): the
 /// faithful per-line clip of view-range inline decorations into one-based
 /// column `LineDecoration`s. Empty-range Regular decorations are dropped.
-pub fn line_decorations_filter(
+fn line_decorations_filter(
   line_decorations : Array[InlineDecoration],
   line_number : Int,
   min_line_column : Int,

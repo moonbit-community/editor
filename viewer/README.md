@@ -66,6 +66,10 @@ The API is a readonly subset of Monaco's editor API:
 - view zones and null-position overlay widgets;
 - model, cursor, scroll, mouse, and disposal events.
 
+Canonical public event values and editor-option enums are owned by
+`viewer/common/editor_api`; the root facade consumes those types directly and
+does not provide compatibility aliases.
+
 `update_options` accepts and replaces one complete typed `ViewerOptions`
 snapshot. It is intentionally not Monaco's JavaScript partial-object merge:
 callers changing one field should pass a record update such as

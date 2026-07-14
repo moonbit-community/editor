@@ -1,4 +1,5 @@
 import {
+  "moonbit-community/editor/viewer/common/editor_api",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
 }

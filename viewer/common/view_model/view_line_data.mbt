@@ -64,7 +64,7 @@ pub fn render_line_input_from_view_line_data(
   line : ViewLineData,
   line_decorations? : Array[@view_layout.LineDecoration] = [],
   space_width? : Double = 7.2,
-  render_whitespace? : @view_layout.RenderWhitespace = None,
+  render_whitespace? : @editor_api.RenderWhitespace = None,
   render_control_characters? : Bool = false,
   vertical_scrollbar_size? : Double = 0.0,
 ) -> @view_layout.RenderLineInput {

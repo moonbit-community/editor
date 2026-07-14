@@ -23,7 +23,7 @@ pub(all) struct ViewLineOptions {
   use_monospace_optimizations : Bool
   can_use_halfwidth_rightwards_arrow : Bool
   stop_rendering_line_after : Int
-  render_whitespace : @view_layout.RenderWhitespace
+  render_whitespace : @editor_api.RenderWhitespace
   render_control_characters : Bool
   font_ligatures : Bool
   vertical_scrollbar_size : Double
@@ -38,7 +38,7 @@ pub fn ViewLineOptions::ViewLineOptions(
   use_monospace_optimizations? : Bool = true,
   can_use_halfwidth_rightwards_arrow? : Bool = true,
   stop_rendering_line_after? : Int = -1,
-  render_whitespace? : @view_layout.RenderWhitespace = None,
+  render_whitespace? : @editor_api.RenderWhitespace = None,
   render_control_characters? : Bool = false,
   font_ligatures? : Bool = false,
   vertical_scrollbar_size? : Double = @core.editor_vertical_scrollbar_size,

@@ -150,7 +150,7 @@ priv struct ResolvedRenderLineInput {
   start_visible_column : Int
   space_width : Double
   render_space_char_code : Int
-  render_whitespace : RenderWhitespace
+  render_whitespace : @editor_api.RenderWhitespace
   render_control_characters : Bool
 }
 

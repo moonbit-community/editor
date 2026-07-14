@@ -3,7 +3,7 @@
 
 ///|
 fn retained_line_test_input(
-  render_whitespace : @view_layout.RenderWhitespace,
+  render_whitespace : @editor_api.RenderWhitespace,
   space_width? : Double = 7.2,
   middot_width? : Double = 7.2,
   wsmiddot_width? : Double = 7.2,

@@ -12,7 +12,7 @@ fn geometry_render_input(
   space_width? : Double = 10.0,
   middot_width? : Double = 10.0,
   wsmiddot_width? : Double = 10.0,
-  render_whitespace? : RenderWhitespace = All,
+  render_whitespace? : @editor_api.RenderWhitespace = All,
 ) -> RenderLineInput {
   RenderLineInput::from_view_line(
     {

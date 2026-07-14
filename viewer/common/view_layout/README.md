@@ -64,7 +64,8 @@ The Monaco map is the pinned `src/vs/editor/common/viewLayout/{viewLayout,
 linesLayout,viewLinesViewportData,viewLineRenderer}.ts`,
 `src/vs/base/common/scrollable.ts`, and the base browser scrollbar state.
 
-This package depends only on `base/common`, declares no FFI, and must not import
-view-model, root viewer, browser, server, transport, workspace, or host packages.
-See `pkg.generated.mbti`; run
+This package depends only on `base/common` and the value-only
+`viewer/common/editor_api`, declares no FFI, and must not import view-model,
+root viewer, browser, server, transport, workspace, or host packages. See
+`pkg.generated.mbti`; run
 `moon test --target js viewer/common/view_layout`.

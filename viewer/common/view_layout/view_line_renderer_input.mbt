@@ -16,7 +16,7 @@ pub(all) struct RenderLineInput {
   render_space_width : Double
   render_space_char_code : Int
   stop_rendering_line_after : Int
-  render_whitespace : RenderWhitespace
+  render_whitespace : @editor_api.RenderWhitespace
   render_control_characters : Bool
   font_ligatures : Bool
   selections_on_line : Array[@base_common.OffsetRange]
@@ -38,7 +38,7 @@ pub fn RenderLineInput::from_view_line(
   middot_width? : Double = 7.2,
   wsmiddot_width? : Double = 7.2,
   stop_rendering_line_after? : Int = -1,
-  render_whitespace? : RenderWhitespace = None,
+  render_whitespace? : @editor_api.RenderWhitespace = None,
   render_control_characters? : Bool = false,
   font_ligatures? : Bool = false,
   selections_on_line? : Array[@base_common.OffsetRange] = [],

@@ -6,7 +6,7 @@
 pub fn render_line_html(
   line : @view_model.ViewLineData,
   line_decorations : Array[@view_layout.LineDecoration],
-  render_whitespace? : @view_layout.RenderWhitespace = None,
+  render_whitespace? : @editor_api.RenderWhitespace = None,
   render_control_characters? : Bool = false,
 ) -> String {
   @view_layout.render_view_line2(

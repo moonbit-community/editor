@@ -465,7 +465,7 @@ extern "js" fn view_event_test_clear_dom_metrics() -> Unit =
 ///|
 fn view_event_test_line_input(
   content : String,
-  render_whitespace : @view_layout.RenderWhitespace,
+  render_whitespace : @editor_api.RenderWhitespace,
   space_width? : Double = 7.2,
   middot_width? : Double = 7.2,
   wsmiddot_width? : Double = 7.2,

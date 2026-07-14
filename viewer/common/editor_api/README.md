@@ -8,3 +8,7 @@ to `base/common` and `viewer/common/core`.
 `ScrolledVisiblePosition` have one declaration here. Internal cursor,
 view-model, browser, and root packages consume these types directly; they do
 not define facade copies or translate variants.
+
+Canonical editor option enums also live here. Rendering and view-model
+packages retain the behavior that interprets those values; they import the
+enum contract instead of defining a package-local copy.

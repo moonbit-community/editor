@@ -43,7 +43,7 @@ test "viewer options default to Selection whitespace and control characters on" 
 
 ///|
 test "viewport line input carries each content-only whitespace mode from options" {
-  let modes : Array[@view_layout.RenderWhitespace] = [
+  let modes : Array[@editor_api.RenderWhitespace] = [
     None,
     Boundary,
     Trailing,

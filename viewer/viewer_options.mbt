@@ -4,7 +4,7 @@ pub(all) struct ViewerOptions {
   soft_wrap : Bool
   tab_size : Int
   wrapping_indent : @view_model.WrappingIndent
-  render_whitespace : @view_layout.RenderWhitespace
+  render_whitespace : @editor_api.RenderWhitespace
   render_control_characters : Bool
   render_line_highlight : @view_layout.RenderLineHighlight
   render_line_highlight_only_when_focus : Bool
@@ -82,7 +82,7 @@ pub fn ViewerOptions::ViewerOptions(
   soft_wrap? : Bool = false,
   tab_size? : Int = 2,
   wrapping_indent? : @view_model.WrappingIndent = Same,
-  render_whitespace? : @view_layout.RenderWhitespace = Selection,
+  render_whitespace? : @editor_api.RenderWhitespace = Selection,
   render_control_characters? : Bool = true,
   render_line_highlight? : @view_layout.RenderLineHighlight = Line,
   render_line_highlight_only_when_focus? : Bool = false,

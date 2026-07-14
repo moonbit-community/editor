@@ -27,7 +27,7 @@ pub fn ViewLinesConfiguration::ViewLinesConfiguration(
   use_monospace_optimizations? : Bool = true,
   can_use_halfwidth_rightwards_arrow? : Bool = true,
   stop_rendering_line_after? : Int = -1,
-  render_whitespace? : @view_layout.RenderWhitespace = None,
+  render_whitespace? : @editor_api.RenderWhitespace = None,
   render_control_characters? : Bool = false,
   font_ligatures? : Bool = false,
   vertical_scrollbar_size? : Double = @core.editor_vertical_scrollbar_size,
@@ -747,7 +747,7 @@ pub fn render_line_input_for_viewport(
 fn selections_on_line_for(
   line_number : Int,
   line_data : @view_layout.ViewLineRenderingData,
-  render_whitespace : @view_layout.RenderWhitespace,
+  render_whitespace : @editor_api.RenderWhitespace,
   selection_view_range : @base_common.Range?,
 ) -> Array[@base_common.OffsetRange] {
   let result : Array[@base_common.OffsetRange] = []

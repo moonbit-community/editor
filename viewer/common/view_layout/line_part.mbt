@@ -6,16 +6,6 @@ pub(all) enum TextDirection {
 } derive(Eq, Debug)
 
 ///|
-/// Whitespace rendering mode, matching the subset needed by the viewer.
-pub(all) enum RenderWhitespace {
-  None
-  Boundary
-  Selection
-  Trailing
-  All
-} derive(Eq, Debug)
-
-///|
 /// Inline decoration placement relative to source text.
 pub(all) enum InlineDecorationType {
   Regular

@@ -5,8 +5,8 @@
 // helper. The DOM overlays that consume these are in
 // `viewer/browser/view/current_line_highlight.mbt` and
 // `viewer/browser/view/current_line_margin_highlight.mbt`. This DOM-free
-// option logic lives here beside `RenderWhitespace` (the same option-enum
-// precedent).
+// option behavior stays here; canonical public option values live in
+// `viewer/common/editor_api`.
 
 ///|
 /// Monaco's `renderLineHighlight` editor option: `'none' | 'gutter' | 'line'

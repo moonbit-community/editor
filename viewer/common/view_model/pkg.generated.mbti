@@ -24,7 +24,7 @@ pub fn lines_decorations_to_render(Array[ViewModelDecoration]) -> Array[Decorati
 
 pub let monospace_line_breaks_computer_factory : MonospaceLineBreaksComputerFactory
 
-pub fn render_line_input_from_view_line_data(ViewLineData, line_decorations? : Array[@view_layout.LineDecoration], space_width? : Double, render_whitespace? : @view_layout.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
+pub fn render_line_input_from_view_line_data(ViewLineData, line_decorations? : Array[@view_layout.LineDecoration], space_width? : Double, render_whitespace? : @editor_api.RenderWhitespace, render_control_characters? : Bool, vertical_scrollbar_size? : Double) -> @view_layout.RenderLineInput
 
 pub fn view_line_rendering_data_from_view_line_data(ViewLineData, line_decorations? : Array[@view_layout.LineDecoration], tab_size? : Int) -> @view_layout.ViewLineRenderingData
 

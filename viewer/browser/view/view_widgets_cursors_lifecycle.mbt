@@ -73,10 +73,7 @@ fn content_widgets_render(
 // the part). No `onLineMappingChanged` handler in Monaco —
 // a remap that moves the cursor arrives as `ViewCursorStateChanged` via the
 // reprojected view selection.
-fn view_cursors_on_view_event(
-  part : @view_cursors.ViewCursors,
-  event : ViewEvent,
-) -> Bool {
+fn view_cursors_on_view_event(part : ViewCursors, event : ViewEvent) -> Bool {
   let self = part
   match event {
     ViewFlushed => true
@@ -98,7 +95,7 @@ fn view_cursors_on_view_event(
         self.selection_is_empty = selection_is_empty
         self.dom_node.set_attribute(
           "class",
-          @view_cursors.cursors_layer_class(!self.selection_is_empty),
+          cursors_layer_class(!self.selection_is_empty),
         )
       }
       true
@@ -138,7 +135,7 @@ fn view_cursors_on_view_event(
 // vertical offset, like every flat overlay piece. The result is stored as
 // the part's `render_data` (Monaco's `this._renderData`).
 fn view_cursors_prepare_render(
-  part : @view_cursors.ViewCursors,
+  part : ViewCursors,
   context : RenderingContext,
 ) -> Unit {
   let self = part
@@ -158,11 +155,11 @@ fn view_cursors_prepare_render(
           None
         } else {
           Some(
-            @view_cursors.prepare_cursor_render_data(
+            prepare_cursor_render_data(
               left,
               context.viewport.relative_vertical_offset[index],
               context.viewport.line_height,
-              @view_cursors.device_pixel_ratio(),
+              device_pixel_ratio(),
             ),
           )
         }
@@ -178,7 +175,7 @@ fn view_cursors_prepare_render(
 
 ///|
 fn view_cursors_render(
-  part : @view_cursors.ViewCursors,
+  part : ViewCursors,
   context : RestrictedRenderingContext,
 ) -> Unit {
   let self = part

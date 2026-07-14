@@ -75,7 +75,7 @@ fn hit_test_result_from_dom_info(
 /// `PointerHandlerLastRenderData` (mouseTarget.ts:63-68).
 /// `lastTextareaPosition` is omitted with the textarea part.
 pub(all) struct PointerHandlerLastRenderData {
-  last_view_cursors_render_data : Array[@view_cursors.ViewCursorRenderData]
+  last_view_cursors_render_data : Array[@view.ViewCursorRenderData]
 }
 
 ///|

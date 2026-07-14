@@ -1015,10 +1015,8 @@ test "ViewLines empty flush resets to one and defers ordinary DOM replacement" {
 ///|
 test "cursor state then focus uses new selection shape and focus returns false" {
   install_view_lifecycle_test_browser()
-  let cursors = @view_cursors.ViewCursors::new(@rdom.document())
-  cursors.render_data = Some(
-    @view_cursors.prepare_cursor_render_data(10.0, 0, 18, 1.0),
-  )
+  let cursors = ViewCursors::new(@rdom.document())
+  cursors.render_data = Some(prepare_cursor_render_data(10.0, 0, 18, 1.0))
   cursors.last_position = Some(Position(1, 1))
   cursors.last_rendered_position = Some(Position(1, 1))
   let selection = @core.Selection::new(Position(1, 1), Position(1, 2))

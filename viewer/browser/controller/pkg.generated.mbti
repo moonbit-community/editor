@@ -5,7 +5,6 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/browser",
   "moonbit-community/editor/viewer/browser/view",
-  "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/view_layout",
@@ -202,7 +201,7 @@ pub(all) struct PointerHandlerHelper {
 }
 
 pub(all) struct PointerHandlerLastRenderData {
-  last_view_cursors_render_data : Array[@view_cursors.ViewCursorRenderData]
+  last_view_cursors_render_data : Array[@view.ViewCursorRenderData]
 }
 
 // Type aliases

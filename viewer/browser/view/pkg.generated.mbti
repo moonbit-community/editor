@@ -5,7 +5,6 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/browser",
-  "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common/core",
@@ -21,9 +20,15 @@ import {
 // Values
 pub fn compute_decoration_overlay_pieces(Array[@view_model.ViewModelDecoration], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[DecorationOverlayPiece]
 
+pub fn compute_screen_aware_size(Double, Double) -> Double
+
 pub fn convert_view_to_model_mouse_target(@browser.MouseTarget, @view_model.CoordinatesConverter) -> @browser.MouseTarget
 
 pub fn current_line_span(@view_model.ViewModel?, Int, Bool) -> (Int, Int)
+
+pub fn cursors_layer_class(Bool) -> String
+
+pub fn device_pixel_ratio() -> Double
 
 pub fn empty_editor_class_name(show_unused? : Bool, show_deprecated? : Bool) -> String
 
@@ -32,6 +37,8 @@ pub fn extra_editor_class_name(Bool, Bool, Bool) -> String
 pub fn prepare_current_line_margin_render(@view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Array[String]
 
 pub fn prepare_current_line_render(@view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Array[String]
+
+pub fn prepare_cursor_render_data(Double, Double, Int, Double) -> CursorRenderData
 
 pub fn prepare_decorations_render(Array[@view_model.ViewModelDecoration], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[String]
 
@@ -149,6 +156,14 @@ pub(all) struct CurrentLineMarginHighlightOverlay {
   mut render_result : Array[String]
 }
 pub fn CurrentLineMarginHighlightOverlay::new() -> Self
+
+pub(all) struct CursorRenderData {
+  top : Double
+  left : Double
+  padding_left : Double
+  width : Double
+  height : Int
+} derive(Eq, @debug.Debug)
 
 pub(all) struct DecorationOverlayPiece {
   line_index : Int
@@ -277,7 +292,7 @@ pub(all) struct View {
   content_view_overlays : ContentViewOverlays
   margin_view_overlays : MarginViewOverlays
   content_widgets : ContentWidgets
-  view_cursors : @view_cursors.ViewCursors
+  view_cursors : ViewCursors
   overlay_widgets : OverlayWidgets
   editor_scrollbar : EditorScrollbar
   // private fields
@@ -338,12 +353,36 @@ pub(all) struct ViewContext {
   model_position_to_view_position : (@common.Position) -> @common.Position
 }
 
+pub(all) struct ViewCursorRenderData {
+  dom_node : @dom.Element
+  position : @common.Position
+  content_left : Double
+  width : Double
+  height : Int
+}
+
 pub(all) struct ViewCursorStateChangedEvent {
   selections : Array[@core.Selection]
   model_selections : Array[@core.Selection]
   reason : @cursor.CursorChangeReason
 }
 pub fn ViewCursorStateChangedEvent::new(Array[@core.Selection], Array[@core.Selection], @cursor.CursorChangeReason) -> Self
+
+pub(all) struct ViewCursors {
+  dom_node : @dom.Element
+  cursor : @dom.Element
+  mut should_render : Bool
+  mut render_data : CursorRenderData?
+  mut last_position : @common.Position?
+  mut last_rendered_position : @common.Position?
+  mut editor_has_focus : Bool
+  mut selection_is_empty : Bool
+}
+pub fn ViewCursors::get_dom_node(Self) -> @dom.Element
+pub fn ViewCursors::get_last_render_data(Self) -> Array[ViewCursorRenderData]
+pub fn ViewCursors::new(@dom.Document) -> Self
+pub fn ViewCursors::on_focus_changed(Self, Bool) -> Unit
+pub fn ViewCursors::render_cursor(Self, has_selection~ : Bool, editor_has_focus~ : Bool) -> Unit
 
 pub(all) struct ViewDecorationsChangedEvent {
   affects_minimap : Bool

@@ -1,7 +1,7 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/viewLines/viewLines.ts`
 // (`ViewLines`, the recycler) and `viewLine.ts` (the per-line render input +
-// DOM write). Its event adapter lives at the owning private-event boundary in
-// `viewer/browser/view/view_lines_zones_lifecycle.mbt`.
+// DOM write). Its event lifecycle wiring lives in
+// `view_lines_zones_lifecycle.mbt`.
 
 ///|
 /// Live configuration values read by `ViewLines.onConfigurationChanged` in the
@@ -217,8 +217,9 @@ fn ViewLines::ViewLines(
 ///|
 /// Installs the two model capabilities used by Monaco's
 /// `linesVisibleRangesForRange`: view-position conversion at column 1 and
-/// model-line text direction. Keeping these readers on ViewLines preserves
-/// the source's converter progression without introducing a package cycle.
+/// model-line text direction. The readers keep the dependency on
+/// `viewer/common/view_model` outside this browser package while preserving
+/// the source's converter progression.
 pub fn ViewLines::install_geometry_readers(
   self : ViewLines,
   view_line_to_model_line : (Int) -> Int,
@@ -899,9 +900,9 @@ fn ViewLines::visible_ranges_for_line_range(
 }
 
 ///|
-/// Source `linesVisibleRangesForRange` boundary using raw tuples to avoid a
-/// package cycle with `browser/view`'s RenderingContext carriers. Horizontal
-/// values are rounded independently only at this source boundary.
+/// Source `linesVisibleRangesForRange` boundary using raw tuples for the DOM
+/// measurement result. Horizontal values are rounded independently only at
+/// this source boundary.
 fn ViewLines::raw_lines_visible_ranges_for_range(
   self : ViewLines,
   requested_range : @base_common.Range,

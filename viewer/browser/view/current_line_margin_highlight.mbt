@@ -3,10 +3,10 @@
 // abstract `prepareRender`, `:126-171`), as a pure per-line HTML builder for
 // `browser/view`'s `MarginViewOverlays` rows — the first registered margin
 // dynamic overlay, before the line-number overlay (`view.ts:225-229`). Its
-// preparation adapter lives at the private rendering-context boundary in
-// `browser/view`; the DOM-free predicates and class strings live
+// lifecycle preparation lives in `view_overlays_lifecycle.mbt`; the DOM-free
+// predicates and class strings live
 // in `viewer/common/view_layout` (`current_line_highlight.mbt`); the content
-// twin lives with `view_parts/current_line_highlight`.
+// twin lives in this package's `current_line_highlight.mbt` source unit.
 
 ///|
 /// The margin current-line dynamic overlay's independent inherited state plus
@@ -82,7 +82,7 @@ fn prepare_current_line_margin_render(
 
 ///|
 /// The view-line span (wrapped pass, `currentLineHighlight.ts:141-158`) —
-/// the margin twin of the content package's `current_line_span`.
+/// the margin twin of the content source unit's `current_line_span`.
 fn margin_current_line_span(
   view_model : @view_model.ViewModel?,
   cursor_view_line : Int,

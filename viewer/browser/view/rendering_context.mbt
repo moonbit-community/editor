@@ -192,7 +192,7 @@ fn RenderingContext::visible_range_for_position(
 ///|
 /// Monaco `RenderingContext.linesVisibleRangesForRange`, DOM-only at this
 /// approved phase. ViewLines owns DOM/range production; this facade converts
-/// its cycle-free tuples into the source rendering carriers. Optional GPU
+/// its raw tuples into the source rendering carriers. Optional GPU
 /// concatenation/sorting remains explicitly deferred.
 fn RenderingContext::lines_visible_ranges_for_range(
   self : RenderingContext,
@@ -207,8 +207,8 @@ fn RenderingContext::lines_visible_ranges_for_range(
 }
 
 ///|
-/// Cycle-free tuple-carrier conversion at the ViewLines/RenderingContext
-/// package boundary. Input and per-line range order are preserved exactly.
+/// Internal tuple-carrier conversion at the ViewLines/RenderingContext
+/// handoff. Input and per-line range order are preserved exactly.
 fn line_visible_ranges_from_raw(
   raw_lines : Array[(Bool, Int, Array[(Int, Int)], Bool)],
 ) -> Array[LineVisibleRanges] {
@@ -231,9 +231,9 @@ fn line_visible_ranges_from_raw(
 }
 
 ///|
-/// Cycle-free capability projection consumed by ContentWidgets. The measured
-/// `HorizontalPosition.left` is intentionally rounded before crossing the
-/// package boundary, matching the source anchor arithmetic.
+/// Focused capability projection consumed by ContentWidgets. The measured
+/// `HorizontalPosition.left` is intentionally rounded before the handoff,
+/// matching the source anchor arithmetic.
 fn RenderingContext::content_widgets_render_context(
   self : RenderingContext,
 ) -> ContentWidgetsRenderContext {

@@ -1,6 +1,6 @@
-// Event and render adapters stay in `browser/view` because the private event
-// and rendering-context types belong here; moving them to concrete part
-// packages would reverse the dependency graph.
+// Event and render lifecycle wiring for ViewLines and ViewZones. Keeping the
+// source-shaped handlers together makes their private event/context access and
+// ordering explicit inside the consolidated view package.
 
 ///|
 fn view_zones_on_view_event(part : ViewZones, event : ViewEvent) -> Bool {

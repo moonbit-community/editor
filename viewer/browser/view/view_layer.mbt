@@ -13,7 +13,7 @@ priv struct RendererContext[T] {
 
 ///|
 /// Typed callbacks adapt a concrete retained-row type to Monaco's
-/// `IVisibleLine` contract without moving row state out of its owner package.
+/// `IVisibleLine` contract while leaving row state on its owning type.
 priv struct ViewLayerRenderer[T] {
   dom_node : @rdom.Element
   create_line : () -> T

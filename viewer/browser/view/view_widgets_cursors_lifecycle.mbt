@@ -1,7 +1,5 @@
-// `ContentWidgets` adapters unpack the render context into the package's
-// `ContentWidgetsRenderContext` capability struct, since that package cannot
-// import `ViewContext`/`RenderingContext` (owned by `browser/view/`, which
-// needs `ContentWidgets` back for `View`'s fields).
+// ContentWidgets lifecycle wiring projects the shared RenderingContext into
+// the focused `ContentWidgetsRenderContext` capability record.
 
 ///|
 // Widget position changes invalidate this part directly through
@@ -59,8 +57,8 @@ fn content_widgets_render(
   )
 }
 
-// `ViewCursors` adapters keep viewport math and DOM measurement here (not in the
-// part package) because they need `RenderingContext` / `ViewContext`.
+// `ViewCursors` lifecycle wiring stays beside the shared
+// `RenderingContext` / `ViewContext` capabilities it consumes.
 
 ///|
 // Event map from `viewCursors.ts`: `onFlushed` (:180), `onLinesChanged`

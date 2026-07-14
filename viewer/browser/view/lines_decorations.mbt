@@ -3,7 +3,7 @@
 // a pure per-line HTML builder for `browser/view`'s `MarginViewOverlays`
 // rows. The DOM-free half (decoration filtering + `DedupOverlay` expansion)
 // lives in `viewer/common/view_model/margin_decorations.mbt`; preparation is
-// adapted at the private rendering-context boundary in `browser/view`.
+// wired from `view_overlays_lifecycle.mbt`.
 
 ///|
 /// The package-private lines-decorations dynamic overlay state: the prepared

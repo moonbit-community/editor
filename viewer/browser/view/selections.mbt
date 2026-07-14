@@ -1,10 +1,9 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/selections/selections.ts`
 // (`SelectionsOverlay`), vscode submodule commit
-// b18492a288de038fbc7643aae6de8247029d11bd. The `ContentViewOverlays` rows
-// shell lives with `viewer/browser/view` (`view_overlays.mbt`), mirroring
-// Monaco's `viewOverlays.ts`; this package is the selection dynamic overlay
-// only. Preparation is adapted at the private rendering-context boundary in
-// `browser/view`.
+// b18492a288de038fbc7643aae6de8247029d11bd. The `ContentViewOverlays` row
+// shell lives in `view_overlays.mbt`, mirroring Monaco's `viewOverlays.ts`;
+// this source unit owns the selection dynamic overlay. Its lifecycle wiring
+// lives beside the package-private rendering context.
 
 ///|
 /// The package-private selection dynamic overlay state: the prepared per-line
@@ -103,9 +102,9 @@ fn prepare_selections_render(
 ///|
 /// Production entrypoint for the pinned `SelectionsOverlay` query shape:
 /// `RenderingContext.linesVisibleRangesForRange(selection, true)` has already
-/// aggregated, rounded, and newline-extended the measured DOM ranges. This
-/// package owns only styling and HTML, so the cross-package carrier is a tuple
-/// of line number plus ordered `(left,width)` pairs.
+/// aggregated, rounded, and newline-extended the measured DOM ranges. The
+/// focused styling/HTML entrypoint accepts line numbers plus ordered
+/// `(left,width)` pairs, preserving the geometry handoff for direct tests.
 fn prepare_selections_render_from_visible_ranges(
   viewport : @view_layout.ViewportData,
   visible_ranges : Array[(Int, Array[(Double, Double)])],

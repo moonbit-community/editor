@@ -79,19 +79,9 @@ pub(all) struct ContentWidgetsRenderContext {
   viewport_height : Double
 }
 
-type CurrentLineHighlightOverlay
-
-type CurrentLineHighlightState
-
-type CurrentLineMarginHighlightOverlay
-
 type CursorRenderData derive(Eq, @debug.Debug)
 
 type DecorationOverlayPiece derive(Eq, @debug.Debug)
-
-type DecorationsOverlay
-
-type DomReadingContext
 
 pub struct EditorScrollbar {
   // private fields
@@ -104,12 +94,6 @@ pub(all) struct HorizontalPosition {
   left : Int
   original_left : Double
 } derive(Eq, @debug.Debug)
-
-type LineNumbersOverlay
-
-type LinesDecorationsOverlay
-
-type MarginViewOverlays
 
 pub struct OverlayWidgets {
   // private fields
@@ -136,10 +120,6 @@ pub fn PartFingerprint::to_int(Self) -> Int
 pub struct PartFingerprints {
 }
 pub fn PartFingerprints::collect(@dom.Element?, @dom.Element) -> Bytes
-
-type RendererContext[T]
-
-type SelectionsOverlay
 
 pub(all) struct View {
   root : @dom.Element
@@ -257,8 +237,6 @@ pub struct ViewFocusChangedEvent {
   // private fields
 }
 pub fn ViewFocusChangedEvent::ViewFocusChangedEvent(Bool) -> Self
-
-type ViewLayerRenderer[T]
 
 pub(all) struct ViewLineOptions {
   line_height : Int

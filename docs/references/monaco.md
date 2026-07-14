@@ -30,3 +30,23 @@ The upstream `test/common/viewModel/inlineDecorations.test.ts` suite maps to
 merge and its 23-case conformance denominator use oracle commit
 `b18492a288de038fbc7643aae6de8247029d11bd`; member-level dispositions and
 terminal product-reach deferrals live in the frozen execution-plan ledger.
+
+## Browser view and view parts
+
+The implemented units from upstream `browser/view.ts`, `browser/view/*.ts`,
+and `browser/viewParts/**/*.ts` map to focused files in the single js-only
+local `viewer/browser/view` package. Unsupported pinned view-part units retain
+their explicit `DEFERRED`/`N-A` rows in the execution-plan ledger:
+
+- `browser/view.ts` maps to `view.mbt`;
+- shared view machinery maps to source-shaped units such as
+  `rendering_context.mbt`, `view_layer.mbt`, `view_overlays.mbt`,
+  `view_part.mbt`, and `view_user_input_events.mbt`;
+- each implemented `browser/viewParts/<part>/*.ts` unit maps to the
+  corresponding part-named `.mbt` files in that same package, from
+  `content_widgets.mbt` through `view_zones.mbt`.
+
+These `.mbt` files preserve source-unit responsibilities for inventory,
+citations, and parity review; they do not create MoonBit packages or
+namespaces. The `viewer/browser/view_parts/*` directories are CSS asset paths
+only, retained so the stylesheet build and provenance paths stay stable.

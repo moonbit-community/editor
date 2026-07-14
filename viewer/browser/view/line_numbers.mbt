@@ -7,7 +7,7 @@
 // the source's `:168-176` + empty-output skip `:181-184`). The
 // relative/interval custom renderers, the active-line class (no blinking
 // cursor here), and the final-newline dimming are out of scope. Preparation is
-// adapted at the private rendering-context boundary in `browser/view`.
+// wired from `view_overlays_lifecycle.mbt`.
 
 ///|
 /// The package-private line-numbers dynamic overlay state: the prepared

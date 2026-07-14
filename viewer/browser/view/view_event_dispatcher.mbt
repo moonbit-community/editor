@@ -88,9 +88,9 @@ fn ViewEventDispatcher::end(self : ViewEventDispatcher) -> Unit {
 
 ///|
 /// Enqueues one internal event and runs `after` only after that event and all
-/// earlier/reentrant ViewEvent batches have completed. This is the narrow
-/// cross-package seam used for ViewZones' internal-before-outgoing contract;
-/// it does not mix outgoing event values into this dispatcher.
+/// earlier/reentrant ViewEvent batches have completed. ViewZones uses this to
+/// preserve its internal-before-outgoing contract; outgoing event values do
+/// not enter this dispatcher.
 fn ViewEventDispatcher::emit_view_event_then(
   self : ViewEventDispatcher,
   event : ViewEvent,

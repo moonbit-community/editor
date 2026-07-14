@@ -1,10 +1,7 @@
-// Shared editor layout constants. DOM-free (plain numbers/strings), but used
-// pervasively across every browser tier package (`viewer/browser/view`,
-// every `view_parts/*`, controller, widget/code_editor) — moved here rather
-// than left in `viewer/view.mbt` (which didn't carve out until Increment D,
-// after this file landed) so that view-parts carved in Increment E didn't
-// need an import back into the still-undivided root `viewer` package for
-// just a numeric constant.
+// Shared DOM-free editor layout constants used by the browser view,
+// controller, and root viewer facade. They live in common/core so every
+// browser tier can consume the same values without reversing the dependency
+// direction back into the root `viewer` package.
 
 ///|
 /// Right padding of `.view-line-content`, part of the horizontal scroll extent.

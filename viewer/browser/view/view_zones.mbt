@@ -1,7 +1,7 @@
 // Faithful browser-side port of
 // `vscode/src/vs/editor/browser/viewParts/viewZones/viewZones.ts` at the
-// repository's pinned Monaco source. Its narrow lifecycle adapter remains at
-// the private rendering-context boundary in `viewer/browser/view`.
+// repository's pinned Monaco source. Its focused lifecycle wiring lives in
+// `view_lines_zones_lifecycle.mbt` beside the private rendering context.
 
 ///|
 /// MoonBit-owned spelling of Monaco's mutable `IViewZone` delegate. The

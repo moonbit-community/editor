@@ -2,10 +2,11 @@
 // `viewParts/currentLineHighlight/currentLineHighlight.ts` (oracle 294fb350):
 // the `renderLineHighlight` option enum, the abstract overlay's should-render
 // predicates, the two concrete class builders, and the wrapped-line span
-// helper. The DOM overlays that consume these live with their containers —
-// content in `viewer/browser/view_parts/selections` (the ContentViewOverlays
-// merge) and margin in `viewer/browser/view_parts/margin`. Lives here beside
-// `RenderWhitespace` (the same option-enum precedent).
+// helper. The DOM overlays that consume these are in
+// `viewer/browser/view/current_line_highlight.mbt` and
+// `viewer/browser/view/current_line_margin_highlight.mbt`. This DOM-free
+// option logic lives here beside `RenderWhitespace` (the same option-enum
+// precedent).
 
 ///|
 /// Monaco's `renderLineHighlight` editor option: `'none' | 'gutter' | 'line'

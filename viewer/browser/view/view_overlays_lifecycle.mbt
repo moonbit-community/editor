@@ -321,8 +321,9 @@ fn content_view_overlays_render(
   self.overlays.dom_node.set_width(Pixels(width))
 }
 
-// Content-overlay adapters stay here because `RenderingContext` is private to
-// this package; concrete part packages continue to export pure HTML builders.
+// Content-overlay lifecycle wiring stays beside the package-private
+// `RenderingContext`; the focused overlay source units provide the pure HTML
+// builders it invokes.
 
 ///|
 fn prepare_current_line_overlay(

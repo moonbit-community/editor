@@ -1,8 +1,7 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/contentWidgets/contentWidgets.ts`
 // (`ViewContentWidgets` + its inner `Widget`), with the `IContentWidget` /
-// `IContentWidgetPosition` contracts of `editorBrowser.ts`. Its narrow
-// lifecycle adapter lives at the private rendering-context boundary in
-// `viewer/browser/view`.
+// `IContentWidgetPosition` contracts of `editorBrowser.ts`. Its focused
+// lifecycle wiring lives beside the package-private rendering context.
 //
 // The widget lifecycle is the source's: a widget's DOM is appended once by
 // `add_widget` and stays mounted until `remove_widget`; `set_widget_position`
@@ -423,9 +422,9 @@ fn ContentWidgets::should_suppress_mouse_down_on_widget(
 
 ///|
 /// The geometry capabilities the prepare pass needs from the render context —
-/// Monaco's `RenderingContext` surface as data plus closures, the
-/// same host pattern `PointerHandlerHelper` uses (this package cannot import
-/// `browser/view`'s context types without a cycle).
+/// Monaco's `RenderingContext` surface as data plus closures, the same host
+/// pattern `PointerHandlerHelper` uses. The record makes the widget's exact
+/// geometry requirements explicit and independently testable.
 pub(all) struct ContentWidgetsRenderContext {
   /// Content-space vertical offset of a view line
   /// (`ctx.getVerticalOffsetForLineNumber`).

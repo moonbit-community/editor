@@ -1,6 +1,6 @@
-// The viewer core's side of the `viewer/browser/view_parts/overlay_widgets`
-// seam: the public overlay-widget API. Kept here per the foreign-method rule
-// (every `Viewer::` method lives in `Viewer`'s own package).
+// The viewer facade's public overlay-widget API delegates to
+// `viewer/browser/view/overlay_widgets.mbt`. It lives here because every
+// `Viewer::` method must be defined in `Viewer`'s package.
 
 ///|
 /// Adds a null-position overlay widget — Monaco's

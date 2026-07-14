@@ -4,9 +4,9 @@
 // `browser/view`'s `ContentViewOverlays` rows, registered after the
 // current-line and selection overlays — Monaco's registration order
 // (`view.ts:218-221`: CurrentLine, Selections, [IndentGuides — unported],
-// Decorations). Preparation is adapted at the private rendering-context
-// boundary in `browser/view`; this package is the pure per-line piece/HTML
-// computation, unit-testable headlessly.
+// Decorations). Lifecycle preparation lives beside the private rendering
+// context; this source unit owns the pure per-line piece/HTML computation,
+// which remains unit-testable headlessly.
 //
 // Deviations:
 // - `linesVisibleRangesForRange` reuses the DOM caret-measurement seam

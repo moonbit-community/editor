@@ -5,9 +5,9 @@
 // as a pure per-line HTML builder. The overlay renders into
 // `browser/view`'s `ContentViewOverlays` rows as the first registered
 // dynamic overlay — before `SelectionsOverlay` (`view.ts:218-219`), which
-// keeps the highlight painting under the selection. Its preparation adapter
-// lives at the private rendering-context boundary in `browser/view`; the
-// DOM-free predicates and class strings live in
+// keeps the highlight painting under the selection. Its lifecycle preparation
+// lives in `view_overlays_lifecycle.mbt`; the DOM-free predicates and class
+// strings live in
 // `viewer/common/view_layout` (`current_line_highlight.mbt`); the margin
 // twin lives with the margin part.
 

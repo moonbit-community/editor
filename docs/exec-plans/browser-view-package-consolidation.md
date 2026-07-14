@@ -1,6 +1,6 @@
 # Browser View Package Consolidation
 
-Status: inventory ready — STOP FOR REVIEW; no implementation has started
+Status: complete — Gate A approved and implementation validated 2026-07-14
 Date: 2026-07-13
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
@@ -236,17 +236,62 @@ Required validation:
 
 ## Exit Criteria
 
-- [ ] inventory rows equal scoped source members; final totals are recorded
-- [ ] only `viewer/browser/view/moon.pkg` remains for the scoped implementation
-- [ ] no product or test import references `viewer/browser/view_layer` or
+- [x] inventory rows equal scoped source members; final totals are recorded
+- [x] only `viewer/browser/view/moon.pkg` remains for the scoped implementation
+- [x] no product or test import references `viewer/browser/view_layer` or
       `viewer/browser/view_parts/*`
-- [ ] files retain source-unit names and responsibilities
-- [ ] no public declaration exists only to cross a deleted package boundary
-- [ ] DOM order, CSS output/order, event order, render results, and disposal
+- [x] files retain source-unit names and responsibilities
+- [x] no public declaration exists only to cross a deleted package boundary
+- [x] DOM order, CSS output/order, event order, render results, and disposal
       behavior are unchanged
-- [ ] all deviations are seam-based and recorded
-- [ ] closing complete-source reread finds no unaccounted member
-- [ ] required validation is green
+- [x] all deviations are seam-based and recorded
+- [x] closing complete-source reread finds no unaccounted member
+- [x] required validation is green
+
+## Completion Record
+
+Gate A's frozen denominator remains 59 pinned upstream files and 4,154
+terminal parity rows: 1,536 `TESTED`, 143 `PORTED`, 231 `N-A`, and 2,244
+`DEFERRED`. The closing reread and ledger reconciliation found no unaccounted
+source member and did not change any reviewed disposition.
+
+The implemented local denominator is:
+
+| Kind | Final result |
+|---|---:|
+| Production MoonBit | 31 source-unit files / 9,331 lines / 536 declarations |
+| MoonBit tests | 16 files / 118 named tests + 130 helpers = 248 declarations |
+| Named-test hash | `802b390612801a787a6a21e247f55cd747877e498a8f71f63cbad31ac92052dc` |
+| Production filename hash | `be2a5c4b23917cb4b28bd8752a5a5f70eff08677007ac0278b505e731ab1f8bb` |
+| Target imports | 12 paths / `6d9e65b14fa8f2e680bd2aaf3eaae8579b0f7324fb78f6bf04255fa2376f8cfd` |
+| Scoped package artifacts | one `moon.pkg`, one `pkg.generated.mbti`, one `README.md` |
+| Generated public interface | 100 entries; no former package-seam export remains |
+| CSS | 14 paths; `web/dist/style.css` is 56,378 bytes / `bcf27861211e6731f0208a756946f9d1f2110c1e8c24bc936cbe5d5d76d66599` |
+
+The eight surviving `viewer/browser/view_parts/*` directories contain CSS
+assets only. All old manifests, generated interfaces, README contracts, and
+MoonBit imports are gone. Primary constructors in the target package use the
+canonical `Type::Type` spelling; only the reviewed alternate factories remain.
+
+Validation completed on 2026-07-14:
+
+- `moon test viewer/browser/view --target js -v`: 118/118;
+- `moon check --target all`, `moon info --target all`, and
+  `moon ide analyze viewer/browser/view`: green;
+- `just check`: architecture and formatting gates green;
+- `just test`: 1,402/1,402 JS and 1,004/1,004 native tests green;
+- `just build`: browser bundles, stylesheet, and native server green;
+- `just test-browser`: 82/82 Playwright tests green, including the 12-cell
+  pinned Monaco scroll-frame matrix;
+- structural import/artifact/count/hash checks and `git diff --check`: green.
+
+There are no behavioral deviations. The reviewed unsupported Monaco units and
+configuration branches retain their Gate A `DEFERRED`/`N-A` dispositions. The
+only new test seam is a JS white-box adapter in the root event-source tests,
+used to assert private event payload fields without reopening the production
+API. The compiler reports expected unused-private warnings for ledger-retained
+members that became internal; deleting or re-exporting them would change the
+approved denominator or boundary.
 
 ## Cross-Plan Coordination
 

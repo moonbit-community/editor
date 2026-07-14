@@ -23,7 +23,6 @@ host document
   -> viewer/common/view_model.ViewModel
   -> viewer/common/view_layout.ViewLayout
   -> viewer/browser/view.View
-  -> viewer/browser/view_parts/*
   -> DOM
 ```
 
@@ -80,16 +79,20 @@ The root `viewer`, `viewer/browser/**`, and `viewer/ui/scrollbar` are js-only:
 - `viewer/browser/config` measures fonts and browser geometry.
 - `viewer/browser/controller` owns hit testing, mouse selection, drag
   scrolling, and scrollbar input.
-- `viewer/browser/view` owns the DOM tree and render ordering.
-- `viewer/browser/view_parts/*` owns content/overlay widgets, current-line and
-  model decorations, margin, selections, cursor, virtualized lines, zones, and
-  the scrollbar view part.
+- `viewer/browser/view` is one package owning the DOM tree, render/event
+  ordering, recycler, content/overlay widgets, current-line and model
+  decorations, margin, selections, cursor, virtualized lines, zones, and the
+  scrollbar view part. Its focused `.mbt` files preserve source-unit
+  responsibilities; they are not package or namespace boundaries.
+- `viewer/browser/view_parts/*` contains CSS assets at their stable build
+  paths. These asset-only directories have no MoonBit package or executable
+  ownership.
 - `viewer/ui/scrollbar` owns custom scrollbar DOM and pointer behavior; its
   arithmetic lives in `viewer/common/view_layout`.
 
-`viewer/browser/view` owns closed event/render handle enums and narrow
-lifecycle adapters for foreign parts because its private `ViewEvent` and
-rendering-context types cannot move down the dependency graph. Root
+`viewer/browser/view` owns closed event/render handle enums, rendering
+contexts, concrete view parts, and their lifecycle wiring. Files in that
+directory share private declarations as one compilation unit. Root
 `viewer/*.mbt` contains `Viewer::` glue because foreign methods must live with
 `Viewer`.
 

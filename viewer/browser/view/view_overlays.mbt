@@ -13,8 +13,8 @@
 //   `ViewEventHandler` dirtiness is folded into the owning part's frame
 //   events: the frame-based model re-prepares every registered overlay when
 //   the part renders (the row-content dedupe keeps DOM writes minimal).
-// - `RenderingContext` is package-private, so narrow adapters in this package
-//   feed the concrete overlays' pure per-line builders.
+// - Package-local lifecycle wiring feeds the focused overlays' pure per-line
+//   builders from the private `RenderingContext`.
 
 ///|
 /// The complete set of overlays owned by `View`. Monaco's class-based array

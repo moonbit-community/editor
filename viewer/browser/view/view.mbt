@@ -21,8 +21,8 @@ pub(all) struct View {
   margin_view_overlays : MarginViewOverlays
   content_widgets : @content_widgets.ContentWidgets
   view_cursors : @view_cursors.ViewCursors
-  overlay_widgets : @overlay_widgets.OverlayWidgets
-  editor_scrollbar : @editor_scrollbar.EditorScrollbar
+  overlay_widgets : OverlayWidgets
+  editor_scrollbar : EditorScrollbar
   priv view_event_handlers : Array[ViewEventHandlerHandle]
   priv view_parts : Array[ViewPartHandle]
   priv event_dispatcher : ViewEventDispatcher
@@ -60,7 +60,7 @@ pub fn View::new(
   lines_content.set_width(Pixels(16777216.0))
   lines_content.set_height(Pixels(16777216.0))
   let margin_view_overlays = MarginViewOverlays::new(document)
-  let editor_scrollbar = @editor_scrollbar.EditorScrollbar::new(lines_content)
+  let editor_scrollbar = EditorScrollbar::new(lines_content)
   let content_view_overlays = ContentViewOverlays::new(document)
   let view_zones = @view_zones.ViewZones::new(
     document,
@@ -70,7 +70,7 @@ pub fn View::new(
   let view_lines = @view_lines.ViewLines::new(document, lines_content)
   let content_widgets = @content_widgets.ContentWidgets::new(document, root)
   let view_cursors = @view_cursors.ViewCursors::new(document)
-  let overlay_widgets = @overlay_widgets.OverlayWidgets::new(document)
+  let overlay_widgets = OverlayWidgets::new(document)
   let lines_content_element = lines_content.element()
   lines_content_element.append_child(
     content_view_overlays.get_dom_node().as_node(),

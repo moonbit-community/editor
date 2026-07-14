@@ -175,7 +175,7 @@ fn prepare_line_numbers_overlay(
 
 ///|
 fn overlay_widgets_on_view_event(
-  _part : @overlay_widgets.OverlayWidgets,
+  _part : OverlayWidgets,
   event : ViewEvent,
 ) -> Bool {
   match event {
@@ -187,7 +187,7 @@ fn overlay_widgets_on_view_event(
 
 ///|
 fn overlay_widgets_prepare_render(
-  _part : @overlay_widgets.OverlayWidgets,
+  _part : OverlayWidgets,
   _context : RenderingContext,
 ) -> Unit {
   ()
@@ -195,7 +195,7 @@ fn overlay_widgets_prepare_render(
 
 ///|
 fn overlay_widgets_render(
-  _part : @overlay_widgets.OverlayWidgets,
+  _part : OverlayWidgets,
   _context : RestrictedRenderingContext,
 ) -> Unit {
   ()
@@ -205,7 +205,7 @@ fn overlay_widgets_render(
 
 ///|
 fn editor_scrollbar_on_view_event(
-  _part : @editor_scrollbar.EditorScrollbar,
+  _part : EditorScrollbar,
   event : ViewEvent,
 ) -> Bool {
   match event {
@@ -217,7 +217,7 @@ fn editor_scrollbar_on_view_event(
 
 ///|
 fn editor_scrollbar_prepare_render(
-  _part : @editor_scrollbar.EditorScrollbar,
+  _part : EditorScrollbar,
   _context : RenderingContext,
 ) -> Unit {
   ()
@@ -225,7 +225,7 @@ fn editor_scrollbar_prepare_render(
 
 ///|
 fn editor_scrollbar_render(
-  part : @editor_scrollbar.EditorScrollbar,
+  part : EditorScrollbar,
   context : RestrictedRenderingContext,
 ) -> Unit {
   let self = part

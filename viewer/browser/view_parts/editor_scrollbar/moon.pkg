@@ -1,7 +1,0 @@
-import {
-  "moonbit-community/editor/viewer/common/core",
-  "moonbit-community/editor/viewer/ui/scrollbar",
-  "moonbit-community/rabbita/dom" @rdom,
-}
-
-supported_targets = "js"

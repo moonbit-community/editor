@@ -7,9 +7,7 @@ import {
   "moonbit-community/editor/viewer/browser",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/current_line_highlight",
-  "moonbit-community/editor/viewer/browser/view_parts/editor_scrollbar",
   "moonbit-community/editor/viewer/browser/view_parts/margin",
-  "moonbit-community/editor/viewer/browser/view_parts/overlay_widgets",
   "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
@@ -65,6 +63,16 @@ pub(all) struct DecorationsOverlay {
 }
 pub fn DecorationsOverlay::new() -> Self
 
+pub(all) struct EditorScrollbar {
+  editor_scrollable : @scrollbar.ScrollableElementDom
+  scrollbar_dom_node : @scrollbar.CachedDomNode
+  mut should_render : Bool
+}
+pub fn EditorScrollbar::content(Self) -> @dom.Element
+pub fn EditorScrollbar::get_dom_node(Self) -> @dom.Element
+pub fn EditorScrollbar::new(@scrollbar.CachedDomNode) -> Self
+pub fn EditorScrollbar::scrollable(Self) -> @scrollbar.ScrollableElementDom
+
 pub(all) struct FloatHorizontalRange {
   left : Double
   width : Double
@@ -110,6 +118,18 @@ pub(all) struct MarginViewOverlays {
 pub fn MarginViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn MarginViewOverlays::new(@dom.Document) -> Self
 
+pub(all) struct OverlayWidgets {
+  dom_node : @dom.Element
+  overflowing_overlay_widgets_dom_node : @dom.Element
+  widgets : Map[String, @dom.Element]
+  mut should_render : Bool
+}
+pub fn OverlayWidgets::add_widget(Self, String, @dom.Element) -> Unit
+pub fn OverlayWidgets::get_dom_node(Self) -> @dom.Element
+pub fn OverlayWidgets::new(@dom.Document) -> Self
+pub fn OverlayWidgets::overflowing_overlay_widgets_dom_node(Self) -> @dom.Element
+pub fn OverlayWidgets::remove_widget(Self, String) -> Unit
+
 pub(all) enum PartFingerprint {
   None
   ContentWidgets
@@ -148,8 +168,8 @@ pub(all) struct View {
   margin_view_overlays : MarginViewOverlays
   content_widgets : @content_widgets.ContentWidgets
   view_cursors : @view_cursors.ViewCursors
-  overlay_widgets : @overlay_widgets.OverlayWidgets
-  editor_scrollbar : @editor_scrollbar.EditorScrollbar
+  overlay_widgets : OverlayWidgets
+  editor_scrollbar : EditorScrollbar
   // private fields
 }
 pub fn View::add_disposable(Self, @common.Disposable) -> Unit

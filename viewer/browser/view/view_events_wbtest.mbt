@@ -1580,7 +1580,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
 
 ///|
 test "current-line predicate ignores same-line column moves but tracks emptiness" {
-  let state = @current_line_highlight.CurrentLineHighlightState::new()
+  let state = CurrentLineHighlightState::new()
   let collapsed_line_3_column_1 = @core.Selection::new(
     Position(3, 1),
     Position(3, 1),

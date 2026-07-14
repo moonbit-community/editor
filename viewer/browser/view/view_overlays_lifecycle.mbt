@@ -104,13 +104,13 @@ fn margin_view_overlays_render(
 
 ///|
 fn prepare_current_line_margin_overlay(
-  part : @margin.CurrentLineMarginHighlightOverlay,
+  part : CurrentLineMarginHighlightOverlay,
   context : RenderingContext,
 ) -> Unit {
   let self = part
   let state = self.state
   let cursor_view_line = state.cursor_line_numbers.get(0)
-  self.render_result = @margin.prepare_current_line_margin_render(
+  self.render_result = prepare_current_line_margin_render(
     context.viewport,
     Some(context.input.view_model),
     cursor_view_line,
@@ -126,7 +126,7 @@ fn prepare_current_line_margin_overlay(
 
 ///|
 fn prepare_lines_decorations_overlay(
-  part : @margin.LinesDecorationsOverlay,
+  part : LinesDecorationsOverlay,
   context : RenderingContext,
 ) -> Unit {
   let self = part
@@ -145,7 +145,7 @@ fn prepare_lines_decorations_overlay(
   // and the content.
   let line_numbers_width = context.gutter_width -
     context.input.line_decorations_width
-  self.render_result = @margin.prepare_lines_decorations_render(
+  self.render_result = prepare_lines_decorations_render(
     class_names_per_line,
     decorations_left=line_numbers_width,
     decorations_width=context.input.line_decorations_width,
@@ -154,7 +154,7 @@ fn prepare_lines_decorations_overlay(
 
 ///|
 fn prepare_line_numbers_overlay(
-  part : @margin.LineNumbersOverlay,
+  part : LineNumbersOverlay,
   context : RenderingContext,
 ) -> Unit {
   let self = part
@@ -162,7 +162,7 @@ fn prepare_line_numbers_overlay(
   // line-decorations lane.
   let line_numbers_width = context.gutter_width -
     context.input.line_decorations_width
-  self.render_result = @margin.prepare_line_numbers_render(
+  self.render_result = prepare_line_numbers_render(
     context.viewport,
     Some(context.input.view_model),
     left=0.0,
@@ -326,13 +326,13 @@ fn content_view_overlays_render(
 
 ///|
 fn prepare_current_line_overlay(
-  part : @current_line_highlight.CurrentLineHighlightOverlay,
+  part : CurrentLineHighlightOverlay,
   context : RenderingContext,
 ) -> Unit {
   let self = part
   let state = self.state
   let cursor_view_line = state.cursor_line_numbers.get(0)
-  self.render_result = @current_line_highlight.prepare_current_line_render(
+  self.render_result = prepare_current_line_render(
     context.viewport,
     Some(context.input.view_model),
     cursor_view_line,

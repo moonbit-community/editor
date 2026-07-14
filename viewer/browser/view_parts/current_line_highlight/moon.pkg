@@ -1,7 +1,0 @@
-import {
-  "moonbit-community/editor/viewer/common/core",
-  "moonbit-community/editor/viewer/common/view_layout",
-  "moonbit-community/editor/viewer/common/view_model",
-}
-
-supported_targets = "js"

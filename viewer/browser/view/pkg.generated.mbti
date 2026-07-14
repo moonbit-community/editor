@@ -6,8 +6,6 @@ import {
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/browser",
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
-  "moonbit-community/editor/viewer/browser/view_parts/current_line_highlight",
-  "moonbit-community/editor/viewer/browser/view_parts/margin",
   "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",
@@ -25,11 +23,21 @@ pub fn compute_decoration_overlay_pieces(Array[@view_model.ViewModelDecoration],
 
 pub fn convert_view_to_model_mouse_target(@browser.MouseTarget, @view_model.CoordinatesConverter) -> @browser.MouseTarget
 
+pub fn current_line_span(@view_model.ViewModel?, Int, Bool) -> (Int, Int)
+
 pub fn empty_editor_class_name(show_unused? : Bool, show_deprecated? : Bool) -> String
 
 pub fn extra_editor_class_name(Bool, Bool, Bool) -> String
 
+pub fn prepare_current_line_margin_render(@view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Array[String]
+
+pub fn prepare_current_line_render(@view_layout.ViewportData, @view_model.ViewModel?, Int?, Bool, Bool, Bool, @view_layout.RenderLineHighlight, Bool, Double) -> Array[String]
+
 pub fn prepare_decorations_render(Array[@view_model.ViewModelDecoration], Int, Int, (Int) -> Int, (Int, Int, Int) -> Array[(Double, Double)], Double) -> Array[String]
+
+pub fn prepare_line_numbers_render(@view_layout.ViewportData, @view_model.ViewModel?, left~ : Double, width~ : Double) -> Array[String]
+
+pub fn prepare_lines_decorations_render(Array[Array[String]], decorations_left~ : Double, decorations_width~ : Double) -> Array[String]
 
 pub fn prepare_selections_render(@view_layout.ViewportData, @common.Range?, @view_model.ViewModel?, Double, (Int, Int, Int) -> Array[(Double, Double)]) -> Array[String]
 
@@ -40,7 +48,7 @@ pub fn prepare_selections_render_from_visible_ranges(@view_layout.ViewportData, 
 // Types and methods
 pub(all) struct ContentViewOverlays {
   overlays : ViewOverlays
-  current_line : @current_line_highlight.CurrentLineHighlightOverlay
+  current_line : CurrentLineHighlightOverlay
   selections : SelectionsOverlay
   decorations : DecorationsOverlay
   mut should_render : Bool
@@ -49,6 +57,37 @@ pub(all) struct ContentViewOverlays {
 pub fn ContentViewOverlays::get_dom_node(Self) -> @dom.Element
 pub fn ContentViewOverlays::new(@dom.Document) -> Self
 pub fn ContentViewOverlays::set_focused(Self, Bool) -> Unit
+
+pub(all) struct CurrentLineHighlightOverlay {
+  state : CurrentLineHighlightState
+  mut render_result : Array[String]
+}
+pub fn CurrentLineHighlightOverlay::new() -> Self
+
+pub(all) struct CurrentLineHighlightState {
+  mut render_line_highlight : @view_layout.RenderLineHighlight
+  mut word_wrap : Bool
+  mut content_left : Double
+  mut content_width : Double
+  mut selection_is_empty : Bool
+  mut render_line_highlight_only_when_focus : Bool
+  mut focused : Bool
+  mut cursor_line_numbers : Array[Int]
+  mut selections : Array[@core.Selection]
+  mut read_configuration : () -> (@view_layout.RenderLineHighlight, Bool, Bool, Double, Double)
+}
+pub fn CurrentLineHighlightState::install_configuration_reader(Self, () -> (@view_layout.RenderLineHighlight, Bool, Bool, Double, Double)) -> Unit
+pub fn CurrentLineHighlightState::new() -> Self
+pub fn CurrentLineHighlightState::on_configuration_changed(Self) -> Unit
+pub fn CurrentLineHighlightState::on_cursor_state_changed(Self, Array[@core.Selection]) -> Bool
+pub fn CurrentLineHighlightState::on_focus_changed(Self, Bool) -> Bool
+pub fn CurrentLineHighlightState::read_from_selections(Self) -> Bool
+
+pub(all) struct CurrentLineMarginHighlightOverlay {
+  state : CurrentLineHighlightState
+  mut render_result : Array[String]
+}
+pub fn CurrentLineMarginHighlightOverlay::new() -> Self
 
 pub(all) struct DecorationOverlayPiece {
   line_index : Int
@@ -96,6 +135,11 @@ pub fn HorizontalRange::from(Array[FloatHorizontalRange]) -> Array[Self]
 pub fn HorizontalRange::new(Double, Double) -> Self
 pub fn HorizontalRange::to_string(Self) -> String
 
+pub(all) struct LineNumbersOverlay {
+  mut render_result : Array[String]
+}
+pub fn LineNumbersOverlay::new() -> Self
+
 pub(all) struct LineVisibleRanges {
   outside_rendered_line : Bool
   line_number : Int
@@ -106,12 +150,17 @@ pub fn LineVisibleRanges::first_line(Array[Self]?) -> Self?
 pub fn LineVisibleRanges::last_line(Array[Self]?) -> Self?
 pub fn LineVisibleRanges::new(Bool, Int, Array[HorizontalRange], Bool) -> Self
 
+pub(all) struct LinesDecorationsOverlay {
+  mut render_result : Array[String]
+}
+pub fn LinesDecorationsOverlay::new() -> Self
+
 pub(all) struct MarginViewOverlays {
   dom_node : @dom.Element
   overlays : ViewOverlays
-  current_line_margin : @margin.CurrentLineMarginHighlightOverlay
-  lines_decorations : @margin.LinesDecorationsOverlay
-  line_numbers : @margin.LineNumbersOverlay
+  current_line_margin : CurrentLineMarginHighlightOverlay
+  lines_decorations : LinesDecorationsOverlay
+  line_numbers : LineNumbersOverlay
   mut should_render : Bool
   // private fields
 }

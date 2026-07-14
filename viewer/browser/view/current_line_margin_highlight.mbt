@@ -12,16 +12,13 @@
 /// The margin current-line dynamic overlay's independent inherited state plus
 /// prepared per-line HTML (`_renderData`).
 pub(all) struct CurrentLineMarginHighlightOverlay {
-  state : @current_line_highlight.CurrentLineHighlightState
+  state : CurrentLineHighlightState
   mut render_result : Array[String]
 }
 
 ///|
 pub fn CurrentLineMarginHighlightOverlay::new() -> CurrentLineMarginHighlightOverlay {
-  {
-    state: @current_line_highlight.CurrentLineHighlightState::new(),
-    render_result: [],
-  }
+  { state: CurrentLineHighlightState::new(), render_result: [] }
 }
 
 ///|

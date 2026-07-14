@@ -21,12 +21,12 @@
 /// is closed at this construction boundary, so retain the concrete variant
 /// instead of erasing every overlay into a trait object.
 priv enum DynamicViewOverlayHandle {
-  CurrentLine(@current_line_highlight.CurrentLineHighlightOverlay)
+  CurrentLine(CurrentLineHighlightOverlay)
   Selections(SelectionsOverlay)
   Decorations(DecorationsOverlay)
-  CurrentLineMargin(@margin.CurrentLineMarginHighlightOverlay)
-  LinesDecorations(@margin.LinesDecorationsOverlay)
-  LineNumbers(@margin.LineNumbersOverlay)
+  CurrentLineMargin(CurrentLineMarginHighlightOverlay)
+  LinesDecorations(LinesDecorationsOverlay)
+  LineNumbers(LineNumbersOverlay)
 }
 
 ///|
@@ -307,7 +307,7 @@ fn ViewOverlays::render_lines(
 /// structs the root package may probe.
 pub(all) struct ContentViewOverlays {
   overlays : ViewOverlays
-  current_line : @current_line_highlight.CurrentLineHighlightOverlay
+  current_line : CurrentLineHighlightOverlay
   selections : SelectionsOverlay
   decorations : DecorationsOverlay
   mut should_render : Bool
@@ -321,7 +321,7 @@ pub fn ContentViewOverlays::new(
   document : @rdom.Document,
 ) -> ContentViewOverlays {
   let overlays = ViewOverlays::new(document, "view-overlays")
-  let current_line = @current_line_highlight.CurrentLineHighlightOverlay::new()
+  let current_line = CurrentLineHighlightOverlay::new()
   let selections = SelectionsOverlay::new()
   let decorations = DecorationsOverlay::new()
   overlays.add_dynamic_overlay(CurrentLine(current_line))
@@ -396,9 +396,9 @@ pub fn ContentViewOverlays::set_focused(
 pub(all) struct MarginViewOverlays {
   dom_node : @rdom.Element
   overlays : ViewOverlays
-  current_line_margin : @margin.CurrentLineMarginHighlightOverlay
-  lines_decorations : @margin.LinesDecorationsOverlay
-  line_numbers : @margin.LineNumbersOverlay
+  current_line_margin : CurrentLineMarginHighlightOverlay
+  lines_decorations : LinesDecorationsOverlay
+  line_numbers : LineNumbersOverlay
   mut should_render : Bool
   // `MarginViewOverlays._contentLeft` (`viewOverlays.ts:238,244-248,265`).
   priv mut content_left : Double
@@ -412,9 +412,9 @@ pub fn MarginViewOverlays::new(document : @rdom.Document) -> MarginViewOverlays 
   dom_node.set_attribute("data-view-part", "margin")
   dom_node.set_attribute("aria-hidden", "true")
   let overlays = ViewOverlays::new(document, "margin-view-overlays")
-  let current_line_margin = @margin.CurrentLineMarginHighlightOverlay::new()
-  let lines_decorations = @margin.LinesDecorationsOverlay::new()
-  let line_numbers = @margin.LineNumbersOverlay::new()
+  let current_line_margin = CurrentLineMarginHighlightOverlay::new()
+  let lines_decorations = LinesDecorationsOverlay::new()
+  let line_numbers = LineNumbersOverlay::new()
   overlays.add_dynamic_overlay(CurrentLineMargin(current_line_margin))
   overlays.add_dynamic_overlay(LinesDecorations(lines_decorations))
   overlays.add_dynamic_overlay(LineNumbers(line_numbers))

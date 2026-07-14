@@ -3,8 +3,6 @@ import {
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/browser" @editor_browser,
   "moonbit-community/editor/viewer/browser/view_parts/content_widgets",
-  "moonbit-community/editor/viewer/browser/view_parts/current_line_highlight",
-  "moonbit-community/editor/viewer/browser/view_parts/margin",
   "moonbit-community/editor/viewer/browser/view_parts/view_cursors",
   "moonbit-community/editor/viewer/browser/view_parts/view_lines",
   "moonbit-community/editor/viewer/browser/view_parts/view_zones",

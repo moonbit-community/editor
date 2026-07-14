@@ -21,12 +21,12 @@
 ///|
 /// The production instantiation of the faithful inline-decorations middle
 /// layer: options are the real `@model.ModelDecorationOptions`.
-pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[
+pub type ViewModelDecoration = RelocatedViewModelDecoration[
   @model.ModelDecorationOptions,
 ]
 
 ///|
-pub type ViewDecorationsCollection = @inline_decorations.ViewDecorationsCollection[
+pub type ViewDecorationsCollection = RelocatedViewDecorationsCollection[
   @model.ModelDecorationOptions,
 ]
 
@@ -58,7 +58,7 @@ pub fn filter_validation_decorations(
 ///|
 /// The `ICoordinatesConverter` seam of the promoted inline-decorations
 /// computer, implemented by the view model's converter.
-pub impl @inline_decorations.CoordinatesConverter for CoordinatesConverter with fn convert_model_position_to_view_position(
+pub impl InlineCoordinatesConverter for CoordinatesConverter with fn convert_model_position_to_view_position(
   self,
   model_position,
   affinity? : @model.PositionAffinity,
@@ -67,7 +67,7 @@ pub impl @inline_decorations.CoordinatesConverter for CoordinatesConverter with 
 }
 
 ///|
-pub impl @inline_decorations.CoordinatesConverter for CoordinatesConverter with fn convert_model_range_to_view_range(
+pub impl InlineCoordinatesConverter for CoordinatesConverter with fn convert_model_range_to_view_range(
   self,
   model_range,
   affinity? : @model.PositionAffinity,
@@ -79,7 +79,7 @@ pub impl @inline_decorations.CoordinatesConverter for CoordinatesConverter with 
 /// `ViewModelDecorations` (`viewModelDecorations.ts:16`): the lazy,
 /// viewport-cached decoration provider for one view model.
 pub struct ViewModelDecorations {
-  priv computer : @inline_decorations.InlineModelDecorationsComputer[
+  priv computer : InlineModelDecorationsComputer[
     @model.ModelDecorationOptions,
     @model.TextModel,
     CoordinatesConverter,
@@ -98,9 +98,7 @@ pub fn ViewModelDecorations::new(
   lines : ViewModelLinesFromProjectedModel,
   coordinates_converter : CoordinatesConverter,
 ) -> ViewModelDecorations {
-  let context : @inline_decorations.InlineModelContext[
-    @model.ModelDecorationOptions,
-  ] = {
+  let context : InlineModelContext[@model.ModelDecorationOptions] = {
     get_model_decorations: (
       view_range,
       only_minimap_decorations,
@@ -113,7 +111,7 @@ pub fn ViewModelDecorations::new(
     },
   }
   {
-    computer: @inline_decorations.InlineModelDecorationsComputer::new(
+    computer: InlineModelDecorationsComputer::new(
       context, model, coordinates_converter,
     ),
     cached_model_decorations_resolver: None,
@@ -217,7 +215,7 @@ fn view_model_lines_get_decorations_in_range(
   filter_out_validation : Bool,
   only_minimap_decorations : Bool,
   only_margin_decorations : Bool,
-) -> Array[@inline_decorations.ModelDecoration[@model.ModelDecorationOptions]] {
+) -> Array[ModelDecoration[@model.ModelDecorationOptions]] {
   // onlyMinimapDecorations only forwards to the out-of-scope bracket
   // provider in the source's model.getDecorationsInRange.
   ignore(only_minimap_decorations)
@@ -312,9 +310,7 @@ fn view_model_lines_get_decorations_in_range(
 
   // Eliminate duplicate decorations that might have intersected our visible
   // ranges multiple times
-  let final_result : Array[
-    @inline_decorations.ModelDecoration[@model.ModelDecorationOptions],
-  ] = []
+  let final_result : Array[ModelDecoration[@model.ModelDecorationOptions]] = []
   let mut last_dec_id = ""
   for dec in result {
     let dec_id = dec.id
@@ -352,7 +348,7 @@ fn lexicographic_id_compare(left : String, right : String) -> Int {
 ///|
 fn to_inline_model_decorations(
   decorations : Array[@model.ModelDecoration],
-) -> Array[@inline_decorations.ModelDecoration[@model.ModelDecorationOptions]] {
+) -> Array[ModelDecoration[@model.ModelDecorationOptions]] {
   decorations.map(dec => {
     id: dec.id,
     owner_id: dec.owner_id,

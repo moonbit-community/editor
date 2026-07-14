@@ -469,7 +469,7 @@ pub fn ModelLineProjection::injected_text_index_at(
 fn view_line_data_for_segment_with_injections(
   with_injections : @tokens.LineTokens,
   segment : ModelLineProjectionSegment,
-  inline_decorations : Array[@inline_decorations.InlineDecoration]?,
+  inline_decorations : Array[InlineDecoration]?,
 ) -> ViewLineData {
   let indent = segment.wrapped_text_indent_length
   let start_offset = segment.start_offset
@@ -592,16 +592,14 @@ fn InjectedTextInlineDecorationsComputer::new(
 fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
   self : InjectedTextInlineDecorationsComputer,
   model_line_number : Int,
-) -> Array[Array[@inline_decorations.InlineDecoration]] {
+) -> Array[Array[InlineDecoration]] {
   let injection_offsets = (self.context.get_injection_offsets)(
     model_line_number,
   )
   if injection_offsets.length() == 0 {
     return []
   }
-  let line_inline_decorations : Array[
-    Array[@inline_decorations.InlineDecoration],
-  ] = []
+  let line_inline_decorations : Array[Array[InlineDecoration]] = []
   let mut total_injected_text_length_before = 0
   let mut current_injected_offset = 0
   let injection_options = (self.context.get_injection_options)(
@@ -609,7 +607,7 @@ fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
   )
   let break_offsets = (self.context.get_break_offsets)(model_line_number)
   for output_line_index in 0..<break_offsets.length() {
-    let inline_decorations : Array[@inline_decorations.InlineDecoration] = []
+    let inline_decorations : Array[InlineDecoration] = []
     line_inline_decorations.push(inline_decorations)
     let line_start_offset_in_input_with_injections = if output_line_index > 0 {
       break_offsets[output_line_index - 1]
@@ -655,7 +653,7 @@ fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
                 ) +
                 output_line_index
               inline_decorations.push(
-                @inline_decorations.InlineDecoration::new(
+                InlineDecoration::new(
                   Range(view_line_number, start + 1, view_line_number, end + 1),
                   inline_class_name,
                   Regular,
@@ -685,7 +683,7 @@ fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
 /// read as the `ISimpleModel.tokenization` dependency closure gives white-box
 /// tests executable ordering evidence without widening the package API.
 priv struct PreparedProjectedLineDemand {
-  line_inline_decorations : Array[Array[@inline_decorations.InlineDecoration]]
+  line_inline_decorations : Array[Array[InlineDecoration]]
   line_with_injections : @tokens.LineTokens
 }
 

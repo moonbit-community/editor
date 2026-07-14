@@ -3,14 +3,14 @@
 /// `vscode/src/vs/editor/test/common/viewModel/inlineDecorations.test.ts`
 /// (`suite('InlineModelDecorationsComputer')` + `suite('InjectedTextInline
 /// DecorationsComputer')`) at submodule commit
-/// 294fb350837dbaee37b949533fead4df4e0e8971. Test names are preserved verbatim.
+/// b18492a288de038fbc7643aae6de8247029d11bd. Test names are preserved verbatim.
 
 ///|
 fn create_model_decoration(
   id : String,
   range : @base_common.Range,
   options : ModelDecorationOptions,
-) -> @inline_decorations.ModelDecoration[ModelDecorationOptions] {
+) -> ModelDecoration[ModelDecorationOptions] {
   { id, owner_id: 0, range, options }
 }
 
@@ -48,7 +48,7 @@ fn TestTextModel::get_line_count(self : TestTextModel) -> Int {
 }
 
 ///|
-impl @inline_decorations.InlineDecorationsModel for TestTextModel with fn get_line_max_column(
+impl InlineDecorationsModel for TestTextModel with fn get_line_max_column(
   self,
   line_number,
 ) {
@@ -98,7 +98,7 @@ fn IdentityCoordinatesConverter::new(
 }
 
 ///|
-impl @inline_decorations.CoordinatesConverter for IdentityCoordinatesConverter with fn convert_model_position_to_view_position(
+impl InlineCoordinatesConverter for IdentityCoordinatesConverter with fn convert_model_position_to_view_position(
   self,
   model_position,
   affinity? : @model.PositionAffinity,
@@ -108,7 +108,7 @@ impl @inline_decorations.CoordinatesConverter for IdentityCoordinatesConverter w
 }
 
 ///|
-impl @inline_decorations.CoordinatesConverter for IdentityCoordinatesConverter with fn convert_model_range_to_view_range(
+impl InlineCoordinatesConverter for IdentityCoordinatesConverter with fn convert_model_range_to_view_range(
   self,
   model_range,
   affinity? : @model.PositionAffinity,
@@ -157,42 +157,42 @@ fn ModelDecorationOptions::new(
 }
 
 ///|
-impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn inline_class_name(
+impl InlineDecorationOptions for ModelDecorationOptions with fn inline_class_name(
   self,
 ) {
   self.inline_class_name
 }
 
 ///|
-impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn inline_class_name_affects_letter_spacing(
+impl InlineDecorationOptions for ModelDecorationOptions with fn inline_class_name_affects_letter_spacing(
   self,
 ) {
   self.inline_class_name_affects_letter_spacing
 }
 
 ///|
-impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn before_content_class_name(
+impl InlineDecorationOptions for ModelDecorationOptions with fn before_content_class_name(
   self,
 ) {
   self.before_content_class_name
 }
 
 ///|
-impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn after_content_class_name(
+impl InlineDecorationOptions for ModelDecorationOptions with fn after_content_class_name(
   self,
 ) {
   self.after_content_class_name
 }
 
 ///|
-impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn affects_font(
+impl InlineDecorationOptions for ModelDecorationOptions with fn affects_font(
   self,
 ) {
   self.affects_font
 }
 
 ///|
-impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with fn is_whole_line(
+impl InlineDecorationOptions for ModelDecorationOptions with fn is_whole_line(
   self,
 ) {
   self.is_whole_line
@@ -202,8 +202,8 @@ impl @inline_decorations.InlineDecorationOptions for ModelDecorationOptions with
 /// Per-line, per-decoration `InlineDecoration` equality (avoids the deprecated
 /// `Show`-based `assert_eq` on nested arrays while keeping per-element detail).
 fn assert_inline_eq(
-  actual : Array[Array[@inline_decorations.InlineDecoration]],
-  expected : Array[Array[@inline_decorations.InlineDecoration]],
+  actual : Array[Array[InlineDecoration]],
+  expected : Array[Array[InlineDecoration]],
 ) -> Unit raise {
   assert_eq(actual.length(), expected.length())
   for i in 0..<expected.length() {
@@ -231,10 +231,10 @@ fn assert_bool_array_eq(
 test "no decorations" {
   let model = TestTextModel::create("hello world")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) { [] },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
@@ -247,7 +247,7 @@ test "no decorations" {
 test "inline class name decoration on a single line" {
   let model = TestTextModel::create("hello world")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
@@ -261,19 +261,13 @@ test "inline class name decoration on a single line" {
       ]
     },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_eq(result.decorations.length(), 1)
   assert_inline_eq(result.inline_decorations, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 1, 1, 6),
-        "test-class",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(1, 1, 1, 6), "test-class", Regular)],
   ])
   assert_bool_array_eq(result.has_variable_fonts, [false])
 }
@@ -282,7 +276,7 @@ test "inline class name decoration on a single line" {
 test "inlineClassName with affectsLetterSpacing" {
   let model = TestTextModel::create("hello world")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
@@ -297,13 +291,13 @@ test "inlineClassName with affectsLetterSpacing" {
       ]
     },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_inline_eq(result.inline_decorations, [
     [
-      @inline_decorations.InlineDecoration::new(
+      InlineDecoration::new(
         Range(1, 1, 1, 6),
         "test-class",
         RegularAffectingLetterSpacing,
@@ -316,7 +310,7 @@ test "inlineClassName with affectsLetterSpacing" {
 test "beforeContentClassName decoration" {
   let model = TestTextModel::create("hello world")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
@@ -330,18 +324,12 @@ test "beforeContentClassName decoration" {
       ]
     },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_inline_eq(result.inline_decorations, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 3, 1, 3),
-        "before-class",
-        Before,
-      ),
-    ],
+    [InlineDecoration::new(Range(1, 3, 1, 3), "before-class", Before)],
   ])
 }
 
@@ -349,7 +337,7 @@ test "beforeContentClassName decoration" {
 test "afterContentClassName decoration" {
   let model = TestTextModel::create("hello world")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
@@ -363,18 +351,12 @@ test "afterContentClassName decoration" {
       ]
     },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_inline_eq(result.inline_decorations, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 8, 1, 8),
-        "after-class",
-        After,
-      ),
-    ],
+    [InlineDecoration::new(Range(1, 8, 1, 8), "after-class", After)],
   ])
 }
 
@@ -382,7 +364,7 @@ test "afterContentClassName decoration" {
 test "all decoration types combined" {
   let model = TestTextModel::create("hello world")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
@@ -398,27 +380,15 @@ test "all decoration types combined" {
       ]
     },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
   assert_inline_eq(result.inline_decorations, [
     [
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 2, 1, 6),
-        "inline-class",
-        Regular,
-      ),
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 2, 1, 2),
-        "before-class",
-        Before,
-      ),
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 6, 1, 6),
-        "after-class",
-        After,
-      ),
+      InlineDecoration::new(Range(1, 2, 1, 6), "inline-class", Regular),
+      InlineDecoration::new(Range(1, 2, 1, 2), "before-class", Before),
+      InlineDecoration::new(Range(1, 6, 1, 6), "after-class", After),
     ],
   ])
 }
@@ -427,7 +397,7 @@ test "all decoration types combined" {
 test "decoration spanning multiple lines" {
   let model = TestTextModel::create("line one\nline two\nline three")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
@@ -441,15 +411,11 @@ test "decoration spanning multiple lines" {
       ]
     },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_decorations(Range(1, 1, 3, 11), false, false)
-  let expected = @inline_decorations.InlineDecoration::new(
-    Range(1, 3, 3, 5),
-    "multi-line",
-    Regular,
-  )
+  let expected = InlineDecoration::new(Range(1, 3, 3, 5), "multi-line", Regular)
   assert_inline_eq(result.inline_decorations, [
     [expected],
     [expected],
@@ -461,7 +427,7 @@ test "decoration spanning multiple lines" {
 test "decoration with affectsFont sets hasVariableFonts" {
   let model = TestTextModel::create("hello world")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
@@ -476,7 +442,7 @@ test "decoration with affectsFont sets hasVariableFonts" {
       ]
     },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_decorations(Range(1, 1, 1, 12), false, false)
@@ -487,7 +453,7 @@ test "decoration with affectsFont sets hasVariableFonts" {
 test "multiple decorations on different lines" {
   let model = TestTextModel::create("line one\nline two")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
@@ -509,25 +475,13 @@ test "multiple decorations on different lines" {
       ]
     },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_decorations(Range(1, 1, 2, 9), false, false)
   assert_inline_eq(result.inline_decorations, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 1, 1, 5),
-        "class-a",
-        Regular,
-      ),
-    ],
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(2, 1, 2, 5),
-        "class-b",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(1, 1, 1, 5), "class-a", Regular)],
+    [InlineDecoration::new(Range(2, 1, 2, 5), "class-b", Regular)],
   ])
 }
 
@@ -543,10 +497,10 @@ test "decoration cache is used for same decoration id" {
       inline_class_name="test-class",
     ),
   )
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) { [dec] },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result1 = computer.get_decorations(Range(1, 1, 1, 12), false, false)
@@ -566,10 +520,10 @@ test "reset clears decoration cache" {
       inline_class_name="test-class",
     ),
   )
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) { [dec] },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result1 = computer.get_decorations(Range(1, 1, 1, 12), false, false)
@@ -582,7 +536,7 @@ test "reset clears decoration cache" {
 test "getInlineDecorations returns inline decorations for a model line" {
   let model = TestTextModel::create("hello world")
   let coordinates_converter = IdentityCoordinatesConverter::new(model)
-  let context : @inline_decorations.InlineModelContext[ModelDecorationOptions] = {
+  let context : InlineModelContext[ModelDecorationOptions] = {
     get_model_decorations: fn(_view_range, _a, _b) {
       [
         create_model_decoration(
@@ -596,18 +550,12 @@ test "getInlineDecorations returns inline decorations for a model line" {
       ]
     },
   }
-  let computer = @inline_decorations.InlineModelDecorationsComputer::new(
+  let computer = InlineModelDecorationsComputer::new(
     context, model, coordinates_converter,
   )
   let result = computer.get_inline_decorations(1)
   assert_inline_eq(result, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 1, 1, 6),
-        "test-class",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(1, 1, 1, 6), "test-class", Regular)],
   ])
 }
 
@@ -615,20 +563,14 @@ test "getInlineDecorations returns inline decorations for a model line" {
 
 ///|
 test "no injections returns empty" {
-  let context : @inline_decorations.InjectedTextContext = {
-    get_injection_options: fn(
-      _l,
-    ) -> Array[@inline_decorations.InjectedTextOptions]? {
-      None
-    },
+  let context : InjectedTextContext = {
+    get_injection_options: fn(_l) -> Array[InjectedTextOptions]? { None },
     get_injection_offsets: fn(_l) -> Array[Int]? { None },
     get_break_offsets: fn(_l) { [10] },
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { 1 },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(1)
   assert_inline_eq(result, [])
 }
@@ -636,48 +578,36 @@ test "no injections returns empty" {
 ///|
 test "single injection with inlineClassName on a single output line" {
   let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(
+    InjectedTextOptions::new(
       content="injected",
       inline_class_name="injected-class",
     ),
   ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([5]) },
     get_break_offsets: fn(_l) { [18] }, // 10 (original) + 8 (injected)
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { 1 },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(1)
   assert_inline_eq(result, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 6, 1, 14),
-        "injected-class",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(1, 6, 1, 14), "injected-class", Regular)],
   ])
 }
 
 ///|
 test "injection without inlineClassName produces no inline decorations" {
-  let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(content="injected"),
-  ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let injection_options = [InjectedTextOptions::new(content="injected")]
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([5]) },
     get_break_offsets: fn(_l) { [18] },
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { 1 },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(1)
   assert_inline_eq(result, [[]]) // empty - no inlineClassName
 }
@@ -685,26 +615,24 @@ test "injection without inlineClassName produces no inline decorations" {
 ///|
 test "injection with inlineClassNameAffectsLetterSpacing" {
   let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(
+    InjectedTextOptions::new(
       content="abc",
       inline_class_name="ls-class",
       inline_class_name_affects_letter_spacing=true,
     ),
   ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([0]) },
     get_break_offsets: fn(_l) { [13] }, // 10 + 3
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { 1 },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(1)
   assert_inline_eq(result, [
     [
-      @inline_decorations.InlineDecoration::new(
+      InlineDecoration::new(
         Range(1, 1, 1, 4),
         "ls-class",
         RegularAffectingLetterSpacing,
@@ -716,38 +644,22 @@ test "injection with inlineClassNameAffectsLetterSpacing" {
 ///|
 test "multiple injections on a single output line" {
   let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(
-      content="AA",
-      inline_class_name="class-a",
-    ),
-    @inline_decorations.InjectedTextOptions::new(
-      content="BBB",
-      inline_class_name="class-b",
-    ),
+    InjectedTextOptions::new(content="AA", inline_class_name="class-a"),
+    InjectedTextOptions::new(content="BBB", inline_class_name="class-b"),
   ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([2, 5]) },
     get_break_offsets: fn(_l) { [15] }, // 10 + 2 + 3
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { 1 },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(1)
   assert_inline_eq(result, [
     [
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 3, 1, 5),
-        "class-a",
-        Regular,
-      ),
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 8, 1, 11),
-        "class-b",
-        Regular,
-      ),
+      InlineDecoration::new(Range(1, 3, 1, 5), "class-a", Regular),
+      InlineDecoration::new(Range(1, 8, 1, 11), "class-b", Regular),
     ],
   ])
 }
@@ -757,79 +669,48 @@ test "injection spanning across wrapped lines" {
   // Original text is 20 chars, injection of 10 chars at offset 8.
   // Break offsets split at 15 and 30 (two wrapped lines).
   let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(
-      content="1234567890",
-      inline_class_name="injected",
-    ),
+    InjectedTextOptions::new(content="1234567890", inline_class_name="injected"),
   ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([8]) },
     get_break_offsets: fn(_l) { [15, 30] },
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { 5 },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(1)
   // Injected text starts at offset 8 in the input with injections.
   // Line 0: [0, 15), injected text occupies [8, 18) -> clipped to [8, 15)
   // Line 1: [15, 30), injected text occupies [8, 18) -> clipped to [15, 18) -> [0, 3)
   assert_inline_eq(result, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(5, 9, 5, 16),
-        "injected",
-        Regular,
-      ),
-    ],
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(6, 1, 6, 4),
-        "injected",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(5, 9, 5, 16), "injected", Regular)],
+    [InlineDecoration::new(Range(6, 1, 6, 4), "injected", Regular)],
   ])
 }
 
 ///|
 test "injection with wrappedTextIndentLength on wrapped lines" {
   let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(
+    InjectedTextOptions::new(
       content="12345678901234567890",
       inline_class_name="injected",
     ),
   ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([0]) },
     get_break_offsets: fn(_l) { [15, 30] },
     get_wrapped_text_indent_length: fn(_l) { 4 },
     get_base_view_line_number: fn(_l) { 1 },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(1)
   // Line 0 (outputLineIndex 0): no offset, start=0, end=15 -> columns 1 to 16
   // Line 1 (outputLineIndex 1): wrappedTextIndentLength=4, start=4, end=9 -> columns 5 to 10
   assert_inline_eq(result, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(1, 1, 1, 16),
-        "injected",
-        Regular,
-      ),
-    ],
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(2, 5, 2, 10),
-        "injected",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(1, 1, 1, 16), "injected", Regular)],
+    [InlineDecoration::new(Range(2, 5, 2, 10), "injected", Regular)],
   ])
 }
 
@@ -837,63 +718,41 @@ test "injection with wrappedTextIndentLength on wrapped lines" {
 test "injection starting in later wrapped line" {
   // Injection at offset 20 which is past the first line break.
   let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(
-      content="ab",
-      inline_class_name="late-class",
-    ),
+    InjectedTextOptions::new(content="ab", inline_class_name="late-class"),
   ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([20]) },
     get_break_offsets: fn(_l) { [15, 32] }, // 30 + 2
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { 1 },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(1)
   // Line 0: [0, 15) -> injection at offset 20 is past this line -> empty
   // Line 1: [15, 32) -> injection at offset 20 -> start=5, end=7 -> columns 6 to 8
   assert_inline_eq(result, [
     [],
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(2, 6, 2, 8),
-        "late-class",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(2, 6, 2, 8), "late-class", Regular)],
   ])
 }
 
 ///|
 test "base view line number offsets correctly" {
   let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(
-      content="test",
-      inline_class_name="test-class",
-    ),
+    InjectedTextOptions::new(content="test", inline_class_name="test-class"),
   ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([0]) },
     get_break_offsets: fn(_l) { [14] },
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { 10 },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(1)
   assert_inline_eq(result, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(10, 1, 10, 5),
-        "test-class",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(10, 1, 10, 5), "test-class", Regular)],
   ])
 }
 
@@ -904,31 +763,20 @@ test "range uses view line number, not model line number" {
   let model_line_number = 3
   let base_view_line_number = 7
   let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(
-      content="ghost",
-      inline_class_name="ghost-class",
-    ),
+    InjectedTextOptions::new(content="ghost", inline_class_name="ghost-class"),
   ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([0]) },
     get_break_offsets: fn(_l) { [15] }, // 10 (original) + 5 (injected)
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { base_view_line_number },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(model_line_number)
   // The range must reference view line 7, not model line 3.
   assert_inline_eq(result, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(7, 1, 7, 6),
-        "ghost-class",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(7, 1, 7, 6), "ghost-class", Regular)],
   ])
 }
 
@@ -938,37 +786,23 @@ test "range uses view line number on wrapped lines, not model line number" {
   let model_line_number = 2
   let base_view_line_number = 5
   let injection_options = [
-    @inline_decorations.InjectedTextOptions::new(
+    InjectedTextOptions::new(
       content="1234567890",
       inline_class_name="wrap-class",
     ),
   ]
-  let context : @inline_decorations.InjectedTextContext = {
+  let context : InjectedTextContext = {
     get_injection_options: fn(_l) { Some(injection_options) },
     get_injection_offsets: fn(_l) { Some([0]) },
     get_break_offsets: fn(_l) { [8, 20] },
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { base_view_line_number },
   }
-  let computer = @inline_decorations.InjectedTextInlineDecorationsComputer::new(
-    context,
-  )
+  let computer = RelocatedInjectedTextInlineDecorationsComputer::new(context)
   let result = computer.get_inline_decorations(model_line_number)
   // First wrapped line uses view line 5, second uses view line 6.
   assert_inline_eq(result, [
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(5, 1, 5, 9),
-        "wrap-class",
-        Regular,
-      ),
-    ],
-    [
-      @inline_decorations.InlineDecoration::new(
-        Range(6, 1, 6, 3),
-        "wrap-class",
-        Regular,
-      ),
-    ],
+    [InlineDecoration::new(Range(5, 1, 5, 9), "wrap-class", Regular)],
+    [InlineDecoration::new(Range(6, 1, 6, 3), "wrap-class", Regular)],
   ])
 }

@@ -133,7 +133,7 @@ fn line_parts_from_view_line_data(
 /// faithful per-line clip of view-range inline decorations into one-based
 /// column `LineDecoration`s. Empty-range Regular decorations are dropped.
 pub fn line_decorations_filter(
-  line_decorations : Array[@inline_decorations.InlineDecoration],
+  line_decorations : Array[InlineDecoration],
   line_number : Int,
   min_line_column : Int,
   max_line_column : Int,
@@ -178,7 +178,7 @@ pub fn line_decorations_filter(
 
 ///|
 fn to_view_layout_decoration_type(
-  type_ : @inline_decorations.InlineDecorationType,
+  type_ : InlineDecorationType,
 ) -> @view_layout.InlineDecorationType {
   match type_ {
     Regular => Regular

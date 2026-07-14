@@ -1,9 +1,8 @@
 ///|
 /// Faithful 1:1 port of Monaco's `viewModel/inlineDecorations.ts`
 /// (`InlineDecoration`, `InlineDecorationType`, `InlineModelDecorationsComputer`,
-/// `InjectedTextInlineDecorationsComputer`) plus `ViewModelDecoration` +
-/// `isModelDecorationVisible` from `viewModel/viewModelDecoration.ts`, from
-/// vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971.
+/// `InjectedTextInlineDecorationsComputer`) from vscode submodule commit
+/// b18492a288de038fbc7643aae6de8247029d11bd.
 ///
 /// Production middle layer (decoration plan Phase 3): the computer is generic
 /// over three seams so the real model tier plugs in while its conformance
@@ -39,7 +38,7 @@ pub(open) trait InlineDecorationsModel {
 /// `affinity` follows the source's optional parameter
 /// (`coordinatesConverter.ts:22-26`); absent means the Monaco default of the
 /// member (`None` for positions, `Left` for ranges).
-pub(open) trait CoordinatesConverter {
+pub(open) trait InlineCoordinatesConverter {
   fn convert_model_position_to_view_position(
     Self,
     @base_common.Position,
@@ -155,39 +154,11 @@ pub(all) struct ModelDecoration[O] {
 }
 
 ///|
-/// A model decoration resolved into view coordinates (Monaco
-/// `ViewModelDecoration`).
-pub(all) struct ViewModelDecoration[O] {
-  range : @base_common.Range
-  options : O
-}
-
-///|
-/// Builds a view-model decoration.
-pub fn[O] ViewModelDecoration::new(
-  range : @base_common.Range,
-  options : O,
-) -> ViewModelDecoration[O] {
-  { range, options }
-}
-
-///|
-/// Whether a model decoration is visible. See the file deviation: the
-/// comment/string-token hiding paths are not ported (no tokenization seam, and
-/// unused by the suite), so this is always `true`.
-pub fn[O, M] is_model_decoration_visible(
-  _model : M,
-  _decoration : ModelDecoration[O],
-) -> Bool {
-  true
-}
-
-///|
 /// Decorations in a range of lines: ungrouped, grouped per line as inline
 /// decorations, and a per-line "affects fonts" flag (Monaco
 /// `IViewDecorationsCollection`).
-pub(all) struct ViewDecorationsCollection[O] {
-  decorations : Array[ViewModelDecoration[O]]
+pub(all) struct RelocatedViewDecorationsCollection[O] {
+  decorations : Array[RelocatedViewModelDecoration[O]]
   inline_decorations : Array[Array[InlineDecoration]]
   has_variable_fonts : Array[Bool]
 }
@@ -209,7 +180,7 @@ pub struct InlineModelDecorationsComputer[O, M, C] {
   priv context : InlineModelContext[O]
   priv model : M
   priv coordinates_converter : C
-  priv mut decorations_cache : Map[String, ViewModelDecoration[O]]
+  priv mut decorations_cache : Map[String, RelocatedViewModelDecoration[O]]
 }
 
 ///|
@@ -227,7 +198,7 @@ pub fn[O, M, C] InlineModelDecorationsComputer::new(
 pub fn[
   O : InlineDecorationOptions,
   M : InlineDecorationsModel,
-  C : CoordinatesConverter,
+  C : InlineCoordinatesConverter,
 ] InlineModelDecorationsComputer::get_inline_decorations(
   self : InlineModelDecorationsComputer[O, M, C],
   model_line_number : Int,
@@ -249,19 +220,19 @@ pub fn[
 pub fn[
   O : InlineDecorationOptions,
   M : InlineDecorationsModel,
-  C : CoordinatesConverter,
+  C : InlineCoordinatesConverter,
 ] InlineModelDecorationsComputer::get_decorations(
   self : InlineModelDecorationsComputer[O, M, C],
   view_range : @base_common.Range,
   only_minimap_decorations : Bool,
   only_margin_decorations : Bool,
-) -> ViewDecorationsCollection[O] {
+) -> RelocatedViewDecorationsCollection[O] {
   let model_decorations = (self.context.get_model_decorations)(
     view_range, only_minimap_decorations, only_margin_decorations,
   )
   let start_line_number = view_range.start_line_number
   let end_line_number = view_range.end_line_number
-  let decorations_in_viewport : Array[ViewModelDecoration[O]] = []
+  let decorations_in_viewport : Array[RelocatedViewModelDecoration[O]] = []
   let inline_decorations : Array[Array[InlineDecoration]] = []
   let has_variable_fonts : Array[Bool] = []
   for _j in start_line_number..<=end_line_number {
@@ -386,11 +357,11 @@ pub fn[O, M, C] InlineModelDecorationsComputer::on_line_mapping_changed(
 fn[
   O : InlineDecorationOptions,
   M : InlineDecorationsModel,
-  C : CoordinatesConverter,
+  C : InlineCoordinatesConverter,
 ] InlineModelDecorationsComputer::get_or_create_view_model_decoration(
   self : InlineModelDecorationsComputer[O, M, C],
   model_decoration : ModelDecoration[O],
-) -> ViewModelDecoration[O] {
+) -> RelocatedViewModelDecoration[O] {
   let id = model_decoration.id
   match self.decorations_cache.get(id) {
     Some(r) => r
@@ -427,7 +398,7 @@ fn[
           affinity=Right,
         )
       }
-      let r = ViewModelDecoration::new(view_range, options)
+      let r = RelocatedViewModelDecoration::new(view_range, options)
       self.decorations_cache[id] = r
       r
     }
@@ -466,23 +437,23 @@ pub(all) struct InjectedTextContext {
 ///|
 /// Computes inline decorations for injected text, split by wrapped output line
 /// (Monaco `InjectedTextInlineDecorationsComputer`).
-pub struct InjectedTextInlineDecorationsComputer {
+pub struct RelocatedInjectedTextInlineDecorationsComputer {
   priv context : InjectedTextContext
 }
 
 ///|
 /// Builds an injected-text inline-decorations computer.
-pub fn InjectedTextInlineDecorationsComputer::new(
+pub fn RelocatedInjectedTextInlineDecorationsComputer::new(
   context : InjectedTextContext,
-) -> InjectedTextInlineDecorationsComputer {
+) -> RelocatedInjectedTextInlineDecorationsComputer {
   { context, }
 }
 
 ///|
 /// Inline decorations for the injected text of one model line, split by output
 /// (wrapped) line.
-pub fn InjectedTextInlineDecorationsComputer::get_inline_decorations(
-  self : InjectedTextInlineDecorationsComputer,
+pub fn RelocatedInjectedTextInlineDecorationsComputer::get_inline_decorations(
+  self : RelocatedInjectedTextInlineDecorationsComputer,
   model_line_number : Int,
 ) -> Array[Array[InlineDecoration]] {
   let injection_offsets = (self.context.get_injection_offsets)(

@@ -6,7 +6,6 @@ import {
   "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/cursor",
-  "moonbit-community/editor/viewer/common/inline_decorations",
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/tokens",
   "moonbit-community/editor/viewer/common/view_layout",
@@ -20,11 +19,13 @@ pub fn dedup_margin_decorations(Int, Int, Array[DecorationToRender]) -> Array[Ar
 
 pub fn filter_validation_decorations(RenderValidationDecorations) -> Bool
 
-pub fn line_decorations_filter(Array[@inline_decorations.InlineDecoration], Int, Int, Int) -> Array[@view_layout.LineDecoration]
+pub fn[O, M] is_model_decoration_visible(M, ModelDecoration[O]) -> Bool
 
-pub fn line_decorations_for_line(@inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions], Int, Int, ViewLineData) -> Array[@view_layout.LineDecoration]
+pub fn line_decorations_filter(Array[InlineDecoration], Int, Int, Int) -> Array[@view_layout.LineDecoration]
 
-pub fn lines_decorations_to_render(Array[@inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]]) -> Array[DecorationToRender]
+pub fn line_decorations_for_line(RelocatedViewDecorationsCollection[@model.ModelDecorationOptions], Int, Int, ViewLineData) -> Array[@view_layout.LineDecoration]
+
+pub fn lines_decorations_to_render(Array[RelocatedViewModelDecoration[@model.ModelDecorationOptions]]) -> Array[DecorationToRender]
 
 pub let monospace_line_breaks_computer_factory : MonospaceLineBreaksComputerFactory
 
@@ -45,7 +46,7 @@ pub fn CoordinatesConverter::model_position_to_view_position(Self, @common.Posit
 pub fn CoordinatesConverter::model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
 pub fn CoordinatesConverter::view_position_to_model_position(Self, @common.Position) -> @common.Position
 pub fn CoordinatesConverter::view_range_to_model_range(Self, @common.Range) -> @common.Range
-pub impl @inline_decorations.CoordinatesConverter for CoordinatesConverter
+pub impl InlineCoordinatesConverter for CoordinatesConverter
 
 type CursorEventDispatcher
 
@@ -104,11 +105,61 @@ pub(all) struct InjectedText {
 } derive(Eq, @debug.Debug)
 pub fn InjectedText::InjectedText(@common.Position, String, String, source_index? : Int) -> Self
 
+pub(all) struct InjectedTextContext {
+  get_injection_options : (Int) -> Array[InjectedTextOptions]?
+  get_injection_offsets : (Int) -> Array[Int]?
+  get_break_offsets : (Int) -> Array[Int]
+  get_wrapped_text_indent_length : (Int) -> Int
+  get_base_view_line_number : (Int) -> Int
+}
+
+pub(all) struct InjectedTextOptions {
+  content : String
+  inline_class_name : String?
+  inline_class_name_affects_letter_spacing : Bool
+} derive(Eq, @debug.Debug)
+pub fn InjectedTextOptions::new(content~ : String, inline_class_name? : String, inline_class_name_affects_letter_spacing? : Bool) -> Self
+
+pub(all) struct InlineDecoration {
+  range : @common.Range
+  inline_class_name : String
+  type_ : InlineDecorationType
+} derive(Eq, @debug.Debug)
+pub fn InlineDecoration::new(@common.Range, String, InlineDecorationType) -> Self
+
+pub(all) enum InlineDecorationType {
+  Regular
+  Before
+  After
+  RegularAffectingLetterSpacing
+} derive(Eq, @debug.Debug)
+
+pub(all) struct InlineModelContext[O] {
+  get_model_decorations : (@common.Range, Bool, Bool) -> Array[ModelDecoration[O]]
+}
+
+pub struct InlineModelDecorationsComputer[O, M, C] {
+  // private fields
+}
+pub fn[O : InlineDecorationOptions, M : InlineDecorationsModel, C : InlineCoordinatesConverter] InlineModelDecorationsComputer::get_decorations(Self[O, M, C], @common.Range, Bool, Bool) -> RelocatedViewDecorationsCollection[O]
+pub fn[O : InlineDecorationOptions, M : InlineDecorationsModel, C : InlineCoordinatesConverter] InlineModelDecorationsComputer::get_inline_decorations(Self[O, M, C], Int) -> Array[Array[InlineDecoration]]
+pub fn[O, M, C] InlineModelDecorationsComputer::new(InlineModelContext[O], M, C) -> Self[O, M, C]
+pub fn[O, M, C] InlineModelDecorationsComputer::on_line_mapping_changed(Self[O, M, C]) -> Unit
+pub fn[O, M, C] InlineModelDecorationsComputer::on_model_decorations_changed(Self[O, M, C]) -> Unit
+pub fn[O, M, C] InlineModelDecorationsComputer::reset(Self[O, M, C]) -> Unit
+
 pub struct LineBreaksComputer {
   // private fields
 }
 pub fn LineBreaksComputer::add_request(Self, Int, String, Array[InjectedText]) -> Unit
 pub fn LineBreaksComputer::finalize(Self) -> Array[ModelLineProjectionData?]
+
+pub(all) struct ModelDecoration[O] {
+  id : String
+  owner_id : Int
+  range : @common.Range
+  options : O
+}
 
 pub(all) enum ModelLineProjection {
   Identity
@@ -195,6 +246,24 @@ pub fn ProjectedTextLine::injected_text_index_at_projected_column(Self, Int) -> 
 pub fn ProjectedTextLine::model_column_to_projected_column(Self, Int, affinity? : @model.PositionAffinity) -> Int
 pub fn ProjectedTextLine::normalize_projected_column_around_injections(Self, Int, @model.PositionAffinity) -> Int
 pub fn ProjectedTextLine::projected_column_to_model_column(Self, Int) -> Int
+
+pub struct RelocatedInjectedTextInlineDecorationsComputer {
+  // private fields
+}
+pub fn RelocatedInjectedTextInlineDecorationsComputer::get_inline_decorations(Self, Int) -> Array[Array[InlineDecoration]]
+pub fn RelocatedInjectedTextInlineDecorationsComputer::new(InjectedTextContext) -> Self
+
+pub(all) struct RelocatedViewDecorationsCollection[O] {
+  decorations : Array[RelocatedViewModelDecoration[O]]
+  inline_decorations : Array[Array[InlineDecoration]]
+  has_variable_fonts : Array[Bool]
+}
+
+pub(all) struct RelocatedViewModelDecoration[O] {
+  range : @common.Range
+  options : O
+}
+pub fn[O] RelocatedViewModelDecoration::new(@common.Range, O) -> Self[O]
 
 pub(all) enum RenderValidationDecorations {
   Editable
@@ -298,8 +367,8 @@ pub fn ViewModel::with_options(@model.TextModel, ViewModelOptions, smooth_scroll
 pub struct ViewModelDecorations {
   // private fields
 }
-pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLinesFromProjectedModel, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
-pub fn ViewModelDecorations::get_decorations_viewport_data(Self, @common.Range) -> @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
+pub fn ViewModelDecorations::get_decorations_on_line(Self, ViewModelLinesFromProjectedModel, Int, only_minimap_decorations? : Bool, only_margin_decorations? : Bool) -> RelocatedViewDecorationsCollection[@model.ModelDecorationOptions]
+pub fn ViewModelDecorations::get_decorations_viewport_data(Self, @common.Range) -> RelocatedViewDecorationsCollection[@model.ModelDecorationOptions]
 pub fn ViewModelDecorations::new(Int, @model.TextModel, Bool, ViewModelLinesFromProjectedModel, CoordinatesConverter) -> Self
 pub fn ViewModelDecorations::on_line_mapping_changed(Self) -> Unit
 pub fn ViewModelDecorations::on_model_decorations_changed(Self) -> Unit
@@ -378,9 +447,28 @@ pub(all) enum WrappingIndent {
 } derive(Eq, @debug.Debug)
 
 // Type aliases
-pub type ViewDecorationsCollection = @inline_decorations.ViewDecorationsCollection[@model.ModelDecorationOptions]
+pub type ViewDecorationsCollection = RelocatedViewDecorationsCollection[@model.ModelDecorationOptions]
 
-pub type ViewModelDecoration = @inline_decorations.ViewModelDecoration[@model.ModelDecorationOptions]
+pub type ViewModelDecoration = RelocatedViewModelDecoration[@model.ModelDecorationOptions]
 
 // Traits
+pub(open) trait InlineCoordinatesConverter {
+  fn convert_model_position_to_view_position(Self, @common.Position, affinity? : @model.PositionAffinity) -> @common.Position
+  fn convert_model_range_to_view_range(Self, @common.Range, affinity? : @model.PositionAffinity) -> @common.Range
+}
+
+pub(open) trait InlineDecorationOptions {
+  fn inline_class_name(Self) -> String?
+  fn inline_class_name_affects_letter_spacing(Self) -> Bool
+  fn before_content_class_name(Self) -> String?
+  fn after_content_class_name(Self) -> String?
+  fn affects_font(Self) -> Bool
+  fn is_whole_line(Self) -> Bool
+}
+pub impl InlineDecorationOptions for @model.ModelDecorationOptions
+
+pub(open) trait InlineDecorationsModel {
+  fn get_line_max_column(Self, Int) -> Int
+}
+pub impl InlineDecorationsModel for @model.TextModel
 

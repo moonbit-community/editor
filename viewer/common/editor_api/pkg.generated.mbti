@@ -82,6 +82,12 @@ pub(all) struct ScrolledVisiblePosition {
   height : Double
 } derive(Eq, @debug.Debug)
 
+pub(all) enum ShowFoldingControls {
+  Always
+  Never
+  Mouseover
+} derive(Eq, @debug.Debug)
+
 pub(all) enum WrappingIndent {
   None
   Same

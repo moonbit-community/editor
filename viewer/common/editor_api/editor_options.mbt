@@ -39,3 +39,11 @@ pub(all) enum RenderValidationDecorations {
   On
   Off
 } derive(Eq, Debug)
+
+///|
+/// Monaco's `showFoldingControls` option.
+pub(all) enum ShowFoldingControls {
+  Always
+  Never
+  Mouseover
+} derive(Eq, Debug)

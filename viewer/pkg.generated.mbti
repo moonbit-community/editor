@@ -4,6 +4,7 @@ package "moonbit-community/editor/viewer"
 import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
+  "moonbit-community/editor/viewer/browser",
   "moonbit-community/editor/viewer/browser/view",
   "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/core",
@@ -53,13 +54,13 @@ pub fn EditorDecorationsCollection::length(Self) -> Int
 pub fn EditorDecorationsCollection::set(Self, Array[@model.ModelDeltaDecoration]) -> Array[String]
 
 pub(all) struct EditorMouseEvent {
-  event : @moonbit-community/editor/viewer/browser.EditorMouseEvent
-  target : @moonbit-community/editor/viewer/browser.MouseTarget
+  event : @browser.EditorMouseEvent
+  target : @browser.MouseTarget
 }
 
 pub(all) struct PartialEditorMouseEvent {
-  event : @moonbit-community/editor/viewer/browser.EditorMouseEvent
-  target : @moonbit-community/editor/viewer/browser.MouseTarget?
+  event : @browser.EditorMouseEvent
+  target : @browser.MouseTarget?
 }
 
 pub struct Viewer {
@@ -180,7 +181,7 @@ pub(all) struct ViewerOptions {
   line_decorations_width : Int
   line_numbers_min_chars : Int
   folding : Bool
-  show_folding_controls : @moonbit-community/editor/viewer/contrib/folding/browser.ShowFoldingControls
+  show_folding_controls : @editor_api.ShowFoldingControls
   folding_highlight : Bool
   folding_maximum_regions : Int
   unfold_on_click_after_end_of_line : Bool
@@ -193,7 +194,7 @@ pub(all) struct ViewerOptions {
   line_height : Double
   letter_spacing : Double
 } derive(Eq, @debug.Debug)
-pub fn ViewerOptions::ViewerOptions(soft_wrap? : Bool, tab_size? : Int, wrapping_indent? : @editor_api.WrappingIndent, render_whitespace? : @editor_api.RenderWhitespace, render_control_characters? : Bool, render_line_highlight? : @editor_api.RenderLineHighlight, render_line_highlight_only_when_focus? : Bool, render_validation_decorations? : @editor_api.RenderValidationDecorations, theme? : String, placeholder? : String, line_decorations_width? : Int, line_numbers_min_chars? : Int, folding? : Bool, show_folding_controls? : @moonbit-community/editor/viewer/contrib/folding/browser.ShowFoldingControls, folding_highlight? : Bool, folding_maximum_regions? : Int, unfold_on_click_after_end_of_line? : Bool, smooth_scrolling? : Bool, show_unused? : Bool, show_deprecated? : Bool, font_family? : String, font_weight? : String, font_size? : Double, line_height? : Double, letter_spacing? : Double) -> Self
+pub fn ViewerOptions::ViewerOptions(soft_wrap? : Bool, tab_size? : Int, wrapping_indent? : @editor_api.WrappingIndent, render_whitespace? : @editor_api.RenderWhitespace, render_control_characters? : Bool, render_line_highlight? : @editor_api.RenderLineHighlight, render_line_highlight_only_when_focus? : Bool, render_validation_decorations? : @editor_api.RenderValidationDecorations, theme? : String, placeholder? : String, line_decorations_width? : Int, line_numbers_min_chars? : Int, folding? : Bool, show_folding_controls? : @editor_api.ShowFoldingControls, folding_highlight? : Bool, folding_maximum_regions? : Int, unfold_on_click_after_end_of_line? : Bool, smooth_scrolling? : Bool, show_unused? : Bool, show_deprecated? : Bool, font_family? : String, font_weight? : String, font_size? : Double, line_height? : Double, letter_spacing? : Double) -> Self
 pub fn ViewerOptions::default() -> Self
 pub fn ViewerOptions::soft_wrap_column_for_content_width(Self, Double, Double) -> Int
 pub fn ViewerOptions::view_model_options(Self, Int, font_info~ : @config.FontInfo, editor_id? : Int) -> @view_model.ViewModelOptions

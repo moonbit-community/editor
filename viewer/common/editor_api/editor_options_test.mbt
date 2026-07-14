@@ -43,3 +43,12 @@ test "RenderValidationDecorations exposes every canonical mode" {
   assert_eq(modes[1], On)
   assert_eq(modes[2], Off)
 }
+
+///|
+test "ShowFoldingControls exposes every canonical mode" {
+  let modes : Array[ShowFoldingControls] = [Always, Never, Mouseover]
+  assert_eq(modes.length(), 3)
+  assert_eq(modes[0], Always)
+  assert_eq(modes[1], Never)
+  assert_eq(modes[2], Mouseover)
+}

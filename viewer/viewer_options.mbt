@@ -36,7 +36,7 @@ pub(all) struct ViewerOptions {
   folding : Bool
   /// Monaco's `showFoldingControls` editor option (default `mouseover`):
   /// when the gutter chevrons are visible. `always`/`never`/`mouseover`.
-  show_folding_controls : @folding_browser.ShowFoldingControls
+  show_folding_controls : @editor_api.ShowFoldingControls
   /// Monaco's `foldingHighlight` editor option (default `true`): whether
   /// folded ranges get the `folded-background` highlight.
   folding_highlight : Bool
@@ -92,7 +92,7 @@ pub fn ViewerOptions::ViewerOptions(
   line_decorations_width? : Int = 10,
   line_numbers_min_chars? : Int = 5,
   folding? : Bool = true,
-  show_folding_controls? : @folding_browser.ShowFoldingControls = Mouseover,
+  show_folding_controls? : @editor_api.ShowFoldingControls = Mouseover,
   folding_highlight? : Bool = true,
   folding_maximum_regions? : Int = 5000,
   unfold_on_click_after_end_of_line? : Bool = false,

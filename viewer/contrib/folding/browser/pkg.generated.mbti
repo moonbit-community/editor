@@ -4,6 +4,7 @@ package "moonbit-community/editor/viewer/contrib/folding/browser"
 import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/core",
+  "moonbit-community/editor/viewer/common/editor_api",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/model",
   "moonbitlang/core/debug",
@@ -82,13 +83,13 @@ pub struct FoldingDecorationAccess {
 }
 
 pub struct FoldingDecorationProvider {
-  mut show_folding_controls : ShowFoldingControls
+  mut show_folding_controls : @editor_api.ShowFoldingControls
   mut show_folding_highlights : Bool
   // private fields
 }
 pub fn FoldingDecorationProvider::access(Self) -> FoldingDecorationAccess
 pub fn FoldingDecorationProvider::new(@model.TextModel, owner_id? : Int) -> Self
-pub fn FoldingDecorationProvider::update_options(Self, show_folding_controls~ : ShowFoldingControls, show_folding_highlights~ : Bool) -> Unit
+pub fn FoldingDecorationProvider::update_options(Self, show_folding_controls~ : @editor_api.ShowFoldingControls, show_folding_highlights~ : Bool) -> Unit
 
 pub(all) struct FoldingLimitReporter {
   limit : () -> Int
@@ -195,12 +196,6 @@ pub(all) enum RegionFilter {
 pub(all) struct SelectedLines {
   starts_inside : (Int, Int) -> Bool
 }
-
-pub(all) enum ShowFoldingControls {
-  Always
-  Never
-  Mouseover
-} derive(Eq, @debug.Debug)
 
 // Type aliases
 

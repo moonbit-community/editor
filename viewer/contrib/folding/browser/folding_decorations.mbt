@@ -153,14 +153,6 @@ let hidden_range_decoration : @model.ModelDecorationOptions = ModelDecorationOpt
 )
 
 ///|
-/// `showFoldingControls: 'always' | 'never' | 'mouseover'`.
-pub(all) enum ShowFoldingControls {
-  Always
-  Never
-  Mouseover
-} derive(Eq, Debug)
-
-///|
 /// The folding decoration source — Monaco's `FoldingDecorationProvider`
 /// (`foldingDecorations.ts:31`). The source holds an `ICodeEditor` whose
 /// `changeDecorations`/`removeDecorations` delegate to the attached model
@@ -169,7 +161,7 @@ pub(all) enum ShowFoldingControls {
 pub struct FoldingDecorationProvider {
   priv model : @model.TextModel
   priv owner_id : Int
-  mut show_folding_controls : ShowFoldingControls
+  mut show_folding_controls : @editor_api.ShowFoldingControls
   mut show_folding_highlights : Bool
 }
 
@@ -192,7 +184,7 @@ pub fn FoldingDecorationProvider::new(
 /// configuration changes.
 pub fn FoldingDecorationProvider::update_options(
   self : FoldingDecorationProvider,
-  show_folding_controls~ : ShowFoldingControls,
+  show_folding_controls~ : @editor_api.ShowFoldingControls,
   show_folding_highlights~ : Bool,
 ) -> Unit {
   self.show_folding_controls = show_folding_controls

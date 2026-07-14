@@ -391,7 +391,7 @@ fn ContentViewOverlays::set_focused(
 pub fn View::install_current_line_configuration_reader(
   self : View,
   read_configuration : () -> (
-    @view_layout.RenderLineHighlight,
+    @editor_api.RenderLineHighlight,
     Bool,
     Bool,
     Double,

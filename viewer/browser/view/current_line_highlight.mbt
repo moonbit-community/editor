@@ -21,7 +21,7 @@
 /// input is deliberately not used to rewrite these caches because doing so
 /// would collapse source event order into a frame-final snapshot.
 priv struct CurrentLineHighlightState {
-  mut render_line_highlight : @view_layout.RenderLineHighlight
+  mut render_line_highlight : @editor_api.RenderLineHighlight
   mut word_wrap : Bool
   mut content_left : Double
   mut content_width : Double
@@ -31,7 +31,7 @@ priv struct CurrentLineHighlightState {
   mut cursor_line_numbers : Array[Int]
   mut selections : Array[@core.Selection]
   mut read_configuration : () -> (
-    @view_layout.RenderLineHighlight,
+    @editor_api.RenderLineHighlight,
     Bool,
     Bool,
     Double,
@@ -65,7 +65,7 @@ fn CurrentLineHighlightState::CurrentLineHighlightState() -> CurrentLineHighligh
 fn CurrentLineHighlightState::install_configuration_reader(
   self : CurrentLineHighlightState,
   read_configuration : () -> (
-    @view_layout.RenderLineHighlight,
+    @editor_api.RenderLineHighlight,
     Bool,
     Bool,
     Double,
@@ -184,7 +184,7 @@ fn prepare_current_line_render(
   selection_is_empty : Bool,
   editor_has_focus : Bool,
   word_wrap : Bool,
-  render_line_highlight : @view_layout.RenderLineHighlight,
+  render_line_highlight : @editor_api.RenderLineHighlight,
   render_line_highlight_only_when_focus : Bool,
   width : Double,
 ) -> Array[String] {

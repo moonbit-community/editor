@@ -1,28 +1,18 @@
 // The DOM-free half of Monaco's
 // `viewParts/currentLineHighlight/currentLineHighlight.ts` (oracle 294fb350):
-// the `renderLineHighlight` option enum, the abstract overlay's should-render
-// predicates, the two concrete class builders, and the wrapped-line span
-// helper. The DOM overlays that consume these are in
+// the abstract overlay's should-render predicates, the two concrete class
+// builders, and the wrapped-line span helper. The canonical option enum lives
+// in `viewer/common/editor_api`. The DOM overlays that consume these are in
 // `viewer/browser/view/current_line_highlight.mbt` and
 // `viewer/browser/view/current_line_margin_highlight.mbt`. This DOM-free
 // option behavior stays here; canonical public option values live in
 // `viewer/common/editor_api`.
 
 ///|
-/// Monaco's `renderLineHighlight` editor option: `'none' | 'gutter' | 'line'
-/// | 'all'` (`editorOptions.ts`; default `'line'`).
-pub(all) enum RenderLineHighlight {
-  None
-  Gutter
-  Line
-  All
-} derive(Eq, Debug)
-
-///|
 /// `AbstractLineHighlightOverlay._shouldRenderInMargin`
 /// (`currentLineHighlight.ts:184-189`).
 pub fn should_render_line_highlight_in_margin(
-  mode : RenderLineHighlight,
+  mode : @editor_api.RenderLineHighlight,
   only_when_focus : Bool,
   focused : Bool,
 ) -> Bool {
@@ -34,7 +24,7 @@ pub fn should_render_line_highlight_in_margin(
 /// (`currentLineHighlight.ts:191-197`): the content fill/border renders only
 /// while the selection is empty.
 pub fn should_render_line_highlight_in_content(
-  mode : RenderLineHighlight,
+  mode : @editor_api.RenderLineHighlight,
   only_when_focus : Bool,
   focused : Bool,
   selection_is_empty : Bool,

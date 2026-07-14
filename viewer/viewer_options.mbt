@@ -6,7 +6,7 @@ pub(all) struct ViewerOptions {
   wrapping_indent : @view_model.WrappingIndent
   render_whitespace : @editor_api.RenderWhitespace
   render_control_characters : Bool
-  render_line_highlight : @view_layout.RenderLineHighlight
+  render_line_highlight : @editor_api.RenderLineHighlight
   render_line_highlight_only_when_focus : Bool
   /// `renderValidationDecorations`. Product default `On` — Monaco defaults to
   /// `Editable`, which hides validation squiggles in readonly editors, and the
@@ -84,7 +84,7 @@ pub fn ViewerOptions::ViewerOptions(
   wrapping_indent? : @view_model.WrappingIndent = Same,
   render_whitespace? : @editor_api.RenderWhitespace = Selection,
   render_control_characters? : Bool = true,
-  render_line_highlight? : @view_layout.RenderLineHighlight = Line,
+  render_line_highlight? : @editor_api.RenderLineHighlight = Line,
   render_line_highlight_only_when_focus? : Bool = false,
   render_validation_decorations? : @view_model.RenderValidationDecorations = On,
   theme? : String = "dark",

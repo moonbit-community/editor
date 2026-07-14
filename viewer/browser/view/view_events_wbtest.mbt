@@ -1626,7 +1626,7 @@ test "current-line predicate ignores same-line column moves but tracks emptiness
   )
 
   let configuration : Ref[
-    (@view_layout.RenderLineHighlight, Bool, Bool, Double, Double),
+    (@editor_api.RenderLineHighlight, Bool, Bool, Double, Double),
   ] = Ref((Line, false, false, 10.0, 100.0))
   state.install_configuration_reader(() => configuration.val)
   assert_false(state.on_focus_changed(true))
@@ -1861,7 +1861,7 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
   layout.set_content_width(80.0) |> ignore
   let view = View::View()
   let configuration : Ref[
-    (@view_layout.RenderLineHighlight, Bool, Bool, Double, Double),
+    (@editor_api.RenderLineHighlight, Bool, Bool, Double, Double),
   ] = Ref((Line, false, false, 40.0, 120.0))
   view.install_current_line_configuration_reader(() => configuration.val)
   let content = view.content_view_overlays

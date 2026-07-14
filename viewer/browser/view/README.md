@@ -166,7 +166,7 @@ The content overlays register in this paint order:
 3. decorations
 
 The content and margin current-line units apply Monaco's focus, selection,
-wrapping, `RenderLineHighlight`, and
+wrapping, canonical `editor_api.RenderLineHighlight`, and
 `RenderLineHighlightOnlyWhenFocus` predicates. `current_line_span` expands a
 wrapped model line to its view-line span. The content highlight is below
 selections and decorations; the margin highlight is first in the implemented

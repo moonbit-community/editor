@@ -141,7 +141,7 @@ pub fn View::dispose(Self) -> Unit
 pub fn View::emit_view_event(Self, ViewEvent) -> Unit
 pub fn View::emit_view_zones_changed_then(Self, () -> Unit) -> Unit
 pub fn View::end_view_event_batch(Self) -> Unit
-pub fn View::install_current_line_configuration_reader(Self, () -> (@view_layout.RenderLineHighlight, Bool, Bool, Double, Double)) -> Unit
+pub fn View::install_current_line_configuration_reader(Self, () -> (@editor_api.RenderLineHighlight, Bool, Bool, Double, Double)) -> Unit
 pub fn View::install_view_zones_context(Self, @view_model.ViewModel, @log.LogService, () -> (Int, Double, Double), () -> Unit) -> Unit
 pub fn View::is_line_rendered(Self, Int) -> Bool
 pub fn View::line_width(Self, Int, Int) -> Double
@@ -295,7 +295,7 @@ pub(all) struct ViewRenderInput {
   typical_fullwidth_character_width : Double
   editor_has_focus : Bool
   word_wrap : Bool
-  render_line_highlight : @view_layout.RenderLineHighlight
+  render_line_highlight : @editor_api.RenderLineHighlight
   render_line_highlight_only_when_focus : Bool
   show_unused : Bool
   show_deprecated : Bool

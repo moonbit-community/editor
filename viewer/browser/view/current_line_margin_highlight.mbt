@@ -37,7 +37,7 @@ fn prepare_current_line_margin_render(
   selection_is_empty : Bool,
   editor_has_focus : Bool,
   word_wrap : Bool,
-  render_line_highlight : @view_layout.RenderLineHighlight,
+  render_line_highlight : @editor_api.RenderLineHighlight,
   render_line_highlight_only_when_focus : Bool,
   width : Double,
 ) -> Array[String] {

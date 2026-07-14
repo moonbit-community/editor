@@ -8,3 +8,12 @@ pub(all) enum RenderWhitespace {
   Trailing
   All
 } derive(Eq, Debug)
+
+///|
+/// Monaco's `renderLineHighlight` option.
+pub(all) enum RenderLineHighlight {
+  None
+  Gutter
+  Line
+  All
+} derive(Eq, Debug)

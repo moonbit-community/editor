@@ -203,41 +203,153 @@ test "viewer disposes all five real rows once in order while the map stays insta
 }
 
 ///|
-test "two viewers retain distinct concrete contribution instances" {
+test "two viewers isolate mutable contribution state and disposal owners" {
   let first = Viewer::Viewer()
   let second = Viewer::Viewer()
-  assert_false(
+  let first_input = first.agent_feedback_input_contribution().unwrap()
+  let second_input = second.agent_feedback_input_contribution().unwrap()
+  let first_widgets = first.agent_feedback_widget_contribution().unwrap()
+  let second_widgets = second.agent_feedback_widget_contribution().unwrap()
+  let first_folding = first.folding_controller().unwrap()
+  let second_folding = second.folding_controller().unwrap()
+  let first_hover = first.content_hover_controller().unwrap()
+  let second_hover = second.content_hover_controller().unwrap()
+  let first_quick_diff = first.quick_diff_contribution().unwrap()
+  let second_quick_diff = second.quick_diff_contribution().unwrap()
+  assert_false(physical_equal(first_input, second_input))
+  assert_false(physical_equal(first_widgets, second_widgets))
+  assert_false(physical_equal(first_folding, second_folding))
+  assert_false(physical_equal(first_hover, second_hover))
+  assert_false(physical_equal(first_quick_diff, second_quick_diff))
+
+  // Give every concrete controller/state a Viewer-specific mutable witness.
+  // These values deliberately differ so an accidental shared carrier or
+  // cross-Viewer lookup is observable before either Viewer is disposed.
+  first_input.visible = true
+  first_input.hover_line_number = 11
+  second_input.visible = false
+  second_input.hover_line_number = 22
+  first_widgets.widget_id_pool = 101
+  first_widgets.reply_drafts["first"] = "first draft"
+  second_widgets.widget_id_pool = 202
+  second_widgets.reply_drafts["second"] = "second draft"
+  first_hover.hover_keep_open = true
+  first_hover.hover_notified_token = 11
+  second_hover.hover_ignore_mouse_events = true
+  second_hover.hover_notified_token = 22
+
+  let first_disposals : Array[String] = []
+  let second_disposals : Array[String] = []
+  first.contributions["agentFeedback.editorInputContribution"].listeners.push(
+    @base_common.Disposable::from(() => first_disposals.push("input")),
+  )
+  second.contributions["agentFeedback.editorInputContribution"].listeners.push(
+    @base_common.Disposable::from(() => second_disposals.push("input")),
+  )
+  first.contributions["agentFeedback.editorWidgetContribution"].listeners.push(
+    @base_common.Disposable::from(() => first_disposals.push("widget")),
+  )
+  second.contributions["agentFeedback.editorWidgetContribution"].listeners.push(
+    @base_common.Disposable::from(() => second_disposals.push("widget")),
+  )
+  first_folding.local_to_dispose.push(
+    @base_common.Disposable::from(() => first_disposals.push("folding")),
+  )
+  second_folding.local_to_dispose.push(
+    @base_common.Disposable::from(() => second_disposals.push("folding")),
+  )
+  first_hover.install_react_timer(
+    @base_common.Disposable::from(() => first_disposals.push("hover")),
+  )
+  second_hover.install_react_timer(
+    @base_common.Disposable::from(() => second_disposals.push("hover")),
+  )
+  first_quick_diff.listeners.push(
+    @base_common.Disposable::from(() => first_disposals.push("quickDiff")),
+  )
+  second_quick_diff.listeners.push(
+    @base_common.Disposable::from(() => second_disposals.push("quickDiff")),
+  )
+  let second_folding_listener_count = second_folding.local_to_dispose.length()
+  let second_quick_diff_listener_count = second_quick_diff.listeners.length()
+
+  assert_eq(first_input.hover_line_number, 11)
+  assert_eq(second_input.hover_line_number, 22)
+  assert_eq(first_widgets.widget_id_pool, 101)
+  assert_eq(second_widgets.widget_id_pool, 202)
+  assert_eq(first_widgets.reply_drafts.get("second"), None)
+  assert_eq(second_widgets.reply_drafts.get("first"), None)
+  assert_true(first_hover.hover_keep_open)
+  assert_false(second_hover.hover_keep_open)
+  assert_false(first_hover.hover_ignore_mouse_events)
+  assert_true(second_hover.hover_ignore_mouse_events)
+
+  first.dispose()
+
+  // First's cleanup drains only First-owned stores. Second keeps the exact
+  // same typed instances, mutable sentinels, and pending disposal handles.
+  assert_eq(first_disposals, [
+    "input", "widget", "folding", "hover", "quickDiff",
+  ])
+  assert_eq(second_disposals, [])
+  assert_true(first.agent_feedback_input_contribution() is None)
+  assert_true(first.agent_feedback_widget_contribution() is None)
+  assert_true(first.folding_controller() is None)
+  assert_true(first.content_hover_controller() is None)
+  assert_true(first.quick_diff_contribution() is None)
+  assert_true(
     physical_equal(
-      first.agent_feedback_input_contribution().unwrap(),
+      second_input,
       second.agent_feedback_input_contribution().unwrap(),
     ),
   )
-  assert_false(
+  assert_true(
     physical_equal(
-      first.agent_feedback_widget_contribution().unwrap(),
+      second_widgets,
       second.agent_feedback_widget_contribution().unwrap(),
     ),
   )
-  assert_false(
-    physical_equal(
-      first.folding_controller().unwrap(),
-      second.folding_controller().unwrap(),
-    ),
+  assert_true(
+    physical_equal(second_folding, second.folding_controller().unwrap()),
   )
-  assert_false(
-    physical_equal(
-      first.content_hover_controller().unwrap(),
-      second.content_hover_controller().unwrap(),
-    ),
+  assert_true(
+    physical_equal(second_hover, second.content_hover_controller().unwrap()),
   )
-  assert_false(
-    physical_equal(
-      first.quick_diff_contribution().unwrap(),
-      second.quick_diff_contribution().unwrap(),
-    ),
+  assert_true(
+    physical_equal(second_quick_diff, second.quick_diff_contribution().unwrap()),
   )
-  first.dispose()
+  assert_false(second_input.visible)
+  assert_eq(second_input.hover_line_number, 22)
+  assert_eq(second_widgets.widget_id_pool, 202)
+  assert_eq(second_widgets.reply_drafts.get("second"), Some("second draft"))
+  assert_eq(
+    second_folding.local_to_dispose.length(),
+    second_folding_listener_count,
+  )
+  assert_eq(second_hover.hover_notified_token, 22)
+  assert_eq(
+    second_quick_diff.listeners.length(),
+    second_quick_diff_listener_count,
+  )
+
+  // Mutating Second after First's teardown cannot reach the retained First
+  // controller objects either.
+  second_input.hover_line_number = 23
+  second_widgets.widget_id_pool = 203
+  second_widgets.reply_drafts["second"] = "updated second draft"
+  second_hover.hover_notified_token = 23
+  assert_eq(first_input.hover_line_number, 11)
+  assert_eq(first_widgets.widget_id_pool, 101)
+  assert_eq(first_widgets.reply_drafts.get("first"), Some("first draft"))
+  assert_eq(first_hover.hover_notified_token, 11)
+
   second.dispose()
+  assert_eq(second_disposals, [
+    "input", "widget", "folding", "hover", "quickDiff",
+  ])
+  assert_eq(first_disposals, [
+    "input", "widget", "folding", "hover", "quickDiff",
+  ])
 }
 
 ///|

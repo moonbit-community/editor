@@ -50,3 +50,27 @@ These `.mbt` files preserve source-unit responsibilities for inventory,
 citations, and parity review; they do not create MoonBit packages or
 namespaces. The `viewer/browser/view_parts/*` directories are CSS asset paths
 only, retained so the stylesheet build and provenance paths stay stable.
+
+## Editor contribution ownership
+
+The complete upstream
+`browser/widget/codeEditor/codeEditorContributions.ts` unit, its bounded
+`codeEditorWidget.ts` integration clusters, and the scoped hover, folding,
+agent-feedback, and quick-diff controller lifetimes map to the root
+`viewer/editor_extensions.mbt` registry plus focused root registration/host
+files. The local `Viewer.contributions` map is the one per-editor instance
+store, corresponding to Monaco's `CodeEditorContributions._instances`.
+Feature-specific root accessors are typed matches over that central map, not
+independent editor-id-keyed stores. Its closed rows are feedback input,
+feedback widgets, folding, content hover, and the local quick-diff decorator.
+The registered Monaco timing modes remain recorded, but the current Viewer
+constructs every row eagerly. Local quick diff is the per-Viewer reduction of
+the workbench controller plus decorator, not a port of
+`QuickDiffEditorController`.
+
+The ownership migration used oracle commit
+`b18492a288de038fbc7643aae6de8247029d11bd`. Its frozen 567-row upstream
+ledger, 226-row local inventory, representation proof, exact lifetime trace,
+and seam-based lifecycle deviation live in the main
+`docs/exec-plans/editor-contribution-single-ownership.md` plan and its sibling
+`editor-contribution-single-ownership-gate-a*.md` artifacts.

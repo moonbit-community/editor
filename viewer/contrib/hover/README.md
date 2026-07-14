@@ -35,11 +35,16 @@ timing, and rendering can be tested on JS and native targets.
 
 `viewer/contrib/hover/browser` owns everything whose contract carries DOM or a
 browser `MouseTarget`: candidate discovery, editor-event reduction, the
-per-editor `ContentHoverController`, geometry, and the persistent
-`ContentHoverWidget`. The widget exposes a generic `ContentWidgetHandle` and
-mounts in the overflowing layer. The root `viewer` package registers the
-contribution, routes events/timers/provider work, owns hover decorations, and
-mounts/synchronizes the widget.
+`ContentHoverController` implementation, geometry, and the persistent
+`ContentHoverWidget`. The feature package has no process-global per-editor
+controller map. The root `viewer` package constructs the concrete controller
+into its sole per-Viewer contribution registry, recovers it through a private
+typed central accessor, routes events/timers/provider work, owns hover
+decorations, and mounts/synchronizes the widget. Controller reset and disposal
+operate on that stored payload directly. The same controller survives model
+removal, replacement, and reattachment while its model-scoped timers, request,
+and decoration state reset. The widget exposes a generic `ContentWidgetHandle`
+and mounts in the overflowing layer.
 
 Compared with Monaco, there are no resize sashes, hover status bar,
 accessibility view, color picker, code-action participant, or context-key/DI

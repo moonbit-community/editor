@@ -110,9 +110,30 @@ depends on them.
 - `viewer/contrib/folding/browser` currently owns the complete js-only folding
   implementation, including ranges, hidden areas, decorations, and controller.
 
-The root editor registry constructs contributions once per `Viewer` and routes
-their commands/keybindings. Declared instantiation modes are retained for
-source parity, but all modes currently instantiate eagerly.
+The root editor registry has two distinct ownership layers. Its process-wide
+contribution-description table contains constructors only; the adjacent command
+and keybinding tables likewise contain no per-Viewer state. Each
+`Viewer.contributions` map is the sole owner and lookup table for that Viewer's
+five concrete contribution instances, retained behind a private closed enum;
+feature packages do not keep second maps keyed by editor id. Root `Viewer::`
+helpers recover typed controllers by matching both the fixed id and central
+entry variant, mirroring Monaco's typed view over
+`CodeEditorContributions._instances`.
+
+Contribution construction is two-phase: reject a duplicate id before side
+effects, construct the bare controller, insert the actual entry, then install
+listeners and run initial synchronization. The complete map remains installed
+during ordered disposal, while each entry's lifecycle prevents repeated
+teardown and direct typed-payload dispatch avoids re-looking up state by id.
+Declared instantiation modes are retained for source parity, but all modes
+currently instantiate eagerly.
+
+This central ownership rule supersedes the feature-local instance tables from
+Track C of the implemented ownership-divergence closeout as of 2026-07-14.
+The reviewed inventory, representation decision, lifetime trace, and completed
+migration are recorded in
+`docs/exec-plans/editor-contribution-single-ownership.md`; the older implemented
+plan remains historical evidence rather than a current contract.
 
 ## Reference Shell
 

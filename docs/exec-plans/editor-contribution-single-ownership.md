@@ -1,6 +1,6 @@
 # Editor Contribution Single Ownership
 
-Status: inventory ready — STOP FOR REVIEW; no implementation has started
+Status: complete — Gate A approved and implementation validated 2026-07-14
 Date: 2026-07-13
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
@@ -12,8 +12,11 @@ Gate A is recorded as a four-document, documentation-only artifact set:
 - `editor-contribution-single-ownership-gate-a-local.md`;
 - `editor-contribution-single-ownership-gate-a-lifetime.md`.
 
-Product implementation remains blocked until the entrypoint and all three
-companions are explicitly approved.
+The entrypoint and all three companions were explicitly approved on
+2026-07-14. They remain frozen pre-implementation evidence: their local
+baseline, present-tense descriptions, and `STOP FOR REVIEW` statuses record the
+state at which the gate was reviewed rather than the current product state.
+Implementation and closing evidence are recorded in this parent plan.
 
 ## Goal
 
@@ -228,7 +231,9 @@ share significant root host files:
 5. verify decoration ownership, widget teardown, drafts, selection suppression,
    and service subscriptions.
 
-No process-global mutable contribution state remains after this milestone.
+No process-global mutable contribution-instance state remains after this
+milestone. The intentional process-wide description, command, and keybinding
+registry contains no per-Viewer controller state.
 
 ## Milestone F: API, Docs, and Historical Supersession
 
@@ -269,19 +274,91 @@ Required validation:
 
 ## Exit Criteria
 
-- [ ] inventory rows equal scoped source members; final totals are recorded
-- [ ] `Viewer.contributions` is the only per-editor contribution instance map
-- [ ] all five registered contributions store their actual typed instance in
+- [x] inventory rows equal scoped source members; final totals are recorded
+- [x] `Viewer.contributions` is the only per-editor contribution instance map
+- [x] all five registered contributions store their actual typed instance in
       the central entry
-- [ ] no feature-local `Map[String, Controller]` remains
-- [ ] no attach/get/detach lookup by editor id remains
-- [ ] construction, model-swap, and disposal order match the reviewed trace
-- [ ] two-viewer isolation and exactly-once disposal tests pass
-- [ ] architecture/current READMEs describe the new owner; historical plans
+- [x] no feature-local `Map[String, Controller]` remains
+- [x] no attach/get/detach lookup by editor id remains
+- [x] construction, model-swap, and disposal order match the reviewed trace
+- [x] two-viewer isolation and exactly-once disposal tests pass
+- [x] architecture/current READMEs describe the new owner; historical plans
       remain unchanged
-- [ ] all deviations are recorded and seam-based
-- [ ] closing complete-source reread finds no unaccounted member
-- [ ] required validation is green
+- [x] all deviations are recorded and seam-based
+- [x] closing complete-source reread finds no unaccounted member
+- [x] required validation is green
+
+## Completion Record
+
+Gate A's frozen upstream denominator remains 11 files / 9,788 lines and 567
+terminal parity rows: 136 `PORTED`, 161 `TESTED`, 143 `DEFERRED`, and 127
+`N-A`. Its frozen local denominator remains 226 structural rows. The closing
+complete-source reread reconciled every scoped source member and found no
+unaccounted behavior-changing branch, lifecycle carrier, or owned listener.
+The four Gate A companions were not rewritten after approval.
+
+The implemented local denominator is:
+
+| Kind | Final result |
+|---|---:|
+| Complete production scope | 14 files / 3,696 lines / 161 declarations |
+| Bounded production carriers | 13; 174 production rows in total |
+| Directly relevant tests | 6 files / 1,823 lines / 46 tests + 21 helpers |
+| Final local structural denominator | 241 rows = 174 production/carriers + 67 test declarations |
+| Registered concrete variants | 5 |
+| Per-Viewer contribution-instance maps | 1 |
+| Feature-global contribution-instance maps | 0, down from 4 |
+| Legacy feature `attach/get/detach` APIs | 0, down from 12 |
+| Static listener handles | 22 = folding 5 + input 9 + widgets 5 + quick diff 3 |
+| Feature interface change | 4 primary constructors added and 12 map APIs removed; net -8 exports |
+| Root Viewer public interface | unchanged; the later API plan owns its temporary facade |
+| Complete scoped code/test manifest | `cfd07b704e6362c9f54fc745ed7cf49d3794bbc82214999ca9318705da106221` |
+| Final 18-artifact package-contract manifest | `a5d4c9c9e8fc3764278c99b6601b33cb7186bd69712db022dcd94d03afdf415a` |
+
+Milestone B introduced the private closed entry representation and migrated
+quick diff in `23a5566`, with direct widget-payload teardown corrected in
+`29190ea`. Hover migrated in `ca0abf7` and its construction spelling was
+cleaned in `964715f`; folding migrated in `841adf9`; feedback input and widgets
+migrated separately in `dccc983` and `43ecf92`. Each milestone was validated
+before the next shared registry/host edit began.
+
+Construction is now duplicate-first-wins before side effects, followed by bare
+controller construction, insertion into the actual Viewer map, then listener
+installation and initial synchronization. Disposal keeps the complete map
+installed and dispatches input -> widgets -> folding -> hover -> quick diff
+directly from the stored enum payload before clearing the map. Model removal,
+replacement, reattachment, and content flush preserve Viewer-lifetime
+controller identity while resetting or rebuilding model-owned state.
+
+The closing audit added regression evidence that was absent from the frozen
+Gate A baseline: all five variants are mutated across two concurrent Viewers,
+and feedback covers content flush, A -> B -> `None` -> reattach, draft/pool
+policy, glyph/highlight/widget bookkeeping, disposal, repeated disposal, and
+post-dispose service silence. Root Viewer tests finish 198/198.
+
+Validation completed on 2026-07-14:
+
+- `moon check --target all`, `moon info --target all`, and the four scoped
+  `moon ide analyze` runs: green; generated interfaces expose no private entry
+  or enum and the root public interface is unchanged;
+- `just check`: formatting and architecture gates green;
+- `just test`: 1,414/1,414 JS and 1,004/1,004 native tests green;
+- `just build`: browser bundles, stylesheet, and native server green;
+- `just test-browser`: 82/82 Playwright tests green, including agent feedback,
+  model swap, async hover ownership, folding, and quick diff;
+- closing map/API/interface searches, manifest/count/hash reconciliation, and
+  `git diff --check`: green.
+
+There is no behavior deviation. The seam-based representation addition is
+`EditorContributionLifecycle`: it keeps the temporary public facade
+idempotent and preserves typed central access during ordered teardown without
+duplicating the instance. Root entries retain Viewer/service listeners because
+root glue creates them; feature packages gain no listener-management API.
+Widget and highlight teardown use the enum's concrete payload and never recover
+state by id. The reviewed eager timing, absent contribution save/restore,
+quick-diff topology reduction, and temporary public facade remain explicit
+deferrals rather than silent parity claims. The facade is handed to
+`viewer-public-editor-api-boundary.md`, whose own Gate A still applies.
 
 ## Cross-Plan Coordination
 

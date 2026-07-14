@@ -24,15 +24,27 @@ ownership and lifecycle rules that are not obvious from signatures.
   scheduler to the model. It then creates a new `ViewModel` and, when mounted,
   a new `View`. Model swaps reset scroll and feature model state; use
   `save_view_state`/`restore_view_state` when the host wants persistence.
-- Contributions are created once per `Viewer` and disposed with it. Their
-  Monaco instantiation modes are recorded, but all modes currently instantiate
-  eagerly. `dispose` is idempotent: it cancels pending render work, removes
+- Contributions are created once per `Viewer` and disposed with it.
+  `Viewer.contributions` is their only instance map: each private central entry
+  owns one concrete hover, folding, feedback-input, feedback-widget, or
+  quick-diff state value plus its root listeners. Feature packages keep no
+  editor-id-keyed instance table. Construction rejects duplicate ids before
+  side effects, inserts the bare typed entry before synchronous initialization,
+  and then installs listeners. Their Monaco instantiation modes are recorded,
+  but all modes currently instantiate eagerly. During disposal the complete
+  map stays installed for ordered callbacks. Entries tear down input, widgets,
+  folding, hover, then quick diff directly from their stored payloads; each
+  retires typed lookup exactly once, and only then is the map cleared. The
+  temporary public `get_contribution` presence/lifecycle facade does not own a
+  second instance; its final status belongs to
+  `docs/exec-plans/viewer-public-editor-api-boundary.md`. `dispose` is
+  idempotent: it cancels pending render work, removes
   Viewer/View listeners and owned DOM, and never disposes the caller's model,
   host, or explicitly supplied services. For an internally created bundle it
   disposes marker decorations, markers, then agent feedback after Viewer
   teardown. `on_did_dispose` fires after model detach and owner-decoration
   cleanup, but before contribution and Viewer-lifetime disposal, matching the
-  source base-store boundary.
+  source base-store boundary, while every central entry is still reachable.
 - Each attached model stores one marker-decoration acquisition lease and one
   exact attached-view handle in its `ModelData`. Multiple Viewers sharing a
   service and model share the identity owner until the final lease and maintain

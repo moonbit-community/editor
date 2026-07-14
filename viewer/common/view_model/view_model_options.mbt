@@ -7,7 +7,7 @@ pub(all) struct ViewModelOptions {
   font_info : @config.FontInfo
   soft_wrap_column : Int
   tab_size : Int
-  wrapping_indent : WrappingIndent
+  wrapping_indent : @editor_api.WrappingIndent
   /// The owning editor's id — the `ownerId` filter for decoration queries
   /// (Monaco's `editorId` handed to `ViewModelDecorations`). `0` means "no
   /// editor": only ownerId-0 decorations match.
@@ -25,7 +25,7 @@ pub fn ViewModelOptions::ViewModelOptions(
   font_info? : @config.FontInfo = @config.FontInfo::default(),
   soft_wrap_column? : Int = 0,
   tab_size? : Int = 2,
-  wrapping_indent? : WrappingIndent = Same,
+  wrapping_indent? : @editor_api.WrappingIndent = Same,
   editor_id? : Int = 0,
   render_validation_decorations? : RenderValidationDecorations = Editable,
 ) -> ViewModelOptions {
@@ -50,7 +50,7 @@ pub fn ViewModelOptions::no_wrap() -> ViewModelOptions {
 pub fn ViewModelOptions::soft_wrap(
   column : Int,
   tab_size? : Int = 2,
-  wrapping_indent? : WrappingIndent = Same,
+  wrapping_indent? : @editor_api.WrappingIndent = Same,
 ) -> ViewModelOptions {
   ViewModelOptions(soft_wrap_column=column, tab_size~, wrapping_indent~)
 }

@@ -156,7 +156,7 @@ pub struct MonospaceLineBreaksComputerFactory {
   // private fields
 }
 pub fn MonospaceLineBreaksComputerFactory::create() -> Self
-pub fn MonospaceLineBreaksComputerFactory::create_line_breaks_computer(Self, font_info~ : @config.FontInfo, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : WrappingIndent, word_break? : WordBreak) -> LineBreaksComputer
+pub fn MonospaceLineBreaksComputerFactory::create_line_breaks_computer(Self, font_info~ : @config.FontInfo, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : @editor_api.WrappingIndent, word_break? : WordBreak) -> LineBreaksComputer
 pub fn MonospaceLineBreaksComputerFactory::new(String, String) -> Self
 
 pub(all) enum OutgoingViewModelEventKind {
@@ -311,7 +311,7 @@ pub struct ViewModelLinesFromProjectedModel {
   mut font_info : @config.FontInfo
   mut tab_size : Int
   mut wrapping_column : Int
-  mut wrapping_indent : WrappingIndent
+  mut wrapping_indent : @editor_api.WrappingIndent
   mut model_line_projections : Array[ModelLineProjection]
   mut projected_model_line_line_counts : Array[Int]
   mut hidden_areas_decoration_ids : Array[String]
@@ -333,27 +333,27 @@ pub fn ViewModelLinesFromProjectedModel::get_view_lines_data(Self, Int, Int, Arr
 pub fn ViewModelLinesFromProjectedModel::injected_text_index_at(Self, Int, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::model_line_number_of_view_line(Self, Int) -> Int
 pub fn ViewModelLinesFromProjectedModel::model_position_is_visible(Self, Int) -> Bool
-pub fn ViewModelLinesFromProjectedModel::new(@model.TextModel, font_info~ : @config.FontInfo, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : WrappingIndent) -> Self
+pub fn ViewModelLinesFromProjectedModel::new(@model.TextModel, font_info~ : @config.FontInfo, tab_size~ : Int, wrapping_column~ : Int, wrapping_indent~ : @editor_api.WrappingIndent) -> Self
 pub fn ViewModelLinesFromProjectedModel::normalize_position(Self, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ViewModelLinesFromProjectedModel::on_injected_text_changed(Self) -> Unit
 pub fn ViewModelLinesFromProjectedModel::on_model_flushed(Self) -> Unit
 pub fn ViewModelLinesFromProjectedModel::set_hidden_areas(Self, Array[@common.Range]) -> Bool
 pub fn ViewModelLinesFromProjectedModel::set_tab_size(Self, Int) -> Bool
-pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(Self, @config.FontInfo, Int, WrappingIndent) -> Bool
+pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(Self, @config.FontInfo, Int, @editor_api.WrappingIndent) -> Bool
 pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 
 pub(all) struct ViewModelOptions {
   font_info : @config.FontInfo
   soft_wrap_column : Int
   tab_size : Int
-  wrapping_indent : WrappingIndent
+  wrapping_indent : @editor_api.WrappingIndent
   editor_id : Int
   render_validation_decorations : RenderValidationDecorations
 } derive(Eq, @debug.Debug)
-pub fn ViewModelOptions::ViewModelOptions(font_info? : @config.FontInfo, soft_wrap_column? : Int, tab_size? : Int, wrapping_indent? : WrappingIndent, editor_id? : Int, render_validation_decorations? : RenderValidationDecorations) -> Self
+pub fn ViewModelOptions::ViewModelOptions(font_info? : @config.FontInfo, soft_wrap_column? : Int, tab_size? : Int, wrapping_indent? : @editor_api.WrappingIndent, editor_id? : Int, render_validation_decorations? : RenderValidationDecorations) -> Self
 pub fn ViewModelOptions::is_soft_wrap_enabled(Self) -> Bool
 pub fn ViewModelOptions::no_wrap() -> Self
-pub fn ViewModelOptions::soft_wrap(Int, tab_size? : Int, wrapping_indent? : WrappingIndent) -> Self
+pub fn ViewModelOptions::soft_wrap(Int, tab_size? : Int, wrapping_indent? : @editor_api.WrappingIndent) -> Self
 
 pub(all) struct ViewTokensChangedRange {
   from_line_number : Int
@@ -369,13 +369,6 @@ pub fn ViewZonesChangedEvent::new() -> Self
 pub(all) enum WordBreak {
   Normal
   KeepAll
-} derive(Eq, @debug.Debug)
-
-pub(all) enum WrappingIndent {
-  None
-  Same
-  Indent
-  DeepIndent
 } derive(Eq, @debug.Debug)
 
 // Type aliases

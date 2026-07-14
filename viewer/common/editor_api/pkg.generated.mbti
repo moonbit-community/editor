@@ -76,6 +76,13 @@ pub(all) struct ScrolledVisiblePosition {
   height : Double
 } derive(Eq, @debug.Debug)
 
+pub(all) enum WrappingIndent {
+  None
+  Same
+  Indent
+  DeepIndent
+} derive(Eq, @debug.Debug)
+
 // Type aliases
 
 // Traits

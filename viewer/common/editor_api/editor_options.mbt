@@ -17,3 +17,14 @@ pub(all) enum RenderLineHighlight {
   Line
   All
 } derive(Eq, Debug)
+
+///|
+/// Monaco's `WrappingIndent` option (`config/editorOptions.ts`). `None` is
+/// flush-left, `Same` retains the model line's indentation, and
+/// `Indent`/`DeepIndent` add one/two tab stops.
+pub(all) enum WrappingIndent {
+  None
+  Same
+  Indent
+  DeepIndent
+} derive(Eq, Debug)

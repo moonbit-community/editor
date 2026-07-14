@@ -11,7 +11,7 @@ pub struct ViewModelLinesFromProjectedModel {
   mut font_info : @config.FontInfo
   mut tab_size : Int
   mut wrapping_column : Int
-  mut wrapping_indent : WrappingIndent
+  mut wrapping_indent : @editor_api.WrappingIndent
   mut model_line_projections : Array[ModelLineProjection]
   /// Monaco's `projectedModelLineLineCounts` (a
   /// `ConstantTimePrefixSumComputer` over per-line view-line counts). The
@@ -60,7 +60,7 @@ pub fn ViewModelLinesFromProjectedModel::new(
   font_info~ : @config.FontInfo,
   tab_size~ : Int,
   wrapping_column~ : Int,
-  wrapping_indent~ : WrappingIndent,
+  wrapping_indent~ : @editor_api.WrappingIndent,
 ) -> ViewModelLinesFromProjectedModel {
   let lines = {
     model,
@@ -360,7 +360,7 @@ pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(
   self : ViewModelLinesFromProjectedModel,
   font_info : @config.FontInfo,
   wrapping_column : Int,
-  wrapping_indent : WrappingIndent,
+  wrapping_indent : @editor_api.WrappingIndent,
 ) -> Bool {
   if self.font_info == font_info &&
     self.wrapping_column == wrapping_column &&

@@ -24,3 +24,13 @@ test "RenderLineHighlight exposes every canonical mode" {
   assert_eq(modes[2], Line)
   assert_eq(modes[3], All)
 }
+
+///|
+test "WrappingIndent exposes every canonical mode" {
+  let modes : Array[WrappingIndent] = [None, Same, Indent, DeepIndent]
+  assert_eq(modes.length(), 4)
+  assert_eq(modes[0], None)
+  assert_eq(modes[1], Same)
+  assert_eq(modes[2], Indent)
+  assert_eq(modes[3], DeepIndent)
+}

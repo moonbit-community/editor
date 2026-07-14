@@ -18,7 +18,7 @@
 fn compute_line_breaks(
   wrapping_column : Int,
   tab_size~ : Int,
-  wrapping_indent~ : WrappingIndent,
+  wrapping_indent~ : @editor_api.WrappingIndent,
   line_text : String,
 ) -> ModelLineProjectionData? {
   let computer = monospace_line_breaks_computer_factory.create_line_breaks_computer(

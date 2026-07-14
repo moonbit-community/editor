@@ -15,18 +15,6 @@
 //     `breakOffsets`/`breakOffsetsVisibleColumn` pair.
 
 ///|
-/// Continuation-line indentation mode, Monaco's `WrappingIndent`
-/// (`config/editorOptions.ts`). Controls how far a wrapped continuation line is
-/// indented under the first: `None` flush-left, `Same` under the model line's
-/// own indent, `Indent`/`DeepIndent` one/two extra tab stops past it.
-pub(all) enum WrappingIndent {
-  None
-  Same
-  Indent
-  DeepIndent
-} derive(Eq, Debug)
-
-///|
 /// Monaco's `wordBreak` editor option (`'normal' | 'keepAll'`): `KeepAll`
 /// disables the ideographic (CJK) break points.
 pub(all) enum WordBreak {
@@ -146,7 +134,7 @@ pub struct LineBreaksComputer {
   priv font_info : @config.FontInfo
   priv tab_size : Int
   priv wrapping_column : Int
-  priv wrapping_indent : WrappingIndent
+  priv wrapping_indent : @editor_api.WrappingIndent
   priv word_break : WordBreak
   priv requests : Array[LineBreaksRequest]
 }
@@ -159,7 +147,7 @@ pub fn MonospaceLineBreaksComputerFactory::create_line_breaks_computer(
   font_info~ : @config.FontInfo,
   tab_size~ : Int,
   wrapping_column~ : Int,
-  wrapping_indent~ : WrappingIndent,
+  wrapping_indent~ : @editor_api.WrappingIndent,
   word_break? : WordBreak = Normal,
 ) -> LineBreaksComputer {
   {
@@ -235,7 +223,7 @@ fn create_line_breaks(
   tab_size : Int,
   first_line_break_column : Int,
   columns_for_full_width_char : Double,
-  wrapping_indent : WrappingIndent,
+  wrapping_indent : @editor_api.WrappingIndent,
   is_keep_all : Bool,
 ) -> ModelLineProjectionData? {
   let line_text = projected_line.text
@@ -460,7 +448,7 @@ fn compute_wrapped_text_indent_length(
   tab_size : Int,
   first_line_break_column : Int,
   columns_for_full_width_char : Double,
-  wrapping_indent : WrappingIndent,
+  wrapping_indent : @editor_api.WrappingIndent,
 ) -> Int {
   let mut wrapped_text_indent_length = 0
   if wrapping_indent != None {

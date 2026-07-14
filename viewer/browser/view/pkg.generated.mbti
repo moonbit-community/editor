@@ -98,7 +98,7 @@ pub(all) struct HorizontalPosition {
 pub struct OverlayWidgets {
   // private fields
 }
-pub fn OverlayWidgets::add_widget(Self, String, @dom.Element) -> Unit
+pub fn OverlayWidgets::add_widget(Self, @browser.OverlayWidget) -> Unit
 pub fn OverlayWidgets::remove_widget(Self, String) -> Unit
 
 pub(all) enum PartFingerprint {
@@ -136,7 +136,7 @@ pub fn View::View(view_zones_configuration_reader? : () -> (Int, Double, Double)
 pub fn View::add_disposable(Self, @common.Disposable) -> Unit
 pub fn View::apply_squiggly_theme(Self) -> Unit
 pub fn View::begin_view_event_batch(Self) -> ViewEventCollector
-pub fn View::change_view_zones(Self, (ViewZoneChangeAccessor) -> Unit raise) -> Unit
+pub fn View::change_view_zones(Self, (@browser.ViewZoneChangeAccessor) -> Unit raise) -> Unit
 pub fn View::dispose(Self) -> Unit
 pub fn View::emit_view_event(Self, ViewEvent) -> Unit
 pub fn View::emit_view_zones_changed_then(Self, () -> Unit) -> Unit
@@ -319,30 +319,6 @@ pub struct ViewTokensChangedEvent {
   // private fields
 }
 pub fn ViewTokensChangedEvent::ViewTokensChangedEvent(Array[ViewTokenChangeRange]) -> Self
-
-pub(all) struct ViewZone {
-  mut after_line_number : Int
-  mut after_column : Int?
-  mut after_column_affinity : @model.PositionAffinity?
-  mut show_in_hidden_areas : Bool?
-  mut ordinal : Int?
-  mut suppress_mouse_down : Bool?
-  mut height_in_lines : Double?
-  mut height_in_px : Double?
-  mut min_width_in_px : Double?
-  mut dom_node : @dom.Element
-  mut margin_dom_node : @dom.Element?
-  mut on_dom_node_top : ((Double) -> Unit raise)?
-  mut on_computed_height : ((Double) -> Unit raise)?
-}
-pub fn ViewZone::ViewZone(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> Self
-
-pub struct ViewZoneChangeAccessor {
-  // private fields
-}
-pub fn ViewZoneChangeAccessor::add_zone(Self, ViewZone) -> String
-pub fn ViewZoneChangeAccessor::layout_zone(Self, String) -> Unit
-pub fn ViewZoneChangeAccessor::remove_zone(Self, String) -> Unit
 
 pub struct ViewZones {
   // private fields

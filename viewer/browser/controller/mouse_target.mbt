@@ -822,7 +822,7 @@ pub fn MouseTargetFactory::new(
 /// `mouseTargetIsWidget` (mouseTarget.ts:527-542).
 pub fn MouseTargetFactory::mouse_target_is_widget(
   self : MouseTargetFactory,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
 ) -> Bool {
   let path = @view.PartFingerprints::collect(
     e.target,

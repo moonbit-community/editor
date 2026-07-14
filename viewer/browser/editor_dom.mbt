@@ -2,11 +2,12 @@
 // commit b18492a288de038fbc7643aae6de8247029d11bd): the coordinate model
 // (`PageCoordinates`/`ClientCoordinates`/`EditorPagePosition`/
 // `CoordinatesRelativeToEditor` and their factory functions),
-// `EditorMouseEvent`, `EditorMouseEventFactory` and
+// `EditorDomMouseEvent`, `EditorMouseEventFactory` and
 // `GlobalEditorPointerMoveMonitor`.
 //
 // Shape notes:
-//   * `EditorMouseEvent extends StandardMouseEvent` flattens the base fields
+//   * `EditorMouseEvent extends StandardMouseEvent` ports as
+//     `EditorDomMouseEvent` and flattens the base fields
 //     into this struct (MoonBit has no inheritance); the constructor populates
 //     them from `@base_browser.StandardMouseEvent::new`.
 //   * The single-window omission (see `base/browser/mouse_event.mbt`) drops
@@ -106,10 +107,11 @@ pub fn create_coordinates_relative_to_editor(
 }
 
 ///|
-/// `EditorMouseEvent` (editorDom.ts:105-147): a `StandardMouseEvent` plus the
+/// `EditorMouseEvent` (editorDom.ts:105-147), named `EditorDomMouseEvent` here
+/// to distinguish it from the hit-tested public wrapper: a `StandardMouseEvent` plus the
 /// editor-anchored coordinate accessors. `editor_pos`/`relative_pos` are
 /// computed lazily like the source's getters.
-pub struct EditorMouseEvent {
+pub struct EditorDomMouseEvent {
   browser_event : @rdom.MouseEvent
   left_button : Bool
   middle_button : Bool
@@ -136,11 +138,11 @@ pub struct EditorMouseEvent {
 }
 
 ///|
-pub fn EditorMouseEvent::new(
+pub fn EditorDomMouseEvent::new(
   e : @rdom.MouseEvent,
   is_from_pointer_capture : Bool,
   editor_view_dom_node : @rdom.Element,
-) -> EditorMouseEvent {
+) -> EditorDomMouseEvent {
   let base = @base_browser.StandardMouseEvent::new(e)
   {
     browser_event: base.browser_event,
@@ -168,8 +170,8 @@ pub fn EditorMouseEvent::new(
 
 ///|
 /// Editor's coordinates relative to the whole document (lazy, editorDom.ts:122-126).
-pub fn EditorMouseEvent::editor_pos(
-  self : EditorMouseEvent,
+pub fn EditorDomMouseEvent::editor_pos(
+  self : EditorDomMouseEvent,
 ) -> EditorPagePosition {
   match self.editor_pos_cache {
     Some(pos) => pos
@@ -185,8 +187,8 @@ pub fn EditorMouseEvent::editor_pos(
 /// Coordinates relative to the (top;left) of the editor (lazy,
 /// editorDom.ts:133-137). Preferred because they account for transformations;
 /// can be negative outside the editor.
-pub fn EditorMouseEvent::relative_pos(
-  self : EditorMouseEvent,
+pub fn EditorDomMouseEvent::relative_pos(
+  self : EditorDomMouseEvent,
 ) -> CoordinatesRelativeToEditor {
   match self.relative_pos_cache {
     Some(pos) => pos
@@ -207,26 +209,28 @@ pub fn EditorMouseEvent::relative_pos(
 /// multi-click count before the event is emitted (mouseHandler.ts:456-457);
 /// the field is package-private-mutable, so the write crosses through this
 /// setter.
-pub fn EditorMouseEvent::set_detail(
-  self : EditorMouseEvent,
+pub fn EditorDomMouseEvent::set_detail(
+  self : EditorDomMouseEvent,
   detail : Int,
 ) -> Unit {
   self.detail = detail
 }
 
 ///|
-pub fn EditorMouseEvent::prevent_default(self : EditorMouseEvent) -> Unit {
+pub fn EditorDomMouseEvent::prevent_default(self : EditorDomMouseEvent) -> Unit {
   self.browser_event.prevent_default()
 }
 
 ///|
-pub fn EditorMouseEvent::stop_propagation(self : EditorMouseEvent) -> Unit {
+pub fn EditorDomMouseEvent::stop_propagation(
+  self : EditorDomMouseEvent,
+) -> Unit {
   self.browser_event.stop_propagation()
 }
 
 ///|
 /// `EditorMouseEventFactory` (editorDom.ts:149-194): DOM-listener wrappers
-/// producing `EditorMouseEvent`s anchored to the editor's view DOM node.
+/// producing `EditorDomMouseEvent`s anchored to the editor's view DOM node.
 pub struct EditorMouseEventFactory {
   priv editor_view_dom_node : @rdom.Element
 }
@@ -243,12 +247,14 @@ fn EditorMouseEventFactory::listen(
   self : EditorMouseEventFactory,
   target : @rdom.Element,
   event_type : String,
-  callback : (EditorMouseEvent) -> Unit,
+  callback : (EditorDomMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
   let handler = (event : @rdom.Event) => {
     match event.to_mouse_event() {
       Some(mouse) =>
-        callback(EditorMouseEvent::new(mouse, false, self.editor_view_dom_node))
+        callback(
+          EditorDomMouseEvent::new(mouse, false, self.editor_view_dom_node),
+        )
       None => ()
     }
   }
@@ -262,7 +268,7 @@ fn EditorMouseEventFactory::listen(
 pub fn EditorMouseEventFactory::on_mouse_up(
   self : EditorMouseEventFactory,
   target : @rdom.Element,
-  callback : (EditorMouseEvent) -> Unit,
+  callback : (EditorDomMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.listen(target, "mouseup", callback)
 }
@@ -271,7 +277,7 @@ pub fn EditorMouseEventFactory::on_mouse_up(
 pub fn EditorMouseEventFactory::on_mouse_down(
   self : EditorMouseEventFactory,
   target : @rdom.Element,
-  callback : (EditorMouseEvent) -> Unit,
+  callback : (EditorDomMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.listen(target, "mousedown", callback)
 }
@@ -284,13 +290,13 @@ pub fn EditorMouseEventFactory::on_mouse_down(
 pub fn EditorMouseEventFactory::on_pointer_down(
   self : EditorMouseEventFactory,
   target : @rdom.Element,
-  callback : (EditorMouseEvent, Int) -> Unit,
+  callback : (EditorDomMouseEvent, Int) -> Unit,
 ) -> @base_common.Disposable {
   let handler = (event : @rdom.Event) => {
     match event.to_mouse_event() {
       Some(mouse) =>
         callback(
-          EditorMouseEvent::new(mouse, false, self.editor_view_dom_node),
+          EditorDomMouseEvent::new(mouse, false, self.editor_view_dom_node),
           @base_browser.mouse_event_pointer_id(mouse),
         )
       None => ()
@@ -306,7 +312,7 @@ pub fn EditorMouseEventFactory::on_pointer_down(
 pub fn EditorMouseEventFactory::on_mouse_leave(
   self : EditorMouseEventFactory,
   target : @rdom.Element,
-  callback : (EditorMouseEvent) -> Unit,
+  callback : (EditorDomMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.listen(target, "mouseleave", callback)
 }
@@ -315,7 +321,7 @@ pub fn EditorMouseEventFactory::on_mouse_leave(
 pub fn EditorMouseEventFactory::on_mouse_move(
   self : EditorMouseEventFactory,
   target : @rdom.Element,
-  callback : (EditorMouseEvent) -> Unit,
+  callback : (EditorDomMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.listen(target, "mousemove", callback)
 }
@@ -374,7 +380,7 @@ pub fn GlobalEditorPointerMoveMonitor::start_monitoring(
   initial_element : @rdom.Element,
   pointer_id : Int,
   initial_buttons : Int,
-  pointer_move_callback : (EditorMouseEvent) -> Unit,
+  pointer_move_callback : (EditorDomMouseEvent) -> Unit,
   on_stop_callback : (@rdom.Event?) -> Unit,
 ) -> Unit {
   if self.disposed {
@@ -404,7 +410,7 @@ pub fn GlobalEditorPointerMoveMonitor::start_monitoring(
     initial_buttons,
     e => {
       pointer_move_callback(
-        EditorMouseEvent::new(e, true, self.editor_view_dom_node),
+        EditorDomMouseEvent::new(e, true, self.editor_view_dom_node),
       )
     },
     e => {

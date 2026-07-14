@@ -101,7 +101,39 @@ fn run_model_swap_test() -> Unit {
   let model_c = swap_model("swap-c.txt", "gamma_document_marker")
   seed_swap_diagnostic(services, model_a)
   seed_swap_diagnostic(services, model_b)
+  let first_overlay_node = document.create_element("div")
+  first_overlay_node.set_attribute("class", "swap-overlay-first")
+  let second_overlay_node = document.create_element("div")
+  second_overlay_node.set_attribute("class", "swap-overlay-second")
+  let unknown_overlay_node = document.create_element("div")
+  unknown_overlay_node.set_attribute("class", "swap-overlay-unknown")
+  let stale_overlay = @viewer.overlay_widget("swap-overlay", first_overlay_node)
+  let current_overlay = @viewer.overlay_widget(
+    "swap-overlay", second_overlay_node,
+  )
+  let unknown_overlay = @viewer.overlay_widget(
+    "unknown-swap-overlay", unknown_overlay_node,
+  )
   viewer.set_model(Some(model_a))
+  viewer.add_overlay_widget(stale_overlay)
+  viewer.add_overlay_widget(current_overlay)
+  ctx.assert_true(
+    @support.query_count(".swap-overlay-first") == 0 &&
+    @support.query_count(".swap-overlay-second") == 1,
+    "duplicate overlay id did not keep the last writer",
+  )
+  viewer.remove_overlay_widget(stale_overlay)
+  ctx.assert_true(
+    @support.query_count(".swap-overlay-second") == 0,
+    "stale overlay handle did not remove the current id registration",
+  )
+  viewer.add_overlay_widget(current_overlay)
+  viewer.remove_overlay_widget(unknown_overlay)
+  ctx.assert_true(
+    @support.query_count(".swap-overlay-second") == 1 &&
+    @support.query_count(".swap-overlay-unknown") == 0,
+    "unknown overlay removal changed the live registration",
+  )
   viewer.focus()
   let zone = document.create_element("div")
   zone.set_attribute("class", "swap-zone")
@@ -128,6 +160,12 @@ fn run_model_swap_test() -> Unit {
       @support.query_count(".swap-zone[monaco-view-zone]") == 1,
       "view zone missing on the first view",
     )
+    ctx.assert_true(
+      @support.query_count(".swap-overlay-second") == 1 &&
+      @support.query_attribute(".swap-overlay-second", "widgetId") ==
+      "swap-overlay",
+      "overlay widget missing or unstamped on model A",
+    )
     install_model_swap_continue("model-a", () => {
       // Swap: the whole view is rebuilt (Monaco's detach-then-attach).
       viewer.set_model(Some(model_b))
@@ -145,6 +183,10 @@ fn run_model_swap_test() -> Unit {
         ctx.assert_true(
           @support.query_count(".swap-zone[monaco-view-zone]") == 0,
           "model-scoped view zone survived onto the new view",
+        )
+        ctx.assert_true(
+          @support.query_count(".swap-overlay-second") == 1,
+          "viewer-scoped overlay widget was not replayed on model B",
         )
         // Text focus carries across the swap (`cew:528-532`).
         ctx.assert_true(
@@ -177,11 +219,19 @@ fn run_model_swap_test() -> Unit {
               viewer.has_text_focus() == false,
               "editor still reports text focus with no model",
             )
+            ctx.assert_true(
+              @support.query_count(".swap-overlay-second") == 0,
+              "overlay widget remained mounted with no model",
+            )
             // Reattach once so Viewer.dispose itself tears down a real View (the
             // preceding None transition already covered ordinary placeholder
             // restoration). Queue a root render and dispose before it can run.
             viewer.set_model(Some(model_c))
             wait_for_text(ctx, "gamma_document_marker", 80, () => {
+              ctx.assert_true(
+                @support.query_count(".swap-overlay-second") == 1,
+                "overlay widget was not replayed after reattach",
+              )
               install_model_swap_continue("model-c", () => {
                 // A second Viewer exercises the disposal path while its no-model
                 // placeholder is still mounted, with a pending placeholder frame.
@@ -210,6 +260,12 @@ fn run_model_swap_test() -> Unit {
                     ctx.assert_true(
                       !model_c.is_disposed(),
                       "Viewer disposal disposed the caller-owned model",
+                    )
+                    ctx.assert_true(
+                      @support.query_count(".swap-overlay-second") == 0 &&
+                      second_overlay_node.get_attribute("widgetId") ==
+                      "swap-overlay",
+                      "Viewer disposal kept the overlay mounted or destroyed its node",
                     )
                     model_c.dispose()
                     services.marker_decorations.dispose()

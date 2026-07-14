@@ -5,7 +5,6 @@ import {
   "moonbit-community/editor/language",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/browser",
-  "moonbit-community/editor/viewer/browser/view",
   "moonbit-community/editor/viewer/common/config",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/editor_api",
@@ -25,7 +24,9 @@ pub fn debug_on_did_render_model(Viewer, (ViewerModelRenderedEvent) -> Unit) -> 
 
 pub fn debug_on_did_resolve_hover(Viewer, (ViewerHoverResolvedEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 
-pub fn view_zone(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> @view.ViewZone
+pub fn overlay_widget(String, @dom.Element) -> @browser.OverlayWidget
+
+pub fn view_zone(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> @browser.ViewZone
 
 // Errors
 
@@ -53,22 +54,12 @@ pub fn EditorDecorationsCollection::get_ranges(Self) -> Array[@moonbit-community
 pub fn EditorDecorationsCollection::length(Self) -> Int
 pub fn EditorDecorationsCollection::set(Self, Array[@model.ModelDeltaDecoration]) -> Array[String]
 
-pub(all) struct EditorMouseEvent {
-  event : @browser.EditorMouseEvent
-  target : @browser.MouseTarget
-}
-
-pub(all) struct PartialEditorMouseEvent {
-  event : @browser.EditorMouseEvent
-  target : @browser.MouseTarget?
-}
-
 pub struct Viewer {
   // private fields
 }
 pub fn Viewer::Viewer(services? : ViewerServices, options? : ViewerOptions) -> Self
-pub fn Viewer::add_overlay_widget(Self, String, @dom.Element) -> Unit
-pub fn Viewer::change_view_zones(Self, (@view.ViewZoneChangeAccessor) -> Unit raise) -> Unit
+pub fn Viewer::add_overlay_widget(Self, @browser.OverlayWidget) -> Unit
+pub fn Viewer::change_view_zones(Self, (@browser.ViewZoneChangeAccessor) -> Unit raise) -> Unit
 pub fn Viewer::create(@dom.Element, services? : ViewerServices, options? : ViewerOptions) -> Self
 pub fn Viewer::create_decorations_collection(Self, decorations? : Array[@model.ModelDeltaDecoration]) -> EditorDecorationsCollection
 pub fn Viewer::delta_decorations(Self, Array[String], Array[@model.ModelDeltaDecoration]) -> Array[String]
@@ -116,12 +107,12 @@ pub fn Viewer::on_did_change_model_content(Self, (@model.ModelContentChangedEven
 pub fn Viewer::on_did_change_view_zones(Self, () -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_dispose(Self, () -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::on_did_scroll_change(Self, (@editor_api.ScrollEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_mouse_down(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_mouse_leave(Self, (PartialEditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_mouse_move(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
-pub fn Viewer::on_mouse_up(Self, (EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_mouse_down(Self, (@browser.EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_mouse_leave(Self, (@browser.PartialEditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_mouse_move(Self, (@browser.EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
+pub fn Viewer::on_mouse_up(Self, (@browser.EditorMouseEvent) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn Viewer::remove_decorations(Self, Array[String]) -> Unit
-pub fn Viewer::remove_overlay_widget(Self, String) -> Unit
+pub fn Viewer::remove_overlay_widget(Self, @browser.OverlayWidget) -> Unit
 pub fn Viewer::restore_view_state(Self, ViewerViewState?) -> Unit
 pub fn Viewer::reveal_line(Self, Int) -> Unit
 pub fn Viewer::reveal_line_in_center(Self, Int) -> Unit
@@ -224,9 +215,6 @@ pub(all) struct ViewerViewState {
 } derive(@debug.Debug)
 
 // Type aliases
-pub using @view {type ViewZone}
-
-pub using @view {type ViewZoneChangeAccessor}
 
 // Traits
 

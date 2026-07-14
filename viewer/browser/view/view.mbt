@@ -170,7 +170,7 @@ pub fn View::install_view_zones_context(
 /// that transaction; the root editor adds the unconditional render schedule.
 pub fn View::change_view_zones(
   self : View,
-  update : (ViewZoneChangeAccessor) -> Unit raise,
+  update : (@editor_browser.ViewZoneChangeAccessor) -> Unit raise,
 ) -> Unit {
   self.view_zones.change_view_zones(update) |> ignore
 }

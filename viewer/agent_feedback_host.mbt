@@ -202,7 +202,7 @@ fn Viewer::sync_agent_feedback_lane(self : Viewer) -> Unit {
 /// is open (or holds a draft).
 fn Viewer::on_agent_feedback_mouse_move(
   self : Viewer,
-  event : EditorMouseEvent,
+  event : @editor_browser.EditorMouseEvent,
 ) -> Unit {
   if self.agent_feedback_input_visible() || self.agent_feedback_has_draft() {
     self.clear_agent_feedback_hover_glyph()
@@ -338,7 +338,7 @@ extern "js" fn element_class_list_contains(
 /// containment stops propagation (`_isWidgetTarget`).
 fn Viewer::on_agent_feedback_mouse_down(
   self : Viewer,
-  event : EditorMouseEvent,
+  event : @editor_browser.EditorMouseEvent,
 ) -> Unit {
   if self.is_agent_feedback_glyph_target(event.target) {
     // upstream: `e.event.preventDefault(); e.event.stopPropagation()`
@@ -362,7 +362,7 @@ fn Viewer::on_agent_feedback_mouse_down(
 /// finished here opens the input).
 fn Viewer::on_agent_feedback_mouse_up(
   self : Viewer,
-  event : EditorMouseEvent,
+  event : @editor_browser.EditorMouseEvent,
 ) -> Unit {
   match self.agent_feedback_input_contribution() {
     Some(ic) => ic.mouse_down = false
@@ -501,8 +501,7 @@ fn Viewer::ensure_agent_feedback_input(
         None => ()
       }
       self.add_overlay_widget(
-        agent_feedback_input_widget_id,
-        widget.get_dom_node(),
+        overlay_widget(agent_feedback_input_widget_id, widget.get_dom_node()),
       )
       widget
     }

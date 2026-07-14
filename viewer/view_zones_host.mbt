@@ -4,14 +4,6 @@
 // delivery, and unconditional render schedule.
 
 ///|
-/// Public MoonBit-owned name for Monaco's mutable `IViewZone` delegate.
-pub type ViewZone = @view.ViewZone
-
-///|
-/// Public MoonBit-owned name for `IViewZoneChangeAccessor`.
-pub type ViewZoneChangeAccessor = @view.ViewZoneChangeAccessor
-
-///|
 /// Constructs the complete mutable ViewZone delegate through the public root
 /// package. Browser scenarios therefore need only `@viewer.view_zone(...)`;
 /// the internal browser ViewPart package stays an implementation detail.
@@ -29,8 +21,8 @@ pub fn view_zone(
   margin_dom_node? : @rdom.Element,
   on_dom_node_top? : (Double) -> Unit raise,
   on_computed_height? : (Double) -> Unit raise,
-) -> ViewZone {
-  @view.ViewZone::ViewZone(
+) -> @editor_browser.ViewZone {
+  @editor_browser.ViewZone::ViewZone(
     after_line_number,
     dom_node,
     after_column?,
@@ -55,7 +47,7 @@ pub fn view_zone(
 /// and then enter the ViewModel outgoing queue/public event.
 pub fn Viewer::change_view_zones(
   self : Viewer,
-  update : (ViewZoneChangeAccessor) -> Unit raise,
+  update : (@editor_browser.ViewZoneChangeAccessor) -> Unit raise,
 ) -> Unit {
   if self.disposed {
     return

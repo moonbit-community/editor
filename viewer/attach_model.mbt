@@ -340,8 +340,8 @@ fn Viewer::create_view(
     }
     None => ()
   }
-  for widget_id, node in self.overlay_widgets {
-    view.overlay_widgets.add_widget(widget_id, node)
+  for _, widget in self.overlay_widgets {
+    view.overlay_widgets.add_widget(widget)
   }
   // `data-uri` (`cew:1912`).
   view.root.set_attribute("data-uri", model.uri.to_string())

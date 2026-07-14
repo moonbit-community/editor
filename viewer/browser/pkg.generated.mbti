@@ -3,6 +3,7 @@ package "moonbit-community/editor/viewer/browser"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom",
   "moonbitlang/core/debug",
@@ -27,7 +28,7 @@ pub(all) struct CoordinatesRelativeToEditor {
   y : Double
 } derive(Eq, @debug.Debug)
 
-pub struct EditorMouseEvent {
+pub struct EditorDomMouseEvent {
   browser_event : @dom.MouseEvent
   left_button : Bool
   middle_button : Bool
@@ -47,22 +48,27 @@ pub struct EditorMouseEvent {
   pos : PageCoordinates
   // private fields
 }
-pub fn EditorMouseEvent::editor_pos(Self) -> EditorPagePosition
-pub fn EditorMouseEvent::new(@dom.MouseEvent, Bool, @dom.Element) -> Self
-pub fn EditorMouseEvent::prevent_default(Self) -> Unit
-pub fn EditorMouseEvent::relative_pos(Self) -> CoordinatesRelativeToEditor
-pub fn EditorMouseEvent::set_detail(Self, Int) -> Unit
-pub fn EditorMouseEvent::stop_propagation(Self) -> Unit
+pub fn EditorDomMouseEvent::editor_pos(Self) -> EditorPagePosition
+pub fn EditorDomMouseEvent::new(@dom.MouseEvent, Bool, @dom.Element) -> Self
+pub fn EditorDomMouseEvent::prevent_default(Self) -> Unit
+pub fn EditorDomMouseEvent::relative_pos(Self) -> CoordinatesRelativeToEditor
+pub fn EditorDomMouseEvent::set_detail(Self, Int) -> Unit
+pub fn EditorDomMouseEvent::stop_propagation(Self) -> Unit
+
+pub(all) struct EditorMouseEvent {
+  event : EditorDomMouseEvent
+  target : MouseTarget
+}
 
 pub struct EditorMouseEventFactory {
   // private fields
 }
 pub fn EditorMouseEventFactory::new(@dom.Element) -> Self
-pub fn EditorMouseEventFactory::on_mouse_down(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
-pub fn EditorMouseEventFactory::on_mouse_leave(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
-pub fn EditorMouseEventFactory::on_mouse_move(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
-pub fn EditorMouseEventFactory::on_mouse_up(Self, @dom.Element, (EditorMouseEvent) -> Unit) -> @common.Disposable
-pub fn EditorMouseEventFactory::on_pointer_down(Self, @dom.Element, (EditorMouseEvent, Int) -> Unit) -> @common.Disposable
+pub fn EditorMouseEventFactory::on_mouse_down(Self, @dom.Element, (EditorDomMouseEvent) -> Unit) -> @common.Disposable
+pub fn EditorMouseEventFactory::on_mouse_leave(Self, @dom.Element, (EditorDomMouseEvent) -> Unit) -> @common.Disposable
+pub fn EditorMouseEventFactory::on_mouse_move(Self, @dom.Element, (EditorDomMouseEvent) -> Unit) -> @common.Disposable
+pub fn EditorMouseEventFactory::on_mouse_up(Self, @dom.Element, (EditorDomMouseEvent) -> Unit) -> @common.Disposable
+pub fn EditorMouseEventFactory::on_pointer_down(Self, @dom.Element, (EditorDomMouseEvent, Int) -> Unit) -> @common.Disposable
 
 pub(all) struct EditorPagePosition {
   x : Double
@@ -76,7 +82,7 @@ pub struct GlobalEditorPointerMoveMonitor {
 }
 pub fn GlobalEditorPointerMoveMonitor::dispose(Self) -> Unit
 pub fn GlobalEditorPointerMoveMonitor::new(@dom.Element) -> Self
-pub fn GlobalEditorPointerMoveMonitor::start_monitoring(Self, @dom.Element, Int, Int, (EditorMouseEvent) -> Unit, (@dom.Event?) -> Unit) -> Unit
+pub fn GlobalEditorPointerMoveMonitor::start_monitoring(Self, @dom.Element, Int, Int, (EditorDomMouseEvent) -> Unit, (@dom.Event?) -> Unit) -> Unit
 pub fn GlobalEditorPointerMoveMonitor::stop_monitoring(Self) -> Unit
 
 pub(all) enum MouseTarget {
@@ -146,11 +152,48 @@ pub(all) enum OutsidePosition {
   Right
 } derive(Eq, @debug.Debug)
 
+pub struct OverlayWidget {
+  // private fields
+}
+pub fn OverlayWidget::get_dom_node(Self) -> @dom.Element
+pub fn OverlayWidget::get_id(Self) -> String
+pub fn OverlayWidget::unmanaged(String, @dom.Element) -> Self
+
 pub(all) struct PageCoordinates {
   x : Double
   y : Double
 } derive(Eq, @debug.Debug)
 pub fn PageCoordinates::to_client_coordinates(Self) -> ClientCoordinates
+
+pub(all) struct PartialEditorMouseEvent {
+  event : EditorDomMouseEvent
+  target : MouseTarget?
+}
+
+pub(all) struct ViewZone {
+  mut after_line_number : Int
+  mut after_column : Int?
+  mut after_column_affinity : @model.PositionAffinity?
+  mut show_in_hidden_areas : Bool?
+  mut ordinal : Int?
+  mut suppress_mouse_down : Bool?
+  mut height_in_lines : Double?
+  mut height_in_px : Double?
+  mut min_width_in_px : Double?
+  mut dom_node : @dom.Element
+  mut margin_dom_node : @dom.Element?
+  mut on_dom_node_top : ((Double) -> Unit raise)?
+  mut on_computed_height : ((Double) -> Unit raise)?
+}
+pub fn ViewZone::ViewZone(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> Self
+
+pub struct ViewZoneChangeAccessor {
+  // private fields
+}
+pub fn ViewZoneChangeAccessor::add_zone(Self, ViewZone) -> String
+pub fn ViewZoneChangeAccessor::from_callbacks((ViewZone) -> String, (String) -> Unit, (String) -> Unit) -> Self
+pub fn ViewZoneChangeAccessor::layout_zone(Self, String) -> Unit
+pub fn ViewZoneChangeAccessor::remove_zone(Self, String) -> Unit
 
 // Type aliases
 

@@ -252,13 +252,14 @@ GPU renderer.
 
 ## View zones
 
-`ViewZone` is the retained mutable delegate. `ViewZoneChangeAccessor` assigns
-a generated whitespace id, removes a registration, or rereads its mutable
-mapping and height through `layout_zone`. `ViewZones` computes hidden-area and
-height facts, mounts caller-owned content and margin nodes without replacing
-their class/style/content, reports host callback failures safely, and renders
-id-bearing viewport whitespace with Monaco's visibility, offscreen, and width
-rules.
+`viewer/browser.ViewZone` is the retained mutable public delegate. Its opaque
+callback-backed `ViewZoneChangeAccessor` assigns a generated whitespace id,
+removes a registration, or rereads mutable mapping and height through
+`layout_zone`. This package keeps only registered/runtime state. `ViewZones`
+computes hidden-area and height facts, mounts caller-owned content and margin
+nodes without replacing their class/style/content, reports host callback
+failures safely, and renders id-bearing viewport whitespace with Monaco's
+visibility, offscreen, and width rules.
 
 The `.margin-view-zones` child sits below the retained `.margin` clipping
 container and receives the `bigNumbersDelta - scrollTop` parent offset.

@@ -78,7 +78,7 @@ fn ViewZonesBranchFixture::dispose(self : ViewZonesBranchFixture) -> Unit {
 ///|
 fn ViewZonesBranchFixture::add_zone(
   self : ViewZonesBranchFixture,
-  zone : ViewZone,
+  zone : @editor_browser.ViewZone,
 ) -> String {
   let id = Ref("")
   self.view.change_view_zones(accessor => id.val = accessor.add_zone(zone))
@@ -120,7 +120,7 @@ fn ViewZonesBranchFixture::add_height_zone(
   computed_height : Ref[Double],
 ) -> String {
   self.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       0,
       @rdom.document().create_element("div"),
       ordinal~,
@@ -169,7 +169,7 @@ test "ViewZones maps zero, first, middle, last, and clamped model anchors" {
   for index, pair in line_cases {
     let (after_line_number, expected_view_line) = pair
     let id = fixture.add_zone(
-      ViewZone::ViewZone(
+      @editor_browser.ViewZone::ViewZone(
         after_line_number,
         @rdom.document().create_element("div"),
         ordinal=index,
@@ -192,7 +192,7 @@ test "ViewZones maps zero, first, middle, last, and clamped model anchors" {
   for index, pair in column_cases {
     let (after_column, expected_view_line) = pair
     let id = fixture.add_zone(
-      ViewZone::ViewZone(
+      @editor_browser.ViewZone::ViewZone(
         1,
         @rdom.document().create_element("div"),
         after_column?,
@@ -224,7 +224,7 @@ test "ViewZones forwards every affinity at wrap and injected-text boundaries" {
   for index, pair in wrap_cases {
     let (affinity, expected_view_line) = pair
     let id = wrap_fixture.add_zone(
-      ViewZone::ViewZone(
+      @editor_browser.ViewZone::ViewZone(
         1,
         @rdom.document().create_element("div"),
         after_column=5,
@@ -272,7 +272,7 @@ test "ViewZones forwards every affinity at wrap and injected-text boundaries" {
   for index, pair in injected_cases {
     let (affinity, expected_view_line) = pair
     let id = injected_fixture.add_zone(
-      ViewZone::ViewZone(
+      @editor_browser.ViewZone::ViewZone(
         1,
         @rdom.document().create_element("div"),
         after_column=3,
@@ -309,7 +309,7 @@ test "ViewZones hidden-area omitted false and true toggle exact heights" {
   let false_callbacks : Array[Double] = []
   let true_callbacks : Array[Double] = []
   let omitted_id = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       1,
       @rdom.document().create_element("div"),
       ordinal=0,
@@ -318,7 +318,7 @@ test "ViewZones hidden-area omitted false and true toggle exact heights" {
     ),
   )
   let false_id = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       1,
       @rdom.document().create_element("div"),
       show_in_hidden_areas=false,
@@ -328,7 +328,7 @@ test "ViewZones hidden-area omitted false and true toggle exact heights" {
     ),
   )
   let true_id = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       1,
       @rdom.document().create_element("div"),
       show_in_hidden_areas=true,
@@ -397,7 +397,7 @@ test "ViewZones hidden-area omitted false and true toggle exact heights" {
   let zero_node = @rdom.document().create_element("div")
   let zero_callbacks : Array[Double] = []
   let zero_id = zero_fixture.add_zone(
-    ViewZone::ViewZone(0, zero_node, height_in_px=17.0, on_computed_height=height => {
+    @editor_browser.ViewZone::ViewZone(0, zero_node, height_in_px=17.0, on_computed_height=height => {
       zero_callbacks.push(height)
     }),
   )
@@ -505,7 +505,7 @@ test "ViewZones layoutZone rereads geometry but retains ordinal width and nodes"
   let original_callback_count = Ref(0)
   let replacement_callback_count = Ref(0)
   let replacement_callback_height = Ref(-1.0)
-  let zone = ViewZone::ViewZone(
+  let zone = @editor_browser.ViewZone::ViewZone(
     1,
     original_node,
     after_column=1,
@@ -603,7 +603,7 @@ test "ViewZones derives explicit zero equal and fallback ordinals" {
   )
   defer fixture.dispose()
   let explicit_zero = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       1,
       @rdom.document().create_element("div"),
       after_column=6,
@@ -612,7 +612,7 @@ test "ViewZones derives explicit zero equal and fallback ordinals" {
     ),
   )
   let equal_first = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       1,
       @rdom.document().create_element("div"),
       after_column=3,
@@ -620,7 +620,7 @@ test "ViewZones derives explicit zero equal and fallback ordinals" {
     ),
   )
   let equal_second = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       1,
       @rdom.document().create_element("div"),
       after_column=3,
@@ -628,7 +628,7 @@ test "ViewZones derives explicit zero equal and fallback ordinals" {
     ),
   )
   let fallback_absent = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       1,
       @rdom.document().create_element("div"),
       height_in_px=1.0,
@@ -666,7 +666,7 @@ test "ViewZones line-height bit recomputes and unchanged layout keeps cadence" {
   let pixels_callbacks : Array[Double] = []
   let fractional_callbacks : Array[Double] = []
   let lines_id = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       0,
       @rdom.document().create_element("div"),
       ordinal=0,
@@ -675,7 +675,7 @@ test "ViewZones line-height bit recomputes and unchanged layout keeps cadence" {
     ),
   )
   let pixels_id = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       0,
       @rdom.document().create_element("div"),
       ordinal=1,
@@ -684,7 +684,7 @@ test "ViewZones line-height bit recomputes and unchanged layout keeps cadence" {
     ),
   )
   let fractional_id = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       0,
       @rdom.document().create_element("div"),
       ordinal=2,
@@ -813,21 +813,21 @@ test "ViewZones recompute freezes keys but reads future delegates live" {
   let future_callbacks : Array[Double] = []
   let added_callbacks : Array[Double] = []
   let did_reenter = Ref(false)
-  let future_zone = ViewZone::ViewZone(
+  let future_zone = @editor_browser.ViewZone::ViewZone(
     0,
     @rdom.document().create_element("div"),
     ordinal=1,
     height_in_lines=2.0,
     on_computed_height=height => future_callbacks.push(height),
   )
-  let added_zone = ViewZone::ViewZone(
+  let added_zone = @editor_browser.ViewZone::ViewZone(
     0,
     @rdom.document().create_element("div"),
     ordinal=2,
     height_in_lines=1.0,
     on_computed_height=height => added_callbacks.push(height),
   )
-  let first_zone = ViewZone::ViewZone(
+  let first_zone = @editor_browser.ViewZone::ViewZone(
     0,
     @rdom.document().create_element("div"),
     ordinal=0,
@@ -902,21 +902,21 @@ test "ViewZones render freezes keys, writes after callback, and reads live value
   let live_future_top_callbacks = Ref(0)
   let added_top_callbacks = Ref(0)
   let did_reenter = Ref(false)
-  let future_zone = ViewZone::ViewZone(
+  let future_zone = @editor_browser.ViewZone::ViewZone(
     0,
     future_node,
     ordinal=1,
     height_in_px=11.0,
     on_dom_node_top=_ => old_future_top_callbacks.val += 1,
   )
-  let added_zone = ViewZone::ViewZone(
+  let added_zone = @editor_browser.ViewZone::ViewZone(
     0,
     added_node,
     ordinal=2,
     height_in_px=12.0,
     on_dom_node_top=_ => added_top_callbacks.val += 1,
   )
-  let current_zone = ViewZone::ViewZone(
+  let current_zone = @editor_browser.ViewZone::ViewZone(
     0,
     current_node,
     ordinal=0,
@@ -987,7 +987,7 @@ test "panic ViewZones render exposes source stale-future-key failure" {
   |> ignore
   let future_id = Ref("")
   fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       0,
       @rdom.document().create_element("div"),
       ordinal=0,
@@ -1001,7 +1001,7 @@ test "panic ViewZones render exposes source stale-future-key failure" {
   )
   |> ignore
   future_id.val = fixture.add_zone(
-    ViewZone::ViewZone(
+    @editor_browser.ViewZone::ViewZone(
       0,
       @rdom.document().create_element("div"),
       ordinal=1,
@@ -1029,7 +1029,7 @@ test "ViewZones contains computed-height throws at first middle and last" {
     let calls : Array[Int] = []
     fixture.view.change_view_zones(accessor => {
       accessor.add_zone(
-        ViewZone::ViewZone(
+        @editor_browser.ViewZone::ViewZone(
           0,
           @rdom.document().create_element("div"),
           ordinal=0,
@@ -1041,7 +1041,7 @@ test "ViewZones contains computed-height throws at first middle and last" {
       )
       |> ignore
       accessor.add_zone(
-        ViewZone::ViewZone(
+        @editor_browser.ViewZone::ViewZone(
           0,
           @rdom.document().create_element("div"),
           ordinal=1,
@@ -1053,7 +1053,7 @@ test "ViewZones contains computed-height throws at first middle and last" {
       )
       |> ignore
       accessor.add_zone(
-        ViewZone::ViewZone(
+        @editor_browser.ViewZone::ViewZone(
           0,
           @rdom.document().create_element("div"),
           ordinal=2,
@@ -1093,21 +1093,39 @@ test "ViewZones contains DOM-top throws at first middle and last" {
     let middle_node = @rdom.document().create_element("div")
     let last_node = @rdom.document().create_element("div")
     fixture.add_zone(
-      ViewZone::ViewZone(0, first_node, ordinal=0, height_in_px=10.0, on_dom_node_top=_ => {
-        view_zones_branch_callback_step(0, throw_index, calls)
-      }),
+      @editor_browser.ViewZone::ViewZone(
+        0,
+        first_node,
+        ordinal=0,
+        height_in_px=10.0,
+        on_dom_node_top=_ => {
+          view_zones_branch_callback_step(0, throw_index, calls)
+        },
+      ),
     )
     |> ignore
     fixture.add_zone(
-      ViewZone::ViewZone(0, middle_node, ordinal=1, height_in_px=11.0, on_dom_node_top=_ => {
-        view_zones_branch_callback_step(1, throw_index, calls)
-      }),
+      @editor_browser.ViewZone::ViewZone(
+        0,
+        middle_node,
+        ordinal=1,
+        height_in_px=11.0,
+        on_dom_node_top=_ => {
+          view_zones_branch_callback_step(1, throw_index, calls)
+        },
+      ),
     )
     |> ignore
     fixture.add_zone(
-      ViewZone::ViewZone(0, last_node, ordinal=2, height_in_px=12.0, on_dom_node_top=_ => {
-        view_zones_branch_callback_step(2, throw_index, calls)
-      }),
+      @editor_browser.ViewZone::ViewZone(
+        0,
+        last_node,
+        ordinal=2,
+        height_in_px=12.0,
+        on_dom_node_top=_ => {
+          view_zones_branch_callback_step(2, throw_index, calls)
+        },
+      ),
     )
     |> ignore
     let visible = fixture.view_model.view_layout.get_whitespace_viewport_data()

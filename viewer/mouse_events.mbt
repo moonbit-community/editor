@@ -6,35 +6,18 @@
 // are converted to **model** coordinates at this boundary
 // (`convertViewToModelMouseTarget`), exactly like the source.
 //
-// `IEditorMouseEvent` lives here rather than in `viewer/browser`
-// (editor_browser.mbt header): dropping the I-prefix would collide with
-// `editorDom.ts`'s `EditorMouseEvent` in that package.
+// The canonical hit-tested wrappers live in `viewer/browser`; the raw
+// `editorDom.ts` event there is named `EditorDomMouseEvent`.
 //
 // Omissions: `onMouseDrag`/`onMouseDrop`/`onMouseDropCanceled` (drag-and-drop
 // text move is not ported), `onContextMenu`, `onMouseWheel` — no consumers.
-
-///|
-/// Monaco's `IEditorMouseEvent` (editorBrowser.ts:536-539): the raw event
-/// facts plus the hit-tested target (model coordinates).
-pub(all) struct EditorMouseEvent {
-  event : @editor_browser.EditorMouseEvent
-  target : @editor_browser.MouseTarget
-}
-
-///|
-/// Monaco's `IPartialEditorMouseEvent` (editorBrowser.ts:540-543): leaves
-/// carry no target.
-pub(all) struct PartialEditorMouseEvent {
-  event : @editor_browser.EditorMouseEvent
-  target : @editor_browser.MouseTarget?
-}
 
 ///|
 /// Fires on editor mousedown with the hit-tested target — Monaco's
 /// `onMouseDown`.
 pub fn Viewer::on_mouse_down(
   self : Viewer,
-  listener : (EditorMouseEvent) -> Unit,
+  listener : (@editor_browser.EditorMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_mouse_down.event(listener)
 }
@@ -44,7 +27,7 @@ pub fn Viewer::on_mouse_down(
 /// `onMouseUp`.
 pub fn Viewer::on_mouse_up(
   self : Viewer,
-  listener : (EditorMouseEvent) -> Unit,
+  listener : (@editor_browser.EditorMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_mouse_up.event(listener)
 }
@@ -54,7 +37,7 @@ pub fn Viewer::on_mouse_up(
 /// `onMouseMove`.
 pub fn Viewer::on_mouse_move(
   self : Viewer,
-  listener : (EditorMouseEvent) -> Unit,
+  listener : (@editor_browser.EditorMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_mouse_move.event(listener)
 }
@@ -64,7 +47,7 @@ pub fn Viewer::on_mouse_move(
 /// (`IPartialEditorMouseEvent`; the target is always `None` for leaves).
 pub fn Viewer::on_mouse_leave(
   self : Viewer,
-  listener : (PartialEditorMouseEvent) -> Unit,
+  listener : (@editor_browser.PartialEditorMouseEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_mouse_leave.event(listener)
 }
@@ -91,7 +74,7 @@ fn Viewer::convert_mouse_target(
 /// controller's `_onEditorMouseDown` (its subscription in the source).
 fn Viewer::emit_mouse_down(
   self : Viewer,
-  event : @editor_browser.EditorMouseEvent,
+  event : @editor_browser.EditorDomMouseEvent,
   target : @editor_browser.MouseTarget,
 ) -> Unit {
   self.did_mouse_down.fire({ event, target: self.convert_mouse_target(target) })
@@ -105,7 +88,7 @@ fn Viewer::emit_mouse_down(
 /// `ViewUserInputEvents.emitMouseUp` → public event.
 fn Viewer::emit_mouse_up(
   self : Viewer,
-  event : @editor_browser.EditorMouseEvent,
+  event : @editor_browser.EditorDomMouseEvent,
   target : @editor_browser.MouseTarget,
 ) -> Unit {
   self.did_mouse_up.fire({ event, target: self.convert_mouse_target(target) })
@@ -117,7 +100,7 @@ fn Viewer::emit_mouse_up(
 /// controller's `_onEditorMouseMove`.
 fn Viewer::emit_mouse_move(
   self : Viewer,
-  event : @editor_browser.EditorMouseEvent,
+  event : @editor_browser.EditorDomMouseEvent,
   target : @editor_browser.MouseTarget,
 ) -> Unit {
   let converted = self.convert_mouse_target(target)
@@ -137,7 +120,7 @@ fn Viewer::emit_mouse_move(
 /// way Monaco's controller ignores them (`_mouseDown` guard N-A here).
 fn Viewer::emit_mouse_drag(
   self : Viewer,
-  _event : @editor_browser.EditorMouseEvent,
+  _event : @editor_browser.EditorDomMouseEvent,
   _target : @editor_browser.MouseTarget,
 ) -> Unit {
   ignore(self)
@@ -148,7 +131,7 @@ fn Viewer::emit_mouse_drag(
 /// controller's `_onEditorMouseLeave`.
 fn Viewer::emit_mouse_leave(
   self : Viewer,
-  event : @editor_browser.EditorMouseEvent,
+  event : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
   self.did_mouse_leave.fire({ event, target: None })
   let client = event.pos.to_client_coordinates()

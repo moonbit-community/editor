@@ -46,7 +46,7 @@ pub struct DragScrolling {
 pub fn DragScrolling::dispose(Self) -> Unit
 pub fn DragScrolling::new(DragScrollingDirection, PointerHandlerHelper, MouseTargetFactory, (@browser.MouseTarget, Bool, NavigationCommandRevealType) -> Unit) -> Self
 pub fn DragScrolling::set_dispatch(Self, (@browser.MouseTarget, Bool, NavigationCommandRevealType) -> Unit) -> Unit
-pub fn DragScrolling::start(Self, @browser.MouseTarget, @browser.EditorMouseEvent) -> Unit
+pub fn DragScrolling::start(Self, @browser.MouseTarget, @browser.EditorDomMouseEvent) -> Unit
 pub fn DragScrolling::stop(Self) -> Unit
 
 pub(all) enum DragScrollingDirection {
@@ -162,7 +162,7 @@ pub struct MouseTargetFactory {
 }
 pub fn MouseTargetFactory::create_mouse_target(Self, PointerHandlerLastRenderData, @browser.EditorPagePosition, @browser.PageCoordinates, @browser.CoordinatesRelativeToEditor, @dom.Element?) -> @browser.MouseTarget
 pub fn MouseTargetFactory::get_mouse_column(Self, @browser.CoordinatesRelativeToEditor) -> Int
-pub fn MouseTargetFactory::mouse_target_is_widget(Self, @browser.EditorMouseEvent) -> Bool
+pub fn MouseTargetFactory::mouse_target_is_widget(Self, @browser.EditorDomMouseEvent) -> Bool
 pub fn MouseTargetFactory::new(PointerHandlerHelper) -> Self
 
 pub(all) enum NavigationCommandRevealType {
@@ -188,11 +188,11 @@ pub(all) struct PointerHandlerHelper {
   get_font_info : () -> @config.FontInfo
   get_current_selection : () -> @core.Selection?
   dispatch_mouse : (MouseDispatchData) -> Unit
-  emit_mouse_down : (@browser.EditorMouseEvent, @browser.MouseTarget) -> Unit
-  emit_mouse_up : (@browser.EditorMouseEvent, @browser.MouseTarget) -> Unit
-  emit_mouse_move : (@browser.EditorMouseEvent, @browser.MouseTarget) -> Unit
-  emit_mouse_drag : (@browser.EditorMouseEvent, @browser.MouseTarget) -> Unit
-  emit_mouse_leave : (@browser.EditorMouseEvent) -> Unit
+  emit_mouse_down : (@browser.EditorDomMouseEvent, @browser.MouseTarget) -> Unit
+  emit_mouse_up : (@browser.EditorDomMouseEvent, @browser.MouseTarget) -> Unit
+  emit_mouse_move : (@browser.EditorDomMouseEvent, @browser.MouseTarget) -> Unit
+  emit_mouse_drag : (@browser.EditorDomMouseEvent, @browser.MouseTarget) -> Unit
+  emit_mouse_leave : (@browser.EditorDomMouseEvent) -> Unit
   overflow_guard : @dom.Element
   editor_scrollable : @scrollbar.ScrollableElementDom
   hover_scrollable : () -> @scrollbar.ScrollableElementDom?

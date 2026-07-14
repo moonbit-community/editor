@@ -105,22 +105,22 @@ pub(all) struct PointerHandlerHelper {
   // --- ViewController substitutes (deviation, see header) ---
   dispatch_mouse : (MouseDispatchData) -> Unit
   emit_mouse_down : (
-    @editor_browser.EditorMouseEvent,
+    @editor_browser.EditorDomMouseEvent,
     @editor_browser.MouseTarget,
   ) -> Unit
   emit_mouse_up : (
-    @editor_browser.EditorMouseEvent,
+    @editor_browser.EditorDomMouseEvent,
     @editor_browser.MouseTarget,
   ) -> Unit
   emit_mouse_move : (
-    @editor_browser.EditorMouseEvent,
+    @editor_browser.EditorDomMouseEvent,
     @editor_browser.MouseTarget,
   ) -> Unit
   emit_mouse_drag : (
-    @editor_browser.EditorMouseEvent,
+    @editor_browser.EditorDomMouseEvent,
     @editor_browser.MouseTarget,
   ) -> Unit
-  emit_mouse_leave : (@editor_browser.EditorMouseEvent) -> Unit
+  emit_mouse_leave : (@editor_browser.EditorDomMouseEvent) -> Unit
   // --- retained viewer scroll seams (scrollbar_input.mbt, no Monaco mirror) ---
   overflow_guard : @rdom.Element
   editor_scrollable : @scrollbar.ScrollableElementDom
@@ -184,7 +184,7 @@ pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
                 ) {
                 // went outside the editor!
                 handler.on_mouse_leave(
-                  @editor_browser.EditorMouseEvent::new(
+                  @editor_browser.EditorDomMouseEvent::new(
                     mouse,
                     false,
                     handler.view_helper.view_dom_node,
@@ -308,7 +308,7 @@ pub fn MouseHandler::get_target_at_client_point(
 /// `elementsFromPoint` recovery (no shadow DOM).
 fn MouseHandler::create_mouse_target(
   self : MouseHandler,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
   test_event_target : Bool,
 ) -> @editor_browser.MouseTarget {
   self.mouse_target_factory.create_mouse_target(
@@ -328,7 +328,7 @@ fn MouseHandler::create_mouse_target(
 /// `_onMouseMove` (mouseHandler.ts:269-289).
 fn MouseHandler::on_mouse_move(
   self : MouseHandler,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
   let target_is_widget = self.mouse_target_factory.mouse_target_is_widget(e)
   if !target_is_widget {
@@ -351,7 +351,7 @@ fn MouseHandler::on_mouse_move(
 /// `_onMouseLeave` (mouseHandler.ts:291-301).
 fn MouseHandler::on_mouse_leave(
   self : MouseHandler,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
   match self.mouse_leave_monitor {
     Some(monitor) => monitor.dispose()
@@ -366,18 +366,18 @@ fn MouseHandler::on_mouse_leave(
 /// `_onMouseUp` (mouseHandler.ts:303-308).
 fn MouseHandler::on_mouse_up(
   self : MouseHandler,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
   (self.view_helper.emit_mouse_up)(e, self.create_mouse_target(e, true))
 }
 
 ///|
 /// `_onMouseDown` (mouseHandler.ts:310-353). `selectOnLineNumbers` reads as
-/// the Monaco default `true`; the pointer id travels with `EditorMouseEvent`
+/// the Monaco default `true`; the pointer id travels with `EditorDomMouseEvent`
 /// into `MouseDownOperation.start`.
 fn MouseHandler::on_mouse_down(
   self : MouseHandler,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
   pointer_id : Int,
 ) -> Unit {
   let t = self.create_mouse_target(e, true)
@@ -505,7 +505,7 @@ fn MouseDownOperation::is_active(self : MouseDownOperation) -> Bool {
 /// branch (header).
 fn MouseDownOperation::on_mouse_down_then_move(
   self : MouseDownOperation,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
   self.mouse_state.set_modifiers(e)
   guard self.find_mouse_position(e, false) is Some(position) else {
@@ -533,7 +533,7 @@ fn MouseDownOperation::on_mouse_down_then_move(
 fn MouseDownOperation::start(
   self : MouseDownOperation,
   target_type : @editor_browser.MouseTargetType,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
   pointer_id : Int,
 ) -> Unit {
   self.mouse_state.set_started_on_line_numbers(target_type is GutterLineNumbers)
@@ -580,7 +580,7 @@ fn MouseDownOperation::on_pointer_up(self : MouseDownOperation) -> Unit {
 /// minimap-hidden branch (no minimap part).
 fn MouseDownOperation::get_position_outside_editor(
   self : MouseDownOperation,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
 ) -> @editor_browser.MouseTarget? {
   let editor_content = e.editor_pos()
   guard (self.view_helper.view_model)() is Some(view_model) else { return None }
@@ -692,7 +692,7 @@ fn MouseDownOperation::get_position_outside_editor(
 /// `_findMousePosition` (mouseHandler.ts:595-615).
 fn MouseDownOperation::find_mouse_position(
   self : MouseDownOperation,
-  e : @editor_browser.EditorMouseEvent,
+  e : @editor_browser.EditorDomMouseEvent,
   test_event_target : Bool,
 ) -> @editor_browser.MouseTarget? {
   match self.get_position_outside_editor(e) {
@@ -858,7 +858,7 @@ pub fn MouseDownState::count(self : MouseDownState) -> Int {
 ///|
 fn MouseDownState::set_modifiers(
   self : MouseDownState,
-  source : @editor_browser.EditorMouseEvent,
+  source : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
   self.alt_key_flag = source.alt_key
   self.ctrl_key_flag = source.ctrl_key
@@ -869,7 +869,7 @@ fn MouseDownState::set_modifiers(
 ///|
 fn MouseDownState::set_start_buttons(
   self : MouseDownState,
-  source : @editor_browser.EditorMouseEvent,
+  source : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
   self.left_button_flag = source.left_button
   self.middle_button_flag = source.middle_button

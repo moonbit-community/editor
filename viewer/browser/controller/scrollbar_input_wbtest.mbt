@@ -459,7 +459,7 @@ test "DragScrolling disposal cancels and disables its pending animation frame" {
   }
   let factory = MouseTargetFactory::new(helper)
   let mouse = scrollbar_input_test_non_element_mouse(0, 1, 77)
-  let editor_event = @editor_browser.EditorMouseEvent::new(mouse, true, root)
+  let editor_event = @editor_browser.EditorDomMouseEvent::new(mouse, true, root)
   let operation = DragScrollingOperation::new(
     TopBottom,
     helper,

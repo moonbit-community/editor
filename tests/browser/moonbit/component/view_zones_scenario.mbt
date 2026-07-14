@@ -266,6 +266,10 @@ fn run_view_zones_test() -> Unit {
     },
   )
 
+  let invalid_node = document.create_element("div")
+  invalid_node.set_attribute("class", "vz-invalid-add-should-stay-detached")
+  let invalid_zone = @viewer.view_zone(1, invalid_node, height_in_px=11.0)
+
   let primary_id = Ref("")
   let initial_primary_id = Ref("")
   let secondary_id = Ref("")
@@ -276,9 +280,15 @@ fn run_view_zones_test() -> Unit {
   let line_height_id = Ref("")
   let negative_zero_id = Ref("")
   let offscreen_id = Ref("")
-  let retained_normal : Ref[@viewer.ViewZoneChangeAccessor?] = Ref(None)
+  let retained_normal_add : Ref[(() -> Unit)?] = Ref(None)
+  let retained_normal_remove : Ref[(() -> Unit)?] = Ref(None)
+  let retained_normal_layout : Ref[(() -> Unit)?] = Ref(None)
   viewer.change_view_zones(accessor => {
-    retained_normal.val = Some(accessor)
+    retained_normal_add.val = Some(() => {
+      accessor.add_zone(invalid_zone) |> ignore
+    })
+    retained_normal_remove.val = Some(() => accessor.remove_zone(primary_id.val))
+    retained_normal_layout.val = Some(() => accessor.layout_zone(primary_id.val))
     primary_id.val = accessor.add_zone(primary)
     initial_primary_id.val = primary_id.val
     secondary_id.val = accessor.add_zone(secondary)
@@ -297,10 +307,9 @@ fn run_view_zones_test() -> Unit {
   replacement_margin.set_attribute(
     "class", "vz-margin-replacement-should-stay-detached",
   )
-  let invalid_node = document.create_element("div")
-  invalid_node.set_attribute("class", "vz-invalid-add-should-stay-detached")
-  let invalid_zone = @viewer.view_zone(1, invalid_node, height_in_px=11.0)
-  let retained_throwing : Ref[@viewer.ViewZoneChangeAccessor?] = Ref(None)
+  let retained_throwing_add : Ref[(() -> Unit)?] = Ref(None)
+  let retained_throwing_remove : Ref[(() -> Unit)?] = Ref(None)
+  let retained_throwing_layout : Ref[(() -> Unit)?] = Ref(None)
   let ordered_node = document.create_element("div")
   ordered_node.set_attribute("class", "vz-ordered-throw")
   ordered_node.set_inner_html("throw-after-add still commits")
@@ -433,7 +442,15 @@ fn run_view_zones_test() -> Unit {
     },
     () => {
       viewer.change_view_zones(accessor => {
-        retained_throwing.val = Some(accessor)
+        retained_throwing_add.val = Some(() => {
+          accessor.add_zone(invalid_zone) |> ignore
+        })
+        retained_throwing_remove.val = Some(() => {
+          accessor.remove_zone(primary_id.val)
+        })
+        retained_throwing_layout.val = Some(() => {
+          accessor.layout_zone(primary_id.val)
+        })
         record_view_zones_order("callback:throw-noop")
         raise ViewZonesFixtureError("throw-noop")
       })
@@ -463,44 +480,52 @@ fn run_view_zones_test() -> Unit {
       })
     },
     () => {
-      match retained_normal.val {
-        Some(accessor) => accessor.add_zone(invalid_zone) |> ignore
+      match retained_normal_add.val {
+        Some(operation) => operation()
         None => ()
       }
     },
     () => {
-      match retained_normal.val {
-        Some(accessor) => accessor.remove_zone(primary_id.val)
+      match retained_normal_remove.val {
+        Some(operation) => operation()
         None => ()
       }
     },
     () => {
-      match retained_normal.val {
-        Some(accessor) => accessor.layout_zone(primary_id.val)
+      match retained_normal_layout.val {
+        Some(operation) => operation()
         None => ()
       }
     },
     () => {
-      match retained_throwing.val {
-        Some(accessor) => accessor.add_zone(invalid_zone) |> ignore
+      match retained_throwing_add.val {
+        Some(operation) => operation()
         None => ()
       }
     },
     () => {
-      match retained_throwing.val {
-        Some(accessor) => accessor.remove_zone(primary_id.val)
+      match retained_throwing_remove.val {
+        Some(operation) => operation()
         None => ()
       }
     },
     () => {
-      match retained_throwing.val {
-        Some(accessor) => accessor.layout_zone(primary_id.val)
+      match retained_throwing_layout.val {
+        Some(operation) => operation()
         None => ()
       }
     },
     () => {
       viewer.change_view_zones(accessor => {
-        retained_throwing.val = Some(accessor)
+        retained_throwing_add.val = Some(() => {
+          accessor.add_zone(invalid_zone) |> ignore
+        })
+        retained_throwing_remove.val = Some(() => {
+          accessor.remove_zone(primary_id.val)
+        })
+        retained_throwing_layout.val = Some(() => {
+          accessor.layout_zone(primary_id.val)
+        })
         record_view_zones_order("callback:add")
         ordered_id.val = accessor.add_zone(ordered_zone)
         record_view_zones_order("callback:throw-after-add")

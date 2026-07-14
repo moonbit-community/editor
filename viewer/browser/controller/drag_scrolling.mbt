@@ -88,7 +88,7 @@ pub fn DragScrolling::dispose(self : DragScrolling) -> Unit {
 pub fn DragScrolling::start(
   self : DragScrolling,
   position : @editor_browser.MouseTarget,
-  mouse_event : @editor_browser.EditorMouseEvent,
+  mouse_event : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
   match self.operation {
     Some(operation) => operation.set_position(position, mouse_event)
@@ -130,7 +130,7 @@ priv struct DragScrollingOperation {
     NavigationCommandRevealType,
   ) -> Unit
   mut position : @editor_browser.MouseTarget
-  mut mouse_event : @editor_browser.EditorMouseEvent
+  mut mouse_event : @editor_browser.EditorDomMouseEvent
   mut last_time : Double
   mut animation_frame_id : Double?
   mut disposed : Bool
@@ -147,7 +147,7 @@ fn DragScrollingOperation::new(
     NavigationCommandRevealType,
   ) -> Unit,
   position : @editor_browser.MouseTarget,
-  mouse_event : @editor_browser.EditorMouseEvent,
+  mouse_event : @editor_browser.EditorDomMouseEvent,
 ) -> DragScrollingOperation {
   let operation : DragScrollingOperation = {
     direction,
@@ -189,7 +189,7 @@ fn DragScrollingOperation::dispose(self : DragScrollingOperation) -> Unit {
 fn DragScrollingOperation::set_position(
   self : DragScrollingOperation,
   position : @editor_browser.MouseTarget,
-  mouse_event : @editor_browser.EditorMouseEvent,
+  mouse_event : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
   self.position = position
   self.mouse_event = mouse_event

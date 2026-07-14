@@ -206,7 +206,7 @@ fn Viewer::folding_reveal(
 /// `range` verbatim.
 fn Viewer::folding_on_editor_mouse_down(
   self : Viewer,
-  e : EditorMouseEvent,
+  e : @editor_browser.EditorMouseEvent,
 ) -> Unit {
   guard self.folding_controller() is Some(controller) else { return }
   controller.mouse_down_info = None
@@ -275,7 +275,7 @@ fn Viewer::folding_on_editor_mouse_down(
 /// toggles recursively.
 fn Viewer::folding_on_editor_mouse_up(
   self : Viewer,
-  e : EditorMouseEvent,
+  e : @editor_browser.EditorMouseEvent,
 ) -> Unit {
   guard self.folding_controller() is Some(controller) else { return }
   guard controller.folding_model is Some(folding_model) else { return }

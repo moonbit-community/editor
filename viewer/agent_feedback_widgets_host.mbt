@@ -101,7 +101,10 @@ fn Viewer::clear_agent_feedback_widgets_from(
       focused_reply = widget.focused_reply_comment_id()
     }
     widget.mark_disposed()
-    self.remove_overlay_widget(widget.widget_id())
+    match self.overlay_widget_for_id(widget.widget_id()) {
+      Some(handle) => self.remove_overlay_widget(handle)
+      None => ()
+    }
   }
   wc.widgets.clear()
   self.clear_agent_feedback_highlight_from(wc)
@@ -139,7 +142,7 @@ fn Viewer::rebuild_agent_feedback_widgets(self : Viewer) -> Unit {
       focused_reply?,
     )
     wc.widgets.push(widget)
-    self.add_overlay_widget(widget_id, widget.get_dom_node())
+    self.add_overlay_widget(overlay_widget(widget_id, widget.get_dom_node()))
     self.layout_agent_feedback_widget(widget, group[0].range.start_line_number)
   }
   self.prune_agent_feedback_reply_drafts()

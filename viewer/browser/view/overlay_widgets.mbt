@@ -43,9 +43,10 @@ fn OverlayWidgets::OverlayWidgets(document : @rdom.Document) -> OverlayWidgets {
 /// widgets set `pointer-events: auto` on their own node.
 pub fn OverlayWidgets::add_widget(
   self : OverlayWidgets,
-  widget_id : String,
-  node : @rdom.Element,
+  widget : @editor_browser.OverlayWidget,
 ) -> Unit {
+  let widget_id = widget.get_id()
+  let node = widget.get_dom_node()
   self.remove_widget(widget_id)
   node.set_attribute("data-overlay-widget-id", widget_id)
   // `widgetId` is the attribute Monaco's hit test resolves through

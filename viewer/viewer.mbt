@@ -60,10 +60,12 @@ pub struct Viewer {
   /// `onMouseLeave`, see `mouse_events.mbt`), fired from the controller's
   /// notify seams; the comments contrib subscribes like Monaco's
   /// `CommentController.registerEditorListeners`.
-  priv did_mouse_down : @base_common.Emitter[EditorMouseEvent]
-  priv did_mouse_up : @base_common.Emitter[EditorMouseEvent]
-  priv did_mouse_move : @base_common.Emitter[EditorMouseEvent]
-  priv did_mouse_leave : @base_common.Emitter[PartialEditorMouseEvent]
+  priv did_mouse_down : @base_common.Emitter[@editor_browser.EditorMouseEvent]
+  priv did_mouse_up : @base_common.Emitter[@editor_browser.EditorMouseEvent]
+  priv did_mouse_move : @base_common.Emitter[@editor_browser.EditorMouseEvent]
+  priv did_mouse_leave : @base_common.Emitter[
+    @editor_browser.PartialEditorMouseEvent,
+  ]
   /// The last fired scroll event's facts, the diff base for the next event's
   /// `*_changed` flags (Monaco's `ScrollEvent` carries per-axis change bits).
   priv mut last_scroll_event : @editor_api.ScrollEvent?
@@ -114,7 +116,7 @@ pub struct Viewer {
   priv mut placeholder_text : @rdom.Element?
   /// Registered overlay widgets by id (Monaco's `_overlayWidgets`), re-added
   /// to every per-model view (`cew:1901-1905`).
-  priv overlay_widgets : Map[String, @rdom.Element]
+  priv overlay_widgets : Map[String, @editor_browser.OverlayWidget]
   /// The cancellable root render request. `None` is both the idle state and
   /// the disposed state; callbacks clear the slot before flushing.
   priv mut render_frame : @base_common.Disposable?

@@ -23,10 +23,9 @@
 //     `SCROLLBAR`), so only the type enum keeps the slot.
 //   * `IMouseTargetMarginData.glyphMarginLane` — the viewer has no glyph
 //     margin lanes (`glyph_margin_width` is always 0).
-//   * `IEditorMouseEvent`/`IPartialEditorMouseEvent` live in the root `viewer`
-//     package (`mouse_events.mbt`), the `ICodeEditor` surface where they are
-//     consumed: dropping the I-prefix here would collide with `editorDom.ts`'s
-//     `EditorMouseEvent` in this package.
+//   * `IEditorMouseEvent`/`IPartialEditorMouseEvent` live beside these targets
+//     in `editor_mouse_events.mbt`; the raw `editorDom.ts` event has the
+//     distinct `EditorDomMouseEvent` name.
 
 ///|
 /// `MouseTargetType` (editorBrowser.ts:358-415). All 14 variants exist for

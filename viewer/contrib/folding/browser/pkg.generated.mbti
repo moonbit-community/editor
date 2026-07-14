@@ -74,10 +74,8 @@ pub(all) struct FoldingController {
   mut mouse_down_info : FoldingMouseDownInfo?
   local_to_dispose : Array[@common.Disposable]
 }
-pub fn FoldingController::attach(String) -> Self
+pub fn FoldingController::FoldingController() -> Self
 pub fn FoldingController::clear_local(Self) -> Unit
-pub fn FoldingController::detach(String) -> Unit
-pub fn FoldingController::get(String) -> Self?
 
 pub struct FoldingDecorationAccess {
   // private fields

@@ -99,3 +99,53 @@ test "folding: disabling the option clears folds and detaches the model state" {
     assert_false(viewer.folding_enabled())
   })
 }
+
+///|
+test "folding: model swap rebuilds state on the same central controller" {
+  let viewer = Viewer::Viewer()
+  let first = test_model("a\n  b\n  c\nd")
+  let second = test_model("root\n  child\n  leaf\ntail\n  end")
+  viewer.set_model(Some(first))
+  let controller = viewer.folding_controller().unwrap()
+  let first_folding_model = controller.folding_model.unwrap()
+  let first_view_model = viewer.test_view_model()
+  let first_region = first_folding_model.get_region_at_line(1).unwrap()
+  first_folding_model.toggle_collapse_state([first_region])
+  assert_eq(first_view_model.line_count(), 2)
+  viewer.set_model(Some(second))
+  assert_true(physical_equal(controller, viewer.folding_controller().unwrap()))
+  let second_folding_model = controller.folding_model.unwrap()
+  assert_false(physical_equal(first_folding_model, second_folding_model))
+  assert_true(physical_equal(second, second_folding_model.text_model()))
+  assert_eq(second_folding_model.regions().length(), 2)
+  assert_eq(viewer.test_view_model().line_count(), 5)
+  assert_eq(viewer.test_view_model().get_hidden_areas().length(), 0)
+  viewer.dispose()
+}
+
+///|
+test "folding: contribution disposal clears folds before silencing listeners" {
+  let viewer = Viewer::Viewer()
+  viewer.set_model(Some(test_model("a\n  b\n  c\nd")))
+  let controller = viewer.folding_controller().unwrap()
+  let folding_model = controller.folding_model.unwrap()
+  let region = folding_model.get_region_at_line(1).unwrap()
+  folding_model.toggle_collapse_state([region])
+  assert_eq(viewer.test_view_model().line_count(), 2)
+  let entry = viewer.contributions[@folding_browser.FOLDING_CONTROLLER_ID]
+  assert_eq(entry.listeners.length(), 5)
+  entry.dispose(viewer)
+  // `clear_local` runs while the hidden-range listener is still live, so its
+  // empty range publication restores the view before the root listeners go.
+  assert_eq(viewer.test_view_model().line_count(), 4)
+  assert_eq(entry.listeners.length(), 0)
+  assert_true(controller.folding_model is None)
+  assert_true(controller.hidden_range_model is None)
+  assert_true(viewer.folding_controller() is None)
+  viewer.set_model(Some(test_model("x\n  y\nz")))
+  // Model-change/content listeners cannot recreate state after contribution
+  // disposal; the retained concrete controller stays silent.
+  assert_true(controller.folding_model is None)
+  assert_true(controller.hidden_range_model is None)
+  viewer.dispose()
+}

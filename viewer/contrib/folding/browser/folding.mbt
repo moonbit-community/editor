@@ -4,8 +4,9 @@
 // `SelectedLines`, `toSelectedLines` — and the `FoldingController`'s state.
 //
 // Structural deviation (the foreign-method rule, like the hover contrib):
-// the controller's *state* lives here in a per-editor instance table, while
-// the event-handler bodies that need the editor (`onModelChanged`,
+// the controller's *state* lives here and is owned by the root Viewer's
+// central contribution registry, while the event-handler bodies that need the
+// editor (`onModelChanged`,
 // `onHiddenRangesChanges`, the mouse handlers, the actions) are `Viewer::`
 // glue in the root package (`viewer/folding_host.mbt` /
 // `viewer/folding_contribution.mbt`).
@@ -79,14 +80,10 @@ pub(all) struct FoldingController {
 }
 
 ///|
-/// Per-editor controller instances keyed by the viewer's id — the instance
-/// half of `registerEditorContribution` (the hover contrib's pattern).
-let folding_instances : Map[String, FoldingController] = Map([])
-
-///|
-/// Creates and registers this editor's controller.
-pub fn FoldingController::attach(editor_id : String) -> FoldingController {
-  let controller : FoldingController = {
+/// Creates the bare controller stored by this editor's central contribution
+/// entry.
+pub fn FoldingController::FoldingController() -> FoldingController {
+  {
     folding_model: None,
     hidden_range_model: None,
     folding_decoration_provider: None,
@@ -94,20 +91,6 @@ pub fn FoldingController::attach(editor_id : String) -> FoldingController {
     mouse_down_info: None,
     local_to_dispose: [],
   }
-  folding_instances[editor_id] = controller
-  controller
-}
-
-///|
-/// `FoldingController.get(editor)` (`folding.ts:72`).
-pub fn FoldingController::get(editor_id : String) -> FoldingController? {
-  folding_instances.get(editor_id)
-}
-
-///|
-/// Drops this editor's controller.
-pub fn FoldingController::detach(editor_id : String) -> Unit {
-  folding_instances.remove(editor_id)
 }
 
 ///|

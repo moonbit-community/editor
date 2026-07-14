@@ -12,9 +12,7 @@ fn register_folding_contribution(registry : EditorContributionRegistry) -> Unit 
   registry.register_editor_contribution(
     @folding_browser.FOLDING_CONTROLLER_ID,
     Eager,
-    viewer => {
-      Folding(@folding_browser.FoldingController::attach(viewer.get_id()))
-    },
+    _viewer => Folding(FoldingController()),
     viewer => {
       let listeners : Array[@base_common.Disposable] = []
       // `this.editor.onDidChangeModel(() => this.onModelChanged())`

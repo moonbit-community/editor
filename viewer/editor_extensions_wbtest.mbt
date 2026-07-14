@@ -245,7 +245,6 @@ test "central lookup ignores reused-id overwrites in transitional alias maps" {
   let viewer = Viewer::Viewer()
   let original_input = viewer.agent_feedback_input_contribution().unwrap()
   let original_widgets = viewer.agent_feedback_widget_contribution().unwrap()
-  let original_folding = viewer.folding_controller().unwrap()
   let reused_id = viewer.get_id()
   let alias_input = @agent_feedback_browser.AgentFeedbackEditorInputContribution::attach(
     reused_id,
@@ -253,10 +252,8 @@ test "central lookup ignores reused-id overwrites in transitional alias maps" {
   let alias_widgets = @agent_feedback_browser.AgentFeedbackEditorWidgetContribution::attach(
     reused_id,
   )
-  let alias_folding = @folding_browser.FoldingController::attach(reused_id)
   assert_false(physical_equal(original_input, alias_input))
   assert_false(physical_equal(original_widgets, alias_widgets))
-  assert_false(physical_equal(original_folding, alias_folding))
   assert_true(
     physical_equal(
       original_input,
@@ -268,9 +265,6 @@ test "central lookup ignores reused-id overwrites in transitional alias maps" {
       original_widgets,
       viewer.agent_feedback_widget_contribution().unwrap(),
     ),
-  )
-  assert_true(
-    physical_equal(original_folding, viewer.folding_controller().unwrap()),
   )
   viewer.dispose()
 }

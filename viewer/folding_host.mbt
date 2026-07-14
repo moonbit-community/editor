@@ -1,9 +1,9 @@
 // The `Viewer::` half of Monaco's `FoldingController`
 // (`vscode/src/vs/editor/contrib/folding/browser/folding.ts`, vscode
 // submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the
-// event-handler bodies that need the editor. The controller *state* lives in
-// `@folding_browser.FoldingController`'s per-editor instance table (the
-// foreign-method rule split, see that file's header).
+// event-handler bodies that need the editor. The controller *state* is owned
+// by the Viewer's central contribution entry (the foreign-method rule split,
+// see that file's header).
 //
 // Deviations beyond the contrib file's recorded omissions:
 //   * `triggerFoldingModelChanged` runs synchronously — no `Delayer`
@@ -12,7 +12,8 @@
 //     `RunOnceScheduler`.
 
 ///|
-/// The instance-table lookup backing Monaco's `FoldingController.get`.
+/// The typed central-registry lookup backing Monaco's
+/// `FoldingController.get`.
 fn Viewer::folding_controller(
   self : Viewer,
 ) -> @folding_browser.FoldingController? {

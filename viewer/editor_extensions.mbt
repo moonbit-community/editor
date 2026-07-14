@@ -149,7 +149,6 @@ fn EditorContributionEntry::dispose(
         listener.dispose()
       }
       self.listeners.clear()
-      @folding_browser.FoldingController::detach(viewer.get_id())
     }
     ContentHover(controller) => {
       controller.cancel_all_timers()

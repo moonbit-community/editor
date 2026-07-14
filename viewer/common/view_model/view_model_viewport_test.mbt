@@ -1,4 +1,11 @@
 ///|
+test "validation decoration filtering preserves readonly policy" {
+  assert_true(@view_model.filter_validation_decorations(Editable))
+  assert_false(@view_model.filter_validation_decorations(On))
+  assert_true(@view_model.filter_validation_decorations(Off))
+}
+
+///|
 test "view model produces viewport data from layout window" {
   let view_model = @view_model.ViewModel(plain_text_model("a\nbb\nccc"))
   let viewport = @view_model.viewport_data_from_view_model(

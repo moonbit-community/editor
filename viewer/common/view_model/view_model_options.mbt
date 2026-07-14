@@ -15,7 +15,7 @@ pub(all) struct ViewModelOptions {
   /// `renderValidationDecorations`. Monaco defaults to `Editable` (which
   /// hides validation decorations in readonly editors); the `Viewer` passes
   /// `On` — see `filter_validation_decorations`.
-  render_validation_decorations : RenderValidationDecorations
+  render_validation_decorations : @editor_api.RenderValidationDecorations
 } derive(Eq, Debug)
 
 ///|
@@ -27,7 +27,7 @@ pub fn ViewModelOptions::ViewModelOptions(
   tab_size? : Int = 2,
   wrapping_indent? : @editor_api.WrappingIndent = Same,
   editor_id? : Int = 0,
-  render_validation_decorations? : RenderValidationDecorations = Editable,
+  render_validation_decorations? : @editor_api.RenderValidationDecorations = Editable,
 ) -> ViewModelOptions {
   {
     font_info,

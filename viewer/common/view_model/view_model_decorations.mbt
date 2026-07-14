@@ -19,22 +19,10 @@
 //   view model; both bodies are identical in the source).
 
 ///|
-/// `renderValidationDecorations` (`editorOptions.ts`): whether validation
-/// (squiggly) decorations render. Monaco's default is `Editable`; the
-/// `Viewer` defaults its option to `On` instead — the readonly viewer's
-/// diagnostics rendering is a shipped feature that `Editable` (which hides
-/// validation decorations in readonly editors) would turn off.
-pub(all) enum RenderValidationDecorations {
-  Editable
-  On
-  Off
-} derive(Eq, Debug)
-
-///|
 /// `filterValidationDecorations` (`editorOptions.ts`): `editable` defers to
 /// `readOnly`, which is constantly `true` for this viewer.
 pub fn filter_validation_decorations(
-  option : RenderValidationDecorations,
+  option : @editor_api.RenderValidationDecorations,
 ) -> Bool {
   match option {
     Editable => true // editable → readOnly; the viewer is always readonly

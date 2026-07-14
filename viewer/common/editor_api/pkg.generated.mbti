@@ -51,6 +51,12 @@ pub(all) enum RenderLineHighlight {
   All
 } derive(Eq, @debug.Debug)
 
+pub(all) enum RenderValidationDecorations {
+  Editable
+  On
+  Off
+} derive(Eq, @debug.Debug)
+
 pub(all) enum RenderWhitespace {
   None
   Boundary

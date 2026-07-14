@@ -28,3 +28,14 @@ pub(all) enum WrappingIndent {
   Indent
   DeepIndent
 } derive(Eq, Debug)
+
+///|
+/// Monaco's `renderValidationDecorations` option (`editorOptions.ts`).
+/// `Editable` follows editor mutability, while `On` and `Off` are
+/// unconditional. Monaco defaults to `Editable`; the readonly Viewer chooses
+/// `On` so its diagnostic decorations remain visible.
+pub(all) enum RenderValidationDecorations {
+  Editable
+  On
+  Off
+} derive(Eq, Debug)

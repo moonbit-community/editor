@@ -12,7 +12,7 @@ pub(all) struct ViewerOptions {
   /// `Editable`, which hides validation squiggles in readonly editors, and the
   /// readonly viewer's diagnostics rendering is a shipped feature. Hosts can
   /// pass `Editable`/`Off` for Monaco's semantics.
-  render_validation_decorations : @view_model.RenderValidationDecorations
+  render_validation_decorations : @editor_api.RenderValidationDecorations
   /// The color theme, Monaco's standalone `theme` option
   /// (`IStandaloneEditorConstructionOptions.theme`, also accepted by
   /// `updateOptions`). Mirrored onto the view root as `data-theme`.
@@ -86,7 +86,7 @@ pub fn ViewerOptions::ViewerOptions(
   render_control_characters? : Bool = true,
   render_line_highlight? : @editor_api.RenderLineHighlight = Line,
   render_line_highlight_only_when_focus? : Bool = false,
-  render_validation_decorations? : @view_model.RenderValidationDecorations = On,
+  render_validation_decorations? : @editor_api.RenderValidationDecorations = On,
   theme? : String = "dark",
   placeholder? : String = "",
   line_decorations_width? : Int = 10,

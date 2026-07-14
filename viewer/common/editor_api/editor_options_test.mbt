@@ -34,3 +34,12 @@ test "WrappingIndent exposes every canonical mode" {
   assert_eq(modes[2], Indent)
   assert_eq(modes[3], DeepIndent)
 }
+
+///|
+test "RenderValidationDecorations exposes every canonical mode" {
+  let modes : Array[RenderValidationDecorations] = [Editable, On, Off]
+  assert_eq(modes.length(), 3)
+  assert_eq(modes[0], Editable)
+  assert_eq(modes[1], On)
+  assert_eq(modes[2], Off)
+}

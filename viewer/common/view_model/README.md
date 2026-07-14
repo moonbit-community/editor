@@ -112,9 +112,16 @@ The merged package keeps the Monaco source units distinct:
 - `inline_decorations_reference_wbtest.mbt` maps
   `test/common/viewModel/inlineDecorations.test.ts` and retains all 23 source
   test names.
+- `inline_decorations_matrix_wbtest.mbt` covers the additional branch and
+  behavior-variable matrix recorded by the ownership plan: overlap/adjacency,
+  whole-line and wrapped boundaries, endpoint visibility, invalidation,
+  same-position/empty/wrapped injection edges, option/offset producer pairing,
+  and consumer preconditions.
 
-All four are pinned to vscode commit
-`b18492a288de038fbc7643aae6de8247029d11bd`. Production uses concrete
+The four source-mapped artifacts are pinned to vscode commit
+`b18492a288de038fbc7643aae6de8247029d11bd`; the local matrix derives its cases
+from that same source revision and the approved Gate A behavior matrix.
+Production uses concrete
 `TextModel`, `ModelDecoration`, `ModelDecorationOptions`, and
 `CoordinatesConverter` values. Only concrete `ViewModelDecoration` and
 `ViewDecorationsCollection` cross the package boundary; computers, contexts,
@@ -140,11 +147,18 @@ The white-box suite uses private resolved-input adapters for the last three
 branches. Those cases prove the source algorithms, not product reachability;
 the five entries remain `DEFERRED` in the execution-plan ledger.
 
-Run the exact conformance suite with:
+Run the exact source-named conformance suite with:
 
 ```sh
 moon test --target js viewer/common/view_model/inline_decorations_reference_wbtest.mbt
 moon test --target native viewer/common/view_model/inline_decorations_reference_wbtest.mbt
+```
+
+Run the additional local branch matrix with:
+
+```sh
+moon test --target js viewer/common/view_model/inline_decorations_matrix_wbtest.mbt
+moon test --target native viewer/common/view_model/inline_decorations_matrix_wbtest.mbt
 ```
 
 There are no `FrameSource`, `FrameViewport`, `RenderLine`, or `RenderFrame` APIs;

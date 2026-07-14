@@ -13,7 +13,7 @@ fn register_hover_contribution(registry : EditorContributionRegistry) -> Unit {
   registry.register_editor_contribution(
     "editor.contrib.contentHover",
     BeforeFirstInteraction,
-    _viewer => ContentHover(@hover_browser.ContentHoverController()),
+    _viewer => ContentHover(ContentHoverController()),
     _viewer => [],
   )
   // `HideContentHoverAction` (`hoverActions.ts`): Escape, gated on

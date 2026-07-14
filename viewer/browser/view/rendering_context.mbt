@@ -265,7 +265,7 @@ pub(all) struct HorizontalPosition {
 } derive(Eq, Debug)
 
 ///|
-pub fn HorizontalPosition::HorizontalPosition(
+fn HorizontalPosition::HorizontalPosition(
   outside_rendered_line : Bool,
   left : Double,
 ) -> HorizontalPosition {
@@ -279,7 +279,7 @@ pub fn HorizontalPosition::HorizontalPosition(
 ///|
 /// Monaco `LineVisibleRanges`: the measured horizontal ranges owned by one
 /// view line plus continuation/outside-rendered facts.
-pub(all) struct LineVisibleRanges {
+priv struct LineVisibleRanges {
   outside_rendered_line : Bool
   line_number : Int
   ranges : Array[HorizontalRange]
@@ -287,7 +287,7 @@ pub(all) struct LineVisibleRanges {
 } derive(Eq, Debug)
 
 ///|
-pub fn LineVisibleRanges::LineVisibleRanges(
+fn LineVisibleRanges::LineVisibleRanges(
   outside_rendered_line : Bool,
   line_number : Int,
   ranges : Array[HorizontalRange],
@@ -299,7 +299,7 @@ pub fn LineVisibleRanges::LineVisibleRanges(
 ///|
 /// Smallest line number independent of input order. Ties retain the first
 /// carrier, and null/empty inputs return `None`.
-pub fn LineVisibleRanges::first_line(
+fn LineVisibleRanges::first_line(
   ranges : Array[LineVisibleRanges]?,
 ) -> LineVisibleRanges? {
   guard ranges is Some(ranges) else { return None }
@@ -319,7 +319,7 @@ pub fn LineVisibleRanges::first_line(
 ///|
 /// Largest line number independent of input order. Ties retain the first
 /// carrier, and null/empty inputs return `None`.
-pub fn LineVisibleRanges::last_line(
+fn LineVisibleRanges::last_line(
   ranges : Array[LineVisibleRanges]?,
 ) -> LineVisibleRanges? {
   guard ranges is Some(ranges) else { return None }
@@ -338,13 +338,13 @@ pub fn LineVisibleRanges::last_line(
 
 ///|
 /// Monaco `HorizontalRange`: integerized DOM geometry.
-pub(all) struct HorizontalRange {
+priv struct HorizontalRange {
   left : Int
   width : Int
 } derive(Eq, Debug)
 
 ///|
-pub fn HorizontalRange::HorizontalRange(
+fn HorizontalRange::HorizontalRange(
   left : Double,
   width : Double,
 ) -> HorizontalRange {
@@ -352,7 +352,7 @@ pub fn HorizontalRange::HorizontalRange(
 }
 
 ///|
-pub fn HorizontalRange::from(
+fn HorizontalRange::from(
   ranges : Array[FloatHorizontalRange],
 ) -> Array[HorizontalRange] {
   let len = ranges.length()
@@ -365,19 +365,19 @@ pub fn HorizontalRange::from(
 }
 
 ///|
-pub fn HorizontalRange::to_string(self : HorizontalRange) -> String {
+fn HorizontalRange::to_string(self : HorizontalRange) -> String {
   "[\{self.left},\{self.width}]"
 }
 
 ///|
 /// Monaco `FloatHorizontalRange`: preserve fractional DOM geometry.
-pub(all) struct FloatHorizontalRange {
+priv struct FloatHorizontalRange {
   left : Double
   width : Double
 } derive(Eq, Debug)
 
 ///|
-pub fn FloatHorizontalRange::FloatHorizontalRange(
+fn FloatHorizontalRange::FloatHorizontalRange(
   left : Double,
   width : Double,
 ) -> FloatHorizontalRange {
@@ -385,12 +385,12 @@ pub fn FloatHorizontalRange::FloatHorizontalRange(
 }
 
 ///|
-pub fn FloatHorizontalRange::to_string(self : FloatHorizontalRange) -> String {
+fn FloatHorizontalRange::to_string(self : FloatHorizontalRange) -> String {
   "[\{self.left},\{self.width}]"
 }
 
 ///|
-pub fn FloatHorizontalRange::compare(
+fn FloatHorizontalRange::compare(
   left : FloatHorizontalRange,
   right : FloatHorizontalRange,
 ) -> Double {
@@ -399,13 +399,13 @@ pub fn FloatHorizontalRange::compare(
 
 ///|
 /// Monaco `VisibleRanges`: unrounded ranges plus their aggregate outside bit.
-pub(all) struct VisibleRanges {
+priv struct VisibleRanges {
   outside_rendered_line : Bool
   ranges : Array[FloatHorizontalRange]
 } derive(Eq, Debug)
 
 ///|
-pub fn VisibleRanges::VisibleRanges(
+fn VisibleRanges::VisibleRanges(
   outside_rendered_line : Bool,
   ranges : Array[FloatHorizontalRange],
 ) -> VisibleRanges {

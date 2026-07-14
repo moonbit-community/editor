@@ -10,15 +10,14 @@
 // adapted at the private rendering-context boundary in `browser/view`.
 
 ///|
-/// The line-numbers dynamic overlay's state: the prepared per-line HTML
-/// (`_renderResult`). `pub(all)`: the closed overlay handle in `browser/view`
-/// reads/writes `render_result` directly.
-pub(all) struct LineNumbersOverlay {
+/// The package-private line-numbers dynamic overlay state: the prepared
+/// per-line HTML (`_renderResult`).
+priv struct LineNumbersOverlay {
   mut render_result : Array[String]
 }
 
 ///|
-pub fn LineNumbersOverlay::LineNumbersOverlay() -> LineNumbersOverlay {
+fn LineNumbersOverlay::LineNumbersOverlay() -> LineNumbersOverlay {
   { render_result: [] }
 }
 
@@ -27,7 +26,7 @@ pub fn LineNumbersOverlay::LineNumbersOverlay() -> LineNumbersOverlay {
 /// readonly `'on'` subset: `<div class="line-numbers"
 /// style="left:{lineNumbersLeft}px;width:{lineNumbersWidth}px;">{n}</div>`
 /// per model-line-starting view line (`LineNumbersOverlay.CLASS_NAME`).
-pub fn prepare_line_numbers_render(
+fn prepare_line_numbers_render(
   viewport : @view_layout.ViewportData,
   view_model : @view_model.ViewModel?,
   left~ : Double,

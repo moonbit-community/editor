@@ -6,15 +6,14 @@
 // adapted at the private rendering-context boundary in `browser/view`.
 
 ///|
-/// The lines-decorations dynamic overlay's state: the prepared per-line HTML
-/// (`_renderResult`). `pub(all)`: the closed overlay handle in `browser/view`
-/// reads/writes `render_result` directly.
-pub(all) struct LinesDecorationsOverlay {
+/// The package-private lines-decorations dynamic overlay state: the prepared
+/// per-line HTML (`_renderResult`).
+priv struct LinesDecorationsOverlay {
   mut render_result : Array[String]
 }
 
 ///|
-pub fn LinesDecorationsOverlay::LinesDecorationsOverlay() -> LinesDecorationsOverlay {
+fn LinesDecorationsOverlay::LinesDecorationsOverlay() -> LinesDecorationsOverlay {
   { render_result: [] }
 }
 
@@ -24,7 +23,7 @@ pub fn LinesDecorationsOverlay::LinesDecorationsOverlay() -> LinesDecorationsOve
 /// `width = decorations_width` (the shared `common` suffix); height comes
 /// from the row (`height: 100%` in `lines_decorations.css`). A zero-width
 /// lane renders nothing.
-pub fn prepare_lines_decorations_render(
+fn prepare_lines_decorations_render(
   class_names_per_line : Array[Array[String]],
   decorations_left~ : Double,
   decorations_width~ : Double,

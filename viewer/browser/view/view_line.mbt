@@ -69,18 +69,18 @@ fn ViewLineOptions::equals(
 ///|
 /// Monaco `ViewLine`'s retained render state narrowed to the fields consumed
 /// by `ViewLayerRenderer`: cached DOM, last render input, and character map.
-pub struct ViewLine {
-  priv mut options : ViewLineOptions
-  priv mut rendered_view_line : RenderedViewLine?
+priv struct ViewLine {
+  mut options : ViewLineOptions
+  mut rendered_view_line : RenderedViewLine?
   // `ViewLine._isMaybeInvalid` (`viewLine.ts:56,61,81-96,109-114`).
   // Invalidators only latch this bit. The next render consumes it before the
   // normalized-input equality gate, so a notification can be proven harmless
   // without replacing the retained DOM node.
-  priv mut is_maybe_invalid : Bool
+  mut is_maybe_invalid : Bool
 }
 
 ///|
-pub fn ViewLine::ViewLine(
+fn ViewLine::ViewLine(
   options? : ViewLineOptions = ViewLineOptions::ViewLineOptions(),
 ) -> ViewLine {
   { options, rendered_view_line: None, is_maybe_invalid: true }
@@ -136,7 +136,7 @@ fn ViewLine::on_selection_changed(self : ViewLine) -> Bool {
 }
 
 ///|
-pub fn ViewLine::get_dom_node(self : ViewLine) -> @rdom.Element? {
+fn ViewLine::get_dom_node(self : ViewLine) -> @rdom.Element? {
   match self.rendered_view_line {
     Some(rendered) => rendered.dom_node.map(node => node.element())
     None => None
@@ -144,10 +144,7 @@ pub fn ViewLine::get_dom_node(self : ViewLine) -> @rdom.Element? {
 }
 
 ///|
-pub fn ViewLine::set_dom_node(
-  self : ViewLine,
-  dom_node : @rdom.Element,
-) -> Unit {
+fn ViewLine::set_dom_node(self : ViewLine, dom_node : @rdom.Element) -> Unit {
   match self.rendered_view_line {
     Some(rendered) =>
       rendered.dom_node = Some(@scrollbar.CachedDomNode::new(dom_node))
@@ -156,13 +153,13 @@ pub fn ViewLine::set_dom_node(
 }
 
 ///|
-pub fn ViewLine::mapping(self : ViewLine) -> @view_layout.CharacterMapping? {
+fn ViewLine::mapping(self : ViewLine) -> @view_layout.CharacterMapping? {
   self.rendered_view_line.map(rendered => rendered.character_mapping)
 }
 
 ///|
 /// `ViewLine.layoutLine` (`viewLine.ts:235-241`).
-pub fn ViewLine::layout_line(
+fn ViewLine::layout_line(
   self : ViewLine,
   _line_number : Int,
   delta_top : Double,
@@ -186,7 +183,7 @@ pub fn ViewLine::layout_line(
 /// The `ViewLine.renderLine` half consumed by `ViewLayerRenderer`. Equal
 /// `RenderLineInput` is the source's unchanged-line early return; changed
 /// lines append one complete row to the renderer's shared HTML batch.
-pub fn ViewLine::render_line(
+fn ViewLine::render_line(
   self : ViewLine,
   line_number : Int,
   input : @view_layout.RenderLineInput,
@@ -241,10 +238,7 @@ pub fn ViewLine::render_line(
 }
 
 ///|
-pub fn ViewLine::get_width(
-  self : ViewLine,
-  context : DomReadingContext?,
-) -> Double {
+fn ViewLine::get_width(self : ViewLine, context : DomReadingContext?) -> Double {
   match self.rendered_view_line {
     Some(rendered) => rendered.get_width(context)
     None => 0.0
@@ -252,7 +246,7 @@ pub fn ViewLine::get_width(
 }
 
 ///|
-pub fn ViewLine::get_width_is_fast(self : ViewLine) -> Bool {
+fn ViewLine::get_width_is_fast(self : ViewLine) -> Bool {
   match self.rendered_view_line {
     Some(rendered) => rendered.get_width_is_fast()
     None => true
@@ -260,7 +254,7 @@ pub fn ViewLine::get_width_is_fast(self : ViewLine) -> Bool {
 }
 
 ///|
-pub fn ViewLine::reset_cached_width(self : ViewLine) -> Unit {
+fn ViewLine::reset_cached_width(self : ViewLine) -> Unit {
   match self.rendered_view_line {
     Some(rendered) => rendered.reset_cached_width()
     None => ()
@@ -271,7 +265,7 @@ pub fn ViewLine::reset_cached_width(self : ViewLine) -> Unit {
 /// Source-shaped visible-range query. Doubles remain unrounded here; the
 /// multi-line ViewLines facade applies JavaScript `Math.round` only at the
 /// source `HorizontalRange` boundary.
-pub fn ViewLine::get_visible_ranges_for_range(
+fn ViewLine::get_visible_ranges_for_range(
   self : ViewLine,
   line_number : Int,
   start_column : Int,
@@ -618,7 +612,7 @@ extern "js" fn element_first_child_offset_width(
 /// answer (token span + character offset) to a one-based column through the
 /// line's `CharacterMapping`. The span index counts every previous sibling,
 /// exactly like the source's `previousSibling` walk.
-pub fn get_column_of_node_offset(
+fn get_column_of_node_offset(
   character_mapping : @view_layout.CharacterMapping,
   span_node : @rdom.Element,
   offset : Int,
@@ -636,7 +630,7 @@ pub fn get_column_of_node_offset(
 /// line node, read as the `offsetWidth` of its reading target — the
 /// `.view-line-content` span (`_getReadingTarget`: the line node's first
 /// child). This is a layout read; the passed context records it.
-pub fn rendered_view_line_width(
+fn rendered_view_line_width(
   line_node : @rdom.Element,
   context : DomReadingContext?,
 ) -> Double {

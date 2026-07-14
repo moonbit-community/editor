@@ -17,7 +17,7 @@
 ///|
 /// Monaco's `ViewCursorRenderData` (`viewCursor.ts:26-36`), minus the
 /// block-cursor `textContent`/`textContentClassName` (N-A for the Line style).
-pub(all) struct CursorRenderData {
+struct CursorRenderData {
   top : Double
   left : Double
   padding_left : Double
@@ -26,31 +26,31 @@ pub(all) struct CursorRenderData {
 } derive(Eq, Debug)
 
 ///|
-/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
-/// `should_render` / `render_data` directly.
-pub(all) struct ViewCursors {
-  dom_node : @rdom.Element
-  cursor : @rdom.Element
-  mut should_render : Bool
+/// Public cursor owner for controller callers. Package-local lifecycle code
+/// reads/writes its private `should_render` / `render_data` state directly.
+pub struct ViewCursors {
+  priv dom_node : @rdom.Element
+  priv cursor : @rdom.Element
+  priv mut should_render : Bool
   /// Monaco `ViewCursor._renderData`, stored by `prepare_render` and written
   /// out by `render`. `None` when the cursor's view line is outside the
   /// rendered window or its line node is not measurable yet — Monaco's
   /// "Outside viewport → null" arms (`viewCursor.ts:177-180`).
-  mut render_data : CursorRenderData?
+  priv mut render_data : CursorRenderData?
   /// The caret's view position captured alongside `render_data` — Monaco's
   /// current `ViewCursor._position`. This advances immediately on a cursor
   /// event and is used by the next prepare pass.
-  mut last_position : @base_common.Position?
+  priv mut last_position : @base_common.Position?
   /// The position paired with the currently painted `render_data`. Monaco's
   /// `ViewCursors.getLastRenderData` returns the array produced by the last
   /// `render`, so an incoming cursor event must not combine its new logical
   /// position with the previous frame's rectangle.
-  mut last_rendered_position : @base_common.Position?
+  priv mut last_rendered_position : @base_common.Position?
   /// `ViewCursors._editorHasFocus`, updated directly by the focus event
   /// handler even when no render is scheduled.
-  mut editor_has_focus : Bool
+  priv mut editor_has_focus : Bool
   /// The last cursor-state selection shape used by `_getClassName`.
-  mut selection_is_empty : Bool
+  priv mut selection_is_empty : Bool
 }
 
 ///|
@@ -58,7 +58,7 @@ pub(all) struct ViewCursors {
 /// `ViewCursors` constructor (`viewCursors.ts:74-79`) + `ViewCursor`
 /// constructor (`viewCursor.ts:74-80`; `monaco-mouse-cursor-text` is Monaco's
 /// `MOUSE_CURSOR_TEXT_CSS_CLASS_NAME`).
-pub fn ViewCursors::ViewCursors(document : @rdom.Document) -> ViewCursors {
+fn ViewCursors::ViewCursors(document : @rdom.Document) -> ViewCursors {
   let dom_node = document.create_element("div")
   dom_node.set_attribute("class", cursors_layer_class(false))
   dom_node.set_attribute("role", "presentation")
@@ -81,7 +81,7 @@ pub fn ViewCursors::ViewCursors(document : @rdom.Document) -> ViewCursors {
 }
 
 ///|
-pub fn ViewCursors::get_dom_node(self : ViewCursors) -> @rdom.Element {
+fn ViewCursors::get_dom_node(self : ViewCursors) -> @rdom.Element {
   self.dom_node
 }
 
@@ -91,7 +91,7 @@ pub fn ViewCursors::get_dom_node(self : ViewCursors) -> @rdom.Element {
 /// default (`:292-294`), and `cursor-solid` (`_blinkingEnabled` is constant
 /// `false` in the readonly product, `:333-335`). The smooth-caret-animation
 /// suffix rides on an unmodeled option (off by default).
-pub fn cursors_layer_class(has_selection : Bool) -> String {
+fn cursors_layer_class(has_selection : Bool) -> String {
   "cursors-layer" +
   (if has_selection { " has-selection" } else { "" }) +
   " cursor-line-style cursor-solid"
@@ -100,7 +100,7 @@ pub fn cursors_layer_class(has_selection : Bool) -> String {
 ///|
 /// Monaco `dom.computeScreenAwareSize`: snaps a CSS pixel size onto the device
 /// pixel grid, `max(1, floor(dpr * css_px)) / dpr`.
-pub fn compute_screen_aware_size(
+fn compute_screen_aware_size(
   device_pixel_ratio : Double,
   css_px : Double,
 ) -> Double {
@@ -111,7 +111,7 @@ pub fn compute_screen_aware_size(
 
 ///|
 /// FFI gap-fill (no `devicePixelRatio` binding in the vendored `@rdom`).
-pub extern "js" fn device_pixel_ratio() -> Double =
+extern "js" fn device_pixel_ratio() -> Double =
   #| () => globalThis.devicePixelRatio || 1
 
 ///|
@@ -122,7 +122,7 @@ pub extern "js" fn device_pixel_ratio() -> Double =
 /// so the bar straddles the character boundary (`:196-200`). Height is the
 /// full line height (`cursorHeight` 0 → `lineHeight`, `:168-173`, so the
 /// centering adjustment is zero).
-pub fn prepare_cursor_render_data(
+fn prepare_cursor_render_data(
   measured_left : Double,
   top : Double,
   line_height : Int,
@@ -144,7 +144,7 @@ pub fn prepare_cursor_render_data(
 /// `_updateBlinking` (`viewCursors.ts:242-256`): in this readonly product the
 /// blinking style is `focused ? Solid : Hidden`, and with no blink timers the
 /// visibility flip happens here rather than between renders.
-pub fn ViewCursors::render_cursor(
+fn ViewCursors::render_cursor(
   self : ViewCursors,
   has_selection~ : Bool,
   editor_has_focus~ : Bool,
@@ -167,10 +167,7 @@ pub fn ViewCursors::render_cursor(
 /// `Solid`/`Hidden` state machine.  This is deliberately an immediate DOM
 /// side effect: the source handler returns `false`, so no render follows from
 /// focus alone.
-pub fn ViewCursors::on_focus_changed(
-  self : ViewCursors,
-  is_focused : Bool,
-) -> Unit {
+fn ViewCursors::on_focus_changed(self : ViewCursors, is_focused : Bool) -> Unit {
   self.editor_has_focus = is_focused
   self.dom_node.set_attribute(
     "class",

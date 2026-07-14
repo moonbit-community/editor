@@ -6,17 +6,17 @@
 // `RangeUtil` parks DOM ranges on between reads.
 
 ///|
-pub struct DomReadingContext {
-  priv dom_node : @rdom.Element
+priv struct DomReadingContext {
+  dom_node : @rdom.Element
   end_node : @rdom.Element
-  priv mut did_dom_layout_flag : Bool
-  priv mut client_rect_delta_left_value : Double
-  priv mut client_rect_scale_value : Double
-  priv mut client_rect_read : Bool
+  mut did_dom_layout_flag : Bool
+  mut client_rect_delta_left_value : Double
+  mut client_rect_scale_value : Double
+  mut client_rect_read : Bool
 }
 
 ///|
-pub fn DomReadingContext::DomReadingContext(
+fn DomReadingContext::DomReadingContext(
   dom_node : @rdom.Element,
   end_node : @rdom.Element,
 ) -> DomReadingContext {
@@ -47,7 +47,7 @@ fn DomReadingContext::read_client_rect(self : DomReadingContext) -> Unit {
 }
 
 ///|
-pub fn DomReadingContext::client_rect_delta_left(
+fn DomReadingContext::client_rect_delta_left(
   self : DomReadingContext,
 ) -> Double {
   if !self.client_rect_read {
@@ -57,7 +57,7 @@ pub fn DomReadingContext::client_rect_delta_left(
 }
 
 ///|
-pub fn DomReadingContext::client_rect_scale(self : DomReadingContext) -> Double {
+fn DomReadingContext::client_rect_scale(self : DomReadingContext) -> Double {
   if !self.client_rect_read {
     self.read_client_rect()
   }
@@ -65,12 +65,12 @@ pub fn DomReadingContext::client_rect_scale(self : DomReadingContext) -> Double 
 }
 
 ///|
-pub fn DomReadingContext::did_dom_layout(self : DomReadingContext) -> Bool {
+fn DomReadingContext::did_dom_layout(self : DomReadingContext) -> Bool {
   self.did_dom_layout_flag
 }
 
 ///|
-pub fn DomReadingContext::mark_did_dom_layout(self : DomReadingContext) -> Unit {
+fn DomReadingContext::mark_did_dom_layout(self : DomReadingContext) -> Unit {
   self.did_dom_layout_flag = true
 }
 

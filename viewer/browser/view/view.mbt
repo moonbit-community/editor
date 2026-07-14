@@ -13,12 +13,12 @@
 pub(all) struct View {
   root : @rdom.Element
   overflow_guard : @rdom.Element
-  lines_content : @scrollbar.CachedDomNode
-  squiggly_style : @rdom.Element
+  priv lines_content : @scrollbar.CachedDomNode
+  priv squiggly_style : @rdom.Element
   view_lines : ViewLines
   view_zones : ViewZones
-  content_view_overlays : ContentViewOverlays
-  margin_view_overlays : MarginViewOverlays
+  priv content_view_overlays : ContentViewOverlays
+  priv margin_view_overlays : MarginViewOverlays
   content_widgets : ContentWidgets
   view_cursors : ViewCursors
   overlay_widgets : OverlayWidgets
@@ -238,7 +238,7 @@ pub fn View::end_view_event_batch(self : View) -> Unit {
 ///|
 /// Generic cleanup-safe batch helper.  The callback result is returned
 /// unchanged; `end` runs on normal return and on a raised error.
-pub fn[T] View::with_view_event_batch(
+fn[T] View::with_view_event_batch(
   self : View,
   body : (ViewEventCollector) -> T raise,
 ) -> T raise {
@@ -274,7 +274,7 @@ pub fn View::emit_view_zones_changed_then(
 ///|
 /// Emits one ordered source batch.  When a collector scope is open these are
 /// appended to that collector instead of being delivered early.
-pub fn View::emit_view_events(self : View, events : Array[ViewEvent]) -> Unit {
+fn View::emit_view_events(self : View, events : Array[ViewEvent]) -> Unit {
   if self.disposed {
     return
   }
@@ -312,7 +312,7 @@ fn get_editor_class_name(
 /// native WebKit WebViews disable the minimap shadow and enable text
 /// selection; every other browser gets `no-user-select`.  macOS is an
 /// independent class axis.
-pub fn extra_editor_class_name(
+fn extra_editor_class_name(
   is_safari : Bool,
   is_webkit_webview : Bool,
   is_macos : Bool,

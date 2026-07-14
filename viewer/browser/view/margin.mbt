@@ -10,7 +10,7 @@
 /// The viewer keeps Monaco's separate `Margin` part (`margin.ts` — the
 /// `.margin` background/clip container) merged onto this struct: the
 /// readonly margin has no glyph lane to justify the split.
-pub(all) struct MarginViewOverlays {
+priv struct MarginViewOverlays {
   dom_node : @rdom.Element
   overlays : ViewOverlays
   current_line_margin : CurrentLineMarginHighlightOverlay
@@ -18,12 +18,12 @@ pub(all) struct MarginViewOverlays {
   line_numbers : LineNumbersOverlay
   mut should_render : Bool
   // `MarginViewOverlays._contentLeft` (`viewOverlays.ts:238,244-248,265`).
-  priv mut content_left : Double
-  priv mut read_content_left : () -> Double
+  mut content_left : Double
+  mut read_content_left : () -> Double
 }
 
 ///|
-pub fn MarginViewOverlays::MarginViewOverlays(
+fn MarginViewOverlays::MarginViewOverlays(
   document : @rdom.Document,
 ) -> MarginViewOverlays {
   let dom_node = document.create_element("div")
@@ -90,8 +90,6 @@ fn MarginViewOverlays::render_focused(self : MarginViewOverlays) -> Unit {
 }
 
 ///|
-pub fn MarginViewOverlays::get_dom_node(
-  self : MarginViewOverlays,
-) -> @rdom.Element {
+fn MarginViewOverlays::get_dom_node(self : MarginViewOverlays) -> @rdom.Element {
   self.dom_node
 }

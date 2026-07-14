@@ -7,19 +7,17 @@
 // `viewer/browser/view/view_overlays_lifecycle.mbt`.
 
 ///|
-/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
-/// `should_render` directly.
-pub(all) struct OverlayWidgets {
-  dom_node : @rdom.Element
-  overflowing_overlay_widgets_dom_node : @rdom.Element
-  widgets : Map[String, @rdom.Element]
-  mut should_render : Bool
+/// Public overlay-widget owner for root callers. Package-local lifecycle code
+/// reads/writes its private `should_render` state directly.
+pub struct OverlayWidgets {
+  priv dom_node : @rdom.Element
+  priv overflowing_overlay_widgets_dom_node : @rdom.Element
+  priv widgets : Map[String, @rdom.Element]
+  priv mut should_render : Bool
 }
 
 ///|
-pub fn OverlayWidgets::OverlayWidgets(
-  document : @rdom.Document,
-) -> OverlayWidgets {
+fn OverlayWidgets::OverlayWidgets(document : @rdom.Document) -> OverlayWidgets {
   let dom_node = document.create_element("div")
   dom_node.set_attribute("class", "overlayWidgets")
   dom_node.set_attribute("data-view-part", "overlayWidgets")
@@ -74,12 +72,12 @@ pub fn OverlayWidgets::remove_widget(
 }
 
 ///|
-pub fn OverlayWidgets::get_dom_node(self : OverlayWidgets) -> @rdom.Element {
+fn OverlayWidgets::get_dom_node(self : OverlayWidgets) -> @rdom.Element {
   self.dom_node
 }
 
 ///|
-pub fn OverlayWidgets::overflowing_overlay_widgets_dom_node(
+fn OverlayWidgets::overflowing_overlay_widgets_dom_node(
   self : OverlayWidgets,
 ) -> @rdom.Element {
   self.overflowing_overlay_widgets_dom_node

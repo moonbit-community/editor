@@ -11,13 +11,13 @@
 ///|
 /// The margin current-line dynamic overlay's independent inherited state plus
 /// prepared per-line HTML (`_renderData`).
-pub(all) struct CurrentLineMarginHighlightOverlay {
+priv struct CurrentLineMarginHighlightOverlay {
   state : CurrentLineHighlightState
   mut render_result : Array[String]
 }
 
 ///|
-pub fn CurrentLineMarginHighlightOverlay::CurrentLineMarginHighlightOverlay() -> CurrentLineMarginHighlightOverlay {
+fn CurrentLineMarginHighlightOverlay::CurrentLineMarginHighlightOverlay() -> CurrentLineMarginHighlightOverlay {
   {
     state: CurrentLineHighlightState::CurrentLineHighlightState(),
     render_result: [],
@@ -30,7 +30,7 @@ pub fn CurrentLineMarginHighlightOverlay::CurrentLineMarginHighlightOverlay() ->
 /// (`:229-231`) — an unhighlighted mode simply produces pieces with the bare
 /// `current-line` class (no `current-line-margin`), which no CSS rule paints.
 /// `width` is `_contentLeft`, the margin width (`:227`).
-pub fn prepare_current_line_margin_render(
+fn prepare_current_line_margin_render(
   viewport : @view_layout.ViewportData,
   view_model : @view_model.ViewModel?,
   cursor_view_line : Int?,

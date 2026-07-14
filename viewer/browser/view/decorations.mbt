@@ -20,7 +20,7 @@
 ///|
 /// One decoration piece (`<div class="cdr {className}">`) inside its line's
 /// overlay row, at `left` with either a pixel width or `width:100%`.
-pub(all) struct DecorationOverlayPiece {
+struct DecorationOverlayPiece {
   line_index : Int
   class_name : String
   left : Double
@@ -85,7 +85,7 @@ fn code_unit_compare(left : String, right : String) -> Int {
 ///|
 /// The pure piece computation of `prepareRender` (`decorations.ts:67-113`):
 /// whole-line pieces first, then the merged normal pieces.
-pub fn compute_decoration_overlay_pieces(
+fn compute_decoration_overlay_pieces(
   decorations : Array[@view_model.ViewModelDecoration],
   visible_start_line_number : Int,
   visible_end_line_number : Int,
@@ -312,15 +312,14 @@ fn render_normal_decoration(
 }
 
 ///|
-/// The decorations dynamic overlay's state: the prepared per-line HTML
-/// (`_renderResult`). `pub(all)`: the closed overlay handle in `browser/view`
-/// reads/writes `render_result` directly.
-pub(all) struct DecorationsOverlay {
+/// The package-private decorations dynamic overlay state: the prepared
+/// per-line HTML (`_renderResult`).
+priv struct DecorationsOverlay {
   mut render_result : Array[String]
 }
 
 ///|
-pub fn DecorationsOverlay::DecorationsOverlay() -> DecorationsOverlay {
+fn DecorationsOverlay::DecorationsOverlay() -> DecorationsOverlay {
   { render_result: [] }
 }
 
@@ -330,7 +329,7 @@ pub fn DecorationsOverlay::DecorationsOverlay() -> DecorationsOverlay {
 /// exact `left:0;width:100%;` string; normal pieces emit
 /// `_renderNormalDecoration`'s `left:{n}px;width:{n}px|100%;`. Height comes
 /// from the row (`height: 100%` in `decorations.css`).
-pub fn prepare_decorations_render(
+fn prepare_decorations_render(
   decorations : Array[@view_model.ViewModelDecoration],
   visible_start_line_number : Int,
   visible_end_line_number : Int,

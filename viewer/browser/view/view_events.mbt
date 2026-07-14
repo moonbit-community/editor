@@ -29,8 +29,8 @@ pub(all) enum ViewConfigurationOption {
 /// Source-shaped configuration payload.  `changed_options` is a typed bitset
 /// represented as a deduplicated array because the readonly viewer has a
 /// deliberately small option surface.
-pub(all) struct ViewConfigurationChangedEvent {
-  changed_options : Array[ViewConfigurationOption]
+pub struct ViewConfigurationChangedEvent {
+  priv changed_options : Array[ViewConfigurationOption]
 }
 
 ///|
@@ -47,7 +47,7 @@ pub fn ViewConfigurationChangedEvent::from_changed_options(
 }
 
 ///|
-pub fn ViewConfigurationChangedEvent::has_changed(
+fn ViewConfigurationChangedEvent::has_changed(
   self : ViewConfigurationChangedEvent,
   option : ViewConfigurationOption,
 ) -> Bool {
@@ -71,10 +71,10 @@ fn view_configuration_options_contain(
 /// `ViewCursorStateChangedEvent`: view-space selections, model-space
 /// selections, and the originating cursor reason are kept separate exactly as
 /// in the source event.
-pub(all) struct ViewCursorStateChangedEvent {
-  selections : Array[@core.Selection]
-  model_selections : Array[@core.Selection]
-  reason : @cursor.CursorChangeReason
+pub struct ViewCursorStateChangedEvent {
+  priv selections : Array[@core.Selection]
+  priv model_selections : Array[@core.Selection]
+  priv reason : @cursor.CursorChangeReason
 }
 
 ///|
@@ -90,11 +90,11 @@ pub fn ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
 /// `ViewDecorationsChangedEvent`.  A producer without source detail must use
 /// `all`, matching Monaco's null-source constructor which conservatively sets
 /// every flag.
-pub(all) struct ViewDecorationsChangedEvent {
-  affects_minimap : Bool
-  affects_overview_ruler : Bool
-  affects_glyph_margin : Bool
-  affects_line_number : Bool
+pub struct ViewDecorationsChangedEvent {
+  priv affects_minimap : Bool
+  priv affects_overview_ruler : Bool
+  priv affects_glyph_margin : Bool
+  priv affects_line_number : Bool
 }
 
 ///|
@@ -123,8 +123,8 @@ pub fn ViewDecorationsChangedEvent::all() -> ViewDecorationsChangedEvent {
 }
 
 ///|
-pub(all) struct ViewFocusChangedEvent {
-  is_focused : Bool
+pub struct ViewFocusChangedEvent {
+  priv is_focused : Bool
 }
 
 ///|
@@ -137,13 +137,13 @@ pub fn ViewFocusChangedEvent::ViewFocusChangedEvent(
 ///|
 /// The changed view-line interval is `[from_line_number,
 /// from_line_number + count - 1]` (inclusive), matching Monaco.
-pub(all) struct ViewLinesChangedEvent {
-  from_line_number : Int
-  count : Int
+pub struct ViewLinesChangedEvent {
+  priv from_line_number : Int
+  priv count : Int
 }
 
 ///|
-pub fn ViewLinesChangedEvent::ViewLinesChangedEvent(
+fn ViewLinesChangedEvent::ViewLinesChangedEvent(
   from_line_number : Int,
   count : Int,
 ) -> ViewLinesChangedEvent {
@@ -151,13 +151,13 @@ pub fn ViewLinesChangedEvent::ViewLinesChangedEvent(
 }
 
 ///|
-pub(all) struct ViewLinesDeletedEvent {
-  from_line_number : Int
-  to_line_number : Int
+pub struct ViewLinesDeletedEvent {
+  priv from_line_number : Int
+  priv to_line_number : Int
 }
 
 ///|
-pub fn ViewLinesDeletedEvent::ViewLinesDeletedEvent(
+fn ViewLinesDeletedEvent::ViewLinesDeletedEvent(
   from_line_number : Int,
   to_line_number : Int,
 ) -> ViewLinesDeletedEvent {
@@ -165,13 +165,13 @@ pub fn ViewLinesDeletedEvent::ViewLinesDeletedEvent(
 }
 
 ///|
-pub(all) struct ViewLinesInsertedEvent {
-  from_line_number : Int
-  to_line_number : Int
+pub struct ViewLinesInsertedEvent {
+  priv from_line_number : Int
+  priv to_line_number : Int
 }
 
 ///|
-pub fn ViewLinesInsertedEvent::ViewLinesInsertedEvent(
+fn ViewLinesInsertedEvent::ViewLinesInsertedEvent(
   from_line_number : Int,
   to_line_number : Int,
 ) -> ViewLinesInsertedEvent {
@@ -182,15 +182,15 @@ pub fn ViewLinesInsertedEvent::ViewLinesInsertedEvent(
 /// Exact `ViewScrollChangedEvent` payload.  Values are always the new scroll
 /// state; each axis/dimension carries its own changed flag so handlers cannot
 /// accidentally conflate independent source branches.
-pub(all) struct ViewScrollChangedEvent {
-  scroll_width : Double
-  scroll_left : Double
-  scroll_height : Double
-  scroll_top : Double
-  scroll_width_changed : Bool
-  scroll_left_changed : Bool
-  scroll_height_changed : Bool
-  scroll_top_changed : Bool
+pub struct ViewScrollChangedEvent {
+  priv scroll_width : Double
+  priv scroll_left : Double
+  priv scroll_height : Double
+  priv scroll_top : Double
+  priv scroll_width_changed : Bool
+  priv scroll_left_changed : Bool
+  priv scroll_height_changed : Bool
+  priv scroll_top_changed : Bool
 }
 
 ///|
@@ -217,12 +217,12 @@ pub fn ViewScrollChangedEvent::ViewScrollChangedEvent(
 }
 
 ///|
-pub(all) struct ViewThemeChangedEvent {
-  theme : String
+pub struct ViewThemeChangedEvent {
+  priv theme : String
 }
 
 ///|
-pub fn ViewThemeChangedEvent::ViewThemeChangedEvent(
+fn ViewThemeChangedEvent::ViewThemeChangedEvent(
   theme : String,
 ) -> ViewThemeChangedEvent {
   { theme, }
@@ -230,9 +230,9 @@ pub fn ViewThemeChangedEvent::ViewThemeChangedEvent(
 
 ///|
 /// Inclusive line range carried by `ViewTokensChangedEvent`.
-pub(all) struct ViewTokenChangeRange {
-  from_line_number : Int
-  to_line_number : Int
+pub struct ViewTokenChangeRange {
+  priv from_line_number : Int
+  priv to_line_number : Int
 }
 
 ///|
@@ -244,8 +244,8 @@ pub fn ViewTokenChangeRange::ViewTokenChangeRange(
 }
 
 ///|
-pub(all) struct ViewTokensChangedEvent {
-  ranges : Array[ViewTokenChangeRange]
+pub struct ViewTokensChangedEvent {
+  priv ranges : Array[ViewTokenChangeRange]
 }
 
 ///|

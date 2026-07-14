@@ -4,6 +4,86 @@ fn estimated_font_info(options : ViewerOptions) -> @config.FontInfo {
 }
 
 ///|
+/// These white-box adapters keep source-fact assertions precise without
+/// widening the consolidated view package's production API. The event payload
+/// fields remain private; JS white-box tests inspect their emitted runtime
+/// representation directly.
+extern "js" fn test_view_configuration_changed_options_length(
+  event : @view.ViewConfigurationChangedEvent,
+) -> Int = "(event) => event.changed_options.length"
+
+///|
+extern "js" fn test_view_configuration_has_changed(
+  event : @view.ViewConfigurationChangedEvent,
+  option : @view.ViewConfigurationOption,
+) -> Bool = "(event, option) => event.changed_options.includes(option)"
+
+///|
+extern "js" fn test_view_decorations_flags(
+  event : @view.ViewDecorationsChangedEvent,
+) -> Array[Bool] =
+  #| (event) => [
+  #|   event.affects_minimap,
+  #|   event.affects_overview_ruler,
+  #|   event.affects_glyph_margin,
+  #|   event.affects_line_number,
+  #| ]
+
+///|
+extern "js" fn test_view_tokens_range_count(
+  event : @view.ViewTokensChangedEvent,
+) -> Int = "(event) => event.ranges.length"
+
+///|
+extern "js" fn test_view_tokens_range_from(
+  event : @view.ViewTokensChangedEvent,
+  index : Int,
+) -> Int = "(event, index) => event.ranges[index].from_line_number"
+
+///|
+extern "js" fn test_view_tokens_range_to(
+  event : @view.ViewTokensChangedEvent,
+  index : Int,
+) -> Int = "(event, index) => event.ranges[index].to_line_number"
+
+///|
+extern "js" fn test_view_scroll_values(
+  event : @view.ViewScrollChangedEvent,
+) -> Array[Double] =
+  #| (event) => [
+  #|   event.scroll_width,
+  #|   event.scroll_left,
+  #|   event.scroll_height,
+  #|   event.scroll_top,
+  #| ]
+
+///|
+extern "js" fn test_view_scroll_flags(
+  event : @view.ViewScrollChangedEvent,
+) -> Array[Bool] =
+  #| (event) => [
+  #|   event.scroll_width_changed,
+  #|   event.scroll_left_changed,
+  #|   event.scroll_height_changed,
+  #|   event.scroll_top_changed,
+  #| ]
+
+///|
+extern "js" fn test_view_cursor_selections(
+  event : @view.ViewCursorStateChangedEvent,
+) -> Array[@core.Selection] = "(event) => event.selections"
+
+///|
+extern "js" fn test_view_cursor_model_selections(
+  event : @view.ViewCursorStateChangedEvent,
+) -> Array[@core.Selection] = "(event) => event.model_selections"
+
+///|
+extern "js" fn test_view_cursor_reason(
+  event : @view.ViewCursorStateChangedEvent,
+) -> @cursor.CursorChangeReason = "(event) => event.reason"
+
+///|
 test "view configuration source preserves independent paint axes and no-op" {
   let previous = ViewerOptions::default()
   let font_info = estimated_font_info(previous)
@@ -36,15 +116,21 @@ test "view configuration source preserves independent paint axes and no-op" {
     0,
     layout_info_changed=false,
   ).unwrap()
-  assert_eq(event.changed_options.length(), 5)
-  assert_true(event.has_changed(RenderWhitespace))
-  assert_true(event.has_changed(RenderControlCharacters))
-  assert_true(event.has_changed(RenderLineHighlight))
-  assert_true(event.has_changed(RenderLineHighlightOnlyWhenFocus))
-  assert_true(event.has_changed(RenderValidationDecorations))
-  assert_false(event.has_changed(LayoutInfo))
-  assert_false(event.has_changed(FontInfo))
-  assert_false(event.has_changed(WrappingInfo))
+  assert_eq(test_view_configuration_changed_options_length(event), 5)
+  assert_true(test_view_configuration_has_changed(event, RenderWhitespace))
+  assert_true(
+    test_view_configuration_has_changed(event, RenderControlCharacters),
+  )
+  assert_true(test_view_configuration_has_changed(event, RenderLineHighlight))
+  assert_true(
+    test_view_configuration_has_changed(event, RenderLineHighlightOnlyWhenFocus),
+  )
+  assert_true(
+    test_view_configuration_has_changed(event, RenderValidationDecorations),
+  )
+  assert_false(test_view_configuration_has_changed(event, LayoutInfo))
+  assert_false(test_view_configuration_has_changed(event, FontInfo))
+  assert_false(test_view_configuration_has_changed(event, WrappingInfo))
   let reversed = view_configuration_changed_event(
     current,
     previous,
@@ -54,8 +140,8 @@ test "view configuration source preserves independent paint axes and no-op" {
     0,
     layout_info_changed=false,
   ).unwrap()
-  assert_eq(reversed.changed_options.length(), 5)
-  assert_true(reversed.has_changed(RenderWhitespace))
+  assert_eq(test_view_configuration_changed_options_length(reversed), 5)
+  assert_true(test_view_configuration_has_changed(reversed, RenderWhitespace))
 }
 
 ///|
@@ -84,9 +170,9 @@ test "view configuration source separates layout font line-height and wrapping" 
     0,
     layout_info_changed=false,
   ).unwrap()
-  assert_eq(font_event.changed_options.length(), 1)
-  assert_true(font_event.has_changed(FontInfo))
-  assert_false(font_event.has_changed(LineHeight))
+  assert_eq(test_view_configuration_changed_options_length(font_event), 1)
+  assert_true(test_view_configuration_has_changed(font_event, FontInfo))
+  assert_false(test_view_configuration_has_changed(font_event, LineHeight))
 
   let taller = { ..font_info, line_height: font_info.line_height + 1 }
   let height_event = view_configuration_changed_event(
@@ -98,9 +184,9 @@ test "view configuration source separates layout font line-height and wrapping" 
     0,
     layout_info_changed=true,
   ).unwrap()
-  assert_true(height_event.has_changed(LayoutInfo))
-  assert_true(height_event.has_changed(FontInfo))
-  assert_true(height_event.has_changed(LineHeight))
+  assert_true(test_view_configuration_has_changed(height_event, LayoutInfo))
+  assert_true(test_view_configuration_has_changed(height_event, FontInfo))
+  assert_true(test_view_configuration_has_changed(height_event, LineHeight))
 
   let tabbed = { ..previous, tab_size: previous.tab_size + 1 }
   let wrapping_event = view_configuration_changed_event(
@@ -112,8 +198,8 @@ test "view configuration source separates layout font line-height and wrapping" 
     0,
     layout_info_changed=false,
   ).unwrap()
-  assert_eq(wrapping_event.changed_options.length(), 1)
-  assert_true(wrapping_event.has_changed(WrappingInfo))
+  assert_eq(test_view_configuration_changed_options_length(wrapping_event), 1)
+  assert_true(test_view_configuration_has_changed(wrapping_event, WrappingInfo))
 }
 
 ///|
@@ -225,25 +311,27 @@ test "decoration source copies four flags and null-reset uses all" {
     affects_injected_text: true,
     affects_line_number: true,
   })
-  assert_false(event.affects_minimap)
-  assert_true(event.affects_overview_ruler)
-  assert_false(event.affects_glyph_margin)
-  assert_true(event.affects_line_number)
+  let event_flags = test_view_decorations_flags(event)
+  assert_false(event_flags[0])
+  assert_true(event_flags[1])
+  assert_false(event_flags[2])
+  assert_true(event_flags[3])
   let all = @view.ViewDecorationsChangedEvent::all()
-  assert_true(all.affects_minimap)
-  assert_true(all.affects_overview_ruler)
-  assert_true(all.affects_glyph_margin)
-  assert_true(all.affects_line_number)
+  let all_flags = test_view_decorations_flags(all)
+  assert_true(all_flags[0])
+  assert_true(all_flags[1])
+  assert_true(all_flags[2])
+  assert_true(all_flags[3])
 }
 
 ///|
 test "token source preserves inclusive ranges in producer order" {
   let event = view_tokens_changed_event([(2, 4), (9, 9)])
-  assert_eq(event.ranges.length(), 2)
-  assert_eq(event.ranges[0].from_line_number, 2)
-  assert_eq(event.ranges[0].to_line_number, 4)
-  assert_eq(event.ranges[1].from_line_number, 9)
-  assert_eq(event.ranges[1].to_line_number, 9)
+  assert_eq(test_view_tokens_range_count(event), 2)
+  assert_eq(test_view_tokens_range_from(event, 0), 2)
+  assert_eq(test_view_tokens_range_to(event, 0), 4)
+  assert_eq(test_view_tokens_range_from(event, 1), 9)
+  assert_eq(test_view_tokens_range_to(event, 1), 9)
 }
 
 ///|
@@ -269,14 +357,16 @@ test "scroll source copies four values and independent flags" {
   let event = view_scroll_changed_event(
     current.create_scroll_event(previous, false),
   )
-  assert_eq(event.scroll_width, 550.0)
-  assert_eq(event.scroll_left, 30.0)
-  assert_eq(event.scroll_height, 900.0)
-  assert_eq(event.scroll_top, 40.0)
-  assert_true(event.scroll_width_changed)
-  assert_true(event.scroll_left_changed)
-  assert_true(event.scroll_height_changed)
-  assert_true(event.scroll_top_changed)
+  let event_values = test_view_scroll_values(event)
+  assert_eq(event_values[0], 550.0)
+  assert_eq(event_values[1], 30.0)
+  assert_eq(event_values[2], 900.0)
+  assert_eq(event_values[3], 40.0)
+  let event_flags = test_view_scroll_flags(event)
+  assert_true(event_flags[0])
+  assert_true(event_flags[1])
+  assert_true(event_flags[2])
+  assert_true(event_flags[3])
 
   let left_only = @view_layout.ScrollState::new(
     force_integer_values=false,
@@ -290,10 +380,11 @@ test "scroll source copies four values and independent flags" {
   let left_event = view_scroll_changed_event(
     left_only.create_scroll_event(previous, false),
   )
-  assert_true(left_event.scroll_left_changed)
-  assert_false(left_event.scroll_width_changed)
-  assert_false(left_event.scroll_height_changed)
-  assert_false(left_event.scroll_top_changed)
+  let left_flags = test_view_scroll_flags(left_event)
+  assert_true(left_flags[1])
+  assert_false(left_flags[0])
+  assert_false(left_flags[2])
+  assert_false(left_flags[3])
 }
 
 ///|
@@ -308,11 +399,13 @@ test "cursor source carries committed view and model selections with reason" {
       [model_selection],
       Explicit,
     )
-    assert_eq(event.selections.length(), 1)
-    assert_eq(event.model_selections.length(), 1)
-    assert_true(event.selections[0] == view_model.cursor.get_view_selection())
-    assert_true(event.model_selections[0] == model_selection)
-    assert_true(event.reason == Explicit)
+    let selections = test_view_cursor_selections(event)
+    let model_selections = test_view_cursor_model_selections(event)
+    assert_eq(selections.length(), 1)
+    assert_eq(model_selections.length(), 1)
+    assert_true(selections[0] == view_model.cursor.get_view_selection())
+    assert_true(model_selections[0] == model_selection)
+    assert_true(test_view_cursor_reason(event) == Explicit)
   })
 }
 

@@ -87,14 +87,14 @@ fn render_result_slice(
 /// `ViewOverlays` (`viewOverlays.ts:19`): a rows container — one absolutely
 /// positioned div per rendered view line, whose innerHTML is the registered
 /// overlays' output for that line concatenated in registration order.
-pub struct ViewOverlays {
+priv struct ViewOverlays {
   dom_node : @scrollbar.CachedDomNode
-  priv dynamic_overlays : Array[DynamicViewOverlayHandle]
-  priv mut lines : Array[ViewOverlayLine]
-  priv mut window : @view_layout.LineWindow
+  dynamic_overlays : Array[DynamicViewOverlayHandle]
+  mut lines : Array[ViewOverlayLine]
+  mut window : @view_layout.LineWindow
   // `ViewOverlays._isFocused` (`viewOverlays.ts:24,76-79,128`): focus is
   // retained when the event is handled and consumed later by `render`.
-  priv mut is_focused : Bool
+  mut is_focused : Bool
 }
 
 ///|
@@ -301,23 +301,22 @@ fn ViewOverlays::render_lines(
 ///|
 /// `ContentViewOverlays` (`viewOverlays.ts:204`): the content-side rows
 /// container hosting the current-line, selection, and decoration overlays in
-/// Monaco's registration order (`view.ts:218-221`). `pub(all)`: `View` holds
-/// and constructs it, and the `ViewPart` impl reads/writes `should_render`
-/// (both in this package); kept `pub(all)` for parity with the other part
-/// structs the root package may probe.
-pub(all) struct ContentViewOverlays {
+/// Monaco's registration order (`view.ts:218-221`). `View` owns and constructs
+/// it, and the `ViewPart` implementation accesses `should_render` in this
+/// package, so both the owner and its state remain private.
+priv struct ContentViewOverlays {
   overlays : ViewOverlays
   current_line : CurrentLineHighlightOverlay
   selections : SelectionsOverlay
   decorations : DecorationsOverlay
   mut should_render : Bool
   // `ContentViewOverlays._contentWidth` (`viewOverlays.ts:204,210-213,226`).
-  priv mut content_width : Double
-  priv mut read_content_width : () -> Double
+  mut content_width : Double
+  mut read_content_width : () -> Double
 }
 
 ///|
-pub fn ContentViewOverlays::ContentViewOverlays(
+fn ContentViewOverlays::ContentViewOverlays(
   document : @rdom.Document,
 ) -> ContentViewOverlays {
   let overlays = ViewOverlays::ViewOverlays(document, "view-overlays")
@@ -358,7 +357,7 @@ fn ContentViewOverlays::on_configuration_changed(
 }
 
 ///|
-pub fn ContentViewOverlays::get_dom_node(
+fn ContentViewOverlays::get_dom_node(
   self : ContentViewOverlays,
 ) -> @rdom.Element {
   self.overlays.dom_node.element()
@@ -368,7 +367,7 @@ pub fn ContentViewOverlays::get_dom_node(
 /// Monaco `ViewOverlays.render` (`viewOverlays.ts:125`):
 /// `toggleClassName('focused', this._isFocused)` on the overlay container —
 /// selection colors key off `.focused .selected-text` (`selections.css`).
-pub fn ContentViewOverlays::set_focused(
+fn ContentViewOverlays::set_focused(
   self : ContentViewOverlays,
   focused : Bool,
 ) -> Unit {

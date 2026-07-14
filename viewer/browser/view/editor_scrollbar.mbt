@@ -5,16 +5,16 @@
 // `viewer/browser/view/view_overlays_lifecycle.mbt`.
 
 ///|
-/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
-/// `should_render` directly.
-pub(all) struct EditorScrollbar {
-  editor_scrollable : @scrollbar.ScrollableElementDom
-  scrollbar_dom_node : @scrollbar.CachedDomNode
-  mut should_render : Bool
+/// Public scrollbar owner for root callers. Package-local lifecycle code
+/// reads/writes its private `should_render` state directly.
+pub struct EditorScrollbar {
+  priv editor_scrollable : @scrollbar.ScrollableElementDom
+  priv scrollbar_dom_node : @scrollbar.CachedDomNode
+  priv mut should_render : Bool
 }
 
 ///|
-pub fn EditorScrollbar::EditorScrollbar(
+fn EditorScrollbar::EditorScrollbar(
   lines_content : @scrollbar.CachedDomNode,
 ) -> EditorScrollbar {
   let editor_scrollable = @scrollbar.ScrollableElementDom::new(
@@ -40,7 +40,7 @@ pub fn EditorScrollbar::EditorScrollbar(
 }
 
 ///|
-pub fn EditorScrollbar::get_dom_node(self : EditorScrollbar) -> @rdom.Element {
+fn EditorScrollbar::get_dom_node(self : EditorScrollbar) -> @rdom.Element {
   self.editor_scrollable.wrapper
 }
 

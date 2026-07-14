@@ -20,7 +20,7 @@
 /// seam. It is read synchronously by `onConfigurationChanged`; render-time
 /// input is deliberately not used to rewrite these caches because doing so
 /// would collapse source event order into a frame-final snapshot.
-pub(all) struct CurrentLineHighlightState {
+priv struct CurrentLineHighlightState {
   mut render_line_highlight : @view_layout.RenderLineHighlight
   mut word_wrap : Bool
   mut content_left : Double
@@ -42,7 +42,7 @@ pub(all) struct CurrentLineHighlightState {
 ///|
 /// `AbstractLineHighlightOverlay` constructor defaults before a live
 /// configuration reader is installed by the owning browser `View`.
-pub fn CurrentLineHighlightState::CurrentLineHighlightState() -> CurrentLineHighlightState {
+fn CurrentLineHighlightState::CurrentLineHighlightState() -> CurrentLineHighlightState {
   let selection = @core.Selection::new(Position(1, 1), Position(1, 1))
   {
     render_line_highlight: Line,
@@ -62,7 +62,7 @@ pub fn CurrentLineHighlightState::CurrentLineHighlightState() -> CurrentLineHigh
 /// Installs the local live-configuration seam and performs the constructor's
 /// initial read. The tuple order is mode, focus-only, viewport wrapping,
 /// content left, and content width.
-pub fn CurrentLineHighlightState::install_configuration_reader(
+fn CurrentLineHighlightState::install_configuration_reader(
   self : CurrentLineHighlightState,
   read_configuration : () -> (
     @view_layout.RenderLineHighlight,
@@ -80,7 +80,7 @@ pub fn CurrentLineHighlightState::install_configuration_reader(
 /// `AbstractLineHighlightOverlay.onConfigurationChanged` (`:87-96`): read
 /// every retained option in source order and always let the caller dirty the
 /// concrete overlay.
-pub fn CurrentLineHighlightState::on_configuration_changed(
+fn CurrentLineHighlightState::on_configuration_changed(
   self : CurrentLineHighlightState,
 ) -> Unit {
   let (
@@ -101,7 +101,7 @@ pub fn CurrentLineHighlightState::on_configuration_changed(
 /// `onCursorStateChanged` plus `_readFromSelections` (`:60-81,:97-100`).
 /// The complete selection array is retained even when the derived line-set
 /// and empty/nonempty predicates do not change.
-pub fn CurrentLineHighlightState::on_cursor_state_changed(
+fn CurrentLineHighlightState::on_cursor_state_changed(
   self : CurrentLineHighlightState,
   selections : Array[@core.Selection],
 ) -> Bool {
@@ -112,7 +112,7 @@ pub fn CurrentLineHighlightState::on_cursor_state_changed(
 ///|
 /// Recomputes the unique sorted cursor-line set and all-selections-empty bit,
 /// updating each cache only when its equality branch detects a change.
-pub fn CurrentLineHighlightState::read_from_selections(
+fn CurrentLineHighlightState::read_from_selections(
   self : CurrentLineHighlightState,
 ) -> Bool {
   let line_numbers : Array[Int] = []
@@ -143,7 +143,7 @@ pub fn CurrentLineHighlightState::read_from_selections(
 /// `onFocusChanged` (`:116-123`): the disabled focus-only option is an early
 /// return. When enabled, the source stores the event and returns true even if
 /// the boolean equals the previous value.
-pub fn CurrentLineHighlightState::on_focus_changed(
+fn CurrentLineHighlightState::on_focus_changed(
   self : CurrentLineHighlightState,
   is_focused : Bool,
 ) -> Bool {
@@ -155,16 +155,15 @@ pub fn CurrentLineHighlightState::on_focus_changed(
 }
 
 ///|
-/// The content current-line dynamic overlay's state: source event caches plus
-/// the prepared per-line HTML (`_renderData`). `pub(all)`: the closed overlay
-/// handle in `browser/view` consumes both.
-pub(all) struct CurrentLineHighlightOverlay {
+/// The package-private content current-line dynamic overlay state: source
+/// event caches plus the prepared per-line HTML (`_renderData`).
+priv struct CurrentLineHighlightOverlay {
   state : CurrentLineHighlightState
   mut render_result : Array[String]
 }
 
 ///|
-pub fn CurrentLineHighlightOverlay::CurrentLineHighlightOverlay() -> CurrentLineHighlightOverlay {
+fn CurrentLineHighlightOverlay::CurrentLineHighlightOverlay() -> CurrentLineHighlightOverlay {
   {
     state: CurrentLineHighlightState::CurrentLineHighlightState(),
     render_result: [],
@@ -178,7 +177,7 @@ pub fn CurrentLineHighlightOverlay::CurrentLineHighlightOverlay() -> CurrentLine
 /// model-line span with the non-exact div and the exact pass (`:160-168`)
 /// claims the cursor's own view line. `width` is
 /// `max(ctx.scrollWidth, contentWidth)` (`_renderOne`, `:211`).
-pub fn prepare_current_line_render(
+fn prepare_current_line_render(
   viewport : @view_layout.ViewportData,
   view_model : @view_model.ViewModel?,
   cursor_view_line : Int?,
@@ -240,7 +239,7 @@ fn render_one(in_margin~ : Bool, exact~ : Bool, width~ : Double) -> String {
 /// The view-line span the highlight covers: the wrapped-line pass's model-line
 /// span when wrapping (`currentLineHighlight.ts:141-158`), else just the
 /// cursor line.
-pub fn current_line_span(
+fn current_line_span(
   view_model : @view_model.ViewModel?,
   cursor_view_line : Int,
   word_wrap : Bool,

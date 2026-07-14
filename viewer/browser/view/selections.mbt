@@ -7,15 +7,14 @@
 // `browser/view`.
 
 ///|
-/// The selection dynamic overlay's state: the prepared per-line HTML
-/// (`_renderResult`). `pub(all)`: the closed overlay handle in `browser/view`
-/// reads/writes `render_result` directly.
-pub(all) struct SelectionsOverlay {
+/// The package-private selection dynamic overlay state: the prepared per-line
+/// HTML (`_renderResult`).
+priv struct SelectionsOverlay {
   mut render_result : Array[String]
 }
 
 ///|
-pub fn SelectionsOverlay::SelectionsOverlay() -> SelectionsOverlay {
+fn SelectionsOverlay::SelectionsOverlay() -> SelectionsOverlay {
   { render_result: [] }
 }
 
@@ -70,7 +69,7 @@ fn new_styled_range(left : Double, width : Double) -> StyledRange {
 /// selection rectangles (`_actualRenderOneSelection`'s two buckets — issue
 /// #77777's ordering). The previous-frame corner cache (a repaint
 /// optimization) is intentionally omitted.
-pub fn prepare_selections_render(
+fn prepare_selections_render(
   viewport : @view_layout.ViewportData,
   selection_view_range : @base_common.Range?,
   view_model : @view_model.ViewModel?,
@@ -107,7 +106,7 @@ pub fn prepare_selections_render(
 /// aggregated, rounded, and newline-extended the measured DOM ranges. This
 /// package owns only styling and HTML, so the cross-package carrier is a tuple
 /// of line number plus ordered `(left,width)` pairs.
-pub fn prepare_selections_render_from_visible_ranges(
+fn prepare_selections_render_from_visible_ranges(
   viewport : @view_layout.ViewportData,
   visible_ranges : Array[(Int, Array[(Double, Double)])],
   space_width : Double,

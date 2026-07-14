@@ -238,9 +238,9 @@ fn ViewZoneChangeAccessor::invalidate(self : ViewZoneChangeAccessor) -> Unit {
 ///|
 /// Browser `ViewZones` part. The registry is model-scoped because its owner
 /// `View` is created and disposed with one attached `ViewModel`.
-pub(all) struct ViewZones {
-  dom_node : @rdom.Element
-  margin_dom_node : @rdom.Element
+pub struct ViewZones {
+  priv dom_node : @rdom.Element
+  priv margin_dom_node : @rdom.Element
   priv dom_node_cache : FastViewZoneDomNode
   priv margin_dom_node_cache : FastViewZoneDomNode
   priv zones : Map[String, RegisteredViewZone]
@@ -253,7 +253,7 @@ pub(all) struct ViewZones {
 }
 
 ///|
-pub fn ViewZones::ViewZones(
+fn ViewZones::ViewZones(
   document : @rdom.Document,
   read_initial_configuration? : () -> (Int, Double, Double) = () => {
     (0, 0.0, 0.0)
@@ -294,19 +294,19 @@ pub fn ViewZones::ViewZones(
 }
 
 ///|
-pub fn ViewZones::dom_node(self : ViewZones) -> @rdom.Element {
+fn ViewZones::dom_node(self : ViewZones) -> @rdom.Element {
   self.dom_node
 }
 
 ///|
-pub fn ViewZones::margin_dom_node(self : ViewZones) -> @rdom.Element {
+fn ViewZones::margin_dom_node(self : ViewZones) -> @rdom.Element {
   self.margin_dom_node
 }
 
 ///|
 /// Installs the remaining model-scoped context after `new` has already taken
 /// Monaco's constructor-time option snapshot.
-pub fn ViewZones::install_context(
+fn ViewZones::install_context(
   self : ViewZones,
   view_model : @view_model.ViewModel,
   log_service : @log.LogService,
@@ -324,7 +324,7 @@ pub fn ViewZones::install_context(
 ///|
 /// `ViewPart.dispose`: superclass state is represented by the dirty flag;
 /// clear it first, then lose the complete model-scoped registry.
-pub fn ViewZones::dispose(self : ViewZones) -> Unit {
+fn ViewZones::dispose(self : ViewZones) -> Unit {
   if self.disposed {
     return
   }
@@ -335,7 +335,7 @@ pub fn ViewZones::dispose(self : ViewZones) -> Unit {
 }
 
 ///|
-pub fn ViewZones::force_should_render(self : ViewZones) -> Unit {
+fn ViewZones::force_should_render(self : ViewZones) -> Unit {
   self.should_render = true
 }
 
@@ -363,7 +363,7 @@ fn ViewZones::refresh_configuration(self : ViewZones) -> Unit {
 ///|
 /// `onConfigurationChanged`: refresh every retained option, recompute only
 /// when the line-height bit changed, and always request render.
-pub fn ViewZones::on_configuration_changed(
+fn ViewZones::on_configuration_changed(
   self : ViewZones,
   line_height_changed : Bool,
 ) -> Bool {
@@ -375,17 +375,17 @@ pub fn ViewZones::on_configuration_changed(
 }
 
 ///|
-pub fn ViewZones::on_line_mapping_changed(self : ViewZones) -> Bool {
+fn ViewZones::on_line_mapping_changed(self : ViewZones) -> Bool {
   self.recompute_whitespace_props()
 }
 
 ///|
-pub fn ViewZones::on_lines_deleted(_self : ViewZones) -> Bool {
+fn ViewZones::on_lines_deleted(_self : ViewZones) -> Bool {
   true
 }
 
 ///|
-pub fn ViewZones::on_scroll_changed(
+fn ViewZones::on_scroll_changed(
   _self : ViewZones,
   scroll_top_changed : Bool,
   scroll_width_changed : Bool,
@@ -394,19 +394,19 @@ pub fn ViewZones::on_scroll_changed(
 }
 
 ///|
-pub fn ViewZones::on_zones_changed(_self : ViewZones) -> Bool {
+fn ViewZones::on_zones_changed(_self : ViewZones) -> Bool {
   true
 }
 
 ///|
-pub fn ViewZones::on_lines_inserted(_self : ViewZones) -> Bool {
+fn ViewZones::on_lines_inserted(_self : ViewZones) -> Bool {
   true
 }
 
 ///|
 /// Source transaction boundary. The host callback is contained and reported,
 /// then the accessor is invalidated on both its normal and throwing paths.
-pub fn ViewZones::change_view_zones(
+fn ViewZones::change_view_zones(
   self : ViewZones,
   update : (ViewZoneChangeAccessor) -> Unit raise,
 ) -> Bool {
@@ -655,7 +655,7 @@ fn ViewZones::layout_zone(
 }
 
 ///|
-pub fn ViewZones::should_suppress_mouse_down_on_view_zone(
+fn ViewZones::should_suppress_mouse_down_on_view_zone(
   self : ViewZones,
   id : String,
 ) -> Bool {
@@ -733,7 +733,7 @@ fn ViewZones::report_callback_error(
 /// transitions happen before callbacks, and callbacks happen before geometry
 /// writes. Container widths are the final writes and only occur when at least
 /// one non-hidden zone is visible.
-pub fn ViewZones::render(
+fn ViewZones::render(
   self : ViewZones,
   visible_whitespaces : Array[@view_layout.ViewWhitespaceViewportData],
   big_numbers_delta : Int,

@@ -149,14 +149,14 @@ priv struct Widget {
 }
 
 ///|
-/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
-/// `should_render` / `dom_node` directly.
-pub(all) struct ContentWidgets {
-  dom_node : @rdom.Element
-  overflowing_content_widgets_dom_node : @rdom.Element
+/// Public widget owner for root callers. Package-local lifecycle code
+/// reads/writes its private `should_render` / `dom_node` state directly.
+pub struct ContentWidgets {
+  priv dom_node : @rdom.Element
+  priv overflowing_content_widgets_dom_node : @rdom.Element
   /// Monaco `ViewContentWidgets._viewDomNode`: the editor's root node, the
   /// page-space reference box for `_layoutBoxInPage`.
-  view_dom_node : @rdom.Element
+  priv view_dom_node : @rdom.Element
   priv widgets : Map[String, Widget]
   /// Live stand-ins for Monaco's retained `ViewContext`: configuration reads
   /// and model-to-view conversion happen when their source events arrive, not
@@ -166,7 +166,7 @@ pub(all) struct ContentWidgets {
     @base_common.Position,
     @model.PositionAffinity?,
   ) -> @base_common.Position?
-  mut should_render : Bool
+  priv mut should_render : Bool
 }
 
 ///|
@@ -350,7 +350,7 @@ pub fn ContentWidgets::set_widget_position(
 /// Monaco `ViewContentWidgets.onConfigurationChanged` (`:56-62`) delegates
 /// to every retained widget. Each inner handler rereads layout caches only for
 /// the `layoutInfo` option identity (`Widget.onConfigurationChanged`, :250-258).
-pub fn ContentWidgets::on_configuration_changed(
+fn ContentWidgets::on_configuration_changed(
   self : ContentWidgets,
   layout_info_changed : Bool,
 ) -> Unit {
@@ -367,9 +367,7 @@ pub fn ContentWidgets::on_configuration_changed(
 /// Monaco `_updateAnchorsViewPositions` (`:95-100`): Map iteration preserves
 /// insertion/key order, matching `Object.keys(_widgets)`, and every retained
 /// model anchor is reprojected before the part is marked dirty.
-pub fn ContentWidgets::update_anchors_view_positions(
-  self : ContentWidgets,
-) -> Unit {
+fn ContentWidgets::update_anchors_view_positions(self : ContentWidgets) -> Unit {
   let widget_ids = self.widget_ids_snapshot()
   for widget_id in widget_ids {
     self.widgets[widget_id].update_anchor_view_position(
@@ -393,7 +391,7 @@ fn ContentWidgets::widget_ids_snapshot(self : ContentWidgets) -> Array[String] {
 
 ///|
 /// Monaco `ViewContentWidgets.removeWidget` (`contentWidgets.ts:124-136`).
-pub fn ContentWidgets::remove_widget(
+fn ContentWidgets::remove_widget(
   self : ContentWidgets,
   actual : ContentWidgetHandle,
 ) -> Unit {
@@ -413,7 +411,7 @@ pub fn ContentWidgets::remove_widget(
 /// Monaco `ViewContentWidgets.shouldSuppressMouseDownOnWidget`
 /// (`contentWidgets.ts:138-143`). The controller wiring remains a separate
 /// input-boundary seam; this method owns the registered widget lookup/default.
-pub fn ContentWidgets::should_suppress_mouse_down_on_widget(
+fn ContentWidgets::should_suppress_mouse_down_on_widget(
   self : ContentWidgets,
   widget_id : String,
 ) -> Bool {
@@ -451,7 +449,7 @@ pub(all) struct ContentWidgetsRenderContext {
 /// Monaco `ViewContentWidgets.onBeforeRender` (`contentWidgets.ts:145-150`):
 /// complete the max-width write pass for every retained widget before text
 /// rendering and the later DOM-read phase begin.
-pub fn ContentWidgets::on_before_render_widgets(
+fn ContentWidgets::on_before_render_widgets(
   self : ContentWidgets,
   viewport_start : Int,
   viewport_end : Int,

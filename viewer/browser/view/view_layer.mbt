@@ -5,7 +5,7 @@
 ///|
 /// The mutable renderer context copied at the beginning of every render and
 /// returned with the reconciled retained-line collection.
-pub(all) struct RendererContext[T] {
+priv struct RendererContext[T] {
   mut rend_line_number_start : Int
   mut lines : Array[T]
   mut lines_length : Int
@@ -14,26 +14,19 @@ pub(all) struct RendererContext[T] {
 ///|
 /// Typed callbacks adapt a concrete retained-row type to Monaco's
 /// `IVisibleLine` contract without moving row state out of its owner package.
-pub struct ViewLayerRenderer[T] {
-  priv dom_node : @rdom.Element
-  priv create_line : () -> T
-  priv get_dom_node : (T) -> @rdom.Element?
-  priv set_dom_node : (T, @rdom.Element) -> Unit
-  priv layout_line : (T, Int, Double, Int) -> Unit
-  priv render_line : (
-    T,
-    Int,
-    Double,
-    Int,
-    @view_layout.ViewportData,
-    StringBuilder,
-  ) -> Bool
-  priv viewport_data : @view_layout.ViewportData
-  priv line_height_for_line_number : (Int) -> Int
+priv struct ViewLayerRenderer[T] {
+  dom_node : @rdom.Element
+  create_line : () -> T
+  get_dom_node : (T) -> @rdom.Element?
+  set_dom_node : (T, @rdom.Element) -> Unit
+  layout_line : (T, Int, Double, Int) -> Unit
+  render_line : (T, Int, Double, Int, @view_layout.ViewportData, StringBuilder) -> Bool
+  viewport_data : @view_layout.ViewportData
+  line_height_for_line_number : (Int) -> Int
 }
 
 ///|
-pub fn[T] ViewLayerRenderer::ViewLayerRenderer(
+fn[T] ViewLayerRenderer::ViewLayerRenderer(
   dom_node : @rdom.Element,
   create_line : () -> T,
   get_dom_node : (T) -> @rdom.Element?,
@@ -58,7 +51,7 @@ pub fn[T] ViewLayerRenderer::ViewLayerRenderer(
 ///|
 /// `ViewLayerRenderer.render` (`viewLayer.ts:394-467`). Branch and mutation
 /// order intentionally match the source.
-pub fn[T] ViewLayerRenderer::render(
+fn[T] ViewLayerRenderer::render(
   self : ViewLayerRenderer[T],
   in_context : RendererContext[T],
   start_line_number : Int,

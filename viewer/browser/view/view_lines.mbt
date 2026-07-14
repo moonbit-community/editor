@@ -146,20 +146,20 @@ fn RunOnceScheduler::dispose(self : RunOnceScheduler) -> Unit {
 }
 
 ///|
-/// `pub(all)`: the closed lifecycle handle in `browser/view` reads/writes
-/// `should_render` and delegates source events into the retained collection.
-pub(all) struct ViewLines {
-  dom_node : @scrollbar.CachedDomNode
-  lines_content : @scrollbar.CachedDomNode
+/// The public owner type retains only its caller-proven methods; its lifecycle
+/// and retained-render state stay private to `browser/view`.
+pub struct ViewLines {
+  priv dom_node : @scrollbar.CachedDomNode
+  priv lines_content : @scrollbar.CachedDomNode
   /// Monaco's `_textRangeRestingSpot` (viewLines.ts ctor): the detached node
   /// `DomReadingContext.endNode` parks DOM ranges on between reads.
-  text_range_resting_spot : @rdom.Element
-  mut window : @view_layout.LineWindow
-  mut lines : Array[ViewLine]
-  mut line_height : Int
-  mut typical_halfwidth_character_width : Double
-  mut is_viewport_wrapping : Bool
-  mut can_use_layer_hinting : Bool
+  priv text_range_resting_spot : @rdom.Element
+  priv mut window : @view_layout.LineWindow
+  priv mut lines : Array[ViewLine]
+  priv mut line_height : Int
+  priv mut typical_halfwidth_character_width : Double
+  priv mut is_viewport_wrapping : Bool
+  priv mut can_use_layer_hinting : Bool
   priv mut view_line_options : ViewLineOptions
   priv view_line_options_ref : Ref[ViewLineOptions]
   priv mut read_configuration : () -> ViewLinesConfiguration
@@ -170,7 +170,7 @@ pub(all) struct ViewLines {
   priv last_rendered_data : LastRenderedData
   priv mut max_line_width : Double
   priv mut last_layout : @view_layout.ViewLayout?
-  mut should_render : Bool
+  priv mut should_render : Bool
 }
 
 ///|
@@ -179,7 +179,7 @@ fn retained_view_line_factory(options : Ref[ViewLineOptions]) -> () -> ViewLine 
 }
 
 ///|
-pub fn ViewLines::ViewLines(
+fn ViewLines::ViewLines(
   document : @rdom.Document,
   lines_content : @scrollbar.CachedDomNode,
 ) -> ViewLines {
@@ -262,7 +262,7 @@ fn ViewLines::seed_configuration(
 /// `ViewLines.onConfigurationChanged`'s cache reread followed by
 /// `_onOptionsMaybeChanged`. The caller preserves the outer source order by
 /// invoking the nested visible-collection handler before this method.
-pub fn ViewLines::on_configuration_changed(
+fn ViewLines::on_configuration_changed(
   self : ViewLines,
   wrapping_info_changed : Bool,
   layout_info_changed : Bool,
@@ -329,7 +329,7 @@ fn ViewLines::window_index(self : ViewLines, view_line_number : Int) -> Int {
 ///|
 /// The retained column-to-DOM `CharacterMapping` for a one-based view-line
 /// number, if in window.
-pub fn ViewLines::mapping_at(
+fn ViewLines::mapping_at(
   self : ViewLines,
   view_line_number : Int,
 ) -> @view_layout.CharacterMapping? {
@@ -344,7 +344,7 @@ pub fn ViewLines::mapping_at(
 ///|
 /// The rendered line node for a one-based view-line number, if in window. Used
 /// by selection measurement to read DOM client rects off the live line DOM.
-pub fn ViewLines::line_node_at(
+fn ViewLines::line_node_at(
   self : ViewLines,
   view_line_number : Int,
 ) -> @rdom.Element? {
@@ -361,7 +361,7 @@ pub fn ViewLines::line_node_at(
 /// collection retains the source's one-based start. Ordinary CPU rendering
 /// deliberately leaves old DOM in place until the next no-overlap batch
 /// replaces `innerHTML`; only the source's excluded GPU arm removes on flush.
-pub fn ViewLines::flush_retained_lines(self : ViewLines) -> Unit {
+fn ViewLines::flush_retained_lines(self : ViewLines) -> Unit {
   self.lines = []
   self.window = { start: 1, end: 1 }
   self.max_line_width = 0.0
@@ -370,7 +370,7 @@ pub fn ViewLines::flush_retained_lines(self : ViewLines) -> Unit {
 ///|
 /// `VisibleLinesCollection.onConfigurationChanged` (`viewLayer.ts:277-282`).
 /// Layout-info changes dirty visible layout but never flush retained rows.
-pub fn ViewLines::on_visible_configuration_changed(
+fn ViewLines::on_visible_configuration_changed(
   _self : ViewLines,
   layout_info_changed : Bool,
 ) -> Bool {
@@ -384,7 +384,7 @@ pub fn ViewLines::on_visible_configuration_changed(
 /// `VisibleLinesCollection.onScrollChanged` (`viewLayer.ts:331-333`). The
 /// nested collection reacts to vertical position only; outer ViewLines adds
 /// its independent horizontal branch.
-pub fn ViewLines::on_visible_scroll_changed(
+fn ViewLines::on_visible_scroll_changed(
   _self : ViewLines,
   scroll_top_changed : Bool,
 ) -> Bool {
@@ -393,7 +393,7 @@ pub fn ViewLines::on_visible_scroll_changed(
 
 ///|
 /// `VisibleLinesCollection.onZonesChanged` (`viewLayer.ts:339-341`).
-pub fn ViewLines::on_visible_zones_changed(self : ViewLines) -> Bool {
+fn ViewLines::on_visible_zones_changed(self : ViewLines) -> Bool {
   match self.last_layout {
     Some(layout) => ignore(layout.set_max_line_width(self.max_line_width))
     None => ()
@@ -405,7 +405,7 @@ pub fn ViewLines::on_visible_zones_changed(self : ViewLines) -> Bool {
 /// `RenderedLinesCollection.onLinesChanged` (`viewLayer.ts:156-177`). Notify
 /// every retained line in the inclusive changed interval, and report whether
 /// at least one line was notified.
-pub fn ViewLines::on_lines_changed(
+fn ViewLines::on_lines_changed(
   self : ViewLines,
   change_from_line_number : Int,
   change_count : Int,
@@ -431,7 +431,7 @@ pub fn ViewLines::on_lines_changed(
 /// `RenderedLinesCollection.onLinesDeleted` (`viewLayer.ts:98-154`) plus
 /// `VisibleLinesCollection.onLinesDeleted`'s ordered optional-DOM removal
 /// (`:305-316`). Control flow and inclusive bounds match the pinned source.
-pub fn ViewLines::on_lines_deleted(
+fn ViewLines::on_lines_deleted(
   self : ViewLines,
   delete_from_line_number : Int,
   delete_to_line_number : Int,
@@ -482,7 +482,7 @@ pub fn ViewLines::on_lines_deleted(
 /// `RenderedLinesCollection.onLinesInserted` (`viewLayer.ts:179-219`) plus
 /// `VisibleLinesCollection.onLinesInserted`'s ordered removal of displaced
 /// tail DOM (`:318-329`).
-pub fn ViewLines::on_lines_inserted(
+fn ViewLines::on_lines_inserted(
   self : ViewLines,
   insert_from_line_number : Int,
   insert_to_line_number : Int,
@@ -534,7 +534,7 @@ pub fn ViewLines::on_lines_inserted(
 /// `RenderedLinesCollection.onTokensChanged` (`viewLayer.ts:221-250`). Local
 /// callers convert the source's inclusive token payloads to one-based
 /// half-open `LineRange`s, then this method clips and notifies line by line.
-pub fn ViewLines::on_token_ranges_changed(
+fn ViewLines::on_token_ranges_changed(
   self : ViewLines,
   ranges : Array[@base_common.LineRange],
 ) -> Bool {
@@ -564,7 +564,7 @@ pub fn ViewLines::on_token_ranges_changed(
 /// `ViewLines.onCursorStateChanged` (`viewLines.ts:238-246`). Preserve the
 /// source's right-to-left sticky OR: every retained line is visited even after
 /// one returns true.
-pub fn ViewLines::on_selection_changed(self : ViewLines) -> Bool {
+fn ViewLines::on_selection_changed(self : ViewLines) -> Bool {
   let mut should_render = false
   for line in self.lines {
     should_render = line.on_selection_changed() || should_render
@@ -574,7 +574,7 @@ pub fn ViewLines::on_selection_changed(self : ViewLines) -> Bool {
 
 ///|
 /// `ViewLines.onDecorationsChanged` (`viewLines.ts:247-254`).
-pub fn ViewLines::on_decorations_changed(self : ViewLines) -> Unit {
+fn ViewLines::on_decorations_changed(self : ViewLines) -> Unit {
   for line in self.lines {
     line.on_decorations_changed()
   }
@@ -627,7 +627,7 @@ extern "js" fn remove_retained_line_dom_node(node : @rdom.Element) -> Unit =
 /// Monaco `ViewLines.renderText` (`viewLines.ts:613-677`): reconcile the
 /// retained rows through the shared `ViewLayerRenderer`, size the row layer,
 /// then move the single lines-content rail for both axes.
-pub fn ViewLines::render_text(
+fn ViewLines::render_text(
   self : ViewLines,
   viewport : @view_layout.ViewportData,
   layout : @view_layout.ViewLayout,
@@ -688,10 +688,9 @@ pub fn ViewLines::render_text(
 }
 
 ///|
-/// `pub`: called cross-package by `browser/view`'s `ViewOverlays` row
-/// recycler, which windows its rows the same way `ViewLines::render_text`
-/// windows text lines.
-pub fn viewport_window(
+/// Shared with `ViewOverlays`' row recycler, which windows its rows the same
+/// way `ViewLines::render_text` windows text lines.
+fn viewport_window(
   viewport : @view_layout.ViewportData,
 ) -> @view_layout.LineWindow {
   // ViewportData is a 1-based inclusive range `[start, end]`; the render window
@@ -870,7 +869,7 @@ pub fn ViewLines::get_line_width(self : ViewLines, line_number : Int) -> Double 
 }
 
 ///|
-pub fn ViewLines::reset_line_width_caches(self : ViewLines) -> Unit {
+fn ViewLines::reset_line_width_caches(self : ViewLines) -> Unit {
   for line in self.lines {
     line.reset_cached_width()
   }
@@ -878,7 +877,7 @@ pub fn ViewLines::reset_line_width_caches(self : ViewLines) -> Unit {
 
 ///|
 /// Raw, unrounded visible ranges for one rendered view line.
-pub fn ViewLines::visible_ranges_for_line_range(
+fn ViewLines::visible_ranges_for_line_range(
   self : ViewLines,
   line_number : Int,
   start_column : Int,
@@ -903,7 +902,7 @@ pub fn ViewLines::visible_ranges_for_line_range(
 /// Source `linesVisibleRangesForRange` boundary using raw tuples to avoid a
 /// package cycle with `browser/view`'s RenderingContext carriers. Horizontal
 /// values are rounded independently only at this source boundary.
-pub fn ViewLines::raw_lines_visible_ranges_for_range(
+fn ViewLines::raw_lines_visible_ranges_for_range(
   self : ViewLines,
   requested_range : @base_common.Range,
   include_new_lines : Bool,
@@ -994,7 +993,7 @@ pub fn ViewLines::raw_lines_visible_ranges_for_range(
 }
 
 ///|
-pub fn ViewLines::raw_visible_range_for_position(
+fn ViewLines::raw_visible_range_for_position(
   self : ViewLines,
   line_number : Int,
   column : Int,
@@ -1008,7 +1007,7 @@ pub fn ViewLines::raw_visible_range_for_position(
 }
 
 ///|
-pub fn ViewLines::update_line_widths(self : ViewLines) -> Unit {
+fn ViewLines::update_line_widths(self : ViewLines) -> Unit {
   ignore(self.update_line_widths_internal(false))
 }
 
@@ -1080,7 +1079,7 @@ fn ViewLines::ensure_max_line_width(
 }
 
 ///|
-pub fn ViewLines::dispose(self : ViewLines) -> Unit {
+fn ViewLines::dispose(self : ViewLines) -> Unit {
   self.async_update_line_widths.dispose()
 }
 

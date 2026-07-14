@@ -55,14 +55,13 @@ pub fn PartFingerprint::from_int(value : Int) -> PartFingerprint {
 }
 
 ///|
-/// `PartFingerprints` (viewPart.ts:48-82). Deviation: Monaco stamps inside
-/// each part's constructor, but this port's dependency direction is inverted
-/// (part packages cannot import `@view`), so `View::new` stamps every part
-/// root right after construction (view.mbt).
-pub(all) struct PartFingerprints {}
+/// `PartFingerprints` (viewPart.ts:48-82). Monaco stamps inside each part's
+/// constructor; the merged View stamps every part root right after
+/// construction (view.mbt).
+pub struct PartFingerprints {}
 
 ///|
-pub fn PartFingerprints::write(
+fn PartFingerprints::write(
   target : @rdom.Element,
   part_id : PartFingerprint,
 ) -> Unit {
@@ -70,7 +69,7 @@ pub fn PartFingerprints::write(
 }
 
 ///|
-pub fn PartFingerprints::read(target : @rdom.Element) -> PartFingerprint {
+fn PartFingerprints::read(target : @rdom.Element) -> PartFingerprint {
   PartFingerprint::from_int(read_data_mprt(target))
 }
 
